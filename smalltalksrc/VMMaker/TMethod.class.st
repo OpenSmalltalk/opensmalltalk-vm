@@ -1428,14 +1428,14 @@ TMethod >> statementsListsForInlining [
 				node receiver statements size = 1
 					ifTrue:[stmtLists remove: node receiver ifAbsent: []].
 			].
-			(node selector = #to:do) ifTrue: [
+			(node selector = #to:do:) ifTrue: [
 				stmtLists remove: node receiver ifAbsent: [].
 				stmtLists remove: node args first ifAbsent: [].
 			].
-			(node selector = #to:do) ifTrue: [
+			(node selector = #to:by:do:) ifTrue: [
 				stmtLists remove: node receiver ifAbsent: [].
 				stmtLists remove: node args first ifAbsent: [].
-				stmtLists remove: (node args at: 2) ifAbsent: [].
+				stmtLists remove: node args second ifAbsent: [].
 			].
 		].
 		node isCaseStmt ifTrue: [

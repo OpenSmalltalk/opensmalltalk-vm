@@ -74,13 +74,13 @@ Class {
 	],
 	#classVars : [
 		'SemaphoresToSignalSize',
-		'StreamArrayIndex',
+		'StreamIndexIndex',
 		'AtCacheMask',
 		'MethodIndex',
 		'MessageArgumentsIndex',
 		'MethodArrayIndex',
 		'DirEntryFound',
-		'LastLinkIndex',
+		'CompilerHooksSize',
 		'MethodCachePrim',
 		'CrossedX',
 		'ExcessSignalsIndex',
@@ -102,8 +102,8 @@ Class {
 		'InitialIPIndex',
 		'MethodCacheNative',
 		'HeaderIndex',
-		'InstructionPointerIndex',
 		'BytecodeTable',
+		'InstructionPointerIndex',
 		'ProcessListsIndex',
 		'SuspendedContextIndex',
 		'MaxExternalPrimitiveTableSize',
@@ -141,9 +141,9 @@ Class {
 		'PrimitiveTable',
 		'SuperclassIndex',
 		'AtCacheEntries',
-		'StreamIndexIndex',
 		'StackPointerIndex',
-		'CompilerHooksSize'
+		'StreamArrayIndex',
+		'LastLinkIndex'
 	],
 	#category : #'VMMaker-Interpreter'
 }
@@ -184,7 +184,7 @@ Interpreter class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'sqInt (*compilerHooks[', (CompilerHooksSize + 1) printString, '])()'.
 	aCCodeGenerator
 		var: #interpreterVersion
-		declareC: 'const char *interpreterVersion = "', Smalltalk datedVersion, ' [', Smalltalk lastUpdateString,']"'.
+		declareC: 'const char *interpreterVersion = "', SmalltalkImage current datedVersion, ' [', SmalltalkImage current lastUpdateString,']"'.
 	aCCodeGenerator
 		var: #obsoleteIndexedPrimitiveTable
 		declareC: 'char* obsoleteIndexedPrimitiveTable[][3] = ', self obsoleteIndexedPrimitiveTableString.

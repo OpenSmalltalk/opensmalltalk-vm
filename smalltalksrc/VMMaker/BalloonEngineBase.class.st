@@ -27,8 +27,8 @@ Class {
 	#classVars : [
 		'FillTable',
 		'EdgeStepTable',
-		'EdgeInitTable',
 		'WideLineWidthTable',
+		'EdgeInitTable',
 		'WideLineFillTable'
 	],
 	#pools : [
