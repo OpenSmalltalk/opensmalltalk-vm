@@ -1,6 +1,7 @@
-2003-08-08  Ian Piumarta  <piumarta@cartman.inria.fr>
+2003-08-08  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/plugins/UnixOSProcessPlugin/Makefile.inc
+	(XCPPFLAGS): Pass location of X includes to compile command.
 	(XLDFLAGS): Pass location of X libraries to link command.
 
 	* platforms/unix/vm-display-X11/sqUnixX11.c (sendSelection): Use
