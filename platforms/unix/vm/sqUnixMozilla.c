@@ -32,7 +32,6 @@
 extern Display* stDisplay;
 extern Window   stWindow;
 extern Window   browserWindow;
-extern int      secure;
 
 /* from interpret.c */
 int stackObjectValue(int);
@@ -202,9 +201,7 @@ int primitivePluginRequestFileHandle()
     sFO = ioLoadFunctionFrom("sqFileOpen", "FilePlugin");
     if ( !fRS || !fVO || !sFO) return primitiveFail(); /* TPR - is this the right way to fail here? */
     fileHandle = instantiateClassindexableSize(classByteArray(), ((int(*)(void))fRS)());
-    secure = false;    /* Temporarily disable file sandbox */
     ((int(*)(int, int, int, int))sFO)( ((int(*)(int))fVO)(fileHandle),(int)req->localName, strlen(req->localName), 0);
-    secure = true;
     if (failed()) return 0;
   }
   pop(2);

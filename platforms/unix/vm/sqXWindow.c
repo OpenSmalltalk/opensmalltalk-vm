@@ -223,7 +223,6 @@ int		 stHasSameRGBMask32;
 int		 stRNMask, stGNMask, stBNMask;
 int		 stRShift, stGShift, stBShift;
 char		*stDisplayBitmap= 0;
-int              secure= 0;		/* true if running as a browser plugin */
 Window           browserWindow= 0;      /* parent window */
 int		 headless= 0;
 
@@ -241,7 +240,6 @@ int	windowState=	WIN_CHANGED;
 /* some vars need setting for headless */
 int		 noEvents= 1;		/* 1 to disable new event handling */
 /* XXX is there a reason to allow this? -lex */
-int              secure= 0;		/* true if running as a browser plugin */
 
 #endif  /* !HEADLESS */
 
@@ -3842,65 +3840,6 @@ int stopProfiling(void) { return 0; }
 
 
 
-/*** Browser plugin stuff ***/
-
-
-
-/* Return true if access to the given file is allowed.  Grant permission
-   to access only those files in directories at or under the image directory. 
-   Note: vmPath is actually the path to the image.
-   NOTE ALSO: that this is broken.  Symbolic links will confuse it. -- ikp
- */
-int plugInAllowAccessToFilePath(char *pathString, int pathStringLength)
-{
-#ifndef HEADLESS
-
-# if 1 /* Bert Freudenberg's version of reality */
-
-  int vmPathLength= 0, i= 0;
-
-  if (!secure)
-    return true;                             /* not a plugin ==> grant */
-
-  vmPathLength= strlen(vmPath) - 1;
-  if (pathStringLength < vmPathLength)
-    return false;                            /* path too short ==> deny */
-
-  for (i= 0; i < vmPathLength; i++)
-    if (pathString[i] != vmPath[i])
-      return false;                          /* no common root ==> deny */
-
-  for (; i < pathStringLength-3; i++)
-    if (!strncmp(&pathString[i], "/..", 3))
-      return false;                          /* parent component ==> deny */
-
-  return true;                               /* ==> grant */
-
-# else /* ikp's alternative reality */
-
-  char vmPathEnd= strrchr(vmPath, '/');
-  int  vmPathLen= vmPathEnd - vmPath;
-  char piPath[MAXPATHLEN];
-  strncpy(piPath, pathString, pathStringLength);
-  realpath(piPath, piPath);
-  {
-    char piPathEnd= strrchr(piPath, '/');
-    int  piPathLen= piPathEnd - piPath;
-    return ((piPathLen >= vmPathLen)
-	    && !strncmp(vmPath, piPath, vmPathLen));
-  }
-  /* IKP also says: of course, this is all COMPLETELY BOGUS anyway (named
-   * prims give access to the entirety of libc).
-   */
-
-# endif /* alternative reality */
-
-#endif    /* !HEADLESS */
-  return true;
-}
-
-
-
 /*** Access to system attributes and command-line arguments ***/
 
 
@@ -3977,7 +3916,6 @@ void usage()
 #ifndef HEADLESS
   printf("  -noevents            disable event-driven input support\n");
   printf("  -notitle             disable the Squeak window title bar\n");
-  printf("  -secure              enable file sandbox\n");
 #endif
   printf("  -spy                 enable the system spy (jit)\n");
   printf("  -version             print version information, then exit\n");
@@ -4098,7 +4036,6 @@ void ParseEnvironment(void)
   if (getenv("SQUEAK_NOTITLE"))		noTitle= 1;
   if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;  /* XXX should check whether the variable is 1 or 0 */
   if (getenv("SQUEAK_NOEVENTS"))	noEvents= 1;
-  if (getenv("SQUEAK_SECURE"))		secure= 1;
 #if defined(USE_XSHM)
   if (getenv("SQUEAK_XSHM"))		useXshm= 1;
   if (getenv("SQUEAK_XASYNC"))		asyncUpdate= 1;
@@ -4147,7 +4084,6 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
       else if (!strcmp(arg, "-spy"))		withSpy= 1;
 #    ifndef HEADLESS
       else if (!strcmp(arg, "-fullscreen"))	fullScreen= 1;
-      else if (!strcmp(arg, "-secure"))		secure= true;
 #    endif
       else if (!strcmp(arg, "-version"))	versionInfo();
       else if (!strcmp(arg, "-args_in_header")) {
@@ -4185,7 +4121,6 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
 		  fprintf(stderr, "Error: invalid -browserWindow argument!\n");
 		  exit(1);
 		}
-	      secure= true;
 	    }
 #        endif
 	  else

@@ -33,7 +33,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2001-02-12 15:06:09 by piumarta on rnd10-51.rd.wdi.disney.com
+ * Last edited: Wed 27 Feb 2002 14:29:48 by bert on balloon
  */
 
 #include "sq.h"
@@ -102,8 +102,6 @@ int dir_Create(char *pathString, int pathStringLength)
      directory is created relative to the cwd. */
   char name[MAXPATHLEN+1];
   int i;
-  if (!plugInAllowAccessToFilePath(pathString, pathStringLength))
-    return false;
   if (pathStringLength >= MAXPATHLEN)
     return false;
   for (i = 0; i < pathStringLength; i++)
@@ -117,8 +115,6 @@ int dir_Delete(char *pathString, int pathStringLength)
   /* Delete the existing directory with the given path. */
   char name[MAXPATHLEN+1];
   int i;
-  if (!plugInAllowAccessToFilePath(pathString, pathStringLength))
-    return false;
   if (pathStringLength >= MAXPATHLEN)
     return false;
   for (i = 0; i < pathStringLength; i++)
@@ -157,9 +153,6 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   *modificationDate = 0;
   *isDirectory      = false;
   *sizeIfFile       = 0;
-
-  if (!plugInAllowAccessToFilePath(pathString, pathStringLength))
-    return NO_MORE_ENTRIES;
 
   if ((pathStringLength == 0))
     strcpy(unixPath, ".");
