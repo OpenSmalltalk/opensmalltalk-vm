@@ -1,12 +1,12 @@
 /****************************************************************************
-*   PROJECT: Mac window, memory, keyboard interface.
+*   PROJECT: Mac filespec interface.
 *   FILE:    sqMacFileLogic.c
 *   CONTENT: 
 *
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.5 2002/01/22 19:10:22 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.6 2002/02/23 10:44:59 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
