@@ -60,25 +60,3 @@ int     	sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionVa
 int     	sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(
 			SocketPtr s,int optionName, int optionNameSize, int *result);
 
-/*** security traps ***/
-/* check if we are allowed to create the given socket */
-int ioCanCreateSocketOfType(int netType, int socketType);
-/* check if we are allowed to connect to the given port */
-int ioCanConnectToPort(int netAddr, int port);
-/* check if we are allowed to listen on the given port
-	Note: ability to listen applies also to setting ports of UDP sockets.
-	For TCP sockets, the ability to listen implies the ability to accept(). */
-int ioCanListenOnPort(SocketPtr s, int port);
-/* disable all use of sockets */
-int ioDisableSocketAccess(void);
-/* query for socket availability */
-int ioHasSocketAccess(void);
-
-#ifdef DISABLE_SECURITY
-#define ioCanCreateSocketOfType(netType, socketType) 1
-#define ioCanConnectToPort(netAddr, port) 1
-#define ioCanListenOnPort(s, port) 1
-#define ioDisableSocketAccess() 1
-#define ioHasSocketAccess() 1
-#endif
-
