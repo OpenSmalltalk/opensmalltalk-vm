@@ -6,21 +6,26 @@
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0\fs24 \cf0 Mac VM 3.7.1 mach-o build for Carbon, and build for Classic. Support for Croquet, and support for Safari\
-Jan 6th, 2004 (3.7.1b2)\
+Feb 18th, 2004 (3.7.2b1)\
 Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 Notes About previous VM.\
 3.2.6 VM classic have an issue when the tickcount clock goes over 0x7FFFFFFF, about 24 days. \
-This exhibits it self as Squeak won't accept user input, or allow you to switch under os 9 or earlier.\
-Starting a Squeak image hangs durning the screen painting.\
-Restarting the mac solved these problems. Force quit does not.\
+This exhibits itself when Squeak won't accept user input, or allow you to switch under os 9 or earlier after 24 days,\
+or starting a Squeak image hangs during the initial screen painting.\
+Restarting the mac solved these problems. Force quitting Squeak does not.\
 This is fixed in 3.2.7b3\
+\
 Some issues with alias files and folder were fixed in 3.2.7b6 and 3.2.8b3\
 You need 3.5.3b1 for Safari plugin support\
-3.6.1 seems a fine VM, from what people tell me, but now we've 3.7.1...\
+3.6.1 seems a fine VM, from what people tell me, but now we've 3.7.2...\
 \
+3.7.2b1 			Changes for NPSqueak to fix issues with full screen mode under Safari 1.2 (V125) \
+				Usage of VMMaker3-7b2 to build interp.c\
+				Unicode values now come up from the classic VM versus the historical (1984) keycode values, this makes Tweak work.\
+		\
 3.7.1b2		\
 JPEG READER WRITER\
 				usage of Apple '-fast' uncovered a source code issue, initialization routines for internal jpeg plugin were not returning true or false, before this was kinda of considered as true. But when compiled with -fast it's zero, meaning the inialization failed, but that is bogus.\
@@ -34,9 +39,8 @@ JPEG READER WRITER\
 
 \f0 \
 3.7.0b2		\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f1 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -44,17 +48,14 @@ JPEG READER WRITER\
 				b) Support for sqSocketListenOnPortBacklogSizeInterface, which allows you to specify the interface to use for the listen should work both for os-x and os-9.\
 				c) Usage of VMMaker3-7a2.\
 				d) Special change sets: make primitive point x/y internal, and slightly faster activate.\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 \
+\f0 \
 3.7.0b1 			\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f1 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 3.6.1b7			\
+\f0 3.6.1b7			\
 SqMacWindow.c	Fix for new rending code when used with 2.8 or earlier images, mouse clicks reported in wrong place\
 \
 3.6.1b6\
