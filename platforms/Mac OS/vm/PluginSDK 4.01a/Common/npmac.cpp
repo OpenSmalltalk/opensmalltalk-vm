@@ -76,7 +76,6 @@
 //
 // Define PLUGIN_TRACE to 1 to have the wrapper functions emit
 // DebugStr messages whenever they are called.
-//
 //#define PLUGIN_TRACE 1
 
 #if PLUGIN_TRACE
@@ -293,23 +292,22 @@ void NPN_ForceRedraw(NPP instance)
 //
 //::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::::
 
-NPError 	Private_Initialize(void);
-void 		Private_Shutdown(void);
-NPError		Private_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc, char* argn[], char* argv[], NPSavedData* saved);
-NPError 	Private_Destroy(NPP instance, NPSavedData** save);
-NPError		Private_SetWindow(NPP instance, NPWindow* window);
-NPError		Private_NewStream(NPP instance, NPMIMEType type, NPStream* stream, NPBool seekable, uint16* stype);
-NPError		Private_DestroyStream(NPP instance, NPStream* stream, NPError reason);
-int32		Private_WriteReady(NPP instance, NPStream* stream);
-int32		Private_Write(NPP instance, NPStream* stream, int32 offset, int32 len, void* buffer);
-void		Private_StreamAsFile(NPP instance, NPStream* stream, const char* fname);
-void		Private_Print(NPP instance, NPPrint* platformPrint);
-int16 		Private_HandleEvent(NPP instance, void* event);
-void        Private_URLNotify(NPP instance, const char* url, NPReason reason, void* notifyData);
-jref		Private_GetJavaClass(void);
+extern "C" NPError 	Private_Initialize(void);
+extern "C" void 		Private_Shutdown(void);
+extern "C" NPError		Private_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc, char* argn[], char* argv[], NPSavedData* saved);
+extern "C" NPError 	Private_Destroy(NPP instance, NPSavedData** save);
+extern "C" NPError		Private_SetWindow(NPP instance, NPWindow* window);
+extern "C" NPError		Private_NewStream(NPP instance, NPMIMEType type, NPStream* stream, NPBool seekable, uint16* stype);
+extern "C" NPError		Private_DestroyStream(NPP instance, NPStream* stream, NPError reason);
+extern "C" int32		Private_WriteReady(NPP instance, NPStream* stream);
+extern "C" int32		Private_Write(NPP instance, NPStream* stream, int32 offset, int32 len, void* buffer);
+extern "C" void		Private_StreamAsFile(NPP instance, NPStream* stream, const char* fname);
+extern "C" void		Private_Print(NPP instance, NPPrint* platformPrint);
+extern "C" int16 		Private_HandleEvent(NPP instance, void* event);
+extern "C" void        Private_URLNotify(NPP instance, const char* url, NPReason reason, void* notifyData);
+extern "C" jref		Private_GetJavaClass(void);
 
-
-NPError Private_Initialize(void)
+extern "C" NPError Private_Initialize(void)
 {
 	NPError err;
 	EnterCodeResource();
@@ -319,7 +317,7 @@ NPError Private_Initialize(void)
 	return err;
 }
 
-void Private_Shutdown(void)
+extern "C" void Private_Shutdown(void)
 {
 	EnterCodeResource();
 	PLUGINDEBUGSTR("\pShutdown;g;");
@@ -331,7 +329,7 @@ void Private_Shutdown(void)
 }
 
 
-NPError	Private_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc, char* argn[], char* argv[], NPSavedData* saved)
+extern "C" NPError	Private_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc, char* argn[], char* argv[], NPSavedData* saved)
 {
 	EnterCodeResource();
 	NPError ret = NPP_New(pluginType, instance, mode, argc, argn, argv, saved);
@@ -340,7 +338,7 @@ NPError	Private_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc
 	return ret;	
 }
 
-NPError Private_Destroy(NPP instance, NPSavedData** save)
+extern "C" NPError Private_Destroy(NPP instance, NPSavedData** save)
 {
 	NPError err;
 	EnterCodeResource();
@@ -350,7 +348,7 @@ NPError Private_Destroy(NPP instance, NPSavedData** save)
 	return err;
 }
 
-NPError Private_SetWindow(NPP instance, NPWindow* window)
+extern "C" NPError Private_SetWindow(NPP instance, NPWindow* window)
 {
 	NPError err;
 	EnterCodeResource();
@@ -360,7 +358,7 @@ NPError Private_SetWindow(NPP instance, NPWindow* window)
 	return err;
 }
 
-NPError Private_NewStream(NPP instance, NPMIMEType type, NPStream* stream, NPBool seekable, uint16* stype)
+extern "C" NPError Private_NewStream(NPP instance, NPMIMEType type, NPStream* stream, NPBool seekable, uint16* stype)
 {
 	NPError err;
 	EnterCodeResource();
@@ -370,7 +368,7 @@ NPError Private_NewStream(NPP instance, NPMIMEType type, NPStream* stream, NPBoo
 	return err;
 }
 
-int32 Private_WriteReady(NPP instance, NPStream* stream)
+extern "C" int32 Private_WriteReady(NPP instance, NPStream* stream)
 {
 	int32 result;
 	EnterCodeResource();
@@ -380,7 +378,7 @@ int32 Private_WriteReady(NPP instance, NPStream* stream)
 	return result;
 }
 
-int32 Private_Write(NPP instance, NPStream* stream, int32 offset, int32 len, void* buffer)
+extern "C" int32 Private_Write(NPP instance, NPStream* stream, int32 offset, int32 len, void* buffer)
 {
 	int32 result;
 	EnterCodeResource();
@@ -390,7 +388,7 @@ int32 Private_Write(NPP instance, NPStream* stream, int32 offset, int32 len, voi
 	return result;
 }
 
-void Private_StreamAsFile(NPP instance, NPStream* stream, const char* fname)
+extern "C" void Private_StreamAsFile(NPP instance, NPStream* stream, const char* fname)
 {
 	EnterCodeResource();
 	PLUGINDEBUGSTR("\pStreamAsFile;g;");
@@ -399,7 +397,7 @@ void Private_StreamAsFile(NPP instance, NPStream* stream, const char* fname)
 }
 
 
-NPError Private_DestroyStream(NPP instance, NPStream* stream, NPError reason)
+extern "C" NPError Private_DestroyStream(NPP instance, NPStream* stream, NPError reason)
 {
 	NPError err;
 	EnterCodeResource();
@@ -409,7 +407,7 @@ NPError Private_DestroyStream(NPP instance, NPStream* stream, NPError reason)
 	return err;
 }
 
-int16 Private_HandleEvent(NPP instance, void* event)
+extern "C" int16 Private_HandleEvent(NPP instance, void* event)
 {
 	int16 result;
 	EnterCodeResource();
@@ -419,7 +417,7 @@ int16 Private_HandleEvent(NPP instance, void* event)
 	return result;
 }
 
-void Private_Print(NPP instance, NPPrint* platformPrint)
+extern "C" void Private_Print(NPP instance, NPPrint* platformPrint)
 {
 	EnterCodeResource();
 	PLUGINDEBUGSTR("\pPrint;g;");
@@ -427,7 +425,7 @@ void Private_Print(NPP instance, NPPrint* platformPrint)
 	ExitCodeResource();
 }
 
-void Private_URLNotify(NPP instance, const char* url, NPReason reason, void* notifyData)
+extern "C" void Private_URLNotify(NPP instance, const char* url, NPReason reason, void* notifyData)
 {
 	EnterCodeResource();
 	PLUGINDEBUGSTR("\pURLNotify;g;");
@@ -435,8 +433,7 @@ void Private_URLNotify(NPP instance, const char* url, NPReason reason, void* not
 	ExitCodeResource();
 }
 
-
-jref Private_GetJavaClass(void)
+extern "C" jref Private_GetJavaClass(void)
 {
 	EnterCodeResource();
 	PLUGINDEBUGSTR("\pGetJavaClass;g;");
@@ -450,7 +447,6 @@ jref Private_GetJavaClass(void)
     }
     return NULL;
 }
-
 
 void SetUpQD(void);
 void SetUpQD(void)
@@ -535,8 +531,25 @@ void SetUpQD(void)
 	}
 
 }
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+static void* TV2FP (void *tvp) {
+	static uint32 glue[6] = { 0x3D800000, 0x618C0000, 0x800C0000, 0x804C0004, 0x7C0903A6, 0x4E800420 };
+	uint32 * newGlue = NULL ;
 
-
+	if (tvp != NULL ) {
+		newGlue = ( uint32 *) malloc (sizeof(glue));
+		if (newGlue != NULL ) {
+			memcpy(newGlue, glue, sizeof(glue));
+			newGlue[0] |= ((UInt32)tvp >> 16);
+			newGlue[1] |= ((UInt32)tvp & 0xFFFF);
+			MakeDataExecutable(newGlue, sizeof(glue));
+		}
+	}
+	return newGlue;
+}
+#else
+#define TV2FP(foo) foo
+#endif 
 
 int main(NPNetscapeFuncs* nsTable, NPPluginFuncs* pluginFuncs, NPP_ShutdownUPP* unloadUpp);
 
@@ -595,33 +608,37 @@ int main(NPNetscapeFuncs* nsTable, NPPluginFuncs* pluginFuncs, NPP_ShutdownUPP* 
 
 		gNetscapeFuncs.version = nsTable->version;
 		gNetscapeFuncs.size = nsTable->size;
-		gNetscapeFuncs.posturl = nsTable->posturl;
-		gNetscapeFuncs.geturl = nsTable->geturl;
-		gNetscapeFuncs.requestread = nsTable->requestread;
-		gNetscapeFuncs.newstream = nsTable->newstream;
-		gNetscapeFuncs.write = nsTable->write;
-		gNetscapeFuncs.destroystream = nsTable->destroystream;
-		gNetscapeFuncs.status = nsTable->status;
-		gNetscapeFuncs.uagent = nsTable->uagent;
-		gNetscapeFuncs.memalloc = nsTable->memalloc;
-		gNetscapeFuncs.memfree = nsTable->memfree;
-		gNetscapeFuncs.memflush = nsTable->memflush;
-		gNetscapeFuncs.reloadplugins = nsTable->reloadplugins;
-		if( navMinorVers >= NPVERS_HAS_LIVECONNECT )
-		{
-			gNetscapeFuncs.getJavaEnv = nsTable->getJavaEnv;
-			gNetscapeFuncs.getJavaPeer = nsTable->getJavaPeer;
-		}
-		if( navMinorVers >= NPVERS_HAS_NOTIFICATION )
-		{	
-			gNetscapeFuncs.geturlnotify = nsTable->geturlnotify;
-			gNetscapeFuncs.posturlnotify = nsTable->posturlnotify;
-		}
-		gNetscapeFuncs.getvalue = nsTable->getvalue;
-		gNetscapeFuncs.setvalue = nsTable->setvalue;
-		gNetscapeFuncs.invalidaterect = nsTable->invalidaterect;
-		gNetscapeFuncs.invalidateregion = nsTable->invalidateregion;
-		gNetscapeFuncs.forceredraw = nsTable->forceredraw;
+                gNetscapeFuncs.version          = nsTable->version;
+                gNetscapeFuncs.size             = nsTable->size;
+                gNetscapeFuncs.posturl          = (NPN_PostURLUPP)TV2FP( nsTable->posturl);
+                gNetscapeFuncs.geturl           = (NPN_GetURLUPP)TV2FP( nsTable->geturl);
+                gNetscapeFuncs.requestread      = (NPN_RequestReadUPP)TV2FP( nsTable->requestread);
+                gNetscapeFuncs.newstream        = (NPN_NewStreamUPP)TV2FP(nsTable->newstream);
+                gNetscapeFuncs.write            = (NPN_WriteUPP)TV2FP(nsTable->write);
+                gNetscapeFuncs.destroystream    = (NPN_DestroyStreamUPP)TV2FP( nsTable->destroystream);
+                gNetscapeFuncs.status           = (NPN_StatusUPP)TV2FP(nsTable->status);
+                gNetscapeFuncs.uagent           = (NPN_UserAgentUPP)TV2FP(nsTable->uagent);
+                gNetscapeFuncs.memalloc         = (NPN_MemAllocUPP)TV2FP(nsTable->memalloc);
+                gNetscapeFuncs.memfree          = (NPN_MemFreeUPP)TV2FP(nsTable->memfree);
+                gNetscapeFuncs.memflush         = (NPN_MemFlushUPP)TV2FP(nsTable->memflush);
+                gNetscapeFuncs.reloadplugins    = (NPN_ReloadPluginsUPP)TV2FP( nsTable->reloadplugins);
+                if( navMinorVers >= NPVERS_HAS_LIVECONNECT ){ 
+                        gNetscapeFuncs.getJavaEnv   = (NPN_GetJavaEnvUPP)TV2FP(nsTable->getJavaEnv);
+                    gNetscapeFuncs.getJavaPeer  = (NPN_GetJavaPeerUPP)TV2FP( nsTable->getJavaPeer);
+                
+                
+                }                                     
+                if( navMinorVers >= NPVERS_HAS_NOTIFICATION ){ 
+                        gNetscapeFuncs.geturlnotify     = (NPN_GetURLNotifyUPP)TV2FP( nsTable->geturlnotify);
+                    gNetscapeFuncs.posturlnotify    = (NPN_PostURLNotifyUPP)TV2FP( nsTable->posturlnotify);
+                
+                }
+                
+                gNetscapeFuncs.getvalue         = (NPN_GetValueUPP)TV2FP( nsTable->getvalue);
+                gNetscapeFuncs.setvalue         = (NPN_SetValueUPP)TV2FP( nsTable->setvalue);
+                gNetscapeFuncs.invalidaterect   = (NPN_InvalidateRectUPP)TV2FP( nsTable->invalidaterect);
+                gNetscapeFuncs.invalidateregion = (NPN_InvalidateRegionUPP)TV2FP( nsTable->invalidateregion);
+                gNetscapeFuncs.forceredraw      = (NPN_ForceRedrawUPP)TV2FP( nsTable->forceredraw);
 		
 		//
 		// Set up the plugin function table that Netscape will use to
