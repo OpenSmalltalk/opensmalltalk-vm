@@ -6,7 +6,7 @@ Note: ""x asOop: Unsigned"" can cause garbage collection when x is outside Small
 Class {
 	#name : #Unsigned,
 	#superclass : #Behavior,
-	#category : #'VMMaker-SmartSyntaxPlugins'
+	#category : 'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #'plugin generation' }
