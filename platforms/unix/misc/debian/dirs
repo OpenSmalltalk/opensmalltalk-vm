@@ -1,2 +1,5 @@
 usr/bin
-usr/sbin
+usr/share/squeak
+usr/lib/squeak
+usr/man/man1
+

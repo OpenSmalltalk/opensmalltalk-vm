@@ -24,8 +24,8 @@ configure-stamp:
 build: build-stamp
 build-stamp: configure-stamp 
 	dh_testdir
-	(cd build-oss; $(MAKE))
-	(cd build-nas; $(MAKE))
+	(cd build-oss; $(MAKE) squeak squeak.1 inisqueak.1)
+	(cd build-nas; $(MAKE) squeak squeak.1)
 	touch build-stamp
 
 clean:
@@ -34,7 +34,7 @@ clean:
 	rm -f build-stamp configure-stamp
 	rm -rf build-oss build-nas
 	dh_clean -a
-	rm -rf debian/squeak-vm-nas debian/squeak-vm-oss
+	rm -rf debian/squeak-vm-nas debian/squeak-vm-oss debian/inisqueak
 
 
 install: DH_OPTIONS=
@@ -42,10 +42,22 @@ install: build
 	dh_testdir
 	dh_testroot
 	dh_clean -k
-	dh_installdirs
+	dh_installdocs -a -i
 
-	(cd build-oss; $(MAKE) install prefix=$(CURDIR)/debian/squeak-vm-oss/usr)
-	(cd build-nas; $(MAKE) install prefix=$(CURDIR)/debian/squeak-vm-nas/usr)
+	$(foreach audio, oss nas, \
+		install -d $(CURDIR)/debian/squeak-vm-$(audio)/usr/bin; \
+		install -m 755 build-$(audio)/squeak $(CURDIR)/debian/squeak-vm-$(audio)/usr/bin/squeak ; \
+		\
+		install -d $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/squeak-3.2.4653 ; \
+		install -m 644 build-$(audio)/squeak.map $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/squeak-3.2.4653 ; \
+		dh_installman -psqueak-vm-$(audio)  build-$(audio)/squeak.1 ; \
+	)
+
+
+	install -d $(CURDIR)/debian/inisqueak/usr/bin
+	install -m 755 build-oss/inisqueak $(CURDIR)/debian/inisqueak/usr/bin/
+
+	dh_installman -pinisqueak build-oss/inisqueak.1
 
 #	dh_movefiles
 
@@ -53,12 +65,12 @@ install: build
 # Build architecture-independent files here.
 # Pass -i to all debhelper commands in this target to reduce clutter.
 binary-indep: build install
-#	dh_testdir -i
-#	dh_testroot -i
+	dh_testdir -i
+	dh_testroot -i
 #	dh_installdebconf -i
-#	dh_installdocs -i
+	dh_installdocs -i
 #	dh_installexamples -i
-#	dh_installmenu -i
+	dh_installmenu -i
 #	dh_installlogrotate -i
 #	dh_installemacsen -i
 #	dh_installpam -i
@@ -69,15 +81,15 @@ binary-indep: build install
 #	ln -s squeak.1 $(DESTDIR)/usr/share/man/inisqueak.1
 #	dh_installinfo -i
 #	dh_undocumented -i
-#	dh_installchangelogs  -i
+	dh_installchangelogs  -i
 #	dh_link -i
-#	dh_compress -i
-#	dh_fixperms -i
-#	dh_installdeb -i
+	dh_compress -i
+	dh_fixperms -i
+	dh_installdeb -i
 #	dh_perl -i
-#	dh_gencontrol -i
-#	dh_md5sums -i
-#	dh_builddeb -i
+	dh_gencontrol -i
+	dh_md5sums -i
+	dh_builddeb -i
 
 # Build architecture-dependent files here.
 binary-arch: build install
@@ -97,9 +109,8 @@ binary-arch: build install
 #	ln -s squeak.1 $(CURDIR)/debian/usr/share/man/inisqueak.1
 #	dh_installinfo -a
 #	dh_undocumented -a
-#	dh_installchangelogs  -a
+	dh_installchangelogs  -a
 	dh_strip -a
-	dh_link -a /usr/share/man/man1/squeak.1 /usr/share/man/man1/inisqueak.1
 	dh_compress -a
 	dh_fixperms -a
 #	dh_makeshlibs -a
