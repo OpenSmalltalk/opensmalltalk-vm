@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32OpenGL.c,v 1.6 2002/05/29 11:43:03 andreasraab Exp $
+*   RCSID:   $Id: sqWin32OpenGL.c,v 1.7 2002/09/05 19:30:45 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -427,19 +427,29 @@ FAILED:
 }
 #endif
 
-int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, int h)
+#define SUPPORTED_FLAGS (\
+    B3D_HARDWARE_RENDERER \
+  | B3D_SOFTWARE_RENDERER \
+  | B3D_STENCIL_BUFFER)
+
+int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 {
-  PIXELFORMATDESCRIPTOR pfd, goodPFD;
+  PIXELFORMATDESCRIPTOR pfd, goodPFD, matchPFD;
   int depth, i, goodIndex, max, index;
   char *string;
   glRenderer *renderer;
+
+  if(flags & ~SUPPORTED_FLAGS) {
+    DPRINTF(1, (fp, "ERROR: Unsupported flags requested( %d)\n", flags));
+    return -1;
+  }
 
   for(i=0; i < MAX_RENDERER; i++) {
     if(allRenderer[i].used == 0) break;
   }
   if(i >= MAX_RENDERER) {
     DPRINTF(1, (fp, "ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
-    return 0;
+    return -1;
   }
   index = i;
   renderer = allRenderer+index;
@@ -470,48 +480,39 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
   goodPFD.nSize = 0;
   goodIndex = 0;
 
+  /* setup the matching PFD */
+  matchPFD.dwFlags = 0;
+  /* standard requirements */
+  matchPFD.dwFlags |= PFD_DRAW_TO_WINDOW;
+  matchPFD.dwFlags |= PFD_SUPPORT_OPENGL;
+  matchPFD.dwFlags |= PFD_TYPE_RGBA;
+  matchPFD.dwFlags |= PFD_DOUBLEBUFFER;
+
   for(i=1; i<= max; i++) {
     DescribePixelFormat(renderer->hDC, i, sizeof(pfd), &pfd);
     DPRINTF(3,(fp, "\n#### Checking pixel format %d:\n", i));
     printPFD(&pfd, 3);
-    if((pfd.dwFlags & PFD_DRAW_TO_WINDOW) == 0) 
-      continue; /* can't draw to window */
-    if((pfd.dwFlags & PFD_SUPPORT_OPENGL) == 0) 
-      continue; /* can't use OpenGL */
-    if((pfd.dwFlags & PFD_DOUBLEBUFFER) == 0) 
-      continue;  /* can't double buffer */
+
+    if((pfd.dwFlags & matchPFD.dwFlags) != matchPFD.dwFlags)
+      continue; /* one of the basic requirements didn't work */
+
     if(pfd.iPixelType != PFD_TYPE_RGBA) 
       continue; /* not an RGBA format */
-    if(pfd.cDepthBits < 16) 
+
+    if(pfd.cDepthBits < 12)
       continue; /* no enough z-buffer */
+
     if(pfd.iLayerType != PFD_MAIN_PLANE) 
       continue; /* overlay/underlay */
-#ifdef TEA
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning
-#warning "TEA: Stencil buffer required"
-#warning
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning "**************************************************************"
-    if(pfd.cStencilBits < 8)
-      continue; /* need stencil bits */
-#endif
+
+    if(flags & B3D_STENCIL_BUFFER)
+      if(pfd.cStencilBits == 0)
+	continue; /* need stencil bits */
 
     if((pfd.dwFlags & PFD_GENERIC_FORMAT) == 0) {
       /* This indicates an accellerated driver */
-      if(!allowHardware) continue;
+      if((flags & B3D_HARDWARE_RENDERER) == 0) continue;
       DPRINTF(3,(fp,"===> This is an accelerated driver\n"));
-#ifdef ENABLE_FORCED_PFD
-      if(forcedPFD > 0) {
-	if(--forcedPFD == 0) {
-	  goodPFD = pfd; goodIndex = i;
-	  break;
-	}
-      }
-#endif
       if(goodPFD.nSize == 0) {
         goodPFD = pfd; goodIndex = i;
       } else if(goodPFD.cColorBits == depth) {
@@ -519,16 +520,9 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
       }
     } else if(pfd.dwFlags & PFD_GENERIC_ACCELERATED) {
       /* This indicates an accellerated mini-driver */
-      if(!allowHardware) continue;
+      if((flags & B3D_HARDWARE_RENDERER) == 0) continue;
       DPRINTF(3,(fp,"===> This is an accelerated mini-driver\n"));
-#ifdef ENABLE_FORCED_PFD
-      if(forcedPFD > 0) {
-	if(--forcedPFD == 0) {
-	  goodPFD = pfd; goodIndex = i;
-	  break;
-	}
-      }
-#endif
+
       if(goodPFD.nSize == 0) {
         goodPFD = pfd; goodIndex = i;
       } else if(goodPFD.cColorBits == depth) {
@@ -539,17 +533,13 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
     if( (pfd.dwFlags & PFD_GENERIC_FORMAT) &&
 	((pfd.dwFlags & PFD_GENERIC_ACCELERATED) == 0)) {
       /* this indicates a non-accellerated driver */
-      if(!allowSoftware) continue;
-	  if(goodPFD.nSize == 0) {
+      if((flags & B3D_SOFTWARE_RENDERER) == 0) continue;
+      if(goodPFD.nSize == 0) {
         goodPFD = pfd; goodIndex = i;
-	  }
+      }
     }
   }
-  if((goodPFD.nSize == 0) 
-#ifdef ENABLE_FORCED_PFD
-     || (forcedPFD > 0)
-#endif
-     ) {
+  if((goodPFD.nSize == 0)) {
     /* We didn't find an accellerated driver. */
     DPRINTF(3,(fp,"#### WARNING: No accelerated driver found; bailing out\n"));
     goto FAILED;

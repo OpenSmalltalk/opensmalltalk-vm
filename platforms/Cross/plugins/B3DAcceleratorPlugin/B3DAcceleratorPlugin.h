@@ -57,18 +57,17 @@ typedef struct B3DPrimitiveLight {
 	float spotExponent;
 } B3DPrimitiveLight;
 
-#ifdef TEA
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning
-#warning "TEA: D3D disabled"
-#warning
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning "**************************************************************"
-# define WIN32_PURE_GL
-#endif
+/* Renderer creation flags:
+   B3D_SOFTWARE_RENDERER: Enable use of software renderers
+   B3D_HARDWARE_RENDERER: Enable use of hardware renderers
+   B3D_STENCIL_BUFFER:    Request stencil buffer
+   More flags may be added - if they are not supported by the platform
+   code the creation primitive should fail.
+*/
+#define B3D_SOFTWARE_RENDERER 0x0001
+#define B3D_HARDWARE_RENDERER 0x0002
+#define B3D_STENCIL_BUFFER    0x0004
+
 
 /* Win32 defaults to DUAL D3D/GL interface everyone else to OpenGL */
 #if defined(WIN32)
@@ -83,6 +82,10 @@ typedef struct B3DPrimitiveLight {
 #define B3DX_GL
 #endif
 
+/* b3dxCreateRenderer is now obsolete but older plugin sources may still use it */
+#define b3dxCreateRenderer(sw,hw,x,y,w,h) b3dxCreateRendererFlags(x,y,w,h, (sw ? B3D_SOFTWARE_RENDERER : 0) | (hw ? B3D_HARDWARE_RENDERER : 0))
+
+
 #if defined(B3DX_GL)
 #define b3dxInitialize            glInitialize
 #define b3dxShutdown              glShutdown
@@ -96,7 +99,7 @@ typedef struct B3DPrimitiveLight {
 #define b3dxTextureSurfaceHandle glTextureSurfaceHandle
 #define b3dxCompositeTexture      glCompositeTexture
 
-#define b3dxCreateRenderer        glCreateRenderer
+#define b3dxCreateRendererFlags   glCreateRendererFlags
 #define b3dxDestroyRenderer        glDestroyRenderer
 #define b3dxIsOverlayRenderer     glIsOverlayRenderer
 #define b3dxGetRendererSurfaceHandle glGetRendererSurfaceHandle
@@ -138,7 +141,7 @@ typedef struct B3DPrimitiveLight {
 #define b3dxTextureSurfaceHandle d3dTextureSurfaceHandle
 #define b3dxCompositeTexture      d3dCompositeTexture
 
-#define b3dxCreateRenderer        d3dCreateRenderer
+#define b3dxCreateRendererFlags    d3dCreateRendererFlags
 #define b3dxDestroyRenderer        d3dDestroyRenderer
 #define b3dxGetRendererSurfaceHandle d3dGetRendererSurfaceHandle
 #define b3dxGetRendererSurfaceWidth d3dGetRendererSurfaceWidth
@@ -180,7 +183,7 @@ int b3dxTextureSurfaceHandle(int renderer, int handle); /* return handle or <0 i
 int b3dxCompositeTexture(int renderer, int handle, int x, int y, int w, int h, int translucent); /* return true on success; else false */
 
 /* Renderer primitives */
-int b3dxCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, int h); /* return handle or -1 on error */
+int b3dxCreateRendererFlags(int x, int y, int w, int h, int flags); /* return handle or -1 on error */
 int b3dxDestroyRenderer(int handle); /* return true on success, else false */
 int b3dxIsOverlayRenderer(int handle); /* return true/false */
 int b3dxSetBufferRect(int handle, int x, int y, int w, int h); /* return true on success, false on error */
@@ -234,8 +237,8 @@ extern int glMode;
   (glMode ? glTextureSurfaceHandle(r,h) : d3dTextureSurfaceHandle(r,h))
 #define b3dxCompositeTexture(r,hh,x,y,w,h,t) \
   (glMode ? glCompositeTexture(r,hh,x,y,w,h,t) : d3dCompositeTexture(r,hh,x,y,w,h,t))
-#define b3dxCreateRenderer(sw,hw,x,y,w,h) \
-  (glMode ? glCreateRenderer(sw,hw,x,y,w,h) : d3dCreateRenderer(sw,hw,x,y,w,h))
+#define b3dxCreateRendererFlags(x,y,w,h,f) \
+  (glMode ? glCreateRendererFlags(x,y,w,h,f) : d3dCreateRendererFlags(x,y,w,h,f))
 #define b3dxDestroyRenderer(h) \
   (glMode ? glDestroyRenderer(h) : d3dDestroyRenderer(h))
 #define b3dxIsOverlayRenderer(h) \

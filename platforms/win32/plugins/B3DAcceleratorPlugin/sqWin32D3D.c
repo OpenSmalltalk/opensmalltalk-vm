@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32D3D.c,v 1.7 2002/06/16 18:25:07 andreasraab Exp $
+*   RCSID:   $Id: sqWin32D3D.c,v 1.8 2002/09/05 19:30:45 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -105,8 +105,7 @@ typedef struct d3dRenderer {
   int surfaceID;
 
   /* device description of renderer */
-  BOOL fAllowSoftware;
-  BOOL fAllowHardware;
+  int  devFlags; /* device flags from CreateRenderer */
   BOOL fDeviceFound;
   D3DDEVICEDESC7 ddDesc;
   GUID guidDevice;
@@ -390,9 +389,9 @@ EnumDeviceCallback(LPSTR            lpszDeviceDesc,
 
   /* The device must match hw/sw constraints from the renderer */
   if(fIsHardware) {
-    if(!renderer->fAllowHardware) return D3DENUMRET_OK;
+    if(!(renderer->devFlags & B3D_HARDWARE_RENDERER)) return D3DENUMRET_OK;
   } else {
-    if(!renderer->fAllowSoftware) return D3DENUMRET_OK;
+    if(!(renderer->devFlags & B3D_HARDWARE_RENDERER)) return D3DENUMRET_OK;
   }
 
   /* this is a device we're interested in */
@@ -844,17 +843,26 @@ int d3dDestroyRenderer(int handle) {
   return 1;
 }
 
-int d3dCreateRenderer(int allowSoftware, int allowHardware, 
-		      int x, int y, int w, int h) {
+#define SUPPORTED_FLAGS (\
+    B3D_HARDWARE_RENDERER \
+  | B3D_SOFTWARE_RENDERER)
+
+int d3dCreateRendererFlags(int x, int y, int w, int h, int flags) {
   int i, index;
   d3dRenderer *renderer;
+
+  if(flags & ~SUPPORTED_FLAGS) {
+    DPRINTF(1, (fp, "ERROR: Unsupported flags requested( %d)\n", flags));
+    return -1;
+  }
+
   DPRINTF(3, (fp, "---- Initializing D3D ----\n"));
   for(i=0; i < MAX_RENDERER; i++) {
     if(allRenderer[i].fUsed == 0) break;
   }
   if(i >= MAX_RENDERER) {
     DPRINTF(1, (fp, "ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
-    return 0;
+    return -1;
   }
   index = i;
   renderer = allRenderer+index;
@@ -864,8 +872,7 @@ int d3dCreateRenderer(int allowSoftware, int allowHardware,
   renderer->bufferRect[1] = y;
   renderer->bufferRect[2] = w;
   renderer->bufferRect[3] = h;
-  renderer->fAllowSoftware = allowSoftware;
-  renderer->fAllowHardware = allowHardware;
+  renderer->devFlags = flags;
   if(!d3dInitializePrimary()) {
     /* disable DX if we cannot create the primary objects */
     fDirectXEnable = 0;
