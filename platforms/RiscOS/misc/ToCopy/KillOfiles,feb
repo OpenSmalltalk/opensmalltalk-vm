@@ -1,0 +1,2 @@
+ifthere %0.o then wipe %0.o ~c~vf
+cdir %0.o
