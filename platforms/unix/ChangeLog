@@ -1,3 +1,25 @@
+2003-08-23  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm/sqUnixMain.c (recordFullPathForVmName): stat()
+	the result of readlink() to avoid embarassement on early linux
+	kernels.
+
+	* util/Makefile.rpm (%.spec): Unconditional rebuild.
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c
+	(handleEvents): Return true if there are events waiting in the
+	squeak queue.
+	(display_ioRelinquishProcessorForMicroseconds): Don't block if
+	handleEvents returns true.
+
+	* platforms/unix/vm-display-Quartz/sqUnixQuartz.m (qz2sqButton):
+	Enable button mapping for 3-button mice.
+
+	* platforms/unix/vm/sqUnixMain.c (recordFullPathForVmName): Read
+	absolute path of executable out of /proc on Linux.
+
+	* platforms/unix/vm/sqUnixExternalPrims.c: vmLibDir moved to sqUnixMain.
+
 2003-08-22  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds):
