@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.6 2002/03/05 00:25:44 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.7 2002/03/25 07:09:34 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *
@@ -48,7 +48,6 @@
     #else
       #define TARGET_API_MAC_CARBON 1
     #endif 
-    #undef ioLowResMSecs
     #define ftell ftello
     #define fseek fseeko
     typedef FILE *sqImageFile;
@@ -91,6 +90,7 @@ void *	    sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize);
 #define reserveExtraCHeapBytes(origHeapSize, bytesToReserve) (origHeapSize - bytesToReserve)
 
 /* undefine clock macros that are implemented as functions */
+#undef ioLowResMSecs
 #undef ioMicroMSecs
 #undef ioMSecs
 #define ioMSecs ioMicroMSecs
