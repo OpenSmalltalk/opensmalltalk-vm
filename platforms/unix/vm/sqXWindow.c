@@ -561,10 +561,7 @@ int disconnectXDisplay()
 {
   if (isConnectedToXServer) {
     XSync(stDisplay, False);
-    while (HandleEvents())
-      {
-        /* process all pending window events */
-       }
+    HandleEvents(); /* process all pending window events */
      XDestroyWindow(stDisplay, stWindow);
      if (browserWindow == 0)
        XDestroyWindow(stDisplay, stParent);
@@ -887,6 +884,7 @@ static void signalInputEvent()
 }
 
 
+
 static void recordMouseEvent(XButtonEvent *xevt, int pressFlag)
 {
   sqMouseEvent *evt= allocateMouseEvent();
@@ -945,151 +943,157 @@ int HandleEvents(void)
   return 0;
 #else /*!HEADLESS*/
   XEvent theEvent;
+
+  printf("HandleEvents  %d\n", random());
   
-  if (!isConnectedToXServer || !XPending(stDisplay))
+  
+  if (!isConnectedToXServer)
     return 0;
+  
 
-  XNextEvent(stDisplay, &theEvent);
+  while(XPending(stDisplay)) {
+    XNextEvent(stDisplay, &theEvent);
       
-  switch (theEvent.type)
-    {
-    case MotionNotify:
-      mousePosition.x= ((XMotionEvent *)&theEvent)->x;
-      mousePosition.y= ((XMotionEvent *)&theEvent)->y;
-      if (inputEventSemaIndex != 0)
-	{
-	  recordMouseEvent((XButtonEvent *)&theEvent, true);
-	}
-      break;
-
-    case ButtonPress:
-      recordMouseDown((XButtonEvent *)&theEvent);
-      if (inputEventSemaIndex != 0)
-	{
-	  recordMouseEvent((XButtonEvent *)&theEvent, true);
-	}
-      return false;
-      break;
-
-    case ButtonRelease:
-      recordModifierButtons((XButtonEvent *)&theEvent);
-      /* button up on "paste" causes a selection retrieval:
-	 record the event time in case we need it later */
-      stButtonTime= ((XButtonEvent *)&theEvent)->time;
-      if (inputEventSemaIndex != 0)
-	{
-	  recordMouseEvent((XButtonEvent *)&theEvent, false);
-	}
-      return false;
-      break;
-
-    case KeyPress:
-      recordModifierButtons((XButtonEvent *)&theEvent);
-      recordKeystroke((XKeyEvent *)&theEvent);
-      if (inputEventSemaIndex != 0)
-	{
-	  recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyDown);
-	  recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyChar);
-	}
-      break;
-
-    case KeyRelease:
-      if (inputEventSemaIndex != 0)
-	{
-	  recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyUp);
-	}
-      break;
-
-    case SelectionClear:
-      stOwnsSelection= 0;
-      break;
-
-    case SelectionRequest:
-      sendSelection(&theEvent.xselectionrequest);
-      break;
-
-    case Expose:
+    switch (theEvent.type)
       {
-	XExposeEvent *ex= (XExposeEvent *)&theEvent;
-#      if defined(USE_XSHM)
-	if (asyncUpdate)
+      case MotionNotify:
+	mousePosition.x= ((XMotionEvent *)&theEvent)->x;
+	mousePosition.y= ((XMotionEvent *)&theEvent)->y;
+	if (inputEventSemaIndex != 0)
 	  {
-	    /* wait for pending updates */
-	       /* XXX Lex Spoon has observed an infinite recursion here; it should be investigated further.... */
-	    while (completions) HandleEvents();
+	    recordMouseEvent((XButtonEvent *)&theEvent, true);
 	  }
+	break;
+
+      case ButtonPress:
+	recordMouseDown((XButtonEvent *)&theEvent);
+	if (inputEventSemaIndex != 0)
+	  {
+	    recordMouseEvent((XButtonEvent *)&theEvent, true);
+	  }
+	break;
+
+      case ButtonRelease:
+	recordModifierButtons((XButtonEvent *)&theEvent);
+	/* button up on "paste" causes a selection retrieval:
+	   record the event time in case we need it later */
+	stButtonTime= ((XButtonEvent *)&theEvent)->time;
+	if (inputEventSemaIndex != 0)
+	  {
+	    recordMouseEvent((XButtonEvent *)&theEvent, false);
+	  }
+	break;
+
+      case KeyPress:
+	recordModifierButtons((XButtonEvent *)&theEvent);
+	recordKeystroke((XKeyEvent *)&theEvent);
+	if (inputEventSemaIndex != 0)
+	  {
+	    recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyDown);
+	    recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyChar);
+	  }
+	break;
+
+      case KeyRelease:
+	recordModifierButtons((XButtonEvent *)&theEvent);
+	if (inputEventSemaIndex != 0)
+	  {
+	    recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyUp);
+	  }
+	break;
+
+      case SelectionClear:
+	stOwnsSelection= 0;
+	break;
+
+      case SelectionRequest:
+	sendSelection(&theEvent.xselectionrequest);
+	break;
+
+      case Expose:
+	{
+	  XExposeEvent *ex= (XExposeEvent *)&theEvent;
+#      if defined(USE_XSHM)
+	  if (asyncUpdate)
+	    {
+	      /* wait for pending updates */
+	      /* XXX Lex Spoon has observed an infinite recursion here; it should be investigated further.... */
+	      while (completions) HandleEvents();
+	    }
 #      endif
 #      ifdef FULL_UPDATE_ON_EXPOSE
-	/* ignore it if there are other exposures upstream */
-	if (ex->count == 0)
-	  fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
+	  /* ignore it if there are other exposures upstream */
+	  if (ex->count == 0)
+	    fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
 #      else
-	redrawDisplay(ex->x, ex->x + ex->width, ex->y, ex->y + ex->height);
+	  redrawDisplay(ex->x, ex->x + ex->width, ex->y, ex->y + ex->height);
 #      endif /*!FULL_UPDATE_ON_EXPOSE*/
-      }
-      break;
+	}
+	break;
 
-    case MapNotify:
-      /* The window has just been mapped, possibly for the first
-	 time: update mousePosition (which otherwise may not be
-	 set before the first button event). */
-      getMousePosition();
-      noteWindowChange();
-      break;
-
-    case UnmapNotify:
-      {
-	if (sleepWhenUnmapped)
-	  do
-	    {
-	      XNextEvent(stDisplay, &theEvent);
-	      switch (theEvent.type)
-		{
-		case SelectionClear:
-		  stOwnsSelection= 0;
-		  break;
-		case SelectionRequest:
-		  sendSelection(&theEvent.xselectionrequest);
-		  break;
-		}
-	    } while (theEvent.type != MapNotify);
+      case MapNotify:
+	/* The window has just been mapped, possibly for the first
+	   time: update mousePosition (which otherwise may not be
+	   set before the first button event). */
 	getMousePosition();
-      }
-      noteWindowChange();
-      break;
-
-    case ClientMessage:
-      if (browserWindow != 0)
-	pluginHandleEvent(&theEvent);
-      break;
-
-    case ConfigureNotify:
-      {
-	XConfigureEvent *ec= (XConfigureEvent *)&theEvent;
-#      if defined(USE_XSHM)
-	if (asyncUpdate)
-	  {
-	    /* wait for pending updates */
-	    while (completions) HandleEvents();
-	  }
-#      endif
-	if (windowState != WIN_ZOOMED)
-	  XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
 	noteWindowChange();
-      }
-      break;
+	break;
 
-    case MappingNotify:
-      XRefreshKeyboardMapping((XMappingEvent *) &theEvent);
-      break;
+      case UnmapNotify:
+	{
+	  if (sleepWhenUnmapped)
+	    do
+	      {
+		XNextEvent(stDisplay, &theEvent);
+		switch (theEvent.type)
+		  {
+		  case SelectionClear:
+		    stOwnsSelection= 0;
+		    break;
+		  case SelectionRequest:
+		    sendSelection(&theEvent.xselectionrequest);
+		    break;
+		  }
+	      } while (theEvent.type != MapNotify);
+	  getMousePosition();
+	}
+	noteWindowChange();
+	break;
+
+      case ClientMessage:
+	if (browserWindow != 0)
+	  pluginHandleEvent(&theEvent);
+	break;
+
+      case ConfigureNotify:
+	{
+	  XConfigureEvent *ec= (XConfigureEvent *)&theEvent;
+#      if defined(USE_XSHM)
+	  if (asyncUpdate)
+	    {
+	      /* wait for pending updates */
+	      while (completions) HandleEvents();
+	    }
+#      endif
+	  if (windowState != WIN_ZOOMED)
+	    XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
+	  noteWindowChange();
+	}
+	break;
+
+      case MappingNotify:
+	XRefreshKeyboardMapping((XMappingEvent *) &theEvent);
+	break;
 	  
 #  ifdef USE_XSHM
-    default:
-      if (theEvent.type == completionType) --completions;
-      break;
+      default:
+	if (theEvent.type == completionType) --completions;
+	break;
 #  endif
-    }
-  return 1;
+      }
+  }
+  
+  return 0;
 #endif /* !HEADLESS */
 }
 
