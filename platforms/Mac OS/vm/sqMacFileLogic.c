@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.10 2002/08/06 21:42:48 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.11 2003/06/20 01:47:37 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -591,7 +591,9 @@ int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,
  int *isFolder,int *createDateStorage,int *modificationDateStorage,squeakFileOffsetType *sizeOfFile,Str255 *longFileName) {
     long        aliasGestaltInfo;
     CInfoPBRec pb;
-    Boolean     result,isFolder2;
+    Boolean     isFolder2;
+    OSErr	error,result;
+    
     *isFolder = false;
         
     pb.hFileInfo.ioNamePtr = name;
@@ -600,7 +602,7 @@ int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,
     pb.hFileInfo.ioVRefNum = spec->vRefNum;
     pb.hFileInfo.ioDirID = spec->parID;
 
-    if (PBGetCatInfoSync(&pb) == noErr) {
+    if ((error = PBGetCatInfoSync(&pb)) == noErr) {
     	if ((pb.hFileInfo.ioFlFndrInfo.fdFlags & kIsAlias) && doAlias) {
 		    FSSpec spec2,spec3;
 		    Boolean isAlias;
@@ -623,7 +625,7 @@ int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,
 			*isFolder = isFolder2;
             if (err == noErr) {
                 resolveLongName(0,0,nil,&spec3,*isFolder,longFileName,sizeOfFile);
-                result = true;
+                result = noErr;
                 goto done;
 		    }
     	}
@@ -635,10 +637,10 @@ int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,
             
         resolveLongName(pb.hFileInfo.ioVRefNum,pb.hFileInfo.ioFlParID,name,nil,((pb.hFileInfo.ioFlAttrib & kioFlAttribDirMask) > 0),longFileName,sizeOfFile);
         spec->parID = pb.hFileInfo.ioDirID;
-        result = true;
+        result = noErr;
         goto done;
     }
-    result = false;
+    result = error;
     memcpy(longFileName,name,sizeof(StrFileName));
     
     done:
