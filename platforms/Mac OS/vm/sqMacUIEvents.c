@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.23 2004/08/03 02:42:18 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.24 2004/09/03 00:19:18 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -24,8 +24,7 @@
 *  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 *  3.7.1b3 Jan 29th, 2004  JMM return unicode for classic version versus virtual keyboard code 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  alteration to unicode key capture
-notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
-IsUserCancelEventRef
+notes: IsUserCancelEventRef
 
 *****************************************************************************/
 #if !TARGET_API_MAC_CARBON 
@@ -164,11 +163,11 @@ int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
 int ioProcessEvents(void) {
-#ifndef BROWSERPLUGIN
 	/* This is a noop when running as a plugin; the browser handles events. */
 	static unsigned long   nextPollTick = 0, nextPowerCheck=0, disableIdleTickLimit=0;
 	unsigned long   clockTime;
 
+#ifndef BROWSERPLUGIN
     clockTime = ioLowResMSecs();
 	if (abs(nextPollTick - clockTime) >= 16) {
 		/* time to process events! */
@@ -355,56 +354,45 @@ void HandleMouseDown(EventRecord *theEvent) {
 
 #ifndef IHAVENOHEAD
 		case inDrag:
-
 			if (getFullScreenFlag()) 	
 				break;
 				
 			GetRegionBounds(GetGrayRgn(), &dragBounds);
-			if (theWindow == getSTWindow()) {
-				DragWindow(getSTWindow(), theEvent->where, &dragBounds);
-			}
+			DragWindow( theWindow, theEvent->where, &dragBounds);
 		break;
 
 		case inGrow:
-			if (theWindow == getSTWindow()) {
-				if (getFullScreenFlag()) 	
-					break;
-				newSize = GrowWindow(getSTWindow(), theEvent->where, &growLimits);
+			if (getFullScreenFlag()) 	
+				break;
+				
+			newSize = GrowWindow(theWindow, theEvent->where, &growLimits);
 				if (newSize != 0) {
-					SizeWindow(getSTWindow(), LoWord(newSize), HiWord(newSize), true);
-				}
+				SizeWindow( theWindow, LoWord(newSize), HiWord(newSize), true);
 			}
 		break;
 
 		case inZoomIn:
 		case inZoomOut:
-			if (theWindow == getSTWindow()) {
-				if (getFullScreenFlag()) 	
-					break;
-					DoZoomWindow(theEvent,getSTWindow(), windowCode,10000, 10000);
-				}
-
+			if (getFullScreenFlag()) 	
+				break;
+				
+			DoZoomWindow(theEvent, theWindow, windowCode,10000, 10000);
 		break;
 
 		case inContent:
 			gButtonIsDown = true;
 			if (theWindow == getSTWindow()) {
-				if (theWindow != FrontWindow()) {
-					SelectWindow(getSTWindow());
-				}
 				if(inputSemaphoreIndex) {
 					recordMouseEvent(theEvent,MouseModifierState(theEvent));
 					break;
 				}
 				recordMouseDown(theEvent);
+			} else {
+				SelectWindow(theWindow);
 			}
 		break;
 
 		case inGoAway:
-			if ((theWindow == getSTWindow()) &&
-				(TrackGoAway(getSTWindow(), theEvent->where))) {
-					/* HideWindow(stWindow); noop for now */
-			}
 		break;
 #endif
 	}
@@ -1213,11 +1201,13 @@ EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
                             { kEventClassWindow, kEventWindowActivated},
                             { kEventClassWindow, kEventWindowDeactivated}};
                             
-EventTypeSpec windEventMouseList[] = {{ kEventClassMouse, kEventMouseMoved},
+EventTypeSpec windEventMouseList[] = {
+							{ kEventClassMouse, kEventMouseMoved},
                             { kEventClassMouse, kEventMouseWheelMoved},
                             { kEventClassMouse, kEventMouseDragged},
                             { kEventClassMouse, kEventMouseUp},
-                            { kEventClassMouse, kEventMouseDown}};
+							{ kEventClassMouse, kEventMouseDown}
+							};
                             
 EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
                             { kEventClassKeyboard, kEventRawKeyUp},
@@ -1455,11 +1445,19 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     Point  mouseLocation;
     OSStatus result = eventNotHandledErr; /* report failure by default */
     static RgnHandle	ioWinRgn=null;
+	static Boolean mouseDownActivate=false;
     extern Boolean gSqueakWindowIsFloating,gSqueakFloatingWindowGetsFocus;
     
-    if (!windowActive)
-        return result;
+    whatHappened	= GetEventKind(event);
+	
 
+	//fprintf(stderr,"\nMouseEvent %i-%i ",whatHappened,windowActive);
+
+	if (!windowActive) {
+		if (whatHappened == kEventMouseDown)
+			mouseDownActivate = true;
+        return result;
+	}
     if (ioWinRgn == null) 
         ioWinRgn = NewRgn();
         
@@ -1467,6 +1465,8 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
     
     if (!PtInRgn(mouseLocation,ioWinRgn)) {
+		if (mouseDownActivate && whatHappened == kEventMouseUp)
+			mouseDownActivate = false;
         return result;
     }
     
@@ -1478,12 +1478,14 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
     
-    whatHappened = GetEventKind(event);
+
     switch (whatHappened)
     {
         case kEventMouseMoved:
         case kEventMouseDragged:
         case kEventMouseWheelMoved:
+			if (mouseDownActivate) 
+				return result;
             recordMouseEventCarbon(event,whatHappened);
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
@@ -1491,6 +1493,8 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             GetWindowRegion(getSTWindow(),kWindowGrowRgn,ioWinRgn);
             if (PtInRgn(mouseLocation,ioWinRgn))
                 return result;
+			if (mouseDownActivate) 
+				return result;
             if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating) {
                 SetUserFocusWindow(kUserFocusAuto);
                 SetUserFocusWindow(getSTWindow());
@@ -1500,6 +1504,10 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             result = noErr;
             break;
         case kEventMouseUp:
+			if (mouseDownActivate) {
+				mouseDownActivate = false;
+				return result;
+			}
             gButtonIsDown = false;
             recordMouseEventCarbon(event,whatHappened);
             result = noErr;
@@ -1511,13 +1519,15 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     }
     if (postMessageHook) 
         doPostMessageHook(event);
+	//fprintf(stderr,"handled %i",result);
     return result;
 }
 
 static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
-    UInt32 whatHappened,keyCode,key;
+    UInt32 whatHappened,keyCode;
+	SInt32 key;
     OSStatus result = eventNotHandledErr; /* report failure by default */
 	 
     if (!windowActive)
@@ -1543,7 +1553,7 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
         case kEventRawKeyUp:
 			//fprintf(stdout,"\nrawkey up %i",ioMSecs());
 			key = findInKeyMap(keyCode);
-			if (key) {
+			if (key != -1) {
 				enterKeystroke ( EventTypeKeyboard,key, EventKeyUp, ModifierStateCarbon(event,0));
 			}
 			removeFromKeyMap(keyCode);
@@ -1578,6 +1588,7 @@ static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
     
     if (!windowActive)
         return result;
+		
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
 
@@ -2044,19 +2055,19 @@ static int indexInKeyMap(int keyCode)
 static int findInKeyMap(int keyCode)
 {
   int idx= indexInKeyMap(keyCode);
-  return (idx >= 0) ? keyMap[idx].keyChar : -1;
+  return (idx != -1) ? keyMap[idx].keyChar : -1;
 }
 
 static int findRepeatInKeyMap(int keyCode)
 {
   int idx= indexInKeyMap(keyCode);
-  return (idx >= 0) ? keyMap[idx].keyRepeated : 0;
+  return (idx != -1) ? keyMap[idx].keyRepeated : 0;
 }
 
 static void setRepeatInKeyMap(int keyCode)
 {
   int idx= indexInKeyMap(keyCode);
-  if (idx >= 0) keyMap[idx].keyRepeated = 1;
+  if (idx != -1) keyMap[idx].keyRepeated = 1;
 }
 
 static int removeFromKeyMap(int keyCode)
@@ -2064,7 +2075,7 @@ static int removeFromKeyMap(int keyCode)
   int idx= indexInKeyMap(keyCode);
   int keyChar= -1;
   //fprintf(stdout, "\nremoveFromKeyMap T %i c %i i %i",ioMSecs(),keyCode,keyMapSize-1);
-  if (idx < 0) { fprintf(stderr, "keymap underflow\n");  return -1; }
+  if (idx == -1) { fprintf(stderr, "keymap underflow\n");  return -1; }
   keyChar= keyMap[idx].keyChar;
   for (; idx < keyMapSize - 1;  ++idx)
     keyMap[idx]= keyMap[idx + 1];
