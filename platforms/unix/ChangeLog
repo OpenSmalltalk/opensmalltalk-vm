@@ -1,3 +1,9 @@
+2003-08-08  Ian Piumarta  <piumarta@cartman.inria.fr>
+
+	* platforms/unix/vm/sqUnixMain.c: Add support for '-vm' option and
+	SQUEAK_VM environment variable.  Add support for default module
+	detection and loading.
+
 2003-08-07  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/config/make.ext.in (LINK): Use -rpath $(plgdir)
