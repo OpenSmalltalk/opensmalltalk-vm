@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.9 2003/09/01 23:05:55 andreasraab Exp $
+*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.10 2004/08/31 21:13:51 bertf Exp $
 *
 *   NOTES: 
 *
@@ -878,7 +878,7 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 	  /* harumph... we need to rotate all the colors as we're getting ARGB here but GL expects RGBA... */
 	  for(i=1;i<=nVertices;i++) {
 	    unsigned int argb = vtxPointer[i].pixelValue32;
-	    unsigned int rgba = (argb >> 8) | (argb << 24);
+	    unsigned int rgba = (argb << 8) | (argb >> 24);
 	    vtxPointer[i].pixelValue32 = rgba;
 	  }
 	  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(B3DPrimitiveVertex), &(vtxPointer->pixelValue32));
