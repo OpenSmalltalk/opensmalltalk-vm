@@ -1,0 +1,10 @@
+Wimpslot -min 300K  -max 400k
+Set Squeak$Dir <Obey$Dir>
+/<Squeak$Dir>.!Boot
+| specify amount of free space to attempt to allocate for Squeak's object
+| memory.  More will be claimed for the display sprite that is used.
+| 5m == 5 MB, which is plenty; 4m should be ok at a pinch.
+| 'k' is also acceptable for allocating Kb values
+/<Squeak$Dir>.!RunImage -memory:30m  %*0
+| uncomment this to get  stdout logged
+| >> trace

@@ -1,0 +1,82 @@
+# Project:   sq32plugin
+# Make the pluginised VM for v3.2
+# Reworked to use VMMaker non-copying of platform & cross files
+
+# Toolflags:
+CCflags = -c -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -Otime
+Linkflags = -aif -c++ -o $@ 
+ObjAsmflags = -throwback -NoCache -depend !Depend
+LibFileflags = -c -o $@
+Squeezeflags = -o $@
+
+
+# Final targets:
+@.!Squeak.!Runimage:   @.vm.o.interp @.vm.o.sqArgument \
+        @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
+        @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
+        @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
+        @.vm.o.fperrors OSLib:o.OSLib C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+        link $(linkflags)  @.vm.o.interp @.vm.o.sqArgument \
+        @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
+        @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
+        @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
+        @.vm.o.fperrors OSLib:o.OSLib C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+
+
+# User-editable dependencies:
+extractsymflags = o
+PLAT=@.^.platforms
+PVM=$(PLAT).RiscOS.vm
+CVM=$(PLAT).Cross.vm
+SVM=@.vm
+Sqk=@.!Squeak
+
+vmobjdir:
+        CDir $(Sqk)
+        CDir @.vm.o
+
+# extract the link info for rink to use
+# relies upon the partially populated !squeak directory having been copied to
+# the working directory
+
+@.vm.o.ptrblock:   $(Sqk).ptrblkmap 
+        rinkptr $(rinkptrflags) $(Sqk).ptrblkmap  @.vm.o.ptrblock
+
+$(Sqk).ptrblkmap:   vmobjdir C:o.stubs @.vm.o.sqRPCWindows $(PVM).dsc.block
+        copy $(PVM).dsc.block $* f~c
+        extractsym e $* C:o.stubs
+        extractsym e $* @.vm.o.sqRPCWindows
+
+
+
+# Static dependencies:
+# platform specific code
+@.vm.o.interp:   vmobjdir @.vm.c.interp
+        cc $(ccflags) -o @.vm.o.interp @.vm.c.interp 
+@.vm.o.osExports:   vmobjdir $(PVM).c.osExports
+        cc $(ccflags) -o @.vm.o.osExports $(PVM).c.osExports 
+@.vm.o.sqArgument:   vmobjdir $(PVM).c.sqArgument
+        cc $(ccflags) -o @.vm.o.sqArgument $(PVM).c.sqArgument 
+@.vm.o.sqRPCClipboard:   vmobjdir $(PVM).c.sqRPCClipboard
+        cc $(ccflags) -o @.vm.o.sqRPCClipboard $(PVM).c.sqRPCClipboard 
+@.vm.o.sqRPCEvents:   vmobjdir $(PVM).c.sqRPCEvents
+        cc $(ccflags) -o @.vm.o.sqRPCEvents $(PVM).c.sqRPCEvents 
+@.vm.o.sqRPCExternalPrims:   vmobjdir $(PVM).c.sqRPCExternalPrims
+        cc $(ccflags) -o @.vm.o.sqRPCExternalPrims $(PVM).c.sqRPCExternalPrims 
+@.vm.o.sqRPCFormPrint:   vmobjdir $(PVM).c.sqRPCFormPrint
+        cc $(ccflags) -o @.vm.o.sqRPCFormPrint $(PVM).c.sqRPCFormPrint 
+@.vm.o.sqRPCSyscall:   vmobjdir $(PVM).c.sqRPCSyscall
+        cc $(ccflags) -o @.vm.o.sqRPCSyscall $(PVM).c.sqRPCSyscall 
+@.vm.o.sqRPCWindows:   vmobjdir $(PVM).c.sqRPCWindows
+        cc $(ccflags) -o @.vm.o.sqRPCWindows $(PVM).c.sqRPCWindows 
+@.vm.o.fperrors:   vmobjdir $(PVM).s.fperrors
+        objasm $(objasmflags) -from $(PVM).s.fperrors -to @.vm.o.fperrors
+
+# cross platform code
+@.vm.o.sqNamedPrims:   vmobjdir $(CVM).c.sqNamedPrims
+        cc $(ccflags) -o @.vm.o.sqNamedPrims $(CVM).c.sqNamedPrims 
+@.vm.o.sqVirtualMachine:   vmobjdir $(CVM).c.sqVirtualMachine
+        cc $(ccflags) -o @.vm.o.sqVirtualMachine $(CVM).c.sqVirtualMachine
+
+
+# Dynamic dependencies:

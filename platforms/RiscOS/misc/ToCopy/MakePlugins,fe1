@@ -1,0 +1,412 @@
+# Project:   sq31plugins
+
+
+# Toolflags:
+CCflags = -c -depend !Depend -IC:,OSLib:,$(PVM),$(CVM),C:^.rink,@.vm -throwback  -DACORN -Otime
+C++flags = -c -depend !Depend -IC: -throwback
+Linkflags = -aif -c++ -o $@
+ObjAsmflags = -throwback -NoCache -depend !Depend
+CMHGflags = 
+LibFileflags = -c -o $@
+Squeezeflags = -o $@
+
+#  ADPCMPlugin
+# Final targets:  
+all: pluginList
+
+# User-editable dependencies:
+extractsymflags = o
+Sqk=@.!Squeak
+SokLib=OSLib:^.socketlibs.o.
+SqPlugins=@.!Squeak.plugins
+PLAT=@.^.platforms
+CVM=$(PLAT).Cross.vm
+PVM=$(PLAT).RiscOS.vm
+PPlug=$(PLAT).RiscOS.plugins
+CPlug=$(PLAT).Cross.plugins
+SPlug=@.plugins
+
+pluginList: pluginDir  B2DPlugin BitBltPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin SocketPlugin StarSqueakPlugin  Squeak3D SurfacePlugin ZipPlugin
+	echo DONE!
+
+pluginDir:
+	echo make $*  
+	CDir $(SqPlugins)
+	CDir @.o
+
+###########
+# ADPCMCodecPlugin make rule.
+# Very simple, only the one source file
+###########
+ADPCMCodecPlugin:	$(SqPlugins).ADPCMCodecPlugin $(SqPlugins).ADPCMCodecPlugin.code
+	echo done $*
+
+$(SqPlugins).ADPCMCodecPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).ADPCMCodecPlugin.code:  $(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin $(SPlug).ADPCMCodecPlugin.dsc.ADPCMCodecPlugin $(Sqk).ptrblkmap  $(SqPlugins).ADPCMCodecPlugin
+	rink -o $(SqPlugins).ADPCMCodecPlugin.code -l $(SqPlugins).ADPCMCodecPlugin.links -h $(SPlug).ADPCMCodecPlugin.dsc.ADPCMCodecPlugin -m $(Sqk).ptrblkmap -a $(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin
+
+$(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin: $(SPlug).ADPCMCodecPlugin.c.ADPCMCodecPlugin
+	cc $(ccflags) -o $(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin $(SPlug).ADPCMCodecPlugin.c.ADPCMCodecPlugin 
+
+
+###########
+# B2D Plugin
+# Very simple, only the one source file 
+###########
+B2DPlugin:	$(SqPlugins).B2DPlugin $(SqPlugins).B2DPlugin.code
+	echo done $*
+
+$(SqPlugins).B2DPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).B2DPlugin.code:  $(SPlug).B2DPlugin.o.B2DPlugin $(SPlug).B2DPlugin.dsc.B2DPlugin $(Sqk).ptrblkmap  $(SqPlugins).B2DPlugin
+	rink -o $(SqPlugins).B2DPlugin.code -l $(SqPlugins).B2DPlugin.links -h $(SPlug).B2DPlugin.dsc.B2DPlugin -m $(Sqk).ptrblkmap -a $(SPlug).B2DPlugin.o.B2DPlugin
+
+$(SPlug).B2DPlugin.o.B2DPlugin: $(SPlug).B2DPlugin.c.B2DPlugin
+	cc $(ccflags) -o $(SPlug).B2DPlugin.o.B2DPlugin $(SPlug).B2DPlugin.c.B2DPlugin 
+
+
+###########
+# BitBlt Plugin make rule.
+# Very simple, only the one source file
+###########
+BitBltPlugin:	$(SqPlugins).BitBltPlugin $(SqPlugins).BitBltPlugin.code
+	echo done $*
+
+$(SqPlugins).BitBltPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).BitBltPlugin.code:  $(SPlug).BitBltPlugin.o.BitBltPlugin $(SPlug).BitBltPlugin.dsc.BitBltPlugin $(Sqk).ptrblkmap  $(SqPlugins).BitBltPlugin
+	rink -o $(SqPlugins).BitBltPlugin.code -l $(SqPlugins).BitBltPlugin.links -h $(SPlug).BitBltPlugin.dsc.BitBltPlugin -m $(Sqk).ptrblkmap -a $(SPlug).BitBltPlugin.o.BitBltPlugin
+
+$(SPlug).BitBltPlugin.o.BitBltPlugin: $(SPlug).BitBltPlugin.c.BitBltPlugin
+	cc $(ccflags) -o $(SPlug).BitBltPlugin.o.BitBltPlugin $(SPlug).BitBltPlugin.c.BitBltPlugin 
+
+
+###########
+# DSA Plugin make rule.
+# Very simple, only the one source file
+###########
+DSAPrims:	$(SqPlugins).DSAPrims $(SqPlugins).DSAPrims.code
+	echo done $*
+
+$(SqPlugins).DSAPrims:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).DSAPrims.code:  $(SPlug).DSAPrims.o.DSAPrims $(SPlug).DSAPrims.dsc.DSAPrims $(Sqk).ptrblkmap  $(SqPlugins).DSAPrims
+	rink -o $(SqPlugins).DSAPrims.code -l $(SqPlugins).DSAPrims.links -h $(SPlug).DSAPrims.dsc.DSAPrims -m $(Sqk).ptrblkmap -a $(SPlug).DSAPrims.o.DSAPrims
+
+$(SPlug).DSAPrims.o.DSAPrims: $(SPlug).DSAPrims.c.DSAPrims
+	cc $(ccflags) -o $(SPlug).DSAPrims.o.DSAPrims $(SPlug).DSAPrims.c.DSAPrims 
+
+
+
+###########
+# FFT Plugin make rule.
+# Very simple, only the one source file
+###########
+FFTPlugin:	$(SqPlugins).FFTPlugin $(SqPlugins).FFTPlugin.code
+	echo done $*
+
+$(SqPlugins).FFTPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).FFTPlugin.code:  $(SPlug).FFTPlugin.o.FFTPlugin $(SPlug).FFTPlugin.dsc.FFTPlugin $(Sqk).ptrblkmap  $(SqPlugins).FFTPlugin
+	rink -o $(SqPlugins).FFTPlugin.code -l $(SqPlugins).FFTPlugin.links -h $(SPlug).FFTPlugin.dsc.FFTPlugin -m $(Sqk).ptrblkmap -a $(SPlug).FFTPlugin.o.FFTPlugin
+
+$(SPlug).FFTPlugin.o.FFTPlugin: $(SPlug).FFTPlugin.c.FFTPlugin
+	cc $(ccflags) -o $(SPlug).FFTPlugin.o.FFTPlugin $(SPlug).FFTPlugin.c.FFTPlugin 
+
+
+
+###########
+# File Plugin make rule.
+# More complex - involves files from several sources
+# FilePlugin.c is generated
+# FilePlugin.h is in Cross
+# sqFilePluginBasicPrims.c is in Cross
+# sqRPCDirectory.c is in RiscOS
+###########
+FilePlugin:	$(SqPlugins).FilePlugin $(SqPlugins).FilePlugin.code
+	echo done $*
+
+$(SqPlugins).FilePlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).FilePlugin.code:  $(SPlug).FilePlugin.o.FilePlugin $(SPlug).FilePlugin.o.sqRPCDirectory $(SPlug).FilePlugin.o.sqFilePluginBasicPrims $(SPlug).FilePlugin.dsc.FilePlugin $(Sqk).ptrblkmap  $(SqPlugins).FilePlugin
+	rink -o $(SqPlugins).FilePlugin.code -l $(SqPlugins).FilePlugin.links -h $(SPlug).FilePlugin.dsc.FilePlugin -m $(Sqk).ptrblkmap -a $(SPlug).FilePlugin.o.FilePlugin $(SPlug).FilePlugin.o.sqRPCDirectory $(SPlug).FilePlugin.o.sqFilePluginBasicPrims 
+
+$(SPlug).FilePlugin.o.FilePlugin: $(SPlug).FilePlugin.c.FilePlugin
+	cc $(ccflags) -I$(CPlug).FilePlugin -o $(SPlug).FilePlugin.o.FilePlugin $(SPlug).FilePlugin.c.FilePlugin 
+$(SPlug).FilePlugin.o.sqRPCDirectory: $(PPlug).FilePlugin.c.sqRPCDirectory
+	cc $(ccflags) -o $(SPlug).FilePlugin.o.sqRPCDirectory $(PPlug).FilePlugin.c.sqRPCDirectory 
+$(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(CPlug).FilePlugin.c.sqFilePluginBasicPrims
+	cc $(ccflags) -I$(CPlug).FilePlugin -o $(SPlug).FilePlugin.o.sqFilePluginBasicPrims $(CPlug).FilePlugin.c.sqFilePluginBasicPrims 
+
+
+###########
+# FileCopy Plugin make rule.
+# More complex - involves files from several sources
+# FileCopyPlugin.c is generated
+# FileCopyPlugin.h is in Cross
+# sqRPCFileCopy.c is in RiscOS
+
+###########
+FileCopyPlugin:	$(SqPlugins).FileCopyPlugin $(SqPlugins).FileCopyPlugin.code
+	echo done $*
+
+$(SqPlugins).FileCopyPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).FileCopyPlugin.code:  $(SPlug).FileCopyPlugin.o.FileCopyPlugin $(SPlug).FileCopyPlugin.o.sqRPCFileCopy  $(SPlug).FileCopyPlugin.dsc.FileCopyPlugin $(Sqk).ptrblkmap  $(SqPlugins).FileCopyPlugin
+	rink -o $(SqPlugins).FileCopyPlugin.code -l $(SqPlugins).FileCopyPlugin.links -h $(SPlug).FileCopyPlugin.dsc.FileCopyPlugin -m $(Sqk).ptrblkmap -a $(SPlug).FileCopyPlugin.o.FileCopyPlugin $(SPlug).FileCopyPlugin.o.sqRPCFileCopy 
+
+$(SPlug).FileCopyPlugin.o.FileCopyPlugin: $(SPlug).FileCopyPlugin.c.FileCopyPlugin
+	cc $(ccflags) -I$(CPlug).FileCopyPlugin -o $(SPlug).FileCopyPlugin.o.FileCopyPlugin $(SPlug).FileCopyPlugin.c.FileCopyPlugin 
+$(SPlug).FileCopyPlugin.o.sqRPCFileCopy: $(PPlug).FileCopyPlugin.c.sqRPCFileCopy
+	cc $(ccflags) -o $(SPlug).FileCopyPlugin.o.sqRPCFileCopy $(PPlug).FileCopyPlugin.c.sqRPCFileCopy 
+
+
+###########
+# FloatArray Plugin make rule.
+# Very simple, only the one source file
+###########
+FloatArrayPlugin:	$(SqPlugins).FloatArrayPlugin $(SqPlugins).FloatArrayPlugin.code
+	echo done $*
+
+$(SqPlugins).FloatArrayPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).FloatArrayPlugin.code:  $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin $(SPlug).FloatArrayPlugin.dsc.FloatArrayPlugin $(Sqk).ptrblkmap  $(SqPlugins).FloatArrayPlugin
+	rink -o $(SqPlugins).FloatArrayPlugin.code -l $(SqPlugins).FloatArrayPlugin.links -h $(SPlug).FloatArrayPlugin.dsc.FloatArrayPlugin -m $(Sqk).ptrblkmap -a $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin
+
+$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin: $(SPlug).FloatArrayPlugin.c.FloatArrayPlugin
+	cc $(ccflags) -o $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin $(SPlug).FloatArrayPlugin.c.FloatArrayPlugin 
+
+
+
+###########
+# Genie Plugin make rule.
+# Very simple, only the one source file
+###########
+GeniePlugin:	$(SqPlugins).GeniePlugin $(SqPlugins).GeniePlugin.code
+	echo done $*
+
+$(SqPlugins).GeniePlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).GeniePlugin.code:  $(SPlug).GeniePlugin.o.GeniePlugin $(SPlug).GeniePlugin.dsc.GeniePlugin $(Sqk).ptrblkmap  $(SqPlugins).GeniePlugin
+	rink -o $(SqPlugins).GeniePlugin.code -l $(SqPlugins).GeniePlugin.links -h $(SPlug).GeniePlugin.dsc.GeniePlugin -m $(Sqk).ptrblkmap -a $(SPlug).GeniePlugin.o.GeniePlugin
+
+$(SPlug).GeniePlugin.o.GeniePlugin: $(SPlug).GeniePlugin.c.GeniePlugin
+	cc $(ccflags) -o $(SPlug).GeniePlugin.o.GeniePlugin $(SPlug).GeniePlugin.c.GeniePlugin 
+
+
+
+###########
+# JPEGReader Plugin make rule.
+# Very simple, only the one source file
+###########
+JPEGReaderPlugin:	$(SqPlugins).JPEGReaderPlugin $(SqPlugins).JPEGReaderPlugin.code
+	echo done $*
+
+$(SqPlugins).JPEGReaderPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).JPEGReaderPlugin.code:  $(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin $(SPlug).JPEGReaderPlugin.dsc.JPEGReaderPlugin $(Sqk).ptrblkmap  $(SqPlugins).JPEGReaderPlugin
+	rink -o $(SqPlugins).JPEGReaderPlugin.code -l $(SqPlugins).JPEGReaderPlugin.links -h $(SPlug).JPEGReaderPlugin.dsc.JPEGReaderPlugin -m $(Sqk).ptrblkmap -a $(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin
+
+$(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin: $(SPlug).JPEGReaderPlugin.c.JPEGReaderPlugin
+	cc $(ccflags) -o $(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin $(SPlug).JPEGReaderPlugin.c.JPEGReaderPlugin 
+
+
+
+
+###########
+# LargeIntegers Plugin make rule.
+# Very simple, only the one source file
+###########
+LargeIntegers:	$(SqPlugins).LargeIntegers $(SqPlugins).LargeIntegers.code
+	echo done $*
+
+$(SqPlugins).LargeIntegers:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).LargeIntegers.code:  $(SPlug).LargeIntegers.o.LargeIntegers $(SPlug).LargeIntegers.dsc.LargeIntegers $(Sqk).ptrblkmap  $(SqPlugins).LargeIntegers
+	rink -o $(SqPlugins).LargeIntegers.code -l $(SqPlugins).LargeIntegers.links -h $(SPlug).LargeIntegers.dsc.LargeIntegers -m $(Sqk).ptrblkmap -a $(SPlug).LargeIntegers.o.LargeIntegers
+
+$(SPlug).LargeIntegers.o.LargeIntegers: $(SPlug).LargeIntegers.c.LargeIntegers
+	cc $(ccflags) -o $(SPlug).LargeIntegers.o.LargeIntegers $(SPlug).LargeIntegers.c.LargeIntegers 
+
+
+
+###########
+# Matrix2x3 Plugin make rule.
+# Very simple, only the one source file
+###########
+Matrix2x3Plugin:	$(SqPlugins).Matrix2x3Plugin $(SqPlugins).Matrix2x3Plugin.code
+	echo done $*
+
+$(SqPlugins).Matrix2x3Plugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).Matrix2x3Plugin.code:  $(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin $(SPlug).Matrix2x3Plugin.dsc.Matrix2x3Plugin $(Sqk).ptrblkmap  $(SqPlugins).Matrix2x3Plugin
+	rink -o $(SqPlugins).Matrix2x3Plugin.code -l $(SqPlugins).Matrix2x3Plugin.links -h $(SPlug).Matrix2x3Plugin.dsc.Matrix2x3Plugin -m $(Sqk).ptrblkmap -a $(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin
+
+$(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin: $(SPlug).Matrix2x3Plugin.c.Matrix2x3Plugin
+	cc $(ccflags) -o $(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin $(SPlug).Matrix2x3Plugin.c.Matrix2x3Plugin 
+
+###########
+# MiscPrimitive Plugin make rule.
+# Very simple, only the one source file
+###########
+MiscPrimitivePlugin:	$(SqPlugins).MiscPrimitivePlugin $(SqPlugins).MiscPrimitivePlugin.code
+	echo done $*
+
+$(SqPlugins).MiscPrimitivePlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).MiscPrimitivePlugin.code:  $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin $(SPlug).MiscPrimitivePlugin.dsc.MiscPrimitivePlugin $(Sqk).ptrblkmap  $(SqPlugins).MiscPrimitivePlugin
+	rink -o $(SqPlugins).MiscPrimitivePlugin.code -l $(SqPlugins).MiscPrimitivePlugin.links -h $(SPlug).MiscPrimitivePlugin.dsc.MiscPrimitivePlugin -m $(Sqk).ptrblkmap -a $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin
+
+$(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin: $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin
+	cc $(ccflags) -o $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin 
+
+
+
+
+###########
+# Socket Plugin make rule.
+# Quite complex - involves files from several places
+# SocketPlugin.c is generated
+# SocketPlugin.h is in Cross
+# sqRPCNetPlugin.c is in RiscOS
+# and the socket includes are needed as well 
+###########
+SocketPlugin:	$(SqPlugins).SocketPlugin $(SqPlugins).SocketPlugin.code
+	echo done $*
+
+$(SqPlugins).SocketPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).SocketPlugin.code:  $(SPlug).SocketPlugin.o.SocketPlugin $(SPlug).SocketPlugin.o.sqRPCNetPlugin $(SPlug).SocketPlugin.dsc.SocketPlugin $(Sqk).ptrblkmap  $(SqPlugins).SocketPlugin
+	rink -o $(SqPlugins).SocketPlugin.code -l $(SqPlugins).SocketPlugin.links -h $(SPlug).SocketPlugin.dsc.SocketPlugin -m $(Sqk).ptrblkmap -a $(SPlug).SocketPlugin.o.SocketPlugin $(SPlug).SocketPlugin.o.sqRPCNetPlugin  $(SokLib)inetlib $(SokLib)socklibzm $(SokLib)unixlibzm $(SokLib)inetlibzm $(SokLib)socklib $(SokLib)unixlib
+
+$(SPlug).SocketPlugin.o.SocketPlugin: $(SPlug).SocketPlugin.c.SocketPlugin
+	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin  -o $(SPlug).SocketPlugin.o.SocketPlugin $(SPlug).SocketPlugin.c.SocketPlugin 
+
+$(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin
+	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin,C:^.socketincl -o $(SPlug).SocketPlugin.o.sqRPCNetPlugin $(PPlug).SocketPlugin.c.sqRPCNetPlugin 
+
+
+
+###########
+# Squeak3D Plugin
+# More complex - involves files from several sources
+# Squeak3D.c is generated
+# various files in Cross
+###########
+Squeak3D:	$(SqPlugins).Squeak3D $(SqPlugins).Squeak3D.code
+	echo done $*
+
+$(SqPlugins).Squeak3D:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).Squeak3D.code:  $(SPlug).Squeak3D.o.Squeak3D \
+       $(SPlug).Squeak3D.o.b3dalloc \
+       $(SPlug).Squeak3D.o.b3ddraw \
+       $(SPlug).Squeak3D.o.b3dinit \
+       $(SPlug).Squeak3D.o.b3dmain \
+       $(SPlug).Squeak3D.o.b3dremap \
+       $(SPlug).Squeak3D.dsc.Squeak3D \
+       $(Sqk).ptrblkmap  $(SqPlugins).Squeak3D
+	rink -o $(SqPlugins).Squeak3D.code -l $(SqPlugins).Squeak3D.links -h $(SPlug).Squeak3D.dsc.Squeak3D -m $(Sqk).ptrblkmap -a $(SPlug).Squeak3D.o.b3dalloc $(SPlug).Squeak3D.o.b3ddraw $(SPlug).Squeak3D.o.b3dinit $(SPlug).Squeak3D.o.b3dmain $(SPlug).Squeak3D.o.b3dremap $(SPlug).Squeak3D.o.Squeak3D
+
+$(SPlug).Squeak3D.o.Squeak3D: $(SPlug).Squeak3D.c.Squeak3D
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $(SPlug).Squeak3D.o.Squeak3D $(SPlug).Squeak3D.c.Squeak3D 
+$(SPlug).Squeak3D.o.b3dalloc: $(CPlug).Squeak3D.c.b3dalloc
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $(SPlug).Squeak3D.o.b3dalloc $(CPlug).Squeak3D.c.b3dalloc
+$(SPlug).Squeak3D.o.b3ddraw: $(CPlug).Squeak3D.c.b3ddraw
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $(SPlug).Squeak3D.o.b3ddraw $(CPlug).Squeak3D.c.b3ddraw
+$(SPlug).Squeak3D.o.b3dinit: $(CPlug).Squeak3D.c.b3dinit
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $(SPlug).Squeak3D.o.b3dinit $(CPlug).Squeak3D.c.b3dinit
+$(SPlug).Squeak3D.o.b3dmain: $(CPlug).Squeak3D.c.b3dmain
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $(SPlug).Squeak3D.o.b3dmain $(CPlug).Squeak3D.c.b3dmain
+$(SPlug).Squeak3D.o.b3dremap: $(CPlug).Squeak3D.c.b3dremap
+	cc $(ccflags) -I$(CPlug).Squeak3D -o $(SPlug).Squeak3D.o.b3dremap $(CPlug).Squeak3D.c.b3dremap
+
+###########
+# StarSqueak Plugin make rule.
+# Very simple, only the one source file
+###########
+StarSqueakPlugin:	$(SqPlugins).StarSqueakPlugin $(SqPlugins).StarSqueakPlugin.code
+	echo done $*
+
+$(SqPlugins).StarSqueakPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).StarSqueakPlugin.code:  $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin $(SPlug).StarSqueakPlugin.dsc.StarSqueakPlugin $(Sqk).ptrblkmap  $(SqPlugins).StarSqueakPlugin
+	rink -o $(SqPlugins).StarSqueakPlugin.code -l $(SqPlugins).StarSqueakPlugin.links -h $(SPlug).StarSqueakPlugin.dsc.StarSqueakPlugin -m $(Sqk).ptrblkmap -a $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin
+
+$(SPlug).StarSqueakPlugin.o.StarSqueakPlugin: $(SPlug).StarSqueakPlugin.c.StarSqueakPlugin
+	cc $(ccflags) -o $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin $(SPlug).StarSqueakPlugin.c.StarSqueakPlugin 
+
+###########
+# Surface Plugin
+# An odd one
+# SurfacePlugin.c & .h are BOTH on Cross
+# only the .dsc file is generated
+###########
+SurfacePlugin:	$(SqPlugins).SurfacePlugin $(SqPlugins).SurfacePlugin.code
+	echo done $*
+
+$(SqPlugins).SurfacePlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).SurfacePlugin.code:  $(SPlug).SurfacePlugin.o.SurfacePlugin $(SPlug).SurfacePlugin.dsc.SurfacePlugin $(Sqk).ptrblkmap  $(SqPlugins).SurfacePlugin
+	rink -o $(SqPlugins).SurfacePlugin.code -l $(SqPlugins).SurfacePlugin.links -h $(SPlug).SurfacePlugin.dsc.SurfacePlugin -m $(Sqk).ptrblkmap -a $(SPlug).SurfacePlugin.o.SurfacePlugin
+
+$(SPlug).SurfacePlugin.o.SurfacePlugin: $(CPlug).SurfacePlugin.c.SurfacePlugin
+	cc $(ccflags) -I$(CPlug).SurfacePlugin -o $(SPlug).SurfacePlugin.o.SurfacePlugin $(CPlug).SurfacePlugin.c.SurfacePlugin 
+
+
+###########
+# Zip Plugin
+# Very simple, only the one source file 
+########### 
+ZipPlugin:	$(SqPlugins).ZipPlugin $(SqPlugins).ZipPlugin.code
+	echo done $*
+
+$(SqPlugins).ZipPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).ZipPlugin.code:  $(SPlug).ZipPlugin.o.ZipPlugin $(SPlug).ZipPlugin.dsc.ZipPlugin $(Sqk).ptrblkmap  $(SqPlugins).ZipPlugin
+	rink -o $(SqPlugins).ZipPlugin.code -l $(SqPlugins).ZipPlugin.links -h $(SPlug).ZipPlugin.dsc.ZipPlugin -m $(Sqk).ptrblkmap -a $(SPlug).ZipPlugin.o.ZipPlugin
+
+$(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin
+	cc $(ccflags) -o $(SPlug).ZipPlugin.o.ZipPlugin $(SPlug).ZipPlugin.c.ZipPlugin 
+
+
+# Static dependencies:
+# Dynamic dependencies:
+
