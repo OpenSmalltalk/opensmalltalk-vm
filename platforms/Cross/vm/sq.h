@@ -6,7 +6,7 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.8 2003/05/20 18:56:25 rowledge Exp $
+*   RCSID:   $Id: sq.h,v 1.9 2003/05/20 18:57:27 rowledge Exp $
 *
 *	05/20/03	tim - move browser related macros in front of
 *			include of sqPlatformSpecific.h
@@ -360,27 +360,7 @@ int clipboardSize(void);
 int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex);
 int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex);
 
-<<<<<<< sq.h
-=======
-/* old browser plug-in support, maintained for a little while */
-#if 1
-void plugInForceTimeToReturn(void);
-int plugInInit(char *sqImageName);
-int plugInNotifyUser(char *msg);
-void plugInSetStartTime(void);
-int plugInShutdown(void);
-int plugInTimeToReturn(void);
-#endif
-/* macros to support Mac browser plugin needs without ugly
- * code in Interpreter
- */
-#define insufficientMemorySpecifiedError() error("Insufficient memory for this image")
-#define insufficientMemoryAvailableError() error("Failed to allocate memory for the heap")
-#define unableToReadImageError() error("Read failed or premature end of image file")
-#define browserPluginReturnIfNeeded()
-#define browserPluginInitialiseIfNeeded()
 
->>>>>>> 1.7
 
 /* interpreter entry points needed by compiled primitives */
 void * arrayValueOf(int arrayOop);
