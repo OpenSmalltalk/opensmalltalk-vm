@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.16 2004/02/19 04:34:42 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.17 2004/08/03 02:46:43 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -65,6 +65,7 @@ Jun 	 2001	JMM 3.0.23, added seteventhook logic to enable HW acceleration plugin
 Aug      2001	JMM 3.0.24  rework of security logic, remove explicit call 
 May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+ July 31st, 2004 JMM 3.7.4b2 Add imageName and URL redirection. 
 **********/
 
 #include "sq.h"
@@ -81,7 +82,6 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 #include <Files.h>
 #include <Gestalt.h>
 #include <Notification.h>
-#include <Strings.h>
 #include <MacWindows.h>
 #include <Movies.h>
 #include <Folders.h>
@@ -89,13 +89,16 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 #include <ctype.h>
 #include <Threads.h>
 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    #include <pthread.h>
+#endif
+
 #if TARGET_API_MAC_CARBON
     #define EnableMenuItemCarbon(m1,v1)  EnableMenuItem(m1,v1);
     #define DisableMenuItemCarbon(m1,v1)  DisableMenuItem(m1,v1);
 #else
     #define EnableMenuItemCarbon(m1,v1)  EnableItem(m1,v1);
     #define DisableMenuItemCarbon(m1,v1)  DisableItem(m1,v1);
-        inline pascal long InvalWindowRect(WindowRef  window,  const Rect * bounds) {InvalRect (bounds);}
 #endif
 
 
@@ -112,7 +115,6 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 *	  using Squeak's own HTTPSocket.
 *
 **********/
-//#define ENABLE_URL_FETCH  
 #define IMAGE_NAME "SqueakPlugin.image"
 
 /*** Exported Primitives ***/
@@ -180,14 +182,13 @@ RgnHandle   gSavePortClipRgn;
 CGrafPtr	gOldPort		= nil;
 int			needsUpdate		= false;
 NPWindow* 	netscapeWindow	= nil;
-Str255		notificationMsg = "";
-NMRec		notifyRec;
 int			pluginArgCount	= 0;
 char		*pluginArgName[MAX_ARG_STRING_LENGTH];
 char		*pluginArgValue[MAX_ARG_STRING_LENGTH];
 Boolean     ignoreFirstEvent=false,gIWasRunning=false;
 int			squeakHeapMBytes = STARTINGsqueakHeapMBytes;  /* default heap size, override via the "memory" EMBED tag */
-char		squeakPluginImageName[] = IMAGE_NAME;
+char		squeakPluginImageName[256] = IMAGE_NAME;
+char		failureURL[1024] = "";
 NPP			thisInstance	= nil;
 WindowPtr gAFullscreenWindow = nil;
 char        rememberMemoryString[128]="";
@@ -212,7 +213,7 @@ int nextRequestID = 1;
 int ioSetFullScreenRestore();
 
 /*** From VM ***/
-int checkImageVersionFromstartingAt(sqImageFile f, int imageOffset);
+int checkImageVersionFromstartingAt(sqImageFile f, squeakFileOffsetType imageOffset);
 int getLongFromFileswap(sqImageFile f, int swapFlag);
 extern int inputSemaphoreIndex;
 int recordMouseEvent(EventRecord *theEvent, int theButtonState);
@@ -323,7 +324,6 @@ void NPP_Shutdown(void) {
 NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
   int16 argc, char* argn[], char* argv[], NPSavedData* saved) {
 	int i;
-    OSErr   err;
 
 	/* only one Squeak instance can be active at a time */
 	if (thisInstance != nil) return NPERR_GENERIC_ERROR;
@@ -339,15 +339,21 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
 		strcpy(pluginArgName[i], argn[i]);
 		pluginArgValue[i] = (char *) NPN_MemAlloc(strlen(argv[i]) + 1);
 		strcpy(pluginArgValue[i], argv[i]);
+		if (CaseInsensitiveMatch(pluginArgName[i], "imagename")) {
+			strcpy(squeakPluginImageName,pluginArgValue[i]);
+		}
+		if (CaseInsensitiveMatch(pluginArgName[i], "failureurl")) {
+			strcpy(failureURL,pluginArgValue[i]);
+		}
 		if (CaseInsensitiveMatch(pluginArgName[i], "memory")) {
 			strcpy(rememberMemoryString,pluginArgValue[i]);
 		}
 	}
 
 	memory = nil;
+	thisInstance = instance;
 	ReadSqueakImage();
 	if (!memory) return NPERR_GENERIC_ERROR;
-	thisInstance = instance;
 	gSavePortClipRgn = NewRgn();
 	
 	
@@ -368,7 +374,6 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
  * NPP_Destroy as the instance's window is no longer guaranteed to be valid. 
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 NPError NPP_Destroy(NPP instance, NPSavedData** save) {
-	long i;
 	
 	exitRequested = true;
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
@@ -742,13 +747,16 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 				fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
 				EndUpdate(FrontWindow());
     		    //EndUpdate((WindowPtr) eventPtr->message);
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
 				pthread_mutex_lock(&gEventDrawLock);
 				pthread_mutex_unlock(&gEventNSAccept);
+#endif
 				return true;
      		}
 			else {
              fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
  			}
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
 			if (!getFullScreenFlag()) {
 				ProcessSerialNumber psn = { 0, kCurrentProcess }; 
 				OSStatus err;
@@ -761,6 +769,7 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 #endif
 				return false;
 			}
+#endif
     	}
 		
 		if(postMessageHook) postMessageHook(eventPtr);
@@ -774,11 +783,15 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
     	    return false;
     	} */
 	if (getFullScreenFlag()) {
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
             pthread_mutex_lock(&gEventDrawLock);
 			pthread_mutex_unlock(&gEventNSAccept);
+#endif
      	    ok = WaitNextEvent(everyEvent, &theEvent,1,null);
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
             pthread_mutex_unlock(&gEventDrawLock);
 			pthread_mutex_lock(&gEventNSAccept);
+#endif
             eventPtr = &theEvent;
     		SqueakYieldToAnyThread();
     	}
@@ -856,12 +869,12 @@ int ioShowDisplay(
 	static RgnHandle	maskRect = nil;
     
 	if (stWindow == nil || exitRequested) {
-		return;
+		return 0;
 	}
 	
 	StartDraw();
         if (exitRequested) 
-            return;
+            return 0;
     
 	dstRect.right	= width;
 	dstRect.bottom	= height;
@@ -892,9 +905,10 @@ int ioShowDisplay(
 
 	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(GetWindowPort(stWindow)), &srcRect, &dstRect, srcCopy, maskRect);
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-	QDFlushPortBuffer ((struct CGrafPort*)stWindow, maskRect);
+	QDFlushPortBuffer ((CGrafPtr)stWindow, maskRect);
 #endif
-	    EndDraw();
+	EndDraw();
+	return 0;
 }
 
 NP_Port * getNP_Port(void) {
@@ -911,18 +925,27 @@ void ReadSqueakImage(void) {
     int dataSize;
     int headerStart;
     int headerSize;
-    int heapSize;
     
 	plugInInit(squeakPluginImageName);
 	InitFilePaths();
 
 	/* read the image file and allocate memory for Squeak heap */
-	f = sqImageFileOpen(imageName, "rb");
+	if (CaseInsensitiveMatch(imageName,
+		"Problems finding the Internet folder in the Squeak Preference folder or finding the SqueakPlugin.image"))
+		f = NULL;
+	else
+		f = sqImageFileOpen(imageName, "rb");
+		
 	if (f == NULL) {
+		if (failureURL[0] != 0x00) {
+			// July 31/2004 added per Michaels request for squeakland camp in chicago
+			NPN_GetURL(thisInstance, failureURL, "_self");
+		} else {
 		strcpy(msg, "Could not open Squeak image file \"");
 		strcat(msg, imageName);
 		strcat(msg, "\"");
 		plugInNotifyUser(msg);
+		}
 		return;
 	}
 	
@@ -946,6 +969,7 @@ void ReadSqueakImage(void) {
 	sqImageFileClose(f);
 	setInterruptKeycode(515);  /* ctrl-C, since Netscape blocks cmd-. */
 	setFullScreenFlag(false); //Note image can be saved with true
+	SetUpTimers();
 }
 
 /*** URL Requests ***/
@@ -956,7 +980,6 @@ int URLRequestCreate(char *url, char *target, int semaIndex) {
      no idle request handles. */
 
 	int handle, notifyData;
-	long junk;
     char mail[8];
     NPError err;
     
@@ -972,7 +995,7 @@ int URLRequestCreate(char *url, char *target, int semaIndex) {
 	notifyData = (urlRequests[handle].id << 8) + handle;
 	strncpy(mail,url,7);
 	mail[7] = 0x00;
-#ifdef TARGET_API_MAC_CARBON 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
     	err = CFNetworkGoGetURL(thisInstance, url, target, (void *) notifyData);
 #else
 	if (CaseInsensitiveMatch(mail,"mailto:"))
@@ -989,8 +1012,9 @@ int URLPostCreate(char *url, char *buffer, char * window,int semaIndex) {
      no idle request handles. */
 
 	int handle, notifyData;
-	long junk;
+#if !(defined ( __APPLE__ ) && defined ( __MACH__ ))
 	NPError error;
+#endif
 	
 	if (thisInstance == null) return -1;
 	handle = FindIdleURLRequest();
@@ -1001,7 +1025,7 @@ int URLPostCreate(char *url, char *buffer, char * window,int semaIndex) {
 	urlRequests[handle].buffer = buffer;
 
 	notifyData = (urlRequests[handle].id << 8) + handle;
-#ifdef TARGET_API_MAC_CARBON 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
         {
         OSStatus		status; //kURLDisplayProgressFlag
         URLState                currentState;
@@ -1176,6 +1200,7 @@ int ioExit(void) {
 
 	ioSetFullScreenRestore();
 	exitRequested = true;
+	return 0;
 }
 
 int ioScreenSize(void) {
@@ -1212,13 +1237,13 @@ int ioSetFullScreen(int fullScreen) {
     GDHandle   dominantGDevice;
 	
 	if (fullScreen) {
-	    if (getFullScreenFlag()) return;
+	    if (getFullScreenFlag()) return 0;
 	    
 		desiredWidth = 0;
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
 		oldStWindow = stWindow;
-#if TARGET_API_MAC_CARBON
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
                 GetWindowGreatestAreaDevice((WindowPtr) FrontWindow(),kWindowContentRgn,&dominantGDevice,&windRect); 
 #else
                 dominantGDevice = getDominateDevice(stWindow,&windRect);
@@ -1248,11 +1273,11 @@ int ioSetFullScreen(int fullScreen) {
     	netscapeWindow = &gFullScreenNPWindow;
     	ignoreFirstEvent = true;
  	} else {
-	    if (!getFullScreenFlag()) return;
+	    if (!getFullScreenFlag()) return 0;
 		setFullScreenFlag(false);
         ioSetFullScreenRestore();
 	}
-
+	return 0;
 }
 
 int  ioSetFullScreenRestore()
@@ -1263,14 +1288,17 @@ int  ioSetFullScreenRestore()
 	if (gRestorableStateForScreen != nil) {
 		EndFullScreen(gRestorableStateForScreen,nil);
 	    if (gAFullscreenWindow == nil) 
-		    return;
+		    return 0;
 	    gRestorableStateForScreen = nil;
 	    netscapeWindow = oldNetscapeWindow;
 	    stWindow = oldStWindow;
 		
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
 		err = ShowHideProcess (&psn,false);
 		waitAFewMilliseconds();
+#endif
 	}
+	return 0;
 }
 
 /*** File and Access Paths ***/
@@ -1354,12 +1382,13 @@ int primitivePluginBrowserReady(void) {
 	PLUGINDEBUGSTR("\pPrimitiveCallBrowserReady;g;");
 	interpreterProxy->pop(1);
 	interpreterProxy->pushBool(1);
+	return 0;
 }
 
 
 /*** Optional URL Fetch Primitives ***/
 #ifdef ENABLE_URL_FETCH
-#ifdef TARGET_API_MAC_CARBON
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
 
 int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* notifyData)
 {
@@ -1370,15 +1399,14 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
     GetTempFSSpec(&tempFileSpec);
     error = URLSimpleDownload (url,&tempFileSpec,NULL,NULL,NULL,notifyData);
     PathToFile(fileName,MAX_STRING_LENGTH, &tempFileSpec,gCurrentVMEncoding);
-    URLRequestCompleted(notifyData, fileName);
+    URLRequestCompleted((int) notifyData, fileName);
+	return 0;
 }
 
 void GetTempFSSpec(FSSpec *spec) {
     char tempName[1024+1];
     CFURLRef    sillyThing;
     CFStringRef filePath;
-    FSRef	theFSRef;
-    OSErr	err;
     
     strcpy(tempName,tmpnam(0));
     
@@ -1406,6 +1434,7 @@ int primitivePluginDestroyRequest(void) {
 	}
 	URLRequestDestroy(handle);
 	interpreterProxy->pop(1);
+	return 0;
 }
 
 int primitivePluginRequestFileHandle(void) {
@@ -1447,6 +1476,7 @@ int primitivePluginRequestFileHandle(void) {
 	}
 	interpreterProxy->pop(2);
 	interpreterProxy->push(fileObj);
+	return 0;
 }
 
 int primitivePluginRequestState(void) {
@@ -1482,6 +1512,7 @@ int primitivePluginRequestState(void) {
 
 	interpreterProxy->pop(2);
 	interpreterProxy->push(resultObj);
+	return 0;
 }
 
 int primitivePluginRequestURL(void) {
@@ -1542,6 +1573,7 @@ int primitivePluginRequestURL(void) {
 	}
 	interpreterProxy->pop(4);
 	interpreterProxy->pushInteger(handle);
+	return 0;
 }
 
 int primitivePluginPostURL(void) {
@@ -1631,6 +1663,7 @@ int primitivePluginPostURL(void) {
 	}
 	interpreterProxy->pop(5);
 	interpreterProxy->pushInteger(handle);
+	return 0;
 }
 
 int primitivePluginRequestURLStream(void) {
@@ -1674,6 +1707,7 @@ int primitivePluginRequestURLStream(void) {
 	}
 	interpreterProxy->pop(3);
 	interpreterProxy->pushInteger(handle);
+	return 0;
 }
 
 void OpenFileReadOnly(SQFile *f, char *MacfileName) {
@@ -1757,7 +1791,6 @@ int StringToInteger(char *s) {
 
 void ExitCleanup(void) {
   /* Clean up and stop running plugin. */
-	Boolean URLFetchInProgress;
 	int i;
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
@@ -1770,6 +1803,7 @@ void ExitCleanup(void) {
         pthread_mutex_unlock(&gEventDrawLock);
 #endif	
 	/* do { This hangs things, not sure what to do about outstanding URL requests...
+		Boolean URLFetchInProgress;
 		URLFetchInProgress = false;
 		for (i = 0; i < URL_REQUEST_COUNT; i++) {
 			if (urlRequests[i].status == STATUS_IN_PROGRESS) {
@@ -1812,18 +1846,21 @@ void ExitCleanup(void) {
 
 int plugInNotifyUser(char *msg) {
   /* Notify the user that there was a problem starting Squeak. */
+	unsigned char *		notificationMsg = malloc(256);
+	NMRec		*notifyRec = malloc(sizeof(NMRec));
 
 	CopyCStringToPascal(msg,notificationMsg); /* copy message, since notification is asynchronous */
 
-	notifyRec.qType = nmType;
-	notifyRec.nmMark = false;			/* no mark in applications menu */
-	notifyRec.nmIcon = nil;				/* no menu bar icon */
-	notifyRec.nmSound = (Handle) -1;	/* -1 means system beep */
-	notifyRec.nmStr = notificationMsg;
-	notifyRec.nmResp = (NMUPP) -1;		/* -1 means remove notification when user confirms */
+	notifyRec->qType = nmType;
+	notifyRec->nmMark = false;			/* no mark in applications menu */
+	notifyRec->nmIcon = nil;				/* no menu bar icon */
+	notifyRec->nmSound = (Handle) -1;	/* -1 means system beep */
+	notifyRec->nmStr = notificationMsg;
+	notifyRec->nmResp = (NMUPP) -1;		/* -1 means remove notification when user confirms */
 
 	/* add to notification queue */
-	NMInstall(&notifyRec);
+	NMInstall(notifyRec);
+	return 0;
 }
 
 void plugInSetStartTime(void) {
@@ -1917,6 +1954,8 @@ void waitAFewMilliseconds()
     err = pthread_mutex_unlock(&sleepLock); 
 }
 
+#ifdef JMMFoo
+
 /* LowRunAppleScript compiles and runs an AppleScript
     provided as text in the buffer pointed to by text.  textLength
     bytes will be compiled from this buffer and run as an AppleScript
@@ -2003,4 +2042,5 @@ static pokeAtSafari(void) {
        "end tell");
    */
 
+#endif
 #endif
