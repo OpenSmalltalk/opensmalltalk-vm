@@ -77,9 +77,11 @@
 // Define PLUGIN_TRACE to 1 to have the wrapper functions emit
 // DebugStr messages whenever they are called.
 //
-#define PLUGIN_TRACE 0
+//#define PLUGIN_TRACE 1
 
 #if PLUGIN_TRACE
+//extern "C"  int printOnOSXPascal(unsigned char * string);
+//#define PLUGINDEBUGSTR(msg) printOnOSXPascal(msg)
 #define PLUGINDEBUGSTR(msg)		::DebugStr(msg)
 #else
 #define PLUGINDEBUGSTR
