@@ -144,7 +144,7 @@ IMG_O=		squeak_image.o
 IMZ_O=		squeak_image_gz.o
 
 DOCFILES=	COPYING COPYRIGHT LICENSE README.CodingStandards
-MANFILES=	squeak.1
+MANFILES=	squeak.1 inisqueak.1
 
 .SUFFIXES:
 
@@ -189,18 +189,7 @@ gnu-interp.c : $(gendir)/vm/interp.c $(GNUIFY)
 
 .force :
 
-squeak.1 : $(srcdir)/squeak.1
-	rm -f squeak.1
-	sed '\
-s,{vsqdatadir},$(vsqdatadir),g;\
-s,{sqdatadir},$(sqdatadir),g;\
-s,{vsqlibdir},$(vsqlibdir),g;\
-s,{sqlibdir},$(sqlibdir),g;\
-s,{bindir},$(bindir),g;\
-s,{docdir},$(docdir),g;\
-s,{mandir},$(man1dir),g;\
-s,{version},$(VERSION),g;\
-s,{major},$(MAJOR),g;' <$(srcdir)/squeak.1 >squeak.1
+
 
 # installation
 
@@ -249,7 +238,7 @@ modules_uninstall :
 	done
 	@$(UNINSTALL) $(DESTDIR)$(vsqlibdir)
 
-doc_install : squeak.1
+doc_install : squeak.1 inisqueak.1
 	$(MKINSTALLDIRS) $(DESTDIR)$(docdir)
 	@list='$(DOCFILES)'; for f in $$list; do \
 	  echo $(INSTALL_DATA) $(srcdir)/$$f $(DESTDIR)$(docdir); \
@@ -257,10 +246,12 @@ doc_install : squeak.1
 	done
 	$(MKINSTALLDIRS) $(DESTDIR)$(man1dir)
 	$(INSTALL_DATA) squeak.1 $(DESTDIR)$(man1dir)
+	$(INSTALL_DATA) inisqueak.1 $(DESTDIR)$(man1dir)
 
 doc_uninstall :
 	@$(UNINSTALL) $(DESTDIR)$(docdir) $(DOCFILES)
 	@$(UNINSTALL) $(DESTDIR)$(man1dir) squeak.1
+	@$(UNINSTALL) $(DESTDIR)$(man1dir) inisqueak.1
 
 image_install :
 	$(MKINSTALLDIRS) $(DESTDIR)$(vsqdatadir)
