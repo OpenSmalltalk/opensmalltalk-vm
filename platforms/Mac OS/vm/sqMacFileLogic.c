@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.8 2002/05/17 23:43:28 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.9 2002/05/31 16:48:23 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -149,20 +149,30 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
                 CFRelease(sillyThing);
                 return -1;
             } else {
+                CFStringRef lastPathPart;
+                char	 lastpart[256];
+                
                 CFRelease(filePath);
                 CFRelease(firstPartOfPath);
-#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
-                filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
-#else
-                filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLPOSIXPathStyle);
-#endif
+                lastPathPart = CFURLCopyLastPathComponent(sillyThing);
                 CFRelease(sillyThing);
-                if (filePath  == null) 
-                    return -2;
                 
-                CFStringGetCString(filePath,dst,1000, kCFStringEncodingMacRoman);
-                CFRelease(filePath);
-                return 0;
+                err = noErr;
+                if (resolveAlias) 
+                    err = FSResolveAliasFile (&theFSRef,true,&isFolder,&isAlias);
+
+                if (err) 
+                    return 2;
+                
+                err = FSRefMakePath(&theFSRef,(UInt8 *)dst,1000); 
+                CFStringGetCString(lastPathPart,lastpart,256, kCFStringEncodingUTF8);
+                CFRelease(lastPathPart);
+                if (strlen(dst)+1+strlen(lastpart) < 1000) {
+                    strcat(dst,"/");
+                    strcat(dst,lastpart);
+                    return 0;
+                } else
+                    return 2;
             }
         }
         
