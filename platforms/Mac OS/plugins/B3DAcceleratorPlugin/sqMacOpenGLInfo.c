@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGLInfo.c,v 1.3 2002/02/06 06:57:19 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGLInfo.c,v 1.4 2004/09/22 18:56:40 johnmci Exp $
 *
 *   NOTES:
 *
@@ -26,6 +26,9 @@
 	#include <agl.h>
 #endif
 
+#include "sq.h"
+#include "sqVirtualMachine.h"
+
 int printRendererInfo(void);
 int printFormatInfo(AGLPixelFormat info);
 
@@ -42,12 +45,36 @@ int printFormatInfo(AGLPixelFormat info);
 int verboseLevel = 3;
 /* define forceFlush if we should fflush() before closing file */
 #define forceFlush 1
+FILE * xopenf(char *filename,char* attr);
+
+#include "sqMacFileLogic.h"	
+
+static FILE *xopenf(char *filename,char* attr) {
+	FSSpec imageSpec;
+	char fullName[1024];
+	FILE *fp;
+	makeFSSpec("", 0, &imageSpec);
+	PathToFile(fullName,sizeof(fullName),&imageSpec,gCurrentVMEncoding);
+	strcat(fullName,filename);
+	fp = fopen(fullName, attr);
+return fp;
+}
+
 
 /* Note: Print this stuff into a file in case we lock up*/
+/* Note: Print this stuff into a file in case we lock up*/
 #undef DPRINTF
+#if defined (__APPLE__) && defined(__MACH__)
 # define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
-	FILE *fp = fopen("Squeak3D.log", "at");\
+	char fileName[1024]; \
+	sqFilenameFromStringOpen(fileName,(long) &":Squeak3D.log", strlen(":Squeak3D.log")); \
+	FILE *fp = fopen(fileName, "at");\
 	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
+#else
+# define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
+	FILE *fp = xopenf("Squeak3D.log", "at");\
+	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
+#endif
 
 /*****************************************************************************/
 /*****************************************************************************/

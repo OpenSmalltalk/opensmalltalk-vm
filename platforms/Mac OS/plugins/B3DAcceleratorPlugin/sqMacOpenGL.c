@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.9 2004/08/03 02:41:16 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.10 2004/09/22 18:56:33 johnmci Exp $
 * 
 *   NOTES:
 *
@@ -36,9 +36,14 @@
 	#include <agl.h> 
 	#include <Events.h>
 #endif
+/* Do not include the entire sq.h file but just those parts needed. */
+/*  The virtual machine proxy definition */
 #include "sqVirtualMachine.h"
+/* Configuration options */
 #include "sqConfig.h"
+/* Platform specific definitions */
 #include "sqPlatformSpecific.h"
+
 #include "B3DAcceleratorPlugin.h"
 #include "sqMacOpenGL.h"
 #include "sqOpenGLRenderer.h"
@@ -88,11 +93,33 @@ extern int verboseLevel;
 /* define forceFlush if we should fflush() before closing file */
 #define forceFlush 1
 
+FILE *xopenf(char *filename,char* attr);
+#include "sqMacFileLogic.h"	
+
+static FILE *xopenf(char *filename,char* attr) {
+	FSSpec imageSpec;
+	char fullName[1024];
+	FILE *fp;
+	makeFSSpec("", 0, &imageSpec);
+	PathToFile(fullName,sizeof(fullName),&imageSpec,gCurrentVMEncoding);
+	strcat(fullName,filename);
+	fp = fopen(fullName, attr);
+return fp;
+}
+
 /* Note: Print this stuff into a file in case we lock up*/
 #undef DPRINTF
+#if defined (__APPLE__) && defined(__MACH__)
 # define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
-	FILE *fp = fopen("Squeak3D.log", "at");\
+	char fileName[1024]; \
+	sqFilenameFromStringOpen(fileName,(long) &":Squeak3D.log", strlen(":Squeak3D.log")); \
+	FILE *fp = fopen(fileName, "at");\
 	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
+#else
+# define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
+	FILE *fp = xopenf("Squeak3D.log", "at");\
+	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
+#endif
         
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
