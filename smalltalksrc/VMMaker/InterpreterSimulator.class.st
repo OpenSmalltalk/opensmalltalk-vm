@@ -280,6 +280,13 @@ InterpreterSimulator >> fullGC [
 	Transcript show: ' done>'.
 ]
 
+{ #category : #'interpreter shell' }
+InterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass [
+"Override Interpreter to handle the external primitives caching. See also internalExecuteNewMethod"
+	(primIndex between: 1 and: MaxPrimitiveIndex) ifFalse:[^nil].
+	^primitiveTable at: primIndex +1
+]
+
 { #category : #'memory access' }
 InterpreterSimulator >> halfWordAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
@@ -395,6 +402,16 @@ InterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
 	^memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
+]
+
+{ #category : #'interpreter shell' }
+InterpreterSimulator >> internalExecuteNewMethod [
+"Override the Interpreter version to trap cached external prims.
+These have a 'prim index' of 1000 + the externalPrimitiveTableIndex normally used"
+	primitiveIndex < 1000 ifTrue:[^super internalExecuteNewMethod].
+	self externalizeIPandSP.
+	self callExternalPrimitive: (externalPrimitiveTable at: primitiveIndex - 1001).
+	self internalizeIPandSP
 ]
 
 { #category : #security }
@@ -1322,7 +1339,7 @@ InterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
 ]
 
 { #category : #'float primitives' }
-InterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat. [
+InterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 
 	self longAt: floatBitsAddress put: (aFloat at: 1).
 	self longAt: floatBitsAddress+4 put: (aFloat at: 2).

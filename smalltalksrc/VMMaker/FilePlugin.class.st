@@ -17,9 +17,9 @@ Class {
 		'sHFAfn'
 	],
 	#classVars : [
-		'DirBadPath',
 		'DirEntryFound',
-		'DirNoMoreEntries'
+		'DirNoMoreEntries',
+		'DirBadPath'
 	],
 	#category : 'VMMaker-Plugins'
 }
