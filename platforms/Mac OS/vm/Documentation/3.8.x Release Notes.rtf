@@ -9,13 +9,16 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation\
 \
-Jan 31st, 2005 (3.8.6b4)\
+Feb 3rd, 2005 (3.8.6b5)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.7.5.x seems a fine VM, from what people tell me, but now we've 3.8.6.\
+\
+3.8.6b5			Change to JMM & AR GC instrumentation patch, collect a few less statistics. Also change carbon VM to use Unix/Quartz sound driver \
+				which interfaces to Core Audio stuff. \
 \
 3.8.6b4			Ensure VMMaker 3.8b2 - the VM code classes and tools for building a working vm for Squeak version  > 3.8-6461. is incorporated.\
 				Add Andreas's GC improvement changes for \
@@ -38,7 +41,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 				Smalltalk setGCBiasToGrow: 1.\
 				Set bias to grow upto GCLimit, this can avoid a problem where we attempt to avoid growing but results in thousands of incremental GC events as \
 				we approach a knee in a curve of space used versus the growth/compaction decision. \
-\
+\
 \
 3.8.6b3			Add in logic for become: to fix issues with changes to become: logic. \
 \
