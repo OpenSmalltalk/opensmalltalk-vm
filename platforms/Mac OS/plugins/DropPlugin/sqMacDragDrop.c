@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDragDrop.c,v 1.3 2002/01/09 06:42:12 johnmci Exp $
+*   RCSID:   $Id: sqMacDragDrop.c,v 1.4 2002/05/13 19:49:47 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Carbon cleanup
@@ -42,6 +42,8 @@ Some of this code comes from
 	Change History (most recent first):
 	9/9/99 by John Montbriand
 	
+	May 8th,2002,JMM - Bert Freudenberg published some changes to make file opening easier without security
+	
 */
 /*
     need get filetype/creator
@@ -58,7 +60,6 @@ Some of this code comes from
 
 
 #include "sqVirtualMachine.h"
-#include "FilePlugin.h"
 #include "sqMacFileLogic.h"	
 
 #include "DropPlugin.h"
@@ -89,7 +90,6 @@ char tempName[DOCUMENT_NAME_SIZE + 1];
 		
  Boolean gApprovedDrag = false;   /* set to true if the drag is approved */
  Boolean gInIconBox = false;      /* set true if the drag is inside our drop box */
- long gSecurityCallbackToDisableSecurity = 0;
  
 extern struct VirtualMachine *interpreterProxy;
  pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef);
@@ -173,19 +173,8 @@ int dropShutdown() {
 
 }
 
-int sqSetFileAccessCallback(void *function) {
-    gSecurityCallbackToDisableSecurity  = (long) function;
-}
-
-/*	Return a pointer to the first byte of of the file record within the given Smalltalk object, or nil if objectPointer is not a file record. */
-
-static SQFile * fileValueOf(int objectPointer) {
-	if (!((interpreterProxy->isBytes(objectPointer)) && ((interpreterProxy->byteSizeOf(objectPointer)) == ( sizeof(SQFile))))) {
-		interpreterProxy->primitiveFail();
-		return null;
-	}
-	return interpreterProxy->firstIndexableField(objectPointer);
-}
+int sqSecFileAccessCallback(void *function) {
+ }
 
 //Primitive to get file name
 
@@ -201,35 +190,21 @@ char *dropRequestFileName(int dropIndex) {
 //Primitive to get file stream handle.
 
 int dropRequestFileHandle(int dropIndex) {
-    int  fileHandle,fn,iHFAfn;
-    int  size,classPointer;
+    int  fileOop,fn;
     char *dropName = dropRequestFileName(dropIndex);
-    Boolean needToFlipFlagBack=false;
-    
+
     if(!dropName)
         return interpreterProxy->nilObject();
  
-    size = sizeof(SQFile);
-    classPointer = interpreterProxy->classByteArray();
-    fileHandle = interpreterProxy->instantiateClassindexableSize(classPointer, size);
-	fn = interpreterProxy->ioLoadFunctionFrom("fileOpennamesizewrite", "FilePlugin");
+	fn = interpreterProxy->ioLoadFunctionFrom("fileOpenNamesizewritesecure", "FilePlugin");
 	if (fn == 0) {
 		/* begin primitiveFail */
         interpreterProxy->success(false);
 		return null;
 	}
-	if (gSecurityCallbackToDisableSecurity != 0 ) {
-    	iHFAfn = interpreterProxy->ioLoadFunctionFrom("secHasFileAccess", "SecurityPlugin");
-    	if ((iHFAfn != 0) && !((int (*) (void)) iHFAfn)()){
- 	    	((int (*) (int)) gSecurityCallbackToDisableSecurity)(true);
-    	    needToFlipFlagBack = true;
-    	} 
-    }
-	((int (*) (SQFile *, int, int,int)) fn)(fileValueOf(fileHandle),(int)dropName, strlen(dropName), 0);
-    if (needToFlipFlagBack)
- 	    ((int (*) (int)) gSecurityCallbackToDisableSecurity)(false);
+	fileOop = ((int (*) (int, int, int, int)) fn)((int)dropName, strlen(dropName), 0,0);
     
-  return fileHandle;
+  return fileOop;
 }
 
 
