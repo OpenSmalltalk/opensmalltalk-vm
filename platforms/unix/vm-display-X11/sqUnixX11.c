@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2004-01-30 02:53:20 by piumarta on emilia.local
+ * Last edited: 2004-04-02 14:44:31 by piumarta on emilia.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -607,10 +607,13 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
       /* If we don't report COMPOUND_TEXT in this list, KMail (and maybe other
        * Qt/KDE apps) don't accept pastes from Squeak. Of course, they'll use
        * UTF8_STRING anyway... */
-      Atom targets[]= {
-	xaTargets,    xaMultiple, xaTimestamp,	        /* required by ICCCM */
-	xaUTF8String, XA_STRING,  xaCompoundText
-      };
+      Atom targets[6];
+      targets[0]= xaTargets;
+      targets[1]= xaMultiple;
+      targets[2]= xaTimestamp;	        /* required by ICCCM */
+      targets[3]= xaUTF8String;
+      targets[4]= XA_STRING;
+      targets[5]= xaCompoundText;
 
       xError= XChangeProperty(requestEv->display, requestEv->requestor,
                               targetProperty, XA_ATOM,
@@ -621,8 +624,11 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
       /* COMPOUND_TEXT is handled here for older clients that don't handle UTF-8 */
       int	    len=    strlen(stPrimarySelection);
       char	   *buf=    (char *)malloc(len * 3 + 1);
-      char	   *list[]= { buf, NULL };
       XTextProperty textProperty;
+      char	   *list[2];
+
+      list[0]= buf;
+      list[1]= NULL;
 
       /* convert our locale text to CTEXT */
       sq2uxText(stPrimarySelection, len, buf, len * 3 + 1, 1);
@@ -677,7 +683,7 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
 	    }
 	  else
 	    {
-	      int i;
+	      unsigned long i;
 	      for (i= 0; i < numberOfItems; i+= 2)
 		{
 		  XSelectionRequestEvent individualRequestEv;
@@ -765,7 +771,6 @@ static char *getSelectionFrom(Atom source)
 {
   XEvent  ev;
   fd_set  fdMask;
-  int	  xreturn;
   Time	  timestamp= getXTimestamp();
 
   XDeleteProperty(stDisplay, stWindow, selectionAtom);
@@ -861,7 +866,7 @@ static char *getSelectionFrom(Atom source)
 #  if defined(DEBUG_SELECTIONS)
     fprintf(stderr, "getprop type ");
     printAtomName(type);
-    fprintf(stderr, " format %d nitems %d bytesAfter %d\ndata=",
+    fprintf(stderr, " format %d nitems %ld bytesAfter %ld\ndata=",
 	    format, nitems, bytesAfter);
     dumpSelectionData(data, nitems, 1);
 #  endif
@@ -3978,9 +3983,6 @@ static void display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h)
 static void printVisual(XVisualInfo* visinfo);
 static void listVisuals();
 
-static glRenderer *current= NULL;
-static glRenderer allRenderer[MAX_RENDERER];
-
 static int visualAttributes[]= {
   GLX_STENCIL_SIZE,     0,  /* filled in later - must be first item! */
   GLX_ALPHA_SIZE,       1,  /* filled in later - must be second item! */
@@ -4008,7 +4010,6 @@ static int display_ioGLinitialise(void) { return 1; }
 static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags)
 {
   XVisualInfo* visinfo= 0;
-  int index= -1;
 
   if (flags & B3D_STENCIL_BUFFER)
     visualAttributes[1]= 1;
@@ -4159,14 +4160,15 @@ static void printVisual(XVisualInfo* visinfo)
       glXGetConfig(stDisplay, visinfo, GLX_DEPTH_SIZE,    &depth);
 
       if (slow != GLX_SLOW_CONFIG)
-	DPRINTF(3, (fp,"===> OpenGL visual\r"))
+        { DPRINTF(3, (fp,"===> OpenGL visual\r")) }
       else
-	DPRINTF(3, (fp,"---> slow OpenGL visual\r"));
+        { DPRINTF(3, (fp,"---> slow OpenGL visual\r")) }
 
       DPRINTF(3, (fp,"rgbaBits = %i+%i+%i+%i\r", red, green, blue, alpha));
       DPRINTF(3, (fp,"stencilBits = %i\r", stencil));
       DPRINTF(3, (fp,"depthBits = %i\r", depth));
     }
+  glGetError();	/* reset error flag */
 }
 
 static void listVisuals(void)
@@ -4229,8 +4231,8 @@ static void display_winInit(void)
 
 static void display_winOpen(void)
 {
-  int sws= getSavedWindowSize();
 #if defined(DEBUG_WINDOW)
+  int sws= getSavedWindowSize();
   fprintf(stderr, "saved window size is %d %d\n", sws >> 16, sws & 0xffff);
 #endif
   if (headless)
@@ -4273,6 +4275,9 @@ static void display_printUsage(void)
   printf("  -swapbtn              swap yellow (middle) and blue (right) buttons\n");
   printf("  -xasync               don't serialize display updates\n");
   printf("  -xshm                 use X shared memory extension\n");
+#if (USE_X11_GLX)
+  printf("  -glxdebug <n>         set GLX debug verbosity level to <n>\n");
+#endif
 }
 
 static void display_printUsageNotes(void)
@@ -4332,7 +4337,7 @@ static int display_parseArgument(int argc, char **argv)
       else if (!strcmp(arg, "-cmdmod"))  cmdMapIndex= Mod1MapIndex + atoi(argv[1]) - 1;
       else if (!strcmp(arg, "-browserWindow"))
 	{
-	  sscanf(argv[1], "%li", &browserWindow);
+	  sscanf(argv[1], "%lu", (unsigned long *)&browserWindow);
 	  if (browserWindow == 0)
 	    {
 	      fprintf(stderr, "Error: invalid argument for `-browserWindow'\n");
@@ -4359,6 +4364,12 @@ static int display_parseArgument(int argc, char **argv)
 #	 endif
 	  return 3;
 	}
+#    if (USE_X11_GLX)
+      else if (!strcmp(arg, "-glxdebug"))
+	{
+	  sscanf(argv[1], "%d", &verboseLevel);
+	}
+#    endif
       else
 	n= 0;	/* not recognised */
     }
