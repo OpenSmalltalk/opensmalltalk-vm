@@ -1,23 +1,133 @@
-Building the Squeak Virtual Machine (Dec 18th 2001)
+Building the Squeak Virtual Machine (Jan 1st 2002)
 	-- John Maloney, May 25, 2000,
-	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001
-	
+	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002
+	-- Changes Andrew C. Greenberg, Jan 1st 2002
 
-To build this under Apple's Project Builder on OS-X 10.1.1 (december 2001 developer tools) 
-You must unpack the resources sit file to get the proper icns files and resource for OS-X.
-You must unpack the resources SqueakVMForCarbon.pbproj.sit to enable you to build under OS-X
+(Note to readers, this hasn't been proofed yet, so beware)
 
-The Macintosh virtual machine is built using the following command via
-Tim's VMMaker, and having access to the squeak source tree for static files. 
-Usually found somewhere on ftp://ftp.squeak.org
+Date: Tue, 1 Jan 2002 22:12:07 -0500
+Subject: Next step of the build documentation
+To: John M McIntosh <johnmci@smalltalkconsulting.com>
+From: "Andrew C. Greenberg" <werdna@mucow.com>
 
-(VMMaker default initializeAllInternalBut: 
-	#(IntegerPokerPlugin Mpeg3Plugin FFIPlugin TestOSAPlugin FileCopyPlugin )) 
-	generateMainVM.
+Here's a step forward, some polish and practice necessary:
 
-After building the source code, move the contents of the src:vm directory, and any plugins folders you
-want into a folder that you want to build the VM from. 
+Building a Carbon Squeak VM with ProjectBuilder:
 
+In the following, I'm assuming you have a modern build of Mac OS X (mine is 10.0.2).
+
+Overview
+
+	1.	Get the Apple Developer Tools (free)
+	2.	Get the current Sourceforge Platforms tree
+	2'.	Tweak LargeIntegersPlugin
+	3.	Get, and install, the VMMaker, and build an interpreter
+	4.	Get, and install, the Gnifier, and gnuify the interpreter
+	5.	Shove some files around the buildspace
+	6.	Run ProjectBuilder and build yourself an interpreter
+	7.	Download and print your Squeak VM Developer's Certificate
+
+Step One: Get the Apple Developer Tools (free)
+
+	The current build requires the December 2001 developer tools.  They are available to Online members at the apple developer website.  You can get an Online membership for free at:
+
+		http://developer.apple.com/membership/online.html
+
+Step Two: Get the current Sourceforge Platforms tree
+
+	A.	Open the Terminal, entering the following commands:
+	B.	cd /directory/path/to/your/squeak/folder
+	C.	cvs -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak login
+		(when prompted for a password, just hit enter)
+	D.	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak co platforms
+
+After so much mumbo-jumbo, your squeak folder should have a directory entitled platforms.
+
+Step Two Prime: Tweak LargeIntegersPlugin
+
+	(This step is necessary to fix an incompatibility between LargeIntegersPlugin,
+	gcc and some OS libraries).  There seems to be some religious issues involving the
+	nature of the changes, but we can't build in Carbon as is.  Hopefullly, these
+	issues will be reconciled and repaired to everybody's satisfaction.)
+
+-	A.	http://www.mucow.com/LargeIntegersAssertFix.1.cs (just fileIn)
+
+Step Three: Get, and install, the VMMaker, and build an interpeter
+
+	A.
+	http://sumeru.stanford.EDU/tim/pooters/SqFiles/deltas/VMMaker-3-1-version3.
+cs
+	B.	DoIt: VMMakerTool openInWorld
+	C.	Enter the Path to platforms code: (enter path to platforms in step two).
+	D.	Enter the Platform name: (default is fine) "Mac OS"
+	E.	Enter the Path for your generates sources (default is fine).
+	F.	Select plugins. (Suggest selecting menu item "make all external",
+		then drag back the following back to Plugins not built:
+			FFIPlugin
+			FileCopyPlugin
+			IntegerPokerPlugin
+			Mpeg3Plugin
+			TestOSAPlugin)
+	G.	Press button "Save Configuration" to save your configuration for later.
+	H.	Press button "Generate All" to build the interpreter
+
+For comparison, my entries were, respectively:
+
+		powercow X:Users:werdna:Desktop:squeak:VM:squeak:platforms
+		Mac OS
+		powercow X:Users:werdna:Desktop:squeak:Squeak3.2a-4599 Folder:src
+
+Step Four: Get, and install, the Gnifier, and gnuify the interpreter
+
+	A.	http://www.werdna.com/Gnuifier.1.cs
+	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
+
+		(Gnuifier on:
+			((FileDirectory default
+				directoryNamed: 'src')
+				directoryNamed: 'vm') pathName) gnuify
+
+Step Five: Shove and Tweak some files around the buildspace
+
+	A.	Open a MacOSX Finder browser and go to the src/vm folder.
+	B.	Unstuff 'resources.sit.hqx'
+		1. select the file
+		2. cmd-I for an inspector
+		3. select "Open with application"
+		4. click the box and select Stuffit Expander
+		5. go back and double-click the .hqx
+	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit'
+		(same deal as step B)
+	D.	Drag 'Squeak
+
+Step Six: Run ProjectBuilder and build yourself an interpreter
+
+	A.	Double-click the SqueakVMForCarbon.pbproj file
+	B.	Click on the Sources folder in the left pane
+	C.	Select "Project -> Add Files..."
+	D.	Select all the highlighted ".c" files relating to your projects.
+		(But don't add MacMinimal.c or anything beginning with "my").
+-	D'.	Click on the file "Error.c", and delete the whitespace at the end
+		of the file
+	E.	Click on the Resources folder in the left pane
+	F.	Select "Project -> Add Files..."
+	G.	Select all the .rsrc files in the resource/For ProjectBuilder folder and add them
+	E.	On the left pane, there are some vertically oriented fold-over tabs.
+		Click the one marked "Targets."
+	F.	On the left upper pane marked "Targets," select "Squeak VM Opt"
+	G.	On the left lower pane marked "Build Styles," select "Deployment"
+	H.	Click on the hammer icon at the top left to build your VM.
+	I.	The final product should live in the src/vm/Build folder, named "Squeak VM Opt"
+
+Step Seven: Download and print your Squeak VM Developer's Certificate
+
+	http://sumeru.stanford.edu/tim/pooters/SqueakVMBuilderCertificate.pdf
+
+Congratulations! Take a bow!
+
+1 tinyBenchmarks
+
+Older Notes
 The platform specific files are sqMacXXX.c, totaling about  more than 2000 lines of code
 when this document was originally written. All other code is written to standard
 ANSI libraries and should port easily to other C environments.
