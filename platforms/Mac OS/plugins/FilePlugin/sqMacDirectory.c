@@ -1,4 +1,15 @@
-/* 
+/****************************************************************************
+*   PROJECT: Mac directory logic
+*   FILE:    sqMacDirectory.c
+*   CONTENT: 
+*
+*   AUTHOR:  John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqMacDirectory.c,v 1.4 2002/01/09 06:40:38 johnmci Exp $
+*
+*   NOTES: See change log below.
+* 
  
  Feb 2nd 2001, JMM rewrote, using more current file manager logic.
  3.0.7 return correct response on findimage
@@ -9,6 +20,7 @@
  3.0.19 Aug 2001 JMM make it a real plugin 
  3.2.1  Nov 2001 JMM build with Apple's project builder and convert to use StdCLib.
  3.2.1B5 Dec 27,2001 JMM alter mkdir def to make cw pro 5 happy
+ 3.2.1B6 Jan 2,2002 JMM make lookup faster
  */
 
 #include "sq.h"
@@ -215,7 +227,7 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 		/* get file or directory info */
 		if (!equalsLastPath(pathString, pathStringLength)) {
  			/* lookup and cache the refNum for this path */
-			err = lookupPath(pathString, pathStringLength, &spec,false);
+			err = lookupPath(pathString, pathStringLength, &spec,false,true);
  			if (err == noErr) 
 				recordPath(pathString, pathStringLength, &spec);
 			else 
