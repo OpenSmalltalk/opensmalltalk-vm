@@ -2314,8 +2314,12 @@ static void *stMalloc(size_t lbs)
 	      XSync(stDisplay, False);
 	      XSetErrorHandler(prev);
 	      if (result)
-		/* success */
-		return stShmInfo.shmaddr;
+		{
+		   /* success */
+		   shmctl(stShmInfo.shmid, IPC_RMID, NULL);  /* go ahead and mark it detached;
+								it will disappear on program exit */
+		   return stShmInfo.shmaddr;
+		}
 	    }
 	  /* could not attach to allocated shared memory segment */
 	  shmctl(stShmInfo.shmid, IPC_RMID, 0);
@@ -2339,7 +2343,6 @@ static void stFree(void *addr)
       return;
     }
 #ifdef USE_XSHM
-  shmctl(stShmInfo.shmid, IPC_RMID, 0);
   shmdt(stShmInfo.shmaddr);
 #endif
 }
