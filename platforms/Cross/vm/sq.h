@@ -6,8 +6,10 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.7 2003/05/14 02:10:29 asparagi Exp $
+*   RCSID:   $Id: sq.h,v 1.8 2003/05/20 18:56:25 rowledge Exp $
 *
+*	05/20/03	tim - move browser related macros in front of
+*			include of sqPlatformSpecific.h
 *	02/26/03	tim change browser plugin support code
 *	01/28/02	Tim add macro default for sqFilenameFromStringOpen
 *		and sqFTruncate
@@ -163,6 +165,24 @@ if (1) { \
    truncate. 
 */
 #define sqFTruncate(filenum, fileoffset) true
+
+/* old browser plug-in support, maintained for a little while */
+#if 1
+void plugInForceTimeToReturn(void);
+int plugInInit(char *imageName);
+int plugInNotifyUser(char *msg);
+void plugInSetStartTime(void);
+int plugInShutdown(void);
+int plugInTimeToReturn(void);
+#endif
+/* macros to support Mac browser plugin needs without ugly
+ * code in Interpreter
+ */
+#define insufficientMemorySpecifiedError() error("Insufficient memory for this image")
+#define insufficientMemoryAvailableError() error("Failed to allocate memory for the heap")
+#define unableToReadImageError() error("Read failed or premature end of image file")
+#define browserPluginReturnIfNeeded()
+#define browserPluginInitialiseIfNeeded()
 
 /* this include file may redefine earlier definitions and macros: */
 #include "sqPlatformSpecific.h"
@@ -340,6 +360,8 @@ int clipboardSize(void);
 int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex);
 int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex);
 
+<<<<<<< sq.h
+=======
 /* old browser plug-in support, maintained for a little while */
 #if 1
 void plugInForceTimeToReturn(void);
@@ -358,6 +380,7 @@ int plugInTimeToReturn(void);
 #define browserPluginReturnIfNeeded()
 #define browserPluginInitialiseIfNeeded()
 
+>>>>>>> 1.7
 
 /* interpreter entry points needed by compiled primitives */
 void * arrayValueOf(int arrayOop);
