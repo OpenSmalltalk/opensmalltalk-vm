@@ -1016,6 +1016,8 @@ static void recordMouseEvent(XButtonEvent *theEvent)
 	  evt->reserved2=
 	  evt->reserved3= 0;
       }
+
+      return;
     }
 
     if(theEvent->button > 5) {
