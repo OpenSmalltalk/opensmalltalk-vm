@@ -257,3 +257,15 @@ Mpeg3Plugin.o:	Mpeg3Plugin.c
 Squeak.res: misc/Squeak.rc
 	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
 
+#############################################################################
+# sync-ing sqNamedPrims.h with plugins.int
+#
+MAKEPRIMS=util/makeprims.exe
+
+$(MAKEPRIMS): util/makeprims.c
+	gcc -o $(MAKEPRIMS) util/makeprims.c
+
+sqNamedPrims.h: plugins/plugins.int $(MAKEPRIMS)
+	$(MAKEPRIMS) vm\\sqNamedPrims.h $(INTERNAL_PLUGINS)
+
+
