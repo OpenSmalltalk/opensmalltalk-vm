@@ -262,38 +262,6 @@ ObjectMemory class >> initBytesPerWord: nBytes [
 ]
 
 { #category : #initialization }
-ObjectMemory class >> initialize [
-	"ObjectMemory initialize"
-
-	"Translation flags (booleans that control code generation via conditional translation):"
-	DoAssertionChecks _ false.  "generate assertion checks"
-	DoBalanceChecks _ false. "generate stack balance checks"
-
-	self initializeSpecialObjectIndices.
-	self initializeObjectHeaderConstants.
-
-	CtxtTempFrameStart _ 6.  "Copy of TempFrameStart in Interp"
-	ContextFixedSizePlusHeader _ CtxtTempFrameStart + 1.
-	SmallContextSize _ ContextFixedSizePlusHeader + 16 * BytesPerWord.  "16 indexable fields"
-	"Large contexts have 56 indexable fileds.  Max with single header word."
-	"However note that in 64 bits, for now, large contexts have 3-word headers"
-	LargeContextSize _ ContextFixedSizePlusHeader + 56 * BytesPerWord.
-	
-	LargeContextBit _ 16r40000.  "This bit set in method headers if large context is needed."
-	NilContext _ 1.  "the oop for the integer 0; used to mark the end of context lists"
-
-	RemapBufferSize _ 25.
-	RootTableSize _ 2500.  	"number of root table entries (4 bytes/entry)"
-	RootTableRedZone _ RootTableSize - 100.	"red zone of root table - when reached we force IGC"
-
-	"tracer actions"
-	StartField _ 1.
-	StartObj _ 2.
-	Upward _ 3.
-	Done _ 4.
-]
-
-{ #category : #initialization }
 ObjectMemory class >> initializeObjectHeaderConstants [
 
 	BytesPerWord ifNil: [BytesPerWord _ 4].  "May get called on fileIn, so supply default"
@@ -391,6 +359,40 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	SelectorAboutToReturn _ 48.
 	SelectorRunWithIn _ 49.
 
+]
+
+{ #category : #initialization }
+ObjectMemory class >> initializeWithBytesToWord:  numberOfBytesInAWord [
+	"ObjectMemory initializeWithBytesToWord: Smalltalk wordSize"
+
+	self initBytesPerWord: numberOfBytesInAWord.
+
+	"Translation flags (booleans that control code generation via conditional translation):"
+	DoAssertionChecks _ false.  "generate assertion checks"
+	DoBalanceChecks _ false. "generate stack balance checks"
+
+	self initializeSpecialObjectIndices.
+	self initializeObjectHeaderConstants.
+
+	CtxtTempFrameStart _ 6.  "Copy of TempFrameStart in Interp"
+	ContextFixedSizePlusHeader _ CtxtTempFrameStart + 1.
+	SmallContextSize _ ContextFixedSizePlusHeader + 16 * BytesPerWord.  "16 indexable fields"
+	"Large contexts have 56 indexable fileds.  Max with single header word."
+	"However note that in 64 bits, for now, large contexts have 3-word headers"
+	LargeContextSize _ ContextFixedSizePlusHeader + 56 * BytesPerWord.
+	
+	LargeContextBit _ 16r40000.  "This bit set in method headers if large context is needed."
+	NilContext _ 1.  "the oop for the integer 0; used to mark the end of context lists"
+
+	RemapBufferSize _ 25.
+	RootTableSize _ 2500.  	"number of root table entries (4 bytes/entry)"
+	RootTableRedZone _ RootTableSize - 100.	"red zone of root table - when reached we force IGC"
+
+	"tracer actions"
+	StartField _ 1.
+	StartObj _ 2.
+	Upward _ 3.
+	Done _ 4.
 ]
 
 { #category : #translation }
