@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-03-04 03:58:41 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-08 06:54:14 by piumarta on cartman.inria.fr
  *
  * Support for displays deeper than 8 bits contributed by: Kazuki YASUMATSU
  *	<kyasu@crl.fujixerox.co.jp> <Kazuki.Yasumatsu@fujixerox.co.jp>
@@ -528,15 +528,13 @@ void sendSelection(XSelectionRequestEvent *requestEv)
       if (XA_UTF8_STRING == requestEv->target)
         n= sq2uxUTF8(stPrimarySelection, len, buf, len * 3 + 1, 1);
       else
-        n= sq2uxText(stPrimarySelection, len, buf, len * 3 + 1, 1); /* XXX len*6+1 would be safer */
+        n= sq2uxText(stPrimarySelection, len, buf, len * 3 + 1, 1);
 #    if defined(DEBUG_SELECTIONS)
       fprintf(stderr, "sendSelection: n=%d, buf=", n);
       dumpSelectionData(buf, n, 1);
 #    endif
-      XChangeProperty(requestEv->display,
-		      requestEv->requestor,
-		      (requestEv->property == None ? requestEv->target : requestEv->property),
-		      requestEv->target,
+      XChangeProperty(requestEv->display, requestEv->requestor,
+		      targetProperty, requestEv->target,
 		      8, PropModeReplace, buf, n);
       free(buf);
     }
@@ -559,7 +557,7 @@ void sendSelection(XSelectionRequestEvent *requestEv)
     {
       /* COMPOUND_TEXT is handled here for older clients that don't handle UTF-8 */
       int	    len=    strlen(stPrimarySelection);
-      char	   *buf=    (char *)malloc(len * 3 + 1); /*** XXX len*6+1 ***/
+      char	   *buf=    (char *)malloc(len * 3 + 1);
       char	   *list[]= { buf };
       XTextProperty textProperty;
 
@@ -644,11 +642,6 @@ static char *getSelectionFrom(Atom source)
   fd_set  fdMask;
   char	 *data;
   int	  xreturn;
-
-#if 0 /*** xxx ***/
-  if (stOwnsSelection)
-    return stPrimarySelection;
-#endif
 
   XDeleteProperty(stDisplay, stWindow, selectionAtom);
 
@@ -1763,7 +1756,7 @@ void setWindowSize(void)
   int width, height, maxWidth, maxHeight;
   int winSize= getSavedWindowSize();
 
-#if defined(DEBUIG_BROWSER)
+#if defined(DEBUG_BROWSER)
   fprintf(stderr, "browserWindow %d\n", browserWindow);
 #endif
 
