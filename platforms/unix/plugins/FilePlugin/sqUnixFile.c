@@ -33,7 +33,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: Wed 27 Feb 2002 14:29:48 by bert on balloon
+ * Last edited: Fri 29 Mar 2002 12:39:53 by bert on balloon
  */
 
 #include "sq.h"
@@ -207,7 +207,9 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
     strcat(unixPath, terminatedName);
     if (stat(unixPath, &statBuf) && lstat(unixPath, &statBuf))
       {
-	return BAD_PATH;
+	/* We can't stat the entry, but failing here would invalidate
+	   the whole directory --bertf */
+	return ENTRY_FOUND;
       }
   }
 
