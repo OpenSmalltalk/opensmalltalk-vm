@@ -6,12 +6,13 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacPrinting.c,v 1.3 2002/07/05 06:56:51 johnmci Exp $
+*   RCSID:   $Id: sqMacPrinting.c,v 1.4 2002/08/08 01:25:31 johnmci Exp $
 *
 *   NOTES: 
 *	Take carbon sample code, and alter it a bit
 *	Feb 20th 2002, JMM - add offset logic, free printsession only if allocated (duh)
 *   Jun 27th 2002, JMM - use UILock code to lock UI to prevent os-x seg fault
+*       Aug 7th, 2002, JMM - fixes to build as internal
 *
 *****************************************************************************/
 #include "sqVirtualMachine.h"
@@ -44,8 +45,8 @@
 /*------------------------------------------------------------------------------
 	Globals
 ------------------------------------------------------------------------------*/
-CTabHandle	stColorTable = nil;
-PixMapHandle	stPixMap = nil;
+static CTabHandle	stColorTable = nil;
+static PixMapHandle	stPixMap = nil;
 extern struct VirtualMachine *interpreterProxy;
 
 /*------------------------------------------------------------------------------
