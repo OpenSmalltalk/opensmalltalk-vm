@@ -280,7 +280,7 @@ static Time lastKeystrokeTime;  /* XXX is initializing this to 0 okay?? */
  */
 #define	EVENTMASK	ButtonPressMask | ButtonReleaseMask | \
 			KeyPressMask | KeyReleaseMask | PointerMotionMask | \
-			ExposureMask | StructureNotifyMask
+			ExposureMask
 
 #define	WM_EVENTMASK	StructureNotifyMask
 
@@ -535,6 +535,7 @@ int openXDisplay()
       }
     else /* if in browser we will be reparented and mapped by plugin */
       {
+	DPRINT("VM: send window\n");
 	/* tell browser our window */
 	write(browserPipes[1], &stWindow, 4);
 	/* listen for commands */
@@ -2009,12 +2010,13 @@ int ioScreenSize(void)
     Window root;
     int x, y;
     unsigned int b, d;
-    XGetGeometry(stDisplay, stWindow, &root, &x, &y, &w, &h, &b, &d);
+    XGetGeometry(stDisplay, stParent, &root, &x, &y, &w, &h, &b, &d);
   }
   /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
   if ((w % sizeof(void *)) != 0)
     {
       w= (w / sizeof(void *)) * sizeof(void *);
+      XResizeWindow(stDisplay, stParent, w, h);
       XResizeWindow(stDisplay, stWindow, w, h);
       noteWindowChange();
     }
@@ -4109,6 +4111,7 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
 	      sscanf(saveArg(), "%li", &browserPipes[0]);
 	      sscanf(saveArg(), "%li", &browserPipes[1]);
 	      /* receive browserWindow */
+	      DPRINT("VM: reading browserWindow\n");
 	      read(browserPipes[0], &browserWindow, 4);
 	    }
 #        endif
