@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Drop.c,v 1.1 2002/05/04 23:20:27 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Drop.c,v 1.2 2002/05/05 17:34:38 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -24,11 +24,13 @@ extern HWND stWindow;
 #endif
 
 int sqSecFileAccessCallback(void *function) {
+#ifndef _MSC_VER
 #warning "REMOVE THIS NONSENSE"
 #warning "REMOVE THIS NONSENSE"
 #warning "REMOVE THIS NONSENSE"
 #warning "REMOVE THIS NONSENSE"
 #warning "REMOVE THIS NONSENSE"
+#endif
   return 0;
 }
 
@@ -606,7 +608,6 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
     HANDLE hDib;
     BITMAPINFO bmi;
     ENHMETAHEADER header;
-    int size;
 
     DPRINTF(("Success\n"));
 
