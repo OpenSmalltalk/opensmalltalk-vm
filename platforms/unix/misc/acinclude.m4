@@ -147,15 +147,15 @@ if test "$ac_cv_oss" = "yes" -a -e /dev/dsp; then
   AC_DEFINE(HAVE_OSS,1)
 fi])
 
+
+# if we are commited to using OSS, then the device should really be /dev/dsp.
+# Don't even check -- there's nothing to be done if the check fails.  :)
+# Besides, you can compile it and then run it somewhere else.
+# XXX this whole line of autoconfiguration should really be removed...
 AC_DEFUN(AC_FIND_OSS_DEVICE,
-[OSS_DEVICE=notfound
-AC_CHECK_FILE([/dev/dsp], [OSS_DEVICE=/dev/dsp])
-if test $OSS_DEVICE = notfound
-then
-  AC_MSG_ERROR(No OSS device found!  Select another audio interface.)
-fi
-AC_MSG_NOTICE([using OSS_DEVICE: $OSS_DEVICE])
-AC_DEFINE_UNQUOTED(OSS_DEVICE, "$OSS_DEVICE")])
+ [OSS_DEVICE=/dev/dsp
+  AC_DEFINE_UNQUOTED(OSS_DEVICE, "$OSS_DEVICE")])
+
 
 AC_DEFUN(AC_HAVE_NAS,
 [AC_CACHE_CHECK([for Network Audio System], ac_cv_nas,
