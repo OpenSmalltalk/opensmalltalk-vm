@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.13 2003/10/14 19:46:38 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.14 2003/12/16 22:08:32 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -246,7 +246,6 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
         pthread_cond_init(&gSleepLockCondition,NULL);
     }
     
-    aioPoll(0);
     setInterruptCheckCounter(0);
     now = (ioMSecs() & 536870911);
     if (getNextWakeupTick() <= now)
@@ -258,12 +257,14 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     else
         realTimeToWait = getNextWakeupTick() - now; 
             
-        tspec.tv_sec=  realTimeToWait / 1000;
+    aioPoll(realTimeToWait*1000);
+    
+    /* tspec.tv_sec=  realTimeToWait / 1000;
     tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
     
     err = pthread_mutex_lock(&gSleepLock);
     err = pthread_cond_timedwait_relative_np(&gSleepLockCondition,&gSleepLock,&tspec);	
-        err = pthread_mutex_unlock(&gSleepLock); 
+    err = pthread_mutex_unlock(&gSleepLock); */
     
 
 #else
@@ -287,3 +288,11 @@ int ioMSecs() {
     return ioMicroMSecs();
 }
 
+void sqHeartBeatActions(int now) {
+    static int past=0;
+    
+    if ((now-past) > 10) {
+        aioPoll(0);
+    }
+    past = now;
+}
