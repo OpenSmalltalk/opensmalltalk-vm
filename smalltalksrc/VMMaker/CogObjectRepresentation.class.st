@@ -37,7 +37,7 @@ CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 
 { #category : #accessing }
 CogObjectRepresentation class >> numTrampolines [
-	^1
+	^1 "ceStoreCheckTrampoline"
 ]
 
 { #category : #translation }
