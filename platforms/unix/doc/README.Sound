@@ -130,7 +130,7 @@ yourself.)
 
 Note that NAS is broken on big-endian Linux machines.  I've patched
 the daemon to fix this.  If you want the patches, send me email
-(mailto:ian.piumarta@inria.fr).
+(mailto:ian.piumarta@squeakland.org).
 
 3.3. SunOS/Solaris
 

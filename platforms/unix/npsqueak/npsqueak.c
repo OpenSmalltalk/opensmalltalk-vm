@@ -4,7 +4,7 @@
  * 
  * Author:  Bert Freudenberg
  *
- * Last edited: 2005-02-28 15:56:49 by jens on impara.de
+ * Last edited: 2005-03-17 12:15:48 by piumarta on squeak.hpl.hp.com
  *
  * History:
  *          Jan 2005 - looking for image and npsqueakrun in system and home dir
@@ -157,8 +157,8 @@ NPP_GetValue(void *instance, NPPVariable variable, void *value)
       "The Squeak Plugin for Unix was developed by"
       " <a href=\"mailto:bert@freudenbergs.de\">Bert Freudenberg</a>,"
       " it uses the Squeak VM developed by"
-      " <a href=\"mailto:Ian.Piumarta@inria.fr\">Ian Piumarta</a>"
-      " and many others.";
+      " <a href=\"mailto:Ian.Piumarta@squeakland.org\">Ian Piumarta</a>"
+      " and others.";
     break;
   default:
     return NPERR_GENERIC_ERROR;
