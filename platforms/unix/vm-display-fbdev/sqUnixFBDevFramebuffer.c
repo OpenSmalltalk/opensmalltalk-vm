@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-21 15:00:23 by piumarta on felina.inria.fr
+ * Last edited: 2003-10-31 13:32:59 by piumarta on emilia.inria.fr
  */
 
 
@@ -70,6 +70,7 @@ struct fb
   char				 *addr;
   struct fb_var_screeninfo	  var;
   struct fb_fix_screeninfo	  fix;
+  long int			  pitch;
   int				  bpp;
   fb_copyBits_t			  copyBits;
   fb_drawPixel_t		  drawPixel;
@@ -109,13 +110,14 @@ static char *visualName(_self)
 
 
 static inline int fb_width(_self)	{ return self->var.xres; }
+static inline int fb_pitch(_self)	{ return self->pitch; }
 static inline int fb_height(_self)	{ return self->var.yres; }
 static inline int fb_depth(_self)	{ return self->var.bits_per_pixel; }
 
 
 static inline unsigned long fb_getPixel_32(_self, int x, int y)
 {
-  return ((x >= 0) && (y >= 0) && (x < self->var.xres) && (y < self->var.yres))
+  return ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
     ? *((unsigned long *)(self->addr
 			   + (x + self->var.xoffset) * (32 / 8)
 			   + (y + self->var.yoffset) * (self->fix.line_length)))
@@ -124,7 +126,7 @@ static inline unsigned long fb_getPixel_32(_self, int x, int y)
 
 static inline void fb_putPixel_32(_self, int x, int y, unsigned long pix)
 {
-  if ((x >= 0) && (y >= 0) && (x < self->var.xres) && (y < self->var.yres))
+  if ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
     {
       *((unsigned long *)(self->addr
 			  + (x + self->var.xoffset) * (32 / 8)
@@ -136,7 +138,7 @@ static inline void fb_putPixel_32(_self, int x, int y, unsigned long pix)
 
 static inline unsigned long fb_getPixel_16(_self, int x, int y)
 {
-  return ((x >= 0) && (y >= 0) && (x < self->var.xres) && (y < self->var.yres))
+  return ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
     ? *((unsigned short *)(self->addr
 			   + (x + self->var.xoffset) * (16 / 8)
 			   + (y + self->var.yoffset) * (self->fix.line_length)))
@@ -145,7 +147,7 @@ static inline unsigned long fb_getPixel_16(_self, int x, int y)
 
 static inline void fb_putPixel_16(_self, int x, int y, unsigned long pix)
 {
-  if ((x >= 0) && (y >= 0) && (x < self->var.xres) && (y < self->var.yres))
+  if ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
     {
       *((unsigned short *)(self->addr
 			   + (x + self->var.xoffset) * (16 / 8)
@@ -157,7 +159,7 @@ static inline void fb_putPixel_16(_self, int x, int y, unsigned long pix)
 
 static inline unsigned long fb_getPixel_8(_self, int x, int y)
 {
-  return ((x >= 0) && (y >= 0) && (x < self->var.xres) && (y < self->var.yres))
+  return ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
     ? *((unsigned char *)(self->addr
 			  + (x + self->var.xoffset)
 			  + (y + self->var.yoffset) * (self->fix.line_length)))
@@ -167,7 +169,7 @@ static inline unsigned long fb_getPixel_8(_self, int x, int y)
 
 static inline void fb_putPixel_8(_self, int x, int y, unsigned long pix)
 {
-  if ((x >= 0) && (y >= 0) && (x < self->var.xres) && (y < self->var.yres))
+  if ((x >= 0) && (y >= 0) && (x < fb_width(self)) && (y < fb_height(self)))
     {
       *((unsigned char *)(self->addr
 			  + (x + self->var.xoffset)
@@ -283,8 +285,8 @@ static void fb_setCursor(_self, char *bits, char *mask, int xoff, int yoff)
 static void fb_advanceCursor(_self, int dx, int dy)
 {
   hideCursor(self);
-  self->cursorPosition.x= max(0, min(self->cursorPosition.x + dx, self->var.xres - 1));
-  self->cursorPosition.y= max(0, min(self->cursorPosition.y + dy, self->var.yres - 1));
+  self->cursorPosition.x= max(0, min(self->cursorPosition.x + dx, fb_width(self) - 1));
+  self->cursorPosition.y= max(0, min(self->cursorPosition.y + dy, fb_height(self) - 1));
   showCursor(self);
 }
 
@@ -295,9 +297,8 @@ static void fb_copyBits_32(_self, char *bits, int l, int r, int t, int b)
   hideCursorIn(self, l, r, t, b);
   for (y= t;  y < b;  ++y)
     {
-      int offset= (l + (y * self->var.xres)) * 4;
-      unsigned long *in= (unsigned long *)(bits + offset);
-      unsigned long *out= (unsigned long *)(self->addr + offset);
+      unsigned long *in= (unsigned long *)(bits + ((l + (y * fb_width(self))) * 4));
+      unsigned long *out= (unsigned long *)(self->addr + ((l + (y * fb_pitch(self))) * 4));
       for (x= l;  x < r;  x += 1, in += 1, out += 1)
 	{
 	  out[0]= in[0];
@@ -322,9 +323,8 @@ static void fb_copyBits_16(_self, char *bits, int l, int r, int t, int b)
   hideCursorIn(self, l, r, t, b);
   for (y= t;  y < b;  ++y)
     {
-      int offset= (l + (y * self->var.xres)) * 2;
-      unsigned short *in= (unsigned short *)(bits + offset);
-      unsigned short *out= (unsigned short *)(self->addr + offset);
+      unsigned short *in= (unsigned short *)(bits + ((l + (y * fb_width(self))) * 2));
+      unsigned short *out= (unsigned short *)(self->addr + ((l + (y * fb_pitch(self))) * 2));
       for (x= l;  x < r;  x += 2, in += 2, out += 2)
 	{
 #	 if defined(WORDS_BIGENDIAN)
@@ -346,9 +346,8 @@ static void fb_copyBits_15(_self, char *bits, int l, int r, int t, int b)
   hideCursorIn(self, l, r, t, b);
   for (y= t;  y < b;  ++y)
     {
-      int offset= (l + (y * self->var.xres)) * 2;
-      unsigned short *in= (unsigned short *)(bits + offset);
-      unsigned short *out= (unsigned short *)(self->addr + offset);
+      unsigned short *in= (unsigned short *)(bits + ((l + (y * fb_width(self))) * 2));
+      unsigned short *out= (unsigned short *)(self->addr + ((l + (y * fb_pitch(self))) * 2));
       for (x= l;  x < r;  x += 2, in += 2, out += 2)
 	{
 #	 if defined(WORDS_BIGENDIAN)
@@ -369,9 +368,8 @@ static void fb_copyBits_8(_self, char *bits, int l, int r, int t, int b)
   hideCursorIn(self, l, r, t, b);
   for (y= t;  y < b;  ++y)
     {
-      int offset= (l + (y * self->var.xres));
-      unsigned char *in= (unsigned char *)(bits + offset);
-      unsigned char *out= (unsigned char *)(self->addr + offset);
+      unsigned char *in= (unsigned char *)(bits + ((l + (y * fb_pitch(self)))));
+      unsigned char *out= (unsigned char *)(self->addr + ((l + (y * fb_pitch(self)))));
       for (x= l;  x < r;  x += 4, in += 4, out += 4)
 	{
 	  unsigned long pix= *(unsigned long *)out= *(unsigned long *)in;
@@ -510,18 +508,19 @@ static void fb_initVisual(_self)
   self->var.xoffset=  0;
   self->var.yoffset=  0;
   self->var.activate= FB_ACTIVATE_NOW;
-  if (ioctl(self->fd, FBIOPAN_DISPLAY, &self->var))	 perror("FBIOPAN_DISPLAY");
+  ioctl(self->fd, FBIOPAN_DISPLAY, &self->var);
 
-  dprintf("%s: %dx%dx%d+%x+%x (%dx%d) %s, rgb %d+%d %d+%d %d+%d pitch %d\n", self->fbName,
+  self->size= fb_height(self) * self->fix.line_length;
+  self->pitch= self->fix.line_length / self->var.bits_per_pixel * 8;
+
+  dprintf("%s: %dx%dx%d+%x+%x (%dx%d) %s, rgb %d+%d %d+%d %d+%d pitch %d(%d)\n", self->fbName,
 	  self->var.xres, self->var.yres, self->var.bits_per_pixel, self->var.xoffset, self->var.yoffset,
 	  self->var.xres_virtual, self->var.yres_virtual,
 	  visualName(self),
 	  self->var.red  .offset, self->var.red  .length,
 	  self->var.green.offset, self->var.green.length,
 	  self->var.blue .offset, self->var.blue .length,
-	  self->fix.line_length);
-
-  self->size= self->var.yres * self->fix.line_length;
+	  self->fix.line_length, self->pitch);
 
   if (self->var.bits_per_pixel == 8)
     self->bpp= 8;
@@ -633,8 +632,8 @@ static void fb_initGraphics(_self)
   int x, y;
   assert(self->kb);
   kb_initGraphics(self->kb);
-  for (y= 0;  y < self->var.yres;  ++y)
-    for (x= 0;  x < self->var.xres;  ++x)
+  for (y= 0;  y < fb_height(self);  ++y)
+    for (x= 0;  x < fb_width(self);  ++x)
       self->putPixel(self, x, y, self->whitePixel);
 }
 
@@ -644,8 +643,8 @@ static void fb_freeGraphics(_self)
   if (self->putPixel)
     {
       int x, y;
-      for (y= 0;  y < self->var.yres;  ++y)
-	for (x= 0;  x < self->var.xres;  ++x)
+      for (y= 0;  y < fb_height(self);  ++y)
+	for (x= 0;  x < fb_width(self);  ++x)
 	  self->putPixel(self, x, y, 0);
     }
   if (self->kb)
@@ -655,8 +654,8 @@ static void fb_freeGraphics(_self)
 
 static void fb_initCursor(_self)
 {
-  self->cursorPosition.x= self->var.xres / 2;
-  self->cursorPosition.y= self->var.yres / 2;
+  self->cursorPosition.x= fb_width(self) / 2;
+  self->cursorPosition.y= fb_height(self) / 2;
 }
 
 
