@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-09-16 06:53:35 by piumarta on emilia.inria.fr
+ * Last edited: 2004-01-30 02:53:20 by piumarta on emilia.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -395,7 +395,7 @@ static unsigned char X_to_Squeak[256] =
 
 unsigned char Squeak_to_X[256];
 
-void initCharmap()
+void initCharmap(void)
 {
   int i;
   for(i= 0; i < 256; i++)
@@ -1049,7 +1049,7 @@ static int x2sqKeyInput(XKeyEvent *xevt)
       initialised= 1;
       if (!setlocale(LC_CTYPE, ""))
 	{
-	  fprintf(stderr, "setlocale() failed\n");
+	  fprintf(stderr, "setlocale() failed (check values of LC_CTYPE, LANG and LC_ALL)\n");
 	  goto revertInput;
 	}
       if (!(im= XOpenIM(stDisplay, 0, 0, 0)))
