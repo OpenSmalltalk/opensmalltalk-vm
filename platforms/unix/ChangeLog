@@ -1,5 +1,16 @@
 2003-08-23  Ian Piumarta  <ian.piumarta@inria.fr>
 
+	* platforms/unix/config/Makefile.in ($(squeak)): Reduce verbiage.
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c (handleEvents): Don't
+	reset interrupt check counter.
+
+	* platforms/unix/vm-display-Quartz/Resources/SqueakHelp/SqueakHelp.html:
+	Explain where to put image/sources files.
+
+	* platforms/unix/vm/aio.c (aioPoll): Bound total interrupted
+	select() waiting time by the original timeout.
+
 	* platforms/unix/vm-display-Quartz/sqUnixQuartz.m
 	([Squeak -applicationDidFinishLaunching:]): Don't reset the vmPath
 	when starting up.
