@@ -1,3 +1,47 @@
+2003-08-31  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/configure.ac: Version 3.6-beta8 3.6b-5402.
+
+	* platforms/unix/config/Makefile.install (install-squeak) 
+	(uninstall-squeak): (Un)install app icons on Darwin.
+
+	* platforms/unix/config/make.cfg.in (VM_APP_ICONS): Define
+	VM_APP_ICONS.
+
+	* platforms/unix/config/configure.ac: Define and export
+	VM_APP_ICONS for Darwin.
+
+	* platforms/unix/vm-display-Quartz/sqUnixQuartz.m: Remove explicit
+	init of dock icon.  Only setIcon if !fromFinder.
+	([SqueakWindow -setIcon]): Try to find icon file in cwd, vmlibdir
+	and resourcePath.
+
+	* platforms/unix/config/inisqueak.in: Run the VM if Squeak is
+	already installed.
+
+2003-08-30  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* util/Squeak-vm.spec, util/Squeak-image.spec,
+	util/Squeak-sources.spec (%install): Install everything as
+	'root.bin'.
+
+	* platforms/unix/config/make.cfg.in (INSTALL_PROG, INSTALL_DATA):
+	Pass $(INSTALL_ARGS) to install program.
+
+	* platforms/unix/config/configure.ac: Version 3.6-beta7.
+
+	* platforms/unix/vm-display-Quartz/Info.plist.in: Modify icon
+	associations.
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c (_renderContext)
+	(_renderWindow): Lvalue companions to render{Window,Context}().
+
+	* platforms/unix/vm/sqUnixMain.c (jitArgs): Change // comments to
+	/* */.
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c (_PSP):
+	Lvalue companion to PSP().
+
 2003-08-23  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/config/Makefile.in ($(squeak)): Reduce verbiage.
