@@ -32,6 +32,11 @@
 #include "idct.h"
 #include <stdlib.h>
 
+#ifdef _MSC_VER
+/* inline is unrecognized keyword in C mode of MSVC */
+#define inline __inline
+#endif
+
 /**********************************************************/
 /* inverse two dimensional DCT, Chen-Wang algorithm       */
 /* (cf. IEEE ASSP-32, pp. 803-816, Aug. 1984)             */

@@ -45,6 +45,9 @@ unsigned short *gClipArray_ptr16g=&gClipArray16g[512];
 unsigned short *gClipArray_ptr16b=&gClipArray16b[512];
 int doClippingArrays=1;
 
+static unsigned char mpeg3_601_to_rgb[256];
+
+#ifdef HAVE_MMX
 
 static long long mpeg3_MMX_0 = 0L;
 static unsigned long  mpeg3_MMX_10w[]         = {0x00100010, 0x00100010};                     /*dd    00010 0010h, 000100010h */
@@ -64,14 +67,11 @@ static unsigned short mpeg3_MMX_redmask[]     = {0xf800, 0xf800, 0xf800, 0xf800}
 
 static unsigned short mpeg3_MMX_grnmask[]     = {0x7e0, 0x7e0, 0x7e0, 0x7e0};                 /*dd    003e0 03e0h, 003e003e0h */
 
-static unsigned char mpeg3_601_to_rgb[256];
-
 /* Algorithm */
 /* 			r = (int)(*y + 1.371 * (*cr - 128)); */
 /* 			g = (int)(*y - 0.698 * (*cr - 128) - 0.336 * (*cb - 128)); */
 /* 			b = (int)(*y + 1.732 * (*cb - 128)); */
 
-#ifdef HAVE_MMX
 inline void mpeg3video_rgb16_mmx(unsigned char *lum, 
 			unsigned char *cr, 
 			unsigned char *cb,
