@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.10 2002/08/06 22:36:01 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.11 2002/08/17 16:46:56 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -454,7 +454,7 @@ char * GetAttributeString(int id) {
         }
 #endif
 
-#if TARGET_API_MAC_CARBON && defined(__MWERKS__)
+#if defined(__MWERKS__)
 	if (id == 1004) return (char *) interpreterVersion;
 #endif
 
