@@ -2,14 +2,16 @@
             ****** Building Unix Squeak (>= 3.2) from source ******
 
                                  Ian Piumarta
-                            <ian.piumarta@inria.fr>
 
-       Last edited: 2002-06-05 05:22:02 by piumarta on emilia.inria.fr
-                Translated to .ps/.pdf/.html/.txt: June 5, 2002
+                         <ian.piumarta@squeakland.org>
+
+      Last edited: 2005-03-17 11:52:13 by piumarta on squeak.hpl.hp.com
+               Translated to .ps/.pdf/.html/.txt: March 17, 2005
 
 ***** Contents *****
 
-    * 1_configure_-_build_-_install
+    * 0_The_easy_way
+    * 1_The_hard_way:_configure,_build,_install
     * 2_Generating_your_own_VM_and_plugin_sources
     * 3_Adding_your_own_plugins
 
@@ -21,7 +23,45 @@
 
     * Index
 
-1 configure - build - install
+****** 0 The easy way ******
+
+Beginning with version 3.7-7, everything you need is included with the Unix
+sources regardless of how you obtained them - either as a tarball or by
+repository checkout. (This was done to eliminate frequent problems encountered
+by people combining the repository Unix and Cross sources with a set of
+incompatible generated sources.)
+
+If you extract a tarball then you will have a top-level directory named Squeak-
+X.Y-Z (for some values of X, Y, and Z). If you are checking out from a
+repository, you can call the direcory anything you like; for example:
+
+  $ svn co http://squeak.hpl.hp.com/svn/squeak/trunk squeak
+
+will leave you with a directory called squeak. (We'll assume from now on that
+the directory is called squeak.)
+
+Next change to the 'unix' directory within the sources that you just checked
+out (or extracted from the tarball):
+
+  $ cd squeak/platforms/unix
+
+Build the VM and plugins by running make:
+
+  $ make
+
+Then install the VM, plugins and manual pages by running make again (with
+superuser privileges):
+
+  $ sudo make install
+
+To delete the temporary files created during the build process, run make one
+last time:
+
+  $ make clean
+
+That's all there is to it.
+
+****** 1 The hard way: configure, build, install ******
 
 Unix Squeak is built using the (almost) universal ``configure; make; make
 install''. If you haven't come across this before, read on...
@@ -62,7 +102,7 @@ Assuming you've created the blddir next to platforms, this would be:
      commands:
 
        $ .../configure --with-src=src-3.2gamma-4857
-             or
+             nbsp;CLASS="textit">or
        $ .../configure --with-src=src-3.3alpha-4881
 
 Build the VM and plugins by running make:
@@ -179,7 +219,7 @@ in it's platdep directory.
 In addition to the usual autoconf macros, the following macros are available
 specifically for Squeak plugins to use:
 
-3.1.1 AC_PLUGIN_CHECK_LIB(lib,func)
+**** 3.1.1 AC_PLUGIN_CHECK_LIB(lib,func) ****
 
 This is similar to the autoconf `AC_CHECK_LIB' macro.
 
@@ -194,7 +234,7 @@ to that effect printed during configuration. (The VM can still be built,
 without rerunning VMMaker or reconfiguring, and the plugin will simply be
 ommitted from it.)
 
-3.1.2 AC_PLUGIN_DEFINE_UNQUOTED(keyword,text)
+**** 3.1.2 AC_PLUGIN_DEFINE_UNQUOTED(keyword,text) ****
 
 This is similar to the autoconf `AC_DEFINE_UNQUOTED' macro.
 
@@ -209,22 +249,18 @@ The following variables are also set during the execution of a plugin-specific
 acinclude.m4:
 
       ${plugin} is the name of the plugin;
-
       ${topdir} is the path to the top-level directory (containing platforms);
-
       ${vmmdir} is the path to the VMMaker `src' directory.
 
-3.2 Plugin-specific Makefile declarations and rules
+***** 3.2 Plugin-specific Makefile declarations and rules *****
 
 Three mechanisms are avilable for this:
    1. scanning additional dirrectories for sources and headers;
-   2.
-      including a few additional lines into the default Makefile; and
-   3.
-      replacing entirely the default Makefile with a hand-written one.
+   2. including a few additional lines into the default Makefile; and
+   3. replacing entirely the default Makefile with a hand-written one.
 (The last option isn't as scary as it might sound: read on...)
 
-3.2.1 The anatomy of a plugin's Makefile
+**** 3.2.1 The anatomy of a plugin's Makefile ****
 
 Before proceeding, let's take a minute to understand how Unix Squeak compiles
 and links files in its default Makefile for plugins. The default Makefile looks
@@ -284,19 +320,33 @@ command must be the output filename).
 [includes]  is a list of `-Idir' compiler flags, one for each of the
 directories
 
-  src/plugins/name
-  src/vm/intplugins/name
-  platforms/Cross/plugins/name
-  platforms/unix/plugins/name
+  src/plugins/nbsp;CLASS="textit">name
+  src/vm/intplugins/
+
+nbsp;CLASS="textit">name
+  platforms/Cross/plugins/
+
+nbsp;CLASS="textit">name
+  platforms/unix/plugins/
+
+nbsp;CLASS="textit">name
+
 in which at least one header file is present.
 
 [targets]  is a list of object files corresponding to the source (.c) files
 found in the directories:
 
-  src/plugins/name/*.c
-  src/vm/intplugins/name/*.c
-  platforms/Cross/plugins/name/*.c
-  platforms/unix/plugins/name/*.c
+  src/plugins/nbsp;CLASS="textit">name/*.c
+  src/vm/intplugins/
+
+nbsp;CLASS="textit">name/*.c
+  platforms/Cross/plugins/
+
+nbsp;CLASS="textit">name/*.c
+  platforms/unix/plugins/
+
+nbsp;CLASS="textit">name/*.c
+
 where each source file has been stripped of the directory name and had the `.c'
 converted into `$o'.
 
@@ -321,10 +371,12 @@ directory (or empty if this file doesn't exist).
 [make_targets]  is a list of rules for building the files listed in [targets].
 Each rule looks like this:
 
-        name$o : original/source/dir/name.c
-                $(COMPILE) name$o original/source/dir/name.c
+        name$o : nbsp;CLASS="textit">original/source/dir/name.c
+                $(COMPILE) name$o
 
-3.2.2 A note about $(COMPILE) and $(LINK) commands
+nbsp;CLASS="textit">original/source/dir/name.c
+
+**** 3.2.2 A note about $(COMPILE) and $(LINK) commands ****
 
 You should never pass additional flags to these commands explicitly. This is
 because you cannot know how they are defined. (Their definitions depend on
@@ -356,7 +408,7 @@ directories). These directories will be added to the list of locations searched
 for `.c' and `.h' files while constructing the substitutions for `[includes]',
 `[targets]' and `[make_targets]'.
 
-3.2.4 Including additional material in the default Makefile
+**** 3.2.4 Including additional material in the default Makefile ****
 
 If the file platdep/Makefile.inc exists then mkmf will substitute its contents
 into the Makefile in place of the [make_inc] keyword.
@@ -367,7 +419,7 @@ into the Makefile in place of the [make_inc] keyword.
      relevant declarations and rules without worrying about whether the
      plugin is internal or external.
 
-3.2.5 Replacing the default Makefile entirely
+**** 3.2.5 Replacing the default Makefile entirely ****
 
 If neither of the above are sufficient then you can create a complete Makefile
 template called platdep/Makefile.in. mkmf will use this template instead of the
@@ -397,7 +449,7 @@ message warning of the fact is printed).
      Note: There's a bug here. This should also check for `GL_VERSION_1_1'
      in headers.
 
-3.3.2 Customising the Makefile
+**** 3.3.2 Customising the Makefile ****
 
 The Mpeg3Plugin requires a (modified) libmpeg to be compiled along with it. The
 sources for this library are in (several) subdirectories of Cross/Meg3Plugin
@@ -432,9 +484,13 @@ definition) manually. The end result looks like this:
 
           PLUGIN  = Mpeg3Plugin$o
           VIDEO   = getpicture$o headers$o idct$o macroblocks$o
-          etc...
-          AUDIO   = dct$o header$o layer1$o layer2$o layer3$o etc...
-          LIBMPEG = bitstream$o changesForSqueak$o libmpeg3$o etc...
+          nbsp;CLASS="textit">etc...
+          AUDIO   = dct$o header$o layer1$o layer2$o layer3$o
+
+          nbsp;CLASS="textit">etc...
+          LIBMPEG = bitstream$o changesForSqueak$o libmpeg3$o
+
+          nbsp;CLASS="textit">etc...
 
           OBJS    = $(PLUGIN) $(VIDEO) $(AUDIO) $(LIBMPEG)
 
@@ -610,4 +666,4 @@ then send me mail and I'll be happy to help you with the various platdep files.
             2
 
 ===============================================================================
-     Ian Piumarta 2002-06-05
+     2005-03-17

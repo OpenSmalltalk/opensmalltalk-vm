@@ -1,20 +1,19 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 3.2 Final//EN">
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.0 Transitional//EN">
 
-<!--Converted with LaTeX2HTML 2002 (1.67)
+<!--Converted with LaTeX2HTML 2002-2-1 (1.70)
 original version by:  Nikos Drakos, CBLU, University of Leeds
 * revised and updated by:  Marcus Hennecke, Ross Moore, Herb Swan
 * with significant contributions from:
   Jens Lippmann, Marek Rouchal, Martin Wilck and others -->
 <HTML>
 <HEAD>
-<TITLE>1 configure - build - install</TITLE>
-<META NAME="description" CONTENT="1 configure - build - install">
+<TITLE>0 The easy way</TITLE>
+<META NAME="description" CONTENT="0 The easy way">
 <META NAME="keywords" CONTENT="HowToBuildFromSource">
 <META NAME="resource-type" CONTENT="document">
 <META NAME="distribution" CONTENT="global">
 
-<META HTTP-EQUIV="Content-Type" CONTENT="text/html; charset=iso-8859-1">
-<META NAME="Generator" CONTENT="LaTeX2HTML v2002">
+<META NAME="Generator" CONTENT="LaTeX2HTML v2002-2-1">
 <META HTTP-EQUIV="Content-Style-Type" CONTENT="text/css">
 
 <LINK REL="STYLESHEET" HREF="HowToBuildFromSource.css">
@@ -26,190 +25,156 @@ original version by:  Nikos Drakos, CBLU, University of Leeds
 </HEAD>
 
 <BODY >
-<!--Navigation Panel-->
-<A NAME="tex2html64"
+
+<DIV CLASS="navigation"><!--Navigation Panel-->
+<A NAME="tex2html66"
   HREF="HowToBuildFromSource-node3.html">
 <IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
-<A NAME="tex2html58"
+<A NAME="tex2html60"
   HREF="HowToBuildFromSource.html">
 <IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
-<A NAME="tex2html52"
+<A NAME="tex2html54"
   HREF="HowToBuildFromSource-node1.html">
 <IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
-<A NAME="tex2html60"
+<A NAME="tex2html62"
   HREF="HowToBuildFromSource-node1.html">
 <IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
-<A NAME="tex2html62"
-  HREF="HowToBuildFromSource-node5.html">
+<A NAME="tex2html64"
+  HREF="HowToBuildFromSource-node6.html">
 <IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
 <BR>
-<B> Next:</B> <A NAME="tex2html65"
-  HREF="HowToBuildFromSource-node3.html">2 Generating your own</A>
-<B> Up:</B> <A NAME="tex2html59"
+<B> Next:</B> <A NAME="tex2html67"
+  HREF="HowToBuildFromSource-node3.html">1 The hard way:</A>
+<B> Up:</B> <A NAME="tex2html61"
   HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
-<B> Previous:</B> <A NAME="tex2html53"
+<B> Previous:</B> <A NAME="tex2html55"
   HREF="HowToBuildFromSource-node1.html">Contents</A>
- &nbsp <B>  <A NAME="tex2html61"
+ &nbsp; <B>  <A NAME="tex2html63"
   HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
- &nbsp <B>  <A NAME="tex2html63"
-  HREF="HowToBuildFromSource-node5.html">Index</A></B> 
+ &nbsp; <B>  <A NAME="tex2html65"
+  HREF="HowToBuildFromSource-node6.html">Index</A></B> 
 <BR>
-<BR>
+<BR></DIV>
 <!--End of Navigation Panel-->
 
 <H1><A NAME="SECTION00020000000000000000">
-1 <TT>configure</TT> - <TT>build</TT> - <TT>install</TT></A>
+<SPAN CLASS="arabic">0</SPAN> The easy way</A>
 </H1>
 
 <P>
-Unix Squeak is built using the (almost) universal ``<TT>configure;
-make; make install</TT>''.  If you haven't come across this before, read on...
+Beginning with version 3.7-7, everything you need is included with the
+Unix sources regardless of how you obtained them&nbsp;- either as a
+tarball or by repository checkout.  (This was done to eliminate
+frequent problems encountered by people combining the repository Unix
+and Cross sources with a set of incompatible generated sources.)
 
 <P>
-Create a build<A NAME="43"></A>
-directory (which we will call `<TT>blddir</TT>' from now on)
-and then `<TT>cd</TT>' to it:
-<FONT COLOR="#0000ff">
+If you extract a tarball then you will have a top-level directory
+named <TT>Squeak-X.Y-Z</TT> (for some values of X, Y, and Z).  If you
+are checking out from a repository, you can call the direcory anything
+you like; for example:
+<SPAN ID="hue533">
 
-<DIV ALIGN="LEFT">
+<DIV CLASS="alltt" ALIGN="LEFT">
 <TT>
  
 <FONT COLOR="#0000ff">
-<BR>&nbsp;&nbsp;$ mkdir blddir
-<BR>&nbsp;&nbsp;$ cd blddir
+<BR>&nbsp;&nbsp;$ svn co http://squeak.hpl.hp.com/svn/squeak/trunk squeak
 <BR></FONT></TT>
 </DIV>
-</FONT>
+</SPAN>
 <P>
-A convenient place is just next to the <TT>platforms</TT> directory,
-like this:
-<FONT COLOR="#0000ff">
+will leave you with a directory called <TT>squeak</TT>.  (We'll
+assume from now on that the directory is called <TT>squeak</TT>.)
 
-<DIV ALIGN="LEFT">
+<P>
+Next change to the 'unix' directory within the sources that you just
+checked out (or extracted from the tarball):
+<SPAN ID="hue535">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
 <TT>
  
 <FONT COLOR="#0000ff">
-<BR>&nbsp;&nbsp;$ cd squeak
-<BR>&nbsp;&nbsp;$ ls
-<BR>&nbsp;&nbsp;platforms src ...
-<BR>&nbsp;&nbsp;$ mkdir bld
-<BR>&nbsp;&nbsp;$ cd bld
+<BR>&nbsp;&nbsp;$ cd squeak/platforms/unix
 <BR></FONT></TT>
 </DIV>
-</FONT>
-<P>
-Create the build<A NAME="55"></A>
-environment by running the script <TT>configure</TT> which
-lives in the <TT>platforms/unix/config</TT> directory.
-
-<P>
-<BLOCKQUOTE>
-<FONT COLOR="#ff0000"> Note: The <TT>configure</TT> script accepts lots of options.  To see a list of
-them, run: `<code>configure --help</code>'
-</FONT></BLOCKQUOTE>
-<P>
-Assuming you've created the <TT>blddir</TT> next to <TT>platforms</TT>,
-this would be:
-<FONT COLOR="#0000ff">
-
-<DIV ALIGN="LEFT">
-<TT>
- 
-<FONT COLOR="#0000ff">
-<BR>&nbsp;&nbsp;$ ../platforms/unix/config/configure
-<BR></FONT></TT>
-</DIV>
-</FONT>
-<P>
-<BLOCKQUOTE>
-<FONT COLOR="#ff0000"> Note: This assumes that the VMMaker sources are in `<TT>../src</TT>'.  However,
-since the Unix Squeak support code is independent of the image version
-from which VMMaker generated the interpreter/plugin sources, it is
-possible that your source distribution comes with more than one
-<TT>src</TT> directory (corresponding to more than one image version used
-to generate the sources).  In such cases you will have to tell
-<TT>configure</TT> which source version to use, via the `-<TT>-with-src</TT>'
-option.  For example, if there
-are two source directories called <TT>src-3.2gamma-4857</TT> and
-<TT>src-3.3.alpha-4881</TT> then you would use <I>one</I> of the
-following commands:
-<FONT COLOR="#ff0000">
-
-<DIV ALIGN="LEFT">
-<TT>
- 
-<FONT COLOR="#ff0000">
-<BR>&nbsp;&nbsp;$ .../configure --with-src=src-3.2gamma-4857
-<BR>&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<I>or</I>
-<BR>&nbsp;&nbsp;$ .../configure --with-src=src-3.3alpha-4881
-<BR></FONT></TT>
-</DIV>
-</FONT>
-</FONT></BLOCKQUOTE>
+</SPAN>
 <P>
 Build the VM and plugins by running <TT>make</TT>:
-<FONT COLOR="#0000ff">
+<SPAN ID="hue537">
 
-<DIV ALIGN="LEFT">
+<DIV CLASS="alltt" ALIGN="LEFT">
 <TT>
  
 <FONT COLOR="#0000ff">
 <BR>&nbsp;&nbsp;$ make
 <BR></FONT></TT>
 </DIV>
-</FONT>
+</SPAN>
 <P>
-<BLOCKQUOTE>
-<FONT COLOR="#ff0000"> Note: If you want to build just the VM (without external plugins) or just
-the external plugins (without the VM) then you can use:
-`<code>make squeak</code>' or `<code>make plugins</code>' respectively.
-</FONT></BLOCKQUOTE>
-<P>
-Finally install the VM, plugins and manual pages:
-<FONT COLOR="#0000ff">
+Then install the VM, plugins and manual pages by running
+<TT>make</TT> again (with superuser privileges):
+<SPAN ID="hue539">
 
-<DIV ALIGN="LEFT">
+<DIV CLASS="alltt" ALIGN="LEFT">
 <TT>
  
 <FONT COLOR="#0000ff">
-<BR>&nbsp;&nbsp;$ su root
-<BR>&nbsp;&nbsp;$ make install
+<BR>&nbsp;&nbsp;$ sudo make install
 <BR></FONT></TT>
 </DIV>
-</FONT>
+</SPAN>
 <P>
-<HR>
+To delete the temporary files created during the build
+process, run <TT>make</TT> one last time:
+<SPAN ID="hue541">
+
+<DIV CLASS="alltt" ALIGN="LEFT">
+<TT>
+ 
+<FONT COLOR="#0000ff">
+<BR>&nbsp;&nbsp;$ make clean
+<BR></FONT></TT>
+</DIV>
+</SPAN>
+<P>
+That's all there is to it.
+
+<P>
+
+<DIV CLASS="navigation"><HR>
 <!--Navigation Panel-->
-<A NAME="tex2html64"
+<A NAME="tex2html66"
   HREF="HowToBuildFromSource-node3.html">
 <IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
-<A NAME="tex2html58"
+<A NAME="tex2html60"
   HREF="HowToBuildFromSource.html">
 <IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
-<A NAME="tex2html52"
+<A NAME="tex2html54"
   HREF="HowToBuildFromSource-node1.html">
 <IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
-<A NAME="tex2html60"
+<A NAME="tex2html62"
   HREF="HowToBuildFromSource-node1.html">
 <IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
-<A NAME="tex2html62"
-  HREF="HowToBuildFromSource-node5.html">
+<A NAME="tex2html64"
+  HREF="HowToBuildFromSource-node6.html">
 <IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
 <BR>
-<B> Next:</B> <A NAME="tex2html65"
-  HREF="HowToBuildFromSource-node3.html">2 Generating your own</A>
-<B> Up:</B> <A NAME="tex2html59"
+<B> Next:</B> <A NAME="tex2html67"
+  HREF="HowToBuildFromSource-node3.html">1 The hard way:</A>
+<B> Up:</B> <A NAME="tex2html61"
   HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
-<B> Previous:</B> <A NAME="tex2html53"
+<B> Previous:</B> <A NAME="tex2html55"
   HREF="HowToBuildFromSource-node1.html">Contents</A>
- &nbsp <B>  <A NAME="tex2html61"
+ &nbsp; <B>  <A NAME="tex2html63"
   HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
- &nbsp <B>  <A NAME="tex2html63"
-  HREF="HowToBuildFromSource-node5.html">Index</A></B> 
+ &nbsp; <B>  <A NAME="tex2html65"
+  HREF="HowToBuildFromSource-node6.html">Index</A></B> </DIV>
 <!--End of Navigation Panel-->
 <ADDRESS>
-Ian Piumarta
-2002-06-05
+
+2005-03-17
 </ADDRESS>
 </BODY>
 </HTML>

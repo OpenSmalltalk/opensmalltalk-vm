@@ -28,3 +28,31 @@ TD.eqno			{ }	/* equation-number cells */
 
 
 /* document-specific styles come next */
+DIV.navigation		{   }
+DIV.alltt		{   }
+DIV.quote		{   }
+SPAN.tt		{   }
+SPAN.textit		{ font-style: italic  }
+SPAN.arabic		{   }
+SPAN.textbf		{ font-weight: bold  }
+SPAN.textsf		{ font-style: italic  }
+#hue533		{ color: #0000ff;  }
+#hue535		{ color: #0000ff;  }
+#hue537		{ color: #0000ff;  }
+#hue539		{ color: #0000ff;  }
+#hue541		{ color: #0000ff;  }
+#hue543		{ color: #0000ff;  }
+#hue545		{ color: #0000ff;  }
+#hue547		{ color: #0000ff;  }
+#hue549		{ color: #ff0000;  }
+#hue551		{ color: #0000ff;  }
+#hue553		{ color: #0000ff;  }
+#hue555		{ color: #0000ff;  }
+#hue559		{ color: #ff0000;  }
+#hue562		{ color: #0000ff;  }
+#hue567		{ color: #ff0000;  }
+#hue581		{ color: #000000;  }
+#hue596		{ color: #000000;  }
+#hue601		{ color: #000000;  }
+#hue643		{ color: #000000;  }
+#txt149		{ text-decoration: underline;  }
