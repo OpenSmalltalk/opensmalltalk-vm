@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32OpenGL.c,v 1.3 2002/05/04 23:20:27 andreasraab Exp $
+*   RCSID:   $Id: sqWin32OpenGL.c,v 1.4 2002/05/06 10:36:25 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -43,8 +43,8 @@ extern struct VirtualMachine *interpreterProxy;
 
 static HWND *theSTWindow = NULL; /* a reference to Squeak's main window */
 
-glRenderer *current = NULL;
-glRenderer allRenderer[MAX_RENDERER];
+static glRenderer *current = NULL;
+static glRenderer allRenderer[MAX_RENDERER];
 
 static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
