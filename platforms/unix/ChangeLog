@@ -1,3 +1,22 @@
+----------------------------------------------------------------
+
+2005-03-19  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* 3.7-7 Released.
+
+2005-03-19  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* config/configure.ac (INCLUDES): Version is 3.7-7.
+
+	* config/acinclude.m4 (ac_optflags): Default optimisation flags are '-O'.
+
+	* config/configure.ac (INCLUDES): Check for alloca().
+
+	* plugins/UnixOSProcessPlugin/acinclude.m4: Check for libc::unsetenv().
+
+	* plugins/AioPlugin/Makefile.inc (XCPPFLAGS): Search FilePlugin
+	and SocketPlugin for includes.
+
 2005-03-17  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* src: Imported from generated sources.
