@@ -30,14 +30,16 @@ int serialPortSetControl(int portNum,int control, char *data);
 int serialPortIsOpen(int portNum);
 int serialPortNames(int portNum, char *portName, char *inName, char *outName);
 Boolean IsKeyDown(void);
-#if defined( BROWSERPLUGIN ) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
+#if defined( BROWSERPLUGIN )
 int primitivePluginBrowserReady(void);
+#if !defined ( __APPLE__ ) && !defined ( __MACH__ )
 int primitivePluginDestroyRequest(void);
 int primitivePluginRequestFileHandle(void);
 int primitivePluginRequestState(void);
 int primitivePluginRequestURL(void);
 int primitivePluginRequestURLStream(void);
 int primitivePluginPostURL(void);
+#endif
 #endif
 
 void *os_exports[][3] = {
@@ -59,17 +61,19 @@ void *os_exports[][3] = {
 #if !defined(BROWSERPLUGIN) & I_AM_CARBON_EVENT
 	XFN(getUIToLock)
 #endif
-#if defined( BROWSERPLUGIN )  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
+#if defined( BROWSERPLUGIN ) 
 /* Plugin support primitives
    We should make these primitives a proper plugin
    but right now we just need the exports. */
 XFN(primitivePluginBrowserReady)
+#if !defined ( __APPLE__ ) && !defined ( __MACH__ )
 XFN(primitivePluginRequestURLStream)
 XFN(primitivePluginRequestURL)
 XFN(primitivePluginPostURL)
 XFN(primitivePluginRequestFileHandle)
 XFN(primitivePluginDestroyRequest)
 XFN(primitivePluginRequestState)
+#endif
 #endif
 	{NULL, NULL, NULL}
 
