@@ -43,7 +43,7 @@ RSC=rc.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
-# ADD CPP /nologo /W3 /GX /O2 /I "../../vm" /I "..\vm" /D "NDEBUG" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "SQUEAK_BUILTIN_PLUGIN" /YX /FD /c
+# ADD CPP /nologo /W3 /GX /O2 /Ob2 /I "../../vm" /I "..\vm" /D "NDEBUG" /D "WIN32_FILE_SUPPORT" /D "SQUEAK_BUILTIN_PLUGIN" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "NO_STD_FILE_SUPPORT" /FR /YX /FD /c
 # ADD BASE MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "NDEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x407 /d "NDEBUG"
@@ -69,7 +69,7 @@ LINK32=link.exe
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /GZ /c
-# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "./../../vm" /I "./vm" /I "..\vm" /D "_DEBUG" /D "SQUEAK_BUILTIN_PLUGIN" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /YX /FD /GZ /c
+# ADD CPP /nologo /W3 /Gm /GX /ZI /Od /I "./../../vm" /I "./vm" /I "..\vm" /D "_DEBUG" /D "SQUEAK_BUILTIN_PLUGIN" /D "WIN32" /D "_WINDOWS" /D "_MBCS" /D "WIN32_FILE_SUPPORT" /D "NO_STD_FILE_SUPPORT" /YX /FD /GZ /c
 # ADD BASE MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD MTL /nologo /D "_DEBUG" /mktyplib203 /win32
 # ADD BASE RSC /l 0x407 /d "_DEBUG"
