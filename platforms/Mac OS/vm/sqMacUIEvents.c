@@ -6,13 +6,14 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.5 2002/03/15 01:57:35 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.6 2002/03/15 07:14:54 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Mar 1st, 2002, JMM carbon event logic, mutiple buttons with scroll wheels.
 *  Mar 8th,  2002, JMM Add logic to pass in external prim calls that require main thread UI execution
 *  Mar 10th, 2002, JMM correct bad char cast, ensure we can get all characters.
+*  Mar 14th, 2002, JMM fix text input for encoding keys (textinput versus raw char)
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -1168,12 +1169,14 @@ EventTypeSpec windEventMouseList[] = {{ kEventClassMouse, kEventMouseMoved},
                             { kEventClassMouse, kEventMouseUp},
                             { kEventClassMouse, kEventMouseDown}};
                             
-EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
+EventTypeSpec windEventKBList[] = {/*{ kEventClassKeyboard, kEventRawKeyDown},
                             { kEventClassKeyboard, kEventRawKeyUp},
-                            { kEventClassKeyboard, kEventRawKeyRepeat},
+                            { kEventClassKeyboard, kEventRawKeyRepeat},*/
                             { kEventClassKeyboard, kEventRawKeyModifiersChanged}};
                             
 EventTypeSpec appleEventEventList[] = {{ kEventClassAppleEvent, kEventAppleEvent}};
+
+EventTypeSpec textInputEventList[] = {{ kEventClassTextInput, kEventTextInputUnicodeForKeyEvent}};
 
 EventTypeSpec customEventEventList[] = {{ 'JMM1', 'JMM1'}};
 
@@ -1189,6 +1192,8 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
 static pascal OSStatus MyAppleEventEventHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
+static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData);
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData);
@@ -1196,7 +1201,7 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
 int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
 void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
-void recordKeyboardEventCarbon(EventRef event,int keyType);
+void recordKeyboardEventCarbon(EventRef event);
 int doPreMessageHook(EventRef event); 
 void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta);
             
@@ -1210,8 +1215,9 @@ void SetUpCarbonEvent() {
 /* Installing the window event handler */
     InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventHandler), 3, windEventList, 0, NULL);
     InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventMouseHandler), 5, windEventMouseList, 0, NULL);
-    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventKBHandler), 4, windEventKBList, 0, NULL);
+    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventKBHandler), 1, windEventKBList, 0, NULL);
     InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyAppleEventEventHandler), 1, appleEventEventList, 0, NULL);
+    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyTextInputEventHandler), 1, textInputEventList, 0, NULL);
     InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), 1, customEventEventList, 0, NULL);
     
 /* timmer loops */
@@ -1450,7 +1456,7 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
     whatHappened = GetEventKind(event);
     switch (whatHappened)
     {
-        case kEventRawKeyDown:
+        /*case kEventRawKeyDown:
         case kEventRawKeyRepeat:
             recordKeyboardEventCarbon(event,EventKeyDown);
             result = noErr;
@@ -1458,7 +1464,7 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
         case kEventRawKeyUp:
             recordKeyboardEventCarbon(event,EventKeyUp);
             result = noErr;
-            break;
+            break;*/
         case kEventRawKeyModifiersChanged:
             /* ok in this case we fake a mouse event to deal with the modifiers changing */
             if(inputSemaphoreIndex)
@@ -1474,11 +1480,36 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
         doPostMessageHook(event);
     return result;
 }
-
 static pascal OSStatus MyAppleEventEventHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
     return eventNotHandledErr;
+}
+
+static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData)
+{
+    UInt32 whatHappened;
+    OSStatus result = eventNotHandledErr; /* report failure by default */
+    
+    if (!windowActive)
+        return result;
+    if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
+        return result;
+
+    whatHappened = GetEventKind(event);
+    switch (whatHappened)
+    {
+        case kEventTextInputUnicodeForKeyEvent:
+            recordKeyboardEventCarbon(event);
+        default: 
+        /* If nobody handled the event, it gets propagated to the */
+        /* application-level handler. */
+        break;
+    }
+    if (postMessageHook) 
+        doPostMessageHook(event);
+    return result;
 }
 
 
@@ -1633,105 +1664,130 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
                 
 }
 
-void recordKeyboardEventCarbon(EventRef event,int keyType) {
-	int 		asciiChar, modifierBits;
-        char 		macCharCode;
-        char		workArea[2];
-        UInt32		macKeyCode;
-        UniChar		unicodeValue;
-	CFStringRef	converter;
-        sqKeyboardEvent *evt, *extra;
-        OSErr		err;
-        
-	err = GetEventParameter( event,
-                                kEventParamKeyMacCharCodes,
-                                typeChar,
-                                NULL,
-                                sizeof(char),
-                                NULL,
-                                &macCharCode); 
-
-	err = GetEventParameter( event,
-                                kEventParamKeyCode,
-                                typeUInt32,
-                                NULL,
-                                sizeof(UInt32),
-                                NULL,
-                                &macKeyCode); 
-
-	err = GetEventParameter( event,
-                                kEventParamKeyUnicodes,
-                                typeUnicodeText,
-                                NULL,
-                                sizeof(typeUnicodeText),
-                                NULL,
-                                &unicodeValue); 
-
-
-        
-        /*converter = CFStringCreateWithCharacters (null,&unicodeValue,1);
-        
-	if (CFStringGetCString (converter,&workArea[0],2, kCFStringEncodingMacRoman))
-            asciiChar = (unsigned char) workArea[0];
-        else
-            asciiChar = (unsigned char) macCharCode;
-        CFRelease(converter);*/
-        
-        asciiChar = (unsigned char) macCharCode;
-	buttonState = modifierBits =ModifierStateCarbon(event,0); //Capture option states
-	if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
-		if ((asciiChar >= 97) && (asciiChar <= 122)) {
-			/* convert ascii code of command-shift-letter to upper case */
-			asciiChar = asciiChar - 32;
-		}
-	}
-
-        pthread_mutex_lock(&gEventQueueLock);
-	evt = (sqKeyboardEvent*) nextEventPut();
-
-	/* first the basics */
-	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioLowResMSecs() & 536870911;
-	/* now the key code */
-	/* press code must differentiate */
-	evt->charCode = macKeyCode;
-	evt->pressCode = keyType;
-	evt->modifiers = modifierBits >> 3;
-	/* clean up reserved */
-	evt->reserved1 = 0;
-	evt->reserved2 = 0;
-	/* generate extra character event */
-	if (keyType == EventKeyDown) {
-		extra = (sqKeyboardEvent*)nextEventPut();
-		*extra = *evt;
-		extra->charCode = asciiChar;
-		extra->pressCode = EventKeyChar;
-	}
-        
-       if(!inputSemaphoreIndex && keyType != EventKeyUp) {
-            int  keystate;
+void recordKeyboardEventCarbon(EventRef event) {
+    int 		asciiChar, modifierBits;
+    char 		macCharCode;
+    UInt32		macKeyCode;
+    sqKeyboardEvent 	*evt, *extra;
+    OSErr	err;
+    UniChar  	text;
+    UInt32      actualSize; 
+    EventRef	actualEvent;
     
-            /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
+    /*  kEventTextInputUnicodeForKeyEvent
+        Required parameters:
+        -->     kEventParamTextInputSendComponentInstance           typeComponentInstance
+        -->     kEventParamTextInputSendRefCon                      typeLongInteger
+        -->     kEventParamTextInputSendSLRec                       typeIntlWritingCode
+        -->     kEventParamTextInputSendText                        typeUnicodeText
+        -->     kEventParamTextInputSendKeyboardEvent               typeEventRef
+                    (This parameter is the original raw keyboard event that produced the
+                     text.  It enables access to kEventParamKeyModifiers and 
+                     kEventParamKeyCode parameters.
+                     You can also extract from this event either Unicodes or Mac encoding
+                     characters as follows:
+                            kEventParamKeyUnicodes              typeUnicodeText
+                            kEventParamKeyMacCharCodes          typeChar (if available)
+                     The kEventParamKeyUnicodes parameter of the raw keyboard event is
+                     identical to the TextInput event's kEventParamTextInputSendText
+                     parameter.  Note that when contents of TSM's bottom-line input
+                     window (i.e. during typing Chinese, Korean, or Japanese) are confirmed,
+                     the raw keyboard event's keyCode and modifiers are set to default values.)
+    */
+
+    err = GetEventParameter (event, kEventParamTextInputSendText,
+            typeUnicodeText, NULL, 0, &actualSize, NULL);
+
+    if (actualSize != 2)
+        return;
     
-            keystate = (evt->modifiers << 8) | asciiChar;
-            if (keystate == interruptKeycode) {
-                    /* Note: interrupt key is "meta"; it not reported as a keystroke */
-                    interruptPending = true;
-                    interruptCheckCounter = 0;
-            } else {
-                    keyBuf[keyBufPut] = keystate;
-                    keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
-                    if (keyBufGet == keyBufPut) {
-                            /* buffer overflow; drop the last character */
-                            keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
-                            keyBufOverflows++;
-                    }
+    err = GetEventParameter (event, kEventParamTextInputSendText,
+            typeUnicodeText, NULL, actualSize, NULL, &text);
+            
+    err = GetEventParameter (event, kEventParamTextInputSendKeyboardEvent,
+            typeEventRef, NULL, sizeof(EventRef), NULL, &actualEvent);
+    
+    err = GetEventParameter( actualEvent,
+                            kEventParamKeyMacCharCodes,
+                            typeChar,
+                            NULL,
+                            sizeof(char),
+                            NULL,
+                            &macCharCode); 
+
+    err = GetEventParameter( actualEvent,
+                            kEventParamKeyCode,
+                            typeUInt32,
+                            NULL,
+                            sizeof(UInt32),
+                            NULL,
+                            &macKeyCode); 
+                            
+    asciiChar = (unsigned char) macCharCode;
+    buttonState = modifierBits =ModifierStateCarbon(actualEvent,0); //Capture option states
+    if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
+            if ((asciiChar >= 97) && (asciiChar <= 122)) {
+                    /* convert ascii code of command-shift-letter to upper case */
+                    asciiChar = asciiChar - 32;
             }
+    }
 
+    pthread_mutex_lock(&gEventQueueLock);
+    evt = (sqKeyboardEvent*) nextEventPut();
+
+    /* first the basics */
+    evt->type = EventTypeKeyboard;
+    evt->timeStamp = ioLowResMSecs() & 536870911;
+    /* now the key code */
+    /* press code must differentiate */
+    evt->charCode = text;
+    evt->pressCode = EventKeyDown;
+    evt->modifiers = modifierBits >> 3;
+    /* clean up reserved */
+    evt->reserved1 = 0;
+    evt->reserved2 = 0;
+    /* generate extra character event */
+    extra = (sqKeyboardEvent*)nextEventPut();
+    *extra = *evt;
+    extra->charCode = asciiChar;
+    extra->pressCode = EventKeyChar;
+    
+    if(!inputSemaphoreIndex) {
+        int  keystate;
+
+        /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
+
+        keystate = (evt->modifiers << 8) | asciiChar;
+        if (keystate == interruptKeycode) {
+                /* Note: interrupt key is "meta"; it not reported as a keystroke */
+                interruptPending = true;
+                interruptCheckCounter = 0;
+        } else {
+                keyBuf[keyBufPut] = keystate;
+                keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
+                if (keyBufGet == keyBufPut) {
+                        /* buffer overflow; drop the last character */
+                        keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
+                        keyBufOverflows++;
+                }
         }
-        pthread_mutex_unlock(&gEventQueueLock);		        
-        signalSemaphoreWithIndex(inputSemaphoreIndex);
-                
+
+    }
+    evt = (sqKeyboardEvent*) nextEventPut();
+
+    /* first the basics */
+    evt->type = EventTypeKeyboard;
+    evt->timeStamp = ioLowResMSecs() & 536870911;
+    /* now the key code */
+    /* press code must differentiate */
+    evt->charCode = text;
+    evt->pressCode = EventKeyUp;
+    evt->modifiers = modifierBits >> 3;
+    /* clean up reserved */
+    evt->reserved1 = 0;
+    evt->reserved2 = 0;
+    pthread_mutex_unlock(&gEventQueueLock);		        
+    signalSemaphoreWithIndex(inputSemaphoreIndex);
 }
 
 
