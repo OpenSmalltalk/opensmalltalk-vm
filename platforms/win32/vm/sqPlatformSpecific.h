@@ -15,8 +15,11 @@
 #undef putchar
 #include "sqWin32Alloc.h"
 
-#define squeakFileOffsetType int
-#define size_t int
+#ifdef _MSC_VER
+#define squeakFileOffsetType __uint64
+#else
+#define squeakFileOffsetType unsigned long long
+#endif
 
 #ifdef WIN32_FILE_SUPPORT
 

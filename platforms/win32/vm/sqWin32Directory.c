@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Directory.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Directory.c,v 1.3 2002/05/05 17:18:02 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -15,7 +15,7 @@
 #include "sq.h"
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Directory.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32Directory.c,v 1.3 2002/05/05 17:18:02 andreasraab Exp $";
 #endif
 
 /***
@@ -33,6 +33,14 @@
 
 static TCHAR DELIMITER[] = TEXT("\\");
 static TCHAR DOT[] = TEXT(".");
+
+typedef union {
+  struct {
+    DWORD dwLow;
+    DWORD dwHigh;
+  };
+  squeakFileOffsetType offset;
+} win32FileOffset;
 
 DWORD convertToSqueakTime(SYSTEMTIME st)
 { DWORD secs;
@@ -69,7 +77,7 @@ int dir_Delimitor(void)
 
 int dir_Lookup(char *pathString, int pathStringLength, int index,
 /* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-	       int *isDirectory, int *sizeIfFile)
+	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
   /* Lookup the index-th entry of the directory with the given path, starting
      at the root of the file system. Set the name, name length, creation date,
@@ -191,9 +199,12 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
   if (findData.dwFileAttributes & FILE_ATTRIBUTE_DIRECTORY)
     *isDirectory= true;
-  else
-    *sizeIfFile= findData.nFileSizeLow; /* assuming that this is enough ;-) */
-
+  else {
+    win32FileOffset ofs;
+    ofs.dwLow = findData.nFileSizeLow;
+    ofs.dwHigh = findData.nFileSizeHigh;
+    *sizeIfFile = ofs.offset;
+  }
   return ENTRY_FOUND;
 }
 
