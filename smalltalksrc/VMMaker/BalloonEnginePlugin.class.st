@@ -5,7 +5,7 @@ BalloonEnginePlugin should be translated but its superclass should not since it 
 Class {
 	#name : #BalloonEnginePlugin,
 	#superclass : #BalloonEngineBase,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'class initialization' }

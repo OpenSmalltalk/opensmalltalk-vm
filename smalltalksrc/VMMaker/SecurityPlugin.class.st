@@ -24,7 +24,7 @@ Restoring the rights revoked by an image might be possible by some interaction w
 Class {
 	#name : #SecurityPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

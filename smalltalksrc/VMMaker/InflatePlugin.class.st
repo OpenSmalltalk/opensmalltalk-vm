@@ -21,10 +21,10 @@ Class {
 		'zipDistTableSize'
 	],
 	#classVars : [
-		'StateNoMoreData',
-		'MaxBits'
+		'MaxBits',
+		'StateNoMoreData'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

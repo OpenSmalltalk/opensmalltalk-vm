@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'sCOAFfn'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

@@ -8,7 +8,7 @@ Class {
 		'readBlock',
 		'writeBlock'
 	],
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #accessing }

@@ -4,7 +4,7 @@ A VMMaker subclass to suit Mac OS
 Class {
 	#name : #MacOSPowerPCOS9VMMaker,
 	#superclass : #VMMaker,
-	#category : #'VMMaker-Building'
+	#category : 'VMMaker-Building'
 }
 
 { #category : #initialisation }

@@ -4,7 +4,7 @@ Subclass of InterpreterPlugin, used in connection with TestCodeGenerator for nam
 Class {
 	#name : #SmartSyntaxInterpreterPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-SmartSyntaxPlugins'
+	#category : 'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #private }

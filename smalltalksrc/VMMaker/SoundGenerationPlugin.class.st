@@ -4,7 +4,7 @@ This class is a stub for the directly generated primitives in AbstractSound and 
 Class {
 	#name : #SoundGenerationPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

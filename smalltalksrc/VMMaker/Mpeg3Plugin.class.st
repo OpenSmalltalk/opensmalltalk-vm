@@ -17,7 +17,7 @@ Class {
 		'maximumNumberOfFilesToWatch',
 		'mpegFiles'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'initialize-release' }

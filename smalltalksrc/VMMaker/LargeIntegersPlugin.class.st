@@ -1377,12 +1377,12 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 
 	"Avoid crashes in case of getting unnormalized args."
 	(self isNormalized: firstInteger)
-		ifFalse: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-			self msg: '------> receiver *not* normalized!'.
+		ifFalse: [self debugCode:[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+			self msg: '------> receiver *not* normalized!'].
 			^ interpreterProxy primitiveFail].
 	(self isNormalized: secondInteger)
-		ifFalse: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-			self msg: '------> argument *not* normalized!'.
+		ifFalse: [self debugCode:[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+			self msg: '------> argument *not* normalized!'].
 			^ interpreterProxy primitiveFail].
 		
 	"Coerce SmallIntegers to corresponding (not normalized) large integers  
