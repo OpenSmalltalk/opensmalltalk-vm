@@ -8,12 +8,13 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
     -- Changes Jay Hardesty, July 6, 2002
     -- Changes John Mcintosh &  Andrew C. Greenberg. Aug 6 & 7th, 2002
     -- Changes John McIntosh Nov 14th, 2002 (some cleanup and modernization
+    -- CHanges John McIntosh April 5th, 2003 (changeset names change)
 
 (Note to readers, it is possible a step was missed, so beware)
 
 Building a Carbon Squeak VM with ProjectBuilder:
 
-{JMM notes this is building with 10.2.2, and Squeak 3.4alpha (for croquet)}
+{JMM notes this is building with 10.2.4, and Squeak 3.5alpha (for croquet)}
 
 Overview
 
@@ -67,9 +68,9 @@ Step Three: Build an interpeter
 		so do a "remove linefeeds" first. 
 		
 		MoreInterpAccessors-JMM.2.cs
-		Globalstructure-JMM.3.cs
+		VMGlobalsChanges.5.cs
 		CGeneratorEnhancements-ajh.1.cs
-		Gnuifier.3.cs
+		Gnuifier.4.cs
 		
 	B.	DoIt: VMMakerTool openInWorld
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
@@ -93,7 +94,7 @@ Step Three: Build an interpeter
 
 Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
-	A.	See the Gnuifier.3.cs changeset in the specialChangeSetsFolder
+	A.	See the Gnuifier.4.cs changeset in the specialChangeSetsFolder
 	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
 
 		(Gnuifier on:
