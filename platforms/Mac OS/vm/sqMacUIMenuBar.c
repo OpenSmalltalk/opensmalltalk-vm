@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.3 2002/09/27 20:00:41 johnmci Exp $
+*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.4 2003/02/08 18:33:27 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -90,7 +90,9 @@ void MenuBarRestore(void) {
 #endif
 
 void SetUpMenus(void) {
+#if TARGET_API_MAC_CARBON
 	long decideOnQuitMenu;
+#endif 
 	
 	InsertMenu(appleMenu = NewMenu(appleID, "\p\024"), 0);
 	InsertMenu(fileMenu  = NewMenu(fileID,  "\pFile"), 0);
