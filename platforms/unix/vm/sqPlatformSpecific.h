@@ -9,6 +9,8 @@
 */
 
 
+#ifndef SQ_PLATFORM_SPECIFIC_H
+#define SQ_PLATFORM_SPECIFIC_H
 
 #ifdef UNIX
 #include <string.h>
@@ -76,3 +78,4 @@ int sqImageFileStartLocation(sqImageFile file, const char *fileName, int size);
 
 #endif /* UNIX */
 
+#endif  /* SQ_PLATFORM_SPECIFIC_H */
