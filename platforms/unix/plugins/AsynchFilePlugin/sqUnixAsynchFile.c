@@ -35,7 +35,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2002-07-12 10:36:51 by piumarta on emilia.inria.fr
+ * Last edited: 2005-04-06 08:10:05 by piumarta on squeak.hpl.hp.com
  */
 
 /*
@@ -78,7 +78,7 @@
 /*** module initialisation ***/
 
 #include "sqVirtualMachine.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #include <sys/types.h>
 #include <unistd.h>

@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2005-03-17 21:34:16 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-04-06 08:08:42 by piumarta on squeak.hpl.hp.com
  */
 
 
@@ -46,7 +46,7 @@
 #include "sq.h"
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #include "SqDisplay.h"
 

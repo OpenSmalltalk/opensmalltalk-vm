@@ -1,4 +1,4 @@
-/* aio.h -- asynchronous file i/o
+/* sqaio.h -- asynchronous file i/o
  *
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -36,11 +36,11 @@
 
 /* author: ian.piumarta@inria.fr
  *
- * last edited: 2002-12-02 20:20:13 by piumarta on calvin.inria.fr
+ * last edited: 2005-04-06 08:09:25 by piumarta on squeak.hpl.hp.com
  */
 
-#ifndef __aio_h
-#define __aio_h
+#ifndef __sqaio_h
+#define __sqaio_h
 
 
 #define AIO_X	(1<<0)	/* handle for exceptions */
@@ -100,4 +100,4 @@ extern void aioDisable(int fd);
 extern int aioPoll(int microSeconds);
 
 
-#endif /* __aio_h */
+#endif /* __sqaio_h */

@@ -43,7 +43,7 @@
 
 #undef	DEBUG
 
-#include "aio.h"
+#include "sqaio.h"
 
 #include <stdio.h>
 #include <unistd.h>

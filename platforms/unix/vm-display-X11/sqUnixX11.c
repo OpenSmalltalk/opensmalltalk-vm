@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2005-03-17 21:38:07 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-04-06 08:08:49 by piumarta on squeak.hpl.hp.com
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -69,7 +69,7 @@
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
 #include "sqUnixCharConv.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #undef HAVE_OPENGL_GL_H		/* don't include Quartz OpenGL if configured */
 #include "SqDisplay.h"

@@ -1,5 +1,5 @@
 #include "sq.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #include "SqDisplay.h"
 #include "sqUnixGlobals.h"

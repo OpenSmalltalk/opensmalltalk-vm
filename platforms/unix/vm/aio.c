@@ -36,10 +36,10 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2005-03-17 21:09:26 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-04-06 08:09:41 by piumarta on squeak.hpl.hp.com
  */
 
-#include "aio.h"
+#include "sqaio.h"
 
 #ifdef HAVE_CONFIG_H
 

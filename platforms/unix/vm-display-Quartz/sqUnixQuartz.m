@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2005-03-17 21:29:16 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-04-06 08:08:33 by piumarta on squeak.hpl.hp.com
  */
 
 
@@ -56,7 +56,7 @@
 #include "sqUnixCharConv.h"
 
 #include "sq.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #include <unistd.h>
 #include <stdlib.h>

@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2005-03-31 14:39:17 by piumarta on margaux.hpl.hp.com
+ * Last edited: 2005-04-06 08:09:57 by piumarta on squeak.hpl.hp.com
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -53,7 +53,7 @@
 
 #include "sq.h"
 #include "SocketPlugin.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #undef	AIO_DEBUG
 #undef	DEBUG

@@ -36,12 +36,12 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2005-03-17 21:21:56 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-04-06 08:08:59 by piumarta on squeak.hpl.hp.com
  */
 
 #include "sq.h"
 #include "sqMemoryAccess.h"
-#include "aio.h"
+#include "sqaio.h"
 #include "sqUnixCharConv.h"
 #include "debug.h"
 

@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2005-03-26 19:11:28 by piumarta on graves.hpl.hp.com
+ * Last edited: 2005-04-06 08:08:29 by piumarta on squeak.hpl.hp.com
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -65,7 +65,7 @@
 #define	TEST_CHANS	2		/* forced h/w channels for input/output */
 #endif
 
-#include "aio.h"
+#include "sqaio.h"
 
 #include <stdio.h>
 #include <stdlib.h>

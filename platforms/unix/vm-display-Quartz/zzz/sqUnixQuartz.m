@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-02-13 22:28:33 by piumarta on emilia.inria.fr
+ * Last edited: 2005-04-06 08:08:38 by piumarta on squeak.hpl.hp.com
  */
 
 
@@ -55,7 +55,7 @@
 #include "sqUnixGlobals.h"
 
 #include "sq.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #include <unistd.h>
 #include <stdlib.h>

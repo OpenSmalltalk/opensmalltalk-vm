@@ -37,7 +37,7 @@
  */
 
 #include "sq.h"
-#include "aio.h"
+#include "sqaio.h"
 
 #include <audio/audiolib.h>
 #include <assert.h>
