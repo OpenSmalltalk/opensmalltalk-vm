@@ -1,3 +1,12 @@
+2003-08-08  Ian Piumarta  <piumarta@cartman.inria.fr>
+
+	* platforms/unix/plugins/B3DAcceleratorPlugin/Makefile.inc
+	(XLDFLAGS): Pass location of X libs to link command.
+
+	* platforms/unix/vm-display-Quartz/Info.plist.in
+	(CFBundleExecutable): Fix capitalization to avoid confusing the
+	Finder on case-sensitive filesystems.
+
 2003-08-08  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/plugins/UnixOSProcessPlugin/Makefile.inc
