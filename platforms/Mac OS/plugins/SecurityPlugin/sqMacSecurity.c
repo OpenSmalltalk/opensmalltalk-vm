@@ -186,16 +186,11 @@ int ioInitSecurity(void) {
   long  dirID;
   OSErr err;
   FSSpec spec;
-  int   iLoadAS,iDropDrag;
+  int   iLoadAS;
   char  *data;
   
   if (gInitialized) return 1;
   gInitialized  = true;
-
-  iDropDrag = interpreterProxy->ioLoadFunctionFrom("setFileAccessCallback", "DropPlugin");
-  if (iDropDrag != 0) {
-    ((int (*) (void *)) iDropDrag)(&_ioSetFileAccess);
-  }
 
   iLoadAS = interpreterProxy->ioLoadFunctionFrom("GetAttributeString", "");
   if (iLoadAS == 0) {
