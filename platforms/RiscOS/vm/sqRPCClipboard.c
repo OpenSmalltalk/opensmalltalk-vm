@@ -11,6 +11,7 @@
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
+//#define DEBUG
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
 #include "oslib/osfscontrol.h"
@@ -124,17 +125,16 @@ void sendDataRequest(wimp_message* wmessage) {
 /* We want to fetch the clipboard contents from some other application
  * Broadcast the message_DATA_REQUEST message
  */
-extern wimp_w	sqWindowHandle;
 	wmessage->size = 52;
 	wmessage->sender = (wimp_t)NULL;
 	wmessage->my_ref = 0; 
 	wmessage->your_ref = 0;
 	wmessage->action = message_DATA_REQUEST;
-	wmessage->data.data_request.w = sqWindowHandle;
+	wmessage->data.data_request.w = 0 /* sqWindowHandle */;
 	wmessage->data.data_request.i = wimp_ICON_WINDOW;
 	wmessage->data.data_request.pos.x = 0;
 	wmessage->data.data_request.pos.y = 0;
-	wmessage->data.data_request.flags = 0x04; // request clipboard
+	wmessage->data.data_request.flags = wimp_DATA_REQUEST_CLIPBOARD;
 	wmessage->data.data_request.file_types[0] = 0xFFF; //TEXT
 	wmessage->data.data_request.file_types[1] = 0xFFD; // DATA
 	wmessage->data.data_request.file_types[2] = -1;

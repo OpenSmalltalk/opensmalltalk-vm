@@ -11,6 +11,7 @@
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
+//#define DEBUG
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -180,26 +181,24 @@ char * string;
 
 /* parse all arguments starting with the image name */
 static int parseGenericArgs(void) {
-char *string;
-extern char vmPath[];
-extern void decodePath(char*, char*);
+char *string, *imageName= getImageName();
+extern char * canonicalizeFilename(char* inString, char * outString);
+extern void setDefaultImageName(void);
 
 	if (!(string = nextOption()) ) {
-		// no options left, so can only use default image name
-		strcpy(imageName, vmPath);
-		strcat(imageName, "Squeak/image");
+		// no options left, so can only use default image name & return
+		setDefaultImageName();
 		imageOptions[numOptionsImage++] = imageName;
 		return 1;
 	}
 
-	/* now get decode the putative image name */
-	decodePath(string, imageName);
+	/* now decode the putative image name */
+	canonicalizeFilename(string, imageName);
 
 	if(*imageName && IsImage(imageName)) {
 		// all is ok, its the image name
 	} else { /* Not the image name -- use a default in the !Squeak appdir */
-		strcpy(imageName, vmPath);
-		strcat(imageName, "Squeak/image");
+		setDefaultImageName();
 		// and skip back 1 on the option list
 		opt--;
 	}
@@ -219,16 +218,14 @@ extern void decodePath(char*, char*);
 
 
 int parseArguments(char *argv[], int argc, vmArg args[]) {
-extern char vmPath[];
-extern void decodeVMPath(char*);
+extern char * decodeVMPath(char*);
 numOptionsVM = 0;
 numOptionsImage = 0;
 numOptions = argc;
 optionArray = &argv[0];
 
 	/* argv[0] = executable name */
-	decodeVMPath( nextOption());
-	vmOptions[numOptionsVM++] = vmPath;
+	vmOptions[numOptionsVM++] = decodeVMPath( nextOption());
 
 	/* parse VM options */
 	parseVMArgs(args);

@@ -1501,15 +1501,17 @@ static socketOption socketOptions[]= {
 };
 
 
-static socketOption *findOption(char *name, size_t nameSize)
-{
-  socketOption *opt= 0;
-  char buf[32];
-  strncpy(buf, name, nameSize);
-  for (opt= socketOptions; opt->name != 0; ++opt)
-    if (!strcmp(buf, opt->name))
-      return opt;
-  return 0;
+static socketOption *findOption(char *name, size_t nameSize) {
+	if (nameSize < 32) {
+		socketOption *opt= 0;
+		char buf[32];
+		buf[nameSize]= '\0';
+		strncpy(buf, name, nameSize);
+		for (opt= socketOptions; opt->name != 0; ++opt)
+	if (!strcmp(buf, opt->name))
+	return opt;
+	}
+    return 0;
 }
 
 

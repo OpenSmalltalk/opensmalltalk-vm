@@ -25,28 +25,22 @@
 
 #define longAt(i) (*((int *) (i)))
 
-#ifndef MIN
-#define MIN( a, b )   ( ( (a) < (b) ) ? (a) : (b) )
-#define MAX( a, b )   ( ( (a) > (b) ) ? (a) : (b) )
-#endif
-
-extern wimp_w	sqWindowHandle;
-wimp_block	wimpPollBlock;
-wimp_event_no	wimpPollEvent;
-int		wimpPollWord;
-int		windowActive = false;
-extern int	pointerBuffer[];
-extern os_coord	pointerOffset;
-extern os_coord	scalingFactor;
-os_box		windowVisibleArea;
+wimp_block			wimpPollBlock;
+wimp_event_no		wimpPollEvent;
+int					wimpPollWord;
+int					windowActive = false;
+extern int			pointerBuffer[];
+extern os_coord		pointerOffset;
+extern os_coord		scalingFactor;
+extern os_coord		screenSizeP;
 
 /*** Variables -- Event Recording ***/
 
-int inputSemaphoreIndex = 0;
+int					inputSemaphoreIndex = 0;
 #define EVENTQ_SIZE 1024
-sqInputEvent eventBuf[EVENTQ_SIZE ]; /* circular buffer */
-int eventBufGet = 0;
-int eventBufPut = 0;
+sqInputEvent		eventBuf[EVENTQ_SIZE ]; /* circular buffer */
+int					eventBufGet = 0;
+int					eventBufPut = 0;
 
 /* to use the Cerilia DeepKey Event extender */
 #define wimp_DEEPKEY_LSHIFT		1<<0
@@ -83,26 +77,27 @@ typedef struct {
 	int deepkey;
 	} wimp_deepkey;
 
-int user_LCTL_KEY, user_RCTL_KEY;
+int				user_LCTL_KEY, user_RCTL_KEY;
 
 
 /* older polling stuff still needs supporting */
 #define KEYBUF_SIZE 64
-int	keyBuf[KEYBUF_SIZE];	/* circular buffer */
-int	keyBufGet = 0;		/* index of next item of keyBuf to read */
-int	keyBufPut = 0;		/* index of next item of keyBuf to write */
-int	keyBufOverflows = 0;	/* number of characters dropped */
+int				keyBuf[KEYBUF_SIZE];	/* circular buffer */
+int				keyBufGet = 0;		/* index of next item of keyBuf to read */
+int				keyBufPut = 0;		/* index of next item of keyBuf to write */
+int				keyBufOverflows = 0;	/* number of characters dropped */
 
-int	prevButtonState,
-		buttonState = 0,
-		modifierState = 0;	/* mouse button and modifier state  */
-os_coord	prevSavedMousePosition,
-		savedMousePosition;	/* mouse position; not modified when window is inactive unless a mouse button is down - ie dragging out of window */
-int	mouseButtonDown;	/* keep track of curent mouse button state - for drags outside window */
+int				prevButtonState,
+					buttonState = 0,
+					modifierState = 0;	/* mouse button and modifier state  */
+os_coord		prevSavedMousePositionP,
+				savedMousePositionP;	/* mouse position; not modified when window is inactive unless a mouse button is down - ie dragging out of window */
+int				mouseButtonDown; /* keep track of curent mouse button state - for drags outside window */
 
-extern int	getInterruptKeycode(void);
-extern int	setInterruptPending(int value);
-extern int	forceInterruptCheck(void);
+extern int		getInterruptKeycode(void);
+extern int		setInterruptPending(int value);
+extern int		forceInterruptCheck(void);
+extern int		ioIconiseWindow(wimp_message * wblock);
 
 void (*socketPollFunction)(int delay, int extraFd) = null;
 
@@ -235,9 +230,7 @@ unsigned char keymap[0x68] = {
 
  
 /*** Functions ***/
-	 void ActivateWindow(wimp_block * wblock);
-	 void DeactivateWindow( wimp_block * wblock);
-	 void DisplayPixmap(void);
+	 void DisplayPixmap(wimp_draw * wblock);
 extern	 void DisplayModeChanged(void);
 	 void DoNothing(void);
 	  int HandleEvents(void);
@@ -245,8 +238,8 @@ extern	 void DisplayModeChanged(void);
 	 void KeyBufAppend(int key);
 	 void UserMessage(wimp_message * wblock);
 	 void MouseButtons( wimp_pointer * wblock);
-	 void PointerEnterWindow(wimp_block *wblock);
-	 void PointerLeaveWindow(wimp_block *wblock);
+	 void PointerEnterWindow(wimp_entering *wblock);
+	 void PointerLeaveWindow(wimp_leaving *wblock);
 	 void WindowClose(wimp_close * wblock);
 	 void WindowOpen( wimp_open * wblock);
 extern	 void claimCaret(wimp_pointer * wblock);
@@ -254,14 +247,15 @@ extern	 void receivedClaimEntity(wimp_message * wblock);
 extern	 void receivedDataRequest(wimp_message * wmessage);
 extern	 void receivedDataSave(wimp_message * wblock);
 extern	 void receivedDataSaveAck(wimp_message * wblock);
-	 void EventBufAppendKey( int key, int buttons, int x, int y);
-	 void EventBufAppendMouse(int buttons, int modifiers, int x, int y);
+	 void EventBufAppendKey( int key, int buttons, int x, int y, int windowIndex);
+	 void EventBufAppendMouse(int buttons, int modifiers, int x, int y, int windowIndex);
 extern	 void platReportError( os_error * e);
+void EventBufAppendWindow( int action, int left, int top, int right, int bottom,int windowIndex);
 
 void setSocketPollFunction(int spf ) {
 /* called from SocketPlugin init code */
 	socketPollFunction = (void(*)(int, int))spf;
-	PRINTF(( "socketPoll %0x", (int)socketPollFunction));
+	PRINTF(( "\\t socketPoll %0x\n", (int)socketPollFunction));
 }
 
 void setMetaKeyOptions(int swap) {
@@ -289,29 +283,61 @@ int kbdstate, thisTick;
 static int draggingWindow = false;
 static int lastMousePollTick = 0;
 wimp_pointer wblock;
+windowDescriptorBlock * thisWindow;
+static windowDescriptorBlock * lastWindow = NULL;
 
 	/* Don't mouse poll more than once every millisecond */
 	if ( lastMousePollTick == (thisTick = (ioMSecs() & 0x1fffffff))) return;
+	lastMousePollTick = thisTick;
 
 	if ( mouseButtonDown || windowActive) {
 
 		/* stash previous values */
 		prevButtonState = buttonState;
-		prevSavedMousePosition.x = savedMousePosition.x;
-		prevSavedMousePosition.y = savedMousePosition.y;
-	
+		prevSavedMousePositionP.x = savedMousePositionP.x;
+		prevSavedMousePositionP.y = savedMousePositionP.y;
+
+
+
 		/* check for current state */
 		xwimp_get_pointer_info( &wblock);
 				buttonState = ((int)wblock.buttons &
 				(wimp_CLICK_SELECT
 				| wimp_CLICK_MENU
 				| wimp_CLICK_ADJUST));
+		/* need the window block with this handle */
+		thisWindow = (windowDescriptorBlock *)
+						windowBlockFromHandle(wblock.w);
+		/* It is possible for thisWindow to be 0 - ie not one of ours.
+		 * WTF do we do to work out a meaningful mouse pos?
+		 * The plausible scenario is that some dragging (ie a mouse button
+		 * down) has gone outside the window. Thus mouseButtonDown is true,
+		 * windowActive will be false as soon as the leave event is processed
+		 * and thisWindow will be 0. At this point we'd like to know the
+		 * window that _was_ active so we can use it instead of thisWindow.
+		 * While buttonDown is true we need to maintain the same window.
+		 * 
+		 * It is possible for a MousePoll to hpapen before a leave is processed,
+		 * (ie windowActive is improperly true) so we should check and ignore
+		 * the mouse pos.
+		 */
+		if (!thisWindow ) {
+			if (mouseButtonDown) {
+				thisWindow = lastWindow;
+			} else {
+				return; // no event
+			}
+		}
+		lastWindow = thisWindow; // save this one for next time round
+
+		/* update mouseButtonDown */
 		mouseButtonDown = buttonState>0?true:false;
+
 		/* mouse pos & shift state */
-		savedMousePosition.x = (wblock.pos.x -
-					windowVisibleArea.x0)>>scalingFactor.x;
-		savedMousePosition.y = (windowVisibleArea.y1 -
-					wblock.pos.y)>>scalingFactor.y;
+		savedMousePositionP.x = OS2PixX(wblock.pos.x -
+					thisWindow->visibleArea.x0);
+		savedMousePositionP.y = OS2PixY(thisWindow->visibleArea.y1 -
+					wblock.pos.y);
 		modifierState = 0;
 		xosbyte1(osbyte_SCAN_KEYBOARD , 0x80, 0, &kbdstate);
 		if (kbdstate >0 ) modifierState = modifierState | ShiftKeyBit;
@@ -319,40 +345,42 @@ wimp_pointer wblock;
 		if (kbdstate >0 ) modifierState = modifierState | CtrlKeyBit;
 		xosbyte1(osbyte_SCAN_KEYBOARD , 0x87, 0, &kbdstate);
 		if (kbdstate >0 ) modifierState = modifierState | CommandKeyBit;
+
 		/* if the ctl or cmd key is held down there is a chance that
 		 * we are trying to resize the window
 		 */
 		if ( (modifierState & (CommandKeyBit | CtrlKeyBit))
-			&& (wblock.w == sqWindowHandle)
+			&& (thisWindow)
 			&& (wblock.i == (wimp_i)wimp_ICON_WINDOW)
 			/* we are in our window and on the main icon */
 			&& (prevButtonState == 0)
 			&& (buttonState == RedButtonBit)
 			/* and the red button is freshly pressed */
-			&& (wblock.pos.x > (windowVisibleArea.x1 - 15))
-			/* and x is within 15 pixels of right edge */
-			&& (wblock.pos.y <(windowVisibleArea.y0 + 15))
+			&& (wblock.pos.x > (thisWindow->visibleArea.x1 - 15))
+			/* and x@y is within 15 pixels of right@bottom corner */
+			&& (wblock.pos.y <(thisWindow->visibleArea.y0 + 15))
 			) {
 			/* Phew - all those checks just to detect a size
 			 *  dragging case.
 			 * set windowActive false, draggingWindow true and
 			 * start the UI window sizing operation
 			 */
-				extern void ResizeWindow(void);
+				extern void ResizeWindow(windowDescriptorBlock * window);
 				mouseButtonDown = windowActive = false;
 				draggingWindow = true;
-				ResizeWindow();
+				ResizeWindow(thisWindow);
 				return;
 		}
+
 		/* compare prev to current */
 		if ( (prevButtonState != buttonState)
-			|| (prevSavedMousePosition.x != savedMousePosition.x)
-			|| (prevSavedMousePosition.y != savedMousePosition.y)){
+			|| (prevSavedMousePositionP.x != savedMousePositionP.x)
+			|| (prevSavedMousePositionP.y != savedMousePositionP.y)){
 			EventBufAppendMouse(buttonState, modifierState,
-				savedMousePosition.x, savedMousePosition.y);
-			PRINTF(("\\tMouse Event %X (%X), %d@%d\n", buttonState,
-				modifierState, savedMousePosition.x,
-				savedMousePosition.y));
+				savedMousePositionP.x, savedMousePositionP.y, thisWindow->windowIndex);
+			PRINTF(("\\tMouse Event %X (%X), %d@%d w: %d\n", buttonState,
+				modifierState, savedMousePositionP.x,
+				savedMousePositionP.y, thisWindow->windowIndex));
 		}
 	} else {
 		/* see if we are doing a window resizing drag */
@@ -378,15 +406,15 @@ int HandleSingleEvent(wimp_block *pollBlock, wimp_event_no pollEvent) {
 			return false ; break;
 		case wimp_REDRAW_WINDOW_REQUEST	:
 			PRINTF(("\\t display\n"));
-			DisplayPixmap(); break;
+			DisplayPixmap(&(pollBlock->redraw)); break;
 		case wimp_OPEN_WINDOW_REQUEST	:
 			WindowOpen(&(pollBlock->open)); break;
 		case wimp_CLOSE_WINDOW_REQUEST	:
 			WindowClose(&(pollBlock->close)); break;
 		case wimp_POINTER_LEAVING_WINDOW :
-			PointerLeaveWindow(pollBlock); break;
+			PointerLeaveWindow(&(pollBlock->leaving)); break;
 		case wimp_POINTER_ENTERING_WINDOW:
-			PointerEnterWindow(pollBlock); break;
+			PointerEnterWindow(&(pollBlock->entering)); break;
 		case wimp_MOUSE_CLICK			:
 			MouseButtons(&(pollBlock->pointer)); break;
 		case wimp_USER_DRAG_BOX			:
@@ -416,6 +444,9 @@ int HandleSocketPoll(int microSecondsToDelay) {
 	}
 }
 
+#if 0
+/* this is pretty much obsolete - we can't do microsecond delays and
+ * anything longer just slows Squeak down horribly */ 
 int HandleEventsWithWait(int microSecondsToDelay) {
 /* use wimp_poll_delay so that we don't return a null before
  * the end of the delay, thus giving some cpu back to everyone else
@@ -458,12 +489,17 @@ extern int getNextWakeupTick(void);
 		(wimp_event_no*)&wimpPollEvent);
 	} while(HandleSingleEvent(&wimpPollBlock, wimpPollEvent));
 }
+#endif
 
 int HandleEvents(void) {
 /* track buttons and pos, send event if any change */
 	HandleMousePoll();
 	HandleSocketPoll(0);
 	//PRINTF(("\\t HandleEvents\n"));
+	/* One poll to bring them all.
+	 * One poll to find them.
+	 * One poll to to bring them all
+	 * and in the do loop, bind them */
 	do {xwimp_poll((wimp_MASK_POLLWORD
 		| wimp_MASK_GAIN
 		| wimp_MASK_LOSE
@@ -479,13 +515,11 @@ int HandleEventsNotTooOften(void) {
 /* If we are using the older style polling stuff, we typically end up
  * calling HandleEvents an awful lot of times. Since at least 3/4 of
  * those times are redundant, throttle it back a little */
-static clock_t nextPollTick = 0;
-clock_t currentTick;
-	if( (currentTick = clock()) >= nextPollTick) {
-	//PRINTF(("\\t HandleEventsNotTooOften\n"));
-		HandleEvents();
-		nextPollTick = currentTick + 1;
-	}
+static int lastPollTick = 0;
+int thisTick;
+	if ( lastPollTick == (thisTick = (ioMSecs() & 0x1fffffff))) return false;
+	HandleEvents();
+	lastPollTick = thisTick;
 	return true; 
 }
 
@@ -494,40 +528,72 @@ clock_t currentTick;
 /****************************************/
 
 void WindowOpen( wimp_open * wblock) {
+windowDescriptorBlock * thisWindow;
+/* window open events are used to open windows (duh) and when they have
+ * been moved, brought to front, de-iconised, screen-redrawn etc.
+ * Re-establish the window visible area values. */
+	/* need the window block with this handle */
+	thisWindow = windowBlockFromHandle(wblock->w);
+
 	wblock->xscroll = 0;
 	wblock->yscroll = 0;
-	windowVisibleArea.x0 = wblock->visible.x0;
-	windowVisibleArea.y0 = wblock->visible.y0;
-	windowVisibleArea.x1 = wblock->visible.x1;
-	windowVisibleArea.y1 = wblock->visible.y1;
+	if (thisWindow->visibleArea.x0 != wblock->visible.x0
+		|| thisWindow->visibleArea.y0 != wblock->visible.y0
+		|| thisWindow->visibleArea.x1 != wblock->visible.x1
+		|| thisWindow->visibleArea.y1 != wblock->visible.y1) {
+		EventBufAppendWindow( WindowEventMetricChange,
+			OS2PixX(wblock->visible.x0),
+			screenSizeP.y - OS2PixY(wblock->visible.y1),
+			OS2PixX(wblock->visible.x1),
+			screenSizeP.y - OS2PixY(wblock->visible.y0),
+			thisWindow->windowIndex);
+		PRINTF(("\\t WindowOpen - new size: %d@%d ex: %d@%d\n",
+			OS2PixX(wblock->visible.x0),
+			screenSizeP.y - OS2PixY(wblock->visible.y1),
+			OS2PixX(wblock->visible.x1),
+			screenSizeP.y - OS2PixY(wblock->visible.y0)));
+	}
+	/* save the new visible area */
+	thisWindow->visibleArea.x0 = wblock->visible.x0;
+	thisWindow->visibleArea.y0 = wblock->visible.y0;
+	thisWindow->visibleArea.x1 = wblock->visible.x1;
+	thisWindow->visibleArea.y1 = wblock->visible.y1;
 	xwimp_open_window(wblock);
 }
 
 void WindowClose(wimp_close * wblock) {
+/* What to do with multiple windows?
+ * Do dialogue only on last remaining one?
+ */
 os_error e;
+int windowIndex;
 extern char sqTaskName[];
+	if ((windowIndex = windowIndexFromHandle(wblock->w)) >1 ) {
+		EventBufAppendWindow( WindowEventClose, 0, 0, 0, 0, windowIndex);
+		PRINTF(("\\t close window event: %d\n", windowIndex));
+		return;
+	}
 	e.errnum = 0;
-	sprintf(e.errmess, "Really quit Squeak?");
+	sprintf(e.errmess, "Really quit %s?", sqTaskName);
 	if (wimp_report_error( &e, wimp_ERROR_BOX_OK_ICON |
 		wimp_ERROR_BOX_CANCEL_ICON |
 		 wimp_ERROR_BOX_HIGHLIGHT_CANCEL |
 		 wimp_ERROR_BOX_SHORT_TITLE ,
 		 sqTaskName) == wimp_ERROR_BOX_SELECTED_OK) {;
-			sqWindowHandle = null;
-			PointerLeaveWindow((wimp_block *)wblock);
+			PointerLeaveWindow((wimp_leaving *)wblock);
 			xwimp_close_window(wblock->w);
 			exit(0);
 	}
 }
 
-void PointerLeaveWindow(wimp_block *wblock) {
+void PointerLeaveWindow(wimp_leaving *wblock) {
 /* the pointer has left my area. swap to normal desktop pointer */
 	xwimp_set_pointer_shape(1, (byte const *)-1,
 		0, 0, 0, 0);
 	windowActive = false;
 }
 
-void PointerEnterWindow(wimp_block *wblock) {
+void PointerEnterWindow(wimp_entering *wblock) {
 /* the pointer has moved into my area. swap to my pointer pixmap */
 	xwimp_set_pointer_shape(2, (byte const *)pointerBuffer,
 		16, 16, pointerOffset.x, pointerOffset.y);
@@ -541,30 +607,35 @@ void MouseButtons( wimp_pointer * wblock) {
  * Right now we DO NOT use the click info to generate squeak mouse events
  * - we poll in HandleMousePoll()
  */
+windowDescriptorBlock * thisWindow;
 
-	if ( (wblock->w == sqWindowHandle)
-		&& (wblock->i == (wimp_i)wimp_ICON_WINDOW)) {
-		PRINTF(("\\t buttons %x \n", wblock->buttons)); 
-		/* claim caret via message_claimentity() iff we
-		 *don't already have it */
-		claimCaret(wblock);
-		/* do we still use wimp_set_caret_position ?  */
-		xwimp_set_caret_position(sqWindowHandle,
-			(wimp_i)wimp_ICON_WINDOW, 0, 0, (1<<25)|255, 0);
-		return;
-	}
 	if ( wblock->w == wimp_ICON_BAR ) {
-		/* select-click on iconbar icon means bring window to front */
-		if ((wblock->buttons == wimp_CLICK_SELECT)
-			&& (sqWindowHandle != null)) {
-			extern void SetWindowToTop(void);
-			SetWindowToTop();
+		if ((wblock->buttons == wimp_CLICK_SELECT)) {
+		/* select-click on iconbar icon means bring window to front
+		 * - but what if we have multiple windows?  */
+		extern void SetWindowToTop(int windowIndex); 
+			SetWindowToTop(1);
 			return;
 		}
 		if (wblock->buttons == wimp_CLICK_MENU) {
 			/* sometime get the menu stuff to work */
+			return;
 		}
-	} 
+	}
+ 
+	/* need the window block with this handle */
+	thisWindow = (windowDescriptorBlock *)windowBlockFromHandle(wblock->w);
+	if ( thisWindow
+		&& (wblock->i == (wimp_i)wimp_ICON_WINDOW)) {
+		PRINTF(("\\t buttons %x w: %d\n", wblock->buttons, thisWindow->windowIndex)); 
+		/* claim caret via message_claimentity() iff we
+		 *don't already have it */
+		claimCaret(wblock);
+		/* do we still use wimp_set_caret_position ?  */
+		xwimp_set_caret_position(wblock->w,
+			(wimp_i)wimp_ICON_WINDOW, 0, 0, (1<<25)|255, 0);
+		return;
+	}
 }
 
 void KeyPressed( wimp_key * wblock) {
@@ -574,8 +645,16 @@ void KeyPressed( wimp_key * wblock) {
  * Mac numbering in order to satisfy the image code
  */
 wimp_deepkey * dblock;
-int keystate, dkey, modState;
+int keystate, dkey, modState, thisWindowIndex;
+
 	dblock = (wimp_deepkey *)wblock;
+
+	/* need the window block with this handle */
+	thisWindowIndex = windowIndexFromHandle(wblock->w);
+	if (!thisWindowIndex) return;
+	/* if not one of our windows, no event. Keypresses keep the window id
+	 * of the active/focused window event when the nouse is outside.
+	 * Just to add to the confusion. */
 
 	/* initially keystate will be the event's idea of the key pressed */
 	keystate = dblock->c;
@@ -598,7 +677,8 @@ int keystate, dkey, modState;
 		| wimp_DEEPKEY_RSHIFT)) ? ShiftKeyBit: 0;
 	/* Damn! can't use ALT for the Command key since we don't get
 	 * keypress events for most alt-keys. Use previous plan of
-	 * left ctl = Control & right ctl = Command
+	 * left ctl = Control & right ctl = Command unless user has
+	 * specified -swapmeta. In which case, swap the meta keys around.
 	 */
 	if (dkey & (user_LCTL_KEY /* wimp_DEEPKEY_LCTL */))
 		modState |= CtrlKeyBit;
@@ -631,11 +711,13 @@ int keystate, dkey, modState;
 		}
 	}
 	if (inputSemaphoreIndex) {
-		EventBufAppendKey(keystate, modState, savedMousePosition.x, savedMousePosition.y);
+		/* inputSem testing is the way we see if event type input is
+		 * expected or not. Stupid way to do it */
+		EventBufAppendKey(keystate, modState, savedMousePositionP.x, savedMousePositionP.y, thisWindowIndex);
 	} else {
 		KeyBufAppend(keystate | ((modState)<<8));
 	}
-	PRINTF(("\\t KeyPressed .c%c .d%x keystate(%d-%d)\n", dblock->c, (dblock->deepkey)>>wimp_DEEPKEY_KEYNUMSHIFT, keystate, modState));
+	PRINTF(("\\t KeyPressed .c%c .d%x keystate(%d-%d) w: %d\n", dblock->c, (dblock->deepkey)>>wimp_DEEPKEY_KEYNUMSHIFT, keystate, modState, thisWindowIndex));
 }
 
 void UserMessage(wimp_message * wblock) {
@@ -649,6 +731,8 @@ extern wimp_t Task_Handle;
 		case message_QUIT:		ioExit();
 								break;
 		case message_MODE_CHANGE: DisplayModeChanged();
+								break;
+		case message_WINDOW_INFO: ioIconiseWindow(wblock);
 								break;
 		case message_CLAIM_ENTITY: receivedClaimEntity(wblock);
 								break;
@@ -671,16 +755,7 @@ extern wimp_t Task_Handle;
 	}
 }
 
-void ActivateWindow(wimp_block * wblock) {
-/* maybe we will need to do something here */
-	PointerEnterWindow(wblock);
-}
 
-void DeactivateWindow( wimp_block * wblock) {
-/* maybe we will need to do something here */
-	PointerLeaveWindow(wblock);
-}
- 
 void DoNothing(void) {
 /* do nothing at all, but make sure to do it quickly.
  * Primarily a breakpoint option */
@@ -691,20 +766,21 @@ void DoNothing(void) {
 /*****************************************************************************/
 
 void SignalInputEvent(void) {
+/* Unused currently */
 	PRINTF(("\\t SignalInputEvent\n"));
 	if(inputSemaphoreIndex > 0)
 		signalSemaphoreWithIndex(inputSemaphoreIndex);
 }
 
 /* Event buffer functions */
+/* code stolen from ikp's unix code. blame him if it doesn't work.
+ * compliment me if it does.
+ */
 
 #define iebEmptyP()	(eventBufPut == eventBufGet)
 #define iebAdvance(P)	(P= ((P + 1) % EVENTQ_SIZE))
 
 sqInputEvent *EventBufAppendEvent(int  type) {
-/* code stolen from ikp's unix code. blame him if it doesn't work.
- * complement me if it does.
- */
 	sqInputEvent *evt= &eventBuf[eventBufPut];
 	iebAdvance(eventBufPut);
 	if (iebEmptyP()) {
@@ -714,10 +790,9 @@ sqInputEvent *EventBufAppendEvent(int  type) {
 	evt->type= type;
 	evt->timeStamp= ioMSecs();
 	return evt;
-
 }
 
-void EventBufAppendKey( int keyValue, int modifiers, int x, int y) {
+void EventBufAppendKey( int keyValue, int modifiers, int x, int y, int windowIndex) {
 /* add an event record for a keypress */
 sqKeyboardEvent *evt;
 	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
@@ -726,13 +801,12 @@ sqKeyboardEvent *evt;
 	evt->modifiers = modifiers;
 	evt->reserved1 = 0;
 	evt->reserved2 = 0;
-	evt->reserved3 = 0; 
+	evt->windowIndex = windowIndex; 
 }
 
-void EventBufAppendMouse( int buttons, int modifiers, int x, int y) {
+void EventBufAppendMouse( int buttons, int modifiers, int x, int y, int windowIndex) {
 /* add an event record for a mouse press */
 sqMouseEvent *evt;
-#if 1
 /* if the previous event is a mouse event with the same buttons
  * we can overwrite it */
 	if ( !iebEmptyP()) {
@@ -742,14 +816,25 @@ sqMouseEvent *evt;
 		if ( (evt->buttons == buttons)
 			&& (evt->modifiers == modifiers)) return;
 	}
-#endif 
 	evt = (sqMouseEvent *)EventBufAppendEvent( EventTypeMouse);
 	evt->x = x;
 	evt->y = y;
 	evt->buttons = buttons;
 	evt->modifiers = modifiers;
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
+	evt->windowIndex = windowIndex;
+}
+
+void EventBufAppendWindow( int action, int left, int top, int right, int bottom,int windowIndex) {
+/* add an event record for a keypress */
+sqWindowEvent *evt;
+	evt = (sqWindowEvent *)EventBufAppendEvent( EventTypeWindow);
+	evt->action = action;
+	evt->value1 = left;
+	evt->value2 = top;
+	evt->value3 = right;
+	evt->value4 = bottom;
+	evt->windowIndex = windowIndex; 
 }
 
 /* key buffer functions to support older images */
@@ -807,7 +892,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
  * Here, we use microSeconds as the parameter to HandleEvents, so that
  * wimpPollIdle gets a timeout.
  */
-	PRINTF(("\\t relinq %d\n", microSeconds));
+	//PRINTF(("\\t relinq %d\n", microSeconds));
 	/* HandleEventsWithWait(microSeconds);   */
 	HandleEvents();
 	forceInterruptCheck();
@@ -863,7 +948,7 @@ int ioGetKeystroke(void) {
 int ioMousePoint(void) {
 /* return the mouse point as 16bits of x | 16bits of y */
 	HandleEventsNotTooOften();  /* process all pending events */
-	return (savedMousePosition.x << 16 | savedMousePosition.y & 0xFFFF);
+	return (savedMousePositionP.x << 16 | savedMousePositionP.y & 0xFFFF);
 }
 
 int ioPeekKeystroke(void) {

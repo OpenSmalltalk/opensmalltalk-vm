@@ -11,7 +11,7 @@ CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM)
 CCVMflags = $(ccflags)
 # likewise, linkflags with -debug...
 Linkflags = -aif -c++ -o $@ 
-#Linkflags = -aif -c++ -debug -o $@ 
+#Linkflags = -aif -c++ -debug -o $@
 ObjAsmflags = -throwback -NoCache -depend !Depend
 LibFileflags = -c -o $@
 Squeezeflags = -o $@
@@ -29,14 +29,18 @@ SPlug=@.plugins
 PlHdr=$(CVM).h.sqVirtualMachine $(PVM).h.sqConfig $(PVM).h.sqPlatformSpecific
 VMHdr=$(CVM).h.sq $(PlHdr)
 SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
+HWTestFile= $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin
 
-pluginList=B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SocketPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin pluginDir
+pluginList=B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SocketPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
 
 # Final targets:
 all: plugins vm
 
 ifeq ( $(wildcard $(SQ3DTestFile)), $(SQ3DTestFile)
 pluginList += Squeak3D
+endif
+ifeq ( $(wildcard $(HWTestFile)), $(HWTestFile)
+pluginList += HostWindowPlugin
 endif
 
 vm:	$(Sqk).!Runimage vmobjdir
@@ -55,7 +59,7 @@ pluginDir:
 	@ifthere $(SqPlugins) then else CDir $(SqPlugins) 
 	@ifthere @.o then else CDir @.o
 
-plugins: $(pluginList) 
+plugins: $(pluginList) pluginDir
 	@
 
 $(Sqk).!Runimage:	@.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
@@ -76,10 +80,11 @@ $(Sqk).!Runimage:	@.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
 @.vm.o.ptrblock:   $(Sqk).ptrblkmap 
         rinkptr $(rinkptrflags) $(Sqk).ptrblkmap  @.vm.o.ptrblock
 
-$(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCMain $(PVM).dsc.block
+$(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCMain @.vm.o.sqRPCWindows  $(PVM).dsc.block
         copy $(PVM).dsc.block $* f~c
         extractsym -e $* C:o.stubs,*
         extractsym -e $* @.vm.o.sqRPCMain
+        extractsym -e $* @.vm.o.sqRPCWindows
 
 ###########
 # ADPCMCodecPlugin make rule.
@@ -294,6 +299,25 @@ $(SqPlugins).GeniePlugin:	$(SPlug).GeniePlugin.o.GeniePlugin \
 
 $(SPlug).GeniePlugin.o.GeniePlugin: $(SPlug).GeniePlugin.c.GeniePlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
+
+
+###########
+# HostWindow Plugin make rule.
+# Very simple, only the one source file
+###########
+HostWindowPlugin:	$(SqPlugins).HostWindowPlugin
+	@echo done $*
+
+$(SqPlugins).HostWindowPlugin:	$(SPlug).HostWindowPlugin.o.HostWindowPlugin \
+		$(SPlug).HostWindowPlugin.dsc.HostWindowPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).HostWindowPlugin \
+		-h $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).HostWindowPlugin.o.HostWindowPlugin
+
+$(SPlug).HostWindowPlugin.o.HostWindowPlugin: $(SPlug).HostWindowPlugin.c.HostWindowPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).HostWindowPlugin -o $@ $*.c 
 
 
 

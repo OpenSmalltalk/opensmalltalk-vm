@@ -4,7 +4,7 @@
 /*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
 /*  other machines not yet tested.                                        */
 /*                       sqRPCFileCopy.c                                  */
-/*  hook up to RiscOS file copy to preserve filtypes etc                  */
+/*  hook up to RiscOS file copy to preserve filetypes etc                 */
 /**************************************************************************/
 
 /* To recompile this reliably you will need    */           
@@ -18,22 +18,23 @@
 #include "oslib/osfscontrol.h"
 #include "sq.h"
 
-#define MAXDIRNAMELENGTH 1024
-
-
+char fromname[MAXDIRNAMELENGTH];
+char toname[MAXDIRNAMELENGTH];
 
 /*** Functions ***/
 int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize) {
 	os_error *e;
-	char fromname[MAXDIRNAMELENGTH];
-	char toname[MAXDIRNAMELENGTH];
+
+
 	osfscontrol_copy_flags flag = osfscontrol_COPY_FORCE;
 		PRINTF(("\\t platcopy called\n"));
 
-	if( srcNameSize > MAXDIRNAMELENGTH) return false;
-	sqFilenameFromString( fromname, (int)srcName, srcNameSize);
-	if( dstNameSize > MAXDIRNAMELENGTH) return false;
-	sqFilenameFromString( toname, (int)dstName, dstNameSize);
+	if (!canonicalizeFilenameToString(srcName, srcNameSize, fromname))
+		return false;
+
+	if (!canonicalizeFilenameToString(dstName, dstNameSize, toname))
+		return false;
+
 		PRINTF(("\\t platcopy names ok\n"));
 
 	e = xosfscontrol_copy(
@@ -41,8 +42,10 @@ int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstN
 		(char const *)toname,
 		flag,
 		(bits)0,(bits)0,(bits)0,(bits)0,(osfscontrol_descriptor *)0 );
+
 	if (e != NULL) return false;
-		PRINTF(("\\t platcopy ok\n"));
+	PRINTF(("\\t platcopy ok\n"));
+
 	return true;
 }
 

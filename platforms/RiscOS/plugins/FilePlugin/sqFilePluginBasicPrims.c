@@ -124,61 +124,9 @@ typedef struct OpenFileListEntry {
 int thisSession = 0;
 extern struct VirtualMachine * interpreterProxy;
 OpenFileListEntry *openFileListRoot = NULL;
+char cFilename[MAXDIRNAMELENGTH];
 
-char * canonicalizeFilenameToString(int sqString, int sqSize) {
-/* copy chars from a Squeak String to a C filename char array.
- * You may transform the characters as needed
- * Mallocs a string for the result. Remember to free when not needed!
- */
-int i;
-int spare;
-char c;
-char *temp, *filename;
-os_error * e;
-
-	temp = malloc(sqSize+2);
-	if (temp == NULL) return (char*)NULL;
-
-	for (i = 0; i < sqSize; i++) {
-		c =  *((char *) (sqString + i));
-		if ( c =='.') c = '/';
-		else if (c=='/') c = '.';
-		temp[i] = c;
-	}
-	temp[i] = 0;
-
-	/* first pass finds size of resultant string */
-	if ((e = xosfscontrol_canonicalise_path (temp, (char *)NULL, (char const *) NULL, (char const *)NULL, 0, &spare)) != null) {
-		/* when canonicalizing filenames we can get errors like
-		 *  no disc
-		 *  bad use of ^
-		 *  bad name
-		 *  etc
-		 * failure means we must free temp */
-		PRINTF(("\\t canonicalizeFilenameToString fail(1) - %s\n",temp));
-		free(temp);
-		return (char*)NULL;
-	}
-	/* second pass actually does the canonicalization into
-	 * the malloc'd filename */
-	filename = malloc(1-spare);
-	if (filename ==NULL) {
-		/* failure to alloc means we must free temp */
-		free(temp);
-		return (char*)NULL;
-	}
-	if ((e = xosfscontrol_canonicalise_path (temp, filename, (char const *) NULL, (char const *)NULL, 1-spare, &spare)) != null) {
-		/* failure to alloc means we must free temp AND fileneame */
-		PRINTF(("\\t canonicalizeFilenameToString fail(2) - %s\n",temp));
-		free(temp);
-		free(filename);
-		return (char*)NULL;
-	}
-	PRINTF(("\\t canonicalizeFilenameToString - %s\n",filename));
-	/* free temp since it is a temporary buffer */
-	free(temp);
-	return filename;
-}
+/* linked list & entry management */
 
 static void *findFileEntry(char *fName) {
 OpenFileListEntry *entry;
@@ -295,13 +243,15 @@ os_fw handle;
 	return entry;
 }
 
+
+/* primitive support */
+
 int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag) {
 /* Opens the given file using the supplied sqFile structure
  * to record its state. Fails with no side effects if f is
  * already open. Files are always opened in binary mode;
  * Squeak must take care of any line-end character mapping.
  */
-char * cFilename;
 int extent;
 OpenFileListEntry * entry;
 
@@ -311,13 +261,11 @@ OpenFileListEntry * entry;
 		FAIL();
 	}
 
-	cFilename = canonicalizeFilenameToString(sqFileNameIndex, sqFileNameSize);
-	if ( cFilename == NULL) FAIL();
-	
+	if (!canonicalizeFilenameToString((char*)sqFileNameIndex, sqFileNameSize, cFilename)) FAIL();
+
 	PRINTF(("\\t sqFileOpen: canonicalized filename: %s\n", cFilename));
 
 	entry = entryForFileNamed(cFilename, writeFlag);
-	free(cFilename); // done with this now
 
 	if (entry == NULL) {
 		PRINTF(("\\t sqFileOpen: failed to open file\n"));
@@ -342,6 +290,7 @@ OpenFileListEntry * entry;
 	/* compute and cache file size */
 	xosargs_read_extw(FILE_HANDLE(f), &extent);
 	f->fileSize = extent;
+	return true;
 }
 
 int sqFileClose(SQFile *f) {
@@ -484,32 +433,24 @@ int extent;
 }
 
 int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameIndex, int newNameSize) {
-char *cOldName, *cNewName;
-os_error * err;
+char cNewName[MAXDIRNAMELENGTH];
 
-	cOldName = canonicalizeFilenameToString(oldNameIndex, oldNameSize);
-	if ( cOldName ==NULL) FAIL();
-	cNewName = canonicalizeFilenameToString(newNameIndex, newNameSize);
-	if ( cNewName ==NULL) FAIL();
+	if (!canonicalizeFilenameToString((char*)oldNameIndex, oldNameSize, cFilename)) FAIL();
+	if (!canonicalizeFilenameToString((char*)newNameIndex, newNameSize, cNewName)) FAIL();
 
-	err = xosfscontrol_rename(cOldName, cNewName);
-	free(cOldName);
-	free(cNewName);
-	if (err != NULL) {
+	if (xosfscontrol_rename(cFilename, cNewName) != NULL) {
 		FAIL();
 	}
 }
 
 int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize) {
-char * cFilename;
 os_error *err;
 fileswitch_object_type objtype;
 bits loadaddr, execaddr;
 int size;
 fileswitch_attr attr;
 
-	cFilename = canonicalizeFilenameToString(sqFileNameIndex, sqFileNameSize);
-	if ( cFilename ==NULL) FAIL();
+	if (!canonicalizeFilenameToString((char*)sqFileNameIndex, sqFileNameSize, cFilename)) FAIL();;
 
 	PRINTF(("\\t sqFileDeleteNameSize: canonicalized name %s\n",cFilename));
 
@@ -519,7 +460,6 @@ fileswitch_attr attr;
 		&execaddr,
 		&size,
 		&attr);
-	free(cFilename);
 	if (err != NULL) {
 		PRINTF(("\\t sqFileDeleteNameSize: failed\n"));
 		FAIL();

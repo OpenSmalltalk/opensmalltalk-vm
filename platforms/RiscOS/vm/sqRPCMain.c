@@ -30,21 +30,15 @@
 /*** Variables -- Imported from Virtual Machine ***/
 
 /*** Variables -- image and path names ***/
-#define IMAGE_NAME_SIZE 300
-char		imageName[IMAGE_NAME_SIZE + 1];  /* full path to image */
-
-#define VMPATH_SIZE 300
-char		vmPath[VMPATH_SIZE + 1];  /* full path to interpreter's directory */
-
-#ifndef MIN
-#define MIN( a, b )   ( ( (a) < (b) ) ? (a) : (b) )
-#define MAX( a, b )   ( ( (a) > (b) ) ? (a) : (b) )
-#endif
+char			imageName[MAXDIRNAMELENGTH]; /* full path to image */
+char			vmPath[MAXDIRNAMELENGTH]; /* full path to interpreter's directory */
 
 /*** Variables -- RPC Related ***/
-extern wimp_w			sqWindowHandle;
-char			sqTaskName[] = "Squeak!";
+char			sqTaskName[10] = "Squeak\0\0\0\0";
+int				sqTaskNameLength = 10;
 wimp_t			Task_Handle;
+char validationString[] = "Siconbar";
+
 os_dynamic_area_no	SqueakObjectSpaceDA;
 extern os_dynamic_area_no	SqueakDisplayDA;
 wimp_MESSAGE_LIST(8)	importantWimpMessages;
@@ -58,21 +52,22 @@ int 			numOptionsVM;
 char			*(vmOptions[MAX_OPTIONS]);
 int 			numOptionsImage;
 char			*(imageOptions[MAX_OPTIONS]);
-
-int			headlessFlag = 0;
-int			helpMe = 0;
-int			versionMe = 0;
-int			swapMeta = 0;
-int			objectHeadroom = 4*1024*1024;
-char * windowLabel = &imageName[0];
+            	
+int				headlessFlag = 0;
+int				helpMe = 0;
+int				versionMe = 0;
+int				swapMeta = 0;
+int				objectHeadroom = 4*1024*1024;
+char			*windowLabel, *taskNameArg;
 
 vmArg args[] = {
 		{ ARG_FLAG,   &headlessFlag, "-headless" },
 		{ ARG_FLAG,   &helpMe, "-help" },
 		{ ARG_FLAG,   &versionMe, "-version" },
-		{ ARG_FLAG,   &swapMeta,  "-swapMeta"},
+		{ ARG_FLAG,   &swapMeta,  "-swapmeta"},
 		{ ARG_UINT,   &objectHeadroom, "-memory:"},
-		{ ARG_STRING, &windowLabel, "-windowlabel:"},
+		{ ARG_STRING, &windowLabel, "-windowlabel:"}, 
+		{ ARG_STRING, &taskNameArg, "-taskname:"},
 		{ ARG_NONE, NULL, NULL }
 	};
 
@@ -92,9 +87,16 @@ int openLogStream(void) {
 	}
 	if (!logfile) {
 		/* No Report: so try an ordinary log file */
-		char logPath[VMPATH_SIZE];
-		sprintf(logPath, "%sSqueak/vmlog", vmPath);
+		#define LogName "Squeak/vmlog\0"
+		char *logPath;
+		logPath = (char*)malloc(strlen(vmPath) + strlen(LogName));
+		if (logPath == NULL) {
+			logfile = (FILE *)-1;
+			return 0;
+		}
+		sprintf(logPath, "%s%s", vmPath, LogName);
 		logfile= fopen(logPath, "a+");
+		free(logPath);
 	}
 	if (!logfile) {
 		/* if still no file handle, we stop trying and
@@ -149,38 +151,61 @@ void platReportFatalError( os_error * e) {
 	exit(e->errnum);
 }
 
+char*rinkMalloc(size_t size) {
+	printf("\\t rink alloc %d\n", (int)size);
+	return malloc(size);
+}
+
 int platAllocateMemory( int amount) {
 os_error * e;
-int daSizeLimit;
+int daSizeLimit, daSize;
 byte * daBaseAddress;
-	if ((e = xosdynamicarea_create (
+	if ((e = xos_read_dynamic_area(
 				os_DYNAMIC_AREA_APPLICATION_SPACE,
-				amount,
-				(byte const*)-1,
-				(bits)128,
-				-1,
-				NULL,
-				NULL,
-				"Squeak ObjectSpace",
-				&SqueakObjectSpaceDA,
 				&daBaseAddress,
+				&daSize,
 				&daSizeLimit
-			)) !=NULL) {
+			)) != NULL) {
 		platReportFatalError(e);
 		return false;
 	}
+	PRINTF(("\\t platAllocateMemory DA size check: %08x @ %08x\n", (int)daSizeLimit, (int)daBaseAddress));
+	if (daSizeLimit <= 0x1BF8000 ) {
+		/* RISC OS 4 or Aemulor is preventing a large application slot,
+		 * so use a DA instead */
+		if ((e = xosdynamicarea_create (
+					os_DYNAMIC_AREA_APPLICATION_SPACE,
+					amount,
+					(byte const*)-1,
+					(bits)128,
+					-1,
+					NULL,
+					NULL,
+					"Squeak ObjectSpace",
+					&SqueakObjectSpaceDA,
+					&daBaseAddress,
+					&daSizeLimit
+				)) !=NULL) {
+			platReportFatalError(e);
+			return false;
+		}
+	} else {
+		/* Looks like we can use a large application slot so
+		 * just malloc the memory */
+		daBaseAddress = malloc(amount);
+		if ( daBaseAddress == NULL) {
+			privateErr.errnum = 0;
+			sprintf(privateErr.errmess, "Unable to allocate Object Memory\n");
+			platReportFatalError(&privateErr);
+			return false;
+		}
+	}  
 
-	PRINTF(("\\t platAllocateMemory(%d) at %0x", amount, (int)daBaseAddress));
+	PRINTF(("\\t platAllocateMemory(%d) at %0x\n", amount, (int)daBaseAddress));
 
 	return (int)daBaseAddress;
 }
 
-int platMallocChunk(int size) {
-	int chunk;
-	chunk = (int) malloc(size);
-	if ( chunk ==  NULL) return -1;
-	return chunk;
-}
 
 void setTimer(void) {
 /* Initialise the TimerMod timer
@@ -194,12 +219,25 @@ int InitRiscOS(void) {
 /* Initialise RiscOS for desktop wimp program use */
 os_error * e;
 extern  wimp_icon_create sqIconBarIcon;
+extern void		GetDisplayParameters(void);
+extern void		SetupWindowTitle(void);
+extern void SetDefaultPointer(void);
+extern void InitRootWindow(void);
+int width;
+
+	SetDefaultPointer();
 	importantWimpMessages.messages[0] = message_MODE_CHANGE;
 	importantWimpMessages.messages[1] = message_CLAIM_ENTITY;
 	importantWimpMessages.messages[2] = message_DATA_REQUEST;
 	importantWimpMessages.messages[3] = message_DATA_SAVE;
 	importantWimpMessages.messages[4] = message_DATA_LOAD;
 	importantWimpMessages.messages[5] = message_DATA_SAVE_ACK;
+	importantWimpMessages.messages[6] = message_WINDOW_INFO;
+
+/* set the taskname */
+	if ( taskNameArg != NULL){
+		strncpy(sqTaskName, taskNameArg, sqTaskNameLength );
+	}
 
 	if ((e = xwimp_initialise (wimp_VERSION_RO35,
 					sqTaskName,
@@ -210,30 +248,43 @@ extern  wimp_icon_create sqIconBarIcon;
 		return false;
 	}
 	SqueakDisplayDA =SqueakObjectSpaceDA = (os_dynamic_area_no)NULL;
- 
-	sqIconBarIcon.w = (wimp_w)-1;
+
+/* strictly speaking we need to find the width of the chosen icon and give
+ * wimp_creat_icon the larger of that and width (below). Oh and respond
+ * to the message Message_FontChanged by recalculating it and using
+ * wimp_resize_icon(wimp_ICON_BAR, icon id, x/y, x/y). */
+	width = wimptextop_string_width(sqTaskName, 0);
+	sqIconBarIcon.w = wimp_ICON_BAR_RIGHT;
 	sqIconBarIcon.icon.extent.x0 = 0;
-	sqIconBarIcon.icon.extent.y0 = 0;
-	sqIconBarIcon.icon.extent.x1 = 68;
-	sqIconBarIcon.icon.extent.y1 = 68;
-	sqIconBarIcon.icon.flags = wimp_ICON_INDIRECTED
-				| wimp_ICON_SPRITE
-				| wimp_ICON_HCENTRED
-				| wimp_ICON_VCENTRED
-				| (wimp_BUTTON_CLICK
-					<<wimp_ICON_BUTTON_TYPE_SHIFT ) ;
-	sqIconBarIcon.icon.data.indirected_sprite.id = (osspriteop_id )&sqTaskName;
-	sqIconBarIcon.icon.data.indirected_sprite.area = (osspriteop_area *)1;
-	sqIconBarIcon.icon.data.indirected_sprite.size = 7;
+	sqIconBarIcon.icon.extent.y0 = -16;
+	sqIconBarIcon.icon.extent.x1 = width;
+	sqIconBarIcon.icon.extent.y1 = 84;
+	sqIconBarIcon.icon.flags =
+			wimp_ICON_INDIRECTED
+			| wimp_ICON_TEXT
+			| wimp_ICON_SPRITE
+			| wimp_ICON_HCENTRED
+			| 0x17000000   /* colour flags */
+			| (wimp_BUTTON_CLICK
+				<<wimp_ICON_BUTTON_TYPE_SHIFT ) ;
+	sqIconBarIcon.icon.data.indirected_text_and_sprite.text = sqTaskName;
+	sqIconBarIcon.icon.data.indirected_text_and_sprite.validation =
+		validationString;  /* NB validation string has to be a global, not local to initRiscOS ! */
+	sqIconBarIcon.icon.data.indirected_text_and_sprite.size =
+		strlen(validationString);
+
 	wimp_create_icon(&sqIconBarIcon);
 
 	SetupPaletteTable();
+	GetDisplayParameters();
+	InitRootWindow();
+	SetupWindowTitle();
 
 	setFPStatus(0);
 
 	setTimer();
 
-return true;
+	return true;
 }
 
 /*** I/O Primitives ***/
@@ -300,9 +351,16 @@ int ioSeconds(void) {
 
 /*** Image File Naming ***/
 
-void sqStringFromFilename( int sqString, char*fileName, int sqSize) {
-// copy chars TO a Squeak String FROM a C filename char array.
-// You may transform the characters as needed
+void setDefaultImageName(void) {
+#define DefImName "Squeak/image\0"
+	sprintf(imageName, "%s%s", vmPath, DefImName);
+	PRINTF(("\\t Default image name: %s\n", imageName));
+}
+
+void sqStringFromFilename( char * sqString, char*fileName, int sqSize) {
+/* copy chars TO a Squeak String FROM a C filename char array.
+ * You may transform the characters as needed as long as the string length
+ * stays the same . The sqString and fileName can be the same address */
 int i;
 char c;
 	PRINTF(("sqRPCMain: sqStringFromFilename - %s\n",fileName));
@@ -315,14 +373,25 @@ char c;
 	}
 }
 
-void sqFilenameFromString(char*fileName, int sqString, int sqSize) {
-// copy chars from a Squeak String to a C filename char array.
-// You may transform the characters as needed
-int i;
-int junk;
-char c;
-char temp[1000];
+int canonicalizeFilename(char * inString, char * outString) {
+/* run a RISC OS format filename through canonicalize to make it correct */
+int spare;
 os_error * e;
+
+	if ((e = xosfscontrol_canonicalise_path (inString, outString, (char const *) NULL, (char const *)NULL, MAXDIRNAMELENGTH, &spare)) != null) {
+		return false;
+	}
+	return true;
+}
+
+int canonicalizeFilenameToString(char * sqString, int sqSize, char * cString) {
+/* copy chars from a Squeak String to a C filename char array.
+ * You may transform the characters as needed - in this case go from unix like
+ * path to RISC OS & then canonicalize
+ */
+int i, spare;
+char c;
+char temp[MAXDIRNAMELENGTH];
 
 	for (i = 0; i < sqSize; i++) {
 		c =  *((char *) (sqString + i));
@@ -331,18 +400,8 @@ os_error * e;
 		temp[i] = c;
 	}
 	temp[i] = 0;
-	if ((e = xosfscontrol_canonicalise_path (temp, fileName, (char const *) NULL, (char const *)NULL, 1000, &junk)) != null) {
-		// when canonicalizing filenames we can get errors like
-		//   no disc
-		//   bad use of ^
-		//   bad name
-		// etc
-		// just copy the ugly string to the destination for now
-		strcpy(fileName, temp);
-		PRINTF(("sqRPCMain: sqFilenameFromString canon fail - %s\n",temp));
-		// debugging-> platReportError(e);
-	}
-	PRINTF(("sqRPCMain: sqFilenameFromString - %s\n",temp));
+
+	 return canonicalizeFilename(temp, cString) ;
 }
 
 int imageNameSize(void) {
@@ -356,17 +415,20 @@ int count;
 	count = (length < count) ? length : count;
 
 	/* copy the file name into the Squeak string */
-	sqStringFromFilename( sqImageNameIndex, imageName, count);
+	sqStringFromFilename( (char *)sqImageNameIndex, imageName, count);
 }
 
 int imageNamePutLength(int sqImageNameIndex, int length) {
-int count;
-	count = (IMAGE_NAME_SIZE < length) ? IMAGE_NAME_SIZE : length;
+extern void SetupWindowTitle(void);
 
-	/* copy the file name into a null-terminated C string */
-	sqFilenameFromString( imageName, sqImageNameIndex, count);
+	if (!canonicalizeFilenameToString((char*)sqImageNameIndex, length, imageName)) return false;
 
-	return count;
+	SetupWindowTitle();
+	return length;
+}
+
+char * getImageName(void) {
+	return imageName;
 }
 
 void dummyWimpPoll(void) {
@@ -432,7 +494,8 @@ unsigned char *dstPtr;
 	/* update the window title to reflect the new image name, if that *
 	 * is what it is showing */
 	if (actualOSLevel >= 380) {
-		xwimp_force_redraw_furniture(sqWindowHandle, wimp_FURNITURE_TITLE);
+		extern wimp_w windowHandleFromIndex(int windowIndex);
+		xwimp_force_redraw_furniture(windowHandleFromIndex(1), wimp_FURNITURE_TITLE);
 	}
 
 	actuallyWritten = fwrite(dstPtr, (size_t)1, (size_t)remaining, f);
@@ -457,7 +520,7 @@ int count;
 	count = (length < count) ? length : count;
 
 	/* copy the file name into the Squeak string */
-	sqStringFromFilename( sqVMPathIndex, vmPath, count);
+	sqStringFromFilename( (char *)sqVMPathIndex, vmPath, count);
 	return count;
 }
 
@@ -558,25 +621,19 @@ extern char VMVersion[];
 	platReportError((os_error *)&privateErr);
 }
 
-void decodePath(char *srcptr, char * dstPtr) {
-os_error * e;
-int spare;
-
-	/* do the actual canonicalisation */
-	if ((e = xosfscontrol_canonicalise_path (srcptr, dstPtr, (char const *) null, (char const *)null, VMPATH_SIZE, &spare)) != null) {
-		platReportFatalError(e);
-		return;
-	}
-}
-
-void decodeVMPath(char *srcptr) {
+char * decodeVMPath(char *srcptr) {
+/* canonicalize the program name and chop off at the last dirsep to
+ * make a path for the vm directory. This is  set right at the beginning of
+ * run and never changed */
 char * endChar;
 
-	decodePath(srcptr, vmPath);
+	canonicalizeFilename(srcptr, vmPath);
 	/* find the last dir separator in the string and zap it with *
 	 * a dirsep and null to make the end of the string. */
 	endChar = strrchr( vmPath, '.');
 	if (endChar) *(++endChar) = null;
+	PRINTF(("\\t vmPath: %s\n", vmPath));
+	return vmPath;
 }
 
 /*** Main ***/
@@ -605,6 +662,7 @@ extern void setMetaKeyOptions(int swap);
 		extern char VMVersion[];
 		privateErr.errnum = (bits)0;
 		sprintf(privateErr.errmess, "Could not open the Squeak image file '%s' (Squeak version: %s)", imageName, VMVersion);
+		printf("%s\n", privateErr.errmess);
 		platReportError((os_error *)&privateErr);
 		helpMessage(vmPath, "!ImName");
 		ioExit();

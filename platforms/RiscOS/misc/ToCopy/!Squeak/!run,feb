@@ -1,18 +1,30 @@
 Wimpslot -min 400K  -max 700k
 Set Squeak$Dir <Obey$Dir>
 | Make sure the TimerMod module is loaded; thanks to DRuck for that
-RMEnsure TimerMod 4.10 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
+RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
 /<Squeak$Dir>.!Boot
 | syntax:
 | {appname} [-vmoption [-vmoption]] imagefilepath [startupfile/URL] [imageoption [imageoption]]
-| vmoptions - 
+| vmoptions -
+| -version
+|      Display the version info in a dialogue box
+| -help
+|      Open the help file 
 | -memory:<number>[m|k]
-| specify amount of free space to attempt to allocate for Squeak's object
-| memory.  More will be claimed for the display sprite that is used.
-| 15m == 15 MB, which is plenty.'k' is also acceptable for allocating Kb values
+|      Specify amount of free space to attempt to allocate for Squeak's object
+|      memory.  More will be claimed for the display sprite that is used.
+|      15m == 15 MB, for example.
+|      I recommend a setting of around double the image file size
 | -windowlabel:<string>
-| specify the label for the window, default is the pathname %*0 below
+|      Specify the label for the window, default is the pathname %*0 below
+| -taskname:<string>
+|      Specify a task name that will appear on the iconbar and in the Task
+|      Manager. This allows you to deploy an application written in squeak
+|      with your own icon(s) and task name. The sprite for the iconbar is
+|      named 'iconbar'.
+| -swapmeta
+|      Swap the left and right ctrl key meanings; see the !help file.
 | startupfile/URL - path for a Smalltalk file or a URL that will yield one
-| imageoption - any words follwing will be available to the image via
+| imageoption - any words following will be available to the image via
 | Smalltalk getSystemAttribute: -{1000, 1}
-/<Squeak$Dir>.!RunImage -memory:15m  %*0
+/<Squeak$Dir>.!RunImage -memory:22m  %*0

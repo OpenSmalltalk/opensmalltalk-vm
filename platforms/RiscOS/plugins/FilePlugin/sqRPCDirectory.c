@@ -35,7 +35,10 @@
 
 
 extern struct VirtualMachine * interpreterProxy;
-extern void sqStringFromFilename( int sqString, char*fileName, int sqSize);
+char name[MAXDIRNAMELENGTH];
+extern void sqStringFromFilename( char * sqString, char*fileName, int sqSize);
+
+
 /*** Functions ***/
 
 int convertToSqueakTime(os_date_and_time fileTime) {
@@ -71,15 +74,13 @@ int dir_Create(char *pathString, int pathStringLength) {
 	/* Create a new directory with the given path. By default, this
 	   directory is created in the current directory. Use
 	   a full path name to create directories elsewhere. */
-	char name[MAXDIRNAMELENGTH];
 	os_error *e;
 
-	if( pathStringLength > MAXDIRNAMELENGTH) return false;
+	if (!canonicalizeFilenameToString(pathString, pathStringLength, name))
+		return false;
 
-	sqFilenameFromString( name, (int)pathString, pathStringLength);
-	/* mkdir(name) */
 	if ( (e = xosfile_create_dir( name, 0)) != NULL) {
-		PRINTF(("\\t dir_Create: failed"));
+		PRINTF(("\\t dir_Create: failed\n"));
 		return false;
 	}
 	return true;
@@ -88,17 +89,13 @@ int dir_Create(char *pathString, int pathStringLength) {
 int dir_Delete(char *pathString, int pathStringLength) {
 	/* Delete the existing directory with the given path. */
 	/* For now replicate the normal sqFileDeleteNameSize, since that appears to be adequate, except for returning true if all is well - essential ! */
-	char cFileName[MAXDIRNAMELENGTH];
 
-	if (pathStringLength >= MAXDIRNAMELENGTH) {
-		return interpreterProxy->success(false);
-	}
+	if (!canonicalizeFilenameToString(pathString, pathStringLength, name))
+		return false;
 
-	/* copy the file name into a null-terminated C string */
-	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
-	if (remove(cFileName) != 0) {
+	if (remove(name) != 0) {
 		PRINTF(("\\t dir_Delete error\n"));
-		return interpreterProxy->success(false);
+		return false;
 	}
 	return true;
 }
@@ -107,7 +104,7 @@ int dir_Delimitor(void) {
 	return DELIMITOR;
 }
 
-int dir_LookupRoot(int context, char *name, int *nameLength, int *creationDate, int *modificationDate, int *isDirectory, int *sizeIfFile) {
+int dir_LookupRoot(int context, char *fname, int *fnameLength, int *creationDate, int *modificationDate, int *isDirectory, int *sizeIfFile) {
 #define F2HJump 4
 	int junk, run_total, adfs_flop=0, adfs_hard=0, scsifs_flop=0, scsifs_hard=0, ramfs_flop=0, ramfs_hard=0, cdfs_hard=0;
 	char discid[20];
@@ -177,8 +174,8 @@ decode_disc_id:
 		strcpy (discname, discid);
 	}
 
-	*nameLength       = strlen(discname);
-	sqStringFromFilename( (int)name, discname, *nameLength);
+	*fnameLength       = strlen(discname);
+	sqStringFromFilename( fname, discname, *fnameLength);
 	*creationDate     = 0;
 	*modificationDate = 0;
 	*isDirectory      = true;
@@ -188,7 +185,7 @@ decode_disc_id:
 
 int dir_Lookup(char *pathString, int pathStringLength, int index,
   /* outputs: */
-  char *name, int *nameLength, int *creationDate, int *modificationDate,
+  char *fname, int *fnameLength, int *creationDate, int *modificationDate,
   int *isDirectory, int *sizeIfFile) {
 /* Lookup the index-th entry of the directory with the given path, starting
    at the root of the file system. Set the name, name length, creation date,
@@ -197,44 +194,45 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
    		NO_MORE_ENTRIES	if the directory has fewer than index entries
    		BAD_PATH	if the given path has bad syntax or does not reach a directory
 	*/
-	char dirname[MAXDIRNAMELENGTH];
 	osgbpb_SYSTEM_INFO( MAXDIRNAMELENGTH + 4 ) buffer;
 	int i, count, context;
 	os_error * e;
 	/* default return values */
-	*name             = 0;
-	*nameLength       = 0;
+	*fname             = 0;
+	*fnameLength       = 0;
 	*creationDate     = 0;
 	*modificationDate = 0;
 	*isDirectory      = false;
 	*sizeIfFile       = 0;
 
-	if( pathStringLength > MAXDIRNAMELENGTH) return BAD_PATH;
-	context = index-1;
+	context = index - 1;
 	PRINTF(("\\t dir_Lookup:raw pathname %s\n", pathString));
 
 	if ( pathStringLength == 0) {
 		// empty string for path implies find the mounted roots.
-		return dir_LookupRoot(context, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile);
+		return dir_LookupRoot(context, fname, fnameLength, creationDate, modificationDate, isDirectory, sizeIfFile);
 	}
 
-	sqFilenameFromString(dirname, (int)pathString, pathStringLength);
-	PRINTF(("\\t dir_Lookup:pathName = %s\n", dirname));
+	if (!canonicalizeFilenameToString(pathString, pathStringLength, name))
+		return BAD_PATH;
+
+	PRINTF(("\\t dir_Lookup:pathName = %s\n", name));
 
 	/* lookup indexth entry in the directory */
 	count = 1;
 	i = /* osgbpb_SIZEOF_SYSTEM_INFO(MAXDIRNAMELENGTH + 4)*/ 28 +MAXDIRNAMELENGTH + 4;
 
-	e = xosgbpb_dir_entries_system_info(dirname,(osgbpb_system_info_list *)&buffer, count, context, i, (char const *)0, &count, &context);
+	e = xosgbpb_dir_entries_system_info(name,(osgbpb_system_info_list *)&buffer, count, context, i, (char const *)0, &count, &context);
 	if ( e != NULL ) {
-		i = e->errnum & 0xFF;
-		if ( i >= 0xD3 && i<= 0xD5 )  return NO_MORE_ENTRIES;
+		int errnumber;
+		errnumber = e->errnum & 0xFF;
+		if ( errnumber >= 0xD3 && errnumber<= 0xD5 )  return NO_MORE_ENTRIES;
 		return  BAD_PATH;
 	}
 	if ( count != 1 ) return NO_MORE_ENTRIES;
 
-	*nameLength = strlen(buffer.name);
-	sqStringFromFilename( (int)name, buffer.name, *nameLength);
+	*fnameLength = strlen(buffer.name);
+	sqStringFromFilename( fname, buffer.name, *fnameLength);
 	if (buffer.obj_type ==  fileswitch_IS_DIR
 		|| buffer.obj_type == fileswitch_IS_IMAGE) {
 		*isDirectory = true;
@@ -251,24 +249,31 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 /* TPR addition to attempt to improve portability */
 int dir_SetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, char * owner) {
 /* set the type and owner of the named file.
- * return true if ok, false otherwise. Arg MUST be a Squeak filename string,
- * not a C filename string - it will end up mis-converting it to wrong dirseps! */
+ * return true if ok, false otherwise.
+ * filename is a Squeak filename string, so convert it to a C filename
+ */
 
-	bits ftype=0;
-	char name[MAXDIRNAMELENGTH];
-	if( filenamesize > MAXDIRNAMELENGTH) return false;
+	bits ftype=0xFFD;
 	if (strcmp(type, "TEXT")==0) ftype = (bits)0xFFF;
-
-	if (strcmp(type, "STim")==0) {
-		// if its for STim type, assume it was called from imagesave
-		// and the filename was already correct format so use a
-		// simple copy instead of the convertor
-		copyNCharsFromTo( filenamesize, filename, name);
-		ftype = (bits)0xFAA;
-	} else {
-		// for any other type, convert the filename
-		sqFilenameFromString( name, (int)filename, filenamesize);
+	if (strcmp(type, "STim") ==0) {
+		/* this is likely to be a settype on the image file, so see if
+		 * the name is already canonicalized. Copy it to the name buffer
+		 * to make sure we have the terminator, find the first $ and see
+		 * if it is surrounded by /  or .
+		 */
+		strncpy(name, filename, filenamesize);
+		name[filenamesize] = null;
+		PRINTF(("\\tsettype of %s \n", name)); 
+		if (strstr(name, ".$.") ) {
+			/* .$. is a strong hint that the name is already in RISC OS form */
+			xosfile_set_type(name, (bits)0xFAA);
+			return true;
+		}
 	}
+
+	if (!canonicalizeFilenameToString(filename, filenamesize, name))
+		return false;
+
 	xosfile_set_type(name, (bits)ftype);
 
 	return true;
@@ -279,9 +284,16 @@ int dir_GetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, 
 	return false;
 }
 
+void dir_SetImageFileType(void) {
+/* do whatever file type/creator/permission setting is needed for
+ * the image file */
+char * imageName = getImageName();
+		xosfile_set_type(imageName, (bits)0xFAA);
+}
+
 /* extended protocol */
 
-fileswitch_object_type fsobject_Exists(char* name) {
+fileswitch_object_type fsobject_Exists(char* fname) {
 bits load_addr, exec_addr, file_type;
 fileswitch_attr attr;
 fileswitch_object_type obj_type;
@@ -292,34 +304,22 @@ int length;
 	return obj_type;
 }
 
-int dir_Exists(char *pathString, int pathStringLength) {
+int dir_DirectoryExists(char *pathString, int pathStringLength) {
 	/* Is there an existing directory with the given path? */
-	char cFileName[MAXDIRNAMELENGTH];
-
-	if (pathStringLength >= MAXDIRNAMELENGTH) {
-		return interpreterProxy->success(false);
-	}
 
 	/* copy the file name into a null-terminated C string */
-	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
+	if (!canonicalizeFilenameToString(pathString, pathStringLength, name))
+		return false;
 
-	return (fsobject_Exists(cFileName) == fileswitch_IS_DIR);
+	return (fsobject_Exists(name) == fileswitch_IS_DIR);
 }
 
-int file_Exists(char *pathString, int pathStringLength) {
+int dir_FileExists(char *pathString, int pathStringLength) {
 	/* Is there an existing file with the given path? */
-	char cFileName[MAXDIRNAMELENGTH];
-
-	if (pathStringLength >= MAXDIRNAMELENGTH) {
-		return interpreterProxy->success(false);
-	}
 
 	/* copy the file name into a null-terminated C string */
-	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
+	if (!canonicalizeFilenameToString(pathString, pathStringLength, name))
+		return false;
 
-	return (fsobject_Exists(cFileName) == fileswitch_IS_FILE);
+	return (fsobject_Exists(name) == fileswitch_IS_FILE);
 }
-
-
-
-

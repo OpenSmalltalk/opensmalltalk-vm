@@ -17,6 +17,8 @@ extern struct foo * foo;
 #pragma -r0
 
 #include "oslib/os.h"
+#include "oslib/wimp.h"
+#include "oslib/osspriteop.h"
 
 /* acorn memory allocation */
 #undef sqAllocateMemory
@@ -24,16 +26,16 @@ int platAllocateMemory(int amount);
 #define sqAllocateMemory(minHeapSize, desiredHeapSize) platAllocateMemory(desiredHeapSize)
 
 #undef sqFilenameFromString
-extern void sqFilenameFromString(char*fileName, int sqString, int sqSize);
-#define sqFilenameFromString(dst, src, num) sqFilenameFromString(dst, src, num)
+extern int canonicalizeFilenameToString(char * sqString, int sqSize, char * cString);
+#define sqFilenameFromString(dst, src, num) (canonicalizeFilenameToString(dst, src, num))
+
+int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize);
 
 #undef sqImageFileRead
 size_t sqImageFileRead(void *ptr, size_t sz, size_t count, FILE* f);
 
 #undef sqImageFileWrite
 size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, FILE* f);
-
-int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize);
 
 #define squeakFileOffsetType int
 
@@ -55,6 +57,10 @@ if(1) {int sqfni;\
 #undef ioLowResMSecs
 #define ioLowResMSecs() (ioMicroMSecs())
 
+/* extended fileplugin support */
+extern int dir_DirectoryExists(char *pathString, int pathStringLength);
+extern int dir_FileExists(char *pathString, int pathStringLength);
+extern void dir_SetImageFileType(void); 
 
 /* Debugging support - printf is #def'd to repprint which outputs to
  * a logfile or to !Reporter if it is active
@@ -73,6 +79,37 @@ extern int repfprintf(FILE *strm, const char * format, ...);
 #define printf repprintf
 #define fprintf repfprintf
 #define MAXDIRNAMELENGTH 1024
+
+#ifndef MIN
+#define MIN( a, b )   ( ( (a) < (b) ) ? (a) : (b) )
+#define MAX( a, b )   ( ( (a) > (b) ) ? (a) : (b) )
+#endif
+
+/* multiple host windows stuff */
+typedef struct windowDescriptorBlock {
+	struct windowDescriptorBlock * next;
+	wimp_w			handle;
+	int				windowIndex;
+	os_coord		bitmapExtentP; 
+	os_box			visibleArea;  // rename to visibleArea
+	int				squeakDisplayDepth;
+	osspriteop_header *	displaySprite; // the sprite pointer
+	char			spriteName[12];
+#define WindowTitleLength 150
+	char			title[WindowTitleLength + 2];
+	wimp_window_flags attributes;
+	osspriteop_trans_tab *	pixelTranslationTable;
+} windowDescriptorBlock;
+
+extern windowDescriptorBlock *windowBlockFromHandle(wimp_w windowHandle);
+extern int windowIndexFromBlock( windowDescriptorBlock * thisWindow);
+extern int windowIndexFromHandle(wimp_w windowHandle);
+
+#define OS2PixX(val) ((val)>>scalingFactor.x)
+#define OS2PixY(val) ((val)>>scalingFactor.y)
+ 
+#define Pix2OSX(val) ((val)<<scalingFactor.x)
+#define Pix2OSY(val) ((val)<<scalingFactor.y)
 
 
 #else
