@@ -206,7 +206,8 @@ XImage		*stImage= 0;		/* the X pixmap to be drawn;
 char		*stPrimarySelection;	/* buffer holding selection */
 char		*stEmptySelection= "";	/* immutable "empty string" value */
 int		 stPrimarySelectionSize;/* size of buffer holding selection */
-int		 stOwnsSelection= 0;	/* true if we own the X selection */
+int		 stOwnsSelection= 0;	/* true if we own the X PRIMARY selection */
+int		 stOwnsClipboard= 0;	/* true if we own the X CLIPBOARD selection */
 XColor		 stColorBlack;		/* black pixel value in stColormap */
 XColor		 stColorWhite;		/* white pixel value in stColormap */
 int		 savedWindowOrigin= -1;	/* initial origin of window */
@@ -233,6 +234,8 @@ char		*stDisplayBitmap= 0;
 Window           browserWindow= 0;      /* parent window */
 int              browserPipes[]= {-1, -1};   /* read/write fd for communication with browser */ 
 int		 headless= 0;
+Atom		 clipboardAtom= 0;
+Atom		 primaryAtom= 0;
 
 #define          inBrowser\
   (-1 != browserPipes[0])
@@ -640,7 +643,10 @@ static void handleOneEvent(XEvent *theEvent)
 	break;
 
       case SelectionClear:
-	stOwnsSelection= 0;
+	if (((XSelectionClearEvent *)theEvent)->selection == clipboardAtom)
+	  stOwnsClipboard= 0;
+	else if (((XSelectionClearEvent *)theEvent)->selection == primaryAtom)
+	  stOwnsSelection= 0;
 	break;
 
       case SelectionRequest:
@@ -687,7 +693,10 @@ static void handleOneEvent(XEvent *theEvent)
 		switch (theEvent.type)
 		  {
 		  case SelectionClear:
-		    stOwnsSelection= 0;
+		    if (((XSelectionClearEvent*)&theEvent)->selection == clipboardAtom)
+		      stOwnsClipboard= 0;
+		    else if (((XSelectionClearEvent*)&theEvent)->selection == primaryAtom)
+		      stOwnsSelection= 0;
 		    break;
 		  case SelectionRequest:
 		    sendSelection(&theEvent.xselectionrequest);
@@ -751,9 +760,11 @@ static void handleOneEvent(XEvent *theEvent)
 
 void claimSelection(void)
 {
-  XSetSelectionOwner(stDisplay, XA_PRIMARY, stWindow, lastKeystrokeTime);
+  XSetSelectionOwner(stDisplay, clipboardAtom, stWindow, lastKeystrokeTime);
+  XSetSelectionOwner(stDisplay, primaryAtom, stWindow, lastKeystrokeTime);
   XFlush(stDisplay);
-  stOwnsSelection= (XGetSelectionOwner(stDisplay, XA_PRIMARY) == stWindow);
+  stOwnsClipboard= (XGetSelectionOwner(stDisplay, clipboardAtom) == stWindow);
+  stOwnsSelection= (XGetSelectionOwner(stDisplay, primaryAtom) == stWindow);
 }
 
 void sendSelection(XSelectionRequestEvent *requestEv)
@@ -804,8 +815,8 @@ char *getSelection(void)
   fd_set  fdMask;
   char	 *data;
 
-  /* request the selection */
-  XConvertSelection(stDisplay, XA_PRIMARY, XA_STRING, XA_STRING, stWindow, CurrentTime);
+  /* request the PRIMARY selection, since this should be the same as the CLIPBOARD */
+  XConvertSelection(stDisplay, primaryAtom, XA_STRING, XA_STRING, stWindow, CurrentTime);
 
   /* wait for selection notification, ignoring (most) other events. */
   FD_ZERO(&fdMask);
@@ -1605,6 +1616,9 @@ void SetUpWindow(char *displayName)
 # ifdef USE_XSHM
   completionType= XShmGetEventBase(stDisplay) + ShmCompletion;
 # endif
+
+	clipboardAtom = XInternAtom(stDisplay, "CLIPBOARD", False);
+	primaryAtom = XInternAtom(stDisplay, "PRIMARY", False);
 }
 
 
@@ -3748,13 +3762,14 @@ void SetUpClipboard(void)
   stPrimarySelection= 0;
   stPrimarySelectionSize= 0;
   stOwnsSelection= 0;
+  stOwnsClipboard= 0;
 }
 #endif
 
 int clipboardSize(void)
 {
 #ifndef HEADLESS
-  if (stOwnsSelection)
+  if (stOwnsSelection || stOwnsClipboard)
     return stPrimarySelection ? strlen(stPrimarySelection) : 0;
   return strlen(getSelection());
 #else
@@ -3814,7 +3829,7 @@ int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
   if (!isConnectedToXServer)
     return 0;
 
-  if (!stOwnsSelection)
+  if (!stOwnsSelection && !stOwnsClipboard)
     {
       char *newSelection;
       int newSize;
