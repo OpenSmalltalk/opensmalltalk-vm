@@ -62,7 +62,9 @@ Step Three: Build an interpeter
 
 	A.  Install change sets from the specialChangeSets Folder. 
 		These are required to build a VM that has globals as a structure which improves
-		performance by 10%.
+		performance by 10% or more. There has been some discussion that the line endings 
+		might be wrong for the following change sets that might depend on what CVS thinks, 
+		so do a "remove linefeeds" first. 
 		
 		MoreInterpAccessors-JMM.2.cs
 		Globalstructure-JMM.3.cs
@@ -133,7 +135,10 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
 		Note you should look at the binary in the Contents subfolder to see if it is the same size.
 		(The only error you should get is 
 		warning: passing arg 1 of `sqImageFileStartLocation' makes integer from pointer without a cast)
-		Run a tinyBenchmark benchmark against your VM, versus the production VM to confirm yours is simular in performance
+		Run a tinyBenchmark benchmark against your VM, versus the production VM to confirm yours is simular in performance.
+		John suggests: "You might need to switch back to the Squeak VM Debug and back to ensure the setting actually are taken. 
+		There seems to be a bug where although you've got the Opt build picked it really builds a non-optimized debug version." 
+		You will know this because performance will be off by 30-40%.
 
 Step Seven: Download and print your Squeak VM Developer's Certificate
 
