@@ -29,7 +29,7 @@ void *os_exports[][3] = {
   {"","primitivePluginRequestFileHandle", primitivePluginRequestFileHandle},
   {"","primitivePluginDestroyRequest", primitivePluginDestroyRequest},
   {"","primitivePluginRequestState", primitivePluginRequestState},
-  ("", "printf", printf),
+  {"", "printf", printf},
   {"","stWindow", &stWindow},
   {"","firstMessageHook", &firstMessageHook},
   {"","preMessageHook", &preMessageHook},

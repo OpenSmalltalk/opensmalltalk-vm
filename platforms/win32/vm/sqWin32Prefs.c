@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.5 2002/05/26 18:52:10 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Prefs.c,v 1.6 2002/07/18 22:12:57 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -87,6 +87,8 @@ void Set1ButtonMouse() {
 void SetUseDirectSound() {
   CheckMenuItem(vmPrefsMenu, ID_DIRECTSOUND, MF_BYCOMMAND | 
 		(fUseDirectSound ? MF_CHECKED : MF_UNCHECKED));
+  WritePrivateProfileString(U_GLOBAL,TEXT("UseDirectSound"),
+			    fUseDirectSound ? U_ON : U_OFF,squeakIniName);
 }
 
 void SetAllowFileAccess() {
@@ -178,6 +180,9 @@ void LoadPreferences()
     GetPrivateProfileInt(U_GLOBAL,TEXT("PriorityBoost"),
 			 fPriorityBoost,squeakIniName);
 
+  fUseOpenGL   = 
+    GetPrivateProfileInt(U_GLOBAL,TEXT("UseDirectSound"),
+			 fUseDirectSound,squeakIniName);
   fUseOpenGL   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("B3DXUsesOpenGL"),
 			 fUseOpenGL,squeakIniName);
