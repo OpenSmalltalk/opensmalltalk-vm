@@ -1,0 +1,191 @@
+Details of the SourceForge Squeak/Unix Build Process
+====================================================
+
+This file contains details of the build process.  If you just
+want to compile Squeak, then you should probably read BUILD.fast
+instead.  If you want to add a plugin that has 
+
+
+
+Directory Layout
+================
+
+The directory layout is as follows:
+
+    platforms             hand-editted files, separated by platform
+        Cross             files common to all platforms
+        unix              Unix-specific files
+            plugins       plugin files, separated by plugin
+            vm            source code files
+            misc          other files
+                utils     utility scripts
+                debian    files for building Debian packages
+                specs     files for building RedHat packages
+
+    src                   generated files
+
+
+
+For a particular plugin, say the "FrobPlugin" plugin, the following
+directories are relevant if the plugin is external:
+
+    src
+        plugins
+            FrobPlugin      generated files for the plugin, typically
+                            FrobPlugin.c and FrobPlugin.h
+
+    platforms
+        unix
+            plugins
+                FrobPlugin  Unix-specific files for the plugin, if any.
+                            This typically includes either nothing or
+                            one .c file, but it can be anything.  See
+                            below for details what to put in this
+                            directory.
+        Cross
+            plugins
+                FrobPlugin  Similarly, for cross-platform files related
+                            to the plugin.
+
+
+If FrobPlugin is build internally, then the following directories are
+relevant:
+
+    src
+        vm
+            sqNamedPrims.h  info on all internal plugins for
+                            this build tree
+
+        intplugins
+            FrobPlugin      generated files for the plugin
+
+    platforms
+        unix
+            plugins
+                FrobPlugin  Unix-specific files for the plugin
+
+        Cross
+            plugins
+                FrobPlugin  cross-platform filse for the plugin
+        
+
+
+
+Build Process Summary
+=====================
+
+The full process of building Squeak from scratch is:
+
+    1. Run aclocal.
+       in: acinclude.m4
+       out: aclocal.m4
+
+    2. Run autoconf.
+       in: configure.ac, aclocal.m4
+       out: configure
+
+    3. Run the generated configure script.
+       in: Makefile.in, mkMake, mkMakeRule's, sqUnixConfig.h.in,
+       out: Makefile, sqUnixConfig.h
+
+    4. Run make.
+
+    4. Run "make install".
+
+
+
+Normally only the last two steps are required.  Earlier steps must
+be repeated if their input files change; e.g. you must re-run
+autoconf if configure.ac is changed.
+
+
+
+
+Description of Files
+==================== 
+
+There are a variety of files involved in building Squeak/Unix.
+Here are some of the more notable ones.
+
+
+"configure.ac" is processed by autoconf to create the configure
+script.  The language is shell script with m4 macros intersperced.  In
+fact it is perfectly legal to insert raw shell-script code, but often
+there is a macro to do what is desired.  See the autoconf
+documentation for details.
+
+
+
+"acinclude.m4" includes extra macros that have been hand-written for
+Unix.  When aclocal is executed, it will be combined with other macros
+into aclocal.m4.
+
+
+"sqUnixConfig.h.in" is converted on the compilation machine to
+"sqUnixConfig.h", and it includes the configuration options that the
+configure script chose.
+
+
+"Makefile.in" is converted on the compilation machine to "Makefile".
+This includes the actual compilation commands to be run.  Actually,
+the majority of the makefile is hidden in the "make_auto" include
+file, which is in turn created by:
+
+"mkMake", in misc/util, is a script that generates the bulk of the
+Makefile.  In addition to generating make rules for the individual .o
+files in the core VM, it scans the src/plugins and src/intplugins
+directories for plugins and generates rules for them, as well.  It
+will include default rules for normal plugins that are C files
+requiring no special rules; for more complex plugins, an alternative
+is available:
+
+
+"mkMakeRules" scripts, in any platforms/unix/plugins/Foo subdirectory.
+The mkMake script will allow mkMakeRules scripts to override the
+default build rules for individual plugins.
+
+
+
+Writing mkMakeRules Scripts
+===========================
+
+A mkMakeRules script should be written in Bourne shell script (other
+languages will currently work, but they may not continue to.  Besides,
+Bourne shell is extremely portable.)  The script will be executed from
+the Squeak build directory.  The arguments to the script are:
+
+    arg 1: a path to top of the VMMaker directory.
+
+    arg 2: either "internal" or "external", depending on which mode
+           the plugin should be compiled in.
+
+
+Intermediate build files for the plugin should be created in the
+"FrobPlugin/" subdirectory of the current directory; this subdirectory
+is created automatically by the configure script.
+
+The final plugin file itself should be built as "FrobPlugin.la" in the
+current directory, and it should be built with libtool.
+
+
+The shared libraries in Squeak are built with "libtool".  libtool is a
+generic library-building tool frequently used with autoconf, and it
+can certainly look weird and be irritating to use.  Time will tell if
+actually saves any effort over simply forcing people to install GNU
+tools.  At any rate, here is a short tour of using libtool:
+
+    1. Files should be named with .lo and .la instead of with .o and .so.
+
+    2. Instead of "$(CC) -c foo.c -o foo.o", use:
+            $(LIBTOOL) --mode=compile $(CC) -c foo.c -o foo.lo
+
+    3. Instead of "$(CC) -shared -o mylib.so foo.o bar.o", use:
+
+            $(LIBTOOL) --mode=link $(CC) -o mylib.la foo.lo bar.lo
+ 
+
+There are no facilities for linking mkMakeRules scripts into the
+top-level autoconf execution.  However, the script may certainly run
+autoconf itself.  Also, for simple options, plugin writers may
+certainly lobby to have them added to the top-level configure script.
+Thus far plugins are simple enough that this is reasonable.
