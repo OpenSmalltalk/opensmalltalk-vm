@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.12 2003/04/08 20:59:02 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.13 2003/04/08 21:17:11 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.12 2003/04/08 20:59:02 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.13 2003/04/08 21:17:11 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -144,7 +144,7 @@ int recordVirtualKey(UINT,WPARAM,LPARAM);
 void recordMouse(void);
 void SetSystemTrayIcon(BOOL on);
 
-static sqInputEvent *sqNextEventPut(void);
+sqInputEvent *sqNextEventPut(void);
 
 
 /****************************************************************************/
@@ -934,7 +934,7 @@ static sqInputEvent eventBuffer[MAX_EVENT_BUFFER];
 static int eventBufferGet = 0;
 static int eventBufferPut = 0;
 
-static sqInputEvent *sqNextEventPut(void) {
+sqInputEvent *sqNextEventPut(void) {
   sqInputEvent *evt;
   evt = eventBuffer + eventBufferPut;
   eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
