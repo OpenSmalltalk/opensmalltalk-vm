@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-08-16 11:16:09 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-23 23:13:02 by piumarta on emilia.inria.fr
  */
 
 #include "aio.h"
@@ -194,9 +194,8 @@ void aioFini(void)
 
 int aioPoll(int microSeconds)
 {
-  int fd;
+  int	 fd, ms;
   fd_set rd, wr, ex;
-  struct timeval tv;
 
   DO_TICK();
 
@@ -208,39 +207,45 @@ int aioPoll(int microSeconds)
   rd= rdMask;
   wr= wrMask;
   ex= exMask;
-  tv.tv_sec=  microSeconds / 1000000;
-  tv.tv_usec= microSeconds % 1000000;
+  ms= ioMSecs();
 
-  {
-    int result;
-    do
-      {
-	result= select(maxFd, &rd, &wr, &ex, &tv);
+  for (;;)
+    {
+      struct timeval tv;
+      int n, now;
+      tv.tv_sec=  microSeconds / 1000000;
+      tv.tv_usec= microSeconds % 1000000;
+      n= select(maxFd, &rd, &wr, &ex, &tv);
+      if (n  > 0) break;
+      if (n == 0) return 0;
+      if (EINTR != errno)
+	{
+	  perror("select");
+	  return 0;
+	}
+      now= ioMSecs();
+      microSeconds -= (now - ms) * 1000;
+      if (microSeconds <= 0)
+	return 0;
+      ms= now;
+    }
+
+  for (fd= 0; fd < maxFd; ++fd)
+    {
+#     define _DO(FLAG, TYPE)				\
+      {							\
+	if (FD_ISSET(fd, &TYPE))			\
+	  {						\
+	    aioHandler handler= TYPE##Handler[fd];	\
+	    FD_CLR(fd, &TYPE##Mask);			\
+	    TYPE##Handler[fd]= undefinedHandler;	\
+	    handler(fd, clientData[fd], FLAG);		\
+	  }						\
       }
-    while ((result < 0) && (errno == EINTR));
-    if (result < 0)
-      perror("select");
-    else if (result > 0)
-      {
-	for (fd= 0; fd < maxFd; ++fd)
-	  {
-#           define _DO(FLAG, TYPE)				\
-	    {							\
-	      if (FD_ISSET(fd, &TYPE))				\
-		{						\
-		  aioHandler handler= TYPE##Handler[fd];	\
-		  FD_CLR(fd, &TYPE##Mask);			\
-		  TYPE##Handler[fd]= undefinedHandler;		\
-		  handler(fd, clientData[fd], FLAG);		\
-		}						\
-	    }
-	    _DO_FLAG_TYPE();
-#           undef _DO
-	  }
-	return 1;
-      }
-  }
-  return 0;
+      _DO_FLAG_TYPE();
+#     undef _DO
+    }
+  return 1;
 }
 
 
