@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.4 2002/03/15 01:52:00 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.5 2002/03/15 21:06:26 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -208,12 +208,13 @@ int ioSeconds(void) {
 }
 
 
+pthread_mutex_t gSleepLock;
+pthread_cond_t  gSleepLockCondition;
+
 int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 	/* This operation is platform dependent. 	 */
     
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-    static pthread_mutex_t gSleepLock;
-    static pthread_cond_t  gSleepLockCondition;
     static Boolean doInitialization=true;
     int	   realTimeToWait,now,err;
     struct timespec tspec;
