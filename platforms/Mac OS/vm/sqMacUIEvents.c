@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.15 2003/06/20 01:54:16 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.16 2003/07/31 13:02:06 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -18,6 +18,7 @@
 *  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x drop usb stuff
 *  3.5.1b2 June 6th, 2003 JMM support for aio polling under unix socket support
 *  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
+*  3.5.1b5 June 25th, 2003 JMM don't close window on floating full screen, handle issue with keydown and floating window if required.
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -1161,6 +1162,7 @@ EventTypeSpec appEventList[] = {{kEventClassApplication, kEventAppActivated},
                                 {kEventClassApplication, kEventAppDeactivated}};
 
 EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
+                            { kEventClassWindow, kEventWindowHidden },
                             { kEventClassWindow, kEventWindowActivated},
                             { kEventClassWindow, kEventWindowDeactivated}};
                             
@@ -1381,6 +1383,12 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
        case kEventWindowDrawContent:
             result = noErr;
             break;
+        case kEventWindowHidden:
+            if (gSqueakWindowIsFloating) {
+                ShowWindow(getSTWindow());
+                result = noErr;
+            }
+            break;
         default:
         /* If nobody handled the event, it gets propagated to the */
         /* application-level handler. */
@@ -1399,6 +1407,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     OSStatus result = eventNotHandledErr; /* report failure by default */
     static RgnHandle	ioWinRgn=null;
     WindowPtr	theWindow;
+    extern Boolean gSqueakWindowIsFloating,gSqueakFloatingWindowGetsFocus;
     
     if (!windowActive)
         return result;
@@ -1409,9 +1418,15 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     GetWindowRegion(getSTWindow(),kWindowGlobalPortRgn,ioWinRgn);
     GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
     
-    if (!PtInRgn(mouseLocation,ioWinRgn))
+    if (!PtInRgn(mouseLocation,ioWinRgn)) {
         return result;
-
+    }
+    
+   /* if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating && 
+            GetUserFocusWindow() != getSTWindow()) {
+        SetUserFocusWindow(kUserFocusAuto);
+        SetUserFocusWindow(getSTWindow());
+    }*/
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
     
@@ -1425,9 +1440,13 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
-            if (FindWindow(mouseLocation, &theWindow) == inGrow)
+            GetWindowRegion(getSTWindow(),kWindowGrowRgn,ioWinRgn);
+            if (PtInRgn(mouseLocation,ioWinRgn))
                 return result;
-        
+            if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating) {
+                SetUserFocusWindow(kUserFocusAuto);
+                SetUserFocusWindow(getSTWindow());
+            }
             gButtonIsDown = true;
             recordMouseEventCarbon(event,whatHappened);
             result = noErr;
