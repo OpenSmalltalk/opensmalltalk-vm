@@ -392,15 +392,18 @@ if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
 int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle)
 {
  HWND hwnd = (HWND)windowIndex;
- char *title = malloc(sizeOfTitle+1);
-
+ char *title;
+ if (sizeOfTitle > 1023) sizeOfTitle = 1024; /*to avoid allocating a really huge array, shouln't be possible displaying this in titlebar, also in the near future*/
+ title = malloc(sizeOfTitle+1);
+ if (title == NULL) return -1;
  strncpy(title, newTitle, sizeOfTitle);
  title[sizeOfTitle]='\0';
  if(SetWindowText(hwnd, (LPSTR) title) == 0){
        free (title);
        return -1;
        }
- free (title);                        
+ free (title);   
+
  return sizeOfTitle;
 }
 
