@@ -30,6 +30,11 @@
  
  /*  Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
  */
+ /*  Changed May 23 by Jason Dufair to handle mp3 files with ID3v2 tags
+     (specifically ones with binary data in them)
+     - Added mpeg3io_get_id3v2_size
+     - modified all fseek's to use the id3v2 offset
+ */
 #include "mpeg3private.h"
 #include "mpeg3protos.h"
 
@@ -77,13 +82,25 @@ long mpeg3io_get_total_bytes(mpeg3_fs_t *fs)
  */
 
 	fseek(fs->fd, 0, SEEK_END);
-	fs->total_bytes = ftell(fs->fd);
-	fseek(fs->fd, 0, SEEK_SET);
+	fs->total_bytes = ftell(fs->fd) - fs->id3v2_offset;
+	fseek(fs->fd, fs->id3v2_offset, SEEK_SET);
 	return fs->total_bytes;
+}
+
+int mpeg3io_get_id3v2_size(mpeg3_fs_t *fs)
+{
+  unsigned long synchsafe_size = 0;
+  
+  fseek(fs->fd, 6, SEEK_SET);
+
+  synchsafe_size = mpeg3io_read_int32(fs);
+
+  return ((synchsafe_size & 0xff) | (synchsafe_size & 0xff00) >> 1 | (synchsafe_size & 0xff0000) >> 2 | (synchsafe_size & 0xff000000) >> 3) + 10;
 }
 
 int mpeg3io_open_file(mpeg3_fs_t *fs)
 {
+        unsigned int bits;
 /* Need to perform authentication before reading a single byte. */
 	mpeg3_get_keys(fs->css, fs->path);
 
@@ -92,6 +109,17 @@ int mpeg3io_open_file(mpeg3_fs_t *fs)
 		perror("mpeg3io_open_file");
 		return 1;
 	}
+
+	bits = mpeg3io_read_int32(fs);
+
+	if ((bits >> 8) == MPEG3_ID3_PREFIX)
+	  {
+	    fs->id3v2_offset = mpeg3io_get_id3v2_size(fs);
+	  } else {
+	    fs->id3v2_offset = 0;
+	  }
+
+	mpeg3io_seek(fs, 0);
 
 	fs->total_bytes = mpeg3io_get_total_bytes(fs);
 	
@@ -153,12 +181,12 @@ int mpeg3io_device(char *path, char *device)
 int mpeg3io_seek(mpeg3_fs_t *fs, long byte)
 {
 	fs->current_byte = byte;
-	return fseek(fs->fd, byte, SEEK_SET);
+	return fseek(fs->fd, byte + fs->id3v2_offset, SEEK_SET);
 }
 
 int mpeg3io_seek_relative(mpeg3_fs_t *fs, long bytes)
 {
 	fs->current_byte += bytes;
-	return fseek(fs->fd, fs->current_byte, SEEK_SET);
+	return fseek(fs->fd, fs->current_byte + fs->id3v2_offset, SEEK_SET);
 }
 
