@@ -15,9 +15,13 @@ int joystickShutdown() {}
 
 /* End of adjustments for pluginized VM */
 
-#include <DeskBus.h>
-#include <Devices.h>
-#include <Timer.h>
+#if TARGET_API_MAC_CARBON
+#include <Carbon/Carbon.h>
+#else
+	#include <DeskBus.h>
+	#include <Devices.h>
+	#include <Timer.h>
+#endif
 
 /* Joystick Record */
 
