@@ -13,7 +13,7 @@
 
 # Local autoconf macros for configuring Unix Squeak		-*- sh -*-
 # 
-#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -46,9 +46,9 @@
 #   changes these copyright conditions.  Read the file `COPYING' in the
 #   directory `platforms/unix/doc' before proceeding with any such use.
 # 
-# Author: Ian.Piumarta@INRIA.Fr
+# Author: Ian.Piumarta@squeakland.org
 # 
-# Last edited: 2005-03-19 11:58:37 by piumarta on emilia.local
+# Last edited: 2005-03-19 12:21:17 by piumarta on emilia.local
 
 AC_DEFUN([AC_CHECK_VMM_DIR],[
   AC_MSG_CHECKING([sanity of generated src directory])
