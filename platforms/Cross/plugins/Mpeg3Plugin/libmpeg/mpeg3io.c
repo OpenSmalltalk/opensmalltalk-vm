@@ -37,7 +37,7 @@
 #include <mntent.h>
 #endif
 
-#ifdef TARGET_OS_MAC
+#if defined( TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
 #include <stat.h>
 #else
 #include <sys/stat.h>
