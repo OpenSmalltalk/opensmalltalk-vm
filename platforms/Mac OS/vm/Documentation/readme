@@ -1,0 +1,310 @@
+Updated July 6th 2002
+
+Building the Squeak Virtual Machine (Jan 1st 2002)
+	-- John Maloney, May 25, 2000,
+	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002,
+	   Feb 5th 2002, April 26th 2002
+	-- Changes Andrew C. Greenberg, Jan 1st 2002
+        -- Changes Jay Hardesty, July 6, 2002
+
+(Note to readers, it is possible a step was missed, so beware)
+
+Date: Tue, 1 Jan 2002 22:12:07 -0500
+Subject: Next step of the build documentation
+To: John M McIntosh <johnmci@smalltalkconsulting.com>
+From: "Andrew C. Greenberg" <werdna@mucow.com>
+
+Here's a step forward, some polish and practice necessary:
+
+Building a Carbon Squeak VM with ProjectBuilder:
+
+In the following, I'm assuming you have a modern build of Mac OS X (mine is 10.0.2).
+
+{JMM notes this is building with 10.1.5, and Squeak 3.2g at changeset 4905)}
+
+Overview
+
+	1.	Get the Apple Developer Tools (free)
+	2.	Get the current Sourceforge Platforms tree
+	3.	Build an interpreter
+	4.	Get, and install, the Gnuifier, and gnuify the interpreter
+	5.	Shove some files around the buildspace
+	6.	Run ProjectBuilder and build yourself an interpreter
+	7.	Download and print your Squeak VM Developer's Certificate
+
+Step One: Get the Apple Developer Tools (free)
+
+	The current build requires the December 2001 developer tools.  They are available to Online members at the apple developer website.  You can get an Online membership for free at:
+
+		http://developer.apple.com/membership/online.html
+
+Step Two: Get the current Sourceforge Platforms tree
+
+	A.	Open the Terminal, entering the following commands:
+	B.	cd /directory/path/to/your/squeak/folder
+	C.	cvs -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak login
+		(when prompted for a password, just hit enter)
+	D.	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak co platforms
+	E.  	For printing support get RealPrintingPlugin-JMM.cs.gz, from http://swiki.gsug.org:8080/sqfixes/all 
+		decompress it and fileIn
+
+After so much mumbo-jumbo, your squeak folder should have a directory entitled platforms.
+
+Step Three: Build an interpeter
+
+	A.  Install change sets from the specialChangeSets Folder. 
+		These are required to build a VM that has globals as a structure which improves
+		performance by 10%.
+		
+		Interpreter-normalSend.1.cs
+		MoreInterpAccessors-JMM.2.cs
+		CheckInterruptOften-JMM.1.cs
+		Globalstructure-JMM.2.cs
+		CGeneratorEnhancements-ajh.1.cs
+		Gnuifier.2.cs
+		
+	B.	DoIt: VMMakerTool openInWorld
+	C.	Enter the Path to platforms code: (enter path to platforms in step two).
+	D.	Enter the Platform name: (default is fine) "Mac OS"
+	E.	Enter the Path for your generates sources (default is fine).
+	F.	Select plugins. (Suggest selecting menu item "make all external",
+		then drag back the following back to Plugins not built:
+			FFIPlugin
+			FileCopyPlugin
+			IntegerPokerPlugin
+			Mpeg3Plugin
+			TestOSAPlugin
+			RealPrintingPlugin)
+	G.	Press button "Save Configuration" to save your configuration for later.
+	H.	Press button "Generate All" to build the interpreter
+
+For comparison, my entries were, respectively:
+
+		powercow X:Users:werdna:Desktop:squeak:VM:squeak:platforms
+		Mac OS
+		powercow X:Users:werdna:Desktop:squeak:Squeak3.2a-4599 Folder:src
+
+Step Four: Get, and install, the Gnifier, and gnuify the interpreter
+
+	A.	See the Gnuifier.2.cs changeset in the specialChangeSetsFolder
+	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
+
+		(Gnuifier on:
+			((FileDirectory default
+				directoryNamed: 'src')
+				directoryNamed: 'vm') pathName) gnuify
+
+Step Five: Shove and Tweak some files around the buildspace
+
+	A.	Open a MacOSX Finder browser and go to the platforms/Mac OS/src/vm folder.
+	B.	Unstuff 'resources.sit.hqx'
+		1. select the file
+		2. cmd-I for an inspector
+		3. select "Open with application"
+		4. click the box and select Stuffit Expander
+		5. go back and double-click the .hqx
+	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit' (same deal as step B)
+	D.	Drag 'SqueakVMForCarbon.pbproj' to the folder containing
+		the 'platforms' and 'src' folders.
+        E. 	Copy 'platforms/Mac OS/vm/sqNamedPlugins.h' to 'src/vm/sqNamedPlugins.h'
+
+Step Six: Run ProjectBuilder and build yourself an interpreter
+
+	A.	Double-click the SqueakVMForCarbon.pbproj file
+	B.	Click on the Sources folder in the left pane
+	C.	Select "Project -> Add Files..."
+        D.      Add the 'Cross' folder, and the 'Mac OS' folder, from the platform squeak cvs folder
+                
+                now delete the references or uncheck the following files/folders
+                FileCopyPlugin
+                Mpeg3Plugin
+                RealPrintingPlugin 
+                PrintJobPlugin (otherwise _stPixMap and _stColorTable are multiply defined?? -jay)
+                SqueakFFIPrims
+                TestOSAPlugin
+                PluginSDK 4.01a
+                
+                The 68K folder in the SocketPlugin folder
+                The ReadMe.txt in the cross/JPEGReaderWriter2 folder
+                The InternetConfiguration.xml in the InternetConfigPlugin folder
+                The UUIDPlugin.project.xml in the UUIDPlugin folder
+		sqOldSoundPrims.c in the SoundGenerationPlugin folder
+                
+                all the files that start with my in the mac vm folder
+                
+                3.x.x Release Notes.rtf
+                 readme
+                resources.sit.hqx
+                sqMacMinimal.c
+                sqMacNSPlugin.c
+                SqueakPro5.xml
+                SqueakVMForCarbon.pbproj.sit
+                
+                Mmm if we've missed one then you'll have a compiler error for sure or the file gets 
+                dragged into the resources folder in the .app. If you look in the "Files & Build Phases"
+                you should only see the five *.icns files in the Bundle Resources section, and 
+                two files (Squeak VM.r and SqueakApp.rsrc) in the ResourceManager Resources section.
+                Extra files imply you've got too much selected.
+            	
+        E.	In the finder (or a unix shell) rename the folder "resource/For ProjectBuilder"
+                to "resource/For_ProjectBuilder".
+	F.	Click on the Resources folder in the left pane.
+	G.	Select "Project -> Add Files..."
+	H	Select SqueakApp.rsrc in the resource/For_ProjectBuilder folder and add it.
+	I.	On the left pane, there are some vertically oriented fold-over tabs.
+		Click the one marked "Targets."
+	J.	On the left upper pane marked "Targets," select "Squeak VM Opt"
+	K.	On the left lower pane marked "Build Styles," select "Deployment"
+        L.      On that same page, under "Search paths" - "Headers" there is a list of directories.
+                Change the last entry, "/Volumes/Lamie/Squeak/SqueakAtSourceForge/squeak/platforms/Mac OS/vm"
+                to instead point point to the "platforms/Mac OS/vm" directory on your local machine
+                (meaning the "platforms" dir downloaded from SourceForge in Step 2.D above)
+ 	M*.	Click on the hammer icon at the top left to build your VM.
+		The final product should live in the src/vm/Build folder, named "Squeak VM Opt"
+
+Step Seven: Download and print your Squeak VM Developer's Certificate
+
+	http://sumeru.stanford.edu/tim/pooters/SqueakVMBuilderCertificate.pdf
+        
+Congratulations! Take a bow!
+
+1 tinyBenchmarks
+
+Older Notes
+The platform specific files are sqMacXXX.c, totaling about  more than 2000 lines of code
+when this document was originally written. All other code is written to standard
+ANSI libraries and should port easily to other C environments.
+
+The files interp.c, sqSoundPrims.c, sqMiscPrims.c, and others are generated
+automatically, so changes to these files will be lost when they are next
+generated. It is fine to make ephemeral changes to these file for the purpose of
+debugging or statistics gathering. 
+
+The current VM was compiled with Metrowerks CodeWarrior Pro 5.3. Earlier versions of Squeak used
+the Symantec Think C 6.0, but there were a few bugs in their libraries having to do
+with 8-byte versus 4-byte integers. These bugs have probably been fixed by now.
+
+This code has also been compiled under the MPW "Mr. C" Macintosh compiler by
+Hans-Martin Mosner (hmm@heeg.de) with only one minor change: you will need to
+create an empty "MacHeaders.h" file. You may get some harmless compiler warnings
+and, for peak performance, the method that patches the dispatch loop must also be
+changed. Hans-Martin says: "The whole VM seems to be marginally slower than the
+delivered VM, but it is significantly smaller." Note that Jitter 3 (Squeak V3.x) has migrated
+to Gnu GCC, and MPW. As of late fall 2000 there is no 68K version, but the macintosh
+specific source is the same with additional files for Jitter 3.
+
+The source code also has been compiled with Apple's project builder under OS-X, but we are 
+not shipping an example of it at this time.
+
+To build using CW we have provided an XML exported CW project that should match the 
+current one being used to build the production VM.  There is also a project file for the MPEG3 Plugin,
+the TestOSAPlugin (AppleScript), and SqueakFFIPrims (Foreign Function Calls). You must import
+these project XML files into CW to build the projects.  Other XML project files are included as
+an example.
+
+To get an additional speedup, the object code for the bytecode dispatch loop of
+the PPC version can be patched using the method "patchInterp:" in Interpreter
+class.
+
+Also you might need to add 	struct foo *foo = &fum;
+to interpret()
+
+68K Notes
+
+Note: In order to support dynamically loaded primitives, we have switched to
+using Code Fragement Manager model for the 68K VM. This has several
+ramifications:
+
+  1. You now need to use the CFM versions of the library files. The 68K project
+file has been updated accordingly.
+  2. You cannot run the 68K VM under the emulator on the PowerPC (Apple doesn't
+support CFM apps under the 68K emulator).
+  3. You need to be sure that version 4.0 or later of "CFM-68K Runtime Enabler"
+is in the Extensions folder of the system folder on your 68K Mac. *** Warning:
+Older versions of "CFM-68K Runtime Enabler" had bugs that will probably prevent
+Squeak from even starting! ***.
+
+The shipping 68K version of Squeak uses the older MacTCP interface. You can alter
+the sqMacNetwork.c file and compile your own 68K verion of Squeak that uses the
+new Open Transport version, but the availability of the 68K version of Open
+Transport V1.3 is limited to 68040 machines that run system 8.1. You can run this
+configuration on a 68030 using system 7.5.x but Apple does not support that
+configuration.
+
+Note with some work you can migrate back to a pure 68K application, versus a CFM 
+environment if you wish for building regular 68k applications. 
+
+Carbon
+
+Much of the work to make a Carbon application is done, however we are still missing
+a serialMidi interface and tablet support which are Carbon compliant. 
+
+Pluginized VM
+
+Squeak 2.8 and higher introduces the "pluginized VM". To reduce complexity 
+most of the plugins are linked iternally into the VM. That is because many of them
+still access a few VM functions and variables directly, rather than calling
+through the interpreter proxy, which they must in order to run in an external
+plugin. One can still override these builtin primitives with an external plugin
+and, of course, newly built plugins can be created as external or internal
+plugins, using the features of VMMaker. However you will need to mange your CW
+project on your own. 
+
+Building Squeak as a Browser Plugin
+
+The plugin works with versions 4.0 or later of either browser. However,
+the primitives that can be used to ask the browser to fetch a URL do not work in
+versions of IE earlier than 5.0. 
+
+The installation and use of Squeak as a browser plugin is somewhat beyond the
+scope of this readme file. The basic idea is that the Squeak image started by the
+browser lives in a pre-defined directory ("System
+Folder:Preferences:Squeak:Internet" by default) with predefined name (e.g.,
+"squeakPlugin.image"). The browser plugin can only read and write files within the
+Internet directory and directories contained within it. This is called Squeak
+file system "sand box". The browser captures most of the command key combination,
+so you have to use the menus rather than your favorite Squeak command key
+shortcuts. {Note that using the full screen option allows you to again use the
+command key combinations and has better performance characteristics.} The browser
+also captures cmd-., so the interrupt key when running under the browser is
+control-C. The most flexible way to invoke Squeak is through the HTML "EMBED"
+command. This allows arbitrary arguments to be made available to Squeak. The
+"memory" EMBED tag can be used to tell Squeak how much memory is required by a
+given Squeaklet.
+
+To build a browser plugin VM, invoke the following command after building a regular VM.
+
+ (MacOSPowerPCOS9BrowserVMMaker new initialize initializeAllInternalBut: #(IntegerPokerPlugin Mpeg3Plugin FFIPlugin TestOSAPlugin)) generateInterpreterFile.
+
+Rename the interp.c file to pluginInterp.c. Then change the two definitions of 
+PLUGIN found in sqMacWindow.c and platform.exports, and build your application. 
+Squeak as a plugin will run as a Carbon plugin for Carbonized IE if you put it into the 
+correct directory. 
+
+If you build your own project file, note that IE requires that the main entry
+point be "main" rather than CW's usual "__start". (Netscape doesn't care, so it
+took me a long time to figure out why it wasn't working under IE!) The supplied
+project produces a PPC-only plugin.
+
+
+Porting Notes:
+
+The file sqMacMinimal.c can be used a porting guide. This ~1100 line file stubs
+out all non-essential support functions and, together with sqFilePrims.c, allows
+one to build a functioning virtual machine that only lacks non-essential I/O
+functions (including support for file directory enumeration, which is not really
+essential!). The small size of this file demonstrates how little code is really
+needed to get Squeak running on a new platform.
+
+Thanks to Ian Piumarta, the C header files are identical across all the major
+Squeak platforms.
+
+The code assumes that C ints and pointers are 4 bytes and double floats are 8
+bytes; these assumptions are checked at start up time. Float objects in the image
+are stored in the IEEE standard byte ordering for double-precision floats on all
+platforms; macros in sq.h can be defined to swap bytes into and out of the
+platform native float format if necessary. (To ensure proper word alignment, one
+typically has to copy a Squeak Float object into a C "double" variable before
+operating on it; byte swapping can be done while doing this copy for little or no
+additional cost.)
+
