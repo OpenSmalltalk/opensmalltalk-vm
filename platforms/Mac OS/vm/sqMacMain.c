@@ -6,12 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.7 2002/03/25 07:04:31 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.8 2002/04/27 18:55:25 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Mar  8th, 2002, JMM UI locking for applescript under os-x
 *  Mar  17th, 2002, JMM look into sleep wakeup issues under os-9 on some computers.
+*  Apr  17th, 2002, JMM Use accessors for VM variables, add os-9 check, plus changes by Alain Fischer <alain.fischer@bluewin.ch> to look for image and fetch VM version under os-x
 ****************************************************************************/
 
 //#define PLUGIN to compile code for Netscape or IE Plug-in
@@ -90,7 +91,7 @@ QDGlobals 		qd;
 extern char shortImageName[];
 extern char documentName[];
 extern char vmPath[];
-extern int  fullScreenFlag;
+extern int  getFullScreenFlag();
 extern unsigned char *memory;
 extern squeakFileOffsetType calculateStartLocationForImage();
 Boolean         gTapPowerManager=false;
@@ -122,8 +123,7 @@ int main(void) {
 	EventRecord theEvent;
 	sqImageFile f;
 	OSErr err;
-    long threadGestaltInfo;
-    FSSpec	workingDirectory;
+        long threadGestaltInfo;
         
 	/* check the interpreter's size assumptions for basic data types */
 	if (sizeof(int) != 4) {
@@ -143,6 +143,7 @@ int main(void) {
 	SetUpClipboard();
 	SetUpWindow();
         SetUpTimers();
+
 #ifndef I_AM_CARBON_EVENT
 	SetEventMask(everyEvent); // also get key up events
 #endif
@@ -157,11 +158,28 @@ int main(void) {
 	}
                 
 	if (imageName[0] == 0) {
+            FSSpec	workingDirectory;
+#if TARGET_API_MAC_CARBON
+            CFBundleRef mainBundle;
+            CFURLRef imageURL;
+            CFStringRef imagePath;
+
+            mainBundle = CFBundleGetMainBundle();            
+            imageURL = CFBundleCopyResourceURL (mainBundle, CFSTR("Squeak"), CFSTR("image"), NULL);
+            if (imageURL != NULL) {
+                imagePath = CFURLCopyFileSystemPath (imageURL, kCFURLHFSPathStyle);
+                CFStringGetCString (imagePath, imageName, IMAGE_NAME_SIZE, CFStringGetSystemEncoding());
+            } else {
+#endif
+
 		err = GetApplicationDirectory(&workingDirectory);
 		if (err != noErr) 
                     error("Could not obtain default directory");
                 CopyCStringToPascal("squeak.image",workingDirectory.name);
 		PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
+#if TARGET_API_MAC_CARBON
+            }
+#endif
 	}
 
 	/* uncomment the following when using the C transcript window for debugging: */
@@ -201,7 +219,7 @@ int main(void) {
     
 #ifndef IHAVENOHEAD
 	SetWindowTitle(shortImageName);
-	ioSetFullScreen(fullScreenFlag);
+	ioSetFullScreen(getFullScreenFlag());
 #endif
 
 #if (!(defined JITTER) && defined(__MPW__))
@@ -324,6 +342,17 @@ Boolean RunningOnCarbonX(void)
                 && (response >= 0x01000);
 }
 
+Boolean isSystem9_0_or_better(void)
+{
+    UInt32	response;
+    OSErr	error;
+    
+    error = Gestalt(gestaltSystemVersion, 
+                    (SInt32 *) &response);
+    return ((error == noErr)
+                && (response >= 0x0900));
+}
+
 /*** I/O Primitives ***/
 
 int ioBeep(void) {
@@ -406,9 +435,23 @@ char * GetAttributeString(int id) {
 		else
 			return "PowerPC";
 	}
-	if (id == 1004) return (char *) interpreterVersion;
 #if TARGET_API_MAC_CARBON
+        if (id == 1004) {
+            CFBundleRef mainBundle;
+            CFStringRef versionString;
+            static char data[255];
+            
+            mainBundle = CFBundleGetMainBundle ();
+            versionString = CFBundleGetValueForInfoDictionaryKey(mainBundle, CFSTR("CFBundleShortVersionString"));
+            bzero(data,255);
+            strcat(data,interpreterVersion);
+            strcat(data," ");
+            CFStringGetCString (versionString, data+strlen(data), 255-strlen(data), CFStringGetSystemEncoding());
+            return data;            
+        }
 	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
+#else
+	if (id == 1004) return (char *) interpreterVersion;
 #endif
 	/* attribute undefined by this platform */
 	success(false);
