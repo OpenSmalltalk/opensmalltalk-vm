@@ -2,7 +2,7 @@
  *
  * Author: Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  * 
- * Last edited: Mon 04 Mar 2002 18:08:40 by bert on balloon
+ * Last edited: Tue 05 Mar 2002 09:52:03 by bert on balloon
  *
  * Originally based on Andreas Raab's sqWin32PluginSupport
  * 
@@ -100,6 +100,9 @@ typedef struct sqStreamRequest {
 #define SQUEAK_READ 0
 #define SQUEAK_WRITE 1
 
+#define inBrowser\
+  (-1 != browserPipes[SQUEAK_READ])
+
 #define CMD_BROWSER_WINDOW 1
 #define CMD_GET_URL        2
 #define CMD_POST_URL       3
@@ -122,7 +125,7 @@ static sqStreamRequest *requests[MAX_REQUESTS];
 int primitivePluginBrowserReady()
 {
   pop(1);
-  pushBool(browserPipes[SQUEAK_WRITE] != 0);
+  pushBool(inBrowser);
   return 1;
 }
 
@@ -140,7 +143,7 @@ int primitivePluginRequestURLStream()
   sqStreamRequest *req;
   int id, url, length, semaIndex;
 
-  if (!browserPipes[SQUEAK_WRITE]) return primitiveFail();
+  if (!inBrowser) return primitiveFail();
 
   DPRINT("VM: primitivePluginRequestURLStream()\n");
 
@@ -407,7 +410,7 @@ static void browserReceiveData()
 static void browserGetURLRequest(int id, char* url, int urlSize, 
 				char* target, int targetSize)
 {
-  if (!browserPipes[SQUEAK_WRITE]) {
+  if (!inBrowser) {
     fprintf(stderr, "Cannot submit URL request -- "
 	    "there is no connection to a browser\n");
     return;
@@ -434,7 +437,7 @@ static void browserPostURLRequest(int id, char* url, int urlSize,
 				 char* target, int targetSize, 
 				 char* postData, int postDataSize)
 {
-  if (!browserPipes[SQUEAK_WRITE]) {
+  if (!inBrowser) {
     fprintf(stderr, "Cannot submit URL post request -- "
 	    "there is no connection to a browser\n");
     return;

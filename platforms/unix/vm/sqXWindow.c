@@ -224,11 +224,11 @@ int		 stRNMask, stGNMask, stBNMask;
 int		 stRShift, stGShift, stBShift;
 char		*stDisplayBitmap= 0;
 Window           browserWindow= 0;      /* parent window */
-int              browserPipes[]= {0, 0};/* read/write fd for communication with browser */ 
+int              browserPipes[]= {-1, -1};   /* read/write fd for communication with browser */ 
 int		 headless= 0;
 
 #define          inBrowser\
-  (0 != browserPipes[0])
+  (-1 != browserPipes[0])
 
 /* window states */
 #define	WIN_NORMAL	0
