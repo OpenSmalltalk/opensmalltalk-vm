@@ -6,9 +6,10 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.8 2002/04/27 19:04:21 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.9 2002/05/09 19:28:04 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
+*   May 5th, 2002, JMM added define for PLUGIN for CW
 *
    How to use this file:
    This file is for general platform-specific macros and declarations.
@@ -18,10 +19,12 @@
    version of this file can be used on that platform. The goal is to keep all
    the other header files generic across platforms. To override a definition or
    macro from sq.h, you must first #undef it, then provide the new definition.
+   
+   Define PLUGIN for Netscape Plugin building, needed for CodeWarrior
 */
 
 #ifdef macintoshSqueak
-
+//#define PLUGIN
 /* replace the image file manipulation macros with functions */
 #undef sqImageFile
 #undef sqImageFileClose
