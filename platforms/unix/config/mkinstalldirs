@@ -4,7 +4,7 @@
 # Created: 1993-05-16
 # Public domain
 
-# $Id: mkinstalldirs,v 1.5 2003/08/07 02:44:53 piumarta Exp $
+# $Id$
 
 errstatus=0
 
