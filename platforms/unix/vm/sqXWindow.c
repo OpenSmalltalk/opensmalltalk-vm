@@ -1658,14 +1658,18 @@ void recordKeystroke(XKeyEvent *theEvent)
   lastKeystrokeTime = theEvent->time;
   nConv= XLookupString(theEvent, buf, sizeof(buf), &symbolic, 0);
 
-  charCode= buf[0];
-#if 0
-  if (charCode == 127)
-    charCode= 8;
-#endif
-  if (nConv == 0 && (charCode= translateCode(symbolic)) < 0)
-    return;	/* unknown key */
+  /* check for special keys */
+  charCode= translateCode(symbolic);
+  if(charCode < 0) {
+    /* not a special key */
+    if(nConv==0) {
+      /* unknown key */
+      return;
+    }
+    charCode= buf[0];
+  }
 
+  /* Squeak uses a different character encoding than the rest of the world */
   if (charCode >= 128)
     charCode= X_to_Squeak[charCode];
 
