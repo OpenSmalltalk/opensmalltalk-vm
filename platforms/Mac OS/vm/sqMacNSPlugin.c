@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.3 2002/01/09 06:45:59 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.4 2002/03/01 00:22:59 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -35,7 +35,6 @@ Here is a list of the functions overridden:
 	ioExit()
 	ioScreenSize()
 	ioSetFullScreen()
-	sqAllocateMemory()
 
 In addition, ioProcessEvents() becomes a noop and main() is completely
 omitted when sqMacWindow.c is compiled for use in the browser plugin VM.
@@ -202,7 +201,6 @@ int recordKeystroke(EventRecord *theEvent);
 int recordModifierButtons(EventRecord *theEvent);
 int recordMouseDown(EventRecord *theEvent);
 void ioSetFullScreenRestore();
-int PathToDir(char *pathName, int pathNameMax, FSSpec workingDirectory);
 
 /*** From VM ***/
 int checkImageVersionFromstartingAt(sqImageFile f, int imageOffset);
@@ -580,7 +578,7 @@ int16 NPP_HandleEvent(NPP instance, void *rawEvent) {
         rememberFrontWindow = (GrafPtr) FrontWindow();
     }
 
-YieldToAnyThread(); //Give some time up, needed for Netscape
+SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
  
 	do {
 	
@@ -688,7 +686,7 @@ YieldToAnyThread(); //Give some time up, needed for Netscape
     	if (fullScreenFlag) {
      	    ok = WaitNextEvent(everyEvent, &theEvent,0,null);
             eventPtr = &theEvent;
-    		YieldToAnyThread();
+    		SqueakYieldToAnyThread();
     	}
 	} while (fullScreenFlag);
 	return true;
@@ -1052,6 +1050,7 @@ WindowPtr oldStWindow;
 int ioSetFullScreen(int fullScreen) {
 	short desiredWidth,desiredHeight;
 	Rect  windRect;
+        GDHandle   dominantGDevice;
 	
 	if (fullScreen) {
 	    if (fullScreenFlag) return;
@@ -1059,7 +1058,12 @@ int ioSetFullScreen(int fullScreen) {
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
 		oldStWindow = stWindow;
-		BeginFullScreen	(&gRestorableStateForScreen,getDominateDevice(stWindow,&windRect),
+#if TARGET_API_MAC_CARBON
+                GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&windRect); 
+#else
+                dominantGDevice = getDominateDevice(stWindow,&windRect)
+#endif
+		BeginFullScreen	(&gRestorableStateForScreen,dominantGDevice,
 								 &desiredWidth,
 								 &desiredHeight,
 								 &gAFullscreenWindow,
@@ -1100,21 +1104,6 @@ void ioSetFullScreenRestore()
 	    netscapeWindow = oldNetscapeWindow;
 	    stWindow = oldStWindow;
 	}
-}
-
-void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
-  /* Allocate the Squeak object heap memory from the system heap. */
- char *pointer;
- 
-#if TARGET_API_MAC_CARBON
-	return NewPtr(desiredHeapSize);
-#else
-    pointer = NewPtr(desiredHeapSize);
-    if (pointer == null) 
-	    return NewPtrSys(desiredHeapSize);
-	else 
-	    return pointer;
-#endif
 }
 
 /*** File and Access Paths ***/
