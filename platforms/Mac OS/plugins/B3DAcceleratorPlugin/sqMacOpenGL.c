@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.10 2004/09/22 18:56:33 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.11 2004/09/23 16:33:26 johnmci Exp $
 * 
 *   NOTES:
 *
@@ -93,7 +93,7 @@ extern int verboseLevel;
 /* define forceFlush if we should fflush() before closing file */
 #define forceFlush 1
 
-FILE *xopenf(char *filename,char* attr);
+static FILE *xopenf(char *filename,char* attr);
 #include "sqMacFileLogic.h"	
 
 static FILE *xopenf(char *filename,char* attr) {

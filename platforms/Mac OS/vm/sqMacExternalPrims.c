@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacExternalPrims.c,v 1.8 2004/09/03 00:20:19 johnmci Exp $
+*   RCSID:   $Id: sqMacExternalPrims.c,v 1.9 2004/09/23 16:33:19 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -224,7 +224,7 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         //Watch out for the bundle suffix, not a normal thing in squeak plugins
 
 		/* copy the file name into a null-terminated C string */
-		sqFilenameFromString(cFileName, tempDirPath, strlen(tempDirPath));
+		sqFilenameFromString(cFileName, (int) tempDirPath, strlen(tempDirPath));
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),gCurrentVMEncoding,false);
     
         theURLRef = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
