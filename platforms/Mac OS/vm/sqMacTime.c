@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.12 2003/10/04 04:46:39 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.13 2003/10/14 19:46:38 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -280,3 +280,10 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 #endif
 #endif	
 }
+#undef ioMSecs
+//Issue with unix aio.c sept 2003
+
+int ioMSecs() {
+    return ioMicroMSecs();
+}
+
