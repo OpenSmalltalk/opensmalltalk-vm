@@ -19,6 +19,11 @@
 #endif
 #endif
 
+#ifdef _MSC_VER
+/* disallow INLINE since those functions cannot be linked */
+#undef INLINE
+#define INLINE
+#endif
 
 /* use pthreads? */
 #ifndef NOPTHREADS

@@ -36,7 +36,9 @@
 
 #include <stdlib.h>
 
+#ifdef HAVE_MMX
 static unsigned long long MMX_128 = 0x80008000800080LL;
+#endif
 
 int mpeg3_new_slice_buffer(mpeg3_slice_buffer_t *slice_buffer)
 {
