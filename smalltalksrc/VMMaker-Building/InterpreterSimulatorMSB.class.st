@@ -4,11 +4,6 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
-{ #category : #'instance creation' }
-InterpreterSimulatorMSB class >> new [
-	^self basicNew
-]
-
 { #category : #'memory access' }
 InterpreterSimulatorMSB >> byteAt: byteAddress [
 	| lowBits |

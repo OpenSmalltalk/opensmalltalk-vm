@@ -176,6 +176,7 @@ BalloonEngineSimulation >> edgeTransform [
 { #category : #initialize }
 BalloonEngineSimulation >> initialize [
 	doProfileStats _ false.
+	bbPluginName _ 'BitBltPlugin'
 ]
 
 { #category : #simulation }
