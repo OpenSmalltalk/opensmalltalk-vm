@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-08-07 08:53:27 by piumarta on emilia.inria.fr
+ * Last edited: 2004-04-03 11:33:44 by piumarta on emilia.local
  */
 
 #include <stdio.h>
@@ -72,10 +72,50 @@ static const char *dlerror(void)
 }
 
 
+static void dlUndefined(const char *symbol)
+{
+  fprintf(stderr, "dyld: undefined symbol: %s\n", symbol);
+}
+
+static NSModule dlMultiple(NSSymbol s, NSModule oldModule, NSModule newModule)
+{
+  dprintf((stderr, "dyld: %s: %s previously defined in %s, new definition in %s\n",
+	   NSNameOfSymbol(s), NSNameOfModule(oldModule), NSNameOfModule(newModule)));
+  return newModule;
+}
+
+static void dlLinkEdit(NSLinkEditErrors errorClass, int errorNumber,
+		       const char *fileName, const char *errorString)
+
+{
+  fprintf(stderr, "dyld: %s: %s\n", fileName, errorString);
+}
+
+static NSLinkEditErrorHandlers errorHandlers=
+  {
+    dlUndefined,
+    dlMultiple,
+    dlLinkEdit
+  };
+
+static void dlinit(void)
+{
+  NSInstallLinkEditErrorHandlers(&errorHandlers);
+}
+
+static int dlInitialised= 0;
+
+
 static void *dlopen(const char *path, int mode)
 {
   void			*handle= 0;
   NSObjectFileImage	 ofi= 0;
+
+  if (!dlInitialised)
+    {
+      dlinit();
+      dlInitialised= 1;
+    }
 
   if (!path)
     return DL_APP_CONTEXT;
@@ -96,6 +136,8 @@ static void *dlopen(const char *path, int mode)
 
   if (!handle)
     dlSetError("could not load shared object: %s", path);
+
+  dprintf((stderr, "dlopen: %s => %d\n", path, (int)handle));
 
   return handle;
 }
@@ -125,15 +167,19 @@ static void *dlsym(void *handle, const char *symbol)
   else
     {
       if ((  (MH_MAGIC == ((struct mach_header *)handle)->magic))	/* ppc */
-	  || (MH_CIGAM == ((struct mach_header *)handle)->magic)) /* 386 */
+	  || (MH_CIGAM == ((struct mach_header *)handle)->magic))	/* 386 */
 	{
 	  if (NSIsSymbolNameDefinedInImage((struct mach_header *)handle, _symbol))
-	    nsSymbol= NSLookupSymbolInImage
-	      ((struct mach_header *)handle,
-	       _symbol,
-	         NSLOOKUPSYMBOLINIMAGE_OPTION_BIND
-	       | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR);
-	  dprintf((stderr, "dlsym: bundle (image) lookup returned %p\n", nsSymbol));
+	    {
+	      nsSymbol= NSLookupSymbolInImage
+		((struct mach_header *)handle,
+		 _symbol,
+		 NSLOOKUPSYMBOLINIMAGE_OPTION_BIND
+		 /*| NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR*/);
+	      dprintf((stderr, "dlsym: bundle (image) lookup returned %p\n", nsSymbol));
+	    }
+	  else
+	    dprintf((stderr, "dlsym: bundle (image) symbol not defined\n"));
 	}
       else
 	{
