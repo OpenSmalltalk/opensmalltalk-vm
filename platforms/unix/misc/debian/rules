@@ -9,6 +9,11 @@
 # This is the debhelper compatability version to use.
 export DH_COMPAT=3
 
+
+# This is the Squeak version we are compiling
+# It is only available once configure has been run!
+version=$(shell if [ -f  build-oss/version ]; then cat build-oss/version; else echo noversionyet; fi)
+
 configure: configure-stamp
 configure-stamp:
 	dh_testdir
@@ -42,12 +47,11 @@ install: build
 	dh_installdocs -a -i
 
 	$(foreach audio, oss nas, \
-		version=$(shell cat build-$(audio)/version); \
 		install -d $(CURDIR)/debian/squeak-vm-$(audio)/usr/bin; \
 		install -m 755 build-$(audio)/squeak $(CURDIR)/debian/squeak-vm-$(audio)/usr/bin/squeak ; \
 		\
-		install -d $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/\$(version) ; \
-		install -m 644 build-$(audio)/squeak.map $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/\$(version) ; \
+		install -d $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/$(version) ; \
+		install -m 644 build-$(audio)/squeak.map $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/$(version) ; \
 		dh_installman -psqueak-vm-$(audio)  build-$(audio)/squeak.1 ; \
 	)
 
