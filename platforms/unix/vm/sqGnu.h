@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  *
- * Last edited: 2003-09-10 06:01:29 by piumarta on emilia.inria.fr
+ * Last edited: 2004-04-02 14:51:09 by piumarta on emilia.local
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -171,45 +171,45 @@
         especially Intel.
   */
 #if defined(__mips__)
-# define IP_REG asm("$16")
-# define SP_REG asm("$17")
-# define CB_REG asm("$18")
+# define IP_REG __asm__("$16")
+# define SP_REG __asm__("$17")
+# define CB_REG __asm__("$18")
 #endif
 #if defined(__sparc__)
-# define IP_REG asm("%l0")
-# define SP_REG asm("%l1")
-# define CB_REG asm("%l2")
+# define IP_REG __asm__("%l0")
+# define SP_REG __asm__("%l1")
+# define CB_REG __asm__("%l2")
 #endif
 #if defined(__alpha__)
-# define IP_REG asm("$9")
-# define SP_REG asm("$10")
-# define CB_REG asm("$11")
+# define IP_REG __asm__("$9")
+# define SP_REG __asm__("$10")
+# define CB_REG __asm__("$11")
 #endif
 #if defined(__i386__)
-# define IP_REG asm("%esi")
-# define SP_REG asm("%edi")
+# define IP_REG __asm__("%esi")
+# define SP_REG __asm__("%edi")
 # if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
-#   define CB_REG asm("%ebx")
+#   define CB_REG __asm__("%ebx")
 # else
 #   define CB_REG /* avoid undue register pressure */
 # endif
 #endif
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
-# define GP_REG asm("24")
-# define JP_REG asm("25")
-# define IP_REG asm("26")
-# define SP_REG asm("27")
-# define CB_REG asm("28")
+# define GP_REG __asm__("24")
+# define JP_REG __asm__("25")
+# define IP_REG __asm__("26")
+# define SP_REG __asm__("27")
+# define CB_REG __asm__("28")
 #endif
 #if defined(__hppa__)
-# define IP_REG asm("%r18")
-# define SP_REG asm("%r17")
-# define CB_REG asm("%r16")
+# define IP_REG __asm__("%r18")
+# define SP_REG __asm__("%r17")
+# define CB_REG __asm__("%r16")
 #endif
 #if defined(__mc68000__)
-# define IP_REG asm("a5")
-# define SP_REG asm("a4")
-# define CB_REG asm("d7")
+# define IP_REG __asm__("a5")
+# define SP_REG __asm__("a4")
+# define CB_REG __asm__("d7")
 #endif
 
 #ifndef JP_REG
