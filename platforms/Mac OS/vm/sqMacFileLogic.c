@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.7 2002/04/27 18:53:34 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.8 2002/05/17 23:43:28 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -14,6 +14,7 @@
 *	1/1/2002 JMM some cleanup to streamline path creation to minimize io & carbon cleanup
 *	1/18/2002 JMM recheck macroman, fix dir size problem on os-9, do squeak file offset type
 *   4/23/2002 JMM fix how image is found for os-9 for bundled applications
+*   5/12/2002 JMM add logic to enable you to put plugins beside macclassic VM
 *
 *****************************************************************************/
 /* 
@@ -774,6 +775,7 @@ Karl Goiser 14/01/01
 OSStatus GetApplicationDirectory(FSSpec *workingDirectory) {
         ProcessSerialNumber PSN;
         ProcessInfoRec pinfo;
+        FSSpec	checkDirectory;
         OSErr	err;
         
                   /* set up process serial number */
@@ -785,7 +787,13 @@ OSStatus GetApplicationDirectory(FSSpec *workingDirectory) {
         pinfo.processAppSpec = workingDirectory;
         err = GetProcessInformation(&PSN, &pinfo);
         if (err == noErr && isSystem9_0_or_better()) {
-            FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
+#if TARGET_API_MAC_CARBON
+			FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
+#else
+            FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:",&checkDirectory);
+            if (strncmp((const char *)checkDirectory.name,(const char *) "\pMacOSClassic",13) == 0)
+				FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
+#endif
         }
         return err;
 }
