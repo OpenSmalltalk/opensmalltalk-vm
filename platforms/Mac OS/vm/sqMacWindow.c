@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.28 2003/11/17 23:39:26 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.29 2003/11/20 01:35:47 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -144,7 +144,7 @@ int ioSetFullScreen(int fullScreen) {
 }
 
 #define bytesPerLine(width, depth)	((((width)*(depth) + 31) >> 5) << 2)
-#ifndef TARGET_API_MAC_CARBON
+#if !TARGET_API_MAC_CARBON
 int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
@@ -228,8 +228,9 @@ int ioShowDisplay(
             titleH = structureRect.bottom- structureRect.top;
         }
 
+#if TARGET_API_MAC_CARBON
         LockPortBits(windowPort); 
-         
+#endif          
        {
             PixMapHandle    pix;
             int   pixPitch,pixDepth,pitch,bytes;
@@ -263,8 +264,8 @@ int ioShowDisplay(
                 else if (depth == 16)
                  while (affectedH--) {
                         register long   i,count= bytes/2;
-                        register short   *to=    out;
-                        register short   *from=  in;
+                        register short   *to=   (short *) out;
+                        register short   *from= (short *) in;
                         while (count--)
                             *to++= *from++;
                         in  += pitch;
@@ -272,8 +273,8 @@ int ioShowDisplay(
                     } 
                 else while (affectedH--) {
                         register long   count= bytes/4;
-                        register long   *to=    out;
-                        register long   *from=  in;
+                        register long   *to=   (long *) out;
+                        register long   *from=  (long *)in;
                         while (count--)
                             *to++= *from++;
                         in  += pitch;
@@ -281,8 +282,8 @@ int ioShowDisplay(
                 }
             } else if ( depth == 16 && pixDepth == 32) {
                 while (affectedH--)  {
-                        register long   *to=    out;
-                        register short  *from=  in;
+                        register long   *to=    (long *) out;
+                        register short  *from=  (short *) in;
                         register long   count= bytes/2,target,r,g,b;  
 
                         while (count--) { /* see '11111'b needs to be '11111111'b */
@@ -304,8 +305,8 @@ int ioShowDisplay(
                 }
             } else if (depth == 32 && pixDepth == 16) {
                 while (affectedH--)  {
-                        register short *to=    out;
-                        register long  *from=  in;
+                        register short *to=    (short *) out;
+                        register long  *from=   (long *) in;
                         register long   count= bytes/4,target;  
                         while (count--) {
                             target = *from++;
@@ -318,8 +319,8 @@ int ioShowDisplay(
                 }
             } else if (depth == 8 && pixDepth == 16) {
                 while (affectedH--)  {
-                        short *to=    out;
-                        unsigned char  *from=  in;
+                        short *to=   (short *)  out;
+                        unsigned char  *from= ( unsigned char *) in;
                         long   count= bytes;
                         unsigned short r,g,b;
                         unsigned long target;
@@ -337,8 +338,8 @@ int ioShowDisplay(
                 }
             }else if (depth == 8 && pixDepth == 32) {
                 while (affectedH--)  {
-                        long *to=    out;
-                        unsigned char  *from=  in;
+                    long *to=   (long *) out;
+                    unsigned char  *from=  (unsigned char *) in;
                         long   count= bytes;
                         unsigned short r,g,b;
                         unsigned long target;
@@ -354,12 +355,54 @@ int ioShowDisplay(
                         in  += pitch;
                         out += pixPitch;
                 }
+            } else if (depth == 16 && pixDepth == 8) { // Untested, perhaps will not get called
+                SetPort(windowPort);
+                while (affectedH--)  {
+                    unsigned char   *to=   (unsigned char *) out;
+                    unsigned short  *from=  (unsigned short *) in;
+                    long   count= bytes/2;
+                    unsigned short target;
+                    RGBColor colorPixel;
+            
+                    while (count--) {
+                        target = *from++;
+                        colorPixel.red = (target & 0x7C00) >> 10;
+                        colorPixel.green = (target & 0x03E0) >> 5;
+                        colorPixel.blue = (target & 0x001F);
+                        *to++ = (unsigned char) Color2Index(&colorPixel);
+                    }
+                    in  += pitch;
+                    out += pixPitch;
+                }
+            } else if (depth == 32 && pixDepth == 8) {
+                SetPort(windowPort);
+                while (affectedH--)  {
+                    unsigned char   *to=   (unsigned char *) out;
+                    unsigned short  *from=  (unsigned short *) in;
+                    long   count= bytes/4;
+                    unsigned long target;
+                    RGBColor colorPixel;
+            
+                    while (count--) {
+                        target = *from++;
+                        colorPixel.red = (target & 0x00FF0000) >> 16;
+                        colorPixel.green = (target & 0x0000FF00) >> 8;
+                        colorPixel.blue = (target & 0x000000FF);
+                        *to++ = (unsigned char) Color2Index(&colorPixel);
+                    }
+                    in  += pitch;
+                    out += pixPitch;
+                }
             }
 
+
+
             
+#if TARGET_API_MAC_CARBON
             SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
             QDFlushPortBuffer(windowPort, maskRect);
             UnlockPortBits(windowPort);
+#endif
         }
 
         if (gWindowsIsInvisible) {
@@ -1223,6 +1266,7 @@ int ioShowDisplay(
 }
 #endif
 
+#if JMMFoo 
 #include "SurfacePlugin.h"
 
 int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* isMSB);
@@ -1323,3 +1367,4 @@ inline void DuffsDevicesCopyLong(long *to, long *from, long count) {
     }
 }
 
+#endif 
