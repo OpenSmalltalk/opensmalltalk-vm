@@ -42,4 +42,6 @@ extern void __sq_eprintf(const char *fmt, ...);
     __sq_errfunc= __FUNCTION__,			\
     __sq_eprintf )
 
+extern void sqDebugAnchor(void);
+
 #endif /* __sq_debug_h */

@@ -36,3 +36,8 @@ void __sq_eprintf(const char *fmt, ...)
   vfprintf(stderr, fmt, ap);
   va_end(ap);
 }
+
+
+void sqDebugAnchor(void)
+{
+}
