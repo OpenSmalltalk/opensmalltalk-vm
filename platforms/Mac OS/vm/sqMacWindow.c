@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.9 2002/02/12 18:20:11 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.10 2002/02/14 03:53:02 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
@@ -1204,6 +1204,14 @@ void SetUpWindow(void) {
 	Rect windowBounds = {44, 8, 300, 500};
 
 #ifndef IHAVENOHEAD
+#if TARGET_API_MAC_CARBON
+    if ((Ptr)CreateNewWindow != (Ptr)kUnresolvedCFragSymbolAddress)
+	CreateNewWindow(kDocumentWindowClass,
+            kWindowNoConstrainAttribute+kWindowStandardDocumentAttributes
+                -kWindowCloseBoxAttribute,
+            &windowBounds,&stWindow);
+    else
+#endif
 	stWindow = NewCWindow(
 		0L, &windowBounds,
 		"\p Welcome to Squeak!  Reading Squeak image file... ",
