@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.25 2003/10/03 19:06:12 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.26 2003/11/12 05:23:23 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -142,6 +142,8 @@ int ioSetFullScreen(int fullScreen) {
 	}
 }
 
+#define bytesPerLine(width, depth)	((((width)*(depth) + 31) >> 5) << 2)
+#ifndef TARGET_API_MAC_CARBON
 int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
@@ -192,20 +194,125 @@ int ioShowDisplay(
 	SetPort((GrafPtr) windowPort);
 	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(windowPort), &srcRect, &dstRect, srcCopy, maskRect);
 
-#if TARGET_API_MAC_CARBON
-/* Note I did attempt to use the logic of getting the port's update region
-   then adding in the mask region, then setting the port region, versus this flush
-   that shaves say 2 seconds off the FreeCell game 1 benchmark. However the video 
-   updating becomes jerky versus smooth, so the trade off isn't good. */
-   
-	QDFlushPortBuffer (windowPort, maskRect);
-#endif
+        if (gWindowsIsInvisible) {
+            ShowWindow(stWindow);
+            gWindowsIsInvisible = false;
+        }
+}
+#else
+int ioShowDisplay(
+	int dispBitsIndex, int width, int height, int depth,
+	int affectedL, int affectedR, int affectedT, int affectedB) {
+
+        CGrafPtr	windowPort;
+	static 		RgnHandle maskRect = nil;
+        static int	titleH=0;
+        PixMapHandle 	pix;
+        int 		pixPitch,affectedW,affectedH,pixDepth;
+        char		*pixBase;
+        
+        affectedW= affectedR - affectedL;
+        affectedH= affectedB - affectedT;
+
+	if ((stWindow == nil) || (affectedW <= 0) || (affectedH <= 0)){
+            return;
+	}
+
+        windowPort = GetWindowPort(stWindow);
+	SetPort((GrafPtr) windowPort);
+ 
+        if (maskRect == nil) {
+            Rect structureRect;
+            
+            maskRect = NewRgn();
+            GetWindowRegion(stWindow,kWindowContentRgn,maskRect);
+            GetRegionBounds(maskRect,&structureRect);
+            titleH = structureRect.top/2;
+        }
+
+        LockPortBits(windowPort); 
+        pix = GetPortPixMap(windowPort);
+        pixDepth= GetPixDepth(pix);
+        pixPitch= GetPixRowBytes(pix);
+        pixBase = ((char *)GetPixBaseAddr(pix) + ((int)titleH * pixPitch));
+        
+       {
+            int   opp=	depth / 8;	// octets per pixel
+            char  *out=	pixBase;
+            int   pitch= bytesPerLine(width, depth);
+            char *in=    (char *)dispBitsIndex + affectedL * opp + affectedT * pitch;
+            int   lines= affectedH;
+            int   bytes= affectedW * opp;
+    
+            out += (affectedL * (pixDepth/8)) + (affectedT * pixPitch);
+    
+             if (depth == pixDepth) {
+                if (bytes < 9) // empirical
+                    while (lines--) {
+                        register char *to=    out;
+                        register char *from=  in;
+                        register int   count= bytes;
+                        while (count--)
+                            *to++= *from++;
+                        in  += pitch;
+                        out += pixPitch;
+                    } 
+                else  while (lines--)  {
+                        memcpy((void *)out, (void *)in, bytes);
+                        in  += pitch;
+                        out += pixPitch;
+                    }
+            } else if ( depth == 16 && pixDepth == 32) {
+                while (lines--)  {
+                        register long   *to=    out;
+                        register short  *from=  in;
+                        register long   count= bytes/2,target;  
+                        while (count--) {
+                            target = *from++;
+                            /*r = (target & 0x00007C00);
+                            r <<= 9;
+                            g = (target &  0x000003E0);
+                            g <<= 6;
+                            b = (target & 0x0000001F);
+                            b <<= 3;
+                            *to++ =  r | g | b; */
+                            *to++ = ((target & 0x00007C00) << 9) |
+                                ((target &  0x000003E0) << 6) |
+                                ((target & 0x0000001F) << 3);
+
+                        }
+                        in  += pitch;
+                        out += pixPitch;
+                }
+            } else if (depth == 32 && pixDepth == 16) {
+                while (lines--)  {
+                        register short *to=    out;
+                        register long  *from=  in;
+                        register long   count= bytes/4,target;  
+                        while (count--) {
+                            target = *from++;
+                            *to++ = ((target & 0x00F80000) >> 9) |
+                                ((target    &  0x0000F800) >> 6) |
+                                ((target & 0x000000F8) >> 3);
+                        }
+                        in  += pitch;
+                        out += pixPitch;
+                }
+            }
+            
+            SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
+            QDFlushPortBuffer(windowPort, maskRect);
+            UnlockPortBits(windowPort);
+        }
+
         if (gWindowsIsInvisible) {
             ShowWindow(stWindow);
             gWindowsIsInvisible = false;
         }
 }
 #endif
+#endif
+
 
 void SetUpPixmap(void) {
 	int i, r, g, b;
