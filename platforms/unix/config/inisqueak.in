@@ -2,7 +2,7 @@
 # 
 # inisqueak -- setup a directory for use with Squeak
 # 
-#   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
 #     as listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -37,7 +37,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2002-09-29 05:14:34 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-31 07:31:35 by piumarta on cartman.inria.fr
 
 MAJOR=@SQ_MAJOR@
 VERSION=@SQ_VERSION@
@@ -59,12 +59,13 @@ test="`which test`"
 list=false
 startup=true
 batch=false
+interactive=true
 
 while true; do
   case "$1" in
     -l) list=true; shift;;
     -n) startup=false; shift;;
-    -b) batch=true; shift;;
+    -b) batch=true; interactive=false; shift;;
     -h|-help|--help)
         echo "`basename $0` [-option...] [rootdir]"
         echo '    -b      batch (avoid interaction, exit status reflects success)'
@@ -98,6 +99,24 @@ missing()
   exit 1
 }
 
+if ${test} \( -f squeak.image \) -a \( -f squeak.changes \) -a \( -e ${SOURCES} \)
+then
+  if ${startup}; then
+    if test ! -x ${SQUEAK}; then
+      missing "${SQUEAK}"
+    fi
+    if ${interactive}; then
+      echo "Running ${SQUEAK}";
+    fi
+    exec ${SQUEAK}
+  else
+    if ${interactive}; then
+      echo "Squeak is already installed in this directory" >&2
+    fi
+    exit 1
+  fi
+fi
+
 install()
 {
   cpy="${1}"
@@ -106,14 +125,16 @@ install()
   dst="${4}"
   if ${test} ! -e ${dst}; then
     if ${test} -e ${src}; then
-      echo "+ ${cpy} ${src} ${red} ${dst}"
-      eval    ${cpy} ${src} ${red} ${dst}
+      if ${interactive}; then
+	echo "+ ${cpy} ${src} ${red} ${dst}";
+      fi
+      eval      ${cpy} ${src} ${red} ${dst}
     else
       missing "${src}"
     fi
   else
     echo "${dst} is already present -- leaving it alone"
-    startup=false
+#   startup=false
   fi
 }
 
@@ -175,7 +196,7 @@ if ${list}; then
   IMAGE=${IMAGE}.image.gz
 fi
 
-echo "Installing ${IMAGE} in `pwd`"
+if ${interactive}; then echo "Installing ${IMAGE} in `pwd`"; fi
 
 install "ln -s"      "${imgdir}/${SOURCES}" " " "${SOURCES}"
 install "gunzip -dc" "${imgdir}/${IMAGE}"   ">" "squeak.image"
@@ -185,6 +206,8 @@ if ${startup}; then
   if test ! -x ${SQUEAK}; then
     missing "${SQUEAK}"
   fi
-  echo "Running ${SQUEAK}"
+  if ${interactive}; then
+    echo "Running ${SQUEAK}";
+  fi
   exec ${SQUEAK}
 fi
