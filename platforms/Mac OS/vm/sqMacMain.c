@@ -6,11 +6,12 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.5 2002/03/15 01:44:07 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.6 2002/03/19 21:33:33 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Mar  8th, 2002, JMM UI locking for applescript under os-x
+*  Mar  17th, 2002, JMM look into sleep wakeup issues under os-9 on some computers.
 ****************************************************************************/
 
 //#define PLUGIN to compile code for Netscape or IE Plug-in
@@ -292,7 +293,7 @@ void InitMacintosh(void) {
     InitDialogs(NULL);
     InitCursor();
     LoadScrap();
-    SetupKeyboard();	
+    //JMM causes sleep wakeup issues. SetupKeyboard();	
 }
 #endif
 
