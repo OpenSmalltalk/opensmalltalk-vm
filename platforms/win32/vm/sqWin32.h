@@ -118,6 +118,7 @@ int readableFormat(int imageVersion);
 /*************************************************************/
 
 /* #define USE_DIRECT_X */
+#define NO_DIRECTINPUT
 
 /* Definition for Intel Processors */
 #if defined(_M_IX86) || defined(i386)
