@@ -33,7 +33,7 @@
 .\"   changes these copyright conditions.  Read the file `COPYING' in the
 .\"   directory `platforms/unix/doc' before proceeding with any such use.
 .\" 
-.\" Last edited: 2003-09-03 19:53:48 by piumarta on emilia.inria.fr
+.\" Last edited: 2003-09-16 07:05:38 by piumarta on emilia.inria.fr
 .\" 
 .if @@\*(lq@ \{\
 .	ds lq "
@@ -449,6 +449,14 @@ of the cursor and Delete normally deletes the character
 to the right of the cursor.  With this option, Deletes will behave like
 Backspace.  The behaviour of Backspace is not changed.
 .TP
+.B \-nointl
+disables the handling of dead keys on international keyboards.
+Without this option, dead key handling is enabled if either
+.B LC_ALL
+or
+.B LC_CTYPE
+is set in the environment.
+.TP
 .B \-notitle
 disables the title bar on the Squeak window (if the window manager supports it).
 This option is implied by '\c
@@ -658,6 +666,11 @@ if set, equivalent to '\c
 .B \-noevents\c
 \&'.
 .TP
+.B SQUEAK_NOINTL
+equivalent to '\c
+.B \-nointl\c
+\&' if set.
+.TP
 .B SQUEAK_NOMIXER
 equivalent to '\c
 .B \-nomixer\c
@@ -712,6 +725,32 @@ precedence.  The exception to this rule is the '\-vm' option.
 Environment variables are processed before command-line arguments and
 \&'\-vm' cannnot be used to unload a driver that was loaded while
 processing the contents of 'SQUEAK_VM'.
+.PP
+.B squeak
+also checks the environment for
+.B LC_ALL
+and
+.B LC_CTYPE\c
+\&.  If either of these variables is set then support for
+international keyboards (including dead keys for diacritical marks) is
+enabled.  To prevent this support being enabled even when one or both
+of these variables is set, use the '\-nointl' option (or set
+.B SQUEAK_NOINTL
+in the environment).  For example, to start
+.B squeak
+with support for dead keys on Spanish keyboards, with Latin-1 encoding
+of external characters and the default MacRoman internal font
+encoding, run
+.B squeak
+like this:
+.sp
+.RS
+.nf
+export LC_CTYPE=es_ES
+export SQUEAK_TEXTENC=latin1
+squeak
+.fi
+.RE
 .SH SCRIPTS
 Squeak can load and execute a 'script' file containing Smalltalk code at
 startup.  The name of the file should be given as the
