@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.4 2002/03/04 02:03:19 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.5 2002/03/04 02:36:34 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -186,7 +186,7 @@ Boolean hasFileMapping(void)
     UInt32	response;
     OSErr	error;
     
-    error = Gestalt(gestaltVMFilemappingOn, 
+    error = Gestalt(gestaltFileMappingAttr, 
                     (SInt32 *) &response);
     return ((error == noErr)
                 && response);
