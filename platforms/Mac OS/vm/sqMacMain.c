@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.2 2002/02/23 11:25:43 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.3 2002/03/01 00:21:26 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -54,7 +54,9 @@
 *	1/27/2002  JMM added logic to get framework bundles 
 *	2/04/2002  JMM Rework timer logic, fall back to old style timer, which is pthread based.
 *	2/14/2002  JMM fixes for updatewindow logic and drag/drop image with no file type
+*	2/25/2002  JMM additions for carbon event managment.
 */
+
 
 #if !TARGET_API_MAC_CARBON 
 #include <Power.h>
@@ -76,6 +78,11 @@
 QDGlobals 		qd;
 #endif
 
+#if I_AM_CARBON_EVENT
+    #include <pthread.h>
+    extern pthread_mutex_t gEventQueueLock;
+#endif
+ 
 extern char shortImageName[];
 extern char documentName[];
 extern char vmPath[];
@@ -83,7 +90,6 @@ extern int  fullScreenFlag;
 extern long gDisableIdleTickLimit;
 extern unsigned char *memory;
 extern squeakFileOffsetType calculateStartLocationForImage();
-
 Boolean         gTapPowerManager=false;
 Boolean         gDisablePowerManager=false;
 Boolean         gThreadManager=false;
@@ -104,6 +110,7 @@ void ExitCleanup();
 void PowerMgrCheck(void);
 OSErr   createNewThread();
 static pascal void* squeakThread(void *threadParm);
+void SetUpCarbonEvent();
   
 /*** Main ***/
 
@@ -116,34 +123,6 @@ int main(void) {
         long threadGestaltInfo;
         FSSpec	workingDirectory;
         
- 	InitMacintosh();
-	PowerMgrCheck();
-	
-	SetUpMenus();
-	SetUpClipboard();
-	SetUpWindow();
-	
-	SetEventMask(everyEvent); // also get key up events
-	
-        SetUpTimers();
-        
-	/* install apple event handlers and wait for open event */
-	imageName[0] = shortImageName[0] = documentName[0] = vmPath[0] = 0;
-	InstallAppleEventHandlers();
-	while (shortImageName[0] == 0) {
-		GetNextEvent(everyEvent, &theEvent);
-		if (theEvent.what == kHighLevelEvent) {
-			AEProcessAppleEvent(&theEvent);
-		}
-	}
-	if (imageName[0] == 0) {
-		err = GetApplicationDirectory(&workingDirectory);
-		if (err != noErr) 
-                    error("Could not obtain default directory");
-                CopyCStringToPascal("squeak.image",workingDirectory.name);
-		PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
-	}
-
 	/* check the interpreter's size assumptions for basic data types */
 	if (sizeof(int) != 4) {
 		error("This C compiler's integers are not 32 bits.");
@@ -153,6 +132,34 @@ int main(void) {
 	}
 	if (sizeof(time_t) != 4) {
 		error("This C compiler's time_t's are not 32 bits.");
+	}
+
+ 	InitMacintosh();
+	PowerMgrCheck();
+	
+	SetUpMenus();
+	SetUpClipboard();
+	SetUpWindow();
+        SetUpTimers();
+#ifndef I_AM_CARBON_EVENT
+	SetEventMask(everyEvent); // also get key up events
+#endif
+	/* install apple event handlers and wait for open event */
+	imageName[0] = shortImageName[0] = documentName[0] = vmPath[0] = 0;
+	InstallAppleEventHandlers();
+	while (shortImageName[0] == 0) {
+		GetNextEvent(everyEvent, &theEvent);
+		if (theEvent.what == kHighLevelEvent) {
+			AEProcessAppleEvent(&theEvent);
+		}
+	}
+                
+	if (imageName[0] == 0) {
+		err = GetApplicationDirectory(&workingDirectory);
+		if (err != noErr) 
+                    error("Could not obtain default directory");
+                CopyCStringToPascal("squeak.image",workingDirectory.name);
+		PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
 	}
 
 	/* compute the desired memory allocation */
@@ -169,7 +176,8 @@ int main(void) {
 	if (RunningOnCarbonX())
 	    availableMemory = 512*1024*1024 - reservedMemory;
 	else 
-    	availableMemory = MaxBlock() - reservedMemory;
+            availableMemory = MaxBlock() - reservedMemory;
+            
 	/******
 	  Note: This is platform-specific. On the Mac, the user specifies the desired
 	    memory partition for each application using the Finder's Get Info command.
@@ -203,7 +211,7 @@ int main(void) {
 	    err =  makeFSSpec(vmPath,vmPathSize(),&vmfsSpec);
 	    if (err) 
 	        ioExit();
-		err = squeakFindImage(&vmfsSpec,&imageFsSpec);
+            err = squeakFindImage(&vmfsSpec,&imageFsSpec);
 	    if (err) 
 	        ioExit();
 	    CopyPascalStringToC(imageFsSpec.name,shortImageName);
@@ -219,6 +227,7 @@ int main(void) {
 	
 	readImageFromFileHeapSizeStartingAt(f, availableMemory, calculateStartLocationForImage());
 	sqImageFileClose(f);
+        
 #ifndef MINIMALVM
 	 ioLoadFunctionFrom(NULL, "DropPlugin");
 #endif
@@ -232,7 +241,25 @@ int main(void) {
 	atexit(SqueakTerminate);
 #endif
 
-#if !defined(MINIMALVM)  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    {
+     pthread_t thread;
+    
+     gThreadManager = false;
+    /* run Squeak */
+#if I_AM_CARBON_EVENT
+    //squeakThread(0);
+    pthread_mutex_init(&gEventQueueLock, NULL);
+    SetUpCarbonEvent();
+    err = pthread_create(&thread,null,interpret, null);
+    if (err == 0) {
+        RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
+    }
+    return;
+#endif
+    }
+#else
+#if !defined(MINIMALVM)  
     if( Gestalt( gestaltThreadMgrAttr, &threadGestaltInfo) == noErr &&
         threadGestaltInfo & (1<<gestaltThreadMgrPresent) &&
         ((Ptr) NewThread != (Ptr)kUnresolvedCFragSymbolAddress)) {
@@ -241,16 +268,16 @@ int main(void) {
         if (err == noErr) {
             while(true)  {
                 ioProcessEvents();
-        		YieldToAnyThread();
+        		SqueakYieldToAnyThread();
             }
             return;
         }
-    }        
+    }
 #endif
-
     gThreadManager = false;
     /* run Squeak */
     squeakThread(0);
+#endif
 }
 #endif
 
@@ -274,29 +301,32 @@ static pascal void* squeakThread(void *threadParm) {
 #	endif
 }
 
-#ifdef MINIMALVM
-pascal short YieldToAnyThread(void) {
-}
+pascal short SqueakYieldToAnyThread(void) {
+#ifndef I_AM_CARBON_EVENT
+    YieldToAnyThread();
 #endif
+}
 
 #if TARGET_API_MAC_CARBON
 void InitMacintosh(void) {
+#ifndef I_AM_CARBON_EVENT
 	FlushEvents(everyEvent, 0);
+#endif
 	LoadScrap();
 	InitCursor();
 }
 #else
 void InitMacintosh(void) {
-	MaxApplZone();
-	InitGraf(&qd.thePort);
-	InitFonts();
-	FlushEvents(everyEvent, 0);
-	InitWindows();
-	InitMenus();
-	TEInit();
-	InitDialogs(NULL);
-	InitCursor();
-	LoadScrap();
+    MaxApplZone();
+    InitGraf(&qd.thePort);
+    InitFonts();
+    FlushEvents(everyEvent, 0);
+    InitWindows();
+    InitMenus();
+    TEInit();
+    InitDialogs(NULL);
+    InitCursor();
+    LoadScrap();
     SetupKeyboard();	
 }
 #endif
@@ -364,10 +394,8 @@ void SqueakTerminate() {
 
 int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, double vScale, int landscapeFlag) {
 	/* experimental: print a form with the given bitmap, width, height, and depth at
-	   the given horizontal and vertical scales in the given orientation */
-	printf("ioFormPrint width %d height %d depth %d hScale %f vScale %f landscapeFlag %d\n",
-		width, height, depth, hScale, vScale, landscapeFlag);
-	bitsAddr;
+	   the given horizontal and vertical scales in the given orientation
+           However John Mcintosh has introduced a printjob class and plugin to replace this primitive */
 	return true;
 }
 
