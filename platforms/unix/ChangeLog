@@ -1,3 +1,44 @@
+2003-08-14  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* src/plugins/XDisplayControlPlugin/XDisplayControlPlugin.c:
+	Generate new plugin source.
+
+	* src/plugins/UnixOSProcessPlugin/UnixOSProcessPlugin.c:
+	Regenerate source from version 3.1.1.
+
+	* platforms/unix/plugins/XDisplayControlPlugin/acinclude.m4:
+	Disable plugin when X is not available.
+
+	* platforms/unix/plugins/XDisplayControlPlugin/Makefile.inc (XCPPFLAGS):
+	Add X includes and libs to compile/link command.
+ 
+	* platforms/unix/plugins/UnixOSProcessPlugin/acinclude.m4:
+	Deleted.
+
+	* platforms/unix/plugins/UnixOSProcessPlugin/Makefile.inc (XCPPFLAGS):
+	Remove X includes and libs.
+
+	* platforms/unix/vm/sqUnixExternalPrims.c (tryLoading): Don't skip
+	non-existent files (for default search).  Only print dlerror
+	message when file exists.
+
+2003-08-14  Ian Piumarta  <piumarta@ina.inria.fr>
+
+	* platforms/unix/doc/squeak.1: Update for new options and module
+	system.
+
+	* platforms/unix/npsqueak/Makefile (npsqueak.so, npsqueakrun,
+	npsqueakregister): Use explicit first dependency rather than $<
+	(for BSD make).
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c: Provide PRIMARY
+	rather than CLIPBOARD for Squeak selection when requestor clears
+	CUT_BUFFER0.
+
+	* platforms/unix/vm/sqUnixExternalPrims.c (ioLoadModule): Search X11
+	library path for plugins.
+	(ioLoadModule): Search build location for plugins.
+
 2003-08-08  Ian Piumarta  <piumarta@cartman.inria.fr>
 
 	* platforms/unix/plugins/B3DAcceleratorPlugin/Makefile.inc
