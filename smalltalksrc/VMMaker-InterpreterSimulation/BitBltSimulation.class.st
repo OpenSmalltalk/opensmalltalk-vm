@@ -2384,7 +2384,7 @@ BitBltSimulation >> primitiveDisplayString [
 
 	| kernDelta xTable glyphMap stopIndex startIndex sourceString bbObj maxGlyph ascii glyphIndex sourcePtr left quickBlt |
 	self export: true.
-	self var: #sourcePtr type: 'unsigned char *'.
+	self var: #sourcePtr type: 'char *'.
 	interpreterProxy methodArgumentCount = 6 
 		ifFalse:[^interpreterProxy primitiveFail].
 	kernDelta _ interpreterProxy stackIntegerValue: 0.
