@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacFFIPPC.c,v 1.1 2001/10/24 23:13:45 rowledge Exp $
+*   RCSID:   $Id: sqMacFFIPPC.c,v 1.2 2002/02/01 07:05:09 johnmci Exp $
 *
 *   NOTES:
 *
@@ -27,29 +27,30 @@ extern struct VirtualMachine *interpreterProxy;
 #define FP_MAX_REGS 13
 
 /* Values passed in GPR3-GPR10 */
-static int GPRegs[8];
+int GPRegs[8];
+
 /* Nr of GPRegs used so far */
-static int gpRegCount = 0;
+ int gpRegCount = 0;
 /* Values passed in FPR1-FPR13 */
-static double FPRegs[13];
+ double FPRegs[13];
 /* Nr of FPRegs used so far */
-static int fpRegCount = 0;
+ int fpRegCount = 0;
 
 /* Max stack size */
 #define FFI_MAX_STACK 512
 /* The stack used to assemble the arguments for a call */
-static int   ffiStack[FFI_MAX_STACK];
+int   ffiStack[FFI_MAX_STACK];
 /* The stack pointer while filling the stack */
-static int   ffiStackIndex = 0;
+ int   ffiStackIndex = 0;
 /* The area for temporarily allocated strings */
 static char *ffiTempStrings[FFI_MAX_STACK];
 /* The number of temporarily allocated strings */
 static int   ffiTempStringCount = 0;
 
 /* The return values for calls */
-static int      intReturnValue;
-static LONGLONG longReturnValue;
-static double   floatReturnValue;
+ int      intReturnValue;
+ LONGLONG longReturnValue;
+ double   floatReturnValue;
 static int *structReturnValue = NULL;
 
 /**************************************************************/
@@ -336,9 +337,16 @@ int ffiCleanup(void)
 	return 1;
 }
 
-
+int  ffiStackLocation=&ffiStack;
+int  FPRegsLocation=&FPRegs;
+int  GPRegsLocation=&GPRegs;
+int  longReturnValueLocation=&longReturnValue;
+int  floatReturnValueLocation=&floatReturnValue;
 /*****************************************************************************/
 /*****************************************************************************/
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+extern int ffiCallAddressOf(int);
+#else
 asm int ffiCallAddressOf(int);
 
 #if TARGET_CPU_PPC
@@ -443,9 +451,7 @@ _0_gpregs:
 	mtlr r0
 	blr
 }
-#else
-asm int ffiCallAddressOf(int addr) {
-}
+#endif
 #endif
 
 int ffiCallAddressOfWithPointerReturn(int fn, int callType)
