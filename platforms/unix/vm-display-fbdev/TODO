@@ -1,23 +1,15 @@
-32-bit display support
-
-manual fb mode switch via command-line option
+option: fb mode switch at startup
+option: mapdelbs for 127 -> 8
+option: enable VT switch with Alt-Fn
+option: find and run on a free VT rather than taking over the active one
+option: mouse acceleration
 
 attempt auto mode switch for 16-bit (565 -> 555 to eliminate pixel repack)
 
 ImPS/2 and USB mouse protocols
 
-alternative keyboard maps (sucked in from /usr/share/keymaps)
-
-clipboard
+keyboard maps from /usr/share/keymaps or /lib/kbd/keymaps
 
 printing
 
-mapdelbs option to enable 127 -> 8 backspace mapping
-
-option to enable VT switch with Alt-Fn
-
-option to find and run on a free VT rather than taking over the active one
-
 make it play nice when launched from within X11
-
-mouse acceleration
