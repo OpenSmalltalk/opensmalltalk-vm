@@ -64,7 +64,7 @@ static inline void mpeg3bits_fill_reverse_bits(mpeg3_bits_t* stream, int bits)
 }
 
 /* Read bytes forward from the file until the forward_bits is full. */
-extern inline void mpeg3bits_fill_bits(mpeg3_bits_t* stream, int bits)
+static inline void mpeg3bits_fill_bits(mpeg3_bits_t* stream, int bits)
 {
 	while(stream->bit_number < bits)
 	{
@@ -84,7 +84,7 @@ extern inline void mpeg3bits_fill_bits(mpeg3_bits_t* stream, int bits)
 }
 
 /* Return 8 bits, advancing the file position. */
-extern inline unsigned int mpeg3bits_getbyte_noptr(mpeg3_bits_t* stream)
+static inline unsigned int mpeg3bits_getbyte_noptr(mpeg3_bits_t* stream)
 {
 	if(stream->bit_number < 8)
 	{
@@ -102,7 +102,7 @@ extern inline unsigned int mpeg3bits_getbyte_noptr(mpeg3_bits_t* stream)
 	return (stream->bfr >> (stream->bit_number -= 8)) & 0xff;
 }
 
-extern inline unsigned int mpeg3bits_getbit_noptr(mpeg3_bits_t* stream)
+static inline unsigned int mpeg3bits_getbit_noptr(mpeg3_bits_t* stream)
 {
 	if(!stream->bit_number)
 	{
@@ -121,14 +121,14 @@ extern inline unsigned int mpeg3bits_getbit_noptr(mpeg3_bits_t* stream)
 
 /* Return n number of bits, advancing the file position. */
 /* Use in place of flushbits */
-extern inline unsigned int mpeg3bits_getbits(mpeg3_bits_t* stream, int bits)
+static inline unsigned int mpeg3bits_getbits(mpeg3_bits_t* stream, int bits)
 {
 	if(bits <= 0) return 0;
 	mpeg3bits_fill_bits(stream, bits);
 	return (stream->bfr >> (stream->bit_number -= bits)) & (0xffffffff >> (32 - bits));
 }
 
-extern inline unsigned int mpeg3bits_showbits24_noptr(mpeg3_bits_t* stream)
+static inline unsigned int mpeg3bits_showbits24_noptr(mpeg3_bits_t* stream)
 {
 	while(stream->bit_number < 24)
 	{
@@ -141,7 +141,7 @@ extern inline unsigned int mpeg3bits_showbits24_noptr(mpeg3_bits_t* stream)
 	return (stream->bfr >> (stream->bit_number - 24)) & 0xffffff;
 }
 
-extern inline unsigned int mpeg3bits_showbits32_noptr(mpeg3_bits_t* stream)
+static inline unsigned int mpeg3bits_showbits32_noptr(mpeg3_bits_t* stream)
 {
 	while(stream->bit_number < 32)
 	{
@@ -154,13 +154,13 @@ extern inline unsigned int mpeg3bits_showbits32_noptr(mpeg3_bits_t* stream)
 	return stream->bfr;
 }
 
-extern inline unsigned int mpeg3bits_showbits(mpeg3_bits_t* stream, int bits)
+static inline unsigned int mpeg3bits_showbits(mpeg3_bits_t* stream, int bits)
 {
 	mpeg3bits_fill_bits(stream, bits);
 	return (stream->bfr >> (stream->bit_number - bits)) & (0xffffffff >> (32 - bits));
 }
 
-extern inline unsigned int mpeg3bits_getbits_reverse(mpeg3_bits_t* stream, int bits)
+static inline unsigned int mpeg3bits_getbits_reverse(mpeg3_bits_t* stream, int bits)
 {
 	unsigned int result;
 	mpeg3bits_fill_reverse_bits(stream, bits);
@@ -169,7 +169,7 @@ extern inline unsigned int mpeg3bits_getbits_reverse(mpeg3_bits_t* stream, int b
 	return result;
 }
 
-extern inline unsigned int mpeg3bits_showbits_reverse(mpeg3_bits_t* stream, int bits)
+static inline unsigned int mpeg3bits_showbits_reverse(mpeg3_bits_t* stream, int bits)
 {
 	unsigned int result;
 	mpeg3bits_fill_reverse_bits(stream, bits);
