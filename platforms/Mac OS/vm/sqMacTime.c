@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.6 2002/03/19 21:32:44 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.7 2002/03/25 07:07:26 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -171,6 +171,15 @@ int ioMicroMSecs(void) {
     return ioMicroMSecsExpensive();
 }
 #endif
+
+int ioLowResMSecs(void)
+{
+  double convert;
+  
+  convert = TickCount();
+  convert = convert*1000.0/60.0;
+  return convert;
+}
 
 #endif
 
