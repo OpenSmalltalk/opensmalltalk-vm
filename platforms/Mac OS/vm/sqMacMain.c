@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.12 2002/09/30 23:54:23 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.13 2003/03/05 19:52:18 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -86,10 +86,12 @@ QDGlobals 		qd;
 
 #if I_AM_CARBON_EVENT
     #include <pthread.h>
-    extern pthread_mutex_t gEventQueueLock,gEventUILock;
-    extern pthread_cond_t  gEventUILockCondition;
+    extern pthread_mutex_t gEventQueueLock,gEventUILock,gEventDrawLock,gSleepLock;
+    extern pthread_cond_t  gEventUILockCondition,gSleepLockCondition;
+
+    pthread_t gSqueakPThread;
 #endif
- 
+
 extern char shortImageName[];
 extern char documentName[];
 extern char vmPath[];
@@ -246,13 +248,12 @@ int main(void) {
 
 #if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
     {
-    pthread_t thread;
     
     gThreadManager = false;
     pthread_mutex_init(&gEventQueueLock, NULL);
     pthread_mutex_init(&gEventUILock, NULL);
     pthread_cond_init(&gEventUILockCondition,NULL);
-    err = pthread_create(&thread,null,(void *) interpret, null);
+    err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
     if (err == 0) {
         SetUpCarbonEvent();
         RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
@@ -282,15 +283,36 @@ int main(void) {
 }
 #endif
 
+#ifdef PLUGIN
+OSErr createNewThread() {
+#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
+    {
+        OSErr err;
+        
+        gThreadManager = false;
+        pthread_mutex_init(&gEventQueueLock, NULL);
+        pthread_mutex_init(&gEventUILock, NULL);
+        pthread_mutex_init(&gEventDrawLock, NULL);
+        pthread_cond_init(&gEventUILockCondition,NULL);
+        err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
+    }
+    #else
+        gSqueakThreadUPP = NewThreadEntryUPP(squeakThread); //We should dispose of someday
+	return NewThread( kCooperativeThread, gSqueakThreadUPP, nil, 80*1024, kCreateIfNeeded+kNewSuspend, 0L, &gSqueakThread);
+    #endif
+}
 
+#else
 OSErr createNewThread() {
     gSqueakThreadUPP = NewThreadEntryUPP(squeakThread); //We should dispose of someday
- 
-#ifndef PLUGIN
-	return NewThread( kCooperativeThread, gSqueakThreadUPP, nil, 80*1024, kCreateIfNeeded, 0L, &gSqueakThread);
-#else
-	return NewThread( kCooperativeThread, gSqueakThreadUPP, nil, 80*1024, kCreateIfNeeded+kNewSuspend, 0L, &gSqueakThread);
+    return NewThread( kCooperativeThread, gSqueakThreadUPP, nil, 80*1024, kCreateIfNeeded, 0L, &gSqueakThread);
+}
+
 #endif
+pascal short SqueakYieldToAnyThread(void) {
+#if !defined( I_AM_CARBON_EVENT) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
+    YieldToAnyThread();
+    #endif
 }
 
 static pascal void* squeakThread(void *threadParm) {
@@ -302,11 +324,6 @@ static pascal void* squeakThread(void *threadParm) {
 #	endif
 }
 
-pascal short SqueakYieldToAnyThread(void) {
-#ifndef I_AM_CARBON_EVENT
-    YieldToAnyThread();
-#endif
-}
 
 #if TARGET_API_MAC_CARBON
 void InitMacintosh(void) {
@@ -538,6 +555,16 @@ int plugInShutdown(void) {
 	if (memory != nil) {
         if (gThreadManager)
 	        DisposeThread(gSqueakThread,null,true);
+#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
+        pthread_cancel(gSqueakPThread);
+        pthread_join(gSqueakPThread,NULL);
+        pthread_mutex_destroy(&gEventQueueLock);
+        pthread_mutex_destroy(&gEventUILock);
+        pthread_mutex_destroy(&gEventDrawLock);
+        pthread_mutex_destroy(&gSleepLock);
+        pthread_cond_destroy(&gEventUILockCondition);
+        pthread_cond_destroy(&gSleepLockCondition);
+#endif        
 	    sqMacMemoryFree();
 	}
 }
