@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.21 2004/08/03 02:40:39 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.22 2004/09/22 18:52:05 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -175,7 +175,6 @@ int main(void) {
 	SetUpMenus();
 	SetUpClipboard();
         fetchPrefrences();
-	SetUpWindow();
 
 #ifndef I_AM_CARBON_EVENT
 	SetEventMask(everyEvent); // also get key up events
@@ -252,6 +251,7 @@ int main(void) {
 	
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
 	sqImageFileClose(f);
+	SetUpWindow();
         
 #ifndef MINIMALVM
 	 ioLoadFunctionFrom(NULL, "DropPlugin");
