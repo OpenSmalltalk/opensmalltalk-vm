@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.7 2002/05/26 18:55:14 andreasraab Exp $
+*   RCSID:   $Id: sqWin32FilePrims.c,v 1.8 2003/06/21 18:15:57 andreasraab Exp $
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -20,12 +20,15 @@
 #include "sq.h"
 #include "FilePlugin.h"
 
+extern struct VirtualMachine *interpreterProxy;
+
 #ifdef WIN32_FILE_SUPPORT
 
 #define true  1
 #define false 0
 
 #define FILE_HANDLE(f) ((HANDLE) (f)->file)
+#define FAIL() return interpreterProxy->primitiveFail()
 
 /***
     The state of a file is kept in the following structure,
@@ -48,7 +51,9 @@
 
 /*** Variables ***/
 int thisSession = 0;
-//extern unsigned char *memory;
+
+/* answers if the file name in question has a case-sensitive duplicate */
+int hasCaseSensitiveDuplicate(TCHAR *path);
 
 typedef union {
   struct {
@@ -66,7 +71,7 @@ int sqFileThisSession(void) {
 int sqFileAtEnd(SQFile *f) {
   win32FileOffset ofs;
   /* Return true if the file's read/write head is at the end of the file. */
-  if (!sqFileValid(f)) return success(false);
+  if (!sqFileValid(f)) FAIL();
   ofs.offset = 0;
   ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
   return ofs.offset == f->fileSize;
@@ -75,8 +80,8 @@ int sqFileAtEnd(SQFile *f) {
 int sqFileClose(SQFile *f) {
   /* Close the given file. */
 
-  if (!sqFileValid(f)) return success(false);
-  if(!CloseHandle(FILE_HANDLE(f))) return success(false);
+  if (!sqFileValid(f)) FAIL();
+  if(!CloseHandle(FILE_HANDLE(f))) FAIL();
   f->file = NULL;
   f->sessionID = 0;
   f->writable = false;
@@ -87,20 +92,18 @@ int sqFileClose(SQFile *f) {
 int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize) {
 
   TCHAR *win32Path;
-  if (sqFileNameSize >= MAX_PATH) {
-    return success(false);
-  }
+  if (sqFileNameSize >= MAX_PATH) FAIL();
   /* copy the file name into a null-terminated C string */
   win32Path = fromSqueak((char*)sqFileNameIndex, sqFileNameSize);
-  if(!DeleteFile(win32Path))
-    return success(false);
+  if(hasCaseSensitiveDuplicate(win32Path)) FAIL();
+  if(!DeleteFile(win32Path)) FAIL();
   return 1;
 }
 
 squeakFileOffsetType sqFileGetPosition(SQFile *f) {
   win32FileOffset ofs;
   /* Return the current position of the file's read/write head. */
-  if (!sqFileValid(f)) return success(false);
+  if (!sqFileValid(f)) FAIL();
   ofs.offset = 0;
   ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
   return ofs.offset;
@@ -129,7 +132,11 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
   */
   HANDLE h;
   TCHAR *win32Path = fromSqueak((char*)sqFileNameIndex, sqFileNameSize);
-
+  if(hasCaseSensitiveDuplicate(win32Path)) {
+    f->sessionID = 0;
+    f->fileSize = 0;
+    FAIL();
+  }
   h = CreateFile(win32Path,
                  writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
                  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
@@ -140,7 +147,7 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
   if(h == INVALID_HANDLE_VALUE) {
     f->sessionID = 0;
     f->fileSize = 0;
-    return success(false);
+    FAIL();
   } else {
     win32FileOffset ofs;
     f->sessionID = thisSession;
@@ -164,7 +171,7 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t star
   */
   DWORD dwReallyRead;
 
-  if (!sqFileValid(f)) return success(false);
+  if (!sqFileValid(f)) FAIL();
   ReadFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex+startIndex), count, &dwReallyRead, NULL);
   return (int)dwReallyRead;
 }
@@ -173,9 +180,8 @@ int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameInd
 {
   TCHAR *oldPath = fromSqueak((char*)oldNameIndex, oldNameSize);
   TCHAR *newPath = fromSqueak2((char*)newNameIndex,newNameSize);
-
-  if(!MoveFile(oldPath, newPath))
-    return success(false);
+  if(hasCaseSensitiveDuplicate(oldPath)) FAIL();
+  if(!MoveFile(oldPath, newPath)) FAIL();
   return 1;
 }
 
@@ -184,7 +190,7 @@ int sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
   win32FileOffset ofs;
   ofs.offset = position;
   /* Set the file's read/write head to the given position. */
-  if (!sqFileValid(f)) return success(false);
+  if (!sqFileValid(f)) FAIL();
   SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
   return 1;
 }
@@ -192,12 +198,12 @@ int sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
 squeakFileOffsetType sqFileSize(SQFile *f) {
   /* Return the length of the given file. */
   
-  if (!sqFileValid(f)) return success(false);
+  if (!sqFileValid(f)) FAIL();
   return f->fileSize;
 }
 
 int sqFileFlush(SQFile *f) {
-  if (!sqFileValid(f)) return success(false);
+  if (!sqFileValid(f)) FAIL();
   /* note: ignores the return value in case of read-only access */
   FlushFileBuffers(FILE_HANDLE(f));
   return 1;
@@ -206,7 +212,7 @@ int sqFileFlush(SQFile *f) {
 int sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
   win32FileOffset ofs;
   ofs.offset = offset;
-  if (!sqFileValid(f)) return success(false);
+  if (!sqFileValid(f)) FAIL();
   SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
   if(!SetEndOfFile(FILE_HANDLE(f))) return 0;
   return 1;
@@ -226,7 +232,7 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t sta
   */
   DWORD dwReallyWritten;
   win32FileOffset ofs;
-  if (!(sqFileValid(f) && f->writable)) return success(false);
+  if (!(sqFileValid(f) && f->writable)) FAIL();
 
   WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
   /* update file size */
@@ -234,9 +240,7 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t sta
   ofs.dwLow = GetFileSize(FILE_HANDLE(f), &ofs.dwHigh);
   f->fileSize = ofs.offset;
   
-  if ((int)dwReallyWritten != count) {
-    success(false);
-  }
+  if ((int)dwReallyWritten != count) FAIL();
   return (int) dwReallyWritten;
 }
 
@@ -265,6 +269,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode)
       modePtr++;
     }
   win32Path = fromSqueak(fileName, strlen(fileName));
+  if(hasCaseSensitiveDuplicate(win32Path)) return 0;
   h = CreateFile(win32Path,
                  writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
                  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
