@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.7 2002/09/27 19:58:20 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.8 2003/05/19 07:20:07 johnmci Exp $
 * 
 *   NOTES:
 *
@@ -14,6 +14,7 @@
 *   Changes Jun 2001 JMM browser internal plugin support
 * 	Changes Jan 2002 JMM carbon cleanup
 *  Feb 26th, 2002, JMM - use carbon get dominate device 
+*  Apr 3rd, 2003, JMM - use BROWSERPLUGIN 
 *
 *****************************************************************************/
 #include <stdio.h>
@@ -41,11 +42,6 @@
 #include "B3DAcceleratorPlugin.h"
 #include "sqMacOpenGL.h"
 #include "sqOpenGLRenderer.h"
-
-//#define PLUGIN
-#ifdef PLUGIN
-	#define BROWSERPLUGIN
-#endif
 
 #define INTERNAL
 

@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacExternalPrims.c,v 1.3 2003/02/08 18:31:33 johnmci Exp $
+*   RCSID:   $Id: sqMacExternalPrims.c,v 1.4 2003/05/19 07:19:49 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -36,7 +36,7 @@ int ioLoadModule(char *pluginName) {
     	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
 	strcpy(pluginDirPath, vmPath);
 	
-#ifdef PLUGIN
+#ifdef BROWSERPLUGIN
 	strcat(pluginDirPath, ":Plugins");
 #else
 	strcat(pluginDirPath, "Plugins");
@@ -45,7 +45,7 @@ int ioLoadModule(char *pluginName) {
     libHandle = LoadLibViaPath(pluginName, pluginDirPath);
 	if (libHandle != nil) return (int) libHandle;
 
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
 	/* second, look directly in Squeak VM directory for the library */
 	libHandle = LoadLibViaPath(pluginName, vmPath);
 	if (libHandle != nil) return (int) libHandle;

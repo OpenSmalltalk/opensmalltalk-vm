@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.9 2003/03/05 19:54:29 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.10 2003/05/19 07:20:02 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -29,7 +29,7 @@ Relationship of this file to sqMacWindow.c:
 One can think of this file as specializing and extending sqMacWindow.c
 for running within a browser. Certain methods in  sqMacWindow.c are
 replaced by functions defined here. The originals are removed from
-sqMacWindow.c by defining the PLUGIN flag in that file when compiling.
+sqMacWindow.c by defining the BROWSERPLUGIN flag in that file when compiling.
 Here is a list of the functions overridden:
 
 	ioExit()
@@ -108,7 +108,7 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 *	  using Squeak's own HTTPSocket.
 *
 **********/
-#define ENABLE_URL_FETCH  
+//#define ENABLE_URL_FETCH  
 #define IMAGE_NAME "SqueakPlugin.image"
 #define VMPATH_SIZE 300
 

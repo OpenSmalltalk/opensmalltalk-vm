@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.13 2003/03/05 19:57:48 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.14 2003/05/19 07:20:12 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -131,7 +131,7 @@ char modifierMap[256] = {
 void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command);
 Boolean IsKeyDown(void);    
 
-#if !defined(I_AM_CARBON_EVENT) || PLUGIN
+#if !defined(I_AM_CARBON_EVENT) || BROWSERPLUGIN
 int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
@@ -140,7 +140,7 @@ int ioProcessEvents(void) {
 	static unsigned long   nextPollTick = 0, nextPowerCheck=0, disableIdleTickLimit=0;
 	unsigned long   clockTime;
 
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
     clockTime = ioLowResMSecs();
 	if (abs(nextPollTick - clockTime) >= 16) {
 		/* time to process events! */
@@ -1842,7 +1842,7 @@ int ModifierStateCarbon(EventRef event,UInt32 whatHappened) {
 }
 
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData) {
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
     if (gDisablePowerManager && gTapPowerManager) {
         IdleUpdate();
 #if !defined(MINIMALVM)
@@ -1852,7 +1852,7 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 #endif
 }
 
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
 int ioProcessEvents(void) {
     if (gQuitNowRightNow) {
         ioExit();  //This might not return, might call exittoshell

@@ -6,16 +6,17 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.13 2003/03/05 19:52:18 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.14 2003/05/19 07:19:54 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Mar  8th, 2002, JMM UI locking for applescript under os-x
 *  Mar  17th, 2002, JMM look into sleep wakeup issues under os-9 on some computers.
 *  Apr  17th, 2002, JMM Use accessors for VM variables, add os-9 check, plus changes by Alain Fischer <alain.fischer@bluewin.ch> to look for image and fetch VM version under os-x
+*  Apr  3rd, 2003, JMM use BROWSERPLUGIN
 ****************************************************************************/
 
-//#define PLUGIN to compile code for Netscape or IE Plug-in
+//#define BROWSERPLUGIN to compile code for Netscape or IE Plug-in
 //#define IHAVENOHEAD for no head
 //#define MINIMALVM to make small small vm
 
@@ -104,7 +105,7 @@ Boolean         gThreadManager=false;
 ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
 
-#ifdef PLUGIN
+#ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
 extern int pluginArgCount;
 extern char *pluginArgName[100];
@@ -122,7 +123,7 @@ void SetUpCarbonEvent();
   
 /*** Main ***/
 
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 /*** Variables -- globals for access from pluggable primitives ***/
 int    argCnt= 0;
@@ -283,7 +284,7 @@ int main(void) {
 }
 #endif
 
-#ifdef PLUGIN
+#ifdef BROWSERPLUGIN
 OSErr createNewThread() {
 #if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
     {
@@ -394,7 +395,7 @@ int ioBeep(void) {
 	SysBeep(1000);
 }
 
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
 int ioExit(void) {
     UnloadScrap();
     ioShutdownAllModules();
@@ -405,7 +406,7 @@ int ioExit(void) {
 #endif
 
 void SqueakTerminate() {
-#ifdef PLUGIN
+#ifdef BROWSERPLUGIN
 	ExitCleanup();
 #else
 	UnloadScrap();
@@ -440,7 +441,7 @@ char * GetAttributeString(int id) {
 	if (id == 1) return imageName;
 	if (id == 2) return documentName;
 
-#ifdef PLUGIN
+#ifdef BROWSERPLUGIN
 	/* When running in browser, return the EMBED tag info */
 	if ((id > 2) && (id <= (2 + (2 * pluginArgCount)))) {
 		int i = id - 3;
@@ -521,7 +522,7 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 	return charsToMove;
 }
 
-#ifdef PLUGIN
+#ifdef BROWSERPLUGIN
 
 /*** Plugin Support ***/
 
@@ -549,6 +550,8 @@ int plugInInit(char *fullImagePath) {
 }
 
 int plugInShutdown(void) {
+        int err;
+        
 	ioShutdownAllModules();
 	FreeClipboard();
 	FreePixmap();
@@ -556,7 +559,8 @@ int plugInShutdown(void) {
         if (gThreadManager)
 	        DisposeThread(gSqueakThread,null,true);
 #if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
-        pthread_cancel(gSqueakPThread);
+        err = pthread_cancel(gSqueakPThread);
+        if (err == 0 )
         pthread_join(gSqueakPThread,NULL);
         pthread_mutex_destroy(&gEventQueueLock);
         pthread_mutex_destroy(&gEventUILock);

@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.21 2003/03/05 19:58:36 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.22 2003/05/19 07:20:17 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -53,7 +53,7 @@ WindowPtr getSTWindow(void) {
     return stWindow;
 }
 
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
 int ioSetFullScreen(int fullScreen) {
     Rect                screen,portRect,ignore;
     int                 width, height, maxWidth, maxHeight;
@@ -344,7 +344,7 @@ int ioScreenDepth(void) {
     return (*(*mainDevice)->gdPMap)->pixelSize;
 }
 
-#ifndef PLUGIN
+#ifndef BROWSERPLUGIN
 int ioScreenSize(void) {
 	int w = 10, h = 10;
     Rect portRect;
@@ -526,7 +526,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 }
 
 
-#if !I_AM_CARBON_EVENT || PLUGIN
+#if !I_AM_CARBON_EVENT || BROWSERPLUGIN
 #define rectWidth(aRect) ((aRect).right - (aRect).left)
 #define rectHeight(aRect) ((aRect).bottom - (aRect).top)
 #define MinWindowWidth(foo) 72*3

@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.10 2003/03/05 19:53:14 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.11 2003/05/19 07:19:57 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -105,7 +105,7 @@ void * sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
     OSErr err;
 	minHeapSize;
      
-#if defined( PLUGIN)  || (TARGET_API_MAC_CARBON && defined(__MWERKS__))
+#if defined( BROWSERPLUGIN)  || (TARGET_API_MAC_CARBON && defined(__MWERKS__))
     gMaxHeapSize = gHeapSize = *desiredHeapSize;
     
     #if TARGET_API_MAC_CARBON
@@ -183,7 +183,7 @@ void sqMacMemoryFree() {
 	if (memory == nil) 
 		return;
 #if TARGET_API_MAC_CARBON
-    #ifdef PLUGIN
+    #ifdef BROWSERPLUGIN
     DisposePtr((void *) memory);
     #endif
 #else

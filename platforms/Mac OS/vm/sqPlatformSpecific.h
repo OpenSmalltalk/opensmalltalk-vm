@@ -6,10 +6,10 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.11 2002/08/06 21:55:38 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.12 2003/05/19 07:20:23 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
-*   May 5th, 2002, JMM added define for PLUGIN for CW
+*   May 5th, 2002, JMM added define for plugin for CW
 *   May 12th, 2002, JMM added SQUEAK_BUILTIN_PLUGIN for CW Pro
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
 
@@ -23,11 +23,11 @@
    the other header files generic across platforms. To override a definition or
    macro from sq.h, you must first #undef it, then provide the new definition.
    
-   Define PLUGIN for Netscape Plugin building, needed for CodeWarrior
+   Define plugin for Netscape Plugin building, needed for CodeWarrior
 */
 
 #ifdef macintoshSqueak
-//#define PLUGIN
+//#define BROWSERPLUGIN
 #define SQUEAK_BUILTIN_PLUGIN
 /* replace the image file manipulation macros with functions */
 #undef sqImageFile
@@ -118,6 +118,18 @@ void CopyCStringToPascal(const char* src, Str255 dst);
 int sqGrowMemoryBy(int memoryLimit, int delta);
 int sqShrinkMemoryBy(int memoryLimit, int delta);
 int sqMemoryExtraBytesLeft(Boolean flag);
+#ifdef BROWSERPLUGIN
+    #undef insufficientMemorySpecifiedError
+    #undef insufficientMemoryAvailableError
+    #undef unableToReadImageError
+    #undef browserPluginReturnIfNeeded
+    #undef browserPluginInitialiseIfNeeded
+    #define insufficientMemorySpecifiedError() plugInNotifyUser("The amount of memory specified by the 'memory' EMBED tag is not enough for the installed Squeak image file.")
+    #define insufficientMemoryAvailableError() plugInNotifyUser("There is not enough memory to give Squeak the amount specified by the 'memory' EMBED tag.")
+    #define unableToReadImageError() plugInNotifyUser("Read failed or premature end of image file")
+    #define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
+    #define browserPluginInitialiseIfNeeded()
+#endif
 
 #endif /* macintoshSqueak */
 
