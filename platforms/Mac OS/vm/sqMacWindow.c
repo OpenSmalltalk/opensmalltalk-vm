@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.13 2002/03/01 00:27:52 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.14 2002/03/01 01:43:06 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -67,7 +67,7 @@ int ioSetFullScreen(int fullScreen) {
         screen.top -= GetMBarHeight();
 #else
     dominantGDevice = getDominateDevice(stWindow,&ignore);
-    if (dominateGDevice == null) {
+    if (dominantGDevice == null) {
         success(false);
         return 0;
     }
@@ -555,8 +555,8 @@ void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, sh
 			 */
 
             dominantGDevice = getDominateDevice(theWindow,&windRect);
-            if (dominateGDevice == null) {
-                return 0;
+            if (dominantGDevice == null) {
+                return;
             }
 
 			/*
