@@ -9,12 +9,13 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
     -- Changes John Mcintosh &  Andrew C. Greenberg. Aug 6 & 7th, 2002
     -- Changes John McIntosh Nov 14th, 2002 (some cleanup and modernization
     -- CHanges John McIntosh April 5th, 2003 (changeset names change)
-
+	-- Changes John McIntosh May 19th, 2003 (changeset consolidation into VMMaker).
+	
 (Note to readers, it is possible a step was missed, so beware)
 
 Building a Carbon Squeak VM with ProjectBuilder:
 
-{JMM notes this is building with 10.2.4, and Squeak 3.5alpha (for croquet)}
+{JMM notes this is building with 10.2.6, and Squeak 3.5alpha (for croquet)}
 
 Overview
 
@@ -62,15 +63,18 @@ After so much mumbo-jumbo, your squeak folder should have a directory entitled p
 Step Three: Build an interpeter
 
 	A.  Install change sets from the specialChangeSets Folder. 
-		These are required to build a VM that has globals as a structure which improves
-		performance by 10% or more. There has been some discussion that the line endings 
+		These are required to build a VM that improves performance by x% or more.
+		There has been some discussion that the line endings 
 		might be wrong for the following change sets that might depend on what CVS thinks, 
 		so do a "remove linefeeds" first. 
 		
-		MoreInterpAccessors-JMM.2.cs
-		VMGlobalsChanges.5.cs
 		CGeneratorEnhancements-ajh.1.cs
+			- For some versions of GCC, and most 68K compilers this changeset helps them 
+			better localize variables in the interpreter() loop. Before the change there are 
+			about 16 temporary variables and most compilers give up do poor register colorization. 
+			This changeset gives unique individual names to the temp vars and the compiler is happy.
 		Gnuifier.4.cs
+			- A smalltalk version of the AWK example. 
 		
 	B.	DoIt: VMMakerTool openInWorld
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
@@ -177,6 +181,14 @@ sqMacPrinting.c & sqMacPrinting.h from the platforms/Mac OS/plugins/PrintJobPlug
 these should go in the Sources/Mac OS/plugins/PrintJobPlugin group that you will create
 
 
+Browser plugin 
+
+It's now possible to build a browser plugin without much work. To do this just 
+pick the NPSqueak target, and in the Targets tab pick either Safari or IE as the 
+targeted browser. Remember to copy the newly compiled NPSqueak.bundle to the Internet Plug-ins Folder
+so you debug the right bundle.
+
+See the following for information on the older harder way, which you can now ignore.
 
 ---------------------------------------------------
 
