@@ -37,7 +37,7 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2005-03-18 19:46:59 by piumarta on emilia.local
+# Last edited: 2005-03-19 11:08:32 by piumarta on emilia.local
 
 AC_INIT([config.h.in])
 
@@ -168,6 +168,7 @@ AC_STDC_HEADERS
 AC_HAVE_HEADERS(unistd.h string.h fcntl.h sys/file.h sys/param.h)
 AC_HAVE_HEADERS(sys/time.h sys/filio.h sys/select.h)
 AC_HAVE_HEADERS(features.h)
+AC_HAVE_HEADERS(alloca.h) # SunOS5
 AC_HEADER_TIME
 AC_HEADER_DIRENT
 
@@ -225,6 +226,7 @@ AC_CHECK_FUNC(_dyld_present, [
 AC_CHECK_FUNCS(snprintf __snprintf,[break])
 
 AC_FUNC_MMAP
+AC_FUNC_ALLOCA
 
 #AC_ARG_ENABLE(jit,
 #[  --enable-jit            enable J4 support [default=no]],
