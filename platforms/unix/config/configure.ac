@@ -2,7 +2,7 @@
 # 
 # Process this file with autoconf to produce a configure script
 
-#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -37,11 +37,11 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2004-04-28 11:49:00 by piumarta on LPA-wlan-3-6.external.hpl.hp.com
+# Last edited: 2005-03-09 01:13:59 by piumarta on localhost.localdomain
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,7b,5, 3,7b,5868)
+AC_VM_VERSION(3,7b,6, 3,7b,5868)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
