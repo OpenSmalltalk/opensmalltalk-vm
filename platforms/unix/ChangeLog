@@ -1,7 +1,26 @@
 2003-08-07  Ian Piumarta  <piumarta@cartman.inria.fr>
 
+	* platforms/unix/config/acinclude.m4 (AC_C_DOUBLE_ORDER): Use
+	improved test that isn't fooled by over-zealous compiler
+	optimisations.
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c: Numerous changes from
+	Ned Konz to add support for COMPOUND_TEXT and fix some problems
+	with UTF8_STRING.
+
+	* platforms/unix/vm/sqUnixCharConv.c: Numerous changes from Ned
+	Konz to improve UTF-8 handling.
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c
+	(socketValid): Fail validation if thisNetSession is zero.
+
 	* platforms/unix/vm/sqUnixMain.c (sigsegv): Call abort() after
-	segv, to leave a core.
+	segv, to leave a core for debugging.
+
+2002-12-01--2003-08-07  piumarta  <piumarta@emilia.inria.fr>
+	
+	* platforms/unix/*/*: First pass at refactoring sound and display
+	code into runtime-loadable modules.
 
 2002-12-01  piumarta  <piumarta@calvin.inria.fr>
 
