@@ -335,8 +335,12 @@ int ioFontGlyphOfChar(int fontIndex, int characterIndex,
 /*****************************************************************************/
 
 /* Font name cache */
+struct sqFontDescription {
+  LOGFONT logFont;
+  int fontType;
+};
 
-static LOGFONT *fontNameCache = NULL;
+static sqFontName *fontNameCache = NULL;
 static int numFontNames = 0;
 static int maxFontNames = 0;
 
@@ -346,16 +350,18 @@ int CALLBACK enumFontsCallback(ENUMLOGFONTEX *logFont, NEWTEXTMETRICEX *textMetr
 	if(numFontNames == maxFontNames) {
 		/* Resize font cache */
 		maxFontNames = maxFontNames + FONT_CACHE_SIZE; /* grow linearly */
-		fontNameCache = (LOGFONT*) realloc(fontNameCache, maxFontNames * sizeof(LOGFONT));
+		fontNameCache = (sqFontDescription*) realloc(fontNameCache, maxFontNames * sizeof(sqFontDescription));
 	}
 	/* We check for unique names here since fonts will be listed in all available char sets */
 	for(i = 0; i < numFontNames; i++) {
-		if(strcmp(fontNameCache[i].lfFaceName, logFont->elfLogFont.lfFaceName) == 0) {
+		if(strcmp(fontNameCache[i].logFont.lfFaceName, logFont->elfLogFont.lfFaceName) == 0) {
 			/* we had this guy already */
 			return 1; /* but continue enumerating */
 		}
 	}
-	fontNameCache[numFontNames++] = logFont->elfLogFont;
+	numFontNames++;
+	fontNameCache[numFontNames].logFont = logFont->elfLogFont;
+	fontNameCache[numFontNames].fontType = fontType;
 	return 1; /* continue enumeration */
 }
 
@@ -376,7 +382,29 @@ char *ioListFont(int fontIndex) {
 	}
 	if(!fontNameCache) return NULL;
 	if(fontIndex >= numFontNames) return NULL;
-	return fontNameCache[fontIndex].lfFaceName;
+	return fontNameCache[fontIndex].font.lfFaceName;
+}
+
+/* ioListFontType:
+   Answer the type of the font with the given index.
+   Return values:
+     -1: Invalid font index
+      0: Unknown font type
+      1: Scalable font (TrueType)
+      2: Bitmap font
+      3: Printer font
+*/
+int *ioListFontType(int fontIndex) {
+  sqFontDescription *desc;
+  if(fontIndex == 0 || fontIndex >= numFontNames)
+    return -1;
+  desc = fontNameCache[fontIndex];
+  switch(desc->fontType) {
+    case TRUETYPE_FONTTYPE: return 1;
+    case RASTER_FONTTYPE: return 2;
+    case DEVICE_FONTTYPE: return 3;
+  }
+  return 0;
 }
 
 /*****************************************************************/
