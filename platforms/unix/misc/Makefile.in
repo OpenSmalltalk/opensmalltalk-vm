@@ -35,7 +35,7 @@
 
 ### TARGETS (default target is `all')
 # 
-# 	all		- build `squeak' and `modules'
+e# 	all		- build `squeak' and `modules'
 #	install		- build `squeak_install' and `modules_install'
 #	uninstall	- undo the effects of `install'
 # 
@@ -43,6 +43,8 @@
 #	squeak_install	- install squeak in ${bindir}/
 #	modules		- build all modules
 #	modules_install	- install modules in ${libdir}/squeak${VERSION}/
+#
+#	update          - rerun mkMake and regenerate the makefile
 
 @SET_MAKE@
 
