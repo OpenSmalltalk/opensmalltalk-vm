@@ -1,3 +1,91 @@
+2004-04-03  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm/dlfcn-dyld.c (dlsym): Don't automatically
+	return on error from NSIsSymbolNameDefinedInImage().
+	(dlinit): Install error handlers for multiply-defined symbols to
+	choose definition from most recently loaded plugin.
+
+2004-04-02  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm-sound-NAS/Makefile.inc (PLIBS): Add -laudio to
+	the link command.
+
+	* platforms/unix/config/acinclude.m4: Quote all macro names in
+	AC_DEFUN()s.
+
+	* platforms/unix/vm/sqGnu.h: Use __asm__() instead of asm().
+
+	* platforms/unix/vm-display-fbdev/sqUnixFBDev.c (DEBUG): Only
+	define if not already defined.
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c: Remove unused globals
+	'current' and 'allRenderer'.
+	(sendSelection): Clean up targets[] initialisation.
+	(sendSelection): Clean up list[] initialisation.
+	(getSelectionFrom): Remove unused variable 'xreturn'.
+	(display_ioGLcreateRenderer): Remove unused variable 'index'.
+	(printVisual): Reset gl error flag at end.
+	(display_winOpen): Get saved window size only if debugging.
+	(display_printUsage): Add new flag '-glxdebug'.
+	(display_parseArgument): Add new flag '-glxdebug'.
+
+	* platforms/unix/vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds):
+	Calculate relinquish time only if a delay is pending.
+
+	* platforms/unix/vm/sqUnixExternalPrims.c (ioFindExternalFunctionIn):
+	Squash error messages for shutdownModule when sqIgnorePluginErrors
+	is set.
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c: Additional
+	checks for null privateSocketStruct.
+
+----------------------------------------------------------------
+
+2004-04-02  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* 3.6-3 Released.
+
+2004-04-02  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* vm-sound-MacOSX/sqUnixSoundMacOSX.c: Substantial rewrite for OS
+	10.3.
+
+	* vm-display-fbdev/sqUnixFBDevMousePS2.c: Increase all timeouts to
+	100ms.
+
+	* vm-display-fbdev/sqUnixFBDevKeyboard.c: Add diagnostic code.
+
+	* vm-display-fbdev/sqUnixFBDevFramebuffer.c: Use accessors for all
+	struct members.  Fix problems when xres * bytesPerPix != bytes per
+	line.
+
+	* vm-display-fbdev/sqUnixFBDev.c: Add diagnostic code.
+
+	* vm-display-X11/sqUnixX11.c (initCharmap): Fix prototype.
+	(x2sqKeyInput): Print more useful diagnostic on setlocale()
+	failure.
+
+	* vm-display-X11/Makefile.in (XINCLUDES): Include
+	/usr/X11R6/include explicitly.
+
+	* vm/sqUnixMain.c: Add runInterpreter (for display modules to
+	inhibit entry to interpreter loop).  Reinstate -nomixer as a
+	global option.
+
+	* vm/sqUnixCharConv.c: Use Solaris encoding names on Sparc.
+
+	* vm/glibc.h: Force all ctype operations to functions.  Alias
+	realpath() to glibc version 2.0.
+	
+	* plugins/SocketPlugin/sqUnixSocket.c (sqSocketConnectionStatus):
+	Don't check for connection closed by peer.
+
+2003-10-28  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/plugins/FilePlugin/sqUnixFile.c: Use ctime for
+	creationDate and mtime for modificationDate (consistent with 'ls
+	-l').
+
 2003-09-16  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/doc/squeak.1: Updated for '-nointl',
