@@ -1,3 +1,18 @@
+/****************************************************************************
+*   PROJECT: Mac window, memory, keyboard interface.
+*   FILE:    sqMacWindow.c
+*   CONTENT: 
+*
+*   AUTHOR:  John Maloney, John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqMacWindow.c,v 1.3 2001/12/20 06:06:05 johnmci Exp $
+*
+*   NOTES: See change log below.
+*			12/19/2001 Fix for USB on non-usb devices, and fix for ext keyboard use volatile
+*
+*
+*****************************************************************************/
 #include "sq.h"
 #include "sqMacFileLogic.h"
 #include "DropPlugin.h"
@@ -86,6 +101,7 @@
 //June 18th 2001, JMM V3.18 fix for cast of version info for CW 6.1
 //June 18th 2001, JMM V3.19 fix for saveAsEmbeddedImage. Broken in 3.0 Also added fix for powerpc only cfrg, and rework of security interface for VMMaker via Tim
 //Oct 1,2001, JMM V3.1.2  open document support and fix scrap issues, add ext keyboard unlock shift key logic. 
+//Dec 19,2001, JMM V3.1.2B6 fix USB on no-usb machines.
 
 #if TARGET_API_MAC_CARBON
     #define EnableMenuItemCarbon(m1,v1)  EnableMenuItem(m1,v1);
@@ -3258,7 +3274,8 @@ void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command) {
 void SetupKeyboard(void) {
  	ADBAddress     currentDev;
  	ADBDataBlock   info;
- 	short       data = 0,number;
+ 	volatile short data = 0;
+ 	short       number;
  	Byte        buffer[3], ADBReg;
  	short       talk, listen,i;
  	OSErr       myErr;
@@ -3268,6 +3285,8 @@ void SetupKeyboard(void) {
     USBKeyboardInit();
 
     number = CountADBs();
+    compProcPtr = NewADBCompletionProc(ADBIOCompletionPPC);
+    
     for(i=1;i<=number;i++) {
         currentDev = GetIndADB(&info, i);
         if (currentDev < 0)
@@ -3283,18 +3302,18 @@ void SetupKeyboard(void) {
         ADBReg = 3;                // get register 3
      
         talk = (currentDev << 4) + 0x0C + ADBReg;    
-        compProcPtr = NewADBCompletionProc(ADBIOCompletionPPC);
      
+        data = 0;
         myErr = ADBOp((Ptr)&data, (ADBCompletionUPP)compProcPtr, (Ptr)buffer, talk);
         if (myErr != noErr) 
            goto done;
      
         while(!data); 
         
-    	data = 0;
         buffer[2] = 3; // change from 2 to 3 so we can differentiate between left and right shift keys
         listen = (currentDev << 4) + 0x08 + ADBReg; 
      
+    	data = 0;
         myErr = ADBOp((Ptr)&data, (ADBCompletionUPP)compProcPtr, (Ptr)buffer, listen);
         while(!data); 
     }
@@ -3598,6 +3617,9 @@ void USBKeyboardInit(void){
         USBKMAPReverse[USBKMAP[i]] = i;
     }
     
+    if((Ptr)USBGetNextDeviceByClass == (Ptr)kUnresolvedCFragSymbolAddress)
+    	return;
+    	
 #if CALL_NOT_IN_CARBON
     deviceRef = kNoDeviceRef;
     for (i=0;i< kNumberOfKeyboardDispatch; i++ ) {
