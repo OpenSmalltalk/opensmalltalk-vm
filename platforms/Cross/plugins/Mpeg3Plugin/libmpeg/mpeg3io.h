@@ -32,7 +32,7 @@ typedef struct
 
 #define mpeg3io_total_bytes(fs) (((mpeg3_fs_t *)(fs))->total_bytes)
 
-extern inline unsigned int mpeg3io_read_int32(mpeg3_fs_t *fs)
+static inline unsigned int mpeg3io_read_int32(mpeg3_fs_t *fs)
 {
 	int a, b, c, d;
 	unsigned int result;
@@ -49,7 +49,7 @@ extern inline unsigned int mpeg3io_read_int32(mpeg3_fs_t *fs)
 	return result;
 }
 
-extern inline unsigned int mpeg3io_read_char(mpeg3_fs_t *fs)
+static inline unsigned int mpeg3io_read_char(mpeg3_fs_t *fs)
 {
 	fs->current_byte++;
 	return fgetc(fs->fd);
