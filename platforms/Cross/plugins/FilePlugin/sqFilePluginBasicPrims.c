@@ -6,9 +6,15 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   ]
-*   RCSID:   $Id: sqFilePluginBasicPrims.c,v 1.4 2002/01/22 19:18:18 johnmci Exp $
+*   RCSID:   $Id: sqFilePluginBasicPrims.c,v 1.5 2002/01/31 21:15:33 johnmci Exp $
 *
 *   NOTES: See change log below.
+* 	1/28/02    Tim remove non-ansi stuff
+*				unistd.h
+				ftello
+				fseeko
+				ftruncate & fileno
+				macro-ise use of sqFTruncate to avoid non-ansi
 *	1/22/2002  JMM Use squeakFileOffsetType versus off_t
 *
 *****************************************************************************/
@@ -22,7 +28,7 @@
 #include "sq.h"
 #ifndef NO_STD_FILE_SUPPORT
 #include "FilePlugin.h"
-#include <unistd.h>
+
 /***
 	The state of a file is kept in the following structure,
 	which is stored directly in a Squeak bytes object.
@@ -73,7 +79,7 @@ int sqFileAtEnd(SQFile *f) {
 	/* Return true if the file's read/write head is at the end of the file. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	return ftello(f->file) == f->fileSize;
+	return ftell(f->file) == f->fileSize;
 }
 
 int sqFileClose(SQFile *f) {
@@ -111,8 +117,8 @@ squeakFileOffsetType sqFileGetPosition(SQFile *f) {
 	squeakFileOffsetType position;
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	position = ftello(f->file);
-	if (position < 0) return interpreterProxy->success(false);
+	position = ftell(f->file);
+	if (position == -1) return interpreterProxy->success(false);
 	return position;
 }
 
@@ -177,9 +183,9 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
 	} else {
 		f->sessionID = thisSession;
 		/* compute and cache file size */
-		fseeko(f->file, 0, SEEK_END);
-		f->fileSize = ftello(f->file);
-		fseeko(f->file, 0, SEEK_SET);
+		fseek(f->file, 0, SEEK_END);
+		f->fileSize = ftell(f->file);
+		fseek(f->file, 0, SEEK_SET);
 	}
 	f->lastOp = UNCOMMITTED;
 }
@@ -196,7 +202,7 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t star
 	size_t bytesRead;
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	if (f->writable && (f->lastOp == WRITE_OP)) fseeko(f->file, 0, SEEK_CUR);  /* seek between writing and reading */
+	if (f->writable && (f->lastOp == WRITE_OP)) fseek(f->file, 0, SEEK_CUR);  /* seek between writing and reading */
 	dst = (char *) (byteArrayIndex + startIndex);
 	bytesRead = fread(dst, 1, count, f->file);
 	f->lastOp = READ_OP;
@@ -226,7 +232,7 @@ int sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 	/* Set the file's read/write head to the given position. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	fseeko(f->file, position, SEEK_SET);
+	fseek(f->file, position, SEEK_SET);
 	f->lastOp = UNCOMMITTED;
 }
 
@@ -249,10 +255,10 @@ int sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
 	/* Truncate the file*/
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	if (ftruncate(fileno(f->file),offset)) {
+ 	if (sqFTruncate(fileno(f->file),offset)) {
             return interpreterProxy->success(false);
-        }
-	f->fileSize = ftello(f->file);
+        } 
+	f->fileSize = ftell(f->file);
 	return 1;
 }
 
@@ -275,11 +281,11 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t sta
 	squeakFileOffsetType position;
 
 	if (!(sqFileValid(f) && f->writable)) return interpreterProxy->success(false);
-	if (f->lastOp == READ_OP) fseeko(f->file, 0, SEEK_CUR);  /* seek between reading and writing */
+	if (f->lastOp == READ_OP) fseek(f->file, 0, SEEK_CUR);  /* seek between reading and writing */
 	src = (char *) (byteArrayIndex + startIndex);
 	bytesWritten = fwrite(src, 1, count, f->file);
 
-	position = ftello(f->file);
+	position = ftell(f->file);
 	if (position > f->fileSize) {
 		f->fileSize = position;  /* update file size */
 	}
