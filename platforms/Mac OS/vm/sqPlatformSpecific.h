@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.5 2002/01/31 21:28:59 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.6 2002/03/05 00:25:44 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *
@@ -82,8 +82,9 @@ size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImage
 void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
 int         sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 squeakFileOffsetType       sqImageFileStartLocation(int fileRef, char *filename,squeakFileOffsetType imageSize);
-void *	    sqAllocateMemory(int minHeapSize, int desiredHeapSize);
+void *	    sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize);
 
+#define sqAllocateMemory(x,y) sqAllocateMemoryMac(x,&y);
 
 /* override reserveExtraCHeapBytes() macro to reduce Squeak object heap size on Mac */
 #undef reserveExtraCHeapBytes
