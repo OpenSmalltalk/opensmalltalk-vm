@@ -6,7 +6,7 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	   Feb 5th 2002, April 26th 2002
 	-- Changes Andrew C. Greenberg, Jan 1st 2002
     -- Changes Jay Hardesty, July 6, 2002
-    -- Changes John Mcintosh &  Andrew C. Greenberg. Aug 8th, 2002
+    -- Changes John Mcintosh &  Andrew C. Greenberg. Aug 6 & 7th, 2002
 
 (Note to readers, it is possible a step was missed, so beware)
 
@@ -46,7 +46,8 @@ Step Two: Get the current Sourceforge Platforms tree
 		(when prompted for a password, just hit enter)
 	D.	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak co platforms
 	E.  For printing support get RealPrintingPlugin-JMM.cs.gz, from http://swiki.gsug.org:8080/sqfixes/all 
-		decompress it and fileIn (optional, currently a plugin in the offical build)
+		decompress it and fileIn (optional, currently an external plugin in the offical build)
+		(more on how to do this later).
 	
 	
 		
@@ -80,14 +81,14 @@ Step Three: Build an interpeter
 			IntegerPokerPlugin
 			Mpeg3Plugin
 			TestOSAPlugin
-			RealPrintingPlugin (if installed))
+			PrintJobPlugin (if installed, we'll discuss how to built this later as built in)
 	G.	Press button "Save Configuration" to save your configuration for later.
 	H.	Press button "Generate All" to build the interpreter
 
 
 Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
-	A.	See the Gnuifier.2.cs changeset in the specialChangeSetsFolder
+	A.	See the Gnuifier.3.cs changeset in the specialChangeSetsFolder
 	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
 
 		(Gnuifier on:
@@ -97,7 +98,7 @@ Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
 Step Five: Shove and Tweak some files around the buildspace
 
-	A.	Open a MacOSX Finder browser and go to the platforms/Mac OS/src/vm/Developer folder.
+	A.	Open a MacOSX Finder browser and go to the platforms/Mac OS/vm/Developer folder.
 	B.	Unstuff 'resources.sit'
 		1. select the file
 		2. cmd-I for an inspector
@@ -119,17 +120,17 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
 	C.	Option-click on the Sources group folder and confirm the files listed can be found.
 		Files which can't be found are listed in red. For any red highlighted files you'll need to 
 		resolve where or why the files is/are missing.
-		Note you will need to add the PrintJobPlugin files if you choose to build that plugin as internal.
 	D.	On the left pane, there are some vertically oriented fold-over tabs.
 		Click the one marked "Targets."
 	E.	On the left upper pane marked "Targets," select "Squeak VM Opt"
 	F.	On the left lower pane marked "Build Styles," select "Deployment"
  	G.	Click on the hammer icon at the top left to build your VM.
-		The final product should live in the src/vm/Build folder, named "Squeak VM Opt"
+		The final product should live in the build folder, named "Squeak VM Opt"
 		Compare against the offical build to see if it is the same. 
 		Note you should look at the binary in the Contents subfolder to see if it is the same size.
 		(The only error you should get is 
 		warning: passing arg 1 of `sqImageFileStartLocation' makes integer from pointer without a cast)
+		Run a tinyBenchmark benchmark against your VM, versus the production VM to confirm yours is simular in performance
 
 Step Seven: Download and print your Squeak VM Developer's Certificate
 
@@ -139,6 +140,34 @@ Congratulations! Take a bow!
 
 1 tinyBenchmarks
 Is also a good idea against the production VM, and yours to confirm it's built correctly.
+
+
+Building with PrintJobPlugin as internal
+
+Add to the build as internal plugin list
+do a "clean out"
+do a "Generate all"
+
+This should result in a folder being created 
+src/vm/intplugins/PrintJobPlugin
+and of course we also use the code in 
+platforms/Mac OS/plugins/PrintJobPlugin folder
+
+Returning to the project builder project we need to add a number of files to the project.
+
+In the "Files" tab view 
+Select down to the location we want to put the built source
+Sources/src/plugins/vm/intplugins
+Create a new group called PrintJobPlugin
+Add the file PrintJobPlugin.c  from src/vm/intplugins/PrintJobPlugin to that group
+
+Do the same type of work to select the other files need to build the plugin
+PrintJobPlugin.h file from the platforms/Cross/plugins/PrintJobPlugin folder
+that should go in the Sources/Cross/plugins/PrintJobPlugin group that you will create
+sqMacPrinting.c & sqMacPrinting.h from the platforms/Mac OS/plugins/PrintJobPlugin
+these should go in the Sources/Mac OS/plugins/PrintJobPlugin group that you will create
+
+
 
 ---------------------------------------------------
 
