@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c,v 1.1 2002/01/19 22:34:27 slosher Exp $
+*   RCSID:   $Id: sqWin32Intel.c,v 1.2 2002/01/28 13:56:59 slosher Exp $
 *
 *   NOTES:
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -717,20 +717,6 @@ int sqMain(char *lpCmdLine, int nCmdShow)
     
     ioSetFullScreen(fullScreenFlag);
 
-    /*****************************************************************/
-    /*****************************************************************/
-    /*****************************************************************/
-    /*****************************************************************/
-    /* Okay, okay, this is nasty. But Squeak is a realtime media app
-       doing all sorts of sound mixing and similar and if we don't
-       boost our priority level a bit we'll be run with the same priority
-       that any other nonsense has. */
-    /*****************************************************************/
-    /*****************************************************************/
-    /*****************************************************************/
-    /*****************************************************************/
-    SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
-    
     /* run Squeak */
     ioInitSecurity();
     interpret();

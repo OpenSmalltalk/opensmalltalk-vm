@@ -168,8 +168,6 @@ int readableFormat(int imageVersion);
 /* Message hooks for processing out of sqWin32Window.c  */
 /********************************************************/
 typedef int (*messageHook)(void *, unsigned int, unsigned int, long);
-/* give preMessageHook external visibility, for use by plugins -- crl */
-extern messageHook preMessageHook;
 
 /********************************************************/
 /* Several setup functions                              */
@@ -290,6 +288,7 @@ extern BOOL fReduceCPUInBackground; /* reduce CPU usage when not active? */
 extern BOOL  f1ButtonMouse;  /* Should we use a 1 button mouse mapping? */
 extern BOOL  f3ButtonMouse;  /* Should we use a 3 button mouse mapping? */
 extern BOOL  fShowAllocations; /* Show memory allocations */
+extern BOOL  fPriorityBoost; /* thread priority boost */
 
 extern HANDLE vmSemaphoreMutex;   /* the mutex for synchronization */
 extern HANDLE vmWakeUpEvent;      /* wakeup event for interpret() */

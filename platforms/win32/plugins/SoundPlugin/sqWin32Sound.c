@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Sound.c,v 1.2 2002/01/19 22:34:27 slosher Exp $
+*   RCSID:   $Id: sqWin32Sound.c,v 1.3 2002/01/28 13:56:59 slosher Exp $
 *
 *   NOTES:   For now we're supporting both, the DirectSound and the win32
 *            based interface. In the future we'll switch to DSound exclusively.
@@ -27,7 +27,7 @@
 #ifndef NO_SOUND
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Sound.c,v 1.2 2002/01/19 22:34:27 slosher Exp $";
+  static char RCSID[]="$Id: sqWin32Sound.c,v 1.3 2002/01/28 13:56:59 slosher Exp $";
 #endif
 
 /***************************************************************************/
@@ -170,7 +170,7 @@ int dx_snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startInde
   if(bytesWritten < playBufferSize)
     return 0;
 
-  DPRINTF(("%d ", frameCount));
+  DPRINTF(("[%d", frameCount));
 
   hRes = IDirectSoundBuffer_Lock(lpdPlayBuffer, 
 				 playBufferSize * playBufferIndex,
@@ -188,11 +188,13 @@ int dx_snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startInde
     short *shortSrc = (short*)(arrayIndex+startIndex);
     short *shortDst = (short*)dstPtr;
     dstLen /=2;
+    DPRINTF(("|%d", dstLen));
     for(i=0;i<dstLen;i++) {
       *shortDst++ = *(shortSrc++) + 500;
     }
   }
   IDirectSoundBuffer_Unlock(lpdPlayBuffer, dstPtr, dstLen, NULL, 0);
+  DPRINTF(("]"));
   playBufferAvailable = 0;
   return bytesWritten / waveOutFormat.nBlockAlign;
 }
@@ -233,6 +235,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
   DPRINTF(("Starting DSound\n"));
   if(!lpdSound) {
     /* Initialize DirectSound */
+    DPRINTF(("# Creating lpdSound\n"));
     hRes = CoCreateInstance(&CLSID_DirectSound,
 			    NULL, 
 			    CLSCTX_INPROC_SERVER,
@@ -247,6 +250,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
       /* and try again */
       return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
     }
+    DPRINTF(("# Initializing lpdSound\n"));
     hRes = IDirectSound_Initialize(lpdSound, NULL);
     if(FAILED(hRes)) {
       DPRINTF(("sndStart: IDirectSound_Initialize() failed (errCode: %x)\n", hRes));
@@ -267,6 +271,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
     ZeroMemory(&dsbd, sizeof(dsbd));
     dsbd.dwSize = sizeof(dsbd);
     dsbd.dwFlags = DSBCAPS_PRIMARYBUFFER;
+    DPRINTF(("# Creating primary buffer\n"));
     hRes = IDirectSound_CreateSoundBuffer(lpdSound, &dsbd, &lpdPrimaryBuffer, NULL);
     if(FAILED(hRes)) {
       DPRINTF(("sndStart: Failed to create primary buffer (errCode: %x)\n", hRes));
@@ -278,6 +283,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 
   if(!hPlayThread) {
     /* create the playback notification thread */
+    DPRINTF(("# Creating playback thread\n"));
     hPlayThread = CreateThread(NULL, 0, playCallback, NULL, 0, &threadID);
     if(hPlayThread == 0) {
       printLastError("sndStart: CreateThread failed");
@@ -323,6 +329,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
     }
   }
 
+  DPRINTF(("# Creating play buffer\n"));
   hRes = IDirectSound_CreateSoundBuffer(lpdSound, &dsbd, &lpdPlayBuffer, NULL);
   if(FAILED(hRes)) {
     DPRINTF(("sndStart: IDirectSound_CreateSoundBuffer() failed (errCode: %x)\n", hRes));
@@ -349,6 +356,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
   posNotify[1].dwOffset = 2 * playBufferSize - 1;
   posNotify[0].hEventNotify = hPlayEvent;
   posNotify[1].hEventNotify = hPlayEvent;
+  DPRINTF(("# Setting notifications\n"));
   hRes = IDirectSoundNotify_SetNotificationPositions(lpdNotify, 2, posNotify);
   IDirectSoundNotify_Release(lpdNotify);
   if(FAILED(hRes)) {
@@ -360,6 +368,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
     return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
   }
 
+  DPRINTF(("# Starting to play buffer\n"));
   hRes = IDirectSoundBuffer_Play(lpdPlayBuffer, 0, 0, DSBPLAY_LOOPING);
   if(FAILED(hRes)) {
     DPRINTF(("sndStart: IDirectSoundBuffer_Play() failed (errCode: %x)\n", hRes));

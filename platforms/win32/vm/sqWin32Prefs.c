@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.1 2001/10/24 23:14:28 rowledge Exp $
+*   RCSID:   $Id: sqWin32Prefs.c,v 1.2 2002/01/28 13:56:59 slosher Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -113,6 +113,14 @@ void SetShowAllocations() {
 		(fShowAllocations ? MF_CHECKED : MF_UNCHECKED));
 }
 
+void SetPriorityBoost() {
+  CheckMenuItem(vmPrefsMenu, ID_PRIORITYBOOST, MF_BYCOMMAND | 
+		(fPriorityBoost ? MF_CHECKED : MF_UNCHECKED));
+  WritePrivateProfileString(U_GLOBAL,TEXT("PriorityBoost"),
+			    fPriorityBoost ? U_ON : U_OFF,squeakIniName);
+}
+
+
 void LoadPreferences()
 {
   /* Set preferences */
@@ -138,6 +146,10 @@ void LoadPreferences()
   f3ButtonMouse   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("3ButtonMouse"),
 			 f3ButtonMouse,squeakIniName);
+
+  fPriorityBoost   = 
+    GetPrivateProfileInt(U_GLOBAL,TEXT("PriorityBoost"),
+			 fPriorityBoost,squeakIniName);
 #endif
 }
 
@@ -155,6 +167,7 @@ void SetAllPreferences() {
   SetAllowImageWrite();
   SetAllowSocketAccess();
   SetShowAllocations();
+  SetPriorityBoost();
 }
 
 void CreatePrefsMenu(void) {
@@ -204,6 +217,8 @@ void CreatePrefsMenu(void) {
 	       TEXT("Reduce CPU usage"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_REDUCEBACKGROUNDCPU, 
 	       TEXT("Reduce background CPU usage"));
+    AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_PRIORITYBOOST, 
+	       TEXT("Thread Priority Boost"));
 #ifndef NO_PRINTER
     AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_DEFAULTPRINTER, 
@@ -225,6 +240,8 @@ void CreatePrefsMenu(void) {
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DBGPRINTSOCKET,
 	       TEXT("Dump network state"));
 #endif
+    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DBGPRINTSTACK,
+	       TEXT("Dump call stack"));
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
 	       TEXT("Debug Options"));
   }
@@ -309,6 +326,13 @@ void HandlePrefsMenu(int cmd) {
 #ifndef NO_NETWORK
     win32DebugPrintSocketState();
 #endif
+    break;
+  case ID_DBGPRINTSTACK:
+    printCallStack();
+    break;
+  case ID_PRIORITYBOOST:
+    fPriorityBoost = !fPriorityBoost;
+    SetPriorityBoost();
     break;
   }
 }

@@ -20,7 +20,10 @@
 #define ID_IMAGEWRITE 0x00E0
 #define ID_SOCKETACCESS 0x00F0
 
-#define ID_PREF_LAST 0x00F0
+#define ID_DBGPRINTSTACK 0x0100
+#define ID_PRIORITYBOOST 0x0110
+
+#define ID_PREF_LAST 0x0110
 
 void TrackPrefsMenu(void);
 void CreatePrefsMenu(void);

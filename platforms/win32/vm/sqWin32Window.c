@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.1 2001/10/24 23:14:29 rowledge Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.2 2002/01/28 13:56:59 slosher Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.1 2001/10/24 23:14:29 rowledge Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.2 2002/01/28 13:56:59 slosher Exp $");
 #endif
 
 /****************************************************************************/
@@ -90,6 +90,7 @@ BOOL fShowAllocations = 0; /* Show allocation activity */
 BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
 BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
 BOOL fUseDirectSound = 1; /* Do we use DirectSound?! */
+BOOL fPriorityBoost = 1;
 
 BOOL f1ButtonMouse = 0;   /* Should we use a 1 button mouse mapping? */
 BOOL f3ButtonMouse = 0;   /* Should we use a real 3 button mouse mapping? */
@@ -378,13 +379,16 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       MapWindowPoints(stWindow, NULL, (LPPOINT) &stWindowRect, 2);
     }
     else return DefWindowProc(hwnd,message,wParam,lParam);
-
-#if defined(_WIN32_WCE)
-     /* All erasing is done in the display function 
-	and the window is always full screen*/
+    /* Erasing the background leads to flashing so avoid it */
   case WM_ERASEBKGND:
     return TRUE;
-#endif
+  case WM_ACTIVATE:
+    if(wParam == WA_INACTIVE) {
+      SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
+    } else if(fPriorityBoost) {
+      SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
+    } 
+    break;
 
 #if !defined(_WIN32_WCE)
     /* Don't change the cursor or system tray on WinCE */
@@ -691,7 +695,7 @@ void SetupWindows()
     stWindow = CreateWindowEx(WS_EX_APPWINDOW | WS_EX_OVERLAPPEDWINDOW,
 			      TEXT("SqueakWindowClass"),
 			      TEXT("Squeak!"),
-			      WS_OVERLAPPEDWINDOW /* | WS_CLIPCHILDREN */,
+			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			      0,
 			      0,
 			      CW_USEDEFAULT,
@@ -706,7 +710,7 @@ void SetupWindows()
     stWindow = CreateWindowEx(0,
 			      TEXT("SqueakWindowClass"),
 			      TEXT("Squeak!"),
-			      WS_CHILD /* | WS_CLIPCHILDREN */,
+			      WS_CHILD | WS_CLIPCHILDREN,
 			      0,
 			      0,
 			      GetSystemMetrics(SM_CXSCREEN),

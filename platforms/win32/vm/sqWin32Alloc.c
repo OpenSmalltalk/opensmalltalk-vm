@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Alloc.c,v 1.1 2001/10/24 23:14:27 rowledge Exp $
+*   RCSID:   $Id: sqWin32Alloc.c,v 1.2 2002/01/28 13:56:59 slosher Exp $
 *
 *
 *****************************************************************************/
@@ -18,7 +18,7 @@
 #define EXPERIMENTAL
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Alloc.c,v 1.1 2001/10/24 23:14:27 rowledge Exp $";
+  static char RCSID[]="$Id: sqWin32Alloc.c,v 1.2 2002/01/28 13:56:59 slosher Exp $";
 #endif
 
 static LPSTR  pageBase;     /* base address of allocated memory */
@@ -63,7 +63,13 @@ void *sqAllocateMemory(int minHeapSize, int desiredHeapSize)
 
   /* Here, we only reserve the maximum memory to be used
      It will later be committed during actual access */
-  maxReserved = 512*1024*1024;
+  maxReserved = 2*1024*1024*1024;
+  /* Ugh. Note. Some people really *are* crazy...
+     ... as if 512MB wouldn't be enough, no sir...
+     ... so we give you all we have (2GB) ...
+     ... except a bit for the C allocator ...
+  */
+  maxReserved -= 128*1024*1024;
   do {
     pageBase = VirtualAlloc(NULL,maxReserved,MEM_RESERVE, PAGE_NOACCESS);
     if(!pageBase) {
