@@ -65,11 +65,6 @@ VMMakerTool class >> initialize [
 ]
 
 { #category : #'instance creation' }
-VMMakerTool class >> new [
-	^super new initialize
-]
-
-{ #category : #'instance creation' }
 VMMakerTool class >> openInWorld [
 	"Build a VMMakerTool and open it"
 	"VMMakerTool openInWorld"
@@ -87,6 +82,8 @@ VMMakerTool class >> unload [
 VMMakerTool >> acceptDroppingMorph: transferMorph event: evt inMorph: aMorph [
 	"Here we are fetching information from the dropped transferMorph and performing the correct action for this drop.
 	As long as the source is part of this tool, move the dragged item from the source list to the destination list"
+
+	(transferMorph isKindOf: HandleMorph) ifTrue: [ ^false ].
 
 	transferMorph source model = self ifFalse:[^false].
 

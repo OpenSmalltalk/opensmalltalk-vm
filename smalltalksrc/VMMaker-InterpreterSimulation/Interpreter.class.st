@@ -77,7 +77,7 @@ Class {
 		'StreamIndexIndex',
 		'AtCacheMask',
 		'MethodIndex',
-		'StreamArrayIndex',
+		'MessageArgumentsIndex',
 		'MethodArrayIndex',
 		'DirEntryFound',
 		'CompilerHooksSize',
@@ -140,9 +140,9 @@ Class {
 		'StreamReadLimitIndex',
 		'PrimitiveTable',
 		'SuperclassIndex',
-		'MessageArgumentsIndex',
 		'AtCacheEntries',
 		'StackPointerIndex',
+		'StreamArrayIndex',
 		'LastLinkIndex'
 	],
 	#category : #'VMMaker-Interpreter'
@@ -2842,8 +2842,8 @@ Interpreter >> extendedStoreBytecode [
 Interpreter >> externalizeIPandSP [
 	"Copy the local instruction and stack pointer to global variables for use in primitives and other functions outside the interpret loop."
 
-	instructionPointer _ self cCoerce: localIP to: 'int'.
-	stackPointer _ self cCoerce: localSP to: 'int'.
+	instructionPointer _ self cCoerce: localIP to: 'unsigned'.
+	stackPointer _ self cCoerce: localSP to: 'unsigned'.
 	theHomeContext _ localHomeContext.
 
 ]
@@ -4276,13 +4276,16 @@ Interpreter >> okayInterpreterObjects [
 ]
 
 { #category : #'debug support' }
-Interpreter >> okayOop: oop [
+Interpreter >> okayOop: signedOop [
 	"Verify that the given oop is legitimate. Check address, header, and size but not class."
 
-	| sz type fmt |
+	| sz type fmt oop |
+	self var: #oop type: 'unsigned'.
+	oop := self cCoerce: signedOop to: 'unsigned'.
+
 	"address and size checks"
 	(self isIntegerObject: oop) ifTrue: [ ^true ].
-	((0 < oop) & (oop < endOfMemory))
+	(oop < endOfMemory)
 		ifFalse: [ self error: 'oop is not a valid address' ].
 	((oop \\ 4) = 0)
 		ifFalse: [ self error: 'oop is not a word-aligned address' ].
@@ -4328,18 +4331,24 @@ xxx"
 ]
 
 { #category : #'image segment in/out' }
-Interpreter >> oopHasAcceptableClass: oop [
+Interpreter >> oopHasAcceptableClass: signedOop [
 	"Similar to oopHasOkayClass:, except that it only returns true or false."
 
-	| oopClass formatMask behaviorFormatBits oopFormatBits |
-	(self isIntegerObject: oop) ifTrue: [^ true].
-	((0 < oop) & (oop < endOfMemory)) ifFalse: [^ false].
+	| oopClass formatMask behaviorFormatBits oopFormatBits oop |
+	(self isIntegerObject: signedOop) ifTrue: [^ true].
+
+	self var: #oop type: 'unsigned'.
+	self var: #oopClass type: 'unsigned'.
+
+	oop := self cCoerce: signedOop to: 'unsigned'.
+
+	oop < endOfMemory ifFalse: [^ false].
 	((oop \\ 4) = 0) ifFalse: [^ false].
 	(oop + (self sizeBitsOf: oop)) < endOfMemory ifFalse: [^ false].
-	oopClass _ self fetchClassOf: oop.
+	oopClass := self cCoerce: (self fetchClassOf: oop) to: 'unsigned'.
 
 	(self isIntegerObject: oopClass) ifTrue: [^ false].
-	((0 < oopClass) & (oopClass < endOfMemory)) ifFalse: [^ false].
+	(oopClass < endOfMemory) ifFalse: [^ false].
 	((oopClass \\ 4) = 0) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) < endOfMemory ifFalse: [^ false].
 	((self isPointers: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
@@ -4354,12 +4363,16 @@ Interpreter >> oopHasAcceptableClass: oop [
 ]
 
 { #category : #'debug support' }
-Interpreter >> oopHasOkayClass: oop [
+Interpreter >> oopHasOkayClass: signedOop [
 	"Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance."
 
-	| oopClass formatMask behaviorFormatBits oopFormatBits |
+	| oop oopClass formatMask behaviorFormatBits oopFormatBits |
+	self var: #oop type: 'unsigned'.
+	self var: #oopClass type: 'unsigned'.
+
+	oop := self cCoerce: signedOop to: 'unsigned'.
 	self okayOop: oop.
-	oopClass _ self fetchClassOf: oop.
+	oopClass := self cCoerce: (self fetchClassOf: oop) to: 'unsigned'.
 
 	(self isIntegerObject: oopClass)
 		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior' ].
@@ -7972,6 +7985,7 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	self var: #headerStart declareC: 'squeakFileOffsetType headerStart'.
 	self var: #dataSize declareC: 'size_t dataSize'.
 	self var: #imageOffset declareC: 'squeakFileOffsetType imageOffset'.
+	self var: #memStart type: 'unsigned'.
 
 	swapBytes _ self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart _ (self sqImageFilePosition: f) - 4.  "record header start position"
