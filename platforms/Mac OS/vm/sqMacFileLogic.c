@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.9 2002/05/31 16:48:23 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.10 2002/08/06 21:42:48 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -15,6 +15,8 @@
 *	1/18/2002 JMM recheck macroman, fix dir size problem on os-9, do squeak file offset type
 *   4/23/2002 JMM fix how image is found for os-9 for bundled applications
 *   5/12/2002 JMM add logic to enable you to put plugins beside macclassic VM
+*   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+
 *
 *****************************************************************************/
 /* 
@@ -170,6 +172,19 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
                 if (strlen(dst)+1+strlen(lastpart) < 1000) {
                     strcat(dst,"/");
                     strcat(dst,lastpart);
+                    
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)dst,strlen(dst),kCFStringEncodingMacRoman,false);
+        if (filePath == nil) 
+            return 2;
+        sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,true);
+		CFRelease(filePath);
+        filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
+        CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+		CFRelease(sillyThing);
+        CFRelease(filePath);        
+#endif
+
                     return 0;
                 } else
                     return 2;
@@ -182,8 +197,17 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
         if (resolveAlias) 
             err = FSResolveAliasFile (&theFSRef,true,&isFolder,&isAlias);
 
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+		sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
+        filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
+        CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+		CFRelease(sillyThing);
+        CFRelease(filePath);        
+        return 0;
+#else
         err = FSRefMakePath(&theFSRef,(UInt8 *)dst,1000); 
         return err;
+#endif 
 }
 
 /* Convert the squeak path to an OS-X path. This path because of alias resolving may point 
@@ -193,7 +217,7 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
         FSRef		theFSRef;
         FSSpec		convertFileNameSpec,failureRetry;
         OSErr		err;
-        Boolean		isFolder,isAlias;
+        Boolean		isFolder=false,isAlias=false;
         CFURLRef 	sillyThing,appendedSillyThing;
         CFStringRef 	filePath,lastPartOfPath;
         
@@ -205,10 +229,15 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
         err = lookupPath((char *) src,num,&convertFileNameSpec,true,false);
         if ((err == noErr) && resolveAlias) {
             err = ResolveAliasFile(&convertFileNameSpec,true,&isFolder,&isAlias);
+            if (err == fnfErr) {
+				err = lookupPath((char *) src,num,&convertFileNameSpec,false,false);
+	            err = ResolveAliasFile(&convertFileNameSpec,true,&isFolder,&isAlias);
+            }
         }
+        
         if (err == fnfErr) {
             failureRetry = convertFileNameSpec;
-            CopyCStringToPascal(":",failureRetry.name);
+            CopyCStringToPascal("::",failureRetry.name);
             err = FSpMakeFSRef(&failureRetry,&theFSRef);
             if (err != noErr) 
                 return;
@@ -240,6 +269,7 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
         CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
 		CFRelease(sillyThing);
         CFRelease(filePath);        
+        return;
  #else
         err = FSRefMakePath(&theFSRef,(UInt8 *)dst,1000); 
  #endif
@@ -723,10 +753,11 @@ static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileNam
 #endif
 }
 
+#if defined(__MWERKS__)
+int RunningOnCarbonX();
+OSErr __path2fss(const char * pathName, FSSpecPtr spec);
 
-#if defined(__MWERKS__) && !TARGET_API_MAC_CARBON
-OSErr __path2fss(const char * pathName, FSSpecPtr spec)
-{
+OSErr __path2fss(const char * pathName, FSSpecPtr spec) {
     return lookupPath((char *) pathName, strlen(pathName),spec,true,true);
 }
 #endif
@@ -797,7 +828,7 @@ OSStatus GetApplicationDirectory(FSSpec *workingDirectory) {
         pinfo.processAppSpec = workingDirectory;
         err = GetProcessInformation(&PSN, &pinfo);
         if (err == noErr && isSystem9_0_or_better()) {
-#if TARGET_API_MAC_CARBON
+#if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
 			FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
 #else
             FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:",&checkDirectory);
