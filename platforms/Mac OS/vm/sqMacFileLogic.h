@@ -1,3 +1,16 @@
+/****************************************************************************
+*   PROJECT: Mac directory logic
+*   FILE:    sqMacFileLogic.c
+*   CONTENT: 
+*
+*   AUTHOR:  John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqMacFileLogic.h,v 1.3 2002/01/09 06:43:39 johnmci Exp $
+*
+*   NOTES: See change log below.
+*	Jan 2nd 2002 JMM added logic to make lookups faster
+*/
 #if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
 #else
@@ -23,5 +36,6 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info, NavCallBackUserD
 pascal short DialogHook(short item, DialogPtr theDialog,  void *userData);
 int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,long *parentDirectory, int *isFolder,int *createDateStorage,int *modificationDateStorage,squeakInt64 *sizeOfFile,Str255 *longFileName);
 int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown);
-int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown);
-void makeOSXPath(char * dst, int src, int num,Boolean resolveAlias);Boolean isVmPathVolumeHFSPlus(void);
+int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown,Boolean tryShortCut);
+void makeOSXPath(char * dst, int src, int num,Boolean resolveAlias);
+Boolean isVmPathVolumeHFSPlus(void);

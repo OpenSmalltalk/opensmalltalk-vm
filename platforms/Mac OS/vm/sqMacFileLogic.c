@@ -6,11 +6,12 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.3 2001/12/27 22:44:17 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.4 2002/01/09 06:43:25 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
 *	12/27/2001 JMM Because of how os-x handles metadata I had to change how navgetfile functions
+*	1/1/2002 JMM some cleanup to streamline path creation to minimize io & carbon cleanup
 *
 *****************************************************************************/
 /* 
@@ -28,6 +29,16 @@ in terms of POSIX path names.
 Just to complicate things CW Pro likes to think of names in terms of HFS path names for unix calls.
 Also if you attempt to use Apple's StdClib it wants posix names, sigh...
 */
+#if TARGET_API_MAC_CARBON
+	#include <Carbon/Carbon.h>
+#else
+	#include <AppleEvents.h>
+	EXTERN_API( OSErr ) AEGetDescData(
+  const AEDesc *  theAEDesc,
+  void *          dataPtr,
+  Size            maximumSize);
+
+#endif
 
 #include "sq.h"
 #include "sqVirtualMachine.h"
@@ -35,8 +46,9 @@ Also if you attempt to use Apple's StdClib it wants posix names, sigh...
 
 static void resolveLongName(short vRefNum, long parID, unsigned char *shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakInt64 *sizeOfFile);
 static int fetchFileSpec(FSSpec *spec,unsigned char *name,long *parentDirectory);
-static OSErr FSpGetFullPath(const FSSpec *spec, short *fullPathLength, Handle *fullPath);
+static int quicklyMakePath(char *pathString, int pathStringLength, char *dst, Boolean resolveAlias);
 extern Boolean RunningOnCarbonX(void);
+extern int  IsImageName(char *name);
 
 #if TARGET_API_MAC_CARBON
 
@@ -53,7 +65,7 @@ OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
         // name contains multiple aliases or does not exist, so fallback to lookupPath
         CFRelease(filePath);
         CFRelease(sillyThing);
-        return lookupPath(pathString,pathStringLength,spec,true);
+        return lookupPath(pathString,pathStringLength,spec,true,true);
     } 
             
     CFRelease(filePath);
@@ -111,6 +123,52 @@ int PathToFile(char *pathName, int pathNameMax, FSSpec *where) {
         return 0;
 }
 
+static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boolean resolveAlias) {
+	CFStringRef 	filePath;
+        CFURLRef 	sillyThing,firstPartOfPath;
+        FSRef		theFSRef;   
+        Boolean		isFolder,isAlias;
+        OSErr		err;
+        
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,
+                    (UInt8 *)pathString,pathStringLength,kCFStringEncodingMacRoman,false);
+	sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+        
+        if (!CFURLGetFSRef(sillyThing,&theFSRef)) {
+            firstPartOfPath = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault,sillyThing);
+            if (!CFURLGetFSRef(firstPartOfPath,&theFSRef)) {
+                CFRelease(firstPartOfPath);
+                CFRelease(filePath);
+                CFRelease(sillyThing);
+                return -1;
+            } else {
+                CFRelease(filePath);
+                CFRelease(firstPartOfPath);
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+                filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
+#else
+                filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLPOSIXPathStyle);
+#endif
+                CFRelease(sillyThing);
+                if (filePath  == null) 
+                    return -2;
+                
+                CFStringGetCString(filePath,dst,1000, kCFStringEncodingMacRoman);
+                CFRelease(filePath);
+                return 0;
+            }
+        }
+        
+        CFRelease(filePath);
+        CFRelease(sillyThing);
+        
+        if (resolveAlias) 
+            err = FSResolveAliasFile (&theFSRef,true,&isFolder,&isAlias);
+
+        err = FSRefMakePath(&theFSRef,(UInt8 *)dst,1000); 
+        return err;
+}
+
 /* Convert the squeak path to an OS-X path. This path because of alias resolving may point 
 to another directory tree */
 
@@ -123,7 +181,11 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
         CFStringRef 	filePath,lastPartOfPath;
         
         *dst = 0x00;
-        err = makeFSSpec((char *) src,num,&convertFileNameSpec);
+        err = quicklyMakePath((char *) src,num,dst,resolveAlias);
+        if (err == noErr) 
+            return;
+            
+        err = lookupPath((char *) src,num,&convertFileNameSpec,true,false);
         if ((err == noErr) && resolveAlias) {
             err = ResolveAliasFile(&convertFileNameSpec,true,&isFolder,&isAlias);
         }
@@ -227,6 +289,7 @@ int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown) {
 
 #else
 /* OS 8 and pre carbon logic */
+static OSErr FSpGetFullPath(const FSSpec *spec, short *fullPathLength, Handle *fullPath);
 
 static OSErr	FSpGetFullPath(const FSSpec *spec,
 							   short *fullPathLength,
@@ -424,7 +487,7 @@ These are common routines
 
 */
 
-int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown) {
+int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown,Boolean tryShortCut) {
 	/* Resolve the given path and return the resulting folder or volume
 	   reference number in *refNumPtr. Return error if the path is bad. */
 
@@ -432,7 +495,7 @@ int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDr
  	OSErr		    err;
  	int		        i;
  	
-    if (pathStringLength < 256) {
+    if (pathStringLength < 256 && tryShortCut) {
         /* First locate by farily normal methods, with perhaps an alias lookup */
  		tempName[0] = pathStringLength;
 		strncpy((char *)tempName+1,pathString,pathStringLength);
@@ -586,12 +649,18 @@ static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileNam
         OSErr     err;
 
         if (possibleSpec == nil) {
-            err = FSMakeFSSpecCompat(vRefNum,parID,shortFileName,&spec);
+            FSRefParam FSParam;
+            
+            FSParam.ioNamePtr = shortFileName;
+            FSParam.ioVRefNum = vRefNum;
+            FSParam.ioDirID = parID;
+            FSParam.newRef = &theFSRef;
+            FSParam.ioCompletion = null;
+
+            err = PBMakeFSRefSync(&FSParam);
+
             if (err != noErr)
                 goto done1;   
-            err = FSpMakeFSRef(&spec,&theFSRef);
-            if (err != noErr)
-             goto done1;   
         } else {
             err = FSpMakeFSRef(possibleSpec,&theFSRef);
             if (err != noErr)
@@ -633,7 +702,7 @@ static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileNam
 #if defined(__MWERKS__) && !TARGET_API_MAC_CARBON
 OSErr __path2fss(const char * pathName, FSSpecPtr spec)
 {
-    return lookupPath((char *) pathName, strlen(pathName),spec,true);
+    return lookupPath((char *) pathName, strlen(pathName),spec,true,true);
 }
 #endif
 
@@ -641,16 +710,22 @@ OSErr __path2fss(const char * pathName, FSSpecPtr spec)
 Boolean isVmPathVolumeHFSPlus() {
     XVolumeParam        xpb;
     OSErr               err;
-     
+    static int 		cachedCheck = -1;
+    
+    if (cachedCheck != -1) 
+        return cachedCheck;
+        
     xpb.ioNamePtr   = NULL;
     xpb.ioVRefNum   = 0;
     xpb.ioXVersion  = 0;
     xpb.ioVolIndex  = 0;
 
     err = PBXGetVolInfoSync( &xpb );
-    if (err != noErr) 
-        return false;
-    return ( xpb.ioVSigWord == kHFSPlusSigWord );
+    if (err != noErr)  
+    	cachedCheck = false;
+    else
+        cachedCheck = xpb.ioVSigWord == kHFSPlusSigWord;
+    return cachedCheck;
 }
 
 OSErr	FSMakeFSSpecCompat(short vRefNum, long dirID, ConstStr255Param fileName,  FSSpec *spec) {
@@ -764,8 +839,9 @@ OSErr squeakFindImage(const FSSpecPtr defaultLocationfssPtr,FSSpecPtr documentFS
     {
         //  Adjust the options to fit our needs
         //  Set default location option
-        dialogOptions.dialogOptionFlags |= kNavSelectDefaultLocation;
-        dialogOptions.dialogOptionFlags |= kNavNoTypePopup;
+        //  dialogOptions.dialogOptionFlags |= kNavSelectDefaultLocation;
+        dialogOptions.dialogOptionFlags |= kNavAllFilesInPopup;
+        dialogOptions.dialogOptionFlags |= kNavSelectAllReadableItem;
         //  Clear preview option
         dialogOptions.dialogOptionFlags ^= kNavAllowPreviews;
         
@@ -778,11 +854,8 @@ OSErr squeakFindImage(const FSSpecPtr defaultLocationfssPtr,FSSpecPtr documentFS
             // Get 'open' resource. A nil handle being returned is OK,
             // this simply means no automatic file filtering.
             // 3.2.1, use filter proc, not open resource, because of os-x tag, metadata issues
-#if defined (__APPLE__) && defined(__MACH__)
             NavTypeListHandle typeList = nil;
-#else
-            NavTypeListHandle typeList = (NavTypeListHandle)GetResource('open', 128);
-#endif
+            // NavTypeListHandle typeList = (NavTypeListHandle)GetResource('open', 128);
             
             NavReplyRecord reply;
             
