@@ -1,0 +1,73 @@
+#!/bin/sh
+# 
+# ffi-config [cfgdir] [options...]
+# 
+#    -cpu	print the supported cpu name or `any'
+#    -abi	print the supported abu name or `libffi'
+#    -lib	print nothing if supported, otherwise  `-lffi'
+#    -query	exit with status 0 if supported, 1 if libffi required
+
+cfgdir=../../config
+
+if [ $# -gt 0 ]; then
+    case $1 in
+	-*)	;;
+	*)	cfgdir=$1; shift;;
+    esac
+fi
+
+ffidir=.
+
+if [ $# -gt 0 ]; then
+    case $1 in
+	-*)	;;
+	*)	ffidir=$1; shift;;
+    esac
+fi
+
+guess=`${cfgdir}/config.guess`
+host=`${cfgdir}/config.sub ${guess}`
+cpu=`echo ${host} | sed 's/-.*//'`
+abi=`echo ${host} | sed 's/[^-]*-[^-]*-//;s/-.*//'`
+lib=
+
+case ${cpu} in
+    powerpc|ppc)	cpu=ppc;;
+    i[3456789]86)	cpu=x86;;
+    *)			cpu=any;;
+esac
+
+case ${abi} in
+    linux)		abi=sysv;;
+    darwin*)		abi=darwin;;
+    *)			abi=libffi; lib="-lffi";;
+esac
+
+if [ ! -f ${ffidir}/${cpu}-${abi}.c ] || [ ! -f ${ffidir}/${cpu}-${abi}-asm.S ]; then
+    cpu=any
+    abi=libffi
+    lib="-lffi"
+fi
+
+if [ ! -f ${ffidir}/${cpu}-${abi}.c ] || [ ! -f ${ffidir}/${cpu}-${abi}-asm.S ]; then
+    echo "Could not find ${cpu}-${abi}.c and ${cpu}-${abi}-asm.S" >&2
+    exit 1
+fi
+
+if [ $# -eq 0 ]; then
+    echo "${cpu}-${abi}" "${lib}"
+else
+    while [ $# -gt 0 ]; do
+	case $1 in
+	    -cpu)	echo ${cpu};;
+	    -abi)	echo ${abi};;
+	    -lib)	echo ${lib};;
+	    -cpu-abi)	echo ${cpu}-${abi};;
+	    -query)	if [ ${abi} = "libffi" ]; then exit 1; else exit 0; fi;;
+	    *)		echo "$0: I don't understand \`$1'" >&1; exit 1;;
+	esac
+    shift
+    done
+fi
+
+exit 0

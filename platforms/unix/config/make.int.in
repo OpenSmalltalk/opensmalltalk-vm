@@ -1,0 +1,12 @@
+# make.int.in -- mf fragment for internal plugins		-*- makefile -*-
+# 
+# Author: Ian.Piumarta@inria.fr
+# 
+# Last edited: 2002-07-08 20:31:51 by piumarta on emilia.inria.fr
+
+o		= .o
+a		= .a
+COMPILE		= $(CC) $(CFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) -DSQUEAK_BUILTIN_PLUGIN \
+		  $(INCLUDES) $(XINCLUDES) $(CPPFLAGS) $(XCPPFLAGS) -c -o
+LINK		= $(AR) -rc
+RANLIB		= @RANLIB@

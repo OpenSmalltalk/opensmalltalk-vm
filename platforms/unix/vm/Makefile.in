@@ -1,0 +1,69 @@
+# Makefile for core VM				-*- makefile -*-
+# 
+#   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+#     as listed elsewhere in this file.
+#   All rights reserved.
+#   
+#   This file is part of Unix Squeak.
+# 
+#   This file is distributed in the hope that it will be useful, but WITHOUT
+#   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#   FITNESS FOR A PARTICULAR PURPOSE.
+#   
+#   You may use and/or distribute this file ONLY as part of Squeak, under
+#   the terms of the Squeak License as described in `LICENSE' in the base of
+#   this distribution, subject to the following restrictions:
+# 
+#   1. The origin of this software must not be misrepresented; you must not
+#      claim that you wrote the original software.  If you use this software
+#      in a product, an acknowledgment to the original author(s) (and any
+#      other contributors mentioned herein) in the product documentation
+#      would be appreciated but is not required.
+# 
+#   2. This notice must not be removed or altered in any source distribution.
+# 
+#   Using (or modifying this file for use) in any context other than Squeak
+#   changes these copyright conditions.  Read the file `COPYING' in the
+#   directory `platforms/unix/doc' before proceeding with any such use.
+# 
+#   You are not allowed to distribute a modified version of this file
+#   under its original name without explicit permission to do so.  If
+#   you change it, rename it.
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: 2002-12-01 10:20:57 by piumarta on calvin.inria.fr
+
+[make_cfg]
+[make_plg]
+
+TARGET		= vm$a
+OBJS		= $(INTERP)$o sqNamedPrims$o sqVirtualMachine$o \
+		  aio$o osExports$o sqUnixExternalPrims$o sqUnixMozilla$o sqXWindow$o
+
+XINCLUDES	= [includes] -I$(topdir)/platforms/Cross/plugins/FilePlugin
+
+$(TARGET) : $(OBJS) Makefile
+	$(LINK) $(TARGET) $(OBJS)
+	$(RANLIB) $(TARGET)
+
+# rebuild sqNamedPrims.o if sqNamedPrims.h changes
+
+sqNamedPrims$o : $(srcdir)/vm/sqNamedPrims.h
+
+# rebuild sqExtPrims (VM_LIBDIR) sqXWin (VM_VERSION) if config.h changes
+
+sqUnixExternalPrims$o sqXWindow$o : ../config.h $(topdir)/platforms/unix/vm/dlfcn-dyld.c
+
+# GNUify the interpreter if needed
+
+gnu-interp$o : gnu-interp.c
+	$(COMPILE) $@ gnu-interp.c
+
+gnu-interp.c : $(srcdir)/vm/interp.c
+	$(AWK) -f $(topdir)/platforms/unix/config/gnuify $(srcdir)/vm/interp.c > $@.out
+	mv $@.out $@
+
+[make_targets]
+
+.force :

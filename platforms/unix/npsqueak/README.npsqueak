@@ -1,0 +1,192 @@
+=================================================================
+
+Netscape Plugin for Squeak on Unix platforms
+
+Author:	     Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
+Version:     @VM_VERSION@
+Last edited: Wed 02 Oct 2002 15:52:35 by bert on balloon
+
+
+=================================================================
+
+Files:
+	Makefile
+	README.npsqueak
+	npsqueak.c
+	npunix.c	(modified copy from Netscape Plugin SDK)
+	include/*	(unmodified headers from Netscape Plugin SDK)
+	test/*
+
+=================================================================
+
+To compile and install the Squeak plugin
+
+  0a.	You have to compile and install the main VM first.
+
+		mkdir build
+		cd build
+		../platforms/unix/config/configure
+		make
+		make install
+
+	This installs squeak into (probably) 
+
+		SQ_DIR=/usr/local/lib/squeak
+
+  0b.	You will need an image. Copy it to
+
+		${SQ_DIR}/npsqueak.image
+
+	A good place to look for an image suited as plugin is
+
+		http://squeakland.org/plugin/installers/files.html		
+
+  1.	Change into the plugin source directory:
+
+		cd npsqueak
+
+  2a.	If necessary, edit the Makefile (compiler options):
+
+		emacs Makefile
+
+  2b.	Make the plugin:
+
+		make
+
+	"npsqueak.so" will be the output of a successful compile process.
+
+  3.	Install the plugin as superuser (root):
+
+		su
+		make install
+
+	This creates the following files and directories
+
+		${SQ_DIR}/@VM_VERSION@/npsqueakrun
+			(executed from plugin)
+		${SQ_DIR}/@VM_VERSION@/npsqueak.so
+			(the plugin itself)
+		${SQ_DIR}/npsqueakregister
+			(a shell script to register)
+
+	It also runs npsqueakregister which looks for various browsers
+	in various directories and creates links to the plugin. If
+	your browser is not found, hack the npsqueakregister script or
+	symlink the plugin manually:
+
+		ln -s ${SQ_DIR}/@VM_VERSION@/npsqueak.so \
+			/usr/lib/mybrowser/plugins/
+
+	Finally, log out of the super user account:
+
+		exit
+
+  4.	Exit and restart the browser. Check if the Squeak plugin 
+	was recognized by selecting the Help>>About Plugins menu item.
+
+  5.	Open the html file in the test/ directory. This should
+	activate the Squeak plugin. Since this is the first time the
+	plugin is executed, a .npsqueak folder will be created in your 
+	home directory and the plugin image is installed into it.
+
+=================================================================
+
+NOTE: If you are not the super user of your machine you can install
+everything into your home directory. Put npsqueak.so somewhere your
+browser will find it.  Make a .npsqueak dir in your home directory
+with subdirectories and files like shown below. Also create a
+.npsqueak/npsqueakvm file which points to a Squeak VM.
+
+=================================================================
+
+DOCUMENTATION
+
+* On the first run for each user, the npsqueakrun will create a directory
+  structure like this:
+
+    $(HOME)/
+    |
+    +--- .npsqueak/
+         |
+         +--- SqueakPlugin.image
+         |
+         +--- secure/
+         |
+         +--- untrusted/
+
+* Environment Variables:
+
+    NPSQUEAK_DEBUG
+        logs debug info to /tmp/npsqueak.log
+        Default: don't log
+
+* Mimetypes:
+
+    application/x-squeak-source:sts:Squeak source
+    application/x-squeak-object:sqo:Squeak object
+    application/x-squeak-project:pr:Squeak project
+
+* Parameters:
+
+  parameters in EMBED tag used by Squeak:
+
+    SRC=...
+    MEMORY=... (not by unix npsqueak)
+
+* Communication with VM is via Pipes
+
+=================================================================
+
+TODO
+
+* loop on read() and write() until all data is sent and received.
+* make sure Squeak really gets killed
+* fix crashing the browser when closing plugin page
+* make plugin not wait for browser when the url is loaded into a target.
+* use autoconf
+
+
+=================================================================
+
+Change log
+
+Oct 2002:
+	* modified install from home directory to system-wide
+
+Sep 2002:
+	* hack to work with Mozilla >= 1.0 which deletes the delivered
+	  file immediately. We just create a hard link before and
+	  delete that after opening the file.
+
+Mar 2002:
+	* uses aio now for command pipe 
+	* moved stuff from ~/.netscape/squeak to ~/.npsqueak directory
+	* implemented SecurityPlugin
+
+May 2001:
+	* updated for squeakland.org image.
+	* TODO: SecurityManager
+
+Feb 2001:
+	* updated for Squeak 3.0
+
+Nov 2000:
+	* introduced -browserPipes command line
+	* this fixed the bug of plugins in tables
+	* cleaned up a lot of hacks
+	* this fixed crashing Mozilla 0.6
+	* made widget destroy work more often than not
+	* Problems: crashes when closing Netscape window
+	*           pipe is polled for now - should use select in sqXWindow
+
+
+Apr 2000:
+	* url requests through browser
+
+Nov 1999
+	* report attributes to vm
+
+Aug 1999
+	* initial version
+
+

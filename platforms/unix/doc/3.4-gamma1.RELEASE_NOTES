@@ -1,0 +1,86 @@
+3.4-gamma1 released on 2003-02-09.
+
+Note that this will be the last release of the VM in its current form.
+A major overhaul has been underway to add support for MacOSX and to
+modularise large parts of the support code.  Active development has
+ceased in 3.4 and moved to the 3.5 VM, although bug-fix releases of
+3.4 will continue to be made as necessary in the short term until 3.5
+is considered stable.
+
+Major changes since 3.2-5:
+
+VM:
+
+  The core VM was generated out of a 3.4a-5169 (3.4gammeOne) image.
+
+  IMPORTANT NOTE for Croquet users: binary releases of this VM will
+  NOT run the latest version of Croquet.  The 3.4 image is missing
+  some BitBlt and Float support required by Croquet.  The support code
+  is entirely compatible, though, so regenerating the VM core from
+  within a Croquet image and then recompiling WILL yield a VM capable
+  of running Croquet just fine.
+
+  Subtle directory deletion bug eliminated.  (Thanks to Ned Konz.)
+
+  The peer address is filled in correctly after reception of a UDP
+  packet.  (Thanks to Stefan Kersten.)
+
+  Numerous small changes in several places for Darwin compatibility.
+
+  Type of sizeIfFile corrected to squeakFileOffsetType.  (Many thanks
+  to Alain Fischer for finding this.)
+
+  The `-secure' option has been removed.
+
+  MAXHOSTNAMELEN defaults to 256 (for ancient Solaris systems that
+  fail to define it anywhere).
+
+  On PowerPC machines (only) mod2 (the Option key) is mapped to Option
+  and mod3 (the Command key) is mapped to Command.  (On other
+  architectures the mapping remains as before: mod1 and mod2 mapped to
+  Option and Command.  If anyone else is having problems with
+  modifiers, blame it on the peecee crowd whose keyboards are broken.
+  It just seemed ridiculous that the image wasn't behaving the way it
+  should on Apple keyboards, which is after all what it was originally
+  designed for.)
+
+Plugins:
+
+  Updated OpenGL code for B3DAcceleratorPlugin.  _Many_ thanks to Bert
+  Freudenberg for this.
+
+  OSProcessPlugin updated to 3.0.5.  Thanks to Dave Lewis for keeping
+  me up to date with his progress.
+
+  The FFIPlugin now comes with built-in support for SVr4-like APIs
+  (GNU/Linux, BSD, etc.) on PowerPC and Intel x86, and for the Mach-O
+  (Darwin) API on PowerPC.  There is no longer any dependency on
+  libffi on these platforms.  Fallback to using libffi is retained for
+  other platforms.
+
+  DragDrop changes for Darwin/Quartz.  (Note that the Quartz window
+  code that uses it will bundled starting with version 3.5-1, so don't
+  go looking for it in 3.4.)
+
+Build:
+
+  The build is using autoconf-2.52 for the moment, since there are
+  severe problems with 2.54-generated configure scripts (which refuse
+  to create a working libtool on Darwin).
+
+  Builds out of the box on Darwin, either headless or with X11 support
+  (tested with XDarwin 4.2.1.1 on darwin6.2).  NOTE: there are still
+  bugs in autoconf (more precisely, in aclocal and libtool) concerning
+  darwin.  If you rebuild the configure script (by running `autoconf'
+  or `make' in the config dir) then the resulting configure script may
+  not work (the build will fail when trying to create shared libs for
+  external plugins).  If you are affected by this then I can send you
+  my patched versions of ltcf-c.sh and aclocal.m4.  You have been
+  warned!  (On the other hand, the autoconf supplied with Darwin works
+  perfectly on all the systems that I've tested it on.)
+
+  Problems with libGLs that depend on libpthread should be fixed.
+
+  Link errors in sqUnixMozilla on BSD should no longer occur.
+
+  Removed the majority of the ridiculous dependencies in the RPM.

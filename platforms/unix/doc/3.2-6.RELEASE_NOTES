@@ -1,0 +1,45 @@
+3.2-6 released on 2002-11-27.
+
+This release consolidates the VM support required by Croquet (which is
+missing in 3.2) and that required by several 3.2 plugins (that are
+missing in Croquet).  It should work just fine with 3.2, 3.4 and
+Croquet images.
+
+Major changes since 3.2-5:
+
+VM:
+
+  New VM sources generated (for Croquet compatibility).  The core is
+  now generated out of a 3.4a-5125 image and runs Croquet fine on the
+  build machine.
+
+  Various small changes in several places for Darwin compatibility.
+
+  The `-secure' option has been removed.
+
+Plugins:
+
+  Updated OpenGL code for B3DAcceleratorPlugin.  _Many_ thanks to Bert
+  Freudenberg for this.
+
+  OSProcessPlugin updated to 3.0.2.
+
+Build:
+
+  Updated to autoconf-2.54.
+
+  Builds out of the box on Darwin, either headless or with X11 support
+  (tested with XDarwin 4.2.1.1 on darwin6.2).  NOTE: there are still
+  bugs in autoconf (more precisely, in aclocal and libtool) concerning
+  darwin.  If you rebuild the configure script (by running `autoconf'
+  or `make' in the config dir) then the resulting configure script may
+  not work (the build will fail when trying to create shared libs for
+  external plugins).  If you are affected by this then I can send you
+  my patched versions of ltcf-c.sh and aclocal.m4.  You have been
+  warned!
+
+  Problems with libGLs that depend on libpthread should be fixed.
+
+  Link errors in sqUnixMozilla on BSD should no longer occur.
+
+  Removed the majority of the ridiculous dependencies in the RPM.

@@ -1,0 +1,22 @@
+# Makefile.in for FFIPlugin on Unix
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: 2003-01-28 10:59:01 by piumarta on emilia.inria.fr
+
+[make_cfg]
+[make_plg]
+
+TARGET	= SqueakFFIPrims$a
+
+OBJS	= SqueakFFIPrims$o ffi-test$o $(FFI_O)
+
+XINCLUDES	= [includes]
+
+$(TARGET) : $(OBJS) Makefile
+	$(LINK) $(TARGET) $(OBJS)
+	$(RANLIB) $(TARGET)
+
+[make_targets]
+
+.force :

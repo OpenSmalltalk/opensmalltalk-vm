@@ -1,0 +1,25 @@
+This release is mainly for the BSD folks.  It fixes some portability
+issues in the PTY plugin (I've now built and tested it on GNU/Linux,
+NetBSD and Solaris and I'm hopeful that it will compile out of the box
+and work on almost any Unix now) and ties up the last of the loose
+ends in BSD build.
+
+Since 3.2-3:
+
+* PtyPlugin rewritten to use either /dev/ptmx or openpty(), as
+  availablility permits.
+
+* Minor tweaks to build process (thanks to Steve Elkins for spotting
+  the problems).
+
+* A couple of buglets fixed in AsynchFilePlugin (the *class*, not the
+  support code) to prevent core dumps when AsyncFiles are left open
+  across snapshot.  (The changes have been sent to John Mc who was, I
+  believe, the original author.  Apologies if this isn't so.  In any
+  case the changes file is in the unix/plugins/AsynchFilePlugin
+  directory and they're in the Unix VM source/binaries [since I've
+  had core dumps from these bugs recently].)
+
+That's it.
+
+Ian
