@@ -33,7 +33,7 @@
 .\"   changes these copyright conditions.  Read the file `COPYING' in the
 .\"   directory `platforms/unix/doc' before proceeding with any such use.
 .\" 
-.\" Last edited: 2003-08-21 20:42:57 by piumarta on felina.inria.fr
+.\" Last edited: 2003-09-03 19:53:48 by piumarta on emilia.inria.fr
 .\" 
 .if @@\*(lq@ \{\
 .	ds lq "
@@ -824,6 +824,27 @@ should be self-explanatory.
 .B squeak
 normally does not print anything at all.  If it prints something then there
 is a problem.  The messages should be self-explanatory.
+.\" .PP
+.\" Sending
+.\" .B squeak
+.\" a SIGHUP or SIGQUIT signal will cause it dump the executing image into
+.\" the working directy and then exit.  Both of these should be
+.\" considered 'last resort' measures to save an image that contains
+.\" valuable recent changes.  SIGHUP is synchronous (it works when the VM
+.\" is in a known state) and the chances of obtaining a working image are
+.\" fairly good, but it relies on the event polling loop being called.
+.\" SIGQUIT is asynchronous, and the chances of recovering a working image
+.\" after using it are fairly poor.  In either case, when restaring the
+.\" "dumped" image, the first think that should be done is to execute
+.\" .sp
+.\" .RS
+.\" .nf
+.\" Smalltalk processStartUpList: true
+.\" .fi
+.\" .RE
+.\" .sp
+.\" in a workspace.  Recover what is needed from the image, then destroy
+.\" the image (whose integrity should certainly not be trusted).
 .SH FILES
 .I [imgdir]/SqueakV[major].sources
 .RS
