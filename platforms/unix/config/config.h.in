@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2003-03-02 05:26:57 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-13 23:16:27 by piumarta on emilia.inria.fr
  */
 
 #ifndef __sq_config_h
@@ -153,5 +153,6 @@
 #undef VM_LIBDIR
 #undef VM_MODULE_PREFIX
 #undef VM_DLSYM_PREFIX
+#undef VM_X11DIR
 
 #endif /* __sq_config_h */
