@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   andreasr@wdi.disney.com
-*   RCSID:   $Id: any-libffi.c,v 1.4 2003/08/07 02:44:55 piumarta Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:  The Unix version of the FFI support code relies on libffi from
 *	    http://sourceware.cygnus.com/libffi/
