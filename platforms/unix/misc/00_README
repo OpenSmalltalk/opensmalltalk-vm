@@ -1,8 +1,33 @@
-VMMaker-3.7b5-unsignedFixes3-nk.2.cs
+VMM38b4-64bit-image1-ikp.1.cs
+VMM38b4-64bit-image2-ikp.1.cs
 
-    Contains Ned Konz's last-minute fixes for the generated sources
-    that avoid problems with loading image segments, the SqueakMap
-    package list, etc.  They apply to the 3.7-5898-full image.
+    Contain image-side support for 64-bit images.  File-in image1
+    before image2.
+
+System-Tracing.2.cs
+
+    Contains the SystemTracer64 which writes a copy of the running
+    image in 64-bit format.  File-in image1 and image2 before
+    System-Tracing.
+
+VMMaker-tpr.14.mcz
+
+    Contains the version of VMMaker to which 64-bit support has been
+    added.  (This file does not itself contain any 64-bit support.)
+
+VMM38b4-64bit-vm1-ikp.1.cs
+
+    Contains 64-bit support for the CCodeGenerator, ObjectMemory, core
+    Interpreter, and the three essential plugins: BitBlt, Balloon and
+    FilePlugin.  You must file this in on top of VMMaker-tpr.14.
+
+VMM38b4-64bit-vm2-ikp.2.cs
+
+    Contains 64-bit support for the SocketPlugin, and for the
+    SmartSyntaxInterperterPlugin (and its variant of the
+    CCodeGenerator) required to translate it.
+
+----------------------------------------------------------------
 
 OSProcessPluginV3-3.sar
 XDisplayControlPluginV1-0.sar
@@ -11,6 +36,8 @@ AioPluginV1-1.sar
     The latest OSProcessPlugin from Dave Lewis.  Not part of the
     standard VM distributions, but bundled with the Unix distribution
     for your convenience.
+
+----------------------------------------------------------------
 
 GLXUnix-ikp.2.cs
 
