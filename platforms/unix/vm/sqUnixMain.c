@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2005-04-06 08:08:59 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-04-06 05:10:35 by piumarta on pauillac.hpl.hp.com
  */
 
 #include "sq.h"
@@ -685,7 +685,10 @@ static struct moduleDescription moduleDescriptions[]=
   { &displayModule, "display", "X11"    },	/*** NO DEFAULT ***/
   { &displayModule, "display", "fbdev"  },	/*** NO DEFAULT ***/
   { &displayModule, "display", "null"   },	/*** NO DEFAULT ***/
+  { &displayModule, "display", "custom" },	/*** NO DEFAULT ***/
   { &soundModule,   "sound",   "NAS"    },	/*** NO DEFAULT ***/
+  { &soundModule,   "sound",   "custom" },	/*** NO DEFAULT ***/
+  /* defaults */
   { &displayModule, "display", "Quartz" },
   { &soundModule,   "sound",   "MacOSX" },
   { &soundModule,   "sound",   "Sun"    },
@@ -694,7 +697,7 @@ static struct moduleDescription moduleDescriptions[]=
   { 0,              0,         0	}
 };
 
-static struct moduleDescription *defaultModules= moduleDescriptions + 4;
+static struct moduleDescription *defaultModules= moduleDescriptions + 6;
 
 
 struct SqModule *queryLoadModule(char *type, char *name, int query)
