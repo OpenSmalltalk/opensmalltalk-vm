@@ -1,9 +1,0 @@
-#!/bin/sh
-
-sed "s%\[major\]%$1%g
-s%\[version\]%$2%g
-s%\[bindir\]%$3%g
-s%\[imgdir\]%$4%g
-s%\[plgdir\]%$5%g
-s%\[mandir\]%$6%g
-s%\[docdir\]%$7%g"

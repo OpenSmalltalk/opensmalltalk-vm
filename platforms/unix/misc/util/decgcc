@@ -1,9 +1,0 @@
-#!/bin/sh
-#
-# gcc wrapper to remove extraneous warnings about pointer/int problems
-
-LOG=/tmp/gcc.err.$$
-trap "/bin/rm -f $LOG" 0 1 2 3 9 15
-gcc $* 2>$LOG ; STATUS=$?
-fgrep -v "In function" $LOG | fgrep -v "of different size" 1>&2
-exit $STATUS
