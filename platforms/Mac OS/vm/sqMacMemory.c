@@ -6,11 +6,12 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.8 2002/05/09 19:22:53 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.9 2002/08/06 21:45:49 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Mar  8th, 2002, JMM Must unmap view first then free.
+*  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
 *****************************************************************************/
 
 #include "sq.h" 
@@ -50,6 +51,11 @@ Boolean isSystem9_2_or_better(void);
 UInt32	sqGetAvailableMemory() {
 
 	long 	availableMemory;
+	
+#if TARGET_API_MAC_CARBON && defined(__MWERKS__)
+    availableMemory = MaxBlock() - reservedMemory;
+    return availableMemory;
+#endif 
 
 #if TARGET_API_MAC_CARBON
 	availableMemory = gMaxHeapSize;
@@ -99,7 +105,7 @@ void * sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
     OSErr err;
 	minHeapSize;
      
-#ifdef PLUGIN
+#if defined( PLUGIN)  || (TARGET_API_MAC_CARBON && defined(__MWERKS__))
     gMaxHeapSize = gHeapSize = *desiredHeapSize;
     
     #if TARGET_API_MAC_CARBON
@@ -111,8 +117,7 @@ void * sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
 	    else 
 	      return debug;
     #endif
-#endif
-
+#else
 #if TARGET_API_MAC_CARBON
     gHeapSize = gMaxHeapSize;
     debug = mmap( NULL, gMaxHeapSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
@@ -152,6 +157,7 @@ fallBack:
 	debug = NewPtr(gHeapSize);
 	return debug;
 #endif 
+#endif
 }
 
 int sqGrowMemoryBy(int memoryLimit, int delta) {

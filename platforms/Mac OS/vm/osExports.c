@@ -6,6 +6,12 @@
 
    style you may as well insert the exports right here */
 
+#include "sqVirtualMachine.h"
+/* Configuration options */
+#include "sqConfig.h"
+/* Platform specific definitions */
+#include "sqPlatformSpecific.h"
+
 #include <stdio.h>
 #include "sqMacUIEvents.h"
 #include "serialPlugin.h"
@@ -50,7 +56,9 @@ void *os_exports[][3] = {
 	XFN(serialPortReadInto)
 	XFN(serialPortWriteFrom)
 	XFN(IsKeyDown)
+#ifndef PLUGIN
 	XFN(getUIToLock)
+#endif
 #ifdef PLUGIN
 /* Plugin support primitives
    We should make these primitives a proper plugin
