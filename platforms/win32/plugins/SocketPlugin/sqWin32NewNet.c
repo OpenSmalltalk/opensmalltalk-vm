@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.5 2003/05/28 22:37:31 andreasraab Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.6 2003/06/21 17:06:57 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,7 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.5 2003/05/28 22:37:31 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.6 2003/06/21 17:06:57 andreasraab Exp $";
 #endif
 
 #if 0
@@ -495,7 +495,7 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 	/* Change appropriate socket state */
 	switch(pss->readWatcherOp) {
 	case WatchData:
-	  /* Data is available */
+	  /* Data may be available */
 	  pss->sockState |= SOCK_DATA_READABLE;
 	  doWait = 1; /* until data has been read */
 	  break;
@@ -1426,12 +1426,30 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(
 
 int sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, int buf, int bufSize,  int *address,  int *port, int *moreFlag)
 {
-	return FAIL();
+  int nRead;
+  if(UDPSocketType != s->socketType) 
+    return interpreterProxy->primitiveFail();
+  /* bind UDP socket*/
+  sqSocketConnectToPort(s, address, port);
+  if(interpreterProxy->failed()) return 0;
+  /* receive data */
+  nRead = sqSocketSendDataBufCount(s, buf, bufSize);
+  if(nRead >= 0) {
+    *address= ntohl(ADDRESS(s)->sin_addr.s_addr);
+    *port= ntohs(ADDRESS(s)->sin_port);
+  }
+  return nRead;
 }
 
 int	sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port, int buf, int bufSize)
 {
-	return FAIL();
+  if(UDPSocketType != s->socketType) 
+    return interpreterProxy->primitiveFail();
+  /* bind UDP socket */
+  sqSocketConnectToPort(s, address, port);
+  if(interpreterProxy->failed()) return 0;
+  /* send data */
+  return sqSocketSendDataBufCount(s, buf, bufSize);
 }
 
 /*** socket options ***/
