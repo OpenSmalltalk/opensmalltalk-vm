@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.14 2003/12/16 22:08:32 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.15 2004/04/23 20:47:52 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -288,11 +288,11 @@ int ioMSecs() {
     return ioMicroMSecs();
 }
 
-void sqHeartBeatActions(int now) {
+/*void sqHeartBeatActions(int now) {
     static int past=0;
     
     if ((now-past) > 10) {
         aioPoll(0);
     }
     past = now;
-}
+} */
