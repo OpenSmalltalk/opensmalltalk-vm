@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.6 2002/05/05 18:08:16 andreasraab Exp $
+*   RCSID:   $Id: sqWin32FilePrims.c,v 1.7 2002/05/26 18:55:14 andreasraab Exp $
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -135,7 +135,7 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
                  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
                  NULL, /* No security descriptor */
                  writeFlag ? OPEN_ALWAYS : OPEN_EXISTING,
-                 FILE_ATTRIBUTE_NORMAL,
+                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
                  NULL /* No template */);
   if(h == INVALID_HANDLE_VALUE) {
     f->sessionID = 0;
