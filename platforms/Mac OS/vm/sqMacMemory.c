@@ -6,10 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.6 2002/03/05 00:23:50 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.7 2002/03/15 01:45:21 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+*  Mar  8th, 2002, JMM Must unmap view first then free.
 *****************************************************************************/
 
 #include "sq.h" 
@@ -177,8 +178,10 @@ void sqMacMemoryFree() {
 		return;
 #if TARGET_API_MAC_CARBON
 #else
-    if(((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) && (gBackingFile != 0)) {
-        CloseMappedFile(gBackingFile);
+    if(((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) && (gBackingFile != 0)) {       
+	    OSErr	error;
+		error = UnmapFileView(gFileViewID);
+		error = CloseMappedFile(gBackingFile);
         gBackingFile = 0;
     } else {
 		if (memory != nil)
