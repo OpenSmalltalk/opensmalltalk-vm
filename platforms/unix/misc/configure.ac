@@ -197,7 +197,7 @@ fi
 
 if test $with_audio = "nas"
 then
-  LIBS="$LIBS $NAS_LIBS"
+  LIBS="$LIBS -laudio -lXt"
 fi
 
 
