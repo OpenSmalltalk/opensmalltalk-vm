@@ -56,7 +56,7 @@ void *os_exports[][3] = {
 	XFN(serialPortReadInto)
 	XFN(serialPortWriteFrom)
 	XFN(IsKeyDown)
-#if !defined(PLUGIN) & TARGET_API_MAC_CARBON
+#if !defined(PLUGIN) & I_AM_CARBON_EVENT
 	XFN(getUIToLock)
 #endif
 #ifdef PLUGIN
