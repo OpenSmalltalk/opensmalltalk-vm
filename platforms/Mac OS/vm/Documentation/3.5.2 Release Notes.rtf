@@ -6,7 +6,7 @@
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0\fs24 \cf0 Mac VM 3.5.1 mach-o build for Carbon, and build for Classic. Support for Croquet, and support for Safari\
-June 19th, 2003 (3.5.1b4)\
+July 31st, 2003 (3.5.2b2)\
 Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
@@ -19,6 +19,10 @@ Restarting the mac solved these problems. Force quit does not.\
 This is fixed in 3.2.7b3\
 Some issues with alias files and folder were fixed in 3.2.7b6 and 3.2.8b3\
 3.5.0b4 seems a fine VM, from what people tell me, but now we've 3.5.2...\
+\
+3.5.2b2 \
+Fix applescript document handling logic to prevent overrunning the drag/drop logic via the command line open cmd by using a spin loop\
+to ensure Squeak has sufficent time to read the file name. \
 \
 3.5.2b1 \
 Changed the bitBlt copyloop logic to use locals in safe places, versus globals. This improves drawing by 5%.\
