@@ -184,8 +184,6 @@ StackToRegisterMappingCogit class >> callingConvention [
 { #category : #translation }
 StackToRegisterMappingCogit class >> declareCVarsIn: aCodeGen [
 	aCodeGen
-		var: #ceStoreTrampolines
-			declareC: 'sqint ceStoreTrampolines[4]';
 		var: #methodAbortTrampolines
 			declareC: 'sqInt methodAbortTrampolines[4]';
 		var: #picAbortTrampolines
