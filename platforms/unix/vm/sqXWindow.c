@@ -597,6 +597,20 @@ int disconnectXDisplay()
 #endif
 
 
+static void getMousePosition(void)
+{
+  Window root, child;
+  int rootX, rootY, winX, winY;
+  unsigned int mask;
+  if (True == XQueryPointer(stDisplay, stWindow, &root, &child,
+			    &rootX, &rootY, &winX, &winY, &mask))
+    {
+      mousePosition.x= winX;
+      mousePosition.y= winY;
+      /* could update modifiers from mask too, but I can't be bothered... */
+    }
+}
+
 static void handleOneEvent(XEvent *theEvent) 
 {
     switch (theEvent->type)
@@ -893,19 +907,6 @@ static void redrawDisplay(int l, int r, int t, int b)
 }
 
 
-static void getMousePosition(void)
-{
-  Window root, child;
-  int rootX, rootY, winX, winY;
-  unsigned int mask;
-  if (True == XQueryPointer(stDisplay, stWindow, &root, &child,
-			    &rootX, &rootY, &winX, &winY, &mask))
-    {
-      mousePosition.x= winX;
-      mousePosition.y= winY;
-      /* could update modifiers from mask too, but I can't be bothered... */
-    }
-}
 
 #endif /*!HEADLESS*/
 
