@@ -20,6 +20,26 @@ This is fixed in 3.2.7b3\
 Some issues with alias files and folder were fixed in 3.2.7b6 and 3.2.8b3\
 3.5.0b4 seems a fine VM, from what people tell me, but now we've 3.5.2...\
 \
+3.5.3b1  (browser plugin)\
+Fixed issues with IE drawing and crashs related to screen updating in non-thread safe IE.\
+\
+3.5.2b6\
+Fixed issues with plugin discovery for netscape plugin \
+3.5.2b5\
+Fixed primitive dispatch to use gnuified jump table. \
+\
+3.5.2b4 \
+Fix issue with race on open doc events and squeak VM Thread for drag and drop support when starting squeak\
+For os-x expose primitivePluginBrowserReady, not the rest of the URL browser primitives, they don't work in Safari\
+For system attribute 1003 return powerpc versus PowerPC to match unix VM\
+Start timers later in the VM startup logic, after reading the image, versus before.\
+sqMacNSPlugin.c 	- Look for Squeak folder in User, local, Network, System domains versus just User.\
+sqMacTime.c		- Use old delay logic (1ms accurate), versus aioPoll (10ms accurate).\
+sqMacUIEvents.c	- Only create PowerManagerDefeatTimer tick routine if power manager tapping is required which is only os-9 anyways.\
+sqMacUIMenuBar.c - Draw menu bar later in startup, after we change it, save 200+ms\
+BitBltPlugin.c		- alphaSourceBlendBits16  Use table lookup which is 90% faster\
+				- copyLoopNoSource, roll constants into register versus recalculating.\
+\
 3.5.2b2 \
 Fix applescript document handling logic to prevent overrunning the drag/drop logic via the command line open cmd by using a spin loop\
 to ensure Squeak has sufficent time to read the file name. \
