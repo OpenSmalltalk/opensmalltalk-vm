@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: changesForSqueak.c,v 1.6 2002/09/07 07:32:48 johnmci Exp $
+*   RCSID:   $Id: changesForSqueak.c,v 1.7 2003/02/08 18:23:30 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/27/2001 JMM added support to build as a OS-X Bundle, a bit werid because its a mixture of unix and mac OS
@@ -349,38 +349,6 @@ int IsImageName(char *name) {
 	if (strcmp(suffix, ".IMA") == 0) return 1;
 	if (strcmp(suffix, ".IMAGE") == 0) return 1;
 	return 0;
-}
-
-int mpeg3_get_transparent (mpeg3_t *file, int aStream) {
-	return file->vtrack[aStream]->video->alphaChannelValue;
-}
-
-int mpeg3_set_transparent (mpeg3_t *file, int aNumber, int aStream) {
-	file->vtrack[aStream]->video->alphaChannelValue = aNumber & 0xFF;
-}
-
-int mpeg3_set_ClipData (mpeg3_t *file, unsigned char *r, unsigned char *g, unsigned char *b,int aStream) {
-        long h;
-        
-        memcpy(file->vtrack[aStream]->video->blueScreenMappingR,r,256);
-        memcpy(file->vtrack[aStream]->video->blueScreenMappingG,g,256);
-        memcpy(file->vtrack[aStream]->video->blueScreenMappingB,b,256);
-        
-        for(h=-512;h<=512;h++) {
-            file->vtrack[aStream]->video->clipArray_Red[h+512] = r[CLIP(h)];
-            file->vtrack[aStream]->video->clipArray_Green[h+512] = g[CLIP(h)];
-            file->vtrack[aStream]->video->clipArray_Blue[h+512] = b[CLIP(h)];
-            file->vtrack[aStream]->video->clipArray16_Red[h+512]=(r[CLIP(h)] & 0xf8) << 7;
-            file->vtrack[aStream]->video->clipArray16_Green[h+512]=(g[CLIP(h)] & 0xf8) << 2;
-            file->vtrack[aStream]->video->clipArray16_Blue[h+512]=(b[CLIP(h)] & 0xf8) >> 3;
-        }
-
-}
-
-int mpeg3_get_ClipData (mpeg3_t *file, unsigned char *r, unsigned char *g, unsigned char *b,int aStream) {
-	memcpy(r,file->vtrack[aStream]->video->blueScreenMappingR,256);
-	memcpy(g,file->vtrack[aStream]->video->blueScreenMappingG,256);
-	memcpy(b,file->vtrack[aStream]->video->blueScreenMappingB,256);
 }
 
 
