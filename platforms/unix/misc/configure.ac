@@ -224,4 +224,3 @@ $srcdir/util/mkMake $srcdir/../../.. > make_auto
 AC_SUBST_FILE(make_auto)
 make_auto=make_auto
 AC_OUTPUT(Makefile inisqueak)
-echo $VERSION > version
