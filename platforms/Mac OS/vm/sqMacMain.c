@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.15 2003/06/20 01:49:23 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.16 2003/07/31 13:00:00 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -14,6 +14,7 @@
 *  Mar  17th, 2002, JMM look into sleep wakeup issues under os-9 on some computers.
 *  Apr  17th, 2002, JMM Use accessors for VM variables, add os-9 check, plus changes by Alain Fischer <alain.fischer@bluewin.ch> to look for image and fetch VM version under os-x
 *  Apr  3rd, 2003, JMM use BROWSERPLUGIN
+*  Jun 25th, 2003, JMM optional window title. globals for various user preferences
 ****************************************************************************/
 
 //#define BROWSERPLUGIN to compile code for Netscape or IE Plug-in
@@ -109,7 +110,8 @@ Boolean         gThreadManager=false;
 ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
 OSErr			gSqueakFileLastError; 
-Boolean		gSqueakWindowIsFloating;
+Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false;
+UInt32  gMaxHeapSize=512*1024*1024;
 
 #ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
@@ -245,6 +247,7 @@ int main(void) {
 #endif
     
 #ifndef IHAVENOHEAD
+        if (gSqueakWindowHasTitle) 
 	SetWindowTitle(shortImageName);
 #if I_AM_CARBON_EVENT	
         ioSetFullScreenActual(getFullScreenFlag());
