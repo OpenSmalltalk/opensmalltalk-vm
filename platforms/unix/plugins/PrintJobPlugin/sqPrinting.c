@@ -8,6 +8,7 @@
    *hand */
 int ioPrintSetup(PrintingLogicPtr  *printJob) 
 {
+  *printJob= (PrintingLogicPtr) 1234;  /* I would like to put NULL here, but NULL is considered an error.... */
   return 0;
 }
 
@@ -28,12 +29,14 @@ int ioPrintCleanup(PrintingLogicPtr *printJob)
 
 int ioInitPrintJob(void)
 {
-  return 0;
+  return 1;  /* it would be nice to have a standard on which functions
+                return 0 for success and which functions return
+                non-zero... */
 }
 
 int ioShutdownPrintJob(void)
 {
-  return 0;
+  return 1;
 }
 
 int ioPagePreProcessing(PrintingLogicPtr printJob)
@@ -92,7 +95,7 @@ int ioPagePostscript(PrintingLogicPtr printJob,char *postscript,int postscriptLe
   }
 
   written = fwrite(postscript, postscriptLength, 1, lprOutput);
-  if(written < postscriptLength) {
+  if(written < 1) {
     perror("fwrite");
     pclose(lprOutput);
     return 1;
