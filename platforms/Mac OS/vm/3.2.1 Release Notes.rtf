@@ -4,14 +4,19 @@
 \margl1440\margr1440\vieww13420\viewh10820\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.2.1 mach-o build for Carbon.\
+\f0\fs24 \cf0 Mac VM 3.2.1 Beta 5 mach-o build for Carbon.\
 \
 Still yet to do.\
 Test drag and drop at startup time\
 Verify that file delete rename etc works on aliases, not the targets.\
-Verify that we can get plugins to work. (untested as of yet)\
 Verify that sound input works, seems flaky to me.\
 \
+Beta 5 notes\
+For Beta 5 we added support to load os-x bundles instead of CFM plugins. This works with a changed mpeg3lib \
+bundle plugin. There is broken code there for CFM support under mach-o.\
+\
+Also changed file selection logic to hunt for image files without meta data or files matching type STim to make\
+some file systems that don't support meta data happy.\
 \
 You might need these change sets to build a new VM or to use this VM with your image.\
 Note if you need the VM source, ask me. I've not posted to sourceforge quite yet.\
