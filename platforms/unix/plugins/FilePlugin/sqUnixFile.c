@@ -63,6 +63,8 @@
 #include <time.h>
 #include <sys/param.h>
 #include <sys/stat.h>
+#include <errno.h>
+#include <string.h>
 
 /***
 	The interface to the directory primitive is path based.
@@ -185,7 +187,11 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   for (i= 0; i < index; i++)
     {
     nextEntry:
+      do { 
+        errno= 0; 
       dirEntry= readdir(openDir);
+      }  while(dirEntry==0 && errno==EINTR);
+
       if (!dirEntry)
 	{
 	  return NO_MORE_ENTRIES;
