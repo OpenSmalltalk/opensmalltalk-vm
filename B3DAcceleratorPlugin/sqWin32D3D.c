@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32D3D.c,v 1.2 2002/01/19 22:34:27 slosher Exp $
+*   RCSID:   $Id: sqWin32D3D.c,v 1.3 2002/01/28 13:56:58 slosher Exp $
 *
 *   NOTES:
 *
@@ -42,8 +42,6 @@
 
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;
-
-static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
 
 /* Verbose level for debugging purposes:
 	0 - print NO information ever
@@ -1460,7 +1458,21 @@ int d3dSetTransform(int handle, float *modelViewMatrix, float *projectionMatrix)
   hRes = lpDevice->lpVtbl->
     SetTransform(lpDevice, D3DTRANSFORMSTATE_PROJECTION, &d);
   ERROR_CHECK;
-
+#if 0
+  DPRINTF(1, (fp, "Projection matrix before:\n"));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._11, d._12,d._13,d._14));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._21, d._22,d._23,d._24));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._31, d._32,d._33,d._34));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._41, d._42,d._43,d._44));
+  hRes = lpDevice->lpVtbl->
+    GetTransform(lpDevice, D3DTRANSFORMSTATE_PROJECTION, &d);
+  ERROR_CHECK;
+  DPRINTF(1, (fp, "Projection matrix after:\n"));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._11, d._12,d._13,d._14));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._21, d._22,d._23,d._24));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._31, d._32,d._33,d._34));
+  DPRINTF(1, (fp, "\t%g\t%g\t%g\t%g\n", d._41, d._42,d._43,d._44));
+#endif
   return 1;
 }
 
@@ -1688,6 +1700,9 @@ int d3dLoadLight(int handle, int idx, B3DPrimitiveLight *light)
   hRes = lpDevice->lpVtbl->
     GetTransform(lpDevice, D3DTRANSFORMSTATE_WORLD, &m);
   ERROR_CHECK;
+  hRes = lpDevice->lpVtbl->
+    SetTransform(lpDevice, D3DTRANSFORMSTATE_WORLD, &d3dIdentity);
+  ERROR_CHECK;
   /* Set light parameters */
   hRes = lpDevice->lpVtbl->SetLight(lpDevice, idx, &d3dLight);
   ERROR_CHECK;
@@ -1706,45 +1721,72 @@ int d3dSetFog(int handle, int fogType, double density,
   LPDIRECT3DDEVICE7 lpDevice;
   HRESULT hRes;
   float floatValue;
+  int pFog, vFog, rFog, wFog;
+  DWORD fogMode;
   d3dRenderer *renderer = d3dRendererFromHandle(handle);
 
   if(!renderer) return 0;
   lpDevice = renderer->lpDevice;
 
+  hRes = lpDevice->lpVtbl->
+    SetRenderState(lpDevice, D3DRENDERSTATE_FOGTABLEMODE, D3DFOG_NONE);
+  hRes = lpDevice->lpVtbl->
+    SetRenderState(lpDevice, D3DRENDERSTATE_FOGENABLE, FALSE);
+  hRes = lpDevice->lpVtbl->
+    SetRenderState(lpDevice, D3DRENDERSTATE_FOGVERTEXMODE, D3DFOG_NONE);
+  ERROR_CHECK;
   if(fogType == 0) {
-    hRes = lpDevice->lpVtbl->
-      SetRenderState(lpDevice, D3DRENDERSTATE_FOGTABLEMODE, D3DFOG_NONE);
-    hRes = lpDevice->lpVtbl->
-      SetRenderState(lpDevice, D3DRENDERSTATE_FOGENABLE, FALSE);
-    ERROR_CHECK;
     return 1;
   }
-  hRes = lpDevice->lpVtbl->SetRenderState(lpDevice, D3DRENDERSTATE_FOGENABLE, TRUE);
+  /* figure out what we can use */
+  /* pixel fog? */
+  pFog = renderer->ddDesc.dpcTriCaps.dwRasterCaps & D3DPRASTERCAPS_FOGTABLE;
+  /* vertex fog? */
+  vFog = renderer->ddDesc.dpcTriCaps.dwRasterCaps & D3DPRASTERCAPS_FOGVERTEX;
+  /* w-based fog? */
+  wFog = renderer->ddDesc.dpcTriCaps.dwRasterCaps & D3DPRASTERCAPS_WFOG;
+  /* range-based fog? */
+  rFog = renderer->ddDesc.dpcTriCaps.dwRasterCaps & D3DPRASTERCAPS_FOGRANGE;
+
+  if(!vFog && !pFog) return 0; /* neither vertex nor pixel fog */
+
+  hRes = lpDevice->lpVtbl->
+    SetRenderState(lpDevice, D3DRENDERSTATE_FOGENABLE, TRUE);
   ERROR_CHECK;
   hRes = lpDevice->lpVtbl->
     SetRenderState(lpDevice, D3DRENDERSTATE_FOGCOLOR, rgba);
   ERROR_CHECK;
-  if(fogType == 1)
+
+  fogMode = D3DFOG_NONE;
+  if(fogType == 1) fogMode = D3DFOG_LINEAR;
+  if(fogType == 2) fogMode = D3DFOG_EXP;
+  if(fogType == 3) fogMode = D3DFOG_EXP2;
+  if(!pFog || (!wFog && fogType == 1)) {
+    /* if we don't have pixel fog use vertex fog instead */
     hRes = lpDevice->lpVtbl->
-      SetRenderState(lpDevice, D3DRENDERSTATE_FOGTABLEMODE, D3DFOG_LINEAR);
-  if(fogType == 2)
+      SetRenderState(lpDevice, D3DRENDERSTATE_FOGVERTEXMODE, fogMode);
+    /* but enable range based fog if available */
+    if(rFog) {
+      ERROR_CHECK;
+      hRes = lpDevice->lpVtbl->
+	SetRenderState(lpDevice, D3DRENDERSTATE_RANGEFOGENABLE, TRUE);
+    }
+  } else {
     hRes = lpDevice->lpVtbl->
-      SetRenderState(lpDevice, D3DRENDERSTATE_FOGTABLEMODE, D3DFOG_EXP);
-  if(fogType == 3)
-    hRes = lpDevice->lpVtbl->
-      SetRenderState(lpDevice, D3DRENDERSTATE_FOGTABLEMODE, D3DFOG_EXP2);
+      SetRenderState(lpDevice, D3DRENDERSTATE_FOGTABLEMODE, fogMode);
+  }
   ERROR_CHECK;
   floatValue = (float) fogRangeStart;
   hRes = lpDevice->lpVtbl->
-    SetRenderState(lpDevice, D3DRENDERSTATE_FOGSTART, *(DWORD*)(&floatValue));
+    SetRenderState(lpDevice, D3DRENDERSTATE_FOGSTART,*(DWORD*)(&floatValue));
   ERROR_CHECK;
   floatValue = (float) fogRangeEnd;
   hRes = lpDevice->lpVtbl->
-    SetRenderState(lpDevice, D3DRENDERSTATE_FOGEND, *(DWORD*)(&floatValue));
+    SetRenderState(lpDevice, D3DRENDERSTATE_FOGEND,*(DWORD*)(&floatValue));
   ERROR_CHECK;
   floatValue = (float) density;
   hRes = lpDevice->lpVtbl->
-    SetRenderState(lpDevice, D3DRENDERSTATE_FOGDENSITY, *(DWORD*)(&floatValue));
+    SetRenderState(lpDevice, D3DRENDERSTATE_FOGDENSITY,*(DWORD*)(&floatValue));
   ERROR_CHECK;
   return 1;
 }
@@ -1839,7 +1881,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
 
   /* @@@ TODO: What about two-sided lighting? */
 
-  if(texHandle >= 0) {
+  if(texHandle >= 0 && (flags & B3D_VB_HAS_TEXTURES)) {
     /* Look if the surface was registered as D3D surface */
     if(!(*findSurface)(texHandle, &d3dTextureDispatch, (int*) (&lpdsTexture))) {
       DPRINTF(4, (fp,"WARNING: Texture (%d) not registered\n", texHandle));
@@ -1977,7 +2019,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
 /* Win32 specific handling                                                   */
 /*****************************************************************************/
 /*****************************************************************************/
-static messageHook *localPreMessageHook = NULL;
+static messageHook *preMessageHook = NULL;
 static messageHook nextPreMessageHook = NULL;
 
 /* Message hook for processing Windows messages sent to stWindow */
@@ -2048,14 +2090,14 @@ int d3dInitialize(void)
     DPRINTF(1,(fp,"ERROR: Failed to look up ioFindSurface()\n"));
     return 0;
   }
-  localPreMessageHook = (messageHook*)
+  preMessageHook = (messageHook*)
     interpreterProxy->ioLoadFunctionFrom("preMessageHook","");
-  if(!localPreMessageHook) {
+  if(!preMessageHook) {
     DPRINTF(1,(fp,"ERROR: Failed to look up preMessageHook()\n"));
     return 0;
   }
-  nextPreMessageHook = *localPreMessageHook;
-  preMessageHook = (messageHook) d3dMessageHook;
+  nextPreMessageHook = *preMessageHook;
+  *preMessageHook = (messageHook) d3dMessageHook;
 
   /* Recompute the stWindow rectangle */
   GetClientRect(*theSTWindow,&stWindowRect);

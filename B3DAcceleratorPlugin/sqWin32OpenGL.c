@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32OpenGL.c,v 1.1 2001/10/24 23:14:23 rowledge Exp $
+*   RCSID:   $Id: sqWin32OpenGL.c,v 1.2 2002/01/28 13:56:58 slosher Exp $
 *
 *   NOTES:
 *
@@ -59,6 +59,13 @@ static float blackLight[4] = { 0.0f, 0.0f, 0.0f, 0.0f };
    10 - print information about each vertex and face
 */
 int verboseLevel = 1;
+
+#define ENABLE_FORCED_PFD
+
+#ifdef ENABLE_FORCED_PFD
+/* If forcedPFD > 0 then use the n-th accelerated PFD */
+static int forcedPFD = -1;
+#endif
 
 /*****************************************************************************/
 /*****************************************************************************/
@@ -189,6 +196,225 @@ int glDestroyRenderer(int handle) {
   return 1;
 }
 
+#if 0
+int glDescribeRenderer(int index, int *desc, int descSize) {
+  PIXELFORMATDESCRIPTOR pfd, goodPFD;
+  HDC hDC;
+
+  /* req. at least version 0 */
+  if(descSize < B3D_PF_SIZE0) return 0;
+  if(!*theSTWindow) return 0;
+  hDC = GetDC(*theSTWindow);
+  if(!hDC) return 0;
+  pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+  pfd.nVersion = 1;
+  if(!DescribePixelFormat(hDC, index, sizeof(pfd), &pfd)) {
+    return 0;
+  }
+  desc[0] = B3D_PF_SIZE;
+  flags = 0;
+  if(pfd.dwFlags & PFD_DRAW_TO_WINDOW) flags |= B3D_PF_WINDOW_FLAG;
+  if(pfd.dwFlags & PFD_DRAW_TO_BITMAP) flags |= B3D_PF_BITMAP_FLAG;
+  if(pfd.dwFlags & PFD_SUPPORT_GDI) flags |= B3D_PF_NATIVE_GDI_FLAG;
+  if(pfd.dwFlags & PFD_SUPPORT_OPENGL) flags |= B3D_PF_NATIVE_API_FLAG;
+  if(pfd.dwFlags & PFD_GENERIC_ACCELERATED) flags |= B3D_PF_ACCELERATED_FLAG;
+  if((pfd.dwFlags & PFD_GENERIC_FORMAT) == 0) flags |= B3D_PF_ACCELERATED_FLAG;
+  if(pfd.dwFlags & PFD_DOUBLEBUFFER) flags |= B3D_PF_DOUBLEBUFFER_FLAG;
+
+  if(pfd.iPixelType == PFD_TYPE_RGBA) flags |= B3D_RGBA_FLAG;
+  else flags |= B3D_INDEXED_FLAG;
+
+  desc[B3D_PF_FLAGS] = flags;
+  desc[B3D_PF_COLORBITS] = pfd.cColorBits;
+  desc[B3D_PF_DEPTHBITS] = pfd.cDepthBits;
+  desc[B3D_PF_STENCILBITS] = pfd.cStencilBits;
+  desc[B3D_PF_ACCUMBITS] = pfd.cAccumBits;
+  desc[B3D_PF_AUXBUFFERS] = pfd.cAuxBuffers;
+  desc[B3D_PF_LAYER] = pfd.iLayerType;
+
+  desc[B3D_PF_REDMASK] = ((1 << pfd.cRedBits) - 1) << pfd.cRedShift;
+  desc[B3D_PF_GREENMASK] = ((1 << pfd.cGreenBits) - 1) << pfd.cGreenShift;
+  desc[B3D_PF_BLUEMASK] = ((1 << pfd.cBlueBits) - 1) << pfd.cBlueShift;
+  desc[B3D_PF_ALPHAMASK] = ((1 << pfd.cAlphaBits) - 1) << pfd.cAlphaShift;
+  return 1;
+}
+
+int glCreateRendererPF(int *pfDesc, int descSize, int x, int y, int w, int h)
+{
+  PIXELFORMATDESCRIPTOR pfd;
+  int depth, i, goodIndex, max, index;
+  char *string;
+  glRenderer *renderer;
+
+  for(i=0; i < MAX_RENDERER; i++) {
+    if(allRenderer[i].used == 0) break;
+  }
+  if(i >= MAX_RENDERER) {
+    DPRINTF(1, (fp, "ERROR: Maximum number of renderers (%d) exceeded\n", MAX_RENDERER));
+    return 0;
+  }
+  index = i;
+  renderer = allRenderer+index;
+  renderer->used = 0;
+  renderer->context = NULL;
+  renderer->hDC = NULL;
+  renderer->hWnd = NULL;
+
+  DPRINTF(3,(fp,"---- Initializing OpenGL ----\n\n"));
+  renderer->hWnd = glCreateClientWindow(*theSTWindow, x, y, w, h);
+  if(renderer->hWnd == NULL) {
+    DPRINTF(1, (fp, "Failed to create client window\n"));
+    goto FAILED;
+  }
+  ShowWindow(renderer->hWnd, SW_SHOW);
+  UpdateWindow(renderer->hWnd);
+  renderer->hDC = GetDC(renderer->hWnd);
+  if(!renderer->hDC) {
+    DPRINTF(1, (fp, "Failed to obtain client hdc\n"));
+    goto FAILED;
+  }
+
+  /* Query the native depth so we can choose something appropriate */
+  depth = GetDeviceCaps(renderer->hDC, BITSPIXEL);
+  max = DescribePixelFormat(renderer->hDC, 1, sizeof(pfd), &pfd);
+  pfd.nSize = sizeof(PIXELFORMATDESCRIPTOR);
+  pfd.nVersion = 1;
+  goodPFD.nSize = 0;
+  goodIndex = 0;
+
+  for(i=1; i<= max; i++) {
+    DescribePixelFormat(renderer->hDC, i, sizeof(pfd), &pfd);
+    DPRINTF(3,(fp, "\n#### Checking pixel format %d:\n", i));
+    printPFD(&pfd, 3);
+    if((pfd.dwFlags & PFD_DRAW_TO_WINDOW) == 0) 
+      continue; /* can't draw to window */
+    if((pfd.dwFlags & PFD_SUPPORT_OPENGL) == 0) 
+      continue; /* can't use OpenGL */
+    if((pfd.dwFlags & PFD_DOUBLEBUFFER) == 0) 
+      continue;  /* can't double buffer */
+    if(pfd.iPixelType != PFD_TYPE_RGBA) 
+      continue; /* not an RGBA format */
+    if(pfd.cDepthBits < 16) 
+      continue; /* no enough z-buffer */
+    if(pfd.iLayerType != PFD_MAIN_PLANE) 
+      continue; /* overlay/underlay */
+
+    if((pfd.dwFlags & PFD_GENERIC_FORMAT) == 0) {
+      /* This indicates an accellerated driver */
+      if(!allowHardware) continue;
+      DPRINTF(3,(fp,"===> This is an accelerated driver\n"));
+#ifdef ENABLE_FORCED_PFD
+      if(forcedPFD > 0) {
+	if(--forcedPFD == 0) {
+	  goodPFD = pfd; goodIndex = i;
+	  break;
+	}
+      }
+#endif
+      if(goodPFD.nSize == 0) {
+        goodPFD = pfd; goodIndex = i;
+      } else if(goodPFD.cColorBits == depth) {
+        goodPFD = pfd; goodIndex = i;
+      }
+    } else if(pfd.dwFlags & PFD_GENERIC_ACCELERATED) {
+      /* This indicates an accellerated mini-driver */
+      if(!allowHardware) continue;
+      DPRINTF(3,(fp,"===> This is an accelerated mini-driver\n"));
+#ifdef ENABLE_FORCED_PFD
+      if(forcedPFD > 0) {
+	if(--forcedPFD == 0) {
+	  goodPFD = pfd; goodIndex = i;
+	  break;
+	}
+      }
+#endif
+      if(goodPFD.nSize == 0) {
+        goodPFD = pfd; goodIndex = i;
+      } else if(goodPFD.cColorBits == depth) {
+        goodPFD = pfd; goodIndex = i;
+      }
+    }
+
+    if( (pfd.dwFlags & PFD_GENERIC_FORMAT) &&
+	((pfd.dwFlags & PFD_GENERIC_ACCELERATED) == 0)) {
+      /* this indicates a non-accellerated driver */
+      if(!allowSoftware) continue;
+	  if(goodPFD.nSize == 0) {
+        goodPFD = pfd; goodIndex = i;
+	  }
+    }
+  }
+  if((goodPFD.nSize == 0) 
+#ifdef ENABLE_FORCED_PFD
+     || (forcedPFD > 0)
+#endif
+     ) {
+    /* We didn't find an accellerated driver. */
+    DPRINTF(3,(fp,"#### WARNING: No accelerated driver found; bailing out\n"));
+    goto FAILED;
+  }
+
+  /* Now we have found the PFD to use. 
+     Try setting the pixel format for the window */
+  SetPixelFormat(renderer->hDC, goodIndex, &goodPFD);
+  /* Note: SetPixelFormat may fail if the pixel format has been set before.
+     Rather than failing here we do ignore the result of the above,
+     so that an old pixel format will be used in any case. */
+  goodIndex = GetPixelFormat(renderer->hDC);
+  DescribePixelFormat(renderer->hDC, goodIndex, sizeof(pfd), &pfd);
+
+  DPRINTF(3,(fp,"\n#### Selected pixel format (%d) ####\n",goodIndex));
+  printPFD(&pfd, 3);
+  renderer->context = wglCreateContext(renderer->hDC);
+  if(!renderer->context) {
+    DPRINTF(1, (fp,"Failed to create opengl context\n"));
+    goto FAILED;
+  }
+  /* Make the context current */
+  if(!wglMakeCurrent(renderer->hDC, renderer->context)) goto FAILED;
+
+  /* print some information about the context */
+  string = (char*) glGetString(GL_VENDOR);
+  DPRINTF(3,(fp, "\nOpenGL vendor: %s\n", string));
+  string = (char*) glGetString(GL_RENDERER);
+  DPRINTF(3,(fp, "OpenGL renderer: %s\n", string));
+  string = (char*) glGetString(GL_VERSION);
+  DPRINTF(3,(fp, "OpenGL version: %s\n", string));
+  string = (char*) glGetString(GL_EXTENSIONS);
+  DPRINTF(3,(fp, "OpenGL extensions: %s\n", string));
+  
+  renderer->used = 1;
+  renderer->bufferRect[0] = x;
+  renderer->bufferRect[1] = y;
+  renderer->bufferRect[2] = w;
+  renderer->bufferRect[3] = h;
+
+  DPRINTF(3, (fp,"### Renderer created!\n"));
+  /* setup user context */
+  glDisable(GL_LIGHTING);
+  glDisable(GL_COLOR_MATERIAL);
+  glDisable(GL_BLEND);
+  glDisable(GL_ALPHA_TEST);
+  glEnable(GL_DITHER);
+  glEnable(GL_DEPTH_TEST);
+  glEnable(GL_NORMALIZE);
+  glDepthFunc(GL_LEQUAL);
+  glClearDepth(1.0);
+  glHint(GL_PERSPECTIVE_CORRECTION_HINT, GL_NICEST);
+  glShadeModel(GL_SMOOTH);
+  glLightModelfv(GL_LIGHT_MODEL_AMBIENT, blackLight);
+  ERROR_CHECK;
+  return index;
+FAILED:
+  /* do necessary cleanup */
+  DPRINTF(1,(fp, "OpenGL initialization failed\n"));
+  if(renderer->context) wglDeleteContext(renderer->context);
+  if(renderer->hDC) ReleaseDC(renderer->hWnd, renderer->hDC);
+  if(renderer->hWnd) DestroyWindow(renderer->hWnd);
+  return -1;
+}
+#endif
+
 int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, int h)
 {
   PIXELFORMATDESCRIPTOR pfd, goodPFD;
@@ -253,6 +479,14 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
       /* This indicates an accellerated driver */
       if(!allowHardware) continue;
       DPRINTF(3,(fp,"===> This is an accelerated driver\n"));
+#ifdef ENABLE_FORCED_PFD
+      if(forcedPFD > 0) {
+	if(--forcedPFD == 0) {
+	  goodPFD = pfd; goodIndex = i;
+	  break;
+	}
+      }
+#endif
       if(goodPFD.nSize == 0) {
         goodPFD = pfd; goodIndex = i;
       } else if(goodPFD.cColorBits == depth) {
@@ -262,6 +496,14 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
       /* This indicates an accellerated mini-driver */
       if(!allowHardware) continue;
       DPRINTF(3,(fp,"===> This is an accelerated mini-driver\n"));
+#ifdef ENABLE_FORCED_PFD
+      if(forcedPFD > 0) {
+	if(--forcedPFD == 0) {
+	  goodPFD = pfd; goodIndex = i;
+	  break;
+	}
+      }
+#endif
       if(goodPFD.nSize == 0) {
         goodPFD = pfd; goodIndex = i;
       } else if(goodPFD.cColorBits == depth) {
@@ -278,7 +520,11 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
 	  }
     }
   }
-  if(goodPFD.nSize == 0) {
+  if((goodPFD.nSize == 0) 
+#ifdef ENABLE_FORCED_PFD
+     || (forcedPFD > 0)
+#endif
+     ) {
     /* We didn't find an accellerated driver. */
     DPRINTF(3,(fp,"#### WARNING: No accelerated driver found; bailing out\n"));
     goto FAILED;
@@ -494,5 +740,17 @@ int glShutdown(void)
   }
   return 1;
 }
+
+#ifdef ENABLE_FORCED_PFD
+int win32SetForcedPFD(void) {
+  int pfdIndex;
+  if(interpreterProxy->methodArgumentCount() != 1)
+    return interpreterProxy->primitiveFail();
+  pfdIndex = interpreterProxy->stackIntegerValue(0);
+  if(interpreterProxy->failed()) return 0;
+  forcedPFD = pfdIndex;
+  interpreterProxy->pop(1);
+}
+#endif
 
 #endif /* defined(B3DX_GL) */

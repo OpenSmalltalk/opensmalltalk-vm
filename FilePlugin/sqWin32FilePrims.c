@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.2 2002/01/19 22:34:27 slosher Exp $
+*   RCSID:   $Id: sqWin32FilePrims.c,v 1.3 2002/01/28 13:56:59 slosher Exp $
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -24,7 +24,7 @@
 
 #define true  1
 #define false 0
- 
+
 #define FILE_HANDLE(f) ((HANDLE) (f)->file)
 
 /***
@@ -184,10 +184,11 @@ int sqFileFlush(SQFile *f) {
   return 1;
 }
 
-int sqFileTruncate(SQFile *f,off_t offset) {
-	/* Truncate the file*/
-
-	return success(false);
+int sqFileTruncate(SQFile *f, int offset) {
+  if (!sqFileValid(f)) return success(false);
+  SetFilePointer(FILE_HANDLE(f), offset, NULL, FILE_BEGIN);
+  if(!SetEndOfFile(FILE_HANDLE(f))) return 0;
+  return 1;
 }
 
 int sqFileValid(SQFile *f) {
