@@ -1,0 +1,93 @@
+Many of the files in this distribution are subject to the following
+copyright conditions:
+
+    Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
+       authors/contributors listed elsewhere in this file.
+    All rights reserved.
+    
+    This file is part of Unix Squeak.
+  
+    This file is distributed in the hope that it will be useful, but WITHOUT
+    ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+    FITNESS FOR A PARTICULAR PURPOSE.
+    
+    You may use and/or distribute this file ONLY as part of Squeak, under
+    the terms of the Squeak License as described in `LICENSE' in the base of
+    this distribution, subject to the following restrictions:
+  
+    1. The origin of this software must not be misrepresented; you must not
+       claim that you wrote the original software.  If you use this software
+       in a product, an acknowledgment to the original author(s) (and any
+       other contributors mentioned herein) in the product documentation
+       would be appreciated but is not required.
+  
+    2. This notice may not be removed or altered in any source distribution.
+  
+    Using or modifying this file for use in any context other than Squeak
+    changes these copyright conditions.  Read the file `COPYING' in the base
+    of the distribution before proceeding with any such use.
+  
+    You are STRONGLY DISCOURAGED from distributing a modified version of
+    this file under its original name without permission.  If you must
+    change it, rename it first.
+
+NOTE: Files that do not contain the above notice are subject to the
+      conditions contained in the individual files themselves.  In the
+      absence of explicit copyright conditions they are subject to the
+      conditions described in the file `LICENSE'.
+
+NOTE: Significant source contributions from other people are always
+      acknowledged in the individual source files.  Unless explicitly
+      indicated otherwise, the above copyright notice applies to such code
+      (without prejudice and strictly to protect the interests of the
+      individual contributors) but makes NO REPRESENTATION about the
+      authorship or the ownership of the contributed code.
+
+You are allowed to use (or modify for use) in a non-Squeak context, or to
+create derivative works unrelated to Squeak based on, any files that
+contain the above copyright notice, subject to the following restrictions:
+
+1. You must make a copy of the file under a different name and then use
+   only your renamed copy.
+
+2. You must not change the first three lines of the copyright notice in
+   your copy.
+
+3. In your copy you must replace the portion of the copyright notice that
+   commences:
+
+     This file is part of Unix Squeak
+
+   with the following notice:
+
+     This program is free software.  You can redistribute it and/or modify
+     it under the terms of the GNU General Public License as published by
+     the Free Software Foundation; either version 2 of the License, or (at
+     your option) any later version.
+     
+     This program is distributed in the hope that it will be useful, but
+     WITHOUT ANY WARRANTY; without even the implied warranties of
+     MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.
+     
+     You should have received a copy of the GNU General Public License
+     along with this program; if not, write to the Free Software
+     Foundation, Inc., 675 Mass Ave, Cambridge, MA 02139, USA.
+     
+     See the file COPYRIGHT for more details.
+
+4. You MUST NOT remove any acknowledgements for code contributed by other
+   authors from your copy of the file.
+
+5. You must include the file `COPYRIGHT' in any source or binary
+   distribution that includes or is based on one or more files modified in
+   the above manner.
+
+6. You can now use your copy in any way that you like, subject to its new
+   copyright conditions, provided that you do not re-introduce the file
+   into any distribution of Squeak.
+
+---
+
+I'm sorry if the above seems draconian, but I'm trying simply to ensure
+that both the Squeak and non-Squeak communities obtain the maximum benefit
+from the software in this distribution.
