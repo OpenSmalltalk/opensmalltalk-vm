@@ -6,10 +6,11 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacPrinting.c,v 1.1 2002/02/12 18:26:05 johnmci Exp $
+*   RCSID:   $Id: sqMacPrinting.c,v 1.2 2002/02/20 21:02:38 johnmci Exp $
 *
 *   NOTES: 
 *	Take carbon sample code, and alter it a bit
+*	Feb 20th 2002, JMM - add offset logic, free printsession only if allocated (duh)
 *
 *****************************************************************************/
 #include "sqVirtualMachine.h"
@@ -161,25 +162,6 @@ int ioPagePreProcessing(PrintingLogicPtr printJob) {
     return status;
 }
 
-int ioPagePostscript(PrintingLogicPtr printJob,char *postscript,int postscriptLength) {
-
-    printJob->postscript = postscript;
-    printJob->postscriptLength = postscriptLength;
-    printJob->formBitMap = NULL;
-    return ioPrint(printJob);
-}
-
-int ioPageForm(PrintingLogicPtr printJob, char *aBitMap,int w,int h,int d,float sh,float sw) {
-    printJob->formBitMap = aBitMap;
-    printJob->width = w;
-    printJob->height = h;
-    printJob->depth = d;
-    printJob->scaleH = sh;
-    printJob->scaleW = sw;
-    printJob->postscriptLength = 0;
-    return ioPrint(printJob);
-}
-
 int ioPrint(PrintingLogicPtr printJob) {  
     OSStatus		status = noErr;
 
@@ -242,7 +224,8 @@ int ioPrintCleanup(PrintingLogicPtr *token) {                                   
         (void)PMRelease(printJob->printSettings);
     
     //	Terminate the current printing session. 
-    (void)PMRelease(printJob->printSession);
+    if (printJob->printSession != NULL)
+    	(void)PMRelease(printJob->printSession);
     
     printJob->pageFormat = kPMNoPageFormat;
     printJob->printSettings = kPMNoPrintSettings;
@@ -694,25 +677,6 @@ int ioPagePreProcessing(PrintingLogicPtr printJob) {
     return status;
 }
 
-int ioPagePostscript(PrintingLogicPtr printJob,char *postscript,int postscriptLength) {
-
-    printJob->postscript = postscript;
-    printJob->postscriptLength = postscriptLength;
-    printJob->formBitMap = NULL;
-    return ioPrint(printJob);
-}
-
-int ioPageForm(PrintingLogicPtr printJob, char *aBitMap,int w,int h,int d,float sh,float sw) {
-    printJob->formBitMap = aBitMap;
-    printJob->width = w;
-    printJob->height = h;
-    printJob->depth = d;
-    printJob->scaleH = sh;
-    printJob->scaleW = sw;
-    printJob->postscriptLength = 0;
-    return ioPrint(printJob);
-}
-
 int ioPrint(PrintingLogicPtr printJob) {  
     OSStatus		status = noErr;
 
@@ -830,6 +794,27 @@ static Boolean RunningOnCarbonX(void)
                 && (response >= 0x01000);
 }
 
+int ioPagePostscript(PrintingLogicPtr printJob,char *postscript,int postscriptLength) {
+
+    printJob->postscript = postscript;
+    printJob->postscriptLength = postscriptLength;
+    printJob->formBitMap = NULL;
+    return ioPrint(printJob);
+}
+
+int ioPageForm(PrintingLogicPtr printJob, char *aBitMap,int h,int w,int d,float sh,float sw,int oh, int ow) {
+    printJob->formBitMap = aBitMap;
+    printJob->width = w;
+    printJob->height = h;
+    printJob->depth = d;
+    printJob->scaleH = sh;
+    printJob->scaleW = sw;
+    printJob->offsetHeight = oh;
+    printJob->offsetWidth = ow;
+    printJob->postscriptLength = 0;
+    return ioPrint(printJob);
+}
+
 /*------------------------------------------------------------------------------
     Function:	DrawPage
 	
@@ -850,8 +835,10 @@ OSStatus DrawPage(PrintingLogicPtr printJob)
     Rect	srcRect = { 0, 0, 0, 0 };
     
     if (printJob->formBitMap != nil) {
-        dstRect.right = printJob->width*printJob->scaleW;
-        dstRect.bottom = printJob->height*printJob->scaleH;
+        dstRect.top = printJob->offsetHeight;
+        dstRect.left = printJob->offsetWidth;
+        dstRect.right = printJob->width*printJob->scaleW + printJob->offsetWidth;
+        dstRect.bottom = printJob->height*printJob->scaleH + printJob->offsetHeight;
     
         srcRect.right = printJob->width;
         srcRect.bottom = printJob->height;

@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacPrinting.h,v 1.1 2002/02/12 18:26:09 johnmci Exp $
+*   RCSID:   $Id: sqMacPrinting.h,v 1.2 2002/02/20 21:02:40 johnmci Exp $
 *
 *   NOTES: 
 *
@@ -32,6 +32,8 @@ typedef struct {
         long	depth;
         float	scaleW;
         float	scaleH;
+        long	offsetWidth;
+        long	offsetHeight;
         void	*postscript;
         UInt32	postscriptLength;
 #if TARGET_API_MAC_CARBON	
@@ -56,6 +58,6 @@ int ioShutdownPrintJob(void);
 int ioPagePreProcessing(PrintingLogicPtr printJob);
 int ioPagePostProcessing(PrintingLogicPtr printJob);
 int ioPagePostscript(PrintingLogicPtr printJob,char *postscript,int postscriptLength);
-int ioPageForm(PrintingLogicPtr printJob, char *aBitMap,int w,int h,int d,float sh,float sw);
+int ioPageForm(PrintingLogicPtr printJob, char *aBitMap,int h,int w,int d,float sh,float sw,int oh,int ow);
 int ioPrintGetFirstPageNumber(PrintingLogicPtr printJob);
 int ioPrintGetLastPageNumber(PrintingLogicPtr printJob);
