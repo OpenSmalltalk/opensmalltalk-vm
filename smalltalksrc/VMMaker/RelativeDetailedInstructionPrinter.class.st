@@ -5,7 +5,7 @@ Class {
 		'stackHeightComputer',
 		'saveLabel'
 	],
-	#category : #'VMMaker-Support'
+	#category : 'VMMaker-Support'
 }
 
 { #category : #'instance creation' }

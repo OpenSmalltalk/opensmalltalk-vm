@@ -8,7 +8,7 @@ Class {
 		'NumFloatRegArgs',
 		'NumIntRegArgs'
 	],
-	#category : #'VMMaker-Plugins-FFI'
+	#category : 'VMMaker-Plugins-FFI'
 }
 
 { #category : #translation }

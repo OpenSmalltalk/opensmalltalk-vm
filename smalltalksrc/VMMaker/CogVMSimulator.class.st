@@ -79,7 +79,7 @@ Class {
 	#classVars : [
 		'ByteCountsPerMicrosecond'
 	],
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #'class initialization' }

@@ -1,7 +1,7 @@
 Class {
 	#name : #CogMIPSELCompilerForTests,
 	#superclass : #CogMIPSELCompiler,
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #'as yet unclassified' }

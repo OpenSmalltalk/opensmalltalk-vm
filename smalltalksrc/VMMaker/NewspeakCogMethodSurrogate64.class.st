@@ -1,7 +1,7 @@
 Class {
 	#name : #NewspeakCogMethodSurrogate64,
 	#superclass : #CogMethodSurrogate64,
-	#category : #'VMMaker-JITSimulation'
+	#category : 'VMMaker-JITSimulation'
 }
 
 { #category : #accessing }
