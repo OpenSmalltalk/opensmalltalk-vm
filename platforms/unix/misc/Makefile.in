@@ -109,7 +109,7 @@ RM=		@RM@
 
 CC=		@CC@
 CXX=		@CXX@
-DEFS=		@DEFS@ -DUNIX -DSQ_LIBDIR=\"$(vsqlibdir)\" -DVM_NAME=\"$(DESTDIR)$(bindir)/squeak\"  -DDISABLE_SECURITY
+DEFS=		@DEFS@ -DUNIX -DSQ_LIBDIR=\"$(vsqlibdir)\" -DVM_NAME=\"$(DESTDIR)$(bindir)/squeak\"
 # FilePlugin and SocketPlugin are counted as standard includes,
 # because some plugins (notably OSProcess) need them
 INCLUDES=	-I. -I$(unixdir)/misc -I$(unixdir)/vm -I$(crossdir)/vm -I$(gendir) -I$(gendir)/vm -I$(crossdir)/plugins/FilePlugin  -I$(crossdir)/plugins/SocketPlugin 
@@ -120,7 +120,7 @@ WFLAGS=		@WFLAGS@
 LDFLAGS=	@LDFLAGS@ -avoid-version
 LIBS=		@LIBS@
 
-COMPILE=	$(CC) $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS)
+COMPILE=	$(CC) $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS) $(WFLAGS)
 LTCOMPILE=	$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS)
 LINK=		$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS)
 LTCOMPILEXX=	$(LIBTOOL) --mode=compile $(CXX) $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS)

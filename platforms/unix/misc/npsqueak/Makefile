@@ -32,9 +32,8 @@ NETSCAPE=$(HOME)/.netscape
 PLUGINS=$(NETSCAPE)/plugins
 SQUEAK=$(HOME)/.npsqueak
 VM=$(SQUEAK)/squeakvm
-IMAGE=$(SQUEAK)/image
-SECURE=$(IMAGE)/secure
-UNTRUSTED=$(IMAGE)/untrusted
+SECURE=$(SQUEAK)/secure
+UNTRUSTED=$(SQUEAK)/untrusted
 
 ### directories ###
 
@@ -55,13 +54,10 @@ $(VM): $(SQUEAK) squeakvm
 	cp squeakvm $(VM)
 	chmod +x $(VM)
 
-$(IMAGE): $(SQUEAK)
-	[ -d $(IMAGE) ]  && touch $(IMAGE) || mkdir $(IMAGE)
-
-$(UNTRUSTED): $(IMAGE)
+$(UNTRUSTED): $(SQUEAK)
 	[ -d $(UNTRUSTED) ] && touch $(UNTRUSTED) || mkdir $(UNTRUSTED)
 
-$(SECURE): $(IMAGE)
+$(SECURE): $(SQUEAK)
 	[ -d $(SECURE) ] && touch $(SECURE) || mkdir $(SECURE)
 	chmod go-rwx $(SECURE)
 

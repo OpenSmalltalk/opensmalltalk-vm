@@ -44,9 +44,8 @@ To compile and install the Squeak plugin
 		~/.netscape/plugins/npsqueak.so
 
 		~/.npsqueak/
-		~/.npsqueak/image/
-		~/.npsqueak/image/secure/
-		~/.npsqueak/image/untrusted/
+		~/.npsqueak/secure/
+		~/.npsqueak/untrusted/
 
 	If you don't use Netscape 4.x you'll have to copy the plugin
 	into your browser's plugins directory:
@@ -67,7 +66,7 @@ To compile and install the Squeak plugin
 	"SqueakPlugin.image".
 
 		cp someSqueakVM ~/.npsqueak/squeakvm.bin
-		cp someSqueak.image ~/.npsqueak/image/SqueakPlugin.image
+		cp someSqueak.image ~/.npsqueak/SqueakPlugin.image
 
   6.	Invoke the browser. Check if the Squeak plugin was recognized
 	by selecting the Help>>About Plugins menu item.
@@ -114,22 +113,18 @@ DOCUMENTATION
          |
          +--- squeakvm
          |
-	 +--- image/
-              |
-              +--- SqueakPlugin.image
-              |
-              +--- secure/
-              |    |
-              |    +--- Squeak.keys
-              |
-              +--- untrusted/
+         +--- SqueakPlugin.image
+         |
+         +--- secure/
+         |
+         +--- untrusted/
 
 =================================================================
 
 TODO
 
+* make sure Squeak really gets killed
 * fix crashing the browser when closing plugin page
-* implement primitivePluginPostURL()
 * make plugin not wait for browser when the url is loaded into a target.
 * Implement SecurityManager stuff
 * use autoconf

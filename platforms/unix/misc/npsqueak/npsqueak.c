@@ -190,7 +190,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   strcpy(plugin->vmName, basedir);
   strcat(plugin->vmName, "squeakvm");
   strcpy(plugin->imageName, basedir);
-  strcat(plugin->imageName, "image/SqueakPlugin.image");
+  strcat(plugin->imageName, "SqueakPlugin.image");
   plugin->argv[0]= plugin->vmName;
   plugin->argv[1]= "-display";
   plugin->argv[2]= ":0";             /* inserted later */
