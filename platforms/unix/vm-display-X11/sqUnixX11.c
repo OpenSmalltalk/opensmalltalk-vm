@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-30 11:47:06 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-16 06:53:35 by piumarta on emilia.inria.fr
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -82,6 +82,7 @@
 #define SQ_FORM_FILENAME	"squeak-form.ppm"
 #undef	FULL_UPDATE_ON_EXPOSE
 
+#undef	DEBUG_CONV
 #undef	DEBUG_EVENTS
 #undef	DEBUG_SELECTIONS
 #undef	DEBUG_BROWSER
@@ -102,6 +103,7 @@
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
+#include <locale.h>
 
 #if defined(HAVE_SYS_SELECT_H)
 # include <sys/select.h>
@@ -213,6 +215,13 @@ char		*stDisplayBitmap= 0;
 Window           browserWindow= 0;      /* parent window */
 int		 browserPipes[]= {-1, -1}; /* read/write fd for browser communication */
 int		 headless= 0;
+
+typedef int (*x2sqKey_t)(XKeyEvent *xevt);
+
+static int x2sqKeyPlain(XKeyEvent *xevt);
+static int x2sqKeyInput(XKeyEvent *xevt);
+
+static x2sqKey_t x2sqKey= x2sqKeyPlain;
 
 #define inBrowser()	(-1 != browserPipes[0])
 
@@ -1008,7 +1017,135 @@ static void getMousePosition(void)
 }
 
 
-static int x2sqKey(XKeyEvent *xevt)
+int recode(int charCode)
+{
+  if (charCode >= 128)
+    {
+      unsigned char buf[32];
+      unsigned char out[32];
+      buf[0]= charCode;
+      if (convertChars((char *)buf, 1, uxXWinEncoding,
+		       (char *)out, sizeof(out),
+		       sqTextEncoding, 0, 1))
+	charCode= out[0];
+#    if defined(DEBUG_EVENTS)
+      fprintf(stderr, "  8-bit: %d=%02x [%c->%c]\n", charCode, charCode,
+	      (char *)uxXWinEncoding, (char *)sqTextEncoding);
+#    endif
+    }
+  return charCode;
+}
+
+
+static int x2sqKeyInput(XKeyEvent *xevt)
+{
+  static int initialised= 0;
+  static XIM im= 0;
+  static XIC ic= 0;
+  static int lastKey= -1;
+
+  if (!initialised)
+    {
+      initialised= 1;
+      if (!setlocale(LC_CTYPE, ""))
+	{
+	  fprintf(stderr, "setlocale() failed\n");
+	  goto revertInput;
+	}
+      if (!(im= XOpenIM(stDisplay, 0, 0, 0)))
+	{
+	  fprintf(stderr, "XOpenIM() failed\n");
+	  goto revertInput;
+	}
+      else
+	{
+	  if (!(ic= XCreateIC(im, XNInputStyle, XIMPreeditNothing | XIMStatusNothing,
+			      XNClientWindow, stWindow, 0)))
+	    {
+	      fprintf(stderr, "XCreateIC() failed\n");
+	      goto revertInput;
+	    }
+	  else
+	    {
+	      unsigned int mask;
+	      XWindowAttributes xwa;
+	      XGetWindowAttributes(stDisplay, stWindow, &xwa);
+	      XGetICValues(ic, XNFilterEvents, &mask, NULL);
+	      mask |= xwa.your_event_mask;
+	      XSelectInput(stDisplay, stWindow, mask);
+	    }
+	}
+    }
+
+  if (KeyPress != xevt->type)
+    {
+      int key= lastKey;
+      lastKey= -1;;
+      return key;
+    }
+
+#if defined(DEBUG_CONV)
+  printf("keycode %u\n", xevt->keycode);
+#endif
+
+  {
+    unsigned char string[128];	/* way too much */
+    KeySym symbolic;
+    Status status;
+    int count= XmbLookupString(ic, (XKeyPressedEvent *)xevt,
+			       string, sizeof(string), &symbolic, &status);
+    switch (status)
+      {
+      case XLookupNone:		/* still composing */
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupNone\n");
+#	 endif
+	return -1;
+
+      case XLookupChars:
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupChars count %d\n", count);
+#	 endif
+      case XLookupBoth:
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupBoth count %d\n", count);
+#	 endif
+	lastKey= (count ? recode(string[0]) : -1);
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey == %d\n", lastKey);
+#	 endif
+	return lastKey;
+
+      case XLookupKeySym:
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupKeySym\n");
+#	 endif
+	{
+	  int charCode= translateCode(symbolic);
+#	   if defined(DEBUG_CONV)
+	  printf("SYM %d -> %d\n", symbolic, charCode);
+#	   endif
+	  if (charCode < 0)
+	    return -1;	/* unknown key */
+	  if ((charCode == 127) && mapDelBs)
+	    charCode= 8;
+	  return lastKey= charCode;
+	}
+
+      default:
+	fprintf(stderr, "this cannot happen\n");
+	return lastKey= -1;
+      }
+    return lastKey= -1;
+  }
+
+ revertInput:
+  x2sqKey= x2sqKeyPlain;
+  return x2sqKey(xevt);
+}
+
+
+static int x2sqKeyPlain(XKeyEvent *xevt)
 {
   unsigned char buf[32];
   KeySym symbolic;
@@ -1027,19 +1164,9 @@ static int x2sqKey(XKeyEvent *xevt)
       modifierState= charCode >> 8;
       charCode &= 0xff;
     }
-  if (charCode >= 128)
-    {
-      unsigned char out[32];
-
-      buf[0]= charCode;
-      if (convertChars((char *)buf, 1, uxXWinEncoding, (char *)out, sizeof(out), sqTextEncoding, 0, 1))
-	charCode= out[0];
-#    if defined(DEBUG_EVENTS)
-      fprintf(stderr, "  8-bit: %d=%02x [%s->%s]\n", charCode, charCode, (char *)uxXWinEncoding, (char *)sqTextEncoding);
-#    endif
-    }
-  return charCode;
+  return recode(charCode);
 }
+
 
 static int x2sqButton(int button)
 {
@@ -1138,6 +1265,9 @@ static void handleEvent(XEvent *evt)
     noteEventPosition(evt);				\
     modifierState= x2sqModifier(evt.state);		\
   }
+
+  if (True == XFilterEvent(evt, 0))
+    return;
 
   switch (evt->type)
     {
@@ -4137,6 +4267,7 @@ static void display_printUsage(void)
   printf("  -iconic               start up iconified\n");
   printf("  -lazy                 go to sleep when main window unmapped\n");
   printf("  -mapdelbs             map Delete key onto Backspace\n");
+  printf("  -nointl               disable international keyboard support\n");
   printf("  -notitle              disable the Squeak window title bar\n");
   printf("  -optmod <n>           map Mod<n> to the Option key\n");
   printf("  -swapbtn              swap yellow (middle) and blue (right) buttons\n");
@@ -4155,8 +4286,12 @@ static void display_parseEnvironment(void)
 {
   char *ev= 0;
 
+  if (getenv("LC_CTYPE") || getenv("LC_ALL"))
+    x2sqKey= x2sqKeyInput;
+
   if (getenv("SQUEAK_LAZY"))		sleepWhenUnmapped= 1;
   if (getenv("SQUEAK_SPY"))		withSpy= 1;
+  if (getenv("SQUEAK_NOINTL"))		x2sqKey= x2sqKeyPlain;
   if (getenv("SQUEAK_NOTITLE"))		noTitle= 1;
   if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;
   if (getenv("SQUEAK_ICONIC"))		iconified= 1;
@@ -4188,6 +4323,7 @@ static int display_parseArgument(int argc, char **argv)
   else if (!strcmp(arg, "-swapbtn"))	swapBtn= 1;
   else if (!strcmp(arg, "-fullscreen"))	fullScreen= 1;
   else if (!strcmp(arg, "-iconic"))	iconified= 1;
+  else if (!strcmp(arg, "-nointl"))	x2sqKey= x2sqKeyPlain;
   else if (argv[1])	/* option requires an argument */
     {
       n= 2;
@@ -4207,7 +4343,7 @@ static int display_parseArgument(int argc, char **argv)
 	{
 	  if (!argv[2]) return 0;
 	  sscanf(argv[1], "%i", &browserPipes[0]);
-	  sscanf(argv[1], "%i", &browserPipes[1]);
+	  sscanf(argv[2], "%i", &browserPipes[1]);
 	  /* receive browserWindow */
 #	 if defined(DEBUG_BROWSER)
 	  fprintf(stderr, "browser: reading window\n");
@@ -4219,7 +4355,7 @@ static int display_parseArgument(int argc, char **argv)
 	      exit(1);
 	    }
 #	 if defined(DEBUG_BROWSER)
-	  fprintf(stderr, "browser: window = 0x%x\n" browserWindow);
+	  fprintf(stderr, "browser: window = 0x%x\n", browserWindow);
 #	 endif
 	  return 3;
 	}
