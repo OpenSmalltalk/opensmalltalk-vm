@@ -5,7 +5,7 @@
 
                          <ian.piumarta@squeakland.org>
 
-      Last edited: 2005-03-17 11:52:13 by piumarta on squeak.hpl.hp.com
+      Last edited: 2005-03-17 12:43:23 by piumarta on squeak.hpl.hp.com
                Translated to .ps/.pdf/.html/.txt: March 17, 2005
 
 ***** Contents *****
@@ -13,6 +13,9 @@
     * 0_The_easy_way
     * 1_The_hard_way:_configure,_build,_install
     * 2_Generating_your_own_VM_and_plugin_sources
+
+          o 2.1_How_configure_finds_the_src_directory
+
     * 3_Adding_your_own_plugins
 
           o 3.1_Plugin-specific_configuration
@@ -167,6 +170,18 @@ make; make install' in your blddir (as described above).
      configuration' means either when running `configure' for the first
      time or running `config.status' to update an already configured build
      environment.
+
+***** 2.1 How configure finds the src directory *****
+
+Starting with version 3.7 configure looks in two places for the src directory,
+in the following order, and uses the first one that it finds:
+
+    * the top-level directory (the one containing the platforms directory);
+    * the platforms/unix directory.
+
+In other words, if you want to use your own generated sources without deleting
+the built-in generated sources, generating them into a src directory next to
+platforms (and then re-running configure) will do what you want.
 
 ****** 3 Adding your own plugins ******
 

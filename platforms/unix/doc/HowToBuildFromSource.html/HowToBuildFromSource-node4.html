@@ -27,35 +27,44 @@ original version by:  Nikos Drakos, CBLU, University of Leeds
 <BODY >
 
 <DIV CLASS="navigation"><!--Navigation Panel-->
-<A NAME="tex2html94"
+<A NAME="tex2html96"
   HREF="HowToBuildFromSource-node5.html">
 <IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
-<A NAME="tex2html88"
+<A NAME="tex2html90"
   HREF="HowToBuildFromSource.html">
 <IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
-<A NAME="tex2html82"
+<A NAME="tex2html84"
   HREF="HowToBuildFromSource-node3.html">
 <IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
-<A NAME="tex2html90"
+<A NAME="tex2html92"
   HREF="HowToBuildFromSource-node1.html">
 <IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
-<A NAME="tex2html92"
+<A NAME="tex2html94"
   HREF="HowToBuildFromSource-node6.html">
 <IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
 <BR>
-<B> Next:</B> <A NAME="tex2html95"
+<B> Next:</B> <A NAME="tex2html97"
   HREF="HowToBuildFromSource-node5.html">3 Adding your own</A>
-<B> Up:</B> <A NAME="tex2html89"
+<B> Up:</B> <A NAME="tex2html91"
   HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
-<B> Previous:</B> <A NAME="tex2html83"
+<B> Previous:</B> <A NAME="tex2html85"
   HREF="HowToBuildFromSource-node3.html">1 The hard way:</A>
- &nbsp; <B>  <A NAME="tex2html91"
-  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
  &nbsp; <B>  <A NAME="tex2html93"
+  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html95"
   HREF="HowToBuildFromSource-node6.html">Index</A></B> 
 <BR>
 <BR></DIV>
 <!--End of Navigation Panel-->
+<!--Table of Child-Links-->
+<A NAME="CHILD_LINKS"><STRONG>Subsections</STRONG></A>
+
+<UL CLASS="ChildLinks">
+<LI><A NAME="tex2html98"
+  HREF="HowToBuildFromSource-node4.html#SECTION00041000000000000000"><SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> How <TT>configure</TT> finds the <TT>src</TT> directory</A>
+</UL>
+<!--End of Table of Child-Links-->
+<HR>
 
 <H1><A NAME="SECTION00040000000000000000">
 <SPAN CLASS="arabic">2</SPAN> Generating your own VM and plugin sources</A>
@@ -86,7 +95,7 @@ to generate the core interpreter and plugin sources.
 <P>
 Start Squeak in the top-level directory (the one containing the
 <TT>platforms</TT> directory); for example:
-<SPAN ID="hue555">
+<SPAN ID="hue566">
 
 <DIV CLASS="alltt" ALIGN="LEFT">
 <TT>
@@ -115,15 +124,15 @@ described above).
 <P>
 <BLOCKQUOTE>
 <FONT COLOR="#ff0000"> Note: You only need to run
-<TT>configure</TT><A NAME="556"></A>
+<TT>configure</TT><A NAME="567"></A>
 <SPAN  CLASS="textbf"><SPAN ID="txt149">once</SPAN></SPAN> for a given
 <TT>blddir</TT> (on the same host).
 If you modify the choice of plugins
 (or change whether they're internal/external)
 then you can update the build environment by running the
-<TT>config.status</TT><A NAME="558"></A>
+<TT>config.status</TT><A NAME="569"></A>
 script in the <TT>bldddir</TT>, like this:
-<SPAN ID="hue559">
+<SPAN ID="hue570">
 
 <DIV CLASS="alltt" ALIGN="LEFT">
 <TT>
@@ -151,33 +160,60 @@ environment.
 </FONT></BLOCKQUOTE>
 <P>
 
+<H2><A NAME="SECTION00041000000000000000">
+<SPAN CLASS="arabic">2</SPAN>.<SPAN CLASS="arabic">1</SPAN> How <TT>configure</TT> finds the <TT>src</TT> directory</A>
+</H2>
+
+<P>
+Starting with version 3.7 <TT>configure</TT> looks in two places for the
+<TT>src</TT> directory, in the following order, and uses the first one
+that it finds:
+
+<P>
+
+<UL>
+<LI>the top-level directory (the one containing the <TT>platforms</TT>
+directory);
+</LI>
+<LI>the <TT>platforms/unix</TT> directory.
+</LI>
+</UL>
+
+<P>
+In other words, if you want to use your own generated
+sources without deleting the built-in generated sources, generating
+them into a <TT>src</TT> directory next to <TT>platforms</TT> (and then
+re-running <TT>configure</TT>) will do what you want.
+
+<P>
+
 <DIV CLASS="navigation"><HR>
 <!--Navigation Panel-->
-<A NAME="tex2html94"
+<A NAME="tex2html96"
   HREF="HowToBuildFromSource-node5.html">
 <IMG WIDTH="37" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="next" SRC="next.png"></A> 
-<A NAME="tex2html88"
+<A NAME="tex2html90"
   HREF="HowToBuildFromSource.html">
 <IMG WIDTH="26" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="up" SRC="up.png"></A> 
-<A NAME="tex2html82"
+<A NAME="tex2html84"
   HREF="HowToBuildFromSource-node3.html">
 <IMG WIDTH="63" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="previous" SRC="prev.png"></A> 
-<A NAME="tex2html90"
+<A NAME="tex2html92"
   HREF="HowToBuildFromSource-node1.html">
 <IMG WIDTH="65" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="contents" SRC="contents.png"></A> 
-<A NAME="tex2html92"
+<A NAME="tex2html94"
   HREF="HowToBuildFromSource-node6.html">
 <IMG WIDTH="43" HEIGHT="24" ALIGN="BOTTOM" BORDER="0" ALT="index" SRC="index.png"></A> 
 <BR>
-<B> Next:</B> <A NAME="tex2html95"
+<B> Next:</B> <A NAME="tex2html97"
   HREF="HowToBuildFromSource-node5.html">3 Adding your own</A>
-<B> Up:</B> <A NAME="tex2html89"
+<B> Up:</B> <A NAME="tex2html91"
   HREF="HowToBuildFromSource.html">Building Unix Squeak (</A>
-<B> Previous:</B> <A NAME="tex2html83"
+<B> Previous:</B> <A NAME="tex2html85"
   HREF="HowToBuildFromSource-node3.html">1 The hard way:</A>
- &nbsp; <B>  <A NAME="tex2html91"
-  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
  &nbsp; <B>  <A NAME="tex2html93"
+  HREF="HowToBuildFromSource-node1.html">Contents</A></B> 
+ &nbsp; <B>  <A NAME="tex2html95"
   HREF="HowToBuildFromSource-node6.html">Index</A></B> </DIV>
 <!--End of Navigation Panel-->
 <ADDRESS>
