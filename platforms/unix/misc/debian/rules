@@ -1,10 +1,7 @@
 #!/usr/bin/make -f
-# Sample debian/rules that uses debhelper. 
-# GNU copyright 1997 by Joey Hess.
-#
-# This version is for a hypothetical package that builds an
-# architecture-dependant package, as well as an architecture-independent
-# package.
+# A debian/rules file for the Squeak VM and for inisqueak.  This
+# is based on a sample debian/rules file from debhelper,
+# which is GNU copyright 1997 by Joey Hess.
 
 # Uncomment this to turn on verbose mode. 
 #export DH_VERBOSE=1
