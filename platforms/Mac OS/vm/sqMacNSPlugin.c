@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.6 2002/07/05 07:07:03 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.7 2002/08/06 21:51:22 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -137,10 +137,12 @@ int primitivePluginPostURL(void);
 #define STATUS_SUCCEEDED 3
 #define STARTINGsqueakHeapMBytes 20*1024*1024
 
-#define PLUGIN_TRACE 0
+#define PLUGIN_TRACE 1
 
 #if PLUGIN_TRACE
-#define PLUGINDEBUGSTR(msg)		DebugStr(msg)
+int printOnOSXPascal(unsigned char *msg);
+#define PLUGINDEBUGSTR(msg) printOnOSXPascal(msg);
+//#define PLUGINDEBUGSTR(msg)		::DebugStr(msg)
 #else
 #define PLUGINDEBUGSTR
 #endif
@@ -1045,24 +1047,29 @@ Ptr gRestorableStateForScreen = nil;
 NP_Port	  gFullScreenNPPort;
 NPWindow  *oldNetscapeWindow,gFullScreenNPWindow;
 WindowPtr oldStWindow;
+int printOnOSX(char *string);
+int printOnOSXNumber(int foo);
+
 
 int ioSetFullScreen(int fullScreen) {
 	short desiredWidth,desiredHeight;
 	Rect  windRect;
-        GDHandle   dominantGDevice;
+    GDHandle   dominantGDevice;
 	
 	if (fullScreen) {
 	    if (getFullScreenFlag()) return;
+	    
 		desiredWidth = 0;
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
 		oldStWindow = stWindow;
-#if TARGET_API_MAC_CARBON
+#if TARGET_API_MAC_CARBON & !defined(PLUGIN)
                 GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&windRect); 
 #else
                 dominantGDevice = getDominateDevice(stWindow,&windRect);
 #endif
-		BeginFullScreen	(&gRestorableStateForScreen,dominantGDevice,
+		BeginFullScreen	(&gRestorableStateForScreen,
+								dominantGDevice,
 								 &desiredWidth,
 								 &desiredHeight,
 								 &gAFullscreenWindow,
