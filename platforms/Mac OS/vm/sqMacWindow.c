@@ -18,6 +18,7 @@
  3.7.0bx Nov 24th, 2003 JMM move preferences to main, the proper place.
  3.7.3bx Apr 10th, 2004 JMM fix crash on showscreen
  3.8.1b1 Jul 20th, 2004 JMM Start on multiple window logic
+ 3.8.6b1 Jan 25th, 2005 JMM flush qd buffers less often
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -147,6 +148,56 @@ int ioSetFullScreen(int fullScreen) {
 }
 
 #if TARGET_API_MAC_CARBON
+
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle, int affectedL, int affectedT, int affectedR, int affectedB);
+
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle,int affectedL, int affectedT, int affectedR, int affectedB) {
+	static int pastTime=0,rememberWindowIndex=1;
+	int check;
+	static RgnHandle dirtyRgn = NULL;
+	static Rect dirtyRect = {0,0,0,0};
+	Rect rect;
+
+	if (dirtyRgn == NULL) 
+		dirtyRgn = NewRgn();
+		
+	rect.top = affectedT;
+	rect.left = affectedL;
+	rect.bottom = affectedB;
+	rect.right = affectedR; 
+
+	if (EmptyRect(&dirtyRect))
+		dirtyRect = rect;
+		
+	/* If the window index to use is different we must flush the old window 
+	   but only if the old window is still valid, it have have been closed */
+	   
+	if (rememberWindowIndex != windowIndexToUse) {
+		wHandleType validWindowHandle = windowHandleFromIndex(rememberWindowIndex);
+		if (validWindowHandle) {
+			RectRgn(dirtyRgn, &dirtyRect);
+			QDFlushPortBuffer(GetWindowPort(validWindowHandle), dirtyRgn);
+		}
+		dirtyRect = rect;
+		rememberWindowIndex = windowIndexToUse;
+	}
+
+	if (!noRectangle)
+		UnionRect(&dirtyRect,&rect,&dirtyRect);
+			
+	/* Flush every 8ms or if the clock rolls over */ 
+	
+	if (((check = (ioMSecs() - pastTime)) > 7) || check < 0) {
+		pastTime = pastTime + check;
+		if (!EmptyRect(&dirtyRect)) {
+			RectRgn(dirtyRgn, &dirtyRect);
+			QDFlushPortBuffer(windowPort, dirtyRgn);
+			SetRect(&dirtyRect,0,0,0,0);
+		}
+	}
+}
+
+
 extern struct VirtualMachine *interpreterProxy;
 void sqShowWindow(int windowIndex);
 void sqShowWindowActual(int windowIndex);
@@ -474,12 +525,8 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
                 }
             }
 
-
-
-            
 #if TARGET_API_MAC_CARBON
-            SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
-            QDFlushPortBuffer(windowPort, maskRect);
+			ReduceQDFlushLoad(windowPort, windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
             UnlockPortBits(windowPort);
 #endif
         }
@@ -1509,4 +1556,24 @@ inline void DuffsDevicesCopyLong(long *to, long *from, long count) {
     }
 }
 
+		
+			{
+				static int pastTime=0;
+				int check;
+				static RgnHandle dirtyRgn = NULL;
+
+				if (dirtyRgn == NULL) 
+					dirtyRgn = NewRgn();
+										
+				UnionRgn (dirtyRgn, maskRect, dirtyRgn);
+				
+				if (((check = (ioMSecs() - pastTime)) > 7) || check < 0) {
+					QDFlushPortBuffer(windowPort, dirtyRgn);
+					SetEmptyRgn(dirtyRgn);
+					pastTime = pastTime + check;
+				}
+			} 
+
+			
+		
 #endif 

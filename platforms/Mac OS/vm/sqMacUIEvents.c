@@ -25,6 +25,7 @@
 *  3.7.1b3 Jan 29th, 2004  JMM return unicode for classic version versus virtual keyboard code 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  alteration to unicode key capture
 *  3.8.0b1 July 20th, 2004 JMM Multiple window support
+*  3.8.5b2 Jan 25th, 2004 JMM reduce qd buffer flushing.
 
 notes: IsUserCancelEventRef
 
@@ -76,6 +77,7 @@ notes: IsUserCancelEventRef
 	static int findRepeatInKeyMap(int keyCode);
 	static void setRepeatInKeyMap(int keyCode);
 	void SetUpCarbonEventForWindowIndex(int index);
+	void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle, int affectedL, int affectedT, int affectedR, int affectedB);
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -731,6 +733,8 @@ int ioSetInputSemaphore(int semaIndex) {
 int ioGetNextEvent(sqInputEvent *evt) {
 #if I_AM_CARBON_EVENT
         aioPoll(0);
+		if (windowActive != 0)
+			ReduceQDFlushLoad(GetWindowPort(windowHandleFromIndex(windowActive)),windowActive, true, 0, 0, 0, 0);
         pthread_mutex_lock(&gEventQueueLock);
 #else
     if (eventBufferGet == eventBufferPut) {
@@ -2052,7 +2056,12 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 }
 
 #ifndef BROWSERPLUGIN
+
 int ioProcessEvents(void) {
+
+	if (windowActive != 0)
+		ReduceQDFlushLoad(GetWindowPort(windowHandleFromIndex(windowActive)),windowActive, true, 0, 0, 0, 0);
+
     if (gQuitNowRightNow) {
         ioExit();  //This might not return, might call exittoshell
         QuitApplicationEventLoop();
