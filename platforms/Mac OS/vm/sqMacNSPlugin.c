@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.13 2003/10/23 17:02:26 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.14 2003/11/20 01:33:43 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -170,6 +170,7 @@ extern struct VirtualMachine *interpreterProxy;
 extern int thisSession;  /* from sqFilePrims.c: */
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 pthread_mutex_t  gEventDrawLock;
+extern pthread_mutex_t gEventQueueLock;
 extern TMTask    gTMTask;
 #endif 
 
