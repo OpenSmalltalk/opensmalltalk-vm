@@ -16,7 +16,7 @@
     <key>CFBundleShortVersionString</key>	<string>Squeak @BNDL_VERSION@</string>
     <key>CFBundleGetInfoString</key>		<string>Squeak @BNDL_VERSION@ http://www.squeak.org </string>
     <key>CFBundleIdentifier</key>		<string>org.squeak.Squeak</string>
-    <key>CFBundleIconFile</key>			<string>Squeak.icns</string>
+    <key>CFBundleIconFile</key>			<string>SqueakVM.icns</string>
     <key>CFBundleHelpBookFolder</key>		<string>SqueakHelp</string>
     <key>CFBundleHelpBookName</key>		<string>Squeak Help</string>
     <key>CFBundleDocumentTypes</key>
@@ -27,6 +27,7 @@
 	<key>CFBundleTypeName</key>		<string>Squeak Image File</string>
 	<key>CFBundleTypeOSTypes</key>		<array><string>STim</string></array>
 	<key>CFBundleTypeRole</key>		<string>Editor</string>
+	<key>LSIsAppleDefaultForType</key>	<string>Yes</string>
       </dict>
       <dict>
 	<key>CFBundleTypeExtensions</key>	<array><string>changes</string></array>
@@ -34,14 +35,30 @@
 	<key>CFBundleTypeName</key>		<string>Squeak Changes File</string>
 	<key>CFBundleTypeOSTypes</key>		<array><string>STch</string></array>
 	<key>CFBundleTypeRole</key>		<string>Editor</string>
+	<key>LSIsAppleDefaultForType</key>	<string>Yes</string>
+      </dict>
+      <dict>
+	<key>CFBundleTypeExtensions</key>	<array><string>sources</string></array>
+	<key>CFBundleTypeIconFile</key>		<string>SqueakSources.icns</string>
+	<key>CFBundleTypeName</key>		<string>Squeak Sources File</string>
+	<key>CFBundleTypeOSTypes</key>		<array><string>STso</string></array>
+	<key>CFBundleTypeRole</key>		<string>Editor</string>
+      </dict>
+      <dict>
+	<key>CFBundleTypeExtensions</key>	<array><string>pr</string></array>
+	<key>CFBundleTypeIconFile</key>		<string>SqueakProject.icns</string>
+	<key>CFBundleTypeName</key>		<string>Squeak Project File</string>
+	<key>CFBundleTypeOSTypes</key>		<array><string>STpr</string></array>
+	<key>CFBundleTypeRole</key>		<string>Editor</string>
       </dict>
       <dict>
 	<key>CFBundleTypeExtensions</key>	<array><string>sobj</string></array>
-	<key>CFBundleTypeIconFile</key>		<string>SqueakScript.icns</string>
+	<key>CFBundleTypeIconFile</key>		<string>SqueakProject.icns</string>
 	<key>CFBundleTypeName</key>		<string>Squeak Script File</string>
 	<key>CFBundleTypeOSTypes</key>		<array><string>SOBJ</string></array>
 	<key>CFBundleTypeRole</key>		<string>Editor</string>
       </dict>
+<!--
       <dict>
 	<key>CFBundleTypeExtensions</key>	<array><string>bundle</string></array>
 	<key>CFBundleTypeIconFile</key>		<string>SqueakPlugin.icns</string>
@@ -49,6 +66,7 @@
 	<key>CFBundleTypeOSTypes</key>		<array><string>BNDL</string></array>
 	<key>CFBundleTypeRole</key>		<string>Editor</string>
       </dict>
+-->
       <dict>
 	<key>CFBundleTypeName</key>		<string>JPEG</string>
 	<key>CFBundleTypeOSTypes</key>		<array><string>JPEG</string></array>
