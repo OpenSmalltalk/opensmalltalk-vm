@@ -35,9 +35,9 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-08-08 15:34:41 by piumarta on emilia.inria.fr
+# Last edited: 2004-04-02 15:00:23 by piumarta on emilia.local
 
-AC_DEFUN(AC_CHECK_VMM_DIR,[
+AC_DEFUN([AC_CHECK_VMM_DIR],[
   AC_MSG_CHECKING([sanity of VMMaker src directory])
   vmmcheck () {
     if test ! ${2} ${3}; then
@@ -57,7 +57,7 @@ AC_DEFUN(AC_CHECK_VMM_DIR,[
   AC_MSG_RESULT(okay)])
 
 
-AC_DEFUN(AC_VM_VERSION,[
+AC_DEFUN([AC_VM_VERSION],[
   VM_MAJOR=$1
   VM_MINOR=$2
   VM_RELEASE=$3
@@ -68,7 +68,7 @@ AC_DEFUN(AC_VM_VERSION,[
 
 
 
-AC_DEFUN(AC_CHECK_VERSION,[
+AC_DEFUN([AC_CHECK_VERSION],[
   gendir="${vmmdir}/vm"
   version=`${cfgdir}/version ${gendir}/interp.c`
   SQ_MAJOR=`echo ${version} | cut -d ' ' -f 1`
@@ -79,7 +79,7 @@ AC_DEFUN(AC_CHECK_VERSION,[
 AC_SUBST(NM)
 AC_SUBST(LD)
 
-AC_DEFUN(AC_REQUIRE_SIZEOF,[
+AC_DEFUN([AC_REQUIRE_SIZEOF],[
   AC_MSG_CHECKING("size of $1")
   AC_TRY_RUN([#include <sys/types.h>
 	      int main(){return(sizeof($1) == $2)?0:1;}],
@@ -90,7 +90,7 @@ AC_DEFUN(AC_REQUIRE_SIZEOF,[
 # Try to find a 64-bit integer data type.
 # NOTE: `long long' is 64 bits in ANSI C99 [ISO/IEC 9899:1999 (E)].
 
-AC_DEFUN(AC_CHECK_INT64_T,[
+AC_DEFUN([AC_CHECK_INT64_T],[
   AC_CACHE_CHECK([for 64-bit integer type],ac_cv_int64_t,
     AC_TRY_RUN([int main(){return(sizeof(long) == 8)?0:1;}],
       ac_cv_int64_t="long",
@@ -104,18 +104,18 @@ AC_DEFUN(AC_CHECK_INT64_T,[
   AC_DEFINE_UNQUOTED(squeakInt64, $ac_cv_int64_t)])
   
 
-AC_DEFUN(AC_NEED_SUNOS_H,
+AC_DEFUN([AC_NEED_SUNOS_H],
 [case "$host" in
   *-sunos*)	AC_DEFINE(NEED_SUNOS_H, 1)
 esac])
 
 
-AC_DEFUN(AC_PROG_CC_WALL,
+AC_DEFUN([AC_PROG_CC_WALL],
 [AC_PROG_CC
 test "$GCC" = yes && WFLAGS="-Wall -Wno-unknown-pragmas"
 AC_SUBST(WFLAGS)])
 
-AC_DEFUN(AC_GNU_OPT,
+AC_DEFUN([AC_GNU_OPT],
 [AC_MSG_CHECKING([for $host_cpu optimization flags])
 ac_optflags="no"
 if test "$GCC" = yes; then
@@ -135,7 +135,7 @@ else
   AC_MSG_RESULT("$ac_optflags")
 fi])
 
-AC_DEFUN(AC_GNU_INTERP,
+AC_DEFUN([AC_GNU_INTERP],
 [INTERP="interp"
 AC_SUBST(INTERP)
 AC_PROG_AWK
@@ -163,7 +163,7 @@ else
   AC_MSG_RESULT(no)
 fi])
 
-AC_DEFUN(AC_PROG_AS_GNU,
+AC_DEFUN([AC_PROG_AS_GNU],
 [AC_CHECK_PROG(AS,as,as)
 AC_MSG_CHECKING(for GNU as)
 case "$GAS" in
@@ -175,7 +175,7 @@ yes|no) ;;
 esac
 AC_MSG_RESULT($GAS)])
 
-AC_DEFUN(AC_CHECK_ATEXIT,
+AC_DEFUN([AC_CHECK_ATEXIT],
 [AC_CACHE_CHECK([for atexit or on_exit], ac_cv_atexit,
   AC_TRY_COMPILE([#include <stdlib.h>],[atexit(0);], ac_cv_atexit="atexit",
   AC_TRY_COMPILE([#include <stdlib.h>],[on_exit(0);], ac_cv_atexit="on_exit",
@@ -184,31 +184,31 @@ if test "$ac_cv_atexit" != "no"; then
   AC_DEFINE_UNQUOTED(AT_EXIT, $ac_cv_atexit)
 fi])
 
-AC_DEFUN(AC_CHECK_SOCKLEN_T,
+AC_DEFUN([AC_CHECK_SOCKLEN_T],
 [AC_CACHE_CHECK([for socklen_t in sys/socket.h], ac_cv_socklen_t,
   AC_TRY_COMPILE([#include <sys/socket.h>],[sizeof(socklen_t);],
     ac_cv_socklen_t="yes", ac_cv_socklen_t="no"))
 test "$ac_cv_socklen_t" != "yes" && AC_DEFINE(socklen_t, int)])
 
-AC_DEFUN(AC_CHECK_TZSET,
+AC_DEFUN([AC_CHECK_TZSET],
 [AC_CACHE_CHECK([for tzset], ac_cv_tzset,
   AC_TRY_COMPILE([#include <time.h>],[tzet();],
     ac_cv_tzset="yes", ac_cv_tzset="no"))
 test "$ac_cv_tzset" != "no" && AC_DEFINE(HAVE_TZSET)])
 
-AC_DEFUN(AC_CHECK_GMTOFF,
+AC_DEFUN([AC_CHECK_GMTOFF],
 [AC_CACHE_CHECK([for gmtoff in struct tm], ac_cv_tm_gmtoff,
   AC_TRY_COMPILE([#include <time.h>],[struct tm tm; tm.tm_gmtoff;],
     ac_cv_tm_gmtoff="yes", ac_cv_tm_gmtoff="no"))
 test "$ac_cv_tm_gmtoff" != "no" && AC_DEFINE(HAVE_TM_GMTOFF)])
 
-AC_DEFUN(AC_CHECK_TIMEZONE,
+AC_DEFUN([AC_CHECK_TIMEZONE],
 [AC_CACHE_CHECK([for timezone and daylight variables], ac_cv_timezone,
   AC_TRY_COMPILE([extern long timezone; extern int daylight;],[timezone;daylight;],
     ac_cv_timezone="yes", ac_cv_timezone="no"))
 test "$ac_cv_timezone" != "no" && AC_DEFINE(HAVE_TIMEZONE)])
 
-AC_DEFUN(AC_CHECK_GETHOSTNAME,
+AC_DEFUN([AC_CHECK_GETHOSTNAME],
 [AC_CACHE_CHECK([for gethostname in unistd.h], ac_cv_gethostname_p,
   AC_TRY_COMPILE([#include <unistd.h>],[return (int)gethostname;],
     ac_cv_gethostname_p="yes", ac_cv_gethostname_p="no"))
@@ -226,21 +226,21 @@ else
 fi
 
 
-AC_DEFUN(AC_C_BYTEORDER,
+AC_DEFUN([AC_C_BYTEORDER],
 [AC_C_BIGENDIAN
 if test $ac_cv_c_bigendian != yes
 then CFLAGS="$CFLAGS -DLSB_FIRST=1"
 fi])
 
 
-AC_DEFUN(AC_C_DOUBLE_ALIGNMENT,
+AC_DEFUN([AC_C_DOUBLE_ALIGNMENT],
 [AC_CACHE_CHECK([whether unaligned access to doubles is ok], ac_cv_double_align,
   AC_TRY_RUN([f(int i){*(double *)i=*(double *)(i+4);}
               int main(){char b[[12]];f(b);return 0;}],
     ac_cv_double_align="yes", ac_cv_double_align="no"))
 test "$ac_cv_double_align" = "no" && AC_DEFINE(DOUBLE_WORD_ALIGNMENT)])
 
-AC_DEFUN(AC_C_DOUBLE_ORDER,
+AC_DEFUN([AC_C_DOUBLE_ORDER],
 [AC_CACHE_CHECK([whether doubles are stored in Squeak order], ac_cv_double_order,
   AC_TRY_RUN([union { double d; int i[[2]]; } d;
 	      int main(void) { d.d= 1.0;  return d.i[[0]] == 0; }],
@@ -249,7 +249,7 @@ test "$ac_cv_double_order" = "no" && AC_DEFINE(DOUBLE_WORD_ORDER)])
 
 # this assumes that libtool has already been configured and built --
 # if not then err on the side of conservatism.
-AC_DEFUN(AC_MODULE_LIB_PREFIX,
+AC_DEFUN([AC_MODULE_LIB_PREFIX],
 [AC_CACHE_CHECK([for prefix to use for loadable modules], ac_cv_module_prefix,
 if test -x ./libtool &&
    test "`./libtool --config | fgrep need_lib_prefix`" = "need_lib_prefix=no"
@@ -259,7 +259,7 @@ fi)
 AC_DEFINE_UNQUOTED(VM_MODULE_PREFIX,"$mkfrags_lib_prefix")
 test "$ac_cv_module_prefix" = lib && mkfrags_lib_prefix=lib])
 
-AC_DEFUN(AC_64BIT_ARCH,
+AC_DEFUN([AC_64BIT_ARCH],
 [AC_MSG_CHECKING(for compiler flags to force 32-bit addresses)
 case $host in
   alpha*)
@@ -275,29 +275,29 @@ AC_MSG_RESULT($CFLAGS_32)])
 
 # AC_PLUGIN_SUBST(varname,value)
 
-AC_DEFUN(AC_PLUGIN_DISABLE_PLUGIN,[
+AC_DEFUN([AC_PLUGIN_DISABLE_PLUGIN],[
   AC_MSG_RESULT([******** disabling $1])
   disabled_plugins="${disabled_plugins} $1"])
   
-AC_DEFUN(AC_PLUGIN_DISABLE,[
+AC_DEFUN([AC_PLUGIN_DISABLE],[
   AC_PLUGIN_DISABLE_PLUGIN(${plugin})])
   
-AC_DEFUN(AC_PLUGIN_USE_LIB,[
+AC_DEFUN([AC_PLUGIN_USE_LIB],[
   plibs="${plibs} $1"])
 
-AC_DEFUN(AC_PLUGIN_DEFINE_UNQUOTED,[
+AC_DEFUN([AC_PLUGIN_DEFINE_UNQUOTED],[
   echo 's%[\['$1'\]]%'$2'%g' >> ${plugin}.sub])
 
 # AC_PLUGIN_SEARCH_LIBS(function,libs...)
 
-AC_DEFUN(AC_PLUGIN_SEARCH_LIBS,[
+AC_DEFUN([AC_PLUGIN_SEARCH_LIBS],[
   AC_SEARCH_LIBS($1,$2,,
     AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
     disabled_plugins="${disabled_plugins} ${plugin}")])
 
 # AC_PLUGIN_CHECK_LIB(lib,func,ok,bad)
 
-AC_DEFUN(AC_PLUGIN_CHECK_LIB,[
+AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
   AC_CHECK_LIB($1,$2,
     plibs="${plibs} $1",
     AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
