@@ -60,26 +60,26 @@ EOF
 if [ $mode = external ]
 then
 cat <<EOF
-LIBMPEG_CC:=\$(LIBTOOL) --mode=compile \$(CC)
-LIBMPEG_LINKLIB:=\$(LIBTOOL) --mode=link \$(CC) -o
-LIBMPEG_OBJECT_EXT:=lo
-LIBMPEG_LIBRARY_EXT:=la
+LIBMPEG_CC=\$(LIBTOOL) --mode=compile \$(CC)
+LIBMPEG_LINKLIB=\$(LIBTOOL) --mode=link \$(CC) -o
+LIBMPEG_OBJECT_EXT=lo
+LIBMPEG_LIBRARY_EXT=la
 EOF
 else
 cat <<EOF
-LIBMPEG_CC:=\$(CC)
-LIBMPEG_LINKLIB:=\$(AR) rcs
-LIBMPEG_OBJECT_EXT:=o
-LIBMPEG_LIBRARY_EXT:=a
+LIBMPEG_CC=\$(CC)
+LIBMPEG_LINKLIB=\$(AR) rcs
+LIBMPEG_OBJECT_EXT=o
+LIBMPEG_LIBRARY_EXT=a
 EOF
 fi
 
 
 cat <<EOF
-LIBMPEG_CFLAGS:=-O3
-LIBMPEG_NASM:=nasm -f elf
-LIBMPEG_SOURCE_DIR:=$libmpegdir
-LIBMPEG_BUILD_DIR:=\$(top_builddir)/Mpeg3Plugin/libmpeg
+LIBMPEG_CFLAGS=-O3
+LIBMPEG_NASM=nasm -f elf
+LIBMPEG_SOURCE_DIR=$libmpegdir
+LIBMPEG_BUILD_DIR=\$(top_builddir)/Mpeg3Plugin/libmpeg
 EOF
 
 
@@ -108,7 +108,7 @@ Mpeg3Plugin.o : \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c
 	\$(COMPILE) -I\$(Mpeg3Plugin_DIR) -I\$(LIBMPEG_SOURCE_DIR) -I\$(LIBMPEG_SOURCE_DIR)/audio -I\$(LIBMPEG_SOURCE_DIR)/video -I$crossdir/plugins/Mpeg3Plugin -c \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c -o Mpeg3Plugin.o
 
 
-PLUGINS_O:=\$(PLUGINS_O) Mpeg3Plugin.o \$(LIBMPEG_BUILD_DIR)/libmpeg3.a
+PLUGINS_O += Mpeg3Plugin.o \$(LIBMPEG_BUILD_DIR)/libmpeg3.a
 
 EOF
 fi
