@@ -1743,100 +1743,108 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth,
 		double hScale, double vScale, int landscapeFlag)
 {
 #ifdef HEADLESS
-     return false;
+  return false;
 #else
-  /* Write the form as a PPM (Portable PixMap) file, from which it can
-     be converted into almost any existing graphical format (including
-     PostScript).  See the "netpbm" utilities for a huge collection of
-     image manipulation tools that understand the PPM format.
-     Note that "xv" can also read, convert, and do image processing on
-     PPM files.
-     The output filename is defined in "sqPlatformSpecific.h". */
-
   FILE *ppm;
-  int ok= true;
-  float scale;  /* scale to use with pnmtops; unfortunately, the same
-		   scale must be used horizontally and vertically */
+  float scale;  /* scale to use with pnmtops */
   char printCommand[1000];
+  unsigned int *form32;  /* the form data, in  32 bits */
+  
 
+  /* convert the form to 32 bits */
+  form32 = malloc(width * height * 4);
+  if(form32 == NULL) {
+    fprintf(stderr, "not enough memory\n");
+    return false;
+  }
+  switch(depth) {
+  case 1:
+    copyImage1To32((int *) bitsAddr, (int *) form32,
+		   width, height,
+		   1, 1, width, height);
+    break;
+  case 2:
+    copyImage2To32((int *) bitsAddr, (int *) form32,
+		   width, height,
+		   1, 1, width, height);
+    break;
+  case 4:
+    copyImage4To32((int *) bitsAddr, (int *) form32,
+		   width, height,
+		   1, 1, width, height);
+    break;
+  case 8:
+    copyImage8To32((int *) bitsAddr, (int *) form32,
+		   width, height,
+		   1, 1, width, height);
+    break;
 
+  case 15:
+  case 16:
+    copyImage16To32((int *) bitsAddr, (int *) form32,
+		    width, height,
+		    1, 1, width, height);
+    break;
+  case 32:
+    copyImage32To32((int *) bitsAddr, (int *) form32,
+		    width, height,
+		    1, 1, width, height);
+    break;
+  default:
+    fprintf(stderr, "error in formPrint: unhandled form depth %d\n", depth);
+    free(form32);
+    return false;
+  }
+  
+  /* pick a scale. unfortunately, pnmtops requires the same scale
+     horizontally and vertically */
   if(hScale < vScale)
-       scale= hScale;
+    scale= hScale;
   else
-       scale= vScale;
+    scale= vScale;
 
+
+  /* assemble the command for printing.  pnmtops is part of "netpbm",
+     a widely-available set of tools that eases image manipulation */ 
   snprintf(printCommand, sizeof(printCommand),
 	   "pnmtops -scale %f %s | lpr",
 	   scale,
 	   (landscapeFlag ? "-turn" : "-noturn"));
 
-  if ((ppm= popen(printCommand, "w")) == 0)
-       return false;
+
   
-  /* PPM magic number and pixmap header */
+  /* open a pipe to print through */
+  if ((ppm= popen(printCommand, "w")) == 0) {
+    free(form32);
+    return false;
+  }
+  
+  
+  /* print the PPM magic number */
   fprintf(ppm, "P3\n%d %d 255\n", width, height);
 
-  switch (depth)
-    {
-    case 8:
-      {
-	unsigned char *bits= (unsigned char *) bitsAddr;
-	int ppw= 32 / depth;
-	int raster= ((width + ppw - 1) / ppw) * 4;
-	XColor colors[256];
-	int i;
+  /* write the pixmap */
+  {
+    int y;
+    for (y= 0; y < height; ++y) {
+      int x;
+      for (x= 0; x < width; ++x) {
+	int pixel, red, green, blue;
 
-	for (i= 0; i < 256; ++i) colors[i].pixel= i;
-	if(stVisual->class == PseudoColor) {
-	  /* If the display is pseudocolor, then query the X server to
-             get the true colormap; that way the output looks as much
-             like the screen as possible. */
-	  XQueryColors(stDisplay, stColormap, colors, 256);
-	  for(i=0; i<256; i++) {
-	       /* scale down to 256 colors */
-	       colors[i].red >>= 8;
-	       colors[i].green >>= 8;
-	       colors[i].blue >>= 8;
-	  }
-	} else {
-	     /* otherwise, just use stColors, scaled up to 256 colors */
-	     for(i=0; i<256; i++) {
-		  colors[i].red=   ((stColors[i]>>5) & 0x7) << 5;
-		  colors[i].green= ((stColors[i]>>2) & 0x7) << 5;
-		  colors[i].blue=  ((stColors[i]) & 0x3) << 6;
-	     }
-	}
-	
-	
-	/* write the pixmap */
-	{
-	  int y;
-	  for (y= 0; y < height; ++y) {
-	    int x;
-	    for (x= 0; x < width; ++x) {
-	      /* everything is backwards (as usual ;) */
-	      int index= y * raster + x;
-	      int byte= 3 - (index & 0x00000003);
-	      int word= index & -4;
-	      int pixel= bits[word + byte];
-	      fprintf(ppm, "%d %d %d\n",
-		      colors[pixel].red, colors[pixel].green, colors[pixel].blue);
-	    }
-	  }
-	}
-	break;
-      } /* case 8 */
-    default:
-      fprintf(stderr,
-	      "Depth %d pixmaps are not yet supported.  If you *really*\n"
-	      "need this then bribe me with something (a Korg OPSYS PCI\n"
-	      "sound card would do the trick ;).\n", depth);
-      ok= false;
-      break;
-    } /* switch */
+	pixel= form32[y*width + x];
+	red=   (pixel >> 16) & 0xFF;
+	green= (pixel >> 8)  & 0xFF;
+	blue=  (pixel >> 0)  & 0xFF;
+
+	fprintf(ppm, "%d %d %d\n", red, green, blue);
+      }
+    }
+  }
+    
+      
 
   pclose(ppm);
-  return ok;
+  return true;
 #endif  /* HEADLESS */
 }
 
