@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32D3D.c,v 1.5 2002/05/06 10:36:25 andreasraab Exp $
+*   RCSID:   $Id: sqWin32D3D.c,v 1.6 2002/05/29 11:43:03 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -583,7 +583,9 @@ static void d3dPrintMemoryInformation(void)
 
 int d3dInitializePrimary(void) {
   HRESULT hRes;
+  DPRINTF(5,(fp, "[Initializing primary surface]\n"));
   if(!lpDD) {
+    DPRINTF(5,(fp, "[Creating DDraw object]\n"));
     hRes = CoCreateInstance(&CLSID_DirectDraw,
 			    NULL, 
 			    CLSCTX_ALL/* CLSCTX_INPROC_SERVER */,
@@ -591,9 +593,15 @@ int d3dInitializePrimary(void) {
 			    (void**)&lpDD);
     ERROR_CHECK;
     if(FAILED(hRes)) return 0;
+    if(!lpDD) {
+      DPRINTF(1,(fp,"ERROR: Could not create IDirectDraw7\n"));
+      return 0;
+    }
+    DPRINTF(5,(fp, "[Initializing DDraw object]\n"));
     hRes = lpDD->lpVtbl->Initialize(lpDD, NULL);
     ERROR_CHECK;
     if(FAILED(hRes)) return 0;
+    DPRINTF(5,(fp, "[Setting cooperation level]\n"));
     hRes = lpDD->lpVtbl->
       SetCooperativeLevel(lpDD, *theSTWindow, 
 			  DDSCL_NORMAL | DDSCL_FPUPRESERVE);
@@ -602,9 +610,14 @@ int d3dInitializePrimary(void) {
   }
   if(!lpD3D) {
     /* query for the direct3d object */
+    DPRINTF(5,(fp, "[Querying for IDirect3D7]\n"));
     hRes = lpDD->lpVtbl->QueryInterface(lpDD,&IID_IDirect3D7, (LPVOID*)&lpD3D);
     ERROR_CHECK;
     if(FAILED(hRes)) return 0;
+    if(!lpD3D) {
+      DPRINTF(1,(fp,"ERROR: Could not retrieve IDirect3D7\n"));
+      return 0;
+    }
   }
   if(!lpddPrimary) {
     /* create the primary surface */
@@ -614,9 +627,14 @@ int d3dInitializePrimary(void) {
     ddsd.dwFlags        = DDSD_CAPS;
     ddsd.ddsCaps.dwCaps = DDSCAPS_PRIMARYSURFACE;
 
+    DPRINTF(5,(fp, "[Creating primary surface]\n"));
     hRes = lpDD->lpVtbl->CreateSurface( lpDD, &ddsd, &lpddPrimary, NULL );
     ERROR_CHECK;
     if (FAILED(hRes)) return 0;
+    if(!lpddPrimary) {
+      DPRINTF(1,(fp,"ERROR: Could not create primary surface\n"));
+      return 0;
+    }
   }
 
   /*
@@ -626,9 +644,14 @@ int d3dInitializePrimary(void) {
    * outside the visible region of the window.
    */
   if(!lpddClipper) {
+    DPRINTF(5,(fp, "[Creating clipper]\n"));
     hRes = lpDD->lpVtbl->CreateClipper(lpDD, 0UL, &lpddClipper, NULL);
     ERROR_CHECK;
     if(FAILED(hRes)) return 0;
+    if(!lpddClipper) {
+      DPRINTF(1,(fp,"ERROR: Could not create clipper\n"));
+      return 0;
+    }
     hRes = lpddClipper->lpVtbl->SetHWnd(lpddClipper, 0UL, *theSTWindow);
     ERROR_CHECK;
     if(FAILED(hRes)) return 0;
@@ -692,6 +715,9 @@ int d3dInitializeRenderer(d3dRenderer *renderer) {
   if(!renderer->fDeviceFound) {
     return 0;
   }
+
+  DPRINTF(3, (fp, "### Using %s\n(%s)\n", 
+	      renderer->szDeviceName, renderer->szDeviceDesc));
 
   /* enumerate z-buffer formats and find a nice one */
   memset(&ddpfZBuffer, 0, sizeof(ddpfZBuffer));
@@ -822,7 +848,7 @@ int d3dCreateRenderer(int allowSoftware, int allowHardware,
 		      int x, int y, int w, int h) {
   int i, index;
   d3dRenderer *renderer;
-
+  DPRINTF(3, (fp, "---- Initializing D3D ----\n"));
   for(i=0; i < MAX_RENDERER; i++) {
     if(allRenderer[i].fUsed == 0) break;
   }
@@ -982,6 +1008,35 @@ int d3dGetIntProperty(int handle, int prop)
     return 1;
   case 4: /* line width */
     return 1;
+  case 5: /* blend enable */
+     hRes = lpDevice->lpVtbl->
+      GetRenderState(lpDevice, D3DRENDERSTATE_ALPHABLENDENABLE, &dwState);
+     ERROR_CHECK;
+     return dwState;
+  case 6: /* blend source factor */
+  case 7: /* blend dest factor */
+    if(prop == 6) {
+      hRes = lpDevice->lpVtbl->
+	GetRenderState(lpDevice, D3DRENDERSTATE_SRCBLEND, &dwState);
+    } else {
+      hRes = lpDevice->lpVtbl->
+	GetRenderState(lpDevice, D3DRENDERSTATE_DESTBLEND, &dwState);
+    }
+    ERROR_CHECK;
+    switch(dwState) {
+        case D3DBLEND_ZERO: return 0;
+        case D3DBLEND_ONE: return 1;
+        case D3DBLEND_SRCCOLOR: return 2;
+        case D3DBLEND_INVSRCCOLOR: return 3;
+        case D3DBLEND_DESTCOLOR: return 4;
+        case D3DBLEND_INVDESTCOLOR: return 5;
+        case D3DBLEND_SRCALPHA: return 6;
+        case D3DBLEND_INVSRCALPHA: return 7;
+        case D3DBLEND_DESTALPHA: return 8;
+        case D3DBLEND_INVDESTALPHA: return 9;
+        case D3DBLEND_SRCALPHASAT: return 10;
+        default: return -1;
+      }
   }
   return 0;
 }
@@ -1018,6 +1073,37 @@ int d3dSetIntProperty(int handle, int prop, int value)
     return 1;
   case 4: /* line width */
     return 1;
+  case 5: /* blend enable */
+    dwState = value ? TRUE : FALSE;
+    hRes = lpDevice->lpVtbl->
+      SetRenderState(lpDevice, D3DRENDERSTATE_ALPHABLENDENABLE, dwState);
+    ERROR_CHECK;
+    return 1;
+  case 6: /* blend source factor */
+  case 7: /* blend dest factor */
+      switch(value) {
+        case 0: dwState = D3DBLEND_ZERO; break;
+        case 1: dwState = D3DBLEND_ONE; break;
+        case 2: dwState = D3DBLEND_SRCCOLOR; break;
+        case 3: dwState = D3DBLEND_INVSRCCOLOR; break;
+        case 4: dwState = D3DBLEND_DESTCOLOR; break;
+        case 5: dwState = D3DBLEND_INVDESTCOLOR; break;
+        case 6: dwState = D3DBLEND_SRCALPHA; break;
+        case 7: dwState = D3DBLEND_INVSRCALPHA; break;
+        case 8: dwState = D3DBLEND_DESTALPHA; break;
+        case 9: dwState = D3DBLEND_INVDESTALPHA; break;
+        case 10: dwState = D3DBLEND_SRCALPHASAT; break;
+        default: return 0;
+      }
+      if(prop == 6) {
+	hRes = lpDevice->lpVtbl->
+	  SetRenderState(lpDevice, D3DRENDERSTATE_SRCBLEND, dwState);
+      } else {
+	hRes = lpDevice->lpVtbl->
+	  SetRenderState(lpDevice, D3DRENDERSTATE_DESTBLEND, dwState);
+      }
+      ERROR_CHECK;
+      return 1;
   }
   return 0;
 }
