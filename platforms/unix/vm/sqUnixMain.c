@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-11-23 13:23:43 by piumarta on emilia.local
+ * Last edited: 2004-04-02 14:30:12 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -453,12 +453,14 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, d
 int ioRelinquishProcessorForMicroseconds(int us)
 {
   int nwt= getNextWakeupTick();
-  int now= (ioMSecs() & 0x1fffffff);
   int ms=  0;
-  if (nwt <= now)
-    ms= (nwt ? 0 : (1000/60));
-  else
-    ms= nwt - now;
+
+  if (nwt)
+    {
+      int now= (ioMSecs() & 0x1fffffff);
+      ms= ((nwt <= now) ? (1000/60) : nwt - now);
+    }
+
   if (ms < (1000/60))		/* < 1 timeslice? */
     {
 #    if defined(__MACH__)	/* can sleep with 1ms resolution */
