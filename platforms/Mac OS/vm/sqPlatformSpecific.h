@@ -6,12 +6,14 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.12 2003/05/19 07:20:23 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.13 2003/06/07 00:44:00 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *   May 5th, 2002, JMM added define for plugin for CW
 *   May 12th, 2002, JMM added SQUEAK_BUILTIN_PLUGIN for CW Pro
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+*   3.5.1  May 28th, 2003 JMM SQUEAK_BUILTIN_PLUGIN in PB defs
+
 
 *
    How to use this file:
@@ -28,7 +30,7 @@
 
 #ifdef macintoshSqueak
 //#define BROWSERPLUGIN
-#define SQUEAK_BUILTIN_PLUGIN
+//#define SQUEAK_BUILTIN_PLUGIN
 /* replace the image file manipulation macros with functions */
 #undef sqImageFile
 #undef sqImageFileClose
