@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   andreasr@wdi.disney.com
-*   RCSID:   $Id: sqWin32FFI.c,v 1.1 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32FFI.c,v 1.2 2002/06/01 11:44:39 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -273,12 +273,14 @@ int newBP;
 	Perform the actual function call. */
 int ffiCallAddress(int fn)
 {
+#if 0
    {
      FILE *f = fopen("ffi.log","at");
      fprintf(f, "%x",fn);
      fflush(f);
      fclose(f);
    }
+#endif
 #ifdef _MSC_VER
 	__asm {
 		push ebx
@@ -360,6 +362,7 @@ movl %%esp, _newSP
 		": /* no outputs */ : "ebx" (fn) : "eax" /* clobbered registers */);
 		/* done */
 #endif
+#if 0
    {
      FILE *f = fopen("ffi.log","at");
      fprintf(f, "...ok\n");
@@ -370,7 +373,7 @@ movl %%esp, _newSP
      fflush(f);
      fclose(f);
    }
-
+#endif
 	return intReturnValue;
 }
 
