@@ -1,13 +1,7 @@
-/* The basic prim code for file operations. See also the platform specific
- * files typically named 'sq{blah}Directory.c' for details of the directory
- * handling code. Note that the win32 platform #defines NO_STD_FILE_SUPPORT
- * and thus bypasses this file
- */
-  
 #include "sq.h"
 #ifndef NO_STD_FILE_SUPPORT
 #include "FilePlugin.h"
-
+#include <unistd.h>
 /***
 	The state of a file is kept in the following structure,
 	which is stored directly in a Squeak bytes object.
@@ -32,7 +26,7 @@
 		File	*file;
 		int		sessionID;
 		int		writable;
-		int		fileSize;
+		off_t		fileSize;  //JMM Nov 8th 2001 64bits we hope
 		int		lastOp;  // 0 = uncommitted, 1 = read, 2 = write //
 	} SQFile;
 
@@ -58,7 +52,7 @@ int sqFileAtEnd(SQFile *f) {
 	/* Return true if the file's read/write head is at the end of the file. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	return ftell(f->file) == f->fileSize;
+	return ftello(f->file) == f->fileSize;
 }
 
 int sqFileClose(SQFile *f) {
@@ -90,13 +84,13 @@ int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize) {
 	}
 }
 
-int sqFileGetPosition(SQFile *f) {
+off_t sqFileGetPosition(SQFile *f) {
 	/* Return the current position of the file's read/write head. */
 
-	int position;
+	off_t position;
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	position = ftell(f->file);
+	position = ftello(f->file);
 	if (position < 0) return interpreterProxy->success(false);
 	return position;
 }
@@ -107,7 +101,7 @@ int sqFileInit(void) {
 	   Should be called once at startup time.
 	*/
 
-	thisSession = clock() + time(NULL);
+	thisSession = ioLowResMSecs() + time(NULL);
 	if (thisSession == 0) thisSession = 1;	/* don't use 0 */
 	return 1;
 }
@@ -132,7 +126,7 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
 	if (sqFileNameSize > 1000) {
 		return interpreterProxy->success(false);
 	}
-	sqFilenameFromString(cFileName, sqFileNameIndex, sqFileNameSize);
+        sqFilenameFromStringOpen(cFileName, sqFileNameIndex, sqFileNameSize);
 
 	if (writeFlag) {
 		/* First try to open an existing file read/write: */
@@ -145,7 +139,7 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
 			if (f->file != NULL) {
 			    char type[4],creator[4];
 				dir_GetMacFileTypeAndCreator((char *)sqFileNameIndex, sqFileNameSize, type, creator);
-				if (strncmp(type,"BINA",4) == 0 || strncmp(type,"????",4) == 0 ) 
+				if (strncmp(type,"BINA",4) == 0 || strncmp(type,"????",4) == 0 || *(long *)type == 0 ) 
 				    dir_SetMacFileTypeAndCreator((char *)sqFileNameIndex, sqFileNameSize,"TEXT","R*ch");	
 			}
 		}
@@ -162,14 +156,14 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
 	} else {
 		f->sessionID = thisSession;
 		/* compute and cache file size */
-		fseek(f->file, 0, SEEK_END);
-		f->fileSize = ftell(f->file);
-		fseek(f->file, 0, SEEK_SET);
+		fseeko(f->file, 0, SEEK_END);
+		f->fileSize = ftello(f->file);
+		fseeko(f->file, 0, SEEK_SET);
 	}
 	f->lastOp = UNCOMMITTED;
 }
 
-int sqFileReadIntoAt(SQFile *f, int count, int byteArrayIndex, int startIndex) {
+size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
 	/* Read count bytes from the given file into byteArray starting at
 	   startIndex. byteArray is the address of the first byte of a
 	   Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -178,10 +172,10 @@ int sqFileReadIntoAt(SQFile *f, int count, int byteArrayIndex, int startIndex) {
 	*/
 
 	char *dst;
-	int bytesRead;
+	size_t bytesRead;
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	if (f->writable && (f->lastOp == WRITE_OP)) fseek(f->file, 0, SEEK_CUR);  /* seek between writing and reading */
+	if (f->writable && (f->lastOp == WRITE_OP)) fseeko(f->file, 0, SEEK_CUR);  /* seek between writing and reading */
 	dst = (char *) (byteArrayIndex + startIndex);
 	bytesRead = fread(dst, 1, count, f->file);
 	f->lastOp = READ_OP;
@@ -207,15 +201,15 @@ int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameInd
 	}
 }
 
-int sqFileSetPosition(SQFile *f, int position) {
+int sqFileSetPosition(SQFile *f, off_t position) {
 	/* Set the file's read/write head to the given position. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	fseek(f->file, position, SEEK_SET);
+	fseeko(f->file, position, SEEK_SET);
 	f->lastOp = UNCOMMITTED;
 }
 
-int sqFileSize(SQFile *f) {
+off_t sqFileSize(SQFile *f) {
 	/* Return the length of the given file. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
@@ -230,12 +224,14 @@ int sqFileFlush(SQFile *f) {
 	return 1;
 }
 
-int sqFileTruncate(SQFile *f,int offset) {
+int sqFileTruncate(SQFile *f,off_t offset) {
 	/* Truncate the file*/
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	if (ftruncate(f->file,offset)) return interpreterProxy->success(false);
-	f->fileSize = ftell(f->file);
+	if (ftruncate(fileno(f->file),offset)) {
+            return interpreterProxy->success(false);
+        }
+	f->fileSize = ftello(f->file);
 	return 1;
 }
 
@@ -247,21 +243,22 @@ int sqFileValid(SQFile *f) {
 		(f->sessionID == thisSession));
 }
 
-int sqFileWriteFromAt(SQFile *f, int count, int byteArrayIndex, int startIndex) {
+size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
 	/* Write count bytes to the given writable file starting at startIndex
 	   in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
 	   of byteArray and startIndex).
 	*/
 
 	char *src;
-	int bytesWritten, position;
+	size_t bytesWritten;
+	off_t position;
 
 	if (!(sqFileValid(f) && f->writable)) return interpreterProxy->success(false);
-	if (f->lastOp == READ_OP) fseek(f->file, 0, SEEK_CUR);  /* seek between reading and writing */
+	if (f->lastOp == READ_OP) fseeko(f->file, 0, SEEK_CUR);  /* seek between reading and writing */
 	src = (char *) (byteArrayIndex + startIndex);
 	bytesWritten = fwrite(src, 1, count, f->file);
 
-	position = ftell(f->file);
+	position = ftello(f->file);
 	if (position > f->fileSize) {
 		f->fileSize = position;  /* update file size */
 	}
