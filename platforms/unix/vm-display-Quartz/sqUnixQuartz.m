@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-08-23 13:08:07 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-23 21:18:45 by piumarta on emilia.inria.fr
  */
 
 
@@ -1626,23 +1626,7 @@ static void *runInterpreter(void *arg)
     }
 
   imgInit();
-
-  // vmPath has been set to the realpath() of the VM, which might be
-  // bogus (since the more cultivated OS X user will make it a symlink
-  // to /usr/local/bin/squeak).  put it back where it should be.  note
-  // that we would also like to pick up the sources file from
-  // resourcePath/SqueakV*.sources, but I guess the stupid image is
-  // going to look for it in the vmPath.  ho hum.
-  {
-    char *ptr;
-    assert(strlen(argVec[0]) < MAXPATHLEN);
-    strcpy(vmPath, argVec[0]);
-    if ((ptr= strrchr(vmPath, '/')))
-      ptr[1]= '\0';
-  }
-
   setUpDisplay();
-  printf("fullScreenFlag %d\n", getFullScreenFlag());
   setUpWindow(fullscreen= getFullScreenFlag());
 
 #if 1
