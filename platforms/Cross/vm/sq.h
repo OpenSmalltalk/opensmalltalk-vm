@@ -6,7 +6,7 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.4 2002/01/31 21:10:06 johnmci Exp $
+*   RCSID:   $Id: sq.h,v 1.5 2002/03/06 10:13:50 bertf Exp $
 *
 *	01/28/02	Tim add macro default for sqFilenameFromStringOpen
 *		and sqFTruncate
@@ -237,8 +237,8 @@ int ioProcessEvents(void);
 
 /* button definitions */
 #define RedButtonBit 4
-#define BlueButtonBit 2
-#define YellowButtonBit 1
+#define YellowButtonBit 2
+#define BlueButtonBit 1
 
 /* modifier definitions */
 #define ShiftKeyBit 1
