@@ -63,7 +63,9 @@ sqExport *pluginExports[] = {
 	JoystickTabletPlugin_exports,
 	Klatt_exports,
 	LargeIntegers_exports,
+#ifndef BROWSERPLUGIN
 	MacMenubarPlugin_exports,
+#endif
 	MIDIPlugin_exports,
 	Matrix2x3Plugin_exports,
 	MiscPrimitivePlugin_exports,

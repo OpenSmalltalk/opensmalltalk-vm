@@ -25,7 +25,8 @@
 *  3.7.1b3 Jan 29th, 2004  JMM return unicode for classic version versus virtual keyboard code 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  alteration to unicode key capture
 *  3.8.0b1 July 20th, 2004 JMM Multiple window support
-*  3.8.5b2 Jan 25th, 2004 JMM reduce qd buffer flushing.
+*  3.8.5b2 Jan 25th, 2005 JMM reduce qd buffer flushing.
+*  3.8.7b1 Mar 13th, 2005 JMM fire keydown/keychar on key repeat to mimic ms windows behavior.
 
 notes: IsUserCancelEventRef
 
@@ -203,6 +204,7 @@ int ioProcessEvents(void) {
 	return 0;
 }
 
+#ifndef BROWSERPLUGIN
 int HandleEvents(void) {
 	EventRecord		theEvent;
 	int				ok,isMenuKey;
@@ -449,6 +451,7 @@ void HandleMouseDown(EventRecord *theEvent) {
 #endif
 	}
 }
+#endif
 
 /*** Event Recording Functions ***/
 
@@ -1971,8 +1974,7 @@ void recordKeyboardEventCarbon(EventRef event) {
         CFRelease(theString);
         
        /* Put the sqKeyboardEvent for KeyDown */
-		if (!ISawRawKeyRepeat)
-			enterKeystroke ( EventTypeKeyboard, modifiedUniChar, EventKeyDown, modifierBits);
+		enterKeystroke ( EventTypeKeyboard, modifiedUniChar, EventKeyDown, modifierBits);
 		
         /* generate extra character event */
 		enterKeystroke ( EventTypeKeyboard, (macRomanCode == '\0') ? modifiedUniChar : macRomanCode, EventKeyChar, modifierBits);

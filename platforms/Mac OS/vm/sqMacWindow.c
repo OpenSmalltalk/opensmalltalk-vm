@@ -367,7 +367,7 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
             pixDepth = GetPixDepth(pix);
             
 			if (depth == 1 || depth == 2 || depth == 4) {
-				dispBitsIndex = (int) copy124BitsTheHardWay(dispBitsIndex, width, height, depth, pixDepth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
+				dispBitsIndex = (int) copy124BitsTheHardWay((unsigned *) dispBitsIndex, width, height, depth, pixDepth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
 				depth = pixDepth;
 			} else {
             pitch = bytesPerLine(width, depth);
@@ -747,11 +747,13 @@ int makeMainWindow(void) {
 		getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
 		SetWindowTitle(1,shortImageName);
 	}
+#ifndef BROWSERPLUGIN
 #if I_AM_CARBON_EVENT	
         ioSetFullScreenActual(getFullScreenFlag());
 #else
 	ioSetFullScreen(getFullScreenFlag());
 #endif
+#endif 
 #endif
 	return (int) window;
 }

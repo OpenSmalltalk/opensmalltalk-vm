@@ -33,7 +33,9 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 #if I_AM_CARBON_EVENT
 	SetUpCarbonEventForWindowIndex(index);
 #endif
+#ifndef BROWSERPLUGIN
 	sqShowWindow(index);
+#endif
 	return index;
 }
 

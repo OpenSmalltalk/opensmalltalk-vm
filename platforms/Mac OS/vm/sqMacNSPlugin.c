@@ -66,6 +66,7 @@ Aug      2001	JMM 3.0.24  rework of security logic, remove explicit call
 May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
  July 31st, 2004 JMM 3.7.4b2 Add imageName and URL redirection. 
+March	2005	JMM 3.7.6	Add host window support
 **********/
 
 #include "sq.h"
@@ -89,6 +90,8 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 #include <string.h>
 #include <ctype.h>
 #include <Threads.h>
+#include "sqMacHostWindow.h"
+
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     #include <pthread.h>
@@ -399,6 +402,7 @@ NPError NPP_SetWindow(NPP instance, NPWindow* window) {
 	NP_Port* port;
         OSErr   err;
 	WindowPtr realWindow;
+	windowDescriptorBlock *windowBlock;
 	
 	if (window == NULL || window->window == NULL)
 		return NPERR_NO_ERROR;
@@ -415,8 +419,9 @@ NPError NPP_SetWindow(NPP instance, NPWindow* window) {
 	netscapeWindow = window;
 	port = (NP_Port *) netscapeWindow->window;
 	realWindow = GetWindowFromPort(port->port);
-	interpreterProxy->windowAtIndexputBlock(1,realWindow);
-	
+	windowBlock = AddWindowBlock();
+	windowBlock->handle = (wHandleType) realWindow;
+
 	needsUpdate	= true;
 
 	if (gIWasRunning)
@@ -825,6 +830,7 @@ void StartDraw(void) {
 	NP_Port* port;
 	Rect clipRect;
 	WindowPtr realWindow;
+	windowDescriptorBlock *mangleWindowInfo;
 	
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     pthread_mutex_lock(&gEventDrawLock);
@@ -840,7 +846,8 @@ void StartDraw(void) {
 	/* save old graphics port and switch to ours */
 	GetPort((GrafPtr *) &gOldPort);
 	realWindow = (WindowPtr) port->port;
-	interpreterProxy->windowAtIndexputBlock(1,realWindow);
+	mangleWindowInfo = windowBlockFromIndex(1);
+	mangleWindowInfo->handle = realWindow;
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 	LockPortBits((GrafPtr)GetWindowPort(getSTWindow()));
 #endif
@@ -870,6 +877,10 @@ int ioShowDisplay(
 	ioShowDisplayOnWindow(  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 }
 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle, int affectedL, int affectedT, int affectedR, int affectedB);
+#endif
+
 int ioShowDisplayOnWindow(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
@@ -879,7 +890,7 @@ int ioShowDisplayOnWindow(
 	Rect		srcRect = { 0, 0, 0, 0 };
 	static RgnHandle	maskRect = nil;
     
-	if (interpreterProxy->windowHandleFromIndex(windowIndex) == nil || exitRequested) {
+	if (windowHandleFromIndex(windowIndex) == nil || exitRequested) {
 		return;
 	}
 	
@@ -914,13 +925,63 @@ int ioShowDisplayOnWindow(
 	maskRect = NewRgn();
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
 
-	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(GetWindowPort(interpreterProxy->windowHandleFromIndex(windowIndex))), &srcRect, &dstRect, srcCopy, maskRect);
+	CopyBits((BitMap *) *stPixMap, 
+		GetPortBitMapForCopyBits(GetWindowPort(windowHandleFromIndex(1))), 
+		&srcRect, &dstRect, srcCopy, maskRect);
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-	QDFlushPortBuffer ((struct CGrafPort*)interpreterProxy->windowHandleFromIndex(windowIndex), maskRect);
+		ReduceQDFlushLoad(windowHandleFromIndex(1), windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
 #endif
 	EndDraw();
 	return 0;
 }
+
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle,int affectedL, int affectedT, int affectedR, int affectedB) {
+	static int pastTime=0,rememberWindowIndex=1;
+	int check;
+	static RgnHandle dirtyRgn = NULL;
+	static Rect dirtyRect = {0,0,0,0};
+	Rect rect;
+
+	if (dirtyRgn == NULL) 
+		dirtyRgn = NewRgn();
+		
+	rect.top = affectedT;
+	rect.left = affectedL;
+	rect.bottom = affectedB;
+	rect.right = affectedR; 
+
+	if (EmptyRect(&dirtyRect))
+		dirtyRect = rect;
+		
+	/* If the window index to use is different we must flush the old window 
+	   but only if the old window is still valid, it have have been closed */
+	   
+	if (rememberWindowIndex != windowIndexToUse) {
+		wHandleType validWindowHandle = windowHandleFromIndex(rememberWindowIndex);
+		if (validWindowHandle) {
+			RectRgn(dirtyRgn, &dirtyRect);
+			QDFlushPortBuffer(GetWindowPort(validWindowHandle), dirtyRgn);
+		}
+		dirtyRect = rect;
+		rememberWindowIndex = windowIndexToUse;
+	}
+
+	if (!noRectangle)
+		UnionRect(&dirtyRect,&rect,&dirtyRect);
+			
+	/* Flush every 8ms or if the clock rolls over */ 
+	//7
+	if (((check = (ioMSecs() - pastTime)) > 10) || check < 0) {
+		pastTime = pastTime + check;
+
+		if (!EmptyRect(&dirtyRect)) {
+			RectRgn(dirtyRgn, &dirtyRect);
+			QDFlushPortBuffer(windowPort, dirtyRgn);
+			SetRect(&dirtyRect,0,0,0,0);
+		}
+	}
+}
+
 
 NP_Port * getNP_Port(void) {
     return (NP_Port *) netscapeWindow->window;
@@ -1247,6 +1308,7 @@ int printOnOSXNumber(int foo);
 int ioSetFullScreen(int fullScreen) {
 	short desiredWidth,desiredHeight;
     GDHandle   dominantGDevice;
+	windowDescriptorBlock *	mangleWindowInfo;
 	
 	if (fullScreen) {
 	    if (getFullScreenFlag()) return 0;
@@ -1264,7 +1326,9 @@ int ioSetFullScreen(int fullScreen) {
 								 &gAFullscreenWindow,
 								 nil,
 								 fullScreenAllowEvents);
-		interpreterProxy->windowAtIndexputBlock(1,gAFullscreenWindow);
+		mangleWindowInfo = windowBlockFromIndex(1);
+		mangleWindowInfo->handle = gAFullscreenWindow;
+
 		gFullScreenNPPort.port = GetWindowPort(gAFullscreenWindow);
 		gFullScreenNPPort.portx = 0;
 		gFullScreenNPPort.porty = 0;
@@ -1292,6 +1356,7 @@ int  ioSetFullScreenRestore()
 {
 	ProcessSerialNumber psn = { 0, kCurrentProcess }; 
 	OSErr   err;
+	windowDescriptorBlock *	mangleWindowInfo;
 	
 	if (gRestorableStateForScreen != nil) {
 		EndFullScreen(gRestorableStateForScreen,nil);
@@ -1299,7 +1364,8 @@ int  ioSetFullScreenRestore()
 		    return 0;
 	    gRestorableStateForScreen = nil;
 	    netscapeWindow = oldNetscapeWindow;
-	    interpreterProxy->windowAtIndexputBlock(1,oldStWindow);
+		mangleWindowInfo = windowBlockFromIndex(1);
+		mangleWindowInfo->handle = oldStWindow;
 		
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 		err = ShowHideProcess (&psn,false);
