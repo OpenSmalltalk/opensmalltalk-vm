@@ -10,7 +10,7 @@
    macro from sq.h, you must first #undef it, then provide the new definition.
 */
 
-#ifdef macintosh
+#ifdef macintoshSqueak
 
 // CARBON
 #if defined (__APPLE__) && defined(__MACH__)
@@ -21,15 +21,36 @@
     #else
       #define TARGET_API_MAC_CARBON 1
     #endif 
-#endif
-/*
-    #ifdef TARGET_API_MAC_CARBON  
-        #undef TARGET_API_MAC_CARBON
-        #define TARGET_API_MAC_CARBON 1
-    #else
-      #define TARGET_API_MAC_CARBON 1
+    #undef ioLowResMSecs
+#else
+    #define sqFilenameFromStringOpen(dst, src, num) sqFilenameFromString(dst, src, num)
+    #if defined(__MWERKS__) & !TARGET_API_MAC_CARBON
+        #include <stat.h>
+    #endif
+
+    #if !defined(off_t)
+    #define off_t long long
     #endif 
-*/
+    #if !defined(fseeko)
+    #define fseeko fseek
+    #endif 
+    #if !defined(ftello)
+    #define ftello ftell
+    #endif 
+    int ftruncate(short int file,int offset);
+	#if TARGET_API_MAC_CARBON
+ 	#else
+ 	   #define fileno(n) n->handle
+	#endif
+#endif
+  
+#if TARGET_API_MAC_CARBON
+    #undef sqFilenameFromStringOpen
+    #undef sqFilenameFromString
+    void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias);
+    #define sqFilenameFromStringOpen(dst, src, num) makeOSXPath(dst,src,num,true)
+    #define sqFilenameFromString(dst, src, num) makeOSXPath(dst,src,num,false)
+#endif
 
 /* replace the image file manipulation macros with functions */
 #undef sqImageFile
@@ -45,20 +66,21 @@
 typedef int sqImageFile;
 void        sqImageFileClose(sqImageFile f);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
-int         sqImageFilePosition(sqImageFile f);
-int         sqImageFileRead(void *ptr, int elementSize, int count, sqImageFile f);
-void        sqImageFileSeek(sqImageFile f, int pos);
-int         sqImageFileWrite(void *ptr, int elementSize, int count, sqImageFile f);
-int         sqImageFileStartLocation(int fileRef, char *filename, int imageSize);
-void *						sqAllocateMemory(int minHeapSize, int desiredHeapSize);
+off_t       sqImageFilePosition(sqImageFile f);
+size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile f);
+void        sqImageFileSeek(sqImageFile f, off_t pos);
+int         sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
+off_t       sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize);
+void *	    sqAllocateMemory(int minHeapSize, int desiredHeapSize);
 
 /* override reserveExtraCHeapBytes() macro to reduce Squeak object heap size on Mac */
 #undef reserveExtraCHeapBytes
 #define reserveExtraCHeapBytes(origHeapSize, bytesToReserve) (origHeapSize - bytesToReserve)
 
 /* undefine clock macros that are implemented as functions */
-#undef ioMSecs
 #undef ioMicroMSecs
+#undef ioMSecs
+#define ioMSecs ioMicroMSecs
 
 /* macro to return from interpret() loop in browser plugin VM */
 #define ReturnFromInterpret() return
@@ -76,8 +98,7 @@ void CopyCStringToPascal(const char* src, Str255 dst);
 int sqGrowMemoryBy(int memoryLimit, int delta);
 int sqShrinkMemoryBy(int memoryLimit, int delta);
 int sqMemoryExtraBytesLeft(Boolean flag);
-int ftruncate(FILE	*file,int offset);
 
-#endif /* macintosh */
+#endif /* macintoshSqueak */
 
 
