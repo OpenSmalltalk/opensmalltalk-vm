@@ -48,7 +48,8 @@ XCFLAGS		= $(X_CFLAGS)
 XINCLUDES	= [includes] $(X_INCLUDES) \
 		  -I$(topdir)/platforms/Cross/plugins/FilePlugin \
 		  -I$(topdir)/platforms/Cross/plugins/B3DAcceleratorPlugin \
-		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin
+		  -I$(topdir)/platforms/unix/plugins/B3DAcceleratorPlugin \
+		  -I/usr/X11R6/include
 
 $(TARGET) : $(OBJS) Makefile
 	$(LINK) $(TARGET) $(OBJS) $(X_LIBS)
