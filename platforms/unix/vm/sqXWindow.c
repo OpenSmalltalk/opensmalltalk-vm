@@ -890,13 +890,27 @@ static void signalInputEvent()
 
 static void recordMouseEvent(XButtonEvent *xevt, int pressFlag)
 {
+ /* mouse wheel support */
+  if ((xevt->button == 4 || xevt->button == 5) && pressFlag)
+  {
+    sqKeyboardEvent *evt= allocateKeyboardEvent();
+    evt->charCode= (xevt->button + 26);       /* Up/Down */
+    evt->pressCode= EventKeyChar;
+    evt->modifiers= CtrlKeyBit | modifierMap[(xevt->state) & 0xF];
+    evt->reserved1=
+      evt->reserved2=
+        evt->reserved3= 0;
+  }
+  else
+  {
   sqMouseEvent *evt= allocateMouseEvent();
   evt->x= mousePosition.x;
   evt->y= mousePosition.y;
   evt->buttons= buttonState & 0x7;
-  evt->modifiers= (buttonState >> 3);
+  evt->modifiers= modifierMap[(xevt->state) & 0xF];
   evt->reserved1= 0;
   evt->reserved2= 0;
+  }
   signalInputEvent();
 }
 
@@ -911,8 +925,10 @@ static void recordKeyboardEvent(XKeyEvent *xevt, int pressCode)
 
   nConv= XLookupString(xevt, buf, sizeof(buf), &symbolic, 0);
   charCode= buf[0];
+#if 0
   if (charCode == 127)
     charCode= 8;
+#endif
   if (nConv == 0 && (charCode= translateCode(symbolic)) < 0)
     return;	/* unknown key */
   if (charCode >= 128)
