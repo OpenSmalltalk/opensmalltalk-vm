@@ -1,13 +1,9 @@
 /* Definitions for "gnuified" interp.c
  * 
- *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
- *     as listed elsewhere in this file.
+ *   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
+ *      authors/contributors listed elsewhere in this file.
  *   All rights reserved.
  *   
- *     You are NOT ALLOWED to distribute modified versions of this file
- *     under its original name.  If you want to modify it and then make
- *     your modifications available publicly, rename the file first.
- * 
  *   This file is part of Unix Squeak.
  * 
  *   This file is distributed in the hope that it will be useful, but WITHOUT
@@ -16,7 +12,7 @@
  *   
  *   You may use and/or distribute this file ONLY as part of Squeak, under
  *   the terms of the Squeak License as described in `LICENSE' in the base of
- *   this distribution, subject to the following additional restrictions:
+ *   this distribution, subject to the following restrictions:
  * 
  *   1. The origin of this software must not be misrepresented; you must not
  *      claim that you wrote the original software.  If you use this software
@@ -24,19 +20,21 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. You must not distribute (or make publicly available by any
- *      means) a modified copy of this file unless you first rename it.
+ *   2. This notice may not be removed or altered in any source distribution.
  * 
- *   3. This notice must not be removed or altered in any source distribution.
+ *   Using or modifying this file for use in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the base
+ *   of the distribution before proceeding with any such use.
  * 
- *   Using (or modifying this file for use) in any context other than Squeak
- *   changes these copyright conditions.  Read the file `COPYING' in the
- *   directory `platforms/unix/doc' before proceeding with any such use.
+ *   You are STRONGLY DISCOURAGED from distributing a modified version of
+ *   this file under its original name without permission.  If you must
+ *   change it, rename it first.
  */
 
 /* Author: Ian.Piumarta@inria.fr
  *
- * Last edited: 2004-04-02 14:51:09 by piumarta on emilia.local
+ * Last edited: Fri Aug 11 08:20:28 2000 by piumarta (Ian Piumarta) on emilia
+ * April 17th, 2002, John M McIntosh use jumptable register logic for PPC
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -44,22 +42,15 @@
 
 #include "sq.h"
 
-#define CASE(N)		case N: _##N:
-
-#if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
-# define JUMP_TABLE_PTR	; register void **jumpTableP JP_REG; jumpTableP= &jumpTable[0]
-# define BREAK		goto *jumpTableP[currentBytecode]
+#define CASE(N)	case N: _##N:
+#if defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined (__APPLE__)
+    #define BREAK		goto *jumpTableR[currentBytecode]
+    #define PPC_REG_JUMP	; register void **jumpTableR JP_REG; jumpTableR = &jumpTable[0]
 #else
-# define JUMP_TABLE_PTR
-# define BREAK		goto *jumpTable[currentBytecode]
+    #define BREAK		goto *jumpTable[currentBytecode]
+    #define PPC_REG_JUMP	
 #endif
-
-#if defined(SQ_USE_GLOBAL_STRUCT)
-# define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
-#else
-# define PRIM_DISPATCH	goto *jumpTable[primitiveIndex]
-#endif
-
+#define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
 #define JUMP_TABLE \
   static void *jumpTable[256]= { \
       &&_0,   &&_1,   &&_2,   &&_3,   &&_4,   &&_5,   &&_6,   &&_7,   &&_8,   &&_9, \
@@ -88,8 +79,7 @@
     &&_230, &&_231, &&_232, &&_233, &&_234, &&_235, &&_236, &&_237, &&_238, &&_239, \
     &&_240, &&_241, &&_242, &&_243, &&_244, &&_245, &&_246, &&_247, &&_248, &&_249, \
     &&_250, &&_251, &&_252, &&_253, &&_254, &&_255 \
-  } JUMP_TABLE_PTR
-
+  } PPC_REG_JUMP;
 #define PRIM_TABLE \
   static void *jumpTable[700]= { \
       &&_0,   &&_1,   &&_2,   &&_3,   &&_4,   &&_5,   &&_6,   &&_7,   &&_8,   &&_9, \
@@ -171,40 +161,36 @@
         especially Intel.
   */
 #if defined(__mips__)
-# define IP_REG __asm__("$16")
-# define SP_REG __asm__("$17")
-# define CB_REG __asm__("$18")
+# define IP_REG asm("$16")
+# define SP_REG asm("$17")
+# define CB_REG asm("$18")
 #endif
 #if defined(__sparc__)
-# define IP_REG __asm__("%l0")
-# define SP_REG __asm__("%l1")
-# define CB_REG __asm__("%l2")
+# define IP_REG asm("%l0")
+# define SP_REG asm("%l1")
+# define CB_REG asm("%l2")
 #endif
 #if defined(__alpha__)
-# define IP_REG __asm__("$9")
-# define SP_REG __asm__("$10")
-# define CB_REG __asm__("$11")
+# define IP_REG asm("$9")
+# define SP_REG asm("$10")
+# define CB_REG asm("$11")
 #endif
 #if defined(__i386__)
-# define IP_REG __asm__("%esi")
-# define SP_REG __asm__("%edi")
-# if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
-#   define CB_REG __asm__("%ebx")
-# else
-#   define CB_REG /* avoid undue register pressure */
-# endif
+# define IP_REG asm("%esi")
+# define SP_REG asm("%edi")
+# define CB_REG	/* asm("%ebx") ; avoid undue register pressure */
 #endif
-#if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
-# define GP_REG __asm__("24")
-# define JP_REG __asm__("25")
-# define IP_REG __asm__("26")
-# define SP_REG __asm__("27")
-# define CB_REG __asm__("28")
+#if defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined (__APPLE__)
+# define FOO_REG asm("24")
+# define JP_REG asm("25")
+# define IP_REG asm("26")
+# define SP_REG asm("27")
+# define CB_REG asm("28")
 #endif
 #if defined(__hppa__)
-# define IP_REG __asm__("%r18")
-# define SP_REG __asm__("%r17")
-# define CB_REG __asm__("%r16")
+# define IP_REG asm("%r18")
+# define SP_REG asm("%r17")
+# define CB_REG asm("%r16")
 #endif
 #if defined(__mc68000__)
 # define IP_REG asm("a5")
