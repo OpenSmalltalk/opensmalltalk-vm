@@ -115,6 +115,12 @@
 	* platforms/unix/vm/sqUnixMain.c (sigsegv): Call abort() after
 	segv, to leave a core for debugging.
 
+----------------------------------------------------------------
+
+2003-03-04  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* 3.4-1 Released.
+
 2002-12-01--2003-08-07  piumarta  <piumarta@emilia.inria.fr>
 	
 	* platforms/unix/*/*: First pass at refactoring sound and display
