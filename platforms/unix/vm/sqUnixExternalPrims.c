@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2003-08-15 17:42:15 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-22 21:23:13 by piumarta on emilia.inria.fr
  */
 
 #define DEBUG 0
@@ -114,7 +114,8 @@ extern char *squeakPlugins;
 
 /*** configured variables ***/
 
-char *vmLibDir= VM_LIBDIR;
+extern char vmLibDir[];
+extern char vmPath[];
 
 /*** local functions ***/
 
@@ -247,7 +248,6 @@ int ioLoadModule(char *pluginName)
   // look in the bundle contents dir
   {
     static char *contents= 0;
-    extern char vmPath[];
     if (!contents)
       {
 	char *delim;
@@ -283,7 +283,6 @@ int ioLoadModule(char *pluginName)
   /* finally (for VM hackers) try the pre-install build location */
   {
     char pluginDir[MAXPATHLEN];
-    extern char vmPath[];
 #  ifdef HAVE_SNPRINTF
     snprintf(pluginDir, sizeof(pluginDir), "%s%s/.libs/", vmPath, pluginName);
 #  else
