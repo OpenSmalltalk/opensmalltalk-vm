@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.7 2002/03/15 01:45:21 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.8 2002/05/09 19:22:53 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -105,11 +105,11 @@ void * sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
     #if TARGET_API_MAC_CARBON
 	    return NewPtr(*desiredHeapSize);
     #else
-        pointer = NewPtr(*desiredHeapSize);
-        if (pointer == null) 
+        debug = NewPtr(*desiredHeapSize);
+        if (debug == null) 
 	       return NewPtrSys(*desiredHeapSize);
 	    else 
-	      return pointer;
+	      return debug;
     #endif
 #endif
 
