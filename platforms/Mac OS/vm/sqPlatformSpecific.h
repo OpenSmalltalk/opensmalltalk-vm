@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.4 2002/01/22 19:02:38 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.5 2002/01/31 21:28:59 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *
@@ -32,8 +32,13 @@
 #undef sqImageFileWrite
 #undef sqImageFileStartLocation
 #undef sqAllocateMemory
+
 #undef squeakFileOffsetType
 #define squeakFileOffsetType off_t
+
+#undef sqFTruncate
+#define sqFTruncate(f,o) ftruncate(f, o)
+
 // CARBON
 #if defined (__APPLE__) && defined(__MACH__)
 
@@ -44,24 +49,20 @@
       #define TARGET_API_MAC_CARBON 1
     #endif 
     #undef ioLowResMSecs
+    #define ftell ftello
+    #define fseek fseeko
     typedef FILE *sqImageFile;
 #else
-    #define sqFilenameFromStringOpen(dst, src, num) sqFilenameFromString(dst, src, num)
     #if defined(__MWERKS__) & !TARGET_API_MAC_CARBON
         #include <stat.h>
+        #define fseeko fseek
+        #define ftello ftell
+ 	    #define fileno(n) n->handle
+		#undef squeakFileOffsetType
+		#define squeakFileOffsetType unsigned long
     #endif
 
-    #if !defined(fseeko)
-    #define fseeko fseek
-    #endif 
-    #if !defined(ftello)
-    #define ftello ftell
-    #endif 
     int ftruncate(short int file,int offset);
-	#if TARGET_API_MAC_CARBON
- 	#else
- 	   #define fileno(n) n->handle
-	#endif
     typedef int sqImageFile;
 
 #endif
