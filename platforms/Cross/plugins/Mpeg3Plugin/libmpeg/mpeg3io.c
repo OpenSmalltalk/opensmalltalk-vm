@@ -33,7 +33,7 @@
 #include "mpeg3private.h"
 #include "mpeg3protos.h"
 
-#if !(defined(TARGET_OS_MAC) || defined(WIN32))
+#if defined(__linux__)
 #include <mntent.h>
 #endif
 
@@ -122,7 +122,9 @@ int mpeg3io_read_data(unsigned char *buffer, long bytes, mpeg3_fs_t *fs)
 int mpeg3io_device(char *path, char *device)
 {
 	struct stat file_st, device_st;
-    struct mntent *mnt;
+#if defined(__linux__)
+	struct mntent *mnt;
+#endif
 	FILE *fp;
 
 	if(stat(path, &file_st) < 0)
@@ -131,9 +133,9 @@ int mpeg3io_device(char *path, char *device)
 		return 1;
 	}
 
-#if !(defined(WIN32) || defined(TARGET_OS_MAC))
-    fp = setmntent(MOUNTED, "r");
-    while(fp && (mnt = getmntent(fp)))
+#if defined(__linux__)
+	fp = setmntent(MOUNTED, "r");
+	while(fp && (mnt = getmntent(fp)))
 	{
 		if(stat(mnt->mnt_fsname, &device_st) < 0) continue;
 		if(device_st.st_rdev == file_st.st_dev)
