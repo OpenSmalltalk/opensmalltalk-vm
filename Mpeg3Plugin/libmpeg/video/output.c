@@ -1090,7 +1090,7 @@ int mpeg3video_ditherframeFastRGB555(mpeg3video_t *video, unsigned char **src, u
 	register unsigned short *clipArray_ptr16r,*clipArray_ptr16g,*clipArray_ptr16b;
 	long y_l, r_l, b_l, g_l;
 	register unsigned short *data;
-	register int uv_subscript, step, w = -1,t1,t2;
+	register int uv_subscript, step, w = -1,t1,t2,video_horizontal_size;
     register long *cr_to_gPtr,*cr_to_rPtr,*cb_to_bPtr,*cb_to_gPtr;;
     
 	clipArray_ptr = gClipArray_ptr;
@@ -1101,7 +1101,7 @@ int mpeg3video_ditherframeFastRGB555(mpeg3video_t *video, unsigned char **src, u
 	cr_to_gPtr = &video->cr_to_g[0];
 	cb_to_bPtr = &video->cb_to_b[0];
 	cb_to_gPtr = &video->cb_to_g[0];
-	
+	video_horizontal_size = video->horizontal_size;
 	for(h = 0; h < video->out_h; h++) 
     	{ 
     		t1 = video->y_table[h] + video->in_y;
@@ -1111,8 +1111,8 @@ int mpeg3video_ditherframeFastRGB555(mpeg3video_t *video, unsigned char **src, u
     		cr_in = &src[2][t2] + (video->in_x >> 1); 
     		data = (unsigned short*) output_rows[h];
 
-            if(video->out_w == video->horizontal_size) {
-                for(w = 0; w < video->horizontal_size; w++)  { 
+            if(video->out_w == video_horizontal_size) {
+                for(w = 0; w < video_horizontal_size; w++)  { 
              		y_l = *y_in++; 
              		r_l = g_l = b_l = y_l << 16; 
              		g_l = (g_l + cr_to_gPtr[*cr_in] + cb_to_gPtr[*cb_in]) >> 16;
