@@ -1,4 +1,4 @@
-Updated Oct 5th, 2003
+Updated Feb 20th, 2004
 
 Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- John Maloney, May 25, 2000,
@@ -11,13 +11,14 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
     -- CHanges John McIntosh April 5th, 2003 (changeset names change)
 	-- Changes John McIntosh May 19th, 2003 (changeset consolidation into VMMaker).
 	-- Changes John McIntosh July 31th, 2003 3.5.x updates
-	-- Changes John McIntosh Oct 5th, 2003 3.6.x updats
+	-- Changes John McIntosh Oct 5th, 2003 3.6.x updates
+	-- Changes John McIntosh Feb 18th, 2004 3.7.x updates (pending)  (xcode changes)
 	
 (Note to readers, it is possible a step was missed, so beware)
 
 Building a Carbon Squeak VM with ProjectBuilder:
 
-{JMM notes this is building with 10.2.8, and Squeak 3.6 (for croquet)}
+{JMM notes this is building with 10.3.x, and Squeak 3.7 (for croquet)}
 
 Overview
 
@@ -31,16 +32,12 @@ Overview
 
 Step One: Get the Apple Developer Tools (free)
 
-	The current build requires the December 2002 developer tools, or higher.  They are available to Online members at the apple developer website.  You can get an Online membership for free at:
+	The current build requires the latest XCode tools.  They are available to Online members at the apple developer website.  You can get an Online membership for free at:
 
 		http://developer.apple.com/membership/online.html
 		
 		(Note building with GCC 3.3 produces better code than gcc 3.1 or gcc 2.95, FYI gcc 3.1 produces lousy code)
-		
-		You might need to use the "sudo /usr/sbin/gcc_select 3" command to pick the GCC 3.3 compiler, although project builder seems to give you a choice (2.x, 3.x) it lies...
-		do a "gcc --version" to confirm what you think you are using is what you are using.
-		Follow the Apple instructions for building with 3.3 otherwise you will get a back leveled compiler.
-		
+				
 		
 Step One (b):
 	A. Get the OpenGL sdk if you need to build with codeWarrior under system 9.x 
@@ -64,7 +61,7 @@ After so much mumbo-jumbo, your squeak folder should have a directory entitled p
 
 Step Three: Build an interpeter
 
-	0.  Grab your 3.6 image, and then install VM Maker 3.6g2 or better, and Ballon 3D.
+	0.  Grab your 3.7 image, and then install VM Maker 3.7b1 or better, and Ballon 3D.
 	
 	A.  Install change sets from the specialChangeSets Folder. 
 		There has been some discussion that the line endings 
@@ -73,22 +70,17 @@ Step Three: Build an interpeter
 		
 		Gnuifier.5.cs
 			- A smalltalk version of the AWK example. 
-		
-		ArraysToGlobalStruct-JMM.1.cs
-		FasterCopyLoop-JMM.4.cs
-		FasterCopyLoopPart2-JMM.2.cs
-		FasterLookupMethod-JMM.1.cs
-		MakePrimPointXInternal-JMM.1.cs
-		SlightlyFasterActivate-JMM.3.cs
+				
+		ArraysToGlobalStruct-JMM.1.cs  - Put arrays in the structure, this fixes some issues with gce in the compiler.
 		
 	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure)
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
 		If you created an alias to the squeak platform folder, it might come up with for example
-		Mac OS X:Users:Shared:Squeak3.6b2:platforms
+		Mac OS X:Users:Shared:Squeak3.7x:platforms
 	D.	Enter the Platform name: (default is fine) "Mac OS"
 	E.	Enter the Path for your generates sources (default is fine).
 		It might come up with for example
-		Mac OS X:Users:Shared:Squeak3.6b2:src
+		Mac OS X:Users:Shared:Squeak3.7x:src
 	F.	Select plugins. (Suggest selecting menu item "make all internal",
 		then drag back the following back to Plugins not built:
 			FFIPlugin
@@ -124,29 +116,29 @@ Step Five: Shove and Tweak some files around the buildspace
 	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit' (same deal as step B)
 	D.	Drag 'SqueakVMForCarbon.pbproj' to the folder containing
 		the 'platforms' and 'src' folders.
+	E.	Ensure a copy of the files:
+			Info-NPSqueak__Upgraded_.plist
+			Info-Squeak_VM_Debug__Upgraded_.plist
+			Info-Squeak_VM_OPT__Upgraded_.plist
+		can be found in the folder containing the 'platforms' and 'src' folders.
 
-Step Six: Run ProjectBuilder and build yourself an interpreter
+Step Six: Run ProjectBuilder and build yourself an interpreter {for xcode 1.1 }
 
 	A.	Double-click the SqueakVMForCarbon.pbproj file
-	B.	On the left pane, there are some vertically oriented fold-over tabs.
-		Click on the "files" tab to see the files
-	C.	Option-click on the Sources group folder and confirm the files listed can be found.
+	B.	On the left pane, see the SqueakVMForCarbon blue xcode icon.
+		Click on  it to see the files.
 		Files which can't be found are listed in red. For any red highlighted files you'll need to 
 		resolve where or why the files is/are missing.
-	D.	On the left pane, there are some vertically oriented fold-over tabs.
-		Click the one marked "Targets."
-	E.	On the left upper pane marked "Targets," select "Squeak VM Opt"
-	F.	On the left lower pane marked "Build Styles," select "Deployment"
- 	G.	Click on the hammer icon at the top left to build your VM.
+	c.	On the left pane, find the Targets icon. 
+	d.	Select "Squeak VM Opt"
+	e.	On the upper window area pick "Deployment" (This is the active build style) {This depends on how you have xcode configured}
+ 	f.	Click on the hammer icon at the top  to build your VM.
 		The final product should live in the build folder, named "Squeak VM Opt"
 		Compare against the offical build to see if it is the same. 
 		Note you should look at the binary in the Contents subfolder to see if it is the same size.
 		(The only error you should get is 
 		warning: passing arg 1 of `sqImageFileStartLocation' makes integer from pointer without a cast)
 		Run a tinyBenchmark benchmark against your VM, versus the production VM to confirm yours is simular in performance.
-		John suggests: "You might need to switch back to the Squeak VM Debug and back to ensure the setting actually are taken. 
-		There seems to be a bug where although you've got the Opt build picked it really builds a non-optimized debug version." 
-		You will know this because performance will be off by 30-40%.
 
 Step Seven: Download and print your Squeak VM Developer's Certificate
 
@@ -195,7 +187,8 @@ See the following for information on the older harder way, which you can now ign
 
 ---------------------------------------------------
 
-Older Notes
+Older Notes (Below)
+
 The platform specific files are sqMacXXX.c, totaling about  more than 2000 lines of code
 when this document was originally written. All other code is written to standard
 ANSI libraries and should port easily to other C environments.
