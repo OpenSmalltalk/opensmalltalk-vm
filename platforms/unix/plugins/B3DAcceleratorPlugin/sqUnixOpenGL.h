@@ -12,17 +12,21 @@ typedef struct glRenderer
   void	 *context;
 } glRenderer;
 
-#define GL_RENDERER_DEFINED	 1
-#define MAX_RENDERER		16
+#if defined(USE_X11_GLX) || defined (USE_QUARTZ_CGL)
 
-#if defined(HAVE_GL_GL_H)
-# include <GL/gl.h>
-#else
-# if defined(HAVE_OPENGL_GL_H)
-#   include <OpenGL/gl.h>
+# define GL_RENDERER_DEFINED	 1
+# define MAX_RENDERER		16
+
+# if defined(HAVE_GL_GL_H)
+#   include <GL/gl.h>
 # else
-#   error *** cannot find gl.h
+#   if defined(HAVE_OPENGL_GL_H)
+#     include <OpenGL/gl.h>
+#   else
+#     error *** cannot find gl.h
+#   endif
 # endif
+
 #endif
 
 extern int  ioGLinitialise(void);
