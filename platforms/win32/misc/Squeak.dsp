@@ -38,8 +38,8 @@ RSC=rc.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 0
-# PROP Output_Dir "Release"
-# PROP Intermediate_Dir "Release"
+# PROP Output_Dir "..\Release"
+# PROP Intermediate_Dir "..\Release"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /GX /O2 /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /c
@@ -64,8 +64,8 @@ LINK32=link.exe
 # PROP BASE Target_Dir ""
 # PROP Use_MFC 0
 # PROP Use_Debug_Libraries 1
-# PROP Output_Dir "Debug"
-# PROP Intermediate_Dir "Debug"
+# PROP Output_Dir "..\Debug"
+# PROP Intermediate_Dir "..\Debug"
 # PROP Ignore_Export_Lib 0
 # PROP Target_Dir ""
 # ADD BASE CPP /nologo /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_MBCS" /YX /FD /GZ /c
@@ -99,6 +99,10 @@ SOURCE=..\vm\interp.c
 
 SOURCE=..\vm\sqNamedPrims.c
 # SUBTRACT CPP /D "SQUEAK_BUILTIN_PLUGIN"
+# End Source File
+# Begin Source File
+
+SOURCE=.\Squeak.rc
 # End Source File
 # Begin Source File
 
@@ -218,6 +222,18 @@ SOURCE=..\vm\sqWin32Prefs.h
 # Begin Group "Resource Files"
 
 # PROP Default_Filter "ico;cur;bmp;dlg;rc2;rct;bin;rgs;gif;jpg;jpeg;jpe"
+# Begin Source File
+
+SOURCE=.\squeak.ico
+# End Source File
+# Begin Source File
+
+SOURCE=.\squeak2.ico
+# End Source File
+# Begin Source File
+
+SOURCE=.\squeak3.ico
+# End Source File
 # End Group
 # Begin Group "Plugins (internal)"
 
@@ -905,6 +921,7 @@ SOURCE=..\plugins\Mpeg3Plugin\libmpeg\video\macroblocks.c
 # Begin Source File
 
 SOURCE=..\plugins\Mpeg3Plugin\libmpeg\video\mmxtest.c
+# ADD CPP /I "../plugins/Mpeg3Plugin/libmpeg" /I "../plugins/Mpeg3Plugin/libmpeg/audio" /I "../plugins/Mpeg3Plugin/libmpeg/video"
 # End Source File
 # Begin Source File
 

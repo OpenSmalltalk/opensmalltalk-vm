@@ -16,7 +16,7 @@
 #include "sqWin32Alloc.h"
 
 #ifdef _MSC_VER
-#define squeakFileOffsetType __uint64
+#define squeakFileOffsetType __int64
 #else
 #define squeakFileOffsetType unsigned long long
 #endif
