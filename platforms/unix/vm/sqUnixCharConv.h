@@ -1,4 +1,6 @@
-/* sqPlatformSpecific.h -- platform-specific modifications to sq.h
+/* sqUnixCharConv.h -- conversion between character encodings
+ * 
+ * Author: Ian.Piumarta@INRIA.Fr
  * 
  *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
@@ -33,39 +35,29 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Author: ian.piumarta@inria.fr
- * 
- * Last edited: 2003-03-02 21:06:24 by piumarta on emilia.inria.fr
+ * Last edited: 2003-03-03 03:52:52 by piumarta on emilia.inria.fr
  */
 
-/* undefine clock macros (these are implemented as functions) */
+#ifndef __sqUnixCharConv_h
+#define __sqUnixCharConv_h
 
-#undef ioMSecs
-#undef ioMicroMSecs
-#undef ioLowResMSecs
+extern void *sqTextEncoding;
+extern void *uxTextEncoding;
+extern void *uxPathEncoding;
+extern void *uxUTF8Encoding;
+extern void *uxXWinEncoding;
 
-#undef sqAllocateMemory
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
-#undef sqMemoryExtraBytesLeft
+extern void setEncoding(void **encoding, char *name);
 
-#include <sys/types.h>
+extern int convertChars(char *from, int fromLen, void *fromCode,
+			char *to,   int toLen,   void *toCode,
+			int norm, int term);
 
-typedef off_t squeakFileOffsetType;
+extern int sq2uxText(char *from, int fromLen, char *to, int toLen, int term);
+extern int ux2sqText(char *from, int fromLen, char *to, int toLen, int term);
+extern int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term);
+extern int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term);
+extern int sq2uxUTF8(char *from, int fromLen, char *to, int toLen, int term);
+extern int ux2sqUTF8(char *from, int fromLen, char *to, int toLen, int term);
 
-#define SQ_STDIO_UTF8
-
-/* intercept stdio functions that might need UTF-8 path conversion. */
-/* (on HFS+ we also need to perform canonical decomposition on the UTF-8 encoding.) */
-
-#if defined(SQ_STDIO_UTF8)
-# undef fopen
-# undef delete
-# undef remove
-  extern FILE *sq_fopen(char *path, const char *mode);
-  extern int   sq_remove(char *path);
-  extern int   sq_rename(char *from, char *to);
-# define fopen  sq_fopen
-# define remove sq_remove
-# define rename sq_rename
-#endif
+#endif /* __sqUnixCharConv_h */

@@ -4,6 +4,10 @@
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
+ *     You are NOT ALLOWED to distribute modified versions of this file
+ *     under its original name.  If you want to modify it and then make
+ *     your modifications available publicly, rename the file first.
+ * 
  *   This file is part of Unix Squeak.
  * 
  *   This file is distributed in the hope that it will be useful, but WITHOUT
@@ -12,7 +16,7 @@
  *   
  *   You may use and/or distribute this file ONLY as part of Squeak, under
  *   the terms of the Squeak License as described in `LICENSE' in the base of
- *   this distribution, subject to the following restrictions:
+ *   this distribution, subject to the following additional restrictions:
  * 
  *   1. The origin of this software must not be misrepresented; you must not
  *      claim that you wrote the original software.  If you use this software
@@ -20,33 +24,32 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. This notice must not be removed or altered in any source distribution.
+ *   2. You must not distribute (or make publicly available by any
+ *      means) a modified copy of this file unless you first rename it.
+ * 
+ *   3. This notice must not be removed or altered in any source distribution.
  * 
  *   Using (or modifying this file for use) in any context other than Squeak
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
- * 
- *   You are not allowed to distribute a modified version of this file
- *   under its original name without explicit permission to do so.  If
- *   you change it, rename it.
  */
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2003-01-29 21:51:13 by piumarta on emilia.local.
+ * Last edited: 2003-02-21 03:48:48 by piumarta on emilia.inria.fr
  */
-
-#include "sq.h"		/* sqUnixConfig.h */
 
 #define DEBUG 0
  
+#include "sq.h"		/* sqUnixConfig.h */
+
 #if DEBUG
 # define dprintf(ARGS) fprintf ARGS
 #else
 # define dprintf(ARGS)
 #endif
  
-#if defined(HAVE_DYLD)
+#if !defined(HAVE_LIBDL) && defined(HAVE_DYLD)
 # include "dlfcn-dyld.c"
 #endif
 
@@ -123,22 +126,20 @@ static void *tryLoading(char *dirName, char *moduleName)
       {
 	char        libName[NAME_MAX + 32];	/* headroom for prefix/suffix */
 	struct stat buf;
-	int         err;
 	sprintf(libName, "%s%s%s%s", dirName, *prefix, moduleName, *suffix);
-	if (((err= stat(libName, &buf)) == 0) && (S_ISDIR(buf.st_mode)))
+	if (stat(libName, &buf))
+	  dprintf((stderr, "not found: %s\n", libName));
+	else if (S_ISDIR(buf.st_mode))
 	  dprintf((stderr, "ignoring directory: %s\n", libName));
 	else
 	  {
 	    dprintf((stderr, "tryLoading %s\n", libName));
 	    handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 	    if (handle == 0)
-	      {
-		if (err == 0)
-		  fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
-	      }
+	      fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
 	    else
 	      {
-		dprintf((stderr, "loaded: %s\n", libName));
+		printf("squeak: loaded plugin `%s'\n", libName);
 		return handle;
 	      }
 	  }
@@ -218,22 +219,51 @@ int ioLoadModule(char *pluginName)
 	  return (int)handle;
       }
 
-  /* these are ordered such that a knowledgeable user can override a
-     "system" library with one in the CWD */
-       
   if ((   handle= tryLoading(        "./", pluginName))
-      /* this is the standard location for the plugins */
       || (handle= tryLoading(VM_LIBDIR"/", pluginName))
-      /* this is the default case: when LD_LIBRARY_PATH is not
-	 it searches /etc/ld.so.cache, /lib and /usr/lib */
       || (handle= tryLoading(          "", pluginName))
-      /* try SQUEAK_PLUGIN_PATH and LD_LIBRARY_PATH if set */
       || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH", pluginName))
       || (handle= tryLoadingPath("LD_LIBRARY_PATH",    pluginName)))
     return (int)handle;
-      
-  dprintf(("ioLoadModule: could not load: %s\n", pluginName));
 
+#if defined(DARWIN)
+  // look in the bundle contents dir
+  {
+    static char *contents= 0;
+    extern char vmPath[];
+    if (!contents)
+      {
+	char *delim;
+	contents= strdup(vmPath);
+	if ((delim= strrchr(contents, '/')))
+	  delim[1]= '\0';
+      }
+    if ((handle= tryLoading(contents, pluginName)))
+      return (int)handle;
+  }
+  // the following is needed so that, for example, the FFI can pick up
+  // things like <cdecl: 'xyz' module: 'CoreServices'>
+  {
+    static char *frameworks[]=
+      {
+	"/System/Library/Frameworks",
+	"/System/Library/Frameworks/CoreServices.framework/Frameworks",
+	"/System/Library/Frameworks/ApplicationServices.framework/Frameworks",
+	"/System/Library/Frameworks/Carbon.framework/Frameworks",
+	0
+      };
+    char **framework= 0;
+    for (framework= frameworks;  *framework;  ++framework)
+      {
+	char path[NAME_MAX];
+	sprintf(path, "%s/%s.framework/", *framework, pluginName);
+	if ((handle= tryLoading(path, pluginName)))
+	  return (int)handle;
+      }
+  }
+#endif
+
+  fprintf(stderr, "squeak: could not load plugin `%s'\n", pluginName);
   return 0;
 }
 
@@ -249,10 +279,8 @@ int ioFindExternalFunctionIn(char *lookupName, int moduleHandle)
 	   lookupName, moduleHandle));
 
   if (fn == 0)
-    dprintf((stderr, "ioFindExternalFunctionIn(%s, %d):\n  %s\n",
-	     lookupName, moduleHandle, dlerror()));
-  else
-    dprintf((stderr, "  => %d (0x%x)\n", (int)fn, (int)fn));
+    fprintf(stderr, "ioFindExternalFunctionIn(%s, %d):\n  %s\n",
+	    lookupName, moduleHandle, dlerror());
 
   return (int)fn;
 }
@@ -261,7 +289,7 @@ int ioFindExternalFunctionIn(char *lookupName, int moduleHandle)
 
 /*  Free the module with the associated handle.  Answer 0 on error (do
  *  NOT fail the primitive!).
- */
+*/
 int ioFreeModule(int moduleHandle)
 {
   if (dlclose((void *)moduleHandle))
