@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.2 2002/02/23 11:26:06 johnmci Exp $
+*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.3 2002/09/27 20:00:41 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -36,6 +36,7 @@ MenuHandle	fileMenu = nil;
 void MenuBarHide(void) {
  	if (menuBarRegion != nil) return;  /* saved state, so menu bar is already hidden */
     menuBarRegion = (RgnHandle) 1;
+    ShowMenuBar();
     HideMenuBar();
 }
 void MenuBarRestore(void) {
