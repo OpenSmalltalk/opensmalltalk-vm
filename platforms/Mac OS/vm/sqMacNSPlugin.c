@@ -193,8 +193,7 @@ int recordKeystroke(EventRecord *theEvent);
 int recordModifierButtons(EventRecord *theEvent);
 int recordMouseDown(EventRecord *theEvent);
 void ioSetFullScreenRestore();
-int PrefixPathWith(char *pathName, int pathNameSize, int pathNameMax, char *prefix);
-int PathToWorkingDir(char *pathName, int pathNameMax, short volumeNumber,long directoryID);
+int PathToDir(char *pathName, int pathNameMax, FSSpec workingDirectory);
 
 /*** From VM ***/
 int checkImageVersionFromstartingAt(sqImageFile f, int imageOffset);
@@ -1134,13 +1133,13 @@ int InitFilePaths(void) {
 	strcpy(imageInPreferenceFolder,":Squeak:Internet:");
 	strcat(imageInPreferenceFolder,shortImageName);
 	CopyCStringToPascal(imageInPreferenceFolder,(unsigned char *) imageInPreferenceFolder);
-	err = FSMakeFSSpec(vRefNum, dirID,(unsigned char *) imageInPreferenceFolder , &fileSpec);
+	err = FSMakeFSSpecCompat(vRefNum, dirID,(unsigned char *) imageInPreferenceFolder , &fileSpec);
 	if (err != noErr) {
-		strcpy(imageName,"Problems finding the Internet folder in the Squeak Preference folder or the SqueakPlugin.image");
+		strcpy(imageName,"Problems finding the Internet folder in the Squeak Preference folder or finding the SqueakPlugin.image");
 		return err;
 	}	
 	/* set the vmPath */
-	PathToWorkingDir(vmPath,VMPATH_SIZE, fileSpec.vRefNum,fileSpec.parID);
+	PathToDir(vmPath,VMPATH_SIZE, &fileSpec);
 	strcpy(imageName, vmPath);
 	strcat(imageName, shortImageName);
 }
@@ -1473,9 +1472,9 @@ void OpenFileReadOnly(SQFile *f, char *fileName) {
 	} else {
 		f->sessionID = thisSession;
 		/* compute and cache file size */
-		fseek(f->file, 0, SEEK_END);
-		f->fileSize = ftell(f->file);
-		fseek(f->file, 0, SEEK_SET);
+		fseeko(f->file, 0, SEEK_END);
+		f->fileSize = ftello(f->file);
+		fseeko(f->file, 0, SEEK_SET);
 	}
 	f->lastOp = 0;
 }
