@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacFFIPPC.c,v 1.3 2002/11/18 19:09:23 johnmci Exp $
+*   RCSID:   $Id: sqMacFFIPPC.c,v 1.4 2002/12/21 06:36:37 johnmci Exp $
 *
 *   NOTES:
 *
@@ -502,7 +502,10 @@ typedef struct ffiTestPoint4 {
 EXPORT(char) ffiTestChars(char c1, char c2, char c3, char c4);
 EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4);
 EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4);
+EXPORT(int) ffiTestInts8(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8);
 EXPORT(float) ffiTestFloats(float f1, float f2);
+EXPORT(float) ffiTestFloats7(float f1, float f2, float f3, float f4, float f5, float f6, float f7);
+EXPORT(float) ffiTestFloats13(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13);
 EXPORT(double) ffiTestDoubles(double d1, double d2);
 EXPORT(char *) ffiPrintString(char *string);
 EXPORT(ffiTestPoint2) ffiTestStruct64(ffiTestPoint2 pt1, ffiTestPoint2 pt2);
@@ -530,11 +533,28 @@ EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4) {
 	return 42;
 }
 
+EXPORT(int) ffiTestInts8(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8) {
+	printf("4 ints came in as\ni1 = %d (%x)\ni2 = %d (%x)\ni3 = %d (%x)\ni4 = %d (%x)\ni5 = %d (%x)\ni6 = %d (%x)\ni7 = %d (%x)\ni8 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4, c5, c5, c6, c6, c7, c7, c8, c8);
+	return 42;
+}
+
+
 /* test passing and returning floats */
 EXPORT(float) ffiTestFloats(float f1, float f2) {
 	printf("The two floats are %f and %f\n", f1, f2);
 	return (float) (f1 + f2);
 }
+
+EXPORT(float) ffiTestFloats7(float f1, float f2, float f3, float f4, float f5, float f6, float f7) {
+	printf("The 7 floats are %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7);
+	return (float) (f1 + f2 + f3 + f4 + f5 + f6 + f7);
+}
+
+EXPORT(float) ffiTestFloats13(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13) {
+	printf("The 13 floats are %f %f %f %f %f %f %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13);
+	return (float) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10 + f11 + f12 + f13);
+}
+
 
 /* test passing and returning doubles */
 EXPORT(double) ffiTestDoubles(double d1, double d2) {
