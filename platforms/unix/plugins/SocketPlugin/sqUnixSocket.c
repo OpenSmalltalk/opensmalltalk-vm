@@ -194,7 +194,8 @@ typedef struct privateSocketStruct
   struct sockaddr_in peer;	/* default send/recv address for UDP */
   int multiListen;		/* whether to listen for multiple connections */
   int acceptedSock;		/* a connection that has been accepted */
-  int pendingEvents;		/* pending conn/read/write events to be signalled */
+  int pendingEvents;		/* conn/read/write events that the image is interested in;
+				   when these states go high, the image should be signalled */
 } privateSocketStruct;
 
 #define CONN_NOTIFY	(1<<0)
@@ -280,8 +281,6 @@ static void sockEnable(privateSocketStruct *pss)
 
 
 
-
-
 /***      miscellaneous sundries           ***/
 
 
@@ -360,14 +359,55 @@ static int socketWritable(int s)
  *   - signal its semaphore to indicate that the operation is complete
  */
 
+
+/* notify(pss, eventMask) - signal the appropriate semaphores for
+   socket pss, assuming that the states in eventMask are true.
+*/
 void notify(privateSocketStruct *pss, int eventMask)
 {
-  int mask= pss->pendingEvents | eventMask;
-  if (mask & CONN_NOTIFY)  interpreterProxy->signalSemaphoreWithIndex((pss)->connSema);
-  if (mask & READ_NOTIFY)  interpreterProxy->signalSemaphoreWithIndex((pss)->readSema);
-  if (mask & WRITE_NOTIFY) interpreterProxy->signalSemaphoreWithIndex((pss)->writeSema);
-  pss->pendingEvents= 0;
+  int eventsToSignal= pss->pendingEvents & eventMask;
+  if (eventsToSignal & CONN_NOTIFY)
+    {
+      interpreterProxy->signalSemaphoreWithIndex((pss)->connSema);
+      pss->pendingEvents &= ~CONN_NOTIFY;
+    }
+  
+  if (eventsToSignal & READ_NOTIFY)
+    {
+      interpreterProxy->signalSemaphoreWithIndex((pss)->readSema);
+      pss->pendingEvents &= ~READ_NOTIFY;
+    }
+  
+  if (eventsToSignal & WRITE_NOTIFY)
+    {
+      interpreterProxy->signalSemaphoreWithIndex((pss)->writeSema);
+      pss->pendingEvents &= ~WRITE_NOTIFY;
+    }
 }
+
+
+static void installAppropriateDataHandler(privateSocketStruct *pss)
+{
+  int listenFlags= AIO_EX;
+  if(pss->pendingEvents & READ_NOTIFY)
+    listenFlags|= AIO_RD;
+  if(pss->pendingEvents & WRITE_NOTIFY)
+    listenFlags|= AIO_WR;
+  
+  /* keep listening for more data? */
+  if(listenFlags == AIO_EX)
+    {
+      /* don't listen */
+      aioHandle(pss->s, nullHandler, pss, AIO_EX);
+    }
+  else
+    {
+      /* listen for listenFlags */
+      aioHandle(pss->s, dataHandler, pss, listenFlags);
+    }
+  
+}
+
 
 
 /* this handler should never normally be invoked */
@@ -489,21 +529,28 @@ static void connectHandler(void *pssIn, int readFlag, int writeFlage, int errFla
 }
 
 
+
 /* read or write data transfer is now possible for the socket */
 
 static void dataHandler(void *pssIn, int readFlag, int writeFlag, int errFlag)
 {
   privateSocketStruct *pss = (privateSocketStruct *)pssIn;
-  sockSuspend(pss);
 
   FPRINTF((stderr, "dataHandler(%d,%d,%d)\n", pss->s, errFlag, readFlag));
   if (errFlag)
     /* error: almost certainly "connection closed by peer" */
     pss->sockState= OtherEndClosed;
-  notify(pss, (readFlag ? READ_NOTIFY : WRITE_NOTIFY));
+  if(readFlag)
+    notify(pss, READ_NOTIFY);
+  if(writeFlag)
+    notify(pss, WRITE_NOTIFY);
+
+  installAppropriateDataHandler(pss);
 }
 
 
+
+      
 /* a non-blocking close() has completed -- finish tidying up */
 
 static void closeHandler(void *pssIn, int readFlag, int writeFlag, int errFlag)
@@ -625,6 +672,7 @@ int sqSocketConnectionStatus(SocketPtr s)
 {
   if (!socketValid(s))
     return -1;
+  
   return SOCKETSTATE(s);
 }
 
@@ -712,6 +760,8 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 	    {
 	      /* asynchronous connection in progress */
 	      SOCKETSTATE(s)= WaitingForConnection;
+	      PSP(s)->pendingEvents|= CONN_NOTIFY;
+	      
 	      aioHandle(SOCKET(s), connectHandler, PSP(s), AIO_WR);  /* => connect() done */
 	    }
 	  else
@@ -951,7 +1001,7 @@ int sqSocketReceiveDataAvailable(SocketPtr s)
       if (socketReadable(SOCKET(s)))
 	return true;
       PSP(s)->pendingEvents|= READ_NOTIFY;
-      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);
+      installAppropriateDataHandler(PSP(s));
     }
   return false;
 }
@@ -967,7 +1017,7 @@ int sqSocketSendDone(SocketPtr s)
     {
       if (socketWritable(SOCKET(s))) return true;
       PSP(s)->pendingEvents|= WRITE_NOTIFY;
-      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);
+      installAppropriateDataHandler(PSP(s));
     }
   return false;
 }
