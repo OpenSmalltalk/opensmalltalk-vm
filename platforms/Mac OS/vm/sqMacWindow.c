@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.23 2003/06/20 01:55:47 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.24 2003/07/31 13:03:20 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -14,6 +14,7 @@
 *  Apr  17th, 2002, JMM Use accessors for VM variables.
 *  May 5th, 2002, JMM cleanup for building as NS plugin
  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+ 3.5.1b5 June 25th, 2003 JMM fix memory leak on color table free, pull preferences from Info.plist under os-x
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -281,6 +282,7 @@ void SetUpPixmap(void) {
 	stPixMap = NewPixMap();
 	(*stPixMap)->pixelType = 0; /* chunky */
 	(*stPixMap)->cmpCount = 1;
+        DisposeCTable((*stPixMap)->pmTable);
 	(*stPixMap)->pmTable = stColorTable;
 }
 
@@ -940,14 +942,20 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 void fetchPrefrencesForWindow(int *windowType,int *windowAttributes) {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
-    CFNumberRef SqueakWindowType;
+    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType;
+    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType;
     CFDataRef 	SqueakWindowAttributeType;    
-    extern	Boolean gSqueakWindowIsFloating;
+    extern	Boolean gSqueakWindowIsFloating,gSqueakWindowHasTitle,gSqueakFloatingWindowGetsFocus;
+    extern 	UInt32 gMaxHeapSize;
     
     myBundle = CFBundleGetMainBundle();
     myDictionary = CFBundleGetInfoDictionary(myBundle);
     SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));
     SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
+    SqueakWindowHasTitleType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowHasTitle"));
+    SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
+    SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
+    
     if (SqueakWindowType) 
         CFNumberGetValue(SqueakWindowType,kCFNumberLongType,windowType);
     else
@@ -955,17 +963,29 @@ void fetchPrefrencesForWindow(int *windowType,int *windowAttributes) {
         
     gSqueakWindowIsFloating = *windowType == kUtilityWindowClass;
         
-    if (SqueakWindowAttributeType) {
-        if (CFDataGetLength(SqueakWindowAttributeType) == 4) {
+    if (SqueakWindowAttributeType && CFDataGetLength(SqueakWindowAttributeType) == 4) {
             const UInt8 *where;
             where = CFDataGetBytePtr(SqueakWindowAttributeType);
             memmove(windowAttributes,where,4);
-        }
-    } else
+    } else {
         *windowAttributes = kWindowStandardDocumentAttributes
             +kWindowStandardHandlerAttribute
             +kWindowNoConstrainAttribute
             -kWindowCloseBoxAttribute;
+    }
+    
+    if (SqueakWindowHasTitleType) 
+        gSqueakWindowHasTitle = CFBooleanGetValue(SqueakWindowHasTitleType);
+    else 
+        gSqueakWindowHasTitle = true;
+        
+    if (SqueakFloatingWindowGetsFocusType) 
+        gSqueakFloatingWindowGetsFocus = CFBooleanGetValue(SqueakFloatingWindowGetsFocusType);
+    else
+        gSqueakFloatingWindowGetsFocus = false;
+
+    if (SqueakMaxHeapSizeType) 
+        CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
     
 }
 #endif 
