@@ -10,6 +10,7 @@ Provides: squeak-vm
 Conflicts: squeak-vm
 Architecture: any
 Depends: ${shlibs:Depends}
+Suggests: inisqueak
 Description: The Squeak Smalltalk System (virtual machine)
  Squeak is an open, highly-portable Smalltalk-80 implementation whose 
  virtual machine is written entirely in Smalltalk, making it easy to 
@@ -26,6 +27,7 @@ Provides: squeak-vm
 Conflicts: squeak-vm
 Architecture: any
 Depends: ${shlibs:Depends}
+Suggests: inisqueak, squeak-image
 Description: The Squeak Smalltalk System (virtual machine)
  Squeak is an open, highly-portable Smalltalk-80 implementation whose 
  virtual machine is written entirely in Smalltalk, making it easy to 
@@ -36,3 +38,12 @@ Description: The Squeak Smalltalk System (virtual machine)
  This package contains the virtual machine (VM) for Squeak.  It is
  compiled to use the Open Sound System (OSS) to play and record
  sound.
+
+
+Package: inisqueak
+Architecture: all
+Depends: squeak-vm, squeak-image
+Description: convenience script for new Squeak users
+ This script sets up Squeak in a reasonable way for new users.
+ Those familiar with Squeak will probably want to set things up
+ themselves.
