@@ -1,2 +1,2 @@
-?package(squeak-vm):needs=X11 section=Apps/Programming\
+?package(inisqueak):needs=X11 section=Apps/Programming\
   title="Squeak" command="/usr/bin/inisqueak"
