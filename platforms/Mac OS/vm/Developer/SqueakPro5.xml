@@ -128,15 +128,6 @@
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
                     </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:SqueakAtSourceForge:squeak:platforms:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
                 </SETTING>
 
                 <!-- Settings for "Target Settings" panel -->
@@ -2984,15 +2975,6 @@
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
                     </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:SqueakAtSourceForge:squeak:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
                 </SETTING>
                 <SETTING><NAME>SystemSearchPaths</NAME>
                     <SETTING>
@@ -3628,13 +3610,6 @@
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Library</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
@@ -4920,11 +4895,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>ADPCMCodecPlugin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -5883,27 +5853,9 @@
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:vm:PluginSDK 4.01a:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>::Squeak 3.0.21:PluginSDK 4.01a:Common:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>::Squeak 3.0.21:PluginSDK 4.01a:Include:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
@@ -7771,13 +7723,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqOpenGLRenderer.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqPlatformSpecific.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -8743,11 +8688,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqOpenGLRenderer.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqPlatformSpecific.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -8846,297 +8786,9 @@
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:vm:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>::Squeak:Carbon:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:B3DAcceleratorPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:vm:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:SurfacePlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:UUIDPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:UUIDPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:SoundPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:SerialPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:B3DAcceleratorPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:SecurityPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:SoundPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:FilePlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:SoundCodecPrims:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:AsynchFilePlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:FilePlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:InternetConfigPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:DropPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:JoystickTabletPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:MIDIPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:SocketPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:SoundGenerationPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:SocketPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:SerialPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:SecurityPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:MIDIPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:JoystickTabletPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:InternetConfigPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:DropPlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:Squeak3D:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:AsynchFilePlugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::Carbon:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:plugins:JPEGReadWriter2Plugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:plugins:Mpeg3Plugin:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>System</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
@@ -10493,27 +10145,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>jcapimin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -10951,6 +10582,20 @@
                     <PATH>interp.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL C.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Library</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Library</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>
             </FILELIST>
@@ -11492,21 +11137,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>jcapimin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -11820,6 +11450,16 @@
                     <PATH>interp.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL C.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
             </LINKORDER>
         </TARGET>
         <TARGET>
@@ -11875,27 +11515,9 @@
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:vm:PluginSDK 4.01a:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>::Squeak 3.0.21:PluginSDK 4.01a:Common:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>::Squeak 3.0.21:PluginSDK 4.01a:Include:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
@@ -12465,7 +12087,7 @@
 
                 <!-- Settings for "PPC Project" panel -->
                 <SETTING><NAME>MWProject_PPC_type</NAME><VALUE>SharedLibrary</VALUE></SETTING>
-                <SETTING><NAME>MWProject_PPC_outfile</NAME><VALUE>NS-Squeak VM 3.0</VALUE></SETTING>
+                <SETTING><NAME>MWProject_PPC_outfile</NAME><VALUE>NS-Squeak VM 3.0 Debug</VALUE></SETTING>
                 <SETTING><NAME>MWProject_PPC_filecreator</NAME><VALUE>1297044307</VALUE></SETTING>
                 <SETTING><NAME>MWProject_PPC_filetype</NAME><VALUE>1314082892</VALUE></SETTING>
                 <SETTING><NAME>MWProject_PPC_size</NAME><VALUE>0</VALUE></SETTING>
@@ -14826,27 +14448,9 @@
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>::Squeak:Carbon:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::Carbon:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>System</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
@@ -15867,20 +15471,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>jcapimin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -16455,41 +16045,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jritypes.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>UUIDPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -16693,9 +16248,16 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
+                    <PATH>MSL C.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
+                    <FILEKIND>Library</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Library</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
                 </FILE>
             </FILELIST>
@@ -16997,16 +16559,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>jcapimin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -17417,31 +16969,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jritypes.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>UUIDPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -17587,7 +17114,12 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
+                    <PATH>MSL C.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -17645,27 +17177,18 @@
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>::Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:vm:PluginSDK 4.01a:Common:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>System</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>::Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:vm:PluginSDK 4.01a:Include:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
-                        </SETTING>
-                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
-                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
-                    </SETTING>
-                    <SETTING>
-                        <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::Carbon:</VALUE></SETTING>
-                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>System</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
@@ -17693,6 +17216,15 @@
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
                             <SETTING><NAME>Path</NAME><VALUE>OpenGL_SDK_1.2:Headers:</VALUE></SETTING>
+                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
+                        </SETTING>
+                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
+                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
+                    </SETTING>
+                    <SETTING>
+                        <SETTING><NAME>SearchPath</NAME>
+                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:Carbon:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
                             <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
                         </SETTING>
@@ -18672,62 +18204,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>npupp.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>npapi.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jritypes.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>npmac.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>UUIDPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -19015,31 +18491,10 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>AsynchFilePlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
@@ -19475,6 +18930,76 @@
                     <FILEKIND>Resource</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>npmac.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jni.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jni_md.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jri.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jritypes.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jri_md.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>npapi.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>npupp.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL C.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Library</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Library</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
             </FILELIST>
             <LINKORDER>
                 <FILEREF>
@@ -19764,46 +19289,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>npupp.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>npapi.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jritypes.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jri.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni_md.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jni.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>npmac.cpp</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>UUIDPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -20009,22 +19494,7 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>AsynchFilePlugin.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -20337,6 +19807,56 @@
                     <PATH>SqueakInBrowserCarbon.rsrc</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>npmac.cpp</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jni.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jni_md.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jri.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jritypes.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>jri_md.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>npapi.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>npupp.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL C.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
             </LINKORDER>
         </TARGET>
         <TARGET>
@@ -20392,27 +19912,27 @@
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Mac OS:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>::Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:vm:PluginSDK 4.01a:Common:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>System</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::SqueakAtSourceForge:squeak:platforms:Cross:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>::Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:vm:PluginSDK 4.01a:Include:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>System</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>:::Carbon:</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>::Squeak:Carbon:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>System</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
@@ -20982,7 +20502,7 @@
 
                 <!-- Settings for "PPC Project" panel -->
                 <SETTING><NAME>MWProject_PPC_type</NAME><VALUE>SharedLibrary</VALUE></SETTING>
-                <SETTING><NAME>MWProject_PPC_outfile</NAME><VALUE>NS-Squeak VM 3.0 Carbon</VALUE></SETTING>
+                <SETTING><NAME>MWProject_PPC_outfile</NAME><VALUE>NS-Squeak VM 3.0 Carbon Op</VALUE></SETTING>
                 <SETTING><NAME>MWProject_PPC_filecreator</NAME><VALUE>1297044307</VALUE></SETTING>
                 <SETTING><NAME>MWProject_PPC_filetype</NAME><VALUE>1112690764</VALUE></SETTING>
                 <SETTING><NAME>MWProject_PPC_size</NAME><VALUE>0</VALUE></SETTING>
@@ -21405,20 +20925,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Library</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>jcapimin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -22056,13 +21562,6 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>b3d.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -22161,6 +21660,20 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>myMacHeadersCarbon.pch</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>SqueakInBrowserCarbon.rsrc</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Resource</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>npmac.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -22217,16 +21730,16 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>myMacHeadersCarbon.pch</PATH>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
+                    <FILEKIND>Library</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>SqueakInBrowserCarbon.rsrc</PATH>
+                    <PATH>MSL C.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Resource</FILEKIND>
+                    <FILEKIND>Library</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
                 </FILE>
             </FILELIST>
@@ -22508,16 +22021,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>jcapimin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -22973,11 +22476,6 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>AddressXlation.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>b3d.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -23048,6 +22546,16 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>myMacHeadersCarbon.pch</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>SqueakInBrowserCarbon.rsrc</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>npmac.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -23088,12 +22596,12 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>myMacHeadersCarbon.pch</PATH>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
-                    <PATH>SqueakInBrowserCarbon.rsrc</PATH>
+                    <PATH>MSL C.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -23184,12 +22692,6 @@
                     <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>jcomapi.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <TARGETNAME>Squeak VM PPC Carbon Opt</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>jconfig.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -23497,12 +22999,6 @@
                 <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
                 <PATH>ADPCMCodecPlugin.c</PATH>
-                <PATHFORMAT>MacOS</PATHFORMAT>
-            </FILEREF>
-            <FILEREF>
-                <TARGETNAME>Squeak VM PPC Opt</TARGETNAME>
-                <PATHTYPE>Name</PATHTYPE>
-                <PATH>AddressXlation.h</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>
@@ -24106,6 +23602,12 @@
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>
+                <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
+                <PATHTYPE>Name</PATHTYPE>
+                <PATH>ZipPlugin.c</PATH>
+                <PATHFORMAT>MacOS</PATHFORMAT>
+            </FILEREF>
+            <FILEREF>
                 <TARGETNAME>Squeak VM NS Plugin Opt</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
                 <PATH>npmac.cpp</PATH>
@@ -24151,12 +23653,6 @@
                 <TARGETNAME>Squeak VM NS Plugin Opt</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
                 <PATH>npupp.h</PATH>
-                <PATHFORMAT>MacOS</PATHFORMAT>
-            </FILEREF>
-            <FILEREF>
-                <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
-                <PATHTYPE>Name</PATHTYPE>
-                <PATH>ZipPlugin.c</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
         </GROUP>
@@ -24205,21 +23701,7 @@
             </FILEREF>
         </GROUP>
         <GROUP><NAME>ANSI Libraries</NAME>
-            <GROUP><NAME>68K</NAME>
-            </GROUP>
             <GROUP><NAME>PPC</NAME>
-                <FILEREF>
-                    <TARGETNAME>Squeak VM PPC Carbon Debug</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL C.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <TARGETNAME>Squeak VM PPC Carbon Debug</TARGETNAME>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
                 <FILEREF>
                     <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
@@ -24230,6 +23712,18 @@
                     <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>MSL SIOUX.PPC.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <TARGETNAME>Squeak VM PPC Carbon Debug</TARGETNAME>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL C.CARBON.Lib</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <TARGETNAME>Squeak VM PPC Carbon Debug</TARGETNAME>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>MSL SIOUX.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </GROUP>
@@ -24277,10 +23771,6 @@
                 <PATH>InterfaceLib</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
-            <GROUP><NAME>68K</NAME>
-            </GROUP>
-            <GROUP><NAME>68KOpenTransport</NAME>
-            </GROUP>
             <GROUP><NAME>PPC</NAME>
                 <FILEREF>
                     <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
@@ -24355,8 +23845,6 @@
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </GROUP>
-        </GROUP>
-        <GROUP><NAME>FAT Target Files Opt</NAME>
         </GROUP>
     </GROUPLIST>
 
