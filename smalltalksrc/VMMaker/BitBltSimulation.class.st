@@ -176,9 +176,7 @@ BitBltSimulation class >> copyBitsFrom: aBitBlt [
 	proxy success: (bb loadBitBltFrom: aBitBlt).
 	bb copyBits.
 	proxy failed ifFalse:[
-		proxy showDisplayBits: aBitBlt destForm 
-				Left: bb affectedLeft Top: bb affectedTop 
-				Right: bb affectedRight Bottom: bb affectedBottom].
+		proxy showDisplayBits: aBitBlt destForm Left: bb affectedLeft Top: bb affectedTop Right: bb affectedRight Bottom: bb affectedBottom].
 	^proxy stackValue: 0
 ]
 
@@ -339,37 +337,37 @@ BitBltSimulation class >> opTable [
 
 ]
 
+{ #category : #translation }
+BitBltSimulation class >> requiredMethodNames [
+	^self opTable asSet
+]
+
 { #category : #'system simulation' }
 BitBltSimulation class >> simulatorClass [
 	^BitBltSimulator
 ]
 
-{ #category : #initialization }
-BitBltSimulation class >> test2 [  "BitBltSimulation test2"
+{ #category : #testing }
+BitBltSimulation class >> test2 [
+	"BitBltSimulation test2"
 	| f |
-	Display fillWhite: (0@0 extent: 300@140).
-	1 to: 12 do:
-		[:i | f _ (Form extent: i@5) fillBlack.
-		0 to: 20 do:
-			[:x | f displayOn: Display
-					at: (x*13) @ (i*10)]]
+	Display fillWhite: (0 @ 0 extent: 300 @ 140).
+	1 to: 12 do: [:i | 
+			f _ (Form extent: i @ 5) fillBlack.
+			0 to: 20 do: [:x | f displayOn: Display at: x * 13 @ (i * 10)]]
 ]
 
-{ #category : #initialization }
-BitBltSimulation class >> timingTest: extent [  "BitBltSimulation timingTest: 640@480"
+{ #category : #testing }
+BitBltSimulation class >> timingTest: extent [ 
+	"BitBltSimulation timingTest: 640@480"
 	| f f2 map |
 	f _ Form extent: extent depth: 8.
 	f2 _ Form extent: extent depth: 8.
 	map _ Bitmap new: 1 << f2 depth.
-	^ Array with:
-	(Time millisecondsToRun: [100 timesRepeat:
-		[f fillWithColor: Color white]])
-	with:
-	(Time millisecondsToRun: [100 timesRepeat:
-		[f copy: f boundingBox from: 0@0 in: f2 rule: Form over]])
-	with:
-	(Time millisecondsToRun: [100 timesRepeat:
-		[f copyBits: f boundingBox from: f2 at: 0@0 colorMap: map]])
+	^ Array
+		with: (Time millisecondsToRun: [100 timesRepeat: [f fillWithColor: Color white]])
+		with: (Time millisecondsToRun: [100 timesRepeat: [f copy: f boundingBox from: 0 @ 0 in: f2 rule: Form over]])
+		with: (Time millisecondsToRun: [100 timesRepeat: [f copyBits: f boundingBox from: f2 at: 0 @ 0 colorMap: map]])
 ]
 
 { #category : #'system simulation' }
@@ -384,9 +382,7 @@ BitBltSimulation class >> warpBitsFrom: aBitBlt [
 	proxy success: (bb loadWarpBltFrom: aBitBlt).
 	bb warpBits.
 	proxy failed ifFalse:[
-		proxy showDisplayBits: aBitBlt destForm 
-				Left: bb affectedLeft Top: bb affectedTop 
-				Right: bb affectedRight Bottom: bb affectedBottom].
+		proxy showDisplayBits: aBitBlt destForm Left: bb affectedLeft Top: bb affectedTop Right: bb affectedRight Bottom: bb affectedBottom].
 	^proxy stackValue: 0
 ]
 
@@ -2418,8 +2414,7 @@ BitBltSimulation >> primitiveCopyBits [
 	| rcvr |
 	self export: true.
 	rcvr _ interpreterProxy stackValue: interpreterProxy methodArgumentCount.
-	(self loadBitBltFrom: rcvr) 
-		ifFalse:[^interpreterProxy primitiveFail].
+	(self loadBitBltFrom: rcvr)  ifFalse:[^interpreterProxy primitiveFail].
 	self copyBits.
 	interpreterProxy failed ifTrue:[^nil].
 	self showDisplayBits.
@@ -2435,30 +2430,29 @@ BitBltSimulation >> primitiveDisplayString [
 	| kernDelta xTable glyphMap stopIndex startIndex sourceString bbObj maxGlyph ascii glyphIndex sourcePtr left quickBlt |
 	self export: true.
 	self var: #sourcePtr type: 'unsigned char *'.
-	interpreterProxy methodArgumentCount = 6 
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy methodArgumentCount = 6 ifFalse: [^ interpreterProxy primitiveFail].
+
 	kernDelta _ interpreterProxy stackIntegerValue: 0.
 	xTable _ interpreterProxy stackObjectValue: 1.
 	glyphMap _ interpreterProxy stackObjectValue: 2.
-	((interpreterProxy isArray: xTable) and:[
-		(interpreterProxy isArray: glyphMap)])
-			ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: glyphMap) = 256 ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy failed ifTrue:[^nil].
-	maxGlyph _ (interpreterProxy slotSizeOf: xTable) - 2.
 
+	((interpreterProxy isArray: xTable) and: [interpreterProxy isArray: glyphMap]) ifFalse: [^ interpreterProxy primitiveFail].
+	(interpreterProxy slotSizeOf: glyphMap) = 256 ifFalse: [^ interpreterProxy primitiveFail].
+	interpreterProxy failed ifTrue: [^ nil].
+
+	maxGlyph _ (interpreterProxy slotSizeOf: xTable) - 2.
 	stopIndex _ interpreterProxy stackIntegerValue: 3.
 	startIndex _ interpreterProxy stackIntegerValue: 4.
 	sourceString _ interpreterProxy stackObjectValue: 5.
-	(interpreterProxy isBytes: sourceString) ifFalse:[^interpreterProxy primitiveFail].
-	(startIndex > 0 and:[stopIndex > 0 and:[
-		stopIndex <= (interpreterProxy byteSizeOf: sourceString)]])
-			ifFalse:[^interpreterProxy primitiveFail].
 
+	(interpreterProxy isBytes: sourceString) ifFalse: [^ interpreterProxy primitiveFail].
+	(startIndex > 0 and: [stopIndex > 0 and: [stopIndex <= (interpreterProxy byteSizeOf: sourceString)]])
+		ifFalse: [^ interpreterProxy primitiveFail].
 	bbObj _ interpreterProxy stackObjectValue: 6.
-	(self loadBitBltFrom: bbObj) ifFalse:[^interpreterProxy primitiveFail].
-	(combinationRule = 30 or:[combinationRule = 31]) "needs extra source alpha"
-		ifTrue:[^interpreterProxy primitiveFail].
+	(self loadBitBltFrom: bbObj) ifFalse: [^ interpreterProxy primitiveFail].
+	(combinationRule = 30 or: [combinationRule = 31])
+		ifTrue: ["needs extra source alpha" ^ interpreterProxy primitiveFail].
+
 	"See if we can go directly into copyLoopPixMap (usually we can)"
 	quickBlt _ destBits ~= 0 "no OS surfaces please"
 				and:[sourceBits ~= 0 "and again"
@@ -2466,35 +2460,35 @@ BitBltSimulation >> primitiveDisplayString [
 				and:[sourceForm ~= destForm "no blits onto self"
 				and:[(cmFlags ~= 0 
 						or:[sourceMSB ~= destMSB 
-						or:[sourceDepth ~= destDepth]]) "no point using slower version"
-				]]]].
+						or:[sourceDepth ~= destDepth]]) "no point using slower version" ]]]].
 	left _ destX.
 	sourcePtr _ interpreterProxy firstIndexableField: sourceString.
-	startIndex to: stopIndex do:[:charIndex|
-		ascii _ interpreterProxy byteAt: sourcePtr + charIndex - 1.
-		glyphIndex _ interpreterProxy fetchInteger: ascii ofObject: glyphMap.
-		(glyphIndex < 0 or:[glyphIndex > maxGlyph]) 
-			ifTrue:[^interpreterProxy primitiveFail].
-		sourceX _ interpreterProxy fetchInteger: glyphIndex ofObject: xTable.
-		width _ (interpreterProxy fetchInteger: glyphIndex+1 ofObject: xTable) - sourceX.
-		interpreterProxy failed ifTrue:[^nil].
-		self clipRange.	"Must clip here"
-		(bbW > 0 and:[bbH > 0]) ifTrue: [
-			quickBlt ifTrue:[
-				self destMaskAndPointerInit.
-				self copyLoopPixMap.
-				"both, hDir and vDir are known to be > 0"
-				affectedL _ dx.
-				affectedR _ dx + bbW.
-				affectedT _ dy.
-				affectedB _ dy + bbH.
-			] ifFalse:[self copyBits]].
-		interpreterProxy failed ifTrue:[^nil].
-		destX _ destX + width + kernDelta.
-	 ].
+	startIndex to: stopIndex do: [:charIndex | 
+			ascii _ interpreterProxy byteAt: sourcePtr + charIndex - 1.
+			glyphIndex _ interpreterProxy fetchInteger: ascii ofObject: glyphMap.
+			(glyphIndex < 0 or: [glyphIndex > maxGlyph]) ifTrue: [^ interpreterProxy primitiveFail].
+
+			sourceX _ interpreterProxy fetchInteger: glyphIndex ofObject: xTable.
+			width _ (interpreterProxy fetchInteger: glyphIndex + 1 ofObject: xTable) - sourceX.
+			interpreterProxy failed ifTrue: [^ nil].
+
+			self clipRange. "Must clip here"
+			(bbW > 0 and: [bbH > 0])
+				ifTrue: [quickBlt
+						ifTrue: [self destMaskAndPointerInit.
+							self copyLoopPixMap.
+							"both, hDir and vDir are known to be > 0"
+							affectedL _ dx.
+							affectedR _ dx + bbW.
+							affectedT _ dy.
+							affectedB _ dy + bbH]
+						ifFalse: [self copyBits]].
+			interpreterProxy failed ifTrue: [^ nil].
+			destX _ destX + width + kernDelta].
 	affectedL _ left.
+
 	self showDisplayBits.
-	interpreterProxy pop: 6. "pop args, return rcvr"
+	interpreterProxy pop: 6
 ]
 
 { #category : #primitives }
@@ -2505,8 +2499,7 @@ BitBltSimulation >> primitiveDrawLoop [
 	rcvr _ interpreterProxy stackValue: 2.
 	xDelta _ interpreterProxy stackIntegerValue: 1.
 	yDelta _ interpreterProxy stackIntegerValue: 0.
-	(self loadBitBltFrom: rcvr) 
-		ifFalse:[^interpreterProxy primitiveFail].
+	(self loadBitBltFrom: rcvr) ifFalse:[^interpreterProxy primitiveFail].
 	interpreterProxy failed ifFalse:[
 		self drawLoopX: xDelta Y: yDelta.
 		self showDisplayBits].

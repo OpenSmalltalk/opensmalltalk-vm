@@ -123,6 +123,13 @@ InterpreterPlugin class >> noteCompilationOf: aSelector meta: isMeta [
 ]
 
 { #category : #translation }
+InterpreterPlugin class >> requiredMethodNames [
+	"return the list of method names that should be retained for export or other support reasons"
+	"just which methods?"
+	^#()
+]
+
+{ #category : #translation }
 InterpreterPlugin class >> requiresCrossPlatformFiles [
 	"default is ok for most, any plugin needing cross platform files aside from a normal header must say so. See SoundCodecPlugin for example"
 	^self hasHeaderFile

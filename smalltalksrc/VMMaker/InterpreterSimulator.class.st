@@ -155,6 +155,12 @@ InterpreterSimulator >> cr [
 ]
 
 { #category : #'interpreter shell' }
+InterpreterSimulator >> dispatchFunctionPointerOn: index in: table [
+"handle the primitive table dispatch macro in simulation"
+	^self dispatchOn: index in: table
+]
+
+{ #category : #'interpreter shell' }
 InterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
 	"Simulate a case statement via selector table lookup.
 	The given integer must be between 0 and selectorArray size-1, inclusive.
@@ -344,6 +350,8 @@ InterpreterSimulator >> initialize [
 	semaphoresToSignalA _ Array new: SemaphoresToSignalSize.
 	semaphoresToSignalB _ Array new: SemaphoresToSignalSize.
 	externalPrimitiveTable _ CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
+
+	primitiveTable _ CArrayAccessor on: self class primitiveTable.
 
 	obsoleteNamedPrimitiveTable _ 
 		CArrayAccessor on: self class obsoleteNamedPrimitiveTable.

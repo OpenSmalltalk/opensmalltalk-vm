@@ -61,6 +61,17 @@ InterpreterSimulatorLSB >> displayForm: f [
 	realForm displayOn: Display at: 0@0.
 ]
 
+{ #category : #'memory access' }
+InterpreterSimulatorLSB >> halfWordAt: byteAddress [ 
+	"return the half-word at byteAddress. Do the LSB 
+	conversion/shift "
+	| lowBits |
+	lowBits _ byteAddress bitAnd: 2.
+	^ ((self longAt: byteAddress - lowBits)
+		bitShift: lowBits * 8)
+		bitAnd: 65535
+]
+
 { #category : #initialization }
 InterpreterSimulatorLSB >> nextLongFrom: aStream [
 	"Read a 32-bit quantity from the given (binary) stream."
