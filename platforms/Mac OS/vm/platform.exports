@@ -7,7 +7,7 @@
    XFN(setSoundPollFunction)
 */
 
-#ifdef macintosh
+#ifdef macintoshSqueak
 
 	XFN(getSTWindow)
 	XFN(setMessageHook)
@@ -23,6 +23,7 @@
 	XFN(serialPortOpen)
 	XFN(serialPortReadInto)
 	XFN(serialPortWriteFrom)
+	XFN(IsKeyDown)
 	
 //#define PLUGIN
 #ifdef PLUGIN
@@ -37,5 +38,5 @@ XFN(primitivePluginRequestFileHandle)
 XFN(primitivePluginDestroyRequest)
 XFN(primitivePluginRequestState)
 #endif
-#endif /* macintosh */
+#endif /* macintoshSqueak */
 
