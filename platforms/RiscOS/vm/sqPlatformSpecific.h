@@ -11,11 +11,13 @@
 
 #ifdef ACORN
 
-#include "os.h"
+#include "oslib/os.h"
 /* acorn memory allocation */
 #undef sqAllocateMemory
 #define sqAllocateMemory(minHeapSize, desiredHeapSize) platAllocateMemory(desiredHeapSize)
+
 #undef sqFilenameFromString
+extern void sqFilenameFromString(char*fileName, int sqString, int sqSize);
 #define sqFilenameFromString(dst, src, num) sqFilenameFromString(dst, src, num)
 
 #define squeakFileOffsetType int

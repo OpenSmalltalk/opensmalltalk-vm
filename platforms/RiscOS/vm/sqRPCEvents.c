@@ -11,12 +11,12 @@
 /* Jonathon Coxhead's OSLib,                   */
 /* AcornC_C++, the Acorn sockets libs          */
 /* and a little luck                           */
-#include "os.h"
-#include "osbyte.h"
-#include "osfscontrol.h"
-#include "wimp.h"
-#include "wimpsprite.h"
-#include "colourtrans.h"
+#include "oslib/os.h"
+#include "oslib/osbyte.h"
+#include "oslib/osfscontrol.h"
+#include "oslib/wimp.h"
+#include "oslib/wimpspriteop.h"
+#include "oslib/colourtrans.h"
 #include "sq.h"
 #include "sqArguments.h"
 
@@ -250,6 +250,7 @@ extern	 void receivedDataSave(wimp_message * wblock);
 	 void eventBufAppendMouseDown(int buttons, int x, int y);
 	 void eventBufAppendMouseUp(int buttons, int x, int y);
 	 void eventBufAppendMouseMove(int x, int y);
+		extern void platReportError( os_error * e);
 
 
 //#define dbg
@@ -260,7 +261,6 @@ void setSocketPollFunction(int spf ) {
 #ifdef dbg
 {
 		extern os_error privateErr;
-		extern void platReportError( os_error * e);
 
 		privateErr.errnum = (bits)0;
 		sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);
@@ -310,7 +310,6 @@ int kbdstate, pollDelay;
 #ifdef dbg
 {
 		extern os_error privateErr;
-		extern void platReportError( os_error * e);
 
 		privateErr.errnum = (bits)0;
 		sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);

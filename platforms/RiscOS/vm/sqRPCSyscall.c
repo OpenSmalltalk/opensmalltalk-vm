@@ -11,12 +11,12 @@
 /* Jonathon Coxhead's OSLib,                   */
 /* AcornC_C++, the Acorn sockets libs          */
 /* and a little luck                           */
-#include "os.h"
-#include "osbyte.h"
-#include "osfscontrol.h"
-#include "wimp.h"
-#include "wimpsprite.h"
-#include "colourtran.h"
+#include "oslib/os.h"
+#include "oslib/osbyte.h"
+#include "oslib/osfscontrol.h"
+#include "oslib/wimp.h"
+#include "oslib/wimpspriteop.h"
+#include "oslib/colourtran.h"
 #include "sq.h"
 #include <kernel.h>
 

@@ -6,15 +6,15 @@
 /*                       sqRPCDirec.c                                     */
 /*  Directory reading etc                                                 */
 /**************************************************************************/
-#include "os.h"
-#include "osbyte.h"
-#include "osgbpb.h"
-#include "osfile.h"
-#include "osfscontrol.h"
-#include "scsifs.h"
-#include "adfs.h"
-#include "ramfs.h"
-#include "cdfs.h"
+#include "oslib/os.h"
+#include "oslib/osbyte.h"
+#include "oslib/osgbpb.h"
+#include "oslib/osfile.h"
+#include "oslib/osfscontrol.h"
+#include "oslib/scsifs.h"
+#include "oslib/adfs.h"
+#include "oslib/ramfs.h"
+#include "oslib/cdfs.h"
 #include "sq.h"
 #include <kernel.h>
 
@@ -27,9 +27,25 @@
 
 #define DELIMITOR '.'
 
-extern int ImageVersionNumber;
-extern struct VirtualMachine * interpreterProxy;
+/* debugging stuff; can probably be deleted */
+//#define DEBUG
 
+#ifdef DEBUG
+#define FPRINTF(s)\
+{\
+	extern os_error privateErr;\
+	extern void platReportError( os_error * e);\
+	privateErr.errnum = (bits)0;\
+	sprintf s;\
+	platReportError((os_error *)&privateErr);\
+};
+#else
+# define FPRINTF(X)
+#endif
+
+
+extern struct VirtualMachine * interpreterProxy;
+extern void sqStringFromFilename( int sqString, char*fileName, int sqSize);
 /*** Functions ***/
 int convertToSqueakTime(os_date_and_time fileTime);
 
@@ -71,7 +87,7 @@ int dir_Create(char *pathString, int pathStringLength) {
 
 int dir_Delete(char *pathString, int pathStringLength) {
 	/* Delete the existing directory with the given path. */
-	/* For now replicate the normal sqFileDeleteNameSize, since that appears to be adequate */
+	/* For now replicate the normal sqFileDeleteNameSize, since that appears to be adequate, except for returning true if all is well - essential ! */
 	char cFileName[MAXDIRNAMELENGTH];
 	int err;
 
@@ -81,11 +97,11 @@ int dir_Delete(char *pathString, int pathStringLength) {
 
 	/* copy the file name into a null-terminated C string */
 	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
-
-	err = remove(cFileName);
-	if (err) {
+	if (remove(cFileName) != 0) {
+		FPRINTF((privateErr.errmess, "dir delete error %d\n", err));
 		return interpreterProxy->success(false);
 	}
+	return true;
 }
 
 int dir_Delimitor(void) {

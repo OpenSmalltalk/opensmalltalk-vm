@@ -3,7 +3,7 @@
 	Find the function address of a named function by searching the C code segment. All sorts
 	of possible failures here - compiling with function names removed is just the most egregious
 */
-#include "os.h"
+#include "oslib/os.h"
 #include "sq.h"
 #include <kernel.h>
 #include "rink.h"
