@@ -1,6 +1,6 @@
 # Local autoconf macros for configuring Unix Squeak		-*- sh -*-
 # 
-#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -33,12 +33,12 @@
 #   changes these copyright conditions.  Read the file `COPYING' in the
 #   directory `platforms/unix/doc' before proceeding with any such use.
 # 
-# Author: Ian.Piumarta@INRIA.Fr
+# Author: Ian.Piumarta@squeakland.org
 # 
-# Last edited: 2004-04-02 15:00:23 by piumarta on emilia.local
+# Last edited: 2005-03-19 12:21:17 by piumarta on emilia.local
 
 AC_DEFUN([AC_CHECK_VMM_DIR],[
-  AC_MSG_CHECKING([sanity of VMMaker src directory])
+  AC_MSG_CHECKING([sanity of generated src directory])
   vmmcheck () {
     if test ! ${2} ${3}; then
       AC_MSG_RESULT(bad)
@@ -116,7 +116,7 @@ test "$GCC" = yes && WFLAGS="-Wall -Wno-unknown-pragmas"
 AC_SUBST(WFLAGS)])
 
 AC_DEFUN([AC_GNU_OPT],
-[AC_MSG_CHECKING([for $host_cpu optimization flags])
+[AC_MSG_CHECKING([for $host_cpu optimisation flags])
 ac_optflags="no"
 if test "$GCC" = yes; then
   case $host_cpu in
@@ -127,6 +127,8 @@ if test "$GCC" = yes; then
     ac_optflags="-O3 -mcpu=750 -funroll-loops"
     ;;
   esac
+else
+  ac_optflags="-O"
 fi
 if test "$ac_optflags" = "no"; then
   AC_MSG_RESULT([(none)])
