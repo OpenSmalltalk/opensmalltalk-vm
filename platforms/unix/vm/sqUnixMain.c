@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-22 17:09:26 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-22 22:33:42 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -77,8 +77,9 @@
        char  *documentName= 0;			/* name if launced from document */
        char   shortImageName[MAXPATHLEN+1];	/* image name */
        char   imageName[MAXPATHLEN+1];		/* full path to image */
-       char   vmPath[MAXPATHLEN+1];		/* full path to image directory */
 static char   vmName[MAXPATHLEN+1];		/* full path to vm */
+       char   vmPath[MAXPATHLEN+1];		/* full path to image directory */
+       char  *vmLibDir= VM_LIBDIR;		/* full path to lib directory */
 
        int    argCnt=		0;	/* global copies for access from plugins */
        char **argVec=		0;
@@ -241,6 +242,19 @@ static void pathCopyAbs(char *target, const char *src, size_t targetSize)
 
 static void recordFullPathForVmName(const char *localVmName)
 {
+#if defined(__linux__)
+  char	 path[MAXPATHLEN+1];
+  char	 name[MAXPATHLEN+1];
+  int    len;
+
+  sprintf(path, "/proc/%d/exe", getpid());
+  if ((len= readlink(path, name, sizeof(name))) > 0)
+    {
+      name[len]= '\0';
+      localVmName= name;
+    }
+#endif
+
   /* get canonical path to vm */
   if (realpath(localVmName, vmPath) == 0)
     pathCopyAbs(vmPath, localVmName, sizeof(vmPath));
@@ -252,7 +266,7 @@ static void recordFullPathForVmName(const char *localVmName)
       if ('/' == vmPath[i])
 	{
 	  vmPath[i+1]= '\0';
-	  return;
+	  break;
 	}
   }
 }
@@ -738,7 +752,6 @@ static void checkModuleVersion(struct SqModule *module, int required, int actual
 
 static void loadImplicit(struct SqModule **addr, char *evar, char *type, char *name)
 {
-  extern char *vmLibDir;
   if ((!*addr) && getenv(evar) && !(*addr= queryModule(type, name)))
     {
       fprintf(stderr, "could not find %s driver vm-%s-%s; either:\n", type, type, name);
@@ -1017,9 +1030,8 @@ static void usage(void)
 
 char *getVersionInfo(int verbose)
 {
-  extern int vm_serial;
+  extern int   vm_serial;
   extern char *vm_date, *cc_version, *ux_version;
-  extern char *vmLibDir;
   char *info= (char *)malloc(4096);
   info[0]= '\0';
 
