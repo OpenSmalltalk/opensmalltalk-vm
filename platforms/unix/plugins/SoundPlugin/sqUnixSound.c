@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-02-09 18:15:00 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-14 01:34:52 by piumarta on emilia.inria.fr
  *
  *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
@@ -64,6 +64,7 @@ static struct SqSound *snd= 0;
 int soundInit(void)
 {
   if (!soundModule
+#    if 0
       && !(soundModule= getenv("SQUEAK_SOUND_OSS")    ? loadModule("sound", "OSS")    : 0)
       && !(soundModule= getenv("SQUEAK_SOUND_NAS")    ? loadModule("sound", "NAS")    : 0)
       && !(soundModule= getenv("SQUEAK_SOUND_SUN")    ? loadModule("sound", "Sun")    : 0)
@@ -72,12 +73,14 @@ int soundInit(void)
       && !(soundModule= loadModule("sound", "OSS"))
       && !(soundModule= loadModule("sound", "Sun"))
       && !(soundModule= loadModule("sound", "MacOSX"))
-      && !(soundModule= loadModule("sound", "null")))
+      && !(soundModule= loadModule("sound", "null"))
+#    endif
+      )
     {
       fprintf(stderr, "could not find any sound module\n");
       abort();
     }
-  printf("soundModule   %p %s\n", soundModule, soundModule->name);
+  //printf("soundModule   %p %s\n", soundModule, soundModule->name);
   snd= (struct SqSound *)soundModule->makeInterface();
   if (SqSoundVersion != snd->version)
     {
