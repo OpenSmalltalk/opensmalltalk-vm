@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.8 2002/05/26 18:52:10 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.9 2003/03/08 21:07:51 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.8 2002/05/26 18:52:10 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.9 2003/03/08 21:07:51 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -124,6 +124,7 @@ RECT stWindowRect;			/* Client rectangle in screen coordinates */
 #ifndef NO_PRINTER
 /* printer settings */
 PRINTDLG printValues;
+static int printerSetup = FALSE;
 #endif
 
 #ifndef NO_WHEEL_MOUSE
@@ -492,6 +493,7 @@ void ReleaseTimer()
 void SetDefaultPrinter()
 {
 #ifndef NO_PRINTER
+  if(!printerSetup) SetupPrinter();
   printValues.Flags = PD_PRINTSETUP;
   PrintDlg(&printValues);
 #endif /* NO_PRINTER */
@@ -512,6 +514,7 @@ void SetupPrinter()
   /* fetch default DEVMODE/DEVNAMES */
   printValues.Flags = PD_RETURNDEFAULT;
   PrintDlg(&printValues);
+  printerSetup = 1;
 #endif
 }
 
@@ -788,7 +791,9 @@ void SetupWindows()
 #if !defined(_WIN32_WCE)  /* Unused under WinCE */
 
 void SetWindowSize(void) 
-{ RECT r;
+{ 
+  RECT r;
+  RECT workArea;
   int width, height, maxWidth, maxHeight, actualWidth, actualHeight;
   int deltaWidth, deltaHeight;
 
@@ -810,9 +815,11 @@ void SetWindowSize(void)
   width  = ( width > 64) ?   width : 64;
   height = (height > 64) ?  height : 64;
 
-  /* maximum size is screen size */
-  maxWidth  = GetSystemMetrics(SM_CXFULLSCREEN);
-  maxHeight = GetSystemMetrics(SM_CYFULLSCREEN);
+  /* maximum size is working area */
+  SystemParametersInfo( SPI_GETWORKAREA, 0, &workArea, 0);
+  maxWidth  = workArea.right - workArea.left;
+  maxHeight = workArea.bottom - workArea.top;
+
   width  = ( width <= maxWidth)  ?  width : maxWidth;
   height = (height <= maxHeight) ? height : maxHeight;
 
@@ -833,11 +840,8 @@ void SetWindowSize(void)
   deltaHeight = height - actualHeight;
   width += deltaWidth;
   height += deltaHeight;
-  width  = (width <= (maxWidth + deltaWidth))  ?  
-    width : (maxWidth + deltaWidth);
-  height = (height <= (maxHeight + deltaHeight)) ? 
-    height : (maxHeight + deltaHeight);
-
+  width  = (width <= maxWidth ) ? width : maxWidth;
+  height = (height <= maxHeight ) ? height : maxHeight;
   SetWindowPos(stWindow, 
   		NULL, 
   		(maxWidth-width) / 2, 
@@ -1806,6 +1810,7 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, dou
   int scWidth;
   int scHeight;
 
+  if(!printerSetup) SetupPrinter();
   devNames = GlobalLock(printValues.hDevNames);
   if(!devNames)
     {
