@@ -2,17 +2,17 @@
 	Interface to the Internet Configuration toolkit
 	John M McIntosh of Corporate Smalltalk Consulting Ltd
 	johnmci@smalltalkconsulting.com 
-	http://www.smalltalkconsulting.com */
+	http://www.smalltalkconsulting.com 
+        
+    Nov 24th 2001 JMM fixed broken tempSpec code, was causing memory exception under os-x*/
 
 
 #include <InternetConfig.h>
 #include "sq.h"
 #include "InternetConfigPlugin.h"
+#include "sqMacFileLogic.h"
 
 static OSType GetApplicationSignature();
-pascal	OSErr	FSpGetFullPath(const FSSpec *spec,
-							   short *fullPathLength,
-							   Handle *fullPath);
 void convertPassword(unsigned char *buffer);
 							   
 static ICInstance gICInstance;
@@ -48,7 +48,7 @@ int sqInternetConfigurationInit(void) {
 
 int sqInternetConfigurationShutdown(void) {
     if (!gInitializedOk) 
-        return;
+        return 1;
     ICStop(gICInstance);
     gInitializedOk = false;
 }
@@ -59,7 +59,7 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
     OSStatus error;
     Str255   key;
     char     convertedKey[256],buffer[1025];
-    ICFileSpec tempSpec;
+    ICFileSpec *tempICFileSpec;
     
     if (!gInitializedOk) 
         return 0;
@@ -71,22 +71,12 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
     CopyCStringToPascal(convertedKey,key);
     
     if (strcmp(convertedKey,"DownLoadPath") == 0) {
-        size = 1024;
-        error  = ICGetPref(gICInstance, "\pDownloadFolder", &junkAttr, &tempSpec, &size);
+        size = sizeof(ICFileSpec);
+        error  = ICGetPref(gICInstance, "\pDownloadFolder", nil, &buffer, &size);
         if (error == noErr || error == icTruncatedErr) {
-        	short	fullPathLength;
-        	Handle	fullPathHandle;
-
-        	if (FSpGetFullPath(&tempSpec.fss,
-							   &fullPathLength,
-							   &fullPathHandle)) {
-         		aString[0] = 0;
-        		return 0;
-        	}
-
-    	    strncpy((char *) aString, (char *) *fullPathHandle, fullPathLength);
-    	    DisposeHandle(fullPathHandle);
-	        size = fullPathLength;
+            tempICFileSpec = (ICFileSpec *) &buffer;
+            PathToFile(aString, 1024, &tempICFileSpec->fss);
+            size = strlen(aString);
        } else 
             return 0;
    } else { 
