@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.7 2003/11/02 19:52:39 andreasraab Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.8 2003/11/21 17:19:49 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,7 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.7 2003/11/02 19:52:39 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.8 2003/11/21 17:19:49 andreasraab Exp $";
 #endif
 
 #if 0
@@ -522,7 +522,7 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 	
 	UNLOCKSOCKET(pss->mutex);
 	/* Socket state changed so signal */
-	signalSemaphoreWithIndex(pss->semaphoreIndex);
+	SIGNAL(pss->semaphoreIndex);
       } else {
 	if(n != SOCKET_ERROR) {
 	  /* select() timed out */
@@ -602,7 +602,7 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 	}
 	UNLOCKSOCKET(pss->mutex);
 	/* Socket state changed so signal */
-	signalSemaphoreWithIndex(pss->semaphoreIndex);
+	SIGNAL(pss->semaphoreIndex);
       } else {
 	if(n != SOCKET_ERROR) {
 	  /* select() timed out */
@@ -1805,7 +1805,7 @@ void sqResolverStartNameLookup(char *hostName, int nameSize)
      (strlen(lastName) == len) && 
      (strncmp(hostName, lastName, len) == 0)) {
 	  /* same as last, no point in looking it up */
-	  signalSemaphoreWithIndex(resolverSemaphoreIndex);
+	  SIGNAL(resolverSemaphoreIndex);
 	  return;
   }
   MoveMemory(lastName,hostName, len);
@@ -1864,7 +1864,7 @@ DWORD WINAPI sqGetHostByAddr(int netAddress)
   else
     lastError = WSAGetLastError();
   asyncLookupHandle = 0;
-  synchronizedSignalSemaphoreWithIndex(resolverSemaphoreIndex);
+  SIGNAL(resolverSemaphoreIndex);
   ExitThread(0);
   return 1;
 }
@@ -1886,7 +1886,7 @@ DWORD WINAPI sqGetHostByName(char *hostName)
   else
     lastError = WSAGetLastError();
   asyncLookupHandle = 0;
-  synchronizedSignalSemaphoreWithIndex(resolverSemaphoreIndex);
+  SIGNAL(resolverSemaphoreIndex);
   ExitThread(0);
   return 1;
 }
