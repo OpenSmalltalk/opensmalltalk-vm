@@ -79,6 +79,8 @@
  inline int min(int i, int j) { return (i < j) ? i : j; }
  inline int max(int i, int j) { return (i > j) ? i : j; }
 
+char empty[256] = { 0 };
+
 #define DEBUG	0
 #define TESTING	0
 
@@ -408,7 +410,6 @@ typedef struct Stream
   Buffer_getOutputPointers(b, &p1, &n1, &p2, &n2);
   if (!n1)
     {
-       char empty[256];
       *ioDataSize= min(256, *ioDataSize);
       *outData= (void *)empty;
 #    if (DEBUG)
