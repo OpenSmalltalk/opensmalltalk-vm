@@ -1369,7 +1369,7 @@ static SInt32 unmapStatus(EPInfo *s) {
 static Boolean SocketValid(SocketPtr s) {
 	if ((s != NULL) &&
 		(s->privateSocketPtr != NULL) &&
-		(s->sessionID == gthisNetSession) && 
+		(s->sessionID == gthisNetSession) && (gthisNetSession != 0) && 
 		(s->socketType == TCPSocketType || s->socketType == UDPSocketType) &&
 		(!OTAtomicTestBit(&(((EPInfo *)s->privateSocketPtr)->stateFlags3), kSleepKilledMe)) )
 		    return true;
