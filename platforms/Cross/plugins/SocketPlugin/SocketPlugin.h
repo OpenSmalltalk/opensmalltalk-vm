@@ -47,6 +47,7 @@ int		sqSocketSendDone(SocketPtr s);
 	Note: If accept() calls are not supported simply make the calls fail
 	and the old connection style will be used */
 void	sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize);
+void	sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, int port, int backlogSize, int addr);
 void	sqSocketAcceptFromRecvBytesSendBytesSemaID(
 			SocketPtr s, SocketPtr serverSocket,
 			int recvBufSize, int sendBufSize, int semaIndex);
