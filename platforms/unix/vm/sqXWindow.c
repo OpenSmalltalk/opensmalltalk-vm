@@ -534,7 +534,6 @@ int openXDisplay()
       }
     else /* if in browser we will be reparented and mapped by plugin */
       {
-	DPRINT("VM: send window\n");
 	/* tell browser our window */
 	write(browserPipes[1], &stWindow, 4);
 	/* listen for commands */
@@ -4143,7 +4142,6 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
 	      sscanf(saveArg(), "%li", &browserPipes[0]);
 	      sscanf(saveArg(), "%li", &browserPipes[1]);
 	      /* receive browserWindow */
-	      DPRINT("VM: reading browserWindow\n");
 	      read(browserPipes[0], &browserWindow, 4);
 	    }
 #        endif
