@@ -6,10 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacExternalPrims.c,v 1.4 2003/05/19 07:19:49 johnmci Exp $
+*   RCSID:   $Id: sqMacExternalPrims.c,v 1.5 2003/10/03 18:59:08 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+*  Oct 2nd, 2003, JMM bug in browser file name creation in os-x, rework how path is resolved
 *****************************************************************************/
 
 #include "sq.h"
@@ -18,6 +19,7 @@
 
 extern char vmPath[];
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath);
+void createBrowserPluginPath(char *pluginDirPath);
 
 /*** Mac Specific External Primitive Support ***/
 
@@ -37,7 +39,7 @@ int ioLoadModule(char *pluginName) {
 	strcpy(pluginDirPath, vmPath);
 	
 #ifdef BROWSERPLUGIN
-	strcat(pluginDirPath, ":Plugins");
+        createBrowserPluginPath(pluginDirPath);
 #else
 	strcat(pluginDirPath, "Plugins");
 #endif 	
@@ -308,3 +310,21 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 	return libHandle;
 }
 #endif
+
+void createBrowserPluginPath(char *pluginDirPath) {
+    int lengthOfPath = strlen(pluginDirPath);
+    int i;
+    
+    lengthOfPath--;
+    pluginDirPath[lengthOfPath] = 0x00;
+    
+    for (i=lengthOfPath;i>=0;i--) {
+        if (pluginDirPath[i] == ':') {
+            pluginDirPath[i] = 0x00;
+            strcat(pluginDirPath, ":Plugins");
+            return;
+        }
+    }
+    /* shouldn't ever get here, path will always contain one : */
+}
+
