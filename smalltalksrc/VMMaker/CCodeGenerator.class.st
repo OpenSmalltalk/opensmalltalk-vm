@@ -588,9 +588,6 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 #define byteAtput(i, val) (*((unsigned char *) (i)) = val)
 #define longAt(i) (*((int *) (i)))
 #define longAtput(i, val) (*((int *) (i)) = val)
-/* typedef for primitive function pointes */
-typedef  int (*fptr) (void);
-#define dispatchFunctionPointerOnin(index, table)  (((int (*) (void)) ((table)[(index)])) ())
 
 int printCallStack(void);
 void error(char *s);
