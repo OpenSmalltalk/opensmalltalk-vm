@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.15 2002/03/04 00:31:47 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.16 2002/03/04 03:27:37 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -638,6 +638,11 @@ GDHandle getDominateDevice( WindowPtr theWindow,Rect *windRect) {
 			GetRegionBounds(windowRegion,windRect);
 #else
 			*windRect = (**((WindowPeek) theWindow)->strucRgn).rgnBBox;
+			if (windRect->left == 0 && windRect->top == 0 && windRect->bottom == 0 && windRect->right == 0) {
+				windRect->right = (unsigned) savedWindowSize >> 16;
+				windRect->bottom = savedWindowSize & 0xFFFF;
+
+			}
 #endif
 			dominantGDevice = nil;
     	    if (! Gestalt(gestaltQuickdrawFeatures, &quickDrawAttributes) && 
