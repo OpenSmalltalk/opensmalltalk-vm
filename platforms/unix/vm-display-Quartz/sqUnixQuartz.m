@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-03-05 04:49:17 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-15 12:40:11 by piumarta on emilia.inria.fr
  */
 
 
@@ -644,11 +644,19 @@ static int display_ioScreenDepth(void)
   return headless ? 1 : dpyDepth;
 }
 
+static int displayChanged= 0;
+
 static int display_ioScreenSize(void)
 {
   int size;
   if (headless)
     return ((16 << 16) | 16);
+  if (displayChanged)
+    {
+      displayChanged= 0;
+      [win setFrame: [win frame] display: YES];
+      return 0;
+    }
   lock(display);
   size= getSavedWindowSize();
   unlock(display);
@@ -823,6 +831,7 @@ static int display_ioShowDisplay(int dispBitsIndex, int width, int height, int d
   if (headless
       || (width != pixWidth) || (width < 1) || (height != pixHeight) || (height < 1) || (depth != pixDepth)
       || ((!pixBase) && !updatePix())
+      || (displayChanged)
       || (![view lockFocusIfCanDraw]))
     {
       printf("ioShowDisplay squashed\n");
@@ -1548,6 +1557,14 @@ static char *documentName= 0;
 }
 
 
+#if 0 // only for running with increased stack size
+static void *runInterpreter(void *arg)
+{
+  [(id)arg interpret: nil];
+}
+#endif
+
+
 -(void) applicationDidFinishLaunching: (NSNotification *)note
 {
   int fds[2];
@@ -1629,10 +1646,27 @@ static char *documentName= 0;
   printf("fullScreenFlag %d\n", getFullScreenFlag());
   setUpWindow(fullscreen= getFullScreenFlag());
 
+#if 1
   [NSThread
     detachNewThreadSelector: @selector(interpret:)
     toTarget:		     self
     withObject:		     nil];
+#else
+  // ensure cocoa is initialised for threads
+  {
+    id obj= [NSObject new];
+    [NSThread detachNewThreadSelector: @selector(self) toTarget: obj withObject: nil];
+    [obj release];
+  }
+  // run interpreter with stack size > default
+  {
+    pthread_t	   thread;
+    pthread_attr_t attr;
+    pthread_attr_init(&attr);
+    pthread_attr_setstacksize(&attr, 8192*1024);
+    pthread_create(&thread, &attr, runInterpreter, (void *)self);
+  }
+#endif
 }
 
 
@@ -1657,7 +1691,8 @@ static char *documentName= 0;
   updatePix();
   //  unlock(display);
   //setUpMenus();
-  fullDisplayUpdate();
+  displayChanged= 1;
+  //fullDisplayUpdate();
 }
 
 
