@@ -74,13 +74,13 @@ Class {
 	],
 	#classVars : [
 		'SemaphoresToSignalSize',
-		'StreamIndexIndex',
+		'StreamArrayIndex',
 		'AtCacheMask',
 		'MethodIndex',
 		'MessageArgumentsIndex',
 		'MethodArrayIndex',
 		'DirEntryFound',
-		'CompilerHooksSize',
+		'LastLinkIndex',
 		'MethodCachePrim',
 		'CrossedX',
 		'ExcessSignalsIndex',
@@ -102,8 +102,8 @@ Class {
 		'InitialIPIndex',
 		'MethodCacheNative',
 		'HeaderIndex',
-		'BytecodeTable',
 		'InstructionPointerIndex',
+		'BytecodeTable',
 		'ProcessListsIndex',
 		'SuspendedContextIndex',
 		'MaxExternalPrimitiveTableSize',
@@ -141,9 +141,9 @@ Class {
 		'PrimitiveTable',
 		'SuperclassIndex',
 		'AtCacheEntries',
+		'StreamIndexIndex',
 		'StackPointerIndex',
-		'StreamArrayIndex',
-		'LastLinkIndex'
+		'CompilerHooksSize'
 	],
 	#category : #'VMMaker-Interpreter'
 }
@@ -156,30 +156,35 @@ Interpreter class >> bytecodeTable [
 
 { #category : #translation }
 Interpreter class >> declareCVarsIn: aCCodeGenerator [
+
 	aCCodeGenerator 
 		var: #interpreterProxy 
 		type: #'struct VirtualMachine*'.
 	aCCodeGenerator
+		var: #primitiveTable
+		declareC: 'void *primitiveTable[', (MaxPrimitiveIndex +2) printString, '] = ',	self primitiveTableString.
+	aCCodeGenerator
+		var: #primitiveFunctionPointer
+		declareC: 'void *primitiveFunctionPointer'				.		"xxxx FIX THIS STUPIDITY xxxx - ikp. What he means is use a better type than void *, apparently - tpr"
+	aCCodeGenerator
 		var: #methodCache
-		declareC: 'int methodCache[', (MethodCacheSize + 1) printString, ']'.
+		declareC: 'long methodCache[', (MethodCacheSize + 1) printString, ']'.
 	aCCodeGenerator
 		var: #atCache
-		declareC: 'int atCache[', (AtCacheTotalSize + 1) printString, ']'.
+		declareC: 'sqInt atCache[', (AtCacheTotalSize + 1) printString, ']'.
 	aCCodeGenerator var: #localIP type: #'char*'.
 	aCCodeGenerator var: #localSP type: #'char*'.
+	aCCodeGenerator var: #showSurfaceFn type: #'void*'.
 	aCCodeGenerator var: 'semaphoresToSignalA'
-		declareC: 'int semaphoresToSignalA[', (SemaphoresToSignalSize + 1) printString, ']'.
+		declareC: 'sqInt semaphoresToSignalA[', (SemaphoresToSignalSize + 1) printString, ']'.
 	aCCodeGenerator var: 'semaphoresToSignalB'
-		declareC: 'int semaphoresToSignalB[', (SemaphoresToSignalSize + 1) printString, ']'.
+		declareC: 'sqInt semaphoresToSignalB[', (SemaphoresToSignalSize + 1) printString, ']'.
 	aCCodeGenerator
 		var: #compilerHooks
-		declareC: 'int (*compilerHooks[', (CompilerHooksSize + 1) printString, '])()'.
+		declareC: 'sqInt (*compilerHooks[', (CompilerHooksSize + 1) printString, '])()'.
 	aCCodeGenerator
 		var: #interpreterVersion
 		declareC: 'const char *interpreterVersion = "', Smalltalk datedVersion, ' [', Smalltalk lastUpdateString,']"'.
-	aCCodeGenerator
-		var: #primitiveTable
-		declareC: 'fptr const primitiveTable[] = ', self primitiveTableString.
 	aCCodeGenerator
 		var: #obsoleteIndexedPrimitiveTable
 		declareC: 'char* obsoleteIndexedPrimitiveTable[][3] = ', self obsoleteIndexedPrimitiveTableString.
@@ -188,7 +193,7 @@ Interpreter class >> declareCVarsIn: aCCodeGenerator [
 		declareC: 'const char* obsoleteNamedPrimitiveTable[][3] = ', self obsoleteNamedPrimitiveTableString.
 	aCCodeGenerator
 		var: #externalPrimitiveTable
-		declareC: 'int externalPrimitiveTable[', (MaxExternalPrimitiveTableSize + 1) printString, ']'.
+		declareC: 'void *externalPrimitiveTable[', (MaxExternalPrimitiveTableSize + 1) printString, ']'.
 
 ]
 
@@ -316,6 +321,7 @@ Interpreter class >> initializeBytecodeTable [
 
 { #category : #initialization }
 Interpreter class >> initializeCaches [
+
 	| atCacheEntrySize |
 	MethodCacheEntries _ 512. 
 	MethodCacheSelector _ 1.
@@ -329,7 +335,7 @@ Interpreter class >> initializeCaches [
 	MethodCacheSize _ MethodCacheEntries * MethodCacheEntrySize.
 	CacheProbeMax _ 3.
 
-	AtCacheEntries _ 8.  "Must be power of two"
+	AtCacheEntries _ 8.  "Must be a power of two"
 	AtCacheOop _ 1.
 	AtCacheSize _ 2.
 	AtCacheFmt _ 3.
@@ -395,7 +401,8 @@ Interpreter class >> initializeContextIndices [
 	StackPointerIndex _ 2.
 	MethodIndex _ 3.
 	ReceiverIndex _ 5.
-	TempFrameStart _ 6.
+	TempFrameStart _ 6.  "Note this is in two places!"
+
 	"Class BlockContext"
 	CallerIndex _ 0.
 	BlockArgumentCountIndex _ 3.
@@ -1069,14 +1076,19 @@ Interpreter class >> primitiveTable [
 Interpreter class >> primitiveTableString [
 	"Interpreter initializePrimitiveTable primitiveTableString"
 	| table |
-	table _ self primitiveTable.
-	^ String streamContents: [:s | 
-			s nextPutAll: '{';
-				 cr.
-			table do: [:primSpec | s nextPutAll: primSpec;
-						 nextPut: $,;
-						 cr].
-			s cr; nextPutAll: '}']
+	table := self primitiveTable.
+	^ String
+		streamContents: [:s | 
+			s nextPut: ${.
+			table
+				withIndexDo: [:primSpec :index | s cr; tab;
+					nextPutAll: '/* ';
+					nextPutAll: (index - 1) printString;
+					nextPutAll: '*/ ';
+					nextPutAll: '(void *)';
+					nextPutAll: primSpec;
+					nextPut: $,].
+			s cr; nextPutAll: ' 0 }']
 ]
 
 { #category : #translation }
@@ -1122,26 +1134,26 @@ Interpreter >> activateNewMethod [
 	methodHeader _ self headerOf: newMethod.
 	newContext _ self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit).
 
-	initialIP _ ((LiteralStart + (self literalCountOfHeader: methodHeader)) * 4) + 1.
+	initialIP _ ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1.
 	tempCount _ (methodHeader >> 19) bitAnd: 16r3F.
 
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
 
 	where _  newContext  + BaseHeaderSize.
-	self longAt: where + (SenderIndex << 2) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << 2) put: (self integerObjectOf: initialIP).
-	self longAt: where + (StackPointerIndex << 2) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << 2) put: newMethod.
+	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
+	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
 
 	"Copy the reciever and arguments..."
 	0 to: argumentCount do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << 2) put: (self stackValue: argumentCount-i)].
+		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self stackValue: argumentCount-i)].
 
 	"clear remaining temps to nil in case it has been recycled"
 	nilOop _ nilObj.
 	argumentCount+1+ReceiverIndex to: tempCount+ReceiverIndex do:
-		[:i | self longAt: where + (i << 2) put: nilOop].
+		[:i | self longAt: where + (i << ShiftForWord) put: nilOop].
 
 	self pop: argumentCount + 1.
 	reclaimableContextCount _ reclaimableContextCount + 1.
@@ -1189,7 +1201,7 @@ Interpreter >> addNewMethodToCache [
 			methodCache at: probe + MethodCacheMethod put: newMethod.
 			methodCache at: probe + MethodCachePrim put: primitiveIndex.
 			methodCache at: probe + MethodCacheNative put: newNativeMethod.
-			methodCache at: probe + MethodCachePrimFunction put: primitiveFunctionPointer.
+			methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: 'long').
 			^ nil]].
 
 	"OK, we failed to find an entry -- install at the first slot..."
@@ -1199,7 +1211,7 @@ Interpreter >> addNewMethodToCache [
 	methodCache at: probe + MethodCacheMethod put: newMethod.
 	methodCache at: probe + MethodCachePrim put: primitiveIndex.
 	methodCache at: probe + MethodCacheNative put: newNativeMethod.
-	methodCache at: probe + MethodCachePrimFunction put: primitiveFunctionPointer.
+	methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: 'long').
 
 	"...and zap the following entries"
 	1 to: CacheProbeMax-1 do:
@@ -1208,12 +1220,15 @@ Interpreter >> addNewMethodToCache [
 
 ]
 
-{ #category : #'plugin primitive support' }
+{ #category : #'plugin support' }
 Interpreter >> addToExternalPrimitiveTable: functionAddress [
 	"Add the given function address to the external primitive table and return the index where it's stored. This function doesn't need to be fast since it is only called when an external primitive has been looked up (which takes quite a bit of time itself). So there's nothing specifically complicated here.
 	Note: Return index will be one-based (ST convention)"
-	0 to: MaxExternalPrimitiveTableSize-1 do:[:i|
-		(externalPrimitiveTable at: i) = 0 ifTrue:[
+
+	self var: #functionAddress declareC: 'void *functionAddress'.
+
+	0 to: MaxExternalPrimitiveTableSize-1 do: [ :i |
+		(externalPrimitiveTable at: i) = 0 ifTrue: [
 			externalPrimitiveTable at: i put: functionAddress.
 			^i+1]].
 	"if no space left, return zero so it'll looked up again"
@@ -1258,12 +1273,13 @@ Interpreter >> argumentCountOfBlock: blockPointer [
 
 { #category : #utilities }
 Interpreter >> arrayValueOf: arrayOop [
-	"Return the address of first indexable field of the word or byte arry-like object arrayOop. Fail if arrayOop is not an indexable bytes or words object."
+	"Return the address of first indexable field of resulting array object, or fail if the instance variable does not contain an indexable bytes or words object."
 	"Note: May be called by translated primitive code."
 
 	self returnTypeC: 'void *'.
-	(self isWordsOrBytes: arrayOop)
-		ifTrue: [^ self cCode: '(void *) (arrayOop + 4)'].
+	((self isIntegerObject: arrayOop) not and:
+	 [self isWordsOrBytes: arrayOop])
+		ifTrue: [^ self cCode: '(void *)pointerForOop(arrayOop + BaseHeaderSize)'].
 	self primitiveFail.
 
 ]
@@ -1306,7 +1322,7 @@ Interpreter >> balancedStack: delta afterPrimitive: primIdx withArgs: nArgs [
 	"81-88 are control primitives after which the stack may look unbalanced"
 	successFlag ifTrue:[
 		"Successful prim, stack must have exactly nArgs arguments popped off"
-		^(stackPointer - activeContext + (nArgs * 4)) = delta
+		^(stackPointer - activeContext + (nArgs * BytesPerWord)) = delta
 	].
 	"Failed prim must leave stack intact"
 	^(stackPointer - activeContext) = delta
@@ -1367,6 +1383,7 @@ Interpreter >> byteLengthOf: oop [
 { #category : #'object format' }
 Interpreter >> byteSizeOf: oop [
 	| slots |
+self flag: #Dan.
 	(self isIntegerObject: oop) ifTrue:[^0].
 	slots _ self slotSizeOf: oop.
 	(self isBytesNonInt: oop)
@@ -1399,20 +1416,34 @@ Interpreter >> byteSwapByteObjectsFrom: startOop to: stopAddr [
 							fmt >= 12
 								ifTrue: ["compiled method; start after methodHeader and literals"
 									methodHeader _ self longAt: oop + BaseHeaderSize.
-									wordAddr _ wordAddr + 4 + ((methodHeader >> 10 bitAnd: 255) * 4)].
-							self reverseBytesFrom: wordAddr to: oop + (self sizeBitsOf: oop)]].
+									wordAddr _ wordAddr + BytesPerWord + ((methodHeader >> 10 bitAnd: 255) * BytesPerWord)].
+							self reverseBytesFrom: wordAddr to: oop + (self sizeBitsOf: oop)].
+					(fmt = 6 and: [BytesPerWord = 8])
+						ifTrue: ["Object contains 32-bit half-words packed into 64-bit machine words."
+							wordAddr _ oop + BaseHeaderSize.
+							self reverseWordsFrom: wordAddr to: oop + (self sizeBitsOf: oop)]].
 			oop _ self objectAfter: oop]
 ]
 
 { #category : #'image save/restore' }
 Interpreter >> byteSwapped: w [
-	"Return the given integer with its bytes in the reverse order."
+	"Answer the given integer with its bytes in the reverse order."
 
-	^ ((w bitShift: -24) bitAnd: 16rFF) +
-	  ((w bitShift: -8) bitAnd: 16rFF00) +
-	  ((w bitShift: 8) bitAnd: 16rFF0000) +
-	  ((w bitShift: 24) bitAnd: 16rFF000000)
-
+	BytesPerWord = 4
+		ifTrue:
+			[^ ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
+			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
+			 + ((w bitShift: Byte1Shift         ) bitAnd: Byte2Mask)
+			 + ((w bitShift: Byte3Shift         ) bitAnd: Byte3Mask)]
+		ifFalse:
+			[^ ((w bitShift: Byte7ShiftNegated) bitAnd: Byte0Mask)
+			 + ((w bitShift: Byte5ShiftNegated) bitAnd: Byte1Mask)
+			 + ((w bitShift: Byte3ShiftNegated) bitAnd: Byte2Mask)
+			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte3Mask)
+			 + ((w bitShift: Byte1Shift         ) bitAnd: Byte4Mask)
+			 + ((w bitShift: Byte3Shift         ) bitAnd: Byte5Mask)
+			 + ((w bitShift: Byte5Shift         ) bitAnd: Byte6Mask)
+			 + ((w bitShift: Byte7Shift         ) bitAnd: Byte7Mask)]
 ]
 
 { #category : #'common selector sends' }
@@ -1913,7 +1944,9 @@ Interpreter >> bytecodePrimValueWithArg [
 
 { #category : #'plugin primitive support' }
 Interpreter >> callExternalPrimitive: functionID [
-"call the external plugin function identified. In the VM this is an address, see InterpreterSimulator for it's version. dispatc.... is a mcro in the VM C code"
+	"Call the external plugin function identified. In the VM this is an address, see 	InterpreterSimulator for it's version. dispatch... is a macro in the VM C code."
+
+	self var: #functionID type: 'void *'.
 	self dispatchFunctionPointer: functionID
 ]
 
@@ -2044,10 +2077,11 @@ Interpreter >> checkImageVersionFrom: f startingAt: imageOffset [
 	"hard failure; abort"
 	self print: 'This interpreter (vers. '.
 	self printNum: self imageFormatVersion.
-	self print: ' cannot read image file (vers. '.
+	self print: ') cannot read image file (vers. '.
 	self printNum: firstVersion.
+	self print: ').'.
 	self cr.
-	self print: 'Hit CR to quit'.
+	self print: 'Press CR to quit...'.
 	self getchar.
 	self ioExit.
 
@@ -2071,13 +2105,13 @@ Interpreter >> checkedIntegerValueOf: intOop [
 
 { #category : #'plugin primitive support' }
 Interpreter >> classNameOf: aClass Is: className [ 
-	"Check if aClass' name is className"
+	"Check if aClass's name is className"
 	| srcName name length |
 	self var: #className declareC: 'char *className'.
 	self var: #srcName declareC: 'char *srcName'.
 	(self lengthOf: aClass) <= 6 ifTrue: [^ false].
 
-	"Not a class but maybe behavior"
+	"Not a class but might be behavior"
 	name _ self fetchPointer: 6 ofObject: aClass.
 	(self isBytes: name) ifFalse: [^ false].
 	length _ self stSizeOf: name.
@@ -2236,15 +2270,15 @@ Interpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 	| stSize fmt fixedFields result |
 
 	stSize _ atCache at: atIx+AtCacheSize.
-	((self cCoerce: index to: 'unsigned ') >= 1
-		and: [(self cCoerce: index to: 'unsigned ') <= (self cCoerce: stSize to: 'unsigned ')])
+	((self cCoerce: index to: 'usqInt ') >= 1
+		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
 	ifTrue:
 		[fmt _ atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
 			[fixedFields _ atCache at: atIx+AtCacheFixedFields.
 			^ self fetchPointer: index + fixedFields - 1 ofObject: rcvr].
 		fmt < 8 ifTrue:  "Bitmap"
-			[result _ self fetchWord: index - 1 ofObject: rcvr.
+			[result _ self fetchLong32: index - 1 ofObject: rcvr.
 			result _ self positive32BitIntegerFor: result.
 			^ result].
 		fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
@@ -2263,8 +2297,8 @@ Interpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	self inline: true.
 
 	stSize _ atCache at: atIx+AtCacheSize.
-	((self cCoerce: index to: 'unsigned ') >= 1
-		and: [(self cCoerce: index to: 'unsigned ') <= (self cCoerce: stSize to: 'unsigned ')])
+	((self cCoerce: index to: 'usqInt ') >= 1
+		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
 	ifTrue:
 		[fmt _ atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
@@ -2272,7 +2306,7 @@ Interpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 			^ self storePointer: index + fixedFields - 1 ofObject: rcvr withValue: value].
 		fmt < 8 ifTrue:  "Bitmap"
 			[valToPut _ self positive32BitValueOf: value.
-			successFlag ifTrue: [self storeWord: index - 1 ofObject: rcvr withValue: valToPut].
+			successFlag ifTrue: [self storeLong32: index - 1 ofObject: rcvr withValue: valToPut].
 			^ nil].
 		fmt >= 16  "Note fmt >= 16 is an artificial flag for strings"
 			ifTrue: [valToPut _ self asciiOfCharacter: value.
@@ -2293,15 +2327,15 @@ Interpreter >> commonVariableInternal: rcvr at: index cacheIndex: atIx [
 	self inline: true.
 
 	stSize _ atCache at: atIx+AtCacheSize.
-	((self cCoerce: index to: 'unsigned ') >= 1
-		and: [(self cCoerce: index to: 'unsigned ') <= (self cCoerce: stSize to: 'unsigned ')])
+	((self cCoerce: index to: 'usqInt ') >= 1
+		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
 	ifTrue:
 		[fmt _ atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
 			[fixedFields _ atCache at: atIx+AtCacheFixedFields.
 			^ self fetchPointer: index + fixedFields - 1 ofObject: rcvr].
 		fmt < 8 ifTrue:  "Bitmap"
-			[result _ self fetchWord: index - 1 ofObject: rcvr.
+			[result _ self fetchLong32: index - 1 ofObject: rcvr.
 			self externalizeIPandSP.
 			result _ self positive32BitIntegerFor: result.
 			self internalizeIPandSP.
@@ -2451,30 +2485,34 @@ Interpreter >> context: thisCntx hasSender: aContext [
 	^false
 ]
 
-{ #category : #'I/O primitive support' }
+{ #category : #'bitblt support' }
 Interpreter >> copyBits [
 	"This entry point needs to be implemented for the interpreter proxy.
 	Since BitBlt is now a plugin we need to look up BitBltPlugin_copyBits
 	and call it. This entire mechanism should eventually go away and be
 	replaced with a dynamic lookup from BitBltPlugin itself but for backward
 	compatibility this stub is provided"
+
 	| fn |
+	self var: #fn declareC: 'void *fn'.
 	fn _ self ioLoadFunction: 'copyBits' From: 'BitBltPlugin'.
-	fn = 0 ifTrue:[^self primitiveFail].
-	^self cCode:' ((int (*) (void)) fn)()'
+	fn = 0 ifTrue: [^self primitiveFail].
+	^self cCode: '((sqInt (*)(void))fn)()'
 ]
 
-{ #category : #'I/O primitive support' }
+{ #category : #'bitblt support' }
 Interpreter >> copyBitsFrom: x0 to: x1 at: y [
 	"This entry point needs to be implemented for the interpreter proxy.
 	Since BitBlt is now a plugin we need to look up BitBltPlugin_copyBitsFrom:to:at:
 	and call it. This entire mechanism should eventually go away and be
 	replaced with a dynamic lookup from BitBltPlugin itself but for backward
 	compatibility this stub is provided"
+
 	| fn |
+	self var: #fn declareC: 'void *fn'.
 	fn _ self ioLoadFunction: 'copyBitsFromtoat' From: 'BitBltPlugin'.
-	fn = 0 ifTrue:[^self primitiveFail].
-	^self cCode:' ((int (*) (int, int, int)) fn)(x0, x1, y)'
+	fn = 0 ifTrue: [^self primitiveFail].
+	^self cCode: '((sqInt (*)(sqInt, sqInt, sqInt))fn)(x0, x1, y)'
 ]
 
 { #category : #'image segment in/out' }
@@ -2485,20 +2523,21 @@ Interpreter >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stopAt: st
 
 	"Copy the object..."
 	| extraSize bodySize hdrAddr |
+	self flag: #Dan.  "None of the imageSegment stuff has been updated for 64 bits"
 	successFlag ifFalse: [^ lastSeg].
 	extraSize _ self extraHeaderBytes: oop.
 	bodySize _ self sizeBitsOf: oop.
 	(lastSeg + extraSize + bodySize) >= stopAddr
 		ifTrue: [^ self primitiveFail].
-	self transfer: extraSize + bodySize // 4  "wordCount"
+	self transfer: extraSize + bodySize // BytesPerWord  "wordCount"
 		from: oop - extraSize
-		to: lastSeg+4.
+		to: lastSeg+BytesPerWord.
 
 	"Clear root and mark bits of all headers copied into the segment"
-	hdrAddr _ lastSeg+4 + extraSize.
+	hdrAddr _ lastSeg+BytesPerWord + extraSize.
 	self longAt: hdrAddr put: ((self longAt: hdrAddr) bitAnd: AllButRootBit - MarkBit).
 
-	self forward: oop to: (lastSeg+4 + extraSize - segmentWordArray)
+	self forward: oop to: (lastSeg+BytesPerWord + extraSize - segmentWordArray)
 		savingOopAt: oopPtr andHeaderAt: hdrPtr.
 
 	"Return new end of segment"
@@ -2531,13 +2570,13 @@ Interpreter >> createActualMessageTo: aClass [
 
 	compilerInitialized
 		ifTrue: [self compilerCreateActualMessage: message storingArgs: argumentArray]
-		ifFalse: [self transfer: argumentCount from: stackPointer - (argumentCount - 1 * 4) to: argumentArray + BaseHeaderSize.
+		ifFalse: [self transfer: argumentCount from: stackPointer - (argumentCount - 1 * BytesPerWord) to: argumentArray + BaseHeaderSize.
 			self pop: argumentCount thenPush: message].
 
 	argumentCount _ 1.
 	self storePointer: MessageSelectorIndex ofObject: message withValue: messageSelector.
 	self storePointer: MessageArgumentsIndex ofObject: message withValue: argumentArray.
-	(self lastPointerOf: message) >= (MessageLookupClassIndex * 4 + BaseHeaderSize)
+	(self lastPointerOf: message) >= (MessageLookupClassIndex * BytesPerWord + BaseHeaderSize)
 		ifTrue: ["Only store lookupClass if message has 3 fields (old images don't)"
 			self storePointer: MessageLookupClassIndex ofObject: message withValue: lookupClass]
 ]
@@ -2547,40 +2586,56 @@ Interpreter >> disableCompiler [
 	compilerInitialized _ false
 ]
 
-{ #category : #'I/O primitive support' }
-Interpreter >> displayBitsOf: aForm Left: l Top: t Right: r Bottom: b [ 
-	"Repaint the portion of the Smalltalk screen bounded by the 
-	affected rectangle. Used to synchronize the screen after a 
-	Bitblt to the Smalltalk Display object."
+{ #category : #'Ian fixes for missing stuff' }
+Interpreter >> dispatchFunctionPointer: aFunctionPointer [
+
+	self var: #aFunctionPointer type: 'void *'.
+	self cCode: '((void (*)(void))aFunctionPointer)()'
+			inSmalltalk: [self error: 'my simulator should simulate me']
+]
+
+{ #category : #'Ian fixes for missing stuff' }
+Interpreter >> dispatchFunctionPointerOn: primIdx in: primTable [
+	"Call the primitive at index primIdx in the primitiveTable."
+
+	self var: #primTable declareC: 'void *primTable[]'.
+	^self dispatchFunctionPointer: (primTable at: primIdx)
+]
+
+{ #category : #'I/O primitives' }
+Interpreter >> displayBitsOf: aForm Left: l Top: t Right: r Bottom: b [
+	"Repaint the portion of the Smalltalk screen bounded by the affected rectangle. Used to synchronize the screen after a Bitblt to the Smalltalk Display object."
+
 	| displayObj dispBits w h dispBitsIndex d left right top bottom surfaceHandle |
 	displayObj _ self splObj: TheDisplay.
 	aForm = displayObj ifFalse: [^ nil].
 	self success: ((self isPointers: displayObj) and: [(self lengthOf: displayObj) >= 4]).
-	successFlag
-		ifTrue: [dispBits _ self fetchPointer: 0 ofObject: displayObj.
-			w _ self fetchInteger: 1 ofObject: displayObj.
-			h _ self fetchInteger: 2 ofObject: displayObj.
-			d _ self fetchInteger: 3 ofObject: displayObj].
-	successFlag ifFalse:[^nil].
-	
-	l < 0 ifTrue: [left _ 0] ifFalse: [left _ l].
+	successFlag ifTrue: [
+		dispBits _ self fetchPointer: 0 ofObject: displayObj.
+		w _ self fetchInteger: 1 ofObject: displayObj.
+		h _ self fetchInteger: 2 ofObject: displayObj.
+		d _ self fetchInteger: 3 ofObject: displayObj.
+	].
+	l < 0 ifTrue:[left _ 0] ifFalse: [left _ l].
 	r > w ifTrue: [right _ w] ifFalse: [right _ r].
 	t < 0 ifTrue: [top _ 0] ifFalse: [top _ t].
 	b > h ifTrue: [bottom _ h] ifFalse: [bottom _ b].
-	(left <= right and: [top <= bottom]) ifFalse: [^ nil].
-
-	"if dispBits is a SmallInteger we are using an external platform bitmap as the display bits - call the SurfacePlugin to handle it"
-	(self isIntegerObject: dispBits)
-		ifTrue: [surfaceHandle _ self integerValueOf: dispBits.
-			showSurfaceFn = 0
-				ifTrue: [showSurfaceFn _ self ioLoadFunction: 'ioShowSurface' From: 'SurfacePlugin'.
-					showSurfaceFn = 0
-						ifTrue: [^ self success: false]].
-			self cCode: '((int (*) (int, int, int, int, int))showSurfaceFn)(surfaceHandle, left, top, right-left, bottom-top)']
-		ifFalse: [dispBitsIndex _ dispBits + BaseHeaderSize.
-			self
-				cCode: 'ioShowDisplay(dispBitsIndex, w, h, d, left, right, top, bottom)'
-				inSmalltalk: [self showDisplayBits: dispBitsIndex w: w h: h d: d left: left right: right top: top bottom: bottom]]
+	((left <= right) and: [top <= bottom]) ifFalse: [^nil].
+	successFlag ifTrue: [
+		(self isIntegerObject: dispBits) ifTrue: [
+			surfaceHandle _ self integerValueOf: dispBits.
+			showSurfaceFn = 0 ifTrue: [
+				showSurfaceFn _ self ioLoadFunction: 'ioShowSurface' From: 'SurfacePlugin'.
+				showSurfaceFn = 0 ifTrue: [^self success: false]].
+			self cCode:'((sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt))showSurfaceFn)(surfaceHandle, left, top, right-left, bottom-top)'.
+		] ifFalse: [
+			dispBitsIndex _ dispBits + BaseHeaderSize.  "index in memory byte array"
+			self cCode: 'ioShowDisplay(dispBitsIndex, w, h, d, left, right, top, bottom)'
+				inSmalltalk: [self showDisplayBits: dispBitsIndex 
+								w: w h: h d: d
+								left: left right: right top: top bottom: bottom]
+		].
+	].
 ]
 
 { #category : #'arithmetic primitive support' }
@@ -2723,77 +2778,84 @@ Interpreter >> executeNewMethodFromCache [
 
 { #category : #'stack bytecodes' }
 Interpreter >> experimentalBytecode [
-	"Note: This bytecode is not currently generated by the 
-	compiler. "
-	"This range of six bytecodes can replace the 
-	pushTemporaryVariable[0..5] bytecode at the beginning of a 
-	sequence of either the form: 
-		pushTemp 
-		pushTemp | pushConstantOne | pushLiteralConstant 
-		<= 
-		longJumpIfFalse 
-	or the form: 
-		pushTemp 
-		pushTemp | pushConstantOne | pushLiteralConstant 
-		+ 
-		popIntoTemp (optional) 
-	 
-	If two values pushed are not small integers, this bytecode 
-	acts like the pushTemp bytecode it replaces. However, if 
-	they are small integers, then the given arithmetic or 
-	comparison operation is performed. The result of that 
-	operation is either pushed onto the stack or, if one of the 
-	expected bytecodes follows it, then that bytecode is 
-	performed immediately. In such cases, the entire four 
-	instruction sequence is performed without doing any stack 
-	operations. "
+	"Note: This bytecode is not currently generated by the compiler."
+	"This range of six bytecodes can replace the pushTemporaryVariable[0..5] bytecode at the beginning of a sequence of either the form:
+		pushTemp
+		pushTemp | pushConstantOne | pushLiteralConstant
+		<=
+		longJumpIfFalse
+or the form:
+		pushTemp
+		pushTemp | pushConstantOne | pushLiteralConstant
+		+
+		popIntoTemp (optional)
+
+If two values pushed are not small integers, this bytecode acts like the pushTemp bytecode it replaces. However, if they are small integers, then the given arithmetic or comparison operation is performed. The result of that operation is either pushed onto the stack or, if one of the expected bytecodes follows it, then that bytecode is performed immediately. In such cases, the entire four instruction sequence is performed without doing any stack operations."
+
 	| arg1 byte2 byte3 byte4 arg1Val arg2Val result offset |
 	arg1 _ self temporary: currentBytecode - 138.
-	byte2 _ self byteAt: localIP + 1.
-	"fetch ahead"
-	byte3 _ self byteAt: localIP + 2.
-	"fetch ahead"
-	byte4 _ self byteAt: localIP + 3.
-	"fetch ahead"
+	byte2 _ self byteAtPointer: localIP + 1.  "fetch ahead"
+	byte3 _ self byteAtPointer: localIP + 2.  "fetch ahead"
+	byte4 _ self byteAtPointer: localIP + 3.  "fetch ahead"
+
 	"check first arg"
-	(self isIntegerObject: arg1)
-		ifTrue: [arg1Val _ self integerValueOf: arg1]
-		ifFalse: [self fetchNextBytecode.
-			^ self internalPush: arg1"abort; first arg is not an integer"].
+	(self isIntegerObject: arg1) ifTrue: [
+		arg1Val _ self integerValueOf: arg1.
+	] ifFalse: [
+		self fetchNextBytecode.
+		^ self internalPush: arg1.  "abort; first arg is not an integer"
+	].
+
 	"get and check second arg"
-	byte2 < 32
-		ifTrue: [arg2Val _ self temporary: (byte2 bitAnd: 15).
-			(self isIntegerObject: arg2Val)
-				ifTrue: [arg2Val _ self integerValueOf: arg2Val]
-				ifFalse: [self fetchNextBytecode.
-					^ self internalPush: arg1"abort; second arg is not an integer"]]
-		ifFalse: [byte2 > 64
-				ifTrue: [arg2Val _ 1]
-				ifFalse: [arg2Val _ self literal: (byte2 bitAnd: 31).
-					(self isIntegerObject: arg2Val)
-						ifTrue: [arg2Val _ self integerValueOf: arg2Val]
-						ifFalse: [self fetchNextBytecode.
-							^ self internalPush: arg1"abort; second arg is not an integer"]]].
-	byte3 < 178
-		ifTrue: ["do addition, possibly followed by a storeAndPopTemp"
-			result _ arg1Val + arg2Val.
-			(self isIntegerValue: result)
-				ifTrue: [(byte4 > 103 and: [byte4 < 112])
-						ifTrue: ["next instruction is a storeAndPopTemp"
-							localIP _ localIP + 3.
-							self storePointerUnchecked: (byte4 bitAnd: 7) + TempFrameStart ofObject: localHomeContext withValue: (self integerObjectOf: result)]
-						ifFalse: [localIP _ localIP + 2.
-							self internalPush: (self integerObjectOf: result)]]
-				ifFalse: [self fetchNextBytecode.
-					^ self internalPush: arg1"abort; result is not an integer"]]
-		ifFalse: ["do comparison operation, followed by a 
-			longJumpIfFalse "
-			offset _ self byteAt: localIP + 4.
-			arg1Val <= arg2Val
-				ifTrue: [localIP _ localIP + 3 + 1
-					"jump not taken; skip extra instruction byte"]
-				ifFalse: [localIP _ localIP + 3 + 1 + offset].
-			self fetchNextBytecode]
+	byte2 < 32 ifTrue: [
+		arg2Val _ self temporary: (byte2 bitAnd: 16rF).
+		(self isIntegerObject: arg2Val) ifTrue: [
+			arg2Val _ self integerValueOf: arg2Val.
+		] ifFalse: [
+			self fetchNextBytecode.
+			^ self internalPush: arg1.  "abort; second arg is not an integer"
+		].
+	] ifFalse: [
+		byte2 > 64 ifTrue: [
+			arg2Val _ 1.
+		] ifFalse: [
+			arg2Val _ self literal: (byte2 bitAnd: 16r1F).
+			(self isIntegerObject: arg2Val) ifTrue: [
+				arg2Val _ self integerValueOf: arg2Val.
+			] ifFalse: [
+				self fetchNextBytecode.
+				^ self internalPush: arg1.  "abort; second arg is not an integer"
+			].
+		].
+	].
+
+	byte3 < 178 ifTrue: [
+		"do addition, possibly followed by a storeAndPopTemp"
+		result _ arg1Val + arg2Val.
+		(self isIntegerValue: result) ifTrue: [
+			((byte4 > 103) and: [byte4 < 112]) ifTrue: [
+				"next instruction is a storeAndPopTemp"
+				localIP _ localIP + 3.
+				self storePointerUnchecked: (byte4 bitAnd: 7) + TempFrameStart
+					ofObject: localHomeContext
+					withValue: (self integerObjectOf: result).
+			] ifFalse: [
+				localIP _ localIP + 2.
+				self internalPush: (self integerObjectOf: result).
+			].
+		] ifFalse: [
+			self fetchNextBytecode.
+			^ self internalPush: arg1.  "abort; result is not an integer"
+		].
+	] ifFalse: [
+		"do comparison operation, followed by a longJumpIfFalse"
+		offset _ self byteAtPointer: localIP + 4.
+		arg1Val <= arg2Val
+			ifTrue: [localIP _ localIP + 3 + 1]  "jump not taken; skip extra instruction byte"
+			ifFalse: [localIP _ localIP + 3 + 1 + offset].
+			self fetchNextBytecode.
+	].
+
 ]
 
 { #category : #'stack bytecodes' }
@@ -2842,8 +2904,8 @@ Interpreter >> extendedStoreBytecode [
 Interpreter >> externalizeIPandSP [
 	"Copy the local instruction and stack pointer to global variables for use in primitives and other functions outside the interpret loop."
 
-	instructionPointer _ self cCoerce: localIP to: 'unsigned'.
-	stackPointer _ self cCoerce: localSP to: 'unsigned'.
+	instructionPointer _ self oopForPointer: localIP.
+	stackPointer _ self oopForPointer: localSP.
 	theHomeContext _ localHomeContext.
 
 ]
@@ -2870,7 +2932,7 @@ Interpreter >> fetchArray: fieldIndex ofObject: objectPointer [
 Interpreter >> fetchByte [
 	"This method uses the preIncrement builtin function which has no Smalltalk equivalent. Thus, it must be overridden in the simulator."
 
-	^ self byteAt: localIP preIncrement
+	^ self byteAtPointer: localIP preIncrement
 ]
 
 { #category : #contexts }
@@ -2898,7 +2960,7 @@ Interpreter >> fetchContextRegisters: activeCntx [
 
 	"the stack pointer is a pointer variable also..."
 	tmp _ self quickFetchInteger: StackPointerIndex ofObject: activeCntx.
-	stackPointer _ activeCntx + BaseHeaderSize + (TempFrameStart + tmp - 1 * 4)
+	stackPointer _ activeCntx + BaseHeaderSize + (TempFrameStart + tmp - 1 * BytesPerWord)
 ]
 
 { #category : #utilities }
@@ -2941,9 +3003,10 @@ Interpreter >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPointer [
 		self fetchFloatAt: intOrFloat + BaseHeaderSize into: floatVal.
 		self cCode: 'frac = modf(floatVal, &trunc)'.
 		"the following range check is for C ints, with range -2^31..2^31-1"
-		self cCode: 'success((-2147483648.0 <= trunc) && (trunc <= 2147483647.0))'].
+		self flag: #Dan.		"The ranges are INCORRECT if SmallIntegers are wider than 31 bits."
+		self cCode: 'success((-2147483648.0 <= trunc) && (trunc <= 2147483647.0))'.].
 	successFlag
-		ifTrue: [^ self cCode: '((int) trunc)' inSmalltalk: [floatVal truncated]]
+		ifTrue: [^ self cCode: '((sqInt) trunc)' inSmalltalk: [floatVal truncated]]
 		ifFalse: [^ 0].
 
 ]
@@ -3018,7 +3081,8 @@ Interpreter >> findObsoleteNamedPrimitive: functionName length: functionLength [
 		self cCode: '' inSmalltalk: [ entry _ CArrayAccessor on: entry ].
 		"Compare entry with functionName"
 		chIndex _ 0.
-		[(entry at: chIndex) = (functionName at: chIndex) 
+		[(entry at: chIndex) = (self cCode: 'functionName[chIndex]'
+								inSmalltalk: [self byteAtPointer: functionName + chIndex]) 
 			and:[chIndex < functionLength]] whileTrue:[chIndex _ chIndex + 1].
 		(chIndex = functionLength and:[(entry at: chIndex) = 0]) 
 			ifTrue:[^index]. "match"
@@ -3049,26 +3113,32 @@ Interpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
 	^ nilObj    "method not found in superclass chain"
 ]
 
-{ #category : #'object format' }
+{ #category : #'plugin support' }
 Interpreter >> firstFixedField: oop [
-	self returnTypeC:'void *'.
-	^self cCoerce: oop+4 to:'void *'.
+
+	self returnTypeC: 'void *'.
+	^ self pointerForOop: oop + BaseHeaderSize
 ]
 
-{ #category : #'object format' }
+{ #category : #'plugin support' }
 Interpreter >> firstIndexableField: oop [
+	"NOTE: copied in InterpreterSimulator, so please duplicate any changes"
 
 	| hdr fmt totalLength fixedFields |
-	self returnTypeC:'void *'.
+	self returnTypeC: 'void *'.
 	hdr _ self baseHeader: oop.
 	fmt _ (hdr >> 8) bitAnd: 16rF.
 	totalLength _ self lengthOf: oop baseHeader: hdr format: fmt.
 	fixedFields _ self fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt < 8
-		ifTrue:["32 bit field objects"
-			^ self cCoerce: oop+4+ (fixedFields << 2) to:'void *']
-		ifFalse:["Byte objects"
-			^ self cCoerce: oop+4+fixedFields to:'void *']
+	fmt < 8 ifTrue:
+		[fmt = 6 ifTrue:
+			["32 bit field objects"
+			^ self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)].
+		"full word objects (pointer or bits)"
+		^ self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)]
+	ifFalse:
+		["Byte objects"
+		^ self pointerForOop: oop + BaseHeaderSize + fixedFields]
 ]
 
 { #category : #'object format' }
@@ -3093,8 +3163,9 @@ Interpreter >> fixedFieldsOf: oop format: fmt length: wordLength [
 { #category : #'object format' }
 Interpreter >> floatObjectOf: aFloat [
 	| newFloatObj |
+self flag: #Dan.
 	self var: #aFloat declareC: 'double aFloat'.
-	newFloatObj _ self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 12 fill: 0.
+	newFloatObj _ self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize fill: 0.
 	self storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
 	^ newFloatObj.
 
@@ -3106,6 +3177,7 @@ Interpreter >> floatValueOf: oop [
 	"Note: May be called by translated primitive code."
 
 	| result |
+	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
 	self returnTypeC: 'double'.
 	self var: #result declareC: 'double result'.
 	self assertClassOf: oop is: (self splObj: ClassFloat).
@@ -3124,8 +3196,8 @@ Interpreter >> flushExternalPrimitiveOf: methodPtr [
 	lit _ self literal: 0 ofMethod: methodPtr.
 	((self isArray: lit) and:[(self lengthOf: lit) = 4])
 		ifFalse:[^nil]. "Something's broken"
-	self storeWord: 2 ofObject: lit withValue: ConstZero.
-	self storeWord: 3 ofObject: lit withValue: ConstZero.
+	self storePointer: 2 ofObject: lit withValue: ConstZero.
+	self storePointer: 3 ofObject: lit withValue: ConstZero.
 
 ]
 
@@ -3244,9 +3316,12 @@ Interpreter >> fullDisplayUpdate [
 
 { #category : #'method lookup cache' }
 Interpreter >> functionPointerFor: primIdx inClass: theClass [
-"find an actual function pointer for this primitiveIndex - this is an opportunity to specialise the prim for the relevant class (format for example).
-Default for now is simply the entry in the base primitiveTable"
-	^self cCoerce: (primitiveTable at: primIdx) to:'int'
+	"Find an actual function pointer for this primitiveIndex.  This is an
+	opportunity to specialise the prim for the relevant class (format for
+	example).  Default for now is simply the entry in the base primitiveTable."
+
+	self returnTypeC: 'void *'.
+	^primitiveTable at: primIdx
 ]
 
 { #category : #'interpreter shell' }
@@ -3277,12 +3352,13 @@ Interpreter >> getInterruptPending [
 ]
 
 { #category : #'image save/restore' }
-Interpreter >> getLongFromFile: f swap: swapFlag [
-	"Return the next 4-byte word of the given file, byte-swapped according to the given flag."
+Interpreter >> getLongFromFile: aFile swap: swapFlag [
+	"Answer the next word read from aFile, byte-swapped according to the swapFlag."
 
 	| w |
-	self var: #f declareC: 'sqImageFile f'.
-	self cCode: 'sqImageFileRead(&w, sizeof(char), 4, f)'.
+	self var: #aFile declareC: 'sqImageFile aFile'.
+	w _ 0.
+	self cCode: 'sqImageFileRead(&w, sizeof(w), 1, aFile)'.
 	swapFlag
 		ifTrue: [^ self byteSwapped: w]
 		ifFalse: [^ w].
@@ -3308,7 +3384,9 @@ Interpreter >> headerOf: methodPointer [
 Interpreter >> imageFormatVersion [
 	"Return a magic constant that changes when the image format changes. Since the image reading code uses this to detect byte ordering, one must avoid version numbers that are invariant under byte reversal."
 
-	^ 6502
+	BytesPerWord == 4
+		ifTrue: [^6502]
+		ifFalse: [^68000]
 ]
 
 { #category : #'image segment in/out' }
@@ -3409,12 +3487,12 @@ Interpreter >> initializeInterpreter: bytesToShift [
 
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array and stream primitives' }
 Interpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	"Install the oop of this object in the given cache (at or atPut), along with
 	its size, format and fixedSize"
 	| hdr fmt totalLength fixedFields |
-	self var: #cache declareC: 'int *cache'.
+	self var: #cache declareC: 'sqInt *cache'.
 
 	hdr _ self baseHeader: rcvr.
 	fmt _ (hdr >> 8) bitAnd: 16rF.
@@ -3462,21 +3540,21 @@ Interpreter >> internalActivateNewMethod [
 	"Assume: newContext will be recorded as a root if necessary by the
 	 call to newActiveContext: below, so we can use unchecked stores."
 	where _   newContext + BaseHeaderSize.
-	self longAt: where + (SenderIndex << 2) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << 2) put: (self integerObjectOf:
-			(((LiteralStart + (self literalCountOfHeader: methodHeader)) * 4) + 1)).
-	self longAt: where + (StackPointerIndex << 2) put: (self integerObjectOf: tempCount).
-	self longAt: where + (MethodIndex << 2) put: newMethod.
+	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf:
+			(((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1)).
+	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
 
 	"Copy the reciever and arguments..."
 	argCount2 _ argumentCount.
 	0 to: argCount2 do:
-		[:i | self longAt: where + ((ReceiverIndex+i) << 2) put: (self internalStackValue: argCount2-i)].
+		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self internalStackValue: argCount2-i)].
 
 	"clear remaining temps to nil in case it has been recycled"
 	methodHeader _ nilObj.  "methodHeader here used just as faster (register?) temp"
 	argCount2+1+ReceiverIndex to: tempCount+ReceiverIndex do:
-		[:i | self longAt: where + (i << 2) put: methodHeader].
+		[:i | self longAt: where + (i << ShiftForWord) put: methodHeader].
 
 	self internalPop: argCount2 + 1.
 	reclaimableContextCount _ reclaimableContextCount + 1.
@@ -3533,33 +3611,34 @@ Interpreter >> internalExecuteNewMethod [
 ]
 
 { #category : #contexts }
-Interpreter >> internalFetchContextRegisters: activeCntx [ 
-	"Inlined into return bytecodes. The only difference between 
-	this method and fetchContextRegisters: is that this method 
-	sets the local IP and SP."
+Interpreter >> internalFetchContextRegisters: activeCntx [
+	"Inlined into return bytecodes. The only difference between this method and fetchContextRegisters: is that this method sets the local IP and SP."
+
 	| tmp |
 	self inline: true.
 	tmp _ self fetchPointer: MethodIndex ofObject: activeCntx.
-	(self isIntegerObject: tmp)
-		ifTrue: ["if the MethodIndex field is an integer, activeCntx is a block context"
-			tmp _ self fetchPointer: HomeIndex ofObject: activeCntx.
-			tmp < youngStart
-				ifTrue: [self beRootIfOld: tmp]]
-		ifFalse: ["otherwise, it is a method context and is its own home context "
-			tmp _ activeCntx].
+	(self isIntegerObject: tmp) ifTrue: [
+		"if the MethodIndex field is an integer, activeCntx is a block context"
+		tmp _ self fetchPointer: HomeIndex ofObject: activeCntx.
+		(tmp < youngStart) ifTrue: [ self beRootIfOld: tmp ].
+	] ifFalse: [
+		"otherwise, it is a method context and is its own home context"
+		tmp _ activeCntx.
+	].
 	localHomeContext _ tmp.
 	receiver _ self fetchPointer: ReceiverIndex ofObject: tmp.
 	method _ self fetchPointer: MethodIndex ofObject: tmp.
- 	"the instruction pointer is a pointer variable equal to 
-	method oop + ip + BaseHeaderSize 
-	-1 for 0-based addressing of fetchByte 
-	-1 because it gets incremented BEFORE fetching 
-	currentByte "
+
+	"the instruction pointer is a pointer variable equal to
+		method oop + ip + BaseHeaderSize
+		  -1 for 0-based addressing of fetchByte
+		  -1 because it gets incremented BEFORE fetching currentByte"
 	tmp _ self quickFetchInteger: InstructionPointerIndex ofObject: activeCntx.
-	localIP _ self cCoerce: method + tmp + BaseHeaderSize - 2 to: 'char *'.
- 	"the stack pointer is a pointer variable also..."
+	localIP _ self pointerForOop: method + tmp + BaseHeaderSize - 2.
+
+	"the stack pointer is a pointer variable also..."
 	tmp _ self quickFetchInteger: StackPointerIndex ofObject: activeCntx.
-	localSP _ self cCoerce: activeCntx + BaseHeaderSize + (TempFrameStart + tmp - 1 * 4) to: 'char *'
+	localSP _ self pointerForOop: activeCntx + BaseHeaderSize + ((TempFrameStart + tmp - 1) * BytesPerWord)
 ]
 
 { #category : #'message sending' }
@@ -3591,13 +3670,13 @@ Interpreter >> internalNewActiveContext: aContext [
 { #category : #contexts }
 Interpreter >> internalPop: nItems [
 
-	localSP _ localSP - (nItems * 4).
+	localSP _ localSP - (nItems * BytesPerWord).
 ]
 
 { #category : #contexts }
 Interpreter >> internalPop: nItems thenPush: oop [
 
-	self longAt: (localSP _ localSP - ((nItems - 1) * 4)) put: oop.
+	self longAtPointer: (localSP _ localSP - ((nItems - 1) * BytesPerWord)) put: oop.
 
 ]
 
@@ -3630,7 +3709,7 @@ Interpreter >> internalPrimitiveValue [
 { #category : #contexts }
 Interpreter >> internalPush: object [
 
-	self longAt: (localSP _ localSP + 4) put: object.
+	self longAtPointer: (localSP _ localSP + BytesPerWord) put: object.
 ]
 
 { #category : #processes }
@@ -3651,13 +3730,13 @@ Interpreter >> internalQuickCheckForInterrupts [
 { #category : #contexts }
 Interpreter >> internalStackTop [
 
-	^ self longAt: localSP
+	^ self longAtPointer: localSP
 ]
 
 { #category : #contexts }
 Interpreter >> internalStackValue: offset [
 
-	^ self longAt: localSP - (offset * 4)
+	^ self longAtPointer: localSP - (offset * BytesPerWord)
 ]
 
 { #category : #contexts }
@@ -3670,10 +3749,12 @@ Interpreter >> internalStoreContextRegisters: activeCntx [
 		-1 because it gets incremented BEFORE fetching currentByte"
 
 	self inline: true.
-	self storeWord: InstructionPointerIndex ofObject: activeCntx
-		withValue: (self integerObjectOf: (localIP asInteger + 2 - (method + BaseHeaderSize))).
-	self storeWord: StackPointerIndex ofObject: activeCntx
-		withValue: (self integerObjectOf: (((localSP asInteger - (activeCntx + BaseHeaderSize)) >> 2) - TempFrameStart + 1)).
+	self storePointer: InstructionPointerIndex ofObject: activeCntx
+		withValue: (self integerObjectOf: 
+			((self oopForPointer: localIP) + 2 - (method + BaseHeaderSize))).
+	self storePointer: StackPointerIndex		  ofObject: activeCntx
+		withValue: (self integerObjectOf:
+			((((self oopForPointer: localSP) - (activeCntx + BaseHeaderSize)) >> ShiftForWord) - TempFrameStart + 1)).
 
 ]
 
@@ -3681,8 +3762,8 @@ Interpreter >> internalStoreContextRegisters: activeCntx [
 Interpreter >> internalizeIPandSP [
 	"Copy the local instruction and stack pointer to local variables for rapid access within the interpret loop."
 
-	localIP _ self cCoerce: instructionPointer to: 'char *'.
-	localSP _ self cCoerce: stackPointer to: 'char *'.
+	localIP _ self pointerForOop: instructionPointer.
+	localSP _ self pointerForOop: stackPointer.
 	localHomeContext _ theHomeContext.
 
 ]
@@ -3806,7 +3887,7 @@ Interpreter >> isUnwindMarked: aContext [
 Interpreter >> jump: offset [
 
 	localIP _ localIP + offset + 1.
-	currentBytecode _ self byteAt: localIP.
+	currentBytecode _ self byteAtPointer: localIP.
 
 ]
 
@@ -3855,12 +3936,14 @@ Interpreter >> lengthOf: oop baseHeader: hdr format: fmt [
 	| sz |
 	self inline: true.
 	(hdr bitAnd: TypeMask) = HeaderTypeSizeAndClass
-		ifTrue: [ sz _ (self sizeHeader: oop) bitAnd: AllButTypeMask ]
-		ifFalse: [ sz _ hdr bitAnd: SizeMask ].
-
+		ifTrue: [ sz _ (self sizeHeader: oop) bitAnd: LongSizeMask ]
+		ifFalse: [ sz _ (hdr bitAnd: SizeMask)].
+	sz _ sz - (hdr bitAnd: Size4Bit).
+	fmt <= 4
+		ifTrue: [ ^ (sz - BaseHeaderSize) >> ShiftForWord "words"].
 	fmt < 8
-		ifTrue: [ ^ (sz - BaseHeaderSize) >> 2 ]  "words"
-		ifFalse: [ ^ (sz - BaseHeaderSize) - (fmt bitAnd: 3) ]  "bytes"
+		ifTrue: [ ^ (sz - BaseHeaderSize) >> 2 "32-bit longs"]
+		ifFalse: [ ^ (sz - BaseHeaderSize) - (fmt bitAnd: 3) "bytes"]
 ]
 
 { #category : #'compiled methods' }
@@ -3885,7 +3968,7 @@ Interpreter >> literalCountOfHeader: headerPointer [
 	^ (headerPointer >> 10) bitAnd: 16rFF
 ]
 
-{ #category : #'I/O primitive support' }
+{ #category : #'bitblt support' }
 Interpreter >> loadBitBltFrom: bb [
 	"This entry point needs to be implemented for the interpreter proxy.
 	Since BitBlt is now a plugin we need to look up BitBltPlugin_loadBitBltFrom
@@ -3893,9 +3976,10 @@ Interpreter >> loadBitBltFrom: bb [
 	replaced with a dynamic lookup from BitBltPlugin itself but for backward
 	compatibility this stub is provided"
 	| fn |
+	self var: #fn declareC: 'void *fn'.
 	fn _ self ioLoadFunction: 'loadBitBltFrom' From: 'BitBltPlugin'.
-	fn = 0 ifTrue:[^self primitiveFail].
-	^self cCode:' ((int (*) (int)) fn)(bb)'
+	fn = 0 ifTrue: [^self primitiveFail].
+	^self cCode: '((sqInt (*)(sqInt))fn)(bb)'
 ]
 
 { #category : #utilities }
@@ -3969,7 +4053,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 			[newMethod _ methodCache at: probe + MethodCacheMethod.
 			primitiveIndex _ methodCache at: probe + MethodCachePrim.
 			newNativeMethod _ methodCache at: probe + MethodCacheNative.
-			primitiveFunctionPointer _ methodCache at: probe + MethodCachePrimFunction.
+			primitiveFunctionPointer _ self cCoerce: (methodCache at: probe + MethodCachePrimFunction) to: 'void *'.
 			^ true	"found entry in cache; done"].
 
 	probe _ (hash >> 1) bitAnd: MethodCacheMask.  "second probe"
@@ -3978,7 +4062,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 			[newMethod _ methodCache at: probe + MethodCacheMethod.
 			primitiveIndex _ methodCache at: probe + MethodCachePrim.
 			newNativeMethod _ methodCache at: probe + MethodCacheNative.
-			primitiveFunctionPointer _ methodCache at: probe + MethodCachePrimFunction.
+			primitiveFunctionPointer _ self cCoerce: (methodCache at: probe + MethodCachePrimFunction) to: 'void *'.
 			^ true	"found entry in cache; done"].
 
 	probe _ (hash >> 2) bitAnd: MethodCacheMask.
@@ -3987,7 +4071,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 			[newMethod _ methodCache at: probe + MethodCacheMethod.
 			primitiveIndex _ methodCache at: probe + MethodCachePrim.
 			newNativeMethod _ methodCache at: probe + MethodCacheNative.
-			primitiveFunctionPointer _ methodCache at: probe + MethodCachePrimFunction.
+			primitiveFunctionPointer _ self cCoerce: (methodCache at: probe + MethodCachePrimFunction) to: 'void *'.
 			^ true	"found entry in cache; done"].
 
 	^ false
@@ -4073,7 +4157,7 @@ Interpreter >> lookupMethodInDictionary: dictionary [
 Interpreter >> makePointwithxValue: xValue yValue: yValue [
 
 	| pointResult |
-	pointResult _ self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 12 fill: nilObj.
+	pointResult _ self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 3*BytesPerWord fill: nilObj.
 	self storePointer: XIndex ofObject: pointResult withValue: (self integerObjectOf: xValue).
 	self storePointer: YIndex ofObject: pointResult withValue: (self integerObjectOf: yValue).
 	^ pointResult
@@ -4279,15 +4363,15 @@ Interpreter >> okayInterpreterObjects [
 Interpreter >> okayOop: signedOop [
 	"Verify that the given oop is legitimate. Check address, header, and size but not class."
 
-	| sz type fmt oop |
-	self var: #oop type: 'unsigned'.
-	oop := self cCoerce: signedOop to: 'unsigned'.
+	| sz type fmt unusedBit oop |
+	self var: #oop type: 'usqInt'.
+	oop := self cCoerce: signedOop to: 'usqInt'.
 
 	"address and size checks"
 	(self isIntegerObject: oop) ifTrue: [ ^true ].
 	(oop < endOfMemory)
 		ifFalse: [ self error: 'oop is not a valid address' ].
-	((oop \\ 4) = 0)
+	((oop \\ BytesPerWord) = 0)
 		ifFalse: [ self error: 'oop is not a word-aligned address' ].
 	sz _ self sizeBitsOf: oop.
 	(oop + sz) < endOfMemory
@@ -4302,13 +4386,13 @@ Interpreter >> okayOop: signedOop [
 			ifTrue:  [ self error: 'cannot have zero compact class field in a short header' ].
 	].
 	type = HeaderTypeClass ifTrue: [
-		((oop >= 4) and: [(self headerType: oop - 4) = type])
+		((oop >= BytesPerWord) and: [(self headerType: oop - BytesPerWord) = type])
 			ifFalse: [ self error: 'class header word has wrong type' ].
 	].
 	type = HeaderTypeSizeAndClass ifTrue: [
-		((oop >= 8) and:
-		 [(self headerType: oop - 8) = type and:
-		 [(self headerType: oop - 4) = type]])
+		((oop >= (BytesPerWord*2)) and:
+		 [(self headerType: oop - (BytesPerWord*2)) = type and:
+		 [(self headerType: oop - BytesPerWord) = type]])
 			ifFalse: [ self error: 'class header word has wrong type' ].
 	].
 
@@ -4318,7 +4402,12 @@ Interpreter >> okayOop: signedOop [
 		ifTrue:  [ self error: 'oop has an unknown format type' ].
 
 	"mark and root bit checks"
-	((self longAt: oop) bitAnd: 16r20000000) = 0
+	unusedBit _ 16r20000000.
+	BytesPerWord = 8
+		ifTrue:
+			[unusedBit _ unusedBit << 16.
+			 unusedBit _ unusedBit << 16].
+	((self longAt: oop) bitAnd: unusedBit) = 0
 		ifFalse: [ self error: 'unused header bit 30 is set; should be zero' ].
 "xxx
 	((self longAt: oop) bitAnd: MarkBit) = 0
@@ -4328,6 +4417,7 @@ xxx"
 	 [oop >= youngStart])
 		ifTrue: [ self error: 'root bit is set in a young object' ].
 	^true
+
 ]
 
 { #category : #'image segment in/out' }
@@ -4337,19 +4427,19 @@ Interpreter >> oopHasAcceptableClass: signedOop [
 	| oopClass formatMask behaviorFormatBits oopFormatBits oop |
 	(self isIntegerObject: signedOop) ifTrue: [^ true].
 
-	self var: #oop type: 'unsigned'.
-	self var: #oopClass type: 'unsigned'.
+	self var: #oop type: 'usqInt'.
+	self var: #oopClass type: 'usqInt'.
 
-	oop := self cCoerce: signedOop to: 'unsigned'.
+	oop := self cCoerce: signedOop to: 'usqInt'.
 
 	oop < endOfMemory ifFalse: [^ false].
-	((oop \\ 4) = 0) ifFalse: [^ false].
+	((oop \\ BytesPerWord) = 0) ifFalse: [^ false].
 	(oop + (self sizeBitsOf: oop)) < endOfMemory ifFalse: [^ false].
-	oopClass := self cCoerce: (self fetchClassOf: oop) to: 'unsigned'.
+	oopClass := self cCoerce: (self fetchClassOf: oop) to: 'usqInt'.
 
 	(self isIntegerObject: oopClass) ifTrue: [^ false].
 	(oopClass < endOfMemory) ifFalse: [^ false].
-	((oopClass \\ 4) = 0) ifFalse: [^ false].
+	((oopClass \\ BytesPerWord) = 0) ifFalse: [^ false].
 	(oopClass + (self sizeBitsOf: oopClass)) < endOfMemory ifFalse: [^ false].
 	((self isPointers: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
 	(self isBytes: oop)
@@ -4367,12 +4457,12 @@ Interpreter >> oopHasOkayClass: signedOop [
 	"Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance."
 
 	| oop oopClass formatMask behaviorFormatBits oopFormatBits |
-	self var: #oop type: 'unsigned'.
-	self var: #oopClass type: 'unsigned'.
+	self var: #oop type: 'usqInt'.
+	self var: #oopClass type: 'usqInt'.
 
-	oop := self cCoerce: signedOop to: 'unsigned'.
+	oop := self cCoerce: signedOop to: 'usqInt'.
 	self okayOop: oop.
-	oopClass := self cCoerce: (self fetchClassOf: oop) to: 'unsigned'.
+	oopClass := self cCoerce: (self fetchClassOf: oop) to: 'usqInt'.
 
 	(self isIntegerObject: oopClass)
 		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior' ].
@@ -4403,14 +4493,14 @@ Interpreter >> pop2AndPushIntegerIfOK: integerResult [
 Interpreter >> pop: nItems [
 	"Note: May be called by translated primitive code."
 
-	stackPointer _ stackPointer - (nItems*4).
+	stackPointer _ stackPointer - (nItems*BytesPerWord).
 ]
 
 { #category : #contexts }
 Interpreter >> pop: nItems thenPush: oop [
 
 	| sp |
-	self longAt: (sp _ stackPointer - ((nItems - 1) * 4)) put: oop.
+	self longAt: (sp _ stackPointer - ((nItems - 1) * BytesPerWord)) put: oop.
 	stackPointer _ sp.
 
 ]
@@ -4452,7 +4542,7 @@ Interpreter >> popStack [
 
 	| top |
 	top _ self longAt: stackPointer.
-	stackPointer _ stackPointer - 4.
+	stackPointer _ stackPointer - BytesPerWord.
 	^ top
 ]
 
@@ -4470,9 +4560,17 @@ Interpreter >> positive32BitIntegerFor: integerValue [
 	| newLargeInteger |
 	"Note - integerValue is interpreted as POSITIVE, eg, as the result of
 		Bitmap>at:, or integer>bitAnd:."
-	(integerValue >= 0 and: [self isIntegerValue: integerValue])
-		ifTrue: [^ self integerObjectOf: integerValue].
-	newLargeInteger _ self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: 8 fill: 0.
+	integerValue >= 0
+		ifTrue: [(self isIntegerValue: integerValue)
+					ifTrue: [^ self integerObjectOf: integerValue]].
+
+	BytesPerWord = 4
+	ifTrue: ["Faster instantiateSmallClass: currently only works with integral word size."
+			newLargeInteger _ self instantiateSmallClass: (self splObj: ClassLargePositiveInteger)
+					sizeInBytes: BaseHeaderSize + 4 fill: 0]
+	ifFalse: ["Cant use instantiateSmallClass: due to integral word requirement."
+			newLargeInteger _ self instantiateClass: (self splObj: ClassLargePositiveInteger)
+					indexableSize: 4].
 	self storeByte: 3 ofObject: newLargeInteger withValue: ((integerValue >> 24) bitAnd: 16rFF).
 	self storeByte: 2 ofObject: newLargeInteger withValue: ((integerValue >> 16) bitAnd: 16rFF).
 	self storeByte: 1 ofObject: newLargeInteger withValue: ((integerValue >> 8) bitAnd: 16rFF).
@@ -4508,15 +4606,15 @@ Interpreter >> positive64BitIntegerFor: integerValue [
 	| newLargeInteger value check |
 	"Note - integerValue is interpreted as POSITIVE, eg, as the result of
 		Bitmap>at:, or integer>bitAnd:."
-	self var: 'integerValue' type: 'squeakInt64'.
+	self var: 'integerValue' type: 'sqLong'.
  
 	(self sizeof: integerValue) = 4 ifTrue: [^self positive32BitIntegerFor: integerValue].
 
-  	self cCode: 'check = integerValue >> 32'.
+  	self cCode: 'check = integerValue >> 32'.  "Why not run this in sim?"
 	check = 0 ifTrue: [^self positive32BitIntegerFor: integerValue].
 	
 	newLargeInteger _
-		self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: 12 fill: 0.
+		self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: BaseHeaderSize + 8 fill: 0.
 	0 to: 7 do: [:i |
 		self cCode: 'value = ( integerValue >> (i * 8)) & 255'.
 		self storeByte: i ofObject: newLargeInteger withValue: value].
@@ -4528,9 +4626,9 @@ Interpreter >> positive64BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive ST integer or a eight-byte LargePositiveInteger."
 
-	| sz szsqueakInt64 value  |
-	self returnTypeC: 'squeakInt64'.
-	self var: 'value' type: 'squeakInt64'.
+	| sz szsqLong value  |
+	self returnTypeC: 'sqLong'.
+	self var: 'value' type: 'sqLong'.
 	(self isIntegerObject: oop) ifTrue: [
 		value _ self integerValueOf: oop.
 		value < 0 ifTrue: [^ self primitiveFail].
@@ -4538,13 +4636,13 @@ Interpreter >> positive64BitValueOf: oop [
 
 	self assertClassOf: oop is: (self splObj: ClassLargePositiveInteger).
 	successFlag ifFalse: [^ self primitiveFail].
-	szsqueakInt64 _ self cCode: 'sizeof(squeakInt64)'.
+	szsqLong _ self cCode: 'sizeof(sqLong)'.
 	sz _ self lengthOf: oop.
-	sz > szsqueakInt64
+	sz > szsqLong
 		ifTrue: [^ self primitiveFail].
 	value _ 0.
 	0 to: sz - 1 do: [:i |
-		value _ value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: 'squeakInt64') <<  (i*8))].
+		value _ value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: 'sqLong') <<  (i*8))].
 	^value.
 ]
 
@@ -4682,6 +4780,10 @@ Interpreter >> primitiveBeCursor [
 	"Set the cursor to the given shape. The Mac only supports 16x16 pixel cursors. Cursor offsets are handled by Smalltalk."
 
 	| cursorObj maskBitsIndex maskObj bitsObj extentX extentY depth offsetObj offsetX offsetY cursorBitsIndex ourCursor |
+
+self flag: #Dan.  "This is disabled until we convert bitmaps appropriately"
+BytesPerWord = 8 ifTrue: [^ self pop: argumentCount].
+
 	argumentCount = 0 ifTrue: [
 		cursorObj _ self stackTop.
 		maskBitsIndex _ nil].
@@ -4711,7 +4813,7 @@ Interpreter >> primitiveBeCursor [
 			[ourCursor _ Cursor
 				extent: extentX @ extentY
 				fromArray: ((1 to: 16) collect: [:i |
-					((self fetchWord: i-1 ofObject: bitsObj) >> 16) bitAnd: 16rFFFF])
+					((self fetchLong32: i-1 ofObject: bitsObj) >> (BytesPerWord*8 - 16)) bitAnd: 16rFFFF])
 				offset: offsetX  @ offsetY]].
 
 	argumentCount = 1 ifTrue: [
@@ -4824,15 +4926,14 @@ Interpreter >> primitiveBlockCopy [
 	newContext _ self instantiateContext: (self splObj: ClassBlockContext) sizeInBytes: contextSize.
 	methodContext _ self popRemappableOop.
 
-	initialIP _ self integerObjectOf: instructionPointer - method.
-	"Was instructionPointer + 3, but now it's greater by 
-		methodOop + 4 (headerSize) and less by 1 due to preIncrement"
+	initialIP _ self integerObjectOf: (instructionPointer+1+3) - (method+BaseHeaderSize).
+	"Was instructionPointer + 3, but now it's greater by 1 due to preIncrement"
 
 	"Assume: have just allocated a new context; it must be young.
 	 Thus, can use uncheck stores. See the comment in fetchContextRegisters."
 
-	self storeWord: InitialIPIndex ofObject: newContext withValue: initialIP.
-	self storeWord: InstructionPointerIndex ofObject: newContext withValue: initialIP.
+	self storePointer: InitialIPIndex ofObject: newContext withValue: initialIP.
+	self storePointer: InstructionPointerIndex ofObject: newContext withValue: initialIP.
 	self storeStackPointerValue: 0 inContext: newContext.
 	self storePointerUnchecked: BlockArgumentCountIndex ofObject: newContext withValue: (self stackValue: 0).
 	self storePointerUnchecked: HomeIndex ofObject: newContext withValue: methodContext.
@@ -4860,26 +4961,26 @@ Interpreter >> primitiveBytesLeft [
 	^ self primitiveFail
 ]
 
-{ #category : #'plugin primitives' }
+{ #category : #'message sending' }
 Interpreter >> primitiveCalloutToFFI [
 	"Perform a function call to a foreign function.
 	Only invoked from method containing explicit external call spec.
 	Due to this we use the pluggable prim mechanism explicitly here
 	(the first literal of any FFI spec'ed method is an ExternalFunction
 	and not an array as used in the pluggable primitive mechanism)."
+
 	| function moduleName functionName |
-	self var: #function declareC:'static int function = 0'.
-	self var: #moduleName declareC:'static char *moduleName = "SqueakFFIPrims"'.
-	self var: #functionName declareC:'static char *functionName = "primitiveCallout"'.
-	function = 0 ifTrue:[
+	self var: #function declareC: 'static void *function = 0'.
+	self var: #moduleName declareC: 'static char *moduleName = "SqueakFFIPrims"'.
+	self var: #functionName declareC: 'static char *functionName = "primitiveCallout"'.
+	function = 0 ifTrue: [
 		function _ self
-			ioLoadExternalFunction: (self cCoerce: functionName to:'int')
+			ioLoadExternalFunction: (self oopForPointer: functionName)
 			OfLength: 16
-			FromModule: (self cCoerce: moduleName to:'int')
+			FromModule: (self oopForPointer: moduleName)
 			OfLength: 14.
-		function == 0 ifTrue:[^self primitiveFail]].
-	self cCode: '((int (*) (void)) function) ()'.
-	self forceInterruptCheck
+		function == 0 ifTrue: [^self primitiveFail]].
+	^self cCode: '((sqInt (*)(void))function)()'.
 
 ]
 
@@ -4908,8 +5009,8 @@ Interpreter >> primitiveChangeClass [
 	argFormat = rcvrFormat ifFalse:[^self primitiveFail]. "no way"
 
 	"For fixed field classes, the sizes must match.
-	Note: byteSize-4 because base header is included in class size."
-	argFormat < 2 ifTrue:[(byteSize - 4) = (self byteSizeOf: rcvr) ifFalse:[^self primitiveFail]].
+	Note: base header size is included in class size."
+	argFormat < 2 ifTrue:[(byteSize - BaseHeaderSize) = (self byteSizeOf: rcvr) ifFalse:[^self primitiveFail]].
 
 	(self headerType: rcvr) = HeaderTypeShort
 		ifTrue:[ "Compact classes. Check if the arg's class is compact and exchange ccIndex"
@@ -4919,7 +5020,7 @@ Interpreter >> primitiveChangeClass [
 				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32)
 					bitOr: ccIndex)]
 		ifFalse:["Exchange the class pointer, which could make rcvr a root for argClass"
-			self longAt: rcvr-4 put: (argClass bitOr: (self headerType: rcvr)).
+			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
 			(rcvr < youngStart) ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
 
 	"Flush cache because rcvr's class has changed"
@@ -4981,7 +5082,7 @@ Interpreter >> primitiveConstantFill [
 						whileTrue: [self byteAt: i put: fillValue.
 							i _ i + 1]]
 				ifFalse: [[i < end]
-						whileTrue: [self longAt: i put: fillValue.
+						whileTrue: [self long32At: i put: fillValue.
 							i _ i + 4]].
 			self pop: 1]
 ]
@@ -5136,7 +5237,7 @@ Interpreter >> primitiveExecuteMethodArgsArray [
 	(self isArray: argumentArray) ifFalse:[self unPop: 2. ^self primitiveFail].
 	successFlag ifTrue: [self success: (argCnt = (self fetchWordLengthOf: argumentArray))].
 	successFlag
-		ifTrue: [self transfer: argCnt from: argumentArray + BaseHeaderSize to: stackPointer + 4.
+		ifTrue: [self transfer: argCnt from: argumentArray + BaseHeaderSize to: stackPointer + BytesPerWord.
 			self unPop: argCnt.
 			argumentCount _ argCnt.
 			self executeNewMethod]
@@ -5169,11 +5270,12 @@ Interpreter >> primitiveExponent [
 	| rcvr frac pwr |
 	self var: #rcvr declareC: 'double rcvr'.
 	self var: #frac declareC: 'double frac'.
-
+	self var: #pwr declareC: 'int pwr'.
 	rcvr _ self popFloat.
 	successFlag
 		ifTrue: [  "rcvr = frac * 2^pwr, where frac is in [0.5..1.0)"
-			self cCode: 'frac = frexp(rcvr, &pwr)' inSmalltalk: [pwr _ rcvr exponent].
+			self cCode: 'frac = frexp(rcvr, &pwr)'
+					inSmalltalk: [pwr _ rcvr exponent].
 			self pushInteger: pwr - 1]
 		ifFalse: [self unPop: 1].
 ]
@@ -5209,6 +5311,7 @@ Interpreter >> primitiveExternalCall [
 	always remove the rewrite. 
 	"
 	| lit addr moduleName functionName moduleLength functionLength index |
+	self var: #addr declareC: 'void *addr'.
 	
 	"Fetch the first literal of the method"
 	self success: (self literalCountOf: newMethod) > 0. "@@: Could this be omitted for speed?!"
@@ -5246,15 +5349,18 @@ Interpreter >> primitiveExternalCall [
 			^ self primitiveFail].
 
 	"Clean up session id and external primitive index"
-	self storeWord: 2 ofObject: lit withValue: ConstZero.
-	self storeWord: 3 ofObject: lit withValue: ConstZero.
+	self storeInteger: 2 ofObject: lit withValue: ConstZero.
+	self storeInteger: 3 ofObject: lit withValue: ConstZero.
 
 	"The function has not been loaded yet. Fetch module and function name."
 	moduleName _ self fetchPointer: 0 ofObject: lit.
 	moduleName = nilObj
 		ifTrue: [moduleLength _ 0]
 		ifFalse: [self success: (self isBytes: moduleName).
-			moduleLength _ self lengthOf: moduleName].
+				moduleLength _ self lengthOf: moduleName.
+				self cCode: '' inSmalltalk:
+					[ (#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: (self stringOf: moduleName))
+						ifTrue: [moduleLength _ 0  "Cause all of these to fail"]]].
 	functionName _ self fetchPointer: 1 ofObject: lit.
 	self success: (self isBytes: functionName).
 	functionLength _ self lengthOf: functionName.
@@ -5267,15 +5373,15 @@ Interpreter >> primitiveExternalCall [
 	addr _ 0. "Addr ~= 0 indicates we have a compat match later"
 	moduleLength = 0
 		ifTrue: ["Search the obsolete named primitive table for a match "
-			index _ self findObsoleteNamedPrimitive: (self cCoerce: functionName + 4 to: 'char *') length: functionLength.
+		index _ self findObsoleteNamedPrimitive: ((self pointerForOop: functionName) + BaseHeaderSize) length: functionLength.
 			"The returned value is the index into the obsolete primitive table. 
 			If the index is found, use the 'C-style' version of the lookup. "
 			index < 0 ifFalse: [addr _ self ioLoadFunction: (self cCoerce: ((obsoleteNamedPrimitiveTable at: index) at: 2) to: 'char*')
 								From: (self cCoerce: ((obsoleteNamedPrimitiveTable at: index) at: 1) to: 'char*')]].
 	addr = 0 ifTrue: ["Only if no compat version was found"
-			addr _ self ioLoadExternalFunction: functionName + 4
+			addr _ self ioLoadExternalFunction: functionName + BaseHeaderSize
 						OfLength: functionLength
-						FromModule: moduleName + 4
+						FromModule: moduleName + BaseHeaderSize
 						OfLength: moduleLength].
 	addr = 0
 		ifTrue: [index _ -1]
@@ -5311,7 +5417,7 @@ Interpreter >> primitiveFailAfterCleanup: outPointerArray [
 	i _ outPointerArray + BaseHeaderSize.
 	[i <= lastAddr] whileTrue:
 		[self longAt: i put: nilObj.
-		i _ i + 4].
+		i _ i + BytesPerWord].
 
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 	self primitiveFail
@@ -5562,6 +5668,7 @@ Interpreter >> primitiveFormPrint [
 
 	| landscapeFlag vScale hScale rcvr bitsArray w h
 	 depth pixelsPerWord wordsPerLine bitsArraySize ok |
+
 	self var: #vScale declareC: 'double vScale'.
 	self var: #hScale declareC: 'double hScale'.
 	landscapeFlag _ self booleanValueOf: self stackTop.
@@ -5586,8 +5693,9 @@ Interpreter >> primitiveFormPrint [
 				self success: (bitsArraySize = (wordsPerLine * h * 4))]
 			ifFalse: [self success: false]].	
 	successFlag ifTrue: [
-		ok _ self cCode:
-			'ioFormPrint(bitsArray + 4, w, h, depth, hScale, vScale, landscapeFlag)'.
+		BytesPerWord = 8
+			ifTrue: [ok _ self cCode: 'ioFormPrint(bitsArray + 8, w, h, depth, hScale, vScale, landscapeFlag)']
+			ifFalse: [ok _ self cCode: 'ioFormPrint(bitsArray + 4, w, h, depth, hScale, vScale, landscapeFlag)'].
 		self success: ok].
 	successFlag ifTrue: [
 		self pop: 3].  "pop hScale, vScale, and landscapeFlag; leave rcvr on stack"
@@ -5683,35 +5791,33 @@ Interpreter >> primitiveGreaterThan [
 	self checkBooleanResult: integerReceiver > integerArgument
 ]
 
-{ #category : #'system control primitives' }
+{ #category : #'other primitives' }
 Interpreter >> primitiveImageName [
 	"When called with a single string argument, record the string as the current image file name. When called with zero arguments, return a string containing the current image file name."
-	| s sz sCRIfn okToRename |
-	argumentCount = 1
-		ifTrue: ["If the security plugin can be loaded, use it to check for rename permission. 
-			If not, assume it's ok"
-			sCRIfn := self ioLoadFunction: 'secCanRenameImage' From: 'SecurityPlugin'.
-			sCRIfn ~= 0
-				ifTrue: [okToRename := self cCode: ' ((int (*) (void)) sCRIfn)()'.
-					okToRename ifFalse: [^ self primitiveFail]].
-			"Make sure the arg is a plausible String"
-			s := self stackTop.
-			(self isBytes: s)
-				ifFalse: [^ self primitiveFail].
-			successFlag
-				ifTrue: [sz := self stSizeOf: s.
-					"if the image name is not accepted by the VM support code, fail"
-					(self imageNamePut: s + BaseHeaderSize Length: sz) = 0
-						ifTrue: [^ self primitiveFail].
-					self pop: 1]]
 
-		ifFalse: ["Just return the imageName"
-			sz := self imageNameSize.
-			s := self
-					instantiateClass: (self splObj: ClassString)
-					indexableSize: sz.
-			self imageNameGet: s + BaseHeaderSize Length: sz.
-			self pop: 1 thenPush: s]
+	| s sz sCRIfn okToRename |
+	self var: #sCRIfn declareC: 'void *sCRIfn'.
+	argumentCount = 1 ifTrue: [
+		"If the security plugin can be loaded, use it to check for rename permission.
+		If not, assume it's ok"
+		sCRIfn _ self ioLoadFunction: 'secCanRenameImage' From: 'SecurityPlugin'.
+		sCRIfn ~= 0 ifTrue:[okToRename _ self cCode:' ((sqInt (*)(void))sCRIfn)()'.
+			okToRename ifFalse:[^self primitiveFail]].
+		s _ self stackTop.
+		self assertClassOf: s is: (self splObj: ClassString).
+		successFlag ifTrue: [
+			sz _ self stSizeOf: s.
+			self imageNamePut: (s + BaseHeaderSize) Length: sz.
+			self pop: 1.  "pop s, leave rcvr on stack"
+		].
+	] ifFalse: [
+		sz _ self imageNameSize.
+		s _ self instantiateClass: (self splObj: ClassString) indexableSize: sz.
+		self imageNameGet: (s + BaseHeaderSize) Length: sz.
+		self pop: 1.  "rcvr"
+		self push: s.
+	].
+
 ]
 
 { #category : #'memory space primitives' }
@@ -5822,43 +5928,45 @@ Interpreter >> primitiveInstVarsPutFromStack [
 { #category : #'sound primitives' }
 Interpreter >> primitiveIntegerAt [
 	"Return the 32bit signed integer contents of a words receiver"
+
 	| index rcvr sz addr value |
 	index _ self stackIntegerValue: 0.
 	rcvr _ self stackValue: 1.
-	(self isWords: rcvr) ifFalse: [^ self success: false].
-	sz _ self lengthOf: rcvr. "number of fields"
-	self success: (index >= 1 and: [index <= sz]).
-	successFlag
-		ifTrue: [addr _ rcvr + BaseHeaderSize - 4 + (index * 4).
-			"for zero indexing"
-			value _ self cCode: '*((int *) addr)' inSmalltalk: [self integerAt: addr].
-			self pop: 2.
-			"pop rcvr, index"
-			"push element value"
-			(self isIntegerValue: value)
-				ifTrue: [self pushInteger: value]
-				ifFalse: [self push: (self signed32BitIntegerFor: value)]]
+	(self isIntegerObject: rcvr) ifTrue: [^self success: false].
+	(self isWords: rcvr) ifFalse: [^self success: false].
+	sz _ self lengthOf: rcvr.  "number of fields"
+	self success: ((index >= 1) and: [index <= sz]).
+	successFlag ifTrue: [
+		addr _ rcvr + BaseHeaderSize - 4 "for zero indexing" + (index * 4).
+		value _ self intAt: addr.
+		self pop: 2.  "pop rcvr, index"
+		"push element value"
+		(self isIntegerValue: value)
+			ifTrue: [self pushInteger: value]
+			ifFalse: [self push: (self signed32BitIntegerFor: value)].
+	].
 ]
 
 { #category : #'sound primitives' }
 Interpreter >> primitiveIntegerAtPut [
 	"Return the 32bit signed integer contents of a words receiver"
 	| index rcvr sz addr value valueOop |
-	valueOop _ self stackTop.
+	valueOop _ self stackValue: 0.
 	index _ self stackIntegerValue: 1.
 	rcvr _ self stackValue: 2.
-	(self isWords: rcvr) ifFalse: [^ self success: false].
-	sz _ self lengthOf: rcvr. "number of fields"
-	(index >= 1 and: [index <= sz])
-		ifFalse: [^ self success: false].
+	(self isIntegerObject: rcvr) ifTrue:[^self success: false].
+	(self isWords: rcvr) ifFalse:[^self success: false].
+	sz _ self lengthOf: rcvr.  "number of fields"
+	((index >= 1) and: [index <= sz]) ifFalse:[^self success: false].
 	(self isIntegerObject: valueOop)
-		ifTrue: [value _ self integerValueOf: valueOop]
-		ifFalse: [value _ self signed32BitValueOf: valueOop].
-	successFlag
-		ifTrue: [addr _ rcvr + BaseHeaderSize - 4 + (index * 4).
-			"for zero indexing"
-			value _ self cCode: '*((int *) addr) = value' inSmalltalk: [self integerAt: addr put: value].
-			self pop: 3 thenPush: valueOop]
+		ifTrue:[value _ self integerValueOf: valueOop]
+		ifFalse:[value _ self signed32BitValueOf: valueOop].
+	successFlag ifTrue:[
+		addr _ rcvr + BaseHeaderSize - 4 "for zero indexing" + (index * 4).
+		value _ self intAt: addr put: value.
+		self pop: 3 thenPush: valueOop. "pop all; return value"
+	].
+
 ]
 
 { #category : #'I/O primitives' }
@@ -5881,7 +5989,7 @@ Interpreter >> primitiveInvokeObjectAsMethod [
 	| runSelector runReceiver runArgs newReceiver lookupClass |
 	runArgs _ self instantiateClass: (self splObj: ClassArray) indexableSize: argumentCount.
 	self beRootIfOld: runArgs. "do we really need this?"
-	self transfer: argumentCount from: stackPointer - ((argumentCount - 1) * 4) to: runArgs + BaseHeaderSize.
+	self transfer: argumentCount from: stackPointer - ((argumentCount - 1) * BytesPerWord) to: runArgs + BaseHeaderSize.
 
 	runSelector _ messageSelector.
 	runReceiver _ self stackValue: argumentCount.
@@ -6011,27 +6119,27 @@ Interpreter >> primitiveLoadImageSegment [
 	data _ self longAt: segmentWordArray + BaseHeaderSize.
 	(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse: [
 		"Not readable -- try again with reversed bytes..."
-		self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + 4.
+		self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
 		data _ self longAt: segmentWordArray + BaseHeaderSize.
 		(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse: [
 			"Still NG -- put things back and fail"
-			self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + 4.
+			self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
 			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 			^ self primitiveFail]].
 	"Reverse the Byte type objects if the data from opposite endian machine"
 	"Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal"
 	data = self imageSegmentVersion ifFalse: [
 		"Reverse the byte-type objects once"
-		segOop _ self oopFromChunk: segmentWordArray + BaseHeaderSize + 4.
+		segOop _ self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
 			 "Oop of first embedded object"
-		self byteSwapByteObjectsFrom: segOop to: endSeg + 4].
+		self byteSwapByteObjectsFrom: segOop to: endSeg + BytesPerWord].
 
 	"Proceed through the segment, remapping pointers..."
-	segOop _ self oopFromChunk: segmentWordArray + BaseHeaderSize + 4.
+	segOop _ self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
 	[segOop <= endSeg] whileTrue:
 		[(self headerType: segOop) <= 1
 			ifTrue: ["This object has a class field (type = 0 or 1) -- start with that."
-					fieldPtr _ segOop - 4.  doingClass _ true]
+					fieldPtr _ segOop - BytesPerWord.  doingClass _ true]
 			ifFalse: ["No class field -- start with first data field"
 					fieldPtr _ segOop + BaseHeaderSize.  doingClass _ false].
 		lastPtr _ segOop + (self lastPointerOf: segOop).	"last field"
@@ -6049,7 +6157,7 @@ Interpreter >> primitiveLoadImageSegment [
 			(self isIntegerObject: fieldOop)
 				ifTrue:
 					["Integer -- nothing to do"
-					fieldPtr _ fieldPtr + 4]
+					fieldPtr _ fieldPtr + BytesPerWord]
 				ifFalse:
 					[(fieldOop bitAnd: 3) = 0 ifFalse: [^ self primitiveFail "bad oop"].
 					(fieldOop bitAnd: 16r80000000) = 0
@@ -6064,14 +6172,14 @@ Interpreter >> primitiveLoadImageSegment [
 								fieldPtr _ fieldPtr + 8.
 								doingClass _ false]
 						ifFalse: [self longAt: fieldPtr put: mapOop.
-								fieldPtr _ fieldPtr + 4].
+								fieldPtr _ fieldPtr + BytesPerWord].
 					segOop < youngStart
 						ifTrue: [self possibleRootStoreInto: segOop value: mapOop].
 					]].
 		segOop _ self objectAfter: segOop].
 
 	"Again, proceed through the segment checking consistency..."
-	segOop _ self oopFromChunk: segmentWordArray + BaseHeaderSize + 4.
+	segOop _ self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
 	[segOop <= endSeg] whileTrue:
 		[(self oopHasAcceptableClass: segOop) ifFalse: [^ self primitiveFail "inconsistency"].
 		fieldPtr _ segOop + BaseHeaderSize.		"first field"
@@ -6081,20 +6189,20 @@ Interpreter >> primitiveLoadImageSegment [
 			["Examine each pointer field"
 			fieldOop _ self longAt: fieldPtr.
 			(self oopHasAcceptableClass: fieldOop) ifFalse: [^ self primitiveFail "inconsistency"].
-			fieldPtr _ fieldPtr + 4].
+			fieldPtr _ fieldPtr + BytesPerWord].
 		segOop _ self objectAfter: segOop].
 
-	"Truncate the segment word array to size = 4 (vers stamp only)"
+	"Truncate the segment word array to size = BytesPerWord (vers stamp only)"
 	extraSize _ self extraHeaderBytes: segmentWordArray.
 	hdrTypeBits _ self headerType: segmentWordArray.
 	extraSize = 8
-		ifTrue: [self longAt: segmentWordArray-extraSize put: BaseHeaderSize + 4 + hdrTypeBits]
+		ifTrue: [self longAt: segmentWordArray-extraSize put: BaseHeaderSize + BytesPerWord + hdrTypeBits]
 		ifFalse: [header _ self longAt: segmentWordArray.
 				self longAt: segmentWordArray
-					put: header - (header bitAnd: SizeMask) + BaseHeaderSize + 4].	
+					put: header - (header bitAnd: SizeMask) + BaseHeaderSize + BytesPerWord].	
 	"and return the roots array which was first in the segment"
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
-	self pop: 3 thenPush: (self oopFromChunk: segmentWordArray + BaseHeaderSize + 4).
+	self pop: 3 thenPush: (self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord).
 
 ]
 
@@ -6241,7 +6349,7 @@ Interpreter >> primitiveNewMethod [
 	self success: (self isIntegerObject: header).
 	successFlag ifFalse: [self unPop: 2].
 	class _ self popStack.
-	size _ (self literalCountOfHeader: header) + 1 * 4 + bytecodeCount.
+	size _ (self literalCountOfHeader: header) + 1 * BytesPerWord + bytecodeCount.
 	theMethod _ self instantiateClass: class indexableSize: size.
 	self storePointer: HeaderIndex ofObject: theMethod withValue: header.
 	literalCount _ self literalCountOfHeader: header.
@@ -6397,33 +6505,35 @@ Interpreter >> primitiveObjectPointsTo [
 	(self isIntegerObject: rcvr) ifTrue: [^self pushBool: false].
 
 	lastField _ self lastPointerOf: rcvr.
-	BaseHeaderSize to: lastField by: 4 do:
+	BaseHeaderSize to: lastField by: BytesPerWord do:
 		[:i | (self longAt: rcvr + i) = thang
 			ifTrue: [^ self pushBool: true]].
 	self pushBool: false.
 ]
 
-{ #category : #'system control primitives' }
+{ #category : #'other primitives' }
 Interpreter >> primitiveObsoleteIndexedPrimitive [
 	"Primitive. Invoke an obsolete indexed primitive."
+
 	| pluginName functionName functionAddress |
 	self var: #pluginName declareC: 'char *pluginName'.
 	self var: #functionName declareC: 'char *functionName'.
-	"see if the prim has been called before and already has a function pointer set"
-	functionAddress _ self cCoerce: ((obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 2) to: 'int'.
-	functionAddress = nil
-		ifFalse: [^ self cCode: '((int (*) (void))functionAddress)()' inSmalltalk: [self callExternalPrimitive: functionAddress]].
-
-	"try loading the plugin that this old number maps to"
+	self var: #functionAddress declareC: 'void *functionAddress'.
+	functionAddress _ self cCoerce: ((obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 2) to: 'void *'.
+	functionAddress = nil 
+		ifFalse: [^self cCode: '((sqInt (*)(void))functionAddress)()'
+					inSmalltalk: [self callExternalPrimitive: functionAddress]].
 	pluginName _ (obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 0.
 	functionName _ (obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 1.
-	(pluginName = nil and: [functionName = nil]) ifTrue: [^ self primitiveFail].
+	(pluginName = nil and: [functionName = nil]) 
+		ifTrue: [^self primitiveFail].
 	functionAddress _ self ioLoadFunction: functionName From: pluginName.
-	functionAddress = 0
-		ifFalse: ["Cache for future use"
-			(obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 2 put: (self cCoerce: functionAddress to: 'char*').
-			^ self cCode: '((int (*) (void))functionAddress)()' inSmalltalk: [self callExternalPrimitive: functionAddress]].
-	^ self primitiveFail
+	functionAddress = 0 ifFalse: ["Cache for future use"
+		(obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 2 put: 
+			(self cCoerce: functionAddress to: 'char*').
+		^self cCode: '((sqInt (*)(void))functionAddress)()'
+				inSmalltalk: [self callExternalPrimitive: functionAddress]].
+	^self primitiveFail
 ]
 
 { #category : #'control primitives' }
@@ -6842,44 +6952,41 @@ Interpreter >> primitiveSetInterruptKey [
 
 { #category : #'sound primitives' }
 Interpreter >> primitiveShortAt [
-	"Treat the receiver, which can be indexible by either bytes or 
-	words, as an array of signed 16-bit values. Return the 
-	contents of the given index. Note that the index specifies the 
-	i-th 16-bit entry, not the i-th byte or word."
+	"Treat the receiver, which can be indexible by either bytes or words, as an array of signed 16-bit values. Return the contents of the given index. Note that the index specifies the i-th 16-bit entry, not the i-th byte or word."
+
 	| index rcvr sz addr value |
 	index _ self stackIntegerValue: 0.
 	rcvr _ self stackValue: 1.
-	self success: (self isWordsOrBytes: rcvr).
-	successFlag ifFalse: [^ nil].
-	sz _ (self sizeBitsOf: rcvr) - BaseHeaderSize // 2. "number of 16-bit fields"
-	self success: (index >= 1 and: [index <= sz]).
-	successFlag
-		ifTrue: [addr _ rcvr + BaseHeaderSize + (2 * (index - 1)).
-			value _ self cCode: '*((short int *) addr)' inSmalltalk: [self halfWordAt: addr].
-			self pop: 2.
-			"pop rcvr, index"
-			self pushInteger: value]
+	self success: ((self isIntegerObject: rcvr) not and: [self isWordsOrBytes: rcvr]).
+	successFlag ifFalse: [ ^ nil ].
+	sz _ ((self sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
+	self success: ((index >= 1) and: [index <= sz]).
+	successFlag ifTrue: [
+		addr _ rcvr + BaseHeaderSize + (2 * (index - 1)).
+		value _ self shortAt: addr.
+		self pop: 2.  "pop rcvr, index"
+		self pushInteger: value.  "push element value"
+	]
 ]
 
 { #category : #'sound primitives' }
 Interpreter >> primitiveShortAtPut [
-	"Treat the receiver, which can be indexible by either bytes or 
-	words, as an array of signed 16-bit values. Set the contents 
-	of the given index to the given value. Note that the index 
-	specifies the i-th 16-bit entry, not the i-th byte or word."
+	"Treat the receiver, which can be indexible by either bytes or words, as an array of signed 16-bit values. Set the contents of the given index to the given value. Note that the index specifies the i-th 16-bit entry, not the i-th byte or word."
+
 	| index rcvr sz addr value |
 	value _ self stackIntegerValue: 0.
 	index _ self stackIntegerValue: 1.
 	rcvr _ self stackValue: 2.
-	self success: (self isWordsOrBytes: rcvr).
-	successFlag ifFalse: [^ nil].
-	sz _ (self sizeBitsOf: rcvr) - BaseHeaderSize // 2. "number of 16-bit fields"
-	self success: (index >= 1 and: [index <= sz]).
-	self success: (value >= -32768 and: [value <= 32767]).
-	successFlag
-		ifTrue: [addr _ rcvr + BaseHeaderSize + (2 * (index - 1)).
-			self cCode: '*((short int *) addr) = value'.
-			self pop: 2]
+	self success: ((self isIntegerObject: rcvr) not and: [self isWordsOrBytes: rcvr]).
+	successFlag ifFalse: [ ^ nil ].
+	sz _ ((self sizeBitsOf: rcvr) - BaseHeaderSize) // 2.  "number of 16-bit fields"
+	self success: ((index >= 1) and: [index <= sz]).
+	self success: ((value >= -32768) and: [value <= 32767]).
+	successFlag ifTrue: [
+		addr _ rcvr + BaseHeaderSize + (2 * (index - 1)).
+		self shortAt: addr put: value.
+		self pop: 2.  "pop index and value; leave rcvr on stack"
+	]
 ]
 
 { #category : #'I/O primitives' }
@@ -7048,22 +7155,22 @@ In case of either success or failure, the headers must be restored.  In the even
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 	"Use the top half of outPointers for saved headers."
 	firstOut _ outPointerArray + BaseHeaderSize.
-	lastOut _ firstOut - 4.
-	hdrBaseOut _ outPointerArray + ((self lastPointerOf: outPointerArray) // 8 * 4). "top half"
+	lastOut _ firstOut - BytesPerWord.
+	hdrBaseOut _ outPointerArray + ((self lastPointerOf: outPointerArray) // (BytesPerWord*2) * BytesPerWord). "top half"
 
 	lastSeg _ segmentWordArray.
-	endSeg _ segmentWordArray + (self sizeBitsOf: segmentWordArray) - 4.
+	endSeg _ segmentWordArray + (self sizeBitsOf: segmentWordArray) - BytesPerWord.
 
 	"Write a version number for byte order and version check"
-	versionOffset _ 4.
+	versionOffset _ BytesPerWord.
 	lastSeg _ lastSeg + versionOffset.
 	lastSeg > endSeg ifTrue: [^ self primitiveFail].
 	self longAt: lastSeg put: self imageSegmentVersion.
 
 	"Allocate top 1/8 of segment for table of internal oops and saved headers"
-	firstIn _ endSeg - ((self sizeBitsOf: segmentWordArray) // 32 * 4).  "Take 1/8 of seg"
-	lastIn _ firstIn - 4.
-	hdrBaseIn _ firstIn + ((self sizeBitsOf: segmentWordArray) // 64 * 4). "top half"
+	firstIn _ endSeg - ((self sizeBitsOf: segmentWordArray) // (BytesPerWord*8) * BytesPerWord).  "Take 1/8 of seg"
+	lastIn _ firstIn - BytesPerWord.
+	hdrBaseIn _ firstIn + ((self sizeBitsOf: segmentWordArray) // (BytesPerWord*16) * BytesPerWord). "top half of that"
 
 	"First mark the rootArray and all root objects."
 	self longAt: arrayOfRoots put: ((self longAt: arrayOfRoots) bitOr: MarkBit).
@@ -7073,7 +7180,7 @@ In case of either success or failure, the headers must be restored.  In the even
 		[fieldOop _ self longAt: fieldPtr.
 		(self isIntegerObject: fieldOop) ifFalse:
 			[self longAt: fieldOop put: ((self longAt: fieldOop) bitOr: MarkBit)].
-		fieldPtr _ fieldPtr + 4].
+		fieldPtr _ fieldPtr + BytesPerWord].
 
 	"Then do a mark pass over all objects.  This will stop at our marked roots,
 	thus leaving our segment unmarked in their shadow."
@@ -7092,15 +7199,15 @@ In case of either success or failure, the headers must be restored.  In the even
 		[fieldOop _ self longAt: fieldPtr.
 		(self isIntegerObject: fieldOop) ifFalse:
 			[self longAt: fieldOop put: ((self longAt: fieldOop) bitAnd: AllButMarkBit)].
-		fieldPtr _ fieldPtr + 4].
+		fieldPtr _ fieldPtr + BytesPerWord].
 
 	"All external objects, and only they, are now marked.
 	Copy the array of roots into the segment, and forward its oop."
-	lastIn _ lastIn + 4.
+	lastIn _ lastIn + BytesPerWord.
 	lastIn >= hdrBaseIn ifTrue: [successFlag _ false].
 	lastSeg _ self copyObj: arrayOfRoots toSegment: segmentWordArray addr: lastSeg stopAt: firstIn saveOopAt: lastIn headerAt: hdrBaseIn + (lastIn - firstIn).
 	successFlag ifFalse:
-		[lastIn _ lastIn - 4.
+		[lastIn _ lastIn - BytesPerWord.
 		self restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut.
 		^ self primitiveFailAfterCleanup: outPointerArray].
 
@@ -7110,7 +7217,7 @@ In case of either success or failure, the headers must be restored.  In the even
 	[segOop <= lastSeg] whileTrue:
 		[(self headerType: segOop) <= 1
 			ifTrue: ["This object has a class field (type=0 or 1) -- start with that."
-					fieldPtr _ segOop - 4.  doingClass _ true]
+					fieldPtr _ segOop - BytesPerWord.  doingClass _ true]
 			ifFalse: ["No class field -- start with first data field"
 					fieldPtr _ segOop + BaseHeaderSize.  doingClass _ false].
 		lastPtr _ segOop + (self lastPointerOf: segOop).	"last field"
@@ -7124,7 +7231,7 @@ In case of either success or failure, the headers must be restored.  In the even
 				fieldOop _ fieldOop - hdrTypeBits].
 			(self isIntegerObject: fieldOop)
 				ifTrue: ["Just an integer -- nothing to do"
-						fieldPtr _ fieldPtr + 4]
+						fieldPtr _ fieldPtr + BytesPerWord]
 				ifFalse:
 				[header _ self longAt: fieldOop.
 				(header bitAnd: TypeMask) = HeaderTypeFree
@@ -7135,22 +7242,22 @@ In case of either success or failure, the headers must be restored.  In the even
 						ifTrue:
 							["Points to an unmarked obj -- an internal pointer.
 							Copy the object into the segment, and forward its oop."
-							lastIn _ lastIn + 4.
+							lastIn _ lastIn + BytesPerWord.
 							lastIn >= hdrBaseIn ifTrue: [successFlag _ false].
 							lastSeg _ self copyObj: fieldOop toSegment: segmentWordArray addr: lastSeg stopAt: firstIn saveOopAt: lastIn headerAt: hdrBaseIn + (lastIn - firstIn).
 							successFlag ifFalse:
 								["Out of space in segment"
-								lastIn _ lastIn - 4.
+								lastIn _ lastIn - BytesPerWord.
 								self restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut.
 								^ self primitiveFailAfterCleanup: outPointerArray].
 							mapOop _ (self longAt: fieldOop) bitAnd: AllButTypeMask]
 						ifFalse:
 							["Points to a marked obj -- an external pointer.
 							Map it as a tagged index in outPointers, and forward its oop."
-							lastOut _ lastOut + 4.
+							lastOut _ lastOut + BytesPerWord.
 							lastOut >= hdrBaseOut ifTrue:
 								["Out of space in outPointerArray"
-								lastOut _ lastOut - 4.
+								lastOut _ lastOut - BytesPerWord.
 								self restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut.
 								^ self primitiveFailAfterCleanup: outPointerArray].
 .							mapOop _ lastOut - outPointerArray bitOr: 16r80000000.
@@ -7159,10 +7266,10 @@ In case of either success or failure, the headers must be restored.  In the even
 					"Replace the oop by its mapped value"
 					doingClass
 						ifTrue: [self longAt: fieldPtr put: mapOop + hdrTypeBits.
-								fieldPtr _ fieldPtr + 8.
+								fieldPtr _ fieldPtr + (BytesPerWord*2).
 								doingClass _ false]
 						ifFalse: [self longAt: fieldPtr put: mapOop.
-								fieldPtr _ fieldPtr + 4].
+								fieldPtr _ fieldPtr + BytesPerWord].
 ]].
 		segOop _ self objectAfter: segOop].
 
@@ -7178,12 +7285,12 @@ In case of either success or failure, the headers must be restored.  In the even
 	"Copy the 3-word wordArray header to establish a free chunk."
 	self transfer: 3
 		from: segmentWordArray - extraSize
-		to: lastOut+4.
+		to: lastOut+BytesPerWord.
 	"Adjust the size of the original as well as the free chunk."
-	self longAt: lastOut+4
+	self longAt: lastOut+BytesPerWord
 		put: outPointerArray + (self lastPointerOf: outPointerArray) - lastOut - extraSize + hdrTypeBits.
 	self longAt: outPointerArray-extraSize
-		put: lastOut - firstOut + 8 + hdrTypeBits.
+		put: lastOut - firstOut + (BytesPerWord*2) + hdrTypeBits.
 	"Note that pointers have been stored into roots table"
 	self beRootIfOld: outPointerArray.
 
@@ -7191,11 +7298,11 @@ In case of either success or failure, the headers must be restored.  In the even
 	"Copy the 3-word wordArray header to establish a free chunk."
 	self transfer: 3
 		from: segmentWordArray - extraSize
-		to: lastSeg+4.
+		to: lastSeg+BytesPerWord.
 	"Adjust the size of the original as well as the free chunk."
 	self longAt: segmentWordArray-extraSize
 		put: lastSeg - segmentWordArray + BaseHeaderSize + hdrTypeBits.
-	self longAt: lastSeg+4
+	self longAt: lastSeg+BytesPerWord
 		put: endSeg - lastSeg - extraSize + hdrTypeBits.
 
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
@@ -7211,7 +7318,7 @@ Interpreter >> primitiveStoreStackp [
 	ctxt _ self stackValue: 1.
 	newStackp _ self stackIntegerValue: 0.
 	self success: newStackp >= 0.
-	self success: newStackp <= (LargeContextSize - BaseHeaderSize // 4 - CtxtTempFrameStart).
+	self success: newStackp <= (LargeContextSize - BaseHeaderSize // BytesPerWord - CtxtTempFrameStart).
 	successFlag ifFalse: [^ self primitiveFail].
 	stackp _ self fetchStackPointerOf: ctxt.
 	newStackp > stackp ifTrue: ["Nil any newly accessible cells"
@@ -7274,15 +7381,15 @@ Interpreter >> primitiveStringReplace [
 	srcIndex _ replStart + replInstSize - 1.
 	"- 1 for 0-based access"
 
-	arrayFmt < 4
+	arrayFmt <= 4
 		ifTrue: ["pointer type objects"
 			start + arrayInstSize - 1 to: stop + arrayInstSize - 1 do: [:i |
 				self storePointer: i ofObject: array withValue: (self fetchPointer: srcIndex ofObject: repl).
 					srcIndex _ srcIndex + 1]]
 		ifFalse: [arrayFmt < 8
-				ifTrue: ["long-word type objects"
+				ifTrue: ["32-bit-word type objects"
 					start + arrayInstSize - 1 to: stop + arrayInstSize - 1
-						do: [:i | self storeWord: i ofObject: array withValue: (self fetchWord: srcIndex ofObject: repl).
+						do: [:i | self storeLong32: i ofObject: array withValue: (self fetchLong32: srcIndex ofObject: repl).
 							srcIndex _ srcIndex + 1]]
 				ifFalse: ["byte-type objects"
 					start + arrayInstSize - 1 to: stop + arrayInstSize - 1
@@ -7363,11 +7470,14 @@ Interpreter >> primitiveTruncated [
 	self var: #frac declareC: 'double frac'.
 	self var: #trunc declareC: 'double trunc'.
 	rcvr _ self popFloat.
+	successFlag ifTrue:
+		[self cCode: 'frac = modf(rcvr, &trunc)'
+			inSmalltalk: [trunc _ rcvr truncated].
+		self flag: #Dan.		"The ranges are INCORRECT if SmallIntegers are wider than 31 bits."
+		self cCode: 'success((-1073741824.0 <= trunc) && (trunc <= 1073741823.0))'
+			inSmalltalk: [self success: (trunc between: SmallInteger minVal and: SmallInteger maxVal)]].
 	successFlag
-		ifTrue: [ self cCode: 'frac = modf(rcvr, &trunc)'.
-			self cCode: 'success((-1073741824.0 <= trunc) && (trunc <= 1073741823.0))'].
-	successFlag
-		ifTrue: [self cCode: 'pushInteger((int) trunc)' inSmalltalk: [self pushInteger: rcvr truncated]]
+		ifTrue: [self cCode: 'pushInteger((sqInt) trunc)' inSmalltalk: [self pushInteger: trunc]]
 		ifFalse: [self unPop: 1]
 ]
 
@@ -7381,14 +7491,14 @@ Interpreter >> primitiveUnloadModule [
 	moduleName _ self stackTop.
 	(self isIntegerObject: moduleName) ifTrue:[^self primitiveFail].
 	(self isBytes: moduleName) ifFalse:[^self primitiveFail].
-	(self ioUnloadModule: (self cCoerce: (self firstIndexableField: moduleName) to: 'int')
+	(self ioUnloadModule: (self oopForPointer: (self firstIndexableField: moduleName))
 		OfLength: (self byteSizeOf: moduleName)) ifFalse:[^self primitiveFail].
 	self flushExternalPrimitives.
 	self forceInterruptCheck.
 	self pop: 1 "pop moduleName; return receiver"
 ]
 
-{ #category : #'system control primitives' }
+{ #category : #'other primitives' }
 Interpreter >> primitiveVMParameter [
 	"Behaviour depends on argument count:
 		0 args:	return an Array of VM parameter values;
@@ -7410,36 +7520,39 @@ Interpreter >> primitiveVMParameter [
 		21	root table size (read-only)
 		22	root table overflows since startup (read-only)
 		23	bytes of extra memory to reserve for VM buffers, plugins, etc.
+
 		24	memory headroom when growing object memory (rw)
 		25	memory threshold above which shrinking object memory (rw)
-		26 interruptChecksEveryNms - force an ioProcessEvents every N milliseconds, in case the image is not calling getNextEvent often (rw)
+		26	interruptChecksEveryNms - force an ioProcessEvents every N milliseconds, in case the image is not calling getNextEvent often (rw)
+		27	BytesPerWord for this image
 
 	Note: Thanks to Ian Piumarta for this primitive."
 
 	| mem paramsArraySize result arg index |
-	mem _ self cCoerce: memory to: 'int'.
-	self cCode: '' inSmalltalk: [mem _ 0].
+	mem _ self startOfMemory.
+	paramsArraySize _ 27.
 	argumentCount = 0 ifTrue: [
-		paramsArraySize _ 25.
 		result _ self instantiateClass: (self splObj: ClassArray) indexableSize: paramsArraySize.
 		0 to: paramsArraySize - 1 do:
-			[:i | self storeWord: i ofObject: result withValue: ConstZero].
-		self storeWord: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
-		self storeWord: 1		ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
-		self storeWord: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
-		self storeWord: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
-		self storeWord: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
-		self storeWord: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
-		self storeWord: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
-		self storeWord: 7	ofObject: result withValue: (self integerObjectOf: statFullGCMSecs).
-		self storeWord: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
-		self storeWord: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCMSecs).
-		self storeWord: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
-		self storeWord: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
-		self storeWord: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
-		self storeWord: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
-		self storeWord: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
-		self storeWord: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
+			[:i | self storePointer: i ofObject: result withValue: (self integerObjectOf: 0)].
+		self storePointer: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
+		self storePointer: 1		ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
+		self storePointer: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
+		self storePointer: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
+		self storePointer: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
+		self storePointer: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
+		self storePointer: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
+		self storePointer: 7	ofObject: result withValue: (self integerObjectOf: statFullGCMSecs).
+		self storePointer: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
+		self storePointer: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCMSecs).
+		self storePointer: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
+		self storePointer: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
+		self storePointer: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
+		self storePointer: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
+		self storePointer: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
+		self storePointer: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
+		self storePointer: 25	ofObject: result withValue: (self integerObjectOf: interruptChecksEveryNms).
+		self storePointer: 26	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
 		self pop: 1 thenPush: result.
 		^nil].
 
@@ -7447,7 +7560,7 @@ Interpreter >> primitiveVMParameter [
 	(self isIntegerObject: arg) ifFalse: [^self primitiveFail].
 	arg _ self integerValueOf: arg.
 	argumentCount = 1 ifTrue: [	 "read VM parameter"
-		(arg < 1 or: [arg > 25]) ifTrue: [^self primitiveFail].
+		(arg < 1 or: [arg > paramsArraySize]) ifTrue: [^self primitiveFail].
 		arg = 1		ifTrue: [result _ youngStart - mem].
 		arg = 2		ifTrue: [result _ freeBlock - mem].
 		arg = 3		ifTrue: [result _ endOfMemory - mem].
@@ -7464,8 +7577,9 @@ Interpreter >> primitiveVMParameter [
 		arg = 22		ifTrue: [result _ statRootTableOverflows].
 		arg = 23		ifTrue: [result _ extraVMMemory].
 		arg = 24		ifTrue: [result _ shrinkThreshold].
-		arg = 25		ifTrue: [result _ growHeadroom].
+		arg = 25 	ifTrue: [result _ growHeadroom].
 		arg = 26		ifTrue: [result _ interruptChecksEveryNms]. 
+		arg = 27 	ifTrue: [result _ BytesPerWord].
 		self pop: 2 thenPush: (self integerObjectOf: result).
 		^nil].
 
@@ -7501,6 +7615,7 @@ Interpreter >> primitiveVMParameter [
 	index = 26 ifTrue: [
 		arg > 1 ifTrue:[
 			result _ interruptChecksEveryNms.
+			interruptChecksEveryNms _ arg.
 			successFlag _ true]]. 
 
 	successFlag ifTrue: [
@@ -7711,10 +7826,10 @@ Interpreter >> printNameOfClass: classOop count: cnt [
 	"Details: The count argument is used to avoid a possible infinite recursion if classOop is a corrupted object."
 
 	cnt <= 0 ifTrue: [ ^ self print: 'bad class' ].
-	(self sizeBitsOf: classOop) = 16r1C  "(Metaclass instSize+1 * 4)"
-	ifTrue: [self printNameOfClass: (self fetchPointer: 5 "thisClass" ofObject: classOop) 
-				count: cnt - 1.
-			self print: ' class']
+	(self sizeBitsOf: classOop) = (7 * BytesPerWord)	"(Metaclass instSize+1 * 4)"
+		ifTrue: [self printNameOfClass: (self fetchPointer: 5 "thisClass" ofObject: classOop) 
+					count: cnt - 1.
+				self print: ' class']
 	ifFalse: [self printStringOf: (self fetchPointer: 6 "name" ofObject: classOop)]
 ]
 
@@ -7773,7 +7888,7 @@ Interpreter >> printUnbalancedStackFromNamedPrimitive [
 Interpreter >> push: object [
 
 	| sp |
-	self longAt: (sp _ stackPointer + 4) put: object.
+	self longAt: (sp _ stackPointer + BytesPerWord) put: object.
 	stackPointer _ sp.
 ]
 
@@ -7934,14 +8049,16 @@ Interpreter >> pushTemporaryVariableBytecode [
 ]
 
 { #category : #'image save/restore' }
-Interpreter >> putLong: n toFile: f [
-	"Append the given 4-byte long word to the given file in this platforms 'natural' byte order. (Bytes will be swapped, if necessary, when the image is read on a different platform.) Set successFlag to false if the write fails."
+Interpreter >> putLong: aWord toFile: aFile [
+	"Append aWord to aFile in this platforms 'natural' byte order.  (Bytes will be swapped, if
+	necessary, when the image is read on a different platform.) Set successFlag to false if
+	the write fails."
 
-	| wordsWritten |
-	self var: #f declareC: 'sqImageFile f'.
+	| objectsWritten |
+	self var: #aFile declareC: 'sqImageFile aFile'.
 
-	wordsWritten _ self cCode: 'sqImageFileWrite(&n, sizeof(int), 1, f)'.
-	self success: wordsWritten = 1.
+	objectsWritten _ self cCode: 'sqImageFileWrite(&aWord, sizeof(aWord), 1, aFile)'.
+	self success: objectsWritten = 1.
 
 ]
 
@@ -7985,10 +8102,9 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	self var: #headerStart declareC: 'squeakFileOffsetType headerStart'.
 	self var: #dataSize declareC: 'size_t dataSize'.
 	self var: #imageOffset declareC: 'squeakFileOffsetType imageOffset'.
-	self var: #memStart type: 'unsigned'.
 
 	swapBytes _ self checkImageVersionFrom: f startingAt: imageOffset.
-	headerStart _ (self sqImageFilePosition: f) - 4.  "record header start position"
+	headerStart _ (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 
 	headerSize			_ self getLongFromFile: f swap: swapBytes.
 	dataSize				_ self getLongFromFile: f swap: swapBytes.
@@ -8012,7 +8128,7 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 		self insufficientMemorySpecifiedError].
 
 	"allocate a contiguous block of memory for the Squeak heap"
-	memory _ self cCode: '(unsigned char *) sqAllocateMemory(minimumMemory, heapSize)'.
+	memory _ self cCode: 'sqAllocateMemory(minimumMemory, heapSize)'.
 	memory = nil ifTrue: [self insufficientMemoryAvailableError].
 
 	memStart _ self startOfMemory.
@@ -8023,13 +8139,13 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"read in the image in bulk, then swap the bytes if necessary"
-	bytesRead _ self cCode: 'sqImageFileRead(memory, sizeof(unsigned char), dataSize, f)'.
+	bytesRead _ self cCode: 'sqImageFileRead(pointerForOop(memory), sizeof(unsigned char), dataSize, f)'.
 	bytesRead ~= dataSize ifTrue: [self unableToReadImageError].
 
-	headerTypeBytes at: 0 put: 8. "3-word header (type 0)"	
-	headerTypeBytes at: 1 put: 4. "2-word header (type 1)"
-	headerTypeBytes at: 2 put: 0. "free chunk (type 2)"	
-	headerTypeBytes at: 3 put: 0. "1-word header (type 3)"
+	headerTypeBytes at: 0 put: BytesPerWord * 2.		"3-word header (type 0)"	
+	headerTypeBytes at: 1 put: BytesPerWord.		"2-word header (type 1)"
+	headerTypeBytes at: 2 put: 0.					"free chunk (type 2)"	
+	headerTypeBytes at: 3 put: 0.					"1-word header (type 3)"
 
 	swapBytes ifTrue: [self reverseBytesInImage].
 
@@ -8076,13 +8192,13 @@ Interpreter >> restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: first
 		[oop _ self longAt: tablePtr.
 		header _ self longAt: hdrBaseIn + (tablePtr-firstIn).
 		self longAt: oop put: header.
-		tablePtr _ tablePtr + 4].
+		tablePtr _ tablePtr + BytesPerWord].
 	tablePtr _ firstOut.
 	[tablePtr <= lastOut] whileTrue:
 		[oop _ self longAt: tablePtr.
 		header _ self longAt: hdrBaseOut + (tablePtr-firstOut).
 		self longAt: oop put: header.
-		tablePtr _ tablePtr + 4].
+		tablePtr _ tablePtr + BytesPerWord].
 	
 	"Clear all mark bits"
 	oop _ self firstObject.
@@ -8154,10 +8270,11 @@ Interpreter >> returnTrue [
 Interpreter >> reverseBytesFrom: startAddr to: stopAddr [
 	"Byte-swap the given range of memory (not inclusive of stopAddr!)."
 	| addr |
+	self flag: #Dan.
 	addr _ startAddr.
 	[addr < stopAddr] whileTrue:
 		[self longAt: addr put: (self byteSwapped: (self longAt: addr)).
-		addr _ addr + 4].
+		addr _ addr + BytesPerWord].
 ]
 
 { #category : #'image save/restore' }
@@ -8187,20 +8304,34 @@ Interpreter >> reverseDisplayFrom: startIndex to: endIndex [
 	dispBitsPtr _ dispBitsPtr + BaseHeaderSize.
 	dispBitsPtr + (startIndex * 4) to: dispBitsPtr + (endIndex * 4) by: 4
 		do: [:ptr | 
-			reversed _ (self longAt: ptr) bitXor: 4294967295.
+			reversed _ (self long32At: ptr) bitXor: 4294967295.
 			self longAt: ptr put: reversed].
+	successFlag _ true.
 	self displayBitsOf: displayObj Left: 0 Top: 0 Right: w Bottom: 1.
 	self ioForceDisplayUpdate
 ]
 
+{ #category : #'image save/restore' }
+Interpreter >> reverseWordsFrom: startAddr to: stopAddr [
+	"Word-swap the given range of memory, excluding stopAddr."
+
+	| addr |
+	addr _ startAddr.
+	[addr < stopAddr] whileTrue:
+		[self longAt: addr put: (self wordSwapped: (self longAt: addr)).
+		addr _ addr + BytesPerWord].
+]
+
 { #category : #'method lookup cache' }
 Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrimIndex [
-"rewrite the cache entry with the provided prim index and matching function pointer"
+
+	"Rewrite the cache entry with the given primitive index and matching function pointer"
 	| primPtr |
+	self var: #primPtr type: 'void *'.
 	self inline: false.
 	localPrimIndex = 0
-		ifTrue:[primPtr _ 0]
-		ifFalse:[primPtr _ self cCoerce: (primitiveTable at: localPrimIndex) to: 'int'].
+		ifTrue: [primPtr _ 0]
+		ifFalse: [primPtr _ primitiveTable at: localPrimIndex].
 	self
 		rewriteMethodCacheSel: selector class: class
 		primIndex: localPrimIndex primFunction: primPtr
@@ -8212,13 +8343,14 @@ Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrim
 	index & function address. Used by primExternalCall to make direct jumps to found external prims"
 	| probe hash |
 	self inline: false.
+	self var: #localPrimAddress type: 'void *'.
 	hash := selector bitXor: class.
 	0 to: CacheProbeMax - 1 do: [:p | 
 			probe := hash >> p bitAnd: MethodCacheMask.
 			((methodCache at: probe + MethodCacheSelector) = selector
 					and: [(methodCache at: probe + MethodCacheClass) = class])
 				ifTrue: [methodCache at: probe + MethodCachePrim put: localPrimIndex.
-					methodCache at: probe + MethodCachePrimFunction put: localPrimAddress.
+					methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: localPrimAddress to: 'long').
 					^ nil]]
 ]
 
@@ -8425,8 +8557,8 @@ Interpreter >> signed64BitIntegerFor: integerValue [
 	"Return a Large Integer object for the given integer value"
 	| newLargeInteger value largeClass intValue check |
 	self inline: false.
-	self var: 'integerValue' type: 'squeakInt64'.
-	self var: 'value' type: 'squeakInt64'.
+	self var: 'integerValue' type: 'sqLong'.
+	self var: 'value' type: 'sqLong'.
 	integerValue < 0
 		ifTrue:[	largeClass _ self classLargeNegativeInteger.
 				value _ 0 - integerValue]
@@ -8449,24 +8581,24 @@ Interpreter >> signed64BitIntegerFor: integerValue [
 Interpreter >> signed64BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive ST integer or a eight-byte LargeInteger."
-	| sz value largeClass negative szsqueakInt64 |
+	| sz value largeClass negative szsqLong |
 	self inline: false.
-	self returnTypeC: 'squeakInt64'.
-	self var: 'value' type: 'squeakInt64'.
-	(self isIntegerObject: oop) ifTrue: [^self cCoerce: (self integerValueOf: oop) to: 'squeakInt64'].
+	self returnTypeC: 'sqLong'.
+	self var: 'value' type: 'sqLong'.
+	(self isIntegerObject: oop) ifTrue: [^self cCoerce: (self integerValueOf: oop) to: 'sqLong'].
 	largeClass _ self fetchClassOf: oop.
 	largeClass = self classLargePositiveInteger
 		ifTrue:[negative _ false]
 		ifFalse:[largeClass = self classLargeNegativeInteger
 					ifTrue:[negative _ true]
 					ifFalse:[^self primitiveFail]].
-	szsqueakInt64 _ self cCode: 'sizeof(squeakInt64)'.
+	szsqLong _ self cCode: 'sizeof(sqLong)'.
 	sz _ self lengthOf: oop.
-	sz > szsqueakInt64 
+	sz > szsqLong 
 		ifTrue: [^ self primitiveFail].
 	value _ 0.
 	0 to: sz - 1 do: [:i |
-		value _ value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: 'squeakInt64') <<  (i*8))].
+		value _ value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: 'sqLong') <<  (i*8))].
 	negative
 		ifTrue:[^0 - value]
 		ifFalse:[^value]
@@ -8497,16 +8629,16 @@ Interpreter >> singleExtendedSuperBytecode [
 
 { #category : #utilities }
 Interpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
-	"Return the number of indexable fields of the given object. This method is to be called from an automatically generated C primitive. The argument is assumed to be a pointer to the first indexable field of a words or bytes object; the object header start 4 bytes before that."
+	"Return the number of indexable fields of the given object. This method is to be called from an automatically generated C primitive. The argument is assumed to be a pointer to the first indexable field of a words or bytes object; the object header starts 4 bytes before that."
 	"Note: Only called by translated primitive code."
 
 	| oop |
 	self var: #cPtr declareC: 'void *cPtr'.
-	oop _ self cCode: '((int) cPtr) - 4'.
+	oop _ (self oopForPointer: cPtr) - BaseHeaderSize.
 	(self isWordsOrBytes: oop) ifFalse: [
 		self primitiveFail.
-		^ 0].
-	^ self lengthOf: oop
+		^0].
+	^self lengthOf: oop
 
 ]
 
@@ -8523,6 +8655,7 @@ Interpreter >> slotSizeOf: oop [
 Interpreter >> snapshot: embedded [ 
 	"update state of active context"
 	| activeProc dataSize rcvr setMacType |
+	self var: #setMacType type: 'void *'.
 	compilerInitialized
 		ifTrue: [self compilerPreSnapshot]
 		ifFalse: [self storeContextRegisters: activeContext].
@@ -8551,7 +8684,7 @@ Interpreter >> snapshot: embedded [
 				ifFalse: ["set Mac file type and creator; this is a noop on other platforms"
 					setMacType _ self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
 					setMacType = 0
-						ifFalse: [self cCode: '((int (*) (char*, char*, char*)) setMacType) (getImageName(), "STim", "FAST")']].
+						ifFalse: [self cCode: '((sqInt (*)(char *, char *, char *))setMacType)(imageName, "STim", "FAST")']].
 			self pop: 1].
 
 	"activeContext was unmarked in #snapshotCleanUp, mark it old "
@@ -8578,8 +8711,8 @@ Interpreter >> snapshotCleanUp [
 					"Clean out context"
 					(fmt = 3 and: [self isContextHeader: header])
 						ifTrue: [sz _ self sizeBitsOf: oop.
-							(self lastPointerOf: oop) + 4
-								to: sz - BaseHeaderSize by: 4
+							(self lastPointerOf: oop) + BytesPerWord
+								to: sz - BaseHeaderSize by: BytesPerWord
 								do: [:i | self longAt: oop + i put: nilObj]].
 					"Clean out external functions"
 					fmt >= 12
@@ -8610,8 +8743,8 @@ Interpreter >> stObject: array at: index [
 	(fmt = 3 and: [self isContextHeader: hdr])
 		ifTrue: [stSize _ self fetchStackPointerOf: array]
 		ifFalse: [stSize _ totalLength - fixedFields].
-	((self cCoerce: index to: 'unsigned ') >= 1
-		and: [(self cCoerce: index to: 'unsigned ') <= (self cCoerce: stSize to: 'unsigned ')])
+	((self cCoerce: index to: 'usqInt ') >= 1
+		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
 		ifTrue: [^ self subscript: array with: (index + fixedFields) format: fmt]
 		ifFalse: [successFlag _ false.  ^ 0].
 ]
@@ -8628,8 +8761,8 @@ Interpreter >> stObject: array at: index put: value [
 	(fmt = 3 and: [self isContextHeader: hdr])
 		ifTrue: [stSize _ self fetchStackPointerOf: array]
 		ifFalse: [stSize _ totalLength - fixedFields].
-	((self cCoerce: index to: 'unsigned ') >= 1
-		and: [(self cCoerce: index to: 'unsigned ') <= (self cCoerce: stSize to: 'unsigned ')])
+	((self cCoerce: index to: 'usqInt ') >= 1
+		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
 		ifFalse: [successFlag _ false]
 ]
@@ -8656,7 +8789,7 @@ Interpreter >> stackFloatValue: offset [
 	| result floatPointer |
 	self returnTypeC: 'double'.
 	self var: #result declareC: 'double result'.
-	floatPointer _ self longAt: stackPointer - (offset*4).
+	floatPointer _ self longAt: stackPointer - (offset*BytesPerWord).
 	(self fetchClassOf: floatPointer) = (self splObj: ClassFloat) 
 		ifFalse:[self primitiveFail. ^0.0].
 	self cCode: '' inSmalltalk: [result _ Float new: 2].
@@ -8667,7 +8800,7 @@ Interpreter >> stackFloatValue: offset [
 { #category : #contexts }
 Interpreter >> stackIntegerValue: offset [
 	| integerPointer |
-	integerPointer _ self longAt: stackPointer - (offset*4).
+	integerPointer _ self longAt: stackPointer - (offset*BytesPerWord).
 	^self checkedIntegerValueOf: integerPointer
 ]
 
@@ -8676,7 +8809,7 @@ Interpreter >> stackObjectValue: offset [
 	"Ensures that the given object is a real object, not a SmallInteger."
 
 	| oop |
-	oop _ self longAt: stackPointer - (offset * 4).
+	oop _ self longAt: stackPointer - (offset * BytesPerWord).
 	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
 	^ oop
 
@@ -8686,7 +8819,7 @@ Interpreter >> stackObjectValue: offset [
 Interpreter >> stackPointerIndex [
 	"Return the 0-based index rel to the current context.
 	(This is what stackPointer used to be before conversion to pointer"
-	^ (stackPointer - activeContext - BaseHeaderSize) >> 2
+	^ (stackPointer - activeContext - BaseHeaderSize) >> ShiftForWord
 ]
 
 { #category : #contexts }
@@ -8696,7 +8829,7 @@ Interpreter >> stackTop [
 
 { #category : #contexts }
 Interpreter >> stackValue: offset [
-	^ self longAt: stackPointer - (offset*4)
+	^ self longAt: stackPointer - (offset*BytesPerWord)
 ]
 
 { #category : #'stack bytecodes' }
@@ -8739,9 +8872,9 @@ Interpreter >> storeContextRegisters: activeCntx [
 		-1 because it gets incremented BEFORE fetching currentByte"
 
 	self inline: true.
-	self storeWord: InstructionPointerIndex ofObject: activeCntx
+	self storePointer: InstructionPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (instructionPointer - method - (BaseHeaderSize - 2))).
-	self storeWord: StackPointerIndex ofObject: activeCntx
+	self storePointer: StackPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (self stackPointerIndex - TempFrameStart + 1)).
 
 ]
@@ -8750,17 +8883,15 @@ Interpreter >> storeContextRegisters: activeCntx [
 Interpreter >> storeInstructionPointerValue: value inContext: contextPointer [
 	"Assume: value is an integerValue"
 
-	self storeWord: InstructionPointerIndex ofObject: contextPointer withValue: (self integerObjectOf: value).
+	self storePointer: InstructionPointerIndex ofObject: contextPointer withValue: (self integerObjectOf: value).
 ]
 
 { #category : #utilities }
 Interpreter >> storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue [ 
 	"Note: May be called by translated primitive code."
 	(self isIntegerValue: integerValue)
-		ifTrue: [self
-				storeWord: fieldIndex
-				ofObject: objectPointer
-				withValue: (self integerObjectOf: integerValue)]
+		ifTrue: [self storePointer: fieldIndex ofObject: objectPointer
+					withValue: (self integerObjectOf: integerValue)]
 		ifFalse: [self primitiveFail]
 ]
 
@@ -8768,7 +8899,8 @@ Interpreter >> storeInteger: fieldIndex ofObject: objectPointer withValue: integ
 Interpreter >> storeStackPointerValue: value inContext: contextPointer [
 	"Assume: value is an integerValue"
 
-	self storeWord: StackPointerIndex ofObject: contextPointer withValue: (self integerObjectOf: value).
+	self storePointer: StackPointerIndex ofObject: contextPointer
+		withValue: (self integerObjectOf: value).
 ]
 
 { #category : #'array and stream primitive support' }
@@ -8780,7 +8912,7 @@ Interpreter >> subscript: array with: index format: fmt [
 		^ self fetchPointer: index - 1 ofObject: array].
 	fmt < 8 ifTrue: [  "long-word type objects"
 		^ self positive32BitIntegerFor:
-			(self fetchWord: index - 1 ofObject: array)
+			(self fetchLong32: index - 1 ofObject: array)
 	] ifFalse: [  "byte-type objects"
 		^ self integerObjectOf:
 			(self fetchByte: index - 1 ofObject: array)
@@ -8794,16 +8926,14 @@ Interpreter >> subscript: array with: index storing: oopToStore format: fmt [
 	self inline: true.
 	fmt <= 4
 		ifTrue: ["pointer type objects"
-			self storePointer: index - 1
-				ofObject: array
+			self storePointer: index - 1 ofObject: array
 				withValue: oopToStore]
 		ifFalse: [fmt < 8
 				ifTrue: ["long-word type objects"
 					valueToStore _ self positive32BitValueOf: oopToStore.
 					successFlag
-						ifTrue: [self storeWord: index - 1
-								ofObject: array
-								withValue: valueToStore]]
+						ifTrue: [self storeLong32: index - 1 ofObject: array
+									withValue: valueToStore]]
 				ifFalse: ["byte-type objects"
 					(self isIntegerObject: oopToStore)
 						ifFalse: [successFlag _ false].
@@ -8832,11 +8962,11 @@ Interpreter >> sufficientSpaceToInstantiate: classOop indexableSize: size [
 	self inline: true.
 	format _ (self formatOfClass: classOop) >> 8 bitAnd: 15.
 	"fail if attempting to call new: on non-indexable class"
-	((self cCoerce: size to: 'unsigned ') > 0 and: [format < 2])
+	((self cCoerce: size to: 'usqInt ') > 0 and: [format < 2])
 		ifTrue: [^ false].
 	format < 8
 		ifTrue: ["indexable fields are words or pointers"
-			okay _ self sufficientSpaceToAllocate: 2500 + (size * 4)]
+			okay _ self sufficientSpaceToAllocate: 2500 + (size * BytesPerWord)]
 		ifFalse: ["indexable fields are bytes"
 			okay _ self sufficientSpaceToAllocate: 2500 + size].
 	^ okay
@@ -8874,6 +9004,11 @@ Interpreter >> synchronousSignal: aSemaphore [
 		ifFalse: [self resume: (self removeFirstLinkOfList: aSemaphore)]
 ]
 
+{ #category : #'compiled methods' }
+Interpreter >> tempCountOf: methodPointer [
+	^ ((self headerOf: methodPointer) >> 19) bitAnd: 16r3F
+]
+
 { #category : #contexts }
 Interpreter >> temporary: offset [
 
@@ -8883,27 +9018,31 @@ Interpreter >> temporary: offset [
 { #category : #utilities }
 Interpreter >> transfer: count from: src to: dst [ 
 	| in out lastIn |
+	self flag: #Dan.  "Need to check all senders before converting this for 64 bits"
 	self inline: true.
-	in _ src - 4.
-	lastIn _ in + (count * 4).
-	out _ dst - 4.
+	in _ src - BytesPerWord.
+	lastIn _ in + (count * BytesPerWord).
+	out _ dst - BytesPerWord.
 	[in < lastIn]
 		whileTrue: [self
-				longAt: (out _ out + 4)
-				put: (self longAt: (in _ in + 4))]
+				longAt: (out _ out + BytesPerWord)
+				put: (self longAt: (in _ in + BytesPerWord))]
 ]
 
 { #category : #utilities }
-Interpreter >> transfer: count fromIndex: firstFrom ofObject: fromOop toIndex: firstTo ofObject: toOop [ 
+Interpreter >> transfer: count fromIndex: firstFrom ofObject: fromOop toIndex: firstTo ofObject: toOop [
+	"Transfer the specified fullword fields, as from calling context to called context"
+	
 	"Assume: beRootIfOld: will be called on toOop."
 	| fromIndex toIndex lastFrom |
+	self flag: #Dan.  "Need to check all senders before converting this for 64 bits"
 	self inline: true.
-	fromIndex _ fromOop + (firstFrom * 4).
-	toIndex _ toOop + (firstTo * 4).
-	lastFrom _ fromIndex + (count * 4).
+	fromIndex _ fromOop + (firstFrom * BytesPerWord).
+	toIndex _ toOop + (firstTo * BytesPerWord).
+	lastFrom _ fromIndex + (count * BytesPerWord).
 	[fromIndex < lastFrom]
-		whileTrue: [fromIndex _ fromIndex + 4.
-			toIndex _ toIndex + 4.
+		whileTrue: [fromIndex _ fromIndex + BytesPerWord.
+			toIndex _ toIndex + BytesPerWord.
 			self
 				longAt: toIndex
 				put: (self longAt: fromIndex)]
@@ -8929,7 +9068,7 @@ Interpreter >> transferTo: aProc [
 
 { #category : #contexts }
 Interpreter >> unPop: nItems [
-	stackPointer _ stackPointer + (nItems*4)
+	stackPointer _ stackPointer + (nItems*BytesPerWord)
 ]
 
 { #category : #'interpreter shell' }
@@ -8971,29 +9110,54 @@ Interpreter >> wakeHighestPriority [
 ]
 
 { #category : #'image save/restore' }
+Interpreter >> wordSwapped: w [
+	"Return the given 64-bit integer with its halves in the reverse order."
+
+	BytesPerWord = 8 ifFalse: [self error: 'This cannot happen.'].
+	^   ((w bitShift: Byte4ShiftNegated) bitAnd: Bytes3to0Mask)
+	  + ((w bitShift: Byte4Shift         ) bitAnd: Bytes7to4Mask)
+
+]
+
+{ #category : #'image save/restore' }
 Interpreter >> writeImageFile: imageBytes [
+
+	| fn |
+	self var: #fn declareC: 'void *fn'.
+	self writeImageFileIO: imageBytes.
+	"set Mac file type and creator; this is a noop on other platforms"
+	fn _ self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
+	fn = 0 ifFalse:[
+		self cCode:'((sqInt (*)(char*, char*, char*))fn)(imageName, "STim", "FAST")'.
+	].
+
+]
+
+{ #category : #'image save/restore' }
+Interpreter >> writeImageFileIO: imageBytes [
 
 	| headerStart headerSize f bytesWritten sCWIfn okToWrite |
 	self var: #f declareC: 'sqImageFile f'.
 	self var: #headerStart declareC: 'squeakFileOffsetType headerStart'.
+	self var: #sCWIfn declareC: 'void *sCWIfn'.
 
 	"If the security plugin can be loaded, use it to check for write permission.
 	If not, assume it's ok"
 	sCWIfn _ self ioLoadFunction: 'secCanWriteImage' From: 'SecurityPlugin'.
-	sCWIfn ~= 0 ifTrue:[okToWrite _ self cCode:' ((int (*) (void)) sCWIfn)()'.
+	sCWIfn ~= 0 ifTrue:[okToWrite _ self cCode: '((sqInt (*)(void))sCWIfn)()'.
 		okToWrite ifFalse:[^self primitiveFail]].
 	
 	"local constants"
 	headerStart _ 0.  
 	headerSize _ 64.  "header size in bytes; do not change!"
 
-	f _ self cCode: 'sqImageFileOpen(getImageName(), "wb")'.
+	f _ self cCode: 'sqImageFileOpen(imageName, "wb")'.
 	f = nil ifTrue: [
 		"could not open the image file for writing"
 		self success: false.
 		^ nil].
 
-	headerStart _ self cCode: 'sqImageFileStartLocation(f,getImageName(),headerSize+imageBytes)'.
+	headerStart _ self cCode: 'sqImageFileStartLocation(f,imageName,headerSize+imageBytes)'.
 	self cCode: '/* Note: on Unix systems one could put an exec command here, padded to 512 bytes */'.
 	"position file to start of header"
 	self sqImageFile: f Seek: headerStart.
@@ -9017,7 +9181,7 @@ Interpreter >> writeImageFile: imageBytes [
 	self sqImageFile: f Seek: headerStart + headerSize.
 
 	"write the image data"
-	bytesWritten _ self cCode: 'sqImageFileWrite(memory, sizeof(unsigned char), imageBytes, f)'.
+	bytesWritten _ self cCode: 'sqImageFileWrite(pointerForOop(memory), sizeof(unsigned char), imageBytes, f)'.
 	self success: bytesWritten = imageBytes.
 	self cCode: 'sqImageFileClose(f)'.
 

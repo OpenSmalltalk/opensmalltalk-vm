@@ -503,19 +503,16 @@ VMMaker >> generateInternalPlugins [
 
 { #category : #'generate sources' }
 VMMaker >> generateInterpreterFile [
-	"Translate the Smalltalk description of the virtual machine into C. If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead. On the PPC, this results in a factor of three speedup with only 30% increase in code size. "
-"Subclasses can use specialised versions of CCodeGenerator and interpreterClass"
+	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
 
-	|  cg |
-	self needsToRegenerateInterpreterFile ifFalse:[^nil].
-
+	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 	self interpreterClass initialize.
 	ObjectMemory initialize.
-	cg _ self createCodeGenerator.
-	cg addClass: self interpreterClass.
-	cg addClass: ObjectMemory.
-
-	cg storeCodeOnFile: self interpreterFilePath doInlining: self doInlining
+	self createCodeGenerator
+		addClass: self interpreterClass;
+		addClass: ObjectMemory;
+		storeHeaderOnFile: self interpreterHeaderPath bytesPerWord: ObjectMemory bytesPerWord;
+		storeCodeOnFile: self interpreterFilePath doInlining: self doInlining
 ]
 
 { #category : #'generate sources' }
@@ -666,14 +663,30 @@ VMMaker >> interpreterExportsFilePath [
 
 { #category : #'generate sources' }
 VMMaker >> interpreterFilePath [
-	"return the full path for the interpreter file"
+	"Answer the fully-qualified path for the generated interpreter file."
+
 	^self coreVMDirectory fullNameFor: self interpreterFilename
 ]
 
 { #category : #'target directories' }
 VMMaker >> interpreterFilename [
-	"what is the filename for the core interpreter. Default is interp.c"
+	"Answer the filename for the core interpreter.  Default is 'interp.c'."
+
 	^'interp.c'
+]
+
+{ #category : #'target directories' }
+VMMaker >> interpreterHeaderName [
+	"Answer the filename for the core interpreter header.  Default is 'interp.h'."
+
+	^'interp.h'
+]
+
+{ #category : #'generate sources' }
+VMMaker >> interpreterHeaderPath [
+	"Answer the fully-qualified path for the generated interpreter header file."
+
+	^self coreVMDirectory fullNameFor: self interpreterHeaderName
 ]
 
 { #category : #'private - errors' }

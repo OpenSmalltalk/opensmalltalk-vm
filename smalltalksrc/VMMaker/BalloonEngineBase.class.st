@@ -27,8 +27,8 @@ Class {
 	#classVars : [
 		'FillTable',
 		'EdgeStepTable',
-		'WideLineWidthTable',
 		'EdgeInitTable',
+		'WideLineWidthTable',
 		'WideLineFillTable'
 	],
 	#pools : [
@@ -259,8 +259,9 @@ Clipping
 	^self error:'Comment only'
 ]
 
-{ #category : #'class initialization' }
+{ #category : #translation }
 BalloonEngineBase class >> declareCVarsIn: cg [
+
 	"Buffers"
 	cg var: #workBuffer type: #'int*'.
 	cg var: #objBuffer type: #'int*'.
@@ -270,7 +271,9 @@ BalloonEngineBase class >> declareCVarsIn: cg [
 	cg var: #edgeTransform declareC: 'float edgeTransform[6]'.
 	cg var: #doProfileStats declareC: 'int doProfileStats = 0'.
 	cg var: 'bbPluginName' declareC:'char bbPluginName[256] = "BitBltPlugin"'.
-
+	"Functions"
+	cg var: 'copyBitsFn'	type: 'void *'.
+	cg var: 'loadBBFn'	type: 'void *'.
 ]
 
 { #category : #'class initialization' }
@@ -645,11 +648,12 @@ BalloonEngineBase >> computeSqrt: length2 [
 
 { #category : #private }
 BalloonEngineBase >> copyBitsFrom: x0 to: x1 at: yValue [
-	copyBitsFn = 0 ifTrue:[
+
+	copyBitsFn = 0 ifTrue: [
 		"We need copyBits here so try to load it implicitly"
-		self initialiseModule ifFalse:[^false].
+		self initialiseModule ifFalse: [^false].
 	].
-	^self cCode:' ((int (*) (int, int, int)) copyBitsFn)(x0, x1, yValue)'
+	^self cCode: '((sqInt (*)(sqInt, sqInt, sqInt))copyBitsFn)(x0, x1, yValue)'
 ]
 
 { #category : #'GET processing' }
@@ -1073,6 +1077,7 @@ BalloonEngineBase >> fillSpan: fill from: leftX to: rightX [
 	Clip before performing any operations. Return true if the fill must
 	be handled by some Smalltalk code."
 	| x0 x1 type |
+	self var: #fill type: 'unsigned int'.
 	self inline: false.
 	fill = 0 ifTrue:[^false]. "Nothing to do"
 	"Start from spEnd - we must not paint pixels twice at a scan line"
@@ -1082,49 +1087,6 @@ BalloonEngineBase >> fillSpan: fill from: leftX to: rightX [
 	rightX > (self spanSizeGet << self aaShiftGet) 
 		ifTrue:[x1 _ (self spanSizeGet << self aaShiftGet)]
 		ifFalse:[x1 _ rightX].
-
-	"Clip left and right values"
-	x0 < self fillMinXGet ifTrue:[x0 _ self fillMinXGet].
-	x1 > self fillMaxXGet ifTrue:[x1 _ self fillMaxXGet].
-
-	"Adjust start and end values of span"
-	x0 < self spanStartGet ifTrue:[self spanStartPut: x0].
-	x1 > self spanEndGet ifTrue:[self spanEndPut: x1].
-	x1 > self spanEndAAGet ifTrue:[self spanEndAAPut: x1].
-
-	x0 >= x1 ifTrue:[^false]. "Nothing to do"
-
-	(self isFillColor: fill) ifTrue:[
-		self fillColorSpan: fill from: x0 to: x1.
-	] ifFalse:[
-		"Store the values for the dispatch"
-		self lastExportedFillPut: fill.
-		self lastExportedLeftXPut: x0.
-		self lastExportedRightXPut: x1.
-		type _ self fillTypeOf: fill.
-		type <= 1 ifTrue:[^true].
-		self dispatchOn: type in: FillTable.
-	].
-	^false
-]
-
-{ #category : #displaying }
-BalloonEngineBase >> fillSpan: fill from: leftX to: rightX max: maxRightX [
-	"Fill the span buffer from leftX to rightX with the given fill.
-	Clip before performing any operations. Return true if the fill must
-	be handled by some Smalltalk code."
-	| x0 x1 type |
-	self inline: false.
-	fill = 0 ifTrue:[^false]. "Nothing to do"
-	"Start from spEnd - we must not paint pixels twice at a scan line"
-	leftX < self spanEndAAGet 
-		ifTrue:[x0 _ self spanEndAAGet]
-		ifFalse:[x0 _ leftX].
-	rightX > (self spanSizeGet << self aaShiftGet) 
-		ifTrue:[x1 _ (self spanSizeGet << self aaShiftGet)]
-		ifFalse:[x1 _ rightX].
-
-	maxRightX < x1 ifTrue:[x1 _ maxRightX].
 
 	"Clip left and right values"
 	x0 < self fillMinXGet ifTrue:[x0 _ self fillMinXGet].
@@ -1500,7 +1462,8 @@ BalloonEngineBase >> initializeGETProcessing [
 	"Reset GET and AET"
 	self getUsedPut: 0.
 	self aetUsedPut: 0.
-	getBuffer _ aetBuffer _ objBuffer + objUsed.
+	getBuffer _ objBuffer + objUsed.
+	aetBuffer _ objBuffer + objUsed.
 
 	"Create the global edge table"
 	self createGlobalEdgeTable.
@@ -1663,11 +1626,12 @@ BalloonEngineBase >> loadArrayTransformFrom: transformOop into: destPtr length: 
 
 { #category : #private }
 BalloonEngineBase >> loadBitBltFrom: bbObj [
-	loadBBFn = 0 ifTrue:[
+
+	loadBBFn = 0 ifTrue: [
 		"We need copyBits here so try to load it implicitly"
 		self initialiseModule ifFalse:[^false].
 	].
-	^self cCode: '((int (*) (int))loadBBFn)(bbObj)'
+	^self cCode: '((sqInt (*)(sqInt))loadBBFn)(bbObj)'
 ]
 
 { #category : #'loading state' }
@@ -1866,7 +1830,7 @@ BalloonEngineBase >> loadWorkBufferFrom: wbOop [
 	(interpreterProxy isIntegerObject: wbOop) ifTrue:[^false].
 	(interpreterProxy isWords: wbOop) ifFalse:[^false].
 	(interpreterProxy slotSizeOf: wbOop) < GWMinimalSize ifTrue:[^false].
-	workBuffer _ interpreterProxy firstIndexableField: wbOop.
+	self workBufferPut: wbOop.
 	self magicNumberGet = GWMagicNumber ifFalse:[^false].
 	"Sanity checks"
 	(self wbSizeGet = (interpreterProxy slotSizeOf: wbOop)) ifFalse:[^false].
@@ -2445,7 +2409,7 @@ BalloonEngineBase >> primitiveInitializeBuffer [
 		ifFalse:[^interpreterProxy primitiveFail].
 	(size _ interpreterProxy slotSizeOf: wbOop) < GWMinimalSize
 		ifTrue:[^interpreterProxy primitiveFail].
-	workBuffer _ interpreterProxy firstIndexableField: wbOop.
+	self workBufferPut: wbOop.
 	objBuffer _ workBuffer + GWHeaderSize.
 	self magicNumberPut: GWMagicNumber.
 	self wbSizePut: size.
@@ -3872,4 +3836,9 @@ BalloonEngineBase >> wbTopGet [
 { #category : #'accessing state' }
 BalloonEngineBase >> wbTopPut: value [
 	^workBuffer at: GWBufferTop put: value
+]
+
+{ #category : #'accessing state' }
+BalloonEngineBase >> workBufferPut: wbOop [
+	workBuffer := interpreterProxy firstIndexableField: wbOop.
 ]

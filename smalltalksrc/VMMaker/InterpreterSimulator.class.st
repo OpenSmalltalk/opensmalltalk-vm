@@ -21,7 +21,10 @@ Class {
 		'pluginList',
 		'mappedPluginEntries',
 		'inputSem',
-		'quitBlock'
+		'quitBlock',
+		'transcript',
+		'displayView',
+		'logging'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -33,6 +36,42 @@ InterpreterSimulator class >> new [
 				ifTrue: [InterpreterSimulatorMSB new]
 				ifFalse: [InterpreterSimulatorLSB new]]
 		ifFalse: [super new]
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> allObjectsDo: objBlock [
+
+	| oop |
+	oop _ self firstObject.
+	[oop < endOfMemory] whileTrue:
+			[(self isFreeObject: oop)
+				ifFalse: [objBlock value: oop].
+			oop _ self objectAfter: oop].
+
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> allObjectsSelect: objBlock [
+	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
+
+	| oop selected |
+	oop _ self firstObject.
+	selected _ OrderedCollection new.
+	[oop < endOfMemory] whileTrue:
+			[(self isFreeObject: oop)
+				ifFalse: [(objBlock value: oop) ifTrue: [selected addLast: oop]].
+			oop _ self objectAfter: oop].
+	^ selected
+]
+
+{ #category : #'debugging traps' }
+InterpreterSimulator >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill with: fillWord [ 
+
+	| newObj |
+	newObj _ super allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill with: fillWord.
+	"byteCount < 600000 ifTrue: [^ newObj]."
+	"(self baseHeader: newObj) =  16r0FCC0600 ifTrue: [self halt]."
+	^ newObj
 ]
 
 { #category : #'interpreter shell' }
@@ -56,6 +95,36 @@ InterpreterSimulator >> byteAt: byteAddress put: byte [
 ]
 
 { #category : #'memory access' }
+InterpreterSimulator >> byteAtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	pointer is a raw address, and byte is an 8-bit quantity."
+
+	^ self byteAt: pointer
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> byteAtPointer: pointer put: byteValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	pointer is a raw address, and byteValue is an 8-bit quantity."
+
+	^ self byteAt: pointer  put: byteValue
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> byteCount [
+	"So you can call this from temp debug statements in, eg, Interpreter, such as
+	self byteCount = 12661 ifTrue: [self halt].
+	"
+
+	^ byteCount
+]
+
+{ #category : #UI }
+InterpreterSimulator >> byteCountText [
+	^ byteCount printString asText
+]
+
+{ #category : #'memory access' }
 InterpreterSimulator >> cCoerce: value to: cTypeString [
 	"Type coercion for translation only; just return the value when running in Smalltalk."
 
@@ -74,6 +143,14 @@ InterpreterSimulator >> callExternalPrimitive: mapIndex [
 { #category : #'debug support' }
 InterpreterSimulator >> charsOfLong: long [
 	^self subclassResponsibility
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> checkForInterrupts [
+	"Prevent interrupts so that traces are consistent during detailed debugging"
+
+	true ifTrue: [^ self].
+	^ super checkForInterrupts
 ]
 
 { #category : #'debug support' }
@@ -142,6 +219,13 @@ InterpreterSimulator >> compactClassAt: ccIndex [
 	^ self fetchPointer: (ccIndex - 1) ofObject: classArray
 ]
 
+{ #category : #initialization }
+InterpreterSimulator >> convertToArray [
+	"I dont believe it -- this *just works*"
+	
+	memory _ memory as: Array
+]
+
 { #category : #'I/O primitives support' }
 InterpreterSimulator >> copyBits [
 
@@ -151,7 +235,7 @@ InterpreterSimulator >> copyBits [
 { #category : #'debug printing' }
 InterpreterSimulator >> cr [
 
-	traceOn ifTrue: [ Transcript cr; endEntry ].
+	traceOn ifTrue: [ transcript cr; endEntry ].
 ]
 
 { #category : #'interpreter shell' }
@@ -224,8 +308,8 @@ InterpreterSimulator >> fetchByte [
 { #category : #'float primitives' }
 InterpreterSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 
-	aFloat at: 1 put: (self longAt: floatBitsAddress).
-	aFloat at: 2 put: (self longAt: floatBitsAddress+4).
+	aFloat at: 1 put: (self long32At: floatBitsAddress).
+	aFloat at: 2 put: (self long32At: floatBitsAddress+4).
 
 ]
 
@@ -267,24 +351,65 @@ InterpreterSimulator >> findNewMethodInClass: class [
 	super findNewMethodInClass: class.
 ]
 
+{ #category : #'memory access' }
+InterpreterSimulator >> firstIndexableField: oop [
+	"NOTE: overridden from Interpreter to add coercion to CArray"
+
+	| hdr fmt totalLength fixedFields |
+	self returnTypeC: 'void *'.
+	hdr _ self baseHeader: oop.
+	fmt _ (hdr >> 8) bitAnd: 16rF.
+	totalLength _ self lengthOf: oop baseHeader: hdr format: fmt.
+	fixedFields _ self fixedFieldsOf: oop format: fmt length: totalLength.
+	fmt < 8 ifTrue:
+		[fmt = 6 ifTrue:
+			["32 bit field objects"
+			^ self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)) to: 'int *'].
+		"full word objects (pointer or bits)"
+		^ self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *']
+		ifFalse:
+		["Byte objects"
+		^ self cCoerce: (self pointerForOop: oop + BaseHeaderSize + fixedFields) to: 'char *']
+]
+
 { #category : #'plugin support' }
 InterpreterSimulator >> flushExternalPrimitives [
 	mappedPluginEntries _ #().
 	super flushExternalPrimitives.
 ]
 
+{ #category : #'I/O primitives' }
+InterpreterSimulator >> fullDisplay [
+	| t |
+	displayForm == nil ifTrue: [^ self].
+	t _ successFlag.  successFlag _ true.
+	self displayBitsOf: (self splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
+	successFlag _ t
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> fullDisplayUpdate [
+	"Preserve successFlag when call asynchronously from Simulator"
+	| s |
+	s _ successFlag.
+	successFlag _ true.
+	super fullDisplayUpdate.
+	successFlag _ s
+]
+
 { #category : #'debug support' }
 InterpreterSimulator >> fullGC [
-	Transcript cr; show:'<Running full GC ...'.
+	transcript cr; show:'<Running full GC ...'.
 	super fullGC.
-	Transcript show: ' done>'.
+	transcript show: ' done>'.
 ]
 
 { #category : #'interpreter shell' }
 InterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass [
-"Override Interpreter to handle the external primitives caching. See also internalExecuteNewMethod"
-	(primIndex between: 1 and: MaxPrimitiveIndex) ifFalse:[^nil].
-	^primitiveTable at: primIndex +1
+	"Override Interpreter to handle the external primitives caching.  See also 	internalExecuteNewMethod."
+
+	^(primIndex between: 1 and: MaxPrimitiveIndex)
+		ifTrue: [primitiveTable at: primIndex + 1]
 ]
 
 { #category : #'memory access' }
@@ -295,6 +420,16 @@ InterpreterSimulator >> halfWordAt: byteAddress [
 
 { #category : #'memory access' }
 InterpreterSimulator >> halfWordAt: byteAddress put: halfWord [
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> halfWordHighInLong32: long32 [
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
 ]
 
@@ -346,8 +481,13 @@ InterpreterSimulator >> initialize [
 	global arrays in the translated code."
 
 	"initialize class variables"
+	ObjectMemory initBytesPerWord: self bytesPerWord.
 	ObjectMemory initialize.
 	Interpreter initialize.
+
+	"Note: we must initialize ConstMinusOne differently for simulation,
+		due to the fact that the simulator works only with +ve 32-bit values"
+	ConstMinusOne _ self integerObjectOf: -1.
 
 	methodCache _ Array new: MethodCacheSize.
 	atCache _ Array new: AtCacheTotalSize.
@@ -375,9 +515,11 @@ InterpreterSimulator >> initialize [
 	quitBlock _ [^ self].
 	traceOn _ true.
 	myBitBlt _ BitBltSimulator new setInterpreter: self.
-	displayForm _ nil.  "displayForm is created in response to primitiveBeDisplay"
 	filesOpen _ OrderedCollection new.
-	headerTypeBytes _ CArrayAccessor on: (Array with:  8 with: 4 with: 0 with: 0).
+	headerTypeBytes _ CArrayAccessor on: (Array with: BytesPerWord*2 with: BytesPerWord with: 0 with: 0).
+	transcript _ Transcript.
+	displayForm _ 'Display has not yet been installed' asDisplayText form.
+	
 ]
 
 { #category : #'interpreter shell' }
@@ -402,6 +544,14 @@ InterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
 	^memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> integerObjectOf: value [
+	"The simulator works with strictly positive bit patterns"
+	value < 0
+		ifTrue: [^ ((16r80000000 + value) << 1) + 1]
+		ifFalse: [^ (value << 1) + 1]
 ]
 
 { #category : #'interpreter shell' }
@@ -493,8 +643,12 @@ InterpreterSimulator >> ioLowResMSecs [
 { #category : #'I/O primitives support' }
 InterpreterSimulator >> ioMSecs [
 	"Return the value of the millisecond clock."
+	"NOT.  Actually, we want something a lot slower and, for exact debugging,
+	something more repeatable than real time.  IO have an idea: use the byteCount..."
 
-	^ Time millisecondClockValue
+	^ byteCount // 100
+	
+"At 20k bytecodes per second, this gives us aobut 200 ticks per second, or about 1/5 of what you'd expect for the real time clock.  This should still service events at one or two per second"
 ]
 
 { #category : #'I/O primitives support' }
@@ -553,7 +707,10 @@ InterpreterSimulator >> isInterpreterProxy [
 { #category : #'plugin support' }
 InterpreterSimulator >> loadNewPlugin: pluginString [
 	| plugin simClass |
-	Transcript cr; show:'Looking for module ', pluginString.
+	transcript cr; show:'Looking for module ', pluginString.
+	(#('FloatArrayPlugin' 'Matrix2x3Plugin')
+		includes: pluginString) ifTrue:
+		[transcript show: ' ... defeated'. ^ nil].
 	plugin _ simClass _ nil.
 	InterpreterPlugin allSubclassesDo:[:plg|
 		plg moduleName asString = pluginString asString ifTrue:[
@@ -562,15 +719,164 @@ InterpreterSimulator >> loadNewPlugin: pluginString [
 				ifNotNil:[plugin == simClass ifFalse:[^self error:'This won''t work...']].
 		].
 	].
-	plugin ifNil:[Transcript show: ' ... not found'. ^nil].
+	plugin ifNil:[transcript show: ' ... not found'. ^nil].
 	plugin _ plugin new.
 	plugin setInterpreter: self. "Ignore return value from setInterpreter"
 	(plugin respondsTo: #initialiseModule) ifTrue:[
-		plugin initialiseModule ifFalse:[Transcript show: ' ... initialiser failed'.^nil]. "module initialiser failed"
+		plugin initialiseModule ifFalse:[transcript show: ' ... initialiser failed'.^nil]. "module initialiser failed"
 	].
 	pluginList _ pluginList copyWith: (pluginString asString -> plugin).
-	Transcript show:' ... loaded'.
+	transcript show:' ... loaded'.
 	^pluginList last
+]
+
+{ #category : #testing }
+InterpreterSimulator >> logOfBytesVerify: nBytes fromFileNamed: fileName fromStart: loggingStart [
+	"Verify a questionable interpreter against a successful run"
+	"self logOfBytesVerify: 10000 fromFileNamed: 'clone32Bytecodes.log' "
+	
+	| logFile rightByte prevCtxt |
+	logFile _ (FileStream readOnlyFileNamed: fileName) binary.
+	logging _ loggingStart.
+	transcript clear.
+	byteCount _ 0.
+	quitBlock _ [^ self].
+	self internalizeIPandSP.
+	self fetchNextBytecode.
+	prevCtxt _ 0.  prevCtxt _ prevCtxt.
+	[byteCount < nBytes] whileTrue:
+		[
+"
+byteCount > 14560 ifTrue:
+[self externalizeIPandSP.
+prevCtxt = activeContext ifFalse:
+ [prevCtxt _ activeContext.
+ transcript cr; nextPutAll: (self printTop: 2); endEntry].
+transcript cr; print: byteCount; nextPutAll: ': ' , (activeContext hex); space;
+ print: (instructionPointer - method - (BaseHeaderSize - 2));
+ nextPutAll: ': <' , (self byteAt: localIP) hex , '>'; space;
+ nextPutAll: (self symbolic: currentBytecode at: localIP inMethod: method); space;
+ print: (self stackPointerIndex - TempFrameStart + 1); endEntry.
+byteCount = 14590 ifTrue: [self halt]].
+"
+		logging ifTrue: [rightByte _ logFile next.
+						currentBytecode = rightByte ifFalse: [self halt]].
+		self dispatchOn: currentBytecode in: BytecodeTable.
+		byteCount _ byteCount + 1.
+		byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]].
+	self externalizeIPandSP.
+	logFile close.
+	self inform: nBytes printString , ' bytecodes verfied.'
+]
+
+{ #category : #testing }
+InterpreterSimulator >> logOfBytesWrite: nBytes toFileNamed: fileName fromStart: loggingStart [
+	"Write a log file for testing a flaky interpreter on the same image"
+	"self logOfBytesWrite: 10000 toFileNamed: 'clone32Bytecodes.log' "
+	
+	| logFile |
+	logFile _ (FileStream newFileNamed: fileName) binary.
+	logging _ loggingStart.
+	transcript clear.
+	byteCount _ 0.
+	quitBlock _ [^ self].
+	self internalizeIPandSP.
+	self fetchNextBytecode.
+	[logging not or: [byteCount < nBytes]] whileTrue:
+		[logging ifTrue: [logFile nextPut: currentBytecode].
+		self dispatchOn: currentBytecode in: BytecodeTable.
+		byteCount _ byteCount + 1.
+		byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]].
+	self externalizeIPandSP.
+	logFile close.
+
+]
+
+{ #category : #testing }
+InterpreterSimulator >> logOfSendsVerify: nSends fromFileNamed: fileName fromStart: loggingStart [
+	"Write a log file for testing a flaky interpreter on the same image"
+	"self logOfSendsWrite: 10000 toFileNamed: 'clone32Messages.log' "
+	
+	| logFile priorContext rightSelector prevCtxt |
+	logFile _ FileStream readOnlyFileNamed: fileName.
+	logging _ loggingStart.
+	transcript clear.
+	byteCount _ 0.
+	sendCount _ 0.
+	priorContext _ activeContext.
+	quitBlock _ [^ self].
+	self internalizeIPandSP.
+	self fetchNextBytecode.
+	prevCtxt _ 0.  prevCtxt _ prevCtxt.
+	[sendCount < nSends] whileTrue:
+		[
+"
+byteCount>500 ifTrue:
+[byteCount>550 ifTrue: [self halt].
+self externalizeIPandSP.
+prevCtxt = activeContext ifFalse:
+ [prevCtxt _ activeContext.
+ transcript cr; nextPutAll: (self printTop: 2); endEntry].
+transcript cr; print: byteCount; nextPutAll: ': ' , (activeContext hex); space;
+ print: (instructionPointer - method - (BaseHeaderSize - 2));
+ nextPutAll: ': <' , (self byteAt: localIP) hex , '>'; space;
+ nextPutAll: (self symbolic: currentBytecode at: localIP inMethod: method); space;
+ print: (self stackPointerIndex - TempFrameStart + 1); endEntry.
+].
+"
+		self dispatchOn: currentBytecode in: BytecodeTable.
+		activeContext == priorContext ifFalse:
+			[sendCount _ sendCount + 1.
+			logging ifTrue: [rightSelector _ logFile nextLine.
+							(self stringOf: messageSelector) = rightSelector ifFalse: [self halt]].
+			priorContext _ activeContext].
+		byteCount _ byteCount + 1.
+		byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]].
+	self externalizeIPandSP.
+	logFile close.
+	self inform: nSends printString , ' sends verfied.'
+]
+
+{ #category : #testing }
+InterpreterSimulator >> logOfSendsWrite: nSends toFileNamed: fileName fromStart: loggingStart [
+	"Write a log file for testing a flaky interpreter on the same image"
+	"self logOfSendsWrite: 10000 toFileNamed: 'clone32Messages.log' "
+	
+	| logFile priorContext |
+	logFile _ FileStream newFileNamed: fileName.
+	logging _ loggingStart.
+	transcript clear.
+	byteCount _ 0.
+	sendCount _ 0.
+	priorContext _ activeContext.
+	quitBlock _ [^ self].
+	self internalizeIPandSP.
+	self fetchNextBytecode.
+	[logging not or: [sendCount < nSends]] whileTrue:
+		[self dispatchOn: currentBytecode in: BytecodeTable.
+		activeContext == priorContext ifFalse:
+			[logging ifTrue: [sendCount _ sendCount + 1.
+							logFile nextPutAll: (self stringOf: messageSelector); cr].
+			priorContext _ activeContext].
+		byteCount _ byteCount + 1.
+		byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]].
+	self externalizeIPandSP.
+	logFile close.
+
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> long32At: byteAddress [
+	"Return the 32-bit word at byteAddress which must be 0 mod 4."
+
+	^ self longAt: byteAddress
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> long32At: byteAddress put: a32BitValue [
+	"Store the 32-bit value at byteAddress which must be 0 mod 4."
+
+	^ self longAt: byteAddress put: a32BitValue
 ]
 
 { #category : #'memory access' }
@@ -587,32 +893,51 @@ InterpreterSimulator >> longAt: byteAddress put: a32BitValue [
 	^memory at: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
+{ #category : #'memory access' }
+InterpreterSimulator >> longAtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	pointer is a raw address, and the result is the width of a machine word."
+
+	^ self longAt: pointer
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> longAtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	pointer is a raw address, and longValue is the width of a machine word."
+
+	^ self longAt: pointer put: longValue
+]
+
 { #category : #'debug support' }
 InterpreterSimulator >> longPrint: oop [
 	| lastPtr val lastLong hdrType prevVal |
 	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
 	^ String streamContents:
 		[:strm |
-		lastPtr _ 256 min: (self lastPointerOf: oop).
+		lastPtr _ 64*BytesPerWord min: (self lastPointerOf: oop).
 		hdrType _ self headerType: oop.
 		hdrType = 2 ifTrue: [lastPtr _ 0].
 		prevVal _ 0.
-		(self headerStart: oop) to: lastPtr by: 4 do:
+		(self headerStart: oop) to: lastPtr by: BytesPerWord do:
 			[:a | val _ self longAt: oop+a.
 			(a > 0 and: [(val = prevVal) & (a ~= lastPtr)])
 			ifTrue:
-			[prevVal = (self longAt: oop+a-8) ifFalse: [strm cr; nextPutAll: '        ...etc...']]
+			[prevVal = (self longAt: oop+a-(BytesPerWord*2)) ifFalse: [strm cr; nextPutAll: '        ...etc...']]
 			ifFalse:
 			[strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
 				space; space; space; nextPutAll: val hex8; space; space.
-			a=-8 ifTrue: [strm nextPutAll: 'size = ' , (val - hdrType) hex].
-			a=-4 ifTrue: [strm nextPutAll: '<' , (self nameOfClass: (val - hdrType)) , '>'].
-			a=0 ifTrue: [strm cr; tab; nextPutAll: (self dumpHeader: val)].
-			a>0 ifTrue: [strm nextPutAll: (self shortPrint: val)].
-			a=4 ifTrue: [(self fetchClassOf: oop) = (self splObj: ClassCompiledMethod) ifTrue:
+			a = (BytesPerWord*2) negated ifTrue:
+				[strm nextPutAll: 'size = ' , (val - hdrType) hex].
+			a = BytesPerWord negated ifTrue:
+				[strm nextPutAll: '<' , (self nameOfClass: (val - hdrType)) , '>'].
+			a = 0 ifTrue: [strm cr; tab; nextPutAll: (self dumpHeader: val)].
+			a > 0 ifTrue: [strm nextPutAll: (self shortPrint: val)].
+			a = BytesPerWord ifTrue:
+				[(self fetchClassOf: oop) = (self splObj: ClassCompiledMethod) ifTrue:
 							[strm cr; tab; nextPutAll: (self dumpMethodHeader: val)]]].
 			prevVal _ val].
-		lastLong _ 256 min: (self sizeBitsOf: oop) - 4.
+		lastLong _ 256 min: (self sizeBitsOf: oop) - BaseHeaderSize.
 		hdrType = 2
 			ifTrue:
 			["free" strm cr; nextPutAll: (oop+(self longAt: oop)-2) hex;
@@ -621,19 +946,57 @@ InterpreterSimulator >> longPrint: oop [
 			[(self formatOf: oop) = 3
 			ifTrue:
 				[strm cr; tab; nextPutAll: '/ next 3 fields are above SP... /'.
-				lastPtr+4 to: lastPtr+12 by: 4 do:
+				lastPtr+BytesPerWord to: lastPtr+(3*BytesPerWord) by: BytesPerWord do:
 					[:a | val _ self longAt: oop+a.
 					strm cr; nextPutAll: a hex; 
 						space; space; space; nextPutAll: val hex8; space; space.
 					(self validOop: val) ifTrue: [strm nextPutAll: (self shortPrint: val)]]]
 			ifFalse:
-			[lastPtr+4 to: lastLong by: 4 do:
+			[lastPtr+BytesPerWord to: lastLong by: BytesPerWord do:
 				[:a | val _ self longAt: oop+a.
 				strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
 					space; space; space.
 				strm nextPutAll: val hex8; space; space;
 						nextPutAll: (self charsOfLong: val)]]].
 	]
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> lookupMethodInClass: class [
+	| currentClass dictionary found rclass |
+
+	"This method overrides the interp, causing a halt on MNU."
+	"true ifTrue: [^ super lookupMethodInClass: class]."    "Defeat debug support"
+
+	currentClass _ class.
+	[currentClass ~= nilObj]
+		whileTrue:
+		[dictionary _ self fetchPointer: MessageDictionaryIndex ofObject: currentClass.
+		dictionary = nilObj ifTrue:
+			["MethodDict pointer is nil (hopefully due a swapped out stub)
+				-- raise exception #cannotInterpret:."
+			self pushRemappableOop: currentClass.  "may cause GC!"
+			self createActualMessageTo: class.
+			currentClass _ self popRemappableOop.
+			messageSelector _ self splObj: SelectorCannotInterpret.
+			^ self lookupMethodInClass: (self superclassOf: currentClass)].
+
+		found _ self lookupMethodInDictionary: dictionary.
+		found ifTrue: [^ methodClass _ currentClass].
+		currentClass _ self superclassOf: currentClass].
+
+	"Could not find #doesNotUnderstand: -- unrecoverable error."
+	messageSelector = (self splObj: SelectorDoesNotUnderstand) ifTrue:
+		[self error: 'Recursive not understood error encountered'].
+
+self halt: (self stringOf: messageSelector).
+
+	"Cound not find a normal message -- raise exception #doesNotUnderstand:"
+	self pushRemappableOop: class.  "may cause GC!"
+	self createActualMessageTo: class.
+	rclass _ self popRemappableOop.
+	messageSelector _ self splObj: SelectorDoesNotUnderstand.
+	^ self lookupMethodInClass: rclass
 ]
 
 { #category : #'file primitives' }
@@ -676,7 +1039,7 @@ InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 
 { #category : #'debug support' }
 InterpreterSimulator >> nameOfClass: classOop [
-	(self sizeBitsOf: classOop) = (Metaclass instSize +1*4) ifTrue:
+	(self sizeBitsOf: classOop) = (Metaclass instSize +1*BytesPerWord) ifTrue:
 		[^ (self nameOfClass:
 				(self fetchPointer: 5 "thisClass" ofObject: classOop)) , ' class'].
 	^ self stringOf: (self fetchPointer: 6 "name" ofObject: classOop)
@@ -695,6 +1058,15 @@ InterpreterSimulator >> nextLongFrom: aStream swap: swapFlag [
 		ifFalse: [^ self nextLongFrom: aStream]
 ]
 
+{ #category : #'debugging traps' }
+InterpreterSimulator >> normalSend [
+	"Catch errors before we start the whole morphic error process"
+
+	"(byteCount > 4000000 and: [(self stringOf: messageSelector) = 'sorts:before:'])
+		ifTrue: [self halt]."
+	^ super normalSend
+]
+
 { #category : #testing }
 InterpreterSimulator >> objectBefore: addr [
 	| oop prev |
@@ -706,11 +1078,41 @@ InterpreterSimulator >> objectBefore: addr [
 	]
 ]
 
+{ #category : #'memory access' }
+InterpreterSimulator >> oopForPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	oop is the width of a machine word, and pointer is a raw address."
+
+	^ pointer
+]
+
+{ #category : #UI }
+InterpreterSimulator >> openAsMorph [
+	"Open a morphic view on this simulation."
+	| window localImageName |
+	localImageName _ FileDirectory default localNameFor: imageName.
+	window _ (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
+
+	window addMorph: (displayView _ ImageMorph new image: displayForm)
+		frame: (0@0 corner: 1@0.8).
+
+	transcript _ TranscriptStream on: (String new: 10000).
+	window addMorph: (PluggableTextMorph on: transcript text: nil accept: nil
+			readSelection: nil menu: #codePaneMenu:shifted:)
+		frame: (0@0.8 corner: 0.7@1).
+
+	window addMorph: (PluggableTextMorph on: self
+						text: #byteCountText accept: nil) hideScrollBarIndefinitely
+		frame: (0.7@0.8 corner: 1@1).
+
+	window openInWorld
+]
+
 { #category : #initialization }
 InterpreterSimulator >> openOn: fileName [
 	"(InterpreterSimulator new openOn: 'clonex.image') test"
 
-	self openOn: fileName extraMemory: 500000.
+	self openOn: fileName extraMemory: 2500000.
 ]
 
 { #category : #initialization }
@@ -719,7 +1121,8 @@ InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 
 	| f version headerSize count oldBaseAddr bytesToShift swapBytes |
 	"open image file and read the header"
-[
+
+	["begin ensure block..."
 	f _ FileStream readOnlyFileNamed: fileName.
 	imageName _ f fullName.
 	f binary.
@@ -734,7 +1137,6 @@ InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	oldBaseAddr _ self nextLongFrom: f swap: swapBytes.  "object memory base address of image"
 	specialObjectsOop _ self nextLongFrom: f swap: swapBytes.
 	lastHash _ self nextLongFrom: f swap: swapBytes.  "Should be loaded from, and saved to the image header"
-	"savedWindowSize _ self nextLongFrom: f swap: swapBytes."
 	lastHash = 0 ifTrue: [lastHash _ 999].
 
 	savedWindowSize	_ self nextLongFrom: f swap: swapBytes.
@@ -749,7 +1151,9 @@ InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	memory _ Bitmap new: memoryLimit // 4.
 	count _ f readInto: memory startingAt: 1 count: endOfMemory // 4.
 	count ~= (endOfMemory // 4) ifTrue: [self halt].
-	] ensure: [f close].
+	]
+		ensure: [f close].
+
 	swapBytes ifTrue: [Utilities informUser: 'Swapping bytes of foreign image...'
 								during: [self reverseBytesInImage]].
 
@@ -759,6 +1163,14 @@ InterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	Utilities informUser: 'Relocating object pointers...'
 				during: [self initializeInterpreter: bytesToShift].
 
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> pointerForOop: oop [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	oop is the width of a machine word, and pointer is a raw address."
+
+	^ oop
 ]
 
 { #category : #'other primitives' }
@@ -786,7 +1198,7 @@ InterpreterSimulator >> primBitmapdecompressfromByteArrayat [
 	bm decompress: bm fromByteArray: ba at: index.
 
 	"Then copy bm into the Bitmap"
-	1 to: bmSize do: [:i | self storeWord: i-1 ofObject: bmOop withValue: (bm at: i)].
+	1 to: bmSize do: [:i | self storeLong32: i-1 ofObject: bmOop withValue: (bm at: i)].
 	self pop: 3
 ]
 
@@ -826,6 +1238,7 @@ InterpreterSimulator >> primitiveBeDisplay [
 		"create a scratch form the same size as Smalltalk displayObj"
 		displayForm _ Form extent: destWidth @ destHeight
 							depth: destDepth.
+		displayView ifNotNil: [displayView image: displayForm].
 	].
 	super primitiveBeDisplay.
 ]
@@ -853,7 +1266,7 @@ InterpreterSimulator >> primitiveDirectoryLookup [
 		self push: nilObj.
 		^array.
 	].
-	array == #badDirectoryPath ifTrue: [
+	array == #badDirectoryPath ifTrue: [self halt.
 		^self primitiveFail.
 	].
 
@@ -863,6 +1276,13 @@ InterpreterSimulator >> primitiveDirectoryLookup [
 	self pop: 3.
 	self push: result.
 
+]
+
+{ #category : #'debugging traps' }
+InterpreterSimulator >> primitiveFail [
+
+"(primitiveIndex = 61 and: [byteCount > 210000]) ifTrue: [self halt]."
+	successFlag _ false.
 ]
 
 { #category : #'file primitives' }
@@ -980,7 +1400,7 @@ InterpreterSimulator >> primitiveMousePoint [
 	self pop: 1.
 	displayForm == nil
 		ifTrue: [self push: (self makePointwithxValue: 99 yValue: 66)]
-		ifFalse: [relPt _ Sensor cursorPoint - (Display extent - displayForm extent - (10@10)).
+		ifFalse: [relPt _ Sensor cursorPoint - self displayLocation.
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
@@ -991,6 +1411,14 @@ InterpreterSimulator >> primitiveRelinquishProcessor [
 	^ self pop: 1
 ]
 
+{ #category : #'debugging traps' }
+InterpreterSimulator >> primitiveResume [
+	"Catch errors before we start the whole morphic error process"
+
+	byteCount > 1000000 ifTrue: [self halt].  "Ignore early process activity"
+	^ super primitiveResume
+]
+
 { #category : #'I/O primitives' }
 InterpreterSimulator >> primitiveScreenSize [  "Dummied for now"
 
@@ -998,31 +1426,109 @@ InterpreterSimulator >> primitiveScreenSize [  "Dummied for now"
 	self push: (self makePointwithxValue: 640 yValue: 480).
 ]
 
+{ #category : #'debugging traps' }
+InterpreterSimulator >> primitiveSuspend [
+	"Catch errors before we start the whole morphic error process"
+
+	byteCount > 1000000 ifTrue: [self halt].  "Ignore early process activity"
+	^ super primitiveSuspend
+]
+
 { #category : #'debug printing' }
 InterpreterSimulator >> print: s [
 
-	traceOn ifTrue: [ Transcript show: s ]
+	traceOn ifTrue: [ transcript show: s ]
 ]
 
 { #category : #'debug printing' }
 InterpreterSimulator >> printChar: aByte [
 
-	traceOn ifTrue: [ Transcript nextPut: aByte asCharacter ].
+	traceOn ifTrue: [ transcript nextPut: aByte asCharacter ].
 ]
 
 { #category : #'debug printing' }
 InterpreterSimulator >> printNum: anInteger [
 
-	traceOn ifTrue: [ Transcript show: anInteger printString ].
+	traceOn ifTrue: [ transcript show: anInteger printString ].
 ]
 
 { #category : #'debug support' }
 InterpreterSimulator >> printStack [
-	| ctxt classAndSel home |
+	^ self printStack: false
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> printStack: includeTemps [
+	| ctxt |
 	ctxt _ activeContext.
 	^ String streamContents:
 		[:strm |
-			[home _ (self fetchClassOf: ctxt) = (self splObj: ClassBlockContext)
+		[self printStackFrame: ctxt onStream: strm.
+		includeTemps ifTrue: [self printStackTemps: ctxt onStream: strm].
+		(ctxt _ (self fetchPointer: SenderIndex ofObject: ctxt)) = nilObj]
+				whileFalse: [].
+		]
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> printStackFrame: ctxt onStream: strm [
+	| classAndSel home |
+	home _ (self fetchClassOf: ctxt) = (self splObj: ClassBlockContext)
+		ifTrue: [self fetchPointer: HomeIndex ofObject: ctxt]
+		ifFalse: [ctxt].
+	classAndSel _ self
+		classAndSelectorOfMethod: (self fetchPointer: MethodIndex ofObject: home)
+		forReceiver: (self fetchPointer: ReceiverIndex ofObject: home).
+	strm cr; nextPutAll: ctxt hex8.
+	ctxt = home ifFalse: [strm nextPutAll: ' [] in'].
+	strm space; nextPutAll: (self nameOfClass: classAndSel first).
+	strm nextPutAll: '>>'; nextPutAll: (self shortPrint: classAndSel last).
+
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> printStackTemps: ctxt onStream: strm [
+	| home cMethod nArgs nTemps oop |
+	home _ (self fetchClassOf: ctxt) = (self splObj: ClassBlockContext)
+		ifTrue: [self fetchPointer: HomeIndex ofObject: ctxt]
+		ifFalse: [ctxt].
+	cMethod _ self fetchPointer: MethodIndex ofObject: home.
+	nArgs _ nTemps _ 0.
+
+	home = ctxt ifTrue:
+		[strm cr; tab; nextPutAll: 'args: '.
+		nArgs _ self argumentCountOf: cMethod.
+		1 to: nArgs do:
+			[:i | oop _ self fetchPointer: TempFrameStart + i-1 ofObject: ctxt.
+			strm nextPutAll: oop hex; space].
+
+		strm cr; tab; nextPutAll: 'temps: '.
+		nTemps _ self tempCountOf: cMethod.
+		nArgs+1 to: nTemps do:
+			[:i | oop _ self fetchPointer: TempFrameStart + i-1 ofObject: ctxt.
+			strm nextPutAll: oop hex; space]].
+	
+	strm cr; tab; nextPutAll: 'stack: '.
+	nTemps + 1 to: (self lastPointerOf: ctxt)//BytesPerWord - TempFrameStart do:
+		[:i | oop _ self fetchPointer: TempFrameStart + i-1 ofObject: ctxt.
+			strm nextPutAll: oop hex; space].
+	
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> printStackWithTemps [
+	^ self printStack: true
+]
+
+{ #category : #'debug support' }
+InterpreterSimulator >> printTop: n [
+	"Print important fields of the top n contexts"
+	| ctxt classAndSel home top ip sp |
+	ctxt _ activeContext.
+	^ String streamContents:
+		[:strm | 1 to: n do:
+			[:i |
+			home _ (self fetchClassOf: ctxt) = (self splObj: ClassBlockContext)
 				ifTrue: [self fetchPointer: HomeIndex ofObject: ctxt]
 				ifFalse: [ctxt].
 			classAndSel _ self
@@ -1032,15 +1538,28 @@ InterpreterSimulator >> printStack [
 			ctxt = home ifFalse: [strm nextPutAll: ' [] in'].
 			strm space; nextPutAll: (self nameOfClass: classAndSel first).
 			strm nextPutAll: '>>'; nextPutAll: (self shortPrint: classAndSel last).
-			(ctxt _ (self fetchPointer: SenderIndex ofObject: ctxt)) = nilObj]
-				whileFalse: [].
+			ctxt = activeContext
+				ifTrue: [ip _ instructionPointer - method - (BaseHeaderSize - 2).
+						sp _ self stackPointerIndex - TempFrameStart + 1.
+						top _ self stackTop]
+				ifFalse: [ip _ self integerValueOf:
+							(self fetchPointer: InstructionPointerIndex ofObject: ctxt).
+						sp _ self integerValueOf:
+							(self fetchPointer: StackPointerIndex ofObject: ctxt).
+						top _ self longAt: ctxt + (self lastPointerOf: ctxt)].
+			strm cr; tab; nextPutAll: 'ip = '; print: ip.
+			strm cr; tab; nextPutAll: 'sp = '; print: sp.
+			strm cr; tab; nextPutAll: 'top = '; nextPutAll: (self shortPrint: top).
+			(ctxt _ (self fetchPointer: SenderIndex ofObject: ctxt)) = nilObj
+				ifTrue: [^strm contents].
+			].
 		]
 ]
 
 { #category : #testing }
 InterpreterSimulator >> profile: nBytecodes [
 	"(InterpreterSimulator new openOn: 'clonex.image') profile: 60000"
-	Transcript clear.
+	transcript clear.
 	byteCount _ 0.
 	MessageTally spyOn: [self runForNBytes: nBytecodes].
 	self close
@@ -1116,13 +1635,24 @@ InterpreterSimulator >> runForNBytes: nBytecodes [
 	self externalizeIPandSP
 ]
 
+{ #category : #'memory access' }
+InterpreterSimulator >> shortAt: byteAddress [
+    "Return the half-word at byteAddress which must be even."
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+InterpreterSimulator >> shortAt: byteAddress put: a16BitValue [
+	^ self subclassResponsibility
+]
+
 { #category : #'debug support' }
 InterpreterSimulator >> shortPrint: oop [
 	| name classOop |
 	(self isIntegerObject: oop) ifTrue: [^ '=' , (self integerValueOf: oop) printString , 
 		' (' , (self integerValueOf: oop) hex , ')'].
 	classOop _ self fetchClassOf: oop.
-	(self sizeBitsOf: classOop) = (Metaclass instSize +1*4) ifTrue: [
+	(self sizeBitsOf: classOop) = (Metaclass instSize +1*BytesPerWord) ifTrue: [
 		^ 'class ' , (self nameOfClass: oop)].
 	name _ self nameOfClass: classOop.
 	name size = 0 ifTrue: [name _ '??'].
@@ -1133,11 +1663,11 @@ InterpreterSimulator >> shortPrint: oop [
 	name = 'UndefinedObject' ifTrue: [^ 'nil'].
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
-	name = 'Float' ifTrue: [^ '=' , (self floatValueOf: oop) printString].
+	name = 'Float' ifTrue: [successFlag _ true. ^ '=' , (self floatValueOf: oop) printString].
 	name = 'Association' ifTrue: [^ '(' ,
 				(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
 				' -> ' ,
-				(self longAt: oop + BaseHeaderSize + 4) hex8 , ')'].
+				(self longAt: oop + BaseHeaderSize + BytesPerWord) hex8 , ')'].
 	('AEIOU' includes: name first)
 		ifTrue: [^ 'an ' , name]
 		ifFalse: [^ 'a ' , name]
@@ -1149,12 +1679,16 @@ InterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left righ
 	pixPerWord _ 32 // d.
 	raster _ displayForm width + (pixPerWord - 1) // pixPerWord.
 	simDisp _ Form new hackBits: memory.
+	displayForm unhibernate.
 	realDisp _ Form new hackBits: displayForm bits.
 	realDisp
 		copy: (0 @ (top * raster) extent: 4 @ (bottom - top * raster))
 		from: 0 @ (destBits // 4 + (top * raster))
 		in: simDisp
 		rule: Form over.
+	displayView ifNotNil: [^ displayView changed].
+	
+	"If running without a view, just blat the bits onto the screen..."
 	rect _ 0 @ top corner: displayForm width @ bottom.
 	Display
 		copy: (rect translateBy: self displayLocation)
@@ -1166,6 +1700,7 @@ InterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left righ
 { #category : #'I/O primitives support' }
 InterpreterSimulator >> sizeof: var [
 
+	self flag: #Dan.
 	^ 4
 ]
 
@@ -1238,8 +1773,9 @@ InterpreterSimulator >> sqGetInterpreterProxy [
 
 { #category : #'memory access' }
 InterpreterSimulator >> sqGrowMemory: oldLimit By: delta [
-	Transcript show: 'grow memory from ', oldLimit printString, ' by ', delta printString; cr.
-	memory _ memory copyGrownBy: delta // 4.
+
+	transcript show: 'grow memory from ', oldLimit printString, ' by ', delta printString; cr.
+	memory _ memory , (memory class new: delta // 4).
 	^ memory size * 4
 ]
 
@@ -1250,7 +1786,7 @@ InterpreterSimulator >> sqMemoryExtraBytesLeft: includingSwap [
 
 { #category : #'memory access' }
 InterpreterSimulator >> sqShrinkMemory: oldLimit By: delta [
-	Transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
+	transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
 
 	^ oldLimit
 ]
@@ -1299,7 +1835,7 @@ InterpreterSimulator >> stats [
 							(d between: -16000 and: 16000)
 								ifTrue: [stats add: #oops32k]
 								ifFalse: [stats add: #oopsOther]]].
-				fieldAddr _ fieldAddr - 4]].
+				fieldAddr _ fieldAddr - BytesPerWord]].
 		bar value: oop.
 		last _ oop.
 		last _ last.
@@ -1339,10 +1875,10 @@ InterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
 ]
 
 { #category : #'float primitives' }
-InterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
+InterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat. [
 
-	self longAt: floatBitsAddress put: (aFloat at: 1).
-	self longAt: floatBitsAddress+4 put: (aFloat at: 2).
+	self long32At: floatBitsAddress put: (aFloat at: 1).
+	self long32At: floatBitsAddress+4 put: (aFloat at: 2).
 
 ]
 
@@ -1352,25 +1888,111 @@ InterpreterSimulator >> stringOf: oop [
 	^ String streamContents:
 		[:strm |
 		size _ 100 min: (self stSizeOf: oop).
-		nLongs _ size-1//4+1.
+		nLongs _ size-1//BytesPerWord+1.
 		1 to: nLongs do:
-			[:i | long _ self longAt: oop + BaseHeaderSize + (i-1*4).
+			[:i | long _ self longAt: oop + BaseHeaderSize + (i-1*BytesPerWord).
 			chars _ self charsOfLong: long.
 			strm nextPutAll: (i=nLongs
-							ifTrue: [chars copyFrom: 1 to: size-1\\4+1]
+							ifTrue: [chars copyFrom: 1 to: size-1\\BytesPerWord+1]
 							ifFalse: [chars])]]
+]
+
+{ #category : #'debug printing' }
+InterpreterSimulator >> symbolic: byte at: ip inMethod: meth [
+	"Print a bytecode in simple symbolic form"
+
+	| type offset |
+	type _ byte // 16.  
+	offset _ byte \\ 16.  
+	type=0 ifTrue: [^ 'pushRcvr ' , offset printString].
+	type=1 ifTrue: [^ 'pushTemp ' , offset printString].
+	type=2 ifTrue: [^ 'pushLit ' , offset printString].
+	type=3 ifTrue: [^ 'pushLit ' , (offset+16) printString].
+	type=4 ifTrue: [^ 'pushLitVar ' , offset printString].
+	type=5 ifTrue: [^ 'pushLitVar ' , (offset+16) printString].
+	type=6 ifTrue: [offset<8
+					ifTrue: [^ 'storePopRcvr ' , offset printString]
+					ifFalse: [^ 'storePopTemp ' , (offset-8) printString]].
+	type=7 ifTrue: [offset=0 ifTrue: [^ 'pushRcvr'].
+				offset<8 ifTrue: [^ 'pushConst ' , ( #(true false nil -1 0 1 2) at: offset) printString].
+				offset=8 ifTrue: [^ 'returnSelf'].
+				offset<12 ifTrue: [^ 'returnConst ' , ( #(true false nil -1 0 1 2) at: offset-8) printString].
+				offset=12 ifTrue: [^ 'returnTop'].
+				offset=13 ifTrue: [^ 'blockReturnTop'].
+				offset>13 ifTrue: [^ 'unusedBytecode']].
+	type=8 ifTrue: [^ self symbolicExtensions: offset at: ip inMethod: meth].
+	type=9 ifTrue:  "short jumps"
+			[offset<8 ifTrue: [^ 'jump ' , (offset+1) printString].
+			^ 'jumpIfFalse ' , (offset-8+1) printString].
+	type=10 ifTrue:  "long jumps"
+			[offset<8 ifTrue: [^ 'extendedJump'].
+			offset<12 ifTrue: [^ 'extendedJumpIfTrue'].
+			true ifTrue: [^ 'extendedJumpIfFalse']].
+	type=11 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+1)].
+	type=12 ifTrue: [^ 'sendSpl ' , (Smalltalk specialSelectorAt: offset+17)].
+	type>12 ifTrue: [^ 'send ' , (self stringOf: (self literal: offset))]
+]
+
+{ #category : #'debug printing' }
+InterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
+	| type offset2 byte2 byte3 |
+	offset <=6 ifTrue: 
+		["Extended op codes 128-134"
+		byte2 _ self byteAt: ip+1.
+		offset <= 2 ifTrue:
+			["128-130:  extended pushes and pops"
+			type _ byte2 // 64.
+			offset2 _ byte2 \\ 64.
+			offset = 0 ifTrue: 
+				[type = 0 ifTrue: [^ 'pushRcvr ' , offset2 printString].
+				type = 1 ifTrue: [^ 'pushTemp ' , offset2 printString].
+				type = 2  ifTrue: [^ 'pushLit ' , (offset2 + 1) printString].
+				type = 3 ifTrue: [^ 'pushLitVar ' , (offset2 + 1) printString]].
+			offset = 1 ifTrue: 
+				[type = 0 ifTrue: [^ 'storeIntoRcvr ' , offset2 printString].
+				type = 1 ifTrue: [^ 'storeIntoTemp ' , offset2 printString].
+				type = 2 ifTrue: [^ 'illegalStore'].
+				type = 3 ifTrue: [^ 'storeIntoLitVar ' , (offset2 + 1) printString]].
+			offset = 2 ifTrue: 
+				[type = 0 ifTrue: [^ 'storePopRcvr ' , offset2 printString].
+				type = 1 ifTrue: [^ 'storePopTemp ' , offset2 printString].
+				type = 2 ifTrue: [^ 'illegalStore'].
+				type = 3  ifTrue: [^ 'storePopLitVar ' , (offset2 + 1) printString]]].
+		"131-134: extended sends"
+		offset = 3 ifTrue:  "Single extended send"
+			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 32))].
+		offset = 4 ifTrue:    "Double extended do-anything"
+			[byte3 _ self byteAt: ip+2.
+			type _ byte2 // 32.
+			type = 0 ifTrue: [^ 'send ' , (self stringOf: (self literal: byte3))].
+			type = 1 ifTrue: [^ 'superSend ' , (self stringOf: (self literal: byte3))].
+			type = 2 ifTrue: [^ 'pushRcvr ' , byte3 printString].
+			type = 3 ifTrue: [^ 'pushLit ' , byte3 printString].
+			type = 4 ifTrue: [^ 'pushLitVar ' , byte3 printString].
+			type = 5 ifTrue: [^ 'storeIntoRcvr ' , byte3 printString].
+			type = 6 ifTrue: [^ 'storePopRcvr ' , byte3 printString].
+			type = 7 ifTrue: [^ 'storeIntoLitVar ' , byte3 printString]].
+		offset = 5 ifTrue:  "Single extended send to super"
+			[^ 'superSend ' , (self stringOf: (self literal: byte2 \\ 32))].
+		offset = 6 ifTrue:   "Second extended send"
+			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 64))]].
+	offset = 7 ifTrue: [^ 'doPop'].
+	offset = 8 ifTrue: [^ 'doDup'].
+	offset = 9 ifTrue: [^ 'pushActiveContext'].
+	^ 'unusedBytecode'
 ]
 
 { #category : #testing }
 InterpreterSimulator >> test [
-	Transcript clear.
+	transcript clear.
 	byteCount _ 0.
 	quitBlock _ [^ self].
 	self internalizeIPandSP.
 	self fetchNextBytecode.
 	[true] whileTrue:
 		[self dispatchOn: currentBytecode in: BytecodeTable.
-		byteCount _ byteCount + 1].
+		byteCount _ byteCount + 1.
+		byteCount \\ 10000 = 0 ifTrue: [self fullDisplay]].
 	self externalizeIPandSP.
 
 ]
@@ -1425,14 +2047,15 @@ InterpreterSimulator >> validOop: oop [
 { #category : #testing }
 InterpreterSimulator >> validate [
 	| oop prev |
-	Transcript show: 'Validating...'.
+	transcript show: 'Validating...'.
 	oop _ self firstObject.
 	[oop < endOfMemory] whileTrue: [
 		self validate: oop.
 		prev _ oop.  "look here if debugging prev obj overlapping this one"
 		oop _ self objectAfter: oop.
 	].
-	Transcript show: 'done.'; cr
+	prev _ prev.  "Don't offer to delete this please"
+	transcript show: 'done.'; cr
 ]
 
 { #category : #testing }
@@ -1441,16 +2064,16 @@ InterpreterSimulator >> validate: oop [
 	header _ self longAt: oop.
 	type _ header bitAnd: 3.
 	type = 2 ifFalse: [type = (self rightType: header) ifFalse: [self halt]].
-	sz _ (header >> 2) bitAnd: 16r3F.
+	sz _ (header bitAnd: SizeMask) >> 2.
 	(self isFreeObject: oop)
 		ifTrue: [ nextChunk _ oop + (self sizeOfFree: oop) ]
 		ifFalse: [  nextChunk _ oop + (self sizeBitsOf: oop) ].
 	nextChunk > endOfMemory
 		ifTrue: [oop = endOfMemory ifFalse: [self halt]].
 	(self headerType: nextChunk) = 0 ifTrue: [
-		(self headerType: (nextChunk + 8)) = 0 ifFalse: [self halt]].
+		(self headerType: (nextChunk + (BytesPerWord*2))) = 0 ifFalse: [self halt]].
 	(self headerType: nextChunk) = 1 ifTrue: [
-		(self headerType: (nextChunk + 4)) = 1 ifFalse: [self halt]].
+		(self headerType: (nextChunk + BytesPerWord)) = 1 ifFalse: [self halt]].
 	type = 2 ifTrue:
 		["free block" ^ self].
 	fmt _ (header >> 8) bitAnd: 16rF.
@@ -1458,13 +2081,13 @@ InterpreterSimulator >> validate: oop [
 	cc > 16 ifTrue: [self halt].	"up to 32 are legal, but not used"
 	type = 0 ifTrue:
 		["three-word header"
-		((self longAt: oop-4) bitAnd: 3) = type ifFalse: [self halt].
-		((self longAt: oop-8) bitAnd: 3) = type ifFalse: [self halt].
-		((self longAt: oop-4) = type) ifTrue: [self halt].	"Class word is 0"
+		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
+		((self longAt: oop-(BytesPerWord*2)) bitAnd: 3) = type ifFalse: [self halt].
+		((self longAt: oop-BytesPerWord) = type) ifTrue: [self halt].	"Class word is 0"
 		sz = 0 ifFalse: [self halt]].
 	type = 1 ifTrue:
 		["two-word header"
-		((self longAt: oop-4) bitAnd: 3) = type ifFalse: [self halt].
+		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
 		cc > 0 ifTrue: [sz = 1 ifFalse: [self halt]].
 		sz = 0 ifTrue: [self halt]].
 	type = 3 ifTrue:
@@ -1474,7 +2097,7 @@ InterpreterSimulator >> validate: oop [
 	fmt = 7 ifTrue: [self halt].
 	fmt >= 12 ifTrue:
 		["CompiledMethod -- check for integer header"
-		(self isIntegerObject: (self longAt: oop + 4)) ifFalse: [self halt]].
+		(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
 ]
 
 { #category : #testing }
@@ -1490,8 +2113,8 @@ InterpreterSimulator >> validateOopsIn: object [
 	limit _ object + (self lastPointerOf: object).	"a good field"
 	[fieldPtr > limit] whileFalse: [
 		former _ self longAt: fieldPtr.
-		(self validOop: former) ifFalse: [self halt].
-		fieldPtr _ fieldPtr + 4].
+		(self validOop: former) ifFalse: [self error: 'invalid oop in pointers object'].
+		fieldPtr _ fieldPtr + BytesPerWord].
 	"class"
 	header _ self baseHeader: object.
 	(header bitAnd: CompactClassMask) = 0 ifTrue: [	
@@ -1526,7 +2149,7 @@ InterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 	"Actually emit the first numberOfBytesToWrite object memory bytes onto the snapshot."
 
 	| headerSize file |
-
+	BytesPerWord = 4 ifFalse: [self error: 'Not rewritten for 64 bits yet'].
 	headerSize _ 64.
 
 	[
