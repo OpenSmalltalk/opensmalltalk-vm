@@ -67,7 +67,7 @@ typedef struct B3DPrimitiveLight {
 #warning "**************************************************************"
 #warning "**************************************************************"
 #warning "**************************************************************"
-# define WIN32_PURE_D3D
+# define WIN32_PURE_GL
 #endif
 
 /* Win32 defaults to DUAL D3D/GL interface everyone else to OpenGL */
@@ -106,20 +106,22 @@ typedef struct B3DPrimitiveLight {
 #define b3dxGetRendererColorMasks glGetRendererColorMasks
 #define b3dxSetBufferRect           glSetBufferRect
 
-#define b3dxSetViewport           glSetViewport
-#define b3dxClearDepthBuffer      glClearDepthBuffer
-#define b3dxClearViewport          glClearViewport
+#define b3dxSetViewport          glSetViewport
+#define b3dxClearDepthBuffer     glClearDepthBuffer
+#define b3dxClearViewport        glClearViewport
 #define b3dxRenderVertexBuffer   glRenderVertexBuffer
-#define b3dxSetTransform          glSetTransform
-#define b3dxDisableLights          glDisableLights
-#define b3dxLoadLight             glLoadLight
-#define b3dxLoadMaterial          glLoadMaterial
+#define b3dxSetTransform         glSetTransform
+#define b3dxDisableLights        glDisableLights
+#define b3dxLoadLight            glLoadLight
+#define b3dxLoadMaterial         glLoadMaterial
 #define b3dxFlushRenderer        glFlushRenderer
 #define b3dxFinishRenderer       glFinishRenderer
-#define b3dxSwapRendererBuffers glSwapRendererBuffers
+#define b3dxSwapRendererBuffers  glSwapRendererBuffers
 #define b3dxGetIntProperty       glGetIntProperty
 #define b3dxSetIntProperty       glSetIntProperty
-#define b3dxSetVerboseLevel     glSetVerboseLevel
+#define b3dxGetIntPropertyOS     glGetIntPropertyOS
+#define b3dxSetIntPropertyOS     glSetIntPropertyOS
+#define b3dxSetVerboseLevel      glSetVerboseLevel
 #define b3dxSetFog               glSetFog
 #endif
 
@@ -201,6 +203,8 @@ int b3dxFinishRenderer(int handle);
 int b3dxSwapRendererBuffers(int handle);
 int b3dxGetIntProperty(int handle, int prop);
 int b3dxSetIntProperty(int handle, int prop, int value);
+int b3dxGetIntPropertyOS(int handle, int prop);
+int b3dxSetIntPropertyOS(int handle, int prop, int value);
 int b3dxSetVerboseLevel(int level);
 int b3dxSetFog(int handle, int fogType, double density, double rangeStart, double rangeEnd, int rgba);
 

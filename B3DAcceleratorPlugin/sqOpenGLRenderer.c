@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.6 2002/01/20 19:21:50 slosher Exp $
+*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.7 2002/05/29 11:42:15 andreasraab Exp $
 *
 *   NOTES: 
 *
@@ -648,6 +648,132 @@ int glSetFog(int handle, int fogType, double density,
   glHint(GL_FOG_HINT, GL_NICEST);
   ERROR_CHECK;
   return 1;
+}
+
+int glGetIntProperty(int handle, int prop)
+{
+  GLint v;
+
+  glRenderer *renderer = glRendererFromHandle(handle);
+  if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
+
+  if(prop < 0) return glGetIntPropertyOS(handle, prop);
+
+  switch(prop) {
+  case 1: /* backface culling */
+    if(!glIsEnabled(GL_CULL_FACE)) return 0;
+    glGetIntegerv(GL_FRONT_FACE, &v);
+    if(v == GL_CW) return 1;
+    if(v == GL_CCW) return -1;
+    return 0;
+  case 2: /* polygon mode */
+    glGetIntegerv(GL_POLYGON_MODE, &v);
+    ERROR_CHECK;
+    return v;
+  case 3: /* point size */
+    glGetIntegerv(GL_POINT_SIZE, &v);
+    ERROR_CHECK;
+    return v;
+  case 4: /* line width */
+    glGetIntegerv(GL_LINE_WIDTH, &v);
+    ERROR_CHECK;
+    return v;
+  case 5: /* blend enable */
+    return glIsEnabled(GL_BLEND);
+  case 6: /* blend source factor */
+  case 7: /* blend dest factor */
+    if(prop == 6)
+      glGetIntegerv(GL_BLEND_SRC, &v);
+    else
+      glGetIntegerv(GL_BLEND_DST, &v);
+    ERROR_CHECK;
+    switch(v) {
+        case GL_ZERO: return 0;
+        case GL_ONE: return 1;
+        case GL_SRC_COLOR: return 2;
+        case GL_ONE_MINUS_SRC_COLOR: return 3;
+        case GL_DST_COLOR: return 4;
+        case GL_ONE_MINUS_DST_COLOR: return 5;
+        case GL_SRC_ALPHA: return 6;
+        case GL_ONE_MINUS_SRC_ALPHA: return 7;
+        case GL_DST_ALPHA: return 8;
+        case GL_ONE_MINUS_DST_ALPHA: return 9;
+        case GL_SRC_ALPHA_SATURATE: return 10;
+        default: return -1;
+    }
+  }
+  return 0;
+}
+
+int glSetIntProperty(int handle, int prop, int value)
+{
+  glRenderer *renderer = glRendererFromHandle(handle);
+  if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
+
+  if(prop < 0) return glSetIntPropertyOS(handle, prop, value);
+
+  switch(prop) {
+  case 1: /* backface culling */
+    if(!value) {
+      glDisable(GL_CULL_FACE);
+      ERROR_CHECK;
+      return 1;
+    }
+    glEnable(GL_CULL_FACE);
+    glFrontFace(value == 1 ? GL_CCW : GL_CW);
+    ERROR_CHECK;
+    return 1;
+  case 2: /* polygon mode */
+    if(value == 0) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
+    else if(value == 1) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
+    else if(value == 2) glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
+    else return 0;
+    ERROR_CHECK;
+    return 1;
+  case 3: /* point size */
+    glPointSize(value);
+    ERROR_CHECK;
+    return 1;
+  case 4: /* line width */
+    glLineWidth(value);
+    ERROR_CHECK;
+    return 1;
+  case 5: /* blend enable */
+    if(value)
+      glEnable(GL_BLEND);
+    else
+      glDisable(GL_BLEND);
+    ERROR_CHECK;
+    return 1;
+  case 6: /* blend source factor */
+  case 7: /* blend dest factor */
+    {
+      int factor;
+      int src, dst;
+      switch(value) {
+        case 0: factor = GL_ZERO; break;
+        case 1: factor = GL_ONE; break;
+        case 2: factor = GL_SRC_COLOR; break;
+        case 3: factor = GL_ONE_MINUS_SRC_COLOR; break;
+        case 4: factor = GL_DST_COLOR; break;
+        case 5: factor = GL_ONE_MINUS_DST_COLOR; break;
+        case 6: factor = GL_SRC_ALPHA; break;
+        case 7: factor = GL_ONE_MINUS_SRC_ALPHA; break;
+        case 8: factor = GL_DST_ALPHA; break;
+        case 9: factor = GL_ONE_MINUS_DST_ALPHA; break;
+        case 10: factor = GL_SRC_ALPHA_SATURATE; break;
+        default: return 0;
+      }
+      glGetIntegerv(GL_BLEND_SRC, &src);
+      glGetIntegerv(GL_BLEND_DST, &dst);
+      if(prop == 6) src = factor;
+      else dst = factor;
+      glBlendFunc(src,dst);
+      ERROR_CHECK;
+      return 1;
+    }
+  }
+  return 0;
 }
 
 #ifndef GL_VERSION_1_1
