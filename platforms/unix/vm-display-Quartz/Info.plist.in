@@ -8,7 +8,7 @@
   <dict>
     <key>CFBundleDevelopmentRegion</key>	<string>English</string>
     <key>CFBundleInfoDictionaryVersion</key>	<string>6.0</string>
-    <key>CFBundleExecutable</key>		<string>squeak</string>
+    <key>CFBundleExecutable</key>		<string>Squeak</string>
     <key>CFBundlePackageType</key>		<string>APPL</string>
     <key>CFBundleSignature</key>		<string>FAST</string>
     <key>CFBundleName</key>			<string>Squeak</string>
