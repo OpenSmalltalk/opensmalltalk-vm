@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.14 2003/05/19 07:20:12 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.15 2003/06/20 01:54:16 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -16,7 +16,8 @@
 *  Mar 14th, 2002, JMM fix text input for encoding keys (textinput versus raw char)
 *  Apr 17th, 2002, JMM Use accessors for VM variables.
 *  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x drop usb stuff
-
+*  3.5.1b2 June 6th, 2003 JMM support for aio polling under unix socket support
+*  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -34,6 +35,8 @@ IsUserCancelEventRef
 
 #if I_AM_CARBON_EVENT
     #include <pthread.h>
+    #include "aio.h"
+    
     pthread_mutex_t gEventQueueLock,gEventUILock;
     pthread_cond_t  gEventUILockCondition;
     extern pthread_mutex_t gSleepLock;
@@ -612,6 +615,7 @@ int ioSetInputSemaphore(int semaIndex) {
 
 int ioGetNextEvent(sqInputEvent *evt) {
 #if I_AM_CARBON_EVENT
+        aioPoll(0);
         pthread_mutex_lock(&gEventQueueLock);
 #else
     if (eventBufferGet == eventBufferPut) {
@@ -1271,6 +1275,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
 {
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
+    extern Boolean gSqueakWindowIsFloating;
     
     if (messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
@@ -1285,6 +1290,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
             }
             break;
         case kEventAppDeactivated:
+            if (gSqueakWindowIsFloating) break;
               GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
             SetPortWindowPort(getSTWindow());
@@ -1351,6 +1357,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
     WindowRef window;
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
+    extern Boolean gSqueakWindowIsFloating;
   
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
@@ -1364,6 +1371,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
             postFullScreenUpdate();
              break;
         case kEventWindowDeactivated:
+            if (gSqueakWindowIsFloating) break;
             GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
             SetPortWindowPort(getSTWindow());
@@ -1389,7 +1397,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     UInt32 whatHappened;
     Point  mouseLocation;
     OSStatus result = eventNotHandledErr; /* report failure by default */
-    RgnHandle	ioWinRgn=null;
+    static RgnHandle	ioWinRgn=null;
     WindowPtr	theWindow;
     
     if (!windowActive)
