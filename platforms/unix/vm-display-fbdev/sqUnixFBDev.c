@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-22 16:35:25 by piumarta on emilia.inria.fr
+ * Last edited: 2004-04-02 14:46:52 by piumarta on emilia.local
  */
 
 
@@ -68,7 +68,9 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#define DEBUG	0
+#if !defined(DEBUG)
+# define DEBUG	0
+#endif
 
 
 static void dprintf(const char *fmt, ...)
