@@ -84,7 +84,8 @@ Class {
 		'platformRootDirName',
 		'logger',
 		'allFilesList',
-		'interpreterClassName'
+		'interpreterClassName',
+		'is64BitVM'
 	],
 	#classVars : [
 		'DirNames'
@@ -186,6 +187,12 @@ VMMaker >> allPluginsDo: aBlock [
 VMMaker >> availablePlugins [
 	allPlugins ifNil:[self initializeAllPlugins].
 	^allPlugins
+]
+
+{ #category : #initialize }
+VMMaker >> bytesPerWord [
+	"Return the bytes in a word for the chosen 32bit/64bit pointer setup chosen"
+	^is64BitVM ifTrue:[8] ifFalse:[4]
 ]
 
 { #category : #'plugin lists' }
@@ -440,6 +447,20 @@ VMMaker >> externalPluginsDo: aBlock [
 	self plugins: externalPlugins do: aBlock
 ]
 
+{ #category : #initialize }
+VMMaker >> for32BitVM [
+"set my flag to make a 32bit pointer model VM"
+	is64BitVM _ false.
+	self changed: #sourcePathText.
+]
+
+{ #category : #initialize }
+VMMaker >> for64BitVM [
+"set my flag to make a 64bit pointer model VM"
+	is64BitVM _ true.
+	self changed: #sourceDirectory.
+]
+
 { #category : #'generate sources' }
 VMMaker >> generateEntire [
 "generate the interp, internal plugins and exports as well as the external plugins"
@@ -507,11 +528,11 @@ VMMaker >> generateInterpreterFile [
 
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
 	self interpreterClass initialize.
-	ObjectMemory initialize.
+	ObjectMemory initializeWithBytesToWord: self bytesPerWord.
 	self createCodeGenerator
 		addClass: self interpreterClass;
 		addClass: ObjectMemory;
-		storeHeaderOnFile: self interpreterHeaderPath bytesPerWord: ObjectMemory bytesPerWord;
+		storeHeaderOnFile: self interpreterHeaderPath bytesPerWord: self bytesPerWord;
 		storeCodeOnFile: self interpreterFilePath doInlining: self doInlining
 ]
 
@@ -534,8 +555,9 @@ VMMaker >> initialize [
 	internalPlugins _ SortedCollection new.
 	externalPlugins _ SortedCollection new.
 	platformName _ self class machinesDirName.
+	is64BitVM _ Smalltalk wordSize == 8.
 	allFilesList _ Dictionary new.
-	interpreterClassName _ 'Interpreter'.
+	interpreterClassName _ Interpreter name
 ]
 
 { #category : #initialize }
@@ -693,6 +715,18 @@ VMMaker >> interpreterHeaderPath [
 VMMaker >> invalidClassName [
 	"This should raise a nice exception to a UI"
 	(VMMakerException new messageText: self class name, ' invalid interpreter class name: ', interpreterClassName) signal
+]
+
+{ #category : #initialize }
+VMMaker >> isFor32BitVM [
+"is my flag to make a 32bit pointer model VM?"
+	^is64BitVM not
+]
+
+{ #category : #initialize }
+VMMaker >> isFor64BitVM [
+"is my flag to make a 64bit pointer model VM?"
+	^is64BitVM
 ]
 
 { #category : #'UI access' }
@@ -1003,7 +1037,7 @@ VMMaker >> setPlatName: aString [
 VMMaker >> sourceDirectory [
 	| fd |
 	fd _ FileDirectory default directoryNamed: (sourceDirName
-		ifNil: [self class sourceDirName]).
+		ifNil: [self class sourceDirName, self vmBitnessString]).
 	fd assureExistence.
 	^ fd
 ]
@@ -1109,4 +1143,10 @@ VMMaker >> validatePlugin:	plName in: listOfPlugins [
 					^ self couldNotFindPlatformFilesFor: plugin]].
 
 	^plugin
+]
+
+{ #category : #'target directories' }
+VMMaker >> vmBitnessString [
+	"Return a string of 32 or 64 depending on the is64BitVM valuse"
+	^is64BitVM ifTrue:['64'] ifFalse:['32']
 ]

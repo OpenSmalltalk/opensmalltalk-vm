@@ -192,6 +192,12 @@ VMMakerTool >> buildWindow [
 			 actionSelector: #helpText;
 			 hResizing: #spaceFill;
 			 setBalloonText: 'Open the help window').
+	box addMorphBack: (SimpleSwitchMorph new target: self;
+			 label: '64Bit VM';
+			 actionSelector: #set64BitVM:;
+			setSwitchState: self isFor64BitVM;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Set to build a 64 bit VM or a 32bit VM').
 	sysWin
 		addMorph: box
 		fullFrame: (LayoutFrame
@@ -656,6 +662,12 @@ VMMakerTool >> interpreterClassName: aText [
 	^true
 ]
 
+{ #category : #'generate sources' }
+VMMakerTool >> isFor64BitVM [
+"do I build a 64bit VM or not?"
+	^vmMaker isFor64BitVM
+]
+
 { #category : #'list access' }
 VMMakerTool >> listForMorph: aMorph [
 	"work out which list is the one associated with this morph"
@@ -802,6 +814,13 @@ VMMakerTool >> saveConfig [
 		file := fileResult directory fullNameFor: fileResult name.
 		vmMaker saveConfigurationTo: file].
 
+]
+
+{ #category : #'generate sources' }
+VMMakerTool >> set64BitVM: boolean [
+"do I build a 64bit VM or not?"
+	boolean ifTrue:[vmMaker for64BitVM] ifFalse:[vmMaker for32BitVM].
+	self changed: #sourcePathText
 ]
 
 { #category : #'path access' }
