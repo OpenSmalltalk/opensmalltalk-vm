@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUUID.c,v 1.3 2002/02/05 20:05:57 johnmci Exp $
+*   RCSID:   $Id: sqMacUUID.c,v 1.4 2004/08/03 02:42:26 johnmci Exp $
 *
 *   Feb 5 2002, JMM cleanup for windows port
 *
@@ -28,6 +28,7 @@ int MakeUUID(sqUUID location) {
     theBytes = CFUUIDGetUUIDBytes(theUUID);
     memcpy((char *) location,(char *) &theBytes,sizeof(sqUUID));
     CFRelease(theUUID);
+	return 0;
 }
 
 int sqUUIDInit() {
@@ -44,7 +45,9 @@ int sqUUIDInit() {
 }
 
 MakeUUID(sqUUID location) {
+#pragma unused(location)
     interpreterProxy->success(false);
+    return 0;
 }
 
 int sqUUIDShutdown() {

@@ -1944,7 +1944,7 @@ static UInt32 ReadData(EPInfo* epi,char *specialReadBuffer,UInt32 specialReadSiz
             
     	if (link == NULL) {
            	OTAtomicSetBit(&epi->stateFlags2, kReadFlowControl);  //NO free buffers we are flow controled
-        	return; 
+        	return 0; 
     	}
 		gFreeReadBuffersCounter--;
     	readBufferObject = OTGetLinkObject(link, ReadBuffer, fNext);
@@ -2007,7 +2007,7 @@ static UInt32 ReadData(EPInfo* epi,char *specialReadBuffer,UInt32 specialReadSiz
                     
         	if (link == NULL) {
                	OTAtomicSetBit(&epi->stateFlags2, kReadFlowControl); //Our read flow control, OT will block lower down
-            	return; 
+            	return 0; 
         	}
 			gFreeReadBuffersCounter--;
         	readBufferObject = OTGetLinkObject(link, ReadBuffer, fNext);
@@ -2709,6 +2709,7 @@ static OTResult SetLingerOption(EPInfo* epi,Boolean trueIfGet, OTXTILevel level,
 
 static pascal void DNSNotifier(void* context, OTEventCode event, OTResult result, void* cookie)
 {
+#pragma unused(cookie)
 	EPInfo* epi = (EPInfo*) context;
 
 	JMMLogMessageAndNumber("\p DNS Event  ",event);

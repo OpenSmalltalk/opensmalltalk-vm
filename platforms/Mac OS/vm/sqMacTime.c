@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.15 2004/04/23 20:47:52 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.16 2004/08/03 02:41:48 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -73,7 +73,7 @@ void SetUpTimers(void)
     gTMTask.tmWakeUp = 0;
     gTMTask.tmReserved = 0;    
      
-    InsXTime((QElemPtr)&gTMTask);
+    InsXTime((QElemPtr)(&gTMTask));
     PrimeTime((QElemPtr)&gTMTask,LOW_RES_TICK_MSECS);
 
     /*gTMTask1000.tmAddr = NewTimerUPP((TimerProcPtr) MyTimerProc1000);
@@ -237,8 +237,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     static Boolean doInitialization=true;
-    int	   realTimeToWait,now,err;
-    struct timespec tspec;
+    int	   realTimeToWait,now;
     
     if (doInitialization) {
         doInitialization = false;
@@ -252,7 +251,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
         if (getNextWakeupTick() == 0)
             realTimeToWait = 16;
         else {
-            return;
+            return 0;
     }
     else
         realTimeToWait = getNextWakeupTick() - now; 
@@ -276,10 +275,11 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 	    ioProcessEvents();
     if ((getNextWakeupTick() <= (ioMSecs() & 536870911)) && (getNextWakeupTick() != 0)) {
         setInterruptCheckCounter(0);
-        return;
+        return 0;
     }
 #endif
 #endif	
+	return 0;
 }
 #undef ioMSecs
 //Issue with unix aio.c sept 2003

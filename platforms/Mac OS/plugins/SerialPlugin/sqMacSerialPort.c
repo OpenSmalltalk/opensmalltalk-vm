@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacSerialPort.c,v 1.3 2002/03/01 00:18:31 johnmci Exp $
+*   RCSID:   $Id: sqMacSerialPort.c,v 1.4 2004/08/03 02:41:31 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM enable 16 ports for serial, versus four, which was capped at 2?
@@ -50,6 +50,7 @@ int serialPortShutdown() {
         if (serialPortIsOpen(i))
             serialPortClose(i);
     }
+	return 1;
 }
 
 EXPORT (int) serialPortCount(void) {
@@ -118,13 +119,14 @@ int serialPortNames(int portNum, char *portName, char *inName, char *outName) {
 			CopyPascalStringToC((void *) *(serialPtr->name),portName);
 			CopyPascalStringToC((void *) *(serialPtr->inputDriverName),inName);
 			CopyPascalStringToC((void *) *(serialPtr->outputDriverName),outName);
-                        return;
+                        return 0;
  		}
  		count++;
 		commRec.crmDeviceID = thisRecPtr->crmDeviceID;
 		thisRecPtr = (CRMRecPtr) CRMSearch(&commRec);
     }
 #endif
+	return 0;
  }
 
 int setHandshakeOptions(
@@ -161,6 +163,7 @@ int setHandshakeOptions(
 		interpreterProxy->success(false);
 	}
 #endif
+	return 0;
 }
 /*** Serial Port Functions ***/
 
@@ -171,7 +174,7 @@ EXPORT (int) serialPortClose(int portNum) {
 	int osErr;
 
 	if (!serialPortIsOpen(portNum)) {
-		return;  /* already closed */
+		return 0;  /* already closed */
 	}
 	osErr = KillIO(outRefNum[portNum]);
 	if (osErr != noErr) {
@@ -189,6 +192,7 @@ EXPORT (int) serialPortClose(int portNum) {
 	inRefNum[portNum] = 0;
 	outRefNum[portNum] = 0;
 #endif
+	return 0;
 }
 
 EXPORT (int) serialPortOpen(
@@ -297,6 +301,7 @@ EXPORT (int) serialPortOpen(
 		outRefNum[portNum] = 0;
 	}
 #endif
+	return 0;
 }
 
 EXPORT (int) serialPortReadInto(int portNum, int count, int bufferPtr) {

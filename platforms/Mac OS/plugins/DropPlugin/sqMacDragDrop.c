@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDragDrop.c,v 1.6 2003/12/02 04:52:07 johnmci Exp $
+*   RCSID:   $Id: sqMacDragDrop.c,v 1.7 2004/08/03 02:39:43 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Carbon cleanup
@@ -174,9 +174,12 @@ int dropShutdown() {
 	gMainTrackingHandler = NULL; 
     gMainReceiveHandler = NULL;
     gDragDropThrottleSpinLock = false;
+	return 1;
 }
 
 int sqSecFileAccessCallback(void *function) {
+#pragma unused(function)
+	return 0;
  }
 
 //Primitive to get file name
@@ -277,6 +280,7 @@ bail:
 	as the mouse passes over it.  */
 
 pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef) {
+#pragma unused(refCon)
 		/* we're drawing into the image well if we hilite... */
     Rect  bounds;
 	EventRecord		theEvent;
@@ -351,6 +355,8 @@ pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWin
      
 pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReference theDragRef) {
 
+#pragma unused(refcon)
+#pragma unused(theWindow)
 	ItemReference   theItem;
 	PromiseHFSFlavor targetPromise;
 	Size            theSize;

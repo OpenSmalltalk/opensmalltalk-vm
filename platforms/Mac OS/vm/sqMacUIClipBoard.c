@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIClipBoard.c,v 1.2 2002/02/23 11:25:55 johnmci Exp $
+*   RCSID:   $Id: sqMacUIClipBoard.c,v 1.3 2004/08/03 02:42:09 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -63,6 +63,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 	err = ClearCurrentScrap();
     err = GetCurrentScrap (&scrap);
 	err = PutScrapFlavor ( scrap, kScrapFlavorTypeText, kScrapFlavorMaskNone , count,  (const void *) (byteArrayIndex + startIndex));
+	return 0;
 }
 
 #else 
@@ -118,6 +119,7 @@ int clipboardSize(void) {
 int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 	ZeroScrap();
 	PutScrap(count, 'TEXT', (char *) (byteArrayIndex + startIndex));
+	return 0;
 }
 
 #endif

@@ -179,7 +179,7 @@ int asyncFileClose(AsyncFile *f) {
 	short int volRefNum;
 	OSErr err;
 
-	if (!asyncFileValid(f)) return;  /* already closed */
+	if (!asyncFileValid(f)) return 0;  /* already closed */
 	state = f->state;
 
 	err = GetVRefNum(state->refNum, &volRefNum);
@@ -199,6 +199,7 @@ int asyncFileClose(AsyncFile *f) {
 	DisposePtr((void *) f->state);
 	f->state = nil;
 	f->sessionID = 0;
+	return 0;
 }
 
 int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag, int semaIndex) {
@@ -264,6 +265,7 @@ int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag
 	state->bytesTransferred = 0;
 	state->bufferSize = 0;
 	state->bufferPtr = nil;
+	return 0;
 }
 
 int asyncFileReadResult(AsyncFile *f, int bufferPtr, int bufferSize) {
@@ -312,8 +314,9 @@ int asyncFileReadStart(AsyncFile *f, int fPosition, int count) {
 	if (err != noErr) {
 		state->status = IDLE;
 		success(false);
-		return;
+		return 0;
 	}
+	return 0;
 }
 
 int asyncFileRecordSize() {
@@ -362,4 +365,5 @@ int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSi
 		state->status = IDLE;
 		return success(false);
 	}
+	return 0;
 }

@@ -35,7 +35,7 @@ extern struct VirtualMachine* interpreterProxy;
  
 /* initialize/shutdown */
 int soundInit() { return true; }
-int soundShutdown() { snd_Stop(); }
+int soundShutdown() { snd_Stop(); 	return 1;}
 
 /* End of adjustments for pluginized VM */
 
@@ -198,7 +198,7 @@ pascal void DoubleBack(SndChannelPtr chan, SndDoubleBufferPtr buf) {
 
 	PlayStateRec *state;
 
-	chan;  /* reference argument to avoid compiler warnings */
+	#pragma unused(chan)  /* reference argument to avoid compiler warnings */
 
 	state = (PlayStateRec *) buf->dbUserInfo[0];
 	if (buf->dbUserInfo[1] == 0) {
@@ -236,6 +236,7 @@ int FillBufferWithSilence(SndDoubleBufferPtr buf) {
 			*sample++ = 0;
 		}
 	}
+	return 0;
 }
 
 pascal void FlipRecordBuffers(SPBPtr pb) {
@@ -306,8 +307,11 @@ int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) 
 			}
 		} else {  /* mono */
 			/* if mono, average the left and right channels of the source */
+			unsigned int a,b;
 			while (src < end) {
-				*dst++ = (*src++ + *src++) / 2;
+				a = *src++;
+				b = *src++;
+				*dst++ = (a+b) / 2;
 			}
 		}
 	}
@@ -342,15 +346,19 @@ int MixInSamples(int count, char *srcBufPtr, int srcStartIndex, char *dstBufPtr,
 			}
 		} else {  /* mono */
 			/* if mono, average the left and right channels of the source */
+			unsigned int a,b;
 			dst = (short int *) (dstBufPtr + (dstStartIndex * 2));
 			while (src < end) {
-				sample = *dst + ((*src++ + *src++) / 2);
+				a = *src++;
+				b = *src++;
+				sample = *dst + ((a+b) / 2);
 				if (sample > 32767) sample = 32767;
 				if (sample < -32767) sample = -32767;
 				*dst++ = sample;
 			}
 		}
 	}
+	return 0;
 }
 
 int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime) {
@@ -484,7 +492,7 @@ int snd_Stop(void) {
 	SCStatus			status;
 	long				i, junk;
 
-	if (!bufState.open) return;
+	if (!bufState.open) return 0;
 	bufState.open = false;
 
 	bufState.done = true;
@@ -507,6 +515,7 @@ int snd_Stop(void) {
 		dblBufHeader.dbhBufferPtr[i] = NULL;
 	}
 	bufState.open = false;
+	return 0;
 }
 
 /*** exported sound input functions ***/
@@ -518,12 +527,13 @@ int snd_SetRecordLevel(int level) {
 
 	if (!recordingInProgress || (level < 0) || (level > 1000)) {
 		interpreterProxy->success(false);
-		return;  /* noop if not recording */
+		return 0;  /* noop if not recording */
 	}
 
 	inputGainArg = ((500 + level) << 16) / 1000;  /* gain is Fixed between 0.5 and 1.5 */
 	err = SPBSetDeviceInfo(soundInputRefNum, siInputGain, &inputGainArg);
 	/* don't fail on error; hardware may not support setting the gain */
+	return 0;
 }
 
 int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
@@ -544,7 +554,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	err = SPBOpenDevice(deviceName, siWritePermission, &soundInputRefNum);
 	if (err != noErr) {
 		interpreterProxy->success(false);
-		return;
+		return 0;
 	}
 
 	channelCountArg = stereo ? 2 : 1;
@@ -558,7 +568,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
         if (err != noErr) {
                 interpreterProxy->success(false);
                 SPBCloseDevice(soundInputRefNum);
-                return;
+                return 0;
         }
 
 	/* try to initialize some optional parameters, but don't fail if we can't */
@@ -574,7 +584,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	if (err != noErr) {
 		interpreterProxy->success(false);
 		SPBCloseDevice(soundInputRefNum);
-		return;
+		return 0;
 	}
 
 	sampleSizeArg = 16;
@@ -586,7 +596,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 		if (err != noErr) {
 			interpreterProxy->success(false);
 			SPBCloseDevice(soundInputRefNum);
-			return;
+			return 0;
 		}
 	}
 
@@ -652,17 +662,18 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	if (err != noErr) {
 		interpreterProxy->success(false);
 		SPBCloseDevice(soundInputRefNum);
-		return;
+		return 0;
 	}
 
 	recordingInProgress = true;
+	return 0;
 }
 
 int snd_StopRecording(void) {
 	/* turn off sound recording */
 	int err;
 
-	if (!recordingInProgress) return;  /* noop if not recording */
+	if (!recordingInProgress) return 0;  /* noop if not recording */
 
 	err = SPBStopRecording(soundInputRefNum);
 	if (err != noErr) interpreterProxy->success(false);
@@ -684,6 +695,7 @@ int snd_StopRecording(void) {
 	recordBuffer1.recordSemaIndex = 0;
 	recordBuffer2.recordSemaIndex = 0;
 	recordingInProgress = false;
+	return 0;
 }
 
 double snd_GetRecordingSampleRate(void) {

@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.8 2003/05/19 07:20:07 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.9 2004/08/03 02:41:16 johnmci Exp $
 * 
 *   NOTES:
 *
@@ -53,7 +53,6 @@ int printRendererInfo(void);
 int printFormatInfo(AGLPixelFormat info);
 
 glRenderer *current = NULL;
-static int fUseSoftwareRenderer = 1;
 glRenderer allRenderer[MAX_RENDERER];
 typedef int (*eventMessageHook)(EventRecord* event);
 
@@ -617,6 +616,7 @@ int glSetVerboseLevel(int level) {
 }
 
 int glIsOverlayRenderer(int handle) {
+#pragma unused(handle)
   /* we never use overlay renderers */
   return 0;
 }

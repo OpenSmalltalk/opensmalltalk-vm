@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIAppleEvents.c,v 1.3 2004/04/23 20:46:38 johnmci Exp $
+*   RCSID:   $Id: sqMacUIAppleEvents.c,v 1.4 2004/08/03 02:42:00 johnmci Exp $
 *
 *   NOTES: 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  encoding for image name at startup time.
@@ -56,6 +56,9 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 	Str255              name; 
         char                cname[256];
 	FSSpec 		    workingDirectory;
+#pragma unused(aevt)
+#pragma unused(refCon)
+#pragma unused(reply)
 
 	// Get spec to the working directory
     err = GetApplicationDirectory(&workingDirectory);
@@ -105,7 +108,8 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 	FInfo		finderInformation;
 	char            shortImageName[256];
 	
-	reply; refCon;  /* reference args to avoid compiler warnings */
+#pragma unused(reply)
+#pragma unused(refCon)  /* reference args to avoid compiler warnings */
 
 	/* record path to VM's home folder */
 	
@@ -288,12 +292,16 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 
 
 pascal OSErr HandlePrintDocEvent(const AEDescList *aevt,  AEDescList *reply, long refCon) {
-	aevt; reply; refCon;  /* reference args to avoid compiler warnings */
+#pragma unused(aevt)
+#pragma unused(reply)
+#pragma unused(refCon)  /* reference args to avoid compiler warnings */
 	return errAEEventNotHandled;
 }
 
 pascal OSErr HandleQuitAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon) {
-	aevt; reply; refCon;  /* reference args to avoid compiler warnings */
+#pragma unused(aevt)
+#pragma unused(reply)
+#pragma unused(refCon)  /* reference args to avoid compiler warnings */
 	return noErr;  //Note under Carbon it sends us a Quit event, but we don't process because image might not get saved?
 }
 

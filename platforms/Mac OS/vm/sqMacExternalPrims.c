@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacExternalPrims.c,v 1.6 2003/12/02 04:52:11 johnmci Exp $
+*   RCSID:   $Id: sqMacExternalPrims.c,v 1.7 2004/08/03 02:39:59 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -32,10 +32,13 @@ void createBrowserPluginPath(char *pluginDirPath);
 int ioLoadModule(char *pluginName) {
 	char pluginDirPath[1000];
 	CFragConnectionID libHandle;
+#ifndef BROWSERPLUGIN
+    #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
 	Ptr mainAddr;
 	Str255 errorMsg,tempPluginName;
 	OSErr err;
-    
+#endif
+#endif    
     	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
         getVMPathWithEncoding(pluginDirPath,gCurrentVMEncoding);
 	
@@ -173,7 +176,6 @@ OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr)
 
 int 	ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
 	void * 		functionPtr = 0;
-	OSErr 		err;
         CFStringRef	theString;
         
 	if (!moduleHandle) 

@@ -54,6 +54,7 @@ int sqInternetConfigurationShutdown(void) {
         return 1;
     ICStop(gICInstance);
     gInitializedOk = false;
+	return 1;
 }
 
 int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength, char *aString) {

@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.31 2004/04/23 20:48:31 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.32 2004/08/03 02:42:35 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -31,9 +31,6 @@
 #include "sqmacUIEvents.h"
 #include "sqMacUIMenuBar.h"
 
-#if !TARGET_API_MAC_CARBON
-    inline pascal long InvalWindowRect(WindowRef  window,  const Rect * bounds) {InvalRect (bounds);}
-#endif
 
 /*** Variables -- Imported from Virtual Machine ***/
 extern int getFullScreenFlag();    /* set from header when image file is loaded */
@@ -142,6 +139,7 @@ int ioSetFullScreen(int fullScreen) {
 		SizeWindow(stWindow, width, height, true);
 		setFullScreenFlag(false);
 	}
+	return 0;
 }
 
 #if TARGET_API_MAC_CARBON
@@ -150,7 +148,7 @@ void sqShowWindow(void);
 void sqShowWindowActual(void);
 
 void sqShowWindow(void) {
-        int giLocker,return_value=0;
+        int giLocker;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
@@ -166,6 +164,7 @@ void sqShowWindow(void) {
 
 void sqShowWindowActual(void){
 #else
+void sqShowWindow(void);
 void sqShowWindow(void) {
 #endif
 	ShowWindow(stWindow);
@@ -184,7 +183,7 @@ int ioShowDisplay(
         static int	rememberWidth=0,rememberHeight=0,rememberDepth=0;
         
 	if (stWindow == nil) {
-            return;
+            return 0;
 	}
     
         if (maskRect == nil) {
@@ -227,6 +226,7 @@ int ioShowDisplay(
             sqShowWindow();
             gWindowsIsInvisible = false;
         }
+	return 0;
 }
 #else
 int ioShowDisplay(
@@ -242,7 +242,7 @@ int ioShowDisplay(
         affectedH= affectedB - affectedT;
 
 	if ((stWindow == nil) || (affectedW <= 0) || (affectedH <= 0)){
-            return;
+            return 0;
 	}
 
         windowPort = GetWindowPort(stWindow);
@@ -291,7 +291,7 @@ int ioShowDisplay(
                     } 
                 else if (depth == 16)
                  while (affectedH--) {
-                        register long   i,count= bytes/2;
+                        register long   count= bytes/2;
                         register short   *to=   (short *) out;
                         register short   *from= (short *) in;
                         while (count--)
@@ -438,6 +438,7 @@ int ioShowDisplay(
             gWindowsIsInvisible = false;
            //  NOT YET givers poor performance SetupSurface();
         }
+	return 0;
 }
 
 #endif
@@ -571,6 +572,7 @@ void SetWindowTitle(char *title) {
 
 int ioForceDisplayUpdate(void) {
 	/* do nothing on a Mac */
+	return 0;
 }
 
 int ioHasDisplayDepth(int depth) {
@@ -624,7 +626,7 @@ int ioScreenSize(void) {
 
 int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
 	/* Old version; forward to new version. */
-	ioSetCursorWithMask(cursorBitsIndex, nil, offsetX, offsetY);
+	return ioSetCursorWithMask(cursorBitsIndex, nil, offsetX, offsetY);
 }
 
 int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
@@ -656,6 +658,7 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	macCursor.hotSpot.h = -offsetX;
 	macCursor.hotSpot.v = -offsetY;
 	SetCursor(&macCursor);
+	return 0;
 }
 
 // requestFlags bit values in VideoRequestRec (example use: 1<<kAbsoluteRequestBit)
@@ -975,6 +978,7 @@ void getDominateGDeviceRect(GDHandle dominantGDevice,Rect *dGDRect,Boolean forge
 
 pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDisplayModeListEntryPtr displaymodeInfo)
 {
+#pragma unused(itemIndex)
 	unsigned long			depthCount;
 	short					iCount;
 	ListIteratorDataRec		*myIterateData		= (ListIteratorDataRec*) userData;

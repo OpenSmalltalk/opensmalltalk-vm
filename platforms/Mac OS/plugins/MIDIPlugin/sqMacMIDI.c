@@ -117,17 +117,21 @@ int midiInit() {
     return true; 
 }
 
-int midiShutdown() {}
+int midiShutdown() {
+	return 1;
+}
 
 /* helper function for MIDI module */
 int sqMIDIParameter(int whichParameter, int modify, int newValue);
 
 int sqMIDIParameterSet(int whichParameter, int newValue) {
 	sqMIDIParameter(whichParameter, true, newValue);
+	return 0;
 }
 
 int sqMIDIParameterGet(int whichParameter) {
 	sqMIDIParameter(whichParameter, false, 0);
+	return 0;
 }
 
 int setMidiClockRate(int portNum, int interfaceClockRate) {
@@ -166,6 +170,7 @@ int setMidiClockRate(int portNum, int interfaceClockRate) {
 		return interpreterProxy->success(false);
 	}
 #endif
+return 0;
 }/*** MIDI Parameters (used with sqMIDIParameter function) ***/
 
 #define sqMIDIInstalled				1
@@ -252,7 +257,7 @@ int sqMIDIClosePort(int portNum) {
 	serialPorts = sqMIDIGetSerialPortCount();
 	if (portNum == serialPorts) {
 		closeQuicktimeMIDIPort();
-		return;
+		return 0;
 	} else {
 
     	if (serialPortCloseFn == 0) {
@@ -354,6 +359,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
    adaptor on platforms that use such adaptors (e.g., Macintosh).
    Fail if there is no port of the given number.*/
 
+#pragma unused(readSemaIndex)
 	int serialPorts;
 	int err;
 
@@ -363,7 +369,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
 
 	if (portNum == serialPorts) {
 		openQuicktimeMIDIPort();
-		return;
+		return 0;
 	}
 
     if (serialPortOpenFn == 0) {
@@ -377,6 +383,7 @@ int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate) {
 			sqMIDIClosePort(portNum);
 		}
 	}   
+	return 0;
 }
 
 int sqMIDIParameter(int whichParameter, int modify, int newValue) {
@@ -386,6 +393,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue) {
    parameter is set to newValue. Note that many MIDI driver parameters
    are read-only; attempting to set one of these parameters fails.
    For boolean parameters, true = 1, false = 0. */
+#pragma unused(newValue)
 
 	if (modify == 0) {
 		switch(whichParameter) {
@@ -447,6 +455,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue) {
 			return interpreterProxy->success(false);
 		}
 	}
+	return 0;
 }
 
 int sqMIDIPortReadInto(int portNum, int count, int bufferPtr) {
@@ -485,7 +494,7 @@ int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time) {
    zero, then send the data immediately. Implementations that do
    not support a timestamped output queue, such as this one, always
    send the data immediately; see sqMIDIHasBuffer. */
-
+#pragma unused(time)
 	int serialPorts, i;
 	unsigned char *bytePtr;
 	

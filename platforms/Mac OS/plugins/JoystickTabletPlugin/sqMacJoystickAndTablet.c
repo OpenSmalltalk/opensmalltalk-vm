@@ -11,7 +11,9 @@
 #include "JoystickTabletPlugin.h"
 
 /* initialize/shutdown */
-int joystickShutdown() {}
+int joystickShutdown() {	
+	return 1;
+}
 
 /* End of adjustments for pluginized VM */
 

@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.10 2004/04/23 20:45:30 johnmci Exp $
+*   RCSID:   $Id: sqMacDirectory.c,v 1.11 2004/08/03 02:39:35 johnmci Exp $
 *
 *   NOTES: See change log below.
 * 
@@ -86,7 +86,6 @@ int dir_Create(char *pathString, int pathStringLength) {
 	   create folders elsewhere. */
 
     char cFileName[1001];
-    int err;
 
     if (pathStringLength >= 1000) {
         return false;
@@ -102,6 +101,7 @@ int dir_Create(char *pathString, int pathStringLength) {
         FSRef	        parentFSRef;
         UniChar         buffer[1024];
         long            tokenLength;
+		int err;
         
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),gCurrentVMEncoding,false);
         if (filePath == nil) 
@@ -136,7 +136,6 @@ int dir_Create(char *pathString, int pathStringLength) {
 int dir_Delete(char *pathString, int pathStringLength) {
 	/* Delete the existing directory with the given path. */
     char cFileName[1000];
-    int err;
 
     if (pathStringLength >= 1000) {
         return false;
@@ -214,7 +213,6 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 		FSVolumeInfoParam fsVolumeParam;
 		HFSUniStr255 uniStr;
 		FSVolumeInfo volumeInfo;
-		FSRef fsRef;
     
 	/* default return values */
 	*name             = 0;
@@ -285,7 +283,6 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 			// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
 			if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
 				CFStringNormalize(mStr, kCFStringNormalizationFormKC); // pre-combined
-			CFIndex len =  CFStringGetLength(mStr);
 			CFStringGetCString(mStr, name, 256, gCurrentVMEncoding);
 			CFRelease(mStr);
 
@@ -380,7 +377,7 @@ OSErr getSpecAndFInfo(char *filename, int filenameSize,FSSpec *spec,FInfo *finde
     return noErr;
 }
 
-dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
+int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
 	/* Set the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 
@@ -396,7 +393,7 @@ dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char
     return FSpSetFInfo(&spec,&finderInfo) == noErr;
 }
 
-dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
+int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
 	/* Get the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 
@@ -441,12 +438,13 @@ int recordPath(char *pathString, int pathStringLength, FSSpec *spec) {
 		lastPath[0] = 0; /* set to empty string */
 		lastPathValid = false;
 		lastSpec = *spec;
-		return;
+		return 0;
 	}
 	strncpy(lastPath,pathString,pathStringLength);
 	lastPath[pathStringLength] = 0; /* string terminator */
 	lastPathValid = true;
 	lastSpec = *spec;
+	return 0;
 }
 
 

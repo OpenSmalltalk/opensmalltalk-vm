@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacImageIO.c,v 1.4 2003/12/02 04:52:31 johnmci Exp $
+*   RCSID:   $Id: sqMacImageIO.c,v 1.5 2004/08/03 02:40:15 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -155,6 +155,7 @@ void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos) {
 int sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
     if (f != 0)
       return fwrite(ptr,elementSize,count,f);
+	return 0;
 }
 
 squeakFileOffsetType calculateStartLocationForImage() {
@@ -293,6 +294,7 @@ squeakFileOffsetType sqImageFileStartLocation(int fileRef, char *filename, squea
 	CFragResourceMember *target;
     FSSpec  imageSpec;
     
+#pragma unused(fileRef)
     makeFSSpec(filename, strlen(filename), &imageSpec);
     err = FSpGetFInfo(&imageSpec,&fileInfo);
     if (err != noErr) return 0; //This should not happen

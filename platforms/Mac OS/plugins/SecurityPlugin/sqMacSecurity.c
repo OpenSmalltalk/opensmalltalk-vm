@@ -102,16 +102,19 @@ int ioCanRenameFileOfSize(char* pathString, int pathStringLength) {
 
 
 int ioCanGetFileTypeOfSize(char* pathString, int pathStringLength) {
+#pragma unused(pathString,pathStringLength)
   return 1; /* of no importance here */
 }
 
 int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength) {
+#pragma unused(pathString,pathStringLength)
   return 1; /* of no importance here */
 }
 
 /* disabling/querying */
 int ioDisableFileAccess(void) {
   allowFileAccess = 0;
+ return 0;
 }
 
 int ioHasFileAccess(void) {
@@ -136,6 +139,7 @@ int ioCanWriteImage() {
 
 int ioDisableImageWrite() {
   allowImageWrite = 0;
+	return 0;
 }
 
 
@@ -147,19 +151,23 @@ int ioDisableImageWrite() {
 static int allowSocketAccess = 1; /* allow access to sockets */
 
 int ioCanCreateSocketOfType(int netType, int socketType) {
+#pragma unused(netType,socketType)
   return allowSocketAccess;
 }
 
 int ioCanConnectToPort(int netAddr, int port) {
+#pragma unused(netAddr,port)
   return allowSocketAccess;
 }
 
 int ioCanListenOnPort(int  s, int port) {
+#pragma unused(s,port)
   return allowSocketAccess;
 }
 
 int ioDisableSocketAccess() {
   allowSocketAccess = 0;
+	return 0;
 }
 
 int ioHasSocketAccess() {

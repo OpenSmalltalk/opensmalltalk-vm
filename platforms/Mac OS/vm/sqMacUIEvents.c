@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.22 2004/04/23 20:49:34 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.23 2004/08/03 02:42:18 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -164,11 +164,11 @@ int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
 int ioProcessEvents(void) {
+#ifndef BROWSERPLUGIN
 	/* This is a noop when running as a plugin; the browser handles events. */
 	static unsigned long   nextPollTick = 0, nextPowerCheck=0, disableIdleTickLimit=0;
 	unsigned long   clockTime;
 
-#ifndef BROWSERPLUGIN
     clockTime = ioLowResMSecs();
 	if (abs(nextPollTick - clockTime) >= 16) {
 		/* time to process events! */
@@ -194,6 +194,7 @@ int ioProcessEvents(void) {
         }        
 	}
 #endif
+	return 0;
 }
 
 int HandleEvents(void) {
@@ -1454,7 +1455,6 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     Point  mouseLocation;
     OSStatus result = eventNotHandledErr; /* report failure by default */
     static RgnHandle	ioWinRgn=null;
-    WindowPtr	theWindow;
     extern Boolean gSqueakWindowIsFloating,gSqueakFloatingWindowGetsFocus;
     
     if (!windowActive)
@@ -1918,6 +1918,7 @@ int ioProcessEvents(void) {
         QuitApplicationEventLoop();
         pthread_exit(null);
     }
+	return 0;
 }
 #endif 
 
@@ -1933,6 +1934,7 @@ int getUIToLock(long *data) {
         pthread_cond_wait(&gEventUILockCondition,&gEventUILock);	
         pthread_mutex_unlock(&gEventUILock);
     }
+	return 0;
 }
 
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,

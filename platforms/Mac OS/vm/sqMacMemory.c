@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.13 2004/04/23 20:47:15 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.14 2004/08/03 02:40:47 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -103,8 +103,7 @@ UInt32	sqGetAvailableMemory() {
 
 void * sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
     void * debug;
-    OSErr err;
-	minHeapSize;
+	#pragma unused(minHeapSize)
      
 #if (TARGET_API_MAC_CARBON && defined(__MWERKS__))
     gMaxHeapSize = gHeapSize = *desiredHeapSize;
@@ -129,6 +128,7 @@ void * sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
     if(((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) && hasFileMapping() && !gNoFileMappingInOS9) {
         ByteCount  viewLength;
         long       i;
+		OSErr err;
         
         err = 1;
         for(i=gMaxHeapSize;i>minHeapSize;i-=8*1024*1024) {

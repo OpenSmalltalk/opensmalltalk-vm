@@ -77,7 +77,6 @@ void SetImageNameViaCFString(CFStringRef string) {
 }
 
 void SetImageNameViaString(char *string,UInt32 encoding) {
-    char *ignore;
     if (imageNameString != NULL)
         CFRelease(imageNameString);
     SetImageNameViaCFString(CFStringCreateWithCString(NULL, string, encoding));
@@ -138,6 +137,7 @@ static char documentNameString[DOCUMENT_NAME_SIZE+1];
 static char shortImageNameString[SHORTIMAGE_NAME_SIZE+1];
 
 void getVMPathWithEncoding(char *target,UInt32 encoding) {
+#pragma unused(encoding)
     strcpy(target,vmPathString);
 }
 
@@ -150,6 +150,7 @@ Boolean VMPathIsEmpty() {
 }
 
 void getImageNameWithEncoding(char *target,UInt32 encoding) {
+#pragma unused(encoding)
     strcpy(target,imageName);
 }
 
@@ -158,6 +159,7 @@ char *getImageName(void) {
 }
     
 void SetImageNameViaString(char *string,UInt32 encoding) {
+#pragma unused(encoding)
     strcpy(imageName,string);
 }
 
@@ -170,18 +172,22 @@ Boolean ImageNameIsEmpty() {
 }
 
 void getDocumentNameWithEncoding(char *target,UInt32 encoding) {
+#pragma unused(encoding)
     strcpy(target,documentNameString);
 }
 
 void SetDocumentNameViaString(char *string,UInt32 encoding) {
+#pragma unused(encoding)
     strcpy(documentNameString,string);
 }
 
 void getShortImageNameWithEncoding(char *target,UInt32 encoding) {
+#pragma unused(encoding)
     strcpy(target,shortImageNameString);
 }
 
 void SetShortImageNameViaString(char *string,UInt32 encoding) {
+#pragma unused(encoding)
     strcpy(shortImageNameString,string);
 }
 

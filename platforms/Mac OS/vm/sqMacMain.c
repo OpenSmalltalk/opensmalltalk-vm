@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.20 2004/02/19 04:34:34 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.21 2004/08/03 02:40:39 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -146,8 +146,10 @@ int main(void) {
 	EventRecord theEvent;
 	sqImageFile f;
 	OSErr err;
+	char shortImageName[256];
+#if !defined(MINIMALVM)  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
         long threadGestaltInfo;
-        char shortImageName[256];
+#endif
         
 	/* check the interpreter's size assumptions for basic data types */
 	if (sizeof(int) != 4) {
@@ -285,7 +287,7 @@ int main(void) {
         RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
         }
     }
-    return; //Note the return, need to refactor this ugly code
+    return 0; //Note the return, need to refactor this ugly code
 #endif
 
 #if !defined(MINIMALVM)  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
@@ -299,13 +301,14 @@ int main(void) {
                 ioProcessEvents();
         		SqueakYieldToAnyThread();
             }
-            return;
+            return 0;
         }
     }
 #endif
     gThreadManager = false;
     /* run Squeak */
     squeakThread(0);
+    return 0;
 }
 #endif
 
@@ -328,6 +331,7 @@ OSErr createNewThread() {
         gSqueakThreadUPP = NewThreadEntryUPP(squeakThread); //We should dispose of someday
 	return NewThread( kCooperativeThread, gSqueakThreadUPP, nil, 80*1024, kCreateIfNeeded+kNewSuspend, 0L, &gSqueakThread);
     #endif
+	return 0;
 }
 
 #else
@@ -341,17 +345,19 @@ pascal short SqueakYieldToAnyThread(void) {
 #if !defined( I_AM_CARBON_EVENT) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
     YieldToAnyThread();
     #endif
+	return 0;
 }
 
 static pascal void* squeakThread(void *threadParm) {
 	/* run Squeak */
+#pragma unused(threadParm)
 #	ifdef JITTER
 	j_interpret();
 #	else
 	interpret();
 #	endif
+	return 0;
 }
-
 
 #if TARGET_API_MAC_CARBON
 void InitMacintosh(void) {
@@ -394,6 +400,7 @@ void PowerMgrCheck(void) {
 
 int ioDisablePowerManager(int disableIfNonZero) {
     gDisablePowerManager = disableIfNonZero;
+	return 0;
 }
 
 Boolean RunningOnCarbonX(void)
@@ -420,6 +427,7 @@ Boolean isSystem9_0_or_better(void)
 
 int ioBeep(void) {
 	SysBeep(1000);
+	return 0;
 }
 
 #ifndef BROWSERPLUGIN
@@ -429,6 +437,7 @@ int ioExit(void) {
     MenuBarRestore();
 	sqMacMemoryFree();
     ExitToShell();
+	return 0;
 }
 #endif
 
@@ -446,6 +455,7 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, d
 	/* experimental: print a form with the given bitmap, width, height, and depth at
 	   the given horizontal and vertical scales in the given orientation
            However John Mcintosh has introduced a printjob class and plugin to replace this primitive */
+#pragma unused( bitsAddr,  width,  height,  depth,  hScale,  vScale,  landscapeFlag)
 	return true;
 }
 
@@ -495,10 +505,10 @@ char * GetAttributeString(int id) {
 
 	if (id == 1001) return "Mac OS";
 	if (id == 1002) {
-		long myattr;
+		unsigned int myattr;
 		static char data[32];
 		
-		Gestalt(gestaltSystemVersion, &myattr);
+		Gestalt(gestaltSystemVersion, (long *) &myattr);
 		sprintf(data,"%X",myattr);
 		return data;
 	}
@@ -575,7 +585,7 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 
 int plugInInit(char *fullImagePath) {
 
-	fullImagePath;
+	#pragma unused(fullImagePath)
 	/* check the interpreter's size assumptions for basic data types */
 	if (sizeof(int) != 4) {
 		error("This C compiler's integers are not 32 bits.");
@@ -587,10 +597,10 @@ int plugInInit(char *fullImagePath) {
 		error("This C compiler's time_t's are not 32 bits.");
 	}
 
-        SetUpTimers();
 	PowerMgrCheck();
 	SetUpClipboard();
 	SetUpPixmap();
+	return 0;
 }
 
 int plugInShutdown(void) {
@@ -616,6 +626,7 @@ int plugInShutdown(void) {
 #endif        
 	    sqMacMemoryFree();
 	}
+	return 0;
 }
 
 #endif
@@ -686,10 +697,10 @@ void fetchPrefrences() {}
 
 /*** Profiling Stubs ***/
 
-int clearProfile(void){}														
-int dumpProfile(void){}														
-int startProfiling(void){}													
-int stopProfiling(void)	{}													
+int clearProfile(void){return 0;}														
+int dumpProfile(void){return 0;}														
+int startProfiling(void){return 0;}													
+int stopProfiling(void)	{return 0;}													
 
 #if TARGET_API_MAC_CARBON && defined(__MWERKS__)
 int printOnOSX(char * string);

@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.13 2004/04/23 20:46:12 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.14 2004/08/03 02:40:08 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -505,6 +505,7 @@ int PathToFile(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {
         OSErr	error;
         short 	pathLength;
         Handle fullPathHandle;
+#pragma unused(encoding)
         
 	error =  FSpGetFullPath(where, &pathLength, &fullPathHandle);
 	if (fullPathHandle != 0) {
@@ -839,8 +840,9 @@ Boolean isVmPathVolumeHFSPlus() {
 
 OSErr	FSMakeFSSpecCompat(short vRefNum, long dirID, ConstStr255Param fileName,  FSSpec *spec) {
 	OSErr	result;
+#if TARGET_API_MAC_CARBON
 	char pascalString[256];
-	
+#endif	
 	/* Let the file system create the FSSpec if it can since it does the job */
 	/* much more efficiently than I can. */
 #if TARGET_API_MAC_CARBON
@@ -874,7 +876,6 @@ Karl Goiser 14/01/01
 OSStatus GetApplicationDirectory(FSSpec *workingDirectory) {
         ProcessSerialNumber PSN;
         ProcessInfoRec pinfo;
-        FSSpec	checkDirectory;
         OSErr	err;
         
                   /* set up process serial number */
@@ -889,6 +890,7 @@ OSStatus GetApplicationDirectory(FSSpec *workingDirectory) {
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
 			FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
 #else
+			FSSpec	checkDirectory;
             FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:",&checkDirectory);
             if (strncmp((const char *)checkDirectory.name,(const char *) "\pMacOSClassic",13) == 0)
 				FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
@@ -1028,6 +1030,7 @@ pascal void findImageEventProc(NavEventCallbackMessage callBackSelector,
                         NavCBRecPtr callBackParms, 
                         NavCallBackUserData callBackUD)
 {
+#pragma unused(callBackUD)
    // WindowPtr window = 
    //                 (WindowPtr)callBackParms->eventData.event->message;
     switch (callBackSelector)
@@ -1049,6 +1052,7 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
                             NavCallBackUserData callBackUD,
                             NavFilterModes filterMode)
 {
+#pragma unused(filterMode,callBackUD)
     NavFileOrFolderInfo* theInfo = (NavFileOrFolderInfo*)info;
     
     if (theItem->descriptorType == typeFSS) {
