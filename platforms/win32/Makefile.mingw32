@@ -11,8 +11,8 @@ endif
 
 
 AR = ar rc
-CP = copy
-RM = del
+CP = cp
+RM = rm
 
 #############################################################################
 # Default locations
@@ -181,27 +181,27 @@ makedll: $(LIBOBJ)
 		$(OBJDIR)/$(LIB).exp \
 		$(LIBOBJ)
 	strip --strip-all $(OBJDIR)/$(LIB).dll
-	$(RM) $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
+	$(RM) -f $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
 
 Mpeg3Plugin.lib:
 	@$(MAKE) -Cplugins/Mpeg3Plugin -f Makefile.win32 XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
-	$(CP) plugins\Mpeg3Plugin\Mpeg3Plugin.lib release\Mpeg3Plugin.lib
-	$(RM) plugins\Mpeg3Plugin\Mpeg3Plugin.lib
+	$(CP) plugins/Mpeg3Plugin/Mpeg3Plugin.lib release/Mpeg3Plugin.lib
+	$(RM) plugins/Mpeg3Plugin/Mpeg3Plugin.lib
 
 Mpeg3Plugin.dll:
 	@$(MAKE) -Cplugins/Mpeg3Plugin -f Makefile.win32 makedll
-	$(CP) plugins\Mpeg3Plugin\Mpeg3Plugin.dll release\Mpeg3Plugin.dll
-	$(RM) plugins\Mpeg3Plugin\Mpeg3Plugin.dll
+	$(CP) plugins/Mpeg3Plugin/Mpeg3Plugin.dll release/Mpeg3Plugin.dll
+	$(RM) plugins/Mpeg3Plugin/Mpeg3Plugin.dll
 
 %.lib:
 	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
-	$(CP) plugins\$*\$*.lib release\$*.lib
-	$(RM) plugins\$*\$*.lib
+	$(CP) plugins/$*/$*.lib release/$*.lib
+	$(RM) plugins/$*/$*.lib
 
 %.dll:
 	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
-	$(CP) plugins\$*\$*.dll release\$*.dll
-	$(RM) plugins\$*\$*.dll
+	$(CP) plugins/$*/$*.dll release/$*.dll
+	$(RM) plugins/$*/$*.dll
 
 
 #############################################################################
