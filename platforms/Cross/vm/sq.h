@@ -27,9 +27,9 @@
 #define sqImageFile FILE *
 #define sqImageFileClose(f)                  fclose(f)
 #define sqImageFileOpen(fileName, mode)      fopen(fileName, mode)
-#define sqImageFilePosition(f)               ftell(f)
+#define sqImageFilePosition(f)               ftello(f)
 #define sqImageFileRead(ptr, sz, count, f)   fread(ptr, sz, count, f)
-#define sqImageFileSeek(f, pos)              fseek(f, pos, SEEK_SET)
+#define sqImageFileSeek(f, pos)              fseeko(f, pos, SEEK_SET)
 #define sqImageFileWrite(ptr, sz, count, f)  fwrite(ptr, sz, count, f)
 #define sqImageFileStartLocation(fileRef, fileName, size)  0
 
@@ -306,7 +306,7 @@ int ioDisableImageWrite(void);
 
 /* save/restore */
 /* Read the image from the given file starting at the given image offset */
-int readImageFromFileHeapSizeStartingAt(sqImageFile f, int desiredHeapSize, int imageOffset);
+int readImageFromFileHeapSizeStartingAt(sqImageFile f, int desiredHeapSize, off_t imageOffset);
 /* NOTE: The following is obsolete - it is only provided for compatibility */
 #define readImageFromFileHeapSize(f, s) readImageFromFileHeapSizeStartingAt(f,s,0)
 
