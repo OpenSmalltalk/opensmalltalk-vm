@@ -39,14 +39,14 @@ static int IsImage(char *name) {
 	}
 	/* no luck at beginning of file, seek to 512 and try again */
 	if(fseek( fp, 512, SEEK_SET)) {
-		/* seek failed, which implies fileis too small */
+		/* seek failed, which implies file is too small */
 		fclose(fp);
 		return false;
 	}
-		if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
-		/* could not read an int from file */
-		fclose(fp);
-		return 0;
+	if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+	/* could not read an int from file */
+	fclose(fp);
+	return 0;
 	}
 	if (magic > 0xFFFF) {
 		magic = byteSwapped(magic);
@@ -56,6 +56,7 @@ static int IsImage(char *name) {
 		fclose(fp);
 		return true;
 	}
+	fclose(fp);
 	return false;
 }
 
