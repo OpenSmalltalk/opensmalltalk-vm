@@ -14,6 +14,7 @@
 /* unix-specific prototypes and definitions */
 void aioPollForIO(int microSeconds, int extraFd);
 #define SQ_FORM_FILENAME        "squeak-form.ppm"
+#define sqFilenameFromStringOpen(dst, src, num) sqFilenameFromString(dst, src, num)
 
 /* undefine clock macros that are implemented as functions */
 #undef ioMSecs
