@@ -6,21 +6,24 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.6 2004/09/22 18:53:17 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+*  Oct 18th, 2004, JMM changes for host menu support
 *****************************************************************************/
 
 #include "sqMacUIMenuBar.h"
 #include "sqMacMain.h"
 #include "sqMacWindow.h"
+#include "sq.h"
 
 MenuHandle	appleMenu = nil;
 MenuHandle	editMenu = nil;
 int		menuBarHeight = 20;
 RgnHandle	menuBarRegion = nil;  /* if non-nil, then menu bar has been hidden */
 MenuHandle	fileMenu = nil;
+extern struct VirtualMachine* interpreterProxy;
 
  
 #if TARGET_API_MAC_CARBON
@@ -102,20 +105,29 @@ void SetUpMenus(void) {
     Gestalt( gestaltMenuMgrAttr, &decideOnQuitMenu);
     if (!(decideOnQuitMenu & gestaltMenuMgrAquaLayoutMask) || true)	
         AppendMenu(fileMenu, "\pQuit do not save");
-    if (RunningOnCarbonX())
+    if (RunningOnCarbonX()) {
         DisableMenuCommand(NULL,'quit');
-        
+	}
 #else
 	AppendResMenu(appleMenu, 'DRVR');
     AppendMenu(fileMenu, "\pQuit do not save");
 #endif
  	AppendMenu(editMenu, "\pUndo/Z;(-;Cut/X;Copy/C;Paste/V;Clear");
+	/* Disable items in the Edit menu */
+	DisableMenuItemCarbon(editMenu, 1);
+	DisableMenuItemCarbon(editMenu, 3);
+	DisableMenuItemCarbon(editMenu, 4);
+	DisableMenuItemCarbon(editMenu, 5);
+	DisableMenuItemCarbon(editMenu, 6);
 	DrawMenuBar();
 }
 
  void AdjustMenus(void) {
 	WindowRef		wp;
 	int				isDeskAccessory;
+	int				cutState;	
+		
+	cutState = IsMenuItemEnabled(editMenu, 1);
 
 	wp = FrontWindow();
 	if (wp != NULL) {
@@ -132,12 +144,20 @@ void SetUpMenus(void) {
 		EnableMenuItemCarbon(editMenu, 5);
 		EnableMenuItemCarbon(editMenu, 6);
 	} else {
-		/* Disable items in the Edit menu */
-		DisableMenuItemCarbon(editMenu, 1);
-		DisableMenuItemCarbon(editMenu, 3);
-		DisableMenuItemCarbon(editMenu, 4);
-		DisableMenuItemCarbon(editMenu, 5);
-		DisableMenuItemCarbon(editMenu, 6);
+		if (cutState) {
+			/* Enable items in the Edit menu */
+			EnableMenuItemCarbon(editMenu, 1);
+			EnableMenuItemCarbon(editMenu, 3);
+			EnableMenuItemCarbon(editMenu, 4);
+			EnableMenuItemCarbon(editMenu, 5);
+		} else {
+			/* Disable items in the Edit menu */
+			DisableMenuItemCarbon(editMenu, 1);
+			DisableMenuItemCarbon(editMenu, 3);
+			DisableMenuItemCarbon(editMenu, 4);
+			DisableMenuItemCarbon(editMenu, 5);
+			DisableMenuItemCarbon(editMenu, 6);
+		}
 	}
 }
 

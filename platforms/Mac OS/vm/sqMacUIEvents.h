@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.h,v 1.5 2003/12/02 04:53:02 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -28,6 +28,8 @@ void recordMouseDown(EventRecord *theEvent);
 int recordMouseEvent(EventRecord *theEvent, int theButtonState);
 int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType);
 int recordKeyboardEvent(EventRecord *theEvent, int keyType);
+void recordWindowEvent(int windowType,int left, int top, int right, int bottom);
+void recordMenu(int menuID,UInt32 menuItem);
 int MouseModifierState(EventRecord *theEvent);
 WindowPtr getSTWindow(void);
 void setMessageHook(eventMessageHook theHook);

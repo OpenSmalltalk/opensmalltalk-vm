@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacImageIO.c,v 1.5 2004/08/03 02:40:15 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -100,7 +100,7 @@ int imageNamePutLength(int sqImageNameIndex, int length) {
 	shortImageName[j] = 0;
 
         SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
-	SetWindowTitle(shortImageName);
+	SetWindowTitle(1,shortImageName);
 	return count;
 }
 

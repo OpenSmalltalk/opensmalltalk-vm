@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.18 2004/09/22 18:55:24 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -160,7 +160,6 @@ int primitivePluginPostURL(void);
 /*** Imported Variables ***/
 
 extern unsigned char *memory;
-extern WindowPtr stWindow;
 extern int gButtonIsDown;
 extern int getFullScreenFlag();
 extern int setInterruptKeycode(int value);
@@ -399,6 +398,7 @@ NPError NPP_Destroy(NPP instance, NPSavedData** save) {
 NPError NPP_SetWindow(NPP instance, NPWindow* window) {
 	NP_Port* port;
         OSErr   err;
+	WindowPtr realWindow;
 	
 	if (window == NULL || window->window == NULL)
 		return NPERR_NO_ERROR;
@@ -414,7 +414,9 @@ NPError NPP_SetWindow(NPP instance, NPWindow* window) {
             
 	netscapeWindow = window;
 	port = (NP_Port *) netscapeWindow->window;
-	stWindow = GetWindowFromPort(port->port);
+	realWindow = GetWindowFromPort(port->port);
+	interpreterProxy->windowAtIndexputBlock(1,realWindow);
+	
 	needsUpdate	= true;
 
 	if (gIWasRunning)
@@ -814,7 +816,7 @@ void EndDraw(void) {
 	SetClip(gSavePortClipRgn);
 	SetPort((GrafPtr) gOldPort);
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-	UnlockPortBits((GrafPtr)GetWindowPort(stWindow));
+	UnlockPortBits((GrafPtr)GetWindowPort(getSTWindow()));
     pthread_mutex_unlock(&gEventDrawLock);
 #endif 
 }
@@ -822,6 +824,7 @@ void EndDraw(void) {
 void StartDraw(void) {
 	NP_Port* port;
 	Rect clipRect;
+	WindowPtr realWindow;
 	
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     pthread_mutex_lock(&gEventDrawLock);
@@ -836,9 +839,10 @@ void StartDraw(void) {
 
 	/* save old graphics port and switch to ours */
 	GetPort((GrafPtr *) &gOldPort);
-	stWindow = (WindowPtr) port->port;
+	realWindow = (WindowPtr) port->port;
+	interpreterProxy->windowAtIndexputBlock(1,realWindow);
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-	LockPortBits((GrafPtr)GetWindowPort(stWindow));
+	LockPortBits((GrafPtr)GetWindowPort(getSTWindow()));
 #endif
 	SetPort((GrafPtr) port->port);
 
@@ -853,23 +857,30 @@ void StartDraw(void) {
 	clipRect.bottom = netscapeWindow->clipRect.bottom + port->porty;
 	clipRect.right  = netscapeWindow->clipRect.right  + port->portx;
 	if (clipRect.top == 0 && clipRect.left ==0 && clipRect.bottom==0 && clipRect.right==0) {
-		// Not sure what to do IE is lying... this gets the full screen, not a table cell GetPortBounds(GetWindowPort(stWindow),&clipRect);
+		// Not sure what to do IE is lying... this gets the full screen, not a table cell GetPortBounds(GetWindowPort(getSTWindow()),&clipRect);
 	}
 	ClipRect(&clipRect);
 	BackColor(whiteColor);  /* needed to avoid funny colors */
 }
 
-
 int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
+
+	ioShowDisplayOnWindow(  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
+}
+
+int ioShowDisplayOnWindow(
+	int dispBitsIndex, int width, int height, int depth,
+	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
+
 
 	Rect		dstRect = { 0, 0, 0, 0 };
 	Rect		srcRect = { 0, 0, 0, 0 };
 	static RgnHandle	maskRect = nil;
     
-	if (stWindow == nil || exitRequested) {
-		return 0;
+	if (interpreterProxy->windowHandleFromIndex(windowIndex) == nil || exitRequested) {
+		return;
 	}
 	
 	StartDraw();
@@ -903,9 +914,9 @@ int ioShowDisplay(
 	maskRect = NewRgn();
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
 
-	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(GetWindowPort(stWindow)), &srcRect, &dstRect, srcCopy, maskRect);
+	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(GetWindowPort(interpreterProxy->windowHandleFromIndex(windowIndex))), &srcRect, &dstRect, srcCopy, maskRect);
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-	QDFlushPortBuffer ((CGrafPtr)stWindow, maskRect);
+	QDFlushPortBuffer ((struct CGrafPort*)interpreterProxy->windowHandleFromIndex(windowIndex), maskRect);
 #endif
 	EndDraw();
 	return 0;
@@ -1215,7 +1226,7 @@ int ioScreenSize(void) {
 	}
 	    
 	if (w == 0 && h == 0) { 
-	    GetPortBounds(GetWindowPort(stWindow),&bounds);
+	    GetPortBounds(GetWindowPort(getSTWindow()),&bounds);
 		w = bounds.right - bounds.left;
 		h = bounds.bottom - bounds.top;
 	}
@@ -1243,7 +1254,7 @@ int ioSetFullScreen(int fullScreen) {
 		desiredWidth = 0;
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
-		oldStWindow = stWindow;
+		oldStWindow = getSTWindow();
 		dominantGDevice = getThatDominateGDevice();
 		setFullScreenFlag(true);  //JMM Moved before to test
 		BeginFullScreen	(&gRestorableStateForScreen,
@@ -1253,7 +1264,7 @@ int ioSetFullScreen(int fullScreen) {
 								 &gAFullscreenWindow,
 								 nil,
 								 fullScreenAllowEvents);
-		stWindow = gAFullscreenWindow;
+		interpreterProxy->windowAtIndexputBlock(1,gAFullscreenWindow);
 		gFullScreenNPPort.port = GetWindowPort(gAFullscreenWindow);
 		gFullScreenNPPort.portx = 0;
 		gFullScreenNPPort.porty = 0;
@@ -1288,7 +1299,7 @@ int  ioSetFullScreenRestore()
 		    return 0;
 	    gRestorableStateForScreen = nil;
 	    netscapeWindow = oldNetscapeWindow;
-	    stWindow = oldStWindow;
+	    interpreterProxy->windowAtIndexputBlock(1,oldStWindow);
 		
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 		err = ShowHideProcess (&psn,false);

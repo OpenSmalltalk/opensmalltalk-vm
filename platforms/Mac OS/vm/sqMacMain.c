@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.22 2004/09/22 18:52:05 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -64,6 +64,7 @@
 *  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
 *  3.6.x  Sept 1st, 2003 JMM per note from Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>  changed 1003 parm to lowercase. 
 *  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+*  3.8.0bx Jul 20th, 2004 JMM multiple window support
 */
 
 
@@ -111,7 +112,7 @@ ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
 OSErr			gSqueakFileLastError; 
 Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false;
-UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType,gSqueakWindowAttributes;
+UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 
 #ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
@@ -175,6 +176,8 @@ int main(void) {
 	SetUpMenus();
 	SetUpClipboard();
         fetchPrefrences();
+	SetUpPixmap();
+
 
 #ifndef I_AM_CARBON_EVENT
 	SetEventMask(everyEvent); // also get key up events
@@ -251,21 +254,7 @@ int main(void) {
 	
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
 	sqImageFileClose(f);
-	SetUpWindow();
         
-#ifndef MINIMALVM
-	 ioLoadFunctionFrom(NULL, "DropPlugin");
-#endif
-    
-#ifndef IHAVENOHEAD
-        if (gSqueakWindowHasTitle) 
-	SetWindowTitle(shortImageName);
-#if I_AM_CARBON_EVENT	
-        ioSetFullScreenActual(getFullScreenFlag());
-#else
-	ioSetFullScreen(getFullScreenFlag());
-#endif
-#endif
 
 #if (!(defined JITTER) && defined(__MPW__))
 	atexit(SqueakTerminate);

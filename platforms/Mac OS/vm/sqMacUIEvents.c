@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.24 2004/09/03 00:19:18 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -24,6 +24,8 @@
 *  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 *  3.7.1b3 Jan 29th, 2004  JMM return unicode for classic version versus virtual keyboard code 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  alteration to unicode key capture
+*  3.8.0b1 July 20th, 2004 JMM Multiple window support
+
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -36,6 +38,8 @@ notes: IsUserCancelEventRef
 #include "sq.h"
 #include "sqMacUIEvents.h"
 #include "sqMacUIMenuBar.h"
+#include "sqMacWindow.h"
+#include "sqMacHostWindow.h"
 
 #if I_AM_CARBON_EVENT
     #include <pthread.h>
@@ -71,6 +75,7 @@ notes: IsUserCancelEventRef
 	static int indexInKeyMap(int keyCode);
 	static int findRepeatInKeyMap(int keyCode);
 	static void setRepeatInKeyMap(int keyCode);
+	void SetUpCarbonEventForWindowIndex(int index);
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -120,7 +125,7 @@ int cachedButtonState = 0;	/* buffered mouse button and modifier state for
 int gButtonIsDown = 0;
 
 Point savedMousePosition;	/* mouse position when window is inactive */
-int windowActive = true;	/* true if the Squeak window is the active window */
+int windowActive = 0;		/* positive indicates the active window */
 
 /* This table maps the 5 Macintosh modifier key bits to 4 Squeak modifier
    bits. (The Mac shift and caps lock keys are both mapped to the single
@@ -198,7 +203,7 @@ int ioProcessEvents(void) {
 
 int HandleEvents(void) {
 	EventRecord		theEvent;
-	int				ok;
+	int				ok,isMenuKey;
 
 	ok = WaitNextEvent(everyEvent, &theEvent,0,null);
 	if((messageHook) && (messageHook(&theEvent))) {
@@ -228,7 +233,11 @@ int HandleEvents(void) {
 			case autoKey:
                 if ((theEvent.modifiers & cmdKey) != 0) {
 					AdjustMenus();
-					HandleMenu(MenuKey(theEvent.message & charCodeMask));
+					isMenuKey = MenuKey(theEvent.message & charCodeMask);
+					if (isMenuKey) {
+						HandleMenu(isMenuKey);
+						break;
+					}
 				}
 				if(inputSemaphoreIndex) {
 					recordKeyboardEvent(&theEvent,EventKeyDown);
@@ -246,19 +255,30 @@ int HandleEvents(void) {
 
 #ifndef IHAVENOHEAD
 			case updateEvt:
+				 {
+				WindowPtr window = (WindowPtr) theEvent.message;
 
-				BeginUpdate((WindowPtr) theEvent.message);
-				fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
-				EndUpdate((WindowPtr) theEvent.message);
-
+				RgnHandle updateRgn = NewRgn();
+				Rect structureRect;
+				
+				BeginUpdate(window);
+				GetPortVisibleRegion((CGrafPtr)window,updateRgn);
+				GetRegionBounds(updateRgn,&structureRect);
+				DisposeRgn(updateRgn);
+				if (windowIndexFromHandle(window))
+					recordWindowEvent(WindowEventPaint,structureRect.left, structureRect.top, structureRect.right, structureRect.bottom);
+				if (windowIndexFromHandle(window) == 1) fullDisplayUpdate();  /* this makes VM call ioShowDisplay */					
+				EndUpdate(window);
+				}
 			break;
 
 			case activateEvt:
 				if (theEvent.modifiers & activeFlag) {
-					windowActive = true;
+					windowActive = (windowIndexFromHandle((WindowPtr) theEvent.message));
+					recordWindowEvent(WindowEventActivated,0, 0, 0, 0);
 				} else {
 					GetMouse(&savedMousePosition);
-					windowActive = false;
+					windowActive = 0;
 				}
 				fullDisplayUpdate();  /* Fix for full screen menu bar tabbing*/
 			break;
@@ -276,11 +296,11 @@ int HandleEvents(void) {
 					//
 					if ((theEvent.message & resumeFlag) == 0) {
 						GetMouse(&savedMousePosition);
-						windowActive = false;
+						windowActive = 0;
 						if (getFullScreenFlag())
 							MenuBarRestore();
 					} else {
-						windowActive = true;
+ 						windowActive = (windowIndexFromHandle((WindowPtr) FrontWindow()));
  						if (getFullScreenFlag()) {
 							MenuBarHide();
             				fullDisplayUpdate();  /* Fix for full screen menu bar tabbing*/
@@ -307,6 +327,7 @@ void HandleMenu(int mSelect) {
 
 	menuID = HiWord(mSelect);
 	menuItem = LoWord(mSelect);
+	HiliteMenu(menuID);
 	switch (menuID) {
 		case appleID:
 			GetPort(&savePort);
@@ -321,23 +342,35 @@ void HandleMenu(int mSelect) {
 			if (menuItem == quitItem) {
 				ioExit();
 			}
+			recordMenu(menuID,menuItem);
 		break;
 
 		case editID:
 #if !TARGET_API_MAC_CARBON
 			if (!SystemEdit(menuItem - 1)) {
-				SysBeep(5);
+				recordMenu(menuID,menuItem);
 			}
 #endif
 		break;
+		
+        default:
+			recordMenu(menuID,menuItem);
+        break;
 	}
+	HiliteMenu(0);
 }
+
+#define GetWindowContentRgn(window, r) (MacCopyRgn(((WindowPeek)window)->contRgn, r))
 
 void HandleMouseDown(EventRecord *theEvent) {
 	WindowPtr	theWindow;
 	static Rect		growLimits = { 20, 20, 10000, 10000 };
-	Rect        dragBounds;
-	int			windowCode, newSize;
+	Rect        dragBounds,globalBounds;
+	int			windowCode, newSize, isMenuKey;
+	static RgnHandle	ioWinRgn=null;
+	
+    if (ioWinRgn == null) 
+        ioWinRgn = NewRgn();
 
 	windowCode = FindWindow(theEvent->where, &theWindow);
 	switch (windowCode) {
@@ -349,7 +382,10 @@ void HandleMouseDown(EventRecord *theEvent) {
 
 		case inMenuBar:
 			AdjustMenus();
-			HandleMenu(MenuSelect(theEvent->where));
+			isMenuKey = MenuSelect(theEvent->where);
+			if (isMenuKey) {
+				HandleMenu(isMenuKey);
+			}
 		break;
 
 #ifndef IHAVENOHEAD
@@ -359,6 +395,9 @@ void HandleMouseDown(EventRecord *theEvent) {
 				
 			GetRegionBounds(GetGrayRgn(), &dragBounds);
 			DragWindow( theWindow, theEvent->where, &dragBounds);
+			GetWindowContentRgn (theWindow, ioWinRgn);
+			GetRegionBounds(ioWinRgn,&globalBounds);
+			recordWindowEvent(WindowEventMetricChange,globalBounds.left, globalBounds.top, globalBounds.right, globalBounds.bottom);
 		break;
 
 		case inGrow:
@@ -368,6 +407,9 @@ void HandleMouseDown(EventRecord *theEvent) {
 			newSize = GrowWindow(theWindow, theEvent->where, &growLimits);
 				if (newSize != 0) {
 				SizeWindow( theWindow, LoWord(newSize), HiWord(newSize), true);
+				GetWindowContentRgn (theWindow, ioWinRgn);
+				GetRegionBounds(ioWinRgn,&globalBounds);
+				recordWindowEvent(WindowEventMetricChange,globalBounds.left, globalBounds.top, globalBounds.right, globalBounds.bottom);
 			}
 		break;
 
@@ -377,11 +419,14 @@ void HandleMouseDown(EventRecord *theEvent) {
 				break;
 				
 			DoZoomWindow(theEvent, theWindow, windowCode,10000, 10000);
+			GetWindowContentRgn (theWindow, ioWinRgn);
+			GetRegionBounds(ioWinRgn,&globalBounds);
+			recordWindowEvent(WindowEventMetricChange,globalBounds.left, globalBounds.top, globalBounds.right, globalBounds.bottom);
 		break;
 
 		case inContent:
 			gButtonIsDown = true;
-			if (theWindow == getSTWindow()) {
+			if (theWindow == windowHandleFromIndex(windowActive)) {
 				if(inputSemaphoreIndex) {
 					recordMouseEvent(theEvent,MouseModifierState(theEvent));
 					break;
@@ -392,7 +437,12 @@ void HandleMouseDown(EventRecord *theEvent) {
 			}
 		break;
 
+		case inCollapseBox:
+			recordWindowEvent(WindowEventIconise,0, 0, 0, 0);
+		break;
+		
 		case inGoAway:
+			recordWindowEvent(WindowEventClose,0, 0, 0, 0);
 		break;
 #endif
 	}
@@ -459,6 +509,7 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 	/* first the basics */
 	evt->type = EventTypeMouse;
 	evt->timeStamp = ioMSecs() & 536870911; 
+	SetPortWindowPort(windowHandleFromIndex(windowActive));
 	GlobalToLocal((Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
@@ -466,9 +517,7 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 	evt->buttons = theButtonState & 0x07;
 	/* then the modifiers */
 	evt->modifiers = theButtonState >> 3;
-	/* clean up reserved */
-	evt->reserved1 = 0;
-	evt->reserved2 = 0;
+	evt->windowIndex = windowActive;
 	
 	if (oldEvent.buttons == evt->buttons && 
 	    oldEvent.x == evt->x &&
@@ -481,6 +530,41 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 	
 //	signalSemaphoreWithIndex(inputSemaphoreIndex);
 	return 1;
+}
+
+void recordMenu(int menuID,UInt32 menuItem) {
+	sqMenuEvent *evt;
+
+	evt = (sqMenuEvent*) nextEventPut();
+
+	evt->type = EventTypeMenu;
+	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->menu = menuID;
+	evt->menuItem = menuItem;
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+	evt->reserved3 = 0;
+	evt->windowIndex = windowActive;
+
+	return;
+}
+
+void recordWindowEvent(int windowType,int left, int top, int right, int bottom) 
+{
+	sqWindowEvent *evt;
+
+	evt = (sqWindowEvent*) nextEventPut();
+
+	evt->type = EventTypeWindow;
+	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->action = windowType;
+	evt->value1 = left;
+	evt->value2 = top;
+	evt->value3 = right;
+	evt->value4 = bottom;
+	evt->windowIndex = windowActive;
+
+	return;
 }
 
 static int MacRomanToUnicode[256] = 
@@ -526,9 +610,9 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	evt->charCode = MacRomanToUnicode[asciiChar];
 	evt->pressCode = keyType;
 	evt->modifiers = modifierBits >> 3;
+	evt->windowIndex = windowActive;
 	/* clean up reserved */
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
 	/* generate extra character event */
 	if (keyType == EventKeyDown) {
 		extra = (sqKeyboardEvent*)nextEventPut();
@@ -594,8 +678,7 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 	
 	/* then the modifiers */
 	evt->modifiers = theButtonState >> 3;
-	/* clean up reserved */
-	evt->reserved1 = 0;
+	evt->windowIndex = windowActive;
 #if I_AM_CARBON_EVENT
         pthread_mutex_unlock(&gEventQueueLock);
         signalAnyInterestedParties();
@@ -723,7 +806,7 @@ int ioMousePoint(void) {
 	if (windowActive) {
                 GrafPtr savePort;
                 GetPort(&savePort);
-                SetPortWindowPort(getSTWindow());
+                SetPortWindowPort(windowHandleFromIndex(windowActive));
 		GetMouse(&p);
                 SetPort(savePort);
 	} else {
@@ -1199,6 +1282,9 @@ EventTypeSpec appEventList[] = {{kEventClassApplication, kEventAppActivated},
 EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
                             { kEventClassWindow, kEventWindowHidden },
                             { kEventClassWindow, kEventWindowActivated},
+							{ kEventClassWindow, kEventWindowBoundsChanged},
+							{ kEventClassWindow, kEventWindowClose},
+							{ kEventClassWindow, kEventWindowCollapsed},
                             { kEventClassWindow, kEventWindowDeactivated}};
                             
 EventTypeSpec windEventMouseList[] = {
@@ -1243,6 +1329,8 @@ int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);
 int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
 void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
 void recordKeyboardEventCarbon(EventRef event);
+void recordMenuEventCarbon(MenuRef menu, UInt32 menuItem);
+void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom,int windowIndex);
 int doPreMessageHook(EventRef event); 
 void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta);
             
@@ -1250,16 +1338,9 @@ void SetUpCarbonEvent() {
     AdjustMenus();
 
 /* Installing the application event handler */
-    InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventCmdHandler), 1, appEventCmdList, 0, NULL);
-    InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventHandler), 2, appEventList, 0, NULL);
-
-/* Installing the window event handler */
-    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventHandler), 4, windEventList, 0, NULL);
-    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventMouseHandler), 5, windEventMouseList, 0, NULL);
-    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventKBHandler), 4, windEventKBList, 0, NULL);
-    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyAppleEventEventHandler), 1, appleEventEventList, 0, NULL);
-    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyTextInputEventHandler), 1, textInputEventList, 0, NULL);
-    InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), 1, customEventEventList, 0, NULL);
+    InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventCmdHandler), GetEventTypeCount(appEventCmdList), appEventCmdList, 0, NULL);
+    InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventHandler), GetEventTypeCount(appEventList), appEventList, 0, NULL);
+    InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), GetEventTypeCount(customEventEventList), customEventEventList, 0, NULL);
     
 /* timmer loops */
     if (gTapPowerManager) 
@@ -1268,6 +1349,15 @@ void SetUpCarbonEvent() {
                        kEventDurationSecond,
                        NewEventLoopTimerUPP(PowerManagerDefeatTimer),
                        NULL,&gPowerManagerDefeatTimer);
+}
+
+void SetUpCarbonEventForWindowIndex(int index) {
+/* Installing the window event handler */
+    InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventHandler), GetEventTypeCount(windEventList), windEventList, 0, NULL);
+    InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventMouseHandler), GetEventTypeCount(windEventMouseList), windEventMouseList, 0, NULL);
+    InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventKBHandler), GetEventTypeCount(windEventKBList), windEventKBList, 0, NULL);
+    InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyAppleEventEventHandler), GetEventTypeCount(appleEventEventList), appleEventEventList, 0, NULL);
+    InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyTextInputEventHandler), GetEventTypeCount(textInputEventList), textInputEventList, 0, NULL);
 }
 
 int   doPreMessageHook(EventRef event) {
@@ -1295,6 +1385,7 @@ void   doPostMessageHook(EventRef event) {
         pthread_mutex_lock(&gEventQueueLock);
 	evt = nextEventPut();
 	evt->type = EventTypePostEventProcessing;
+	evt->windowIndex = windowActive;
 	evt->unused1 = (long) theOldEventType;
         pthread_mutex_unlock(&gEventQueueLock);
 
@@ -1308,6 +1399,7 @@ void   postFullScreenUpdate() {
     pthread_mutex_lock(&gEventQueueLock);
     evt = nextEventPut();
     evt->type = EventTypeFullScreenUpdate;
+	evt->windowIndex = windowActive;
     pthread_mutex_unlock(&gEventQueueLock);
 }
 
@@ -1322,21 +1414,18 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
         return result;
 
     whatHappened = GetEventKind(event);
+
+	//fprintf(stderr,"\nAppEvent %i",whatHappened);
     switch (whatHappened)
     {
         case kEventAppActivated:
-            windowActive = true;
             if (getFullScreenFlag()) {
                 MenuBarHide();
             }
             break;
         case kEventAppDeactivated:
             if (gSqueakWindowIsFloating) break;
-              GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
-                    sizeof(Point), NULL, &savedMousePosition);
-            SetPortWindowPort(getSTWindow());
-            GlobalToLocal(&savedMousePosition);
-            windowActive = false;
+			windowActive = 0;
             if (getFullScreenFlag())
                 MenuBarRestore();
             break;
@@ -1363,26 +1452,14 @@ EventRef event, void* userData)
         case kEventCommandProcess:
             GetEventParameter (event, kEventParamDirectObject,
                 typeHICommand, NULL, sizeof(HICommand),NULL, &commandStruct);
-            AdjustMenus();
-            if (commandStruct.menu.menuRef == fileMenu) {
-                switch (commandStruct.menu.menuItemIndex)
-                {
-                    case quitItem :
-                        result = noErr;
+
+            if (commandStruct.menu.menuRef == fileMenu && commandStruct.menu.menuItemIndex == quitItem) {
                         gQuitNowRightNow = true;
-                    default:
-                        break;
-                }
-            }
-             if (commandStruct.menu.menuRef == editMenu) {
-                switch (commandStruct.commandID)
-                {
-                     default:
-                        if (windowActive)
-                            result = noErr;
-                        break;
-                }
-            }
+				result = noErr;
+			} else if (windowActive) {
+				recordMenuEventCarbon(commandStruct.menu.menuRef,commandStruct.menu.menuItemIndex);
+				result = noErr;
+			}
             break;
         default:
             break;
@@ -1395,36 +1472,53 @@ EventRef event, void* userData)
 static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
-    WindowRef window;
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
     extern Boolean gSqueakWindowIsFloating;
+	Rect globalBounds;
+    WindowRef window;
   
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
-    GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL,
-                sizeof(window), NULL, &window);
+    GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL,sizeof(window), NULL, &window);
     whatHappened = GetEventKind(event);
+	//fprintf(stderr,"\nWindowEvent %i %i %i",whatHappened,IsWindowActive(window),windowIndexFromHandle((int)window));
     switch (whatHappened)
     {
          case kEventWindowActivated:
-            windowActive = true;
+            windowActive = windowIndexFromHandle((wHandleType)window);
             postFullScreenUpdate();
+			recordWindowEventCarbon(WindowEventActivated,0, 0, 0, 0,windowActive);
              break;
         case kEventWindowDeactivated:
             if (gSqueakWindowIsFloating) break;
             GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
-            SetPortWindowPort(getSTWindow());
+            SetPortWindowPort(windowHandleFromIndex(windowIndexFromHandle((wHandleType)window)));
             GlobalToLocal(&savedMousePosition);
-            windowActive = false;
+            windowActive = 0;
+             break;
+       case kEventWindowHandleContentClick:
+			result = eventNotHandledErr;
              break;
        case kEventWindowDrawContent:
             result = noErr;
             break;
+		case kEventWindowBoundsChanged:
+			GetWindowBounds(window,kWindowContentRgn,&globalBounds);
+			recordWindowEventCarbon(WindowEventMetricChange,globalBounds.left, globalBounds.top, 
+	globalBounds.right, globalBounds.bottom,windowIndexFromHandle((wHandleType)window));
+			break;
+		case kEventWindowCollapsed:
+			recordWindowEventCarbon(WindowEventIconise,0, 0, 0, 0,windowIndexFromHandle((wHandleType)window));
+			break;
+		case kEventWindowClose:
+			recordWindowEventCarbon(WindowEventClose,0, 0, 0, 0,windowIndexFromHandle((wHandleType)window));
+			result = noErr;
+			break;
         case kEventWindowHidden:
             if (gSqueakWindowIsFloating) {
-                ShowWindow(getSTWindow());
+                ShowWindow(windowHandleFromIndex(windowIndexFromHandle((wHandleType)window)));
                 result = noErr;
             }
             break;
@@ -1461,7 +1555,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     if (ioWinRgn == null) 
         ioWinRgn = NewRgn();
         
-    GetWindowRegion(getSTWindow(),kWindowGlobalPortRgn,ioWinRgn);
+    GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGlobalPortRgn,ioWinRgn);
     GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
     
     if (!PtInRgn(mouseLocation,ioWinRgn)) {
@@ -1471,9 +1565,9 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     }
     
    /* if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating && 
-            GetUserFocusWindow() != getSTWindow()) {
+            GetUserFocusWindow() != getSTWindowXXXX()) {
         SetUserFocusWindow(kUserFocusAuto);
-        SetUserFocusWindow(getSTWindow());
+        SetUserFocusWindow(getSTWindowXXXX());
     }*/
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
@@ -1490,14 +1584,14 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
-            GetWindowRegion(getSTWindow(),kWindowGrowRgn,ioWinRgn);
+			GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGrowRgn,ioWinRgn);
             if (PtInRgn(mouseLocation,ioWinRgn))
                 return result;
 			if (mouseDownActivate) 
 				return result;
             if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating) {
                 SetUserFocusWindow(kUserFocusAuto);
-                SetUserFocusWindow(getSTWindow());
+                SetUserFocusWindow(windowHandleFromIndex(windowActive));
             }
             gButtonIsDown = true;
             recordMouseEventCarbon(event,whatHappened);
@@ -1608,6 +1702,41 @@ static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
     return result;
 }
 
+void recordMenuEventCarbon(MenuRef menu,UInt32 menuItem) {
+	sqMenuEvent *evt;
+	pthread_mutex_lock(&gEventQueueLock);
+	evt = (sqMenuEvent*) nextEventPut();
+
+	evt->type = EventTypeMenu;
+	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->menu = (int) GetMenuID(menu);
+	evt->menuItem = menuItem;
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+	evt->reserved3 = 0;
+	evt->windowIndex = windowActive;
+	pthread_mutex_unlock(&gEventQueueLock);
+	signalAnyInterestedParties();
+	return;
+}
+
+void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom, int windowIndex) {
+	sqWindowEvent *evt;
+	pthread_mutex_lock(&gEventQueueLock);
+	evt = (sqWindowEvent*) nextEventPut();
+
+	evt->type = EventTypeWindow;
+	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->action = windowType;
+	evt->value1 = left;
+	evt->value2 = top;
+	evt->value3 = right;
+	evt->value4 = bottom;
+	evt->windowIndex = windowIndex;
+	pthread_mutex_unlock(&gEventQueueLock);
+	signalAnyInterestedParties();
+	return;
+}
 
 void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	sqMouseEvent *evt;
@@ -1620,7 +1749,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
         err = GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &where);
                     
-        SetPortWindowPort(getSTWindow());
+        SetPortWindowPort(windowHandleFromIndex(windowActive));
 	if (err != noErr)
             GetMouse(&where); //fake mouse event
         else
@@ -1658,8 +1787,8 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	/* then the modifiers */
 	evt->modifiers = buttonState >> 3;
 	/* clean up reserved */
-	evt->reserved1 = wheelMouseDirection;
-	evt->reserved2 = wheelMouseDelta;
+	evt->reserved1 = 0;
+	evt->windowIndex = windowActive;
 	
 	if (oldEvent.buttons == evt->buttons && 
 	    oldEvent.x == evt->x &&
@@ -1709,9 +1838,9 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	evt->charCode = macKeyCode;
 	evt->pressCode = EventKeyDown;
 	evt->modifiers = modifierMap[(controlKey >> 8)];
+	evt->windowIndex = windowActive;
 	/* clean up reserved */
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
 	/* generate extra character event */
         extra = (sqKeyboardEvent*)nextEventPut();
         *extra = *evt;
@@ -1750,9 +1879,9 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	evt->charCode = macKeyCode;
 	evt->pressCode = EventKeyUp;
 	evt->modifiers = modifierMap[(controlKey >> 8)];
+	evt->windowIndex = windowActive;
 	/* clean up reserved */
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
 
     }
     pthread_mutex_unlock(&gEventQueueLock);
@@ -1942,6 +2071,7 @@ int getUIToLock(long *data) {
         err = SetEventParameter(dummyEvent,1,1,sizeof(long *),&data);
         pthread_mutex_lock(&gEventUILock);
         err = PostEventToQueue(GetMainEventQueue(), dummyEvent,kEventPriorityHigh);
+		ReleaseEvent(dummyEvent);
         pthread_cond_wait(&gEventUILockCondition,&gEventUILock);	
         pthread_mutex_unlock(&gEventUILock);
     }
@@ -2009,9 +2139,9 @@ sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, long m) {
 	evt->charCode = cc;
 	evt->pressCode = pc;
 	evt->modifiers = m;
+	evt->windowIndex = windowActive;
 	/* clean up reserved */
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
 	if(pc == EventKeyChar && !inputSemaphoreIndex) {
 		int  keystate;
 

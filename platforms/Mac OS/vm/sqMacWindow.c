@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.34 2004/09/22 18:54:30 johnmci Exp $
+*   RCSID:  $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -17,6 +17,7 @@
  3.5.1b5 June 25th, 2003 JMM fix memory leak on color table free, pull preferences from Info.plist under os-x
  3.7.0bx Nov 24th, 2003 JMM move preferences to main, the proper place.
  3.7.3bx Apr 10th, 2004 JMM fix crash on showscreen
+ 3.8.1b1 Jul 20th, 2004 JMM Start on multiple window logic
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -31,7 +32,7 @@
 #include "sqmacUIEvents.h"
 #include "sqMacUIMenuBar.h"
 #include "sqMacEncoding.h"
-
+#include "sqMacHostWindow.h"
 
 /*** Variables -- Imported from Virtual Machine ***/
 extern int getFullScreenFlag();    /* set from header when image file is loaded */
@@ -43,7 +44,6 @@ extern struct VirtualMachine *interpreterProxy;
 /*** Variables -- Mac Related ***/
 CTabHandle	stColorTable = nil;
 PixMapHandle	stPixMap = nil;
-WindowPtr	stWindow = nil;
 Boolean  	gWindowsIsInvisible=true;
 
 /*** Functions ***/
@@ -52,7 +52,7 @@ GDHandle getDominateDevice(WindowPtr theWindow,Rect *windRect);
 void getDominateGDeviceRect(GDHandle dominantGDevice,Rect *dGDRect,Boolean forgetMenuBar);
 
 WindowPtr getSTWindow(void) {
-    return stWindow;
+    return  windowHandleFromIndex(1);
 }
 
 #ifndef BROWSERPLUGIN
@@ -148,37 +148,43 @@ int ioSetFullScreen(int fullScreen) {
 
 #if TARGET_API_MAC_CARBON
 extern struct VirtualMachine *interpreterProxy;
-void sqShowWindow(void);
-void sqShowWindowActual(void);
+void sqShowWindow(int windowIndex);
+void sqShowWindowActual(int windowIndex);
 
-void sqShowWindow(void) {
+void sqShowWindow(int windowIndex) {
         int giLocker;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
             foo = malloc(sizeof(long)*4);
-            foo[0] = 0;
+            foo[0] = 1;
             foo[1] = (int) sqShowWindowActual;
-            foo[2] = 0;
+            foo[2] = windowIndex;
             foo[3] = 0;
             ((int (*) (void *)) giLocker)(foo);
             free(foo);
         }
 }
 
-void sqShowWindowActual(void){
+void sqShowWindowActual(int windowIndex){
 #else
-void sqShowWindow(void);
-void sqShowWindow(void) {
+void sqShowWindow(int windowIndex) {
 #endif
-	ShowWindow(stWindow);
+	ShowWindow( windowHandleFromIndex(windowIndex));
+}
+
+int ioShowDisplay(
+	int dispBitsIndex, int width, int height, int depth,
+	int affectedL, int affectedR, int affectedT, int affectedB) {
+	
+	ioShowDisplayOnWindow( (unsigned *)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
+	return 1;
 }
 
 #define bytesPerLine(width, depth)	((((width)*(depth) + 31) >> 5) << 2)
 #if !TARGET_API_MAC_CARBON
-int ioShowDisplay(
-	int dispBitsIndex, int width, int height, int depth,
-	int affectedL, int affectedR, int affectedT, int affectedB) {
+int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int depth, 
+	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
         CGrafPtr	windowPort;
 	static 		RgnHandle maskRect = nil;
@@ -186,7 +192,11 @@ int ioShowDisplay(
 	static Rect	srcRect = { 0, 0, 0, 0 };
         static int	rememberWidth=0,rememberHeight=0,rememberDepth=0;
         
-	if (stWindow == nil) {
+	if (gWindowsIsInvisible) {
+		makeMainWindow();
+	}
+	
+	if (windowHandleFromIndex(windowIndex) == nil) {
             return 0;
 	}
     
@@ -222,42 +232,58 @@ int ioShowDisplay(
         
 	/* create a mask region so that only the affected rectangle is copied */
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
-        windowPort = GetWindowPort(stWindow);
+	windowPort = GetWindowPort(windowHandleFromIndex(windowIndex));
 	SetPort((GrafPtr) windowPort);
 	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(windowPort), &srcRect, &dstRect, srcCopy, maskRect);
 
         if (gWindowsIsInvisible) {
-            sqShowWindow();
-            gWindowsIsInvisible = false;
-        }
-	return 0;
+		sqShowWindow(1);
+		gWindowsIsInvisible = false;
+	}
+	return 1;
 }
 #else
-int ioShowDisplay(
-	int dispBitsIndex, int width, int height, int depth,
-	int affectedL, int affectedR, int affectedT, int affectedB) {
+void * copy124BitsTheHardWay(
+	unsigned* dispBitsIndex, int width, int height, int depth,
+	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex,int *pixPitch);
+	
+int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int depth, 
+	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
         CGrafPtr	windowPort;
-	static 		RgnHandle maskRect = nil;
-        static int	titleH=0;
+		static RgnHandle maskRect = nil;
+        static int	titleH=0,lastWindowIndex=-1;
         int 		affectedW,affectedH;
         
+	if (gWindowsIsInvisible) {
+		makeMainWindow();
+	}
+		if (affectedL < 0) affectedL = 0;
+		if (affectedT < 0) affectedT = 0;
+		if (affectedR > width) affectedR = width;
+		if (affectedB > height) affectedB = height;
+		
         affectedW= affectedR - affectedL;
         affectedH= affectedB - affectedT;
 
-	if ((stWindow == nil) || (affectedW <= 0) || (affectedH <= 0)){
+	if ((windowHandleFromIndex(windowIndex) == nil) || (affectedW <= 0) || (affectedH <= 0)){
             return 0;
 	}
 
-        windowPort = GetWindowPort(stWindow);
+        windowPort = GetWindowPort(windowHandleFromIndex(windowIndex));
+		if (windowPort == nil) 
+			return 0;
  
-        if (maskRect == nil) {
-            Rect structureRect;
-            
+        if (maskRect == nil) {            
             maskRect = NewRgn();            
-            GetWindowRegion(stWindow,kWindowTitleBarRgn,maskRect);
+        }
+		
+		if (lastWindowIndex != windowIndex) {
+            Rect structureRect;
+            GetWindowRegion(windowHandleFromIndex(windowIndex),kWindowTitleBarRgn,maskRect);
             GetRegionBounds(maskRect,&structureRect);
             titleH = structureRect.bottom- structureRect.top;
+			lastWindowIndex = windowIndex;
         }
 
 #if TARGET_API_MAC_CARBON
@@ -272,7 +298,13 @@ int ioShowDisplay(
             pixPitch = GetPixRowBytes(pix);
             pixDepth = GetPixDepth(pix);
             
+			if (depth == 1 || depth == 2 || depth == 4) {
+				dispBitsIndex = (int) copy124BitsTheHardWay(dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
+				depth = 32;
+			} else {
             pitch = bytesPerLine(width, depth);
+			}
+ 
             bytes= affectedW * (depth / 8);
             
             in = (char *)dispBitsIndex + affectedL * (depth / 8) + affectedT * pitch;
@@ -453,11 +485,72 @@ int ioShowDisplay(
         }
 
         if (gWindowsIsInvisible) {
-            sqShowWindow();
+            sqShowWindow(1);
             gWindowsIsInvisible = false;
            //  NOT YET givers poor performance SetupSurface();
         }
-	return 0;
+			 
+	return 1;
+}
+
+void * copy124BitsTheHardWay(unsigned* dispBitsIndex, int width, int height, int depth,
+	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch) {
+	
+	static GWorldPtr offscreenGWorld = nil;
+	Rect structureRect;
+	QDErr error;
+	static 		RgnHandle maskRect = nil;
+	static Rect	dstRect = { 0, 0, 0, 0 };
+	static Rect	srcRect = { 0, 0, 0, 0 };
+	static int	rememberWidth=0,rememberHeight=0,rememberDepth=0,lastWindowIndex=0;
+	
+	if (maskRect == nil)
+		maskRect = NewRgn();            
+ 		
+	(*stPixMap)->baseAddr = (void *) dispBitsIndex;
+        
+	if (!((lastWindowIndex == windowIndex) && (rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth))) {
+			lastWindowIndex = windowIndex;
+			GetWindowRegion(windowHandleFromIndex(windowIndex),kWindowContentRgn,maskRect);
+			GetRegionBounds(maskRect,&structureRect);
+			structureRect.bottom = structureRect.bottom - structureRect.top;
+			structureRect.right = structureRect.right - structureRect.left;
+			structureRect.top = structureRect.left = 0;
+			
+			if (offscreenGWorld != nil)
+				DisposeGWorld(offscreenGWorld);
+			
+			error	= NewGWorld (&offscreenGWorld,32,&structureRect,0,0,keepLocal);
+			LockPixels(GetGWorldPixMap(offscreenGWorld));
+			
+            rememberWidth  = dstRect.right = width;
+            rememberHeight = dstRect.bottom = height;
+    
+            srcRect.right = width;
+            srcRect.bottom = height;
+    
+            /* Note: top three bits of rowBytes indicate this is a PixMap, not a BitMap */
+            (*stPixMap)->rowBytes = (((((width * depth) + 31) / 32) * 4) & 0x1FFF) | 0x8000;
+            (*stPixMap)->bounds = srcRect;
+            rememberDepth = (*stPixMap)->pixelSize = depth;
+    
+            if (depth<=8) { /*Duane Maxwell <dmaxwell@exobox.com> fix cmpSize Sept 18,2000 */
+                (*stPixMap)->cmpSize = depth;
+                (*stPixMap)->cmpCount = 1;
+            } else if (depth==16) {
+                (*stPixMap)->cmpSize = 5;
+                (*stPixMap)->cmpCount = 3;
+            } else if (depth==32) {
+                (*stPixMap)->cmpSize = 8;
+                (*stPixMap)->cmpCount = 3;
+            }
+        }
+        
+	/* create a mask region so that only the affected rectangle is copied */
+	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
+	CopyBits((BitMap *) *stPixMap,(BitMap *)*GetGWorldPixMap(offscreenGWorld), &srcRect, &dstRect, srcCopy, maskRect);
+	*pitch = GetPixRowBytes(GetGWorldPixMap(offscreenGWorld));
+	return GetPixBaseAddr(GetGWorldPixMap(offscreenGWorld));
 }
 
 #endif
@@ -561,39 +654,72 @@ void FreePixmap(void) {
 	}
 }
 
-void SetUpWindow(void) {
-	Rect windowBounds = {44, 8, 0, 0};
+extern Boolean gSqueakWindowHasTitle;
+extern int SetUpCarbonEventForWindowIndex(int index);
+int makeMainWindow(void) {
+	WindowPtr window;
+	char	shortImageName[256];
 	int width,height;
+	windowDescriptorBlock *windowBlock;
+	extern UInt32 gSqueakWindowType,gSqueakWindowAttributes;
 		
 	/* get old window size */
 	width  = (unsigned) getSavedWindowSize() >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
 	
-	windowBounds.bottom = windowBounds.top+height;
-	windowBounds.right = windowBounds.left+width;
+	
+	window = SetUpWindow(44, 8, 44+height, 8+width,gSqueakWindowType,gSqueakWindowAttributes);
+	windowBlock = AddWindowBlock();
+	windowBlock-> handle = (wHandleType) window;
+#if I_AM_CARBON_EVENT
+	SetUpCarbonEventForWindowIndex(1);
+#endif
+
+#ifndef MINIMALVM
+	 ioLoadFunctionFrom(NULL, "DropPlugin");
+#endif
+    
+#ifndef IHAVENOHEAD
+	if (gSqueakWindowHasTitle) {
+		getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
+		SetWindowTitle(1,shortImageName);
+	}
+#if I_AM_CARBON_EVENT	
+        ioSetFullScreenActual(getFullScreenFlag());
+#else
+	ioSetFullScreen(getFullScreenFlag());
+#endif
+#endif
+	return (int) window;
+}
+
+
+WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes) {
+	Rect windowBounds;
+	WindowPtr   createdWindow;
+	
+	SetRect (&windowBounds,l,t,r,b);
 
 #ifndef IHAVENOHEAD
 #if TARGET_API_MAC_CARBON & !defined(__MWERKS__)
 
     if ((Ptr)CreateNewWindow != (Ptr)kUnresolvedCFragSymbolAddress) {
-        extern UInt32 gSqueakWindowType,gSqueakWindowAttributes;
-
-	CreateNewWindow(gSqueakWindowType,gSqueakWindowAttributes,&windowBounds,&stWindow);
+		CreateNewWindow(windowType,windowAttributes,&windowBounds,&createdWindow);
     } else
 #endif
-	stWindow = NewCWindow(
+	createdWindow = NewCWindow(
 		0L, &windowBounds,
-		"\p Welcome to Squeak!  Reading Squeak image file... ",
-		false, zoomDocProc, (WindowPtr) -1L, false, 0);
+		"\p",
+		false, windowType, (WindowPtr) -1L, windowAttributes, 0);
 #endif
-    SetUpPixmap();
+	return createdWindow;
 }
 
-void SetWindowTitle(char *title) {
+void SetWindowTitle(int windowIndex,char *title) {
     Str255 tempTitle;
 	CopyCStringToPascal(title,tempTitle);
 #ifndef IHAVENOHEAD
-	SetWTitle(getSTWindow(), tempTitle);
+	SetWTitle(windowHandleFromIndex(windowIndex), tempTitle);
 #endif
 }
 
@@ -609,8 +735,8 @@ int ioHasDisplayDepth(int depth) {
 	case 1:
 	case 2:
 	case 4:
-            return false;  //OS-X 10.3.0/1 bug in copybits, force silly manual move
-            break;
+//            return false;  //OS-X 10.3.0/1 bug in copybits, force silly manual move
+//            break;
 	case 8:
 	case 16:
 	case 32:
@@ -1223,7 +1349,11 @@ int ioShowDisplay(
         static CGRect rectangle;
         CGRect clip;
 
-	if (stWindow == nil) {
+	if (gWindowsIsInvisible) {
+		makeMainWindow();
+	}
+
+	if (getSTWindow() == nil) {
             return;
 	}
 
@@ -1263,7 +1393,7 @@ int ioShowDisplay(
         }
 
         if (gWindowsIsInvisible) {
-            sqShowWindow();
+            sqShowWindow(1);
             gWindowsIsInvisible = false;
         }
 
