@@ -1,11 +1,16 @@
-# Project:   sq34
-# Make the pluginised VM  & plugins for v3.2
+# Project:   sq34plugin
+# Make the pluginised VM for v3.4
 # Reworked to use VMMaker non-copying of platform & cross files
-# Reworked to integrate MakePlug & MakePlugins etc
 
 # Toolflags:
 CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -Otime
+# extra ccflags for debugging go here because rink doesnt deal with debug
+# segment. remember to use ccvmflags with all core vm files
+#CCVMflags = $(ccflags) -g
+CCVMflags = $(ccflags)
+# likewise, linkflags with -debug...
 Linkflags = -aif -c++ -o $@ 
+#Linkflags = -aif -c++ -debug -o $@ 
 ObjAsmflags = -throwback -NoCache -depend !Depend
 LibFileflags = -c -o $@
 Squeezeflags = -o $@
@@ -28,9 +33,7 @@ vm:	$(Sqk).!Runimage vmobjdir
 	@
 
 clean:
-	-repeat killofiles @.plugins -directories
-	-wipe @.o.* ~c
-	-wipe @.vm.o.*  ~c
+	$(MAKEFILEDIR).each @ -type d -name o -exec wipe %0.* ~C ";"
 
 # User-editable dependencies:
 
@@ -45,7 +48,7 @@ pluginDir:
 pluginList: B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims \
 		FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin \
 		GeniePlugin JPEGReaderPlugin  LargeIntegers \
-		Matrix2x3Plugin MiscPrimitivePlugin SocketPlugin \
+		Matrix2x3Plugin MiscPrimitivePlugin RePlugin SocketPlugin \
 		SoundPlugin StarSqueakPlugin  Squeak3D SurfacePlugin \
 		ZipPlugin pluginDir
 	@
@@ -54,12 +57,12 @@ $(Sqk).!Runimage:	@.vm.o.interp @.vm.o.sqArgument \
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
-        @.vm.o.fperrors OSLib:o.OSLib C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
         link $(linkflags)  @.vm.o.interp @.vm.o.sqArgument \
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
-        @.vm.o.fperrors OSLib:o.OSLib C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
 
 # extract the link info for rink to use
 # relies upon the partially populated !squeak directory having been copied to
@@ -391,7 +394,7 @@ $(SqPlugins).RePlugin:	$(SPlug).RePlugin.o.RePlugin \
 			$(SPlug).RePlugin.o.study 
 
 $(SPlug).RePlugin.o.RePlugin: $(SPlug).RePlugin.c.RePlugin
-	cc $(ccflags) -I$(CPlug).RePlugin -o $@$(SPlug).RePlugin.c.RePlugin
+	cc $(ccflags) -I$(CPlug).RePlugin -o $@ $(SPlug).RePlugin.c.RePlugin
  
 $(SPlug).RePlugin.o.chartables: $(CPlug).RePlugin.c.chartables
 	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.chartables
@@ -427,9 +430,8 @@ $(SqPlugins).SocketPlugin:	$(SPlug).SocketPlugin.o.SocketPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).SocketPlugin.o.SocketPlugin \
 			$(SPlug).SocketPlugin.o.sqRPCNetPlugin \
-			$(SokLib).o.inetlib $(SokLib).o.socklibzm \
-			$(SokLib).o.unixlibzm $(SokLib).o.inetlibzm \
-			$(SokLib).o.socklib $(SokLib).o.unixlib  
+			$(SokLib).o.unixlib \
+			$(SokLib).o.socklib5 $(SokLib).o.inetlib  \
 
 #####$(SokLib)inetlib $(SokLib)socklibzm $(SokLib)unixlibzm
 ######$(SokLib)inetlibzm $(SokLib)socklib $(SokLib)unixlib
@@ -568,28 +570,28 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin
 # Static dependencies:
 # platform specific code
 @.vm.o.interp:    $(SVM).c.interp
-  cc $(ccflags) -o $@ $(SVM).c.interp
+  cc $(ccvmflags) -o $@ $(SVM).c.interp
   
 @.vm.o.osExports:    $(PVM).c.osExports
-  cc $(ccflags) -o $@ $(PVM).c.osExports
+  cc $(ccvmflags) -o $@ $(PVM).c.osExports
   
 @.vm.o.sqArgument:    $(PVM).c.sqArgument
-  cc $(ccflags) -o $@ $(PVM).c.sqArgument
+  cc $(ccvmflags) -o $@ $(PVM).c.sqArgument
   
 @.vm.o.sqRPCClipboard:    $(PVM).c.sqRPCClipboard
-  cc $(ccflags) -o $@ $(PVM).c.sqRPCClipboard
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCClipboard
   
 @.vm.o.sqRPCEvents:    $(PVM).c.sqRPCEvents
-  cc $(ccflags) -o $@ $(PVM).c.sqRPCEvents
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCEvents
   
 @.vm.o.sqRPCExternalPrims:    $(PVM).c.sqRPCExternalPrims
-  cc $(ccflags) -o $@ $(PVM).c.sqRPCExternalPrims
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCExternalPrims
   
 @.vm.o.sqRPCFormPrint:    $(PVM).c.sqRPCFormPrint
-  cc $(ccflags) -o $@ $(PVM).c.sqRPCFormPrint
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCFormPrint
   
 @.vm.o.sqRPCSyscall:    $(PVM).c.sqRPCSyscall
-  cc $(ccflags) -o $@ $(PVM).c.sqRPCSysCall
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCSysCall
 
 # sqRPCVersion depends on all the obj files (except its own)
 # so that it will always be recompiled if any other file is  
@@ -597,21 +599,21 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
-        @.vm.o.fperrors OSLib:o.OSLib C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys
-  cc $(ccflags) -o $@ $(PVM).c.sqRPCVersion
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCVersion
 
 @.vm.o.sqRPCWindows:    $(PVM).c.sqRPCWindows
-  cc $(ccflags) -o $@ $(PVM).c.sqRPCWindows
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCWindows
 
 @.vm.o.fperrors:    $(PVM).s.fperrors
         objasm $(objasmflags) -from $(PVM).s.fperrors -to @.vm.o.fperrors
 
 # cross platform code
 @.vm.o.sqNamedPrims:    $(CVM).c.sqNamedPrims
-  cc $(ccflags) -o $@ $(CVM).c.sqNamedPrims
+  cc $(ccvmflags) -o $@ $(CVM).c.sqNamedPrims
   
 @.vm.o.sqVirtualMachine:    $(CVM).c.sqVirtualMachine
-  cc $(ccflags) -o $@ $(CVM).c.sqVirtualMachine
+  cc $(ccvmflags) -o $@ $(CVM).c.sqVirtualMachine
 
 
 # Dynamic dependencies:
