@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: changesForSqueak.c,v 1.4 2002/05/05 11:58:47 andreasraab Exp $
+*   RCSID:   $Id: changesForSqueak.c,v 1.5 2002/06/01 05:23:00 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/27/2001 JMM added support to build as a OS-X Bundle, a bit werid because its a mixture of unix and mac OS
@@ -31,6 +31,7 @@
 */
 // Nov 2nd, 2000  JMM changed memoryAllocate, use calloc
 // Sept 7nd, 2001 JMM added carbon logic
+// May 31st, 2002 JMM a few additions to make it compile on the mac with latest code
 
 #include <string.h>
 #include "mpeg3private.h"
@@ -39,6 +40,7 @@
 #if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
 #include <Memory.h>
 #include <QuickDraw.h>
+#include "sq.h"
 #endif
 
 #ifdef WIN32
@@ -141,6 +143,13 @@ int main ()
 } 
 
 #endif
+
+#if defined(TARGET_OS_MAC) && defined ( __APPLE__ ) && defined ( __MACH__ )
+int isSystem9_0_or_better(void)
+{
+    return 1;
+}
+#endif 
 
 void appendStringToBufferIfPossible(char *buffer,char *append,int bufferSize) 
 {
