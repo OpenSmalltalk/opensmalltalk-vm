@@ -6,12 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.17 2002/04/27 19:05:10 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.18 2002/05/09 19:25:09 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Feb 26th, 2002, JMM - use carbon get dominate device 
 *  Apr  17th, 2002, JMM Use accessors for VM variables.
+*  May 5th, 2002, JMM cleanup for building as NS plugin
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -43,7 +44,6 @@ WindowPtr	stWindow = nil;
 Boolean  	gWindowsIsInvisible=true;
 
 /*** Functions ***/
-void FreePixmap(void);
 void SetColorEntry(int index, int red, int green, int blue);
 GDHandle getDominateDevice(WindowPtr theWindow,Rect *windRect);
 void getDominateGDeviceRect(GDHandle dominantGDevice,Rect *dGDRect,Boolean forgetMenuBar);
