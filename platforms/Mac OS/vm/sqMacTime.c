@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.11 2003/10/03 19:04:18 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.12 2003/10/04 04:46:39 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -246,20 +246,18 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
         pthread_cond_init(&gSleepLockCondition,NULL);
     }
     
+    aioPoll(0);
     setInterruptCheckCounter(0);
     now = (ioMSecs() & 536870911);
     if (getNextWakeupTick() <= now)
         if (getNextWakeupTick() == 0)
             realTimeToWait = 16;
         else {
-            aioPoll(0);
             return;
     }
     else
         realTimeToWait = getNextWakeupTick() - now; 
             
-    aioPoll(0);
-        
         tspec.tv_sec=  realTimeToWait / 1000;
     tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
     
@@ -268,16 +266,6 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
         err = pthread_mutex_unlock(&gSleepLock); 
     
 
-    //JMM foo usleep(microSeconds);
-    //JMM fooif (getNextWakeupTick() != 0 && (ioMSecs() & 536870911) >= getNextWakeupTick())
-    //JMM foo    interruptCheckCounter = 0;
-     /* This is unix code, but seems to be problem under osx
-      {
-      struct timeval tv;
-      tv.tv_sec=  microSeconds / 1000000;
-      tv.tv_usec= microSeconds % 1000000;
-      select(0, 0, 0, 0, &tv); 
-      }*/
 #else
 #if !I_AM_CARBON_EVENT
     microSeconds;
