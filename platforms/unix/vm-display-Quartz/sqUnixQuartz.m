@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-08-15 12:40:11 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-23 13:08:07 by piumarta on emilia.inria.fr
  */
 
 
@@ -402,7 +402,8 @@ static int display_ioBeep(void)
 
 static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
-  return aioPoll(microSeconds);
+  aioPoll(microSeconds);
+  return 0;
 }
 
 
@@ -423,7 +424,6 @@ static unsigned int qz2sqModifiers(unsigned int qz)
 
 static unsigned int qz2sqButton(unsigned int button)
 {
-#if 0
   // the image has blue and yellow back-to-front.  fix that here...
   switch (button)
     {
@@ -432,7 +432,6 @@ static unsigned int qz2sqButton(unsigned int button)
     case 2: return (swapBtn ? BlueButtonBit   : YellowButtonBit);
     }
   dprintf(("unknown mouse button %d\n", button));
-#endif
   return RedButtonBit;
 }
 
