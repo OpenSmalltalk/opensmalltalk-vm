@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  *
- * Last edited: 2003-09-03 00:34:59 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-10 06:01:29 by piumarta on emilia.inria.fr
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -54,7 +54,11 @@
 # define BREAK		goto *jumpTable[currentBytecode]
 #endif
 
-#define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
+#if defined(SQ_USE_GLOBAL_STRUCT)
+# define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
+#else
+# define PRIM_DISPATCH	goto *jumpTable[primitiveIndex]
+#endif
 
 #define JUMP_TABLE \
   static void *jumpTable[256]= { \
