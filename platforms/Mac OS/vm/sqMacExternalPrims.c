@@ -6,12 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacExternalPrims.c,v 1.7 2004/08/03 02:39:59 johnmci Exp $
+*   RCSID:   $Id: sqMacExternalPrims.c,v 1.8 2004/09/03 00:20:19 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Oct 2nd, 2003, JMM bug in browser file name creation in os-x, rework how path is resolved
  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+ 3.7.5b1 Aug 24th, 2004 JMM Joliet support for loading bundles?
 *****************************************************************************/
 
 #include "sq.h"
@@ -121,7 +122,7 @@ void	*MachOFunctionPointerForCFMFunctionPointer( void *cfmfp )
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 
-OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr)
+OSStatus LoadFrameworkBundle(SInt16 folderLocation,CFStringRef framework, CFBundleRef *bundlePtr)
 {
 	OSStatus 	err;
 	FSRef 		frameworksFolderRef;
@@ -133,7 +134,7 @@ OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr)
 	baseURL = nil;
 	bundleURL = nil;
 	
-	err = FSFindFolder(kOnAppropriateDisk, kFrameworksFolderType, true, &frameworksFolderRef);
+	err = FSFindFolder(folderLocation, kFrameworksFolderType, true, &frameworksFolderRef);
 	if (err == noErr) {
 		baseURL = CFURLCreateFromFSRef(kCFAllocatorSystemDefault, &frameworksFolderRef);
 		if (baseURL == nil) {
@@ -204,10 +205,11 @@ int ioFreeModule(int moduleHandle) {
 
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         char				tempDirPath[1024];
- 	CFragConnectionID		libHandle = 0;
+		char				cFileName[1000];
+		CFragConnectionID   libHandle = 0;
+		CFStringRef			filePath;
         CFURLRef 			theURLRef;
         CFBundleRef			theBundle;
-        CFStringRef			filePath;
         OSStatus			err;
         
 	strncpy(tempDirPath,pluginDirPath,1023);
@@ -220,14 +222,12 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         strcat(tempDirPath,libName);
         strcat(tempDirPath,".bundle");  
         //Watch out for the bundle suffix, not a normal thing in squeak plugins
-	// We could do this, but it's expensive err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
-        // So go back to a cheaper call
-        filePath = CFStringCreateWithCString(kCFAllocatorDefault,
-                    (UInt8 *) tempDirPath,gCurrentVMEncoding);
-        if (filePath == nil)
-            return nil;
-            
-        theURLRef = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+
+		/* copy the file name into a null-terminated C string */
+		sqFilenameFromString(cFileName, tempDirPath, strlen(tempDirPath));
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),gCurrentVMEncoding,false);
+    
+        theURLRef = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
 	CFRelease(filePath);
         if (theURLRef == nil)
             return nil;
@@ -238,7 +238,14 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         if (theBundle == nil) {
             CFStringRef libNameCFString;
            libNameCFString = CFStringCreateWithCString(kCFAllocatorDefault,libName,gCurrentVMEncoding);
-            err = LoadFrameworkBundle(libNameCFString, &theBundle);
+            err = LoadFrameworkBundle(kUserDomain,libNameCFString, &theBundle);
+			if (err != noErr)
+				err = LoadFrameworkBundle(kNetworkDomain,libNameCFString, &theBundle);
+			if (err != noErr)
+				err = LoadFrameworkBundle(kLocalDomain,libNameCFString, &theBundle);
+			if (err != noErr)
+				err = LoadFrameworkBundle(kSystemDomain,libNameCFString, &theBundle);
+				
             CFRelease(libNameCFString);
             if (err != noErr)
                 return nil;
