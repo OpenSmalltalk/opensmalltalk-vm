@@ -6,11 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.10 2002/05/13 19:57:39 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.11 2002/08/06 21:55:38 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *   May 5th, 2002, JMM added define for PLUGIN for CW
 *   May 12th, 2002, JMM added SQUEAK_BUILTIN_PLUGIN for CW Pro
+*   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+
 *
    How to use this file:
    This file is for general platform-specific macros and declarations.
@@ -57,7 +59,7 @@
     #define fseek fseeko
     typedef FILE *sqImageFile;
 #else
-    #if defined(__MWERKS__) & !TARGET_API_MAC_CARBON
+    #if defined(__MWERKS__)
         #include <stat.h>
         #define fseeko fseek
         #define ftello ftell
