@@ -61,10 +61,10 @@ wimp_icon_create	sqIconBarIcon;
 extern os_error		privateErr;
 
 /* screen description. Needs updating when screenmode changes */
-os_coord		squeakDisplaySize,
+os_coord	squeakDisplaySize,
 			screenSize,
 			scalingFactor;
-extern os_box		windowVisibleArea;
+extern os_box	windowVisibleArea;
 int			screenBitPerPixel, squeakDisplayDepth;
 // osbool squeakDisplayNeedsReversing = true;
 
@@ -83,14 +83,14 @@ unsigned int *		displaySpriteBits = NULL;
 void		SetColorEntry(int index, int red, int green, int blue);
 void		GetDisplayParameters(void);
 extern int	HandleEvents(int);
-int		InitRiscOS(void);
+int			InitRiscOS(void);
 void		MouseButtons( wimp_pointer * wblock);
 void		SetUpWindow(int w, int h);
 void		SetInitialWindowSize(int w, int h);
-int		SetupPixmap(int w, int h, int d);
+int			SetupPixmap(int w, int h, int d);
 void		SetupPixelTranslationTable(void);
 void		SetupPaletteTable(void);
-int		platAllocateMemory( int amount);
+int			platAllocateMemory( int amount);
 void		platReportFatalError( os_error * e);
 void		platReportError( os_error * e);
 
@@ -310,7 +310,7 @@ os_error * e;
 	}
 	wblock.w = sqWindowHandle;
 	more = wimp_redraw_window( &wblock );
-	while ( more ) {
+	while ( more ) { 
 		if ((e = xosspriteop_put_sprite_scaled (
 			osspriteop_PTR,
 			spriteAreaPtr,
@@ -328,14 +328,19 @@ os_error * e;
 }
 
 void DisplayPixmapNow(void) {
-/* bitblt the displaySprite to the screen, not from a wimp_poll */
+/* bitblt the displaySprite to the screen, not from a wimp_poll
+ * it works but seems to suck up a huge % of cpu
+ */
 extern osspriteop_area *spriteAreaPtr;
 extern osspriteop_header *displaySprite;
 extern osspriteop_trans_tab *	pixelTranslationTable;
 osbool more;
 wimp_draw wblock;
 os_error * e;
-	if ( sqWindowHandle == null ) return;
+
+	if ( sqWindowHandle == null )
+		return;
+
 	wblock.w = sqWindowHandle;
 	/* set work area to suit these values */
 	/* work area extent - set to screen size */
@@ -344,6 +349,7 @@ os_error * e;
 	wblock.box.x1 = screenSize.x<<scalingFactor.x;
 	wblock.box.y1 = 0;
 
+	PRINTF(("\\t display NOW\n"));
 	more = wimp_update_window( &wblock );
 	while ( more ) {
 		if ((e = xosspriteop_put_sprite_scaled (
@@ -376,6 +382,7 @@ wimp_drag dragBlock;
 }
 
 void SetDefaultPointer(void) {
+/* setup the pointer buffer for use in the Squeak window */
 	xwimp_set_pointer_shape(2, (byte const *)pointerBuffer, 16, 16, 0, 0);
 	/* and then return the pointer to no.1 */
 	xwimp_set_pointer_shape(1, (byte const *)-1, 0, 0, 0, 0);
@@ -403,7 +410,7 @@ int SetWindowParameters(void) {
 /* arrange for the window to appear in windowVisibleArea */
 wimp_window_state wblock;
 os_error * e;
-	/*  the sqWindowHandle state */
+	/* get the sqWindowHandle state */
 	wblock.w = sqWindowHandle;
 	if ((e = xwimp_get_window_state(&wblock)) != NULL) {
 		platReportFatalError(e);
@@ -421,7 +428,7 @@ os_error * e;
 	if ( (e = xwimp_open_window((wimp_open *)&wblock)) != NULL) {
 		platReportFatalError(e);
 		return false;
-	};
+	}
 	/* check the resulting state */
 	if ((e = xwimp_get_window_state(&wblock)) != NULL) {
 		platReportFatalError(e);
@@ -504,6 +511,8 @@ byte * daBaseAddress;
 	}
 	return ptr;
 }
+
+/* Colour translation table stuff */
 
 void SetupPixelTranslationTable(void) {
 /* derive the pixel translation table suited to the current combination */
@@ -681,7 +690,6 @@ os_error * e;
 wimp_w w;
 os_coord origin, size;
 extern char * windowLabel;
-extern char imageName[];
 
 	PRINTF(("\\t initial open window\n"));
 
@@ -849,7 +857,9 @@ int minWidth = 100, minHeight = 100;
 
 
 int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
-/* Move 1-bit form to pointer buffer and use mask to affect result. Remember RPC pointer is 2-bits/pixel to allow 3 colours + mask. As of Sq2.2, there can also be a mask 1-bit form specified.
+/* Move 1-bit form to pointer buffer and use mask to affect result.
+ * Remember RPC pointer is 2-bits/pixel to allow 3 colours + mask.
+ * As of Sq2.2, there can also be a mask 1-bit form specified.
 mask	cursor
   0		0		transparent
   1		1		black
@@ -945,6 +955,9 @@ static int fullScreen = false;
 	return true;
 }
 
+/* BitBlt has messed with part of the Display - inform the WIMP so
+ * that it gets redrawn when we do HandleEvents and get a
+ * wimp_REDRAW_WINDOW_REQUEST */
 int ioShowDisplay( int dispBitsIndex, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB) {
 os_error *e;
 	if(affectedR <= affectedL || affectedT >= affectedB) return true;
@@ -977,9 +990,13 @@ os_error *e;
 
 int ioForceDisplayUpdate(void) {
 	PRINTF(("\\t ioForceDisplayUpdate"));
-	//ioProcessEvents();
-	DisplayPixmapNow();
-	return true;
+	// This immediate display update seems to display the right bits but
+	// takes a huge % of the machine time. By going back to the older
+	// HandleEvents we get a nice snappy machine. Weird.
+	// DisplayPixmapNow();
+extern int HandleEvents(void);
+	HandleEvents();   /* we might need to forceInterruptCheck() here ? */
+	return false;
 }
 
 int ioSetDisplayMode(int width, int height, int depth, int fullScreenFlag) {

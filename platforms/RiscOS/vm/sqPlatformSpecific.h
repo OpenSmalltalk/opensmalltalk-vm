@@ -69,7 +69,11 @@ if(1) {int sqfni;\
 #endif
 
 extern int repprintf(const char * format, ...);
+extern int repfprintf(FILE *strm, const char * format, ...);
 #define printf repprintf
+#define fprintf repfprintf
+#define MAXDIRNAMELENGTH 1024
+
 
 #else
 

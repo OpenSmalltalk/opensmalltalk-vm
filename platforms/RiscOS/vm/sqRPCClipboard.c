@@ -295,12 +295,15 @@ void receivedDataSaveAck(wimp_message * wmessage) {
 /*** Clipboard Support interface to interp.c ***/
 
 int clipboardSize(void) {
+extern int	forceInterruptCheck(void);
+
 /* return the number of characters in the clipboard entry */
 	if (!sqHasClipboard) {
 		/* if squeak doesn't have the clipboard, we need to
 		 * fetch the clipboard contents from the current holder
 		 */
 		fetchClipboard();
+		forceInterruptCheck();
 	} 
 	return strlen(clipboardBuffer);
 }

@@ -83,6 +83,7 @@ typedef struct {
 	int deepkey;
 	} wimp_deepkey;
 
+int user_LCTL_KEY, user_RCTL_KEY;
 
 
 /* older polling stuff still needs supporting */
@@ -101,7 +102,7 @@ int	mouseButtonDown;	/* keep track of curent mouse button state - for drags outs
 
 extern int	getInterruptKeycode(void);
 extern int	setInterruptPending(int value);
-extern int	setInterruptCheckCounter(int value);
+extern int	forceInterruptCheck(void);
 
 void (*socketPollFunction)(int delay, int extraFd) = null;
 
@@ -257,12 +258,20 @@ extern	 void receivedDataSaveAck(wimp_message * wblock);
 	 void EventBufAppendMouse(int buttons, int modifiers, int x, int y);
 extern	 void platReportError( os_error * e);
 
-
-
 void setSocketPollFunction(int spf ) {
 /* called from SocketPlugin init code */
 	socketPollFunction = (void(*)(int, int))spf;
 	PRINTF(( "socketPoll %0x", (int)socketPollFunction));
+}
+
+void setMetaKeyOptions(int swap) {
+	if (swap) {
+		user_LCTL_KEY = wimp_DEEPKEY_RCTL;
+		user_RCTL_KEY = wimp_DEEPKEY_LCTL;
+	} else {
+		user_LCTL_KEY = wimp_DEEPKEY_LCTL;
+		user_RCTL_KEY = wimp_DEEPKEY_RCTL;
+	}
 }
 
 /**************************/
@@ -276,9 +285,14 @@ void HandleMousePoll(void) {
  * This is very unsatisfactory by comparison to a proper mouse event system !
  * NB sets the GLOBAL state of buttonState and modifierState
  */
-int kbdstate;
+int kbdstate, thisTick;
 static int draggingWindow = false;
+static int lastMousePollTick = 0;
 wimp_pointer wblock;
+
+	/* Don't mouse poll more than once every millisecond */
+	if ( lastMousePollTick == (thisTick = (ioMSecs() & 0x1fffffff))) return;
+
 	if ( mouseButtonDown || windowActive) {
 
 		/* stash previous values */
@@ -363,6 +377,7 @@ int HandleSingleEvent(wimp_block *pollBlock, wimp_event_no pollEvent) {
 			   so return false*/
 			return false ; break;
 		case wimp_REDRAW_WINDOW_REQUEST	:
+			PRINTF(("\\t display\n"));
 			DisplayPixmap(); break;
 		case wimp_OPEN_WINDOW_REQUEST	:
 			WindowOpen(&(pollBlock->open)); break;
@@ -373,13 +388,11 @@ int HandleSingleEvent(wimp_block *pollBlock, wimp_event_no pollEvent) {
 		case wimp_POINTER_ENTERING_WINDOW:
 			PointerEnterWindow(pollBlock); break;
 		case wimp_MOUSE_CLICK			:
-			MouseButtons(&(pollBlock->pointer));
-			return false; break;
+			MouseButtons(&(pollBlock->pointer)); break;
 		case wimp_USER_DRAG_BOX			:
 			DoNothing(); break;
 		case wimp_KEY_PRESSED			:
-			KeyPressed( &(pollBlock->key));
-			return false; break;
+			KeyPressed( &(pollBlock->key)); break;
 		case wimp_MENU_SELECTION		:
 			DoNothing(); break;
 		case wimp_SCROLL_REQUEST		:
@@ -406,14 +419,33 @@ int HandleSocketPoll(int microSecondsToDelay) {
 int HandleEventsWithWait(int microSecondsToDelay) {
 /* use wimp_poll_delay so that we don't return a null before
  * the end of the delay, thus giving some cpu back to everyone else
+ * NB - RISC OS uses centi-Seconds for delays etc.
  */
-int pollDelay; 
+int pollDelay, nextWakeTick, currentTick;
+extern int getNextWakeupTick(void); 
 	pollDelay = microSecondsToDelay /* * CLOCKS_PER_SEC / 1000000 */
 			>> 14 /* will always give small answer, but good enough */;
 	if ( microSecondsToDelay ) {
 		pollDelay = MAX(pollDelay, 1);
-		/* makes sure we get at least one tick of delay */
+		/* makes sure we get at least one tick of delay
+		 * unless there is an alarm waiting  */
 	}
+	/* This is a touch confusing;
+	 * if nWT <= cT then either there is a rollover to consider  or there
+	 * is no wakeup set.
+	 * if nWT > cT, then try to make sure the delay does not exceed the
+	 * time until that wakeup
+	 */
+	nextWakeTick = getNextWakeupTick();
+	currentTick  = (ioMSecs() & 0x1fffffff);
+	if (nextWakeTick <= currentTick) {
+		if ( nextWakeTick != 0) {
+			pollDelay = 0;
+		}
+	} else {
+		pollDelay = (nextWakeTick - currentTick ) / 10 * pollDelay;
+	}
+	//PRINTF(("\\t HandleEventsWithWait %d\n", pollDelay));
 	HandleMousePoll();
 	HandleSocketPoll(microSecondsToDelay);
 	do { xwimp_poll_idle((wimp_MASK_POLLWORD
@@ -431,7 +463,7 @@ int HandleEvents(void) {
 /* track buttons and pos, send event if any change */
 	HandleMousePoll();
 	HandleSocketPoll(0);
-
+	//PRINTF(("\\t HandleEvents\n"));
 	do {xwimp_poll((wimp_MASK_POLLWORD
 		| wimp_MASK_GAIN
 		| wimp_MASK_LOSE
@@ -442,6 +474,7 @@ int HandleEvents(void) {
 	} while (HandleSingleEvent(&wimpPollBlock, wimpPollEvent));
 }
 
+
 int HandleEventsNotTooOften(void) {
 /* If we are using the older style polling stuff, we typically end up
  * calling HandleEvents an awful lot of times. Since at least 3/4 of
@@ -449,8 +482,9 @@ int HandleEventsNotTooOften(void) {
 static clock_t nextPollTick = 0;
 clock_t currentTick;
 	if( (currentTick = clock()) >= nextPollTick) {
+	//PRINTF(("\\t HandleEventsNotTooOften\n"));
 		HandleEvents();
-		nextPollTick = currentTick + 4;
+		nextPollTick = currentTick + 1;
 	}
 	return true; 
 }
@@ -528,9 +562,9 @@ void MouseButtons( wimp_pointer * wblock) {
 			return;
 		}
 		if (wblock->buttons == wimp_CLICK_MENU) {
+			/* sometime get the menu stuff to work */
 		}
 	} 
-
 }
 
 void KeyPressed( wimp_key * wblock) {
@@ -541,12 +575,10 @@ void KeyPressed( wimp_key * wblock) {
  */
 wimp_deepkey * dblock;
 int keystate, dkey, modState;
-
 	dblock = (wimp_deepkey *)wblock;
 
 	/* initially keystate will be the event's idea of the key pressed */
 	keystate = dblock->c;
-
 	if (keystate == getInterruptKeycode()
 		|| ( (keystate == wimp_KEY_PRINT)) ) {
 		/* The image tends to set the interruptKeycode to suit the Mac
@@ -554,8 +586,8 @@ int keystate, dkey, modState;
 		 * check for printscrn/SysRq as well
 		 * interrupt is a meta-event; do not report it as a keypress
 		 */
-		setInterruptPending(true); 
-		setInterruptCheckCounter(0);
+		setInterruptPending(true);
+		forceInterruptCheck();
 		return;
 	}
 
@@ -568,9 +600,9 @@ int keystate, dkey, modState;
 	 * keypress events for most alt-keys. Use previous plan of
 	 * left ctl = Control & right ctl = Command
 	 */
-	if (dkey & (wimp_DEEPKEY_LCTL /*| wimp_DEEPKEY_RCTL */))
+	if (dkey & (user_LCTL_KEY /* wimp_DEEPKEY_LCTL */))
 		modState |= CtrlKeyBit;
-	if (dkey & (/* wimp_DEEPKEY_LALT| wimp_DEEPKEY_RALT */ wimp_DEEPKEY_RCTL))
+	if (dkey & (user_RCTL_KEY /* wimp_DEEPKEY_RCTL */))
 		modState |= CommandKeyBit;
 
 	if ( modState > ShiftKeyBit ) {
@@ -681,7 +713,6 @@ sqInputEvent *EventBufAppendEvent(int  type) {
 	}
 	evt->type= type;
 	evt->timeStamp= ioMSecs();
-	//SignalInputEvent();
 	return evt;
 
 }
@@ -745,10 +776,18 @@ int ioGetNextEvent(sqInputEvent *evt) {
 		}
 	};
 #endif
-	if (iebEmptyP()) HandleEvents();
+	if (iebEmptyP()) {
+		HandleEvents();
+		forceInterruptCheck(); /* handleevents can take a while */
+	}
 	if (iebEmptyP()) return false;
 	*evt = eventBuf[eventBufGet];
 	iebAdvance(eventBufGet);
+// #ifdef DEBUG
+// 	if (evt->type == EventTypeKeyboard) {
+// 		PRINTF(("\\t key ev(%d) read %c\n", evt->timeStamp, ((sqKeyboardEvent *)evt)->charCode));
+// 	}
+// #endif 
 	return true;
 }
 
@@ -765,22 +804,29 @@ int ioSetInputSemaphore(int semaIndex) {
 int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 /* This operation is platform dependent. On the Mac, it simply calls
  * HandleEvents(), which gives other applications a chance to run.
- * Here, we use microSeconds as the parameter to HandleEvents, so that wimpPollIdle
- * gets a timeout.
+ * Here, we use microSeconds as the parameter to HandleEvents, so that
+ * wimpPollIdle gets a timeout.
  */
 	PRINTF(("\\t relinq %d\n", microSeconds));
-	HandleEventsWithWait(microSeconds);
+	/* HandleEventsWithWait(microSeconds);   */
+	HandleEvents();
+	forceInterruptCheck();
 	return microSeconds;
 }
 
 
 int ioProcessEvents(void) {
-		HandleEvents();
+/* This is called only from checkForInterrupts as a last resort
+ * to make sure that IO polling is done at least occasionally no matter what
+ * the image is up to. We don't force an interrupt check here because we're
+ * in the middle of one already
+ */
+	HandleEvents();
 	return true; 
 }
 
-
-/* older polling state style access */
+/* older polling state style access - completely unused by images after
+ * about 3.6 */
 
 int nextKeyPressOrNil(void) {
 /*  return the next keypress in the buffer, or -1 if nothing there */

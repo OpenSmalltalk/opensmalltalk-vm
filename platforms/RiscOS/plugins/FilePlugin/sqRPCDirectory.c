@@ -11,6 +11,8 @@
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
+/* debugging stuff; uncommnet for debugging trace */
+//#define DEBUG
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
 #include "oslib/osgbpb.h"
@@ -29,25 +31,7 @@
 #define ENTRY_FOUND     0
 #define NO_MORE_ENTRIES 1
 #define BAD_PATH        2
-#define MAXDIRNAMELENGTH 1024
-
 #define DELIMITOR '.'
-
-/* debugging stuff; can probably be deleted */
-//#define DEBUG
-
-#ifdef DEBUG
-#define FPRINTF(s)\
-if(1){\
-	extern os_error privateErr;\
-	extern void platReportError( os_error * e);\
-	privateErr.errnum = (bits)0;\
-	sprintf s;\
-	platReportError((os_error *)&privateErr);\
-};
-#else
-# define FPRINTF(X)
-#endif
 
 
 extern struct VirtualMachine * interpreterProxy;
@@ -83,12 +67,6 @@ int tzoffset;
 	return (int)low + (tzoffset/100);
 }
 
-void dirReportError( os_error * e) {
-/* Use the RiscOS Error dialogue to notify users of some problem */
-	extern void platReportError( os_error * e);
-	platReportError(e);
-}
-
 int dir_Create(char *pathString, int pathStringLength) {
 	/* Create a new directory with the given path. By default, this
 	   directory is created in the current directory. Use
@@ -101,6 +79,7 @@ int dir_Create(char *pathString, int pathStringLength) {
 	sqFilenameFromString( name, (int)pathString, pathStringLength);
 	/* mkdir(name) */
 	if ( (e = xosfile_create_dir( name, 0)) != NULL) {
+		PRINTF(("\\t dir_Create: failed"));
 		return false;
 	}
 	return true;
@@ -118,7 +97,7 @@ int dir_Delete(char *pathString, int pathStringLength) {
 	/* copy the file name into a null-terminated C string */
 	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
 	if (remove(cFileName) != 0) {
-		FPRINTF((privateErr.errmess, "dir delete error\n"));
+		PRINTF(("\\t dir_Delete error\n"));
 		return interpreterProxy->success(false);
 	}
 	return true;
@@ -126,6 +105,85 @@ int dir_Delete(char *pathString, int pathStringLength) {
 
 int dir_Delimitor(void) {
 	return DELIMITOR;
+}
+
+int dir_LookupRoot(int context, char *name, int *nameLength, int *creationDate, int *modificationDate, int *isDirectory, int *sizeIfFile) {
+#define F2HJump 4
+	int junk, run_total, adfs_flop=0, adfs_hard=0, scsifs_flop=0, scsifs_hard=0, ramfs_flop=0, ramfs_hard=0, cdfs_hard=0;
+	char discid[20];
+	char discname[MAXDIRNAMELENGTH];
+	os_error * e;
+
+	PRINTF(("\\t dir_Lookup:null pathname, scanning disc %d\n", context));
+	/* no path, so try to enumerate all the attached discs */
+	run_total = 0;
+	xadfs_drives  (&junk, &adfs_flop,   &adfs_hard);
+	if ( context < adfs_flop + run_total) {
+		// it's an adfs floppy
+		sprintf( discid, "ADFS::%d", context);
+		goto decode_disc_id;
+	}
+	run_total += adfs_flop;
+	if ( context < (adfs_flop + adfs_hard) ) {
+		// it's an adfs hard disc
+		sprintf( discid, "ADFS::%d", context - run_total + F2HJump);
+		goto decode_disc_id;
+	}
+	run_total += adfs_hard;
+
+	xscsifs_drives(&junk, &scsifs_flop, &scsifs_hard);
+	if (  context < ( run_total + scsifs_flop) ) {
+		// it's a scsifs floppy disc
+		sprintf( discid, "SCSI::%d", context - run_total);
+		goto decode_disc_id;
+	}
+	run_total += scsifs_flop;
+	    
+	if (  context < (run_total + scsifs_hard) ) {
+		// it's a scsifs hard disc
+		sprintf( discid, "SCSI::%d", context - run_total + F2HJump);
+		goto decode_disc_id;
+	}
+	run_total += scsifs_hard;    
+
+	xramfs_drives (&junk, &ramfs_flop,  &ramfs_hard);
+	if (  context < ( run_total + ramfs_flop) ) {
+		// it's a ramfs floppy disc
+		sprintf( discid, "RAM::%d", context - run_total);
+		goto decode_disc_id;
+	}
+	run_total += ramfs_flop;    
+	if (  context < (run_total + ramfs_hard) ) {
+		// it's a ramfs hard disc
+		sprintf( discid, "RAM::%d", context - run_total + F2HJump);
+		goto decode_disc_id;
+	}
+	run_total += ramfs_hard;    
+
+	xcdfs_get_number_of_drives( &cdfs_hard);
+	if (  context < (run_total + cdfs_hard) ) {
+		// it's a cdfs hard disc
+		sprintf( discid, "CDFS::%d", context - run_total);
+		goto decode_disc_id;
+	}
+	return NO_MORE_ENTRIES;
+decode_disc_id:
+	PRINTF(("\\t dir_Lookup:found %s\n", discid));
+	if ((e = xosfscontrol_canonicalise_path (discid, discname, (char const *) NULL, (char const *)NULL, MAXDIRNAMELENGTH, &junk)) != null) {
+		// for any error, it seems best to copy the instring
+		// to the outstring.
+		// we shouldn't get too many types of error here since
+		// the names have come from the OS anyway
+		strcpy (discname, discid);
+	}
+
+	*nameLength       = strlen(discname);
+	sqStringFromFilename( (int)name, discname, *nameLength);
+	*creationDate     = 0;
+	*modificationDate = 0;
+	*isDirectory      = true;
+	*sizeIfFile       = 0;
+	return ENTRY_FOUND;
 }
 
 int dir_Lookup(char *pathString, int pathStringLength, int index,
@@ -153,86 +211,15 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
 	if( pathStringLength > MAXDIRNAMELENGTH) return BAD_PATH;
 	context = index-1;
-	FPRINTF((privateErr.errmess, "dir_Lookup:raw pathname %s\n", pathString));
+	PRINTF(("\\t dir_Lookup:raw pathname %s\n", pathString));
 
 	if ( pathStringLength == 0) {
-#define F2HJump 4
-int junk, run_total, adfs_flop=0, adfs_hard=0, scsifs_flop=0, scsifs_hard=0, ramfs_flop=0, ramfs_hard=0, cdfs_hard=0;
-char discid[20];
-		FPRINTF((privateErr.errmess, "dir_Lookup:null pathname, scanning disc %d\n", context));
-		/* no path, so try to enumerate all the attached discs */
-		run_total = 0;
-		xadfs_drives  (&junk, &adfs_flop,   &adfs_hard);
-		if ( context < adfs_flop + run_total) {
-			// it's an adfs floppy
-			sprintf( discid, "ADFS::%d", context);
-			goto decode_disc_id;
-		}
-		run_total += adfs_flop;
-		if ( context < (adfs_flop + adfs_hard) ) {
-			// it's an adfs hard disc
-			sprintf( discid, "ADFS::%d", context - run_total + F2HJump);
-			goto decode_disc_id;
-		}
-		run_total += adfs_hard;
-
-		xscsifs_drives(&junk, &scsifs_flop, &scsifs_hard);
-		if (  context < ( run_total + scsifs_flop) ) {
-			// it's a scsifs floppy disc
-			sprintf( discid, "SCSI::%d", context - run_total);
-			goto decode_disc_id;
-		}
-		run_total += scsifs_flop;
-		    
-		if (  context < (run_total + scsifs_hard) ) {
-			// it's a scsifs hard disc
-			sprintf( discid, "SCSI::%d", context - run_total + F2HJump);
-			goto decode_disc_id;
-		}
-		run_total += scsifs_hard;    
-
-		xramfs_drives (&junk, &ramfs_flop,  &ramfs_hard);
-		if (  context < ( run_total + ramfs_flop) ) {
-			// it's a ramfs floppy disc
-			sprintf( discid, "RAM::%d", context - run_total);
-			goto decode_disc_id;
-		}
-		run_total += ramfs_flop;    
-		if (  context < (run_total + ramfs_hard) ) {
-			// it's a ramfs hard disc
-			sprintf( discid, "RAM::%d", context - run_total + F2HJump);
-			goto decode_disc_id;
-		}
-		run_total += ramfs_hard;    
-
-		xcdfs_get_number_of_drives( &cdfs_hard);
-		if (  context < (run_total + cdfs_hard) ) {
-			// it's a cdfs hard disc
-			sprintf( discid, "CDFS::%d", context - run_total);
-			goto decode_disc_id;
-		}
-		return NO_MORE_ENTRIES;
-decode_disc_id:
-		if ((e = xosfscontrol_canonicalise_path (discid, dirname, (char const *) NULL, (char const *)NULL, MAXDIRNAMELENGTH, &junk)) != null) {
-			// for any error, it seems best to copy the instring
-			// to the outstring.
-			// we shouldn't get too many types of error here since
-			// the names have come from the OS anyway
-			strcpy (dirname, discid);
-			// debugging -> dirReportError(e);
-		}
-
-		*nameLength       = strlen(dirname);
-		sqStringFromFilename( (int)name, dirname, *nameLength);
-		*creationDate     = 0;
-		*modificationDate = 0;
-		*isDirectory      = true;
-		*sizeIfFile       = 0;
-		return ENTRY_FOUND;
+		// empty string for path implies find the mounted roots.
+		return dir_LookupRoot(context, name, nameLength, creationDate, modificationDate, isDirectory, sizeIfFile);
 	}
 
 	sqFilenameFromString(dirname, (int)pathString, pathStringLength);
-	FPRINTF((privateErr.errmess, "dir_Lookup:pathName = %s\n", dirname));
+	PRINTF(("\\t dir_Lookup:pathName = %s\n", dirname));
 
 	/* lookup indexth entry in the directory */
 	count = 1;
@@ -240,7 +227,6 @@ decode_disc_id:
 
 	e = xosgbpb_dir_entries_system_info(dirname,(osgbpb_system_info_list *)&buffer, count, context, i, (char const *)0, &count, &context);
 	if ( e != NULL ) {
-		// debugging-> dirReportError(e);
 		i = e->errnum & 0xFF;
 		if ( i >= 0xD3 && i<= 0xD5 )  return NO_MORE_ENTRIES;
 		return  BAD_PATH;
@@ -249,7 +235,8 @@ decode_disc_id:
 
 	*nameLength = strlen(buffer.name);
 	sqStringFromFilename( (int)name, buffer.name, *nameLength);
-	if (buffer.obj_type ==2 || buffer.obj_type == 3) {
+	if (buffer.obj_type ==  fileswitch_IS_DIR
+		|| buffer.obj_type == fileswitch_IS_IMAGE) {
 		*isDirectory = true;
 	} else {
 		*isDirectory = false;
@@ -263,7 +250,9 @@ decode_disc_id:
 
 /* TPR addition to attempt to improve portability */
 int dir_SetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, char * owner) {
-/* set the type and owner of  the named file. return true if ok, false otherwise. Arg MUST be a Squeak filename string, not a C filename string - it will end up mis-converting it to wrong dirseps! */
+/* set the type and owner of the named file.
+ * return true if ok, false otherwise. Arg MUST be a Squeak filename string,
+ * not a C filename string - it will end up mis-converting it to wrong dirseps! */
 
 	bits ftype=0;
 	char name[MAXDIRNAMELENGTH];
@@ -288,6 +277,47 @@ int dir_SetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, 
 int dir_GetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, char * owner) {
 /* tacky, tacky. Why this ridiculous dependence on Mac idiocies? */
 	return false;
+}
+
+/* extended protocol */
+
+fileswitch_object_type fsobject_Exists(char* name) {
+bits load_addr, exec_addr, file_type;
+fileswitch_attr attr;
+fileswitch_object_type obj_type;
+int length;
+	xosfile_read_stamped_no_path(name,
+		&obj_type, &load_addr, &exec_addr, &length, &attr, &file_type);
+	/* if the obj_type is not-found, clear the buffer and return */
+	return obj_type;
+}
+
+int dir_Exists(char *pathString, int pathStringLength) {
+	/* Is there an existing directory with the given path? */
+	char cFileName[MAXDIRNAMELENGTH];
+
+	if (pathStringLength >= MAXDIRNAMELENGTH) {
+		return interpreterProxy->success(false);
+	}
+
+	/* copy the file name into a null-terminated C string */
+	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
+
+	return (fsobject_Exists(cFileName) == fileswitch_IS_DIR);
+}
+
+int file_Exists(char *pathString, int pathStringLength) {
+	/* Is there an existing file with the given path? */
+	char cFileName[MAXDIRNAMELENGTH];
+
+	if (pathStringLength >= MAXDIRNAMELENGTH) {
+		return interpreterProxy->success(false);
+	}
+
+	/* copy the file name into a null-terminated C string */
+	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
+
+	return (fsobject_Exists(cFileName) == fileswitch_IS_FILE);
 }
 
 

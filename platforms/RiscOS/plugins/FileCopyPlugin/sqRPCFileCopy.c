@@ -11,27 +11,16 @@
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
+/* debugging stuff; can probably be deleted */
+//#define DEBUG
 #include "oslib/os.h"
 #include "oslib/osfile.h"
 #include "oslib/osfscontrol.h"
 #include "sq.h"
 
 #define MAXDIRNAMELENGTH 1024
-/* debugging stuff; can probably be deleted */
-//#define DEBUG
 
-#ifdef DEBUG
-#define FPRINTF(s)\
-{\
-	extern os_error privateErr;\
-	extern void platReportError( os_error * e);\
-	privateErr.errnum = (bits)0;\
-	sprintf s;\
-	platReportError((os_error *)&privateErr);\
-};
-#else
-# define FPRINTF(X)
-#endif
+
 
 /*** Functions ***/
 int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize) {
@@ -39,13 +28,13 @@ int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstN
 	char fromname[MAXDIRNAMELENGTH];
 	char toname[MAXDIRNAMELENGTH];
 	osfscontrol_copy_flags flag = osfscontrol_COPY_FORCE;
-		FPRINTF((privateErr.errmess, "platcopy called\n"));
+		PRINTF(("\\t platcopy called\n"));
 
 	if( srcNameSize > MAXDIRNAMELENGTH) return false;
 	sqFilenameFromString( fromname, (int)srcName, srcNameSize);
 	if( dstNameSize > MAXDIRNAMELENGTH) return false;
 	sqFilenameFromString( toname, (int)dstName, dstNameSize);
-		FPRINTF((privateErr.errmess, "platcopy names ok\n"));
+		PRINTF(("\\t platcopy names ok\n"));
 
 	e = xosfscontrol_copy(
 		(char const *)fromname,
@@ -53,7 +42,7 @@ int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstN
 		flag,
 		(bits)0,(bits)0,(bits)0,(bits)0,(osfscontrol_descriptor *)0 );
 	if (e != NULL) return false;
-		FPRINTF((privateErr.errmess, "platcopy ok\n"));
+		PRINTF(("\\t platcopy ok\n"));
 	return true;
 }
 

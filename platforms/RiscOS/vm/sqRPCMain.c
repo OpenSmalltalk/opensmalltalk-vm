@@ -62,6 +62,7 @@ char			*(imageOptions[MAX_OPTIONS]);
 int			headlessFlag = 0;
 int			helpMe = 0;
 int			versionMe = 0;
+int			swapMeta = 0;
 int			objectHeadroom = 4*1024*1024;
 char * windowLabel = &imageName[0];
 
@@ -69,6 +70,7 @@ vmArg args[] = {
 		{ ARG_FLAG,   &headlessFlag, "-headless" },
 		{ ARG_FLAG,   &helpMe, "-help" },
 		{ ARG_FLAG,   &versionMe, "-version" },
+		{ ARG_FLAG,   &swapMeta,  "-swapMeta"},
 		{ ARG_UINT,   &objectHeadroom, "-memory:"},
 		{ ARG_STRING, &windowLabel, "-windowlabel:"},
 		{ ARG_NONE, NULL, NULL }
@@ -76,15 +78,9 @@ vmArg args[] = {
 
 /*** Functions ***/
 extern void		SetupPaletteTable(void);
-extern void		setFPStatus(int stat); 
+extern void		setFPStatus(int stat);
 
-
-/* override printf()
- * - see also the #define printf repprintf in sqPlatforSpecifi.h
- */
-int repprintf(const char * format, ...) {
-int charsPrinted;
-va_list ap;
+int openLogStream(void) {
 	if ((int)logfile < 0) {
 		/* negative num means we couldn't open !reporter or any logfile
 		 * so don't log stuff */
@@ -96,16 +92,38 @@ va_list ap;
 	}
 	if (!logfile) {
 		/* No Report: so try an ordinary log file */
-		void decodePath(char *srcptr, char * dstPtr);
 		char logPath[VMPATH_SIZE];
-		sprintf(logPath, "%s.Squeak/vmlog", vmPath);
+		sprintf(logPath, "%sSqueak/vmlog", vmPath);
 		logfile= fopen(logPath, "a+");
 	}
 	if (!logfile) {
 		/* if still no file handle, we stop trying and
 		 * set file to -1 as a flag */
 		logfile = (FILE *)-1;
-	} 
+		return 0;
+	}
+	return (int)logfile; 
+}
+/* override printf()
+ * - see also the #define printf repprintf in sqPlatforSpecific.h
+ */
+int repprintf(const char * format, ...) {
+int charsPrinted;
+va_list ap;
+	if (!openLogStream()) return 0;
+	va_start(ap, format);
+	charsPrinted = vfprintf(logfile, format, ap);
+	va_end(ap);
+	fflush(logfile);
+
+	return charsPrinted;
+}
+
+/* also deal with fprintf in the same manner. Ignore the stream specified */
+int repfprintf(FILE *strm, const char * format, ...) {
+int charsPrinted;
+va_list ap;
+	if (!openLogStream()) return 0;
 	va_start(ap, format);
 	charsPrinted = vfprintf(logfile, format, ap);
 	va_end(ap);
@@ -152,7 +170,7 @@ byte * daBaseAddress;
 		return false;
 	}
 
-	PRINTF(("\\t platAllocateMemory(%d) at %d", amount, (int)daBaseAddress));
+	PRINTF(("\\t platAllocateMemory(%d) at %0x", amount, (int)daBaseAddress));
 
 	return (int)daBaseAddress;
 }
@@ -163,6 +181,14 @@ int platMallocChunk(int size) {
 	if ( chunk ==  NULL) return -1;
 	return chunk;
 }
+
+void setTimer(void) {
+/* Initialise the TimerMod timer
+*/
+_kernel_swi_regs regs;
+	_kernel_swi(/* Timer_Start*/ 0x490C0, &regs, &regs);
+}
+
 
 int InitRiscOS(void) {
 /* Initialise RiscOS for desktop wimp program use */
@@ -205,6 +231,8 @@ extern  wimp_icon_create sqIconBarIcon;
 
 	setFPStatus(0);
 
+	setTimer();
+
 return true;
 }
 
@@ -215,18 +243,16 @@ int ioBeep(void) {
 	return true;
 }
 
-int ioExit(void)
-{
+int ioExit(void) {
 	exit(1);
 	return 1;
 }
 
 int ioAssertion(void) {
- return 1;
- }
+	return 1;
+}
  
-void exit_function(void)
-{
+void exit_function(void) {
 /* do we need to do any special tidy up here ? RiscOS needs to kill the
    pointer bitmap and release the dynamic areas
 */
@@ -257,7 +283,8 @@ int ioMicroMSecs(void) {
 */
 _kernel_swi_regs regs;
 	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
-	return (regs.r[0] * 1000) + (int)(regs.r[1] / 1000); 
+	return (regs.r[0] * 1000) + (int)(regs.r[1] / 1000);
+
 }
 
 int ioSeconds(void) {
@@ -274,9 +301,11 @@ int ioSeconds(void) {
 /*** Image File Naming ***/
 
 void sqStringFromFilename( int sqString, char*fileName, int sqSize) {
-// copy chars TO a Squeak String FROM a C filename char array. You may transform the characters as needed
+// copy chars TO a Squeak String FROM a C filename char array.
+// You may transform the characters as needed
 int i;
 char c;
+	PRINTF(("sqRPCMain: sqStringFromFilename - %s\n",fileName));
 
 	for (i = 0; i < sqSize; i++) {
 		c =  *fileName++; ;
@@ -287,7 +316,8 @@ char c;
 }
 
 void sqFilenameFromString(char*fileName, int sqString, int sqSize) {
-// copy chars from a Squeak String to a C filename char array. You may transform the characters as needed
+// copy chars from a Squeak String to a C filename char array.
+// You may transform the characters as needed
 int i;
 int junk;
 char c;
@@ -309,8 +339,10 @@ os_error * e;
 		// etc
 		// just copy the ugly string to the destination for now
 		strcpy(fileName, temp);
+		PRINTF(("sqRPCMain: sqFilenameFromString canon fail - %s\n",temp));
 		// debugging-> platReportError(e);
 	}
+	PRINTF(("sqRPCMain: sqFilenameFromString - %s\n",temp));
 }
 
 int imageNameSize(void) {
@@ -552,6 +584,7 @@ char * endChar;
 int main(int argc,  char  *argv[]) {
 FILE *f;
 extern void initGlobalStructure(void);
+extern void setMetaKeyOptions(int swap);
 	parseArguments( argv, argc, args);
 
 	if (versionMe) versionMessage(vmPath);
@@ -576,6 +609,9 @@ extern void initGlobalStructure(void);
 		helpMessage(vmPath, "!ImName");
 		ioExit();
 	}
+
+	setMetaKeyOptions(swapMeta);
+
 	readImageFromFileHeapSize(f, objectHeadroom);
 	fclose(f);
 
