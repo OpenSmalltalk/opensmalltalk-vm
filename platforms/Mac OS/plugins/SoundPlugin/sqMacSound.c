@@ -25,8 +25,11 @@ Karl Goiser 14/01/01
  
 #include "sq.h"
 #include "SoundPlugin.h"
-#if defined (__APPLE__) && defined(__MACH__)
-    #include <CarbonSoundSound.h>
+#if TARGET_API_MAC_CARBON
+	#include <Carbon/Carbon.h>
+#else
+	#include <Sound.h>
+	#include <SoundInput.h>
 #endif
 extern struct VirtualMachine* interpreterProxy;
  
@@ -36,8 +39,6 @@ int soundShutdown() { snd_Stop(); }
 
 /* End of adjustments for pluginized VM */
 
-#include <Sound.h>
-#include <SoundInput.h>
 
 /******
   Mac Sound Output Notes:
@@ -125,7 +126,7 @@ typedef struct {
 	char samples[RECORD_BUFFER_SIZE];
 } RecordBufferRec, *RecordBuffer;
 
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
+#if (defined ( __APPLE__ ) && defined ( __MACH__ )) || TARGET_API_MAC_CARBON
 enum {
   dbBufferReady                 = 0x00000001, /*double buffer is filled*/
   dbLastBuffer                  = 0x00000004 /*last double buffer to play*/
@@ -528,7 +529,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	/* turn on sound recording, trying to use a sampling rate close to
 	   the one specified. semaIndex is the index in the exportedObject
 	   array of a semaphore to be signalled when input data is available. */
-	Str255 deviceName = "";
+	Str255 deviceName = "\p";
 	short automaticGainControlArg;
 	Fixed inputGainArg;
 	long  compressionTypeArg;
@@ -575,12 +576,16 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 
 	channelCountArg = stereo ? 2 : 1;
 	err = SPBSetDeviceInfo(soundInputRefNum, siNumberChannels, &channelCountArg);
-	if (err != noErr) {
-		interpreterProxy->success(false);
-		SPBCloseDevice(soundInputRefNum);
-		return;
-	}
-
+	if (err == notEnoughHardwareErr) {
+            stereo = 1;
+            channelCountArg = stereo ? 2 : 1;
+            err = SPBSetDeviceInfo(soundInputRefNum, siNumberChannels, &channelCountArg);
+        }
+        if (err != noErr) {
+                interpreterProxy->success(false);
+                SPBCloseDevice(soundInputRefNum);
+                return;
+        }
 	/* try to set the client's desired sample rate */
 	sampleRateArg = desiredSamplesPerSec << 16;
 	err = SPBSetDeviceInfo(soundInputRefNum, siSampleRate, &sampleRateArg);
@@ -700,10 +705,12 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	   end of the buffer, which is buf + bufferSizeInBytes. return the number
 	   of slices (not bytes) copied. a slice is one 16-bit sample in mono
 	   or two 16-bit samples in stereo. */
-	int bytesPerSlice = (recordBuffer1.stereo ? 4 : 2);
+//	int bytesPerSlice = (recordBuffer1.stereo ? 4 : 2);
+	int bytesPerSlice = (bufState.stereo ? 4 : 2);
 	char *nextBuf = (char *) buf + (startSliceIndex * bytesPerSlice);
 	char *bufEnd = (char *) buf + bufferSizeInBytes;
 	char *src, *srcEnd;
+	short int mixedSample;
 	RecordBuffer recBuf = nil;
 	int bytesCopied;
 
@@ -721,6 +728,7 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	/* copy samples into the client's buffer */
 	src = &recBuf->samples[0] + recBuf->readIndex;
 	srcEnd = &recBuf->samples[RECORD_BUFFER_SIZE];
+	if (bufState.stereo) {
 	if (recBuf->bytesPerSample == 1) {
 		while ((src < srcEnd) && (nextBuf < bufEnd)) {
 			/* convert 8-bit sample to 16-bit sample */
@@ -730,6 +738,25 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	} else {
 		while ((src < srcEnd) && (nextBuf < bufEnd)) {
 			*nextBuf++ = *src++;
+		}
+	}
+	} else {
+		// need to mix the two samples togehter
+		if (recBuf->bytesPerSample == 1) {
+			while ((src < srcEnd) && (nextBuf < bufEnd)) {
+				/* convert 8-bit sample to 16-bit sample */
+				mixedSample = (*src++) - 128;
+				mixedSample += (*src++) - 128;
+				mixedSample >>= 1;
+				*nextBuf++ = mixedSample;
+				*nextBuf++ = 0;  /* low-order byte is zero */
+			}
+		} else {
+			while ((src < srcEnd) && (nextBuf < bufEnd)) {
+				*nextBuf++ = (*src++);
+				*nextBuf++ = (*src++);
+				*src++; *src++; // TODO - mix in this channel!
+			}
 		}
 	}
 	recBuf->readIndex = src - &recBuf->samples[0];  /* update read index */
@@ -808,7 +835,7 @@ void snd_SetVolume(double left, double right) {
 				please do not use, install, modify or redistribute this Apple software.
 
 				In consideration of your agreement to abide by the following terms, and subject
-				to these terms, Apple grants you a personal, non-exclusive license, under Appleπs
+				to these terms, Apple grants you a personal, non-exclusive license, under Apple’s
 				copyrights in this original Apple software (the "Apple Software"), to use,
 				reproduce, modify and redistribute the Apple Software, with or without
 				modifications, in source and/or binary forms; provided that if you redistribute
