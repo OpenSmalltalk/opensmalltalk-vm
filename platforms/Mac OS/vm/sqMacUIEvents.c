@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.18 2003/10/03 19:05:19 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.19 2003/12/02 04:48:24 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -20,6 +20,8 @@
 *  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
 *  3.5.1b5 June 25th, 2003 JMM don't close window on floating full screen, handle issue with keydown and floating window if required.
 *  3.6.0b1 Aug 5th, 2003 JMM only invoke event timer loop logic if gTapPowerManager is true (OS supports!)
+*  3.6.2b3 Nov 25th, 2003 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp> supplied multiple unicode extraction
+*  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -691,7 +693,11 @@ int ioMousePoint(void) {
 	else
 	    ioProcessEvents();
 	if (windowActive) {
+                GrafPtr savePort;
+                GetPort(&savePort);
+                SetPortWindowPort(getSTWindow());
 		GetMouse(&p);
+                SetPort(savePort);
 	} else {
 		/* don't report mouse motion if window is not active */
 		p = savedMousePosition;
@@ -1691,14 +1697,17 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 }
 
 void recordKeyboardEventCarbon(EventRef event) {
-    int 		asciiChar, modifierBits;
+    int 		modifierBits, i;
     char 		macCharCode;
-    UInt32		macKeyCode;
+    UniCharCount	uniCharCount;
+    UniChar		uniChar, modifiedUniChar, *uniCharBufPtr, *uniCharBuf;
     sqKeyboardEvent 	*evt, *extra;
     OSErr	err;
     UniChar  	text;
     UInt32      actualSize; 
     EventRef	actualEvent;
+    
+    //  Tetsuya HAYASHI <tetha@st.rim.or.jp> supplied multiple unicode extraction
     
     /*  kEventTextInputUnicodeForKeyEvent
         Required parameters:
@@ -1721,40 +1730,24 @@ void recordKeyboardEventCarbon(EventRef event) {
                      the raw keyboard event's keyCode and modifiers are set to default values.)
     */
 
+    /* Get the actual keyboard event */
+    err = GetEventParameter (event, kEventParamTextInputSendKeyboardEvent,
+            typeEventRef, NULL, sizeof(EventRef), NULL, &actualEvent);
+    /* Get the actual data size */
     err = GetEventParameter (event, kEventParamTextInputSendText,
             typeUnicodeText, NULL, 0, &actualSize, NULL);
 
-    if (actualSize != 2)
-        return;
-    
-    err = GetEventParameter (event, kEventParamTextInputSendText,
-            typeUnicodeText, NULL, actualSize, NULL, &text);
-            
-    err = GetEventParameter (event, kEventParamTextInputSendKeyboardEvent,
-            typeEventRef, NULL, sizeof(EventRef), NULL, &actualEvent);
-    
-    err = GetEventParameter( actualEvent,
-                            kEventParamKeyMacCharCodes,
-                            typeChar,
-                            NULL,
-                            sizeof(char),
-                            NULL,
-                            &macCharCode); 
-
-    err = GetEventParameter( actualEvent,
-                            kEventParamKeyCode,
-                            typeUInt32,
-                            NULL,
-                            sizeof(UInt32),
-                            NULL,
-                            &macKeyCode); 
+    /* Get the actual character data */
+    uniCharBuf = uniCharBufPtr = malloc(actualSize);
+    err = GetEventParameter (actualEvent, kEventParamKeyUnicodes,
+            typeUnicodeText, NULL, actualSize, NULL, uniCharBuf);
                             
-    asciiChar = (unsigned char) macCharCode;
+    uniChar = modifiedUniChar = *uniCharBufPtr;
     buttonState = modifierBits =ModifierStateCarbon(actualEvent,0); //Capture option states
     if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
-            if ((asciiChar >= 97) && (asciiChar <= 122)) {
+            if ((modifiedUniChar >= 97) && (modifiedUniChar <= 122)) {
                     /* convert ascii code of command-shift-letter to upper case */
-                    asciiChar = asciiChar - 32;
+                    modifiedUniChar = modifiedUniChar - 32;
             }
     }
 
@@ -1766,52 +1759,62 @@ void recordKeyboardEventCarbon(EventRef event) {
     evt->timeStamp = ioMSecs() & 536870911;
     /* now the key code */
     /* press code must differentiate */
-    evt->charCode = text;
+    evt->charCode = uniChar;
     evt->pressCode = EventKeyDown;
     evt->modifiers = modifierBits >> 3;
     /* clean up reserved */
     evt->reserved1 = 0;
     evt->reserved2 = 0;
-    /* generate extra character event */
-    extra = (sqKeyboardEvent*)nextEventPut();
-    *extra = *evt;
-    extra->charCode = asciiChar;
-    extra->pressCode = EventKeyChar;
     
-    if(!inputSemaphoreIndex) {
-        int  keystate;
-
-        /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
-
-        keystate = (evt->modifiers << 8) | asciiChar;
-        if (keystate == getInterruptKeycode()) {
-                /* Note: interrupt key is "meta"; it not reported as a keystroke */
-		setInterruptPending(true);
-		setInterruptCheckCounter(0);
-        } else {
-                keyBuf[keyBufPut] = keystate;
-                keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
-                if (keyBufGet == keyBufPut) {
-                        /* buffer overflow; drop the last character */
-                        keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
-                        keyBufOverflows++;
-                }
+    /* Put sqKeyboardEvent in actualSize times */
+    uniCharCount = actualSize / sizeof(UniChar);
+    for (i=0; i<uniCharCount; i++) {
+        /* generate extra character event */
+        extra = (sqKeyboardEvent*)nextEventPut();
+            extra->type = EventTypeKeyboard;
+            extra->timeStamp = ioMSecs() & 536870911;
+            extra->charCode = modifiedUniChar;
+        extra->pressCode = EventKeyChar;
+            extra->modifiers = modifierBits >> 3;
+        
+        if(!inputSemaphoreIndex) {
+            int  keystate;
+    
+            /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
+                keystate = (evt->modifiers << 8) | (unsigned char) uniChar;
+            if (keystate == getInterruptKeycode()) {
+                    /* Note: interrupt key is "meta"; it not reported as a keystroke */
+                    setInterruptPending(true);
+                    setInterruptCheckCounter(0);
+            } else {
+                    keyBuf[keyBufPut] = keystate;
+                    keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
+                    if (keyBufGet == keyBufPut) {
+                            /* buffer overflow; drop the last character */
+                            keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
+                            keyBufOverflows++;
+                    }
+            }
         }
-
+        uniCharBufPtr++;
+        modifiedUniChar = *uniCharBufPtr;
     }
-    evt = (sqKeyboardEvent*) nextEventPut();
 
+    /* Put the sqKeyboardEvent for KeyUp */
+    evt = (sqKeyboardEvent*) nextEventPut();
     /* first the basics */
     evt->type = EventTypeKeyboard;
     evt->timeStamp = ioMSecs() & 536870911;
     /* now the key code */
     /* press code must differentiate */
-    evt->charCode = text;
+    evt->charCode = uniChar;
     evt->pressCode = EventKeyUp;
     evt->modifiers = modifierBits >> 3;
     /* clean up reserved */
     evt->reserved1 = 0;
     evt->reserved2 = 0;
+    
+    free(uniCharBuf);
     pthread_mutex_unlock(&gEventQueueLock);		        
     signalAnyInterestedParties();
 }
