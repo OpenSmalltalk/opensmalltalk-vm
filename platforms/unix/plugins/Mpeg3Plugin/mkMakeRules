@@ -105,7 +105,7 @@ else
 #rules for compiling internally 
 cat <<EOF
 Mpeg3Plugin.o : \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c
-	\$(COMPILE) -I\$(Mpeg3Plugin_DIR) -I\$(LIBMPEG_SOURCE_DIR) -I\$(LIBMPEG_SOURCE_DIR)/audio -I\$(LIBMPEG_SOURCE_DIR)/video -I$crossdir/plugins/Mpeg3Plugin -c \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c -o Mpeg3Plugin.o
+	\$(COMPILE) -DSQUEAK_BUILTIN_PLUGIN -I\$(Mpeg3Plugin_DIR) -I\$(LIBMPEG_SOURCE_DIR) -I\$(LIBMPEG_SOURCE_DIR)/audio -I\$(LIBMPEG_SOURCE_DIR)/video -I$crossdir/plugins/Mpeg3Plugin -c \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c -o Mpeg3Plugin.o
 
 
 PLUGINS_O += Mpeg3Plugin.o \$(LIBMPEG_BUILD_DIR)/libmpeg3.a

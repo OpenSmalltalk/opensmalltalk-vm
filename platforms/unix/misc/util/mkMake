@@ -6,7 +6,7 @@
 # build directory -- eg, it should have "platforms" as an immediate
 # subdirectory.
 #
-# $Id: mkMake,v 1.8 2002/05/05 01:42:13 jeyrich Exp $
+# $Id: mkMake,v 1.9 2002/05/13 12:26:23 slosher Exp $
 #
 
 
@@ -121,12 +121,12 @@ cFilesToCompile() {
 # $1, $2, etc.  directories to find header files
 pruneOverridenHeaders() {
 #######################
-#    basenames=`find "$@" -maxdepth 1 '(' -name '*.h' -o -name 'platform.exports' ')' -exec basename '{}' ';' | sort | uniq`
+#    basenames=`find "$@" -maxdepth 1 '(' -name '*.h' -o ')' -exec basename '{}' ';' | sort | uniq`
 #######################
 basenames=""
 for dir in "$@"
 do
-    newnames=`ls "$dir"/*.h "$dir/platform.exports" 2>/dev/null`
+    newnames=`ls "$dir"/*.h 2>/dev/null`
     if [ "$newnames" ]
     then
         basenames="$newnames
@@ -206,7 +206,7 @@ do
     else
         # compile with default rules
         THIS_PLUGIN_O=""
-        THIS_PLUGIN_EXTRA_INC="-I$unixdir/plugins/$plugin -I$crossdir/plugins/$plugin -I$srcdir/vm/intplugins/$plugin"
+        THIS_PLUGIN_EXTRA_INC="-DSQUEAK_BUILTIN_PLUGIN -I$unixdir/plugins/$plugin -I$crossdir/plugins/$plugin -I$srcdir/vm/intplugins/$plugin"
 
 	# find the source files for this plugin
         THIS_PLUGIN_C=`cFilesToCompile $unixdir/plugins/$plugin $crossdir/plugins/$plugin $srcdir/vm/intplugins/$plugin`
