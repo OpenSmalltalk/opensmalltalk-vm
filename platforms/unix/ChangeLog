@@ -1,3 +1,14 @@
+2004-04-06  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/configure.ac: Version is 3.7b-5.
+
+	* platforms/unix/npsqueak/npsqueak.c: Add failureUrl to SqueakPlugin struct.
+	(NPP_New): Check for and use explicit imageName.  
+	(NPP_New): Check for explicit failureUrl.  
+	(NPP_New): Check for access on imageName, set failureUrl if missing.
+	(NPP_NewStream): Redirect to failureUrl if set.
+	(Run): Do not start VM if failureUrl set.
+
 2004-04-04  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/vm-display-X11/sqUnixXdnd.c: New file.
