@@ -22,6 +22,9 @@ VM:
   image; defaults to 'My Squeak'.  (May break for users of shells
   other than bash.  Contact Bert if you have problems.)
 
+  Interpreter changes from Ned to avoid image segment loading errors
+  caused by oops >= 2GB.
+
 VM drivers:
 
   Preliminary drag-and-drop support added to the X11 display driver.
