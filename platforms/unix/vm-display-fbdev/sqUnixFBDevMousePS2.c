@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2003-08-21 01:40:38 by piumarta on felina.inria.fr
+ * Last edited: 2003-10-31 11:42:56 by piumarta on emilia.inria.fr
  */
 
 /* The framebuffer display driver was donated to the Squeak community by:
@@ -40,11 +40,11 @@
  * 3. This notice must not be removed or altered in any source distribution.
  */
 
-#define PS2_DISABLE_DELAY    10*1000
+#define PS2_DISABLE_DELAY   100*1000
 #define PS2_RESET_DELAY	   1500*1000
-#define PS2_FLUSH_DELAY	     10*1000
-#define PS2_READ_DELAY	     10*1000
-#define PS2_SEND_DELAY	     10*1000
+#define PS2_FLUSH_DELAY	    100*1000
+#define PS2_READ_DELAY	    100*1000
+#define PS2_SEND_DELAY	    100*1000
 
 #define	PS2_RESET		0xff
 #define	PS2_RESEND		0xfe
@@ -125,6 +125,7 @@ static int ms_ps2_send(_self, unsigned char *command, int len)
       switch (buf[0])
 	{
 	case PS2_OK:
+	case PS2_SELFTEST_OK:	/* /dev/input/mice emulation is broken */
 	  break;
 	case PS2_ERROR:
 	  fprintf(stderr, "%s: error response in send\n", self->msName);
@@ -183,6 +184,10 @@ static int ms_ps2_reset(_self)
 	  break;
 	}
     }
+  /* /dev/input/mice emulation returns PS2_SELFTEST_OK where send()
+     expects PS2_OK, causing control to fall through to here.  we pick
+     up the mouse id immediately in the flush(), so the only harm done
+     is a misleading "reset failed" message while debugging.  */
   ms_ps2_flush(self);
   dprintf("%s: reset failed\n", self->msName);
   return -1;
