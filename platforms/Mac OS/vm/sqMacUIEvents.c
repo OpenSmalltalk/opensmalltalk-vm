@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.9 2002/04/27 19:02:16 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.10 2002/07/05 07:01:53 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -534,7 +534,7 @@ int checkForModifierKeys() {
 	return result;
 }
 
-int getUIToLock(long *) {
+int getUIToLock(long *foo) {
 }
 
 #endif
