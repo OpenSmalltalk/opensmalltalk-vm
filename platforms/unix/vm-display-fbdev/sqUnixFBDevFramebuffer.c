@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-20 01:14:58 by piumarta on felina.inria.fr
+ * Last edited: 2003-08-20 15:09:25 by piumarta on emilia.inria.fr
  */
 
 
@@ -64,9 +64,8 @@ typedef void		(*fb_putPixel_t )(_self, int x, int y, unsigned long pixel);
 struct fb
 {
   char				 *fbName;
-  char				 *ttyName;
   int				  fd;
-  int				  tty;
+  struct kb			 *kb;
   long int			  size;
   char				 *addr;
   struct fb_var_screeninfo	  var;
@@ -632,7 +631,8 @@ static void fb_freeBuffer(_self)
 static void fb_initGraphics(_self)
 {
   int x, y;
-  if (ioctl(self->tty, KDSETMODE, KD_GRAPHICS)) perror("KDSETMODE(KDGRAPHICS)");
+  assert(self->kb);
+  kb_initGraphics(self->kb);
   for (y= 0;  y < self->var.yres;  ++y)
     for (x= 0;  x < self->var.xres;  ++x)
       self->putPixel(self, x, y, self->whitePixel);
@@ -648,7 +648,8 @@ static void fb_freeGraphics(_self)
 	for (x= 0;  x < self->var.xres;  ++x)
 	  self->putPixel(self, x, y, 0);
     }
-  if (ioctl(self->tty, KDSETMODE, KD_TEXT)) perror("KDSETMODE(KDTEXT)");
+  if (self->kb)
+    kb_freeGraphics(self->kb);
 }
 
 
@@ -659,34 +660,8 @@ static void fb_initCursor(_self)
 }
 
 
-static int fb_open(_self, char *fbDev)
+static int fb_open(_self, struct kb *kb, char *fbDev)
 {
-  assert(self->tty == -1);
-  {
-    char *cons[]= { "/dev/console", "/dev/tty0", 0 };
-    int i;
-    for (i= 0;  cons[i];  ++i)
-      if ((self->tty= open(self->ttyName= cons[i], O_RDWR | O_NDELAY)) >= 0)
-	break;
-      else
-	perror(cons[i]);
-  }
-  if (self->tty < 0)
-    if ((self->tty= open(self->ttyName= ttyname(0), O_RDWR | O_NDELAY)) < 0)
-      perror(self->ttyName);
-  if (self->tty < 0)
-    failPermissions("console");
-  {
-    struct vt_stat v;
-    static char vtname[32];
-    if (ioctl(self->tty, VT_GETSTATE, &v))
-      fatalError("VT_GETSTATE");
-    close(self->tty);
-    sprintf(vtname, "/dev/tty%d", v.v_active);
-    if ((self->tty= open(self->ttyName= vtname, O_RDWR | O_NDELAY)) < 0)
-      fatalError(vtname);
-  }
-
   assert(self->fd == -1);
   if (fbDev)
     self->fd= open(self->fbName= fbDev, O_RDWR);
@@ -703,7 +678,9 @@ static int fb_open(_self, char *fbDev)
   if (self->fd < 0)
     failPermissions("framebuffer");
 
-  dprintf("using: %s (%d) %s (%d)\n", self->fbName, self->fd, self->ttyName, self->tty);
+  self->kb= kb;
+
+  dprintf("using: %s (%d)\n", self->fbName, self->fd);
 
   fb_initVisual(self);
   fb_initBuffer(self);
@@ -718,19 +695,13 @@ static void fb_close(_self)
 {
   fb_freeGraphics(self);
   fb_freeBuffer(self);
-
   if (self->fd >= 0)
     {
       close(self->fd);
       dprintf("%s (%d) closed\n", self->fbName, self->fd);
       self->fd= -1;
     }
-  if (self->tty >= 0)
-    {
-      close(self->tty);
-      dprintf("%s (%d) closed\n", self->ttyName, self->tty);
-      self->tty= -1;
-    }
+  self->kb= 0;
 }
 
 
@@ -739,7 +710,6 @@ static struct fb *fb_new(void)
   _self= (struct fb *)calloc(1, sizeof(struct fb));
   if (!self) fatal("out of memory");
   self->fd=  -1;
-  self->tty= -1;
   return self;
 }
 
@@ -748,7 +718,6 @@ static void fb_delete(_self)
 {
   assert(self->addr ==  0);
   assert(self->fd   == -1);
-  assert(self->tty  == -1);
   free(self);
 }
 

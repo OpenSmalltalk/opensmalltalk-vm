@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-20 01:14:53 by piumarta on felina.inria.fr
+ * Last edited: 2003-08-21 02:28:27 by piumarta on felina.inria.fr
  */
 
 
@@ -42,49 +42,31 @@
  */
 
 
-#define _self	struct kb *self
-
-
 #include <termios.h>
+#include <sys/ioctl.h>
+
 #include <linux/keyboard.h>
+#include <linux/kd.h>
+#include <linux/vt.h>
 
 
-static unsigned short defaultKeyMap[128][13]= {
-# include "defaultKeyboardMap.h"
-};
-
-static unsigned short *keyMaps[128];
+#define _self	struct kb *self
 
 
 typedef void (*kb_callback_t)(int key, int up, int mod);
 
-
 struct kb
 {
-  int			fd;
-  int			mode;
-  struct termios	attr;
-  int			state;
-  kb_callback_t		callback;
+  char			 *kbName;
+  int			  fd;
+  int			  mode;
+  struct termios	  attr;
+  int			  state;
+  kb_callback_t		  callback;
+  unsigned short	**keyMaps;
 };
 
-
-static void initKeyMap(void)
-{
-  int c, m;
-  memset(keyMaps, 0, sizeof(keyMaps));
-  for (c= 0;  c < 128;  ++c)
-    for (m= 0;  m < 13;  ++m)
-    {
-      int code= defaultKeyMap[c][m];
-      if (code)
-	{
-	  if (!keyMaps[m])
-	    keyMaps[m]= (unsigned short *)calloc(128, sizeof(unsigned short));
-	  keyMaps[m][c]= code;
-	}
-    }
-}
+#include "sqUnixFBDevKeymap.c"
 
 
 static void updateModifiers(int kstate)
@@ -112,7 +94,7 @@ static void kb_post(_self, int code, int up)
 static void kb_translate(_self, int code, int up)
 {
   static int prev= 0;
-  unsigned short *keyMap= keyMaps[self->state];
+  unsigned short *keyMap= self->keyMaps[self->state];
   int rep= (!up) && (prev == code);
   prev= up ? 0 : code;
   if (keyMap)
@@ -122,54 +104,46 @@ static void kb_translate(_self, int code, int up)
       sym &= 255;
       if (type >= 0xf0)		// shiftable
 	type -= 0xf0;
-      if (KT_LETTER == type)
-	//xxx do additional shift for lock here
+      if (KT_LETTER == type)	// lockable
 	type= KT_LATIN;
       switch (type)
 	{
 	case KT_LATIN:
-	  kb_post(self, sym, up);
-	  break;
-
-	case KT_FN:
-	  break;
-
-	case KT_SPEC:		// also covers compose and several useless PC-specific special keys
-	  if (1 == sym)
-	    kb_post(self, '\r', up);
-	  break;
-
-	case KT_PAD:
-	case KT_DEAD:
-	case KT_CONS:
-	case KT_CUR:
-	  break;
-
-	case KT_SHIFT:
-	  if (rep)
-	    return;
-	  if (up)
-	    self->state &= ~(1 << sym);
-	  else
-	    self->state |=  (1 << sym);
-	  updateModifiers(self->state);
-	  break;
-
 	case KT_META:
 	  kb_post(self, sym, up);
 	  break;
 
-	case KT_ASCII:
-	case KT_LOCK:
-	case KT_LETTER:
-	case KT_SLOCK:
-	case 13: // KT_DEAD2:
-	case 14:
-	case 15:
+	case KT_SHIFT:
+	  if      (rep) break;
+	  else if (up)  self->state &= ~(1 << sym);
+	  else          self->state |=  (1 << sym);
+	  updateModifiers(self->state);
+	  break;
+
+	case KT_FN:
+	case KT_SPEC:
+	case KT_CUR:
+	  switch (K(type,sym))
+	    {
+	      // FN
+	    case K_FIND:	kb_post(self,  1, up);	break;	// home
+	    case K_INSERT:	kb_post(self,  5, up);	break;
+	    case K_SELECT:	kb_post(self,  4, up);	break;	// end
+	    case K_PGUP:	kb_post(self, 11, up);	break;
+	    case K_PGDN:	kb_post(self, 12, up);	break;
+	      // SPEC
+	    case K_ENTER:	kb_post(self, 13, up);	break;
+	      // CUR
+	    case K_DOWN:	kb_post(self, 31, up);	break;
+	    case K_LEFT:	kb_post(self, 28, up);	break;
+	    case K_RIGHT:	kb_post(self, 29, up);	break;
+	    case K_UP:		kb_post(self, 30, up);	break;
+	    }
 	  break;
 
 	default:
-	  dprintf("ignoring unknown scancode %d.%d\n", type, sym);
+	  if (type > KT_SLOCK)
+	    dprintf("ignoring unknown scancode %d.%d\n", type, sym);
 	  break;
 	}
     }
@@ -222,11 +196,46 @@ static void kb_bell(_self)
 }
 
 
-void kb_open(_self, struct fb *fb)
+static void kb_initGraphics(_self)
+{
+  if (ioctl(self->fd, KDSETMODE, KD_GRAPHICS)) perror("KDSETMODE(KDGRAPHICS)");
+}
+
+static void kb_freeGraphics(_self)
+{
+  if (ioctl(self->fd, KDSETMODE, KD_TEXT)) perror("KDSETMODE(KDTEXT)");
+}
+
+
+void kb_open(_self)
 {
   struct termios nattr;
 
-  self->fd= fb->tty;
+  assert(self->fd == -1);
+  {
+    char *cons[]= { "/dev/console", "/dev/tty0", 0 };
+    int i;
+    for (i= 0;  cons[i];  ++i)
+      if ((self->fd= open(self->kbName= cons[i], O_RDWR | O_NDELAY)) >= 0)
+	break;
+      else
+	perror(cons[i]);
+  }
+  if (self->fd < 0)
+    if ((self->fd= open(self->kbName= ttyname(0), O_RDWR | O_NDELAY)) < 0)
+      perror(self->kbName);
+  if (self->fd < 0)
+    failPermissions("console");
+  {
+    struct vt_stat v;
+    static char vtname[32];
+    if (ioctl(self->fd, VT_GETSTATE, &v))
+      fatalError("VT_GETSTATE");
+    close(self->fd);
+    sprintf(vtname, "/dev/tty%d", v.v_active);
+    if ((self->fd= open(self->kbName= vtname, O_RDWR | O_NDELAY)) < 0)
+      fatalError(vtname);
+  }
 
   if (ioctl(self->fd, KDGKBMODE, &self->mode))			perror("KDGKBMODE");
   if (ioctl(self->fd, KDSKBMODE, K_MEDIUMRAW))			perror("KDSKBMODE(K_MEDIUMRAW)");
@@ -234,7 +243,6 @@ void kb_open(_self, struct fb *fb)
 
   nattr= self->attr;
   nattr.c_iflag= (IGNPAR | IGNBRK) & (~PARMRK) & (~ISTRIP);
-  nattr.c_oflag= 0;
   nattr.c_cflag= CREAD | CS8;
   nattr.c_lflag= 0;
   nattr.c_cc[VTIME]= 0;
@@ -247,18 +255,26 @@ void kb_open(_self, struct fb *fb)
 
 void kb_close(_self)
 {
-  ioctl(self->fd, KDSKBMODE, self->mode);
-  tcsetattr(self->fd, TCSANOW, &self->attr);
+  if (self->fd >= 0)
+    {
+      ioctl(self->fd, KDSKBMODE, self->mode);
+      tcsetattr(self->fd, TCSANOW, &self->attr);
+      close(self->fd);
+      dprintf("%s (%d) closed\n", self->kbName, self->fd);
+      self->fd= -1;
+    }
 }
 
 
 struct kb *kb_new(void)
 {
   _self= (struct kb *)calloc(1, sizeof(struct kb));
-  initKeyMap();
+  self->fd= -1;
   self->callback= kb_noCallback;
+  kb_initKeyMap(self, kmPath);
   return self;
 }
+
 
 void kb_delete(_self)
 {

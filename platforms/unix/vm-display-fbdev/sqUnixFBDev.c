@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-20 01:15:03 by piumarta on felina.inria.fr
+ * Last edited: 2003-08-21 01:56:33 by piumarta on emilia.inria.fr
  */
 
 
@@ -67,19 +67,17 @@
 #include <stdarg.h>
 #include <assert.h>
 
-#define DEBUG	1
+#define DEBUG	0
 
+static void dprintf(const char *fmt, ...)
+{
 #if (DEBUG)
-  static void dprintf(const char *fmt, ...)
-  {
-    va_list ap;
-    va_start(ap, fmt);
-    vfprintf(stderr, fmt, ap);
-    va_end(ap);
-  }
-#else
-  static void dprintf(const char *fmt, ...) {}
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
 #endif
+}
 
 #define fatal(M)	do { fprintf(stderr, "%s\n", M); exit(1); } while (0)
 #define fatalError(M)	do { perror(M); exit(1); } while (0)
@@ -91,40 +89,29 @@ static inline int max(int a, int b) { return a > b ? a : b; }
 
 static void failPermissions(const char *who);
 
+static char *msDev=   0;
+static char *msProto= 0;
+static char *kmPath=  0;
+static char *fbDev=   0;
+
 #include "sqUnixFBDevUtil.c"
-#include "sqUnixFBDevFramebuffer.c"
-#include "sqUnixFBDevKeyboard.c"
 #include "sqUnixFBDevMouse.c"
+#include "sqUnixFBDevKeyboard.c"
+#include "sqUnixFBDevFramebuffer.c"
 
-static char *fbDev= 0;
-static char *msDev= 0;
-
-static struct fb *fb= 0;
-static struct kb *kb= 0;
 static struct ms *ms= 0;
+static struct kb *kb= 0;
+static struct fb *fb= 0;
 
 
-static void failPermissions(const char *who)
-{
-  fprintf(stderr, "cannot open %s\n", who);
-  fprintf(stderr, "either:\n");
-  fprintf(stderr, "  -  you don't have a framebuffer driver for your graphics card\n");
-  fprintf(stderr, "     (you might be able to load one with 'modprobe'; look in\n");
-  fprintf(stderr, "     /lib/modules for something called '<your-card>fb.o'\n");
-  fprintf(stderr, "  -  you don't have write permission on some of the following\n");
-  fprintf(stderr, "       /dev/tty*, /dev/fb*, /dev/psaux, /dev/input/mice\n");
-  fprintf(stderr, "  -  you need to run Squeak as root on your machine\n");
-  exit(1);
-}
-
-
-static void openConsole(void)
+static void openFramebuffer(void)
 {
   fb= fb_new();
-  fb_open(fb, fbDev);
+  fb_open(fb, kb, fbDev);
 }
 
-static void closeConsole(void)
+
+static void closeFramebuffer(void)
 {
   if (fb)
     {
@@ -152,7 +139,7 @@ static void enqueueKeyboardEvent(int key, int up, int modifiers)
 static void openKeyboard(void)
 {
   kb= kb_new();
-  kb_open(kb, fb);
+  kb_open(kb);
   kb_setCallback(kb, enqueueKeyboardEvent);
 }
 
@@ -179,7 +166,7 @@ static void enqueueMouseEvent(int b, int dx, int dy)
 static void openMouse(void)
 {
   ms= ms_new();
-  ms_open(ms, msDev);
+  ms_open(ms, msDev, msProto);
   ms_setCallback(ms, enqueueMouseEvent);
 }
 
@@ -192,34 +179,6 @@ static void closeMouse(void)
       ms_delete(ms);
       ms= 0;
     }
-}
-
-
-#define missing(N)	fprintf(stderr, "%s: MISSING\n", __FUNCTION__); return N
-
-
-static int display_clipboardSize(void)
-{
-  missing(0);
-}
-
-
-static int display_clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
-{
-  missing(0);
-}
-
-
-static int display_clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
-{
-  missing(0);
-}
-
-
-static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
-			       double hScale, double vScale, int landscapeFlag)
-{
-  missing(0);
 }
 
 
@@ -246,13 +205,12 @@ static int display_ioProcessEvents(void)
 
 static int display_ioScreenDepth(void)
 {
-  missing(0);
+  return fb_depth(fb);
 }
 
 
 static int display_ioScreenSize(void)
 {
-  assert(fb);
   return ((fb_width(fb) << 16) | fb_height(fb));
 }
 
@@ -262,18 +220,6 @@ static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
 {
   fb_setCursor(fb, (char *)cursorBitsIndex, (char *)cursorMaskIndex, offsetX, offsetY);
   return 1;
-}
-
-
-static int display_ioSetFullScreen(int fullScreen)
-{
-  return 0;
-}
-
-
-static int display_ioForceDisplayUpdate(void)
-{
-  return 0;
 }
 
 
@@ -297,70 +243,25 @@ static int display_ioHasDisplayDepth(int i)
 }
 
 
-static int display_ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
-{
-  missing(0);
-}
-
-
-static void display_winSetName(char *imageName)
-{
-  missing(;);
-}
-
-
 static void openDisplay(void)
 {
   dprintf("openDisplay\n");
-  openConsole();
-  openKeyboard();
   openMouse();
+  openKeyboard();
+  openFramebuffer();
+  // init mouse after setting graf mode on tty avoids packets being
+  // snarfed by gpm
+  ms->init(ms);
 }
 
 
 static void closeDisplay(void)
 {
   dprintf("closeDisplay\n");
-  closeMouse();
+  closeFramebuffer();
   closeKeyboard();
-  closeConsole();
+  closeMouse();
 }
-
-
-/* ---------------------------------------------------------------- */
-
-/* OSPP */
-
-#if 1
-void openXDisplay(void) {}
-void closeXDisplay(void) {}
-void synchronizeXDisplay(void) {}
-void forgetXDisplay(void) {}
-#endif
-
-static void *display_ioGetDisplay(void)	{ return (void *)0; }
-static void *display_ioGetWindow(void)	{ return (void *)0; }
-
-/* OpenGL */
-
-static int   display_ioGLinitialise(void) { return 0; }
-static int   display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags) { return 0; }
-static void  display_ioGLdestroyRenderer(glRenderer *r) {}
-static void  display_ioGLswapBuffers(glRenderer *r) {}
-static int   display_ioGLmakeCurrentRenderer(glRenderer *r) { return 0; }
-static void  display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h) {}
-
-/* Mozilla */
-
-static int   display_primitivePluginBrowserReady()	{ return primitiveFail(); }
-static int   display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
-static int   display_primitivePluginRequestURL()	{ return primitiveFail(); }
-static int   display_primitivePluginPostURL()		{ return primitiveFail(); }
-static int   display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
-static int   display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
-static int   display_primitivePluginRequestState()	{ return primitiveFail(); }
-
-/* ---------------------------------------------------------------- */
 
 
 static char *display_winSystemName(void)
@@ -390,35 +291,40 @@ static void display_winOpen(void)
 }
 
 
-static void display_winExit(void)
+static void failPermissions(const char *who)
 {
+  fprintf(stderr, "cannot open %s\n", who);
+  fprintf(stderr, "either:\n");
+  fprintf(stderr, "  -  you don't have a framebuffer driver for your graphics card\n");
+  fprintf(stderr, "     (you might be able to load one with 'modprobe'; look in\n");
+  fprintf(stderr, "     /lib/modules for something called '<your-card>fb.o'\n");
+  fprintf(stderr, "  -  you don't have write permission on some of the following\n");
+  fprintf(stderr, "       /dev/tty*, /dev/fb*, /dev/psaux, /dev/input/mice\n");
+  fprintf(stderr, "  -  you need to run Squeak as root on your machine\n");
+  exit(1);
 }
-
-
-static int  display_winImageFind(char *buf, int len)	{ return 0; }
-static void display_winImageNotFound(void)		{}
 
 
 static void display_printUsage(void)
 {
-#if 0
-  printf("\FBDev <option>s:\n");
+  printf("\nFBDev <option>s:\n");
   printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb)\n");
+  printf("  -kbmap <file>         load keymap from <file> (default: generic US PC-101)\n");
   printf("  -msdev <dev>          use mouse device <dev> (default: /dev/psaux)\n");
-#endif
+  printf("  -msproto <protocol>   use the given <protocol> for the mouse (default: ps2)\n");
 }
 
 
-static void display_printUsageNotes(void)
-{
-}
+static void display_printUsageNotes(void) {}
 
 
 static void display_parseEnvironment(void)
 {
   char *ev= 0;
-  if ((ev= getenv("SQUEAK_FBDEV")))	fbDev= strdup(ev);
-  if ((ev= getenv("SQUEAK_MSDEV")))	msDev= strdup(ev);
+  if ((ev= getenv("SQUEAK_FBDEV")))	fbDev=   strdup(ev);
+  if ((ev= getenv("SQUEAK_KBMAP")))	kmPath=  strdup(ev);
+  if ((ev= getenv("SQUEAK_MSDEV")))	msDev=   strdup(ev);
+  if ((ev= getenv("SQUEAK_MSPROTO")))	msProto= strdup(ev);
 }
 
 
@@ -430,8 +336,10 @@ static int display_parseArgument(int argc, char **argv)
   if (argv[1])	/* option requires an argument */
     {
       n= 2;
-      if      (!strcmp(arg, "-fbdev"))	 fbDev= argv[1];
-      else if (!strcmp(arg, "-msdev"))	 msDev= argv[1];
+      if      (!strcmp(arg, "-fbdev"))	 fbDev=   argv[1];
+      else if (!strcmp(arg, "-kbmap"))	 kmPath=  argv[1];
+      else if (!strcmp(arg, "-msdev"))	 msDev=   argv[1];
+      else if (!strcmp(arg, "-msproto")) msProto= argv[1];
       else
 	n= 0;	/* not recognised */
     }
@@ -439,6 +347,53 @@ static int display_parseArgument(int argc, char **argv)
     n= 0;
   return n;
 }
+
+
+static int  display_clipboardSize(void)								{ return 0; }
+static int  display_clipboardWriteFromAt(int n, int ptr, int off)				{ return 0; }
+static int  display_clipboardReadIntoAt(int n, int ptr, int off)				{ return 0; }
+static int  display_ioFormPrint(int bits, int w, int h, int d, double hs, double vs, int l)	{ return 0; }
+static int  display_ioSetFullScreen(int fullScreen)						{ return 0; }
+static int  display_ioForceDisplayUpdate(void)							{ return 0; }
+static int  display_ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)	{ return 0; }
+static void display_winSetName(char *imageName)							{ return  ; }
+static void display_winExit(void)								{ return  ; }
+static int  display_winImageFind(char *buf, int len)						{ return 0; }
+static void display_winImageNotFound(void)							{ return  ; }
+
+
+//----------------------------------------------------------------
+
+// OSPP
+
+void openXDisplay(void)		{}
+void closeXDisplay(void)	{}
+void synchronizeXDisplay(void)	{}
+void forgetXDisplay(void)	{}
+
+static void *display_ioGetDisplay(void)	{ return 0; }
+static void *display_ioGetWindow(void)	{ return 0; }
+
+// OpenGL
+
+static int   display_ioGLinitialise(void)							{ return 0; }
+static int   display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags)	{ return 0; }
+static void  display_ioGLdestroyRenderer(glRenderer *r)						{ return  ; }
+static void  display_ioGLswapBuffers(glRenderer *r)						{ return  ; }
+static int   display_ioGLmakeCurrentRenderer(glRenderer *r)					{ return 0; }
+static void  display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h)		{ return  ; }
+
+// Mozilla
+
+static int   display_primitivePluginBrowserReady()	{ return primitiveFail(); }
+static int   display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
+static int   display_primitivePluginRequestURL()	{ return primitiveFail(); }
+static int   display_primitivePluginPostURL()		{ return primitiveFail(); }
+static int   display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
+static int   display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
+static int   display_primitivePluginRequestState()	{ return primitiveFail(); }
+
+//----------------------------------------------------------------
 
 
 #include "SqModule.h"
