@@ -1,6 +1,8 @@
+Updated Feb 5th 2002
+
 Building the Squeak Virtual Machine (Jan 1st 2002)
 	-- John Maloney, May 25, 2000,
-	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002
+	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002, Feb 5th 2002
 	-- Changes Andrew C. Greenberg, Jan 1st 2002
 
 (Note to readers, this hasn't been proofed yet, so beware)
@@ -105,10 +107,37 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
 	A.	Double-click the SqueakVMForCarbon.pbproj file
 	B.	Click on the Sources folder in the left pane
 	C.	Select "Project -> Add Files..."
-	D.	Select all the highlighted ".c" files relating to your projects.
-		(But don't add MacMinimal.c or anything beginning with "my").
--	D'.	Click on the file "Error.c", and delete the whitespace at the end
-		of the file
+        D.      Add the 'Cross' folder, and the 'Mac OS' folder, from the platform squeak cvs folder
+                now delete the references or uncheck the following files/folders
+                FileCopyPlugin
+                Mpeg3Plugin
+                SqueakFFIPrims
+                TestOSAPlugin
+                PluginSDK 4.01a
+                
+                The 68K folder in the SocketPlugin folder
+                The ReadMe.txt in the cross/JPEGReaderWriter2 folder
+                The InternetConfiguration.xml in the InternetConfigPlugin folder
+                The UUIDPlugin.project.xml in the UUIDPlugin folder
+                The platform.exports in the cross/vm folder
+                
+                all the files that start with my in the mac vm folder
+                
+                3.2.2 Release Notes.rtf
+                platform.exports
+                readme
+                resources.sit.hqx
+                sqMacMinimal.c
+                sqMacNSPlugin.c
+                SqueakPro5.xml
+                SqueakVMForCarbon.pbproj.sit
+                
+                Mmm if we've missed one then you'll have a compiler error for sure or the file gets 
+                dragged into the resources folder in the .app. If you look in the "Files & Build Phases"
+                you should only see the five *.icns files in the Bundle Resources section, and 
+                two files (Squeak VM.r and SqueakApp.rsrc) in the ResourceManager Resources section.
+                Extra files imply you've got too much selected.
+            	
 	E.	Click on the Resources folder in the left pane
 	F.	Select "Project -> Add Files..."
 	G.	Select all the .rsrc files in the resource/For ProjectBuilder folder and add them
