@@ -434,14 +434,8 @@ CogARMCompiler >> callerSavedRegisterMask [
 		A subroutine must preserve the contents of the registers r4-r8, r10, r11 and SP (and r9 in PCS variants that designate r9 as v6).
 	 SP = r13, so the callee-saved regs are r4-r8 & r10-r12.
 	 The caller-saved registers are those that are not callee-saved and not reserved for hardware/abi uses,
-	 i..e r0-r3, r9 & r12.  We can't name all the C argument registers.  So..."
-	^cogit
-		registerMaskFor: 0
-		"and: 1"
-		"and: 2"
-		"and: 3"
-		"and: 9"
-		and: 12
+	 i..e r0-r3, r9 & r12."
+	^cogit registerMaskFor: 0 and: 1 and: 2 and: 3 and: 9 and: 12
 ]
 
 { #category : #testing }

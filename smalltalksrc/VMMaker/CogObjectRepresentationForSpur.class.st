@@ -1203,6 +1203,7 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName instV
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [ 
 	"Store check code is duplicated to use a single trampoline"
+	<option: #IMMUTABILITY>
 	| immutableJump jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered |
 	<var: #immutableJump type: #'AbstractInstruction *'>
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
@@ -1250,7 +1251,8 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg
 
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreWithImmutabilityButNoStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [
-
+	"Gen an immutability check with no store check (e.g. assigning an immediate literal)"
+	<option: #IMMUTABILITY>
 	<var: #mutableJump type: #'AbstractInstruction *'>
 	<var: #immutabilityFailure type: #'AbstractInstruction *'>
 	| immutabilityFailure mutableJump |
@@ -1278,7 +1280,7 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityButNoStoreCheckSourceR
 CogObjectRepresentationForSpur >> genStoreWithImmutabilityCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needsStoreCheck: needsStoreCheck needRestoreRcvr: needRestoreRcvr [
 	"We know there is a frame as immutability check requires a frame"
 	"needRestoreRcvr has to be true to keep RcvrResultReg live with the receiver in it across the trampoline"
-	
+	<option: #IMMUTABILITY>
 	"Trampoline convention..."
 	self assert: destReg == ReceiverResultReg.
 	self assert: scratchReg == TempReg.
