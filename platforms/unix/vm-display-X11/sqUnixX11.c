@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-08 06:54:14 by piumarta on cartman.inria.fr
+ * Last edited: 2003-08-15 13:01:18 by piumarta on emilia.inria.fr
  *
  * Support for displays deeper than 8 bits contributed by: Kazuki YASUMATSU
  *	<kyasu@crl.fujixerox.co.jp> <Kazuki.Yasumatsu@fujixerox.co.jp>
@@ -159,27 +159,33 @@ char		*stPrimarySelection;	/* buffer holding selection */
 int		 stPrimarySelectionSize;/* size of buffer holding selection */
 int		 stOwnsSelection= 0;	/* true if we own the X selection */
 int		 stOwnsClipboard= 0;	/* true if we own the X clipboard */
+int		 usePrimaryFirst= 0;	/* true if we should look to PRIMARY before CLIPBOARD */
 Time		 stSelectionTime;	/* Time of setting the selection */
 XColor		 stColorBlack;		/* black pixel value in stColormap */
 XColor		 stColorWhite;		/* white pixel value in stColormap */
 int		 savedWindowOrigin= -1;	/* initial origin of window */
-Time		 stButtonTime;		/* time of last ButtonRelease (for SetSeln) */
-#if !defined(XA_CLIPBOARD)
-Atom		 XA_CLIPBOARD;		/* www.freedesktop.org/standards/clipboards.txt */
-#endif
-#if !defined(XA_TARGETS)
-Atom		 XA_TARGETS;
-#endif
-#if !defined(XA_UTF8_STRING)
-Atom		 XA_UTF8_STRING;
-#endif
-#if !defined(XA_COMPOUND_TEXT)
-Atom		 XA_COMPOUND_TEXT;
-#endif
-#if !defined(XA_TIMESTAMP)
-Atom		 XA_TIMESTAMP;
-#endif
-Atom		 selectionAtom;		/* used for XGetSelectionOwner() data */
+
+#define		 SELECTION_ATOM_COUNT  8
+/* http://www.freedesktop.org/standards/clipboards-spec/clipboards.txt */
+Atom		 selectionAtoms[SELECTION_ATOM_COUNT];
+char		*selectionAtomNames[SELECTION_ATOM_COUNT]= {
+         "CLIPBOARD",
+#define xaClipboard	selectionAtoms[0]
+	 "CUT_BUFFER0",
+#define xaCutBuffer0	selectionAtoms[1]
+	 "TARGETS",
+#define xaTargets	selectionAtoms[2]
+	 "MULTIPLE",
+#define xaMultiple	selectionAtoms[3]
+	 "UTF8_STRING",
+#define xaUTF8String	selectionAtoms[4]
+	 "COMPOUND_TEXT",
+#define xaCompoundText	selectionAtoms[5]
+	 "TIMESTAMP",
+#define xaTimestamp     selectionAtoms[6]
+	 "SQUEAK_SELECTION",		/* used for XGetSelectionOwner() data */
+#define selectionAtom   selectionAtoms[7]
+};
 
 #if defined(USE_XSHM)
 XShmSegmentInfo  stShmInfo;		/* shared memory descriptor */
@@ -188,6 +194,7 @@ int		 completionType;	/* the type of XShmCompletionEvent */
 int		 useXshm= 0;		/* 1 if shared memory is in use */
 int		 asyncUpdate= 0;	/* 1 for asynchronous screen updates */
 #endif
+
 int		 mapDelBs= 0;		/* 1 to map delete to backspace */
 int		 optMapIndex= 0;	/* Option key modifier map index */
 int		 cmdMapIndex= 0;	/* Command key modifier map index */
@@ -225,20 +232,17 @@ int windowState= WIN_CHANGED;
 #define SqueakWhite	0
 #define SqueakBlack	1
 
-int sleepWhenUnmapped= 0;
-int noTitle= 0;
-int fullScreen= 0;
-int iconified= 0;
-int withSpy= 0;
+int sleepWhenUnmapped=	0;
+int noTitle=		0;
+int fullScreen=		0;
+int iconified=		0;
+int withSpy=		0;
 
 
 /*xxx REMOVE REFS TO THESE IN sqUnixSound*.* */
 
 void feedback(int offset, int pixel)	{}
 int inModalLoop= 0, dpyPitch= 0, dpyPixels= 0;
-
-
-static Time lastKeystrokeTime;
 
 /* we are interested in these events...
  */
@@ -263,7 +267,12 @@ static void npHandler(int fd, void *data, int flags);
 static void handleEvent(XEvent *event);
 static int  handleEvents(void);
 static void waitForCompletions(void);
-static char *getSelectionFrom(Atom source);
+static Time getXTimestamp(void);
+static void claimSelection(void);
+
+#if defined(DEBUG_SELECTIONS)
+static void printAtomName(Atom atom);
+#endif
 
 void setWindowSize(void);
 void getMaskbit(unsigned long ul, int *nmask, int *shift);
@@ -316,11 +325,13 @@ declareCopyFunction(copyImage32To32Same);
 
 #undef declareCopyFunction
 
-static void redrawDisplay(int l, int r, int t, int b);
+static void  redrawDisplay(int l, int r, int t, int b);
 
-void    sendSelection(XSelectionRequestEvent *requestEv);
-char   *getSelection(void);
-static int  translateCode(KeySym symbolic);
+static int   sendSelection(XSelectionRequestEvent *requestEv, int isMultiple);
+static char *getSelection(void);
+static char *getSelectionFrom(Atom source);
+static int   translateCode(KeySym symbolic);
+
 #if defined(USE_XSHM)
 int    XShmGetEventBase(Display *);
 #endif
@@ -412,6 +423,32 @@ int synchronizeXDisplay(void)
   return 0;
 }
 
+static Bool timestampPredicate(Display *dpy, XEvent *evt, XPointer arg)
+{
+  return ((  (PropertyNotify   == evt->type))
+	  && (stWindow         == evt->xproperty.window)
+	  && (xaTimestamp      == evt->xproperty.atom)
+	  && (PropertyNewValue == evt->xproperty.state))
+    ? True : False;
+}
+
+/* answer the real current server time */
+
+static Time getXTimestamp(void)
+{
+  unsigned char dummy;
+  XEvent evt;
+
+  XWindowAttributes xwa;
+  XGetWindowAttributes(stDisplay, stWindow, &xwa);
+  XSelectInput(stDisplay, stWindow, xwa.your_event_mask | PropertyChangeMask);
+  XChangeProperty(stDisplay, stWindow, xaTimestamp, XA_INTEGER, 8, PropModeAppend, &dummy, 0);
+  XIfEvent(stDisplay, &evt, timestampPredicate, 0);
+  XSelectInput(stDisplay, stWindow, xwa.your_event_mask);
+  return evt.xproperty.time;
+}
+
+
 #if 0
 static char *debugVisual(int x)
 {
@@ -451,23 +488,38 @@ static int resized(void)
 
 
 #if defined(DEBUG_SELECTIONS)
-static void dumpSelectionData(const char *data, int n, int crToo)
+
+static void dumpSelectionData(const char *data, int n, int newline)
 {
-    int numberLeft= min(n, 30);
-
-    while (n > 0)
-      {
-	unsigned char c= (unsigned char)*data++;
-	n--;
-
-	if (0x20 <= c && c <= 0x7e)
-	  fputc(c, stderr);
-	else
-	  fprintf(stderr, "<%02x>", c);
-      }
-    if (crToo)
-      fputc('\n', stderr);
+  if (NULL == data)
+    fprintf(stderr, "dumpSelectionData: data is NULL\n");
+  else
+    {
+      for (n= min(30, n);  n > 0;  --n)
+	{
+	  unsigned char c= (unsigned char)*data++;
+	  fprintf(stderr, (0x20 <= c && c <= 0x7e) ? "%c" : "<%02x>", c);
+	}
+      if (newline)
+	fprintf(stderr, "\n");
+    }
 }
+
+/* this is needed because the atom names must be freed */
+static void printAtomName(Atom atom)
+{
+  if (None == atom)
+    {
+      fprintf(stderr, "None");
+    }
+  else
+    {
+      char *atomName= XGetAtomName(stDisplay, atom);
+      fprintf(stderr, "%s", atomName);
+      XFree((void *)atomName);
+    }
+}
+
 #endif
 
 
@@ -494,7 +546,8 @@ static int allocateSelectionBuffer(int count)
 }
 
 
-void sendSelection(XSelectionRequestEvent *requestEv)
+/* answers true if selection could be handled */
+static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
 {
   int xError= 0;
   XSelectionEvent notifyEv;
@@ -505,17 +558,16 @@ void sendSelection(XSelectionRequestEvent *requestEv)
   notifyEv.property= targetProperty;
 
 #if defined(DEBUG_SELECTIONS)
-  fprintf(stderr, "selection request sel %s prop %s target %s\n",
-	  requestEv->selection == None
-	    ? "None" : XGetAtomName(stDisplay, requestEv->selection),
-	  requestEv->property == None
-	    ? "None" : XGetAtomName(stDisplay, requestEv->property),
-	  requestEv->target == None
-	    ? "None" : XGetAtomName(stDisplay, requestEv->target));
+  fprintf(stderr, "%d selection request sel ", isMultiple);
+  printAtomName(requestEv->selection);
+  fprintf(stderr, " prop ");
+  printAtomName(requestEv->property);
+  fprintf(stderr, " target ");
+  printAtomName(requestEv->target);
+  fprintf(stderr, "\n");
 #endif
 
-  /* refuse the selection if the target type isn't XA_[UTF8_]STRING */
-  if ((XA_STRING == requestEv->target) || (XA_UTF8_STRING == requestEv->target))
+  if ((XA_STRING == requestEv->target) || (xaUTF8String == requestEv->target))
     {
       int   len= strlen(stPrimarySelection);
       char *buf= (char *)malloc(len * 3 + 1);
@@ -525,7 +577,7 @@ void sendSelection(XSelectionRequestEvent *requestEv)
       fprintf(stderr, "sendSelection: len=%d, sel=", len);
       dumpSelectionData(stPrimarySelection, len, 1);
 #    endif
-      if (XA_UTF8_STRING == requestEv->target)
+      if (xaUTF8String == requestEv->target)
         n= sq2uxUTF8(stPrimarySelection, len, buf, len * 3 + 1, 1);
       else
         n= sq2uxText(stPrimarySelection, len, buf, len * 3 + 1, 1);
@@ -538,27 +590,26 @@ void sendSelection(XSelectionRequestEvent *requestEv)
 		      8, PropModeReplace, buf, n);
       free(buf);
     }
-  else if (XA_TARGETS == requestEv->target)
+  else if (xaTargets == requestEv->target)
     {
       /* If we don't report COMPOUND_TEXT in this list, KMail (and maybe other
        * Qt/KDE apps) don't accept pastes from Squeak. Of course, they'll use
        * UTF8_STRING anyway... */
-      Atom targets[]= { XA_UTF8_STRING, XA_STRING, XA_COMPOUND_TEXT, XA_TIMESTAMP };
+      Atom targets[]= {
+	xaTargets,    xaMultiple, xaTimestamp,	        /* required by ICCCM */
+	xaUTF8String, XA_STRING,  xaCompoundText
+      };
 
-      xError= XChangeProperty(requestEv->display,
-                              requestEv->requestor,
-                              targetProperty,
-                              XA_ATOM,
-                              32, PropModeReplace,
-                              (unsigned char *)targets,
-                              sizeof(targets)/sizeof(Atom));
+      xError= XChangeProperty(requestEv->display, requestEv->requestor,
+                              targetProperty, XA_ATOM,
+                              32, PropModeReplace, (unsigned char *)targets, sizeof(targets) / sizeof(Atom));
     }
-  else if (XA_COMPOUND_TEXT == requestEv->target)
+  else if (xaCompoundText == requestEv->target)
     {
       /* COMPOUND_TEXT is handled here for older clients that don't handle UTF-8 */
       int	    len=    strlen(stPrimarySelection);
       char	   *buf=    (char *)malloc(len * 3 + 1);
-      char	   *list[]= { buf };
+      char	   *list[]= { buf, NULL };
       XTextProperty textProperty;
 
       /* convert our locale text to CTEXT */
@@ -569,11 +620,10 @@ void sendSelection(XSelectionRequestEvent *requestEv)
 
       if (Success == xError)
         {
-          XSetTextProperty(requestEv->display,
-                           requestEv->requestor,
-                           &textProperty,
-                           requestEv->property);
-          XFree((void *)&textProperty);
+	  xError= XChangeProperty(requestEv->display, requestEv->requestor,
+				  targetProperty, xaCompoundText,
+				  8, PropModeReplace, textProperty.value, textProperty.nitems);
+          XFree((void *)textProperty.value);
         }
       else
         {
@@ -581,18 +631,67 @@ void sendSelection(XSelectionRequestEvent *requestEv)
           notifyEv.property= None;
         }
     }
-  else if (XA_TIMESTAMP == requestEv->target)
+  else if (xaTimestamp == requestEv->target)
     {
-      xError= XChangeProperty(requestEv->display,
-                              requestEv->requestor,
-                              targetProperty,
-                              XA_INTEGER,
-                              32, PropModeReplace,
-                              (unsigned char *)&stSelectionTime, 1);
+      xError= XChangeProperty(requestEv->display, requestEv->requestor,
+                              targetProperty, XA_INTEGER,
+                              32, PropModeReplace, (unsigned char *)&stSelectionTime, 1);
+    }
+  else if (xaMultiple == requestEv->target)
+    {
+      /* The ICCCM requires MULTIPLE, but I'm not sure who sends it. */
+      if (None == requestEv->property)
+	  notifyEv.property= None;	/* illegal request */
+      else
+	{
+	  Atom* multipleAtoms= NULL;
+	  int	format;
+	  Atom  type;
+	  unsigned long numberOfItems, bytesAfter;
+
+	  xError= XGetWindowProperty(requestEv->display,
+				      requestEv->requestor,
+				      requestEv->property,
+				      0, 100, False,
+				      AnyPropertyType,  /* XA_ATOM */
+				      &type, &format,
+				      &numberOfItems,
+				      &bytesAfter,
+				      (unsigned char **)&multipleAtoms);
+	  if ((xError != Success) || (bytesAfter != 0)
+	      || (format != 32) || (type == None))
+	    {
+	      notifyEv.property= None;
+	    }
+	  else
+	    {
+	      int i;
+	      for (i= 0; i < numberOfItems; i+= 2)
+		{
+		  XSelectionRequestEvent individualRequestEv;
+
+		  memcpy(&individualRequestEv, requestEv, sizeof(XSelectionRequestEvent));
+		  individualRequestEv.target= multipleAtoms[i];
+		  individualRequestEv.property= multipleAtoms[i+1];
+		  if (individualRequestEv.target == None)
+		    {
+		      multipleAtoms[i+1]= None;
+		    }
+		  else
+		    {
+		      /* call this function recursively for each target/property pair */
+		      if (!sendSelection(&individualRequestEv, i/2 + 1))
+			{
+			  multipleAtoms[i+1]= None;
+			}
+		    }
+		}
+	    }
+	}
     }
   else
     {
-      notifyEv.property= None;
+      notifyEv.property= None;	/* couldn't handle it */
     }
 
 #if defined(DEBUG_SELECTIONS)
@@ -601,21 +700,27 @@ void sendSelection(XSelectionRequestEvent *requestEv)
     fprintf(stderr, "sendSelection: XChangeProperty err %d\n", xError);
 #endif
 
-  notifyEv.type= SelectionNotify;
-  notifyEv.display= requestEv->display;
-  notifyEv.requestor= requestEv->requestor;
-  notifyEv.selection= requestEv->selection;
-  notifyEv.target= requestEv->target;
-  /* notifyEv.property set above */
-  notifyEv.time= requestEv->time;
-  notifyEv.send_event= True;
+  /* on MULTIPLE requests, we notify only once */
+  if (!isMultiple)
+    {
+      notifyEv.type= SelectionNotify;
+      notifyEv.display= requestEv->display;
+      notifyEv.requestor= requestEv->requestor;
+      notifyEv.selection= requestEv->selection;
+      notifyEv.target= requestEv->target;
+   /* notifyEv.property set above */
+      notifyEv.time= requestEv->time;
+      notifyEv.send_event= True;
 
-  XSendEvent(requestEv->display, requestEv->requestor, False, 0, (XEvent *)&notifyEv);
-  XFlush(stDisplay);
+      XSendEvent(requestEv->display, requestEv->requestor, False, 0, (XEvent *)&notifyEv);
+      XFlush(stDisplay);
+    }
+
+  return notifyEv.property != None;
 }
 
 
-char *getSelection(void)
+static char *getSelection(void)
 {
   char *data;
 
@@ -627,10 +732,18 @@ char *getSelection(void)
       return stPrimarySelection;
     }
 
-  data= getSelectionFrom(XA_CLIPBOARD);   /* try clipboard first */
-
-  if (stEmptySelection == data)
-      data= getSelectionFrom(XA_PRIMARY);  /* then try PRIMARY */
+  if (usePrimaryFirst)
+    {
+      data= getSelectionFrom(XA_PRIMARY);     /* try PRIMARY first */
+      if (stEmptySelection == data)
+	data= getSelectionFrom(xaClipboard);  /* then try CLIPBOARD (TODO CUT_BUFFER0?) */
+    }
+  else
+    {
+      data= getSelectionFrom(xaClipboard);    /* try clipboard first */
+      if (stEmptySelection == data)
+	data= getSelectionFrom(XA_PRIMARY);   /* then try PRIMARY */
+    }
 
   return data;
 }
@@ -640,18 +753,16 @@ static char *getSelectionFrom(Atom source)
 {
   XEvent  ev;
   fd_set  fdMask;
-  char	 *data;
   int	  xreturn;
+  Time	  timestamp= getXTimestamp();
 
   XDeleteProperty(stDisplay, stWindow, selectionAtom);
 
   /* request the selection */
   if (textEncodingUTF8)
-    /*XConvertSelection(stDisplay, source, XA_UTF8_STRING, selectionAtom, stWindow, CurrentTime);*/
-    XConvertSelection(stDisplay, source, XA_UTF8_STRING, selectionAtom, stWindow, lastKeystrokeTime);
+    XConvertSelection(stDisplay, source, xaUTF8String, selectionAtom, stWindow, timestamp);
   else
-    /*XConvertSelection(stDisplay, source, XA_STRING, selectionAtom, stWindow, CurrentTime);*/
-    XConvertSelection(stDisplay, source, XA_STRING, selectionAtom, stWindow, lastKeystrokeTime);
+    XConvertSelection(stDisplay, source, XA_STRING, selectionAtom, stWindow, timestamp);
 
   /* wait for selection notification, ignoring (most) other events. */
   FD_ZERO(&fdMask);
@@ -698,7 +809,7 @@ static char *getSelectionFrom(Atom source)
 #	 if defined(DEBUG_SELECTIONS)
 	  fprintf(stderr, "getSelection: sending own selection\n");
 #	 endif
-	  sendSelection(&ev.xselectionrequest);
+	  sendSelection(&ev.xselectionrequest, 0);
 	  break;
 
 #       if defined(USE_XSHM)
@@ -723,10 +834,11 @@ static char *getSelectionFrom(Atom source)
 
   /* get the value of the selection from the containing property */
   {
-    Atom type;
-    int format;
-    unsigned long nitems, bytesAfter;
-    int bytes;
+    Atom	 type;
+    int		 format;
+    unsigned	 long nitems=0, bytesAfter= 0;
+    int		 bytes;
+    char	*data= NULL;
 
     XGetWindowProperty(stDisplay, ev.xselection.requestor, ev.xselection.property,
 		       (long)0, (long)(MAX_SELECTION_SIZE/4),
@@ -735,8 +847,9 @@ static char *getSelectionFrom(Atom source)
 		       (unsigned char **)&data);
 
 #  if defined(DEBUG_SELECTIONS)
-    fprintf(stderr, "getprop type %s format %d nitems %d bytesAfter %d\ndata=",
-	    type == None ? "None" : XGetAtomName(stDisplay, type),
+    fprintf(stderr, "getprop type ");
+    printAtomName(type);
+    fprintf(stderr, " format %d nitems %d bytesAfter %d\ndata=",
 	    format, nitems, bytesAfter);
     dumpSelectionData(data, nitems, 1);
 #  endif
@@ -748,16 +861,21 @@ static char *getSelectionFrom(Atom source)
     bytes= min(nitems, MAX_SELECTION_SIZE - 1) * (format / 8);
     if (bytes && allocateSelectionBuffer(bytes))
       {
-	if (XA_UTF8_STRING == type)
+	if (xaUTF8String == type)
 	  bytes= ux2sqUTF8(data, bytes, stPrimarySelection, bytes + 1, 1);
 	else if (XA_STRING == type)
 	  bytes= ux2sqText(data, bytes, stPrimarySelection, bytes + 1, 1);
 	else
-	  /*** ux2sqText(data, bytes, stPrimarySelection, bytes * 2, 1); ***/
 	  {
+	    char* atomName;
+
 	    bytes= 0;
-	    fprintf(stderr, "selection data is of wrong type (%s)\n",
-		    XGetAtomName(stDisplay, type));
+	    atomName= XGetAtomName(stDisplay, type);
+	    if (atomName != NULL)
+	      {
+		fprintf(stderr, "selection data is of wrong type (%s)\n", atomName);
+		XFree((void *)atomName);
+	      }
 	  }
       }
     else
@@ -770,8 +888,11 @@ static char *getSelectionFrom(Atom source)
     fprintf(stderr, "selection=");
     dumpSelectionData(stPrimarySelection, bytes, 1);
 #  endif
+    if (data != NULL)
+      {
+	XFree((void *)data);
+      }
   }
-  XFree(data);
 
   return stPrimarySelection;
 }
@@ -779,13 +900,15 @@ static char *getSelectionFrom(Atom source)
 
 /* claim ownership of the X selection, providing the given string to requestors */
 
-void claimSelection(void)
+static void claimSelection(void)
 {
-  XSetSelectionOwner(stDisplay, XA_PRIMARY, stWindow, lastKeystrokeTime);
-  XSetSelectionOwner(stDisplay, XA_CLIPBOARD, stWindow, lastKeystrokeTime);
-  stSelectionTime= lastKeystrokeTime;
+  Time selectionTime= getXTimestamp();
+
+  XSetSelectionOwner(stDisplay, XA_PRIMARY, stWindow, selectionTime);
+  XSetSelectionOwner(stDisplay, xaClipboard, stWindow, selectionTime);
+  stSelectionTime= selectionTime;
   XFlush(stDisplay);
-  stOwnsClipboard= (XGetSelectionOwner(stDisplay, XA_CLIPBOARD) == stWindow);
+  stOwnsClipboard= (XGetSelectionOwner(stDisplay, xaClipboard) == stWindow);
   stOwnsSelection= (XGetSelectionOwner(stDisplay, XA_PRIMARY) == stWindow);
 #if defined(DEBUG_SELECTIONS)
   fprintf(stderr, "claim selection stOwnsClipboard=%d, stOwnsSelection=%d\n",
@@ -1057,14 +1180,10 @@ static void handleEvent(XEvent *evt)
 	  ioBeep();
 	  break;
 	}
-      /* button up on "paste" causes a selection retrieval:
-	 record the event time in case we need it later */
-      stButtonTime= evt->xbutton.time;
       break;
 
     case KeyPress:
       noteEventState(evt->xkey);
-      lastKeystrokeTime= evt->xkey.time;
       {
 	int keyCode= x2sqKey(&evt->xkey);
 	if (keyCode >= 0)
@@ -1078,7 +1197,6 @@ static void handleEvent(XEvent *evt)
 
     case KeyRelease:
       noteEventState(evt->xkey);
-      lastKeystrokeTime= evt->xkey.time;
       {
 	int keyCode= x2sqKey(&evt->xkey);
 	if (keyCode >= 0)
@@ -1087,13 +1205,14 @@ static void handleEvent(XEvent *evt)
       break;
 
     case SelectionClear:
-      if (XA_CLIPBOARD == evt->xselectionclear.selection)
+      if (xaClipboard == evt->xselectionclear.selection)
 	{
 #	 if defined(DEBUG_SELECTIONS)
-	  fprintf(stderr, "SelectionClear(XA_CLIPBOARD)\n");
+	  fprintf(stderr, "SelectionClear(xaClipboard)\n");
 #	 endif
 	  stOwnsClipboard= 0;
 	  stOwnsSelection= 0;   /* clear both CLIPBOARD and PRIMARY */
+	  usePrimaryFirst= 0;
 	}
       else if (XA_PRIMARY == evt->xselectionclear.selection)
 	{
@@ -1105,7 +1224,18 @@ static void handleEvent(XEvent *evt)
       break;
 
     case SelectionRequest:
-      sendSelection(&evt->xselectionrequest);
+      sendSelection(&evt->xselectionrequest, 0);
+      break;
+
+    case PropertyNotify:
+      if (evt->xproperty.atom == xaCutBuffer0)
+	{
+#	 if defined(DEBUG_SELECTIONS)
+	  fprintf(stderr, "CUT_BUFFER0 changed\n");
+#	 endif
+	  stOwnsClipboard= 0;
+	  usePrimaryFirst= 1;
+	}
       break;
 
     case Expose:
@@ -1140,36 +1270,9 @@ static void handleEvent(XEvent *evt)
 	if (sleepWhenUnmapped)
 	  do
 	    {
+	      /* xxx SelectInput() ??? -- need to filter key events? */
 	      XNextEvent(stDisplay, &ev);
-	      switch (ev.type)
-		{
-		case SelectionClear:
-		  if (XA_CLIPBOARD == ev.xselectionclear.selection)
-		    {
-#		     if defined(DEBUG_SELECTIONS)
-		      fprintf(stderr, "SelectionClear(XA_CLIPBOARD)\n");
-#		     endif
-		      stOwnsClipboard= 0;
-		      stOwnsSelection= 0;
-		    }
-		  else if (XA_PRIMARY == ev.xselectionclear.selection)
-		    {
-#		     if defined(DEBUG_SELECTIONS)
-		      fprintf(stderr, "SelectionClear(XA_PRIMARY)\n");
-#		     endif
-		      stOwnsSelection= 0;
-		    }
-		  break;
-		case SelectionRequest:
-		  sendSelection(&ev.xselectionrequest);
-		  break;
-#	       if defined(USE_XSHM)
-		default:
-		  if (ev.type == completionType)
-		    --completions;
-		  break;
-#	       endif
-		}
+	      handleEvent(&ev);
 	    }
 	  while (ev.type != MapNotify);
 	getMousePosition();
@@ -1651,6 +1754,9 @@ void initWindow(char *displayName)
 			    valuemask, &attributes);
   }
 
+  /* look for property changes on root window to track selection */
+  XSelectInput(stDisplay, DefaultRootWindow(stDisplay), PropertyChangeMask);
+
   /* set the geometry hints */
   if (!browserWindow)
     {
@@ -1731,23 +1837,7 @@ void initWindow(char *displayName)
     completionType= XShmGetEventBase(stDisplay) + ShmCompletion;
 # endif
 
-  /* undefined by the X protocol */
-#if !defined(XA_CLIPBOARD)
-  XA_CLIPBOARD= XInternAtom(stDisplay, "CLIPBOARD", False);
-#endif
-#if !defined(XA_TARGETS)
-  XA_TARGETS= XInternAtom(stDisplay, "TARGETS", False);
-#endif
-#if !defined(XA_UTF8_STRING)
-  XA_UTF8_STRING= XInternAtom(stDisplay, "UTF8_STRING", False);
-#endif
-#if !defined(XA_COMPOUND_TEXT)
-  XA_COMPOUND_TEXT= XInternAtom(stDisplay, "COMPOUND_TEXT", False);
-#endif
-#if !defined(XA_TIMESTAMP)
-  XA_TIMESTAMP= XInternAtom(stDisplay, "TIMESTAMP", False);
-#endif
-  selectionAtom= XInternAtom(stDisplay, "SQUEAK_SELECTION", False);
+  XInternAtoms(stDisplay, selectionAtomNames, SELECTION_ATOM_COUNT, False, selectionAtoms);
 }
 
 
@@ -1916,7 +2006,7 @@ static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
 	   "pnmtops -scale %f %s | lpr",
 	   scale,
 	   (landscapeFlag ? "-turn" : "-noturn"));
-#else /* is your OS is broken then so might be this code */
+#else /* if your OS is broken then so might be this code */
   sprintf(printCommand,
 	  "pnmtops -scale %f %s | lpr",
 	  scale,
@@ -3688,7 +3778,6 @@ int openXDisplay(void)
 	  aioHandle(browserPipes[0], npHandler, AIO_RX);
 	}
       isConnectedToXServer= 1;
-      lastKeystrokeTime= CurrentTime;
       aioEnable(stXfd, 0, AIO_EXT);
       aioHandle(stXfd, xHandler, AIO_RX);
     }
@@ -3741,7 +3830,16 @@ int disconnectXDisplay(void)
 static void *display_ioGetDisplay(void)	{ return (void *)stDisplay; }
 static void *display_ioGetWindow(void)	{ return (void *)stWindow; }
 
-#if (USE_X11_GLX)
+#if (!USE_X11_GLX)
+
+static int  display_ioGLinitialise(void) { return 0; }
+static int  display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags) { return 0; }
+static void display_ioGLdestroyRenderer(glRenderer *r) {}
+static void display_ioGLswapBuffers(glRenderer *r) {}
+static int  display_ioGLmakeCurrentRenderer(glRenderer *r) { return 0; }
+static void display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h) {}
+
+#else
 
 # include "B3DAcceleratorPlugin.h"
 # include "sqOpenGLRenderer.h"
