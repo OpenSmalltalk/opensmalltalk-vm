@@ -50,7 +50,7 @@
     #define BREAK		goto *jumpTable[currentBytecode]
     #define PPC_REG_JUMP	
 #endif
-#define PRIM_DISPATCH	goto *jumpTable[primitiveIndex]
+#define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
 #define JUMP_TABLE \
   static void *jumpTable[256]= { \
       &&_0,   &&_1,   &&_2,   &&_3,   &&_4,   &&_5,   &&_6,   &&_7,   &&_8,   &&_9, \
