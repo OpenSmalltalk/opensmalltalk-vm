@@ -6,11 +6,12 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.h,v 1.3 2002/03/01 00:29:49 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.h,v 1.4 2002/03/15 01:58:20 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Feb 27th, 2002, JMM changed for carbon event logic.
+*  Mar 8th,  2002, JMM external prims that make dialog windows must do this on main thread
 ****************************************************************************/
  
 #if TARGET_API_MAC_CARBON
@@ -35,3 +36,4 @@ void ignoreLastEvent();
 void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, short hMax, short vMax);
 void SetupKeyboard(void);    
 pascal short SqueakYieldToAnyThread(void);
+int getUIToLock(long *);
