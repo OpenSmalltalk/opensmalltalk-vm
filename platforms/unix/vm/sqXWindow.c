@@ -737,9 +737,9 @@ static void handleOneEvent(XEvent *theEvent)
 	     we are in full screen mode */
 	  if (! fullScreen)
 	    {
-	      XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
-	      stWindowWidth= ec->width;
-	      stWindowHeight= ec->height;
+	      XResizeWindow(stDisplay, stWindow, width, height);
+	      stWindowWidth= width;
+	      stWindowHeight= height;
 	    }
 	}
 	
@@ -1907,7 +1907,11 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth,
 int ioBeep(void)
 {
 #ifndef HEADLESS
+  if(!isConnectedToXServer)
+    return 0;
+  
   XBell(stDisplay, 0);	/* ring at default volume */
+  XFlush(stDisplay);
 #endif
   return 0;
 }
