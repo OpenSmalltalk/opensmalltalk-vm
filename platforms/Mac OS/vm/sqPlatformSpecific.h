@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.13 2003/06/07 00:44:00 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.14 2004/09/03 00:17:38 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *   May 5th, 2002, JMM added define for plugin for CW
@@ -59,6 +59,7 @@
     #endif 
     #define ftell ftello
     #define fseek fseeko
+	int	 ftruncate(int, off_t);
     typedef FILE *sqImageFile;
 #else
     #if defined(__MWERKS__)
