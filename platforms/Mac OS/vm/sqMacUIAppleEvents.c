@@ -6,9 +6,10 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIAppleEvents.c,v 1.2 2003/12/02 04:52:56 johnmci Exp $
+*   RCSID:   $Id: sqMacUIAppleEvents.c,v 1.3 2004/04/23 20:46:38 johnmci Exp $
 *
 *   NOTES: 
+*  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  encoding for image name at startup time.
 */
 
 #include "sq.h"
@@ -23,6 +24,7 @@ extern squeakFileOffsetType calculateStartLocationForImage();
 
 int getFirstImageNameIfPossible(AEDesc	*fileList);
 void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude);
+UInt32 getEncoding();
 
 /*** Apple Event Handlers ***/
 static pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon);
@@ -82,7 +84,7 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
     }
     
     CopyPascalStringToC(name,cname);
-    SetShortImageNameViaString(cname,gCurrentVMEncoding);
+      SetShortImageNameViaString(cname,getEncoding());
     SetImageName( &workingDirectory);
 
     return noErr;
@@ -136,7 +138,7 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
         // Test is open change set 
         strcpy(shortImageName, "Squeak.image");
         CopyCStringToPascal(shortImageName,workingDirectory.name);
-        SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+          SetShortImageNameViaString(shortImageName,getEncoding());
         SetImageName(&workingDirectory);
         fileSpec = workingDirectory;
     } else {
@@ -150,7 +152,7 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     	    goto done;
     		
     	CopyPascalStringToC(fileSpec.name,shortImageName);
-        SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+          SetShortImageNameViaString(shortImageName,getEncoding());
         SetImageName(&fileSpec);
    }
     
@@ -275,7 +277,7 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	        goto done;
                 
             CopyPascalStringToC(fileSpec.name,shortImageName);
-            SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+            SetShortImageNameViaString(shortImageName,getEncoding());
 
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim')
             return i;
@@ -293,5 +295,13 @@ pascal OSErr HandlePrintDocEvent(const AEDescList *aevt,  AEDescList *reply, lon
 pascal OSErr HandleQuitAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon) {
 	aevt; reply; refCon;  /* reference args to avoid compiler warnings */
 	return noErr;  //Note under Carbon it sends us a Quit event, but we don't process because image might not get saved?
+}
+
+UInt32 getEncoding() {
+#if TARGET_API_MAC_CARBON
+	return CFStringGetSystemEncoding();
+#else
+	return 0;
+#endif
 }
 

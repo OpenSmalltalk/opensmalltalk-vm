@@ -5,9 +5,12 @@
  *  Created by John M McIntosh on Mon Dec 01 2003.
  *
  */
+#include "sq.h"
 
 #include "sqMacEncoding.h"
 #include "sqMacUIConstants.h" 
+#include "sqMacFileLogic.h"	
+
 
 #if TARGET_API_MAC_CARBON
     CFStringEncoding gCurrentVMEncoding=kCFStringEncodingMacRoman;
@@ -34,8 +37,14 @@ void SetVMPath(FSSpec *workingDirectory) {
     
     if (vmPathString != NULL)  
         CFRelease(vmPathString);
-    PathToDir(path,VMPATH_SIZE, workingDirectory,kCFStringEncodingUTF8);
-    vmPathString = CFStringCreateWithCString(NULL, path, kCFStringEncodingUTF8);
+    PathToDir(path,VMPATH_SIZE, workingDirectory,gCurrentVMEncoding);
+    CFStringRef strRef = CFStringCreateWithCString(NULL, path, gCurrentVMEncoding);
+	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+	vmPathString = CFStringCreateMutableCopy(NULL, 0, strRef);
+	CFRelease(strRef);
+	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+		CFStringNormalize((CFMutableStringRef)vmPathString, kCFStringNormalizationFormKC); // pre-combined
+	CFRetain(vmPathString);
 }
 
 Boolean VMPathIsEmpty() {
@@ -57,8 +66,13 @@ char *getImageName(void) {
     
 void SetImageNameViaCFString(CFStringRef string) {
     char *ignore;
-    CFRetain(string);
-    imageNameString = string;
+	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+	CFMutableStringRef mutableStr= CFStringCreateMutableCopy(NULL, 0, string);
+	CFRelease(string);
+	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+		CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
+    CFRetain(mutableStr);
+    imageNameString = mutableStr;
     ignore = getImageName();
 }
 
@@ -66,15 +80,19 @@ void SetImageNameViaString(char *string,UInt32 encoding) {
     char *ignore;
     if (imageNameString != NULL)
         CFRelease(imageNameString);
-    imageNameString = CFStringCreateWithCString(NULL, string, encoding);
-    ignore = getImageName();
+    SetImageNameViaCFString(CFStringCreateWithCString(NULL, string, encoding));
 }
 
 void SetImageName(FSSpec *workingDirectory) {
+	SetImageNameWithEncoding(workingDirectory, gCurrentVMEncoding);
+}
+
+void SetImageNameWithEncoding(FSSpec *workingDirectory,
+							  CFStringEncodings encoding) {
     char path[IMAGE_NAME_SIZE + 1];
     
-    PathToFile(path,IMAGE_NAME_SIZE, workingDirectory,kCFStringEncodingUTF8);
-    SetImageNameViaString(path,kCFStringEncodingUTF8);
+    PathToFile(path,IMAGE_NAME_SIZE, workingDirectory, encoding);
+    SetImageNameViaString(path, encoding);
 }
 
 Boolean ImageNameIsEmpty() {
@@ -174,15 +192,19 @@ Boolean ShortImageNameIsEmpty() {
 
 
 void setEncodingType (char * string) {
-    gCurrentVMEncoding = kCFStringEncodingMacRoman;
-    if (strcmp("UTF-8",string) == 0)
-        gCurrentVMEncoding = kCFStringEncodingUTF8;
-}
-
-char  *getEncodingType(UInt32 aType) {
-    if (aType == kCFStringEncodingMacRoman) 
-        return &"macintosh";
-    if (aType == kCFStringEncodingUTF8) 
-        return &"UTF-8";
-    return &"macintosh";
-}
+      gCurrentVMEncoding = kCFStringEncodingMacRoman;
+      if (strcmp("UTF-8",string) == 0)
+          gCurrentVMEncoding = kCFStringEncodingUTF8;
+      if (strcmp("ShiftJIS",string) == 0)
+          gCurrentVMEncoding = kCFStringEncodingShiftJIS;
+  }
+  
+  char  *getEncodingType(UInt32 aType) {
+      if (aType == kCFStringEncodingMacRoman) 
+          return (char *)&"macintosh";
+      if (aType == kCFStringEncodingUTF8) 
+          return (char *)&"UTF-8";
+      if (aType == kCFStringEncodingShiftJIS) 
+          return (char *)&"ShiftJIS";
+      return (char *)&"macintosh";
+  }

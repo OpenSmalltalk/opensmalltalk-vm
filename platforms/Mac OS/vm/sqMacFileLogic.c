@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.12 2003/12/02 04:52:22 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.13 2004/04/23 20:46:12 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -57,19 +57,25 @@ extern int  IsImageName(char *name);
 extern Boolean isSystem9_0_or_better(void);
 
 #if TARGET_API_MAC_CARBON
+void unicode2NativePascalString(ConstStr255Param fromString, StringPtr toString) ;
 
 OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
 {	
     CFURLRef    sillyThing;
-    CFStringRef filePath;
+    CFStringRef tmpStrRef;
+	CFMutableStringRef filePath;
     FSRef	theFSRef;
     OSErr	err;
     
-    filePath = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,pathStringLength,gCurrentVMEncoding,false);
-    if (filePath == nil)
+    tmpStrRef = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,
+										pathStringLength, gCurrentVMEncoding, true);
+    if (tmpStrRef == nil)
         return -1000;
+	filePath = CFStringCreateMutableCopy(NULL, 0, tmpStrRef);
+	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+		CFStringNormalize(filePath, kCFStringNormalizationFormD);
     sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
-    if (!CFURLGetFSRef(sillyThing,&theFSRef)) {
+    if (CFURLGetFSRef(sillyThing,&theFSRef) == false) {
         // name contains multiple aliases or does not exist, so fallback to lookupPath
         CFRelease(filePath);
         CFRelease(sillyThing);
@@ -90,7 +96,8 @@ int PathToDir(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {
 }
 
 /* Fill in the given string with the full path from a root volume to the given file. */
-
+/* From FSSpec to C-string pathName */
+/* FSSpec -> FSRef -> URL(Unix) -> HPFS+ */
 int PathToFile(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {        
         CFURLRef sillyThing;
         CFStringRef filePath;
@@ -118,8 +125,14 @@ int PathToFile(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {
         filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
         CFRelease(sillyThing);
         
-        CFStringGetCString (filePath,pathName,pathNameMax, encoding);
-        CFRelease(filePath);
+  		CFMutableStringRef mutableStr= CFStringCreateMutableCopy(NULL, 0, filePath);
+          CFRelease(filePath);
+  
+  		// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+  		if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+  			CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
+  
+          CFStringGetCString (mutableStr, pathName,pathNameMax, encoding);
         
         if (retryWithDirectory) {
             strcat(pathName,":");
@@ -142,7 +155,13 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
                     (UInt8 *)pathString,pathStringLength,gCurrentVMEncoding,false);
         if (filePath == nil)
             return -1;
-	sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+		CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, filePath);
+		// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+		if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+			CFStringNormalize(str, kCFStringNormalizationFormKC); // canonical decomposition
+
+		sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault, str, kCFURLHFSPathStyle,false);
+		CFRelease(str);
         
         if (!CFURLGetFSRef(sillyThing,&theFSRef)) {
             firstPartOfPath = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault,sillyThing);
@@ -211,6 +230,24 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
 #endif 
 }
 
+/* Some classcical Mac APIs use the encoding based on WorldScript. for example, Japanese language envrironment use
+ShiftJIS encoding. So, unicode2NativePascalString, this function converts unicode encoded pascal string to suitable
+encoding (came from CFStringGetSystemEncoding()).
+*/
+void unicode2NativePascalString(ConstStr255Param fromString, StringPtr toString) {
+	if (fromString != NULL) {
+		CFStringRef strRef = CFStringCreateWithPascalString(kCFAllocatorDefault, fromString, gCurrentVMEncoding);
+		if (strRef != NULL) {
+			CFMutableStringRef mStrRef = CFStringCreateMutableCopy(NULL, 0, strRef);
+			if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+				CFStringNormalize(mStrRef, kCFStringNormalizationFormKD);
+			CFStringGetPascalString (mStrRef, toString, 256, CFStringGetSystemEncoding());
+			CFRelease(mStrRef);
+			CFRelease(strRef);
+		}
+	}
+}
+
 /* Convert the squeak path to an OS-X path. This path because of alias resolving may point 
 to another directory tree */
 
@@ -220,7 +257,8 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
         OSErr		err;
         Boolean		isFolder=false,isAlias=false;
         CFURLRef 	sillyThing,appendedSillyThing;
-        CFStringRef 	filePath,lastPartOfPath;
+        CFStringRef 	lastPartOfPath;
+		CFMutableStringRef filePath;
         
         *dst = 0x00;
         err = quicklyMakePath((char *) src,num,dst,resolveAlias);
@@ -242,9 +280,14 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
             err = FSpMakeFSRef(&failureRetry,&theFSRef);
             if (err != noErr) 
                 return;
-            filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)src,num,gCurrentVMEncoding,false);
-            if (filePath == nil) 
+//            filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)src,num,gCurrentVMEncoding,false);
+			CFStringRef tmpStrRef = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)src,num,gCurrentVMEncoding,false);
+            if (tmpStrRef == nil) 
                 return;
+			filePath = CFStringCreateMutableCopy(NULL, 0, tmpStrRef);
+			if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+				CFStringNormalize(filePath, kCFStringNormalizationFormKD); // canonical decomposition
+
             sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
             CFRelease(filePath);
             lastPartOfPath = CFURLCopyLastPathComponent(sillyThing);
@@ -263,6 +306,7 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
             CFRelease(filePath);        
             return; 
         }
+        	
         err = FSpMakeFSRef(&convertFileNameSpec,&theFSRef);
 #if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
 		sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
@@ -741,8 +785,14 @@ static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileNam
                 *sizeOfFile =  theCatalogInfo.dataLogicalSize; 
                 
            theString = CFStringCreateWithCharacters (kCFAllocatorDefault, unicodeName.unicode, (CFIndex) unicodeName.length);
-           CFStringGetPascalString(theString,(unsigned char *) name,256, gCurrentVMEncoding);
+			CFMutableStringRef mStr= CFStringCreateMutableCopy(NULL, 0, theString);
            CFRelease(theString);
+			// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+			if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+				CFStringNormalize(mStr, kCFStringNormalizationFormKC); // canonical decomposition
+
+           CFStringGetPascalString(mStr, (unsigned char *) name,256, gCurrentVMEncoding);
+           CFRelease(mStr);
            return;
         }
    }
@@ -789,11 +839,16 @@ Boolean isVmPathVolumeHFSPlus() {
 
 OSErr	FSMakeFSSpecCompat(short vRefNum, long dirID, ConstStr255Param fileName,  FSSpec *spec) {
 	OSErr	result;
+	char pascalString[256];
 	
 	/* Let the file system create the FSSpec if it can since it does the job */
 	/* much more efficiently than I can. */
-	result = FSMakeFSSpec(vRefNum, dirID, fileName, spec);
-
+#if TARGET_API_MAC_CARBON
+	unicode2NativePascalString((unsigned char *) fileName, (unsigned char *) pascalString);	
+	result = FSMakeFSSpec(vRefNum, dirID,(unsigned char *) pascalString, spec);
+#else
+	result = FSMakeFSSpec(vRefNum, dirID,(unsigned char *) fileName, spec);
+#endif
 	/* Fix a bug in Macintosh PC Exchange's MakeFSSpec code where 0 is */
 	/* returned in the parID field when making an FSSpec to the volume's */
 	/* root directory by passing a full pathname in MakeFSSpec's */

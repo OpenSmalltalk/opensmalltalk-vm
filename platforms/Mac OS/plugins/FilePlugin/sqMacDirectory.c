@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.9 2003/12/02 04:52:02 johnmci Exp $
+*   RCSID:   $Id: sqMacDirectory.c,v 1.10 2004/04/23 20:45:30 johnmci Exp $
 *
 *   NOTES: See change log below.
 * 
@@ -34,6 +34,7 @@
 	#include <Carbon/Carbon.h>
 	#include <unistd.h>
 	#include <sys/stat.h>
+	extern CFStringEncoding gCurrentVMEncoding;
 #else
 	#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
 		#include <unistd.h>
@@ -190,6 +191,115 @@ int dir_Delimitor(void) {
 	return DELIMITOR;
 }
 
+#if TARGET_API_MAC_CARBON
+
+int dir_Lookup(char *pathString, int pathStringLength, int index,
+  /* outputs: */
+  char *name, int *nameLength, int *creationDate, int *modificationDate,
+  int *isDirectory, squeakFileOffsetType *sizeIfFile) {
+	/* Lookup the index-th entry of the directory with the given path, starting
+	   at the root of the file system. Set the name, name length, creation date,
+	   creation time, directory flag, and file size (if the entry is a file).
+	   Return:	0 	if a entry is found at the given index
+	   			1	if the directory has fewer than index entries
+	   			2	if the given path has bad syntax or does not reach a directory
+	*/
+
+	int okay;
+	HVolumeParam volumeParams;
+    FSSpec      spec;
+    long        parentDirectory;
+    OSErr       err;
+    Str255      longFileName;
+		FSVolumeInfoParam fsVolumeParam;
+		HFSUniStr255 uniStr;
+		FSVolumeInfo volumeInfo;
+		FSRef fsRef;
+    
+	/* default return values */
+	*name             = 0;
+	*nameLength       = 0;
+	*creationDate     = 0;
+	*modificationDate = 0;
+	*isDirectory      = false;
+	*sizeIfFile       = 0;
+
+	if ((pathStringLength == 0)) {
+		/* get volume info */
+		fsVolumeParam.volumeName = &uniStr;
+		fsVolumeParam.ioVRefNum = kFSInvalidVolumeRefNum;
+		fsVolumeParam.volumeIndex = index;
+		fsVolumeParam.whichInfo = NULL;
+		fsVolumeParam.volumeInfo = &volumeInfo;
+		fsVolumeParam.ref = NULL;
+		okay = PBGetVolumeInfoSync( &fsVolumeParam) == noErr;
+/*
+		FSGetVolumeInfo (kFSInvalidVolumeRefNum,
+			index,
+			NULL,
+			)
+*/
+		if (okay) {
+			CFStringRef strRef = CFStringCreateWithCharacters( kCFAllocatorDefault, uniStr.unicode, uniStr.length );
+			CFMutableStringRef mStr = CFStringCreateMutableCopy(NULL, 0, strRef);
+			// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+			if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+				CFStringNormalize(mStr, kCFStringNormalizationFormKC); // pre-combined
+			Boolean result = CFStringGetCString(mStr, name, 256, gCurrentVMEncoding); // buffer size is to see primitiveDirectoryLookup
+			CFRelease(strRef);
+			CFRelease(mStr);
+			if (result == true) {
+				// strncpy(name, &(uniStr.unicode), uniStr.length);
+				// *nameLength       = uniStr.length;
+				*nameLength       = strlen(name);
+				*creationDate     = convertToSqueakTime(volumeParams.ioVCrDate);
+				*modificationDate = convertToSqueakTime(volumeParams.ioVLsMod);
+				*isDirectory      = true;
+				*sizeIfFile       = 0;
+				return ENTRY_FOUND;
+			} else {
+				return NO_MORE_ENTRIES;
+			}
+		} else {
+			return NO_MORE_ENTRIES;
+		}
+	} else {
+		/* get file or directory info */
+		if (!equalsLastPath(pathString, pathStringLength)) {
+ 			/* lookup and cache the refNum for this path */
+			err = lookupPath(pathString, pathStringLength, &spec,false,true);
+ 			if (err == noErr) 
+				recordPath(pathString, pathStringLength, &spec);
+			else 
+				return BAD_PATH;
+		}
+	    spec = lastSpec;
+		*sizeIfFile   = 0;
+		okay = fetchFileInfo(index,&spec,(unsigned char *) name,true,
+							&parentDirectory,isDirectory,creationDate,
+							modificationDate,sizeIfFile,&longFileName);
+		if (okay == noErr) {
+			CFStringRef cfs= CFStringCreateWithPascalString(NULL, longFileName, gCurrentVMEncoding);
+			CFMutableStringRef mStr= CFStringCreateMutableCopy(NULL, 0, cfs);
+			CFRelease(cfs);
+			// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+			if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+				CFStringNormalize(mStr, kCFStringNormalizationFormKC); // pre-combined
+			CFIndex len =  CFStringGetLength(mStr);
+			CFStringGetCString(mStr, name, 256, gCurrentVMEncoding);
+			CFRelease(mStr);
+
+			*nameLength       = strlen(name);
+			*creationDate     = convertToSqueakTime(*creationDate);
+			*modificationDate = convertToSqueakTime(*modificationDate);
+			return ENTRY_FOUND;
+		} else
+			return okay == fnfErr ? NO_MORE_ENTRIES : BAD_PATH;
+	}
+}
+
+#else 
+
 int dir_Lookup(char *pathString, int pathStringLength, int index,
   /* outputs: */
   char *name, int *nameLength, int *creationDate, int *modificationDate,
@@ -257,7 +367,7 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 			return okay == fnfErr ? NO_MORE_ENTRIES : BAD_PATH;
 	}
 }
-
+#endif
 OSErr getSpecAndFInfo(char *filename, int filenameSize,FSSpec *spec,FInfo *finderInfo) {
     OSErr err;
     
