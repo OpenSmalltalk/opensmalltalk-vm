@@ -6,7 +6,7 @@
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0\fs24 \cf0 Mac VM 3.5.1 mach-o build for Carbon, and build for Classic. Support for Croquet, and support for Safari\
-June 6th, 2003 (3.5.1b2)\
+June 19th, 2003 (3.5.1b4)\
 Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
@@ -20,7 +20,15 @@ This is fixed in 3.2.7b3\
 Some issues with alias files and folder were fixed in 3.2.7b6 and 3.2.8b3\
 3.5.0b4 seems a fine VM, from what people tell me, but now we've 3.5.1...\
 \
-3.5.1b4\
+3.5.1b5 Added some more user changeable attributes.\
+OS-x Version only \
+SqueakWindowHasTitle		- (Yes/No) yes if window should get title.\
+SqueakFloatingWindowGetsFocus (Yes/No) yes if window should allow click and type if floating.\
+SqueakMaxHeapSize		- (Number) set to 512K, max size for os-x memory heap. Note changing this to 1GB may or may not cause a \
+						core dump depending on where os-x allocates the memory segment above or below the 2GB boundary. \
+\
+\
+3.5.1b4 Please note the major changes to network code in 3.5.1b2\
 a)Added options SqueakWindowType & SqueakWIndowAttributes to info.plist. The SqueakWindowType of 6 is the standard document window, a type of 8 is the floating utility window. The attributes control with window attributes and behavior according to\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
@@ -29,7 +37,14 @@ a)Added options SqueakWindowType & SqueakWIndowAttributes to info.plist. The Squ
 \cf2 \ul http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_1.html#//apple_ref/doc/c_ref/WindowClass\cf0 \ulnone \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 \
+\f0 \cf0 b) Sockets are not valid if the network is not initialized. \
+c) The os-9 vm can return the open file error in the vm attribute data 1202\
+d) MyWindowEventMouseHandler was leaking region handles.\
+e) Support for primitiveClosureValue, primitiveClosureValueWithArgs, primitiveExecuteMethod\
+f) when rootTableCount  goes > 2400 then allocationCount gets allocationsBetweenGCs + 1 \
+g) BitBlt Alpha Blending has changed\
+h) Added primitiveWrite24BmpLine\
+i) The guard if statement for primitiveSerialPortRead was flawed, noted the buffer overflow, but then proceeded, versus returning. \
 \
 3.5.1b3 \
 a) Fix, Stephane Ducasse <ducasse@iam.unibe.ch> pointed out that using a virtual desktop we had a crash in ioSetFullScreen. This \
@@ -101,11 +116,13 @@ a) recompiled os-x version, 3.2.8b8 seem to have a bad compiler option and gave 
 a) exposed 
 \f1 vmParameter
 \f0  24 & 25 which control how memory is allocated/freed \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 Smalltalk vmParameterAt: 24 put: 48*1024*1024.\
+\f1 \cf0 Smalltalk vmParameterAt: 24 put: 48*1024*1024.\
 Smalltalk vmParameterAt: 25 put: 24*1024*1024.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 b) Added argv,argc, env variables to main\
+\f0 \cf0 b) Added argv,argc, env variables to main\
 c) Fixed for Jaguar 10.2. Full screen mode cmd-tab broke menu bar hiding, this is a 10.2 bug\
 d) Added support for IP_ADD/DROPMEMBERSHIP and the ability to bind to the wild card port (0).\
 e) OpenGL changes for TEA\
