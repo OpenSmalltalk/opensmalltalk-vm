@@ -6,11 +6,12 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacPrinting.c,v 1.2 2002/02/20 21:02:38 johnmci Exp $
+*   RCSID:   $Id: sqMacPrinting.c,v 1.3 2002/07/05 06:56:51 johnmci Exp $
 *
 *   NOTES: 
 *	Take carbon sample code, and alter it a bit
 *	Feb 20th 2002, JMM - add offset logic, free printsession only if allocated (duh)
+*   Jun 27th 2002, JMM - use UILock code to lock UI to prevent os-x seg fault
 *
 *****************************************************************************/
 #include "sqVirtualMachine.h"
@@ -93,8 +94,9 @@ int ioPrintSetup(PrintingLogicPtr *token)
         return -1;	// pointless to continue if PMCreateSession fails
     
     //	Display the Page Setup dialog.
-    if (status == noErr)
+    if (status == noErr) {
         status = DoPageSetupDialog(printJob);
+    }
     return status;
 }
 
@@ -281,7 +283,24 @@ OSStatus 	DoPageSetupDialog(PrintingLogicPtr printJob)
 	//	Display the Page Setup dialog.	
 	if (status == noErr)
             {
-            status = PMSessionPageSetupDialog(printJob->printSession, printJob->pageFormat, &accepted);
+            int giLocker;
+            giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+            if (giLocker != 0) {
+                long *foo;
+                foo = malloc(sizeof(long)*6);
+                foo[0] = 3;
+                foo[1] = (long) PMSessionPageSetupDialog;
+                foo[2] =  (long)printJob->printSession;
+                foo[3] =  (long)printJob->pageFormat;
+                foo[4] =  (long)&accepted;
+                foo[5] = 0;
+                ((int (*) (void *)) giLocker)(foo);
+                status = foo[5];
+                free(foo);
+            } else
+                    status = PMSessionPageSetupDialog(printJob->printSession, printJob->pageFormat,
+                        &accepted);
+            
             if (status == noErr && !accepted)
                 status = kPMCancel;		// user clicked Cancel button
             }	
@@ -350,7 +369,24 @@ OSStatus 	DoPrintDialog(PrintingLogicPtr printJob)
 	//	Display the Print dialog.
 	if (status == noErr)
             {
-            status = PMSessionPrintDialog(printJob->printSession, printJob->printSettings, printJob->pageFormat, &accepted);
+            int giLocker;
+            giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+            if (giLocker != 0) {
+                long *foo;
+                foo = malloc(sizeof(long)*7);
+                foo[0] = 4;
+                foo[1] =  (long)PMSessionPrintDialog;
+                foo[2] =  (long)printJob->printSession;
+                foo[3] =  (long)printJob->printSettings;
+                foo[4] =  (long)printJob->pageFormat;
+                foo[5] =  (long)&accepted;
+                foo[6] = 0;
+                ((int (*) (void *)) giLocker)(foo);
+                status = foo[6];
+                free(foo);
+            } else
+                status = PMSessionPrintDialog(printJob->printSession, printJob->printSettings,
+                        printJob->pageFormat, &accepted);
             if (status == noErr && !accepted)
                 status = kPMCancel;		// user clicked Cancel button
             }
