@@ -1,4 +1,4 @@
-Updated August 6th 2002
+Updated Nov 14th 2002
 
 Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- John Maloney, May 25, 2000,
@@ -7,12 +7,13 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes Andrew C. Greenberg, Jan 1st 2002
     -- Changes Jay Hardesty, July 6, 2002
     -- Changes John Mcintosh &  Andrew C. Greenberg. Aug 6 & 7th, 2002
+    -- Changes John McIntosh Nov 14th, 2002 (some cleanup and modernization
 
 (Note to readers, it is possible a step was missed, so beware)
 
 Building a Carbon Squeak VM with ProjectBuilder:
 
-{JMM notes this is building with 10.1.5, and Squeak 3.2gamma5)}
+{JMM notes this is building with 10.2.2, and Squeak 3.4alpha (for croquet)}
 
 Overview
 
@@ -32,7 +33,11 @@ Step One: Get the Apple Developer Tools (free)
 		
 		(Note building with GCC 3.x will produce a slower VM than with GCC 2.9x (Sad but true), you can pick which compiler
 		to use, see the April 2002 or higher developer tools CD documentation)
-
+		
+		You might need to use the "sudo /usr/sbin/gcc_select 2" command to pick the GCC 2.x compiler, although project builder seems to give you a choice (2.x, 3.x) it lies...
+		do a "gcc --version" to confirm what you think you are using is what you are using.
+		
+		
 Step One (b):
 	A. Get the OpenGL sdk if you need to build with codeWarrior under system 9.x 
 		This is not needed if only building the os-x version
@@ -59,10 +64,8 @@ Step Three: Build an interpeter
 		These are required to build a VM that has globals as a structure which improves
 		performance by 10%.
 		
-		Interpreter-normalSend.1.cs     (THIS IS ALREADY IN 3.2GAMMA5 SO YOU CAN SKIP IT)
 		MoreInterpAccessors-JMM.2.cs
-		CheckInterruptOften-JMM.1.cs	(THIS IS ALREADY IN 3.2GAMMA5 SO YOU CAN SKIP IT)
-		Globalstructure-JMM.2.cs
+		Globalstructure-JMM.3.cs
 		CGeneratorEnhancements-ajh.1.cs
 		Gnuifier.3.cs
 		
