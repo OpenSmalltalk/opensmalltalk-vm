@@ -46,7 +46,7 @@ install: build
 		install -m 755 build-$(audio)/squeak $(CURDIR)/debian/squeak-vm-$(audio)/usr/bin/squeak ; \
 		\
 		install -d $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/squeak-3.2.4653 ; \
-		install -m 644 build-$(audio)/squeak.map $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/squeak-3.2.4653 ; \
+		install -m 644 build-$(audio)/squeak.map $(CURDIR)/debian/squeak-vm-$(audio)/usr/lib/squeak/3.2.4743 ; \
 		dh_installman -psqueak-vm-$(audio)  build-$(audio)/squeak.1 ; \
 	)
 
@@ -59,8 +59,6 @@ install: build
 #	dh_movefiles
 
 
-# Build architecture-independent files here.
-# Pass -i to all debhelper commands in this target to reduce clutter.
 binary-indep: build install
 	dh_testdir -i
 	dh_testroot -i
@@ -88,7 +86,7 @@ binary-indep: build install
 	dh_md5sums -i
 	dh_builddeb -i
 
-# Build architecture-dependent files here.
+
 binary-arch: build install
 	dh_testdir -a
 	dh_testroot -a
