@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.11 2003/03/25 17:42:49 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.12 2003/04/08 20:59:02 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.11 2003/03/25 17:42:49 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.12 2003/04/08 20:59:02 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -144,7 +144,7 @@ int recordVirtualKey(UINT,WPARAM,LPARAM);
 void recordMouse(void);
 void SetSystemTrayIcon(BOOL on);
 
-static sqInputEvent *nextEventPut(void);
+static sqInputEvent *sqNextEventPut(void);
 
 
 /****************************************************************************/
@@ -212,7 +212,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     /* Record mouse wheel msgs as CTRL-Up/Down */
     short zDelta = (short) HIWORD(wParam);
     if(inputSemaphoreIndex) {
-      sqKeyboardEvent *evt = (sqKeyboardEvent*) nextEventPut();
+      sqKeyboardEvent *evt = (sqKeyboardEvent*) sqNextEventPut();
       evt->type = EventTypeKeyboard;
       evt->timeStamp = lastMessage->time;
       evt->charCode = (zDelta > 0) ? 30 : 31;
@@ -784,6 +784,10 @@ void SetupWindows()
   /* drag and drop needs to be set up on per-window basis */
   SetupDragAndDrop();
 #endif
+#ifndef NO_DIRECTINPUT
+  /* direct input needs to be set up on per-window basis */
+  SetupDirectInput();
+#endif
   ioScreenSize(); /* compute new rect initially */
 }
 
@@ -905,7 +909,7 @@ int mapVirtualKey(int virtKey)
     case VK_RIGHT:  return 29;
     case VK_UP   :  return 30;
     case VK_DOWN :  return 31;
-    /* case VK_RETURN: return 13; */
+    case VK_RETURN: return 13;
     /* remap appropriately so that we get _all_ key down events */
     case 127: return VK_DELETE;
     case 5: return VK_INSERT;
@@ -925,17 +929,18 @@ int mapVirtualKey(int virtKey)
 /****************************************************************************/
 /*              Event based primitive set                                   */
 /****************************************************************************/
-#define MAX_EVENT_BUFFER 500
+#define MAX_EVENT_BUFFER 1024
 static sqInputEvent eventBuffer[MAX_EVENT_BUFFER];
 static int eventBufferGet = 0;
 static int eventBufferPut = 0;
 
-static sqInputEvent *nextEventPut(void) {
+static sqInputEvent *sqNextEventPut(void) {
   sqInputEvent *evt;
   evt = eventBuffer + eventBufferPut;
   eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
   if (eventBufferGet == eventBufferPut) {
     /* buffer overflow; drop the last event */
+    printf("WARNING: event buffer overflow\n");
     eventBufferGet = (eventBufferGet + 1) % MAX_EVENT_BUFFER;
   }
   return evt;
@@ -943,11 +948,10 @@ static sqInputEvent *nextEventPut(void) {
 
 
 int recordMouseEvent(MSG *msg) {
-  sqMouseEvent *evt;
+  static DWORD firstEventTime = 0;
+  sqMouseEvent proto, *event;
   int alt, shift, ctrl, red, blue, yellow;
   if(!msg) return 0;
-
-  evt = (sqMouseEvent*) nextEventPut();
 
   alt = GetKeyState(VK_MENU) & 0x8000;
   shift = msg->wParam & MK_SHIFT;
@@ -974,23 +978,33 @@ int recordMouseEvent(MSG *msg) {
     }
   }
   /* first the basics */
-  evt->type = EventTypeMouse;
-  evt->timeStamp = msg->time;
-  evt->x = (int)(short)LOWORD(msg->lParam);
-  evt->y = (int)(short)HIWORD(msg->lParam);
+  proto.type = EventTypeMouse;
+  proto.timeStamp = msg->time;
+  proto.x = (int)(short)LOWORD(msg->lParam);
+  proto.y = (int)(short)HIWORD(msg->lParam);
   /* then the buttons */
-  evt->buttons = 0;
-  evt->buttons |= red ? RedButtonBit : 0;
-  evt->buttons |= blue ? BlueButtonBit : 0;
-  evt->buttons |= yellow ? YellowButtonBit : 0;
+  proto.buttons = 0;
+  proto.buttons |= red ? RedButtonBit : 0;
+  proto.buttons |= blue ? BlueButtonBit : 0;
+  proto.buttons |= yellow ? YellowButtonBit : 0;
   /* then the modifiers */
-  evt->modifiers = 0;
-  evt->modifiers |= shift ? ShiftKeyBit : 0;
-  evt->modifiers |= ctrl ? CtrlKeyBit : 0;
-  evt->modifiers |= alt ? CommandKeyBit : 0;
+  proto.modifiers = 0;
+  proto.modifiers |= shift ? ShiftKeyBit : 0;
+  proto.modifiers |= ctrl ? CtrlKeyBit : 0;
+  proto.modifiers |= alt ? CommandKeyBit : 0;
   /* clean up reserved */
-  evt->reserved1 = 0;
-  evt->reserved2 = 0;
+  proto.reserved1 = 0;
+  proto.reserved2 = 0;
+#ifndef NO_DIRECTINPUT
+  /* get buffered input */
+  if(msg->message == WM_MOUSEMOVE) {
+    GetBufferedMouseTrail(firstEventTime, msg->time, &proto);
+  }
+  firstEventTime = msg->time;
+#endif
+  /* and lastly, fill in the event itself */
+  event = (sqMouseEvent*) sqNextEventPut();
+  *event = proto;
   return 1;
 }
 
@@ -999,7 +1013,7 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
   sqDragDropFilesEvent *evt;
   int alt, shift, ctrl, modifiers;
 
-  evt = (sqDragDropFilesEvent*) nextEventPut();
+  evt = (sqDragDropFilesEvent*) sqNextEventPut();
 
   alt = GetKeyState(VK_MENU) & 0x8000;
   shift = (GetKeyState(VK_SHIFT) & 0x8000);
@@ -1064,7 +1078,7 @@ int recordKeyboardEvent(MSG *msg) {
     alt = 0;
   }
   /* first the basics */
-  evt = (sqKeyboardEvent*) nextEventPut();
+  evt = (sqKeyboardEvent*) sqNextEventPut();
   evt->type = EventTypeKeyboard;
   evt->timeStamp = msg->time;
   evt->charCode = keyCode;
@@ -1081,7 +1095,7 @@ int recordKeyboardEvent(MSG *msg) {
      generate extra character events here */
   if(pressCode == EventKeyDown && virtCode != 0) {
     /* generate extra character event */
-    sqKeyboardEvent *extra = (sqKeyboardEvent*)nextEventPut();
+    sqKeyboardEvent *extra = (sqKeyboardEvent*)sqNextEventPut();
     *extra = *evt;
     extra->pressCode = EventKeyChar;
   }
@@ -1342,6 +1356,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds)
   ResetEvent(vmWakeUpEvent);
   MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE, 
 			    microSeconds / 1000, QS_ALLINPUT);
+  ioProcessEvents(); /* keep up with mouse moves etc. */
   return microSeconds;
 }
 
@@ -1385,6 +1400,11 @@ int ioProcessEvents(void)
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
+
+#ifndef NO_DIRECTINPUT
+  /* any buffered mouse input which hasn't been processed is obsolete */
+  DumpBufferedMouseTrail();
+#endif
 
   /* If we're running in a browser check if the browser's still there */
   if(fBrowserMode && browserWindow) {
