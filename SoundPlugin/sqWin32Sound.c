@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Sound.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Sound.c,v 1.5 2003/11/02 19:52:40 andreasraab Exp $
 *
 *   NOTES:   For now we're supporting both, the DirectSound and the win32
 *            based interface. In the future we'll switch to DSound exclusively.
@@ -27,7 +27,7 @@
 #ifndef NO_SOUND
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Sound.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32Sound.c,v 1.5 2003/11/02 19:52:40 andreasraab Exp $";
 #endif
 
 /***************************************************************************/
@@ -192,7 +192,7 @@ int dx_snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startInde
     dstLen /=2;
     DPRINTF(("|%d", dstLen));
     for(i=0;i<dstLen;i++) {
-      *shortDst++ = *(shortSrc++) + 500;
+      *shortDst++ = *(shortSrc++);
     }
   }
   IDirectSoundBuffer_Unlock(lpdPlayBuffer, dstPtr, dstLen, NULL, 0);

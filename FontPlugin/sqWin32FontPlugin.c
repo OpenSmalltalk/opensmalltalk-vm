@@ -335,12 +335,12 @@ int ioFontGlyphOfChar(int fontIndex, int characterIndex,
 /*****************************************************************************/
 
 /* Font name cache */
-struct sqFontDescription {
+typedef struct sqFontDescription {
   LOGFONT logFont;
   int fontType;
-};
+} sqFontDescription;
 
-static sqFontName *fontNameCache = NULL;
+static sqFontDescription *fontNameCache = NULL;
 static int numFontNames = 0;
 static int maxFontNames = 0;
 
@@ -382,7 +382,7 @@ char *ioListFont(int fontIndex) {
 	}
 	if(!fontNameCache) return NULL;
 	if(fontIndex >= numFontNames) return NULL;
-	return fontNameCache[fontIndex].font.lfFaceName;
+	return fontNameCache[fontIndex].logFont.lfFaceName;
 }
 
 /* ioListFontType:
@@ -398,7 +398,7 @@ int *ioListFontType(int fontIndex) {
   sqFontDescription *desc;
   if(fontIndex == 0 || fontIndex >= numFontNames)
     return -1;
-  desc = fontNameCache[fontIndex];
+  desc = fontNameCache + fontIndex;
   switch(desc->fontType) {
     case TRUETYPE_FONTTYPE: return 1;
     case RASTER_FONTTYPE: return 2;

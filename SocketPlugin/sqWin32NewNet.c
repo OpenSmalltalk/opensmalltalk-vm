@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.6 2003/06/21 17:06:57 andreasraab Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.7 2003/11/02 19:52:39 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,7 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.6 2003/06/21 17:06:57 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.7 2003/11/02 19:52:39 andreasraab Exp $";
 #endif
 
 #if 0
@@ -1218,22 +1218,19 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
   }
 
 /* printf("Data read (%d) WSAGetLastError (%d)\n", result, WSAGetLastError()); */
+
+  /* Guard eventual writes to socket state */
+  LOCKSOCKET(pss->mutex, INFINITE)
+
   /* Check if something went wrong */
   if(result <= 0) {
-    /* Guard eventual writes to socket state */
-    LOCKSOCKET(pss->mutex, INFINITE)
       if(result == 0) {
 	/* UDP doesn't know "other end closed" state */
 	if(pss->sockType != UDPSocketType)
 	  pss->sockState = OtherEndClosed;
       } else if(result < 0) {
 	int err = WSAGetLastError();
-	if(err == WSAEWOULDBLOCK) {
-	  /* no data available -> wake up read watcher */
-	  pss->sockState &= ~SOCK_DATA_READABLE;
-	  pss->readWatcherOp = WatchData;
-	  SetEvent(pss->hReadWatcherEvent);
-	} else {
+	if(err != WSAEWOULDBLOCK) {
 	  /* printf("ERROR: %d\n", err); */
 	  /* NOTE: We consider all other errors to be fatal, e.g.,
 	     report them as "other end closed". Looking at the
@@ -1246,8 +1243,16 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 	}
 	result = 0;
       }
-    UNLOCKSOCKET(pss->mutex);
   }
+
+  if(!socketReadable(pss->s)) {
+    /* no more data to read; wake up read watcher */
+    pss->sockState &= ~SOCK_DATA_READABLE;
+    pss->readWatcherOp = WatchData;
+    SetEvent(pss->hReadWatcherEvent);
+  }
+
+  UNLOCKSOCKET(pss->mutex);
   if(failPrim) FAIL();
   return result;
 }
@@ -1296,22 +1301,19 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
     result = send(pss->s, (void*)buf, bufSize, 0);
   }
 /* printf("Data sent (%d) WSAGetLastError (%d)\n", result, WSAGetLastError()); */
+
+  /* Guard eventual writes to socket state */
+  LOCKSOCKET(pss->mutex, INFINITE)
+
   /* Check if something went wrong */
   if(result <= 0) {
-    /* Guard eventual writes to socket state */
-    LOCKSOCKET(pss->mutex, INFINITE)
       if(result == 0) {
 	/* UDP doesn't know "other end closed" state */
 	if(pss->sockType != UDPSocketType)
 	  pss->sockState = OtherEndClosed;
       } else {
 	int err = WSAGetLastError();
-	if(err == WSAEWOULDBLOCK) {
-	  /* no data available => wake up write watcher */
-	  pss->sockState &= ~SOCK_DATA_WRITABLE;
-	  pss->writeWatcherOp = WatchData;
-	  SetEvent(pss->hWriteWatcherEvent);
-	} else {
+	if(err != WSAEWOULDBLOCK) {
 	  /* printf("ERROR: %d\n", err); */
 	  /* NOTE: We consider all other errors to be fatal, e.g.,
 	     report them as "other end closed". Looking at the
@@ -1324,8 +1326,16 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 	}
 	result = 0;
       }
-    UNLOCKSOCKET(pss->mutex);
   }
+
+  if(!socketWritable(pss->s)) {
+    /* can't write more data; wake up write watcher */
+    pss->sockState &= ~SOCK_DATA_WRITABLE;
+    pss->writeWatcherOp = WatchData;
+    SetEvent(pss->hWriteWatcherEvent);
+  }
+
+  UNLOCKSOCKET(pss->mutex);
   if(failPrim) FAIL();
   return result;
 }
