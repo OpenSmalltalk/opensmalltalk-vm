@@ -6,33 +6,33 @@
 *   AUTHOR:  Andreas Raab (ar), John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFFI.s,v 1.1 2002/02/01 07:05:03 johnmci Exp $
+*   RCSID:   $Id: sqMacFFI.s,v 1.2 2002/11/14 19:52:20 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/24/2002  JMM hacked from the original code for os-x, added save for CCR and 
 *			tweaked _4_gpregs compare
-*
+*	
+*	11/14/2002 JMM clean & fix quad word alignment issue
 *****************************************************************************/
 #import <architecture/ppc/asm_help.h>
 #import	<architecture/ppc/pseudo_inst.h>
 .text
 .globl _ffiCallAddressOf
-_ffiCallAddressOf:	/* Save link register */
-	mflr r0
-        mfcr r12
-        stw r12,4(sp)
+_ffiCallAddressOf:	
+	mflr r0		/* Save link register */
 	stw r0, 8(sp)
-        
+        mfcr r0		/* save CCR  */
+        stw r0,4(sp)
+
 	/* get stack index and preserve it for copying stuff later */
         EXTERN_TO_REG(r4, _ffiStackIndex) // lwz r4, ffiStackIndex(r2)
 
 	/* compute frame size */
 	rlwinm r5, r4, 2, 0, 29  /* ffiStackIndex words to bytes (e.g., "slwi r5, r4, 2") */
-	addi r5, r5, 24 /* linkage area */
-	neg  r5, r5     /* stack goes down */
-
-	/* adjust stack frame */
-	stwux sp, sp, r5
+	addi r5, r5, 24+15 	/* linkage area */
+        rlwinm r5,r5,0,0,27 	/* JMM round up to quad word*/
+	neg  r5, r5    		/* stack goes down */
+	stwux sp, sp, r5 	/* adjust stack frame */
 
 	/* load the stack frame area */
 	/* note: r4 == ffiStackIndex */
@@ -56,7 +56,7 @@ nextItem:
 	EXTERN_TO_REG(r3, _fpRegCount) //lwz r3, fpRegCount
 	EXTERN_TO_REG(r12, _FPRegsLocation) // lwz r12, FPRegs(r2)
 	cmpwi r3, 0     /* skip all fpregs if no FP values used */
-	blt _0_fpregs
+	beq _0_fpregs   /* was lt should be eq */ 
 	cmpwi r3, 8
 	blt _7_fpregs   /* skip last N fpregs if unused */
 _all_fpregs:
@@ -79,7 +79,7 @@ _0_fpregs:
 	/* load all the general purpose registers */
 	EXTERN_TO_REG(r3, _gpRegCount) //lwz  r3, gpRegCount
 	EXTERN_TO_REG(r12, _GPRegsLocation) // lwz  r12, GPRegs(r2)
-	cmpwi r3, 5      /* was 4 in original code but that seems to be a bug? */
+	cmpwi r3, 5     /* 5 was 4 in original code but that seems to be a bug? */
 	blt _4_gpregs    /* skip last four gpregs if unused */
 _all_gpregs:
 	lwz  r7, 16(r12)
@@ -94,21 +94,16 @@ _4_gpregs:
 _0_gpregs:
 
 	/* go calling out */
-	//mr r12, r0      /* tvector into GPR12 */
-	/* Note: The code below is nearly identical to to what's described in
-		"MacOS Runtime Architectures"
-		Chapter 2, Listing 2-2, pp. 2-11 */
- 	//lwz r0, 0(r12)  /* get entry point */
         //Note: OS-X mach-o does not use TVectors rather the addr is the entry point
-	lwz r0, 20(sp)  /* fetch addr */
-        stw r2, 20(sp)  /* save GPR2 */
-	mtctr r0        /* move entry point into count register */
-	//lwz r2, 4(r12)  /* new base pointer */
+	lwz r12, 20(sp) /* fetch addr */
+	mtctr r12       /* move entry point into count register */
 	bctrl           /* jump through count register and link */
-	lwz r2, 20(sp)  /* restore GPR2 */
+
 	lwz sp, 0(sp)   /* restore frame */
 
 	/* store the result of the call */
+        /* more intelligent logic would have a check for type versus assuming all */
+        
 	REG_TO_EXTERN(r3,_intReturnValue) // stw r3, intReturnValue(r2)
 	EXTERN_TO_REG(r12, _longReturnValueLocation) //lwz r12, longReturnValue(r2)
 	stw r3, 0(r12)
@@ -117,8 +112,8 @@ _0_gpregs:
         stfd f1, 0(r12) //stfd f1, floatReturnValue(r2)
 
 	/* and get out of here */
-	lwz r0, 8(sp)
-        lwz r12, 4(sp)
-	mtlr r0
-        mtcrf 0xff,r12                               
+        lwz r0, 4(sp) 	/*restore CCR */
+        mtcrf 0xff,r0                               
+	lwz r0, 8(sp)	/* restore ltr */
+ 	mtlr r0
 	blr
