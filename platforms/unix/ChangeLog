@@ -1,3 +1,8 @@
+2004-05-26  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c (findOption):
+	Nul-terminate the converted option name before looking it up.
+
 2004-04-17  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/vm/sqPlatformSpecific.h: Include <unistd.h>.
