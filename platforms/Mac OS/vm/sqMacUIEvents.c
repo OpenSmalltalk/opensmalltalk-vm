@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.20 2004/01/07 05:25:39 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.21 2004/02/19 04:34:50 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -22,6 +22,7 @@
 *  3.6.0b1 Aug 5th, 2003 JMM only invoke event timer loop logic if gTapPowerManager is true (OS supports!)
 *  3.6.2b3 Nov 25th, 2003 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp> supplied multiple unicode extraction
 *  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+*  3.7.1b3 Jan 29th, 2004  JMM return unicode for classic version versus virtual keyboard code 
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -473,6 +474,21 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 	return 1;
 }
 
+static int MacRomanToUnicode[256] = 
+{0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,
+ 25,26,27,28,29,30,31,32,33,34,35,36,37,38,39,40,41,42,43,44,45,46,
+ 47,48,49,50,51,52,53,54,55,56,57,58,59,60,61,62,63,64,65,66,67,68,
+ 69,70,71,72,73,74,75,76,77,78,79,80,81,82,83,84,85,86,87,88,89,90,
+ 91,92,93,94,95,96,97,98,99,100,101,102,103,104,105,106,107,108,109,
+ 110,111,112,113,114,115,116,117,118,119,120,121,122,123,124,125,126,
+ 127,196,197,199,201,209,214,220,225,224,226,228,227,229,231,233,232,
+ 234,235,237,236,238,239,241,243,242,244,246,245,250,249,251,252,8224,
+ 176,162,163,167,8226,182,223,174,169,8482,180,168,8800,198,216,8734,177,
+ 8804,8805,165,181,8706,8721,8719,960,8747,170,186,937,230,248,191,161,172,
+ 8730,402,8776,8710,171,187,8230,160,192,195,213,338,339,8211,8212,8220,8221,
+ 8216,8217,247,9674,255,376,8260,8364,8249,8250,64257,64258,8225,183,8218,8222,
+ 8240,194,202,193,203,200,205,206,207,204,211,212,63743,210,218,219,217,305,710,
+ 732,175,728,729,730,184,733,731,711};
 
 int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	int asciiChar, modifierBits;
@@ -495,7 +511,10 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	evt->timeStamp = ioMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
-	evt->charCode = (theEvent->message & keyCodeMask) >> 8;
+	// Jan 2004, changed for TWEAK instead of doing virtual keycode return  unicode
+	// Unicode generated from CFSTring
+	//evt->charCode = (theEvent->message & keyCodeMask) >> 8;
+	evt->charCode = MacRomanToUnicode[asciiChar];
 	evt->pressCode = keyType;
 	evt->modifiers = modifierBits >> 3;
 	/* clean up reserved */

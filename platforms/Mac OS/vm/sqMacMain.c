@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.19 2003/12/02 04:52:46 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.20 2004/02/19 04:34:34 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -91,7 +91,7 @@ QDGlobals 		qd;
 
 #if I_AM_CARBON_EVENT
     #include <pthread.h>
-    extern pthread_mutex_t gEventQueueLock,gEventUILock,gEventDrawLock,gSleepLock;
+    extern pthread_mutex_t gEventQueueLock,gEventUILock,gEventDrawLock,gEventNSAccept,gSleepLock;
     extern pthread_cond_t  gEventUILockCondition,gSleepLockCondition;
 
     pthread_t gSqueakPThread;
@@ -320,6 +320,7 @@ OSErr createNewThread() {
         pthread_mutex_init(&gEventQueueLock, NULL);
         pthread_mutex_init(&gEventUILock, NULL);
         pthread_mutex_init(&gEventDrawLock, NULL);
+        pthread_mutex_init(&gEventNSAccept, NULL);
         pthread_cond_init(&gEventUILockCondition,NULL);
         err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
     }
@@ -608,6 +609,7 @@ int plugInShutdown(void) {
         pthread_mutex_destroy(&gEventQueueLock);
         pthread_mutex_destroy(&gEventUILock);
         pthread_mutex_destroy(&gEventDrawLock);
+		pthread_mutex_destroy(&gEventNSAccept);
         pthread_mutex_destroy(&gSleepLock);
         pthread_cond_destroy(&gEventUILockCondition);
         pthread_cond_destroy(&gSleepLockCondition);

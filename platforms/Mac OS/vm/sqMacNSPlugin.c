@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.15 2004/01/07 05:24:10 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.16 2004/02/19 04:34:42 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -167,7 +167,7 @@ extern struct VirtualMachine *interpreterProxy;
 
 extern int thisSession;  /* from sqFilePrims.c: */
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-pthread_mutex_t  gEventDrawLock;
+pthread_mutex_t  gEventDrawLock,gEventNSAccept;
 extern pthread_mutex_t gEventQueueLock;
 extern TMTask    gTMTask;
 #endif 
@@ -586,9 +586,10 @@ int16 NPP_HandleEvent(NPP instance, void *rawEvent) {
 	int				ok;
     Boolean windowActive=true;
     GrafPtr         rememberFrontWindow=null;
-    Boolean     rememberWindowOnce=true;
+    Boolean			rememberWindowOnce=true;
     
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
+	pthread_mutex_lock(&gEventNSAccept);
     pthread_mutex_unlock(&gEventDrawLock);
 #endif
 
@@ -610,11 +611,17 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
     	if (exitRequested) {
     		exitRequested = false;
     		ExitCleanup();
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+			pthread_mutex_unlock(&gEventNSAccept);
+#endif
     		return false;
     	}
 
     	if ((thisInstance == nil) || (eventPtr == NULL)) {
     		/* no instance or no event; do nothing */
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+			pthread_mutex_unlock(&gEventNSAccept);
+#endif
     		return false;
     	}
 
@@ -690,13 +697,7 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	    			needsUpdate = true;
 	    		break;
 	    		
-				case activateEvt:
-					
-
-				break;
-
-
-	    		case nullEvent:
+	    		case nullEvent :
 					{
 	    				if(inputSemaphoreIndex && windowActive) {
 	    					eventPtr->modifiers = checkForModifierKeys();
@@ -713,32 +714,71 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	    		 		}
 					}
 	    		break;    		
+				case activateEvt:
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+				{
+				/* serious hack to show safari after hiding, 
+				issue with safari 1.1.1 not seeing activate when full screen terminates */
+				
+				ProcessSerialNumber psn = { 0, kCurrentProcess }; 
+				OSStatus err;
+				if (!IsProcessVisible(&psn)) {
+					err = ShowHideProcess (&psn,true);
+					SetFrontProcess(&psn);
+				}
+				}
+				pthread_mutex_lock(&gEventDrawLock);
+				pthread_mutex_unlock(&gEventNSAccept);
+#endif
+				return false;
+				break;
 	    	}
 		}
     	if (needsUpdate && (netscapeWindow != nil) && (memory)) {
+     		needsUpdate = false;
     		if (getFullScreenFlag()) {
-    		    BeginUpdate((WindowPtr) eventPtr->message);
+    		    //BeginUpdate((WindowPtr) eventPtr->message);
+				BeginUpdate(FrontWindow());
+				fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
+				EndUpdate(FrontWindow());
+    		    //EndUpdate((WindowPtr) eventPtr->message);
+				pthread_mutex_lock(&gEventDrawLock);
+				pthread_mutex_unlock(&gEventNSAccept);
+				return true;
      		}
+			else {
+             fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
+ 			}
+			if (!getFullScreenFlag()) {
+				ProcessSerialNumber psn = { 0, kCurrentProcess }; 
+				OSStatus err;
+				err = ShowHideProcess (&psn,true);
+				waitAFewMilliseconds();
 
-            fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
-
-    		if (getFullScreenFlag()) {
-    		    EndUpdate((WindowPtr) eventPtr->message);
-   			}
-    		needsUpdate = false;
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+				pthread_mutex_lock(&gEventDrawLock);
+				pthread_mutex_unlock(&gEventNSAccept);
+#endif
+				return false;
+			}
     	}
 		
 		if(postMessageHook) postMessageHook(eventPtr);
     	
-    	if (ignoreFirstEvent  &&  getFullScreenFlag()) {
+    	/* JMM HUH if (ignoreFirstEvent  &&  getFullScreenFlag()) {
     	    ignoreFirstEvent = false;
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
             pthread_mutex_lock(&gEventDrawLock);
+			pthread_mutex_unlock(&gEventNSAccept);
 #endif
-    	    return true;
-    	}
-    	if (getFullScreenFlag()) {
+    	    return false;
+    	} */
+	if (getFullScreenFlag()) {
+            pthread_mutex_lock(&gEventDrawLock);
+			pthread_mutex_unlock(&gEventNSAccept);
      	    ok = WaitNextEvent(everyEvent, &theEvent,1,null);
+            pthread_mutex_unlock(&gEventDrawLock);
+			pthread_mutex_lock(&gEventNSAccept);
             eventPtr = &theEvent;
     		SqueakYieldToAnyThread();
     	}
@@ -747,6 +787,7 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
         
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     pthread_mutex_lock(&gEventDrawLock);
+	pthread_mutex_unlock(&gEventNSAccept);
 #endif
 	return true;
 }
@@ -1182,6 +1223,7 @@ int ioSetFullScreen(int fullScreen) {
 #else
                 dominantGDevice = getDominateDevice(stWindow,&windRect);
 #endif
+		setFullScreenFlag(true);  //JMM Moved before to test
 		BeginFullScreen	(&gRestorableStateForScreen,
 								dominantGDevice,
 								 &desiredWidth,
@@ -1189,7 +1231,6 @@ int ioSetFullScreen(int fullScreen) {
 								 &gAFullscreenWindow,
 								 nil,
 								 fullScreenAllowEvents);
-		setFullScreenFlag(true);
 		stWindow = gAFullscreenWindow;
 		gFullScreenNPPort.port = GetWindowPort(gAFullscreenWindow);
 		gFullScreenNPPort.portx = 0;
@@ -1216,6 +1257,9 @@ int ioSetFullScreen(int fullScreen) {
 
 int  ioSetFullScreenRestore()
 {
+	ProcessSerialNumber psn = { 0, kCurrentProcess }; 
+	OSErr   err;
+	
 	if (gRestorableStateForScreen != nil) {
 		EndFullScreen(gRestorableStateForScreen,nil);
 	    if (gAFullscreenWindow == nil) 
@@ -1223,6 +1267,9 @@ int  ioSetFullScreenRestore()
 	    gRestorableStateForScreen = nil;
 	    netscapeWindow = oldNetscapeWindow;
 	    stWindow = oldStWindow;
+		
+		err = ShowHideProcess (&psn,false);
+		waitAFewMilliseconds();
 	}
 }
 
@@ -1869,4 +1916,91 @@ void waitAFewMilliseconds()
     err = pthread_cond_timedwait_relative_np(&sleepLockCondition,&sleepLock,&tspec);	
     err = pthread_mutex_unlock(&sleepLock); 
 }
+
+/* LowRunAppleScript compiles and runs an AppleScript
+    provided as text in the buffer pointed to by text.  textLength
+    bytes will be compiled from this buffer and run as an AppleScript
+    using all of the default environment and execution settings.  If
+    resultData is not NULL, then the result returned by the execution
+    command will be returned as typeChar in this descriptor record
+    (or typeNull if there is no result information).  If the function
+    returns errOSAScriptError, then resultData will be set to a
+    descriptive error message describing the error (if one is
+    available).  */
+static OSStatus LowRunAppleScript(const void* text, long textLength,
+                                    AEDesc *resultData) {
+    ComponentInstance theComponent;
+    AEDesc scriptTextDesc;
+    OSStatus err;
+    OSAID scriptID, resultID;
+
+        /* set up locals to a known state */
+    theComponent = NULL;
+    AECreateDesc(typeNull, NULL, 0, &scriptTextDesc);
+    scriptID = kOSANullScript;
+    resultID = kOSANullScript;
+
+        /* open the scripting component */
+    theComponent = OpenDefaultComponent(kOSAComponentType,
+                    typeAppleScript);
+    if (theComponent == NULL) { err = paramErr; goto bail; }
+
+        /* put the script text into an aedesc */
+    err = AECreateDesc(typeChar, text, textLength, &scriptTextDesc);
+    if (err != noErr) goto bail;
+
+        /* compile the script */
+    err = OSACompile(theComponent, &scriptTextDesc,
+                    kOSAModeNull, &scriptID);
+    if (err != noErr) goto bail;
+
+        /* run the script */
+    err = OSAExecute(theComponent, scriptID, kOSANullScript,
+                    kOSAModeNull, &resultID);
+
+        /* collect the results - if any */
+    if (resultData != NULL) {
+        AECreateDesc(typeNull, NULL, 0, resultData);
+        if (err == errOSAScriptError) {
+            OSAScriptError(theComponent, kOSAErrorMessage,
+                        typeChar, resultData);
+        } else if (err == noErr && resultID != kOSANullScript) {
+            OSADisplay(theComponent, resultID, typeChar,
+                        kOSAModeNull, resultData);
+        }
+    }
+bail:
+    AEDisposeDesc(&scriptTextDesc);
+    if (scriptID != kOSANullScript) OSADispose(theComponent, scriptID);
+    if (resultID != kOSANullScript) OSADispose(theComponent, resultID);
+    if (theComponent != NULL) CloseComponent(theComponent);
+    return err;
+}
+
+
+    /* SimpleRunAppleScript compiles and runs the AppleScript in
+    the c-style string provided as a parameter.  The result returned
+    indicates the success of the operation. */
+static OSStatus SimpleRunAppleScript(const char* theScript) {
+    return LowRunAppleScript(theScript, strlen(theScript), NULL);
+}
+
+static pokeAtSafari(void) {
+   SimpleRunAppleScript(
+       "tell application \"Finder\"\n"
+       "  activate\n"
+       "  select folder \"Documents\" of startup disk\n"
+       "  open selection\n"
+       "end tell");
+}
+
+/* example:
+   SimpleRunAppleScript(
+       "tell application \"Finder\"\n"
+       "  activate\n"
+       "  select folder \"Documents\" of startup disk\n"
+       "  open selection\n"
+       "end tell");
+   */
+
 #endif
