@@ -40,7 +40,7 @@ i) Change iorelinquishPrcessorForMicroseconds to sleep the quatum between now an
    check for interrupts if wakeup time is now or in the past. This improves delay accuracy. For OS-x this was a big deal,\
    for os-9 it improves things by 1 or 2ms. Also in  os-x we sleep more when idle so CPU usage goes down.\
 j) On OS-9 umap AND free the VM backing store. Just doing the free doesn't work and you lose 128Mb of disk space until you reboot\
-\
+k) 3.2.6b7 for post event processing ignore mouse move/drag/or scroll wheel events. These are ignored by the open/gl plugin and only suck a major amount of CPU time to process in the post event processing logic. \
 \
 Mac VM 3.2.5 mach-o build for Carbon, and build for Classic.\
 March 4th, 2002\
