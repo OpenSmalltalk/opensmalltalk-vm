@@ -533,7 +533,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	Str255 deviceName = "\p";
 	short automaticGainControlArg;
 	Fixed inputGainArg;
-	long  compressionTypeArg,i;
+	long  compressionTypeArg;
 	short continuousArg;
 	short sampleSizeArg;
 	short channelCountArg;
