@@ -2,7 +2,7 @@
  * 
  * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
  * 
- * Last edited: 2005-03-09 02:11:06 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-03-19 20:47:40 by piumarta on squeak.hpl.hp.com
  * 
  * Note: According to Ian Piumarta, the Unix VM is inherently insecure since
  *       pluggable primitives can access all of libc! It would need 
@@ -32,7 +32,7 @@ static char* fromSqueak(char* string, int len)
 /* file security ***********************************************************/
 
 
-static int allowFileAccess= 1;  /* full access to files */
+static sqInt allowFileAccess= 1;  /* full access to files */
 
 
 static int isAccessiblePathName(char *pathName)
@@ -63,21 +63,21 @@ static int isAccessibleFileName(char *fileName)
 /* directory access */
 
 
-int ioCanCreatePathOfSize(char* pathString, int pathStringLength)
+sqInt ioCanCreatePathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 
-int ioCanListPathOfSize(char* pathString, int pathStringLength)
+sqInt ioCanListPathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 
-int ioCanDeletePathOfSize(char* pathString, int pathStringLength)
+sqInt ioCanDeletePathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
@@ -87,39 +87,39 @@ int ioCanDeletePathOfSize(char* pathString, int pathStringLength)
 /* file access */
 
 
-int ioCanOpenFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag)
+sqInt ioCanOpenFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag)
 {
   if (allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
 
-int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag)
+sqInt ioCanOpenAsyncFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag)
 {
   return ioCanOpenFileOfSizeWritable(pathString, pathStringLength, writeFlag);
 }
 
 
-int ioCanDeleteFileOfSize(char* pathString, int pathStringLength)
+sqInt ioCanDeleteFileOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
-int ioCanRenameFileOfSize(char* pathString, int pathStringLength)
+sqInt ioCanRenameFileOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
 
-int ioCanGetFileTypeOfSize(char* pathString, int pathStringLength)
+sqInt ioCanGetFileTypeOfSize(char* pathString, sqInt pathStringLength)
 {
   return 1; /* we don't have file types */
 }
 
 
-int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength)
+sqInt ioCanSetFileTypeOfSize(char* pathString, sqInt pathStringLength)
 {
   return 1; /* we don't have file types */
 }
@@ -128,14 +128,14 @@ int ioCanSetFileTypeOfSize(char* pathString, int pathStringLength)
 /* disabling/querying */
 
 
-int ioDisableFileAccess(void)
+sqInt ioDisableFileAccess(void)
 {
   allowFileAccess= 0;
   return 1;
 }
 
 
-int ioHasFileAccess(void)
+sqInt ioHasFileAccess(void)
 {
   return allowFileAccess;
 }
@@ -144,20 +144,20 @@ int ioHasFileAccess(void)
 /* image security **********************************************************/
 
 
-static int allowImageWrite= 1;  /* allow writing the image */
+static sqInt allowImageWrite= 1;  /* allow writing the image */
 
 
-int ioCanRenameImage(void)
+sqInt ioCanRenameImage(void)
 {
   return allowImageWrite; /* only when we're allowed to save the image */
 }
 
-int ioCanWriteImage(void)
+sqInt ioCanWriteImage(void)
 {
   return allowImageWrite;
 }
 
-int ioDisableImageWrite(void)
+sqInt ioDisableImageWrite(void)
 {
   allowImageWrite= 0;
   return 1;
@@ -167,35 +167,35 @@ int ioDisableImageWrite(void)
 /* socket security - for now it's all or nothing ***************************/
 
 
-static int allowSocketAccess= 1; /* allow access to sockets */
+static sqInt allowSocketAccess= 1; /* allow access to sockets */
 
 
-int ioCanCreateSocketOfType(int netType, int socketType)
+sqInt ioCanCreateSocketOfType(sqInt netType, sqInt socketType)
 {
   return allowSocketAccess;
 }
 
 
-int ioCanConnectToPort(int netAddr, int port)
+sqInt ioCanConnectToPort(sqInt netAddr, sqInt port)
 {
   return allowSocketAccess;
 }
 
 
-int ioCanListenOnPort(int s, int port)
+sqInt ioCanListenOnPort(sqInt s, sqInt port)
 {
   return allowSocketAccess;
 }
 
 
-int ioDisableSocketAccess()
+sqInt ioDisableSocketAccess()
 {
   allowSocketAccess= 0;
   return 1;
 }
 
 
-int ioHasSocketAccess()
+sqInt ioHasSocketAccess()
 {
   return allowSocketAccess;
 }
@@ -219,7 +219,7 @@ char *ioGetUntrustedUserDirectory(void)
 
 
 /* note: following is called from VM directly, not from plugin */
-int ioInitSecurity(void)
+sqInt ioInitSecurity(void)
 {
   int imagePathLen= strrchr(imageName, '/') - imageName;
   char *squeakUserDirectory= 0;

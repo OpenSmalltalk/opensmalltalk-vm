@@ -1,8 +1,8 @@
 /* sqUnixQuartz.m -- display via native windows on Mac OS X	-*- ObjC -*-
  * 
- * Author: Ian Piumarta <ian.piumarta@inria.fr>
+ * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2005-03-09 03:09:23 by piumarta on emilia.local
+ * Last edited: 2005-03-17 21:29:16 by piumarta on squeak.hpl.hp.com
  */
 
 
@@ -347,8 +347,8 @@ static void doUnlock(pthread_mutex_t *mx)
 
 //xxx FIXME: this is currently monochrome
 
-static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
-			       double hScale, double vScale, int landscapeFlag)
+static sqInt display_ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth,
+				 double hScale, double vScale, sqInt landscapeFlag)
 {
   //xxx hScale and vScale are ppi.  is there a way to use this
   // meaningfully with PrintInfo or NSPrinter?
@@ -359,7 +359,7 @@ static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
 
   dprintf(("ioFormPrint %f %f\n", hScale, vScale));
   {
-    unsigned char    *planes[1]= { (char *)bitsAddr };
+    unsigned char    *planes[1]= { pointerForOop(bitsAddr) };
     NSBitmapImageRep *bitmap= 	 0;
     NSImage	     *image=  	 0;
     NSImageView	     *view=   	 0;
@@ -397,14 +397,14 @@ static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
 }
 
 
-static int display_ioBeep(void)
+static sqInt display_ioBeep(void)
 {
   NSBeep();
   return 0;
 }
 
 
-static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
+static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
   aioPoll(microSeconds);
   return 0;
@@ -636,20 +636,20 @@ static void noteDragEvent(int dragType, int numFiles)
 }
 
 
-static int display_ioProcessEvents(void)
+static sqInt display_ioProcessEvents(void)
 {
   return aioPoll(0);
 }
 
 
-static int display_ioScreenDepth(void)
+static sqInt display_ioScreenDepth(void)
 {
   return headless ? 1 : dpyDepth;
 }
 
 static int displayChanged= 0;
 
-static int display_ioScreenSize(void)
+static sqInt display_ioScreenSize(void)
 {
   int size;
   if (headless)
@@ -667,8 +667,7 @@ static int display_ioScreenSize(void)
 }
 
 
-static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
-				       int offsetX, int offsetY)
+static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
   if (headless)
     return 0;
@@ -700,10 +699,10 @@ static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
 
 	  for (i= 0; i < 16; ++i)
 	    {
-	      unsigned int word= ((unsigned int *)cursorBitsIndex)[i];
+	      unsigned int word= ((unsigned int *)pointerForOop(cursorBitsIndex))[i];
 	      data[i*2 + 0]= (word >> 24) & 0xFF;
 	      data[i*2 + 1]= (word >> 16) & 0xFF;
-	      word= ((unsigned int *)cursorMaskIndex)[i];
+	      word= ((unsigned int *)pointerForOop(cursorMaskIndex))[i];
 	      mask[i*2 + 0]= (word >> 24) & 0xFF;
 	      mask[i*2 + 1]= (word >> 16) & 0xFF;
 	    }
@@ -723,14 +722,14 @@ static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
 }
 
 #if 0
-static int display_ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY)
+static sqInt display_ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
   return ioSetCursorWithMask(cursorBitsIndex, cursorBitsIndex, offsetX, offsetY);
 }
 #endif
 
 
-static int display_ioForceDisplayUpdate(void)
+static sqInt display_ioForceDisplayUpdate(void)
 {
   return 0;
 }
@@ -783,9 +782,9 @@ static char *updatePix(void)
       NSRect winRect= [win frame];
       winRect.origin= NSMakePoint(0, 0);	// window coordinates
       topRect= [NSWindow contentRectForFrameRect: winRect styleMask: styleMask];
-      dprintf(("updatePix w=%d h=%d\n", (int)NSWidth(topRect), (int)NSHeight(topRect)));
       w= NSWidth(topRect);
       h= NSHeight(topRect);
+      dprintf(("updatePix w=%d h=%d\n", w, h));
       setSavedWindowSize((w << 16) | h);			// assume this is atomic
       if (fullscreen)
 	{
@@ -807,7 +806,7 @@ static char *updatePix(void)
 	pixDepth= GetPixDepth(pix);
 	pixPitch= GetPixRowBytes(pix);
 	assert(pixPitch);
-	assert(pixPitch >= w * pixDepth);
+	assert(pixPitch >= w * (pixDepth / 8));
 	pixBase= ((char *)GetPixBaseAddr(pix) + ((int)NSHeight(titleRect) * pixPitch));
 	assert(pixBase);
       }
@@ -827,8 +826,8 @@ static char *updatePix(void)
 
 #define bytesPerLine(width, depth)	((((width)*(depth) + 31) >> 5) << 2)
 
-static int display_ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
-				 int affectedL, int affectedR, int affectedT, int affectedB)
+static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
+				   sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 {
   int affectedW, affectedH;
 
@@ -838,9 +837,15 @@ static int display_ioShowDisplay(int dispBitsIndex, int width, int height, int d
       || (displayChanged)
       || (![view lockFocusIfCanDraw]))
     {
-      dprintf(("ioShowDisplay squashed\n"));
+      dprintf(("ioShowDisplay squashed: dpy %dx%dx%d pix %dx%dx%d\n",
+	       (int)width, (int)height, (int)depth,
+	       (int)pixWidth, (int)pixHeight, (int)pixDepth));
       return 0;
     }
+
+  dprintf(("ioShowDisplay %p %ldx%ldx%ld %ld,%ld-%ld,%ld\n",
+	   (void *)dispBitsIndex, width, height, depth,
+	   affectedL, affectedR, affectedT, affectedB));
 
   lock(display);
   affectedR= min(affectedR, min(width,  pixWidth ));
@@ -858,7 +863,7 @@ static int display_ioShowDisplay(int dispBitsIndex, int width, int height, int d
       // used by the other types of Unix display)
       {
 	int   pitch= bytesPerLine(width, depth);
-	char *in=    (char *)dispBitsIndex + affectedL * opp + affectedT * pitch;
+	char *in=    pointerForOop(dispBitsIndex) + affectedL * opp + affectedT * pitch;
 	int   lines= affectedH;
 	int   bytes= affectedW * opp;
 
@@ -912,12 +917,12 @@ static void display_ioFlushDisplay(void)
 
 #endif
 
-static int display_ioHasDisplayDepth(int i)
+static sqInt display_ioHasDisplayDepth(sqInt i)
 {
   return i == (headless ? 1 : dpyDepth);
 }
 
-static int display_ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
+static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
   if (headless)
     return 0;
@@ -945,12 +950,12 @@ static void *display_ioGetWindow(void)
   return 0;
 }
 
-static int display_clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
+static sqInt display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   NSAutoreleasePool *pool=   [[NSAutoreleasePool alloc] init];
   NSPasteboard      *pboard= [NSPasteboard generalPasteboard];
   char		    *buf= malloc(count * 2);
-  int		     len= sq2uxText((char *)byteArrayIndex + startIndex, count, buf, count * 2, 1);
+  int		     len= sq2uxText(pointerForOop(byteArrayIndex) + startIndex, count, buf, count * 2, 1);
   NSString	    *string= [NSString stringWithCString: buf length: len];
   [pboard declareTypes: [NSArray arrayWithObject: NSStringPboardType] owner: nil];
   [pboard setString: string forType: NSStringPboardType];
@@ -960,7 +965,7 @@ static int display_clipboardWriteFromAt(int count, int byteArrayIndex, int start
 }
 
 
-static int display_clipboardSize(void)
+static sqInt display_clipboardSize(void)
 {
   NSAutoreleasePool *pool=   [[NSAutoreleasePool alloc] init];
   NSPasteboard      *pboard= [NSPasteboard generalPasteboard];
@@ -992,11 +997,11 @@ static int display_clipboardSize(void)
   return clipSize;
 }
 
-static int display_clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
+static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   if (clipboard)
     {
-      memcpy((char *)byteArrayIndex + startIndex, clipboard, count);
+      memcpy(pointerForOop(byteArrayIndex) + startIndex, clipboard, count);
       return count;
     }
   return 0;
@@ -1258,8 +1263,16 @@ static void setUpWindow(int fs)
       else
 	{
 	  int winSize= getSavedWindowSize();
-	  w= winSize >> 16;
-	  h= winSize & 0xffff;
+	  if (winSize)
+	    {
+	      w= winSize >> 16;
+	      h= winSize & 0xffff;
+	    }
+	  else
+	    {
+	      w= 640;
+	      h= 480;
+	    }
 	}
       dprintf(("initial winSize %d %d\n", w, h));
       styleMask= (fs
@@ -1277,6 +1290,7 @@ static void setUpWindow(int fs)
       contentRect= [[win contentView] frame];
       w= NSWidth(contentRect);
       h= NSHeight(contentRect);
+      dprintf(("alloc winSize %d %d\n", w, h));
       setSavedWindowSize((w << 16) | h);
 
       view= [[SqueakView alloc] initWithFrame: contentRect];
@@ -1440,9 +1454,9 @@ static void fadeIn(float delta)
 
 #if 1
 
-static int display_ioSetFullScreen(int flag)
+static sqInt display_ioSetFullScreen(sqInt flag)
 {
-  static int originalWindowSize= 0;
+  static sqInt originalWindowSize= 0;
   SqueakWindow *old;
 
   dprintf(("ioSetFullScreen(%d)\n", flag));
@@ -1464,9 +1478,9 @@ static int display_ioSetFullScreen(int flag)
 
 #else
 
-static int display_ioSetFullScreen(int flag)
+static sqInt display_ioSetFullScreen(sqInt flag)
 {
-  static int originalWindowSize= (800 << 16) | 600;
+  static sqInt originalWindowSize= (800 << 16) | 600;
 
   dprintf(("ioSetFullScreen(%d)\n", flag));
 
@@ -2584,13 +2598,13 @@ static int display_winImageFind(char *buf, int len)
 }
 
 
-static int display_primitivePluginBrowserReady()	{ return primitiveFail(); }
-static int display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
-static int display_primitivePluginRequestURL()		{ return primitiveFail(); }
-static int display_primitivePluginPostURL()		{ return primitiveFail(); }
-static int display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
-static int display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
-static int display_primitivePluginRequestState()	{ return primitiveFail(); }
+static sqInt display_primitivePluginBrowserReady(void)		{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURLStream(void)	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURL(void)		{ return primitiveFail(); }
+static sqInt display_primitivePluginPostURL(void)		{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestFileHandle(void)	{ return primitiveFail(); }
+static sqInt display_primitivePluginDestroyRequest(void)	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestState(void)		{ return primitiveFail(); }
 
 
 /// 
@@ -2609,7 +2623,7 @@ static int display_primitivePluginRequestState()	{ return primitiveFail(); }
 
 static glRenderer *renderers[MAX_RENDERER];
 
-static int display_ioGLinitialise(void)
+static sqInt display_ioGLinitialise(void)
 {
   int i;
   for (i= 0;  i < MAX_RENDERER;  ++i)
@@ -2682,7 +2696,7 @@ static void updateRenderers(void)
 #endif
 
 
-static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags)
+static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags)
 {
   long swapInterval;
   NSOpenGLView *drawable;
@@ -2733,7 +2747,7 @@ static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h,
 }
 
 
-static int display_ioGLmakeCurrentRenderer(glRenderer *r)
+static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r)
 {
   if (r)
     {
@@ -2764,7 +2778,7 @@ static void display_ioGLswapBuffers(glRenderer *r)
 }
 
 
-static void display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h)
+static void display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h)
 {
   NSRect frame= NSMakeRect(x, y, w, h);
   fprintf(stderr, "ioGLsetBufferRect(%p, %d, %d, %d, %d)\n", r->context, x, y, w, h);

@@ -1,6 +1,6 @@
 /* sqUnixMain.c -- support for Unix.
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -34,12 +34,13 @@
  *   directory `platforms/unix/doc' before proceeding with any such use.
  */
 
-/* Author: Ian Piumarta <ian.piumarta@inria.fr>
+/* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2005-03-15 19:39:53 by piumarta on margaux.hpl.hp.com
+ * Last edited: 2005-03-17 21:21:56 by piumarta on squeak.hpl.hp.com
  */
 
 #include "sq.h"
+#include "sqMemoryAccess.h"
 #include "aio.h"
 #include "sqUnixCharConv.h"
 #include "debug.h"
@@ -160,7 +161,7 @@ static void initTimers(void)
 #      else
 	sa.sa_flags= 0;	/* assume we already have BSD behaviour */
 #      endif
-#      ifdef __linux__
+#      if defined(__linux__) && !defined(__ia64)
 	sa.sa_restorer= 0;
 #      endif
 	sigaction(SIGALRM, &sa, 0);
@@ -175,14 +176,14 @@ static void initTimers(void)
     }
 }
 
-int ioLowResMSecs(void)
+sqInt ioLowResMSecs(void)
 {
   return (useItimer)
     ? lowResMSecs
     : ioMSecs();
 }
 
-int ioMSecs(void)
+sqInt ioMSecs(void)
 {
   struct timeval now;
   gettimeofday(&now, 0);
@@ -195,7 +196,7 @@ int ioMSecs(void)
   return lowResMSecs= (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-int ioMicroMSecs(void)
+sqInt ioMicroMSecs(void)
 {
   /* return the highest available resolution of the millisecond clock */
   return ioMSecs();	/* this already to the nearest millisecond */
@@ -218,7 +219,7 @@ time_t convertToSqueakTime(time_t unixTime)
 }
 
 /* returns the local wall clock time */
-int ioSeconds(void)
+sqInt ioSeconds(void)
 {
   return convertToSqueakTime(time(0));
 }
@@ -284,14 +285,14 @@ static void recordFullPathForImageName(const char *localImageName)
 
 /* vm access */
 
-int imageNameSize(void)
+sqInt imageNameSize(void)
 {
   return strlen(imageName);
 }
 
-int imageNameGetLength(int sqImageNameIndex, int length)
+sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length)
 {
-  char *sqImageName= (char *)sqImageNameIndex;
+  char *sqImageName= pointerForOop(sqImageNameIndex);
   int count, i;
 
   count= strlen(imageName);
@@ -305,9 +306,9 @@ int imageNameGetLength(int sqImageNameIndex, int length)
 }
 
 
-int imageNamePutLength(int sqImageNameIndex, int length)
+sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 {
-  char *sqImageName= (char *)sqImageNameIndex;
+  char *sqImageName= pointerForOop(sqImageNameIndex);
   int count, i;
 
   count= (IMAGE_NAME_SIZE < length) ? IMAGE_NAME_SIZE : length;
@@ -323,7 +324,7 @@ int imageNamePutLength(int sqImageNameIndex, int length)
 }
 
 
-/* Why on Earth VMM couldn't use imageNameGetLength() instead is a total mystery. */
+/* why on earth tpr couldn't use imageName[Get]Length() instead is a total mystery */
 
 char *getImageName(void)
 {
@@ -334,14 +335,14 @@ char *getImageName(void)
 /*** VM Home Directory Path ***/
 
 
-int vmPathSize(void)
+sqInt vmPathSize(void)
 {
   return strlen(vmPath);
 }
 
-int vmPathGetLength(int sqVMPathIndex, int length)
+sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length)
 {
-  char *stVMPath= (char *)sqVMPathIndex;
+  char *stVMPath= pointerForOop(sqVMPathIndex);
   int count, i;
 
   count= strlen(vmPath);
@@ -358,16 +359,16 @@ int vmPathGetLength(int sqVMPathIndex, int length)
 /*** Profiling ***/
 
 
-int clearProfile(void) { return 0; }
-int dumpProfile(void) { return 0; }
-int startProfiling(void) { return 0; }
-int stopProfiling(void) { return 0; }
+sqInt clearProfile(void) { return 0; }
+sqInt dumpProfile(void) { return 0; }
+sqInt startProfiling(void) { return 0; }
+sqInt stopProfiling(void) { return 0; }
 
 
 /*** power management ***/
 
 
-int ioDisablePowerManager(int disableIfNonZero)
+sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 {
   return true;
 }
@@ -386,7 +387,7 @@ int ioDisablePowerManager(int disableIfNonZero)
 # endif
 #endif
 
-static char *getAttribute(int id)
+static char *getAttribute(sqInt id)
 {
   if (id < 0) {
     /* VM argument */
@@ -420,15 +421,15 @@ static char *getAttribute(int id)
   return "";
 }
 
-int attributeSize(int id)
+sqInt attributeSize(sqInt id)
 {
   return strlen(getAttribute(id));
 }
 
-int getAttributeIntoLength(int id, int byteArrayIndex, int length)
+sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length)
 {
   if (length > 0)
-    strncpy((char *)byteArrayIndex, getAttribute(id), length);
+    strncpy(pointerForOop(byteArrayIndex), getAttribute(id), length);
   return 0;
 }
 
@@ -436,12 +437,12 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length)
 /*** event handling ***/
 
 
-int inputEventSemaIndex= 0;
+sqInt inputEventSemaIndex= 0;
 
 
 /* set asynchronous input event semaphore  */
 
-int ioSetInputSemaphore(int semaIndex)
+sqInt ioSetInputSemaphore(sqInt semaIndex)
 {
   if ((semaIndex == 0) || (noEvents == 1))
     success(false);
@@ -453,12 +454,12 @@ int ioSetInputSemaphore(int semaIndex)
 
 /*** display functions ***/
 
-int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, double vScale, int landscapeFlag)
+sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double hScale, double vScale, sqInt landscapeFlag)
 {
   return dpy->ioFormPrint(bitsAddr, width, height, depth, hScale, vScale, landscapeFlag);
 }
 
-int ioRelinquishProcessorForMicroseconds(int us)
+sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 {
   int nwt= getNextWakeupTick();
   int ms=  0;
@@ -484,15 +485,15 @@ int ioRelinquishProcessorForMicroseconds(int us)
   return 0;
 }
 
-int ioBeep(void)				 { return dpy->ioBeep(); }
+sqInt ioBeep(void)				 { return dpy->ioBeep(); }
 
 #if defined(IMAGE_DUMP)
 
 static void emergencyDump(int quit)
 {
-  extern int  preSnapshot(void);
-  extern int  postSnapshot(void);
-  extern void writeImageFile(int);
+  extern sqInt preSnapshot(void);
+  extern sqInt postSnapshot(void);
+  extern void writeImageFile(sqInt);
   char savedName[MAXPATHLEN];
   char baseName[MAXPATHLEN];
   char *term;
@@ -525,7 +526,7 @@ static void emergencyDump(int quit)
 
 #endif
 
-int ioProcessEvents(void)
+sqInt ioProcessEvents(void)
 {
 #if defined(IMAGE_DUMP)
   if (dumpImageFile)
@@ -537,54 +538,54 @@ int ioProcessEvents(void)
   return dpy->ioProcessEvents();
 }
 
-int ioScreenDepth(void)				 { return dpy->ioScreenDepth(); }
-int ioScreenSize(void)				 { return dpy->ioScreenSize(); }
+sqInt ioScreenDepth(void)		 { return dpy->ioScreenDepth(); }
+sqInt ioScreenSize(void)		 { return dpy->ioScreenSize(); }
 
-int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY)
+sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
   return dpy->ioSetCursorWithMask(cursorBitsIndex, cursorMaskIndex, offsetX, offsetY);
 }
 
-int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY)
+sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
 }
 
-int ioSetFullScreen(int fullScreen) { return dpy->ioSetFullScreen(fullScreen); }
-int ioForceDisplayUpdate(void)	    { return dpy->ioForceDisplayUpdate(); }
+sqInt ioSetFullScreen(sqInt fullScreen)	{ return dpy->ioSetFullScreen(fullScreen); }
+sqInt ioForceDisplayUpdate(void)	{ return dpy->ioForceDisplayUpdate(); }
 
-int ioShowDisplay(int dispBitsIndex, int width, int height, int depth, int l, int r, int t, int b)
+sqInt ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth, sqInt l, sqInt r, sqInt t, sqInt b)
 {
   return dpy->ioShowDisplay(dispBitsIndex, width, height, depth, l, r, t, b);
 }
 
-int ioHasDisplayDepth(int i) { return dpy->ioHasDisplayDepth(i); }
+sqInt ioHasDisplayDepth(sqInt i) { return dpy->ioHasDisplayDepth(i); }
 
-int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
+sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
   return dpy->ioSetDisplayMode(width, height, depth, fullscreenFlag);
 }
 
-int clipboardSize(void)
+sqInt clipboardSize(void)
 {
   return dpy->clipboardSize();
 }
 
-int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
+sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   return dpy->clipboardWriteFromAt(count, byteArrayIndex, startIndex);
 }
 
-int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
+sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   return dpy->clipboardReadIntoAt(count, byteArrayIndex, startIndex);
 }
 
-int   ioGetButtonState(void)			{ return dpy->ioGetButtonState(); }
-int   ioPeekKeystroke(void)			{ return dpy->ioPeekKeystroke(); }
-int   ioGetKeystroke(void)			{ return dpy->ioGetKeystroke(); }
-int   ioGetNextEvent(sqInputEvent *evt)		{ return dpy->ioGetNextEvent(evt); }
-int   ioMousePoint(void)			{ return dpy->ioMousePoint(); }
+sqInt ioGetButtonState(void)		{ return dpy->ioGetButtonState(); }
+sqInt ioPeekKeystroke(void)		{ return dpy->ioPeekKeystroke(); }
+sqInt ioGetKeystroke(void)		{ return dpy->ioGetKeystroke(); }
+sqInt ioGetNextEvent(sqInputEvent *evt)	{ return dpy->ioGetNextEvent(evt); }
+sqInt ioMousePoint(void)		{ return dpy->ioMousePoint(); }
 
 
 /*** OpenGL ***/
@@ -595,30 +596,30 @@ struct SqDisplay *ioGetDisplayModule(void)	{ return dpy; }
 
 void *ioGetDisplay(void)			{ return dpy->ioGetDisplay(); }
 void *ioGetWindow(void)				{ return dpy->ioGetWindow(); }
-int   ioGLinitialise(void)			{ return dpy->ioGLinitialise(); }
+sqInt ioGLinitialise(void)			{ return dpy->ioGLinitialise(); }
 
-int   ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags)
+sqInt  ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags)
 {
   return dpy->ioGLcreateRenderer(r, x, y, w, h, flags);
 }
 
-int   ioGLmakeCurrentRenderer(glRenderer *r)	{ return dpy->ioGLmakeCurrentRenderer(r); }
+sqInt ioGLmakeCurrentRenderer(glRenderer *r)	{ return dpy->ioGLmakeCurrentRenderer(r); }
 void  ioGLdestroyRenderer(glRenderer *r)	{	 dpy->ioGLdestroyRenderer(r); }
 void  ioGLswapBuffers(glRenderer *r)		{	 dpy->ioGLswapBuffers(r); }
 
-void  ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h)
+void  ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h)
 {
   dpy->ioGLsetBufferRect(r, x, y, w, h);
 }
 
 
-int   primitivePluginBrowserReady(void)		{ return dpy->primitivePluginBrowserReady(); }
-int   primitivePluginRequestURLStream(void)	{ return dpy->primitivePluginRequestURLStream(); }
-int   primitivePluginRequestURL(void)		{ return dpy->primitivePluginRequestURL(); }
-int   primitivePluginPostURL(void)		{ return dpy->primitivePluginPostURL(); }
-int   primitivePluginRequestFileHandle(void)	{ return dpy->primitivePluginRequestFileHandle(); }
-int   primitivePluginDestroyRequest(void)	{ return dpy->primitivePluginDestroyRequest(); }
-int   primitivePluginRequestState(void)		{ return dpy->primitivePluginRequestState(); }
+sqInt  primitivePluginBrowserReady(void)	{ return dpy->primitivePluginBrowserReady(); }
+sqInt  primitivePluginRequestURLStream(void)	{ return dpy->primitivePluginRequestURLStream(); }
+sqInt  primitivePluginRequestURL(void)		{ return dpy->primitivePluginRequestURL(); }
+sqInt  primitivePluginPostURL(void)		{ return dpy->primitivePluginPostURL(); }
+sqInt  primitivePluginRequestFileHandle(void)	{ return dpy->primitivePluginRequestFileHandle(); }
+sqInt  primitivePluginDestroyRequest(void)	{ return dpy->primitivePluginDestroyRequest(); }
+sqInt  primitivePluginRequestState(void)	{ return dpy->primitivePluginRequestState(); }
 
 
 /*** errors ***/
@@ -700,7 +701,7 @@ struct SqModule *queryLoadModule(char *type, char *name, int query)
 {
   char modName[MAXPATHLEN], itfName[32];
   struct SqModule *module= 0;
-  int itf= 0;
+  void *itf= 0;
   sprintf(modName, "vm-%s-%s", type, name);
 #ifdef DEBUG_MODULES
   printf("looking for module %s\n", modName);
@@ -712,7 +713,7 @@ struct SqModule *queryLoadModule(char *type, char *name, int query)
   itf= ioFindExternalFunctionIn(itfName, ioLoadModule(0));
   if (!itf)
     {
-      int handle= ioLoadModule(modName);
+      void *handle= ioLoadModule(modName);
       if (handle)
 	itf= ioFindExternalFunctionIn(itfName, handle);
       else
@@ -1225,7 +1226,7 @@ void imgInit(void)
       FILE *f= 0;
       struct stat sb;
       char imageName[MAXPATHLEN];
-      sqFilenameFromStringOpen(imageName, (int)shortImageName, strlen(shortImageName));
+      sq2uxPath(shortImageName, strlen(shortImageName), imageName, 1000, 1);
       if ((  (-1 == stat(imageName, &sb)))
 	  || ( 0 == (f= fopen(imageName, "r"))))
 	{
@@ -1336,8 +1337,8 @@ int main(int argc, char **argv, char **envp)
   if (useJit)
     {
       /* first try to find an internal dynamic compiler... */
-      int handle= ioLoadModule(0);
-      int comp= ioFindExternalFunctionIn("j_interpret", handle);
+      void *handle= ioLoadModule(0);
+      void *comp= ioFindExternalFunctionIn("j_interpret", handle);
       /* ...and if that fails... */
       if (comp == 0)
 	{
@@ -1375,7 +1376,7 @@ int main(int argc, char **argv, char **envp)
 }
 
 
-int ioExit(void)
+sqInt ioExit(void)
 {
   dpy->winExit();
   exit(0);

@@ -1,10 +1,10 @@
 /* sqUnixSoundOSS.c -- sound module for Open Sound System
  *
- * Author: Ian.Piumarta@inria.fr
+ * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2003-08-14 09:23:16 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-17 21:27:29 by piumarta on squeak.hpl.hp.com
  *
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -762,7 +762,7 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int sa
 static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
 {
   assert(out->write != 0);
-  return out->write(out, (void *)(arrayIndex + (startIndex * out->sq.bpf)), frameCount);
+  return out->write(out, pointerForOop(arrayIndex) + startIndex * out->sq.bpf, frameCount);
 }
 
 
@@ -857,7 +857,7 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int buf
       frameCount= min(frameCount, framesAvail);
       /*PRINTF(("<%d", frameCount * in->hw.bpf));*/
       return in->read(in,
-		      (void *)(buf + (startSliceIndex * 2)),
+		      pointerForOop(buf) + startSliceIndex * 2,
 		      frameCount)
 	* in->sq.channels;
     }

@@ -29,12 +29,12 @@ typedef struct glRenderer
 
 #endif
 
-extern int  ioGLinitialise(void);
-extern int  ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags);
-extern void ioGLdestroyRenderer(glRenderer *r);
-extern int  ioGLmakeCurrentRenderer(glRenderer *r);
-extern void ioGLswapBuffers(glRenderer *r);
-extern void ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h);
+extern sqInt ioGLinitialise(void);
+extern sqInt ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags);
+extern void  ioGLdestroyRenderer(glRenderer *r);
+extern sqInt ioGLmakeCurrentRenderer(glRenderer *r);
+extern void  ioGLswapBuffers(glRenderer *r);
+extern void  ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h);
 
 #define glErrorCheck()	ERROR_CHECK
 

@@ -1,6 +1,6 @@
 /* sqUnixX11.c -- support for display via the X Window System.
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -34,9 +34,9 @@
  *   directory `platforms/unix/doc' before proceeding with any such use.
  */
 
-/* Author: Ian Piumarta <ian.piumarta@inria.fr>
+/* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2004-04-03 22:19:32 by piumarta on cartman.inria.fr
+ * Last edited: 2005-03-17 21:38:07 by piumarta on squeak.hpl.hp.com
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -64,6 +64,7 @@
  */
 
 #include "sq.h"
+#include "sqMemoryAccess.h"
 
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
@@ -134,6 +135,16 @@
 
 #define isAligned(T, V)	(((V) % sizeof(T)) == 0)
 #define align(T, V)	(((V) / sizeof(T)) * sizeof(T))
+
+#if defined(SQ_IMAGE32)
+# define BytesPerOop	4
+#elif defined(SQ_IMAGE64)
+# define BytesPerOop	8
+#else
+# error cannot determine image word size
+#endif
+
+#define BaseHeaderSize	BytesPerOop
 
 /*** Variables -- Imported from Virtual Machine ***/
 
@@ -293,17 +304,14 @@ void getMaskbit(unsigned long ul, int *nmask, int *shift);
 
 void initDownGradingColors(void);
 
-void copyReverseImageBytes(int *fromImageData, int *toImageData,
-			   int depth, int width, int height,
+void copyReverseImageBytes(int *fromImageData, int *toImageData, int depth, int width, int height,
 			   int affectedL, int affectedT, int affectedR, int affectedB);
 
-void copyReverseImageWords(int *fromImageData, int *toImageData,
-			   int depth, int width, int height,
+void copyReverseImageWords(int *fromImageData, int *toImageData, int depth, int width, int height,
 			   int affectedL, int affectedT, int affectedR, int affectedB);
 
 #define declareCopyFunction(NAME) \
-  void NAME (int *fromImageData, int *toImageData, \
-	     int width, int height, \
+  void NAME (int *fromImageData, int *toImageData, int width, int height, \
 	     int affectedL, int affectedT, int affectedR, int affectedB)
 
 declareCopyFunction(copyImage1To8);
@@ -945,17 +953,17 @@ void initClipboard(void)
 }
 
 
-static int display_clipboardSize(void)
+static sqInt display_clipboardSize(void)
 {
   return strlen(getSelection());
 }
 
 
-static int display_clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
+static sqInt display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   if (allocateSelectionBuffer(count))
     {
-      memcpy((void *)stPrimarySelection, (void *)(byteArrayIndex + startIndex), count);
+      memcpy((void *)stPrimarySelection, pointerForOop(byteArrayIndex + startIndex), count);
       stPrimarySelection[count]= '\0';
       claimSelection();
     }
@@ -964,7 +972,7 @@ static int display_clipboardWriteFromAt(int count, int byteArrayIndex, int start
 
 /* transfer the X selection into the given byte array; optimise local requests */
 
-static int display_clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
+static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
 {
   int clipSize;
   int selectionSize;
@@ -976,7 +984,7 @@ static int display_clipboardReadIntoAt(int count, int byteArrayIndex, int startI
 #if defined(DEBUG_SELECTIONS)
   fprintf(stderr, "clipboard read: %d selectionSize %d\n", count, selectionSize);
 #endif
-  memcpy((void *)(byteArrayIndex + startIndex), (void *)stPrimarySelection, clipSize);
+  memcpy(pointerForOop(byteArrayIndex + startIndex), (void *)stPrimarySelection, clipSize);
   return clipSize;
 }
 
@@ -991,21 +999,22 @@ static int display_clipboardReadIntoAt(int count, int byteArrayIndex, int startI
 */
 static void redrawDisplay(int l, int r, int t, int b)
 {
-  extern int lengthOf(int);
-  extern int displayObject(void);
-# define longAt(i) (*((int *) (i)))
-  int displayObj= displayObject();
-  if ((((((unsigned)(longAt(displayObj))) >> 8) & 15) <= 4) &&
-      ((lengthOf(displayObj)) >= 4))
+  extern sqInt displayObject(void);
+  extern sqInt lengthOf(sqInt);
+  extern sqInt fetchPointerofObject(sqInt, sqInt);
+
+  sqInt displayObj= displayObject();
+
+  if ((((((unsigned)(oopAt(displayObj))) >> 8) & 15) <= 4)
+      && ((lengthOf(displayObj)) >= 4))
     {
-      int dispBits= longAt((displayObj + 4) + (0 * 4));
-      int w= fetchIntegerofObject(1, displayObj);
-      int h= fetchIntegerofObject(2, displayObj);
-      int d= fetchIntegerofObject(3, displayObj);
-      int dispBitsIndex= dispBits + 4;
-      ioShowDisplay(dispBitsIndex, w, h, d, l, r, t, b);
+      sqInt dispBits= fetchPointerofObject(0, displayObj);
+      sqInt w= fetchIntegerofObject(1, displayObj);
+      sqInt h= fetchIntegerofObject(2, displayObj);
+      sqInt d= fetchIntegerofObject(3, displayObj);
+      sqInt dispBitsIndex= dispBits + BaseHeaderSize;
+      ioShowDisplay(dispBitsIndex, w, h, d, (sqInt)l, (sqInt)r, (sqInt)t, (sqInt)b);
     }
-# undef longAt
 }
 
 
@@ -1728,11 +1737,19 @@ void initPixmap(void)
 }
 
 
+static int xError(Display *dpy, XErrorEvent *evt)
+{
+  fprintf(stderr, "X error\n");
+  return 0;
+}
+
+
 void initWindow(char *displayName)
 {
   XRectangle windowBounds= { 0, 0, 640, 480 };  /* default window bounds */
-
   int right, bottom;
+
+  XSetErrorHandler(xError);
 
   stDisplay= XOpenDisplay(displayName);
   if (!stDisplay)
@@ -2107,11 +2124,11 @@ static int translateCode(KeySym symbolic)
 #endif
 
 
-static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
-			       double hScale, double vScale, int landscapeFlag)
+static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqInt depth, double hScale, double vScale, sqInt landscapeFlag)
 {
 # if defined(PRINT_PS_FORMS)
 
+  char *bitsAddr= pointerForOop(bitsIndex);
   FILE *ppm;
   float scale;			/* scale to use with pnmtops */
   char printCommand[1000];
@@ -2266,7 +2283,7 @@ static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
 }
 
 
-static int display_ioBeep(void)
+static sqInt display_ioBeep(void)
 {
   if (isConnectedToXServer)
     XBell(stDisplay, 0);	/* ring at default volume */
@@ -2274,14 +2291,14 @@ static int display_ioBeep(void)
 }
 
 
-static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
+static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
   aioPoll(handleEvents() ? 0 : microSeconds);
   return 0;
 }
 
 
-static int display_ioProcessEvents(void)
+static sqInt display_ioProcessEvents(void)
 {
   handleEvents();
   aioPoll(0);
@@ -2290,7 +2307,7 @@ static int display_ioProcessEvents(void)
 
 
 /* returns the depth of the Squeak window */
-static int display_ioScreenDepth(void)
+static sqInt display_ioScreenDepth(void)
 {
   Window root;
   int x, y;
@@ -2305,7 +2322,7 @@ static int display_ioScreenDepth(void)
 
 
 /* returns the size of the Squeak window */
-static int display_ioScreenSize(void)
+static sqInt display_ioScreenSize(void)
 {
   int winSize= getSavedWindowSize();
 
@@ -2345,9 +2362,10 @@ static unsigned char swapBits(unsigned char in)
 }
 
 
-static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
-				       int offsetX, int offsetY)
+static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
+  unsigned int *cursorBits= (unsigned int *)pointerForOop(cursorBitsIndex);
+  unsigned int *cursorMask= (unsigned int *)pointerForOop(cursorMaskIndex);
   unsigned char data[32], mask[32];	/* cursors are always 16x16 */
   int i;
   Cursor cursor;
@@ -2356,39 +2374,16 @@ static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
   if (!isConnectedToXServer)
     return 0;
 
-#if 0
   if (cursorMaskIndex == null)
-    {
-      for (i= 0; i < 16; i++)
-	{
-	  data[i*2+0]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 24) & 0xFF;
-	  data[i*2+1]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF;
-	  mask[i*2+0]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 24) & 0xFF;
-	  mask[i*2+1]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF;
-	}
-    }
-  else
-    {
-      for (i= 0; i < 16; i++)
-	{
-	  data[i*2+0]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 24) & 0xFF;
-	  data[i*2+1]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF;
-	  mask[i*2+0]= ((unsigned)checkedLongAt(cursorMaskIndex + (4 * i)) >> 24) & 0xFF;
-	  mask[i*2+1]= ((unsigned)checkedLongAt(cursorMaskIndex + (4 * i)) >> 16) & 0xFF;
-	}
-    }
-#else
-  if (cursorMaskIndex == null)
-    cursorMaskIndex= cursorBitsIndex;
+    cursorMask= cursorBits;
 
   for (i= 0; i < 16; i++)
     {
-      data[i*2+0]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 24) & 0xFF;
-      data[i*2+1]= ((unsigned)checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFF;
-      mask[i*2+0]= ((unsigned)checkedLongAt(cursorMaskIndex + (4 * i)) >> 24) & 0xFF;
-      mask[i*2+1]= ((unsigned)checkedLongAt(cursorMaskIndex + (4 * i)) >> 16) & 0xFF;
+      data[i*2+0]= (cursorBits[i] >> 24) & 0xFF;
+      data[i*2+1]= (cursorBits[i] >> 16) & 0xFF;
+      mask[i*2+0]= (cursorMask[i] >> 24) & 0xFF;
+      mask[i*2+1]= (cursorMask[i] >> 16) & 0xFF;
     }
-#endif
 
   /*  if (BitmapBitOrder(stDisplay) == LSBFirst)*/
     {
@@ -2423,8 +2418,9 @@ static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
   return 0;
 }
 
+
 #if 0
-int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY)
+sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
   /* Deprecated: forward to new version with explicit mask. */
   ioSetCursorWithMask(cursorBitsIndex, null, offsetX, offsetY);
@@ -2441,7 +2437,7 @@ static void overrideRedirect(Display *dpy, Window win, int flag)
 }
 
 
-static int display_ioSetFullScreen(int fullScreen)
+static sqInt display_ioSetFullScreen(sqInt fullScreen)
 {
   int winX, winY;
   unsigned int winW, winH;
@@ -2525,7 +2521,7 @@ static int display_ioSetFullScreen(int fullScreen)
 
 
 # if defined(USE_XSHM)
-static int xError(Display *dpy, XErrorEvent *evt)
+static int shmError(Display *dpy, XErrorEvent *evt)
 {
   char buf[2048];
   XGetErrorText(stDisplay, evt->error_code, buf, sizeof(buf));
@@ -2544,12 +2540,12 @@ static void *stMalloc(size_t lbs)
 	perror("shmget");
       else
 	{
-	  if ((int)(stShmInfo.shmaddr= (char *)shmat(stShmInfo.shmid, 0, 0)) == -1)
+	  if ((long)(stShmInfo.shmaddr= (char *)shmat(stShmInfo.shmid, 0, 0)) == -1)
 	    perror("shmat");
 	  else
 	    {
 	      /* temporarily install error handler */
-	      XErrorHandler prev= XSetErrorHandler(xError);
+	      XErrorHandler prev= XSetErrorHandler(shmError);
 	      int result= 0;
 	      stShmInfo.readOnly= False;
 	      result= XShmAttach(stDisplay, &stShmInfo);
@@ -2652,7 +2648,7 @@ static void stXDestroyImage(XImage *image)
 #define bytesPerLineRD(width, depth)	((((width)*(depth)) >> 5) << 2)
 
 
-static int display_ioForceDisplayUpdate(void)
+static sqInt display_ioForceDisplayUpdate(void)
 {
 #if defined(USE_XSHM)
   if (asyncUpdate && isConnectedToXServer)
@@ -2665,17 +2661,17 @@ static int display_ioForceDisplayUpdate(void)
 }
 
 
-static int display_ioShowDisplay(int dispBitsIndex,
-				 int width, int height, int depth,
-				 int affectedL, int affectedR,
-				 int affectedT, int affectedB)
+static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth,
+				   sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 {
-  static int stDisplayBitsIndex= 0;	/* last known oop of the VM's Display */
-  static int stDisplayWidth= 0;		/* ditto width */
-  static int stDisplayHeight= 0;	/* ditto height */
-  static int stDisplayDepth= 0;		/* ditto depth */
+  static char *stDisplayBits= 0;	/* last known oop of the VM's Display */
+  static sqInt  stDisplayWidth= 0;	/* ditto width */
+  static sqInt  stDisplayHeight= 0;	/* ditto height */
+  static sqInt  stDisplayDepth= 0;	/* ditto depth */
 
-  int geometryChanged= ((stDisplayBitsIndex != dispBitsIndex)
+  char *dispBits= pointerForOop(dispBitsIndex);
+
+  int geometryChanged= ((stDisplayBits != dispBits)
 			|| (stDisplayWidth  != width)
 			|| (stDisplayHeight != height)
 			|| (stDisplayDepth  != depth));
@@ -2685,13 +2681,6 @@ static int display_ioShowDisplay(int dispBitsIndex,
 
   if ((width < 1) || (height < 1))
     return 0;
-
-  /* following a ``bug fix'' posted to the list this was recently
-     changed to clamp the values at ({width,height} - 1), but that
-     prevented the rightmost column and bottommost row from being
-     redrawn.  so now it's back the way it always was, pending further
-     problem reports (if any) and subsequent investigation (if
-     any). */
 
   if (affectedL > width)  affectedL= width;
   if (affectedR > width)  affectedR= width;
@@ -2714,7 +2703,7 @@ static int display_ioShowDisplay(int dispBitsIndex,
 
   if (geometryChanged)
     {
-      stDisplayBitsIndex= dispBitsIndex;
+      stDisplayBits= dispBits;
       stDisplayWidth= width;
       stDisplayHeight= height;
       stDisplayDepth= depth;
@@ -2724,7 +2713,7 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	/* wait for pending updates to complete before freeing the XImage */
 	waitForCompletions();
 # endif
-      stDisplayBitsIndex= dispBitsIndex;
+      stDisplayBits= dispBits;
       if (stImage)
 	{
 	  stImage->data= 0; /* don't you dare free() Display's Bitmap! */
@@ -2766,7 +2755,7 @@ static int display_ioShowDisplay(int dispBitsIndex,
 			      0,
 			      (stDisplayBitmap
 			         ? stDisplayBitmap
-			         : (char *)stDisplayBitsIndex),
+			         : stDisplayBits),
 			      width,
 			      height,
 			      32,
@@ -2798,25 +2787,25 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	{
 	  if (stBitsPerPixel == 8)
 	    {
-	      copyImage1To8((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage1To8((int *)dispBits, (int *)stDisplayBitmap,
 			    width, height,
 			    affectedL, affectedT, affectedR, affectedB);
 	    }
 	  if (stBitsPerPixel == 16)
 	    {
-	      copyImage1To16((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage1To16((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if (stBitsPerPixel == 24)
 	    {
-	      copyImage1To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage1To24((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else /* stBitsPerPixel == 32 */
 	    {
-	      copyImage1To32((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage1To32((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
@@ -2826,25 +2815,25 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	{
 	  if (stBitsPerPixel == 8)
 	    {
-	      copyImage2To8((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage2To8((int *)dispBits, (int *)stDisplayBitmap,
 			    width, height,
 			    affectedL, affectedT, affectedR, affectedB);
 	    }
 	  if (stBitsPerPixel == 16)
 	    {
-	      copyImage2To16((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage2To16((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if (stBitsPerPixel == 24)
 	    {
-	      copyImage2To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage2To24((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else /* stBitsPerPixel == 32 */
 	    {
-	      copyImage2To32((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage2To32((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
@@ -2854,25 +2843,25 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	{
 	  if (stBitsPerPixel == 8)
 	    {
-	      copyImage4To8((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage4To8((int *)dispBits, (int *)stDisplayBitmap,
 			    width, height,
 			    affectedL, affectedT, affectedR, affectedB);
 	    }
 	  if (stBitsPerPixel == 16)
 	    {
-	      copyImage4To16((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage4To16((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if (stBitsPerPixel == 24)
 	    {
-	      copyImage4To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage4To24((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else /* stBitsPerPixel == 32 */
 	    {
-	      copyImage4To32((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage4To32((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
@@ -2882,19 +2871,19 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	{
 	  if (stBitsPerPixel == 16)
 	    {
-	      copyImage8To16((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage8To16((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if (stBitsPerPixel == 24)
 	    {
-	      copyImage8To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage8To24((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else /* stBitsPerPixel == 32 */
 	    {
-	      copyImage8To32((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage8To32((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
@@ -2903,19 +2892,19 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	{
 	  if (stBitsPerPixel == 8)
 	    {
-	      copyImage16To8((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage16To8((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if ( stBitsPerPixel == 24)
 	    {
-	      copyImage16To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage16To24((int *)dispBits, (int *)stDisplayBitmap,
 			      width, height,
 			      affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else /* stBitsPerPixel == 32 */
 	    {
-	      copyImage16To32((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage16To32((int *)dispBits, (int *)stDisplayBitmap,
 			      width, height,
 			      affectedL, affectedT, affectedR, affectedB);
 	    }
@@ -2924,19 +2913,19 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	{
 	  if (stBitsPerPixel == 8)
 	    {
-	      copyImage32To8((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage32To8((int *)dispBits, (int *)stDisplayBitmap,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if (stBitsPerPixel == 16)
 	    {
-	      copyImage32To16((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage32To16((int *)dispBits, (int *)stDisplayBitmap,
 			      width, height,
 			      affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else /* stBitPerPixel == 24 */
 	    {
-	      copyImage32To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage32To24((int *)dispBits, (int *)stDisplayBitmap,
 			      width, height,
 			      affectedL, affectedT, affectedR, affectedB);
 	    }
@@ -2946,13 +2935,13 @@ static int display_ioShowDisplay(int dispBitsIndex,
     {
       if (depth == 16 && !stHasSameRGBMask16)
 	{
-	  copyImage16To16((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	  copyImage16To16((int *)dispBits, (int *)stDisplayBitmap,
 			  width, height,
 			  affectedL, affectedT, affectedR, affectedB);
 	}
       else if (depth == 32 && !stHasSameRGBMask32)
 	{
-	  copyImage32To32((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	  copyImage32To32((int *)dispBits, (int *)stDisplayBitmap,
 			  width, height,
 			  affectedL, affectedT, affectedR, affectedB);
 	}
@@ -2962,17 +2951,17 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	{
 	  if (depth == 8)
 	    {
-	      copyImage8To8((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage8To8((int *)dispBits, (int *)stDisplayBitmap,
 			    width, height,affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if (depth == 16)
 	    {
-	      copyImage16To16((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage16To16((int *)dispBits, (int *)stDisplayBitmap,
 			      width, height,affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else if (depth == 32)
 	    {
-	      copyImage32To32((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage32To32((int *)dispBits, (int *)stDisplayBitmap,
 			      width, height,affectedL, affectedT, affectedR, affectedB);
 	    }
 	  else
@@ -2985,13 +2974,13 @@ static int display_ioShowDisplay(int dispBitsIndex,
 # else /* !WORDS_BIGENDIAN */
       else if (depth == 8)
 	{
-	  copyReverseImageBytes((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	  copyReverseImageBytes((int *)dispBits, (int *)stDisplayBitmap,
 				depth, width, height,
 				affectedL, affectedT, affectedR, affectedB);
 	}
       else if (depth == 16)
 	{
-	  copyReverseImageWords((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	  copyReverseImageWords((int *)dispBits, (int *)stDisplayBitmap,
 				depth, width, height,
 				affectedL, affectedT, affectedR, affectedB);
 	}
@@ -3000,7 +2989,7 @@ static int display_ioShowDisplay(int dispBitsIndex,
 	  /* there is a separate map, so we still need to copy */
 	  if (depth == 32)
 	    {
-	      copyImage32To32Same((int *)dispBitsIndex, (int *)stDisplayBitmap,
+	      copyImage32To32Same((int *)dispBits, (int *)stDisplayBitmap,
 				  width, height,
 				  affectedL, affectedT, affectedR, affectedB);
 	    }
@@ -3018,7 +3007,7 @@ static int display_ioShowDisplay(int dispBitsIndex,
 }
 
 
-static int display_ioHasDisplayDepth(int i)
+static sqInt display_ioHasDisplayDepth(sqInt i)
 {
   switch (i)
     {
@@ -3035,7 +3024,7 @@ static int display_ioHasDisplayDepth(int i)
 }
 
 
-static int display_ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
+static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)
 {
   fprintf(stderr, "ioSetDisplayMode(%d, %d, %d, %d)\n",
 	  width, height, depth, fullscreenFlag);
@@ -3043,8 +3032,7 @@ static int display_ioSetDisplayMode(int width, int height, int depth, int fullsc
 }
 
 
-void copyReverseImageBytes(int *fromImageData, int *toImageData,
-			   int depth, int width, int height,
+void copyReverseImageBytes(int *fromImageData, int *toImageData, int depth, int width, int height,
 			   int affectedL, int affectedT, int affectedR, int affectedB)
 {
   register int scanLine, firstWord, lastWord;
@@ -3056,9 +3044,9 @@ void copyReverseImageBytes(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
   {
-    register unsigned char *from= (unsigned char *)((int)fromImageData+firstWord);
-    register unsigned char *limit= (unsigned char *)((int)fromImageData+lastWord);
-    register unsigned char *to= (unsigned char *)((int)toImageData+firstWord);
+    register unsigned char *from= (unsigned char *)((long)fromImageData+firstWord);
+    register unsigned char *limit= (unsigned char *)((long)fromImageData+lastWord);
+    register unsigned char *to= (unsigned char *)((long)toImageData+firstWord);
     while (from < limit)
       {
 	to[0]= from[3];
@@ -3073,8 +3061,7 @@ void copyReverseImageBytes(int *fromImageData, int *toImageData,
   }
 }
 
-void copyReverseImageWords(int *fromImageData, int *toImageData,
-			   int depth, int width, int height,
+void copyReverseImageWords(int *fromImageData, int *toImageData, int depth, int width, int height,
 			   int affectedL, int affectedT, int affectedR, int affectedB)
 {
   register int scanLine, firstWord, lastWord;
@@ -3086,9 +3073,9 @@ void copyReverseImageWords(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned short *from= (unsigned short *)((int)fromImageData+firstWord);
-      register unsigned short *limit= (unsigned short *)((int)fromImageData+lastWord);
-      register unsigned short *to= (unsigned short *)((int)toImageData+firstWord);
+      register unsigned short *from= (unsigned short *)((long)fromImageData+firstWord);
+      register unsigned short *limit= (unsigned short *)((long)fromImageData+lastWord);
+      register unsigned short *to= (unsigned short *)((long)toImageData+firstWord);
       while (from < limit)
 	{
 	  to[0]= from[1];
@@ -3101,32 +3088,28 @@ void copyReverseImageWords(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage1To8(int *fromImageData, int *toImageData,
-		   int width, int height,
+void copyImage1To8(int *fromImageData, int *toImageData, int width, int height,
 		   int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 1 not yet implemented in 8 bpp\n");
   exit(1);
 }
 
-void copyImage2To8(int *fromImageData, int *toImageData,
-		   int width, int height,
+void copyImage2To8(int *fromImageData, int *toImageData, int width, int height,
 		   int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 2 not yet implemented in 8 bpp\n");
   exit(1);
 }
 
-void copyImage4To8(int *fromImageData, int *toImageData,
-		   int width, int height,
+void copyImage4To8(int *fromImageData, int *toImageData, int width, int height,
 		   int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 4 not yet implemented in 8 bpp\n");
   exit(1);
 }
 
-void copyImage8To8(int *fromImageData, int *toImageData,
-		   int width, int height,
+void copyImage8To8(int *fromImageData, int *toImageData, int width, int height,
 		   int affectedL, int affectedT, int affectedR, int affectedB)
 {
   register int scanLine, firstWord, lastWord;
@@ -3137,9 +3120,9 @@ void copyImage8To8(int *fromImageData, int *toImageData,
   lastWord= scanLine*affectedT + bytesPerLine(affectedR, 8);
 
   for (line= affectedT; line < affectedB; line++) {
-    register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord);
-    register unsigned int *limit= (unsigned int *)((int)fromImageData+lastWord);
-    register unsigned int *to= (unsigned int *)((int)toImageData+firstWord);
+    register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord);
+    register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord);
+    register unsigned int *to= (unsigned int *)((long)toImageData+firstWord);
     while (from < limit)
       *to++= *from++;
     firstWord+= scanLine;
@@ -3147,32 +3130,28 @@ void copyImage8To8(int *fromImageData, int *toImageData,
   }
 }
 
-void copyImage1To16(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage1To16(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 1 not yet implemented in 16 bpp\n");
   exit(1);
 }
 
-void copyImage2To16(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage2To16(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 2 not yet implemented in 16 bpp\n");
   exit(1);
 }
 
-void copyImage4To16(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage4To16(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 4 not yet implemented in 16 bpp\n");
   exit(1);
 }
 
-void copyImage8To16(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage8To16(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine8, firstWord8, lastWord8;
@@ -3187,9 +3166,9 @@ void copyImage8To16(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned char *from= (unsigned char *)((int)fromImageData+firstWord8);
-      register unsigned char *limit= (unsigned char *)((int)fromImageData+lastWord8);
-      register unsigned short *to= (unsigned short *)((int)toImageData+firstWord16);
+      register unsigned char *from= (unsigned char *)((long)fromImageData+firstWord8);
+      register unsigned char *limit= (unsigned char *)((long)fromImageData+lastWord8);
+      register unsigned short *to= (unsigned short *)((long)toImageData+firstWord16);
       while (from < limit)
 	{
 #	 if defined(WORDS_BIGENDIAN)
@@ -3212,8 +3191,7 @@ void copyImage8To16(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage16To8(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage16To8(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine16, firstWord16, lastWord16;
@@ -3234,9 +3212,9 @@ void copyImage16To8(int *fromImageData, int *toImageData,
   for (line= affectedT; line < affectedB; line++)
     {
       register int col;
-      register unsigned short *from= (unsigned short *)((int)fromImageData+firstWord16);
-      register unsigned short *limit= (unsigned short *)((int)fromImageData+lastWord16);
-      register unsigned char *to= (unsigned char *)((int)toImageData+firstWord8);
+      register unsigned short *from= (unsigned short *)((long)fromImageData+firstWord16);
+      register unsigned short *limit= (unsigned short *)((long)fromImageData+lastWord16);
+      register unsigned char *to= (unsigned char *)((long)toImageData+firstWord8);
 
       while (from < limit)
 	{
@@ -3257,8 +3235,7 @@ void copyImage16To8(int *fromImageData, int *toImageData,
 #undef map16To8
 }
 
-void copyImage1To32(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage1To32(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine1, firstWord1, firstShift1;
@@ -3275,9 +3252,9 @@ void copyImage1To32(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord1);
-      register unsigned int *to= (unsigned int *)((int)toImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((int)toImageData+lastWord32);
+      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord1);
+      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
+      register unsigned int *limit= (unsigned int *)((long)toImageData+lastWord32);
       register int shift= firstShift1;
       while (to < limit)
 	{
@@ -3296,8 +3273,7 @@ void copyImage1To32(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage2To32(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage2To32(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine2, firstWord2, firstShift2;
@@ -3314,9 +3290,9 @@ void copyImage2To32(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord2);
-      register unsigned int *to= (unsigned int *)((int)toImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((int)toImageData+lastWord32);
+      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord2);
+      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
+      register unsigned int *limit= (unsigned int *)((long)toImageData+lastWord32);
       register int shift= firstShift2;
       while (to < limit)
 	{
@@ -3335,8 +3311,7 @@ void copyImage2To32(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage4To32(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage4To32(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine4, firstWord4, firstShift4;
@@ -3353,9 +3328,9 @@ void copyImage4To32(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord4);
-      register unsigned int *to= (unsigned int *)((int)toImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((int)toImageData+lastWord32);
+      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord4);
+      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
+      register unsigned int *limit= (unsigned int *)((long)toImageData+lastWord32);
       register int shift= firstShift4;
       while (to < limit)
 	{
@@ -3374,8 +3349,7 @@ void copyImage4To32(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage8To32(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage8To32(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine8, firstWord8, lastWord8;
@@ -3390,9 +3364,9 @@ void copyImage8To32(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned char *from= (unsigned char *)((int)fromImageData+firstWord8);
-      register unsigned char *limit= (unsigned char *)((int)fromImageData+lastWord8);
-      register unsigned int *to= (unsigned int *)((int)toImageData+firstWord32);
+      register unsigned char *from= (unsigned char *)((long)fromImageData+firstWord8);
+      register unsigned char *limit= (unsigned char *)((long)fromImageData+lastWord8);
+      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
       while (from < limit)
 	{
 #	 if defined(WORDS_BIGENDIAN)
@@ -3415,32 +3389,28 @@ void copyImage8To32(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage1To24(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage1To24(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 1 not yet implemented in 24 bpp\n");
   exit(1);
 }
 
-void copyImage2To24(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage2To24(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 2 not yet implemented in 24 bpp\n");
   exit(1);
 }
 
-void copyImage4To24(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage4To24(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   fprintf(stderr, "depth 4 not yet implemented in 24 bpp\n");
   exit(1);
 }
 
-void copyImage8To24(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage8To24(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine8, firstWord8, lastWord8;
@@ -3455,9 +3425,9 @@ void copyImage8To24(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned char *from= (unsigned char *)((int)fromImageData+firstWord8);
-      register unsigned char *limit= (unsigned char *)((int)fromImageData+lastWord8);
-      register unsigned char *to= (unsigned char *)((int)toImageData+firstWord24);
+      register unsigned char *from= (unsigned char *)((long)fromImageData+firstWord8);
+      register unsigned char *limit= (unsigned char *)((long)fromImageData+lastWord8);
+      register unsigned char *to= (unsigned char *)((long)toImageData+firstWord24);
       register unsigned int newpix= 0;
       while (from < limit)
 	{
@@ -3521,8 +3491,7 @@ void copyImage8To24(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage32To8(int *fromImageData, int *toImageData,
-		    int width, int height,
+void copyImage32To8(int *fromImageData, int *toImageData, int width, int height,
 		    int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine32, firstWord32, lastWord32;
@@ -3543,9 +3512,9 @@ void copyImage32To8(int *fromImageData, int *toImageData,
   for (line= affectedT; line < affectedB; line++)
   {
     register int col;
-    register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord32);
-    register unsigned int *limit= (unsigned int *)((int)fromImageData+lastWord32);
-    register unsigned char *to= (unsigned char *)((int)toImageData+firstWord8);
+    register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
+    register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
+    register unsigned char *to= (unsigned char *)((long)toImageData+firstWord8);
     while (from < limit)
     {
       to[0]= map32To8(from[0]);
@@ -3559,8 +3528,7 @@ void copyImage32To8(int *fromImageData, int *toImageData,
 #undef map32To8
 }
 
-void copyImage16To32(int *fromImageData, int *toImageData,
-		     int width, int height,
+void copyImage16To32(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine16, firstWord16, lastWord16;
@@ -3592,9 +3560,9 @@ void copyImage16To32(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned short *from= (unsigned short *)((int)fromImageData+firstWord16);
-      register unsigned short *limit= (unsigned short *)((int)fromImageData+lastWord16);
-      register unsigned int *to= (unsigned int *)((int)toImageData+firstWord32);
+      register unsigned short *from= (unsigned short *)((long)fromImageData+firstWord16);
+      register unsigned short *limit= (unsigned short *)((long)fromImageData+lastWord16);
+      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
       while (from < limit)
 	{
 #	 if defined(WORDS_BIGENDIAN)
@@ -3614,8 +3582,7 @@ void copyImage16To32(int *fromImageData, int *toImageData,
 #undef map16To32
 }
 
-void copyImage16To24(int *fromImageData, int *toImageData,
-		     int width, int height,
+void copyImage16To24(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine16, firstWord16, lastWord16;
@@ -3642,9 +3609,9 @@ void copyImage16To24(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned short *from= (unsigned short *)((int)fromImageData+firstWord16);
-      register unsigned short *limit= (unsigned short *)((int)fromImageData+lastWord16);
-      register unsigned char *to= (unsigned char *)((int)toImageData+firstWord24);
+      register unsigned short *from= (unsigned short *)((long)fromImageData+firstWord16);
+      register unsigned short *limit= (unsigned short *)((long)fromImageData+lastWord16);
+      register unsigned char *to= (unsigned char *)((long)toImageData+firstWord24);
       register unsigned int newpix= 0;
       while (from < limit)
 	{
@@ -3684,8 +3651,7 @@ void copyImage16To24(int *fromImageData, int *toImageData,
 }
 
 
-void copyImage32To16(int *fromImageData, int *toImageData,
-		     int width, int height,
+void copyImage32To16(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine32, firstWord32, lastWord32;
@@ -3711,9 +3677,9 @@ void copyImage32To16(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((int)fromImageData+lastWord32);
-      register unsigned short *to= (unsigned short *)((int)toImageData+firstWord16);
+      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
+      register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
+      register unsigned short *to= (unsigned short *)((long)toImageData+firstWord16);
       while (from < limit)
 	{
 	  to[0]= map32To16(from[0]);
@@ -3727,8 +3693,7 @@ void copyImage32To16(int *fromImageData, int *toImageData,
 #undef map32To16
 }
 
-void copyImage16To16(int *fromImageData, int *toImageData,
-		     int width, int height,
+void copyImage16To16(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine16, firstWord16, lastWord16;
@@ -3751,9 +3716,9 @@ void copyImage16To16(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned short *from= (unsigned short *)((int)fromImageData+firstWord16);
-      register unsigned short *limit= (unsigned short *)((int)fromImageData+lastWord16);
-      register unsigned short *to= (unsigned short *)((int)toImageData+firstWord16);
+      register unsigned short *from= (unsigned short *)((long)fromImageData+firstWord16);
+      register unsigned short *limit= (unsigned short *)((long)fromImageData+lastWord16);
+      register unsigned short *to= (unsigned short *)((long)toImageData+firstWord16);
       while (from < limit)
 	{
 #	 if defined(WORDS_BIGENDIAN)
@@ -3772,8 +3737,7 @@ void copyImage16To16(int *fromImageData, int *toImageData,
 #undef map16To16
 }
 
-void copyImage32To32(int *fromImageData, int *toImageData,
-		     int width, int height,
+void copyImage32To32(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine32, firstWord32, lastWord32;
@@ -3796,9 +3760,9 @@ void copyImage32To32(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((int)fromImageData+lastWord32);
-      register unsigned int *to= (unsigned int *)((int)toImageData+firstWord32);
+      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
+      register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
+      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
       while (from < limit)
 	{
 	  *to= map32To32(*from);
@@ -3824,9 +3788,9 @@ void copyImage32To32Same(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((int)fromImageData+lastWord32);
-      register unsigned int *to= (unsigned int *)((int)toImageData+firstWord32);
+      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
+      register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
+      register unsigned int *to= (unsigned int *)((long)toImageData+firstWord32);
       while (from < limit)
 	{
 	  *to= *from;
@@ -3838,8 +3802,7 @@ void copyImage32To32Same(int *fromImageData, int *toImageData,
     }
 }
 
-void copyImage32To24(int *fromImageData, int *toImageData,
-		     int width, int height,
+void copyImage32To24(int *fromImageData, int *toImageData, int width, int height,
 		     int affectedL, int affectedT, int affectedR, int affectedB)
 {
   int scanLine24, firstWord24;
@@ -3867,9 +3830,9 @@ void copyImage32To24(int *fromImageData, int *toImageData,
 
   for (line= affectedT; line < affectedB; line++)
     {
-      register unsigned int *from= (unsigned int *)((int)fromImageData+firstWord32);
-      register unsigned int *limit= (unsigned int *)((int)fromImageData+lastWord32);
-      register unsigned char *to= (unsigned char *)((int)toImageData+firstWord24);
+      register unsigned int *from= (unsigned int *)((long)fromImageData+firstWord32);
+      register unsigned int *limit= (unsigned int *)((long)fromImageData+lastWord32);
+      register unsigned char *to= (unsigned char *)((long)toImageData+firstWord24);
       register unsigned int newpix= 0;
       while (from < limit)
 	{
@@ -3986,12 +3949,12 @@ static void *display_ioGetWindow(void)	{ return (void *)stWindow; }
 
 #if (!USE_X11_GLX)
 
-static int  display_ioGLinitialise(void) { return 0; }
-static int  display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags) { return 0; }
+static sqInt display_ioGLinitialise(void) { return 0; }
+static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags) { return 0; }
 static void display_ioGLdestroyRenderer(glRenderer *r) {}
 static void display_ioGLswapBuffers(glRenderer *r) {}
-static int  display_ioGLmakeCurrentRenderer(glRenderer *r) { return 0; }
-static void display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h) {}
+static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r) { return 0; }
+static void display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h) {}
 
 #else
 
@@ -4021,14 +3984,14 @@ static int visualAttributes[]= {
 
 extern int verboseLevel;
 
-static int display_ioGLinitialise(void) { return 1; }
+static sqInt display_ioGLinitialise(void) { return 1; }
 
 #define _renderWindow(R)	((R)->drawable)
 #define renderWindow(R)		((Window)(R)->drawable)
 #define _renderContext(R)	((R)->context)
 #define renderContext(R)	((GLXContext)(R)->context)
 
-static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags)
+static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags)
 {
   XVisualInfo* visinfo= 0;
 
@@ -4135,7 +4098,7 @@ static void display_ioGLswapBuffers(glRenderer *r)
 }
 
 
-static int display_ioGLmakeCurrentRenderer(glRenderer *r)
+static sqInt display_ioGLmakeCurrentRenderer(glRenderer *r)
 {
   if (r)
     {
@@ -4151,7 +4114,7 @@ static int display_ioGLmakeCurrentRenderer(glRenderer *r)
 }
 
 
-static void display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h)
+static void display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h)
 {
   XMoveResizeWindow(stDisplay, renderWindow(r), x, y, w, h);
 }
@@ -4213,13 +4176,13 @@ static void listVisuals(void)
 
 /*** browser plugin (from sqUnixMozilla.c) ***/
 
-int   display_primitivePluginBrowserReady(void);
-int   display_primitivePluginRequestURLStream(void);
-int   display_primitivePluginRequestURL(void);
-int   display_primitivePluginPostURL(void);
-int   display_primitivePluginRequestFileHandle(void);
-int   display_primitivePluginDestroyRequest(void);
-int   display_primitivePluginRequestState(void);
+sqInt display_primitivePluginBrowserReady(void);
+sqInt display_primitivePluginRequestURLStream(void);
+sqInt display_primitivePluginRequestURL(void);
+sqInt display_primitivePluginPostURL(void);
+sqInt display_primitivePluginRequestFileHandle(void);
+sqInt display_primitivePluginDestroyRequest(void);
+sqInt display_primitivePluginRequestState(void);
 
 
 static char *display_winSystemName(void)

@@ -2,7 +2,7 @@
  *
  * Author: Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  * 
- * Last edited: 2003-08-16 10:17:41 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-17 21:37:05 by piumarta on squeak.hpl.hp.com
  *
  * Originally based on Andreas Raab's sqWin32PluginSupport
  * 
@@ -65,19 +65,19 @@ extern Window   stParent;
 extern int      browserPipes[2];
 
 /* from interpret.c */
-int stackObjectValue(int);
-int stackIntegerValue(int);
-int isBytes(int);
-int byteSizeOf(int);
-void *firstIndexableField(int);
-int push(int);
-int pop(int);
-int positive32BitIntegerFor(int);
-int nilObject();
-int instantiateClassindexableSize(int, int);
-int classByteArray();
-int failed();
-int pushBool(int);
+sqInt stackObjectValue(sqInt);
+sqInt stackIntegerValue(sqInt);
+sqInt isBytes(sqInt);
+sqInt byteSizeOf(sqInt);
+void *firstIndexableField(sqInt);
+sqInt push(sqInt);
+sqInt pop(sqInt);
+sqInt positive32BitIntegerFor(sqInt);
+sqInt nilObject(void);
+sqInt instantiateClassindexableSize(sqInt, sqInt);
+sqInt classByteArray(void);
+sqInt failed(void);
+sqInt pushBool(sqInt);
 
 /* prototypes */
 
@@ -244,7 +244,8 @@ int display_primitivePluginPostURL()
 int display_primitivePluginRequestFileHandle()
 {
   sqStreamRequest *req;
-  int id, fileOop, openFn;
+  int id, fileOop;
+  void *openFn;
 
   id= stackIntegerValue(0);
   if (failed()) return 0;
@@ -266,7 +267,7 @@ int display_primitivePluginRequestFileHandle()
 	return primitiveFail();
       }
   
-      fileOop=  ((int (*) (char *, int, int, int)) openFn)
+      fileOop= ((sqInt (*)(char *, sqInt, sqInt, sqInt))openFn)
 	(req->localName, strlen(req->localName), 0 /* readonly */, 0 /* insecure */);
  
       /* if file ends in a $, it was a temp link created by the plugin */
@@ -293,7 +294,7 @@ int display_primitivePluginRequestFileHandle()
   primitivePluginDestroyRequest: id
   Destroy a request that has been issued before.
 */
-int display_primitivePluginDestroyRequest()
+sqInt display_primitivePluginDestroyRequest()
 {
   sqStreamRequest *req;
   int id;
@@ -317,7 +318,7 @@ int display_primitivePluginDestroyRequest()
   Return false if the operation was aborted.
   Return nil if the operation is still in progress.
 */
-int display_primitivePluginRequestState()
+sqInt display_primitivePluginRequestState()
 {
   sqStreamRequest *req;
   int id;
@@ -505,12 +506,12 @@ void browserProcessCommand(void)
 
 #else /* !defined(USE_X11) */
 
-int display_primitivePluginBrowserReady()	{ return primitiveFail(); }
-int display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
-int display_primitivePluginRequestURL()		{ return primitiveFail(); }
-int display_primitivePluginPostURL()		{ return primitiveFail(); }
-int display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
-int display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
-int display_primitivePluginRequestState()	{ return primitiveFail(); }
+sqInt display_primitivePluginBrowserReady()		{ return primitiveFail(); }
+sqInt display_primitivePluginRequestURLStream()		{ return primitiveFail(); }
+sqInt display_primitivePluginRequestURL()		{ return primitiveFail(); }
+sqInt display_primitivePluginPostURL()			{ return primitiveFail(); }
+sqInt display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
+sqInt display_primitivePluginDestroyRequest()		{ return primitiveFail(); }
+sqInt display_primitivePluginRequestState()		{ return primitiveFail(); }
 
 #endif

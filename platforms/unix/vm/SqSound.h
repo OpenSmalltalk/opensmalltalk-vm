@@ -11,21 +11,21 @@ struct SqSound
 {
   int    version;
   /* output */
-  int	 (*snd_AvailableSpace)(void);
-  int	 (*snd_InsertSamplesFromLeadTime)(int frameCount, int srcBufPtr, int samplesOfLeadTime);
-  int	 (*snd_PlaySamplesFromAtLength)(int frameCount, int arrayIndex, int startIndex);
-  int	 (*snd_PlaySilence)(void);
-  int	 (*snd_Start)(int frameCount, int samplesPerSec, int stereo, int semaIndex);
-  int	 (*snd_Stop)(void);
+  sqInt  (*snd_AvailableSpace)(void);
+  sqInt  (*snd_InsertSamplesFromLeadTime)(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime);
+  sqInt  (*snd_PlaySamplesFromAtLength)(sqInt frameCount, sqInt arrayIndex, sqInt startIndex);
+  sqInt  (*snd_PlaySilence)(void);
+  sqInt  (*snd_Start)(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
+  sqInt  (*snd_Stop)(void);
   /* input */
-  int	 (*snd_StartRecording)(int desiredSamplesPerSec, int stereo, int semaIndex);
-  int	 (*snd_StopRecording)(void);
+  sqInt  (*snd_StartRecording)(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex);
+  sqInt  (*snd_StopRecording)(void);
   double (*snd_GetRecordingSampleRate)(void);
-  int	 (*snd_RecordSamplesIntoAtLength)(int buf, int startSliceIndex, int bufferSizeInBytes);
+  sqInt  (*snd_RecordSamplesIntoAtLength)(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes);
   /* mixer */
-  void	 (*snd_Volume)(double *left, double *right);
-  void	 (*snd_SetVolume)(double left, double right);
-  int    (*snd_SetRecordLevel)(int level);
+  void   (*snd_Volume)(double *left, double *right);
+  void   (*snd_SetVolume)(double left, double right);
+  sqInt  (*snd_SetRecordLevel)(sqInt level);
 };
 
 

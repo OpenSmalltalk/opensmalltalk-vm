@@ -1,8 +1,8 @@
 /* sqUnixFBDevKeyboard.c -- abstraction over the keyboard
  * 
- * Author: Ian Piumarta <ian.piumarta@inria.fr>
+ * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2003-08-21 20:44:36 by piumarta on felina.inria.fr
+ * Last edited: 2005-03-17 21:35:14 by piumarta on squeak.hpl.hp.com
  */
 
 
@@ -12,7 +12,7 @@
  *	13271 Skislope Way, Truckee, CA 96161
  *	http://www.weatherdimensions.com
  *
- * Copyright (C) 2003 Ian Piumarta
+ * Copyright (C) 2003-2005 Ian Piumarta
  * All Rights Reserved.
  * 
  * This file is part of Unix Squeak.
@@ -241,7 +241,7 @@ static void sigusr1(int sig)
     }
   else
     {
-      extern int fullDisplayUpdate(void);
+      extern sqInt fullDisplayUpdate(void);
       self->vtActive= 1;
       updateModifiers(self->state= 0);
       fullDisplayUpdate();
@@ -263,7 +263,9 @@ static void kb_initGraphics(_self)
       sa.sa_handler= sigusr1;
       sigemptyset(&sa.sa_mask);
       sa.sa_flags= 0;
+#    if !defined(__ia64)
       sa.sa_restorer= 0;
+#    endif
       sigaction(SIGUSR1, &sa, 0);
       vt.mode=   VT_PROCESS;
       vt.relsig= SIGUSR1;

@@ -1,10 +1,10 @@
 /* sqUnixSoundNull.c -- sound module for no sound
  *
- * Author: Ian.Piumarta@inria.fr
+ * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2003-02-09 17:53:08 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-17 20:34:26 by piumarta on squeak.hpl.hp.com
  *
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -43,21 +43,21 @@
 #define FAIL(X) { success(false); return X; }
 
 /* output */
-static int    sound_AvailableSpace(void)								FAIL(8192)
-static int    sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime)	FAIL(frameCount)
-static int    sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)		FAIL(8192)
-static int    sound_PlaySilence(void)									FAIL(8192)
-static int    sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)			FAIL(1)
-static int    sound_Stop(void)										FAIL(0)
+static sqInt  sound_AvailableSpace(void)									FAIL(8192)
+static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
+static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)		FAIL(8192)
+static sqInt  sound_PlaySilence(void)										FAIL(8192)
+static sqInt  sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)			FAIL(1)
+static sqInt  sound_Stop(void)											FAIL(0)
 /* input */
-static int    sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex)			FAIL(0)
-static int    sound_StopRecording(void)									FAIL(0)
-static double sound_GetRecordingSampleRate(void)							FAIL(0)
-static int    sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)	FAIL(0)
+static sqInt  sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)			FAIL(0)
+static sqInt  sound_StopRecording(void)										FAIL(0)
+static double sound_GetRecordingSampleRate(void)								FAIL(0)
+static sqInt  sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)	FAIL(0)
 /* mixer */
-static void   sound_Volume(double *left, double *right)							{ return; }
-static void   sound_SetVolume(double left, double right)						{ return; }
-static int    sound_SetRecordLevel(int level)								{ return level; }
+static void   sound_Volume(double *left, double *right)								{ return; }
+static void   sound_SetVolume(double left, double right)							{ return; }
+static sqInt  sound_SetRecordLevel(sqInt level)									{ return level; }
 
 #include "SqSound.h"
 
@@ -67,7 +67,7 @@ SqSoundDefine(null);
 
 static void sound_parseEnvironment(void) {}
 
-static int sound_parseArgument(int argc, char **argv)
+static int  sound_parseArgument(int argc, char **argv)
 {
   if (!strcmp(argv[0], "-nosound")) return 1;
   return 0;

@@ -1,10 +1,10 @@
 /* sqUnixSoundMacOSX.c -- sound support for CoreAudio on Mac OS 10
  *
- * Author: Ian.Piumarta@inria.fr
+ * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2003-11-23 14:39:18 by piumarta on emilia.local
+ * Last edited: 2005-03-17 21:36:05 by piumarta on squeak.hpl.hp.com
  *
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -617,7 +617,7 @@ static int Stream_stop(Stream *s)
 /// 
 
 
-static int sound_AvailableSpace(void)
+static sqInt sound_AvailableSpace(void)
 {
   if (output)
     return Buffer_free(output->buffer);
@@ -649,8 +649,7 @@ static void mixFrames(short *out, short *in, int nFrames)
 // Note: this is only used when the "sound quick start" preference is
 // enabled in the image.
 // 
-static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int framesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt framesOfLeadTime)
 {
   Stream *s= output;
 
@@ -721,9 +720,9 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 
       if ((frontFrames + backFrames) >= (frameCount / 2))
 	{
-	  mixFrames((short *)frontData, (short *)srcBufPtr, frontFrames);
+	  mixFrames((short *)frontData, (short *)pointerForOop(srcBufPtr), frontFrames);
 	  srcBufPtr += frontFrames * SqueakFrameSize;
-	  mixFrames((short *)backData,  (short *)srcBufPtr, backFrames);
+	  mixFrames((short *)backData,  (short *)pointerForOop(srcBufPtr), backFrames);
 	  framesDone= frontFrames + backFrames;
 	}
       return framesDone;
@@ -737,7 +736,7 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 // play (exactly) frameCount of samples (and no less, since the result is
 // ignored).
 // 
-static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
 {
   if (output)
     {
@@ -745,7 +744,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
       if (Buffer_free(output->buffer) >= byteCount)
 	{
 	  Buffer_write(output->buffer,
-		       (char *)arrayIndex + (startIndex * SqueakFrameSize),
+		       pointerForOop(arrayIndex) + (startIndex * SqueakFrameSize),
 		       byteCount);
 	  return frameCount;
 	}
@@ -758,7 +757,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 
 // play a buffer's worth of silence (as quietly as possible).
 // 
-static int sound_PlaySilence(void)
+static sqInt sound_PlaySilence(void)
 {
   success(false);
   return 8192;
@@ -767,7 +766,7 @@ static int sound_PlaySilence(void)
 
 // shut down sound output.
 // 
-static int sound_Stop(void)
+static sqInt sound_Stop(void)
 {
   dprintf("snd_Stop\n");
   
@@ -783,7 +782,7 @@ static int sound_Stop(void)
 
 // start up sound output.
 // 
-static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   Stream *s= 0;
 
@@ -825,7 +824,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static int sound_StopRecording(void)
+static sqInt sound_StopRecording(void)
 {
   dprintf("snd_StopRecording\n");
 
@@ -841,7 +840,7 @@ static int sound_StopRecording(void)
 
 // start up sound input.
 // 
-static int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex)
+static sqInt sound_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   Stream *s= 0;
 
@@ -867,7 +866,7 @@ static int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex)
 }
 
 
-static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   if (input)
     {
@@ -876,7 +875,7 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int buf
 	  int    start= startSliceIndex * SqueakFrameSize / 2;
 	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
 	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
-								&count, (char *)buf + start))
+								&count, pointerForOop(buf) + start))
 	    return count / (SqueakFrameSize / 2) / input->channels;
 	}
       return 0;
@@ -971,7 +970,7 @@ static void sound_SetVolume(double left, double right)
 
 // set recording gain, 0 <= level <= 1000
 // 
-static int sound_SetRecordLevel(int level)
+static sqInt sound_SetRecordLevel(sqInt level)
 {
   extern int noSoundMixer;
 

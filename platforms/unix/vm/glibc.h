@@ -18,6 +18,6 @@
     extern int isxdigit(int c);
     /* squash realpath@GLIBC_2.3 */
 #   include <stdlib.h>
-    asm (".symver realpath, realpath@GLIBC_2.0");
+/*  asm (".symver realpath, realpath@GLIBC_2.0"); */
 # endif
 #endif

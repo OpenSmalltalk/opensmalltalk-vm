@@ -1,6 +1,6 @@
 /* aio.c -- asynchronous file i/o
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -34,9 +34,9 @@
  *   directory `platforms/unix/doc' before proceeding with any such use.
  */
 
-/* Author: Ian.Piumarta@inria.fr
+/* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2003-08-23 23:13:02 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-17 21:09:26 by piumarta on squeak.hpl.hp.com
  */
 
 #include "aio.h"
@@ -218,8 +218,9 @@ int aioPoll(int microSeconds)
       n= select(maxFd, &rd, &wr, &ex, &tv);
       if (n  > 0) break;
       if (n == 0) return 0;
-      if (EINTR != errno)
+      if (errno && (EINTR != errno))
 	{
+	  fprintf(stderr, "errno %d\n", errno);
 	  perror("select");
 	  return 0;
 	}

@@ -1,6 +1,6 @@
 /* Definitions for "gnuified" interp.c
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -34,9 +34,9 @@
  *   directory `platforms/unix/doc' before proceeding with any such use.
  */
 
-/* Author: Ian.Piumarta@inria.fr
+/* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2004-04-02 14:51:09 by piumarta on emilia.local
+ * Last edited: 2005-03-17 21:05:30 by piumarta on squeak.hpl.hp.com
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h

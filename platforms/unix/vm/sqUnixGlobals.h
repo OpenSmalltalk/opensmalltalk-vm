@@ -1,26 +1,28 @@
 #ifndef __sqUnixGlobals_h
 #define __sqUnixGlobals_h
 
+#include "sqMemoryAccess.h"
+
 #if 1 /* use global structure */
 
-extern int  getFullScreenFlag(void);
-extern void setFullScreenFlag(int i);
-extern int  getInterruptCheckCounter(void);
-extern void setInterruptCheckCounter(int i);
-extern int  getInterruptKeycode(void);
-extern void setInterruptKeycode(int i);
-extern int  getInterruptPending(void);
-extern void setInterruptPending(int i);
-extern int  getSavedWindowSize(void);
-extern void setSavedWindowSize(int i);
+  extern sqInt getFullScreenFlag(void);
+  extern void  setFullScreenFlag(sqInt i);
+  extern sqInt getInterruptCheckCounter(void);
+  extern void  setInterruptCheckCounter(sqInt i);
+  extern sqInt getInterruptKeycode(void);
+  extern void  setInterruptKeycode(sqInt i);
+  extern sqInt getInterruptPending(void);
+  extern void  setInterruptPending(sqInt i);
+  extern sqInt getSavedWindowSize(void);
+  extern void  setSavedWindowSize(sqInt i);
 
 #else /* ! global structure */
 
-  extern int fullScreenFlag;
-  extern int interruptCheckCounter;
-  extern int interruptKeycode;
-  extern int interruptPending;
-  extern int savedWindowSize;
+  extern sqInt fullScreenFlag;
+  extern sqInt interruptCheckCounter;
+  extern sqInt interruptKeycode;
+  extern sqInt interruptPending;
+  extern sqInt savedWindowSize;
 
 # define getFullScreenFlag()		(fullScreenFlag)
 # define setFullScreenFlag(I)		(fullScreenFlag= (I))

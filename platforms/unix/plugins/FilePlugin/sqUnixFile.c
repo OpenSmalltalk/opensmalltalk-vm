@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2003-10-28 10:56:26 by piumarta on emilia.inria.fr
+ * Last edited: 2004-06-13 19:42:03 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -98,7 +98,8 @@ DIR *openDir= 0;
 
 extern time_t convertToSqueakTime(time_t unixTime);
 
-int dir_Create(char *pathString, int pathStringLength)
+
+sqInt dir_Create(char *pathString, sqInt pathStringLength)
 {
   /* Create a new directory with the given path. By default, this
      directory is created relative to the cwd. */
@@ -111,7 +112,8 @@ int dir_Create(char *pathString, int pathStringLength)
   return mkdir(name, 0777) == 0;	/* rwxrwxrwx & ~umask */
 }
 
-int dir_Delete(char *pathString, int pathStringLength)
+
+sqInt dir_Delete(char *pathString, sqInt pathStringLength)
 {
   /* Delete the existing directory with the given path. */
   char name[MAXPATHLEN+1];
@@ -123,10 +125,12 @@ int dir_Delete(char *pathString, int pathStringLength)
   return rmdir(name) == 0;
 }
 
-int dir_Delimitor(void)
+
+sqInt dir_Delimitor(void)
 {
   return DELIMITER;
 }
+
 
 static int maybeOpenDir(char *unixPath)
 {
@@ -149,9 +153,10 @@ static int maybeOpenDir(char *unixPath)
   return true;
 }
 
-int dir_Lookup(char *pathString, int pathStringLength, int index,
-/* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
+
+sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
+/* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+		sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
   /* Lookup the index-th entry of the directory with the given path, starting
      at the root of the file system. Set the name, name length, creation date,
@@ -242,16 +247,16 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   return ENTRY_FOUND;
 }
 
-int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
-				 char *fType, char *fCreator)
+
+/* unix files are untyped, and the creator is correct by default */
+
+
+sqInt dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator)
 {
-  /* unix files are untyped, and the creator is correct by default */
   return true;
 }
 
-
-int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
-				 char *fType, char *fCreator)
+sqInt dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator)
 {
   return true;
 }

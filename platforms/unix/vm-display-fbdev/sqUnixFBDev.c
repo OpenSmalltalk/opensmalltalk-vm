@@ -1,8 +1,8 @@
 /* sqUnixFBDev.c -- display driver for the Linux framebuffer
  * 
- * Author: Ian Piumarta <ian.piumarta@inria.fr>
+ * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2004-04-02 14:46:52 by piumarta on emilia.local
+ * Last edited: 2005-03-17 21:34:16 by piumarta on squeak.hpl.hp.com
  */
 
 
@@ -12,7 +12,7 @@
  *	13271 Skislope Way, Truckee, CA 96161
  *	http://www.weatherdimensions.com
  *
- * Copyright (C) 2003 Ian Piumarta
+ * Copyright (C) 2003-2005 Ian Piumarta
  * All Rights Reserved.
  * 
  * This file is part of Unix Squeak.
@@ -219,28 +219,28 @@ static void closeMouse(void)
 }
 
 
-static int display_ioBeep(void)
+static sqInt display_ioBeep(void)
 {
   kb_bell(kb);
   return 0;
 }
 
 
-static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
+static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
   aioPoll(microSeconds);
   return 0;
 }
 
 
-static int display_ioProcessEvents(void)
+static sqInt display_ioProcessEvents(void)
 {
   aioPoll(0);
   return 0;
 }
 
 
-static int display_ioScreenDepth(void)
+static sqInt display_ioScreenDepth(void)
 {
   // we could match negative depths for little-endian machines here, but:
   //   1. some kinds of BitBlt seem to be broken at depth -8;
@@ -249,34 +249,30 @@ static int display_ioScreenDepth(void)
 }
 
 
-static int display_ioScreenSize(void)
+static sqInt display_ioScreenSize(void)
 {
   return ((fb_width(fb) << 16) | fb_height(fb));
 }
 
 
-static int display_ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex,
-				       int offsetX, int offsetY)
+static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
-  fb_setCursor(fb, (char *)cursorBitsIndex, (char *)cursorMaskIndex, offsetX, offsetY);
+  fb_setCursor(fb, pointerForOop(cursorBitsIndex), pointerForOop(cursorMaskIndex), offsetX, offsetY);
   return 1;
 }
 
 
-static int display_ioShowDisplay(int dispBitsIndex,
-				 int width, int height, int depth,
-				 int affectedL, int affectedR,
-				 int affectedT, int affectedB)
+static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB)
 {
   if ((depth  != fb_depth(fb)) || (width  != fb_width(fb)) || (height != fb_height(fb))
       || (affectedR < affectedL) || (affectedB < affectedT))
     return 0;
-  fb->copyBits(fb, (char *)dispBitsIndex, affectedL, affectedR, affectedT, affectedB);
+  fb->copyBits(fb, pointerForOop(dispBitsIndex), affectedL, affectedR, affectedT, affectedB);
   return 1;
 }
 
 
-static int display_ioHasDisplayDepth(int i)
+static sqInt display_ioHasDisplayDepth(sqInt i)
 {
   dprintf("hasDisplayDepth %d (%d) => %d\n", i, fb_depth(fb), (i == fb_depth(fb)));
   return (i == fb_depth(fb));
@@ -398,17 +394,17 @@ static int display_parseArgument(int argc, char **argv)
 }
 
 
-static int  display_clipboardSize(void)								{ return 0; }
-static int  display_clipboardWriteFromAt(int n, int ptr, int off)				{ return 0; }
-static int  display_clipboardReadIntoAt(int n, int ptr, int off)				{ return 0; }
-static int  display_ioFormPrint(int bits, int w, int h, int d, double hs, double vs, int l)	{ return 0; }
-static int  display_ioSetFullScreen(int fullScreen)						{ return 0; }
-static int  display_ioForceDisplayUpdate(void)							{ return 0; }
-static int  display_ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)	{ return 0; }
-static void display_winSetName(char *imageName)							{ return  ; }
-static void display_winExit(void)								{ return  ; }
-static int  display_winImageFind(char *buf, int len)						{ return 0; }
-static void display_winImageNotFound(void)							{ return  ; }
+static sqInt display_clipboardSize(void)									{ return 0; }
+static sqInt display_clipboardWriteFromAt(sqInt n, sqInt ptr, sqInt off)					{ return 0; }
+static sqInt display_clipboardReadIntoAt(sqInt n, sqInt ptr, sqInt off)					{ return 0; }
+static sqInt display_ioFormPrint(sqInt bits, sqInt w, sqInt h, sqInt d, double hs, double vs, sqInt l)	{ return 0; }
+static sqInt display_ioSetFullScreen(sqInt fullScreen)							{ return 0; }
+static sqInt display_ioForceDisplayUpdate(void)								{ return 0; }
+static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)		{ return 0; }
+static void display_winSetName(char *imageName)								{ return  ; }
+static void display_winExit(void)									{ return  ; }
+static int  display_winImageFind(char *buf, int len)							{ return 0; }
+static void display_winImageNotFound(void)								{ return  ; }
 
 
 //----------------------------------------------------------------
@@ -425,22 +421,22 @@ static void *display_ioGetWindow(void)	{ return 0; }
 
 // OpenGL
 
-static int   display_ioGLinitialise(void)							{ return 0; }
-static int   display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags)	{ return 0; }
-static void  display_ioGLdestroyRenderer(glRenderer *r)						{ return  ; }
-static void  display_ioGLswapBuffers(glRenderer *r)						{ return  ; }
-static int   display_ioGLmakeCurrentRenderer(glRenderer *r)					{ return 0; }
-static void  display_ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h)		{ return  ; }
+static sqInt  display_ioGLinitialise(void)								{ return 0; }
+static sqInt  display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h, sqInt flags)	{ return 0; }
+static void  display_ioGLdestroyRenderer(glRenderer *r)							{ return  ; }
+static void  display_ioGLswapBuffers(glRenderer *r)							{ return  ; }
+static sqInt  display_ioGLmakeCurrentRenderer(glRenderer *r)						{ return 0; }
+static void  display_ioGLsetBufferRect(glRenderer *r, sqInt x, sqInt y, sqInt w, sqInt h)			{ return  ; }
 
 // Mozilla
 
-static int   display_primitivePluginBrowserReady()	{ return primitiveFail(); }
-static int   display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
-static int   display_primitivePluginRequestURL()	{ return primitiveFail(); }
-static int   display_primitivePluginPostURL()		{ return primitiveFail(); }
-static int   display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
-static int   display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
-static int   display_primitivePluginRequestState()	{ return primitiveFail(); }
+static sqInt display_primitivePluginBrowserReady()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURLStream()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestURL()	{ return primitiveFail(); }
+static sqInt display_primitivePluginPostURL()		{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestFileHandle()	{ return primitiveFail(); }
+static sqInt display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
+static sqInt display_primitivePluginRequestState()	{ return primitiveFail(); }
 
 //----------------------------------------------------------------
 
