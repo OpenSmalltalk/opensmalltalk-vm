@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.6 2002/08/06 21:40:26 johnmci Exp $
+*   RCSID:   $Id: sqMacDirectory.c,v 1.7 2003/02/08 18:26:23 johnmci Exp $
 *
 *   NOTES: See change log below.
 * 
@@ -138,6 +138,9 @@ int dir_Delete(char *pathString, int pathStringLength) {
     if (pathStringLength >= 1000) {
         return false;
     }
+
+	if (equalsLastPath(pathString, pathStringLength))
+		lastPathValid = false;
 
 #if defined(__MWERKS__)
 	{
