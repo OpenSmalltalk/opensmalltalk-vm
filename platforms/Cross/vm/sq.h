@@ -1,3 +1,15 @@
+/****************************************************************************
+*   PROJECT: Common include
+*   FILE:    sq.h
+*   CONTENT: 
+*
+*   AUTHOR:  
+*   ADDRESS: 
+*   EMAIL:   
+*   RCSID:   $Id: sq.h,v 1.3 2002/01/22 19:22:38 johnmci Exp $
+*
+*	01/22/2002 JMM change off_t to squeakOffsetFileType
+*/
 #include <math.h>
 #include <stdio.h>
 #include <stdlib.h>
@@ -306,7 +318,7 @@ int ioDisableImageWrite(void);
 
 /* save/restore */
 /* Read the image from the given file starting at the given image offset */
-int readImageFromFileHeapSizeStartingAt(sqImageFile f, int desiredHeapSize, off_t imageOffset);
+int readImageFromFileHeapSizeStartingAt(sqImageFile f, int desiredHeapSize, squeakFileOffsetType imageOffset);
 /* NOTE: The following is obsolete - it is only provided for compatibility */
 #define readImageFromFileHeapSize(f, s) readImageFromFileHeapSizeStartingAt(f,s,0)
 

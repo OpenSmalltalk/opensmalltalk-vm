@@ -1,3 +1,18 @@
+/****************************************************************************
+*   PROJECT: File Interface
+*   FILE:    sqFilePluginBasicPrims.c
+*   CONTENT: 
+*
+*   AUTHOR:  
+*   ADDRESS: 
+*   EMAIL:   ]
+*   RCSID:   $Id: sqFilePluginBasicPrims.c,v 1.4 2002/01/22 19:18:18 johnmci Exp $
+*
+*   NOTES: See change log below.
+*	1/22/2002  JMM Use squeakFileOffsetType versus off_t
+*
+*****************************************************************************/
+
 /* The basic prim code for file operations. See also the platform specific
 * files typically named 'sq{blah}Directory.c' for details of the directory
 * handling code. Note that the win32 platform #defines NO_STD_FILE_SUPPORT
@@ -32,7 +47,7 @@
 		File	*file;
 		int		sessionID;
 		int		writable;
-		off_t		fileSize;  //JMM Nov 8th 2001 64bits we hope
+		squeakFileOffsetType		fileSize;  //JMM Nov 8th 2001 64bits we hope
 		int		lastOp;  // 0 = uncommitted, 1 = read, 2 = write //
 	} SQFile;
 
@@ -90,10 +105,10 @@ int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize) {
 	}
 }
 
-off_t sqFileGetPosition(SQFile *f) {
+squeakFileOffsetType sqFileGetPosition(SQFile *f) {
 	/* Return the current position of the file's read/write head. */
 
-	off_t position;
+	squeakFileOffsetType position;
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
 	position = ftello(f->file);
@@ -207,7 +222,7 @@ int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameInd
 	}
 }
 
-int sqFileSetPosition(SQFile *f, off_t position) {
+int sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 	/* Set the file's read/write head to the given position. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
@@ -215,7 +230,7 @@ int sqFileSetPosition(SQFile *f, off_t position) {
 	f->lastOp = UNCOMMITTED;
 }
 
-off_t sqFileSize(SQFile *f) {
+squeakFileOffsetType sqFileSize(SQFile *f) {
 	/* Return the length of the given file. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
@@ -230,7 +245,7 @@ int sqFileFlush(SQFile *f) {
 	return 1;
 }
 
-int sqFileTruncate(SQFile *f,off_t offset) {
+int sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
 	/* Truncate the file*/
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
@@ -257,7 +272,7 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t sta
 
 	char *src;
 	size_t bytesWritten;
-	off_t position;
+	squeakFileOffsetType position;
 
 	if (!(sqFileValid(f) && f->writable)) return interpreterProxy->success(false);
 	if (f->lastOp == READ_OP) fseeko(f->file, 0, SEEK_CUR);  /* seek between reading and writing */
