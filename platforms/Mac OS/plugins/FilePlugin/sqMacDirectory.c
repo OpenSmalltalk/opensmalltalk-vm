@@ -7,16 +7,26 @@
  3.0.14 May 2001 lookupPath needs to abort on :: can't do hardway lookup, too complicated
  3.0.17 May 24th 2001 JMM add flush vol on flush file (needed according to apple tech notes)
  3.0.19 Aug 2001 JMM make it a real plugin 
+ 3.2.1  Nov 2001 JMM build with Apple's project builder and convert to use StdCLib.
  */
 
 #include "sq.h"
 #include "FilePlugin.h"
 #include "sqMacFileLogic.h"
+#if TARGET_API_MAC_CARBON
+	#include <Carbon/Carbon.h>
+	#include <unistd.h>
+	#include <sys/stat.h>
+#else
+	#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+		#include <unistd.h>
+		int mkdir(const char *,...);
+		int ftruncate(short int file,int offset);
+	#endif
 
-/* End of adjustments for pluginized VM */
-
-#include <Files.h>
-#include <Strings.h>
+	#include <Files.h>
+	#include <Strings.h>
+#endif
 
 /***
         The interface to the directory primitive is path based.
@@ -45,21 +55,91 @@ int convertToSqueakTime(int macTime);
 int equalsLastPath(char *pathString, int pathStringLength);
 int recordPath(char *pathString, int pathStringLength, FSSpec *spec);
 OSErr getSpecAndFInfo(char *filename, int filenameSize,FSSpec *spec,FInfo *finderInfo);
-int ftruncate(FILE	*file,int offset);
-									 								 
+
 int convertToSqueakTime(int macTime) {
 	/* Squeak epoch is Jan 1, 1901, 3 non-leap years earlier than Mac one */
 	return macTime + (3 * 365 * 24 * 60 * 60);
 }
-
+#if TARGET_API_MAC_CARBON
 int dir_Create(char *pathString, int pathStringLength) {
 	/* Create a new directory with the given path. By default, this
 	   directory is created in the current directory. Use
 	   a full path name such as "MyDisk:Working:New Folder" to
 	   create folders elsewhere. */
 
-    //JMM tests create file in Vm directory, other place, other volume
+    char cFileName[1001];
+    int err;
+
+    if (pathStringLength >= 1000) {
+        return false;
+    }
+
+    /* copy the file name into a null-terminated C string */
+    sqFilenameFromString((char *) cFileName, (int) pathString, pathStringLength);
     
+#if defined(__MWERKS__) && JMMFoo
+	{
+        CFStringRef 	filePath,lastFilePath;
+        CFURLRef 	    sillyThing,sillyThing2;
+        FSRef	        parentFSRef;
+        UniChar         buffer[1024];
+        long            tokenLength;
+        
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),kCFStringEncodingMacRoman,false);
+        sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,true);
+        CFRelease(filePath);
+
+        lastFilePath = CFURLCopyLastPathComponent(sillyThing);
+        tokenLength = CFStringGetLength(lastFilePath);
+        CFStringGetCharacters(lastFilePath,CFRangeMake(0,tokenLength),buffer);
+        CFRelease(lastFilePath);
+
+        sillyThing2 = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault,sillyThing);
+
+        err = CFURLGetFSRef(sillyThing2,&parentFSRef);
+        CFRelease(sillyThing);
+        CFRelease(sillyThing2);
+        if (err == 0) {
+            return false;  
+        }
+		err = FSCreateDirectoryUnicode(&parentFSRef,tokenLength,buffer,kFSCatInfoNone,NULL,NULL,NULL,NULL);
+		
+    	return (err == noErr ? 1 : 0);
+    }
+#else
+    return mkdir(cFileName, 0777) == 0;
+#endif
+}
+ 
+int dir_Delete(char *pathString, int pathStringLength) {
+	/* Delete the existing directory with the given path. */
+    char cFileName[1000];
+    int err;
+
+    if (pathStringLength >= 1000) {
+        return false;
+    }
+
+#if defined(__MWERKS__)  && JMMFoo
+	{
+    	/* Delete the existing directory with the given path. */
+        FSSpec spec;
+        OSErr  err;
+
+        if ((err = makeFSSpec(pathString, pathStringLength,&spec))  != noErr)
+            return false;
+            
+       	return FSpDelete(&spec) == noErr;
+    }
+#else
+    /* copy the file name into a null-terminated C string */
+    sqFilenameFromString(cFileName, (int) pathString, pathStringLength);
+    return rmdir(cFileName) == 0;
+#endif
+}
+
+#else
+int dir_Create(char *pathString, int pathStringLength) {
     FSSpec spec;
     OSErr  err;
     long  createdDirID;
@@ -80,6 +160,7 @@ int dir_Delete(char *pathString, int pathStringLength) {
         
    	return FSpDelete(&spec) == noErr;
 }
+#endif
 
 int dir_Delimitor(void) {
 	return DELIMITOR;
@@ -88,7 +169,7 @@ int dir_Delimitor(void) {
 int dir_Lookup(char *pathString, int pathStringLength, int index,
   /* outputs: */
   char *name, int *nameLength, int *creationDate, int *modificationDate,
-  int *isDirectory, int *sizeIfFile) {
+  int *isDirectory, off_t *sizeIfFile) {
 	/* Lookup the index-th entry of the directory with the given path, starting
 	   at the root of the file system. Set the name, name length, creation date,
 	   creation time, directory flag, and file size (if the entry is a file).
@@ -99,10 +180,10 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
 	int okay;
 	HVolumeParam volumeParams;
-	CInfoPBRec dirParams;
     FSSpec      spec;
-    Boolean     isFolder;
+    long        parentDirectory;
     OSErr       err;
+    Str255      longFileName;
     
 	/* default return values */
 	*name             = 0;
@@ -132,27 +213,21 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 	} else {
 		/* get file or directory info */
 		if (!equalsLastPath(pathString, pathStringLength)) {
-			/* lookup and cache the refNum for this path */
+ 			/* lookup and cache the refNum for this path */
 			err = lookupPath(pathString, pathStringLength, &spec,false);
-			if (err == noErr) 
+ 			if (err == noErr) 
 				recordPath(pathString, pathStringLength, &spec);
 			else 
 				return BAD_PATH;
 		}
 	    spec = lastSpec;
-		okay = fetchFileInfo(&dirParams,index,&spec,(unsigned char *) name,true,&isFolder);
-		if (okay) {
-			CopyPascalStringToC((ConstStr255Param) name,name);
-			*nameLength       = strlen(name);
-			*creationDate     = convertToSqueakTime(dirParams.hFileInfo.ioFlCrDat);
-			*modificationDate = convertToSqueakTime(dirParams.hFileInfo.ioFlMdDat);
-			if (((dirParams.hFileInfo.ioFlAttrib & kioFlAttribDirMask) != 0) || isFolder) {
-				*isDirectory  = true;
 				*sizeIfFile   = 0;
-			} else {
-				*isDirectory  = false;
-				*sizeIfFile   = dirParams.hFileInfo.ioFlLgLen;
-			}
+		okay = fetchFileInfo(index,&spec,(unsigned char *) name,true,&parentDirectory,isDirectory,creationDate,modificationDate,sizeIfFile,&longFileName);
+		if (okay) {
+			CopyPascalStringToC((ConstStr255Param) longFileName,name);
+			*nameLength       = strlen(name);
+			*creationDate     = convertToSqueakTime(*creationDate);
+			*modificationDate = convertToSqueakTime(*modificationDate);
 			return ENTRY_FOUND;
 		} else
 			return NO_MORE_ENTRIES;
@@ -241,9 +316,22 @@ int recordPath(char *pathString, int pathStringLength, FSSpec *spec) {
 }
 
 
+#if defined(__MWERKS__) && !TARGET_API_MAC_CARBON
+int ftruncate(short int file,int offset)
+{	
+	ParamBlockRec pb;
+    OSErr error;
 
-#if !defined ( __MPW__ ) &&  !defined( __APPLE__ ) && !defined( __MACH__)
+	//JMM Foo FSSetForkSize FSSetForkPosition FSGetForkPosition
+	pb.ioParam.ioRefNum = file;
+	pb.ioParam.ioMisc = (char *) offset;
+	error = PBSetEOFSync(&pb);
+	return error;
+}
 
+#endif
+
+#if defined(__MWERKS__) && !TARGET_API_MAC_CARBON
 
 #include <ansi_files.h>
 #include <buffer_io.h>
@@ -276,7 +364,7 @@ int fflush(FILE * file)
 	}
 	
 #ifndef _No_Disk_File_OS_Support
-	if (file->mode.file_kind != __disk_file || (position = ftell(file)) < 0)
+	if (file->mode.file_kind != __disk_file || (position = ftello(file)) < 0)
 		position = 0;
 #else
 	position = 0;
@@ -302,15 +390,125 @@ int fflush(FILE * file)
 	return(0);
 }
 
-int ftruncate(FILE	*file,int offset)
-{	
-	ParamBlockRec pb;
-    OSErr error;
+extern __system7present();
+extern long __getcreator(long isbinary);
+extern long __gettype(long isbinary);
 
-	pb.ioParam.ioRefNum = file->handle;
-	pb.ioParam.ioMisc = (char *) offset;
-	error = PBSetEOFSync(&pb);
-	return error;
+
+static void set_file_type(FSSpec * spec, int binary_file)
+{
+	CInfoPBRec	pb;
+	OSErr				ioResult;
+	
+	pb.hFileInfo.ioNamePtr   = spec->name;
+	pb.hFileInfo.ioVRefNum   = spec->vRefNum;
+	pb.hFileInfo.ioFDirIndex = 0;
+	pb.hFileInfo.ioDirID     = spec->parID;
+	
+	if (!(ioResult = PBGetCatInfoSync(&pb)))
+	{
+		pb.hFileInfo.ioFlFndrInfo.fdType    = __gettype(binary_file);     /*mm-960729*/
+		pb.hFileInfo.ioFlFndrInfo.fdCreator = __getcreator(binary_file);  /*mm-960729*/
+		pb.hFileInfo.ioDirID                = spec->parID;
+		
+		ioResult = PBSetCatInfoSync(&pb);
+	}
 }
-#endif
 
+int	__open_file			(const char * name, __std(__file_modes) mode, __std(__file_handle) * handle);
+
+int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
+{
+	FSSpec					spec;
+	OSErr						ioResult;
+	HParamBlockRec	pb;
+	
+	ioResult = __path2fss(name, &spec);
+	if (__system7present())												/* mm 980424 */
+	{																	/* mm 980424 */
+		Boolean targetIsFolder, wasAliased;								/* mm 980424 */
+		ResolveAliasFile(&spec, true, &targetIsFolder, &wasAliased);	/* mm 980424 */
+	}																	/* mm 980424 */
+	
+	if (ioResult && (ioResult != fnfErr || mode.open_mode == __must_exist))
+		return(__io_error);
+	
+#if TARGET_API_MAC_CARBON	
+	if (ioResult) {
+        CFStringRef 	filePath;
+        CFURLRef 	    sillyThing, sillyThing2;
+        FSRef	        parentFSRef;
+    	short int       fileRefNum;
+        OSErr           err;
+        UniChar         buffer[1024];
+        long            tokenLength;
+        
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)name,strlen(name),kCFStringEncodingMacRoman,false);
+        sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+        CFRelease(filePath);
+        sillyThing2 = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault,sillyThing);
+        err = CFURLGetFSRef(sillyThing2,&parentFSRef);
+        if (err == 0) {
+            CFRelease(sillyThing);
+            CFRelease(sillyThing2);
+            return fnfErr;  
+        }
+        filePath = CFURLCopyLastPathComponent(sillyThing);
+        tokenLength = CFStringGetLength(filePath);
+        CFStringGetCharacters(filePath,CFRangeMake(0,tokenLength),buffer);
+
+        CFRelease(filePath);
+        CFRelease(sillyThing);
+        CFRelease(sillyThing2);
+
+		ioResult = FSCreateFileUnicode(&parentFSRef,tokenLength,buffer,kFSCatInfoNone,NULL,NULL,&spec);  
+    	if (ioResult)
+	    	return(__io_error);
+	    	
+	    ioResult = FSpOpenDF(&spec,(mode.io_mode == __read) ? fsRdPerm : fsRdWrPerm, &fileRefNum); 
+    	if (ioResult)
+	    	return(__io_error);
+	    	
+	    *handle = fileRefNum;
+	
+	    return(__no_io_error);
+	}
+#endif
+    pb.ioParam.ioNamePtr    = spec.name;
+	pb.ioParam.ioVRefNum    = spec.vRefNum;
+	pb.ioParam.ioPermssn    = (mode.io_mode == __read) ? fsRdPerm : fsRdWrPerm;
+	pb.ioParam.ioMisc       = 0;
+	pb.fileParam.ioFVersNum = 0;
+	pb.fileParam.ioDirID    = spec.parID;
+	
+	if (ioResult)
+	{
+		if (!(ioResult = PBHCreateSync(&pb)))
+		{
+			set_file_type(&spec, mode.binary_io);
+			ioResult = PBHOpenDFSync(&pb);  /* HH 10/25/97  was PBHOpenSync */
+		}
+	}
+	else
+	{
+		if (!(ioResult = PBHOpenDFSync(&pb)) && mode.open_mode == __create_or_truncate)  
+		                                  /* HH 10/25/97  was PBHOpenSync */
+		{
+			pb.ioParam.ioMisc = 0;
+			
+			ioResult = PBSetEOFSync((ParmBlkPtr) &pb);
+			
+			if (ioResult)
+				PBCloseSync((ParmBlkPtr) &pb);
+		}
+	}
+	
+	if (ioResult)
+		return(__io_error);
+	
+	*handle = pb.ioParam.ioRefNum;
+	
+	return(__no_io_error);
+}
+
+#endif
