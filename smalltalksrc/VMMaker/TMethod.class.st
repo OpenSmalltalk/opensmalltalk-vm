@@ -297,7 +297,7 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
 		(declarations includesKey: arg) ifTrue: [
 			aStream nextPutAll: (declarations at: arg).
 		] ifFalse: [
-			aStream nextPutAll: 'int ', (args at: i).
+			aStream nextPutAll: 'sqInt ', (args at: i).
 		].
 		i < args size ifTrue: [ aStream nextPutAll: ', ' ].
 	].
@@ -314,7 +314,7 @@ TMethod >> emitCHeaderOn: aStream generator: aCodeGen [
 	self emitGlobalStructReferenceOn: aStream.
 	locals do: [ :var |
 		aStream nextPutAll: '    '.
-		aStream nextPutAll: (declarations at: var ifAbsent: [ 'int ', var]), ';'; cr.
+		aStream nextPutAll: (declarations at: var ifAbsent: [ 'sqInt ', var]), ';'; cr.
 	].
 	locals isEmpty ifFalse: [ aStream cr ].
 ]
@@ -341,7 +341,7 @@ TMethod >> emitInlineOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll:'{'; cr.
 	locals do: [ :var |
 		aStream tab: level+1.
-		aStream nextPutAll: (declarations at: var ifAbsent: [ 'int ', var]), ';'; cr.
+		aStream nextPutAll: (declarations at: var ifAbsent: [ 'sqInt ', var]), ';'; cr.
 	].
 	parseTree emitCCodeOn: aStream level: level+1 generator: aCodeGen.
 	aStream tab: level; nextPutAll: '}'; cr.
@@ -360,7 +360,7 @@ TMethod >> emitProxyFunctionPrototype: aStream generator: aCodeGen [
 		(declarations includesKey: arg) ifTrue: [
 			aStream nextPutAll: (declarations at: arg).
 		] ifFalse: [
-			aStream nextPutAll: 'int ', (args at: i).
+			aStream nextPutAll: 'sqInt ', (args at: i).
 		].
 		i < args size ifTrue: [ aStream nextPutAll: ', ' ].
 	].
@@ -727,7 +727,7 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 				ifFalse: [ exitLabel _ nil ].
 		].
 		"propagate type info if necessary"
-		((exitVar ~= nil) and: [meth returnType ~= 'int']) ifTrue: [
+		((exitVar ~= nil) and: [meth returnType ~= 'sqInt']) ifTrue: [
 			declarations at: exitVar put: meth returnType, ' ', exitVar.
 		].
 	].
@@ -1322,7 +1322,7 @@ TMethod >> setSelector: sel args: argList locals: localList block: aBlockNode pr
 	"Initialize this method using the given information."
 
 	selector _ sel.
-	returnType _ 'int'. 	 "assume return type is int for now"
+	returnType _ 'sqInt'. 	 "assume return type is long for now"
 	args _ argList asOrderedCollection collect: [:arg | arg key].
 	locals _ localList asOrderedCollection collect: [:arg | arg key].
 	declarations _ Dictionary new.

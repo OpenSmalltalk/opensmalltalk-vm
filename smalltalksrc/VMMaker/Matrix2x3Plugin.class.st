@@ -128,6 +128,8 @@ Matrix2x3Plugin >> okayIntValue: value [
 { #category : #primitives }
 Matrix2x3Plugin >> primitiveComposeMatrix [
 	| m1 m2 m3 result |
+	self cCode: ''  "Make this fail in simulation"
+		inSmalltalk: [interpreterProxy success: false. ^ nil].
 	self export: true.
 	self inline: false.
 	self var: #m1 declareC:'float *m1'.

@@ -42,5 +42,5 @@ Unsigned >> ccg: cg prolog: aBlock expr: aString index: anInteger [
 { #category : #'as yet unclassified' }
 Unsigned >> ccgDeclareCForVar: aSymbolOrString [
 
-	^'unsigned ', aSymbolOrString
+	^'unsigned int ', aSymbolOrString
 ]

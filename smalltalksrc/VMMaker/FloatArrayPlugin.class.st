@@ -94,7 +94,7 @@ FloatArrayPlugin >> primitiveAtPut [
 	interpreterProxy failed ifTrue:[^nil].
 	floatPtr _ interpreterProxy firstIndexableField: rcvr.
 	floatPtr at: index-1 put: (self cCoerce: floatValue to:'float').
-	interpreterProxy failed ifFalse:[interpreterProxy pop: 3 thenPush: value].
+	interpreterProxy failed ifFalse: [interpreterProxy pop: 3 thenPush: value].
 ]
 
 { #category : #'arithmetic primitives' }

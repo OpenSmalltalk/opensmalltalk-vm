@@ -37,11 +37,32 @@ CObjectAccessor >> -= decrement [
 ]
 
 { #category : #converting }
+CObjectAccessor >> asFloatAccessor [
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj floatAt: index]
+		atPutBlock: [:obj :index :value | obj floatAt: index put: value]
+]
+
+{ #category : #converting }
+CObjectAccessor >> asIntAccessor [
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj intAt: index]
+		atPutBlock: [:obj :index :value | obj intAt: index put: value]
+]
+
+{ #category : #converting }
 CObjectAccessor >> asOop: aClass [
 
 	(aClass ccgCanConvertFrom: object)
 		ifFalse: [^self error: 'incompatible object for autocoercion'].
 	^object
+]
+
+{ #category : #converting }
+CObjectAccessor >> asPluggableAccessor [
+	^ (CPluggableAccessor on: object) += offset
 ]
 
 { #category : #converting }
@@ -64,12 +85,20 @@ CObjectAccessor >> at: index put: value [
 { #category : #converting }
 CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 
+	cTypeString = 'float *' ifTrue: [^ self asFloatAccessor].
+	cTypeString = 'int *' ifTrue: [^ self asIntAccessor].
 	^ self
 ]
 
 { #category : #private }
 CObjectAccessor >> getObject [
 	^object
+]
+
+{ #category : #accessing }
+CObjectAccessor >> isCObjectAccessor [
+
+	^ true
 ]
 
 { #category : #accessing }

@@ -56,7 +56,7 @@ FFIPlugin >> addressOf: rcvr startingAt: byteOffset size: byteSize [
 	rcvrSize _ interpreterProxy byteSizeOf: rcvr.
 	rcvrClass == interpreterProxy classExternalAddress ifTrue:[
 		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
-		addr _ interpreterProxy fetchWord: 0 ofObject: rcvr.
+		addr _ interpreterProxy fetchPointer: 0 ofObject: rcvr.
 		"don't you dare to read from object memory!"
 		(addr == 0 or:[interpreterProxy isInMemory: addr])
 			ifTrue:[^interpreterProxy primitiveFail].
@@ -384,7 +384,7 @@ FFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
 		ifFalse:[^self ffiFail: errCode].
 	((interpreterProxy byteSizeOf: oop) == 4)
 		ifFalse:[^self ffiFail: errCode].
-	^interpreterProxy fetchWord: 0 ofObject: oop
+	^interpreterProxy fetchPointer: 0 ofObject: oop
 ]
 
 { #category : #'callout support' }
@@ -697,7 +697,7 @@ FFIPlugin >> ffiPushPointerContentsOf: oop [
 	ptrValue _ oop.
 	ptrClass _ interpreterProxy fetchClassOf: ptrValue.
 	ptrClass == interpreterProxy classExternalAddress ifTrue:[
-		ptrAddress _ interpreterProxy fetchWord: 0 ofObject: ptrValue.
+		ptrAddress _ interpreterProxy fetchPointer: 0 ofObject: ptrValue.
 		"Don't you dare to pass pointers into object memory"
 		(interpreterProxy isInMemory: ptrAddress)
 			ifTrue:[^self ffiFail: FFIErrorInvalidPointer].
@@ -759,7 +759,7 @@ FFIPlugin >> ffiPushStructureContentsOf: oop [
 	ptrValue _ oop.
 	ptrClass _ interpreterProxy fetchClassOf: ptrValue.
 	ptrClass == interpreterProxy classExternalAddress ifTrue:[
-		ptrAddress _ interpreterProxy fetchWord: 0 ofObject: ptrValue.
+		ptrAddress _ interpreterProxy fetchPointer: 0 ofObject: ptrValue.
 		"There is no way we can make sure the structure is valid.
 		But we can at least check for attempts to pass pointers to ST memory."
 		(interpreterProxy isInMemory: ptrAddress)
@@ -779,7 +779,7 @@ FFIPlugin >> ffiPushStructureContentsOf: oop [
 		"If FFIFlagPointer + FFIFlagStructure is set use ffiPushPointer on the contents"
 		(ffiArgHeader bitAnd: FFIStructSizeMask) = 4
 			ifFalse:[^self ffiFail: FFIErrorStructSize].
-		ptrAddress _ interpreterProxy fetchWord: 0 ofObject: ptrValue.
+		ptrAddress _ interpreterProxy fetchPointer: 0 ofObject: ptrValue.
 		(interpreterProxy isInMemory: ptrAddress)
 			ifTrue:[^self ffiFail: FFIErrorInvalidPointer].
 		^self ffiPushPointer: ptrAddress].
@@ -869,7 +869,7 @@ FFIPlugin >> ffiValidateExternalData: oop AtomicType: atomicType [
 		ifFalse:[^self ffiFail: FFIErrorWrongType].
 	(interpreterProxy slotSizeOf: specOop) = 0
 		ifTrue:[^self ffiFail: FFIErrorWrongType].
-	spec _ interpreterProxy fetchWord: 0 ofObject: specOop.
+	spec _ interpreterProxy fetchPointer: 0 ofObject: specOop.
 	(self isAtomicType: spec)
 		ifFalse:[^self ffiFail: FFIErrorWrongType].
 	specType _ self atomicTypeOf: spec.
@@ -1124,7 +1124,7 @@ FFIPlugin >> primitiveFFIIntegerAt [
 		byteSize = 1 
 			ifTrue:[value _ interpreterProxy byteAt: addr]
 			ifFalse:[	value _ self cCode: '*((short int *) addr)' 
-								inSmalltalk: [interpreterProxy halfWordAt: addr]].
+								inSmalltalk: [interpreterProxy shortAt: addr]].
 		isSigned ifTrue:["sign extend value"
 			mask _ 1 << (byteSize * 8 - 1).
 			value _ (value bitAnd: mask-1) - (value bitAnd: mask)].
@@ -1174,7 +1174,7 @@ FFIPlugin >> primitiveFFIIntegerAtPut [
 		byteSize = 1 
 			ifTrue:[interpreterProxy byteAt: addr put: value]
 			ifFalse:[	self cCode: '*((short int *) addr) = value' 
-						inSmalltalk: [interpreterProxy halfWordAt: addr put: value]].
+						inSmalltalk: [interpreterProxy shortAt: addr put: value]].
 	] ifFalse:[interpreterProxy longAt: addr put: value].
 	interpreterProxy pop: 5.
 	^interpreterProxy push: valueOop.

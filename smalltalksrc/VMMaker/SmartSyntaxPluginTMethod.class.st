@@ -62,7 +62,7 @@ SmartSyntaxPluginTMethod >> emitCHeaderOn: aStream generator: aCodeGen [
 			tab; 
 			nextPutAll: (declarations 
 				at: var 
-				ifAbsent: [ 'int ', var]);
+				ifAbsent: [ 'sqInt ', var]);
 			nextPut: $;; 
 			cr].
 	locals isEmpty ifFalse: [ aStream cr ].
@@ -294,7 +294,7 @@ SmartSyntaxPluginTMethod >> oopVariable: aString [
 		[locals add: aString.
 		 declarations
 			at: aString 
-			put: 'int ', aString].
+			put: 'sqInt ', aString].
 	^TVariableNode new setName: aString
 ]
 
@@ -465,7 +465,7 @@ SmartSyntaxPluginTMethod >> setSelector: sel args: argList locals: localList blo
 	"Initialize this method using the given information."
 
 	selector _ sel.
-	returnType _ 'int'. 	 "assume return type is int for now"
+	returnType _ 'sqInt'. 	 "assume return type is sqInt for now"
 	args _ argList asOrderedCollection collect: [:arg | arg key].
 	locals _ localList asOrderedCollection collect: [:arg | arg key].
 	declarations _ Dictionary new.

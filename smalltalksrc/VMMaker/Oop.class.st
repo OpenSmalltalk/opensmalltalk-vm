@@ -37,5 +37,5 @@ Oop class >> ccgCanConvertFrom: anObject [
 { #category : #'plugin generation' }
 Oop class >> ccgDeclareCForVar: aSymbolOrString [
 
-	^'int ', aSymbolOrString
+	^'sqInt ', aSymbolOrString
 ]

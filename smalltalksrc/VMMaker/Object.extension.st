@@ -71,6 +71,42 @@ Object >> cCoerce: value to: cType [
 	^ value
 ]
 
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
+
+	cg emitLoad: aString asNakedOopFrom: anInteger on: aStream
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
+
+	cg emitCExpression: aNode on: aStream
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
+
+	cg emitCExpression: aNode on: aStream
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
+
+	^cg ccgLoad: aBlock expr: aString asKindOf: self from: anInteger
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccgCanConvertFrom: anObject [
+
+	^anObject isKindOf: self
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccgDeclareCForVar: aSymbolOrString [
+
+	^'sqInt ', aSymbolOrString
+]
+
 { #category : #'*VMMaker-translation support' }
 Object >> debugCode: aBlock [ 
 	"Sending this message tells the code generator that there is debug code in 
@@ -83,6 +119,12 @@ Object >> debugCode: aBlock [
 { #category : #'*VMMaker-translation support' }
 Object >> export: aBoolean [
 	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> isCObjectAccessor [
+
+	^ false
 ]
 
 { #category : #'*VMMaker-translation support' }

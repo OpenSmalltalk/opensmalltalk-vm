@@ -363,14 +363,16 @@ BalloonEnginePlugin >> bitmapTileFlagOf: bmFill put: value [
 
 { #category : #'fills-bitmaps' }
 BalloonEnginePlugin >> bitmapValue: bmFill bits: bits atX: xp y: yp [
+
 	| bmDepth bmRaster value rShift cMask r g b a |
 	self inline: true.
+
 	bmDepth _ self bitmapDepthOf: bmFill.
 	bmRaster _ self bitmapRasterOf: bmFill.
-	bmDepth = 32 ifTrue:[
+	bmDepth = 32 ifTrue: [
 		value _ (self cCoerce: bits to:'int*') at: (bmRaster * yp) + xp.
-		(value ~= 0 and:[(value bitAnd: 16rFF000000) = 0])
-				ifTrue:[value _ value bitOr: 16rFF000000].
+		(value ~= 0 and: [(value bitAnd: 16rFF000000) = 0])
+				ifTrue: [value _ value bitOr: 16rFF000000].
 		^self uncheckedTransformColor: value].
 	"rShift - shift value to convert from pixel to word index"
 	rShift _ self rShiftTable at: bmDepth.
@@ -381,19 +383,19 @@ BalloonEnginePlugin >> bitmapValue: bmFill bits: bits atX: xp y: yp [
 	"rShift - shift value to move the pixel in the word to the lowest bit position"
 	rShift _ 32 - bmDepth - ((xp bitAnd: (1 << rShift - 1)) * bmDepth).
 	value _ (value >> rShift) bitAnd: cMask.
-	bmDepth = 16 ifTrue:[
+	bmDepth = 16 ifTrue: [
 		"Must convert by expanding bits"
-		value = 0 ifFalse:[
+		value = 0 ifFalse: [
 			b _ (value bitAnd: 31) << 3.		b _ b + (b >> 5).
 			g _ (value >> 5 bitAnd: 31) << 3.	g _ g + (g >> 5).
 			r _ (value >> 10 bitAnd: 31) << 3.	r _ r + (r >> 5).
 			a _ 255.
 			value _ b + (g << 8) + (r << 16) + (a << 24)].
-	] ifFalse:[
+	] ifFalse: [
 		"Must convert by using color map"
 		(self bitmapCmSizeOf: bmFill) = 0
-			ifTrue:[value _ 0]
-			ifFalse:[value _ self makeUnsignedFrom: ((self colormapOf: bmFill) at: value)].
+			ifTrue: [value _ 0]
+			ifFalse: [value _ self makeUnsignedFrom: ((self colormapOf: bmFill) at: value)].
 	].
 	^self uncheckedTransformColor: value.
 ]
@@ -479,9 +481,9 @@ BalloonEnginePlugin >> checkCompressedFillIndexList: fillList max: maxIndex segm
 	length _ interpreterProxy slotSizeOf: fillList.
 	fillPtr _ interpreterProxy firstIndexableField: fillList.
 	nFills _ 0.
-	0 to: length-1 do:[:i|
+	0 to: length-1 do:[:i |
 		runLength _ self shortRunLengthAt: i from: fillPtr.
-		runValue _ self shortRunValueAt: 0 from: fillPtr.
+		runValue _ self shortRunValueAt: i from: fillPtr.
 		(runValue >= 0 and:[runValue <= maxIndex]) ifFalse:[^false].
 		nFills _ nFills + runLength.
 	].
@@ -500,13 +502,12 @@ BalloonEnginePlugin >> checkCompressedFills: indexList [
 	"Then check the fill entries"
 	length _ interpreterProxy slotSizeOf: indexList.
 	fillPtr _ interpreterProxy firstIndexableField: indexList.
-	1 to: length do:[:i|
-		fillIndex _ fillPtr at: 0.
+	0 to: length-1 do:[:i |
+		fillIndex _ fillPtr at: i.
 		"Make sure the fill is okay"
-		(self isFillOkay: fillIndex) ifFalse:[^false].
-		fillPtr _ fillPtr + 1].
+		(self isFillOkay: fillIndex) ifFalse:[^false]].
 
-	^true
+	^ true
 ]
 
 { #category : #'shapes-compressed' }

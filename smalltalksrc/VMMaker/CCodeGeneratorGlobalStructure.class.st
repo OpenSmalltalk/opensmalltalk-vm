@@ -80,7 +80,7 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 			target nextPutAll: (variableDeclarations at: varString), ';'; cr.
 		] ifFalse: [
 			"default variable declaration"
-			target nextPutAll: 'int ', varString, ';'; cr.
+			target nextPutAll: 'sqInt ', varString, ';'; cr.
 		].
 	].
 	structure nextPutAll: ' } fum;';cr.

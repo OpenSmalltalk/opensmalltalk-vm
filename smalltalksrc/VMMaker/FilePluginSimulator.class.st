@@ -13,7 +13,7 @@ FilePluginSimulator class >> shouldBeTranslated [
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> fileValueOf: objectPointer [
 	^interpreterProxy fileValueOf: objectPointer
 ]
@@ -66,7 +66,7 @@ FilePluginSimulator >> ioCanSetFileType: fileNameIndex OfSize: fileNameSize [
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize
 	createDate: createDate modDate: modifiedDate
 	isDir: dirFlag fileSize: fileSize [
@@ -78,67 +78,75 @@ FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
+FilePluginSimulator >> oopForPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	oop is the width of a machine word, and pointer is a raw address."
+
+	^ pointer
+]
+
+{ #category : #simulation }
 FilePluginSimulator >> primitiveDirectoryLookup [
 	^interpreterProxy primitiveDirectoryLookup
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> primitiveFileDelete [ 
 	^interpreterProxy primitiveFileDelete 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> primitiveFileOpen [
 	^interpreterProxy primitiveFileOpen
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> primitiveFileRename [
 	^interpreterProxy primitiveFileRename
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
 	^interpreterProxy sqFile: file Read: count Into: byteArrayIndex At: startIndex
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFile: file SetPosition: newPosition [
 	^interpreterProxy sqFile: file SetPosition: newPosition
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFile: file Truncate: truncatePosition [
 	^interpreterProxy sqFile: file Truncate: truncatePosition
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
 	^interpreterProxy sqFile: file Write: count From: byteArrayIndex At: startIndex
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFileAtEnd: file [
 	^interpreterProxy sqFileAtEnd: file
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFileClose: file [
 	^interpreterProxy sqFileClose: file
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFileFlush: file [
 	^interpreterProxy sqFileFlush: file
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFileGetPosition: file [
 	^interpreterProxy sqFileGetPosition: file
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #simulation }
 FilePluginSimulator >> sqFileSize: file [
 	^interpreterProxy sqFileSize: file
 ]

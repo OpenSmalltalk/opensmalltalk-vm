@@ -181,8 +181,13 @@ CCodeGenerator >> addPoolVarsFor: aClass [
 CCodeGenerator >> builtin: sel [
 	"Answer true if the given selector is one of the builtin selectors."
 
-	((sel = #longAt:) or: [(sel = #longAt:put:) or: [sel = #error:]]) ifTrue: [ ^true ].
 	((sel = #byteAt:) or: [sel = #byteAt:put:]) ifTrue: [ ^true ].
+	((sel = #shortAt:) or: [sel = #shortAt:put:]) ifTrue: [ ^true ].
+	((sel = #intAt:) or: [sel = #intAt:put:]) ifTrue: [ ^true ].
+	((sel = #longAt:) or: [(sel = #longAt:put:) or: [sel = #error:]]) ifTrue: [ ^true ].
+	((sel = #byteAtPointer:) or: [sel = #byteAtPointer:put:]) ifTrue: [ ^true ].
+	((sel = #shortAtPointer:) or: [sel = #shortAtPointer:put:]) ifTrue: [ ^true ].
+	((sel = #longAtPointer:) or: [(sel = #longAtPointer:put:) or: [sel = #error:]]) ifTrue: [ ^true ].
 	^translationDict includesKey: sel
 ]
 
@@ -215,7 +220,7 @@ CCodeGenerator >> cLiteralFor: anObject [
 	(anObject isKindOf: Integer) ifTrue: [
 		(anObject < 16r7FFFFFFF)
 			ifTrue: [^ anObject printString]
-			ifFalse: [^ anObject printString , 'U']].
+			ifFalse: [^ anObject printString , ObjectMemory unsignedIntegerSuffix "ikp"]].
 	(anObject isKindOf: String) ifTrue: [^ '"', anObject, '"' ].
 	(anObject isKindOf: Float) ifTrue: [^ anObject printString ].
 	anObject == nil ifTrue: [^ 'null' ].
@@ -551,16 +556,12 @@ CCodeGenerator >> emitCHeaderForPrimitivesOn: aStream [
 		aStream nextPutAll:'#include '; nextPutAll: hdr; cr].
 
 	aStream nextPutAll: '
-/* Memory Access Macros */
-#define byteAt(i) (*((unsigned char *) (i)))
-#define byteAtput(i, val) (*((unsigned char *) (i)) = val)
-#define longAt(i) (*((int *) (i)))
-#define longAtput(i, val) (*((int *) (i)) = val)
+#include "sqMemoryAccess.h"
 
 /*** Imported Functions/Variables ***/
-extern int stackValue(int);
-extern int stackIntegerValue(int);
-extern int successFlag;
+extern sqInt stackValue(sqInt);
+extern sqInt stackIntegerValue(sqInt);
+extern sqInt successFlag;
 
 /* allows accessing Strings in both C and Smalltalk */
 #define asciiValue(c) c
@@ -583,17 +584,13 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 		aStream nextPutAll:'#include '; nextPutAll: hdr; cr].
 
 	aStream nextPutAll: '
-/* memory access macros */
-#define byteAt(i) (*((unsigned char *) (i)))
-#define byteAtput(i, val) (*((unsigned char *) (i)) = val)
-#define longAt(i) (*((int *) (i)))
-#define longAtput(i, val) (*((int *) (i)) = val)
+#include "sqMemoryAccess.h"
 
-int printCallStack(void);
+sqInt printCallStack(void);
 void error(char *s);
 void error(char *s) {
 	/* Print an error message and exit. */
-	static int printingStack = false;
+	static sqInt printingStack = false;
 
 	printf("\n%s\n\n", s);
 	if (!printingStack) {
@@ -637,7 +634,7 @@ CCodeGenerator >> emitCVariablesOn: aStream [
 			(variableDeclarations includesKey: varString)
 				ifTrue: [aStream nextPutAll: (variableDeclarations at: varString) , ';'; cr]
 				ifFalse: ["default variable declaration"
-					aStream nextPutAll: 'int ' , varString , ';'; cr]].
+					aStream nextPutAll: 'sqInt ' , varString , ';'; cr]].
 	aStream cr
 ]
 
@@ -696,7 +693,7 @@ CCodeGenerator >> generateAsFloat: msgNode on: aStream indent: level [
 CCodeGenerator >> generateAsInteger: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	aStream nextPutAll:'((int) '.
+	aStream nextPutAll:'((sqInt) '.
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' )'.
 ]
@@ -757,7 +754,7 @@ CCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 	rcvr _ msgNode receiver.
 	arg isConstant ifTrue: [
 		"bit shift amount is a constant"
-		aStream nextPutAll: '((unsigned) '.
+		aStream nextPutAll: '((usqInt) '.
 		self emitCExpression: rcvr on: aStream.
 		arg value < 0 ifTrue: [
 			aStream nextPutAll: ' >> ', arg value negated printString.
@@ -769,11 +766,11 @@ CCodeGenerator >> generateBitShift: msgNode on: aStream indent: level [
 		"bit shift amount is an expression"
 		aStream nextPutAll: '(('.
 		self emitCExpression: arg on: aStream.
-		aStream nextPutAll: ' < 0) ? ((unsigned) '.
+		aStream nextPutAll: ' < 0) ? ((usqInt) '.
 		self emitCExpression: rcvr on: aStream.
 		aStream nextPutAll: ' >> -'.
 		self emitCExpression: arg on: aStream.
-		aStream nextPutAll: ') : ((unsigned) '.
+		aStream nextPutAll: ') : ((usqInt) '.
 		self emitCExpression: rcvr on: aStream.
 		aStream nextPutAll: ' << '.
 		self emitCExpression: arg on: aStream.
@@ -843,7 +840,7 @@ CCodeGenerator >> generateDivide: msgNode on: aStream indent: level [
 	 [divisor <= (1 bitShift: 31)]]]]])
 	ifTrue: [
 		"use signed (arithmetic) right shift instead of divide"
-		aStream nextPutAll: '((int) '.
+		aStream nextPutAll: '((sqInt) '.
 		self emitCExpression: rcvr on: aStream.
 		aStream nextPutAll: ' >> ', (divisor log: 2) asInteger printString.
 		aStream nextPutAll: ')'.
@@ -1261,7 +1258,7 @@ CCodeGenerator >> generateShiftLeft: msgNode on: aStream indent: level [
 CCodeGenerator >> generateShiftRight: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
-	aStream nextPutAll: '((unsigned) '.
+	aStream nextPutAll: '((usqInt) '.
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ')'.
 	aStream nextPutAll: ' >> '.
@@ -1936,6 +1933,23 @@ CCodeGenerator >> storeCodeOnFile: fileName doInlining: inlineFlag doAssertions:
 	stream ifNil: [Error signal: 'Could not open C code file: ', fileName].
 	self emitCCodeOn: stream doInlining: inlineFlag doAssertions: assertionFlag.
 	stream close
+]
+
+{ #category : #public }
+CCodeGenerator >> storeHeaderOnFile: fileName bytesPerWord: bytesPerWord [
+	"Store C header code for this interpreter on the given file."
+
+	| aStream |
+	aStream _ CrLfFileStream forceNewFileNamed: fileName.
+	aStream ifNil: [Error signal: 'Could not open C header file: ', fileName].
+	aStream
+		nextPutAll: '/* Automatically generated from Squeak on ';
+		print: Time dateAndTimeNow;
+		nextPutAll: ' */'; cr; cr;
+		nextPutAll: '#define SQ_VI_BYTES_PER_WORD ';
+		print: bytesPerWord;
+		cr;
+		close
 ]
 
 { #category : #utilities }
