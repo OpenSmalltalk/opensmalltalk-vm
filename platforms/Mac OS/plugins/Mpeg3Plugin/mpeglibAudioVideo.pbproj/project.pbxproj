@@ -1,0 +1,1019 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 34;
+	objects = {
+		66A53B1C01DAA43100A80109 = {
+			isa = PBXFileReference;
+			path = sqMacFileLogic.c;
+			refType = 4;
+		};
+		66A53B1D01DAA43100A80109 = {
+			isa = PBXFileReference;
+			path = sqMacFileLogic.h;
+			refType = 4;
+		};
+		66A53B1E01DAA43100A80109 = {
+			fileRef = 66A53B1D01DAA43100A80109;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66A53B1F01DAA43100A80109 = {
+			fileRef = 66A53B1C01DAA43100A80109;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66A53B2001DAF78500A80109 = {
+			children = (
+				66A53B2101DAF78500A80109,
+			);
+			isa = PBXVariantGroup;
+			name = InfoPlist.strings;
+			path = "";
+			refType = 4;
+		};
+		66A53B2101DAF78500A80109 = {
+			isa = PBXFileReference;
+			name = English;
+			path = resources/English.lproj/InfoPlist.strings;
+			refType = 4;
+		};
+		66A53B2201DAF78500A80109 = {
+			fileRef = 66A53B2001DAF78500A80109;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66C6C8E501DB1EC300A80109 = {
+			isa = PBXFileReference;
+			path = SqueakPlugin.icns;
+			refType = 4;
+		};
+		66C6C8E601DB1EC300A80109 = {
+			fileRef = 66C6C8E501DB1EC300A80109;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7904B01D8034300A80119 = {
+			isa = PBXFileReference;
+			path = Mpeg3Plugin.c;
+			refType = 4;
+		};
+		66D7904E01D808AD00A80119 = {
+			isa = PBXBundleReference;
+			path = mpeg3Plugin.bundle;
+			refType = 3;
+		};
+		66D7904F01D808AD00A80119 = {
+			buildPhases = (
+				66D7905001D808AD00A80119,
+				66D7906601D808AD00A80119,
+				66D7906901D808AD00A80119,
+				66D7908801D808AD00A80119,
+				66D7908A01D808AD00A80119,
+			);
+			buildSettings = {
+				DEBUGGING_SYMBOLS = NO;
+				HEADER_SEARCH_PATHS = "/Developer/Headers/FlatCarbon libmpeg";
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_LDFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = mpeg3Plugin;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = "-Wmost -Wno-four-char-constants -Wno-unknown-pragmas";
+				WRAPPER_EXTENSION = bundle;
+			};
+			dependencies = (
+			);
+			isa = PBXBundleTarget;
+			name = mpeg3Plugin;
+			productInstallPath = "$(USER_LIBRARY_DIR)/Bundles";
+			productName = "mpeg3PluginBundle Debug";
+			productReference = 66D7904E01D808AD00A80119;
+			productSettingsXML = "<?xml version=\"1.0\" encoding=\"UTF-8\"?>
+<!DOCTYPE plist SYSTEM \"file://localhost/System/Library/DTDs/PropertyList.dtd\">
+<plist version=\"0.9\">
+<dict>
+	<key>CFBundleDevelopmentRegion</key>
+	<string>English</string>
+	<key>CFBundleExecutable</key>
+	<string>mpeg3Plugin</string>
+	<key>CFBundleGetInfoString</key>
+	<string>mpeg3Plugin for Squeak</string>
+	<key>CFBundleIconFile</key>
+	<string>SqueakPlugin.icns</string>
+	<key>CFBundleIdentifier</key>
+	<string></string>
+	<key>CFBundleInfoDictionaryVersion</key>
+	<string>6.0</string>
+	<key>CFBundleName</key>
+	<string>mpeg3Plugin for Squeak</string>
+	<key>CFBundlePackageType</key>
+	<string>BNDL</string>
+	<key>CFBundleShortVersionString</key>
+	<string>1.1.0b1</string>
+	<key>CFBundleSignature</key>
+	<string>FAST</string>
+	<key>CFBundleVersion</key>
+	<string>1.0.0b1</string>
+</dict>
+</plist>
+";
+			shouldUseHeadermap = 0;
+		};
+		66D7905001D808AD00A80119 = {
+			buildActionMask = 2147483647;
+			files = (
+				66D7905101D808AD00A80119,
+				66D7905201D808AD00A80119,
+				66D7905301D808AD00A80119,
+				66D7905401D808AD00A80119,
+				66D7905501D808AD00A80119,
+				66D7905601D808AD00A80119,
+				66D7905701D808AD00A80119,
+				66D7905801D808AD00A80119,
+				66D7905901D808AD00A80119,
+				66D7905A01D808AD00A80119,
+				66D7905B01D808AD00A80119,
+				66D7905C01D808AD00A80119,
+				66D7905D01D808AD00A80119,
+				66D7905E01D808AD00A80119,
+				66D7905F01D808AD00A80119,
+				66D7906001D808AD00A80119,
+				66D7906101D808AD00A80119,
+				66D7906201D808AD00A80119,
+				66D7906301D808AD00A80119,
+				66D7906401D808AD00A80119,
+				66D7906501D808AD00A80119,
+				66A53B1E01DAA43100A80109,
+			);
+			isa = PBXHeadersBuildPhase;
+			name = Headers;
+		};
+		66D7905101D808AD00A80119 = {
+			fileRef = 66DF6C0101D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905201D808AD00A80119 = {
+			fileRef = 66DF6C0401D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905301D808AD00A80119 = {
+			fileRef = 66DF6C0901D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905401D808AD00A80119 = {
+			fileRef = 66DF6C0D01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905501D808AD00A80119 = {
+			fileRef = 66DF6C1201D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905601D808AD00A80119 = {
+			fileRef = 66DF6C1301D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905701D808AD00A80119 = {
+			fileRef = 66DF6C1801D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905801D808AD00A80119 = {
+			fileRef = 66DF6C1901D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905901D808AD00A80119 = {
+			fileRef = 66DF6C1E01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905A01D808AD00A80119 = {
+			fileRef = 66DF6C2001D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905B01D808AD00A80119 = {
+			fileRef = 66DF6C2201D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905C01D808AD00A80119 = {
+			fileRef = 66DF6C3401D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905D01D808AD00A80119 = {
+			fileRef = 66DF6C3201D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905E01D808AD00A80119 = {
+			fileRef = 66DF6C3101D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7905F01D808AD00A80119 = {
+			fileRef = 66DF6C2F01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906001D808AD00A80119 = {
+			fileRef = 66DF6C2D01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906101D808AD00A80119 = {
+			fileRef = 66DF6C2C01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906201D808AD00A80119 = {
+			fileRef = 66DF6C2B01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906301D808AD00A80119 = {
+			fileRef = 66DF6C2901D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906401D808AD00A80119 = {
+			fileRef = 66DF6C2701D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906501D808AD00A80119 = {
+			fileRef = 66DF6C2401D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906601D808AD00A80119 = {
+			buildActionMask = 2147483647;
+			files = (
+				66A53B2201DAF78500A80109,
+				66C6C8E601DB1EC300A80109,
+			);
+			isa = PBXResourcesBuildPhase;
+			name = "Bundle Resources";
+		};
+		66D7906901D808AD00A80119 = {
+			buildActionMask = 2147483647;
+			files = (
+				66D7906A01D808AD00A80119,
+				66D7906B01D808AD00A80119,
+				66D7906C01D808AD00A80119,
+				66D7906D01D808AD00A80119,
+				66D7906E01D808AD00A80119,
+				66D7906F01D808AD00A80119,
+				66D7907001D808AD00A80119,
+				66D7907101D808AD00A80119,
+				66D7907201D808AD00A80119,
+				66D7907301D808AD00A80119,
+				66D7907401D808AD00A80119,
+				66D7907501D808AD00A80119,
+				66D7907601D808AD00A80119,
+				66D7907701D808AD00A80119,
+				66D7907801D808AD00A80119,
+				66D7907901D808AD00A80119,
+				66D7907A01D808AD00A80119,
+				66D7907B01D808AD00A80119,
+				66D7907C01D808AD00A80119,
+				66D7907D01D808AD00A80119,
+				66D7907E01D808AD00A80119,
+				66D7907F01D808AD00A80119,
+				66D7908001D808AD00A80119,
+				66D7908101D808AD00A80119,
+				66D7908201D808AD00A80119,
+				66D7908301D808AD00A80119,
+				66D7908401D808AD00A80119,
+				66D7908501D808AD00A80119,
+				66D7908601D808AD00A80119,
+				66D7908701D808AD00A80119,
+				66A53B1F01DAA43100A80109,
+			);
+			isa = PBXSourcesBuildPhase;
+			name = Sources;
+		};
+		66D7906A01D808AD00A80119 = {
+			fileRef = 66DF6C0201D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906B01D808AD00A80119 = {
+			fileRef = 66DF6C0301D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906C01D808AD00A80119 = {
+			fileRef = 66DF6C0501D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906D01D808AD00A80119 = {
+			fileRef = 66DF6C0601D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906E01D808AD00A80119 = {
+			fileRef = 66DF6C0701D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7906F01D808AD00A80119 = {
+			fileRef = 66DF6C0801D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907001D808AD00A80119 = {
+			fileRef = 66DF6C0A01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907101D808AD00A80119 = {
+			fileRef = 66DF6C0B01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907201D808AD00A80119 = {
+			fileRef = 66DF6C0C01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907301D808AD00A80119 = {
+			fileRef = 66DF6C0F01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907401D808AD00A80119 = {
+			fileRef = 66DF6C1001D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907501D808AD00A80119 = {
+			fileRef = 66DF6C1101D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907601D808AD00A80119 = {
+			fileRef = 66DF6C1401D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907701D808AD00A80119 = {
+			fileRef = 66DF6C1501D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907801D808AD00A80119 = {
+			fileRef = 66DF6C1601D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907901D808AD00A80119 = {
+			fileRef = 66DF6C1701D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907A01D808AD00A80119 = {
+			fileRef = 66DF6C1A01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907B01D808AD00A80119 = {
+			fileRef = 66DF6C1B01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907C01D808AD00A80119 = {
+			fileRef = 66DF6C1C01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907D01D808AD00A80119 = {
+			fileRef = 66DF6C1D01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907E01D808AD00A80119 = {
+			fileRef = 66DF6C1F01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7907F01D808AD00A80119 = {
+			fileRef = 66DF6C2101D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908001D808AD00A80119 = {
+			fileRef = 66DF6C2301D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908101D808AD00A80119 = {
+			fileRef = 66D7904B01D8034300A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908201D808AD00A80119 = {
+			fileRef = 66DF6C3301D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908301D808AD00A80119 = {
+			fileRef = 66DF6C3001D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908401D808AD00A80119 = {
+			fileRef = 66DF6C2E01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908501D808AD00A80119 = {
+			fileRef = 66DF6C2A01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908601D808AD00A80119 = {
+			fileRef = 66DF6C2801D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908701D808AD00A80119 = {
+			fileRef = 66DF6C2501D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908801D808AD00A80119 = {
+			buildActionMask = 2147483647;
+			files = (
+				66D7908901D808AD00A80119,
+			);
+			isa = PBXFrameworksBuildPhase;
+			name = "Frameworks & Libraries";
+		};
+		66D7908901D808AD00A80119 = {
+			fileRef = 66DF6C8201D7DF7E00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908A01D808AD00A80119 = {
+			buildActionMask = 2147483647;
+			files = (
+				66D7908B01D808AD00A80119,
+				66D7908C01D808AD00A80119,
+			);
+			isa = PBXRezBuildPhase;
+			name = "ResourceManager Resources";
+		};
+		66D7908B01D808AD00A80119 = {
+			fileRef = 66DF6C3A01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66D7908C01D808AD00A80119 = {
+			fileRef = 66DF6C3B01D7DCEA00A80119;
+			isa = PBXBuildFile;
+			settings = {
+			};
+		};
+		66DF6BFD01D7DCEA00A80119 = {
+			buildStyles = (
+				66DF6C4301D7DCEA00A80119,
+				66DF6C4401D7DCEA00A80119,
+			);
+			isa = PBXProject;
+			mainGroup = 66DF6BFE01D7DCEA00A80119;
+			productRefGroup = 66DF6C4501D7DEEE00A80119;
+			projectDirPath = "";
+			targets = (
+				66D7904F01D808AD00A80119,
+			);
+		};
+		66DF6BFE01D7DCEA00A80119 = {
+			children = (
+				66DF6BFF01D7DCEA00A80119,
+				66DF6C3901D7DCEA00A80119,
+				66DF6C8201D7DF7E00A80119,
+				66DF6C4501D7DEEE00A80119,
+			);
+			isa = PBXGroup;
+			refType = 4;
+		};
+		66DF6BFF01D7DCEA00A80119 = {
+			children = (
+				66DF6C0001D7DCEA00A80119,
+				66DF6C0E01D7DCEA00A80119,
+				66DF6C2101D7DCEA00A80119,
+				66DF6C2201D7DCEA00A80119,
+				66DF6C2301D7DCEA00A80119,
+				66DF6C2401D7DCEA00A80119,
+				66DF6C2501D7DCEA00A80119,
+				66DF6C2601D7DCEA00A80119,
+				66DF6C2701D7DCEA00A80119,
+				66DF6C2801D7DCEA00A80119,
+				66DF6C2901D7DCEA00A80119,
+				66DF6C2A01D7DCEA00A80119,
+				66DF6C2B01D7DCEA00A80119,
+				66DF6C2C01D7DCEA00A80119,
+				66DF6C2D01D7DCEA00A80119,
+				66DF6C2E01D7DCEA00A80119,
+				66DF6C2F01D7DCEA00A80119,
+				66DF6C3001D7DCEA00A80119,
+				66DF6C3101D7DCEA00A80119,
+				66DF6C3201D7DCEA00A80119,
+				66DF6C3301D7DCEA00A80119,
+				66DF6C3401D7DCEA00A80119,
+				66D7904B01D8034300A80119,
+				66DF6C8501D7FB8D00A80119,
+				66A53B1C01DAA43100A80109,
+				66A53B1D01DAA43100A80109,
+			);
+			isa = PBXGroup;
+			name = Sources;
+			refType = 4;
+		};
+		66DF6C0001D7DCEA00A80119 = {
+			children = (
+				66DF6C0101D7DCEA00A80119,
+				66DF6C0201D7DCEA00A80119,
+				66DF6C0301D7DCEA00A80119,
+				66DF6C0401D7DCEA00A80119,
+				66DF6C0501D7DCEA00A80119,
+				66DF6C0601D7DCEA00A80119,
+				66DF6C0701D7DCEA00A80119,
+				66DF6C0801D7DCEA00A80119,
+				66DF6C0901D7DCEA00A80119,
+				66DF6C0A01D7DCEA00A80119,
+				66DF6C0B01D7DCEA00A80119,
+				66DF6C0C01D7DCEA00A80119,
+				66DF6C0D01D7DCEA00A80119,
+			);
+			isa = PBXGroup;
+			name = Audio;
+			refType = 4;
+		};
+		66DF6C0101D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = ac3.h;
+			path = libmpeg/audio/ac3.h;
+			refType = 4;
+		};
+		66DF6C0201D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = dct.c;
+			path = libmpeg/audio/dct.c;
+			refType = 4;
+		};
+		66DF6C0301D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = header.c;
+			path = libmpeg/audio/header.c;
+			refType = 4;
+		};
+		66DF6C0401D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = huffman.h;
+			path = libmpeg/audio/huffman.h;
+			refType = 4;
+		};
+		66DF6C0501D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = layer1.c;
+			path = libmpeg/audio/layer1.c;
+			refType = 4;
+		};
+		66DF6C0601D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = layer2.c;
+			path = libmpeg/audio/layer2.c;
+			refType = 4;
+		};
+		66DF6C0701D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = layer3.c;
+			path = libmpeg/audio/layer3.c;
+			refType = 4;
+		};
+		66DF6C0801D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3audio.c;
+			path = libmpeg/audio/mpeg3audio.c;
+			refType = 4;
+		};
+		66DF6C0901D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3audio.h;
+			path = libmpeg/audio/mpeg3audio.h;
+			refType = 4;
+		};
+		66DF6C0A01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = pcm.c;
+			path = libmpeg/audio/pcm.c;
+			refType = 4;
+		};
+		66DF6C0B01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = synthesizers.c;
+			path = libmpeg/audio/synthesizers.c;
+			refType = 4;
+		};
+		66DF6C0C01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = tables.c;
+			path = libmpeg/audio/tables.c;
+			refType = 4;
+		};
+		66DF6C0D01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = tables.h;
+			path = libmpeg/audio/tables.h;
+			refType = 4;
+		};
+		66DF6C0E01D7DCEA00A80119 = {
+			children = (
+				66DF6C0F01D7DCEA00A80119,
+				66DF6C1001D7DCEA00A80119,
+				66DF6C1101D7DCEA00A80119,
+				66DF6C1201D7DCEA00A80119,
+				66DF6C1301D7DCEA00A80119,
+				66DF6C1401D7DCEA00A80119,
+				66DF6C1501D7DCEA00A80119,
+				66DF6C1601D7DCEA00A80119,
+				66DF6C1701D7DCEA00A80119,
+				66DF6C1801D7DCEA00A80119,
+				66DF6C1901D7DCEA00A80119,
+				66DF6C1A01D7DCEA00A80119,
+				66DF6C1B01D7DCEA00A80119,
+				66DF6C1C01D7DCEA00A80119,
+				66DF6C1D01D7DCEA00A80119,
+				66DF6C1E01D7DCEA00A80119,
+				66DF6C1F01D7DCEA00A80119,
+				66DF6C2001D7DCEA00A80119,
+			);
+			isa = PBXGroup;
+			name = Video;
+			refType = 4;
+		};
+		66DF6C0F01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = getpicture.c;
+			path = libmpeg/video/getpicture.c;
+			refType = 4;
+		};
+		66DF6C1001D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = headers.c;
+			path = libmpeg/video/headers.c;
+			refType = 4;
+		};
+		66DF6C1101D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = idct.c;
+			path = libmpeg/video/idct.c;
+			refType = 4;
+		};
+		66DF6C1201D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = idct.h;
+			path = libmpeg/video/idct.h;
+			refType = 4;
+		};
+		66DF6C1301D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = layerdata.h;
+			path = libmpeg/video/layerdata.h;
+			refType = 4;
+		};
+		66DF6C1401D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = macroblocks.c;
+			path = libmpeg/video/macroblocks.c;
+			refType = 4;
+		};
+		66DF6C1501D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mmxtest.c;
+			path = libmpeg/video/mmxtest.c;
+			refType = 4;
+		};
+		66DF6C1601D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = motion.c;
+			path = libmpeg/video/motion.c;
+			refType = 4;
+		};
+		66DF6C1701D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3video.c;
+			path = libmpeg/video/mpeg3video.c;
+			refType = 4;
+		};
+		66DF6C1801D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3video.h;
+			path = libmpeg/video/mpeg3video.h;
+			refType = 4;
+		};
+		66DF6C1901D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3videoprotos.h;
+			path = libmpeg/video/mpeg3videoprotos.h;
+			refType = 4;
+		};
+		66DF6C1A01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = output.c;
+			path = libmpeg/video/output.c;
+			refType = 4;
+		};
+		66DF6C1B01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = reconstruct.c;
+			path = libmpeg/video/reconstruct.c;
+			refType = 4;
+		};
+		66DF6C1C01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = seek.c;
+			path = libmpeg/video/seek.c;
+			refType = 4;
+		};
+		66DF6C1D01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = slice.c;
+			path = libmpeg/video/slice.c;
+			refType = 4;
+		};
+		66DF6C1E01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = slice.h;
+			path = libmpeg/video/slice.h;
+			refType = 4;
+		};
+		66DF6C1F01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = vlc.c;
+			path = libmpeg/video/vlc.c;
+			refType = 4;
+		};
+		66DF6C2001D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = vlc.h;
+			path = libmpeg/video/vlc.h;
+			refType = 4;
+		};
+		66DF6C2101D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = bitstream.c;
+			path = libmpeg/bitstream.c;
+			refType = 2;
+		};
+		66DF6C2201D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = bitstream.h;
+			path = libmpeg/bitstream.h;
+			refType = 2;
+		};
+		66DF6C2301D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = libmpeg3.c;
+			path = libmpeg/libmpeg3.c;
+			refType = 2;
+		};
+		66DF6C2401D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = libmpeg3.h;
+			path = libmpeg/libmpeg3.h;
+			refType = 2;
+		};
+		66DF6C2501D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3atrack.c;
+			path = libmpeg/mpeg3atrack.c;
+			refType = 2;
+		};
+		66DF6C2601D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3atrack.h;
+			path = libmpeg/mpeg3atrack.h;
+			refType = 2;
+		};
+		66DF6C2701D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3css.h;
+			path = libmpeg/mpeg3css.h;
+			refType = 2;
+		};
+		66DF6C2801D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3demux.c;
+			path = libmpeg/mpeg3demux.c;
+			refType = 2;
+		};
+		66DF6C2901D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3demux.h;
+			path = libmpeg/mpeg3demux.h;
+			refType = 2;
+		};
+		66DF6C2A01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3io.c;
+			path = libmpeg/mpeg3io.c;
+			refType = 2;
+		};
+		66DF6C2B01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3io.h;
+			path = libmpeg/mpeg3io.h;
+			refType = 2;
+		};
+		66DF6C2C01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3private.h;
+			path = libmpeg/mpeg3private.h;
+			refType = 4;
+		};
+		66DF6C2D01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3protos.h;
+			path = libmpeg/mpeg3protos.h;
+			refType = 4;
+		};
+		66DF6C2E01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3title.c;
+			path = libmpeg/mpeg3title.c;
+			refType = 2;
+		};
+		66DF6C2F01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3title.h;
+			path = libmpeg/mpeg3title.h;
+			refType = 4;
+		};
+		66DF6C3001D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3vtrack.c;
+			path = libmpeg/mpeg3vtrack.c;
+			refType = 2;
+		};
+		66DF6C3101D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3vtrack.h;
+			path = libmpeg/mpeg3atrack.h;
+			refType = 2;
+		};
+		66DF6C3201D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = timecode.h;
+			path = libmpeg/timecode.h;
+			refType = 4;
+		};
+		66DF6C3301D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = changesForSqueak.c;
+			path = libmpeg/changesForSqueak.c;
+			refType = 2;
+		};
+		66DF6C3401D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			path = Mpeg3Plugin.h;
+			refType = 2;
+		};
+		66DF6C3901D7DCEA00A80119 = {
+			children = (
+				66DF6C3A01D7DCEA00A80119,
+				66DF6C3B01D7DCEA00A80119,
+				66A53B2001DAF78500A80109,
+				66C6C8E501DB1EC300A80109,
+			);
+			isa = PBXGroup;
+			name = resources;
+			refType = 4;
+		};
+		66DF6C3A01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = App.rsrc;
+			path = resources/App.rsrc;
+			refType = 4;
+		};
+		66DF6C3B01D7DCEA00A80119 = {
+			isa = PBXFileReference;
+			name = CarbonApp.rsrc;
+			path = resources/CarbonApp.rsrc;
+			refType = 4;
+		};
+		66DF6C4301D7DCEA00A80119 = {
+			buildRules = (
+			);
+			buildSettings = {
+				COPY_PHASE_STRIP = NO;
+				OPTIMIZATION_CFLAGS = "-O0";
+				OTHER_CFLAGS = "-DTARGET_OS_MAC -DNOPTHREADS -g";
+			};
+			isa = PBXBuildStyle;
+			name = Development;
+		};
+		66DF6C4401D7DCEA00A80119 = {
+			buildRules = (
+			);
+			buildSettings = {
+				COPY_PHASE_STRIP = YES;
+				OPTIMIZATION_CFLAGS = "-O3 -mcpu=750 -funroll-loops ";
+				OTHER_CFLAGS = "-DTARGET_OS_MAC -DNOPTHREADS";
+			};
+			isa = PBXBuildStyle;
+			name = Deployment;
+		};
+		66DF6C4501D7DEEE00A80119 = {
+			children = (
+				66D7904E01D808AD00A80119,
+			);
+			isa = PBXGroup;
+			name = Products;
+			refType = 4;
+		};
+		66DF6C8201D7DF7E00A80119 = {
+			isa = PBXFrameworkReference;
+			name = Carbon.framework;
+			path = /System/Library/Frameworks/Carbon.framework;
+			refType = 0;
+		};
+		66DF6C8501D7FB8D00A80119 = {
+			isa = PBXFileReference;
+			name = mpeg3private.inc;
+			path = libmpeg/mpeg3private.inc;
+			refType = 2;
+		};
+	};
+	rootObject = 66DF6BFD01D7DCEA00A80119;
+}
