@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Impara GmbH, Magdeburg, Germany
 *   EMAIL:   Andreas.Raab@impara.de
-*   RCSID:   $Id: sqWin32DirectInput.c,v 1.1 2003/04/08 20:59:48 andreasraab Exp $
+*   RCSID:   $Id: sqWin32DirectInput.c,v 1.2 2003/04/26 17:41:50 andreasraab Exp $
 *
 *   NOTES:
 *     The function enclosed here provide direct support to the
@@ -40,14 +40,14 @@
 static int xData[BUFFER_SIZE];
 static int yData[BUFFER_SIZE];
 static int stampData[BUFFER_SIZE];
+static int printDebugMessages = 0;
 
 IDirectInput            *lpDI = NULL;
 IDirectInputDevice      *lpDev = NULL;
-HANDLE                  hMouseEvent = NULL;
 
 #define ERROR_CHECK(hResult, errMsg) \
 if(FAILED(hResult)) { \
-  printf("%s (%s, %s)\n", errMsg, __FILE__, __LINE__); \
+  if(printDebugMessages) printf("%s (%s, %d)\n", errMsg, __FILE__, __LINE__); \
   return hResult; \
 }
 
@@ -73,18 +73,8 @@ HRESULT InitDirectInput( HANDLE hInstance, HWND hWnd )
 					  hWnd, 
 					  DISCL_NONEXCLUSIVE | 
 					  DISCL_BACKGROUND);
-  ERROR_CHECK(hr, "Error setting cooperative mode");
+  ERROR_CHECK(hr, "Error setting cooperative level");
 
-  /* create the event to signal */
-  hMouseEvent = CreateEvent( NULL, FALSE, FALSE, NULL );
-  if(!hMouseEvent) {
-    ERROR_CHECK(E_FAIL, "Error creating mouse event");
-  }
-
-  /* install it */
-  hr = lpDev->lpVtbl->SetEventNotification(lpDev, hMouseEvent );
-  ERROR_CHECK(hr, "Error setting event notification");
-  
   /* setup buffer size */
   propWord.diph.dwSize = sizeof(DIPROPDWORD);
   propWord.diph.dwHeaderSize = sizeof(DIPROPHEADER);
@@ -111,10 +101,6 @@ HRESULT FreeDirectInput()
   if(lpDI != NULL) {
     lpDI->lpVtbl->Release(lpDI);
     lpDI = NULL;
-  }
-  if(hMouseEvent != NULL) {
-    CloseHandle( hMouseEvent );
-    hMouseEvent = NULL;
   }
   return S_OK;
 }
