@@ -6,11 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.3 2002/03/01 00:44:40 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.4 2002/03/04 00:33:08 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
-
+*  Mar 1st, 2002, JMM carbon event logic, mutiple buttons with scroll wheels.
 : see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
 
@@ -1534,7 +1534,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
     
     pthread_mutex_lock(&gEventQueueLock);
     for(i=0;i<abs(wheelMouseDelta);i++) {
-        if (wheelMouseDirection == kEventMouseWheelAxisY) 
+        if (wheelMouseDirection == kEventMouseWheelAxisX) 
             if (wheelMouseDelta > 0) {//up/down
                 macKeyCode = 126;
                 asciiChar = kUpArrowCharCode;
@@ -1711,24 +1711,19 @@ int MouseModifierStateCarbon(EventRef event,UInt32 whatHappened) {
                                 sizeof(EventMouseButton),
                                 NULL,
                                 &mouseButton); 
-        if (mouseButton > 0 && mouseButton < 4)
+                                
+        if (mouseButton > 0 && mouseButton < 4) {
             buttonState[mouseButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
+            stButtons |= buttonState[1]*4*
+                        (!((keyBoardModifiers & optionKey) || (keyBoardModifiers & cmdKey)));
+            stButtons |= buttonState[1]*((keyBoardModifiers & optionKey)> 0)*2;
+            stButtons |= buttonState[1]*((keyBoardModifiers & cmdKey)> 0)*1;
+            stButtons |= buttonState[2]*1;
+            stButtons |= buttonState[3]*2;
+       }
             
-        if (mouseButton && (keyBoardModifiers > 0)) {
-            stButtons = stButtons*1;
-            stButtons++;
-            stButtons = 0;
-        }
-            
-        stButtons += buttonState[1]*4*
-                    (!((keyBoardModifiers & optionKey) || (keyBoardModifiers & cmdKey)));
-        stButtons += buttonState[1]*((keyBoardModifiers & optionKey)> 0)*2;
-        stButtons += buttonState[1]*((keyBoardModifiers & cmdKey)> 0)*1;
-        stButtons += buttonState[2]*1;
-        stButtons += buttonState[3]*2;
-        
 	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
-	return ((modifierMap[(keyBoardModifiers >> 8)] << 3) |
+	return ((modifierMap[((keyBoardModifiers & 0xFFFF) >> 8)] << 3) |
 		(stButtons & 0x7));
 }
 
@@ -1744,7 +1739,7 @@ int ModifierStateCarbon(EventRef event,UInt32 whatHappened) {
                                 NULL,
                                 &keyBoardModifiers); 
  	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
-	return ((modifierMap[(keyBoardModifiers >> 8)] << 3));
+	return ((modifierMap[((keyBoardModifiers & 0xFFFF) >> 8)] << 3));
 }
 
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData) {
