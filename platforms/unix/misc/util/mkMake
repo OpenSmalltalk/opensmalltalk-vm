@@ -6,7 +6,7 @@
 # build directory -- eg, it should have "platforms" as an immediate
 # subdirectory.
 #
-# $Id: mkMake,v 1.7 2002/03/07 06:24:48 lexspoon Exp $
+# $Id: mkMake,v 1.8 2002/05/05 01:42:13 jeyrich Exp $
 #
 
 
@@ -120,7 +120,22 @@ cFilesToCompile() {
 # prune header files that are overriden
 # $1, $2, etc.  directories to find header files
 pruneOverridenHeaders() {
-    basenames=`find "$@" -maxdepth 1 '(' -name '*.h' -o -name 'platform.exports' ')' -exec basename '{}' ';' | sort | uniq`
+#######################
+#    basenames=`find "$@" -maxdepth 1 '(' -name '*.h' -o -name 'platform.exports' ')' -exec basename '{}' ';' | sort | uniq`
+#######################
+basenames=""
+for dir in "$@"
+do
+    newnames=`ls "$dir"/*.h "$dir/platform.exports" 2>/dev/null`
+    if [ "$newnames" ]
+    then
+        basenames="$newnames
+$basenames"
+    fi
+done
+basenames=`echo "$basenames" | xargs -n 1 basename`
+basenames=`echo "$basenames" | sort | uniq`
+#######################
 echo basenames: $basenames
     for header in $basenames
     do
@@ -209,7 +224,7 @@ do
     fi
 done
 
-echo "PLUGINS_O:=\$(PLUGINS_O) $PLUGINS_O"
+echo "PLUGINS_O += $PLUGINS_O"
 echo ""
 
 
