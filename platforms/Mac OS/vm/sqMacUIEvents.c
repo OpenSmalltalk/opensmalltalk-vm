@@ -6,10 +6,14 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.2 2002/02/23 11:25:59 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.3 2002/03/01 00:44:40 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+
+: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
+IsUserCancelEventRef
+
 *****************************************************************************/
 #if !TARGET_API_MAC_CARBON 
 #include <Power.h>
@@ -21,6 +25,15 @@
 #include "sqMacUIEvents.h"
 #include "sqMacUIMenuBar.h"
 
+#if I_AM_CARBON_EVENT
+    #include <pthread.h>
+    pthread_mutex_t gEventQueueLock;
+    #define EventTypeFullScreenUpdate 98
+    #define EventTypePostEventProcessing 99
+    void doPostMessageHook(EventRef event);
+    void postFullScreenUpdate(void);
+    Boolean gQuitNowRightNow=false;
+#endif
 
 /*** Variables -- Event Recording ***/
 #ifdef MINIMALVM
@@ -109,10 +122,44 @@ char modifierMap[256] = {
  
 void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command);
 Boolean IsKeyDown(void);    
+
+#ifndef I_AM_CARBON_EVENT
 int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
+int ioProcessEvents(void) {
+	/* This is a noop when running as a plugin; the browser handles events. */
+	const int nextPollOffsetCheck = CLOCKS_PER_SEC/60, nextPowerCheckOffset=CLOCKS_PER_SEC/2; 
+	static clock_t nextPollTick = 0, nextPowerCheck=0;
+	long    clockTime;
 
+#ifndef PLUGIN
+	if (ioLowResMSecs() >= nextPollTick) {
+		/* time to process events! */
+		while (HandleEvents()) {
+			/* process all pending events */
+		}
+		
+        clockTime = ioLowResMSecs();
+        
+        if (gDisablePowerManager && gTapPowerManager) {
+            if (clockTime > gDisableIdleTickLimit)
+                gDisableIdleTickLimit = IdleUpdate() + gDisableIdleTickCount;
+                
+#if !defined(MINIMALVM)
+            if (clockTime > nextPowerCheck) {
+                 UpdateSystemActivity(UsrActivity);
+                 nextPowerCheck = clockTime + nextPowerCheckOffset;
+            }
+#endif
+        }
+        
+		/* wait a while before trying again */
+		nextPollTick = clockTime + nextPollOffsetCheck;
+	}
+#endif
+	return interruptPending;
+}
 
 int HandleEvents(void) {
 	EventRecord		theEvent;
@@ -365,25 +412,6 @@ void recordMouseDown(EventRecord *theEvent) {
 	cachedButtonState = cachedButtonState | buttonState;
 }
 
-int MouseModifierState(EventRecord *theEvent) {
-	int stButtons;
-
-	stButtons = 0;
-	if ((theEvent->modifiers & btnState) == false) {  /* is false if button is down */
-		stButtons = 4;		/* red button by default */
-		if ((theEvent->modifiers & optionKey) != 0) {
-			stButtons = 2;	/* yellow button if option down */
-		}
-		if ((theEvent->modifiers & cmdKey) != 0) {
-			stButtons = 1;	/* blue button if command down */
-		}
-	} 
-
-	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
-	return ((modifierMap[(theEvent->modifiers >> 8)] << 3) |
-		(stButtons & 0x7));
-}
-
 void recordModifierButtons(EventRecord *theEvent) {
 	int stButtons = 0;
 
@@ -431,29 +459,6 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 	return 1;
 }
 
-int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) {
-	sqDragDropFilesEvent *evt;
-	int theButtonState;
-	
-	evt = (sqDragDropFilesEvent*) nextEventPut();
-
-	/* first the basics */
-	theButtonState = MouseModifierState(theEvent);
-	evt->type = EventTypeDragDropFiles;
-	evt->timeStamp = ioMSecs(); 
-	GlobalToLocal((Point *) &theEvent->where);
-	evt->x = theEvent->where.h;
-	evt->y = theEvent->where.v;
-	evt->numFiles = numberOfItems;
-	evt->dragType = dragType;
-	
-	/* then the modifiers */
-	evt->modifiers = theButtonState >> 3;
-	/* clean up reserved */
-	evt->reserved1 = 0;
-//	signalSemaphoreWithIndex(inputSemaphoreIndex);
-	return 1;
-}
 
 int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	int asciiChar, modifierBits;
@@ -493,149 +498,6 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	return 1;
 }
 
-sqInputEvent *nextEventPut(void) {
-	sqInputEvent *evt;
-	evt = eventBuffer + eventBufferPut;
-	eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
-	if (eventBufferGet == eventBufferPut) {
-		/* buffer overflow; drop the last event */
-		eventBufferGet = (eventBufferGet + 1) % MAX_EVENT_BUFFER;
-	}
-	return evt;
-}
-
-void ignoreLastEvent() {
-    eventBufferPut -= 1;
-    if (eventBufferPut < 0) 
-        eventBufferPut = MAX_EVENT_BUFFER -1;
-}
-
-int ioSetInputSemaphore(int semaIndex) {
-	inputSemaphoreIndex = semaIndex;
-	return 1;
-}
-
-int ioGetNextEvent(sqInputEvent *evt) {
-	if (eventBufferGet == eventBufferPut) {
-		if (gThreadManager)
-    		YieldToAnyThread();
-		else
-		    ioProcessEvents();
-	}
-	if (eventBufferGet == eventBufferPut) 
-		return false;
-
-	*evt = eventBuffer[eventBufferGet];
-	eventBufferGet = (eventBufferGet+1) % MAX_EVENT_BUFFER;
-	return true;
-}
-
-int ioGetButtonState(void) {
-	if (gThreadManager)
-		YieldToAnyThread();
-	else
-	    ioProcessEvents();
-	if ((cachedButtonState & 0x7) != 0) {
-		int result = cachedButtonState;
-		cachedButtonState = 0;  /* clear cached button state */
-		return result;
-	}
-	cachedButtonState = 0;  /* clear cached button state */
-	return buttonState;
-}
-
-int ioGetKeystroke(void) {
-	int keystate;
-
-	if (gThreadManager)
-		YieldToAnyThread();
-	else
-	    ioProcessEvents();
-	if (keyBufGet == keyBufPut) {
-		return -1;  /* keystroke buffer is empty */
-	} else {
-		keystate = keyBuf[keyBufGet];
-		keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
-		/* set modifer bits in buttonState to reflect the last keystroke fetched */
-		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-	}
-	return keystate;
-}
-int ioMousePoint(void) {
-	Point p;
-
-	if (gThreadManager)
-		YieldToAnyThread();
-	else
-	    ioProcessEvents();
-	if (windowActive) {
-		GetMouse(&p);
-	} else {
-		/* don't report mouse motion if window is not active */
-		p = savedMousePosition;
-	}
-	return (p.h << 16) | (p.v & 0xFFFF);  /* x is high 16 bits; y is low 16 bits */
-}
-
-int ioPeekKeystroke(void) {
-	int keystate;
-
-	if (gThreadManager)
-		YieldToAnyThread();
-	else
-	    ioProcessEvents();
-	if (keyBufGet == keyBufPut) {
-		return -1;  /* keystroke buffer is empty */
-	} else {
-		keystate = keyBuf[keyBufGet];
-		/* set modifer bits in buttonState to reflect the last keystroke peeked at */
-		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
-	}
-	return keystate;
-}
-
-int ioProcessEvents(void) {
-	/* This is a noop when running as a plugin; the browser handles events. */
-	const int nextPollOffsetCheck = CLOCKS_PER_SEC/60, nextPowerCheckOffset=CLOCKS_PER_SEC/2; 
-	static clock_t nextPollTick = 0, nextPowerCheck=0;
-	long    clockTime;
-
-#ifndef PLUGIN
-	if (ioLowResMSecs() >= nextPollTick) {
-		/* time to process events! */
-		while (HandleEvents()) {
-			/* process all pending events */
-		}
-		
-        clockTime = ioLowResMSecs();
-        
-        if (gDisablePowerManager && gTapPowerManager) {
-            if (clockTime > gDisableIdleTickLimit)
-                gDisableIdleTickLimit = IdleUpdate() + gDisableIdleTickCount;
-                
-#if !defined(MINIMALVM)
-            if (clockTime > nextPowerCheck) {
-                 UpdateSystemActivity(UsrActivity);
-                 nextPowerCheck = clockTime + nextPowerCheckOffset;
-            }
-#endif
-        }
-        
-		/* wait a while before trying again */
-		nextPollTick = clockTime + nextPollOffsetCheck;
-	}
-#endif
-	return interruptPending;
-}
-
-void setMessageHook(eventMessageHook theHook) {
-    messageHook = theHook;
-}
-
-void setPostMessageHook(eventMessageHook theHook) {
-    postMessageHook = theHook;
-}
-
 int checkForModifierKeys() {
 	enum {
 			/* modifier keys */
@@ -666,6 +528,190 @@ int checkForModifierKeys() {
 	
 	return result;
 }
+
+#endif
+
+int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) {
+	sqDragDropFilesEvent *evt;
+	int theButtonState;
+	
+#if I_AM_CARBON_EVENT
+        pthread_mutex_lock(&gEventQueueLock);
+#endif
+        evt = (sqDragDropFilesEvent*) nextEventPut();
+
+	/* first the basics */
+	theButtonState = MouseModifierState(theEvent);
+	evt->type = EventTypeDragDropFiles;
+	evt->timeStamp = ioMSecs(); 
+	GlobalToLocal((Point *) &theEvent->where);
+	evt->x = theEvent->where.h;
+	evt->y = theEvent->where.v;
+	evt->numFiles = numberOfItems;
+	evt->dragType = dragType;
+	
+	/* then the modifiers */
+	evt->modifiers = theButtonState >> 3;
+	/* clean up reserved */
+	evt->reserved1 = 0;
+#if I_AM_CARBON_EVENT
+        pthread_mutex_unlock(&gEventQueueLock);
+#endif
+//	signalSemaphoreWithIndex(inputSemaphoreIndex);
+	return 1;
+}
+int MouseModifierState(EventRecord *theEvent) {
+	int stButtons;
+
+	stButtons = 0;
+	if ((theEvent->modifiers & btnState) == false) {  /* is false if button is down */
+		stButtons = 4;		/* red button by default */
+		if ((theEvent->modifiers & optionKey) != 0) {
+			stButtons = 2;	/* yellow button if option down */
+		}
+		if ((theEvent->modifiers & cmdKey) != 0) {
+			stButtons = 1;	/* blue button if command down */
+		}
+	} 
+
+	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
+	return ((modifierMap[(theEvent->modifiers >> 8)] << 3) |
+		(stButtons & 0x7));
+}
+
+
+sqInputEvent *nextEventPut(void) {
+	sqInputEvent *evt;
+	evt = eventBuffer + eventBufferPut;
+	eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
+	if (eventBufferGet == eventBufferPut) {
+		/* buffer overflow; drop the last event */
+		eventBufferGet = (eventBufferGet + 1) % MAX_EVENT_BUFFER;
+	}
+	return evt;
+}
+
+void ignoreLastEvent() {
+    eventBufferPut -= 1;
+    if (eventBufferPut < 0) 
+        eventBufferPut = MAX_EVENT_BUFFER -1;
+}
+
+int ioSetInputSemaphore(int semaIndex) {
+	inputSemaphoreIndex = semaIndex;
+	return 1;
+}
+
+int ioGetNextEvent(sqInputEvent *evt) {
+#if I_AM_CARBON_EVENT
+        pthread_mutex_lock(&gEventQueueLock);
+#else
+    if (eventBufferGet == eventBufferPut) {
+        if (gThreadManager)
+            SqueakYieldToAnyThread();
+        else
+            ioProcessEvents();
+    }
+#endif
+	if (eventBufferGet == eventBufferPut) {
+#if I_AM_CARBON_EVENT
+            pthread_mutex_unlock(&gEventQueueLock);
+#endif
+            return false;
+        }
+	*evt = eventBuffer[eventBufferGet];
+	eventBufferGet = (eventBufferGet+1) % MAX_EVENT_BUFFER;
+#if I_AM_CARBON_EVENT
+        if (evt->type == EventTypeFullScreenUpdate) {
+            pthread_mutex_unlock(&gEventQueueLock);
+            fullDisplayUpdate();	//Note I think it's ok to unlock by now
+            return ioGetNextEvent(evt);
+        }
+        
+        if (evt->type == EventTypePostEventProcessing) {
+            if (postMessageHook) 
+                postMessageHook((EventRecord *) evt->unused1);
+            free((void *) evt->unused1);
+            pthread_mutex_unlock(&gEventQueueLock);
+            return ioGetNextEvent(evt);
+        }
+        pthread_mutex_unlock(&gEventQueueLock);
+#endif
+	return true;
+}
+
+int ioGetButtonState(void) {
+	if (gThreadManager)
+		SqueakYieldToAnyThread();
+	else
+	    ioProcessEvents();
+	if ((cachedButtonState & 0x7) != 0) {
+		int result = cachedButtonState;
+		cachedButtonState = 0;  /* clear cached button state */
+		return result;
+	}
+	cachedButtonState = 0;  /* clear cached button state */
+	return buttonState;
+}
+
+int ioGetKeystroke(void) {
+	int keystate;
+
+	if (gThreadManager)
+		SqueakYieldToAnyThread();
+	else
+	    ioProcessEvents();
+	if (keyBufGet == keyBufPut) {
+		return -1;  /* keystroke buffer is empty */
+	} else {
+		keystate = keyBuf[keyBufGet];
+		keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
+		/* set modifer bits in buttonState to reflect the last keystroke fetched */
+		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
+	}
+	return keystate;
+}
+int ioMousePoint(void) {
+	Point p;
+
+	if (gThreadManager)
+		SqueakYieldToAnyThread();
+	else
+	    ioProcessEvents();
+	if (windowActive) {
+		GetMouse(&p);
+	} else {
+		/* don't report mouse motion if window is not active */
+		p = savedMousePosition;
+	}
+	return (p.h << 16) | (p.v & 0xFFFF);  /* x is high 16 bits; y is low 16 bits */
+}
+
+int ioPeekKeystroke(void) {
+	int keystate;
+
+	if (gThreadManager)
+		SqueakYieldToAnyThread();
+	else
+	    ioProcessEvents();
+	if (keyBufGet == keyBufPut) {
+		return -1;  /* keystroke buffer is empty */
+	} else {
+		keystate = keyBuf[keyBufGet];
+		/* set modifer bits in buttonState to reflect the last keystroke peeked at */
+		buttonState = ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
+	}
+	return keystate;
+}
+
+void setMessageHook(eventMessageHook theHook) {
+    messageHook = theHook;
+}
+
+void setPostMessageHook(eventMessageHook theHook) {
+    postMessageHook = theHook;
+}
+
 #if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
   
 Boolean USBKeyboardCheckKey(int macKeyCode);
@@ -1090,6 +1136,635 @@ Boolean USBKeyboardCheckKey(int macKeyCode) {
 #else
 Boolean IsKeyDown() {
     interpreterProxy->success(false);
+    return null;
 }
 #endif
 
+#ifdef I_AM_CARBON_EVENT
+
+extern MenuHandle fileMenu, editMenu;
+EventLoopTimerRef  gPowerManagerDefeatTimer;
+
+EventTypeSpec appEventCmdList[] = {{kEventClassCommand, kEventCommandProcess}};
+
+EventTypeSpec appEventList[] = {{kEventClassApplication, kEventAppActivated},
+                                {kEventClassApplication, kEventAppDeactivated}};
+
+EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
+                            { kEventClassWindow, kEventWindowActivated},
+                            { kEventClassWindow, kEventWindowDeactivated}};
+                            
+EventTypeSpec windEventMouseList[] = {{ kEventClassMouse, kEventMouseMoved},
+                            { kEventClassMouse, kEventMouseWheelMoved},
+                            { kEventClassMouse, kEventMouseDragged},
+                            { kEventClassMouse, kEventMouseUp},
+                            { kEventClassMouse, kEventMouseDown}};
+                            
+EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
+                            { kEventClassKeyboard, kEventRawKeyUp},
+                            { kEventClassKeyboard, kEventRawKeyRepeat},
+                            { kEventClassKeyboard, kEventRawKeyModifiersChanged}};
+                            
+static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
+                EventRef event, void* userData);
+static pascal OSStatus MyAppEventCmdHandler (EventHandlerCallRef myHandlerChain,
+                EventRef event, void* userData);
+static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData);
+static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData);
+static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData);
+static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData);
+            
+int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
+int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
+void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
+void recordKeyboardEventCarbon(EventRef event,int keyType);
+int doPreMessageHook(EventRef event); 
+void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta);
+            
+void SetUpCarbonEvent() {
+    AdjustMenus();
+
+/* Installing the application event handler */
+    InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventCmdHandler), 1, appEventCmdList, 0, NULL);
+    InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventHandler), 2, appEventList, 0, NULL);
+
+/* Installing the window event handler */
+    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventHandler), 3, windEventList, 0, NULL);
+    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventMouseHandler), 5, windEventMouseList, 0, NULL);
+    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventKBHandler), 4, windEventKBList, 0, NULL);
+    
+/* timmer loops */
+    InstallEventLoopTimer (GetMainEventLoop(),
+                       6*kEventDurationSecond,
+                       kEventDurationSecond,
+                       NewEventLoopTimerUPP(PowerManagerDefeatTimer),
+                       NULL,&gPowerManagerDefeatTimer);
+}
+
+int   doPreMessageHook(EventRef event) {
+   /* jmm rethink, breaks not thread safe
+    if (messageHook) {
+        EventRecord theOldEventType;
+        if (!ConvertEventRefToEventRecord(event,&theOldEventType))
+            return eventNotHandledErr;
+        if (messageHook(&theOldEventType))
+            return noErr;
+    } */
+    return eventNotHandledErr;
+}
+
+void   doPostMessageHook(EventRef event) {
+    if (postMessageHook) {
+        EventRecord *theOldEventType;
+        sqInputEvent *evt;
+        
+        theOldEventType = malloc(sizeof(EventRecord));
+        if (!ConvertEventRefToEventRecord(event,theOldEventType)) {
+            free(theOldEventType);
+            return;
+        }
+        pthread_mutex_lock(&gEventQueueLock);
+	evt = nextEventPut();
+	evt->type = EventTypePostEventProcessing;
+	evt->unused1 = (long) theOldEventType;
+        pthread_mutex_unlock(&gEventQueueLock);
+
+        // not quite this postMessageHook(&theOldEventType);
+    }
+}
+
+void   postFullScreenUpdate() {
+    sqInputEvent *evt;
+    
+    pthread_mutex_lock(&gEventQueueLock);
+    evt = nextEventPut();
+    evt->type = EventTypeFullScreenUpdate;
+    pthread_mutex_unlock(&gEventQueueLock);
+}
+
+static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
+    EventRef event, void* userData)
+{
+    UInt32 whatHappened;
+    
+    OSStatus result = eventNotHandledErr; /* report failure by default */
+    
+    if (messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
+        return result;
+
+    whatHappened = GetEventKind(event);
+    switch (whatHappened)
+    {
+        case kEventAppActivated:
+            windowActive = true;
+            if (fullScreenFlag) {
+                MenuBarHide();
+                //postFullScreenUpdate();  /* Fix for full screen menu bar tabbing*/
+            }
+            break;
+        case kEventAppDeactivated:
+            GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
+                    sizeof(Point), NULL, &savedMousePosition);
+            SetPortWindowPort(getSTWindow());
+            GlobalToLocal(&savedMousePosition);
+            windowActive = false;
+            if (fullScreenFlag)
+                MenuBarRestore();
+            break;
+        default:
+            break;
+    }
+    if (postMessageHook) 
+        doPostMessageHook(event);
+    return result;
+}
+
+static pascal OSStatus MyAppEventCmdHandler (EventHandlerCallRef myHandlerChain,
+EventRef event, void* userData)
+{
+    UInt32 whatHappened;
+    HICommand commandStruct;    
+    OSStatus result = eventNotHandledErr; /* report failure by default */
+
+    if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
+        return result;
+    whatHappened = GetEventKind(event);
+    switch (whatHappened)
+    {
+        case kEventCommandProcess:
+            GetEventParameter (event, kEventParamDirectObject,
+                typeHICommand, NULL, sizeof(HICommand),NULL, &commandStruct);
+            AdjustMenus();
+            if (commandStruct.menu.menuRef == fileMenu) {
+                switch (commandStruct.menu.menuItemIndex)
+                {
+                    case quitItem :
+                        result = noErr;
+                        gQuitNowRightNow = true;
+                    default:
+                        break;
+                }
+            }
+             if (commandStruct.menu.menuRef == editMenu) {
+                switch (commandStruct.commandID)
+                {
+                     default:
+                        if (windowActive)
+                            result = noErr;
+                        break;
+                }
+            }
+            break;
+        default:
+            break;
+    }
+    if (postMessageHook) 
+        doPostMessageHook(event);
+    return result;
+}
+
+static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData)
+{
+    WindowRef window;
+    UInt32 whatHappened;
+    OSStatus result = eventNotHandledErr; /* report failure by default */
+
+    if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
+        return result;
+    GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL,
+                sizeof(window), NULL, &window);
+    whatHappened = GetEventKind(event);
+    switch (whatHappened)
+    {
+         case kEventWindowActivated:
+            windowActive = true;
+            postFullScreenUpdate();
+            break;
+        case kEventWindowDeactivated:
+            GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
+                    sizeof(Point), NULL, &savedMousePosition);
+            SetPortWindowPort(getSTWindow());
+            GlobalToLocal(&savedMousePosition);
+            windowActive = false;
+            //postFullScreenUpdate();
+            break;
+       case kEventWindowDrawContent:
+            //postFullScreenUpdate();  /* this makes VM call ioShowDisplay */
+            result = noErr;
+            break;
+        default:
+        /* If nobody handled the event, it gets propagated to the */
+        /* application-level handler. */
+        break;
+    }
+    if (postMessageHook) 
+        doPostMessageHook(event);
+    return result;
+}
+
+static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData)
+{
+    UInt32 whatHappened;
+    Point  mouseLocation;
+    OSStatus result = eventNotHandledErr; /* report failure by default */
+    RgnHandle	ioWinRgn=null;
+    WindowPtr	theWindow;
+    
+    if (!windowActive)
+        return result;
+
+    if (ioWinRgn == null) 
+        ioWinRgn = NewRgn();
+        
+    GetWindowRegion(getSTWindow(),kWindowGlobalPortRgn,ioWinRgn);
+    GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
+    
+    if (!PtInRgn(mouseLocation,ioWinRgn))
+        return result;
+
+    if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
+        return result;
+    
+    whatHappened = GetEventKind(event);
+    switch (whatHappened)
+    {
+        case kEventMouseMoved:
+        case kEventMouseDragged:
+        case kEventMouseWheelMoved:
+            recordMouseEventCarbon(event,whatHappened);
+            result = noErr;
+            break;
+        case kEventMouseDown:
+            if (FindWindow(mouseLocation, &theWindow) == inGrow)
+                return result;
+        
+            gButtonIsDown = true;
+            recordMouseEventCarbon(event,whatHappened);
+            result = noErr;
+            break;
+        case kEventMouseUp:
+            gButtonIsDown = false;
+            recordMouseEventCarbon(event,whatHappened);
+            result = noErr;
+            break;
+        default:
+        /* If nobody handled the event, it gets propagated to the */
+        /* application-level handler. */
+        break;
+    }
+    if (postMessageHook) 
+        doPostMessageHook(event);
+    return result;
+}
+
+static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData)
+{
+    UInt32 whatHappened;
+    OSStatus result = eventNotHandledErr; /* report failure by default */
+    
+    if (!windowActive)
+        return result;
+
+    if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
+        return result;
+    whatHappened = GetEventKind(event);
+    switch (whatHappened)
+    {
+        case kEventRawKeyDown:
+        case kEventRawKeyRepeat:
+            recordKeyboardEventCarbon(event,EventKeyDown);
+            result = noErr;
+            break;
+        case kEventRawKeyUp:
+            recordKeyboardEventCarbon(event,EventKeyUp);
+            result = noErr;
+            break;
+        case kEventRawKeyModifiersChanged:
+            /* ok in this case we fake a mouse event to deal with the modifiers changing */
+            if(inputSemaphoreIndex)
+                recordMouseEventCarbon(event,kEventMouseMoved);
+            result = noErr;
+            break;
+        default: 
+        /* If nobody handled the event, it gets propagated to the */
+        /* application-level handler. */
+        break;
+    }
+    if (postMessageHook) 
+        doPostMessageHook(event);
+    return result;
+}
+
+void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
+	sqMouseEvent *evt;
+	static sqMouseEvent oldEvent;
+	Point  where;
+        EventMouseWheelAxis wheelMouseDirection=0;
+        long	wheelMouseDelta=0;
+        OSErr		err;
+        
+        err = GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
+                    sizeof(Point), NULL, &where);
+                    
+        SetPortWindowPort(getSTWindow());
+	if (err != noErr)
+            GetMouse(&where); //fake mouse event
+        else
+            GlobalToLocal((Point *) &where);
+        buttonState = MouseModifierStateCarbon(event,whatHappened);
+ 	cachedButtonState = cachedButtonState | buttonState;
+       
+        if (whatHappened == kEventMouseWheelMoved) {
+            GetEventParameter( event,
+                                kEventParamKeyModifiers,
+                                typeMouseWheelAxis,
+                                NULL,
+                                sizeof(EventMouseWheelAxis),
+                                NULL,
+                                &wheelMouseDirection); 
+            GetEventParameter( event,
+                                kEventParamMouseWheelDelta,
+                                typeLongInteger,
+                                NULL,
+                                sizeof(long),
+                                NULL,
+                                &wheelMouseDelta); 
+       }
+
+        pthread_mutex_lock(&gEventQueueLock);
+	evt = (sqMouseEvent*) nextEventPut();
+
+	/* first the basics */
+	evt->type = EventTypeMouse;
+	evt->timeStamp = ioLowResMSecs(); 
+        evt->x = where.h;
+	evt->y = where.v;
+	/* then the buttons */
+	evt->buttons = buttonState & 0x07;
+	/* then the modifiers */
+	evt->modifiers = buttonState >> 3;
+	/* clean up reserved */
+	evt->reserved1 = wheelMouseDirection;
+	evt->reserved2 = wheelMouseDelta;
+	
+	if (oldEvent.buttons == evt->buttons && 
+	    oldEvent.x == evt->x &&
+	    oldEvent.y == evt->y &&
+	    oldEvent.modifiers == evt->modifiers &&
+            whatHappened != kEventMouseWheelMoved) 
+	    ignoreLastEvent();
+	    
+        oldEvent = *evt;
+     	pthread_mutex_unlock(&gEventQueueLock);
+        
+        if (whatHappened == kEventMouseWheelMoved) 
+            fakeMouseWheelKeyboardEvents(wheelMouseDirection,wheelMouseDelta);
+}
+
+void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta) {
+    long 	i,asciiChar;
+    sqKeyboardEvent *evt,*extra;
+    UInt32	macKeyCode;
+    
+    pthread_mutex_lock(&gEventQueueLock);
+    for(i=0;i<abs(wheelMouseDelta);i++) {
+        if (wheelMouseDirection == kEventMouseWheelAxisY) 
+            if (wheelMouseDelta > 0) {//up/down
+                macKeyCode = 126;
+                asciiChar = kUpArrowCharCode;
+            } else {
+                macKeyCode = 125;
+                asciiChar = kDownArrowCharCode;
+            }
+        else
+            if (wheelMouseDelta > 0) {//left/right
+                macKeyCode = 124;
+                asciiChar = kRightArrowCharCode;
+            } else {
+                macKeyCode = 123;
+                asciiChar = kLeftArrowCharCode;
+            }
+            
+	evt = (sqKeyboardEvent*) nextEventPut();
+	/* first the basics */
+	evt->type = EventTypeKeyboard;
+	evt->timeStamp = ioLowResMSecs();
+	/* now the key code */
+	/* press code must differentiate */
+	evt->charCode = macKeyCode;
+	evt->pressCode = EventKeyDown;
+	evt->modifiers = modifierMap[(cmdKey >> 8)];
+	/* clean up reserved */
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+	/* generate extra character event */
+        extra = (sqKeyboardEvent*)nextEventPut();
+        *extra = *evt;
+        extra->charCode = asciiChar;
+        extra->pressCode = EventKeyChar;
+        
+       if(!inputSemaphoreIndex) {
+            int  keystate;
+    
+            /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
+    
+            keystate = (evt->modifiers << 8) | asciiChar;
+            if (keystate == interruptKeycode) {
+                    /* Note: interrupt key is "meta"; it not reported as a keystroke */
+                    interruptPending = true;
+                    interruptCheckCounter = 0;
+            } else {
+                    keyBuf[keyBufPut] = keystate;
+                    keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
+                    if (keyBufGet == keyBufPut) {
+                            /* buffer overflow; drop the last character */
+                            keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
+                            keyBufOverflows++;
+                    }
+            }
+
+        }
+    }
+    if (wheelMouseDelta != 0) {
+    	evt = (sqKeyboardEvent*) nextEventPut();
+	/* first the basics */
+	evt->type = EventTypeKeyboard;
+	evt->timeStamp = ioLowResMSecs();
+	/* now the key code */
+	/* press code must differentiate */
+	evt->charCode = macKeyCode;
+	evt->pressCode = EventKeyUp;
+	evt->modifiers = modifierMap[(cmdKey >> 8)];
+	/* clean up reserved */
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+
+    }
+    pthread_mutex_unlock(&gEventQueueLock);
+}
+
+void recordKeyboardEventCarbon(EventRef event,int keyType) {
+	int 		asciiChar, modifierBits;
+        char 		macCharCode;
+        UInt32		macKeyCode;
+	sqKeyboardEvent *evt, *extra;
+        OSErr		err;
+        
+	err = GetEventParameter( event,
+                                kEventParamKeyMacCharCodes,
+                                typeChar,
+                                NULL,
+                                sizeof(char),
+                                NULL,
+                                &macCharCode); 
+
+	err = GetEventParameter( event,
+                                kEventParamKeyCode,
+                                typeUInt32,
+                                NULL,
+                                sizeof(UInt32),
+                                NULL,
+                                &macKeyCode); 
+
+	/* keystate: low byte is the ascii character; next 4 bits are modifier bits */
+	asciiChar = macCharCode;
+	buttonState = modifierBits =ModifierStateCarbon(event,0); //Capture option states
+	if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
+		if ((asciiChar >= 97) && (asciiChar <= 122)) {
+			/* convert ascii code of command-shift-letter to upper case */
+			asciiChar = asciiChar - 32;
+		}
+	}
+
+        pthread_mutex_lock(&gEventQueueLock);
+	evt = (sqKeyboardEvent*) nextEventPut();
+
+	/* first the basics */
+	evt->type = EventTypeKeyboard;
+	evt->timeStamp = ioLowResMSecs();
+	/* now the key code */
+	/* press code must differentiate */
+	evt->charCode = macKeyCode;
+	evt->pressCode = keyType;
+	evt->modifiers = modifierBits >> 3;
+	/* clean up reserved */
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+	/* generate extra character event */
+	if (keyType == EventKeyDown) {
+		extra = (sqKeyboardEvent*)nextEventPut();
+		*extra = *evt;
+		extra->charCode = asciiChar;
+		extra->pressCode = EventKeyChar;
+	}
+        
+       if(!inputSemaphoreIndex && keyType != EventKeyUp) {
+            int  keystate;
+    
+            /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
+    
+            keystate = (evt->modifiers << 8) | asciiChar;
+            if (keystate == interruptKeycode) {
+                    /* Note: interrupt key is "meta"; it not reported as a keystroke */
+                    interruptPending = true;
+                    interruptCheckCounter = 0;
+            } else {
+                    keyBuf[keyBufPut] = keystate;
+                    keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
+                    if (keyBufGet == keyBufPut) {
+                            /* buffer overflow; drop the last character */
+                            keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
+                            keyBufOverflows++;
+                    }
+            }
+
+        }
+        pthread_mutex_unlock(&gEventQueueLock);		        
+}
+
+
+int MouseModifierStateCarbon(EventRef event,UInt32 whatHappened) {
+	long stButtons = 0;
+        UInt32 keyBoardModifiers=0;
+        EventMouseButton mouseButton=0;
+        static long buttonState[4] = {0,0,0,0};
+        OSErr err;
+        
+	err = GetEventParameter( event,
+                                kEventParamKeyModifiers,
+                                typeUInt32,
+                                NULL,
+                                sizeof(UInt32),
+                                NULL,
+                                &keyBoardModifiers); 
+  	if (whatHappened != kEventMouseMoved && whatHappened != kEventMouseWheelMoved)
+            err = GetEventParameter( event,
+                                kEventParamMouseButton,
+                                typeMouseButton,
+                                NULL,
+                                sizeof(EventMouseButton),
+                                NULL,
+                                &mouseButton); 
+        if (mouseButton > 0 && mouseButton < 4)
+            buttonState[mouseButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
+            
+        if (mouseButton && (keyBoardModifiers > 0)) {
+            stButtons = stButtons*1;
+            stButtons++;
+            stButtons = 0;
+        }
+            
+        stButtons += buttonState[1]*4*
+                    (!((keyBoardModifiers & optionKey) || (keyBoardModifiers & cmdKey)));
+        stButtons += buttonState[1]*((keyBoardModifiers & optionKey)> 0)*2;
+        stButtons += buttonState[1]*((keyBoardModifiers & cmdKey)> 0)*1;
+        stButtons += buttonState[2]*1;
+        stButtons += buttonState[3]*2;
+        
+	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
+	return ((modifierMap[(keyBoardModifiers >> 8)] << 3) |
+		(stButtons & 0x7));
+}
+
+int ModifierStateCarbon(EventRef event,UInt32 whatHappened) {
+        UInt32 keyBoardModifiers=0;
+        OSErr err;
+        
+	err = GetEventParameter( event,
+                                kEventParamKeyModifiers,
+                                typeUInt32,
+                                NULL,
+                                sizeof(UInt32),
+                                NULL,
+                                &keyBoardModifiers); 
+ 	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
+	return ((modifierMap[(keyBoardModifiers >> 8)] << 3));
+}
+
+static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData) {
+#ifndef PLUGIN
+    if (gDisablePowerManager && gTapPowerManager) {
+        IdleUpdate();
+#if !defined(MINIMALVM)
+        UpdateSystemActivity(UsrActivity);
+#endif
+    }
+#endif
+}
+
+int ioProcessEvents(void) {
+    if (gQuitNowRightNow) {
+        ioExit();  //This might not return, might call exittoshell
+        QuitApplicationEventLoop();
+        pthread_exit(null);
+    }
+    return interruptPending;
+}
+
+#endif
