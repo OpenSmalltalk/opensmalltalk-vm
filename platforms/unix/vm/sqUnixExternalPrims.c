@@ -114,7 +114,10 @@ static void *tryLoading(char *prefix, char *moduleName, char *suffix)
 	    && */ (stat(libName, &buf) == 0))
 	{
 	  /* insist on the error message: the shared lib really _is_ broken */
-	  fprintf(stderr, "ioLoadModule(%s): %s\n", libName, dlerror());
+	  if (!(S_ISDIR(buf.st_mode)))
+	  {
+	    fprintf(stderr, "ioLoadModule(%s): %s\n", libName, dlerror());
+	  }
 	}
       else
 	{
