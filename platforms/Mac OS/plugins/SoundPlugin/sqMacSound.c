@@ -117,9 +117,11 @@ typedef struct {
    Note: G3 Series Powerbook requires minimum of 4 * 4096 buffer size for stereo.
 */
 #define RECORD_BUFFER_SIZE (4096 * 2)
+
 typedef struct {
 	SPB paramBlock;
 	int stereo;
+        int brokenOSXWasMono;
 	int bytesPerSample;
 	int recordSemaIndex;
 	int readIndex;  /* index of the next sample to read */
@@ -242,7 +244,7 @@ pascal void FlipRecordBuffers(SPBPtr pb) {
 	RecordBuffer nextBuffer = (RecordBuffer) pb->userLong;
 
 	if (pb->error == 0) {
-		/* restart recording using the other buffer */
+  		/* restart recording using the other buffer */
 		SPBRecord(&nextBuffer->paramBlock, true);
 		/* reset the read pointer for the buffer that has just been filled */
 		thisBuffer->readIndex = 0;
@@ -531,18 +533,33 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	Str255 deviceName = "\p";
 	short automaticGainControlArg;
 	Fixed inputGainArg;
-	long  compressionTypeArg;
+	long  compressionTypeArg,i;
 	short continuousArg;
 	short sampleSizeArg;
 	short channelCountArg;
 	UnsignedFixed sampleRateArg;
 	int err;
-
+        long 	brokenOSXWasMono=0;
+        
 	err = SPBOpenDevice(deviceName, siWritePermission, &soundInputRefNum);
 	if (err != noErr) {
 		interpreterProxy->success(false);
 		return;
 	}
+
+	channelCountArg = stereo ? 2 : 1;
+	err = SPBSetDeviceInfo(soundInputRefNum, siNumberChannels, &channelCountArg);
+	if (err == notEnoughHardwareErr) {
+            stereo = 1;
+            brokenOSXWasMono = 1;
+            channelCountArg = stereo ? 2 : 1;
+            err = SPBSetDeviceInfo(soundInputRefNum, siNumberChannels, &channelCountArg);
+        }
+        if (err != noErr) {
+                interpreterProxy->success(false);
+                SPBCloseDevice(soundInputRefNum);
+                return;
+        }
 
 	/* try to initialize some optional parameters, but don't fail if we can't */
 	automaticGainControlArg = false;
@@ -573,18 +590,6 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 		}
 	}
 
-	channelCountArg = stereo ? 2 : 1;
-	err = SPBSetDeviceInfo(soundInputRefNum, siNumberChannels, &channelCountArg);
-	if (err == notEnoughHardwareErr) {
-            stereo = 1;
-            channelCountArg = stereo ? 2 : 1;
-            err = SPBSetDeviceInfo(soundInputRefNum, siNumberChannels, &channelCountArg);
-        }
-        if (err != noErr) {
-                interpreterProxy->success(false);
-                SPBCloseDevice(soundInputRefNum);
-                return;
-        }
 	/* try to set the client's desired sample rate */
 	sampleRateArg = desiredSamplesPerSec << 16;
 	err = SPBSetDeviceInfo(soundInputRefNum, siSampleRate, &sampleRateArg);
@@ -603,7 +608,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 		SPBSetDeviceInfo(soundInputRefNum, siSampleRate, &sampleRateArg);
 	}
 
-	recordBuffer1.paramBlock.inRefNum = soundInputRefNum;
+ 	recordBuffer1.paramBlock.inRefNum = soundInputRefNum;
 	recordBuffer1.paramBlock.count = RECORD_BUFFER_SIZE;
 	recordBuffer1.paramBlock.milliseconds = 0;
 	recordBuffer1.paramBlock.bufferLength = RECORD_BUFFER_SIZE;
@@ -618,6 +623,7 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	recordBuffer1.paramBlock.error = noErr;
 	recordBuffer1.paramBlock.unused1 = 0;
 	recordBuffer1.stereo = stereo;
+        recordBuffer1.brokenOSXWasMono = brokenOSXWasMono;
 	recordBuffer1.bytesPerSample = sampleSizeArg == 8 ? 1 : 2;
 	recordBuffer1.recordSemaIndex = semaIndex;
 	recordBuffer1.readIndex = RECORD_BUFFER_SIZE;
@@ -637,11 +643,12 @@ int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	recordBuffer2.paramBlock.error = noErr;
 	recordBuffer2.paramBlock.unused1 = 0;
 	recordBuffer2.stereo = stereo;
+        recordBuffer2.brokenOSXWasMono = brokenOSXWasMono;
 	recordBuffer2.bytesPerSample = sampleSizeArg == 8 ? 1 : 2;
 	recordBuffer2.recordSemaIndex = semaIndex;
 	recordBuffer2.readIndex = RECORD_BUFFER_SIZE;
 
-	err = SPBRecord(&recordBuffer1.paramBlock, true);
+        err = SPBRecord(&recordBuffer1.paramBlock, true);
 	if (err != noErr) {
 		interpreterProxy->success(false);
 		SPBCloseDevice(soundInputRefNum);
@@ -704,7 +711,7 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	   end of the buffer, which is buf + bufferSizeInBytes. return the number
 	   of slices (not bytes) copied. a slice is one 16-bit sample in mono
 	   or two 16-bit samples in stereo. */
-	int bytesPerSlice = (recordBuffer1.stereo ? 4 : 2);
+	int bytesPerSlice = (recordBuffer1.brokenOSXWasMono) ? 2 : ((recordBuffer1.stereo) ? 4 : 2);
 	char *nextBuf = (char *) buf + (startSliceIndex * bytesPerSlice);
 	char *bufEnd = (char *) buf + bufferSizeInBytes;
 	char *src, *srcEnd;
@@ -732,9 +739,18 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 			*nextBuf++ = 0;  /* low-order byte is zero */
 		}
 	} else {
-		while ((src < srcEnd) && (nextBuf < bufEnd)) {
+		if (recordBuffer1.brokenOSXWasMono) {
+                    src++;src++;
+                     while ((src < srcEnd) && (nextBuf < bufEnd)) {
+			*nextBuf++ = *src++; 
+ 			*nextBuf++ = *src++; 
+                        src++;src++;
+                    }
+                } else {
+                    while ((src < srcEnd) && (nextBuf < bufEnd)) {
 			*nextBuf++ = *src++;
-		}
+                    }
+                }
 	}
 	recBuf->readIndex = src - &recBuf->samples[0];  /* update read index */
 
