@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-09-03 23:09:33 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-09 03:09:23 by piumarta on emilia.local
  */
 
 
@@ -588,7 +588,7 @@ static void noteMouseEvent(void)
   evt.buttons= (state & 0x7);
   evt.modifiers= (state >> 3);
   evt.reserved1= 0;
-  evt.reserved2= 0;
+  evt.windowIndex= 0;
 #ifdef DEBUG_EVENTS
   printf("EVENT: mouse (%d,%d)", mousePosition.x, mousePosition.y);
   printModifiers(state >> 3);
@@ -609,7 +609,7 @@ static void noteKeyboardEvent(int keyCode, int pressCode, int modifiers)
   evt.modifiers= modifiers;
   evt.reserved1= 0;
   evt.reserved2= 0;
-  evt.reserved3= 0;
+  evt.windowIndex= 0;
 #ifdef DEBUG_EVENTS
   printf("EVENT: keyboard");
   printModifiers(modifiers);
@@ -631,7 +631,7 @@ static void noteDragEvent(int dragType, int numFiles)
   evt.y= mousePosition.y;
   evt.modifiers= (state >> 3);
   evt.numFiles= numFiles;
-  evt.reserved1= 0;
+  evt.windowIndex= 0;
   sendEvent((sqInputEvent *)&evt);
 }
 

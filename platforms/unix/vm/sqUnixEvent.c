@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-02-11 04:53:56 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-09 03:08:42 by piumarta on emilia.local
  *
  * NOTE: this file is included by the window support files that need it.
  */
@@ -163,7 +163,7 @@ static void recordMouseEvent(void)
   evt->buttons= (state & 0x7);
   evt->modifiers= (state >> 3);
   evt->reserved1=
-    evt->reserved2= 0;
+    evt->windowIndex= 0;
   signalInputEvent();
 #ifdef DEBUG_EVENTS
   printf("EVENT: mouse (%d,%d)", mousePosition.x, mousePosition.y);
@@ -182,7 +182,7 @@ static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers)
   evt->modifiers= modifiers;
   evt->reserved1=
     evt->reserved2=
-    evt->reserved3= 0;
+    evt->windowIndex= 0;
   signalInputEvent();
 #ifdef DEBUG_EVENTS
   printf("EVENT: key");
@@ -209,7 +209,7 @@ static void recordDragEvent(int dragType, int numFiles)
   evt->y= mousePosition.y;
   evt->modifiers= (state >> 3);
   evt->numFiles= numFiles;
-  evt->reserved1= 0;
+  evt->windowIndex= 0;
   signalInputEvent();
 #ifdef DEBUG_EVENTS
   printf("EVENT: drag (%d,%d)", mousePosition.x, mousePosition.y);
