@@ -2,15 +2,15 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
- *     as listed elsewhere in this file.
+ *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
- *     You are NOT ALLOWED to distribute modified versions of this file
- *     under its original name.  If you want to modify it and then make
- *     your modifications available publicly, rename the file first.
- * 
  *   This file is part of Unix Squeak.
+ * 
+ *      You are NOT ALLOWED to distribute modified versions of this file
+ *      under its original name.  If you modify this file then you MUST
+ *      rename it before making your modifications available publicly.
  * 
  *   This file is distributed in the hope that it will be useful, but WITHOUT
  *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2002-12-06 11:07:42 by piumarta on calvin.local.
+ * Last edited: 2004-04-03 22:55:04 by piumarta on cartman.inria.fr
  */
 
 /* Why on earth does this plugin exist at all?  Brain death strikes
