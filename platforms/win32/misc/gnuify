@@ -1,0 +1,171 @@
+#!/usr/bin/gawk -f
+#
+# Rewrite the interpreter source in $1 to use GNU C extensions, writing the
+# modified file to stdout.  Author: Ian.Piumarta@inria.fr
+#
+# Last edited: Wed Dec 16 01:46:39 1998 by piumarta (Ian Piumarta) on clotho
+
+BEGIN {
+  print "/* This file has been post-processed for GNU C */\n\
+\n\
+";
+  print "copying first section of file" > "/dev/stderr";
+  stage= 0;
+}
+
+/#include "sq.h"/ {
+  print "#include \"sqGnu.h\"\n";
+  next;
+}
+
+# A prototype for internalPush means the interprer was not inlined
+
+/^int internalPush\(/ \
+{
+  print "" > "/dev/stderr";
+  print "*** interpreter was not inlined: bailing out! ***" > "/dev/stderr";
+  print "" > "/dev/stderr";
+  exit 1;
+}
+
+
+(stage == 0) && /^int interpret\(void\) \{/ {
+  print "interpret: adding static register assignments" > "/dev/stderr";
+  stage= 1;
+  print;
+  next;
+}
+
+(stage == 1) && /^    char\* localIP;/ {
+  print "    register char* localIP IP_REG;";
+  next;
+}
+
+(stage == 1) && /^    char\* localSP;/ {
+  print "    register char* localSP SP_REG;";
+  next;
+}
+
+(stage == 1) && /^    int currentBytecode;/ {
+# print "    register unsigned char currentBytecode CB_REG;" */
+  print "    register int currentBytecode CB_REG;";
+  next;
+}
+
+(stage == 1) && /^$/ {
+  print "interpret: adding bytecode dispatch table" > "/dev/stderr";
+  print "    BC_JUMP_TABLE;\n";
+  print "interpret: rewriting case labels and outer breaks" > "/dev/stderr";
+  stage= 2;
+  FS="[ 	:]+";
+  next;
+}
+
+#(stage == 2) && /^		switch \(currentBytecode\) {/ {
+#  print "#ifdef PROFILE"
+#  print "		bytecodeJumpTable = jumpTable;"
+#  print "#endif"
+#  print;
+#  next;
+#}
+
+(stage == 2) && /^		case 207/ {
+  print "		BC_CASE(" 207 ")";
+  stage= 3;
+  next;
+}
+
+(stage == 2) && /^		case / {
+  print "		BC_CASE(" $3 ")";
+  next;
+}
+
+(stage == 2) && /^			break;/ {
+  print "			BC_BREAK;";
+  next;
+}
+
+(stage == 3) && /^			break;/ {
+  print "			BC_BREAK;";
+  next;
+}
+
+# sendLiteralSelectorBytecode inlining
+(stage == 3) && /^		case / {
+# Note: At some point we should try to bypass GCC's CSE mechanism
+#       It's pretty ridiculous to have CSE on for a single instruction...
+  print "		BC_CASE(" $3 ")";
+#  print "			argumentCount = ((" $3 " >> 4) & 3) - 1;";
+#  print "			messageSelector = longAt(((char *) method) + 4 + (((" $3 "& 15) + 1) << 2));";
+#  print "			goto commonSend;";
+
+#  print "			__asm__(\"";
+#  print "					movl %4, %%eax  ";
+#  print "					movl %2(%%eax), %%eax ";
+#  print "					movl %2, %%eax  ";
+#  print "					movl %4(%%eax), %%eax ";
+#  print "					movl %3, %0  ";
+#  print "					movl %%eax, %1 \"";
+#  print "					: \"=m\" (argumentCount), \"=m\" (messageSelector) ";
+#  print "					: \"i\" (4 + (((" $3 " & 15) + 1) << 2)), \"i\" (((" $3 " >> 4) & 3) - 1), \"m\" (method) : \"eax\"); ";
+#  print "			goto commonSend;";
+  next;
+}
+
+
+(stage == 3) && /^\}/ {
+  stage= 4;
+  print;
+  next;
+}
+
+(stage == 4) && /^int primitiveResponse\(/ {
+  print;
+  print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
+  print "    PRIM_TABLE;\n";
+  print "primitiveResponse: rewriting case labels" > "/dev/stderr";
+  stage= 5;
+  FS="[ 	:]+";
+  next;
+}
+
+
+(stage == 5) && /^	switch \(primitiveIndex\) {/ {
+  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
+  print "	PRIM_DISPATCH;";
+  print;
+  next;
+}
+
+#(stage == 5) && /^		startProfiling\(\);/ {
+#  print "#ifdef PROFILE"
+#  print "		primitiveJumpTable = jumpTable;"
+#  print "#endif"
+#  print;
+#  next;
+#}
+
+(stage == 5) && /^	case / {
+  print "	PRIM_CASE(" $3 ")";
+  next;
+}
+
+(stage == 5) && /^		break;/ {
+  print "		PRIM_BREAK;";
+  next;
+}
+
+
+(stage == 5) && /^\}/ {
+  print "copying last section of file" > "/dev/stderr";
+  stage= 6;
+  FS=" ";
+  print;
+  next;
+}
+
+# default
+{
+  print;
+  next;
+}
