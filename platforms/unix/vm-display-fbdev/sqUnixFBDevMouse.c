@@ -92,6 +92,16 @@ static int ms_read(_self, unsigned char *out, int limit, int quant, int usecs)
   if (count)
     {
       memcpy(out, self->buf, count);
+#    if DEBUG_AN_AWFUL_LOT
+      {
+	int i= 0;
+	while (i < count)
+	  {
+	    dprintf("<%02x\n", out[i]);
+	    ++i;
+	  }
+      }
+#    endif
       self->bufSize -= count;
       if (self->bufSize)
 	memcpy(self->buf, self->buf + count, self->bufSize);
