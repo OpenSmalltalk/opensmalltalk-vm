@@ -5,14 +5,48 @@
 \margl1440\margr1440\vieww20700\viewh15660\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.8.4 mach-o build for Carbon, and build for Classic. Support for Croquet, support for Safari, support for TK4, support for Multiple Windows\
-Dec 15th, 2004 (3.7.5b1)\
+\f0\fs24 \cf0 Mac VM 3.8.6 mach-o build for Carbon, and build for Classic. \
+\
+Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation\
+\
+Jan 31st, 2005 (3.8.6b4)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
-3.7.5.x seems a fine VM, from what people tell me, but now we've 3.8.5.\
+3.7.5.x seems a fine VM, from what people tell me, but now we've 3.8.6.\
+\
+3.8.6b4			Ensure VMMaker 3.8b2 - the VM code classes and tools for building a working vm for Squeak version  > 3.8-6461. is incorporated.\
+				Add Andreas's GC improvement changes for \
+				
+\f1 * primitiveIsYoung: This answers the question whether an object currently lives in young or in old space.\
+\
+				* primitiveIsRoot: Answers the question whether any given object is currently a root for young space.\
+\
+				* primitiveRootTable: Answers a snapshot of the current root table. Useful to examine the roots table if the analysis requires complex other operations during which the root table might be modified itself. Note that since this primitive can cause GC there is a small chance that it will give an inaccurate answer.\
+\
+				* primitiveRootTableAt: Answers a single element of the root table (by one-based index). This primitive can be used to quickly scan the root table for certain objects.\
+\
+				* primitiveSetGCSemaphore: Indicates a semaphore (index) to be signaled whenever a garbage collection occurs. I can see at least two uses uses for the GC semaphore: running cleanup actions (for example after full GCs occured) and dynamic parameter tuning for the GC algorithm itself.\
+
+\f0 \
+				Add John's changes for\
+\
+				Smalltalk setGCBiasToGrowGCLimit: 16*1024*1024. "Set growth limit before full GC to 16MB"\
+\
+				Smalltalk setGCBiasToGrow: 1.\
+				Set bias to grow upto GCLimit, this can avoid a problem where we attempt to avoid growing but results in thousands of incremental GC events as \
+				we approach a knee in a curve of space used versus the growth/compaction decision. \
+\
+\
+3.8.6b3			Add in logic for become: to fix issues with changes to become: logic. \
+\
+3.8.6b2			sqMacWindow.c  reduce number of lock/unlock pixel events and flush no more than 91 fps, with flush check every 1/50 or 1/60 and 1/5 of a second. this \
+				shaves another 50% off making drawing pixels 1.3% of the time originally taken. \
+\
+3.8.6b1			sqMacWindow.c, sqUIEvents.c, changed logic to flush screen every 125 fps, this makes pixel level drawing complete in 2% of the time originally taken. \
+			\
 \
 3.8.5b1			Fix issue with gnuify. The offical gnu header file used a different #ifdef for the foo register than an altered gnu header file I was using for \
 				many years. This resulted in slower performance, which is fixed in 3.8.5 \
