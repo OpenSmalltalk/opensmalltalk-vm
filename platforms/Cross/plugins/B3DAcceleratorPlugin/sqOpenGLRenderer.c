@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.2 2001/12/18 22:51:24 johnmci Exp $
+*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.3 2002/01/19 19:11:51 slosher Exp $
 *
 *   NOTES: 
 *
@@ -25,7 +25,7 @@
 	#if defined(__MWERKS__) 
 	#include <GL/gl.h>
 	#else
-	#include <gl.h>
+	#include <GL/gl.h>
 	#endif
 #endif
 #include "sqVirtualMachine.h"
