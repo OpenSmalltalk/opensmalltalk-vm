@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-30 13:06:31 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-02 15:29:03 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -68,6 +68,8 @@
 #endif
 
 #undef	DEBUG_MODULES
+
+#undef	IMAGE_DUMP				/* define to enable SIGHUP and SIGQUIT handling */
 
 #define IMAGE_NAME_SIZE MAXPATHLEN
 
@@ -106,6 +108,10 @@ static int    useItimer=	1;	/* 0 to disable itimer-based clock */
        char **uxDropFileNames=	0;	/* dropped filenames		*/
 
        int    textEncodingUTF8= 0;	/* 1 if copy from external selection uses UTF8 */
+
+#if defined(IMAGE_DUMP)
+static int    dumpImageFile=	0;	/* 1 after SIGHUP received */
+#endif
 
 #if defined(DARWIN)
 int inModalLoop= 0;
@@ -468,7 +474,58 @@ int ioRelinquishProcessorForMicroseconds(int us)
 }
 
 int ioBeep(void)				 { return dpy->ioBeep(); }
-int ioProcessEvents(void)			 { return dpy->ioProcessEvents(); }
+
+#if defined(IMAGE_DUMP)
+
+static void emergencyDump(int quit)
+{
+  extern int  preSnapshot(void);
+  extern int  postSnapshot(void);
+  extern void writeImageFile(int);
+  char savedName[MAXPATHLEN];
+  char baseName[MAXPATHLEN];
+  char *term;
+  int  dataSize, i;
+  strncpy(savedName, imageName, MAXPATHLEN);
+  strncpy(baseName, imageName, MAXPATHLEN);
+  if ((term= strrchr(baseName, '.')))
+    *term= '\0';
+  for (i= 0; ++i;)
+    {
+      struct stat sb;
+      sprintf(imageName, "%s-emergency-dump-%d.image", baseName, i);
+      if (stat(imageName, &sb))
+	break;
+    }
+  dataSize= preSnapshot();
+  writeImageFile(dataSize);
+
+  fprintf(stderr, "\n");
+  printCallStack();
+  fprintf(stderr, "\nTo recover valuable content from this image:\n");
+  fprintf(stderr, "    squeak %s\n", imageName);
+  fprintf(stderr, "and then evaluate\n");
+  fprintf(stderr, "    Smalltalk processStartUpList: true\n");
+  fprintf(stderr, "in a workspace.  DESTROY the dumped image after recovering content!");
+
+  if (quit) abort();
+  strncpy(imageName, savedName, sizeof(imageName));
+}
+
+#endif
+
+int ioProcessEvents(void)
+{
+#if defined(IMAGE_DUMP)
+  if (dumpImageFile)
+    {
+      emergencyDump(0);
+      dumpImageFile= 0;
+    }
+#endif
+  return dpy->ioProcessEvents();
+}
+
 int ioScreenDepth(void)				 { return dpy->ioScreenDepth(); }
 int ioScreenSize(void)				 { return dpy->ioScreenSize(); }
 
@@ -576,6 +633,21 @@ static void sigsegv(int ignore)
     }
   abort();
 }
+
+
+#if defined(IMAGE_DUMP)
+
+static void sighup(int ignore)
+{
+  dumpImageFile= 1;
+}
+
+static void sigquit(int ignore)
+{
+  emergencyDump(1);
+}
+
+#endif
 
 
 /*** modules ***/
@@ -1269,6 +1341,11 @@ int main(int argc, char **argv, char **envp)
 	printf("could not find j_interpret\n");
       exit(1);
     }
+#endif
+
+#if defined(IMAGE_DUMP)
+  signal(SIGHUP,  sighup);
+  signal(SIGQUIT, sigquit);
 #endif
 
   /* run Squeak */
