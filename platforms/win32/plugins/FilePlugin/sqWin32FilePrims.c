@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.5 2002/05/05 17:18:02 andreasraab Exp $
+*   RCSID:   $Id: sqWin32FilePrims.c,v 1.6 2002/05/05 18:08:16 andreasraab Exp $
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -276,12 +276,15 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode)
   return (DWORD)h+1;
 }
 
-int sqImageFilePosition(sqImageFile h)
+squeakFileOffsetType sqImageFilePosition(sqImageFile h)
 {
-  return (int)SetFilePointer((HANDLE)(h-1), 0, NULL, FILE_CURRENT);
+  win32FileOffset ofs;
+  ofs.offset = 0;
+  ofs.dwLow = SetFilePointer((HANDLE)(h-1), 0, &ofs.dwHigh, FILE_CURRENT);
+  return ofs.offset;
 }
 
-int sqImageFileRead(void *ptr, int sz, int count, sqImageFile h)
+size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyRead;
   int position;
@@ -298,21 +301,27 @@ int sqImageFileRead(void *ptr, int sz, int count, sqImageFile h)
   return (int)(dwReallyRead / sz);
 }
 
-int sqImageFileSeek(sqImageFile h, int pos)
+squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos)
 {
-  return (int) SetFilePointer((HANDLE)(h-1), pos, NULL, FILE_BEGIN);
+  win32FileOffset ofs;
+  ofs.offset = pos;
+  ofs.dwLow = SetFilePointer((HANDLE)(h-1), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
+  return ofs.offset;
 }
 
-int sqImageFileWrite(void *ptr, int sz, int count, sqImageFile h)
+size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h)
 {
   DWORD dwReallyWritten;
   WriteFile((HANDLE)(h-1), (LPVOID) ptr, count*sz, &dwReallyWritten, NULL);
-  return (int) (dwReallyWritten / sz);
+  return (size_t) (dwReallyWritten / sz);
 }
 
-int sqImageFileSize(sqImageFile h)
+squeakFileOffsetType sqImageFileSize(sqImageFile h)
 {
-  return GetFileSize((HANDLE)(h-1), NULL);
+  win32FileOffset ofs;
+  ofs.offset = 0;
+  ofs.dwLow = GetFileSize((HANDLE)(h-1), &ofs.dwHigh);
+  return ofs.offset;
 }
 
 #endif /* WIN32_FILE_SUPPORT */

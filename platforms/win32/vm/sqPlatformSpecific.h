@@ -34,10 +34,10 @@
 #define sqImageFile unsigned long
 int sqImageFileClose(sqImageFile h);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
-int sqImageFilePosition(sqImageFile h);
-int sqImageFileRead(void *ptr, int sz, int count, sqImageFile h);
-int sqImageFileSeek(sqImageFile h, int pos);
-int sqImageFileWrite(void *ptr, int sz, int count, sqImageFile h);
+squeakFileOffsetType sqImageFilePosition(sqImageFile h);
+size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile h);
+squeakFileOffsetType sqImageFileSeek(sqImageFile h, squeakFileOffsetType pos);
+size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 
 #endif /* WIN32_FILE_SUPPORT */
 
