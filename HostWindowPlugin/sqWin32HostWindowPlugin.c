@@ -101,7 +101,17 @@ switch(message){
 	}
 	break;
 	
-	
+  case WM_ACTIVATE:
+    {
+        sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
+        windowevent->type = EventTypeWindow;
+        windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
+        if (wParam == WA_INACTIVE) windowevent->action = WindowEventIconise;
+        else windowevent->action = WindowEventActivated;
+       	windowevent->windowIndex =(int) hwnd;      
+     }
+	break; 
+    	
   case WM_GETMINMAXINFO:
     {
         sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
@@ -112,9 +122,6 @@ switch(message){
        	windowevent->windowIndex =(int) hwnd;      
      }
 	break;   
-    
-	
-
  }
 return DefWindowProc(hwnd,message,wParam,lParam);
 }
@@ -385,11 +392,15 @@ if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
 int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle)
 {
  HWND hwnd = (HWND)windowIndex;
- char title[256];
- if (sizeOfTitle > 255) sizeOfTitle = 255;
+ char *title = malloc(sizeOfTitle+1);
+
  strncpy(title, newTitle, sizeOfTitle);
  title[sizeOfTitle]='\0';
- if(SetWindowText(hwnd, (LPSTR) title) == 0)return -1;
+ if(SetWindowText(hwnd, (LPSTR) title) == 0){
+       free (title);
+       return -1;
+       }
+ free (title);                        
  return sizeOfTitle;
 }
 
