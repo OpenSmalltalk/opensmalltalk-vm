@@ -62,6 +62,7 @@
 	v1.3.11 Nov 11th 2000, JMM extra buffer for server version
 	v1.3.12 Jan 2001, Karl Goiser Carbon changes
         v1.3.13 Sept 2002, JMM fixes for wildcard  port binding, and IP_ADD_MEMBERSHIP logic
+	v1.4.00 Feb 2003, JMM watch out for async port fetch info not working under os-x
 	
 	Notes beware semaphore's lurk for socket support. Three semaphores lives in Smalltalk, waiting for
 	connect/disconnect/listen, sending data, and receiving data. When to tap the semaphore is based on
@@ -1231,18 +1232,23 @@ int sqSocketRemoteAddress(SocketPtr s) {
     EPInfo*     epi;
     TBind       remoteBind;
     InetAddress remoteAddr;
-    SInt32        counter=0;
     OSStatus    err;
+    Boolean	isAsync;
 
 	if (!SocketValid(s)) return -1;
 	epi = (EPInfo *) s->privateSocketPtr;
 	if (OTAtomicTestBit(&epi->stateFlags, kUnConnected) && 
-	    !OTAtomicTestBit(&epi->stateFlags, kWaitingForConnection)) return 0;
+	    !OTAtomicTestBit(&epi->stateFlags, kWaitingForConnection)) 
+            return 0;
 	
     if (epi->socketType == UDPSocketType) {
         return (int) epi->remoteAddress.fHost;
     }
     
+   if (OTIsSynchronous(epi->erf) == false)	{	// check whether ep sync or not
+		isAsync = true;			       	// set flag if async
+		OTSetSynchronous(epi->erf);		// set endpoint to sync	
+    }
     //It seems the only reliable way to get the address
     //Is to make a call
     //
@@ -1251,22 +1257,25 @@ int sqSocketRemoteAddress(SocketPtr s) {
     remoteBind.addr.buf = (UInt8 *) &remoteAddr;
     remoteBind.addr.maxlen = sizeof(InetAddress);
     err = OTGetProtAddress(epi->erf,0,&remoteBind);
-    while (counter++ < 10 && remoteAddr.fHost == 0) {
-        OTIdle();
-    }
+
+    if (isAsync)				        // restore ep state 
+        OTSetAsynchronous(epi->erf);
     
     if (err != kOTNoError) 
         return 0;
-    else
+    else {
+        if ((int) remoteAddr.fHost == 0)
+                return (int) epi->remoteAddress.fHost;
         return (int) remoteAddr.fHost;
+}
 }
 
 int sqSocketRemotePort(SocketPtr s) {
     EPInfo* epi;
     TBind       remoteBind;
     InetAddress remoteAddr;
-    SInt32        counter=0;
     OSStatus    err;
+    Boolean	isAsync;
 
 	if (!SocketValid(s)) return -1;
 	epi = (EPInfo *) s->privateSocketPtr;
@@ -1277,6 +1286,10 @@ int sqSocketRemotePort(SocketPtr s) {
         return epi->remoteAddress.fPort;
     }
     
+   if (OTIsSynchronous(epi->erf) == false)	{	// check whether ep sync or not
+		isAsync = true;			       	// set flag if async
+		OTSetSynchronous(epi->erf);		// set endpoint to sync	
+    }
     //It seems the only reliable way to get the port
     //Is to make a call
     //
@@ -1285,14 +1298,16 @@ int sqSocketRemotePort(SocketPtr s) {
     remoteBind.addr.buf = (UInt8 *) &remoteAddr;
     remoteBind.addr.maxlen = sizeof(InetAddress);
     err = OTGetProtAddress(epi->erf,0,&remoteBind);
-    while (counter++ < 10 && remoteAddr.fHost == 0) {
-        OTIdle();
-    }
+    if (isAsync)				        // restore ep state 
+        OTSetAsynchronous(epi->erf);
     
     if (err != kOTNoError) 
         return 0;
-    else
-        return remoteAddr.fPort;
+    else {
+        if ((int) remoteAddr.fPort == 0)
+                return (int) epi->remoteAddress.fPort;
+        return (int) remoteAddr.fPort;
+    }
 }
 
 
