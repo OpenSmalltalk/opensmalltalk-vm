@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-08-23 21:18:45 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-31 19:40:14 by piumarta on emilia.inria.fr
  */
 
 
@@ -107,6 +107,7 @@
 /// 
 
 #define USE_SPINLOCK	1
+#define USE_OWN_ICON	0
 
 static inline int min(int x, int y) { return x < y ? x : y; }
 static inline int max(int x, int y) { return x > y ? x : y; }
@@ -133,8 +134,11 @@ static inline int max(int x, int y) { return x > y ? x : y; }
 - (BOOL) isOpaque;
 - (BOOL) canBecomeKeyWindow;
 - (void) setIcon;
-- (void) performMiniaturize: (id)sender;
+#if 0
+- (NSImage *) dockImage
 - (void) miniaturize: (id)sender;
+#endif
+- (void) performMiniaturize: (id)sender;
 @end
 
 
@@ -1296,7 +1300,8 @@ static void setUpWindow(int fs)
       else
 	{
 	  [win center];
-	  [win setIcon];
+	  if (!fromFinder)
+	    [win setIcon];
 	  display_winSetName(shortImageName);
 	}
 
@@ -1924,13 +1929,25 @@ static void *runInterpreter(void *arg)
 - (BOOL) isOpaque		{ return YES; }
 - (BOOL) canBecomeKeyWindow	{ return YES; }
 
+static NSImage *tryLoadingIcon(char *dir)
+{
+  char buf[MAXPATHLEN];
+  sprintf(buf, "%s/SqueakVM.icns", dir);
+  return [[NSImage alloc]
+	   initWithContentsOfFile:
+	     [NSString stringWithCString: buf]];
+}
+
 - (void) setIcon
 {
-  /////////////xxxxxxxxxxxxxxxxxxxxxxxxxx REMOVE
-  icon= [[NSImage alloc] initWithContentsOfFile: @"transp.icns"];
-  if (icon)
+  icon= 0;
+  if ((   icon= tryLoadingIcon("."))
+      || (icon= tryLoadingIcon("/usr/local/lib/squeak"))
+      || (icon= tryLoadingIcon(resourcePath)))
     [NSApp setApplicationIconImage: icon];
 }
+
+#if 0
 
 - (NSImage *) dockImage
 {
@@ -1953,12 +1970,6 @@ static void *runInterpreter(void *arg)
   return nil;
 }
 
-- (void) performMiniaturize: (id)sender
-{
-  if (!glActive)
-    [super performMiniaturize: sender];
-}
-
 - (void) miniaturize: (id)sender
 {
   NSImage *image= [self dockImage];
@@ -1966,6 +1977,15 @@ static void *runInterpreter(void *arg)
     [self setMiniwindowImage: image];
   [image release];
   [super miniaturize: sender];
+}
+
+#endif
+
+
+- (void) performMiniaturize: (id)sender
+{
+  if (!glActive)
+    [super performMiniaturize: sender];
 }
 
 
@@ -1981,11 +2001,13 @@ static void *runInterpreter(void *arg)
 - (BOOL) becomeFirstResponder	{ return YES; }
 - (BOOL) resignFirstResponder	{ return NO; }
 
+#if 0
 - (void) renewGState
 {
   printf("\nRENEW GSTATE\n\n");
   [super renewGState];
 }
+#endif
 
 static NSRange inputMark;
 static NSRange inputSelection;
@@ -2024,7 +2046,9 @@ static int     inputCharCode;
 
 - (void) drawRect: (NSRect)rect		// view already has focus
 {
+#if 0
   printf("drawRect:\n");
+#endif
   if ([self inLiveResize])
     {
       [[NSColor whiteColor] set];
@@ -2035,7 +2059,9 @@ static int     inputCharCode;
     {
       if (!pixBase)
 	{
+#	 if 0
 	  printf("drawRect: calling updatePix\n");
+#	 endif
 	  assert([self qdPort]);
 	  updatePix();
 	}
