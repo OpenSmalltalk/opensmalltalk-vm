@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.3 2002/05/11 00:27:50 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,7 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.3 2002/05/11 00:27:50 andreasraab Exp $";
 #endif
 
 #ifndef NDEBUG
@@ -1497,7 +1497,9 @@ void sqResolverStartNameLookup(char *hostName, int nameSize)
 
   if(asyncLookupHandle) return; /* lookup in progress */
   len = nameSize < MAXHOSTNAMELEN ? nameSize : MAXHOSTNAMELEN;
-  if((strlen(lastName) == len) && (strncmp(hostName, lastName, len) == 0)) {
+  if((lastError == 0) && 
+     (strlen(lastName) == len) && 
+     (strncmp(hostName, lastName, len) == 0)) {
 	  /* same as last, no point in looking it up */
 	  signalSemaphoreWithIndex(resolverSemaphoreIndex);
 	  return;
@@ -1553,6 +1555,7 @@ DWORD WINAPI sqGetHostByAddr(int netAddress)
     {
       strcpy(lastName,he->h_name);
       lastAddr = ntohl(*(long*)(he->h_addr_list[0]));
+      lastError = 0;
     }
   else
     lastError = WSAGetLastError();
@@ -1574,6 +1577,7 @@ DWORD WINAPI sqGetHostByName(char *hostName)
     {
       strcpy(lastName,he->h_name);
       lastAddr = ntohl(*(long*)(he->h_addr_list[0]));
+      lastError = 0;
     }
   else
     lastError = WSAGetLastError();
