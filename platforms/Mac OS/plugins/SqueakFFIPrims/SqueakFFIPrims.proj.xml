@@ -92,9 +92,18 @@
                     </SETTING>
                     <SETTING>
                         <SETTING><NAME>SearchPath</NAME>
-                            <SETTING><NAME>Path</NAME><VALUE>::</VALUE></SETTING>
+                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:SqueakAtSourceForge:squeak:platforms:Mac OS:</VALUE></SETTING>
                             <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
-                            <SETTING><NAME>PathRoot</NAME><VALUE>Project</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
+                        </SETTING>
+                        <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
+                        <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
+                    </SETTING>
+                    <SETTING>
+                        <SETTING><NAME>SearchPath</NAME>
+                            <SETTING><NAME>Path</NAME><VALUE>Lamie:Squeak:SqueakAtSourceForge:squeak:platforms:Cross:</VALUE></SETTING>
+                            <SETTING><NAME>PathFormat</NAME><VALUE>MacOS</VALUE></SETTING>
+                            <SETTING><NAME>PathRoot</NAME><VALUE>Absolute</VALUE></SETTING>
                         </SETTING>
                         <SETTING><NAME>Recursive</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>HostFlags</NAME><VALUE>All</VALUE></SETTING>
@@ -273,7 +282,7 @@
                     <SETTING>
                         <SETTING><NAME>FileType</NAME><VALUE>TEXT</VALUE></SETTING>
                         <SETTING><NAME>FileExtension</NAME><VALUE>.idl</VALUE></SETTING>
-                        <SETTING><NAME>Compiler</NAME><VALUE>SOMobjectsÅ TS</VALUE></SETTING>
+                        <SETTING><NAME>Compiler</NAME><VALUE>SOMobjects™ TS</VALUE></SETTING>
                         <SETTING><NAME>Precompile</NAME><VALUE>true</VALUE></SETTING>
                         <SETTING><NAME>Launchable</NAME><VALUE>false</VALUE></SETTING>
                         <SETTING><NAME>ResourceFile</NAME><VALUE>false</VALUE></SETTING>
@@ -590,7 +599,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>s0Ø</VALUE></SETTING>
+                    <SETTING><VALUE>	ß1</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -625,7 +634,7 @@
 
                 <!-- Settings for "PPC Linker" panel -->
                 <SETTING><NAME>MWLinker_PPC_linksym</NAME><VALUE>0</VALUE></SETTING>
-                <SETTING><NAME>MWLinker_PPC_symfullpath</NAME><VALUE>0</VALUE></SETTING>
+                <SETTING><NAME>MWLinker_PPC_symfullpath</NAME><VALUE>1</VALUE></SETTING>
                 <SETTING><NAME>MWLinker_PPC_linkmap</NAME><VALUE>0</VALUE></SETTING>
                 <SETTING><NAME>MWLinker_PPC_nolinkwarnings</NAME><VALUE>0</VALUE></SETTING>
                 <SETTING><NAME>MWLinker_PPC_dontdeadstripinitcode</NAME><VALUE>0</VALUE></SETTING>
@@ -796,18 +805,6 @@
             <FILEREF>
                 <TARGETNAME>SqueakFFIPrims</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
-                <PATH>MSL C.PPC.Lib</PATH>
-                <PATHFORMAT>MacOS</PATHFORMAT>
-            </FILEREF>
-            <FILEREF>
-                <TARGETNAME>SqueakFFIPrims</TARGETNAME>
-                <PATHTYPE>Name</PATHTYPE>
-                <PATH>MSL RuntimePPC.Lib</PATH>
-                <PATHFORMAT>MacOS</PATHFORMAT>
-            </FILEREF>
-            <FILEREF>
-                <TARGETNAME>SqueakFFIPrims</TARGETNAME>
-                <PATHTYPE>Name</PATHTYPE>
                 <PATH>InterfaceLib</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
@@ -815,6 +812,18 @@
                 <TARGETNAME>SqueakFFIPrims</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
                 <PATH>MathLib</PATH>
+                <PATHFORMAT>MacOS</PATHFORMAT>
+            </FILEREF>
+            <FILEREF>
+                <TARGETNAME>SqueakFFIPrims</TARGETNAME>
+                <PATHTYPE>Name</PATHTYPE>
+                <PATH>MSL C.PPC.Lib</PATH>
+                <PATHFORMAT>MacOS</PATHFORMAT>
+            </FILEREF>
+            <FILEREF>
+                <TARGETNAME>SqueakFFIPrims</TARGETNAME>
+                <PATHTYPE>Name</PATHTYPE>
+                <PATH>MSL RuntimePPC.Lib</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>
