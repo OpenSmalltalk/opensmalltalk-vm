@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.19 2002/08/06 21:54:26 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.20 2003/02/08 18:34:34 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -633,10 +633,10 @@ GDHandle getDominateDevice( WindowPtr theWindow,Rect *windRect) {
 	long				sectArea, greatestArea;
     long                quickDrawAttributes;
 	Rect				theSect;
-    RgnHandle           windowRegion;
-
+ 
     
 #if TARGET_API_MAC_CARBON
+    RgnHandle           windowRegion;
 			windowRegion = NewRgn();
 			GetWindowRegion(theWindow,kWindowStructureRgn,windowRegion);
 			GetRegionBounds(windowRegion,windRect);
