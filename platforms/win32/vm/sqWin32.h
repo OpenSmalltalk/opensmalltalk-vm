@@ -240,7 +240,7 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define SQUEAK_VM_VERSION TEXT("Squeak 3.2.1 VM (release candidate) from ") TEXT(__DATE__) \
+#define SQUEAK_VM_VERSION TEXT("Squeak 3.2.2 VM (release candidate) from ") TEXT(__DATE__) \
 	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
 /********************************************************/
@@ -256,6 +256,13 @@ extern char imageName[];		/* full path and name to image */
 extern TCHAR imagePath[];		/* full path to image */
 extern TCHAR vmPath[];		    /* full path to interpreter's directory */
 extern TCHAR vmName[];		    /* name of the interpreter's executable */
+extern TCHAR windowTitle[];     /* window title string */
+
+extern const TCHAR U_ON[];
+extern const TCHAR U_OFF[];
+extern const TCHAR U_GLOBAL[];
+extern const TCHAR U_SLASH[];
+extern const TCHAR U_BACKSLASH[];
 
 #ifndef NO_PREFERENCES
 extern HMENU vmPrefsMenu;         /* preferences menu */
@@ -329,6 +336,7 @@ char*   fromUnicode(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
          It is up to the caller to free these! */
 TCHAR*  toUnicodeNew(const char *ptr);                 /* Inline Ansi -> Unicode */
 char*   fromUnicodeNew(const TCHAR *ptr);              /* Inline Unicode -> Ansi */
+TCHAR *lstrrchr(TCHAR *source, TCHAR c);
 
 /******************************************************/
 /* Output stuff                                       */

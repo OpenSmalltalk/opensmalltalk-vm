@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.7 2002/05/11 17:09:03 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.8 2002/05/26 18:52:10 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.7 2002/05/11 17:09:03 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.8 2002/05/26 18:52:10 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -51,6 +51,13 @@ char imageName[MAX_PATH+1];		  /* full path and name to image */
 TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
 TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
 TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
+TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
+
+const TCHAR U_ON[]  = TEXT("1");
+const TCHAR U_OFF[] = TEXT("0");
+const TCHAR U_GLOBAL[] = TEXT("Global");
+const TCHAR U_SLASH[] = TEXT("/");
+const TCHAR U_BACKSLASH[] = TEXT("\\");
 
 int		 savedWindowSize= 0;	/* initial size of window */
 
@@ -138,9 +145,6 @@ void SetSystemTrayIcon(BOOL on);
 
 static sqInputEvent *nextEventPut(void);
 
-/* UNICODE stuff */
-const TCHAR U_SLASH[] = TEXT("/");
-const TCHAR U_BACKSLASH[] = TEXT("\\");
 
 /****************************************************************************/
 /*                      Synchronization functions                           */
@@ -674,7 +678,11 @@ void SetWindowTitle()
   TCHAR titleString[MAX_PATH+20];
 
   if(!IsWindow(stWindow)) return;
-  wsprintf(titleString,TEXT("Squeak! (%s)"), toUnicode(imageName));
+  if(*windowTitle) {
+	  lstrcpy(titleString, windowTitle);
+  } else {
+      wsprintf(titleString,TEXT("Squeak! (%s)"), toUnicode(imageName));
+  }
   SetWindowText(stWindow,titleString);
 }
 
@@ -2423,17 +2431,6 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 /****************************************************************************/
 /*                      File Startup                                        */
 /****************************************************************************/
-
-static TCHAR *lstrrchr(TCHAR *source, TCHAR c)
-{ TCHAR *tmp;
-
-  /* point to the last char */
-  tmp = source + lstrlen(source)-1;
-  while(tmp >= source)
-    if(*tmp == c) return tmp;
-    else tmp--;
-  return NULL;
-}
 
 /* Check if the path/file name is subdirectory of the image path */
 int isLocalFileName(TCHAR *fileName)

@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.4 2002/05/06 10:36:25 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Prefs.c,v 1.5 2002/05/26 18:52:10 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -24,10 +24,6 @@ void HandlePrefsMenu(int) {}
 /* VM preference variables */
 TCHAR squeakIniName[MAX_PATH+1]; /* full path and name to ini file */
 HMENU vmPrefsMenu;         /* preferences menu */
-
-const TCHAR U_ON[]  = TEXT("1");
-const TCHAR U_OFF[] = TEXT("0");
-const TCHAR U_GLOBAL[] = TEXT("Global");
 
 /****************************************************************************/
 /*                   Preference functions                                   */
@@ -127,11 +123,35 @@ void SetB3DXUsesOpenGL() {
 			    fUseOpenGL ? U_ON : U_OFF,squeakIniName);
 }
 
-
 void LoadPreferences()
 {
   /* Set preferences */
 #ifndef WCE_PREFERENCES
+  int size;
+
+  /* make ini file name based on executable file name */
+  lstrcpy(squeakIniName, vmName);
+  size = lstrlen(squeakIniName);
+  lstrcpy(squeakIniName + (size-3), TEXT("ini"));
+
+  /* get image file name from ini file */
+  size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
+			 TEXT(""), imageName, MAX_PATH, squeakIniName);
+  if(size > 0) {
+    if( !(imageName[0] == '\\' && imageName[1] == '\\') && !(imageName[1] == ':' && imageName[2] == '\\')) {
+      /* make the path relative to VM directory */
+      lstrcpy(imageName, vmName);
+      (lstrrchr(imageName,U_BACKSLASH[0]))[1] = 0;
+      size = lstrlen(imageName);
+      size = GetPrivateProfileString(U_GLOBAL, TEXT("ImageFile"), 
+			 TEXT(""), imageName + size, MAX_PATH - size, squeakIniName);
+	}
+  }
+
+  /* get window title from ini file */
+  GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"), 
+			 TEXT(""), windowTitle, MAX_PATH, squeakIniName);
+
   fDeferredUpdate = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("DeferUpdate"), 
 			 fDeferredUpdate,squeakIniName);
@@ -185,10 +205,6 @@ void SetAllPreferences() {
 void CreatePrefsMenu(void) {
   HMENU hMenu,pMenu;
 
-  /* make ini file */
-  lstrcpy(squeakIniName, vmPath);
-  lstrcat(squeakIniName,TEXT("Squeak.ini"));
-  LoadPreferences();
   pMenu = CreatePopupMenu();
   AppendMenu(pMenu,MF_STRING | MF_DISABLED, 0,
 	     TEXT("[Squeak VM Preferences]"));

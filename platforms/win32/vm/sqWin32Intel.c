@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Intel.c,v 1.4 2002/05/26 18:52:10 andreasraab Exp $
 *
 *   NOTES:
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -598,6 +598,7 @@ int sqMain(char *lpCmdLine, int nCmdShow)
 { 
   int virtualMemory;
 
+  LoadPreferences();
   /* parse command line args */
   if(!parseArguments(strdup(GetCommandLine()), args))
     return printUsage(1);

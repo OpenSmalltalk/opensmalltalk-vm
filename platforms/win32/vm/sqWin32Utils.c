@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Utils.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Utils.c,v 1.3 2002/05/26 18:52:10 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -99,6 +99,18 @@ char *fromUnicodeNew(const TCHAR *ptr)
     result[i] = (unsigned char) ptr[i];
   return result;
 }
+
+TCHAR *lstrrchr(TCHAR *source, TCHAR c)
+{ TCHAR *tmp;
+
+  /* point to the last char */
+  tmp = source + lstrlen(source)-1;
+  while(tmp >= source)
+    if(*tmp == c) return tmp;
+    else tmp--;
+  return NULL;
+}
+
 
 /****************************************************************************/
 /* Helper to pop up a message box with a message formatted from the         */

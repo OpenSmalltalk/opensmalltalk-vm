@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Args.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Args.c,v 1.4 2002/05/26 18:52:10 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -174,24 +174,15 @@ static char *parseGenericArgs(char *string)
   tmpImageName = string;
   string = parseStringArg(string, &tmpImageName);
   if(!string) return NULL; /* parse error */
-
-  if(*tmpImageName && IsImage(tmpImageName))
-    {
+  if(*imageName == 0) {
+	/* only attempt to use image name if none is provided */
+	if(*tmpImageName && IsImage(tmpImageName))
       strcpy(imageName, tmpImageName);
-    }
-  /* The default image names are taken out so we always
-     present a file open dialog when more than one image
-     file is in the current directory */
-#if 0
-  else
-    { /* Not the image name -- use default */
-      if(IsImage(DEFAULT_IMAGE_NAME))
-        strcpy(imageName, DEFAULT_IMAGE_NAME);
-      else if(IsImage(BASE_IMAGE_NAME))
-        strcpy(imageName, BASE_IMAGE_NAME);
-    }
-#endif
-  imageOptions[numOptionsImage++] = imageName;
+  } else {
+	  /* provide image name as second argument if implicitly specified */
+	  imageOptions[numOptionsImage++] = imageName;
+  }
+  imageOptions[numOptionsImage++] = tmpImageName;
   while(string && *string)
     {
       if(numOptionsImage > MAX_OPTIONS) return string; /* too many args */
