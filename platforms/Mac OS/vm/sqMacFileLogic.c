@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.14 2004/08/03 02:40:08 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.15 2004/09/03 00:19:45 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -257,7 +257,7 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
         OSErr		err;
         Boolean		isFolder=false,isAlias=false;
         CFURLRef 	sillyThing,appendedSillyThing;
-        CFStringRef 	lastPartOfPath;
+        CFStringRef 	lastPartOfPath,filePath2;
 		CFMutableStringRef filePath;
         
         *dst = 0x00;
@@ -295,15 +295,15 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
             sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
             appendedSillyThing = CFURLCreateCopyAppendingPathComponent(kCFAllocatorDefault,sillyThing,lastPartOfPath,false);
 #if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
-            filePath = CFURLCopyFileSystemPath (appendedSillyThing, kCFURLHFSPathStyle);
+            filePath2 = CFURLCopyFileSystemPath (appendedSillyThing, kCFURLHFSPathStyle);
 #else
-            filePath = CFURLCopyFileSystemPath (appendedSillyThing, kCFURLPOSIXPathStyle);
+            filePath2 = CFURLCopyFileSystemPath (appendedSillyThing, kCFURLPOSIXPathStyle);
 #endif
-            CFStringGetCString (filePath,dst,1000, gCurrentVMEncoding);
+            CFStringGetCString (filePath2,dst,1000, gCurrentVMEncoding);
             CFRelease(sillyThing);
             CFRelease(appendedSillyThing);
             CFRelease(lastPartOfPath);
-            CFRelease(filePath);        
+            CFRelease(filePath2);        
             return; 
         }
         	
