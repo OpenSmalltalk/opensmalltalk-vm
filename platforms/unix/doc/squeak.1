@@ -33,7 +33,7 @@
 .\"   changes these copyright conditions.  Read the file `COPYING' in the
 .\"   directory `platforms/unix/doc' before proceeding with any such use.
 .\" 
-.\" Last edited: 2003-03-02 22:22:14 by piumarta on emilia.inria.fr
+.\" Last edited: 2003-08-14 09:31:07 by piumarta on emilia.inria.fr
 .\" 
 .if @@\*(lq@ \{\
 .	ds lq "
@@ -55,7 +55,7 @@
 ..
 .TH SQUEAK 1 "\*(Dt" "Squeak Smalltalk System" "Squeak Smalltalk System"
 .SH NAME
-squeak, inisqueak \- Squeak virtual machine and installer
+squeak, inisqueak \- Unix Squeak virtual machine and installer
 .SH SYNOPSIS
 .B inisqueak
 .br
@@ -135,7 +135,6 @@ argument can be followed by a
 name.  This is the name of a \`document\' that should contain
 Smalltalk code to be executed on startup.  The document can be either
 the name of a file or a URL starting with \`http:\'.
-
 Any
 .I argument\c
 s that appear after the
@@ -152,15 +151,259 @@ If
 .I image
 is given as \`--\' then
 .B squeak
-behaves as if
+immediately stops argument processing (and behaves as if
 .I image
-was not specified.  This is useful to  specify a
+was not specified).  This is useful to specify a
 .I script
-without specifying an explicit
+(possibly with script arguments) without specifying an explicit
 .I image\c
 \&.
 .SH OPTIONS
-The complete list of options is as follows:
+Command line options fall into two categories: \`common\' options
+that are recognised by the base VM and \`specific\' options that are
+tied to a particular display or sound driver.  Common options will
+always be recognised by
+.B squeak\c
+, whereas a given specific option will be recognised only after
+.B squeak
+has loaded the driver to which it relates.  Refer to the \`-vm\'
+option below for more details.
+.PP
+The common options recognised by
+.B squeak
+are as follows:
+.TP
+.BI "\-encoding " "enc"
+specifies the internal character encoding to be used by Squeak.  This
+affects the translation that the VM performs when importing text (from
+the keyboard or via \`paste\' from an external selection) or exporting
+text (pasting text from Squeak to another application, or when
+generating filenames containing special characters).  In other words,
+it affects the correspondence between what Squeak displays on the
+screen and what it sends to (or receives from) external applications.
+The correct value depends on the way Squeak's internal fonts are
+encoded.  Current images are delivered with traditional Macintosh
+\`New York\' fonts that use
+.B Mac Roman
+encoding, and so this is the default internal encoding.  If other
+fonts (from X11 or elsewhere) are imported into the image and used as
+system fonts then the this default translation will give incorrect
+results for diacritical marks and special characters.  In such cases
+the
+.B \-encoding
+option can be used to change the internal encoding, for example
+.sp
+.nf
+\ \ \ \ \-encoding ISO-8859-15
+.fi
+.sp
+(aka
+.B Latin9\c
+) which would be appropriate for many of the fonts designed for
+European languages.
+.TP
+.B \-help
+prints a short summary of the command-line syntax, options and
+available drivers, then exits.
+.TP
+.BI "-memory " "size"[mk]
+requests that a fixed heap of
+.I size
+bytes be allocated for the Squeak image.  If the suffix `\c
+.B k\c
+\' is given then the argument is expressed in kilobytes.  If
+the suffux `\c
+.B m\c
+\' is given then the argument is expressed in megabytes.  This option
+SHOULD NOT be used, unless there is a good reason to do so, since it
+places an arbitrary limit on Squeak's object memory size.
+.TP
+.BI "-mmap " "size"[mk]
+requests that a variable heap of at most
+.I size
+bytes be allocated.  (The suffixes are as described for the
+\`\-memory\' option.)
+.B squeak
+will initially allocate a heap that is large enough to hold the image,
+with a small amount of headroom.  If at any time Squeak requires more
+memory for its image then additional space will be allocated
+dynamically.  Likewise, when memory is no longer needed it will
+deallocated and returned to the system.  The
+.I size
+argument places an upper limit on how big the heap can grow in this
+fashion.  
+.B squeak
+uses a dynamic heap by default with the maximum size set to 75% of the
+available virtual memory or 1 gigabyte, whichever is smaller.
+.TP
+.B \-noevents
+disables the new (image 2.8 and later) event-driven input mechanism.
+This option is only useful for testing backwards compatibility with
+older images and should not be used.
+.TP
+.B \-notimer
+disables the use of the interval timer for keeping track of low-resolution
+time.  (If you are having problems with file, sound or socket i/o reporting
+`interrupted system call' then setting this flag might help.)
+.TP
+.BI "\-pathenc " "enc"
+specifies the external character encoding to be used by Squeak when accessing the filesystem
+(file and directory pathnames).  The correct value depends on the local platform's characteristics.
+If no encoding conversion should be performed then this should be set to the same encoding
+as Squeak uses internally (see the
+.I \-encoding
+option).  Otherwise
+.B ISO-8859-15
+(aka
+.B Latin9\c
+) might make sense on a filesystem supporting 8\-bit characters, and
+.B UTF-8
+for filesystems that use Unicode-based pathnames.  The default is
+.B UTF-8
+which is correct for Mac OS X and very recent GNU/Linux distributions,
+and which (in an ideal world) will eventually be adopted by all Unix
+variants.
+.TP
+.BI "-plugins " "path"
+specifies an alternative location for external plugins (collections of
+named primitives) and drivers (for display and sound).  The
+.I path
+argument contains a pattern in which any occurrences of `\c
+.B %n\c
+\' will be replaced by the name of the plugin or driver being loaded.
+The
+.I path
+can name either a directory or the plugin itself and can be absolute or
+relative (to the directory in which
+.B squeak
+was run).  If a plugin or driver cannot be found in the location
+specified by
+.I path
+then the search continues in the default locations.
+.TP
+.BI "\-textenc " "enc"
+specifies the external character encoding to be used by Squeak when
+exchanging clipboard text with other applications.  The default is
+.B UTF-8
+on Mac OS X and
+.B ISO-8859-15
+(aka
+.B Latin9\c
+) on other Unix systems.  Note that X11 applications requesting the
+selection converted to
+.B UTF8_STRING
+data will (correctly) receive the clipboard text encoded as
+.B UTF-8\c
+, regardless of this setting.
+.sp
+Squeak recognises a subset of the encoding names defined by the IANA.
+(If you prefer to use the international currency symbol rather than
+the Euro symbol in external text then you might want to set this to
+.B ISO-8859-1\c
+, aka
+.B Latin1\c
+\&.)
+.TP
+.B \-version
+prints three or more lines of version information, as follows:
+.RS
+.TP
+\ \ \ \(bu
+the architecture configured for the virtual machine at compile time,
+the compilation `sequence number', the time and date of compilation,
+and the name (and version, if known) of the compiler that was used to
+compile
+.B squeak\c
+;
+.TP
+\ \ \ \(bu
+the complete
+.BR uname (1)
+information for the host on which the virtual machine was compiled;
+.TP
+\ \ \ \(bu
+the default installed location for plugins and drivers;
+.PP
+After printing the above, the virtual machine exits.
+.RE
+.TP
+.BI "\-vm " "driver"
+asks
+.B squeak
+to load a sound/display driver.  For each supported device there is a
+corresponding driver that
+.B squeak
+loads during initialisation.  Unless told otherwise,
+.B squeak
+will figure out sensible default drivers to load.  This choice can be
+overridden using this option.  The
+.I driver
+argument is a list of one or more \`assignments\' of the form
+.sp
+\ \ \ \ 
+.I class\c
+=\c
+.I device
+.sp
+separated by spaces or commas.  The supported combinations are currently:
+.RS
+.TP
+.B \ \ \ display=X11
+to display the Squeak window on a local or remote X Window System
+server.
+.TP
+.B \ \ \ display=Quartz
+to display on the local Mac OS X desktop.
+.TP
+.B \ \ \ display=none
+to disable the display (and keyboard/mouse) entirely.  (This driver is
+useful primarily for running \`server\' applications in Squeak.)
+.TP
+.B \ \ \ sound=OSS
+provides sound input and output via the Open Sound System.  (If you
+have a device called \`/dev/dsp\' then this is likely the one you
+want.)
+.TP
+.B \ \ \ sound=MacOSX
+provides sound input/output via Core Audio on Mac OS X.
+.TP
+.B \ \ \ sound=NAS
+provides sound i/o via the Network Audio System.
+.TP
+.B \ \ \ sound=Sun
+provides sound on Sun Microsystems hardware.
+.TP
+.B \ \ \ sound=none
+disables sound entirely.
+.B squeak
+will not attempt to play or record sounds when this driver is loaded.
+.RE
+.PP
+.RS
+Note that only those drivers relevant to the local platform will be
+available.  Attempting to load an unsupported driver will cause
+.B squeak
+to exit with an error message.  A list of available drivers is printed
+by the \`-help\' option.  If a particular driver cannot load system
+libraries on which it depends then it will neither be listed nor
+be available to load at runtime.
+.RE
+.PP
+.RS
+Note also that on Mac OS X both the X11 and Quartz display drivers are
+supported, although the former will refuse to load if the X11 client
+libraries are not installed on the local machine.  The Quartz driver
+will happily load (and Squeak will run as a fully-fledged application)
+even when
+.B squeak
+is invoked from the command line.  Exercise caution when logged into
+Mac OS X from another machine: forgetting to set DISPLAY before trying
+to run
+.B squeak
+on the remote display could cause embarrassement.
+.RE
+.PP
+Options specific to the X11 display driver are as follows:
 .TP
 .BI "\-browserWindow " "id"
 specifies the
@@ -178,20 +421,6 @@ instead of looking in the environment variable
 DISPLAY
 (the default behaviour) to find the name of the server to use.
 .TP
-.BI "\-encoding " "enc"
-specifies the internal character encoding to be used by Squeak.  The correct value depends on
-the way Squeak's internal fonts are encoded.  Older images use
-.B MacRoman
-encoding within the image, newer images should use
-.B ISO-8859-15
-(aka
-.B Latin9\c
-).  The correct value is
-.B MacRoman
-for image versions prior to 3.5,
-.B ISO-8859-15
-for image versions 3.5 and later.
-.TP
 .B \-fullscreen
 causes the Squeak window to occupy as much of the screen area as possible.
 Implies \`\c
@@ -202,15 +431,11 @@ Implies \`\c
 disables the graphical display and mouse/keyboard input.  This mode of
 operation is useful primarily for servers.
 .TP
-.B \-help
-prints a short summary of the command-line syntax and available
-options, then exits.
-.TP
 .B \-iconic
 asks the window manager to iconify the Squeak window at startup.
 .TP
 .B \-lazy
-causes Squeak to `snooze' whenever the main window is unmapped.  This can
+causes Squeak to `snooze' whenever the main winodw is unmapped.  This can
 be used if Squeak appears to be using consuming CPU time while idling (which should
 not normally be the case).  Note that if this option is in effect, when the
 Squeak window is unmapped
@@ -224,69 +449,11 @@ of the cursor and Delete normally deletes the character
 to the right of the cursor.  With this option, Deletes will behave like
 Backspace.  The behaviour of Backspace is not changed.
 .TP
-.BI "-memory " "size"[mk]
-requests that an initial heap of
-.I size
-bytes be allocated.  If the suffix `\c
-.B k\c
-\' is given then the argument is expressed in kilobytes.  If
-the suffux `\c
-.B m\c
-\' is given then the argument is expressed in megabytes.  The default heap
-size is 20 megabytes.
-.TP
-.B \-noevents
-disables the new (image 2.8 and later) event-driven input mechanism.  This
-option is only intended for testing backwards compatibility in the VM and image.
-.TP
-.B \-nomixer
-disables the primitives that change mixer (sound) settings.  If you
-prefer that Squeak leave these alone (they are, after all, really
-the reponsibility of whichever mixer program you use) then this option is
-for you.
-.TP
-.B \-notimer
-disables the use of the interval timer for keeping track of low-resolution
-time.  (If you are having problems with file, sound or socket i/o reporting
-`interrupted system call' then setting this flag might help.)
-.TP
 .B \-notitle
 disables the title bar on the Squeak window (if the window manager supports it).
 This option is implied by \`\c
 .B \-fullscreen\c
 \'.
-.TP
-.BI "\-pathenc " "enc"
-specifies the external character encoding to be used by Squeak when accessing the filesystem
-(file and directory pathnames).  The correct value depends on the local platform's characteristics.
-If no encoding conversion should be performed then this should be set to the same encoding
-as Squeak uses internally (see the
-.I \-encoding
-option).  Otherwise
-.B ISO-8859-15
-(aka
-.B Latin9\c
-) might make sense on a filesystem with 8-bit names and
-.B UTF-8
-for a filesystem that uses Unicode-based pathnames.  The default is
-.B UTF-8
-for version 3.5 and later of the VM (which is correct for at least MacOSX and RedHat 8, and
-which in an ideal world will eventually be adopted by all Unix variants).
-.TP
-.BI "-plugins " "path"
-specifies an alternative location for external plugins (collections
-of named primitives).  The
-.I path
-argument contains a pattern in which any occurrences of `\c
-.B %n\c
-\' will be replaced by the name of the plugin being loaded.  The
-.I path
-can name either a directory or the plugin itself and can be absolute or
-relative (to the directory in which
-.B squeak
-was run).  If a plugin cannot be found in the location specified by
-.I path
-then the search continues in the default locations.
 .TP
 .B \-swapbtn
 swaps the yellow and blue buttons.   (Traditionally, the red button is on
@@ -307,57 +474,6 @@ and
 .B yellow
 buttons.)
 .TP
-.BI "\-textenc " "enc"
-specifies the external character encoding to be used by Squeak when exchanging clipboard
-text with other applications that request/provide the selection converted to
-.B STRING
-data.  The default is
-.B UTF-8
-on MacOSX, and
-.B ISO-8859-15
-(aka
-.B Latin9\c
-) on other Unix systems.
-Note that X11 applications requesting the selection converted to
-.B STRING_UTF8
-data will (correctly) receive the clipboard text encoded as
-.B UTF-8\c
-, regardless of this setting.
-
-Squeak recognises a subset of the character set names defined by the IANA.
-(If you prefer to use the international currency symbol
-rather than the Euro symbol in external text then you might want to set this to
-.B ISO-8859-1\c
-, aka
-.B Latin1\c
-\&.)
-.TP
-.B \-version
-prints three or more lines of version information, as follows:
-.RS
-.TP
-\ \ \ \(bu
-the architecture configured for the virtual machine at compile time,
-the compilation `sequence number', `XShm' if shared memory support is
-enabled, the time and date of compilation, and the name (and version,
-if known) of the compiler that was used to compile
-.B squeak\c
-;
-.TP
-\ \ \ \(bu
-the complete
-.BR uname (1)
-information for the host on which the virtual machine was compiled;
-.TP
-\ \ \ \(bu
-the default installed location of loadable modules;
-.TP
-\ \ \ \(bu
-a list of all modules that are compiled internally in the virtual machine.
-.PP
-After printing the above, the virtual machine exits.
-.RE
-.TP
 .B \-xasync
 causes Squeak to use asynchronous display updates.  The virtual machine normally
 flushes and synchronises the display connection at regular intervals.  Using this
@@ -368,8 +484,37 @@ explicitly requests it.
 enables the use of the X Shared Memory extension on servers that support it.
 This can dramatically improve display performance, but works only when
 Squeak is running on the server.
+.PP
+Options specific to the OSS and MacOSX sound drivers are as follows:
+.TP
+.B \-nomixer
+disables the primitives that change mixer (sound) settings.  If you
+prefer that Squeak leave these alone (they are, after all, really the
+reponsibility of whichever mixer program or sound control panel you
+use) then this option is for you.
+.PP
+Several common options are deprecated and are provided only for
+backward compatibility.  These options should not be used and will be
+removed in a future release:
+.TP
+.BI "\-display " "dpy"
+is equivalent to \`\-vm display=X11 \-display
+.I dpy\c
+\'.
+.TP
+.B \-headless
+is equivalent to \`\-vm display=X11 \-headless\'.
+.TP
+.B \-nodisplay
+is equivalent to \`\-vm display=none\'.
+.TP
+.B \-nosound
+is equivalent to \`\-vm sound=none\'.
+.TP
+.B \-quartz
+is equivalent to \`-vm display=Quartz\'.
 .SH ENVIRONMENT
-Many of the options that can be set on the command-line can
+Many of the options that can be set on the command line can
 also be set from environment variables.
 .TP
 .B SQUEAK_ASYNC
@@ -455,13 +600,23 @@ Equivalent to giving the \`\c
 .B \-textenc\c
 \' command-line option if set.
 .TP
+.B SQUEAK_VM
+contains the names of one or more drivers to be loaded during initialisation.
+See the \`\c
+.B \-vm\c
+\' option for details.
+.TP
 .B SQUEAK_XSHM
 equivalent to \`\c
 .B \-xshm\c
 \'.
 .PP
-If both an environment variable and a command-line flag give values
-for the same option, the value in the command line takes precedence.
+If an environment variable and a command-line option conflict over a
+particular value then normally the value in the command line takes
+precedence.  The exception to this rule is the \`\-vm\' option.
+Environment variables are processed before command-line arguments and
+\`\-vm\' cannnot be used to unload a driver that was loaded while
+processing the contents of \`SQUEAK_VM\'.
 .SH SCRIPTS
 Squeak can load and execute a \`script\' file containing Smalltalk code at
 startup.  The name of the file should be given as the
@@ -611,7 +766,9 @@ Private copies of image and changes files.
 .br
 .I [plgdir]/*.la
 .RS
-Virtual machine `plugin modules', containing primitives that are loaded on demand.
+Virtual machine \`plugins\' (containing primitives that are loaded on
+demand) and drivers (for different types of display and sound
+hardware).
 .RE
 .sp
 .I [bindir]/squeak
@@ -631,24 +788,38 @@ This manual page.
 Miscellaneous documentation.
 .RE
 .SH NOTES
-The image and changes files containing a saved Squeak session are intimately
-related.  They should always be used together, never be separated, and under
-no circumstances should an image be run with a changes file that has been
-used with a different image.  Failure to adhere to the above could cause the
-source code for the methods in the image to become garbled and impossible
-to retrieve.
+This manual page documents version [version] of Unix Squeak.  It may
+not be appropriate for any other version.
+.PP
+The image and changes files containing a saved Squeak session are
+intimately related.  They should always be used together, never be
+separated, and under no circumstances should an image be run with a
+changes file that has been used with a different image.  Failure to
+adhere to the above could cause the source code for the methods in the
+image to become garbled and impossible to retrieve.
+.PP
+The Unix Squeak virtual machine fully supports OpenGL in both the X11
+and Quartz display drivers.  Open Croquet will run just fine with
+either of these drivers (and many Mac OS X users will even have the
+choice of which driver to use :).
 .SH BUGS
 If a \`binary\' option is enabled by an environment variable, there is no
 way to disable it on the command line.
 .PP
+Similarly, drivers specified in the
+.I SQUEAK_VM
+environment variable cannot be overridden by passing options on the
+command line.
+.PP
 .B squeak
-should never crash.  In the unlikely event that it does crash (which is a remote
-possibility with the unstable development versions), or prints any kind of message
-that
+should never crash.  In the unlikely event that it does crash, or
+prints any kind of message that
 .I does not
-appear to be caused by incorrect arguments or illegal operations from within
-a Squeak program, please send a bug report to:
-<ian.piumarta@inria.fr>.
+appear to be caused by incorrect arguments or illegal operations from
+within a Squeak program, please send a bug report to:
+<ian.piumarta@inria.fr>.  (Reports sent or copied to this address,
+rather than just to the Squeak mailing list, will stand a much better
+chance of being seen and dealt with in a timely fashion.)
 .SH AUTHOR
 This manual page was written by Ian Piumarta.
 .SH SEE ALSO
@@ -670,8 +841,8 @@ The latest source and binary distributions of Unix Squeak:
 .RS
 .B http://www-sor.inria.fr/~piumarta/squeak
 .RE
-.PP
-The list of IANA-registered character encoding names, of which a proper subset is recognised by Squeak:
-.RS
-.B http://www.iana.org/assignments/character-sets
-.RE
+.\".PP
+.\"The list of IANA-registered character encoding names, of which a proper subset is recognised by Squeak:
+.\".RS
+.\".B http://www.iana.org/assignments/character-sets
+.\".RE
