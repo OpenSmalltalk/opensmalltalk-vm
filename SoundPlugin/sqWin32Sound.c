@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Sound.c,v 1.1 2001/10/24 23:14:26 rowledge Exp $
+*   RCSID:   $Id: sqWin32Sound.c,v 1.2 2002/01/19 22:34:27 slosher Exp $
 *
 *   NOTES:   For now we're supporting both, the DirectSound and the win32
 *            based interface. In the future we'll switch to DSound exclusively.
@@ -27,7 +27,7 @@
 #ifndef NO_SOUND
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Sound.c,v 1.1 2001/10/24 23:14:26 rowledge Exp $";
+  static char RCSID[]="$Id: sqWin32Sound.c,v 1.2 2002/01/19 22:34:27 slosher Exp $";
 #endif
 
 /***************************************************************************/
@@ -40,7 +40,7 @@
 #undef WINNT
 #define DIRECTSOUND_VERSION 0x0600	/* use DirectSound 6.0 */
 #ifdef __MINGW32__
-#define HMONINTOR_DECLARED
+#define HMONITOR_DECLARED
 #endif
 #include <dsound.h>
 

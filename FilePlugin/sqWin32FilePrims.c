@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.1 2001/10/24 23:14:23 rowledge Exp $
+*   RCSID:   $Id: sqWin32FilePrims.c,v 1.2 2002/01/19 22:34:27 slosher Exp $
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -24,7 +24,7 @@
 
 #define true  1
 #define false 0
-
+ 
 #define FILE_HANDLE(f) ((HANDLE) (f)->file)
 
 /***
@@ -184,6 +184,12 @@ int sqFileFlush(SQFile *f) {
   return 1;
 }
 
+int sqFileTruncate(SQFile *f,off_t offset) {
+	/* Truncate the file*/
+
+	return success(false);
+}
+
 int sqFileValid(SQFile *f) {
   return (
 	  (f != NULL) &&
@@ -207,6 +213,10 @@ int sqFileWriteFromAt(SQFile *f, int count, int byteArrayIndex, int startIndex) 
     success(false);
   }
   return (int) dwReallyWritten;
+}
+
+int sqFileThisSession() {
+	return thisSession;
 }
 
 /***************************************************************************/
