@@ -2,7 +2,7 @@ Source: squeak
 Section: non-US/non-free
 Priority: optional
 Maintainer: Lex Spoon <lex@debian.org>
-Build-Depends: debhelper (>> 3.0.0), nas-dev
+Build-Depends: debhelper (>> 3.0.0), nas-dev, xlibs-dev
 Standards-Version: 3.5.2
 
 Package: squeak-vm-nas
@@ -38,7 +38,6 @@ Description: The Squeak Smalltalk System (virtual machine)
  This package contains the virtual machine (VM) for Squeak.  It is
  compiled to use the Open Sound System (OSS) to play and record
  sound.
-
 
 Package: inisqueak
 Architecture: all
