@@ -57,10 +57,13 @@ host_cpu=	@host_cpu@
 
 top_builddir=	.
 
+# directory names.  "srcdir" will be the location of the configure script,
+# thus all the ".." invocations
 srcdir=		@srcdir@
-plgdir=		$(srcdir)/plugins
-intplgdir=	$(srcdir)/intplugins
-vmdir=		$(srcdir)/vm
+topdir=		$(srcdir)/..
+gendir=		$(srcdir)
+unixdir=	$(srcdir)/..
+crossdir=	$(topdir)/platforms/Cross
 utldir=		$(srcdir)/util
 
 prefix=		@prefix@
@@ -101,13 +104,15 @@ LIBTOOL=	@LIBTOOL@
 NM=		@NM@
 LN=		@LN@
 LN_S=		@LN_S@
+RM=		@RM@
+
 
 CC=		@CC@
 CXX=		@CXX@
 DEFS=		@DEFS@ -DUNIX -DSQ_LIBDIR=\"$(vsqlibdir)\" -DVM_NAME=\"$(DESTDIR)$(bindir)/squeak\"  -DDISABLE_SECURITY
 # FilePlugin and SocketPlugin are counted as standard includes,
-# because some plugins (notable OSProcess) need them
-INCLUDES=	-I. -I$(vmdir) -I$(srcdir) -I$(intplgdir)/FilePlugin -I$(plgdir)/FilePlugin -I$(intplgdir)/SocketPlugin -I$(plgdir)/SocketPlugin
+# because some plugins (notably OSProcess) need them
+INCLUDES=	-I. -I$(gendir) -I$(gendir)/vm -I$(gendir)/vm/intplugins/FilePlugin -I$(gendir)/plugins/FilePlugin -I$(gendir)/vm/intplugins/SocketPlugin -I$(gendir)/plugins/SocketPlugin
 CPPFLAGS=	@CPPFLAGS@
 CFLAGS=		@CFLAGS@ @J_CFLAGS@ -funroll-loops
 WFLAGS=		@WFLAGS@
@@ -134,9 +139,6 @@ all : squeak modules
 
 VM_O=		$(CORE_O) $(PLUGINS_O) $(INTERP).o
 
-VER_O=		sqUnixVersion.o
-VER_C=		$(VER_O:.o=.c)
-
 IMG=		../internal.image
 IMG_O=		squeak_image.o
 IMZ_O=		squeak_image_gz.o
@@ -161,17 +163,13 @@ MANFILES=	squeak.1
 Makefile : $(MAKEFILE_IN) $(CONFIGURE) config.status
 	CONFIG_FILES=Makefile CONFIG_HEADERS= $(SHELL) ./config.status
 
-sqUnixConfig.h : $(vmdir)/sqUnixConfig.h.in $(CONFIGURE)
+sqUnixConfig.h : $(miscdir)/sqUnixConfig.h.in $(CONFIGURE)
 	CONFIG_FILES= CONFIG_HEADERS=sqUnixConfig.h $(SHELL) ./config.status
 
 # targets
 
-squeak.a : $(VM_O) $(VER_O)
-	$(AR) -rc $@.tmp $(VM_O) $(VER_O)
-	mv $@.tmp $@
-
-squeak squeak.map : $(VM_O) $(VER_O)
-	$(LINK) -export-dynamic -R$(vsqlibdir) -o squeak $(VM_O) $(VER_O) $(LIBS)
+squeak squeak.map : $(VM_O) sqUnixVersion.o
+	$(LINK) -export-dynamic -R$(vsqlibdir) -o squeak $(VM_O) sqUnixVersion.o $(LIBS)
 	$(NM) squeak | grep -w T | sort > squeak.map
 
 modules : $(MOD_LA)
@@ -182,21 +180,12 @@ inisqueak : $(srcdir)/inisqueak.in
 
 # misc support
 
-VER_C=	$(VER_O:.o=.c)
+sqUnixVersion.c : $(VM_O)
+	$(utldir)/verstamp sqUnixVersion.c $(CC)
 
-$(VER_O) : $(VER_C)
-	$(COMPILE) -c $(VER_C)
-
-$(VER_C) : $(UNX_O) $(GEN_O)
-	$(utldir)/verstamp $(VER_C) $(CC)
-
-interp.o : $(vmdir)/interp.c
-	$(COMPILE) -c -o interp.o $(vmdir)/interp.c
-
-gnu-interp.o : $(vmdir)/interp.c
-	$(AWK) -f $(GNUIFY) $(vmdir)/interp.c > gnuify.out
+gnu-interp.c : $(gendir)/vm/interp.c $(GNUIFY)
+	$(AWK) -f  $(GNUIFY) $(gendir)/vm/interp.c > gnuify.out
 	mv gnuify.out gnu-interp.c
-	$(COMPILE) -c gnu-interp.c
 
 .force :
 
@@ -294,8 +283,7 @@ cleanfiles :
 	rm -f *.o *.lo core
 
 clean : cleanfiles
-	rm -f $(VM) *.la .libs/*
-	test ! -d .libs || rmdir .libs
+	rm -rf $(VM) *.la .libs
 
 distclean : clean
 	rm -f Makefile mh_frag mt_frag inisqueak
