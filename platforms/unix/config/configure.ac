@@ -37,11 +37,11 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-08-22 17:13:42 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-23 13:28:31 by piumarta on emilia.inria.fr
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,6,beta5, 3,6b,5395)
+AC_VM_VERSION(3,6,beta6, 3,6b,5395)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
