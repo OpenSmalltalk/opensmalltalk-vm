@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-09-16 20:06:06 by piumarta on emilia.inria.fr
+ * Last edited: 2004-04-02 14:21:17 by piumarta on emilia.local
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -367,6 +367,7 @@ static void acceptHandler(int fd, void *data, int flags)
 	  pss->sockError= errno;
 	  pss->sockState= Invalid;
 	  perror("acceptHandler");
+	  aioDisable(fd);
 	  close(fd);
 	  fprintf(stderr, "acceptHandler: aborting server %d pss=%p\n", fd, pss);
 	}
@@ -432,12 +433,18 @@ static void dataHandler(int fd, void *data, int flags)
   privateSocketStruct *pss= (privateSocketStruct *)data;
   FPRINTF((stderr, "dataHandler(%d=%d, %p, %d)\n", fd, pss->s, data, flags));
 
+  if (pss == NULL)
+    {
+      fprintf(stderr, "dataHandler: pss is NULL fd=%d data=%p flags=0x%x\n", fd, data, flags);
+      return;
+    }
+
   if (flags & AIO_R)
     {
       int n= socketReadable(fd);
       if (n == 0)
 	{
-	  fprintf(stderr, "dataHandler: selected socket would block (why?)\n");
+	  fprintf(stderr, "dataHandler: selected socket fd=%d flags=0x%x would block (why?)\n", fd, flags);
 	}
       if (n != 1)
 	{
@@ -544,6 +551,12 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&one, sizeof(one));
   /* private socket structure */
   pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
+  if (pss == NULL)
+    {
+      fprintf(stderr, "acceptFrom: out of memory\n");
+      interpreterProxy->success(false);
+      return;
+    }
   pss->s= newSocket;
   pss->connSema= semaIndex;
   pss->readSema= readSemaIndex;
@@ -744,17 +757,17 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
   /* check that a connection is there */
   if (PSP(serverSocket)->acceptedSock < 0)
     {
-      printf("acceptFrom: no socket available\n");
+      fprintf(stderr, "acceptFrom: no socket available\n");
       interpreterProxy->success(false);
       return;
     }
 
   /* got connection -- fill in the structure */
   s->sessionID= 0;
-  pss= calloc(1, sizeof(*pss));
+  pss= (privateSocketStruct *)calloc(1, sizeof(privateSocketStruct));
   if (pss == NULL)
     {
-      printf("acceptFrom: out of memory\n");
+      fprintf(stderr, "acceptFrom: out of memory\n");
       interpreterProxy->success(false);
       return;
     }
