@@ -1,0 +1,502 @@
+.\" squeak.1 -- manual page for Unix Squeak			-*- nroff -*-
+.\" 
+.\"   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
+.\"      authors/contributors listed elsewhere in this file.
+.\"   All rights reserved.
+.\"   
+.\"   This file is part of Unix Squeak.
+.\" 
+.\"   This file is distributed in the hope that it will be useful, but WITHOUT
+.\"   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+.\"   FITNESS FOR A PARTICULAR PURPOSE.
+.\"   
+.\"   You may use and/or distribute this file ONLY as part of Squeak, under
+.\"   the terms of the Squeak License as described in `LICENSE' in the base of
+.\"   this distribution, subject to the following restrictions:
+.\" 
+.\"   1. The origin of this software must not be misrepresented; you must not
+.\"      claim that you wrote the original software.  If you use this software
+.\"      in a product, an acknowledgment to the original author(s) (and any
+.\"      other contributors mentioned herein) in the product documentation
+.\"      would be appreciated but is not required.
+.\" 
+.\"   2. This notice may not be removed or altered in any source distribution.
+.\" 
+.\"   Using or modifying this file for use in any context other than Squeak
+.\"   changes these copyright conditions.  Read the file `COPYING' in the base
+.\"   of the distribution before proceeding with any such use.
+.\" 
+.\"   You are STRONGLY DISCOURAGED from distributing a modified version of
+.\"   this file under its original name without permission.  If you must
+.\"   change it, rename it first.
+.\" 
+.\" Last edited: Mon Sep 11 21:46:29 2000 by piumarta (Ian Piumarta) on emilia
+.\" 
+.if @@\*(lq@ \{\
+.	ds lq "
+.	if t .ds lq ``
+.	if !@@\(lq@ .ds lq "\(lq
+.\}
+.if @@\*(rq@ \{\
+.	ds rq "
+.	if t .ds rq ''
+.	if !@@\(rq@ .ds rq "\(rq
+.\}
+.de Id
+.ds Rv \\$3
+.ds Dt \\$4
+..
+.de Sp
+.if n .sp
+.if t .sp 0.4
+..
+.TH SQUEAK 1 "\*(Dt" "Squeak Smalltalk System" "Squeak Smalltalk System"
+.SH NAME
+squeak \- Squeak virtual machine 
+.SH SYNOPSIS
+.B squeak
+.RI "[ " option ".\|.\|. ] [ " image " ] [ " script " [ " argument ".\|.\|. ] ]"
+.SH DESCRIPTION
+.B squeak
+is the virtual machine for the Squeak Smalltalk system.  It requires three files
+to operate correctly: an
+.B image
+file containing a `snapshot' of a live Squeak session, a
+.B changes
+file containing the source code for modified methods in the image, and
+a copy of (or a link to) a shared system
+.B sources
+file containing the source code for methods that have not been modified
+since the last major version increment.
+.PP
+The image and changes files contain the state of a user's Squeak
+session, which is persistent between consecutive sessions.  Private
+copies of these files are therefore normally required.
+.PP
+.SH INVOCATION
+.B squeak
+accepts various
+.I options
+(described below), and then an optional
+.I image
+name (which must not begin with a minus sign \`\-\').  If an
+.I image
+name is given on the command line then
+.B squeak
+tries to run that image.  Otherwise
+.B squeak
+checks the environment variable
+.B SQUEAK_IMAGE
+and, if it is set, uses its value as the name of the image to run.
+Otherwise 
+.B squeak
+looks for an image called \`squeak.image\' in the current directory.
+If the image file does not exist then
+.B squeak
+prints a message indicating which image file it failed to find and then
+exits.
+If the extension \`.image\' is missing in the
+.I image
+argument or in the value of the
+.B SQUEAK_IMAGE
+variable, it will be appended automatically.
+.PP
+The
+.I image
+argument can be followed by a
+.I script
+name.  This is the name of a \`document\' that should contain
+Smalltalk code to be executed on startup.  The document can be either
+the name of a file or a URL starting with \`http:\'.
+
+Any
+.I argument\c
+s that appear after the
+.I script
+name are ignored, but are made available to the
+.I script
+from within Squeak via the method
+.B getSystemAttribute:\c
+\&.  (See the section
+.B SCRIPTS
+below.)
+.PP
+If
+.I image
+is given as \`--\' then
+.B squeak
+behaves as if
+.I image
+was not specified.  This is useful to  specify a
+.I script
+without specifying an explicit
+.I image\c
+\&.
+.SH OPTIONS
+The complete list of options is as follows:
+.TP
+.BI "\-browserWindow " "id"
+specifies the
+.I id
+of the window that
+.B squeak
+should use for its display.  This option is intended for use when Squeak is
+running as a web browser plugin.
+.TP
+.BI "\-display " "server"
+specifies that Squeak should connect to the given display
+.I server 
+instead of looking in the environment variable
+.B
+DISPLAY
+(the default behaviour) to find the name of the server to use.
+.TP
+.B \-fullscreen
+causes the Squeak window to occupy as much of the screen area as possible.
+Implies \`\c
+.B \-notitle\c
+\'.
+.TP
+.B \-headless
+disables the graphical display and mouse/keyboard input.  This mode of
+operation is useful primarily for servers.
+.TP
+.B \-help
+prints a short summary of the command-line syntax and available
+options, then exits.
+.TP
+.B \-lazy
+causes Squeak to `snooze' whenever the main window is unmapped.  This can
+be used if Squeak appears to be using consuming CPU time while idling (which should
+not normally be the case).  Note that if this option is in effect, when the
+Squeak window is unmapped
+.B squeak
+will not respond to any external stimuli (other than to provide the X
+selection to requestors, when Squeak is the owner).
+.TP
+.BI "-memory " "size"[mk]
+requests that an initial heap of
+.I size
+bytes be allocated.  If the suffix `\c
+.B k\c
+\' is given then the argument is expressed in kilobytes.  If
+the suffux `\c
+.B m\c
+\' is given then the argument is expressed in megabytes.  The default heap
+size is 50 megabytes.
+.TP
+.B \-notitle
+disables the title bar on the Squeak window (if the window manager supports it).
+This option is implied by \`\c
+.B \-fullscreen\c
+\'.
+.TP
+.B \-secure
+`sandboxes' the session, limiting the access to the local system that
+is possible from within Squeak.  This option is primarily useful when
+Squeak is running as a web browser plugin.
+.TP
+.B \-version
+prints three or more lines of version information, as follows:
+.RS
+.TP
+\ \ \ \(bu
+the architecture configured for the virtual machine at compile time,
+the compilation `sequence number', `XShm' if shared memory support is
+enabled, the time and date of compilation, and the name (and version,
+if known) of the compiler that was used to compile
+.B squeak\c
+;
+.TP
+\ \ \ \(bu
+the complete
+.BR uname (1)
+information for the host on which the virtual machine was compiled;
+.TP
+\ \ \ \(bu
+the default installed location of loadable modules;
+.TP
+\ \ \ \(bu
+a list of all modules that are compiled internally in the virtual machine.
+.PP
+After printing the above, the virtual machine exits.
+.RE
+.TP
+.B \-xasync
+causes Squeak to use asynchronous display updates.  The virtual machine normally
+flushes and synchronises the display connection at regular intervals.  Using this
+option disables synchronisation, which will be performed only when the image
+explicitly requests it.
+.TP
+.B \-xshm
+enables the use of the X Shared Memory extension on servers that support it.
+This can dramatically improve display performance, but works only when
+Squeak is running on the server.
+.SH ENVIRONMENT
+Many of the options that can be set on the command-line can
+also be set from environment variables.
+.TP
+.B SQUEAK_ASYNC
+if set in the environment then equivalent to the \`\c
+.B \-xasync\c
+\' flag.  (The value is ignored.)
+.TP
+.B SQUEAK_FULLSCREEN
+equivalent to \`\c
+.B \-fullscreen\c
+\' if set.
+.TP
+.B SQUEAK_IMAGE
+the name of the image file to execute if no
+.I image
+argument is given on the command line.
+.TP
+.B SQUEAK_LAZY
+equivalent to the \`\c
+.B \-lazy\c
+\' flag.
+.TP
+.B SQUEAK_MEMORY
+the initial size of the heap, with optional \`k\' or \`m\' suffix.  Equivalent
+to the \`\c
+.BI "-memory " size [km]\c
+\' flag.
+.TP
+.B SQUEAK_NOTITLE
+if set, equivalent to \`\c
+.B \-notitle\c
+\'.
+.TP
+.B SQUEAK_SECURE
+equivalent to \`\c
+.B \-secure\c
+\' if set.
+.TP
+.B SQUEAK_XSHM
+equivalent to \`\c
+.B \-xshm\c
+\'.
+.PP
+If both an environment variable and a command-line flag give values
+for the same option, the value in the command line takes precedence.
+.SH SCRIPTS
+Squeak can load and execute a \`script\' file containing Smalltalk code at
+startup.  The name of the file should be given as the
+.I script
+argument to
+.B squeak\c
+\&.
+For example, assuming that the image \`foo.image\'
+contains an open Transcript window, then the following represents
+the \`hello world\' program for Squeak:
+.sp
+.RS
+.nf
+Transcript cr; show: 'Hello, world'.
+.fi
+.RE
+.sp
+If this script is in a file called \`hello.sq\', then it could be run like this:
+.sp
+.RS
+.nf
+squeak foo.image hello.sq
+.fi
+.RE
+.PP
+It is also possible to make \`self interpreting\' scripts by adding an \`interpreter
+line\' to the start of the script.  The \`hello.sq\' file could be changed to
+.sp
+.RS
+.nf
+#!{bindir}/squeak --
+Transcript cr; show: 'Hello, world'.
+.fi
+.RE
+.sp
+and then made executable with
+.sp
+.RS
+.nf
+chmod +x hello.sq
+.fi
+.RE
+.sp
+and then invoked by running the script file directly:
+.sp
+.RS
+.nf
+SQUEAK_IMAGE="foo.image"
+export SQUEAK_IMAGE
+\&./hello.sq
+.fi
+.RE
+.PP
+If any
+.I argument\c
+s are present after the
+.I script
+name then they can be retrieved from within the script using the method
+.sp
+.RS
+.nf
+Smalltalk getSystemAttribute: \c
+.I n
+.fi
+.RE
+.sp
+where
+.I n
+is the index of the argument, starting at 3 for the first argument.  (See the
+method comment for
+.sp
+.RS
+.nf
+SystemDictionary>>getSystemAttribute:
+.fi
+.RE
+.sp
+in the image for an explanation of the meanings of the indices.)
+.PP
+As an example of this, here is the \`echo\' program written as a Squeak script:
+.sp
+.RS
+.nf
+#!{bindir}/squeak --
+"Echo arguments to the Transcript."
+| i a |
+i := 2.
+[(a := Smalltalk getSystemAttribute: (i := i + 1))
+    notNil]
+  whileTrue: [Transcript space; show: a].
+.fi
+.RE
+.sp
+When run as
+.sp
+.RS
+.nf
+\&./echo.sq one two three
+.fi
+.RE
+.sp
+this would print \`one two three\' in the Transcript window.
+.SH DIAGNOSTICS
+.B squeak
+normally does not print anything at all.  If it prints something then there
+is a problem.  The messages should be self-explanatory.
+.SH FILES
+.I {sqdatadir}/SqueakV{major}.sources
+.RS
+Shared system sources file for the Squeak image.  There must be a
+copy of (or link to) this file in the working directory when running
+.B squeak\c
+\&.
+.RE
+.sp
+.I {sqdatadir}/Squeak{version}.image
+.I {sqdatadir}/Squeak{version}.changes
+.RS
+Distributed image and changes files holding a `shapshot' of a
+live Squeak session.  (The contents of these files change during a
+session, and so private copies should always be made before running
+.B squeak
+for the first time.  See
+.BR inisqueak (1)\c
+).
+.RE
+.sp
+.I ./SqueakV{major}.sources
+.RS
+A link to the system sources file.
+.RE
+.sp
+.IR ./ name .image
+.br
+.IR ./ name .changes
+.RS
+Private copies of image and changes files.
+.RE
+.sp
+.I {vsqlibdir}/*.so
+.br
+.I {vsqlibdir}/*.la
+.RS
+Virtual machine `plugin modules', containing primitives that are loaded on demand.
+.RE
+.sp
+.I {bindir}/squeak
+.br
+.I {bindir}/inisqueak
+.RS
+The Squeak virtual machine and personal image installer script.
+.RE
+.sp
+.I {mandir}/squeak.1
+.RS
+This manual page.
+.RE
+.sp
+.I {docdir}/*
+.RS
+Miscellaneous documentation.
+.RE
+.SH NOTES
+The image and changes files containing a saved Squeak session are intimately
+related.  They should always be used together, never be separated, and under
+no circumstances should an image be run with a changes file that has been
+used with a different image.  Failure to adhere to the above could cause the
+source code for the methods in the image to become garbled and impossible
+to retrieve.
+.SH BUGS
+If a \`binary\' option is enabled by an environment variable, there is no
+way to disable it on the command line.
+.PP
+.B squeak
+should never crash.  In the unlikely event that it does crash (which is a remote
+possibility with the unstable development versions), or prints any kind of message
+that
+.I does not
+appear to be caused by incorrect arguments or illegal operations from within
+a Squeak program, please send a bug report to:
+<ian.piumarta@inria.fr>.
+.SH AUTHOR
+This manual page
+.\" and much of the Unix-specific code in Squeak
+was written by Ian Piumarta.
+.\" .PP
+.\" The following deserve special thanks for their invaluable
+.\" contributions: Andreas Raab, Bert Freudenberg, Bill Cattey, Kazuki
+.\" Yasumatsu, Lex Spoon, and Ned Konz.
+.SH SEE ALSO
+inisqueak(1)
+.PP
+Dan Ingalls, Ted Kaehler, John Maloney, Scott Wallace and Alan Kay, \c
+.I Back to the Future: The Story of Squeak, A Practical Smalltalk Written in Itself\c
+\&.  Proc. OOPSLA\'97.
+.PP
+The official Squeak home page:
+.\" contains a lot of information about Squeak,
+.\" its history,
+.\" where it's headed,
+.\" who is involved with it,
+.\" neat things that people are doing with it,
+.\" where to find versions for the dozen or so platforms on which it runs,
+.\" how to subscribe to the mailing list,
+.\" how to join in with the global Squeak effort,
+.\" and so on:
+.RS
+.B <http://squeak.org>
+.RE
+.PP
+The archives of the Squeak mailing list:
+.\" can be found at:
+.RS
+.B <http://squeak.cs.uiuc.edu/mail/squeak>
+.RE
+.PP
+The latest stable and development versions for Unix:
+.\" are available from:
+.RS
+.B <http://www-sor.inria.fr/~piumarta/squeak>
+.RE
