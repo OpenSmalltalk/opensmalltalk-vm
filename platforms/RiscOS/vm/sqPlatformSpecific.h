@@ -19,8 +19,6 @@
 #define sqFilenameFromString(dst, src, num) sqFilenameFromString(dst, src, num)
 
 #define squeakFileOffsetType int
-/* #undef squeakInt64  
-#define squeakInt64 long */
 
 /* string copying macro to compensate for bug in Acorn library code */
 #define copyNCharsFromTo(num, src, dst)\
