@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.10 2003/06/20 01:51:34 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.11 2003/10/03 19:04:18 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -258,14 +258,14 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     else
         realTimeToWait = getNextWakeupTick() - now; 
             
-    aioPoll(realTimeToWait*1000);
+    aioPoll(0);
         
- /*       tspec.tv_sec=  realTimeToWait / 1000;
+        tspec.tv_sec=  realTimeToWait / 1000;
     tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
     
     err = pthread_mutex_lock(&gSleepLock);
     err = pthread_cond_timedwait_relative_np(&gSleepLockCondition,&gSleepLock,&tspec);	
-        err = pthread_mutex_unlock(&gSleepLock); */
+        err = pthread_mutex_unlock(&gSleepLock); 
     
 
     //JMM foo usleep(microSeconds);
