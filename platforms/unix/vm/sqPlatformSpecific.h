@@ -13,13 +13,16 @@
 #ifdef UNIX
 #include <string.h>
 #include <stdio.h>
+#include <unistd.h>
 
 
 /* off_t should be available (XXX though really, we should
    autoconf-check this, and substitute whatever fseeko is using) */
 typedef off_t squeakFileOffsetType;
 
-
+#define sqFTruncate(fp, offs) ftruncate(fileno(fp),offs)
+#define fseek(fp, offs,type) fseeko(fp, offs,type)
+#define ftell(fp) ftello(fp)
 
 /* unix-specific prototypes and definitions */
 void aioPollForIO(int microSeconds, int extraFd);  /* XXX should no longer be needed -lex */
