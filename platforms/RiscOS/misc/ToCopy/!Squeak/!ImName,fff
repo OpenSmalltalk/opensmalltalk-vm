@@ -1,0 +1,12 @@
+You appear to be having problems with opening a Squeak image file.
+
+The image file is a memory dump of all the objects in your working system. It is loaded during startup and can be saved whenever you feel like it might be a good idea. For example after a successful bit of work and before starting something you think might be risky! Accompanying an image file is a changes file (bar/image will be partnered by bar/changes) which is a sort of audit trail of all the code you have changed, useful for recovering work after something catastrophic happens. Which it does, sometimes.
+
+Did you run Squeak by double-clicking on the !Squeak icon?
+	If so, the error message probably told you "Could not open Squeak image file <squeak$dir>.Squeak/image". This means that you do not have an image file >inside< the !Squeak application directory. Since this is normally the case, why do we complain? Well, when you have built some useful application you copy the image into the !Squeak directory and (after renaming it to 'squeak/image') it will be the default image for any subsequent users. If you rename the application directory and make appropriate icon files etc it would behave like a reasonably normal RiscOS application.
+
+Did you run Squeak by double-clicking on a STimage(&FAA) typed file?
+	If so, there is a good chance it is simply a corrupted file, possibly a failed download. If that might be the cause, try downloading the image and changes file again.
+
+Where can you get image and changes files?
+	Go to http://www.squeak.org and follow instructions relating to downloading.   
