@@ -78,14 +78,28 @@ Building Unix Squeak from CVS Sources
 8.  Save your configuration and/or image, if you like, then quit your
     Squeak session.
 
-9.  Descend into the "squeak" directory.
+9.  Create a configure script.  (You need autoconf installed to do
+    this.  I use version 2.52.  If you have any other version
+    installed then you're on your own.)  Descend into the unix
+    "config" directory and run "make" to build the script:
 
-        ~$ cd squeak
+        cd squeak/platforms/unix/config
+	make
 
 10. From this point on the build instructions are identical to those
     for a "ready-made" source tarball.  Refer to the "README" file in
     this directory for the continuation of this saga.
 
+11. For the impatient:
+
+	cd ../../..		# back to the "squeak" directory
+	mkdir build
+	cd build
+	../platforms/unix/config/configure
+	make
+	cd ../..		# back to your image directory
+	./squeak/build/squeak up-to-date.image
+
 
 ----
-Last edited: 2003-08-07 08:36:46 by piumarta on cartman.inria.fr
+Last edited: 2003-08-21 01:48:25 by piumarta on emilia.inria.fr
