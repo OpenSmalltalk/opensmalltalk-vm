@@ -39,7 +39,7 @@ InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
 	cg declareModuleName: self moduleNameAndVersion.
 
 	theClass _ aPluginClass.
-	[theClass == Object] whileFalse:[
+	[theClass == Object | (theClass == InterpreterSimulationObject)] whileFalse:[
 		cg addClass: theClass.
 		theClass _ theClass superclass].
 	^cg
@@ -187,6 +187,14 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 	cg _ self buildCodeGeneratorUpTo: self.
 	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
 	^cg exportedPrimitiveNames asArray
+]
+
+{ #category : #initialize }
+InterpreterPlugin >> getInterpreter [
+	"Note: This is coded so that plugins can be run from Squeak."
+
+	self returnTypeC: 'VirtualMachine *'.
+	^interpreterProxy
 ]
 
 { #category : #initialize }

@@ -95,11 +95,7 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 
 
 	aStream nextPutAll: '
-/* memory access macros */
-#define byteAt(i) (*((unsigned char *) (i)))
-#define byteAtput(i, val) (*((unsigned char *) (i)) = val)
-#define longAt(i) (*((int *) (i)))
-#define longAtput(i, val) (*((int *) (i)) = val)
+#include "sqMemoryAccess.h"
 
 '.
 	aStream cr.

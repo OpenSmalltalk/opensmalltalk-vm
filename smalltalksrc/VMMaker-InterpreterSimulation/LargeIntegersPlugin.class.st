@@ -977,12 +977,6 @@ LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [
 	^ self normalize: res
 ]
 
-{ #category : #debugging }
-LargeIntegersPlugin >> flag: aSymbol [
-	"Flag for marking methods."
-	"Needed as dummy to avoid an external reference in C."
-]
-
 { #category : #util }
 LargeIntegersPlugin >> highBitOfBytes: aBytesOop [ 
 	^ self cBytesHighBit: (interpreterProxy firstIndexableField: aBytesOop)

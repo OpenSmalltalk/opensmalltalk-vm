@@ -15,6 +15,17 @@ Class {
 }
 
 { #category : #translation }
+SocketPlugin class >> declareCVarsIn: aCCodeGenerator [
+
+	aCCodeGenerator var: 'sDSAfn'	type: 'void *'.
+	aCCodeGenerator var: 'sHSAfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCCTPfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCCLOPfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCCSOTfn'	type: 'void *'.
+	aCCodeGenerator addHeaderFile: '"SocketPlugin.h"'
+]
+
+{ #category : #translation }
 SocketPlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^true
@@ -41,7 +52,7 @@ SocketPlugin >> initialiseModule [
 SocketPlugin >> intToNetAddress: addr [
 	"Convert the given 32-bit integer into an internet network address represented as a four-byte ByteArray."
 
-	| netAddressOop naPtr|
+	| netAddressOop naPtr |
 	self var: #naPtr declareC: 'char * naPtr'.
 
 	netAddressOop _
@@ -221,12 +232,13 @@ SocketPlugin >> primitiveSocket: socket getOptions: optionName [
 
 	| s optionNameStart optionNameSize returnedValue errorCode results |
 	self var: #s declareC: 'SocketPtr s'.
+	self var: #optionNameStart declareC: 'char *optionNameStart'.
 	self primitive: 'primitiveSocketGetOptions'
 		parameters: #(Oop Oop).
 
 	s _ self socketValueOf: socket.
 	interpreterProxy success: (interpreterProxy isBytes: optionName).
-	optionNameStart _ self cCoerce: (interpreterProxy firstIndexableField: optionName) to: 'int'.
+	optionNameStart _ self cCoerce: (interpreterProxy firstIndexableField: optionName) to: 'char *'.
 	optionNameSize _ interpreterProxy slotSizeOf: optionName.
 
 	interpreterProxy failed ifTrue: [^nil].
@@ -314,6 +326,8 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port backlogSize: backlog 
 SocketPlugin >> primitiveSocket: socket receiveDataBuf: array start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesReceived |
 	self var: #s declareC: 'SocketPtr s'.
+	self var: #arrayBase declareC: 'char *arrayBase'.
+	self var: #bufStart declareC: 'char *bufStart'.
 	self primitive: 'primitiveSocketReceiveDataBufCount'
 		parameters: #(Oop Oop SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -327,8 +341,7 @@ SocketPlugin >> primitiveSocket: socket receiveDataBuf: array start: startIndex 
 			and: [count >= 0 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)]]).
 	interpreterProxy failed
 		ifFalse: ["Note: adjust bufStart for zero-origin indexing"
-			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array)
-						to: 'int'.
+			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array) to: 'char *'.
 			bufStart _ arrayBase + (startIndex - 1 * byteSize).
 			bytesReceived _ self
 						sqSocket: s
@@ -341,6 +354,8 @@ SocketPlugin >> primitiveSocket: socket receiveDataBuf: array start: startIndex 
 SocketPlugin >> primitiveSocket: socket receiveUDPDataBuf: array start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesReceived results address port moreFlag |
 	self var: #s declareC: 'SocketPtr s'.
+	self var: #arrayBase declareC: 'char *arrayBase'.
+	self var: #bufStart declareC: 'char *bufStart'.
 	self primitive: 'primitiveSocketReceiveUDPDataBufCount'
 		parameters: #(Oop Oop SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -354,8 +369,7 @@ SocketPlugin >> primitiveSocket: socket receiveUDPDataBuf: array start: startInd
 			and: [count >= 0 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)]]).
 	interpreterProxy failed
 		ifFalse: ["Note: adjust bufStart for zero-origin indexing"
-			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array)
-						to: 'int'.
+			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array) to: 'char *'.
 			bufStart _ arrayBase + (startIndex - 1 * byteSize).
 			"allocate storage for results, remapping newly allocated
 			 oops in case GC happens during allocation"
@@ -390,6 +404,8 @@ SocketPlugin >> primitiveSocket: socket receiveUDPDataBuf: array start: startInd
 SocketPlugin >> primitiveSocket: socket sendData: array start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesSent |
 	self var: #s declareC: 'SocketPtr s'.
+	self var: #arrayBase declareC: 'char *arrayBase'.
+	self var: #bufStart declareC: 'char *bufStart'.
 	self primitive: 'primitiveSocketSendDataBufCount'
 		parameters: #(Oop Oop SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -403,8 +419,7 @@ SocketPlugin >> primitiveSocket: socket sendData: array start: startIndex count:
 			and: [count >= 0 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)]]).
 	interpreterProxy failed
 		ifFalse: ["Note: adjust bufStart for zero-origin indexing"
-			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array)
-						to: 'int'.
+			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array) to: 'char *'.
 			bufStart _ arrayBase + (startIndex - 1 * byteSize).
 			bytesSent _ self
 						sqSocket: s
@@ -417,6 +432,8 @@ SocketPlugin >> primitiveSocket: socket sendData: array start: startIndex count:
 SocketPlugin >> primitiveSocket: socket sendUDPData: array toHost: hostAddress  port: portNumber start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesSent address |
 	self var: #s declareC: 'SocketPtr s'.
+	self var: #arrayBase declareC: 'char *arrayBase'.
+	self var: #bufStart declareC: 'char *bufStart'.
 	self primitive: 'primitiveSocketSendUDPDataBufCount'
 		parameters: #(Oop Oop ByteArray SmallInteger SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -430,8 +447,7 @@ SocketPlugin >> primitiveSocket: socket sendUDPData: array toHost: hostAddress  
 			and: [count >= 0 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)]]).
 	interpreterProxy failed
 		ifFalse: ["Note: adjust bufStart for zero-origin indexing"
-			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array)
-						to: 'int'.
+			arrayBase _ self cCoerce: (interpreterProxy firstIndexableField: array) to: 'char *'.
 			bufStart _ arrayBase + (startIndex - 1 * byteSize).
 			address _ self netAddressToInt: (self cCoerce: hostAddress to: 'unsigned char *').
 			bytesSent _ self
@@ -448,15 +464,17 @@ SocketPlugin >> primitiveSocket: socket setOptions: optionName value: optionValu
 
 	| s optionNameStart optionNameSize optionValueStart optionValueSize returnedValue errorCode results |
 	self var: #s declareC: 'SocketPtr s'.
+	self var: #optionNameStart declareC: 'char *optionNameStart'.
+	self var: #optionValueStart declareC: 'char *optionValueStart'.
 	self primitive: 'primitiveSocketSetOptions'
 		parameters: #(Oop Oop Oop).
 
 	s _ self socketValueOf: socket.
 	interpreterProxy success: (interpreterProxy isBytes: optionName).
-	optionNameStart _ self cCoerce: (interpreterProxy firstIndexableField: optionName) to: 'int'.
+	optionNameStart _ self cCoerce: (interpreterProxy firstIndexableField: optionName) to: 'char *'.
 	optionNameSize _ interpreterProxy slotSizeOf: optionName.
 	interpreterProxy success: (interpreterProxy isBytes: optionValue).
-	optionValueStart_ self cCoerce: (interpreterProxy firstIndexableField: optionValue) to: 'int'.
+	optionValueStart_ self cCoerce: (interpreterProxy firstIndexableField: optionValue) to: 'char *'.
 	optionValueSize _ interpreterProxy slotSizeOf: optionValue.
 
 	interpreterProxy failed ifTrue: [^nil].
@@ -735,12 +753,12 @@ SocketPlugin >> socketValueOf: socketOop [
 	given Smalltalk object, or nil if socketOop is not a socket record."
 	| socketIndex |
 	self returnTypeC: 'SQSocket *'.
+	self var: #socketIndex type: 'void *'.
 	interpreterProxy success: ((interpreterProxy isBytes: socketOop)
 			and: [(interpreterProxy byteSizeOf: socketOop)
 					= self socketRecordSize]).
 	interpreterProxy failed
 		ifTrue: [^ nil]
-		ifFalse: [socketIndex _ self cCoerce: (interpreterProxy firstIndexableField: socketOop)
-						to: 'int'.
+		ifFalse: [socketIndex _ self cCoerce: (interpreterProxy firstIndexableField: socketOop) to: 'void *'.
 			^ self cCode: '(SQSocket *) socketIndex']
 ]
