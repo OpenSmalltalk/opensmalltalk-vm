@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.8 2002/08/08 04:45:11 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.9 2003/03/05 19:54:29 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -70,6 +70,7 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 #include "sqMacUIEvents.h"
 #include "sqMacFileLogic.h"
 #include "FilePlugin.h"
+#include "sqMacTime.h"
 #include "npapi.h"
 
 #include <Events.h>
@@ -107,7 +108,6 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 *	  using Squeak's own HTTPSocket.
 *
 **********/
-
 #define ENABLE_URL_FETCH  
 #define IMAGE_NAME "SqueakPlugin.image"
 #define VMPATH_SIZE 300
@@ -140,9 +140,9 @@ int primitivePluginPostURL(void);
 //#define PLUGIN_TRACE 1
 
 #if PLUGIN_TRACE
-int printOnOSXPascal(unsigned char *msg);
-#define PLUGINDEBUGSTR(msg) printOnOSXPascal(msg);
-//#define PLUGINDEBUGSTR(msg)		::DebugStr(msg)
+//int printOnOSXPascal(unsigned char *msg);
+//#define PLUGINDEBUGSTR(msg) printOnOSXPascal(msg);
+#define PLUGINDEBUGSTR(msg)		DebugStr(msg)
 #else
 #define PLUGINDEBUGSTR
 #endif
@@ -165,6 +165,10 @@ extern char vmPath[];  /* full path to interpreter's directory */
 extern struct VirtualMachine *interpreterProxy;
 
 extern int thisSession;  /* from sqFilePrims.c: */
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+pthread_mutex_t  gEventDrawLock;
+extern TMTask    gTMTask;
+#endif 
 
 /*** Local Variables ***/
 
@@ -203,7 +207,7 @@ int nextRequestID = 1;
 
 /*** Functions Imported from sqMacWindow ***/
 
-void ioSetFullScreenRestore();
+int ioSetFullScreenRestore();
 
 /*** From VM ***/
 int checkImageVersionFromstartingAt(sqImageFile f, int imageOffset);
@@ -309,7 +313,6 @@ void NPP_Shutdown(void) {
 NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
   int16 argc, char* argn[], char* argv[], NPSavedData* saved) {
 	int i;
-    long threadGestaltInfo;
     OSErr   err;
 
 	/* only one Squeak instance can be active at a time */
@@ -337,16 +340,6 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
 	thisInstance = instance;
 	gSavePortClipRgn = NewRgn();
 	
-	if ((Gestalt( gestaltThreadMgrAttr, &threadGestaltInfo) == noErr) &&
-        threadGestaltInfo & (1<<gestaltThreadMgrPresent) &&
-        ((Ptr) NewThread != (Ptr)kUnresolvedCFragSymbolAddress)) {
-
-        gThreadManager = true;
-        err = createNewThread();
-        if (err != noErr)
-              gThreadManager = false;
-    }
-
 	
 	return NPERR_NO_ERROR;
 }
@@ -393,11 +386,11 @@ NPError NPP_Destroy(NPP instance, NPSavedData** save) {
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 NPError NPP_SetWindow(NPP instance, NPWindow* window) {
 	NP_Port* port;
-
-	if (window == NULL) return NPERR_NO_ERROR;
-	if (window->window == NULL) {
+        OSErr   err;
+	
+	if (window == NULL || window->window == NULL)
 		return NPERR_NO_ERROR;
-	}
+                
 	if (window->width == 0 && window->height == 0) {
 		if (gIWasRunning) {
 			gIWasRunning = false;
@@ -406,14 +399,25 @@ NPError NPP_SetWindow(NPP instance, NPWindow* window) {
 		return NPERR_NO_ERROR;
 	}
 
-	gIWasRunning = true;
+            
 	netscapeWindow = window;
 	port = (NP_Port *) netscapeWindow->window;
-	stWindow = (WindowPtr) port->port;
+	stWindow = GetWindowFromPort(port->port);
 	needsUpdate	= true;
+
+	if (gIWasRunning)
+            return NPERR_NO_ERROR;
+        gIWasRunning = true;
+
 	ioLoadFunctionFrom(NULL, "DropPlugin");
+
+        gThreadManager = true;
+        err = createNewThread();
+        if (err != noErr)
+            gThreadManager = false;
+
 	if (gSqueakThread != kNoThreadID)
-	    SetThreadState (gSqueakThread,kReadyThreadState,kNoThreadID); //OK start Squeak
+	    SetThreadState (gSqueakThread,kReadyThreadState,kNoThreadID); //OK start Squeak (os-9)
 
 	return NPERR_NO_ERROR;
 }
@@ -579,6 +583,7 @@ int16 NPP_HandleEvent(NPP instance, void *rawEvent) {
         rememberFrontWindow = (GrafPtr) FrontWindow();
     }
 
+	if (gThreadManager)
 SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
  
 	do {
@@ -685,11 +690,12 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
     	    return true;
     	}
     	if (getFullScreenFlag()) {
-     	    ok = WaitNextEvent(everyEvent, &theEvent,0,null);
+     	    ok = WaitNextEvent(everyEvent, &theEvent,1,null);
             eventPtr = &theEvent;
     		SqueakYieldToAnyThread();
     	}
 	} while (getFullScreenFlag());
+                    
 	return true;
 }
 
@@ -699,19 +705,29 @@ void EndDraw(void) {
 	SetOrigin(gSavePortPortRect.left, gSavePortPortRect.top);
 	SetClip(gSavePortClipRgn);
 	SetPort((GrafPtr) gOldPort);
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+	UnlockPortBits((GrafPtr)GetWindowPort(stWindow));
+    pthread_mutex_unlock(&gEventDrawLock);
+#endif 
 }
 
 void StartDraw(void) {
 	NP_Port* port;
 	Rect clipRect;
 	
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    pthread_mutex_lock(&gEventDrawLock);
+#endif
 
 	port = (NP_Port *) netscapeWindow->window;
 
 	/* save old graphics port and switch to ours */
 	GetPort((GrafPtr *) &gOldPort);
-	SetPort((GrafPtr) port->port);
 	stWindow = (WindowPtr) port->port;
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+	LockPortBits((GrafPtr)GetWindowPort(stWindow));
+#endif
+	SetPort((GrafPtr) port->port);
 
 	/* save old drawing environment */
 	GetPortBounds(port->port,&gSavePortPortRect);
@@ -737,27 +753,16 @@ int ioShowDisplay(
 
 	Rect		dstRect = { 0, 0, 0, 0 };
 	Rect		srcRect = { 0, 0, 0, 0 };
-	RgnHandle	maskRect = nil;
-    Boolean     restorePort=false;
+	static RgnHandle	maskRect = nil;
     
 	if (stWindow == nil || exitRequested) {
 		return;
 	}
 	
-	restorePort = true;
 	StartDraw();
-   /*if (((NP_Port *) netscapeWindow->window)->port != (struct CGrafPort *) stWindow) {
-        StartDraw();
-        restorePort = true;
-    }*/
     
-	dstRect.left	= 0;
-	dstRect.top		= 0;
 	dstRect.right	= width;
 	dstRect.bottom	= height;
-
-	srcRect.left	= 0;
-	srcRect.top		= 0;
 	srcRect.right	= width;
 	srcRect.bottom	= height;
 
@@ -779,17 +784,14 @@ int ioShowDisplay(
     }
 
 	/* create a mask region so that only the affected rectangle is copied */
+	if (maskRect == nil) 
 	maskRect = NewRgn();
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
 
-	SetPortWindowPort(stWindow);
 	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(GetWindowPort(stWindow)), &srcRect, &dstRect, srcCopy, maskRect);
-/* causes IE to crash #if TARGET_API_MAC_CARBON 
-	QDFlushPortBuffer (GetWindowPort(stWindow), maskRect);
-#endif */
-	DisposeRgn(maskRect);
-	
-	if (restorePort) 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+	QDFlushPortBuffer ((struct CGrafPort*)stWindow, maskRect);
+#endif
 	    EndDraw();
 }
 
@@ -853,10 +855,12 @@ int URLRequestCreate(char *url, char *target, int semaIndex) {
 	int handle, notifyData;
 	long junk;
     char mail[8];
+    NPError err;
     
-	if (thisInstance == null) return -1;
-	handle = FindIdleURLRequest();
-	if (handle < 0) return handle;
+    if (thisInstance == null) return -1;
+    handle = FindIdleURLRequest();
+    if (handle < 0) return handle;
+    
 	urlRequests[handle].id = nextRequestID++;
 	urlRequests[handle].status = STATUS_IN_PROGRESS;
 	urlRequests[handle].semaIndex = semaIndex;
@@ -1063,8 +1067,8 @@ int ioSetFullScreen(int fullScreen) {
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
 		oldStWindow = stWindow;
-#if TARGET_API_MAC_CARBON & !defined(PLUGIN)
-                GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&windRect); 
+#if TARGET_API_MAC_CARBON
+                GetWindowGreatestAreaDevice((GrafPtr) FrontWindow(),kWindowContentRgn,&dominantGDevice,&windRect); 
 #else
                 dominantGDevice = getDominateDevice(stWindow,&windRect);
 #endif
@@ -1100,7 +1104,7 @@ int ioSetFullScreen(int fullScreen) {
 
 }
 
-void ioSetFullScreenRestore()
+int  ioSetFullScreenRestore()
 {
 	if (gRestorableStateForScreen != nil) {
 		EndFullScreen(gRestorableStateForScreen,nil);
@@ -1457,13 +1461,21 @@ int primitivePluginRequestURLStream(void) {
 }
 
 
-void OpenFileReadOnly(SQFile *f, char *fileName) {
+void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 	/* Opens the given file for reading using the supplied sqFile
 	   structure. This is a simplified version of sqFileOpen() that
 	   avoids the "sandbox" access check, since the browser's
 	   cache folder is outside the Squeak sandbox. That is why
 	   we only allow reading of this file. Sets the primitive
 	   failure flag if not successful. */
+    char fileName[1024];
+    sqImageFile remember;
+    
+    if (*MacfileName == NULL) {
+        interpreterProxy->success(false);
+        return;
+    }
+    sqFilenameFromStringOpen(fileName,(long) MacfileName, strlen(MacfileName));
 
 	f->file = fopen(fileName, "rb");
 	f->writable = false;
@@ -1534,10 +1546,15 @@ void ExitCleanup(void) {
 	Boolean URLFetchInProgress;
 	int i;
 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+        pthread_mutex_lock(&gEventDrawLock);
+#endif
 	if (thisInstance == nil) return;
 	thisInstance = nil;
 	exitRequested = true;
-	
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+        pthread_mutex_unlock(&gEventDrawLock);
+#endif	
 	/* do { This hangs things, not sure what to do about outstanding URL requests...
 		URLFetchInProgress = false;
 		for (i = 0; i < URL_REQUEST_COUNT; i++) {
@@ -1554,9 +1571,20 @@ void ExitCleanup(void) {
 	
 	while(gSqueakThread != kNoThreadID && YieldToThread(gSqueakThread) == noErr){};
 	
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+        if (gTMTask.tmAddr) {
+        
+            RemoveTimeTask((QElemPtr)&gTMTask);
+            DisposeTimerUPP(gTMTask.tmAddr);
+            gTMTask.tmAddr = NULL;
+        }
+#endif 
+        
 	plugInShutdown();
 	ioSetFullScreenRestore();
 	NPP_Initialize();  /* reset local variables */
+        ignoreFirstEvent=false;
+        gIWasRunning=false;
 }
 
 /*** Interpreter Hooks ***/
