@@ -1,14 +1,31 @@
-2004-05-26  Ian Piumarta  <ian.piumarta@inria.fr>
+2005-03-09  Bert Freudenberg <bert@squeakland.de>
+
+	* platforms/unix/npsqueak: Check for image file in system and home
+	dir.  Modifications to npsqueakrun, runs with bash, other shells
+	untested.  Make sure Squeak really gets killed.  Fixed browser
+	crash when closing plugin page.
+
+	* platforms/unix/plugins/SecurityPlugin/sqUnixSecurity.c: Check
+	for SQUEAK_USERDIR, otherwise untrusted dir is 'My Squeak'.
+
+2005-03-09  Ian Piumarta  <ian.piumarta@hp.com>
+
+	* platforms/unix/config/Makefile.install: NPSqueak (un)install
+	changes as suggested by Bert.
+
+	* platforms/unix/config/configure.ac: Version 3.7b-6.
+
+2004-05-26  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c (findOption):
 	Nul-terminate the converted option name before looking it up.
 
-2004-04-17  Ian Piumarta  <ian.piumarta@inria.fr>
+2004-04-17  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* platforms/unix/vm/sqPlatformSpecific.h: Include <unistd.h>.
 	Define sqFTruncate().
 
-2004-04-12  Ian Piumarta  <ian.piumarta@inria.fr>
+2004-04-12  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* platforms/unix/config/gnuify: Insert #error into output file if
 	processing failed.
@@ -16,12 +33,12 @@
 	* platforms/unix/vm-display-fbdev/Makefile.in ($(TARGET)): Remove
 	$(X_LIBS) from the link command.
 
-2004-04-11  Ian Piumarta  <ian.piumarta@inria.fr>
+2004-04-11  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* platforms/unix/config/gnuify: Escape all occurences of '{'
 	within regular expressions.
 
-2004-04-10  Ian Piumarta  <ian.piumarta@inria.fr>
+2004-04-10  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* platforms/unix/config/gnuify: Remove gnu specifics.
 
