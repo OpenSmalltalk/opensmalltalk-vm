@@ -1,4 +1,4 @@
-'From Squeak3.2gamma of 15 January 2002 [latest update: #4857] on 9 May 2002 at 2:22:35 pm'!
+'From Squeak3.2gamma of 15 January 2002 [latest update: #4889] on 6 November 2002 at 5:54:58 pm'!
 "Change Set:		Globalstructure-JMM
 Date:			5 April 2002
 Author:			John M McIntosh
@@ -299,8 +299,3 @@ emitCCodeOn: aStream level: level generator: aCodeGen
 		ifFalse: [ aStream nextPutAll: (aCodeGen returnPrefixFromVariable: name) ].! !
 
 Interpreter removeSelector: #returnValue:to:!
-Object subclass: #CCodeGenerator
-	instanceVariableNames: 'translationDict inlineList constants variables variableDeclarations methods variablesSetCache headerFiles pluginPrefix extraDefs postProcesses isCPP '
-	classVariableNames: 'UseRightShiftForDivide '
-	poolDictionaries: ''
-	category: 'VMConstruction-Translation to C'!
