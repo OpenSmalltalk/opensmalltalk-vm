@@ -6,7 +6,7 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.6 2003/05/07 23:49:50 rowledge Exp $
+*   RCSID:   $Id: sq.h,v 1.7 2003/05/14 02:10:29 asparagi Exp $
 *
 *	02/26/03	tim change browser plugin support code
 *	01/28/02	Tim add macro default for sqFilenameFromStringOpen
@@ -177,7 +177,7 @@ int fullDisplayUpdate(void);
 int initializeInterpreter(int bytesToShift);
 int interpret(void);
 int primitiveFail(void);
-int signalSemaphoreWithIndex(int index);
+int signalSemaphoreWithIndex(int semaIndex);
 int success(int);
 
 /* display, mouse, keyboard, time i/o */
@@ -343,7 +343,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex);
 /* old browser plug-in support, maintained for a little while */
 #if 1
 void plugInForceTimeToReturn(void);
-int plugInInit(char *imageName);
+int plugInInit(char *sqImageName);
 int plugInNotifyUser(char *msg);
 void plugInSetStartTime(void);
 int plugInShutdown(void);
