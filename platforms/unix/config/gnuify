@@ -5,7 +5,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 #
-# Last edited: Sun Apr 11 16:50:09 2004 by piumarta (Ian Piumarta) on ina
+# Last edited: 2004-04-12 12:56:01 by piumarta on emilia.local
 
 #   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
@@ -150,7 +150,7 @@ BEGIN {
 
 (stage == 4) && /^\}/ {
 # print "copying last section of file" > "/dev/stderr";
-  stage= 5;
+  stage= -1;
   FS=" ";
   print;
   next;
@@ -160,4 +160,10 @@ BEGIN {
 {
   print;
   next;
+}
+
+END {
+  if (stage != -1) {
+    print "#error GNUIFICATION FAILED"
+  }
 }
