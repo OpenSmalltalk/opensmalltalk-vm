@@ -72,7 +72,7 @@ enum {
  UInt16 gNumDropFiles=0;
  HFSFlavor *dropFiles;
 
-#define DOCUMENT_NAME_SIZE 300
+#define DOCUMENT_NAME_SIZE 1000
 char tempName[DOCUMENT_NAME_SIZE + 1];  
 
 	/* these routines are used both in the receive handler and inside of the
@@ -182,16 +182,11 @@ static SQFile * fileValueOf(int objectPointer) {
 //Primitive to get file name
 
 char *dropRequestFileName(int dropIndex) {
-    char	shortName[256];
-  
     if(dropIndex < 1 || dropIndex > gNumDropFiles) 
         return NULL;
-    CopyPascalStringToC(dropFiles[dropIndex-1].fileSpec.name,shortName);
-    StoreFullPathForLocalNameInto(shortName, 
-        tempName, 
+    PathToFile(tempName, 
         DOCUMENT_NAME_SIZE,
-        dropFiles[dropIndex-1].fileSpec.vRefNum,
-        dropFiles[dropIndex-1].fileSpec.parID);
+        &dropFiles[dropIndex-1].fileSpec);
   return tempName;
 }
 
@@ -292,8 +287,8 @@ bail:
 /* MyDragTrackingHandler is called for tracking the mouse while a drag is passing over our
 	window.  if the drag is approved, then the drop box will be hilitied appropriately
 	as the mouse passes over it.  */
-	
-static pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef) {
+
+pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef) {
 		/* we're drawing into the image well if we hilite... */
     Rect  bounds;
 	EventRecord		theEvent;
@@ -366,7 +361,7 @@ static pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr
 	
      */
      
-static pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReference theDragRef) {
+pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReference theDragRef) {
 
 	ItemReference   theItem;
 	PromiseHFSFlavor targetPromise;
@@ -434,7 +429,7 @@ static pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, Drag
     		err = GetFlavorData(theDragRef, theItem, targetPromise.promisedFlavor, &dropFiles[countActualItems].fileSpec, &theSize, 0);
     		if (err != noErr) 
     			continue;
-    		HGetFInfo(dropFiles[countActualItems].fileSpec.vRefNum,dropFiles[countActualItems].fileSpec.parID,dropFiles[countActualItems].fileSpec.name,  &finderInfo);
+    		FSpGetFInfo(&dropFiles[countActualItems].fileSpec, &finderInfo);
 	    		/* queue up an event */
 	        dropFiles[countActualItems].fileType = finderInfo.fdType;
 	        dropFiles[countActualItems].fileCreator = finderInfo.fdCreator;
@@ -474,7 +469,7 @@ void sqSetNumberOfDropFiles(int numberOfFiles) {
     return;
 }
 
-void sqSetFileInformation(int dropIndex, HFSFlavor *dropFile) { 
+void sqSetFileInformation(int dropIndex, void *dropFile) { 
     if(dropIndex < 1 || dropIndex > gNumDropFiles) 
         return;
     memcpy(&dropFiles[dropIndex-1],(char *) dropFile,sizeof(HFSFlavor));
