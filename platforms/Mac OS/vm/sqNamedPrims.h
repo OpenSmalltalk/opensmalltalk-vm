@@ -6,6 +6,7 @@ extern sqExport ADPCMCodecPlugin_exports[];
 extern sqExport AsynchFilePlugin_exports[];
 extern sqExport B3DAcceleratorPlugin_exports[];
 extern sqExport Squeak3D_exports[];
+extern sqExport BMPReadWriterPlugin_exports[];
 extern sqExport B2DPlugin_exports[];
 extern sqExport BitBltPlugin_exports[];
 extern sqExport DSAPrims_exports[];
@@ -14,6 +15,7 @@ extern sqExport DropPlugin_exports[];
 extern sqExport FFTPlugin_exports[];
 extern sqExport FilePlugin_exports[];
 extern sqExport FloatArrayPlugin_exports[];
+extern sqExport GeniePlugin_exports[];
 extern sqExport InternetConfigPlugin_exports[];
 extern sqExport JPEGReadWriter2Plugin_exports[];
 extern sqExport JPEGReaderPlugin_exports[];
@@ -42,6 +44,7 @@ sqExport *pluginExports[] = {
 	B3DAcceleratorPlugin_exports,
 #endif
 	Squeak3D_exports,
+	BMPReadWriterPlugin_exports,
 	B2DPlugin_exports,
 	BitBltPlugin_exports,
 	DSAPrims_exports,
@@ -50,6 +53,7 @@ sqExport *pluginExports[] = {
 	FFTPlugin_exports,
 	FilePlugin_exports,
 	FloatArrayPlugin_exports,
+	GeniePlugin_exports,
 	InternetConfigPlugin_exports,
 	JPEGReadWriter2Plugin_exports,
 	JPEGReaderPlugin_exports,
