@@ -5,7 +5,7 @@ typedef struct {
 	FILE	*file;
 	int		sessionID;
 	int		writable;
-	int		fileSize;
+	off_t		fileSize;
 	int		lastOp;  /* 0 = uncommitted, 1 = read, 2 = write */
 } SQFile;
 
@@ -13,18 +13,18 @@ typedef struct {
 int sqFileAtEnd(SQFile *f);
 int sqFileClose(SQFile *f);
 int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize);
-int sqFileGetPosition(SQFile *f);
+off_t sqFileGetPosition(SQFile *f);
 int sqFileInit(void);
 int sqFileShutdown(void);
 int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag);
-int sqFileReadIntoAt(SQFile *f, int count, int byteArrayIndex, int startIndex);
+size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex);
 int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameIndex, int newNameSize);
-int sqFileSetPosition(SQFile *f, int position);
-int sqFileSize(SQFile *f);
+int sqFileSetPosition(SQFile *f, off_t position);
+off_t sqFileSize(SQFile *f);
 int sqFileValid(SQFile *f);
-int sqFileWriteFromAt(SQFile *f, int count, int byteArrayIndex, int startIndex);
+size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex);
 int sqFileFlush(SQFile *f);
-int sqFileTruncate(SQFile *f,int offset);
+int sqFileTruncate(SQFile *f,off_t offset);
 int sqFileThisSession(void);
 
 /* directories */
@@ -34,7 +34,7 @@ int dir_Delimitor(void);
 int dir_Lookup(char *pathString, int pathStringLength, int index,
 	/* outputs: */
 	char *name, int *nameLength, int *creationDate, int *modificationDate,
-	int *isDirectory, int *sizeIfFile);
+	int *isDirectory, off_t *sizeIfFile);
 int dir_PathToWorkingDir(char *pathName, int pathNameMax);
 int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator);
 int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator);
