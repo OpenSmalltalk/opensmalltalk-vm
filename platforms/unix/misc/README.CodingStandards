@@ -1,73 +1,35 @@
-If you plan on contributing code or submitting patches to fix bugs
-then PLEASE adhere to the following coding conventions.  Doing so
-makes my life easier (since I *will* reformat myself any code that
-doesn't conform) and makes your code much more likely to be accepted
-(since any code that is difficult to read because of formatting
-problems simply won't get read, and if I haven't read it then it isn't
-going into my sources -- period).
+Try to follow the existing style if you submit code; consistently
+formatted code is easier on everyone.
 
-Of course, if you're submitting an entire file full of stuff (and you
-are therefore the original author of the file) then you can format it
-any way you like (and tell the rest of us how we have to format our
-code to get it included in your file. ;-)
 
-The following guidelines are sufficiently close to the GNU Coding
-Standards that you shouldn't need to change any of Emacs's C-mode
-variables from their default settings.
+In general, this code follows the GNU coding standards.  Thus, emacs
+users may benefit from putting the following code in their .emacs
+file:
+
+  (defun my-set-c-style ()
+     (if (string-match "/cvss/queak/" (buffer-file-name))
+       (c-set-style "gnu")
+       (c-set-style "k&r")))
+  (add-hook 'c-mode-common-hook 'my-set-c-style)
+
 
 
 
 FORMATTING CODE
 ---------------
 
+Indent two spaces at a time.
 
-Tabs stops are every TWO characters.  Regardless of what Torvalds
-might say, if tab stops were meant to be 8 characters apart then
-humans would have evolved wide-angle vision shortly after the
-invention of the Newbury terminal.  (If your editor doesn't remind you
-about the matching delimiter when a block is more than a page long
-then it's time you evolved to Emacs. ;-)
-
-Always use C-style comment delimiters.  Unix Squeak runs on lots of
-platforms where GNU gcc is not the standard compiler.  Many of these
-compilers choke (quite rightly) on C++ style comments.  Similarly,
-always comment-out any additional explanatory text appearing after
-`#else' and `#endif'.
+Be sure to always use C-style comment delimiters.  Not all C compilers
+Similarly, always comment-out any additional explanatory text
+appearing after `#else' and `#endif' -- not all preprocessors will
+ignore such text.
 
 Use `#if defined(...)' in preference to `#ifdef ...'.
 
-Indent preprocessor commands to reflect the nesting of conditional
-sections, and place a comment after any `#else' or `#endif' that isn't
-utterly obvious:
 
-	#if defined(LAZY)
-	# include <sleep.h>
-	# ...
-	# if defined(VERY_LAZY)
-	#   include <vacation.h>
-	#   ...
-	# endif
-	# ...
-	#else /* !LAZY */
-	# include <schedule.h>
-	#endif
-
-Declarations and external definitions should start in column zero.
-The only exception is for small conditional sections where indentation
-helps to show the "scope" of the conditional code.  Hence:
-
-	#if defined(EAT_DONUTS)
-	# include <donut/supplies.h>
-	  int donutCounter= 0;	/* number of donuts consumed since startup */
-	#endif /* EAT_DONUTS */
-
-But don't overdo this -- the start/end of the conditional section
-should remain clearly visible while looking at indented declarations.
-
-Always use ANSI prototypes, and put the return types of functions and
-their identifiers on the same line (unless you rely on tools that
-prefer function names to start in column zero, in which case you're
-forgiven in advance).  Hence:
+Always use ANSI prototypes for your functions, and write them with the
+return types and their identifiers on the same line:
 
 	static char *concat(char *s1, char *s2)
 	{
@@ -92,61 +54,12 @@ arguments nicely.)  Like this:
 	     double aDouble, float aFloat)
         ...
 
-Put spaces on either side of an arithmetic or relational operator.
-
-One of the most common (and most difficult to debug) problems in C is
-caused by writing `=' when you meant `=='.  To avoid such mistakes, it
-is a great help to omit the space before an operator that side-effects
-its l-value.  For example:
-
-	if (x == 42)
-	  x= 666;
-
-	while (ptr >= base)
-	  processWord(ptr-= 4);
-
-(In my three years of writing C before adopting this convention I
-spent many tens of hours tracking down `=' vs. `==' bugs.  In the
-fifteen years since the instant that I adopted the above convention I
-have suffered from that bug precisely ONCE.)
-
-For similar reasons it's also a good idea to place constant values on
-the left side of a comparison.  Most compilers will happily let this
-this pass:
-
-	int c= getchar();
-	if (c= EOF)
-	  ...
-
-but will detect the problem if the comparison is written the other way
-round:
-
-	int c= getchar();
-	if (EOF= c)
-	  ...
-
 Character constants are characters:
 
 	void terminate(char *string, size_t len)
 	{
-	  string[len]= '\0';	/* NOT `string[len]= 0;' !!! */
+	  string[len]= '\0';	/* NOT `string[len]= 0;'  */
 	}
-
-Always initialise a variable, even if you're just about to give it a
-value:
-
-	int min= 0;
-
-	if (x < y)
-	  min= x;
-	else
-	  min= y;
-	...
-
-Just about every compiler in existence can optimise away the
-assignment.  On the hand, always assigning an initial value avoids
-warning messages about possibly uninitialised variables from several
-compilers when their optimisation dials are `cranked up to 11'.
 
 
 Vertically align related elements in dense program sections, such as a
@@ -161,6 +74,8 @@ This applies to the _identifiers_ when indirection is present:
 	int   a=         42;	/* current data value */
 	int  *current=    0;	/* current data location */
 	int **dataLists=  0;	/* current data list */
+
+
 
 Don't be tempted to write `C++ style' types.  Respect also the proper
 placement of whitespace in casts, which should have spaces in exactly
@@ -209,6 +124,7 @@ operator, not after one.  Here is the right way:
 Avoid having two operators of different precedence at the same level
 of indentation.  For example, don't write this:
 
+        /* BAD */
 	mode= (inmode[j] == VOIDmode
 	       || GET_MODE_SIZE(outmode[j]) > GET_MODE_SIZE(inmode[j])
 	       ? outmode[j] : inmode[j]);
@@ -216,6 +132,8 @@ of indentation.  For example, don't write this:
 Instead, use extra parentheses so that the indentation shows the
 logical nesting:
 
+
+        /* GOOD */
 	mode= ((inmode[j] == VOIDmode
 		|| (GET_MODE_SIZE(outmode[j]) > GET_MODE_SIZE(inmode[j])))
 	       ? outmode[j] : inmode[j]);
@@ -460,12 +378,20 @@ is the case for all source files in the "unix" source directory).
 Ideally, your code should compile without warnings when "-pedantic" is
 turned on too, but I'm not insisting on this -- yet.
 
+(NOTE: Squeak uses "long long" in its 64-bit file offset support,
+nowadays.  This is unportable.  We'll see how it pans out.)
+
+
 ABSOLUTELY avoid GNU make-specific stuff in Makefiles.  If your
 wizz-bang Squeak feature requires a GNU make-specific rule or
 conditional section in a Makefile someplace then go away and rethink
 your feature.  (If the entire GNU compiler suite can be built using
 the tiniest imaginable subset of Makefile features, then so can
 Squeak.)
+
+(NOTE: The makefile is extremely GNU-centric at this point.  Terrible,
+but true.)
+
 
 Another way to avoid GNU make features in Makefiles is to run a script
 from `configure' to make a `fragment' and then AC_SUBST_FILE() it into
