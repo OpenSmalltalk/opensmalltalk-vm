@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.12 2002/11/14 20:06:51 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.13 2003/03/05 19:57:48 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -131,7 +131,7 @@ char modifierMap[256] = {
 void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command);
 Boolean IsKeyDown(void);    
 
-#ifndef I_AM_CARBON_EVENT
+#if !defined(I_AM_CARBON_EVENT) || PLUGIN
 int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
@@ -1852,6 +1852,7 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 #endif
 }
 
+#ifndef PLUGIN
 int ioProcessEvents(void) {
     if (gQuitNowRightNow) {
         ioExit();  //This might not return, might call exittoshell
@@ -1859,6 +1860,7 @@ int ioProcessEvents(void) {
         pthread_exit(null);
     }
 }
+#endif 
 
 int getUIToLock(long *data) {
     OSStatus err;
