@@ -1501,16 +1501,21 @@ CCodeGenerator >> generateAbs: msgNode on: aStream indent: level [
 		ifFalse: [(type beginsWith: 'u')
 			ifTrue: [type allButFirst: 1]
 			ifFalse: [type]].
-	absFun := (#('long long' '__int64' 'int64_t') anySatisfy: [:t| strippedType beginsWith: t]) ifTrue: [#llabs]
-		ifFalse: [(strippedType beginsWith: #sqInt) ifTrue: [#SQABS]
-		ifFalse: [(strippedType beginsWith: #sqLong) ifTrue: [#SQLABS]
-		ifFalse: [(#('float' 'double') anySatisfy: [:t| strippedType beginsWith: t]) ifTrue: [#fabs]
-		ifFalse: [#abs]]]].
+	absFun :=
+		(#(	('long long' llabs) ('__int64' #llabs) ('int64_t' #llabs)
+			(sqInt SQABS)
+			(sqLong SQLABS)
+			(double fabs)
+			(float fabsf))
+				detect: [:tuple| strippedType beginsWith: tuple first]
+				ifNone: [])
+			ifNotNil: [:tuple| tuple last]
+			ifNil: [#abs].
 	
 	aStream nextPutAll: absFun.
 	aStream nextPut: $(.
 	self emitCExpression: msgNode receiver on: aStream.
-	aStream nextPut: $).
+	aStream nextPut: $)
 ]
 
 { #category : #'C translation' }
