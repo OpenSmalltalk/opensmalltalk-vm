@@ -22,7 +22,7 @@ VM_LIBDIR= $(SQ_DIR)/$(VM_VERSION)
 npsqueak.so : npsqueak.o npunix.o 
 	$(LD) $(LDFLAGS) npsqueak.o npunix.o -o npsqueak.so 
 
-npsqueak.o: npsqueak.c
+npsqueak.o: npsqueak.c ../config.h
 	$(CC) -c $(CFLAGS) -DVM_LIBDIR=\"$(VM_LIBDIR)\" $<
 
 npunix.o: npunix.c
