@@ -68,21 +68,90 @@ int sqImageFileStartLocation(sqImageFile file, const char *fileName, int size)
 }
 
 
-/* put together a header to be written to the image file */
+  /* put together a header to be written to the image file */
 static void assembleHeader(char *header)
 {
+  int i;
+  int pos;  /* position in the header while writing arguments */
+
+  /* imported from sqXWindow.c */
+  extern int    vmArgCnt;
+  extern char **vmArgVec;
+
+  extern int    squeakArgCnt;
+  extern char **squeakArgVec;
+  
+
   memset(header, 0, HEADER_SIZE);
   
-  /* check that there is room for the VM */
-  if(strlen(VM_NAME) + 3 > HEADER_SIZE) {
-    /* no space -- write an empty header */
+  /* print the VM name and a special argument to the first line of the
+     header */
+  if(strlen(VM_NAME) + strlen("-args_in_header") + 5 > HEADER_SIZE) {
+    /* not enough space -- give up and write an empty header */
     return;
   }
   
+  sprintf(header, "#!%s -args_in_header\n", VM_NAME);
 
-  /* plenty of space -- print the VM name to the header */
-  sprintf(header, "#!%s\n", VM_NAME);
+  /** try to print the arguments out **/
+
+  /* print VM args */
+  pos = strlen(header);
+  for(i=1; i<vmArgCnt; i++) {  /* start at 1 to skip the VM name */
+    char *arg = vmArgVec[i];
+    
+    if(strcmp(arg, "-args_in_header") == 0)
+      continue;  /* don't save the -args_in_header argument */
+
+    if(pos + strlen(arg) + 2 > HEADER_SIZE)
+      /* out of space -- give up on the header */
+      goto give_up;
+
+    strcpy(header+pos, arg);
+    pos += strlen(arg) + 1;
+  }
+
+#if 0  /* should Squeak arguments be saved?  I don't really think so:
+	  the purpose of saving arguments is IMHO to help recreate the
+	  exact state of the image when it is restarted.  Most VM
+	  arguments will be necessary to do this.  Most image
+	  arguments, on the other hand, will get their effect saved
+	  simply because all the objects are saved in the snapshot.
+	  -Lex */
+
+
+  /* put a "--" between VM and Squeak args, just to be sure */
+  if(pos + 4 > HEADER_SIZE)
+    goto give_up;
+  strcpy(header+pos, "--");
+  pos += 3;
+  
+
+  /* print out Squeak args */
+  for(i=0; i<squeakArgCnt; i++) {
+    char *arg = squeakArgVec[i];
+    
+    if(pos + strlen(arg) + 2 > HEADER_SIZE)
+      /* out of space -- give up on the header */
+      goto give_up;
+
+    strcpy(header+pos, arg);
+    pos += strlen(arg) + 1;
+  }
+#endif
+
+  /* all done */
+  return;
+
+  
+give_up:  /* space ran out; give up and use an all-0's header.
+             Conceivably, this could switch to some other mode, where
+             the arguments are stored *after* the image data  */
+  memset(header, 0, HEADER_SIZE);
+  return;
 }
+
+
 
 
 /* write a Unixy header to the image file */ 
