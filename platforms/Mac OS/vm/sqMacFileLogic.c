@@ -6,13 +6,14 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.6 2002/02/23 10:44:59 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.7 2002/04/27 18:53:34 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
 *	12/27/2001 JMM Because of how os-x handles metadata I had to change how navgetfile functions
 *	1/1/2002 JMM some cleanup to streamline path creation to minimize io & carbon cleanup
 *	1/18/2002 JMM recheck macroman, fix dir size problem on os-9, do squeak file offset type
+*   4/23/2002 JMM fix how image is found for os-9 for bundled applications
 *
 *****************************************************************************/
 /* 
@@ -48,8 +49,8 @@ Also if you attempt to use Apple's StdClib it wants posix names, sigh...
 static void resolveLongName(short vRefNum, long parID, unsigned char *shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakFileOffsetType *sizeOfFile);
 static int fetchFileSpec(FSSpec *spec,unsigned char *name,long *parentDirectory);
 static int quicklyMakePath(char *pathString, int pathStringLength, char *dst, Boolean resolveAlias);
-extern Boolean RunningOnCarbonX(void);
 extern int  IsImageName(char *name);
+extern Boolean isSystem9_0_or_better(void);
 
 #if TARGET_API_MAC_CARBON
 
@@ -783,11 +784,9 @@ OSStatus GetApplicationDirectory(FSSpec *workingDirectory) {
         pinfo.processName = 0;
         pinfo.processAppSpec = workingDirectory;
         err = GetProcessInformation(&PSN, &pinfo);
-#if defined (__APPLE__) && defined(__MACH__)
-        if (err == noErr) {
+        if (err == noErr && isSystem9_0_or_better()) {
             FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
         }
-#endif
         return err;
 }
 
