@@ -60,8 +60,8 @@ top_builddir=	.
 # directory names.  "srcdir" will be the location of the configure script,
 # thus all the ".." invocations
 srcdir=		@srcdir@
-topdir=		$(srcdir)/..
-gendir=		$(srcdir)
+topdir=		$(srcdir)/../../..
+gendir=		$(topdir)/src
 unixdir=	$(srcdir)/..
 crossdir=	$(topdir)/platforms/Cross
 utldir=		$(srcdir)/util
@@ -112,7 +112,7 @@ CXX=		@CXX@
 DEFS=		@DEFS@ -DUNIX -DSQ_LIBDIR=\"$(vsqlibdir)\" -DVM_NAME=\"$(DESTDIR)$(bindir)/squeak\"  -DDISABLE_SECURITY
 # FilePlugin and SocketPlugin are counted as standard includes,
 # because some plugins (notably OSProcess) need them
-INCLUDES=	-I. -I$(gendir) -I$(gendir)/vm -I$(gendir)/vm/intplugins/FilePlugin -I$(gendir)/plugins/FilePlugin -I$(gendir)/vm/intplugins/SocketPlugin -I$(gendir)/plugins/SocketPlugin
+INCLUDES=	-I. -I$(unixdir)/misc -I$(unixdir)/vm -I$(crossdir)/vm -I$(gendir) -I$(gendir)/vm -I$(gendir)/vm/intplugins/FilePlugin -I$(gendir)/plugins/FilePlugin -I$(gendir)/vm/intplugins/SocketPlugin -I$(gendir)/plugins/SocketPlugin
 CPPFLAGS=	@CPPFLAGS@
 CFLAGS=		@CFLAGS@ @J_CFLAGS@ -funroll-loops
 WFLAGS=		@WFLAGS@
