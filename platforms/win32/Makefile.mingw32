@@ -164,17 +164,6 @@ $(VMDEF) $(VMEXP) $(VMLIB):	$(ALLOBJ)
 
 DLL: $(DLLOBJ)
 
-assureReleaseDir:
-	-$(MD) release
-
-#%.dll:	assureReleaseDir
-#		-$(MD) Release\\$*
-#		$(MAKE) -C ../$* -f ../win32/Makefile.mingw32 DLLDIR=$* DLLNAME=$*.dll DLL XDEFS=-DSTANDALONE
-#		$(DLLTOOL) --output-def $(OUTDIR)/$*/$*.def --output-exp $(OUTDIR)/$*/$*.exp --output-lib $(OUTDIR)/$*/$*.lib $(OUTDIR)/$*/*.o
-#		$(DLLWRAP) -mwindows -def $(OUTDIR)/$*/$*.def -o $(OUTDIR)/$*.dll $(LIBS) $(OUTDIR)/$*/*.o $(OUTDIR)/$*/$*.exp
-#		strip --strip-all $(OUTDIR)/$*.dll
-
-
 makelib: $(LIBOBJ)
 	$(AR) $(LIB) $(LIBOBJ)
 	$(RM) $(LIBOBJ)
@@ -193,6 +182,16 @@ makedll: $(LIBOBJ)
 		$(LIBOBJ)
 	strip --strip-all $(OBJDIR)/$(LIB).dll
 	$(RM) $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
+
+Mpeg3Plugin.lib:
+	@$(MAKE) -Cplugins/Mpeg3Plugin -f Makefile.win32 XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
+	$(CP) plugins\Mpeg3Plugin\Mpeg3Plugin.lib release\Mpeg3Plugin.lib
+	$(RM) plugins\Mpeg3Plugin\Mpeg3Plugin.lib
+
+Mpeg3Plugin.dll:
+	@$(MAKE) -Cplugins/Mpeg3Plugin -f Makefile.win32 makedll
+	$(CP) plugins\Mpeg3Plugin\Mpeg3Plugin.dll release\Mpeg3Plugin.dll
+	$(RM) plugins\Mpeg3Plugin\Mpeg3Plugin.dll
 
 %.lib:
 	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
@@ -257,62 +256,4 @@ Mpeg3Plugin.o:	Mpeg3Plugin.c
 
 Squeak.res: misc/Squeak.rc
 	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
-
-### housekeeping
-clean:
-	@echo ------------------------------------------------------
-	@echo Please delete all files from the "$(OUTDIR)" directory
-	@echo ------------------------------------------------------
-
-
-#############################################################################
-# Generic Win32 support file definitions
-#
-#WINDIR=	$(SRCDIR)/win32
-#WINSRC= $(notdir $(wildcard $(WINDIR)/sqWin32*.c))
-#WINOBJ=	$(WINSRC:.c=.o)
-
-#############################################################################
-# Specific Win32 support file definitions
-#
-#WIN95DIR= $(WINDIR)/Win95
-#WIN95SRC= $(notdir $(wildcard $(WIN95DIR)/sqWin32*.c))
-#WIN95OBJ= $(WIN95SRC:.c=.o)
-
-#############################################################################
-# The Squeak plugin
-#
-#NPDIR= $(WINDIR)/NPSqueak
-#NPSRC= $(notdir $(wildcard $(NPDIR)/*.c))
-#NPOBJ:=		$(NPSRC:.c=.o) NPRes.o
-#NPINC = $(NPDIR)/include
-#############################################################################
-# CCG definitions
-#
-# Note: CCGINCDIR is a phony entry since CCG makes includes based on
-#       include <ccg/asm-i386.h> so we have to make it find that.
-#
-#CCGDIR = $(SRCDIR)/../ccg
-#CCGINCDIR = $(CCGDIR)/..
-#CCG=		$(WINDIR)/utils/ccg.exe
-#############################################################################
-# The Squeak plugin
-#
-#NPSqueak.dll: assureReleaseDir
-#	$(MD) Release\\NPSqueak
-#	$(MAKE) -f Makefile.mingw32 DLLDIR=NPSqueak $(NPOBJ)
-#	$(DLLWRAP) -mwindows -def NPSqueak/NPSqueak.def -o $(OUTDIR)/NPSqueak.dll $(STDLIBS) $(OUTDIR)/NPSqueak/*.o
-#	strip --strip-all $(OUTDIR)/NPSqueak.dll
-#
-#NPRes.o: NPSqueak.rc
-#	$(RC) $(RCFLAGS) -i $< -o $(OUTDIR)/$@
-#
-#NPSqueakLand.dll:
-#	$(MD) Release\\NPSqueak
-#	$(MAKE) -f Makefile.mingw32 DLLDIR=NPSqueak $(NPOBJ) XDEFS=-DSQUEAKLAND
-#	$(DLLWRAP) -mwindows -def NPSqueak/NPSqueak.def -o $(OUTDIR)/NPSqueakLand.dll $(LIBS) $(OUTDIR)/NPSqueak/*.o
-#	strip --strip-all $(OUTDIR)/NPSqueakLand.dll
-
-
-
 
