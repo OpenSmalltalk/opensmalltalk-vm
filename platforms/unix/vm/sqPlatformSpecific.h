@@ -1,6 +1,6 @@
 /* sqPlatformSpecific.h -- platform-specific modifications to sq.h
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -33,9 +33,9 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Author: ian.piumarta@inria.fr
+ * Author: ian.piumarta@squeakland.org
  * 
- * Last edited: 2004-04-17 02:45:14 by piumarta on emilia.local
+ * Last edited: 2005-03-19 12:20:23 by piumarta on emilia.local
  */
 
 /* undefine clock macros (these are implemented as functions) */
@@ -63,3 +63,17 @@ extern void sqFilenameFromString(char *uxName, int stNameIndex, int sqNameLength
 
 #undef	sqFTruncate
 #define	sqFTruncate(f,o) ftruncate(fileno(f), o)
+
+#ifndef __GNUC__
+# if HAVE_ALLOCA_H
+#   include <alloca.h>
+# else
+#   ifdef _AIX
+#     pragma alloca
+#   else
+#     ifndef alloca /* predefined by HP cc +Olibcalls */
+        char *alloca();
+#     endif
+#   endif
+# endif
+#endif
