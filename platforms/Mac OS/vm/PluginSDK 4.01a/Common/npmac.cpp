@@ -19,8 +19,14 @@
 // globals for 68K (analagous to the function SetCurrentA5
 // defined by the toolbox).
 //
+#if !defined ( __APPLE__ ) && !defined ( __MACH__ )
 #include <A4Stuff.h>
-
+#else
+#define EnterCodeResource() 
+#define ExitCodeResource() 
+#define __destroy_global_chain()
+#define __InitCode__()
+#endif
 
 #include "npapi.h"
 
@@ -530,7 +536,7 @@ void SetUpQD(void)
 
 
 
-NPError main(NPNetscapeFuncs* nsTable, NPPluginFuncs* pluginFuncs, NPP_ShutdownUPP* unloadUpp);
+int main(NPNetscapeFuncs* nsTable, NPPluginFuncs* pluginFuncs, NPP_ShutdownUPP* unloadUpp);
 
 #if TARGET_RT_MAC_CFM
 #if !TARGET_API_MAC_CARBON
@@ -540,7 +546,7 @@ RoutineDescriptor mainRD = BUILD_ROUTINE_DESCRIPTOR(uppNPP_MainEntryProcInfo, ma
 #endif
  
 
-NPError main(NPNetscapeFuncs* nsTable, NPPluginFuncs* pluginFuncs, NPP_ShutdownUPP* unloadUpp)
+int main(NPNetscapeFuncs* nsTable, NPPluginFuncs* pluginFuncs, NPP_ShutdownUPP* unloadUpp)
 {
 	EnterCodeResource();
 	PLUGINDEBUGSTR("\pmain");
