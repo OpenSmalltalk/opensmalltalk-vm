@@ -1680,10 +1680,10 @@ void recordKeystroke(XKeyEvent *theEvent)
   nConv= XLookupString(theEvent, buf, sizeof(buf), &symbolic, 0);
 
   charCode= buf[0];
-
+#if 0
   if (charCode == 127)
     charCode= 8;
-
+#endif
   if (nConv == 0 && (charCode= translateCode(symbolic)) < 0)
     return;	/* unknown key */
 
