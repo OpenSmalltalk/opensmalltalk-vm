@@ -24,8 +24,7 @@
 	XFN(serialPortReadInto)
 	XFN(serialPortWriteFrom)
 	XFN(IsKeyDown)
-	
-//#define PLUGIN
+	XFN(getUIToLock)
 #ifdef PLUGIN
 /* Plugin support primitives
    We should make these primitives a proper plugin
