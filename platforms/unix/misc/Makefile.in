@@ -35,7 +35,7 @@
 
 ### TARGETS (default target is `all')
 # 
-e# 	all		- build `squeak' and `modules'
+# 	all		- build `squeak' and `modules'
 #	install		- build `squeak_install' and `modules_install'
 #	uninstall	- undo the effects of `install'
 # 
