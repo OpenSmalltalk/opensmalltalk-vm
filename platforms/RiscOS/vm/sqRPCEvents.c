@@ -59,17 +59,17 @@ int eventBufPut = 0;
 
 
 #define KEYBUF_SIZE 64
-int						keyBuf[KEYBUF_SIZE];	/* circular buffer */
-int						keyBufGet = 0;			/* ndex of next item of keyBuf to read */
-int						keyBufPut = 0;			/* ndex of next item of keyBuf to write */
-int						keyBufOverflows = 0;	/* number of characters dropped */
+int	keyBuf[KEYBUF_SIZE];	/* circular buffer */
+int	keyBufGet = 0;			/* ndex of next item of keyBuf to read */
+int	keyBufPut = 0;			/* ndex of next item of keyBuf to write */
+int	keyBufOverflows = 0;	/* number of characters dropped */
 
-int						buttonState = 0;		/* mouse button and modifier state  */
-os_coord				savedMousePosition;	/* mouse position; not modified when window is inactive */
-int						mouseButtonDown;		/* keep track of curent mouse button state - for drags outside window */
-extern int				interruptKeycode;
-extern int				interruptPending;
-extern int				interruptCheckCounter;
+int	buttonState = 0;		/* mouse button and modifier state  */
+os_coord	savedMousePosition;	/* mouse position; not modified when window is inactive */
+int	mouseButtonDown;		/* keep track of curent mouse button state - for drags outside window */
+extern int	getInterruptKeycode(void);
+extern int		setInterruptPending(int value);
+extern int	setInterruptCheckCounter(int value);
 
 int scanLine, startX, xLen, startY, stopY, pixelsPerWord, pixelsPerWordShift;
 void (*reverserFunction)(void);
@@ -525,7 +525,8 @@ void DisplayPixmap(void) {
 extern osspriteop_area *spriteAreaPtr;
 extern osspriteop_header *displaySprite;
 extern osspriteop_trans_tab *	pixelTranslationTable;
-bool more;
+//bool more;
+int more;
 wimp_draw wblock;
 os_error * e;
 int xA, yA, xB, yB;
@@ -559,7 +560,8 @@ extern osspriteop_area *spriteAreaPtr;
 extern osspriteop_header *displaySprite;
 extern osspriteop_trans_tab *	pixelTranslationTable;
 extern os_coord squeakDisplaySize;
-bool more;
+//bool more;
+int more;
 wimp_draw wblock;
 os_error * e;
 int xA, yA, xB, yB;
@@ -650,12 +652,12 @@ void KeyPressed( wimp_key * wblock) {
 	// basically keystate will be the event idea of the key pressed
 	keystate = wblock->c;
 
-	if (keystate == interruptKeycode || ( (keystate == wimp_KEY_PRINT)/* && (buttonState & CmdKey ) */) ) {
+	if (keystate == getInterruptKeycode() || ( (keystate == wimp_KEY_PRINT)) ) {
 		// The image tends to set the interruptKeycode to suit the Mac cmd-. nonsense
-		// this is decidedly not Acorn compatible, so check for right-ctl-printscrn as well
-		// interrupt is a meta-event; do not report it as a keypress 
-		interruptPending = true;
-		interruptCheckCounter = 0;
+		// this is decidedly not Acorn compatible, so check for printscrn/SysRq as well
+		// interrupt is a meta-event; do not report it as a keypress
+		setInterruptPending(true); 
+		setInterruptCheckCounter(0);
 		return;
 	}
 
@@ -693,12 +695,12 @@ void keyBufAppend(int keystate) {
 }
 
 void eventBufAppendEvent(int  type, int mouseX, int mouseY, int buttons, int key) {
-/* append an event to the queue. DO NOT siganl the input semaphore here since the 
+/* append an event to the queue. DO NOT signal the input semaphore here since the 
  * HandleEvents() routine is called from place where that causes segfaults!!
  * Leave the signalling to the ioEventsCount() routine.
  */
-/* first check there is room on the queue */
 int peek;
+	/* first check there is room on the queue */
 	peek = (eventBufPut + 1) % EVENTQ_SIZE;
 	if ( peek == eventBufGet) {/* no room, drop the whole thing */
 		return;
@@ -709,7 +711,8 @@ int peek;
 	if ( (type == SQ_MOUSE_MOVE) && (eventBufPut != eventBufGet)) {
 		int prevEvent;
 		prevEvent = eventBufPut -1;
-		if ( prevEvent == -1) prevEvent = EVENTQ_SIZE -1 ; /* wrap around */
+		if ( prevEvent == -1)
+			prevEvent = EVENTQ_SIZE -1 ; /* wrap around */
 		if ( eventBuf[prevEvent].type == SQ_MOUSE_MOVE ) {
 			/* overwrite previous event data */
 			eventBuf[eventBufPut].type = type;
@@ -837,5 +840,5 @@ void DeactivateWindow( wimp_block * wblock) {
 }
  
 void DoNothing(void) {
-/* do nothing at all, but make sure to do it quickly. primarily a breakpoint option */
+/* do nothing at all, but make sure to do it quickly. Primarily a breakpoint option */
 }

@@ -8,17 +8,26 @@
 
 */
 
-
+/* This odd looking declaration is to allow the global variable foo to be
+ * kept in a register all the time. This produces an approx 30% speedup */
 #ifdef ACORN
 
+#pragma -r1
+extern struct foo * foo;
+#pragma -r0
+
 #include "oslib/os.h"
+
 /* acorn memory allocation */
 #undef sqAllocateMemory
+int platAllocateMemory(int amount);
 #define sqAllocateMemory(minHeapSize, desiredHeapSize) platAllocateMemory(desiredHeapSize)
 
 #undef sqFilenameFromString
 extern void sqFilenameFromString(char*fileName, int sqString, int sqSize);
 #define sqFilenameFromString(dst, src, num) sqFilenameFromString(dst, src, num)
+
+int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize);
 
 #define squeakFileOffsetType int
 

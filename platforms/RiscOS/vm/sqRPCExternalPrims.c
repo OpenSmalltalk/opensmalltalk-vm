@@ -1,8 +1,11 @@
-/*
-	sqRPCExternalPrims.c
-	Find the function address of a named function by searching the C code segment. All sorts
-	of possible failures here - compiling with function names removed is just the most egregious
-*/
+/**************************************************************************/
+/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
+/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
+/*  not yet tested.                                                       */
+/*                       sqRPCExternalPrims.c                             */
+/* hook up to RiscOS external code modules using 'rink'                   */
+/**************************************************************************/
 #include "oslib/os.h"
 #include "sq.h"
 #include <kernel.h>

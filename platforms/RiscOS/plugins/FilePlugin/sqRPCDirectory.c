@@ -32,7 +32,7 @@
 
 #ifdef DEBUG
 #define FPRINTF(s)\
-{\
+if(1){\
 	extern os_error privateErr;\
 	extern void platReportError( os_error * e);\
 	privateErr.errnum = (bits)0;\
@@ -64,8 +64,8 @@ int convertToSqueakTime(os_date_and_time fileTime) {
 
 void dirReportError( os_error * e) {
 /* Use the RiscOS Error dialogue to notify users of some problem */
-// Maybe sometime later...
-	//wimp_report_error( e, wimp_ERROR_BOX_CANCEL_ICON | wimp_ERROR_BOX_HIGHLIGHT_CANCEL |wimp_ERROR_BOX_SHORT_TITLE ,  sqTaskName);
+	extern void platReportError( os_error * e);
+	platReportError(e);
 }
 
 int dir_Create(char *pathString, int pathStringLength) {
@@ -89,7 +89,6 @@ int dir_Delete(char *pathString, int pathStringLength) {
 	/* Delete the existing directory with the given path. */
 	/* For now replicate the normal sqFileDeleteNameSize, since that appears to be adequate, except for returning true if all is well - essential ! */
 	char cFileName[MAXDIRNAMELENGTH];
-	int err;
 
 	if (pathStringLength >= MAXDIRNAMELENGTH) {
 		return interpreterProxy->success(false);
@@ -98,7 +97,7 @@ int dir_Delete(char *pathString, int pathStringLength) {
 	/* copy the file name into a null-terminated C string */
 	sqFilenameFromString(cFileName, (int)pathString, pathStringLength);
 	if (remove(cFileName) != 0) {
-		FPRINTF((privateErr.errmess, "dir delete error %d\n", err));
+		FPRINTF((privateErr.errmess, "dir delete error\n"));
 		return interpreterProxy->success(false);
 	}
 	return true;
@@ -112,12 +111,12 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   /* outputs: */
   char *name, int *nameLength, int *creationDate, int *modificationDate,
   int *isDirectory, int *sizeIfFile) {
-	/* Lookup the index-th entry of the directory with the given path, starting
-	   at the root of the file system. Set the name, name length, creation date,
-	   creation time, directory flag, and file size (if the entry is a file).
-	   Return:	ENTRY_FOUND	if a entry is found at the given index
-	   			NO_MORE_ENTRIES	if the directory has fewer than index entries
-	   			BAD_PATH	if the given path has bad syntax or does not reach a directory
+/* Lookup the index-th entry of the directory with the given path, starting
+   at the root of the file system. Set the name, name length, creation date,
+   creation time, directory flag, and file size (if the entry is a file).
+   Return:	ENTRY_FOUND	if a entry is found at the given index
+   		NO_MORE_ENTRIES	if the directory has fewer than index entries
+   		BAD_PATH	if the given path has bad syntax or does not reach a directory
 	*/
 	char dirname[MAXDIRNAMELENGTH];
 	osgbpb_SYSTEM_INFO( MAXDIRNAMELENGTH + 4 ) buffer;
@@ -133,12 +132,13 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
 	if( pathStringLength > MAXDIRNAMELENGTH) return BAD_PATH;
 	context = index-1;
+	FPRINTF((privateErr.errmess, "dir_Lookup:raw pathname %s\n", pathString));
 
 	if ( pathStringLength == 0) {
-#if 1
 #define F2HJump 4
 int junk, run_total, adfs_flop=0, adfs_hard=0, scsifs_flop=0, scsifs_hard=0, ramfs_flop=0, ramfs_hard=0, cdfs_hard=0;
 char discid[20];
+		FPRINTF((privateErr.errmess, "dir_Lookup:null pathname, scanning disc %d\n", context));
 		/* no path, so try to enumerate all the attached discs */
 		run_total = 0;
 		xadfs_drives  (&junk, &adfs_flop,   &adfs_hard);
@@ -193,11 +193,12 @@ char discid[20];
 		return NO_MORE_ENTRIES;
 decode_disc_id:
 		if ((e = xosfscontrol_canonicalise_path (discid, dirname, (char const *) NULL, (char const *)NULL, MAXDIRNAMELENGTH, &junk)) != null) {
-			// for any error, it seems best to copy the instring to the outstring
+			// for any error, it seems best to copy the instring
+			// to the outstring.
+			// we shouldn't get too many types of error here since
+			// the names have come from the OS anyway
 			strcpy (dirname, discid);
-			if ( (e->errnum & 0xFF) >= 0xD3 || (e->errnum & 0xFF) <= 0xD5 ) {
-				// disc not present type error shouldn't cause too many upsets
-			} else dirReportError(e);
+			// debugging -> dirReportError(e);
 		}
 
 		*nameLength       = strlen(dirname);
@@ -207,27 +208,23 @@ decode_disc_id:
 		*isDirectory      = true;
 		*sizeIfFile       = 0;
 		return ENTRY_FOUND;
-#else
-		return BAD_PATH;
-#endif
 	}
-//return NO_MORE_ENTRIES;
-	/* looks like this should be strncpy( dirname, pathString, pathStringLength); */
-	sqFilenameFromString(dirname, (int)pathString, pathStringLength);
 
-/* lookup indexth entry in the directory */
+	sqFilenameFromString(dirname, (int)pathString, pathStringLength);
+	FPRINTF((privateErr.errmess, "dir_Lookup:pathName = %s\n", dirname));
+
+	/* lookup indexth entry in the directory */
 	count = 1;
 	i = /* osgbpb_SIZEOF_SYSTEM_INFO(MAXDIRNAMELENGTH + 4)*/ 28 +MAXDIRNAMELENGTH + 4;
 
 	e = xosgbpb_dir_entries_system_info(dirname,(osgbpb_system_info_list *)&buffer, count, context, i, (char const *)0, &count, &context);
-	if ( count != 1 ) return NO_MORE_ENTRIES;
 	if ( e != NULL ) {
+		// debugging-> dirReportError(e);
 		i = e->errnum & 0xFF;
-		if ( i >= 0xD3 || i<= 0xD5 )  return NO_MORE_ENTRIES;
-	return  BAD_PATH;
+		if ( i >= 0xD3 && i<= 0xD5 )  return NO_MORE_ENTRIES;
+		return  BAD_PATH;
 	}
-	
-
+	if ( count != 1 ) return NO_MORE_ENTRIES;
 
 	*nameLength = strlen(buffer.name);
 	sqStringFromFilename( (int)name, buffer.name, *nameLength);

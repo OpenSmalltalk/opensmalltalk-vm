@@ -5,7 +5,7 @@
 #include "sq.h"
 #include "sqArguments.h"
 
-static opt = 0;
+static int opt = 0;
 static int numOptions;
 static char** optionArray;
 int ImageVersionNumber;
@@ -21,6 +21,7 @@ static int IsImage(char *name) {
 	FILE *fp;
 	int magic;
 	int byteSwapped(int);
+extern int readableFormat(int imageVersion);
 
 	fp = fopen(name,"rb");
 	if(!fp) return 0; /* could not open file */

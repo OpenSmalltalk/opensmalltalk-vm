@@ -2,7 +2,7 @@
 
 
 # Toolflags:
-CCflags = -c -depend !Depend -IC:,OSLib:,$(PVM),$(CVM),C:^.rink,@.vm -throwback  -DACORN -Otime
+CCflags = -c -depend !Depend -IC:,OSLib:,$(PVM),$(CVM),C:^.rink,@.vm -throwback  -DACORN  -Otime
 C++flags = -c -depend !Depend -IC: -throwback
 Linkflags = -aif -c++ -o $@
 ObjAsmflags = -throwback -NoCache -depend !Depend
@@ -26,7 +26,7 @@ PPlug=$(PLAT).RiscOS.plugins
 CPlug=$(PLAT).Cross.plugins
 SPlug=@.plugins
 
-pluginList: pluginDir  B2DPlugin BitBltPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin SocketPlugin StarSqueakPlugin  Squeak3D SurfacePlugin ZipPlugin
+pluginList: pluginDir  B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin  SocketPlugin SoundPlugin StarSqueakPlugin  Squeak3D SurfacePlugin ZipPlugin
 	echo DONE!
 
 pluginDir:
@@ -86,6 +86,23 @@ $(SqPlugins).BitBltPlugin.code:  $(SPlug).BitBltPlugin.o.BitBltPlugin $(SPlug).B
 
 $(SPlug).BitBltPlugin.o.BitBltPlugin: $(SPlug).BitBltPlugin.c.BitBltPlugin
 	cc $(ccflags) -o $(SPlug).BitBltPlugin.o.BitBltPlugin $(SPlug).BitBltPlugin.c.BitBltPlugin 
+
+###########
+# BMPReadWriter Plugin make rule.
+# Very simple, only the one source file
+###########
+BMPReadWriterPlugin:	$(SqPlugins).BMPReadWriterPlugin $(SqPlugins).BMPReadWriterPlugin.code
+	echo done $*
+
+$(SqPlugins).BMPReadWriterPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).BMPReadWriterPlugin.code:  $(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin $(SPlug).BMPReadWriterPlugin.dsc.BMPReadWriterPlugin $(Sqk).ptrblkmap  $(SqPlugins).BMPReadWriterPlugin
+	rink -o $(SqPlugins).BMPReadWriterPlugin.code -l $(SqPlugins).BMPReadWriterPlugin.links -h $(SPlug).BMPReadWriterPlugin.dsc.BMPReadWriterPlugin -m $(Sqk).ptrblkmap -a $(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin
+
+$(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin: $(SPlug).BMPReadWriterPlugin.c.BMPReadWriterPlugin
+	cc $(ccflags) -o $(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin $(SPlug).BMPReadWriterPlugin.c.BMPReadWriterPlugin 
 
 
 ###########
@@ -150,6 +167,8 @@ $(SPlug).FilePlugin.o.sqRPCDirectory: $(PPlug).FilePlugin.c.sqRPCDirectory
 	cc $(ccflags) -o $(SPlug).FilePlugin.o.sqRPCDirectory $(PPlug).FilePlugin.c.sqRPCDirectory 
 $(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(CPlug).FilePlugin.c.sqFilePluginBasicPrims
 	cc $(ccflags) -I$(CPlug).FilePlugin -o $(SPlug).FilePlugin.o.sqFilePluginBasicPrims $(CPlug).FilePlugin.c.sqFilePluginBasicPrims 
+
+
 
 
 ###########
@@ -287,6 +306,37 @@ $(SqPlugins).MiscPrimitivePlugin.code:  $(SPlug).MiscPrimitivePlugin.o.MiscPrimi
 $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin: $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin
 	cc $(ccflags) -o $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin 
 
+###########
+# Regular expressions Plugin make rule.
+# More complex - involves files from several sources
+# rePlugin.c is generated
+# internal & pcre.h are in Cross
+# chartables, get, pcre & study.c are in Cross
+###########
+RePlugin:	$(SqPlugins).RePlugin $(SqPlugins).RePlugin.code
+	echo done $*
+
+$(SqPlugins).RePlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).RePlugin.code:  $(SPlug).RePlugin.o.RePlugin $(SPlug).RePlugin.o.chartables $(SPlug).RePlugin.o.get $(SPlug).RePlugin.o.pcre $(SPlug).RePlugin.o.study $(SPlug).RePlugin.dsc.RePlugin $(Sqk).ptrblkmap  $(SqPlugins).RePlugin
+	rink -o $(SqPlugins).RePlugin.code -l $(SqPlugins).RePlugin.links -h $(SPlug).RePlugin.dsc.RePlugin -m $(Sqk).ptrblkmap -a $(SPlug).RePlugin.o.RePlugin $(SPlug).RePlugin.o.chartables $(SPlug).RePlugin.o.get $(SPlug).RePlugin.o.pcre $(SPlug).RePlugin.o.study 
+
+$(SPlug).RePlugin.o.RePlugin: $(SPlug).RePlugin.c.RePlugin
+	cc $(ccflags) -I$(CPlug).RePlugin -o $(SPlug).RePlugin.o.RePlugin $(SPlug).RePlugin.c.RePlugin
+ 
+$(SPlug).RePlugin.o.chartables: $(CPlug).RePlugin.c.chartables
+	cc $(ccflags) -o $(SPlug).RePlugin.o.chartables $(CPlug).RePlugin.c.chartables
+ 
+$(SPlug).RePlugin.o.get: $(CPlug).RePlugin.c.get
+	cc $(ccflags) -o $(SPlug).RePlugin.o.get $(CPlug).RePlugin.c.get
+
+$(SPlug).RePlugin.o.pcre: $(CPlug).RePlugin.c.pcre
+	cc $(ccflags) -o $(SPlug).RePlugin.o.pcre $(CPlug).RePlugin.c.pcre
+	
+$(SPlug).RePlugin.o.study: $(CPlug).RePlugin.c.study
+	cc $(ccflags) -o $(SPlug).RePlugin.o.study $(CPlug).RePlugin.c.study
 
 
 
@@ -314,6 +364,28 @@ $(SPlug).SocketPlugin.o.SocketPlugin: $(SPlug).SocketPlugin.c.SocketPlugin
 $(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin
 	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin,C:^.socketincl -o $(SPlug).SocketPlugin.o.sqRPCNetPlugin $(PPlug).SocketPlugin.c.sqRPCNetPlugin 
 
+###########
+# Sound Plugin make rule.
+# More complex - involves files from several sources
+# SoundPlugin.c is generated
+# SoundPlugin.h is in Cross
+# sqRPCSound.c is in RiscOS
+
+###########
+SoundPlugin:	$(SqPlugins).SoundPlugin $(SqPlugins).SoundPlugin.code
+	echo done $*
+
+$(SqPlugins).SoundPlugin:	pluginDir
+	echo make $*
+	CDir $*
+
+$(SqPlugins).SoundPlugin.code:  $(SPlug).SoundPlugin.o.SoundPlugin $(SPlug).SoundPlugin.o.sqRPCSound  $(SPlug).SoundPlugin.dsc.SoundPlugin $(Sqk).ptrblkmap  $(SqPlugins).SoundPlugin
+	rink -o $(SqPlugins).SoundPlugin.code -l $(SqPlugins).SoundPlugin.links -h $(SPlug).SoundPlugin.dsc.SoundPlugin -m $(Sqk).ptrblkmap -a $(SPlug).SoundPlugin.o.SoundPlugin $(SPlug).SoundPlugin.o.sqRPCSound 
+
+$(SPlug).SoundPlugin.o.SoundPlugin: $(SPlug).SoundPlugin.c.SoundPlugin
+	cc $(ccflags) -I$(CPlug).SoundPlugin -o $(SPlug).SoundPlugin.o.SoundPlugin $(SPlug).SoundPlugin.c.SoundPlugin 
+$(SPlug).SoundPlugin.o.sqRPCSound: $(PPlug).SoundPlugin.c.sqRPCSound
+	cc $(ccflags) -I$(CPlug).SoundPlugin -o $(SPlug).SoundPlugin.o.sqRPCSound $(PPlug).SoundPlugin.c.sqRPCSound 
 
 
 ###########
@@ -409,4 +481,3 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin
 
 # Static dependencies:
 # Dynamic dependencies:
-

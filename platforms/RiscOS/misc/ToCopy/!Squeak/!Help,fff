@@ -3,7 +3,7 @@ Help for Squeak
 
 What is this?
 -------------
-This is the Acorn port of Squeak 2.80, a public domain Smalltalk system.
+This is the Acorn port of Squeak 3.2, a public domain Smalltalk system.
 Updates, patches etc are available from http://sumeru.stanford.edu/tim as and when I can make time to produce then. 
 
 What is Smalltalk?
@@ -17,24 +17,13 @@ c) as you will quickly notice, the Squeak windows can exist only within the sing
 
 Information
 -----------
-For those with web access, there is plenty of information available about Squeak and all the other variants of Smalltalk.
-See:-
-http://www.squeak.org/ The Squeak.Org main site for updates, releases, goodies etc
-ftp://alix.inria.fr/pub/squeak Ian Piumarta's UNIX ports
-ftp://ftp.cs.uni-magdeburg.de/pub/Smalltalk/free/squeak/win32 Andreas Raab's Windows Ports
-http://sumeru.stanford.edu/tim My Acorn Port
-http://www.oti.com/links/smaltalk.htm Jeff McAffer's Smalltalk Links
-news:comp.lang.smalltalk Smalltalk News Group
-and perhaps most important, the squeak mailing list. You may get yourself onto the list by sending email to:
+For those with web access, there is plenty of information available about Squeak and all the other variants of Smalltalk. See http://www.squeak.org/, the Squeak.Org main site for updates, releases, goodies etc and perhaps most important, the squeak mailing list. You may get yourself onto the list by sending email to:
 
-        squeak-request@cs.uiuc.edu
+        squeak-dev-request@lists.squeakfoundation.org
 
-with the letter body:
-        subscribe squeak
-        end
+with the subject line set to -
 
-
-The Jeff McAffer page is one of the most useful since it is a remarkably comprehensive resource.
+subscribe
 
 In print there are a number of good sources, some of which you might find on the shelves in better bookstores:-
       Smalltalk 80 The Language, Adele Goldberg & David Robson
@@ -64,8 +53,8 @@ In print there are a number of good sources, some of which you might find on the
       Designing Object-Oriented Software,
             Rebecca Wirfs-Brock, Brian Wilkerson, and Lauren Wiener
             Prentice-Hall 1990 ISBN 0-13-629825-7
-      Object Oriented Programming with Smalltalk/V, Dusko Savic
-            Ellis Horwood 1990 ISBN 0-13-040692-9
+      Squeak, Open Personal Computing for Multimedia, Mark Guzdial & Kim Rose, editors, 2001, Prentice-Hall
+      Squeak: Object-oriented design with Multimedia Applications, MArk Guzdial, 2001, Prentice-Hall
 
 Known problems with this release
 ================================
