@@ -29,20 +29,17 @@
  */
   /*  Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
       Feb/march 2001, JMM  tuning for the mac
-      I've coded up mpeg3video_ditherframeFastRGB555 and mpeg3video_ditherframeFastRGBA which
+      I've coded up mpeg3video_ditherframeFastRGB555 and mpeg3video_ditherframeFastARGB which
       do specialized 16 and 32 bit Crb to rgb mapping (Intel should do this too?)
       I also coded up clip arrays versus using CLIP() This avoid test/branchs which slows things down
+		Sept 2002, JMM added clip arrays to enable blue screening and value for alpha channel
  */
 #include "libmpeg3.h"
 #include "mpeg3video.h"
 #include <string.h>
 
-unsigned char gClipArray[1026];
-unsigned short gClipArray16r[1026],gClipArray16g[1026],gClipArray16b[1026];
-unsigned char *gClipArray_ptr=&gClipArray[512];
-unsigned short *gClipArray_ptr16r=&gClipArray16r[512];
-unsigned short *gClipArray_ptr16g=&gClipArray16g[512];
-unsigned short *gClipArray_ptr16b=&gClipArray16b[512];
+unsigned char gClipArray[1028];
+unsigned short gClipArray16r[1028],gClipArray16g[1028],gClipArray16b[1028];
 int doClippingArrays=1;
 
 static unsigned char mpeg3_601_to_rgb[256];
@@ -514,30 +511,30 @@ asm("
 
 
 #define STORE_PIXEL_BGR888 \
-	*data++ = clipArray_ptr[b_l]; \
-	*data++ = clipArray_ptr[g_l]; \
-	*data++ = clipArray_ptr[r_l];
+	*data++ = clipArray_ptr_B[b_l]; \
+	*data++ = clipArray_ptr_G[g_l]; \
+	*data++ = clipArray_ptr_R[r_l];
 
 #define STORE_PIXEL_BGRA8888 \
-	*data++ = clipArray_ptr[b_l]; \
-	*data++ = clipArray_ptr[g_l]; \
-	*data++ = clipArray_ptr[r_l]; \
-	*data++ = 0;
+	*data++ = clipArray_ptr_B[b_l]; \
+	*data++ = clipArray_ptr_G[g_l]; \
+	*data++ = clipArray_ptr_R[r_l]; \
+	*data++ = alphaChannelValue;
 
 #define STORE_PIXEL_RGB565 \
-    foo = ((clipArray_ptr[r_l] & 0xf8) << 8) | \
-		((clipArray_ptr[g_l] & 0xfc) << 3) | \
-		((clipArray_ptr[b_l] & 0xf8) >> 3); *(unsigned short*)data = foo; data += 2;
+    foo = ((clipArray_ptr_R[r_l] & 0xf8) << 8) | \
+		((clipArray_ptr_G[g_l] & 0xfc) << 3) | \
+		((clipArray_ptr_B[b_l] & 0xf8) >> 3); *(unsigned short*)data = foo; data += 2;
 
 #define STORE_PIXEL_RGB555 \
-    foo = ((clipArray_ptr[r_l] & 0xf8) << 7) | \
-		((clipArray_ptr[g_l] & 0xf8) << 2) | \
-		((clipArray_ptr[b_l] & 0xf8) >> 3); *(unsigned short*)data = foo; data += 2;
+    foo = ((clipArray_ptr_R[r_l] & 0xf8) << 7) | \
+		((clipArray_ptr_G[g_l] & 0xf8) << 2) | \
+		((clipArray_ptr_B[b_l] & 0xf8) >> 3); *(unsigned short*)data = foo; data += 2;
 
 #define STORE_PIXEL_RGBI555 \
-    foo = ((clipArray_ptr[r_l] & 0xf8) << 7) | \
-          ((clipArray_ptr[g_l] & 0xf8) << 2) | \
-          ((clipArray_ptr[b_l] & 0xf8) >> 3); \
+    foo = ((clipArray_ptr_R[r_l] & 0xf8) << 7) | \
+          ((clipArray_ptr_G[g_l] & 0xf8) << 2) | \
+          ((clipArray_ptr_B[b_l] & 0xf8) >> 3); \
     if((unsigned long)data & 0x00000002L) { \
 	  data -= 2; \
           *(unsigned short*)data = foo; \
@@ -549,37 +546,40 @@ asm("
 
 
 #define STORE_PIXEL_RGB888 \
-	*data++ = clipArray_ptr[r_l]; \
-	*data++ = clipArray_ptr[g_l]; \
-	*data++ = clipArray_ptr[b_l];
+	*data++ = clipArray_ptr_R[r_l]; \
+	*data++ = clipArray_ptr_G[g_l]; \
+	*data++ = clipArray_ptr_B[b_l];
 
 #define STORE_PIXEL_RGBA8888 \
-	*data++ = clipArray_ptr[r_l]; \
-	*data++ = clipArray_ptr[g_l]; \
-	*data++ = clipArray_ptr[b_l]; \
-	*data++ = 0;
+	*data++ = clipArray_ptr_R[r_l]; \
+	*data++ = clipArray_ptr_G[g_l]; \
+	*data++ = clipArray_ptr_B[b_l]; \
+	*data++ = alphaChannelValue;
 
 #define STORE_PIXEL_ARGB8888 \
-	*data++ = 0; \
-	*data++ = clipArray_ptr[r_l]; \
-	*data++ = clipArray_ptr[g_l]; \
-	*data++ = clipArray_ptr[b_l]; 
+	*data++ = alphaChannelValue; \
+	*data++ = clipArray_ptr_R[r_l]; \
+	*data++ = clipArray_ptr_G[g_l]; \
+	*data++ = clipArray_ptr_B[b_l]; 
 
 #define STORE_PIXEL_RGBA16161616 \
-	*data_s++ = clipArray_ptr[r_l]; \
-	*data_s++ = clipArray_ptr[g_l]; \
-	*data_s++ = clipArray_ptr[b_l]; \
-	*data_s++ = 0;
-
+	*data_s++ = clipArray_ptr_R[r_l]; \
+	*data_s++ = clipArray_ptr_G[g_l]; \
+	*data_s++ = clipArray_ptr_B[b_l]; \
+	*data_s++ = alphaChannelValue;
+/* JMM broken for 16 bit color here */
 
 
 /* Only good for YUV 4:2:0 */
 int mpeg3video_ditherframe(mpeg3video_t *video, unsigned char **src, unsigned char **output_rows)
 {
 	int h = 0;
-	register unsigned char *y_in, *cb_in, *cr_in;
+	register unsigned char *y_in, *cb_in, *cr_in,alphaChannelValue=video->alphaChannelValue;
 	long y_l, r_l, b_l, g_l;
-	register unsigned char *data,*clipArray_ptr=gClipArray_ptr;
+	register unsigned char *data,
+                        *clipArray_ptr_R=&video->clipArray_Red[512],
+                       *clipArray_ptr_G=&video->clipArray_Green[512],
+                       *clipArray_ptr_B=&video->clipArray_Blue[512];
 	register int uv_subscript, step, w = -1;
 	register short foo;
 
@@ -970,7 +970,7 @@ int mpeg3video_dithertop(mpeg3video_t *video, unsigned char *src[])
         return mpeg3video_ditherframeFastRGB555(video, src, video->output_rows);
     else
         if (video->color_model == MPEG3_ARGB8888) 
-            return mpeg3video_ditherframeFastRGBA(video, src, video->output_rows);
+            return mpeg3video_ditherframeFastARGB(video, src, video->output_rows);
         else
 	return mpeg3video_ditherframe(video, src, video->output_rows);
 }
@@ -1030,15 +1030,20 @@ int mpeg3video_init_output()
 	return 0;
 }
 
-int mpeg3video_ditherframeFastRGBA(mpeg3video_t *video, unsigned char **src, unsigned char **output_rows) {
+int mpeg3video_ditherframeFastARGB(mpeg3video_t *video, unsigned char **src, unsigned char **output_rows) {
 	int h = 0;
-	register unsigned char *y_in, *cb_in, *cr_in, *clipArray_ptr;
+	register unsigned char *y_in, *cb_in, *cr_in, *clipArray_ptr_R, *clipArray_ptr_G, *clipArray_ptr_B;
 	long y_l, r_l, b_l, g_l;
 	register unsigned long *data;
 	register int uv_subscript, step, w = -1,t1,t2;
-    register long *cr_to_gPtr,*cr_to_rPtr,*cb_to_bPtr,*cb_to_gPtr;;
-
-	clipArray_ptr = gClipArray_ptr;
+                register long *cr_to_gPtr,*cr_to_rPtr,*cb_to_bPtr,*cb_to_gPtr;
+                unsigned long alphaChannelValue_t;
+        
+	clipArray_ptr_R = &video->clipArray_Red[512];
+	clipArray_ptr_G = &video->clipArray_Green[512];
+	clipArray_ptr_B = &video->clipArray_Blue[512];
+                alphaChannelValue_t = video->alphaChannelValue << 24;
+        
 	cr_to_rPtr = &video->cr_to_r[0];
 	cr_to_gPtr = &video->cr_to_g[0];
 	cb_to_bPtr = &video->cb_to_b[0];
@@ -1060,7 +1065,7 @@ int mpeg3video_ditherframeFastRGBA(mpeg3video_t *video, unsigned char **src, uns
              		g_l = (g_l + cr_to_gPtr[*cr_in] + cb_to_gPtr[*cb_in]) >> 16;
              		r_l = (r_l + cr_to_rPtr[*cr_in])  >> 16; 
              		b_l = (b_l + cb_to_bPtr[*cb_in])  >> 16;
-                 	*data++ = (clipArray_ptr[r_l] << 16) | (clipArray_ptr[g_l] << 8) | clipArray_ptr[b_l];
+                 	*data++ = alphaChannelValue_t | (clipArray_ptr_R[r_l] << 16) | (clipArray_ptr_G[g_l] << 8) | clipArray_ptr_B[b_l];
                 	if(w & 1) { 
                     	cr_in++; 
                     	cb_in++; 
@@ -1076,7 +1081,7 @@ int mpeg3video_ditherframeFastRGBA(mpeg3video_t *video, unsigned char **src, uns
              		g_l = (g_l + cr_to_gPtr[t1] + cb_to_gPtr[t2]) >> 16;
             		r_l = (r_l + cr_to_rPtr[t1]) >> 16; 
              		b_l = (b_l + cb_to_bPtr[t2]) >> 16;
-                 	*data++ = (clipArray_ptr[r_l] << 16) | (clipArray_ptr[g_l] << 8) | clipArray_ptr[b_l];
+                 	*data++ = alphaChannelValue_t | (clipArray_ptr_R[r_l] << 16) | (clipArray_ptr_G[g_l] << 8) | clipArray_ptr_B[b_l];
                     }
                 }
             }     
@@ -1085,24 +1090,22 @@ int mpeg3video_ditherframeFastRGBA(mpeg3video_t *video, unsigned char **src, uns
 
 int mpeg3video_ditherframeFastRGB555(mpeg3video_t *video, unsigned char **src, unsigned char **output_rows) {
 	int h = 0;
-	register unsigned char *y_in, *cb_in, *cr_in, *clipArray_ptr;
-	register unsigned short *clipArray_ptr16r,*clipArray_ptr16g,*clipArray_ptr16b;
 	long y_l, r_l, b_l, g_l;
-	register unsigned short *data;
-	register int uv_subscript, step, w = -1,t1,t2;
-    register long *cr_to_gPtr,*cr_to_rPtr,*cb_to_bPtr,*cb_to_gPtr;;
+	unsigned char *y_in, *cb_in, *cr_in;
+        unsigned short *clipArray_ptr16r,*clipArray_ptr16g,*clipArray_ptr16b,*data;
+	int  w,t1,t2;
+        long *cr_to_gPtr,*cr_to_rPtr,*cb_to_bPtr,*cb_to_gPtr;;
     
-	clipArray_ptr = gClipArray_ptr;
-	clipArray_ptr16r = gClipArray_ptr16r;
-	clipArray_ptr16g = gClipArray_ptr16g;
-	clipArray_ptr16b = gClipArray_ptr16b;
-	cr_to_rPtr = &video->cr_to_r[0];
+	clipArray_ptr16r = &video->clipArray16_Red[512];
+	clipArray_ptr16g = &video->clipArray16_Green[512];
+	clipArray_ptr16b = &video->clipArray16_Blue[512];
+        cr_to_rPtr = &video->cr_to_r[0];
 	cr_to_gPtr = &video->cr_to_g[0];
 	cb_to_bPtr = &video->cb_to_b[0];
 	cb_to_gPtr = &video->cb_to_g[0];
 	
-	for(h = 0; h < video->out_h; h++) 
-    	{ 
+        if(video->out_w == video->horizontal_size) {
+            for(h = 0; h < video->out_h; h++) { 
     		t1 = video->y_table[h] + video->in_y;
     		t2 = (t1 >> 1) * video->chrom_width;
     		y_in  = &src[0][t1 * video->coded_picture_width] + video->in_x; 
@@ -1110,24 +1113,34 @@ int mpeg3video_ditherframeFastRGB555(mpeg3video_t *video, unsigned char **src, u
     		cr_in = &src[2][t2] + (video->in_x >> 1); 
     		data = (unsigned short*) output_rows[h];
 
-            if(video->out_w == video->horizontal_size) {
-                for(w = 0; w < video->horizontal_size; w++)  { 
+                for (w = 0; w < video->horizontal_size; w++)  { 
              		y_l = *y_in++; 
              		r_l = g_l = b_l = y_l << 16; 
              		g_l = (g_l + cr_to_gPtr[*cr_in] + cb_to_gPtr[*cb_in]) >> 16;
              		r_l = (r_l + cr_to_rPtr[*cr_in])  >> 16; 
              		b_l = (b_l + cb_to_bPtr[*cb_in])  >> 16;
-                    *data++ =   clipArray_ptr16r[r_l] | 
+                        *data++ =   clipArray_ptr16r[r_l] | 
                 		        clipArray_ptr16g[g_l] | 
                 		        clipArray_ptr16b[b_l];
+                        
                 	if(w & 1) { 
-                    	cr_in++; 
-                    	cb_in++; 
-                	} 
+                            cr_in++; 
+                            cb_in++; 
+                        } 
                 }
-            } else {
-                for(w = 0; w < video->out_w; w++) 
-            	   { 
+            }
+        } else {
+            int uv_subscript;
+            
+            for(h = 0; h < video->out_h; h++) { 
+    		t1 = video->y_table[h] + video->in_y;
+    		t2 = (t1 >> 1) * video->chrom_width;
+    		y_in  = &src[0][t1 * video->coded_picture_width] + video->in_x; 
+    		cb_in = &src[1][t2] + (video->in_x >> 2); 
+    		cr_in = &src[2][t2] + (video->in_x >> 1); 
+    		data = (unsigned short*) output_rows[h];
+
+                for (w = 0; w < video->out_w; w++)  { 
             		uv_subscript = video->x_table[w] / 2; 
             		r_l = g_l = b_l = (y_in[video->x_table[w]]) << 16; 
             		t1 = cr_in[uv_subscript];
@@ -1138,9 +1151,10 @@ int mpeg3video_ditherframeFastRGB555(mpeg3video_t *video, unsigned char **src, u
                     *data++ =   clipArray_ptr16r[r_l] | 
                 		        clipArray_ptr16g[g_l] | 
                 		        clipArray_ptr16b[b_l];
-                   }
+ 
                 }
-            } 
+            }
+        } 
             
      
     return 0;
@@ -1151,19 +1165,6 @@ int mpeg3video_present_frame(mpeg3video_t *video)
 	int i, j, k, l, h;
 	unsigned char **src = video->output_src;
 
-	if (doClippingArrays) {
-		for(h=-512;h<=512;h++) {
-			gClipArray_ptr[h]=CLIP(h);
-			gClipArray_ptr16r[h]=(CLIP(h) & 0xf8) << 7;
-			gClipArray_ptr16g[h]=(CLIP(h) & 0xf8) << 2;
-			gClipArray_ptr16b[h]=(CLIP(h) & 0xf8) >> 3;
-			if (gClipArray_ptr[h] == 0x00) 
-				gClipArray_ptr[h] = 0x01;
-			if (gClipArray_ptr16b[h] == 0x00) 
-				gClipArray_ptr16b[h] = 0x01;
-		}
-		doClippingArrays = 0;
-	}
 
 /* Copy YUV buffers */
 	if(video->want_yvu)
@@ -1224,7 +1225,7 @@ int mpeg3video_present_frame(mpeg3video_t *video)
         	    mpeg3video_ditherframeFastRGB555(video, src, video->output_rows);
     		else
     		    if (video->color_model == MPEG3_ARGB8888) 
-        	      mpeg3video_ditherframeFastRGBA(video, src, video->output_rows);
+        	      mpeg3video_ditherframeFastARGB(video, src, video->output_rows);
     		    else
     		mpeg3video_ditherframe(video, src, video->output_rows);
     	}
@@ -1271,3 +1272,41 @@ int mpeg3video_display_second_field(mpeg3video_t *video)
 /* Not used */
 	return 0;
 }
+
+void doClipArrays(mpeg3_t *file) {
+	long h,i;
+	
+	if (doClippingArrays) {
+                
+		for(h=-512;h<=512;h++) {
+			gClipArray[h+512]=CLIP(h);
+			gClipArray16r[h+512]=(CLIP(h) & 0xf8) << 7;
+			gClipArray16g[h+512]=(CLIP(h) & 0xf8) << 2;
+			gClipArray16b[h+512]=(CLIP(h) & 0xf8) >> 3;
+			if (gClipArray[h+512] == 0x00) 
+				gClipArray[h+512] = 0x01;
+			if (gClipArray16b[h+512] == 0x00) 
+				gClipArray16b[h+512] = 0x01;
+		}
+		doClippingArrays = 0;
+	}
+        
+    for(h=0;h<file->total_vstreams;h++) {   
+        memcpy(&file->vtrack[h]->video->clipArray_Red,&gClipArray,1028);
+        memcpy(&file->vtrack[h]->video->clipArray_Green,&gClipArray,1028);
+        memcpy(&file->vtrack[h]->video->clipArray_Blue,&gClipArray,1028);
+        memcpy(&file->vtrack[h]->video->clipArray16_Red,&gClipArray16r,1028*2);
+        memcpy(&file->vtrack[h]->video->clipArray16_Green,&gClipArray16g,1028*2);
+        memcpy(&file->vtrack[h]->video->clipArray16_Blue,&gClipArray16b,1028*2);
+        file->vtrack[h]->video->alphaChannelValue =0x00;
+        for(i=0;i<256;i++) {
+        	file->vtrack[h]->video->blueScreenMappingR[i] = i;
+        	file->vtrack[h]->video->blueScreenMappingG[i] = i;
+        	file->vtrack[h]->video->blueScreenMappingB[i] = i;
+        }
+        file->vtrack[h]->video->blueScreenMappingR[0]  = 1;
+        file->vtrack[h]->video->blueScreenMappingG[0]  = 1;
+        file->vtrack[h]->video->blueScreenMappingB[0]  = 1;
+    }
+}
+
