@@ -113,7 +113,7 @@ VMMaker class >> coreVMDirName [
 { #category : #initialisation }
 VMMaker class >> default [
 	"return a VMMaker initialised to build a default no-internal-plugins, no-external-plugins vm codebase"
-	^self forPlatform: Smalltalk platformName
+	^self forPlatform: SmalltalkImage current platformName
 ]
 
 { #category : #initialisation }
@@ -152,7 +152,7 @@ VMMaker class >> isActiveVMMakerClassFor: platformName [
 
 { #category : #accessing }
 VMMaker class >> machinesDirName [
-	^DirNames at: #machineType ifAbsent:[Smalltalk platformName]
+	^DirNames at: #machineType ifAbsent:[SmalltalkImage current platformName]
 ]
 
 { #category : #accessing }

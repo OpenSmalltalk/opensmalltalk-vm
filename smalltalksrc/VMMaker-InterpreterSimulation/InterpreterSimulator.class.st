@@ -32,7 +32,7 @@ Class {
 { #category : #'instance creation' }
 InterpreterSimulator class >> new [
 	^ self == InterpreterSimulator
-		ifTrue: [Smalltalk endianness == #big
+		ifTrue: [SmalltalkImage current endianness == #big
 				ifTrue: [InterpreterSimulatorMSB new]
 				ifFalse: [InterpreterSimulatorLSB new]]
 		ifFalse: [super new]
@@ -410,17 +410,6 @@ InterpreterSimulator >> functionPointerFor: primIndex inClass: lookupClass [
 
 	^(primIndex between: 1 and: MaxPrimitiveIndex)
 		ifTrue: [primitiveTable at: primIndex + 1]
-]
-
-{ #category : #'memory access' }
-InterpreterSimulator >> halfWordAt: byteAddress [
-    "Return the half-word at byteAddress which must be even."
-	^self subclassResponsibility
-]
-
-{ #category : #'memory access' }
-InterpreterSimulator >> halfWordAt: byteAddress put: halfWord [
-	^self subclassResponsibility
 ]
 
 { #category : #'memory access' }

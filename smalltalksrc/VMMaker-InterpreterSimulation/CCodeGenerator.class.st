@@ -294,13 +294,6 @@ CCodeGenerator >> codeString [
 	^stream contents
 ]
 
-{ #category : #public }
-CCodeGenerator >> codeStringForPrimitives: classAndSelectorList [ 
-"TPR - appears to be obsolete now"
-	self addMethodsForPrimitives: classAndSelectorList.
-	^self generateCodeStringForPrimitives
-]
-
 { #category : #inlining }
 CCodeGenerator >> collectInlineList [
 	"Make a list of methods that should be inlined."

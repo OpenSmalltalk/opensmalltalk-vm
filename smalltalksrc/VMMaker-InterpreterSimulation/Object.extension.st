@@ -128,6 +128,16 @@ Object >> isCObjectAccessor [
 ]
 
 { #category : #'*VMMaker-translation support' }
+Object >> primitive: primName [
+	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> primitive: primName parameters: parms [
+	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
 Object >> primitive: primID parameters: parmSpecs receiver: rcvrSpec [
 "belongs in CCG package"
 	| tMethod |
@@ -181,6 +191,11 @@ Object >> static: aBoolean [
 { #category : #'*VMMaker-translation support' }
 Object >> suppressFailureGuards: failureGuardFlag [
 	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> touch: something [
+	"For translation only; eliminated by CCodeGenerator"
 ]
 
 { #category : #'*VMMaker-translation support' }

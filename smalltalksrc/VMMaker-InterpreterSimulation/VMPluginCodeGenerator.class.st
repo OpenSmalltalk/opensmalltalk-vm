@@ -10,14 +10,6 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #public }
-VMPluginCodeGenerator >> codeStringForPrimitives: classAndSelectorList [ 
-"TPR - appears to be obsolete now"
-	self addClass: InterpreterPlugin.
-	InterpreterPlugin declareCVarsIn: self.
-	^super codeStringForPrimitives: classAndSelectorList 
-]
-
 { #category : #inlining }
 VMPluginCodeGenerator >> doInlining: inlineFlag [
 "do inlining for a plugin"
