@@ -5672,26 +5672,31 @@ Interpreter >> primitiveGreaterThan [
 
 { #category : #'system control primitives' }
 Interpreter >> primitiveImageName [
-	"When called with a single string argument, record the string 
-	as the current image file name. When called with zero 
-	arguments, return a string containing the current image file 
-	name. "
+	"When called with a single string argument, record the string as the current image file name. When called with zero arguments, return a string containing the current image file name."
 	| s sz sCRIfn okToRename |
 	argumentCount = 1
-		ifTrue: ["If the security plugin can be loaded, use it to check 
-			for rename permission. 
+		ifTrue: ["If the security plugin can be loaded, use it to check for rename permission. 
 			If not, assume it's ok"
-			sCRIfn _ self ioLoadFunction: 'secCanRenameImage' From: 'SecurityPlugin'.
+			sCRIfn := self ioLoadFunction: 'secCanRenameImage' From: 'SecurityPlugin'.
 			sCRIfn ~= 0
-				ifTrue: [okToRename _ self cCode: ' ((int (*) (void)) sCRIfn)()'.
+				ifTrue: [okToRename := self cCode: ' ((int (*) (void)) sCRIfn)()'.
 					okToRename ifFalse: [^ self primitiveFail]].
-			s _ self stackTop.
-			(self isBytes: s) ifFalse: [^ self primitiveFail].
-			successFlag ifTrue: [sz _ self stSizeOf: s.
-					self imageNamePut: s + BaseHeaderSize Length: sz.
+			"Make sure the arg is a plausible String"
+			s := self stackTop.
+			(self isBytes: s)
+				ifFalse: [^ self primitiveFail].
+			successFlag
+				ifTrue: [sz := self stSizeOf: s.
+					"if the image name is not accepted by the VM support code, fail"
+					(self imageNamePut: s + BaseHeaderSize Length: sz) = 0
+						ifTrue: [^ self primitiveFail].
 					self pop: 1]]
-		ifFalse: [sz _ self imageNameSize.
-			s _ self instantiateClass: (self splObj: ClassString) indexableSize: sz.
+
+		ifFalse: ["Just return the imageName"
+			sz := self imageNameSize.
+			s := self
+					instantiateClass: (self splObj: ClassString)
+					indexableSize: sz.
 			self imageNameGet: s + BaseHeaderSize Length: sz.
 			self pop: 1 thenPush: s]
 ]
@@ -8532,7 +8537,7 @@ Interpreter >> snapshot: embedded [
 				ifFalse: ["set Mac file type and creator; this is a noop on other platforms"
 					setMacType _ self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
 					setMacType = 0
-						ifFalse: [self cCode: '((int (*) (char*, char*, char*)) setMacType) (imageName, "STim", "FAST")']].
+						ifFalse: [self cCode: '((int (*) (char*, char*, char*)) setMacType) (getImageName(), "STim", "FAST")']].
 			self pop: 1].
 
 	"activeContext was unmarked in #snapshotCleanUp, mark it old "
@@ -8968,13 +8973,13 @@ Interpreter >> writeImageFile: imageBytes [
 	headerStart _ 0.  
 	headerSize _ 64.  "header size in bytes; do not change!"
 
-	f _ self cCode: 'sqImageFileOpen(imageName, "wb")'.
+	f _ self cCode: 'sqImageFileOpen(getImageName(), "wb")'.
 	f = nil ifTrue: [
 		"could not open the image file for writing"
 		self success: false.
 		^ nil].
 
-	headerStart _ self cCode: 'sqImageFileStartLocation(f,imageName,headerSize+imageBytes)'.
+	headerStart _ self cCode: 'sqImageFileStartLocation(f,getImageName(),headerSize+imageBytes)'.
 	self cCode: '/* Note: on Unix systems one could put an exec command here, padded to 512 bytes */'.
 	"position file to start of header"
 	self sqImageFile: f Seek: headerStart.
