@@ -1,4 +1,11 @@
-/* Acorn sqPlatformSpecific.h -- Platform-specific prototypes and definitions */
+/**************************************************************************/
+/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
+/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqPlatformSpecific.h                             */
+/*  Platform-specific prototypes and definitions                          */
+/**************************************************************************/
 
 /* How to use this file:
    This file is for general platform-specific macros and declarations.
@@ -49,6 +56,12 @@ if(1) {int sqfni;\
 	}\
 	dst[num] = 0;\
 }
+
+/* for experimental 64bit support period we keep the macros and have to undef them here */
+#undef dispatchFunctionPointer
+#undef dispatchFunctionPointerOnin
+/* we'd like to untypedef fptr too, but no way to do it */
+
 
 /* undefine clock macros that are implemented as functions */
 #undef ioMicroMSecs

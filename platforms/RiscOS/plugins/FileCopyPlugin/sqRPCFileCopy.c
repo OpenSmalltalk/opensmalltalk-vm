@@ -22,7 +22,7 @@ char fromname[MAXDIRNAMELENGTH];
 char toname[MAXDIRNAMELENGTH];
 
 /*** Functions ***/
-int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize) {
+sqInt sqCopyFilesizetosize(char *srcName, sqInt srcNameSize, char *dstName, sqInt dstNameSize) {
 	os_error *e;
 
 

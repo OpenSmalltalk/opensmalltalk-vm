@@ -294,7 +294,7 @@ void receivedDataSaveAck(wimp_message * wmessage) {
 
 /*** Clipboard Support interface to interp.c ***/
 
-int clipboardSize(void) {
+sqInt clipboardSize(void) {
 extern int	forceInterruptCheck(void);
 
 /* return the number of characters in the clipboard entry */
@@ -308,7 +308,7 @@ extern int	forceInterruptCheck(void);
 	return strlen(clipboardBuffer);
 }
 
-int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
+sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 // paste - clipboardSize() will actually do any fetching
 int clipSize, charsToMove, i;
 char *srcPtr, *dstPtr, cc;
@@ -327,7 +327,7 @@ char *srcPtr, *dstPtr, cc;
 	return charsToMove;
 }
 
-int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
+sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 /* copy count bytes, starting from startIndex, from byteArrayIndex to the
  * clipboard. return value not (yet) used but send the number of chars moved
  * the prim code has no way to handle any failure as yet, so do our best

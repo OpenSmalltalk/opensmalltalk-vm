@@ -1188,7 +1188,7 @@ windowDescriptorBlock * thisWindow;
 
 /*** I/O Primitives ***/
 
-int ioSizeOfWindow(int windowIndex) {
+sqInt ioSizeOfWindow(sqInt windowIndex) {
 /* ioSizeOfWindow: arg is int windowIndex. Return the size of the specified
  * window in (width<<16 || height) format like ioScreenSize.
  * Return -1 for failure - typically invalid windowIndex
@@ -1351,12 +1351,12 @@ windowDescriptorBlock * thisWindow;
 	return true;
 }
 
-int ioScreenSize(void) {
+sqInt ioScreenSize(void) {
 /* return the screen size for the main Display window */
 	return ioSizeOfWindow(1);
 }
 
-int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
+sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY) {
 /* Move 1-bit form to pointer buffer and use mask to affect result.
  * Remember RPC pointer is 2-bits/pixel to allow 3 colours + mask.
  * As of Sq2.2, there can also be a mask 1-bit form specified.
@@ -1399,18 +1399,18 @@ os_error *e;
 	return true;
 }
 
-int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
+sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY) {
 /* older API for cursor setting */
 	return ioSetCursorWithMask(cursorBitsIndex, NULL, offsetX, offsetY);
 }
 
 /* Backwards compat stub */
-int ioShowDisplay( int dispBitsIndex, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB) {
+sqInt ioShowDisplay( sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth, sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB) {
 	ioShowDisplayOnWindow( (unsigned *)dispBitsIndex, width, height, depth, affectedL, affectedR, affectedT, affectedB, 1);
 }
 
 
-int ioForceDisplayUpdate(void) {
+sqInt ioForceDisplayUpdate(void) {
 	PRINTF(("\\t ioForceDisplayUpdate\n"));
 	// This immediate display update seems to display the right bits but
 	// takes a huge % of the machine time. By going back to the older
@@ -1421,7 +1421,7 @@ int ioForceDisplayUpdate(void) {
 }
 
 
-int ioSetFullScreen(int fullScreenWanted) {
+sqInt ioSetFullScreen(sqInt fullScreenWanted) {
 /* if fullScreenWanted and we aren't already running fullScreen,
    change the window size and store the current origin and size
    for a later restore.
@@ -1484,7 +1484,7 @@ windowDescriptorBlock * thisWindow;
 	return true;
 }
 
-int ioSetDisplayMode(int width, int height, int depth, int fullScreenFlag) {
+sqInt ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullScreenFlag) {
 /* if fullScreenFlag, we are to try to change to a screen mode that matches
  * width, height and depth and then go fullscreen in that mode. Remember
  * the original screen mode _even if we change several times _. Somehow..
@@ -1536,14 +1536,14 @@ static os_box prevSize = {0,0,0,0};
 	return false;
 }
 
-int ioScreenDepth(void) {
+sqInt ioScreenDepth(void) {
 // what is the bpp setting of the screen right now?
 	return screenBitPerPixel;
 }
 
-int ioHasDisplayDepth(int bitsPerPixel) {
+sqInt ioHasDisplayDepth(sqInt bitsPerPixel) {
 // return true for all supported bpp supported. 
-	switch(bitsPerPixel) {
+	switch((int)bitsPerPixel) {
 // -ve numbers invoke a littleendian display - doesn't quite work for
 // some reason.
 //		case -8:

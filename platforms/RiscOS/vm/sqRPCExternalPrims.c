@@ -22,14 +22,15 @@
 
 
 
-int ioFindExternalFunctionIn(char *symbol, int moduleHandle) {
+void* ioFindExternalFunctionIn(char *symbol, void* moduleHandle) {
 /* find the function named symbol in the known loaded module moduleHandle */
-int fnIndex= 0, address;
+int fnIndex= 0;
+void* address;
 const char * foundName;
 
 	PRINTF(( "\\t ioFindExternalFunctionIn: %s", symbol));
 
-	while ( (address = (int)rink_enum_named((rink_seghandle)moduleHandle, &fnIndex, &foundName)), fnIndex >= 0) {
+	while ( (address = (void*)rink_enum_named((rink_seghandle)moduleHandle, &fnIndex, &foundName)), fnIndex >= 0) {
 		if ( strcmp(foundName, symbol) == 0) {
 			PRINTF(( "found %s\n",foundName));
 			return address;
@@ -38,10 +39,10 @@ const char * foundName;
 
 	/* failed to find the function... */
 	PRINTF(( " did not find: %s\n", symbol));
-	return 0;
+	return (void*)NULL;
 }
 
-int ioLoadModule(char *modName) {
+void* ioLoadModule(char *modName) {
 /* a routine to load a segment(module). Takes a pointer to the name
  * of the directory the code and links files are stored in
  */
@@ -60,7 +61,7 @@ const rink_check CheckBlock = {"SqueakSO", 100, 0};
 	/* load the segment... */
 	if((e = rink_load(&CheckBlock, codeName, &moduleHandle)) != NULL) {
 		PRINTF(( "\\t Plugin load failed: %s\n", codeName));
-		return 0;
+		return (void*)NULL;
 	}
 	
 	/* OK, let's have a look at the version of the segment we've just
@@ -71,10 +72,10 @@ const rink_check CheckBlock = {"SqueakSO", 100, 0};
 	/* report the version */
 	PRINTF(("\\t Plugin version: %d:%d\n", Version->main, Version->code));
 
-	return (int)moduleHandle;
+	return (void*)moduleHandle;
 }
 
-int ioFreeModule(int moduleHandle) {
+sqInt ioFreeModule(void* moduleHandle) {
 	PRINTF(( "\\t Plugin unload %d\n", moduleHandle));
 	rink_unload((rink_seghandle)moduleHandle);
 	return 1;

@@ -1,3 +1,12 @@
+/**************************************************************************/
+/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
+/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqArguments.h                                    */
+/*  handle commandline arguments                                          */
+/**************************************************************************/
+
 #ifndef __SQ_ARGS_H
 #define __SQ_ARGS_H
 

@@ -289,12 +289,12 @@ int width;
 
 /*** I/O Primitives ***/
 
-int ioBeep(void) {
+sqInt ioBeep(void) {
 	os_writec((char)7);
 	return true;
 }
 
-int ioExit(void) {
+sqInt ioExit(void) {
 	exit(1);
 	return 1;
 }
@@ -321,7 +321,7 @@ extern void SetDefaultPointer(void);
 	if ( (int)logfile > 0) fclose( logfile);
 }
 
-int ioMicroMSecs(void) {
+sqInt ioMicroMSecs(void) {
 /* The
    function ioMicroMSecs() is used only to collect timing statistics
    for the garbage collector and other VM facilities. (The function
@@ -338,7 +338,7 @@ _kernel_swi_regs regs;
 
 }
 
-int ioSeconds(void) {
+sqInt ioSeconds(void) {
 /*	  Unix epoch to Smalltalk epoch conversion.
 	(Date newDay: 1 year: 1970) asSeconds
 			- (Date newDay: 1 year: 1901) asSeconds
@@ -404,11 +404,11 @@ char temp[MAXDIRNAMELENGTH];
 	 return canonicalizeFilename(temp, cString) ;
 }
 
-int imageNameSize(void) {
+sqInt imageNameSize(void) {
 	return strlen(imageName);
 }
 
-int imageNameGetLength(int sqImageNameIndex, int length) {
+sqInt imageNameGetLength(sqInt sqImageNameIndex, sqInt length) {
 int count;
 
 	count = strlen(imageName);
@@ -418,7 +418,7 @@ int count;
 	sqStringFromFilename( (char *)sqImageNameIndex, imageName, count);
 }
 
-int imageNamePutLength(int sqImageNameIndex, int length) {
+sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length) {
 extern void SetupWindowTitle(void);
 
 	if (!canonicalizeFilenameToString((char*)sqImageNameIndex, length, imageName)) return false;
@@ -509,11 +509,11 @@ unsigned char *dstPtr;
 
 /*** VM Home Directory Path ***/
 
-int vmPathSize(void) {
+sqInt vmPathSize(void) {
 	return strlen(vmPath);
 }
 
-int vmPathGetLength(int sqVMPathIndex, int length) {
+sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length) {
 int count;
 
 	count = strlen(vmPath);
@@ -526,19 +526,19 @@ int count;
 
 
 /* null version */
-int ioDisablePowerManager(int disableIfNonZero) {
+sqInt ioDisablePowerManager(sqInt disableIfNonZero) {
 return 0;
 }
 
 /*** Profiling place holders ***/
 
-int clearProfile(void) {}
+sqInt clearProfile(void) {}
 
-int dumpProfile(void) {}
+sqInt dumpProfile(void) {}
 
-int startProfiling(void) {}
+sqInt startProfiling(void) {}
 
-int stopProfiling(void) {}
+sqInt stopProfiling(void) {}
 
 /*** System Attributes ***/
 char * osVersionString(void) {
@@ -546,7 +546,7 @@ char * osVersionString(void) {
 	return versionString;
 }
 
-char * getAttributeString(int id) {
+char * getAttributeString(sqInt id) {
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options
@@ -555,7 +555,7 @@ char * getAttributeString(int id) {
 	*/
 char * tmp;
 
-	switch (id) {
+	switch ((int)id) {
 		case 0: return vmPath; break;
 		case 1: return imageName; break;
 		case 1001: return "RiscOS"; break;
@@ -579,11 +579,11 @@ char * tmp;
 	return ""; 
 }
 
-int attributeSize(int id) {
+sqInt attributeSize(sqInt id) {
 	return strlen(getAttributeString(id));
 }
 
-int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
+sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length) {
 char *srcPtr, *dstPtr, *end;
 int charsToMove;
 

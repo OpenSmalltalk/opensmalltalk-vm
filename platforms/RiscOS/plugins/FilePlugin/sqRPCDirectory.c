@@ -70,7 +70,7 @@ int tzoffset;
 	return (int)low + (tzoffset/100);
 }
 
-int dir_Create(char *pathString, int pathStringLength) {
+sqInt dir_Create(char *pathString, sqInt pathStringLength) {
 	/* Create a new directory with the given path. By default, this
 	   directory is created in the current directory. Use
 	   a full path name to create directories elsewhere. */
@@ -86,7 +86,7 @@ int dir_Create(char *pathString, int pathStringLength) {
 	return true;
 }
 
-int dir_Delete(char *pathString, int pathStringLength) {
+sqInt dir_Delete(char *pathString, sqInt pathStringLength) {
 	/* Delete the existing directory with the given path. */
 	/* For now replicate the normal sqFileDeleteNameSize, since that appears to be adequate, except for returning true if all is well - essential ! */
 
@@ -100,11 +100,11 @@ int dir_Delete(char *pathString, int pathStringLength) {
 	return true;
 }
 
-int dir_Delimitor(void) {
+sqInt dir_Delimitor(void) {
 	return DELIMITOR;
 }
 
-int dir_LookupRoot(int context, char *fname, int *fnameLength, int *creationDate, int *modificationDate, int *isDirectory, int *sizeIfFile) {
+sqInt dir_LookupRoot(int context, char *fname, sqInt *fnameLength, sqInt *creationDate, sqInt *modificationDate, sqInt *isDirectory, sqInt *sizeIfFile) {
 #define F2HJump 4
 	int junk, run_total, adfs_flop=0, adfs_hard=0, scsifs_flop=0, scsifs_hard=0, ramfs_flop=0, ramfs_hard=0, cdfs_hard=0;
 	char discid[20];
@@ -183,10 +183,10 @@ decode_disc_id:
 	return ENTRY_FOUND;
 }
 
-int dir_Lookup(char *pathString, int pathStringLength, int index,
+sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   /* outputs: */
-  char *fname, int *fnameLength, int *creationDate, int *modificationDate,
-  int *isDirectory, int *sizeIfFile) {
+  char *fname, sqInt *fnameLength, sqInt *creationDate, sqInt *modificationDate,
+  sqInt *isDirectory, sqInt *sizeIfFile) {
 /* Lookup the index-th entry of the directory with the given path, starting
    at the root of the file system. Set the name, name length, creation date,
    creation time, directory flag, and file size (if the entry is a file).
@@ -247,7 +247,7 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
 
 /* TPR addition to attempt to improve portability */
-int dir_SetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, char * owner) {
+sqInt dir_SetMacFileTypeAndCreator(char * filename, sqInt filenamesize, char* type, char * owner) {
 /* set the type and owner of the named file.
  * return true if ok, false otherwise.
  * filename is a Squeak filename string, so convert it to a C filename
@@ -279,7 +279,7 @@ int dir_SetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, 
 	return true;
 }
 
-int dir_GetMacFileTypeAndCreator(char * filename, int filenamesize, char* type, char * owner) {
+sqInt dir_GetMacFileTypeAndCreator(char * filename, sqInt filenamesize, char* type, char * owner) {
 /* tacky, tacky. Why this ridiculous dependence on Mac idiocies? */
 	return false;
 }
@@ -304,7 +304,7 @@ int length;
 	return obj_type;
 }
 
-int dir_DirectoryExists(char *pathString, int pathStringLength) {
+sqInt dir_DirectoryExists(char *pathString, sqInt pathStringLength) {
 	/* Is there an existing directory with the given path? */
 
 	/* copy the file name into a null-terminated C string */
@@ -314,7 +314,7 @@ int dir_DirectoryExists(char *pathString, int pathStringLength) {
 	return (fsobject_Exists(name) == fileswitch_IS_DIR);
 }
 
-int dir_FileExists(char *pathString, int pathStringLength) {
+sqInt dir_FileExists(char *pathString, sqInt pathStringLength) {
 	/* Is there an existing file with the given path? */
 
 	/* copy the file name into a null-terminated C string */

@@ -868,7 +868,7 @@ void KeyBufAppend(int keystate) {
 /*************************/
 
 /* retrieve the next input event from the OS */
-int ioGetNextEvent(sqInputEvent *evt) {
+sqInt ioGetNextEvent(sqInputEvent *evt) {
 #ifdef DEBUG
 	{static int once = 0;
 		if ( once <1 ) {
@@ -894,7 +894,7 @@ int ioGetNextEvent(sqInputEvent *evt) {
 
 
 /* set an asynchronous input semaphore index for events */
-int ioSetInputSemaphore(int semaIndex) {
+sqInt ioSetInputSemaphore(sqInt semaIndex) {
 	PRINTF(("\\t ioSetInputSemaphore\n"));
 	if( semaIndex < 1)
 		return primitiveFail();
@@ -902,7 +902,7 @@ int ioSetInputSemaphore(int semaIndex) {
 	return true;
 }
 
-int ioRelinquishProcessorForMicroseconds(int microSeconds) {
+sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 /* This operation is platform dependent. On the Mac, it simply calls
  * HandleEvents(), which gives other applications a chance to run.
  * Here, we use microSeconds as the parameter to HandleEvents, so that
@@ -916,7 +916,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 }
 
 
-int ioProcessEvents(void) {
+sqInt ioProcessEvents(void) {
 /* This is called only from checkForInterrupts as a last resort
  * to make sure that IO polling is done at least occasionally no matter what
  * the image is up to. We don't force an interrupt check here because we're
@@ -929,7 +929,7 @@ int ioProcessEvents(void) {
 /* older polling state style access - completely unused by images after
  * about 3.6 */
 
-int nextKeyPressOrNil(void) {
+sqInt nextKeyPressOrNil(void) {
 /*  return the next keypress in the buffer, or -1 if nothing there */
 int keystate;
 	if (keyBufGet == keyBufPut) {
@@ -941,7 +941,7 @@ int keystate;
 	return keystate;
 }
 
-int peekKeyPressOrNil(void) {
+sqInt peekKeyPressOrNil(void) {
 /*  return the next keypress in the buffer, or -1 if nothing there */
 int keystate;
 	if (keyBufGet == keyBufPut) {
@@ -951,23 +951,23 @@ int keystate;
 	}
 	return keystate;
 }
-int ioGetButtonState(void) {
+sqInt ioGetButtonState(void) {
 	HandleEventsNotTooOften();  /* process all pending events */
 	return buttonState;
 }
 
-int ioGetKeystroke(void) {
+sqInt ioGetKeystroke(void) {
 	HandleEventsNotTooOften();  /* process all pending events */
 	return nextKeyPressOrNil();
 }
 
-int ioMousePoint(void) {
+sqInt ioMousePoint(void) {
 /* return the mouse point as 16bits of x | 16bits of y */
 	HandleEventsNotTooOften();  /* process all pending events */
 	return (savedMousePositionP.x << 16 | savedMousePositionP.y & 0xFFFF);
 }
 
-int ioPeekKeystroke(void) {
+sqInt ioPeekKeystroke(void) {
 	HandleEventsNotTooOften();  /* process all pending events */
 	return peekKeyPressOrNil();
 }

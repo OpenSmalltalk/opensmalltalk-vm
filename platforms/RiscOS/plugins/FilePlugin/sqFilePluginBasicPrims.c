@@ -51,8 +51,8 @@
 	positioning operation to be done automatically if needed.
 
 	typedef struct {
-		File	*file;
 		int		sessionID;
+		File	*file;
 		int		writable;
 		squeakFileOffsetType		fileSize; 
 		int		lastOp;  // 0 = uncommitted, 1 = read, 2 = write -
@@ -246,7 +246,7 @@ os_fw handle;
 
 /* primitive support */
 
-int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag) {
+sqInt sqFileOpen(SQFile *f, sqInt sqFileNameIndex, sqInt sqFileNameSize, sqInt writeFlag) {
 /* Opens the given file using the supplied sqFile structure
  * to record its state. Fails with no side effects if f is
  * already open. Files are always opened in binary mode;
@@ -293,7 +293,7 @@ OpenFileListEntry * entry;
 	return true;
 }
 
-int sqFileClose(SQFile *f) {
+sqInt sqFileClose(SQFile *f) {
 	/* Close the given file. */
 	OpenFileListEntry *entry;
 
@@ -320,7 +320,7 @@ int sqFileClose(SQFile *f) {
 	f->fileSize = 0;
 }
 
-int sqFileAtEnd(SQFile *f) {
+sqInt sqFileAtEnd(SQFile *f) {
 /* Return true if the file's read/write head is at the end of the file.*/
 int pntr;
 
@@ -344,7 +344,7 @@ squeakFileOffsetType position;
 	return FILE_POSITION(f);
 }
 
-int sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
+sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 /* Set the file's read/write head to the given position. */
 	if (!sqFileValid(f)) {
 		PRINTF(("\\t sqFileSetPosition: attempt to set invalid file\n"));
@@ -364,14 +364,14 @@ int extent;
 	return f->fileSize;
 }
 
-int sqFileFlush(SQFile *f) {
+sqInt sqFileFlush(SQFile *f) {
 /* Return the length of the given file. */
 	if (!sqFileValid(f)) FAIL();
 	xosargs_ensurew(FILE_HANDLE(f));
 	return 1;
 }
 
-int sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
+sqInt sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
 /* Truncate the file*/
 int extent;
 	if (!sqFileValid(f)) FAIL();
@@ -383,7 +383,7 @@ int extent;
 	return 1;
 }
 
-size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
+size_t sqFileReadIntoAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex) {
 /* Read count bytes from the given file into byteArray starting at
  * startIndex. byteArray is the address of the first byte of a
  * Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -404,7 +404,7 @@ int bytesUnread;
 	return count - bytesUnread;
 }
 
-size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
+size_t sqFileWriteFromAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex) {
 /* Write count bytes to the given writable file starting at startIndex
  * in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
  * of byteArray and startIndex).
@@ -432,7 +432,7 @@ int extent;
 	return count;
 }
 
-int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameIndex, int newNameSize) {
+sqInt sqFileRenameOldSizeNewSize(sqInt oldNameIndex, sqInt oldNameSize, sqInt newNameIndex, sqInt newNameSize) {
 char cNewName[MAXDIRNAMELENGTH];
 
 	if (!canonicalizeFilenameToString((char*)oldNameIndex, oldNameSize, cFilename)) FAIL();
@@ -443,7 +443,7 @@ char cNewName[MAXDIRNAMELENGTH];
 	}
 }
 
-int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize) {
+sqInt sqFileDeleteNameSize(sqInt sqFileNameIndex, sqInt sqFileNameSize) {
 os_error *err;
 fileswitch_object_type objtype;
 bits loadaddr, execaddr;
@@ -466,18 +466,18 @@ fileswitch_attr attr;
 	}
 }
 
-int sqFileThisSession() {
+sqInt sqFileThisSession() {
 	return thisSession;
 }
 
-int sqFileValid(SQFile *f) {
+sqInt sqFileValid(SQFile *f) {
 	return (
 		(f != NULL) &&
 		(f->file != NULL) &&
 		(f->sessionID == thisSession));
 }
 
-int sqFileInit(void) {
+sqInt sqFileInit(void) {
 /* Create a session ID that is unlikely to be repeated.
  * Zero is never used for a valid session number.
  * Should be called once at startup time.
@@ -488,7 +488,7 @@ int sqFileInit(void) {
 	return 1;
 }
 
-int sqFileShutdown(void) {
+sqInt sqFileShutdown(void) {
 /* might be  good place to close files */
 OpenFileListEntry *entry;
 	entry = openFileListRoot;

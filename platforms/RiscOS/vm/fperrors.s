@@ -1,3 +1,11 @@
+;/**************************************************************************/
+;/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
+;/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+;/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+;/*  other machines not yet tested.                                        */
+;/*                       fperrors.s                                       */
+;/*  fudge the FPE status to get /0 errors properly                        */
+;/**************************************************************************/
 
 R0      RN      0
 sp      RN      13

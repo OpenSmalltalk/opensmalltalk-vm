@@ -3,15 +3,11 @@
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
 /*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
 /*  other machines not yet tested.                                        */
-/*                       sqConfig.h                                       */
-/*  platform identification and configuration                             */
+/*                  config.h --                                           */
+/*  configuration stuff analogous to that produced on *nix machines whenv */
+/*  you run the spawn-of-satan-autoconf stuff. */
 /**************************************************************************/
 
-
-
-#if defined(ACORN)
-# if defined(SQ_CONFIG_DONE)
-#   error configuration conflict
-# endif
-# define SQ_CONFIG_DONE
-#endif
+#define SIZEOF_VOID_P  4
+#define HAVE_INTERP_H 1
+#define SIZEOF_LONG_LONG 8

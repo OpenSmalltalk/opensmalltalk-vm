@@ -17,7 +17,7 @@
 #include "sq.h"
 
 
-int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, double vScale, int landscapeFlag) {
+sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double hScale, double vScale, sqInt landscapeFlag) {
 	/* experimental: print a form with the given bitmap, width, height, and depth at the given horizontal and vertical scales in the given orientation */
 		PRINTF(("ioFormPrint width %d height %d depth %d hScale %f vScale %f landscapeFlag %d\n", width, height, depth, hScale, vScale, landscapeFlag));
 		bitsAddr;
