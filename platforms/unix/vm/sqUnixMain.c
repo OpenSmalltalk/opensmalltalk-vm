@@ -36,12 +36,13 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-03-05 05:59:28 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-07 08:51:39 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
 #include "aio.h"
 #include "sqUnixCharConv.h"
+#include "debug.h"
 
 #ifdef ioMSecs
 # undef ioMSecs
@@ -1076,7 +1077,8 @@ int main(int argc, char **argv, char **envp)
   /* we need these, even if not referenced from main executable */
   (void)sq2uxPath;
   (void)ux2sqPath;
-
+  sqDebugAnchor();
+  
   return 0;
 }
 
