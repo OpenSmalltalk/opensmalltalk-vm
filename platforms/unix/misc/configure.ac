@@ -220,7 +220,7 @@ AC_C_DOUBLE_ORDER
 # Configure files.
 
 AC_CONFIG_HEADER(sqUnixConfig.h)
-$srcdir/util/mkMake $srcdir/.. > make_auto
+$srcdir/util/mkMake $srcdir/../../.. > make_auto
 AC_SUBST_FILE(make_auto)
 make_auto=make_auto
 AC_OUTPUT(Makefile inisqueak)

@@ -9698,7 +9698,7 @@ EOF
 
 ac_config_headers="$ac_config_headers sqUnixConfig.h"
 
-$srcdir/util/mkMake $srcdir/.. > make_auto
+$srcdir/util/mkMake $srcdir/../../.. > make_auto
 
 make_auto=make_auto
 ac_config_files="$ac_config_files Makefile inisqueak"
