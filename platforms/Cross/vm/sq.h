@@ -6,8 +6,9 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.10 2003/11/12 23:10:31 nedkonz Exp $
+*   RCSID:   $Id: sq.h,v 1.11 2003/11/13 16:18:54 nedkonz Exp $
 *
+*	11/12/03	nedkonz - float bug fix for gcc 3.3 optimization
 *	05/20/03	tim - move browser related macros in front of
 *			include of sqPlatformSpecific.h
 *	02/26/03	tim change browser plugin support code
