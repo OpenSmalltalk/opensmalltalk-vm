@@ -42,6 +42,8 @@ Step Two: Get the current Sourceforge Platforms tree
 	C.	cvs -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak login
 		(when prompted for a password, just hit enter)
 	D.	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak co platforms
+	E.  For printing support get RealPrintingPlugin-JMM.cs.gz, from http://swiki.gsug.org:8080/sqfixes/all 
+		decompress it and fileIn
 
 After so much mumbo-jumbo, your squeak folder should have a directory entitled platforms.
 
@@ -69,7 +71,8 @@ cs
 			FileCopyPlugin
 			IntegerPokerPlugin
 			Mpeg3Plugin
-			TestOSAPlugin)
+			TestOSAPlugin
+			RealPrintingPlugin)
 	G.	Press button "Save Configuration" to save your configuration for later.
 	H.	Press button "Generate All" to build the interpreter
 
@@ -108,9 +111,13 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
 	B.	Click on the Sources folder in the left pane
 	C.	Select "Project -> Add Files..."
         D.      Add the 'Cross' folder, and the 'Mac OS' folder, from the platform squeak cvs folder
+				Project/Add Files ... "GeniePlugin.c to Sources
+				Map "sqGnu.h" to "platforms/unix/vm/sqGnu.h"
+				Add (for both targets) "Target/Build Settings/Other Compiler Flags" -DI_AM_CARBON_EVENT
                 now delete the references or uncheck the following files/folders
                 FileCopyPlugin
                 Mpeg3Plugin
+                RealPrintingPlugin
                 SqueakFFIPrims
                 TestOSAPlugin
                 PluginSDK 4.01a
@@ -123,7 +130,7 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
                 
                 all the files that start with my in the mac vm folder
                 
-                3.2.2 Release Notes.rtf
+                3.x.x Release Notes.rtf
                 platform.exports
                 readme
                 resources.sit.hqx
