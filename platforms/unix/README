@@ -7,14 +7,18 @@ Full documentation can be found in:
 
 For the impatient:
 
-1. Type 'make' in the directory containing this file (the one you are
-   reading right now).
+1. Change to the 'platforms/unix' directory (if you aren't already
+   there) and type 'make' to build the VM and plugins:
 
-2. Install the VM, plugins, man pages and documentation:
+        cd platforms/unix
+        make
+
+2. Install the VM, plugins, man pages and documentation (as root,
+   note the 'sudo' command to gain superuser privileges):
 
 	sudo make install
 
-3. If you haven't used Squeak before, RTFM:
+3. If you haven't used Squeak before, read the manual:
 
 	man squeak
 
@@ -25,4 +29,4 @@ Note: The latest documentation and releases are available from:
    http://squeak.hpl.hp.com/~piumarta/squeak
 
 ----
-Last edited: 2005-03-16 22:36:18 by piumarta on squeak.hpl.hp.com
+Last edited: 2005-03-16 22:39:22 by piumarta on squeak.hpl.hp.com
