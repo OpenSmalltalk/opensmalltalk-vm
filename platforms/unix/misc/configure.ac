@@ -41,7 +41,7 @@
 # Hacked further by Lex Spoon (lex@cc.gatech.edu) for various things.
 # Along the way, it has been updated to a newer autoconf version.
 
-AC_INIT(squeak, 3.2a-4653)
+AC_INIT(squeak, 3.2-4743)
 AC_CONFIG_SRCDIR(inisqueak.in)
 
 VERSION=$PACKAGE_VERSION
