@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.8 2002/04/27 18:58:38 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.9 2003/03/05 19:57:02 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -275,14 +275,14 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 #else
 #if !I_AM_CARBON_EVENT
     microSeconds;
-    if ((getNextWakeupTick() <= (ioMSecs() & 536870911)) && (getNextWakeupTick() != 0)) {
-        setInterruptCheckCounter(0);
-        return;
-    }
 	if (gThreadManager)
             SqueakYieldToAnyThread();
 	else
 	    ioProcessEvents();
+    if ((getNextWakeupTick() <= (ioMSecs() & 536870911)) && (getNextWakeupTick() != 0)) {
+        setInterruptCheckCounter(0);
+        return;
+    }
 #endif
 #endif	
 }
