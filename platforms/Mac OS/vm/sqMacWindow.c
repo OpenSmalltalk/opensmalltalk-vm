@@ -6,11 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.3 2001/12/20 06:06:05 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.4 2001/12/27 22:53:03 johnmci Exp $
 *
 *   NOTES: See change log below.
-*			12/19/2001 Fix for USB on non-usb devices, and fix for ext keyboard use volatile
-*
+*	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
+*	12/27/2001 JMM Added support to load os-x Bundles versus CFM, have broken CFM code too.
 *
 *****************************************************************************/
 #include "sq.h"
@@ -55,6 +55,10 @@
 	#include <unistd.h>
 	struct timeval	 startUpTime;
 	unsigned int	lowResMSecs= 0;
+        
+//Notes turning USE_ITIMER on is needed for production performance!!! You must define it
+// However turning this on causes grief for gnu profiling and for gnu debugging so when debugging turn it off!
+
 	#define USE_ITIMER
 	#define LOW_RES_TICK_MSECS 16
 #endif
@@ -1469,13 +1473,15 @@ int ioLoadModule(char *pluginName) {
 	libHandle = LoadLibViaPath(pluginName, vmPath);
 	if (libHandle != nil) return (int) libHandle;
     
-    /* Lastly look for it as a shared import library */
-    
-    CopyCStringToPascal(pluginName,tempPluginName);
-    err = GetSharedLibrary(tempPluginName, kAnyCFragArch, kLoadCFrag, &libHandle, &mainAddr, errorMsg);
-	if (err == noErr) 
-	    err = GetSharedLibrary(tempPluginName, kAnyCFragArch, kFindCFrag, &libHandle, &mainAddr, errorMsg);
-	if (libHandle != nil) return (int) libHandle;
+    #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
+        /* Lastly look for it as a shared import library */
+        
+        CopyCStringToPascal(pluginName,tempPluginName);
+        err = GetSharedLibrary(tempPluginName, kAnyCFragArch, kLoadCFrag, &libHandle, &mainAddr, errorMsg);
+            if (err == noErr) 
+                err = GetSharedLibrary(tempPluginName, kAnyCFragArch, kFindCFrag, &libHandle, &mainAddr, errorMsg);
+            if (libHandle != nil) return (int) libHandle;
+    #endif
 #endif
     
 	return nil;
@@ -1485,11 +1491,127 @@ int ioLoadModule(char *pluginName) {
 	Find the function with the given name in the moduleHandle.
 	WARNING: never primitiveFail() within, just return 0.
 */
-int ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
+
+#if defined ( __APPLE__ ) && defined ( __MACH__ ) && JMMFoo
+/* This code is here because it was mentioned as a way to link to CFM 
+libraries. However it seems to core dump the VM when we go to set the interpreter ptr
+Getting the Module name seemed to work. 
+This code comes from the Carbon samples.
+
+ ?THought I wonder if the malloc is return non-aligned address (shouldnt)?
+ ?However others can try to see if this works 
+ ?The code would need to try as a bundle, if failure then try as a CFM
+ ?Not quite sure how to carry forward info about bundle, or CFM
+ ?Perhaps a structure is needed pass back that indicates what the handle is? 
+ 
+      This of course goes in ioFindExternalFunctionIn, it's glue code that a CFM 
+      application does for you, but we must manually do for mach-o applications
+      
+     functionPtr = MachOFunctionPointerForCFMFunctionPointer(functionPtr);
+    
+*/
+
+//
+//	This function allocates a block of CFM glue code which contains the instructions to call CFM routines
+//
+UInt32 CFMLinkageTemplate[6] = {0x3D800000, 0x618C0000, 0x800C0000, 0x804C0004, 0x7C0903A6, 0x4E800420};
+
+void	*MachOFunctionPointerForCFMFunctionPointer( void *cfmfp );
+void	*MachOFunctionPointerForCFMFunctionPointer( void *cfmfp )
+{
+    UInt32	*mfp;
+    
+    mfp = malloc(sizeof(CFMLinkageTemplate)); //No we don't need to free, this linkage might be needed later. Freed when we terminate!
+    mfp[0] = CFMLinkageTemplate[0] | ((UInt32)cfmfp >> 16);
+    mfp[1] = CFMLinkageTemplate[1] | ((UInt32)cfmfp & 0xFFFF);
+    mfp[2] = CFMLinkageTemplate[2];
+    mfp[3] = CFMLinkageTemplate[3];
+    mfp[4] = CFMLinkageTemplate[4];
+    mfp[5] = CFMLinkageTemplate[5];
+ 
+    MakeDataExecutable( mfp, sizeof(CFMLinkageTemplate) );
+    return( mfp );
+}
+
+#endif
+
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+int 	ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
+	void * 		functionPtr = 0;
+	OSErr 		err;
+        CFStringRef	theString;
+        
+	if (!moduleHandle) 
+            return nil;
+            
+        theString = CFStringCreateWithCString(kCFAllocatorDefault,lookupName,kCFStringEncodingMacRoman);
+        if (theString == nil) 
+            return nil;
+        functionPtr = (void*)CFBundleGetFunctionPointerForName((CFBundleRef) moduleHandle,theString);
+        CFRelease(theString);
+                
+	return (int) functionPtr;
+}
+
+/* ioFreeModule:
+	Free the module with the associated handle.
+	WARNING: never primitiveFail() within, just return 0.
+*/
+int ioFreeModule(int moduleHandle) {
+	if (!moduleHandle) 
+            return 0;
+	CFBundleUnloadExecutable((CFBundleRef) moduleHandle);
+	CFRelease((CFBundleRef) moduleHandle);
+        return 0;
+}
+
+CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
+	FSSpec				fileSpec;
+        char				tempDirPath[1024];
+ 	CFragConnectionID		libHandle = 0;
+	OSErr				err = noErr;
+        FSRef				theFSRef;
+        CFURLRef 			theURLRef;
+        CFBundleRef			theBundle;
+
+	strncpy(tempDirPath,pluginDirPath,1023);
+        if (tempDirPath[strlen(tempDirPath)-1] != ':')
+            strcat(tempDirPath,":");
+            
+        strcat(tempDirPath,libName);
+        strcat(tempDirPath,".bundle");  //Watch out for the bundle suffix, not a normal thing in squeak plugins
+	err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
+	if (err) return nil; /* bad plugin directory path */
+
+        
+        err = FSpMakeFSRef (&fileSpec, &theFSRef);
+        if (err != noErr)
+	    return nil;
+               
+        theURLRef =  CFURLCreateFromFSRef (kCFAllocatorDefault, &theFSRef);
+        if (theURLRef == nil) 
+            return nil;
+        
+        theBundle = CFBundleCreate(NULL,theURLRef);
+        CFRelease(theURLRef);
+        if (theBundle == nil) 
+            return nil;
+            
+        if (!CFBundleLoadExecutable(theBundle)) {
+            CFRelease(theBundle);
+            return nil;
+        }
+        libHandle = (CFragConnectionID) theBundle;
+
+	return libHandle;
+}
+
+#else
+int  ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
 	CFragSymbolClass ignored;
 	Ptr functionPtr = 0;
 	OSErr err;
-    Str255 tempLookupName;
+        Str255 tempLookupName;
     
 	if (!moduleHandle) return 0;
 
@@ -1499,7 +1621,6 @@ int ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
 		(CFragConnectionID) moduleHandle, (unsigned char *) tempLookupName,
 		&functionPtr, &ignored);
 	if (err) return 0;
-
 	return (int) functionPtr;
 }
 
@@ -1533,13 +1654,18 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 	err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
 	if (err) return nil; /* bad plugin directory path */
 
-	err = GetDiskFragment(
+        err = GetDiskFragment(
 		&fileSpec, 0, kCFragGoesToEOF, nil, kLoadCFrag, &libHandle, &junk, problemLibName);
-	if (err) 
+                
+        if (err) 
 	    return nil;
+
 	return libHandle;
 }
 /*** I/O Primitives ***/
+
+#endif
+
 
 int ioBeep(void) {
 	SysBeep(1000);
@@ -2501,6 +2627,42 @@ off_t sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize){
 	return targetOffset;
 }
 
+
+#if TARGET_API_MAC_CARBON
+#if defined ( __APPLE__ ) && defined ( __MACH__ ) && JMMFoo
+UInt32	gHeapSize;
+
+#ifndef PLUGIN
+void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
+	/* Application allocates Squeak object heap memory from its own heap. */	
+        void * debug;
+	minHeapSize;
+        gHeapSize = desiredHeapSize;
+        debug = malloc(gHeapSize);
+	return debug;
+}
+#endif
+
+int sqGrowMemoryBy(int memoryLimit, int delta) {
+   Ptr	check;
+   gHeapSize += delta;
+   check = realloc((char *) memory,  gHeapSize);
+    if (check != NULL) 
+        return memoryLimit + delta;
+   return memoryLimit;
+}
+
+int sqShrinkMemoryBy(int memoryLimit, int delta) {
+    return sqGrowMemoryBy(memoryLimit,0-delta);
+}
+
+int sqMemoryExtraBytesLeft(Boolean flag) {
+    if (flag) 
+        return 512*1024*1024 - gHeapSize;
+    else
+        return 0;
+}
+#else
 #ifndef PLUGIN
 void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
 	/* Application allocates Squeak object heap memory from its own heap. */	
@@ -2511,9 +2673,8 @@ void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
 }
 #endif
 
-#if TARGET_API_MAC_CARBON
 int sqGrowMemoryBy(int memoryLimit, int delta) {
-    SetPtrSize ((char *) memory,  GetPtrSize((char *) memory) + delta);
+   SetPtrSize ((char *) memory,  GetPtrSize((char *) memory) + delta);
     if (MemError() == noErr) 
         return memoryLimit + delta;
    return memoryLimit;
@@ -2529,6 +2690,7 @@ int sqMemoryExtraBytesLeft(Boolean flag) {
     else
         return 0;
 }
+#endif
 #else
 int sqGrowMemoryBy(int memoryLimit, int delta) {
     return memoryLimit;
