@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.8 2002/02/06 07:08:36 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.9 2002/02/12 18:20:11 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
@@ -108,6 +108,7 @@
 //June 18th 2001, JMM V3.19 fix for saveAsEmbeddedImage. Broken in 3.0 Also added fix for powerpc only cfrg, and rework of security interface for VMMaker via Tim
 //Oct 1,2001, JMM V3.1.2  open document support and fix scrap issues, add ext keyboard unlock shift key logic. 
 //Dec 19,2001, JMM V3.1.2B6 fix USB on no-usb machines.
+//Feb 11th 2002, JMM V3.0.21 fix for UpdateWindow to make printing work!
 
 #if TARGET_API_MAC_CARBON
     #define EnableMenuItemCarbon(m1,v1)  EnableMenuItem(m1,v1);
@@ -734,9 +735,11 @@ int HandleEvents(void) {
 
 #ifndef IHAVENOHEAD
 			case updateEvt:
-				BeginUpdate(stWindow);
+
+				BeginUpdate((WindowPtr) theEvent.message);
 				fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
-				EndUpdate(stWindow);
+				EndUpdate((WindowPtr) theEvent.message);
+
 			break;
 
 			case activateEvt:
@@ -1114,7 +1117,7 @@ void FreePixmap(void) {
 	}
 
 	if (stColorTable != nil) {
-		DisposeHandle((void *) stColorTable);
+		//JMM disposepixmap does this DisposeHandle((void *) stColorTable);
 		stColorTable = nil;
 	}
 }
