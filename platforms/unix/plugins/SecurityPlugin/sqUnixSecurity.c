@@ -39,17 +39,8 @@ static int isAccessiblePathName(char *pathName)
    realpath(pathName, realPathName);
    realPathLen= strlen(realPathName);
 
-   fprintf(stderr, "testing %s\nagainst %s\n", realPathName, untrustedUserDirectory);
-
-   if (realPathLen >= untrustedUserDirectoryLen
-       && 0 == strncmp(realPathName, untrustedUserDirectory, untrustedUserDirectoryLen))
-     {
-       fprintf(stderr, "grant\n");
-       return 1;
-     }
-
-   fprintf(stderr, "deny\n");
-   return 0;
+   return (realPathLen >= untrustedUserDirectoryLen
+	   && 0 == strncmp(realPathName, untrustedUserDirectory, untrustedUserDirectoryLen));
 }
 
 
@@ -60,8 +51,6 @@ static int isAccessibleFileName(char *fileName)
 
   strncpy(pathName, fileName, pathLen);
   pathName[pathLen]= '\0';
-
-  fprintf(stderr, "file:   %s\n", fileName);
 
   return isAccessiblePathName(pathName);
 }
@@ -236,9 +225,6 @@ int ioInitSecurity(void)
   strncpy(untrustedUserDirectory, imageName, imagePathLen);
   strcpy(untrustedUserDirectory+imagePathLen, "/untrusted");
   untrustedUserDirectoryLen= strlen(untrustedUserDirectory);
-
-  fprintf(stderr, "secure:    %s\n", secureUserDirectory);
-  fprintf(stderr, "untrusted: %s\n", untrustedUserDirectory);
 
   return 1;
 }
