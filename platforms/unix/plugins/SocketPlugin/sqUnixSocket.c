@@ -1,6 +1,6 @@
 /* sqUnixSocket.c -- Unix socket support
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2004-07-06 09:37:16 by piumarta on dsl081-060-134.sfo1.dsl.speakeasy.net
+ * Last edited: 2005-03-09 02:24:15 by piumarta on squeak.hpl.hp.com
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
