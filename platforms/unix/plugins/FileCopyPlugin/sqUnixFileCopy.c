@@ -1,35 +1,48 @@
 /**************************************************************************/
-/*  A Squeak plugin for unix machines by Tim Rowledge                     */
-/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*                       sqUnixfileCopy.c                                 */
-/*  Copying files via OS calls                                            */
+/*  sqUnixFileCopy -- Copying files via OS calls                          */
 /**************************************************************************/
 #include "sq.h"
 #include <stdlib.h>
 
-#define MAXDIRNAMELENGTH 1024
 
 /*** Functions ***/
 int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize) {
-	char fromname[MAXDIRNAMELENGTH];
-	char toname[MAXDIRNAMELENGTH];
+        char *fromname, *toname;
 	char *cmdLine;
+	int retval;
 
-	if( srcNameSize > MAXDIRNAMELENGTH) return false;
-	sqFilenameFromString( fromname, (int)srcName, srcNameSize);
-	if( dstNameSize > MAXDIRNAMELENGTH) return false;
-	sqFilenameFromString( toname, (int)dstName, dstNameSize);
+	fromname=malloc(srcNameSize+1);
+	if(fromname == NULL) return false;
+	toname=malloc(dstNameSize+1);
+	if(toname == NULL) {
+	     free(fromname);
+	     return -1;
+	}
+
+	sqFilenameFromString(fromname, srcName, srcNameSize);
+	sqFilenameFromString(toname, dstName, dstNameSize);
+	
 
 	cmdLine = (char *)malloc((size_t)(dstNameSize + srcNameSize + 20));
-	if( cmdLine == NULL) return false;
+	if( cmdLine == NULL) {
+	     free(fromname);
+	     free(toname);
+	     return -1;
+	}
+	
 
-	sprintf(cmdLine, "cp %s %s", fromname, toname);
+	sprintf(cmdLine, "cp -p %s %s", fromname, toname);
+	
+	retval = system(cmdLine);
 
-	/* is there any useful error code that could be checked for here? */
-	system(cmdLine);
-
+	free(fromname);
+	free(toname);
 	free(cmdLine);
-	return true;
+
+	if(retval)
+	     return -1;  /* there was an error in the cp */
+	else
+	     return 0;   /* all went well */
 }
 
 
