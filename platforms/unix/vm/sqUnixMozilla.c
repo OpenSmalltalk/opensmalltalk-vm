@@ -21,6 +21,8 @@
 #include <fcntl.h>
 #include <errno.h>
 
+#include "FilePlugin.h"
+
 #define DEBUG
 
 #ifdef DEBUG
@@ -235,58 +237,46 @@ int primitivePluginPostURL()
 int primitivePluginRequestFileHandle()
 {
   sqStreamRequest *req;
-  int id, fileHandle;
+  int id, fileOop, openFn;
+  SQFile* file;
 
   id= stackIntegerValue(0);
   if (failed()) return 0;
   if (id < 0 || id >= MAX_REQUESTS) return primitiveFail();
+
   req= requests[id];
   if (!req || !req->localName) return primitiveFail();
-  fileHandle= nilObject();
-  if (req->localName) {
-    DPRINT("VM: Creating file handle for %s\n", req->localName);
+
+  fileOop= nilObject();
+
+  if (req->localName)
     {
+      DPRINT("VM: Creating file handle for %s\n", req->localName);
+ 
+      fileOop= instantiateClassindexableSize(classByteArray(), sizeof(SQFile));
+      if (!isBytes(fileOop)) return primitiveFail();
 
-#if defined(FILEPLUGIN_EXTERNAL) /* otherwise loading won't work */
+      file= firstIndexableField(fileOop);
 
-      int fRS, fVO, sFO;
+      /* this opens a file w/o security checks - I wonder if this is a security hole? */
+      openFn= ioLoadFunctionFrom("fileOpennamesizewrite", "FilePlugin");
+      if (!openFn)
+	{
+	  DPRINT("VM:   Couldn't load function from FilePlugin!\n");
+	  return primitiveFail();
+	}
 
-      fRS= ioLoadFunctionFrom("fileRecordSize", "FilePlugin");
-      fVO= ioLoadFunctionFrom("fileValueOf", "FilePlugin");
-      sFO= ioLoadFunctionFrom("sqFileOpen", "FilePlugin");
+      ((int (*) (SQFile *, int, int,int)) openFn)
+	(firstIndexableField(fileOop), (int)req->localName, strlen(req->localName), 0);
 
-      if ( !fRS || !fVO || !sFO) {
-	fprintf(stderr, "Squeak Plugin: Couldn't load functions from FilePlugin!\n");
-	return primitiveFail();
-      }
-
-# define fileRecordSize ((int(*)(void))fRS)
-# define fileValueOf ((int(*)(int))fVO)
-# define sqFileOpen ((int(*)(int, int, int, int))sFO)
-
-#else /*! defined(FILEPLUGIN_EXTERNAL) */
-
-      int fileRecordSize(void);
-      int fileValueOf(int);
-      int sqFileOpen(int, int, int, int);
-
-#endif
-
-      fileHandle= instantiateClassindexableSize(classByteArray(), fileRecordSize());
-      sqFileOpen( fileValueOf(fileHandle),(int)req->localName, strlen(req->localName), 0);
-
-      if (failed())
-	DPRINT("VM:   file open failed\n");
-
-#undef fileRecordSize
-#undef fileValueOf
-#undef sqFileOpen
-
+      if (failed()) 
+	{
+	  DPRINT("VM:   file open failed\n");
+	  return 0;
+	}
     }
-    if (failed()) return 0;
-  }
   pop(2);
-  push(fileHandle);
+  push(fileOop);
   return 1;
 }
 
@@ -381,7 +371,7 @@ static void browserReceiveData()
   DPRINT("VM:  receiving data id: %i state %i\n", id, ok);
 
   if (ok == 1) {
-    int n, length= 0;
+    int length= 0;
     browserReceive(&length, 4);
     if (length) {
       localName= malloc(length+1);
