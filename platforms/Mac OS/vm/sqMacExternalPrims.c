@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacExternalPrims.c,v 1.2 2002/02/23 11:25:36 johnmci Exp $
+*   RCSID:   $Id: sqMacExternalPrims.c,v 1.3 2003/02/08 18:31:33 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -264,7 +264,8 @@ int  ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
 	err = FindSymbol(
 		(CFragConnectionID) moduleHandle, (unsigned char *) tempLookupName,
 		&functionPtr, &ignored);
-	if (err) return 0;
+	if (err) 
+	    return 0;
 	return (int) functionPtr;
 }
 
