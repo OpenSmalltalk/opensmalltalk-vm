@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.11 2003/07/31 13:22:47 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.12 2003/10/03 19:02:06 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -235,6 +235,7 @@ void EndDraw(void);
 void ExitCleanup(void);
 int  FindIdleURLRequest(void);
 int  InitFilePaths(void);
+int  InitFilePathsViaDomain(SInt16 domain);
 void InitURLRequestTable(void);
 int  IsPrefixedBy(char *s, char *prefix);
 void OpenFileReadOnly(SQFile *f, char *fileName);
@@ -251,6 +252,7 @@ int parseMemorySize(int baseSize, char *src);
 int AbortIfFileURL(char *url);
 int URLPostCreate(char *url, char *buffer, char * window,int semaIndex);
 NP_Port	  *getNP_Port(void);
+void waitAFewMilliseconds(void);
 
 /*** Initialize/Shutdown ***/
 
@@ -298,6 +300,9 @@ NPP_GetJavaClass(void)
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 void NPP_Shutdown(void) {
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    pthread_mutex_unlock(&gEventDrawLock);
+#endif
 	ExitCleanup();
 }
 
@@ -363,14 +368,10 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
 NPError NPP_Destroy(NPP instance, NPSavedData** save) {
 	long i;
 	
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    pthread_mutex_unlock(&gEventDrawLock);
+#endif
 	ExitCleanup();
-	if (pluginArgCount != 0) {
-		for(i=0;i<pluginArgCount;i++) {
-			NPN_MemFree(pluginArgName[i]);
-			NPN_MemFree(pluginArgValue[i]);
-		}
-		pluginArgCount = 0;
-	}
 	return NPERR_NO_ERROR;
 }
 
@@ -415,6 +416,9 @@ NPError NPP_SetWindow(NPP instance, NPWindow* window) {
 	ioLoadFunctionFrom(NULL, "DropPlugin");
 
         gThreadManager = true;
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    pthread_mutex_lock(&gEventDrawLock);
+#endif
         err = createNewThread();
         if (err != noErr)
             gThreadManager = false;
@@ -581,6 +585,10 @@ int16 NPP_HandleEvent(NPP instance, void *rawEvent) {
     GrafPtr         rememberFrontWindow=null;
     Boolean     rememberWindowOnce=true;
     
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    pthread_mutex_unlock(&gEventDrawLock);
+#endif
+
     if (rememberWindowOnce) { //Remember who the front window is
         rememberWindowOnce = false;
         rememberFrontWindow = (GrafPtr) FrontWindow();
@@ -690,6 +698,9 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
     	
     	if (ignoreFirstEvent  &&  getFullScreenFlag()) {
     	    ignoreFirstEvent = false;
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+            pthread_mutex_lock(&gEventDrawLock);
+#endif
     	    return true;
     	}
     	if (getFullScreenFlag()) {
@@ -699,6 +710,10 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
     	}
 	} while (getFullScreenFlag());
                     
+        
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    pthread_mutex_lock(&gEventDrawLock);
+#endif
 	return true;
 }
 
@@ -1071,7 +1086,7 @@ int ioSetFullScreen(int fullScreen) {
 		oldNetscapeWindow = netscapeWindow;
 		oldStWindow = stWindow;
 #if TARGET_API_MAC_CARBON
-                GetWindowGreatestAreaDevice((GrafPtr) FrontWindow(),kWindowContentRgn,&dominantGDevice,&windRect); 
+                GetWindowGreatestAreaDevice((WindowPtr) FrontWindow(),kWindowContentRgn,&dominantGDevice,&windRect); 
 #else
                 dominantGDevice = getDominateDevice(stWindow,&windRect);
 #endif
@@ -1121,7 +1136,7 @@ int  ioSetFullScreenRestore()
 
 /*** File and Access Paths ***/
 
-int InitFilePaths(void) {
+int InitFilePathsViaDomain(SInt16 domain) {
 	short vRefNum;
 	char imageInPreferenceFolder[256];
 	long dirID;
@@ -1134,9 +1149,8 @@ int InitFilePaths(void) {
 	strcpy(shortImageName, squeakPluginImageName);
 
 	/* get the path to the sytem folder preference area*/
-	err = FindFolder(kOnSystemDisk, kPreferencesFolderType, kDontCreateFolder, &vRefNum, &dirID);
+	err = FindFolder(domain, kPreferencesFolderType, kDontCreateFolder, &vRefNum, &dirID);
 	if (err != noErr) {
-		strcpy(imageName,"Problems finding the System Preference folder");
 		return err;
 	}
 	
@@ -1153,9 +1167,22 @@ int InitFilePaths(void) {
 	PathToDir(vmPath,VMPATH_SIZE, &fileSpec);
 	strcpy(imageName, vmPath);
 	strcat(imageName, shortImageName);
+        return noErr;
 }
 
-
+int InitFilePaths() {
+	static const SInt16 domain[] = {kOnSystemDisk,kUserDomain, kLocalDomain, kNetworkDomain, kSystemDomain, 0}; 
+	int error;
+	SInt32 domainIndex=0;
+	
+	do {
+		error = InitFilePathsViaDomain(domain[domainIndex]);
+		if (error == noErr) 
+			return noErr;
+		domainIndex++;
+	} while (domain[domainIndex] != 0); 
+        return error;
+}
 
 int IsPrefixedBy(char *s, char *prefix) {
   /* Return true if the given string begins with or equals the given prefix. */
@@ -1585,6 +1612,13 @@ void ExitCleanup(void) {
         
 	plugInShutdown();
 	ioSetFullScreenRestore();
+	if (pluginArgCount != 0) {
+		for(i=0;i<pluginArgCount;i++) {
+			NPN_MemFree(pluginArgName[i]);
+			NPN_MemFree(pluginArgValue[i]);
+		}
+		pluginArgCount = 0;
+	}
 	NPP_Initialize();  /* reset local variables */
         ignoreFirstEvent=false;
         gIWasRunning=false;
@@ -1674,3 +1708,28 @@ int AbortIfFileURL(char *url)
 	}
 	return !CaseInsensitiveMatch(lookFor,"file:");
 }
+
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+pthread_mutex_t sleepLock;
+pthread_cond_t  sleepLockCondition;
+void waitAFewMilliseconds()
+{
+    static Boolean doInitialization=true;
+    const int	   realTimeToWait = 16;
+    struct timespec tspec;
+    int err;
+    
+    if (doInitialization) {
+        doInitialization = false;
+        pthread_mutex_init(&sleepLock, NULL);
+        pthread_cond_init(&sleepLockCondition,NULL);
+    }
+
+    tspec.tv_sec=  realTimeToWait / 1000;
+    tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
+    
+    err = pthread_mutex_lock(&sleepLock);
+    err = pthread_cond_timedwait_relative_np(&sleepLockCondition,&sleepLock,&tspec);	
+    err = pthread_mutex_unlock(&sleepLock); 
+}
+#endif
