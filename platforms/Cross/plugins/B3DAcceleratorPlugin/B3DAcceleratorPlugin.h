@@ -79,7 +79,7 @@ typedef struct B3DPrimitiveLight {
 #  define B3DX_DUAL
 # endif
 #else
-#define B3DX_GL
+# define B3DX_GL
 #endif
 
 /* b3dxCreateRenderer is now obsolete but older plugin sources may still use it */

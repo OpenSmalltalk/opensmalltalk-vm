@@ -6,7 +6,6 @@
 #elif defined(WIN32)
 # include "sqWin32OpenGL.h"
 #elif defined(UNIX)
-# include <GL/glx.h>
 # include "sqUnixOpenGL.h"
 #endif
 
