@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: myMacHeaders.pch,v 1.1 2002/08/06 17:42:22 johnmci Exp $
+*   RCSID:   $Id: myMacHeaders.pch,v 1.2 2003/06/20 01:57:13 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -39,4 +39,5 @@
 
 #pragma once on
 #define ACCESSOR_CALLS_ARE_FUNCTIONS 1
+#define SQUEAK_BUILTIN_PLUGIN
 #include "myMacHeaders.c"
