@@ -16,7 +16,8 @@
    5) Ignore perror
    
 */
-// Nov 2nd, 2000 JMM changed memoryAllocate, use calloc
+// Nov 2nd, 2000  JMM changed memoryAllocate, use calloc
+// Sept 7nd, 2001 JMM added carbon logic
 
 #include <string.h>
 #include "mpeg3private.h"
@@ -48,7 +49,11 @@ static long counter = 0;
 void * memoryAllocate(int number,unsigned size) {
     void * stuff;
 #ifdef TARGET_OS_MAC
+#if TARGET_API_MAC_CARBON
+    stuff = (void *) NewPtrClear(size*number);
+#else
     stuff = (void *) NewPtrSysClear(size*number);
+#endif
 //    if (stuff == nil) Debugger();
 #else
     stuff = (void *) calloc(size,number);

@@ -29,6 +29,8 @@
  */
  
   /*  Changed Sept 15th by John M McIntosh to support Macintosh & Squeak
+  	  Changed Dec 3rd 2001 by John M McIntosh to ignore extents on file names
+  	  
  */
 
 #include "libmpeg3.h"
@@ -97,10 +99,11 @@ int mpeg3_check_sig(char *path)
 	{
 		result = 1;
 
+		/* JMM Don't want extends, too ugly 
 		ext = strrchr(path, '.');
 		if(ext)
 		{
-/* Test file extension. */
+/* Test file extension. 
 			if(strncasecmp(ext, ".mp2", 4) && 
 				strncasecmp(ext, ".mp3", 4) &&
 				strncasecmp(ext, ".m1v", 4) &&
@@ -109,9 +112,9 @@ int mpeg3_check_sig(char *path)
 				strncasecmp(ext, ".mpg", 4) &&
 				strncasecmp(ext, ".vob", 4) &&
 				strncasecmp(ext, ".mpeg", 4) /* JMM &&
-				strncasecmp(ext, ".ac3", 4) */)
+				strncasecmp(ext, ".ac3", 4) )
 				result = 0;
-		}
+		} */
 	}
 
 	mpeg3io_close_file(fs);
