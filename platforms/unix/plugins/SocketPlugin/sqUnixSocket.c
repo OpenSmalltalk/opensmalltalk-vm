@@ -1,6 +1,6 @@
 /* sqUnixSocket.c -- Unix socket support
  * 
- *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-08-16 11:16:04 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-30 13:01:29 by piumarta on emilia.inria.fr
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -185,6 +185,7 @@ typedef struct privateSocketStruct
 
 /*** Accessors for private socket members from a Squeak socket pointer ***/
 
+#define _PSP(S)		(((S)->privateSocketPtr))
 #define PSP(S)		((privateSocketStruct *)((S)->privateSocketPtr))
 
 #define SOCKET(S)	(PSP(S)->s)
@@ -584,7 +585,7 @@ int sqSocketConnectionStatus(SocketPtr s)
     {
       fprintf(stderr, "socketStatus: freeing invalidated pss=%p\n", PSP(s));
       /*free(PSP(s));*/	/* this almost never happens -- safer not to free()?? */
-      PSP(s)= 0;
+      _PSP(s)= 0;
       interpreterProxy->success(false);
       return Invalid;
     }
@@ -741,7 +742,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
       return;
     }
 
-  PSP(s)= pss;
+  _PSP(s)= pss;
   pss->s= PSP(serverSocket)->acceptedSock;
   PSP(serverSocket)->acceptedSock= -1;
   SOCKETSTATE(serverSocket)= WaitingForConnection;
@@ -826,8 +827,7 @@ void sqSocketDestroy(SocketPtr s)
   if (PSP(s))
     free(PSP(s));			/* release private struct */
 
-  /* PSP(s)= 0;*/	/* HPukes cannot cope with this */
-  s->privateSocketPtr= 0;
+  _PSP(s)= 0;
 }
 
 
