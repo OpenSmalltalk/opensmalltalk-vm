@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-07 08:51:39 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-08 06:47:23 by piumarta on cartman.inria.fr
  */
 
 #include "sq.h"
@@ -115,9 +115,10 @@ int inModalLoop= 0;
 int sqIgnorePluginErrors= 0;
 
 #include "SqDisplay.h"
+#include "SqSound.h"
 
 static struct SqDisplay *dpy= 0;
-static struct SqDisplay *snd= 0;
+static struct SqSound   *snd= 0;
 
 
 /*** timer support ***/
@@ -554,6 +555,28 @@ static struct SqModule *modules= 0;
 
 #define modulesDo(M)	for (M= modules;  M;  M= M->next)
 
+struct moduleDescription
+{
+  struct SqModule **addr;
+  char		   *type;
+  char		   *name;
+};
+
+static struct moduleDescription moduleDescriptions[]=
+{
+  { &displayModule, "display", "X11"    },	/*** NO DEFAULT ***/
+  { &displayModule, "display", "null"   },	/*** NO DEFAULT ***/
+  { &soundModule,   "sound",   "NAS"    },	/*** NO DEFAULT ***/
+  { &displayModule, "display", "Quartz" },
+  { &soundModule,   "sound",   "MacOSX" },
+  { &soundModule,   "sound",   "Sun"    },
+  { &soundModule,   "sound",   "OSS"    },
+  { &soundModule,   "sound",   "null"   },
+  { 0,              0,         0	}
+};
+
+static struct moduleDescription *defaultModules= moduleDescriptions + 3;
+
 
 struct SqModule *queryLoadModule(char *type, char *name, int query)
 {
@@ -576,7 +599,10 @@ struct SqModule *queryLoadModule(char *type, char *name, int query)
 	itf= ioFindExternalFunctionIn(itfName, handle);
       else
 	if (!query)
-	  fprintf(stderr, "could not find module %s\n", modName);
+	  {
+	    fprintf(stderr, "could not find module %s\n", modName);
+	    return 0;
+	  }
     }
   if (itf)
     {
@@ -609,6 +635,130 @@ struct SqModule *loadModule(char *type, char *name)
   return queryLoadModule(type, name, 0);
 }
 
+struct SqModule *requireModule(char *type, char *name)
+{
+  struct SqModule *m= loadModule(type, name);
+  if (!m) abort();
+  return m;
+}
+
+
+static char *canonicalModuleName(char *name)
+{
+  struct moduleDescription *md;
+
+  for (md= moduleDescriptions;  md->addr;  ++md)
+    if (!strcasecmp(name, md->name))
+      return md->name;
+  if (!strcasecmp(name, "none"))
+    return "null";
+  return name;
+}
+
+
+static void requireModuleNamed(char *type)	/*** NOTE: MODIFIES THE ARGUMENT! ***/
+{
+  if      (!strncmp(type,  "vm-", 3)) type+= 3;
+  else if (!strncmp(type, "-vm-", 4)) type+= 4;
+  /* we would like to use strsep() here, but neither OSF1 nor Solaris have it */
+  {
+    char *name= type;
+
+    while (*name && ('-' != *name) && ('=' != *name))
+      ++name;
+    if (*name) *name++= '\0';
+
+    {
+      struct SqModule **addr= 0, *module= 0;
+
+      if      (!strcmp(type, "display")) addr= &displayModule;
+      else if (!strcmp(type, "sound"))   addr= &soundModule;
+      /* let unknown types through to the following to generate a more informative diagnostic */
+      printf("CANONICAL %s ", name);
+      name= canonicalModuleName(name);
+      printf(" = %s\n", name);
+      module= requireModule(type, name);
+      if (!addr)
+	{
+	  fprintf(stderr, "this cannot happen\n");
+	  abort();
+	}
+      *addr= module;
+    }
+  }
+}
+
+static void requireModulesNamed(char *specs)
+{
+  char *vec= strdup(specs);
+  char *pos= vec;
+  while (*pos)
+    {
+      char *end= pos;
+      while (*end && (' ' <= *end) && (',' != *end))
+	++end;
+      if (*end) *end++= '\0';
+      requireModuleNamed(pos);
+      pos= end;
+    }
+  free(vec);
+}
+
+
+static void checkModuleVersion(struct SqModule *module, int required, int actual)
+{
+  if (required != actual)
+    {
+      fprintf(stderr, "module %s interface version %x does not have required version %x\n",
+	      module->name, actual, required);
+      abort();
+    }
+}
+
+
+static void loadImplicit(struct SqModule **addr, char *evar, char *type, char *name)
+{
+  extern char *vmLibDir;
+  if ((!*addr) && getenv(evar) && !(*addr= queryModule(type, name)))
+    {
+      fprintf(stderr, "could not find %s driver vm-%s-%s; either:\n", type, type, name);
+      fprintf(stderr, "  - check that %s/vm-%s-%s.so exists, or\n", vmLibDir, type, name);
+      fprintf(stderr, "  - use the '-plugins <path>' option to tell me where it is, or\n");
+      fprintf(stderr, "  - remove %s from your environment.\n", evar);
+      abort();
+    }
+}
+
+static void loadModules(void)
+{
+  loadImplicit(&displayModule, "DISPLAY",     "display", "X11");
+  loadImplicit(&soundModule,   "AUDIOSERVER", "sound",   "NAS");
+  {
+    struct moduleDescription *md;
+
+    for (md= defaultModules;  md->addr;  ++md)
+      if (!*md->addr)
+	if ((*md->addr= queryModule(md->type, md->name)))
+	  fprintf(stderr, "squeak: %s driver defaulting to vm-%s-%s\n", md->type, md->type, md->name);
+  }
+
+  if (!displayModule)
+    {
+      fprintf(stderr, "squeak: could not find any display driver\n");
+      abort();
+    }
+  if (!soundModule)
+    {
+      fprintf(stderr, "squeak: could not find any sound driver\n");
+      abort();
+    }
+
+  dpy= (struct SqDisplay *)displayModule->makeInterface();
+  snd= (struct SqSound   *)soundModule  ->makeInterface();
+
+  checkModuleVersion(displayModule, SqDisplayVersion, dpy->version);
+  checkModuleVersion(soundModule,   SqSoundVersion,   snd->version);
+}
 
 /* built-in main vm module */
 
@@ -633,7 +783,7 @@ static int jitArgs(char *str)
 {
   char *endptr= str;
   int  args= 3;				// default JIT mode = fast compiler
-
+  
   if (*str == '\0') return args;
   if (*str != ',')
     args= strtol(str, &endptr, 10);	// mode
@@ -665,11 +815,25 @@ static void vm_parseEnvironment(void)
   if ((ev= getenv("SQUEAK_ENCODING")))	setEncoding(&sqTextEncoding, ev);
   if ((ev= getenv("SQUEAK_PATHENC")))	setEncoding(&uxPathEncoding, ev);
   if ((ev= getenv("SQUEAK_TEXTENC")))	setEncoding(&uxTextEncoding, ev);
+
+  if ((ev= getenv("SQUEAK_VM")))	requireModulesNamed(ev);
 }
 
 
 static void usage(void);
 static void versionInfo(void);
+
+
+static int parseModuleArgument(int argc, char **argv, struct SqModule **addr, char *type, char *name)
+{
+  if (*addr)
+    {
+      fprintf(stderr, "option '%s' conflicts with previously-loaded module '%s'\n", *argv, (*addr)->name);
+      exit(1);
+    }
+  *addr= requireModule(type, name);
+  return (*addr)->parseArgument(argc, argv);
+}
 
 
 static int vm_parseArgument(int argc, char **argv)
@@ -678,25 +842,27 @@ static int vm_parseArgument(int argc, char **argv)
 
   if (!strncmp(argv[0], "-psn_", 5))
     {
-      displayModule= loadModule("display", "Quartz");
-      return displayModule
-	? displayModule->parseArgument(argc, argv)
-	: 0;
+      displayModule= requireModule("display", "Quartz");
+      return displayModule->parseArgument(argc, argv);
     }
 
-# define moduleArg(ARG, TYPE, NAME)					\
-    if (!strcmp(argv[0], ARG))						\
-      {									\
-        if (TYPE##Module)						\
-	  {								\
-	    fprintf(stderr, "option `%s' conflicts with previously loaded module `%s'\n", *argv, TYPE##Module->name); \
-	    exit(1);							\
-	  }								\
-	TYPE##Module= loadModule(#TYPE, NAME);				\
-	return TYPE##Module						\
-	  ? TYPE##Module->parseArgument(argc, argv)			\
-	  : 0;								\
-      }
+  if ((!strcmp(argv[0], "-vm")) && (argc > 1))
+    {
+      requireModulesNamed(argv[1]);
+      return 2;
+    }
+
+  if (!strncmp(argv[0], "-vm-", 4))
+    {
+      requireModulesNamed(argv[0] + 4);
+      return 1;
+    }
+
+  /* legacy compatibility */		/*** XXX to be removed at some time ***/
+
+# define moduleArg(arg, type, name)						\
+    if (!strcmp(argv[0], arg))							\
+      return parseModuleArgument(argc, argv, &type##Module, #type, name);
 
   moduleArg("-nodisplay",	display, "null");
   moduleArg("-display",		display, "X11");
@@ -1007,22 +1173,7 @@ int main(int argc, char **argv, char **envp)
   modules= &vm_Module;
   modules->parseEnvironment();
   parseArguments(argc, argv);
-
-  if (!displayModule
-      && !(displayModule= (getenv("DISPLAY") ? loadModule("display", "X11") : 0))
-      && !(displayModule= loadModule("display", "null")))
-    {
-      fprintf(stderr, "could not find a display module\n");
-      abort();
-    }
-  dpy= (struct SqDisplay *)displayModule->makeInterface();
-  if (SqDisplayVersion != dpy->version)
-    {
-      fprintf(stderr, "module %s interface version %x does not have required version %x\n",
-	      displayModule->name, dpy->version, SqDisplayVersion);
-      abort();
-    }
-
+  loadModules();
   sqIgnorePluginErrors= 0;
 
 #ifdef DEBUG_MODULES
