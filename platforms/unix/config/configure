@@ -1036,7 +1036,7 @@ Optional Features:
 Optional Packages:
   --with-PACKAGE[=ARG]    use PACKAGE [ARG=yes]
   --without-PACKAGE       do not use PACKAGE (same as --with-PACKAGE=no)
-  --with-src=dir          VMMaker src directory default=src
+  --with-src=dir          generated src directory default=src
   --with-gnu-awk          assume that awk is GNU gawk default=no
   --with-gnu-as           assume that as is the GNU assembler default=no
   --with-gnu-ld           assume the C compiler uses GNU ld [default=no]
@@ -1529,13 +1529,13 @@ if test "${vmmdir}" = "${topdir}/src"; then
   if test ! -d "${vmmdir}"; then
     if test -d "${topdir}/platforms/unix/src"; then
       vmmdir="${topdir}/platforms/unix/src"
-      echo "$as_me:$LINENO: result: ******** using built-in generated src directory" >&5
-echo "${ECHO_T}******** using built-in generated src directory" >&6
+      echo "$as_me:$LINENO: result: using built-in src directory" >&5
+echo "${ECHO_T}using built-in src directory" >&6
     fi
   fi
 fi
 
-# Check the VMMaker src dir looks sane
+# Check the generated src dir looks sane
 
 
   echo "$as_me:$LINENO: checking sanity of VMMaker src directory" >&5

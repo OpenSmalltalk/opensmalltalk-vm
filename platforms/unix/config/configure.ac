@@ -37,7 +37,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2005-03-16 22:13:29 by piumarta on squeak.hpl.hp.com
+# Last edited: 2005-03-16 23:19:04 by piumarta on squeak.hpl.hp.com
 
 AC_INIT([config.h.in])
 
@@ -47,7 +47,7 @@ topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
 
 AC_ARG_WITH(src,
-[  --with-src=dir          VMMaker src directory [default=src]],
+[  --with-src=dir          generated src directory [default=src]],
 [ vmmdir="${topdir}/${with_src}"],
 [ vmmdir="${topdir}/src"])
 
@@ -55,12 +55,12 @@ if test "${vmmdir}" = "${topdir}/src"; then
   if test ! -d "${vmmdir}"; then
     if test -d "${topdir}/platforms/unix/src"; then
       vmmdir="${topdir}/platforms/unix/src"
-      AC_MSG_RESULT([******** using built-in generated src directory])
+      AC_MSG_RESULT([using built-in src directory])
     fi
   fi
 fi
 
-# Check the VMMaker src dir looks sane
+# Check the generated src dir looks sane
 
 AC_CHECK_VMM_DIR
 
