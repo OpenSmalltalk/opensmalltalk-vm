@@ -61,6 +61,7 @@
 	v1.3.10 Oct 4th 2000, JMM Issue with destory and free buffers, and disconnect on read with buffer restriction
 	v1.3.11 Nov 11th 2000, JMM extra buffer for server version
 	v1.3.12 Jan 2001, Karl Goiser Carbon changes
+        v1.3.13 Sept 2002, JMM fixes for wildcard  port binding, and IP_ADD_MEMBERSHIP logic
 	
 	Notes beware semaphore's lurk for socket support. Three semaphores lives in Smalltalk, waiting for
 	connect/disconnect/listen, sending data, and receiving data. When to tap the semaphore is based on
@@ -305,6 +306,7 @@ static void         NoCopyReceiveWalkingBufferChain(EPInfo *epi,OTBufferInfo *bu
 static UInt32       readBytes(EPInfo* epi,char *buf,UInt32 adjustedBufSize);
 static UInt32       readBytesUDP(EPInfo* epi,InetAddress *fromAddress, int *moreFlag, char *buf,UInt32 adjustedBufSize);
 static SInt32	    lookupOptionName(EPInfo *epi, Boolean trueIfGet, char *aString, UInt32 value, SInt32 *result);
+static OTResult     SetEightByteOption(EPInfo* epi, Boolean trueIfGet, OTXTILevel level,  OTXTIName  name, char * value, SInt32    *result);
 static OTResult     SetFourByteOption(EPInfo* epi, Boolean trueIfGet, OTXTILevel level,  OTXTIName  name, UInt32 value, SInt32    *result);
 static OTResult     SetOneByteOption(EPInfo* epi, Boolean trueIfGet, OTXTILevel level,  OTXTIName  name, UInt32 value, SInt32    *result);
 static OTResult     SetKeepAliveOption(EPInfo* epi, Boolean trueIfGet, OTXTILevel level,  OTXTIName  name, UInt32 value, SInt32    *result);
@@ -765,7 +767,7 @@ void sqSocketListenOnPort(SocketPtr s, int port) {
 	epi = (EPInfo *) s->privateSocketPtr;
 	if (s->socketType == TCPSocketType) {
 		DoBind(epi,0,(InetPort) port,TCPListenerSocketType,1);
-		if (epi->localAddress.fPort != port) {//We die if we don't get the port we want
+		if (port != 0 && epi->localAddress.fPort != port) {//We die if we don't get the port we want
             sqSocketDestroy(s);
     	    interpreterProxy->success(false);
 		}
@@ -798,7 +800,7 @@ void	sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize) {
 		}
         epi = (EPInfo *) s->privateSocketPtr;
 		DoBind(epi,0,(InetPort) port,TCPListenerSocketType,(OTQLen) backlogSize);
-		if (epi->localAddress.fPort != port) {//The port we wanted must match, otherwise we die
+		if (port != 0 && epi->localAddress.fPort != port) {//The port we wanted must match, otherwise we die
 		    sqSocketDestroy(s);
     	    interpreterProxy->success(false);
 		}
@@ -2351,10 +2353,13 @@ int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSi
 	
     OTMemcpy(optionValue,(char *) optionValueT,optionValueSize);
     optionValue[optionValueSize] = 0x00;
-    CopyCStringToPascal(optionValue,(unsigned char *) optionValue);
-    StringToNum((ConstStr255Param) optionValue,&anInteger);   
-    	
-   error = lookupOptionName(epi, false, (char *) &optionName, anInteger,(long *) result);
+    if (optionValueSize == 8) {
+        error = lookupOptionName(epi, false, (char *) &optionName, (long) &optionValue ,(long *) result);
+    } else {
+        CopyCStringToPascal(optionValue,(unsigned char *) optionValue);
+        StringToNum((ConstStr255Param) optionValue,&anInteger);   
+        error = lookupOptionName(epi, false, (char *) &optionName, anInteger,(long *) result);
+    }
    return error;
 }
 
@@ -2415,13 +2420,60 @@ static SInt32	lookupOptionName(EPInfo *epi, Boolean trueIfGet, char *aString, UI
 	if (strcmp("IP_MULTICAST_IF",aString)==0) 			{return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_MULTICAST_IF,value,result);};	
 	if (strcmp("IP_MULTICAST_TTL",aString)==0) 			 {return SetOneByteOption(epi,trueIfGet,INET_IP,kIP_MULTICAST_TTL,value,result);};	
 	if (strcmp("IP_MULTICAST_LOOP",aString)==0) 	     {return SetOneByteOption(epi,trueIfGet,INET_IP,kIP_MULTICAST_LOOP,value,result);};	
-/*	if (strcmp("IP_ADD_MEMBERSHIP",aString)==0) 	    { return SetJMMByteOption(epi,trueIfGet,INET_IP,IP_ADD_MEMBERSHIP,value,result);};	
-	if (strcmp("IP_DROP_MEMBERSHIP",aString)==0) 	    { return SetJMMByteOption(epi,trueIfGet,INET_IP,IP_DROP_MEMBERSHIP,value,result);};	
-	if (strcmp("IP_BROADCAST_IF",aString)==0) 	        {return SetFourByteOption(epi,trueIfGet,INET_IP,IP_BROADCAST_IF,value,result);};	
-	if (strcmp("IP_RCVIFADDR",aString)==0) 	            {return SetFourByteOption(epi,trueIfGet,INET_IP,IP_RCVIFADDR,value,result);};	*/
+	if (strcmp("IP_ADD_MEMBERSHIP",aString)==0) 	    { return SetEightByteOption(epi,trueIfGet,INET_IP,kIP_ADD_MEMBERSHIP,(char *) value,result);};	
+	if (strcmp("IP_DROP_MEMBERSHIP",aString)==0) 	    { return SetEightByteOption(epi,trueIfGet,INET_IP,kIP_DROP_MEMBERSHIP,(char *) value,result);};	
+	if (strcmp("IP_BROADCAST_IFNAME",aString)==0) 	        {return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_BROADCAST_IFNAME,value,result);};	
+	if (strcmp("IP_RCVIFADDR",aString)==0) 	            {return SetFourByteOption(epi,trueIfGet,INET_IP,kIP_RCVIFADDR,value,result);};	
 
     *result = 0;
     return -1;
+}
+
+static OTResult SetEightByteOption(EPInfo* epi,Boolean trueIfGet, OTXTILevel level, OTXTIName  name, char * value, SInt32    *returnValue) {
+   OTResult err;
+   UInt8    optBuffer[kOTFourByteOptionSize+4];
+   TOption  *option = (TOption *) &optBuffer;
+   TOptMgmt request;
+   TOptMgmt result;
+   Boolean isAsync=false;
+   
+   /* Set up the option buffer to specify the option and value to set. */
+   option->len  = kOTFourByteOptionSize+4;
+   option->level= level;
+   option->name = name;
+   option->status = 0;
+   if (!trueIfGet) 
+    OTMemcpy(option->value,value,8);
+    
+   /* Set up request parameter for OTOptionManagement */
+   request.opt.buf= (UInt8 *) option;
+   request.opt.len= sizeof(optBuffer);
+   request.opt.maxlen=sizeof(optBuffer);
+   request.flags  = trueIfGet ? T_CURRENT : T_NEGOTIATE;
+
+   /* Set up reply parameter for OTOptionManagement. */
+   result.opt.buf  = (UInt8 *) option;
+   result.opt.maxlen  = sizeof(optBuffer);
+  
+    if (OTIsSynchronous(epi->erf) == false)	{	// check whether ep sync or not
+		isAsync = true;			                // set flag if async
+		OTSetSynchronous(epi->erf);			        // set endpoint to sync	
+	}
+				
+				
+    err = OTOptionManagement(epi->erf, &request, &result);
+	
+	if (isAsync)				        // restore ep state 
+		OTSetAsynchronous(epi->erf);
+    
+	*returnValue = option->value[0];
+
+   if (err == noErr) {
+      if (option->status != T_SUCCESS) 
+         err = option->status;
+   } 
+            
+   return (err);
 }
 
 static OTResult SetFourByteOption(EPInfo* epi,Boolean trueIfGet, OTXTILevel level, OTXTIName  name, UInt32   value, SInt32    *returnValue) {
