@@ -713,7 +713,7 @@ char *getSelection(void)
 	  break;
 
 	case MappingNotify:
-	  XRefreshKeyboardMapping((XMappingEvent *) &theEvent);
+	  XRefreshKeyboardMapping((XMappingEvent *) &ev);
 	  break;
 	}
       
