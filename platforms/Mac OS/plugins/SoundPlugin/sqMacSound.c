@@ -244,7 +244,6 @@ pascal void FlipRecordBuffers(SPBPtr pb) {
 	if (pb->error == 0) {
 		/* restart recording using the other buffer */
 		SPBRecord(&nextBuffer->paramBlock, true);
-
 		/* reset the read pointer for the buffer that has just been filled */
 		thisBuffer->readIndex = 0;
 		interpreterProxy->signalSemaphoreWithIndex(nextBuffer->recordSemaIndex);
@@ -705,12 +704,10 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	   end of the buffer, which is buf + bufferSizeInBytes. return the number
 	   of slices (not bytes) copied. a slice is one 16-bit sample in mono
 	   or two 16-bit samples in stereo. */
-//	int bytesPerSlice = (recordBuffer1.stereo ? 4 : 2);
-	int bytesPerSlice = (bufState.stereo ? 4 : 2);
+	int bytesPerSlice = (recordBuffer1.stereo ? 4 : 2);
 	char *nextBuf = (char *) buf + (startSliceIndex * bytesPerSlice);
 	char *bufEnd = (char *) buf + bufferSizeInBytes;
 	char *src, *srcEnd;
-	short int mixedSample;
 	RecordBuffer recBuf = nil;
 	int bytesCopied;
 
@@ -728,7 +725,6 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	/* copy samples into the client's buffer */
 	src = &recBuf->samples[0] + recBuf->readIndex;
 	srcEnd = &recBuf->samples[RECORD_BUFFER_SIZE];
-	if (bufState.stereo) {
 	if (recBuf->bytesPerSample == 1) {
 		while ((src < srcEnd) && (nextBuf < bufEnd)) {
 			/* convert 8-bit sample to 16-bit sample */
@@ -738,25 +734,6 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 	} else {
 		while ((src < srcEnd) && (nextBuf < bufEnd)) {
 			*nextBuf++ = *src++;
-		}
-	}
-	} else {
-		// need to mix the two samples togehter
-		if (recBuf->bytesPerSample == 1) {
-			while ((src < srcEnd) && (nextBuf < bufEnd)) {
-				/* convert 8-bit sample to 16-bit sample */
-				mixedSample = (*src++) - 128;
-				mixedSample += (*src++) - 128;
-				mixedSample >>= 1;
-				*nextBuf++ = mixedSample;
-				*nextBuf++ = 0;  /* low-order byte is zero */
-			}
-		} else {
-			while ((src < srcEnd) && (nextBuf < bufEnd)) {
-				*nextBuf++ = (*src++);
-				*nextBuf++ = (*src++);
-				*src++; *src++; // TODO - mix in this channel!
-			}
 		}
 	}
 	recBuf->readIndex = src - &recBuf->samples[0];  /* update read index */
