@@ -1,8 +1,9 @@
-Updated Feb 5th 2002
+Updated April 26th 2002
 
 Building the Squeak Virtual Machine (Jan 1st 2002)
 	-- John Maloney, May 25, 2000,
-	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002, Feb 5th 2002
+	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002,
+	   Feb 5th 2002, April 26th 2002
 	-- Changes Andrew C. Greenberg, Jan 1st 2002
 
 (Note to readers, this hasn't been proofed yet, so beware)
@@ -61,6 +62,17 @@ Step Three: Get, and install, the VMMaker, and build an interpeter
 	A.
 	http://sumeru.stanford.EDU/tim/pooters/SqFiles/deltas/VMMaker-3-1-version3.
 cs
+	A2: Install change sets from the specialChangeSets Folder. 
+		These are required to build a VM that has globals as a structure which improves
+		performance by 10%.
+		
+		Interpreter-normalSend.1.cs
+		MoreInterpAccessors-JMM.2.cs
+		CheckInterruptOften-JMM.1.cs
+		Globalstructure-JMM.1.cs
+		CGeneratorEnhancements-ajh.1.cs
+		Gnuifier.2.cs
+		
 	B.	DoIt: VMMakerTool openInWorld
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
 	D.	Enter the Platform name: (default is fine) "Mac OS"
@@ -84,7 +96,7 @@ For comparison, my entries were, respectively:
 
 Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
-	A.	http://www.mucow.com/Gnuifier.1.cs
+	A.	See the Gnuifier.2.cs changeset in the specialChangeSetsFolder
 	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
 
 		(Gnuifier on:
@@ -198,6 +210,9 @@ an example.
 To get an additional speedup, the object code for the bytecode dispatch loop of
 the PPC version can be patched using the method "patchInterp:" in Interpreter
 class.
+
+Also you might need to add 	struct foo *foo = &fum;
+to interpret()
 
 68K Notes
 
