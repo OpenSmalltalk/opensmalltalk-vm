@@ -79,7 +79,7 @@ static void updateModifiers(int kstate)
   if (kstate & (1 << KG_CTRL))	modifierState |= CtrlKeyBit;
   if (kstate & (1 << KG_ALT))	modifierState |= CommandKeyBit;
   if (kstate & (1 << KG_ALTGR))	modifierState |= OptionKeyBit;
-  dprintf("state %2d %02x mod %2d %02x\n", kstate, modifierState);
+  dprintf("state %02x mod %02x\n", kstate, modifierState);
 }
 
 
@@ -103,10 +103,6 @@ static void kb_chvt(_self, int vt)
 
 static void kb_post(_self, int code, int up)
 {
-  dprintf("KEY %3d %02x %c %s state %02x mod %02x\n",
-	  code, code, ((code > 32) && (code < 127)) ? code : ' ',
-	  up ? "UP" : "DOWN", self->state, modifierState);
-
   if (code == 127) code= 8;		//xxx OPTION!!!
   self->callback(code, up, modifierState);
 }
@@ -118,15 +114,20 @@ static void kb_translate(_self, int code, int up)
   unsigned short *keyMap= self->keyMaps[self->state];
   int rep= (!up) && (prev == code);
   prev= up ? 0 : code;
+
+  dprintf("+++ code %d up %d prev %d rep %d map %p\n", code, up, prev, rep, keyMap);
+
   if (keyMap)
     {
       int sym=  keyMap[code];
       int type= KTYP(sym);
+      dprintf("+++ sym %x (%02x) type %d\n", sym, sym & 255, type);
       sym &= 255;
       if (type >= 0xf0)		// shiftable
 	type -= 0xf0;
       if (KT_LETTER == type)	// lockable
 	type= KT_LATIN;
+      dprintf("+++ type %d\n", type);
       switch (type)
 	{
 	case KT_LATIN:
@@ -181,11 +182,15 @@ static void kb_noCallback(int k, int u, int s) {}
 
 static int kb_handleEvents(_self)
 {
+  dprintf("+++ kb_handleEvents\n");
   while (fdReadable(self->fd, 0))
     {
       unsigned char buf;
       if (1 == read(self->fd, &buf, 1))
-	kb_translate(self, buf & 127, (buf >> 7) & 1);
+	{
+	  dprintf("+++ kb_translate %3d %02x + %d\n", buf & 127, buf & 127, (buf >> 7) & 1);
+	  kb_translate(self, buf & 127, (buf >> 7) & 1);
+	}
     }
   return 0;
 }
