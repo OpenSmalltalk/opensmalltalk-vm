@@ -12,7 +12,7 @@ LDFLAGS = -shared
 # usually overridden from top level makefile
 imgdir=      /usr/local/lib/squeak
 SQ_DIR=      /usr/local/lib/squeak
-VM_VERSION=  3.2-5devel
+VM_VERSION=  3.7b-2
 
 libdir=	   $(imgdir)/$(VM_VERSION)
 VM_LIBDIR= $(SQ_DIR)/$(VM_VERSION)
