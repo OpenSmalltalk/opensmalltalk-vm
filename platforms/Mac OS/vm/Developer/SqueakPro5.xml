@@ -605,7 +605,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -1948,6 +1948,13 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>sqMacUIEvents.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqMacUIEvents.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -1976,6 +1983,13 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>interp.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>osExports.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -1994,34 +2008,6 @@
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacUIEvents.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
                 </FILE>
             </FILELIST>
             <LINKORDER>
@@ -2917,6 +2903,11 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>sqMacUIEvents.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqMacUIEvents.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -2928,6 +2919,11 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqMacUIMenuBar.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>interp.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -2948,26 +2944,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>GeniePlugin.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacUIEvents.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -3329,7 +3305,7 @@
 
                 <!-- Settings for "Build Extras" panel -->
                 <SETTING><NAME>CacheModDates</NAME><VALUE>true</VALUE></SETTING>
-                <SETTING><NAME>ActivateBrowser</NAME><VALUE>true</VALUE></SETTING>
+                <SETTING><NAME>ActivateBrowser</NAME><VALUE>false</VALUE></SETTING>
                 <SETTING><NAME>DumpBrowserInfo</NAME><VALUE>false</VALUE></SETTING>
                 <SETTING><NAME>CacheSubprojects</NAME><VALUE>true</VALUE></SETTING>
                 <SETTING><NAME>UseThirdPartyDebugger</NAME><VALUE>false</VALUE></SETTING>
@@ -3529,7 +3505,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -3565,7 +3541,7 @@
                 <!-- Settings for "PPC Linker" panel -->
                 <SETTING><NAME>MWLinker_PPC_linksym</NAME><VALUE>0</VALUE></SETTING>
                 <SETTING><NAME>MWLinker_PPC_symfullpath</NAME><VALUE>1</VALUE></SETTING>
-                <SETTING><NAME>MWLinker_PPC_linkmap</NAME><VALUE>1</VALUE></SETTING>
+                <SETTING><NAME>MWLinker_PPC_linkmap</NAME><VALUE>0</VALUE></SETTING>
                 <SETTING><NAME>MWLinker_PPC_nolinkwarnings</NAME><VALUE>0</VALUE></SETTING>
                 <SETTING><NAME>MWLinker_PPC_dontdeadstripinitcode</NAME><VALUE>0</VALUE></SETTING>
                 <SETTING><NAME>MWLinker_PPC_permitmultdefs</NAME><VALUE>0</VALUE></SETTING>
@@ -3893,6 +3869,13 @@
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqMacAsyncFilePrims.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>sqMacDirectory.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -4746,6 +4729,13 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>interp.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqMacExternalPrims.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -4919,34 +4909,6 @@
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
                 </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacDirectory.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
             </FILELIST>
             <LINKORDER>
                 <FILEREF>
@@ -5067,6 +5029,11 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>InternetConfigPlugin.h</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>interp.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -5197,6 +5164,11 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>sqMacAsyncFilePrims.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
+                    <PATH>sqMacDirectory.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
@@ -5874,26 +5846,6 @@
                     <PATH>GeniePlugin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacDirectory.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
             </LINKORDER>
         </TARGET>
         <TARGET>
@@ -6462,7 +6414,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -7112,6 +7064,13 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>FilePlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -7883,27 +7842,6 @@
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>GeniePlugin.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -8307,6 +8245,11 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>FilePlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -8858,21 +8801,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>GeniePlugin.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -9443,7 +9371,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -10756,27 +10684,6 @@
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
             </FILELIST>
             <LINKORDER>
                 <FILEREF>
@@ -11649,21 +11556,6 @@
                     <PATH>GeniePlugin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
             </LINKORDER>
         </TARGET>
         <TARGET>
@@ -12232,7 +12124,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -13582,6 +13474,13 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>npmac.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -13656,27 +13555,6 @@
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
                 </FILE>
             </FILELIST>
             <LINKORDER>
@@ -14577,6 +14455,11 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>npmac.cpp</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -14628,21 +14511,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>GeniePlugin.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -15213,7 +15081,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -16526,27 +16394,6 @@
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
                 </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
             </FILELIST>
             <LINKORDER>
                 <FILEREF>
@@ -17419,21 +17266,6 @@
                     <PATH>GeniePlugin.c</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
             </LINKORDER>
         </TARGET>
         <TARGET>
@@ -18020,7 +17852,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -18733,6 +18565,13 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS>Debug</FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>InternetConfigPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -19319,27 +19158,6 @@
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS>Debug</FILEFLAGS>
                 </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS>Debug</FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
             </FILELIST>
             <LINKORDER>
                 <FILEREF>
@@ -19784,6 +19602,11 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>InternetConfigPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -20200,21 +20023,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>GeniePlugin.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -20803,7 +20611,7 @@
                 <SETTING><NAME>MWMerge_MacOS_skipResources</NAME>
                     <SETTING><VALUE></VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
-                    <SETTING><VALUE>	˝</VALUE></SETTING>
+                    <SETTING><VALUE>è±</VALUE></SETTING>
                     <SETTING><VALUE></VALUE></SETTING>
                 </SETTING>
 
@@ -21887,6 +21695,13 @@
                 </FILE>
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                    <FILEKIND>Text</FILEKIND>
+                    <FILEFLAGS></FILEFLAGS>
+                </FILE>
+                <FILE>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>InternetConfigPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
@@ -22105,27 +21920,6 @@
                 <FILE>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>GeniePlugin.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                    <FILEKIND>Text</FILEKIND>
-                    <FILEFLAGS></FILEFLAGS>
-                </FILE>
-                <FILE>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                     <FILEKIND>Text</FILEKIND>
                     <FILEFLAGS></FILEFLAGS>
@@ -22839,6 +22633,11 @@
                 </FILEREF>
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
+                    <PATH>plugininterp2.c</PATH>
+                    <PATHFORMAT>MacOS</PATHFORMAT>
+                </FILEREF>
+                <FILEREF>
+                    <PATHTYPE>Name</PATHTYPE>
                     <PATH>InternetConfigPlugin.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
@@ -22995,21 +22794,6 @@
                 <FILEREF>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>GeniePlugin.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>interp os9.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.c</PATH>
-                    <PATHFORMAT>MacOS</PATHFORMAT>
-                </FILEREF>
-                <FILEREF>
-                    <PATHTYPE>Name</PATHTYPE>
-                    <PATH>sqMacEncoding.h</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
             </LINKORDER>
@@ -23548,13 +23332,13 @@
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>
-                <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
+                <TARGETNAME>Squeak VM NS Plugin Opt</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
-                <PATH>interp os9.c</PATH>
+                <PATH>plugininterp2.c</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>
-                <TARGETNAME>Squeak VM PPC Carbon Debug</TARGETNAME>
+                <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
                 <PATH>interp.c</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
@@ -23821,18 +23605,6 @@
                 <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
                 <PATHTYPE>Name</PATHTYPE>
                 <PATH>sqMacExternalPrims.c</PATH>
-                <PATHFORMAT>MacOS</PATHFORMAT>
-            </FILEREF>
-            <FILEREF>
-                <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
-                <PATHTYPE>Name</PATHTYPE>
-                <PATH>sqMacEncoding.c</PATH>
-                <PATHFORMAT>MacOS</PATHFORMAT>
-            </FILEREF>
-            <FILEREF>
-                <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
-                <PATHTYPE>Name</PATHTYPE>
-                <PATH>sqMacEncoding.h</PATH>
                 <PATHFORMAT>MacOS</PATHFORMAT>
             </FILEREF>
             <FILEREF>
@@ -24147,13 +23919,13 @@
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
-                    <TARGETNAME>Squeak VM NS Carbon Opt</TARGETNAME>
+                    <TARGETNAME>Squeak VM PPC Carbon Debug</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>MSL C.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
-                    <TARGETNAME>Squeak VM NS Carbon Opt</TARGETNAME>
+                    <TARGETNAME>Squeak VM PPC Carbon Debug</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>MSL SIOUX.CARBON.Lib</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
@@ -24253,13 +24025,13 @@
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
-                    <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
+                    <TARGETNAME>Squeak VM PPC Opt</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>OpenGLLibraryStub</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
                 </FILEREF>
                 <FILEREF>
-                    <TARGETNAME>Squeak VM PPC Debug</TARGETNAME>
+                    <TARGETNAME>Squeak VM PPC Opt</TARGETNAME>
                     <PATHTYPE>Name</PATHTYPE>
                     <PATH>OpenGLUtilityStub</PATH>
                     <PATHFORMAT>MacOS</PATHFORMAT>
