@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.4 2002/03/01 00:22:59 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.5 2002/05/09 19:24:09 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -62,9 +62,13 @@ April 30th 2001 JMM 3.0.15, window is nil, if so make post work correctly, fix i
 May 16th 2001	JMM 3.0.19, fix broken 3.0.17 for netscape, fixed set/restore port logic, obey plugin size hints 
 May 27th 2001	JMM 3.0.22, fix bug in mailto: string size, added logic to deal with back behavior in IE to avoid crashes.
 Jun 	 2001	JMM 3.0.23, added seteventhook logic to enable HW acceleration plugin to get notification of events
-Aug      2001	JMM 3.0.24  rework of security logic, remove explicit call **********/
+Aug      2001	JMM 3.0.24  rework of security logic, remove explicit call 
+May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
+**********/
 
 #include "sq.h"
+#include "sqMacUIEvents.h"
+#include "sqMacFileLogic.h"
 #include "FilePlugin.h"
 #include "npapi.h"
 
@@ -144,12 +148,12 @@ int primitivePluginPostURL(void);
 
 /*** Imported Variables ***/
 
-extern int interruptKeycode;
 extern unsigned char *memory;
 extern WindowPtr stWindow;
-extern int fullScreenFlag;
-extern int successFlag;
 extern int gButtonIsDown;
+extern int getFullScreenFlag();
+extern int setInterruptKeycode(int value);
+extern int setFullScreenFlag(int value);
 
 extern char documentName[];  /* full path to document file */
 extern char imageName[];  /* full path to image file */
@@ -197,9 +201,6 @@ int nextRequestID = 1;
 
 /*** Functions Imported from sqMacWindow ***/
 
-int recordKeystroke(EventRecord *theEvent);
-int recordModifierButtons(EventRecord *theEvent);
-int recordMouseDown(EventRecord *theEvent);
 void ioSetFullScreenRestore();
 
 /*** From VM ***/
@@ -241,7 +242,6 @@ int  URLRequestStatus(int requestHandle);
 int parseMemorySize(int baseSize, char *src);
 int AbortIfFileURL(char *url);
 int URLPostCreate(char *url, char *buffer, char * window,int semaIndex);
-WindowPtr getSTWindow(void);
 NP_Port	  *getNP_Port(void);
 
 /*** Initialize/Shutdown ***/
@@ -665,13 +665,13 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	    	}
 		}
     	if (needsUpdate && (netscapeWindow != nil) && (memory)) {
-    		if (fullScreenFlag) {
+    		if (getFullScreenFlag()) {
     		    BeginUpdate((WindowPtr) eventPtr->message);
      		}
 
             fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
 
-    		if (fullScreenFlag) {
+    		if (getFullScreenFlag()) {
     		    EndUpdate((WindowPtr) eventPtr->message);
    			}
     		needsUpdate = false;
@@ -679,16 +679,16 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 		
 		if(postMessageHook) postMessageHook(eventPtr);
     	
-    	if (ignoreFirstEvent  &&  fullScreenFlag) {
+    	if (ignoreFirstEvent  &&  getFullScreenFlag()) {
     	    ignoreFirstEvent = false;
     	    return true;
     	}
-    	if (fullScreenFlag) {
+    	if (getFullScreenFlag()) {
      	    ok = WaitNextEvent(everyEvent, &theEvent,0,null);
             eventPtr = &theEvent;
     		SqueakYieldToAnyThread();
     	}
-	} while (fullScreenFlag);
+	} while (getFullScreenFlag());
 	return true;
 }
 
@@ -839,8 +839,8 @@ void ReadSqueakImage(void) {
 	    
 	readImageFromFileHeapSizeStartingAt(f, squeakHeapMBytes, 0);
 	sqImageFileClose(f);
-	interruptKeycode = 515;  /* ctrl-C, since Netscape blocks cmd-. */
-	fullScreenFlag=false; //Note image can be saved with true
+	setInterruptKeycode(515);  /* ctrl-C, since Netscape blocks cmd-. */
+	setFullScreenFlag(false); //Note image can be saved with true
 }
 
 /*** URL Requests ***/
@@ -1053,7 +1053,7 @@ int ioSetFullScreen(int fullScreen) {
         GDHandle   dominantGDevice;
 	
 	if (fullScreen) {
-	    if (fullScreenFlag) return;
+	    if (getFullScreenFlag()) return;
 		desiredWidth = 0;
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
@@ -1061,7 +1061,7 @@ int ioSetFullScreen(int fullScreen) {
 #if TARGET_API_MAC_CARBON
                 GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&windRect); 
 #else
-                dominantGDevice = getDominateDevice(stWindow,&windRect)
+                dominantGDevice = getDominateDevice(stWindow,&windRect);
 #endif
 		BeginFullScreen	(&gRestorableStateForScreen,dominantGDevice,
 								 &desiredWidth,
@@ -1069,7 +1069,7 @@ int ioSetFullScreen(int fullScreen) {
 								 &gAFullscreenWindow,
 								 nil,
 								 fullScreenAllowEvents);
-		fullScreenFlag = true;
+		setFullScreenFlag(true);
 		stWindow = gAFullscreenWindow;
 		gFullScreenNPPort.port = GetWindowPort(gAFullscreenWindow);
 		gFullScreenNPPort.portx = 0;
@@ -1087,8 +1087,8 @@ int ioSetFullScreen(int fullScreen) {
     	netscapeWindow = &gFullScreenNPWindow;
     	ignoreFirstEvent = true;
  	} else {
-	    if (!fullScreenFlag) return;
-		fullScreenFlag = false;
+	    if (!getFullScreenFlag()) return;
+		setFullScreenFlag(false);
         ioSetFullScreenRestore();
 	}
 
