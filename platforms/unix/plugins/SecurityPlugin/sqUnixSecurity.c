@@ -2,7 +2,7 @@
  * 
  * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
  * 
- * Last edited: 2002-10-26 14:43:23 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-09 02:11:06 by piumarta on squeak.hpl.hp.com
  * 
  * Note: According to Ian Piumarta, the Unix VM is inherently insecure since
  *       pluggable primitives can access all of libc! It would need 
@@ -222,14 +222,27 @@ char *ioGetUntrustedUserDirectory(void)
 int ioInitSecurity(void)
 {
   int imagePathLen= strrchr(imageName, '/') - imageName;
+  char *squeakUserDirectory= 0;
 
   /* establish the secure user directory */
   strncpy(secureUserDirectory, imageName, imagePathLen);
-  strcpy(secureUserDirectory+imagePathLen, "/secure");
+  strcpy(secureUserDirectory + imagePathLen, "/secure");
 
   /* establish untrusted user directory */
-  strncpy(untrustedUserDirectory, imageName, imagePathLen);
-  strcpy(untrustedUserDirectory+imagePathLen, "/untrusted");
+  squeakUserDirectory= getenv("SQUEAK_USERDIR");
+  if (0 == squeakUserDirectory)
+    {
+      strncpy(untrustedUserDirectory, imageName, imagePathLen);
+      strcpy(untrustedUserDirectory + imagePathLen, "/My Squeak");
+    }
+  else
+    {
+      int lastChar= strlen(squeakUserDirectory);
+      /*  path is not allowed to end with "/" */
+      if ('/' == squeakUserDirectory[lastChar - 1])
+	squeakUserDirectory[lastChar - 1]= '\0';
+      strcpy(untrustedUserDirectory, squeakUserDirectory);
+    }
   untrustedUserDirectoryLen= strlen(untrustedUserDirectory);
 
   return 1;
