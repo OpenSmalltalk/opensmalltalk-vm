@@ -1,0 +1,13 @@
+"If you see this message as a text file something went wrong.
+You may go back and try the embedded Squeak version. If this
+works, the server isn't sending the right mime type. If not,
+the Squeak plugin is not installed correctly.
+"
+StringHolder new textContents: ('Hello Plugin World!!
+
+This window was opened by some code in the file plugintest.sts, which was downloaded by your web browser and executed by the Squeak Plugin Virtual Machine (', (Smalltalk getSystemAttribute: 0), ') in an object image (', (Smalltalk getSystemAttribute: 1),'). 
+
+Since you are reading this I guess all is okay then ...
+
+On most platforms, you can also run Squeak as a stand-alone program if you start the VM with the image.
+') withSqueakLineEndings; openLabel: 'Plugin Startup'
