@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.5 2002/03/01 00:15:57 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.6 2002/05/31 16:49:42 johnmci Exp $
 * 
 *   NOTES:
 *
@@ -445,7 +445,7 @@ FAILED:
 /*****************************************************************************/
 /*****************************************************************************/
 
-int glGetIntProperty(int handle, int prop)
+int glGetIntPropertyOS(int handle, int prop)
 {
 	GLint v;
 	glRenderer *renderer = glRendererFromHandle(handle);
@@ -455,29 +455,11 @@ int glGetIntProperty(int handle, int prop)
 		case -1: /* vertical blank synchronization */
 			aglGetInteger(renderer->context, AGL_SWAP_INTERVAL, &v);
 			return v;
-		case 1: /* backface culling */
-			if(!glIsEnabled(GL_CULL_FACE)) return 0;
-			glGetIntegerv(GL_FRONT_FACE, &v);
-			if(v == GL_CW) return 1;
-			if(v == GL_CCW) return -1;
-			return 0;
-		case 2: /* polygon mode */
-			glGetIntegerv(GL_POLYGON_MODE, &v);
-			ERROR_CHECK;
-			return v;
-		case 3: /* point size */
-			glGetIntegerv(GL_POINT_SIZE, &v);
-			ERROR_CHECK;
-			return v;
-		case 4: /* line width */
-			glGetIntegerv(GL_LINE_WIDTH, &v);
-			ERROR_CHECK;
-			return v;
 	}
 	return 0;
 }
 
-int glSetIntProperty(int handle, int prop, int value)
+int glSetIntPropertyOS(int handle, int prop, int value)
 {
 	glRenderer *renderer = glRendererFromHandle(handle);
 	if(!renderer || !glMakeCurrentRenderer(renderer)) return 0;
@@ -485,31 +467,6 @@ int glSetIntProperty(int handle, int prop, int value)
 	switch(prop) {
 		case -1: /* vertical blank synchronization */
 			aglSetInteger(renderer->context, AGL_SWAP_INTERVAL, (GLint*) &value);
-			return 1;
-		case 1: /* backface culling */
-			if(!value) {
-				glDisable(GL_CULL_FACE);
-				ERROR_CHECK;
-				return 1;
-			}
-			glEnable(GL_CULL_FACE);
-			glFrontFace(value == 1 ? GL_CCW : GL_CW);
-			ERROR_CHECK;
-			return 1;
-		case 2: /* polygon mode */
-			if(value == 0) glPolygonMode(GL_FRONT_AND_BACK, GL_FILL);
-			else if(value == 1) glPolygonMode(GL_FRONT_AND_BACK, GL_LINE);
-			else if(value == 2) glPolygonMode(GL_FRONT_AND_BACK, GL_POINT);
-			else return 0;
-			ERROR_CHECK;
-			return 1;
-		case 3: /* point size */
-			glPointSize(value);
-			ERROR_CHECK;
-			return 1;
-		case 4: /* line width */
-			glLineWidth(value);
-			ERROR_CHECK;
 			return 1;
 	}
 	return 0;
