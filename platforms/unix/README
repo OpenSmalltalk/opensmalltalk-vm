@@ -7,34 +7,22 @@ Full documentation can be found in:
 
 For the impatient:
 
-1. Create a build directory and chdir to it:
+1. Type 'make' in the directory containing this file (the one you are
+   reading right now).
 
-	mkdir bld
-	cd bld
+2. Install the VM, plugins, man pages and documentation:
 
-2. Configure the build environment:
+	sudo make install
 
-	../platforms/unix/config/configure
-
-3. Build the VM and plugins:
-
-	make
-
-4. Install the VM, plugins, man pages and documentation:
-
-	su root
-	make install
-
-5. If you haven't used Squeak before, RTFM:
+3. If you haven't used Squeak before, RTFM:
 
 	man squeak
 
-6. Enjoy!
+4. Enjoy!
 
 Note: The latest documentation and releases are available from:
 
-   http://www-sor.inria.fr/~piumarta/squeak
-
+   http://squeak.hpl.hp.com/~piumarta/squeak
 
 ----
-Last edited: 2003-08-07 08:37:00 by piumarta on cartman.inria.fr
+Last edited: 2005-03-16 22:36:18 by piumarta on squeak.hpl.hp.com
