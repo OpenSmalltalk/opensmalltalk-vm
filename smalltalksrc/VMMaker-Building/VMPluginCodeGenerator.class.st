@@ -18,6 +18,12 @@ VMPluginCodeGenerator >> codeStringForPrimitives: classAndSelectorList [
 	^super codeStringForPrimitives: classAndSelectorList 
 ]
 
+{ #category : #inlining }
+VMPluginCodeGenerator >> doInlining: inlineFlag [
+"do inlining for a plugin"
+	^self doBasicInlining: inlineFlag
+]
+
 { #category : #'C code generator' }
 VMPluginCodeGenerator >> emitCHeaderForPrimitivesOn: aStream [
 	"Write a C file header for compiled primitives onto the given stream."
