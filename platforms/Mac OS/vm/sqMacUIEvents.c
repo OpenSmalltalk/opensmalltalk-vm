@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.10 2002/07/05 07:01:53 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.11 2002/08/06 21:53:33 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -15,6 +15,8 @@
 *  Mar 10th, 2002, JMM correct bad char cast, ensure we can get all characters.
 *  Mar 14th, 2002, JMM fix text input for encoding keys (textinput versus raw char)
 *  Apr 17th, 2002, JMM Use accessors for VM variables.
+*  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x drop usb stuff
+
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -534,9 +536,6 @@ int checkForModifierKeys() {
 	return result;
 }
 
-int getUIToLock(long *foo) {
-}
-
 #endif
 
 int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) {
@@ -719,7 +718,7 @@ void setPostMessageHook(eventMessageHook theHook) {
     postMessageHook = theHook;
 }
 
-#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__) && JMMFoo
   
 Boolean USBKeyboardCheckKey(int macKeyCode);
 #define kNumberOfKeyboardDispatch 10
