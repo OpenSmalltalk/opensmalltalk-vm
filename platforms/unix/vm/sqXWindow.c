@@ -944,8 +944,6 @@ int HandleEvents(void)
 #else /*!HEADLESS*/
   XEvent theEvent;
 
-  printf("HandleEvents  %d\n", random());
-  
   
   if (!isConnectedToXServer)
     return 0;
@@ -1745,15 +1743,8 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth,
 		double hScale, double vScale, int landscapeFlag)
 {
 #ifdef HEADLESS
-
-  fprintf(stderr,
-	  "Sorry, a headless VM cannot print Forms.  If you\n"
-	  "*really* need this then let me know, since there\n"
-	  "is a (rather painful to implement) solution.\n");
-  return false;
-
-#else /*!HEADLESS*/
-
+     return false;
+#else
   /* Write the form as a PPM (Portable PixMap) file, from which it can
      be converted into almost any existing graphical format (including
      PostScript).  See the "netpbm" utilities for a huge collection of
@@ -1764,11 +1755,26 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth,
 
   FILE *ppm;
   int ok= true;
+  float scale;  /* scale to use with pnmtops; unfortunately, the same
+		   scale must be used horizontally and vertically */
+  char printCommand[1000];
 
-  if ((ppm= fopen(SQ_FORM_FILENAME, "wb")) == 0)
-    return false;
+
+  if(hScale < vScale)
+       scale= hScale;
+  else
+       scale= vScale;
+
+  snprintf(printCommand, sizeof(printCommand),
+	   "pnmtops -scale %f %s | lpr",
+	   scale,
+	   (landscapeFlag ? "-turn" : "-noturn"));
+
+  if ((ppm= popen(printCommand, "w")) == 0)
+       return false;
+  
   /* PPM magic number and pixmap header */
-  fprintf(ppm, "P3\n%d %d 65535\n", width, height);
+  fprintf(ppm, "P3\n%d %d 255\n", width, height);
 
   switch (depth)
     {
@@ -1777,12 +1783,31 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth,
 	unsigned char *bits= (unsigned char *) bitsAddr;
 	int ppw= 32 / depth;
 	int raster= ((width + ppw - 1) / ppw) * 4;
-	/* stColors[] is too approximate: query the real colormap */
 	XColor colors[256];
 	int i;
+
 	for (i= 0; i < 256; ++i) colors[i].pixel= i;
-	/* all colors in one query reduces server traffic */
-	XQueryColors(stDisplay, stColormap, colors, 256);
+	if(stVisual->class == PseudoColor) {
+	  /* If the display is pseudocolor, then query the X server to
+             get the true colormap; that way the output looks as much
+             like the screen as possible. */
+	  XQueryColors(stDisplay, stColormap, colors, 256);
+	  for(i=0; i<256; i++) {
+	       /* scale down to 256 colors */
+	       colors[i].red >>= 8;
+	       colors[i].green >>= 8;
+	       colors[i].blue >>= 8;
+	  }
+	} else {
+	     /* otherwise, just use stColors, scaled up to 256 colors */
+	     for(i=0; i<256; i++) {
+		  colors[i].red=   ((stColors[i]>>5) & 0x7) << 5;
+		  colors[i].green= ((stColors[i]>>2) & 0x7) << 5;
+		  colors[i].blue=  ((stColors[i]) & 0x3) << 6;
+	     }
+	}
+	
+	
 	/* write the pixmap */
 	{
 	  int y;
@@ -1810,10 +1835,9 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth,
       break;
     } /* switch */
 
-  fclose(ppm);
+  pclose(ppm);
   return ok;
-
-#endif /*!HEADLESS*/
+#endif  /* HEADLESS */
 }
 
 
