@@ -447,7 +447,7 @@ int mpeg3_get_pack_header(mpeg3_demuxer_t *demuxer, unsigned int *header)
 		j = mpeg3packet_read_int16(demuxer);
 		if(i & 0x40000000 || (i >> 28) == 2)
 		{
-    		clock_ref = ((i & 0x31000000) << 3);
+    		clock_ref = ((i & 0x38000000) << 3); // JMM fix was 0x31 see http://sourceforge.net/tracker/index.php?func=detail&aid=439528&group_id=13554&atid=313554
     		clock_ref |= ((i & 0x03fff800) << 4);
     		clock_ref |= ((i & 0x000003ff) << 5);
     		clock_ref |= ((j & 0xf800) >> 11);
