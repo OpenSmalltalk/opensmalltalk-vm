@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.10 2003/03/23 20:00:59 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.11 2003/03/25 17:42:49 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.10 2003/03/23 20:00:59 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.11 2003/03/25 17:42:49 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -905,7 +905,19 @@ int mapVirtualKey(int virtKey)
     case VK_RIGHT:  return 29;
     case VK_UP   :  return 30;
     case VK_DOWN :  return 31;
-    case VK_RETURN: return 13;
+    /* case VK_RETURN: return 13; */
+    /* remap appropriately so that we get _all_ key down events */
+    case 127: return VK_DELETE;
+    case 5: return VK_INSERT;
+    case 11: return VK_PRIOR;
+    case 12: return VK_NEXT;
+    case 4: return VK_END;
+    case 1: return VK_HOME;
+    case 28: return VK_LEFT;
+    case 29: return VK_RIGHT;
+    case 30: return VK_UP;
+    case 31: return VK_DOWN;
+    /* case 13: return VK_RETURN; */
   }
   return 0;
 }
