@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2003-08-13 23:16:27 by piumarta on emilia.inria.fr
+ * Last edited: Fri Aug 15 19:45:00 2003 by piumarta (Ian Piumarta) on xombul
  */
 
 #ifndef __sq_config_h
@@ -154,5 +154,13 @@
 #undef VM_MODULE_PREFIX
 #undef VM_DLSYM_PREFIX
 #undef VM_X11DIR
+
+/* avoid dependencies on glibc2.3 */
+
+#undef HAVE_FEATURES_H
+
+#if defined(HAVE_FEATURES_H)
+# include "glibc.h"
+#endif
 
 #endif /* __sq_config_h */
