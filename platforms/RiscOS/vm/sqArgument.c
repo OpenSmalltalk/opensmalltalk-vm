@@ -17,22 +17,46 @@ static char* nextOption() {
 
 
 static int IsImage(char *name) {
+/* check the named file to see if it is a decent candidate for a Squeak image file. Remember to check both the very beginning of the file and 512 bytes into it, just in case it was written from a unix machine - which adds a short extra header */
 	FILE *fp;
 	int magic;
 	int byteSwapped(int);
 
 	fp = fopen(name,"rb");
-	if(!fp) return 0; /* not an image */
+	if(!fp) return 0; /* could not open file */
 	if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+		/* could not read an int from file */
 		fclose(fp);
 		return 0;
 	}
-	fclose(fp);
 	if (magic > 0xFFFF) {
 		magic = byteSwapped(magic);
 	}
 	ImageVersionNumber = magic;
-	return readableFormat(magic);
+	if (readableFormat(magic)) {
+		fclose(fp);
+		return true;
+	}
+	/* no luck at beginning of file, seek to 512 and try again */
+	if(fseek( fp, 512, SEEK_SET)) {
+		/* seek failed, which implies fileis too small */
+		fclose(fp);
+		return false;
+	}
+		if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+		/* could not read an int from file */
+		fclose(fp);
+		return 0;
+	}
+	if (magic > 0xFFFF) {
+		magic = byteSwapped(magic);
+	}
+	ImageVersionNumber = magic;
+	if (readableFormat(magic)) {
+		fclose(fp);
+		return true;
+	}
+	return false;
 }
 
 

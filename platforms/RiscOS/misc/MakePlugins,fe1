@@ -26,7 +26,7 @@ pluginList: pluginDir  B2DPlugin BitBltPlugin DSAPrims FFTPlugin FilePlugin File
 pluginDir:
 	echo make $*  
 	CDir $(SPD)
-	
+	CDir @.o
 
 ###########
 # ADPCMCodecPlugin make rule.
@@ -433,10 +433,6 @@ plugins.Squeak3D.o.b3dremap:	plugins.Squeak3D.h.b3d
 plugins.Squeak3D.o.b3dremap:	plugins.Squeak3D.h.b3dTypes
 plugins.Squeak3D.o.b3dremap:	plugins.Squeak3D.h.b3dAlloc
 plugins.Squeak3D.o.b3dremap:	plugins.Squeak3D.h.b3dTypes
-plugins.ZipPlugin.o.ZipPlugin:	plugins.ZipPlugin.c.ZipPlugin
-plugins.ZipPlugin.o.ZipPlugin:	vm.h.sqVirtualMachine
-plugins.ZipPlugin.o.ZipPlugin:	vm.h.sqConfig
-plugins.ZipPlugin.o.ZipPlugin:	vm.h.sqPlatformSpecific
 plugins.SurfacePlugin.o.SurfacePlugin:	plugins.SurfacePlugin.c.SurfacePlugin
 plugins.SurfacePlugin.o.SurfacePlugin:	vm.h.sqVirtualMachine
 plugins.SurfacePlugin.o.SurfacePlugin:	vm.h.sqConfig
@@ -523,3 +519,9 @@ plugins.DSAPrims.o.DSAPrims:	plugins.DSAPrims.c.DSAPrims
 plugins.DSAPrims.o.DSAPrims:	vm.h.sqVirtualMachine
 plugins.DSAPrims.o.DSAPrims:	vm.h.sqConfig
 plugins.DSAPrims.o.DSAPrims:	vm.h.sqPlatformSpecific
+plugins.ZipPlugin.o.ZipPlugin:	plugins.ZipPlugin.c.ZipPlugin
+plugins.ZipPlugin.o.ZipPlugin:	vm.h.sqVirtualMachine
+plugins.ZipPlugin.o.ZipPlugin:	vm.h.sqConfig
+plugins.ZipPlugin.o.ZipPlugin:	vm.h.sqPlatformSpecific
+plugins.ZipPlugin.o.ZipPlugin:	OS:h.os
+plugins.ZipPlugin.o.ZipPlugin:	OS:h.types
