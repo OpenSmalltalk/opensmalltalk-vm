@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.16 2003/07/31 13:02:06 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.17 2003/09/02 17:52:47 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -19,6 +19,7 @@
 *  3.5.1b2 June 6th, 2003 JMM support for aio polling under unix socket support
 *  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
 *  3.5.1b5 June 25th, 2003 JMM don't close window on floating full screen, handle issue with keydown and floating window if required.
+*  3.6.0b1 Aug 5th, 2003 JMM only invoke event timer loop logic if gTapPowerManager is true (OS supports!)
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -1224,6 +1225,7 @@ void SetUpCarbonEvent() {
     InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), 1, customEventEventList, 0, NULL);
     
 /* timmer loops */
+    if (gTapPowerManager) 
     InstallEventLoopTimer (GetMainEventLoop(),
                        6*kEventDurationSecond,
                        kEventDurationSecond,
