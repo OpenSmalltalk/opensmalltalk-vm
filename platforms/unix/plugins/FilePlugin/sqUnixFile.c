@@ -266,29 +266,3 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
   return true;
 }
 
-#if 0
-/* TPR - shouldn't be required now FilePlugin is fixed */
-
-int ioCanCreatePathOfSize(char* dirNameIndex, int dirNameSize)
-	{ return true; }
-int ioCanListPathOfSize(char* dirNameIndex, int dirNameSize)
-	{ return true; }
-int ioCanDeletePathOfSize(char* dirNameIndex, int dirNameSize)
-	{ return true; }
-int ioCanOpenFileOfSizeWritable(char* fileNameIndex, int fileNameSize, int writeFlag)
-	{ return true; }
-int ioCanDeleteFileOfSize(char* fileNameIndex, int fileNameSize)
-	{ return true; }
-int ioCanRenameFileOfSize(char* fileNameIndex, int fileNameSize)
-	{ return true; }
-int ioCanGetFileTypeOfSize(char* fileNameIndex, int fileNameSize)
-	{ return true; }
-int ioCanSetFileTypeOfSize(char* fileNameIndex, int fileNameSize)
-	{ return true; }
-int ioDisableFileAccess(void)
-	{ return true; }
-int ioHasFileAccess(void)
-	{ return true; }
-
-#endif
-
