@@ -42,6 +42,7 @@
  */
 
 
+#include "config.h"
 #include "sq.h"
 #include "sqUnixMain.h"
 #include "sqUnixGlobals.h"
@@ -75,7 +76,7 @@ static void dprintf(const char *fmt, ...)
 #if (DEBUG)
   va_list ap;
   va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
+  vprintf(fmt, ap);
   va_end(ap);
 #endif
 }
@@ -100,6 +101,9 @@ static void outOfMemory(void)
 {
   fatal("out of memory");
 }
+
+
+/*#define DEBUG_EVENTS	1*/
 
 #include "sqUnixEvent.c"
 
@@ -148,6 +152,10 @@ static void closeFramebuffer(void)
 
 static void enqueueKeyboardEvent(int key, int up, int modifiers)
 {
+  dprintf("KEY %3d %02x %c %s mod %02x\n",
+	  key, key, ((key > 32) && (key < 127)) ? key : ' ',
+	  up ? "UP" : "DOWN", modifiers);
+
   modifierState= modifiers;
   if (up)
     {
@@ -184,6 +192,9 @@ static void enqueueMouseEvent(int b, int dx, int dy)
   fb_advanceCursor(fb, dx, dy);
   buttonState= b;
   mousePosition= fb->cursorPosition;
+  if (b)
+    dprintf("mouse %02x at %4d,%4d mod %02x\n",
+	    b, mousePosition.x, mousePosition.y, modifierState);
   recordMouseEvent();
 }
 
