@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.9 2003/03/08 21:07:51 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.10 2003/03/23 20:00:59 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.9 2003/03/08 21:07:51 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.10 2003/03/23 20:00:59 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -1034,6 +1034,7 @@ int recordKeyboardEvent(MSG *msg) {
       break;
     case WM_KEYUP:
     case WM_SYSKEYUP: 
+      if(virtCode) keyCode = virtCode;
       pressCode = EventKeyUp; 
       break;
     case WM_CHAR:
