@@ -1,0 +1,305 @@
+# Makefile.in (v3.2) for Unix Squeak			-*- makefile -*-
+# 
+#   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
+#      authors/contributors listed elsewhere in this file.
+#   All rights reserved.
+#   
+#   This file is part of Unix Squeak.
+# 
+#   This file is distributed in the hope that it will be useful, but WITHOUT
+#   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#   FITNESS FOR A PARTICULAR PURPOSE.
+#   
+#   You may use and/or distribute this file ONLY as part of Squeak, under
+#   the terms of the Squeak License as described in `LICENSE' in the base of
+#   this distribution, subject to the following restrictions:
+# 
+#   1. The origin of this software must not be misrepresented; you must not
+#      claim that you wrote the original software.  If you use this software
+#      in a product, an acknowledgment to the original author(s) (and any
+#      other contributors mentioned herein) in the product documentation
+#      would be appreciated but is not required.
+# 
+#   2. This notice may not be removed or altered in any source distribution.
+# 
+#   Using or modifying this file for use in any context other than Squeak
+#   changes these copyright conditions.  Read the file `COPYING' in the base
+#   of the distribution before proceeding with any such use.
+# 
+#   You are STRONGLY DISCOURAGED from distributing a modified version of
+#   this file under its original name without permission.  If you must
+#   change it, rename it first.
+
+# Author: Ian.Piumarta@inria.fr
+# 
+# Last edited: 2001-02-12 14:59:20 by piumarta on rnd10-51.rd.wdi.disney.com
+
+### TARGETS (default target is `all')
+# 
+# 	all		- build `squeak' and `modules'
+#	install		- build `squeak_install' and `modules_install'
+#	uninstall	- undo the effects of `install'
+# 
+#	squeak		- build squeak only
+#	squeak_install	- install squeak in ${bindir}/
+#	modules		- build all modules
+#	modules_install	- install modules in ${libdir}/squeak${VERSION}/
+
+@SET_MAKE@
+
+MAKEFLAGS=	--no-print-directory
+
+MAJOR=		@MAJOR@
+MINOR=		@MINOR@
+VERSION=	@VERSION@
+
+host=		@host@
+host_cpu=	@host_cpu@
+
+top_builddir=	.
+
+topdir=		@topdir@
+srcdir=		$(topdir)/src
+#gendir=		$(srcdir)/generated
+#unxdir=		$(srcdir)/unix
+vmdir=		$(srcdir)/vm
+plgdir=		$(srcdir)/plugins
+utldir=		$(srcdir)/util
+
+prefix=		@prefix@
+exec_prefix=	@exec_prefix@
+bindir=		@bindir@
+libdir=		@libdir@
+datadir=	@datadir@
+mandir=		@mandir@
+
+docdir=		$(prefix)/doc/squeak-$(VERSION)
+sqlibdir=	$(libdir)/squeak
+vsqlibdir=	$(sqlibdir)/$(VERSION)
+sqdatadir=	$(datadir)/squeak
+vsqdatadir=	$(sqdatadir)/$(VERSION)
+man1dir=	$(mandir)/man1
+
+ACLOCAL_M4=	$(srcdir)/aclocal.m4
+ACINCLUDE_M4=	$(srcdir)/acinclude.m4
+CONFIGURE=	$(srcdir)/configure
+CONFIGURE_IN=	$(srcdir)/configure.in
+MAKEFILE_IN=	$(srcdir)/Makefile.in
+MKFRAGS=	$(utldir)/mkfrags
+
+SHELL=		@SHELL@
+
+MKINSTALLDIRS=	$(SHELL) $(utldir)/mkinstalldirs
+
+INSTALL=	@INSTALL@
+INSTALL_PROG=	@INSTALL_PROGRAM@
+INSTALL_DATA=	@INSTALL_DATA@
+
+UNINSTALL=	$(SHELL) $(utldir)/uninstall
+
+AS=		@AS@
+AWK=		@AWK@
+LIBTOOL=	@LIBTOOL@
+NM=		@NM@
+LN=		@LN@
+LN_S=		@LN_S@
+
+CC=		@CC@
+CXX=		@CXX@
+DEFS=		@DEFS@ -DUNIX -DSQ_LIBDIR=\"$(vsqlibdir)\"
+INCLUDES=	-I. -I$(vmdir)
+CPPFLAGS=	@CPPFLAGS@
+CFLAGS=		@CFLAGS@ @J_CFLAGS@ -funroll-loops
+WFLAGS=		@WFLAGS@
+
+LDFLAGS=	@LDFLAGS@ -avoid-version
+LIBS=		@LIBS@
+
+COMPILE=	$(CC) $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS)
+LTCOMPILE=	$(LIBTOOL) --mode=compile $(CC) $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS)
+LINK=		$(LIBTOOL) --mode=link $(CC) $(CFLAGS) $(LDFLAGS)
+LTCOMPILEXX=	$(LIBTOOL) --mode=compile $(CXX) $(CFLAGS) $(DEFS) $(INCLUDES) $(CPPFLAGS)
+LINKXX=		$(LIBTOOL) --mode=link $(CXX) $(CFLAGS) $(LDFLAGS)
+
+GNUIFY=		$(utldir)/gnuify
+INTERP=		@INTERP@
+
+@mh_frag@
+
+MOD_LA=		$(MODULES:=.la)	$(PLUGINS:=.la)
+VM_O=		$(VM:=.o) $(INTERP).o
+
+VER_O=		sqUnixVersion.o
+VER_C=		$(VER_O:.o=.c)
+
+IMG=		../internal.image
+IMG_O=		squeak_image.o
+IMZ_O=		squeak_image_gz.o
+
+DOCFILES=	BUILD.UnixSqueak COPYING COPYRIGHT LICENSE README.CodingStandards
+MANFILES=	squeak.1
+
+.SUFFIXES:
+
+all : squeak modules
+
+# configuration
+
+$(ACLOCAL_M4) : $(ACINCLUDE_M4)
+	cd $(srcdir) && aclocal
+
+$(CONFIGURE) : $(CONFIGURE_IN) $(ACLOCAL_M4)
+	cd $(srcdir) && autoconf
+
+config.status : $(CONFIGURE) $(MKFRAGS)
+	$(CONFIGURE) --prefix=${prefix} --exec_prefix=${exec_prefix} --bindir=${bindir} --libdir=${libdir} --mandir=${mandir}
+
+Makefile : $(MAKEFILE_IN) config.status
+	CONFIG_FILES=Makefile CONFIG_HEADERS= $(SHELL) ./config.status
+
+sqUnixConfig.h : $(vmdir)/sqUnixConfig.h.in $(CONFIGURE)
+	CONFIG_FILES= CONFIG_HEADERS=sqUnixConfig.h $(SHELL) ./config.status
+
+# targets
+
+squeak.a : $(VM_O) $(VER_O)
+	$(AR) -rc $@.tmp $(VM_O) $(VER_O)
+	mv $@.tmp $@
+
+squeak : squeak.a
+	$(LINK) -export-dynamic -R$(vsqlibdir) -o squeak squeak.a $(LIBS)
+	$(NM) squeak | grep -w T | sort > squeak.map
+	chmod +x inisqueak
+
+modules : $(MOD_LA)
+
+inisqueak : $(vmdir)/inisqueak.in
+	CONFIG_FILES=inisqueak CONFIG_HEADERS= $(SHELL) ./config.status
+
+# misc support
+
+VER_C=	$(VER_O:.o=.c)
+
+$(VER_O) : $(VER_C)
+	$(COMPILE) -c $(VER_C)
+
+$(VER_C) : $(UNX_O) $(GEN_O)
+	$(utldir)/verstamp $(VER_C) $(CC)
+
+interp.o : $(vmdir)/interp.c
+	$(COMPILE) -c -o interp.o $(vmdir)/interp.c
+
+gnu-interp.o : $(vmdir)/interp.c
+	$(AWK) -f $(GNUIFY) $(vmdir)/interp.c > gnuify.out
+	mv gnuify.out gnu-interp.c
+	$(COMPILE) -c gnu-interp.c
+
+.force :
+
+squeak.1 : $(vmdir)/squeak.1
+	rm -f squeak.1
+	sed '\
+s,{vsqdatadir},$(vsqdatadir),g;\
+s,{sqdatadir},$(sqdatadir),g;\
+s,{vsqlibdir},$(vsqlibdir),g;\
+s,{sqlibdir},$(sqlibdir),g;\
+s,{bindir},$(bindir),g;\
+s,{docdir},$(docdir),g;\
+s,{mandir},$(man1dir),g;\
+s,{version},$(VERSION),g;\
+s,{major},$(MAJOR),g;' <$(vmdir)/squeak.1 >squeak.1
+
+# installation
+
+install : squeak_install modules_install doc_install
+
+uninstall : squeak_uninstall modules_uninstall doc_uninstall
+
+squeak_install : squeak inisqueak
+	$(MKINSTALLDIRS) $(DESTDIR)$(vsqlibdir)
+	$(INSTALL_PROG) squeak $(DESTDIR)$(vsqlibdir)
+#	test -x j3 && $(INSTALL_PROG) squeak $(DESTDIR)$(vsqlibdir)
+	$(INSTALL_PROG) inisqueak $(DESTDIR)$(vsqlibdir)
+	$(INSTALL_DATA) squeak.map $(DESTDIR)$(vsqlibdir)
+	$(MKINSTALLDIRS) $(DESTDIR)$(bindir)
+	( path=`$(utldir)/relpath $(bindir) $(vsqlibdir)`; \
+	  cd $(DESTDIR)$(bindir); \
+	  rm -f squeak inisqueak; \
+	  $(LN_S) $$path/squeak .; \
+	  $(LN_S) $$path/inisqueak .; )
+
+squeak_uninstall :
+	@$(UNINSTALL) $(DESTDIR)$(vsqlibdir) squeak inisqueak squeak.map
+	@$(UNINSTALL) $(DESTDIR)$(bindir) squeak inisqueak
+
+modules_install : $(MOD_LA)
+	$(MKINSTALLDIRS) $(DESTDIR)$(vsqlibdir)
+	@list='$(MOD_LA)'; for p in $$list; do \
+	  if test -f $$p; then \
+	    echo "$(LIBTOOL) --mode=install $(INSTALL) $$p $(DESTDIR)$(vsqlibdir)/$$p"; \
+	    $(LIBTOOL) --mode=install $(INSTALL) $$p $(DESTDIR)$(vsqlibdir)/$$p; \
+	  else :; fi; \
+	done
+
+modules_uninstall :
+	@list='$(MOD_LA)'; for p in $$list; do \
+	  if test -f $(DESTDIR)/$(vsqlibdir)/$$p; then \
+	    echo "$(LIBTOOL) --mode=uninstall rm -f $(DESTDIR)$(vsqlibdir)/$$p"; \
+	    $(LIBTOOL) --mode=uninstall rm -f $$p $(DESTDIR)$(vsqlibdir)/$$p; \
+	  else :; fi; \
+	done
+	@$(UNINSTALL) $(DESTDIR)$(vsqlibdir)
+
+doc_install : squeak.1
+	$(MKINSTALLDIRS) $(DESTDIR)$(docdir)
+	@list='$(DOCFILES)'; for f in $$list; do \
+	  echo $(INSTALL_DATA) $(topdir)/$$f $(DESTDIR)$(docdir); \
+	  $(INSTALL_DATA) $(topdir)/$$f $(DESTDIR)$(docdir); \
+	done
+	$(MKINSTALLDIRS) $(DESTDIR)$(man1dir)
+	$(INSTALL_DATA) squeak.1 $(DESTDIR)$(man1dir)
+
+doc_uninstall :
+	@$(UNINSTALL) $(DESTDIR)$(docdir) $(DOCFILES)
+	@$(UNINSTALL) $(DESTDIR)$(man1dir) squeak.1
+
+image_install :
+	$(MKINSTALLDIRS) $(DESTDIR)$(vsqdatadir)
+	$(INSTALL_DATA) $(topdir)/Squeak$(VERSION).image $(DESTDIR)$(vsqdatadir)
+	$(INSTALL_DATA) $(topdir)/Squeak$(VERSION).changes $(DESTDIR)$(vsqdatadir)
+
+image_uninstall :
+	@$(UNINSTALL) $(DESTDIR)$(vsqdatadir) Squeak$(VERSION).image Squeak$(VERSION).changes
+
+sources_install :
+	$(MKINSTALLDIRS) $(DESTDIR)$(sqdatadir)
+	$(INSTALL_DATA) $(topdir)/SqueakV$(MAJOR).sources $(DESTDIR)$(sqdatadir)
+
+sources_uninstall :
+	@$(UNINSTALL) $(DESTDIR)$(sqdatadir) SqueakV$(MAJOR).sources
+
+# housekeeping
+
+cleanfiles :
+	rm -f *.o *.lo core
+
+clean : cleanfiles
+	rm -f $(VM) *.la .libs/*
+	test ! -d .libs || rmdir .libs
+
+distclean : clean
+	rm -f Makefile mh_frag mt_frag inisqueak
+	rm -f config.cache config.log config.status libtool
+	rm -f gnu-interp.c sqUnixVersion.c
+	rm -f sqUnixConfig.h sqUnixInternalPlugins.h $(VM).map
+
+# ikp local
+
+src.rpm arch.rpm image.rpm sources.rpm \
+distbin distsrc distimg distsources distcheck  :
+	$(MAKE) -f $(topdir)/util/Makefile.dist $@-local
+
+# configured rules
+
+@mt_frag@
+

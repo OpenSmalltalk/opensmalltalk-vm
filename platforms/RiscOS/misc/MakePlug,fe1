@@ -1,0 +1,163 @@
+# Project:   sq31plugin
+# Make the pluginised VM for v3.1
+
+# Toolflags:
+CCflags = -c -C -depend !Depend -IC:,OS:,C:^.socketincl,C:^.rink -throwback  -DACORN
+C++flags = -c -depend !Depend -IC: -throwback
+Linkflags = -aif -c++ -o $@  -S foo
+ObjAsmflags = -throwback -NoCache -depend !Depend
+CMHGflags = 
+LibFileflags = -c -o $@
+Squeezeflags = -o $@
+
+
+# Final targets:
+@.!Squeak.!Runimage:   @.vm.o.interp @.vm.o.sqArgument \
+        @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
+        @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
+        @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine \
+        @.vm.o.fperrors OSLib:o.OSLib C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+        link $(linkflags)  @.vm.o.interp @.vm.o.sqArgument \
+        @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
+        @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
+        @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine \
+        @.vm.o.fperrors OSLib:o.OSLib C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
+
+
+# User-editable dependencies:
+extractsymflags = o
+socklib=OSLib:^.socketlibs.o.
+
+vmobjdir:
+        CDir @.!Squeak
+        CDir @.vm.o
+
+@.vm.o.ptrblock:   @.!Squeak.ptrblkmap 
+        rinkptr $(rinkptrflags) @.!Squeak.ptrblkmap  @.vm.o.ptrblock
+
+@.!Squeak.ptrblkmap:   vmobjdir C:o.stubs @.vm.o.sqRPCWindows @.vm.dsc.block
+        copy @.vm.dsc.block $* f~c
+        extractsym e $* C:o.stubs
+        extractsym e $* @.vm.o.sqRPCWindows
+
+
+
+# Static dependencies:
+@.vm.o.interp:   vmobjdir @.vm.c.interp
+        cc $(ccflags) -o @.vm.o.interp @.vm.c.interp 
+@.vm.o.sqArgument:   vmobjdir @.vm.c.sqArgument
+        cc $(ccflags) -o @.vm.o.sqArgument @.vm.c.sqArgument 
+@.vm.o.sqNamedPrims:   vmobjdir @.vm.c.sqNamedPrims
+        cc $(ccflags) -o @.vm.o.sqNamedPrims @.vm.c.sqNamedPrims 
+@.vm.o.sqOldSoundPrims:   vmobjdir @.vm.c.sqOldSoundPrims
+        cc $(ccflags) -o @.vm.o.sqOldSoundPrims @.vm.c.sqOldSoundPrims 
+@.vm.o.sqRPCClipboard:   vmobjdir @.vm.c.sqRPCClipboard
+        cc $(ccflags) -o @.vm.o.sqRPCClipboard @.vm.c.sqRPCClipboard 
+@.vm.o.sqRPCEvents:   vmobjdir @.vm.c.sqRPCEvents
+        cc $(ccflags) -o @.vm.o.sqRPCEvents @.vm.c.sqRPCEvents 
+@.vm.o.sqRPCExternalPrims:   vmobjdir @.vm.c.sqRPCExternalPrims
+        cc $(ccflags) -o @.vm.o.sqRPCExternalPrims @.vm.c.sqRPCExternalPrims 
+@.vm.o.sqRPCFormPrint:   vmobjdir @.vm.c.sqRPCFormPrint
+        cc $(ccflags) -o @.vm.o.sqRPCFormPrint @.vm.c.sqRPCFormPrint 
+@.vm.o.sqRPCSyscall:   vmobjdir @.vm.c.sqRPCSyscall
+        cc $(ccflags) -o @.vm.o.sqRPCSyscall @.vm.c.sqRPCSyscall 
+@.vm.o.sqRPCWindows:   vmobjdir @.vm.c.sqRPCWindows
+        cc $(ccflags) -o @.vm.o.sqRPCWindows @.vm.c.sqRPCWindows 
+@.vm.o.sqVirtualMachine:   vmobjdir @.vm.c.sqVirtualMachine
+        cc $(ccflags) -o @.vm.o.sqVirtualMachine @.vm.c.sqVirtualMachine
+@.vm.o.fperrors:   vmobjdir @.vm.s.fperrors
+        objasm $(objasmflags) -from @.vm.s.fperrors -to @.vm.o.fperrors
+
+
+# Dynamic dependencies:
+vm.o.sqRPCClipboard:	vm.c.sqRPCClipboard
+vm.o.sqRPCClipboard:	OS:h.os
+vm.o.sqRPCClipboard:	OS:h.types
+vm.o.sqRPCClipboard:	OS:h.osbyte
+vm.o.sqRPCClipboard:	OS:h.osfscontrol
+vm.o.sqRPCClipboard:	OS:h.fileswitch
+vm.o.sqRPCClipboard:	C:h.wimp
+vm.o.sqRPCClipboard:	OS:h.wimpsprite
+vm.o.sqRPCClipboard:	OS:h.osspriteop
+vm.o.sqRPCClipboard:	OS:h.wimp
+vm.o.sqRPCClipboard:	OS:h.font
+vm.o.sqRPCClipboard:	OS:h.colourtrans
+vm.o.sqRPCClipboard:	vm.h.sq
+vm.o.sqRPCClipboard:	vm.h.sqConfig
+vm.o.sqRPCClipboard:	vm.h.sqVirtualMachine
+vm.o.sqRPCClipboard:	vm.h.sqPlatformSpecific
+vm.o.sqRPCClipboard:	vm.h.sqArguments
+vm.o.sqRPCClipboard:	C:h.kernel
+vm.o.sqRPCEvents:	vm.c.sqRPCEvents
+vm.o.sqRPCEvents:	OS:h.os
+vm.o.sqRPCEvents:	OS:h.types
+vm.o.sqRPCEvents:	OS:h.osbyte
+vm.o.sqRPCEvents:	OS:h.osfscontrol
+vm.o.sqRPCEvents:	OS:h.fileswitch
+vm.o.sqRPCEvents:	C:h.wimp
+vm.o.sqRPCEvents:	OS:h.wimpsprite
+vm.o.sqRPCEvents:	OS:h.osspriteop
+vm.o.sqRPCEvents:	OS:h.wimp
+vm.o.sqRPCEvents:	OS:h.font
+vm.o.sqRPCEvents:	OS:h.colourtrans
+vm.o.sqRPCEvents:	vm.h.sq
+vm.o.sqRPCEvents:	vm.h.sqConfig
+vm.o.sqRPCEvents:	vm.h.sqVirtualMachine
+vm.o.sqRPCEvents:	vm.h.sqPlatformSpecific
+vm.o.sqRPCEvents:	vm.h.sqArguments
+vm.o.sqRPCExternalPrims:	vm.c.sqRPCExternalPrims
+vm.o.sqRPCExternalPrims:	OS:h.os
+vm.o.sqRPCExternalPrims:	OS:h.types
+vm.o.sqRPCExternalPrims:	vm.h.sq
+vm.o.sqRPCExternalPrims:	vm.h.sqConfig
+vm.o.sqRPCExternalPrims:	vm.h.sqVirtualMachine
+vm.o.sqRPCExternalPrims:	vm.h.sqPlatformSpecific
+vm.o.sqRPCExternalPrims:	C:h.kernel
+vm.o.sqRPCExternalPrims:	C:^.rink.h.rink
+vm.o.sqRPCExternalPrims:	C:h.kernel
+vm.o.sqRPCFormPrint:	vm.c.sqRPCFormPrint
+vm.o.sqRPCFormPrint:	vm.h.sq
+vm.o.sqRPCFormPrint:	vm.h.sqConfig
+vm.o.sqRPCFormPrint:	vm.h.sqVirtualMachine
+vm.o.sqRPCFormPrint:	vm.h.sqPlatformSpecific
+vm.o.sqVirtualMachine:	vm.c.sqVirtualMachine
+vm.o.sqVirtualMachine:	vm.h.sqVirtualMachine
+vm.o.fperrors: vm.s.fperrors
+vm.o.sqRPCWindows:	vm.c.sqRPCWindows
+vm.o.sqRPCWindows:	OS:h.os
+vm.o.sqRPCWindows:	OS:h.types
+vm.o.sqRPCWindows:	OS:h.osbyte
+vm.o.sqRPCWindows:	OS:h.osfscontrol
+vm.o.sqRPCWindows:	OS:h.fileswitch
+vm.o.sqRPCWindows:	C:h.wimp
+vm.o.sqRPCWindows:	OS:h.wimpsprite
+vm.o.sqRPCWindows:	OS:h.osspriteop
+vm.o.sqRPCWindows:	OS:h.wimp
+vm.o.sqRPCWindows:	OS:h.font
+vm.o.sqRPCWindows:	OS:h.colourtrans
+vm.o.sqRPCWindows:	vm.h.sq
+vm.o.sqRPCWindows:	vm.h.sqConfig
+vm.o.sqRPCWindows:	vm.h.sqVirtualMachine
+vm.o.sqRPCWindows:	vm.h.sqPlatformSpecific
+vm.o.sqRPCWindows:	vm.h.sqArguments
+vm.o.sqRPCWindows:	C:h.kernel
+vm.o.interp:	vm.c.interp
+vm.o.interp:	vm.h.sq
+vm.o.interp:	vm.h.sqConfig
+vm.o.interp:	vm.h.sqVirtualMachine
+vm.o.interp:	vm.h.sqPlatformSpecific
+vm.o.sqArgument:	vm.c.sqArgument
+vm.o.sqArgument:	vm.h.sq
+vm.o.sqArgument:	vm.h.sqConfig
+vm.o.sqArgument:	vm.h.sqVirtualMachine
+vm.o.sqArgument:	vm.h.sqPlatformSpecific
+vm.o.sqArgument:	vm.h.sqArguments
+vm.o.sqNamedPrims:	vm.c.sqNamedPrims
+vm.o.sqNamedPrims:	vm.h.sq
+vm.o.sqNamedPrims:	vm.h.sqConfig
+vm.o.sqNamedPrims:	vm.h.sqVirtualMachine
+vm.o.sqNamedPrims:	vm.h.sqPlatformSpecific
+vm.o.sqNamedPrims:	vm.h.sqNamedPrims
+vm.o.sqNamedPrims:	vm.platform.exports
+vm.o.sqNamedPrims:	vm.platform.exports
+vm.o.sqNamedPrims:	vm.platform.exports

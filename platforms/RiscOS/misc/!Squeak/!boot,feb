@@ -1,0 +1,4 @@
+Set Squeak$Dir <Obey$Dir>
+Set File$Type_FAA STimage
+iconsprites <Squeak$Dir>.!Sprites
+Set Alias$@RunType_FAA run <Squeak$Dir>.!Run %%*0

@@ -1,0 +1,11 @@
+# manual entries for functions imported from the oslib - TPR
+xosgbpb_dir_entries_system_info
+xosfile_create_dir
+xosfile_set_type
+xosfscontrol_canonicalise_path
+xosfscontrol_copy
+xcdfs_get_number_of_drives
+xramfs_drives
+xscsifs_drives
+xadfs_drives
+

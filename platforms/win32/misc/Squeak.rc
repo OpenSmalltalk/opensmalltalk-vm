@@ -1,0 +1,5 @@
+#ifdef _WIN32
+1                       ICON    DISCARDABLE     "squeak.ico"
+2                       ICON    DISCARDABLE     "squeak2.ico"
+3                       ICON    DISCARDABLE     "squeak3.ico"
+#endif

@@ -1,0 +1,36 @@
+/* platform specific exports for the Win32 VM */
+
+#ifndef _WIN32_WCE
+/* Joystick debug support primitives */
+XFN(win32JoystickDebugInfo)
+XFN(win32JoystickDebugPrintRawValues)
+XFN(win32JoystickDebugPrintAlternativeValues)
+
+#ifndef NO_NETWORK
+/* Networking debug primitive */
+XFN(win32DebugPrintSocketState)
+#endif
+
+/* Plugin support primitives
+   Okay, okay, these are not really platform specific
+   but they started out as a Win32 specific version.
+   We should make these primitives a proper plugin
+   but right now I just need the exports. */
+XFN(primitivePluginBrowserReady)
+XFN(primitivePluginRequestURLStream)
+XFN(primitivePluginRequestURL)
+XFN(primitivePluginPostURL)
+XFN(primitivePluginRequestFileHandle)
+XFN(primitivePluginDestroyRequest)
+XFN(primitivePluginRequestState)
+#endif
+
+/* Something fancy. Export a few entry points that can
+   terribly useful for some really Win32 specific stuff.
+   stWindow -- the HWND of Squeak.
+   firstMessageHook -- message hook for processing Msgs from a plugin
+   preMessageHook -- message hook for processing Msgs before any other
+*/
+XFN(stWindow)
+/* XFN(firstMessageHook)
+XFN(preMessageHook) */

@@ -1,0 +1,29 @@
+/*
+   ===========================================================================
+	MacHeaders.pch				©1995-1999 Metrowerks Inc. All rights reserved.
+   ===========================================================================
+
+	Script to generate the 'MacHeaders<xxx>' precompiled header for
+	Metrowerks C.
+
+	RA/8/19/98	Updated to Universal Headers 3.1
+	RA/7/14/99  Changed commenting style so you can built for ANSI Strict
+
+	Support for automatically naming the C precompiled header file ...
+*/
+
+#if __POWERPC__
+	#pragma precompile_target "myMacHeadersPPC"
+#elif __CFM68K__
+	#pragma precompile_target "myMacHeadersCFM68K"
+
+#else
+	#pragma precompile_target "myMacHeaders68K"
+#endif
+
+
+/* Now just include the "MacHeaders.c" source file ... */
+
+#pragma once on
+
+#include "myMacHeaders.c"
