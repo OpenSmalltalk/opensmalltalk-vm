@@ -2,7 +2,7 @@
  * 
  * Author:	Ian Piumarta <ian.piumarta@inria.fr>
  * Version:	1.1
- * Last edited:	2002-07-12 10:37:47 by piumarta on emilia.inria.fr
+ * Last edited:	2003-09-03 18:06:13 by piumarta on emilia.inria.fr
  * 
  * This plugin extends AsynchFilePlugin with support for Unix98-style
  * pseudo ttys.  See the PseudoTTY and PseudoTTYPlugin class comments
@@ -193,6 +193,8 @@ int ptyForkAndExec(AsyncFile *f, int semaIndex,
   int ptm= -1, pts= -1;
   char tty[32];
   FilePtr fp= 0;
+
+  dprintf(("ptyForkAndExec\n"));
 
   /* Module init must succeed in loading the AsyncFile plugin */
   if (sqUnixAsyncFileSessionID == 0)
