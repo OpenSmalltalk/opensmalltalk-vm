@@ -2,7 +2,7 @@
 
 # mktargets -- configure top-level library targets		-*- sh -*-
 # 
-#   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
 #     as listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -37,7 +37,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2003-02-06 03:19:36 by piumarta on emilia.local.
+# Last edited: 2003-08-23 19:33:52 by piumarta on emilia.inria.fr
 
 
 . ./config.sh

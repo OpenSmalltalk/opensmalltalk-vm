@@ -4,7 +4,7 @@
  *
  * Last edited: Tue Jan 28 16:53:52 2003 by piumarta (Ian Piumarta) on xombul
  *
- *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   

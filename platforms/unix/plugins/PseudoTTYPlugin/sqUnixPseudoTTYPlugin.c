@@ -25,7 +25,7 @@
  * and asynchronous i/o on their master devices.  (Dave: are you
  * reading this?)
  * 
- *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
