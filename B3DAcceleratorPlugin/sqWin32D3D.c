@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32D3D.c,v 1.6 2002/05/29 11:43:03 andreasraab Exp $
+*   RCSID:   $Id: sqWin32D3D.c,v 1.7 2002/06/16 18:25:07 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -588,7 +588,7 @@ int d3dInitializePrimary(void) {
     DPRINTF(5,(fp, "[Creating DDraw object]\n"));
     hRes = CoCreateInstance(&CLSID_DirectDraw,
 			    NULL, 
-			    CLSCTX_ALL/* CLSCTX_INPROC_SERVER */,
+			    CLSCTX_INPROC_SERVER,
 			    &IID_IDirectDraw7,
 			    (void**)&lpDD);
     ERROR_CHECK;
