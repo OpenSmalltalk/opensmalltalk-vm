@@ -1,4 +1,4 @@
-Updated Nov 14th 2002
+Updated Oct 5th, 2003
 
 Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- John Maloney, May 25, 2000,
@@ -11,12 +11,13 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
     -- CHanges John McIntosh April 5th, 2003 (changeset names change)
 	-- Changes John McIntosh May 19th, 2003 (changeset consolidation into VMMaker).
 	-- Changes John McIntosh July 31th, 2003 3.5.x updates
+	-- Changes John McIntosh Oct 5th, 2003 3.6.x updats
 	
 (Note to readers, it is possible a step was missed, so beware)
 
 Building a Carbon Squeak VM with ProjectBuilder:
 
-{JMM notes this is building with 10.2.6, and Squeak 3.5 (for croquet)}
+{JMM notes this is building with 10.2.8, and Squeak 3.6 (for croquet)}
 
 Overview
 
@@ -38,6 +39,7 @@ Step One: Get the Apple Developer Tools (free)
 		
 		You might need to use the "sudo /usr/sbin/gcc_select 3" command to pick the GCC 3.3 compiler, although project builder seems to give you a choice (2.x, 3.x) it lies...
 		do a "gcc --version" to confirm what you think you are using is what you are using.
+		Follow the Apple instructions for building with 3.3 otherwise you will get a back leveled compiler.
 		
 		
 Step One (b):
@@ -62,22 +64,31 @@ After so much mumbo-jumbo, your squeak folder should have a directory entitled p
 
 Step Three: Build an interpeter
 
+	0.  Grab your 3.6 image, and then install VM Maker 3.6g2 or better, and Ballon 3D.
+	
 	A.  Install change sets from the specialChangeSets Folder. 
 		There has been some discussion that the line endings 
 		might be wrong for the following change sets that might depend on what CVS thinks, 
 		so do a "remove linefeeds" first. 
 		
-		Gnuifier.4.cs
+		Gnuifier.5.cs
 			- A smalltalk version of the AWK example. 
+		
+		ArraysToGlobalStruct-JMM.1.cs
+		FasterCopyLoop-JMM.4.cs
+		FasterCopyLoopPart2-JMM.2.cs
+		FasterLookupMethod-JMM.1.cs
+		MakePrimPointXInternal-JMM.1.cs
+		SlightlyFasterActivate-JMM.3.cs
 		
 	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure)
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
 		If you created an alias to the squeak platform folder, it might come up with for example
-		Mac OS X:Users:Shared:Squeak3.2g5:platforms
+		Mac OS X:Users:Shared:Squeak3.6b2:platforms
 	D.	Enter the Platform name: (default is fine) "Mac OS"
 	E.	Enter the Path for your generates sources (default is fine).
 		It might come up with for example
-		Mac OS X:Users:Shared:Squeak3.2g5:src
+		Mac OS X:Users:Shared:Squeak3.6b2:src
 	F.	Select plugins. (Suggest selecting menu item "make all internal",
 		then drag back the following back to Plugins not built:
 			FFIPlugin
@@ -92,7 +103,7 @@ Step Three: Build an interpeter
 
 Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
-	A.	See the Gnuifier.4.cs changeset in the specialChangeSetsFolder
+	A.	See the Gnuifier.5.cs changeset in the specialChangeSetsFolder
 	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
 
 		(Gnuifier on:
@@ -113,8 +124,6 @@ Step Five: Shove and Tweak some files around the buildspace
 	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit' (same deal as step B)
 	D.	Drag 'SqueakVMForCarbon.pbproj' to the folder containing
 		the 'platforms' and 'src' folders.
-	E.  Note the sqGnu.h in the platforms/Mac OS/src/vm/Developer. This should override the sqGnu.h in the unix 
-		directory. (In the future we will integrate the changes required and use the unix version). 
 
 Step Six: Run ProjectBuilder and build yourself an interpreter
 
