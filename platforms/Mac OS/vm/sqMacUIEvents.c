@@ -6,12 +6,15 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.4 2002/03/04 00:33:08 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.5 2002/03/15 01:57:35 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Mar 1st, 2002, JMM carbon event logic, mutiple buttons with scroll wheels.
-: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
+*  Mar 8th,  2002, JMM Add logic to pass in external prim calls that require main thread UI execution
+*  Mar 10th, 2002, JMM correct bad char cast, ensure we can get all characters.
+
+notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
 
 *****************************************************************************/
@@ -27,12 +30,14 @@ IsUserCancelEventRef
 
 #if I_AM_CARBON_EVENT
     #include <pthread.h>
-    pthread_mutex_t gEventQueueLock;
+    pthread_mutex_t gEventQueueLock,gEventUILock;
+    pthread_cond_t  gEventUILockCondition;
     #define EventTypeFullScreenUpdate 98
     #define EventTypePostEventProcessing 99
     void doPostMessageHook(EventRef event);
     void postFullScreenUpdate(void);
     Boolean gQuitNowRightNow=false;
+    
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -134,28 +139,28 @@ int ioProcessEvents(void) {
 	long    clockTime;
 
 #ifndef PLUGIN
-	if (ioLowResMSecs() >= nextPollTick) {
+	if ((ioLowResMSecs() & 536870911) >= nextPollTick) {
 		/* time to process events! */
 		while (HandleEvents()) {
 			/* process all pending events */
 		}
 		
-        clockTime = ioLowResMSecs();
+        clockTime = ioLowResMSecs() & 536870911;
         
         if (gDisablePowerManager && gTapPowerManager) {
             if (clockTime > gDisableIdleTickLimit)
-                gDisableIdleTickLimit = IdleUpdate() + gDisableIdleTickCount;
+                gDisableIdleTickLimit = (IdleUpdate() + gDisableIdleTickCount)  & 536870911;
                 
 #if !defined(MINIMALVM)
             if (clockTime > nextPowerCheck) {
                  UpdateSystemActivity(UsrActivity);
-                 nextPowerCheck = clockTime + nextPowerCheckOffset;
+                 nextPowerCheck = (clockTime + nextPowerCheckOffset) & 536870911;
             }
 #endif
         }
         
 		/* wait a while before trying again */
-		nextPollTick = clockTime + nextPollOffsetCheck;
+		nextPollTick = (clockTime + nextPollOffsetCheck) & 536870911;
 	}
 #endif
 	return interruptPending;
@@ -434,7 +439,7 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 
 	/* first the basics */
 	evt->type = EventTypeMouse;
-	evt->timeStamp = ioMSecs(); 
+	evt->timeStamp = ioLowResMSecs() & 536870911; 
 	GlobalToLocal((Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
@@ -478,7 +483,7 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioMSecs();
+	evt->timeStamp = ioLowResMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = (theEvent->message & keyCodeMask) >> 8;
@@ -529,6 +534,9 @@ int checkForModifierKeys() {
 	return result;
 }
 
+int getUIToLock(long *) {
+}
+
 #endif
 
 int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) {
@@ -543,7 +551,7 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 	/* first the basics */
 	theButtonState = MouseModifierState(theEvent);
 	evt->type = EventTypeDragDropFiles;
-	evt->timeStamp = ioMSecs(); 
+	evt->timeStamp = ioLowResMSecs() & 536870911; 
 	GlobalToLocal((Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
@@ -1165,6 +1173,10 @@ EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
                             { kEventClassKeyboard, kEventRawKeyRepeat},
                             { kEventClassKeyboard, kEventRawKeyModifiersChanged}};
                             
+EventTypeSpec appleEventEventList[] = {{ kEventClassAppleEvent, kEventAppleEvent}};
+
+EventTypeSpec customEventEventList[] = {{ 'JMM1', 'JMM1'}};
+
 static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
                 EventRef event, void* userData);
 static pascal OSStatus MyAppEventCmdHandler (EventHandlerCallRef myHandlerChain,
@@ -1174,6 +1186,10 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
 static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
 static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData);
+static pascal OSStatus MyAppleEventEventHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData);
+static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData);
             
@@ -1195,6 +1211,8 @@ void SetUpCarbonEvent() {
     InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventHandler), 3, windEventList, 0, NULL);
     InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventMouseHandler), 5, windEventMouseList, 0, NULL);
     InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyWindowEventKBHandler), 4, windEventKBList, 0, NULL);
+    InstallWindowEventHandler(getSTWindow(), NewEventHandlerUPP(MyAppleEventEventHandler), 1, appleEventEventList, 0, NULL);
+    InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), 1, customEventEventList, 0, NULL);
     
 /* timmer loops */
     InstallEventLoopTimer (GetMainEventLoop(),
@@ -1249,7 +1267,6 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
     EventRef event, void* userData)
 {
     UInt32 whatHappened;
-    
     OSStatus result = eventNotHandledErr; /* report failure by default */
     
     if (messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
@@ -1262,11 +1279,10 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
             windowActive = true;
             if (fullScreenFlag) {
                 MenuBarHide();
-                //postFullScreenUpdate();  /* Fix for full screen menu bar tabbing*/
             }
             break;
         case kEventAppDeactivated:
-            GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
+              GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
             SetPortWindowPort(getSTWindow());
             GlobalToLocal(&savedMousePosition);
@@ -1332,7 +1348,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
     WindowRef window;
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
-
+  
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
     GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL,
@@ -1343,17 +1359,15 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
          case kEventWindowActivated:
             windowActive = true;
             postFullScreenUpdate();
-            break;
+             break;
         case kEventWindowDeactivated:
             GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
             SetPortWindowPort(getSTWindow());
             GlobalToLocal(&savedMousePosition);
             windowActive = false;
-            //postFullScreenUpdate();
-            break;
+             break;
        case kEventWindowDrawContent:
-            //postFullScreenUpdate();  /* this makes VM call ioShowDisplay */
             result = noErr;
             break;
         default:
@@ -1461,6 +1475,13 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
     return result;
 }
 
+static pascal OSStatus MyAppleEventEventHandler(EventHandlerCallRef myHandler,
+            EventRef event, void* userData)
+{
+    return eventNotHandledErr;
+}
+
+
 void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	sqMouseEvent *evt;
 	static sqMouseEvent oldEvent;
@@ -1502,7 +1523,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 
 	/* first the basics */
 	evt->type = EventTypeMouse;
-	evt->timeStamp = ioLowResMSecs(); 
+	evt->timeStamp = ioLowResMSecs() & 536870911; 
         evt->x = where.h;
 	evt->y = where.v;
 	/* then the buttons */
@@ -1522,7 +1543,8 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	    
         oldEvent = *evt;
      	pthread_mutex_unlock(&gEventQueueLock);
-        
+        signalSemaphoreWithIndex(inputSemaphoreIndex);
+                
         if (whatHappened == kEventMouseWheelMoved) 
             fakeMouseWheelKeyboardEvents(wheelMouseDirection,wheelMouseDelta);
 }
@@ -1554,7 +1576,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	evt = (sqKeyboardEvent*) nextEventPut();
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioLowResMSecs();
+	evt->timeStamp = ioLowResMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
@@ -1595,7 +1617,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
     	evt = (sqKeyboardEvent*) nextEventPut();
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioLowResMSecs();
+	evt->timeStamp = ioLowResMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
@@ -1607,13 +1629,18 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 
     }
     pthread_mutex_unlock(&gEventQueueLock);
+    signalSemaphoreWithIndex(inputSemaphoreIndex);
+                
 }
 
 void recordKeyboardEventCarbon(EventRef event,int keyType) {
 	int 		asciiChar, modifierBits;
         char 		macCharCode;
+        char		workArea[2];
         UInt32		macKeyCode;
-	sqKeyboardEvent *evt, *extra;
+        UniChar		unicodeValue;
+	CFStringRef	converter;
+        sqKeyboardEvent *evt, *extra;
         OSErr		err;
         
 	err = GetEventParameter( event,
@@ -1632,8 +1659,25 @@ void recordKeyboardEventCarbon(EventRef event,int keyType) {
                                 NULL,
                                 &macKeyCode); 
 
-	/* keystate: low byte is the ascii character; next 4 bits are modifier bits */
-	asciiChar = macCharCode;
+	err = GetEventParameter( event,
+                                kEventParamKeyUnicodes,
+                                typeUnicodeText,
+                                NULL,
+                                sizeof(typeUnicodeText),
+                                NULL,
+                                &unicodeValue); 
+
+
+        
+        /*converter = CFStringCreateWithCharacters (null,&unicodeValue,1);
+        
+	if (CFStringGetCString (converter,&workArea[0],2, kCFStringEncodingMacRoman))
+            asciiChar = (unsigned char) workArea[0];
+        else
+            asciiChar = (unsigned char) macCharCode;
+        CFRelease(converter);*/
+        
+        asciiChar = (unsigned char) macCharCode;
 	buttonState = modifierBits =ModifierStateCarbon(event,0); //Capture option states
 	if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
 		if ((asciiChar >= 97) && (asciiChar <= 122)) {
@@ -1647,7 +1691,7 @@ void recordKeyboardEventCarbon(EventRef event,int keyType) {
 
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioLowResMSecs();
+	evt->timeStamp = ioLowResMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
@@ -1686,6 +1730,8 @@ void recordKeyboardEventCarbon(EventRef event,int keyType) {
 
         }
         pthread_mutex_unlock(&gEventQueueLock);		        
+        signalSemaphoreWithIndex(inputSemaphoreIndex);
+                
 }
 
 
@@ -1760,6 +1806,57 @@ int ioProcessEvents(void) {
         pthread_exit(null);
     }
     return interruptPending;
+}
+
+int getUIToLock(long *data) {
+    OSStatus err;
+    EventRef dummyEvent;
+    
+    err = MacCreateEvent(null,'JMM1','JMM1', 0, kEventAttributeUserEvent, &dummyEvent);
+    if (err == noErr) {
+        err = SetEventParameter(dummyEvent,1,1,sizeof(long *),&data);
+        pthread_mutex_lock(&gEventUILock);
+        err = PostEventToQueue(GetMainEventQueue(), dummyEvent,kEventPriorityHigh);
+        pthread_cond_wait(&gEventUILockCondition,&gEventUILock);	
+        pthread_mutex_unlock(&gEventUILock);
+    }
+}
+
+static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
+            EventRef event, void* userData)
+{
+    long *data;
+    long numberOfParms;
+    OSErr	err;
+        
+    pthread_mutex_lock(&gEventUILock);
+        
+    err = GetEventParameter(event, 1, 1, NULL, sizeof(long *), NULL, &data);
+    if (err != noErr) {
+        pthread_cond_signal(&gEventUILockCondition);	
+        pthread_mutex_unlock(&gEventUILock);
+    }
+    
+    numberOfParms = data[0];
+    
+    if (0 == numberOfParms)
+        data[2] = ((int (*) (void)) data[1]) ();
+    if (1 == numberOfParms)
+        data[3] = ((int (*) (long)) data[1]) (data[2]);
+    if (2 == numberOfParms)
+        data[4] = ((int (*) (long,long)) data[1]) (data[2],data[3]);
+    if (3 == numberOfParms)
+        data[5] = ((int (*) (long,long,long)) data[1]) (data[2],data[3],data[4]);
+    if (4 == numberOfParms)
+        data[6] = ((int (*) (long,long,long,long)) data[1]) (data[2],data[3],data[4],data[5]);
+    if (5 == numberOfParms)
+        data[7] = ((int (*) (long,long,long,long,long)) data[1]) (data[2],data[3],data[4],data[5],data[6]);
+    if (6 == numberOfParms)
+        data[8] = ((int (*) (long,long,long,long,long,long)) data[1]) (data[2],data[3],data[4],data[5],data[6], data[7]);
+
+    pthread_cond_signal(&gEventUILockCondition);	
+    pthread_mutex_unlock(&gEventUILock);
+    return noErr;
 }
 
 #endif
