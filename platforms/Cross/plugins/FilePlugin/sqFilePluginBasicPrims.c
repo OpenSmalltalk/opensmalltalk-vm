@@ -6,7 +6,7 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   ]
-*   RCSID:   $Id: sqFilePluginBasicPrims.c,v 1.5 2002/01/31 21:15:33 johnmci Exp $
+*   RCSID:   $Id: sqFilePluginBasicPrims.c,v 1.6 2002/04/23 22:37:31 rowledge Exp $
 *
 *   NOTES: See change log below.
 * 	1/28/02    Tim remove non-ansi stuff
@@ -255,7 +255,7 @@ int sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
 	/* Truncate the file*/
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
- 	if (sqFTruncate(fileno(f->file),offset)) {
+ 	if (sqFTruncate(f->file,offset)) {
             return interpreterProxy->success(false);
         } 
 	f->fileSize = ftell(f->file);
