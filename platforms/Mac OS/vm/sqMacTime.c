@@ -6,11 +6,14 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.7 2002/03/25 07:07:26 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.8 2002/04/27 18:58:38 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Feb 27th, 2002, JMM a bit of cleanup for carbon event usage
+*  Apr 17th, 2002, JMM Use accessors for VM variables.
+*  Apr 25th, 2002, JMM low res clock is broken after 0x7FFFFFF
+
 *****************************************************************************/
 #include "sq.h"
 #include "sqMacTime.h"
@@ -18,8 +21,9 @@
 
 
 extern Boolean  gThreadManager;
-extern int interruptCheckCounter;
-extern int nextWakeupTick;
+extern int getNextWakeupTick();
+extern int setInterruptCheckCounter(int value);
+extern int setInterruptPending(int value);
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 
@@ -46,7 +50,7 @@ static pascal void MyTimerProc(QElemPtr time)
 
 /*static pascal void MyTimerProc1000(QElemPtr time)
 {
-    if (nextWakeupTick != 0)
+    if (getNextWakeupTick() != 0)
     	interruptCheckCounter = 0;
     gCounter++;
     if(gCounter > COUNTER_LIMIT) {
@@ -175,10 +179,14 @@ int ioMicroMSecs(void) {
 int ioLowResMSecs(void)
 {
   double convert;
+  long long temp;
+  int final;
   
-  convert = TickCount();
-  convert = convert*1000.0/60.0;
-  return convert;
+  convert = (unsigned int) TickCount();
+  temp = convert*1000.0/60.0;
+  temp = temp & 0x7FFFFFFF;
+  final = temp;
+  return final;
 }
 
 #endif
@@ -236,15 +244,15 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
         pthread_cond_init(&gSleepLockCondition,NULL);
     }
     
-    interruptCheckCounter = 0;
+    setInterruptCheckCounter(0);
     now = (ioMSecs() & 536870911);
-    if (nextWakeupTick <= now)
-        if (nextWakeupTick == 0)
+    if (getNextWakeupTick() <= now)
+        if (getNextWakeupTick() == 0)
             realTimeToWait = 16;
         else 
             return;
     else
-        realTimeToWait = nextWakeupTick - now; 
+        realTimeToWait = getNextWakeupTick() - now; 
             
     tspec.tv_sec=  realTimeToWait / 1000;
     tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
@@ -255,7 +263,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     
 
     //JMM foo usleep(microSeconds);
-    //JMM fooif (nextWakeupTick != 0 && (ioMSecs() & 536870911) >= nextWakeupTick)
+    //JMM fooif (getNextWakeupTick() != 0 && (ioMSecs() & 536870911) >= getNextWakeupTick())
     //JMM foo    interruptCheckCounter = 0;
      /* This is unix code, but seems to be problem under osx
       {
@@ -267,9 +275,9 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 #else
 #if !I_AM_CARBON_EVENT
     microSeconds;
-    if ((nextWakeupTick <= (ioMSecs() & 536870911)) && (nextWakeupTick != 0)) {
-            interruptCheckCounter = 0;
-            return;
+    if ((getNextWakeupTick() <= (ioMSecs() & 536870911)) && (getNextWakeupTick() != 0)) {
+        setInterruptCheckCounter(0);
+        return;
     }
 	if (gThreadManager)
             SqueakYieldToAnyThread();
