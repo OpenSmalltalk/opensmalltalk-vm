@@ -79,7 +79,7 @@
 #define SQ_FORM_FILENAME	"squeak-form.ppm"
 #undef	FULL_UPDATE_ON_EXPOSE
 
-#define	DEBUG_EVENTS
+#undef	DEBUG_EVENTS
 #undef	DEBUG_SELECTIONS
 #undef	DEBUG_BROWSER
 #undef	DEBUG_WINDOW
