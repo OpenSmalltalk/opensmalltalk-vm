@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-22 22:33:42 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-23 18:08:12 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -250,8 +250,10 @@ static void recordFullPathForVmName(const char *localVmName)
   sprintf(path, "/proc/%d/exe", getpid());
   if ((len= readlink(path, name, sizeof(name))) > 0)
     {
+      struct stat st;
       name[len]= '\0';
-      localVmName= name;
+      if (!stat(name, &st))
+	localVmName= name;
     }
 #endif
 
