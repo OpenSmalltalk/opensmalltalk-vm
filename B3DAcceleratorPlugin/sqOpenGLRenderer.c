@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.8 2002/06/01 16:54:19 johnmci Exp $
+*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.9 2003/09/01 23:05:55 andreasraab Exp $
 *
 *   NOTES: 
 *
@@ -841,9 +841,11 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 	if(flags & B3D_VB_TRACK_EMISSION) tracking |= GL_EMISSION;
 
 	if(tracking) {
-		glEnable(GL_COLOR_MATERIAL);
-		ERROR_CHECK;
+		/* in accordance with glColorMaterial man page noting:
+		   Call glColorMaterial before enabling GL_COLOR_MATERIAL. */
 		glColorMaterial(GL_FRONT_AND_BACK, tracking);
+		ERROR_CHECK;
+		glEnable(GL_COLOR_MATERIAL);
 		ERROR_CHECK;
 	}
 
@@ -873,6 +875,12 @@ int glRenderVertexBuffer(int handle, int primType, int flags, int texHandle, flo
 	/* @@@ HACK!!! */
 	vtxPointer -= 1; /* that way we can submit all vertices at once */
 	if(vtxFlags & 1) {
+	  /* harumph... we need to rotate all the colors as we're getting ARGB here but GL expects RGBA... */
+	  for(i=1;i<=nVertices;i++) {
+	    unsigned int argb = vtxPointer[i].pixelValue32;
+	    unsigned int rgba = (argb >> 8) | (argb << 24);
+	    vtxPointer[i].pixelValue32 = rgba;
+	  }
 	  glColorPointer(4, GL_UNSIGNED_BYTE, sizeof(B3DPrimitiveVertex), &(vtxPointer->pixelValue32));
 	  glEnableClientState(GL_COLOR_ARRAY);
 	}
