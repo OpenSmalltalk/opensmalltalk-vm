@@ -242,7 +242,7 @@ int sqMemoryExtraBytesLeft(int includingSwap) {
 
 
 void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
-  malloc(desiredHeapSize);
+  return malloc(desiredHeapSize);
 }
 
 int sqGrowMemoryBy(int oldLimit, int delta) {
