@@ -35,7 +35,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-02-11 04:24:23 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-07 08:28:24 by piumarta on emilia.inria.fr
 
 AC_DEFUN(AC_CHECK_VMM_DIR,[
   AC_MSG_CHECKING([sanity of VMMaker src directory])
@@ -242,8 +242,8 @@ test "$ac_cv_double_align" = "no" && AC_DEFINE(DOUBLE_WORD_ALIGNMENT)])
 
 AC_DEFUN(AC_C_DOUBLE_ORDER,
 [AC_CACHE_CHECK([whether doubles are stored in Squeak order], ac_cv_double_order,
-  AC_TRY_RUN([int main(void) { union { double d; int i[sizeof(double)/sizeof(int)]; } d;
-	      d.d= 1.0;  return d.i[0] == 0; }],
+  AC_TRY_RUN([union { double d; int i[[2]]; } d;
+	      int main(void) { d.d= 1.0;  return d.i[[0]] == 0; }],
     ac_cv_double_order="yes", ac_cv_double_order="no"))
 test "$ac_cv_double_order" = "no" && AC_DEFINE(DOUBLE_WORD_ORDER)])
 
