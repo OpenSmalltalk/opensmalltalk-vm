@@ -6,11 +6,12 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.4 2001/12/27 22:53:03 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.5 2002/01/09 06:50:24 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
 *	12/27/2001 JMM Added support to load os-x Bundles versus CFM, have broken CFM code too.
+*	1/2/2002   JMM Use unix io for image, much faster, cleanup window display and ioshow logic.
 *
 *****************************************************************************/
 #include "sq.h"
@@ -59,7 +60,7 @@
 //Notes turning USE_ITIMER on is needed for production performance!!! You must define it
 // However turning this on causes grief for gnu profiling and for gnu debugging so when debugging turn it off!
 
-	#define USE_ITIMER
+	// MMM for GNU use -D to define at compile time #define USE_ITIMER
 	#define LOW_RES_TICK_MSECS 16
 #endif
 	#include <stddef.h>
@@ -116,10 +117,6 @@
     #endif
     #define EnableMenuItemCarbon(m1,v1)  EnableItem(m1,v1);
     #define DisableMenuItemCarbon(m1,v1)  DisableItem(m1,v1);
-        inline Rect *GetPortBounds(CGrafPtr w,Rect *r) { *r = w->portRect; return &w->portRect;}  
-        inline Rect *GetRegionBounds(RgnHandle region, Rect * bounds) { *bounds = (*region)->rgnBBox; return &(*region)->rgnBBox;}
-        inline BitMap *GetQDGlobalsScreenBits(BitMap *bm){*bm = qd.screenBits; return &qd.screenBits; }
-        inline BitMap * GetPortBitMapForCopyBits (CGrafPtr w) { return &((GrafPtr)w)->portBits;}
         inline pascal long InvalWindowRect(WindowRef  window,  const Rect * bounds) {InvalRect (bounds);}
 #endif
 
@@ -173,6 +170,7 @@ WindowPtr		stWindow = nil;
 OTTimeStamp     timeStart;
 Boolean         gTapPowerManager=false;
 Boolean         gDisablePowerManager=false;
+Boolean  	gWindowsIsInvisible=true;
 const long      gDisableIdleTickCount=60*10;
 long            gDisableIdleTickLimit=0;
 Boolean         gThreadManager=false;
@@ -1084,10 +1082,13 @@ void SetUpMenus(void) {
 #if TARGET_API_MAC_CARBON
     Gestalt( gestaltMenuMgrAttr, &decideOnQuitMenu);
     if (!(decideOnQuitMenu & gestaltMenuMgrAquaLayoutMask) || true)	
-        AppendMenu(fileMenu, "\pQuit");
+        AppendMenu(fileMenu, "\pQuit do not save");
+    if (RunningOnCarbonX())
+        DisableMenuCommand(NULL,'quit');
+        
 #else
 	AppendResMenu(appleMenu, 'DRVR');
-    AppendMenu(fileMenu, "\pQuit");
+    AppendMenu(fileMenu, "\pQuit do not save");
 #endif
  	AppendMenu(editMenu, "\pUndo/Z;(-;Cut/X;Copy/C;Paste/V;Clear");
 }
@@ -1196,7 +1197,7 @@ void SetUpWindow(void) {
 	stWindow = NewCWindow(
 		0L, &windowBounds,
 		"\p Welcome to Squeak!  Reading Squeak image file... ",
-		true, zoomDocProc, (WindowPtr) -1L, false, 0);
+		false, zoomDocProc, (WindowPtr) -1L, false, 0);
 #endif
 }
 
@@ -1566,34 +1567,35 @@ int ioFreeModule(int moduleHandle) {
 }
 
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
-	FSSpec				fileSpec;
         char				tempDirPath[1024];
  	CFragConnectionID		libHandle = 0;
-	OSErr				err = noErr;
-        FSRef				theFSRef;
         CFURLRef 			theURLRef;
         CFBundleRef			theBundle;
-
+        CFStringRef			filePath;
+        
 	strncpy(tempDirPath,pluginDirPath,1023);
         if (tempDirPath[strlen(tempDirPath)-1] != ':')
             strcat(tempDirPath,":");
             
-        strcat(tempDirPath,libName);
-        strcat(tempDirPath,".bundle");  //Watch out for the bundle suffix, not a normal thing in squeak plugins
-	err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
-	if (err) return nil; /* bad plugin directory path */
-
-        
-        err = FSpMakeFSRef (&fileSpec, &theFSRef);
-        if (err != noErr)
-	    return nil;
-               
-        theURLRef =  CFURLCreateFromFSRef (kCFAllocatorDefault, &theFSRef);
-        if (theURLRef == nil) 
+        if ((strlen(tempDirPath) + strlen(libName) + 7) > 1023)
             return nil;
         
+        strcat(tempDirPath,libName);
+        strcat(tempDirPath,".bundle");  
+        //Watch out for the bundle suffix, not a normal thing in squeak plugins
+	// We could do this, but it's expensive err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
+        // So go back to a cheaper call
+        filePath = CFStringCreateWithCString(kCFAllocatorDefault,
+                    (UInt8 *) tempDirPath,kCFStringEncodingMacRoman);
+        if (filePath == nil)
+            return nil;
+            
+        theURLRef = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+
         theBundle = CFBundleCreate(NULL,theURLRef);
+        CFRelease(filePath);
         CFRelease(theURLRef);
+        
         if (theBundle == nil) 
             return nil;
             
@@ -2141,51 +2143,59 @@ int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
 
-	Rect		dstRect = { 0, 0, 0, 0 };
-	Rect		srcRect = { 0, 0, 0, 0 };
-	RgnHandle	maskRect = nil;
-
+        CGrafPtr	windowPort;
+	static 		RgnHandle maskRect = nil;
+	static Rect	dstRect = { 0, 0, 0, 0 };
+	static Rect	srcRect = { 0, 0, 0, 0 };
+        static int	rememberWidth=0,rememberHeight=0,rememberDepth=0;
+        
 	if (stWindow == nil) {
-		return;
+            return;
 	}
+    
+        if (maskRect == nil) {
+            maskRect = NewRgn();
+        }
 
-	dstRect.left	= 0;
-	dstRect.top		= 0;
-	dstRect.right	= width;
-	dstRect.bottom	= height;
-
-	srcRect.left	= 0;
-	srcRect.top		= 0;
-	srcRect.right	= width;
-	srcRect.bottom	= height;
-
-	(*stPixMap)->baseAddr = (void *) dispBitsIndex;
-	/* Note: top three bits of rowBytes indicate this is a PixMap, not a BitMap */
-	(*stPixMap)->rowBytes = (((((width * depth) + 31) / 32) * 4) & 0x1FFF) | 0x8000;
-	(*stPixMap)->bounds = srcRect;
-	(*stPixMap)->pixelSize = depth;
-
-    if (depth<=8) { /*Duane Maxwell <dmaxwell@exobox.com> fix cmpSize Sept 18,2000 */
-    	(*stPixMap)->cmpSize = depth;
-    	(*stPixMap)->cmpCount = 1;
-    } else if (depth==16) {
-    	(*stPixMap)->cmpSize = 5;
-    	(*stPixMap)->cmpCount = 3;
-    } else if (depth==32) {
-    	(*stPixMap)->cmpSize = 8;
-    	(*stPixMap)->cmpCount = 3;
-    }
-
+        (*stPixMap)->baseAddr = (void *) dispBitsIndex;
+        
+	if (!((rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth))) {
+            rememberWidth  = dstRect.right = width;
+            rememberHeight = dstRect.bottom = height;
+    
+            srcRect.right = width;
+            srcRect.bottom = height;
+    
+            /* Note: top three bits of rowBytes indicate this is a PixMap, not a BitMap */
+            (*stPixMap)->rowBytes = (((((width * depth) + 31) / 32) * 4) & 0x1FFF) | 0x8000;
+            (*stPixMap)->bounds = srcRect;
+            rememberDepth = (*stPixMap)->pixelSize = depth;
+    
+            if (depth<=8) { /*Duane Maxwell <dmaxwell@exobox.com> fix cmpSize Sept 18,2000 */
+                (*stPixMap)->cmpSize = depth;
+                (*stPixMap)->cmpCount = 1;
+            } else if (depth==16) {
+                (*stPixMap)->cmpSize = 5;
+                (*stPixMap)->cmpCount = 3;
+            } else if (depth==32) {
+                (*stPixMap)->cmpSize = 8;
+                (*stPixMap)->cmpCount = 3;
+            }
+        }
+        
 	/* create a mask region so that only the affected rectangle is copied */
-	maskRect = NewRgn();
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
+        windowPort = GetWindowPort(stWindow);
+	SetPort((GrafPtr) windowPort);
+	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(windowPort), &srcRect, &dstRect, srcCopy, maskRect);
 
-	SetPortWindowPort(stWindow);
-	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(GetWindowPort(stWindow)), &srcRect, &dstRect, srcCopy, maskRect);
 #if TARGET_API_MAC_CARBON
 	QDFlushPortBuffer (GetWindowPort(stWindow), maskRect);
 #endif
-	DisposeRgn(maskRect);
+        if (gWindowsIsInvisible) {
+            ShowWindow(stWindow);
+            gWindowsIsInvisible = false;
+        }
 }
 #endif
 
@@ -2396,9 +2406,56 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 }
 
 /*** Image File Operations ***/
-
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
 void sqImageFileClose(sqImageFile f) {
-	FSClose(f);
+   if (f != 0)
+      fclose(f);
+}
+
+sqImageFile sqImageFileOpen(char *fileName, char *mode) {
+    char cFileName[1024];
+    sqImageFile remember;
+    
+    sqFilenameFromStringOpen(cFileName, fileName, strlen(fileName));
+    remember = fopen(cFileName, mode);
+    if (remember == null) 
+        return null;
+    setvbuf(remember,0, _IOFBF, 256*1024);
+    return remember;
+}
+
+off_t sqImageFilePosition(sqImageFile f) {
+    if (f != 0)
+      return ftello(f);
+    return 0;
+}
+
+size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+    if (f != 0)
+      return fread(ptr, elementSize, count, f);
+    return 0;
+}
+
+void        sqImageFileSeek(sqImageFile f, off_t pos) {
+    if (f != 0)
+      fseeko(f, pos, SEEK_SET);
+}
+
+int sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+    if (f != 0)
+      return fwrite(ptr,elementSize,count,f);
+}
+
+off_t calculateStartLocationForImage() {
+    return 0;
+}
+
+off_t sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize){
+    return 0;
+}
+#else
+void sqImageFileClose(sqImageFile f) {
+    FSClose(f);
 }
 
 sqImageFile sqImageFileOpen(char *fileName, char *mode) {
@@ -2627,6 +2684,8 @@ off_t sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize){
 	return targetOffset;
 }
 
+#endif
+
 
 #if TARGET_API_MAC_CARBON
 #if defined ( __APPLE__ ) && defined ( __MACH__ ) && JMMFoo
@@ -2692,6 +2751,16 @@ int sqMemoryExtraBytesLeft(Boolean flag) {
 }
 #endif
 #else
+#ifndef PLUGIN
+void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
+	/* Application allocates Squeak object heap memory from its own heap. */	
+        void * debug;
+	minHeapSize;
+        debug = NewPtr(desiredHeapSize);
+	return debug;
+}
+#endif
+
 int sqGrowMemoryBy(int memoryLimit, int delta) {
     return memoryLimit;
 }
@@ -2745,7 +2814,7 @@ void main(void) {
 	OSErr err;
     long threadGestaltInfo;
         FSSpec	workingDirectory;
- 
+        
  	InitMacintosh();
 	PowerMgrCheck();
 	
@@ -2756,12 +2825,13 @@ void main(void) {
 	
 	SetEventMask(everyEvent); // also get key up events
 	
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+      SetUpTimers();
+#else
 #if TARGET_CPU_PPC & !MINIMALVM
 	if((Ptr)OTGetTimeStamp!=(Ptr)kUnresolvedCFragSymbolAddress)
  	    OTGetTimeStamp(&timeStart);
 #endif 
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
-      SetUpTimers();
 #endif
 	/* install apple event handlers and wait for open event */
 	imageName[0] = shortImageName[0] = documentName[0] = vmPath[0] = 0;
@@ -2941,78 +3011,6 @@ void setMessageHook(eventMessageHook theHook) {
 void setPostMessageHook(eventMessageHook theHook) {
     postMessageHook = theHook;
 }
-
-#if !TARGET_API_MAC_CARBON
-//
-//	CopyPascalStringToC converts the source pascal string to a destination
-//	C string as it copies. 
-//
-void CopyPascalStringToC(ConstStr255Param src, char* dst)
-{
-	if ( src != NULL )
-	{
-		short   length  = *src++;
-	
-		while ( length > 0 ) 
-		{
-			*dst++ = *(char*)src++;
-			--length;
-		}
-	}
-	*dst = '\0';
-}
-
-
-//
-//	CopyCStringToPascal converts the source C string to a destination
-//	pascal string as it copies. The dest string will
-//	be truncated to fit into an Str255 if necessary.
-//  If the C String pointer is NULL, the pascal string's length is set to zero
-//
-void CopyCStringToPascal(const char* src, Str255 dst)
-{
-	short 	length  = 0;
-	
-	// handle case of overlapping strings
-	if ( (void*)src == (void*)dst )
-	{
-		unsigned char*		curdst = &dst[1];
-		unsigned char		thisChar;
-				
-		thisChar = *(const unsigned char*)src++;
-		while ( thisChar != '\0' ) 
-		{
-			unsigned char	nextChar;
-			
-			// use nextChar so we don't overwrite what we are about to read
-			nextChar = *(const unsigned char*)src++;
-			*curdst++ = thisChar;
-			thisChar = nextChar;
-			
-			if ( ++length >= 255 )
-				break;
-		}
-	}
-	else if ( src != NULL )
-	{
-		unsigned char*		curdst = &dst[1];
-		short 				overflow = 255;		// count down so test it loop is faster
-		register char		temp;
-	
-		// Can't do the K&R C thing of Òwhile (*s++ = *t++)Ó because it will copy trailing zero
-		// which might overrun pascal buffer.  Instead we use a temp variable.
-		while ( (temp = *src++) != 0 ) 
-		{
-			*(char*)curdst++ = temp;
-				
-			if ( --overflow <= 0 )
-				break;
-		}
-		length = 255 - overflow;
-	}
-	dst[0] = length;
-}
-#endif
 
 #define rectWidth(aRect) ((aRect).right - (aRect).left)
 #define rectHeight(aRect) ((aRect).bottom - (aRect).top)
