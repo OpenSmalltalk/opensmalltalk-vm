@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.5 2002/01/20 07:36:28 slosher Exp $
+*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.6 2002/01/20 19:21:50 slosher Exp $
 *
 *   NOTES: 
 *
@@ -19,14 +19,6 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-
-#if TARGET_API_MAC_CARBON
-	#include <Carbon/Carbon.h>
-#elif defined(macintoshSqueak)
-	#include <gl.h>
-#else
-	#include <GL/gh.h>
-#endif
 
 #include "sqVirtualMachine.h"
 #include "sqConfig.h"
