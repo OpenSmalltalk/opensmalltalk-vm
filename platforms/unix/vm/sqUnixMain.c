@@ -1,6 +1,6 @@
 /* sqUnixMain.c -- support for Unix.
  * 
- *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-23 20:45:32 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-30 13:06:31 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -93,11 +93,7 @@ static char **squeakArgVec=	0;
 static int    extraMemory=	0;
        int    useMmap=		DefaultMmapSize * 1024 * 1024;
 
-//#if defined(__MACH__) /* itimer makes no difference whatsoever */
-//static int    useItimer=	0;	/* 0 to disable itimer-based clock */
-//#else
 static int    useItimer=	1;	/* 0 to disable itimer-based clock */
-//#endif
        int    noEvents=		0;	/* 1 to disable new event handling */
        int    noSoundMixer=	0;	/* 1 to disable writing sound mixer levels */
        char  *squeakPlugins=	0;	/* plugin path */
@@ -826,12 +822,12 @@ static int strtobkm(const char *str)
 static int jitArgs(char *str)
 {
   char *endptr= str;
-  int  args= 3;				// default JIT mode = fast compiler
+  int  args= 3;				/* default JIT mode = fast compiler */
   
   if (*str == '\0') return args;
   if (*str != ',')
-    args= strtol(str, &endptr, 10);	// mode
-  while (*endptr == ',')		// [,debugFlag]*
+    args= strtol(str, &endptr, 10);	/* mode */
+  while (*endptr == ',')		/* [,debugFlag]* */
     args|= (1 << (strtol(endptr + 1, &endptr, 10) + 8));
   return args;
 }
