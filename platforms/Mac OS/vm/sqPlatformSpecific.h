@@ -1,6 +1,16 @@
-/* sqPlatformSpecific.h -- Platform-specific prototypes and definitions */
-
-/* How to use this file:
+/****************************************************************************
+*   PROJECT: Platform-specific prototypes and definitions for the mac
+*   FILE:    sqPlatformSpecific.h
+*   CONTENT: 
+*
+*   AUTHOR:  John Maloney, John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.4 2002/01/22 19:02:38 johnmci Exp $
+*
+*   Jan 22nd 2002, JMM type for squeak file offset
+*
+   How to use this file:
    This file is for general platform-specific macros and declarations.
    Function prototypes that are unlikely to introduce name conflicts on
    other platforms can be added directly. Macro re-definitions or conflicting
@@ -22,7 +32,8 @@
 #undef sqImageFileWrite
 #undef sqImageFileStartLocation
 #undef sqAllocateMemory
-
+#undef squeakFileOffsetType
+#define squeakFileOffsetType off_t
 // CARBON
 #if defined (__APPLE__) && defined(__MACH__)
 
@@ -40,9 +51,6 @@
         #include <stat.h>
     #endif
 
-    #if !defined(off_t)
-    #define off_t long long
-    #endif 
     #if !defined(fseeko)
     #define fseeko fseek
     #endif 
@@ -68,11 +76,11 @@
 
 void        sqImageFileClose(sqImageFile f);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
-off_t       sqImageFilePosition(sqImageFile f);
+squeakFileOffsetType       sqImageFilePosition(sqImageFile f);
 size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile f);
-void        sqImageFileSeek(sqImageFile f, off_t pos);
+void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
 int         sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
-off_t       sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize);
+squeakFileOffsetType       sqImageFileStartLocation(int fileRef, char *filename,squeakFileOffsetType imageSize);
 void *	    sqAllocateMemory(int minHeapSize, int desiredHeapSize);
 
 
