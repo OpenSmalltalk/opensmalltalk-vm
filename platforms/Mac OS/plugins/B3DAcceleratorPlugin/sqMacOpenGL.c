@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.6 2002/05/31 16:49:42 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.7 2002/09/27 19:58:20 johnmci Exp $
 * 
 *   NOTES:
 *
@@ -249,11 +249,11 @@ int glDestroyRenderer(int handle)
 	return 1;
 }
 
-int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, int h)
+ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
 {
-	int index, i;
-	GLint          hwAttrib[] = { AGL_RGBA, AGL_DOUBLEBUFFER, AGL_ACCELERATED, AGL_DEPTH_SIZE, 16, AGL_NONE };
-	GLint          swAttrib[] = { AGL_RGBA, AGL_PIXEL_SIZE, 0, AGL_OFFSCREEN, AGL_DEPTH_SIZE, 16, AGL_NONE };
+ 	int index, i, allowSoftware, allowHardware;
+ 	GLint          hwAttrib[] = { AGL_STENCIL_SIZE, 0, AGL_RGBA, AGL_DOUBLEBUFFER, AGL_ACCELERATED, AGL_DEPTH_SIZE, 16,   AGL_NONE};
+ 	GLint          swAttrib[] = { AGL_STENCIL_SIZE, 0, AGL_RGBA, AGL_PIXEL_SIZE, 0, AGL_OFFSCREEN, AGL_DEPTH_SIZE, 16, AGL_NONE };
 	AGLPixelFormat fmt;
 	AGLContext     ctx;
 	GLboolean      ok;
@@ -262,7 +262,22 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
 	glRenderer	   *renderer;
 	char *string;
 	GDHandle tempGDH;
-    Rect ignore;
+         Rect ignore;
+ 
+ #define SUPPORTED_FLAGS (B3D_HARDWARE_RENDERER | B3D_SOFTWARE_RENDERER | B3D_STENCIL_BUFFER)
+         if(flags & ~SUPPORTED_FLAGS) {
+             DPRINTF(1, (fp, "ERROR: Unsupported renderer flags (%d)\n", flags));
+             return -1;
+         }
+ #undef SUPPORTED_FLAGS
+ 
+         /* interpret renderer flags */
+         allowSoftware = (flags & B3D_SOFTWARE_RENDERER) != 0;
+         allowHardware = (flags & B3D_HARDWARE_RENDERER) != 0;
+         if(flags & B3D_STENCIL_BUFFER) {
+             hwAttrib[1] = 1;
+             swAttrib[1] = 1;
+         }
 
 	for(index=0; index < MAX_RENDERER; index++) {
 		if(allRenderer[index].used == 0) break;
