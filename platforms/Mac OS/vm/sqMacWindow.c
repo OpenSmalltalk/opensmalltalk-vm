@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.7 2002/01/31 21:26:09 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.8 2002/02/06 07:08:36 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
@@ -14,6 +14,7 @@
 *	1/2/2002   JMM Use unix io for image, much faster, cleanup window display and ioshow logic.
 *	1/18/2002  JMM Fix os-x memory mapping, new type for squeak file offsets
 *	1/27/2002  JMM added logic to get framework bundles 
+*	2/04/2002  JMM Rework timer logic, fall back to old style timer, which is pthread based.
 *
 *****************************************************************************/
 #include "sq.h"
@@ -58,13 +59,9 @@
 	#include <sys/time.h>
 	#include <unistd.h>
         #include <sys/mman.h>
+        TMTask    gTMTask;
 	struct timeval	 startUpTime;
 	unsigned int	lowResMSecs= 0;
-        
-//Notes turning USE_ITIMER on is needed for production performance!!! You must define it
-// However turning this on causes grief for gnu profiling and for gnu debugging so when debugging turn it off!
-
-	// MMM for GNU use -D to define at compile time #define USE_ITIMER
 	#define LOW_RES_TICK_MSECS 16
 #endif
 	#include <stddef.h>
@@ -1828,56 +1825,29 @@ int ioHasDisplayDepth(int depth) {
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 
-#ifdef USE_ITIMER
-void sigalrm(int signum)
+static pascal void MyTimerProc(QElemPtr time)
 {
-  lowResMSecs = ioMicroMSecs();
+    lowResMSecs = ioMicroMSecs();
+    PrimeTime((QElemPtr)time, LOW_RES_TICK_MSECS);
+    return;
 }
-#endif
-
 
 void SetUpTimers(void)
 {
   /* set up the micro/millisecond clock */
-  gettimeofday(&startUpTime, 0);
-#ifdef USE_ITIMER
-  /* set up the low-res (50th second) millisecond clock */
-  /* WARNING: all system calls must check for EINTR!!! */
-  {
-    struct sigaction sa;
-    sigset_t ss1, ss2;
-    sigemptyset(&ss1);
-    sigprocmask(SIG_BLOCK, &ss1, &ss2);
-    sa.sa_handler= sigalrm;
-    sa.sa_mask= ss2;
-#ifdef SA_RESTART
-    sa.sa_flags= SA_RESTART;
-#else
-    sa.sa_flags= 0;	/* assume that we have default BSD behaviour */
-#endif
-#ifdef __linux__
-    sa.sa_restorer= 0;
-#endif
-    sigaction(SIGALRM, &sa, 0);
-  }
-  {
-    struct itimerval iv;
-    iv.it_interval.tv_sec= 0;
-    iv.it_interval.tv_usec= LOW_RES_TICK_MSECS * 1000;
-    iv.it_value.tv_sec= 0;
-    iv.it_value.tv_usec= LOW_RES_TICK_MSECS;
-    setitimer(ITIMER_REAL, &iv, 0);
-  }
-#endif
+    gettimeofday(&startUpTime, 0);
+    gTMTask.tmAddr = NewTimerUPP((TimerProcPtr) MyTimerProc);
+    gTMTask.tmCount = 0;
+    gTMTask.tmWakeUp = 0;
+    gTMTask.tmReserved = 0;    
+     
+    InsXTime((QElemPtr)&gTMTask);
+    PrimeTime((QElemPtr)&gTMTask,LOW_RES_TICK_MSECS);
 }
 
 int ioLowResMSecs(void)
 {
-#ifdef USE_ITIMER
   return lowResMSecs;
-#else
-  return ioMicroMSecs();
-#endif
 }
 
 int ioMicroMSecs(void)
@@ -2841,6 +2811,19 @@ int sqGrowMemoryBy(int memoryLimit, int delta) {
         return memoryLimit;
    
     gHeapSize += delta;
+#if TARGET_API_MAC_CARBON
+   /* if (delta < 0) {
+        long range,start,check;
+        
+        range = gMaxHeapSize - gHeapSize;
+        start = memoryLimit + delta + 4096;
+        range = 4096;
+        if (start < gMaxHeapSize) 
+            check = madvise(trunc_page(start),round_page(range),MADV_DONTNEED);
+        if (check == -1) 
+            check = errno;
+    } */
+#endif
     return memoryLimit + delta;
 }
 
