@@ -35,7 +35,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2003-08-14 01:30:10 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-23 19:33:00 by piumarta on emilia.inria.fr
 
 @make_cfg@
 @make_prg@
@@ -53,6 +53,7 @@ all : $(squeak) plugins squeak.1 $(npsqueak)
 
 $(squeak) : config.sh $(SQLIBS) version.o
 	$(LINK) $(squeak) $(SQLIBS) version.o $(LIBS) [plibs] vm/vm.a
+	@echo
 	size $(squeak)
 	@echo
 	@./$(squeak) -version
