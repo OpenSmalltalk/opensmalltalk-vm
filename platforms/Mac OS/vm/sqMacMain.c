@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.3 2002/03/01 00:21:26 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.4 2002/03/04 00:28:47 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -73,6 +73,7 @@
 #include "sqMacUIClipBoard.h"
 #include "sqMacFileLogic.h"
 #include "sqMacUIEvents.h"
+#include "sqMacMemory.h"
 
 #ifdef __MPW__
 QDGlobals 		qd;
@@ -118,10 +119,9 @@ void SetUpCarbonEvent();
 int main(void) {
 	EventRecord theEvent;
 	sqImageFile f;
-	int reservedMemory, availableMemory;
 	OSErr err;
-        long threadGestaltInfo;
-        FSSpec	workingDirectory;
+    long threadGestaltInfo;
+    FSSpec	workingDirectory;
         
 	/* check the interpreter's size assumptions for basic data types */
 	if (sizeof(int) != 4) {
@@ -162,41 +162,6 @@ int main(void) {
 		PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
 	}
 
-	/* compute the desired memory allocation */
-#ifdef JITTER
-	reservedMemory = 1000000;
-#else
-#ifdef MINIMALVM
-	reservedMemory = 128000;
-#else
-	reservedMemory = 500000;
-#endif
-#endif
-
-	if (RunningOnCarbonX())
-	    availableMemory = 512*1024*1024 - reservedMemory;
-	else 
-            availableMemory = MaxBlock() - reservedMemory;
-            
-	/******
-	  Note: This is platform-specific. On the Mac, the user specifies the desired
-	    memory partition for each application using the Finder's Get Info command.
-	    MaxBlock() returns the amount of memory in the partition minus space for
-	    the code segment and other resources. On other platforms, the desired heap
-	    size would be specified in other ways (e.g, via a command line argument).
-	    The maximum size of the object heap is fixed at at startup. If you run low
-	    on space, you must save the image and restart with more memory.
-
-	  Note: Some memory must be reserved for Mac toolbox calls, sound buffers, etc.
-	    A 30K reserve is too little. 40K allows Squeak to run but crashes if the
-	    console is opened. 50K allows the console to be opened (with and w/o the
-	    profiler). I added another 30K to provide for sound buffers and reliability.
-	    (Note: Later discovered that sound output failed if SoundManager was not
-	    preloaded unless there is about 100K reserved. Added 50K to that.)
-	    
-	    JMM Note changed to 500k for Open Transport support on 68K machines
-	******/
-
 	/* uncomment the following when using the C transcript window for debugging: */
 	//printf("Move this window, then hit CR\n"); getchar();
 
@@ -225,7 +190,7 @@ int main(void) {
     	f = sqImageFileOpen(imageName, "rb");
  	}
 	
-	readImageFromFileHeapSizeStartingAt(f, availableMemory, calculateStartLocationForImage());
+	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
 	sqImageFileClose(f);
         
 #ifndef MINIMALVM
@@ -371,14 +336,7 @@ int ioExit(void) {
     UnloadScrap();
     ioShutdownAllModules();
     MenuBarRestore();
-#if !TARGET_API_MAC_CARBON
-    /*if((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) {
-        if (gBackingFile != 0) {
-            CloseMappedFile(gBackingFile);
-            gBackingFile = 0;
-        }
-    }*/
-#endif
+	sqMacMemoryFree();
     ExitToShell();
 }
 #endif
@@ -389,6 +347,7 @@ void SqueakTerminate() {
 #else
 	UnloadScrap();
 	ioShutdownAllModules();
+	sqMacMemoryFree();
 #endif
 }
 
@@ -513,19 +472,7 @@ int plugInShutdown(void) {
 	if (memory != nil) {
         if (gThreadManager)
 	        DisposeThread(gSqueakThread,null,true);
-	    #if TARGET_API_MAC_CARBON
-        #else
-        if((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) {
-	       /* if (gBackingFile != 0) {
-	            CloseMappedFile(gBackingFile);
-	            gBackingFile = 0;
-	        }*/
-        } else {
-    		DisposePtr((void *) memory);
-        }
-        #endif
-
-		memory = nil;
+	    sqMacMemoryFree();
 	}
 }
 
