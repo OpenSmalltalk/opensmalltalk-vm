@@ -2,7 +2,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2002-12-25 19:48:44 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-20 17:53:18 by piumarta on emilia.inria.fr
 
 DOCFILES	= COPYING COPYRIGHT LICENSE \
 		  README.Contributing README.Keyboard README.Sound
@@ -15,7 +15,7 @@ uninstall : uninstall-squeak uninstall-plugins uninstall-doc $(uninstall_nps)
 
 install-squeak : $(squeak)
 	$(MKINSTALLDIRS) $(ROOT)$(plgdir)
-	$(INSTALL_PROG) -s $(squeak) $(ROOT)$(plgdir)
+	$(INSTALL_PROG) $(squeak) $(ROOT)$(plgdir)
 	$(MKINSTALLDIRS) $(ROOT)$(bindir)
 	( path=`$(cfgdir)/relpath $(bindir) $(plgdir)`; \
 	  cd $(ROOT)$(bindir); \
