@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.5 2002/05/09 19:24:09 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.6 2002/07/05 07:07:03 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -209,7 +209,6 @@ int getLongFromFileswap(sqImageFile f, int swapFlag);
 extern int inputSemaphoreIndex;
 int recordMouseEvent(EventRecord *theEvent, int theButtonState);
 int MouseModifierState(EventRecord *theEvent);
-typedef int (*eventMessageHook)(EventRecord* event);
 extern eventMessageHook messageHook ;
 extern eventMessageHook postMessageHook;
 int recordKeyboardEvent(EventRecord *theEvent, int keyType);
