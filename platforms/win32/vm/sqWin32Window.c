@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.15 2003/08/14 21:31:55 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.15 2003/08/14 21:31:55 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id$");
 #endif
 
 /****************************************************************************/
@@ -181,10 +181,10 @@ int synchronizedSignalSemaphoreWithIndex(int semaIndex)
 /****************************************************************************/
 
 /* The last dispatched event. It is used for the event processing mechanism. */
-static MSG *lastMessage = NULL;
+MSG *lastMessage = NULL;
 
 /* The entry to the message hooks called from the window procedure.
-   If another module requires to process messages by itself, it should 
+   If another module requires to process messages by itself, it should
    put its message procedure in this place. */
 messageHook firstMessageHook = 0;
 
@@ -206,7 +206,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
        return 1;
 
 #ifndef NO_WHEEL_MOUSE
-  /* RvL 1999-04-19 00:23 
+  /* RvL 1999-04-19 00:23
      MOUSE WHEELING START */
   if( WM_MOUSEWHEEL == message || g_WM_MOUSEWHEEL == message ) {
     /* Record mouse wheel msgs as CTRL-Up/Down */
@@ -227,7 +227,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
 	recordVirtualKey(message,VK_UP,lParam);
       }
     }
-    return 1;	
+    return 1;
   }
   /* MOUSE WHEELING END */
 #endif
@@ -259,7 +259,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     break;
   }
   /*  mousing */
-  case WM_MOUSEMOVE: 
+  case WM_MOUSEMOVE:
     if(inputSemaphoreIndex) {
       recordMouseEvent(lastMessage);
       break;
@@ -308,7 +308,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     /* virtual key codes */
   case WM_KEYDOWN:
   case WM_SYSKEYDOWN:
-    if(GetFocus() == consoleWindow) 
+    if(GetFocus() == consoleWindow)
       return DefWindowProc(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
@@ -327,7 +327,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     break;
   case WM_KEYUP:
   case WM_SYSKEYUP:
-    if(GetFocus() == consoleWindow) 
+    if(GetFocus() == consoleWindow)
       return DefWindowProc(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
@@ -339,7 +339,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     /* character codes */
   case WM_CHAR:
   case WM_SYSCHAR:
-    if(GetFocus() == consoleWindow) 
+    if(GetFocus() == consoleWindow)
       return DefWindowProc(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
@@ -371,7 +371,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     if(hwnd == stWindow) {
       /* Adjust the console window */
       GetClientRect(stWindow,&stWindowRect);
-      MoveWindow(consoleWindow, 0, 
+      MoveWindow(consoleWindow, 0,
 		 stWindowRect.bottom-100, stWindowRect.right, 100, 1);
       /* Record the global stWindowRect for DirectX */
       MapWindowPoints(stWindow, NULL, (LPPOINT)&stWindowRect, 2);
@@ -393,7 +393,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_NORMAL);
     } else if(fPriorityBoost) {
       SetThreadPriority(GetCurrentThread(), THREAD_PRIORITY_ABOVE_NORMAL);
-    } 
+    }
     break;
 
 #if !defined(_WIN32_WCE)
@@ -471,9 +471,9 @@ void SetupTimer()
   dwTimerPeriod = tCaps.wPeriodMin;
   if(timeBeginPeriod(dwTimerPeriod) != 0)
     return;
-  timerID = timeSetEvent(dwTimerPeriod, 0, 
-			 timerCallback, 0, 
-			 TIME_PERIODIC | 
+  timerID = timeSetEvent(dwTimerPeriod, 0,
+			 timerCallback, 0,
+			 TIME_PERIODIC |
 			 TIME_CALLBACK_FUNCTION);
 #endif /* defined(_WIN32_WCE) */
 }
@@ -677,7 +677,7 @@ void SetupPixmaps(void)
 
 /* SetWindowTitle(): Set the main window title */
 void SetWindowTitle()
-{ 
+{
   TCHAR titleString[MAX_PATH+20];
 
   if(!IsWindow(stWindow)) return;
@@ -751,12 +751,12 @@ void SetupWindows()
 #endif
 
 #if defined(_WIN32_WCE)
-  /* WinCE does not support RegisterClassEx(), so we must set 
+  /* WinCE does not support RegisterClassEx(), so we must set
      the small icon after creating the window. */
-  SendMessage(stWindow,WM_SETICON, FALSE, 
-	      (LPARAM)LoadImage(hInstance, MAKEINTRESOURCE(1), 
+  SendMessage(stWindow,WM_SETICON, FALSE,
+	      (LPARAM)LoadImage(hInstance, MAKEINTRESOURCE(1),
 				IMAGE_ICON, 16, 16, 0));
-  
+
   consoleWindow = NULL; /* We do not use console under WinCE */
 
 #else /* defined(_WIN32_WCE) */
@@ -764,7 +764,7 @@ void SetupWindows()
   consoleWindow = CreateWindowEx(0,
 				 TEXT("EDIT"),
 				 TEXT(""),
-				 WS_CHILD | WS_BORDER | 
+				 WS_CHILD | WS_BORDER |
 				 WS_HSCROLL | WS_VSCROLL | ES_MULTILINE,
 				 0,
 				 0,
@@ -794,8 +794,8 @@ void SetupWindows()
 
 #if !defined(_WIN32_WCE)  /* Unused under WinCE */
 
-void SetWindowSize(void) 
-{ 
+void SetWindowSize(void)
+{
   RECT r;
   RECT workArea;
   int width, height, maxWidth, maxHeight, actualWidth, actualHeight;
@@ -804,12 +804,12 @@ void SetWindowSize(void)
   if(!IsWindow(stWindow)) return; /* might happen if run as NT service */
   if(browserWindow) return; /* Ignored if in browser */
 
-  if (savedWindowSize != 0) 
+  if (savedWindowSize != 0)
     {
       width  = (unsigned) savedWindowSize >> 16;
       height = savedWindowSize & 0xFFFF;
-    } 
-  else 
+    }
+  else
     {
       width  = 640;
       height = 480;
@@ -827,12 +827,12 @@ void SetWindowSize(void)
   width  = ( width <= maxWidth)  ?  width : maxWidth;
   height = (height <= maxHeight) ? height : maxHeight;
 
-  SetWindowPos(stWindow, 
-  		NULL, 
-  		(maxWidth-width) / 2, 
-  		(maxHeight-height) / 2, 
-  		width, 
-  		height, 
+  SetWindowPos(stWindow,
+  		NULL,
+  		(maxWidth-width) / 2,
+  		(maxHeight-height) / 2,
+  		width,
+  		height,
   		SWP_NOZORDER | SWP_HIDEWINDOW);
 
   /* Get the client area to recompute the window size accordingly */
@@ -846,12 +846,12 @@ void SetWindowSize(void)
   height += deltaHeight;
   width  = (width <= maxWidth ) ? width : maxWidth;
   height = (height <= maxHeight ) ? height : maxHeight;
-  SetWindowPos(stWindow, 
-  		NULL, 
-  		(maxWidth-width) / 2, 
-  		(maxHeight-height) / 2, 
-  		width, 
-  		height, 
+  SetWindowPos(stWindow,
+  		NULL,
+  		(maxWidth-width) / 2,
+  		(maxHeight-height) / 2,
+  		width,
+  		height,
   		SWP_NOZORDER | SWP_HIDEWINDOW);
 }
 
@@ -994,7 +994,7 @@ int recordMouseEvent(MSG *msg) {
   proto.modifiers |= alt ? CommandKeyBit : 0;
   /* clean up reserved */
   proto.reserved1 = 0;
-  proto.reserved2 = 0;
+  proto.windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
 #ifndef NO_DIRECTINPUT
   /* get buffered input */
   if(msg->message == WM_MOUSEMOVE) {
@@ -1034,7 +1034,7 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
   evt->numFiles = numFiles;
 
   /* clean up reserved */
-  evt->reserved1 = 0;
+  evt->windowIndex = wnd == stWindow ? 0 : (int) wnd;
   return 1;
 }
 
@@ -1069,9 +1069,9 @@ int recordKeyboardEvent(MSG *msg) {
       }
       break;
     case WM_KEYUP:
-    case WM_SYSKEYUP: 
+    case WM_SYSKEYUP:
       if(virtCode) keyCode = virtCode;
-      pressCode = EventKeyUp; 
+      pressCode = EventKeyUp;
       break;
     case WM_CHAR:
     case WM_SYSCHAR:
@@ -1079,7 +1079,7 @@ int recordKeyboardEvent(MSG *msg) {
       if(keyCode == 13) return 1;
       pressCode = EventKeyChar;
       break;
-    default: 
+    default:
       pressCode = EventKeyChar;
   }
   /* remove Ctrl+Alt codes for international keyboards */
@@ -1097,6 +1097,7 @@ int recordKeyboardEvent(MSG *msg) {
   evt->modifiers |= alt ? CommandKeyBit : 0;
   evt->modifiers |= shift ? ShiftKeyBit : 0;
   evt->modifiers |= ctrl ? CtrlKeyBit : 0;
+  evt->windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
   /* clean up reserved */
   evt->reserved1 = 0;
   evt->reserved2 = 0;
@@ -1121,9 +1122,9 @@ int ioGetNextEvent(sqInputEvent *evt) {
   if (eventBufferGet == eventBufferPut) {
     ioProcessEvents();
   }
-  if (eventBufferGet == eventBufferPut) 
+  if (eventBufferGet == eventBufferPut)
     return 1;
-  
+
   *evt = eventBuffer[eventBufferGet];
   eventBufferGet = (eventBufferGet+1) % MAX_EVENT_BUFFER;
   return 1;
@@ -1220,7 +1221,7 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 
   if (wParam & MK_LBUTTON) stButtons |= 4;
   if (stButtons == 4)	/* red button honours the modifiers */
-    {				 
+    {
       if (wParam & MK_CONTROL) stButtons = 1;	/* blue button if CTRL down */
       else if (GetKeyState(VK_LMENU) & 0x8000) stButtons = 2;	/* yellow button if META down */
     }
@@ -1228,15 +1229,15 @@ int recordMouseDown(WPARAM wParam, LPARAM lParam)
 #else /* defined(_WIN32_WCE) */
 
   if(GetKeyState(VK_LBUTTON) & 0x8000) stButtons |= 4;
-  if(GetKeyState(VK_MBUTTON) & 0x8000) 
+  if(GetKeyState(VK_MBUTTON) & 0x8000)
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 2 : 1;
-  if(GetKeyState(VK_RBUTTON) & 0x8000) 
+  if(GetKeyState(VK_RBUTTON) & 0x8000)
     if(f1ButtonMouse) stButtons |= 4;
     else stButtons |= f3ButtonMouse ? 1 : 2;
 
   if (stButtons == 4)	/* red button honours the modifiers */
-    {		     
+    {
       if (GetKeyState(VK_CONTROL) & 0x8000)
         stButtons= 2;	/* blue button if CTRL down */
       else if (GetKeyState(VK_MENU) & 0x8000)
@@ -1258,13 +1259,13 @@ int recordModifierButtons()
     modifiers |= 1 << 3;
 
   /* Map meta key to command.
-     
+
      NOTE:
      Non US keyboards typically need the right menu key for special mappings.
      However, it seems that hitting this key is interpreted as Alt-Ctrl.
-     We therefore ignore the control modifier if the right menu key 
+     We therefore ignore the control modifier if the right menu key
      is pressed (hoping that nobody will use the right-menu / control combination)
-     
+
      NOTE^2:
      Due to another Win95 bug, we can not ask for the left
      or right alt key directly (Win95 returns always 0 if
@@ -1278,7 +1279,7 @@ int recordModifierButtons()
   /* if ALT and not CTRL pressed use command modifier */
   if((GetKeyState(VK_MENU) & 0x8000) && (GetKeyState(VK_CONTROL) & 0x8000) == 0)
     modifiers |= 1 << 6;
-  
+
   /* if ALT and CTRL pressed use option modifier */
   if((GetKeyState(VK_MENU) & 0x8000) && (GetKeyState(VK_CONTROL) & 0x8000))
     modifiers |= 1 << 5;
@@ -1290,7 +1291,7 @@ int recordModifierButtons()
 
 int ioGetButtonState(void)
 {
-  if(fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) { 
+  if(fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) {
     MSG msg;
     /* Delay execution of squeak if
        - there is currently no button pressed
@@ -1306,8 +1307,8 @@ int ioGetButtonState(void)
 }
 
 int ioMousePoint(void)
-{ 
-  if(fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) { 
+{
+  if(fReduceCPUUsage || (fReduceCPUInBackground && !fHasFocus)) {
     MSG msg;
     /* Delay execution of squeak if
        - there is currently no button pressed
@@ -1360,11 +1361,11 @@ int ioMicroMSecs(void)
 }
 
 /* Note: ioRelinquishProcessorForMicroseconds has *micro*seconds  as argument*/
-int ioRelinquishProcessorForMicroseconds(int microSeconds) 
+int ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
   /* wake us up if something happens */
   ResetEvent(vmWakeUpEvent);
-  MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE, 
+  MsgWaitForMultipleObjects(1, &vmWakeUpEvent, FALSE,
 			    microSeconds / 1000, QS_ALLINPUT);
   ioProcessEvents(); /* keep up with mouse moves etc. */
   return microSeconds;
@@ -1426,7 +1427,7 @@ int ioProcessEvents(void)
 
 /* returns the size of the Squeak window */
 int ioScreenSize(void)
-{ 
+{
   static RECT r;
 
   if(!IsWindow(stWindow)) return savedWindowSize;
@@ -1513,7 +1514,7 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
       }
 
   currentCursor = CreateCursor(hInstance,-offsetX,-offsetY,cx,cy,andMask,xorMask);
-  if(currentCursor) 
+  if(currentCursor)
     {
       SetCursor(0);
       SetCursor(currentCursor);
@@ -1539,7 +1540,7 @@ int ioSetFullScreen(int fullScreen)
   if(wasFullScreen == fullScreen) return 1;
   /* NOTE: No modifications if the window is not currently
            visible, else we'll have a number of strange effects ... */
-  if(!IsWindowVisible(stWindow)) return 1; 
+  if(!IsWindowVisible(stWindow)) return 1;
   if(fullScreen)
     {
 #if !defined(_WIN32_WCE)
@@ -1615,7 +1616,7 @@ int ioSetFullScreen(int fullScreen)
 
 int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 			int depth, int width, RECT *rect)
-{ 
+{
   int pitch, first, last, nWords, delta, yy;
 
   /* --- SPECIAL HACK FOR WINDOWS CE --- */
@@ -1642,7 +1643,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
     if(reverseBits) {
-      for(yy = rect->top; yy < rect->bottom; 
+      for(yy = rect->top; yy < rect->bottom;
 	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
 	int i = nWords;
 	do {
@@ -1652,7 +1653,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 	} while(--i);
       }
     } else { /* !reverseBits */
-      for(yy = rect->top; yy < rect->bottom; 
+      for(yy = rect->top; yy < rect->bottom;
 	  yy++, srcPixPtr += delta, dstPixPtr += delta) {
 	int i = nWords;
 	do {
@@ -1668,7 +1669,7 @@ int reverse_image_bytes(unsigned int* dst, unsigned int *src,
 
 int reverse_image_words(unsigned int *dst, unsigned int *src,
 			int depth, int width, RECT *rect)
-{ 
+{
   int pitch, first, last, nWords, delta, yy;
 
   /* note: all  of the below are in DWORDs not BYTEs */
@@ -1684,7 +1685,7 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,
     register DWORD* dstPixPtr DST_PIX_REG;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top; yy < rect->bottom; 
+    for(yy = rect->top; yy < rect->bottom;
 	yy++, srcPixPtr += delta, dstPixPtr += delta) {
       int i = nWords;
       do {
@@ -1699,7 +1700,7 @@ int reverse_image_words(unsigned int *dst, unsigned int *src,
 
 int copy_image_words(unsigned int *dst, unsigned int *src,
 		     int depth, int width, RECT *rect)
-{ 
+{
   int pitch, first, last, nWords, delta, yy;
 
   /* note: all  of the below are in DWORDs not BYTEs */
@@ -1715,7 +1716,7 @@ int copy_image_words(unsigned int *dst, unsigned int *src,
     DWORD* dstPixPtr;
     srcPixPtr = ((DWORD*)src) + (rect->top * pitch) + first;
     dstPixPtr = ((DWORD*)dst) + (rect->top * pitch) + first;
-    for(yy = rect->top; yy < rect->bottom; 
+    for(yy = rect->top; yy < rect->bottom;
 	yy++, srcPixPtr += pitch, dstPixPtr += pitch) {
       memcpy(dstPixPtr, srcPixPtr, nWords*4);
     }
@@ -1867,8 +1868,8 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, dou
       dmPtr->dmFields |= DM_ORIENTATION;
     }
   namePtr = (TCHAR*) devNames;
-  dc = CreateDC(namePtr+devNames->wDriverOffset, 
-                namePtr+devNames->wDeviceOffset, 
+  dc = CreateDC(namePtr+devNames->wDriverOffset,
+                namePtr+devNames->wDeviceOffset,
                 namePtr+devNames->wOutputOffset,
                 dmPtr);
   GlobalUnlock(printValues.hDevMode);
@@ -1881,7 +1882,7 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, dou
     }
 
   bmi = BmiForDepth(depth);
-  if(!bmi) 
+  if(!bmi)
     {
       warnPrintf(TEXT("Color depth %d not supported"), depth);
       return false;
@@ -1911,10 +1912,10 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, dou
 #ifndef NO_BYTE_REVERSAL
   if( depth < 32 )
     if(depth == 16)
-      reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr, 
+      reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
     else
-      reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr, 
+      reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
 #endif /* NO_BYTE_REVERSAL */
 
@@ -1936,10 +1937,10 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, dou
 #ifndef NO_BYTE_REVERSAL
   if( depth < 32 )
     if(depth == 16)
-      reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr, 
+      reverse_image_words((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
     else
-      reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr, 
+      reverse_image_bytes((unsigned int*) bitsAddr, (unsigned int*) bitsAddr,
 			  depth, width, &targetRect);
 #endif /* NO_BYTE_REVERSAL */
 
@@ -1967,7 +1968,7 @@ HDC CreateBitmapDC(HDC dc, int depth, int width, int height, void** pBitsOut)
   static void* pBits;
   static HDC memDC;
   BITMAPINFO *bmi;
-  
+
   bmi = BmiForDepth(depth);
   if(!bmi)
     abortMessage(TEXT("Fatal error: Color depth %d not supported"),depth);
@@ -1985,7 +1986,7 @@ HDC CreateBitmapDC(HDC dc, int depth, int width, int height, void** pBitsOut)
       if (!hbm)
 	abortMessage(TEXT("Fatal error: Cannot create device bitmap!"));
     }
-  
+
   *pBitsOut = pBits;
   memDC = CreateCompatibleDC(dc);
   SelectObject(memDC, hbm);
@@ -2015,7 +2016,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
   if(affectedR < affectedL || affectedT > affectedB)
     return 1;
 #if 0
-  if(ioDirectXShowDisplayBits(dispBits, width, height, depth, 
+  if(ioDirectXShowDisplayBits(dispBits, width, height, depth,
 			      affectedL, affectedR, affectedT, affectedB))
     return 1;
 #endif
@@ -2026,7 +2027,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
       updateRect.top = affectedT;
       updateRect.right = affectedR;
       updateRect.bottom = affectedB;
-      /* Acknowledge the request for deferred updates only 
+      /* Acknowledge the request for deferred updates only
          if the interpreter is not deferring these by itself */
       if(fDeferredUpdate && !deferDisplayUpdates)
         {
@@ -2051,7 +2052,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
   affectedR = updateRect.right;
   affectedB = updateRect.bottom;
 
-  /* Careful here: 
+  /* Careful here:
      After resizing the main window the affected area can
      be larger than the area covered by the display bits ... */
   if (affectedR > width) affectedR= width-1;
@@ -2096,13 +2097,13 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
 	  reverse_image_bytes((unsigned int*) pBits, (unsigned int*) dispBits,
 			      depth, width, &updateRect);
       } else {
-	copy_image_words((int*)pBits, (int*) dispBits, 
+	copy_image_words((int*)pBits, (int*) dispBits,
 			 depth, width, &updateRect);
       }
     PROFILE_END(ticksForReversal)
-      
+
       PROFILE_BEGIN(PROFILE_DISPLAY);
-    BitBlt(dc, 
+    BitBlt(dc,
 	   updateRect.left,/* dst_x */
 	   updateRect.top, /* dst_y */
 	   (updateRect.right - updateRect.left),/* dst_w */
@@ -2152,7 +2153,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
 
 
   PROFILE_BEGIN(PROFILE_DISPLAY)
-  /* use the actual affected region rather than 
+  /* use the actual affected region rather than
      the complete recangle for clipping */
   SelectClipRgn(dc,updateRgn);
 
@@ -2205,7 +2206,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
-    warnPrintf(TEXT("width=%d,height=%d,bits=%X,dc=%X\n"), 
+    warnPrintf(TEXT("width=%d,height=%d,bits=%X,dc=%X\n"),
 	       width, height, dispBits,dc);
   }
   /* reverse the image bits if necessary */
@@ -2250,7 +2251,7 @@ int clipboardSize(void)
   CloseClipboard();
   return len;
 }
-    
+
 /* send the given string to the clipboard */
 int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
 { HANDLE h;
@@ -2286,7 +2287,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
   *dst = 0;
   EmptyClipboard();
   SetClipboardData(CF_TEXT, h);
-  /* Note: After setting clipboard data, 
+  /* Note: After setting clipboard data,
      the memory block previously allocated belongs to
      the clipboard - not to the app. */
   CloseClipboard();
@@ -2463,7 +2464,7 @@ int attributeSize(int id) {
 int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
   char *srcPtr, *dstPtr, *end;
   int charsToMove;
-  
+
   srcPtr = GetAttributeString(id);
   if(!srcPtr) return 0;
   charsToMove = strlen(srcPtr);
@@ -2504,7 +2505,7 @@ int isLocalFileName(TCHAR *fileName)
 
 void SetupFilesAndPath()
 { TCHAR *tmp;
-  
+
   lstrcpy(imagePath, toUnicode(imageName));
   tmp = lstrrchr(imagePath,U_BACKSLASH[0]);
   if(tmp) tmp[1] = 0;
@@ -2574,7 +2575,7 @@ SetupFilesAndPath()
   /* get the full path for the image */
   lstrcpy(tmpName, toUnicode(imageName));
   GetFullPathName(tmpName,MAX_PATH,imageNameW,&tmp);
-  /* check if it is a short name and if so convert 
+  /* check if it is a short name and if so convert
      it to the full name */
   LongFileNameFromPossiblyShortName(imageNameW);
 
@@ -2595,7 +2596,7 @@ SetupFilesAndPath()
 
 #endif /* !defined(_WIN32_WCE) */
 
-/* SqueakImageLength(): 
+/* SqueakImageLength():
    Return the length of the image if it is a valid Squeak image file.
    Otherwise return 0. */
 DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
@@ -2623,7 +2624,7 @@ DWORD SqueakImageLength(TCHAR *fileName) {
   HANDLE hFile;
 
   /* open image file */
-  hFile = CreateFile(fileName, GENERIC_READ, FILE_SHARE_READ, 
+  hFile = CreateFile(fileName, GENERIC_READ, FILE_SHARE_READ,
                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if(hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
