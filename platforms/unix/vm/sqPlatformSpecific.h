@@ -1,81 +1,46 @@
-/* Unix sqPlatformSpecific.h -- Platform-specific prototypes and definitions */
+/* sqPlatformSpecific.h -- platform-specific modifications to sq.h
+ * 
+ *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *     as listed elsewhere in this file.
+ *   All rights reserved.
+ *   
+ *   This file is part of Unix Squeak.
+ * 
+ *   This file is distributed in the hope that it will be useful, but WITHOUT
+ *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *   FITNESS FOR A PARTICULAR PURPOSE.
+ *   
+ *   You may use and/or distribute this file ONLY as part of Squeak, under
+ *   the terms of the Squeak License as described in `LICENSE' in the base of
+ *   this distribution, subject to the following restrictions:
+ * 
+ *   1. The origin of this software must not be misrepresented; you must not
+ *      claim that you wrote the original software.  If you use this software
+ *      in a product, an acknowledgment to the original author(s) (and any
+ *      other contributors mentioned herein) in the product documentation
+ *      would be appreciated but is not required.
+ * 
+ *   2. This notice must not be removed or altered in any source distribution.
+ * 
+ *   Using (or modifying this file for use) in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the
+ *   directory `platforms/unix/doc' before proceeding with any such use.
+ * 
+ *   You are not allowed to distribute a modified version of this file
+ *   under its original name without explicit permission to do so.  If
+ *   you change it, rename it.
+ * 
+ * Author: ian.piumarta@inria.fr
+ * 
+ * Last edited: 2002-06-08 02:34:43 by piumarta on emilia.inria.fr
+ */
 
-/* How to use this file:
-   This file is for general platform-specific macros and declarations.
-   The goal is to keep most of the other header files generic across platforms.
-   To override a definition or macro from sq.h, you must first #undef it, then
-   provide the new definition.
+/* undefine clock macros (these are implemented as functions) */
 
-*/
-
-
-#ifndef SQ_PLATFORM_SPECIFIC_H
-#define SQ_PLATFORM_SPECIFIC_H
-
-#ifdef UNIX
-#include <string.h>
-#include <stdio.h>
-#include <unistd.h>
-
-
-/* off_t should be available (XXX though really, we should
-   autoconf-check this, and substitute whatever fseeko is using) */
-typedef off_t squeakFileOffsetType;
-
-#undef sqFTruncate
-#undef fseek
-#undef ftell
-
-
-#define sqFTruncate(fp, offs) ftruncate(fileno(fp),offs)
-#define fseek(fp, offs,type) fseeko(fp, offs,type)
-#define ftell(fp) ftello(fp)
-
-/* unix-specific prototypes and definitions */
-void aioPollForIO(int microSeconds, int extraFd);  /* XXX should no longer be needed -lex */
-#define SQ_FORM_FILENAME        "squeak-form.ppm"
-
-/* undefine clock macros that are implemented as functions */
 #undef ioMSecs
 #undef ioMicroMSecs
 #undef ioLowResMSecs
 
+#include <sys/types.h>
 
-
-
-/* use non-default heap-allocation functions; see sqUnixMemory.c */
-#undef sqAllocateMemory
-#undef sqGrowMemoryBy
-#undef sqShrinkMemoryBy
-#undef sqMemoryExtraBytesLeft
-
-void * sqAllocateMemory(int minHeapSize, int desiredHeapSize);
-int sqGrowMemoryBy(int oldLimit, int delta);
-int sqShrinkMemoryBy(int oldLimit, int delta);
-int sqMemoryExtraBytesLeft(int includingSwap);
-  
-
-
-
-
-#ifdef sqImageFileOpen  /* this is horrible, but is necessary because
-                           plugins don't include sq.h; so, we should
-                           redefine these macros only when all of sq.h
-                           is being used */
-
-/* use non-default image IO functions; see sqUnixImage.c */
-#undef sqImageFileOpen
-#undef sqImageFileStartLocation
-
-sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
-int sqImageFileStartLocation(sqImageFile file, const char *fileName, int size);
-#endif
-
-
-#else
-
-#error This sqPlatformSpecific.h file is for Unix; you either have the wrong source code, or you forgot to -DUNIX
-
-#endif /* UNIX */
-
-#endif  /* SQ_PLATFORM_SPECIFIC_H */
+typedef off_t squeakFileOffsetType;

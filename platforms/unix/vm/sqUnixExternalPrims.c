@@ -1,7 +1,7 @@
 /* sqUnixExternalPrims.c -- Unix named primitives and loadable modules
  * 
- *   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
- *      authors/contributors listed elsewhere in this file.
+ *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
@@ -20,32 +20,44 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. This notice may not be removed or altered in any source distribution.
+ *   2. This notice must not be removed or altered in any source distribution.
  * 
- *   Using or modifying this file for use in any context other than Squeak
- *   changes these copyright conditions.  Read the file `COPYING' in the base
- *   of the distribution before proceeding with any such use.
+ *   Using (or modifying this file for use) in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the
+ *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- *   You are STRONGLY DISCOURAGED from distributing a modified version of
- *   this file under its original name without permission.  If you must
- *   change it, rename it first.
+ *   You are not allowed to distribute a modified version of this file
+ *   under its original name without explicit permission to do so.  If
+ *   you change it, rename it.
  */
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2001-07-23 14:45:39 CEST by piumarta on emilia.inria.fr
+ * Last edited: 2003-01-29 21:51:13 by piumarta on emilia.local.
  */
 
 #include "sq.h"		/* sqUnixConfig.h */
 
-#ifdef HAVE_LIBDL	/* non-starter without this! */
+#define DEBUG 0
+ 
+#if DEBUG
+# define dprintf(ARGS) fprintf ARGS
+#else
+# define dprintf(ARGS)
+#endif
+ 
+#if defined(HAVE_DYLD)
+# include "dlfcn-dyld.c"
+#endif
+
+#if defined(HAVE_LIBDL)	/* non-starter without this! */
 
 #ifdef HAVE_DLFCN_H
 # include <dlfcn.h>
 #else
   extern void *dlopen (const char *filename, int flag);
   extern const char *dlerror(void);
-  extern void *dlsym(void *handle, char *symbol);
+  extern void *dlsym(void *handle, const char *symbol);
   extern int dlclose (void *handle);
 #endif
  
@@ -66,13 +78,9 @@
 #   define RTLD_NOW 1
 # endif
 #endif
- 
-#undef	DEBUG
- 
-#ifdef DEBUG
-# define dprintf(ARGS) fprintf ARGS
-#else
-# define dprintf(ARGS)
+
+#if !defined(RTLD_GLOBAL)
+# define RTLD_GLOBAL 0
 #endif
  
 #ifndef NAME_MAX
@@ -88,6 +96,14 @@
 #endif
 
 
+/*** options ***/
+
+extern char *squeakPlugins;
+
+/*** configured variables ***/
+
+char *vmLibDir= VM_LIBDIR;
+
 /*** local functions ***/
 
 
@@ -95,38 +111,63 @@
  *  moduleName and suffix.  Answer the new module entry, or 0 if the shared
  *  library could not be loaded.
  */
-static void *tryLoading(char *prefix, char *moduleName, char *suffix)
+static void *tryLoading(char *dirName, char *moduleName)
 {
-  char libName[NAME_MAX + 32];	/* headroom for prefix/suffix */
-  void *handle;
+  static char *prefixes[]= { "", "lib", 0 };
+  static char *suffixes[]= { "", ".so", ".dylib", 0 };
+  void        *handle= 0;
+  char	     **prefix= 0, **suffix= 0;
 
-  sprintf(libName, "%s%s%s", prefix, moduleName, suffix);
-  dprintf(("tryLoading %s\n", libName));
-  handle= dlopen(libName, RTLD_NOW);
-  if (handle == 0)
-    {
-      /* to preserve the humour of Jitter hackers: try to differentiate
-	 between "file not found" and a genuine load error (which would be
-	 difficult to diagnose out of context) when the lib is in the CWD */
-      struct stat buf;
-      if (/*(strcmp(prefix,  "./") == 0)
-	    && (strcmp(suffix, ".so") == 0)
-	    && */ (stat(libName, &buf) == 0))
-	{
-	  /* insist on the error message: the shared lib really _is_ broken */
-	  if (!(S_ISDIR(buf.st_mode)))
+  for (prefix= prefixes;  *prefix;  ++prefix)
+    for (suffix= suffixes;  *suffix;  ++suffix)
+      {
+	char        libName[NAME_MAX + 32];	/* headroom for prefix/suffix */
+	struct stat buf;
+	int         err;
+	sprintf(libName, "%s%s%s%s", dirName, *prefix, moduleName, *suffix);
+	if (((err= stat(libName, &buf)) == 0) && (S_ISDIR(buf.st_mode)))
+	  dprintf((stderr, "ignoring directory: %s\n", libName));
+	else
 	  {
-	    fprintf(stderr, "ioLoadModule(%s): %s\n", libName, dlerror());
+	    dprintf((stderr, "tryLoading %s\n", libName));
+	    handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+	    if (handle == 0)
+	      {
+		if (err == 0)
+		  fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
+	      }
+	    else
+	      {
+		dprintf((stderr, "loaded: %s\n", libName));
+		return handle;
+	      }
 	  }
-	}
-      else
-	{
-	  dprintf(("not found\n"));
-	}
-    }
-  else
+      }
+  return 0;
+}
+
+
+static void *tryLoadingPath(char *varName, char *pluginName)
+{
+  char *path= getenv(varName);
+  void *handle= 0;
+
+  if (path)
     {
-      dprintf((stderr, "loaded:  %s\n", libName));
+      char pbuf[MAXPATHLEN];
+      dprintf((stderr, "try %s=%s\n", varName, path));
+      strncpy(pbuf, path, sizeof(pbuf));
+      pbuf[sizeof(pbuf) - 1]= '\0';
+      for (path= strtok(pbuf, ":");
+	   path != 0;
+	   path= strtok(0, ":"))
+	{
+	  char buf[MAXPATHLEN];
+	  sprintf(buf, "%s/", path);
+	  dprintf((stderr, "  path dir = %s\n", buf));
+	  if ((handle= tryLoading(buf, pluginName)) != 0)
+	    break;
+	}
     }
   return handle;
 }
@@ -141,51 +182,59 @@ int ioLoadModule(char *pluginName)
 
   if ((pluginName == 0) || (pluginName[0] == '\0'))
     {
-      handle = dlopen(0, RTLD_NOW);
+      handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
       if (handle == 0)
 	fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", dlerror());
       else
-	dprintf((stderr, "loaded:  <intrinsic>\n"));
-    } 
-  else
-    {
-      (void)(/* these are ordered such that a knowledgeable user can
-		override a "system" library with one in the CWD */
-	     (   handle= tryLoading(        "./", pluginName, ".so"))
-	     /* these are the normal cases: when LD_LIBRARY_PATH is not
-		set they search /etc/ld.so.cache, /usr/lib and /lib */
-	     || (handle= tryLoading(          "", pluginName, ".so"))
-	     || (handle= tryLoading(          "", pluginName,    ""))
-	     /* this is the standard location for the plugins */
-	     || (handle= tryLoading(SQ_LIBDIR"/", pluginName, ".so"))
-	     || (handle= tryLoading(       "lib", pluginName, ""   ))
-	     || (handle= tryLoading(       "lib", pluginName, ".so")));
-    }
-
-  if (handle == 0)
-    {
-      /* ld.so is broken on some platforms: try LD_LIBRARY_PATH ourselves */
-      char *path= getenv("LD_LIBRARY_PATH");
-      dprintf(("try LD_LIBRARY_PATH %s\n", path));
-      if (path != 0)
 	{
-	  char pbuf[MAXPATHLEN];
-	  strncpy(pbuf, path, sizeof(pbuf));
-	  pbuf[sizeof(pbuf) - 1]= '\0';
-	  for (path= strtok(pbuf, ":");
-	       path != 0;
-	       path= strtok(0, ":"))
-	    {
-	      char buf[MAXPATHLEN];
-	      sprintf(buf, "%s/", path);
-	      dprintf(("LD_LIBRARY_PATH dir = %s\n", buf));
-	      if ((handle= tryLoading(buf, pluginName, ".so")) != 0)
-		break;
-	    }
+	  dprintf((stderr, "loaded: <intrinsic>\n"));
+	  return (int)handle;
 	}
     }
 
-  return (int)handle;
+  if (squeakPlugins)
+      {
+	char path[NAME_MAX];
+	char c, *in= squeakPlugins, *out= path;
+	while ((c= *in++))
+	  {
+	    if (c == '%' && ((*in == 'n') || (*in == 'N')))
+	      {
+		++in;
+		strcpy(out, pluginName);
+		out+= strlen(pluginName);
+	      }
+	    else
+	      *out++= c;
+	  }
+	*out= '\0';
+	dprintf((stderr, "ioLoadModule plugins = %s\n                path = %s\n",
+		 squeakPlugins, path));
+	if ((handle= tryLoading("", path)))
+	  return (int)handle;
+	*out++= '/';
+	*out= '\0';
+	if ((handle= tryLoading(path, pluginName)))
+	  return (int)handle;
+      }
+
+  /* these are ordered such that a knowledgeable user can override a
+     "system" library with one in the CWD */
+       
+  if ((   handle= tryLoading(        "./", pluginName))
+      /* this is the standard location for the plugins */
+      || (handle= tryLoading(VM_LIBDIR"/", pluginName))
+      /* this is the default case: when LD_LIBRARY_PATH is not
+	 it searches /etc/ld.so.cache, /lib and /usr/lib */
+      || (handle= tryLoading(          "", pluginName))
+      /* try SQUEAK_PLUGIN_PATH and LD_LIBRARY_PATH if set */
+      || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH", pluginName))
+      || (handle= tryLoadingPath("LD_LIBRARY_PATH",    pluginName)))
+    return (int)handle;
+      
+  dprintf(("ioLoadModule: could not load: %s\n", pluginName));
+
+  return 0;
 }
 
 
@@ -200,10 +249,10 @@ int ioFindExternalFunctionIn(char *lookupName, int moduleHandle)
 	   lookupName, moduleHandle));
 
   if (fn == 0)
-    {
-      dprintf((stderr, "ioFindExternalFunctionIn(%s, %d):\n  %s\n",
-	       lookupName, moduleHandle, dlerror()));
-    }
+    dprintf((stderr, "ioFindExternalFunctionIn(%s, %d):\n  %s\n",
+	     lookupName, moduleHandle, dlerror()));
+  else
+    dprintf((stderr, "  => %d (0x%x)\n", (int)fn, (int)fn));
 
   return (int)fn;
 }
@@ -212,7 +261,7 @@ int ioFindExternalFunctionIn(char *lookupName, int moduleHandle)
 
 /*  Free the module with the associated handle.  Answer 0 on error (do
  *  NOT fail the primitive!).
-*/
+ */
 int ioFreeModule(int moduleHandle)
 {
   if (dlclose((void *)moduleHandle))

@@ -2,13 +2,14 @@
  * 
  * Author: Ned Konz, July 14, 2000
  * 
- * Last edited: Wed Sep  6 03:39:38 2000 by piumarta (Ian Piumarta) on emilia
+ * Last edited: 2002-10-26 14:36:11 by piumarta on emilia.inria.fr
  *
  * Separated from MIDI, plus various portability problems fixed, by:
  *	Ian Piumarta <Ian.Piumarta@INRIA.Fr>
  */
 
 #include "sq.h"
+#include "SerialPlugin.h"
 
 #include <termios.h>
 #include <unistd.h>

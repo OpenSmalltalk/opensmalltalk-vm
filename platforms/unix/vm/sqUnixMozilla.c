@@ -2,7 +2,7 @@
  *
  * Author: Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  * 
- * Last edited: Tue 05 Mar 2002 09:52:03 by bert on balloon
+ * Last edited: 2002-09-27 19:58:30 by piumarta on emilia.inria.fr
  *
  * Originally based on Andreas Raab's sqWin32PluginSupport
  * 
@@ -32,7 +32,7 @@ void DPRINT(char *format, ...)
   if (42 == debug) 
     debug= (NULL != getenv("NPSQUEAK_DEBUG"));
 
-  if (!debug) 
+  if (!debug)
     {
       return;
     }
@@ -44,7 +44,7 @@ void DPRINT(char *format, ...)
 	  file= fopen("/tmp/npsqueak.log", "a+");
 	}
 
-      {
+      if (file) {
 	va_list ap;
 	va_start(ap, format);
 	vfprintf(file, format, ap);
@@ -54,7 +54,7 @@ void DPRINT(char *format, ...)
     }
 }
 #else
-static int DPRINT(char *, ...) { }
+void DPRINT(char *, ...) { }
 #endif
 
 /* from sqXWindow.c */
@@ -87,9 +87,11 @@ static void browserSendInt(int value);
 static void browserReceiveData();
 static void browserGetURLRequest(int id, char* url, int urlSize,
 				char* target, int targetSize);
+#ifdef NOT_USED
 static void browserPostURLRequest(int id, char* url, int urlSize, 
 				 char* target, int targetSize, 
 				 char* postData, int postDataSize);
+#endif
 
 typedef struct sqStreamRequest {
   char *localName;
@@ -126,8 +128,13 @@ static sqStreamRequest *requests[MAX_REQUESTS];
 */
 int primitivePluginBrowserReady()
 {
-  pop(1);
-  pushBool(inBrowser);
+  if (inBrowser)
+    {
+      pop(1);
+      pushBool(1);
+    }
+  else
+    primitiveFail();
   return 1;
 }
 
@@ -238,7 +245,6 @@ int primitivePluginRequestFileHandle()
 {
   sqStreamRequest *req;
   int id, fileOop, openFn;
-  SQFile* file;
 
   id= stackIntegerValue(0);
   if (failed()) return 0;
@@ -253,21 +259,23 @@ int primitivePluginRequestFileHandle()
     {
       DPRINT("VM: Creating file handle for %s\n", req->localName);
  
-      fileOop= instantiateClassindexableSize(classByteArray(), sizeof(SQFile));
-      if (!isBytes(fileOop)) return primitiveFail();
-
-      file= firstIndexableField(fileOop);
-
-      /* this opens a file w/o security checks - I wonder if this is a security hole? */
-      openFn= ioLoadFunctionFrom("fileOpennamesizewrite", "FilePlugin");
+      openFn= ioLoadFunctionFrom("fileOpenNamesizewritesecure", "FilePlugin");
       if (!openFn)
-	{
-	  DPRINT("VM:   Couldn't load function from FilePlugin!\n");
-	  return primitiveFail();
-	}
-
-      ((int (*) (SQFile *, int, int,int)) openFn)
-	(firstIndexableField(fileOop), (int)req->localName, strlen(req->localName), 0);
+      {
+	DPRINT("VM:   Couldn't load fileOpenName:size:write:secure: from FilePlugin!\n");
+	return primitiveFail();
+      }
+  
+      fileOop=  ((int (*) (char *, int, int, int)) openFn)
+	(req->localName, strlen(req->localName), 0 /* readonly */, 0 /* insecure */);
+ 
+      /* if file ends in a $, it was a temp link created by the plugin */
+      if ('$' == req->localName[strlen(req->localName) - 1])
+      {
+	DPRINT("VM:   unlink %s\n", req->localName);
+	if (-1 == unlink(req->localName))
+	  DPRINT("VM:   unlink failed: %s\n", strerror(errno));
+      }
 
       if (failed()) 
 	{
@@ -423,6 +431,7 @@ static void browserGetURLRequest(int id, char* url, int urlSize,
   browserPostURLRequest:
   Notify plugin to post data to the specified url and get result into target
 */
+#ifdef NOT_USED
 static void browserPostURLRequest(int id, char* url, int urlSize, 
 				 char* target, int targetSize, 
 				 char* postData, int postDataSize)
@@ -448,6 +457,7 @@ static void browserPostURLRequest(int id, char* url, int urlSize,
   if (postDataSize > 0)
     browserSend(postData, postDataSize);
 }
+#endif
 
 
 /***************************************************************
@@ -458,7 +468,7 @@ static void browserPostURLRequest(int id, char* url, int urlSize,
   browserProcessCommand:
   Handle commands sent by the plugin.
 */
-void browserProcessCommand()
+void browserProcessCommand(void)
 {
   static int firstTime= 1;
   int cmd, n;

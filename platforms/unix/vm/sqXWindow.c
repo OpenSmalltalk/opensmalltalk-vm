@@ -1,7 +1,7 @@
 /* sqXWindow.c -- support for Unix and the X Window System.
  * 
- *   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
- *      authors/contributors listed elsewhere in this file.
+ *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
@@ -20,18 +20,20 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. This notice may not be removed or altered in any source distribution.
+ *   2. This notice must not be removed or altered in any source distribution.
  * 
- *   Using or modifying this file for use in any context other than Squeak
- *   changes these copyright conditions.  Read the file `COPYING' in the base
- *   of the distribution before proceeding with any such use.
+ *   Using (or modifying this file for use) in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the
+ *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- *   You are STRONGLY DISCOURAGED from distributing a modified version of
- *   this file under its original name without permission.  If you must
- *   change it, rename it first.
+ *   You are not allowed to distribute a modified version of this file
+ *   under its original name without explicit permission to do so.  If
+ *   you change it, rename it.
  */
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
+ *
+ * Last edited: 2003-02-06 16:22:36 by piumarta on emilia.local.
  *
  * Support for displays deeper than 8 bits contributed by: Kazuki YASUMATSU
  *	<kyasu@crl.fujixerox.co.jp> <Kazuki.Yasumatsu@fujixerox.co.jp>
@@ -61,16 +63,16 @@
  */
 
 #include "sq.h"
-#include "sqaio.h"
-
-# if 0
-/* Nope, no need for these at all. TPR */
-#include "FilePlugin.h"			/* sqFileInit() */
-#include "JoystickTabletPlugin.h"	/* joystickInit() */
-# endif
+#include "aio.h"
 
 #define NO_ICON
+#define PRINT_PS_FORMS
+#define SQ_FORM_FILENAME	"squeak-form.ppm"
 #undef	FULL_UPDATE_ON_EXPOSE
+
+#undef	DEBUG_EVENTS
+#undef	DEBUG_SELECTIONS
+#undef	DEBUG_BROWSER
 
 /* if defined then the main Squeak window is a subwindow in an
    invisible enclosing InputOutput window.  helps integrate the
@@ -130,8 +132,13 @@
 #   define NDEBUG
 # endif
 # include <assert.h>
-# include "zipio.h"
+# if defined(USE_INTERNAL_IMAGE)
+#   include "zipio.h"
+# endif
 #endif
+
+#define isAligned(T, V)	(((V) % sizeof(T)) == 0)
+#define align(T, V)	(((V) / sizeof(T)) * sizeof(T))
 
 /*** Variables -- Imported from Virtual Machine ***/
 extern unsigned char *memory;
@@ -148,9 +155,11 @@ char        imageName[MAXPATHLEN+1];		/* full path to image */
 static char vmPath[MAXPATHLEN+1];		/* full path to image directory */
 static char vmName[MAXPATHLEN+1];		/* full path to vm */
 
-#define DefaultHeapSize		50	/* megabytes */
+#define DefaultHeapSize 48			/* megabytes */
 
 int initialHeapSize= DefaultHeapSize * 1024 * 1024;
+
+char *squeakPlugins= 0;
 
 /*** Variables -- globals for access from pluggable primitives ***/
 int    argCnt= 0;
@@ -171,19 +180,17 @@ unsigned char *internalImagePtr= 0;	/* non-zero means plain image */
 z_stream      *internalZStream=  0;	/* non-zero means gzipped image */
 #endif
 
-#undef USE_ITIMER			/* severely confuses GNU's profil() */
-
-#ifdef USE_ITIMER
-unsigned int	lowResMSecs= 0;
+int		useItimer=	1;
+unsigned int	lowResMSecs=	0;
 #define	LOW_RES_TICK_MSECS	20	/* 1/50 second resolution */
-#endif
 
 #ifndef HEADLESS
+
 /*** Variables -- X11 Related ***/
 
 /* name of Squeak windows in Xrm and the WM */
-#define xResClass	"Squeak"
-#define xResName	"squeak"
+# define xResClass	"Squeak"
+# define xResName	"squeak"
 
 char		*displayName= 0;	/* name of display, or 0 for $DISPLAY */
 Display		*stDisplay= null;	/* Squeak display */
@@ -191,37 +198,43 @@ int		 isConnectedToXServer=0;/* True when connected to an X server */
 int		 stXfd= -1;		/* X connection file descriptor */
 Window		 stParent= null;	/* Squeak parent window */
 Window		 stWindow= null;	/* Squeak window */
-int              stWindowWidth=-1;      /* last-known dimensions of that window */
-int              stWindowHeight=-1;
+int		 stWidth= 0;
+int		 stHeight= 0;
+int		 xWidth= 0;
+int		 xHeight= 0;
 Visual		*stVisual;		/* the default visual */
 GC		 stGC;			/* graphics context used for rendering */
 Colormap	 stColormap= null;	/* Squeak color map */
-int		 scrW= 0;               /* the size of the whole screen */
+int		 scrW= 0;
 int		 scrH= 0;
-int		 stDisplayBitsIndex= 0;	/* last known oop of the VM's Display */
-XImage		*stImage= 0;		/* the X pixmap to be drawn;
-					   it either refers to the Display object,
-					   or it refers to a pixmap in shared memory */
-
+XImage		*stImage= 0;		/* ...and it's client-side pixmap */
 char		*stPrimarySelection;	/* buffer holding selection */
 char		*stEmptySelection= "";	/* immutable "empty string" value */
 int		 stPrimarySelectionSize;/* size of buffer holding selection */
-int		 stOwnsSelection= 0;	/* true if we own the X PRIMARY selection */
-int		 stOwnsClipboard= 0;	/* true if we own the X CLIPBOARD selection */
+int		 stOwnsSelection= 0;	/* true if we own the X selection */
+int		 stOwnsClipboard= 0;	/* true if we own the X clipboard */
 XColor		 stColorBlack;		/* black pixel value in stColormap */
 XColor		 stColorWhite;		/* white pixel value in stColormap */
 int		 savedWindowOrigin= -1;	/* initial origin of window */
 XPoint		 mousePosition;		/* position at last PointerMotion event */
 Time		 stButtonTime;		/* time of last ButtonRelease (for SetSeln) */
+# ifndef XA_CLIPBOARD
+Atom		 XA_CLIPBOARD;		/* www.freedesktop.org/standards/clipboards.txt */
+# endif
+# ifndef XA_TARGETS
+Atom		 XA_TARGETS;
+# endif
 # ifdef USE_XSHM
 XShmSegmentInfo  stShmInfo;		/* shared memory descriptor */
 int		 completions= 0;	/* outstanding completion events */
 int		 completionType;	/* the type of XShmCompletionEvent */
 int		 useXshm= 0;		/* 1 if shared memory is in use */
 int		 asyncUpdate= 0;	/* 1 for asynchronous screen updates */
-#else
-#define useXshm 0                       /* this is handy sometimes */
 # endif
+int		 mapDelBs= 0;		/* 1 to map delete to backspace */
+int		 swapBtn= 0;		/* 1 to swap yellow and blue buttons */
+int		 optMapIndex= 0;	/* Option key modifier map index */
+int		 cmdMapIndex= 0;	/* Command key modifier map index */
 int		 stDepth= 0;
 int		 stBitsPerPixel= 0;
 unsigned int	 stColors[256];
@@ -232,26 +245,31 @@ int		 stRNMask, stGNMask, stBNMask;
 int		 stRShift, stGShift, stBShift;
 char		*stDisplayBitmap= 0;
 Window           browserWindow= 0;      /* parent window */
-int              browserPipes[]= {-1, -1};   /* read/write fd for communication with browser */ 
+int		 browserPipes[]= {-1, -1}; /* read/write fd for browser communication */
 int		 headless= 0;
-Atom		 clipboardAtom= 0;
-Atom		 primaryAtom= 0;
 
-#define          inBrowser\
-  (-1 != browserPipes[0])
+# define inBrowser()	(-1 != browserPipes[0])
 
-#else
-/* some vars need setting for headless */
-int		 noEvents= 1;		/* 1 to disable new event handling */
-/* XXX is there a reason to turn off event-based input?  what's it matter?
-   feel free to replace this query with an explanation :)  -lex */
+/* window states */
+
+# define WIN_NORMAL	0
+# define WIN_CHANGED	1
+# define WIN_ZOOMED	2
+
+int windowState= WIN_CHANGED;
+
+# define noteWindowChange()			\
+  {						\
+    if (windowState == WIN_NORMAL)		\
+      windowState= WIN_CHANGED;			\
+  }
 
 #endif  /* !HEADLESS */
 
 /* events */
 
 int inputEventSemaIndex= 0;
-#define IEB_SIZE	 64
+#define IEB_SIZE	 64	/* must be power of 2 */
 
 sqInputEvent inputEventBuffer[IEB_SIZE];
 int iebIn=  0;	/* next IEB location to write */
@@ -260,20 +278,23 @@ int iebOut= 0;	/* next IEB location to read  */
 #define SqueakWhite	0
 #define SqueakBlack	1
 
-int		 asmAlign= 1;
-int		 sleepWhenUnmapped= 0;
-int		 noJitter= 1;
-int		 withSpy= 0;
-int		 noTitle= 0;
-int		 fullScreen= 0;
-struct timeval	 startUpTime;
-int		 noEvents= 0;		/* 1 to disable new event handling */
+int asmAlign= 1;
+int sleepWhenUnmapped= 0;
+int useJit= 0;
+int jitProcs= 0;
+int jitMaxPIC= 0;
+int withSpy= 0;
+int noTitle= 0;
+int fullScreen= 0;
+int iconified= 0;
+int noEvents= 0;		/* 1 to disable new event handling */
+int noSoundMixer= 0;		/* 1 to diable writing sound mixer levels */
 
+struct timeval	 startUpTime;
 
 #ifndef HEADLESS
 
-static Time lastKeystrokeTime;  /* XXX is initializing this to 0 okay?? */
-                                /* XXX er, uh, als, isn't this supposed to get set somewhere? */
+static Time lastKeystrokeTime;
 
 /* we are interested in these events...
  */
@@ -291,30 +312,11 @@ static Time lastKeystrokeTime;  /* XXX is initializing this to 0 okay?? */
 
 
 /*** Variables -- Event Recording ***/
-#define KEYBUF_SIZE 64
 
-int keyBuf[KEYBUF_SIZE];	/* circular buffer */
-int keyBufGet= 0;		/* index of next item of keyBuf to read */
-int keyBufPut= 0;		/* index of next item of keyBuf to write */
-int keyBufOverflows= 0;		/* number of characters dropped */
-
-
-unsigned stButtons= 0;          /* mouse buttons currently pressed
-				   down; the mask bits are described
-				   in sq.h as RedButtonBit, etc.  */
-unsigned modifiers;             /* the modifiers curretnly pressed down;
-				   the mask bits are described in sq.h
-				   as CtrlKeyBit, etc. */
-unsigned buttonState= 0;        /* the combination of the stButtons
-				   and modifiers in the format Squeak
-				   expects:
-
-				   buttonState == (stButtons | (modifiers << 3)
-				*/
-
+int buttonState= 0;		/* mouse button state or 0 if not pressed */
+int modifierState= 0;		/* modifier key state or 0 if none pressed */
 
 #endif   /* !HEADLESS */
-
 
 
 /*** Functions ***/
@@ -324,25 +326,30 @@ unsigned buttonState= 0;        /* the combination of the stButtons
 #endif
 
 #ifndef HEADLESS
-static void xDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag);
-static void npDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag);
+static void xHandler(int fd, void *data, int flags);
+static void npHandler(int fd, void *data, int flags);
+static void handleEvent(XEvent *event);
 #endif
 static int  HandleEvents(void);
+static void waitForCompletions(void);
 void RecordFullPathForVmName(char *localVmName);
 void RecordFullPathForImageName(char *localImageName);
 void SetUpTimers(void);
 void usage(void);
 void imageNotFound(char *imageName);
-void ParseArguments(int argc, char **argv, int);
-void segv(int ignored);
-void keyBufAppend(int keystate);
+void ParseArguments(int argc, char **argv, int inHeader);
+void sigsegv(int ignored);
+void sighup(int ignored);
 
 #ifndef HEADLESS
+
 void SetColorEntry(int index, int red, int green, int blue);
 void SetUpClipboard(void);
 void SetUpPixmap(void);
 void SetUpWindow(char *displayName);
+#if 1
 void SetWindowSize(void);
+#endif
 void getMaskbit(unsigned long ul, int *nmask, int *shift);
 void setupDownGradingColors(void);
 void copyReverseImageBytes(int *fromImageData, int *toImageData,
@@ -390,29 +397,23 @@ declareCopyFunction(copyImage32To32Same);
 
 # undef declareCopyFunction
 
-void SetUpCharmap();
-void ux2st(unsigned char *string);
-void st2ux(unsigned char *string);
-void claimSelection(void);
-void sendSelection(XSelectionRequestEvent *requestEv);
-char *getSelection(void);
 static void redrawDisplay(int l, int r, int t, int b);
-static int translateCode(KeySym symbolic);
-static void recordMouseEvent(XButtonEvent *theEvent);
-static void recordKeystrokeEvent(XKeyEvent *theEvent);
-static void recordModifierButtons(XButtonEvent *theEvent,
-				  int buttonToAdd,
-				  int buttonToRemove);
+
+void    SetUpCharmap();
+void    ux2st(unsigned char *string);
+void    st2ux(unsigned char *string);
+void    claimSelection(void);
+void    sendSelection(XSelectionRequestEvent *requestEv);
+char   *getSelection(void);
+static int  translateCode(KeySym symbolic);
+static void recordKeystroke(int keyCode);		/* DEPRECATED */
 # ifdef USE_XSHM
-int XShmGetEventBase(Display *);
+int    XShmGetEventBase(Display *);
 # endif
-int ioMSecs(void);
-void browserProcessCommand(void);       /* see sqUnixMozilla.c */
+int    ioMSecs(void);
+void   browserProcessCommand(void);       /* see sqUnixMozilla.c */
 #endif /*!HEADLESS*/
-
-int strtobkm(const char *str);
-
-
+int    strtobkm(const char *str);
 time_t convertToSqueakTime(time_t);	/* unix epoch -> Squeak epoch */
 
 
@@ -483,7 +484,7 @@ unsigned char Squeak_to_X[256];
 void SetUpCharmap()
 {
   int i;
-  for(i=0; i<256; i++)
+  for(i= 0; i < 256; i++)
     Squeak_to_X[X_to_Squeak[i]]= i;
 }
 
@@ -511,14 +512,14 @@ void ux2st(unsigned char *string)
 
 /* Called prior to forking a squeak session.
  */
-int synchronizeXDisplay()
+int synchronizeXDisplay(void)
 {
   if (isConnectedToXServer)
     XSync(stDisplay, False);
   return 0;
 }
 
-int openXDisplay()
+int openXDisplay(void)
 {
   /* open the Squeak window. */
   if (!isConnectedToXServer) {
@@ -526,26 +527,37 @@ int openXDisplay()
     SetUpClipboard();
     SetUpWindow(displayName);
     SetUpPixmap();
-    if (!inBrowser)
+    if (!inBrowser())
       {
+#      if 1
 	SetWindowSize();
+#      endif
 	XMapWindow(stDisplay, stParent);
 	XMapWindow(stDisplay, stWindow);
       }
     else /* if in browser we will be reparented and mapped by plugin */
       {
 	/* tell browser our window */
+#      ifdef DEBUG_BROWSER
+	fprintf(stderr, "browser: sending squeak window = 0x%x\n", stWindow);
+#      endif
 	write(browserPipes[1], &stWindow, 4);
+#      ifdef DEBUG_BROWSER
+	fprintf(stderr, "browser: squeak window sent\n");
+#      endif
 	/* listen for commands */
-	aioHandle(browserPipes[0], npDescriptorHandler, NULL, AIO_RD);
+	aioEnable(browserPipes[0], 0, AIO_EXT);
+	aioHandle(browserPipes[0], npHandler, AIO_RX);
       }
-    aioHandle(stXfd, xDescriptorHandler, NULL, AIO_RD | AIO_EX);
     isConnectedToXServer= 1;
+    lastKeystrokeTime= CurrentTime;
+    aioEnable(stXfd, 0, AIO_EXT);
+    aioHandle(stXfd, xHandler, AIO_RX);
   }
   return 0;
 }
 
-int forgetXDisplay()
+int forgetXDisplay(void)
 {
   /* Initialise variables related to the X connection, and
      make the existing connection to the X Display invalid
@@ -558,40 +570,42 @@ int forgetXDisplay()
 
   displayName= 0;       /* name of display, or 0 for $DISPLAY   */
   stDisplay= null;      /* Squeak display                       */
-  if (isConnectedToXServer) {
-    aioStopHandling(stXfd);
+  if (isConnectedToXServer)
     close(stXfd);
-  }
-  stXfd= -1;             /* X connection file descriptor         */
+  if (stXfd >= 0)
+    aioDisable(stXfd);
+  stXfd= -1;		/* X connection file descriptor         */
   stParent= null;
   stWindow= null;       /* Squeak window                        */
   isConnectedToXServer= 0;
   return 0;
 }
 
-int disconnectXDisplay()
+int disconnectXDisplay(void)
 {
-  if (isConnectedToXServer) {
-    XSync(stDisplay, False);
-    HandleEvents(); /* process all pending window events */
-     XDestroyWindow(stDisplay, stWindow);
-     if (browserWindow == 0)
-       XDestroyWindow(stDisplay, stParent);
-     XCloseDisplay(stDisplay);
-   }
-   forgetXDisplay();
-   return 0;
- }
+  if (isConnectedToXServer)
+    {
+      XSync(stDisplay, False);
+      HandleEvents();
+      XDestroyWindow(stDisplay, stWindow);
+      if (browserWindow == 0)
+	XDestroyWindow(stDisplay, stParent);
+      XCloseDisplay(stDisplay);
+    }
+  forgetXDisplay();
+  return 0;
+}
 
- #if 0
- static char *debugVisual(int x)
- {
-   switch (x)
-     {
-     case 0: return "StaticGray";
-     case 1: return "GrayScale";
-     case 2: return "StaticColor";
-     case 3: return "PseudoColor";
+
+#if 0
+static char *debugVisual(int x)
+{
+  switch (x)
+    {
+    case 0: return "StaticGray";
+    case 1: return "GrayScale";
+    case 2: return "StaticColor";
+    case 3: return "PseudoColor";
     case 4: return "TrueColor";
     case 5: return "DirectColor";
     default: return "Invalid";
@@ -600,182 +614,54 @@ int disconnectXDisplay()
 #endif
 
 
-static void getMousePosition(void)
+static void noteResize(int w, int h)
 {
-  Window root, child;
-  int rootX, rootY, winX, winY;
-  unsigned int mask;
-  if (True == XQueryPointer(stDisplay, stWindow, &root, &child,
-			    &rootX, &rootY, &winX, &winY, &mask))
-    {
-      mousePosition.x= winX;
-      mousePosition.y= winY;
-      /* could update modifiers from mask too, but I can't be bothered... */
-    }
+  xWidth= w;
+  xHeight= h;
+#if defined(USE_XSHM)
+  if (asyncUpdate)
+    waitForCompletions();
+#endif
+  noteWindowChange();
 }
 
-static void handleOneEvent(XEvent *theEvent) 
+
+static int resized(void)
 {
-    switch (theEvent->type)
-      {
-      case MotionNotify:
-	recordMouseEvent((XButtonEvent *) theEvent);
-	break;
-
-      case ButtonPress:
-	recordMouseEvent((XButtonEvent *) theEvent);
-	break;
-
-      case ButtonRelease:
-	recordMouseEvent((XButtonEvent *) theEvent);
-
-	/* button up on "paste" causes a selection retrieval:
-	   record the event time in case we need it later */
-	stButtonTime= ((XButtonEvent *) theEvent)->time;
-	break;
-
-      case KeyPress:
-	recordKeystrokeEvent((XKeyEvent *) theEvent);
-	break;
-
-      case KeyRelease:
-	recordKeystrokeEvent((XKeyEvent *) theEvent);
-	break;
-
-      case SelectionClear:
-	if (((XSelectionClearEvent *)theEvent)->selection == clipboardAtom)
-	  stOwnsClipboard= 0;
-	else if (((XSelectionClearEvent *)theEvent)->selection == primaryAtom)
-	  stOwnsSelection= 0;
-	break;
-
-      case SelectionRequest:
-	sendSelection(&theEvent->xselectionrequest);
-	break;
-
-      case Expose:
-	{
-	  XExposeEvent *ex= (XExposeEvent *)theEvent;
-#      if defined(USE_XSHM)
-	  if (asyncUpdate)
-	    {
-	      /* wait for pending updates */
-	      /* XXX Lex Spoon has observed an infinite recursion here; it should be investigated further.... */
-	      while (completions) HandleEvents();
-	    }
-#      endif
-#      ifdef FULL_UPDATE_ON_EXPOSE
-	  /* ignore it if there are other exposures upstream */
-	  if (ex->count == 0)
-	    fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
-#      else
-	  redrawDisplay(ex->x, ex->x + ex->width, ex->y, ex->y + ex->height);
-#      endif /*!FULL_UPDATE_ON_EXPOSE*/
-	}
-	break;
-
-      case MapNotify:
-	/* The window has just been mapped, possibly for the first
-	   time: update mousePosition (which otherwise may not be
-	   set before the first button event). */
-	getMousePosition();
-	break;
-
-      case UnmapNotify:
-	{
-	  XEvent theEvent;
-	  
-	  if (sleepWhenUnmapped)
-	    do
-	      {
-		
-		XNextEvent(stDisplay, &theEvent);
-		switch (theEvent.type)
-		  {
-		  case SelectionClear:
-		    if (((XSelectionClearEvent*)&theEvent)->selection == clipboardAtom)
-		      stOwnsClipboard= 0;
-		    else if (((XSelectionClearEvent*)&theEvent)->selection == primaryAtom)
-		      stOwnsSelection= 0;
-		    break;
-		  case SelectionRequest:
-		    sendSelection(&theEvent.xselectionrequest);
-		    break;
-		  }
-	      } while (theEvent.type != MapNotify);
-	  getMousePosition();
-	}
-	break;
-
-      case ConfigureNotify:
-	{
-	  XConfigureEvent *ec= (XConfigureEvent *) theEvent;
-	  int width= ec->width;
-	  int height= ec->height;
-	  
-	  
-	  /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
-	  if ((width % sizeof(void *)) != 0)
-	    {
-	      width= (width / sizeof(void *)) * sizeof(void *);
-	      if(! inBrowser) {
-		/* it would be rude to resize the window the browser gave us! */
-		XResizeWindow(stDisplay, stParent, width, height);
-	      }
-	    }
-	  
-
-#      if defined(USE_XSHM)
-	  if (asyncUpdate)
-	    {
-	      /* wait for pending updates */
-	      while (completions) HandleEvents();
-	    }
-#      endif
-
-	  /* resize the display window to match the parent, unless
-	     we are in full screen mode */
-	  if (! fullScreen)
-	    {
-	      XResizeWindow(stDisplay, stWindow, width, height);
-	      stWindowWidth= width;
-	      stWindowHeight= height;
-	    }
-	}
-	
-	break;
-
-      case MappingNotify:
-	XRefreshKeyboardMapping((XMappingEvent *) theEvent);
-	break;
-	  
-#  ifdef USE_XSHM
-      default:
-	if (theEvent->type == completionType) --completions;
-	break;
-#  endif
-      }
+  return ((stWidth != xWidth) || (stHeight != xHeight));
 }
 
 
 void claimSelection(void)
 {
-  XSetSelectionOwner(stDisplay, clipboardAtom, stWindow, lastKeystrokeTime);
-  XSetSelectionOwner(stDisplay, primaryAtom, stWindow, lastKeystrokeTime);
+  XSetSelectionOwner(stDisplay, XA_PRIMARY, stWindow, lastKeystrokeTime);
+  XSetSelectionOwner(stDisplay, XA_CLIPBOARD, stWindow, lastKeystrokeTime);
   XFlush(stDisplay);
-  stOwnsClipboard= (XGetSelectionOwner(stDisplay, clipboardAtom) == stWindow);
-  stOwnsSelection= (XGetSelectionOwner(stDisplay, primaryAtom) == stWindow);
+  stOwnsClipboard= (XGetSelectionOwner(stDisplay, XA_CLIPBOARD) == stWindow);
+  stOwnsSelection= (XGetSelectionOwner(stDisplay, XA_PRIMARY) == stWindow);
 }
 
 void sendSelection(XSelectionRequestEvent *requestEv)
 {
   XSelectionEvent notifyEv;
 
-  /* REFUSE the selection if the target type isn't XA_STRING */
+#ifdef DEBUG_SELECTIONS
+  fprintf(stderr, "selection request sel %s prop %s target %s\n",
+	  requestEv->selection == None
+	    ? "None"
+	    : XGetAtomName(stDisplay, requestEv->selection),
+	  requestEv->property == None
+	    ? "None"
+	    : XGetAtomName(stDisplay, requestEv->property),
+	  requestEv->target == None
+	    ? "None"
+	    : XGetAtomName(stDisplay, requestEv->target));
+#endif
+
+  /* refuse the selection if the target type isn't XA_STRING */
   if (requestEv->target == XA_STRING)
     {
       st2ux(stPrimarySelection);
- 
       XChangeProperty(requestEv->display,
 		      requestEv->requestor,
 		      (requestEv->property == None
@@ -784,27 +670,34 @@ void sendSelection(XSelectionRequestEvent *requestEv)
 		      requestEv->target,
 		      8, PropModeReplace, stPrimarySelection,
 		      (stPrimarySelection ? strlen(stPrimarySelection) : 0));
-
       ux2st(stPrimarySelection);
       notifyEv.property= (requestEv->property == None)
 	? requestEv->target
 	: requestEv->property;
     }
+  else if (requestEv->target == XA_TARGETS)
+    {
+      Atom targets[1]= { XA_STRING };
+      XChangeProperty(requestEv->display,
+		      requestEv->requestor,
+		      requestEv->property,
+		      requestEv->target,
+		      8, PropModeReplace, (char*)targets, sizeof(targets));
+      notifyEv.property= requestEv->property;
+    }
   else
     {
       notifyEv.property= None;
     }
-
   notifyEv.type= SelectionNotify;
   notifyEv.display= requestEv->display;
   notifyEv.requestor= requestEv->requestor;
   notifyEv.selection= requestEv->selection;
   notifyEv.target= requestEv->target;
   notifyEv.time= requestEv->time;
+  notifyEv.send_event= True;
 
-  XSendEvent(requestEv->display, requestEv->requestor,
-	     False, 0, (XEvent *)&notifyEv);
-
+  XSendEvent(requestEv->display, requestEv->requestor, False, 0, (XEvent *)&notifyEv);
   XFlush(stDisplay);
 }
 
@@ -815,48 +708,55 @@ char *getSelection(void)
   fd_set  fdMask;
   char	 *data;
 
-  /* request the PRIMARY selection, since this should be the same as the CLIPBOARD */
-  XConvertSelection(stDisplay, primaryAtom, XA_STRING, XA_STRING, stWindow, CurrentTime);
+  /* request the selection */
+  XConvertSelection(stDisplay, XA_PRIMARY, XA_STRING, XA_STRING, stWindow, CurrentTime);
 
   /* wait for selection notification, ignoring (most) other events. */
   FD_ZERO(&fdMask);
-  if(stXfd >= 0)
+  if (stXfd >= 0)
     FD_SET(stXfd, &fdMask);
 
-  /* loop until a selection notify event is received */
   do
     {
-      /* wait until some event has arrived */
-      while(! XPending(stDisplay))
+      if (XPending(stDisplay) == 0)
 	{
-	  /* empty event queue; wait for a while */
-	  struct timeval timeout= {SELECTION_TIMEOUT, 0};
 	  int status;
+	  struct timeval timeout= { SELECTION_TIMEOUT, 0 };
 
-	  while ((status= select(FD_SETSIZE, &fdMask, 0, 0, &timeout)) < 0
-		 && errno == EINTR);
+	  while (((status= select(FD_SETSIZE, &fdMask, 0, 0, &timeout)) < 0)
+		 && (errno == EINTR))
+	    ;
 	  if (status < 0)
 	    {
-	      /* uh oh */
 	      perror("select(stDisplay)");
 	      return stEmptySelection;
 	    }
 	  if (status == 0)
 	    {
-	      /* timeout; give up */
 	      if (isConnectedToXServer)
 		XBell(stDisplay, 0);
 	      return stEmptySelection;
 	    }
 	}
-
-      /* retrieve it */
       XNextEvent(stDisplay, &ev);
-
-      if(ev.type != SelectionNotify)
+      switch (ev.type)
 	{
-	  /* wrong kind of event */
-	  handleOneEvent(&ev);
+	case ConfigureNotify:
+	  noteResize(ev.xconfigure.width, ev.xconfigure.height);
+	  break;
+
+        /* this is necessary so that we can supply our own selection when we
+	   are the requestor -- this could (should) be optimised to return the
+	   stored selection value instead! */
+	case SelectionRequest:
+	  sendSelection(&ev.xselectionrequest);
+	  break;
+
+#       ifdef USE_XSHM
+	default:
+	  if (ev.type == completionType)
+	    --completions;
+#       endif
 	}
     }
   while (ev.type != SelectionNotify);
@@ -918,6 +818,20 @@ static void redrawDisplay(int l, int r, int t, int b)
 }
 
 
+static void getMousePosition(void)
+{
+  Window root, child;
+  int rootX, rootY, winX, winY;
+  unsigned int mask;
+  if (True == XQueryPointer(stDisplay, stWindow, &root, &child,
+			    &rootX, &rootY, &winX, &winY, &mask))
+    {
+      mousePosition.x= winX;
+      mousePosition.y= winY;
+      /* could update modifiers from mask too, but I can't be bothered... */
+    }
+}
+
 
 #endif /*!HEADLESS*/
 
@@ -942,7 +856,7 @@ int ioSetInputSemaphore(int semaIndex)
 
 
 #define iebEmptyP()	(iebIn == iebOut)
-#define iebAdvance(P)	(P= ((P + 1) % IEB_SIZE))
+#define iebAdvance(P)	(P= ((P + 1) & (IEB_SIZE - 1)))
 
 
 /* retrieve the next input event from the OS
@@ -981,195 +895,429 @@ static sqInputEvent *allocateInputEvent(int eventType)
 
 #ifndef HEADLESS
 
-static void signalInputEvent() 
+static void signalInputEvent(void)
 {
-  if(inputEventSemaIndex > 0)
+#ifdef DEBUG_EVENTS
+  printf("signalInputEvent\n");
+#endif
+  if (inputEventSemaIndex > 0)
     signalSemaphoreWithIndex(inputEventSemaIndex);
 }
 
 
-
-
-
-/* record a mouse event.  This handles button presses, button releases, and motion notify.
-   Note that the fields in motion notify that this structure uses line up exactly
-   with the same-named fields in XButtonEvent */
-static void recordMouseEvent(XButtonEvent *theEvent) 
+static int x2sqKey(XKeyEvent *xevt)
 {
-  int buttonToAdd= 0;
-  int buttonToRemove= 0;
-  
-  if(theEvent->type == ButtonPress)
-    buttonToAdd= theEvent->button;
-  if(theEvent->type == ButtonRelease)
-    buttonToRemove= theEvent->button;
-  
-  
-  recordModifierButtons(theEvent, buttonToAdd, buttonToRemove);
-  
-  mousePosition.x= theEvent->x;
-  mousePosition.y= theEvent->y;
-
-  if(theEvent->type == ButtonPress) {
-    if(theEvent->button==4 || theEvent->button==5) {
-      /* Mouse wheel support */
-      keyBufAppend((theEvent->button + 26)        /* Up/Down */
-		   | (2 << 8)                          /* Ctrl  */
-		   | (modifiers << 8));
-
-
-      if(inputEventSemaIndex != 0) {
-      	sqKeyboardEvent *evt= allocateKeyboardEvent();
-	evt->charCode= (theEvent->button + 26);       /* Up/Down */
-	evt->pressCode= EventKeyChar;
-	evt->modifiers= CtrlKeyBit | modifiers;
-	evt->reserved1=
-	  evt->reserved2=
-	  evt->reserved3= 0;
-      }
-
-      return;
-    }
-
-    if(theEvent->button > 5) {
-      ioBeep();
-    }
-  }
-  
-
-  if(inputEventSemaIndex != 0) {
-    sqMouseEvent *evt= allocateMouseEvent();
-    evt->x= mousePosition.x;
-    evt->y= mousePosition.y;
-    evt->buttons= stButtons;
-    evt->modifiers= modifiers;
-    evt->reserved1= 0;
-    evt->reserved2= 0;
-    
-    signalInputEvent();
-  }
-}
-
-
-/* record a keystroke event, whether it is a release or a press */
-static void recordKeystrokeEvent(XKeyEvent *theEvent) 
-{
-  int charCode= 0;       /* the character code for the key, in Squeak's encoding */
-  int keystate= 0;       /* the combined character code and modifiers */
   unsigned char buf[32];
-  int nConv= 0;
   KeySym symbolic;
-
-  recordModifierButtons((XButtonEvent *) theEvent, 0, 0);
-
-
-  /* translate the key from X11 to Squeak */
-  nConv= XLookupString(theEvent, buf, sizeof(buf), &symbolic, 0);
-
-  /* check for special keys */
-  charCode= translateCode(symbolic);
-  if(charCode < 0) {
-    /* not a special key */
-    if(nConv==0) {
-      /* key not known at all.  Give up */
-      return;
-    }
-
-    /* just use the first character of the string; conceivably all
-       the characters could be sent in */
-    charCode= buf[0];
-  }
-
-  /* Squeak uses the Macintosh 8-bit character encoding */
+  int nConv= XLookupString(xevt, buf, sizeof(buf), &symbolic, 0);
+  int charCode= buf[0];
+#ifdef DEBUG_EVENTS
+  printf("convert keycode %d -> %d (keysym %ld)\n", xevt->keycode, charCode, symbolic);
+#endif
+  if (nConv == 0 && (charCode= translateCode(symbolic)) < 0)
+    return -1;	/* unknown key */
+  if ((charCode == 127) && mapDelBs)
+    charCode= 8;
   if (charCode >= 128)
     charCode= X_to_Squeak[charCode];
+  return charCode;
+}
 
-  
-  keystate= charCode | (modifiers << 8);
+#ifdef DEBUG_EVENTS
+#include <ctype.h>
+static void printKey(int key)
+{
+  printf(" `%c' (%d = 0x%x)", (isgraph(key) ? key : ' '), key, key);
+}
+#endif
 
-  if (keystate == interruptKeycode)
+
+static int x2sqButton(int button)
+{
+  /* ASSUME: (button >= 1) & (button <= 3) */
+  static int rybMap[4]= { 0, RedButtonBit, YellowButtonBit, BlueButtonBit };
+  static int rbyMap[4]= { 0, RedButtonBit, BlueButtonBit, YellowButtonBit };
+  return (swapBtn ? rbyMap : rybMap)[button];
+}
+
+#ifdef DEBUG_EVENTS
+static void printButtons(int buttons)
+{
+  if (buttons & RedButtonBit)    printf(" red");
+  if (buttons & YellowButtonBit) printf(" yellow");
+  if (buttons & BlueButtonBit)   printf(" blue");
+}
+#endif
+
+
+static int x2sqModifier(int state)
+{
+  int mods= 0;
+  if (optMapIndex || cmdMapIndex)
     {
-      /* Treat the interrupt key specially; don't just pass it into the image */
-      if(theEvent->type==KeyPress) {
-	interruptPending= true;
-	interruptCheckCounter= 0;
-      }
-      
-      return;
+      int shift= 1 & ((state >> ShiftMapIndex) ^ (state >> LockMapIndex));
+      int ctrl=  1 & (state >> ControlMapIndex);
+      int cmd=   1 & (state >> cmdMapIndex);
+      int opt=   1 & (state >> optMapIndex);
+      mods= (shift ? ShiftKeyBit   : 0)
+	|   (ctrl  ? CtrlKeyBit    : 0)
+	|   (cmd   ? CommandKeyBit : 0)
+	|   (opt   ? OptionKeyBit  : 0);
+#    ifdef DEBUG_EVENTS
+      printf("X mod %x -> Sq mod %x (extended opt=%d cmd=%d)\n", state, mods,
+	     optMapIndex, cmdMapIndex);
+#    endif
     }
-
-  keyBufAppend(keystate);
-
-
-  if(inputEventSemaIndex != 0)     {
-    int codes[2];
-    int numCodes;
-    int i;
-
-    if(theEvent->type==KeyPress) {
-      codes[0] = EventKeyDown;
-      codes[1] = EventKeyChar;
-      numCodes=2;
+  else
+    {
+      enum { _= 0, S= ShiftKeyBit, C= CtrlKeyBit, O= OptionKeyBit, M= CommandKeyBit };
+      static char midofiers[32]= {	/* ALT=Cmd, META=ignored, C-ALT=Opt, META=ignored */
+	/*              - -       - S       L -       L S */
+	/* - - - - */ _|_|_|_,  _|_|_|S,  _|_|_|S,  _|_|_|_,
+	/* - - - C */ _|_|C|_,  _|_|C|S,  _|_|C|S,  _|_|C|_,
+	/* - - A - */ _|M|_|_,  _|M|_|S,  _|M|_|S,  _|M|_|_,
+	/* - - A C */ O|_|_|_,  O|_|_|S,  O|_|_|S,  O|_|_|_,
+	/*              - -       - S       L -       L S */
+	/* M - - - */ _|M|_|_,  _|M|_|S,  _|M|_|S,  _|M|_|_,
+	/* M - - C */ _|M|C|_,  _|M|C|S,  _|M|C|S,  _|M|C|_,
+	/* M - A - */ _|M|_|_,  _|M|_|S,  _|M|_|S,  _|M|_|_,
+	/* M - A C */ O|_|_|_,  O|M|_|S,  O|M|_|S,  O|M|_|_,
+      };
+#    if defined(__POWERPC__)
+      mods= midofiers[state & 0x1f];
+#    else
+      mods= midofiers[state & 0x0f];
+#    endif
+#    ifdef DEBUG_EVENTS
+      printf("X mod %x -> Sq mod %x (default)\n", state & 0xf, mods);
+#    endif
     }
-    else {
-      codes[0] = EventKeyUp;
-      numCodes=1;
-    }
+  return mods;
+}
 
-    for(i=0; i<numCodes; i++) {
-      sqKeyboardEvent *evt= allocateKeyboardEvent();
-    
-      evt->charCode= charCode;
-      evt->pressCode= codes[i];
-      evt->modifiers= modifiers;
-      evt->reserved1=
-	evt->reserved2=
-	evt->reserved3= 0;
+#ifdef DEBUG_EVENTS
+static void printModifiers(int midofiers)
+{
+  if (midofiers & ShiftKeyBit)   printf(" Shift");
+  if (midofiers & CtrlKeyBit)    printf(" Control");
+  if (midofiers & CommandKeyBit) printf(" Command");
+  if (midofiers & OptionKeyBit)  printf(" Option");
+}
+#endif
+
+
+static int getButtonState(void)
+{
+  /* red button honours the modifiers:
+   *	red+ctrl    = yellow button
+   *	red+command = blue button
+   */
+  int buttons= buttonState;
+  int modifiers= modifierState;
+  if ((buttons == RedButtonBit) && modifiers)
+    {
+      int yellow= swapBtn ? BlueButtonBit   : YellowButtonBit;
+      int blue=   swapBtn ? YellowButtonBit : BlueButtonBit;
+      switch (modifiers)
+	{
+	case CtrlKeyBit:    buttons= yellow; modifiers &= ~CtrlKeyBit;    break;
+	case CommandKeyBit: buttons= blue;   modifiers &= ~CommandKeyBit; break;
+	}
     }
-  }
-  signalInputEvent();
+#ifdef DEBUG_EVENTS_DISABLED
+  printf("BUTTONS");
+  printModifiers(modifiers);
+  printButtons(buttons);
+  printf("\n");
+#endif
+  return buttons | (modifiers << 3);
 }
 
 
+static void recordMouseEvent(void)
+{
+  int state= getButtonState();
+  sqMouseEvent *evt= allocateMouseEvent();
+  evt->x= mousePosition.x;
+  evt->y= mousePosition.y;
+  evt->buttons= (state & 0x7);
+  evt->modifiers= (state >> 3);
+  evt->reserved1=
+    evt->reserved2= 0;
+  signalInputEvent();
+#ifdef DEBUG_EVENTS
+  printf("EVENT: mouse (%d,%d)", mousePosition.x, mousePosition.y);
+  printModifiers(state >> 3);
+  printButtons(state & 7);
+  printf("\n");
+#endif
+}
+
+
+static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers)
+{
+  sqKeyboardEvent *evt= allocateKeyboardEvent();
+  evt->charCode= keyCode;
+  evt->pressCode= pressCode;
+  evt->modifiers= modifiers;
+  evt->reserved1=
+    evt->reserved2=
+    evt->reserved3= 0;
+  signalInputEvent();
+#ifdef DEBUG_EVENTS
+  printf("EVENT: key");
+  switch (pressCode)
+    {
+    case EventKeyDown: printf(" down "); break;
+    case EventKeyChar: printf(" char "); break;
+    case EventKeyUp:   printf(" up   "); break;
+    default:           printf(" ***UNKNOWN***"); break;
+    }
+  printModifiers(modifiers);
+  printKey(keyCode);
+  printf("\n");
+#endif
+}
+
+
+/* wait for pending completion events to arrive */
+
+static void waitForCompletions(void)
+{
+  while (completions > 0)
+    HandleEvents();
+}
+
+
+static void handleEvent(XEvent *evt)
+{
+#ifdef DEBUG_EVENTS
+  switch (evt->type)
+    {
+    case ButtonPress:
+      printf("\nX ButtonPress   state 0x%x button %d\n",
+	     evt->xbutton.state, evt->xbutton.button);
+      break;
+    case ButtonRelease:
+      printf("\nX ButtonRelease state 0x%x button %d\n",
+	     evt->xbutton.state, evt->xbutton.button);
+      break;
+    case KeyPress:
+      printf("\nX KeyPress      state 0x%x keycode %d\n",
+	     evt->xkey.state, evt->xkey.keycode);
+      break;
+    case KeyRelease:
+      printf("\nX KeyRelease    state 0x%x keycode %d\n",
+	     evt->xkey.state, evt->xkey.keycode);
+      break;
+    }
+#endif
+
+# define noteEventPosition(evt)				\
+  {							\
+    mousePosition.x= evt.x;				\
+    mousePosition.y= evt.y;				\
+  }
+# define noteEventState(evt)				\
+  {							\
+    noteEventPosition(evt);				\
+    modifierState= x2sqModifier(evt.state);		\
+  }
+
+  switch (evt->type)
+    {
+    case MotionNotify:
+      noteEventState(evt->xmotion);
+      recordMouseEvent();
+      break;
+
+    case ButtonPress:
+      noteEventState(evt->xbutton);
+      switch (evt->xbutton.button)
+	{
+	case 1: case 2: case 3:
+	  buttonState |= x2sqButton(evt->xbutton.button);
+	  recordMouseEvent();
+	  break;
+	case 4: case 5:	/* mouse wheel */
+	  {
+	    int keyCode= evt->xbutton.button + 26;	/* up/down */
+	    int modifiers= modifierState ^ CtrlKeyBit;
+	    recordKeyboardEvent(keyCode, EventKeyDown, modifiers);
+	    recordKeyboardEvent(keyCode, EventKeyChar, modifiers);
+	    recordKeyboardEvent(keyCode, EventKeyUp,   modifiers);
+	  }
+	  break;
+	default:
+	  ioBeep();
+	  break;
+	}
+      break;
+
+    case ButtonRelease:
+      noteEventState(evt->xbutton);
+      switch (evt->xbutton.button)
+	{
+	case 1: case 2: case 3:
+	  buttonState &= ~x2sqButton(evt->xbutton.button);
+	  recordMouseEvent();
+	  break;
+	case 4: case 5:	/* mouse wheel */
+	  break;
+	default:
+	  ioBeep();
+	  break;
+	}
+      /* button up on "paste" causes a selection retrieval:
+	 record the event time in case we need it later */
+      stButtonTime= evt->xbutton.time;
+      break;
+
+    case KeyPress:
+      noteEventState(evt->xkey);
+      {
+	int keyCode= x2sqKey(&evt->xkey);
+	if (keyCode >= 0)
+	  {
+	    recordKeyboardEvent(keyCode, EventKeyDown, modifierState);
+	    recordKeyboardEvent(keyCode, EventKeyChar, modifierState);
+	    recordKeystroke(keyCode);			/* DEPRECATED */
+	  }
+      }
+      break;
+
+    case KeyRelease:
+      noteEventState(evt->xkey);
+      {
+	int keyCode= x2sqKey(&evt->xkey);
+	if (keyCode >= 0)
+	  recordKeyboardEvent(keyCode, EventKeyUp, modifierState);
+      }
+      break;
+
+    case SelectionClear:
+      if (evt->xselectionclear.selection == XA_CLIPBOARD)
+	stOwnsClipboard= 0;
+      else if (evt->xselectionclear.selection == XA_PRIMARY)
+	stOwnsSelection= 0;
+      break;
+
+    case SelectionRequest:
+      sendSelection(&evt->xselectionrequest);
+      break;
+
+    case Expose:
+      {
+	XExposeEvent *ex= &evt->xexpose;
+#      if defined(USE_XSHM)
+	if (asyncUpdate)
+	  waitForCompletions();
+#      endif
+#      ifdef FULL_UPDATE_ON_EXPOSE
+	/* ignore it if there are other exposures upstream */
+	if (ex->count == 0)
+	  fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
+#      else
+	redrawDisplay(ex->x, ex->x + ex->width, ex->y, ex->y + ex->height);
+#      endif /*!FULL_UPDATE_ON_EXPOSE*/
+      }
+      break;
+
+    case MapNotify:
+      /* The window has just been mapped, possibly for the first
+	 time: update mousePosition (which otherwise may not be
+	 set before the first button event). */
+      getMousePosition();
+      noteWindowChange();
+      fullDisplayUpdate();
+      break;
+
+    case UnmapNotify:
+      {
+	XEvent ev;
+	if (sleepWhenUnmapped)
+	  do
+	    {
+	      XNextEvent(stDisplay, &ev);
+	      switch (ev.type)
+		{
+		case SelectionClear:
+		  if (ev.xselectionclear.selection == XA_CLIPBOARD)
+		    stOwnsClipboard= 0;
+		  else if (ev.xselectionclear.selection == XA_PRIMARY)
+		    stOwnsSelection= 0;
+		  break;
+		case SelectionRequest:
+		  sendSelection(&ev.xselectionrequest);
+		  break;
+#	       ifdef USE_XSHM
+		default:
+		  if (ev.type == completionType)
+		    --completions;
+		  break;
+#	       endif
+		}
+	    }
+	  while (ev.type != MapNotify);
+	getMousePosition();
+      }
+      noteWindowChange();
+      break;
+
+    case ConfigureNotify:
+      noteResize(evt->xconfigure.width, evt->xconfigure.height);
+      break;
+
+    case MappingNotify:
+      XRefreshKeyboardMapping(&evt->xmapping);
+      break;
+
+#  ifdef USE_XSHM
+    default:
+      if (evt->type == completionType)
+	--completions;
+      break;
+#  endif
+    }
+# undef noteEventState
+}
+
 #endif /* !HEADLESS */
+
 
 int HandleEvents(void)
 {
 #ifdef HEADLESS
   return 0;
-#else /*!HEADLESS*/
-  XEvent theEvent;
+#else
 
-  
-  if (!isConnectedToXServer)
+  if (!isConnectedToXServer || !XPending(stDisplay))
     return 0;
-  
 
-  while(XPending(stDisplay)) {
-    XNextEvent(stDisplay, &theEvent);
-
-    handleOneEvent(&theEvent);
-    
-      
-  }
-  
-  return 0;
+  while (XPending(stDisplay))
+    {
+      XEvent evt;
+      XNextEvent(stDisplay, &evt);
+      handleEvent(&evt);
+    }
+  return 1;
 #endif /* !HEADLESS */
 }
 
 
-
 #ifndef HEADLESS
 
-/* called via the aio module */
-static void xDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag)
+static void xHandler(int fd, void *data, int flags)
 {
-  HandleEvents();
+  HandleEvents();	/* XPending() drains display connection input */
+  aioHandle(stXfd, xHandler, AIO_RX);
 }
 
-static void npDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag)
+
+static void npHandler(int fd, void *data, int flags)
 {
   browserProcessCommand();
+  aioHandle(browserPipes[0], npHandler, AIO_RX);
 }
 
 
@@ -1191,17 +1339,16 @@ void setupDownGradingColors(void)
 {
   int r, g, b, i;
 
-  for (r= 0; r < 0x8; r++)
+  if (stVisual->class == PseudoColor)
     {
-      for (g= 0; g < 0x8; g++)
-	{
+      for (r= 0; r < 0x8; r++)
+	for (g= 0; g < 0x8; g++)
 	  for (b= 0; b < 0x4; b++)
 	    {
 	      int mindiff= 0x7*0x7 + 0x7*0x7 + 0x3*0x3 + 1;
 	      for (i= 0; i < 256; i++)
 		{
 		  int rdiff, gdiff, bdiff, diff;
-
 		  rdiff= r - ((stColors[i]>>5) & 0x7);
 		  gdiff= g - ((stColors[i]>>2) & 0x7);
 		  bdiff= b -  (stColors[i] & 0x3);
@@ -1213,8 +1360,13 @@ void setupDownGradingColors(void)
 		    }
 		}
 	    }
-	}
     }
+  else
+    for (i= 0; i < 256; i++)
+      stDownGradingColors[i]=
+	(  ((i >> 5) & ((1 << stRNMask) - 1)) << stRShift)
+	| (((i >> 2) & ((1 << stGNMask) - 1)) << stGShift)
+	| (((i >> 0) & ((1 << stBNMask) - 1)) << stBShift);
 }
 
 void SetColorEntry(int index, int red, int green, int blue)
@@ -1258,7 +1410,7 @@ void SetUpPixmap(void)
 
   if (xpv)
     {
-      while(--count >= 0)
+      while (--count >= 0)
 	{
 	  if (stDepth == xpv[count].depth)
 	    stBitsPerPixel= xpv[count].bits_per_pixel;
@@ -1319,8 +1471,8 @@ void SetUpPixmap(void)
 
   if (stVisual->class == PseudoColor)
     stColormap= XCreateColormap(stDisplay, stWindow, stVisual, AllocAll);
-
-
+  //  else
+  //    stColormap= XCreateColormap(stDisplay, stWindow, stVisual, AllocNone);
 
   /* 1-bit colors (monochrome) */
   SetColorEntry(0, 65535, 65535, 65535);	/* white or transparent */
@@ -1487,9 +1639,14 @@ void SetUpWindow(char *displayName)
       }
   }
 
-  if (savedWindowSize != 0)
+  if (fullScreen)
     {
-      right=  windowBounds.x + ((unsigned) savedWindowSize >> 16);
+      right=  scrW;
+      bottom= scrH;
+    }
+  else if (savedWindowSize != 0)
+    {
+      right=  windowBounds.x + ((unsigned)savedWindowSize >> 16);
       bottom= windowBounds.y + (savedWindowSize & 0xFFFF);
     }
   else
@@ -1497,7 +1654,6 @@ void SetUpWindow(char *displayName)
       right= windowBounds.x + windowBounds.width;
       bottom= windowBounds.y + windowBounds.height;
     }
-
   /* minimum size is 64 x 64 */
   right= ( right > (windowBounds.x + 64)) ?  right : (windowBounds.x + 64);
   bottom= (bottom > (windowBounds.y + 64)) ? bottom : (windowBounds.y + 64);
@@ -1511,18 +1667,24 @@ void SetUpWindow(char *displayName)
   windowBounds.width= right - windowBounds.x;
   windowBounds.height= bottom - windowBounds.y;
 
+  if (windowBounds.width % sizeof(void *))
+    windowBounds.width= (windowBounds.width / sizeof(void *)) * sizeof(void *);
+
+  stWidth= windowBounds.width;
+  stHeight= windowBounds.height;
+
   /* create the Squeak window */
   {
     XSetWindowAttributes attributes;
-    unsigned long valuemask, valuemaskForParent;
+    unsigned long valuemask, parentValuemask;
 
-    attributes.border_pixel= BlackPixel(stDisplay, DefaultScreen(stDisplay));
-    attributes.background_pixel= BlackPixel(stDisplay, DefaultScreen(stDisplay));
+    attributes.border_pixel= WhitePixel(stDisplay, DefaultScreen(stDisplay));
+    attributes.background_pixel= WhitePixel(stDisplay, DefaultScreen(stDisplay));
     attributes.event_mask= WM_EVENTMASK;
-    attributes.backing_store= Always;
+    attributes.backing_store= NotUseful;
 
     valuemask= CWEventMask | CWBackingStore | CWBorderPixel | CWBackPixel;
-    valuemaskForParent= CWEventMask | CWBorderPixel ;  /* For some reason, leaving out CWBorderPixel causes errors on certain Sun boxes */
+    parentValuemask= CWEventMask | CWBackingStore | CWBorderPixel;
 
     /* A visual that is not DefaultVisual requires its own color map.
        If visual is PseudoColor, the new color map is made elsewhere. */
@@ -1535,31 +1697,53 @@ void SetUpWindow(char *displayName)
 				    AllocNone);
 	attributes.colormap= stColormap;
 	valuemask|= CWColormap;
-	valuemaskForParent|= CWColormap;
+	parentValuemask|= CWColormap;
       }
 
     if (browserWindow != 0)
-      stParent= browserWindow;
+      {
+	Window root;
+	int x, w, h;
+	stParent= browserWindow;
+	XGetGeometry(stDisplay, stParent, &root, &x, &x, &w, &h, &x, &x);
+	stWidth= xWidth= w;
+	stHeight= xHeight= h;
+	savedWindowSize= (w << 16) | h;
+      }
     else
       stParent= XCreateWindow(stDisplay,
 			      DefaultRootWindow(stDisplay),
 			      windowBounds.x, windowBounds.y,
-			      windowBounds.width, windowBounds.height,
+			      stWidth, stHeight,
 			      0,
-			      stDepth, CopyFromParent, stVisual,
-			      valuemaskForParent, &attributes);
+			      stDepth, InputOutput, stVisual,
+			      parentValuemask, &attributes);
 
     attributes.event_mask= EVENTMASK;
+    attributes.backing_store= NotUseful;
 
     stWindow= XCreateWindow(stDisplay, stParent,
 			    0, 0,
-			    windowBounds.width, windowBounds.height,
+			    stWidth, stHeight,
 			    0,
 			    stDepth, InputOutput, stVisual,
 			    valuemask, &attributes);
-    stWindowWidth= windowBounds.width;
-    stWindowHeight= windowBounds.height;
   }
+
+  /* set the geometry hints */
+  if (!browserWindow)
+    {
+      XSizeHints *sizeHints= XAllocSizeHints();
+      sizeHints->min_width= 16;
+      sizeHints->min_height= 16;
+      sizeHints->width_inc= sizeof(void *);
+      sizeHints->height_inc= 1;
+      sizeHints->win_gravity= NorthWestGravity;
+      sizeHints->flags= PWinGravity | PResizeInc;
+      XSetWMNormalHints(stDisplay, stWindow, sizeHints);
+      XSetWMNormalHints(stDisplay, stParent, sizeHints);
+      XFree((void *)sizeHints);
+    }
 
   /* set the window title and resource/class names */
   {
@@ -1571,6 +1755,7 @@ void SetUpWindow(char *displayName)
 	XSetClassHint(stDisplay, stParent, classHints);
 	XStoreName(stDisplay, stParent, shortImageName);
       }
+    XFree((void *)classHints);
   }
 
   /* tell the WM that we can't be bothered managing focus for ourselves */
@@ -1583,8 +1768,14 @@ void SetUpWindow(char *displayName)
     wmHints->icon_pixmap=
       XCreateBitmapFromData(stDisplay, DefaultRootWindow(stDisplay),
 			    sqXIcon_bits, sqXIcon_width, sqXIcon_height);
-    if (wmHints->icon_pixmap != None) wmHints->flags |= IconPixmapHint;
+    if (wmHints->icon_pixmap != None)
+      wmHints->flags |= IconPixmapHint;
 # endif
+    if (iconified)
+      {
+	wmHints->initial_state= IconicState;
+	wmHints->flags |= StateHint;
+      }
     XSetWMHints(stDisplay, stParent, wmHints);
     XFree((void *)wmHints);
   }
@@ -1594,16 +1785,17 @@ void SetUpWindow(char *displayName)
     XGCValues gcValues;
 
     gcValues.function= GXcopy;
+    gcValues.line_width= 0;
     gcValues.subwindow_mode= IncludeInferiors;
     gcValues.clip_x_origin= 0;
     gcValues.clip_y_origin= 0;
     gcValues.clip_mask= None;
-    gcValues.foreground= SqueakBlack;
+    gcValues.foreground= SqueakWhite;
     gcValues.background= SqueakWhite;
     gcValues.fill_style= FillSolid;
     stGC= XCreateGC(stDisplay,
 		    stWindow,
-		    GCFunction | GCSubwindowMode |
+		    GCFunction | GCLineWidth | GCSubwindowMode |
 		    GCClipXOrigin | GCClipYOrigin | GCClipMask |
 		    GCForeground | GCBackground | GCFillStyle,
 		    &gcValues);
@@ -1614,14 +1806,21 @@ void SetUpWindow(char *displayName)
     XSetTransientForHint(stDisplay, stParent, DefaultRootWindow(stDisplay));
 
 # ifdef USE_XSHM
-  completionType= XShmGetEventBase(stDisplay) + ShmCompletion;
+  if (useXshm)
+    completionType= XShmGetEventBase(stDisplay) + ShmCompletion;
 # endif
 
-	clipboardAtom = XInternAtom(stDisplay, "CLIPBOARD", False);
-	primaryAtom = XInternAtom(stDisplay, "PRIMARY", False);
+  /* undefined by the X protocol */
+# ifndef XA_CLIPBOARD
+  XA_CLIPBOARD= XInternAtom(stDisplay, "CLIPBOARD", False);
+# endif
+# ifndef XA_TARGETS
+  XA_TARGETS= XInternAtom(stDisplay, "TARGETS", False);
+# endif
 }
 
 
+#if 1
 void SetWindowSize(void)
 {
   int width, height, maxWidth, maxHeight;
@@ -1643,12 +1842,9 @@ void SetWindowSize(void)
   width=  ( width > 64) ?   width : 64;
   height= (height > 64) ?  height : 64;
 
-  /* maximum size is screen size, rounded down to a multiple of sizeof(void *) */
+  /* maximum size is screen size */
   maxWidth=  (DisplayWidth(stDisplay, DefaultScreen(stDisplay)));
   maxHeight= (DisplayHeight(stDisplay, DefaultScreen(stDisplay)));
-  maxWidth= (maxWidth / sizeof(void *)) * sizeof(void *);
-  maxHeight= (maxHeight / sizeof(void *)) * sizeof(void *);
-  
   width=  ( width <= maxWidth)  ?  width : maxWidth;
   height= (height <= maxHeight) ? height : maxHeight;
 
@@ -1658,18 +1854,17 @@ void SetWindowSize(void)
       height= maxHeight;
     }
 
-  XResizeWindow(stDisplay, stParent, width, height);
+  noteResize(width, height);
 }
+#endif
 
 
 /*** Event Recording Functions ***/
 
-/* translate special keys; return -1 if the key isn't recognized */
+
 static int translateCode(KeySym symbolic)
 {
-  int ALT=(8<<8);
-  
-    
+# define ALT (8<<8)
   switch (symbolic)
     {
     case XK_Left:	return 28;
@@ -1681,9 +1876,7 @@ static int translateCode(KeySym symbolic)
     case XK_Next:	return 12;	/* page down */
     case XK_Home:	return  1;
     case XK_End:	return  4;
-    case XK_BackSpace:  return  8;
-    case XK_Delete:     return 127;
- 
+
     /* "aliases" for Sun keyboards */
     case XK_R9:		return 11;	/* page up */
     case XK_R15:	return 12;	/* page down */
@@ -1705,229 +1898,74 @@ static int translateCode(KeySym symbolic)
     default:		return -1;
     }
   /*NOTREACHED*/
+# undef ALT
 }
 
 
-void keyBufAppend(int keystate)
+/*** the following is deprecated and should really go away.  for now we keep it
+     for backwards compatibility with ancient images ***/
+
+#define KEYBUF_SIZE 64
+
+static int keyBuf[KEYBUF_SIZE];		/* circular buffer */
+static int keyBufGet= 0;		/* index of next item of keyBuf to read */
+static int keyBufPut= 0;		/* index of next item of keyBuf to write */
+static int keyBufOverflows= 0;		/* number of characters dropped */
+
+static void recordKeystroke(int keyCode)			/* DEPRECATED */
 {
-  /* bug: this should be rewritten to cope with nConv > 1 */
-  keyBuf[keyBufPut]= keystate;
-  keyBufPut= (keyBufPut + 1) % KEYBUF_SIZE;
-  if (keyBufGet == keyBufPut)
+  if (inputEventSemaIndex == 0)
     {
-      /* buffer overflow; drop the last character */
-      keyBufGet= (keyBufGet + 1) % KEYBUF_SIZE;
-      keyBufOverflows++;
+      int keystate= keyCode | (modifierState << 8);
+#    ifdef DEBUG_EVENTS
+      printf("RECORD keystroke");
+      printModifiers(modifierState);
+      printKey(keyCode);
+      printf(" = %d 0x%x\n", keystate, keystate);
+#    endif
+      if (keystate == interruptKeycode)
+	{
+	  interruptPending= true;
+	  interruptCheckCounter= 0;
+	}
+      else
+	{
+	  keyBuf[keyBufPut]= keystate;
+	  keyBufPut= (keyBufPut + 1) % KEYBUF_SIZE;
+	  if (keyBufGet == keyBufPut)
+	    {
+	      /* buffer overflow; drop the last character */
+	      keyBufGet= (keyBufGet + 1) % KEYBUF_SIZE;
+	      keyBufOverflows++;
+	    }
+	}
     }
 }
-
-
-
-/* return the squeak mask for an X button number */
-static unsigned int squeakMaskForXButton(int button) 
-{
-  switch(button)     {
-  case 1:
-    return RedButtonBit;
-
-  case 2:
-    return YellowButtonBit;
-
-  case 3:
-    return BlueButtonBit;
-
-  default:
-    /* ignore buttons other than 1-3 */
-    return 0;
-  }
-  
-}
-
-
-/* record the mouse buttons and modifier keys pressed according to an X event.
-   This routine also translates meta-button1 into button3 */
-static void recordModifierButtons(XButtonEvent *theEvent,
-				  int buttonToAdd,
-				  int buttonToRemove)
-{
-  /* translate the button encodings */
-  stButtons= 0;
-  if(theEvent->state & Button1Mask)  stButtons|= RedButtonBit;
-  if(theEvent->state & Button2Mask)  stButtons|= YellowButtonBit;
-  if(theEvent->state & Button3Mask)  stButtons|= BlueButtonBit;
-  stButtons|= squeakMaskForXButton(buttonToAdd);
-  stButtons&= ~ squeakMaskForXButton(buttonToRemove);
-
-  /* translate the modifiers pressed */
-  modifiers= 0;
-  if(theEvent->state & ShiftMask)        modifiers|= ShiftKeyBit;
-  if(theEvent->state & LockMask)         modifiers|= ShiftKeyBit;
-  if(theEvent->state & ControlMask)      modifiers|= CtrlKeyBit;
-  if(theEvent->state & Mod1Mask)         modifiers|= CommandKeyBit;
-  
-
-
-  /* remap the red button, if Control or Meta is pressed */
-  if ((stButtons == RedButtonBit) && (modifiers & CtrlKeyBit))
-  {
-    /* ctrl-red is mapped to the yellow button */
-    stButtons= YellowButtonBit;
-    modifiers &= ~CtrlKeyBit;
-  }
-    
-  if ((stButtons == RedButtonBit) && (modifiers & CommandKeyBit)) {
-    /* meta-red is mapped to the blue button */
-    stButtons= BlueButtonBit;
-    modifiers &= ~CommandKeyBit;
-  }
-
-
-  
-  /* combine the button state in the format Squeak likes */
-  buttonState= (modifiers << 3) | (stButtons & 0x7);
-}
-
 
 #endif /*!HEADLESS*/
 
-
-/*** I/O Primitives ***/
-
-
-int ioFormPrint(int bitsAddr, int width, int height, int depth,
-		double hScale, double vScale, int landscapeFlag)
+int ioPeekKeystroke(void)			/* DEPRECATED */
 {
 #ifdef HEADLESS
-  return false;
-#else
-  FILE *ppm;
-  float scale;  /* scale to use with pnmtops */
-  char printCommand[1000];
-  unsigned int *form32;  /* the form data, in  32 bits */
-  
-
-  /* convert the form to 32 bits */
-  form32 = malloc(width * height * 4);
-  if(form32 == NULL) {
-    fprintf(stderr, "not enough memory\n");
-    return false;
-  }
-  switch(depth) {
-  case 1:
-    copyImage1To32((int *) bitsAddr, (int *) form32,
-		   width, height,
-		   1, 1, width, height);
-    break;
-  case 2:
-    copyImage2To32((int *) bitsAddr, (int *) form32,
-		   width, height,
-		   1, 1, width, height);
-    break;
-  case 4:
-    copyImage4To32((int *) bitsAddr, (int *) form32,
-		   width, height,
-		   1, 1, width, height);
-    break;
-  case 8:
-    copyImage8To32((int *) bitsAddr, (int *) form32,
-		   width, height,
-		   1, 1, width, height);
-    break;
-
-  case 15:
-  case 16:
-    copyImage16To32((int *) bitsAddr, (int *) form32,
-		    width, height,
-		    1, 1, width, height);
-    break;
-  case 32:
-    copyImage32To32((int *) bitsAddr, (int *) form32,
-		    width, height,
-		    1, 1, width, height);
-    break;
-  default:
-    fprintf(stderr, "error in formPrint: unhandled form depth %d\n", depth);
-    free(form32);
-    return false;
-  }
-  
-  /* pick a scale. unfortunately, pnmtops requires the same scale
-     horizontally and vertically */
-  if(hScale < vScale)
-    scale= hScale;
-  else
-    scale= vScale;
-
-
-  /* assemble the command for printing.  pnmtops is part of "netpbm",
-     a widely-available set of tools that eases image manipulation */ 
-  snprintf(printCommand, sizeof(printCommand),
-	   "pnmtops -scale %f %s | lpr",
-	   scale,
-	   (landscapeFlag ? "-turn" : "-noturn"));
-
-
-  
-  /* open a pipe to print through */
-  if ((ppm= popen(printCommand, "w")) == 0) {
-    free(form32);
-    return false;
-  }
-  
-  
-  /* print the PPM magic number */
-  fprintf(ppm, "P3\n%d %d 255\n", width, height);
-
-  /* write the pixmap */
-  {
-    int y;
-    for (y= 0; y < height; ++y) {
-      int x;
-      for (x= 0; x < width; ++x) {
-	int pixel, red, green, blue;
-
-	pixel= form32[y*width + x];
-	red=   (pixel >> 16) & 0xFF;
-	green= (pixel >> 8)  & 0xFF;
-	blue=  (pixel >> 0)  & 0xFF;
-
-	fprintf(ppm, "%d %d %d\n", red, green, blue);
-      }
-    }
-  }
-    
-      
-  free(form32);
-  pclose(ppm);
-  return true;
-#endif  /* HEADLESS */
-}
-
-
-int ioBeep(void)
-{
-#ifndef HEADLESS
-  if(!isConnectedToXServer)
-    return 0;
-  
-  XBell(stDisplay, 0);	/* ring at default volume */
-  XFlush(stDisplay);
-#endif
-  return 0;
-}
-
-
-int ioGetButtonState(void)
-{
   ioProcessEvents();  /* process all pending events */
-#ifndef HEADLESS
-  return buttonState;
+  return -1;  /* keystroke buffer is empty */
 #else
-  return 0;
+  int keystate;
+
+  ioProcessEvents();  /* process all pending events */
+
+  if (keyBufGet == keyBufPut)
+    return -1;  /* keystroke buffer is empty */
+
+  keystate= keyBuf[keyBufGet];
+  /* set modifer bits in buttonState to reflect the last keystroke peeked at */
+  /* buttonState= ((keystate >> 5) & 0xF8) | (buttonState & 0x7); */
+  return keystate;
 #endif
 }
 
-int ioGetKeystroke(void)
+
+int ioGetKeystroke(void)			/* DEPRECATED */
 {
 #ifndef HEADLESS
   int keystate;
@@ -1942,19 +1980,217 @@ int ioGetKeystroke(void)
 
   keystate= keyBuf[keyBufGet];
   keyBufGet= (keyBufGet + 1) % KEYBUF_SIZE;
+  /* set modifer bits in buttonState to reflect the last keystroke fetched */
+  /* buttonState= ((keystate >> 5) & 0xF8) | (buttonState & 0x7); */
 
   return keystate;
 #endif
 }
 
 
+/*** I/O Primitives ***/
+
+
+#ifndef HAVE_SNPRINTF
+# ifdef HAVE___SNPRINTF	/* Solaris 2.5 */
+    extern int __snprintf(char *buf, size_t limit, const char *fmt, ...);
+#   define snprintf __snprintf
+#   define HAVE_SNPRINTF
+# endif
+#endif
+
+
+int ioFormPrint(int bitsAddr, int width, int height, int depth,
+		double hScale, double vScale, int landscapeFlag)
+{
+#ifdef HEADLESS
+  return false;
+#else
+
+# ifdef PRINT_PS_FORMS
+
+  FILE *ppm;
+  float scale;			/* scale to use with pnmtops */
+  char printCommand[1000];
+  unsigned int *form32;		/* the form data, in 32 bits */
+
+  /* convert the form to 32 bits */
+
+  typedef void (*copyFn)(int *, int *, int, int, int, int, int, int);
+  static copyFn copyFns[33]= {
+    0,
+    copyImage1To32,	/* 1 */
+    copyImage2To32,	/* 2 */
+    0,
+    copyImage4To32,	/* 4 */
+    0, 0, 0,
+    copyImage8To32,	/* 8 */
+    0, 0, 0, 0, 0, 0,
+    copyImage16To32,	/* 15 */
+    copyImage16To32,	/* 16 */
+    0, 0, 0, 0, 0, 0, 0, 0,
+    0, 0, 0, 0, 0, 0, 0,
+    copyImage32To32	/* 32 */
+  };
+
+  copyFn copy= ((depth > 0) && (depth <= 32)) ? copyFns[depth] : 0;
+  if (!copy)
+    {
+      fprintf(stderr, "ioFormPrint: depth %d not supported\n", depth);
+      return false;
+    }
+
+  form32= malloc(width * height * 4);
+  if (!form32)
+    {
+      fprintf(stderr, "ioFormPrint: out of memory\n");
+      return false;
+    }
+
+  copy((int *)bitsAddr, (int *)form32, width, height, 1, 1, width, height);
+
+  /* pick a scale. unfortunately, pnmtops requires the same scale
+     horizontally and vertically */
+  if (hScale < vScale)
+    scale= hScale;
+  else
+    scale= vScale;
+
+  /* assemble the command for printing.  pnmtops is part of "netpbm",
+     a widely-available set of tools that eases image manipulation */
+#ifdef HAVE_SNPRINTF
+  snprintf(printCommand, sizeof(printCommand),
+	   "pnmtops -scale %f %s | lpr",
+	   scale,
+	   (landscapeFlag ? "-turn" : "-noturn"));
+#else /* is your OS is broken then so might be this code */
+  sprintf(printCommand,
+	  "pnmtops -scale %f %s | lpr",
+	  scale,
+	  (landscapeFlag ? "-turn" : "-noturn"));
+#endif
+
+  /* open a pipe to print through */
+  if ((ppm= popen(printCommand, "w")) == 0)
+    {
+      free(form32);
+      return false;
+    }
+
+  /* print the PPM magic number */
+  fprintf(ppm, "P3\n%d %d 255\n", width, height);
+
+  /* write the pixmap */
+  {
+    int y;
+    for (y= 0; y < height; ++y)
+      {
+	int x;
+	for (x= 0; x < width; ++x)
+	  {
+	    int pixel= form32[y*width + x];
+	    int red=   (pixel >> 16) & 0xFF;
+	    int green= (pixel >> 8)  & 0xFF;
+	    int blue=  (pixel >> 0)  & 0xFF;
+	    fprintf(ppm, "%d %d %d\n", red, green, blue);
+	  }
+      }
+  }
+  free(form32);
+  pclose(ppm);
+  return true;
+
+# else  /* !PRINT_PS_FORMS */
+
+  /* Write the form as a PPM (Portable PixMap) file, from which it can
+     be converted into almost any existing graphical format (including
+     PostScript).  See the "netpbm" utilities for a huge collection of
+     image manipulation tools that understand the PPM format.
+     Note that "xv" can also read, convert, and do image processing on
+     PPM files.
+     The output filename is defined in "sqPlatformSpecific.h". */
+
+  FILE *ppm;
+  int ok= true;
+
+  if ((ppm= fopen(SQ_FORM_FILENAME, "wb")) == 0)
+    return false;
+
+  /* PPM magic number and pixmap header */
+  fprintf(ppm, "P3\n%d %d 65535\n", width, height);
+
+  switch (depth)
+    {
+    case 8:
+      {
+	unsigned char *bits= (unsigned char *) bitsAddr;
+	int ppw= 32 / depth;
+	int raster= ((width + ppw - 1) / ppw) * 4;
+	/* stColors[] is too approximate: query the real colormap */
+	XColor colors[256];
+	int i;
+	for (i= 0; i < 256; ++i) colors[i].pixel= i;
+	/* all colors in one query reduces server traffic */
+	XQueryColors(stDisplay, stColormap, colors, 256);
+	/* write the pixmap */
+	{
+	  int y;
+	  for (y= 0; y < height; ++y) {
+	    int x;
+	    for (x= 0; x < width; ++x) {
+	      /* everything is backwards (as usual ;) */
+	      int index= y * raster + x;
+	      int byte= 3 - (index & 0x00000003);
+	      int word= index & -4;
+	      int pixel= bits[word + byte];
+	      fprintf(ppm, "%d %d %d\n",
+		      colors[pixel].red, colors[pixel].green, colors[pixel].blue);
+	    }
+	  }
+	}
+	break;
+      } /* case 8 */
+    default:
+      fprintf(stderr, "ioFormPrint: depth %d not supported.\n", depth);
+      ok= false;
+      break;
+    } /* switch */
+
+  fclose(ppm);
+  return ok;
+
+# endif /* !PRINT_PS_FORMS */
+
+#endif /*!HEADLESS*/
+}
+
+
+int ioBeep(void)
+{
+#ifndef HEADLESS
+  if (isConnectedToXServer)
+    XBell(stDisplay, 0);	/* ring at default volume */
+#endif
+  return 0;
+}
+
+
+int ioGetButtonState(void)
+{
+  ioProcessEvents();  /* process all pending events */
+#ifndef HEADLESS
+  return getButtonState();
+#else
+  return 0;
+#endif
+}
+
+
 int ioLowResMSecs(void)
 {
-#ifdef USE_ITIMER
-  return lowResMSecs;
-#else
-  return ioMSecs();
-#endif
+  return (useItimer)
+    ? lowResMSecs
+    : ioMSecs();
 }
 
 
@@ -1962,13 +2198,15 @@ int ioMSecs(void)
 {
   struct timeval now;
   gettimeofday(&now, 0);
-  if ((now.tv_usec-= startUpTime.tv_usec) < 0) {
-    now.tv_usec+= 1000000;
-    now.tv_sec-= 1;
-  }
+  if ((now.tv_usec-= startUpTime.tv_usec) < 0)
+    {
+      now.tv_usec+= 1000000;
+      now.tv_sec-= 1;
+    }
   now.tv_sec-= startUpTime.tv_sec;
   return (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
+
 
 int ioMicroMSecs(void)
 {
@@ -1976,11 +2214,27 @@ int ioMicroMSecs(void)
   return ioMSecs();	/* this already to the nearest millisecond */
 }
 
+
 int ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
-  aioPoll(microSeconds);
-  return microSeconds;
+  if (HandleEvents())
+    {
+      aioPoll(0);
+      return 0;
+    }
+  else
+    aioPoll(microSeconds);
+  return 0;
 }
+
+
+int ioProcessEvents(void)
+{
+  HandleEvents();
+  aioPoll(0);
+  return 0;
+}
+
 
 int ioMousePoint(void)
 {
@@ -1991,35 +2245,6 @@ int ioMousePoint(void)
 #else
   return 0;
 #endif
-}
-
-int ioPeekKeystroke(void)
-{
-#ifdef HEADLESS
-  ioProcessEvents();  /* process all pending events */
-  return -1;  /* keystroke buffer is empty */
-#else
-  int keystate;
-
-  ioProcessEvents();  /* process all pending events */
-
-  if (keyBufGet == keyBufPut)
-    return -1;  /* keystroke buffer is empty */
-
-  keystate= keyBuf[keyBufGet];
-  return keystate;
-#endif
-}
-
-
-int ioProcessEvents(void)
-{
-  /* This code used to delay before processing events, but that
-     behavior is pretty well taken care of if you are in morphic.
-     Plus, aioPoll() is just a select() call, anyway -- it should be
-     pretty fast if there are no events.  */
-  aioPoll(0);
-  return 0;
 }
 
 
@@ -2042,27 +2267,32 @@ int ioScreenDepth(void)
 }
 
 
-/* returns most recently known size of the Squeak window */
-/* the return is encoded as:
-      (width << 16) | height
-*/
+/* returns the size of the Squeak window */
 int ioScreenSize(void)
 {
 #ifdef HEADLESS
-  int headless= 1;
+  return savedWindowSize ? savedWindowSize : ((64 << 16) | 64);
 #else
-
   if (headless || !isConnectedToXServer)
-    {
-      if(savedWindowSize != 0)
-	return savedWindowSize;
-      else
-	return (64 << 16) | 64;
-    }
-  
-    
-  return (stWindowWidth << 16) | stWindowHeight;
+    return savedWindowSize ? savedWindowSize : ((64 << 16) | 64);
 
+  if ((windowState == WIN_ZOOMED) && !resized())
+    return (scrW << 16) | scrH;
+
+  if (resized())
+    {
+      windowState= WIN_NORMAL;
+      if (useXshm && !isAligned(void *, xWidth))
+	{
+	  xWidth= align(void *, xWidth);
+	  if (!browserWindow)
+	    {
+	      XResizeWindow(stDisplay, stParent, xWidth, xHeight);
+	    }
+	}
+      XResizeWindow(stDisplay, stWindow, (stWidth= xWidth), (stHeight= xHeight));
+    }
+  return (stWidth << 16) | stHeight;  /* w is high 16 bits; h is low 16 bits */
 #endif
 }
 
@@ -2200,7 +2430,7 @@ static void overrideRedirect(Display *dpy, Window win, int flag)
 
 #endif
 
-int ioSetFullScreen(int fs)
+int ioSetFullScreen(int fullScreen)
 {
 #ifndef HEADLESS
   int winX, winY;
@@ -2208,9 +2438,6 @@ int ioSetFullScreen(int fs)
 
   if (!isConnectedToXServer)
     return 0;
-  
-  fullScreen= fs;
-  
 
   if (fullScreen)
     {
@@ -2232,13 +2459,17 @@ int ioSetFullScreen(int fs)
 	  XSynchronize(stDisplay, True);
 	  overrideRedirect(stDisplay, stWindow, True);
 	  XReparentWindow(stDisplay, stWindow, root, 0, 0);
+#	 if 1
 	  XResizeWindow(stDisplay, stWindow, scrW, scrH);
+#	 else
+	  XResizeWindow(stDisplay, stParent, scrW, scrH);
+#	 endif
+	  XLowerWindow(stDisplay, stParent);
 	  XRaiseWindow(stDisplay, stWindow);
 	  XSetInputFocus(stDisplay, stWindow, RevertToPointerRoot, CurrentTime);
 	  XSynchronize(stDisplay, False);
-
-	  stWindowWidth= scrW;
-	  stWindowHeight= scrH;
+	  windowState= WIN_ZOOMED;
+	  fullDisplayUpdate();
 	}
     }
   else
@@ -2257,13 +2488,16 @@ int ioSetFullScreen(int fs)
 	  winY= savedWindowOrigin & 0xFFFF;
 	  savedWindowOrigin= -1; /* prevents consecutive full-screen disables */
 	  XSynchronize(stDisplay, True);
+	  XRaiseWindow(stDisplay, stParent);
 	  XReparentWindow(stDisplay, stWindow, stParent, 0, 0);
 	  overrideRedirect(stDisplay, stWindow, False);
-	  XResizeWindow(stDisplay, stWindow, winW, winH);
+#	 if 1
+	  XResizeWindow(stDisplay, stWindow, scrW, scrH);
+#	 else
+	  XResizeWindow(stDisplay, stParent, winW, winH);
+#	 endif
 	  XSynchronize(stDisplay, False);
-
-	  stWindowWidth= winW;
-	  stWindowHeight= winH;
+	  windowState= WIN_CHANGED;
 	}
     }
   /* sync avoids race with ioScreenSize() reading geometry before resize event */
@@ -2315,15 +2549,16 @@ static void *stMalloc(size_t lbs)
 	      XSetErrorHandler(prev);
 	      if (result)
 		{
-		   /* success */
-		   shmctl(stShmInfo.shmid, IPC_RMID, NULL);  /* go ahead and mark it detached;
-								it will disappear on program exit */
-		   return stShmInfo.shmaddr;
+#		 ifdef __linux__
+		  /* destroy ID now; segment will be destroyed at exit */
+		  shmctl(stShmInfo.shmid, IPC_RMID, 0);
+#		 endif
+		  return stShmInfo.shmaddr;
 		}
+	      shmdt(stShmInfo.shmaddr);
 	    }
 	  /* could not attach to allocated shared memory segment */
 	  shmctl(stShmInfo.shmid, IPC_RMID, 0);
-	  shmdt(stShmInfo.shmaddr);
 	}
       /* could not allocate shared memory segment */
       useXshm= 0;
@@ -2344,6 +2579,7 @@ static void stFree(void *addr)
     }
 #ifdef USE_XSHM
   shmdt(stShmInfo.shmaddr);
+  shmctl(stShmInfo.shmid, IPC_RMID, NULL);
 #endif
 }
 
@@ -2351,7 +2587,10 @@ static void stFree(void *addr)
 static void shmExit(void)
 {
   if (stDisplayBitmap && useXshm)
-    stFree(stDisplayBitmap);
+    {
+      stFree(stDisplayBitmap);
+      stDisplayBitmap= 0;
+    }
 }
 #endif
 
@@ -2386,9 +2625,7 @@ static void stXPutImage(Display *display, Window window, GC gc, XImage *image,
   XShmPutImage(display, window, gc, image, src_x, src_y, dst_x, dst_y, w, h, True);
   ++completions;
   if (!asyncUpdate)
-    do {
-      HandleEvents();
-    } while (completions);
+    waitForCompletions();
 #endif
 }
 
@@ -2414,9 +2651,7 @@ int ioForceDisplayUpdate(void)
 #if !defined(HEADLESS) && defined(USE_XSHM)
   if (asyncUpdate && isConnectedToXServer) {
     XFlush(stDisplay);
-    do {
-      HandleEvents();
-    } while (completions);
+    waitForCompletions();
   }
 #endif
   return 0;
@@ -2427,21 +2662,36 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 		  int affectedL, int affectedR, int affectedT, int affectedB)
 {
 #ifndef HEADLESS
+  static int stDisplayBitsIndex= 0;	/* last known oop of the VM's Display */
+  static int stDisplayWidth= 0;		/* ditto width */
+  static int stDisplayHeight= 0;	/* ditto height */
+  static int stDisplayDepth= 0;		/* ditto depth */
+
+  int geometryChanged= ((stDisplayBitsIndex != dispBitsIndex)
+			|| (stDisplayWidth  != width)
+			|| (stDisplayHeight != height)
+			|| (stDisplayDepth  != depth));
+
   if (stWindow == 0)
     return 0;
 
+  if ((width < 1) || (height < 1))
+    return 0;
 
-  /* Sanitize the input values */
-  if (affectedR >= width)  affectedR= width-1;
-  if (affectedL >= width)  affectedL= width-1;
-  if (affectedB >= height) affectedB= height-1;
-  if (affectedT >= height) affectedT= height-1;
-  
+  /* following a ``bug fix'' posted to the list this was recently
+     changed to clamp the values at ({width,height} - 1), but that
+     prevented the rightmost column and bottommost row from being
+     redrawn.  so now it's back the way it always was, pending further
+     problem reports (if any) and subsequent investigation (if
+     any). */
 
-  
-  /* quit, if its a trivial region */
-  if(affectedR < affectedL || affectedT > affectedB)
-    return 1;
+  if (affectedL > width)  affectedL= width;
+  if (affectedR > width)  affectedR= width;
+  if (affectedT > height) affectedT= height;
+  if (affectedB > height) affectedB= height;
+
+  if ((affectedL > affectedR) || (affectedT > affectedB))
+    return 0;
 
   if (!(depth == 1 || depth == 2 || depth == 4
 	|| depth == 8 || depth == 16 || depth == 32))
@@ -2451,21 +2701,22 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
       return 0;
     }
 
-  if (stImage == NULL
-      || stImage->width != width
-      || stImage->height != height
-      || stDisplayBitsIndex != dispBitsIndex) 
+  if (resized())
+    return 0;
+
+  if (geometryChanged)
     {
-      /* Display has changed size;  recreate stImage */
+      stDisplayBitsIndex= dispBitsIndex;
+      stDisplayWidth= width;
+      stDisplayHeight= height;
+      stDisplayDepth= depth;
+
 # if defined(USE_XSHM)
       if (asyncUpdate)
-	{
-	  /* wait for pending updates to complete before freeing the XImage */
-	  while (completions) HandleEvents();
-	}
+	/* wait for pending updates to complete before freeing the XImage */
+	waitForCompletions();
 # endif
-      
-      
+      stDisplayBitsIndex= dispBitsIndex;
       if (stImage)
 	{
 	  stImage->data= 0; /* don't you dare free() Display's Bitmap! */
@@ -2476,15 +2727,18 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 	      stDisplayBitmap= 0;
 	    }
 	}
-      
 
-# ifdef WORDS_BIGENDIAN
+# ifndef USE_XSHM
+#  define useXshm 0
+# endif
+
+#    ifdef WORDS_BIGENDIAN
       if (!useXshm && depth == stBitsPerPixel &&
 	  (depth != 16 || stHasSameRGBMask16) &&
 	  (depth != 32 || stHasSameRGBMask32))
-# else
+#    else
       if (!useXshm && depth == stBitsPerPixel && depth == 32 && stHasSameRGBMask32)
-# endif
+#    endif
 	{
 	  stDisplayBitmap= 0;
 	}
@@ -2493,6 +2747,10 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 	  stDisplayBitmap= stMalloc(bytesPerLine(width, stBitsPerPixel) * height);
 	}
 
+# ifndef USE_XSHM
+#  undef useXshm
+# endif
+
       stImage= stXCreateImage(stDisplay,
 			      DefaultVisual(stDisplay, DefaultScreen(stDisplay)),
 			      stDepth,
@@ -2500,7 +2758,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 			      0,
 			      (stDisplayBitmap
 			         ? stDisplayBitmap
-			         : (char *)dispBitsIndex),
+			         : (char *)stDisplayBitsIndex),
 			      width,
 			      height,
 			      32,
@@ -2518,10 +2776,13 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
       if (!XInitImage(stImage))
 	fprintf(stderr, "XInitImage failed (but we don't care)\n");
       */
-
-      stDisplayBitsIndex= dispBitsIndex;
     }
-  
+
+  /* this can happen after resizing the window */
+  if (affectedR > width) affectedR= width;
+  if (affectedB > height) affectedB= height;
+  if ((affectedR <= affectedL) || (affectedT >= affectedB))
+    return 1;
 
   if (depth != stBitsPerPixel)
     {
@@ -2539,7 +2800,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
-	  else if(stBitsPerPixel == 24)
+	  else if (stBitsPerPixel == 24)
 	    {
 	      copyImage1To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
 			     width, height,
@@ -2552,7 +2813,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
 	}
-      
+
       else if (depth == 2)
 	{
 	  if (stBitsPerPixel == 8)
@@ -2567,7 +2828,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
-	  else if(stBitsPerPixel == 24)
+	  else if (stBitsPerPixel == 24)
 	    {
 	      copyImage2To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
 			     width, height,
@@ -2595,7 +2856,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
-	  else if(stBitsPerPixel == 24)
+	  else if (stBitsPerPixel == 24)
 	    {
 	      copyImage4To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
 			     width, height,
@@ -2617,7 +2878,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 			     width, height,
 			     affectedL, affectedT, affectedR, affectedB);
 	    }
-	  else if(stBitsPerPixel == 24)
+	  else if (stBitsPerPixel == 24)
 	    {
 	      copyImage8To24((int *)dispBitsIndex, (int *)stDisplayBitmap,
 			     width, height,
@@ -2742,6 +3003,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 	      affectedL, affectedT,	/* dst_x, dst_y */
 	      affectedR-affectedL,	/* width */
 	      affectedB-affectedT);	/* height */
+
 #endif /* !HEADLESS */
   return 0;
 }
@@ -3242,7 +3504,7 @@ void copyImage8To24(int *fromImageData, int *toImageData,
 	  to++;
 	  *to= (unsigned char) (newpix & 0xff);
 	  to++;
-	  from+=4;
+	  from+= 4;
 	}
       firstWord8+= scanLine8;
       lastWord8+= scanLine8;
@@ -3297,6 +3559,12 @@ void copyImage16To32(int *fromImageData, int *toImageData,
   int line;
   int rshift, gshift, bshift;
   register unsigned int col;
+
+#ifdef DEBUG
+  printf("copyImg16to32 %p -> %p (%d %d) %d %d %d %d\n",
+	 fromImageData, toImageData, width, height,
+	 affectedL, affectedT, affectedR, affectedB);
+#endif
 
   rshift= stRNMask-5 + stRShift;
   gshift= stGNMask-5 + stGShift;
@@ -3397,7 +3665,7 @@ void copyImage16To24(int *fromImageData, int *toImageData,
 	  to++;
 	  *to= (unsigned char) (newpix & 0xff);
 	  to++;
-	  from+=2;
+	  from+= 2;
 	}
       firstWord16+= scanLine16;
       lastWord16+= scanLine16;
@@ -3614,7 +3882,7 @@ void copyImage32To24(int *fromImageData, int *toImageData,
 #undef map32To24
 }
 
-#endif
+#endif /* !HEADLESS */
 
 
 /*** power management ***/
@@ -3624,6 +3892,7 @@ int ioDisablePowerManager(int disableIfNonZero)
 {
   return true;
 }
+
 
 /*** VM & Image File Naming ***/
 
@@ -3714,47 +3983,45 @@ int imageNamePutLength(int sqImageNameIndex, int length)
 /*** Timer support ***/
 
 
-#ifdef USE_ITIMER
 void sigalrm(int signum)
 {
   lowResMSecs+= LOW_RES_TICK_MSECS;
 }
-#endif
 
 
 void SetUpTimers(void)
 {
   /* set up the micro/millisecond clock */
   gettimeofday(&startUpTime, 0);
-#ifdef USE_ITIMER
-  /* set up the low-res (50th second) millisecond clock */
-  /* WARNING: all system calls must check for EINTR!!! */
-  {
-    struct sigaction sa;
-    sigset_t ss1, ss2;
-    sigemptyset(&ss1);
-    sigprocmask(SIG_BLOCK, &ss1, &ss2);
-    sa.sa_handler= sigalrm;
-    sa.sa_mask= ss2;
-#ifdef SA_RESTART
-    sa.sa_flags= SA_RESTART;
-#else
-    sa.sa_flags= 0;	/* assume that we have default BSD behaviour */
-#endif
-#ifdef __linux__
-    sa.sa_restorer= 0;
-#endif
-    sigaction(SIGALRM, &sa, 0);
-  }
-  {
-    struct itimerval iv;
-    iv.it_interval.tv_sec= 0;
-    iv.it_interval.tv_usec= LOW_RES_TICK_MSECS * 1000;
-    iv.it_value.tv_sec= 0;
-    iv.it_value.tv_usec= LOW_RES_TICK_MSECS;
-    setitimer(ITIMER_REAL, &iv, 0);
-  }
-#endif
+  if (useItimer)
+    {
+      /* set up the low-res (50th second) millisecond clock */
+      /* WARNING: all system calls must check for EINTR!!! */
+      {
+	struct sigaction sa;
+	sigset_t ss1, ss2;
+	sigemptyset(&ss1);
+	sigprocmask(SIG_BLOCK, &ss1, &ss2);
+	sa.sa_handler= sigalrm;
+	sa.sa_mask= ss2;
+#      ifdef SA_RESTART	/* we're probably on Linux */
+	sa.sa_flags= SA_RESTART;
+#      else
+	sa.sa_flags= 0;	/* assume we already have BSD behaviour */
+#      endif
+#      ifdef __linux__
+	sa.sa_restorer= 0;
+#      endif
+	sigaction(SIGALRM, &sa, 0);
+      }
+      {
+	struct itimerval iv;
+	iv.it_interval.tv_sec= 0;
+	iv.it_interval.tv_usec= LOW_RES_TICK_MSECS * 1000;
+	iv.it_value= iv.it_interval;
+	setitimer(ITIMER_REAL, &iv, 0);
+      }
+    }
 }
 
 
@@ -3769,14 +4036,13 @@ void SetUpClipboard(void)
   stPrimarySelection= 0;
   stPrimarySelectionSize= 0;
   stOwnsSelection= 0;
-  stOwnsClipboard= 0;
 }
 #endif
 
 int clipboardSize(void)
 {
 #ifndef HEADLESS
-  if (stOwnsSelection || stOwnsClipboard)
+  if (stOwnsSelection)
     return stPrimarySelection ? strlen(stPrimarySelection) : 0;
   return strlen(getSelection());
 #else
@@ -3836,7 +4102,7 @@ int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
   if (!isConnectedToXServer)
     return 0;
 
-  if (!stOwnsSelection && !stOwnsClipboard)
+  if (!stOwnsSelection)
     {
       char *newSelection;
       int newSize;
@@ -3868,9 +4134,7 @@ int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
 }
 
 
-
 /*** Profiling ***/
-
 
 
 int clearProfile(void) { return 0; }
@@ -3879,9 +4143,7 @@ int startProfiling(void) { return 0; }
 int stopProfiling(void) { return 0; }
 
 
-
 /*** Access to system attributes and command-line arguments ***/
-
 
 
 static char *getAttribute(int id)
@@ -3891,8 +4153,8 @@ static char *getAttribute(int id)
     if (-id  < vmArgCnt)
       return vmArgVec[-id];
   } else switch (id) {
-    case 0: 
-      return vmArgVec[0];
+    case 0:
+      return vmName[0] ? vmName : vmArgVec[0];
     case 1:
       return imageName;
     case 1001:
@@ -3939,37 +4201,41 @@ void usage()
   printf("Usage: %s [<option>...] [<imageName> [<argument>...]]\n", progName);
   printf("       %s [<option>...] -- [<argument>...]\n\n", progName);
   printf("<option> can be:\n");
-  printf("  -align <n>           align functions at n-bytes (jit)\n");
-#ifndef HEADLESS
-  printf("  -browserWindow <id>  run in window <id>\n"); 
-  printf("  -browserPipes <fds>  run as Browser plugin using command pipes <fds>\n");
-  printf("  -display <dpy>       display on <dpy> (default: $DISPLAY)\n");
-  printf("  -fullscreen          occupy the entire screen\n");
-  printf("  -headless            run in headless (no window) mode\n");
-#endif
-  printf("  -help                print this help message, then exit\n");
-  printf("  -jit                 enable the dynamic (runtime) compiler\n");
-#ifndef HEADLESS
-  printf("  -lazy                go to sleep when main window unmapped\n");
-#endif
-  printf("  -memory <size>[mk]   set initial memory size (default: %dm)\n",
+  printf("  -help                 print this help message, then exit\n");
+  printf("  -jit                  enable the dynamic compiler (if available)\n");
+  printf("  -memory <size>[mk]    set initial memory size (default: %dm)\n",
 	 DefaultHeapSize);
+  printf("  -nomixer              disable modification of sound mixer settings\n");
+  printf("  -notimer              disable interval timer for low-res clock \n");
+  printf("  -plugins <path>       specify alternative plugin location (see manpage)\n");
+  printf("  -version              print version information, then exit\n");
 #ifndef HEADLESS
-  printf("  -noevents            disable event-driven input support\n");
-  printf("  -notitle             disable the Squeak window title bar\n");
+  printf("X11 <option>s:\n");
+  printf("  -browserWindow <wid>  run in window <wid>\n");
+  printf("  -browserPipes <r> <w> run as Browser plugin using descriptors <r> <w>\n");
+  printf("  -cmdmod <n>           map Mod<n> to the Command key\n");
+  printf("  -display <dpy>        display on <dpy> (default: $DISPLAY)\n");
+  printf("  -fullscreen           occupy the entire screen\n");
+  printf("  -headless             run in headless (no window) mode\n");
+  printf("  -iconic               start up iconified\n");
+  printf("  -lazy                 go to sleep when main window unmapped\n");
+  printf("  -mapdelbs             map Delete key onto Backspace\n");
+  printf("  -noevents             disable event-driven input support\n");
+  printf("  -notitle              disable the Squeak window title bar\n");
+  printf("  -optmod <n>           map Mod<n> to the Option key\n");
+  printf("  -swapbtn              swap yellow (middle) and blue (right) buttons\n");
+  printf("  -xasync               don't serialize display updates\n");
+  printf("  -xshm                 use X shared memory extension\n");
 #endif
-  printf("  -spy                 enable the system spy (jit)\n");
-  printf("  -version             print version information, then exit\n");
-#ifndef HEADLESS
-  printf("  -xasync              don't serialize display updates\n");
-  printf("  -xshm                use X shared memory extension\n");
-#endif
-#if 0  /* on second thought, it makes absolutely no sense for someone
-	  to use -args_in_header from the command line.  This is left
-	  here for documentation, but it doesn't really need to be
-	  printed out by -help */
-  printf("  -args_in_header      read NUL-separated arguments from image header\n");
-#endif
+  if (useJit)
+    {
+      printf("jit <option>s:\n");
+      printf("  -align <n>            align functions at <n>-byte boundaries\n");
+      printf("  -jit<o>[,<d>...]      set optimisation [and debug] levels\n");
+      printf("  -maxpic <n>           set maximum PIC size to <n> entries\n");
+      printf("  -procs <n>            allow <n> concurrent volatile processes\n");
+      printf("  -spy                  enable the system spy\n");
+    }
   printf("\nNotes:\n");
   printf("  <imageName> defaults to `squeak.image'.\n");
 #ifndef HEADLESS
@@ -3986,18 +4252,18 @@ void usage()
 void imageNotFound(char *imageName)
 {
   /* image file is not found */
-  fprintf(stderr,"\
-Could not open the Squeak image file `%s'.
-
-There are three ways to open a Squeak image file.  You can:
-  1. Put copies of the default image and changes files in this directory.
-  2. Put the name of the image file on the command line when you
-     run squeak (use the `-help' option for more information).
-  3. Set the environment variable SQUEAK_IMAGE to the name of the image
-     that you want to use by default.
-
-For more information, type: `man squeak' (without the quote characters).
-", imageName);
+  fprintf(stderr,
+	  "Could not open the Squeak image file `%s'.\n"
+	  "\n"
+	  "There are three ways to open a Squeak image file.  You can:\n"
+	  "  1. Put copies of the default image and changes files in this directory.\n"
+	  "  2. Put the name of the image file on the command line when you\n"
+	  "     run squeak (use the `-help' option for more information).\n"
+	  "  3. Set the environment variable SQUEAK_IMAGE to the name of the image\n"
+	  "     that you want to use by default.\n"
+	  "\n"
+	  "For more information, type: `man squeak' (without the quote characters).\n",
+	  imageName);
   exit(1);
 }
 
@@ -4006,29 +4272,16 @@ void versionInfo(void)
 {
   extern int vm_serial;
   extern char *vm_date, *cc_version, *ux_version;
-  
-  fprintf(stderr, "%s %s #%d",
-	  VM_HOST, SQ_VERSION, vm_serial);
-  
-    
-  fprintf(stderr, " ["
-	  AUDIO_INTERFACE " audio"
+  extern char *vmLibDir;
+
+  printf("%s #%d", VM_VERSION, vm_serial);
 #if defined(USE_XSHM)
-	  ", xshm"
+  printf(" XShm");
 #endif
-#if defined(USE_MEMORY_MMAP)
-	  ", memory-mmap"
-#endif
-	  "] ");
-  
-
-  fprintf(stderr, "%s %s\n",  vm_date, cc_version);
-  fprintf(stderr,"%s\n", ux_version);
-
-
-  fprintf(stderr, "default plugin location: %s/%s*.so\n",
-	  SQ_LIBDIR, SQ_MODULE_PREFIX);
-  
+  printf(" %s %s\n", vm_date, cc_version);
+  printf("%s\n", interpreterVersion);
+  printf("%s\n", ux_version);
+  printf("default plugin location: %s/*.so\n", vmLibDir);
   exit(0);
 }
 
@@ -4057,49 +4310,121 @@ int strtobkm(const char *str)
 }
 
 
+static int jitArgs(char *str)
+{
+  char *endptr= str;
+  int  args= 3;				// default JIT mode = fast compiler
+
+  if (*str == '\0') return args;
+  if (*str != ',')
+    args= strtol(str, &endptr, 10);	// mode
+  while (*endptr == ',')		// [,debugFlag]*
+    args|= (1 << (strtol(endptr + 1, &endptr, 10) + 8));
+  return args;
+}
+
+
 void ParseEnvironment(void)
 {
   char *ev= 0;
 
-  if ((ev= getenv("SQUEAK_ALIGN")))	asmAlign= atoi(ev);
-  if (asmAlign <  1) asmAlign= 1;
-  if (asmAlign > 16) asmAlign= 16;
-
   if ((ev= getenv("SQUEAK_IMAGE")))	strcpy(shortImageName, ev);
-  else					strcpy(shortImageName,
-					       "squeak.image");
+  else					strcpy(shortImageName, "squeak.image");
   if ((ev= getenv("SQUEAK_MEMORY")))	initialHeapSize= strtobkm(ev);
+  if ((ev= getenv("SQUEAK_PLUGINS")))	squeakPlugins= strdup(ev);
+  if ((ev= getenv("SQUEAK_NOMIXER")))	noSoundMixer= 1;
+  if ((ev= getenv("SQUEAK_NOTIMER")))	useItimer= 0;
+
 #ifndef HEADLESS
   if (getenv("SQUEAK_LAZY"))		sleepWhenUnmapped= 1;
-  if (getenv("SQUEAK_NOJIT"))		noJitter= 1;
-  if (getenv("SQUEAK_JIT"))		noJitter= 0;
   if (getenv("SQUEAK_SPY"))		withSpy= 1;
   if (getenv("SQUEAK_NOTITLE"))		noTitle= 1;
-  if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;  /* XXX should check whether the environment variable is 1 or 0 */
+  if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;
+  if (getenv("SQUEAK_ICONIC"))		iconified= 1;
   if (getenv("SQUEAK_NOEVENTS"))	noEvents= 1;
+  if (getenv("SQUEAK_MAPDELBS"))	mapDelBs= 1;
+  if (getenv("SQUEAK_SWAPBTN"))		swapBtn= 1;
+  if ((ev= getenv("SQUEAK_OPTMOD")))	optMapIndex= Mod1MapIndex + atoi(ev) - 1;
+  if ((ev= getenv("SQUEAK_CMDMOD")))	cmdMapIndex= Mod1MapIndex + atoi(ev) - 1;
 #if defined(USE_XSHM)
   if (getenv("SQUEAK_XSHM"))		useXshm= 1;
   if (getenv("SQUEAK_XASYNC"))		asyncUpdate= 1;
 #endif
 #endif
+  if ((ev= getenv("SQUEAK_JIT")))	useJit= jitArgs(ev);
+  if ((ev= getenv("SQUEAK_ALIGN")))	asmAlign= atoi(ev);
+  if ((ev= getenv("SQUEAK_PROCS")))	jitProcs= atoi(ev);
+  if ((ev= getenv("SQUEAK_MAXPIC")))	jitMaxPIC= atoi(ev);
+  if (asmAlign <  1) asmAlign= 1;
+  if (asmAlign > 16) asmAlign= 16;
 }
 
 
-/* defined below */
-static void readHeaderOptions(const char *image_filename);
+/* read options from the header of the specified image */
+
+#define HEADER_SIZE 512
+
+static void readHeaderOptions(const char *filename)
+{
+  int   headerArgc= 0;
+  char *headerArgv[512];
+  char *header= malloc(HEADER_SIZE+1);
+
+  if (header == NULL)
+    outOfMemory();
+  /* read the header */
+  {
+    int fd= open(filename, O_RDONLY);
+    if (fd < 0) return;
+    if (read(fd, header, HEADER_SIZE) < HEADER_SIZE)
+      {
+	free(header);
+	close(fd);
+	return;
+      }
+    header[HEADER_SIZE]= '\0';  /* make sure header is a valid C string */
+    close(fd);
+  }
+  if (header[0] != '#' || header[1] != '!')
+    {
+      /* not a Unix image file */
+      free(header);
+      return;
+    }
+  /* find the newline which marks the beginning of the options */
+  {
+    int headerPos= 0;
+    while ((headerPos < HEADER_SIZE) && (header[headerPos] != '\n'))
+      headerPos++;
+    headerPos++;   /* skip the newline */
+    /* read in options, one at a time; we are finished when either the
+       header is exhausted, or a NUL character is seen at the beginning
+       of an option */
+    while ((headerPos < HEADER_SIZE) && (header[headerPos] != '\0'))
+      {
+	/* record one option */
+	headerArgv[headerArgc]= &header[headerPos];
+	headerArgc+= 1;
+	/* find the begining of the next option */
+	while (headerPos < HEADER_SIZE && header[headerPos] != '\0')
+	  headerPos+= 1;
+	/* skip over the '\0' */
+	headerPos+= 1;
+      }
+  }
+  /* got all options -- process them */
+  ParseArguments(headerArgc, headerArgv, 1);
+}
 
 
-void ParseArguments(int argc, char *argv[], int parsing_header_args)
+void ParseArguments(int argc, char *argv[], int inHeader)
 {
 # define skipArg()	(--argc, argv++)
 # define saveArg()	(vmArgVec[vmArgCnt++]= *skipArg())
-  int args_in_header=0;   /* whether to read arguments from the image header */
-  
+  int argsInHeader= 0;
 
-  /* vm name */
-  if(vmArgCnt == 0)
-    saveArg();
-  
+  if (vmArgCnt == 0)
+    saveArg();		/* vm name */
 
   while ((argc > 0) && (**argv == '-'))	/* more options to parse */
     {
@@ -4110,6 +4435,8 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
       saveArg();
 
       if      (!strcmp(arg, "-help"))		usage();
+      if      (!strcmp(arg, "-nomixer"))	noSoundMixer= 1;
+      if      (!strcmp(arg, "-notimer"))	useItimer= 0;
 #    ifndef HEADLESS
       else if (!strcmp(arg, "-headless"))	headless= 1;
 #      if defined(USE_XSHM)
@@ -4119,24 +4446,27 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
       else if (!strcmp(arg, "-lazy"))		sleepWhenUnmapped= 1;
       else if (!strcmp(arg, "-noevents"))	noEvents= 1;
       else if (!strcmp(arg, "-notitle"))	noTitle= 1;
+      else if (!strcmp(arg, "-mapdelbs"))	mapDelBs= 1;
+      else if (!strcmp(arg, "-swapbtn"))	swapBtn= 1;
 #    endif
-      else if (!strcmp(arg, "-nojit"))		noJitter= 1;
-      else if (!strcmp(arg, "-jit"))		noJitter= 0;
+      else if (!strncmp(arg, "-jit", 4))	useJit= jitArgs(arg+4);
+      else if (!strcmp(arg, "-nojit"))		useJit= 0;
       else if (!strcmp(arg, "-spy"))		withSpy= 1;
 #    ifndef HEADLESS
       else if (!strcmp(arg, "-fullscreen"))	fullScreen= 1;
+      else if (!strcmp(arg, "-iconic"))		iconified= 1;
 #    endif
       else if (!strcmp(arg, "-version"))	versionInfo();
-      else if (!strcmp(arg, "-args_in_header")) {
-	args_in_header=1;
-	if(argc > 0) {
-	  /* record the image name */
-	  strcpy(shortImageName, *skipArg());
+      else if (!strcmp(arg, "-args_in_header"))
+	{
+	  argsInHeader= 1;
+	  if (argc > 0)
+	    /* record the image name */
+	    strcpy(shortImageName, *skipArg());
+	  /* read the arguments */
+	  if (!inHeader)   /* but don't recurse */
+	    readHeaderOptions(shortImageName);
 	}
-	/* read the arguments */
-	if(!parsing_header_args)   /* but don't recurse */
-	  readHeaderOptions(shortImageName);
-      }
       else
 	{
 	  /* option requires an argument */
@@ -4147,13 +4477,16 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
 	      if (asmAlign <  1) asmAlign= 1;
 	      if (asmAlign > 16) asmAlign= 16;
 	    }
-	  else if (!strcmp(arg, "-memory")) {
-	    const char *arg = saveArg();
-	    if (arg)
-	      initialHeapSize= strtobkm(arg);
-	  }
+	  else if (!strcmp(arg, "-procs"))	jitProcs= atoi(saveArg());
+	  else if (!strcmp(arg, "-maxpic"))	jitMaxPIC= atoi(saveArg());
+	  else if (!strcmp(arg, "-memory"))	initialHeapSize= strtobkm(saveArg());
+	  else if (!strcmp(arg, "-plugins"))	squeakPlugins= strdup(saveArg());
 #        if !defined(HEADLESS)
 	  else if (!strcmp(arg, "-display"))	displayName= saveArg();
+	  else if (!strcmp(arg, "-optmod"))
+	    optMapIndex= Mod1MapIndex + atoi(saveArg()) - 1;
+	  else if (!strcmp(arg, "-cmdmod"))
+	    cmdMapIndex= Mod1MapIndex + atoi(saveArg()) - 1;
 	  else if (!strcmp(arg, "-browserWindow"))
 	    {
 	      sscanf(saveArg(), "%li", &browserWindow);
@@ -4164,15 +4497,23 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
 		}
 	    }
 	  else if (!strcmp(arg, "-browserPipes"))
-	    { 
+	    {
 	      if (argc < 2) usage();
 	      sscanf(saveArg(), "%i", &browserPipes[0]);
 	      sscanf(saveArg(), "%i", &browserPipes[1]);
 	      /* receive browserWindow */
-#if 0
-	      DPRINT("VM: reading browserWindow\n");
-#endif
-	      read(browserPipes[0], &browserWindow, 4);
+#	     ifdef DEBUG_BROWSER
+	      fprintf(stderr, "browser: reading window\n");
+#	     endif
+	      if (sizeof(browserWindow) !=
+		   read(browserPipes[0], (void *)&browserWindow, sizeof(browserWindow)))
+		{
+		  perror("reading browserWindow");
+		  exit(1);
+		}
+#	     ifdef DEBUG_BROWSER
+	      fprintf(stderr, "browser: window = 0x%x\n", browserWindow);
+#	     endif
 	    }
 #        endif
 	  else
@@ -4187,95 +4528,26 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
       else
 	{
 	  /* look for an image name */
-	  if(! args_in_header) {  /* if args_in_header, then the image name
-				     will have already been read  */
-	    if(parsing_header_args)
-	      skipArg();
-	    else {
-	      strcpy(shortImageName, saveArg());
-	      if (0 == strstr(shortImageName, ".image"))
-		strcat(shortImageName, ".image");
+	  if (!argsInHeader)
+	    {  /* if args_in_header, then the image name will have already been read  */
+	      if (inHeader)
+		skipArg();
+	      else
+		{
+		  strcpy(shortImageName, saveArg());
+		  if (0 == strstr(shortImageName, ".image"))
+		    strcat(shortImageName, ".image");
+		}
 	    }
-	  }
 	}
     }
-  
   /* save remaining arguments as Squeak arguments */
   while (argc > 0)
     squeakArgVec[squeakArgCnt++]= *skipArg();
 
-  
 # undef saveArg
 # undef skipArg
 }
-
-
-/* read options from the header of the specified image */
-#define HEADER_SIZE 512
-static void readHeaderOptions(const char *image_filename) 
-{
-  int fd;
-  char *header;
-  int header_argc=0;
-  char *header_argv[512];
-  int header_pos;   /* position in the header as we read from it */
-
-  
-  /* allocate the header on the heap, so that strings within it can be
-     stored by ParseArguments later */
-  header = malloc(HEADER_SIZE+1);
-  if(header == NULL) {
-    error("Out of Memory\n");
-  }
-  
-
-  /* read the header */
-  fd = open(image_filename, O_RDONLY);
-  if(fd < 0) return;
-  if(read(fd, header, HEADER_SIZE) < HEADER_SIZE) {
-    free(header);
-    close(fd);
-    return;
-  }
-  header[HEADER_SIZE] = '\0';  /* make sure header is a valid C string */
-  close(fd);
-  
-  
-
-  if(header[0] != '#' || header[1] != '!') {
-    /* not a Unix image file */
-    free(header);
-    return;
-  }
-  
-  
-  /* find the newline which marks the beginning of the options */
-  header_pos = 0;
-  while(header_pos < HEADER_SIZE && header[header_pos] != '\n')
-    header_pos += 1;
-  header_pos += 1;   /* skip the newline */
-
-  /* read in options, one at a time; we are finished when either the
-     header is exhausted, or a NUL character is seen at the beginning
-     of an option */
-  while(header_pos < HEADER_SIZE && header[header_pos] != '\0') {
-    /* record one option */
-    header_argv[header_argc] = &header[header_pos];
-    header_argc += 1;
-
-    /* find the begining of the next option */
-    while(header_pos < HEADER_SIZE && header[header_pos] != '\0')
-      header_pos += 1;
-
-    /* skip over the '\0' */
-    header_pos += 1;
-  }
-
-
-  /* got all options -- process them */
-  ParseArguments(header_argc, header_argv, 1);
-}
-
 
 
 
@@ -4287,7 +4559,7 @@ static void readHeaderOptions(const char *image_filename)
 
   /*-- EXPERIMENTAL -- read [and inflate] an internal image file --*/
 
-int sqImageFileClose(FILE *f)
+  int sqImageFileClose(FILE *f)
   {
     int err= 0;
     if (f != 0)
@@ -4351,7 +4623,7 @@ int sqImageFileClose(FILE *f)
 #   define RTLD_NOW 1
 # endif
 #endif
- 
+
   int openInternal(void)
   {
     unsigned char *internalImageEnd= 0;
@@ -4417,9 +4689,22 @@ int sqImageFileClose(FILE *f)
 
 #include <signal.h>
 
-void segv(int ignore)
+void sigsegv(int ignore)
 {
   error("Segmentation fault");
+}
+
+void sighup(int ignore)
+{
+  extern int printCallStack(void);
+  extern int nextWakeupTick;
+  printCallStack();
+  nextWakeupTick= ioLowResMSecs();
+  interruptPending= true;
+  interruptCheckCounter= 0;
+#if !defined(HEADLESS)
+  signalInputEvent();
+#endif
 }
 
 #ifdef __alpha__
@@ -4430,14 +4715,13 @@ void segv(int ignore)
 
 
 
-/*** ...we came in? ***/
-
 int main(int argc, char **argv, char **envp)
 {
   /* check the interpreter's size assumptions for basic data types */
-  if (sizeof(int)    != 4) error("This C platform's integers are not 32 bits.");
-  if (sizeof(double) != 8) error("This C platform's floats are not 64 bits.");
-  if (sizeof(time_t) != 4) error("This C platform's time_t's are not 32 bits.");
+  /* NOTE: as of 3.2 these are checked by configure */
+  if (sizeof(int)    != 4) error("This platform's integers are not 32 bits.");
+  if (sizeof(time_t) != 4) error("This platform's time_t is not 32 bits.");
+  if (sizeof(double) != 8) error("This platform's double is not 64 bits.");
 
   /* Make parameters global for access from pluggable primitives */
   argCnt= argc;
@@ -4452,7 +4736,8 @@ int main(int argc, char **argv, char **envp)
   if ((squeakArgVec= calloc(argc + 1, sizeof(char *))) == 0)
     outOfMemory();
 
-  signal(SIGSEGV, segv);
+  signal(SIGSEGV, sigsegv);
+  signal(SIGHUP, sighup);
 
   /* initialisation */
 
@@ -4475,8 +4760,6 @@ int main(int argc, char **argv, char **envp)
   ParseEnvironment();
   ParseArguments(argc, argv, 0);
   SetUpTimers();
-  aioInitialize();
-  
 
 # if !defined(HEADLESS) && defined(USE_XSHM)
 #   ifdef AT_EXIT
@@ -4490,11 +4773,7 @@ int main(int argc, char **argv, char **envp)
 #   endif
 # endif
 
-# if 0
- /* TPR - do not call these here; the module mechanism will call them at the right time automagically */
-  sqFileInit();
-  joystickInit();
-# endif
+  aioInit();
 
 # if defined(HAVE_TZSET)
   tzset();	/* should _not_ be necessary! */
@@ -4533,35 +4812,33 @@ int main(int argc, char **argv, char **envp)
     openXDisplay();
 #endif
 
-#if defined(HAVE_LIBDL) && defined(J_ENABLED) && !defined(J_PROFILE)
-  {
-    /* first try to find an internal dynamic compiler... */
-    int handle= ioLoadModule(0);
-    int comp= ioFindExternalFunctionIn("j_interpret", handle);
-    /* ...and if that fails... */
-    if ((comp == 0) && !noJitter)
-      {
-	/* ...try to find an external one */
-	handle= ioLoadModule("SqueakCompiler");
-	if (handle != 0)
-	  comp= ioFindExternalFunctionIn("j_interpret", handle);
-      }
-    if (comp)
-      {
-	((void(*)(void))comp)();
-	return 0;
-      }
-    else
-      printf("could not find j_interpret\n");
-  }
+#if defined(HAVE_LIBDL)
+  if (useJit)
+    {
+      /* first try to find an internal dynamic compiler... */
+      int handle= ioLoadModule(0);
+      int comp= ioFindExternalFunctionIn("j_interpret", handle);
+      /* ...and if that fails... */
+      if (comp == 0)
+	{
+	  /* ...try to find an external one */
+	  handle= ioLoadModule("SqueakCompiler");
+	  if (handle != 0)
+	    comp= ioFindExternalFunctionIn("j_interpret", handle);
+	}
+      if (comp)
+	{
+	  ((void (*)(void))comp)();
+	  fprintf(stderr, "handing control back to interpret() -- have a nice day\n");
+	}
+      else
+	printf("could not find j_interpret\n");
+      exit(1);
+    }
 #endif /*HAVE_LIBDL*/
 
   /* run Squeak */
-#ifndef J_PROFILE
   interpret();
-#else
-  j_interpret();
-#endif
 
   return 0;
 }
@@ -4573,7 +4850,42 @@ int ioExit(void)
   disconnectXDisplay();
 #endif
 
-  /*** Isn't this where... ***/
-
   exit(0);
 }
+
+
+/* a couple of things needed by B3DAccelerator. */
+
+void *ioGetDisplay(void)
+{
+#ifndef HEADLESS
+  return (void *)stDisplay;
+#else
+  return 0;
+#endif
+}
+
+void *ioGetWindow(void)
+{
+#ifndef HEADLESS
+  return (void *)stWindow;
+#else
+  return 0;
+#endif
+}
+
+
+/* various thinks required by OSProcess when compiled headless */
+
+#if defined(HEADLESS)
+
+char *displayName= "";
+int   isConnectedToXServer= 0;
+
+int openXDisplay(void) { return 0; }
+int synchronizeXDisplay(void) { return 0; }
+int disconnectXDisplay(void) { return 0; }
+int forgetXDisplay(void) { return 0; }
+
+#endif
+

@@ -1,7 +1,7 @@
 /* It's a mystery to me why they even bothered with /usr/include on SunOS
  * 
- *   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
- *      authors/contributors listed elsewhere in this file.
+ *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
@@ -20,15 +20,15 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. This notice may not be removed or altered in any source distribution.
+ *   2. This notice must not be removed or altered in any source distribution.
  * 
- *   Using or modifying this file for use in any context other than Squeak
- *   changes these copyright conditions.  Read the file `COPYING' in the base
- *   of the distribution before proceeding with any such use.
+ *   Using (or modifying this file for use) in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the
+ *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- *   You are STRONGLY DISCOURAGED from distributing a modified version of
- *   this file under its original name without permission.  If you must
- *   change it, rename it first.
+ *   You are not allowed to distribute a modified version of this file
+ *   under its original name without explicit permission to do so.  If
+ *   you change it, rename it.
  */
 
 /* Last edited: Wed Aug 16 06:21:25 2000 by piumarta (Ian Piumarta) on emilia

@@ -1,16 +1,20 @@
 /* sqUnixSecurity.c -- directory operations for Unix
  * 
+ * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
+ * 
+ * Last edited: 2002-10-26 14:43:23 by piumarta on emilia.inria.fr
+ * 
  * Note: According to Ian Piumarta, the Unix VM is inherently insecure since
  *       pluggable primitives can access all of libc! It would need 
  *       some linker magic to hide these from dlsym(). 
- *
+ * 
  *       A workaround would be to disallow lookups via dlsym() when
  *       fileaccess is disallowed - internal plugins should still work ...
- *
- * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
  */
 
 #include "sq.h"
+#include "SecurityPlugin.h"
+
 #include <sys/param.h>
 
 static char secureUserDirectory[MAXPATHLEN];     /* imagepath/secure/    */
@@ -178,7 +182,7 @@ int ioCanConnectToPort(int netAddr, int port)
 }
 
 
-int ioCanListenOnPort(void* s, int port)
+int ioCanListenOnPort(int s, int port)
 {
   return allowSocketAccess;
 }
@@ -202,6 +206,8 @@ int ioHasSocketAccess()
 
 char *ioGetSecureUserDirectory(void)
 {
+  if (secureUserDirectory[0] == '\0')
+    return (char *)success(false);
   return secureUserDirectory;
 }
 

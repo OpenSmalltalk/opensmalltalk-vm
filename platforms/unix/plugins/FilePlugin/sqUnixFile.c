@@ -1,7 +1,7 @@
 /* sqUnixFile.c -- directory operations for Unix
  * 
- *   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
- *      authors/contributors listed elsewhere in this file.
+ *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
@@ -20,23 +20,24 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. This notice may not be removed or altered in any source distribution.
+ *   2. This notice must not be removed or altered in any source distribution.
  * 
- *   Using or modifying this file for use in any context other than Squeak
- *   changes these copyright conditions.  Read the file `COPYING' in the base
- *   of the distribution before proceeding with any such use.
+ *   Using (or modifying this file for use) in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the
+ *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- *   You are STRONGLY DISCOURAGED from distributing a modified version of
- *   this file under its original name without permission.  If you must
- *   change it, rename it first.
+ *   You are not allowed to distribute a modified version of this file
+ *   under its original name without explicit permission to do so.  If
+ *   you change it, rename it.
  */
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: Fri 29 Mar 2002 12:39:53 by bert on balloon
+ * Last edited: 2003-02-06 16:29:22 by piumarta on emilia.local.
  */
 
 #include "sq.h"
+#include "FilePlugin.h"
 
 #ifdef HAVE_DIRENT_H
 # include <dirent.h>
@@ -61,10 +62,10 @@
 #endif
 
 #include <time.h>
-#include <sys/param.h>
-#include <sys/stat.h>
 #include <errno.h>
 #include <string.h>
+#include <sys/param.h>
+#include <sys/stat.h>
 
 /***
 	The interface to the directory primitive is path based.
@@ -90,10 +91,9 @@ DIR *openDir= 0;
 
 
 /*** Functions ***/
+
 extern time_t convertToSqueakTime(time_t unixTime);
 
-int equalsLastPath(char *pathString, int pathStringLength);
-int recordPath(char *pathString, int pathStringLength, int refNum, int volNum);
 int maybeOpenDir(char *unixPath);
 
 int dir_Create(char *pathString, int pathStringLength)
@@ -117,9 +117,11 @@ int dir_Delete(char *pathString, int pathStringLength)
   int i;
   if (pathStringLength >= MAXPATHLEN)
     return false;
-  for (i = 0; i < pathStringLength; i++)
-    name[i] = pathString[i];
-  name[i] = 0; /* string terminator */
+  for (i= 0;  i < pathStringLength;  ++i)
+    name[i]= pathString[i];
+  if (!strcmp(lastPath, name))
+    lastPathValid= false;
+  name[i]= '\0'; /* string terminator */
   return rmdir(name) == 0;
 }
 
@@ -130,7 +132,7 @@ int dir_Delimitor(void)
 
 int dir_Lookup(char *pathString, int pathStringLength, int index,
 /* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
-	       int *isDirectory, int *sizeIfFile)
+	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
   /* Lookup the index-th entry of the directory with the given path, starting
      at the root of the file system. Set the name, name length, creation date,
@@ -180,16 +182,18 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   for (i= 0; i < index; i++)
     {
     nextEntry:
-      do { 
-        errno= 0; 
-      dirEntry= readdir(openDir);
-      }  while(dirEntry==0 && errno==EINTR);
+      do
+	{ 
+	  errno= 0; 
+	  dirEntry= readdir(openDir);
+	}
+      while ((dirEntry == 0) && (errno == EINTR));
 
       if (!dirEntry)
-	{
-	  return NO_MORE_ENTRIES;
-	}
+	return NO_MORE_ENTRIES;
+      
       nameLen= NAMLEN(dirEntry);
+
       /* ignore '.' and '..' (these are not *guaranteed* to be first) */
       if (nameLen < 3 && dirEntry->d_name[0] == '.')
 	if (nameLen == 1 || dirEntry->d_name[1] == '.')
@@ -260,4 +264,3 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
 {
   return true;
 }
-

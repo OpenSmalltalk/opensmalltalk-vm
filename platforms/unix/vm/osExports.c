@@ -1,25 +1,32 @@
 #include <stdio.h>
-/* duh ... this is ugly */
 
-#define XFN(export) {"", #export, (void*)export},
+#define XFN(export) {"", #export, (void*)export}
 #define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export}
 
-int primitivePluginBrowserReady(void);
-int primitivePluginRequestURLStream(void);
-int primitivePluginRequestURL(void);
-int primitivePluginPostURL(void);
-int primitivePluginRequestFileHandle(void);
-int primitivePluginDestroyRequest(void);
-int primitivePluginRequestState(void);
+#if !defined(HEADLESS)
+int   primitivePluginBrowserReady(void);
+int   primitivePluginRequestURLStream(void);
+int   primitivePluginRequestURL(void);
+int   primitivePluginPostURL(void);
+int   primitivePluginRequestFileHandle(void);
+int   primitivePluginDestroyRequest(void);
+int   primitivePluginRequestState(void);
+void *ioGetDisplay(void);
+void *ioGetWindow(void);
+#endif
 
-void *os_exports[][3] = {
-	XFN(primitivePluginBrowserReady)
-	XFN(primitivePluginRequestURLStream)
-	XFN(primitivePluginRequestURL)
-	XFN(primitivePluginPostURL)
-	XFN(primitivePluginRequestFileHandle)
-	XFN(primitivePluginDestroyRequest)
-	XFN(primitivePluginRequestState)
-	{NULL, NULL, NULL}
+void *os_exports[][3]=
+{
+#if !defined(HEADLESS)
+  XFN(primitivePluginBrowserReady),
+  XFN(primitivePluginRequestURLStream),
+  XFN(primitivePluginRequestURL),
+  XFN(primitivePluginPostURL),
+  XFN(primitivePluginRequestFileHandle),
+  XFN(primitivePluginDestroyRequest),
+  XFN(primitivePluginRequestState),
+  XFN(ioGetDisplay),
+  XFN(ioGetWindow),
+#endif
+  { 0, 0, 0 }
 };
-
