@@ -57,9 +57,28 @@ typedef struct B3DPrimitiveLight {
 	float spotExponent;
 } B3DPrimitiveLight;
 
-/* Win32 defaults to D3D everyone else to OpenGL */
-#if defined(WIN32) && !defined(WIN32_NO_D3D)
-#define B3DX_D3D
+#ifdef TEA
+#warning "**************************************************************"
+#warning "**************************************************************"
+#warning "**************************************************************"
+#warning
+#warning "TEA: D3D disabled"
+#warning
+#warning "**************************************************************"
+#warning "**************************************************************"
+#warning "**************************************************************"
+# define WIN32_PURE_D3D
+#endif
+
+/* Win32 defaults to DUAL D3D/GL interface everyone else to OpenGL */
+#if defined(WIN32)
+# if defined(WIN32_PURE_D3D)
+#  define B3DX_D3D
+# elif defined(WIN32_PURE_GL)
+#  define B3DX_GL
+# else
+#  define B3DX_DUAL
+# endif
 #else
 #define B3DX_GL
 #endif
@@ -184,4 +203,86 @@ int b3dxGetIntProperty(int handle, int prop);
 int b3dxSetIntProperty(int handle, int prop, int value);
 int b3dxSetVerboseLevel(int level);
 int b3dxSetFog(int handle, int fogType, double density, double rangeStart, double rangeEnd, int rgba);
+
+#if defined(B3DX_DUAL)
+extern int glMode;
+
+#if 0 /* initializer is special since it decides what to use */
+#define b3dxInitialize() \
+  (glMode ? glInitialize() : d3dInitialize())
+#endif
+
+#define b3dxShutdown() \
+  (glMode ? glShutdown()   : d3dShutdown())
+#define b3dxAllocateTexture(r,w,h,d) \
+  (glMode ? glAllocateTexture(r,w,h,d) : d3dAllocateTexture(r,w,h,d))
+#define b3dxDestroyTexture(r,h) \
+  (glMode ? glDestroyTexture(r,h) : d3dAllocateTexture(r,h))
+#define b3dxActualTextureDepth(r,h) \
+  (glMode ? glActualTextureDepth(r,h) : d3dActualTextureDepth(r,h))
+#define b3dxTextureColorMasks(r,h,m) \
+  (glMode ? glTextureColorMasks(r,h,m) : d3dTextureColorMasks(r,h,m))
+#define b3dxUploadTexture(r,hh,w,h,d,b) \
+  (glMode ? glUploadTexture(r,hh,w,h,d,b) : d3dUploadTexture(r,hh,w,h,d,b))
+#define b3dxTextureByteSex(r,h) \
+  (glMode ? glTextureByteSex(r,h) : d3dTextureByteSex(r,h))
+#define b3dxTextureSurfaceHandle(r,h) \
+  (glMode ? glTextureSurfaceHandle(r,h) : d3dTextureSurfaceHandle(r,h))
+#define b3dxCompositeTexture(r,hh,x,y,w,h,t) \
+  (glMode ? glCompositeTexture(r,hh,x,y,w,h,t) : d3dCompositeTexture(r,hh,x,y,w,h,t))
+#define b3dxCreateRenderer(sw,hw,x,y,w,h) \
+  (glMode ? glCreateRenderer(sw,hw,x,y,w,h) : d3dCreateRenderer(sw,hw,x,y,w,h))
+#define b3dxDestroyRenderer(h) \
+  (glMode ? glDestroyRenderer(h) : d3dDestroyRenderer(h))
+#define b3dxIsOverlayRenderer(h) \
+  (glMode ? glIsOverlayRenderer(h) : d3dIsOverlayRenderer(h))
+#define b3dxSetBufferRect(hh,x,y,w,h) \
+  (glMode ? glSetBufferRect(hh, x, y, w, h) : d3dSetBufferRect(hh,x,y,w,h))
+#define b3dxGetRendererSurfaceHandle(h) \
+  (glMode ? glGetRendererSurfaceHandle(h) : d3dGetRendererSurfaceHandle(h))
+#define b3dxGetRendererSurfaceWidth(h) \
+  (glMode ? glGetRendererSurfaceWidth(h) : d3dGetRendererSurfaceWidth(h))
+#define b3dxGetRendererSurfaceHeight(h) \
+  (glMode ? glGetRendererSurfaceHeight(h) : d3dGetRendererSurfaceHeight(h))
+#define b3dxGetRendererSurfaceDepth(h) \
+  (glMode ? glGetRendererSurfaceDepth(h) : d3dGetRendererSurfaceDepth(h))
+#define b3dxGetRendererColorMasks(h,m) \
+  (glMode ? glGetRendererColorMasks(h,m) : d3dGetRendererColorMasks(h,m))
+
+#define b3dxSetViewport(hh,x,y,w,h) \
+  (glMode ? glSetViewport(hh,x,y,w,h) : d3dSetViewport(hh,x,y,w,h))
+#define b3dxClearDepthBuffer(h) \
+  (glMode ? glClearDepthBuffer(h) : d3dClearDepthBuffer(h))
+#define b3dxClearViewport(h,rgba,pv) \
+  (glMode ? glClearViewport(h,rgba, pv) : d3dClearViewport(h,rgba,pv))
+
+#define b3dxSetTransform(h,mv,p) \
+  (glMode ? glSetTransform(h,mv,p) : d3dSetTransform(h,mv,p))
+#define b3dxDisableLights(h) \
+  (glMode ? glDisableLights(h) : d3dDisableLights(h))
+#define b3dxLoadLight(h,i,l) \
+  (glMode ? glLoadLight(h,i,l) : d3dLoadLight(h,i,l))
+#define b3dxLoadMaterial(h,m) \
+  (glMode ? glLoadMaterial(h,m) : d3dLoadMaterial(h,m))
+#define b3dxRenderVertexBuffer(h,p,f,t,va,vs,ia,is) \
+  (glMode ? glRenderVertexBuffer(h,p,f,t,va,vs,ia,is) : d3dRenderVertexBuffer(h,p,f,t,va,vs,ia,is))
+#define b3dxFlushRenderer(h) \
+  (glMode ? glFlushRenderer(h) : d3dFlushRenderer(h))
+#define b3dxFinishRenderer(h) \
+  (glMode ? glFinishRenderer(h) : d3dFinishRenderer(h))
+#define b3dxSwapRendererBuffers(h) \
+  (glMode ? glSwapRendererBuffers(h) : d3dSwapRendererBuffers(h))
+#define b3dxGetIntProperty(h,p) \
+  (glMode ? glGetIntProperty(h,p) : d3dGetIntProperty(h,p))
+#define b3dxSetIntProperty(h,p,v) \
+  (glMode ? glSetIntProperty(h,p,v) : d3dSetIntProperty(h,p,v))
+#define b3dxSetVerboseLevel(l) \
+  (glMode ? glSetVerboseLevel(l) : d3dSetVerboseLevel(l))
+#define b3dxSetFog(h,t,d,s,e,rgba) \
+  (glMode ? glSetFog(h,t,d,s,e,rgba) : d3dSetFog(h,t,d,s,e,rgba))
+
+#define B3DX_GL
+#define B3DX_D3D
+
+#endif
 
