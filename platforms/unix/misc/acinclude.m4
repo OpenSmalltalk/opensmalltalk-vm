@@ -163,7 +163,6 @@ AC_DEFUN(AC_HAVE_NAS,
     ac_cv_nas="yes", ac_cv_nas="no"))
 if test "$ac_cv_nas" = "yes"; then
   AC_DEFINE(HAVE_NAS,1)
-  NAS_LIBS="-laudio -lXt"
 fi])
 
 AC_DEFUN(AC_C_BYTEORDER,
