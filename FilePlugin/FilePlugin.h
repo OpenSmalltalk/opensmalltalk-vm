@@ -6,7 +6,7 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: FilePlugin.h,v 1.3 2002/01/22 19:25:28 johnmci Exp $
+*   RCSID:   $Id: FilePlugin.h,v 1.4 2002/01/29 05:18:38 rowledge Exp $
 *
 *	01/22/2002 JMM change off_t to squeakOffsetFileType
 */
@@ -50,36 +50,3 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 int dir_PathToWorkingDir(char *pathName, int pathNameMax);
 int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator);
 int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator);
-
-/*** security traps ***/
-
-/* directory access */
-int ioCanCreatePathOfSize(char* dirNameIndex, int dirNameSize);
-int ioCanListPathOfSize(char* dirNameIndex, int dirNameSize);
-int ioCanDeletePathOfSize(char* dirNameIndex, int dirNameSize);
-
-/* file access */
-int ioCanOpenFileOfSizeWritable(char* fileNameIndex, int fileNameSize, int writeFlag);
-int ioCanDeleteFileOfSize(char* fileNameIndex, int fileNameSize);
-int ioCanRenameFileOfSize(char* fileNameIndex, int fileNameSize);
-
-int ioCanGetFileTypeOfSize(char* fileNameIndex, int fileNameSize);
-int ioCanSetFileTypeOfSize(char* fileNameIndex, int fileNameSize);
-
-/* top level functions */
-int ioDisableFileAccess(void);
-int ioHasFileAccess(void);
-
-#ifdef DISABLE_SECURITY
-#define ioCanCreatePathOfSize(name, size) 1
-#define ioCanListPathOfSize(name, size) 1
-#define ioCanDeletePathOfSize(name, size) 1
-#define ioCanOpenFileOfSizeWritable(name, size, writeFlag) 1
-#define ioCanDeleteFileOfSize(name, size) 1
-#define ioCanRenameFileOfSize(name, size) 1
-#define ioCanGetFileTypeOfSize(name, size) 1
-#define ioCanSetFileTypeOfSize(name, size) 1
-#define ioDisableFileAccess() 1
-#define ioHasFileAccess() 1
-#endif /* DISABLE_SECURITY */
-
