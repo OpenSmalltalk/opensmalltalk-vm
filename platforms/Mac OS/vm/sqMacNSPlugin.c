@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.10 2003/05/19 07:20:02 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.11 2003/07/31 13:22:47 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -114,9 +114,12 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 
 /*** Exported Primitives ***/
 
-#ifdef ENABLE_URL_FETCH
 #pragma export on
 int primitivePluginBrowserReady(void);
+#pragma export off
+
+#ifdef ENABLE_URL_FETCH
+#pragma export on
 int primitivePluginDestroyRequest(void);
 int primitivePluginRequestFileHandle(void);
 int primitivePluginRequestState(void);
@@ -1165,9 +1168,6 @@ int IsPrefixedBy(char *s, char *prefix) {
 	return true;
 }
 
-/*** Optional URL Fetch Primitives ***/
-
-#ifdef ENABLE_URL_FETCH
 int primitivePluginBrowserReady(void) {
 	/* Args: none.
 	   Always return true on Macintosh. */
@@ -1177,6 +1177,9 @@ int primitivePluginBrowserReady(void) {
 	interpreterProxy->pushBool(1);
 }
 
+
+/*** Optional URL Fetch Primitives ***/
+#ifdef ENABLE_URL_FETCH
 int primitivePluginDestroyRequest(void) {
 	/* Args: handle.
 	   Destroy the given request. */
