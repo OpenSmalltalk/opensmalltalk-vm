@@ -3,6 +3,8 @@
 	* platforms/unix/vm/sqUnixMain.c (recordFullPathForVmName): stat()
 	the result of readlink() to avoid embarassement on early linux
 	kernels.
+	(ioRelinquishProcessorForMicroseconds): Really sleep for < 1
+	timeslice then poll for i/o on Mach.
 
 	* util/Makefile.rpm (%.spec): Unconditional rebuild.
 
