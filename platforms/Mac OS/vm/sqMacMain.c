@@ -6,10 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.4 2002/03/04 00:28:47 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.5 2002/03/15 01:44:07 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+*  Mar  8th, 2002, JMM UI locking for applescript under os-x
 ****************************************************************************/
 
 //#define PLUGIN to compile code for Netscape or IE Plug-in
@@ -81,7 +82,8 @@ QDGlobals 		qd;
 
 #if I_AM_CARBON_EVENT
     #include <pthread.h>
-    extern pthread_mutex_t gEventQueueLock;
+    extern pthread_mutex_t gEventQueueLock,gEventUILock;
+    extern pthread_cond_t  gEventUILockCondition;
 #endif
  
 extern char shortImageName[];
@@ -206,25 +208,24 @@ int main(void) {
 	atexit(SqueakTerminate);
 #endif
 
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
+#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
     {
-     pthread_t thread;
+    pthread_t thread;
     
-     gThreadManager = false;
-    /* run Squeak */
-#if I_AM_CARBON_EVENT
-    //squeakThread(0);
+    gThreadManager = false;
     pthread_mutex_init(&gEventQueueLock, NULL);
-    SetUpCarbonEvent();
+    pthread_mutex_init(&gEventUILock, NULL);
+    pthread_cond_init(&gEventUILockCondition,NULL);
     err = pthread_create(&thread,null,interpret, null);
     if (err == 0) {
+        SetUpCarbonEvent();
         RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
+        }
     }
-    return;
+    return; //Note the return, need to refactor this ugly code
 #endif
-    }
-#else
-#if !defined(MINIMALVM)  
+
+#if !defined(MINIMALVM)  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
     if( Gestalt( gestaltThreadMgrAttr, &threadGestaltInfo) == noErr &&
         threadGestaltInfo & (1<<gestaltThreadMgrPresent) &&
         ((Ptr) NewThread != (Ptr)kUnresolvedCFragSymbolAddress)) {
@@ -242,7 +243,6 @@ int main(void) {
     gThreadManager = false;
     /* run Squeak */
     squeakThread(0);
-#endif
 }
 #endif
 
@@ -307,7 +307,7 @@ void PowerMgrCheck(void) {
 		    && (pmgrAttributes & (1<<gestaltPMgrDispatchExists))
 		    && (PMSelectorCount() >= 0x24)) {
 		    gTapPowerManager = true;
-                    gDisableIdleTickLimit = ioLowResMSecs();
+                    gDisableIdleTickLimit = ioLowResMSecs()  & 536870911;
 		}
 #endif
 }
