@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacFFIPPC.c,v 1.2 2002/02/01 07:05:09 johnmci Exp $
+*   RCSID:   $Id: sqMacFFIPPC.c,v 1.3 2002/11/18 19:09:23 johnmci Exp $
 *
 *   NOTES:
 *
@@ -19,6 +19,12 @@
 #define LONGLONG long long
 #endif
 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+#define staticIssue 
+#else
+#define staticIssue static 
+#endif 
+
 extern struct VirtualMachine *interpreterProxy;
 #define primitiveFail() interpreterProxy->primitiveFail();
 
@@ -27,30 +33,29 @@ extern struct VirtualMachine *interpreterProxy;
 #define FP_MAX_REGS 13
 
 /* Values passed in GPR3-GPR10 */
-int GPRegs[8];
-
+static int GPRegs[8];
 /* Nr of GPRegs used so far */
- int gpRegCount = 0;
+staticIssue int gpRegCount = 0;
 /* Values passed in FPR1-FPR13 */
- double FPRegs[13];
+static double FPRegs[13];
 /* Nr of FPRegs used so far */
- int fpRegCount = 0;
+staticIssue int fpRegCount = 0;
 
 /* Max stack size */
 #define FFI_MAX_STACK 512
 /* The stack used to assemble the arguments for a call */
-int   ffiStack[FFI_MAX_STACK];
+static int   ffiStack[FFI_MAX_STACK];
 /* The stack pointer while filling the stack */
- int   ffiStackIndex = 0;
+staticIssue int   ffiStackIndex = 0;
 /* The area for temporarily allocated strings */
 static char *ffiTempStrings[FFI_MAX_STACK];
 /* The number of temporarily allocated strings */
 static int   ffiTempStringCount = 0;
 
 /* The return values for calls */
- int      intReturnValue;
- LONGLONG longReturnValue;
- double   floatReturnValue;
+staticIssue int      intReturnValue;
+static LONGLONG longReturnValue;
+static double   floatReturnValue;
 static int *structReturnValue = NULL;
 
 /**************************************************************/
@@ -337,11 +342,11 @@ int ffiCleanup(void)
 	return 1;
 }
 
-int  ffiStackLocation=&ffiStack;
-int  FPRegsLocation=&FPRegs;
-int  GPRegsLocation=&GPRegs;
-int  longReturnValueLocation=&longReturnValue;
-int  floatReturnValueLocation=&floatReturnValue;
+int  ffiStackLocation=(int) &ffiStack;
+int  FPRegsLocation=(int) &FPRegs;
+int  GPRegsLocation=(int) &GPRegs;
+int  longReturnValueLocation=(int) &longReturnValue;
+int  floatReturnValueLocation=(int) &floatReturnValue;
 /*****************************************************************************/
 /*****************************************************************************/
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
@@ -354,13 +359,16 @@ asm int ffiCallAddressOf(int addr) {
 	/* Save link register */
 	mflr r0
 	stw r0, 8(SP)
+    mfcr r0		/* save CCR  */
+    stw r0,4(sp)
 
 	/* get stack index and preserve it for copying stuff later */
 	lwz r4, ffiStackIndex(RTOC)
 
 	/* compute frame size */
 	rlwinm r5, r4, 2, 0, 29  /* ffiStackIndex words to bytes (e.g., "slwi r5, r4, 2") */
-	addi r5, r5, 24 /* linkage area */
+	addi r5, r5, 24+15 	/* linkage area */
+    rlwinm r5,r5,0,0,27 	/* JMM round up to quad word*/
 	neg  r5, r5     /* stack goes down */
 
 	/* adjust stack frame */
@@ -388,7 +396,7 @@ nextItem:
 	lwz r3, fpRegCount
 	lwz r12, FPRegs(RTOC)
 	cmpwi r3, 0     /* skip all fpregs if no FP values used */
-	blt _0_fpregs
+	beq _0_fpregs
 	cmpwi r3, 8
 	blt _7_fpregs   /* skip last N fpregs if unused */
 _all_fpregs:
@@ -411,7 +419,7 @@ _0_fpregs:
 	/* load all the general purpose registers */
 	lwz  r3, gpRegCount
 	lwz  r12, GPRegs(RTOC)
-	cmpwi r3, 4
+	cmpwi r3, 5
 	blt _4_gpregs    /* skip last four gpregs if unused */
 _all_gpregs:
 	lwz  r7, 16(r12)
@@ -447,6 +455,8 @@ _0_gpregs:
 	stfd fp1, floatReturnValue(RTOC)
 
 	/* and get out of here */
+    lwz r0, 4(sp) 	/*restore CCR */
+    mtcrf 0xff,r0                               
 	lwz r0, 8(SP)
 	mtlr r0
 	blr
