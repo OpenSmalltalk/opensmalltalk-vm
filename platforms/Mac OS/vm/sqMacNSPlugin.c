@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.17 2004/08/03 02:46:43 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.18 2004/09/22 18:55:24 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -77,6 +77,7 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 #include "sqMacUIConstants.h"
 #include "sqMacImageIO.h"
 #include "sqMacEncoding.h"
+#include "sqMacMemory.h"
 
 #include <Events.h>
 #include <Files.h>
@@ -225,7 +226,6 @@ extern Boolean  gThreadManager;
 OSErr   createNewThread();
 extern PixMapHandle	stPixMap;
 extern ThreadID  gSqueakThread;
-GDHandle getDominateDevice( WindowPtr theWindow,Rect *windRect);
 int checkForModifierKeys();
 
 /*** Local Functions ***/
@@ -964,6 +964,8 @@ void ReadSqueakImage(void) {
 	squeakHeapMBytes = parseMemorySize(dataSize, rememberMemoryString);
 	if (squeakHeapMBytes == 0) 
 	    squeakHeapMBytes = STARTINGsqueakHeapMBytes;
+	if (squeakHeapMBytes < sqGetAvailableMemory())
+		squeakHeapMBytes = sqGetAvailableMemory();
 	    
 	readImageFromFileHeapSizeStartingAt(f, squeakHeapMBytes, 0);
 	sqImageFileClose(f);
@@ -1233,7 +1235,6 @@ int printOnOSXNumber(int foo);
 
 int ioSetFullScreen(int fullScreen) {
 	short desiredWidth,desiredHeight;
-	Rect  windRect;
     GDHandle   dominantGDevice;
 	
 	if (fullScreen) {
@@ -1243,11 +1244,7 @@ int ioSetFullScreen(int fullScreen) {
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
 		oldStWindow = stWindow;
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
-                GetWindowGreatestAreaDevice((WindowPtr) FrontWindow(),kWindowContentRgn,&dominantGDevice,&windRect); 
-#else
-                dominantGDevice = getDominateDevice(stWindow,&windRect);
-#endif
+		dominantGDevice = getThatDominateGDevice();
 		setFullScreenFlag(true);  //JMM Moved before to test
 		BeginFullScreen	(&gRestorableStateForScreen,
 								dominantGDevice,
