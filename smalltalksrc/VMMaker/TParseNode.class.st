@@ -39,6 +39,16 @@ TParseNode >> comment: aComment [
 	comment _ aComment 
 ]
 
+{ #category : #'as yet unclassified' }
+TParseNode >> copyTree [
+	self subclassResponsibility.
+]
+
+{ #category : #'as yet unclassified' }
+TParseNode >> emitCCodeOn: aStream level: lev generator: gen [
+	self subclassResponsibility.
+]
+
 { #category : #'emit comments' }
 TParseNode >> emitCCommentOn: aStream level: level [
 	"Emit the transferred Smalltalk comments as C comments."
