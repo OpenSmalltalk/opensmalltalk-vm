@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-03-05 06:44:50 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-30 04:50:04 by piumarta on emilia.inria.fr
  */
 
 #if !defined(__MACH__)
@@ -63,7 +63,7 @@ static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
 #if defined(__MACH__)
 
 // we have to do something special on MacOSX (surprise surprise) because:
-// - MacOSX isn't Unix98 compliant and lacks builtin iconv functions
+// - MacOSX is not Unix98 compliant and lacks builtin iconv functions
 // - the free libiconv cannot handle the canonical decomposition used in HFS+
 // ho hum dee dumb
 
@@ -89,7 +89,7 @@ static alias encodings[]=
   { "ISOLATIN1",	(void *)kCFStringEncodingISOLatin1 },
   { "LATIN1",		(void *)kCFStringEncodingISOLatin1 },
   { "ISO-8859-1",	(void *)kCFStringEncodingISOLatin1 },
-  // there are many tens of these and I can't be bothered.
+  // there are many tens of these and I cannot be bothered.
   { 0,			0 }
 };
 
@@ -151,19 +151,29 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 
 typedef char ichar_t;
 
-void *sqTextEncoding=	(void *)"MACINTOSH";	/* xxxFIXME -> "ISO-8859-15" */ 
-void *uxTextEncoding=	(void *)"ISO-8859-15";
-void *uxPathEncoding=	(void *)"UTF-8";
+#ifdef __sparc
+void *sqTextEncoding=	(void *)"mac";		/* xxxFIXME -> "ISO-8859-15" */ 
+void *uxPathEncoding=	(void *)"iso";
+void *uxTextEncoding=	(void *)"iso";
+void *uxXWinEncoding=	(void *)"iso";
 void *uxUTF8Encoding=	(void *)"UTF-8";
+#else
+void *sqTextEncoding=	(void *)"MACINTOSH";	/* xxxFIXME -> "ISO-8859-15" */ 
+void *uxPathEncoding=	(void *)"UTF-8";
+void *uxTextEncoding=	(void *)"ISO-8859-15";
 void *uxXWinEncoding=	(void *)"ISO-8859-1";
+void *uxUTF8Encoding=	(void *)"UTF-8";
+#endif
 
 void setEncoding(void **encoding, char *rawName)
 {
   char *name= strdup(rawName);	// teeny memory leak, but we don't care
   int   len= strlen(name);
   int   i;
+#ifndef __sparc
   for (i= 0;  i < len;  ++i)
     name[i]= toupper(name[i]);
+#endif
   if      (!strcmp(name, "MACROMAN"))  *encoding= "MACINTOSH";
   else if (!strcmp(name, "MAC-ROMAN")) *encoding= "MACINTOSH";
   else
