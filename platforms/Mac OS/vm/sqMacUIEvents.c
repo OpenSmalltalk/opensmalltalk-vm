@@ -6,14 +6,21 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.1 2002/02/23 10:48:10 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.2 2002/02/23 11:25:59 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *****************************************************************************/
+#if !TARGET_API_MAC_CARBON 
+#include <Power.h>
+#include <USB.h>
+#include <DeskBus.h>
+#endif
+
 #include "sq.h"
 #include "sqMacUIEvents.h"
 #include "sqMacUIMenuBar.h"
+
 
 /*** Variables -- Event Recording ***/
 #ifdef MINIMALVM
@@ -101,9 +108,7 @@ char modifierMap[256] = {
  
  
 void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command);
-void SetupKeyboard(void);    
 Boolean IsKeyDown(void);    
-void AdjustMenus(void);
 int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);

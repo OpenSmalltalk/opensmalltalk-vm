@@ -6,13 +6,15 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.1 2002/02/23 10:47:46 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.2 2002/02/23 11:25:51 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *****************************************************************************/
 #include "sqMacTime.h"
 #include "sq.h"
+
+extern Boolean  gThreadManager;
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 
@@ -24,7 +26,7 @@
     unsigned int	lowResMSecs= 0;
     #define LOW_RES_TICK_MSECS 16
 
-extern Boolean  gThreadManager;
+
 
 static pascal void MyTimerProc(QElemPtr time)
 {
@@ -64,6 +66,10 @@ int ioMicroMSecs(void)
 }
 
 #else
+#if !TARGET_API_MAC_CARBON
+    #include <OpenTransport.h>
+#endif
+
 OTTimeStamp     timeStart;
 int ioMicroMSecsExpensive(void);
 

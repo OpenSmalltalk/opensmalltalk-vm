@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.1 2002/02/23 10:48:17 johnmci Exp $
+*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.2 2002/02/23 11:26:06 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -14,6 +14,7 @@
 
 #include "sqMacUIMenuBar.h"
 #include "sqMacMain.h"
+#include "sqMacWindow.h"
 
 MenuHandle	appleMenu = nil;
 MenuHandle	editMenu = nil;
@@ -21,6 +22,7 @@ int		menuBarHeight = 20;
 RgnHandle	menuBarRegion = nil;  /* if non-nil, then menu bar has been hidden */
 MenuHandle	fileMenu = nil;
 
+ 
 #if TARGET_API_MAC_CARBON
     #define EnableMenuItemCarbon(m1,v1)  EnableMenuItem(m1,v1);
     #define DisableMenuItemCarbon(m1,v1)  DisableMenuItem(m1,v1);
@@ -58,7 +60,7 @@ void MenuBarHide(void) {
 		RectRgn(menuBarRegion, &mBarRect);
 		UnionRgn(GetGrayRgn(), menuBarRegion, GetGrayRgn());
 		PaintOne(NULL,menuBarRegion);
-		CalcVisBehind(stWindow,menuBarRegion);
+		CalcVisBehind(getSTWindow(),menuBarRegion);
 	}
 }
 

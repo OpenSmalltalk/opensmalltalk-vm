@@ -6,12 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.1 2002/02/23 10:47:40 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.2 2002/02/23 11:25:47 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *****************************************************************************/
 
+#include "sq.h" 
 #include "sqMacMemory.h"
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
@@ -23,6 +24,7 @@ unsigned long  gMaxHeapSize=512*1024*1024;
 extern unsigned char *memory;
 unsigned long	gHeapSize;
 #if !TARGET_API_MAC_CARBON
+#include <FileMapping.h>
 BackingFileID gBackingFile=0;
 FileViewID gFileViewID=0;
 #endif

@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacImageIO.c,v 1.1 2002/02/23 10:47:28 johnmci Exp $
+*   RCSID:   $Id: sqMacImageIO.c,v 1.2 2002/02/23 11:25:39 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -16,6 +16,8 @@
 #include "sqMacImageIO.h"
 #include "sqMacUIConstants.h"
 #include "sqMacWindow.h"
+#include "sqMacFileLogic.h"
+
 
 /*** Variables -- image and path names ***/
 char imageName[IMAGE_NAME_SIZE + 1];  /* full path to image file */
@@ -26,6 +28,8 @@ char documentName[DOCUMENT_NAME_SIZE + 1];  /* full path to document file */
 
 char vmPath[VMPATH_SIZE + 1];  /* full path to interpreter's directory */
 /*** VM Home Directory Path ***/
+
+squeakFileOffsetType calculateStartLocationForImage(void);
 
 int vmPathSize(void) {
 	return strlen(vmPath);

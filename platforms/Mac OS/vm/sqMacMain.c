@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.1 2002/02/23 10:47:35 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.2 2002/02/23 11:25:43 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -56,6 +56,10 @@
 *	2/14/2002  JMM fixes for updatewindow logic and drag/drop image with no file type
 */
 
+#if !TARGET_API_MAC_CARBON 
+#include <Power.h>
+#endif
+
 #include "sq.h"
 #include "sqMacUIConstants.h"
 #include "sqMacMain.h"
@@ -66,7 +70,7 @@
 #include "sqMacImageIO.h"
 #include "sqMacUIClipBoard.h"
 #include "sqMacFileLogic.h"
-
+#include "sqMacUIEvents.h"
 
 #ifdef __MPW__
 QDGlobals 		qd;

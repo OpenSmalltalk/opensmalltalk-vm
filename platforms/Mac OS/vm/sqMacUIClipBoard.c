@@ -6,12 +6,12 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIClipBoard.c,v 1.1 2002/02/23 10:47:59 johnmci Exp $
+*   RCSID:   $Id: sqMacUIClipBoard.c,v 1.2 2002/02/23 11:25:55 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *****************************************************************************/
-
+#include "sq.h"
 #include "sqMacUIClipBoard.h"
 
 int clipboardSize(void);
