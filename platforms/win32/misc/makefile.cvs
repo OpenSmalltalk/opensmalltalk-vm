@@ -57,3 +57,6 @@ update:
 
 endif
 
+export:
+	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak export -r HEAD win32-solo Cross-solo
+
