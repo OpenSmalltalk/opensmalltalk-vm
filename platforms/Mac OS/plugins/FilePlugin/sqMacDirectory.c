@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.4 2002/01/09 06:40:38 johnmci Exp $
+*   RCSID:   $Id: sqMacDirectory.c,v 1.5 2002/01/22 19:12:33 johnmci Exp $
 *
 *   NOTES: See change log below.
 * 
@@ -21,6 +21,7 @@
  3.2.1  Nov 2001 JMM build with Apple's project builder and convert to use StdCLib.
  3.2.1B5 Dec 27,2001 JMM alter mkdir def to make cw pro 5 happy
  3.2.1B6 Jan 2,2002 JMM make lookup faster
+ 3.2.2B1 Jan 18th,2002 JMM check macroman, fix issues with squeak file offset
  */
 
 #include "sq.h"
@@ -99,6 +100,8 @@ int dir_Create(char *pathString, int pathStringLength) {
         long            tokenLength;
         
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),kCFStringEncodingMacRoman,false);
+        if (filePath == nil) 
+            return false;
         sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,true);
         CFRelease(filePath);
 
@@ -182,7 +185,7 @@ int dir_Delimitor(void) {
 int dir_Lookup(char *pathString, int pathStringLength, int index,
   /* outputs: */
   char *name, int *nameLength, int *creationDate, int *modificationDate,
-  int *isDirectory, off_t *sizeIfFile) {
+  int *isDirectory, squeakFileOffsetType *sizeIfFile) {
 	/* Lookup the index-th entry of the directory with the given path, starting
 	   at the root of the file system. Set the name, name length, creation date,
 	   creation time, directory flag, and file size (if the entry is a file).
@@ -457,6 +460,8 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
         long            tokenLength;
         
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)name,strlen(name),kCFStringEncodingMacRoman,false);
+        if (filePath == nil) 
+            return __io_error;
         sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
         CFRelease(filePath);
         sillyThing2 = CFURLCreateCopyDeletingLastPathComponent(kCFAllocatorDefault,sillyThing);
