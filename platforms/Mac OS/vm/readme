@@ -1,11 +1,11 @@
-Updated July 4th 2002
+Updated July 6th 2002
 
 Building the Squeak Virtual Machine (Jan 1st 2002)
 	-- John Maloney, May 25, 2000,
 	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002,
 	   Feb 5th 2002, April 26th 2002
 	-- Changes Andrew C. Greenberg, Jan 1st 2002
-    -- Changes Jay Hardesty, July 4, 2002
+        -- Changes Jay Hardesty, July 6, 2002
 
 (Note to readers, it is possible a step was missed, so beware)
 
@@ -26,9 +26,8 @@ Overview
 
 	1.	Get the Apple Developer Tools (free)
 	2.	Get the current Sourceforge Platforms tree
-	2'.	Tweak LargeIntegersPlugin
-	3.	Get, and install, the VMMaker, and build an interpreter
-	4.	Get, and install, the Gnifier, and gnuify the interpreter
+	3.	Build an interpreter
+	4.	Get, and install, the Gnuifier, and gnuify the interpreter
 	5.	Shove some files around the buildspace
 	6.	Run ProjectBuilder and build yourself an interpreter
 	7.	Download and print your Squeak VM Developer's Certificate
@@ -51,12 +50,9 @@ Step Two: Get the current Sourceforge Platforms tree
 
 After so much mumbo-jumbo, your squeak folder should have a directory entitled platforms.
 
-Step Three: Get, and install, the VMMaker, and build an interpeter
+Step Three: Build an interpeter
 
-	A.
-	http://sumeru.stanford.EDU/tim/pooters/SqFiles/deltas/VMMaker-3-1-version3.
-cs
-	A2: Install change sets from the specialChangeSets Folder. 
+	A.  Install change sets from the specialChangeSets Folder. 
 		These are required to build a VM that has globals as a structure which improves
 		performance by 10%.
 		
@@ -107,10 +103,10 @@ Step Five: Shove and Tweak some files around the buildspace
 		3. select "Open with application"
 		4. click the box and select Stuffit Expander
 		5. go back and double-click the .hqx
-	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit'
-		(same deal as step B)
-	D.	Drag 'SqueakVMForCarbon.pbproj.sit' to the folder containing
+	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit' (same deal as step B)
+	D.	Drag 'SqueakVMForCarbon.pbproj' to the folder containing
 		the 'platforms' and 'src' folders.
+        E. 	Copy 'platforms/Mac OS/vm/sqNamedPlugins.h' to 'src/vm/sqNamedPlugins.h'
 
 Step Six: Run ProjectBuilder and build yourself an interpreter
 
@@ -159,12 +155,11 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
 		Click the one marked "Targets."
 	J.	On the left upper pane marked "Targets," select "Squeak VM Opt"
 	K.	On the left lower pane marked "Build Styles," select "Deployment"
-        L.      Add (for both targets) "Target/Build Settings/Other Compiler Flags" -DI_AM_CARBON_EVENT
-        M.      On that same page, under "Search paths" - "Headers" there is a list of directories.
+        L.      On that same page, under "Search paths" - "Headers" there is a list of directories.
                 Change the last entry, "/Volumes/Lamie/Squeak/SqueakAtSourceForge/squeak/platforms/Mac OS/vm"
                 to instead point point to the "platforms/Mac OS/vm" directory on your local machine
                 (meaning the "platforms" dir downloaded from SourceForge in Step 2.D above)
- 	L.	Click on the hammer icon at the top left to build your VM.
+ 	M*.	Click on the hammer icon at the top left to build your VM.
 		The final product should live in the src/vm/Build folder, named "Squeak VM Opt"
 
 Step Seven: Download and print your Squeak VM Developer's Certificate
