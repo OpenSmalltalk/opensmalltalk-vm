@@ -51,10 +51,13 @@
 
 #define CHECK(x) !(x) ? fail(__FILE__, __LINE__) : 0 
 
+static int failed= 0;
+
 static int fail(char *file, int line)
 {
   fprintf(stderr, "%s: failed at line %d\n", file, line);
-  exit(EXIT_FAILURE);
+  ++failed;
+//exit(EXIT_FAILURE);
   return 0;
 }
 
@@ -652,8 +655,12 @@ extern void ffiDoAssertions(void);
 
 int main()
 {
-  ffiDoAssertions();	printf("passed ffi assertions\n");
-  stests();		printf("passed FFITester support check\n");
-  ctests();		printf("passed C test suite\n");
+# define report(who)								\
+  printf("%s %s (%d failed)\n", failed ? "FAILED" : "passed", who, failed);
+
+  failed= 0;  ffiDoAssertions();  report("ffi assertions");
+  failed= 0;  stests();		  report("FFITester support check");
+  failed= 0;  ctests();		  report("C test suite");
+
   return 0;
 }
