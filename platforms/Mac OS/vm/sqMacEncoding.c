@@ -201,8 +201,10 @@ void setEncodingType (char * string) {
       gCurrentVMEncoding = kCFStringEncodingMacRoman;
       if (strcmp("UTF-8",string) == 0)
           gCurrentVMEncoding = kCFStringEncodingUTF8;
+#if TARGET_API_MAC_CARBON
       if (strcmp("ShiftJIS",string) == 0)
           gCurrentVMEncoding = kCFStringEncodingShiftJIS;
+#endif
   }
   
   char  *getEncodingType(UInt32 aType) {
@@ -210,7 +212,9 @@ void setEncodingType (char * string) {
           return (char *)&"macintosh";
       if (aType == kCFStringEncodingUTF8) 
           return (char *)&"UTF-8";
+#if TARGET_API_MAC_CARBON
       if (aType == kCFStringEncodingShiftJIS) 
           return (char *)&"ShiftJIS";
+#endif
       return (char *)&"macintosh";
   }

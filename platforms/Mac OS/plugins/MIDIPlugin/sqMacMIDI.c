@@ -5,6 +5,7 @@
     #include <QuickTime/QuickTimeMusic.h>
 #else
     #include <MacTypes.h>
+typedef struct OpaqueIdleManager*       IdleManager;
     #include <QuickTimeComponents.h>
     #include <QuickTimeMusic.h>
     #include <Strings.h>

@@ -6,7 +6,11 @@
  *
  */
 
+#if TARGET_API_MAC_CARBON
 #include <Carbon/Carbon.h>
+#else
+#define CFStringEncodings UInt32
+#endif 
 
 void getVMPathWithEncoding(char *target,UInt32 encoding);
 void SetVMPath(FSSpec *workingDirectory);
