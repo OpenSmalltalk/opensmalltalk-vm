@@ -822,14 +822,16 @@ ObjectMemory >> clone: oop [
 
 { #category : #become }
 ObjectMemory >> containOnlyOops: array1 and: array2 [ 
-	"Return true if neither array contains a small integer. You 
-	can't become: integers!"
-	| fieldOffset |
+	"Return true if neither array contains a small integer. You can't become: integers! Also check for attempt to make an object become itself which upsets the GC code"
+	| fieldOffset oop1 oop2|
 	fieldOffset _ self lastPointerOf: array1.
-	"same size as array2"
+	"we have previously checked that array1 is same size as array2 - this code may crash the system otherwise"
 	[fieldOffset >= BaseHeaderSize]
-		whileTrue: [(self isIntegerObject: (self longAt: array1 + fieldOffset)) ifTrue: [^ false].
-			(self isIntegerObject: (self longAt: array2 + fieldOffset)) ifTrue: [^ false].
+		whileTrue: [oop1 _ self longAt: array1 + fieldOffset.
+			oop2 _ self longAt: array2 + fieldOffset.
+			oop1 = oop2 ifTrue:[^false].
+			(self isIntegerObject: oop1) ifTrue: [^ false].
+			(self isIntegerObject: oop2) ifTrue: [^ false].
 			fieldOffset _ fieldOffset - 4].
 	^ true
 ]
