@@ -6,13 +6,14 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.18 2002/05/09 19:25:09 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.19 2002/08/06 21:54:26 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Feb 26th, 2002, JMM - use carbon get dominate device 
 *  Apr  17th, 2002, JMM Use accessors for VM variables.
 *  May 5th, 2002, JMM cleanup for building as NS plugin
+ 3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -281,7 +282,7 @@ void SetUpWindow(void) {
 	Rect windowBounds = {44, 8, 300, 500};
 
 #ifndef IHAVENOHEAD
-#if TARGET_API_MAC_CARBON
+#if TARGET_API_MAC_CARBON & !defined(__MWERKS__)
     if ((Ptr)CreateNewWindow != (Ptr)kUnresolvedCFragSymbolAddress)
 	CreateNewWindow(kDocumentWindowClass,
             kWindowNoConstrainAttribute+kWindowStandardDocumentAttributes
