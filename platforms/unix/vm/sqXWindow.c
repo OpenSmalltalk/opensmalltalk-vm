@@ -33,8 +33,6 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2001-07-25 23:21:22 CEST by piumarta on emilia.inria.fr
- *
  * Support for displays deeper than 8 bits contributed by: Kazuki YASUMATSU
  *	<kyasu@crl.fujixerox.co.jp> <Kazuki.Yasumatsu@fujixerox.co.jp>
  *
@@ -63,6 +61,7 @@
  */
 
 #include "sq.h"
+#include "sqaio.h"
 
 # if 0
 /* Nope, no need for these at all. TPR */
@@ -101,6 +100,7 @@
 #include <unistd.h>
 #include <errno.h>
 #include <signal.h>
+#include <fcntl.h>
 
 #ifdef HAVE_SYS_SELECT_H
 # include <sys/select.h>
@@ -148,7 +148,7 @@ char        imageName[MAXPATHLEN+1];		/* full path to image */
 static char vmPath[MAXPATHLEN+1];		/* full path to image directory */
 static char vmName[MAXPATHLEN+1];		/* full path to vm */
 
-#define DefaultHeapSize		20	/* megabytes */
+#define DefaultHeapSize		50	/* megabytes */
 
 int initialHeapSize= DefaultHeapSize * 1024 * 1024;
 
@@ -214,7 +214,6 @@ int		 completionType;	/* the type of XShmCompletionEvent */
 int		 useXshm= 0;		/* 1 if shared memory is in use */
 int		 asyncUpdate= 0;	/* 1 for asynchronous screen updates */
 # endif
-int		 noEvents= 0;		/* 1 to disable new event handling */
 int		 stDepth= 0;
 int		 stBitsPerPixel= 0;
 unsigned int	 stColors[256];
@@ -264,11 +263,15 @@ int		 withSpy= 0;
 int		 noTitle= 0;
 int		 fullScreen= 0;
 struct timeval	 startUpTime;
+int		 noEvents= 0;		/* 1 to disable new event handling */
 
 /* maximum input polling frequency */
+/* LEX -- I took this out -- see comment in ioProcessEvents() */
 #define	MAXPOLLSPERSEC	33
 
 #ifndef HEADLESS
+
+static Time lastKeystrokeTime;  /* XXX is initializing this to 0 okay?? */
 
 /* we are interested in these events...
  */
@@ -312,10 +315,6 @@ char modifierMap[16]= {
 #define MOD_META	8
 #endif   /* !HEADLESS */
 
-/* polling functions in socket/sound plugins, called from HandleEvents */
-
-void (*socketPollFunction)(int delay, int extraFd)= 0;	/* aioPollForIO */
-void (*soundPollFunction)(void)= 0;			/* auPollForIO */
 
 
 /*** Functions ***/
@@ -324,12 +323,16 @@ void (*soundPollFunction)(void)= 0;			/* auPollForIO */
 # undef ioMSecs
 #endif
 
-int  HandleEvents(void);
+#ifndef HEADLESS
+static void xDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag);
+#endif
+static int  HandleEvents(void);
+void RecordFullPathForVmName(char *localVmName);
 void RecordFullPathForImageName(char *localImageName);
 void SetUpTimers(void);
 void usage(void);
 void imageNotFound(char *imageName);
-void ParseArguments(int argc, char **argv);
+void ParseArguments(int argc, char **argv, int);
 void segv(int ignored);
 void keyBufAppend(int keystate);
 
@@ -406,7 +409,7 @@ void pluginExit();
 void pluginHandleEvent(XEvent *);
 #endif /*!HEADLESS*/
 
-int strtobkm(char *str);
+int strtobkm(const char *str);
 
 
 time_t convertToSqueakTime(time_t);	/* unix epoch -> Squeak epoch */
@@ -525,6 +528,7 @@ int openXDisplay()
     SetWindowSize();
     XMapWindow(stDisplay, stParent);
     XMapWindow(stDisplay, stWindow);
+    aioHandle(stXfd, xDescriptorHandler, NULL, AIO_RD | AIO_EX);
     isConnectedToXServer= 1;
   }
   return 0;
@@ -558,26 +562,26 @@ int disconnectXDisplay()
     XSync(stDisplay, False);
     while (HandleEvents())
       {
-        /* process all pending events */
-      }
-    XDestroyWindow(stDisplay, stWindow);
-    if (browserWindow == 0)
-      XDestroyWindow(stDisplay, stParent);
-    XCloseDisplay(stDisplay);
-  }
-  forgetXDisplay();
-  return 0;
-}
+        /* process all pending window events */
+       }
+     XDestroyWindow(stDisplay, stWindow);
+     if (browserWindow == 0)
+       XDestroyWindow(stDisplay, stParent);
+     XCloseDisplay(stDisplay);
+   }
+   forgetXDisplay();
+   return 0;
+ }
 
-#if 0
-static char *debugVisual(int x)
-{
-  switch (x)
-    {
-    case 0: return "StaticGray";
-    case 1: return "GrayScale";
-    case 2: return "StaticColor";
-    case 3: return "PseudoColor";
+ #if 0
+ static char *debugVisual(int x)
+ {
+   switch (x)
+     {
+     case 0: return "StaticGray";
+     case 1: return "GrayScale";
+     case 2: return "StaticColor";
+     case 3: return "PseudoColor";
     case 4: return "TrueColor";
     case 5: return "DirectColor";
     default: return "Invalid";
@@ -587,7 +591,8 @@ static char *debugVisual(int x)
 
 void claimSelection(void)
 {
-  XSetSelectionOwner(stDisplay, XA_PRIMARY, stWindow, CurrentTime);
+  XSetSelectionOwner(stDisplay, XA_PRIMARY, stWindow, lastKeystrokeTime);
+  XFlush(stDisplay);
   stOwnsSelection= (XGetSelectionOwner(stDisplay, XA_PRIMARY) == stWindow);
 }
 
@@ -595,20 +600,29 @@ void sendSelection(XSelectionRequestEvent *requestEv)
 {
   XSelectionEvent notifyEv;
 
-  /* this should REFUSE the selection if the target type isn't XA_STRING */
+  /* REFUSE the selection if the target type isn't XA_STRING */
+  if (requestEv->target == XA_STRING)
+    {
+      st2ux(stPrimarySelection);
+ 
+      XChangeProperty(requestEv->display,
+		      requestEv->requestor,
+		      (requestEv->property == None
+		       ? requestEv->target
+		       : requestEv->property),
+		      requestEv->target,
+		      8, PropModeReplace, stPrimarySelection,
+		      (stPrimarySelection ? strlen(stPrimarySelection) : 0));
 
-  st2ux(stPrimarySelection);
-
-  XChangeProperty(requestEv->display,
-		  requestEv->requestor,
-		  (requestEv->property == None
-		     ? requestEv->target
-		     : requestEv->property),
-		  requestEv->target,
-		  8, PropModeReplace, stPrimarySelection,
-		  (stPrimarySelection ? strlen(stPrimarySelection) : 0));
-
-  ux2st(stPrimarySelection);
+      ux2st(stPrimarySelection);
+      notifyEv.property= (requestEv->property == None)
+	? requestEv->target
+	: requestEv->property;
+    }
+  else
+    {
+      notifyEv.property= None;
+    }
 
   notifyEv.type= SelectionNotify;
   notifyEv.display= requestEv->display;
@@ -616,9 +630,6 @@ void sendSelection(XSelectionRequestEvent *requestEv)
   notifyEv.selection= requestEv->selection;
   notifyEv.target= requestEv->target;
   notifyEv.time= requestEv->time;
-  notifyEv.property= (requestEv->property == None)
-    ? requestEv->target
-    : requestEv->property;
 
   XSendEvent(requestEv->display, requestEv->requestor,
 	     False, 0, (XEvent *)&notifyEv);
@@ -679,6 +690,7 @@ char *getSelection(void)
 	    noteWindowChange();
 	  }
 	  break;
+	  
 
         /* this is necessary so that we can supply our own selection when we
 	   are the requestor -- this could (should) be optimised to return the
@@ -867,6 +879,13 @@ static sqInputEvent *allocateInputEvent(int eventType)
 
 #ifndef HEADLESS
 
+static void signalInputEvent() 
+{
+  if(inputEventSemaIndex > 0)
+    signalSemaphoreWithIndex(inputEventSemaIndex);
+}
+
+
 static void recordMouseEvent(XButtonEvent *xevt, int pressFlag)
 {
   sqMouseEvent *evt= allocateMouseEvent();
@@ -874,8 +893,9 @@ static void recordMouseEvent(XButtonEvent *xevt, int pressFlag)
   evt->y= mousePosition.y;
   evt->buttons= buttonState & 0x7;
   evt->modifiers= (buttonState >> 3);
-  evt->reserved1=
-    evt->reserved2= 0;
+  evt->reserved1= 0;
+  evt->reserved2= 0;
+  signalInputEvent();
 }
 
 static void recordKeyboardEvent(XKeyEvent *xevt, int pressCode)
@@ -886,6 +906,7 @@ static void recordKeyboardEvent(XKeyEvent *xevt, int pressCode)
   unsigned char buf[32];
   int nConv= 0;
   KeySym symbolic;
+
   nConv= XLookupString(xevt, buf, sizeof(buf), &symbolic, 0);
   charCode= buf[0];
   if (charCode == 127)
@@ -912,23 +933,18 @@ static void recordKeyboardEvent(XKeyEvent *xevt, int pressCode)
 	evt->reserved2=
 	evt->reserved3= 0;
     }
+  signalInputEvent();
 }
 
 #endif /* !HEADLESS */
 
 int HandleEvents(void)
 {
-#ifndef HEADLESS
-  XEvent theEvent;
-#endif
-  /* quick checks for asynchronous socket/sound i/o */
-  if (socketPollFunction != 0)
-    socketPollFunction(0, 0);
-  if (soundPollFunction != 0)
-    soundPollFunction();
 #ifdef HEADLESS
   return 0;
 #else /*!HEADLESS*/
+  XEvent theEvent;
+  
   if (!isConnectedToXServer || !XPending(stDisplay))
     return 0;
 
@@ -998,6 +1014,7 @@ int HandleEvents(void)
 	if (asyncUpdate)
 	  {
 	    /* wait for pending updates */
+	       /* XXX Lex Spoon has observed an infinite recursion here; it should be investigated further.... */
 	    while (completions) HandleEvents();
 	  }
 #      endif
@@ -1061,6 +1078,10 @@ int HandleEvents(void)
       }
       break;
 
+    case MappingNotify:
+      XRefreshKeyboardMapping((XMappingEvent *) &theEvent);
+      break;
+	  
 #  ifdef USE_XSHM
     default:
       if (theEvent.type == completionType) --completions;
@@ -1072,7 +1093,18 @@ int HandleEvents(void)
 }
 
 
+
 #ifndef HEADLESS
+
+/* called via the aio module */
+static void xDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag)
+{
+  HandleEvents();
+}
+
+
+
+
 void getMaskbit(unsigned long ul, int *nmask, int *shift)
 {
   int i;
@@ -1427,19 +1459,6 @@ void SetUpWindow(char *displayName)
 
     valuemask= CWEventMask | CWBackingStore | CWBorderPixel | CWBackPixel;
 
-    if (browserWindow != 0)
-      stParent= browserWindow;
-    else
-      stParent= XCreateWindow(stDisplay,
-			      DefaultRootWindow(stDisplay),
-			      windowBounds.x, windowBounds.y,
-			      windowBounds.width, windowBounds.height,
-			      0,
-			      stDepth, CopyFromParent, stVisual,
-			      CWEventMask, &attributes);
-
-    attributes.event_mask= EVENTMASK;
-
     /* A visual that is not DefaultVisual requires its own color map.
        If visual is PseudoColor, the new color map is made elsewhere. */
     if ((stVisual != DefaultVisual(stDisplay, DefaultScreen(stDisplay))) &&
@@ -1452,6 +1471,19 @@ void SetUpWindow(char *displayName)
 	attributes.colormap= stColormap;
 	valuemask|= CWColormap;
       }
+
+    if (browserWindow != 0)
+      stParent= browserWindow;
+    else
+      stParent= XCreateWindow(stDisplay,
+			      DefaultRootWindow(stDisplay),
+			      windowBounds.x, windowBounds.y,
+			      windowBounds.width, windowBounds.height,
+			      0,
+			      stDepth, CopyFromParent, stVisual,
+			      CWEventMask, &attributes);
+
+    attributes.event_mask= EVENTMASK;
 
     stWindow= XCreateWindow(stDisplay, stParent,
 			    0, 0,
@@ -1622,6 +1654,7 @@ void recordKeystroke(XKeyEvent *theEvent)
   int nConv= 0;
   KeySym symbolic;
 
+  lastKeystrokeTime = theEvent->time;
   nConv= XLookupString(theEvent, buf, sizeof(buf), &symbolic, 0);
 
   charCode= buf[0];
@@ -1849,21 +1882,7 @@ int ioMicroMSecs(void)
 
 int ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
-  /* sleep in select() for immediate response to socket i/o */
-  if (socketPollFunction != 0)
-#ifdef HEADLESS
-    socketPollFunction(microSeconds, 0);
-#else
-    socketPollFunction(microSeconds, (isConnectedToXServer ? stXfd : 0));
-#endif
-  else
-    {
-      /* can't rely on BSD usleep */
-      struct timeval tv;
-      tv.tv_sec=  microSeconds / 1000000;
-      tv.tv_usec= microSeconds % 1000000;
-      select(0, 0, 0, 0, &tv);
-    }
+  aioPoll(microSeconds);
   return microSeconds;
 }
 
@@ -1899,21 +1918,13 @@ int ioPeekKeystroke(void)
 }
 
 
-/* this should be rewritten to use SIGIO and/or the interval timers */
 int ioProcessEvents(void)
 {
-  static unsigned long nextPollTick= 0;
-
-  if ((unsigned long)ioLowResMSecs() > nextPollTick)
-    {
-      /* time to process events! */
-      while (HandleEvents())
-	{
-	  /* process all pending events */
-	}
-    /* wait a while before trying again */
-      nextPollTick= ioLowResMSecs() + (1000 / MAXPOLLSPERSEC);
-    }
+  /* This code used to delay before processing events, but that
+     behavior is pretty well taken care of if you are in morphic.
+     Plus, aioPoll() is just a select() call, anyway -- it should be
+     pretty fast if there are no events.  */
+  aioPoll(0);
   return 0;
 }
 
@@ -2215,7 +2226,7 @@ static void *stMalloc(size_t lbs)
 	      result= XShmAttach(stDisplay, &stShmInfo);
 	      XSync(stDisplay, False);
 	      XSetErrorHandler(prev);
-	      if (result == 0)
+	      if (result)
 		/* success */
 		return stShmInfo.shmaddr;
 	    }
@@ -3519,28 +3530,31 @@ int ioDisablePowerManager(int disableIfNonZero)
   return true;
 }
 
+/*** VM & Image File Naming ***/
 
-/*** Image File Naming ***/
 
-
-void RecordFullPathForImageName(char *localImageName)
+/* copy src filename to target, if src is not an absolute filename,
+ * prepend the cwd to make target absolute */
+void pathCopyAbs(char *target, const char *src, size_t targetSize)
 {
-  struct stat s;
-  /* get canonical path to image */
-  if ((stat(localImageName, &s) == -1) || (realpath(localImageName, vmPath) == 0))
-    {
-      if (localImageName[0] == '/')
-	{
-	  strcpy(vmPath, localImageName);
-	}
-      else
-	{
-	  getcwd(vmPath, sizeof(vmPath));
-	  strcat(vmPath, "/");
-	  strcat(vmPath, localImageName);
-	}
-    }
-  strcpy(imageName, vmPath);
+  if (src[0] == '/')
+  {
+    strcpy(target, src);
+  }
+  else
+  {
+    getcwd(target, targetSize);
+    strcat(target, "/");
+    strcat(target, src);
+  }
+}
+
+void RecordFullPathForVmName(char *localVmName)
+{
+  /* get canonical path to vm */
+  if (realpath(localVmName, vmPath) == 0)
+    pathCopyAbs(vmPath, localVmName, sizeof(vmPath));
+
   /* truncate vmPath to dirname */
   {
     int i= 0;
@@ -3551,8 +3565,14 @@ void RecordFullPathForImageName(char *localImageName)
 	  return;
 	}
   }
-  /* this might just work in an emergency... */
-  strcpy(imageName, vmPath);
+}
+
+void RecordFullPathForImageName(char *localImageName)
+{
+  struct stat s;
+  /* get canonical path to image */
+  if ((stat(localImageName, &s) == -1) || (realpath(localImageName, imageName) == 0))
+    pathCopyAbs(imageName, localImageName, sizeof(imageName));
 }
 
 int imageNameSize(void)
@@ -3899,13 +3919,19 @@ void usage()
 #ifndef HEADLESS
   printf("  -noevents            disable event-driven input support\n");
   printf("  -notitle             disable the Squeak window title bar\n");
-#endif
   printf("  -secure              enable file sandbox\n");
+#endif
   printf("  -spy                 enable the system spy (jit)\n");
   printf("  -version             print version information, then exit\n");
 #ifndef HEADLESS
   printf("  -xasync              don't serialize display updates\n");
   printf("  -xshm                use X shared memory extension\n");
+#endif
+#if 0  /* on second thought, it makes absolutely no sense for someone
+	  to use -args_in_header from the command line.  This is left
+	  here for documentation, but it doesn't really need to be
+	  printed out by -help */
+  printf("  -args_in_header      read NUL-separated arguments from image header\n");
 #endif
   printf("\nNotes:\n");
   printf("  <imageName> defaults to `Squeak"SQ_VERSION".image'.\n");
@@ -3943,17 +3969,29 @@ void versionInfo(void)
 {
   extern int vm_serial;
   extern char *vm_date, *cc_version, *ux_version;
+  
+  fprintf(stderr, "%s %s #%d",
+	  VM_HOST, SQ_VERSION, vm_serial);
+  
+    
+  fprintf(stderr, " ["
+	  AUDIO_INTERFACE " audio"
+#if defined(USE_XSHM)
+	  ", xshm"
+#endif
+#if defined(USE_MEMORY_MMAP)
+	  ", memory-mmap"
+#endif
+	  "] ");
+  
 
-  fprintf(stderr, "%s %s #%d %s%s %s\n%s\n",
-	  VM_HOST, SQ_VERSION, vm_serial,
-# if defined(USE_XSHM)
-	  "XShm ",
-# else
-	  " ",
-# endif
-	  vm_date, cc_version, ux_version);
+  fprintf(stderr, "%s %s\n",  vm_date, cc_version);
+  fprintf(stderr,"%s\n", ux_version);
+
+
   fprintf(stderr, "default plugin location: %s/%s*.so\n",
 	  SQ_LIBDIR, SQ_MODULE_PREFIX);
+  
   exit(0);
 }
 
@@ -3965,7 +4003,7 @@ void outOfMemory(void)
 }
 
 
-int strtobkm(char *str)
+int strtobkm(const char *str)
 {
   char *suffix;
   int value= strtol(str, &suffix, 10);
@@ -4002,21 +4040,30 @@ void ParseEnvironment(void)
   if (getenv("SQUEAK_NOTITLE"))		noTitle= 1;
   if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;
   if (getenv("SQUEAK_NOEVENTS"))	noEvents= 1;
+  if (getenv("SQUEAK_SECURE"))		secure= 1;
 #if defined(USE_XSHM)
   if (getenv("SQUEAK_XSHM"))		useXshm= 1;
   if (getenv("SQUEAK_XASYNC"))		asyncUpdate= 1;
 #endif
 #endif
-  if (getenv("SQUEAK_SECURE"))		secure= 1;
 }
 
 
-void ParseArguments(int argc, char *argv[])
+/* defined below */
+static void readHeaderOptions(const char *image_filename);
+
+
+void ParseArguments(int argc, char *argv[], int parsing_header_args)
 {
 # define skipArg()	(--argc, argv++)
 # define saveArg()	(vmArgVec[vmArgCnt++]= *skipArg())
+  int args_in_header=0;   /* whether to read arguments from the image header */
+  
 
-  saveArg();		/* vm name */
+  /* vm name */
+  if(vmArgCnt == 0)
+    saveArg();
+  
 
   while ((argc > 0) && (**argv == '-'))	/* more options to parse */
     {
@@ -4042,9 +4089,19 @@ void ParseArguments(int argc, char *argv[])
       else if (!strcmp(arg, "-spy"))		withSpy= 1;
 #    ifndef HEADLESS
       else if (!strcmp(arg, "-fullscreen"))	fullScreen= 1;
-#    endif
       else if (!strcmp(arg, "-secure"))		secure= true;
+#    endif
       else if (!strcmp(arg, "-version"))	versionInfo();
+      else if (!strcmp(arg, "-args_in_header")) {
+	args_in_header=1;
+	if(argc > 0) {
+	  /* record the image name */
+	  strcpy(shortImageName, *skipArg());
+	}
+	/* read the arguments */
+	if(!parsing_header_args)   /* but don't recurse */
+	  readHeaderOptions(shortImageName);
+      }
       else
 	{
 	  /* option requires an argument */
@@ -4055,7 +4112,11 @@ void ParseArguments(int argc, char *argv[])
 	      if (asmAlign <  1) asmAlign= 1;
 	      if (asmAlign > 16) asmAlign= 16;
 	    }
-	  else if (!strcmp(arg, "-memory"))	initialHeapSize= strtobkm(saveArg());
+	  else if (!strcmp(arg, "-memory")) {
+	    const char *arg = saveArg();
+	    if (arg)
+	      initialHeapSize= strtobkm(arg);
+	  }
 #        if !defined(HEADLESS)
 	  else if (!strcmp(arg, "-display"))	displayName= saveArg();
 	  else if (!strcmp(arg, "-browserWindow"))
@@ -4080,18 +4141,96 @@ void ParseArguments(int argc, char *argv[])
 	skipArg();
       else
 	{
-	  strcpy(shortImageName, saveArg());
-	  if (0 == strstr(shortImageName, ".image"))
-	    strcat(shortImageName, ".image");
+	  /* look for an image name */
+	  if(! args_in_header) {  /* if args_in_header, then the image name
+				     will have already been read  */
+	    if(parsing_header_args)
+	      skipArg();
+	    else {
+	      strcpy(shortImageName, saveArg());
+	      if (0 == strstr(shortImageName, ".image"))
+		strcat(shortImageName, ".image");
+	    }
+	  }
 	}
     }
+  
   /* save remaining arguments as Squeak arguments */
   while (argc > 0)
     squeakArgVec[squeakArgCnt++]= *skipArg();
 
+  
 # undef saveArg
 # undef skipArg
 }
+
+
+/* read options from the header of the specified image */
+#define HEADER_SIZE 512
+static void readHeaderOptions(const char *image_filename) 
+{
+  int fd;
+  char *header;
+  int header_argc=0;
+  char *header_argv[512];
+  int header_pos;   /* position in the header as we read from it */
+
+  
+  /* allocate the header on the heap, so that strings within it can be
+     stored by ParseArguments later */
+  header = malloc(HEADER_SIZE+1);
+  if(header == NULL) {
+    error("Out of Memory\n");
+  }
+  
+
+  /* read the header */
+  fd = open(image_filename, O_RDONLY);
+  if(fd < 0) return;
+  if(read(fd, header, HEADER_SIZE) < HEADER_SIZE) {
+    free(header);
+    close(fd);
+    return;
+  }
+  header[HEADER_SIZE] = '\0';  /* make sure header is a valid C string */
+  close(fd);
+  
+  
+
+  if(header[0] != '#' || header[1] != '!') {
+    /* not a Unix image file */
+    free(header);
+    return;
+  }
+  
+  
+  /* find the newline which marks the beginning of the options */
+  header_pos = 0;
+  while(header_pos < HEADER_SIZE && header[header_pos] != '\n')
+    header_pos += 1;
+  header_pos += 1;   /* skip the newline */
+
+  /* read in options, one at a time; we are finished when either the
+     header is exhausted, or a NUL character is seen at the beginning
+     of an option */
+  while(header_pos < HEADER_SIZE && header[header_pos] != '\0') {
+    /* record one option */
+    header_argv[header_argc] = &header[header_pos];
+    header_argc += 1;
+
+    /* find the begining of the next option */
+    while(header_pos < HEADER_SIZE && header[header_pos] != '\0')
+      header_pos += 1;
+
+    /* skip over the '\0' */
+    header_pos += 1;
+  }
+
+
+  /* got all options -- process them */
+  ParseArguments(header_argc, header_argv, 1);
+}
+
 
 
 
@@ -4103,7 +4242,7 @@ void ParseArguments(int argc, char *argv[])
 
   /*-- EXPERIMENTAL -- read [and inflate] an internal image file --*/
 
-  int sqImageFileClose(FILE *f)
+int sqImageFileClose(FILE *f)
   {
     int err= 0;
     if (f != 0)
@@ -4289,8 +4428,10 @@ int main(int argc, char **argv, char **envp)
     headless= 1;
 #endif
   ParseEnvironment();
-  ParseArguments(argc, argv);
+  ParseArguments(argc, argv, 0);
   SetUpTimers();
+  aioInitialize();
+  
 
 # if !defined(HEADLESS) && defined(USE_XSHM)
 #   ifdef AT_EXIT
@@ -4334,6 +4475,7 @@ int main(int argc, char **argv, char **envp)
 	else
 	  RecordFullPathForImageName(shortImageName); /* full image path */
       }
+    RecordFullPathForVmName(argv[0]); /* full vm path */
     readImageFromFileHeapSize(f, initialHeapSize);
     sqImageFileClose(f);
   }
