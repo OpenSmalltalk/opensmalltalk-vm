@@ -193,6 +193,12 @@ Class {
 }
 
 { #category : #accessing }
+ObjectMemory class >> baseHeaderSize [
+"To support SmartSyntaxPluginCodeGenerator"
+	^BaseHeaderSize
+]
+
+{ #category : #accessing }
 ObjectMemory class >> bytesPerWord [
 	"Answer the width of an object pointer, in bytes."
 

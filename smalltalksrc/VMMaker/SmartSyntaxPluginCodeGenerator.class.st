@@ -599,7 +599,9 @@ SmartSyntaxPluginCodeGenerator >> generateCPtrAsOop: aNode on: aStream indent: a
 
 	aStream nextPutAll: '((sqInt)(long)('.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ') - sizeof(sqInt))'.
+	aStream nextPutAll: ') - ';
+		nextPutAll: ObjectMemory baseHeaderSize;
+		nextPut: $'.
 ]
 
 { #category : #'translating builtins' }
