@@ -10,9 +10,9 @@
 export DH_COMPAT=3
 
 
-# This is the Squeak version we are compiling
-# It is only available once configure has been run!
-version=$(shell if [ -f  build-oss/version ]; then cat build-oss/version; else echo noversionyet; fi)
+# This is the Squeak version we are compiling.  It's a hack, but
+# what the heck.
+version=$(shell grep AC_INIT  platforms/unix/misc/configure.ac  | cut -d ',' -f 2 | tr -dc '0-9.\-')
 
 configure: configure-stamp
 configure-stamp:
@@ -122,4 +122,11 @@ binary-arch: build install
 	dh_builddeb -a
 
 binary: binary-indep binary-arch
-.PHONY: build clean binary-indep binary-arch binary install configure
+
+
+# build a new orig.tar.gz file
+origtgz: clean
+	cd ..; tar cfvz squeak_$(version).orig.tar.gz squeak-$(shell echo $(version) | tr - . )/{platforms/unix,platforms/Cross,src,debian}
+
+
+.PHONY: build clean binary-indep binary-arch binary install configure origtgz
