@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.5 2003/09/02 17:53:37 johnmci Exp $
+*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.6 2004/09/22 18:53:17 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -35,6 +35,7 @@ MenuHandle	fileMenu = nil;
 
 void MenuBarHide(void) {
  	if (menuBarRegion != nil) return;  /* saved state, so menu bar is already hidden */
+	if (!(getThatDominateGDevice() == GetMainDevice())) return;  /*Do not did if main window on secondary screen */
     menuBarRegion = (RgnHandle) 1;
     ShowMenuBar();
     HideMenuBar();
