@@ -181,7 +181,7 @@ AC_MSG_NOTICE([using audio interface: $with_audio])
 AC_DEFINE_UNQUOTED(AUDIO_INTERFACE, "$with_audio")
 
 
-AUDIO_CDEFINE=`echo USE_AUDIO_$with_audio | tr '[a-z]' '[A-Z]'`
+AUDIO_CDEFINE=`echo USE_AUDIO_$with_audio | tr '[[:lower:]]' '[[:upper:]]'`
 AC_DEFINE_UNQUOTED($AUDIO_CDEFINE)
 
 
