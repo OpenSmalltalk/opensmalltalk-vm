@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c,v 1.5 2002/09/05 19:33:54 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Intel.c,v 1.6 2003/03/08 21:06:15 andreasraab Exp $
 *
 *   NOTES:
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -379,44 +379,59 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   SetCurrentDirectory(vmPath);
   /* print the above information */
   f = fopen("crash.dmp","a");
-  if(f)
-    {  time_t crashTime = time(NULL);
-       fprintf(f,"---------------------------------------------------------------------\n");
-	   fprintf(f,"%s\n", ctime(&crashTime));
-	   /* Print the exception code */
-       fprintf(f,"Exception code: %08X\nException addr: %08X\n",
-			     exp->ExceptionRecord->ExceptionCode,
-				 exp->ExceptionRecord->ExceptionAddress);
-	   if(exp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
-		   /* For access violations print what actually happened */
-		   fprintf(f,"Access violation (%s) at %08X\n",
-			   (exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
-			   exp->ExceptionRecord->ExceptionInformation[1]);
-	   }
-	   fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
-		   exp->ContextRecord->Eax,
-		   exp->ContextRecord->Ebx,
-		   exp->ContextRecord->Ecx,
-		   exp->ContextRecord->Edx);
-	   fprintf(f,"ESI:%08X\tEDI:%08X\tEBP:%08X\tESP:%08X\n",
-		   exp->ContextRecord->Esi,
-		   exp->ContextRecord->Edi,
-		   exp->ContextRecord->Ebp,
-		   exp->ContextRecord->Esp);
-	   fprintf(f,"EIP:%08X\tEFL:%08X\n",
-		   exp->ContextRecord->Eip,
-		   exp->ContextRecord->EFlags);
-	   fprintf(f,"FP Control: %08X\nFP Status:  %08X\nFP Tag:     %08X\n",
-		   exp->ContextRecord->FloatSave.ControlWord,
-		   exp->ContextRecord->FloatSave.StatusWord,
-		   exp->ContextRecord->FloatSave.TagWord);
-       fprintf(f,"\n"
-                 "Current byte code: %d\n"
-                 "Primitive index: %d\n"
-                 "Stack dump follows:\n\n",
-                 byteCode,
-                 methodPrimitiveIndex());
+  if(f){  
+    time_t crashTime = time(NULL);
+    fprintf(f,"---------------------------------------------------------------------\n");
+    fprintf(f,"%s\n", ctime(&crashTime));
+    /* Print the exception code */
+    fprintf(f,"Exception code: %08X\nException addr: %08X\n",
+	    exp->ExceptionRecord->ExceptionCode,
+	    exp->ExceptionRecord->ExceptionAddress);
+    if(exp->ExceptionRecord->ExceptionCode == EXCEPTION_ACCESS_VIOLATION) {
+      /* For access violations print what actually happened */
+      fprintf(f,"Access violation (%s) at %08X\n",
+	      (exp->ExceptionRecord->ExceptionInformation[0] ? "write access" : "read access"),
+	      exp->ExceptionRecord->ExceptionInformation[1]);
     }
+    fprintf(f,"EAX:%08X\tEBX:%08X\tECX:%08X\tEDX:%08X\n",
+	    exp->ContextRecord->Eax,
+	    exp->ContextRecord->Ebx,
+	    exp->ContextRecord->Ecx,
+	    exp->ContextRecord->Edx);
+    fprintf(f,"ESI:%08X\tEDI:%08X\tEBP:%08X\tESP:%08X\n",
+	    exp->ContextRecord->Esi,
+	    exp->ContextRecord->Edi,
+	    exp->ContextRecord->Ebp,
+	    exp->ContextRecord->Esp);
+    fprintf(f,"EIP:%08X\tEFL:%08X\n",
+	    exp->ContextRecord->Eip,
+	    exp->ContextRecord->EFlags);
+    fprintf(f,"FP Control: %08X\nFP Status:  %08X\nFP Tag:     %08X\n",
+	    exp->ContextRecord->FloatSave.ControlWord,
+	    exp->ContextRecord->FloatSave.StatusWord,
+	    exp->ContextRecord->FloatSave.TagWord);
+    /* print version information */
+    fprintf(f,"VM Version: %s\n", SQUEAK_VM_VERSION);
+    fflush(f);
+    fprintf(f,"\n"
+	    "Current byte code: %d\n"
+	    "Primitive index: %d\n",
+	    byteCode,
+	    methodPrimitiveIndex());
+    fflush(f);
+    /* print loaded plugins */
+    fprintf(f,"\nLoaded plugins:\n");
+    {
+      int index = 1;
+      char *pluginName;
+      while( (pluginName = ioListLoadedModule(index)) != NULL) {
+	fprintf(f,"\t%s\n", pluginName);
+	fflush(f);
+	index++;
+      }
+    }
+    fprintf(f, "\n\nStack dump:\n\n");
+  }
   fflush(f);
 
   /* print the caller's stack twice (to stdout and "crash.dmp")*/
@@ -599,6 +614,7 @@ int sqMain(char *lpCmdLine, int nCmdShow)
   int virtualMemory;
 
   LoadPreferences();
+
   /* parse command line args */
   if(!parseArguments(strdup(GetCommandLine()), args))
     return printUsage(1);
@@ -669,7 +685,6 @@ int sqMain(char *lpCmdLine, int nCmdShow)
   SetupKeymap();
   SetupWindows();
   SetupPixmaps();
-  SetupPrinter();
   SetupService95();
   SetupTimer();
 
