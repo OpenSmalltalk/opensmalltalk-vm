@@ -4,5 +4,5 @@ portions of the code already generated.  Details on the process are at:
 
     http://minnow.cc.gatech.edu/squeak/2173
 
-After following the instructions on that page -- setting all plugins
-to "internal" -- the "src" directory was renamed and tar-ed.
+This package contains source code from the above link, with all
+plugins generated internally.
