@@ -2,7 +2,7 @@
 # 
 # Process this file with autoconf to produce a configure script
 
-#   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
 #     as listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -37,11 +37,11 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-08-23 13:28:31 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-31 20:15:06 by piumarta on emilia.inria.fr
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,6,beta6, 3,6b,5395)
+AC_VM_VERSION(3,6,beta8, 3,6b,5402)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
@@ -240,12 +240,16 @@ AC_C_DOUBLE_ORDER
 case $host_os in
   darwin*)
     AC_DEFINE(DARWIN,[1])
-    CFLAGS="-no-cpp-precomp $CFLAGS"
+#    CFLAGS="-no-cpp-precomp $CFLAGS"
     with_npsqueak=no
+    VM_APP_ICONS="${imgdir}/SqueakVM.icns"
     ;;
   *)
+    VM_APP_ICONS=""
     ;;
 esac
+
+AC_SUBST(VM_APP_ICONS)
 
 # Checks for browser support
 
@@ -295,10 +299,12 @@ AC_SUBST_FILE(make_prg)
 Makefile_install=${cfgdir}/Makefile.install
 Makefile_dist=${topdir}/util/Makefile.dist
 Makefile_rpm=${topdir}/util/Makefile.rpm
+Makefile_deb=${topdir}/util/Makefile.deb
 
 AC_SUBST_FILE(Makefile_install)
 AC_SUBST_FILE(Makefile_dist)
 AC_SUBST_FILE(Makefile_rpm)
+AC_SUBST_FILE(Makefile_deb)
 
 # Configure VM modules xxx MAKE INTERNAL WORK
 
