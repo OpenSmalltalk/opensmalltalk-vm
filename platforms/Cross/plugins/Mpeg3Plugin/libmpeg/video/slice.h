@@ -73,7 +73,7 @@ typedef struct
 	} \
 }
 
-extern inline unsigned int mpeg3slice_getbit(mpeg3_slice_buffer_t *buffer)
+static inline unsigned int mpeg3slice_getbit(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size)
 		return (buffer->bits >> (--buffer->bits_size)) & 0x1;
@@ -86,7 +86,7 @@ extern inline unsigned int mpeg3slice_getbit(mpeg3_slice_buffer_t *buffer)
 	}
 }
 
-extern inline unsigned int mpeg3slice_getbits2(mpeg3_slice_buffer_t *buffer)
+static inline unsigned int mpeg3slice_getbits2(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 2)
 		return (buffer->bits >> (buffer->bits_size -= 2)) & 0x3;
@@ -100,7 +100,7 @@ extern inline unsigned int mpeg3slice_getbits2(mpeg3_slice_buffer_t *buffer)
 	}
 }
 
-extern inline unsigned int mpeg3slice_getbyte(mpeg3_slice_buffer_t *buffer)
+static inline unsigned int mpeg3slice_getbyte(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 8)
 		return (buffer->bits >> (buffer->bits_size -= 8)) & 0xff;
@@ -114,14 +114,14 @@ extern inline unsigned int mpeg3slice_getbyte(mpeg3_slice_buffer_t *buffer)
 }
 
 
-extern inline unsigned int mpeg3slice_getbits(mpeg3_slice_buffer_t *slice_buffer, int bits)
+static inline unsigned int mpeg3slice_getbits(mpeg3_slice_buffer_t *slice_buffer, int bits)
 {
 	if(bits == 1) return mpeg3slice_getbit(slice_buffer);
 	mpeg3slice_fillbits(slice_buffer, bits);
 	return (slice_buffer->bits >> (slice_buffer->bits_size -= bits)) & (0xffffffff >> (32 - bits));
 }
 
-extern inline unsigned int mpeg3slice_showbits16(mpeg3_slice_buffer_t *buffer)
+static inline unsigned int mpeg3slice_showbits16(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 16)
 		return (buffer->bits >> (buffer->bits_size - 16)) & 0xffff;
@@ -136,7 +136,7 @@ extern inline unsigned int mpeg3slice_showbits16(mpeg3_slice_buffer_t *buffer)
 	}
 }
 
-extern inline unsigned int mpeg3slice_showbits9(mpeg3_slice_buffer_t *buffer)
+static inline unsigned int mpeg3slice_showbits9(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 9)
 		return (buffer->bits >> (buffer->bits_size - 9)) & 0x1ff;
@@ -151,7 +151,7 @@ extern inline unsigned int mpeg3slice_showbits9(mpeg3_slice_buffer_t *buffer)
 	}
 }
 
-extern inline unsigned int mpeg3slice_showbits5(mpeg3_slice_buffer_t *buffer)
+static inline unsigned int mpeg3slice_showbits5(mpeg3_slice_buffer_t *buffer)
 {
 	if(buffer->bits_size >= 5)
 		return (buffer->bits >> (buffer->bits_size - 5)) & 0x1f;
@@ -165,7 +165,7 @@ extern inline unsigned int mpeg3slice_showbits5(mpeg3_slice_buffer_t *buffer)
 	}
 }
 
-extern inline unsigned int mpeg3slice_showbits(mpeg3_slice_buffer_t *slice_buffer, int bits)
+static inline unsigned int mpeg3slice_showbits(mpeg3_slice_buffer_t *slice_buffer, int bits)
 {
 	mpeg3slice_fillbits(slice_buffer, bits);
 	return (slice_buffer->bits >> (slice_buffer->bits_size - bits)) & (0xffffffff >> (32 - bits));
