@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.6 2002/05/06 10:36:25 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.7 2002/05/11 17:09:03 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.6 2002/05/06 10:36:25 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.7 2002/05/11 17:09:03 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -2549,28 +2549,37 @@ SetupFilesAndPath()
 /* SqueakImageLength(): 
    Return the length of the image if it is a valid Squeak image file.
    Otherwise return 0. */
-DWORD SqueakImageLength(TCHAR *fileName)
-{ DWORD dwRead, dwSize, magic = 0;
+DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
+  DWORD dwRead, dwSize, magic = 0;
+  /* get the file size */
+  dwSize = GetFileSize(hFile, NULL);
+  /* seek to start */
+  if(SetFilePointer(hFile, 0, NULL, FILE_BEGIN) != 0) return 0;
+  /* read magic number */
+  if(!ReadFile(hFile, &magic, 4, &dwRead, NULL)) return 0;
+  /* see if it matches */
+  if(readableFormat(magic) || readableFormat(byteSwapped(magic))) return dwSize;
+  /* skip possible 512 byte header */
+  dwSize -= 512;
+  if(SetFilePointer(hFile, 512, NULL, FILE_BEGIN) != 512) return 0;
+  /* read magic number */
+  if(!ReadFile(hFile, &magic, 4, &dwRead, NULL)) return 0;
+  /* see if it matches */
+  if(readableFormat(magic) || readableFormat(byteSwapped(magic))) return dwSize;
+  return 0;
+}
+
+DWORD SqueakImageLength(TCHAR *fileName) {
+  DWORD dwSize;
   HANDLE hFile;
 
   /* open image file */
   hFile = CreateFile(fileName, GENERIC_READ, FILE_SHARE_READ, 
                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
-  if(hFile == INVALID_HANDLE_VALUE) 
-    return 0;
-  /* read magic number */
-  if(!ReadFile(hFile, &magic, 4, &dwRead, NULL))
-    {
-      CloseHandle(hFile);
-      return 0;
-    }
-  /* get the image's size */
-  dwSize = GetFileSize(hFile, NULL);
+  if(hFile == INVALID_HANDLE_VALUE) return 0;
+  dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
-  if(!readableFormat(magic) && !readableFormat(byteSwapped(magic)))
-    return 0;
-  else
-    return dwSize;
+  return dwSize;
 }
 
 /****************************************************************************/

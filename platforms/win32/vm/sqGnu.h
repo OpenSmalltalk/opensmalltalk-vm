@@ -50,7 +50,8 @@
     &&_230, &&_231, &&_232, &&_233, &&_234, &&_235, &&_236, &&_237, &&_238, &&_239,\
     &&_240, &&_241, &&_242, &&_243, &&_244, &&_245, &&_246, &&_247, &&_248, &&_249,\
     &&_250, &&_251, &&_252, &&_253, &&_254, &&_255\
-  }
+  };
+/*  register void **jumpTablePtr JP_REG = jumpTable; */
 
 #define PRIM_TABLE\
   static void *jumpTable[700] = {\
@@ -151,6 +152,7 @@
 # define IP_REG asm("%esi")
 # define SP_REG asm("%edi")
 # define CB_REG asm("%ebx")
+//# define JP_REG asm("%ebx")
 #endif
 #if defined(PPC) || defined(_POWER) || defined(_IBMR2)
 # define IP_REG asm("26")
