@@ -34,7 +34,11 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: Sun Sep 10 10:23:42 2000 by piumarta (Ian Piumarta) on emilia
+
+# Modified by Lex Spoon; it now looks for an image as
+#   /usr/share/squeak/squeak.image
+# Typically this will be a symbolic link.
+#
 
 MAJOR=@MAJOR@
 VERSION=@VERSION@
@@ -45,15 +49,15 @@ bindir=@bindir@
 libdir=@libdir@
 datadir=@datadir@
 
-echo "Installing per-user files for Squeak${VERSION} in `pwd`"
+echo "Installing per-user files for Squeak in `pwd`"
 
 SQDATADIR=${datadir}/squeak
 VSQDATADIR=${SQDATADIR}/${VERSION}
 
 SQUEAK=${bindir}/squeak
 
-IMAGE=Squeak${VERSION}.image
-CHANGES=Squeak${VERSION}.changes
+IMAGE=squeak.image
+CHANGES=squeak.changes
 SOURCES=SqueakV${MAJOR}.sources
 
 # Sun's /bin/sh does not understand "test -e", but [/usr]/bin/test does
@@ -95,8 +99,8 @@ install()
 }
 
 install "${SOURCES}" "${SQDATADIR}"  "ln -s"
-install "${IMAGE}"   "${VSQDATADIR}" "cp -p"
-install "${CHANGES}" "${VSQDATADIR}" "cp -p"
+install "${IMAGE}"   "${SQDATADIR}" "cp -p"
+install "${CHANGES}" "${SQDATADIR}" "cp -p"
 
 echo "Running ${SQUEAK}"
 
