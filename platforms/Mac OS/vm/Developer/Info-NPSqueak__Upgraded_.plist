@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>NPSqueak</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Browser Plugin 3.7.1b3 http://www.squeak.org </string>
+	<string>Squeak Browser Plugin 3.7.5b1 http://www.squeak.org </string>
 	<key>CFBundleIconFile</key>
 	<string>resources/ProjectBuilder/SqueakPlugin.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -19,11 +19,11 @@
 	<key>CFBundlePackageType</key>
 	<string>BRPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak Browser Plugin 3.7.1b3</string>
+	<string>Squeak Browser Plugin 3.7.5b1</string>
 	<key>CFBundleSignature</key>
 	<string>MOSS</string>
 	<key>CFBundleVersion</key>
-	<string>3.7.1b3</string>
+	<string>3.7.5b1</string>
 	<key>SqueakEncodingType</key>
 	<string>macintosh</string>
 	<key>SqueakMaxHeapSize</key>
