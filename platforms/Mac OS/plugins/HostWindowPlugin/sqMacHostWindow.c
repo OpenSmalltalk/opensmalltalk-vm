@@ -64,9 +64,28 @@ int ioPositionOfWindow(wIndexType windowIndex)
 
 int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 {
+	int giLocker,return_value=0;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
-	MoveWindow(windowHandleFromIndex(windowIndex), x, y, true);
+#if TARGET_API_MAC_CARBON
+	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*7);
+		foo[0] = 4;
+		foo[1] = (int) MoveWindow;
+		foo[2] = (long) windowHandleFromIndex(windowIndex);
+		foo[3] = x;
+		foo[4] = y;
+		foo[5] = true;
+		foo[6] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
+		free(foo);
+	}
+#else
+	MoveWindow(windowHandleFromIndex(windowIndex),x,y,true);
+#endif
 	return ioPositionOfWindow(windowIndex);
 }
 
@@ -87,9 +106,28 @@ int ioSizeOfWindow(wIndexType windowIndex)
 
 int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 {
+	int giLocker,return_value=0;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
-	SizeWindow(windowHandleFromIndex(windowIndex), x, y, true);
+#if TARGET_API_MAC_CARBON
+	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*7);
+		foo[0] = 4;
+		foo[1] = (int) SizeWindow;
+		foo[2] = (long) windowHandleFromIndex(windowIndex);
+		foo[3] = x;
+		foo[4] = y;
+		foo[5] = true;
+		foo[6] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
+		free(foo);
+	}
+#else
+	SizeWindow(windowHandleFromIndex(windowIndex),x,y,true);
+#endif
 	return ioSizeOfWindow(windowIndex);
 }
 
