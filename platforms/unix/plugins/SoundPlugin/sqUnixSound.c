@@ -227,7 +227,7 @@ static int transBufSize=0;            /* current size of the buffer */
 
 
 
-#if 1
+#if 0
 #define DEBUG
 #endif
 #ifdef DEBUG
