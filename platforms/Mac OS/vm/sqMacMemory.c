@@ -6,12 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.11 2003/05/19 07:19:57 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.12 2003/07/31 13:00:57 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Mar  8th, 2002, JMM Must unmap view first then free.
 *  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+*  3.5.1b5 June 25th, 2003 JMM get memory upper limit from os-x user preferences
 *****************************************************************************/
 
 #include "sq.h" 
@@ -22,7 +23,7 @@
 #include <sys/mman.h>
 #endif
 
-UInt32  gMaxHeapSize=512*1024*1024;
+extern UInt32  gMaxHeapSize;
 UInt32	gHeapSize;
 Boolean	gNoFileMappingInOS9=false;
 
