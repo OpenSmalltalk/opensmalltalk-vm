@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.33 2004/09/03 00:18:28 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.34 2004/09/22 18:54:30 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -82,30 +82,30 @@ int ioSetFullScreenActual(int fullScreen) {
 #else
 int ioSetFullScreen(int fullScreen) {
 #endif
-    Rect                screen,portRect,ignore;
+    Rect                screen,portRect;
     int                 width, height, maxWidth, maxHeight;
     int                 oldWidth, oldHeight;
-    static Rect		rememberOldLocation = {44,8,0,0};		
+    static Rect		rememberOldLocation = {0,0,0,0};		
     GDHandle            dominantGDevice;
 
-#if TARGET_API_MAC_CARBON
-    GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&dominantGDevice,&ignore); 
+	dominantGDevice = getThatDominateGDevice();
     if (dominantGDevice == null) {
         success(false);
         return 0;
     }
+
+#if TARGET_API_MAC_CARBON
     screen = (**dominantGDevice).gdRect;
 #else
-    dominantGDevice = getDominateDevice(getSTWindow(),&ignore);
-    if (dominantGDevice == null) {
-        success(false);
-        return 0;
-    }
     getDominateGDeviceRect(dominantGDevice,&screen,true);
 #endif  
         
     if (fullScreen) {
 		GetPortBounds(GetWindowPort(getSTWindow()),&rememberOldLocation);
+		if (gWindowsIsInvisible) {
+			rememberOldLocation.top = 44;
+			rememberOldLocation.left = 8;
+		}
 		LocalToGlobal((Point*) &rememberOldLocation.top);
 		LocalToGlobal((Point*) &rememberOldLocation.bottom);
 		MenuBarHide();
@@ -114,31 +114,33 @@ int ioSetFullScreen(int fullScreen) {
 		oldHeight =  portRect.bottom -  portRect.top;
 		width  = screen.right - screen.left; 
 		height = (screen.bottom - screen.top);
-		if ((oldWidth < width) || (oldHeight < height)) {
-			/* save old size if it wasn't already full-screen */ 
-			setSavedWindowSize((oldWidth << 16) + (oldHeight & 0xFFFF));
-		}
 		MoveWindow(getSTWindow(), screen.left, screen.top, true);
 		SizeWindow(getSTWindow(), width, height, true);
 		setFullScreenFlag(true);
 	} else {
 		MenuBarRestore();
 
-		/* get old window size */
-		width  = (unsigned) getSavedWindowSize() >> 16;
-		height = getSavedWindowSize() & 0xFFFF;
+		if (EmptyRect(&rememberOldLocation)) {
+			/* get old window size */
+			width  = (unsigned) getSavedWindowSize() >> 16;
+			height = getSavedWindowSize() & 0xFFFF;
 
-		/* minimum size is 64 x 64 */
-		width  = (width  > 64) ?  width : 64;
-		height = (height > 64) ? height : 64;
+			/* minimum size is 1 x 1 */
+			width  = (width  > 0) ?  width : 64;
+			height = (height > 0) ? height : 64;
 
 		/* maximum size is screen size inset slightly */
 		maxWidth  = (screen.right  - screen.left) - 16;
 		maxHeight = (screen.bottom - screen.top)  - 52;
 		width  = (width  <= maxWidth)  ?  width : maxWidth;
 		height = (height <= maxHeight) ? height : maxHeight;
+			MoveWindow(getSTWindow(), 8, 44, true);
+			SizeWindow(getSTWindow(), width, height, true);
+		} else {
 		MoveWindow(getSTWindow(), rememberOldLocation.left, rememberOldLocation.top, true);
-		SizeWindow(getSTWindow(), width, height, true);
+			SizeWindow(getSTWindow(), rememberOldLocation.right - rememberOldLocation.left, rememberOldLocation.bottom - rememberOldLocation.top, true);
+		}
+		
 		setFullScreenFlag(false);
 	}
 	return 0;
@@ -560,7 +562,15 @@ void FreePixmap(void) {
 }
 
 void SetUpWindow(void) {
-	Rect windowBounds = {44, 8, 300, 500};
+	Rect windowBounds = {44, 8, 0, 0};
+	int width,height;
+		
+	/* get old window size */
+	width  = (unsigned) getSavedWindowSize() >> 16;
+	height = getSavedWindowSize() & 0xFFFF;
+	
+	windowBounds.bottom = windowBounds.top+height;
+	windowBounds.right = windowBounds.left+width;
 
 #ifndef IHAVENOHEAD
 #if TARGET_API_MAC_CARBON & !defined(__MWERKS__)
@@ -610,14 +620,9 @@ int ioHasDisplayDepth(int depth) {
 }
 
 int ioScreenDepth(void) {
-    Rect ignore;
     GDHandle mainDevice;
     
-#if TARGET_API_MAC_CARBON
-    GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&mainDevice,&ignore); 
-#else
-    mainDevice = getDominateDevice(getSTWindow(),&ignore);
-#endif
+	mainDevice = getThatDominateGDevice();
 
     if (mainDevice == null) 
         return 8;
@@ -748,7 +753,6 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	
 
     GDHandle		dominantGDevice;
-	Rect 			ignore;
 	Handle			displayState;
 	UInt32			depthMode=depth;
 	long			value = 0,displayMgrPresent;
@@ -768,11 +772,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
     	return 0;
     }
 
-#if TARGET_API_MAC_CARBON
-        GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&dominantGDevice,&ignore); 
-#else
-        dominantGDevice = getDominateDevice(getSTWindow(),&ignore);
-#endif
+	dominantGDevice = getThatDominateGDevice();
         if (dominantGDevice == null) {
             success(false);
             return 0;
@@ -809,6 +809,17 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	
     return 1;
 #endif
+}
+
+GDHandle	getThatDominateGDevice() {
+	GDHandle		dominantGDevice;
+	Rect 			ignore;
+#if TARGET_API_MAC_CARBON
+        GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&dominantGDevice,&ignore); 
+#else
+        dominantGDevice = getDominateDevice(getSTWindow(),&ignore);
+#endif
+	return dominantGDevice;
 }
 
 
