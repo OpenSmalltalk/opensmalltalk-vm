@@ -35,7 +35,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2003-08-31 03:15:52 by piumarta on cartman.inria.fr
+# Last edited: 2004-02-06 06:37:54 by piumarta on emilia.local
 
 @make_cfg@
 @make_prg@
@@ -88,7 +88,9 @@ Squeak.app : squeak plugins Info.plist
 	/bin/rm -rf $(app)
 	mkdir -p			$(appdir)/MacOS
 	cp -p  squeak			$(appdir)/MacOS/.
-	cp -p  */.libs/*.so		$(appdir)/MacOS/.
+	cp -p  */.libs/*		$(appdir)/MacOS/.
+	rm -f				$(appdir)/MacOS/*.la
+	rm -f				$(appdir)/MacOS/*.lai
 	cp -p  Info.plist		$(appdir)/.
 	cp -p  $(osxdir)/PkgInfo	$(appdir)/.
 	cp -pr $(osxdir)/Resources	$(appdir)/.
@@ -99,6 +101,29 @@ bndl_version=${VM_VERSION} (${SQ_VERSION})
 Info.plist : $(osxdir)/Info.plist.in $(osxdir)/mkinfo
 	$(osxdir)/mkinfo $(osxdir)/Info.plist.in Info.plist.tmp "${bndl_version}"
 	mv Info.plist.tmp Info.plist
+
+# OSX plugin bundle
+
+nposxdir=$(topdir)/platforms/unix/vm-display-Quartz
+npapp=NPSqueak.bundle
+npappdir=$(npapp)/Contents
+
+NPSqueak.bundle : NPSqueak plugins
+	/bin/rm -rf $(npapp)
+	mkdir -p			$(npappdir)/MacOS
+	cp -p  squeak			$(npappdir)/MacOS/.
+	cp -p  */.libs/*.so		$(npappdir)/MacOS/.
+	cp -p  Info.plist		$(npappdir)/.
+	cp -p  $(nposxdir)/PkgInfo	$(npappdir)/.
+	cp -pr $(nposxdir)/Resources	$(npappdir)/.
+	-find $(npapp) -name '*~' | xargs rm -f
+
+NPOBJS		= vm-display-Quartz/sqUnixSafari.o vm-sound-MacOSX/sqUnixSoundMacOSX.o vm-display-Quartz/sqUnixQuartz.o
+NPLIBS		= $(NPOBJS) -framework CoreAudio -framework AudioToolbox
+
+NPSqueak : config.sh $(SQLIBS) version.o $(NPOBJS)
+	gcc -bundle -flat_namespace -undefined suppress -o NPSqueak \
+	  $(NPLIBS) $(SQLIBS) version.o $(LIBS)  vm/vm.a
 
 # manual page
 
