@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.13 2003/04/08 21:17:11 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.14 2003/08/01 18:39:41 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.13 2003/04/08 21:17:11 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.14 2003/08/01 18:39:41 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -1057,6 +1057,16 @@ int recordKeyboardEvent(MSG *msg) {
     case WM_SYSKEYDOWN:
       if(virtCode) keyCode = virtCode;
       pressCode = EventKeyDown;
+      /* filter out repeated meta keys */
+      if(msg->lParam & 0x40000000) {
+	/* Bit 30 signifies the previous key state. */
+	if(msg->wParam == VK_SHIFT ||
+	   msg->wParam == VK_CONTROL ||
+	   msg->wParam == VK_MENU) {
+	  /* okay, it's a meta-key */
+	  return 1;
+	}
+      }
       break;
     case WM_KEYUP:
     case WM_SYSKEYUP: 
