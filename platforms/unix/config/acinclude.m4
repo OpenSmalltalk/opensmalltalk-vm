@@ -35,7 +35,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-08-07 08:28:24 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-08 15:34:41 by piumarta on emilia.inria.fr
 
 AC_DEFUN(AC_CHECK_VMM_DIR,[
   AC_MSG_CHECKING([sanity of VMMaker src directory])
@@ -234,7 +234,7 @@ fi])
 
 
 AC_DEFUN(AC_C_DOUBLE_ALIGNMENT,
-[AC_CACHE_CHECK([whether misaligned access to doubles is ok], ac_cv_double_align,
+[AC_CACHE_CHECK([whether unaligned access to doubles is ok], ac_cv_double_align,
   AC_TRY_RUN([f(int i){*(double *)i=*(double *)(i+4);}
               int main(){char b[[12]];f(b);return 0;}],
     ac_cv_double_align="yes", ac_cv_double_align="no"))
