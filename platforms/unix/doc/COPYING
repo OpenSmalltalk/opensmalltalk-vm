@@ -46,15 +46,24 @@ NOTE: Significant source contributions from other people are always
       individual contributors) but makes NO REPRESENTATION about the
       authorship or the ownership of the contributed code.
 
-You are allowed to use (or modify for use) in a non-Squeak context, or to
-create derivative works unrelated to Squeak based on, any files that
-contain the above copyright notice, subject to the following restrictions:
+NOTE: Where the conditions talk about a "Squeak virtual machine" (VM)
+      or use "in the context of Squeak" they refer to any program capable
+      of executing a Squeak image file (as supplied in an official Squeak
+      distribution) or any other image file derived from a Squeak image
+      file.
+
+You are allowed to use (or modify for use) in a program that is not a
+Squeak virtual machine (VM), or to create derivative works unrelated
+to the Squeak virtual machine, any files that contain the above
+copyright notice subject to the following restrictions:
 
 1. You must make a copy of the file under a different name and then use
-   only your renamed copy.
+   only your renamed copy.  [This is to prevent any confusion that
+   would be caused by distributing two or more incompatible versions of
+   the "same" file.]
 
-2. You must not change the first three lines of the copyright notice in
-   your copy.
+2. You must not modify the the copyright notice in your copy, except
+   as described below.
 
 3. In your copy you must replace the portion of the copyright notice that
    commences:
@@ -78,16 +87,17 @@ contain the above copyright notice, subject to the following restrictions:
      
      See the file COPYRIGHT for more details.
 
-4. You MUST NOT remove any acknowledgements for code contributed by other
+4. You must not remove any acknowledgements for code contributed by other
    authors from your copy of the file.
 
 5. You must include the file `COPYRIGHT' in any source or binary
-   distribution that includes or is based on one or more files modified in
+   distribution that includes, or is based on, one or more files modified in
    the above manner.
 
 6. You can now use your copy in any way that you like, subject to its new
    copyright conditions, provided that you do not re-introduce the file
-   into any distribution of Squeak.
+   into any distribution of Squeak.  [This is to prevent any part of Squeak
+   itself from being contaminated with the GPL.]
 
 ---
 
