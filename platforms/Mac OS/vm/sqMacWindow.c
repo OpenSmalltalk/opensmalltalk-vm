@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.10 2002/02/14 03:53:02 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.11 2002/02/20 21:01:48 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
@@ -15,6 +15,7 @@
 *	1/18/2002  JMM Fix os-x memory mapping, new type for squeak file offsets
 *	1/27/2002  JMM added logic to get framework bundles 
 *	2/04/2002  JMM Rework timer logic, fall back to old style timer, which is pthread based.
+*	2/14/2002  JMM fixes for updatewindow logic and drag/drop image with no file type
 *
 *****************************************************************************/
 #include "sq.h"
@@ -616,7 +617,7 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	        goto done;
 		CopyPascalStringToC(fileSpec.name,shortImageName);
 
-        if ((IsImageName(shortImageName) && finderInformation.fdType == 'TEXT')  || finderInformation.fdType == 'STim')
+        if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim')
             return i;
     }
     done: 
