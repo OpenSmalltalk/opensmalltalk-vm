@@ -1924,8 +1924,6 @@ int ioGetKeystroke(void)
 
   keystate= keyBuf[keyBufGet];
   keyBufGet= (keyBufGet + 1) % KEYBUF_SIZE;
-  /* set modifer bits in buttonState to reflect the last keystroke fetched */
-  buttonState= ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
 
   return keystate;
 #endif
@@ -1991,8 +1989,6 @@ int ioPeekKeystroke(void)
     return -1;  /* keystroke buffer is empty */
 
   keystate= keyBuf[keyBufGet];
-  /* set modifer bits in buttonState to reflect the last keystroke peeked at */
-  buttonState= ((keystate >> 5) & 0xF8) | (buttonState & 0x7);
   return keystate;
 #endif
 }
