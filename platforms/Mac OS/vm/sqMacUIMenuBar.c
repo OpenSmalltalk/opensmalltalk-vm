@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.4 2003/02/08 18:33:27 johnmci Exp $
+*   RCSID:   $Id: sqMacUIMenuBar.c,v 1.5 2003/09/02 17:53:37 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -97,7 +97,6 @@ void SetUpMenus(void) {
 	InsertMenu(appleMenu = NewMenu(appleID, "\p\024"), 0);
 	InsertMenu(fileMenu  = NewMenu(fileID,  "\pFile"), 0);
 	InsertMenu(editMenu  = NewMenu(editID,  "\pEdit"), 0);
-	DrawMenuBar();
 #if TARGET_API_MAC_CARBON
     Gestalt( gestaltMenuMgrAttr, &decideOnQuitMenu);
     if (!(decideOnQuitMenu & gestaltMenuMgrAquaLayoutMask) || true)	
@@ -110,6 +109,7 @@ void SetUpMenus(void) {
     AppendMenu(fileMenu, "\pQuit do not save");
 #endif
  	AppendMenu(editMenu, "\pUndo/Z;(-;Cut/X;Copy/C;Paste/V;Clear");
+	DrawMenuBar();
 }
 
  void AdjustMenus(void) {
