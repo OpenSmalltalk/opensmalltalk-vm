@@ -6,8 +6,9 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.5 2002/03/06 10:13:50 bertf Exp $
+*   RCSID:   $Id: sq.h,v 1.6 2003/05/07 23:49:50 rowledge Exp $
 *
+*	02/26/03	tim change browser plugin support code
 *	01/28/02	Tim add macro default for sqFilenameFromStringOpen
 *		and sqFTruncate
 *	01/22/2002 JMM change off_t to squeakOffsetFileType
@@ -339,13 +340,24 @@ int clipboardSize(void);
 int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex);
 int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex);
 
-/* browser plug-in support */
+/* old browser plug-in support, maintained for a little while */
+#if 1
 void plugInForceTimeToReturn(void);
 int plugInInit(char *imageName);
 int plugInNotifyUser(char *msg);
 void plugInSetStartTime(void);
 int plugInShutdown(void);
 int plugInTimeToReturn(void);
+#endif
+/* macros to support Mac browser plugin needs without ugly
+ * code in Interpreter
+ */
+#define insufficientMemorySpecifiedError() error("Insufficient memory for this image")
+#define insufficientMemoryAvailableError() error("Failed to allocate memory for the heap")
+#define unableToReadImageError() error("Read failed or premature end of image file")
+#define browserPluginReturnIfNeeded()
+#define browserPluginInitialiseIfNeeded()
+
 
 /* interpreter entry points needed by compiled primitives */
 void * arrayValueOf(int arrayOop);
