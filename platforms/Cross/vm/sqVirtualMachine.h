@@ -177,10 +177,12 @@ typedef struct VirtualMachine {
 /* This is clearly a sub-optimal way to check for the ability to handle 64 bit
  * long long types but it suffices for the moment
  */
-#ifndef ACORN
-        #define squeakInt64 long long
-#else
+#ifdef ACORN
         #define squeakInt64 long int
+#elif _MSC_VER
+        #define squeakInt64 __int64
+#else
+        #define squeakInt64 long long
 #endif
 	int (*positive64BitIntegerFor)(squeakInt64 integerValue);
 	squeakInt64 (*positive64BitValueOf)(int oop);
