@@ -4224,7 +4224,10 @@ StackInterpreter >> commonAt: stringy [
 	index := objectMemory integerValueOf: index.
 	result := self stObject: rcvr at: index.
 	self successful ifTrue:
-		[stringy ifTrue: [result := self characterForAscii: (objectMemory integerValueOf: result)].
+		[stringy ifTrue:
+			[(objectMemory isInRangeCharacterCode: result) ifFalse:
+				[^self primitiveFailFor: PrimErrBadReceiver].
+			 result := self characterForAscii: (objectMemory integerValueOf: result)].
 		 self pop: argumentCount+1 thenPush: result]
 ]
 
