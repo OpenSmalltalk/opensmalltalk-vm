@@ -37,7 +37,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-08-08 15:24:08 by piumarta on emilia.inria.fr
+# Last edited: Fri Aug 15 19:42:01 2003 by piumarta (Ian Piumarta) on xombul
 
 AC_INIT([config.h.in])
 
@@ -158,6 +158,7 @@ AC_NEED_SUNOS_H
 AC_STDC_HEADERS
 AC_HAVE_HEADERS(unistd.h string.h fcntl.h sys/file.h sys/param.h)
 AC_HAVE_HEADERS(sys/time.h sys/filio.h sys/select.h)
+AC_HAVE_HEADERS(features.h)
 AC_HEADER_TIME
 AC_HEADER_DIRENT
 
