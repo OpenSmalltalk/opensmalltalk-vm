@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  *
- * Last edited: 2003-08-07 07:00:20 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-03 00:34:59 by piumarta on emilia.inria.fr
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -54,7 +54,7 @@
 # define BREAK		goto *jumpTable[currentBytecode]
 #endif
 
-#define PRIM_DISPATCH	goto *jumpTable[primitiveIndex]
+#define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
 
 #define JUMP_TABLE \
   static void *jumpTable[256]= { \
@@ -191,7 +191,7 @@
 # endif
 #endif
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
-/*# define GP_REG asm("24")*/
+# define GP_REG asm("24")
 # define JP_REG asm("25")
 # define IP_REG asm("26")
 # define SP_REG asm("27")
@@ -219,4 +219,7 @@
 #endif
 #ifndef CB_REG
 # define CB_REG
+#endif
+#ifndef GP_REG
+# define GP_REG
 #endif
