@@ -1,3 +1,11 @@
+2005-03-09  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* vm/sqUnixEvent.c (recordMouseEvent): Clear windowIndex field in
+	events.
+
+	* vm-display-Quartz/sqUnixQuartz.m (noteMouseEvent): Clear
+	windowIndex field in events.
+
 2005-03-09  Bert Freudenberg <bert@squeakland.de>
 
 	* platforms/unix/npsqueak: Check for image file in system and home
