@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2004-04-03 22:54:55 by piumarta on cartman.inria.fr
+ * Last edited: 2004-04-04 23:06:38 by piumarta on cartman.inria.fr
  * 
  * BUGS
  * 
@@ -85,6 +85,9 @@ static	Atom	  XdndFinished;
 static	Atom	  XdndStatus;
 static	Atom	  XdndActionCopy;
 static	Atom	  XdndActionMove;
+static	Atom	  XdndActionLink;
+static	Atom	  XdndActionAsk;
+static	Atom	  XdndActionPrivate;
 static	Atom	  XdndTypeList;
 static	Atom	  XdndTextUriList;
 static	Atom	  XdndSelectionAtom;
@@ -92,6 +95,14 @@ static	Atom	  XdndSelectionAtom;
 static	Window	  xdndSourceWindow= 0;
 static	Atom	 *xdndTypeList= 0;
 static	int	  xdndWillAccept= 0;
+
+enum XdndState {
+  XdndStateIdle,
+  XdndStateEntered,
+  XdndStateTracking
+};
+
+static enum XdndState xdndState= XdndStateIdle;
 
 
 #define xdndEnter_sourceWindow(evt)		( (evt)->data.l[0])
@@ -104,27 +115,22 @@ static	int	  xdndWillAccept= 0;
 #define xdndPosition_rootY(evt)			((evt)->data.l[2] & 0xffffUL)
 #define xdndPosition_action(evt)		((Atom)((evt)->data.l[4]))
 
-#define xdndStatus_targetWindow(evt)		((Window)((evt)->data.l[0]))
-#define xdndStatus_setWillAccept(evt, b)	((evt)->data.l[1]= (((evt)->data.l[1] & ~0x1UL) | !!(b)))
-#define xdndStatus_setWantPosition(evt, b)	((evt)->data.l[1]= (((evt)->data.l[1] & ~0x2UL) | !!(b)))
+#define xdndStatus_targetWindow(evt)		((evt)->data.l[0])
+#define xdndStatus_setWillAccept(evt, b)	((evt)->data.l[1]= (((evt)->data.l[1] & ~1UL) | ((b) ? 1 : 0)))
+#define xdndStatus_setWantPosition(evt, b)	((evt)->data.l[1]= (((evt)->data.l[1] & ~2UL) | ((b) ? 2 : 0)))
 #define xdndStatus_action(evt)			((evt)->data.l[4])
 
 #define xdndDrop_sourceWindow(evt)		((Window)((evt)->data.l[0]))
 #define xdndDrop_time(evt)			((evt)->data.l[2])
 
-#define xdndFinished_targetWindow(evt)		((Window)((evt)->data.l[0]))
+#define xdndFinished_targetWindow(evt)		((evt)->data.l[0])
 
 
-static void dprintf(const char *fmt, ...)
-{
 #if (DEBUG_XDND)
-  va_list ap;
-  va_start(ap, fmt);
-  vfprintf(stderr, fmt, ap);
-  va_end(ap);
-  fprintf(stderr, "\n");
+# define dprintf(ARGS) do { fprintf ARGS; } while (0)
+#else
+# define dprintf(ARGS) do { } while (0)
 #endif
-}
 
 
 static void *xmalloc(size_t size)
@@ -198,7 +204,7 @@ static char *uri2string(const char *uri)
     {
       strncpy(string, uri, len);
     }
-  dprintf("uri2string: <%s>", string);
+  dprintf((stderr, "uri2string: <%s>\n", string));
   return string;
 }
 
@@ -216,7 +222,7 @@ static void dndGetTypeList(XClientMessageEvent *evt)
   if (xdndEnter_hasThreeTypes(evt))
     {
       int i;
-      dprintf("  3 types");
+      dprintf((stderr, "  3 types\n"));
       xdndTypeList= (Atom *)xcalloc(3 + 1, sizeof(Atom));
       for (i= 0;  i <  3;  ++i)
 	xdndTypeList[i]= xdndEnter_typeAt(evt, i);
@@ -229,8 +235,7 @@ static void dndGetTypeList(XClientMessageEvent *evt)
       unsigned long i, count, remaining;
       unsigned char *data= 0;
 
-      XGetWindowProperty(stDisplay, xdndSourceWindow, XdndTypeList,
-			 0, 0x8000000L, False, XA_ATOM,
+      XGetWindowProperty(stDisplay, xdndSourceWindow, XdndTypeList, 0, 0x8000000L, False, XA_ATOM,
 			 &type, &format, &count, &remaining, &data);
 
       if ((type != XA_ATOM) || (format != 32) || (count == 0) || !data)
@@ -246,7 +251,7 @@ static void dndGetTypeList(XClientMessageEvent *evt)
 	xdndTypeList[i]= atoms[i];
       xdndTypeList[count]= 0;
       XFree(data);
-      dprintf("  %ld types", count);
+      dprintf((stderr, "  %ld types\n", count));
     }
 
   /* We only accept filenames (MIME type "text/uri-list"). */
@@ -254,7 +259,7 @@ static void dndGetTypeList(XClientMessageEvent *evt)
     int i;
     for (i= 0;  xdndTypeList[i];  ++i)
       {
-	dprintf("  type %d == %ld %s", i, xdndTypeList[i], XGetAtomName(stDisplay, xdndTypeList[i]));
+	dprintf((stderr, "  type %d == %ld %s\n", i, xdndTypeList[i], XGetAtomName(stDisplay, xdndTypeList[i])));
 	if (XdndTextUriList == xdndTypeList[i])
 	  xdndWillAccept= 1;
       }
@@ -280,8 +285,8 @@ static void dndSendStatus(Window target, int willAccept, Atom action)
 
   XSendEvent(stDisplay, xdndSourceWindow, 0, 0, (XEvent *)&evt);
 
-  dprintf("sent status to %ld will accept %d data %ld action %ld %s",
-	  xdndSourceWindow, willAccept, evt.data.l[1], action, XGetAtomName(stDisplay, action));
+  dprintf((stderr, "sent status to %ld will accept %d data %ld action %ld %s\n",
+	   xdndSourceWindow, willAccept, evt.data.l[1], action, XGetAtomName(stDisplay, action)));
 }
 
 
@@ -300,13 +305,13 @@ static void dndSendFinished(Window target)
 
     XSendEvent(stDisplay, xdndSourceWindow, 0, 0, (XEvent *)&evt);
 
-    dprintf("sent finished to %ld", xdndSourceWindow);
+    dprintf((stderr, "sent finished to %ld\n", xdndSourceWindow));
 }
 
 
 static void dndEnter(XClientMessageEvent *evt)
 {
-  dprintf("dndEnter");
+  dprintf((stderr, "dndEnter\n"));
   if (xdndEnter_version(evt) < 3)
     {
       fprintf(stderr, "xdnd: protocol version %ld not supported\n", xdndEnter_version(evt));
@@ -314,26 +319,25 @@ static void dndEnter(XClientMessageEvent *evt)
     }
   xdndSourceWindow= xdndEnter_sourceWindow(evt);
   dndGetTypeList(evt);
-  if (xdndWillAccept)
-    recordDragEvent(DragEnter, 1);
+  xdndState= XdndStateEntered;
 }
 
 
 static void dndLeave(XClientMessageEvent *evt)
 {
-  dprintf("dndLeave");
-  if (xdndWillAccept)
-    recordDragEvent(DragLeave, 1);
+  dprintf((stderr, "dndLeave\n"));
+  recordDragEvent(DragLeave, 1);
+  xdndState= XdndStateIdle;
 }
 
 
 static void dndPosition(XClientMessageEvent *evt)
 {
-  dprintf("dndPosition");
+  dprintf((stderr, "dndPosition\n"));
 
   if (xdndSourceWindow != xdndPosition_sourceWindow(evt))
     {
-      dprintf("dndPosition: wrong source window");
+      dprintf((stderr, "dndPosition: wrong source window\n"));
       return;
     }
 
@@ -345,53 +349,55 @@ static void dndPosition(XClientMessageEvent *evt)
     mousePosition.y= xdndPosition_rootY(evt) - y;
   }
 
+  if (xdndState == XdndStateEntered)
+    {
+      if (xdndWillAccept)
+	recordDragEvent(DragEnter, 1);
+      xdndState= XdndStateTracking;
+    }
+
+  if (xdndState != XdndStateTracking)
+    {
+      dprintf((stderr, "dndPosition: wrong state\n"));
+      return;
+    }
+
   if (xdndWillAccept)
     {
       Atom action= xdndPosition_action(evt);
-      dprintf("  action = %ld %s", action, XGetAtomName(stDisplay, action));
-      xdndWillAccept= ((action == XdndActionMove) | (action == XdndActionCopy));
+      dprintf((stderr, "  action = %ld %s\n", action, XGetAtomName(stDisplay, action)));
+      xdndWillAccept= (action == XdndActionMove) | (action == XdndActionCopy)
+	|             (action == XdndActionLink) | (action == XdndActionAsk);
     }
-
-  recordDragEvent(DragMove, 1);
 
   if (xdndWillAccept)
     {
-      dprintf("accepting");
+      dprintf((stderr, "accepting\n"));
       dndSendStatus(evt->window, 1, XdndActionCopy);
+      recordDragEvent(DragMove, 1);
     }
   else /* won't accept */
     {
-      dprintf("not accepting");
-      dndSendStatus(evt->window, 0, 0);
+      dprintf((stderr, "not accepting\n"));
+      dndSendStatus(evt->window, 0, XdndActionPrivate);
     }
 }
 
 
 static void dndDrop(XClientMessageEvent *evt)
 {
-  dprintf("dndDrop");
+  dprintf((stderr, "dndDrop\n"));
 
   if (xdndSourceWindow != xdndDrop_sourceWindow(evt))
-    {
-      fprintf(stderr, "dndDrop: wrong source window\n");
-      return;
-    }
-
-  if (xdndWillAccept)
+    dprintf((stderr, "dndDrop: wrong source window\n"));
+  else if (xdndWillAccept)
     {
       Window owner;
-
-      dprintf("converting selection");
-
+      dprintf((stderr, "converting selection\n"));
       if (!(owner= XGetSelectionOwner(stDisplay, XdndSelection)))
-	{
-	  fprintf(stderr, "dndDrop: XGetSelectionOwner failed\n");
-	}
+	fprintf(stderr, "dndDrop: XGetSelectionOwner failed\n");
       else
-	{
-	  XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, CurrentTime);
-	}
-
+	XConvertSelection(stDisplay, XdndSelection, XdndTextUriList, XdndSelectionAtom, stWindow, xdndDrop_time(evt));
       if (uxDropFileCount)
 	{
 	  int i;
@@ -404,11 +410,12 @@ static void dndDrop(XClientMessageEvent *evt)
 	}
     }
   else
-    {
-      dprintf("refusing selection -- finishing");
-      dndSendFinished(evt->window);
-      dndLeave(evt);
-    }
+    dprintf((stderr, "refusing selection -- finishing\n"));
+
+  dndSendFinished(evt->window);
+  dndLeave(evt);
+
+  xdndState= XdndStateIdle;
 }
 
 
@@ -432,8 +439,8 @@ static void dndGetSelection(Window owner, Atom property)
       char *item= 0;
       while ((item= strtok(tokens, "\n\r")))
 	{
-	  dprintf("got filename <%s>", item);
-	  if (!strncmp(item, "file:", 5))
+	  dprintf((stderr, "got URI <%s>\n", item));
+	  if (!strncmp(item, "file:", 5))		/*** xxx BOGUS -- just while image is broken ***/
 	    {
 	      if (uxDropFileCount)
 		uxDropFileNames= (char **)xrealloc(uxDropFileNames, (uxDropFileCount + 1) * sizeof(char *));
@@ -445,6 +452,7 @@ static void dndGetSelection(Window owner, Atom property)
 	}
       if (uxDropFileCount)
 	recordDragEvent(DragDrop, uxDropFileCount);
+      dprintf((stderr, "+++ DROP %d\n", uxDropFileCount));
     }
   XFree(data);
 }
@@ -488,11 +496,14 @@ void dndInitialise(void)
   XdndStatus=		 XInternAtom(stDisplay, "XdndStatus", False);
   XdndActionCopy=	 XInternAtom(stDisplay, "XdndActionCopy", False);
   XdndActionMove=	 XInternAtom(stDisplay, "XdndActionMove", False);
+  XdndActionLink=	 XInternAtom(stDisplay, "XdndActionLink", False);
+  XdndActionAsk=	 XInternAtom(stDisplay, "XdndActionAsk", False);
+  XdndActionPrivate=	 XInternAtom(stDisplay, "XdndActionPrivate", False);
   XdndTypeList=		 XInternAtom(stDisplay, "XdndTypeList", False);
   XdndTextUriList=	 XInternAtom(stDisplay, "text/uri-list", False);
   XdndSelectionAtom=	 XInternAtom(stDisplay, "XdndSqueakSelection", False);
 
-  XChangeProperty (stDisplay, stParent, XdndAware, XA_ATOM, 32, PropModeReplace, (unsigned char *)&XdndVersion, 3);
+  XChangeProperty(stDisplay, stParent, XdndAware, XA_ATOM, 32, PropModeReplace, (unsigned char *)&XdndVersion, 1);
 }
 
 
