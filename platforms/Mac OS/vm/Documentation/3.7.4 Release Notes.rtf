@@ -6,7 +6,7 @@
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0\fs24 \cf0 Mac VM 3.7.4 mach-o build for Carbon, and build for Classic. Support for Croquet, and support for Safari\
-June 14th, 2004 (3.7.4b1)\
+Aug 4th, 2004 (3.7.4b3)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
@@ -14,9 +14,16 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.7.3 seems a fine VM, from what people tell me, but now we've 3.7.4...\
 \
-3.7.4b1			primitive Function Pointer goes into method cache logic, better lookup times.\
-				Force Interrupt Check logic in VM to fix most/all? issues with tight loops and keyboard interrupt logic.
+3.7.4b3			Released to fix issues in Netscape plugin code\
+				FIX PROBLEM that triggers image read failure on G5 machines. This prevents image from running on G5 machines.\
+				Problem shows up as browser crash or failure to start squeakland project.\
 \
+3.7.4b2			Released to fix issues in Netscape plugin code\
+				Do not start timers until later in the image start, this prevents failure if image doesn't load\
+				Support failureURL and imageName embed html tags\
+\
+3.7.4b1			primitive Function Pointer goes into method cache logic, better lookup times.\
+				Force Interrupt Check logic in VM to fix most/all? issues with tight loops and keyboard interrupt logic.\
 				more sanity checks in displayBitsOfLeftTopRightBottom\
 				cleanup of flushExternalPrimitiveOf\
 				cleanup of oopFromChunk\
@@ -52,8 +59,9 @@ sqMacEncoding.c	Alter SetVMPath()
 				add support for 
 \f2\fs20 \CocoaLigature0       \
 				\cf2 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1\fs24 \CocoaLigature1 \
+\f1\fs24 \cf0 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 				Alter PathToFile(), get kCFStringNormalizationFormKC path name\
 				Alter QuicklyMakePath() get kCFStringNormalizationFormKC path name\
@@ -95,11 +103,13 @@ JPEG READER WRITER\
 \f1 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
 				Broke high bit ascii macroman in 3.7.0bx.\
 				For multi-byte character input you get EventKeyDown/EventKeyChar/EventKeyUp for each unicode character coming from the input sequence.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \
+\f0 \cf0 \
 3.7.0b2		\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f1 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -107,14 +117,17 @@ JPEG READER WRITER\
 				b) Support for sqSocketListenOnPortBacklogSizeInterface, which allows you to specify the interface to use for the listen should work both for os-x and os-9.\
 				c) Usage of VMMaker3-7a2.\
 				d) Special change sets: make primitive point x/y internal, and slightly faster activate.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \
+\f0 \cf0 \
 3.7.0b1 			\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f1 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 3.6.1b7			\
+\f0 \cf0 3.6.1b7			\
 SqMacWindow.c	Fix for new rending code when used with 2.8 or earlier images, mouse clicks reported in wrong place\
 \
 3.6.1b6\
