@@ -15,6 +15,12 @@
 Welcome to Unix Squeak! <br> (Mac OS X edition)
 </font></center>
 
+<h1> Preface </h1>
+
+The help viewer is buggy (at least mine is).  This document is more
+than a page long, but there's no scroll bar.  To get a scroll bar,
+resize the window slightly.
+
 <h1> Introduction </h1>
 
 This software is still very much in <font color="red">alpha test</font>.
@@ -30,6 +36,20 @@ an alpha tester and hence to the following:
   also concoct a recipe to reproduce the crash reliably then you'll
   [probably] win a faster resolution of the problem.)
   </blockquote>
+
+<h1> Installing Squeak </h1>
+
+The '.app' bundle does not come with '.image/.changes' or '.sources'
+files.  You will have to get these from elsewhere (at the Squeak
+Foundation <a href="ftp://ftp.squeakfoundation.org/official-dist">ftp site</a>,
+for example).  If you keep the '.sources' file (or a link to it) in
+the same directory as your image(s) you'll be fine.  Otherwise you can
+put it (or a link to it) in the 'Contents/MacOS' folder of the app
+bundle.  You can also put the distributed '.image/.changes' files in the
+'Contents/Resources' folder too, if you want a convenient place from
+which to begin working in a fresh image (see
+<a href="#default"><b>Providing a default image</b></a> below).
+
 
 <h1> Starting Squeak </h1>
 
@@ -62,7 +82,7 @@ see a list of options that includes those specific to Quartz, Squeak must be
 run with the options `<tt>-quartz&nbsp;-help</tt>', <b>in that order</b>.
 
  
-<h1> Providing a default image </h1>
+<h1> Providing a default image </h1><a name="default">
 
 When launched from the Finder, if Squeak cannot find a default image to run
 in the current directory then it looks for the files <tt>squeak.image</tt>
