@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-09-12 21:05:50 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-16 20:06:06 by piumarta on emilia.inria.fr
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -589,6 +589,7 @@ int sqSocketConnectionStatus(SocketPtr s)
       interpreterProxy->success(false);
       return Invalid;
     }
+#if 0
   /* check for connection closed by peer */
   if (SOCKETSTATE(s) == Connected)
     {
@@ -600,6 +601,7 @@ int sqSocketConnectionStatus(SocketPtr s)
 	  SOCKETSTATE(s)= OtherEndClosed;
 	}
     }
+#endif
   FPRINTF((stderr, "socketStatus(%d) -> %d\n", SOCKET(s), SOCKETSTATE(s)));
   return SOCKETSTATE(s);
 }
