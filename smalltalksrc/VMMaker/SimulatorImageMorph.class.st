@@ -4,7 +4,7 @@ A SimulatorImageMorph is an ImageMorph that suppresses halos.
 Class {
 	#name : #SimulatorImageMorph,
 	#superclass : #ImageMorph,
-	#category : #'VMMaker-InterpreterSimulation-Morphic'
+	#category : 'VMMaker-InterpreterSimulation-Morphic'
 }
 
 { #category : #geometry }

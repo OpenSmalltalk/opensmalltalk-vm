@@ -9,7 +9,7 @@ Class {
 		'CogAbstractRegisters',
 		'CogRTLOpcodes'
 	],
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #debugger }

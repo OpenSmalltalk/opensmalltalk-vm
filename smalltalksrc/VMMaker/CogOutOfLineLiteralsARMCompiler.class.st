@@ -1,7 +1,7 @@
 Class {
 	#name : #CogOutOfLineLiteralsARMCompiler,
 	#superclass : #CogARMCompiler,
-	#category : #'VMMaker-JIT'
+	#category : 'VMMaker-JIT'
 }
 
 { #category : #'accessing class hierarchy' }
