@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.3 2002/03/04 00:30:57 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.4 2002/03/04 02:03:19 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -32,6 +32,8 @@ extern unsigned char *memory;
 	FileViewID gFileViewID=0;
 #endif
 
+Boolean hasFileMapping(void);
+
 UInt32	sqGetAvailableMemory() {
 
 	long 	reservedMemory,availableMemory;
@@ -54,7 +56,7 @@ UInt32	sqGetAvailableMemory() {
 	if (availableMemory > 128*1024*1024) 
 		gNoFileMappingInOS9 = true;
 	else
-		if (!RunningOnCarbonX() && 
+		if (hasFileMapping() && 
 			((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress)) {
     			gMaxHeapSize = 128*1024*1024;
 	   			availableMemory = gMaxHeapSize;
@@ -116,7 +118,7 @@ void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
         return 0;
     return debug;
 #else
-    if(((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) && !RunningOnCarbonX() && !gNoFileMappingInOS9) {
+    if(((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) && hasFileMapping() && !gNoFileMappingInOS9) {
         ByteCount  viewLength;
         long       i;
         
@@ -178,3 +180,15 @@ void sqMacMemoryFree() {
 
 	memory = nil;
 }
+
+Boolean hasFileMapping(void)
+{
+    UInt32	response;
+    OSErr	error;
+    
+    error = Gestalt(gestaltVMFilemappingOn, 
+                    (SInt32 *) &response);
+    return ((error == noErr)
+                && response);
+}
+
