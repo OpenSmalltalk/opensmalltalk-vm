@@ -16,9 +16,9 @@ configure: configure-stamp
 configure-stamp:
 	dh_testdir
 	mkdir build-oss
-	(cd build-oss; ../configure --prefix=/usr --with-audio=oss)
+	(cd build-oss; ../platforms/unix/misc/configure --prefix=/usr --with-audio=oss)
 	mkdir build-nas
-	(cd build-nas; ../configure --prefix=/usr --with-audio=nas)
+	(cd build-nas; ../platforms/unix/misc/configure --prefix=/usr --with-audio=nas)
 	touch configure-stamp
 
 build: build-stamp
