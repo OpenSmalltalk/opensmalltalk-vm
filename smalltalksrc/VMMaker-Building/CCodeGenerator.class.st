@@ -16,7 +16,8 @@ Class {
 		'headerFiles',
 		'globalVariableUsage',
 		'useSymbolicConstants',
-		'generateDeadCode'
+		'generateDeadCode',
+		'doNotRemoveMethodList'
 	],
 	#classVars : [
 		'UseRightShiftForDivide'
@@ -65,6 +66,8 @@ CCodeGenerator >> addClass: aClass [
 	"ikp..."
 	self addPoolVarsFor: aClass.
 	variables addAll: aClass instVarNames.
+	self retainMethods: aClass requiredMethodNames.
+	
 	'Adding Class ' , aClass name , '...'
 		displayProgressAt: Sensor cursorPoint
 		from: 0
@@ -371,15 +374,11 @@ CCodeGenerator >> declareModuleName: nameString [
 ]
 
 { #category : #inlining }
-CCodeGenerator >> doInlining: inlineFlag [
-	"Inline the bodies of all methods that are suitable for inlining."
-	"Modified slightly for the translator, since the first level of inlining for the interpret loop must be performed in order that the instruction implementations can easily discover their addresses."
+CCodeGenerator >> doBasicInlining: inlineFlag [
+	"Inline the bodies of all methods that are suitable for inlining.
+	This method does only the basic inlining suitable for both the core VM and plugins - no bytecode inlining etc"
 
 	| pass progress |
-	inlineFlag ifFalse: [
-		self inlineDispatchesInMethodNamed: #interpret localizingVars: #().
-		^ self].
-
 	self collectInlineList.
 	pass _ 0.
 	progress _ true.
@@ -395,6 +394,20 @@ CCodeGenerator >> doInlining: inlineFlag [
 					(m tryToInlineMethodsIn: self)
 						ifTrue: [progress _ true]]]].
 
+
+]
+
+{ #category : #inlining }
+CCodeGenerator >> doInlining: inlineFlag [
+	"Inline the bodies of all methods that are suitable for inlining."
+	"Modified slightly for the core VM translator, since the first level of inlining for the interpret loop must be performed in order that the instruction implementations can easily discover their addresses. Remember to inline the bytecode routines as well"
+
+	inlineFlag ifFalse: [
+		self inlineDispatchesInMethodNamed: #interpret localizingVars: #().
+		^ self].
+
+	self doBasicInlining: inlineFlag.
+	
 	'Inlining bytecodes'
 		displayProgressAt: Sensor cursorPoint
 		from: 1 to: 2
@@ -451,8 +464,8 @@ CCodeGenerator >> emitCCodeOn: aStream doInlining: inlineFlag doAssertions: asse
 
 	self emitCHeaderOn: aStream.
 	self emitCConstantsOn: aStream.
-	self emitCVariablesOn: aStream.
 	self emitCFunctionPrototypes: methodList on: aStream.
+	self emitCVariablesOn: aStream.
 'Writing Translated Code...'
 displayProgressAt: Sensor cursorPoint
 from: 0 to: methods size
@@ -575,6 +588,9 @@ CCodeGenerator >> emitCHeaderOn: aStream [
 #define byteAtput(i, val) (*((unsigned char *) (i)) = val)
 #define longAt(i) (*((int *) (i)))
 #define longAtput(i, val) (*((int *) (i)) = val)
+/* typedef for primitive function pointes */
+typedef  int (*fptr) (void);
+#define dispatchFunctionPointerOnin(index, table)  (((int (*) (void)) ((table)[(index)])) ())
 
 int printCallStack(void);
 void error(char *s);
@@ -1814,38 +1830,19 @@ CCodeGenerator >> pruneMethods: selectorList [
 
 { #category : #inlining }
 CCodeGenerator >> pruneUnreachableMethods [
-	"Remove any methods that are not reachable. Retain methods needed by the BitBlt operation table, primitives, plug-ins, or interpreter support code."
- 
-	| retain |
-	"Build a set of selectors for methods that should be output even though they have no apparent callers. Some of these are stored in tables for indirect lookup, some are called by the C support code or by primitives."
-	retain _ BitBltSimulation opTable asSet.
-	#(checkedLongAt: fullDisplayUpdate interpret printCallStack printAllStacks
-	   readImageFromFile:HeapSize:StartingAt: success:
-		"Windows needs the following two for startup and debug"
-	   readableFormat: getCurrentBytecode
-		"Jitter reuses all of these"
-	   allocateChunk: characterForAscii:
-	   findClassOfMethod:forReceiver: findSelectorOfMethod:forReceiver:
-	   firstAccessibleObject loadInitialContext noteAsRoot:headerLoc:
-	   nullCompilerHook
-	   primitiveFloatAdd primitiveFloatDivide primitiveFloatMultiply
-	   primitiveFloatSubtract primitiveFlushExternalPrimitives
-	   setCompilerInitialized: splObj:
-		"accessors needed for global structure support"
-	   getFullScreenFlag getInterruptCheckCounter getInterruptKeycode getInterruptPending
-	   getNextWakeupTick getSavedWindowSize setFullScreenFlag: setInterruptCheckCounter:
-	   setInterruptKeycode: setInterruptPending: setNextWakeupTick: setSavedWindowSize:
-	)
-			do: [:sel | retain add: sel].
-	InterpreterProxy organization categories do: [:cat |
-		((cat ~= 'initialize') and: [cat ~= 'private']) ifTrue: [
-			retain addAll: (InterpreterProxy organization listAtCategoryNamed: cat)]].
+	"Remove any methods that are not reachable. Retain methods needed by the translated classes - see implementors of requiredMethodNames"
+ 	
+	| newMethods |
+	"add all the exported methods and all the called methods to the dNRML"
+	methods do: [ :m |
+		m export ifTrue:[doNotRemoveMethodList add: m selector].
+		doNotRemoveMethodList addAll: m allCalls].
 
-	"Remove all the unreachable methods that aren't retained for the reasons above."
-	self unreachableMethods do: [:sel |
-		(retain includes: sel) ifFalse: [
-			methods removeKey: sel ifAbsent: []]].
-
+	"build a new dictionary of methods from the collection of all the ones to keep"			
+	newMethods _ Dictionary new: doNotRemoveMethodList size.
+	doNotRemoveMethodList do:[:sel|
+		methods at: sel ifPresent:[:meth| newMethods at: sel put: meth]].
+	methods _ newMethods
 ]
 
 { #category : #inlining }
@@ -1911,6 +1908,14 @@ CCodeGenerator >> reportRecursiveMethods [
 			calls _ newCalls asOrderedCollection.
 		].
 	].
+]
+
+{ #category : #inlining }
+CCodeGenerator >> retainMethods: aListOfMethodsToKeep [
+"add aListOfMethodsToKeep to doNotRemoveMethodList so that they will not be pruned"
+	doNotRemoveMethodList ifNil:[doNotRemoveMethodList _ Set new:100].
+	doNotRemoveMethodList addAll: aListOfMethodsToKeep.
+	^aListOfMethodsToKeep
 ]
 
 { #category : #utilities }
