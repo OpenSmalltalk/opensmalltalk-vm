@@ -191,13 +191,18 @@ int		 isConnectedToXServer=0;/* True when connected to an X server */
 int		 stXfd= -1;		/* X connection file descriptor */
 Window		 stParent= null;	/* Squeak parent window */
 Window		 stWindow= null;	/* Squeak window */
+int              stWindowWidth=-1;      /* last-known dimensions of that window */
+int              stWindowHeight=-1;
 Visual		*stVisual;		/* the default visual */
 GC		 stGC;			/* graphics context used for rendering */
 Colormap	 stColormap= null;	/* Squeak color map */
-int		 scrW= 0;
+int		 scrW= 0;               /* the size of the whole screen */
 int		 scrH= 0;
 int		 stDisplayBitsIndex= 0;	/* last known oop of the VM's Display */
-XImage		*stImage= 0;		/* ...and it's client-side pixmap */
+XImage		*stImage= 0;		/* the X pixmap to be drawn;
+					   it either refers to the Display object,
+					   or it refers to a pixmap in shared memory */
+
 char		*stPrimarySelection;	/* buffer holding selection */
 char		*stEmptySelection= "";	/* immutable "empty string" value */
 int		 stPrimarySelectionSize;/* size of buffer holding selection */
@@ -213,6 +218,8 @@ int		 completions= 0;	/* outstanding completion events */
 int		 completionType;	/* the type of XShmCompletionEvent */
 int		 useXshm= 0;		/* 1 if shared memory is in use */
 int		 asyncUpdate= 0;	/* 1 for asynchronous screen updates */
+#else
+#define useXshm 0                       /* this is handy sometimes */
 # endif
 int		 stDepth= 0;
 int		 stBitsPerPixel= 0;
@@ -230,16 +237,6 @@ int		 headless= 0;
 #define          inBrowser\
   (-1 != browserPipes[0])
 
-/* window states */
-#define	WIN_NORMAL	0
-#define	WIN_CHANGED	1
-#define	WIN_ZOOMED	2
-int	windowState=	WIN_CHANGED;
-
-#define noteWindowChange() \
-  if (windowState == WIN_NORMAL) \
-    windowState= WIN_CHANGED;
-
 #else
 /* some vars need setting for headless */
 int		 noEvents= 1;		/* 1 to disable new event handling */
@@ -251,8 +248,7 @@ int		 noEvents= 1;		/* 1 to disable new event handling */
 /* events */
 
 int inputEventSemaIndex= 0;
-#define IEB_SIZE	 64	/* must be power of 2
-				   XXX does it?  why?  -lex  */
+#define IEB_SIZE	 64
 
 sqInputEvent inputEventBuffer[IEB_SIZE];
 int iebIn=  0;	/* next IEB location to write */
@@ -274,6 +270,7 @@ int		 noEvents= 0;		/* 1 to disable new event handling */
 #ifndef HEADLESS
 
 static Time lastKeystrokeTime;  /* XXX is initializing this to 0 okay?? */
+                                /* XXX er, uh, als, isn't this supposed to get set somewhere? */
 
 /* we are interested in these events...
  */
@@ -664,45 +661,40 @@ char *getSelection(void)
 
   do
     {
-      if (XPending(stDisplay) == 0)
+
+      while(! XMaskEvent(stDisplay, 0, &ev))
 	{
-	  int status;
+	  /* no matching event; wait for a while */
 	  struct timeval timeout= {SELECTION_TIMEOUT, 0};
+	  int status;
 
 	  while ((status= select(FD_SETSIZE, &fdMask, 0, 0, &timeout)) < 0
 		 && errno == EINTR);
 	  if (status < 0)
 	    {
+	      /* uh oh */
 	      perror("select(stDisplay)");
 	      return stEmptySelection;
 	    }
 	  if (status == 0)
 	    {
+	      /* timeout; give up */
 	      if (isConnectedToXServer)
 		XBell(stDisplay, 0);
 	      return stEmptySelection;
 	    }
 	}
-      XNextEvent(stDisplay, &ev);
+      
+
+      /* possible events with a mask of 0 are:
+  	   MappingNotify
+	   ClientMessage
+	   SelectionClear
+	   SelectionNotify
+	   SelectionRequest
+      */
       switch (ev.type)
 	{
-	case ConfigureNotify:
-	  {
-	    XConfigureEvent *ec= (XConfigureEvent *)&ev;
-#          if defined(USE_XSHM)
-	    if (asyncUpdate)
-	      {
-		/* wait for pending updates */
-		while (completions) HandleEvents();
-	      }
-#          endif
-	    if (windowState != WIN_ZOOMED)
-	      XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
-	    noteWindowChange();
-	  }
-	  break;
-	  
-
         /* this is necessary so that we can supply our own selection when we
 	   are the requestor -- this could (should) be optimised to return the
 	   stored selection value instead! */
@@ -715,7 +707,16 @@ char *getSelection(void)
 #          endif
 	  }
 	  break;
+
+	case SelectionClear:
+	  stOwnsSelection= 0;
+	  break;
+
+	case MappingNotify:
+	  XRefreshKeyboardMapping((XMappingEvent *) &theEvent);
+	  break;
 	}
+      
     }
   while (ev.type != SelectionNotify);
 
@@ -813,7 +814,7 @@ int ioSetInputSemaphore(int semaIndex)
 
 
 #define iebEmptyP()	(iebIn == iebOut)
-#define iebAdvance(P)	(P= ((P + 1) & (IEB_SIZE - 1)))
+#define iebAdvance(P)	(P= ((P + 1) % IEB_SIZE))
 
 
 /* retrieve the next input event from the OS
@@ -1077,7 +1078,6 @@ int HandleEvents(void)
 	   time: update mousePosition (which otherwise may not be
 	   set before the first button event). */
 	getMousePosition();
-	noteWindowChange();
 	break;
 
       case UnmapNotify:
@@ -1098,12 +1098,26 @@ int HandleEvents(void)
 	      } while (theEvent.type != MapNotify);
 	  getMousePosition();
 	}
-	noteWindowChange();
 	break;
 
       case ConfigureNotify:
 	{
 	  XConfigureEvent *ec= (XConfigureEvent *)&theEvent;
+	  int width= ec->width;
+	  int height= ec->height;
+	  
+	  
+	  /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
+	  if ((width % sizeof(void *)) != 0)
+	    {
+	      width= (width / sizeof(void *)) * sizeof(void *);
+	      if(! inBrowser) {
+		/* it would be rude to resize the window the browser gave us! */
+		XResizeWindow(stDisplay, stParent, width, height);
+	      }
+	    }
+	  
+
 #      if defined(USE_XSHM)
 	  if (asyncUpdate)
 	    {
@@ -1111,10 +1125,17 @@ int HandleEvents(void)
 	      while (completions) HandleEvents();
 	    }
 #      endif
-	  if (windowState != WIN_ZOOMED)
-	    XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
-	  noteWindowChange();
+
+	  /* resize the display window to match the parent, unless
+	     we are in full screen mode */
+	  if (! fullScreen)
+	    {
+	      XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
+	      stWindowWidth= ec->width;
+	      stWindowHeight= ec->height;
+	    }
 	}
+	
 	break;
 
       case MappingNotify:
@@ -1533,6 +1554,8 @@ void SetUpWindow(char *displayName)
 			    0,
 			    stDepth, InputOutput, stVisual,
 			    valuemask, &attributes);
+    stWindowWidth= windowBounds.width;
+    stWindowHeight= windowBounds.height;
   }
 
   /* set the window title and resource/class names */
@@ -1614,9 +1637,12 @@ void SetWindowSize(void)
   width=  ( width > 64) ?   width : 64;
   height= (height > 64) ?  height : 64;
 
-  /* maximum size is screen size */
+  /* maximum size is screen size, rounded down to a multiple of sizeof(void *) */
   maxWidth=  (DisplayWidth(stDisplay, DefaultScreen(stDisplay)));
   maxHeight= (DisplayHeight(stDisplay, DefaultScreen(stDisplay)));
+  maxWidth= (maxWidth / sizeof(void *)) * sizeof(void *);
+  maxHeight= (maxHeight / sizeof(void *)) * sizeof(void *);
+  
   width=  ( width <= maxWidth)  ?  width : maxWidth;
   height= (height <= maxHeight) ? height : maxHeight;
 
@@ -2010,39 +2036,21 @@ int ioScreenDepth(void)
 }
 
 
-/* returns the size of the Squeak window */
+/* returns most recently known size of the Squeak window */
+/* the return is encoded as:
+      (width << 16) | height
+*/
 int ioScreenSize(void)
 {
 #ifdef HEADLESS
   return ((64 << 16) | 64);
 #else
-  static unsigned int w= 0, h= 0;
 
   if (!isConnectedToXServer)
     return (64 << 16) | 64;
 
-  if (windowState == WIN_NORMAL)
-    return (w << 16) | h;
+  return (stWindowWidth << 16) | stWindowHeight;
 
-  if (windowState == WIN_ZOOMED)
-    return (scrW << 16) | scrH;
-
-  windowState= WIN_NORMAL;
-  {
-    Window root;
-    int x, y;
-    unsigned int b, d;
-    XGetGeometry(stDisplay, stParent, &root, &x, &y, &w, &h, &b, &d);
-  }
-  /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
-  if ((w % sizeof(void *)) != 0)
-    {
-      w= (w / sizeof(void *)) * sizeof(void *);
-      XResizeWindow(stDisplay, stParent, w, h);
-      XResizeWindow(stDisplay, stWindow, w, h);
-      noteWindowChange();
-    }
-  return (w << 16) | h;  /* w is high 16 bits; h is low 16 bits */
 #endif
 }
 
@@ -2180,7 +2188,7 @@ static void overrideRedirect(Display *dpy, Window win, int flag)
 
 #endif
 
-int ioSetFullScreen(int fullScreen)
+int ioSetFullScreen(int fs)
 {
 #ifndef HEADLESS
   int winX, winY;
@@ -2188,6 +2196,9 @@ int ioSetFullScreen(int fullScreen)
 
   if (!isConnectedToXServer)
     return 0;
+  
+  fullScreen= fs;
+  
 
   if (fullScreen)
     {
@@ -2213,7 +2224,9 @@ int ioSetFullScreen(int fullScreen)
 	  XRaiseWindow(stDisplay, stWindow);
 	  XSetInputFocus(stDisplay, stWindow, RevertToPointerRoot, CurrentTime);
 	  XSynchronize(stDisplay, False);
-	  windowState= WIN_ZOOMED;
+
+	  stWindowWidth= scrW;
+	  stWindowHeight= scrH;
 	}
     }
   else
@@ -2236,7 +2249,9 @@ int ioSetFullScreen(int fullScreen)
 	  overrideRedirect(stDisplay, stWindow, False);
 	  XResizeWindow(stDisplay, stWindow, winW, winH);
 	  XSynchronize(stDisplay, False);
-	  windowState= WIN_CHANGED;
+
+	  stWindowWidth= winW;
+	  stWindowHeight= winH;
 	}
     }
   /* sync avoids race with ioScreenSize() reading geometry before resize event */
@@ -2402,10 +2417,11 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 
 
   /* Sanitize the input values */
-  if (affectedR >= width)    affectedR= width-1;
+  if (affectedR >= width)  affectedR= width-1;
+  if (affectedL >= width)  affectedL= width-1;
   if (affectedB >= height) affectedB= height-1;
-  if (affectedL >= width) affectedL= width-1;
   if (affectedT >= height) affectedT= height-1;
+  
 
   
   /* quit, if its a trivial region */
@@ -2420,8 +2436,12 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
       return 0;
     }
 
-  if (stDisplayBitsIndex != dispBitsIndex)
+  if (stImage == NULL
+      || stImage->width != width
+      || stImage->height != height
+      || stDisplayBitsIndex != dispBitsIndex) 
     {
+      /* Display has changed size;  recreate stImage */
 # if defined(USE_XSHM)
       if (asyncUpdate)
 	{
@@ -2429,7 +2449,8 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 	  while (completions) HandleEvents();
 	}
 # endif
-      stDisplayBitsIndex= dispBitsIndex;
+      
+      
       if (stImage)
 	{
 	  stImage->data= 0; /* don't you dare free() Display's Bitmap! */
@@ -2440,10 +2461,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 	      stDisplayBitmap= 0;
 	    }
 	}
-
-# ifndef USE_XSHM
-#  define useXshm 0
-# endif
+      
 
 # ifdef WORDS_BIGENDIAN
       if (!useXshm && depth == stBitsPerPixel &&
@@ -2460,10 +2478,6 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 	  stDisplayBitmap= stMalloc(bytesPerLine(width, stBitsPerPixel) * height);
 	}
 
-# ifndef USE_XSHM
-#  undef useXshm
-# endif
-
       stImage= stXCreateImage(stDisplay,
 			      DefaultVisual(stDisplay, DefaultScreen(stDisplay)),
 			      stDepth,
@@ -2471,7 +2485,7 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
 			      0,
 			      (stDisplayBitmap
 			         ? stDisplayBitmap
-			         : (char *)stDisplayBitsIndex),
+			         : (char *)dispBitsIndex),
 			      width,
 			      height,
 			      32,
@@ -2489,13 +2503,10 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
       if (!XInitImage(stImage))
 	fprintf(stderr, "XInitImage failed (but we don't care)\n");
       */
-    }
 
-  /* this can happen after resizing the window */
-  if (affectedR > width) affectedR= width;
-  if (affectedB > height) affectedB= height;
-  if ((affectedR <= affectedL) || (affectedT >= affectedB))
-    return 1;
+      stDisplayBitsIndex= dispBitsIndex;
+    }
+  
 
   if (depth != stBitsPerPixel)
     {
@@ -3970,7 +3981,7 @@ There are three ways to open a Squeak image file.  You can:
      that you want to use by default.
 
 For more information, type: `man squeak' (without the quote characters).
-", imageName, imageName);
+", imageName);
   exit(1);
 }
 
@@ -4139,9 +4150,12 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
 	  else if (!strcmp(arg, "-browserPipes"))
 	    { 
 	      if (argc < 2) usage();
-	      sscanf(saveArg(), "%li", &browserPipes[0]);
-	      sscanf(saveArg(), "%li", &browserPipes[1]);
+	      sscanf(saveArg(), "%i", &browserPipes[0]);
+	      sscanf(saveArg(), "%i", &browserPipes[1]);
 	      /* receive browserWindow */
+#if 0
+	      DPRINT("VM: reading browserWindow\n");
+#endif
 	      read(browserPipes[0], &browserWindow, 4);
 	    }
 #        endif
