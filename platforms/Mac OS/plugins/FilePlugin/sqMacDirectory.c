@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.5 2002/01/22 19:12:33 johnmci Exp $
+*   RCSID:   $Id: sqMacDirectory.c,v 1.6 2002/08/06 21:40:26 johnmci Exp $
 *
 *   NOTES: See change log below.
 * 
@@ -22,6 +22,7 @@
  3.2.1B5 Dec 27,2001 JMM alter mkdir def to make cw pro 5 happy
  3.2.1B6 Jan 2,2002 JMM make lookup faster
  3.2.2B1 Jan 18th,2002 JMM check macroman, fix issues with squeak file offset
+ 3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
  */
 
 #include "sq.h"
@@ -91,7 +92,7 @@ int dir_Create(char *pathString, int pathStringLength) {
     /* copy the file name into a null-terminated C string */
     sqFilenameFromString((char *) cFileName, (int) pathString, pathStringLength);
     
-#if defined(__MWERKS__) && JMMFoo
+#if defined(__MWERKS__)
 	{
         CFStringRef 	filePath,lastFilePath;
         CFURLRef 	    sillyThing,sillyThing2;
@@ -102,11 +103,13 @@ int dir_Create(char *pathString, int pathStringLength) {
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),kCFStringEncodingMacRoman,false);
         if (filePath == nil) 
             return false;
-        sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,true);
+        sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,true);
         CFRelease(filePath);
 
         lastFilePath = CFURLCopyLastPathComponent(sillyThing);
         tokenLength = CFStringGetLength(lastFilePath);
+        if (tokenLength > 1024)
+            return false;
         CFStringGetCharacters(lastFilePath,CFRangeMake(0,tokenLength),buffer);
         CFRelease(lastFilePath);
 
@@ -136,7 +139,7 @@ int dir_Delete(char *pathString, int pathStringLength) {
         return false;
     }
 
-#if defined(__MWERKS__)  && JMMFoo
+#if defined(__MWERKS__)
 	{
     	/* Delete the existing directory with the given path. */
         FSSpec spec;
@@ -332,7 +335,7 @@ int recordPath(char *pathString, int pathStringLength, FSSpec *spec) {
 }
 
 
-#if defined(__MWERKS__) && !TARGET_API_MAC_CARBON
+#if defined(__MWERKS__) 
 int ftruncate(short int file,int offset)
 {	
 	ParamBlockRec pb;
@@ -347,7 +350,7 @@ int ftruncate(short int file,int offset)
 
 #endif
 
-#if defined(__MWERKS__) && !TARGET_API_MAC_CARBON
+#if defined(__MWERKS__) 
 
 #include <ansi_files.h>
 #include <buffer_io.h>
@@ -432,6 +435,7 @@ static void set_file_type(FSSpec * spec, int binary_file)
 }
 
 int	__open_file			(const char * name, __std(__file_modes) mode, __std(__file_handle) * handle);
+OSErr __path2fss(const char * pathName, FSSpecPtr spec);
 
 int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
 {
@@ -439,6 +443,7 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
 	OSErr						ioResult;
 	HParamBlockRec	pb;
 	
+
 	ioResult = __path2fss(name, &spec);
 	if (__system7present())												/* mm 980424 */
 	{																	/* mm 980424 */
@@ -449,7 +454,8 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
 	if (ioResult && (ioResult != fnfErr || mode.open_mode == __must_exist))
 		return(__io_error);
 	
-#if TARGET_API_MAC_CARBON	
+	
+#if TARGET_API_MAC_CARBON
 	if (ioResult) {
         CFStringRef 	filePath;
         CFURLRef 	    sillyThing, sillyThing2;
@@ -459,6 +465,7 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
         UniChar         buffer[1024];
         long            tokenLength;
         
+		
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)name,strlen(name),kCFStringEncodingMacRoman,false);
         if (filePath == nil) 
             return __io_error;
@@ -473,6 +480,13 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
         }
         filePath = CFURLCopyLastPathComponent(sillyThing);
         tokenLength = CFStringGetLength(filePath);
+        if (tokenLength > 1024) {
+            CFRelease(filePath);
+            CFRelease(sillyThing);
+            CFRelease(sillyThing2);
+            return(__io_error);
+        }
+            
         CFStringGetCharacters(filePath,CFRangeMake(0,tokenLength),buffer);
 
         CFRelease(filePath);
@@ -483,11 +497,19 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
     	if (ioResult)
 	    	return(__io_error);
 	    	
-	    ioResult = FSpOpenDF(&spec,(mode.io_mode == __read) ? fsRdPerm : fsRdWrPerm, &fileRefNum); 
+        pb.ioParam.ioNamePtr    = spec.name;
+    	pb.ioParam.ioVRefNum    = spec.vRefNum;
+    	pb.ioParam.ioPermssn    = (mode.io_mode == __read) ? fsRdPerm : fsRdWrPerm;
+    	pb.ioParam.ioMisc       = 0;
+    	pb.fileParam.ioFVersNum = 0;
+    	pb.fileParam.ioDirID    = spec.parID;
+		set_file_type(&spec, mode.binary_io);
+		ioResult = PBHOpenDFSync(&pb);  /* HH 10/25/97  was PBHOpenSync */
+    	    	
     	if (ioResult)
-	    	return(__io_error);
-	    	
-	    *handle = fileRefNum;
+    		return(__io_error);
+    	
+    	*handle = pb.ioParam.ioRefNum;
 	
 	    return(__no_io_error);
 	}
