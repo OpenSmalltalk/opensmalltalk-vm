@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:28:01 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:38 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -67,9 +67,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"JPEGReadWriter2Plugin 15 March 2005 (i)"
+	"JPEGReadWriter2Plugin 18 March 2005 (i)"
 #else
-	"JPEGReadWriter2Plugin 15 March 2005 (e)"
+	"JPEGReadWriter2Plugin 18 March 2005 (e)"
 #endif
 ;
 

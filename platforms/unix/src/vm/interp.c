@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:26:15 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:18 pm) */
 
 #define SQ_USE_GLOBAL_STRUCT 1
 
@@ -169,6 +169,7 @@ int accessibleObjectAfter(int oop);
 int addNewMethodToCache(void);
 int adjustAllOopsBy(int bytesToShift);
 int allYoungand(int array1, int array2);
+int allocateheaderSizeh1h2h3doFillwith(int byteSize, int hdrSize, int baseHeader, int classOop, int extendedSize, int doFill, int fillWord);
 int allocateChunk(int byteSize);
 int allocateOrRecycleContext(int needsLarge);
 int argumentCountOf(int methodPointer);
@@ -324,10 +325,10 @@ int noteAsRootheaderLoc(int oop, int headerLoc);
 int nullCompilerHook(void);
 int objectAfter(int oop);
 int okayFields(int oop);
-int okayOop(int oop);
+int okayOop(int signedOop);
 int oopFromChunk(int chunk);
-int oopHasAcceptableClass(int oop);
-int oopHasOkayClass(int oop);
+int oopHasAcceptableClass(int signedOop);
+int oopHasOkayClass(int signedOop);
 int pop(int nItems);
 int popthenPush(int nItems, int oop);
 double popFloat(void);
@@ -585,11 +586,9 @@ int stackPointer;
 int successFlag;
 int specialObjectsOop;
 int nilObj;
-int youngStart;
 int argumentCount;
-int endOfMemory;
-int trueObj;
 int falseObj;
+int trueObj;
 int interruptCheckCounter;
 int activeContext;
 int freeBlock;
@@ -597,66 +596,647 @@ int instructionPointer;
 int method;
 int newMethod;
 int theHomeContext;
-int remapBufferCount;
 int primitiveIndex;
-int allocationCount;
-int receiver;
 int messageSelector;
+int receiver;
+int remapBufferCount;
 int compilerInitialized;
-int allocationsBetweenGCs;
+int allocationCount;
 int rootTableCount;
-int reclaimableContextCount;
+int allocationsBetweenGCs;
 int lkupClass;
+int reclaimableContextCount;
 int fwdTableNext;
 int lowSpaceThreshold;
-int memoryLimit;
 int signalLowSpace;
 int nextWakeupTick;
-int compStart;
 int lastHash;
+int compStart;
 int freeLargeContexts;
-int freeContexts;
 int growHeadroom;
-int newNativeMethod;
-int fullScreenFlag;
-int interruptPending;
-int interruptKeycode;
-int shrinkThreshold;
-int fwdTableLast;
-int methodClass;
+int freeContexts;
 int receiverClass;
-int primitiveFunctionPointer;
+int fwdTableLast;
+int fullScreenFlag;
+int methodClass;
+int shrinkThreshold;
+int interruptKeycode;
+int newNativeMethod;
+int interruptPending;
 int totalObjectCount;
+int primitiveFunctionPointer;
 int compEnd;
-int semaphoresUseBufferA;
-int pendingFinalizationSignals;
 int deferDisplayUpdates;
-int statRootTableOverflows;
-int semaphoresToSignalCountB;
 int savedWindowSize;
-int interruptChecksEveryNms;
+int semaphoresToSignalCountB;
+int statRootTableOverflows;
+int semaphoresUseBufferA;
+int semaphoresToSignalCountA;
+int statFullGCMSecs;
 int tenuringThreshold;
 int statFullGCs;
-int statFullGCMSecs;
-int semaphoresToSignalCountA;
+int pendingFinalizationSignals;
+int interruptChecksEveryNms;
 int statIncrGCMSecs;
 int statTenures;
 int statIncrGCs;
 int lastTick;
-int nextPollTick;
 int interruptCheckCounterFeedBackReset;
+int nextPollTick;
+unsigned youngStart;
+unsigned endOfMemory;
 int pollChecksEveryNms;
+unsigned memoryLimit;
  } fum;
 struct foo * foo = &fum;
 
 int extraVMMemory;
 int showSurfaceFn;
-int (*compilerHooks[16])();
+const char *interpreterVersion = "Squeak3.7 of '4 September 2004' [latest update: #5989]";
 int semaphoresToSignalA[501];
-int semaphoresToSignalB[501];
+int (*compilerHooks[16])();
 int methodCache[4097];
 int atCache[65];
-const char *interpreterVersion = "Squeak3.7 of '4 September 2004' [latest update: #5989]";
+struct VirtualMachine* interpreterProxy;
+int semaphoresToSignalB[501];
+char* obsoleteIndexedPrimitiveTable[][3] = {
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "BitBltPlugin", "primitiveCopyBits", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "BitBltPlugin", "primitiveDrawLoop", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "JoystickTabletPlugin", "primitiveReadJoystick", NULL },
+{ "BitBltPlugin", "primitiveWarpBits", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "FilePlugin", "primitiveFileAtEnd", NULL },
+{ "FilePlugin", "primitiveFileClose", NULL },
+{ "FilePlugin", "primitiveFileGetPosition", NULL },
+{ "FilePlugin", "primitiveFileOpen", NULL },
+{ "FilePlugin", "primitiveFileRead", NULL },
+{ "FilePlugin", "primitiveFileSetPosition", NULL },
+{ "FilePlugin", "primitiveFileDelete", NULL },
+{ "FilePlugin", "primitiveFileSize", NULL },
+{ "FilePlugin", "primitiveFileWrite", NULL },
+{ "FilePlugin", "primitiveFileRename", NULL },
+{ "FilePlugin", "primitiveDirectoryCreate", NULL },
+{ "FilePlugin", "primitiveDirectoryDelimitor", NULL },
+{ "FilePlugin", "primitiveDirectoryLookup", NULL },
+{ "FilePlugin", "primitiveDirectoryDelete", NULL },
+{ "FilePlugin", "primitiveDirectoryGetMacTypeAndCreator", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "FilePlugin", "primitiveDirectorySetMacTypeAndCreator", NULL },
+{ "SoundPlugin", "primitiveSoundStart", NULL },
+{ "SoundPlugin", "primitiveSoundStartWithSemaphore", NULL },
+{ "SoundPlugin", "primitiveSoundStop", NULL },
+{ "SoundPlugin", "primitiveSoundAvailableSpace", NULL },
+{ "SoundPlugin", "primitiveSoundPlaySamples", NULL },
+{ "SoundPlugin", "primitiveSoundPlaySilence", NULL },
+{ "SoundGenerationPlugin", "primitiveWaveTableSoundMix", NULL },
+{ "SoundGenerationPlugin", "primitiveFMSoundMix", NULL },
+{ "SoundGenerationPlugin", "primitivePluckedSoundMix", NULL },
+{ "SoundGenerationPlugin", "primitiveSampledSoundMix", NULL },
+{ "SoundGenerationPlugin", "primitiveMixFMSound", NULL },
+{ "SoundGenerationPlugin", "primitiveMixPluckedSound", NULL },
+{ "SoundGenerationPlugin", "primitiveOldSampledSoundMix", NULL },
+{ "SoundGenerationPlugin", "primitiveApplyReverb", NULL },
+{ "SoundGenerationPlugin", "primitiveMixLoopedSampledSound", NULL },
+{ "SoundGenerationPlugin", "primitiveMixSampledSound", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "SoundPlugin", "primitiveSoundInsertSamples", NULL },
+{ "SoundPlugin", "primitiveSoundStartRecording", NULL },
+{ "SoundPlugin", "primitiveSoundStopRecording", NULL },
+{ "SoundPlugin", "primitiveSoundGetRecordingSampleRate", NULL },
+{ "SoundPlugin", "primitiveSoundRecordSamples", NULL },
+{ "SoundPlugin", "primitiveSoundSetRecordLevel", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "SocketPlugin", "primitiveInitializeNetwork", NULL },
+{ "SocketPlugin", "primitiveResolverStartNameLookup", NULL },
+{ "SocketPlugin", "primitiveResolverNameLookupResult", NULL },
+{ "SocketPlugin", "primitiveResolverStartAddressLookup", NULL },
+{ "SocketPlugin", "primitiveResolverAddressLookupResult", NULL },
+{ "SocketPlugin", "primitiveResolverAbortLookup", NULL },
+{ "SocketPlugin", "primitiveResolverLocalAddress", NULL },
+{ "SocketPlugin", "primitiveResolverStatus", NULL },
+{ "SocketPlugin", "primitiveResolverError", NULL },
+{ "SocketPlugin", "primitiveSocketCreate", NULL },
+{ "SocketPlugin", "primitiveSocketDestroy", NULL },
+{ "SocketPlugin", "primitiveSocketConnectionStatus", NULL },
+{ "SocketPlugin", "primitiveSocketError", NULL },
+{ "SocketPlugin", "primitiveSocketLocalAddress", NULL },
+{ "SocketPlugin", "primitiveSocketLocalPort", NULL },
+{ "SocketPlugin", "primitiveSocketRemoteAddress", NULL },
+{ "SocketPlugin", "primitiveSocketRemotePort", NULL },
+{ "SocketPlugin", "primitiveSocketConnectToPort", NULL },
+{ "SocketPlugin", "primitiveSocketListenWithOrWithoutBacklog", NULL },
+{ "SocketPlugin", "primitiveSocketCloseConnection", NULL },
+{ "SocketPlugin", "primitiveSocketAbortConnection", NULL },
+{ "SocketPlugin", "primitiveSocketReceiveDataBufCount", NULL },
+{ "SocketPlugin", "primitiveSocketReceiveDataAvailable", NULL },
+{ "SocketPlugin", "primitiveSocketSendDataBufCount", NULL },
+{ "SocketPlugin", "primitiveSocketSendDone", NULL },
+{ "SocketPlugin", "primitiveSocketAccept", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "MiscPrimitivePlugin", "primitiveDecompressFromByteArray", NULL },
+{ "MiscPrimitivePlugin", "primitiveCompareString", NULL },
+{ "MiscPrimitivePlugin", "primitiveConvert8BitSigned", NULL },
+{ "MiscPrimitivePlugin", "primitiveCompressToByteArray", NULL },
+{ "SerialPlugin", "primitiveSerialPortOpen", NULL },
+{ "SerialPlugin", "primitiveSerialPortClose", NULL },
+{ "SerialPlugin", "primitiveSerialPortWrite", NULL },
+{ "SerialPlugin", "primitiveSerialPortRead", NULL },
+{ NULL, NULL, NULL },
+{ "MiscPrimitivePlugin", "primitiveTranslateStringWithTable", NULL },
+{ "MiscPrimitivePlugin", "primitiveFindFirstInString", NULL },
+{ "MiscPrimitivePlugin", "primitiveIndexOfAsciiInString", NULL },
+{ "MiscPrimitivePlugin", "primitiveFindSubstring", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "MIDIPlugin", "primitiveMIDIClosePort", NULL },
+{ "MIDIPlugin", "primitiveMIDIGetClock", NULL },
+{ "MIDIPlugin", "primitiveMIDIGetPortCount", NULL },
+{ "MIDIPlugin", "primitiveMIDIGetPortDirectionality", NULL },
+{ "MIDIPlugin", "primitiveMIDIGetPortName", NULL },
+{ "MIDIPlugin", "primitiveMIDIOpenPort", NULL },
+{ "MIDIPlugin", "primitiveMIDIParameterGetOrSet", NULL },
+{ "MIDIPlugin", "primitiveMIDIRead", NULL },
+{ "MIDIPlugin", "primitiveMIDIWrite", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "AsynchFilePlugin", "primitiveAsyncFileClose", NULL },
+{ "AsynchFilePlugin", "primitiveAsyncFileOpen", NULL },
+{ "AsynchFilePlugin", "primitiveAsyncFileReadResult", NULL },
+{ "AsynchFilePlugin", "primitiveAsyncFileReadStart", NULL },
+{ "AsynchFilePlugin", "primitiveAsyncFileWriteResult", NULL },
+{ "AsynchFilePlugin", "primitiveAsyncFileWriteStart", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ "JoystickTabletPlugin", "primitiveGetTabletParameters", NULL },
+{ "JoystickTabletPlugin", "primitiveReadTablet", NULL },
+{ "ADPCMCodecPlugin", "primitiveDecodeMono", NULL },
+{ "ADPCMCodecPlugin", "primitiveDecodeStereo", NULL },
+{ "ADPCMCodecPlugin", "primitiveEncodeMono", NULL },
+{ "ADPCMCodecPlugin", "primitiveEncodeStereo", NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL },
+{ NULL, NULL, NULL }
+};
 const char* obsoleteNamedPrimitiveTable[][3] = {
 { "gePrimitiveMergeFillFrom", "B2DPlugin", "primitiveMergeFillFrom" },
 { "gePrimitiveSetClipRect", "B2DPlugin", "primitiveSetClipRect" },
@@ -731,6 +1311,7 @@ const char* obsoleteNamedPrimitiveTable[][3] = {
 { NULL, NULL, NULL }
 };
 unsigned char* memory;
+int externalPrimitiveTable[4097];
 fptr const primitiveTable[] = {
 primitiveFail,
 primitiveAdd,
@@ -1310,589 +1891,9 @@ primitiveFail,
 primitiveFail,
 
 };
-int remapBuffer[26];
-int rootTable[2501];
 int headerTypeBytes[4];
-struct VirtualMachine* interpreterProxy;
-int externalPrimitiveTable[4097];
-char* obsoleteIndexedPrimitiveTable[][3] = {
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "BitBltPlugin", "primitiveCopyBits", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "BitBltPlugin", "primitiveDrawLoop", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "JoystickTabletPlugin", "primitiveReadJoystick", NULL },
-{ "BitBltPlugin", "primitiveWarpBits", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "FilePlugin", "primitiveFileAtEnd", NULL },
-{ "FilePlugin", "primitiveFileClose", NULL },
-{ "FilePlugin", "primitiveFileGetPosition", NULL },
-{ "FilePlugin", "primitiveFileOpen", NULL },
-{ "FilePlugin", "primitiveFileRead", NULL },
-{ "FilePlugin", "primitiveFileSetPosition", NULL },
-{ "FilePlugin", "primitiveFileDelete", NULL },
-{ "FilePlugin", "primitiveFileSize", NULL },
-{ "FilePlugin", "primitiveFileWrite", NULL },
-{ "FilePlugin", "primitiveFileRename", NULL },
-{ "FilePlugin", "primitiveDirectoryCreate", NULL },
-{ "FilePlugin", "primitiveDirectoryDelimitor", NULL },
-{ "FilePlugin", "primitiveDirectoryLookup", NULL },
-{ "FilePlugin", "primitiveDirectoryDelete", NULL },
-{ "FilePlugin", "primitiveDirectoryGetMacTypeAndCreator", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "FilePlugin", "primitiveDirectorySetMacTypeAndCreator", NULL },
-{ "SoundPlugin", "primitiveSoundStart", NULL },
-{ "SoundPlugin", "primitiveSoundStartWithSemaphore", NULL },
-{ "SoundPlugin", "primitiveSoundStop", NULL },
-{ "SoundPlugin", "primitiveSoundAvailableSpace", NULL },
-{ "SoundPlugin", "primitiveSoundPlaySamples", NULL },
-{ "SoundPlugin", "primitiveSoundPlaySilence", NULL },
-{ "SoundGenerationPlugin", "primitiveWaveTableSoundMix", NULL },
-{ "SoundGenerationPlugin", "primitiveFMSoundMix", NULL },
-{ "SoundGenerationPlugin", "primitivePluckedSoundMix", NULL },
-{ "SoundGenerationPlugin", "primitiveSampledSoundMix", NULL },
-{ "SoundGenerationPlugin", "primitiveMixFMSound", NULL },
-{ "SoundGenerationPlugin", "primitiveMixPluckedSound", NULL },
-{ "SoundGenerationPlugin", "primitiveOldSampledSoundMix", NULL },
-{ "SoundGenerationPlugin", "primitiveApplyReverb", NULL },
-{ "SoundGenerationPlugin", "primitiveMixLoopedSampledSound", NULL },
-{ "SoundGenerationPlugin", "primitiveMixSampledSound", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "SoundPlugin", "primitiveSoundInsertSamples", NULL },
-{ "SoundPlugin", "primitiveSoundStartRecording", NULL },
-{ "SoundPlugin", "primitiveSoundStopRecording", NULL },
-{ "SoundPlugin", "primitiveSoundGetRecordingSampleRate", NULL },
-{ "SoundPlugin", "primitiveSoundRecordSamples", NULL },
-{ "SoundPlugin", "primitiveSoundSetRecordLevel", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "SocketPlugin", "primitiveInitializeNetwork", NULL },
-{ "SocketPlugin", "primitiveResolverStartNameLookup", NULL },
-{ "SocketPlugin", "primitiveResolverNameLookupResult", NULL },
-{ "SocketPlugin", "primitiveResolverStartAddressLookup", NULL },
-{ "SocketPlugin", "primitiveResolverAddressLookupResult", NULL },
-{ "SocketPlugin", "primitiveResolverAbortLookup", NULL },
-{ "SocketPlugin", "primitiveResolverLocalAddress", NULL },
-{ "SocketPlugin", "primitiveResolverStatus", NULL },
-{ "SocketPlugin", "primitiveResolverError", NULL },
-{ "SocketPlugin", "primitiveSocketCreate", NULL },
-{ "SocketPlugin", "primitiveSocketDestroy", NULL },
-{ "SocketPlugin", "primitiveSocketConnectionStatus", NULL },
-{ "SocketPlugin", "primitiveSocketError", NULL },
-{ "SocketPlugin", "primitiveSocketLocalAddress", NULL },
-{ "SocketPlugin", "primitiveSocketLocalPort", NULL },
-{ "SocketPlugin", "primitiveSocketRemoteAddress", NULL },
-{ "SocketPlugin", "primitiveSocketRemotePort", NULL },
-{ "SocketPlugin", "primitiveSocketConnectToPort", NULL },
-{ "SocketPlugin", "primitiveSocketListenWithOrWithoutBacklog", NULL },
-{ "SocketPlugin", "primitiveSocketCloseConnection", NULL },
-{ "SocketPlugin", "primitiveSocketAbortConnection", NULL },
-{ "SocketPlugin", "primitiveSocketReceiveDataBufCount", NULL },
-{ "SocketPlugin", "primitiveSocketReceiveDataAvailable", NULL },
-{ "SocketPlugin", "primitiveSocketSendDataBufCount", NULL },
-{ "SocketPlugin", "primitiveSocketSendDone", NULL },
-{ "SocketPlugin", "primitiveSocketAccept", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "MiscPrimitivePlugin", "primitiveDecompressFromByteArray", NULL },
-{ "MiscPrimitivePlugin", "primitiveCompareString", NULL },
-{ "MiscPrimitivePlugin", "primitiveConvert8BitSigned", NULL },
-{ "MiscPrimitivePlugin", "primitiveCompressToByteArray", NULL },
-{ "SerialPlugin", "primitiveSerialPortOpen", NULL },
-{ "SerialPlugin", "primitiveSerialPortClose", NULL },
-{ "SerialPlugin", "primitiveSerialPortWrite", NULL },
-{ "SerialPlugin", "primitiveSerialPortRead", NULL },
-{ NULL, NULL, NULL },
-{ "MiscPrimitivePlugin", "primitiveTranslateStringWithTable", NULL },
-{ "MiscPrimitivePlugin", "primitiveFindFirstInString", NULL },
-{ "MiscPrimitivePlugin", "primitiveIndexOfAsciiInString", NULL },
-{ "MiscPrimitivePlugin", "primitiveFindSubstring", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "MIDIPlugin", "primitiveMIDIClosePort", NULL },
-{ "MIDIPlugin", "primitiveMIDIGetClock", NULL },
-{ "MIDIPlugin", "primitiveMIDIGetPortCount", NULL },
-{ "MIDIPlugin", "primitiveMIDIGetPortDirectionality", NULL },
-{ "MIDIPlugin", "primitiveMIDIGetPortName", NULL },
-{ "MIDIPlugin", "primitiveMIDIOpenPort", NULL },
-{ "MIDIPlugin", "primitiveMIDIParameterGetOrSet", NULL },
-{ "MIDIPlugin", "primitiveMIDIRead", NULL },
-{ "MIDIPlugin", "primitiveMIDIWrite", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "AsynchFilePlugin", "primitiveAsyncFileClose", NULL },
-{ "AsynchFilePlugin", "primitiveAsyncFileOpen", NULL },
-{ "AsynchFilePlugin", "primitiveAsyncFileReadResult", NULL },
-{ "AsynchFilePlugin", "primitiveAsyncFileReadStart", NULL },
-{ "AsynchFilePlugin", "primitiveAsyncFileWriteResult", NULL },
-{ "AsynchFilePlugin", "primitiveAsyncFileWriteStart", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ "JoystickTabletPlugin", "primitiveGetTabletParameters", NULL },
-{ "JoystickTabletPlugin", "primitiveReadTablet", NULL },
-{ "ADPCMCodecPlugin", "primitiveDecodeMono", NULL },
-{ "ADPCMCodecPlugin", "primitiveDecodeStereo", NULL },
-{ "ADPCMCodecPlugin", "primitiveEncodeMono", NULL },
-{ "ADPCMCodecPlugin", "primitiveEncodeStereo", NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL },
-{ NULL, NULL, NULL }
-};
+int rootTable[2501];
+int remapBuffer[26];
 
 
 
@@ -2160,6 +2161,97 @@ l4:	/* end lastPointerOf: */;
 		fieldOffset -= 4;
 	}
 	return 1;
+}
+
+
+/*	Allocate a new object of the given size and number of header words. (Note: byteSize already includes space for the base header word.) Initialize the header fields of the new object and fill the remainder of the object with the given value.
+	May cause a GC */
+
+int allocateheaderSizeh1h2h3doFillwith(int byteSize, int hdrSize, int baseHeader, int classOop, int extendedSize, int doFill, int fillWord) {
+register struct foo * foo = &fum;
+    int newObj;
+    unsigned end;
+    int remappedClassOop;
+    unsigned i;
+    int oop;
+    int newFreeSize;
+    int newChunk;
+    int enoughSpace;
+    int minFree;
+
+	if (hdrSize > 1) {
+		/* begin pushRemappableOop: */
+		remapBuffer[foo->remapBufferCount += 1] = classOop;
+	}
+	/* begin allocateChunk: */
+	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
+		incrementalGC();
+	}
+	/* begin sufficientSpaceToAllocate: */
+	minFree = (foo->lowSpaceThreshold + (byteSize + ((hdrSize - 1) * 4))) + BaseHeaderSize;
+	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((unsigned ) minFree))) {
+		enoughSpace = 1;
+		goto l1;
+	} else {
+		enoughSpace = sufficientSpaceAfterGC(minFree);
+		goto l1;
+	}
+l1:	/* end sufficientSpaceToAllocate: */;
+	if (!(enoughSpace)) {
+		foo->signalLowSpace = 1;
+		foo->lowSpaceThreshold = 0;
+		/* begin forceInterruptCheck */
+		foo->interruptCheckCounter = -1000;
+	}
+	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((unsigned ) ((byteSize + ((hdrSize - 1) * 4)) + BaseHeaderSize)))) {
+		error("out of memory");
+	}
+	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (byteSize + ((hdrSize - 1) * 4));
+	newChunk = foo->freeBlock;
+	foo->freeBlock += byteSize + ((hdrSize - 1) * 4);
+	/* begin setSizeOfFree:to: */
+	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
+	foo->allocationCount += 1;
+	newObj = newChunk;
+	if (hdrSize > 1) {
+		/* begin popRemappableOop */
+		oop = remapBuffer[foo->remapBufferCount];
+		foo->remapBufferCount -= 1;
+		remappedClassOop = oop;
+	}
+	if (hdrSize == 3) {
+		longAtput(newObj, extendedSize | HeaderTypeSizeAndClass);
+		longAtput(newObj + 4, remappedClassOop | HeaderTypeSizeAndClass);
+		longAtput(newObj + 8, baseHeader | HeaderTypeSizeAndClass);
+		newObj += 8;
+	}
+	if (hdrSize == 2) {
+		longAtput(newObj, remappedClassOop | HeaderTypeClass);
+		longAtput(newObj + 4, baseHeader | HeaderTypeClass);
+		newObj += 4;
+	}
+	if (hdrSize == 1) {
+		longAtput(newObj, baseHeader | HeaderTypeShort);
+	}
+	if (doFill) {
+		end = newObj + byteSize;
+		i = newObj + 4;
+		while (i < end) {
+			longAtput(i, fillWord);
+			i += 4;
+		}
+	}
+	if (DoAssertionChecks) {
+		okayOop(newObj);
+		oopHasOkayClass(newObj);
+		if (!((objectAfter(newObj)) == foo->freeBlock)) {
+			error("allocate bug: did not set header of new oop correctly");
+		}
+		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
+			error("allocate bug: did not set header of freeBlock correctly");
+		}
+	}
+	return newObj;
 }
 
 
@@ -5159,15 +5251,6 @@ register struct foo * foo = &fum;
     int header2;
     int format;
     int inc;
-    int newObj1;
-    int end;
-    int remappedClassOop;
-    int i;
-    int oop;
-    int newFreeSize;
-    int newChunk;
-    int enoughSpace;
-    int minFree;
 
 	if (DoAssertionChecks) {
 		if (size < 0) {
@@ -5229,80 +5312,7 @@ register struct foo * foo = &fum;
 	} else {
 		fillWord = 0;
 	}
-	/* begin allocate:headerSize:h1:h2:h3:doFill:with: */
-	if (hdrSize > 1) {
-		/* begin pushRemappableOop: */
-		remapBuffer[foo->remapBufferCount += 1] = header2;
-	}
-	/* begin allocateChunk: */
-	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
-		incrementalGC();
-	}
-	/* begin sufficientSpaceToAllocate: */
-	minFree = (foo->lowSpaceThreshold + (byteSize + ((hdrSize - 1) * 4))) + BaseHeaderSize;
-	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((unsigned ) minFree))) {
-		enoughSpace = 1;
-		goto l1;
-	} else {
-		enoughSpace = sufficientSpaceAfterGC(minFree);
-		goto l1;
-	}
-l1:	/* end sufficientSpaceToAllocate: */;
-	if (!(enoughSpace)) {
-		foo->signalLowSpace = 1;
-		foo->lowSpaceThreshold = 0;
-		/* begin forceInterruptCheck */
-		foo->interruptCheckCounter = -1000;
-	}
-	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((unsigned ) ((byteSize + ((hdrSize - 1) * 4)) + BaseHeaderSize)))) {
-		error("out of memory");
-	}
-	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (byteSize + ((hdrSize - 1) * 4));
-	newChunk = foo->freeBlock;
-	foo->freeBlock += byteSize + ((hdrSize - 1) * 4);
-	/* begin setSizeOfFree:to: */
-	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
-	foo->allocationCount += 1;
-	newObj1 = newChunk;
-	if (hdrSize > 1) {
-		/* begin popRemappableOop */
-		oop = remapBuffer[foo->remapBufferCount];
-		foo->remapBufferCount -= 1;
-		remappedClassOop = oop;
-	}
-	if (hdrSize == 3) {
-		longAtput(newObj1, header3 | HeaderTypeSizeAndClass);
-		longAtput(newObj1 + 4, remappedClassOop | HeaderTypeSizeAndClass);
-		longAtput(newObj1 + 8, header1 | HeaderTypeSizeAndClass);
-		newObj1 += 8;
-	}
-	if (hdrSize == 2) {
-		longAtput(newObj1, remappedClassOop | HeaderTypeClass);
-		longAtput(newObj1 + 4, header1 | HeaderTypeClass);
-		newObj1 += 4;
-	}
-	if (hdrSize == 1) {
-		longAtput(newObj1, header1 | HeaderTypeShort);
-	}
-	if (1) {
-		end = newObj1 + byteSize;
-		i = newObj1 + 4;
-		while (i < end) {
-			longAtput(i, fillWord);
-			i += 4;
-		}
-	}
-	if (DoAssertionChecks) {
-		okayOop(newObj1);
-		oopHasOkayClass(newObj1);
-		if (!((objectAfter(newObj1)) == foo->freeBlock)) {
-			error("allocate bug: did not set header of new oop correctly");
-		}
-		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
-			error("allocate bug: did not set header of freeBlock correctly");
-		}
-	}
-	newObj = newObj1;
+	newObj = allocateheaderSizeh1h2h3doFillwith(byteSize, hdrSize, header1, header2, header3, 1, fillWord);
 	return newObj;
 }
 
@@ -5318,15 +5328,6 @@ register struct foo * foo = &fum;
     int hash;
     int header2;
     int hdrSize;
-    int newObj;
-    int end;
-    int remappedClassOop;
-    int i;
-    int oop;
-    int newFreeSize;
-    int newChunk;
-    int enoughSpace;
-    int minFree;
 
 	/* begin newObjectHash */
 	foo->lastHash = (13849 + (27181 * foo->lastHash)) & 65535;
@@ -5339,80 +5340,7 @@ register struct foo * foo = &fum;
 	} else {
 		hdrSize = 1;
 	}
-	/* begin allocate:headerSize:h1:h2:h3:doFill:with: */
-	if (hdrSize > 1) {
-		/* begin pushRemappableOop: */
-		remapBuffer[foo->remapBufferCount += 1] = header2;
-	}
-	/* begin allocateChunk: */
-	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
-		incrementalGC();
-	}
-	/* begin sufficientSpaceToAllocate: */
-	minFree = (foo->lowSpaceThreshold + (sizeInBytes + ((hdrSize - 1) * 4))) + BaseHeaderSize;
-	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((unsigned ) minFree))) {
-		enoughSpace = 1;
-		goto l1;
-	} else {
-		enoughSpace = sufficientSpaceAfterGC(minFree);
-		goto l1;
-	}
-l1:	/* end sufficientSpaceToAllocate: */;
-	if (!(enoughSpace)) {
-		foo->signalLowSpace = 1;
-		foo->lowSpaceThreshold = 0;
-		/* begin forceInterruptCheck */
-		foo->interruptCheckCounter = -1000;
-	}
-	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((unsigned ) ((sizeInBytes + ((hdrSize - 1) * 4)) + BaseHeaderSize)))) {
-		error("out of memory");
-	}
-	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (sizeInBytes + ((hdrSize - 1) * 4));
-	newChunk = foo->freeBlock;
-	foo->freeBlock += sizeInBytes + ((hdrSize - 1) * 4);
-	/* begin setSizeOfFree:to: */
-	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
-	foo->allocationCount += 1;
-	newObj = newChunk;
-	if (hdrSize > 1) {
-		/* begin popRemappableOop */
-		oop = remapBuffer[foo->remapBufferCount];
-		foo->remapBufferCount -= 1;
-		remappedClassOop = oop;
-	}
-	if (hdrSize == 3) {
-		longAtput(newObj, 0 | HeaderTypeSizeAndClass);
-		longAtput(newObj + 4, remappedClassOop | HeaderTypeSizeAndClass);
-		longAtput(newObj + 8, header1 | HeaderTypeSizeAndClass);
-		newObj += 8;
-	}
-	if (hdrSize == 2) {
-		longAtput(newObj, remappedClassOop | HeaderTypeClass);
-		longAtput(newObj + 4, header1 | HeaderTypeClass);
-		newObj += 4;
-	}
-	if (hdrSize == 1) {
-		longAtput(newObj, header1 | HeaderTypeShort);
-	}
-	if (0) {
-		end = newObj + sizeInBytes;
-		i = newObj + 4;
-		while (i < end) {
-			longAtput(i, 0);
-			i += 4;
-		}
-	}
-	if (DoAssertionChecks) {
-		okayOop(newObj);
-		oopHasOkayClass(newObj);
-		if (!((objectAfter(newObj)) == foo->freeBlock)) {
-			error("allocate bug: did not set header of new oop correctly");
-		}
-		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
-			error("allocate bug: did not set header of freeBlock correctly");
-		}
-	}
-	return newObj;
+	return allocateheaderSizeh1h2h3doFillwith(sizeInBytes, hdrSize, header1, header2, 0, 0, 0);
 }
 
 
@@ -5428,15 +5356,6 @@ register struct foo * foo = &fum;
     int hash;
     int header2;
     int hdrSize;
-    int newObj;
-    int end;
-    int remappedClassOop;
-    int i;
-    int oop;
-    int newFreeSize;
-    int newChunk;
-    int enoughSpace;
-    int minFree;
 
 	/* begin newObjectHash */
 	foo->lastHash = (13849 + (27181 * foo->lastHash)) & 65535;
@@ -5449,80 +5368,7 @@ register struct foo * foo = &fum;
 	} else {
 		hdrSize = 1;
 	}
-	/* begin allocate:headerSize:h1:h2:h3:doFill:with: */
-	if (hdrSize > 1) {
-		/* begin pushRemappableOop: */
-		remapBuffer[foo->remapBufferCount += 1] = header2;
-	}
-	/* begin allocateChunk: */
-	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
-		incrementalGC();
-	}
-	/* begin sufficientSpaceToAllocate: */
-	minFree = (foo->lowSpaceThreshold + (sizeInBytes + ((hdrSize - 1) * 4))) + BaseHeaderSize;
-	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((unsigned ) minFree))) {
-		enoughSpace = 1;
-		goto l1;
-	} else {
-		enoughSpace = sufficientSpaceAfterGC(minFree);
-		goto l1;
-	}
-l1:	/* end sufficientSpaceToAllocate: */;
-	if (!(enoughSpace)) {
-		foo->signalLowSpace = 1;
-		foo->lowSpaceThreshold = 0;
-		/* begin forceInterruptCheck */
-		foo->interruptCheckCounter = -1000;
-	}
-	if ((((unsigned ) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((unsigned ) ((sizeInBytes + ((hdrSize - 1) * 4)) + BaseHeaderSize)))) {
-		error("out of memory");
-	}
-	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (sizeInBytes + ((hdrSize - 1) * 4));
-	newChunk = foo->freeBlock;
-	foo->freeBlock += sizeInBytes + ((hdrSize - 1) * 4);
-	/* begin setSizeOfFree:to: */
-	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
-	foo->allocationCount += 1;
-	newObj = newChunk;
-	if (hdrSize > 1) {
-		/* begin popRemappableOop */
-		oop = remapBuffer[foo->remapBufferCount];
-		foo->remapBufferCount -= 1;
-		remappedClassOop = oop;
-	}
-	if (hdrSize == 3) {
-		longAtput(newObj, 0 | HeaderTypeSizeAndClass);
-		longAtput(newObj + 4, remappedClassOop | HeaderTypeSizeAndClass);
-		longAtput(newObj + 8, header1 | HeaderTypeSizeAndClass);
-		newObj += 8;
-	}
-	if (hdrSize == 2) {
-		longAtput(newObj, remappedClassOop | HeaderTypeClass);
-		longAtput(newObj + 4, header1 | HeaderTypeClass);
-		newObj += 4;
-	}
-	if (hdrSize == 1) {
-		longAtput(newObj, header1 | HeaderTypeShort);
-	}
-	if (1) {
-		end = newObj + sizeInBytes;
-		i = newObj + 4;
-		while (i < end) {
-			longAtput(i, fillValue);
-			i += 4;
-		}
-	}
-	if (DoAssertionChecks) {
-		okayOop(newObj);
-		oopHasOkayClass(newObj);
-		if (!((objectAfter(newObj)) == foo->freeBlock)) {
-			error("allocate bug: did not set header of new oop correctly");
-		}
-		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
-			error("allocate bug: did not set header of freeBlock correctly");
-		}
-	}
-	return newObj;
+	return allocateheaderSizeh1h2h3doFillwith(sizeInBytes, hdrSize, header1, header2, 0, 1, fillValue);
 }
 
 int integerObjectOf(int value) {
@@ -7343,8 +7189,8 @@ register struct foo * foo = &fum;
 			l46:	/* end lookupInMethodCacheSel:class: */;
 				if (!(ok)) {
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					lookupMethodInClass(foo->lkupClass);
 					/* begin internalizeIPandSP */
@@ -7387,8 +7233,8 @@ register struct foo * foo = &fum;
 						}
 					} else {
 						/* begin externalizeIPandSP */
-						foo->instructionPointer = ((int) localIP);
-						foo->stackPointer = ((int) localSP);
+						foo->instructionPointer = ((unsigned) localIP);
+						foo->stackPointer = ((unsigned) localSP);
 						foo->theHomeContext = localHomeContext;
 						if (DoBalanceChecks) {
 							nArgs = foo->argumentCount;
@@ -7419,8 +7265,8 @@ register struct foo * foo = &fum;
 					foo->freeContexts = longAt(((((char *) newContext)) + BaseHeaderSize) + (0 << 2));
 				} else {
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					newContext = allocateOrRecycleContext(needsLarge);
 					/* begin internalizeIPandSP */
@@ -7473,8 +7319,8 @@ register struct foo * foo = &fum;
 				/* begin internalQuickCheckForInterrupts */
 				if ((foo->interruptCheckCounter -= 1) <= 0) {
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					checkForInterrupts();
 					browserPluginReturnIfNeeded();
@@ -7882,8 +7728,8 @@ register struct foo * foo = &fum;
 					/* begin internalQuickCheckForInterrupts */
 					if ((foo->interruptCheckCounter -= 1) <= 0) {
 						/* begin externalizeIPandSP */
-						foo->instructionPointer = ((int) localIP);
-						foo->stackPointer = ((int) localSP);
+						foo->instructionPointer = ((unsigned) localIP);
+						foo->stackPointer = ((unsigned) localSP);
 						foo->theHomeContext = localHomeContext;
 						checkForInterrupts();
 						browserPluginReturnIfNeeded();
@@ -7980,8 +7826,8 @@ register struct foo * foo = &fum;
 				} else {
 					foo->successFlag = 1;
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					primitiveFloatAddtoArg(rcvr, arg);
 					/* begin internalizeIPandSP */
@@ -8021,8 +7867,8 @@ register struct foo * foo = &fum;
 				} else {
 					foo->successFlag = 1;
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					primitiveFloatSubtractfromArg(rcvr, arg);
 					/* begin internalizeIPandSP */
@@ -8706,8 +8552,8 @@ register struct foo * foo = &fum;
 				} else {
 					foo->successFlag = 1;
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					primitiveFloatMultiplybyArg(rcvr, arg);
 					/* begin internalizeIPandSP */
@@ -8751,8 +8597,8 @@ register struct foo * foo = &fum;
 				} else {
 					foo->successFlag = 1;
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					primitiveFloatDividebyArg(rcvr, arg);
 					/* begin internalizeIPandSP */
@@ -8807,8 +8653,8 @@ register struct foo * foo = &fum;
 				int pointResult2;
 				foo->successFlag = 1;
 				/* begin externalizeIPandSP */
-				foo->instructionPointer = ((int) localIP);
-				foo->stackPointer = ((int) localSP);
+				foo->instructionPointer = ((unsigned) localIP);
+				foo->stackPointer = ((unsigned) localSP);
 				foo->theHomeContext = localHomeContext;
 				/* begin primitiveMakePoint */
 				argument = longAt(foo->stackPointer);
@@ -8915,8 +8761,8 @@ register struct foo * foo = &fum;
 				int top1;
 				foo->successFlag = 1;
 				/* begin externalizeIPandSP */
-				foo->instructionPointer = ((int) localIP);
-				foo->stackPointer = ((int) localSP);
+				foo->instructionPointer = ((unsigned) localIP);
+				foo->stackPointer = ((unsigned) localSP);
 				foo->theHomeContext = localHomeContext;
 				/* begin primitiveBitShift */
 				/* begin popInteger */
@@ -9012,8 +8858,8 @@ register struct foo * foo = &fum;
 				int top11;
 				foo->successFlag = 1;
 				/* begin externalizeIPandSP */
-				foo->instructionPointer = ((int) localIP);
-				foo->stackPointer = ((int) localSP);
+				foo->instructionPointer = ((unsigned) localIP);
+				foo->stackPointer = ((unsigned) localSP);
 				foo->theHomeContext = localHomeContext;
 				/* begin primitiveBitAnd */
 				/* begin popPos32BitInteger */
@@ -9066,8 +8912,8 @@ register struct foo * foo = &fum;
 				int top11;
 				foo->successFlag = 1;
 				/* begin externalizeIPandSP */
-				foo->instructionPointer = ((int) localIP);
-				foo->stackPointer = ((int) localSP);
+				foo->instructionPointer = ((unsigned) localIP);
+				foo->stackPointer = ((unsigned) localSP);
 				foo->theHomeContext = localHomeContext;
 				/* begin primitiveBitOr */
 				/* begin popPos32BitInteger */
@@ -9136,8 +8982,8 @@ register struct foo * foo = &fum;
 							if (fmt < 8) {
 								result1 = longAt(((((char *) rcvr)) + BaseHeaderSize) + ((((index >> 1)) - 1) << 2));
 								/* begin externalizeIPandSP */
-								foo->instructionPointer = ((int) localIP);
-								foo->stackPointer = ((int) localSP);
+								foo->instructionPointer = ((unsigned) localIP);
+								foo->stackPointer = ((unsigned) localSP);
 								foo->theHomeContext = localHomeContext;
 								result1 = positive32BitIntegerFor(result1);
 								/* begin internalizeIPandSP */
@@ -9388,8 +9234,8 @@ register struct foo * foo = &fum;
 				foo->successFlag = successValue && foo->successFlag;
 				if (foo->successFlag) {
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					/* begin primitiveBlockCopy */
 					context = longAt(foo->stackPointer - (1 * 4));
@@ -9469,8 +9315,8 @@ register struct foo * foo = &fum;
 			l36:	/* end assertClassOf:is: */;
 				if (foo->successFlag) {
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					primitiveValue();
 					/* begin internalizeIPandSP */
@@ -9515,8 +9361,8 @@ register struct foo * foo = &fum;
 			l38:	/* end assertClassOf:is: */;
 				if (foo->successFlag) {
 					/* begin externalizeIPandSP */
-					foo->instructionPointer = ((int) localIP);
-					foo->stackPointer = ((int) localSP);
+					foo->instructionPointer = ((unsigned) localIP);
+					foo->stackPointer = ((unsigned) localSP);
 					foo->theHomeContext = localHomeContext;
 					primitiveValue();
 					/* begin internalizeIPandSP */
@@ -10074,8 +9920,8 @@ register struct foo * foo = &fum;
 
 	localIP -= 1;
 	/* begin externalizeIPandSP */
-	foo->instructionPointer = ((int) localIP);
-	foo->stackPointer = ((int) localSP);
+	foo->instructionPointer = ((unsigned) localIP);
+	foo->stackPointer = ((unsigned) localSP);
 	foo->theHomeContext = localHomeContext;
 }
 
@@ -10646,7 +10492,7 @@ register struct foo * foo = &fum;
     int type2;
     int parentField;
     int field;
-    int youngStartLocal;
+    unsigned youngStartLocal;
     int child;
 
 	header = longAt(oop);
@@ -11136,19 +10982,23 @@ l1:	/* end fetchClassOf: */;
 
 
 /*	Verify that the given oop is legitimate. Check address, header, and size but not class. */
-/*	address and size checks */
 
-int okayOop(int oop) {
+int okayOop(int signedOop) {
 register struct foo * foo = &fum;
     int fmt;
     int sz;
     int type;
+    unsigned oop;
     int header;
 
+
+	/* address and size checks */
+
+	oop = ((unsigned) signedOop);
 	if ((oop & 1)) {
 		return 1;
 	}
-	if (!((0 < oop) && (oop < foo->endOfMemory))) {
+	if (!(oop < foo->endOfMemory)) {
 		error("oop is not a valid address");
 	}
 	if (!((oop % 4) == 0)) {
@@ -11209,18 +11059,19 @@ int oopFromChunk(int chunk) {
 
 /*	Similar to oopHasOkayClass:, except that it only returns true or false. */
 
-int oopHasAcceptableClass(int oop) {
+int oopHasAcceptableClass(int signedOop) {
 register struct foo * foo = &fum;
     int formatMask;
-    int oopClass;
+    unsigned oopClass;
+    unsigned oop;
     int behaviorFormatBits;
     int oopFormatBits;
-    int ccIndex;
 
-	if ((oop & 1)) {
+	if ((signedOop & 1)) {
 		return 1;
 	}
-	if (!((0 < oop) && (oop < foo->endOfMemory))) {
+	oop = ((unsigned) signedOop);
+	if (!(oop < foo->endOfMemory)) {
 		return 0;
 	}
 	if (!((oop % 4) == 0)) {
@@ -11229,24 +11080,11 @@ register struct foo * foo = &fum;
 	if (!((oop + (sizeBitsOf(oop))) < foo->endOfMemory)) {
 		return 0;
 	}
-	/* begin fetchClassOf: */
-	if ((oop & 1)) {
-		oopClass = longAt(((((char *) foo->specialObjectsOop)) + BaseHeaderSize) + (ClassInteger << 2));
-		goto l1;
-	}
-	ccIndex = (((unsigned) (longAt(oop))) >> 12) & 31;
-	if (ccIndex == 0) {
-		oopClass = (longAt(oop - 4)) & AllButTypeMask;
-		goto l1;
-	} else {
-		oopClass = longAt(((((char *) (longAt(((((char *) foo->specialObjectsOop)) + BaseHeaderSize) + (CompactClasses << 2))))) + BaseHeaderSize) + ((ccIndex - 1) << 2));
-		goto l1;
-	}
-l1:	/* end fetchClassOf: */;
+	oopClass = ((unsigned) (fetchClassOf(oop)));
 	if ((oopClass & 1)) {
 		return 0;
 	}
-	if (!((0 < oopClass) && (oopClass < foo->endOfMemory))) {
+	if (!(oopClass < foo->endOfMemory)) {
 		return 0;
 	}
 	if (!((oopClass % 4) == 0)) {
@@ -11277,29 +11115,16 @@ l1:	/* end fetchClassOf: */;
 
 /*	Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance. */
 
-int oopHasOkayClass(int oop) {
-register struct foo * foo = &fum;
+int oopHasOkayClass(int signedOop) {
     int formatMask;
-    int oopClass;
+    unsigned oopClass;
+    unsigned oop;
     int behaviorFormatBits;
     int oopFormatBits;
-    int ccIndex;
 
+	oop = ((unsigned) signedOop);
 	okayOop(oop);
-	/* begin fetchClassOf: */
-	if ((oop & 1)) {
-		oopClass = longAt(((((char *) foo->specialObjectsOop)) + BaseHeaderSize) + (ClassInteger << 2));
-		goto l1;
-	}
-	ccIndex = (((unsigned) (longAt(oop))) >> 12) & 31;
-	if (ccIndex == 0) {
-		oopClass = (longAt(oop - 4)) & AllButTypeMask;
-		goto l1;
-	} else {
-		oopClass = longAt(((((char *) (longAt(((((char *) foo->specialObjectsOop)) + BaseHeaderSize) + (CompactClasses << 2))))) + BaseHeaderSize) + ((ccIndex - 1) << 2));
-		goto l1;
-	}
-l1:	/* end fetchClassOf: */;
+	oopClass = ((unsigned) (fetchClassOf(oop)));
 	if ((oopClass & 1)) {
 		error("a SmallInteger is not a valid class or behavior");
 	}
@@ -20167,7 +19992,7 @@ register struct foo * foo = &fum;
     int bytesRead;
     int oldBaseAddr;
     int swapBytes;
-    int memStart;
+    unsigned memStart;
     squeakFileOffsetType headerStart;
     int minimumMemory;
     int startAddr;
@@ -21399,7 +21224,7 @@ int stackValue(int offset) {
 /*	Return the start of object memory. */
 
 int startOfMemory(void) {
-	return (int) memory;
+	return (unsigned) memory;
 }
 
 
@@ -22261,8 +22086,8 @@ register struct foo * foo = &fum;
 
 
 void* vm_exports[][3] = {
-	{"", "primitiveScreenDepth", (void*)primitiveScreenDepth},
 	{"", "primitiveDisablePowerManager", (void*)primitiveDisablePowerManager},
 	{"", "moduleUnloaded", (void*)moduleUnloaded},
+	{"", "primitiveScreenDepth", (void*)primitiveScreenDepth},
 	{NULL, NULL, NULL}
 };

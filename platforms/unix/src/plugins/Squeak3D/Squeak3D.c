@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:29:53 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:53 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -230,9 +230,9 @@ static float* litVertex;
 static int loadBBFn;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Squeak3D 15 March 2005 (i)"
+	"Squeak3D 18 March 2005 (i)"
 #else
-	"Squeak3D 15 March 2005 (e)"
+	"Squeak3D 18 March 2005 (e)"
 #endif
 ;
 static float* primLight;

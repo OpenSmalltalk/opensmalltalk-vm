@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:27:16 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:34 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -271,9 +271,9 @@ static int maskTable[33] = {
 };
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BitBltPlugin 15 March 2005 (i)"
+	"BitBltPlugin 18 March 2005 (i)"
 #else
-	"BitBltPlugin 15 March 2005 (e)"
+	"BitBltPlugin 18 March 2005 (e)"
 #endif
 ;
 static int nWords;

@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:28:46 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:43 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -64,9 +64,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"MiscPrimitivePlugin 15 March 2005 (i)"
+	"MiscPrimitivePlugin 18 March 2005 (i)"
 #else
-	"MiscPrimitivePlugin 15 March 2005 (e)"
+	"MiscPrimitivePlugin 18 March 2005 (e)"
 #endif
 ;
 

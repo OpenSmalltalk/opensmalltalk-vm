@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:26:58 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:30 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -729,9 +729,9 @@ struct VirtualMachine* interpreterProxy;
 static int loadBBFn;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"B2DPlugin 15 March 2005 (i)"
+	"B2DPlugin 18 March 2005 (i)"
 #else
-	"B2DPlugin 15 March 2005 (e)"
+	"B2DPlugin 18 March 2005 (e)"
 #endif
 ;
 static int* objBuffer;

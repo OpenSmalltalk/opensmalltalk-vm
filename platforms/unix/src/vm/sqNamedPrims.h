@@ -33,6 +33,9 @@ extern sqExport SoundGenerationPlugin_exports[];
 extern sqExport SoundPlugin_exports[];
 extern sqExport StarSqueakPlugin_exports[];
 extern sqExport SurfacePlugin_exports[];
+extern sqExport AioPlugin_exports[];
+extern sqExport UnixOSProcessPlugin_exports[];
+extern sqExport XDisplayControlPlugin_exports[];
 
 sqExport *pluginExports[] = {
 	vm_exports,
@@ -68,5 +71,8 @@ sqExport *pluginExports[] = {
 	SoundPlugin_exports,
 	StarSqueakPlugin_exports,
 	SurfacePlugin_exports,
+	AioPlugin_exports,
+	UnixOSProcessPlugin_exports,
+	XDisplayControlPlugin_exports,
 	NULL
 };

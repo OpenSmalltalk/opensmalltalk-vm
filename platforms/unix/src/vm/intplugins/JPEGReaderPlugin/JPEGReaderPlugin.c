@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:28:08 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:39 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -144,9 +144,9 @@ static int jsPosition;
 static int jsReadLimit;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"JPEGReaderPlugin 15 March 2005 (i)"
+	"JPEGReaderPlugin 18 March 2005 (i)"
 #else
-	"JPEGReaderPlugin 15 March 2005 (e)"
+	"JPEGReaderPlugin 18 March 2005 (e)"
 #endif
 ;
 static int *residuals;

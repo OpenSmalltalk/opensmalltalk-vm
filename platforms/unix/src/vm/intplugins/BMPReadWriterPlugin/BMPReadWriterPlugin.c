@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:26:28 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:22 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -54,9 +54,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BMPReadWriterPlugin 15 March 2005 (i)"
+	"BMPReadWriterPlugin 18 March 2005 (i)"
 #else
-	"BMPReadWriterPlugin 15 March 2005 (e)"
+	"BMPReadWriterPlugin 18 March 2005 (e)"
 #endif
 ;
 

@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:28:51 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:44 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -96,9 +96,9 @@ struct VirtualMachine* interpreterProxy;
 static int maximumNumberOfFilesToWatch;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Mpeg3Plugin 15 March 2005 (i)"
+	"Mpeg3Plugin 18 March 2005 (i)"
 #else
-	"Mpeg3Plugin 15 March 2005 (e)"
+	"Mpeg3Plugin 18 March 2005 (e)"
 #endif
 ;
 static mpeg3_t *mpegFiles[1024+1];

@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:28:42 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:43 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -73,9 +73,9 @@ static double m23ResultX;
 static double m23ResultY;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Matrix2x3Plugin 15 March 2005 (i)"
+	"Matrix2x3Plugin 18 March 2005 (i)"
 #else
-	"Matrix2x3Plugin 15 March 2005 (e)"
+	"Matrix2x3Plugin 18 March 2005 (e)"
 #endif
 ;
 

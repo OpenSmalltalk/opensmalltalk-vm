@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:28:58 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:45 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -88,9 +88,9 @@ static int lastAlloc = 0;
 static int matchFlags;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"RePlugin 15 March 2005 (i)"
+	"RePlugin 18 March 2005 (i)"
 #else
-	"RePlugin 15 March 2005 (e)"
+	"RePlugin 18 March 2005 (e)"
 #endif
 ;
 static int netMemory = 0;

@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:28:31 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:42 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -120,9 +120,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"LargeIntegers v1.3 15 March 2005 (i)"
+	"LargeIntegers v1.3 18 March 2005 (i)"
 #else
-	"LargeIntegers v1.3 15 March 2005 (e)"
+	"LargeIntegers v1.3 18 March 2005 (e)"
 #endif
 ;
 static const int  orOpIndex = 1;

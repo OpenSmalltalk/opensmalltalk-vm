@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(15 March 2005 2:27:23 pm) */
+/* Automatically generated from Squeak on #(18 March 2005 7:42:35 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -66,9 +66,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"DSAPrims 15 March 2005 (i)"
+	"DSAPrims 18 March 2005 (i)"
 #else
-	"DSAPrims 15 March 2005 (e)"
+	"DSAPrims 18 March 2005 (e)"
 #endif
 ;
 static int remainderDigitCount;
