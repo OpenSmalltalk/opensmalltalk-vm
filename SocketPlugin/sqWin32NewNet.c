@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.8 2003/11/21 17:19:49 andreasraab Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.9 2004/01/19 22:25:51 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,7 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.8 2003/11/21 17:19:49 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.9 2004/01/19 22:25:51 andreasraab Exp $";
 #endif
 
 #if 0
@@ -153,7 +153,11 @@ typedef struct privateSocketStruct {
   int sockType;
   int sockState;
   int sockError;
-  int semaphoreIndex;
+
+  int readSema;
+  int writeSema;
+  int connSema;
+
   struct sockaddr_in peer;  /* socket address in connect() or send/rcv address for UDP */
 
   HANDLE mutex;             /* The mutex used for synchronized access to this socket */
@@ -281,7 +285,7 @@ static void cleanupSocket(privateSocketStruct *pss)
     l.l_linger = 0;
     setsockopt(temp->s, SOL_SOCKET, SO_LINGER, (char*)&l, sizeof(l));
     closesocket(temp->s);
-    temp->s = NULL;
+    temp->s = 0;
     GlobalFree(GlobalHandle(temp));
   }
   /* And again: C allocators thread safe?! */
@@ -369,7 +373,9 @@ static void debugPrintSocket(privateSocketStruct *pss) {
     printf(" [bound for udp]");
   printf("\n");
   printf("\tError: %x\n", pss->sockError);
-  printf("\tSema: %d\n", pss->semaphoreIndex);
+  printf("\treadSema: %d\n", pss->readSema);
+  printf("\twriteSema: %d\n", pss->writeSema);
+  printf("\tconnSema: %d\n", pss->connSema);
   { /* count pending accept()s */
     acceptedSocketStruct *tmp = pss->accepted;
     int n = 0;
@@ -472,7 +478,7 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 {
   struct timeval tv= { 1000, 0 }; /* Timeout value == 1000 sec */
   fd_set fds;
-  int n, doWait;
+  int n, doWait, sema;
 
   while(1) {
     doWait = 1; 
@@ -497,13 +503,15 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 	case WatchData:
 	  /* Data may be available */
 	  pss->sockState |= SOCK_DATA_READABLE;
+	  SIGNAL(pss->readSema);
 	  doWait = 1; /* until data has been read */
 	  break;
 	case WatchClose:
 	  /* Pending close has succeeded */
 	  pss->sockState = ThisEndClosed;
 	  pss->readWatcherOp = 0; /* since a close succeeded */
-	  pss->s = NULL;
+	  pss->s = 0;
+	  SIGNAL(pss->connSema);
 	  doWait = 1;
 	  break;
 	case WatchAcceptSingle:
@@ -511,20 +519,26 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 	  inplaceAcceptHandler(pss);
 	  pss->readWatcherOp = WatchData; /* check for incoming data */
 	  pss->writeWatcherOp = WatchData; /* and signal when writable */
+	  SIGNAL(pss->connSema);
 	  doWait = 0;
 	  break;
 	case WatchAccept:
 	  /* Connection can be accepted */
 	  acceptHandler(pss);
+	  SIGNAL(pss->connSema);
 	  doWait = 0; /* only wait for more connections */
 	  break;
 	}
-	
 	UNLOCKSOCKET(pss->mutex);
-	/* Socket state changed so signal */
-	SIGNAL(pss->semaphoreIndex);
       } else {
-	if(n != SOCKET_ERROR) {
+	if(n == SOCKET_ERROR) {
+	  int err = WSAGetLastError();
+	  LOCKSOCKET(pss->mutex, INFINITE);
+	  pss->sockState = OtherEndClosed;
+	  pss->sockError = err;
+	  SIGNAL(pss->connSema);
+	  UNLOCKSOCKET(pss->mutex);
+	} else {
 	  /* select() timed out */
 	  doWait = 0; /* continue waiting in select() */
 	}
@@ -574,11 +588,13 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 	  if(pss->writeWatcherOp == WatchConnect) {
 	    /* asynchronous connect failed */
 	    pss->sockState = Unconnected;
+	    SIGNAL(pss->connSema);
 	  } else {
 	    /* get socket error */
 	    /* printf("ERROR: %d\n", WSAGetLastError()); */
 	    errSize = sizeof(pss->sockError);
 	    getsockopt(pss->s, SOL_SOCKET, SO_ERROR, (char*)&pss->sockError, &errSize);
+	    SIGNAL(pss->writeSema);
 	  }
 	  pss->writeWatcherOp = 0; /* what else can we do */
 	  doWait = 1; /* until somebody wakes us up */
@@ -591,20 +607,27 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 	    /* Start read watcher for incoming data */
 	    pss->readWatcherOp = WatchData;
 	    SetEvent(pss->hReadWatcherEvent);
+	    SIGNAL(pss->connSema);
 	    /* And fall through since data can be sent */
 	    pss->writeWatcherOp = WatchData;
 	  case WatchData:
 	    /* Data can be sent */
 	    pss->sockState |= SOCK_DATA_WRITABLE;
+	    SIGNAL(pss->writeSema);
 	    doWait = 1; /* until data has been written */
 	    break;
 	  }
 	}
 	UNLOCKSOCKET(pss->mutex);
-	/* Socket state changed so signal */
-	SIGNAL(pss->semaphoreIndex);
       } else {
-	if(n != SOCKET_ERROR) {
+	if(n == SOCKET_ERROR) {
+	  int err = WSAGetLastError();
+	  LOCKSOCKET(pss->mutex, INFINITE);
+	  pss->sockState = OtherEndClosed;
+	  pss->sockError = err;
+	  SIGNAL(pss->connSema);
+	  UNLOCKSOCKET(pss->mutex);
+	} else {
 	  /* select() timed out */
 	  doWait = 0; /* continue waiting in select() */
 	}
@@ -806,7 +829,6 @@ void sqSocketCloseConnection(SocketPtr s)
 {
   privateSocketStruct *pss = PSP(s);
   int err;
-  int failPrim = 0;
 
   if (!SocketValid(s)) return;
   /* Try to gracefully close the socket */
@@ -822,12 +844,14 @@ void sqSocketCloseConnection(SocketPtr s)
       pss->writeWatcherOp = 0;
       SetEvent(pss->hReadWatcherEvent);
     } else {
+      pss->sockState = Unconnected;
       pss->sockError = err;
-      failPrim = 1;
+      SIGNAL(pss->connSema);
     }
   } else {
-    pss->s = NULL;
+    pss->s = 0;
     pss->sockState = Unconnected;
+    SIGNAL(pss->connSema);
   }
   /* Cleanup any accepted sockets */
   while(pss->accepted) {
@@ -842,7 +866,6 @@ void sqSocketCloseConnection(SocketPtr s)
     GlobalFree(GlobalHandle(temp));
   }
   UNLOCKSOCKET(pss->mutex);
-  if(failPrim) FAIL();
 }
 
 /*****************************************************************************
@@ -889,21 +912,25 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
   if(err) {
     err = WSAGetLastError();
     if(err != WSAEWOULDBLOCK) {
-      FAIL();
-      return;
+      pss->sockState = Unconnected; /* reset */
+      pss->sockError = err;
+      SIGNAL(pss->connSema);
+    } else {
+      /* Connection in progress => Start write watcher */
+      LOCKSOCKET(pss->mutex, INFINITE);
+      pss->sockState = WaitingForConnection;
+      pss->writeWatcherOp = WatchConnect;
+      SetEvent(pss->hWriteWatcherEvent);
+      UNLOCKSOCKET(pss->mutex);
     }
-    /* Connection in progress => Start write watcher */
-    LOCKSOCKET(pss->mutex, INFINITE);
-    pss->sockState = WaitingForConnection;
-    pss->writeWatcherOp = WatchConnect;
-    SetEvent(pss->hWriteWatcherEvent);
-    UNLOCKSOCKET(pss->mutex);
   } else {
     /* Connection completed synchronously */
     LOCKSOCKET(pss->mutex, INFINITE);
     pss->sockState = Connected | SOCK_DATA_WRITABLE;
     pss->readWatcherOp = WatchData; /* waiting for data */
     SetEvent(pss->hReadWatcherEvent);
+    SIGNAL(pss->connSema);
+    SIGNAL(pss->writeSema);
     UNLOCKSOCKET(pss->mutex);
   }
 }
@@ -953,10 +980,15 @@ void sqSocketListenOnPort(SocketPtr s, int port)
 	TCP => start listening for incoming connections.
 	UDP => Just call sqListenOnPort
 *****************************************************************************/
-void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
+void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize) {
+  sqSocketListenOnPortBacklogSizeInterface(s, port, backlogSize, 0);
+}
+
+
+void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, int port, int backlogSize, int addr)
 {
   int result;
-  struct sockaddr_in addr;
+  struct sockaddr_in inaddr;
   privateSocketStruct *pss = PSP(s);
 
   if (!SocketValid(s)) return;
@@ -967,12 +999,12 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
   }
 
   /* bind the socket */
-  ZeroMemory(&addr,sizeof(struct sockaddr_in));
-  addr.sin_family = AF_INET;
-  addr.sin_port = htons((short)port);
-  addr.sin_addr.s_addr = localHostAddress;
+  ZeroMemory(&inaddr,sizeof(struct sockaddr_in));
+  inaddr.sin_family = AF_INET;
+  inaddr.sin_port = htons((short)port);
+  inaddr.sin_addr.s_addr = htonl(addr);
 
-  result = bind( SOCKET(s), (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
+  result = bind( SOCKET(s), (struct sockaddr*) &inaddr, sizeof(struct sockaddr_in));
   if(result == SOCKET_ERROR) {
     pss->sockError = WSAGetLastError();
     FAIL();
@@ -991,158 +1023,6 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
     pss->sockError = WSAGetLastError();
     FAIL();
   }
-}
-
-/*****************************************************************************
-  sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID:
-  Create a socket for the given netType (which is always internet here)
-  a given socketType (UDP or TCP) appropriate buffer size (being ignored ;-)
-  and a semaphore to signal upon changes in the socket state.
-*****************************************************************************/
-void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(
-            SocketPtr s, int netType, int socketType,
-            int recvBufSize, int sendBufSize, int semaIndex)
-{
-  SOCKET newSocket;
-  privateSocketStruct *pss;
-
-  s->sessionID = 0;
-  /* perform internal initialization */
-  if(socketType == TCPSocketType)
-    newSocket = socket(AF_INET,SOCK_STREAM, 0);
-  else if(socketType == UDPSocketType)
-    newSocket = socket(AF_INET, SOCK_DGRAM, 0);
-  else { FAIL(); return; }
-  if(newSocket == INVALID_SOCKET) {
-    FAIL();
-    return;
-  }
-  /* Allow the re-use of the current port */
-  setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &one, sizeof(one));
-  /* Disable TCP delays */
-  setsockopt(newSocket, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
-  /* Make the socket non-blocking */
-  ioctlsocket(newSocket,FIONBIO,&one);
-
-  /* initialize private socket structure */
-  pss = (privateSocketStruct*) calloc(1,sizeof(privateSocketStruct));
-  pss->s = newSocket;
-  pss->sockType = socketType;
-  pss->semaphoreIndex = semaIndex;
-
-  /* UDP sockets are born "connected" */
-  if(UDPSocketType == socketType) {
-    pss->sockState = Connected | SOCK_DATA_WRITABLE;
-  } else {/* TCP */
-    pss->sockState = Unconnected;
-  }
-  pss->sockError= 0;
-
-  /* initial UDP peer := wildcard */
-  ZeroMemory(&pss->peer, sizeof(pss->peer));
-  pss->peer.sin_family= AF_INET;
-  pss->peer.sin_port= htons((short)0);;
-  pss->peer.sin_addr.s_addr= INADDR_ANY;
-
-  /* fill the SQSocket */
-  s->sessionID = thisNetSession;
-  s->socketType = socketType;
-  s->privateSocketPtr = pss;
-
-  /* Create a new mutex object for synchronized access */
-  pss->mutex = CreateMutex(NULL, 0,NULL);
-  if(!pss->mutex) { FAIL(); return; }
-  
-  /* Install the socket into the socket list */
-  pss->next = firstSocket;
-  firstSocket = pss;
-  
-  /* Setup the watchers */
-  if(UDPSocketType == socketType) {
-    /* Since UDP sockets are always connected */
-    pss->readWatcherOp = pss->writeWatcherOp = WatchData;
-  }
-  if(!createWatcherThreads(pss)) {
-    /* note: necessary cleanup is done from within createWatcherThreads */
-    s->privateSocketPtr = NULL; /* declare invalid */
-    FAIL();
-  }
-}
-
-/*****************************************************************************
-  sqSocketAcceptFromRecvBytesSendBytesSemaID:
-  Create a new socket by accepting an incoming connection from the source socket.
-*****************************************************************************/
-void sqSocketAcceptFromRecvBytesSendBytesSemaID(
-            SocketPtr s, SocketPtr serverSocket,
-            int recvBufSize, int sendBufSize, int semaIndex)
-{
-  acceptedSocketStruct *accepted;
-  privateSocketStruct *pss;
-
-  /* Lock the server socket and retrieve the last accepted connection */
-  pss = PSP(serverSocket); /* temporarily */
-
-  /* Guard modification in server socket state */
-  LOCKSOCKET(pss->mutex, INFINITE);
-  accepted = pss->accepted;
-  if(accepted) {
-    pss->accepted = accepted->next;
-    if(!pss->accepted) {
-      /* No more connections; go back to waiting state and start watcher */
-      pss->sockState = WaitingForConnection; 
-      pss->readWatcherOp = WatchAccept;
-      SetEvent(pss->hReadWatcherEvent);
-    }
-  }
-  UNLOCKSOCKET(pss->mutex);
-
-  if(!accepted) { /* something was wrong here */
-    FAIL();
-    return;
-  }
-  if(accepted->s == INVALID_SOCKET) {
-    FAIL();
-    return;
-  }
-  /* private socket structure */
-  pss = (privateSocketStruct*) calloc(1,sizeof(privateSocketStruct));
-  pss->s = accepted->s;
-  pss->sockType = PSP(serverSocket)->sockType;
-  pss->semaphoreIndex = semaIndex;
-  pss->sockState= Connected | SOCK_DATA_WRITABLE;
-  pss->sockError= 0;
-  MoveMemory(&pss->peer, &accepted->peer, sizeof(struct sockaddr_in));
-  
-  /* fill the SQSocket */
-  s->sessionID = thisNetSession;
-  s->socketType = pss->sockType;
-  s->privateSocketPtr = pss;
-	
-  /* Disable TCP delays */
-  setsockopt(SOCKET(s), IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
-  /* Make the socket non-blocking */
-  ioctlsocket(SOCKET(s),FIONBIO,&one);
-
-  /* Create a new mutex object for synchronized access */
-  pss->mutex = CreateMutex(NULL, 0,NULL);
-  if(!pss->mutex) { FAIL(); return; }
-
-  /* Install the socket into the socket list */
-  pss->next = firstSocket;
-  firstSocket = pss;
-
-  /* Setup the watchers */
-  pss->readWatcherOp = pss->writeWatcherOp = WatchData;
-
-  if(!createWatcherThreads(pss)) {
-    /* note: necessary cleanup is done from within createWatcherThreads */
-    s->privateSocketPtr = NULL; /* declare invalid */
-    FAIL();
-  }
-
-  /* Cleanup */
-  GlobalFree(GlobalHandle(accepted));
 }
 
 /*****************************************************************************
@@ -1203,7 +1083,6 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
   privateSocketStruct *pss = PSP(s);
   int result;
   int addrSize;
-  int failPrim = 0;
 
   if (!SocketValid(s)) return -1;
   if(bufSize <= 0) return bufSize;
@@ -1236,10 +1115,11 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 	     report them as "other end closed". Looking at the
 	     WSock documentation this ought to be correct. */
 	  /* UDP doesn't know "other end closed" state */
-	  if(pss->sockType != UDPSocketType)
+	  if(pss->sockType != UDPSocketType) {
 	    pss->sockState = OtherEndClosed;
+	    SIGNAL(pss->connSema);
+	  }
 	  pss->sockError = err;
-	  failPrim = 1;
 	}
 	result = 0;
       }
@@ -1253,7 +1133,6 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
   }
 
   UNLOCKSOCKET(pss->mutex);
-  if(failPrim) FAIL();
   return result;
 }
 
@@ -1281,7 +1160,6 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
   privateSocketStruct *pss = PSP(s);
   int result;
   int addrSize;
-  int failPrim = 0;
 
   if (!SocketValid(s)) return -1;
   /***NOTE***NOTE***NOTE***NOTE***NOTE***
@@ -1319,10 +1197,11 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 	     report them as "other end closed". Looking at the
 	     WSock documentation this ought to be correct. */
 	  /* UDP doesn't know "other end closed" state */
-	  if(pss->sockType != UDPSocketType)
+	  if(pss->sockType != UDPSocketType) {
 	    pss->sockState = OtherEndClosed;
+	    SIGNAL(pss->connSema);
+	  }
 	  pss->sockError = err;
-	  failPrim = 1;
 	}
 	result = 0;
       }
@@ -1336,7 +1215,6 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
   }
 
   UNLOCKSOCKET(pss->mutex);
-  if(failPrim) FAIL();
   return result;
 }
 
@@ -1416,22 +1294,174 @@ int sqSocketRemotePort(SocketPtr s)
 
 /*****************************************************************************
  *****                     New Socket Functions                          *****
- *****************************************************************************
- NOTE: The semantics of the 3-sema socket is currently not well-defined.
-       Therefore, it is not supported.
  *****************************************************************************/
-void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(
-			SocketPtr s, int netType, int socketType,
-			int recvBufSize, int sendBufSize, int semaIndex, int readSemaIndex, int writeSemaIndex)
+/*****************************************************************************
+  sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID:
+  Create a socket for the given netType (which is always internet here)
+  a given socketType (UDP or TCP) appropriate buffer size (being ignored ;-)
+  and a semaphore to signal upon changes in the socket state.
+*****************************************************************************/
+void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(
+            SocketPtr s, int netType, int socketType,
+            int recvBufSize, int sendBufSize, int semaIndex)
 {
-	FAIL();
+  sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(s, netType, socketType, recvBufSize, sendBufSize, semaIndex, semaIndex, semaIndex);
 }
 
-void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(
-			SocketPtr s, SocketPtr serverSocket,
-			int recvBufSize, int sendBufSize, int semaIndex, int readSemaIndex, int writeSemaIndex)
+void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, int netType, int socketType, int recvBufSize, int sendBufSize, int connSemaIndex, int readSemaIndex, int writeSemaIndex)
 {
-	FAIL();
+
+  SOCKET newSocket;
+  privateSocketStruct *pss;
+
+  s->sessionID = 0;
+  /* perform internal initialization */
+  if(socketType == TCPSocketType)
+    newSocket = socket(AF_INET,SOCK_STREAM, 0);
+  else if(socketType == UDPSocketType)
+    newSocket = socket(AF_INET, SOCK_DGRAM, 0);
+  else { FAIL(); return; }
+  if(newSocket == INVALID_SOCKET) {
+    FAIL();
+    return;
+  }
+  /* Allow the re-use of the current port */
+  setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &one, sizeof(one));
+  /* Disable TCP delays */
+  setsockopt(newSocket, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
+  /* Make the socket non-blocking */
+  ioctlsocket(newSocket,FIONBIO,&one);
+
+  /* initialize private socket structure */
+  pss = (privateSocketStruct*) calloc(1,sizeof(privateSocketStruct));
+  pss->s = newSocket;
+  pss->sockType = socketType;
+  pss->connSema = connSemaIndex;
+  pss->readSema = readSemaIndex;
+  pss->writeSema = writeSemaIndex;
+
+  /* UDP sockets are born "connected" */
+  if(UDPSocketType == socketType) {
+    pss->sockState = Connected | SOCK_DATA_WRITABLE;
+  } else {/* TCP */
+    pss->sockState = Unconnected;
+  }
+  pss->sockError= 0;
+
+  /* initial UDP peer := wildcard */
+  ZeroMemory(&pss->peer, sizeof(pss->peer));
+  pss->peer.sin_family= AF_INET;
+  pss->peer.sin_port= htons((short)0);;
+  pss->peer.sin_addr.s_addr= INADDR_ANY;
+
+  /* fill the SQSocket */
+  s->sessionID = thisNetSession;
+  s->socketType = socketType;
+  s->privateSocketPtr = pss;
+
+  /* Create a new mutex object for synchronized access */
+  pss->mutex = CreateMutex(NULL, 0,NULL);
+  if(!pss->mutex) { FAIL(); return; }
+  
+  /* Install the socket into the socket list */
+  pss->next = firstSocket;
+  firstSocket = pss;
+  
+  /* Setup the watchers */
+  if(UDPSocketType == socketType) {
+    /* Since UDP sockets are always connected */
+    pss->readWatcherOp = pss->writeWatcherOp = WatchData;
+  }
+  if(!createWatcherThreads(pss)) {
+    /* note: necessary cleanup is done from within createWatcherThreads */
+    s->privateSocketPtr = NULL; /* declare invalid */
+    FAIL();
+  }
+}
+
+
+/*****************************************************************************
+  sqSocketAcceptFromRecvBytesSendBytesSemaID:
+  Create a new socket by accepting an incoming connection from the source socket.
+*****************************************************************************/
+
+void sqSocketAcceptFromRecvBytesSendBytesSemaID(
+            SocketPtr s, SocketPtr serverSocket,
+            int recvBufSize, int sendBufSize, int semaIndex)
+{
+  sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(s, serverSocket, recvBufSize, sendBufSize, semaIndex, semaIndex, semaIndex);
+}
+
+void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, SocketPtr serverSocket, int recvBufSize, int sendBufSize, int connSemaIndex, int readSemaIndex, int writeSemaIndex)
+{
+  acceptedSocketStruct *accepted;
+  privateSocketStruct *pss;
+
+  /* Lock the server socket and retrieve the last accepted connection */
+  pss = PSP(serverSocket); /* temporarily */
+
+  /* Guard modification in server socket state */
+  LOCKSOCKET(pss->mutex, INFINITE);
+  accepted = pss->accepted;
+  if(accepted) {
+    pss->accepted = accepted->next;
+    if(!pss->accepted) {
+      /* No more connections; go back to waiting state and start watcher */
+      pss->sockState = WaitingForConnection; 
+      pss->readWatcherOp = WatchAccept;
+      SetEvent(pss->hReadWatcherEvent);
+    }
+  }
+  UNLOCKSOCKET(pss->mutex);
+
+  if(!accepted) { /* something was wrong here */
+    FAIL();
+    return;
+  }
+  if(accepted->s == INVALID_SOCKET) {
+    FAIL();
+    return;
+  }
+  /* private socket structure */
+  pss = (privateSocketStruct*) calloc(1,sizeof(privateSocketStruct));
+  pss->s = accepted->s;
+  pss->sockType = PSP(serverSocket)->sockType;
+  pss->connSema = connSemaIndex;
+  pss->readSema = readSemaIndex;
+  pss->writeSema = writeSemaIndex;
+  pss->sockState= Connected | SOCK_DATA_WRITABLE;
+  pss->sockError= 0;
+  MoveMemory(&pss->peer, &accepted->peer, sizeof(struct sockaddr_in));
+  
+  /* fill the SQSocket */
+  s->sessionID = thisNetSession;
+  s->socketType = pss->sockType;
+  s->privateSocketPtr = pss;
+	
+  /* Disable TCP delays */
+  setsockopt(SOCKET(s), IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
+  /* Make the socket non-blocking */
+  ioctlsocket(SOCKET(s),FIONBIO,&one);
+
+  /* Create a new mutex object for synchronized access */
+  pss->mutex = CreateMutex(NULL, 0,NULL);
+  if(!pss->mutex) { FAIL(); return; }
+
+  /* Install the socket into the socket list */
+  pss->next = firstSocket;
+  firstSocket = pss;
+
+  /* Setup the watchers */
+  pss->readWatcherOp = pss->writeWatcherOp = WatchData;
+
+  if(!createWatcherThreads(pss)) {
+    /* note: necessary cleanup is done from within createWatcherThreads */
+    s->privateSocketPtr = NULL; /* declare invalid */
+    FAIL();
+  }
+
+  /* Cleanup */
+  GlobalFree(GlobalHandle(accepted));
 }
 
 int sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, int buf, int bufSize,  int *address,  int *port, int *moreFlag)
@@ -1440,7 +1470,7 @@ int sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, int buf, int 
   if(UDPSocketType != s->socketType) 
     return interpreterProxy->primitiveFail();
   /* bind UDP socket*/
-  sqSocketConnectToPort(s, address, port);
+  sqSocketConnectToPort(s, *address, *port);
   if(interpreterProxy->failed()) return 0;
   /* receive data */
   nRead = sqSocketSendDataBufCount(s, buf, bufSize);
@@ -1628,7 +1658,8 @@ int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
   }
   if (opt->optType == 1) {
     len= sizeof(optval);
-    if ((getsockopt(SOCKET(s), opt->optLevel, opt->optName,&optval, &len)) < 0)
+    if ((getsockopt(SOCKET(s), opt->optLevel, opt->optName, 
+		    (void*)&optval,&len)) < 0)
       {
 	/* printf("getsockopt() returned < 0\n"); */
 	goto barf;
