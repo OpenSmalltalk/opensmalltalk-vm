@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.22 2003/05/19 07:20:17 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.23 2003/06/20 01:55:47 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -54,7 +54,32 @@ WindowPtr getSTWindow(void) {
 }
 
 #ifndef BROWSERPLUGIN
+#if TARGET_API_MAC_CARBON
+extern struct VirtualMachine *interpreterProxy;
+int ioSetFullScreenActual(int fullScreen);
+void fetchPrefrencesForWindow(int *windowType,int *windowAttributes);
+
 int ioSetFullScreen(int fullScreen) {
+        int result,giLocker,return_value=0;
+        giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+        if (giLocker != 0) {
+            long *foo;
+            foo = malloc(sizeof(long)*4);
+            foo[0] = 1;
+            foo[1] = (int) ioSetFullScreenActual;
+            foo[2] = fullScreen;
+            foo[3] = 0;
+            ((int (*) (void *)) giLocker)(foo);
+            return_value = interpreterProxy->positive32BitIntegerFor(foo[3]);
+            free(foo);
+        }
+        return return_value;
+}
+
+int ioSetFullScreenActual(int fullScreen) {
+#else
+int ioSetFullScreen(int fullScreen) {
+#endif
     Rect                screen,portRect,ignore;
     int                 width, height, maxWidth, maxHeight;
     int                 oldWidth, oldHeight;
@@ -283,15 +308,12 @@ void SetUpWindow(void) {
 
 #ifndef IHAVENOHEAD
 #if TARGET_API_MAC_CARBON & !defined(__MWERKS__)
-    if ((Ptr)CreateNewWindow != (Ptr)kUnresolvedCFragSymbolAddress)
-	CreateNewWindow(kDocumentWindowClass,
-            kWindowNoConstrainAttribute+kWindowStandardDocumentAttributes
-#if I_AM_CARBON_EVENT
-            + kWindowStandardHandlerAttribute
-#endif
-            - kWindowCloseBoxAttribute,
-            &windowBounds,&stWindow);
-    else
+
+    if ((Ptr)CreateNewWindow != (Ptr)kUnresolvedCFragSymbolAddress) {
+        int windowType,windowAttributes;
+        fetchPrefrencesForWindow(&windowType,&windowAttributes);
+	CreateNewWindow(windowType,windowAttributes,&windowBounds,&stWindow);
+    } else
 #endif
 	stWindow = NewCWindow(
 		0L, &windowBounds,
@@ -914,4 +936,36 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 	return (false);
 }
   
-  
+#if TARGET_API_MAC_CARBON
+void fetchPrefrencesForWindow(int *windowType,int *windowAttributes) {
+    CFBundleRef  myBundle;
+    CFDictionaryRef myDictionary;
+    CFNumberRef SqueakWindowType;
+    CFDataRef 	SqueakWindowAttributeType;    
+    extern	Boolean gSqueakWindowIsFloating;
+    
+    myBundle = CFBundleGetMainBundle();
+    myDictionary = CFBundleGetInfoDictionary(myBundle);
+    SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));
+    SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
+    if (SqueakWindowType) 
+        CFNumberGetValue(SqueakWindowType,kCFNumberLongType,windowType);
+    else
+        *windowType = kDocumentWindowClass;
+        
+    gSqueakWindowIsFloating = *windowType == kUtilityWindowClass;
+        
+    if (SqueakWindowAttributeType) {
+        if (CFDataGetLength(SqueakWindowAttributeType) == 4) {
+            const UInt8 *where;
+            where = CFDataGetBytePtr(SqueakWindowAttributeType);
+            memmove(windowAttributes,where,4);
+        }
+    } else
+        *windowAttributes = kWindowStandardDocumentAttributes
+            +kWindowStandardHandlerAttribute
+            +kWindowNoConstrainAttribute
+            -kWindowCloseBoxAttribute;
+    
+}
+#endif 
