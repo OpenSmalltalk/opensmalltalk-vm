@@ -2,7 +2,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2003-08-31 20:12:26 by piumarta on emilia.inria.fr
+# Last edited: 2004-02-09 10:28:52 by piumarta on emilia.local
 
 DOCFILES	= COPYING COPYRIGHT LICENSE \
 		  README.Contributing README.Keyboard README.Sound
@@ -62,8 +62,8 @@ install-doc : squeak.1
 	@list='$(DOCFILES)'; for f in $$list; do \
 	  echo $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
 	  $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
+	  gzip -f9 $(ROOT)$(docdir)/*
 	done
-	gzip -9 $(ROOT)$(docdir)/*
 	$(MKINSTALLDIRS) $(ROOT)$(mandir)/man1
 	$(INSTALL_DATA) squeak.1 $(ROOT)$(mandir)/man1
 	rm -f $(ROOT)$(mandir)/man1/inisqueak.1
