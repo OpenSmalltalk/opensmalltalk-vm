@@ -43,6 +43,7 @@ Description: The Squeak Smalltalk System (virtual machine)
 Package: inisqueak
 Architecture: all
 Depends: squeak-vm, squeak-image
+Suggests: squeak-image32
 Description: convenience script for new Squeak users
  This script sets up Squeak in a reasonable way for new users.
  Those familiar with Squeak will probably want to set things up
