@@ -822,16 +822,14 @@ ObjectMemory >> clone: oop [
 
 { #category : #become }
 ObjectMemory >> containOnlyOops: array1 and: array2 [ 
-	"Return true if neither array contains a small integer. You can't become: integers! Also check for attempt to make an object become itself which upsets the GC code"
-	| fieldOffset oop1 oop2|
+	"Return true if neither array contains a small integer. You 
+	can't become: integers!"
+	| fieldOffset |
 	fieldOffset _ self lastPointerOf: array1.
-	"we have previously checked that array1 is same size as array2 - this code may crash the system otherwise"
+	"same size as array2"
 	[fieldOffset >= BaseHeaderSize]
-		whileTrue: [oop1 _ self longAt: array1 + fieldOffset.
-			oop2 _ self longAt: array2 + fieldOffset.
-			oop1 = oop2 ifTrue:[^false].
-			(self isIntegerObject: oop1) ifTrue: [^ false].
-			(self isIntegerObject: oop2) ifTrue: [^ false].
+		whileTrue: [(self isIntegerObject: (self longAt: array1 + fieldOffset)) ifTrue: [^ false].
+			(self isIntegerObject: (self longAt: array2 + fieldOffset)) ifTrue: [^ false].
 			fieldOffset _ fieldOffset - 4].
 	^ true
 ]
@@ -1896,34 +1894,54 @@ ObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay: t
 	forwarding blocks if we're short. However, this is an 
 	uncommon enough case that it is better handled by primitive 
 	fail code at the Smalltalk level."
+
+	"Important note on multiple references to same object  - since the preparation of
+	fwdBlocks is NOT idempotent we get VM crashes if the same object is referenced more
+	than once in such a way as to require multiple fwdBlocks.
+	oop1 forwardBecome: oop1 is ok since only a single fwdBlock is needed.
+	oop1 become: oop1 would fail because the second fwdBlock woudl not have the actual object
+	header but rather the mutated ref to the first fwdBlock.
+	Further problems can arise with an array1 or array2 that refer multiply to the same 
+	object. This would notbe expected input for programmer writen code but might arise from
+	automatic usage such as in ImageSegment loading.
+	To avoid the simple and rather common case of oop1 become*: oop1, we skip such pairs
+	and simply avoid making fwdBlocks - it is redundant anyway"
 	| entriesNeeded entriesAvailable fieldOffset oop1 oop2 fwdBlock fwdBlkSize |
-	entriesNeeded _ (self lastPointerOf: array1)
-				// 4.
-	"need enough entries for all oops"
+	entriesNeeded := (self lastPointerOf: array1) // 4. "need enough entries for all oops"
+	"Note: Forward blocks must be quadword aligned - see fwdTableInit:."
 	twoWayFlag
 		ifTrue: ["Double the number of blocks for two-way become"
-			entriesNeeded _ entriesNeeded * 2.
-			fwdBlkSize _ 8
-			"Note: Forward blocks must be quadword aligned."]
+			entriesNeeded := entriesNeeded * 2.
+			fwdBlkSize := 8]
 		ifFalse: ["One-way become needs backPointers in fwd blocks."
-			fwdBlkSize _ 16
-			"Note: Forward blocks must be quadword aligned."].
-	entriesAvailable _ self fwdTableInit: fwdBlkSize.
+			fwdBlkSize := 16].
+	entriesAvailable := self fwdTableInit: fwdBlkSize.
 	entriesAvailable < entriesNeeded
 		ifTrue: [self initializeMemoryFirstFree: freeBlock.
 			"re-initialize the free block"
 			^ false].
-	fieldOffset _ self lastPointerOf: array1.
+	fieldOffset := self lastPointerOf: array1.
 	[fieldOffset >= BaseHeaderSize]
-		whileTrue: [oop1 _ self longAt: array1 + fieldOffset.
-			oop2 _ self longAt: array2 + fieldOffset.
-			fwdBlock _ self fwdBlockGet: fwdBlkSize.
-			self initForwardBlock: fwdBlock mapping: oop1 to: oop2 withBackPtr: twoWayFlag not.
-			twoWayFlag
-				ifTrue: ["Second block maps oop2 back to oop1 for two-way become"
-					fwdBlock _ self fwdBlockGet: fwdBlkSize.
-					self initForwardBlock: fwdBlock mapping: oop2 to: oop1 withBackPtr: twoWayFlag not].
-			fieldOffset _ fieldOffset - 4].
+		whileTrue: [oop1 := self longAt: array1 + fieldOffset.
+			oop2 := self longAt: array2 + fieldOffset.
+			"if oop1 == oop2, no need to do any work for this pair.
+			May still be other entries in the arrays though so keep looking"
+			oop1 = oop2
+				ifFalse: [fwdBlock := self fwdBlockGet: fwdBlkSize.
+					self
+						initForwardBlock: fwdBlock
+						mapping: oop1
+						to: oop2
+						withBackPtr: twoWayFlag not.
+					twoWayFlag
+						ifTrue: ["Second block maps oop2 back to oop1 for two-way become"
+							fwdBlock := self fwdBlockGet: fwdBlkSize.
+							self
+								initForwardBlock: fwdBlock
+								mapping: oop2
+								to: oop1
+								withBackPtr: twoWayFlag not]].
+			fieldOffset := fieldOffset - 4].
 	^ true
 ]
 
@@ -2040,22 +2058,30 @@ ObjectMemory >> restoreHeaderOf: oop [
 
 { #category : #become }
 ObjectMemory >> restoreHeadersAfterBecoming: list1 with: list2 [ 
-	"Restore the headers of all oops in both lists. Exchange their 
-	hash bits so becoming objects in identity sets and 
-	dictionaries doesn't change their hash value."
+	"Restore the headers of all oops in both lists. Exchange their hash bits so
+	becoming objects in identity sets and dictionaries doesn't change their
+	hash value."
+	"See also prepareForwardingTableForBecoming:with:woWay: for notes
+	regarding the case
+	of oop1 = oop2"
 	| fieldOffset oop1 oop2 hdr1 hdr2 |
-	fieldOffset _ self lastPointerOf: list1.
+	fieldOffset := self lastPointerOf: list1.
 	[fieldOffset >= BaseHeaderSize]
-		whileTrue: [oop1 _ self longAt: list1 + fieldOffset.
-			oop2 _ self longAt: list2 + fieldOffset.
-			self restoreHeaderOf: oop1.
-			self restoreHeaderOf: oop2.
-			"Exchange hash bits of the two objects."
-			hdr1 _ self longAt: oop1.
-			hdr2 _ self longAt: oop2.
-			self longAt: oop1 put: ((hdr1 bitAnd: AllButHashBits) bitOr: (hdr2 bitAnd: HashBits)).
-			self longAt: oop2 put: ((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits)).
-			fieldOffset _ fieldOffset - 4]
+		whileTrue: [oop1 := self longAt: list1 + fieldOffset.
+			oop2 := self longAt: list2 + fieldOffset.
+			oop1 = oop2
+				ifFalse: [self restoreHeaderOf: oop1.
+					self restoreHeaderOf: oop2.
+					"Exchange hash bits of the two objects."
+					hdr1 := self longAt: oop1.
+					hdr2 := self longAt: oop2.
+					self
+						longAt: oop1
+						put: ((hdr1 bitAnd: AllButHashBits) bitOr: (hdr2 bitAnd: HashBits)).
+					self
+						longAt: oop2
+						put: ((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits))].
+			fieldOffset := fieldOffset - 4]
 ]
 
 { #category : #become }
