@@ -1,11 +1,33 @@
 #include "UUIDPlugin.h"
-
 #include "sq.h"
 
 extern struct VirtualMachine *interpreterProxy;
-static Boolean gInit= false;
+
+#if TARGET_API_MAC_CARBON
+
+int MakeUUID(UUIDD * location) {
+    CFUUIDRef theUUID;
+    CFUUIDBytes theBytes;
+
+    theUUID =  CFUUIDCreate (null);
+    theBytes = CFUUIDGetUUIDBytes(theUUID);
+    memcpy((char *) location,(char *) &theBytes,sizeof(UUIDD));
+    CFRelease(theUUID);
+}
 
 int sqUUIDInit() {
-    SetUpUUID(UUID_Version_1_DCE,UUID_Variant_GUID,0,0);
     return 1;
 }
+
+#else
+static Boolean gInit= false;
+int sqUUIDInit() {
+    return 0;
+}
+
+MakeUUID(UUIDD * location) {
+    interpreterProxy->success(false);
+}
+#endif
+
+
