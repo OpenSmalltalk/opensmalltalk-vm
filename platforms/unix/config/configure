@@ -1145,10 +1145,10 @@ rm -f conftest.sh
 
   VM_MAJOR=3
   VM_MINOR=6
-  VM_RELEASE=beta3
+  VM_RELEASE=beta5
   SQ_MAJOR=3
-  SQ_MINOR=6
-  SQ_UPDATE=5373
+  SQ_MINOR=6b
+  SQ_UPDATE=5395
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
