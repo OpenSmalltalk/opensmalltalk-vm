@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2003-01-29 00:02:29 by piumarta on calvin.local.
+ * Last edited: 2003-08-15 15:01:32 by piumarta on emilia.inria.fr
  * 
  *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
@@ -65,7 +65,7 @@
 #endif
 
 #if 0
-# define dprintf(ARGS)	printf ARGS
+# define dprintf(ARGS)	printf ARGS; fflush(stdout)
 #else
 # define dprintf(ARGS)
 #endif
@@ -121,6 +121,7 @@ extern int ffiCallAddressOf(void *addr, void *globals);
 
 int ffiInitialize(void)
 {
+  dprintf(("ffiInitialize\n"));
   stackIndex= gprCount= fprCount= 0;
 #if 0
   structCount= 0;
@@ -139,12 +140,15 @@ int ffiSupportsCallingConvention(int callType)
 
 int ffiAlloc(int byteSize)
 {
-  return (int)malloc(byteSize);
+  int ptr= (int)malloc(byteSize);
+  dprintf(("ffiAlloc(%d) => %08x\n", byteSize, ptr));
+  return ptr;
 }
 
 
 int ffiFree(int ptr)
 {
+  dprintf(("ffiFree(%08x)\n", ptr));
   if (ptr) free((void *)ptr);
   return 1;
 }
@@ -257,7 +261,7 @@ int ffiPushUnsignedLongLong(int low, int high)
 
 int ffiPushPointer(int pointer)
 {
-  dprintf(("ffiPushPointer %d\n", pointer));
+  dprintf(("ffiPushPointer %08x\n", pointer));
   pushGPR(pointer);
   return 1;
 }
@@ -317,6 +321,8 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 #define gprl	  (char *)&gprs[GPR_MAX]
   int   gprSize	= min(argSize, gprl - gprp);
 
+  dprintf(("ffiPush %08x Structure %p OfLength %d\n", pointer, structSpec, specSize));
+
   if (gprSize < 4) gprp += (4 - gprSize);
   if (argSize < 4) argp += (4 - gprSize);
   if (argp + argSize > argl)
@@ -363,6 +369,7 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 int ffiCanReturn(int *structSpec, int specSize)
 {
   int header= *structSpec;
+  dprintf(("ffiCanReturn %p %d\n", structSpec, specSize));
   if (header & FFIFlagPointer)
     return 1;
   if (header & FFIFlagStructure)
@@ -385,6 +392,7 @@ int    ffiLongLongResultHigh(void)	{ return ((int *)&longReturnValue)[0]; }
 
 int ffiStoreStructure(int address, int structSize)
 {
+  dprintf(("ffiStoreStructure %08x %d\n", address, structSize));
   memcpy((void *)address,
 	 structReturnValue ? (void *)structReturnValue : (void *)&longReturnValue,
 	 structSize);
@@ -395,6 +403,7 @@ int ffiStoreStructure(int address, int structSize)
 int ffiCleanup(void)
 {
   int i;
+  dprintf(("ffiCleanup\n"));
   for (i= 0;  i < stringCount;  ++i)
     free(strings[i]);
   stringCount= 0;
@@ -409,18 +418,22 @@ int ffiCleanup(void)
 
 int ffiCallAddressOfWithPointerReturn(int fn, int callType)
 {
+  dprintf(("ffiCallAddressOfWithPointerReturn %08x %d\n", fn, callType));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 
 
 int ffiCallAddressOfWithStructReturn(int fn, int callType, int* structSpec, int specSize)
 {
+  dprintf(("ffiCallAddressOfWithStructReturn %08x %d %p %d\n",
+	   fn, callType, structSpec, specSize));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 
 
 int ffiCallAddressOfWithReturnType(int fn, int callType, int typeSpec)
 {
+  dprintf(("ffiCallAddressOfWithReturnType %08x %d %d\n", fn, callType, typeSpec));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 
