@@ -36,6 +36,7 @@ Class {
 		'currentBytecode',
 		'successFlag',
 		'primitiveIndex',
+		'primitiveFunctionPointer',
 		'methodCache',
 		'atCache',
 		'lkupClass',
@@ -117,6 +118,7 @@ Class {
 		'MethodCacheMethod',
 		'MethodCacheNative',
 		'MethodCachePrim',
+		'MethodCachePrimFunction',
 		'MethodCacheSelector',
 		'MethodCacheSize',
 		'MethodIndex',
@@ -321,6 +323,7 @@ Interpreter class >> initializeCaches [
 	MethodCacheMethod _ 3.
 	MethodCachePrim _ 4.
 	MethodCacheNative _ 5.
+	MethodCachePrimFunction _ 6.
 	MethodCacheEntrySize _ 8.  "Must be power of two for masking scheme."
 	MethodCacheMask _ (MethodCacheEntries - 1) * MethodCacheEntrySize.
 	MethodCacheSize _ MethodCacheEntries * MethodCacheEntrySize.
@@ -1172,16 +1175,19 @@ Interpreter >> addNewMethodToCache [
 	self compilerTranslateMethodHook.	"newMethod x lkupClass -> newNativeMethod (may cause GC !)"
 	hash _ messageSelector bitXor: lkupClass.  "drop low-order zeros from addresses"
 
+	primitiveFunctionPointer _ self functionPointerFor: primitiveIndex inClass: lkupClass.
+	
 	0 to: CacheProbeMax-1 do:
 		[:p | probe _ (hash >> p) bitAnd: MethodCacheMask.
 		(methodCache at: probe + MethodCacheSelector) = 0 ifTrue:
-				["Found an empty entry -- use it"
-				methodCache at: probe + MethodCacheSelector put: messageSelector.
-				methodCache at: probe + MethodCacheClass put: lkupClass.
-				methodCache at: probe + MethodCacheMethod put: newMethod.
-				methodCache at: probe + MethodCachePrim put: primitiveIndex.
-				methodCache at: probe + MethodCacheNative put: newNativeMethod.
-				^ nil]].
+			["Found an empty entry -- use it"
+			methodCache at: probe + MethodCacheSelector put: messageSelector.
+			methodCache at: probe + MethodCacheClass put: lkupClass.
+			methodCache at: probe + MethodCacheMethod put: newMethod.
+			methodCache at: probe + MethodCachePrim put: primitiveIndex.
+			methodCache at: probe + MethodCacheNative put: newNativeMethod.
+			methodCache at: probe + MethodCachePrimFunction put: primitiveFunctionPointer.
+			^ nil]].
 
 	"OK, we failed to find an entry -- install at the first slot..."
 	probe _ hash bitAnd: MethodCacheMask.  "first probe"
@@ -1190,6 +1196,7 @@ Interpreter >> addNewMethodToCache [
 	methodCache at: probe + MethodCacheMethod put: newMethod.
 	methodCache at: probe + MethodCachePrim put: primitiveIndex.
 	methodCache at: probe + MethodCacheNative put: newNativeMethod.
+	methodCache at: probe + MethodCachePrimFunction put: primitiveFunctionPointer.
 
 	"...and zap the following entries"
 	1 to: CacheProbeMax-1 do:
@@ -1899,6 +1906,12 @@ Interpreter >> bytecodePrimValueWithArg [
 	].
 	self fetchNextBytecode.
 
+]
+
+{ #category : #'plugin primitive support' }
+Interpreter >> callExternalPrimitive: functionID [
+"call the external plugin function identified. In the VM this is an address, see InterpreterSimulator for it's version. dispatc.... is a mcro in the VM C code"
+	self dispatchFunctionPointer: functionID
 ]
 
 { #category : #contexts }
@@ -2961,7 +2974,7 @@ Interpreter >> findNewMethodInClass: class [
 			self addNewMethodToCache]
 ]
 
-{ #category : #'plugin primitive support' }
+{ #category : #'plugin support' }
 Interpreter >> findObsoleteNamedPrimitive: functionName length: functionLength [
 	"Search the obsolete named primitive table for the given function.
 	Return the index if it's found, -1 otherwise."
@@ -2970,15 +2983,19 @@ Interpreter >> findObsoleteNamedPrimitive: functionName length: functionLength [
 	self var: #entry type:'const char *'.
 	index _ 0.
 	[true] whileTrue:[
-		entry _ (obsoleteNamedPrimitiveTable at: index) at: 0.
+		entry _ self
+			cCode: 'obsoleteNamedPrimitiveTable[index][0]'
+			inSmalltalk: [ (CArrayAccessor on: (obsoleteNamedPrimitiveTable at: index)) at: 0 ].
 		entry == nil ifTrue:[^-1]. "at end of table"
+		self cCode: '' inSmalltalk: [ entry _ CArrayAccessor on: entry ].
 		"Compare entry with functionName"
 		chIndex _ 0.
 		[(entry at: chIndex) = (functionName at: chIndex) 
 			and:[chIndex < functionLength]] whileTrue:[chIndex _ chIndex + 1].
 		(chIndex = functionLength and:[(entry at: chIndex) = 0]) 
 			ifTrue:[^index]. "match"
-		index _ index + 1].
+		index _ index + 1.
+	].
 ]
 
 { #category : #'debug support' }
@@ -3195,6 +3212,13 @@ Interpreter >> fullDisplayUpdate [
 		self displayBitsOf: displayObj Left: 0 Top: 0 Right: w Bottom: h.
 		self ioForceDisplayUpdate].
 
+]
+
+{ #category : #'method lookup cache' }
+Interpreter >> functionPointerFor: primIdx inClass: theClass [
+"find an actual function pointer for this primitiveIndex - this is an opportunity to specialise the prim for the relevant class (format for example).
+Default for now is simply the entry in the base primitiveTable"
+	^self cCoerce: (primitiveTable at: primIdx) to:'int'
 ]
 
 { #category : #'interpreter shell' }
@@ -3466,8 +3490,7 @@ Interpreter >> internalExecuteNewMethod [
 							nArgs _ argumentCount.
 							delta _ stackPointer - activeContext].
 					successFlag _ true.
-					self dispatchFunctionPointerOn: localPrimIndex in: primitiveTable.
-					"replace with plain jump to address from cache entry sometime"
+					self dispatchFunctionPointer: primitiveFunctionPointer. "branch direct to prim function from address stored in mcache"
 					DoBalanceChecks
 						ifTrue: [(self balancedStack: delta afterPrimitive: localPrimIndex withArgs: nArgs)
 								ifFalse: [self printUnbalancedStack: localPrimIndex]].
@@ -3918,6 +3941,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 			[newMethod _ methodCache at: probe + MethodCacheMethod.
 			primitiveIndex _ methodCache at: probe + MethodCachePrim.
 			newNativeMethod _ methodCache at: probe + MethodCacheNative.
+			primitiveFunctionPointer _ methodCache at: probe + MethodCachePrimFunction.
 			^ true	"found entry in cache; done"].
 
 	probe _ (hash >> 1) bitAnd: MethodCacheMask.  "second probe"
@@ -3926,6 +3950,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 			[newMethod _ methodCache at: probe + MethodCacheMethod.
 			primitiveIndex _ methodCache at: probe + MethodCachePrim.
 			newNativeMethod _ methodCache at: probe + MethodCacheNative.
+			primitiveFunctionPointer _ methodCache at: probe + MethodCachePrimFunction.
 			^ true	"found entry in cache; done"].
 
 	probe _ (hash >> 2) bitAnd: MethodCacheMask.
@@ -3934,6 +3959,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 			[newMethod _ methodCache at: probe + MethodCacheMethod.
 			primitiveIndex _ methodCache at: probe + MethodCachePrim.
 			newNativeMethod _ methodCache at: probe + MethodCacheNative.
+			primitiveFunctionPointer _ methodCache at: probe + MethodCachePrimFunction.
 			^ true	"found entry in cache; done"].
 
 	^ false
@@ -5207,9 +5233,7 @@ Interpreter >> primitiveExternalCall [
 	(index > 0 and: [index <= MaxExternalPrimitiveTableSize])
 		ifTrue: [addr _ externalPrimitiveTable at: index - 1.
 			addr ~= 0
-				ifTrue: [self
-						cCode: ' ((int (*) (void)) addr) ()'
-						inSmalltalk: [self callExternalPrimitive: addr].
+				ifTrue: [self callExternalPrimitive: addr.
 					DoBalanceChecks
 						ifTrue: [(self
 									balancedStack: delta
@@ -5230,7 +5254,7 @@ Interpreter >> primitiveExternalCall [
 			"if we get here, then an index to the external prim was 
 			kept on the ST side although the underlying prim 
 			table was already flushed"
-			^ self success: false].
+			^ self primitiveFail].
 
 	"Clean up session id and external primitive index"
 	self storeWord: 2 ofObject: lit withValue: ConstZero.
@@ -5251,22 +5275,16 @@ Interpreter >> primitiveExternalCall [
 	Attempt to map any old-style named primitives into the new 
 	ones. The old ones are exclusively bound into the VM so we 
 	don't need to check if a module is given."
-	addr _ 0.
-	"Addr ~= 0 indicates we have a compat match later"
+	addr _ 0. "Addr ~= 0 indicates we have a compat match later"
 	moduleLength = 0
 		ifTrue: ["Search the obsolete named primitive table for a match "
-			index _ self
-						findObsoleteNamedPrimitive: (self cCoerce: functionName + 4 to: 'char *')
-						length: functionLength.
+			index _ self findObsoleteNamedPrimitive: (self cCoerce: functionName + 4 to: 'char *') length: functionLength.
 			"The returned value is the index into the obsolete primitive table. 
 			If the index is found, use the 'C-style' version of the lookup. "
-			index < 0
-				ifFalse: [addr _ self ioLoadFunction: (self cCoerce: ((obsoleteNamedPrimitiveTable at: index) at: 2) to: 'char*')
+			index < 0 ifFalse: [addr _ self ioLoadFunction: (self cCoerce: ((obsoleteNamedPrimitiveTable at: index) at: 2) to: 'char*')
 								From: (self cCoerce: ((obsoleteNamedPrimitiveTable at: index) at: 1) to: 'char*')]].
-	addr = 0
-		ifTrue: ["Only if no compat version was found"
-			addr _ self
-						ioLoadExternalFunction: functionName + 4
+	addr = 0 ifTrue: ["Only if no compat version was found"
+			addr _ self ioLoadExternalFunction: functionName + 4
 						OfLength: functionLength
 						FromModule: moduleName + 4
 						OfLength: moduleLength].
@@ -5280,7 +5298,7 @@ Interpreter >> primitiveExternalCall [
 
 	"If the function has been successfully loaded process it"
 	(successFlag and: [addr ~= 0])
-		ifTrue: [self cCode: ' ((int (*) (void)) addr) ()' inSmalltalk: [self callExternalPrimitive: addr].
+		ifTrue: [self callExternalPrimitive: addr.
 			DoBalanceChecks
 				ifTrue: [(self
 							balancedStack: delta
@@ -7620,7 +7638,7 @@ Interpreter >> primitiveYield [
 
 	(self isEmptyList: processList) ifFalse:[
 		self addLastLink: activeProc toList: processList.
-		self wakeHighestPriority]
+		self transferTo: self wakeHighestPriority]
 ]
 
 { #category : #'debug printing' }
@@ -8191,17 +8209,31 @@ Interpreter >> reverseDisplayFrom: startIndex to: endIndex [
 ]
 
 { #category : #'method lookup cache' }
-Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrimIndex [ 
-	"Rewrite an existing entry in the method cache with a new 
-	primitive  
-	index."
+Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrimIndex [
+"rewrite the cache entry with the provided prim index and matching function pointer"
+	| primPtr |
+	self inline: false.
+	localPrimIndex = 0
+		ifTrue:[primPtr _ 0]
+		ifFalse:[primPtr _ self cCoerce: (primitiveTable at: localPrimIndex) to: 'int'].
+	self
+		rewriteMethodCacheSel: selector class: class
+		primIndex: localPrimIndex primFunction: primPtr
+]
+
+{ #category : #'method lookup cache' }
+Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrimIndex primFunction: localPrimAddress [
+	"Rewrite an existing entry in the method cache with a new primitive 
+	index & function address. Used by primExternalCall to make direct jumps to found external prims"
 	| probe hash |
 	self inline: false.
-	hash _ selector bitXor: class.
+	hash := selector bitXor: class.
 	0 to: CacheProbeMax - 1 do: [:p | 
-			probe _ hash >> p bitAnd: MethodCacheMask.
-			((methodCache at: probe + MethodCacheSelector) = selector and: [(methodCache at: probe + MethodCacheClass) = class])
+			probe := hash >> p bitAnd: MethodCacheMask.
+			((methodCache at: probe + MethodCacheSelector) = selector
+					and: [(methodCache at: probe + MethodCacheClass) = class])
 				ifTrue: [methodCache at: probe + MethodCachePrim put: localPrimIndex.
+					methodCache at: probe + MethodCachePrimFunction put: localPrimAddress.
 					^ nil]]
 ]
 

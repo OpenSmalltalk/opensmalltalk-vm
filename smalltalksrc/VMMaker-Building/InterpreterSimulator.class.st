@@ -155,6 +155,12 @@ InterpreterSimulator >> cr [
 ]
 
 { #category : #'interpreter shell' }
+InterpreterSimulator >> dispatchFunctionPointer: selector [
+"handle the primitive direct dispatch macro in simulation"
+	^self perform: selector
+]
+
+{ #category : #'interpreter shell' }
 InterpreterSimulator >> dispatchFunctionPointerOn: index in: table [
 "handle the primitive table dispatch macro in simulation"
 	^self dispatchOn: index in: table
@@ -164,14 +170,9 @@ InterpreterSimulator >> dispatchFunctionPointerOn: index in: table [
 InterpreterSimulator >> dispatchOn: anInteger in: selectorArray [
 	"Simulate a case statement via selector table lookup.
 	The given integer must be between 0 and selectorArray size-1, inclusive.
-	For speed, no range test is done, since it is done by the at: operation."
+	For speed, no range test is done, since it is done by the at: operation.
+	Note that, unlike many other arrays used in the Interpreter, this method expect NO CArrayAccessor wrapping - it would duplicate the +1. Maybe this would be better updated to make it all uniform"
 
-	"assert: (anInteger >= 0) | (anInteger < selectorArray size)"
-"
-Transcript cr; show: anInteger hex , '  ' , (selectorArray at: (anInteger + 1)).
-Sensor waitButton.
-Sensor yellowButtonPressed ifTrue: [self halt].
-"
 	self perform: (selectorArray at: (anInteger + 1)).
 ]
 
@@ -350,11 +351,9 @@ InterpreterSimulator >> initialize [
 	semaphoresToSignalA _ Array new: SemaphoresToSignalSize.
 	semaphoresToSignalB _ Array new: SemaphoresToSignalSize.
 	externalPrimitiveTable _ CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
-
-	primitiveTable _ CArrayAccessor on: self class primitiveTable.
-
+	primitiveTable _ self class primitiveTable.
 	obsoleteNamedPrimitiveTable _ 
-		CArrayAccessor on: self class obsoleteNamedPrimitiveTable.
+		CArrayAccessor on: (self class obsoleteNamedPrimitiveTable copyWith: (Array new: 3)).
 	obsoleteIndexedPrimitiveTable _ CArrayAccessor on: 
 		(self class obsoleteIndexedPrimitiveTable collect:[:spec| 
 			CArrayAccessor on:
@@ -366,6 +365,7 @@ InterpreterSimulator >> initialize [
 	"initialize InterpreterSimulator variables used for debugging"
 	byteCount _ 0.
 	sendCount _ 0.
+	quitBlock _ [^ self].
 	traceOn _ true.
 	myBitBlt _ BitBltSimulator new setInterpreter: self.
 	displayForm _ nil.  "displayForm is created in response to primitiveBeDisplay"
@@ -447,7 +447,10 @@ InterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 	"Load and return the requested function from a module"
 	| plugin fnSymbol |
 	fnSymbol _ functionString asSymbol.
-	"Transcript cr; show:'Looking for ', functionString, ' in ', pluginString."
+	Transcript cr; show:'Looking for ', functionString, ' in '.
+	pluginString isEmpty
+		ifTrue:[Transcript show: 'vm']
+		ifFalse:[Transcript show: pluginString].
 	plugin _ pluginList 
 				detect:[:any| any key = pluginString asString]
 				ifNone:[self loadNewPlugin: pluginString].
@@ -813,7 +816,7 @@ InterpreterSimulator >> primitiveBeDisplay [
 { #category : #'other primitives' }
 InterpreterSimulator >> primitiveBeep [
 
-	self beep.
+	Beeper beep.
 ]
 
 { #category : #'file primitives' }
@@ -904,6 +907,7 @@ InterpreterSimulator >> primitiveGetAttribute [
 	attr _ self stackIntegerValue: 0.
 	successFlag ifTrue: [
 		attribute _ Smalltalk getSystemAttribute: attr.
+		attribute ifNil: [ ^self primitiveFail ].
 		s _ self instantiateClass: (self splObj: ClassString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
 			self storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
@@ -1079,15 +1083,20 @@ InterpreterSimulator >> reverseBytesFrom: begin to: end [
 ]
 
 { #category : #testing }
-InterpreterSimulator >> runForNBytes: nBytecodes [
-	byteCount _ 0.
+InterpreterSimulator >> runForNBytes: nBytecodes [ 
+	"Do nByteCodes more bytecode dispatches.
+	Keep byteCount up to date.
+	This can be run repeatedly."
+	| endCount |
+	endCount := byteCount + nBytecodes.
 	self internalizeIPandSP.
 	self fetchNextBytecode.
-	[byteCount < nBytecodes] whileTrue:
-		[self dispatchOn: currentBytecode in: BytecodeTable.
-		byteCount _ byteCount + 1].
-	self externalizeIPandSP.
-
+	[byteCount < endCount]
+		whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable.
+			byteCount := byteCount + 1].
+	localIP := localIP - 1.
+	"undo the pre-increment of IP before returning"
+	self externalizeIPandSP
 ]
 
 { #category : #'debug support' }
@@ -1212,7 +1221,7 @@ InterpreterSimulator >> sqGetInterpreterProxy [
 
 { #category : #'memory access' }
 InterpreterSimulator >> sqGrowMemory: oldLimit By: delta [
-
+	Transcript show: 'grow memory from ', oldLimit printString, ' by ', delta printString; cr.
 	memory _ memory copyGrownBy: delta // 4.
 	^ memory size * 4
 ]
@@ -1224,6 +1233,7 @@ InterpreterSimulator >> sqMemoryExtraBytesLeft: includingSwap [
 
 { #category : #'memory access' }
 InterpreterSimulator >> sqShrinkMemory: oldLimit By: delta [
+	Transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
 
 	^ oldLimit
 ]

@@ -11,28 +11,35 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
-{ #category : #'instance creation' }
-InterpreterSimulatorLSB class >> new [
-	^self basicNew
-]
-
 { #category : #'memory access' }
 InterpreterSimulatorLSB >> byteAt: byteAddress [
-	| lowBits |
+	| lowBits long |
 	lowBits _ byteAddress bitAnd: 3.
-	^((self longAt: byteAddress - lowBits)
-		bitShift: (0 - lowBits) * 8)
-		bitAnd: 16rFF
+	long _ self longAt: byteAddress - lowBits.
+	^(lowBits caseOf: {
+		[0] -> [ long ].
+		[1] -> [ long bitShift: -8  ].
+		[2] -> [ long bitShift: -16 ].
+		[3] -> [ long bitShift: -24 ]
+	}) bitAnd: 16rFF
+
 ]
 
 { #category : #'memory access' }
 InterpreterSimulatorLSB >> byteAt: byteAddress put: byte [
-	| longWord shift lowBits |
+	| lowBits long longAddress |
 	lowBits _ byteAddress bitAnd: 3.
-	longWord _ self longAt: byteAddress - lowBits.
-	shift _ lowBits * 8.
-	longWord _ longWord - (longWord bitAnd: (16rFF bitShift: shift)) + (byte bitShift: shift).
-	self longAt: byteAddress - lowBits put: longWord
+	longAddress _ byteAddress - lowBits.
+	long _ self longAt: longAddress.
+	long _ (lowBits caseOf: {
+		[0] -> [ (long bitAnd: 16rFFFFFF00) bitOr: byte ].
+		[1] -> [ (long bitAnd: 16rFFFF00FF) bitOr: (byte bitShift: 8) ].
+		[2] -> [ (long bitAnd: 16rFF00FFFF) bitOr: (byte bitShift: 16)  ].
+		[3] -> [ (long bitAnd: 16r00FFFFFF) bitOr: (byte bitShift: 24)  ]
+	}).
+
+	self longAt: longAddress put: long.
+
 ]
 
 { #category : #'debug support' }
@@ -62,14 +69,33 @@ InterpreterSimulatorLSB >> displayForm: f [
 ]
 
 { #category : #'memory access' }
-InterpreterSimulatorLSB >> halfWordAt: byteAddress [ 
-	"return the half-word at byteAddress. Do the LSB 
-	conversion/shift "
-	| lowBits |
+InterpreterSimulatorLSB >> halfWordAt: byteAddress [
+    "Return the half-word at byteAddress which must be even."
+	| lowBits long |
 	lowBits _ byteAddress bitAnd: 2.
-	^ ((self longAt: byteAddress - lowBits)
-		bitShift: lowBits * 8)
-		bitAnd: 65535
+	long _ self longAt: byteAddress - lowBits.
+	^lowBits = 2
+		ifTrue: [ long bitShift: -16 ]
+		ifFalse: [ long bitAnd: 16rFFFF ].
+
+]
+
+{ #category : #'memory access' }
+InterpreterSimulatorLSB >> halfWordAt: byteAddress put: a16BitValue [
+    "Return the half-word at byteAddress which must be even."
+	| lowBits long longAddress |
+	lowBits _ byteAddress bitAnd: 2.
+	lowBits = 0
+		ifTrue: [ "storing into LS word"
+			long _ self longAt: byteAddress.
+			self longAt: byteAddress put: ((long bitAnd: 16rFFFF0000) bitOr: a16BitValue)
+		]
+		ifFalse: [
+			longAddress _ byteAddress - 2.
+			long _ self longAt: longAddress.
+			self longAt: longAddress
+				put: ((long bitAnd: 16rFFFF) bitOr: (a16BitValue bitShift: 16))
+		]
 ]
 
 { #category : #initialization }
