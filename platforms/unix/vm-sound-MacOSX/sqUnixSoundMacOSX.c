@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-02-09 17:52:51 by piumarta on emilia.inria.fr
+ * Last edited: 2003-11-23 14:39:18 by piumarta on emilia.local
  *
  *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
@@ -44,26 +44,21 @@
 // supported hardware format is stereo, I cheerfully ignore the stereo
 // flag in snd_Start().  (Mixing everything down to mono only to have
 // the format converter break it back into stereo seems pointless.)
-// 
-// BUGS:
-// 
-// All those primitiveFail()s are going to have to become
-// interpreterProxy->success(0)s when this goes modular.
-// 
-// Double-buffered code (especially input) is _really_ ugly.
-// 
-// Stream.sampleRate should be a float.
-// 
-// 48 kHz sample rate is broken.
-// 
-// Check whether the priority nonsense is required on SMP machines.
 
 
-#if (TESTING)
-# define USE_AUDIO_MACOSX
-#else
-# include "sq.h"
-#endif
+/// 
+/// Things you can tweak, should you really want to...
+/// 
+
+// Do we obey the (huge) default "lead" time of 1024 frames (supplied
+// by the image) when mixing frames into the buffer, or do we reduce
+// the lead time to to an absolute (safe) minimum?
+//
+#define OBEY_LEAD_TIME	0
+
+/// 
+/// No more user-serviceable parts in this file.  Stop Tweaking Now!
+/// 
 
 
 #include <CoreAudio/CoreAudio.h>
@@ -74,68 +69,52 @@
 #include <stdarg.h>
 #include <unistd.h>
 #include <string.h>
-
-
-/// 
-/// Things you can tweak, should you really want to...
-/// 
-
-
-// Do we queue frames for output using double buffering or a FIFO?
-//
-#define USE_FIFO	1
-
-// Do we obey the (huge) default "lead" time of 1024 frames (supplied
-// by the image) when mixing frames into the buffer, or do we reduce
-// the lead time to to an absolute (safe) minimum?
-//
-#define OBEY_LEAD_TIME	0
-
-// when tracking window move or resize, the WindowServer thread (running with
-// a RT priority _way_ higher than any other thread) grabs the CPU and sits in
-// a tight loop hogging every available cycle, stopping user apps dead in
-// their tracks (and sending the VM into a coma -- which is somewhat
-// unfortunate if the SoundPlayer is running).  (In case you ever wondered,
-// this why the entire screen freezes while you're dragging any window around.
-// the only way that, e.g., iTunes manages to carry on is to install a time
-// constrained producer thread running with almost the maximum allowed
-// priority.  bravo, Apple.  [not.])  one way to counter-attack is to detect
-// the onset of this rather antisocial behaviour and raise the priority of the
-// VM thread (strictly for the duration of the tracking loop) just enough that
-// it can preempt the WS thread in time to supply sound data before the device
-// buffer underruns.  (this is INHERENTLY DANGEROUS if the VM is CPU bound
-// [rather than spending most of its time waiting on the sound semaphore]
-// since the WS thread runs at higher priority than our CoreAudio callback
-// thread.  IOW, there's a PRIORITY INVERSION just begging to happen!)
-// setting RAISE_PRIORITY to 1 enables this _disgusting_ hack.
-// 
-#define RAISE_PRIORITY	1
-
-// do we attempt to RAISE_PRIORITY with pthread_setschedparam() or bypass
-// it and deal directly with mach's thread_policy_set()?  (the latter is
-// potentially _much_ more `violent' to the rest of the system.)
-// 
-#define USE_MACH_SCHED	0
-
-
-/// 
-/// No more user-serviceable parts in this file.  Stop Tweaking Now!
-/// 
-
+#include <assert.h>
 
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 #define DeviceFrameSize	8	// ditto (<CoreAudio/AudioHardware.h>, para 9)
 
-inline int min(int i, int j) { return (i < j) ? i : j; }
-inline int max(int i, int j) { return (i > j) ? i : j; }
+static inline int min(int i, int j) { return (i < j) ? i : j; }
+static inline int max(int i, int j) { return (i > j) ? i : j; }
 
-#include "debug.h"	// i'm tired of typing this into every file
+#define DEBUG	0
+#define TESTING	0
+
+#if (!TESTING)
+# include "sq.h"
+#else
+  static int noSoundMixer= 0;
+  static inline int signalSemaphoreWithIndex(int sema) { return 0; }
+  static inline int success(int flag) { return 0; }
+  static inline int primitiveFail(void) { return -1; }
+#endif
 
 #if (DEBUG)
+
 static void dumpFormat(AudioStreamBasicDescription *fmt); // atend
-#else
-# define  dumpFormat(fmt)
-#endif
+
+static void dprintf(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vprintf(fmt, ap);
+  va_end(ap);
+}
+
+#else // !DEBUG
+
+static inline void dumpFormat(AudioStreamBasicDescription *fmt) {}
+static inline void dprintf(const char *fmt, ...) {}
+
+#endif // !DEBUG
+
+static void eprintf(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+}
 
 
 // Apple error codes are really (rather contrived) 4-byte chars with
@@ -149,7 +128,6 @@ static char *str4(UInt32 chars)
   return str;
 }
 
-
 static inline int checkError(OSStatus err, char *op, char *param)
 {
   if (kAudioHardwareNoError != noErr)
@@ -159,234 +137,6 @@ static inline int checkError(OSStatus err, char *op, char *param)
     }
   return 0;
 }
-
-
-#if (DEBUG)
-  // this draws feedback blobs to the left of the apple icon in the menu bar
-  extern void feedback(int offset, int colour);
-# define RED	0xff0000
-# define GREEN	0x00ff00
-# define BLUE	0x0000ff
-# define WHITE	0xffffff
-# define BLACK	0x000000
-#endif
-
-#if (!TESTING) && (!DEBUG)
-# define feedback(o,c)
-#endif
-
-#if (TESTING)
-# define signalSemaphoreWithIndex(i)
-# define success(b)
-# define primitiveFail()	-1
-  void feedback(int i,int j)	{}
-#endif
-
-
-#if (!RAISE_PRIORITY)
-
-//xxx FIXME: this entire unholy mess should be in a header and declared static [inline]
-
-# define setPriority(i)
-# define resetPriority()
-# define printPriority()
-# define inModalLoop	0
-# define priorityRaised 0
-
-#else // (RAISE_PRIORITY)
-
-extern int inModalLoop;
-
-static int priorityRaised= 0;
-
-# if (USE_MACH_SCHED)
-
-#   include <mach/message.h>
-#   include <mach/thread_policy.h>
-#   include <mach/thread_switch.h>
-
-extern kern_return_t thread_policy_get();	// commented out in the header file
-extern kern_return_t thread_policy_set();
-
-static mach_port_t vmThread= 0;
-
-
-static kern_return_t getMachPriority(mach_port_t  thread,
-				     int	 *priority,
-				     boolean_t   *timeshared)
-{
-  thread_extended_policy_data_t   policy;
-  thread_precedence_policy_data_t precedence;
-  boolean_t			  getDefaults;
-  mach_msg_type_number_t	  count;
-  kern_return_t			  status= 0;
-
-  if (0 == thread)
-    thread= mach_thread_self();
-
-  if (timeshared)
-    {
-      getDefaults= 0;
-      count= THREAD_EXTENDED_POLICY_COUNT;
-      status= thread_policy_get(thread, THREAD_EXTENDED_POLICY,
-				&policy, &count, &getDefaults);
-      if (!status) return status;
-      *timeshared= policy.timeshare;
-    }
-
-  if (priority)
-    {
-      getDefaults= 0;
-      count= THREAD_PRECEDENCE_POLICY_COUNT;
-      status= thread_policy_get(thread, THREAD_PRECEDENCE_POLICY,
-				&precedence, &count, &getDefaults);
-      if (!status) return status;
-      *priority= precedence.importance;
-    }
-  return status;
-}
-
-
-static kern_return_t setMachPriority(mach_port_t thread,
-				     int         priority,
-				     boolean_t   timeshared)
-{
-  thread_extended_policy_data_t    policy;
-  thread_precedence_policy_data_t  precedence;
-  kern_return_t                    status = 0;
-
-  policy.timeshare= timeshared;
-  precedence.importance= priority;
-  if (0 == thread)
-    thread= mach_thread_self();
-
-  // setting policy can alter priority, so set policy first
-  if (!(status= thread_policy_set(thread,  THREAD_EXTENDED_POLICY,
-				  &policy, THREAD_EXTENDED_POLICY_COUNT)))
-    status= thread_policy_set(thread,      THREAD_PRECEDENCE_POLICY,
-			      &precedence, THREAD_PRECEDENCE_POLICY_COUNT);
-  return status;
-}
-
-
-static void initPriority(void)
-{
-  vmThread= mach_thread_self();
-}
-
-
-#if UNUSED_AND_DISABLED_TO_AVOID_STUPID_COMPILER_BITCHING
-static void printPriority(void)
-{
-  int priority, ts;
-  if (!getMachPriority(0, &priority, &ts))
-    printf("pri %d ts %d\n", priority, ts);
-}
-#endif
-
-
-static void setPriority(int delta)
-{
-  if (inModalLoop)	// we do this ONLY when the WS is hogging all the CPU
-    {
-      priorityRaised= 1;
-      //xxx 6 is too low (the WS thread continues to hog CPU even when
-      // timeshare is off for the VM) and 7 is too high (even when timeshare
-      // is on for the VM: we get CPU back from WS but then the VM switches
-      // out the ioproc thread before the callback completes [and has a chance
-      // to write data to the device] the moment it signals the sound
-      // semaphore; the device stops responding, or loses sync and stream
-      // integrity collapses)-:.  need to investigate the possibility of using
-      // some kind of TC policy (which would really require cooperation
-      // from checkForInterrupts, so that's definitely not for today...).
-      if (setMachPriority(vmThread, 6, 1))
-	printf("failed to increase priority\n");
-      feedback(1, RED);
-    }
-}
-
-
-static void resetPriority(void)
-{
-  if (priorityRaised)
-    {
-      priorityRaised= 0;
-      if (setMachPriority(vmThread, 0, 1))
-	printf("failed to decrease priority\n");
-      feedback(1, WHITE);
-    }
-}
-
-
-# else // (!USE_MACH_SCHED)
-
-
-#   include <pthread.h>
-
-static pthread_t	  vmThread;
-static int		  vmPolicy= 0;
-static struct sched_param vmParams;
-
-
-static void initPriority(void)
-{
-  vmThread= pthread_self();
-  if (pthread_getschedparam(vmThread, &vmPolicy, &vmParams))
-    perror("getschedparam");
-}
-
-
-#if UNUSED
-static void printPriority(pthread_t who)
-{
-  int policy;
-  struct sched_param param;
-
-  if (pthread_getschedparam(who, &policy, &param))
-    perror("getschedparam");
-  printf("policy is %d, priority %d\n", policy, param.sched_priority);
-}
-#endif
-
-
-static void setPriority(int delta)
-{
-  if (inModalLoop)
-    {
-      struct sched_param param= vmParams;
-
-      param.sched_priority+= delta;
-      if (pthread_setschedparam(vmThread, SCHED_RR, &param))
-	perror("setschedparam");
-      priorityRaised= 1;
-      feedback(1, RED);
-    }
-}
-
-
-static void resetPriority(void)
-{
-  if (priorityRaised)
-    {
-      if (pthread_setschedparam(vmThread, vmPolicy, &vmParams))
-	perror("setschedparam");
-      priorityRaised= 0;
-      feedback(1, WHITE);
-    }
-}
-
-
-# endif // (!USE_MACH_SCHED)
-
-#endif // (RAISE_PRIORITY)
-
-
-
-/// the sound code really starts here...
-
-
-
-#if (USE_FIFO)
 
 
 /// 
@@ -436,7 +186,6 @@ void Buffer_delete(Buffer *b)
 // 
 inline int Buffer_avail(Buffer *b)
 {
-  assert(!(b->avail & 3));
   return b->avail;
 }
 
@@ -509,7 +258,6 @@ inline void Buffer_advanceOutputPointer(Buffer *b, int size)
 {
   int optr=  b->optr;
   int avail= b->avail;
-  assert(!(size & 3));
   optr+=  size;
   avail-= size;
   assert(optr <= b->size);
@@ -524,12 +272,9 @@ inline void Buffer_advanceOutputPointer(Buffer *b, int size)
 inline void Buffer_advanceInputPointer(Buffer *b, int size)
 {
   int iptr= b->iptr;
-  assert(!(size & 3));
-  {
-    int nfree= Buffer_free(b);
-    nfree -= size;
-    assert(nfree >= 0);
-  }
+  int nfree= Buffer_free(b);
+  nfree -= size;
+  assert(nfree >= 0);
   iptr += size;
   assert(iptr <= b->size);
   if (iptr == b->size) iptr= 0;
@@ -544,7 +289,6 @@ inline void Buffer_prefill(Buffer *b, int bytes)
 {
   char *ptr;
   int   size= Buffer_getInputPointer(b, &ptr);
-  assert(!(bytes & 3));
   assert(bytes <= size);
   memset(ptr, 0, size);
   Buffer_advanceInputPointer(b, bytes);
@@ -559,10 +303,6 @@ inline int Buffer_write(Buffer *b, char *buf, int nbytes)
   int bytesToCopy= min(nbytes, Buffer_free(b));
   int headroom= b->size - iptr;
   int bytesCopied= 0;
-
-  assert(!(nbytes      & 3));
-  assert(!(headroom    & 3));
-  assert(!(bytesToCopy & 3));
 
   if (bytesToCopy >= headroom)
     {
@@ -593,8 +333,6 @@ inline int Buffer_read(Buffer *b, char *buf, int nbytes)
   int headroom= b->size - optr;
   int bytesCopied= 0;
 
-  assert(!(nbytes & 3));
-
   if (bytesToCopy >= headroom)
     {
       memcpy(buf, b->data + optr, headroom);
@@ -620,99 +358,6 @@ inline int Buffer_read(Buffer *b, char *buf, int nbytes)
 }
 
 
-#else // !USE_FIFO
-
-
-/// 
-/// Buffer, DBuffer -- double buffer
-/// 
-
-
-typedef struct Buffer
-{
-  enum {
-    Buffer_Empty,
-    Buffer_Busy,
-    Buffer_Full
-  }		 state;
-  void		*data;
-  size_t	 size;
-  size_t	 position;	// read position while full
-} Buffer;
-
-
-// empty a buffer
-// 
-static void Buffer_reset(Buffer *b)
-{
-  b->state= Buffer_Empty;
-  b->position= 0;
-}
-
-// allocate a new buffer
-// 
-static Buffer *Buffer_new(int size)
-{
-  Buffer *b;
-
-  if (!(b= (Buffer *)calloc(1, sizeof(Buffer))))
-    return 0;
-  if ((b->data= (char *)calloc(1, size)))
-    {
-      b->size= size;
-      Buffer_reset(b);
-      return b;
-    }
-  free(b);
-  return 0;
-}
-
-// deallocate a buffer
-// 
-static void Buffer_delete(Buffer *b)
-{
-  assert(b && b->data);
-  free(b->data);
-  free(b);
-}
-
-
-typedef struct DBuffer
-{
-  Buffer *front;	// the buffer currently doing i/o
-  Buffer *back;		// the buffer currently being read/written
-} DBuffer;
-
-
-// allocate a new double buffer
-// 
-static DBuffer *DBuffer_new(int size)
-{
-  DBuffer *db;
-  if (!(db= (DBuffer *)calloc(1, sizeof(DBuffer)))) return 0;
-  if ((db->front= Buffer_new(size)))
-    {
-      if ((db->back= Buffer_new(size)))
-	return db;
-      Buffer_delete(db->front);
-    }
-  return 0;
-}
-
-// deallocate a double buffer
-// 
-static void DBuffer_delete(DBuffer *db)
-{
-  assert(db && db->front && db->back);
-  free(db->back);
-  free(db->front);
-  free(db);
-}
-
-
-#endif // !USE_FIFO
-
-
 /// 
 /// Stream -- abstraction over CoreAudio devices and streams
 /// 
@@ -724,16 +369,10 @@ typedef struct Stream
   int			 direction;		// 1nput/0utput
   int			 sampleRate;		// Squeak frames per second
   int			 channels;		// channels per Squeak frame
-  int			 frameCount;		// frames per Squeak buffer
-  int			 byteCount;		// bytes per Squeak buffer
-  int			 cvtByteCount;		// bytes per conversion buffer
-  int			 devFrameCount;		// frames per conversion buffer
-  int			 devByteCount;		// bytes per device buffer
-#if (USE_FIFO)
+  int			 devBufSize;		// bytes per device buffer
+  int			 imgBufSize;		// bytes per Squeak buffer
+  int			 cvtBufSize;		// bytes per converter buffer
   Buffer		*buffer;		// fifo
-#else
-  DBuffer		*buffer;		// double buffer //xxx call this Buffer
-#endif
   AudioConverterRef	 converter;		// frame format converter
   int			 semaphore;		// ping me!
   u_int64_t		 timestamp;		// nominal buffer tail time (uSecs)
@@ -744,7 +383,9 @@ static Stream *output= 0;
 static Stream *input=  0;
 
 
-#include "sqUnixSoundDebug.h"
+#if (!TESTING)
+# include "sqUnixSoundDebug.h"
+#endif
 
 
 // tell the SoundPlayer that output can be written.
@@ -752,29 +393,36 @@ static Stream *input=  0;
 static void ioProcSignal(int semaphore)
 {
   if (semaphore)
-    {
-      signalSemaphoreWithIndex(semaphore);
-      setPriority(+6);		// your kilometrage may vary
-    //noteEvent("sound");	// this just worsens contention under heavy load
-    }
-  feedback(2, RED);
+    signalSemaphoreWithIndex(semaphore);
 }
 
 
-// when a double buffer underruns, rather than swapping the empty
-// buffers (which causes bad audio artefacts if playSamples has
-// already begun filling the back buffer) ship out a device buffer's
-// worth of silence instead.
-// 
-static float *ioProcZeroOut(float *out, int nFrames)
+static OSStatus bufferDataProc(AudioConverterRef inAudioConverter, UInt32 *ioDataSize, void  **outData, void  *context)
 {
-  while (nFrames--)
+  Stream *s= (Stream *)context;
+  Buffer *b= s->buffer;
+  char *p1, *p2;
+  int   n1,  n2;
+  Buffer_getOutputPointers(b, &p1, &n1, &p2, &n2);
+  if (!n1)
     {
-      // there's surely a nifty altivec gizmo to do this in < -3 cycles?
-      *out++= 0.0f;
-      *out++= 0.0f;
+      static char empty[256];
+      *ioDataSize= min(256, *ioDataSize);
+      *outData= (void *)empty;
+#    if (DEBUG)
+      putchar('-');  fflush(stdout);
+#    endif
     }
-  return out;
+  else
+    {
+      *ioDataSize= n1= min(n1, *ioDataSize);
+      *outData= (void *)p1;
+      Buffer_advanceOutputPointer(b, n1);
+#     if (DEBUG)
+      putchar('+');  fflush(stdout);
+#     endif
+    }
+  return kAudioHardwareNoError;
 }
 
 
@@ -789,127 +437,13 @@ static OSStatus ioProcOutput(AudioDeviceID	    device,
 			     const AudioTimeStamp  *outputTime,
 			     void		   *context)
 {
-  Stream  *s=  	     (Stream *)context;
-  int      cvtBytes= s->cvtByteCount;		// buffer bytes to consume
-  int      devBytes= s->devByteCount;		// device bytes to generate
-  UInt32   sz;
-
-#if (USE_FIFO)
-
-  Buffer *b=         s->buffer;
-  char   *data;
-  int     avail=     Buffer_getOutputPointer(b, &data);
-  int     byteCount= s->byteCount;		// Squeak buffer size
-  int     prevAvail= Buffer_avail(b);
-
-  if (avail >= cvtBytes)
-    {
-      sz= devBytes;	// mDataByteSize is unreliable; force the correct size
-      checkError(AudioConverterConvertBuffer(s->converter,
-					     cvtBytes, data,
-					     &sz, outputData->mBuffers[0].mData),
-		 "AudioConverter", "ConvertBuffer");
-      outputData->mBuffers[0].mDataByteSize= sz; // tell device how much to consume
-      Buffer_advanceOutputPointer(b, cvtBytes);
-      if ((  (inModalLoop && (Buffer_free(b) > 100)))
-	  || ((prevAvail >= byteCount) && ((prevAvail - avail) < byteCount)))
-	{
-	  feedback(3, GREEN);
-	  ioProcSignal(s->semaphore);		// restart SoundPlayer
-	}
-      else
-	feedback(3, WHITE);
-    }
-  else
-    {
-      ioProcZeroOut(outputData->mBuffers[0].mData, s->devFrameCount);
-      outputData->mBuffers[0].mDataByteSize= devBytes;
-      feedback(3, RED);
-      ioProcSignal(s->semaphore);		// dunno why, but this sometimes helps
-    }
-
-#else // (!USE_FIFO)
-
-  DBuffer *db=		s->buffer;
-  Buffer  *f=		db->front;		// buffer currently playing
-  Buffer  *b=		db->back;
-  char 	  *frontData=	f->data + f->position;
-  int	   frontBytes=	f->size - f->position;
-
-  if (Buffer_Empty == f->state)			// front buffer is empty
-    switch (b->state)
-      {
-      case Buffer_Busy:
-	eprintf("ioproc: back buffer busy -- why?\n");
-	// fall through...
-      case Buffer_Empty:
-	ioProcZeroOut(outputData->mBuffers[0].mData, s->devFrameCount);
-	outputData->mBuffers[0].mDataByteSize= devBytes;
-	ioProcSignal(s->semaphore);		// dunno why, but this sometimes helps
-	return kAudioHardwareNoError;
-
-      case Buffer_Full:				// back buffer ready: swap
-	b->state= Buffer_Busy;
-	assert(b->position == 0);
-	s->timestamp= AudioConvertHostTimeToNanos(currentTime->mHostTime) / 1000ull;
-	db->back=  f;
-	db->front= b;
-	f= b;
-	frontData=  f->data;
-	frontBytes= f->size;
-	assert(f->position == 0);
-	ioProcSignal(s->semaphore);
-	break;
-      }
-
-  assert(frontBytes);
-
-  if (frontBytes > cvtBytes)
-    f->position += cvtBytes;
-  else
-    {
-      if (frontBytes == cvtBytes)
-	Buffer_reset(f);	// empty: swap on next intr
-      else
-	{
-	  // reassemble an entire buffer at the start of the front buffer
-	  int backBytes= cvtBytes - frontBytes;
-	  memcpy(f->data, frontData, frontBytes);
-	  frontData= f->data;
-	  Buffer_reset(f);	// now empty: swap on next intr
-	  switch (b->state)
-	    {
-	    case Buffer_Busy:
-	      eprintf("ioproc: back buffer busy -- why?\n");
-	      // fall through...
-	    case Buffer_Empty:	// pad with zero
-	      memset(frontData + frontBytes, 0, backBytes);
-	      break;
-	      
-	    case Buffer_Full:	// back buffer ready: swap now
-	      memcpy(frontData + frontBytes, b->data, backBytes);
-	      b->state= Buffer_Busy;
-	      b->position= backBytes;
-	      s->timestamp=
-		AudioConvertHostTimeToNanos(currentTime->mHostTime) / 1000ull;
-	      db->back=  f;
-	      db->front= b;
-	      break;
-	    }
-	}
-      ioProcSignal(s->semaphore);
-    }
-
-  sz= devBytes;	// mDataByteSize is unreliable; force the correct size
-  checkError(AudioConverterConvertBuffer(s->converter,
-					 cvtBytes, frontData,
-					 &sz, outputData->mBuffers[0].mData),
-	     "AudioConverter", "ConvertBuffer");
-  outputData->mBuffers[0].mDataByteSize= sz;	// tell device how much to consume
-
-#endif // (!USE_FIFO)
-
-  return kAudioHardwareNoError;
+  Stream *s= (Stream *)context;
+  Buffer *b= s->buffer;
+  if (Buffer_free(b) >= s->imgBufSize)
+    ioProcSignal(s->semaphore);		// restart SoundRecorder
+  return AudioConverterFillBuffer(((Stream *)context)->converter, bufferDataProc, context,
+				  &outputData->mBuffers[0].mDataByteSize,
+				  outputData->mBuffers[0].mData);
 }
 
 
@@ -924,119 +458,13 @@ static OSStatus ioProcInput(AudioDeviceID	    device,
 			    const AudioTimeStamp  *outputTime,
 			    void		   *context)
 {
-#if 1
-  Stream  *s=  	     (Stream *)context;
-  int      devBytes= s->devByteCount;		// device bytes to consume
-  int      cvtBytes= s->cvtByteCount;		// buffer bytes to generate
-  UInt32   sz;
-
-#if (USE_FIFO)
-
-  Buffer *b=         s->buffer;
-  char   *data;
-  int     bytesFree= Buffer_getInputPointer(b, &data);
-
-  if (bytesFree >= cvtBytes)
-    {
-      assert(inputData->mBuffers[0].mDataByteSize == devBytes);
-      sz= cvtBytes;	// mDataByteSize is unreliable; force the correct size
-      checkError(AudioConverterConvertBuffer(s->converter,
-					     devBytes, inputData->mBuffers[0].mData,
-					     &sz, data),
-		 "AudioConverter", "ConvertBuffer");
-      //outputData->mBuffers[0].mDataByteSize= sz; // tell device how much to consume
-      Buffer_advanceInputPointer(b, cvtBytes);
-      if (Buffer_avail(b) >= s->byteCount)
-	{
-	  feedback(3, GREEN);
-	  ioProcSignal(s->semaphore);		// restart SoundPlayer
-	}
-      else
-	feedback(3, WHITE);
-    }
-
-#else // (!USE_FIFO)
-
-  DBuffer *db=		s->buffer;
-  Buffer  *f=		db->front;		// buffer currently playing
-  Buffer  *b=		db->back;
-  char 	  *frontData=	f->data + f->position;
-  int	   frontBytes=	f->size - f->position;
-
-  if (Buffer_Empty == f->state)			// front buffer is empty
-    switch (b->state)
-      {
-      case Buffer_Busy:
-	eprintf("ioproc: back buffer busy -- why?\n");
-	// fall through...
-      case Buffer_Empty:
-	ioProcZeroOut(outputData->mBuffers[0].mData, s->devFrameCount);
-	outputData->mBuffers[0].mDataByteSize= devBytes;
-	ioProcSignal(s->semaphore);		// dunno why, but this sometimes helps
-	return kAudioHardwareNoError;
-
-      case Buffer_Full:				// back buffer ready: swap
-	b->state= Buffer_Busy;
-	assert(b->position == 0);
-	s->timestamp= AudioConvertHostTimeToNanos(currentTime->mHostTime) / 1000ull;
-	db->back=  f;
-	db->front= b;
-	f= b;
-	frontData=  f->data;
-	frontBytes= f->size;
-	assert(f->position == 0);
-	ioProcSignal(s->semaphore);
-	break;
-      }
-
-  assert(frontBytes);
-
-  if (frontBytes > cvtBytes)
-    f->position += cvtBytes;
-  else
-    {
-      if (frontBytes == cvtBytes)
-	Buffer_reset(f);	// empty: swap on next intr
-      else
-	{
-	  // reassemble an entire buffer at the start of the front buffer
-	  int backBytes= cvtBytes - frontBytes;
-	  memcpy(f->data, frontData, frontBytes);
-	  frontData= f->data;
-	  Buffer_reset(f);	// now empty: swap on next intr
-	  switch (b->state)
-	    {
-	    case Buffer_Busy:
-	      eprintf("ioproc: back buffer busy -- why?\n");
-	      // fall through...
-	    case Buffer_Empty:	// pad with zero
-	      memset(frontData + frontBytes, 0, backBytes);
-	      break;
-	      
-	    case Buffer_Full:	// back buffer ready: swap now
-	      memcpy(frontData + frontBytes, b->data, backBytes);
-	      b->state= Buffer_Busy;
-	      b->position= backBytes;
-	      s->timestamp=
-		AudioConvertHostTimeToNanos(currentTime->mHostTime) / 1000ull;
-	      db->back=  f;
-	      db->front= b;
-	      break;
-	    }
-	}
-      ioProcSignal(s->semaphore);
-    }
-
-  sz= devBytes;	// mDataByteSize is unreliable; force the correct size
-  checkError(AudioConverterConvertBuffer(s->converter,
-					 cvtBytes, frontData,
-					 &sz, outputData->mBuffers[0].mData),
-	     "AudioConverter", "ConvertBuffer");
-  outputData->mBuffers[0].mDataByteSize= sz;	// tell device how much to consume
-
-#endif // (!USE_FIFO)
-#endif // 0
-
+  Stream *s= (Stream *)context;
+  Buffer *b= s->buffer;
+  int     n= Buffer_free(b);
+  if (n >= inputData->mBuffers[0].mDataByteSize)
+    Buffer_write(b, inputData->mBuffers[0].mData, inputData->mBuffers[0].mDataByteSize);
+  if (Buffer_avail(b) >= s->imgBufSize)
+    ioProcSignal(s->semaphore);		// restart SoundRecorder
   return kAudioHardwareNoError;
 }
 
@@ -1061,16 +489,7 @@ static Stream *Stream_new(int dir)
 
   if (!getDefaultDevice(&id, dir))
     return 0;	// no device available
-#if 0
-  {
-    char *name= getDeviceName(id, dir);
-    if (name)
-      {
-	printf("device %ld: %s\n", id, name);
-	free(name);
-      }
-  }
-#endif
+
   if (!(s= (Stream *)calloc(1, sizeof(Stream))))
     {
       eprintf("out of memory");
@@ -1078,7 +497,7 @@ static Stream *Stream_new(int dir)
     }
   s->id=	id;
   s->direction= dir;
-  dprintf(("stream %p[%d] created for device %ld\n", s, dir, id));
+  dprintf("stream %p[%d] created for device %ld\n", s, dir, id);
 
   return s;
 }
@@ -1089,143 +508,68 @@ static Stream *Stream_new(int dir)
 static void Stream_delete(Stream *s)
 {
   assert(s && s->buffer);
-#if (USE_FIFO)
   Buffer_delete(s->buffer);
-#else
-  DBuffer_delete(s->buffer);	//xxx this should be called Buffer too
-#endif
-  dprintf(("stream %p[%d] deleted\n", s, s->direction));
+  dprintf("stream %p[%d] deleted\n", s, s->direction);
   free(s);
 }
 
 
-// setup conversion from Squeak to device frame format (or vice-versa).
-// requires: stereo for output.  (stereo or mono for input.)
+// setup conversion from Squeak to device frame format, or vice-versa.
+// requires: stereo for output, stereo or mono for input.
 //
 static int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
 {
-  int byteCount= frameCount * SqueakFrameSize;
-  int devBufSize, cvtBufSize;
+  int nChannels=	1 + stereo;
   AudioStreamBasicDescription imgFmt, devFmt;
   UInt32 sz= sizeof(devFmt);
-  int    channels= 1 + stereo;
 
-  dprintf(("stream %p[%d] setFormat frameCount: %d sampleRate: %d stereo: %d\n",
-	   s, s->direction, frameCount, sampleRate, stereo));
+  if (0 == s->direction) nChannels= 2;	// insist
 
-  s->sampleRate= sampleRate;
-  if (0 == s->direction)
-    channels= 2;	// insist
-
-  // device format: LPCM F32 BE stereo at 44k1 (but it's polite to ask
-  // the device anyway...)
   if (checkError(AudioDeviceGetProperty(s->id, 0, s->direction,
 					kAudioDevicePropertyStreamFormat,
 					&sz, &devFmt),
 		 "GetProperty", "StreamFormat"))
     return 0;
-  dprintf(("stream %p[%d] device format:\n", s, s->direction)); dumpFormat(&devFmt);
 
-  // Squeak format: LPCM S16 BE stereo (or mono on input) at any sample rate
+  dprintf("stream %p[%d] device format:\n", s, s->direction);  dumpFormat(&devFmt);
+
   imgFmt.mSampleRate	   = sampleRate;
   imgFmt.mFormatID	   = kAudioFormatLinearPCM;
-  imgFmt.mFormatFlags	   = ( ( kLinearPCMFormatFlagIsBigEndian)
-			       | kLinearPCMFormatFlagIsSignedInteger );
-  imgFmt.mBytesPerPacket   = SqueakFrameSize / (3 - channels);
+  imgFmt.mFormatFlags	   = kLinearPCMFormatFlagIsBigEndian | kLinearPCMFormatFlagIsSignedInteger;
+  imgFmt.mBytesPerPacket   = SqueakFrameSize / (3 - nChannels);
   imgFmt.mFramesPerPacket  = 1;
-  imgFmt.mBytesPerFrame    = SqueakFrameSize / (3 - channels);
-  imgFmt.mChannelsPerFrame = channels;
+  imgFmt.mBytesPerFrame    = SqueakFrameSize / (3 - nChannels);
+  imgFmt.mChannelsPerFrame = nChannels;
   imgFmt.mBitsPerChannel   = 16;
-  dprintf(("stream %p[%d] converter format:\n", s, s->direction)); dumpFormat(&imgFmt);
 
-  if (checkError(AudioConverterNew(s->direction ? &devFmt : &imgFmt,	// input : output
-				   s->direction ? &imgFmt : &devFmt,	// input : output
-				   &s->converter),
-		 "AudioConverter", "New"))
-    return 0;
+  dprintf("stream %p[%d] image format:\n", s, s->direction);  dumpFormat(&imgFmt);
 
-  // the stream records a fixed (default) device buffer size for use in the ioProc
-  sz= sizeof(devBufSize);
-  if (checkError(AudioDeviceGetProperty(s->id, 0, s->direction,
-					kAudioDevicePropertyBufferSize,
-					&sz, &devBufSize),
-		 "GetProperty", "BufferSize"))
-    return 0;
+  if (s->direction) // input
+    {
+      if (checkError(AudioConverterNew(&devFmt, &imgFmt, &s->converter), "AudioConverter", "New"))
+	return 0;
+      sz= sizeof(s->cvtBufSize);
+      s->cvtBufSize= 512 * devFmt.mBytesPerFrame;
+      if (checkError(AudioConverterGetProperty(s->converter, kAudioConverterPropertyCalculateOutputBufferSize,
+					       &sz, &s->cvtBufSize), 
+		     "GetProperty", "OutputBufferSize"))
+	return 0;
+    }
+  else // output
+    {
+      if (checkError(AudioConverterNew(&imgFmt, &devFmt, &s->converter), "AudioConverter", "New"))
+	return 0;
+    }
 
-  s->channels=      channels;
-  s->devByteCount=  devBufSize;
-  s->devFrameCount= devBufSize / DeviceFrameSize;
-  dprintf(("stream %p[%d] device buffer size %d (%d frames)\n",
-	   s, s->direction, s->devByteCount, s->devFrameCount));
+  s->channels=   nChannels;
+  s->sampleRate= sampleRate;
+  s->imgBufSize= SqueakFrameSize * nChannels * frameCount;
 
-  // the converter is buggy: if we ask it for the input buffer size it
-  // would prefer by calling AuConvGetProp(CalculateInBufSize) it
-  // proceeds to barf up a `bad input buffer size' in the ioproc.  ho
-  // hum.  the following seems to work for *integral divisors* (or
-  // multiples) of 44100.  (tested with 88200, 44100, 22050 and 11025,
-  // but Your Kilometrage May Vary.  [Note: 48000 does NOT work.])
+  frameCount= max(frameCount, 512 * sampleRate / devFmt.mSampleRate);
 
-  cvtBufSize= (float)devBufSize
-    * sampleRate      / devFmt.mSampleRate
-    * SqueakFrameSize / devFmt.mBytesPerFrame
-    / (3 - channels); // mono => 2; stereo => 1
-  s->cvtByteCount= cvtBufSize;
-  dprintf(("stream %p[%d] converter buffer size %d (%d channels)\n",
-	   s, s->direction, cvtBufSize, s->channels));
+  s->buffer= Buffer_new((s->direction ? DeviceFrameSize : SqueakFrameSize) * nChannels * frameCount * 2);
 
-#if (USE_FIFO)
-
-  s->frameCount= frameCount;
-  s->byteCount=  byteCount;
-  dprintf(("stream %p[%d] image buffer size %d (%d)\n",
-	   s, s->direction, byteCount, frameCount));
-  {
-    int nBufs=  byteCount / cvtBufSize + 1;
-    byteCount=  cvtBufSize * nBufs;		// align on cvtBufSize
-    frameCount= byteCount / SqueakFrameSize;
-  }
-  // the following factor can be arbitrarily high (2 just approaches double
-  // buffering behaviour under heavy load) since the SoundPlayer only writes
-  // when _available_ data is < 1 (Squeak) buffer.  OTOH the code allows the
-  // buffer to fill to capacity (_free_ space > 1 Squeak buffer) when
-  // inModalLoop (see ../../vm/sqUnixQuartz.m), so increasing the factor will
-  // (dramatically) reduce the likelihood of underrun when Squeak is being
-  // starved of cycles (read: when dragging windows around and the
-  // WindowServer thread is hogging 100% of the CPU at a ridiculously high
-  // priority) at the expense of (momentarily) increased latency.
-  s->buffer= Buffer_new(byteCount * 2);
-
-#else // (!USE_FIFO)
-
-  // use exactly the requested frameSize (which makes life infinitely
-  // simpler in insertSamples) and deal with fragmentation in the ioproc
-  s->frameCount= frameCount;
-  s->byteCount=  byteCount;
-  s->buffer=     DBuffer_new(byteCount);
-
-#endif // (!USE_FIFO)
-
-  dprintf(("stream %p[%d] sound buffer size %d (%d)\n",
-	   s, s->direction, byteCount, frameCount));
-
-  // that's it.  all that's left is to start the device running.
-  // 
-  // Note that both buffers are left empty.  The ioproc will repeatedly
-  // underrun and ship silence until the back buffer (or initial frameCount
-  // worth of fifo) is filled, at which time it will immediately swap the
-  // buffers and start shipping samples.  This both minimises the possibility
-  // of underrun shortly after startup (since no minimum startup latency is
-  // imposed on the SoundPlayer) and reduces the maximum startup latency (from
-  // the SoundPlayer writing the first buffer to audio starting) to one device
-  // buffer (at most 11 milliseconds at 22kHz).
-#if 1
-  if (0 == s->direction)
-#if (USE_FIFO)
-    Buffer_prefill(s->buffer, s->byteCount);
-#else
-    s->buffer->front->state= Buffer_Full;
-#endif
-#endif
+  dprintf("stream %p[%d] sound buffer size %d/%d (%d)\n", s, s->direction, s->imgBufSize, s->buffer->size, frameCount);
 
   return 1;
 }
@@ -1237,7 +581,7 @@ static int Stream_startSema(Stream *s, int semaIndex)
 {
   AudioDeviceIOProc ioProc= s->direction ? ioProcInput : ioProcOutput;
 
-  dprintf(("stream %p[%d] startSema: %d\n", s, s->direction, semaIndex));
+  dprintf("stream %p[%d] startSema: %d\n", s, s->direction, semaIndex);
   
   s->semaphore= semaIndex;	// can be zero
   if (checkError(AudioDeviceAddIOProc(s->id, ioProc, (void *)s),
@@ -1249,7 +593,7 @@ static int Stream_startSema(Stream *s, int semaIndex)
       AudioDeviceRemoveIOProc(s->id, ioProc);
       return 0;
     }
-  dprintf(("stream %p[%d] running\n", s, s->direction));
+  dprintf("stream %p[%d] running\n", s, s->direction);
   return 1;
 }
 
@@ -1263,7 +607,7 @@ static int Stream_stop(Stream *s)
 	     "DeviceStop", s->direction ? "ioProcIn" : "ioProcOut");
   checkError(AudioDeviceRemoveIOProc(s->id, ioProc),
 	     "Remove", s->direction ? "ioProcIn" : "ioProcOut");
-  dprintf(("stream %p[%d] stopped\n", s, s->direction));
+  dprintf("stream %p[%d] stopped\n", s, s->direction);
   return 1;
 }
 
@@ -1273,46 +617,10 @@ static int Stream_stop(Stream *s)
 /// 
 
 
-#define FAIL(X)		return (primitiveFail(), (X))
-
 static int sound_AvailableSpace(void)
 {
   if (output)
-    {
-#    if (USE_FIFO)
-      if (0)//inModalLoop && (Buffer_free(output->buffer) > 100))
-	{
-	  feedback(2, BLUE);
-	  return Buffer_free(output->buffer);
-	}
-      else if (Buffer_avail(output->buffer) <= output->byteCount)
-	{
-	  feedback(2, BLUE);
-	  return output->byteCount;
-	}
-      resetPriority();
-      feedback(2, GREEN);
-      return 0;
-#    else // (!USE_FIFO)
-      switch (output->buffer->back->state)
-	{
-	case Buffer_Empty:
-	  feedback(2, BLUE);
-	  return output->byteCount;	// can write an entire buffer
-	case Buffer_Full:
-	  {
-	    resetPriority();
-	    feedback(2, GREEN);
-	    return 0;
-	  }
-	case Buffer_Busy:
-	  eprintf("back buffer is busy -- why?\n");	// this shouldn't happen
-	  feedback(2, BLACK);
-	  return 0;
-	}
-      eprintf("this cannot happen\n");
-#    endif // (!USE_FIFO)
-    }
+    return Buffer_free(output->buffer);
   success(false);
   return 8192;	// so that older images can cope
 }
@@ -1346,8 +654,7 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 {
   Stream *s= output;
 
-  dprintf(("snd_InsertSamples %d From %p LeadTime %d\n",
-	   frameCount, srcBufPtr, framesOfLeadTime));
+  dprintf("snd_InsertSamples %d From %p LeadTime %d\n", frameCount, srcBufPtr, framesOfLeadTime);
 
   if (s)
     {
@@ -1378,11 +685,10 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
       }
 #    else
       {
-	leadBytes= s->cvtByteCount;	// quantum shipped to the hardware
+	leadBytes= s->devBufSize;	// quantum shipped to the hardware
       }
 #    endif
 
-#    if (USE_FIFO)
       {
 	int   availBytes;
 	int   byteCount= frameCount * SqueakFrameSize;
@@ -1410,23 +716,6 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 	frontFrames /= SqueakFrameSize;
 	backFrames  /= SqueakFrameSize;
       }
-#    else // (!USE_FIFO)
-      {
-	DBuffer *db=    s->buffer;
-	Buffer  *front= db->front;
-	Buffer  *back=  db->back;		//xxx THERE IS A RACE HERE
-
-	if ((  (Buffer_Full == back->state))
-	    && (Buffer_Busy == front->state))
-	  {
-	    int frontBytes=  max(0, front->size - (front->position + leadBytes));
-	    frontFrames= frontBytes / SqueakFrameSize;
-	    frontData=   front->data + front->size - frontBytes;
-	    backFrames=  back->size / SqueakFrameSize;
-	    backData=    back->data;
-	  }
-      }
-#    endif // (!USE_FIFO)
 
       assert((frontFrames + backFrames) < frameCount);	// avoid bug in image
 
@@ -1440,7 +729,8 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
       return framesDone;
     }
 
-  FAIL(frameCount);
+  success(false);
+  return frameCount;
 }
 
 
@@ -1451,52 +741,18 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 {
   if (output)
     {
-#    if (USE_FIFO)
-
       int byteCount= frameCount * SqueakFrameSize;
       if (Buffer_free(output->buffer) >= byteCount)
 	{
 	  Buffer_write(output->buffer,
 		       (char *)arrayIndex + (startIndex * SqueakFrameSize),
 		       byteCount);
-	  if (priorityRaised)
-	    usleep(10000);
 	  return frameCount;
 	}
       return 0;
-
-#    else // (!USE_FIFO)
-
-      Buffer *b= output->buffer->back;
-      assert(frameCount == output->frameCount);
-      switch (b->state)
-	{
-	case Buffer_Empty:	// consume an entire buffer
-	  {
-	    //xxx startIndex is always zero
-	    int   offset= startIndex * SqueakFrameSize;
-	    void *data=   (void *)(arrayIndex + offset);
-	    // eat noise...
-	    memcpy(b->data, data, frameCount * SqueakFrameSize);
-	    // ioproc can swap when ready
-	    assert(b->position == 0);
-	    b->state= Buffer_Full;
-	    return frameCount;
-	  }
-	  break;
-
-	case Buffer_Busy:
-	  eprintf("back buffer busy -- why?\n");	// this shouldn't happen
-	  // fall through..
-	case Buffer_Full:
-	  return 0;
-	}
-      eprintf("this cannot happen\n");
-
-#    endif // (!USE_FIFO)
     }
-
-  FAIL(8192);
+  success(false);
+  return 8192;
 }
 
 
@@ -1504,7 +760,8 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 // 
 static int sound_PlaySilence(void)
 {
-  FAIL(8192);
+  success(false);
+  return 8192;
 }
 
 
@@ -1512,11 +769,10 @@ static int sound_PlaySilence(void)
 // 
 static int sound_Stop(void)
 {
-  dprintf(("snd_Stop\n"));
+  dprintf("snd_Stop\n");
   
   if (output)
     {
-      stopSpy();
       Stream_stop(output);
       Stream_delete(output);
       output= 0;
@@ -1525,24 +781,15 @@ static int sound_Stop(void)
 }
 
 
-static int priorityInitialised= 0;
-
-
 // start up sound output.
 // 
 static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
 {
   Stream *s= 0;
 
-  dprintf(("snd_Start frames: %d samplesPerSec: %d stereo: %d semaIndex: %d\n",
-	   frameCount, samplesPerSec, stereo, semaIndex));
+  dprintf("snd_Start frames: %d samplesPerSec: %d stereo: %d semaIndex: %d\n",
+	   frameCount, samplesPerSec, stereo, semaIndex);
   
-  if (!priorityInitialised)
-    {
-      priorityInitialised= 1;
-      initPriority();
-    }
-
   if (output)	// there might be a change of sample rate
     sound_Stop();
 
@@ -1552,7 +799,6 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIn
 	  && Stream_startSema(s, semaIndex))
 	{
 	  output= s;
-	  startSpy();
 	  return 1;
 	}
       Stream_delete(s);
@@ -1581,11 +827,10 @@ static double sound_GetRecordingSampleRate(void)
 
 static int sound_StopRecording(void)
 {
-  dprintf(("snd_StopRecording\n"));
+  dprintf("snd_StopRecording\n");
 
   if (input)
     {
-      stopSpy();
       Stream_stop(input);
       Stream_delete(input);
       input= 0;
@@ -1600,15 +845,9 @@ static int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex)
 {
   Stream *s= 0;
 
-  dprintf(("snd_StartRecording rate: %d stereo: %d semaIndex: %d\n",
-	   samplesPerSec, stereo, semaIndex));
+  dprintf("snd_StartRecording rate: %d stereo: %d semaIndex: %d\n",
+	   samplesPerSec, stereo, semaIndex);
   
-  if (!priorityInitialised)
-    {
-      priorityInitialised= 1;
-      initPriority();
-    }
-
   if (input)	// there might be a change of sample rate
     sound_StopRecording();
 
@@ -1620,7 +859,6 @@ static int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex)
 	  && Stream_startSema(s, semaIndex))
 	{
 	  input= s;
-	  startSpy();
 	  return 1;
 	}
       Stream_delete(s);
@@ -1633,13 +871,18 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int buf
 {
   if (input)
     {
-      int start= startSliceIndex * SqueakFrameSize / 2;
-      int count= bufferSizeInBytes - start;
-      return Buffer_read(input->buffer, (char *)buf + start, count)
-	/ (SqueakFrameSize / 2)
-	/ input->channels;
+      if (Buffer_avail(input->buffer) >= (512 * DeviceFrameSize))
+	{
+	  int    start= startSliceIndex * SqueakFrameSize / 2;
+	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
+	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
+								&count, (char *)buf + start))
+	    return count / (SqueakFrameSize / 2) / input->channels;
+	}
+      return 0;
     }
-  FAIL(0);
+  success(false);
+  return 0;
 }
 
 
@@ -1779,13 +1022,31 @@ static void dumpFormat(AudioStreamBasicDescription *fmt)
 #endif // (DEBUG)
 
 
-#if (TESTING)
+#if (!TESTING)
 
-#include "math.h"
+# include "SqSound.h"
 
-#define RATE	22050.0			// samples per second
-#define FRAMES	5288 * RATE / 44100	// nominal buffer size requested by Squeak
-#define FREQ	440.0			// tuning fork required to verify this ;)
+  SqSoundDefine(MacOSX);
+
+# include "SqModule.h"
+
+  static void  sound_parseEnvironment(void) {}
+  static int   sound_parseArgument(int argc, char **argv) { return 0; }
+  static void  sound_printUsage(void) {}
+  static void  sound_printUsageNotes(void) {}
+  static void *sound_makeInterface(void) { return &sound_MacOSX_itf; }
+
+  void *np_sound_makeInterface(void) { return &sound_MacOSX_itf; }
+
+  SqModuleDefine(sound, MacOSX);
+
+#else // TESTING
+
+# include "math.h"
+
+# define RATE	48000.0			// samples per second
+# define FRAMES	5288 * RATE / 44100	// nominal buffer size requested by Squeak
+# define FREQ	440.0			// tuning fork required to verify this ;)
 
 static short sound[(int)(FRAMES * 2)];
 
@@ -1816,32 +1077,26 @@ int main()
 	{
 	  warble(n);
 	  sound_PlaySamplesFromAtLength(n, (int)sound, 0);
+#        if (DEBUG)
+	  putchar('.');  fflush(stdout);
+#        endif
 	}
       else
 	usleep(1000);
     }
+  (void)sound_InsertSamplesFromLeadTime;
+  (void)sound_PlaySilence;
+  (void)sound_GetRecordingSampleRate;
+  (void)sound_StartRecording;
+  (void)sound_RecordSamplesIntoAtLength;
+  (void)sound_Volume;
+  (void)sound_SetVolume;
+  (void)sound_SetRecordLevel;
+  return 0;
 }
 
 /*
- cc -g -Wall -DTESTING=1 -o sqUnixSoundMacOSX sqUnixSoundMacOSX.c -framework CoreAudio -framework AudioToolbox
- */
+  cc -g -Wall -DTESTING=1 -o sqUnixSoundMacOSX sqUnixSoundMacOSX.c -framework CoreAudio -framework AudioToolbox
+*/
 
 #endif // TESTING
-
-
-
-
-#include "SqSound.h"
-
-SqSoundDefine(MacOSX);
-
-
-#include "SqModule.h"
-
-static void  sound_parseEnvironment(void) {}
-static int   sound_parseArgument(int argc, char **argv) { return 0; }
-static void  sound_printUsage(void) {}
-static void  sound_printUsageNotes(void) {}
-static void *sound_makeInterface(void) { return &sound_MacOSX_itf; }
-
-SqModuleDefine(sound, MacOSX);
