@@ -6,10 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.h,v 1.2 2002/02/23 11:26:02 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.h,v 1.3 2002/03/01 00:29:49 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+*  Feb 27th, 2002, JMM changed for carbon event logic.
 ****************************************************************************/
  
 #if TARGET_API_MAC_CARBON
@@ -33,3 +34,4 @@ int checkForModifierKeys();
 void ignoreLastEvent();
 void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, short hMax, short vMax);
 void SetupKeyboard(void);    
+pascal short SqueakYieldToAnyThread(void);
