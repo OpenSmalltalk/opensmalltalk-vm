@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacPrinting.c,v 1.4 2002/08/08 01:25:31 johnmci Exp $
+*   RCSID:   $Id: sqMacPrinting.c,v 1.5 2002/11/10 09:24:22 johnmci Exp $
 *
 *   NOTES: 
 *	Take carbon sample code, and alter it a bit
@@ -905,7 +905,7 @@ OSStatus DrawPage(PrintingLogicPtr printJob)
             GWorldPtr   aGWorld;
             PixMapHandle thePix;
             
-            NewGWorld(&aGWorld, printJob->depth, &srcRect, stColorTable, NULL, keepLocal);
+            NewGWorld(&aGWorld, printJob->depth, &srcRect, stColorTable, NULL, keepLocal+useTempMem);
             thePix = GetGWorldPixMap (aGWorld);
     	    LockPixels(thePix);
          
