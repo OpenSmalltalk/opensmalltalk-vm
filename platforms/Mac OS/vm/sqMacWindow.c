@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.30 2003/12/02 04:53:12 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.31 2004/04/23 20:48:31 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -16,6 +16,7 @@
  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
  3.5.1b5 June 25th, 2003 JMM fix memory leak on color table free, pull preferences from Info.plist under os-x
  3.7.0bx Nov 24th, 2003 JMM move preferences to main, the proper place.
+ 3.7.3bx Apr 10th, 2004 JMM fix crash on showscreen
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -143,6 +144,33 @@ int ioSetFullScreen(int fullScreen) {
 	}
 }
 
+#if TARGET_API_MAC_CARBON
+extern struct VirtualMachine *interpreterProxy;
+void sqShowWindow(void);
+void sqShowWindowActual(void);
+
+void sqShowWindow(void) {
+        int giLocker,return_value=0;
+        giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+        if (giLocker != 0) {
+            long *foo;
+            foo = malloc(sizeof(long)*4);
+            foo[0] = 0;
+            foo[1] = (int) sqShowWindowActual;
+            foo[2] = 0;
+            foo[3] = 0;
+            ((int (*) (void *)) giLocker)(foo);
+            free(foo);
+        }
+}
+
+void sqShowWindowActual(void){
+#else
+void sqShowWindow(void) {
+#endif
+	ShowWindow(stWindow);
+}
+
 #define bytesPerLine(width, depth)	((((width)*(depth) + 31) >> 5) << 2)
 #if !TARGET_API_MAC_CARBON
 int ioShowDisplay(
@@ -196,7 +224,7 @@ int ioShowDisplay(
 	CopyBits((BitMap *) *stPixMap, GetPortBitMapForCopyBits(windowPort), &srcRect, &dstRect, srcCopy, maskRect);
 
         if (gWindowsIsInvisible) {
-            ShowWindow(stWindow);
+            sqShowWindow();
             gWindowsIsInvisible = false;
         }
 }
@@ -406,7 +434,7 @@ int ioShowDisplay(
         }
 
         if (gWindowsIsInvisible) {
-            ShowWindow(stWindow);
+            sqShowWindow();
             gWindowsIsInvisible = false;
            //  NOT YET givers poor performance SetupSurface();
         }
@@ -1200,7 +1228,7 @@ int ioShowDisplay(
         }
 
         if (gWindowsIsInvisible) {
-            ShowWindow(stWindow);
+            sqShowWindow();
             gWindowsIsInvisible = false;
         }
 
