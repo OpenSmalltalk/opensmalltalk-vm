@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.14 2003/05/19 07:19:54 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.15 2003/06/20 01:49:23 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -60,6 +60,7 @@
 *	2/14/2002  JMM fixes for updatewindow logic and drag/drop image with no file type
 *	2/25/2002  JMM additions for carbon event managment.
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+*  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
 
 */
 
@@ -93,6 +94,9 @@ QDGlobals 		qd;
     pthread_t gSqueakPThread;
 #endif
 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    #include "aio.h"
+#endif 
 extern char shortImageName[];
 extern char documentName[];
 extern char vmPath[];
@@ -104,6 +108,8 @@ Boolean         gDisablePowerManager=false;
 Boolean         gThreadManager=false;
 ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
+OSErr			gSqueakFileLastError; 
+Boolean		gSqueakWindowIsFloating;
 
 #ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
@@ -240,7 +246,11 @@ int main(void) {
     
 #ifndef IHAVENOHEAD
 	SetWindowTitle(shortImageName);
+#if I_AM_CARBON_EVENT	
+        ioSetFullScreenActual(getFullScreenFlag());
+#else
 	ioSetFullScreen(getFullScreenFlag());
+#endif
 #endif
 
 #if (!(defined JITTER) && defined(__MPW__))
@@ -250,6 +260,7 @@ int main(void) {
 #if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
     {
     
+    aioInit();
     gThreadManager = false;
     pthread_mutex_init(&gEventQueueLock, NULL);
     pthread_mutex_init(&gEventUILock, NULL);
@@ -495,6 +506,13 @@ char * GetAttributeString(int id) {
 #if TARGET_API_MAC_CARBON
 	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
 #endif
+	if (id == 1202) {
+		static char data[32];
+
+		sprintf(data,"%i",gSqueakFileLastError);
+		return data;
+	}
+
 	/* attribute undefined by this platform */
 	success(false);
 	return "";
