@@ -111,7 +111,7 @@ MD=			mkdir
 #
 LD=			gcc
 LDFLAGS=	-mwindows
-STDLIBS=	-lddraw -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm -luser32 -lgdi32 -lkernel32
+STDLIBS=	-lddraw -ldinput -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm -luser32 -lgdi32 -lkernel32
 CRTLIB =	-lcrtdll
 LIBS=		$(STDLIBS) $(CRTLIB)
 

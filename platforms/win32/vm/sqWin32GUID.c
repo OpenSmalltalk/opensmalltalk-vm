@@ -10,6 +10,6 @@
 #include <ddraw.h>
 #include <dsound.h>
 #include <d3d.h>
-
+#include <dinput.h>
 
 
