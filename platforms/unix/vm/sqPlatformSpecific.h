@@ -20,6 +20,11 @@
    autoconf-check this, and substitute whatever fseeko is using) */
 typedef off_t squeakFileOffsetType;
 
+#undef sqFTruncate
+#undef fseek
+#undef ftell
+
+
 #define sqFTruncate(fp, offs) ftruncate(fileno(fp),offs)
 #define fseek(fp, offs,type) fseeko(fp, offs,type)
 #define ftell(fp) ftello(fp)
@@ -27,7 +32,6 @@ typedef off_t squeakFileOffsetType;
 /* unix-specific prototypes and definitions */
 void aioPollForIO(int microSeconds, int extraFd);  /* XXX should no longer be needed -lex */
 #define SQ_FORM_FILENAME        "squeak-form.ppm"
-#define sqFilenameFromStringOpen(dst, src, num) sqFilenameFromString(dst, src, num)
 
 /* undefine clock macros that are implemented as functions */
 #undef ioMSecs
