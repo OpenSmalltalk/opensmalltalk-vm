@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2003-08-15 14:45:18 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-15 17:42:15 by piumarta on emilia.inria.fr
  */
 
 #define DEBUG 0
@@ -313,8 +313,6 @@ int ioFindExternalFunctionIn(char *lookupName, int moduleHandle)
   if ((fn == 0) && (!sqIgnorePluginErrors) && (strcmp(lookupName, "initialiseModule")))
     fprintf(stderr, "ioFindExternalFunctionIn(%s, %d):\n  %s\n",
 	    lookupName, moduleHandle, dlerror());
-
-  printf("%p = %s\n", fn, lookupName);
 
   return (int)fn;
 }
