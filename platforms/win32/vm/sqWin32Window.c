@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.5 2002/05/04 23:45:44 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.5 2002/05/04 23:45:44 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -933,7 +933,7 @@ int recordMouseEvent(MSG *msg) {
     red |= msg->wParam & MK_MBUTTON;
     red |= msg->wParam & MK_RBUTTON;
     blue = yellow = 0;
-  } else if(f3ButtonMouse) {
+  } else if(!f3ButtonMouse) {
     blue   = msg->wParam & MK_MBUTTON;
     yellow = msg->wParam & MK_RBUTTON;
   } else {
@@ -942,10 +942,10 @@ int recordMouseEvent(MSG *msg) {
   }
   if(red && !blue && !yellow) { /* red button honors modifiers */
     if(alt && !ctrl) {
-      red = 0; yellow = 1;
+      red = 0; blue = 1;
     }
     if(ctrl && !alt) {
-      red = 0; blue = 1;
+      red = 0; yellow = 1;
     }
   }
   /* first the basics */
