@@ -4,5 +4,18 @@ portions of the code already generated.  Details on the process are at:
 
     http://minnow.cc.gatech.edu/squeak/2173
 
-This package contains source code as describe at the above link.  All
-possible plugins are generated, and they are generated internally.
+This package contains source code as describe at the above link.
+Additionally, it contains plugins built using the following
+changesets:
+
+    OSProcess version 2.7
+    http://minnow.cc.gatech.edu/squeak/708    
+
+    PrintJobPlugin 1.1
+    http://swiki.gsug.org:8080/sqfixes/2208.html
+
+
+
+All possible plugins are generated, and they are generated internally.
+
+
