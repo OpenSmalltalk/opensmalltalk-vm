@@ -20,6 +20,7 @@
 #include "oslib/colourtrans.h"
 #include "sq.h"
 #include <kernel.h>
+#include <ctype.h>
 
 #define longAt(i) (*((int *) (i)))
 
@@ -680,6 +681,7 @@ os_error * e;
 wimp_w w;
 os_coord origin, size;
 extern char * windowLabel;
+extern char imageName[];
 
 	PRINTF(("\\t initial open window\n"));
 
@@ -730,16 +732,11 @@ extern char * windowLabel;
 	wblock.xmin = (short)100;
 	wblock.ymin = (short)100;
 	/* title data; if the -windowlabel vm option was set, use its arg
-	 * instead of the image pathname */
-	if( strlen(windowLabel)) {
-		wblock.title_data.indirected_text.text =  windowLabel;
-		wblock.title_data.indirected_text.validation = (char*)-1;
-		wblock.title_data.indirected_text.size = strlen(windowLabel);
-	} else {
-		wblock.title_data.indirected_text.text =  &imageName[0];
-		wblock.title_data.indirected_text.validation = (char*)-1;
-		wblock.title_data.indirected_text.size = strlen(imageName);
-	}
+	 * instead of the image pathname. The windowLabel ptr will point
+	 * to the imageName string unless -windowlabel was used */
+	wblock.title_data.indirected_text.text =  windowLabel;
+	wblock.title_data.indirected_text.validation = (char*)-1;
+	wblock.title_data.indirected_text.size = strlen(windowLabel);
 	/* icon count Assuming .icons=0 is ok for no icons ? */
 	wblock.icon_count = 0;
 	/* wblock.icons = (wimp_icon *)NULL;*/
@@ -982,6 +979,7 @@ int ioForceDisplayUpdate(void) {
 	PRINTF(("\\t ioForceDisplayUpdate"));
 	//ioProcessEvents();
 	DisplayPixmapNow();
+	return true;
 }
 
 int ioSetDisplayMode(int width, int height, int depth, int fullScreenFlag) {

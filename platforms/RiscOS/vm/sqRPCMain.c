@@ -63,7 +63,7 @@ int			headlessFlag = 0;
 int			helpMe = 0;
 int			versionMe = 0;
 int			objectHeadroom = 4*1024*1024;
-char * windowLabel = NULL;
+char * windowLabel = &imageName[0];
 
 vmArg args[] = {
 		{ ARG_FLAG,   &headlessFlag, "-headless" },
@@ -447,7 +447,7 @@ int stopProfiling(void) {}
 
 /*** System Attributes ***/
 char * osVersionString(void) {
-	sprintf(versionString, "RiscOS %-3.2f", actualOSLevel/100.0);
+	sprintf(versionString, "%-3.2f", actualOSLevel/100.0);
 	return versionString;
 }
 
