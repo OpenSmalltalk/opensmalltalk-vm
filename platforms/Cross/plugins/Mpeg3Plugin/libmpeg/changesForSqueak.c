@@ -1,3 +1,16 @@
+/****************************************************************************
+*   PROJECT: Changes for Squeak 
+*   FILE:    changesForSqueak.c
+*   CONTENT: 
+*
+*   AUTHOR:  John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: changesForSqueak.c,v 1.3 2001/12/27 23:14:13 johnmci Exp $
+*
+*   NOTES: See change log below.
+*	12/27/2001 JMM added support to build as a OS-X Bundle, a bit werid because its a mixture of unix and mac OS
+*****************************************************************************/
 /* Squeak on MPEG
    by John M McIntosh johnmci#smalltalkconsulting.com  Sept 2000
    
@@ -23,7 +36,7 @@
 #include "mpeg3private.h"
 #include "changesForSqueak.h"
 
-#ifdef TARGET_OS_MAC
+#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
 #include <Memory.h>
 #include <QuickDraw.h>
 #endif
@@ -48,7 +61,7 @@ static long counter = 0;
 
 void * memoryAllocate(int number,unsigned size) {
     void * stuff;
-#ifdef TARGET_OS_MAC
+#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
 #if TARGET_API_MAC_CARBON
     stuff = (void *) NewPtrClear(size*number);
 #else
@@ -64,7 +77,7 @@ void * memoryAllocate(int number,unsigned size) {
 
 void memoryFree(void *stuff) {
     counter--;
-#ifdef TARGET_OS_MAC
+#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
     DisposePtr((char *)stuff);
 #else
     free(stuff);
@@ -73,7 +86,7 @@ void memoryFree(void *stuff) {
 
 
 
-#if defined(TARGET_OS_MAC) || defined(WIN32)
+#if (defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )) || defined(WIN32)
 #define NEEDSTRFUNCS
 #endif
 
@@ -118,7 +131,7 @@ int bzero(char* block, long size) {
 #endif
 
 
-#ifdef TARGET_OS_MAC
+#if defined(TARGET_OS_MAC) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
 int bzero(char *block,long size) {
     BlockZero(block,size);
 }
@@ -313,4 +326,20 @@ int mpeg3_decrypt_packet(mpeg3_css_t *css, unsigned char *sector)
 {
 	return 1;
 }
+
+
+/*** System Attributes ***/
+
+int IsImageName(char *name) {
+	char *suffix;
+
+	suffix = strrchr(name, '.');  /* pointer to last period in name */
+	if (suffix == NULL) return 0;
+	if (strcmp(suffix, ".ima") == 0) return 1;
+	if (strcmp(suffix, ".image") == 0) return 1;
+	if (strcmp(suffix, ".IMA") == 0) return 1;
+	if (strcmp(suffix, ".IMAGE") == 0) return 1;
+	return 0;
+}
+
 
