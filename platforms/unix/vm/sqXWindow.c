@@ -300,15 +300,17 @@ int keyBufPut= 0;		/* index of next item of keyBuf to write */
 int keyBufOverflows= 0;		/* number of characters dropped */
 
 
-int stButtons= 0;               /* mouse buttons currently pressed down;
-				   the mask bits are described in sq.h as
-				   RedButtonBit, etc.  */
-int modifiers;                  /* the modifiers curretnly pressed down;
+unsigned stButtons= 0;          /* mouse buttons currently pressed
+				   down; the mask bits are described
+				   in sq.h as RedButtonBit, etc.  */
+unsigned modifiers;             /* the modifiers curretnly pressed down;
 				   the mask bits are described in sq.h
 				   as CtrlKeyBit, etc. */
-int buttonState= 0;		/* the combination of the stButtons and modifiers
-				   in the format Squeak expects:
-				      buttonState == (stButtons | (modifiers << 3)
+unsigned buttonState= 0;        /* the combination of the stButtons
+				   and modifiers in the format Squeak
+				   expects:
+
+				   buttonState == (stButtons | (modifiers << 3)
 				*/
 
 
@@ -399,7 +401,9 @@ static void redrawDisplay(int l, int r, int t, int b);
 static int translateCode(KeySym symbolic);
 static void recordMouseEvent(XButtonEvent *theEvent);
 static void recordKeystrokeEvent(XKeyEvent *theEvent);
-static void recordModifierButtons(XButtonEvent *theEvent);
+static void recordModifierButtons(XButtonEvent *theEvent,
+				  int buttonToAdd,
+				  int buttonToRemove);
 # ifdef USE_XSHM
 int XShmGetEventBase(Display *);
 # endif
@@ -865,7 +869,16 @@ static void signalInputEvent()
    with the same-named fields in XButtonEvent */
 static void recordMouseEvent(XButtonEvent *theEvent) 
 {
-  recordModifierButtons(theEvent);
+  int buttonToAdd= 0;
+  int buttonToRemove= 0;
+  
+  if(theEvent->type == ButtonPress)
+    buttonToAdd= theEvent->button;
+  if(theEvent->type == ButtonRelease)
+    buttonToRemove= theEvent->button;
+  
+  
+  recordModifierButtons(theEvent, buttonToAdd, buttonToRemove);
   
   mousePosition.x= theEvent->x;
   mousePosition.y= theEvent->y;
@@ -918,7 +931,7 @@ static void recordKeystrokeEvent(XKeyEvent *theEvent)
   int nConv= 0;
   KeySym symbolic;
 
-  recordModifierButtons((XButtonEvent *) theEvent);
+  recordModifierButtons((XButtonEvent *) theEvent, 0, 0);
 
 
   /* translate the key from X11 to Squeak */
@@ -1680,16 +1693,40 @@ void keyBufAppend(int keystate)
 
 
 
+/* return the squeak mask for an X button number */
+static unsigned int squeakMaskForXButton(int button) 
+{
+  switch(button)     {
+  case 1:
+    return RedButtonBit;
+
+  case 2:
+    return YellowButtonBit;
+
+  case 3:
+    return BlueButtonBit;
+
+  default:
+    /* ignore buttons other than 1-3 */
+    return 0;
+  }
+  
+}
+
+
 /* record the mouse buttons and modifier keys pressed according to an X event.
    This routine also translates meta-button1 into button3 */
-static void recordModifierButtons(XButtonEvent *theEvent)
+static void recordModifierButtons(XButtonEvent *theEvent,
+				  int buttonToAdd,
+				  int buttonToRemove)
 {
   /* translate the button encodings */
   stButtons= 0;
   if(theEvent->state & Button1Mask)  stButtons|= RedButtonBit;
   if(theEvent->state & Button2Mask)  stButtons|= YellowButtonBit;
   if(theEvent->state & Button3Mask)  stButtons|= BlueButtonBit;
-
+  stButtons|= squeakMaskForXButton(buttonToAdd);
+  stButtons&= ~ squeakMaskForXButton(buttonToRemove);
 
   /* translate the modifiers pressed */
   modifiers= 0;
@@ -1701,16 +1738,16 @@ static void recordModifierButtons(XButtonEvent *theEvent)
 
 
   /* remap the red button, if Control or Meta is pressed */
-  if ((stButtons == 4) && (modifiers & CtrlKeyBit))
+  if ((stButtons == RedButtonBit) && (modifiers & CtrlKeyBit))
   {
     /* ctrl-red is mapped to the yellow button */
-    stButtons= 2;
+    stButtons= YellowButtonBit;
     modifiers &= ~CtrlKeyBit;
   }
     
-  if ((stButtons == 4) && (modifiers & CommandKeyBit)) {
+  if ((stButtons == RedButtonBit) && (modifiers & CommandKeyBit)) {
     /* meta-red is mapped to the blue button */
-    stButtons= 1;
+    stButtons= BlueButtonBit;
     modifiers &= ~CommandKeyBit;
   }
 
@@ -1719,6 +1756,7 @@ static void recordModifierButtons(XButtonEvent *theEvent)
   /* combine the button state in the format Squeak likes */
   buttonState= (modifiers << 3) | (stButtons & 0x7);
 }
+
 
 #endif /*!HEADLESS*/
 
