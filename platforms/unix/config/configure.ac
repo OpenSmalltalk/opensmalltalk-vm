@@ -6,6 +6,10 @@
 #     as listed elsewhere in this file.
 #   All rights reserved.
 #   
+#     You are NOT ALLOWED to distribute modified versions of this file
+#     under its original name.  If you want to modify it and then make
+#     your modifications available publicly, rename the file first.
+# 
 #   This file is part of Unix Squeak.
 # 
 #   This file is distributed in the hope that it will be useful, but WITHOUT
@@ -14,7 +18,7 @@
 #   
 #   You may use and/or distribute this file ONLY as part of Squeak, under
 #   the terms of the Squeak License as described in `LICENSE' in the base of
-#   this distribution, subject to the following restrictions:
+#   this distribution, subject to the following additional restrictions:
 # 
 #   1. The origin of this software must not be misrepresented; you must not
 #      claim that you wrote the original software.  If you use this software
@@ -22,23 +26,22 @@
 #      other contributors mentioned herein) in the product documentation
 #      would be appreciated but is not required.
 # 
-#   2. This notice must not be removed or altered in any source distribution.
+#   2. You must not distribute (or make publicly available by any
+#      means) a modified copy of this file unless you first rename it.
+# 
+#   3. This notice must not be removed or altered in any source distribution.
 # 
 #   Using (or modifying this file for use) in any context other than Squeak
 #   changes these copyright conditions.  Read the file `COPYING' in the
 #   directory `platforms/unix/doc' before proceeding with any such use.
 # 
-#   You are not allowed to distribute a modified version of this file
-#   under its original name without explicit permission to do so.  If
-#   you change it, rename it.
-# 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-03-04 06:48:40 by piumarta on emilia.inria.fr
+# Last edited: 2003-02-10 20:17:06 by piumarta on emilia.inria.fr
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,4,1, 3,4,5170)
+AC_VM_VERSION(3,5,1devel, 3,2t,369)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
@@ -118,7 +121,8 @@ esac])
 
 AC_ARG_WITH(gnu-as,
 [  --with-gnu-as           assume that as is the GNU assembler [default=no]],
-[GAS="$withval"], [GAS="unknown"])
+  [GAS="$withval"],
+  [GAS="unknown"])
 
 AC_PROG_MAKE_SET
 AC_PROG_CC_WALL
@@ -147,31 +151,6 @@ INCLUDES="-I${blddir} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/
 
 AC_SUBST(INCLUDES)
 
-# Checks for X11
-
-AC_ARG_WITH(x,
-[  --without-x             disable X Window System support [default=enabled]],
-[ if test "$withval" = "no"; then have_x="no"; else have_x="yes"; fi ],
-[ have_x="yes"]
-)
-
-if test "$have_x" = "yes"; then
-  AC_DEFINE(USE_X11,[1])
-  NOX=""
-  AC_PATH_XTRA
-  LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS $LIBS"
-  CFLAGS="$X_CFLAGS $CFLAGS"
-  if test "$x_includes" != ""; then
-    INCLUDES="${INCLUDES} -I${x_includes}"
-  fi
-else
-  NOX="-nox"
-  CFLAGS="$CFLAGS -DHEADLESS"
-  with_npsqueak=no
-fi
-
-AC_SUBST(NOX)
-
 # Checks for header files.
 
 AC_NEED_SUNOS_H
@@ -195,31 +174,34 @@ AC_CHECK_GETHOSTNAME
 
 AC_ARG_WITH(rfb,
 [  --without-rfb           disable Remote FrameBuffer support [default=enabled]],
-[[have_rfb=no]],
-[[have_rfb=yes]])
+  [have_rfb="$withval"],
+  [have_rfb="no"])
+
 test $have_rfb = "yes" && AC_DEFINE(USE_RFB,[1])
 
 # Checks for libraries.
 
 AC_CHECK_LIB(nsl, yp_bind)
 AC_CHECK_LIB(socket, socket)
-
-AC_HAVE_HEADERS(dlfcn.h)
-AC_CHECK_FUNC(dlopen,
-    [AC_DEFINE(HAVE_LIBDL,[1])],
-    [AC_CHECK_LIB(dl, dlopen,
-	[LIBS="-ldl $LIBS"
-	 AC_DEFINE(HAVE_LIBDL,[1])],
-	[AC_CHECK_FUNC(_dyld_present,[AC_DEFINE(HAVE_DYLD,[1])])])])
-
 AC_CHECK_LIB(m,	sin)
 
-if test "$have_x" = "yes"; then
-  AC_CHECK_LIB(X11, XOpenDisplay)
-  AC_CHECK_LIB(Xext, XShmAttach)
-fi
+AC_HAVE_HEADERS(dlfcn.h)
+AC_CHECK_FUNC(dlopen, [
+  AC_DEFINE(HAVE_LIBDL,[1])
+],[
+  AC_CHECK_LIB(dl, dlopen, [
+    LIBS="-ldl $LIBS"
+    AC_DEFINE(HAVE_LIBDL,[1])
+  ],[
+    AC_CHECK_FUNC(_dyld_present, [
+      AC_DEFINE(HAVE_DYLD,[1])
+    ])
+  ])
+])
 
 AC_CHECK_FUNCS(snprintf __snprintf,[break])
+
+AC_FUNC_MMAP
 
 #AC_ARG_ENABLE(jit,
 #[  --enable-jit            enable J4 support [default=no]],
@@ -227,16 +209,6 @@ AC_CHECK_FUNCS(snprintf __snprintf,[break])
 #
 #test $JIT = "yes" && J_CFLAGS="-DJ_ENABLED"
 #AC_SUBST(J_CFLAGS)
-
-# Checks for sound support. 
-
-AC_ARG_WITH(audio,
-[  --with-audio=choice     choose audio device [default=auto]
-                          available devices: auto none oss sun nas],
-[[]],
-[[with_audio=auto]])
-
-AC_CHECK_SOUND
 
 # Checks for platform characteristics.
 
@@ -269,8 +241,8 @@ AC_SUBST(uninstall_nps)
 
 AC_ARG_WITH(npsqueak,
 [  --without-npsqueak      disable browser plugin support [default=enabled]],
-[[with_npsqueak=no]],
-[[with_npsqueak=yes]])
+  [with_npsqueak="$withval"],
+  [with_npsqueak="yes"])
 
 if test "$with_npsqueak" = "no"; then
   npsqueak=""
@@ -309,12 +281,18 @@ AC_SUBST_FILE(make_prg)
 Makefile_install=${cfgdir}/Makefile.install
 Makefile_dist=${topdir}/util/Makefile.dist
 Makefile_rpm=${topdir}/util/Makefile.rpm
-Makefile_deb=${topdir}/util/Makefile.deb
 
 AC_SUBST_FILE(Makefile_install)
 AC_SUBST_FILE(Makefile_dist)
 AC_SUBST_FILE(Makefile_rpm)
-AC_SUBST_FILE(Makefile_deb)
+
+# Configure VM modules xxx MAKE INTERNAL WORK
+
+int_modules="vm"
+ext_modules="`cd ${topdir}/platforms/unix; echo vm-*`"
+
+AC_SUBST(int_modules)
+AC_SUBST(ext_modules)
 
 # Configure plugins
 
@@ -322,9 +300,15 @@ disabled_plugins=""
 rm -f plugins.exc
 sinclude(acplugins.m4)
 
-if test "$have_x" = "no"; then
-  AC_PLUGIN_DISABLE_PLUGIN(UnixOSProcessPlugin)
-fi
+# Plugins not generated by VMM must be listed here...
+int_plugins=""
+ext_plugins="ObjectiveCPlugin"
+AC_SUBST(int_plugins)
+AC_SUBST(ext_plugins)
+
+#if test "$have_x" = "no"; then
+#  AC_PLUGIN_DISABLE_PLUGIN(UnixOSProcessPlugin)
+#fi
 
 if test "${disabled_plugins}" != ""; then
   echo ${disabled_plugins} | tr ' ' '\012' > plugins.exc

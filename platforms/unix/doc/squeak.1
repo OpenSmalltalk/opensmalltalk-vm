@@ -4,6 +4,10 @@
 .\"     as listed elsewhere in this file.
 .\"   All rights reserved.
 .\"   
+.\"     You are NOT ALLOWED to distribute modified versions of this file
+.\"     under its original name.  If you want to modify it and then make
+.\"     your modifications available publicly, rename the file first.
+.\" 
 .\"   This file is part of Unix Squeak.
 .\" 
 .\"   This file is distributed in the hope that it will be useful, but WITHOUT
@@ -12,7 +16,7 @@
 .\"   
 .\"   You may use and/or distribute this file ONLY as part of Squeak, under
 .\"   the terms of the Squeak License as described in `LICENSE' in the base of
-.\"   this distribution, subject to the following restrictions:
+.\"   this distribution, subject to the following additional restrictions:
 .\" 
 .\"   1. The origin of this software must not be misrepresented; you must not
 .\"      claim that you wrote the original software.  If you use this software
@@ -20,17 +24,16 @@
 .\"      other contributors mentioned herein) in the product documentation
 .\"      would be appreciated but is not required.
 .\" 
-.\"   2. This notice must not be removed or altered in any source distribution.
+.\"   2. You must not distribute (or make publicly available by any
+.\"      means) a modified copy of this file unless you first rename it.
+.\" 
+.\"   3. This notice must not be removed or altered in any source distribution.
 .\" 
 .\"   Using (or modifying this file for use) in any context other than Squeak
 .\"   changes these copyright conditions.  Read the file `COPYING' in the
 .\"   directory `platforms/unix/doc' before proceeding with any such use.
 .\" 
-.\"   You are not allowed to distribute a modified version of this file
-.\"   under its original name without explicit permission to do so.  If
-.\"   you change it, rename it.
-.\" 
-.\" Last edited: 2002-10-16 15:23:18 by piumarta on emilia.inria.fr
+.\" Last edited: 2003-03-02 22:22:14 by piumarta on emilia.inria.fr
 .\" 
 .if @@\*(lq@ \{\
 .	ds lq "
@@ -175,6 +178,20 @@ instead of looking in the environment variable
 DISPLAY
 (the default behaviour) to find the name of the server to use.
 .TP
+.BI "\-encoding " "enc"
+specifies the internal character encoding to be used by Squeak.  The correct value depends on
+the way Squeak's internal fonts are encoded.  Older images use
+.B MacRoman
+encoding within the image, newer images should use
+.B ISO-8859-15
+(aka
+.B Latin9\c
+).  The correct value is
+.B MacRoman
+for image versions prior to 3.5,
+.B ISO-8859-15
+for image versions 3.5 and later.
+.TP
 .B \-fullscreen
 causes the Squeak window to occupy as much of the screen area as possible.
 Implies \`\c
@@ -239,6 +256,23 @@ This option is implied by \`\c
 .B \-fullscreen\c
 \'.
 .TP
+.BI "\-pathenc " "enc"
+specifies the external character encoding to be used by Squeak when accessing the filesystem
+(file and directory pathnames).  The correct value depends on the local platform's characteristics.
+If no encoding conversion should be performed then this should be set to the same encoding
+as Squeak uses internally (see the
+.I \-encoding
+option).  Otherwise
+.B ISO-8859-15
+(aka
+.B Latin9\c
+) might make sense on a filesystem with 8-bit names and
+.B UTF-8
+for a filesystem that uses Unicode-based pathnames.  The default is
+.B UTF-8
+for version 3.5 and later of the VM (which is correct for at least MacOSX and RedHat 8, and
+which in an ideal world will eventually be adopted by all Unix variants).
+.TP
 .BI "-plugins " "path"
 specifies an alternative location for external plugins (collections
 of named primitives).  The
@@ -272,6 +306,31 @@ buttons, in that order.  With this option, it maps X buttons
 and
 .B yellow
 buttons.)
+.TP
+.BI "\-textenc " "enc"
+specifies the external character encoding to be used by Squeak when exchanging clipboard
+text with other applications that request/provide the selection converted to
+.B STRING
+data.  The default is
+.B UTF-8
+on MacOSX, and
+.B ISO-8859-15
+(aka
+.B Latin9\c
+) on other Unix systems.
+Note that X11 applications requesting the selection converted to
+.B STRING_UTF8
+data will (correctly) receive the clipboard text encoded as
+.B UTF-8\c
+, regardless of this setting.
+
+Squeak recognises a subset of the character set names defined by the IANA.
+(If you prefer to use the international currency symbol
+rather than the Euro symbol in external text then you might want to set this to
+.B ISO-8859-1\c
+, aka
+.B Latin1\c
+\&.)
 .TP
 .B \-version
 prints three or more lines of version information, as follows:
@@ -317,6 +376,11 @@ also be set from environment variables.
 if set in the environment then equivalent to the \`\c
 .B \-xasync\c
 \' flag.  (The value is ignored.)
+.TP
+.B SQUEAK_ENCODING
+the name of the internal character encoding used by Squeak.  Equivalent to giving the \`\c
+.B \-encoding\c
+\' command-line option if set.
 .TP
 .B SQUEAK_FULLSCREEN
 equivalent to \`\c
@@ -369,6 +433,12 @@ if set, equivalent to \`\c
 .B \-notitle\c
 \'.
 .TP
+.B SQUEAK_PATHENC
+the name of the character encoding used to construct file and directory names.
+Equivalent to giving the \`\c
+.B \-pathenc\c
+\' command-line option if set.
+.TP
 .B SQUEAK_PLUGINS
 see \`\c
 .B \-plugins\c
@@ -378,6 +448,12 @@ see \`\c
 equivalent to \`\c
 .B \-swapbtn\c
 \' if set.
+.TP
+.B SQUEAK_TEXTENC
+the name of the character encoding used to copy/paste text from/to external applications.
+Equivalent to giving the \`\c
+.B \-textenc\c
+\' command-line option if set.
 .TP
 .B SQUEAK_XSHM
 equivalent to \`\c
@@ -590,7 +666,12 @@ The archives of the Squeak mailing list:
 .B http://squeak.cs.uiuc.edu/mail/squeak
 .RE
 .PP
-The latest version of Unix Squeak:
+The latest source and binary distributions of Unix Squeak:
 .RS
 .B http://www-sor.inria.fr/~piumarta/squeak
+.RE
+.PP
+The list of IANA-registered character encoding names, of which a proper subset is recognised by Squeak:
+.RS
+.B http://www.iana.org/assignments/character-sets
 .RE

@@ -15,7 +15,6 @@ if test "X${PATH_SEPARATOR+set}" != Xset; then
     *-DOS) lt_cv_sys_path_separator=';' ;;
     *)     lt_cv_sys_path_separator=':' ;;
   esac
-  PATH_SEPARATOR=$lt_cv_sys_path_separator
 fi
 
 
@@ -82,7 +81,7 @@ else
   #
   # So, first we look for a working echo in the user's PATH.
 
-  IFS="${IFS= 	}"; save_ifs="$IFS"; IFS=$PATH_SEPARATOR
+  IFS="${IFS= 	}"; save_ifs="$IFS"; IFS="${IFS}${PATH_SEPARATOR}"
   for dir in $PATH /usr/ucb; do
     if (test -f $dir/echo || test -f $dir/echo$ac_exeext) &&
        test "X`($dir/echo '\t') 2>/dev/null`" = 'X\t' &&
@@ -1371,11 +1370,11 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 
   VM_MAJOR=3
-  VM_MINOR=4
-  VM_RELEASE=1
+  VM_MINOR=2
+  VM_RELEASE=6
   SQ_MAJOR=3
-  SQ_MINOR=4
-  SQ_UPDATE=5170
+  SQ_MINOR=4a
+  SQ_UPDATE=5125
 
 
 topdir=`cd ${srcdir}/../../..; pwd`
@@ -1572,10 +1571,7 @@ if test "${with_gnu_awk+set}" = set; then
   withval="$with_gnu_awk"
   GAWK="$withval"
 else
-  case $host_os in
-  darwin*)	GAWK="yes";;
-  *)		GAWK="unknown";;
-esac
+  GAWK="unknown"
 fi; 
 
 
@@ -2376,6 +2372,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
 test "$GCC" = yes && WFLAGS="-Wall"
 
+# AC_PROG_CXX -- not needed in this release
 # Extract the first word of "as", so it can be a program name with args.
 set dummy as; ac_word=$2
 echo "$as_me:$LINENO: checking for $ac_word" >&5
@@ -2579,17 +2576,6 @@ test -z "$INSTALL_SCRIPT" && INSTALL_SCRIPT='${INSTALL}'
 
 test -z "$INSTALL_DATA" && INSTALL_DATA='${INSTALL} -m 644'
 
-# Find the correct PATH separator.  Usually this is `:', but
-# DJGPP uses `;' like DOS.
-if test "X${PATH_SEPARATOR+set}" != Xset; then
-  UNAME=${UNAME-`uname 2>/dev/null`}
-  case X$UNAME in
-    *-DOS) lt_cv_sys_path_separator=';' ;;
-    *)     lt_cv_sys_path_separator=':' ;;
-  esac
-  PATH_SEPARATOR=$lt_cv_sys_path_separator
-fi
-
 echo "$as_me:$LINENO: checking for BSD-compatible nm" >&5
 echo $ECHO_N "checking for BSD-compatible nm... $ECHO_C" >&6
 if test "${lt_cv_path_NM+set}" = set; then
@@ -2599,7 +2585,7 @@ else
   # Let the user override the test.
   lt_cv_path_NM="$NM"
 else
-  IFS="${IFS= 	}"; ac_save_ifs="$IFS"; IFS=$PATH_SEPARATOR
+  IFS="${IFS= 	}"; ac_save_ifs="$IFS"; IFS="${IFS}${PATH_SEPARATOR-:}"
   for ac_dir in $PATH /usr/ccs/bin /usr/ucb /bin; do
     test -z "$ac_dir" && ac_dir=.
     tmp_nm=$ac_dir/${ac_tool_prefix}nm
@@ -2989,7 +2975,7 @@ if test "${lt_cv_path_LD+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   if test -z "$LD"; then
-  IFS="${IFS= 	}"; ac_save_ifs="$IFS"; IFS=$PATH_SEPARATOR
+  IFS="${IFS= 	}"; ac_save_ifs="$IFS"; IFS="${IFS}${PATH_SEPARATOR-:}"
   for ac_dir in $PATH; do
     test -z "$ac_dir" && ac_dir=.
     if test -f "$ac_dir/$ac_prog" || test -f "$ac_dir/$ac_prog$ac_exeext"; then
@@ -3075,7 +3061,7 @@ lt_cv_deplibs_check_method='unknown'
 # `unknown' -- same as none, but documents that we really don't know.
 # 'pass_all' -- all dependencies passed with no checks.
 # 'test_compile' -- check by making test program.
-# 'file_magic [[regex]]' -- check by looking for files in library path
+# ['file_magic [regex]'] -- check by looking for files in library path
 # which responds to the $file_magic_cmd with a given egrep regex.
 # If you have `file' or equivalent on your system and you're not sure
 # whether `pass_all' will *always* work, you probably want this one.
@@ -3139,9 +3125,9 @@ hpux10.20*|hpux11*)
   lt_cv_file_magic_test_file=/usr/lib/libc.sl
   ;;
 
-irix5* | irix6* | nonstopux*)
+irix5* | irix6*)
   case $host_os in
-  irix5* | nonstopux*)
+  irix5*)
     # this will be overridden with pass_all, but let us keep it just in case
     lt_cv_deplibs_check_method="file_magic ELF 32-bit MSB dynamic lib MIPS - version 1"
     ;;
@@ -3162,7 +3148,13 @@ irix5* | irix6* | nonstopux*)
 
 # This must be Linux ELF.
 linux-gnu*)
-  lt_cv_deplibs_check_method=pass_all
+  case $host_cpu in
+  alpha* | hppa* | i*86 | powerpc* | sparc* | ia64* )
+    lt_cv_deplibs_check_method=pass_all ;;
+  *)
+    # glibc up to 2.1.1 does not perform some relocations on ARM
+    lt_cv_deplibs_check_method='file_magic ELF [0-9][0-9]*-bit [LM]SB (shared object|dynamic lib )' ;;
+  esac
   lt_cv_file_magic_test_file=`echo /lib/libc.so* /lib/libc-*.so`
   ;;
 
@@ -3281,7 +3273,7 @@ hpux*) # Its linker distinguishes data from code symbols
   lt_cv_global_symbol_to_cdecl="sed -n -e 's/^T .* \(.*\)$/extern char \1();/p' -e 's/^$symcode* .* \(.*\)$/extern char \1;/p'"
   lt_cv_global_symbol_to_c_name_address="sed -n -e 's/^: \([^ ]*\) $/  {\\\"\1\\\", (lt_ptr) 0},/p' -e 's/^$symcode* \([^ ]*\) \([^ ]*\)$/  {\"\2\", (lt_ptr) \&\2},/p'"
   ;;
-irix* | nonstopux*)
+irix*)
   symcode='[BCDEGRST]'
   ;;
 solaris* | sysv5*)
@@ -4513,7 +4505,7 @@ else
       # like `-m68040'.
       lt_cv_prog_cc_pic='-m68020 -resident32 -malways-restore-a4'
       ;;
-    beos* | irix5* | irix6* | nonstopux* | osf3* | osf4* | osf5*)
+    beos* | irix5* | irix6* | osf3* | osf4* | osf5*)
       # PIC is the default for these OSes.
       ;;
     darwin* | rhapsody*)
@@ -4556,7 +4548,7 @@ else
       lt_cv_prog_cc_pic='+Z'
       ;;
 
-    irix5* | irix6* | nonstopux*)
+    irix5* | irix6*)
       lt_cv_prog_cc_wl='-Wl,'
       lt_cv_prog_cc_static='-non_shared'
       # PIC (with -KPIC) is the default.
@@ -5126,7 +5118,7 @@ EOF
     # can override, but on older systems we have to supply one (in ltdll.c)
     if test "x$lt_cv_need_dllmain" = "xyes"; then
       ltdll_obj='$output_objdir/$soname-ltdll.'"$ac_objext "
-      ltdll_cmds='test -f $output_objdir/$soname-ltdll.c || sed -e "/^# \/\* ltdll\.c starts here \*\//,/^# \/\* ltdll.c ends here \*\// { s/^# //; p; }" -e d < $''0 > $output_objdir/$soname-ltdll.c~
+      ltdll_cmds='test -f $output_objdir/$soname-ltdll.c || sed -e "/^# \/\* ltdll\.c starts here \*\//,/^# \/\* ltdll.c ends here \*\// { s/^# //; p; }" -e d < [$]0 > $output_objdir/$soname-ltdll.c~
 	test -f $output_objdir/$soname-ltdll.$ac_objext || (cd $output_objdir && $CC -c $soname-ltdll.c)~'
     else
       ltdll_obj=
@@ -5382,9 +5374,8 @@ else
     esac
     # FIXME: Relying on posixy $() will cause problems for
     #        cross-compilation, but unfortunately the echo tests do not
-    #        yet detect zsh echo's removal of \ escapes.  Also zsh mangles
-    #	     `"' quotes if we put them in here... so don't!
-    archive_cmds='$nonopt $(test .$module = .yes && echo -bundle || echo -dynamiclib) $allow_undefined_flag -o $lib $libobjs $deplibs$linker_flags -install_name $rpath/$soname $verstring'
+    #        yet detect zsh echo's removal of \ escapes.
+    archive_cmds='$nonopt $(test "x$module" = xyes && echo -bundle || echo -dynamiclib) $allow_undefined_flag -o $lib $libobjs $deplibs$linker_flags -install_name $rpath/$soname $verstring'
     # We need to add '_' to the symbols in $export_symbols first
     #archive_expsym_cmds="$archive_cmds"' && strip -s $export_symbols'
     hardcode_direct=yes
@@ -5436,7 +5427,7 @@ else
     export_dynamic_flag_spec='${wl}-E'
     ;;
 
-  irix5* | irix6* | nonstopux*)
+  irix5* | irix6*)
     if test "$GCC" = yes; then
       archive_cmds='$CC -shared $libobjs $deplibs $compiler_flags ${wl}-soname ${wl}$soname `test -n "$verstring" && echo ${wl}-set_version ${wl}$verstring` ${wl}-update_registry ${wl}${output_objdir}/so_locations -o $lib'
     else
@@ -5533,35 +5524,7 @@ else
     ;;
 
   solaris*)
-    # gcc --version < 3.0 without binutils cannot create self contained
-    # shared libraries reliably, requiring libgcc.a to resolve some of
-    # the object symbols generated in some cases.  Libraries that use
-    # assert need libgcc.a to resolve __eprintf, for example.  Linking
-    # a copy of libgcc.a into every shared library to guarantee resolving
-    # such symbols causes other problems:  According to Tim Van Holder
-    # <tim.van.holder@pandora.be>, C++ libraries end up with a separate
-    # (to the application) exception stack for one thing.
     no_undefined_flag=' -z defs'
-    if test "$GCC" = yes; then
-      case `$CC --version 2>/dev/null` in
-      [12].*)
-	cat <<EOF 1>&2
-
-*** Warning: Releases of GCC earlier than version 3.0 cannot reliably
-*** create self contained shared libraries on Solaris systems, without
-*** introducing a dependency on libgcc.a.  Therefore, libtool is disabling
-*** -no-undefined support, which will at least allow you to build shared
-*** libraries.  However, you may find that when you link such libraries
-*** into an application without using GCC, you have to manually add
-*** \`gcc --print-libgcc-file-name\` to the link command.  We urge you to
-*** upgrade to a newer version of GCC.  Another option is to rebuild your
-*** current GCC to use the GNU linker from GNU binutils 2.9.1 or newer.
-
-EOF
-        no_undefined_flag=
-	;;
-      esac
-    fi
     # $CC -shared without GNU ld will not create a library from C++
     # object files and a static libstdc++, better avoid it by now
     archive_cmds='$LD -G${allow_undefined_flag} -h $soname -o $lib $libobjs $deplibs $linker_flags'
@@ -5757,15 +5720,15 @@ aix4* | aix5*)
     # depend on `.', always an invalid library.  This was fixed in
     # development snapshots of GCC prior to 3.0.
     case $host_os in
-      aix4 | aix4.[01] | aix4.[01].*)
-	if { echo '#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 97)'
-	     echo ' yes '
-	     echo '#endif'; } | ${CC} -E - | grep yes > /dev/null; then
-	  :
-	else
-	  can_build_shared=no
-	fi
-	;;
+       aix4 | aix4.[01] | aix4.[01].*)
+      if { echo '#if __GNUC__ > 2 || (__GNUC__ == 2 && __GNUC_MINOR__ >= 97)'
+	   echo ' yes '
+	   echo '#endif'; } | ${CC} -E - | grep yes > /dev/null; then
+	:
+      else
+	can_build_shared=no
+      fi
+      ;;
     esac
     # AIX (on Power*) has no versioning support, so currently we can
     # not hardcode correct soname into executable. Probably we can
@@ -5914,17 +5877,14 @@ hpux9* | hpux10* | hpux11*)
   postinstall_cmds='chmod 555 $lib'
   ;;
 
-irix5* | irix6* | nonstopux*)
-  case $host_os in
-    nonstopux*) version_type=nonstopux ;;
-    *)          version_type=irix ;;
-  esac
+irix5* | irix6*)
+  version_type=irix
   need_lib_prefix=no
   need_version=no
   soname_spec='${libname}${release}.so$major'
   library_names_spec='${libname}${release}.so$versuffix ${libname}${release}.so$major ${libname}${release}.so $libname.so'
   case $host_os in
-  irix5* | nonstopux*)
+  irix5*)
     libsuff= shlibsuff=
     ;;
   *)
@@ -6028,7 +5988,6 @@ os2*)
 osf3* | osf4* | osf5*)
   version_type=osf
   need_version=no
-  need_lib_prefix=no
   soname_spec='${libname}${release}.so'
   library_names_spec='${libname}${release}.so$versuffix ${libname}${release}.so $libname.so'
   shlibpath_var=LD_LIBRARY_PATH
@@ -7439,7 +7398,7 @@ INCLUDES="-I${blddir} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/
 # Check whether --with-x or --without-x was given.
 if test "${with_x+set}" = set; then
   withval="$with_x"
-   if test "$withval" = "no"; then have_x="no"; else have_x="yes"; fi 
+   have_x="no"
 else
    have_x="yes"
 
@@ -8904,7 +8863,8 @@ done
 
 
 
-for ac_header in sys/time.h sys/filio.h sys/select.h
+
+for ac_header in sys/time.h sys/filio.h sys/select.h dlfcn.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
 if eval "test \"\${$as_ac_Header+set}\" = set"; then
@@ -10021,121 +9981,6 @@ _ACEOF
 
 fi
 
-
-
-for ac_header in dlfcn.h
-do
-as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo "$as_me:$LINENO: checking for $ac_header" >&5
-echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-else
-  # Is the header compilable?
-echo "$as_me:$LINENO: checking $ac_header usability" >&5
-echo $ECHO_N "checking $ac_header usability... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-$ac_includes_default
-@%:@include <$ac_header>
-_ACEOF
-rm -f conftest.$ac_objext
-if { (eval echo "$as_me:$LINENO: \"$ac_compile\"") >&5
-  (eval $ac_compile) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest.$ac_objext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_header_compiler=yes
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
-ac_header_compiler=no
-fi
-rm -f conftest.$ac_objext conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_compiler" >&5
-echo "${ECHO_T}$ac_header_compiler" >&6
-
-# Is the header present?
-echo "$as_me:$LINENO: checking $ac_header presence" >&5
-echo $ECHO_N "checking $ac_header presence... $ECHO_C" >&6
-cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-@%:@include <$ac_header>
-_ACEOF
-if { (eval echo "$as_me:$LINENO: \"$ac_cpp conftest.$ac_ext\"") >&5
-  (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
-  ac_status=$?
-  egrep -v '^ *\+' conftest.er1 >conftest.err
-  rm -f conftest.er1
-  cat conftest.err >&5
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } >/dev/null; then
-  if test -s conftest.err; then
-    ac_cpp_err=$ac_c_preproc_warn_flag
-  else
-    ac_cpp_err=
-  fi
-else
-  ac_cpp_err=yes
-fi
-if test -z "$ac_cpp_err"; then
-  ac_header_preproc=yes
-else
-  echo "$as_me: failed program was:" >&5
-  cat conftest.$ac_ext >&5
-  ac_header_preproc=no
-fi
-rm -f conftest.err conftest.$ac_ext
-echo "$as_me:$LINENO: result: $ac_header_preproc" >&5
-echo "${ECHO_T}$ac_header_preproc" >&6
-
-# So?  What about this header?
-case $ac_header_compiler:$ac_header_preproc in
-  yes:no )
-    { echo "$as_me:$LINENO: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&5
-echo "$as_me: WARNING: $ac_header: accepted by the compiler, rejected by the preprocessor!" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
-echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
-  no:yes )
-    { echo "$as_me:$LINENO: WARNING: $ac_header: present but cannot be compiled" >&5
-echo "$as_me: WARNING: $ac_header: present but cannot be compiled" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: check for missing prerequisite headers?" >&5
-echo "$as_me: WARNING: $ac_header: check for missing prerequisite headers?" >&2;}
-    { echo "$as_me:$LINENO: WARNING: $ac_header: proceeding with the preprocessor's result" >&5
-echo "$as_me: WARNING: $ac_header: proceeding with the preprocessor's result" >&2;};;
-esac
-echo "$as_me:$LINENO: checking for $ac_header" >&5
-echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
-if eval "test \"\${$as_ac_Header+set}\" = set"; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  eval "$as_ac_Header=$ac_header_preproc"
-fi
-echo "$as_me:$LINENO: result: `eval echo '${'$as_ac_Header'}'`" >&5
-echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
-
-fi
-if test `eval echo '${'$as_ac_Header'}'` = yes; then
-  cat >>confdefs.h <<_ACEOF
-@%:@define `echo "HAVE_$ac_header" | $as_tr_cpp` 1
-_ACEOF
- 
-fi
-
-done
-
 echo "$as_me:$LINENO: checking for dlopen" >&5
 echo $ECHO_N "checking for dlopen... $ECHO_C" >&6
 if test "${ac_cv_func_dlopen+set}" = set; then
@@ -10206,7 +10051,8 @@ if test $ac_cv_func_dlopen = yes; then
 _ACEOF
 
 else
-  echo "$as_me:$LINENO: checking for dlopen in -ldl" >&5
+  
+echo "$as_me:$LINENO: checking for dlopen in -ldl" >&5
 echo $ECHO_N "checking for dlopen in -ldl... $ECHO_C" >&6
 if test "${ac_cv_lib_dl_dlopen+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -10262,87 +10108,15 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_lib_dl_dlopen" >&5
 echo "${ECHO_T}$ac_cv_lib_dl_dlopen" >&6
 if test $ac_cv_lib_dl_dlopen = yes; then
-  LIBS="-ldl $LIBS"
-	 cat >>confdefs.h <<\_ACEOF
+  cat >>confdefs.h <<_ACEOF
 @%:@define HAVE_LIBDL 1
 _ACEOF
 
-else
-  echo "$as_me:$LINENO: checking for _dyld_present" >&5
-echo $ECHO_N "checking for _dyld_present... $ECHO_C" >&6
-if test "${ac_cv_func__dyld_present+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  cat >conftest.$ac_ext <<_ACEOF
-#line $LINENO "configure"
-#include "confdefs.h"
-/* System header to define __stub macros and hopefully few prototypes,
-    which can conflict with char _dyld_present (); below.  */
-#include <assert.h>
-/* Override any gcc2 internal prototype to avoid an error.  */
-#ifdef __cplusplus
-extern "C"
-#endif
-/* We use char because int might match the return type of a gcc2
-   builtin and then its argument prototype would still apply.  */
-char _dyld_present ();
-char (*f) ();
-
-#ifdef F77_DUMMY_MAIN
-#  ifdef __cplusplus
-     extern "C"
-#  endif
-   int F77_DUMMY_MAIN() { return 1; }
-#endif
-int
-main ()
-{
-/* The GNU C library defines this for functions which it implements
-    to always fail with ENOSYS.  Some functions are actually named
-    something starting with __ and the normal name is an alias.  */
-#if defined (__stub__dyld_present) || defined (__stub____dyld_present)
-choke me
-#else
-f = _dyld_present;
-#endif
-
-  ;
-  return 0;
-}
-_ACEOF
-rm -f conftest.$ac_objext conftest$ac_exeext
-if { (eval echo "$as_me:$LINENO: \"$ac_link\"") >&5
-  (eval $ac_link) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); } &&
-         { ac_try='test -s conftest$ac_exeext'
-  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
-  (eval $ac_try) 2>&5
-  ac_status=$?
-  echo "$as_me:$LINENO: \$? = $ac_status" >&5
-  (exit $ac_status); }; }; then
-  ac_cv_func__dyld_present=yes
-else
-  echo "$as_me: failed program was:" >&5
-cat conftest.$ac_ext >&5
-ac_cv_func__dyld_present=no
-fi
-rm -f conftest.$ac_objext conftest$ac_exeext conftest.$ac_ext
-fi
-echo "$as_me:$LINENO: result: $ac_cv_func__dyld_present" >&5
-echo "${ECHO_T}$ac_cv_func__dyld_present" >&6
-if test $ac_cv_func__dyld_present = yes; then
-  cat >>confdefs.h <<\_ACEOF
-@%:@define HAVE_DYLD 1
-_ACEOF
+  LIBS="-ldl $LIBS"
 
 fi
 
 fi
-
-fi
-
 
 
 echo "$as_me:$LINENO: checking for sin in -lm" >&5
@@ -10408,7 +10182,6 @@ _ACEOF
   LIBS="-lm $LIBS"
 
 fi
-
 
 if test "$have_x" = "yes"; then
   
@@ -11030,16 +10803,10 @@ echo $ECHO_N "checking whether we can gnuify interp.c... $ECHO_C" >&6
 if test "$GCC" = "yes"; then
   case "$GAWK" in
   no) ;;
-  yes)  AWK=awk; GAWK=yes ;;
-  gawk) AWK=gawk; GAWK=yes ;;
-  *) if test -x /usr/bin/gawk; then
-       GAWK=yes
-       AWK=gawk
-     else
-       if $AWK --version /dev/null </dev/null 2>&1 | fgrep -i gnu >/dev/null
-       then GAWK=yes
-       else GAWK=no
-       fi
+  yes|gawk) AWK=gawk; GAWK=yes ;;
+  *) if $AWK --version /dev/null </dev/null 2>&1 | fgrep -i gnu >/dev/null
+     then GAWK=yes
+     else GAWK=no
      fi ;;
   esac
   if test "$GAWK" = "yes"
@@ -11378,14 +11145,12 @@ _ACEOF
 
 case $host_os in
   darwin*)
-    cat >>confdefs.h <<\_ACEOF
-@%:@define DARWIN 1
-_ACEOF
-
     CFLAGS="-no-cpp-precomp $CFLAGS"
     with_npsqueak=no
-    ;;
-  *)
+    cat >>confdefs.h <<_ACEOF
+@%:@define VM_DLSYM_PREFIX "_"
+_ACEOF
+
     ;;
 esac
 
@@ -11447,8 +11212,6 @@ make_prg=${blddir}/make.prg
 Makefile_install=${cfgdir}/Makefile.install
 Makefile_dist=${topdir}/util/Makefile.dist
 Makefile_rpm=${topdir}/util/Makefile.rpm
-Makefile_deb=${topdir}/util/Makefile.deb
-
 
 
 
@@ -12012,21 +11775,7 @@ fi
 plugin="SqueakFFIPrims"
 plibs=""
 rm -f SqueakFFIPrims.sub SqueakFFIPrims.lib
-echo "$as_me:$LINENO: checking for FFI support" >&5
-echo $ECHO_N "checking for FFI support... $ECHO_C" >&6
-
-FFI_DIR=${topdir}/platforms/unix/plugins/SqueakFFIPrims
-
-ffi_cpu_abi=`${FFI_DIR}/ffi-config ${cfgdir} ${FFI_DIR} -cpu-abi`
-
-if test "${ffi_cpu_abi}" != "any-libffi"; then
-    echo "$as_me:$LINENO: result: ${ffi_cpu_abi}" >&5
-echo "${ECHO_T}${ffi_cpu_abi}" >&6
-else
-    echo "$as_me:$LINENO: result: requires libffi" >&5
-echo "${ECHO_T}requires libffi" >&6
-    ffi_cpu_abi=any-libffi
-    if test "${ac_cv_header_ffi_h+set}" = set; then
+if test "${ac_cv_header_ffi_h+set}" = set; then
   echo "$as_me:$LINENO: checking for ffi.h" >&5
 echo $ECHO_N "checking for ffi.h... $ECHO_C" >&6
 if test "${ac_cv_header_ffi_h+set}" = set; then
@@ -12201,16 +11950,6 @@ else
 echo "${ECHO_T}******** disabling ${plugin}" >&6
   disabled_plugins="${disabled_plugins} ${plugin}"
 fi
-
-
-fi
-
-FFI_C=${ffi_cpu_abi}
-FFI_S=${ffi_cpu_abi}-asm
-FFI_O="${FFI_C}\$o ${FFI_S}\$o"
-
-
-
 
 
 if test "${plibs}"; then
@@ -12891,12 +12630,6 @@ s,@Makefile_install@,,;t t
 s,@Makefile_dist@,,;t t
 /@Makefile_rpm@/r $Makefile_rpm
 s,@Makefile_rpm@,,;t t
-/@Makefile_deb@/r $Makefile_deb
-s,@Makefile_deb@,,;t t
-s,@FFI_DIR@,$FFI_DIR,;t t
-s,@FFI_C@,$FFI_C,;t t
-s,@FFI_S@,$FFI_S,;t t
-s,@FFI_O@,$FFI_O,;t t
 CEOF
 
 _ACEOF

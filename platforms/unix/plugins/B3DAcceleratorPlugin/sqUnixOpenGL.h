@@ -1,17 +1,38 @@
-#ifndef SQ_UNIX_OPENGL_H
-#define SQ_UNIX_OPENGL_H
+#ifndef __sqUnixOpenGL_h
+#define __sqUnixOpenGL_h
 
-#define MAX_RENDERER 16
+#include "config.h"
 
-typedef struct glRenderer {
-  GLint bufferRect[4];
-  GLint viewport[4];
-
-  Bool used;
-  Window window;
-  GLXContext context;
+typedef struct glRenderer
+{
+  int	  bufferRect[4];
+  int	  viewport[4];
+  int	  used;
+  void	 *drawable;
+  void	 *context;
 } glRenderer;
 
-#define GL_RENDERER_DEFINED 1
+#define GL_RENDERER_DEFINED	 1
+#define MAX_RENDERER		16
 
-#endif /* SQ_UNIX_OPENGL_H */
+#if defined(HAVE_GL_GL_H)
+# include <GL/gl.h>
+#else
+# if defined(HAVE_OPENGL_GL_H)
+#   include <OpenGL/gl.h>
+# else
+#   error *** cannot find gl.h
+# endif
+#endif
+
+extern int  ioGLinitialise(void);
+extern int  ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags);
+extern void ioGLdestroyRenderer(glRenderer *r);
+extern int  ioGLmakeCurrentRenderer(glRenderer *r);
+extern void ioGLswapBuffers(glRenderer *r);
+extern void ioGLsetBufferRect(glRenderer *r, int x, int y, int w, int h);
+
+#define glErrorCheck()	ERROR_CHECK
+
+
+#endif /* __sqUnixOpenGL_h */

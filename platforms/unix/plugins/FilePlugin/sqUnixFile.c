@@ -4,6 +4,10 @@
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
+ *     You are NOT ALLOWED to distribute modified versions of this file
+ *     under its original name.  If you want to modify it and then make
+ *     your modifications available publicly, rename the file first.
+ * 
  *   This file is part of Unix Squeak.
  * 
  *   This file is distributed in the hope that it will be useful, but WITHOUT
@@ -12,7 +16,7 @@
  *   
  *   You may use and/or distribute this file ONLY as part of Squeak, under
  *   the terms of the Squeak License as described in `LICENSE' in the base of
- *   this distribution, subject to the following restrictions:
+ *   this distribution, subject to the following additional restrictions:
  * 
  *   1. The origin of this software must not be misrepresented; you must not
  *      claim that you wrote the original software.  If you use this software
@@ -20,24 +24,24 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. This notice must not be removed or altered in any source distribution.
+ *   2. You must not distribute (or make publicly available by any
+ *      means) a modified copy of this file unless you first rename it.
+ * 
+ *   3. This notice must not be removed or altered in any source distribution.
  * 
  *   Using (or modifying this file for use) in any context other than Squeak
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
- * 
- *   You are not allowed to distribute a modified version of this file
- *   under its original name without explicit permission to do so.  If
- *   you change it, rename it.
  */
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2003-02-06 16:29:22 by piumarta on emilia.local.
+ * Last edited: 2003-03-02 21:07:51 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
 #include "FilePlugin.h"
+#include "sqUnixCharConv.h"
 
 #ifdef HAVE_DIRENT_H
 # include <dirent.h>
@@ -94,8 +98,6 @@ DIR *openDir= 0;
 
 extern time_t convertToSqueakTime(time_t unixTime);
 
-int maybeOpenDir(char *unixPath);
-
 int dir_Create(char *pathString, int pathStringLength)
 {
   /* Create a new directory with the given path. By default, this
@@ -104,9 +106,8 @@ int dir_Create(char *pathString, int pathStringLength)
   int i;
   if (pathStringLength >= MAXPATHLEN)
     return false;
-  for (i = 0; i < pathStringLength; i++)
-    name[i] = pathString[i];
-  name[i] = 0; /* string terminator */
+  if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
+    return false;
   return mkdir(name, 0777) == 0;	/* rwxrwxrwx & ~umask */
 }
 
@@ -117,17 +118,35 @@ int dir_Delete(char *pathString, int pathStringLength)
   int i;
   if (pathStringLength >= MAXPATHLEN)
     return false;
-  for (i= 0;  i < pathStringLength;  ++i)
-    name[i]= pathString[i];
-  if (!strcmp(lastPath, name))
-    lastPathValid= false;
-  name[i]= '\0'; /* string terminator */
+  if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
+    return false;
   return rmdir(name) == 0;
 }
 
 int dir_Delimitor(void)
 {
   return DELIMITER;
+}
+
+static int maybeOpenDir(char *unixPath)
+{
+  /* if the last opendir was to the same directory, re-use the directory
+     pointer from last time.  Otherwise close the previous directory,
+     open the new one, and save its name.  Return true if the operation
+     was successful, false if not. */
+  if (!lastPathValid || strcmp(lastPath, unixPath))
+    {
+      /* invalidate the old, open the new */
+      if (lastPathValid)
+	closedir(openDir);
+      lastPathValid= false;
+      strcpy(lastPath, unixPath);
+      if ((openDir= opendir(unixPath)) == 0)
+	return false;
+      lastPathValid= true;
+      lastIndex= 0;	/* first entry is index 1 */
+    }
+  return true;
 }
 
 int dir_Lookup(char *pathString, int pathStringLength, int index,
@@ -158,18 +177,12 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
   if ((pathStringLength == 0))
     strcpy(unixPath, ".");
-  else
-    {
-      for (i= 0; i < pathStringLength; i++)
-	unixPath[i]= pathString[i];
-      unixPath[i]= 0;
-    }
+  else if (!sq2uxPath(pathString, pathStringLength, unixPath, MAXPATHLEN, 1))
+    return BAD_PATH;
 
   /* get file or directory info */
   if (!maybeOpenDir(unixPath))
-    {
-      return BAD_PATH;
-    }
+    return BAD_PATH;
 
   if (++lastIndex == index)
     index= 1;		/* fake that the dir is rewound and we want the first entry */
@@ -200,8 +213,7 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 	  goto nextEntry;
     }
 
-  strncpy(name, dirEntry->d_name, nameLen);
-  *nameLength= nameLen;
+  *nameLength= ux2sqPath(dirEntry->d_name, nameLen, name, MAXPATHLEN, 0);
 
   {
     char terminatedName[MAXPATHLEN];
@@ -230,27 +242,6 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   return ENTRY_FOUND;
 }
 
-int maybeOpenDir(char *unixPath)
-{
-  /* if the last opendir was to the same directory, re-use the directory
-     pointer from last time.  Otherwise close the previous directory,
-     open the new one, and save its name.  Return true if the operation
-     was successful, false if not. */
-  if (!lastPathValid || strcmp(lastPath, unixPath))
-    {
-      /* invalidate the old, open the new */
-      if (lastPathValid)
-	closedir(openDir);
-      lastPathValid= false;
-      strcpy(lastPath, unixPath);
-      if ((openDir= opendir(unixPath)) == 0)
-	return false;
-      lastPathValid= true;
-      lastIndex= 0;	/* first entry is index 1 */
-    }
-  return true;
-}
-
 int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize,
 				 char *fType, char *fCreator)
 {
@@ -264,3 +255,40 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
 {
   return true;
 }
+
+
+#if defined(SQ_STDIO_UTF8)
+
+/* Intercept stdio functions to convert pathnames to UTF-8.
+ * (HFS+ also imposes Unicode2.1 canonically-decomposed UTF-8 encoding on all path elements;
+ * calling sq2uxPath() on OSX performs the required normalisation on the output path.)
+ * see sqUnixCharConv.c for gory details.
+ */
+
+# undef fopen
+# undef delete
+# undef remove
+
+FILE *sq_fopen(char *path, const char *mode)
+{
+  char normalised[MAXPATHLEN];
+  sq2uxPath(path, strlen(path), normalised, MAXPATHLEN, 1);
+  return fopen(normalised, mode);
+}
+
+int sq_remove(char *path)
+{
+  char normalised[MAXPATHLEN];
+  sq2uxPath(path, strlen(path), normalised, MAXPATHLEN, 1);
+  return remove(normalised);
+}
+
+int sq_rename(char *from, char *to)
+{
+  char normalisedFrom[MAXPATHLEN], normalisedTo[MAXPATHLEN];
+  sq2uxPath(from, strlen(from), normalisedFrom, MAXPATHLEN, 1);
+  sq2uxPath(to,   strlen(to),   normalisedTo,   MAXPATHLEN, 1);
+  return rename(normalisedFrom, normalisedTo);
+}
+
+#endif /* defined(SQ_UTF8_STDIO) */

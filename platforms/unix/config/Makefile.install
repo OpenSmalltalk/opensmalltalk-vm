@@ -2,7 +2,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: Wed Nov 27 19:13:56 2002 by piumarta (Ian Piumarta) on xombul
+# Last edited: 2002-12-25 19:48:44 by piumarta on emilia.inria.fr
 
 DOCFILES	= COPYING COPYRIGHT LICENSE \
 		  README.Contributing README.Keyboard README.Sound

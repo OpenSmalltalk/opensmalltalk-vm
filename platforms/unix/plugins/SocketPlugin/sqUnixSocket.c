@@ -4,6 +4,10 @@
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
+ *     You are NOT ALLOWED to distribute modified versions of this file
+ *     under its original name.  If you want to modify it and then make
+ *     your modifications available publicly, rename the file first.
+ * 
  *   This file is part of Unix Squeak.
  * 
  *   This file is distributed in the hope that it will be useful, but WITHOUT
@@ -12,7 +16,7 @@
  *   
  *   You may use and/or distribute this file ONLY as part of Squeak, under
  *   the terms of the Squeak License as described in `LICENSE' in the base of
- *   this distribution, subject to the following restrictions:
+ *   this distribution, subject to the following additional restrictions:
  * 
  *   1. The origin of this software must not be misrepresented; you must not
  *      claim that you wrote the original software.  If you use this software
@@ -20,20 +24,19 @@
  *      other contributors mentioned herein) in the product documentation
  *      would be appreciated but is not required.
  * 
- *   2. This notice must not be removed or altered in any source distribution.
+ *   2. You must not distribute (or make publicly available by any
+ *      means) a modified copy of this file unless you first rename it.
+ * 
+ *   3. This notice must not be removed or altered in any source distribution.
  * 
  *   Using (or modifying this file for use) in any context other than Squeak
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
- * 
- *   You are not allowed to distribute a modified version of this file
- *   under its original name without explicit permission to do so.  If
- *   you change it, rename it.
  */
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-01-31 12:02:24 by piumarta on emilia.local.
+ * Last edited: 2003-02-27 19:51:04 by piumarta on emilia.inria.fr
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -141,6 +144,8 @@
 #define OtherEndClosed		 3
 #define ThisEndClosed		 4
 
+#define LINGER_SECS		 1
+
 static int thisNetSession= 0;
 static int one= 1;
 
@@ -240,6 +245,13 @@ int socketShutdown(void)
 
 /***      miscellaneous sundries           ***/
 
+/* set linger on a connected stream */
+
+static void setLinger(int fd, int flag)
+{
+  struct linger linger= { flag, flag * LINGER_SECS };
+  setsockopt(fd, SOL_SOCKET, SO_LINGER, (char *)&linger, sizeof(linger));
+}
 
 /* answer the hostname for the given IP address */
 
@@ -360,8 +372,7 @@ static void acceptHandler(int fd, void *data, int flags)
       else /* newSock >= 0 -- connection accepted */
 	{
 	  pss->sockState= Connected;
-
-
+	  setLinger(newSock, 1);
 	  if (pss->multiListen)
 	    {
 	      pss->acceptedSock= newSock;
@@ -406,6 +417,7 @@ static void connectHandler(int fd, void *data, int flags)
       else
 	{
 	  pss->sockState= Connected;
+	  setLinger(pss->s, 1);
 	}
     }
   notify(pss, CONN_NOTIFY);
@@ -605,7 +617,7 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
     }
 
   PSP(s)->multiListen= (backlogSize > 1);
-  FPRINTF((stderr, "listenOnPortBacklogSize(%d)\n", SOCKET(s)));
+  FPRINTF((stderr, "listenOnPortBacklogSize(%d, %d)\n", SOCKET(s), backlogSize));
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family= AF_INET;
   saddr.sin_port= htons((short)port);
@@ -658,6 +670,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 	  /* connection completed synchronously */
 	  SOCKETSTATE(s)= Connected;
 	  notify(PSP(s), CONN_NOTIFY);
+	  setLinger(SOCKET(s), 1);
 	}
       else
 	{
@@ -763,11 +776,13 @@ void sqSocketCloseConnection(SocketPtr s)
       SOCKETSTATE(s)= Unconnected;
       SOCKETERROR(s)= errno;
       notify(PSP(s), CONN_NOTIFY);
+      perror("closeConnection");
     }
   else if (0 == result)
     {
       /* close completed synchronously */
       SOCKETSTATE(s)= Unconnected;
+      FPRINTF((stderr, "closeConnection: disconnected\n"));
       SOCKET(s)= 0;
     }
   else
@@ -775,6 +790,7 @@ void sqSocketCloseConnection(SocketPtr s)
       /* asynchronous close in progress */
       SOCKETSTATE(s)= ThisEndClosed;
       aioHandle(SOCKET(s), closeHandler, AIO_RWX);  /* => close() done */
+      FPRINTF((stderr, "closeConnection: deferred [aioHandle is set]\n"));
     }
 }
 
@@ -783,13 +799,10 @@ void sqSocketCloseConnection(SocketPtr s)
 
 void sqSocketAbortConnection(SocketPtr s)
 {
-  struct linger linger= { 0, 0 };
-
   FPRINTF((stderr, "abortConnection(%d)\n", SOCKET(s)));
   if (!socketValid(s))
     return;
-
-  setsockopt(SOCKET(s), SOL_SOCKET, SO_LINGER, (char *)&linger, sizeof(linger));
+  setLinger(SOCKET(s), 0);
   sqSocketCloseConnection(s);
 }
 

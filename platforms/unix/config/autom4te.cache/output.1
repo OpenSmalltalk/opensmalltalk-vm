@@ -464,7 +464,7 @@ ac_includes_default="\
 # include <unistd.h>
 #endif"
 
-ac_subst_vars='NM LD SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS topdir cfgdir vmmdir blddir SQ_MAJOR SQ_MINOR SQ_UPDATE SQ_VERSION VM_MAJOR VM_MINOR VM_RELEASE VM_VERSION imgdir plgdir build build_cpu build_vendor build_os host host_cpu host_vendor host_os SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT WFLAGS AS RANLIB ac_ct_RANLIB INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN LN_S ECHO STRIP ac_ct_STRIP CPP EGREP LIBTOOL INCLUDES X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS NOX INTERP AWK npsqueak install_nps uninstall_nps SQ_LIBDIR LIB@&t@OBJS LTLIBOBJS'
+ac_subst_vars='NM LD SHELL PATH_SEPARATOR PACKAGE_NAME PACKAGE_TARNAME PACKAGE_VERSION PACKAGE_STRING PACKAGE_BUGREPORT exec_prefix prefix program_transform_name bindir sbindir libexecdir datadir sysconfdir sharedstatedir localstatedir libdir includedir oldincludedir infodir mandir build_alias host_alias target_alias DEFS ECHO_C ECHO_N ECHO_T LIBS topdir cfgdir vmmdir blddir SQ_MAJOR SQ_MINOR SQ_UPDATE SQ_VERSION VM_MAJOR VM_MINOR VM_RELEASE VM_VERSION imgdir plgdir build build_cpu build_vendor build_os host host_cpu host_vendor host_os SET_MAKE CC CFLAGS LDFLAGS CPPFLAGS ac_ct_CC EXEEXT OBJEXT WFLAGS AS RANLIB ac_ct_RANLIB INSTALL_PROGRAM INSTALL_SCRIPT INSTALL_DATA LN LN_S ECHO STRIP ac_ct_STRIP CPP EGREP LIBTOOL INCLUDES X_CFLAGS X_PRE_LIBS X_LIBS X_EXTRA_LIBS WINDOW INTERP AWK npsqueak install_nps uninstall_nps SQ_LIBDIR LIB@&t@OBJS LTLIBOBJS'
 ac_subst_files='make_cfg make_int make_ext make_prg Makefile_install Makefile_dist Makefile_rpm'
 
 # Initialize some variables set by options.
@@ -1018,6 +1018,7 @@ Optional Packages:
   --with-gnu-as           assume that as is the GNU assembler default=no
   --with-gnu-ld           assume the C compiler uses GNU ld default=no
   --with-pic              try to use only PIC/non-PIC objects default=use both
+  --with-quartz           enable Quartz (Mac OS X) window support
   --without-x             disable X Window System support default=enabled
   --with-x                use the X Window System
   --without-rfb           disable Remote FrameBuffer support default=enabled
@@ -7481,7 +7482,33 @@ INCLUDES="-I${blddir} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/
 
 
 
-# Checks for X11
+# Check for which window system to use
+
+WINDOW="unset";
+
+
+# Check whether --with-quartz or --without-quartz was given.
+if test "${with_quartz+set}" = set; then
+  withval="$with_quartz"
+   have_quartz="yes"
+else
+   have_quartz="no"
+
+fi; 
+
+if test "$have_quartz" = "yes"; then
+  case $host in
+    *-*-darwin*)
+      WINDOW="Quartz"
+      cat >>confdefs.h <<\_ACEOF
+@%:@define USE_QUARTZ 1
+_ACEOF
+
+      LIBS="$LIBS -framework Cocoa"
+      with_npsqueak=no
+      ;;
+  esac
+fi
 
 
 # Check whether --with-x or --without-x was given.
@@ -7493,13 +7520,14 @@ else
 
 fi; 
 
-if test "$have_x" = "yes"; then
-  cat >>confdefs.h <<\_ACEOF
+if test "$WINDOW" = "unset"; then
+  if test "$have_x" = "yes"; then
+    WINDOW="X11"
+    cat >>confdefs.h <<\_ACEOF
 @%:@define USE_X11 1
 _ACEOF
 
-  NOX=""
-  echo "$as_me:$LINENO: checking for X" >&5
+    echo "$as_me:$LINENO: checking for X" >&5
 echo $ECHO_N "checking for X... $ECHO_C" >&6
 
 
@@ -8574,14 +8602,16 @@ fi
 
 fi
 
-  LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS $LIBS"
-  CFLAGS="$X_CFLAGS $CFLAGS"
-  if test "$x_includes" != ""; then
-    INCLUDES="${INCLUDES} -I${x_includes}"
+    LIBS="$X_PRE_LIBS $X_LIBS $X_EXTRA_LIBS $LIBS"
+    CFLAGS="$X_CFLAGS $CFLAGS"
+    if test "$x_includes" != ""; then
+      INCLUDES="${INCLUDES} -I${x_includes}"
+    fi
   fi
-else
-  NOX="-nox"
-  CFLAGS="$CFLAGS -DHEADLESS"
+fi
+
+if test "$WINDOW" = "unset"; then
+  WINDOW="None"
   with_npsqueak=no
 fi
 
@@ -11428,9 +11458,6 @@ if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
   llibs="${llibs} -l${l}"
-  if test -f /usr/lib/lib${l}.la; then
-    llibs="${llibs} -dlopen /usr/lib/lib${l}.la"
-  fi
   done
   echo ${llibs} > ${plugin}.lib
 fi
@@ -11463,9 +11490,6 @@ if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
   llibs="${llibs} -l${l}"
-  if test -f /usr/lib/lib${l}.la; then
-    llibs="${llibs} -dlopen /usr/lib/lib${l}.la"
-  fi
   done
   echo ${llibs} > ${plugin}.lib
 fi
@@ -11762,9 +11786,6 @@ if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
   llibs="${llibs} -l${l}"
-  if test -f /usr/lib/lib${l}.la; then
-    llibs="${llibs} -dlopen /usr/lib/lib${l}.la"
-  fi
   done
   echo ${llibs} > ${plugin}.lib
 fi
@@ -11946,9 +11967,6 @@ if test "${plibs}"; then
   llibs="${LIBS}"
   for l in ${plibs}; do
   llibs="${llibs} -l${l}"
-  if test -f /usr/lib/lib${l}.la; then
-    llibs="${llibs} -dlopen /usr/lib/lib${l}.la"
-  fi
   done
   echo ${llibs} > ${plugin}.lib
 fi
@@ -12636,7 +12654,7 @@ s,@X_CFLAGS@,$X_CFLAGS,;t t
 s,@X_PRE_LIBS@,$X_PRE_LIBS,;t t
 s,@X_LIBS@,$X_LIBS,;t t
 s,@X_EXTRA_LIBS@,$X_EXTRA_LIBS,;t t
-s,@NOX@,$NOX,;t t
+s,@WINDOW@,$WINDOW,;t t
 s,@INTERP@,$INTERP,;t t
 s,@AWK@,$AWK,;t t
 s,@npsqueak@,$npsqueak,;t t

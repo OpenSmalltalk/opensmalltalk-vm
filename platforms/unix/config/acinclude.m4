@@ -4,6 +4,10 @@
 #     as listed elsewhere in this file.
 #   All rights reserved.
 #   
+#     You are NOT ALLOWED to distribute modified versions of this file
+#     under its original name.  If you want to modify it and then make
+#     your modifications available publicly, rename the file first.
+# 
 #   This file is part of Unix Squeak.
 # 
 #   This file is distributed in the hope that it will be useful, but WITHOUT
@@ -12,7 +16,7 @@
 #   
 #   You may use and/or distribute this file ONLY as part of Squeak, under
 #   the terms of the Squeak License as described in `LICENSE' in the base of
-#   this distribution, subject to the following restrictions:
+#   this distribution, subject to the following additional restrictions:
 # 
 #   1. The origin of this software must not be misrepresented; you must not
 #      claim that you wrote the original software.  If you use this software
@@ -20,19 +24,18 @@
 #      other contributors mentioned herein) in the product documentation
 #      would be appreciated but is not required.
 # 
-#   2. This notice must not be removed or altered in any source distribution.
+#   2. You must not distribute (or make publicly available by any
+#      means) a modified copy of this file unless you first rename it.
+# 
+#   3. This notice must not be removed or altered in any source distribution.
 # 
 #   Using (or modifying this file for use) in any context other than Squeak
 #   changes these copyright conditions.  Read the file `COPYING' in the
 #   directory `platforms/unix/doc' before proceeding with any such use.
 # 
-#   You are not allowed to distribute a modified version of this file
-#   under its original name without explicit permission to do so.  If
-#   you change it, rename it.
-# 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-02-09 02:40:58 by piumarta on emilia.inria.fr
+# Last edited: 2003-02-11 04:24:23 by piumarta on emilia.inria.fr
 
 AC_DEFUN(AC_CHECK_VMM_DIR,[
   AC_MSG_CHECKING([sanity of VMMaker src directory])
@@ -109,16 +112,19 @@ esac])
 
 AC_DEFUN(AC_PROG_CC_WALL,
 [AC_PROG_CC
-test "$GCC" = yes && WFLAGS="-Wall"
+test "$GCC" = yes && WFLAGS="-Wall -Wno-unknown-pragmas"
 AC_SUBST(WFLAGS)])
 
 AC_DEFUN(AC_GNU_OPT,
-[AC_MSG_CHECKING("for optimization flags")
+[AC_MSG_CHECKING([for $host_cpu optimization flags])
 ac_optflags="no"
 if test "$GCC" = yes; then
-  case $host in
-  i?86-*)
+  case $host_cpu in
+  i?86)
     ac_optflags="-fomit-frame-pointer"
+    ;;
+  powerpc|ppc)
+    ac_optflags="-O3 -mcpu=750 -funroll-loops"
     ;;
   esac
 fi
@@ -218,60 +224,6 @@ else
     test=test
   fi
 fi
-
-
-AC_DEFUN(AC_HAVE_NAS,[AC_MSG_CHECKING([for Network Audio System])
-  AC_TRY_COMPILE([#include <audio/audio.h>],[AuElementNotifyKindLowWater;],
-    ac_cv_nas="yes", ac_cv_nas="no")
-  AC_MSG_RESULT($ac_cv_nas)])
-
-AC_DEFUN(AC_HAVE_OSS,[AC_MSG_CHECKING([for Open Sound System])
-  AC_TRY_COMPILE([#include <sys/soundcard.h>],[OPEN_SOUND_SYSTEM;],
-    ac_cv_oss="yes", ac_cv_oss="no")
-  AC_MSG_RESULT($ac_cv_oss)])
-
-AC_DEFUN(AC_HAVE_SUN,[AC_MSG_CHECKING([for SunOS/Solaris audio])
- AC_TRY_COMPILE([#include <sys/audioio.h>],[AUDIO_SUNVTS;],
-   ac_cv_sun="yes"
-   AC_DEFINE_UNQUOTED(HAVE_SYS_AUDIOIO_H,1),
-   AC_TRY_COMPILE([#include <sun/audioio.h>],[AUDIO_SUNVTS;],
-     ac_cv_sun="yes"
-     AC_DEFINE_UNQUOTED(HAVE_SUN_AUDIOIO_H,1),
-       ac_cv_sun="no"))
- AC_MSG_RESULT($ac_cv_sun)])
-
-
-AC_DEFUN(AC_CHECK_SOUND,[
-  use_audio=""
-  AC_MSG_CHECKING([for audio support])
-  AC_MSG_RESULT($with_audio)
-  if test "$with_audio" = "auto" -o "$with_audio" = "oss"; then
-    AC_HAVE_OSS
-    if test "$ac_cv_oss" = "yes"; then use_audio=oss; with_audio=oss; fi
-  fi
-  if test "$with_audio" = "auto" -o "$with_audio" = "sun"; then
-    AC_HAVE_SUN
-    if test "$ac_cv_sun" = "yes"; then use_audio=sun; with_audio=sun; fi
-  fi
-  if test "$with_audio" = "auto" -o "$with_audio" = "nas"; then
-    AC_HAVE_NAS
-    if test "$ac_cv_nas" = "yes"; then use_audio=nas; with_audio=nas; fi
-  fi
-  if test "$with_audio" = "none"; then use_audio=none; fi
-  if test "$use_audio" = ""; then  
-    AC_MSG_RESULT([******** AUDIO DISABLED (no support found for: $with_audio)])
-    use_audio=none
-  fi
-  case $use_audio in
-    nas)  AC_DEFINE(USE_AUDIO_NAS,1)
-	  LIBS="$LIBS -laudio -lXt" ;;
-    oss)  AC_DEFINE(USE_AUDIO_OSS,1) ;;
-    sun)  AC_DEFINE(USE_AUDIO_SUN,1)
-	  AC_HAVE_HEADERS(sys/audioio.h) ;;
-    none) AC_DEFINE(USE_AUDIO_NONE,1) ;;
-    *)    echo; echo "this cannot happen"; echo; exit 1 ;;
-  esac
-])
 
 
 AC_DEFUN(AC_C_BYTEORDER,

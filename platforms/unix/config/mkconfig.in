@@ -1,11 +1,15 @@
 #!/bin/sh
 
-int_plugins="`tail -1 @vmmdir@/plugins.int | sed 's,.* =,,'`"
-ext_plugins="`tail -1 @vmmdir@/plugins.ext | sed 's,.* =,,'`"
+int_modules="@int_modules@"
+ext_modules="@ext_modules@"
+int_plugins="@int_plugins@ `tail -1 @vmmdir@/plugins.int | sed 's,.* =,,'`"
+ext_plugins="@ext_plugins@ `tail -1 @vmmdir@/plugins.ext | sed 's,.* =,,'`"
 
 if test -f plugins.exc; then
   nlsp='tr \012\015 \040\040'
   spnl='tr \040\040 \012\012'
+  int_modules="`echo ${int_modules} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
+  ext_modules="`echo ${ext_modules} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
   int_plugins="`echo ${int_plugins} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
   ext_plugins="`echo ${ext_plugins} | $spnl | fgrep -v -f plugins.exc | $nlsp`"
   exc_plugins="`cat plugins.exc | $nlsp`"
@@ -28,6 +32,8 @@ blddir="@blddir@"
 topdir="@topdir@"
 cfgdir="@cfgdir@"
 
+int_modules="${int_modules}"
+ext_modules="${ext_modules}"
 int_plugins="${int_plugins}"
 ext_plugins="${ext_plugins}"
 exc_plugins="${exc_plugins}"

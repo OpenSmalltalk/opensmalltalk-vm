@@ -1,11 +1,11 @@
 #!/bin/sh
 
-includes="`find ../plugins -name acinclude.m4`";
+includes="`echo ../vm*/acinclude.m4 ../plugins/*/acinclude.m4`";
 
 if test "${includes}" != ""; then
   for i in ${includes}; do
     echo "	+ $i" >&2
-    p=`echo $i | sed 's,../plugins/,,;s,/acinclude.m4,,'`
+    p=`echo $i | sed 's,../,,;s,plugins/,,;s,/acinclude.m4,,'`
     cat <<EOF
 plugin="${p}"
 plibs=""
