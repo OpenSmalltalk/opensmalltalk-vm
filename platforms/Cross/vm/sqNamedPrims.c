@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqNamedPrims.c,v 1.2 2002/05/09 01:36:50 rowledge Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
@@ -21,6 +21,8 @@ typedef struct {
 } sqExport;
 
 #include "sqNamedPrims.h"
+
+#undef DEBUG
 
 #ifdef DEBUG
 #define dprintf(what) printf what
@@ -98,7 +100,7 @@ static void *findExternalFunctionIn(char *functionName, ModuleEntry *module)
 
 	dprintf(("Looking (externally) for %s in %s... ", functionName,module->name));
 	if(module->handle)
-		result = (void*) ioFindExternalFunctionIn(functionName, (int) module->handle);
+		result = ioFindExternalFunctionIn(functionName, module->handle);
 	else
 		result = NULL;
 	dprintf(("%s\n", result ? "found" : "not found"));
@@ -172,7 +174,7 @@ static int callInitializersIn(ModuleEntry *module)
 	void *init1;
 	void *init2;
 	char *moduleName;
-	int okay;
+	sqInt okay;
 
 	init0 = findFunctionIn("getModuleName", module);
 	init1 = findFunctionIn("setInterpreter", module);
@@ -198,13 +200,13 @@ static int callInitializersIn(ModuleEntry *module)
 		return 0;
 	}
 	/* call setInterpreter */
-	okay = ((int (*) (struct VirtualMachine*))init1)(sqGetInterpreterProxy());
+	okay = ((sqInt (*) (struct VirtualMachine*))init1)(sqGetInterpreterProxy());
 	if(!okay) {
 		dprintf(("ERROR: setInterpreter() returned false\n"));
 		return 0;
 	}
 	if(init2) {
-		okay = ((int (*) (void)) init2)();
+		okay = ((sqInt (*) (void)) init2)();
 		if(!okay) {
 			dprintf(("ERROR: initialiseModule() returned false\n"));
 			return 0;
@@ -231,7 +233,7 @@ static ModuleEntry *findAndLoadModule(char *pluginName, int ffiLoad)
 
 	dprintf(("Looking for plugin %s\n", (pluginName ? pluginName : "<intrinsic>")));
 	/* Try to load the module externally */
-	handle = (void*) ioLoadModule(pluginName);
+	handle = ioLoadModule(pluginName);
 	if(ffiLoad) {
 		/* When dealing with the FFI, don't attempt to mess around internally */
 		if(!handle) return NULL;
@@ -250,7 +252,7 @@ static ModuleEntry *findAndLoadModule(char *pluginName, int ffiLoad)
 		/* Initializers failed */
 		if(handle != squeakModule->handle) {
 			/* physically unload module */
-			ioFreeModule((int)handle);
+			ioFreeModule(handle);
 		}
 		removeFromList(module); /* remove list entry */
 		free(module); /* give back space */
@@ -287,7 +289,7 @@ static ModuleEntry *findOrLoadModule(char *pluginName, int ffiLoad)
 	Return the function address if successful, otherwise 0.
 	This entry point is called from the interpreter proxy.
 */
-int ioLoadFunctionFrom(char *functionName, char *pluginName)
+void *ioLoadFunctionFrom(char *functionName, char *pluginName)
 {
 	ModuleEntry *module;
 
@@ -299,18 +301,20 @@ int ioLoadFunctionFrom(char *functionName, char *pluginName)
 	}
 	if(!functionName) {
 		/* only the module was requested but not any specific function */
-		return 1;
+	  return (void *)1;
 	}
 	/* and load the actual function */
-	return (int) findFunctionIn(functionName, module);
+	return findFunctionIn(functionName, module);
 }
 
 /* ioLoadExternalFunctionOfLengthFromModuleOfLength
 	Entry point for functions looked up through the VM.
 */
-int ioLoadExternalFunctionOfLengthFromModuleOfLength(int functionNameIndex, int functionNameLength, 
-                                                     int moduleNameIndex,   int moduleNameLength)
+void *ioLoadExternalFunctionOfLengthFromModuleOfLength(sqInt functionNameIndex, sqInt functionNameLength,
+						       sqInt moduleNameIndex,   sqInt moduleNameLength)
 {
+	char *functionNamePointer= pointerForOop(functionNameIndex);
+	char *moduleNamePointer= pointerForOop(moduleNameIndex);
 	char functionName[256];
 	char moduleName[256];
 	int i;
@@ -318,10 +322,10 @@ int ioLoadExternalFunctionOfLengthFromModuleOfLength(int functionNameIndex, int 
 	if(functionNameLength > 255 || moduleNameLength > 255)
 		return 0; /* can't cope with those */
 	for(i=0; i< functionNameLength; i++)
-		functionName[i] = ((char*)functionNameIndex)[i];
+		functionName[i] = functionNamePointer[i];
 	functionName[functionNameLength] = 0;
 	for(i=0; i< moduleNameLength; i++)
-		moduleName[i] = ((char*)moduleNameIndex)[i];
+		moduleName[i] = moduleNamePointer[i];
 	moduleName[moduleNameLength] = 0;
 	return ioLoadFunctionFrom(functionName, moduleName);
 }
@@ -329,15 +333,16 @@ int ioLoadExternalFunctionOfLengthFromModuleOfLength(int functionNameIndex, int 
 /* ioLoadSymbolOfLengthFromModule
 	This entry point is exclusively for the FFI.
 */
-int ioLoadSymbolOfLengthFromModule(int functionNameIndex, int functionNameLength, int moduleHandle)
+void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)
 {
+	char *functionNamePointer= pointerForOop(functionNameIndex);
 	char functionName[256];
 	int i;
 
 	if(functionNameLength > 255)
 		return 0; /* can't cope with those */
 	for(i=0; i< functionNameLength; i++)
-		functionName[i] = ((char*)functionNameIndex)[i];
+		functionName[i] = functionNamePointer[i];
 	functionName[functionNameLength] = 0;
 	if(moduleHandle)
 		return ioFindExternalFunctionIn(functionName, moduleHandle);
@@ -350,19 +355,20 @@ int ioLoadSymbolOfLengthFromModule(int functionNameIndex, int functionNameLength
 	It does *NOT* call any of the initializers nor
 	does it attempt to lookup stuff internally.
 */
-int ioLoadModuleOfLength(int moduleNameIndex, int moduleNameLength)
+void *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
 	ModuleEntry *module;
+	char *moduleNamePointer= pointerForOop(moduleNameIndex);
 	char moduleName[256];
 	int i;
 
 	if(moduleNameLength > 255) return 0; /* can't cope with those */
 	for(i=0; i< moduleNameLength; i++)
-		moduleName[i] = ((char*)moduleNameIndex)[i];
+		moduleName[i] = moduleNamePointer[i];
 	moduleName[moduleNameLength] = 0;
 
 	module = findOrLoadModule(moduleName, 1);
-	if(module) return (int) module->handle;
+	if(module) return module->handle;
 	return 0;
 }
 
@@ -385,7 +391,7 @@ static int shutdownModule(ModuleEntry *module)
 /* ioShutdownAllModules:
 	Call the shutdown mechanism for all loaded modules.
 */
-int ioShutdownAllModules(void)
+sqInt ioShutdownAllModules(void)
 {
 	ModuleEntry *entry;
 	entry = firstModule;
@@ -399,7 +405,7 @@ int ioShutdownAllModules(void)
 /* ioUnloadModule:
 	Unload the module with the given name.
 */
-int ioUnloadModule(char *moduleName)
+sqInt ioUnloadModule(char *moduleName)
 {
 	ModuleEntry *entry, *temp;
 
@@ -429,7 +435,7 @@ int ioUnloadModule(char *moduleName)
 	}
 	/* And actually unload it if it isn't just the VM... */
 	if(entry->handle != squeakModule->handle)
-		ioFreeModule((int) entry->handle);
+		ioFreeModule(entry->handle);
 	removeFromList(entry);
 	free(entry); /* give back space */
 	return 1;
@@ -438,14 +444,15 @@ int ioUnloadModule(char *moduleName)
 /* ioUnloadModuleOfLength:
 	Entry point for the interpreter.
 */
-int ioUnloadModuleOfLength(int moduleNameIndex, int moduleNameLength)
+sqInt ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
+	char *moduleNamePointer= pointerForOop(moduleNameIndex);
 	char moduleName[256];
 	int i;
 
 	if(moduleNameLength > 255) return 0; /* can't cope with those */
 	for(i=0; i< moduleNameLength; i++)
-		moduleName[i] = ((char*)moduleNameIndex)[i];
+		moduleName[i] = moduleNamePointer[i];
 	moduleName[moduleNameLength] = 0;
 	return ioUnloadModule(moduleName);
 }
@@ -454,7 +461,7 @@ int ioUnloadModuleOfLength(int moduleNameIndex, int moduleNameLength)
 	Return the name of the n-th builtin module.
 */
 
-char *ioListBuiltinModule(int moduleIndex)
+char *ioListBuiltinModule(sqInt moduleIndex)
 {
   int index, listIndex;
   char *function;
@@ -487,7 +494,7 @@ char *ioListBuiltinModule(int moduleIndex)
   return NULL;
 }
 
-char *ioListLoadedModule(int moduleIndex) {
+char *ioListLoadedModule(sqInt moduleIndex) {
 	int index = 1;
 
 	ModuleEntry *entry;

@@ -12,189 +12,189 @@
 #define VM_PROXY_MINOR 6
 #endif
 
-typedef int (*CompilerHook)();
+#include "sqMemoryAccess.h"
+
+typedef sqInt (*CompilerHook)();
 
 struct VirtualMachine* sqGetInterpreterProxy(void);
 
 typedef struct VirtualMachine {
-	int (*minorVersion) (void);
-	int (*majorVersion) (void);
-
+	sqInt (*minorVersion)(void);
+	sqInt (*majorVersion)(void);
 
 	/* InterpreterProxy methodsFor: 'stack access' */
 
-	int (*pop)(int nItems);
-	int (*popthenPush)(int nItems, int oop);
-	int (*push)(int object);
-	int (*pushBool)(int trueOrFalse);
-	int (*pushFloat)(double f);
-	int (*pushInteger)(int integerValue);
-	double (*stackFloatValue)(int offset);
-	int (*stackIntegerValue)(int offset);
-	int (*stackObjectValue)(int offset);
-	int (*stackValue)(int offset);
-	
+	sqInt  (*pop)(sqInt nItems);
+	sqInt  (*popthenPush)(sqInt nItems, sqInt oop);
+	sqInt  (*push)(sqInt object);
+	sqInt  (*pushBool)(sqInt trueOrFalse);
+	sqInt  (*pushFloat)(double f);
+	sqInt  (*pushInteger)(sqInt integerValue);
+	double (*stackFloatValue)(sqInt offset);
+	sqInt  (*stackIntegerValue)(sqInt offset);
+	sqInt  (*stackObjectValue)(sqInt offset);
+	sqInt  (*stackValue)(sqInt offset);
 
 	/* InterpreterProxy methodsFor: 'object access' */
 
-	int (*argumentCountOf)(int methodPointer);
-	void * (*arrayValueOf)(int oop);
-	int (*byteSizeOf)(int oop);
-	void * (*fetchArrayofObject)(int fieldIndex, int objectPointer);
-	int (*fetchClassOf)(int oop);
-	double (*fetchFloatofObject)(int fieldIndex, int objectPointer);
-	int (*fetchIntegerofObject)(int fieldIndex, int objectPointer);
-	int (*fetchPointerofObject)(int index, int oop);
-	int (*fetchWordofObject)(int fieldIndex, int oop);
-	void * (*firstFixedField)(int oop);
-	void * (*firstIndexableField)(int oop);
-	int (*literalofMethod)(int offset, int methodPointer);
-	int (*literalCountOf)(int methodPointer);
-	int (*methodArgumentCount)(void);
-	int (*methodPrimitiveIndex)(void);
-	int (*primitiveIndexOf)(int methodPointer);
-	int (*sizeOfSTArrayFromCPrimitive)(void *cPtr);
-	int (*slotSizeOf)(int oop);
-	int (*stObjectat)(int array, int index);
-	int (*stObjectatput)(int array, int index, int value);
-	int (*stSizeOf)(int oop);
-	int (*storeIntegerofObjectwithValue)(int index, int oop, int integer);
-	int (*storePointerofObjectwithValue)(int index, int oop, int valuePointer);
-	
+	sqInt  (*argumentCountOf)(sqInt methodPointer);
+	void  *(*arrayValueOf)(sqInt oop);
+	sqInt  (*byteSizeOf)(sqInt oop);
+	void  *(*fetchArrayofObject)(sqInt fieldIndex, sqInt objectPointer);
+	sqInt  (*fetchClassOf)(sqInt oop);
+	double (*fetchFloatofObject)(sqInt fieldIndex, sqInt objectPointer);
+	sqInt  (*fetchIntegerofObject)(sqInt fieldIndex, sqInt objectPointer);
+	sqInt  (*fetchPointerofObject)(sqInt fieldIndex, sqInt oop);
+	sqInt  (*fetchWordofObject)(sqInt fieldFieldIndex, sqInt oop);
+	void  *(*firstFixedField)(sqInt oop);
+	void  *(*firstIndexableField)(sqInt oop);
+	sqInt  (*literalofMethod)(sqInt offset, sqInt methodPointer);
+	sqInt  (*literalCountOf)(sqInt methodPointer);
+	sqInt  (*methodArgumentCount)(void);
+	sqInt  (*methodPrimitiveIndex)(void);
+	sqInt  (*primitiveIndexOf)(sqInt methodPointer);
+	sqInt  (*sizeOfSTArrayFromCPrimitive)(void *cPtr);
+	sqInt  (*slotSizeOf)(sqInt oop);
+	sqInt  (*stObjectat)(sqInt array, sqInt fieldIndex);
+	sqInt  (*stObjectatput)(sqInt array, sqInt fieldIndex, sqInt value);
+	sqInt  (*stSizeOf)(sqInt oop);
+	sqInt  (*storeIntegerofObjectwithValue)(sqInt fieldIndex, sqInt oop, sqInt integer);
+	sqInt  (*storePointerofObjectwithValue)(sqInt fieldIndex, sqInt oop, sqInt valuePointer);
 
 	/* InterpreterProxy methodsFor: 'testing' */
 
-	int (*isKindOf)(int oop, char *aString);
-	int (*isMemberOf)(int oop, char *aString);
-	int (*isBytes)(int oop);
-	int (*isFloatObject)(int oop);
-	int (*isIndexable)(int oop);
-	int (*isIntegerObject)(int objectPointer);
-	int (*isIntegerValue)(int intValue);
-	int (*isPointers)(int oop);
-	int (*isWeak)(int oop);
-	int (*isWords)(int oop);
-	int (*isWordsOrBytes)(int oop);
-	
+	sqInt (*isKindOf)(sqInt oop, char *aString);
+	sqInt (*isMemberOf)(sqInt oop, char *aString);
+	sqInt (*isBytes)(sqInt oop);
+	sqInt (*isFloatObject)(sqInt oop);
+	sqInt (*isIndexable)(sqInt oop);
+	sqInt (*isIntegerObject)(sqInt objectPointer);
+	sqInt (*isIntegerValue)(sqInt intValue);
+	sqInt (*isPointers)(sqInt oop);
+	sqInt (*isWeak)(sqInt oop);
+	sqInt (*isWords)(sqInt oop);
+	sqInt (*isWordsOrBytes)(sqInt oop);
 
 	/* InterpreterProxy methodsFor: 'converting' */
 
-	int (*booleanValueOf)(int obj);
-	int (*checkedIntegerValueOf)(int intOop);
-	int (*floatObjectOf)(double aFloat);
-	double (*floatValueOf)(int oop);
-	int (*integerObjectOf)(int value);
-	int (*integerValueOf)(int oop);
-	int (*positive32BitIntegerFor)(int integerValue);
-	int (*positive32BitValueOf)(int oop);
-	
+	sqInt  (*booleanValueOf)(sqInt obj);
+	sqInt  (*checkedIntegerValueOf)(sqInt intOop);
+	sqInt  (*floatObjectOf)(double aFloat);
+	double (*floatValueOf)(sqInt oop);
+	sqInt  (*integerObjectOf)(sqInt value);
+	sqInt  (*integerValueOf)(sqInt oop);
+	sqInt  (*positive32BitIntegerFor)(sqInt integerValue);
+	sqInt  (*positive32BitValueOf)(sqInt oop);
 
 	/* InterpreterProxy methodsFor: 'special objects' */
 
-	int (*characterTable)(void);
-	int (*displayObject)(void);
-	int (*falseObject)(void);
-	int (*nilObject)(void);
-	int (*trueObject)(void);
-	
+	sqInt (*characterTable)(void);
+	sqInt (*displayObject)(void);
+	sqInt (*falseObject)(void);
+	sqInt (*nilObject)(void);
+	sqInt (*trueObject)(void);
 
 	/* InterpreterProxy methodsFor: 'special classes' */
 
-	int (*classArray)(void);
-	int (*classBitmap)(void);
-	int (*classByteArray)(void);
-	int (*classCharacter)(void);
-	int (*classFloat)(void);
-	int (*classLargePositiveInteger)(void);
-	int (*classPoint)(void);
-	int (*classSemaphore)(void);
-	int (*classSmallInteger)(void);
-	int (*classString)(void);
-	
+	sqInt (*classArray)(void);
+	sqInt (*classBitmap)(void);
+	sqInt (*classByteArray)(void);
+	sqInt (*classCharacter)(void);
+	sqInt (*classFloat)(void);
+	sqInt (*classLargePositiveInteger)(void);
+	sqInt (*classPoint)(void);
+	sqInt (*classSemaphore)(void);
+	sqInt (*classSmallInteger)(void);
+	sqInt (*classString)(void);
 
 	/* InterpreterProxy methodsFor: 'instance creation' */
 
-	int (*clone)(int oop);
-	int (*instantiateClassindexableSize)(int classPointer, int size);
-	int (*makePointwithxValueyValue)(int xValue, int yValue);
-	int (*popRemappableOop)(void);
-	int (*pushRemappableOop)(int oop);
-	
+	sqInt (*clone)(sqInt oop);
+	sqInt (*instantiateClassindexableSize)(sqInt classPointer, sqInt size);
+	sqInt (*makePointwithxValueyValue)(sqInt xValue, sqInt yValue);
+	sqInt (*popRemappableOop)(void);
+	sqInt (*pushRemappableOop)(sqInt oop);
 
 	/* InterpreterProxy methodsFor: 'other' */
 
-	int (*becomewith)(int array1, int array2);
-	int (*byteSwapped)(int w);
-	int (*failed)(void);
-	int (*fullDisplayUpdate)(void);
-	int (*fullGC)(void);
-	int (*incrementalGC)(void);
-	int (*primitiveFail)(void);
-	int (*showDisplayBitsLeftTopRightBottom)(int aForm, int l, int t, int r, int b);
-	int (*signalSemaphoreWithIndex)(int semaIndex);
-	int (*success)(int aBoolean);
-	int (*superclassOf)(int classPointer);
+	sqInt (*becomewith)(sqInt array1, sqInt array2);
+	sqInt (*byteSwapped)(sqInt w);
+	sqInt (*failed)(void);
+	sqInt (*fullDisplayUpdate)(void);
+	sqInt (*fullGC)(void);
+	sqInt (*incrementalGC)(void);
+	sqInt (*primitiveFail)(void);
+	sqInt (*showDisplayBitsLeftTopRightBottom)(sqInt aForm, sqInt l, sqInt t, sqInt r, sqInt b);
+	sqInt (*signalSemaphoreWithIndex)(sqInt semaIndex);
+	sqInt (*success)(sqInt aBoolean);
+	sqInt (*superclassOf)(sqInt classPointer);
 
 	/* InterpreterProxy methodsFor: 'compiler' */
+
 	CompilerHook *(*compilerHookVector)(void);
-	int (*setCompilerInitialized)(int initFlag);
+	sqInt          (*setCompilerInitialized)(sqInt initFlag);
 
 #if VM_PROXY_MINOR > 1
-	/* new for proxy 1.2 */
+
 	/* InterpreterProxy methodsFor: 'BitBlt support' */
-	int (*loadBitBltFrom)(int bbOop);
-	int (*copyBits)(void);
-	int (*copyBitsFromtoat)(int leftX, int rightX, int yValue);
+
+	sqInt (*loadBitBltFrom)(sqInt bbOop);
+	sqInt (*copyBits)(void);
+	sqInt (*copyBitsFromtoat)(sqInt leftX, sqInt rightX, sqInt yValue);
+
 #endif
 
 #if VM_PROXY_MINOR > 2
-	/* New for proxy version 1.3 */
-	int (*classLargeNegativeInteger)(void);
-	int (*signed32BitIntegerFor)(int integerValue);
-	int (*signed32BitValueOf)(int oop);
-	int (*includesBehaviorThatOf)(int aClass, int aSuperClass);
-	int (*primitiveMethod) (void);
+
+	sqInt (*classLargeNegativeInteger)(void);
+	sqInt (*signed32BitIntegerFor)(sqInt integerValue);
+	sqInt (*signed32BitValueOf)(sqInt oop);
+	sqInt (*includesBehaviorThatOf)(sqInt aClass, sqInt aSuperClass);
+	sqInt (*primitiveMethod)(void);
 
 	/* InterpreterProxy methodsFor: 'FFI support' */
-	int (*classExternalAddress)(void);
-	int (*classExternalData)(void);
-	int (*classExternalFunction)(void);
-	int (*classExternalLibrary)(void);
-	int (*classExternalStructure)(void);
-	int (*ioLoadModuleOfLength)(int modIndex, int modLength);
-	int (*ioLoadSymbolOfLengthFromModule)(int fnIndex, int fnLength, int handle);
-	int (*isInMemory)(int address);
+
+	sqInt (*classExternalAddress)(void);
+	sqInt (*classExternalData)(void);
+	sqInt (*classExternalFunction)(void);
+	sqInt (*classExternalLibrary)(void);
+	sqInt (*classExternalStructure)(void);
+	sqInt (*ioLoadModuleOfLength)(sqInt modIndex, sqInt modLength);
+	sqInt (*ioLoadSymbolOfLengthFromModule)(sqInt fnIndex, sqInt fnLength, sqInt handle);
+	sqInt (*isInMemory)(sqInt address);
+
 #endif
 
 #if VM_PROXY_MINOR > 3
-	/* New for proxy 1.4 */
-	int (*ioLoadFunctionFrom)(char *fnName, char *modName);
-	int (*ioMicroMSecs)(void);
+
+	void *(*ioLoadFunctionFrom)(char *fnName, char *modName);
+	sqInt (*ioMicroMSecs)(void);
+
 #endif
 
 #if VM_PROXY_MINOR > 4
-	/* New for proxy 1.5 */
-/* This is clearly a sub-optimal way to check for the ability to handle 64 bit
- * long long types but it suffices for the moment
- */
-#ifdef  _MSC_VER
-        #define squeakInt64 __int64
-#else
-        #define squeakInt64 long long
-#endif
-	int (*positive64BitIntegerFor)(squeakInt64 integerValue);
-	squeakInt64 (*positive64BitValueOf)(int oop);
-	int (*signed64BitIntegerFor)(squeakInt64 integerValue);
-	squeakInt64 (*signed64BitValueOf)(int oop);
+
+#  if !defined(sqLong)
+#   if _MSC_VER
+#     define sqLong __int64
+#   else
+#     define sqLong long long
+#   endif
+#  endif
+
+	sqInt  (*positive64BitIntegerFor)(sqLong integerValue);
+	sqLong (*positive64BitValueOf)(sqInt oop);
+	sqInt  (*signed64BitIntegerFor)(sqLong integerValue);
+	sqLong (*signed64BitValueOf)(sqInt oop);
+
 #endif
 
 #if VM_PROXY_MINOR > 5
-	/* new for 1.6 */
-	int (*isArray)(int oop);
-	int (*forceInterruptCheck)(void);
+	sqInt (*isArray)(sqInt oop);
+	sqInt (*forceInterruptCheck)(void);
 #endif
+
 
 } VirtualMachine;
 
 #endif /* _SqueakVM_H */
-

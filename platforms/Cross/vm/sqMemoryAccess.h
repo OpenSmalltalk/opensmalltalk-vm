@@ -1,42 +1,8 @@
 /* sqMemoryAccess.h -- memory accessors (and associated type definitions)
  * 
- *   Copyright (C) 2004-2005 by Ian Piumarta
- *   
- *   All rights reserved.
- *   
- *   This file is part of Unix Squeak.
+ * Author: Ian.Piumarta@squeakland.org
  * 
- *      You are NOT ALLOWED to distribute modified versions of this file
- *      under its original name.  If you modify this file then you MUST
- *      rename it before making your modifications available publicly.
- * 
- *   This file is distributed in the hope that it will be useful, but WITHOUT
- *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- *   FITNESS FOR A PARTICULAR PURPOSE.
- *   
- *   You may use and/or distribute this file ONLY as part of Squeak, under
- *   the terms of the Squeak License as described in `LICENSE' in the base of
- *   this distribution, subject to the following additional restrictions:
- * 
- *   1. The origin of this software must not be misrepresented; you must not
- *      claim that you wrote the original software.  If you use this software
- *      in a product, an acknowledgment to the original author(s) (and any
- *      other contributors mentioned herein) in the product documentation
- *      would be appreciated but is not required.
- * 
- *   2. You must not distribute (or make publicly available by any
- *      means) a modified copy of this file unless you first rename it.
- * 
- *   3. This notice must not be removed or altered in any source distribution.
- * 
- *   Using (or modifying this file for use) in any context other than Squeak
- *   changes these copyright conditions.  Read the file `COPYING' in the
- *   directory `platforms/unix/doc' before proceeding with any such use.
- */
-
-/* Author: Ian.Piumarta@squeakland.org
- * 
- * Last edited: 2005-03-22 14:53:47 by piumarta on kim.local
+ * Last edited: 2005-03-28 23:02:04 by piumarta on emilia.local
  */
 
 /* Systematic use of the macros defined in this file within the
@@ -50,17 +16,23 @@
 #ifndef __sqMemoryAccess_h
 #define __sqMemoryAccess_h
 
+#include "config.h"
+
 #if defined(HAVE_INTERP_H)
 # include "interp.h"
-  typedef void *sqModule;
-  typedef void *sqFunction;
 #else
 # define SQ_VI_BYTES_PER_WORD 4		/* build a 32-bit VM */
-  typedef int sqModule;
-  typedef int sqFunction;
+# warning 
+# warning ***************************************************
+# warning *
+# warning * interp.h not found -- defaulting to a 32-bit VM
+# warning *
+# warning * update your image-side VM sources to the latest
+# warning * version to avoid this message
+# warning *
+# warning ***************************************************
+# warning 
 #endif
-
-#include "config.h"
 
 #if (SQ_VI_BYTES_PER_WORD == 4)
 # define SQ_IMAGE32 1
@@ -125,8 +97,6 @@ static inline sqInt oopAtput(sqInt oop, sqInt val)		{ return oopAtPointerput(poi
 #define long32At	intAt
 #define long32Atput	intAtput
 
-#if defined(HAVE_INTERP_H)
-
 /* platform-dependent float conversion macros */
 /* Note: Second argument must be a variable name, not an expression! */
 /* Note: Floats in image are always in PowerPC word order; change
@@ -163,8 +133,6 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 
 #define storeFloatAtfrom(i, floatVarName)	storeFloatAtPointerfrom(pointerForOop(i), floatVarName)
 #define fetchFloatAtinto(i, floatVarName)	fetchFloatAtPointerinto(pointerForOop(i), floatVarName)
-
-#endif
 
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the image. */

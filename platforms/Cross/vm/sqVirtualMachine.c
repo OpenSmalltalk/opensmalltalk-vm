@@ -8,149 +8,149 @@
 /*** Function prototypes ***/
 
 /* InterpreterProxy methodsFor: 'stack access' */
-int pop(int nItems);
-int popthenPush(int nItems, int oop);
-int push(int object);
-int pushBool(int trueOrFalse);
-int pushFloat(double f);
-int pushInteger(int integerValue);
-double stackFloatValue(int offset);
-int stackIntegerValue(int offset);
-int stackObjectValue(int offset);
-int stackValue(int offset);
+sqInt  pop(sqInt nItems);
+sqInt  popthenPush(sqInt nItems, sqInt oop);
+sqInt  push(sqInt object);
+sqInt  pushBool(sqInt trueOrFalse);
+sqInt  pushFloat(double f);
+sqInt  pushInteger(sqInt integerValue);
+double stackFloatValue(sqInt offset);
+sqInt  stackIntegerValue(sqInt offset);
+sqInt  stackObjectValue(sqInt offset);
+sqInt  stackValue(sqInt offset);
 
 /*** variables ***/
 
-extern int (*compilerHooks[])();
-extern int setCompilerInitialized(int flagValue);
+extern sqInt (*compilerHooks[])();
+extern sqInt setCompilerInitialized(sqInt flagValue);
 
 /* InterpreterProxy methodsFor: 'object access' */
-int argumentCountOf(int methodPointer);
-void * arrayValueOf(int oop);
-int byteSizeOf(int oop);
-void * fetchArrayofObject(int fieldIndex, int objectPointer);
-int fetchClassOf(int oop);
-double fetchFloatofObject(int fieldIndex, int objectPointer);
-int fetchIntegerofObject(int fieldIndex, int objectPointer);
-int fetchPointerofObject(int index, int oop);
-int fetchWordofObject(int fieldIndex, int oop);
-void * firstFixedField(int oop);
-void * firstIndexableField(int oop);
-int literalofMethod(int offset, int methodPointer);
-int literalCountOf(int methodPointer);
-int methodArgumentCount(void);
-int methodPrimitiveIndex(void);
-int primitiveMethod(void);
-int primitiveIndexOf(int methodPointer);
-int sizeOfSTArrayFromCPrimitive(void *cPtr);
-int slotSizeOf(int oop);
-int stObjectat(int array, int index);
-int stObjectatput(int array, int index, int value);
-int stSizeOf(int oop);
-int storeIntegerofObjectwithValue(int index, int oop, int integer);
-int storePointerofObjectwithValue(int index, int oop, int valuePointer);
+sqInt  argumentCountOf(sqInt methodPointer);
+void  *arrayValueOf(sqInt oop);
+sqInt  byteSizeOf(sqInt oop);
+void  *fetchArrayofObject(sqInt fieldIndex, sqInt objectPointer);
+sqInt  fetchClassOf(sqInt oop);
+double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
+sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
+sqInt  fetchPointerofObject(sqInt index, sqInt oop);
+sqInt  fetchWordofObject(sqInt fieldIndex, sqInt oop);
+void  *firstFixedField(sqInt oop);
+void  *firstIndexableField(sqInt oop);
+sqInt  literalofMethod(sqInt offset, sqInt methodPointer);
+sqInt  literalCountOf(sqInt methodPointer);
+sqInt  methodArgumentCount(void);
+sqInt  methodPrimitiveIndex(void);
+sqInt  primitiveMethod(void);
+sqInt  primitiveIndexOf(sqInt methodPointer);
+sqInt  sizeOfSTArrayFromCPrimitive(void *cPtr);
+sqInt  slotSizeOf(sqInt oop);
+sqInt  stObjectat(sqInt array, sqInt index);
+sqInt  stObjectatput(sqInt array, sqInt index, sqInt value);
+sqInt  stSizeOf(sqInt oop);
+sqInt  storeIntegerofObjectwithValue(sqInt index, sqInt oop, sqInt integer);
+sqInt  storePointerofObjectwithValue(sqInt index, sqInt oop, sqInt valuePointer);
 
 
 /* InterpreterProxy methodsFor: 'testing' */
-int isKindOf(int oop, char *aString);
-int isMemberOf(int oop, char *aString);
-int isBytes(int oop);
-int isFloatObject(int oop);
-int isIndexable(int oop);
-int isIntegerObject(int objectPointer);
-int isIntegerValue(int intValue);
-int isPointers(int oop);
-int isWeak(int oop);
-int isWords(int oop);
-int isWordsOrBytes(int oop);
-int includesBehaviorThatOf(int aClass, int aSuperClass);
-int isArray(int oop);
+sqInt isKindOf(sqInt oop, char *aString);
+sqInt isMemberOf(sqInt oop, char *aString);
+sqInt isBytes(sqInt oop);
+sqInt isFloatObject(sqInt oop);
+sqInt isIndexable(sqInt oop);
+sqInt isIntegerObject(sqInt objectPointer);
+sqInt isIntegerValue(sqInt intValue);
+sqInt isPointers(sqInt oop);
+sqInt isWeak(sqInt oop);
+sqInt isWords(sqInt oop);
+sqInt isWordsOrBytes(sqInt oop);
+sqInt includesBehaviorThatOf(sqInt aClass, sqInt aSuperClass);
+sqInt isArray(sqInt oop);
 
 /* InterpreterProxy methodsFor: 'converting' */
-int booleanValueOf(int obj);
-int checkedIntegerValueOf(int intOop);
-int floatObjectOf(double aFloat);
-double floatValueOf(int oop);
-int integerObjectOf(int value);
-int integerValueOf(int oop);
-int positive32BitIntegerFor(int integerValue);
-int positive32BitValueOf(int oop);
-int signed32BitIntegerFor(int integerValue);
-int signed32BitValueOf(int oop);
-int positive64BitIntegerFor(squeakInt64 integerValue);
-squeakInt64 positive64BitValueOf(int oop);
-int signed64BitIntegerFor(squeakInt64 integerValue);
-squeakInt64 signed64BitValueOf(int oop);
+sqInt  booleanValueOf(sqInt obj);
+sqInt  checkedIntegerValueOf(sqInt intOop);
+sqInt  floatObjectOf(double aFloat);
+double floatValueOf(sqInt oop);
+sqInt  integerObjectOf(sqInt value);
+sqInt  integerValueOf(sqInt oop);
+sqInt  positive32BitIntegerFor(sqInt integerValue);
+sqInt  positive32BitValueOf(sqInt oop);
+sqInt  signed32BitIntegerFor(sqInt integerValue);
+sqInt  signed32BitValueOf(sqInt oop);
+sqInt  positive64BitIntegerFor(sqLong integerValue);
+sqLong positive64BitValueOf(sqInt oop);
+sqInt  signed64BitIntegerFor(sqLong integerValue);
+sqLong signed64BitValueOf(sqInt oop);
 
 /* InterpreterProxy methodsFor: 'special objects' */
-int characterTable(void);
-int displayObject(void);
-int falseObject(void);
-int nilObject(void);
-int trueObject(void);
+sqInt characterTable(void);
+sqInt displayObject(void);
+sqInt falseObject(void);
+sqInt nilObject(void);
+sqInt trueObject(void);
 
 
 /* InterpreterProxy methodsFor: 'special classes' */
-int classArray(void);
-int classBitmap(void);
-int classByteArray(void);
-int classCharacter(void);
-int classFloat(void);
-int classLargePositiveInteger(void);
-int classLargeNegativeInteger(void);
-int classPoint(void);
-int classSemaphore(void);
-int classSmallInteger(void);
-int classString(void);
+sqInt classArray(void);
+sqInt classBitmap(void);
+sqInt classByteArray(void);
+sqInt classCharacter(void);
+sqInt classFloat(void);
+sqInt classLargePositiveInteger(void);
+sqInt classLargeNegativeInteger(void);
+sqInt classPoint(void);
+sqInt classSemaphore(void);
+sqInt classSmallInteger(void);
+sqInt classString(void);
 
 
 /* InterpreterProxy methodsFor: 'instance creation' */
-int clone(int oop);
-int instantiateClassindexableSize(int classPointer, int size);
-int makePointwithxValueyValue(int xValue, int yValue);
-int popRemappableOop(void);
-int pushRemappableOop(int oop);
+sqInt clone(sqInt oop);
+sqInt instantiateClassindexableSize(sqInt classPointer, sqInt size);
+sqInt makePointwithxValueyValue(sqInt xValue, sqInt yValue);
+sqInt popRemappableOop(void);
+sqInt pushRemappableOop(sqInt oop);
 
 
 /* InterpreterProxy methodsFor: 'other' */
-int becomewith(int array1, int array2);
-int byteSwapped(int w);
-int failed(void);
-int fullDisplayUpdate(void);
-int fullGC(void);
-int incrementalGC(void);
-int primitiveFail(void);
-int showDisplayBitsLeftTopRightBottom(int aForm, int l, int t, int r, int b);
-int signalSemaphoreWithIndex(int semaIndex);
-int success(int aBoolean);
-int superclassOf(int classPointer);
-int ioMicroMSecs(void);
-int forceInterruptCheck(void);
+sqInt becomewith(sqInt array1, sqInt array2);
+sqInt byteSwapped(sqInt w);
+sqInt failed(void);
+sqInt fullDisplayUpdate(void);
+sqInt fullGC(void);
+sqInt incrementalGC(void);
+sqInt primitiveFail(void);
+sqInt showDisplayBitsLeftTopRightBottom(sqInt aForm, sqInt l, sqInt t, sqInt r, sqInt b);
+sqInt signalSemaphoreWithIndex(sqInt semaIndex);
+sqInt success(sqInt aBoolean);
+sqInt superclassOf(sqInt classPointer);
+sqInt ioMicroMSecs(void);
+sqInt forceInterruptCheck(void);
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
-int loadBitBltFrom(int bbOop);
-int copyBits(void);
-int copyBitsFromtoat(int leftX, int rightX, int yValue);
+sqInt loadBitBltFrom(sqInt bbOop);
+sqInt copyBits(void);
+sqInt copyBitsFromtoat(sqInt leftX, sqInt rightX, sqInt yValue);
 
 /* InterpreterProxy methodsFor: 'FFI support' */
-int classExternalAddress(void);
-int classExternalData(void);
-int classExternalFunction(void);
-int classExternalLibrary(void);
-int classExternalStructure(void);
-int ioLoadModuleOfLength(int moduleNameIndex, int moduleNameLength);
-int ioLoadSymbolOfLengthFromModule(int functionNameIndex, int functionNameLength, int moduleHandle);
-int isInMemory(int address);
+sqInt classExternalAddress(void);
+sqInt classExternalData(void);
+sqInt classExternalFunction(void);
+sqInt classExternalLibrary(void);
+sqInt classExternalStructure(void);
+sqInt ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength);
+sqInt ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, sqInt moduleHandle);
+sqInt isInMemory(sqInt address);
 
-int ioLoadFunctionFrom(char *fnName, char *modName);
+void *ioLoadFunctionFrom(char *fnName, char *modName);
 
 struct VirtualMachine *VM = NULL;
 
-static int majorVersion(void) {
+static sqInt majorVersion(void) {
 	return VM_PROXY_MAJOR;
 }
 
-static int minorVersion(void) {
+static sqInt minorVersion(void) {
 	return VM_PROXY_MINOR;
 }
 
@@ -162,11 +162,10 @@ static CompilerHook *compilerHookVector(void) {
 struct VirtualMachine* sqGetInterpreterProxy(void)
 {
 	if(VM) return VM;
-	VM = (struct VirtualMachine *) calloc(1, sizeof(VirtualMachine));
+	VM = (struct VirtualMachine *)calloc(1, sizeof(VirtualMachine));
 	/* Initialize Function pointers */
 	VM->majorVersion = majorVersion;
 	VM->minorVersion = minorVersion;
-
 
 	/* InterpreterProxy methodsFor: 'stack access' */
 	VM->pop = pop;
@@ -180,7 +179,6 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->stackObjectValue = stackObjectValue;
 	VM->stackValue = stackValue;
 	
-
 	/* InterpreterProxy methodsFor: 'object access' */
 	VM->argumentCountOf = argumentCountOf;
 	VM->arrayValueOf = arrayValueOf;
@@ -207,7 +205,6 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->storeIntegerofObjectwithValue = storeIntegerofObjectwithValue;
 	VM->storePointerofObjectwithValue = storePointerofObjectwithValue;
 	
-
 	/* InterpreterProxy methodsFor: 'testing' */
 	VM->isKindOf = isKindOf;
 	VM->isMemberOf = isMemberOf;
@@ -238,7 +235,6 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->nilObject = nilObject;
 	VM->trueObject = trueObject;
 	
-
 	/* InterpreterProxy methodsFor: 'special classes' */
 	VM->classArray = classArray;
 	VM->classBitmap = classBitmap;
@@ -251,14 +247,12 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->classSmallInteger = classSmallInteger;
 	VM->classString = classString;
 	
-
 	/* InterpreterProxy methodsFor: 'instance creation' */
 	VM->clone = clone;
 	VM->instantiateClassindexableSize = instantiateClassindexableSize;
 	VM->makePointwithxValueyValue = makePointwithxValueyValue;
 	VM->popRemappableOop = popRemappableOop;
 	VM->pushRemappableOop = pushRemappableOop;
-	
 
 	/* InterpreterProxy methodsFor: 'other' */
 	VM->becomewith = becomewith;
@@ -277,13 +271,16 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->setCompilerInitialized= setCompilerInitialized;
 
 #if VM_PROXY_MINOR > 1
+
 	/* InterpreterProxy methodsFor: 'BitBlt support' */
 	VM->loadBitBltFrom = loadBitBltFrom;
 	VM->copyBits = copyBits;
 	VM->copyBitsFromtoat = copyBitsFromtoat;
+
 #endif
 
 #if VM_PROXY_MINOR > 2
+
 	/* InterpreterProxy methodsFor: 'FFI support' */
 	VM->classExternalAddress = classExternalAddress;
 	VM->classExternalData = classExternalData;
@@ -297,24 +294,29 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->signed32BitValueOf = signed32BitValueOf;
 	VM->includesBehaviorThatOf = includesBehaviorThatOf;
 	VM->classLargeNegativeInteger = classLargeNegativeInteger;
+
 #endif
 
 #if VM_PROXY_MINOR > 3
+
 	VM->ioLoadFunctionFrom = ioLoadFunctionFrom;
 	VM->ioMicroMSecs = ioMicroMSecs;
+
 #endif
 
 #if VM_PROXY_MINOR > 4
+
 	VM->positive64BitIntegerFor = positive64BitIntegerFor;
 	VM->positive64BitValueOf = positive64BitValueOf;
 	VM->signed64BitIntegerFor = signed64BitIntegerFor;
 	VM->signed64BitValueOf = signed64BitValueOf;
+
 #endif
 
 #if VM_PROXY_MINOR > 5
 	VM->isArray = isArray;
 	VM->forceInterruptCheck = forceInterruptCheck;
 #endif
+
 	return VM;
 }
-
