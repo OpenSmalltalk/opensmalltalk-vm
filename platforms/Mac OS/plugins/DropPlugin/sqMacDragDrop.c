@@ -1,5 +1,18 @@
-/*  Jan 24th 2001
-	Drag and drop support for Squeak 
+/****************************************************************************
+*   PROJECT: Mac window, memory, keyboard interface.
+*   FILE:    sqMacDragDrop.c
+*   CONTENT: 
+*
+*   AUTHOR:  John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqMacDragDrop.c,v 1.3 2002/01/09 06:42:12 johnmci Exp $
+*
+*   NOTES: See change log below.
+*	1/4/2002   JMM Carbon cleanup
+*
+*****************************************************************************/
+/*	Drag and drop support for Squeak 
 	John M McIntosh of Corporate Smalltalk Consulting Ltd
 	johnmci@smalltalkconsulting.com 
 	http://www.smalltalkconsulting.com 
@@ -49,11 +62,6 @@ Some of this code comes from
 #include "sqMacFileLogic.h"	
 
 #include "DropPlugin.h"
-
-#if TARGET_API_MAC_CARBON
-#else
-    inline Rect *GetPortBounds(CGrafPtr w,Rect *r) { *r = w->portRect; return &w->portRect;}  
-#endif
 
 	/* promise flavor types */
 	

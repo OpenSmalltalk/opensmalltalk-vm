@@ -1,3 +1,17 @@
+/****************************************************************************
+*   PROJECT: Mac window, memory, keyboard interface for netscape plugin logic
+*   FILE:    sqMacNSPlugin.c
+*   CONTENT: 
+*
+*   AUTHOR:  John Maloney, John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.3 2002/01/09 06:45:59 johnmci Exp $
+*
+*   NOTES: See change log below.
+*	1/4/2002   JMM Some carbon cleanup
+*
+*****************************************************************************/
 /********** Notes on Browser Plugin VM ************
 How it Works:
 
@@ -73,11 +87,6 @@ Aug      2001	JMM 3.0.24  rework of security logic, remove explicit call *******
 #else
     #define EnableMenuItemCarbon(m1,v1)  EnableItem(m1,v1);
     #define DisableMenuItemCarbon(m1,v1)  DisableItem(m1,v1);
-        inline Rect *GetPortBounds(CGrafPtr w,Rect *r) { *r = w->portRect; return &w->portRect;}  
-        inline Rect *GetRegionBounds(RgnHandle region, Rect * bounds) { *bounds = (*region)->rgnBBox; return &(*region)->rgnBBox;}
-        inline RgnHandle GetPortClipRegion(CGrafPtr port,RgnHandle clipRgn) {MacCopyRgn (port->clipRgn,clipRgn); return clipRgn;}  
-        inline BitMap *GetQDGlobalsScreenBits(BitMap *bm){*bm = qd.screenBits; return &qd.screenBits; }
-        inline BitMap * GetPortBitMapForCopyBits (CGrafPtr w) { return &((GrafPtr)w)->portBits;}
         inline pascal long InvalWindowRect(WindowRef  window,  const Rect * bounds) {InvalRect (bounds);}
 #endif
 

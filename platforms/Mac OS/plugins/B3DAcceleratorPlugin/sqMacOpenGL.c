@@ -6,12 +6,13 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.2 2001/12/18 21:12:24 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.3 2002/01/09 06:47:20 johnmci Exp $
 * 
 *   NOTES:
 *
 *	Changes May 14th 2001 John M McIntosh Carbon support
 *   Changes Jun 2001 JMM browser internal plugin support
+* 	Changes Jan 2002 JMM carbon cleanup
 *
 *****************************************************************************/
 #include <stdio.h>
@@ -47,12 +48,6 @@
 
 #ifdef BROWSERPLUGIN
 #include "npapi.h"
-#endif
-
-#if TARGET_API_MAC_CARBON
-#else
-        inline Rect *GetPortBounds(CGrafPtr w,Rect *r) { *r = w->portRect; return &w->portRect;}  
-        inline BitMap * GetPortBitMapForCopyBits (CGrafPtr w) { return &((GrafPtr)w)->portBits;}
 #endif
 
 int printRendererInfo(void);
