@@ -1,4 +1,30 @@
+2003-09-16  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/doc/squeak.1: Updated for '-nointl',
+	SQUEAK_NOINTL, and LC_CTYPE/LC_ALL.
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c: Make x2sqKey a
+	function pointer.
+	(x2sqKeyInput): Add support for international keyboards and
+	diacritical marks via dead keys.
+	(display_parseEnvironment): Enable international support if either
+	LC_CTYPE or LC_ALL is set in the environment.
+	(display_parseEnvironment): SQUEAK_NOINTL disables international
+	support.
+	(display_parseArgument): '-nointl' disables international support.
+	(display_printUsage): Add help for '-nointl' option.
+
+2003-09-05  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c
+	(display_parseArgument): Fix browserPipes argv indices.
+	(display_parseArgument): Add missing comma in debug printf().
+
 2003-09-03  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm-display-Quartz/sqUnixQuartz.m (setUpDock):
+	Remove warning for CPSEnableForegroundOperation, which always
+	fails -- even when it succeeds.
 
 	* platforms/unix/config/configure.ac: Version 3.6-beta11 3.6b-5411.
 
