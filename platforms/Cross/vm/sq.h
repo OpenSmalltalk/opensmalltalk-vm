@@ -6,7 +6,7 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.11 2003/11/13 16:18:54 nedkonz Exp $
+*   RCSID:   $Id: sq.h,v 1.12 2003/12/02 04:47:02 johnmci Exp $
 *
 *	11/12/03	nedkonz - float bug fix for gcc 3.3 optimization
 *	05/20/03	tim - move browser related macros in front of
@@ -336,6 +336,7 @@ int ioGetNextEvent(sqInputEvent *evt);
 
 /* image file and VM path names */
 extern char imageName[];
+char *getImageName(void);
 int imageNameGetLength(int sqImageNameIndex, int length);
 int imageNamePutLength(int sqImageNameIndex, int length);
 int imageNameSize(void);
