@@ -6,13 +6,15 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.2 2002/02/23 11:25:51 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.3 2002/03/01 00:25:02 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+*  Feb 27th, 2002, JMM a bit of cleanup for carbon event usage
 *****************************************************************************/
-#include "sqMacTime.h"
 #include "sq.h"
+#include "sqMacTime.h"
+#include "sqMacUIEvents.h"
 
 extern Boolean  gThreadManager;
 
@@ -151,10 +153,12 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
       tv.tv_usec= microSeconds % 1000000;
       select(0, 0, 0, 0, &tv); 
       }*/
-#endif	
-
+#else
+#if !I_AM_CARBON_EVENT
 	if (gThreadManager)
-		YieldToAnyThread();
+            SqueakYieldToAnyThread();
 	else
 	    ioProcessEvents();
+#endif
+#endif	
 }
