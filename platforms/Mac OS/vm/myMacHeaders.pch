@@ -1,4 +1,17 @@
-/*
+/****************************************************************************
+*   PROJECT: Mac window, memory, keyboard interface for netscape plugin logic
+*   FILE:    myMacHeaders.pch
+*   CONTENT: 
+*
+*   AUTHOR:  John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: myMacHeaders.pch,v 1.2 2002/01/09 06:37:42 johnmci Exp $
+*
+*   NOTES: See change log below.
+*	1/4/2002   JMM Some carbon cleanup
+*
+*****************************************************************************//*
    ===========================================================================
 	MacHeaders.pch				©1995-1999 Metrowerks Inc. All rights reserved.
    ===========================================================================
@@ -25,5 +38,5 @@
 /* Now just include the "MacHeaders.c" source file ... */
 
 #pragma once on
-
+#define ACCESSOR_CALLS_ARE_FUNCTIONS 1
 #include "myMacHeaders.c"
