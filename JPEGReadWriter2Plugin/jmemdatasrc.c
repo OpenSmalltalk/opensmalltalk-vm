@@ -187,3 +187,15 @@ GLOBAL(void) jpeg_mem_src (j_decompress_ptr cinfo, char * pSourceData, unsigned 
   src->pub.bytes_in_buffer = 0; /* forces fill_input_buffer on first read */
   src->pub.next_input_byte = NULL; /* until buffer loaded */
 }
+/* This function allows data to be moved if necessary */
+GLOBAL(int) jpeg_mem_src_newLocationOfData (j_decompress_ptr cinfo, char * pSourceData, unsigned sourceDataSize) {
+  my_src_ptr src;
+  unsigned offset;
+
+  src = (my_src_ptr) cinfo->src;
+  offset = (src->actualPos) - (src->pSourceData);
+  src->pSourceData = pSourceData;
+  src->actualPos = pSourceData + offset;
+
+  return((src->actualPos + src->bytesLeft) == (pSourceData + sourceDataSize));
+}
