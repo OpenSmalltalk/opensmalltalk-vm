@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.6 2002/03/15 07:14:54 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.7 2002/03/15 21:08:32 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -33,12 +33,14 @@ IsUserCancelEventRef
     #include <pthread.h>
     pthread_mutex_t gEventQueueLock,gEventUILock;
     pthread_cond_t  gEventUILockCondition;
+    extern pthread_mutex_t gSleepLock;
+    extern pthread_cond_t  gSleepLockCondition;
     #define EventTypeFullScreenUpdate 98
     #define EventTypePostEventProcessing 99
     void doPostMessageHook(EventRef event);
     void postFullScreenUpdate(void);
+    void signalAnyInterestedParties(void);
     Boolean gQuitNowRightNow=false;
-    
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -565,6 +567,7 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 	evt->reserved1 = 0;
 #if I_AM_CARBON_EVENT
         pthread_mutex_unlock(&gEventQueueLock);
+        signalAnyInterestedParties();
 #endif
 //	signalSemaphoreWithIndex(inputSemaphoreIndex);
 	return 1;
@@ -631,8 +634,8 @@ int ioGetNextEvent(sqInputEvent *evt) {
 	*evt = eventBuffer[eventBufferGet];
 	eventBufferGet = (eventBufferGet+1) % MAX_EVENT_BUFFER;
 #if I_AM_CARBON_EVENT
+        pthread_mutex_unlock(&gEventQueueLock);
         if (evt->type == EventTypeFullScreenUpdate) {
-            pthread_mutex_unlock(&gEventQueueLock);
             fullDisplayUpdate();	//Note I think it's ok to unlock by now
             return ioGetNextEvent(evt);
         }
@@ -641,10 +644,8 @@ int ioGetNextEvent(sqInputEvent *evt) {
             if (postMessageHook) 
                 postMessageHook((EventRecord *) evt->unused1);
             free((void *) evt->unused1);
-            pthread_mutex_unlock(&gEventQueueLock);
             return ioGetNextEvent(evt);
         }
-        pthread_mutex_unlock(&gEventQueueLock);
 #endif
 	return true;
 }
@@ -1418,7 +1419,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
         case kEventMouseWheelMoved:
             recordMouseEventCarbon(event,whatHappened);
             result = noErr;
-            break;
+            return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
             if (FindWindow(mouseLocation, &theWindow) == inGrow)
                 return result;
@@ -1502,6 +1503,7 @@ static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
     {
         case kEventTextInputUnicodeForKeyEvent:
             recordKeyboardEventCarbon(event);
+            result = noErr;
         default: 
         /* If nobody handled the event, it gets propagated to the */
         /* application-level handler. */
@@ -1574,7 +1576,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	    
         oldEvent = *evt;
      	pthread_mutex_unlock(&gEventQueueLock);
-        signalSemaphoreWithIndex(inputSemaphoreIndex);
+        signalAnyInterestedParties();
                 
         if (whatHappened == kEventMouseWheelMoved) 
             fakeMouseWheelKeyboardEvents(wheelMouseDirection,wheelMouseDelta);
@@ -1660,8 +1662,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 
     }
     pthread_mutex_unlock(&gEventQueueLock);
-    signalSemaphoreWithIndex(inputSemaphoreIndex);
-                
+    signalAnyInterestedParties();                
 }
 
 void recordKeyboardEventCarbon(EventRef event) {
@@ -1787,7 +1788,7 @@ void recordKeyboardEventCarbon(EventRef event) {
     evt->reserved1 = 0;
     evt->reserved2 = 0;
     pthread_mutex_unlock(&gEventQueueLock);		        
-    signalSemaphoreWithIndex(inputSemaphoreIndex);
+    signalAnyInterestedParties();
 }
 
 
@@ -1913,6 +1914,16 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
     pthread_cond_signal(&gEventUILockCondition);	
     pthread_mutex_unlock(&gEventUILock);
     return noErr;
+}
+
+void signalAnyInterestedParties() {
+    if (inputSemaphoreIndex != 0)
+        signalSemaphoreWithIndex(inputSemaphoreIndex);
+    /* I'm not sure this buys anything, usually we are waiting for mophic to step so 
+    waking up early doesn't do much except drive CPU up
+    pthread_mutex_lock(&gSleepLock);
+    pthread_cond_signal(&gSleepLockCondition);	
+    pthread_mutex_unlock(&gSleepLock);*/
 }
 
 #endif
