@@ -1,5 +1,12 @@
 #!/usr/bin/gawk -f
 # 
+# Rewrite the interpreter source in $1 to use GNU C extensions, writing the
+# modified file to stdout.
+# 
+# Author: Ian.Piumarta@INRIA.Fr
+#
+# Last edited: 2003-09-03 00:06:37 by piumarta on emilia.inria.fr
+
 #   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
 #     as listed elsewhere in this file.
 #   All rights reserved.
@@ -32,13 +39,6 @@
 #   Using (or modifying this file for use) in any context other than Squeak
 #   changes these copyright conditions.  Read the file `COPYING' in the
 #   directory `platforms/unix/doc' before proceeding with any such use.
-
-# Author: Ian.Piumarta@INRIA.Fr
-#
-# Last edited: 2003-02-11 05:06:03 by piumarta on emilia.inria.fr
-
-# Rewrite the interpreter source in $1 to use GNU C extensions, writing the
-# modified file to stdout.  Author: Ian.Piumarta@inria.fr
 
 BEGIN {
   print "/* This file has been post-processed for GNU C */\n\
@@ -76,11 +76,13 @@ BEGIN {
   next;
 }
 
+(stage == 1) && /^register struct foo \* foo = &fum;/ {
+  print "    register struct foo * foo GP_REG= &fum;";
+  next;
+}
+
 (stage == 1) && /^    char\* localSP;/ {
   print "    register char* localSP SP_REG;";
-  print "#  ifdef GP_REG";
-  print "    register struct foo * foo GP_REG= &fum;";
-  print "#  endif";
   next;
 }
 
@@ -126,6 +128,13 @@ BEGIN {
 
 
 (stage == 4) && /^	switch \(primitiveIndex\) {/ {
+  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
+  print "	PRIM_DISPATCH;";
+  print;
+  next;
+}
+
+(stage == 4) && /^	switch \(foo->primitiveIndex\) {/ {
   print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
   print "	PRIM_DISPATCH;";
   print;
