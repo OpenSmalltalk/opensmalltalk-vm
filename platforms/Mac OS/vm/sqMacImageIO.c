@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacImageIO.c,v 1.2 2002/02/23 11:25:39 johnmci Exp $
+*   RCSID:   $Id: sqMacImageIO.c,v 1.3 2002/08/06 22:35:27 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -118,7 +118,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode) {
     char cFileName[1024];
     sqImageFile remember;
     
-    sqFilenameFromStringOpen(cFileName, fileName, strlen(fileName));
+    sqFilenameFromStringOpen(cFileName,(long) fileName, strlen(fileName));
     remember = fopen(cFileName, mode);
     if (remember == null) 
         return null;
