@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.7 2002/05/29 11:42:15 andreasraab Exp $
+*   RCSID:   $Id: sqOpenGLRenderer.c,v 1.8 2002/06/01 16:54:19 johnmci Exp $
 *
 *   NOTES: 
 *
@@ -749,7 +749,7 @@ int glSetIntProperty(int handle, int prop, int value)
   case 7: /* blend dest factor */
     {
       int factor;
-      int src, dst;
+      GLint src, dst;
       switch(value) {
         case 0: factor = GL_ZERO; break;
         case 1: factor = GL_ONE; break;
