@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-09-02 15:34:38 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-03 23:09:33 by piumarta on emilia.inria.fr
  */
 
 
@@ -1163,7 +1163,7 @@ static void setUpDock(void)
   else try(CPSSetProcessName, (&psn, "Squeak"), "");
   else
     {
-      try(CPSEnableForegroundOperation, (&psn, 0x03, 0x3c, 0x2c, 0x1103), " (ignored)");
+      CPSEnableForegroundOperation(&psn, 0x03, 0x3c, 0x2c, 0x1103);
       try(CPSSetFrontProcess, (&psn), "");
     }
 # undef try
