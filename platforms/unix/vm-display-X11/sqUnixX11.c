@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-16 20:26:38 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-22 16:00:56 by piumarta on emilia.inria.fr
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -1313,6 +1313,7 @@ int handleEvents(void)
       XNextEvent(stDisplay, &evt);
       handleEvent(&evt);
     }
+  setInterruptCheckCounter(0);
   return 1;
 }
 
@@ -2119,13 +2120,8 @@ static int display_ioBeep(void)
 
 static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
-  if (handleEvents())
-    {
-      aioPoll(0);
-      return 0;
-    }
-  else
-    aioPoll(microSeconds);
+  handleEvents();
+  aioPoll(microSeconds);
   return 0;
 }
 
