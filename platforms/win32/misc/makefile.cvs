@@ -23,6 +23,9 @@ ifndef CVSUSER
  ifeq ($(USERNAME), andreas)
    CVSUSER=AndreasRaab
  endif
+ ifeq ($(USERNAME), ANDREASR)
+   CVSUSER=AndreasRaab
+ endif
 endif
 
 ifdef CVSUSER
@@ -32,12 +35,12 @@ ifdef CVSUSER
 #
 
 update:
-	cvs -z3 -d:ext:$(CVSUSER)@cvs.squeak.sourceforge.net:/cvsroot/squeak co win32-solo Cross-solo
+	cvs -z3 -d:ext:$(CVSUSER)@cvs.sourceforge.net:/cvsroot/squeak co win32-solo Cross-solo
 commit:
-	cvs -z3 -d:ext:$(CVSUSER)@cvs.squeak.sourceforge.net:/cvsroot/squeak commit win32
+	cvs -z3 -d:ext:$(CVSUSER)@cvs.sourceforge.net:/cvsroot/squeak commit win32
 
 commit-cross:
-	cvs -z3 -d:ext:$(CVSUSER)@cvs.squeak.sourceforge.net:/cvsroot/squeak commit cross
+	cvs -z3 -d:ext:$(CVSUSER)@cvs.sourceforge.net:/cvsroot/squeak commit cross
 
 else
 
@@ -58,7 +61,7 @@ update:
 endif
 
 export:
-	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak export -r HEAD win32-solo Cross-solo
+	cvs -z3 -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/squeak export -r HEAD win32-solo Cross-solo
 
 diff:
-	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak diff
+	cvs -z3 -d:pserver:anonymous@cvs.sourceforge.net:/cvsroot/squeak diff
