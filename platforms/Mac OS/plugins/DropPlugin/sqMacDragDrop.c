@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDragDrop.c,v 1.4 2002/05/13 19:49:47 johnmci Exp $
+*   RCSID:   $Id: sqMacDragDrop.c,v 1.5 2003/07/31 12:59:12 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Carbon cleanup
@@ -43,6 +43,7 @@ Some of this code comes from
 	9/9/99 by John Montbriand
 	
 	May 8th,2002,JMM - Bert Freudenberg published some changes to make file opening easier without security
+        July 28th, 2003, JMM - fix issue with race on open doc events and squeak VM Thread.
 	
 */
 /*
@@ -74,6 +75,7 @@ enum {
 
  Boolean gHasDragManager = false;                    /* true if the Drag Manager is installed */
  Boolean gCanTranslucentDrag = false;                /* true if translucent dragging is available */
+ Boolean gDragDropThrottleSpinLock = false;	     /* true if waiting for Squeak to process D&D */
  DragReceiveHandlerUPP gMainReceiveHandler = NULL;   /* receive handler for the main dialog */
  DragTrackingHandlerUPP gMainTrackingHandler = NULL; /* tracking handler for the main dialog */
  WindowPtr   gWindowPtr;
@@ -170,7 +172,7 @@ int dropShutdown() {
 	
 	gMainTrackingHandler = NULL; 
     gMainReceiveHandler = NULL;
-
+    gDragDropThrottleSpinLock = false;
 }
 
 int sqSecFileAccessCallback(void *function) {
@@ -184,6 +186,8 @@ char *dropRequestFileName(int dropIndex) {
     PathToFile(tempName, 
         DOCUMENT_NAME_SIZE,
         &dropFiles[dropIndex-1].fileSpec);
+    if (dropIndex == gNumDropFiles) 
+        gDragDropThrottleSpinLock = false;
   return tempName;
 }
 
@@ -440,6 +444,8 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
 }
 
 void sqSetNumberOfDropFiles(int numberOfFiles) {
+        while (gDragDropThrottleSpinLock);
+        gDragDropThrottleSpinLock = true;
 	if (gNumDropFiles != 0 ) {
 	    DisposePtr((char *) dropFiles);
 	    gNumDropFiles = 0;
