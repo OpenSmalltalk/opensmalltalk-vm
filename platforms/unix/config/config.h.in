@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: Fri Aug 15 19:45:00 2003 by piumarta (Ian Piumarta) on xombul
+ * Last edited: 2003-09-03 17:43:23 by piumarta on emilia.inria.fr
  */
 
 #ifndef __sq_config_h
@@ -88,6 +88,7 @@
 
 #undef	HAVE_PTY_H
 #undef	HAVE_UTIL_H
+#undef	HAVE_LIBUTIL_H
 #undef	HAVE_STROPTS_H
 
 #undef	HAVE_GL_GL_H
