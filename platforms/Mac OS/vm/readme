@@ -1,12 +1,13 @@
-Updated April 26th 2002
+Updated July 4th 2002
 
 Building the Squeak Virtual Machine (Jan 1st 2002)
 	-- John Maloney, May 25, 2000,
 	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001, Jan 1st 2002,
 	   Feb 5th 2002, April 26th 2002
 	-- Changes Andrew C. Greenberg, Jan 1st 2002
+    -- Changes Jay Hardesty, July 4, 2002
 
-(Note to readers, this hasn't been proofed yet, so beware)
+(Note to readers, it is possible a step was missed, so beware)
 
 Date: Tue, 1 Jan 2002 22:12:07 -0500
 Subject: Next step of the build documentation
@@ -18,6 +19,8 @@ Here's a step forward, some polish and practice necessary:
 Building a Carbon Squeak VM with ProjectBuilder:
 
 In the following, I'm assuming you have a modern build of Mac OS X (mine is 10.0.2).
+
+{JMM notes this is building with 10.1.5, and Squeak 3.2g at changeset 4905)}
 
 Overview
 
@@ -43,19 +46,10 @@ Step Two: Get the current Sourceforge Platforms tree
 	C.	cvs -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak login
 		(when prompted for a password, just hit enter)
 	D.	cvs -z3 -d:pserver:anonymous@cvs.squeak.sourceforge.net:/cvsroot/squeak co platforms
-	E.  For printing support get RealPrintingPlugin-JMM.cs.gz, from http://swiki.gsug.org:8080/sqfixes/all 
+	E.  	For printing support get RealPrintingPlugin-JMM.cs.gz, from http://swiki.gsug.org:8080/sqfixes/all 
 		decompress it and fileIn
 
 After so much mumbo-jumbo, your squeak folder should have a directory entitled platforms.
-
-Step Two Prime: Tweak LargeIntegersPlugin
-
-	(This step is necessary to fix an incompatibility between LargeIntegersPlugin,
-	gcc and some OS libraries).  There seems to be some religious issues involving the
-	nature of the changes, but we can't build in Carbon as is.  Hopefullly, these
-	issues will be reconciled and repaired to everybody's satisfaction.)
-
--	A.	http://www.mucow.com/LargeIntegersAssertFix.1.cs (just fileIn)
 
 Step Three: Get, and install, the VMMaker, and build an interpeter
 
@@ -69,7 +63,7 @@ cs
 		Interpreter-normalSend.1.cs
 		MoreInterpAccessors-JMM.2.cs
 		CheckInterruptOften-JMM.1.cs
-		Globalstructure-JMM.1.cs
+		Globalstructure-JMM.2.cs
 		CGeneratorEnhancements-ajh.1.cs
 		Gnuifier.2.cs
 		
@@ -106,7 +100,7 @@ Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
 Step Five: Shove and Tweak some files around the buildspace
 
-	A.	Open a MacOSX Finder browser and go to the src/vm folder.
+	A.	Open a MacOSX Finder browser and go to the platforms/Mac OS/src/vm folder.
 	B.	Unstuff 'resources.sit.hqx'
 		1. select the file
 		2. cmd-I for an inspector
@@ -115,7 +109,8 @@ Step Five: Shove and Tweak some files around the buildspace
 		5. go back and double-click the .hqx
 	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit'
 		(same deal as step B)
-	D.	Drag 'Squeak
+	D.	Drag 'SqueakVMForCarbon.pbproj.sit' to the folder containing
+		the 'platforms' and 'src' folders.
 
 Step Six: Run ProjectBuilder and build yourself an interpreter
 
@@ -123,13 +118,12 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
 	B.	Click on the Sources folder in the left pane
 	C.	Select "Project -> Add Files..."
         D.      Add the 'Cross' folder, and the 'Mac OS' folder, from the platform squeak cvs folder
-				Project/Add Files ... "GeniePlugin.c to Sources
-				Map "sqGnu.h" to "platforms/unix/vm/sqGnu.h"
-				Add (for both targets) "Target/Build Settings/Other Compiler Flags" -DI_AM_CARBON_EVENT
+                
                 now delete the references or uncheck the following files/folders
                 FileCopyPlugin
                 Mpeg3Plugin
-                RealPrintingPlugin
+                RealPrintingPlugin 
+                PrintJobPlugin (otherwise _stPixMap and _stColorTable are multiply defined?? -jay)
                 SqueakFFIPrims
                 TestOSAPlugin
                 PluginSDK 4.01a
@@ -138,13 +132,12 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
                 The ReadMe.txt in the cross/JPEGReaderWriter2 folder
                 The InternetConfiguration.xml in the InternetConfigPlugin folder
                 The UUIDPlugin.project.xml in the UUIDPlugin folder
-                The platform.exports in the cross/vm folder
+		sqOldSoundPrims.c in the SoundGenerationPlugin folder
                 
                 all the files that start with my in the mac vm folder
                 
                 3.x.x Release Notes.rtf
-                platform.exports
-                readme
+                 readme
                 resources.sit.hqx
                 sqMacMinimal.c
                 sqMacNSPlugin.c
@@ -157,20 +150,27 @@ Step Six: Run ProjectBuilder and build yourself an interpreter
                 two files (Squeak VM.r and SqueakApp.rsrc) in the ResourceManager Resources section.
                 Extra files imply you've got too much selected.
             	
-	E.	Click on the Resources folder in the left pane
-	F.	Select "Project -> Add Files..."
-	G.	Select all the .rsrc files in the resource/For ProjectBuilder folder and add them
-	E.	On the left pane, there are some vertically oriented fold-over tabs.
+        E.	In the finder (or a unix shell) rename the folder "resource/For ProjectBuilder"
+                to "resource/For_ProjectBuilder".
+	F.	Click on the Resources folder in the left pane.
+	G.	Select "Project -> Add Files..."
+	H	Select SqueakApp.rsrc in the resource/For_ProjectBuilder folder and add it.
+	I.	On the left pane, there are some vertically oriented fold-over tabs.
 		Click the one marked "Targets."
-	F.	On the left upper pane marked "Targets," select "Squeak VM Opt"
-	G.	On the left lower pane marked "Build Styles," select "Deployment"
-	H.	Click on the hammer icon at the top left to build your VM.
-	I.	The final product should live in the src/vm/Build folder, named "Squeak VM Opt"
+	J.	On the left upper pane marked "Targets," select "Squeak VM Opt"
+	K.	On the left lower pane marked "Build Styles," select "Deployment"
+        L.      Add (for both targets) "Target/Build Settings/Other Compiler Flags" -DI_AM_CARBON_EVENT
+        M.      On that same page, under "Search paths" - "Headers" there is a list of directories.
+                Change the last entry, "/Volumes/Lamie/Squeak/SqueakAtSourceForge/squeak/platforms/Mac OS/vm"
+                to instead point point to the "platforms/Mac OS/vm" directory on your local machine
+                (meaning the "platforms" dir downloaded from SourceForge in Step 2.D above)
+ 	L.	Click on the hammer icon at the top left to build your VM.
+		The final product should live in the src/vm/Build folder, named "Squeak VM Opt"
 
 Step Seven: Download and print your Squeak VM Developer's Certificate
 
 	http://sumeru.stanford.edu/tim/pooters/SqueakVMBuilderCertificate.pdf
-
+        
 Congratulations! Take a bow!
 
 1 tinyBenchmarks
