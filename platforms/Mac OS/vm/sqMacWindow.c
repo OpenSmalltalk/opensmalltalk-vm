@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.27 2003/11/17 17:16:02 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.28 2003/11/17 23:39:26 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -316,7 +316,46 @@ int ioShowDisplay(
                         in  += pitch;
                         out += pixPitch;
                 }
+            } else if (depth == 8 && pixDepth == 16) {
+                while (affectedH--)  {
+                        short *to=    out;
+                        unsigned char  *from=  in;
+                        long   count= bytes;
+                        unsigned short r,g,b;
+                        unsigned long target;
+                        while (count--) {
+                            target = *from++;
+                            r = (short) (*stColorTable)->ctTable[target].rgb.red;  
+                            g = (short) (*stColorTable)->ctTable[target].rgb.green;  
+                            b = (short) (*stColorTable)->ctTable[target].rgb.blue;  
+                            *to++ = ((r>>11) << 10) |
+                                ((g>>11) << 5) |
+                                ((b>>11)); 
+                        }
+                        in  += pitch;
+                        out += pixPitch;
+                }
+            }else if (depth == 8 && pixDepth == 32) {
+                while (affectedH--)  {
+                        long *to=    out;
+                        unsigned char  *from=  in;
+                        long   count= bytes;
+                        unsigned short r,g,b;
+                        unsigned long target;
+                        while (count--) {
+                            target = *from++;
+                            r = (short) (*stColorTable)->ctTable[target].rgb.red;  
+                            g = (short) (*stColorTable)->ctTable[target].rgb.green;  
+                            b = (short) (*stColorTable)->ctTable[target].rgb.blue;  
+                            *to++ = ((r>>8) << 16) |
+                                ((g>>8) << 8) |
+                                ((b>>8)); 
+                        }
+                        in  += pitch;
+                        out += pixPitch;
+                }
             }
+
             
             SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
             QDFlushPortBuffer(windowPort, maskRect);
@@ -470,6 +509,8 @@ int ioHasDisplayDepth(int depth) {
 	case 1:
 	case 2:
 	case 4:
+            return false;  //OS-X 10.3.0/1 bug in copybits, force silly manual move
+            break;
 	case 8:
 	case 16:
 	case 32:
