@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-08 06:47:23 by piumarta on cartman.inria.fr
+ * Last edited: 2003-08-15 17:41:52 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -66,6 +66,8 @@
 # include <sys/sysinfo.h>
 # include <sys/proc.h>
 #endif
+
+#undef	DEBUG_MODULES
 
 #define IMAGE_NAME_SIZE MAXPATHLEN
 
@@ -668,15 +670,16 @@ static void requireModuleNamed(char *type)	/*** NOTE: MODIFIES THE ARGUMENT! ***
       ++name;
     if (*name) *name++= '\0';
 
+#  if defined(DEBUG_MODULES)
+    printf("type %s name %s\n", type, name);
+#  endif
     {
       struct SqModule **addr= 0, *module= 0;
 
       if      (!strcmp(type, "display")) addr= &displayModule;
       else if (!strcmp(type, "sound"))   addr= &soundModule;
       /* let unknown types through to the following to generate a more informative diagnostic */
-      printf("CANONICAL %s ", name);
       name= canonicalModuleName(name);
-      printf(" = %s\n", name);
       module= requireModule(type, name);
       if (!addr)
 	{
@@ -692,6 +695,7 @@ static void requireModulesNamed(char *specs)
 {
   char *vec= strdup(specs);
   char *pos= vec;
+
   while (*pos)
     {
       char *end= pos;
@@ -739,7 +743,10 @@ static void loadModules(void)
     for (md= defaultModules;  md->addr;  ++md)
       if (!*md->addr)
 	if ((*md->addr= queryModule(md->type, md->name)))
-	  fprintf(stderr, "squeak: %s driver defaulting to vm-%s-%s\n", md->type, md->type, md->name);
+#	 if defined(DEBUG_MODULES)
+	  fprintf(stderr, "squeak: %s driver defaulting to vm-%s-%s\n", md->type, md->type, md->name)
+#	 endif
+	    ;
   }
 
   if (!displayModule)
@@ -915,19 +922,25 @@ static void vm_printUsage(void)
 {
   printf("\nCommon <option>s:\n");
   printf("  -encoding <enc>       set the internal character encoding (default: MacRoman)\n");
-  printf("  -headless             don't open initial window\n");
   printf("  -help                 print this help message, then exit\n");
-  printf("  -jit                  enable the dynamic compiler (if available)\n");
+/*printf("  -jit                  enable the dynamic compiler (if available)\n");*/
   printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
   printf("  -mmap <size>[mk]      limit dynamic heap size (default: %dm)\n", DefaultMmapSize);
-  printf("  -nodisplay            disable display\n");
   printf("  -noevents             disable event-driven input support\n");
-  printf("  -nosound              disable sound\n");
   printf("  -notimer              disable interval timer for low-res clock \n");
   printf("  -pathenc <enc>        set encoding for pathnames (default: UTF-8)\n");
   printf("  -plugins <path>       specify alternative plugin location (see manpage)\n");
   printf("  -textenc <enc>        set encoding for external text (default: UTF-8)\n");
   printf("  -version              print version information, then exit\n");
+  printf("  -vm-<sys>-<dev>       use the <dev> driver for <sys> (see below)\n");
+#if 1
+  printf("Deprecated:\n");
+  printf("  -display <dpy>        quivalent to '-vm-display-X11 -display <dpy>'\n");
+  printf("  -headless             quivalent to '-vm-display-X11 -headless'\n");
+  printf("  -nodisplay            quivalent to '-vm-display-null'\n");
+  printf("  -nosound              quivalent to '-vm-sound-null'\n");
+  printf("  -quartz               quivalent to '-vm-display-Quartz'\n");
+#endif
 }
 
 
@@ -959,13 +972,13 @@ static void usage(void)
   printf("Usage: %s [<option>...] [<imageName> [<argument>...]]\n", argVec[0]);
   printf("       %s [<option>...] -- [<argument>...]\n", argVec[0]);
   sqIgnorePluginErrors= 1;
-  queryModule("display", "Quartz");
-  queryModule("display", "X11");
-  queryModule("sound", "NAS");
-  queryModule("sound", "MacOSX");
-  queryModule("sound", "OSS");
-  queryModule("sound", "Sun");
-  modulesDo (m) m->printUsage();
+  {
+    struct moduleDescription *md;
+    for (md= moduleDescriptions;  md->addr;  ++md)
+      queryModule(md->type, md->name);
+  }
+  modulesDo(m)
+    m->printUsage();
   if (useJit)
     {
       printf("\njit <option>s:\n");
@@ -977,7 +990,11 @@ static void usage(void)
     }
   printf("\nNotes:\n");
   printf("  <imageName> defaults to `squeak.image'.\n");
-  modulesDo (m) m->printUsageNotes();
+  modulesDo(m)
+    m->printUsageNotes();
+  printf("\nAvailable drivers:\n");
+  for (m= modules;  m->next;  m= m->next)
+    printf("  %s\n", m->name);
   exit(1);
 }
 
@@ -1176,7 +1193,7 @@ int main(int argc, char **argv, char **envp)
   loadModules();
   sqIgnorePluginErrors= 0;
 
-#ifdef DEBUG_MODULES
+#if defined(DEBUG_MODULES)
   printf("displayModule %p %s\n", displayModule, displayModule->name);
   if (soundModule)
     printf("soundModule   %p %s\n", soundModule,   soundModule->name);
