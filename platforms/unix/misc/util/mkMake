@@ -6,7 +6,7 @@
 # build directory -- eg, it should have "platforms" as an immediate
 # subdirectory.
 #
-# $Id: mkMake,v 1.3 2002/01/25 02:29:04 lexspoon Exp $
+# $Id: mkMake,v 1.4 2002/01/27 04:09:59 lexspoon Exp $
 #
 
 
@@ -91,7 +91,7 @@ EOF
 # prune header files that are overriden
 # $1, $2, etc.  directories to find header files
 pruneOverridenHeaders() {
-    basenames=`find "$@" '(' -name '*.h' -o -name 'platform.exports' ')' -exec basename '{}' ';' | sort | uniq`
+    basenames=`find "$@" -maxdepth 1 '(' -name '*.h' -o -name 'platform.exports' ')' -exec basename '{}' ';' | sort | uniq`
 echo basenames: $basenames
     for header in $basenames
     do
