@@ -25,6 +25,7 @@ if test "$have_x" = "yes"; then
   fi
   AC_CHECK_LIB(X11, XOpenDisplay, [
     AC_DEFINE(USE_X11, [1])
+    AC_DEFINE_UNQUOTED(VM_X11DIR, "${x_libraries}")
     LIBS="${LIBS} -lX11"
     AC_CHECK_LIB(Xext, XShmAttach)
     if test "$have_gl" = ""; then have_gl="no"; fi
