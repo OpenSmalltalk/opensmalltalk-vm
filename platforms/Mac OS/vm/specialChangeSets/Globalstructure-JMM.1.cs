@@ -1,4 +1,4 @@
-'From Squeak3.2gamma of 15 January 2002 [latest update: #4823] on 17 April 2002 at 12:00:32 pm'!
+'From Squeak3.2gamma of 15 January 2002 [latest update: #4823] on 4 May 2002 at 10:31:32 am'!
 "Change Set:		Globalstructure-JMM
 Date:			5 April 2002
 Author:			John M McIntosh
@@ -101,7 +101,7 @@ globalVariables
 		[globalVariables _ Set withAll: variables].
 	^globalVariables! !
 
-!CCodeGeneratorGlobalStructure methodsFor: 'C code generator' stamp: 'JMM 4/16/2002 22:58'!
+!CCodeGeneratorGlobalStructure methodsFor: 'C code generator' stamp: 'JMM 4/17/2002 16:15'!
 placeInStructure: var
 	"See if we should put this array into a structure
 	This has hard coded vars, should go somewhere else!!
@@ -113,6 +113,7 @@ placeInStructure: var
 	check _ variableDeclarations at: var ifAbsent: [''].
 	(check includes: $=) ifTrue: [^false].
 	(check includes: $() ifTrue: [^false].
+	(check includes: $[) ifTrue: [^false].
 	(#( 'showSurfaceFn' 'memory' 'extraVMMemory' 'interpreterProxy') includes: var) ifTrue: [^false].
 	^true.
 	! !
