@@ -1451,7 +1451,7 @@ void SetUpWindow(char *displayName)
   /* create the Squeak window */
   {
     XSetWindowAttributes attributes;
-    unsigned long valuemask;
+    unsigned long valuemask, valuemaskForParent;
 
     attributes.border_pixel= BlackPixel(stDisplay, DefaultScreen(stDisplay));
     attributes.background_pixel= BlackPixel(stDisplay, DefaultScreen(stDisplay));
@@ -1459,6 +1459,7 @@ void SetUpWindow(char *displayName)
     attributes.backing_store= Always;
 
     valuemask= CWEventMask | CWBackingStore | CWBorderPixel | CWBackPixel;
+    valuemaskForParent= CWEventMask | CWBorderPixel ;  /* For some reason, leaving out CWBorderPixel causes errors on certain Sun boxes */
 
     /* A visual that is not DefaultVisual requires its own color map.
        If visual is PseudoColor, the new color map is made elsewhere. */
@@ -1471,6 +1472,7 @@ void SetUpWindow(char *displayName)
 				    AllocNone);
 	attributes.colormap= stColormap;
 	valuemask|= CWColormap;
+	valuemaskForParent|= CWColormap;
       }
 
     if (browserWindow != 0)
@@ -1482,7 +1484,7 @@ void SetUpWindow(char *displayName)
 			      windowBounds.width, windowBounds.height,
 			      0,
 			      stDepth, CopyFromParent, stVisual,
-			      CWEventMask, &attributes);
+			      valuemaskForParent, &attributes);
 
     attributes.event_mask= EVENTMASK;
 
