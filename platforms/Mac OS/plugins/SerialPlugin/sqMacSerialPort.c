@@ -1,3 +1,16 @@
+/****************************************************************************
+*   PROJECT: Squeak Headers
+*   FILE:    sqMacSerialPort.c
+*   CONTENT: 
+*
+*   AUTHOR:  John Maloney, John McIntosh, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqMacSerialPort.c,v 1.3 2002/03/01 00:18:31 johnmci Exp $
+*
+*   NOTES: 
+*  Feb 22nd, 2002, JMM enable 16 ports for serial, versus four, which was capped at 2?
+****************************************************************************/
 #include "sq.h"
 #include "SerialPlugin.h"
 #if TARGET_API_MAC_CARBON
@@ -16,9 +29,9 @@ extern struct VirtualMachine *interpreterProxy;
 #define INPUT_BUF_SIZE 1000
 
 /*** Serial Ports ***/
-#define MAX_PORTS 4
-short inRefNum[MAX_PORTS] = {0, 0, 0, 0};
-short outRefNum[MAX_PORTS] = {0, 0, 0, 0};
+#define MAX_PORTS 16
+short inRefNum[MAX_PORTS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
+short outRefNum[MAX_PORTS] = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0};
 char inputBuffer[MAX_PORTS][INPUT_BUF_SIZE];
 
 /*** Private Functions ***/
@@ -32,8 +45,11 @@ int serialPortNames(int portNum, char *portName, char *inName, char *outName);
 /* initialize/shutdown */
 int serialPortInit() { return true; }
 int serialPortShutdown() {
-	serialPortClose(0);
-	serialPortClose(1);
+    int i;
+    for(i=0;i<MAX_PORTS;i++) {
+        if (serialPortIsOpen(i))
+            serialPortClose(i);
+    }
 }
 
 EXPORT (int) serialPortCount(void) {
@@ -61,7 +77,7 @@ EXPORT (int) serialPortCount(void) {
  }
 
 int serialPortIsOpen(int portNum) {
-	if ((portNum < 0) || (portNum > 1)) return false;
+	if ((portNum < 0) || (portNum >= MAX_PORTS)) return false;
 	return outRefNum[portNum] != 0;
 }
 
@@ -69,6 +85,9 @@ int serialPortSetControl(int portNum,int control, char *data) {
 #if TARGET_API_MAC_CARBON
     return -1;
 #else
+	if ((portNum < 0) || (portNum >= MAX_PORTS)) {
+		return interpreterProxy->success(false); /* bad port number */
+	}
 	return  Control(outRefNum[portNum], control, data);
 #endif
 }
@@ -86,6 +105,9 @@ int serialPortNames(int portNum, char *portName, char *inName, char *outName) {
  	int				count = 0;
  
  	portName[0] = inName[0] = outName[0] = 0;
+	if ((portNum < 0) || (portNum >= MAX_PORTS)) {
+		return interpreterProxy->success(false); /* bad port number */
+	}
 	InitCRM();
  	commRec.crmDeviceType = crmSerialDevice;
  	commRec.crmDeviceID = 0;
@@ -96,6 +118,7 @@ int serialPortNames(int portNum, char *portName, char *inName, char *outName) {
 			CopyPascalStringToC((void *) *(serialPtr->name),portName);
 			CopyPascalStringToC((void *) *(serialPtr->inputDriverName),inName);
 			CopyPascalStringToC((void *) *(serialPtr->outputDriverName),outName);
+                        return;
  		}
  		count++;
 		commRec.crmDeviceID = thisRecPtr->crmDeviceID;
@@ -147,9 +170,6 @@ EXPORT (int) serialPortClose(int portNum) {
 #else
 	int osErr;
 
-	if ((portNum < 0) || (portNum > 1)) {
-		return interpreterProxy->success(false); /* bad port number */
-	}
 	if (!serialPortIsOpen(portNum)) {
 		return;  /* already closed */
 	}
@@ -185,7 +205,7 @@ EXPORT (int) serialPortOpen(
 	char userName[256], inName[256], outName[256];
 	int osErr;
 
-	if ((portNum < 0) || (portNum > 1) || serialPortIsOpen(portNum)) {
+	if ((portNum < 0) || (portNum >= MAX_PORTS) || serialPortIsOpen(portNum)) {
 		return interpreterProxy->success(false); /* bad port number or port already open */
 	}
 
