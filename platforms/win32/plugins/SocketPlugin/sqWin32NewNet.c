@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.4 2002/05/26 18:58:20 andreasraab Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.5 2003/05/28 22:37:31 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,7 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.4 2002/05/26 18:58:20 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.5 2003/05/28 22:37:31 andreasraab Exp $";
 #endif
 
 #if 0
@@ -162,9 +162,11 @@ typedef struct privateSocketStruct {
 
   DWORD  readWatcherOp;      /* read operation to watch */
   HANDLE hReadWatcherEvent;  /* event for waking up read watcher */
+  HANDLE hReadThread;
 
   DWORD  writeWatcherOp;     /* write operation to watch */
   HANDLE hWriteWatcherEvent; /* event for waking up write watcher */
+  HANDLE hWriteThread;
 
   volatile DWORD closePending; /* Cleanup counter */
 
@@ -267,6 +269,8 @@ static void cleanupSocket(privateSocketStruct *pss)
   CloseHandle(pss->mutex);
   CloseHandle(pss->hReadWatcherEvent);
   CloseHandle(pss->hWriteWatcherEvent);
+  CloseHandle(pss->hReadThread);
+  CloseHandle(pss->hWriteThread);
 
   /* Cleanup any accepted sockets */
   while(pss->accepted) {
@@ -664,6 +668,7 @@ static int createWatcherThreads(privateSocketStruct *pss)
 		 (LPVOID) pss,      /* parameter for thread   */
 		 CREATE_SUSPENDED,  /* creation parameter -- create suspended so we can check the return value */
 		 &id);              /* return value for thread id */
+  pss->hReadThread = hThread;
   if(!hThread) {
     printLastError(TEXT("CreateThread() failed"));
     removeFromList(pss);
@@ -685,6 +690,7 @@ static int createWatcherThreads(privateSocketStruct *pss)
 		 (LPVOID) pss,      /* parameter for thread   */
 		 CREATE_SUSPENDED,  /* creation parameter -- create suspended so we can check the return value */
 		 &id);              /* return value for thread id */
+  pss->hWriteThread = hThread;
   if(!hThread) {
     printLastError(TEXT("CreateThread() failed"));
     removeFromList(pss);
