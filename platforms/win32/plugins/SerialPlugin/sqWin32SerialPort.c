@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32SerialPort.c,v 1.1 2001/10/24 23:14:25 rowledge Exp $
+*   RCSID:   $Id: sqWin32SerialPort.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -17,7 +17,7 @@
 #ifndef NO_SERIAL_PORT
 
 #ifndef NO_RCSID
-  static char RCSID[] = "$Id: sqWin32SerialPort.c,v 1.1 2001/10/24 23:14:25 rowledge Exp $";
+  static char RCSID[] = "$Id: sqWin32SerialPort.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
 #endif
 
 /* Maximum number of serial ports supported */

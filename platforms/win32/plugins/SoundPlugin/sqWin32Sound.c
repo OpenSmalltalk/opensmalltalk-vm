@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Sound.c,v 1.3 2002/01/28 13:56:59 slosher Exp $
+*   RCSID:   $Id: sqWin32Sound.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:   For now we're supporting both, the DirectSound and the win32
 *            based interface. In the future we'll switch to DSound exclusively.
@@ -27,7 +27,7 @@
 #ifndef NO_SOUND
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Sound.c,v 1.3 2002/01/28 13:56:59 slosher Exp $";
+  static char RCSID[]="$Id: sqWin32Sound.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $";
 #endif
 
 /***************************************************************************/
@@ -78,6 +78,7 @@ int dx_soundInit(void) {
 }
 
 int dx_soundShutdown(void) {
+  DPRINTF(("dx_soundShutDown\n"));
   dx_snd_StopPlaying();
   dx_snd_StopRecording();
   CloseHandle(hPlayEvent);
@@ -120,6 +121,7 @@ DWORD WINAPI playCallback( LPVOID ignored ) {
     if(WaitForSingleObject(hPlayEvent, INFINITE) == WAIT_OBJECT_0) {
       if(playTerminate) {
 	hPlayThread = NULL;
+	DPRINTF(("playCallback shutdown\n"));
 	dx_snd_StopPlaying();
 	return 0; /* done playing */
       }
@@ -382,7 +384,7 @@ int dx_snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 }
 
 int dx_snd_Stop(void) {
-  playTerminate = 1;
+  dx_snd_StopPlaying();
   return 1;
 }
 
@@ -440,7 +442,7 @@ int dx_snd_StartRecording(int samplesPerSec, int stereo, int semaIndex) {
 
   /* round up the size of the record buffers to multiple of 16 bytes*/
   bytesPerFrame = stereo ? 4 : 2;
-  recBufferSize = ((bytesPerFrame * 4096) / 16) * 16;
+  recBufferSize = ((bytesPerFrame * 1024) / 16) * 16;
 
   /* create the secondary sound buffer */
   dscb.dwSize = sizeof(dscb);

@@ -1,12 +1,30 @@
 #############################################################################
 # Makefile for Win32 Squeak using gcc-2.95.2 and MingW32
 #############################################################################
+ifndef SRCDIR
+include plugins/plugins.ext
+include plugins/plugins.int
+
+INTERNAL_LIBS = $(addsuffix .lib, $(INTERNAL_PLUGINS))
+EXTERNAL_LIBS = $(addsuffix .dll, $(EXTERNAL_PLUGINS))
+endif
+
+
+AR = ar rc
+CP = copy
+RM = del
 
 #############################################################################
 # Default locations
 #
+ifndef SRCDIR
 SRCDIR= .
-BLDDIR= build
+endif
+BLDDIR= $(SRCDIR)/release
+
+ifndef OBJDIR
+OBJDIR= $(BLDDIR)
+endif
 
 #############################################################################
 # Default targets
@@ -30,6 +48,9 @@ VMDIR= $(SRCDIR)/vm
 VMSRC= $(notdir $(wildcard $(VMDIR)/*.c)) gnu-interp.c
 VMOBJ:=	$(VMSRC:.c=.o)
 VMOBJ:=	$(filter-out interp.o sqFilePrims.o, $(VMOBJ))
+
+LIBSRC = $(wildcard *.c)
+LIBOBJ = $(LIBSRC:.c=.o)
 
 .PRECIOUS: gnu-interp.c 
 #BBCopy-i386.cc
@@ -78,8 +99,8 @@ WFLAGS=
 DEFS=		-DWIN32_FILE_SUPPORT -DNO_STD_FILE_SUPPORT -DNDEBUG -DLSB_FIRST -DX86 $(XDEFS)
 #-DUSE_DIB_SECTIONS
 #-DPROFILE
-XDEFS=		
-INCS=		-I. -I$(SRCDIR) -I$(VMDIR) -I$(DXDIR) -I$(DLLDIR)/FilePlugin -I$(DLLDIR)/SocketPlugin $(XINC)
+XDEFS=		-DSQUEAK_BUILTIN_PLUGIN
+INCS=		-I. -I$(SRCDIR) -I$(SRCDIR)/plugins -I$(VMDIR) -I$(DXDIR) -I$(DLLDIR)/FilePlugin -I$(DLLDIR)/SocketPlugin $(XINC)
 MD=			mkdir
 
 #############################################################################
@@ -121,16 +142,15 @@ RCFLAGS=	--include-dir $(SRCDIR)
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg
 
-all:	$(VM) $(PLUGINS)
+all:	$(VM) $(EXTERNAL_LIBS)
 
 #############################################################################
 # Compiling Squeak itself
 #
 #  Mpeg3Plugin.o sqOpenGLRenderer.o sqWin32FilePrims.o 
 
-$(VM):	$(ALLOBJ) $(VMEXP) resource.o
-		$(MD) $(VMOUTDIR)
-		$(LD) $(LDFLAGS) -o $(VMOUTDIR)/$(VM) $(addprefix $(VMOUTDIR)/,$(ALLOBJ)) $(VMOUTDIR)/$(VMEXP) $(VMOUTDIR)/resource.o $(LIBS)
+$(VM):	$(ALLOBJ) $(INTERNAL_LIBS) $(VMEXP) resource.o
+		$(LD) $(LDFLAGS) -o $(VMOUTDIR)/$(VM) $(addprefix $(VMOUTDIR)/,$(ALLOBJ)) $(VMOUTDIR)/$(VMEXP) $(VMOUTDIR)/resource.o $(addprefix $(VMOUTDIR)/,$(INTERNAL_LIBS)) $(LIBS)
 		strip --strip-all $(VMOUTDIR)/$(VM)
 
 #############################################################################
@@ -145,30 +165,58 @@ $(VMDEF) $(VMEXP) $(VMLIB):	$(ALLOBJ)
 DLL: $(DLLOBJ)
 
 assureReleaseDir:
-	$(MD) Release
+	-$(MD) release
 
-%.dll:	assureReleaseDir
-		$(MD) Release\\$*
-		$(MAKE) -C ../$* -f ../win32/Makefile.mingw32 DLLDIR=$* DLLNAME=$*.dll DLL XDEFS=-DSTANDALONE
-		$(DLLTOOL) --output-def $(OUTDIR)/$*/$*.def --output-exp $(OUTDIR)/$*/$*.exp --output-lib $(OUTDIR)/$*/$*.lib $(OUTDIR)/$*/*.o
-		$(DLLWRAP) -mwindows -def $(OUTDIR)/$*/$*.def -o $(OUTDIR)/$*.dll $(LIBS) $(OUTDIR)/$*/*.o $(OUTDIR)/$*/$*.exp
-		strip --strip-all $(OUTDIR)/$*.dll
+#%.dll:	assureReleaseDir
+#		-$(MD) Release\\$*
+#		$(MAKE) -C ../$* -f ../win32/Makefile.mingw32 DLLDIR=$* DLLNAME=$*.dll DLL XDEFS=-DSTANDALONE
+#		$(DLLTOOL) --output-def $(OUTDIR)/$*/$*.def --output-exp $(OUTDIR)/$*/$*.exp --output-lib $(OUTDIR)/$*/$*.lib $(OUTDIR)/$*/*.o
+#		$(DLLWRAP) -mwindows -def $(OUTDIR)/$*/$*.def -o $(OUTDIR)/$*.dll $(LIBS) $(OUTDIR)/$*/*.o $(OUTDIR)/$*/$*.exp
+#		strip --strip-all $(OUTDIR)/$*.dll
+
+
+makelib: $(LIBOBJ)
+	$(AR) $(LIB) $(LIBOBJ)
+	$(RM) $(LIBOBJ)
+
+makedll: $(LIBOBJ)
+	$(DLLTOOL) \
+		--output-def $(OBJDIR)/$(LIB).def \
+		--output-exp $(OBJDIR)/$(LIB).exp \
+		--output-lib $(OBJDIR)/$(LIB).lib \
+		$(LIBOBJ)
+	$(DLLWRAP) -mwindows \
+		-def $(OBJDIR)/$(LIB).def \
+		-o   $(OBJDIR)/$(LIB).dll \
+		$(LIBS) \
+		$(OBJDIR)/$(LIB).exp \
+		$(LIBOBJ)
+	strip --strip-all $(OBJDIR)/$(LIB).dll
+	$(RM) $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
+
+%.lib:
+	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
+	$(CP) plugins\$*\$*.lib release\$*.lib
+	$(RM) plugins\$*\$*.lib
+
+%.dll:
+	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
+	$(CP) plugins\$*\$*.dll release\$*.dll
+	$(RM) plugins\$*\$*.dll
+
 
 #############################################################################
 # Rules for automated builds
 #
 
 Mpeg%.o:
-		$(MD) $(VMOUTDIR)
 		$(CC) -o $(VMOUTDIR)/$@ $(CFLAGS) -I$(VMDIR)/libmpeg -I$(DLLDIR)/Mpeg3Plugin -I$(VMDIR)/libmpeg/audio -I$(VMDIR)/libmpeg/video $(INCS) $(DEFS) -c $<
 
 .c.o:
-		$(MD) $(VMOUTDIR)
-		$(CC) -o $(VMOUTDIR)/$@ $(CFLAGS) $(INCS) $(DEFS) -c $<
+		$(CC) -o $(OBJDIR)/$@ $(CFLAGS) $(INCS) $(DEFS) -c $<
 
 .cc.o:
-		$(MD) $(VMOUTDIR)
-		$(CXX) -o $(VMOUTDIR)/$@ $(CXXFLAGS) $(INCS) $(DEFS) -c $<
+		$(CXX) -o $(OBJDIR)/$@ $(CXXFLAGS) $(INCS) $(DEFS) -c $<
 
 .c.s:
 		$(CC) -S -o $@ -fverbose-asm -Wa,ah $(CFLAGS) $(INCS) $(DEFS) -c $<
@@ -183,12 +231,10 @@ gnu-%.c:	%.c
 		$(AWK) -f $(SRCDIR)/gnuify $< > $@
 
 .rc.res:
-		$(MD) $(VMOUTDIR)
-		$(RC) $(RCFLAGS) -i $< -o $(VMOUTDIR)/$@
+		$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
 
 resource.o:	$(VMRES)
-		$(MD) $(VMOUTDIR)
-		$(RC) $(RCFLAGS) -i $(VMOUTDIR)/$< -o $(VMOUTDIR)/$@
+		$(RC) $(RCFLAGS) -i $(OBJDIR)/$< -o $(OBJDIR)/$@
 
 .cg.c:
 	$(CCG) -n -o $@ $<

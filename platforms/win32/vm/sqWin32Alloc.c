@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Alloc.c,v 1.2 2002/01/28 13:56:59 slosher Exp $
+*   RCSID:   $Id: sqWin32Alloc.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $
 *
 *
 *****************************************************************************/
@@ -18,7 +18,7 @@
 #define EXPERIMENTAL
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Alloc.c,v 1.2 2002/01/28 13:56:59 slosher Exp $";
+  static char RCSID[]="$Id: sqWin32Alloc.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $";
 #endif
 
 static LPSTR  pageBase;     /* base address of allocated memory */

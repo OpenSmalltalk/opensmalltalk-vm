@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c,v 1.2 2002/01/28 13:56:59 slosher Exp $
+*   RCSID:   $Id: sqWin32Intel.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -144,23 +144,28 @@ int OutputLogMessage(char *string)
 }
 
 int OutputConsoleString(char *string)
-{ int pos;
+{ 
+  int pos;
 
+  if(fDynamicConsole && !fShowConsole) {
+    /* show console window */
+    ShowWindow(consoleWindow, SW_SHOW);
+    fShowConsole = TRUE;
+#ifndef NO_PREFERENCES
+    CheckMenuItem(vmPrefsMenu, 0x0030, MF_BYCOMMAND | MF_CHECKED);
+#endif
+    OutputConsoleString(
+      "# Debug console\n"
+      "# To close: F2 -> 'debug options' -> 'show output console'\n"
+      "# To disable: F2 -> 'debug options' -> 'show console on errors'\n"
+      );
+  }
   pos = SendMessage(consoleWindow,WM_GETTEXTLENGTH, 0,0);
   SendMessage(consoleWindow, EM_SETSEL, pos, pos);
   while(*string)
     {
       SendMessage( consoleWindow, WM_CHAR, *string, 1);
       string++;
-    }
-  /* something has been written in the console */
-  if(fDynamicConsole)
-    {
-      ShowWindow(consoleWindow, SW_SHOW);
-      fShowConsole = TRUE;
-#ifndef NO_PREFERENCES
-      CheckMenuItem(vmPrefsMenu, 0x0030, MF_BYCOMMAND | MF_CHECKED);
-#endif
     }
   return 1;
 }
@@ -464,9 +469,14 @@ void printErrors()
   free(errorMsg);
 }
 
+extern int inCleanExit;
+
 void __cdecl Cleanup(void)
 { /* not all of these are essential, but they're polite... */
 
+  if(!inCleanExit) {
+    printCallStack();
+  }
   ioShutdownAllModules();
 #ifndef NO_PLUGIN_SUPPORT
   pluginExit();

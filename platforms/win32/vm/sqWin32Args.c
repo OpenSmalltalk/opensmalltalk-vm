@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Args.c,v 1.2 2002/04/05 00:42:25 rowledge Exp $
+*   RCSID:   $Id: sqWin32Args.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -25,22 +25,22 @@ static int IsImage(char *name)
 
   fp = fopen(name,"rb");
   if(!fp) return 0; /* not an image */
-  if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic))
-    {
-      fclose(fp);
-      return 0;
-    }
-  if (readableFormat(magic) || readableFormat(byteSwapped(magic))) {
-      fclose(fp);
-      return true;
+  if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+    fclose(fp);
+    return 0;
+  }
+  if(readableFormat(magic) || readableFormat(byteSwapped(magic))) {
+    fclose(fp);
+    return true;
   }
    
   /* no luck at beginning of file, seek to 512 and try again */
   if(fseek( fp, 512, SEEK_SET)) {
-     /* seek failed, which implies file is too small */
-     fclose(fp);
-     return false;
+    /* seek failed, which implies file is too small */
+    fclose(fp);
+    return false;
   };
+
   if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic))
     {
       fclose(fp);

@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.3 2002/03/06 10:32:21 bertf Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.3 2002/03/06 10:32:21 bertf Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.4 2002/05/04 23:20:28 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -443,6 +443,14 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
 /****************************************************************************/
 
 static DWORD dwTimerPeriod;
+static DWORD timerID;
+int _lowResMSecs = 0;
+
+void CALLBACK timerCallback(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2) {
+  _lowResMSecs++;
+  interruptCheckCounter = 0;
+}
+
 #include <mmsystem.h>
 void SetupTimer()
 {
@@ -457,12 +465,17 @@ void SetupTimer()
   dwTimerPeriod = tCaps.wPeriodMin;
   if(timeBeginPeriod(dwTimerPeriod) != 0)
     return;
+  timerID = timeSetEvent(dwTimerPeriod, 0, 
+			 timerCallback, 0, 
+			 TIME_PERIODIC | 
+			 TIME_CALLBACK_FUNCTION);
 #endif /* defined(_WIN32_WCE) */
 }
 
 void ReleaseTimer()
 {
 #if !defined(_WIN32_WCE)
+  timeKillEvent(timerID);
   timeEndPeriod(dwTimerPeriod);
 #endif /* !defined(_WIN32_WCE) */
 }
@@ -768,6 +781,7 @@ void SetupWindows()
 void SetWindowSize(void) 
 { RECT r;
   int width, height, maxWidth, maxHeight, actualWidth, actualHeight;
+  int deltaWidth, deltaHeight;
 
   if(!IsWindow(stWindow)) return; /* might happen if run as NT service */
   if(browserWindow) return; /* Ignored if in browser */
@@ -805,10 +819,15 @@ void SetWindowSize(void)
   GetClientRect(stWindow,&r);
   actualWidth = r.right - r.left;
   actualHeight = r.bottom - r.top;
-  width += (width - actualWidth);
-  height += (height - actualHeight);
-  width  = ( width <= maxWidth)  ?  width : maxWidth;
-  height = (height <= maxHeight) ? height : maxHeight;
+  /* deltaWidth/height contains the 'decoration' of the window */
+  deltaWidth = width - actualWidth;
+  deltaHeight = height - actualHeight;
+  width += deltaWidth;
+  height += deltaHeight;
+  width  = (width <= (maxWidth + deltaWidth))  ?  
+    width : (maxWidth + deltaWidth);
+  height = (height <= (maxHeight + deltaHeight)) ? 
+    height : (maxHeight + deltaHeight);
 
   SetWindowPos(stWindow, 
   		NULL, 
@@ -915,11 +934,11 @@ int recordMouseEvent(MSG *msg) {
     red |= msg->wParam & MK_RBUTTON;
     blue = yellow = 0;
   } else if(f3ButtonMouse) {
-    blue   = msg->wParam & MK_RBUTTON;
-    yellow = msg->wParam & MK_MBUTTON;
-  } else {
     blue   = msg->wParam & MK_MBUTTON;
     yellow = msg->wParam & MK_RBUTTON;
+  } else {
+    blue   = msg->wParam & MK_RBUTTON;
+    yellow = msg->wParam & MK_MBUTTON;
   }
   if(red && !blue && !yellow) { /* red button honors modifiers */
     if(alt && !ctrl) {
@@ -1257,9 +1276,11 @@ int ioMousePoint(void)
 /****************************************************************************/
 /*              Misc support primitves                                      */
 /****************************************************************************/
+int inCleanExit = 0;
 
 int ioExit(void)
 {
+  inCleanExit = 1;
   exit(0);
   /* avoid the warnings here */
   return 0;
@@ -1274,7 +1295,11 @@ int ioBeep(void)
 int ioMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
+#ifndef _WIN32_WCE
+  return timeGetTime() & 0x3FFFFFFF;
+#else
   return GetTickCount() &0x3FFFFFFF;
+#endif
 }
 
 /* Note: ioMicroMSecs returns *milli*seconds */
@@ -1972,11 +1997,11 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
   /* Careful here: 
      After resizing the main window the affected area can
      be larger than the area covered by the display bits ... */
-  if (affectedR > width) affectedR= width;
-  if (affectedB > height) affectedB= height;
+  if (affectedR > width) affectedR= width-1;
+  if (affectedB > height) affectedB= height-1;
   /* ... and don't forget left and top - else reverse_image_* will crash */
-  if (affectedL > width) affectedL= width;
-  if (affectedT > height) affectedT= height;
+  if (affectedL > width) affectedL= width-1;
+  if (affectedT > height) affectedT= height-1;
 
   /* Don't draw empty areas */
   if(affectedL == affectedR || affectedT == affectedB) return 1;

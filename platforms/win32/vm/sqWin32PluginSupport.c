@@ -1,8 +1,7 @@
-
 /* Plugin support primitives */
 #include <windows.h>
 #include "sq.h"
-#include "FilePlugin.h"
+#include "../plugins/FilePlugin/FilePlugin.h"
 
 #ifdef DEBUG
 #define DPRINTF(x) printf x

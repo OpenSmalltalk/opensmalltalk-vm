@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.2 2002/01/28 13:56:59 slosher Exp $
+*   RCSID:   $Id: sqWin32Prefs.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/

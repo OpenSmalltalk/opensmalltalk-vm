@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Service.c,v 1.1 2002/01/19 22:34:27 slosher Exp $
+*   RCSID:   $Id: sqWin32Service.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
 *
 *
 *   NOTES:   On Win95 the two "magic" entries in the registry are
@@ -21,7 +21,7 @@
 #ifndef NO_SERVICE
 
 #ifndef NO_RCSID
-  static char RCSID[] = "$Id: sqWin32Service.c,v 1.1 2002/01/19 22:34:27 slosher Exp $";
+  static char RCSID[] = "$Id: sqWin32Service.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
 #endif
 
 /****************************************************************/
