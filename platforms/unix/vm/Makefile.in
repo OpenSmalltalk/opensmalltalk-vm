@@ -35,7 +35,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2003-03-01 19:19:04 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-22 22:54:19 by piumarta on emilia.inria.fr
 
 [make_cfg]
 [make_plg]
@@ -57,9 +57,9 @@ $(TARGET) : $(OBJS) Makefile
 
 sqNamedPrims$o : $(srcdir)/vm/sqNamedPrims.h
 
-# rebuild sqExtPrims (VM_LIBDIR) sqXWin (VM_VERSION) if config.h changes
+# rebuild sqExtPrims (VM_LIBDIR) sqUnixMain (VM_VERSION) if config.h changes
 
-sqUnixExternalPrims$o sqXWindow$o : ../config.h $(topdir)/platforms/unix/vm/dlfcn-dyld.c
+sqUnixExternalPrims$o sqUnixMain$o : ../config.h $(topdir)/platforms/unix/vm/dlfcn-dyld.c
 
 # GNUify the interpreter if needed
 
