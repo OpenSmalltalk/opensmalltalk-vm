@@ -2,7 +2,7 @@
  *
  * Author: Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  * 
- * Last edited: 2003-02-02 15:24:12 by piumarta on emilia.local.
+ * Last edited: 2003-08-16 10:17:41 by piumarta on emilia.inria.fr
  *
  * Originally based on Andreas Raab's sqWin32PluginSupport
  * 
@@ -23,7 +23,7 @@
 
 #include "FilePlugin.h"
 
-#define DEBUG
+#undef DEBUG
 
 #ifdef DEBUG
 void DPRINT(char *format, ...)
@@ -54,7 +54,7 @@ void DPRINT(char *format, ...)
     }
 }
 #else
-void DPRINT(char *, ...) { }
+void DPRINT(char *format, ...) { }
 #endif
 
 /* from sqXWindow.c */
