@@ -19,6 +19,7 @@
  3.7.3bx Apr 10th, 2004 JMM fix crash on showscreen
  3.8.1b1 Jul 20th, 2004 JMM Start on multiple window logic
  3.8.6b1 Jan 25th, 2005 JMM flush qd buffers less often
+ 3.8.6b3 Jan 25th, 2005 JMM Change locking of pixels (less often)
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -151,6 +152,8 @@ int ioSetFullScreen(int fullScreen) {
 
 void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle, int affectedL, int affectedT, int affectedR, int affectedB);
 
+Boolean gPortIsLocked=false;
+
 void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle,int affectedL, int affectedT, int affectedR, int affectedB) {
 	static int pastTime=0,rememberWindowIndex=1;
 	int check;
@@ -176,6 +179,9 @@ void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRect
 		wHandleType validWindowHandle = windowHandleFromIndex(rememberWindowIndex);
 		if (validWindowHandle) {
 			RectRgn(dirtyRgn, &dirtyRect);
+			if (gPortIsLocked)
+				UnlockPortBits(GetWindowPort(windowHandleFromIndex(rememberWindowIndex)));
+			gPortIsLocked = false;
 			QDFlushPortBuffer(GetWindowPort(validWindowHandle), dirtyRgn);
 		}
 		dirtyRect = rect;
@@ -186,9 +192,14 @@ void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRect
 		UnionRect(&dirtyRect,&rect,&dirtyRect);
 			
 	/* Flush every 8ms or if the clock rolls over */ 
-	
-	if (((check = (ioMSecs() - pastTime)) > 7) || check < 0) {
+	//7
+	if (((check = (ioMSecs() - pastTime)) > 10) || check < 0) {
 		pastTime = pastTime + check;
+		if (gPortIsLocked) {
+			UnlockPortBits(windowPort);
+			gPortIsLocked = false;
+		}
+
 		if (!EmptyRect(&dirtyRect)) {
 			RectRgn(dirtyRgn, &dirtyRect);
 			QDFlushPortBuffer(windowPort, dirtyRgn);
@@ -333,12 +344,18 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
             Rect structureRect;
             GetWindowRegion(windowHandleFromIndex(windowIndex),kWindowTitleBarRgn,maskRect);
             GetRegionBounds(maskRect,&structureRect);
+			if (gPortIsLocked && windowHandleFromIndex(lastWindowIndex))
+				UnlockPortBits(GetWindowPort(windowHandleFromIndex(lastWindowIndex)));
+			gPortIsLocked = false;
             titleH = structureRect.bottom- structureRect.top;
 			lastWindowIndex = windowIndex;
         }
 
 #if TARGET_API_MAC_CARBON
-        LockPortBits(windowPort); 
+		if (!gPortIsLocked) {
+			LockPortBits(windowPort);
+			gPortIsLocked = true;
+			}
 #endif          
        {
             PixMapHandle    pix;
@@ -527,7 +544,6 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
 
 #if TARGET_API_MAC_CARBON
 			ReduceQDFlushLoad(windowPort, windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
-            UnlockPortBits(windowPort);
 #endif
         }
 
