@@ -8,4 +8,4 @@
 /* the exact time and date of build                                       */
 /**************************************************************************/
 
-char	VMVersion[] = "3.6 of "__DATE__"@"__TIME__;
+char	VMVersion[] = "3.7 of "__DATE__"@"__TIME__;
