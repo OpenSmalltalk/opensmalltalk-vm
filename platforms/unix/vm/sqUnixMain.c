@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-23 18:08:12 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-23 20:45:32 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -243,12 +243,10 @@ static void pathCopyAbs(char *target, const char *src, size_t targetSize)
 static void recordFullPathForVmName(const char *localVmName)
 {
 #if defined(__linux__)
-  char	 path[MAXPATHLEN+1];
   char	 name[MAXPATHLEN+1];
   int    len;
 
-  sprintf(path, "/proc/%d/exe", getpid());
-  if ((len= readlink(path, name, sizeof(name))) > 0)
+  if ((len= readlink("/proc/self/exe", name, sizeof(name))) > 0)
     {
       struct stat st;
       name[len]= '\0';
@@ -458,8 +456,16 @@ int ioRelinquishProcessorForMicroseconds(int us)
     ms= (nwt ? 0 : (1000/60));
   else
     ms= nwt - now;
-  if (ms < (1000/60))	/* min wait 1 timeslice */
-    ms= 0;
+  if (ms < (1000/60))		/* < 1 timeslice? */
+    {
+#    if defined(__MACH__)	/* can sleep with 1ms resolution */
+      struct timespec rqtp= { 0, ms * 1000*1000 };
+      struct timespec rmtp;
+      while ((nanosleep(&rqtp, &rmtp) < 0) && (errno == EINTR))
+	rqtp= rmtp;
+#    endif
+      ms= 0;			/* poll but don't block */
+    }
   dpy->ioRelinquishProcessorForMicroseconds(ms*1000);
   setInterruptCheckCounter(0);
   return 0;
