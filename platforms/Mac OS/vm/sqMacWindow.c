@@ -6,11 +6,12 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.16 2002/03/04 03:27:37 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.17 2002/04/27 19:05:10 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Feb 26th, 2002, JMM - use carbon get dominate device 
+*  Apr  17th, 2002, JMM Use accessors for VM variables.
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -30,8 +31,10 @@
 #endif
 
 /*** Variables -- Imported from Virtual Machine ***/
-extern int fullScreenFlag;    /* set from header when image file is loaded */
-extern int savedWindowSize;   /* set from header when image file is loaded */
+extern int getFullScreenFlag();    /* set from header when image file is loaded */
+extern int setFullScreenFlag(int value);    /* set from header when image file is loaded */
+extern int getSavedWindowSize();   /* set from header when image file is loaded */
+extern int setSavedWindowSize(int value);   /* set from header when image file is loaded */
 
 /*** Variables -- Mac Related ***/
 CTabHandle	stColorTable = nil;
@@ -85,17 +88,17 @@ int ioSetFullScreen(int fullScreen) {
 		height = (screen.bottom - screen.top);
 		if ((oldWidth < width) || (oldHeight < height)) {
 			/* save old size if it wasn't already full-screen */ 
-			savedWindowSize = (oldWidth << 16) + (oldHeight & 0xFFFF);
+			setSavedWindowSize((oldWidth << 16) + (oldHeight & 0xFFFF));
 		}
 		MoveWindow(stWindow, screen.left, screen.top, true);
 		SizeWindow(stWindow, width, height, true);
-		fullScreenFlag = true;
+		setFullScreenFlag(true);
 	} else {
 		MenuBarRestore();
 
 		/* get old window size */
-		width  = (unsigned) savedWindowSize >> 16;
-		height = savedWindowSize & 0xFFFF;
+		width  = (unsigned) getSavedWindowSize() >> 16;
+		height = getSavedWindowSize() & 0xFFFF;
 
 		/* minimum size is 64 x 64 */
 		width  = (width  > 64) ?  width : 64;
@@ -108,7 +111,7 @@ int ioSetFullScreen(int fullScreen) {
 		height = (height <= maxHeight) ? height : maxHeight;
 		MoveWindow(stWindow, rememberOldLocation.left, rememberOldLocation.top, true);
 		SizeWindow(stWindow, width, height, true);
-		fullScreenFlag = false;
+		setFullScreenFlag(false);
 	}
 }
 
@@ -639,8 +642,8 @@ GDHandle getDominateDevice( WindowPtr theWindow,Rect *windRect) {
 #else
 			*windRect = (**((WindowPeek) theWindow)->strucRgn).rgnBBox;
 			if (windRect->left == 0 && windRect->top == 0 && windRect->bottom == 0 && windRect->right == 0) {
-				windRect->right = (unsigned) savedWindowSize >> 16;
-				windRect->bottom = savedWindowSize & 0xFFFF;
+				windRect->right = (unsigned) getSavedWindowSize() >> 16;
+				windRect->bottom = getSavedWindowSize() & 0xFFFF;
 
 			}
 #endif
