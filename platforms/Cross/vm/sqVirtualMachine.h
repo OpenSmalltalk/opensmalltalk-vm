@@ -9,7 +9,7 @@
    should work with older VMs. */
 #ifndef VM_PROXY_MINOR
 /* Increment the following number if you add functions at the end */
-#define VM_PROXY_MINOR 4
+#define VM_PROXY_MINOR 5
 #endif
 
 typedef int (*CompilerHook)();
@@ -170,6 +170,15 @@ typedef struct VirtualMachine {
 	/* New for proxy 1.4 */
 	int (*ioLoadFunctionFrom)(char *fnName, char *modName);
 	int (*ioMicroMSecs)(void);
+#endif
+
+#if VM_PROXY_MINOR > 4
+	/* New for proxy 1.5 */
+        #define squeakInt64 long long
+	int (*positive64BitIntegerFor)(squeakInt64 integerValue);
+	squeakInt64 (*positive64BitValueOf)(int oop);
+	int (*signed64BitIntegerFor)(squeakInt64 integerValue);
+	squeakInt64 (*signed64BitValueOf)(int oop);
 #endif
 
 } VirtualMachine;

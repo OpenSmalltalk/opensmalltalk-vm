@@ -76,6 +76,10 @@ int positive32BitIntegerFor(int integerValue);
 int positive32BitValueOf(int oop);
 int signed32BitIntegerFor(int integerValue);
 int signed32BitValueOf(int oop);
+int positive64BitIntegerFor(squeakInt64 integerValue);
+squeakInt64 positive64BitValueOf(int oop);
+int signed64BitIntegerFor(squeakInt64 integerValue);
+squeakInt64 signed64BitValueOf(int oop);
 
 /* InterpreterProxy methodsFor: 'special objects' */
 int characterTable(void);
@@ -296,6 +300,13 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #if VM_PROXY_MINOR > 3
 	VM->ioLoadFunctionFrom = ioLoadFunctionFrom;
 	VM->ioMicroMSecs = ioMicroMSecs;
+#endif
+
+#if VM_PROXY_MINOR > 4
+	VM->positive64BitIntegerFor = positive64BitIntegerFor;
+	VM->positive64BitValueOf = positive64BitValueOf;
+	VM->signed64BitIntegerFor = signed64BitIntegerFor;
+	VM->signed64BitValueOf = signed64BitValueOf;
 #endif
 
 	return VM;
