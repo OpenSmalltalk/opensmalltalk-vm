@@ -1,6 +1,6 @@
 /* sqUnixX11.c -- support for display via the X Window System.
  * 
- *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-23 22:52:22 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-30 11:47:06 by piumarta on emilia.inria.fr
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -590,7 +590,7 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
 #    endif
       XChangeProperty(requestEv->display, requestEv->requestor,
 		      targetProperty, requestEv->target,
-		      8, PropModeReplace, buf, n);
+		      8, PropModeReplace, (const unsigned char *)buf, n);
       free(buf);
     }
   else if (xaTargets == requestEv->target)
@@ -1012,7 +1012,7 @@ static int x2sqKey(XKeyEvent *xevt)
 {
   unsigned char buf[32];
   KeySym symbolic;
-  int nConv= XLookupString(xevt, buf, sizeof(buf), &symbolic, 0);
+  int nConv= XLookupString(xevt, (char *)buf, sizeof(buf), &symbolic, 0);
   int charCode= buf[0];
 #if defined(DEBUG_EVENTS)
   fprintf(stderr, "convert keycode %d=%02x -> %d=%02x (keysym %ld)\n",
@@ -1032,7 +1032,7 @@ static int x2sqKey(XKeyEvent *xevt)
       unsigned char out[32];
 
       buf[0]= charCode;
-      if (convertChars(buf, 1, uxXWinEncoding, out, sizeof(out), sqTextEncoding, 0, 1))
+      if (convertChars((char *)buf, 1, uxXWinEncoding, (char *)out, sizeof(out), sqTextEncoding, 0, 1))
 	charCode= out[0];
 #    if defined(DEBUG_EVENTS)
       fprintf(stderr, "  8-bit: %d=%02x [%s->%s]\n", charCode, charCode, (char *)uxXWinEncoding, (char *)sqTextEncoding);
@@ -1722,9 +1722,10 @@ void initWindow(char *displayName)
     if (browserWindow != 0)
       {
 	Window root;
-	int x, w, h;
+	int s;
+	unsigned int w, h, u;
 	stParent= browserWindow;
-	XGetGeometry(stDisplay, stParent, &root, &x, &x, &w, &h, &x, &x);
+	XGetGeometry(stDisplay, stParent, &root, &s, &s, &w, &h, &u, &u);
 	stWidth= xWidth= w;
 	stHeight= xHeight= h;
 	setSavedWindowSize((w << 16) | h);
@@ -3869,7 +3870,9 @@ extern int verboseLevel;
 
 static int display_ioGLinitialise(void) { return 1; }
 
+#define _renderWindow(R)	((R)->drawable)
 #define renderWindow(R)		((Window)(R)->drawable)
+#define _renderContext(R)	((R)->context)
 #define renderContext(R)	((GLXContext)(R)->context)
 
 static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h, int flags)
@@ -3881,8 +3884,8 @@ static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h,
     visualAttributes[1]= 1;
   else 
     visualAttributes[1]= 0;
-  renderWindow(r)= 0;
-  renderContext(r)= 0;
+  _renderWindow(r)= 0;
+  _renderContext(r)= 0;
 
   DPRINTF(3, (fp, "---- Creating new renderer ----\r\r"));
 
@@ -3913,7 +3916,7 @@ static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h,
       printVisual(visinfo);
 
     /* create context */
-    if (!(renderContext(r)= glXCreateContext(stDisplay, visinfo, 0, GL_TRUE)))
+    if (!(_renderContext(r)= glXCreateContext(stDisplay, visinfo, 0, GL_TRUE)))
       {
 	DPRINTF(1, (fp, "Creating GLX context failed!\r"));
 	goto fail;
@@ -3932,9 +3935,9 @@ static int display_ioGLcreateRenderer(glRenderer *r, int x, int y, int w, int h,
       attributes.background_pixel= BlackPixel(stDisplay, DefaultScreen(stDisplay));
       valuemask|= CWBackPixel;
 
-      if (!(renderWindow(r)= XCreateWindow(stDisplay, stWindow, x, y, w, h, 0,
-					   visinfo->depth, InputOutput, visinfo->visual, 
-					   valuemask, &attributes)))
+      if (!(_renderWindow(r)= (void *)XCreateWindow(stDisplay, stWindow, x, y, w, h, 0,
+						    visinfo->depth, InputOutput, visinfo->visual, 
+						    valuemask, &attributes)))
 	{
 	  DPRINTF(1, (fp, "Failed to create client window\r"));
 	  goto fail;
