@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-08-30 13:01:29 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-01 20:26:26 by piumarta on emilia.inria.fr
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -603,7 +603,7 @@ void sqSocketListenOnPort(SocketPtr s, int port)
   sqSocketListenOnPortBacklogSize(s, port, 1);
 }
 
-void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
+void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, int port, int backlogSize, int addr)
 {
   struct sockaddr_in saddr;
 
@@ -622,7 +622,7 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family= AF_INET;
   saddr.sin_port= htons((short)port);
-  saddr.sin_addr.s_addr= INADDR_ANY;
+  saddr.sin_addr.s_addr= htonl(addr);
   bind(SOCKET(s), (struct sockaddr*) &saddr, sizeof(saddr));
   if (TCPSocketType == s->socketType)
     {
@@ -638,6 +638,10 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
     }
 }
 
+void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
+{
+  sqSocketListenOnPortBacklogSizeInterface(s, port, backlogSize, INADDR_ANY);
+}
 
 /* TCP => open a connection.
  * UDP => set remote address.
