@@ -1,4 +1,4 @@
-'From Squeak3.2gamma of 15 January 2002 [latest update: #4913] on 6 August 2002 at 1:52:43 pm'!
+'From Squeak3.5alpha of ''7 January 2003'' [latest update: #5169] on 9 April 2003 at 4:31:35 pm'!
 "Change Set:		Gnuifier
 Date:			1 January 2002
 Author:			acg
@@ -93,7 +93,7 @@ Do you want to gnuify anyway?') ifFalse: [^nil].
 	
 ! !
 
-!Gnuifier methodsFor: 'as yet unclassified' stamp: 'JMM 8/6/2002 13:34'!
+!Gnuifier methodsFor: 'as yet unclassified' stamp: 'JMM 3/27/2003 18:06'!
 gnuifyFrom: inFileStream to: outFileStream
 
 "convert interp.c to use GNU features"
@@ -133,11 +133,12 @@ gnuifyFrom: inFileStream to: outFileStream
 					inInterpretVars := true. ] ]
 			ifFalse: [
 			inInterpretVars ifTrue: [
-				(inLine findString: ' localIP;') > 0 ifTrue: [
-					outLine := '#ifdef FOO_REG
+				(inLine findString: 'register struct foo * foo = &fum;') > 0 ifTrue: [
+				outLine := '#ifdef FOO_REG
     register struct foo * foo FOO_REG = &fum;
-#endif
-    register char* localIP IP_REG;' ].
+#endif' ].
+				(inLine findString: ' localIP;') > 0 ifTrue: [
+					outLine := '    register char* localIP IP_REG;' ].
 				(inLine findString: ' localSP;') > 0 ifTrue: [
 					outLine := '    register char* localSP SP_REG;'. ].
 				(inLine findString: ' currentBytecode;') > 0 ifTrue: [
@@ -195,4 +196,3 @@ on: aFilePathString
 
 	^self new setDirectory: (FileDirectory on: aFilePathString)! !
 
-Gnuifier removeSelector: #sqGnuFile!
