@@ -249,9 +249,7 @@ InterpreterProxy >> fetchInteger: fieldIndex ofObject: objectPointer [
 	| intOop |
 	self inline: false.
 	intOop _ self fetchPointer: fieldIndex ofObject: objectPointer.
-	(self isIntegerObject: intOop)
-		ifTrue: [ ^ self integerValueOf: intOop ]
-		ifFalse: [ self primitiveFail. ^ 0 ]
+	^self checkedIntegerValueOf: intOop
 ]
 
 { #category : #private }

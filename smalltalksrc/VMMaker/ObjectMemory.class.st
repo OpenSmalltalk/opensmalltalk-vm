@@ -296,6 +296,12 @@ ObjectMemory class >> noteCompilationOf: aSelector meta: isMeta [
 ]
 
 { #category : #translation }
+ObjectMemory class >> requiredMethodNames [
+	"return the list of method names that should be retained for export or other support reasons"
+	^ #(checkedLongAt: allocateChunk: firstAccessibleObject noteAsRoot:headerLoc: splObj:)
+]
+
+{ #category : #translation }
 ObjectMemory class >> timeStamp [
 	^timeStamp ifNil:[0]
 ]
@@ -379,164 +385,148 @@ ar 3/20/98 17:20"
 ]
 
 { #category : #'object enumeration' }
-ObjectMemory >> accessibleObjectAfter: oop [
-	"Return the accessible object following the given object or free chunk in the heap. Return nil when heap is exhausted."
-
+ObjectMemory >> accessibleObjectAfter: oop [ 
+	"Return the accessible object following the given object or 
+	free chunk in the heap. Return nil when heap is exhausted."
 	| obj |
 	self inline: false.
 	obj _ self objectAfter: oop.
-	[obj < endOfMemory] whileTrue: [
-		(self isFreeObject: obj) ifFalse: [ ^obj ].
-		obj _ self objectAfter: obj.
-	].
+	[obj < endOfMemory]
+		whileTrue: [(self isFreeObject: obj) ifFalse: [^ obj].
+			obj _ self objectAfter: obj].
 	^ nil
 ]
 
 { #category : #initialization }
-ObjectMemory >> adjustAllOopsBy: bytesToShift [
-	"Adjust all oop references by the given number of bytes. This is done just after reading in an image when the new base address of the object heap is different from the base address in the image."
+ObjectMemory >> adjustAllOopsBy: bytesToShift [ 
+	"Adjust all oop references by the given number of bytes. This 
+	is done just after reading in an image when the new base 
+	address of the object heap is different from the base address 
+	in the image."
 	"di 11/18/2000 - return number of objects found"
-
 	| oop totalObjects |
 	self inline: false.
-	bytesToShift = 0 ifTrue: [ ^ 300000 ]. "this is probably an improvement over the previous anser of nil, but maybe we should do the obejct counting loop and simply guard the adjustFieldsAndClass... with a bytesToShift = 0 ifFalse: ? "
-
+	bytesToShift = 0 ifTrue: [^ 300000].
+	"this is probably an improvement over the previous answer of 
+	nil, but maybe we should do the obejct counting loop and 
+	simply guard the adjustFieldsAndClass... with a bytesToShift 
+	= 0 ifFalse: ?"
 	totalObjects _ 0.
 	oop _ self firstObject.
-	[oop < endOfMemory] whileTrue: [
-		(self isFreeObject: oop) ifFalse: [
-			totalObjects _ totalObjects + 1.
-			self adjustFieldsAndClassOf: oop by: bytesToShift.
- 		].
-		oop _ self objectAfter: oop.
-	].
-	^totalObjects
-
+	[oop < endOfMemory]
+		whileTrue: [(self isFreeObject: oop)
+				ifFalse: [totalObjects _ totalObjects + 1.
+					self adjustFieldsAndClassOf: oop by: bytesToShift].
+			oop _ self objectAfter: oop].
+	^ totalObjects
 ]
 
 { #category : #initialization }
-ObjectMemory >> adjustFieldsAndClassOf: oop by: offsetBytes [
+ObjectMemory >> adjustFieldsAndClassOf: oop by: offsetBytes [ 
 	"Adjust all pointers in this object by the given offset."
-
 	| fieldAddr fieldOop classHeader newClassOop |
 	self inline: true.
 	fieldAddr _ oop + (self lastPointerOf: oop).
-	[fieldAddr > oop] whileTrue: [
-		fieldOop _ self longAt: fieldAddr.
-		(self isIntegerObject: fieldOop) ifFalse: [
-			self longAt: fieldAddr put: (fieldOop + offsetBytes).
-		].
-		fieldAddr _ fieldAddr - 4.
-	].
-
-	(self headerType: oop) ~= HeaderTypeShort ifTrue: [
-		"adjust class header if not a compact class"
-
-		classHeader _ self longAt: (oop - 4).
-		newClassOop _
-			(classHeader bitAnd: AllButTypeMask) + offsetBytes.
-		self longAt: (oop - 4) put: (newClassOop bitOr: (classHeader bitAnd: TypeMask)).
-	].
-
+	[fieldAddr > oop]
+		whileTrue: [fieldOop _ self longAt: fieldAddr.
+			(self isIntegerObject: fieldOop)
+				ifFalse: [self longAt: fieldAddr put: fieldOop + offsetBytes].
+			fieldAddr _ fieldAddr - 4].
+	(self headerType: oop) ~= HeaderTypeShort
+		ifTrue: ["adjust class header if not a compact class"
+			classHeader _ self longAt: oop - 4.
+			newClassOop _ (classHeader bitAnd: AllButTypeMask) + offsetBytes.
+			self longAt: oop - 4 put: (newClassOop bitOr: (classHeader bitAnd: TypeMask))]
 ]
 
 { #category : #become }
-ObjectMemory >> allYoung: array1 and: array2 [
-	"Return true if all the oops in both arrays, and the arrays themselves, are in the young object space."
-
+ObjectMemory >> allYoung: array1 and: array2 [ 
+	"Return true if all the oops in both arrays, and the arrays 
+	themselves, are in the young object space."
 	| fieldOffset |
-	array1 < youngStart ifTrue: [ ^ false ].
-	array2 < youngStart ifTrue: [ ^ false ].
-	fieldOffset _ self lastPointerOf: array1.  "same size as array2"
-	[fieldOffset >= BaseHeaderSize] whileTrue: [
-		(self longAt: array1 + fieldOffset) < youngStart ifTrue: [ ^ false ].
-		(self longAt: array2 + fieldOffset) < youngStart ifTrue: [ ^ false ].
-		fieldOffset _ fieldOffset - 4.
-	].
+	array1 < youngStart ifTrue: [^ false].
+	array2 < youngStart ifTrue: [^ false].
+	fieldOffset _ self lastPointerOf: array1.
+	"same size as array2"
+	[fieldOffset >= BaseHeaderSize]
+		whileTrue: [(self longAt: array1 + fieldOffset) < youngStart ifTrue: [^ false].
+			(self longAt: array2 + fieldOffset) < youngStart ifTrue: [^ false].
+			fieldOffset _ fieldOffset - 4].
 	^ true
 ]
 
 { #category : #allocation }
-ObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill with: fillWord [
-	"Allocate a new object of the given size and number of header words. (Note: byteSize already includes space for the base header word.) Initialize the header fields of the new object and fill the remainder of the object with the given value."
-
+ObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill with: fillWord [ 
+	"Allocate a new object of the given size and number of header words. (Note: byteSize already includes space for the base header word.) Initialize the header fields of the new object and fill the remainder of the object with the given value.
+	May cause a GC"
 	| newObj remappedClassOop end i |
 	self inline: true.
+
 	"remap classOop in case GC happens during allocation"
-	hdrSize > 1 ifTrue: [ self pushRemappableOop: classOop ].
-  	newObj _ self allocateChunk: byteSize + ((hdrSize - 1) * 4).
-	hdrSize > 1 ifTrue: [ remappedClassOop _ self popRemappableOop ].
+	hdrSize > 1 ifTrue: [self pushRemappableOop: classOop].
+	newObj _ self allocateChunk: byteSize + (hdrSize - 1 * 4).
+	hdrSize > 1 ifTrue: [remappedClassOop _ self popRemappableOop].
 
-	hdrSize = 3 ifTrue: [
-		self longAt: newObj      put: (extendedSize bitOr: HeaderTypeSizeAndClass).
-		self longAt: newObj + 4 put: (remappedClassOop bitOr: HeaderTypeSizeAndClass).
-		self longAt: newObj + 8 put: (baseHeader bitOr: HeaderTypeSizeAndClass).
-		newObj _ newObj + 8.
-	].
-	hdrSize = 2 ifTrue: [
-		self longAt: newObj      put: (remappedClassOop bitOr: HeaderTypeClass).
-		self longAt: newObj + 4 put: (baseHeader bitOr: HeaderTypeClass).
-		newObj _ newObj + 4.
-	].
-	hdrSize = 1 ifTrue: [
-		self longAt: newObj put: (baseHeader bitOr: HeaderTypeShort).
-	].
+	hdrSize = 3
+		ifTrue: [self longAt: newObj put: (extendedSize bitOr: HeaderTypeSizeAndClass).
+			self longAt: newObj + 4 put: (remappedClassOop bitOr: HeaderTypeSizeAndClass).
+			self longAt: newObj + 8 put: (baseHeader bitOr: HeaderTypeSizeAndClass).
+			newObj _ newObj + 8].
 
+	hdrSize = 2
+		ifTrue: [self longAt: newObj put: (remappedClassOop bitOr: HeaderTypeClass).
+			self longAt: newObj + 4 put: (baseHeader bitOr: HeaderTypeClass).
+			newObj _ newObj + 4].
+
+	hdrSize = 1
+		ifTrue: [self longAt: newObj put: (baseHeader bitOr: HeaderTypeShort)].
 	"clear new object"
-	doFill ifTrue:
-		[end _ newObj + byteSize.
-		i _ newObj + 4.
-		[i < end] whileTrue:
-			[self longAt: i put: fillWord.
-			i _ i + 4]].
+	doFill ifTrue: [end _ newObj + byteSize.
+			i _ newObj + 4.
+			[i < end] whileTrue: [self longAt: i put: fillWord.
+					i _ i + 4]].
+	DoAssertionChecks
+		ifTrue: [self okayOop: newObj.
+			self oopHasOkayClass: newObj.
+			(self objectAfter: newObj) = freeBlock
+				ifFalse: [self error: 'allocate bug: did not set header of new oop correctly'].
+			(self objectAfter: freeBlock) = endOfMemory
+				ifFalse: [self error: 'allocate bug: did not set header of freeBlock correctly']].
 
-	DoAssertionChecks ifTrue: [
-		self okayOop: newObj.
-		self oopHasOkayClass: newObj.
-		(self objectAfter: newObj) = freeBlock
-			ifFalse: [ self error: 'allocate bug: did not set header of new oop correctly' ].
-		(self objectAfter: freeBlock) = endOfMemory
-			ifFalse: [ self error: 'allocate bug: did not set header of freeBlock correctly' ].
-	].
-
-	^ newObj
+	^newObj
 ]
 
 { #category : #allocation }
 ObjectMemory >> allocateChunk: byteSize [ 
-	"Allocate a chunk of the given size. Sender must be sure that the requested size includes enough space for the header word(s)."
-	"Details: To limit the time per incremental GC, do one every so many allocations."
-
+	"Allocate a chunk of the given size. Sender must be sure that  the requested size includes enough space for the header  word(s). " 
+	"Details: To limit the time per incremental GC, do one every so many allocations. The number is settable via primitiveVMParameter to tune your memory system"
 	| enoughSpace newFreeSize newChunk |
 	self inline: true.
-	allocationCount >= allocationsBetweenGCs ifTrue: [
-		"do an incremental GC every so many allocations to keep pauses short"
-		self incrementalGC.
-	].
+
+	allocationCount >= allocationsBetweenGCs
+		ifTrue: ["do an incremental GC every so many allocations to  keep pauses short"
+			self incrementalGC].
 
 	enoughSpace _ self sufficientSpaceToAllocate: byteSize.
-	enoughSpace ifFalse: [
-		"signal that space is running low, put proceed with allocation if possible"
-		signalLowSpace _ true.
-		lowSpaceThreshold _ 0.  "disable additional interrupts until lowSpaceThreshold is reset by image"
-		interruptCheckCounter _ 0.
-	].
+	enoughSpace
+		ifFalse: ["signal that space is running low, but proceed with allocation if possible"
+			signalLowSpace _ true.
+			lowSpaceThreshold _ 0. "disable additional interrupts until lowSpaceThreshold is reset by image"
+			self forceInterruptCheck].
+	(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ') < (self cCoerce: byteSize + BaseHeaderSize to: 'unsigned ')
+		ifTrue: [self error: 'out of memory'].
 
-	(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ')
-		< (self cCoerce: (byteSize + BaseHeaderSize) to: 'unsigned ') ifTrue: [
-		self error: 'out of memory'.
-	].
-
-	"if we get here, there is enough space for allocation to succeed"
+	"if we get here, there is enough space for allocation to  succeed "
 	newFreeSize _ (self sizeOfFree: freeBlock) - byteSize.
 	newChunk _ freeBlock.
 	freeBlock _ freeBlock + byteSize.
+
 	"Assume: client will initialize object header of free chunk, so following is not needed:"
 	"self setSizeOfFree: newChunk to: byteSize."
 	self setSizeOfFree: freeBlock to: newFreeSize.
 	allocationCount _ allocationCount + 1.
 
-	^ newChunk
+	^newChunk
 ]
 
 { #category : #allocation }
@@ -572,13 +562,13 @@ ObjectMemory >> baseHeader: oop [
 ]
 
 { #category : #'garbage collection' }
-ObjectMemory >> beRootIfOld: oop [
-	"If this object is old, mark it as a root (because a new object may be stored into it)"
-
+ObjectMemory >> beRootIfOld: oop [ 
+	"If this object is old, mark it as a root (because a new object 
+	may be stored into it)"
 	self inline: false.
-	((oop < youngStart) and: [(self isIntegerObject: oop) not]) ifTrue:
-		["Yes, oop is an old object"
-		self noteAsRoot: oop headerLoc: oop].
+	(oop < youngStart and: [(self isIntegerObject: oop) not])
+		ifTrue: ["Yes, oop is an old object"
+			self noteAsRoot: oop headerLoc: oop]
 ]
 
 { #category : #'gc -- compaction' }
@@ -605,32 +595,31 @@ ObjectMemory >> become: array1 with: array2 [
 ]
 
 { #category : #become }
-ObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [
-	"All references to each object in array1 are swapped with all references to the corresponding object in array2. That is, all pointers to one object are replaced with with pointers to the other. The arguments must be arrays of the same length. Returns true if the primitive succeeds."
+ObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHashFlag [ 
+	"All references to each object in array1 are swapped with all references to the corresponding object in array2. That is, all pointers to one object are replaced with with pointers to the other. The arguments must be arrays of the same length. 
+	Returns true if the primitive succeeds."
 	"Implementation: Uses forwarding blocks to update references as done in compaction."
+	(self isArray: array1) ifFalse: [^false].
+	(self isArray: array2) ifFalse: [^false].
+	(self lastPointerOf: array1) = (self lastPointerOf: array2) ifFalse: [^false].
+	(self containOnlyOops: array1 and: array2) ifFalse: [^false].
 
-	(self isArray: array1) ifFalse: [ ^ false ].
-	(self isArray: array2) ifFalse: [ ^ false ].
-	(self lastPointerOf: array1) = (self lastPointerOf: array2) ifFalse: [ ^ false ].
-	(self containOnlyOops: array1 and: array2) ifFalse: [ ^ false ].
+	(self prepareForwardingTableForBecoming: array1 with: array2 twoWay: twoWayFlag) ifFalse: [^false]. "fail; not enough space for forwarding table"
 
-	(self prepareForwardingTableForBecoming: array1 with: array2 twoWay: twoWayFlag)
-		ifFalse: [^ false].  "fail; not enough space for forwarding table"
-
-	(self allYoung: array1 and: array2) ifTrue: [
-		"sweep only the young objects plus the roots"
-		self mapPointersInObjectsFrom: youngStart to: endOfMemory.
-	] ifFalse: [
-		"sweep all objects"
-		self mapPointersInObjectsFrom: (self startOfMemory) to: endOfMemory.
-	].
-
+	(self allYoung: array1 and: array2)
+		ifTrue: ["sweep only the young objects plus the roots"
+			self mapPointersInObjectsFrom: youngStart to: endOfMemory]
+		ifFalse: ["sweep all objects"
+			self mapPointersInObjectsFrom: self startOfMemory to: endOfMemory].
 	twoWayFlag
 		ifTrue: [self restoreHeadersAfterBecoming: array1 with: array2]
 		ifFalse: [self restoreHeadersAfterForwardBecome: copyHashFlag].
-	self initializeMemoryFirstFree: freeBlock.  "re-initialize memory used for forwarding table"
 
-	^ true  "success"
+	self initializeMemoryFirstFree: freeBlock. "re-initialize memory used for forwarding table"
+	
+	self forceInterruptCheck. "pretty much guaranteed to take a long time, so check for timers etc ASAP"
+
+	^true "success"
 ]
 
 { #category : #allocation }
@@ -645,15 +634,12 @@ ObjectMemory >> characterTable [
 ]
 
 { #category : #'memory access' }
-ObjectMemory >> checkAddress: byteAddress [
+ObjectMemory >> checkAddress: byteAddress [ 
 	"Keep this method around for debugging the C code."
-
-	byteAddress < (self startOfMemory) ifTrue: [
-		self error: 'bad address: negative'.
-	].
-	byteAddress >= memoryLimit ifTrue: [
-		self error: 'bad address: past end of heap'.
-	].
+	byteAddress < self startOfMemory
+		ifTrue: [self error: 'bad address: negative'].
+	byteAddress >= memoryLimit
+		ifTrue: [self error: 'bad address: past end of heap']
 ]
 
 { #category : #'memory access' }
@@ -785,23 +771,24 @@ ObjectMemory >> classString [
 
 { #category : #'garbage collection' }
 ObjectMemory >> clearRootsTable [
-	"Clear the root bits of the current roots, then empty the roots table."
-	"Caution: This should only be done when the young object space is empty."
-
+	"Clear the root bits of the current roots, then empty the roots 
+	table. "
+	"Caution: This should only be done when the young object 
+	space is empty."
+	"reset the roots table (after this, all objects are old so there 
+	are no roots)"
 	| oop |
-	"reset the roots table (after this, all objects are old so there are no roots)"
-	1 to: rootTableCount do: [ :i |
-		"clear root bits of current root table entries"
-		oop _ rootTable at: i.
-		self longAt: oop put: ((self longAt: oop) bitAnd: AllButRootBit).
-		rootTable at: i put: 0.
-	].
-	rootTableCount _ 0.
+	1 to: rootTableCount do: [:i | 
+			"clear root bits of current root table entries"
+			oop _ rootTable at: i.
+			self longAt: oop put: ((self longAt: oop) bitAnd: AllButRootBit).
+			rootTable at: i put: 0].
+	rootTableCount _ 0
 ]
 
 { #category : #allocation }
 ObjectMemory >> clone: oop [
-	"Return a shallow copy of the given object."
+	"Return a shallow copy of the given object. May cause GC"
 	"Assume: Oop is a real object, not a small integer."
 
 	| extraHdrBytes bytes newChunk remappedOop fromIndex toIndex lastFrom newOop header hash |
@@ -820,32 +807,30 @@ ObjectMemory >> clone: oop [
 	fromIndex _ (remappedOop - extraHdrBytes) - 4.
 	lastFrom _ fromIndex + bytes.
 	[fromIndex < lastFrom] whileTrue: [
-		self longAt: (toIndex _ toIndex + 4)
-			put: (self longAt: (fromIndex _ fromIndex + 4)).
-	].
+		self longAt: (toIndex _ toIndex + 4) put: (self longAt: (fromIndex _ fromIndex + 4))].
 	newOop _ newChunk + extraHdrBytes.  "convert from chunk to oop"
 
 	"fix base header: compute new hash and clear Mark and Root bits"
 	hash _ self newObjectHash.
 	header _ (self longAt: newOop) bitAnd: 16r1FFFF.
-		"use old ccIndex, format, size, and header-type fields"
+	"use old ccIndex, format, size, and header-type fields"
 	header _ header bitOr: ((hash << 17) bitAnd: 16r1FFE0000).
 	self longAt: newOop put: header.
-	^ newOop
+	^newOop
 
 ]
 
 { #category : #become }
-ObjectMemory >> containOnlyOops: array1 and: array2 [
-	"Return true if neither array contains a small integer. You can't become: integers!"
-
+ObjectMemory >> containOnlyOops: array1 and: array2 [ 
+	"Return true if neither array contains a small integer. You 
+	can't become: integers!"
 	| fieldOffset |
-	fieldOffset _ self lastPointerOf: array1.  "same size as array2"
-	[fieldOffset >= BaseHeaderSize] whileTrue: [
-		(self isIntegerObject: (self longAt: array1 + fieldOffset)) ifTrue: [ ^ false ].
-		(self isIntegerObject: (self longAt: array2 + fieldOffset)) ifTrue: [ ^ false ].
-		fieldOffset _ fieldOffset - 4.
-	].
+	fieldOffset _ self lastPointerOf: array1.
+	"same size as array2"
+	[fieldOffset >= BaseHeaderSize]
+		whileTrue: [(self isIntegerObject: (self longAt: array1 + fieldOffset)) ifTrue: [^ false].
+			(self isIntegerObject: (self longAt: array2 + fieldOffset)) ifTrue: [^ false].
+			fieldOffset _ fieldOffset - 4].
 	^ true
 ]
 
@@ -876,34 +861,29 @@ ObjectMemory >> fetchByte: byteIndex ofObject: oop [
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> fetchClassOf: oop [
+ObjectMemory >> fetchClassOf: oop [ 
 	| ccIndex |
 	self inline: true.
-	(self isIntegerObject: oop)
-		ifTrue: [ ^ self splObj: ClassInteger ].
+	(self isIntegerObject: oop) ifTrue: [^ self splObj: ClassInteger].
 
-	ccIndex _ ((self baseHeader: oop) >> 12) bitAnd: 16r1F.
+	ccIndex _ (self baseHeader: oop) >> 12 bitAnd: 31.
 	ccIndex = 0
-		ifTrue: [^ (self classHeader: oop) bitAnd: AllButTypeMask ]
+		ifTrue: [^ (self classHeader: oop)
+				bitAnd: AllButTypeMask]
 		ifFalse: ["look up compact class"
-				^ self fetchPointer: ccIndex - 1
-					ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop)
-		].
-
+			^ self fetchPointer: ccIndex - 1 ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop)]
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> fetchClassOfNonInt: oop [
+ObjectMemory >> fetchClassOfNonInt: oop [ 
 	| ccIndex |
 	self inline: true.
-
-	ccIndex _ ((self baseHeader: oop) >> 12) bitAnd: 16r1F.
+	ccIndex _ (self baseHeader: oop) >> 12 bitAnd: 31.
 	ccIndex = 0
-		ifTrue: [^ (self classHeader: oop) bitAnd: AllButTypeMask ]
+		ifTrue: [^ (self classHeader: oop)
+				bitAnd: AllButTypeMask]
 		ifFalse: ["look up compact class"
-				^ self fetchPointer: ccIndex - 1
-					ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop)]
-
+			^ self fetchPointer: ccIndex - 1 ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop)]
 ]
 
 { #category : #'interpreter access' }
@@ -927,43 +907,40 @@ ObjectMemory >> fetchWordLengthOf: objectPointer [
 ]
 
 { #category : #finalization }
-ObjectMemory >> finalizeReference: oop [
-	"During sweep phase we have encountered a weak reference. Check if
-	its object has gone away (or is about to) and if so, signal a semaphore."
+ObjectMemory >> finalizeReference: oop [ 
+	"During sweep phase we have encountered a weak reference. 
+	Check if  its object has gone away (or is about to) and if so, signal a 
+	semaphore. "
+	"Do *not* inline this in sweepPhase - it is quite an unlikely 
+	case to run into a weak reference"
 	| weakOop oopGone chunk firstField lastField |
-	"Do *not* inline this in sweepPhase - it is quite an unlikely case to run into a weak reference"
 	self inline: false.
-	firstField := BaseHeaderSize + ((self nonWeakFieldsOf: oop) << 2).
-	lastField := self lastPointerOf: oop.
-	firstField to: lastField by: 4 do:[:i|
-		weakOop := self longAt: oop+i.
-		((weakOop == nilObj) or:[(self isIntegerObject: weakOop)]) ifFalse:[
-			"Check if the object is being collected.
-			If the weak reference points 
-				* backward: check if the weakOops chunk is free
-				* forward: check if the weakOoop has been marked by GC"
-			weakOop < oop 
-				ifTrue:[	chunk _ self chunkFromOop: weakOop.
-						oopGone _ ((self longAt: chunk) bitAnd: TypeMask) = HeaderTypeFree]
-				ifFalse:[oopGone _ ((self baseHeader: weakOop) bitAnd: MarkBit) = 0].
-			oopGone ifTrue:[
-					"Store nil in the pointer and signal the interpreter"
-					self longAt: oop+i put: nilObj.
-					self signalFinalization: oop].
-		].
-	].
+	firstField _ BaseHeaderSize + ((self nonWeakFieldsOf: oop) << 2).
+	lastField _ self lastPointerOf: oop.
+	firstField to: lastField by: 4 do: [:i | 
+			weakOop _ self longAt: oop + i.
+			(weakOop == nilObj or: [self isIntegerObject: weakOop])
+				ifFalse: ["Check if the object is being collected. 
+					If the weak reference points  
+					* backward: check if the weakOops chunk is free
+					* forward: check if the weakOoop has been marked by GC"
+					weakOop < oop
+						ifTrue: [chunk _ self chunkFromOop: weakOop.
+							oopGone _ ((self longAt: chunk) bitAnd: TypeMask) = HeaderTypeFree]
+						ifFalse: [oopGone _ ((self baseHeader: weakOop) bitAnd: MarkBit) = 0].
+					oopGone ifTrue: ["Store nil in the pointer and signal the  interpreter "
+							self longAt: oop + i put: nilObj.
+							self signalFinalization: oop]]]
 ]
 
 { #category : #'object enumeration' }
 ObjectMemory >> firstAccessibleObject [
 	"Return the first accessible object in the heap."
-
 	| obj |
 	obj _ self firstObject.
-	[obj < endOfMemory] whileTrue: [
-		(self isFreeObject: obj) ifFalse: [ ^obj ].
-		obj _ self objectAfter: obj.
-	].
+	[obj < endOfMemory]
+		whileTrue: [(self isFreeObject: obj) ifFalse: [^ obj].
+			obj _ self objectAfter: obj].
 	self error: 'heap is empty'
 ]
 
@@ -997,27 +974,23 @@ ObjectMemory >> formatOf: oop [
 
 { #category : #'garbage collection' }
 ObjectMemory >> fullCompaction [
-	"Move all accessible objects down to leave one big free chunk at the end of memory."
-	"Assume: Incremental GC has just been done to maximimize forwarding table space."
-	| sz |
+	"Move all accessible objects down to leave one big free chunk 
+	at the end of memory."
+	"Assume: Incremental GC has just been done to maximimize 
+	forwarding table space."
 	"need not move objects below the first free chunk"
-	compStart _ self lowestFreeAfter: (self startOfMemory).
-	compStart = freeBlock ifTrue: [
-		"memory is already compact; only free chunk is at the end"
-		^ self initializeMemoryFirstFree: freeBlock
-	].
-	(sz _ self fwdTableSize: 8) < totalObjectCount ifTrue:[
-		"Try to grow OM to make a single pass full GC"
-		self growObjectMemory: (totalObjectCount - sz + 10000) * 8.
-		"Above may or may not work. 
-		If it does, we can do compaction in a single pass.
-		If not, we'll have to loop."
-	].
+	| sz |
+	compStart _ self lowestFreeAfter: self startOfMemory.
+	compStart = freeBlock
+		ifTrue: ["memory is already compact; only free chunk is at the end "
+			^ self initializeMemoryFirstFree: freeBlock].
+	(sz _ self fwdTableSize: 8) < totalObjectCount
+		ifTrue: ["Try to grow OM to make a single pass full GC"
+			self growObjectMemory: totalObjectCount - sz + 10000 * 8].
 	"work up through memory until all free space is at the end"
-	[compStart < freeBlock] whileTrue: [
-		"free chunk returned by incCompBody becomes start of next compaction"
-		compStart _ self incCompBody.  "bubble of free space moves up each time"
-	].
+	[compStart < freeBlock]
+		whileTrue: ["free chunk returned by incCompBody becomes start of next compaction"
+			compStart _ self incCompBody]
 ]
 
 { #category : #'garbage collection' }
@@ -1105,14 +1078,15 @@ ObjectMemory >> fwdTableSize: blkSize [
 ]
 
 { #category : #allocation }
-ObjectMemory >> growObjectMemory: delta [
-	"Attempt to grow the object memory by the given delta amount"
+ObjectMemory >> growObjectMemory: delta [ 
+	"Attempt to grow the object memory by the given delta 
+	amount "
 	| limit |
 	limit _ self sqGrowMemory: memoryLimit By: delta.
-	limit = memoryLimit ifFalse:[
-		memoryLimit _ limit - 24. "remove a tad for safety"
-		self initializeMemoryFirstFree: freeBlock.
-	].
+	limit = memoryLimit
+		ifFalse: [memoryLimit _ limit - 24.
+			"remove a tad for safety"
+			self initializeMemoryFirstFree: freeBlock]
 ]
 
 { #category : #'header access' }
@@ -1148,33 +1122,27 @@ ObjectMemory >> incCompBody [
 
 { #category : #'gc -- compaction' }
 ObjectMemory >> incCompMakeFwd [
-	"Create and initialize forwarding blocks for all non-free objects 
-	following compStart. If the supply of forwarding blocks is exhausted, 
-	set compEnd to the first chunk above the area to be compacted; 
-	otherwise, set it to endOfMemory. Return the number of bytes to be 
-	freed. "
+	"Create and initialize forwarding blocks for all non-free objects  
+	following compStart. If the supply of forwarding blocks is exhausted,  
+	set compEnd to the first chunk above the area to be 
+	compacted; otherwise, set it to endOfMemory. Return the number of 
+	bytes to be freed."
 	| bytesFreed oop fwdBlock newOop |
 	self inline: false.
 	bytesFreed _ 0.
 	oop _ self oopFromChunk: compStart.
 	[oop < endOfMemory]
 		whileTrue: [(self isFreeObject: oop)
-				ifTrue: [bytesFreed _ bytesFreed
-								+ (self sizeOfFree: oop)]
+				ifTrue: [bytesFreed _ bytesFreed + (self sizeOfFree: oop)]
 				ifFalse: ["create a forwarding block for oop"
 					fwdBlock _ self fwdBlockGet: 8.
 					"Two-word block"
 					fwdBlock = nil
-						ifTrue: ["stop; we have used all available forwarding 
-							blocks "
+						ifTrue: ["stop; we have used all available forwarding blocks"
 							compEnd _ self chunkFromOop: oop.
 							^ bytesFreed].
 					newOop _ oop - bytesFreed.
-					self
-						initForwardBlock: fwdBlock
-						mapping: oop
-						to: newOop
-						withBackPtr: false].
+					self initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: false].
 			oop _ self objectAfterWhileForwarding: oop].
 	compEnd _ endOfMemory.
 	^ bytesFreed
@@ -1182,11 +1150,11 @@ ObjectMemory >> incCompMakeFwd [
 
 { #category : #'gc -- compaction' }
 ObjectMemory >> incCompMove: bytesFreed [ 
-	"Move all non-free objects between compStart and compEnd to their new 
-	locations, restoring their headers in the process. Create a new free 
-	block at the end of memory. Return the newly created free chunk."
-	"Note: The free block used by the allocator always must be the last free 
-	block in memory. It may take several compaction passes to make all 
+	"Move all non-free objects between compStart and compEnd to their new  
+	locations, restoring their headers in the process. Create a new free  
+	block at the end of memory. Return the newly created free chunk. "
+	"Note: The free block used by the allocator always must be the last free  
+	block in memory. It may take several compaction passes to make all  
 	free space bubble up to the end of memory."
 	| oop next fwdBlock newOop header bytesToMove firstWord lastWord newFreeChunk sz target |
 	self inline: false.
@@ -1196,84 +1164,76 @@ ObjectMemory >> incCompMove: bytesFreed [
 		whileTrue: [next _ self objectAfterWhileForwarding: oop.
 			(self isFreeObject: oop)
 				ifFalse: ["a moving object; unwind its forwarding block"
-					fwdBlock _ ((self longAt: oop)
-								bitAnd: AllButMarkBitAndTypeMask)
-								<< 1.
+					fwdBlock _ ((self longAt: oop) bitAnd: AllButMarkBitAndTypeMask) << 1.
 					DoAssertionChecks
 						ifTrue: [self fwdBlockValidate: fwdBlock].
 					newOop _ self longAt: fwdBlock.
 					header _ self longAt: fwdBlock + 4.
-					self longAt: oop put: header.
-					"restore the original header"
-					bytesToMove _ oop - newOop.
-					"move the oop (including any extra header words)"
+					self longAt: oop put: header. "restore the original header"
+					bytesToMove _ oop - newOop. "move the oop (including any extra header words) "
 					sz _ self sizeBitsOf: oop.
-					firstWord _ oop
-								- (self extraHeaderBytes: oop).
+					firstWord _ oop - (self extraHeaderBytes: oop).
 					lastWord _ oop + sz - BaseHeaderSize.
 					target _ firstWord - bytesToMove.
 					firstWord to: lastWord by: 4
-						do: [:w | self
-								longAt: target
-								put: (self longAt: w).
+						do: [:w | 
+							self longAt: target put: (self longAt: w).
 							target _ target + 4]].
 			oop _ next].
 	newOop = nil
 		ifTrue: ["no objects moved"
 			oop _ self oopFromChunk: compStart.
-			((self isFreeObject: oop)
-					and: [(self objectAfter: oop)
-							= (self oopFromChunk: compEnd)])
+			((self isFreeObject: oop) and: [(self objectAfter: oop) = (self oopFromChunk: compEnd)])
 				ifTrue: [newFreeChunk _ oop]
 				ifFalse: [newFreeChunk _ freeBlock]]
 		ifFalse: ["initialize the newly freed memory chunk"
-			"newOop is the last object moved; free chunk starts right after it"
-			newFreeChunk _ newOop
-						+ (self sizeBitsOf: newOop).
+			"newOop is the last object moved; free chunk starts 
+			right after it"
+			newFreeChunk _ newOop + (self sizeBitsOf: newOop).
 			self setSizeOfFree: newFreeChunk to: bytesFreed].
 	DoAssertionChecks
-		ifTrue: [(self objectAfter: newFreeChunk)
-					= (self oopFromChunk: compEnd)
+		ifTrue: [(self objectAfter: newFreeChunk) = (self oopFromChunk: compEnd)
 				ifFalse: [self error: 'problem creating free chunk after compaction']].
-	(self objectAfter: newFreeChunk)
-			= endOfMemory
+	(self objectAfter: newFreeChunk) = endOfMemory
 		ifTrue: [self initializeMemoryFirstFree: newFreeChunk]
-		ifFalse: ["newFreeChunk is not at end of memory; re-install freeBlock"
+		ifFalse: ["newFreeChunk is not at end of memory; re-install freeBlock "
 			self initializeMemoryFirstFree: freeBlock].
 	^ newFreeChunk
 ]
 
 { #category : #'garbage collection' }
 ObjectMemory >> incrementalCompaction [
-	"Move objects down to make one big free chunk. Compact the last N objects (where N = number of forwarding table entries) of the young object area."
+	"Move objects down to make one big free chunk. Compact the 
+	last N objects (where N = number of forwarding table 
+	entries) of the young object area."
 	"Assume: compStart was set during the sweep phase"
-
-	compStart = freeBlock ifTrue: [
-		"Note: If compStart = freeBlock then either the young space is already compact
-		 or there are enough forwarding table entries to do a one-pass incr. compaction."
-
-		self initializeMemoryFirstFree: freeBlock.
-	] ifFalse: [
-		self incCompBody.
-	].
-
+	compStart = freeBlock
+		ifTrue: ["Note: If compStart = freeBlock then either the young 
+			space is already compact  or there are enough forwarding table entries to do a 
+			one-pass incr. compaction."
+			self initializeMemoryFirstFree: freeBlock]
+		ifFalse: [self incCompBody]
 ]
 
 { #category : #'garbage collection' }
 ObjectMemory >> incrementalGC [
-	"Do a mark/sweep garbage collection of just the young object area of object memory (i.e., objects above youngStart), using the root table to identify objects containing pointers to young objects from the old object area."
-
+	"Do a mark/sweep garbage collection of just the young object 
+	area of object memory (i.e., objects above youngStart), using 
+	the root table to identify objects containing pointers to 
+	young objects from the old object area."
 	| survivorCount startTime |
 	self inline: false.
-	rootTableCount >= RootTableSize ifTrue: [
-		"root table overflow; cannot do an incremental GC (this should be very rare)"
-		statRootTableOverflows _ statRootTableOverflows + 1.
-		^ self fullGC].
+	rootTableCount >= RootTableSize
+		ifTrue: ["root table overflow; cannot do an incremental GC (this should be very rare)"
+			statRootTableOverflows _ statRootTableOverflows + 1.
+			^ self fullGC].
+	DoAssertionChecks
+		ifTrue: [self reverseDisplayFrom: 8 to: 15.
+			self validateRoots].
 
-	DoAssertionChecks ifTrue: [self reverseDisplayFrom: 8 to: 15].
-	DoAssertionChecks ifTrue: [self validateRoots].
 	self preGCAction: false.
 	"incremental GC and compaction"
+
 	startTime _ self ioMicroMSecs.
 	self markPhase.
 	survivorCount _ self sweepPhase.
@@ -1282,93 +1242,97 @@ ObjectMemory >> incrementalGC [
 	statIncrGCs _ statIncrGCs + 1.
 	statIncrGCMSecs _ statIncrGCMSecs + (self ioMicroMSecs - startTime).
 
-	(survivorCount > tenuringThreshold 
-		or:[rootTableCount >= RootTableRedZone]) ifTrue: [
-		"move up the young space boundary if
-		* there are too many survivors:
-			this limits the number of objects that must be processed on future
-			incremental GC's
-		* we're about to overflow the roots table
-			this limits the number of full GCs that may be caused by 
-			root table overflows in the near future"
-
-		statTenures _ statTenures + 1.
-		self clearRootsTable.
-		youngStart _ freeBlock.  "reset the young object boundary"
-	].
+	self forceInterruptCheck. "Force an an interrupt check ASAP.We could choose to be clever here and only do this under certain time conditions. Keep it simple for now"
+	
+	(survivorCount > tenuringThreshold
+			or: [rootTableCount >= RootTableRedZone])
+		ifTrue: ["move up the young space boundary if 
+			* there are too many survivors: 
+			this limits the number of objects that must be 
+			processed on future incremental GC's 
+			* we're about to overflow the roots table 
+			this limits the number of full GCs that may be caused 
+			by root table overflows in the near future"
+			statTenures _ statTenures + 1.
+			self clearRootsTable.
+			youngStart _ freeBlock].
 	self postGCAction.
-	DoAssertionChecks ifTrue: [self reverseDisplayFrom: 8 to: 15].
-
+	DoAssertionChecks
+		ifTrue: [self reverseDisplayFrom: 8 to: 15]
 ]
 
 { #category : #'gc -- compaction' }
-ObjectMemory >> initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: backFlag [
-	"Initialize the given forwarding block to map oop to newOop, and replace oop's header with a pointer to the fowarding block."
-	"Details: The mark bit is used to indicate that an oop is forwarded. When an oop is forwarded, its header (minus the mark bit) contains the address of its forwarding block. (The forwarding block address is actually shifted right by one bit so that its top-most bit does not conflict with the header's mark bit; since fowarding blocks are stored on word boundaries, the low two bits of the address are always zero.) The first word of the forwarding block is the new oop; the second word is the oop's orginal header. In the case of a forward become, a four-word block is used, with the third field being a backpointer to the old oop (for header fixup), and the fourth word is unused.  The type bits of the forwarding header are the same as those of the original header."
-
+ObjectMemory >> initForwardBlock: fwdBlock mapping: oop to: newOop withBackPtr: backFlag [ 
+	"Initialize the given forwarding block to map oop to newOop, 
+	and replace oop's header with a pointer to the fowarding 
+	block. "
+	"Details: The mark bit is used to indicate that an oop is 
+	forwarded. When an oop is forwarded, its header (minus the 
+	mark bit) contains the address of its forwarding block. (The 
+	forwarding block address is actually shifted right by one bit 
+	so that its top-most bit does not conflict with the header's 
+	mark bit; since fowarding blocks are stored on word 
+	boundaries, the low two bits of the address are always zero.) 
+	The first word of the forwarding block is the new oop; the 
+	second word is the oop's orginal header. In the case of a 
+	forward become, a four-word block is used, with the third 
+	field being a backpointer to the old oop (for header fixup), 
+	and the fourth word is unused. The type bits of the 
+	forwarding header are the same as those of the original 
+	header. "
 	| originalHeader originalHeaderType |
 	self inline: true.
 	originalHeader _ self longAt: oop.
-	DoAssertionChecks ifTrue: [
-		fwdBlock = nil
-			ifTrue: [ self error: 'ran out of forwarding blocks in become' ].
-		(originalHeader bitAnd: MarkBit) ~= 0
-			ifTrue: [ self error: 'object already has a forwarding table entry' ].
-	].
-
+	DoAssertionChecks
+		ifTrue: [fwdBlock = nil ifTrue: [self error: 'ran out of forwarding blocks in become'].
+			(originalHeader bitAnd: MarkBit) ~= 0
+				ifTrue: [self error: 'object already has a forwarding table entry']].
 	originalHeaderType _ originalHeader bitAnd: TypeMask.
 	self longAt: fwdBlock put: newOop.
 	self longAt: fwdBlock + 4 put: originalHeader.
-	backFlag ifTrue:
-		[self longAt: fwdBlock + 8 put: oop].
-	self longAt: oop put: (fwdBlock >> 1 bitOr: (MarkBit bitOr: originalHeaderType)).
-
+	backFlag ifTrue: [self longAt: fwdBlock + 8 put: oop].
+	self longAt: oop put: (fwdBlock >> 1 bitOr: (MarkBit bitOr: originalHeaderType))
 ]
 
 { #category : #'object enumeration' }
-ObjectMemory >> initialInstanceOf: classPointer [
-	"Support for instance enumeration. Return the first instance of the given class, or nilObj if it has no instances."
-
+ObjectMemory >> initialInstanceOf: classPointer [ 
+	"Support for instance enumeration. Return the first instance 
+	of the given class, or nilObj if it has no instances."
 	| thisObj thisClass |
 	thisObj _ self firstAccessibleObject.
-	[thisObj = nil] whileFalse: [
-		thisClass _ self fetchClassOf: thisObj.
-		thisClass = classPointer ifTrue: [ ^thisObj ].
-		thisObj _ self accessibleObjectAfter: thisObj.
-	].
-	^nilObj
+	[thisObj = nil]
+		whileFalse: [thisClass _ self fetchClassOf: thisObj.
+			thisClass = classPointer ifTrue: [^ thisObj].
+			thisObj _ self accessibleObjectAfter: thisObj].
+	^ nilObj
 ]
 
 { #category : #initialization }
 ObjectMemory >> initializeMemoryFirstFree: firstFree [ 
-	"Initialize endOfMemory to the top of oop storage space, reserving some space for forwarding blocks, and create the freeBlock from which space is allocated. Also create a fake free chunk at endOfMemory to act as a sentinal for memory scans."
-	"Note: The amount of space reserved for forwarding blocks should be chosen to ensure that incremental compactions can usually be done in a single pass. However, there should be enough forwarding blocks so a full compaction can be done in a reasonable number of passes, say ten. (A full compaction requires N object-moving passes, where N = number of non-garbage objects / number of forwarding blocks).
-di 11/18/2000 Re totalObjectCount: Provide a margin of one byte per object to be used for forwarding pointers at GC time.  Since fwd blocks are 8 bytes, this means an absolute worst case of 8 passes to compact memory.  In most cases it will be adequate to do compaction in a single pass."
-
+	"Initialize endOfMemory to the top of oop storage space, reserving some space for forwarding blocks, and create the freeBlock from which space is allocated. Also create a fake free chunk at endOfMemory to act as a sentinal for memory scans. "
+	"Note: The amount of space reserved for forwarding blocks should be chosen to ensure that incremental compactions can usually be done in a single pass. However, there should be enough forwarding blocks so a full compaction can be done in a reasonable number of passes, say ten. (A full compaction requires N object-moving passes, where N = number of non-garbage objects / number of forwarding blocks). 
+	di 11/18/2000 Re totalObjectCount: Provide a margin of one byte per object to be used for forwarding pointers at GC time. Since fwd blocks are 8 bytes, this means an absolute worst case of 8 passes to compact memory. In most cases it will be adequate to do compaction in a single pass. "
 	| fwdBlockBytes |
 	"reserve space for forwarding blocks"
-	fwdBlockBytes _ totalObjectCount bitAnd: 16rFFFFFFFC.
-	(memoryLimit - fwdBlockBytes) >= (firstFree + BaseHeaderSize) ifFalse: [
-		"reserve enough space for a minimal free block of BaseHeaderSize bytes"
-		fwdBlockBytes _ memoryLimit - (firstFree + BaseHeaderSize).
-	].
+	fwdBlockBytes _ totalObjectCount bitAnd: 4294967292.
+	memoryLimit - fwdBlockBytes >= (firstFree + BaseHeaderSize)
+		ifFalse: ["reserve enough space for a minimal free block of BaseHeaderSize bytes"
+			fwdBlockBytes _ memoryLimit - (firstFree + BaseHeaderSize)].
 
 	"set endOfMemory and initialize freeBlock"
 	endOfMemory _ memoryLimit - fwdBlockBytes.
 	freeBlock _ firstFree.
-	self setSizeOfFree: freeBlock to: (endOfMemory - firstFree).  "bytes available for oops"
+	self setSizeOfFree: freeBlock to: endOfMemory - firstFree. "bytes available for oops"
 
-	"make a fake free chunk at endOfMemory for use as a sentinal in memory scans"
+	"make a fake free chunk at endOfMemory for use as a sentinel in memory scans"
 	self setSizeOfFree: endOfMemory to: BaseHeaderSize.
-
-	DoAssertionChecks ifTrue: [
-		((freeBlock < endOfMemory) and: [endOfMemory < memoryLimit])
-			ifFalse: [ self error: 'error in free space computation' ].	
-		(self oopFromChunk: endOfMemory) = endOfMemory
-			ifFalse: [ self error: 'header format must have changed' ].
-		(self objectAfter: freeBlock) = endOfMemory
-			ifFalse: [ self error: 'free block not properly initialized' ].
-	].
+	DoAssertionChecks
+		ifTrue: [(freeBlock < endOfMemory and: [endOfMemory < memoryLimit])
+				ifFalse: [self error: 'error in free space computation'].
+			(self oopFromChunk: endOfMemory) = endOfMemory
+				ifFalse: [self error: 'header format must have changed'].
+			(self objectAfter: freeBlock) = endOfMemory
+				ifFalse: [self error: 'free block not properly initialized']]
 ]
 
 { #category : #initialization }
@@ -1390,8 +1354,7 @@ ObjectMemory >> initializeObjectMemory: bytesToShift [
 	"image may be at a different address; adjust oops for new location"
 	totalObjectCount _ self adjustAllOopsBy: bytesToShift.
 
-	self initializeMemoryFirstFree: endOfMemory.
-		"initializes endOfMemory, freeBlock"
+	self initializeMemoryFirstFree: endOfMemory. "initializes endOfMemory, freeBlock"
 
 	specialObjectsOop _ specialObjectsOop + bytesToShift.
 
@@ -1427,112 +1390,102 @@ ObjectMemory >> initializeObjectMemory: bytesToShift [
 ]
 
 { #category : #'object enumeration' }
-ObjectMemory >> instanceAfter: objectPointer [
-	"Support for instance enumeration. Return the next instance of the class of the given object, or nilObj if the enumeration is complete."
-
+ObjectMemory >> instanceAfter: objectPointer [ 
+	"Support for instance enumeration. Return the next instance 
+	of the class of the given object, or nilObj if the enumeration 
+	is complete."
 	| classPointer thisObj thisClass |
-	classPointer _ (self fetchClassOf: objectPointer).
+	classPointer _ self fetchClassOf: objectPointer.
 	thisObj _ self accessibleObjectAfter: objectPointer.
-	[thisObj = nil] whileFalse: [
-		thisClass _ self fetchClassOf: thisObj.
-		thisClass = classPointer ifTrue: [ ^thisObj ].
-		thisObj _ self accessibleObjectAfter: thisObj.
-	].
-	^nilObj
+	[thisObj = nil]
+		whileFalse: [thisClass _ self fetchClassOf: thisObj.
+			thisClass = classPointer ifTrue: [^ thisObj].
+			thisObj _ self accessibleObjectAfter: thisObj].
+	^ nilObj
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> instantiateClass: classPointer indexableSize: size [
+ObjectMemory >> instantiateClass: classPointer indexableSize: size [ 
+	" 
+	NOTE: This method supports the backward-compatible split instSize field of the 
+	class format word. The sizeHiBits will go away and other shifts change by 2 
+	when the split fields get merged in an (incompatible) image change. "
 	| hash header1 header2 cClass byteSize format inc binc header3 hdrSize fillWord newObj sizeHiBits |
-"
-	NOTE: This method supports the backward-compatible split instSize field of the
-	class format word.  The sizeHiBits will go away and other shifts change by 2
-	when the split fields get merged in an (incompatible) image change.
-"
 	self inline: false.
-	DoAssertionChecks ifTrue: [
-		size < 0 ifTrue: [ self error: 'cannot have a negative indexable field count' ]].
-
+	DoAssertionChecks ifTrue: [size < 0
+				ifTrue: [self error: 'cannot have a negative indexable field count']].
 	hash _ self newObjectHash.
-	header1 _ self formatOfClass: classPointer. "Low 2 bits are 0"
-	sizeHiBits _ (header1 bitAnd: 16r60000) >> 9.
-	header1 _ (header1 bitAnd: 16r1FFFF) bitOr: ((hash << HashBitsOffset) bitAnd: HashBits).
+	header1 _ self formatOfClass: classPointer.
+	"Low 2 bits are 0"
+	sizeHiBits _ (header1 bitAnd: 393216) >> 9.
+	header1 _ (header1 bitAnd: 131071) bitOr: (hash << HashBitsOffset bitAnd: HashBits).
 	header2 _ classPointer.
 	header3 _ 0.
-
 	cClass _ header1 bitAnd: CompactClassMask. "compact class field from format word"
 	byteSize _ (header1 bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
-	format _ (header1 >> 8) bitAnd: 16rF.
-
-	format < 8 ifTrue: [
-		"Bitmaps and Arrays"
-		inc _ size * 4.
-	] ifFalse: [
-		"Strings and Methods"
-		inc _ (size + 3) bitAnd: AllButTypeMask. "round up"
-		binc _ 3 - ((size + 3) bitAnd: 3). "odd bytes"
-		"low bits of byte size go in format field"
-		header1 _ header1 bitOr: (binc << 8).
-	].
-
-	(byteSize + inc) > 255 ifTrue: [
-		"requires size header word"
-		header3 _ byteSize + inc.
-		header1 _ header1 - (byteSize bitAnd: 16rFF).  "Clear qsize field"
-	] ifFalse: [
-		header1 _ header1 + inc.
-	].
+	format _ header1 >> 8 bitAnd: 15.
+	format < 8
+		ifTrue: ["Bitmaps and Arrays"
+			inc _ size * 4]
+		ifFalse: ["Strings and Methods"
+			inc _ size + 3 bitAnd: AllButTypeMask. "round up"
+			binc _ 3 - (size + 3 bitAnd: 3). "odd bytes"
+			"low bits of byte size go in format field"
+			header1 _ header1 bitOr: binc << 8].
+	byteSize + inc > 255
+		ifTrue: ["requires size header word"
+			header3 _ byteSize + inc.
+			header1 _ header1 - (byteSize bitAnd: 255)]
+		ifFalse: [header1 _ header1 + inc].
 	byteSize _ byteSize + inc.
-
-	header3 > 0 ifTrue: [
-		"requires full header"
-		hdrSize _ 3.
-	] ifFalse: [
-		cClass = 0
-			ifTrue: [ hdrSize _ 2 ]
-			ifFalse: [ hdrSize _ 1 ].
-	].
-	format <= 4  "if pointers, fill with nil oop"
-		ifTrue: [ fillWord _ nilObj ]
-		ifFalse: [ fillWord _ 0 ].
-
+	header3 > 0
+		ifTrue: ["requires full header"
+			hdrSize _ 3]
+		ifFalse: [cClass = 0
+				ifTrue: [hdrSize _ 2]
+				ifFalse: [hdrSize _ 1]].
+	format <= 4
+		ifTrue: ["if pointers, fill with nil oop"
+			fillWord _ nilObj]
+		ifFalse: [fillWord _ 0].
 	newObj _ self allocate: byteSize headerSize: hdrSize h1: header1 h2: header2 h3: header3 doFill: true with: fillWord.
 	^ newObj
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> instantiateContext: classPointer sizeInBytes: sizeInBytes [
-	"This version of instantiateClass assumes that the total object size is under 256 bytes, the limit for objects with only one or two header words. Note that the size is specified in bytes and should include four bytes for the base header word."
-
+ObjectMemory >> instantiateContext: classPointer sizeInBytes: sizeInBytes [ 
+	"This version of instantiateClass assumes that the total object 
+	size is under 256 bytes, the limit for objects with only one or 
+	two header words. Note that the size is specified in bytes 
+	and should include four bytes for the base header word."
 	| hash header1 header2 hdrSize |
 	hash _ self newObjectHash.
-	header1 _ ((hash << HashBitsOffset) bitAnd: HashBits) bitOr:
-			   (self formatOfClass: classPointer).
+	header1 _ (hash << HashBitsOffset bitAnd: HashBits) bitOr: (self formatOfClass: classPointer).
 	header1 _ header1 + (sizeInBytes - (header1 bitAnd: SizeMask)).
 	header2 _ classPointer.
-
-	(header1 bitAnd: CompactClassMask) = 0 "is compact class field from format word zero?"
-		ifTrue: [ hdrSize _ 2 ]
-		ifFalse: [ hdrSize _ 1 ].
-
+	(header1 bitAnd: CompactClassMask) = 0
+		ifTrue: ["is compact class field from format word zero?"
+			hdrSize _ 2]
+		ifFalse: [hdrSize _ 1].
 	^ self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: header2 h3: 0 doFill: false with: 0
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> instantiateSmallClass: classPointer sizeInBytes: sizeInBytes fill: fillValue [
-	"This version of instantiateClass assumes that the total object size is under 256 bytes, the limit for objects with only one or two header words. Note that the size is specified in bytes and should include four bytes for the base header word."
-
+ObjectMemory >> instantiateSmallClass: classPointer sizeInBytes: sizeInBytes fill: fillValue [ 
+	"This version of instantiateClass assumes that the total object 
+	size is under 256 bytes, the limit for objects with only one or 
+	two header words. Note that the size is specified in bytes 
+	and should include four bytes for the base header word. 
+	May cause a GC"
 	| hash header1 header2 hdrSize |
 	hash _ self newObjectHash.
-	header1 _ ((hash << HashBitsOffset) bitAnd: HashBits) bitOr:
-			   (self formatOfClass: classPointer).
+	header1 _ (hash << HashBitsOffset bitAnd: HashBits) bitOr: (self formatOfClass: classPointer).
 	header1 _ header1 + (sizeInBytes - (header1 bitAnd: SizeMask)).
 	header2 _ classPointer.
-
-	(header1 bitAnd: CompactClassMask) = 0 "is compact class field from format word zero?"
-		ifTrue: [ hdrSize _ 2 ]
-		ifFalse: [ hdrSize _ 1 ].
-
+	(header1 bitAnd: CompactClassMask) = 0
+		ifTrue: ["is compact class field from format word zero?"
+			hdrSize _ 2]
+		ifFalse: [hdrSize _ 1].
 	^ self allocate: sizeInBytes headerSize: hdrSize h1: header1 h2: header2 h3: 0 doFill: true with: fillValue
 ]
 
@@ -1582,6 +1535,13 @@ ObjectMemory >> isBytesNonInt: oop [
 	^ (self formatOf: oop)  >= 8
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> isCompiledMethod: oop [
+    "Answer whether the receiver is of compiled method format"
+    ^(self formatOf: oop) >= 12
+
+]
+
 { #category : #'header access' }
 ObjectMemory >> isFreeObject: oop [
 
@@ -1615,11 +1575,10 @@ ObjectMemory >> isNonIntegerObject: objectPointer [
 ]
 
 { #category : #'gc -- compaction' }
-ObjectMemory >> isObjectForwarded: oop [
-	"Return true if the given object has a forwarding table entry during a compaction or become operation."
-
-	^ (oop bitAnd: 1) = 0 "(isIntegerObject: oop) not" and:
-	   [ ((self longAt: oop) bitAnd: MarkBit) ~= 0 ]
+ObjectMemory >> isObjectForwarded: oop [ 
+	"Return true if the given object has a forwarding table entry 
+	during a compaction or become operation."
+	^ (oop bitAnd: 1) = 0 and: ["(isIntegerObject: oop) not" ((self longAt: oop) bitAnd: MarkBit) ~= 0]
 ]
 
 { #category : #'header access' }
@@ -1681,22 +1640,20 @@ ObjectMemory >> isWordsOrBytesNonInt: oop [
 
 { #category : #'object enumeration' }
 ObjectMemory >> lastPointerOf: oop [ 
-	"Return the byte offset of the last pointer field of the given object. 
-	Works with CompiledMethods, as well as ordinary objects. Can be used 
-	even when the type bits are not correct."
+	"Return the byte offset of the last pointer field of the given object.  
+	Works with CompiledMethods, as well as ordinary objects. 
+	Can be used even when the type bits are not correct."
 	| fmt sz methodHeader header contextSize |
 	self inline: true.
 	header _ self baseHeader: oop.
 	fmt _ header >> 8 bitAnd: 15.
-	fmt <= 4
-		ifTrue: [(fmt = 3 and: [self isContextHeader: header])
-				ifTrue: ["contexts end at the stack pointer"
-					contextSize _ self fetchStackPointerOf: oop.
-					^ CtxtTempFrameStart + contextSize * 4].
-			sz _ self sizeBitsOfSafe: oop.
-			^ sz - BaseHeaderSize"all pointers"].
-	fmt < 12
-		ifTrue: [^ 0]. "no pointers"
+	fmt <= 4 ifTrue: [(fmt = 3 and: [self isContextHeader: header])
+					ifTrue: ["contexts end at the stack pointer"
+						contextSize _ self fetchStackPointerOf: oop.
+						^ CtxtTempFrameStart + contextSize * 4].
+				sz _ self sizeBitsOfSafe: oop.
+				^ sz - BaseHeaderSize"all pointers"].
+	fmt < 12 ifTrue: [^ 0]. "no pointers"
 
 	"CompiledMethod: contains both pointers and bytes:"
 	methodHeader _ self longAt: oop + BaseHeaderSize.
@@ -1705,29 +1662,26 @@ ObjectMemory >> lastPointerOf: oop [
 
 { #category : #'gc -- compaction' }
 ObjectMemory >> lastPointerWhileForwarding: oop [ 
-	"The given object may have its header word in a forwarding block. Find 
-	the offset of the last pointer in the object in spite of this obstacle."
+	"The given object may have its header word in a forwarding block. Find  
+	the offset of the last pointer in the object in spite of this obstacle. "
 	| header fwdBlock fmt size methodHeader contextSize |
 	self inline: true.
 	header _ self longAt: oop.
 	(header bitAnd: MarkBit) ~= 0
-		ifTrue: ["oop is forwarded; get its real header from its forwarding table 
-			entry "
+		ifTrue: ["oop is forwarded; get its real header from its forwarding table entry"
 			fwdBlock _ (header bitAnd: AllButMarkBitAndTypeMask) << 1.
 			DoAssertionChecks
 				ifTrue: [self fwdBlockValidate: fwdBlock].
 			header _ self longAt: fwdBlock + 4].
 	fmt _ header >> 8 bitAnd: 15.
-	fmt <= 4 ifTrue: [(fmt = 3
-					and: [self isContextHeader: header])
+	fmt <= 4
+		ifTrue: [(fmt = 3 and: [self isContextHeader: header])
 				ifTrue: ["contexts end at the stack pointer"
 					contextSize _ self fetchStackPointerOf: oop.
 					^ CtxtTempFrameStart + contextSize * 4].
 			"do sizeBitsOf: using the header we obtained"
-			(header bitAnd: TypeMask)
-					= HeaderTypeSizeAndClass
-				ifTrue: [size _ (self sizeHeader: oop)
-								bitAnd: AllButTypeMask]
+			(header bitAnd: TypeMask) = HeaderTypeSizeAndClass
+				ifTrue: [size _ (self sizeHeader: oop) bitAnd: AllButTypeMask]
 				ifFalse: [size _ header bitAnd: SizeMask].
 			^ size - BaseHeaderSize].
 	fmt < 12 ifTrue: [^ 0]. "no pointers"
@@ -1736,26 +1690,21 @@ ObjectMemory >> lastPointerWhileForwarding: oop [
 ]
 
 { #category : #'garbage collection' }
-ObjectMemory >> lowestFreeAfter: chunk [
+ObjectMemory >> lowestFreeAfter: chunk [ 
 	"Return the first free block after the given chunk in memory."
-
 	| oop oopHeader oopHeaderType oopSize |
 	self inline: false.
 	oop _ self oopFromChunk: chunk.
-	[oop < endOfMemory] whileTrue: [
-		oopHeader _ self baseHeader: oop.
-		oopHeaderType _ oopHeader bitAnd: TypeMask.
-		(oopHeaderType = HeaderTypeFree)
-			ifTrue: [ ^ oop ]
-			ifFalse: [
-				oopHeaderType = HeaderTypeSizeAndClass
-					ifTrue: [ oopSize _ (self sizeHeader: oop) bitAnd: AllButTypeMask ]
-					ifFalse: [ oopSize _ oopHeader bitAnd: SizeMask ].
-			].
-		oop _ self oopFromChunk: (oop + oopSize).
-	].
-	self error: 'expected to find at least one free object'.
-
+	[oop < endOfMemory]
+		whileTrue: [oopHeader _ self baseHeader: oop.
+			oopHeaderType _ oopHeader bitAnd: TypeMask.
+			oopHeaderType = HeaderTypeFree
+				ifTrue: [^ oop]
+				ifFalse: [oopHeaderType = HeaderTypeSizeAndClass
+						ifTrue: [oopSize _ (self sizeHeader: oop) bitAnd: AllButTypeMask]
+						ifFalse: [oopSize _ oopHeader bitAnd: SizeMask]].
+			oop _ self oopFromChunk: oop + oopSize].
+	self error: 'expected to find at least one free object'
 ]
 
 { #category : #'gc -- compaction' }
@@ -1801,32 +1750,32 @@ ObjectMemory >> markAndTrace: oop [
 	youngStartLocal _ youngStart.
 	"run the tracer state machine until all objects reachable from oop are marked"
 	[action = Done] whileFalse: [
-		action = StartField	ifTrue: [ action _ self startField ].
-		action = StartObj		ifTrue: [ action _ self startObj ].
-		action = Upward		ifTrue: [ action _ self upward ].
+		action = StartField ifTrue: [ action _ self startField ].
+		action = StartObj ifTrue: [ action _ self startObj ].
+		action = Upward ifTrue: [ action _ self upward ].
 	].
 ]
 
 { #category : #'gc -- mark and sweep' }
 ObjectMemory >> markPhase [
-	"Mark phase of the mark and sweep garbage collector. Set the mark bits of all reachable objects. Free chunks are untouched by this process."
-	"Assume: All non-free objects are initially unmarked. Root objects were unmarked when they were made roots. (Make sure this stays true!!)."
-
+	"Mark phase of the mark and sweep garbage collector. Set 
+	the mark bits of all reachable objects. Free chunks are 
+	untouched by this process."
+	"Assume: All non-free objects are initially unmarked. Root 
+	objects were unmarked when they were made roots. (Make 
+	sure this stays true!!)."
 	| oop |
 	self inline: false.
 	"clear the recycled context lists"
 	freeContexts _ NilContext.
 	freeLargeContexts _ NilContext.
-
-	"trace the interpreter's objects, including the active stack and special objects array"
+	"trace the interpreter's objects, including the active stack 
+	and special objects array"
 	self markAndTraceInterpreterOops.
-
 	"trace the roots"
-	1 to: rootTableCount do: [ :i | 
-		oop _ rootTable at: i.
-		self markAndTrace: oop.
-	].
-
+	1 to: rootTableCount do: [:i | 
+			oop _ rootTable at: i.
+			self markAndTrace: oop]
 ]
 
 { #category : #'header access' }
@@ -1839,54 +1788,51 @@ ObjectMemory >> newObjectHash [
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> nilObject [  "For access from BitBlt module"
+ObjectMemory >> nilObject [
+	"For access from BitBlt module"
 	^ nilObj
 ]
 
 { #category : #'garbage collection' }
-ObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [
-	"Record that the given oop in the old object area points to an object in the young area.
-	HeaderLoc is usually = oop, but may be an addr in a forwarding block."
-
+ObjectMemory >> noteAsRoot: oop headerLoc: headerLoc [ 
+	"Record that the given oop in the old object area points to an 
+	object in the young area. 
+	HeaderLoc is usually = oop, but may be an addr in a 
+	forwarding block."
 	| header |
 	self inline: true.
 	header _ self longAt: headerLoc.
-	(header bitAnd: RootBit) = 0 ifTrue:[
-		"record oop as root only if not already recorded"
-		rootTableCount < RootTableRedZone ifTrue:[
-			"record root if there is enough room in the roots table"
-			rootTableCount _ rootTableCount + 1.
-			rootTable at: rootTableCount put: oop.
-			self longAt: headerLoc put: (header bitOr: RootBit).
-		] ifFalse:["we're getting in the red zone"
-			rootTableCount < RootTableSize ifTrue:[
-				"but there's still space to record it"
-				rootTableCount _ rootTableCount + 1.
-				rootTable at: rootTableCount put: oop.
-				self longAt: headerLoc put: (header bitOr: RootBit).
-				"but force an IGC on the next allocation"
-				allocationCount _ allocationsBetweenGCs + 1.
-			].
-		].
-	].
-
+	(header bitAnd: RootBit) = 0
+		ifTrue: ["record oop as root only if not already recorded"
+			rootTableCount < RootTableRedZone
+				ifTrue: ["record root if there is enough room in the roots 
+					table "
+					rootTableCount _ rootTableCount + 1.
+					rootTable at: rootTableCount put: oop.
+					self longAt: headerLoc put: (header bitOr: RootBit)]
+				ifFalse: ["we're getting in the red zone"
+					rootTableCount < RootTableSize
+						ifTrue: ["but there's still space to record it"
+							rootTableCount _ rootTableCount + 1.
+							rootTable at: rootTableCount put: oop.
+							self longAt: headerLoc put: (header bitOr: RootBit).
+							"but force an IGC on the next allocation"
+							allocationCount _ allocationsBetweenGCs + 1]]]
 ]
 
 { #category : #'object enumeration' }
-ObjectMemory >> objectAfter: oop [
-	"Return the object or free chunk immediately following the given object or free chunk in memory. Return endOfMemory when enumeration is complete."
-
+ObjectMemory >> objectAfter: oop [ 
+	"Return the object or free chunk immediately following the 
+	given object or free chunk in memory. Return endOfMemory 
+	when enumeration is complete."
 	| sz |
 	self inline: true.
-	DoAssertionChecks ifTrue: [
-		oop >= endOfMemory ifTrue: [ self error: 'no objects after the end of memory' ].
-	].
-
+	DoAssertionChecks
+		ifTrue: [oop >= endOfMemory ifTrue: [self error: 'no objects after the end of memory']].
 	(self isFreeObject: oop)
-		ifTrue: [ sz _ self sizeOfFree: oop ]
-		ifFalse: [ sz _ self sizeBitsOf: oop ].
-
-	^ self oopFromChunk: (oop + sz)
+		ifTrue: [sz _ self sizeOfFree: oop]
+		ifFalse: [sz _ self sizeBitsOf: oop].
+	^ self oopFromChunk: oop + sz
 ]
 
 { #category : #'gc -- compaction' }
@@ -1940,34 +1886,42 @@ ObjectMemory >> possibleRootStoreInto: oop value: valueObj [
 ]
 
 { #category : #become }
-ObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay: twoWayFlag [
-	"Ensure that there are enough forwarding blocks to accomodate this become, then prepare forwarding blocks for the pointer swap. Return true if successful."
-	"Details: Doing a GC might generate enough space for forwarding blocks if we're short. However, this is an uncommon enough case that it is better handled by primitive fail code at the Smalltalk level."
-
+ObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay: twoWayFlag [ 
+	"Ensure that there are enough forwarding blocks to 
+	accomodate this become, then prepare forwarding blocks for 
+	the pointer swap. Return true if successful."
+	"Details: Doing a GC might generate enough space for 
+	forwarding blocks if we're short. However, this is an 
+	uncommon enough case that it is better handled by primitive 
+	fail code at the Smalltalk level."
 	| entriesNeeded entriesAvailable fieldOffset oop1 oop2 fwdBlock fwdBlkSize |
-	entriesNeeded _ (self lastPointerOf: array1) // 4.  "need enough entries for all oops"
+	entriesNeeded _ (self lastPointerOf: array1)
+				// 4.
+	"need enough entries for all oops"
 	twoWayFlag
 		ifTrue: ["Double the number of blocks for two-way become"
-				entriesNeeded _ entriesNeeded * 2.
-				fwdBlkSize _ 8  "Note: Forward blocks must be quadword aligned."]
+			entriesNeeded _ entriesNeeded * 2.
+			fwdBlkSize _ 8
+			"Note: Forward blocks must be quadword aligned."]
 		ifFalse: ["One-way become needs backPointers in fwd blocks."
-				fwdBlkSize _ 16  "Note: Forward blocks must be quadword aligned."].
+			fwdBlkSize _ 16
+			"Note: Forward blocks must be quadword aligned."].
 	entriesAvailable _ self fwdTableInit: fwdBlkSize.
-	entriesAvailable < entriesNeeded ifTrue: 
-		[self initializeMemoryFirstFree: freeBlock.  "re-initialize the free block"
-		^ false].
-
+	entriesAvailable < entriesNeeded
+		ifTrue: [self initializeMemoryFirstFree: freeBlock.
+			"re-initialize the free block"
+			^ false].
 	fieldOffset _ self lastPointerOf: array1.
-	[fieldOffset >= BaseHeaderSize] whileTrue: 
-		[oop1 _ self longAt: array1 + fieldOffset.
-		oop2 _ self longAt: array2 + fieldOffset.
-		fwdBlock _ self fwdBlockGet: fwdBlkSize.
-		self initForwardBlock: fwdBlock mapping: oop1 to: oop2 withBackPtr: twoWayFlag not.
-		twoWayFlag ifTrue:
-			["Second block maps oop2 back to oop1 for two-way become"
+	[fieldOffset >= BaseHeaderSize]
+		whileTrue: [oop1 _ self longAt: array1 + fieldOffset.
+			oop2 _ self longAt: array2 + fieldOffset.
 			fwdBlock _ self fwdBlockGet: fwdBlkSize.
-			self initForwardBlock: fwdBlock mapping: oop2 to: oop1 withBackPtr: twoWayFlag not].
-		fieldOffset _ fieldOffset - 4].
+			self initForwardBlock: fwdBlock mapping: oop1 to: oop2 withBackPtr: twoWayFlag not.
+			twoWayFlag
+				ifTrue: ["Second block maps oop2 back to oop1 for two-way become"
+					fwdBlock _ self fwdBlockGet: fwdBlkSize.
+					self initForwardBlock: fwdBlock mapping: oop2 to: oop1 withBackPtr: twoWayFlag not].
+			fieldOffset _ fieldOffset - 4].
 	^ true
 ]
 
@@ -1979,173 +1933,165 @@ ObjectMemory >> pushRemappableOop: oop [
 ]
 
 { #category : #allocation }
-ObjectMemory >> recycleContextIfPossible: cntxOop [
+ObjectMemory >> recycleContextIfPossible: cntxOop [ 
+	"If possible, save the given context on a list of free contexts to 
+	be recycled."
+	"Note: The context is not marked free, so it can be reused 
+	with minimal fuss. The recycled context lists are cleared at 
+	every garbage collect."
 	| header |
-	"If possible, save the given context on a list of free contexts to be recycled."
-	"Note: The context is not marked free, so it can be reused with minimal fuss.  The recycled context lists are cleared at every garbage collect."
-
 	self inline: true.
 	"only recycle young contexts (which should be most of them)"
-	cntxOop >= youngStart ifTrue:
-		[header _ self baseHeader: cntxOop.
-		(self isMethodContextHeader: header) ifTrue:
-			["It's a young context, alright."
-			(header bitAnd: SizeMask) = SmallContextSize
-				ifTrue:
-				["Recycle small contexts"
-				self storePointerUnchecked: 0 ofObject: cntxOop withValue: freeContexts.
-				freeContexts _ cntxOop].
-			(header bitAnd: SizeMask) = LargeContextSize
-				ifTrue:
-				["Recycle large contexts"
-				self storePointerUnchecked: 0 ofObject: cntxOop withValue: freeLargeContexts.
-				freeLargeContexts _ cntxOop]]]
-
+	cntxOop >= youngStart
+		ifTrue: [header _ self baseHeader: cntxOop.
+			(self isMethodContextHeader: header)
+				ifTrue: ["It's a young context, alright."
+					(header bitAnd: SizeMask) = SmallContextSize
+						ifTrue: ["Recycle small contexts"
+							self storePointerUnchecked: 0 ofObject: cntxOop withValue: freeContexts.
+							freeContexts _ cntxOop].
+					(header bitAnd: SizeMask) = LargeContextSize
+						ifTrue: ["Recycle large contexts"
+							self storePointerUnchecked: 0 ofObject: cntxOop withValue: freeLargeContexts.
+							freeLargeContexts _ cntxOop]]]
 ]
 
 { #category : #'gc -- compaction' }
-ObjectMemory >> remap: oop [
-	"Map the given oop to its new value during a compaction or become: operation. If it has no forwarding table entry, return the oop itself."
-
+ObjectMemory >> remap: oop [ 
+	"Map the given oop to its new value during a compaction or 
+	become: operation. If it has no forwarding table entry, 
+	return the oop itself."
 	| fwdBlock |
 	self inline: false.
-	(self isObjectForwarded: oop) ifTrue: [
-		"get the new value for oop from its forwarding block"
-		fwdBlock _ ((self longAt: oop) bitAnd: AllButMarkBitAndTypeMask) << 1.
-		DoAssertionChecks ifTrue: [ self fwdBlockValidate: fwdBlock ].
-		^ self longAt: fwdBlock
-	].
+	(self isObjectForwarded: oop)
+		ifTrue: ["get the new value for oop from its forwarding block"
+			fwdBlock _ ((self longAt: oop) bitAnd: AllButMarkBitAndTypeMask) << 1.
+			DoAssertionChecks
+				ifTrue: [self fwdBlockValidate: fwdBlock].
+			^ self longAt: fwdBlock].
 	^ oop
 ]
 
 { #category : #'gc -- compaction' }
-ObjectMemory >> remapClassOf: oop [
+ObjectMemory >> remapClassOf: oop [ 
 	"Update the class of the given object, if necessary, using its forwarding table entry."
-	"Note: Compact classes need not be remapped since the compact class field is just an index into the compact class table. The header type bits show if this object has a compact class; we needn't look up the oop's real header."
-
+	"Note: Compact classes need not be remapped since the compact class field is just an index into the compact class 
+	table. The header type bits show if this object has a compact class; we needn't look up the oop's real header."
 	| classHeader classOop fwdBlock newClassOop newClassHeader |
-	(self headerType: oop) = HeaderTypeShort ifTrue: [ ^nil ].  "compact classes needn't be mapped"
+	(self headerType: oop) = HeaderTypeShort ifTrue: [^ nil]. "compact classes needn't be mapped"
 
-	classHeader _ self longAt: (oop - 4).
+	classHeader _ self longAt: oop - 4.
 	classOop _ classHeader bitAnd: AllButTypeMask.
-	(self isObjectForwarded: classOop) ifTrue: [
-		fwdBlock _ ((self longAt: classOop) bitAnd: AllButMarkBitAndTypeMask) << 1.
-		DoAssertionChecks ifTrue: [ self fwdBlockValidate: fwdBlock ].
-		newClassOop _ self longAt: fwdBlock.
-		newClassHeader _ newClassOop bitOr: (classHeader bitAnd: TypeMask).
-		self longAt: (oop - 4) put: newClassHeader.
-
-		"The following ensures that become: into an old object's class makes it a root.
-		  It does nothing during either incremental or full compaction because
-		  oop will never be < youngStart."
-		((oop < youngStart) and: [newClassOop >= youngStart])
-			ifTrue: [ self beRootWhileForwarding: oop ].
-	].
+	(self isObjectForwarded: classOop)
+		ifTrue: [fwdBlock _ ((self longAt: classOop) bitAnd: AllButMarkBitAndTypeMask) << 1.
+			DoAssertionChecks
+				ifTrue: [self fwdBlockValidate: fwdBlock].
+			newClassOop _ self longAt: fwdBlock.
+			newClassHeader _ newClassOop bitOr: (classHeader bitAnd: TypeMask).
+			self longAt: oop - 4 put: newClassHeader.
+			"The following ensures that become: into an old object's class makes it a root. 
+			It does nothing during either incremental or full compaction because 
+			oop will never be < youngStart."
+			(oop < youngStart and: [newClassOop >= youngStart])
+				ifTrue: [self beRootWhileForwarding: oop]]
 ]
 
 { #category : #'gc -- compaction' }
-ObjectMemory >> remapFieldsAndClassOf: oop [
-	"Replace all forwarded pointers in this object with their new oops, using the forwarding table. Remap its class as well, if necessary."
+ObjectMemory >> remapFieldsAndClassOf: oop [ 
+	"Replace all forwarded pointers in this object with their new oops, using the forwarding table. Remap its class as well, if 
+	necessary. "
 	"Note: The given oop may be forwarded itself, which means that its real header is in its forwarding table entry."
-
 	| fieldOffset fieldOop fwdBlock newOop |
 	self inline: true.
 	fieldOffset _ self lastPointerWhileForwarding: oop.
-	[fieldOffset >= BaseHeaderSize] whileTrue: [
-		fieldOop _ self longAt: (oop + fieldOffset).
-		(self isObjectForwarded: fieldOop) ifTrue: [
-			"update this oop from its forwarding block"
-			fwdBlock _ ((self longAt: fieldOop) bitAnd: AllButMarkBitAndTypeMask) << 1.
-			DoAssertionChecks ifTrue: [ self fwdBlockValidate: fwdBlock ].
-			newOop _ self longAt: fwdBlock.
-			self longAt: (oop + fieldOffset) put: newOop.
-
-			"The following ensures that become: into old object makes it a root.
-			  It does nothing during either incremental or full compaction because
-			  oop will never be < youngStart."
-			((oop < youngStart) and: [newOop >= youngStart])
-				ifTrue: [ self beRootWhileForwarding: oop ].
-		].
-		fieldOffset _ fieldOffset - 4.
-	].
-	self remapClassOf: oop.
+	[fieldOffset >= BaseHeaderSize]
+		whileTrue: [fieldOop _ self longAt: oop + fieldOffset.
+			(self isObjectForwarded: fieldOop)
+				ifTrue: ["update this oop from its forwarding block"
+					fwdBlock _ ((self longAt: fieldOop) bitAnd: AllButMarkBitAndTypeMask) << 1.
+					DoAssertionChecks
+						ifTrue: [self fwdBlockValidate: fwdBlock].
+					newOop _ self longAt: fwdBlock.
+					self longAt: oop + fieldOffset put: newOop.
+					"The following ensures that become: into old object makes it a root. 
+					It does nothing during either incremental or full compaction because 
+					oop will never be < youngStart."
+					(oop < youngStart and: [newOop >= youngStart])
+						ifTrue: [self beRootWhileForwarding: oop]].
+			fieldOffset _ fieldOffset - 4].
+	self remapClassOf: oop
 ]
 
 { #category : #become }
-ObjectMemory >> restoreHeaderOf: oop [
-	"Restore the original header of the given oop from its forwarding block."
-
+ObjectMemory >> restoreHeaderOf: oop [ 
+	"Restore the original header of the given oop from its 
+	forwarding block."
 	| fwdHeader fwdBlock |
 	fwdHeader _ self longAt: oop.
 	fwdBlock _ (fwdHeader bitAnd: AllButMarkBitAndTypeMask) << 1.
-
-	DoAssertionChecks ifTrue: [
-		(fwdHeader bitAnd: MarkBit) = 0 ifTrue: [
-			self error: 'attempting to restore the header of an object that has no forwarding block'.
-		].
-		self fwdBlockValidate: fwdBlock.
-	].
-
-	self longAt: oop put: (self longAt: fwdBlock + 4).  "restore orginal header"
+	DoAssertionChecks
+		ifTrue: [(fwdHeader bitAnd: MarkBit) = 0
+				ifTrue: [self error: 'attempting to restore the header of an object that has no forwarding block'].
+			self fwdBlockValidate: fwdBlock].
+	self longAt: oop put: (self longAt: fwdBlock + 4)
 ]
 
 { #category : #become }
-ObjectMemory >> restoreHeadersAfterBecoming: list1 with: list2 [
-	"Restore the headers of all oops in both lists. Exchange their hash bits so becoming objects in identity sets and dictionaries doesn't change their hash value."
-
+ObjectMemory >> restoreHeadersAfterBecoming: list1 with: list2 [ 
+	"Restore the headers of all oops in both lists. Exchange their 
+	hash bits so becoming objects in identity sets and 
+	dictionaries doesn't change their hash value."
 	| fieldOffset oop1 oop2 hdr1 hdr2 |
 	fieldOffset _ self lastPointerOf: list1.
-	[fieldOffset >= BaseHeaderSize] whileTrue: [
-		oop1 _ self longAt: list1 + fieldOffset.
-		oop2 _ self longAt: list2 + fieldOffset.
-		self restoreHeaderOf: oop1.
-		self restoreHeaderOf: oop2.
-		"Exchange hash bits of the two objects."
-		hdr1 _ self longAt: oop1.
-		hdr2 _ self longAt: oop2.
-		self longAt: oop1 put:
-			((hdr1 bitAnd: AllButHashBits) bitOr: (hdr2 bitAnd: HashBits)).
-		self longAt: oop2 put:
-			((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits)).
-		fieldOffset _ fieldOffset - 4.
-	].
+	[fieldOffset >= BaseHeaderSize]
+		whileTrue: [oop1 _ self longAt: list1 + fieldOffset.
+			oop2 _ self longAt: list2 + fieldOffset.
+			self restoreHeaderOf: oop1.
+			self restoreHeaderOf: oop2.
+			"Exchange hash bits of the two objects."
+			hdr1 _ self longAt: oop1.
+			hdr2 _ self longAt: oop2.
+			self longAt: oop1 put: ((hdr1 bitAnd: AllButHashBits) bitOr: (hdr2 bitAnd: HashBits)).
+			self longAt: oop2 put: ((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits)).
+			fieldOffset _ fieldOffset - 4]
 ]
 
 { #category : #become }
-ObjectMemory >> restoreHeadersAfterForwardBecome: copyHashFlag [
-	"Forward become leaves us with no original oops in the mutated object list,
-	so we must enumerate the (four-word) forwarding blocks
+ObjectMemory >> restoreHeadersAfterForwardBecome: copyHashFlag [ 
+	"Forward become leaves us with no original oops in the 
+	mutated object list, 
+	so we must enumerate the (four-word) forwarding blocks 
 	where we have stored backpointers."
-
-	| oop1 fwdBlock oop2 hdr1 hdr2 |
 	"This loop start is copied from fwdBlockGet:"
-	fwdBlock _ (endOfMemory + BaseHeaderSize + 7) bitAnd: 16rFFFFFFF8.
-	fwdBlock _ fwdBlock + 16.  "fwdBlockGet: did a pre-increment"
-	[fwdBlock <= fwdTableNext]  "fwdTableNext points to the last active block"
-		whileTrue:
-		[oop1 _ self longAt: fwdBlock + 8.  "Backpointer to mutated object."
-		oop2 _ self longAt: fwdBlock.
-		self restoreHeaderOf: oop1.
-		copyHashFlag ifTrue:
-			["Change the hash of the new oop (oop2) to be that of the old (oop1)
-			so mutated objects in hash structures will be happy after the change."
-			hdr1 _ self longAt: oop1.
-			hdr2 _ self longAt: oop2.
-			self longAt: oop2 put:
-				((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits))].
-		fwdBlock _ fwdBlock + 16].
+	| oop1 fwdBlock oop2 hdr1 hdr2 |
+	fwdBlock _ endOfMemory + BaseHeaderSize + 7 bitAnd: 4294967288.
+	fwdBlock _ fwdBlock + 16.
+	"fwdBlockGet: did a pre-increment"
+	[fwdBlock <= fwdTableNext
+	"fwdTableNext points to the last active block"]
+		whileTrue: [oop1 _ self longAt: fwdBlock + 8.
+			"Backpointer to mutated object."
+			oop2 _ self longAt: fwdBlock.
+			self restoreHeaderOf: oop1.
+			copyHashFlag
+				ifTrue: ["Change the hash of the new oop (oop2) to be that of the old (oop1) 
+					so mutated objects in hash structures will be 
+					happy after the change."
+					hdr1 _ self longAt: oop1.
+					hdr2 _ self longAt: oop2.
+					self longAt: oop2 put: ((hdr2 bitAnd: AllButHashBits) bitOr: (hdr1 bitAnd: HashBits))].
+			fwdBlock _ fwdBlock + 16]
 ]
 
 { #category : #'header access' }
 ObjectMemory >> rightType: headerWord [
-	"Computer the correct header type for an object based on the size and compact class fields of the given base header word, rather than its type bits. This is used during marking, when the header type bits are used to record the state of tracing."
+	"Compute the correct header type for an object based on the size and compact class fields of the given base header word, rather than its type bits. This is used during marking, when the header type bits are used to record the state of tracing."
 
 	(headerWord bitAnd: SizeMask) = 0  "zero size field in header word"
-		ifTrue: [ ^ HeaderTypeSizeAndClass ]
-		ifFalse: [
-			(headerWord bitAnd: CompactClassMask) = 0
-				ifTrue: [ ^ HeaderTypeClass ]
-				ifFalse: [ ^ HeaderTypeShort ]].
+		ifTrue: [ ^HeaderTypeSizeAndClass ]
+		ifFalse: [ (headerWord bitAnd: CompactClassMask) = 0
+				ifTrue: [ ^HeaderTypeClass ]
+				ifFalse: [ ^HeaderTypeShort ]].
 ]
 
 { #category : #'header access' }
@@ -2156,14 +2102,15 @@ ObjectMemory >> setSizeOfFree: chunk to: byteSize [
 ]
 
 { #category : #allocation }
-ObjectMemory >> shrinkObjectMemory: delta [
-	"Attempt to shrink the object memory by the given delta amount"
+ObjectMemory >> shrinkObjectMemory: delta [ 
+	"Attempt to shrink the object memory by the given delta 
+	amount "
 	| limit |
 	limit _ self sqShrinkMemory: memoryLimit By: delta.
-	limit = memoryLimit ifFalse:[
-		memoryLimit _ limit - 24. "remove a tad for safety"
-		self initializeMemoryFirstFree: freeBlock.
-	].
+	limit = memoryLimit
+		ifFalse: [memoryLimit _ limit - 24.
+			"remove a tad for safety"
+			self initializeMemoryFirstFree: freeBlock]
 ]
 
 { #category : #'header access' }
@@ -2211,80 +2158,68 @@ ObjectMemory >> splObj: index [
 
 { #category : #'gc -- mark and sweep' }
 ObjectMemory >> startField [
-	"Examine and possibly trace the next field of the object being traced. See comment in markAndTrace for explanation of tracer state variables."
-
+	"Examine and possibly trace the next field of the object being 
+	traced. See comment in markAndTrace for explanation of 
+	tracer state variables."
 	| typeBits childType |
 	self inline: true.
-
 	child _ self longAt: field.
 	typeBits _ child bitAnd: TypeMask.
-
-	(typeBits bitAnd: 1) = 1 ifTrue: [
-		"field contains a SmallInteger; skip it"
-		field _ field - 4.
-		^ StartField
-	].
-
-	typeBits = 0 ifTrue: [
-		"normal oop, go down"
-		self longAt: field put: parentField.
-		parentField _ field.
-		^ StartObj
-	].
-
-	typeBits = 2 ifTrue: [
-		"reached the header; do we need to process the class word?"
-		(child bitAnd: CompactClassMask) ~= 0 ifTrue: [
-			"object's class is compact; we're done"
-			"restore the header type bits"
-			child _ child bitAnd: AllButTypeMask.
-			childType _ self rightType: child.
-			self longAt: field put: (child bitOr: childType).
-			^ Upward
-		] ifFalse: [
-			"object has a full class word; process that class"
-			child _ self longAt: (field - 4).  "class word"
-			child _ child bitAnd: AllButTypeMask.  "clear type bits"
-			self longAt: (field - 4) put: parentField.
-			parentField _ (field - 4) bitOr: 1.  "point at class word; mark as working on the class."
-			^ StartObj
-		].
-	].
+	(typeBits bitAnd: 1) = 1
+		ifTrue: ["field contains a SmallInteger; skip it"
+			field _ field - 4.
+			^ StartField].
+	typeBits = 0 ifTrue: ["normal oop, go down"
+			self longAt: field put: parentField.
+			parentField _ field.
+			^ StartObj].
+	typeBits = 2 ifTrue: ["reached the header; do we need to process the class word? "
+			(child bitAnd: CompactClassMask) ~= 0
+				ifTrue: ["object's class is compact; we're done"
+					"restore the header type bits"
+					child _ child bitAnd: AllButTypeMask.
+					childType _ self rightType: child.
+					self longAt: field put: (child bitOr: childType).
+					^ Upward]
+				ifFalse: ["object has a full class word; process that class"
+					child _ self longAt: field - 4. "class word"
+					child _ child bitAnd: AllButTypeMask. "clear type bits"
+					self longAt: field - 4 put: parentField.
+					parentField _ field - 4 bitOr: 1.
+					"point at class word; mark as working on the class. "
+					^ StartObj]]
 ]
 
 { #category : #'gc -- mark and sweep' }
 ObjectMemory >> startObj [
-	"Start tracing the object 'child' and answer the next action. The object may be anywhere in the middle of being swept itself. See comment in markAndTrace for explanation of tracer state variables."
-
+	"Start tracing the object 'child' and answer the next action. 
+	The object may be anywhere in the middle of being swept 
+	itself. See comment in markAndTrace for explanation of 
+	tracer state variables."
 	| oop header lastFieldOffset |
 	self inline: true.
-
 	oop _ child.
-	oop < youngStartLocal ifTrue: [
-		"old object; skip it"
-		 field _ oop.
-		^ Upward
-	].
-
+	oop < youngStartLocal
+		ifTrue: ["old object; skip it"
+			field _ oop.
+			^ Upward].
 	header _ self longAt: oop.
-	(header bitAnd: MarkBit) = 0 ifTrue:
-		["unmarked; mark and trace"
-		"Do not trace the object's indexed fields if it's a weak class"
-		(self isWeakNonInt: oop)
-			ifTrue: ["Set lastFieldOffset before the weak fields in the receiver"
-					lastFieldOffset := (self nonWeakFieldsOf: oop) << 2]
-			ifFalse: ["Do it the usual way"
+	(header bitAnd: MarkBit) = 0
+		ifTrue: ["unmarked; mark and trace"
+			"Do not trace the object's indexed fields if it's a weak class "
+			(self isWeakNonInt: oop)
+				ifTrue: ["Set lastFieldOffset before the weak fields in the receiver "
+					lastFieldOffset _ (self nonWeakFieldsOf: oop) << 2]
+				ifFalse: ["Do it the usual way"
 					lastFieldOffset _ self lastPointerOf: oop].
-		header _ header bitAnd: AllButTypeMask.
-		header _ (header bitOr: MarkBit) bitOr: HeaderTypeGC.
-		self longAt: oop put: header.
-		field _ oop + lastFieldOffset.
-		^ StartField	"trace its fields and class"
-	] ifFalse: [
-		"already marked; skip it"
-		field _ oop.
-		^ Upward
-	].
+			header _ header bitAnd: AllButTypeMask.
+			header _ (header bitOr: MarkBit) bitOr: HeaderTypeGC.
+			self longAt: oop put: header.
+			field _ oop + lastFieldOffset.
+			^ StartField "trace its fields and class"]
+		ifFalse: ["already marked; skip it"
+			field _ oop.
+			^ Upward]
 ]
 
 { #category : #'object enumeration' }
@@ -2297,63 +2232,54 @@ ObjectMemory >> startOfMemory [
 { #category : #'interpreter access' }
 ObjectMemory >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 
-	^ self byteAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + byteIndex
-		put: valueByte
+	^ self byteAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + byteIndex put: valueByte
 ]
 
 { #category : #'interpreter access' }
-ObjectMemory >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
-	"Note must check here for stores of young objects into old ones."
+ObjectMemory >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [ 
+	"Note must check here for stores of young objects into old ones. "
 
-	(oop < youngStart) ifTrue: [
-		self possibleRootStoreInto: oop value: valuePointer.
-	].
-
-	^ self longAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + (fieldIndex << 2)
-		put: valuePointer
+	oop < youngStart ifTrue: [self possibleRootStoreInto: oop value: valuePointer].
+	^ self longAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + (fieldIndex << 2) put: valuePointer
 ]
 
 { #category : #'interpreter access' }
 ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
 	"Like storePointer:ofObject:withValue:, but the caller guarantees that the object being stored into is a young object or is already marked as a root."
 
-	^ self longAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + (fieldIndex << 2)
-			put: valuePointer
+	^ self longAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + (fieldIndex << 2) put: valuePointer
 
 ]
 
 { #category : #'interpreter access' }
 ObjectMemory >> storeWord: fieldIndex ofObject: oop withValue: valueWord [
 
-	^ self longAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + (fieldIndex << 2)
-		put: valueWord
+	^ self longAt: (self cCoerce: oop to: 'char *') + BaseHeaderSize + (fieldIndex << 2) put: valueWord
 ]
 
 { #category : #allocation }
-ObjectMemory >> sufficientSpaceAfterGC: minFree [
+ObjectMemory >> sufficientSpaceAfterGC: minFree [ 
 	"Return true if there is enough free space after doing a garbage collection. If not, signal that space is low."
 	| growSize |
 	self inline: false.
-	self incrementalGC.  "try to recover some space"
-	(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ')
-		< (self cCoerce: minFree to: 'unsigned ')
-		ifTrue:
-		[signalLowSpace ifTrue: [ ^ false ].  "give up; problem is already noted"
-		self fullGC.  "try harder"
-		"for stability, require more free space after doing an expensive full GC"
-		(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ')
-			>= ((self cCoerce: minFree to: 'unsigned ') + 15000)
-			ifTrue: [ ^ true ].  
-		"still not enough; attempt to grow object memory"
-		growSize _ (minFree - (self sizeOfFree: freeBlock)) + growHeadroom.
-		self growObjectMemory: growSize.
-		(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ')
-			>= ((self cCoerce: minFree to: 'unsigned ') + 15000)
-			ifTrue: [ ^ true ].  
-		"still not enough"
-		^false
-	].
-	^ true
+
+	self incrementalGC. "try to recover some space"
+
+	(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ') < (self cCoerce: minFree to: 'unsigned ')
+		ifTrue: [signalLowSpace ifTrue: [^false]. "give up; problem is already noted"
+			self fullGC. "try harder"
+			"for stability, require more free space after doing an expensive full GC"
+			(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ') >= ((self cCoerce: minFree to: 'unsigned ') + 15000) ifTrue: [^ true].
+
+			"still not enough; attempt to grow object memory"
+			growSize _ minFree - (self sizeOfFree: freeBlock) + growHeadroom.
+			self growObjectMemory: growSize.
+
+			(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ') >= ((self cCoerce: minFree to: 'unsigned ') + 15000) ifTrue: [^true].
+
+			"still not enough"
+			^false].
+	^true
 ]
 
 { #category : #allocation }
@@ -2365,10 +2291,9 @@ ObjectMemory >> sufficientSpaceToAllocate: bytes [
 	minFree _ lowSpaceThreshold + bytes + BaseHeaderSize.
 
 	"check for low-space"
-	(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ')
-		>= (self cCoerce: minFree to: 'unsigned ')
-		ifTrue: [^ true]
-		ifFalse: [^ self sufficientSpaceAfterGC: minFree].
+	(self cCoerce: (self sizeOfFree: freeBlock) to: 'unsigned ') >= (self cCoerce: minFree to: 'unsigned ')
+		ifTrue: [^true]
+		ifFalse: [^self sufficientSpaceAfterGC: minFree].
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -2406,14 +2331,11 @@ ObjectMemory >> sweepPhase [
 			(oopHeaderType bitAnd: 1) = 1
 				ifTrue: [oopSize _ oopHeader bitAnd: SizeMask]
 				ifFalse: [oopHeaderType = HeaderTypeSizeAndClass
-						ifTrue: [oopSize _ (self sizeHeader: oop)
-										bitAnd: AllButTypeMask]
-						ifFalse: ["free chunk"
-							oopSize _ oopHeader bitAnd: AllButTypeMask]].
+						ifTrue: [oopSize _ (self sizeHeader: oop) bitAnd: AllButTypeMask]
+						ifFalse: ["free chunk" oopSize _ oopHeader bitAnd: AllButTypeMask]].
 			(oopHeader bitAnd: MarkBit) = 0
 				ifTrue: ["object is not marked; free it"
-					"<-- Finalization support: We need to mark each oop 
-					chunk as free -->"
+					"<-- Finalization support: We need to mark each oop chunk as free -->"
 					self longAt: oop - hdrBytes put: HeaderTypeFree.
 					freeChunk ~= nil
 						ifTrue: ["enlarge current free chunk to include this oop"
@@ -2427,25 +2349,21 @@ ObjectMemory >> sweepPhase [
 				ifFalse: ["object is marked; clear its mark bit and possibly adjust 
 					the compaction start"
 					self longAt: oop put: (oopHeader bitAnd: AllButMarkBit).
-					"<-- Finalization support: Check if we're running about 
-					a weak class -->"
+					"<-- Finalization support: Check if we're running about a weak class -->"
 					(self isWeakNonInt: oop) ifTrue: [self finalizeReference: oop].
 					entriesAvailable > 0
 						ifTrue: [entriesAvailable _ entriesAvailable - 1]
-						ifFalse: ["start compaction at the last free chunk before 
-							this object"
+						ifFalse: ["start compaction at the last free chunk before this object"
 							firstFree _ freeChunk].
 					freeChunk ~= nil
 						ifTrue: ["record the size of the last free chunk"
-							self longAt: freeChunk put: ((freeChunkSize bitAnd: AllButTypeMask)
-										bitOr: HeaderTypeFree).
+							self longAt: freeChunk put: ((freeChunkSize bitAnd: AllButTypeMask) bitOr: HeaderTypeFree).
 							freeChunk _ nil].
 					survivors _ survivors + 1].
 			oop _ self oopFromChunk: oop + oopSize].
 	freeChunk ~= nil
 		ifTrue: ["record size of final free chunk"
-			self longAt: freeChunk put: ((freeChunkSize bitAnd: AllButTypeMask)
-						bitOr: HeaderTypeFree)].
+			self longAt: freeChunk put: ((freeChunkSize bitAnd: AllButTypeMask) bitOr: HeaderTypeFree)].
 	oop = endOfMemory
 		ifFalse: [self error: 'sweep failed to find exact end of memory'].
 	firstFree = nil
@@ -2488,44 +2406,38 @@ ObjectMemory >> updatePointersInRootObjectsFrom: memStart to: memEnd [
 
 { #category : #'gc -- mark and sweep' }
 ObjectMemory >> upward [
-	"Return from marking an object below. Incoming:
-		field = oop we just worked on, needs to be put away
-		parentField = where to put it in our object
-	NOTE: Type field of object below has already been restored!!!"
-
+	"Return from marking an object below. Incoming: 
+	field = oop we just worked on, needs to be put away 
+	parentField = where to put it in our object 
+	NOTE: Type field of object below has already been restored!!! "
 	| type header |
 	self inline: true.
-
-	(parentField bitAnd: 1) = 1 ifTrue: [
-		parentField = GCTopMarker ifTrue: [
-			"top of the chain"
-			header _ (self longAt: field) bitAnd: AllButTypeMask.
-			type _ self rightType: header.
-			self longAt: field put: header + type.  "install type on class oop"
-			^ Done
-		] ifFalse: [
-			"was working on the extended class word"
-			child _ field.	"oop of class"
-			field _ parentField - 1.  "class word, ** clear the low bit **"
+	(parentField bitAnd: 1) = 1
+		ifTrue: [parentField = GCTopMarker
+				ifTrue: ["top of the chain"
+					header _ (self longAt: field) bitAnd: AllButTypeMask.
+					type _ self rightType: header.
+					self longAt: field put: header + type. "install type on class oop"
+					^ Done]
+				ifFalse: ["was working on the extended class word"
+					child _ field. "oop of class"
+					field _ parentField - 1. "class word, ** clear the low bit **"
+					parentField _ self longAt: field.
+					header _ self longAt: field + 4. "base header word"
+					type _ self rightType: header.
+					self longAt: field put: child + type. "install type on class oop"
+					field _ field + 4. "point at header"
+					"restore type bits"
+					header _ header bitAnd: AllButTypeMask.
+					self longAt: field put: header + type.
+					^ Upward]]
+		ifFalse: ["normal"
+			child _ field. "who we worked on below"
+			field _ parentField. "where to put it"
 			parentField _ self longAt: field.
-			header _ self longAt: field+4.  "base header word"
-			type _ self rightType: header.
-			self longAt: field put: child + type.  "install type on class oop"
-			field _ field + 4.  "point at header"
-			"restore type bits"
-			header _ header bitAnd: AllButTypeMask.
-			self longAt: field put: (header + type).
-			^ Upward
-		].
-	] ifFalse: [
-		"normal"
-		child _ field.  "who we worked on below"
-		field _ parentField.  "where to put it"
-		parentField _ self longAt: field.
-		self longAt: field put: child.
-		field _ field - 4.  "point at header"
-		^ StartField
-	].
+			self longAt: field put: child.
+			field _ field - 4. "point at header"
+			^ StartField]
 ]
 
 { #category : #'memory access' }

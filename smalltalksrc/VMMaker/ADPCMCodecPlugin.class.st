@@ -1,3 +1,6 @@
+"
+This is a kludgy interface to the translated primitive code in ADPCMCodec. The translate.... method gathers the code and writes it to a file. No methods in this class actually implement the codec.
+"
 Class {
 	#name : #ADPCMCodecPlugin,
 	#superclass : #InterpreterPlugin,
