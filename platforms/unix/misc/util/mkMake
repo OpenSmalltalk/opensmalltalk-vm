@@ -6,7 +6,7 @@
 # build directory -- eg, it should have "platforms" as an immediate
 # subdirectory.
 #
-# $Id: mkMake,v 1.5 2002/01/29 20:36:01 lexspoon Exp $
+# $Id: mkMake,v 1.6 2002/02/24 19:31:49 lexspoon Exp $
 #
 
 
@@ -129,6 +129,7 @@ echo basenames: $basenames
 	do
 	    if [ -f $dir/$header  -a $dir/$header != $pickedheader ]
 	    then
+		echo "Removing $dir/$header..."
 		rm -f $dir/$header
 	    fi
 	done
