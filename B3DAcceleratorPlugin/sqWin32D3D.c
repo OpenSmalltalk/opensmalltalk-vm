@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32D3D.c,v 1.3 2002/01/28 13:56:58 slosher Exp $
+*   RCSID:   $Id: sqWin32D3D.c,v 1.4 2002/05/04 23:20:27 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -27,7 +27,7 @@
 #include "sqVirtualMachine.h"
 #include "sqConfig.h"
 #include "sqPlatformSpecific.h"
-#include "SurfacePlugin.h"
+#include "../SurfacePlugin/SurfacePlugin.h"
 #include "B3DAcceleratorPlugin.h"
 
 #if defined(B3DX_D3D)

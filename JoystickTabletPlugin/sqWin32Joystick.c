@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Joystick.c,v 1.1 2001/10/24 23:14:23 rowledge Exp $
+*   RCSID:   $Id: sqWin32Joystick.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:
 *     1) Only buttons 1-4 are supported
@@ -19,7 +19,7 @@
 #ifndef NO_JOYSTICK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Joystick.c,v 1.1 2001/10/24 23:14:23 rowledge Exp $";
+  static char RCSID[]="$Id: sqWin32Joystick.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
 #endif
 
 int numJoySticks=0;

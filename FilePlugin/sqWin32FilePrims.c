@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.3 2002/01/28 13:56:59 slosher Exp $
+*   RCSID:   $Id: sqWin32FilePrims.c,v 1.4 2002/05/04 23:20:27 andreasraab Exp $
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -49,6 +49,10 @@
 /*** Variables ***/
 int thisSession = 0;
 extern unsigned char *memory;
+
+int sqFileThisSession(void) {
+  return thisSession;
+}
 
 int sqFileAtEnd(SQFile *f) {
   /* Return true if the file's read/write head is at the end of the file. */
@@ -214,10 +218,6 @@ int sqFileWriteFromAt(SQFile *f, int count, int byteArrayIndex, int startIndex) 
     success(false);
   }
   return (int) dwReallyWritten;
-}
-
-int sqFileThisSession() {
-	return thisSession;
 }
 
 /***************************************************************************/

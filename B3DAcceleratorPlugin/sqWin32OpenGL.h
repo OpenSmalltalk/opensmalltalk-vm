@@ -3,8 +3,6 @@
 
 #define MAX_RENDERER 16
 
-#include <GL/gh.h>
-
 typedef struct glRenderer {
   GLint bufferRect[4];
   GLint viewport[4];

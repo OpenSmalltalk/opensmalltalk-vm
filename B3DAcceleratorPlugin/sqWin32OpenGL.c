@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32OpenGL.c,v 1.2 2002/01/28 13:56:58 slosher Exp $
+*   RCSID:   $Id: sqWin32OpenGL.c,v 1.3 2002/05/04 23:20:27 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -298,7 +298,19 @@ int glCreateRendererPF(int *pfDesc, int descSize, int x, int y, int w, int h)
       continue; /* no enough z-buffer */
     if(pfd.iLayerType != PFD_MAIN_PLANE) 
       continue; /* overlay/underlay */
-
+#ifdef TEA
+#warning "**************************************************************"
+#warning "**************************************************************"
+#warning "**************************************************************"
+#warning
+#warning "TEA: Stencil buffer required"
+#warning
+#warning "**************************************************************"
+#warning "**************************************************************"
+#warning "**************************************************************"
+    if(pfd.cStencilBits < 8)
+      continue; /* need stencil bits */
+#endif
     if((pfd.dwFlags & PFD_GENERIC_FORMAT) == 0) {
       /* This indicates an accellerated driver */
       if(!allowHardware) continue;

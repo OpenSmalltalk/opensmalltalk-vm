@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.1 2001/10/24 23:14:25 rowledge Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,7 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.1 2001/10/24 23:14:25 rowledge Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
 #endif
 
 #ifndef NDEBUG
@@ -138,6 +138,9 @@ static privateSocketStruct *firstSocket = NULL;
 #define SOCKETERROR(s) (PSP(s)->sockError)
 #define ADDRESS(s)      ((struct sockaddr_in*)(&PSP(s)->peer))
 
+extern struct VirtualMachine *interpreterProxy;
+#define FAIL()         interpreterProxy->primitiveFail()
+
 #define LOCKSOCKET(mutex, duration) \
   if(WaitForSingleObject(mutex, duration) == WAIT_FAILED)\
       printLastError(TEXT("Failed to lock socket"));
@@ -188,6 +191,7 @@ static int removeFromList(privateSocketStruct *pss) {
     if(tmp) tmp->next = pss->next;
   }
 }
+
 /* cleanupSocket: 
    Clean up the private socket structure and associated elements.
    The function is called from the watcher threads when a socket
@@ -219,6 +223,7 @@ static void cleanupSocket(privateSocketStruct *pss)
     l.l_linger = 0;
     setsockopt(temp->s, SOL_SOCKET, SO_LINGER, (char*)&l, sizeof(l));
     closesocket(temp->s);
+    temp->s = NULL;
     GlobalFree(GlobalHandle(temp));
   }
   /* And again: C allocators thread safe?! */
@@ -246,6 +251,7 @@ static int inplaceAcceptHandler(privateSocketStruct *pss)
     setsockopt(pss->s, SOL_SOCKET, SO_LINGER, (char*)&l, sizeof(l));
     ioctlsocket(newSocket,FIONBIO,&zero);
     closesocket(pss->s);
+    pss->s = 0;
     /* Disable TCP delays */
     setsockopt(newSocket, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
     /* Make the socket non-blocking */
@@ -439,6 +445,7 @@ static DWORD WINAPI readWatcherThread(privateSocketStruct *pss)
 	  /* Pending close has succeeded */
 	  pss->sockState = ThisEndClosed;
 	  pss->readWatcherOp = 0; /* since a close succeeded */
+	  pss->s = NULL;
 	  doWait = 1;
 	  break;
 	case WatchAcceptSingle:
@@ -511,6 +518,7 @@ static DWORD WINAPI writeWatcherThread(privateSocketStruct *pss)
 	    pss->sockState = Unconnected;
 	  } else {
 	    /* get socket error */
+	    /* printf("ERROR: %d\n", WSAGetLastError()); */
 	    errSize = sizeof(pss->sockError);
 	    getsockopt(pss->s, SOL_SOCKET, SO_ERROR, (char*)&pss->sockError, &errSize);
 	  }
@@ -716,7 +724,7 @@ static int SocketValid(SocketPtr s) {
       (s->sessionID == thisNetSession)) {
     return true;
   } else {
-    success(false);
+    FAIL();
     return false;
   }
 }
@@ -756,6 +764,7 @@ void sqSocketCloseConnection(SocketPtr s)
       pss->sockError = err;
     }
   } else {
+    pss->s = NULL;
     pss->sockState = Unconnected;
   }
   /* Cleanup any accepted sockets */
@@ -767,6 +776,7 @@ void sqSocketCloseConnection(SocketPtr s)
     l.l_linger = 0;
     setsockopt(temp->s, SOL_SOCKET, SO_LINGER, (char*)&l, sizeof(l));
     closesocket(temp->s);
+    temp->s = 0;
     GlobalFree(GlobalHandle(temp));
   }
   UNLOCKSOCKET(pss->mutex);
@@ -816,7 +826,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
   if(err) {
     err = WSAGetLastError();
     if(err != WSAEWOULDBLOCK) {
-      success(false);
+      FAIL();
       return;
     }
     /* Connection in progress => Start write watcher */
@@ -842,6 +852,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 *****************************************************************************/
 void sqSocketListenOnPort(SocketPtr s, int port)
 {
+  int result;
   struct sockaddr_in addr;
   privateSocketStruct *pss = PSP(s);
 	
@@ -857,11 +868,15 @@ void sqSocketListenOnPort(SocketPtr s, int port)
     SOCKETSTATE(s) = Connected | SOCK_BOUND_UDP | SOCK_DATA_WRITABLE;
   } else { /* TCP */
     /* show our willingness to accept a single incoming connection */
-    listen(SOCKET(s), 1);
-    /* Waiting for accept => Start read watcher */
-    pss->sockState = WaitingForConnection;
-    pss->readWatcherOp = WatchAcceptSingle;
-    SetEvent(pss->hReadWatcherEvent);
+    result = listen(SOCKET(s), 1);
+    if(result == SOCKET_ERROR) {
+      FAIL();
+    } else {
+      /* Waiting for accept => Start read watcher */
+      pss->sockState = WaitingForConnection;
+      pss->readWatcherOp = WatchAcceptSingle;
+      SetEvent(pss->hReadWatcherEvent);
+    }
   }
 }
 
@@ -872,6 +887,7 @@ void sqSocketListenOnPort(SocketPtr s, int port)
 *****************************************************************************/
 void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
 {
+  int result;
   struct sockaddr_in addr;
   privateSocketStruct *pss = PSP(s);
 
@@ -890,13 +906,17 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
 
   bind( SOCKET(s), (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
   /* show our willingness to accept a backlogSize incoming connections */
-  listen(SOCKET(s), backlogSize);
-  LOCKSOCKET(pss->mutex, INFINITE);
-  /* Waiting for accept => Start read watcher */
-  pss->sockState = WaitingForConnection;
-  pss->readWatcherOp = WatchAccept;
-  SetEvent(pss->hReadWatcherEvent);
-  UNLOCKSOCKET(pss->mutex);
+  result = listen(SOCKET(s), backlogSize);
+  if(result != SOCKET_ERROR) {
+    LOCKSOCKET(pss->mutex, INFINITE);
+    /* Waiting for accept => Start read watcher */
+    pss->sockState = WaitingForConnection;
+    pss->readWatcherOp = WatchAccept;
+    SetEvent(pss->hReadWatcherEvent);
+    UNLOCKSOCKET(pss->mutex);
+  } else {
+    FAIL();
+  }
 }
 
 /*****************************************************************************
@@ -918,9 +938,9 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(
     newSocket = socket(AF_INET,SOCK_STREAM, 0);
   else if(socketType == UDPSocketType)
     newSocket = socket(AF_INET, SOCK_DGRAM, 0);
-  else { success(false); return; }
+  else { FAIL(); return; }
   if(newSocket == INVALID_SOCKET) {
-    success(false);
+    FAIL();
     return;
   }
   /* Allow the re-use of the current port */
@@ -957,7 +977,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(
 
   /* Create a new mutex object for synchronized access */
   pss->mutex = CreateMutex(NULL, 0,NULL);
-  if(!pss->mutex) { success(false); return; }
+  if(!pss->mutex) { FAIL(); return; }
   
   /* Install the socket into the socket list */
   pss->next = firstSocket;
@@ -971,7 +991,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(
   if(!createWatcherThreads(pss)) {
     /* note: necessary cleanup is done from within createWatcherThreads */
     s->privateSocketPtr = NULL; /* declare invalid */
-    primitiveFail();
+    FAIL();
   }
 }
 
@@ -1004,11 +1024,11 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaID(
   UNLOCKSOCKET(pss->mutex);
 
   if(!accepted) { /* something was wrong here */
-    success(false);
+    FAIL();
     return;
   }
   if(accepted->s == INVALID_SOCKET) {
-    success(false);
+    FAIL();
     return;
   }
   /* private socket structure */
@@ -1032,7 +1052,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaID(
 
   /* Create a new mutex object for synchronized access */
   pss->mutex = CreateMutex(NULL, 0,NULL);
-  if(!pss->mutex) { success(false); return; }
+  if(!pss->mutex) { FAIL(); return; }
 
   /* Install the socket into the socket list */
   pss->next = firstSocket;
@@ -1044,7 +1064,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaID(
   if(!createWatcherThreads(pss)) {
     /* note: necessary cleanup is done from within createWatcherThreads */
     s->privateSocketPtr = NULL; /* declare invalid */
-    primitiveFail();
+    FAIL();
   }
 
   /* Cleanup */
@@ -1127,18 +1147,25 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
   if(result <= 0) {
     /* Guard eventual writes to socket state */
     LOCKSOCKET(pss->mutex, INFINITE)
-      if(result == 0)
-	pss->sockState = OtherEndClosed;
-      else if(result < 0) {
-	int err = WSAGetLastError();
-	if(err == WSAECONNRESET) /* connection reset by peer */
+      if(result == 0) {
+	/* UDP doesn't know "other end closed" state */
+	if(pss->sockType != UDPSocketType)
 	  pss->sockState = OtherEndClosed;
-	else if(err == WSAEWOULDBLOCK) {
+      } else if(result < 0) {
+	int err = WSAGetLastError();
+	if(err == WSAEWOULDBLOCK) {
 	  /* no data available -> wake up read watcher */
 	  pss->sockState &= ~SOCK_DATA_READABLE;
 	  pss->readWatcherOp = WatchData;
 	  SetEvent(pss->hReadWatcherEvent);
 	} else {
+	  /* printf("ERROR: %d\n", err); */
+	  /* NOTE: We consider all other errors to be fatal, e.g.,
+	     report them as "other end closed". Looking at the
+	     WSock documentation this ought to be correct. */
+	  /* UDP doesn't know "other end closed" state */
+	  if(pss->sockType != UDPSocketType)
+	    pss->sockState = OtherEndClosed;
 	  pss->sockError = err;
 	}
 	result = 0;
@@ -1195,23 +1222,25 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
   if(result <= 0) {
     /* Guard eventual writes to socket state */
     LOCKSOCKET(pss->mutex, INFINITE)
-      /***NOTE***NOTE***NOTE***NOTE***NOTE***
-	  It's clear that for a write result being
-	  equal to zero the other side must have
-	  closed down (since we're rejecting zero
-	  writes above) but nevertheless keep it
-	  in mind if you change the above...
-      **************************************/
-      if(result == SOCKET_ERROR) {
-	int err = WSAGetLastError();
-	if(err == WSAECONNRESET) /* connection reset by peer */
+      if(result == 0) {
+	/* UDP doesn't know "other end closed" state */
+	if(pss->sockType != UDPSocketType)
 	  pss->sockState = OtherEndClosed;
-	else if(err == WSAEWOULDBLOCK) {
+      } else {
+	int err = WSAGetLastError();
+	if(err == WSAEWOULDBLOCK) {
 	  /* no data available => wake up write watcher */
 	  pss->sockState &= ~SOCK_DATA_WRITABLE;
 	  pss->writeWatcherOp = WatchData;
 	  SetEvent(pss->hWriteWatcherEvent);
 	} else {
+	  /* printf("ERROR: %d\n", err); */
+	  /* NOTE: We consider all other errors to be fatal, e.g.,
+	     report them as "other end closed". Looking at the
+	     WSock documentation this ought to be correct. */
+	  /* UDP doesn't know "other end closed" state */
+	  if(pss->sockType != UDPSocketType)
+	    pss->sockState = OtherEndClosed;
 	  pss->sockError = err;
 	}
 	result = 0;
@@ -1305,36 +1334,36 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
 			SocketPtr s, int netType, int socketType,
 			int recvBufSize, int sendBufSize, int semaIndex, int readSemaIndex, int writeSemaIndex)
 {
-	primitiveFail();
+	FAIL();
 }
 
 void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(
 			SocketPtr s, SocketPtr serverSocket,
 			int recvBufSize, int sendBufSize, int semaIndex, int readSemaIndex, int writeSemaIndex)
 {
-	primitiveFail();
+	FAIL();
 }
 
 int sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, int buf, int bufSize,  int *address,  int *port, int *moreFlag)
 {
-	return primitiveFail();
+	return FAIL();
 }
 
 int	sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port, int buf, int bufSize)
 {
-	return primitiveFail();
+	return FAIL();
 }
 
 int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(
 			SocketPtr s,int optionName, int optionNameSize, int optionValue, int optionValueSize, int *result)
 {
-	return primitiveFail();
+	return FAIL();
 }
 
 int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(
 			SocketPtr s,int optionName, int optionNameSize, int *result)
 {
-	return primitiveFail();
+	return FAIL();
 }
 
 
