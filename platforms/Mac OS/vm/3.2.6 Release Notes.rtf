@@ -28,12 +28,13 @@ a) Change an internal number that dictates how often pending interrupts should b
 delay accuracy.\
 b) Change how sleeping is done when squeak is idle. This reduces CPU consumption, and improves Delay accuracy.\
 c) Fix bug with high bit problem with keyboard (accented characters are ok now)\
+  c2) 3.2.6b6 has fixed characters that require multiple key strokes to enter.\
 d) Externals that make UI interactions (IE AppleScript) Must now make a call back to the VM to schedule\
     the main thread to do the call that will invoke UI interaction to prevent a deadlock in Carbon between threads. \
    See the OSAExecute call in the AppleScript plugin for details.\
 e) If you run a classic mac VM more than 23.x days nonstop it will stop responding to UI events.  Ensure clocks get anded with 536870911.\
 f) signal inputSemaphoreIndex because we are mulithreaded. Not that it does anything for us yet...\
-g) Prepare for unicodes in the UI keyboard logic.\
+g) 3.2.6b6 Pass the unicode value of the keystroke up as the EventKeyDown/EventKeyUp data, versus mackeyboard code.\
 h) Somewhere there is a bug with mktime + time, so use the unix code of time+localtime+gmt \
 i) Change iorelinquishPrcessorForMicroseconds to sleep the quatum between now and wakeup time. Also schedule a\
    check for interrupts if wakeup time is now or in the past. This improves delay accuracy. For OS-x this was a big deal,\
