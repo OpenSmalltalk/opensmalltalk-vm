@@ -1842,7 +1842,7 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth,
   }
     
       
-
+  free(form32);
   pclose(ppm);
   return true;
 #endif  /* HEADLESS */
