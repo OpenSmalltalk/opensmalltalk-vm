@@ -515,7 +515,6 @@ static void connectHandler(void *pssIn, int readFlag, int writeFlage, int errFla
       getsockopt(pss->s, SOL_SOCKET, SO_ERROR, &s_errno, &len);
       if(s_errno != 0) {
 	/* connection failure */
-        pss->pendingEvents |= CONN_NOTIFY;
         pss->sockError = s_errno;
         pss->sockState = Unconnected;  
         FPRINTF ((stderr, "connectHandler failed\n"));
@@ -667,13 +666,18 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
 
 
 /* return the state of a socket */
-
 int sqSocketConnectionStatus(SocketPtr s)
 {
+  int state;
+  
   if (!socketValid(s))
     return -1;
-  
-  return SOCKETSTATE(s);
+
+  state= SOCKETSTATE(s);
+  if(state == WaitingForConnection)
+    PSP(s)->pendingEvents|= CONN_NOTIFY;
+
+  return state;
 }
 
 
@@ -752,7 +756,6 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 	{
 	  /* connection completed synchronously */
 	  SOCKETSTATE(s)= Connected;
-	  notify(PSP(s), CONN_NOTIFY);
 	}
       else
 	{
@@ -760,7 +763,6 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 	    {
 	      /* asynchronous connection in progress */
 	      SOCKETSTATE(s)= WaitingForConnection;
-	      PSP(s)->pendingEvents|= CONN_NOTIFY;
 	      
 	      aioHandle(SOCKET(s), connectHandler, PSP(s), AIO_WR);  /* => connect() done */
 	    }
@@ -770,11 +772,9 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 	      perror("sqConnectToPort");
 	      SOCKETSTATE(s)= Unconnected;
 	      SOCKETERROR(s)= errno;
-	      notify(PSP(s), CONN_NOTIFY);
 	    }
 	}
     }
-  /* notify(PSP(s), 0); */
 }
 
 
