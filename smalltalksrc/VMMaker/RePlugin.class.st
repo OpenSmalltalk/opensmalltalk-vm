@@ -51,7 +51,7 @@ Class {
 		'patternStrPtr',
 		'errorStrBuffer'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #'plugin code generation' }

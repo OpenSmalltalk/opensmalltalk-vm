@@ -13,13 +13,8 @@ Class {
 		'argumentCount',
 		'bb'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
-
-{ #category : #'instance creation' }
-InterpreterProxy class >> new [
-	^super new initialize
-]
 
 { #category : #private }
 InterpreterProxy class >> validateProxyImplementation: anInterpreter [ 

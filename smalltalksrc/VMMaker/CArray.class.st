@@ -10,7 +10,7 @@ Class {
 		'ptrOffset',
 		'unitSize'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'int arithmetic' }
@@ -115,6 +115,7 @@ CArray >> bitShift: n [
 CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 
 	cTypeString = 'int' ifTrue: [^ self ptrAddress].
+	cTypeString = 'unsigned' ifTrue: [^ self ptrAddress].
 	^ self
 ]
 

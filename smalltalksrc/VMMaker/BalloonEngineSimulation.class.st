@@ -7,13 +7,8 @@ Class {
 	#instVars : [
 		'bbObj'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
-
-{ #category : #'instance creation' }
-BalloonEngineSimulation class >> new [
-	^super new initialize
-]
 
 { #category : #simulation }
 BalloonEngineSimulation >> assert: bool [

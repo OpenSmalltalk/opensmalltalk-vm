@@ -4,7 +4,7 @@ This plugin provides access to the Mac's internet configuration toolkit - so lon
 Class {
 	#name : #InternetConfigPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

@@ -23,7 +23,7 @@ Class {
 		'inputSem',
 		'quitBlock'
 	],
-	#category : 'VMMaker-InterpreterSimulation'
+	#category : #'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'instance creation' }

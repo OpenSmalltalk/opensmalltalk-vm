@@ -22,7 +22,7 @@ Class {
 	#classVars : [
 		'UseRightShiftForDivide'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #'class initialization' }

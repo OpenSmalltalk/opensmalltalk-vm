@@ -7,7 +7,7 @@ Class {
 	#instVars : [
 		'pluginName'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #public }

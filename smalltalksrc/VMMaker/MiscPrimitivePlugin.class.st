@@ -4,7 +4,7 @@ This plugin pulls together a number of translatable methods with no particularly
 Class {
 	#name : #MiscPrimitivePlugin,
 	#superclass : #InterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

@@ -21,7 +21,7 @@ Class {
 		'DirNoMoreEntries',
 		'DirBadPath'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

@@ -53,7 +53,7 @@ Class {
 		'platformNameMorph',
 		'generatedPathMorph'
 	],
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #'instance creation' }
@@ -62,11 +62,6 @@ VMMakerTool class >> initialize [
 	 (TheWorldMenu respondsTo: #registerOpenCommand:)
 
          ifTrue: [TheWorldMenu registerOpenCommand: {'VMMaker'. {self. #openInWorld}. 'The VM making tool'}].
-]
-
-{ #category : #'instance creation' }
-VMMakerTool class >> new [
-	^super new initialize
 ]
 
 { #category : #'instance creation' }
@@ -87,6 +82,8 @@ VMMakerTool class >> unload [
 VMMakerTool >> acceptDroppingMorph: transferMorph event: evt inMorph: aMorph [
 	"Here we are fetching information from the dropped transferMorph and performing the correct action for this drop.
 	As long as the source is part of this tool, move the dragged item from the source list to the destination list"
+
+	(transferMorph isKindOf: HandleMorph) ifTrue: [ ^false ].
 
 	transferMorph source model = self ifFalse:[^false].
 

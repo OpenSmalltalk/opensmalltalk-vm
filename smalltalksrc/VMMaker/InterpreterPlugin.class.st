@@ -11,7 +11,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #accessing }
@@ -118,7 +118,7 @@ InterpreterPlugin class >> moduleNameAndVersion [
 { #category : #compiling }
 InterpreterPlugin class >> noteCompilationOf: aSelector meta: isMeta [
 	"note the recompiliation by resetting the timeStamp "
-	self touch.
+	timeStamp _ Time totalSeconds.
 	^super noteCompilationOf: aSelector meta: isMeta
 ]
 
@@ -171,11 +171,6 @@ InterpreterPlugin class >> storeString: s onFileNamed: fileName [
 { #category : #accessing }
 InterpreterPlugin class >> timeStamp [
 	^timeStamp ifNil:[0]
-]
-
-{ #category : #accessing }
-InterpreterPlugin class >> touch [
-	timeStamp _ Time totalSeconds
 ]
 
 { #category : #translation }
