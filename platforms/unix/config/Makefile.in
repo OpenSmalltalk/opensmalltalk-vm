@@ -35,7 +35,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2003-03-05 08:13:29 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-14 01:30:10 by piumarta on emilia.inria.fr
 
 @make_cfg@
 @make_prg@
@@ -86,7 +86,7 @@ appdir=$(app)/Contents
 Squeak.app : squeak plugins Info.plist
 	/bin/rm -rf $(app)
 	mkdir -p			$(appdir)/MacOS
-	cp -p  squeak			$(appdir)/MacOS/Squeak
+	cp -p  squeak			$(appdir)/MacOS/.
 	cp -p  */.libs/*.so		$(appdir)/MacOS/.
 	cp -p  Info.plist		$(appdir)/.
 	cp -p  $(osxdir)/PkgInfo	$(appdir)/.
@@ -102,7 +102,7 @@ Info.plist : $(osxdir)/Info.plist.in $(osxdir)/mkinfo
 # manual page
 
 squeak.1 : $(topdir)/platforms/unix/doc/squeak.1
-	$(cfgdir)/mkman $(SQ_MAJOR) $(SQ_VERSION) \
+	$(cfgdir)/mkman $(VM_MAJOR) $(VM_VERSION) \
 	  $(bindir) $(imgdir) $(plgdir) $(mandir) $(docdir) \
 	  < $(topdir)/platforms/unix/doc/squeak.1 > $@
 
