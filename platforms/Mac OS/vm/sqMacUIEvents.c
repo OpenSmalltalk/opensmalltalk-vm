@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.17 2003/09/02 17:52:47 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.18 2003/10/03 19:05:19 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -136,7 +136,7 @@ char modifierMap[256] = {
 void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command);
 Boolean IsKeyDown(void);    
 
-#if !defined(I_AM_CARBON_EVENT) || BROWSERPLUGIN
+#if !defined(I_AM_CARBON_EVENT) || defined(BROWSERPLUGIN)
 int  HandleEvents(void);
 void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
