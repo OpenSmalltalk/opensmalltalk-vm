@@ -5,17 +5,17 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 #
-# Last edited: 2003-09-03 00:06:37 by piumarta on emilia.inria.fr
+# Last edited: Sun Apr 11 16:50:09 2004 by piumarta (Ian Piumarta) on ina
 
-#   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
-#     as listed elsewhere in this file.
+#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#                              listed elsewhere in this file.
 #   All rights reserved.
 #   
-#     You are NOT ALLOWED to distribute modified versions of this file
-#     under its original name.  If you want to modify it and then make
-#     your modifications available publicly, rename the file first.
-# 
 #   This file is part of Unix Squeak.
+# 
+#      You are NOT ALLOWED to distribute modified versions of this file
+#      under its original name.  If you modify this file then you MUST
+#      rename it before making your modifications available publicly.
 # 
 #   This file is distributed in the hope that it will be useful, but WITHOUT
 #   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -41,10 +41,8 @@
 #   directory `platforms/unix/doc' before proceeding with any such use.
 
 BEGIN {
-  print "/* This file has been post-processed for GNU C */\n\
-\n\
-";
-  print "copying first section of file" > "/dev/stderr";
+  print "/* This file has been post-processed for GNU C */\n\n";
+# print "copying first section of file" > "/dev/stderr";
   stage= 0;
 }
 
@@ -56,16 +54,16 @@ BEGIN {
 # An inlining comment means the interpreter was not inlined
 
 /inline\: true/ {
-  print NR, $0 > "/dev/stderr";
-  print "" > "/dev/stderr";
-  print "*** interpreter was not inlined: bailing out! ***" > "/dev/stderr";
-  print "" > "/dev/stderr";
-  exit 1;
+# print NR, $0 > "/dev/stderr";
+# print "" > "/dev/stderr";
+# print "*** interpreter was not inlined: bailing out! ***" > "/dev/stderr";
+# print "" > "/dev/stderr";
+  stage= -1;
 }
 
 
 (stage == 0) && /^int interpret\(void\) \{/ {
-  print "interpret: adding static register assignments" > "/dev/stderr";
+# print "interpret: adding static register assignments" > "/dev/stderr";
   stage= 1;
   print;
   next;
@@ -92,16 +90,18 @@ BEGIN {
 }
 
 (stage == 1) && /^$/ {
-  print "interpret: adding bytecode dispatch table" > "/dev/stderr";
+# print "interpret: adding bytecode dispatch table" > "/dev/stderr";
   print "    JUMP_TABLE;\n";
-  print "interpret: rewriting case labels and outer breaks" > "/dev/stderr";
+# print "interpret: rewriting case labels and outer breaks" > "/dev/stderr";
   stage= 2;
-  FS="[ 	:]+";
+  FS=" ";
+# FS="[ 	:]+";
   next;
 }
 
 (stage == 2) && /^		case / {
-  print "		CASE(" $3 ")";
+  print "		CASE(" (($NF) + 0) ")";
+# print "		CASE(" $3 ")";
   next;
 }
 
@@ -118,36 +118,38 @@ BEGIN {
 
 (stage == 3) && /^int primitiveResponse\(/ {
   print;
-  print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
+# print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
   print "    PRIM_TABLE;\n";
-  print "primitiveResponse: rewriting case labels" > "/dev/stderr";
+# print "primitiveResponse: rewriting case labels" > "/dev/stderr";
   stage= 4;
-  FS="[ 	:]+";
+  FS=" ";
+# FS="[ 	:]+";
   next;
 }
 
 
-(stage == 4) && /^	switch \(primitiveIndex\) {/ {
-  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
+(stage == 4) && /^	switch \(primitiveIndex\) \{/ {
+# print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
   print "	PRIM_DISPATCH;";
   print;
   next;
 }
 
-(stage == 4) && /^	switch \(foo->primitiveIndex\) {/ {
-  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
+(stage == 4) && /^	switch \(foo->primitiveIndex\) \{/ {
+# print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
   print "	PRIM_DISPATCH;";
   print;
   next;
 }
 
 (stage == 4) && /^	case / {
-  print "	CASE(" $3 ")";
+  print "	CASE(" (($NF) + 0) ")";
+# print "	CASE(" $3 ")";
   next;
 }
 
 (stage == 4) && /^\}/ {
-  print "copying last section of file" > "/dev/stderr";
+# print "copying last section of file" > "/dev/stderr";
   stage= 5;
   FS=" ";
   print;
