@@ -1,0 +1,15 @@
+# make.ext.in -- mf fragment for external plugins		-*- makefile -*-
+# 
+# Author: Ian.Piumarta@inria.fr
+# 
+# Last edited: 2002-12-01 09:20:28 by piumarta on calvin.inria.fr
+
+o		= .lo
+a		= .la
+COMPILE		= $(LIBTOOL) --mode=compile \
+		  $(CC) $(CFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) \
+		  $(INCLUDES) $(XINCLUDES) $(CPPFLAGS) $(XCPPFLAGS) -c -o
+LINK		= $(LIBTOOL) --mode=link \
+		  $(CC) $(CFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) -avoid-version -module -rpath $(libdir) -o
+RANLIB		= :

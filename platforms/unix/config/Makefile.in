@@ -1,0 +1,126 @@
+# Makefile.in for Unix Squeak using VMMaker		-*- makefile -*-
+# 
+#   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+#     as listed elsewhere in this file.
+#   All rights reserved.
+#   
+#     You are NOT ALLOWED to distribute modified versions of this file
+#     under its original name.  If you want to modify it and then make
+#     your modifications available publicly, rename the file first.
+# 
+#   This file is part of Unix Squeak.
+# 
+#   This file is distributed in the hope that it will be useful, but WITHOUT
+#   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+#   FITNESS FOR A PARTICULAR PURPOSE.
+#   
+#   You may use and/or distribute this file ONLY as part of Squeak, under
+#   the terms of the Squeak License as described in `LICENSE' in the base of
+#   this distribution, subject to the following additional restrictions:
+# 
+#   1. The origin of this software must not be misrepresented; you must not
+#      claim that you wrote the original software.  If you use this software
+#      in a product, an acknowledgment to the original author(s) (and any
+#      other contributors mentioned herein) in the product documentation
+#      would be appreciated but is not required.
+# 
+#   2. You must not distribute (or make publicly available by any
+#      means) a modified copy of this file unless you first rename it.
+# 
+#   3. This notice must not be removed or altered in any source distribution.
+# 
+#   Using (or modifying this file for use) in any context other than Squeak
+#   changes these copyright conditions.  Read the file `COPYING' in the
+#   directory `platforms/unix/doc' before proceeding with any such use.
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: 2003-03-05 08:13:29 by piumarta on emilia.inria.fr
+
+@make_cfg@
+@make_prg@
+
+la		= .la
+
+SQLIBS		= [targets]
+PLUGINS_LA	= [plugins]
+
+squeak		= squeak
+
+all : $(squeak) plugins squeak.1 $(npsqueak)
+
+# VM
+
+$(squeak) : config.sh $(SQLIBS) version.o
+	$(LINK) $(squeak) $(SQLIBS) version.o $(LIBS) [plibs] vm/vm.a
+	size $(squeak)
+	@echo
+	@./$(squeak) -version
+	@echo
+
+version.o : version.c
+	$(COMPILE) version.o version.c
+
+version.c : $(SQLIBS)
+	${cfgdir}/verstamp version.c $(CC)
+
+plugins : config.sh $(PLUGINS_LA)
+
+# npsqueak
+
+npsqueak : nps/npsqueak.so
+
+nps :
+	mkdir nps
+	$(SHELL) -ec 'cd nps; ln -s $(topdir)/platforms/unix/npsqueak/* .'
+
+nps/npsqueak.so : nps
+	$(SHELL) -ec 'cd nps; $(MAKE) VM_VERSION=$(VM_VERSION) SQ_DIR=$(imgdir)'
+
+# OSX app bundle
+
+osxdir=$(topdir)/platforms/unix/vm-display-Quartz
+app=Squeak-$(VM_MAJOR).$(VM_MINOR)-$(VM_RELEASE).app
+appdir=$(app)/Contents
+
+Squeak.app : squeak plugins Info.plist
+	/bin/rm -rf $(app)
+	mkdir -p			$(appdir)/MacOS
+	cp -p  squeak			$(appdir)/MacOS/Squeak
+	cp -p  */.libs/*.so		$(appdir)/MacOS/.
+	cp -p  Info.plist		$(appdir)/.
+	cp -p  $(osxdir)/PkgInfo	$(appdir)/.
+	cp -pr $(osxdir)/Resources	$(appdir)/.
+	-find $(app) -name '*~' | xargs rm -f
+
+bndl_version=${VM_VERSION} (${SQ_VERSION})
+
+Info.plist : $(osxdir)/Info.plist.in $(osxdir)/mkinfo
+	$(osxdir)/mkinfo $(osxdir)/Info.plist.in Info.plist.tmp "${bndl_version}"
+	mv Info.plist.tmp Info.plist
+
+# manual page
+
+squeak.1 : $(topdir)/platforms/unix/doc/squeak.1
+	$(cfgdir)/mkman $(SQ_MAJOR) $(SQ_VERSION) \
+	  $(bindir) $(imgdir) $(plgdir) $(mandir) $(docdir) \
+	  < $(topdir)/platforms/unix/doc/squeak.1 > $@
+
+# install/distrib (these just get in the way -- suck 'em in from elsewhere)
+
+@Makefile_install@
+@Makefile_dist@
+@Makefile_rpm@
+
+# VMM configuration changes
+
+config.sh : $(srcdir)/plugins.int $(srcdir)/plugins.ext $(srcdir)/vm/sqNamedPrims.h
+	./config.status
+	@echo
+	@echo "configuration changed: please run make again"
+	@echo
+	@exit 1
+
+[make_targets]
+
+.force :

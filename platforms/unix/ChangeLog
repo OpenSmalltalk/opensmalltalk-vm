@@ -1,0 +1,506 @@
+2003-08-07  Ian Piumarta  <piumarta@cartman.inria.fr>
+
+	* platforms/unix/vm/sqUnixMain.c (sigsegv): Call abort() after
+	segv, to leave a core.
+
+2002-12-01  piumarta  <piumarta@calvin.inria.fr>
+
+	* platforms/unix/config/mkacinc: Add `-dlopen lib' to library
+	list.
+
+2002-12-01  Ian Piumarta  <piumarta@calvin.inria.fr>
+
+	* platforms/unix/vm/dlfcn-dyld.c: Added.
+
+	* platforms/unix/config/config.h.in: Add HAVE_DYLD, DARWIN.
+
+	* platforms/unix/config/configure.ac: Remove check for dlfcn.h.
+	Check for _dyld_present in libc and define HAVE_DYLD.  Checking
+	for dlfcn.h and -ldl only if !HAVE_DYLD.  Define DARWIN if
+	compiling on Darwin.
+
+	* platforms/unix/config/make.cfg.in (SOFLAGS): Substituted by
+	configure.
+
+	* platforms/unix/vm/sqUnixExternalPrims.c: Include dlopen wrappers
+	for dyld on Mach.  Fix prototype for dlsym().  Provide definition
+	for RTLD_GLOBAL if missing.
+	(tryLoading): Check for dir before calling dlopen().
+	(tryLoading): Make prefix/suffix selection be table driven.
+	(ioLoadModule): Logic simplified (prefix/suffix now handled by
+	tryLoading).
+
+	* platforms/unix/vm/sqXWindow.c (imageNotFound): Fix multi-line
+	string literals.
+
+2002-11-25  Ian Piumarta  <piumarta@dilbert.inria.fr>
+
+	* platforms/unix/plugins/DropPlugin/sqUnixDragDrop.c:
+	Added missing stubs for sqSec*().
+
+2002-11-25  Bert Freudenberg  <bert@isg.cs.uni-magdeburg.de>
+
+	* platforms/unix/plugins/B3DAcceleratorPlugin/sqUnixOpenGL.c:
+	New version, updated for Croquet.
+
+2002-10-27  piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/verstamp: Remove Apple-specific garbage
+	from gcc version string on Darwin.
+
+2002-10-26  piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm/sqUnixMozilla.c (browserProcessCommand): Fix
+	signature to avoid link errors on BSD.
+
+	* util/Makefile.dist (BINREL): Use `-nox' suffix on tarball if
+	configured --without-x.
+
+	* platforms/unix/config/configure.ac: Define and substitute `NOX'
+	as `-nox' when building --without-x, empty otherwise.
+	(disabled_plugins): Disable UnixOSProcessPlugin when building
+	--without-x.
+
+	* platforms/unix/config/make.cfg.in (NOX): Import definition of
+	NOX from configure.
+
+	* platforms/unix/config/Makefile.in: Define `squeak' as `squeak'
+	or `squeak-nox'.  Use `$(squeak)' instead of `squeak' throughout.
+
+	* platforms/unix/config/Makefile.install: Use $(squeak) instead of
+	`squeak'.
+
+2002-10-26  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/SoundPlugin/sqUnixSoundSun.c:
+	* platforms/unix/plugins/SoundPlugin/sqUnixSoundNAS.c:
+	* platforms/unix/plugins/SoundPlugin/sqUnixSound.c:
+	* platforms/unix/plugins/SerialPlugin/sqUnixSerial.c:
+	* platforms/unix/plugins/SecurityPlugin/sqUnixSecurity.c:
+	* platforms/unix/plugins/MIDIPlugin/sqUnixMIDI.c:
+	* plugins/JoystickTabletPlugin/sqUnixJoystickTablet.c:
+	* platforms/unix/plugins/FileCopyPlugin/sqUnixFileCopyPlugin.c:
+	* platforms/unix/plugins/FilePlugin/sqUnixFile.c:
+		Systematically include generated plugin header.
+	
+	* platforms/unix/plugins/FilePlugin/sqUnixFile.c (dir_Lookup):
+	Type of sizeIfFile is squeakFileOffsetType not int.  (Many thanks
+	to Alain Fischer for finding this.)
+
+2002-10-24  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqUnixExternalPrims.c: Fix several dprintf()s
+	that failed to specify the stream.
+	(ioFindExternalFunctionIn): If set, prepend VM_DLSYM_PREFIX to
+	lookupName.
+
+	* platforms/unix/config/configure.ac: On Darwin add
+	`-no-cpp-precomp' to CFLAGS, disable npsqueak, and define
+	VM_DLSYM_PREFIX to "_".
+
+	* platforms/unix/config/config.h.in: Add VM_DLYSM_PREFIX for
+	targets that require `_' before dlsym names (i.e., Darwin).
+
+	* platforms/unix/config/config.guess,
+	  platforms/unix/config/config.sub: updated to autoconf-2.54.
+
+2002-10-24  root  <piumarta@emilia.inria.fr>
+
+	* /usr/share/aclocal/libtool.m4 (archive_cmds for darwin): Remove
+	double quotes around "x$module" (allowing libtool to recognise
+	`-module' flag when building loadable modules on Darwin).
+
+2002-10-23  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqXWindow.c: Remove spurious `#' from front of
+	__snprintf extern declaration.
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c
+	(MAXHOSTNAMELEN): If not defined after including netdb.h (nasty,
+	wicked, evil Solaris) then define it as 256.
+
+2002-10-20  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* util/Squeak-vm.spec:
+	(AutoReqProv): Inhibit automatic dependency generation (too much
+	noise from plugins).
+	(Requires): Add (lib{X11,Xext,m}) as explicit dependencies.
+
+	* src/plugins/UnixOSProcessPlugin/UnixOSProcessPlugin.c: Updated
+	to 3.0.2.
+
+2002-10-17  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/config/Makefile.install (install-npsqueak): Add
+	npsqueak dependency to force build if required.
+
+2002-10-16  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/npsqueak/npsqueakrun.in: Add version directory to
+	`File' comment.
+
+	* platforms/unix/vm/sqXWindow.c: Remove `secure' and the
+	corresponding option and env var.
+
+	* platforms/unix/doc/squeak.1: Remove `-secure'.
+
+----------------------------------------------------------------
+
+2002-10-16  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* 3.2-5 Released.
+
+2002-10-16  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqXWindow.c:
+	Add useItimer (enabled by default, -notimer disables) and iconified.
+	(SetUpWindow): Set wmHint IconicState if iconified.
+	(ioLowResMSecs): Check useItimer.
+	(SetUpTimers): Check useItimer.
+	(usage): Add -iconic, -notimer.
+	(ParseEnvironment): Add SQUEAK_ICONIC, SQUEAK_NOTIMER.
+	(ParseArguments): Add -iconic, -notimer.
+
+	* platforms/unix/doc/squeak.1: Add -iconic and -notimer.
+
+	* platforms/unix/plugins/SqueakFFIPrims/sqUnixFFI.c
+	(FFI_TYPE_STRUCT): Define if neccessary.  (Value is not exported
+	from ffi.h in libffi-2.)
+
+	* platforms/unix/plugins/SqueakFFIPrims/acinclude.m4: Added.
+
+2002-09-29  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqXWindow.c (ioSetFullScreen): Resize stWindow
+	(not sqParent) for browser's benefit.
+
+2002-09-27  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/config/Makefile.install (install-npsqueak): new
+	target.
+
+	* platforms/unix/config/Makefile.in (npsqueak): new target.
+
+	* platforms/unix/config/configure.ac: add `--with-browser' setting
+	NPSQUEAK_SO appropriately.
+
+	* platforms/unix/config/configure.ac: renamed from configure.in to
+	keep debian's autoconf happy.
+
+	* platforms/unix/config/acinclude.m4 (AC_GNU_INTERP): force
+	AWK=gawk if --with-gnu-awk.
+
+	* platforms/unix/config/config.h.in: additional undefines for
+	HAVE_[__]SNPRINTF.
+
+	* platforms/unix/vm/sqXWindow.c (SetUpWindow): Create initial
+	window with extent = screen extent when -fullscreen specified.
+
+2002-09-26  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqXWindow.c (SetUpWindow): `-iconic' option
+	sets initial_state WM hint to Iconic.
+
+2002-09-16  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/aio.c (aioSuspend,aioDisable): remove check
+	for null descriptor (it's a valid fd).
+
+2002-08-21  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/SoundPlugin/sqUnixSoundOSS.c (output):
+	Loop until write() completes (for broken alsa drivers).
+	(Suggested by Lex Spoon.)
+
+2002-08-03  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqXWindow.c (forgetXDisplay): aioDisable the X
+	fd before closing it.  (From Dave Lewis.)
+
+2002-07-17  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqGnu.h: Define all undefined XX_REGs to be
+	empty to prevent build errors on unsupported platforms.  (Thanks
+	to Tommy Thorn for spotting the problem.)
+
+	* platforms/unix/config/*: Many diverse changes for autoconf 2.53
+	and libtool 1.4.2.
+	
+2002-07-12  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/PseudoTTYPlugin/sqUnixPseudoTTYPlugin.c
+	(validate): Fail primitive if f->state is 0.
+	
+	* platforms/unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c
+	(validate): Fail primitive if f->state is 0.
+
+----------------------------------------------------------------
+
+2002-07-11  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* 3.2-4 Released.
+
+2002-07-11  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/PseudoTTYPlugin/openpty.h: Include
+	libutil.h if present (FreeBSD's name for util.h).
+
+	* platforms/unix/plugins/PseudoTTYPlugin/acinclude.m4: Use test -r
+	on /dev/ptmx.  Check for `libutil.h'.  (Thanks to Eric Dorman.)
+
+2002-07-10  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c
+	(asyncFileAttach): Broken out from asyncFileOpen() for use by
+	PtyPlugin.
+
+	* platforms/unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.h:
+	Export asyncFileAttach().
+
+	* platforms/unix/plugins/PseudoTTYPlugin/openpty.h: Provide local
+	implementations of openpty() and login_tty() if not supported by
+	libc.
+
+	* platforms/unix/plugins/PseudoTTYPlugin/sqUnixPseudoTTYPlugin.c:
+	Various portability fixes.  Use openpty() if available.  Avoid use
+	of nanosleep.  ptyFork() and ptyClose() perform all the work of
+	AsyncFile creation and destruction.
+
+----------------------------------------------------------------
+
+2002-07-09  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* 3.2-3 Released.
+
+2002-07-09  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqXWindow.c: Various stubs to allow OSProcess
+	to (mostly) work when compiled -DHEADLESS.
+	
+	* platforms/unix/vm/sqXWindow.c (ioGetWindow, ioGetDisplay):
+	implemented.
+
+	* platforms/unix/plugins/B3DAcceleratorPlugin/sqUnixOpenGL.c
+	(glInitialize): Retrieve stDisplay and stWindow via ioGet
+	functions.
+
+2002-07-08  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c
+	(acceptHandler, sqSocketCreate...): Remove OOBINLINE hack.
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c
+	(sqSocketSetOptions...): Interpret option as a string and convert
+	it to an int before setsockopt().
+
+	* platforms/unix/config/Makefile.in (squeak.1): Avoid $< in rule
+	for squeak.1.
+
+	* platforms/unix/vm/sqUnixMozilla.c (primitivePluginBrowserReady):
+	Fail primitive if not running in browser.  (Eliminates infuriating
+	three second pause on return from snapshot.)
+
+	* platforms/unix/vm/sqXWindow.c: Fix conditional compilation in
+	various places -DHEADLESS.  (Many thanks to Colin Putney.)
+
+	* platforms/unix/vm/osExports.c (os_exports): Don't export browser
+	functions if compiling -DHEADLESS.
+
+	* platforms/unix/config/make.int.in: Run RANLIB on final archive.
+
+2002-07-06  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/PseudoTTYPlugin/sqUnixPseudoTTYPlugin.c:
+	Implemented.
+
+	* platforms/unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c:
+	Implemented.
+
+2002-07-01  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c (acceptHandler,
+	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID):
+	Set option SO_OOBINLINE on new sockets (for the benefit of telnet,
+	which needs to pick up IAC as urgent-mode data).
+	(dataHandler): Read (and discard) out-of-band data on exception,
+	leaving the socket status alone.
+
+----------------------------------------------------------------
+
+2002-06-10  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* 3.2-2 Released.
+
+2002-06-10  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/vm/sqXWindow.c (handleEvent): Add missing break
+	in SelectionClear case.  (Thanks to Ned Konz.)
+	(getAttribute): Return full path of VM for sysAttr(0).  [Thanks
+	also to Ned Konz for spotting this.]
+
+	* platforms/unix/vm/sqXWindow.c (recordKeyboardEvent): modifiers
+	to use passed as argument (for mouse wheel).
+	(handleEvent): Mouse wheel uses inverted ctrl key modifier.
+
+2002-06-08  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/config/Makefile.install (install-image): install
+	compressed image/changes files.
+	image/changes and inisqueak installed in imgdir.
+
+	* platforms/unix/config/inisqueak.in: use compressed image/changes
+	files.
+	image/changes installed in imgdir.
+
+	* platforms/unix/vm/sqPlatformSpecific.h: include <sys/types.h> to
+	pick up off_t.
+
+----------------------------------------------------------------
+
+2002-06-07  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* 3.2-1 Released.
+
+2002-06-06  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* platforms/unix/doc/squeak.1: image/changes files in version
+	independent libdir.
+
+	* platforms/unix/config/verstamp: Use abbreviated date in ISO 8601
+	format.  (Requires the local plarform have a POSIX-compliant `date'
+	command.)
+
+2002-06-03    <piumarta@emilia.inria.fr>
+
+	* platforms/unix/doc/squeak.1: Add `-plugins' option.
+
+	* platforms/unix/vm/sqUnixExternalPrims.c (ioLoadModule): If set, try
+	loading plugins through `squeakPlugins' before the default locations.
+
+	* platforms/unix/vm/sqXWindow.c: Add option `-plugins'.
+
+2002-05-31    <piumarta@emilia.inria.fr>
+
+	* sqXWindow.c (x2sqModifier): Ignore mod[345] to avoid possible
+	numLock problems.
+
+2002-05-27    <piumarta@emilia.inria.fr>
+
+	* squeak.1: Add `-noevents' (missing) and `-nomixer' (new).
+
+	* sqUnixSoundNAS.c (snd_Start): Select sound format based on byte
+	order of the local machine.
+
+2002-05-26    <piumarta@emilia.inria.fr>
+
+	* acinclude.m4:
+	Clean up checks for audio support.
+	Check for native support (oss, sun) before network support (nas).
+
+2002-05-25  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* sqGnu.h: CB_REG defined for intel when gcc >= 2.95.
+
+2002-05-22  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* sqUnixSoundOSS.c (outHandler): Defined only when playSema
+	enabled.
+	(snd_Start): Fail primitive when semaIndex > 0 and play semaphore
+	disabled.  Do not call aioEnable() when playSema disabled.
+	(snd_AvailableSpace): Only call aioHandle() when playSema enabled.
+
+2002-05-21  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* sqUnixSocket.c (sqSocketReceiveDataAvailable): Change socket
+	state to OtherEndClosed on EOF.
+	(dataHandler): Change socket state to OtherEndClosed on EOF.
+
+2002-05-17  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* sqUnixSoundOSS.c: Rewritten from scratch.
+
+	* sqUnixSound.c: Broken into separate files:
+	`sqUnixSound{OSS,NAS,Sun,None}.c'.
+
+2002-05-12  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* sqXWindow.c (ioShowDisplay): Clamp affected{R,B} at
+	{width,height} instead of {width,height} - 1.
+
+2002-05-09  Ian Piumarta  <piumarta@felina.inria.fr>
+
+	* sqXWindow.c (ioBeep): Check for server connection before trying
+	to ring the bell.
+
+	* sqUnixSound.c: New NAS/OSS recording code from Lex Spoon.
+	(Modified for aio compatiblity.)
+
+	* sqUnixExternalPrims.c (tryLoading): Fail silently when
+	attempting to load a plugin that names a directory. [sf]
+
+	* squeak.1: Remove `-swapmod'.
+
+	* sqXWindow.c: Remove `-swapmod'.
+	(x2sqModifier): All modifiers map to Command.
+
+	* sqXWindow.c (ioGetButtonState, recordMouseEvent): Honour
+	`-swapbtn' for Ctrl/Command-RedButton clicks.
+
+	* squeak.1: Default image name is `squeak.image'.
+
+	* sqXWindow.c (ParseEnvironment, usage): Default image name is
+	`squeak.image'. [sf]
+
+	* sqXWindow.c (ioFormPrint): Print form to PostScript printer
+	using pnmtops. [sf]
+
+2002-05-08  Ian Piumarta  <piumarta@emilia.inria.fr>
+
+	* sqXWindow.c: Total rewrite of window resizing to fix
+	incorrect assumptions about the behaviour of the image.
+
+	* sqXWindow.c (SetUpWindow): Calculate initial window geometry
+	based on parent window if running in a browser.  (Avoids X
+	protocol errors.)
+
+	* sqUnixSecurity.c (ioGetSecureUserDirectory): Fail primitive if
+	security not initialised.
+
+	* sqXWindow.c (ioScreenSize): Answer size of saved
+	window when not connected to a display. [sf]
+
+2002-05-07  Ian Piumarta   <piumarta@emilia.inria.fr>
+
+	* sqXWindow.c (handleEvent): Fixed possible infinite recursion
+	(observed by Lex Spoon) in completion event handling.
+
+	* sqXWindow.c: Increase default heap size to 48MB.
+
+	* sqUnixMozilla.c (browserPostURLRequest): Comment out unused
+	function to avoid compilation errors.
+
+	* sqUnixAsynchFile.c: Remove stale security code.
+	* sqUnixSocket.c: Remove stale security code.
+	* sqUnixFile.c: Remove stale security functions.
+	* sqUnixSecurity.c: New version from Bert Freudenberg. [sf]
+
+	* sqUnixFile.c:	Remove stale browser support code.
+	* sqXWindow.c: Support for new browser plugin. [sf]
+
+	* sqUnixFile.c: Include <errno.h> and <string.h>. [sf]
+
+	* sqUnixFile.c (dir_Lookup): Retry readdir() on interrupted system
+	call. [sf]
+
+	* sqXWindow.c: Handle the CLIPBOARD selection. [sf]
+
+	* sqXWindow.c (SetUpWindow): Extra bit in valuemask for parent
+	window to avoid errors on Sun. [sf]
+
+2002-05-07  Ian Piumarta   <piumarta@emilia.inria.fr>
+
+	* sqUnixSocket.c: Immediate detection of remote reset on
+	connection.
+	
+	* sqUnixSocket.c (dataHandler): Don't signal the connection
+	semaphore on error.

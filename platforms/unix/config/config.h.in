@@ -1,0 +1,157 @@
+/* config.h.in -- template for config.h			-*- C -*-
+ *
+ *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+ *     as listed elsewhere in this file.
+ *   All rights reserved.
+ *   
+ *     You are NOT ALLOWED to distribute modified versions of this file
+ *     under its original name.  If you want to modify it and then make
+ *     your modifications available publicly, rename the file first.
+ * 
+ *   This file is part of Unix Squeak.
+ * 
+ *   This file is distributed in the hope that it will be useful, but WITHOUT
+ *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *   FITNESS FOR A PARTICULAR PURPOSE.
+ *   
+ *   You may use and/or distribute this file ONLY as part of Squeak, under
+ *   the terms of the Squeak License as described in `LICENSE' in the base of
+ *   this distribution, subject to the following additional restrictions:
+ * 
+ *   1. The origin of this software must not be misrepresented; you must not
+ *      claim that you wrote the original software.  If you use this software
+ *      in a product, an acknowledgment to the original author(s) (and any
+ *      other contributors mentioned herein) in the product documentation
+ *      would be appreciated but is not required.
+ * 
+ *   2. You must not distribute (or make publicly available by any
+ *      means) a modified copy of this file unless you first rename it.
+ * 
+ *   3. This notice must not be removed or altered in any source distribution.
+ * 
+ *   Using (or modifying this file for use) in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the
+ *   directory `platforms/unix/doc' before proceeding with any such use.
+ */
+
+/* Author: Ian.Piumarta@INRIA.Fr
+ *
+ * Last edited: 2003-03-02 05:26:57 by piumarta on emilia.inria.fr
+ */
+
+#ifndef __sq_config_h
+#define __sq_config_h
+
+/* package options */
+
+#undef	USE_X11
+#undef	USE_X11_GLX
+#undef	USE_QUARTZ
+#undef	USE_QUARTZ_CGL
+#undef	USE_RFB
+
+/* libraries */
+
+#undef	HAVE_LIBX11
+#undef	HAVE_LIBXEXT
+#undef	HAVE_LIBDL
+#undef	HAVE_DYLD
+#undef	HAVE_LIBFFI
+#undef	HAVE_ICONV
+
+#undef	USE_AUDIO_NONE
+#undef	USE_AUDIO_SUN
+#undef	USE_AUDIO_NAS
+#undef	USE_AUDIO_OSS
+#undef	USE_AUDIO_MACOSX
+#undef	OSS_DEVICE
+
+/* header files */
+
+#undef	HAVE_UNISTD_H
+#undef	NEED_GETHOSTNAME_P
+
+#undef	HAVE_DIRENT_H
+#undef	HAVE_SYS_NDIR_H
+#undef	HAVE_SYS_DIR_H
+#undef	HAVE_NDIR_H
+#undef	HAVE_DLFCN_H
+#undef	HAVE_ICONV_H
+
+#undef	HAVE_SYS_TIME_H
+#undef	TIME_WITH_SYS_TIME
+
+#undef	HAVE_SYS_FILIO_H
+
+#undef	HAVE_SYS_AUDIOIO_H
+#undef	HAVE_SUN_AUDIOIO_H
+
+#undef	HAVE_PTY_H
+#undef	HAVE_UTIL_H
+#undef	HAVE_STROPTS_H
+
+#undef	HAVE_GL_GL_H
+#undef	HAVE_OPENGL_GL_H
+
+#undef	NEED_SUNOS_H
+
+/* system calls/library functions */
+
+#undef	AT_EXIT
+
+#undef	HAVE_TZSET
+
+#undef	HAVE_OPENPTY
+#undef	HAVE_UNIX98_PTYS
+
+#undef	HAVE_SNPRINTF
+#undef	HAVE___SNPRINTF
+
+#undef	HAVE_MMAP
+
+#undef	HAVE_DYLD
+
+#undef	HAVE_LANGINFO_CODESET
+
+/* structures */
+
+#undef	HAVE_TM_GMTOFF
+#undef	HAVE_TIMEZONE
+
+/* typedefs */
+
+#undef	size_t
+#undef	socklen_t
+
+#undef	squeakInt64
+
+/* architecture */
+
+#undef	OS_TYPE
+
+#undef	VM_HOST
+#undef	VM_HOST_CPU
+#undef	VM_HOST_VENDOR
+#undef	VM_HOST_OS
+
+#undef	WORDS_BIGENDIAN
+#undef	DOUBLE_WORD_ALIGNMENT
+#undef	DOUBLE_WORD_ORDER
+
+/* damage containment */
+
+#undef	DARWIN
+
+#ifdef NEED_SUNOS_H
+# include "sunos.h"
+#endif
+
+/* other configured variables */
+
+#undef SQ_VERSION
+#undef VM_VERSION
+#undef VM_LIBDIR
+#undef VM_MODULE_PREFIX
+#undef VM_DLSYM_PREFIX
+
+#endif /* __sq_config_h */

@@ -1,0 +1,25 @@
+#!/bin/sh
+# 
+# Write a version stamp into $1.  $2 is the compiler name.
+# 
+# Last edited: 2002-06-08 18:32:53 by piumarta on emilia.inria.fr
+
+if test -f $1; then
+  SERIAL=`head -1 $1 | cut -d ' ' -f 3 | sed 's/;//'`
+  SERIAL=`expr $SERIAL + 1`
+else
+  SERIAL=1
+fi
+
+if expr "$2" : ".*gcc" >/dev/null ; then
+  CC=`$2 -v 2>&1 | tail -1 | sed 's/.*based on//g' | awk '{print $1 , $3} '`
+else
+  CC=$2
+fi
+
+cat <<_EOF >$1
+int vm_serial= $SERIAL;
+char *vm_date= "`date`";
+char *cc_version= "$CC";
+char *ux_version= "`uname -a | sed 's, unknown,,g'`";
+_EOF

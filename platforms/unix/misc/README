@@ -1,0 +1,7 @@
+GLXUnix-ikp.2.cs -
+
+    Contains GLX support (as required by Croquet) that takes into
+    account the differences between big- and little-endian machines.
+    File this into a Croquet0.01 image before trying to run it on
+    Unix.  (If you don't know what Croquet is then you don't need this
+    file.)

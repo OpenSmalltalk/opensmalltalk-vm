@@ -1,0 +1,93 @@
+By default the newer VMs implement the "traditional" Unix VM
+behaviour:
+
+    Squeak		X11
+    ------		---
+    shift		Shift ^ Lock
+    ctrl		Control
+    command		Mod1
+    option		Mod1 & Control
+
+For keyboards that have more than one modifier key (Apple, Sun, etc.)
+a more Macintosh Squeak-like behaviour is possible by specifying which
+modifier keys should map to Option and Command, either on the command
+line or by setting the corresponding environment variables:
+
+    Key		X11 modifier	VM option	Environment
+    ---		-----------	---------	-----------
+    Option	mod<n>		-optmod n	export SQUEAK_OPTMOD=n
+    Command	mod<n>		-cmdmod n	export SQUEAK_CMDMOD=n
+
+Examples:
+
+    Apple keyboard, GNU/Linux, XFree86 4.0:	-cmdmod 1 -optmod 2
+    Apple keyboard, NetBSD, XFree86 4.2:	-cmdmod 2 -optmod 1
+	(these map "Option" to Option [duh] and "Apple" to Command)
+
+    Sun keyboard, Solaris:			-cmdmod 4 -optmod 1
+	(this maps "Alt" to Option and "<>" [Meta] to Command)
+
+If you don't know which modifiers are bound to which keys, then:
+
+    executing `xmodmap -pm' will print the keycodes and keysyms
+    associated with each modifier;
+
+    running`xev' and hitting modifier keys will generate KeyRelease
+    events in which the "state" field has bit N+2 set to 1 for mod<N>
+    (bit 0 is the least significant); i.e: state=0x8 corresponds to
+    mod1 (N = 1, N+2 = 3, 1<<3 = 8), state=0x40 is mod4, and
+    state=0x48 means both mod1 and mod4 are active simultaneously.
+
+With a properly mapped Command key the pointer buttons and keyboard
+shortcuts should work as follows (Option is generally ignored by the
+image and is not considered below):
+
+Pointer mappings:
+
+  Button1 (red)     -> select (world menu on background)
+  Button2 (yellow)  -> window menu (personal menu on background)
+  Button3 (blue)    -> morph halos
+
+  Button1 + Shift   -> extend selection (find window menu on background)
+  Button2 + Shift   -> window "more" menu (find window on background)
+  Button3 + Shift   -> morph halos
+
+  Button1 + Ctrl    -> window menu (personal menu on b/g) = acts like Button2
+  Button2 + Ctrl    -> morph menu
+  Button3 + Ctrl    -> morph menu
+
+  Button1 + Command -> morph halos = acts like Button3
+  Button2 + Command -> window menu (personal menu on b/g)
+  Button3 + Command -> morph halos
+
+  Button1 + Shift + Ctrl -> (topmost) morph menu
+  Button2 + Shift + Ctrl -> (topmost) morph menu
+  Button3 + Shift + Ctrl -> (bottommost) morph menu
+
+  Button1 + Shift + Command -> extend selection (find window on b/g)
+  Button2 + Shift + Command -> window "more" menu (find window on b/g)
+  Button3 + Shift + Command -> morph halos
+
+  Button1 + Ctrl + Command -> morph menu
+  Button2 + Ctrl + Command -> morph menu
+  Button3 + Ctrl + Command -> morph menu
+
+  Button1 + Shift + Ctrl + Command -> (topmost) morph menu
+  Button2 + Shift + Ctrl + Command -> (topmost) morph menu
+  Button3 + Shift + Ctrl + Command -> (topmost) morph menu
+
+Keyboard mappings (with reference to "World Menu -> help... ->
+command-key help"):
+
+  key                          -> lowercase key
+  key + Shift                  -> uppercase key
+  key         + Ctrl           -> uppercase command key
+  key                + Command -> lowercase command key
+  key + Shift + Ctrl           -> uppercase command key
+  key + Shift        + Command -> uppercase command key
+  key         + Ctrl + Command -> uppercase command key
+  key + Shift + Ctrl + Command -> uppercase command key
+
+  (kilometrage with the others [delimiters, styles, kerning, etc.]
+  will vary according to whether particular symbols are shifted or
+  unshifted on a given keyboard.)
