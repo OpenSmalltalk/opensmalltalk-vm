@@ -1,6 +1,11 @@
-Building the Squeak Virtual Machine (May 30th, 2001)
+Building the Squeak Virtual Machine (Dec 18th 2001)
 	-- John Maloney, May 25, 2000,
-	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001
+	-- Changes John M McIntosh Aug 2, 2000, Dec 1,2000, Feb 10th 2001, May 30th 2001, Dec 18th 2001
+	
+
+To build this under Apple's Project Builder on OS-X 10.1.1 (december 2001 developer tools) 
+You must unpack the resources sit file to get the proper icns files and resource for OS-X.
+You must unpack the resources SqueakVMForCarbon.pbproj.sit to enable you to build under OS-X
 
 The Macintosh virtual machine is built using the following command via
 Tim's VMMaker, and having access to the squeak source tree for static files. 
