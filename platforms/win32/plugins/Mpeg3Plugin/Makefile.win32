@@ -1,7 +1,7 @@
 CFLAGS = -O2 -funroll-loops -fomit-frame-pointer -malign-loops=2 -malign-jumps=2 -malign-functions=2 -march=i486 -DX86
 CC = gcc
 
-RM = del
+RM = rm
 DLLTOOL = dlltool
 DLLWRAP = dllwrap
 
@@ -52,7 +52,7 @@ makedll: $(LIBOBJ)
 		$(OBJDIR)/$(LIB).exp \
 		$(LIBOBJ)
 	strip --strip-all $(OBJDIR)/$(LIB).dll
-	$(RM) $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
+	-$(RM) $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
 
 .c.o:
 	$(CC) -c $(CFLAGS) $<
