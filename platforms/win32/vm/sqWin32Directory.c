@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Directory.c,v 1.3 2002/05/05 17:18:02 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Directory.c,v 1.4 2003/06/21 18:16:24 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -14,8 +14,10 @@
 #include <windows.h>
 #include "sq.h"
 
+extern struct VirtualMachine *interpreterProxy;
+
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Directory.c,v 1.3 2002/05/05 17:18:02 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32Directory.c,v 1.4 2003/06/21 18:16:24 andreasraab Exp $";
 #endif
 
 /***
@@ -33,6 +35,84 @@
 
 static TCHAR DELIMITER[] = TEXT("\\");
 static TCHAR DOT[] = TEXT(".");
+
+/* figure out if a case sensitive duplicate of the given path exists.
+   useful for trying to stay in sync with case-sensitive platforms. */
+int caseSensitiveFileMode = 0;
+
+int hasCaseSensitiveDuplicate(TCHAR *path) {
+  TCHAR *src, *dst, *prev;
+  TCHAR findPath[MAX_PATH];
+  WIN32_FIND_DATA findData; /* cached find data */
+  HANDLE findHandle = 0; /* cached find handle */
+
+  if(!caseSensitiveFileMode) return 0;
+
+  if(!path) return 0;
+  if(*path == 0) return 0;
+
+#ifdef DEBUG
+  printf("hasCaseSensitiveDuplicate: Checking %s\n", path);
+#endif
+
+  /* figure out the root of the path (we can't test it) */
+  dst = findPath;
+  src = path;
+  *dst++ = *src++;
+  *dst++ = *src++;
+  if(path[0] == '\\' && path[1] == '\\') {
+    /* \\server\name */
+    while(*src != 0 && *src != '\\') *dst++ = *src++;
+  } else if(path[1] != ':' || path[2] != '\\') {
+    /* Oops??? What is this??? */
+    printf("hasCaseSensitiveDuplicate: Unrecognized path root in %s\n", path);
+    return 0;
+  }
+  *dst = 0;
+#ifdef DEBUG
+  printf("%s\n", findPath);
+#endif
+  /* from the root, enumerate all the path components and find potential mismatches */
+  while(true) {
+    /* skip backslashes */
+    while(*src != 0 && *src == '\\') src++;
+    if(!*src) {
+      /* we're done */
+#ifdef DEBUG
+      printf("Okay\n");
+#endif
+      return 0;
+    }
+    /* copy next path component into findPath */
+    *dst++ = '\\';
+    prev = dst;
+    while(*src != 0 && *src != '\\') *dst++ = *src++;
+    *dst = 0;
+#ifdef DEBUG
+    printf("%s", findPath);
+#endif
+    /* now let's go find it */
+    findHandle = FindFirstFile(findPath, &findData);
+    if(findHandle == INVALID_HANDLE_VALUE) {
+      /* not finding a path means there is no duplicate */
+#ifdef DEBUG
+      printf(" not found (errCode: %x)\n", GetLastError());
+#endif
+      return 0;
+    }
+    FindClose(findHandle);
+    if(lstrcmp(findData.cFileName, prev) != 0) {
+      /* duplicate! */
+#ifdef DEBUG
+      printf("duplicate: %s\n", findData.cFileName);
+#endif
+      return 1;
+    }
+#ifdef DEBUG
+    printf(" ok \n");
+#endif
+  }
+}
 
 typedef union {
   struct {
@@ -158,6 +238,10 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
   /* convert the path to a win32 string */
   win32Path = fromSqueak(pathString, pathStringLength);
+  if(hasCaseSensitiveDuplicate(win32Path)) {
+    lastStringLength = 0;
+    return BAD_PATH;
+  }
   if(win32Path[pathStringLength-1] != DELIMITER[0])
     lstrcat(win32Path,DELIMITER);
   lstrcat(win32Path,TEXT("*"));
@@ -219,7 +303,7 @@ dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
 			     char *fType, char *fCreator)
 {
   /* Win32 files are untyped, and the creator is correct by default */
-  return success(false);
+  return interpreterProxy->primitiveFail();
 }
 
 int dir_Delete(char *pathString, int pathStringLength) {
@@ -227,6 +311,6 @@ int dir_Delete(char *pathString, int pathStringLength) {
 	TCHAR *win32Path;
 
 	win32Path = fromSqueak(pathString, pathStringLength);
-	/* In browser mode delete only local files */
+	if(hasCaseSensitiveDuplicate(win32Path)) return false;
 	return RemoveDirectory(win32Path) == 0 ? false : true;
 }

@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.7 2003/03/08 21:06:56 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Prefs.c,v 1.8 2003/06/21 18:16:54 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -24,6 +24,7 @@ void HandlePrefsMenu(int) {}
 /* VM preference variables */
 TCHAR squeakIniName[MAX_PATH+1]; /* full path and name to ini file */
 HMENU vmPrefsMenu;         /* preferences menu */
+extern int caseSensitiveFileMode;
 
 /****************************************************************************/
 /*                   Preference functions                                   */
@@ -125,6 +126,13 @@ void SetB3DXUsesOpenGL() {
 			    fUseOpenGL ? U_ON : U_OFF,squeakIniName);
 }
 
+void SetCaseSensitiveFileMode() {
+  CheckMenuItem(vmPrefsMenu, ID_CASEFILES, MF_BYCOMMAND | 
+		(caseSensitiveFileMode ? MF_CHECKED : MF_UNCHECKED));
+  WritePrivateProfileString(U_GLOBAL,TEXT("CaseSensitiveFileMode"),
+			    caseSensitiveFileMode ? U_ON : U_OFF,squeakIniName);
+}
+
 void LoadPreferences()
 {
   /* Set preferences */
@@ -186,6 +194,9 @@ void LoadPreferences()
   fUseOpenGL   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("B3DXUsesOpenGL"),
 			 fUseOpenGL,squeakIniName);
+  caseSensitiveFileMode   = 
+    GetPrivateProfileInt(U_GLOBAL,TEXT("CaseSensitiveFileMode"),
+			 caseSensitiveFileMode,squeakIniName);
 #endif
 }
 
@@ -205,6 +216,7 @@ void SetAllPreferences() {
   SetShowAllocations();
   SetPriorityBoost();
   SetB3DXUsesOpenGL();
+  SetCaseSensitiveFileMode();
 }
 
 void CreatePrefsMenu(void) {
@@ -264,12 +276,16 @@ void CreatePrefsMenu(void) {
 
   { /* Create debug menu */
     hMenu = CreatePopupMenu();
+    AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_CASEFILES, 
+	       TEXT("Case sensitive files"));
+    AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED , ID_SHOWCONSOLE, 
 	       TEXT("Show output console"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DYNAMICCONSOLE, 
 	       TEXT("Show console on errors"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_SHOWALLOCATIONS, 
 	       TEXT("Show allocation activity"));
+    AppendMenu(hMenu,MF_SEPARATOR, 0,NULL);
 #ifndef NO_NETWORK
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DBGPRINTSOCKET,
 	       TEXT("Dump network state"));
@@ -371,6 +387,12 @@ void HandlePrefsMenu(int cmd) {
   case ID_USEOPENGL:
     fUseOpenGL = !fUseOpenGL;
     SetB3DXUsesOpenGL();
+    break;
+  case ID_CASEFILES:
+    printf("case files %d\n", caseSensitiveFileMode);
+    caseSensitiveFileMode = !caseSensitiveFileMode;
+    SetCaseSensitiveFileMode();
+    printf("case files %d\n", caseSensitiveFileMode);
     break;
   }
 }
