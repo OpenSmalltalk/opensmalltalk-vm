@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.32 2004/08/03 02:42:35 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.33 2004/09/03 00:18:28 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -30,6 +30,7 @@
 #include "sqMacFileLogic.h"
 #include "sqmacUIEvents.h"
 #include "sqMacUIMenuBar.h"
+#include "sqMacEncoding.h"
 
 
 /*** Variables -- Imported from Virtual Machine ***/
@@ -37,6 +38,7 @@ extern int getFullScreenFlag();    /* set from header when image file is loaded 
 extern int setFullScreenFlag(int value);    /* set from header when image file is loaded */
 extern int getSavedWindowSize();   /* set from header when image file is loaded */
 extern int setSavedWindowSize(int value);   /* set from header when image file is loaded */
+extern struct VirtualMachine *interpreterProxy;
 
 /*** Variables -- Mac Related ***/
 CTabHandle	stColorTable = nil;
@@ -87,14 +89,14 @@ int ioSetFullScreen(int fullScreen) {
     GDHandle            dominantGDevice;
 
 #if TARGET_API_MAC_CARBON
-    GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&ignore); 
+    GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&dominantGDevice,&ignore); 
     if (dominantGDevice == null) {
         success(false);
         return 0;
     }
     screen = (**dominantGDevice).gdRect;
 #else
-    dominantGDevice = getDominateDevice(stWindow,&ignore);
+    dominantGDevice = getDominateDevice(getSTWindow(),&ignore);
     if (dominantGDevice == null) {
         success(false);
         return 0;
@@ -103,11 +105,11 @@ int ioSetFullScreen(int fullScreen) {
 #endif  
         
     if (fullScreen) {
-		GetPortBounds(GetWindowPort(stWindow),&rememberOldLocation);
+		GetPortBounds(GetWindowPort(getSTWindow()),&rememberOldLocation);
 		LocalToGlobal((Point*) &rememberOldLocation.top);
 		LocalToGlobal((Point*) &rememberOldLocation.bottom);
 		MenuBarHide();
-		GetPortBounds(GetWindowPort(stWindow),&portRect);
+		GetPortBounds(GetWindowPort(getSTWindow()),&portRect);
 		oldWidth =  portRect.right -  portRect.left;
 		oldHeight =  portRect.bottom -  portRect.top;
 		width  = screen.right - screen.left; 
@@ -116,8 +118,8 @@ int ioSetFullScreen(int fullScreen) {
 			/* save old size if it wasn't already full-screen */ 
 			setSavedWindowSize((oldWidth << 16) + (oldHeight & 0xFFFF));
 		}
-		MoveWindow(stWindow, screen.left, screen.top, true);
-		SizeWindow(stWindow, width, height, true);
+		MoveWindow(getSTWindow(), screen.left, screen.top, true);
+		SizeWindow(getSTWindow(), width, height, true);
 		setFullScreenFlag(true);
 	} else {
 		MenuBarRestore();
@@ -135,8 +137,8 @@ int ioSetFullScreen(int fullScreen) {
 		maxHeight = (screen.bottom - screen.top)  - 52;
 		width  = (width  <= maxWidth)  ?  width : maxWidth;
 		height = (height <= maxHeight) ? height : maxHeight;
-		MoveWindow(stWindow, rememberOldLocation.left, rememberOldLocation.top, true);
-		SizeWindow(stWindow, width, height, true);
+		MoveWindow(getSTWindow(), rememberOldLocation.left, rememberOldLocation.top, true);
+		SizeWindow(getSTWindow(), width, height, true);
 		setFullScreenFlag(false);
 	}
 	return 0;
@@ -309,6 +311,25 @@ int ioShowDisplay(
                         out += pixPitch;
                 }
             } else if ( depth == 16 && pixDepth == 32) {
+				//(2r0 to: 2r11111000 by: 2r1000) collectWithIndex: [:e :i | (e + ((8/32*(i-1)) asInteger)) bitShift: 16]
+				long lookupTableB[32] = { 
+				 0, 8, 16, 24, 33, 41, 49, 57,
+				 66, 74, 82, 90, 99, 107, 115, 123,
+				 132, 140, 148, 156, 165, 173, 181, 189,
+				 198, 206, 214, 222, 231, 239, 247, 255};
+
+				long lookupTableG[32] = { 
+				0, 2048, 4096, 6144, 8448, 10496, 12544, 14592, 
+				16896, 18944, 20992, 23040, 25344, 27392, 29440, 31488, 
+				33792, 35840, 37888, 39936, 42240, 44288, 46336, 48384, 
+				50688, 52736, 54784, 56832, 59136, 61184, 63232, 65280};
+
+ 				long lookupTableR[32] = { 
+				0, 524288, 1048576, 1572864, 2162688, 2686976, 3211264, 3735552,
+				4325376, 4849664, 5373952, 5898240, 6488064, 7012352, 7536640, 8060928,
+				8650752, 9175040, 9699328, 10223616, 10813440, 11337728, 11862016, 12386304,
+				12976128, 13500416, 14024704, 14548992, 15138816, 15663104, 16187392, 16711680};
+				
                 while (affectedH--)  {
                         register long   *to=    (long *) out;
                         register short  *from=  (short *) in;
@@ -316,17 +337,13 @@ int ioShowDisplay(
 
                         while (count--) { /* see '11111'b needs to be '11111111'b */
                             target = *from++;
-                            r = (target & 0x00007C00);
-                            g = (target & 0x000003E0);
+                            r = (target & 0x00007C00) >> 10;
+                            g = (target & 0x000003E0) >> 5;
                             b = (target & 0x0000001F);
-                            r = (r | (r << 3)) << 6;
-                            g = (g | (g << 3)) << 3;
-                            b = b | (b << 3) ;
-                            *to++ =  r | g | b; 
-                            /* *to++ = ((target & 0x00007C00) << 9) |
-                                ((target &  0x000003E0) << 6) |
-                                ((target & 0x0000001F) << 3); */
-
+                            r = lookupTableR[r];
+                            g = lookupTableG[g];
+                            b = lookupTableB[b];
+                            *to++ =   r | g | b ; 
                         }
                         in  += pitch;
                         out += pixPitch;
@@ -566,7 +583,7 @@ void SetWindowTitle(char *title) {
     Str255 tempTitle;
 	CopyCStringToPascal(title,tempTitle);
 #ifndef IHAVENOHEAD
-	SetWTitle(stWindow, tempTitle);
+	SetWTitle(getSTWindow(), tempTitle);
 #endif
 }
 
@@ -597,9 +614,9 @@ int ioScreenDepth(void) {
     GDHandle mainDevice;
     
 #if TARGET_API_MAC_CARBON
-    GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&mainDevice,&ignore); 
+    GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&mainDevice,&ignore); 
 #else
-    mainDevice = getDominateDevice(stWindow,&ignore);
+    mainDevice = getDominateDevice(getSTWindow(),&ignore);
 #endif
 
     if (mainDevice == null) 
@@ -610,12 +627,15 @@ int ioScreenDepth(void) {
 
 #ifndef BROWSERPLUGIN
 int ioScreenSize(void) {
-	int w = 10, h = 10;
+	int w, h;
     Rect portRect;
     
+	w  = (unsigned) getSavedWindowSize() >> 16;
+	h= getSavedWindowSize() & 0xFFFF;
+
 #ifndef IHAVENOHEAD
-	if (stWindow != nil) {
-            GetPortBounds(GetWindowPort(stWindow),&portRect);
+	if (getSTWindow() != nil) {
+            GetPortBounds(GetWindowPort(getSTWindow()),&portRect);
             w =  portRect.right -  portRect.left;
             h =  portRect.bottom - portRect.top;
 	}
@@ -626,7 +646,8 @@ int ioScreenSize(void) {
 
 int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
 	/* Old version; forward to new version. */
-	return ioSetCursorWithMask(cursorBitsIndex, nil, offsetX, offsetY);
+	ioSetCursorWithMask(cursorBitsIndex, nil, offsetX, offsetY);
+	return 0;
 }
 
 int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
@@ -748,9 +769,9 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
     }
 
 #if TARGET_API_MAC_CARBON
-        GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&ignore); 
+        GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&dominantGDevice,&ignore); 
 #else
-        dominantGDevice = getDominateDevice(stWindow,&ignore);
+        dominantGDevice = getDominateDevice(getSTWindow(),&ignore);
 #endif
         if (dominantGDevice == null) {
             success(false);
@@ -810,7 +831,7 @@ void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, sh
    
 	if (TrackBox(theWindow, theEvent->where, zoomDir)) {
 		SetPortWindowPort(theWindow);
-		GetPortBounds(GetWindowPort(stWindow),&windRect);
+		GetPortBounds(GetWindowPort(theWindow),&windRect);
 		EraseRect(&windRect);	// recommended for cosmetic reasons
 
 		if (zoomDir == inZoomOut) {
@@ -978,7 +999,6 @@ void getDominateGDeviceRect(GDHandle dominantGDevice,Rect *dGDRect,Boolean forge
 
 pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDisplayModeListEntryPtr displaymodeInfo)
 {
-#pragma unused(itemIndex)
 	unsigned long			depthCount;
 	short					iCount;
 	ListIteratorDataRec		*myIterateData		= (ListIteratorDataRec*) userData;
@@ -1209,7 +1229,7 @@ int ioShowDisplay(
             rectangle = CGRectMake(0, 0, width, height);  
 
             if (context == NULL) {
-                CreateCGContextForPort(GetWindowPort(stWindow), &context);
+                CreateCGContextForPort(GetWindowPort(getSTWindow()), &context);
             }
             
             if (image)    
@@ -1278,7 +1298,7 @@ void SetupSurface() {
 
 
 int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* isMSB) {
-    CGrafPtr	windowPort = GetWindowPort(stWindow);
+    CGrafPtr	windowPort = GetWindowPort(getSTWindow());
     PixMapHandle pix;
     Rect        rectangle;
     
@@ -1296,7 +1316,7 @@ int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* is
 int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h) {
     static Boolean firstTime=true;
     static int offsetTitle=0;
-    CGrafPtr    windowPort = GetWindowPort(stWindow);
+    CGrafPtr    windowPort = GetWindowPort(getSTWindow());
     PixMapHandle pixMap;
     
     LockPortBits(windowPort);
@@ -1309,7 +1329,7 @@ int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h) {
         firstTime = false;
              
         rect = NewRgn();            
-        GetWindowRegion(stWindow,kWindowTitleBarRgn,rect);
+        GetWindowRegion(getSTWindow(),kWindowTitleBarRgn,rect);
         GetRegionBounds(rect,&structureRect);
         offsetTitle = (structureRect.bottom- structureRect.top)* *pitch;
         DisposeRgn(rect);
@@ -1319,7 +1339,7 @@ int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h) {
 }
 
 int osxUnlockSurface(int handle, int x, int y, int w, int h) {
-    UnlockPortBits(GetWindowPort(stWindow)); 
+    UnlockPortBits(GetWindowPort(getSTWindow())); 
 }
 
 int osxShowSurface(int handle, int x, int y, int w, int h) {
@@ -1330,7 +1350,7 @@ int osxShowSurface(int handle, int x, int y, int w, int h) {
         maskRect = NewRgn();
         
     SetRectRgn(maskRect, x, y, x+w, y+h);
-    QDFlushPortBuffer(GetWindowPort(stWindow), maskRect); 
+    QDFlushPortBuffer(GetWindowPort(getSTWindow()), maskRect); 
 }
 
 inline void DuffsDevicesCopyLong(long *to, long *from, long count) {
