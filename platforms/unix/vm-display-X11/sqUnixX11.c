@@ -36,8 +36,11 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-15 13:01:18 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-16 20:26:38 by piumarta on emilia.inria.fr
  *
+ * Support for more intelligent CLIPBOARD selection handling contributed by:
+ *	Ned Konz <ned@bike-nomad.com>
+ * 
  * Support for displays deeper than 8 bits contributed by: Kazuki YASUMATSU
  *	<kyasu@crl.fujixerox.co.jp> <Kazuki.Yasumatsu@fujixerox.co.jp>
  *
