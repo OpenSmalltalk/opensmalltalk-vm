@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.11 2002/08/17 16:46:56 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.12 2002/09/30 23:54:23 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -121,7 +121,16 @@ void SetUpCarbonEvent();
 /*** Main ***/
 
 #ifndef PLUGIN
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+/*** Variables -- globals for access from pluggable primitives ***/
+int    argCnt= 0;
+char **argVec= 0;
+char **envVec= 0;
+
+int main(int argc, char **argv, char **envp) {
+#else
 int main(void) {
+#endif
 	EventRecord theEvent;
 	sqImageFile f;
 	OSErr err;
@@ -137,6 +146,13 @@ int main(void) {
 	if (sizeof(time_t) != 4) {
 		error("This C compiler's time_t's are not 32 bits.");
 	}
+
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+  /* Make parameters global for access from pluggable primitives */
+  argCnt= argc;
+  argVec= argv;
+  envVec= envp;
+#endif
 
  	InitMacintosh();
 	PowerMgrCheck();
