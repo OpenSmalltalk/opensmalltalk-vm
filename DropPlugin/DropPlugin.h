@@ -9,4 +9,4 @@ char* dropRequestFileName(int dropIndex); /* return name of file or NULL if erro
 int dropRequestFileHandle(int dropIndex); /* return READ-ONLY file handle OOP or nilObject if error */
 int sqSetFileAccessCallback(void *);
 void sqSetNumberOfDropFiles(int numberOfFiles);
-void sqSetFileInformation(int dropIndex, HFSFlavor *dropFile);
+void sqSetFileInformation(int dropIndex, void *dropFile);
