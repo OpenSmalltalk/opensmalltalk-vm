@@ -1,7 +1,7 @@
 #ifndef SQ_OPENGL_RENDERER_H
 #define SQ_OPENGL_RENDERER_H
 
-#if defined(macintosh)
+#if defined(macintoshSqueak)
 # include "sqMacOpenGL.h"
 #elif defined(WIN32)
 # include "sqWin32OpenGL.h"
