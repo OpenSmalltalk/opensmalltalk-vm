@@ -2,7 +2,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2005-03-22 00:29:48 by piumarta on squeak.hpl.hp.com
+# Last edited: 2005-03-22 13:05:47 by piumarta on squeak.hpl.hp.com
 
 DOCFILES	= COPYING COPYRIGHT LICENSE \
 		  README.Contributing README.Keyboard README.Sound
@@ -65,11 +65,12 @@ install-doc : squeak.1
 	  echo $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
 	  $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
 	done
-	-gzip -f9 $(ROOT)$(docdir)/*
+	gzip -f9 $(ROOT)$(docdir)/*
 	$(MKINSTALLDIRS) $(ROOT)$(mandir)/man1
 	$(INSTALL_DATA) squeak.1 $(ROOT)$(mandir)/man1
-	rm -f $(ROOT)$(mandir)/man1/inisqueak.1
-	$(LN_S) squeak.1 $(ROOT)$(mandir)/man1/inisqueak.1
+	rm -f $(ROOT)$(mandir)/man1/inisqueak.1 $(ROOT)$(mandir)/man1/inisqueak.1.gz
+	if test -f $(ROOT)$(mandir)/man1/squeak.1; then $(LN) $(ROOT)$(mandir)/man1/squeak.1 $(ROOT)$(mandir)/man1/inisqueak.1; fi
+	if test -f $(ROOT)$(mandir)/man1/squeak.1.gz; then $(LN) $(ROOT)$(mandir)/man1/squeak.1.gz $(ROOT)$(mandir)/man1/inisqueak.1.gz; fi
 
 uninstall-doc :
 	@list='$(DOCFILES)'; for f in $$list; do \
