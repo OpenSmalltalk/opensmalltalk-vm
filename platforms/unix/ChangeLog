@@ -1,3 +1,20 @@
+2003-08-07  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/make.ext.in (LINK): Use -rpath $(plgdir)
+	instead of $(libdir) to get correct install_name on OSX.
+
+	* platforms/unix/vm/acinclude.m4 (AC_ICONV): Disable check for
+	libiconv on Mac OS X to avoid pollution from /usr/local/lib.
+
+	* platforms/unix/config/configure.ac (AC_CHECK_FUN(dlopen)): Check
+	for _dyld_present before dlopen to avoid unwanted import of
+	dlcompat on Mac OS X.
+
+	* platforms/unix/config/acinclude.m4 (AC_C_DOUBLE_ORDER): Fix
+	"improved" test so that it _really_ works and identifies
+	big-endian machines correctly.  (Never, _ever_ trust an
+	endian-sensitive function contributed by an Intel user! ;)
+
 2003-08-07  Ian Piumarta  <piumarta@cartman.inria.fr>
 
 	* platforms/unix/config/acinclude.m4 (AC_C_DOUBLE_ORDER): Use
