@@ -5,7 +5,7 @@
 //JMM 9/5/01  make it as a plugin
 
 #include "sq.h"
-#include "sqMacFileLogic.h"        
+#include "sqMacFileLogic.h"	
 #include <files.h> 
 extern struct VirtualMachine * interpreterProxy;
 
@@ -39,7 +39,7 @@ static int isAccessiblePathName(char *pathName) {
   while(pathName[i]) {
     if(pathName[i] == ':') {
       if(pathName[i+1] == ':')
-        return 0; /* Gotcha! */
+	return 0; /* Gotcha! */
     }
     i++;
   }
@@ -56,7 +56,7 @@ static int isAccessibleFileName(char *fileName) {
   while(fileName[i]) {
     if(fileName[i] == ':') {
       if(fileName[i+1] == ':')
-        return 0; /* Gotcha! */
+	return 0; /* Gotcha! */
     }
     i++;
   }
@@ -208,48 +208,32 @@ int ioInitSecurity(void) {
   
   /* establish untrusted user directory */
 
-        /* get the path to the system folder preference area*/
-        err = FindFolder(kOnSystemDisk, kPreferencesFolderType, kDontCreateFolder, &vRefNum, &dirID);
-        if (err != noErr) {
+	/* get the path to the system folder preference area*/
+	err = FindFolder(kOnSystemDisk, kPreferencesFolderType, kDontCreateFolder, &vRefNum, &dirID);
+	if (err != noErr) {
       strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
       fixPath(untrustedUserDirectory);
       return 1;
-        }
-        
-        // Look for folder, if not found abort */
-        PathToWorkingDir(untrustedUserDirectory,255,vRefNum,dirID);
-        strcat(untrustedUserDirectory,"Squeak:Internet");
-         err = lookupPath(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec,true);
-         if (err != noErr) {
-              strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-              fixPath(untrustedUserDirectory);
-                return 0;
-        }        
-        strcat(untrustedUserDirectory,":My Squeak");
-        err = lookupPath(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec,true);
-        if (err != noErr) {
-                if (!dir_CreateSecurity(untrustedUserDirectory,strlen(untrustedUserDirectory))) {
-              strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-                  fixPath(untrustedUserDirectory);
-                }
-        }
-        /* get the path to the documents folder preference area*/
-        /* err = FindFolder(kOnSystemDisk, kDocumentsFolderType, kCreateFolder, &vRefNum, &dirID);
-        if (err != noErr) {
-      strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-      fixPath(untrustedUserDirectory);
-      return 1;
-        }
-        PathToWorkingDir(untrustedUserDirectory,255,vRefNum,dirID);
-        strcat(untrustedUserDirectory,"My Squeak");
-        /* err = lookupPath(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec,true);
-        if (err != noErr) {
-                if (!dir_Create(untrustedUserDirectory,strlen(untrustedUserDirectory))) {
-              strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-                  fixPath(untrustedUserDirectory);
-                }
-        } */
-        
+	}
+	
+	// Look for folder, if not found abort */
+        FSMakeFSSpecCompat(vRefNum,dirID,"\p",&spec);
+	PathToFile(untrustedUserDirectory,255,&spec);
+	strcat(untrustedUserDirectory,"Squeak:Internet");
+ 	err = makeFSSpec(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec);
+ 	if (err != noErr) {
+	      strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
+	      fixPath(untrustedUserDirectory);
+		return 0;
+	}	
+	strcat(untrustedUserDirectory,":My Squeak");
+	err = makeFSSpec(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec);
+	if (err != noErr) {
+		if (!dir_CreateSecurity(untrustedUserDirectory,strlen(untrustedUserDirectory))) {
+	      strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
+		  fixPath(untrustedUserDirectory);
+		}
+	}
   return 1;
 }
 
@@ -287,10 +271,10 @@ void fixPath(char *path) {
 }
 
 int dir_CreateSecurity(char *pathString, int pathStringLength) {
-        /* Create a new directory with the given path. By default, this
-           directory is created in the current directory. Use
-           a full path name such as "MyDisk:Working:New Folder" to
-           create folders elsewhere. */
+	/* Create a new directory with the given path. By default, this
+	   directory is created in the current directory. Use
+	   a full path name such as "MyDisk:Working:New Folder" to
+	   create folders elsewhere. */
 
     //JMM tests create file in Vm directory, other place, other volume
     
@@ -301,5 +285,5 @@ int dir_CreateSecurity(char *pathString, int pathStringLength) {
     if ((err = makeFSSpec(pathString, pathStringLength,&spec)) == -1)
         return false;
         
-           return FSpDirCreate(&spec,smSystemScript,&createdDirID) == noErr;
+   	return FSpDirCreate(&spec,smSystemScript,&createdDirID) == noErr;
 }
