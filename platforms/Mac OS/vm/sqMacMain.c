@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.17 2003/09/02 17:51:05 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.18 2003/10/03 19:06:27 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -305,6 +305,7 @@ OSErr createNewThread() {
     {
         OSErr err;
         
+        aioInit();
         gThreadManager = false;
         pthread_mutex_init(&gEventQueueLock, NULL);
         pthread_mutex_init(&gEventUILock, NULL);
