@@ -23,7 +23,9 @@
 #define ID_DBGPRINTSTACK 0x0100
 #define ID_PRIORITYBOOST 0x0110
 
-#define ID_PREF_LAST 0x0110
+#define ID_USEOPENGL 0x0120
+
+#define ID_PREF_LAST 0x0120
 
 void TrackPrefsMenu(void);
 void CreatePrefsMenu(void);

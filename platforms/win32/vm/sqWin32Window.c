@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.5 2002/05/04 23:45:44 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.6 2002/05/06 10:36:25 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.5 2002/05/04 23:45:44 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.6 2002/05/06 10:36:25 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -90,6 +90,7 @@ BOOL fShowAllocations = 0; /* Show allocation activity */
 BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
 BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
 BOOL fUseDirectSound = 1; /* Do we use DirectSound?! */
+BOOL fUseOpenGL = 0;      /* Do we use OpenGL vs. D3D?! */
 BOOL fPriorityBoost = 1;
 
 BOOL f1ButtonMouse = 0;   /* Should we use a 1 button mouse mapping? */

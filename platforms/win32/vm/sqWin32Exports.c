@@ -15,6 +15,7 @@ int primitivePluginRequestState(void);
 extern void* stWindow;
 extern void* firstMessageHook;
 extern void* preMessageHook;
+extern int fUseOpenGL;
 
 void *os_exports[][3] = {
   {"","win32JoystickDebugInfo", win32JoystickDebugInfo},
@@ -31,5 +32,7 @@ void *os_exports[][3] = {
   {"","stWindow", &stWindow},
   {"","firstMessageHook", &firstMessageHook},
   {"","preMessageHook", &preMessageHook},
+  {"","fUseOpenGL", &fUseOpenGL},
   {NULL,NULL, NULL}
 };
+

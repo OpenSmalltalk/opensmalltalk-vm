@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.3 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Prefs.c,v 1.4 2002/05/06 10:36:25 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -120,6 +120,13 @@ void SetPriorityBoost() {
 			    fPriorityBoost ? U_ON : U_OFF,squeakIniName);
 }
 
+void SetB3DXUsesOpenGL() {
+  CheckMenuItem(vmPrefsMenu, ID_USEOPENGL, MF_BYCOMMAND | 
+		(fUseOpenGL ? MF_CHECKED : MF_UNCHECKED));
+  WritePrivateProfileString(U_GLOBAL,TEXT("B3DXUsesOpenGL"),
+			    fUseOpenGL ? U_ON : U_OFF,squeakIniName);
+}
+
 
 void LoadPreferences()
 {
@@ -150,6 +157,10 @@ void LoadPreferences()
   fPriorityBoost   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("PriorityBoost"),
 			 fPriorityBoost,squeakIniName);
+
+  fUseOpenGL   = 
+    GetPrivateProfileInt(U_GLOBAL,TEXT("B3DXUsesOpenGL"),
+			 fUseOpenGL,squeakIniName);
 #endif
 }
 
@@ -168,6 +179,7 @@ void SetAllPreferences() {
   SetAllowSocketAccess();
   SetShowAllocations();
   SetPriorityBoost();
+  SetB3DXUsesOpenGL();
 }
 
 void CreatePrefsMenu(void) {
@@ -195,8 +207,7 @@ void CreatePrefsMenu(void) {
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_FILEACCESS, 
 	       TEXT("Allow file access"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_IMAGEWRITE, 
-	       TEXT("Allow image writes"));
-    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
+	       TEXT("Allow image writes"));    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_SOCKETACCESS, 
 	       TEXT("Allow socket access"));
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
 	       TEXT("Security Settings"));
@@ -205,6 +216,8 @@ void CreatePrefsMenu(void) {
     hMenu = CreatePopupMenu();
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DIRECTSOUND, 
 	       TEXT("Use DirectSound"));
+    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_USEOPENGL,
+	       TEXT("Use OpenGL (instead of D3D)"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DEFERUPDATES, 
 	       TEXT("Defer display update"));
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
@@ -333,6 +346,10 @@ void HandlePrefsMenu(int cmd) {
   case ID_PRIORITYBOOST:
     fPriorityBoost = !fPriorityBoost;
     SetPriorityBoost();
+    break;
+  case ID_USEOPENGL:
+    fUseOpenGL = !fUseOpenGL;
+    SetB3DXUsesOpenGL();
     break;
   }
 }

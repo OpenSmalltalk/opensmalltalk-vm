@@ -283,6 +283,7 @@ extern BOOL  fRunService;    /* Do we run as NT service? */
 extern BOOL  fBrowserMode;   /* Do we run in a web browser? */
 extern DWORD dwMemorySize;   /* How much memory do we use? */
 extern BOOL  fUseDirectSound;/* Do we use DirectSound?! */
+extern BOOL  fUseOpenGL;     /* Do we use OpenGL?! */
 extern BOOL fReduceCPUUsage; /* Should we reduce CPU usage? */
 extern BOOL fReduceCPUInBackground; /* reduce CPU usage when not active? */
 extern BOOL  f1ButtonMouse;  /* Should we use a 1 button mouse mapping? */

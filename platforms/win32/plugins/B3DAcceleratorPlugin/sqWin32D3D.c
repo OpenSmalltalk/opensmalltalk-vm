@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32D3D.c,v 1.4 2002/05/04 23:20:27 andreasraab Exp $
+*   RCSID:   $Id: sqWin32D3D.c,v 1.5 2002/05/06 10:36:25 andreasraab Exp $
 *
 *   NOTES:
 *
@@ -53,7 +53,11 @@ extern struct VirtualMachine *interpreterProxy;
 
    10 - print information about each vertex and face
 */
+#ifndef B3DX_GL
 int verboseLevel = 1;
+#else
+extern int verboseLevel;
+#endif
 
 #define ERROR_CHECK if(FAILED(hRes)) { DPRINTF(2, (fp, "Error (%x) in %s, line %d\n", hRes, __FILE__, __LINE__))}
 
@@ -136,8 +140,8 @@ typedef struct d3dRenderer {
 } d3dRenderer;
 
 #define MAX_RENDERER 16
-d3dRenderer *current = NULL;
-d3dRenderer allRenderer[MAX_RENDERER];
+static d3dRenderer *current = NULL;
+static d3dRenderer allRenderer[MAX_RENDERER];
 
 #define RELEASE(lp) if(lp) { lp->lpVtbl->Release(lp); lp = NULL; }
 
