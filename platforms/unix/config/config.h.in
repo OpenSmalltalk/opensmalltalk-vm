@@ -1,6 +1,6 @@
 /* config.h.in -- template for config.h			-*- C -*-
  *
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -34,9 +34,9 @@
  *   directory `platforms/unix/doc' before proceeding with any such use.
  */
 
-/* Author: Ian.Piumarta@INRIA.Fr
+/* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2003-09-03 17:43:23 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-19 12:23:21 by piumarta on emilia.local
  */
 
 #ifndef __sq_config_h
@@ -113,6 +113,11 @@
 #undef	HAVE_DYLD
 
 #undef	HAVE_LANGINFO_CODESET
+
+#undef	HAVE_ALLOCA
+#undef	HAVE_ALLOCA_H
+
+#undef	HAVE_UNSETENV
 
 /* structures */
 
