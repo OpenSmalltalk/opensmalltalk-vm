@@ -1477,7 +1477,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
   VM_RELEASE=1
   SQ_MAJOR=3
   SQ_MINOR=8g
-  SQ_UPDATE=9999
+  SQ_UPDATE=6548
 
 
 topdir=`cd ${srcdir}/../../..; pwd`
