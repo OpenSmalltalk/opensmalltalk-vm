@@ -578,7 +578,7 @@ word gsm_div P2((num,denum), word num, word denum)
 	longword	L_num   = num;
 	longword	L_denum = denum;
 	word		div 	= 0;
-	int		k 	= 15;
+	volatile  int		k 	= 15;
 
 	/* The parameter num sometimes becomes zero.
 	 * Although this is explicitly guarded against in 4.2.5,
@@ -2834,7 +2834,7 @@ void Gsm_Preprocess P3((S, s, so),
 	longword	ltmp;		/* for   ADD */
 	ulongword	utmp;		/* for L_ADD */
 
-	register int		k = 160;
+	volatile int		k = 160;
 
 	while (k--) {
 
@@ -3279,7 +3279,7 @@ static void RPE_grid_positioning P3((Mc,xMp,ep),
  *  values.
  */
 {
-	int	i = 13;
+	volatile int	i = 13;
 
 	assert(0 <= Mc && Mc <= 3);
 
