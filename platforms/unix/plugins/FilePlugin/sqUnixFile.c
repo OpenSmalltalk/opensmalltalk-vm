@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2003-03-05 05:53:38 by piumarta on emilia.inria.fr
+ * Last edited: 2003-10-28 10:56:26 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -229,10 +229,10 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
       }
   }
 
-  /* use modification time instead (just like ls) */
-  *creationDate= convertToSqueakTime(statBuf.st_mtime);
-  /* use status change time instead */
-  *modificationDate= convertToSqueakTime(statBuf.st_ctime);
+  /* last change time */
+  *creationDate= convertToSqueakTime(statBuf.st_ctime);
+  /* modification time */
+  *modificationDate= convertToSqueakTime(statBuf.st_mtime);
 
   if (S_ISDIR(statBuf.st_mode))
     *isDirectory= true;
