@@ -31,7 +31,8 @@ fi
 # names for frequently-used directories
 topdir=$1
 srcdir=$topdir/src
-libmpegdir=$srcdir/$plugsubdir/Mpeg3Plugin/libmpeg
+crossdir=$topdir/platforms/Cross
+libmpegdir=$crossdir/plugins/Mpeg3Plugin/libmpeg
 
 
 
@@ -92,7 +93,7 @@ then
 #rules for compile externally
 cat <<EOF
 Mpeg3Plugin.lo : \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c
-	\$(LTCOMPILE)  -I\$(Mpeg3Plugin_DIR) -I\$(LIBMPEG_SOURCE_DIR) -I\$(LIBMPEG_SOURCE_DIR)/audio -I\$(LIBMPEG_SOURCE_DIR)/video \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c -c -o Mpeg3Plugin.lo
+	\$(LTCOMPILE)  -I\$(Mpeg3Plugin_DIR) -I\$(LIBMPEG_SOURCE_DIR) -I\$(LIBMPEG_SOURCE_DIR)/audio -I\$(LIBMPEG_SOURCE_DIR)/video -I$crossdir/plugins/Mpeg3Plugin -c \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c -o Mpeg3Plugin.lo
 
 Mpeg3Plugin.la : Mpeg3Plugin.lo \$(LIBMPEG_BUILD_DIR)/libmpeg3.la
 	\$(LINK) Mpeg3Plugin -module -rpath \$(sqlibdir) -o Mpeg3Plugin.la Mpeg3Plugin.lo \$(LIBMPEG_BUILD_DIR)/libmpeg3.la
@@ -104,7 +105,7 @@ else
 #rules for compiling internally 
 cat <<EOF
 Mpeg3Plugin.o : \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c
-	\$(COMPILE) -I\$(Mpeg3Plugin_DIR) -I\$(LIBMPEG_SOURCE_DIR) -I\$(LIBMPEG_SOURCE_DIR)/audio -I\$(LIBMPEG_SOURCE_DIR)/video -c \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c -o Mpeg3Plugin.o
+	\$(COMPILE) -I\$(Mpeg3Plugin_DIR) -I\$(LIBMPEG_SOURCE_DIR) -I\$(LIBMPEG_SOURCE_DIR)/audio -I\$(LIBMPEG_SOURCE_DIR)/video -I$crossdir/plugins/Mpeg3Plugin -c \$(Mpeg3Plugin_DIR)/Mpeg3Plugin.c -o Mpeg3Plugin.o
 
 
 PLUGINS_O:=\$(PLUGINS_O) Mpeg3Plugin.o \$(LIBMPEG_BUILD_DIR)/libmpeg3.a
