@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.19 2003/12/02 04:48:24 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.20 2004/01/07 05:25:39 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -1700,7 +1700,7 @@ void recordKeyboardEventCarbon(EventRef event) {
     int 		modifierBits, i;
     char 		macCharCode;
     UniCharCount	uniCharCount;
-    UniChar		uniChar, modifiedUniChar, *uniCharBufPtr, *uniCharBuf;
+    UniChar             modifiedUniChar, *uniCharBufPtr, *uniCharBuf;
     sqKeyboardEvent 	*evt, *extra;
     OSErr	err;
     UniChar  	text;
@@ -1742,7 +1742,7 @@ void recordKeyboardEventCarbon(EventRef event) {
     err = GetEventParameter (actualEvent, kEventParamKeyUnicodes,
             typeUnicodeText, NULL, actualSize, NULL, uniCharBuf);
                             
-    uniChar = modifiedUniChar = *uniCharBufPtr;
+    modifiedUniChar = *uniCharBufPtr;
     buttonState = modifierBits =ModifierStateCarbon(actualEvent,0); //Capture option states
     if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
             if ((modifiedUniChar >= 97) && (modifiedUniChar <= 122)) {
@@ -1752,28 +1752,38 @@ void recordKeyboardEventCarbon(EventRef event) {
     }
 
     pthread_mutex_lock(&gEventQueueLock);
-    evt = (sqKeyboardEvent*) nextEventPut();
-
-    /* first the basics */
-    evt->type = EventTypeKeyboard;
-    evt->timeStamp = ioMSecs() & 536870911;
-    /* now the key code */
-    /* press code must differentiate */
-    evt->charCode = uniChar;
-    evt->pressCode = EventKeyDown;
-    evt->modifiers = modifierBits >> 3;
-    /* clean up reserved */
-    evt->reserved1 = 0;
-    evt->reserved2 = 0;
     
     /* Put sqKeyboardEvent in actualSize times */
     uniCharCount = actualSize / sizeof(UniChar);
     for (i=0; i<uniCharCount; i++) {
+        CFStringRef theString;
+        unsigned char macRomanString[2];
+        int macRomanCode;
+        
+        theString = CFStringCreateWithCharacters (nil, &modifiedUniChar, (CFIndex) 1);
+        CFStringGetCString (theString,&macRomanString,2, kCFStringEncodingMacRoman);
+        macRomanCode = macRomanString[0];
+        CFRelease(theString);
+        
+        evt = (sqKeyboardEvent*) nextEventPut();
+    
+        /* first the basics */
+        evt->type = EventTypeKeyboard;
+        evt->timeStamp = ioMSecs() & 536870911;
+        /* now the key code */
+        /* press code must differentiate */
+        evt->charCode = modifiedUniChar;
+        evt->pressCode = EventKeyDown;
+        evt->modifiers = modifierBits >> 3;
+        /* clean up reserved */
+        evt->reserved1 = 0;
+        evt->reserved2 = 0;
+        
         /* generate extra character event */
         extra = (sqKeyboardEvent*)nextEventPut();
             extra->type = EventTypeKeyboard;
             extra->timeStamp = ioMSecs() & 536870911;
-            extra->charCode = modifiedUniChar;
+        extra->charCode = macRomanCode;
         extra->pressCode = EventKeyChar;
             extra->modifiers = modifierBits >> 3;
         
@@ -1781,7 +1791,7 @@ void recordKeyboardEventCarbon(EventRef event) {
             int  keystate;
     
             /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
-                keystate = (evt->modifiers << 8) | (unsigned char) uniChar;
+                keystate = (evt->modifiers << 8) | (unsigned char) macRomanCode;
             if (keystate == getInterruptKeycode()) {
                     /* Note: interrupt key is "meta"; it not reported as a keystroke */
                     setInterruptPending(true);
@@ -1796,10 +1806,6 @@ void recordKeyboardEventCarbon(EventRef event) {
                     }
             }
         }
-        uniCharBufPtr++;
-        modifiedUniChar = *uniCharBufPtr;
-    }
-
     /* Put the sqKeyboardEvent for KeyUp */
     evt = (sqKeyboardEvent*) nextEventPut();
     /* first the basics */
@@ -1807,12 +1813,17 @@ void recordKeyboardEventCarbon(EventRef event) {
     evt->timeStamp = ioMSecs() & 536870911;
     /* now the key code */
     /* press code must differentiate */
-    evt->charCode = uniChar;
-    evt->pressCode = EventKeyUp;
-    evt->modifiers = modifierBits >> 3;
-    /* clean up reserved */
-    evt->reserved1 = 0;
-    evt->reserved2 = 0;
+        evt->charCode = modifiedUniChar;
+        evt->pressCode = EventKeyUp;
+        evt->modifiers = modifierBits >> 3;
+        /* clean up reserved */
+        evt->reserved1 = 0;
+        evt->reserved2 = 0;
+        
+        uniCharBufPtr++;
+        modifiedUniChar = *uniCharBufPtr;
+    }
+
     
     free(uniCharBuf);
     pthread_mutex_unlock(&gEventQueueLock);		        
