@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2003-02-21 03:48:48 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-15 14:45:18 by piumarta on emilia.inria.fr
  */
 
 #define DEBUG 0
@@ -98,6 +98,13 @@
 # endif
 #endif
 
+#if !defined(HAVE_SNPRINTF)
+# if defined(HAVE___SNPRINTF)	/* Solaris 2.5 */
+    extern int __snprintf(char *buf, size_t limit, const char *fmt, ...);
+#   define snprintf __snprintf
+#   define HAVE_SNPRINTF
+# endif
+#endif
 
 extern int sqIgnorePluginErrors;
 
@@ -128,17 +135,19 @@ static void *tryLoading(char *dirName, char *moduleName)
       {
 	char        libName[NAME_MAX + 32];	/* headroom for prefix/suffix */
 	struct stat buf;
+	int         err;
 	sprintf(libName, "%s%s%s%s", dirName, *prefix, moduleName, *suffix);
-	if (stat(libName, &buf))
-	  dprintf((stderr, "not found: %s\n", libName));
-	else if (S_ISDIR(buf.st_mode))
+	if ((!(err= stat(libName, &buf))) && S_ISDIR(buf.st_mode))
 	  dprintf((stderr, "ignoring directory: %s\n", libName));
 	else
 	  {
 	    dprintf((stderr, "tryLoading %s\n", libName));
 	    handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 	    if (handle == 0)
-	      fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
+	      {
+		if ((!err) && !(sqIgnorePluginErrors))
+		  fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
+	      }
 	    else
 	      {
 #	       if DEBUG
@@ -223,11 +232,15 @@ int ioLoadModule(char *pluginName)
 	  return (int)handle;
       }
 
-  if ((   handle= tryLoading(        "./", pluginName))
-      || (handle= tryLoading(VM_LIBDIR"/", pluginName))
-      || (handle= tryLoading(          "", pluginName))
-      || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH", pluginName))
-      || (handle= tryLoadingPath("LD_LIBRARY_PATH",    pluginName)))
+  if ((   handle= tryLoading(    "./",			pluginName))
+      || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH",	pluginName))
+      || (handle= tryLoading(    VM_LIBDIR"/",		pluginName))
+      || (handle= tryLoadingPath("LD_LIBRARY_PATH",	pluginName))
+      || (handle= tryLoading(    "",			pluginName))
+#    if defined(VM_X11DIR)
+      || (handle= tryLoading(VM_X11DIR"/",		pluginName))
+#    endif
+      )
     return (int)handle;
 
 #if defined(DARWIN)
@@ -267,6 +280,19 @@ int ioLoadModule(char *pluginName)
   }
 #endif
 
+  /* finally (for VM hackers) try the pre-install build location */
+  {
+    char pluginDir[MAXPATHLEN];
+    extern char vmPath[];
+#  ifdef HAVE_SNPRINTF
+    snprintf(pluginDir, sizeof(pluginDir), "%s%s/.libs/", vmPath, pluginName);
+#  else
+    sprintf(buf, "%s%s/.libs/", vmPath, pluginDir);
+#  endif
+    if ((handle= tryLoading(pluginDir, pluginName)))
+      return (int)handle;
+  }
+
 #if DEBUG
   fprintf(stderr, "squeak: could not load plugin `%s'\n", pluginName);
 #endif
@@ -284,9 +310,11 @@ int ioFindExternalFunctionIn(char *lookupName, int moduleHandle)
   dprintf((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
 	   lookupName, moduleHandle));
 
-  if ((fn == 0) && !sqIgnorePluginErrors)
+  if ((fn == 0) && (!sqIgnorePluginErrors) && (strcmp(lookupName, "initialiseModule")))
     fprintf(stderr, "ioFindExternalFunctionIn(%s, %d):\n  %s\n",
 	    lookupName, moduleHandle, dlerror());
+
+  printf("%p = %s\n", fn, lookupName);
 
   return (int)fn;
 }
