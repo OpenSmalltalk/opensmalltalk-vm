@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.11 2002/08/06 21:53:33 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.12 2002/11/14 20:06:51 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -1610,7 +1610,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
 	evt->pressCode = EventKeyDown;
-	evt->modifiers = modifierMap[(cmdKey >> 8)];
+	evt->modifiers = modifierMap[(controlKey >> 8)];
 	/* clean up reserved */
 	evt->reserved1 = 0;
 	evt->reserved2 = 0;
@@ -1651,7 +1651,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
 	evt->pressCode = EventKeyUp;
-	evt->modifiers = modifierMap[(cmdKey >> 8)];
+	evt->modifiers = modifierMap[(controlKey >> 8)];
 	/* clean up reserved */
 	evt->reserved1 = 0;
 	evt->reserved2 = 0;
