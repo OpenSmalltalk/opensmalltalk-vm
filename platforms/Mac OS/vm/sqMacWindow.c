@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.24 2003/07/31 13:03:20 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.25 2003/10/03 19:06:12 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -550,7 +550,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 }
 
 
-#if !I_AM_CARBON_EVENT || BROWSERPLUGIN
+#if !I_AM_CARBON_EVENT || defined(BROWSERPLUGIN)
 #define rectWidth(aRect) ((aRect).right - (aRect).left)
 #define rectHeight(aRect) ((aRect).bottom - (aRect).top)
 #define MinWindowWidth(foo) 72*3
