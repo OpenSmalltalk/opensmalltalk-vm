@@ -35,6 +35,12 @@ CogObjectRepresentation class >> implicitReturnTypeFor: aSelector [
 	^#void
 ]
 
+{ #category : #initialization }
+CogObjectRepresentation class >> initializeMiscConstants [
+	"Override to avoid inheriting (and hence repeating) VMClass class>>initializeMiscConstants.
+	 Subclasses that have misc constants to initialize will override further."
+]
+
 { #category : #accessing }
 CogObjectRepresentation class >> numTrampolines [
 	^1 "ceStoreCheckTrampoline"
