@@ -1,3 +1,25 @@
+2004-04-17  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm/sqPlatformSpecific.h: Include <unistd.h>.
+	Define sqFTruncate().
+
+2004-04-12  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/gnuify: Insert #error into output file if
+	processing failed.
+
+	* platforms/unix/vm-display-fbdev/Makefile.in ($(TARGET)): Remove
+	$(X_LIBS) from the link command.
+
+2004-04-11  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/gnuify: Escape all occurences of '{'
+	within regular expressions.
+
+2004-04-10  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/gnuify: Remove gnu specifics.
+
 2004-04-06  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/config/configure.ac: Version is 3.7b-5.
