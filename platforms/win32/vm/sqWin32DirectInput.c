@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Impara GmbH, Magdeburg, Germany
 *   EMAIL:   Andreas.Raab@impara.de
-*   RCSID:   $Id: sqWin32DirectInput.c,v 1.2 2003/04/26 17:41:50 andreasraab Exp $
+*   RCSID:   $Id: sqWin32DirectInput.c,v 1.3 2003/11/12 22:36:55 andreasraab Exp $
 *
 *   NOTES:
 *     The function enclosed here provide direct support to the
