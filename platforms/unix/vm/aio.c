@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-02-27 19:47:59 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-16 11:16:09 by piumarta on emilia.inria.fr
  */
 
 #include "aio.h"
@@ -100,17 +100,21 @@
 #undef	DEBUG
 #undef	DEBUG_TICKER
 
-#if defined(DEBUG) && defined(DEBUG_TICKER)
+#if defined(DEBUG)
 # define FPRINTF(X) fprintf X
+#else
+# define FPRINTF(X)
+#endif
+
+#if defined(DEBUG_TICKER)
   static char *ticks= "-\\|/";
   static char *ticker= "";
-  #define DO_TICK() \
-  { \
-    fprintf(stderr, "\r%c\r", *ticker); \
-    if (!*ticker++) ticker= ticks; \
+  #define DO_TICK()				\
+  {						\
+    fprintf(stderr, "\r%c\r", *ticker);		\
+    if (!*ticker++) ticker= ticks;		\
   }
-#else /* !DEBUG */
-# define FPRINTF(X)
+#else
 # define DO_TICK()
 #endif
 
@@ -245,6 +249,11 @@ int aioPoll(int microSeconds)
 void aioEnable(int fd, void *data, int flags)
 {
   FPRINTF((stderr, "aioEnable(%d)\n", fd));
+  if (fd < 0)
+    {
+      FPRINTF((stderr, "aioEnable(%d): IGNORED\n", fd));
+      return;
+    }
   if (FD_ISSET(fd, &fdMask))
     {
       fprintf(stderr, "aioEnable: descriptor %d already enabled\n", fd);
@@ -277,6 +286,11 @@ void aioEnable(int fd, void *data, int flags)
 void aioHandle(int fd, aioHandler handlerFn, int mask)
 {
   FPRINTF((stderr, "aioHandle(%d, %s, %d)\n", fd, handlerName(handlerFn), mask));
+  if (fd < 0)
+    {
+      FPRINTF((stderr, "aioHandle(%d): IGNORED\n", fd));
+      return;
+    }
 # define _DO(FLAG, TYPE)			\
     if (mask & FLAG) {				\
       FD_SET(fd, &TYPE##Mask);			\
@@ -291,6 +305,11 @@ void aioHandle(int fd, aioHandler handlerFn, int mask)
 
 void aioSuspend(int fd, int mask)
 {
+  if (fd < 0)
+    {
+      FPRINTF((stderr, "aioSuspend(%d): IGNORED\n", fd));
+      return;
+    }
   FPRINTF((stderr, "aioSuspend(%d)\n", fd));
 # define _DO(FLAG, TYPE)			\
   {						\
@@ -309,6 +328,11 @@ void aioSuspend(int fd, int mask)
 
 void aioDisable(int fd)
 {
+  if (fd < 0)
+    {
+      FPRINTF((stderr, "aioDisable(%d): IGNORED\n", fd));
+      return;
+    }
   FPRINTF((stderr, "aioDisable(%d)\n", fd));
   aioSuspend(fd, AIO_RWX);
   FD_CLR(fd, &xdMask);

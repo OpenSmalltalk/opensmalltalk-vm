@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-02-27 19:51:04 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-16 11:16:04 by piumarta on emilia.inria.fr
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -347,7 +347,7 @@ static void acceptHandler(int fd, void *data, int flags)
       aioDisable(fd);
       pss->sockError= socketError(fd);
       pss->sockState= Invalid;
-      pss->s= 0;
+      pss->s= -1;
       close(fd);
       fprintf(stderr, "acceptHandler: aborting server %d pss=%p\n", fd, pss);
     }
@@ -466,7 +466,7 @@ static void closeHandler(int fd, void *data, int flags)
   aioDisable(fd);
   FPRINTF((stderr, "closeHandler(%d, %p, %d)\n", fd, data, flags));
   pss->sockState= Unconnected;
-  pss->s= 0;
+  pss->s= -1;
   notify(pss, CONN_NOTIFY);
 }
 
@@ -760,12 +760,15 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
 
 void sqSocketCloseConnection(SocketPtr s)
 {
-  int result;
+  int result= 0;
 
   if (!socketValid(s))
     return;
 
   FPRINTF((stderr, "closeConnection(%d)\n", SOCKET(s)));
+
+  if (SOCKET(s) < 0)
+    return;	/* already closed */
 
   aioDisable(SOCKET(s));
   SOCKETSTATE(s)= ThisEndClosed;
@@ -783,7 +786,7 @@ void sqSocketCloseConnection(SocketPtr s)
       /* close completed synchronously */
       SOCKETSTATE(s)= Unconnected;
       FPRINTF((stderr, "closeConnection: disconnected\n"));
-      SOCKET(s)= 0;
+      SOCKET(s)= -1;
     }
   else
     {
