@@ -6,10 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.12 2002/02/23 10:48:44 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.13 2002/03/01 00:27:52 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+*  Feb 26th, 2002, JMM - use carbon get dominate device 
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -50,16 +51,30 @@ WindowPtr getSTWindow(void) {
 
 #ifndef PLUGIN
 int ioSetFullScreen(int fullScreen) {
-	Rect                screen,portRect,windRect;
-	int                 width, height, maxWidth, maxHeight;
-	int                 oldWidth, oldHeight;
-    static Rect		    rememberOldLocation = {44,8,0,0};		
-    GDHandle            	dominantGDevice;
+    Rect                screen,portRect,ignore;
+    int                 width, height, maxWidth, maxHeight;
+    int                 oldWidth, oldHeight;
+    static Rect		rememberOldLocation = {44,8,0,0};		
+    GDHandle            dominantGDevice;
 
-    dominantGDevice = getDominateDevice(stWindow,&windRect);
+#if TARGET_API_MAC_CARBON
+    GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&screen); 
+    if (dominantGDevice == null) {
+        success(false);
+        return 0;
+    }
+    if (dominantGDevice == GetMainDevice())
+        screen.top -= GetMBarHeight();
+#else
+    dominantGDevice = getDominateDevice(stWindow,&ignore);
+    if (dominateGDevice == null) {
+        success(false);
+        return 0;
+    }
     getDominateGDeviceRect(dominantGDevice,&screen,true);
-    
-	if (fullScreen) {
+#endif  
+        
+    if (fullScreen) {
 		GetPortBounds(GetWindowPort(stWindow),&rememberOldLocation);
 		LocalToGlobal((Point*) &rememberOldLocation.top);
 		LocalToGlobal((Point*) &rememberOldLocation.bottom);
@@ -268,7 +283,10 @@ void SetUpWindow(void) {
     if ((Ptr)CreateNewWindow != (Ptr)kUnresolvedCFragSymbolAddress)
 	CreateNewWindow(kDocumentWindowClass,
             kWindowNoConstrainAttribute+kWindowStandardDocumentAttributes
-                -kWindowCloseBoxAttribute,
+#if I_AM_CARBON_EVENT
+            + kWindowStandardHandlerAttribute
+#endif
+            - kWindowCloseBoxAttribute,
             &windowBounds,&stWindow);
     else
 #endif
@@ -309,8 +327,14 @@ int ioHasDisplayDepth(int depth) {
 
 int ioScreenDepth(void) {
     Rect ignore;
+    GDHandle mainDevice;
     
-    GDHandle mainDevice = getDominateDevice(stWindow,&ignore);
+#if TARGET_API_MAC_CARBON
+    GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&mainDevice,&ignore); 
+#else
+    mainDevice = getDominateDevice(stWindow,&ignore);
+#endif
+
     if (mainDevice == null) 
         return 8;
     
@@ -324,9 +348,9 @@ int ioScreenSize(void) {
     
 #ifndef IHAVENOHEAD
 	if (stWindow != nil) {
-        GetPortBounds(GetWindowPort(stWindow),&portRect);
-		w =  portRect.right -  portRect.left;
-		h =  portRect.bottom - portRect.top;
+            GetPortBounds(GetWindowPort(stWindow),&portRect);
+            w =  portRect.right -  portRect.left;
+            h =  portRect.bottom - portRect.top;
 	}
 #endif
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
@@ -432,13 +456,10 @@ Boolean FindBestMatch (			VideoRequestRecPtr requestRecPtr,
 int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	/* Set the window to the given width, height, and color depth. Put the window
 	   into the full screen mode specified by fullscreenFlag. */
-	/* Note: Changing display depth is not yet, and may never be, implemented
-	   on the Macintosh, where (a) it is considered inappropriate and (b) it may
-	   not even be a well-defined operation if the Squeak window spans several
-	   displays (which display's depth should be changed?). */
+	
 
     GDHandle		dominantGDevice;
-	Rect 			windRect;
+	Rect 			ignore;
 	Handle			displayState;
 	UInt32			depthMode=depth;
 	long			value = 0,displayMgrPresent;
@@ -458,7 +479,15 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
     	return 0;
     }
 
-    dominantGDevice = getDominateDevice(stWindow,&windRect);
+#if TARGET_API_MAC_CARBON
+        GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&ignore); 
+#else
+        dominantGDevice = getDominateDevice(stWindow,&ignore);
+#endif
+        if (dominantGDevice == null) {
+            success(false);
+            return 0;
+        }
 	request.screenDevice  = dominantGDevice;
 	request.reqBitDepth = depth;
 	request.reqHorizontal = width;
@@ -494,6 +523,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 }
 
 
+#if !I_AM_CARBON_EVENT
 #define rectWidth(aRect) ((aRect).right - (aRect).left)
 #define rectHeight(aRect) ((aRect).bottom - (aRect).top)
 #define MinWindowWidth(foo) 72*3
@@ -525,6 +555,10 @@ void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, sh
 			 */
 
             dominantGDevice = getDominateDevice(theWindow,&windRect);
+            if (dominateGDevice == null) {
+                return 0;
+            }
+
 			/*
 			 *	At this point, we know the dimensions of the window we're zooming, and we know
 			 *	what screen we're going to put it on. To be more specific, however, we need a
@@ -651,6 +685,7 @@ void getDominateGDeviceRect(GDHandle dominantGDevice,Rect *dGDRect,Boolean forge
 			    dGDRect->top += GetMBarHeight();
 		}
 }
+#endif
 
 /*#	MacOSª Sample Code
 #	
