@@ -1,6 +1,6 @@
 # make.cfg.in -- mf fragment for configured variables		-*- makefile -*-
 # 
-#   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
 #     as listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -35,7 +35,7 @@
 
 # Author: Ian.Piumarta@inria.fr
 # 
-# Last edited: 2003-02-06 03:06:06 by piumarta on emilia.local.
+# Last edited: 2003-08-31 19:55:21 by piumarta on emilia.inria.fr
 
 MAKEFLAGS=	--no-print-directory
 
@@ -79,8 +79,8 @@ docdir=		$(prefix)/doc/squeak
 SHELL=		@SHELL@
 MKINSTALLDIRS=	$(SHELL) $(cfgdir)/mkinstalldirs
 INSTALL=	@INSTALL@
-INSTALL_PROG=	@INSTALL_PROGRAM@
-INSTALL_DATA=	@INSTALL_DATA@
+INSTALL_PROG=	@INSTALL_PROGRAM@ $(INSTALL_ARGS)
+INSTALL_DATA=	@INSTALL_DATA@ $(INSTALL_ARGS)
 UNINSTALL=	$(SHELL) $(cfgdir)/uninstall
 AS=		@AS@
 AWK=		@AWK@
@@ -111,6 +111,8 @@ FFI_S=		@FFI_S@
 FFI_O=		@FFI_O@
 
 INTERP=		@INTERP@
+
+VM_APP_ICONS=	@VM_APP_ICONS@
 
 npsqueak=	@npsqueak@
 install_nps=	@install_nps@
