@@ -6,7 +6,7 @@
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0\fs24 \cf0 Mac VM 3.2.7 mach-o build for Carbon, and build for Classic.\
-April 26th, 2002\
+May 31st, 2002 (3.2.7b6)\
 Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
@@ -38,6 +38,8 @@ h) sqMacWindow.c: use accessors for interp.c globals.\
 i)  3.2.7b5 sqMacFileLogic.c: change vmpath to resolve to classic VM if vm is moved from MacOSClassic folder\
 j) Misc changes for Netscape plugin support\
 k) Introduce osExports.c logic\
+l) 3.2.7b6 Fixed a problem in path name resolving need to use UTF8 to properly interact with high ascii characters\
+m) 3.2.7b6 Fixed a problem in path name resolving there was a bug with certain types of alias path name combinations in quick name resolving.\
 \
 Mac VM 3.2.6 mach-o build for Carbon, and build for Classic.\
 March 14th, 2002\
