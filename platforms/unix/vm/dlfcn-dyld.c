@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2002-12-01 16:06:50 by piumarta on calvin.inria.fr
+ * Last edited: 2003-08-07 08:53:27 by piumarta on emilia.inria.fr
  */
 
 #include <stdio.h>
@@ -131,7 +131,7 @@ static void *dlsym(void *handle, const char *symbol)
 	    nsSymbol= NSLookupSymbolInImage
 	      ((struct mach_header *)handle,
 	       _symbol,
-	       NSLOOKUPSYMBOLINIMAGE_OPTION_BIND
+	         NSLOOKUPSYMBOLINIMAGE_OPTION_BIND
 	       | NSLOOKUPSYMBOLINIMAGE_OPTION_RETURN_ON_ERROR);
 	  dprintf((stderr, "dlsym: bundle (image) lookup returned %p\n", nsSymbol));
 	}
