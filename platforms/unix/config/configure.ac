@@ -37,7 +37,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2003-02-10 20:17:06 by piumarta on emilia.inria.fr
+# Last edited: 2003-08-07 08:04:23 by piumarta on emilia.inria.fr
 
 AC_INIT([config.h.in])
 
@@ -185,16 +185,29 @@ AC_CHECK_LIB(nsl, yp_bind)
 AC_CHECK_LIB(socket, socket)
 AC_CHECK_LIB(m,	sin)
 
-AC_HAVE_HEADERS(dlfcn.h)
-AC_CHECK_FUNC(dlopen, [
-  AC_DEFINE(HAVE_LIBDL,[1])
+#AC_CHECK_FUNC(dlopen, [
+#  AC_DEFINE(HAVE_LIBDL,[1])
+#],[
+#  AC_CHECK_LIB(dl, dlopen, [
+#    LIBS="-ldl $LIBS"
+#    AC_DEFINE(HAVE_LIBDL,[1])
+#  ],[
+#    AC_CHECK_FUNC(_dyld_present, [
+#      AC_DEFINE(HAVE_DYLD,[1])
+#    ])
+#  ])
+#])
+
+AC_CHECK_FUNC(_dyld_present, [
+  AC_DEFINE(HAVE_DYLD,[1])
 ],[
-  AC_CHECK_LIB(dl, dlopen, [
-    LIBS="-ldl $LIBS"
+  AC_HAVE_HEADERS(dlfcn.h)
+  AC_CHECK_FUNC(dlopen, [
     AC_DEFINE(HAVE_LIBDL,[1])
   ],[
-    AC_CHECK_FUNC(_dyld_present, [
-      AC_DEFINE(HAVE_DYLD,[1])
+    AC_CHECK_LIB(dl, dlopen, [
+      LIBS="-ldl $LIBS"
+      AC_DEFINE(HAVE_LIBDL,[1])
     ])
   ])
 ])
