@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.14 2003/11/20 01:33:43 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.15 2004/01/07 05:24:10 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -64,6 +64,7 @@ May 27th 2001	JMM 3.0.22, fix bug in mailto: string size, added logic to deal wi
 Jun 	 2001	JMM 3.0.23, added seteventhook logic to enable HW acceleration plugin to get notification of events
 Aug      2001	JMM 3.0.24  rework of security logic, remove explicit call 
 May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
+ 3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 **********/
 
 #include "sq.h"
@@ -72,6 +73,9 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 #include "FilePlugin.h"
 #include "sqMacTime.h"
 #include "npapi.h"
+#include "sqMacUIConstants.h"
+#include "sqMacImageIO.h"
+#include "sqMacEncoding.h"
 
 #include <Events.h>
 #include <Files.h>
@@ -110,7 +114,6 @@ May	     2002   JMM 3.2.7b1 Ok lets see if the sucker will compile again
 **********/
 //#define ENABLE_URL_FETCH  
 #define IMAGE_NAME "SqueakPlugin.image"
-#define VMPATH_SIZE 300
 
 /*** Exported Primitives ***/
 
@@ -159,11 +162,6 @@ extern int gButtonIsDown;
 extern int getFullScreenFlag();
 extern int setInterruptKeycode(int value);
 extern int setFullScreenFlag(int value);
-
-extern char documentName[];  /* full path to document file */
-extern char imageName[];  /* full path to image file */
-extern char shortImageName[];  /* just the image file name */
-extern char vmPath[];  /* full path to interpreter's directory */
 
 extern struct VirtualMachine *interpreterProxy;
 
@@ -254,6 +252,8 @@ int AbortIfFileURL(char *url);
 int URLPostCreate(char *url, char *buffer, char * window,int semaIndex);
 NP_Port	  *getNP_Port(void);
 void waitAFewMilliseconds(void);
+void GetTempFSSpec(FSSpec *spec);
+
 
 /*** Initialize/Shutdown ***/
 
@@ -301,6 +301,7 @@ NPP_GetJavaClass(void)
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 
 void NPP_Shutdown(void) {
+	exitRequested = true;
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     pthread_mutex_unlock(&gEventDrawLock);
 #endif
@@ -369,6 +370,7 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
 NPError NPP_Destroy(NPP instance, NPSavedData** save) {
 	long i;
 	
+	exitRequested = true;
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     pthread_mutex_unlock(&gEventDrawLock);
 #endif
@@ -752,6 +754,8 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 /*** Drawing ***/
 
 void EndDraw(void) {
+        if (exitRequested) 
+            return;
 	SetOrigin(gSavePortPortRect.left, gSavePortPortRect.top);
 	SetClip(gSavePortClipRgn);
 	SetPort((GrafPtr) gOldPort);
@@ -768,7 +772,12 @@ void StartDraw(void) {
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     pthread_mutex_lock(&gEventDrawLock);
 #endif
-
+        if (exitRequested) {
+        #if defined ( __APPLE__ ) && defined ( __MACH__ )
+            pthread_mutex_unlock(&gEventDrawLock);
+        #endif 
+            return;
+        }
 	port = (NP_Port *) netscapeWindow->window;
 
 	/* save old graphics port and switch to ours */
@@ -810,6 +819,8 @@ int ioShowDisplay(
 	}
 	
 	StartDraw();
+        if (exitRequested) 
+            return;
     
 	dstRect.right	= width;
 	dstRect.bottom	= height;
@@ -897,6 +908,7 @@ void ReadSqueakImage(void) {
 }
 
 /*** URL Requests ***/
+int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* notifyData);
 
 int URLRequestCreate(char *url, char *target, int semaIndex) {
   /* Start a URL request and return its index. Return -1 if there were
@@ -919,10 +931,14 @@ int URLRequestCreate(char *url, char *target, int semaIndex) {
 	notifyData = (urlRequests[handle].id << 8) + handle;
 	strncpy(mail,url,7);
 	mail[7] = 0x00;
+#ifdef TARGET_API_MAC_CARBON 
+    	err = CFNetworkGoGetURL(thisInstance, url, target, (void *) notifyData);
+#else
 	if (CaseInsensitiveMatch(mail,"mailto:"))
     	NPN_GetURLNotify(thisInstance, url, "_self", (void *) notifyData);
 	else
     	NPN_GetURLNotify(thisInstance, url, target, (void *) notifyData);
+#endif
 
 	return handle;
 }
@@ -944,10 +960,46 @@ int URLPostCreate(char *url, char *buffer, char * window,int semaIndex) {
 	urlRequests[handle].buffer = buffer;
 
 	notifyData = (urlRequests[handle].id << 8) + handle;
+#ifdef TARGET_API_MAC_CARBON 
+        {
+        OSStatus		status; //kURLDisplayProgressFlag
+        URLState                currentState;
+        URLReference            URLRef;
+        
+        status = URLNewReference(url, &URLRef);
+        if (status == noErr) {
+            FSSpec        tempFileSpec;
+            char fileName[MAX_STRING_LENGTH + 1];
+            
+             // The URLSetProperty function enables you to set those property values identified by the following
+            // constants: kURLPassword, kURLUserName, kURLPassword, kURLHTTPRequestMethod, kURLHTTPRequestHeader,
+            // kURLHTTPRequestBody, and kURLHTTPUserAgent.
+            URLSetProperty(URLRef, kURLHTTPRequestMethod, "POST", 4);
+            URLSetProperty(URLRef, kURLHTTPRequestBody, buffer, strlen(buffer));
+            GetTempFSSpec(&tempFileSpec);
+            status = URLOpen(URLRef, &tempFileSpec, 0, NULL, NULL, NULL);
+            currentState = kURLNullState;
+            while (status == noErr && !(currentState == kURLCompletedState || currentState == kURLErrorOccurredState)){
+                URLIdle();
+                status = URLGetCurrentState (URLRef, &currentState);
+            }
+            URLGetError(URLRef,&status);
+            URLDisposeReference(URLRef);
+            if (status != noErr) 
+                return -1;
+            PathToFile(fileName,MAX_STRING_LENGTH, &tempFileSpec,gCurrentVMEncoding);
+            URLRequestCompleted(notifyData, fileName);
+        } else
+            return -1;
+        }
+        
+#else
 	error = NPN_PostURLNotify(thisInstance, url, window, strlen(buffer), buffer, false, (void *) notifyData);
 	if (error != NPERR_NO_ERROR) {
 		return -1;
 	}
+#endif
+        
 	
 	return handle;
 }
@@ -961,8 +1013,15 @@ void URLRequestDestroy(int requestHandle) {
 	urlRequests[requestHandle].id = 0;
 	urlRequests[requestHandle].status = STATUS_IDLE;
 	urlRequests[requestHandle].semaIndex = 0;
+        
+        if (urlRequests[requestHandle].fileName[0] != NULL) {
+            sqFileDeleteNameSize((int) &urlRequests[requestHandle].fileName, strlen(urlRequests[requestHandle].fileName));
+            urlRequests[requestHandle].fileName[0] = 0x00;
+        }
+        
 	urlRequests[requestHandle].fileName[0] = 0;
 	urlRequests[requestHandle].buffer = null;
+
 }
 
 char * URLRequestFileName(int requestHandle) {
@@ -1011,8 +1070,9 @@ void URLRequestCompleted(int notifyData, const char* fileName) {
 		return;
 	}
 	if (urlRequests[handle].id == (notifyData >> 8)) {
-		if (fileName != null) 
+                if (fileName != null) {
 		    strncpy(urlRequests[handle].fileName, fileName, MAX_STRING_LENGTH);
+                }
 		if (urlRequests[handle].buffer != null) {
 			NPN_MemFree(urlRequests[handle].buffer);
 			urlRequests[handle].buffer = null;
@@ -1174,11 +1234,10 @@ int InitFilePathsViaDomain(SInt16 domain) {
 	long dirID;
 	OSErr err;
 	FSSpec fileSpec;
+	char path[VMPATH_SIZE+1];
 	
 	/* clear all path and file names */
-	imageName[0] = shortImageName[0] = documentName[0] = vmPath[0] = 0;
-
-	strcpy(shortImageName, squeakPluginImageName);
+        SetShortImageNameViaString(squeakPluginImageName,gCurrentVMEncoding);
 
 	/* get the path to the sytem folder preference area*/
 	err = FindFolder(domain, kPreferencesFolderType, kDontCreateFolder, &vRefNum, &dirID);
@@ -1188,18 +1247,32 @@ int InitFilePathsViaDomain(SInt16 domain) {
 	
 	// Look for folder, if not found abort */
 	strcpy(imageInPreferenceFolder,":Squeak:Internet:");
-	strcat(imageInPreferenceFolder,shortImageName);
+	strcat(imageInPreferenceFolder,squeakPluginImageName);
 	CopyCStringToPascal(imageInPreferenceFolder,(unsigned char *) imageInPreferenceFolder);
 	err = FSMakeFSSpecCompat(vRefNum, dirID,(unsigned char *) imageInPreferenceFolder , &fileSpec);
 	if (err != noErr) {
-		strcpy(imageName,"Problems finding the Internet folder in the Squeak Preference folder or finding the SqueakPlugin.image");
-		return err;
+		/* New Behavior try to find the SqueakLand Folder in the Application's Folder */
+		err = FindFolder(domain, kApplicationsFolderType, kDontCreateFolder, &vRefNum, &dirID);
+		if (err != noErr) 
+			goto error;
+		strcpy(imageInPreferenceFolder,":SqueakLand:Squeak:Internet:");
+		strcat(imageInPreferenceFolder,squeakPluginImageName);
+		CopyCStringToPascal(imageInPreferenceFolder,(unsigned char *) imageInPreferenceFolder);
+		err = FSMakeFSSpecCompat(vRefNum, dirID,(unsigned char *) imageInPreferenceFolder , &fileSpec);
+		if (err != noErr)		
+			goto error;
 	}	
 	/* set the vmPath */
-	PathToDir(vmPath,VMPATH_SIZE, &fileSpec);
-	strcpy(imageName, vmPath);
-	strcat(imageName, shortImageName);
-        return noErr;
+	SetVMPath(&fileSpec);
+	getVMPathWithEncoding(path,gCurrentVMEncoding);
+	strcat(path, squeakPluginImageName);
+	SetImageNameViaString(path,gCurrentVMEncoding);
+	return noErr;
+	
+	error: 
+	SetImageNameViaString("Problems finding the Internet folder in the Squeak Preference folder or finding the SqueakPlugin.image",gCurrentVMEncoding);
+	return err;
+	
 }
 
 int InitFilePaths() {
@@ -1239,6 +1312,40 @@ int primitivePluginBrowserReady(void) {
 
 /*** Optional URL Fetch Primitives ***/
 #ifdef ENABLE_URL_FETCH
+#ifdef TARGET_API_MAC_CARBON
+
+int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* notifyData)
+{
+    OSStatus error;
+    FSSpec  tempFileSpec;
+    char fileName[MAX_STRING_LENGTH + 1];
+    
+    GetTempFSSpec(&tempFileSpec);
+    error = URLSimpleDownload (url,&tempFileSpec,NULL,NULL,NULL,notifyData);
+    PathToFile(fileName,MAX_STRING_LENGTH, &tempFileSpec,gCurrentVMEncoding);
+    URLRequestCompleted(notifyData, fileName);
+}
+
+void GetTempFSSpec(FSSpec *spec) {
+    char tempName[1024+1];
+    CFURLRef    sillyThing;
+    CFStringRef filePath;
+    FSRef	theFSRef;
+    OSErr	err;
+    
+    strcpy(tempName,tmpnam(0));
+    
+    filePath = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) tempName,strlen(tempName),kCFStringEncodingUTF8,false);
+    sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
+    CFRelease(filePath);
+    filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
+    CFRelease(sillyThing);
+    CFStringGetCString (filePath,tempName, 1024, kCFStringEncodingMacRoman);
+    CFRelease(filePath);
+    makeFSSpec(tempName, strlen(tempName),spec);
+}
+
+#endif
 int primitivePluginDestroyRequest(void) {
 	/* Args: handle.
 	   Destroy the given request. */
@@ -1522,7 +1629,6 @@ int primitivePluginRequestURLStream(void) {
 	interpreterProxy->pushInteger(handle);
 }
 
-
 void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 	/* Opens the given file for reading using the supplied sqFile
 	   structure. This is a simplified version of sqFileOpen() that
@@ -1531,15 +1637,14 @@ void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 	   we only allow reading of this file. Sets the primitive
 	   failure flag if not successful. */
     char fileName[1024];
-    sqImageFile remember;
     
     if (*MacfileName == NULL) {
         interpreterProxy->success(false);
         return;
     }
     sqFilenameFromStringOpen(fileName,(long) MacfileName, strlen(MacfileName));
-
 	f->file = fopen(fileName, "rb");
+
 	f->writable = false;
 
 	if (f->file == NULL) {
@@ -1726,7 +1831,7 @@ int parseMemorySize(int baseSize, char *src)
 
 int AbortIfFileURL(char *url)
 {   char lookFor[6];
-	int i=0,placement=0;
+	int placement=0;
 	
 	lookFor[5] = 0x00;
 	while (true) {
