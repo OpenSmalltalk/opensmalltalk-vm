@@ -126,7 +126,7 @@ binary: binary-indep binary-arch
 
 # build a new orig.tar.gz file
 origtgz: clean
-	cd ..; tar cfvz squeak_$(version).orig.tar.gz squeak-$(shell echo $(version) | tr - . )/{platforms/unix,platforms/Cross,src,debian}
+	cd ..; tar cfvz squeak_$(version).orig.tar.gz squeak-$(shell echo $(version) | tr - . )/{platforms/unix,platforms/Cross,src,debian} --exclude=CVS
 
 
 .PHONY: build clean binary-indep binary-arch binary install configure origtgz
