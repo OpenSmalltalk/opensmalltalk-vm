@@ -268,15 +268,12 @@ CogVMSimulator >> cCoerce: value to: cTypeString [
 CogVMSimulator >> cCoerceSimple: value to: cTypeString [
 	"Type coercion for translation and simulation.
 	 For simulation answer a suitable surrogate for the struct types"
-	^cTypeString caseOf:
-	   {	[#'char *']				->	[value].
-		[#'void *']				->	[value].
-		[#sqInt]					->	[value].
-		[#'void (*)()']			->	[value].
-		[#'void (*)(void)']		->	[value].
-		[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
-		[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger].
-		[#'NSSendCache *']		->	[cogit nsSendCacheSurrogateAt: value asUnsignedInteger]. }
+	^cTypeString
+		caseOf:
+		   {	[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
+			[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger].
+			[#'NSSendCache *']		->	[cogit nsSendCacheSurrogateAt: value asUnsignedInteger] }
+		otherwise: [value]
 ]
 
 { #category : #'multi-threading simulation switch' }

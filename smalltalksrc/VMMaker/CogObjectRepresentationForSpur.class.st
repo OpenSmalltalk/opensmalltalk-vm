@@ -1079,11 +1079,9 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName [
 	<var: #jumpSC type: #'AbstractInstruction *'>
 	<inline: false>
 	cogit zeroOpcodeIndex.
-	cogit CmpCq: 0 R: TempReg.
-	jumpSC := cogit JumpZero: 0.
-	
-	"CannotAssignTo:, we restore the index."
-	cogit SubCq: 1 R: TempReg.
+	cogit PushR: SendNumArgsReg.
+	jumpSC := self genJumpMutable: ReceiverResultReg scratchReg: SendNumArgsReg.
+	cogit PopR: SendNumArgsReg.
 	cogit
 		compileTrampolineFor: #ceCannotAssignTo:withIndex:valueToAssign:
 		numArgs: 3
@@ -1096,7 +1094,7 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName [
 		resultReg: NoReg.
 		
 	"Store check"
-	jumpSC jmpTarget: cogit Label.
+	jumpSC jmpTarget: (cogit PopR: SendNumArgsReg).
 	^ cogit genTrampolineFor: #remember:
 		called: trampolineName
 		numArgs: 1
@@ -1113,14 +1111,13 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [ 
 	"Store check code is duplicated to use a single trampoline"
+	| immutableJump jmpImmediate jmpDestYoung jmpSourceOld rememberedBitByteOffset jmpAlreadyRemembered mask |
 	<var: #immutableJump type: #'AbstractInstruction *'>
-	<var: #trampJump type: #'AbstractInstruction *'>
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	<var: #jmpDestYoung type: #'AbstractInstruction *'>
 	<var: #jmpSourceOld type: #'AbstractInstruction *'>
 	<var: #jmpAlreadyRemembered type: #'AbstractInstruction *'>
-	| immutableJump trampJump jmpImmediate jmpDestYoung jmpSourceOld rememberedBitByteOffset jmpAlreadyRemembered mask |
-	
+
 	immutableJump := self genJumpImmutable: destReg scratchReg: scratchReg.
 	
 	cogit genTraceStores.
@@ -1151,13 +1148,10 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg
 	cogit MoveMb: rememberedBitByteOffset r: destReg R: scratchReg.
 	cogit AndCq: mask R: scratchReg.
 	jmpAlreadyRemembered := cogit JumpNonZero: 0.
-	"We know scratchReg now holds 0, this is convenient because the trampoline 
-	convention expects 0 for store check in scratchReg. What a coincidence ;-)"
-	"Remembered bit is not set.  Call store check to insert dest into remembered table."
-	trampJump := cogit Jump: 0.
-	"Here we reach the trampoline for Immutability failure"
-	immutableJump jmpTarget: (cogit MoveCq: index + 1 R: scratchReg). "index + 1 as 0 is reserved for store checks"
-	trampJump jmpTarget: (cogit CallRT: ceStoreTrampoline).
+	"Set the inst var index for the benefit of the immutability check. The trampoline will
+	 repeat the check to choose between the immutbality violation and the store check."
+	immutableJump jmpTarget: (cogit MoveCq: index R: scratchReg).
+	cogit CallRT: ceStoreTrampoline.
 	cogit annotateBytecode: cogit Label.
 	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
 
@@ -1179,7 +1173,7 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityButNoStoreCheckSourceR
 	
 	"imm check has its own trampoline"
 	mutableJump := self genJumpMutable: destReg scratchReg: scratchReg.
-	cogit MoveCq: index + 1 R: TempReg. "index + 1 as 0 is reserved for store checks"
+	cogit MoveCq: index R: TempReg.
 	cogit CallRT: ceStoreTrampoline.
 	cogit annotateBytecode: cogit Label.
 	needRestoreRcvr ifTrue: [ cogit putSelfInReceiverResultReg ].
