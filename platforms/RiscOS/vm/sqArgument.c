@@ -172,7 +172,7 @@ char * string;
 					break;
 
 				default:
-					fprintf(stderr,"Unknown option encountered!\n");
+					printf("Unknown option encountered!\n");
 					return NULL;
 			 };
 		}

@@ -22,8 +22,6 @@
 #include "sqArguments.h"
 #include <kernel.h>
 
-// CBDEBUG is for printfs related to the clipboard stuff
-#define CBDEBUG 0
 int		sqHasInputFocus = false;
 int		sqHasClipboard = false;
 char *		clipboardBuffer = NULL;
@@ -52,12 +50,7 @@ void ClaimEntity( int flags) {
 	wmessage.action = message_CLAIM_ENTITY;
 	wmessage.data.claim_entity.flags = (wimp_claim_flags)flags;
 	xwimp_send_message(wimp_USER_MESSAGE, &wmessage, wimp_BROADCAST);
-#if CBDEBUG
-		printf("ClaimEntity sent message with flags %x\n", flags);
-		if (sqHasInputFocus) printf("has focus ");
-		if (sqHasClipboard) printf("has clipboard\n");
-#endif
-	
+
 }
 
 void claimCaret(wimp_pointer * wblock) {
@@ -92,13 +85,6 @@ void receivedClaimEntity(wimp_message * wblock) {
  * indicate that the clipboard is held by another application and deallocate
  * the memory being used to store the clipboard contents.
  */
-#if CBDEBUG
-		printf("receivedClaimEntity with flags %x\n",
-			wblock->data.claim_entity.flags);
-		if (sqHasInputFocus) printf("has focus ");
-		if (sqHasClipboard) printf("has clipboard\n");
-#endif
-
 	if ( (wblock->data.claim_entity.flags
 		& wimp_CLAIM_CARET_OR_SELECTION) > 0 ) {
 		sqHasInputFocus = false;
@@ -107,12 +93,6 @@ void receivedClaimEntity(wimp_message * wblock) {
 		sqHasClipboard = false;
 		allocClipboard(1);
 	}
-#if CBDEBUG
-	printf("post claim entity sq now ");
-		if (sqHasInputFocus) printf("has focus ");
-		if (sqHasClipboard) printf("has clipboard\n");
-#endif
-
 }
 
 /* clipboard buffer management  */
@@ -145,12 +125,6 @@ void sendDataRequest(wimp_message* wmessage) {
  * Broadcast the message_DATA_REQUEST message
  */
 extern wimp_w	sqWindowHandle;
-#if CBDEBUG
-	printf("sendDataRequest  ");
-	if (sqHasInputFocus) printf("has focus ");
-	if (sqHasClipboard) printf("has clipboard\n");
-#endif
-
 	wmessage->size = 52;
 	wmessage->sender = (wimp_t)NULL;
 	wmessage->my_ref = 0; 
@@ -177,11 +151,6 @@ int receivedClipboardDataSave(wimp_message * wmessage) {
  * the message. Otherwise, it should continue with the DataSave
  * protocol as detailed in the Programmer's Reference Manual.
  */
-#if CBDEBUG
-	printf("receivedClipboardDataSave ");
-	if (sqHasInputFocus) printf("has focus ");
-	if (sqHasClipboard) printf("has clipboard\n");
-#endif
 	if(wmessage->data.data_xfer.file_type != (bits)0xfff) {
 		/* if not text type, empty clipboard buffer & return */
 		memset(clipboardBuffer,0, (size_t)clipboardByteSize);
@@ -205,11 +174,6 @@ bits load_addr, exec_addr, file_type;
 fileswitch_attr attr;
 fileswitch_object_type obj_type;
 int length;
-#if CBDEBUG
-	printf("receivedClipboardDataLoad ");
-	if (sqHasInputFocus) printf("has focus ");
-	if (sqHasClipboard) printf("has clipboard\n");
-#endif
 	/* find the file size */
 	xosfile_read_stamped_no_path(&(wmessage->data.data_xfer.file_name[0]),
 		&obj_type, &load_addr, &exec_addr, &length, &attr, &file_type);
@@ -270,11 +234,6 @@ extern void PointerEnterWindow(wimp_block* wblock);
 void fetchClipboard(void) {
 /*  fetch the clipboard from the current owner */
 wimp_block wblock; 
-#if CBDEBUG
-	printf("fetchClipboard ");
-	if (sqHasInputFocus) printf("has focus ");
-	if (sqHasClipboard) printf("has clipboard\n");
-#endif
 	/* ask for the clipboard contents */
 	sendDataRequest(&wblock.message);
 	if( !pollForClipboardMessage(message_DATA_SAVE, &wblock))
@@ -302,11 +261,6 @@ void receivedDataRequest(wimp_message * wmessage) {
 	* data its original (native) format. Note that the list can be
 	* null, to indicate that the native data should be sent.
 	*/
-#if CBDEBUG
-		printf("receivedDataRequest ");
-		if (sqHasInputFocus) printf("has focus ");
-		if (sqHasClipboard) printf("has clipboard\n");
-#endif
 	/* reply using the normal Message_DataSave protocol.
 	 * Bytes 20 through 35 of the DataSave block should be copied directly
 	 * from the corresponding bytes of the Message_DataRequest block,
@@ -327,11 +281,6 @@ void receivedDataRequest(wimp_message * wmessage) {
 
 void receivedDataSaveAck(wimp_message * wmessage) {
 /* we've been asked to save the clipboard contents to the wimpScrap */
-#if CBDEBUG
-		printf("receivedDataSaveAck ");
-		if (sqHasInputFocus) printf("has focus ");
-		if (sqHasClipboard) printf("has clipboard\n");
-#endif
 	osfile_save_stamped(&(wmessage->data.data_xfer.file_name[0]),
 		(bits)0xfff, (byte const *)clipboardBuffer,
 		(byte const *)(clipboardBuffer +

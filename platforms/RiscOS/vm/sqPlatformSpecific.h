@@ -54,6 +54,23 @@ if(1) {int sqfni;\
 #define ioMSecs()  (ioMicroMSecs())
 #undef ioLowResMSecs
 #define ioLowResMSecs() (ioMicroMSecs())
+
+
+/* Debugging support - printf is #def'd to repprint which outputs to
+ * a logfile or to !Reporter if it is active
+ */
+#ifdef DEBUG 
+#define PRINTF(s)\
+{\
+	printf s;\
+};
+#else
+#define PRINTF(s) 
+#endif
+
+extern int repprintf(const char * format, ...);
+#define printf repprintf
+
 #else
 
 #endif /* ACORN */

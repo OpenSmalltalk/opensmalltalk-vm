@@ -1,5 +1,5 @@
-# Project:   sq34plugin
-# Make the pluginised VM for v3.4
+# Project:   sq36plugin
+# Make the pluginised VM for v3.6
 # Reworked to use VMMaker non-copying of platform & cross files
 
 # Toolflags:
@@ -25,6 +25,8 @@ SVM=@.vm
 PPlug=$(PLAT).RiscOS.plugins
 CPlug=$(PLAT).Cross.plugins
 SPlug=@.plugins
+PlHdr=$(CVM).h.sqVirtualMachine $(PVM).h.sqConfig $(PVM).h.sqPlatformSpecific
+VMHdr=$(CVM).h.sq $(PlHdr)
 
 # Final targets:
 all: pluginList vm
@@ -49,16 +51,16 @@ pluginList: B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims \
 		FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin \
 		GeniePlugin JPEGReaderPlugin  LargeIntegers \
 		Matrix2x3Plugin MiscPrimitivePlugin RePlugin SocketPlugin \
-		SoundPlugin StarSqueakPlugin  Squeak3D SurfacePlugin \
+		SoundPlugin StarSqueakPlugin  SurfacePlugin \
 		ZipPlugin pluginDir
 	@
 
-$(Sqk).!Runimage:	@.vm.o.interp @.vm.o.sqArgument \
+$(Sqk).!Runimage:	@.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
         @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys 
-        link $(linkflags)  @.vm.o.interp @.vm.o.sqArgument \
+        link $(linkflags)  @.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard @.vm.o.sqRPCVersion \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
@@ -71,10 +73,10 @@ $(Sqk).!Runimage:	@.vm.o.interp @.vm.o.sqArgument \
 @.vm.o.ptrblock:   $(Sqk).ptrblkmap 
         rinkptr $(rinkptrflags) $(Sqk).ptrblkmap  @.vm.o.ptrblock
 
-$(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCWindows $(PVM).dsc.block
+$(Sqk).ptrblkmap:    C:o.stubs @.vm.o.sqRPCMain $(PVM).dsc.block
         copy $(PVM).dsc.block $* f~c
         extractsym -e $* C:o.stubs,*
-        extractsym -e $* @.vm.o.sqRPCWindows
+        extractsym -e $* @.vm.o.sqRPCMain
 
 ###########
 # ADPCMCodecPlugin make rule.
@@ -91,7 +93,7 @@ $(SqPlugins).ADPCMCodecPlugin:	$(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin
 
-$(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin: $(SPlug).ADPCMCodecPlugin.c.ADPCMCodecPlugin
+$(SPlug).ADPCMCodecPlugin.o.ADPCMCodecPlugin: $(SPlug).ADPCMCodecPlugin.c.ADPCMCodecPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -110,7 +112,7 @@ $(SqPlugins).B2DPlugin:	$(SPlug).B2DPlugin.o.B2DPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).B2DPlugin.o.B2DPlugin
 
-$(SPlug).B2DPlugin.o.B2DPlugin: $(SPlug).B2DPlugin.c.B2DPlugin
+$(SPlug).B2DPlugin.o.B2DPlugin: $(SPlug).B2DPlugin.c.B2DPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -129,7 +131,7 @@ $(SqPlugins).BitBltPlugin:	$(SPlug).BitBltPlugin.o.BitBltPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).BitBltPlugin.o.BitBltPlugin
 
-$(SPlug).BitBltPlugin.o.BitBltPlugin: $(SPlug).BitBltPlugin.c.BitBltPlugin
+$(SPlug).BitBltPlugin.o.BitBltPlugin: $(SPlug).BitBltPlugin.c.BitBltPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 ###########
@@ -147,7 +149,7 @@ $(SqPlugins).BMPReadWriterPlugin:	$(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPl
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin
 
-$(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin: $(SPlug).BMPReadWriterPlugin.c.BMPReadWriterPlugin
+$(SPlug).BMPReadWriterPlugin.o.BMPReadWriterPlugin: $(SPlug).BMPReadWriterPlugin.c.BMPReadWriterPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c 
 
 
@@ -166,7 +168,7 @@ $(SqPlugins).DSAPrims:	$(SPlug).DSAPrims.o.DSAPrims \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).DSAPrims.o.DSAPrims
 
-$(SPlug).DSAPrims.o.DSAPrims: $(SPlug).DSAPrims.c.DSAPrims
+$(SPlug).DSAPrims.o.DSAPrims: $(SPlug).DSAPrims.c.DSAPrims $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -186,7 +188,7 @@ $(SqPlugins).FFTPlugin:	$(SPlug).FFTPlugin.o.FFTPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).FFTPlugin.o.FFTPlugin
 
-$(SPlug).FFTPlugin.o.FFTPlugin: $(SPlug).FFTPlugin.c.FFTPlugin
+$(SPlug).FFTPlugin.o.FFTPlugin: $(SPlug).FFTPlugin.c.FFTPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -214,11 +216,11 @@ $(SqPlugins).FilePlugin:	$(SPlug).FilePlugin.o.FilePlugin \
 			$(SPlug).FilePlugin.o.sqRPCDirectory \
 			$(SPlug).FilePlugin.o.sqFilePluginBasicPrims 
 
-$(SPlug).FilePlugin.o.FilePlugin: $(SPlug).FilePlugin.c.FilePlugin
+$(SPlug).FilePlugin.o.FilePlugin: $(SPlug).FilePlugin.c.FilePlugin $(PlHdr)
 	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(SPlug).FilePlugin.c.FilePlugin 
-$(SPlug).FilePlugin.o.sqRPCDirectory: $(PPlug).FilePlugin.c.sqRPCDirectory
+$(SPlug).FilePlugin.o.sqRPCDirectory: $(PPlug).FilePlugin.c.sqRPCDirectory $(PlHdr)
 	cc $(ccflags) -o $@ $(PPlug).FilePlugin.c.sqRPCDirectory 
-$(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(CPlug).FilePlugin.c.sqFilePluginBasicPrims
+$(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(CPlug).FilePlugin.c.sqFilePluginBasicPrims $(PlHdr)
 	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(CPlug).FilePlugin.c.sqFilePluginBasicPrims 
 
 
@@ -245,7 +247,7 @@ $(SqPlugins).FileCopyPlugin:	$(SPlug).FileCopyPlugin.o.FileCopyPlugin \
 		-a $(SPlug).FileCopyPlugin.o.FileCopyPlugin \
 			$(SPlug).FileCopyPlugin.o.sqRPCFileCopy 
 
-$(SPlug).FileCopyPlugin.o.FileCopyPlugin: $(SPlug).FileCopyPlugin.c.FileCopyPlugin
+$(SPlug).FileCopyPlugin.o.FileCopyPlugin: $(SPlug).FileCopyPlugin.c.FileCopyPlugin $(PlHdr)
 	cc $(ccflags) -I$(CPlug).FileCopyPlugin -o $@ $*.c 
 $(SPlug).FileCopyPlugin.o.sqRPCFileCopy: $(PPlug).FileCopyPlugin.c.sqRPCFileCopy
 	cc $(ccflags) -o $@ $(PPlug).FileCopyPlugin.c.sqRPCFileCopy 
@@ -266,7 +268,7 @@ $(SqPlugins).FloatArrayPlugin:	$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin\
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).FloatArrayPlugin.o.FloatArrayPlugin
 
-$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin: $(SPlug).FloatArrayPlugin.c.FloatArrayPlugin
+$(SPlug).FloatArrayPlugin.o.FloatArrayPlugin: $(SPlug).FloatArrayPlugin.c.FloatArrayPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -286,7 +288,7 @@ $(SqPlugins).GeniePlugin:	$(SPlug).GeniePlugin.o.GeniePlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).GeniePlugin.o.GeniePlugin
 
-$(SPlug).GeniePlugin.o.GeniePlugin: $(SPlug).GeniePlugin.c.GeniePlugin
+$(SPlug).GeniePlugin.o.GeniePlugin: $(SPlug).GeniePlugin.c.GeniePlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -306,7 +308,7 @@ $(SqPlugins).JPEGReaderPlugin:	$(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin
 
-$(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin: $(SPlug).JPEGReaderPlugin.c.JPEGReaderPlugin
+$(SPlug).JPEGReaderPlugin.o.JPEGReaderPlugin: $(SPlug).JPEGReaderPlugin.c.JPEGReaderPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -327,7 +329,7 @@ $(SqPlugins).LargeIntegers:	$(SPlug).LargeIntegers.o.LargeIntegers \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).LargeIntegers.o.LargeIntegers
 
-$(SPlug).LargeIntegers.o.LargeIntegers: $(SPlug).LargeIntegers.c.LargeIntegers
+$(SPlug).LargeIntegers.o.LargeIntegers: $(SPlug).LargeIntegers.c.LargeIntegers $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
@@ -346,7 +348,7 @@ $(SqPlugins).Matrix2x3Plugin:	$(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin
 
-$(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin: $(SPlug).Matrix2x3Plugin.c.Matrix2x3Plugin
+$(SPlug).Matrix2x3Plugin.o.Matrix2x3Plugin: $(SPlug).Matrix2x3Plugin.c.Matrix2x3Plugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 ###########
@@ -364,7 +366,7 @@ $(SqPlugins).MiscPrimitivePlugin:	$(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePl
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin
 
-$(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin: $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin
+$(SPlug).MiscPrimitivePlugin.o.MiscPrimitivePlugin: $(SPlug).MiscPrimitivePlugin.c.MiscPrimitivePlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c 
 
 ###########
@@ -393,7 +395,7 @@ $(SqPlugins).RePlugin:	$(SPlug).RePlugin.o.RePlugin \
 			$(SPlug).RePlugin.o.pcre \
 			$(SPlug).RePlugin.o.study 
 
-$(SPlug).RePlugin.o.RePlugin: $(SPlug).RePlugin.c.RePlugin
+$(SPlug).RePlugin.o.RePlugin: $(SPlug).RePlugin.c.RePlugin $(PlHdr)
 	cc $(ccflags) -I$(CPlug).RePlugin -o $@ $(SPlug).RePlugin.c.RePlugin
  
 $(SPlug).RePlugin.o.chartables: $(CPlug).RePlugin.c.chartables
@@ -436,10 +438,10 @@ $(SqPlugins).SocketPlugin:	$(SPlug).SocketPlugin.o.SocketPlugin \
 #####$(SokLib)inetlib $(SokLib)socklibzm $(SokLib)unixlibzm
 ######$(SokLib)inetlibzm $(SokLib)socklib $(SokLib)unixlib
 
-$(SPlug).SocketPlugin.o.SocketPlugin: $(SPlug).SocketPlugin.c.SocketPlugin
+$(SPlug).SocketPlugin.o.SocketPlugin: $(SPlug).SocketPlugin.c.SocketPlugin $(PlHdr)
 	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin  -o $@ $(SPlug).SocketPlugin.c.SocketPlugin 
 
-$(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin
+$(SPlug).SocketPlugin.o.sqRPCNetPlugin: $(PPlug).SocketPlugin.c.sqRPCNetPlugin $(PlHdr)
 	cc $(ccflags) -I$(PPlug).SocketPlugin,$(CPlug).SocketPlugin,$(Soklib) -o $@ $(PPlug).SocketPlugin.c.sqRPCNetPlugin 
 
 ###########
@@ -463,9 +465,9 @@ $(SqPlugins).SoundPlugin:	$(SPlug).SoundPlugin.o.SoundPlugin \
 		-a $(SPlug).SoundPlugin.o.SoundPlugin \
 			$(SPlug).SoundPlugin.o.sqRPCSound 
 
-$(SPlug).SoundPlugin.o.SoundPlugin: $(SPlug).SoundPlugin.c.SoundPlugin
+$(SPlug).SoundPlugin.o.SoundPlugin: $(SPlug).SoundPlugin.c.SoundPlugin $(PlHdr)
 	cc $(ccflags) -I$(CPlug).SoundPlugin -o $@ $*.c 
-$(SPlug).SoundPlugin.o.sqRPCSound: $(PPlug).SoundPlugin.c.sqRPCSound
+$(SPlug).SoundPlugin.o.sqRPCSound: $(PPlug).SoundPlugin.c.sqRPCSound  $(PlHdr)
 	cc $(ccflags) -I$(CPlug).SoundPlugin -o $@ $(PPlug).SoundPlugin.c.sqRPCSound
 
 
@@ -496,7 +498,7 @@ $(SqPlugins).Squeak3D:	$(SPlug).Squeak3D.o.Squeak3D \
 			$(SPlug).Squeak3D.o.b3dremap \
 			$(SPlug).Squeak3D.o.Squeak3D
 
-$(SPlug).Squeak3D.o.Squeak3D: $(SPlug).Squeak3D.c.Squeak3D
+$(SPlug).Squeak3D.o.Squeak3D: $(SPlug).Squeak3D.c.Squeak3D $(PlHdr)
 	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $*.c 
 $(SPlug).Squeak3D.o.b3dalloc: $(CPlug).Squeak3D.c.b3dalloc
 	cc $(ccflags) -I$(CPlug).Squeak3D -o $@ $(CPlug).Squeak3D.c.b3dalloc 
@@ -524,7 +526,7 @@ $(SqPlugins).StarSqueakPlugin:	$(SPlug).StarSqueakPlugin.o.StarSqueakPlugin \
 	-m $(Sqk).ptrblkmap \
 	-a $(SPlug).StarSqueakPlugin.o.StarSqueakPlugin
 
-$(SPlug).StarSqueakPlugin.o.StarSqueakPlugin: $(SPlug).StarSqueakPlugin.c.StarSqueakPlugin
+$(SPlug).StarSqueakPlugin.o.StarSqueakPlugin: $(SPlug).StarSqueakPlugin.c.StarSqueakPlugin $(PlHdr)
 	cc $(ccflags) -o $@ $*.c 
 
 ###########
@@ -544,7 +546,7 @@ $(SqPlugins).SurfacePlugin:	$(SPlug).SurfacePlugin.o.SurfacePlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).SurfacePlugin.o.SurfacePlugin
 
-$(SPlug).SurfacePlugin.o.SurfacePlugin: $(CPlug).SurfacePlugin.c.SurfacePlugin
+$(SPlug).SurfacePlugin.o.SurfacePlugin: $(CPlug).SurfacePlugin.c.SurfacePlugin $(PlHdr)
 	cc $(ccflags) -I$(CPlug).SurfacePlugin -o $@ $(CPlug).SurfacePlugin.c.SurfacePlugin 
 
 
@@ -563,34 +565,31 @@ $(SqPlugins).ZipPlugin:	$(SPlug).ZipPlugin.o.ZipPlugin \
 		-m $(Sqk).ptrblkmap \
 		-a $(SPlug).ZipPlugin.o.ZipPlugin
 
-$(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin
+$(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin  $(PlHdr)
 	cc $(ccflags) -o $@ $*.c
 
 
 # Static dependencies:
 # platform specific code
-@.vm.o.interp:    $(SVM).c.interp
-  cc $(ccvmflags) -o $@ $(SVM).c.interp
-  
 @.vm.o.osExports:    $(PVM).c.osExports
   cc $(ccvmflags) -o $@ $(PVM).c.osExports
   
-@.vm.o.sqArgument:    $(PVM).c.sqArgument
+@.vm.o.sqArgument:    $(PVM).c.sqArgument $(PVM).h.sqArguments $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqArgument
   
-@.vm.o.sqRPCClipboard:    $(PVM).c.sqRPCClipboard
+@.vm.o.sqRPCClipboard:    $(PVM).c.sqRPCClipboard $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCClipboard
   
-@.vm.o.sqRPCEvents:    $(PVM).c.sqRPCEvents
+@.vm.o.sqRPCEvents:    $(PVM).c.sqRPCEvents $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCEvents
   
-@.vm.o.sqRPCExternalPrims:    $(PVM).c.sqRPCExternalPrims
+@.vm.o.sqRPCExternalPrims:    $(PVM).c.sqRPCExternalPrims $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCExternalPrims
   
-@.vm.o.sqRPCFormPrint:    $(PVM).c.sqRPCFormPrint
+@.vm.o.sqRPCFormPrint:    $(PVM).c.sqRPCFormPrint $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCFormPrint
   
-@.vm.o.sqRPCSyscall:    $(PVM).c.sqRPCSyscall
+@.vm.o.sqRPCSyscall:    $(PVM).c.sqRPCSyscall $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCSysCall
 
 # sqRPCVersion depends on all the obj files (except its own)
@@ -599,21 +598,28 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin
         @.vm.o.sqNamedPrims @.vm.o.sqRPCClipboard \
         @.vm.o.sqRPCEvents @.vm.o.sqRPCExternalPrims @.vm.o.sqRPCFormPrint \
         @.vm.o.sqRPCWindows @.vm.o.sqVirtualMachine @.vm.o.osExports \
-        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys
+        @.vm.o.fperrors OSLib:o.OSLib32 C:o.stubs @.vm.o.ptrblock C:^.rink.o.rink_rtsys $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCVersion
 
-@.vm.o.sqRPCWindows:    $(PVM).c.sqRPCWindows
+@.vm.o.sqRPCMain:    $(PVM).c.sqRPCMain $(VMHdr)
+  cc $(ccvmflags) -o $@ $(PVM).c.sqRPCMain
+
+@.vm.o.sqRPCWindows:    $(PVM).c.sqRPCWindows $(VMHdr)
   cc $(ccvmflags) -o $@ $(PVM).c.sqRPCWindows
 
 @.vm.o.fperrors:    $(PVM).s.fperrors
         objasm $(objasmflags) -from $(PVM).s.fperrors -to @.vm.o.fperrors
 
 # cross platform code
-@.vm.o.sqNamedPrims:    $(CVM).c.sqNamedPrims
+@.vm.o.sqNamedPrims:    $(CVM).c.sqNamedPrims $(VMHdr)
   cc $(ccvmflags) -o $@ $(CVM).c.sqNamedPrims
   
-@.vm.o.sqVirtualMachine:    $(CVM).c.sqVirtualMachine
+@.vm.o.sqVirtualMachine:    $(CVM).c.sqVirtualMachine $(VMHdr)
   cc $(ccvmflags) -o $@ $(CVM).c.sqVirtualMachine
+  
+@.vm.o.interp:    $(SVM).c.interp $(VMHdr)
+  cc $(ccvmflags) -o $@ $(SVM).c.interp
+  
 
 
 # Dynamic dependencies:

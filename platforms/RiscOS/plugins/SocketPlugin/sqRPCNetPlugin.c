@@ -14,10 +14,10 @@
 
 /* Shamelessly copied from Unix socket support.
  *
- * Author: Ian Piumarta (ian.piumarta@inria.fr)
+ * Original Author: Ian Piumarta (ian.piumarta@inria.fr)
  * Minor Acorn changes: Tim Rowledge (tim@sumeru.stanford.edu)
  *
- * Last edited: April 20 2000 by tim@sumeru.stanford.edu to convert for plugin VM usage
+ * Last edited: July 20 2003 by tim@sumeru.stanford.edu to convert for plugin VM usage
  *
  * Notes:
  *
@@ -34,9 +34,6 @@
  */
 #include "sq.h"
 #include "SocketPlugin.h"
-
-// uncomment to get lots of maybe useful info printed out --
-//#define DEBUG
 
 #ifdef ACORN
   #include <time.h>
@@ -98,28 +95,17 @@
 #endif
 
 /* debugging stuff; can probably be deleted */
-
+// define this to get lots of debug notifiers
+//#define DEBUG
 #ifdef DEBUG
-#ifdef ACORN
-#define FPRINTF(s)\
+#define PRINTF(s)\
 {\
-	extern os_error privateErr;\
-	extern void platReportError( os_error * e);\
-	privateErr.errnum = (bits)0;\
-	sprintf s;\
-	platReportError((os_error *)&privateErr);\
+	printf s;\
 };
 #else
-# define FPRINTF(X) fprintf X
+#define PRINTF(s) 
 #endif
-  char *ticks= "-\\|/";
-  char *ticker= "";
-# define DO_TICK() \
-    { fprintf(stderr, "\r%c\r", *ticker); if (!*ticker++) ticker= ticks; }
-#else
-# define FPRINTF(X)
 # define DO_TICK()
-#endif
 
 
 /*** Socket types ***/
@@ -294,7 +280,7 @@ static void aioEnable(privateSocketStruct *pss)
 {
   int fd= pss->s;
 
-  FPRINTF((stderr, "aioEnable(%d)\n", fd));
+  PRINTF(("\\t aioEnable(%d)\n", fd));
 
   sockets[fd]= pss;
   handler[fd]= nullHandler;
@@ -312,7 +298,7 @@ static void aioHandle(privateSocketStruct *pss,
 {
   int fd= pss->s;
 
-  FPRINTF((stderr, "aioHandle(%d,%s,%d)\n",
+  PRINTF(("\\t aioHandle(%d,%s,%d)\n",
 	   fd, handlerName(handlerFn), flags));
 
   if (sockets[fd] != pss) {
@@ -332,7 +318,7 @@ static void aioSuspend(privateSocketStruct *pss)
 {
   int fd= pss->s;
 
-  FPRINTF((stderr, "aioSuspend(%d)\n", fd));
+  PRINTF(("\\t aioSuspend(%d)\n", fd));
 
   if (fd) {
     FD_CLR(fd, &readMask);
@@ -351,7 +337,7 @@ static void aioDisable(privateSocketStruct *pss)
 {
   int fd= pss->s;
 
-  FPRINTF((stderr, "aioDisable(%d)\n", fd));
+  PRINTF(("\\t aioDisable(%d)\n", fd));
 
   if (fd) {
     FD_CLR(fd, &exceptionMask);
@@ -476,7 +462,7 @@ static void nullHandler(privateSocketStruct *pss, int errFlag)
    leaving the client socket unhandled */
 static void acceptHandler(privateSocketStruct *pss, int errFlag)
 {
-  FPRINTF((stderr, "acceptHandler(%d,%d)\n", pss->s, errFlag));
+  PRINTF(("\\t acceptHandler(%d,%d)\n", pss->s, errFlag));
   aioSuspend(pss);
   if (errFlag) {
     /* error during listen() */
@@ -506,7 +492,7 @@ static void acceptHandler(privateSocketStruct *pss, int errFlag)
 /* connect() has completed: check errors, leaving the socket unhandled */
 static void connectHandler(privateSocketStruct *pss, int errFlag)
 {
-  FPRINTF((stderr, "connectHandler(%d,%d)\n", pss->s, errFlag));
+  PRINTF(("\\t connectHandler(%d,%d)\n", pss->s, errFlag));
   aioSuspend(pss);
   if (errFlag) {
     /* error during asynchronous connect() */
@@ -517,7 +503,7 @@ static void connectHandler(privateSocketStruct *pss, int errFlag)
   } else {
     /* connect() has completed */
     pss->sockState= Connected;
-    FPRINTF ((stderr, "connectHandler ok\n"));
+    PRINTF (("\\t connectHandler ok\n"));
   }
   SIGNAL(pss);	/* operation complete */
 }
@@ -525,7 +511,7 @@ static void connectHandler(privateSocketStruct *pss, int errFlag)
 /* read or write data transfer is now possible for the socket */
 static void dataHandler(privateSocketStruct *pss, int errFlag)
 {
-  FPRINTF((stderr, "dataHandler(%d,%d)\n", pss->s, errFlag));
+  PRINTF(("\\t dataHandler(%d,%d)\n", pss->s, errFlag));
   aioSuspend(pss);
   if (errFlag)
     /* error: almost certainly "connection closed by peer" */
@@ -536,7 +522,7 @@ static void dataHandler(privateSocketStruct *pss, int errFlag)
 /* a non-blocking close() has completed -- finish tidying up */
 static void closeHandler(privateSocketStruct *pss, int errFlag)
 {
-  FPRINTF((stderr, "closeHandler(%d,%d)\n", pss->s, errFlag));
+  PRINTF(("\\t closeHandler(%d,%d)\n", pss->s, errFlag));
   aioDisable(pss);
   pss->sockState= Unconnected;
   pss->s= 0;
@@ -608,7 +594,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(
   s->sessionID= thisNetSession;
   s->socketType= socketType;
   s->privateSocketPtr= pss;
-  FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
+  PRINTF(("\\t create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
   /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
 }
 
@@ -629,7 +615,7 @@ void sqSocketListenOnPort(SocketPtr s, int port)
 
   if (!socketValid(s)) return;
 
-  FPRINTF((stderr, "listenOnPort(%d)\n", SOCKET(s)));
+  PRINTF(("\\t listenOnPort(%d)\n", SOCKET(s)));
 
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family= AF_INET;
@@ -658,7 +644,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 
   if (!socketValid(s)) return;
 
-  FPRINTF((stderr, "connectTo(%d)\n", SOCKET(s)));
+  PRINTF(("\\t connectTo(%d)\n", SOCKET(s)));
 
   memset(&saddr, 0, sizeof(saddr));
   saddr.sin_family= AF_INET;
@@ -674,7 +660,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
     int result;
     aioEnable(PSP(s));
     result= connect(SOCKET(s), (struct sockaddr *)&saddr, sizeof(saddr));
-    FPRINTF((stderr, "connect() => %d\n", result));
+    PRINTF(("\\t connect() => %d\n", result));
     if (result == 0) {
       /* connection completed synchronously */
       SOCKETSTATE(s)= Connected;
@@ -702,7 +688,7 @@ void sqSocketCloseConnection(SocketPtr s)
 
   if (!socketValid(s)) return;
 
-  FPRINTF((stderr, "closeConnection(%d)\n", SOCKET(s)));
+  PRINTF(("\\t closeConnection(%d)\n", SOCKET(s)));
 
   aioDisable(PSP(s));
   SOCKETSTATE(s)= ThisEndClosed;
@@ -729,7 +715,7 @@ void sqSocketAbortConnection(SocketPtr s)
 {
   struct linger linger= { 0, 0 };
 
-  FPRINTF((stderr, "abortConnection(%d)\n", SOCKET(s)));
+  PRINTF(("\\t abortConnection(%d)\n", SOCKET(s)));
 
   if (!socketValid(s)) return;
   setsockopt(SOCKET(s), SOL_SOCKET, SO_LINGER,
@@ -743,7 +729,7 @@ void sqSocketDestroy(SocketPtr s)
 {
   if (!socketValid(s)) return;
 
-  FPRINTF((stderr, "destroy(%d)\n", SOCKET(s)));
+  PRINTF(("\\t destroy(%d)\n", SOCKET(s)));
 
   if (SOCKET(s)) sqSocketAbortConnection(s);	/* close if necessary */
   if (PSP(s)) free(PSP(s));			/* release private struct */
@@ -869,7 +855,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 			    (struct sockaddr *)&SOCKETPEER(s),
 			    &addrSize)) <= 0)) {
 	SOCKETERROR(s)= errno;
-	FPRINTF((stderr, "receiveData(%d) = %da\n", SOCKET(s), 0));
+	PRINTF(("\\t receiveData(%d) = %da\n", SOCKET(s), 0));
 	return 0;
       }
     }
@@ -884,13 +870,13 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 	/* error: most probably "connection closed by peer" */
 	SOCKETSTATE(s)= OtherEndClosed;
 	SOCKETERROR(s)= errno;
-	FPRINTF((stderr, "receiveData(%d) = %db\n", SOCKET(s), 0));
+	PRINTF(("\\t receiveData(%d) = %db\n", SOCKET(s), 0));
 	return 0;
       }
     }
   }
   /* read completed synchronously */
-  FPRINTF((stderr, "receiveData(%d) = %d\n", SOCKET(s), nread));
+  PRINTF(("\\t receiveData(%d) = %d\n", SOCKET(s), nread));
   aioSuspend(PSP(s));
   return nread;
 }
@@ -903,11 +889,11 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 
   if (!socketValid(s)) return -1;
 
-  FPRINTF((stderr, "sendData(%d,%d)\n", SOCKET(s), bufSize));
+  PRINTF(("\\t sendData(%d,%d)\n", SOCKET(s), bufSize));
 
   if (UDPSocketType == s->socketType) {
     /* --- UDP --- */
-  FPRINTF((stderr, "UDP sendData(%d,%d)\n", SOCKET(s), bufSize));
+  PRINTF(("\\t UDP sendData(%d,%d)\n", SOCKET(s), bufSize));
     if ((nsent= sendto(SOCKET(s), (void *)buf, bufSize, 0,
 		       (struct sockaddr *)&SOCKETPEER(s),
 		       sizeof(SOCKETPEER(s)))) <= 0) {
@@ -915,14 +901,14 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 	  ((nsent= sendto(SOCKET(s), (void *)buf, bufSize, 0,
 			  (struct sockaddr *)&SOCKETPEER(s),
 			  sizeof(SOCKETPEER(s)))) <= 0)) {
-	FPRINTF((stderr, "UDP send failed\n"));
+	PRINTF(("\\t UDP send failed\n"));
 	SOCKETERROR(s)= errno;
 	return 0;
       }
     }
   } else {
     /* --- TCP --- */
-  FPRINTF((stderr, "TCP sendData(%d,%d)\n", SOCKET(s), bufSize));
+  PRINTF(("\\t TCP sendData(%d,%d)\n", SOCKET(s), bufSize));
     if ((nsent= write(SOCKET(s), (char *)buf, bufSize)) <= 0) {
       if (errno == EWOULDBLOCK) {
 	/* asynchronous write in progress */
@@ -932,14 +918,14 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 	/* error: most likely "connection closed by peer" */
 	SOCKETSTATE(s)= OtherEndClosed;
 	SOCKETERROR(s)= errno;
-	FPRINTF((stderr, "TCP write failed "));
+	PRINTF(("\\t TCP write failed "));
 	perror(" ");
 	return 0;
       }
     }
   }
   /* write completed synchronously */
-  FPRINTF((stderr, "sendData done(%d) = %d\n", SOCKET(s), nsent));
+  PRINTF(("\\t sendData done(%d) = %d\n", SOCKET(s), nsent));
   aioSuspend(PSP(s));
   return nsent;
 }
@@ -1015,7 +1001,7 @@ void sqResolverStartAddrLookup(int address)
   res= addrToName(address);
   // Acorn library bug - strncpy(lastName, res, MAXHOSTNAMELEN);
   copyNCharsFromTo(MAXHOSTNAMELEN, res, lastName);
-  FPRINTF((stderr, "startAddrLookup %s\n", lastName));
+  PRINTF(("\\t startAddrLookup %s\n", lastName));
 }
 
 int sqResolverStatus(void)
@@ -1044,7 +1030,7 @@ void sqResolverStartNameLookup(char *hostName, int nameSize)
   int len= (nameSize < MAXHOSTNAMELEN) ? nameSize : MAXHOSTNAMELEN;
   memcpy(lastName, hostName, len);
   lastName[len]= lastError= 0;
-  FPRINTF((stderr, "name lookup %s\n", lastName));
+  PRINTF(("\\t name lookup %s\n", lastName));
   lastAddr= nameToAddr(lastName);
   /* we're done before we even started */
   interpreterProxy->signalSemaphoreWithIndex(resolverSema);

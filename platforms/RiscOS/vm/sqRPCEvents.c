@@ -11,6 +11,9 @@
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
+// define this to get lots of debug notifiers
+//#define DEBUG
+
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
 #include "oslib/osfscontrol.h"
@@ -22,17 +25,20 @@
 
 #define longAt(i) (*((int *) (i)))
 
-//#define DEBUG
+#ifndef MIN
+#define MIN( a, b )   ( ( (a) < (b) ) ? (a) : (b) )
+#define MAX( a, b )   ( ( (a) > (b) ) ? (a) : (b) )
+#endif
 
 extern wimp_w	sqWindowHandle;
 wimp_block	wimpPollBlock;
+wimp_event_no	wimpPollEvent;
 int		wimpPollWord;
 int		windowActive = false;
 extern int	pointerBuffer[];
 extern os_coord	pointerOffset;
-extern os_coord	scalingFactor, scrollOffset, visibleArea;
-int displayBitmapIndex;
-extern unsigned int * displaySpriteBits;
+extern os_coord	scalingFactor;
+os_box		windowVisibleArea;
 
 /*** Variables -- Event Recording ***/
 
@@ -42,6 +48,43 @@ sqInputEvent eventBuf[EVENTQ_SIZE ]; /* circular buffer */
 int eventBufGet = 0;
 int eventBufPut = 0;
 
+/* to use the Cerilia DeepKey Event extender */
+#define wimp_DEEPKEY_LSHIFT		1<<0
+#define wimp_DEEPKEY_RSHIFT		1<<1
+#define wimp_DEEPKEY_LCTL		1<<2
+#define wimp_DEEPKEY_RCTL		1<<3
+#define wimp_DEEPKEY_LALT		1<<4
+#define wimp_DEEPKEY_RALT		1<<5
+#define wimp_DEEPKEY_LLOGO		1<<6
+#define wimp_DEEPKEY_RLOGO		1<<7
+#define wimp_DEEPKEY_MENU		1<<8
+#define wimp_DEEPKEY_FLAGBIT		1<<15
+#define wimp_DEEPKEY_KEYNUMSHIFT	16
+
+/* Note that this struct is the same as wimp_key except for the added word
+ * .deepkey which contains the above flags and is formatted so -
+ *   b0 Left Shift    b1 Right Shift
+ *    b2 Left Ctrl     b3 Right Ctrl
+ *    b4 Left Alt      b5 Right Alt
+ *    b6 Left Logo     b7 Right Logo
+ *    b8 Menu key
+ *    b9-14 reserved (0)
+ *    b15 Always 0
+ *    b16-31 Physical key number
+ *
+ */
+typedef struct {
+	wimp_w w;
+	wimp_i i;
+	os_coord pos;
+	int height;
+	int index;
+	wimp_key_no c;
+	int deepkey;
+	} wimp_deepkey;
+
+
+
 /* older polling stuff still needs supporting */
 #define KEYBUF_SIZE 64
 int	keyBuf[KEYBUF_SIZE];	/* circular buffer */
@@ -49,176 +92,156 @@ int	keyBufGet = 0;		/* index of next item of keyBuf to read */
 int	keyBufPut = 0;		/* index of next item of keyBuf to write */
 int	keyBufOverflows = 0;	/* number of characters dropped */
 
-int	buttonState = 0;	/* mouse button and modifier state  */
-os_coord	savedMousePosition;	/* mouse position; not modified when window is inactive */
+int	prevButtonState,
+		buttonState = 0,
+		modifierState = 0;	/* mouse button and modifier state  */
+os_coord	prevSavedMousePosition,
+		savedMousePosition;	/* mouse position; not modified when window is inactive unless a mouse button is down - ie dragging out of window */
 int	mouseButtonDown;	/* keep track of curent mouse button state - for drags outside window */
+
 extern int	getInterruptKeycode(void);
 extern int	setInterruptPending(int value);
 extern int	setInterruptCheckCounter(int value);
 
-int scanLine, startX, xLen, startY, stopY, pixelsPerWord, pixelsPerWordShift;
-void (*reverserFunction)(void);
 void (*socketPollFunction)(int delay, int extraFd) = null;
 
 
-/* Squeak expects to get kbd modifiers as the top 4bits of the 8bit char code, or
-	as the 2r1111000 bits of the buttons word. RiscOS doesnt give me the modifiers
-	with keypresses, so we have to manually collect them. SQ only seems to care about them
-	when doing primMouseButtons anyway.  
-				ST bits:  <command><option><control><shift> Notice how Macish this is!
-*/ 
-#define		ShiftKey		0x00000008
-#define		CtlKey			0x00000010
-#define		OptionKey		0x00000020
-#define		CmdKey			0x00000040
+/* Squeak expects to get kbd modifiers as the top 4bits of the 8bit char code,
+ * or as the 2r1111000 bits of the buttons word. RiscOS doesnt give me the
+ * modifiers with keypresses, so we have to manually collect them. SQ only
+ * seems to care about them when doing primMouseButtons anyway.  
+ *	ST bits:  <command><option><control><shift>
+ * Notice how Macish this is!
+*/
 
 #define		MacDownCursor	31
-#define		MacUpCursor		30
+#define		MacUpCursor	30
 #define		MacLeftCursor	28
 #define		MacRightCursor	29
-#define		MacHomeKey		1
-#define		MacEndKey		4
+#define		MacHomeKey	1
+#define		MacEndKey	4
+#define		MacInsertKey	5
 #define		MacDeleteKey	8
+#define		MacPageUpKey	11
+#define		MacPageDownKey	12
 
-unsigned char keymap[256] = {
-	/* 0 = shft */0,
-	/* 1 = ctl */0,
-	/* 2 = alt */0 ,
-	/* 3 = L-shft */0 ,
-	/* 4 = L-ctl */0 ,
-	/* 5 = L-alt */0 ,
-	/* 6 = R-shft */0 ,
-	/* 7 = R-ctl */0 ,
-	/* 8 = R-alt */0 ,
-	/* 9 = L-butt */0 ,
-	/* 10 = M-butt */0 ,
-	/* 11 = R-butt */0 ,
-	/* 12 = ? */0 ,
-	/* 13 = ? */0 ,
-	/* 14 = ? */0 ,
-	/* 15 = ? */0 ,
-	/* 16 = q */ 'q' ,
-	/* 17 = 3/£ */ '3',
-	/* 18 = 4/$ */ '4',
-	/* 19 = 5/% */ '5',
-	/* 20 = F4 */ 0 ,
-	/* 21 = 8 / * */ '8',
-	/* 22 = ? */ 0 ,
-	/* 23 = - */ '-',
-	/* 24 = 6/^ */ '6',
-	/* 25 = L-crsr */ MacLeftCursor,
-	/* 26 = ? */0 ,
-	/* 27 = K-7/ Home */ 0,
-	/* 28 = F11 */ 0,
-	/* 29 = F12 */ 0,
-	/* 30 = F10 */ 0,
-	/* 31 = ScrollLock */ 0,
-	/* 32 = PrntScrn */ 0,
-	/* 33 = w */ 'w',
-	/* 34 = e */ 'e',
-	/* 35 = t */ 't',
-	/* 36 = 7/& */ '7',
-	/* 37 = i */ 'i',
-	/* 38 = 9/( */ '9',
-	/* 39 = 0/) */ '0',
-	/* 40 = - (same as 23) */ '-',
-	/* 41 = D-crsr */ MacDownCursor,
-	/* 42 = K-8 */ 0,
-	/* 43 = K-9 */ 0,
-	/* 44 = Pause/Break */ 0,
-	/* 45 = `/¬ (topleft) */ '`',
-	/* 46 = ? (seems to be missing) */ 0,
-	/* 47 = bkspc */ 0,
-	/* 48 = 1/! */ '1',
-	/* 49 = 2/" */ '2',
-	/* 50 = d */ 'd',
-	/* 51 = r */ 'r',
-	/* 52 = 6/^ (same as 24)*/ '6',
-	/* 53 = u */ 'u',
-	/* 54 = o */ 'o',
-	/* 55 = p */ 'p',
-	/* 56 = [/{ */ '[',
-	/* 57 = U-crsr */ MacUpCursor,
-	/* 58 = K-+ (?) */ 0,
-	/* 59 = K-??? */ 0,
-	/* 60 = K-Enter */ 0,
-	/* 61 = Insert */ 0,
-	/* 62 = Home */ MacHomeKey,
-	/* 63 = PgUP */ 0,
-	/* 64 = CapsLock ? */ 0,
-	/* 65 = a */ 'a',
-	/* 66 = x */ 'x',
-	/* 67 = f */ 'f',
-	/* 68 = y */ 'y',
-	/* 69 = j */ 'j',
-	/* 70 = k */ 'k',
-	/* 71 = 2/" (same 49) */ '2',
-	/* 72 = ;/: */ ';',
-	/* 73 = Return */ 0,
-	/* 74 = K-/ */ 0,
-	/* 75 = ?? */ 0,
-	/* 76 = K-Del/. */ 0,
-	/* 77 = NumLock */ 0,
-	/* 78 = PgDOWN */ 0,
-	/* 79 = '/@ */ '\'',
-	/* 80 = ?? */ 0,
-	/* 81 = s */ 's',
-	/* 82 = c */ 'c',
-	/* 83 = g */ 'g',
-	/* 84 = h */ 'h',
-	/* 85 = n */ 'n',
-	/* 86 = l */ 'l',
-	/* 87 = ;/: (same as 72) */ ';',
-	/* 88 = ]/} */ ']',
-	/* 89 = Delete */ MacDeleteKey,
-	/* 90 = K-- */ 0,
-	/* 91 = K-* */ 0,
-	/* 92 = ?? */ 0,
-	/* 93 = =/+ */ '=',
-	/* 94 = \/| */ '\\',
-	/* 95 = ?? */ 0,
-	/* 96 = tab? */ 0x9,
-	/* 97 = z */ 'z',
-	/* 98 = SPC */ ' ',
-	/* 99 = v */ 'v',
-	/* 100 = b */ 'b',
-	/* 101 = m */ 'm',
-	/* 102 = ,/< */ ',',
-	/* 103 = ./> */ '.',
-	/* 104 = //? */ '/',
-	/* 105 = End */ MacEndKey,
-	/* 106 = K-ins */ 0,
-	/* 107 = K-1/End */ 0,
-	/* 108 = K-3/PgDn */ 0,
-	/* 109 = ?? */ 0,
-	/* 110 = ?? */ 0,
-	/* 111 = ?? */ 0,
-	/* 112 = esc */0x1B,
-	/* 113 = F1 */ 0,
-	/* 114 = F2 */ 0,
-	/* 115 = F3 */ 0,
-	/* 116 = F5 */ 0,
-	/* 117 = F6 */ 0,
-	/* 118 = F8 */ 0,
-	/* 119 = F9 */ 0,
-	/* 120 = ~/# */ 0,
-	/* 121 = R-crsr */ MacRightCursor,
-	/* 122 = K-4 */ 0,
-	/* 123 = K-5 */ 0,
-	/* 124 = K-2 */ 0,
-	/* 125 -255 all null ?? */ 0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,
- };
+unsigned char keymap[0x68] = {
+/* 0x00 Esc */ 0x1b ,
+/* 0x01 F1 */ /* 0x181 wimp_KEY_F1 */ 0,
+/* 0x02 F2 */ /* 0x182 wimp_KEY_F2 */ 0,
+/* 0x03 F3 */ /* 0x183 wimp_KEY_F3 */ 0,
+/* 0x04 F4 */ /* 0x184 wimp_KEY_F4 */ 0,
+/* 0x05 F5 */ /* 0x185 wimp_KEY_F5 */ 0,
+/* 0x06 F6 */ /* 0x186 wimp_KEY_F6 */ 0,
+/* 0x07 F7 */ /* 0x187 wimp_KEY_F7 */ 0,
+/* 0x08 F8 */ /* 0x188 wimp_KEY_F8 */ 0,
+/* 0x09 F9 */ /* 0x189 wimp_KEY_F9 */ 0,
+/* 0x0a F10 */ /* 0x1ca wimp_KEY_F10 */ 0,
+/* 0x0b F11 */ /* 0x1cb wimp_KEY_F11 */ 0,
+/* 0x0c F12 */ /* 0x1cc wimp_KEY_F12 */ 0,
+/* 0x0d Print/Sysrq */ /* 0x180 wimp_KEY_PRINT */ 0,
+/* 0x0e Scrolllock */ 0  ,
+/* 0x0f Break (esc) */ /* 0x1b */ 0 ,
+/* 0x10 `¬¦ */ 0x60 ,
+/* 0x11 1 */ 0x31 ,
+/* 0x12 2 */ 0x32 ,
+/* 0x13 3 */ 0x33 ,
+/* 0x14 4 */ 0x34 ,
+/* 0x15 5 */ 0x35 ,
+/* 0x16 6 */ 0x36 ,
+/* 0x17 7 */ 0x37 ,
+/* 0x18 8 */ 0x38 ,
+/* 0x19 9 */ 0x39 ,
+/* 0x1a 0 */ 0x30 ,
+/* 0x1b - */ 0x2d ,
+/* 0x1c = */ 0x3d ,
+/* 0x1d ?? PRM £ */ 0,
+/* 0x1e backspace*/ wimp_KEY_BACKSPACE,
+/* 0x1f Insert */ /* 0x1cd wimp_KEY_INSERT */ 0,
+/* 0x20 Home */ /* 0x1e wimp_KEY_HOME */ MacHomeKey ,
+/* 0x21 PgUp */ /* 0x19f wimp_KEY_PAGE_UP */ MacPageUpKey,
+/* 0x22 NumLock */ 0  ,
+/* 0x23 k-/ */ /* 0x2f */ 0,
+/* 0x24 k-* */ /* 0x2a */ 0,
+/* 0x25 k-#?? PRM*/ 0,
+/* 0x26 */ /* 18a wimp_KEY_TAB */ 0x09,
+/* 0x27 */ 0x71 ,
+/* 0x28 */ 0x77 ,
+/* 0x29 */ 0x65 ,
+/* 0x2a */ 0x72 ,
+/* 0x2b */ 0x74 ,
+/* 0x2c */ 0x79 ,
+/* 0x2d */ 0x75 ,
+/* 0x2e */ 0x69 ,
+/* 0x2f */ 0x6f ,
+/* 0x30 */ 0x70 ,
+/* 0x31 */ 0x5b ,
+/* 0x32 */ 0x5d ,
+/* 0x33 */ 0x23 ,
+/* 0x34 */ /* 0x7f */ MacDeleteKey ,
+/* 0x35 Copy */ /* 0x18b wimp_KEY_COPY */ MacEndKey,
+/* 0x36 PgDn */ /* 19e wimp_KEY_PAGE_DOWN */ MacPageDownKey,
+/* 0x37 k-7 */ /* 0x37 */ 0 ,
+/* 0x38 k-8 */ /* 0x38 */ 0 ,
+/* 0x39 k-9 */ /* 0x39 */ 0 ,
+/* 0x3a k-- PRM */ /* 0x2d */ 0 ,
+/* 0x3b LCTL */ 0  ,
+/* 0x3c A */ 0x61 ,
+/* 0x3d S */ 0x73 ,
+/* 0x3e D */ 0x64 ,
+/* 0x3f F */ 0x66 ,
+/* 0x40 G */ 0x67 ,
+/* 0x41 H */ 0x68 ,
+/* 0x42 J */ 0x6a ,
+/* 0x43 K */ 0x6b ,
+/* 0x44 L */ 0x6c ,
+/* 0x45 ;/: */ 0x3b ,
+/* 0x46 '/@ gives " in sq */ 0x27 ,
+/* 0x47 Return */ /* 0xd */ 0 ,
+/* 0x48 k-4 */ /* 0x34 */ 0 ,
+/* 0x49 k-5 */ /* 0x35 */ 0 ,
+/* 0x4a k-6 */ /* 0x36 */ 0 ,
+/* 0x4b k-+ */  /* 0x2b */ 0 ,
+/* 0x4c LSHIFT */ 0  ,
+/* 0x4d \/| */ 0x5c ,
+/* 0x4e Z */ 0x7a ,
+/* 0x4f X */ 0x78 ,
+/* 0x50 C */ 0x63 ,
+/* 0x51 V */ 0x76 ,
+/* 0x52 B */ 0x62 ,
+/* 0x53 N */ 0x6e ,
+/* 0x54 M */ 0x6d ,
+/* 0x55 ,/< */ 0x2c ,
+/* 0x56 ./> */ 0x2e ,
+/* 0x57 //? */ 0x2f ,
+/* 0x58 RSHIFT */ 0  ,
+/* 0x59 up */ /* 0x18f wimp_KEY_UP */ MacUpCursor,
+/* 0x5a k-1 */ /* 0x31 */ 0 ,
+/* 0x5b k-2 */ /* 0x32 */ 0 ,
+/* 0x5c k-3 */ /* 0x33 */ 0,
+/* 0x5d Capslock */ 0  ,
+/* 0x5e LALT */ 0  ,
+/* 0x5f Space */ 0x20 ,
+/* 0x60 RALT */ 0  ,
+/* 0x61 RCTL */ 0  ,
+/* 0x62 left */ /* 0x18c wimp_KEY_LEFT */ MacLeftCursor,
+/* 0x63 down */ /* 0x18e wimp_KEY_DOWN */ MacDownCursor,
+/* 0x64 right */ /* 0x18d wimp_KEY_RIGHT */ MacRightCursor,
+/* 0x65 k-0 */ /* 0x30 */ 0 ,
+/* 0x66 k-. */ /* 0x2e */ 0 ,
+/* 0x67 k-enter */ /* 0x0d */ 0
+};
 
  
 /*** Functions ***/
 	 void ActivateWindow(wimp_block * wblock);
 	 void DeactivateWindow( wimp_block * wblock);
 	 void DisplayPixmap(void);
-extern	 void displayModeChanged(void);
+extern	 void DisplayModeChanged(void);
 	 void DoNothing(void);
-	  int HandleEvents(int);
+	  int HandleEvents(void);
 	 void KeyPressed( wimp_key * wblock);
-	 void keyBufAppend(int key);
+	 void KeyBufAppend(int key);
 	 void UserMessage(wimp_message * wblock);
 	 void MouseButtons( wimp_pointer * wblock);
 	 void PointerEnterWindow(wimp_block *wblock);
@@ -230,435 +253,283 @@ extern	 void receivedClaimEntity(wimp_message * wblock);
 extern	 void receivedDataRequest(wimp_message * wmessage);
 extern	 void receivedDataSave(wimp_message * wblock);
 extern	 void receivedDataSaveAck(wimp_message * wblock);
-	 void eventBufAppendKey( int key, int buttons, int x, int y);
-	 void eventBufAppendMouseDown(int buttons, int x, int y);
-	 void eventBufAppendMouseUp(int buttons, int x, int y);
-	 void eventBufAppendMouseMove(int x, int y);
+	 void EventBufAppendKey( int key, int buttons, int x, int y);
+	 void EventBufAppendMouse(int buttons, int modifiers, int x, int y);
 extern	 void platReportError( os_error * e);
 
 
 
 void setSocketPollFunction(int spf ) {
+/* called from SocketPlugin init code */
 	socketPollFunction = (void(*)(int, int))spf;
-#ifdef DEBUG
-{
-	extern os_error privateErr;
-	privateErr.errnum = (bits)0;
-	sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);
-	platReportError((os_error *)&privateErr);
-}
-#endif
+	PRINTF(( "socketPoll %0x", (int)socketPollFunction));
 }
 
-/* Event handling routines */
+/**************************/
+/* Event handler routines */
+/**************************/
 
-int HandleEvents(int microSecondsToDelay) {
-wimp_event_no wimpPollEvent;
+void HandleMousePoll(void) {
+/* for now we poll the mouse state and make up a mouse event if the
+ * pointer has moved or the mouse button state has changed since last
+ * time round.
+ * This is very unsatisfactory by comparison to a proper mouse event system !
+ * NB sets the GLOBAL state of buttonState and modifierState
+ */
+int kbdstate;
+static int draggingWindow = false;
 wimp_pointer wblock;
-os_error *e;
-int kbdstate, pollDelay;
+	if ( mouseButtonDown || windowActive) {
 
-	pollDelay = microSecondsToDelay /* * CLOCKS_PER_SEC / 1000000 */
-			>> 14 /* will always give small answer, but good enough */;
-	if ( mouseButtonDown | windowActive) {
-		/* if the window is active or mouse buttons are supposedly down, */
+		/* stash previous values */
+		prevButtonState = buttonState;
+		prevSavedMousePosition.x = savedMousePosition.x;
+		prevSavedMousePosition.y = savedMousePosition.y;
+	
 		/* check for current state */
-		e = xwimp_get_pointer_info( &wblock);
-		buttonState = ((int)wblock.buttons & 0x7);
-		mouseButtonDown = (int)wblock.buttons>0?true:false;
-	}
-	if (mouseButtonDown | windowActive ) {
-		/* the window is active or the mouse buttons are still down, find */
+		xwimp_get_pointer_info( &wblock);
+				buttonState = ((int)wblock.buttons &
+				(wimp_CLICK_SELECT
+				| wimp_CLICK_MENU
+				| wimp_CLICK_ADJUST));
+		mouseButtonDown = buttonState>0?true:false;
 		/* mouse pos & shift state */
-		savedMousePosition.x = (wblock.pos.x +
-					scrollOffset.x -
-					visibleArea.x) >> scalingFactor.x;
-		savedMousePosition.y = (visibleArea.y -
-					wblock.pos.y -
-					scrollOffset.y)>>scalingFactor.y;
-		/* if new buttons state ~= prev one, would send event here */
-		/* xosbyte_read(osbyte_VAR_KEYBOARD_STATE , &kbdstate); obsolete */
+		savedMousePosition.x = (wblock.pos.x -
+					windowVisibleArea.x0)>>scalingFactor.x;
+		savedMousePosition.y = (windowVisibleArea.y1 -
+					wblock.pos.y)>>scalingFactor.y;
+		modifierState = 0;
 		xosbyte1(osbyte_SCAN_KEYBOARD , 0x80, 0, &kbdstate);
-		if (kbdstate >0 ) buttonState = buttonState | ShiftKey;
+		if (kbdstate >0 ) modifierState = modifierState | ShiftKeyBit;
 		xosbyte1(osbyte_SCAN_KEYBOARD , 0x84, 0, &kbdstate);
-		if (kbdstate >0 ) buttonState = buttonState | CtlKey;
+		if (kbdstate >0 ) modifierState = modifierState | CtrlKeyBit;
 		xosbyte1(osbyte_SCAN_KEYBOARD , 0x87, 0, &kbdstate);
-		if (kbdstate >0 ) buttonState = buttonState | CmdKey;
-	}
-
-	if(socketPollFunction) {
-		socketPollFunction(microSecondsToDelay, 0);
-#ifdef DEBUG
-{
-	extern os_error privateErr;
-
-	privateErr.errnum = (bits)0;
-	sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);
-	platReportError((os_error *)&privateErr);
-}
-#endif
-	}
-
-	while( true ) {
-		xwimp_poll_idle((wimp_MASK_POLLWORD| wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_SAVE_FP) , &wimpPollBlock, (os_t)pollDelay, &wimpPollWord, (wimp_event_no*)&wimpPollEvent);
-		switch ( wimpPollEvent ) {
-			case wimp_NULL_REASON_CODE:
-				/* null means no more interesting events,
-				   so return */
-				return false ; break;
-			case wimp_REDRAW_WINDOW_REQUEST	:
-				DisplayPixmap(); break;
-			case wimp_OPEN_WINDOW_REQUEST	:
-				WindowOpen(&wimpPollBlock.open); break;
-			case wimp_CLOSE_WINDOW_REQUEST	:
-				WindowClose(&wimpPollBlock.close); break;
-			case wimp_POINTER_LEAVING_WINDOW :
-				PointerLeaveWindow(&wimpPollBlock); break;
-			case wimp_POINTER_ENTERING_WINDOW:
-				PointerEnterWindow(&wimpPollBlock); break;
-			case wimp_MOUSE_CLICK			:
-				MouseButtons(&wimpPollBlock.pointer); break;
-			case wimp_USER_DRAG_BOX			:
-				DoNothing(); break;
-			case wimp_KEY_PRESSED			:
-				KeyPressed( &wimpPollBlock.key); break;
-			case wimp_MENU_SELECTION		:
-				DoNothing(); break;
-			case wimp_SCROLL_REQUEST		:
-				DoNothing(); break;
-			case wimp_USER_MESSAGE			:
-				UserMessage(&wimpPollBlock.message); break;
-			case wimp_USER_MESSAGE_RECORDED		:
-				UserMessage(&wimpPollBlock.message); break;
-			case wimp_USER_MESSAGE_ACKNOWLEDGE	:
-				UserMessage(&wimpPollBlock.message); break;
-		} 
-	}
-}
-
-void reverseNothing(void) {
-/* do nothing, as fast as possible */
-}
-
-void reverse_image_1bpps(void) {
-unsigned int * srcPtr, *dstPtr;
-int j;
-	for(j = startY; j < stopY; j += scanLine) {
-		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
-		dstPtr = displaySpriteBits + j + startX;
-		{ int i, k;
-		unsigned int w, nw;
-			for (i=xLen; i--; srcPtr++, dstPtr++) {
-				w = (unsigned int ) *srcPtr;
-				nw = w & 0x1;
-				for (k=31; k--;) {
-					w = w >> 1;
-					nw = (nw << 1) | (w & 0x1);
-				}
-				*dstPtr = nw;
+		if (kbdstate >0 ) modifierState = modifierState | CommandKeyBit;
+		/* if the ctl or cmd key is held down there is a chance that
+		 * we are trying to resize the window
+		 */
+		if ( (modifierState & (CommandKeyBit | CtrlKeyBit))
+			&& (wblock.w == sqWindowHandle)
+			&& (wblock.i == (wimp_i)wimp_ICON_WINDOW)
+			/* we are in our window and on the main icon */
+			&& (prevButtonState == 0)
+			&& (buttonState == RedButtonBit)
+			/* and the red button is freshly pressed */
+			&& (wblock.pos.x > (windowVisibleArea.x1 - 15))
+			/* and x is within 15 pixels of right edge */
+			&& (wblock.pos.y <(windowVisibleArea.y0 + 15))
+			) {
+			/* Phew - all those checks just to detect a size
+			 *  dragging case.
+			 * set windowActive false, draggingWindow true and
+			 * start the UI window sizing operation
+			 */
+				extern void ResizeWindow(void);
+				mouseButtonDown = windowActive = false;
+				draggingWindow = true;
+				ResizeWindow();
+				return;
+		}
+		/* compare prev to current */
+		if ( (prevButtonState != buttonState)
+			|| (prevSavedMousePosition.x != savedMousePosition.x)
+			|| (prevSavedMousePosition.y != savedMousePosition.y)){
+			EventBufAppendMouse(buttonState, modifierState,
+				savedMousePosition.x, savedMousePosition.y);
+			PRINTF(("\\tMouse Event %X (%X), %d@%d\n", buttonState,
+				modifierState, savedMousePosition.x,
+				savedMousePosition.y));
+		}
+	} else {
+		/* see if we are doing a window resizing drag */
+		if (draggingWindow ) {
+			xwimp_get_pointer_info( &wblock);
+			if ((int)wblock.buttons == 0) {
+				/* stopped dragging so restore windowActive */
+				windowActive = true;
+				draggingWindow = false;
 			}
 		}
 	}
 }
 
-void reverse_image_2bpps(void) {
-unsigned int * srcPtr, *dstPtr;
-int j;
-	for(j = startY; j < stopY; j += scanLine) {
-		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
-		dstPtr = displaySpriteBits + j + startX;
-		{ int i, k;
-		unsigned int w, nw;
-			for (i=xLen; i--; srcPtr++, dstPtr++) {
-				w = (unsigned int ) *srcPtr;
-				nw = w & 0x3;
-				for (k=15; k--;) {
-					w = w >> 2;
-					nw = (nw << 2) | (w & 0x3);
-				}
-				*dstPtr = nw;
-			}
-		}
-	}
-}
-
-void reverse_image_4bpps(void) {
-unsigned int * srcPtr, *dstPtr;
-int j;
-	for(j = startY; j < stopY; j += scanLine) {
-		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
-		dstPtr = displaySpriteBits + j + startX;
-		{ int i;
-		unsigned int w, nw;
-			for (i=xLen; i--; srcPtr++, dstPtr++) {
-				w = (unsigned int ) *srcPtr;
-				nw = w & 0xF;
-				w = w >> 4;
-				nw = (nw << 4) | (w & 0xF);
-				w = w >> 4;
-				nw = (nw << 4) | (w & 0xF);
-				w = w >> 4;
-				nw = (nw << 4) | (w & 0xF);
-				w = w >> 4;
-				nw = (nw << 4) | (w & 0xF);
-				w = w >> 4;
-				nw = (nw << 4) | (w & 0xF);
-				w = w >> 4;
-				nw = (nw << 4) | (w & 0xF);
-				w = w >> 4;
-				nw = (nw << 4) | (w & 0xF);
-				*dstPtr = nw;
-			}
-		}
-	}
-}
-
-void reverse_image_bytes(void)  {
-unsigned int * srcPtr, *dstPtr;
-int j;
-	for(j = startY; j < stopY; j += scanLine) {
-		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
-		dstPtr = displaySpriteBits + j + startX;
-		{ int i;
-		unsigned int w, nw;
-			for (i=xLen; i--; srcPtr++, dstPtr++) {
-				w = *srcPtr;
-				nw = w & 0xFF;
-				w = w >>8;
-				nw = (nw << 8) | (w & 0xFF);
-				w = w >>8;
-				nw = (nw << 8) | (w & 0xFF);
-				w = w >>8;
-				nw = (nw << 8) | (w & 0xFF);
-				*dstPtr = nw;
-			}
-		}
-	}
-}
-
-void reverse_image_words(void) {
-unsigned int * srcPtr, *dstPtr;
-int j;
-	for(j = startY; j < stopY; j += scanLine) {
-		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
-		dstPtr = displaySpriteBits + j + startX;
-		{ int i;
-		unsigned int w, nw;
-			for (i=xLen; i--; srcPtr++, dstPtr++) {
-				w = (unsigned int ) *srcPtr;
-				nw = w & 0x1F;
-				w = w >> 5;
-				nw = (nw << 5) | (w & 0x1F);
-				w = w >> 5;
-				nw = (nw << 5) | (w & 0x1F);
-				w = w >> 6;
-				nw = (nw << 6) | (w & 0x1F);
-				w = w >> 5;
-				nw = (nw << 5) | (w & 0x1F);
-				w = w >> 5;
-				nw = (nw << 5) | (w & 0x1F);
-				*dstPtr = nw;
-			}
-		}
-	}
-}
-
-void reverse_image_longs(void) {
-unsigned int * srcPtr, *dstPtr;
-int j;
-	for(j = startY; j < stopY; j += scanLine) {
-		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
-		dstPtr = displaySpriteBits + j + startX;
-		{ int i;
-		unsigned int w, nw;
-			for (i=xLen; i--; srcPtr++, dstPtr++) {
-				w = (unsigned int ) *srcPtr;
-				nw = w & 0xFF;
-				w = w >> 8;
-				nw = (nw << 8) | (w & 0xFF);
-				w = w >> 8;
-				nw = (nw << 8) | (w & 0xFF);
-				*dstPtr = nw;
-			}
-		}
-	}
-}
-
-void DisplayReverseSetup() {
-extern os_coord squeakDisplaySize;
-extern int squeakDisplayDepth;
-int log2Depth;
-
-	switch (squeakDisplayDepth) {
-	case 32:log2Depth=5; reverserFunction = reverse_image_longs; break;
-	case 16:log2Depth=4; reverserFunction = reverse_image_words; break;
-	case 8: log2Depth=3; reverserFunction = reverse_image_bytes;break;
-	case 4: log2Depth=2; reverserFunction = reverse_image_4bpps;break;
-	case 2: log2Depth=1; reverserFunction = reverse_image_2bpps;break;
-	case 1: log2Depth=0; reverserFunction = reverse_image_1bpps;break;
-	default: reverserFunction = reverseNothing; return; 
-	}
-	/* work out words per scan line */
-	pixelsPerWordShift = 5-log2Depth;
-	pixelsPerWord= 1 << pixelsPerWordShift;
-	scanLine= (squeakDisplaySize.x + pixelsPerWord-1) >> pixelsPerWordShift;
-}
-
-int DisplayReverseAreaSetup(int x0, int y0, int x1, int y1) {
-int stopX;
-	startX = (x0 >> pixelsPerWordShift) ;
-	stopX  = (x1 + pixelsPerWord -1) >> pixelsPerWordShift;
-	xLen = stopX - startX /* +1 */;
-	startY = y0 * scanLine;
-	stopY  = y1 * scanLine;
-	if(stopX <= startX || stopY <= startY) return false;
+int HandleSingleEvent(wimp_block *pollBlock, wimp_event_no pollEvent) {
+/* handle a single event as defined by wblock
+ * return false to stop the looping, true to continue it
+ */
+	switch ( pollEvent ) {
+		case wimp_NULL_REASON_CODE:
+			/* null means no more interesting events,
+			   so return false*/
+			return false ; break;
+		case wimp_REDRAW_WINDOW_REQUEST	:
+			DisplayPixmap(); break;
+		case wimp_OPEN_WINDOW_REQUEST	:
+			WindowOpen(&(pollBlock->open)); break;
+		case wimp_CLOSE_WINDOW_REQUEST	:
+			WindowClose(&(pollBlock->close)); break;
+		case wimp_POINTER_LEAVING_WINDOW :
+			PointerLeaveWindow(pollBlock); break;
+		case wimp_POINTER_ENTERING_WINDOW:
+			PointerEnterWindow(pollBlock); break;
+		case wimp_MOUSE_CLICK			:
+			MouseButtons(&(pollBlock->pointer));
+			return false; break;
+		case wimp_USER_DRAG_BOX			:
+			DoNothing(); break;
+		case wimp_KEY_PRESSED			:
+			KeyPressed( &(pollBlock->key));
+			return false; break;
+		case wimp_MENU_SELECTION		:
+			DoNothing(); break;
+		case wimp_SCROLL_REQUEST		:
+			DoNothing(); break;
+		case wimp_USER_MESSAGE			:
+			UserMessage(&(pollBlock->message)); break;
+		case wimp_USER_MESSAGE_RECORDED		:
+			UserMessage(&(pollBlock->message)); break;
+		case wimp_USER_MESSAGE_ACKNOWLEDGE	:
+			UserMessage(&(pollBlock->message)); break;
+	} 
 	return true;
 }
 
-void DisplayPixmap(void) {
-/* bitblt the Display bitmap to the screen */
-extern osspriteop_area *spriteAreaPtr;
-extern osspriteop_header *displaySprite;
-extern osspriteop_trans_tab *	pixelTranslationTable;
-extern int displayObject(void);
-osbool more;
-wimp_draw wblock;
-os_error * e;
-int xA, yA, xB, yB;
-	if ( displaySpriteBits == NULL ) {
-#ifdef DEBUG
-{
-		extern os_error privateErr;
-		privateErr.errnum = (bits)0;
-		sprintf(privateErr.errmess, "DisplayPixmap NULL");
-		platReportError((os_error *)&privateErr);
-}
-#endif
-		/* flush the damage rectangles */
-		wblock.w = sqWindowHandle;
-		more = wimp_redraw_window( &wblock );
-		while ( more ) {
-			xwimp_get_rectangle (&wblock, &more);
-		}
-		return;
-	}
-	wblock.w = sqWindowHandle;
-	/* Find latest address of source Bitmap.
-	   Sensitive to object format */
-	displayBitmapIndex = longAt((displayObject() + 4)+(0 * 4)) + 4; 
-	more = wimp_redraw_window( &wblock );
-	DisplayReverseSetup();
-	while ( more ) {
-		xA = (wblock.clip.x0 - visibleArea.x ) >> scalingFactor.x;
-		yA = (visibleArea.y - wblock.clip.y1  ) >> scalingFactor.y;
-		xB = (wblock.clip.x1 - visibleArea.x ) >> scalingFactor.x;
-		yB = (visibleArea.y -  wblock.clip.y0   ) >> scalingFactor.y;
-		DisplayReverseAreaSetup(xA, yA, xB, yB);
-		reverserFunction();
-		if ((e = xosspriteop_put_sprite_scaled (osspriteop_USER_AREA,
-			spriteAreaPtr,
-			(osspriteop_id)&(displaySprite->name),
-			wblock.box.x0, wblock.box.y0,
-			os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES,
-			(os_factors const *)0,pixelTranslationTable)) != NULL) {
-			if ( spriteAreaPtr != null) {
-				platReportError(e);
-				return;
-			}
-		}
-		xwimp_get_rectangle (&wblock, &more);
+int HandleSocketPoll(int microSecondsToDelay) {
+/* if the socket polling function has been set, call it to see
+ * if any socket work needs doing
+ */
+	if(socketPollFunction) {
+		socketPollFunction(microSecondsToDelay, 0);
 	}
 }
 
-void DisplayPixmapNow(void) {
-/* bitblt the Display bitmap to the screen */
-extern osspriteop_area *spriteAreaPtr;
-extern osspriteop_header *displaySprite;
-extern osspriteop_trans_tab *	pixelTranslationTable;
-extern os_coord squeakDisplaySize;
-//bool more;
-int more;
-wimp_draw wblock;
-os_error * e;
-int xA, yA, xB, yB;
-
-	if ( sqWindowHandle == null ) return;
-	wblock.w = sqWindowHandle;
-	/* set work area to suit these values */
-	wblock.box.x0 = -10000;
-	wblock.box.y0 = -10000/* squeakDisplaySize.y << scalingFactor.y */;
-	wblock.box.x1 = 10000/* squeakDisplaySize.x <<scalingFactor.x */;
-	wblock.box.y1 = 10000;
-
-	more = wimp_update_window( &wblock );
-	DisplayReverseSetup();
-	while ( more ) {
-		xA = (wblock.clip.x0 - visibleArea.x ) >> scalingFactor.x;
-		yA = (visibleArea.y - wblock.clip.y1  ) >> scalingFactor.y;
-		xB = (wblock.clip.x1 - visibleArea.x ) >> scalingFactor.x;
-		yB = (visibleArea.y -  wblock.clip.y0   ) >> scalingFactor.y;
-		DisplayReverseAreaSetup(xA, yA, xB, yB);
-		reverserFunction();
-		if ((e = xosspriteop_put_sprite_scaled (osspriteop_USER_AREA,
-			spriteAreaPtr,
-			(osspriteop_id)&(displaySprite->name),
-			wblock.box.x0, wblock.box.y0,
-			os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES,
-			(os_factors const *)0,pixelTranslationTable)) != NULL) {
-			if ( spriteAreaPtr != null) {
-				platReportError(e);
-				return;
-			}
-		}
-		xwimp_get_rectangle (&wblock, &more);
+int HandleEventsWithWait(int microSecondsToDelay) {
+/* use wimp_poll_delay so that we don't return a null before
+ * the end of the delay, thus giving some cpu back to everyone else
+ */
+int pollDelay; 
+	pollDelay = microSecondsToDelay /* * CLOCKS_PER_SEC / 1000000 */
+			>> 14 /* will always give small answer, but good enough */;
+	if ( microSecondsToDelay ) {
+		pollDelay = MAX(pollDelay, 1);
+		/* makes sure we get at least one tick of delay */
 	}
+	HandleMousePoll();
+	HandleSocketPoll(microSecondsToDelay);
+	do { xwimp_poll_idle((wimp_MASK_POLLWORD
+		| wimp_MASK_GAIN
+		| wimp_MASK_LOSE
+		| wimp_SAVE_FP) ,
+		&wimpPollBlock,
+		(os_t)pollDelay,
+		&wimpPollWord,
+		(wimp_event_no*)&wimpPollEvent);
+	} while(HandleSingleEvent(&wimpPollBlock, wimpPollEvent));
 }
 
+int HandleEvents(void) {
+/* track buttons and pos, send event if any change */
+	HandleMousePoll();
+	HandleSocketPoll(0);
+
+	do {xwimp_poll((wimp_MASK_POLLWORD
+		| wimp_MASK_GAIN
+		| wimp_MASK_LOSE
+		| wimp_SAVE_FP) ,
+		&wimpPollBlock,
+		&wimpPollWord,
+		(wimp_event_no*)&wimpPollEvent);
+	} while (HandleSingleEvent(&wimpPollBlock, wimpPollEvent));
+}
+
+int HandleEventsNotTooOften(void) {
+/* If we are using the older style polling stuff, we typically end up
+ * calling HandleEvents an awful lot of times. Since at least 3/4 of
+ * those times are redundant, throttle it back a little */
+static clock_t nextPollTick = 0;
+clock_t currentTick;
+	if( (currentTick = clock()) >= nextPollTick) {
+		HandleEvents();
+		nextPollTick = currentTick + 4;
+	}
+	return true; 
+}
+
+/****************************************/
+/* Routines to handle the actual events */
+/****************************************/
 
 void WindowOpen( wimp_open * wblock) {
-	scrollOffset.x = wblock->xscroll;
-	scrollOffset.y = wblock->yscroll;
-	visibleArea.x =  wblock->visible.x0;
-	visibleArea.y =  wblock->visible.y1;
+	wblock->xscroll = 0;
+	wblock->yscroll = 0;
+	windowVisibleArea.x0 = wblock->visible.x0;
+	windowVisibleArea.y0 = wblock->visible.y0;
+	windowVisibleArea.x1 = wblock->visible.x1;
+	windowVisibleArea.y1 = wblock->visible.y1;
 	xwimp_open_window(wblock);
 }
 
 void WindowClose(wimp_close * wblock) {
-	sqWindowHandle = null;
-	PointerLeaveWindow((wimp_block *)wblock);
-	xwimp_close_window(wblock->w);
-	/* temporarily, quit Squeak. One day we'll just close the window */
-	/* and allow it to reopen from an iconbar click or somesuch      */
-	exit(0);
+os_error e;
+extern char sqTaskName[];
+	e.errnum = 0;
+	sprintf(e.errmess, "Really quit Squeak?");
+	if (wimp_report_error( &e, wimp_ERROR_BOX_OK_ICON |
+		wimp_ERROR_BOX_CANCEL_ICON |
+		 wimp_ERROR_BOX_HIGHLIGHT_CANCEL |
+		 wimp_ERROR_BOX_SHORT_TITLE ,
+		 sqTaskName) == wimp_ERROR_BOX_SELECTED_OK) {;
+			sqWindowHandle = null;
+			PointerLeaveWindow((wimp_block *)wblock);
+			xwimp_close_window(wblock->w);
+			exit(0);
+	}
 }
 
 void PointerLeaveWindow(wimp_block *wblock) {
 /* the pointer has left my area. swap to normal desktop pointer */
-	xwimp_set_pointer_shape(1, (byte const *)-1, 0, 0, 0, 0);
+	xwimp_set_pointer_shape(1, (byte const *)-1,
+		0, 0, 0, 0);
 	windowActive = false;
 }
 
 void PointerEnterWindow(wimp_block *wblock) {
 /* the pointer has moved into my area. swap to my pointer pixmap */
-	xwimp_set_pointer_shape(2, (byte const *)pointerBuffer,  16, 16, pointerOffset.x, pointerOffset.y);
+	xwimp_set_pointer_shape(2, (byte const *)pointerBuffer,
+		16, 16, pointerOffset.x, pointerOffset.y);
 	windowActive = true;
 }
 
 void MouseButtons( wimp_pointer * wblock) {
-/* deal with a mouse button change event */
-/* RiscOS only seems to send me mouse downs, and we have to manually claim */
-/* input focus with a wimp_BUTTON_CLICK window type */
-	if ( (wblock->w == sqWindowHandle)  && (wblock->i == (wimp_i)wimp_ICON_WINDOW)) {
-		/* its in my window */
-		buttonState = (buttonState & ~0x7) | ((int)wblock->buttons & 0x7);
-		/* track the mouse downs separately */
-		mouseButtonDown = (int)wblock->buttons>0?true:false;
-		// claim caret via message_claimentity() iff we don't already have it
+/* deal with a mouse button change event
+ * RiscOS only seems to send me mouse downs, and we have to manually claim
+ * input focus with a wimp_BUTTON_CLICK window type
+ * Right now we DO NOT use the click info to generate squeak mouse events
+ * - we poll in HandleMousePoll()
+ */
+
+	if ( (wblock->w == sqWindowHandle)
+		&& (wblock->i == (wimp_i)wimp_ICON_WINDOW)) {
+		PRINTF(("\\t buttons %x \n", wblock->buttons)); 
+		/* claim caret via message_claimentity() iff we
+		 *don't already have it */
 		claimCaret(wblock);
-		// do we still use wimp_set_caret_position ?
-		xwimp_set_caret_position(sqWindowHandle, (wimp_i)wimp_ICON_WINDOW, 0, 0, (1<<25)|255, 0);
+		/* do we still use wimp_set_caret_position ?  */
+		xwimp_set_caret_position(sqWindowHandle,
+			(wimp_i)wimp_ICON_WINDOW, 0, 0, (1<<25)|255, 0);
 		return;
 	}
+	if ( wblock->w == wimp_ICON_BAR ) {
+		/* select-click on iconbar icon means bring window to front */
+		if ((wblock->buttons == wimp_CLICK_SELECT)
+			&& (sqWindowHandle != null)) {
+			extern void SetWindowToTop(void);
+			SetWindowToTop();
+			return;
+		}
+		if (wblock->buttons == wimp_CLICK_MENU) {
+		}
+	} 
 
 }
 
@@ -668,15 +539,18 @@ void KeyPressed( wimp_key * wblock) {
  * notification of most alt presses, for example. We also have to convert to
  * Mac numbering in order to satisfy the image code
  */
+wimp_deepkey * dblock;
+int keystate, dkey, modState;
 
-	int keystate, testkey;
+	dblock = (wimp_deepkey *)wblock;
 
-	/* basically keystate will be the event idea of the key pressed */
-	keystate = wblock->c;
+	/* initially keystate will be the event's idea of the key pressed */
+	keystate = dblock->c;
 
-	if (keystate == getInterruptKeycode() || ( (keystate == wimp_KEY_PRINT)) ) {
+	if (keystate == getInterruptKeycode()
+		|| ( (keystate == wimp_KEY_PRINT)) ) {
 		/* The image tends to set the interruptKeycode to suit the Mac
-		 * cmd-. nonsense this is decidedly not Acorn compatible, so
+		 * cmd-. nonsense - this is decidedly not Acorn compatible, so
 		 * check for printscrn/SysRq as well
 		 * interrupt is a meta-event; do not report it as a keypress
 		 */
@@ -685,15 +559,28 @@ void KeyPressed( wimp_key * wblock) {
 		return;
 	}
 
-	if ( buttonState & 0x70) {
+	/* derive the modifier key state */
+	dkey = dblock->deepkey;
+
+	modState = (dkey & (wimp_DEEPKEY_LSHIFT
+		| wimp_DEEPKEY_RSHIFT)) ? ShiftKeyBit: 0;
+	/* Damn! can't use ALT for the Command key since we don't get
+	 * keypress events for most alt-keys. Use previous plan of
+	 * left ctl = Control & right ctl = Command
+	 */
+	if (dkey & (wimp_DEEPKEY_LCTL /*| wimp_DEEPKEY_RCTL */))
+		modState |= CtrlKeyBit;
+	if (dkey & (/* wimp_DEEPKEY_LALT| wimp_DEEPKEY_RALT */ wimp_DEEPKEY_RCTL))
+		modState |= CommandKeyBit;
+
+	if ( modState > ShiftKeyBit ) {
 		/* if a metakey is pressed, try looking up the magic number
 		 * and dealing with a metakey situation
+		 * if a key maps, replace the keystate with the result
 		 */
-		xosbyte1(osbyte_SCAN_KEYBOARD_LIMITED , 0, 0, &testkey);
-		/* if a key is scanned ok and it maps, replace the keystate
-		 * with the result
-		 */
-		if ( (testkey != 0xFF) && (testkey = keymap[testkey]) )
+		unsigned int testkey = (dblock->deepkey)
+					>>wimp_DEEPKEY_KEYNUMSHIFT; 
+		if ((testkey <= 0x67) && (testkey = keymap[testkey]) )
 			keystate = testkey;
 	} else {
 		/* no metakey, so check for special key values. */
@@ -706,22 +593,73 @@ void KeyPressed( wimp_key * wblock) {
 			case wimp_KEY_HOME: keystate = MacHomeKey; break;
 			case wimp_KEY_COPY: keystate = MacEndKey; break;
 			case wimp_KEY_DELETE: keystate = MacDeleteKey; break;
+			case wimp_KEY_PAGE_UP: keystate = MacPageUpKey; break;
+			case wimp_KEY_PAGE_DOWN: keystate = MacPageDownKey; break;
 			default: break;
 		}
 	}
-	keyBufAppend(keystate | ((buttonState >>3)<<8));
-	eventBufAppendKey((keystate & 0xFF), buttonState, savedMousePosition.x, savedMousePosition.y);
+	if (inputSemaphoreIndex) {
+		EventBufAppendKey(keystate, modState, savedMousePosition.x, savedMousePosition.y);
+	} else {
+		KeyBufAppend(keystate | ((modState)<<8));
+	}
+	PRINTF(("\\t KeyPressed .c%c .d%x keystate(%d-%d)\n", dblock->c, (dblock->deepkey)>>wimp_DEEPKEY_KEYNUMSHIFT, keystate, modState));
 }
 
-/* set an asynchronous input semaphore index for events */
-int ioSetInputSemaphore(int semaIndex) {
-	if( semaIndex < 1)
-		return primitiveFail();
-	inputSemaphoreIndex = semaIndex;
-	return true;
+void UserMessage(wimp_message * wblock) {
+/* Deal with user messages */
+extern wimp_t Task_Handle;
+	if( wblock->sender == Task_Handle) {
+		/* it's me - do nothing */
+		return;
+	}
+	switch( wblock->action) {
+		case message_QUIT:		ioExit();
+								break;
+		case message_MODE_CHANGE: DisplayModeChanged();
+								break;
+		case message_CLAIM_ENTITY: receivedClaimEntity(wblock);
+								break;
+		/* these are the two messages we respond to in order
+		 * to initiate clipboard transactions
+		 * DATA_REQUEST is another app asking for our clipboard
+		 * and DATA_SAVE_ACK is part of the dance for giving
+		 * it to them. Us asking for some outside clipboard
+		 * can be found in c.sqRPCClipboard>fetchClipboard()
+		 */
+		case message_DATA_REQUEST: receivedDataRequest(wblock);
+								break; 
+		case message_DATA_SAVE_ACK: receivedDataSaveAck(wblock);
+								break;
+		/* We _might_ sometime respond to DATA_LOAD & DATA_SAVE
+		 * here in order to allow dropping of text files via the
+		 * DropPlugin
+		 */ 
+		default: return;
+	}
 }
 
-void signalInputEvent(void) {
+void ActivateWindow(wimp_block * wblock) {
+/* maybe we will need to do something here */
+	PointerEnterWindow(wblock);
+}
+
+void DeactivateWindow( wimp_block * wblock) {
+/* maybe we will need to do something here */
+	PointerLeaveWindow(wblock);
+}
+ 
+void DoNothing(void) {
+/* do nothing at all, but make sure to do it quickly.
+ * Primarily a breakpoint option */
+}
+
+/*****************************************************************************/
+/* internal event handling - add to queues etc                               */
+/*****************************************************************************/
+
+void SignalInputEvent(void) {
+	PRINTF(("\\t SignalInputEvent\n"));
 	if(inputSemaphoreIndex > 0)
 		signalSemaphoreWithIndex(inputSemaphoreIndex);
 }
@@ -731,7 +669,7 @@ void signalInputEvent(void) {
 #define iebEmptyP()	(eventBufPut == eventBufGet)
 #define iebAdvance(P)	(P= ((P + 1) % EVENTQ_SIZE))
 
-sqInputEvent *eventBufAppendEvent(int  type) {
+sqInputEvent *EventBufAppendEvent(int  type) {
 /* code stolen from ikp's unix code. blame him if it doesn't work.
  * complement me if it does.
  */
@@ -743,42 +681,48 @@ sqInputEvent *eventBufAppendEvent(int  type) {
 	}
 	evt->type= type;
 	evt->timeStamp= ioMSecs();
-	signalInputEvent();
+	//SignalInputEvent();
 	return evt;
 
 }
 
-void eventBufAppendKey( int keyValue, int buttons, int x, int y) {
+void EventBufAppendKey( int keyValue, int modifiers, int x, int y) {
 /* add an event record for a keypress */
-
-	eventBufAppendEvent( EventTypeKeyboard);
+sqKeyboardEvent *evt;
+	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
+	evt->charCode = keyValue;
+	evt->pressCode = EventKeyChar;
+	evt->modifiers = modifiers;
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+	evt->reserved3 = 0; 
 }
 
-void eventBufAppendMouseDown( int buttons, int x, int y) {
+void EventBufAppendMouse( int buttons, int modifiers, int x, int y) {
 /* add an event record for a mouse press */
-	eventBufAppendEvent( EventTypeMouse);
-}
-
-void eventBufAppendMouseUp( int buttons, int x, int y) {
-/* add an event record for a mouse up */
-	eventBufAppendEvent( EventTypeMouse);
-}
-
-void eventBufAppendMouseMove( int x, int y) {
-/* add an event record for a mouse up */
-	eventBufAppendEvent( EventTypeMouse);
-}
-
-
-
-/* retrieve the next input event from the OS */
-int ioGetNextEvent(sqInputEvent *evt) {
-	HandleEvents(0);
-	primitiveFail();
+sqMouseEvent *evt;
+#if 1
+/* if the previous event is a mouse event with the same buttons
+ * we can overwrite it */
+	if ( !iebEmptyP()) {
+		int eventBufPrev;
+		eventBufPrev = (eventBufPut == 0)?EVENTQ_SIZE-1: eventBufPut-1;
+		evt = (sqMouseEvent *)&eventBuf[eventBufPrev];
+		if ( (evt->buttons == buttons)
+			&& (evt->modifiers == modifiers)) return;
+	}
+#endif 
+	evt = (sqMouseEvent *)EventBufAppendEvent( EventTypeMouse);
+	evt->x = x;
+	evt->y = y;
+	evt->buttons = buttons;
+	evt->modifiers = modifiers;
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
 }
 
 /* key buffer functions to support older images */
-void keyBufAppend(int keystate) {
+void KeyBufAppend(int keystate) {
 	keyBuf[keyBufPut] = keystate;
 	keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
 	if (keyBufGet == keyBufPut) {
@@ -786,6 +730,57 @@ void keyBufAppend(int keystate) {
 		keyBufOverflows++;
 	}
 }
+
+/*************************/
+/* interface to interp.c */
+/*************************/
+
+/* retrieve the next input event from the OS */
+int ioGetNextEvent(sqInputEvent *evt) {
+#ifdef DEBUG
+	{static int once = 0;
+		if ( once <1 ) {
+			PRINTF(("\\t initial getEvent\n"));
+			once = 1;
+		}
+	};
+#endif
+	if (iebEmptyP()) HandleEvents();
+	if (iebEmptyP()) return false;
+	*evt = eventBuf[eventBufGet];
+	iebAdvance(eventBufGet);
+	return true;
+}
+
+
+/* set an asynchronous input semaphore index for events */
+int ioSetInputSemaphore(int semaIndex) {
+	PRINTF(("\\t ioSetInputSemaphore\n"));
+	if( semaIndex < 1)
+		return primitiveFail();
+	inputSemaphoreIndex = semaIndex;
+	return true;
+}
+
+int ioRelinquishProcessorForMicroseconds(int microSeconds) {
+/* This operation is platform dependent. On the Mac, it simply calls
+ * HandleEvents(), which gives other applications a chance to run.
+ * Here, we use microSeconds as the parameter to HandleEvents, so that wimpPollIdle
+ * gets a timeout.
+ */
+	PRINTF(("\\t relinq %d\n", microSeconds));
+	HandleEventsWithWait(microSeconds);
+	return microSeconds;
+}
+
+
+int ioProcessEvents(void) {
+		HandleEvents();
+	return true; 
+}
+
+
+/* older polling state style access */
 
 int nextKeyPressOrNil(void) {
 /*  return the next keypress in the buffer, or -1 if nothing there */
@@ -810,93 +805,24 @@ int keystate;
 	return keystate;
 }
 int ioGetButtonState(void) {
-	ioProcessEvents();  /* process all pending events */
+	HandleEventsNotTooOften();  /* process all pending events */
 	return buttonState;
 }
 
 int ioGetKeystroke(void) {
-	ioProcessEvents();  /* process all pending events */
+	HandleEventsNotTooOften();  /* process all pending events */
 	return nextKeyPressOrNil();
 }
 
 int ioMousePoint(void) {
 /* return the mouse point as 16bits of x | 16bits of y */
-	ioProcessEvents();  /* process all pending events */
+	HandleEventsNotTooOften();  /* process all pending events */
 	return (savedMousePosition.x << 16 | savedMousePosition.y & 0xFFFF);
 }
 
 int ioPeekKeystroke(void) {
-	ioProcessEvents();  /* process all pending events */
+	HandleEventsNotTooOften();  /* process all pending events */
 	return peekKeyPressOrNil();
 }
 
-/*** I/O Primitives ***/
 
-int ioProcessEvents(void) {
-static clock_t nextPollTick = 0;
-clock_t currentTick;
-
-//	if( (currentTick = clock()) >= nextPollTick) {
-		HandleEvents(0 );
-//		nextPollTick = currentTick + 1;
-//	}
-	return true; 
-}
-
-int ioRelinquishProcessorForMicroseconds(int microSeconds) {
-/* This operation is platform dependent. On the Mac, it simply calls
- * HandleEvents(), which gives other applications a chance to run.
- * Here, we use microSeconds as the parameter to HandleEvents, so that wimpPollIdle
- * gets a timeout.
- */
-
-	HandleEvents(microSeconds);
-	return microSeconds;
-}
-
-void UserMessage(wimp_message * wblock) {
-/* Deal with user messages */
-extern wimp_t Task_Handle;
-	if( wblock->sender == Task_Handle) {
-		/* it's me - do nothing */
-		return;
-	}
-	switch( wblock->action) {
-		case message_QUIT:		ioExit();
-								break;
-		case message_MODE_CHANGE: displayModeChanged();
-								break;
-		case message_CLAIM_ENTITY: receivedClaimEntity(wblock);
-								break;
-		/* these are the two messages we respond to in order
-		 * to initiate clipboard transactions
-		 * DATA_REQUEST is another app asking for our clipboard
-		 * and DATA_SAVE_ACK is part of the dance for giving
-		 * it to them. Us asking for some outside clipboard
-		 * can be found in sqRPCCLipboard>fetchClipboard()
-		 */
-		case message_DATA_REQUEST: receivedDataRequest(wblock);
-								break; 
-		case message_DATA_SAVE_ACK: receivedDataSaveAck(wblock);
-								break;
-		/* We _might_ sometime respond to DATA_LOAD & DATA_SAVE
-		 * here in order to allo dropping of text files via the
-		 * DropPlugin
-		 */ 
-		default: return;
-	}
-}
-
-void ActivateWindow(wimp_block * wblock) {
-/* maybe we will need to do something here */
-	PointerEnterWindow(wblock);
-}
-
-void DeactivateWindow( wimp_block * wblock) {
-/* maybe we will need to do something here */
-	PointerLeaveWindow(wblock);
-}
- 
-void DoNothing(void) {
-/* do nothing at all, but make sure to do it quickly. Primarily a breakpoint option */
-}

@@ -11,25 +11,14 @@
 /* OSLib -  http://ro-oslib.sourceforge.net/   */
 /* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
+// define this to get lots of debug notifiers
+//#define DEBUG
+
 #include "oslib/os.h"
 #include "sq.h"
 #include <kernel.h>
 #include "rink.h"
 
-// define this to get lots of debug notifiers
-//#define DEBUG
-#ifdef DEBUG
-#define FPRINTF(s)\
-{\
-	extern os_error privateErr;\
-	extern void platReportError( os_error * e);\
-	privateErr.errnum = (bits)0;\
-	sprintf s;\
-	platReportError((os_error *)&privateErr);\
-};
-#else
-#define FPRINTF(s) 
-#endif
 
 
 
@@ -38,17 +27,17 @@ int ioFindExternalFunctionIn(char *symbol, int moduleHandle) {
 int fnIndex= 0, address;
 const char * foundName;
 
-	FPRINTF((privateErr.errmess, "ioFindExternalFunctionIn: %s", symbol));
+	PRINTF(( "ioFindExternalFunctionIn: %s", symbol));
 
 	while ( (address = (int)rink_enum_named((rink_seghandle)moduleHandle, &fnIndex, &foundName)), fnIndex >= 0) {
 		if ( strcmp(foundName, symbol) == 0) {
-			FPRINTF((privateErr.errmess, "found: %s",foundName));
+			PRINTF(( "found: %s",foundName));
 			return address;
 		} 
 	}
 
 	/* failed to find the function... */
-	FPRINTF((privateErr.errmess, " did not find: %s", symbol));
+	PRINTF(( " did not find: %s", symbol));
 	return 0;
 }
 
@@ -66,11 +55,11 @@ const rink_check CheckBlock = {"SqueakSO", 100, 0};
 
 	/* make filename of the code */
 	sprintf(codeName, "%splugins.%s", vmPath, modName);
-	FPRINTF((privateErr.errmess, "Load: %s",modName));
+	PRINTF(( "Load: %s",modName));
 
 	/* load the segment... */
 	if((e = rink_load(&CheckBlock, codeName, &moduleHandle)) != NULL) {
-		FPRINTF((privateErr.errmess, "Plugin load failed: %s", codeName));
+		PRINTF(( "Plugin load failed: %s", codeName));
 		return 0;
 	}
 	
@@ -80,13 +69,13 @@ const rink_check CheckBlock = {"SqueakSO", 100, 0};
 	 */
 	Version = rink_readversion(moduleHandle);
 	/* report the version */
-	//FPRINTF( (privateErr.errmess, "Plugin version: %d:%d", Version->main, Version->code));
+	PRINTF(("Plugin version: %d:%d", Version->main, Version->code));
 
 	return (int)moduleHandle;
 }
 
 int ioFreeModule(int moduleHandle) {
-	FPRINTF( (privateErr.errmess, "Plugin unload %d", moduleHandle));
+	PRINTF(( "Plugin unload %d", moduleHandle));
 	rink_unload((rink_seghandle)moduleHandle);
 	return 1;
 }
