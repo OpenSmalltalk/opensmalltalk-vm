@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.8 2002/04/27 18:55:25 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.9 2002/08/06 21:44:10 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -58,6 +58,8 @@
 *	2/04/2002  JMM Rework timer logic, fall back to old style timer, which is pthread based.
 *	2/14/2002  JMM fixes for updatewindow logic and drag/drop image with no file type
 *	2/25/2002  JMM additions for carbon event managment.
+*   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+
 */
 
 
@@ -159,7 +161,7 @@ int main(void) {
                 
 	if (imageName[0] == 0) {
             FSSpec	workingDirectory;
-#if TARGET_API_MAC_CARBON
+#if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
             CFBundleRef mainBundle;
             CFURLRef imageURL;
             CFStringRef imagePath;
@@ -177,7 +179,7 @@ int main(void) {
                     error("Could not obtain default directory");
                 CopyCStringToPascal("squeak.image",workingDirectory.name);
 		PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
-#if TARGET_API_MAC_CARBON
+#if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
             }
 #endif
 	}
@@ -435,8 +437,9 @@ char * GetAttributeString(int id) {
 		else
 			return "PowerPC";
 	}
-#if TARGET_API_MAC_CARBON
-        if (id == 1004) {
+
+#if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
+   if (id == 1004) {
             CFBundleRef mainBundle;
             CFStringRef versionString;
             static char data[255];
@@ -449,9 +452,14 @@ char * GetAttributeString(int id) {
             CFStringGetCString (versionString, data+strlen(data), 255-strlen(data), CFStringGetSystemEncoding());
             return data;            
         }
-	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
-#else
+#endif
+
+#if TARGET_API_MAC_CARBON && defined(__MWERKS__)
 	if (id == 1004) return (char *) interpreterVersion;
+#endif
+
+#if TARGET_API_MAC_CARBON
+	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
 #endif
 	/* attribute undefined by this platform */
 	success(false);
@@ -526,3 +534,119 @@ int clearProfile(void){}
 int dumpProfile(void){}														
 int startProfiling(void){}													
 int stopProfiling(void)	{}													
+
+#if TARGET_API_MAC_CARBON && defined(__MWERKS__)
+int printOnOSX(char * string);
+int printOnOSXNumber(int number);
+int printOnOSXPascal(unsigned char * string);
+int printOnOSXFormat(char * string,char *format);
+OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef
+*bundlePtr);
+
+OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef
+*bundlePtr)
+{
+    OSStatus    err;
+    FSRef       frameworksFolderRef;
+    CFURLRef    baseURL;
+    CFURLRef    bundleURL;
+
+    if ( bundlePtr == nil ) return( -1 );
+
+    *bundlePtr = nil;
+ 
+    baseURL = nil;
+    bundleURL = nil;
+ 
+    err = FSFindFolder(kOnAppropriateDisk, kFrameworksFolderType, true,
+&frameworksFolderRef);
+    if (err == noErr) {
+        baseURL = CFURLCreateFromFSRef(kCFAllocatorSystemDefault,
+&frameworksFolderRef);
+        if (baseURL == nil) {
+            err = coreFoundationUnknownErr;
+        }
+    }
+    if (err == noErr) {
+        bundleURL =
+CFURLCreateCopyAppendingPathComponent(kCFAllocatorSystemDefault, baseURL,
+framework, false);
+        if (bundleURL == nil) {
+            err = coreFoundationUnknownErr;
+        }
+    }
+    if (err == noErr) {
+        *bundlePtr = CFBundleCreate(kCFAllocatorSystemDefault, bundleURL);
+        if (*bundlePtr == nil) {
+            err = coreFoundationUnknownErr;
+        }
+    }
+    if (err == noErr) {
+        if ( ! CFBundleLoadExecutable( *bundlePtr ) ) {
+            err = coreFoundationUnknownErr;
+        }
+    }
+
+    // Clean up.
+    if (err != noErr && *bundlePtr != nil) {
+        CFRelease(*bundlePtr);
+        *bundlePtr = nil;
+    }
+    if (bundleURL != nil) {
+        CFRelease(bundleURL);
+    }
+
+    if (baseURL != nil) {
+        CFRelease(baseURL);
+    }
+
+    return err;
+}
+
+int printOnOSXFormat(char * string,char *format) {
+	CFBundleRef bundle;
+	int(*fprintf_ptr)(FILE *stream, const char *format, ...) = NULL;
+	void* fcn_ptr = NULL;
+	OSErr	err;
+	FILE* stderr_ptr = NULL;
+	void* __sf_ptr = NULL;
+	
+	err = LoadFrameworkBundle( CFSTR("System.framework"), &bundle );
+
+	fcn_ptr = CFBundleGetFunctionPointerForName(bundle, CFSTR("fprintf"));
+	__sf_ptr = CFBundleGetDataPointerForName(bundle, CFSTR("__sF"));
+	
+	if(fcn_ptr) {
+	   /* cast it */
+	   fprintf_ptr = ( int(*)(FILE *stream, const char *format, ...) ) fcn_ptr;
+	} else {
+	   /* it failed, handle that somehow */
+	   return;
+	}
+
+	if(__sf_ptr) {
+	   stderr_ptr = (FILE*) ( ((char*)__sf_ptr) + 176);
+	   /* 176 = 88*2, where 88=sizeof(FILE) under BSD */
+	} else {
+	   /* it failed */
+	   return;
+	}
+
+	fprintf_ptr(stderr_ptr, format,string);
+}
+
+int printOnOSX(char * string) {
+	return printOnOSXFormat(string,"\n+-+%s");
+}
+
+int printOnOSXNumber(int number) {
+	return printOnOSXFormat((char *) number,"\n+-+%d");
+}
+
+int printOnOSXPascal(unsigned char *string) {
+	CopyPascalStringToC((ConstStr255Param) string,(char*) string);
+	printOnOSX((char*) string);
+	CopyCStringToPascal((char*)string,(void *) string);
+}
+
+#endif
