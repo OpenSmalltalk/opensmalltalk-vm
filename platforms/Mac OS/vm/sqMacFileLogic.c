@@ -6,12 +6,13 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.4 2002/01/09 06:43:25 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.5 2002/01/22 19:10:22 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
 *	12/27/2001 JMM Because of how os-x handles metadata I had to change how navgetfile functions
 *	1/1/2002 JMM some cleanup to streamline path creation to minimize io & carbon cleanup
+*	1/18/2002 JMM recheck macroman, fix dir size problem on os-9, do squeak file offset type
 *
 *****************************************************************************/
 /* 
@@ -44,7 +45,7 @@ Also if you attempt to use Apple's StdClib it wants posix names, sigh...
 #include "sqVirtualMachine.h"
 #include "sqMacFileLogic.h"	
 
-static void resolveLongName(short vRefNum, long parID, unsigned char *shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakInt64 *sizeOfFile);
+static void resolveLongName(short vRefNum, long parID, unsigned char *shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakFileOffsetType *sizeOfFile);
 static int fetchFileSpec(FSSpec *spec,unsigned char *name,long *parentDirectory);
 static int quicklyMakePath(char *pathString, int pathStringLength, char *dst, Boolean resolveAlias);
 extern Boolean RunningOnCarbonX(void);
@@ -60,6 +61,8 @@ OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
     OSErr	err;
     
     filePath = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,pathStringLength,kCFStringEncodingMacRoman,false);
+    if (filePath == nil)
+        return -1000;
     sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
     if (!CFURLGetFSRef(sillyThing,&theFSRef)) {
         // name contains multiple aliases or does not exist, so fallback to lookupPath
@@ -132,6 +135,8 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
         
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,
                     (UInt8 *)pathString,pathStringLength,kCFStringEncodingMacRoman,false);
+        if (filePath == nil)
+            return -1;
 	sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
         
         if (!CFURLGetFSRef(sillyThing,&theFSRef)) {
@@ -196,6 +201,8 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
             if (err != noErr) 
                 return;
             filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)src,num,kCFStringEncodingMacRoman,false);
+            if (filePath == nil) 
+                return;
             sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
             CFRelease(filePath);
             lastPartOfPath = CFURLCopyLastPathComponent(sillyThing);
@@ -263,6 +270,8 @@ int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown) {
             if (err != noErr)
                 return err;
            aLevel = CFStringCreateWithCString(kCFAllocatorDefault,token,kCFStringEncodingMacRoman);
+           if (aLevel == nil) 
+                return -1000;
            tokenLength = CFStringGetLength(aLevel);
            CFStringGetCharacters(aLevel,CFRangeMake(0,tokenLength),buffer);
            err = FSMakeFSRefUnicode(&parentFSRef,tokenLength,buffer,kCFStringEncodingMacRoman,&childFSRef);
@@ -537,7 +546,7 @@ int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDr
 
 /*Get the file ID that unique IDs this file or directory, also resolve any alias if required */
 int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,long *parentDirectory,
- int *isFolder,int *createDateStorage,int *modificationDateStorage,squeakInt64 *sizeOfFile,Str255 *longFileName) {
+ int *isFolder,int *createDateStorage,int *modificationDateStorage,squeakFileOffsetType *sizeOfFile,Str255 *longFileName) {
     long        aliasGestaltInfo;
     CInfoPBRec pb;
     Boolean     result,isFolder2;
@@ -576,7 +585,12 @@ int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,
                 goto done;
 		    }
     	}
-        *sizeOfFile =  pb.hFileInfo.ioFlLgLen;
+    	
+    	if ((pb.hFileInfo.ioFlAttrib & kioFlAttribDirMask) != 0)
+    	    *sizeOfFile = 0;
+    	else
+            *sizeOfFile =  pb.hFileInfo.ioFlLgLen;
+            
         resolveLongName(pb.hFileInfo.ioVRefNum,pb.hFileInfo.ioFlParID,name,nil,((pb.hFileInfo.ioFlAttrib & kioFlAttribDirMask) > 0),longFileName,sizeOfFile);
         spec->parID = pb.hFileInfo.ioDirID;
         result = true;
@@ -637,11 +651,10 @@ static int fetchFileSpec(FSSpec *spec,unsigned char *name,long *parentDirectory)
         return result;
 }
 
-static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakInt64 *sizeOfFile) {
+static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakFileOffsetType *sizeOfFile) {
     
 #if TARGET_API_MAC_CARBON 
     if ((Ptr) PBGetCatalogInfoSync != (Ptr)kUnresolvedCFragSymbolAddress) {
-        FSSpec spec;
         FSRefParam FSRefData;
         FSRef      theFSRef;
         FSCatalogInfo theCatalogInfo;
