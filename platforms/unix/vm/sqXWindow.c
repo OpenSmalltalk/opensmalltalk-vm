@@ -548,8 +548,10 @@ int forgetXDisplay()
 
   displayName= 0;       /* name of display, or 0 for $DISPLAY   */
   stDisplay= null;      /* Squeak display                       */
-  if (isConnectedToXServer)
+  if (isConnectedToXServer) {
+    aioStopHandling(stXfd);
     close(stXfd);
+  }
   stXfd= 0;             /* X connection file descriptor         */
   stParent= null;
   stWindow= null;       /* Squeak window                        */
