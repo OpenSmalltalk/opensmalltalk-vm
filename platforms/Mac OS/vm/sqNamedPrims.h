@@ -40,8 +40,8 @@ sqExport *pluginExports[] = {
 	AsynchFilePlugin_exports,
 #ifndef BROWSERPLUGIN
 	B3DAcceleratorPlugin_exports,
-	Squeak3D_exports,
 #endif
+	Squeak3D_exports,
 	B2DPlugin_exports,
 	BitBltPlugin_exports,
 	DSAPrims_exports,
