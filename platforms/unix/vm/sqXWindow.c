@@ -240,6 +240,7 @@ int	windowState=	WIN_CHANGED;
 #else
 /* some vars need setting for headless */
 int		 noEvents= 1;		/* 1 to disable new event handling */
+/* XXX is there a reason to allow this? -lex */
 int              secure= 0;		/* true if running as a browser plugin */
 
 #endif  /* !HEADLESS */
@@ -3934,7 +3935,7 @@ void usage()
   printf("  -args_in_header      read NUL-separated arguments from image header\n");
 #endif
   printf("\nNotes:\n");
-  printf("  <imageName> defaults to `Squeak"SQ_VERSION".image'.\n");
+  printf("  <imageName> defaults to `squeak.image'.\n");
 #ifndef HEADLESS
   printf("  Using `unix:0' for <dpy> may improve local display performance.\n");
   printf("  -xshm only works when Squeak is running on the X server host.\n");
@@ -4030,7 +4031,7 @@ void ParseEnvironment(void)
 
   if ((ev= getenv("SQUEAK_IMAGE")))	strcpy(shortImageName, ev);
   else					strcpy(shortImageName,
-					       "Squeak"SQ_VERSION".image");
+					       "squeak.image");
   if ((ev= getenv("SQUEAK_MEMORY")))	initialHeapSize= strtobkm(ev);
 #ifndef HEADLESS
   if (getenv("SQUEAK_LAZY"))		sleepWhenUnmapped= 1;
@@ -4038,7 +4039,7 @@ void ParseEnvironment(void)
   if (getenv("SQUEAK_JIT"))		noJitter= 0;
   if (getenv("SQUEAK_SPY"))		withSpy= 1;
   if (getenv("SQUEAK_NOTITLE"))		noTitle= 1;
-  if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;
+  if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;  /* XXX should check whether the variable is 1 or 0 */
   if (getenv("SQUEAK_NOEVENTS"))	noEvents= 1;
   if (getenv("SQUEAK_SECURE"))		secure= 1;
 #if defined(USE_XSHM)
