@@ -1,14 +1,14 @@
 /* sqUnixSocket.c -- Unix socket support
  * 
- *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
- *     as listed elsewhere in this file.
+ *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
- *     You are NOT ALLOWED to distribute modified versions of this file
- *     under its original name.  If you want to modify it and then make
- *     your modifications available publicly, rename the file first.
- * 
  *   This file is part of Unix Squeak.
+ * 
+ *      You are NOT ALLOWED to distribute modified versions of this file
+ *      under its original name.  If you modify this file then you MUST
+ *      rename it before making your modifications available publicly.
  * 
  *   This file is distributed in the hope that it will be useful, but WITHOUT
  *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2004-04-02 14:21:17 by piumarta on emilia.local
+ * Last edited: 2004-05-26 23:03:37 by piumarta on LPA-wlan-3-6.external.hpl.hp.com
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -1247,12 +1247,16 @@ static socketOption socketOptions[]= {
 
 static socketOption *findOption(char *name, size_t nameSize)
 {
-  socketOption *opt= 0;
-  char buf[32];
-  strncpy(buf, name, nameSize);
-  for (opt= socketOptions; opt->name != 0; ++opt)
-    if (!strcmp(buf, opt->name))
-      return opt;
+  if (nameSize < 32)
+    {
+      socketOption *opt= 0;
+      char buf[32];
+      buf[nameSize]= '\0';
+      strncpy(buf, name, nameSize);
+      for (opt= socketOptions; opt->name != 0; ++opt)
+	if (!strcmp(buf, opt->name))
+	  return opt;
+    }
   return 0;
 }
 
