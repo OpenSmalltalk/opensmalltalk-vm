@@ -922,15 +922,23 @@ static void recordKeyboardEvent(XKeyEvent *xevt, int pressCode)
   KeySym symbolic;
 
   nConv= XLookupString(xevt, buf, sizeof(buf), &symbolic, 0);
-  charCode= buf[0];
-#if 0
-  if (charCode == 127)
-    charCode= 8;
-#endif
-  if (nConv == 0 && (charCode= translateCode(symbolic)) < 0)
-    return;	/* unknown key */
+
+  /* check for special keys */
+  charCode= translateCode(symbolic);
+  if(charCode < 0) {
+    /* not a special key */
+    if(nConv==0) {
+      /* unknown key */
+      return;
+    }
+    charCode= buf[0];
+  }
+
+  /* Squeak uses a different character encoding than the rest of the world */
   if (charCode >= 128)
     charCode= X_to_Squeak[charCode];
+
+  
   modifiers= modifierMap[(xevt->state) & 0xF];
   keystate= charCode | (modifiers << 8);
   if (keystate == interruptKeycode)
@@ -1627,7 +1635,9 @@ static int translateCode(KeySym symbolic)
     case XK_Next:	return 12;	/* page down */
     case XK_Home:	return  1;
     case XK_End:	return  4;
-
+    case XK_BackSpace:  return  8;
+    case XK_Delete:     return 127;
+ 
     /* "aliases" for Sun keyboards */
     case XK_R9:		return 11;	/* page up */
     case XK_R15:	return 12;	/* page down */
