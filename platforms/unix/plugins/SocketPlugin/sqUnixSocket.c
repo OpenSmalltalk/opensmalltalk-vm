@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2004-05-26 23:03:37 by piumarta on LPA-wlan-3-6.external.hpl.hp.com
+ * Last edited: 2004-07-06 09:37:16 by piumarta on dsl081-060-134.sfo1.dsl.speakeasy.net
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -686,8 +686,11 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
   if (UDPSocketType == s->socketType)
     {
       /* --- UDP --- */
-      memcpy((void *)&SOCKETPEER(s), (void *)&saddr, sizeof(SOCKETPEER(s)));
-      SOCKETSTATE(s)= Connected;
+      if (SOCKET(s) >= 0)
+	{
+	  memcpy((void *)&SOCKETPEER(s), (void *)&saddr, sizeof(SOCKETPEER(s)));
+	  SOCKETSTATE(s)= Connected;
+	}
     }
   else
     {
