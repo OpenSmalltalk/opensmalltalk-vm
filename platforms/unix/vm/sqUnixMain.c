@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-20 04:17:57 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-22 17:09:26 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -188,7 +188,7 @@ int ioMSecs(void)
       now.tv_sec-= 1;
     }
   now.tv_sec-= startUpTime.tv_sec;
-  return (now.tv_usec / 1000 + now.tv_sec * 1000);
+  return lowResMSecs= (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
 int ioMicroMSecs(void)
@@ -433,8 +433,23 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, d
   return dpy->ioFormPrint(bitsAddr, width, height, depth, hScale, vScale, landscapeFlag);
 }
 
+int ioRelinquishProcessorForMicroseconds(int us)
+{
+  int nwt= getNextWakeupTick();
+  int now= (ioMSecs() & 0x1fffffff);
+  int ms=  0;
+  if (nwt <= now)
+    ms= (nwt ? 0 : (1000/60));
+  else
+    ms= nwt - now;
+  if (ms < (1000/60))	/* min wait 1 timeslice */
+    ms= 0;
+  dpy->ioRelinquishProcessorForMicroseconds(ms*1000);
+  setInterruptCheckCounter(0);
+  return 0;
+}
+
 int ioBeep(void)				 { return dpy->ioBeep(); }
-int ioRelinquishProcessorForMicroseconds(int us) { return dpy->ioRelinquishProcessorForMicroseconds(us); }
 int ioProcessEvents(void)			 { return dpy->ioProcessEvents(); }
 int ioScreenDepth(void)				 { return dpy->ioScreenDepth(); }
 int ioScreenSize(void)				 { return dpy->ioScreenSize(); }
