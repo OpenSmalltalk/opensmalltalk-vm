@@ -7,3 +7,11 @@
    XFN(setSoundPollingFunction)
 */
 
+XFN(primitivePluginBrowserReady)
+XFN(primitivePluginRequestURLStream)
+XFN(primitivePluginRequestURL)
+XFN(primitivePluginPostURL)
+XFN(primitivePluginRequestFileHandle)
+XFN(primitivePluginDestroyRequest)
+XFN(primitivePluginRequestState)
+

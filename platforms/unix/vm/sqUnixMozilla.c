@@ -2,14 +2,12 @@
  *
  * Author: Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  * 
- * Based on Andreas Raab's sqWin32PluginSupport
- * 
- * Notes: The plugin display stuff is in sqXWindow.c.
- *        There, pluginInit(), pluginExit() and pluginHandleEvent()
- *        must be called.
+ * Last edited: Mon 04 Mar 2002 18:08:40 by bert on balloon
  *
- * File renamed (because `Plugin' is a `magic word' to configure and
- * the build Makefile) by Ian.Piumarta@INRIA.Fr
+ * Originally based on Andreas Raab's sqWin32PluginSupport
+ * 
+ * Notes: The plugin window handling stuff is in sqXWindow.c.
+ *        browserProcessCommand() is called when data is available
  */
 
 #include "sq.h"
@@ -19,19 +17,50 @@
 #include <X11/Xlib.h>
 #include <X11/Xatom.h>
 #include <unistd.h>
+#include <stdarg.h>
+#include <fcntl.h>
+#include <errno.h>
 
-#undef DEBUG
+#define DEBUG
 
 #ifdef DEBUG
-#  define FPRINTF(X) fprintf X
+void DPRINT(char *format, ...)
+{
+  static int debug= 42;
+  if (42 == debug) 
+    debug= (NULL != getenv("NPSQUEAK_DEBUG"));
+
+  if (!debug) 
+    {
+      return;
+    }
+  else
+    {
+      static FILE *file= 0;
+      if (!file) 
+	{
+	  file= fopen("/tmp/npsqueak.log", "a+");
+	}
+
+      {
+	va_list ap;
+	va_start(ap, format);
+	vfprintf(file, format, ap);
+	va_end(ap);
+	fflush(file);
+      }
+    }
+}
 #else
-#  define FPRINTF(X)
+static int DPRINT(char *, ...) { }
 #endif
 
 /* from sqXWindow.c */
 extern Display* stDisplay;
 extern Window   stWindow;
 extern Window   browserWindow;
+extern Window   stParent;
+extern int      browserPipes[2];
 
 /* from interpret.c */
 int stackObjectValue(int);
@@ -48,12 +77,17 @@ int classByteArray();
 int failed();
 int pushBool(int);
 
-/* protos */
-void pluginGetURLRequest(int id, char* url, int urlSize,
-       char* target, int targetSize);
-void pluginPostURLRequest(int id, char* url, int urlSize, 
-        char* target, int targetSize, 
-        char* postData, int postDataSize);
+/* prototypes */
+
+static void browserReceive(void *buf, size_t count);
+static void browserSend(const void *buf, size_t count);
+static void browserSendInt(int value);
+static void browserReceiveData();
+static void browserGetURLRequest(int id, char* url, int urlSize,
+				char* target, int targetSize);
+static void browserPostURLRequest(int id, char* url, int urlSize, 
+				 char* target, int targetSize, 
+				 char* postData, int postDataSize);
 
 typedef struct sqStreamRequest {
   char *localName;
@@ -66,15 +100,18 @@ typedef struct sqStreamRequest {
 #define SQUEAK_READ 0
 #define SQUEAK_WRITE 1
 
+#define CMD_BROWSER_WINDOW 1
+#define CMD_GET_URL        2
+#define CMD_POST_URL       3
+#define CMD_RECEIVE_DATA   4
+
 static sqStreamRequest *requests[MAX_REQUESTS];
 
-static int pipes[2] = {0, 0};             /* read/write descriptors */
 
-static Atom XA_SET_PIPES;                 /* ClientMessage types */
-static Atom XA_BROWSER_WINDOW;
-static Atom XA_GET_URL;
-static Atom XA_POST_URL;
-static Atom XA_RECEIVE_DATA;
+
+/* primitives called from Squeak */
+
+
 
 /*
   primitivePluginBrowserReady
@@ -85,7 +122,7 @@ static Atom XA_RECEIVE_DATA;
 int primitivePluginBrowserReady()
 {
   pop(1);
-  pushBool(pipes[SQUEAK_WRITE] != 0);
+  pushBool(browserPipes[SQUEAK_WRITE] != 0);
   return 1;
 }
 
@@ -103,35 +140,36 @@ int primitivePluginRequestURLStream()
   sqStreamRequest *req;
   int id, url, length, semaIndex;
 
-  if (!pipes[SQUEAK_WRITE]) return primitiveFail();
+  if (!browserPipes[SQUEAK_WRITE]) return primitiveFail();
 
-  FPRINTF((stderr, "primitivePluginRequestURLStream()\n"));
+  DPRINT("VM: primitivePluginRequestURLStream()\n");
 
   for (id=0; id<MAX_REQUESTS; id++) {
     if (!requests[id]) break;
   }
   if (id >= MAX_REQUESTS) return primitiveFail();
 
-  semaIndex = stackIntegerValue(0);
-  url = stackObjectValue(1);
+  semaIndex= stackIntegerValue(0);
+  url= stackObjectValue(1);
   if (failed()) return 0;
 
   if (!isBytes(url)) return primitiveFail();
 
-  req = calloc(1, sizeof(sqStreamRequest));
+  req= calloc(1, sizeof(sqStreamRequest));
   if (!req) return primitiveFail();
-  req->localName = NULL;
-  req->semaIndex = semaIndex;
-  req->state = -1;
-  requests[id] = req;
+  req->localName= NULL;
+  req->semaIndex= semaIndex;
+  req->state= -1;
+  requests[id]= req;
 
-  length = byteSizeOf(url);
-  pluginGetURLRequest(id, firstIndexableField(url), length, NULL, 0);
+  length= byteSizeOf(url);
+  browserGetURLRequest(id, firstIndexableField(url), length, NULL, 0);
   pop(3);
   push(positive32BitIntegerFor(id));
-  FPRINTF((stderr, "  request id: %i\n", id));
+  DPRINT("VM:   request id: %i\n", id);
   return 1;
 }
+
 
 /*
   primitivePluginRequestURL: url target: target semaIndex: semaIndex
@@ -151,27 +189,37 @@ int primitivePluginRequestURL()
 
   if (id >= MAX_REQUESTS) return primitiveFail();
 
-  semaIndex = stackIntegerValue(0);
-  target = stackObjectValue(1);
-  url = stackObjectValue(2);
+  semaIndex= stackIntegerValue(0);
+  target= stackObjectValue(1);
+  url= stackObjectValue(2);
 
   if (failed()) return 0;
   if (!isBytes(url) || !isBytes(target)) return primitiveFail();
 
-  urlLength = byteSizeOf(url);
-  targetLength = byteSizeOf(target);
+  urlLength= byteSizeOf(url);
+  targetLength= byteSizeOf(target);
 
-  req = calloc(1, sizeof(sqStreamRequest));
+  req= calloc(1, sizeof(sqStreamRequest));
   if(!req) return primitiveFail();
-  req->localName = NULL;
-  req->semaIndex = semaIndex;
-  req->state = -1;
-  requests[id] = req;
+  req->localName= NULL;
+  req->semaIndex= semaIndex;
+  req->state= -1;
+  requests[id]= req;
 
-  pluginGetURLRequest(id, firstIndexableField(url), urlLength, firstIndexableField(target), targetLength);
+  browserGetURLRequest(id, firstIndexableField(url), urlLength, firstIndexableField(target), targetLength);
   pop(4);
   push(positive32BitIntegerFor(id));
   return 1;
+}
+
+
+/*
+  primitivePluginPostURL
+*/
+int primitivePluginPostURL()
+{
+  fprintf(stderr, "primitivePluginPostURL() not yet implemented\n");
+  return primitiveFail(); 
 }
 
 /* 
@@ -181,36 +229,64 @@ int primitivePluginRequestURL()
   data. Note: The file handle must be read-only for
   security reasons.
 */
-
 int primitivePluginRequestFileHandle()
 {
   sqStreamRequest *req;
   int id, fileHandle;
-#if 1 /* TPR- problems with accessing  fileRecordSixe, fileValueOf and sqFileOpen */
-  id = stackIntegerValue(0);
+
+  id= stackIntegerValue(0);
   if (failed()) return 0;
   if (id < 0 || id >= MAX_REQUESTS) return primitiveFail();
-  req = requests[id];
+  req= requests[id];
   if (!req || !req->localName) return primitiveFail();
-  fileHandle = nilObject();
+  fileHandle= nilObject();
   if (req->localName) {
-    int fRS, fVO, sFO;
-    FPRINTF((stderr, "Creating file handle for %s\n", req->localName));
-    fRS = ioLoadFunctionFrom("fileRecordSize", "FilePlugin");
-    fVO = ioLoadFunctionFrom("fileValueOf", "FilePlugin");
-    sFO = ioLoadFunctionFrom("sqFileOpen", "FilePlugin");
-    if ( !fRS || !fVO || !sFO) return primitiveFail(); /* TPR - is this the right way to fail here? */
-    fileHandle = instantiateClassindexableSize(classByteArray(), ((int(*)(void))fRS)());
-    ((int(*)(int, int, int, int))sFO)( ((int(*)(int))fVO)(fileHandle),(int)req->localName, strlen(req->localName), 0);
+    DPRINT("VM: Creating file handle for %s\n", req->localName);
+    {
+
+#if defined(FILEPLUGIN_EXTERNAL) /* otherwise loading won't work */
+
+      int fRS, fVO, sFO;
+
+      fRS= ioLoadFunctionFrom("fileRecordSize", "FilePlugin");
+      fVO= ioLoadFunctionFrom("fileValueOf", "FilePlugin");
+      sFO= ioLoadFunctionFrom("sqFileOpen", "FilePlugin");
+
+      if ( !fRS || !fVO || !sFO) {
+	fprintf(stderr, "Squeak Plugin: Couldn't load functions from FilePlugin!\n");
+	return primitiveFail();
+      }
+
+# define fileRecordSize ((int(*)(void))fRS)
+# define fileValueOf ((int(*)(int))fVO)
+# define sqFileOpen ((int(*)(int, int, int, int))sFO)
+
+#else /*! defined(FILEPLUGIN_EXTERNAL) */
+
+      int fileRecordSize(void);
+      int fileValueOf(int);
+      int sqFileOpen(int, int, int, int);
+
+#endif
+
+      fileHandle= instantiateClassindexableSize(classByteArray(), fileRecordSize());
+      sqFileOpen( fileValueOf(fileHandle),(int)req->localName, strlen(req->localName), 0);
+
+      if (failed())
+	DPRINT("VM:   file open failed\n");
+
+#undef fileRecordSize
+#undef fileValueOf
+#undef sqFileOpen
+
+    }
     if (failed()) return 0;
   }
   pop(2);
   push(fileHandle);
   return 1;
-#else
-	return primitiveFail();
-#endif  
 }
+
 
 /*
   primitivePluginDestroyRequest: id
@@ -221,17 +297,18 @@ int primitivePluginDestroyRequest()
   sqStreamRequest *req;
   int id;
 
-  id = stackIntegerValue(0);
+  id= stackIntegerValue(0);
   if (id < 0 || id >= MAX_REQUESTS) return primitiveFail();
-  req = requests[id];
+  req= requests[id];
   if (req) {
     if (req->localName) free(req->localName);
     free(req);
   }
-  requests[id] = NULL;
+  requests[id]= NULL;
   pop(1);
   return 1;
 }
+
 
 /*
   primitivePluginRequestState: id
@@ -239,15 +316,14 @@ int primitivePluginDestroyRequest()
   Return false if the operation was aborted.
   Return nil if the operation is still in progress.
 */
-
 int primitivePluginRequestState()
 {
   sqStreamRequest *req;
   int id;
 
-  id = stackIntegerValue(0);
+  id= stackIntegerValue(0);
   if (id < 0 || id >= MAX_REQUESTS) return primitiveFail();
-  req = requests[id];
+  req= requests[id];
   if (!req) return primitiveFail();
   pop(2);
   if (req->state == -1) push(nilObject());
@@ -256,58 +332,67 @@ int primitivePluginRequestState()
 }
 
 
-/*
-  pluginSendEvent:
-  Send a notification message to the plugin
- */
-void pluginSendEvent(Atom message_type, long data0)
-{
-  XClientMessageEvent event;
- 
-  event.type = ClientMessage;
-  event.display = stDisplay;
-  event.window = browserWindow;
-  event.message_type = message_type;
-  event.format = 32;
-  event.data.l[0] = data0;
 
-  XSendEvent(stDisplay, browserWindow, True, 
-	     0, (XEvent*) &event);
+/* helper functions */
+
+static void browserReceive(void *buf, size_t count)
+{
+  ssize_t n;
+  n= read(browserPipes[SQUEAK_READ], buf, count);
+  if (n == -1)
+    perror("Squeak read failed:");
+  if (n < count)
+    fprintf(stderr, "Squeak read too few data from pipe\n");
+}
+
+
+static void browserSend(const void *buf, size_t count)
+{
+  ssize_t n;
+  n= write(browserPipes[SQUEAK_WRITE], buf, count);
+  if (n == -1)
+    perror("Squeak plugin write failed:");
+  if (n < count)
+    fprintf(stderr, "Squeak wrote too few data to pipe\n");
+}
+
+static void browserSendInt(int value)
+{
+  browserSend(&value, 4);
 }
 
 
 /*
-  pluginReceiveData:
-  Called in response to a XA_RECEIVE_DATA message.
+  browserReceiveData:
+  Called in response to a CMD_RECEIVE_DATA message.
   Retrieves the data file name and signals the semaphore.
-  Parameters:
-    event->data.l[0] - request id
-    event->data.l[1] - request successful
 */
-void pluginReceiveData(XClientMessageEvent *event)
+static void browserReceiveData()
 {
-  char *localName = NULL;
-  int id = event->data.l[0];
-  int ok = event->data.l[1];
+  char *localName= NULL;
+  int id, ok;
 
-  FPRINTF((stderr, " receiving data id: %i state %i\n", id, ok));
+  browserReceive(&id, 4);
+  browserReceive(&ok, 4);
+
+  DPRINT("VM:  receiving data id: %i state %i\n", id, ok);
 
   if (ok == 1) {
-    int n, length = 0;
-    n = read(pipes[SQUEAK_READ], &length, 4);
-    if (n==4 && length) {
-      localName = malloc(length+1);
-      read(pipes[SQUEAK_READ], localName, length);
-      localName[length] = 0;
-      FPRINTF((stderr, "  got filename %s\n", localName));
+    int n, length= 0;
+    browserReceive(&length, 4);
+    if (length) {
+      localName= malloc(length+1);
+      browserReceive(localName, length);
+      localName[length]= 0;
+      DPRINT("VM:   got filename %s\n", localName);
     }
   }
   if (id >= 0 && id < MAX_REQUESTS) {
-    sqStreamRequest *req = requests[id];
+    sqStreamRequest *req= requests[id];
     if (req) {
-      req->localName = localName;
-      req->state = ok;
-      FPRINTF((stderr, " signaling semaphore, state=%i\n", ok));
+      req->localName= localName;
+      req->state= ok;
+      DPRINT("VM:  signaling semaphore, state=%i\n", ok);
       /*  synchronizedSignalSemaphoreWithIndex(req->semaIndex);*/
       signalSemaphoreWithIndex(req->semaIndex);
     }
@@ -315,77 +400,60 @@ void pluginReceiveData(XClientMessageEvent *event)
 }
 
 
-
 /*
-  pluginGetURLRequest:
+  browserGetURLRequest:
   Notify plugin to get the specified url into target
 */
-void pluginGetURLRequest(int id, char* url, int urlSize, char* target, int targetSize)
+static void browserGetURLRequest(int id, char* url, int urlSize, 
+				char* target, int targetSize)
 {
-
-  int written;
-
-  if (!pipes[SQUEAK_WRITE]) {
-    fprintf(stderr, "Cannot submit URL request -- there is no connection to a browser\n");
+  if (!browserPipes[SQUEAK_WRITE]) {
+    fprintf(stderr, "Cannot submit URL request -- "
+	    "there is no connection to a browser\n");
     return;
   }
 
-  /* This makes the plugin aware of the request */
-  pluginSendEvent(XA_GET_URL, id);
+  browserSendInt(CMD_GET_URL);
+  browserSendInt(id);
 
-  written = write(pipes[SQUEAK_WRITE], &urlSize, 4);
-  if (written != 4) perror("Failed to write url size");
-  if (urlSize > 0) {
-    written = write(pipes[SQUEAK_WRITE], url, urlSize);
-    if (written != urlSize) perror("Failed to write url request");
-  }
-  written = write(pipes[SQUEAK_WRITE], &targetSize, 4);
-  if (written != 4) perror("Failed to write target size");
-  if (targetSize > 0) {
-    written = write(pipes[SQUEAK_WRITE], target, targetSize);
-    if (written != targetSize) perror("Failed to write url request");
-  }
+  browserSendInt(urlSize);
+  if (urlSize > 0)
+    browserSend(url, urlSize);
+
+  browserSendInt(targetSize);
+  if (targetSize > 0)
+    browserSend(target, targetSize);
 }
 
 
 /*
-  pluginPostURLRequest:
+  browserPostURLRequest:
   Notify plugin to post data to the specified url and get result into target
 */
-void pluginPostURLRequest(int id, char* url, int urlSize, 
-                  char* target, int targetSize, 
-                  char* postData, int postDataSize)
+static void browserPostURLRequest(int id, char* url, int urlSize, 
+				 char* target, int targetSize, 
+				 char* postData, int postDataSize)
 {
-  int written;
-  
-  if (!pipes[SQUEAK_WRITE]) {
-    fprintf(stderr, "Cannot submit URL post request -- there is no connection to a browser\n");
+  if (!browserPipes[SQUEAK_WRITE]) {
+    fprintf(stderr, "Cannot submit URL post request -- "
+	    "there is no connection to a browser\n");
     return;
   }
 
-  /* This makes the plugin aware of the request */
-  pluginSendEvent(XA_POST_URL, id);
+  browserSendInt(CMD_POST_URL);
+  browserSendInt(id);
 
-  written = write(pipes[SQUEAK_WRITE], &urlSize, 4);
-  if (written != 4) perror("Failed to write url size");
-  if (urlSize > 0) {
-    written = write(pipes[SQUEAK_WRITE], url, urlSize);
-    if (written != urlSize) perror("Failed to write url request");
-  }
+  browserSendInt(urlSize);
+  if (urlSize > 0)
+    browserSend(url, urlSize);
 
-  written = write(pipes[SQUEAK_WRITE], &targetSize, 4);
-  if (written != 4) perror("Failed to write url size");
-  if (targetSize > 0) {
-    written = write(pipes[SQUEAK_WRITE], target, targetSize);
-    if (written != targetSize) perror("Failed to write target request");
-  }
+  browserSendInt(targetSize);
+  if (targetSize > 0)
+    browserSend(target, targetSize);
 
-  written = write(pipes[SQUEAK_WRITE], &postDataSize, 4);
-  if (written != 4) perror("Failed to write post data size");
-  if (postDataSize > 0) {
-    written = write(pipes[SQUEAK_WRITE], postData, postDataSize);
-    if (written != postDataSize) perror("Failed to write data request");
-  }
+  browserSendInt(postDataSize);
+  if (postDataSize > 0)
+    browserSend(postData, postDataSize);
 }
 
 
@@ -394,52 +462,41 @@ void pluginPostURLRequest(int id, char* url, int urlSize,
  ***************************************************************/
 
 /*
-  pluginInit:
-  Register the communication events for the plugin.
-  Note: Must be called after stDisplay has been opened, but
-  before the Squeak window is created.
+  browserProcessCommand:
+  Handle commands sent by the plugin.
 */
-void pluginInit()
+void browserProcessCommand()
 {
-  XA_SET_PIPES = XInternAtom(stDisplay, "SQUEAK_SET_PIPES", False);
-  XA_BROWSER_WINDOW = XInternAtom(stDisplay, "SQUEAK_BROWSER_WINDOW", False);
-  XA_GET_URL = XInternAtom(stDisplay, "SQUEAK_GET_URL", False);
-  XA_POST_URL = XInternAtom(stDisplay, "SQUEAK_POST_URL", False);
-  XA_RECEIVE_DATA = XInternAtom(stDisplay, "SQUEAK_RECEIVE_DATA", False);
-}
+  static int firstTime= 1;
+  int cmd, n;
 
+  if (firstTime)
+    {
+      firstTime= 0;
+      /* enable non-blocking reads */
+      fcntl(browserPipes[SQUEAK_READ], F_SETFL, O_NONBLOCK);
+    }
+  DPRINT("VM: browserProcessCommand()\n");
 
-/*
-  pluginExit:
-  Clean up when Squeak is about to quit.
-*/
-void pluginExit()
-{
-}
+  n= read(browserPipes[SQUEAK_READ], &cmd, 4);
+  if (0 == n || (-1 == n && EAGAIN == errno))
+    return;
 
-
-/*
-  pluginHandleEvent:
-  Handle events sent by the plugin
-*/
-void pluginHandleEvent(XClientMessageEvent *event)
-{
-  if (event->type != ClientMessage || event->window != stWindow) return;
-  if (event->message_type == XA_RECEIVE_DATA) {
-    /* Data is coming in */
-    pluginReceiveData(event);
-  } else if (event->message_type == XA_BROWSER_WINDOW) {
-    /* Parent window has changed () */
-    browserWindow = (Window) event->data.l[0];
-    FPRINTF((stderr, " got browser window\n"));
-  } else if (event->message_type == XA_SET_PIPES) {
-    /* Pipes for communication with plugin */
-    pipes[SQUEAK_READ] = event->data.l[0];
-    pipes[SQUEAK_WRITE] = event->data.l[1];
-    FPRINTF((stderr, " got pipes\n"));
-  }
+  switch (cmd)
+    {
+    case CMD_RECEIVE_DATA:
+      /* Data is coming in */
+      browserReceiveData();
+      break;
+    case CMD_BROWSER_WINDOW:
+      /* Parent window has changed () */
+      browserReceive(&browserWindow, 4);
+      stParent= browserWindow;
+      DPRINT("VM:  got browser window 0x%X\n", browserWindow);
+      break;
+    default:
+      fprintf(stderr, "Unknown command from Plugin: %i\n", cmd);
+    }
 }
 
 #endif /* HEADLESS */
-
-

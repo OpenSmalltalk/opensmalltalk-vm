@@ -224,7 +224,11 @@ int		 stRNMask, stGNMask, stBNMask;
 int		 stRShift, stGShift, stBShift;
 char		*stDisplayBitmap= 0;
 Window           browserWindow= 0;      /* parent window */
+int              browserPipes[]= {0, 0};/* read/write fd for communication with browser */ 
 int		 headless= 0;
+
+#define          inBrowser\
+  (0 != browserPipes[0])
 
 /* window states */
 #define	WIN_NORMAL	0
@@ -276,7 +280,7 @@ static Time lastKeystrokeTime;  /* XXX is initializing this to 0 okay?? */
  */
 #define	EVENTMASK	ButtonPressMask | ButtonReleaseMask | \
 			KeyPressMask | KeyReleaseMask | PointerMotionMask | \
-			ExposureMask
+			ExposureMask | StructureNotifyMask
 
 #define	WM_EVENTMASK	StructureNotifyMask
 
@@ -324,6 +328,7 @@ char modifierMap[16]= {
 
 #ifndef HEADLESS
 static void xDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag);
+static void npDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag);
 #endif
 static int  HandleEvents(void);
 void RecordFullPathForVmName(char *localVmName);
@@ -403,9 +408,7 @@ void recordModifierButtons(XButtonEvent *theEvent);
 int XShmGetEventBase(Display *);
 # endif
 int ioMSecs(void);
-void pluginInit();                      /* see sqUnixPluginSupport.c */
-void pluginExit();
-void pluginHandleEvent(XEvent *);
+void browserProcessCommand(void);       /* see sqUnixMozilla.c */
 #endif /*!HEADLESS*/
 
 int strtobkm(const char *str);
@@ -524,9 +527,19 @@ int openXDisplay()
     SetUpClipboard();
     SetUpWindow(displayName);
     SetUpPixmap();
-    SetWindowSize();
-    XMapWindow(stDisplay, stParent);
-    XMapWindow(stDisplay, stWindow);
+    if (!inBrowser)
+      {
+	SetWindowSize();
+	XMapWindow(stDisplay, stParent);
+	XMapWindow(stDisplay, stWindow);
+      }
+    else /* if in browser we will be reparented and mapped by plugin */
+      {
+	/* tell browser our window */
+	write(browserPipes[1], &stWindow, 4);
+	/* listen for commands */
+	aioHandle(browserPipes[0], npDescriptorHandler, NULL, AIO_RD);
+      }
     aioHandle(stXfd, xDescriptorHandler, NULL, AIO_RD | AIO_EX);
     isConnectedToXServer= 1;
   }
@@ -777,44 +790,6 @@ static void getMousePosition(void)
       /* could update modifiers from mask too, but I can't be bothered... */
     }
 }
-
-
-#if 0
-
-/* Returns absolute window position.
- * 
- * If the Squeak window is `decorated' (border, title bar, etc.) by
- * the window manager then it will be a subwindow of a larger window
- * (the `WM window') holding the decorations.  When saving geometry
- * before going fullscreen we need the width and height of the Squeak
- * window, but the absolute position of the WM window.  Otherwise the
- * Squeak window will `creep' down and to the right on the display,
- * horizontally by the width of the decoration border and vertically
- * by the decoration border width + title bar height, each time we
- * toggle fullscreen off.
- */
-static void getAbsoluteGeometry(Display *dpy, Window win,
-				int *winX, int* winY, int* winW, int* winH)
-{
-  Window root, wmWin;
-  int x, y, w, h;
-  unsigned int b, d;
-
-  XGetGeometry(dpy, win, &root, &x, &y, winW, winH, &b, &d);
-  do
-    {
-      Window parent, *children;
-      unsigned int nchildren;
-      XQueryTree(dpy, win, &root, &parent, &children, &nchildren);
-      if (children != 0) XFree(children);
-      wmWin=win;
-      win= parent;
-    }
-  while (win != root);
-  XGetGeometry(dpy, wmWin, &root, winX, winY, &w, &h, &b, &d);
-}
-
-#endif
 
 #endif /*!HEADLESS*/
 
@@ -1083,11 +1058,6 @@ int HandleEvents(void)
 	noteWindowChange();
 	break;
 
-      case ClientMessage:
-	if (browserWindow != 0)
-	  pluginHandleEvent(&theEvent);
-	break;
-
       case ConfigureNotify:
 	{
 	  XConfigureEvent *ec= (XConfigureEvent *)&theEvent;
@@ -1130,7 +1100,10 @@ static void xDescriptorHandler(void *data, int readFlag, int writeFlag, int exce
   HandleEvents();
 }
 
-
+static void npDescriptorHandler(void *data, int readFlag, int writeFlag, int exceptionFlag)
+{
+  browserProcessCommand();
+}
 
 
 void getMaskbit(unsigned long ul, int *nmask, int *shift)
@@ -1387,10 +1360,6 @@ void SetUpWindow(char *displayName)
       fprintf(stderr, "Could not open display `%s'.\n", displayName);
       exit(1);
     }
-
-  /* Plugin must be initialized after Display has been opened, but
-  before the Squeak window is created. */
-  if (browserWindow) pluginInit();
 
   /* get screen size */
   scrH= (DisplayHeight(stDisplay, DefaultScreen(stDisplay)));
@@ -2036,13 +2005,12 @@ int ioScreenSize(void)
     Window root;
     int x, y;
     unsigned int b, d;
-    XGetGeometry(stDisplay, stParent, &root, &x, &y, &w, &h, &b, &d);
+    XGetGeometry(stDisplay, stWindow, &root, &x, &y, &w, &h, &b, &d);
   }
   /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
   if ((w % sizeof(void *)) != 0)
     {
       w= (w / sizeof(void *)) * sizeof(void *);
-      XResizeWindow(stDisplay, stParent, w, h);
       XResizeWindow(stDisplay, stWindow, w, h);
       noteWindowChange();
     }
@@ -2214,7 +2182,6 @@ int ioSetFullScreen(int fullScreen)
 	  overrideRedirect(stDisplay, stWindow, True);
 	  XReparentWindow(stDisplay, stWindow, root, 0, 0);
 	  XResizeWindow(stDisplay, stWindow, scrW, scrH);
-	  XLowerWindow(stDisplay, stParent);
 	  XRaiseWindow(stDisplay, stWindow);
 	  XSetInputFocus(stDisplay, stWindow, RevertToPointerRoot, CurrentTime);
 	  XSynchronize(stDisplay, False);
@@ -2237,7 +2204,6 @@ int ioSetFullScreen(int fullScreen)
 	  winY= savedWindowOrigin & 0xFFFF;
 	  savedWindowOrigin= -1; /* prevents consecutive full-screen disables */
 	  XSynchronize(stDisplay, True);
-	  XRaiseWindow(stDisplay, stParent);
 	  XReparentWindow(stDisplay, stWindow, stParent, 0, 0);
 	  overrideRedirect(stDisplay, stWindow, False);
 	  XResizeWindow(stDisplay, stWindow, winW, winH);
@@ -3911,7 +3877,8 @@ void usage()
   printf("<option> can be:\n");
   printf("  -align <n>           align functions at n-bytes (jit)\n");
 #ifndef HEADLESS
-  printf("  -browserWindow <id>  run as Netscape plugin in window <id>\n");
+  printf("  -browserWindow <id>  run in window <id>\n"); 
+  printf("  -browserPipes <fds>  run as Browser plugin using command pipes <fds>\n");
   printf("  -display <dpy>       display on <dpy> (default: $DISPLAY)\n");
   printf("  -fullscreen          occupy the entire screen\n");
   printf("  -headless            run in headless (no window) mode\n");
@@ -4131,6 +4098,14 @@ void ParseArguments(int argc, char *argv[], int parsing_header_args)
 		  fprintf(stderr, "Error: invalid -browserWindow argument!\n");
 		  exit(1);
 		}
+	    }
+	  else if (!strcmp(arg, "-browserPipes"))
+	    { 
+	      if (argc < 2) usage();
+	      sscanf(saveArg(), "%li", &browserPipes[0]);
+	      sscanf(saveArg(), "%li", &browserPipes[1]);
+	      /* receive browserWindow */
+	      read(browserPipes[0], &browserWindow, 4);
 	    }
 #        endif
 	  else
@@ -4528,7 +4503,6 @@ int main(int argc, char **argv, char **envp)
 int ioExit(void)
 {
 #ifndef HEADLESS
-  if (browserWindow) pluginExit();
   disconnectXDisplay();
 #endif
 
