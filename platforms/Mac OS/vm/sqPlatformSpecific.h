@@ -12,6 +12,17 @@
 
 #ifdef macintoshSqueak
 
+/* replace the image file manipulation macros with functions */
+#undef sqImageFile
+#undef sqImageFileClose
+#undef sqImageFileOpen
+#undef sqImageFilePosition
+#undef sqImageFileRead
+#undef sqImageFileSeek
+#undef sqImageFileWrite
+#undef sqImageFileStartLocation
+#undef sqAllocateMemory
+
 // CARBON
 #if defined (__APPLE__) && defined(__MACH__)
 
@@ -22,6 +33,7 @@
       #define TARGET_API_MAC_CARBON 1
     #endif 
     #undef ioLowResMSecs
+    typedef FILE *sqImageFile;
 #else
     #define sqFilenameFromStringOpen(dst, src, num) sqFilenameFromString(dst, src, num)
     #if defined(__MWERKS__) & !TARGET_API_MAC_CARBON
@@ -42,6 +54,8 @@
  	#else
  	   #define fileno(n) n->handle
 	#endif
+    typedef int sqImageFile;
+
 #endif
   
 #if TARGET_API_MAC_CARBON
@@ -52,18 +66,6 @@
     #define sqFilenameFromString(dst, src, num) makeOSXPath(dst,src,num,false)
 #endif
 
-/* replace the image file manipulation macros with functions */
-#undef sqImageFile
-#undef sqImageFileClose
-#undef sqImageFileOpen
-#undef sqImageFilePosition
-#undef sqImageFileRead
-#undef sqImageFileSeek
-#undef sqImageFileWrite
-#undef sqImageFileStartLocation
-#undef sqAllocateMemory
-
-typedef int sqImageFile;
 void        sqImageFileClose(sqImageFile f);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
 off_t       sqImageFilePosition(sqImageFile f);
@@ -72,6 +74,7 @@ void        sqImageFileSeek(sqImageFile f, off_t pos);
 int         sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 off_t       sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize);
 void *	    sqAllocateMemory(int minHeapSize, int desiredHeapSize);
+
 
 /* override reserveExtraCHeapBytes() macro to reduce Squeak object heap size on Mac */
 #undef reserveExtraCHeapBytes
