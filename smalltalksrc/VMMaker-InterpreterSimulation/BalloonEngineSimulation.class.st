@@ -5,7 +5,8 @@ Class {
 	#name : #BalloonEngineSimulation,
 	#superclass : #BalloonEnginePlugin,
 	#instVars : [
-		'bbObj'
+		'bbObj',
+		'workBufferArray'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -37,7 +38,23 @@ BalloonEngineSimulation >> colorTransform [
 
 { #category : #simulation }
 BalloonEngineSimulation >> copyBitsFrom: x0 to: x1 at: y [
+	"Simulate the copyBits primitive"
+
+	| bb |
+	bbObj isInteger ifTrue:
+		["Create a proxy object to handle BitBlt calls"
+		bb _ BitBltSimulator new.
+		bb initialiseModule.
+		bb setInterpreter: interpreterProxy.
+		(bb loadBitBltFrom: bbObj)
+			ifTrue: [bbObj _ bb]
+			ifFalse: [^ self]].
 	bbObj copyBitsFrom: x0 to: x1 at: y.
+"
+	interpreterProxy showDisplayBits: bbObj destForm
+		Left: bb affectedLeft Top: bb affectedTop
+		Right: bb affectedRight Bottom: bb affectedBottom.
+"
 ]
 
 { #category : #'debug support' }
@@ -169,6 +186,12 @@ BalloonEngineSimulation >> edgeTransform [
 ]
 
 { #category : #initialize }
+BalloonEngineSimulation >> initialiseModule [
+	super initialiseModule.
+	^ true
+]
+
+{ #category : #initialize }
 BalloonEngineSimulation >> initialize [
 	doProfileStats _ false.
 	bbPluginName _ 'BitBltPlugin'
@@ -195,10 +218,29 @@ BalloonEngineSimulation >> loadPointIntAt: index from: intArray [
 
 { #category : #simulation }
 BalloonEngineSimulation >> loadPointShortAt: index from: intArray [
-	"Load the int value from the given index in intArray"
-	^(index bitAnd: 1) = 0
-		ifTrue:[(intArray getObject at: (index // 2) + 1) x]
-		ifFalse:[(intArray getObject at: (index // 2) + 1) y]
+	"Load the short value from the given index in intArray"
+
+	| long |
+	long _ intArray at: index // 2.
+	^ ((index bitAnd: 1) = 0
+		ifTrue:[interpreterProxy halfWordHighInLong32: long]
+		ifFalse:[interpreterProxy halfWordLowInLong32: long])
+		signedIntFromShort
+
+]
+
+{ #category : #initialize }
+BalloonEngineSimulation >> loadWordTransformFrom: transformOop into: destPtr length: n [
+	"Load a float array transformation from the given oop"
+
+	| srcPtr wordDestPtr |
+
+true ifTrue:
+[^ super loadWordTransformFrom: transformOop into: destPtr length: n].
+
+	srcPtr _ interpreterProxy firstIndexableField: transformOop.
+	wordDestPtr _ destPtr as: CArrayAccessor.  "Remove float conversion shell"
+	0 to: n-1 do: [:i | wordDestPtr at: i put: (srcPtr at: i)].
 ]
 
 { #category : #simulation }
@@ -206,6 +248,27 @@ BalloonEngineSimulation >> makeUnsignedFrom: integer [
 	integer < 0 
 		ifTrue:[^(0 - integer - 1) bitInvert32]
 		ifFalse:[^integer]
+]
+
+{ #category : #initialize }
+BalloonEngineSimulation >> primitiveInitializeBuffer [
+
+	"Fix an uninitialized variable (should probably go into the real engine too)"
+	super primitiveInitializeBuffer.
+	self spanEndAAPut: 0.
+]
+
+{ #category : #initialize }
+BalloonEngineSimulation >> primitiveSetBitBltPlugin [
+	"Primitive. Set the BitBlt plugin to use."
+	| pluginName |
+	pluginName _ interpreterProxy stackValue: 0.
+	"Must be string to work"
+	(interpreterProxy isBytes: pluginName) 
+		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy stringOf: pluginName) = bbPluginName
+		ifTrue: [interpreterProxy pop: 1. "Return receiver"]
+		ifFalse: [^interpreterProxy primitiveFail]
 ]
 
 { #category : #'debug support' }
@@ -293,13 +356,17 @@ BalloonEngineSimulation >> rShiftTable [
 ]
 
 { #category : #simulation }
-BalloonEngineSimulation >> shortRunLengthAt: i from: runArray [
-	^runArray getObject lengthAtRun: i+1
+BalloonEngineSimulation >> shortRunLengthAt: index from: runArray [
+	"Load the short value from the given index in intArray"
+
+	^ interpreterProxy halfWordHighInLong32: (runArray at: index)
 ]
 
 { #category : #simulation }
-BalloonEngineSimulation >> shortRunValueAt: i from: runArray [
-	^runArray getObject valueAtRun: i+1
+BalloonEngineSimulation >> shortRunValueAt: index from: runArray [
+	"Load the short value from the given index in intArray"
+
+	^ (interpreterProxy halfWordLowInLong32: (runArray at: index)) signedIntFromShort 
 ]
 
 { #category : #simulation }
@@ -319,4 +386,14 @@ BalloonEngineSimulation >> stopBecauseOf: stopReason [
 	stopReason = GErrorNeedFlush ifFalse:[
 		^super stopBecauseOf: stopReason.
 	].
+]
+
+{ #category : #simulation }
+BalloonEngineSimulation >> workBufferPut: wbOop [
+	interpreterProxy isInterpreterProxy 
+		ifTrue:[^super workBufferPut: wbOop].
+	workBuffer := ((interpreterProxy firstIndexableField: wbOop) as: BalloonArray) asCArrayAccessor.
+	workBufferArray ifNil:
+		[workBufferArray _ Array new: (interpreterProxy slotSizeOf: wbOop)].
+	workBuffer getObject setSimArray: workBufferArray
 ]

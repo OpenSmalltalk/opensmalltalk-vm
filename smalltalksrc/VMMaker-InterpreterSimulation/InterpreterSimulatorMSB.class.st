@@ -6,64 +6,55 @@ Class {
 
 { #category : #'memory access' }
 InterpreterSimulatorMSB >> byteAt: byteAddress [
-	| lowBits |
-	lowBits _ byteAddress bitAnd: 3.
-	^((self longAt: byteAddress - lowBits)
-		bitShift: (lowBits - 3) * 8)
+	| lowBits bpwMinus1 |
+	bpwMinus1 _ BytesPerWord-1.
+	lowBits _ byteAddress bitAnd: bpwMinus1.
+	^ ((self longAt: byteAddress - lowBits)
+		bitShift: (lowBits - bpwMinus1) * 8)
 		bitAnd: 16rFF
 ]
 
 { #category : #'memory access' }
 InterpreterSimulatorMSB >> byteAt: byteAddress put: byte [
-	| longWord shift lowBits |
-	lowBits _ byteAddress bitAnd: 3.
-	longWord _ self longAt: byteAddress - lowBits.
-	shift _ (3 - lowBits) * 8.
-	longWord _ longWord - (longWord bitAnd: (16rFF bitShift: shift)) + (byte bitShift: shift).
-	self longAt: byteAddress put: longWord
+	| longWord shift lowBits bpwMinus1 longAddress |
+	bpwMinus1 _ BytesPerWord-1.
+	lowBits _ byteAddress bitAnd: bpwMinus1.
+	longAddress _ byteAddress - lowBits.
+	longWord _ self longAt: longAddress.
+	shift _ (bpwMinus1 - lowBits) * 8.
+	longWord _ longWord
+				- (longWord bitAnd: (16rFF bitShift: shift))
+				+ (byte bitShift: shift).
+	self longAt: longAddress put: longWord
 ]
 
 { #category : #'debug support' }
 InterpreterSimulatorMSB >> charsOfLong: long [
-	^ (4 to: 1 by: -1) collect:
+	^ (BytesPerWord to: 1 by: -1) collect:
 		[:i | ((long digitAt: i) between: 14 and: 126)
 					ifTrue: [(long digitAt: i) asCharacter]
 					ifFalse: [$?]]
 ]
 
 { #category : #'memory access' }
-InterpreterSimulatorMSB >> halfWordAt: byteAddress [
-    "Return the half-word at byteAddress which must be even."
-	| lowBits |
-	lowBits _ byteAddress bitAnd: 2.
-	^((self longAt: byteAddress - lowBits)
-		bitShift: (lowBits - 2) * 8)
-		bitAnd: 16rFFFF
+InterpreterSimulatorMSB >> halfWordHighInLong32: long32 [
+	"Used by Balloon"
 
+	^ long32 bitShift: -16
 ]
 
 { #category : #'memory access' }
-InterpreterSimulatorMSB >> halfWordAt: byteAddress put: halfWord [
-	| longWord shift lowBits |
-	lowBits _ byteAddress bitAnd: 2.
-	longWord _ self longAt: byteAddress - lowBits.
-	shift _ lowBits * 8.
-	longWord _ longWord - (longWord bitAnd: (16rFFFF bitShift: shift)) +
-(halfWord bitShift: shift).
-	self longAt: byteAddress - lowBits put: longWord
+InterpreterSimulatorMSB >> halfWordLowInLong32: long32 [
+	"Used by Balloon"
 
+	^ long32 bitAnd: 16rFFFF
 ]
 
 { #category : #initialization }
 InterpreterSimulatorMSB >> nextLongFrom: aStream [ 
-	"Read a 32-bit quantity from the given (binary) stream."
-	| bytes |
-	bytes _ aStream nextInto: (ByteArray new: 4).
-	^ Integer
-		byte1: (bytes at: 4)
-		byte2: (bytes at: 3)
-		byte3: (bytes at: 2)
-		byte4: (bytes at: 1)
+	"Read a 32- or 64-bit quantity from the given (binary) stream."
+
+	^ aStream nextNumber: BytesPerWord
 ]
 
 { #category : #'image save/restore' }
@@ -77,4 +68,32 @@ InterpreterSimulatorMSB >> putLong: n toFile: f [
 		nextPut: (n bitAnd: 16rFF).
 
 	self success: true
+]
+
+{ #category : #'memory access' }
+InterpreterSimulatorMSB >> shortAt: byteAddress [
+    "Return the half-word at byteAddress which must be even."
+	| lowBits bpwMinus2 |
+	bpwMinus2 _ BytesPerWord-2.
+	lowBits _ byteAddress bitAnd: bpwMinus2.
+	^ ((self longAt: byteAddress - lowBits)
+		bitShift: (lowBits - bpwMinus2) * 8)
+		bitAnd: 16rFFFF
+
+]
+
+{ #category : #'memory access' }
+InterpreterSimulatorMSB >> shortAt: byteAddress put: a16BitValue [
+    "Return the half-word at byteAddress which must be even."
+	| longWord shift lowBits bpwMinus2 longAddress |
+	bpwMinus2 _ BytesPerWord-2.
+	lowBits _ byteAddress bitAnd: bpwMinus2.
+	longAddress _ byteAddress - lowBits.
+	longWord _ self longAt: longAddress.
+	shift _ (bpwMinus2 - lowBits) * 8.
+	longWord _ longWord
+				- (longWord bitAnd: (16rFFFF bitShift: shift))
+				+ (a16BitValue bitShift: shift).
+	self longAt: longAddress put: longWord
+
 ]

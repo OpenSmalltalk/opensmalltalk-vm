@@ -597,9 +597,9 @@ SmartSyntaxPluginCodeGenerator >> generateAsValue: aNode on: aStream indent: anI
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateCPtrAsOop: aNode on: aStream indent: anInteger [
 
-	aStream nextPutAll: '((int) ('.
+	aStream nextPutAll: '((sqInt)(long)('.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ') -4)'.
+	aStream nextPutAll: ') - sizeof(sqInt))'.
 ]
 
 { #category : #'translating builtins' }
