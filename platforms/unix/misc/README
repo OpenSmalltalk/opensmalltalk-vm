@@ -1,4 +1,18 @@
-GLXUnix-ikp.2.cs -
+VMMaker-3.7b5-unsignedFixes3-nk.2.cs
+
+    Contains Ned Konz's last-minute fixes for the generated sources
+    that avoid problems with loading image segments, the SqueakMap
+    package list, etc.  They apply to the 3.7-5898-full image.
+
+OSProcessPluginV3-3.sar
+XDisplayControlPluginV1-0.sar
+AioPluginV1-1.sar
+
+    The latest OSProcessPlugin from Dave Lewis.  Not part of the
+    standard VM distributions, but bundled with the Unix distribution
+    for your convenience.
+
+GLXUnix-ikp.2.cs
 
     Contains GLX support (as required by Croquet) that takes into
     account the differences between big- and little-endian machines.
