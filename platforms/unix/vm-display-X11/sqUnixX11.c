@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-22 16:00:56 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-22 19:37:59 by piumarta on emilia.inria.fr
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -1305,7 +1305,7 @@ static void handleEvent(XEvent *evt)
 int handleEvents(void)
 {
   if (!isConnectedToXServer || !XPending(stDisplay))
-    return 0;
+    return !iebEmptyP();
 
   while (XPending(stDisplay))
     {
@@ -2120,8 +2120,7 @@ static int display_ioBeep(void)
 
 static int display_ioRelinquishProcessorForMicroseconds(int microSeconds)
 {
-  handleEvents();
-  aioPoll(microSeconds);
+  aioPoll(handleEvents() ? 0 : microSeconds);
   return 0;
 }
 
