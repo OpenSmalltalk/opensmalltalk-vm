@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.7 2002/08/06 21:51:22 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.8 2002/08/08 04:45:11 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -137,7 +137,7 @@ int primitivePluginPostURL(void);
 #define STATUS_SUCCEEDED 3
 #define STARTINGsqueakHeapMBytes 20*1024*1024
 
-#define PLUGIN_TRACE 1
+//#define PLUGIN_TRACE 1
 
 #if PLUGIN_TRACE
 int printOnOSXPascal(unsigned char *msg);
