@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-08-31 19:40:14 by piumarta on emilia.inria.fr
+ * Last edited: 2003-09-02 15:34:38 by piumarta on emilia.inria.fr
  */
 
 
@@ -818,7 +818,8 @@ static char *updatePix(void)
       dprintf(("updatePix: NO PORT!\n"));
       pixBase= 0;
     }
-  printf("pixBase %p, width %d, height %d, depth %d, pitch %d\n", pixBase, pixWidth, pixHeight, pixDepth, pixPitch);
+  dprintf(("pixBase %p, width %d, height %d, depth %d, pitch %d\n",
+	   pixBase, pixWidth, pixHeight, pixDepth, pixPitch));
   return pixBase;
 }
 
@@ -837,7 +838,7 @@ static int display_ioShowDisplay(int dispBitsIndex, int width, int height, int d
       || (displayChanged)
       || (![view lockFocusIfCanDraw]))
     {
-      printf("ioShowDisplay squashed\n");
+      dprintf(("ioShowDisplay squashed\n"));
       return 0;
     }
 
@@ -1166,6 +1167,7 @@ static void setUpDock(void)
       try(CPSSetFrontProcess, (&psn), "");
     }
 # undef try
+# if defined(DEBUG_APP)
   {
     CPSProcessInfoRec info;
     char path[4096];
@@ -1197,6 +1199,7 @@ static void setUpDock(void)
     if (info.Attributes & kCPSNativeReqAttr)	printf(" NativeReq");
     printf("\n");
   }
+#endif
 }
 
 
@@ -1237,7 +1240,7 @@ static void setUpDisplay(void)
   dpyPixels  = CGDisplayBaseAddress(dpy);
   dpyPitch   = CGDisplayBytesPerRow(dpy);
 
-  printf("display is %dx%dx%d at %p pitch %d\n", dpyWidth, dpyHeight, dpyDepth, dpyPixels, dpyPitch);
+  dprintf(("display is %dx%dx%d at %p pitch %d\n", dpyWidth, dpyHeight, dpyDepth, dpyPixels, dpyPitch));
 }
 
 
@@ -1442,7 +1445,7 @@ static int display_ioSetFullScreen(int flag)
   static int originalWindowSize= 0;
   SqueakWindow *old;
 
-  printf("ioSetFullScreen(%d)\n", flag);
+  dprintf(("ioSetFullScreen(%d)\n", flag));
 
   if (headless || (fullscreen == flag))
     return 0;	// nothing to do
@@ -1465,7 +1468,7 @@ static int display_ioSetFullScreen(int flag)
 {
   static int originalWindowSize= (800 << 16) | 600;
 
-  printf("ioSetFullScreen(%d)\n", flag);
+  dprintf(("ioSetFullScreen(%d)\n", flag));
 
   if (headless || (fullscreen == flag) || glActive)
     return 0;	// nothing to do
@@ -1882,10 +1885,13 @@ static void *runInterpreter(void *arg)
 
     case NSScrollWheel:
       {
-	int keyCode= ([event deltaY] >= 0.0) ? 30 : 31;
-	noteKeyboardEvent(keyCode, EventKeyDown, modifierState);
-	noteKeyboardEvent(keyCode, EventKeyChar, modifierState);
-	noteKeyboardEvent(keyCode, EventKeyUp,   modifierState);
+	int keyCode, modifiers;
+	keyCode= ([event deltaY] >= 0.0) ? 30 : 31;
+	modifierState= qz2sqModifiers([event modifierFlags]);
+	modifiers= modifierState ^ CtrlKeyBit;
+	noteKeyboardEvent(keyCode, EventKeyDown, modifiers);
+	noteKeyboardEvent(keyCode, EventKeyChar, modifiers);
+	noteKeyboardEvent(keyCode, EventKeyUp,   modifiers);
       }
       break;
 
