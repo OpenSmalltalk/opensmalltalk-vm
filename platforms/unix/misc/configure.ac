@@ -133,7 +133,7 @@ AC_SUBST(J_CFLAGS)
 AC_ARG_ENABLE(memory-mmap,
 [  --enable-memory-mmap    use experimantal mmap-based memory allocater [default=no]])
 
-if test $enable_memory_mmap = yes
+if test "$enable_memory_mmap" = yes
 then
 AC_MSG_NOTICE([using mmap-based memory manager])
 AC_DEFINE(USE_MEMORY_MMAP)
