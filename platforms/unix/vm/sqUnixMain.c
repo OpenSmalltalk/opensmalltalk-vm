@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-15 17:41:52 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-20 04:17:57 by piumarta on emilia.inria.fr
  */
 
 #include "sq.h"
@@ -567,6 +567,7 @@ struct moduleDescription
 static struct moduleDescription moduleDescriptions[]=
 {
   { &displayModule, "display", "X11"    },	/*** NO DEFAULT ***/
+  { &displayModule, "display", "fbdev"  },	/*** NO DEFAULT ***/
   { &displayModule, "display", "null"   },	/*** NO DEFAULT ***/
   { &soundModule,   "sound",   "NAS"    },	/*** NO DEFAULT ***/
   { &displayModule, "display", "Quartz" },
@@ -577,7 +578,7 @@ static struct moduleDescription moduleDescriptions[]=
   { 0,              0,         0	}
 };
 
-static struct moduleDescription *defaultModules= moduleDescriptions + 3;
+static struct moduleDescription *defaultModules= moduleDescriptions + 4;
 
 
 struct SqModule *queryLoadModule(char *type, char *name, int query)
