@@ -334,12 +334,12 @@ int serialPortInit(void)
 	/* tcflag_t c_oflag output modes */
 	/* defaultTermios.c_oflag = 0; */
 	/* tcflag_t c_cflag control modes */
-	/* defaultTermios.c_cflag = 0; */
+	defaultTermios.c_cflag = CREAD;
 	/* tcflag_t c_lflag local modes */
 	/* defaultTermios.c_lflag = 0; */
 	/* cc_t c_cc[NCCS] control chars */
-	defaultTermios.c_cc[VTIME] = 5;
-	defaultTermios.c_cc[VMIN] = 1;
+	defaultTermios.c_cc[VTIME] = 0;
+	defaultTermios.c_cc[VMIN] = 0;
 
 	success(true);
 	return 1;
