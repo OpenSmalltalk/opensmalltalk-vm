@@ -169,7 +169,7 @@ sqUnixConfig.h : $(miscdir)/sqUnixConfig.h.in $(CONFIGURE)
 # targets
 
 squeak squeak.map : $(VM_O) sqUnixVersion.o
-	$(LINK) -export-dynamic -R$(vsqlibdir) -o squeak $(VM_O) sqUnixVersion.o $(LIBS)
+	$(LINK) -export-dynamic -o squeak $(VM_O) sqUnixVersion.o $(LIBS)
 	$(NM) squeak | grep -w T | sort > squeak.map
 
 modules : $(MOD_LA)
