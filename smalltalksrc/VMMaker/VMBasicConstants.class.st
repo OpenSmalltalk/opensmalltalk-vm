@@ -108,8 +108,9 @@ VMBasicConstants class >> namesDefinedAtCompileTime [
 	^#(	VMBIGENDIAN
 		IMMUTABILITY
 		STACKVM COGVM COGMTVM SPURVM
-		"Pharo vs Squeak" PharoVM
-		"Newspeak" EnforceAccessControl)
+		PharoVM								"Pharo vs Squeak"
+		EnforceAccessControl					"Newspeak"
+		CheckRememberedInTrampoline)		"IMMUTABILITY"
 ]
 
 { #category : #'C translation' }
