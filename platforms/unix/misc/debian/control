@@ -1,0 +1,38 @@
+Source: squeak-vm
+Section: non-US/non-free
+Priority: optional
+Maintainer: Lex Spoon <lex@debian.org>
+Build-Depends: debhelper (>> 3.0.0), nas-dev
+Standards-Version: 3.5.2
+
+Package: squeak-vm-nas
+Provides: squeak-vm
+Conflicts: squeak-vm
+Architecture: any
+Depends: ${shlibs:Depends}
+Description: The Squeak Smalltalk System (Virtual Machine)
+ This is the VM for Squeak. 
+ .
+ Squeak is an open, highly-portable Smalltalk-80 implementation whose 
+ virtual machine is written entirely in Smalltalk, making it easy to 
+ debug, analyze, and change. To achieve practical performance, a 
+ translator produces an equivalent C program whose performance is 
+ comparable to commercial Smalltalks.
+ .
+ This binary uses the Network Audio System to play and record sound.
+
+Package: squeak-vm-oss
+Provides: squeak-vm
+Conflicts: squeak-vm
+Architecture: any
+Description: The Squeak Smalltalk System (Virtual Machine)
+ This is the VM for Squeak. 
+ .
+ Squeak is an open, highly-portable Smalltalk-80 implementation whose 
+ virtual machine is written entirely in Smalltalk, making it easy to 
+ debug, analyze, and change. To achieve practical performance, a 
+ translator produces an equivalent C program whose performance is 
+ comparable to commercial Smalltalks.
+ .
+ This binary uses the Open Sound System to play and record
+ sound.

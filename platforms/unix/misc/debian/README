@@ -1,0 +1,9 @@
+The Debian Package squeak-vm
+----------------------------
+
+This is the "Snail on Hot Asphault" (SHA) release of the
+Squeak VM for Unix.  More information is available at:
+
+    http://minnow.cc.gatech.edu/squeak/2173
+
+ -- Lex Spoon <lex@debian.org>, Sun, 20 Jan 2002 19:40:00 -0500

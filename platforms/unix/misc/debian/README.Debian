@@ -1,0 +1,8 @@
+The true source code for Squeak is generated from Squeak itself.
+However, for convenience, the squeak-vm source package includes those
+portions of the code already generated.  Details on the process are at:
+
+    http://minnow.cc.gatech.edu/squeak/2173
+
+After following the instructions on that page -- setting all plugins
+to "internal" -- the "src" directory was renamed and tar-ed.

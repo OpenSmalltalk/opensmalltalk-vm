@@ -1,0 +1,9 @@
+squeak-vm (3.2alpha.4599-1) unstable; urgency=low
+
+  * Initial Release.
+
+ -- Lex Spoon <lex@debian.org>  Sun, 20 Jan 2002 19:46:01 -0500
+
+Local variables:
+mode: debian-changelog
+End:
