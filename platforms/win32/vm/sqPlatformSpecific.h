@@ -59,6 +59,7 @@ __declspec(dllimport) unsigned long __stdcall GetTickCount(void);
 #endif
 #endif
 
+extern int _lowResMSecs;
 #define ioLowResMSecs() _lowResMSecs
 #else error!
 #endif /* WIN32 */
