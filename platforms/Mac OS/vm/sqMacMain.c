@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.18 2003/10/03 19:06:27 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.19 2003/12/02 04:52:46 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -63,6 +63,7 @@
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
 *  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
 *  3.6.x  Sept 1st, 2003 JMM per note from Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>  changed 1003 parm to lowercase. 
+*  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 */
 
 
@@ -82,6 +83,7 @@
 #include "sqMacFileLogic.h"
 #include "sqMacUIEvents.h"
 #include "sqMacMemory.h"
+#include "sqMacEncoding.h"
 
 #ifdef __MPW__
 QDGlobals 		qd;
@@ -98,9 +100,7 @@ QDGlobals 		qd;
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
     #include "aio.h"
 #endif 
-extern char shortImageName[];
-extern char documentName[];
-extern char vmPath[];
+
 extern int  getFullScreenFlag();
 extern unsigned char *memory;
 extern squeakFileOffsetType calculateStartLocationForImage();
@@ -111,7 +111,7 @@ ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
 OSErr			gSqueakFileLastError; 
 Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false;
-UInt32  gMaxHeapSize=512*1024*1024;
+UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType,gSqueakWindowAttributes;
 
 #ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
@@ -128,6 +128,7 @@ void PowerMgrCheck(void);
 OSErr   createNewThread();
 static pascal void* squeakThread(void *threadParm);
 void SetUpCarbonEvent();
+void fetchPrefrences();
   
 /*** Main ***/
 
@@ -146,6 +147,7 @@ int main(void) {
 	sqImageFile f;
 	OSErr err;
         long threadGestaltInfo;
+        char shortImageName[256];
         
 	/* check the interpreter's size assumptions for basic data types */
 	if (sizeof(int) != 4) {
@@ -170,22 +172,24 @@ int main(void) {
 	
 	SetUpMenus();
 	SetUpClipboard();
+        fetchPrefrences();
 	SetUpWindow();
 
 #ifndef I_AM_CARBON_EVENT
 	SetEventMask(everyEvent); // also get key up events
 #endif
 	/* install apple event handlers and wait for open event */
-	imageName[0] = shortImageName[0] = documentName[0] = vmPath[0] = 0;
 	InstallAppleEventHandlers();
-	while (shortImageName[0] == 0) {
+	while (ShortImageNameIsEmpty()) {
 		GetNextEvent(everyEvent, &theEvent);
 		if (theEvent.what == kHighLevelEvent) {
 			AEProcessAppleEvent(&theEvent);
 		}
 	}
                 
-	if (imageName[0] == 0) {
+        getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
+         
+	if (ImageNameIsEmpty()) {
             FSSpec	workingDirectory;
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
             CFBundleRef mainBundle;
@@ -196,15 +200,17 @@ int main(void) {
             imageURL = CFBundleCopyResourceURL (mainBundle, CFSTR("Squeak"), CFSTR("image"), NULL);
             if (imageURL != NULL) {
                 imagePath = CFURLCopyFileSystemPath (imageURL, kCFURLHFSPathStyle);
-                CFStringGetCString (imagePath, imageName, IMAGE_NAME_SIZE, CFStringGetSystemEncoding());
+                SetImageNameViaCFString(imagePath);
+                CFRelease(imageURL);
+                CFRelease(imagePath);
             } else {
 #endif
 
 		err = GetApplicationDirectory(&workingDirectory);
 		if (err != noErr) 
                     error("Could not obtain default directory");
-                CopyCStringToPascal("squeak.image",workingDirectory.name);
-		PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
+                CopyCStringToPascal("Squeak.image",workingDirectory.name);
+		SetImageName(&workingDirectory);
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
             }
 #endif
@@ -214,28 +220,32 @@ int main(void) {
 	//printf("Move this window, then hit CR\n"); getchar();
 
 	/* read the image file and allocate memory for Squeak heap */
-	f = sqImageFileOpen(imageName, "rb");
+	f = sqImageFileOpen(getImageName(), "rb");
 	while (f == NULL) {
 	    //Failure attempt to ask the user to find the image file
 	    
 	    FSSpec vmfsSpec,imageFsSpec;
 	    WDPBRec wdPB;
-	    
-	    err =  makeFSSpec(vmPath,vmPathSize(),&vmfsSpec);
+            char path[VMPATH_SIZE + 1];
+            
+            getVMPathWithEncoding(path,gCurrentVMEncoding);
+
+	    err =  makeFSSpec(path,strlen(path),&vmfsSpec);
 	    if (err) 
 	        ioExit();
             err = squeakFindImage(&vmfsSpec,&imageFsSpec);
 	    if (err) 
 	        ioExit();
 	    CopyPascalStringToC(imageFsSpec.name,shortImageName);
-            PathToFile(imageName, IMAGE_NAME_SIZE, &imageFsSpec);
+            SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+            SetImageName(&imageFsSpec);
 
 			/* make the image or document directory the working directory */
     	wdPB.ioNamePtr = NULL;
     	wdPB.ioVRefNum = imageFsSpec.vRefNum;
     	wdPB.ioWDDirID = imageFsSpec.parID;
     	PBHSetVolSync(&wdPB);
-    	f = sqImageFileOpen(imageName, "rb");
+    	f = sqImageFileOpen(getImageName(), "rb");
  	}
 	
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
@@ -450,12 +460,25 @@ char * GetAttributeString(int id) {
 	*/
 
 	// id #0 should return the full name of VM; for now it just returns its path
-	if (id == 0) return vmPath;
+	if (id == 0) {
+            static char path[VMPATH_SIZE + 1];
+            getVMPathWithEncoding(path,gCurrentVMEncoding);
+            return path;
+        }
 	/* Note: 1.3x images will try to read the image as a document because they
 	   expect attribute #1 to be the document name. A 1.3x image can be patched
 	   using a VM of 2.6 or earlier. */
-	if (id == 1) return imageName;
-	if (id == 2) return documentName;
+	if (id == 1) {
+            static char path[IMAGE_NAME_SIZE + 1];
+            getImageNameWithEncoding(path,gCurrentVMEncoding);
+            return path;
+        }
+
+	if (id == 2) {
+            static char path[DOCUMENT_NAME_SIZE + 1];
+            getDocumentNameWithEncoding(path,gCurrentVMEncoding);
+            return path;
+        }
 
 #ifdef BROWSERPLUGIN
 	/* When running in browser, return the EMBED tag info */
@@ -499,7 +522,7 @@ char * GetAttributeString(int id) {
             bzero(data,255);
             strcat(data,interpreterVersion);
             strcat(data," ");
-            CFStringGetCString (versionString, data+strlen(data), 255-strlen(data), CFStringGetSystemEncoding());
+            CFStringGetCString (versionString, data+strlen(data), 255-strlen(data), gCurrentVMEncoding);
             return data;            
         }
 #endif
@@ -563,9 +586,6 @@ int plugInInit(char *fullImagePath) {
 		error("This C compiler's time_t's are not 32 bits.");
 	}
 
-	/* clear all path and file names */
-	imageName[0] = shortImageName[0] = documentName[0] = vmPath[0] = 0;
-
         SetUpTimers();
 	PowerMgrCheck();
 	SetUpClipboard();
@@ -597,6 +617,70 @@ int plugInShutdown(void) {
 }
 
 #endif
+
+#if TARGET_API_MAC_CARBON
+void fetchPrefrences() {
+    CFBundleRef  myBundle;
+    CFDictionaryRef myDictionary;
+    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType;
+    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType;
+    CFDataRef 	SqueakWindowAttributeType;    
+    CFStringRef    SqueakVMEncodingType;
+    char        encoding[256];
+    
+    myBundle = CFBundleGetMainBundle();
+    myDictionary = CFBundleGetInfoDictionary(myBundle);
+    SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));
+    SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
+    SqueakWindowHasTitleType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowHasTitle"));
+    SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
+    SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
+    SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
+    
+    
+    if (SqueakVMEncodingType) 
+        CFStringGetCString (SqueakVMEncodingType, encoding, 255, kCFStringEncodingMacRoman);
+    else
+        *encoding = 0x00;
+
+    setEncodingType(encoding);
+    
+    if (SqueakWindowType) 
+        CFNumberGetValue(SqueakWindowType,kCFNumberLongType,&gSqueakWindowType);
+    else
+        gSqueakWindowType = kDocumentWindowClass;
+        
+    gSqueakWindowIsFloating = gSqueakWindowType == kUtilityWindowClass;
+        
+    if (SqueakWindowAttributeType && CFDataGetLength(SqueakWindowAttributeType) == 4) {
+            const UInt8 *where;
+            where = CFDataGetBytePtr(SqueakWindowAttributeType);
+            memmove(&gSqueakWindowAttributes,where,4);
+    } else {
+        gSqueakWindowAttributes = kWindowStandardDocumentAttributes
+            +kWindowStandardHandlerAttribute
+            +kWindowNoConstrainAttribute
+            -kWindowCloseBoxAttribute;
+    }
+    
+    if (SqueakWindowHasTitleType) 
+        gSqueakWindowHasTitle = CFBooleanGetValue(SqueakWindowHasTitleType);
+    else 
+        gSqueakWindowHasTitle = true;
+        
+    if (SqueakFloatingWindowGetsFocusType) 
+        gSqueakFloatingWindowGetsFocus = CFBooleanGetValue(SqueakFloatingWindowGetsFocusType);
+    else
+        gSqueakFloatingWindowGetsFocus = false;
+
+    if (SqueakMaxHeapSizeType) 
+        CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
+    
+}
+#else
+void fetchPrefrences() {}
+#endif 
+
 
 /*** Profiling Stubs ***/
 

@@ -6,18 +6,19 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacExternalPrims.c,v 1.5 2003/10/03 18:59:08 johnmci Exp $
+*   RCSID:   $Id: sqMacExternalPrims.c,v 1.6 2003/12/02 04:52:11 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Oct 2nd, 2003, JMM bug in browser file name creation in os-x, rework how path is resolved
+ 3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 *****************************************************************************/
 
 #include "sq.h"
 #include "sqMacExternalPrims.h"
 #include "sqMacFileLogic.h"
+#include "sqMacEncoding.h"
 
-extern char vmPath[];
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath);
 void createBrowserPluginPath(char *pluginDirPath);
 
@@ -36,7 +37,7 @@ int ioLoadModule(char *pluginName) {
 	OSErr err;
     
     	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
-	strcpy(pluginDirPath, vmPath);
+        getVMPathWithEncoding(pluginDirPath,gCurrentVMEncoding);
 	
 #ifdef BROWSERPLUGIN
         createBrowserPluginPath(pluginDirPath);
@@ -49,7 +50,8 @@ int ioLoadModule(char *pluginName) {
 
 #ifndef BROWSERPLUGIN
 	/* second, look directly in Squeak VM directory for the library */
-	libHandle = LoadLibViaPath(pluginName, vmPath);
+        getVMPathWithEncoding(pluginDirPath,gCurrentVMEncoding);
+	libHandle = LoadLibViaPath(pluginName, pluginDirPath);
 	if (libHandle != nil) return (int) libHandle;
     
     #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
@@ -177,7 +179,7 @@ int 	ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
 	if (!moduleHandle) 
             return nil;
             
-        theString = CFStringCreateWithCString(kCFAllocatorDefault,lookupName,kCFStringEncodingMacRoman);
+        theString = CFStringCreateWithCString(kCFAllocatorDefault,lookupName,gCurrentVMEncoding);
         if (theString == nil) 
             return nil;
         functionPtr = (void*)CFBundleGetFunctionPointerForName((CFBundleRef) moduleHandle,theString);
@@ -219,7 +221,7 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 	// We could do this, but it's expensive err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
         // So go back to a cheaper call
         filePath = CFStringCreateWithCString(kCFAllocatorDefault,
-                    (UInt8 *) tempDirPath,kCFStringEncodingMacRoman);
+                    (UInt8 *) tempDirPath,gCurrentVMEncoding);
         if (filePath == nil)
             return nil;
             
@@ -233,7 +235,7 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         
         if (theBundle == nil) {
             CFStringRef libNameCFString;
-           libNameCFString = CFStringCreateWithCString(kCFAllocatorDefault,libName,kCFStringEncodingMacRoman);
+           libNameCFString = CFStringCreateWithCString(kCFAllocatorDefault,libName,gCurrentVMEncoding);
             err = LoadFrameworkBundle(libNameCFString, &theBundle);
             CFRelease(libNameCFString);
             if (err != noErr)

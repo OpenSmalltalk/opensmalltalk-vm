@@ -4,7 +4,10 @@
 	johnmci@smalltalkconsulting.com 
 	http://www.smalltalkconsulting.com 
         
-    Nov 24th 2001 JMM fixed broken tempSpec code, was causing memory exception under os-x*/
+    Nov 24th 2001 JMM fixed broken tempSpec code, was causing memory exception under os-x
+    3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+    
+    */
 
 
 #include <InternetConfig.h>
@@ -75,7 +78,7 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
         error  = ICGetPref(gICInstance, "\pDownloadFolder", nil, &buffer, &size);
         if (error == noErr || error == icTruncatedErr) {
             tempICFileSpec = (ICFileSpec *) &buffer;
-            PathToFile(aString, 1024, &tempICFileSpec->fss);
+            PathToFile(aString, 1024, &tempICFileSpec->fss,gCurrentVMEncoding);
             size = strlen(aString);
        } else 
             return 0;

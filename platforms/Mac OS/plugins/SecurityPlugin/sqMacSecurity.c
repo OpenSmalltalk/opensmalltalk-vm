@@ -3,6 +3,7 @@
 //JMM 5/3/01  path was wrong for unsecure folder which uncovered a bug in lookupPath
 //JMM 8/15/01 only allow call to ioInitSecurity Once, also return  proper return code
 //JMM 9/5/01  make it as a plugin
+// 3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 
 #include "sq.h"
 #include "sqMacFileLogic.h"	
@@ -214,7 +215,7 @@ int ioInitSecurity(void) {
 	
 	// Look for folder, if not found abort */
         FSMakeFSSpecCompat(vRefNum,dirID,"\p",&spec);
-	PathToFile(untrustedUserDirectory,255,&spec);
+	PathToFile(untrustedUserDirectory,255,&spec,gCurrentVMEncoding);
 	strcat(untrustedUserDirectory,"Squeak:Internet");
  	err = makeFSSpec(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec);
  	if (err != noErr) {

@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIAppleEvents.c,v 1.1 2002/02/23 10:47:54 johnmci Exp $
+*   RCSID:   $Id: sqMacUIAppleEvents.c,v 1.2 2003/12/02 04:52:56 johnmci Exp $
 *
 *   NOTES: 
 */
@@ -15,12 +15,9 @@
 #include "sqMacUIAppleEvents.h"
 #include "sqMacUIConstants.h"
 #include "sqMacUIEvents.h"
-#include "sqMacImageIO.h"
+#include "sqMacEncoding.h"
 #include "sqMacFileLogic.h"
 #include "DropPlugin.h"
-
-extern char shortImageName[];
-extern char vmPath[];
 
 extern squeakFileOffsetType calculateStartLocationForImage();
 
@@ -39,7 +36,6 @@ void InstallAppleEventHandlers() {
 	OSErr	err;
 	long	result;
 
-	shortImageName[0] = 0;
 	err = Gestalt(gestaltAppleEventsAttr, &result);
 	if (err == noErr) {
 		AEInstallEventHandler(kCoreEventClass, kAEOpenApplication, NewAEEventHandlerUPP(HandleOpenAppEvent),  0, false);
@@ -50,25 +46,27 @@ void InstallAppleEventHandlers() {
 }
 
 pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon) {
-	/* User double-clicked application; look for "squeak.image" in same directory */
+	/* User double-clicked application; look for "Squeak.image" in same directory */
     squeakFileOffsetType                 checkValueForEmbeddedImage;
     OSErr               err;
 	ProcessSerialNumber processID;
 	ProcessInfoRec      processInformation;
 	Str255              name; 
+        char                cname[256];
 	FSSpec 		    workingDirectory;
 
 	// Get spec to the working directory
     err = GetApplicationDirectory(&workingDirectory);
-    if (err != noErr) return err;
+    if (err != noErr) 
+        return err;
 
 	// Convert that to a full path string.
-	PathToDir(vmPath, VMPATH_SIZE,&workingDirectory);
+    SetVMPath(&workingDirectory);
 
 	checkValueForEmbeddedImage = calculateStartLocationForImage();
 	if (checkValueForEmbeddedImage == 0) {
 	    /* use default image name in same directory as the VM */
-	    strcpy(shortImageName, "squeak.image");
+        SetShortImageNameViaString("Squeak.image",gCurrentVMEncoding);
 	    return noErr;
 	}
 
@@ -79,12 +77,13 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 	err = GetProcessInformation(&processID,&processInformation);
 
 	if (err != noErr) {
-		strcpy(shortImageName, "squeak.image");
-	    return noErr;
-	}
-	
-	CopyPascalStringToC(name,shortImageName);
-    PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
+        SetShortImageNameViaString("Squeak.image",gCurrentVMEncoding);
+        return noErr;
+    }
+    
+    CopyPascalStringToC(name,cname);
+    SetShortImageNameViaString(cname,gCurrentVMEncoding);
+    SetImageName( &workingDirectory);
 
     return noErr;
 }
@@ -102,16 +101,17 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 	FSSpec		fileSpec,workingDirectory;
 	WDPBRec		pb;
 	FInfo		finderInformation;
+	char            shortImageName[256];
 	
 	reply; refCon;  /* reference args to avoid compiler warnings */
 
 	/* record path to VM's home folder */
 	
-    if (vmPath[0] == 0) {
+    if (VMPathIsEmpty()) {
         err = GetApplicationDirectory(&workingDirectory);
         if (err != noErr) 
             return err;    
-        PathToDir(vmPath, VMPATH_SIZE, &workingDirectory);
+        SetVMPath(&workingDirectory);
 	}
 	
 	/* copy document list */
@@ -124,7 +124,7 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 	if (err) 
 	    goto done;
 	
-	if (shortImageName[0] != 0) {
+	if (!ShortImageNameIsEmpty()) {
         /* Do the rest of the documents */
         processDocumentsButExcludeOne(&fileList,-1);
 		goto done;
@@ -134,9 +134,10 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     
     if (imageFileIsNumber == 0) { 
         // Test is open change set 
-		strcpy(shortImageName, "squeak.image");
+        strcpy(shortImageName, "Squeak.image");
         CopyCStringToPascal(shortImageName,workingDirectory.name);
-        PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
+        SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+        SetImageName(&workingDirectory);
         fileSpec = workingDirectory;
     } else {
     	/* get image name */
@@ -149,7 +150,8 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     	    goto done;
     		
     	CopyPascalStringToC(fileSpec.name,shortImageName);
-        PathToFile(imageName, IMAGE_NAME_SIZE,&fileSpec);
+        SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+        SetImageName(&fileSpec);
    }
     
 	/* make the image or document directory the working directory */
@@ -254,6 +256,7 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	AEKeyword	keyword;
 	FSSpec		fileSpec;
 	FInfo		finderInformation;
+        char            shortImageName[256];
 
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
@@ -270,7 +273,9 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	    err = FSpGetFInfo(&fileSpec,&finderInformation);
 	    if (err) 
 	        goto done;
-		CopyPascalStringToC(fileSpec.name,shortImageName);
+                
+            CopyPascalStringToC(fileSpec.name,shortImageName);
+            SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
 
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim')
             return i;

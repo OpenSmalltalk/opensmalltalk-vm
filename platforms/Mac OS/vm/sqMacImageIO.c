@@ -6,10 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacImageIO.c,v 1.3 2002/08/06 22:35:27 johnmci Exp $
+*   RCSID:   $Id: sqMacImageIO.c,v 1.4 2003/12/02 04:52:31 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+ 3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 *****************************************************************************/
 
 #include "sq.h"
@@ -17,34 +18,33 @@
 #include "sqMacUIConstants.h"
 #include "sqMacWindow.h"
 #include "sqMacFileLogic.h"
+#include "sqMacEncoding.h"
 
 
-/*** Variables -- image and path names ***/
-char imageName[IMAGE_NAME_SIZE + 1];  /* full path to image file */
 
-char shortImageName[SHORTIMAGE_NAME_SIZE + 1];  /* just the image file name */
-
-char documentName[DOCUMENT_NAME_SIZE + 1];  /* full path to document file */
-
-char vmPath[VMPATH_SIZE + 1];  /* full path to interpreter's directory */
 /*** VM Home Directory Path ***/
 
 squeakFileOffsetType calculateStartLocationForImage(void);
 
 int vmPathSize(void) {
-	return strlen(vmPath);
+        char path[VMPATH_SIZE + 1];
+        
+        getVMPathWithEncoding(path,gCurrentVMEncoding);
+	return strlen(path);
 }
 
 int vmPathGetLength(int sqVMPathIndex, int length) {
 	char *stVMPath = (char *) sqVMPathIndex;
 	int count, i;
+        char path[VMPATH_SIZE + 1];
 
-	count = strlen(vmPath);
+        getVMPathWithEncoding(path,gCurrentVMEncoding);
+	count = strlen(path);
 	count = (length < count) ? length : count;
 
 	/* copy the file name into the Squeak string */
 	for (i = 0; i < count; i++) {
-		stVMPath[i] = vmPath[i];
+		stVMPath[i] = path[i];
 	}
 	return count;
 }
@@ -52,19 +52,24 @@ int vmPathGetLength(int sqVMPathIndex, int length) {
 /*** Image File Naming ***/
 
 int imageNameSize(void) {
-	return strlen(imageName);
+    char path[IMAGE_NAME_SIZE+1];
+    getImageNameWithEncoding(path,gCurrentVMEncoding);
+
+    return strlen(path);
 }
 
 int imageNameGetLength(int sqImageNameIndex, int length) {
 	char *sqImageName = (char *) sqImageNameIndex;
 	int count, i;
+        char path[IMAGE_NAME_SIZE+1];
+        getImageNameWithEncoding(path,gCurrentVMEncoding);
 
-	count = strlen(imageName);
+	count = strlen(path);
 	count = (length < count) ? length : count;
 
 	/* copy the file name into the Squeak string */
 	for (i = 0; i < count; i++) {
-		sqImageName[i] = imageName[i];
+		sqImageName[i] = path[i];
 	}
 	return count;
 }
@@ -73,24 +78,28 @@ int imageNamePutLength(int sqImageNameIndex, int length) {
 	char *sqImageName = (char *) sqImageNameIndex;
 	int count, i, ch, j;
 	int lastColonIndex = -1;
+        char name[IMAGE_NAME_SIZE + 1];  /* full path to image file */
+        char shortImageName[SHORTIMAGE_NAME_SIZE+1];
 
 	count = (IMAGE_NAME_SIZE < length) ? IMAGE_NAME_SIZE : length;
 
 	/* copy the file name into a null-terminated C string */
 	for (i = 0; i < count; i++) {
-		ch = imageName[i] = sqImageName[i];
+		ch = name[i] = sqImageName[i];
 		if (ch == ':') {
 			lastColonIndex = i;
 		}
 	}
-	imageName[count] = 0;
+	name[count] = 0; 
+        SetImageNameViaString(name,gCurrentVMEncoding);
 
 	/* copy short image name into a null-terminated C string */
 	for (i = lastColonIndex + 1, j = 0; i < count; i++, j++) {
-		shortImageName[j] = imageName[i];
+		shortImageName[j] = name[i];
 	}
 	shortImageName[j] = 0;
 
+        SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
 	SetWindowTitle(shortImageName);
 	return count;
 }
@@ -387,7 +396,6 @@ squeakFileOffsetType sqImageFileStartLocation(int fileRef, char *filename, squea
 }
 
 #endif
-
 
 
 

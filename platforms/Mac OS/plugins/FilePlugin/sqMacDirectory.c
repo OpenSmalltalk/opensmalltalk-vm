@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.8 2003/06/20 01:43:45 johnmci Exp $
+*   RCSID:   $Id: sqMacDirectory.c,v 1.9 2003/12/02 04:52:02 johnmci Exp $
 *
 *   NOTES: See change log below.
 * 
@@ -24,6 +24,7 @@
  3.2.2B1 Jan 18th,2002 JMM check macroman, fix issues with squeak file offset
  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
  3.5.1b1 May 20th, 2003 JMM isDirectory ? ENTRY_FOUND versus always found because path could be a file. 
+ 3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
  */
 
 #include "sq.h"
@@ -101,7 +102,7 @@ int dir_Create(char *pathString, int pathStringLength) {
         UniChar         buffer[1024];
         long            tokenLength;
         
-        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),kCFStringEncodingMacRoman,false);
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),gCurrentVMEncoding,false);
         if (filePath == nil) 
             return false;
         sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,true);
@@ -474,7 +475,7 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
         long            tokenLength;
         
 		
-        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)name,strlen(name),kCFStringEncodingMacRoman,false);
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)name,strlen(name),gCurrentVMEncoding,false);
         if (filePath == nil) 
             return __io_error;
         sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);

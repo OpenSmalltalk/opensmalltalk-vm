@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.11 2003/06/20 01:47:37 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.12 2003/12/02 04:52:22 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -16,6 +16,7 @@
 *   4/23/2002 JMM fix how image is found for os-9 for bundled applications
 *   5/12/2002 JMM add logic to enable you to put plugins beside macclassic VM
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+    3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 
 *
 *****************************************************************************/
@@ -64,7 +65,7 @@ OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
     FSRef	theFSRef;
     OSErr	err;
     
-    filePath = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,pathStringLength,kCFStringEncodingMacRoman,false);
+    filePath = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,pathStringLength,gCurrentVMEncoding,false);
     if (filePath == nil)
         return -1000;
     sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
@@ -83,14 +84,14 @@ OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
 
 /* Fill in the given string with the full path from a root volume to the given directory. */
 
-int PathToDir(char *pathName, int pathNameMax, FSSpec *where) {
+int PathToDir(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {
     CopyCStringToPascal(":",where->name);
-	return PathToFile(pathName,pathNameMax,where);  
+	return PathToFile(pathName,pathNameMax,where,encoding);  
 }
 
 /* Fill in the given string with the full path from a root volume to the given file. */
 
-int PathToFile(char *pathName, int pathNameMax, FSSpec *where) {        
+int PathToFile(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {        
         CFURLRef sillyThing;
         CFStringRef filePath;
         FSSpec	failureRetry;
@@ -117,7 +118,7 @@ int PathToFile(char *pathName, int pathNameMax, FSSpec *where) {
         filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
         CFRelease(sillyThing);
         
-        CFStringGetCString (filePath,pathName,pathNameMax, kCFStringEncodingMacRoman);
+        CFStringGetCString (filePath,pathName,pathNameMax, encoding);
         CFRelease(filePath);
         
         if (retryWithDirectory) {
@@ -138,7 +139,7 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
         OSErr		err;
         
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,
-                    (UInt8 *)pathString,pathStringLength,kCFStringEncodingMacRoman,false);
+                    (UInt8 *)pathString,pathStringLength,gCurrentVMEncoding,false);
         if (filePath == nil)
             return -1;
 	sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
@@ -174,13 +175,13 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
                     strcat(dst,lastpart);
                     
 #if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
-        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)dst,strlen(dst),kCFStringEncodingMacRoman,false);
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)dst,strlen(dst),gCurrentVMEncoding,false);
         if (filePath == nil) 
             return 2;
         sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,true);
 		CFRelease(filePath);
         filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
-        CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+        CFStringGetCString (filePath,dst,1000, gCurrentVMEncoding);
 		CFRelease(sillyThing);
         CFRelease(filePath);        
 #endif
@@ -200,7 +201,7 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
 #if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
 		sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
         filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
-        CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+        CFStringGetCString (filePath,dst,1000, gCurrentVMEncoding);
 		CFRelease(sillyThing);
         CFRelease(filePath);        
         return 0;
@@ -241,7 +242,7 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
             err = FSpMakeFSRef(&failureRetry,&theFSRef);
             if (err != noErr) 
                 return;
-            filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)src,num,kCFStringEncodingMacRoman,false);
+            filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)src,num,gCurrentVMEncoding,false);
             if (filePath == nil) 
                 return;
             sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
@@ -255,7 +256,7 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
 #else
             filePath = CFURLCopyFileSystemPath (appendedSillyThing, kCFURLPOSIXPathStyle);
 #endif
-            CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+            CFStringGetCString (filePath,dst,1000, gCurrentVMEncoding);
             CFRelease(sillyThing);
             CFRelease(appendedSillyThing);
             CFRelease(lastPartOfPath);
@@ -266,7 +267,7 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
 #if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
 		sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
         filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
-        CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+        CFStringGetCString (filePath,dst,1000, gCurrentVMEncoding);
 		CFRelease(sillyThing);
         CFRelease(filePath);        
         return;
@@ -311,14 +312,14 @@ int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown) {
             err = FSpMakeFSRef(&fix,&parentFSRef);
             if (err != noErr)
                 return err;
-           aLevel = CFStringCreateWithCString(kCFAllocatorDefault,token,kCFStringEncodingMacRoman);
+           aLevel = CFStringCreateWithCString(kCFAllocatorDefault,token,gCurrentVMEncoding);
            if (aLevel == nil) 
                 return -1000;
            tokenLength = CFStringGetLength(aLevel);
            CFStringGetCharacters(aLevel,CFRangeMake(0,tokenLength),buffer);
-           err = FSMakeFSRefUnicode(&parentFSRef,tokenLength,buffer,kCFStringEncodingMacRoman,&childFSRef);
+           err = FSMakeFSRefUnicode(&parentFSRef,tokenLength,buffer,gCurrentVMEncoding,&childFSRef);
            if (err != noErr) {
-                CFStringGetPascalString(aLevel,spec->name,64,kCFStringEncodingMacRoman);
+                CFStringGetPascalString(aLevel,spec->name,64,gCurrentVMEncoding);
                 CFRelease(aLevel);
                return err;
             }
@@ -448,15 +449,15 @@ static OSErr	FSpGetFullPath(const FSSpec *spec,
 
 
 
-int PathToDir(char *pathName, int pathNameMax, FSSpec *where) {
+int PathToDir(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {
 	/* Fill in the given string with the full path from a root volume to
 	   to given  directory.
 	*/
         CopyCStringToPascal(":",where->name);
-	return PathToFile(pathName,pathNameMax,where);  
+	return PathToFile(pathName,pathNameMax,where,encoding);  
 }
 
-int PathToFile(char *pathName, int pathNameMax, FSSpec *where) {
+int PathToFile(char *pathName, int pathNameMax, FSSpec *where,UInt32 encoding) {
         OSErr	error;
         short 	pathLength;
         Handle fullPathHandle;
@@ -740,7 +741,7 @@ static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileNam
                 *sizeOfFile =  theCatalogInfo.dataLogicalSize; 
                 
            theString = CFStringCreateWithCharacters (kCFAllocatorDefault, unicodeName.unicode, (CFIndex) unicodeName.length);
-           CFStringGetPascalString(theString,(unsigned char *) name,256, kCFStringEncodingMacRoman);
+           CFStringGetPascalString(theString,(unsigned char *) name,256, gCurrentVMEncoding);
            CFRelease(theString);
            return;
         }
@@ -1168,7 +1169,7 @@ int fetchFileInfo(CInfoPBRec *pb,int dirIndex,FSSpec *spec,unsigned char *name,B
         
     pb->hFileInfo.ioFlLgLen = catalogInfo.dataLogicalSize; 
     theString = CFStringCreateWithCharacters (nil, unicodeName.unicode, (CFIndex) unicodeName.length);
-    CFStringGetCString (theString,name,256, kCFStringEncodingMacRoman);
+    CFStringGetCString (theString,name,256, gCurrentVMEncoding);
     CopyCStringToPascal(name,name);
     CFRelease(theString);
 

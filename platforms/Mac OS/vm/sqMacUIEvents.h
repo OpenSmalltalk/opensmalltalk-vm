@@ -6,12 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.h,v 1.4 2002/03/15 01:58:20 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.h,v 1.5 2003/12/02 04:53:02 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
 *  Feb 27th, 2002, JMM changed for carbon event logic.
 *  Mar 8th,  2002, JMM external prims that make dialog windows must do this on main thread
+*   3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding, plus multiple keystrokes for input
 ****************************************************************************/
  
 #if TARGET_API_MAC_CARBON

@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:  $Id: sqMacWindow.c,v 1.29 2003/11/20 01:35:47 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.30 2003/12/02 04:53:12 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -15,6 +15,7 @@
 *  May 5th, 2002, JMM cleanup for building as NS plugin
  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
  3.5.1b5 June 25th, 2003 JMM fix memory leak on color table free, pull preferences from Info.plist under os-x
+ 3.7.0bx Nov 24th, 2003 JMM move preferences to main, the proper place.
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -58,7 +59,6 @@ WindowPtr getSTWindow(void) {
 #if TARGET_API_MAC_CARBON
 extern struct VirtualMachine *interpreterProxy;
 int ioSetFullScreenActual(int fullScreen);
-void fetchPrefrencesForWindow(int *windowType,int *windowAttributes);
 void SetupSurface(void);
 
 int ioSetFullScreen(int fullScreen) {
@@ -355,7 +355,7 @@ int ioShowDisplay(
                         in  += pitch;
                         out += pixPitch;
                 }
-            } else if (depth == 16 && pixDepth == 8) { // Untested, perhaps will not get called
+            } else if (depth == 16 && pixDepth == 8) { //Tested by Steve Moffitt <stevia@citlink.net> not all machines do true 8bit windows, some the GPU does and window stays as 16bits
                 SetPort(windowPort);
                 while (affectedH--)  {
                     unsigned char   *to=   (unsigned char *) out;
@@ -520,9 +520,9 @@ void SetUpWindow(void) {
 #if TARGET_API_MAC_CARBON & !defined(__MWERKS__)
 
     if ((Ptr)CreateNewWindow != (Ptr)kUnresolvedCFragSymbolAddress) {
-        int windowType,windowAttributes;
-        fetchPrefrencesForWindow(&windowType,&windowAttributes);
-	CreateNewWindow(windowType,windowAttributes,&windowBounds,&stWindow);
+        extern UInt32 gSqueakWindowType,gSqueakWindowAttributes;
+
+	CreateNewWindow(gSqueakWindowType,gSqueakWindowAttributes,&windowBounds,&stWindow);
     } else
 #endif
 	stWindow = NewCWindow(
@@ -1148,57 +1148,6 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 	return (false);
 }
   
-#if TARGET_API_MAC_CARBON
-void fetchPrefrencesForWindow(int *windowType,int *windowAttributes) {
-    CFBundleRef  myBundle;
-    CFDictionaryRef myDictionary;
-    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType;
-    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType;
-    CFDataRef 	SqueakWindowAttributeType;    
-    extern	Boolean gSqueakWindowIsFloating,gSqueakWindowHasTitle,gSqueakFloatingWindowGetsFocus;
-    extern 	UInt32 gMaxHeapSize;
-    
-    myBundle = CFBundleGetMainBundle();
-    myDictionary = CFBundleGetInfoDictionary(myBundle);
-    SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));
-    SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
-    SqueakWindowHasTitleType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowHasTitle"));
-    SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
-    SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
-    
-    if (SqueakWindowType) 
-        CFNumberGetValue(SqueakWindowType,kCFNumberLongType,windowType);
-    else
-        *windowType = kDocumentWindowClass;
-        
-    gSqueakWindowIsFloating = *windowType == kUtilityWindowClass;
-        
-    if (SqueakWindowAttributeType && CFDataGetLength(SqueakWindowAttributeType) == 4) {
-            const UInt8 *where;
-            where = CFDataGetBytePtr(SqueakWindowAttributeType);
-            memmove(windowAttributes,where,4);
-    } else {
-        *windowAttributes = kWindowStandardDocumentAttributes
-            +kWindowStandardHandlerAttribute
-            +kWindowNoConstrainAttribute
-            -kWindowCloseBoxAttribute;
-    }
-    
-    if (SqueakWindowHasTitleType) 
-        gSqueakWindowHasTitle = CFBooleanGetValue(SqueakWindowHasTitleType);
-    else 
-        gSqueakWindowHasTitle = true;
-        
-    if (SqueakFloatingWindowGetsFocusType) 
-        gSqueakFloatingWindowGetsFocus = CFBooleanGetValue(SqueakFloatingWindowGetsFocusType);
-    else
-        gSqueakFloatingWindowGetsFocus = false;
-
-    if (SqueakMaxHeapSizeType) 
-        CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
-    
-}
-#endif 
 #ifdef JMMFOO2
 
 int ioShowDisplay(

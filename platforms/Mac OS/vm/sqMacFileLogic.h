@@ -6,14 +6,18 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.h,v 1.4 2002/01/22 19:10:27 johnmci Exp $
+*   RCSID:   $Id: sqMacFileLogic.h,v 1.5 2003/12/02 04:52:26 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	Jan 2nd 2002 JMM added logic to make lookups faster
 *	Jan 22nd 2002 JMM squeak file type offset change
+*       Nov 25th 2003 JMM add gCurrentVMEncoding
+        3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 */
 #if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
+    extern CFStringEncoding gCurrentVMEncoding;
+
 #else
 	#include <Navigation.h>
 	#include <StandardFile.h>
@@ -23,12 +27,13 @@
 	#include <Aliases.h>
 	#include <Gestalt.h>
 	#include <string.h>	
+	extern UInt32 gCurrentVMEncoding;
 #endif
 
 OSErr	FSMakeFSSpecCompat(short vRefNum, long dirID, ConstStr255Param fileName,  FSSpec *spec);
 OSStatus GetApplicationDirectory(FSSpec *workingDirectory);
-int PathToDir(char *pathName, int pathNameMax, FSSpec *workingDirectory);
-int PathToFile(char *pathName, int pathNameMax, FSSpec *workingDirectory);
+int PathToDir(char *pathName, int pathNameMax, FSSpec *workingDirectory,UInt32 encoding);
+int PathToFile(char *pathName, int pathNameMax, FSSpec *workingDirectory,UInt32 encoding);
 OSErr makeFSSpec(char *pathString, int pathStringLength, FSSpec *spec);
 							   
 OSErr squeakFindImage(const FSSpecPtr defaultLocationfssPtr,FSSpecPtr documentfsSpec);

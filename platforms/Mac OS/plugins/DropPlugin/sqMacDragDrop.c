@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDragDrop.c,v 1.5 2003/07/31 12:59:12 johnmci Exp $
+*   RCSID:   $Id: sqMacDragDrop.c,v 1.6 2003/12/02 04:52:07 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Carbon cleanup
@@ -44,6 +44,7 @@ Some of this code comes from
 	
 	May 8th,2002,JMM - Bert Freudenberg published some changes to make file opening easier without security
         July 28th, 2003, JMM - fix issue with race on open doc events and squeak VM Thread.
+*  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 	
 */
 /*
@@ -185,7 +186,7 @@ char *dropRequestFileName(int dropIndex) {
         return NULL;
     PathToFile(tempName, 
         DOCUMENT_NAME_SIZE,
-        &dropFiles[dropIndex-1].fileSpec);
+        &dropFiles[dropIndex-1].fileSpec,gCurrentVMEncoding);
     if (dropIndex == gNumDropFiles) 
         gDragDropThrottleSpinLock = false;
   return tempName;
