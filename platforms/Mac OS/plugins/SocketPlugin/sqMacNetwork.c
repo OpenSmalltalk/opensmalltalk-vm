@@ -63,6 +63,7 @@
 	v1.3.12 Jan 2001, Karl Goiser Carbon changes
         v1.3.13 Sept 2002, JMM fixes for wildcard  port binding, and IP_ADD_MEMBERSHIP logic
 	v1.4.00 Feb 2003, JMM watch out for async port fetch info not working under os-x
+	V1.5.00 Dec 2003, JMM add sqSocketListenOnPortBacklogSizeInterface logic
 	
 	Notes beware semaphore's lurk for socket support. Three semaphores lives in Smalltalk, waiting for
 	connect/disconnect/listen, sending data, and receiving data. When to tap the semaphore is based on
@@ -777,8 +778,12 @@ void sqSocketListenOnPort(SocketPtr s, int port) {
 	}
 
 }
-
 void	sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize) {
+	sqSocketListenOnPortBacklogSizeInterface(s, port, backlogSize, 0);
+}
+
+void	sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, int port, int backlogSize, int addr) {
+
     EPInfo* epi;
 	SInt32 sema,readSema,writeSema;
 	OSErr error;
@@ -800,7 +805,7 @@ void	sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize) {
             return;   
 		}
         epi = (EPInfo *) s->privateSocketPtr;
-		DoBind(epi,0,(InetPort) port,TCPListenerSocketType,(OTQLen) backlogSize);
+		DoBind(epi,addr,(InetPort) port,TCPListenerSocketType,(OTQLen) backlogSize);
 		if (port != 0 && epi->localAddress.fPort != port) {//The port we wanted must match, otherwise we die
 		    sqSocketDestroy(s);
     	    interpreterProxy->success(false);
