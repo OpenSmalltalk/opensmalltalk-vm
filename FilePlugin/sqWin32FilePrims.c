@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.4 2002/05/04 23:20:27 andreasraab Exp $
+*   RCSID:   $Id: sqWin32FilePrims.c,v 1.5 2002/05/05 17:18:02 andreasraab Exp $
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -48,17 +48,28 @@
 
 /*** Variables ***/
 int thisSession = 0;
-extern unsigned char *memory;
+//extern unsigned char *memory;
+
+typedef union {
+  struct {
+    DWORD dwLow;
+    DWORD dwHigh;
+  };
+  squeakFileOffsetType offset;
+} win32FileOffset;
+
 
 int sqFileThisSession(void) {
   return thisSession;
 }
 
 int sqFileAtEnd(SQFile *f) {
+  win32FileOffset ofs;
   /* Return true if the file's read/write head is at the end of the file. */
   if (!sqFileValid(f)) return success(false);
-  return 
-    SetFilePointer(FILE_HANDLE(f), 0, NULL, FILE_CURRENT) == (DWORD) f->fileSize;
+  ofs.offset = 0;
+  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
+  return ofs.offset == f->fileSize;
 }
 
 int sqFileClose(SQFile *f) {
@@ -86,14 +97,13 @@ int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize) {
   return 1;
 }
 
-int sqFileGetPosition(SQFile *f) {
+squeakFileOffsetType sqFileGetPosition(SQFile *f) {
+  win32FileOffset ofs;
   /* Return the current position of the file's read/write head. */
-
-  DWORD position;
-
   if (!sqFileValid(f)) return success(false);
-  position = SetFilePointer(FILE_HANDLE(f), 0, NULL, FILE_CURRENT);
-  return (int) position;
+  ofs.offset = 0;
+  ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
+  return ofs.offset;
 }
 
 int sqFileInit(void) {
@@ -132,17 +142,20 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
     f->fileSize = 0;
     return success(false);
   } else {
+    win32FileOffset ofs;
     f->sessionID = thisSession;
     FILE_HANDLE(f) = h;
     /* compute and cache file size */
-    f->fileSize = SetFilePointer(h, 0, NULL, FILE_END);
+    ofs.offset = 0;
+    ofs.dwLow = SetFilePointer(h, 0, &ofs.dwHigh, FILE_END);
+    f->fileSize = ofs.offset;
     SetFilePointer(h, 0, NULL, FILE_BEGIN);
     f->writable = writeFlag ? true : false;
   }
   return 1;
 }
 
-int sqFileReadIntoAt(SQFile *f, int count, int byteArrayIndex, int startIndex) {
+size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
   /* Read count bytes from the given file into byteArray starting at
      startIndex. byteArray is the address of the first byte of a
      Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -166,15 +179,17 @@ int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameInd
   return 1;
 }
 
-int sqFileSetPosition(SQFile *f, int position)
+int sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
 {
+  win32FileOffset ofs;
+  ofs.offset = position;
   /* Set the file's read/write head to the given position. */
   if (!sqFileValid(f)) return success(false);
-  SetFilePointer(FILE_HANDLE(f), position, NULL, FILE_BEGIN);
+  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
   return 1;
 }
 
-int sqFileSize(SQFile *f) {
+squeakFileOffsetType sqFileSize(SQFile *f) {
   /* Return the length of the given file. */
   
   if (!sqFileValid(f)) return success(false);
@@ -188,9 +203,11 @@ int sqFileFlush(SQFile *f) {
   return 1;
 }
 
-int sqFileTruncate(SQFile *f, int offset) {
+int sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
+  win32FileOffset ofs;
+  ofs.offset = offset;
   if (!sqFileValid(f)) return success(false);
-  SetFilePointer(FILE_HANDLE(f), offset, NULL, FILE_BEGIN);
+  SetFilePointer(FILE_HANDLE(f), ofs.dwLow, &ofs.dwHigh, FILE_BEGIN);
   if(!SetEndOfFile(FILE_HANDLE(f))) return 0;
   return 1;
 }
@@ -202,17 +219,20 @@ int sqFileValid(SQFile *f) {
 	  (f->sessionID == thisSession));
 }
 
-int sqFileWriteFromAt(SQFile *f, int count, int byteArrayIndex, int startIndex) {
+size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
   /* Write count bytes to the given writable file starting at startIndex
      in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
      of byteArray and startIndex).
   */
   DWORD dwReallyWritten;
+  win32FileOffset ofs;
   if (!(sqFileValid(f) && f->writable)) return success(false);
 
   WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
   /* update file size */
-  f->fileSize = GetFileSize(FILE_HANDLE(f), NULL);
+  ofs.offset = 0;
+  ofs.dwLow = GetFileSize(FILE_HANDLE(f), &ofs.dwHigh);
+  f->fileSize = ofs.offset;
   
   if ((int)dwReallyWritten != count) {
     success(false);
