@@ -188,7 +188,7 @@ unsigned int	lowResMSecs= 0;
 char		*displayName= 0;	/* name of display, or 0 for $DISPLAY */
 Display		*stDisplay= null;	/* Squeak display */
 int		 isConnectedToXServer=0;/* True when connected to an X server */
-int		 stXfd= 0;		/* X connection file descriptor */
+int		 stXfd= -1;		/* X connection file descriptor */
 Window		 stParent= null;	/* Squeak parent window */
 Window		 stWindow= null;	/* Squeak window */
 Visual		*stVisual;		/* the default visual */
@@ -552,7 +552,7 @@ int forgetXDisplay()
     aioStopHandling(stXfd);
     close(stXfd);
   }
-  stXfd= 0;             /* X connection file descriptor         */
+  stXfd= -1;             /* X connection file descriptor         */
   stParent= null;
   stWindow= null;       /* Squeak window                        */
   isConnectedToXServer= 0;
@@ -649,7 +649,8 @@ char *getSelection(void)
 
   /* wait for selection notification, ignoring (most) other events. */
   FD_ZERO(&fdMask);
-  FD_SET(stXfd, &fdMask);
+  if(stXfd >= 0)
+    FD_SET(stXfd, &fdMask);
 
   do
     {
