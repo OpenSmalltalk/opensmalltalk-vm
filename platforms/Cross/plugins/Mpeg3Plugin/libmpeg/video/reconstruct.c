@@ -540,12 +540,26 @@ static inline void recvc_mmx(unsigned char *s, unsigned char *d, int lx, int lx2
 static inline void rec(unsigned char *s, unsigned char *d, int lx2, int h)
 {
 	int j;
+# ifdef __POWERPC__
+        unsigned long t1,t2,t3,t4;
+#endif
 	for(j = 0; j < h; j++, s += lx2, d += lx2)
 	{
+# ifdef __POWERPC__
+        t1 = *(unsigned long *) s;
+        t2 = *(((unsigned long *) s)+1);
+        t3 = *(((unsigned long *) s)+2);
+        t4 = *(((unsigned long *) s)+3);
+        *(unsigned long *) d = t1;
+        *(((unsigned long *) d)+1) = t2;
+        *(((unsigned long *) d)+2) = t3;
+        *(((unsigned long *) d)+3) = t4;
+#else
     	d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3];
     	d[4] = s[4]; d[5] = s[5]; d[6] = s[6]; d[7] = s[7];
     	d[8] = s[8]; d[9] = s[9]; d[10] = s[10]; d[11] = s[11];
     	d[12] = s[12]; d[13] = s[13]; d[14] = s[14]; d[15] = s[15];
+#endif
 	}
 }
 
@@ -554,10 +568,20 @@ static inline void rec(unsigned char *s, unsigned char *d, int lx2, int h)
 static inline void recc(unsigned char *s, unsigned char *d, int lx2, int h)
 {
 	int j;
+# ifdef __POWERPC__
+        long t1,t2;
+#endif
 	for(j = 0; j < h; j++, s += lx2, d += lx2)
 	{
+# ifdef __POWERPC__
+        t1 = *(long *) s;
+        t2 = *(((long *) s)+1);
+        *(long *) d = t1;
+        *(((long *) d)+1) = t2;
+#else
     	d[0] = s[0]; d[1] = s[1]; d[2] = s[2]; d[3] = s[3];
     	d[4] = s[4]; d[5] = s[5]; d[6] = s[6]; d[7] = s[7];
+#endif
 	}
 }
 
