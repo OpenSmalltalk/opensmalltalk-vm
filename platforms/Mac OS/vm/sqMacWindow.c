@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.26 2003/11/12 05:23:23 johnmci Exp $
+*   RCSID:  $Id: sqMacWindow.c,v 1.27 2003/11/17 17:16:02 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -59,9 +59,10 @@ WindowPtr getSTWindow(void) {
 extern struct VirtualMachine *interpreterProxy;
 int ioSetFullScreenActual(int fullScreen);
 void fetchPrefrencesForWindow(int *windowType,int *windowAttributes);
+void SetupSurface(void);
 
 int ioSetFullScreen(int fullScreen) {
-        int result,giLocker,return_value=0;
+        int giLocker,return_value=0;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
@@ -207,9 +208,7 @@ int ioShowDisplay(
         CGrafPtr	windowPort;
 	static 		RgnHandle maskRect = nil;
         static int	titleH=0;
-        PixMapHandle 	pix;
-        int 		pixPitch,affectedW,affectedH,pixDepth;
-        char		*pixBase;
+        int 		affectedW,affectedH;
         
         affectedW= affectedR - affectedL;
         affectedH= affectedB - affectedT;
@@ -219,73 +218,92 @@ int ioShowDisplay(
 	}
 
         windowPort = GetWindowPort(stWindow);
-	SetPort((GrafPtr) windowPort);
  
         if (maskRect == nil) {
             Rect structureRect;
             
-            maskRect = NewRgn();
-            GetWindowRegion(stWindow,kWindowContentRgn,maskRect);
+            maskRect = NewRgn();            
+            GetWindowRegion(stWindow,kWindowTitleBarRgn,maskRect);
             GetRegionBounds(maskRect,&structureRect);
-            titleH = structureRect.top/2;
+            titleH = structureRect.bottom- structureRect.top;
         }
 
         LockPortBits(windowPort); 
-        pix = GetPortPixMap(windowPort);
-        pixDepth= GetPixDepth(pix);
-        pixPitch= GetPixRowBytes(pix);
-        pixBase = ((char *)GetPixBaseAddr(pix) + ((int)titleH * pixPitch));
-        
+         
        {
-            int   opp=	depth / 8;	// octets per pixel
-            char  *out=	pixBase;
-            int   pitch= bytesPerLine(width, depth);
-            char *in=    (char *)dispBitsIndex + affectedL * opp + affectedT * pitch;
-            int   lines= affectedH;
-            int   bytes= affectedW * opp;
+            PixMapHandle    pix;
+            int   pixPitch,pixDepth,pitch,bytes;
+            char *in,*out;
+                        
+            pix = GetPortPixMap(windowPort);
+            pixPitch = GetPixRowBytes(pix);
+            pixDepth = GetPixDepth(pix);
+            
+            pitch = bytesPerLine(width, depth);
+            bytes= affectedW * (depth / 8);
+            
+            in = (char *)dispBitsIndex + affectedL * (depth / 8) + affectedT * pitch;
+            out = ((char *)GetPixBaseAddr(pix) + ((int)titleH * pixPitch)) +
+                (affectedL * (pixDepth/8)) + (affectedT * pixPitch);
     
-            out += (affectedL * (pixDepth/8)) + (affectedT * pixPitch);
-    
-             if (depth == pixDepth) {
-                if (bytes < 9) // empirical
-                    while (lines--) {
-                        register char *to=    out;
-                        register char *from=  in;
-                        register int   count= bytes;
+  
+            if (depth == pixDepth) {  // either 16 or 32 bit 2 or 4 bytes */
+                if (bytes > 32)
+                    while (affectedH--)  {
+                        memcpy((void *)out, (void *)in, bytes);
+                        in  += pitch;
+                        out += pixPitch;
+                    }
+                else if (bytes == 2)  // empirical
+                    while (affectedH--) {
+                        *((short *)out)= *((short *)in);
+                        in  += pitch;
+                        out += pixPitch;
+                    } 
+                else if (depth == 16)
+                 while (affectedH--) {
+                        register long   i,count= bytes/2;
+                        register short   *to=    out;
+                        register short   *from=  in;
                         while (count--)
                             *to++= *from++;
                         in  += pitch;
                         out += pixPitch;
                     } 
-                else  while (lines--)  {
-                        memcpy((void *)out, (void *)in, bytes);
+                else while (affectedH--) {
+                        register long   count= bytes/4;
+                        register long   *to=    out;
+                        register long   *from=  in;
+                        while (count--)
+                            *to++= *from++;
                         in  += pitch;
                         out += pixPitch;
-                    }
+                }
             } else if ( depth == 16 && pixDepth == 32) {
-                while (lines--)  {
+                while (affectedH--)  {
                         register long   *to=    out;
                         register short  *from=  in;
-                        register long   count= bytes/2,target;  
-                        while (count--) {
+                        register long   count= bytes/2,target,r,g,b;  
+
+                        while (count--) { /* see '11111'b needs to be '11111111'b */
                             target = *from++;
-                            /*r = (target & 0x00007C00);
-                            r <<= 9;
-                            g = (target &  0x000003E0);
-                            g <<= 6;
+                            r = (target & 0x00007C00);
+                            g = (target & 0x000003E0);
                             b = (target & 0x0000001F);
-                            b <<= 3;
-                            *to++ =  r | g | b; */
-                            *to++ = ((target & 0x00007C00) << 9) |
+                            r = (r | (r << 3)) << 6;
+                            g = (g | (g << 3)) << 3;
+                            b = b | (b << 3) ;
+                            *to++ =  r | g | b; 
+                            /* *to++ = ((target & 0x00007C00) << 9) |
                                 ((target &  0x000003E0) << 6) |
-                                ((target & 0x0000001F) << 3);
+                                ((target & 0x0000001F) << 3); */
 
                         }
                         in  += pitch;
                         out += pixPitch;
                 }
             } else if (depth == 32 && pixDepth == 16) {
-                while (lines--)  {
+                while (affectedH--)  {
                         register short *to=    out;
                         register long  *from=  in;
                         register long   count= bytes/4,target;  
@@ -293,7 +311,7 @@ int ioShowDisplay(
                             target = *from++;
                             *to++ = ((target & 0x00F80000) >> 9) |
                                 ((target    &  0x0000F800) >> 6) |
-                                ((target & 0x000000F8) >> 3);
+                                ((target & 0x000000F8) >> 3); 
                         }
                         in  += pitch;
                         out += pixPitch;
@@ -308,11 +326,12 @@ int ioShowDisplay(
         if (gWindowsIsInvisible) {
             ShowWindow(stWindow);
             gWindowsIsInvisible = false;
+           //  NOT YET givers poor performance SetupSurface();
         }
 }
-#endif
-#endif
 
+#endif
+#endif
 
 void SetUpPixmap(void) {
 	int i, r, g, b;
@@ -1096,3 +1115,170 @@ void fetchPrefrencesForWindow(int *windowType,int *windowAttributes) {
     
 }
 #endif 
+#ifdef JMMFOO2
+
+int ioShowDisplay(
+	int dispBitsIndex, int width, int height, int depth,
+	int affectedL, int affectedR, int affectedT, int affectedB) {
+
+        static int  rememberWidth=0,rememberHeight=0,rememberDepth=0,rememberDispBitsIndex=0;
+        static CGContextRef context=NULL;
+        static CGImageRef image;
+        static CGRect rectangle;
+        CGRect clip;
+
+	if (stWindow == nil) {
+            return;
+	}
+
+
+	if (!((rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth) && (rememberDispBitsIndex == dispBitsIndex))) {
+            CGDataProviderRef provider;
+            CGColorSpaceRef colorspace;
+            size_t size;
+            long    bytes = (((width * depth) + 31) / 32) * 4;
+            
+            rememberWidth  = width;
+            rememberHeight = height;
+            rememberDepth  = depth;
+            rectangle = CGRectMake(0, 0, width, height);  
+
+            if (context == NULL) {
+                CreateCGContextForPort(GetWindowPort(stWindow), &context);
+            }
+            
+            if (image)    
+                CGImageRelease(image);
+            /* Create a data provider with a pointer to the memory bits
+            for testing just do the 16bit argb and ignore other color space issues
+            see http://developer.apple.com/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_images/chapter_6_section_3.html
+            */
+            provider = CGDataProviderCreateWithData(NULL, (void*)dispBitsIndex, bytes * height, NULL);
+            colorspace = CGColorSpaceCreateDeviceRGB();
+            /* Create the image  **** NOT COMPLETE ONLY GOOD FOR 16BIT NEED TO ADJUST FOR OTHER SQUEAK COLOR SPACE 1 8 or 32 */
+            image = CGImageCreate(width, height, 5 /* bitsPerComponent */,
+                    16 /* bitsPerPixel */,
+                    bytes, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
+            /* Once the image is created we can release our reference to the
+            provider and the colorspace. They will be retained by the
+            image */
+            CGDataProviderRelease(provider);
+            CGColorSpaceRelease(colorspace);
+        }
+
+        if (gWindowsIsInvisible) {
+            ShowWindow(stWindow);
+            gWindowsIsInvisible = false;
+        }
+
+        /* Draw the image to the Core Graphics context */
+        CGContextSaveGState(context);
+        clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
+        CGContextClipToRect(context, clip);
+        CGContextDrawImage(context, rectangle, image);
+        CGContextFlush(context);
+        CGContextRestoreGState(context);
+        return;
+}
+#endif
+
+#include "SurfacePlugin.h"
+
+int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* isMSB);
+int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h);
+int osxUnlockSurface(int handle, int x, int y, int w, int h);
+int osxShowSurface(int handle, int x, int y, int w, int h);
+
+
+static sqSurfaceDispatch osxTargetDispatch = {
+  1,
+  0,
+  (fn_getSurfaceFormat) osxGetSurfaceFormat,
+  (fn_lockSurface) osxLockSurface,
+  (fn_unlockSurface) osxUnlockSurface,
+  (fn_showSurface) osxShowSurface
+};
+
+static fn_ioRegisterSurface registerSurface = 0;
+static fn_ioUnregisterSurface unregisterSurface = 0;
+static int surfaceID;
+static int unknown=0x0000BEEF;
+
+void SetupSurface() {
+    registerSurface = (fn_ioRegisterSurface) interpreterProxy->ioLoadFunctionFrom("ioRegisterSurface","SurfacePlugin");
+    unregisterSurface = (fn_ioUnregisterSurface) interpreterProxy->ioLoadFunctionFrom("ioUnregisterSurface","SurfacePlugin");
+    (*registerSurface)(unknown, &osxTargetDispatch, &surfaceID);
+}
+
+
+int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* isMSB) {
+    CGrafPtr	windowPort = GetWindowPort(stWindow);
+    PixMapHandle pix;
+    Rect        rectangle;
+    
+    LockPortBits(windowPort); 
+    pix = GetPortPixMap(windowPort);
+    *depth= GetPixDepth(pix);
+    GetPixBounds(pix,&rectangle);
+    *width = rectangle.right - rectangle.left;
+    *height = rectangle.bottom - rectangle.top;
+    *isMSB = 1;
+    UnlockPortBits(windowPort);
+    return 1;
+}
+
+int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h) {
+    static Boolean firstTime=true;
+    static int offsetTitle=0;
+    CGrafPtr    windowPort = GetWindowPort(stWindow);
+    PixMapHandle pixMap;
+    
+    LockPortBits(windowPort);
+    pixMap =  GetPortPixMap(windowPort);
+    *pitch = GetPixRowBytes(pixMap);
+
+    if (firstTime) {
+        Rect structureRect;
+        RgnHandle rect;
+        firstTime = false;
+             
+        rect = NewRgn();            
+        GetWindowRegion(stWindow,kWindowTitleBarRgn,rect);
+        GetRegionBounds(rect,&structureRect);
+        offsetTitle = (structureRect.bottom- structureRect.top)* *pitch;
+        DisposeRgn(rect);
+    }
+    
+    return (char *)GetPixBaseAddr(pixMap) + offsetTitle;
+}
+
+int osxUnlockSurface(int handle, int x, int y, int w, int h) {
+    UnlockPortBits(GetWindowPort(stWindow)); 
+}
+
+int osxShowSurface(int handle, int x, int y, int w, int h) {
+    
+    static RgnHandle maskRect=NULL;
+    
+    if (maskRect == NULL)
+        maskRect = NewRgn();
+        
+    SetRectRgn(maskRect, x, y, x+w, y+h);
+    QDFlushPortBuffer(GetWindowPort(stWindow), maskRect); 
+}
+
+inline void DuffsDevicesCopyLong(long *to, long *from, long count) {
+    long n=(count+7)/8;
+    switch(count%8){
+    case 0: do{     *to = *from++;
+    case 7:         *to = *from++;
+    case 6:         *to = *from++;
+    case 5:         *to = *from++;
+    case 4:         *to = *from++;
+    case 3:         *to = *from++;
+    case 2:         *to = *from++;
+    case 1:         *to = *from++;
+            }while(--n>0);
+    }
+}
+
