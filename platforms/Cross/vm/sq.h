@@ -6,8 +6,9 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.12 2003/12/02 04:47:02 johnmci Exp $
+*   RCSID:   $Id: sq.h,v 1.13 2004/05/19 23:31:21 rowledge Exp $
 *
+*	03/26/04	tim - add primitive dispatch macro/typedef
 *	11/12/03	nedkonz - float bug fix for gcc 3.3 optimization
 *	05/20/03	tim - move browser related macros in front of
 *			include of sqPlatformSpecific.h
@@ -187,6 +188,13 @@ int plugInTimeToReturn(void);
 #define browserPluginReturnIfNeeded()
 #define browserPluginInitialiseIfNeeded()
 
+
+/* typedef and macro to handle primitive dispatch
+ * the primitive table is now a table and we jump direct to the function */
+typedef  int (*fptr) (void);
+#define dispatchFunctionPointerOnin(index, table)  (((int (*) (void)) ((table)[(index)])) ())
+#define dispatchFunctionPointer(fnPtr) ((int (*) (void)) fnPtr) ()     
+
 /* this include file may redefine earlier definitions and macros: */
 #include "sqPlatformSpecific.h"
 
@@ -336,7 +344,7 @@ int ioGetNextEvent(sqInputEvent *evt);
 
 /* image file and VM path names */
 extern char imageName[];
-char *getImageName(void);
+char *getImageName();
 int imageNameGetLength(int sqImageNameIndex, int length);
 int imageNamePutLength(int sqImageNameIndex, int length);
 int imageNameSize(void);
