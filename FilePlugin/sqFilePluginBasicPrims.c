@@ -1,3 +1,9 @@
+/* The basic prim code for file operations. See also the platform specific
+* files typically named 'sq{blah}Directory.c' for details of the directory
+* handling code. Note that the win32 platform #defines NO_STD_FILE_SUPPORT
+* and thus bypasses this file
+*/
+                                                      
 #include "sq.h"
 #ifndef NO_STD_FILE_SUPPORT
 #include "FilePlugin.h"
