@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.14 2002/03/01 01:43:06 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.15 2002/03/04 00:31:47 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -58,13 +58,12 @@ int ioSetFullScreen(int fullScreen) {
     GDHandle            dominantGDevice;
 
 #if TARGET_API_MAC_CARBON
-    GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&screen); 
+    GetWindowGreatestAreaDevice(stWindow,kWindowContentRgn,&dominantGDevice,&ignore); 
     if (dominantGDevice == null) {
         success(false);
         return 0;
     }
-    if (dominantGDevice == GetMainDevice())
-        screen.top -= GetMBarHeight();
+    screen = (**dominantGDevice).gdRect;
 #else
     dominantGDevice = getDominateDevice(stWindow,&ignore);
     if (dominantGDevice == null) {
