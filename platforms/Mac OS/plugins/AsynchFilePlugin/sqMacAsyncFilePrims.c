@@ -1,17 +1,29 @@
 #include "sq.h"
 #include "AsynchFilePlugin.h"
-#include <devices.h>
-#include <string.h>
+#include "sqMacFileLogic.h"
+#if TARGET_API_MAC_CARBON
+#include <Carbon/Carbon.h>
+#else
+	#include <devices.h>
+	#include <string.h>
+	#include <Errors.h>
+	#include <Files.h>
+	#include <Strings.h>
+#endif
 
 extern struct VirtualMachine* interpreterProxy;
 #define success(bool) (interpreterProxy->success(bool))
 
 #if !TARGET_API_MAC_CARBON
 #define DisposeIOCompletionUPP(userUPP) DisposeRoutineDescriptor(userUPP)
+#else
+IOCompletionUPP NewIOCompletionUPP(IOCompletionProcPtr userRoutine);
+void DisposeIOCompletionUPP(IOCompletionUPP userUPP);
 #endif
+
 /* initialize/shutdown */
 int asyncFileInit() { return true; }
-int asyncFileShutdown() {} 
+int asyncFileShutdown() {return true;} 
 
 /* End of adjustments for pluginized VM */
 
@@ -47,9 +59,6 @@ int asyncFileShutdown() {}
   every platform, and they may be withdrawn or replaced in a future release.
 */
 
-#include <Errors.h>
-#include <Files.h>
-#include <Strings.h>
 
 /* Async file handle (defined in header file):
 */
@@ -84,12 +93,12 @@ int asyncFileWriteResult(AsyncFile *f);
 int asyncFileWriteStart(AsyncFile *f, int fPosition, int bufferPtr, int bufferSize);
 
 /*** Local Functions ***/
-int asyncFileAllocateBuffer(AsyncFileState *state, int byteCount);
+void asyncFileAllocateBuffer(AsyncFileState *state, int byteCount);
 pascal void asyncFileCompletionRoutine(AsyncFileState *state);
-int asyncFileInitPB(AsyncFileState *state, int fPosition);
+void asyncFileInitPB(AsyncFileState *state, int fPosition);
 int asyncFileValid(AsyncFile *f);
 
-int asyncFileAllocateBuffer(AsyncFileState *state, int byteCount) {
+void asyncFileAllocateBuffer(AsyncFileState *state, int byteCount) {
   /* Allocate a new buffer of the given size if necessary. If the current buffer
 	 is already allocated and of the desired size, do nothing. */
 
@@ -108,7 +117,8 @@ int asyncFileAllocateBuffer(AsyncFileState *state, int byteCount) {
 	state->bufferPtr = NewPtr(byteCount);
 	if (state->bufferPtr == nil) {
 		state->bufferSize = 0;
-		return success(false);  /* could not allocate a buffer of size count */
+		success(false);  /* could not allocate a buffer of size count */
+		return;
 	}
 	state->bufferSize = byteCount;
 }
@@ -133,7 +143,7 @@ pascal void asyncFileCompletionRoutine(AsyncFileState *state) {
 	interpreterProxy->signalSemaphoreWithIndex(state->semaIndex);
 }
 
-int asyncFileInitPB(AsyncFileState *state, int fPosition) {
+void asyncFileInitPB(AsyncFileState *state, int fPosition) {
 	memset(&state->pb, 0, sizeof(ParamBlockRec));
 	state->pb.ioParam.ioCompletion = asyncFileCompletionProc;
 	state->pb.ioParam.ioRefNum = state->refNum;
@@ -196,12 +206,11 @@ int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag
 	 its state. Fails with no side effects if f is already open. Files are
 	 always opened in binary mode. */
 
-	Str255 cFileName;
 	short int fileRefNum;
 	AsyncFileState *state;
 	OSErr err;
 	int ithisSessionfn,thisSession;
-
+        FSSpec	theSpec; 
 
 	/* don't open an already open file */
 	if (asyncFileValid(f)) return success(false);
@@ -216,25 +225,24 @@ int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag
 	}
 
 	/* copy the file name into a null-terminated C string */
-	if (fileNameSize > 255) return success(false);
+	if (fileNameSize > 1000) return success(false);
 	
-	sqFilenameFromString(cFileName, fileNamePtr, fileNameSize);
-
-	CopyCStringToPascal((const char *)cFileName,cFileName);
+	makeFSSpec((char*) fileNamePtr, fileNameSize,&theSpec);
+        
 	f->sessionID = 0;
 	if (writeFlag) {
 		/* first try to open an existing file read/write: */
-		err = HOpenDF(0,0,cFileName, fsRdWrPerm, &fileRefNum); 
+		err = FSpOpenDF(&theSpec,fsRdWrPerm, &fileRefNum); 
 		if (err != noErr) {
 			/* file does not exist; must create it. */
-			err = HCreate(0, 0, cFileName,'R*ch','TEXT'); 
+			err = FSpCreate(&theSpec,'R*ch','TEXT',smSystemScript); 
 			if (err != noErr) return success(false);
-			err = HOpenDF(0,0,cFileName,fsRdWrPerm, &fileRefNum);
+			err = FSpOpenDF(&theSpec,fsRdWrPerm, &fileRefNum); 
 			if (err != noErr) return success(false);
 		}
 	} else {
 		/* open the file read-only  */
-		err = HOpenDF(0,0,cFileName, fsRdPerm, &fileRefNum); 
+		err = FSpOpenDF(&theSpec,fsRdPerm, &fileRefNum); 
 		if (err != noErr) return success(false);
 	}
 	f->state = (AsyncFileState *) NewPtr(sizeof(AsyncFileState));	/* allocate state record */
@@ -303,7 +311,8 @@ int asyncFileReadStart(AsyncFile *f, int fPosition, int count) {
 	err = PBReadAsync(&state->pb);
 	if (err != noErr) {
 		state->status = IDLE;
-		return success(false);
+		success(false);
+		return;
 	}
 }
 
