@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-09-02 15:29:03 by piumarta on emilia.inria.fr
+ * Last edited: 2003-11-23 13:23:43 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -117,13 +117,14 @@ static int    dumpImageFile=	0;	/* 1 after SIGHUP received */
 int inModalLoop= 0;
 #endif
 
-int sqIgnorePluginErrors= 0;
+int sqIgnorePluginErrors	= 0;
+int runInterpreter		= 1;
 
 #include "SqDisplay.h"
 #include "SqSound.h"
 
-static struct SqDisplay *dpy= 0;
-static struct SqSound   *snd= 0;
+struct SqDisplay *dpy= 0;
+struct SqSound   *snd= 0;
 
 
 /*** timer support ***/
@@ -657,8 +658,7 @@ static void sigquit(int ignore)
 
 struct SqModule *displayModule=	0;
 struct SqModule *soundModule=	0;
-
-static struct SqModule *modules= 0;
+struct SqModule *modules= 0;
 
 #define modulesDo(M)	for (M= modules;  M;  M= M->next)
 
@@ -988,6 +988,7 @@ static int vm_parseArgument(int argc, char **argv)
 
   if      (!strcmp(argv[0], "-help"))		{ usage();				return 1; }
   else if (!strcmp(argv[0], "-noevents"))	{ noEvents	= 1;			return 1; }
+  else if (!strcmp(argv[0], "-nomixer"))	{ noSoundMixer	= 1;			return 1; }
   else if (!strcmp(argv[0], "-notimer"))	{ useItimer	= 0;			return 1; }
   else if (!strncmp(argv[0],"-jit", 4))		{ useJit	= jitArgs(argv[0]+4);	return 1; }
   else if (!strcmp(argv[0], "-nojit"))		{ useJit	= 0;			return 1; }
@@ -1043,6 +1044,7 @@ static void vm_printUsage(void)
   printf("  -display <dpy>        quivalent to '-vm-display-X11 -display <dpy>'\n");
   printf("  -headless             quivalent to '-vm-display-X11 -headless'\n");
   printf("  -nodisplay            quivalent to '-vm-display-null'\n");
+  printf("  -nomixer              disable modification of mixer settings\n");
   printf("  -nosound              quivalent to '-vm-sound-null'\n");
   printf("  -quartz               quivalent to '-vm-display-Quartz'\n");
 #endif
@@ -1291,10 +1293,12 @@ int main(int argc, char **argv, char **envp)
   recordFullPathForVmName(argv[0]); /* full vm path */
 
   sqIgnorePluginErrors= 1;
-  modules= &vm_Module;
-  modules->parseEnvironment();
+  if (!modules)
+    modules= &vm_Module;
+  vm_Module.parseEnvironment();
   parseArguments(argc, argv);
-  loadModules();
+  if ((!dpy) || (!snd))
+    loadModules();
   sqIgnorePluginErrors= 0;
 
 #if defined(DEBUG_MODULES)
@@ -1349,7 +1353,8 @@ int main(int argc, char **argv, char **envp)
 #endif
 
   /* run Squeak */
-  interpret();
+  if (runInterpreter)
+    interpret();
 
   /* we need these, even if not referenced from main executable */
   (void)sq2uxPath;
