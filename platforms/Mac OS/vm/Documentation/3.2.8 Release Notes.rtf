@@ -1,4 +1,4 @@
-{\rtf1\mac\ansicpg10000\cocoartf100
+{\rtf1\mac\ansicpg10000\cocoartf102
 {\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fnil\fcharset77 LucidaGrande;\f2\fswiss\fcharset77 Helvetica;
 }
 {\colortbl;\red255\green255\blue255;}
@@ -6,7 +6,7 @@
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0\fs24 \cf0 Mac VM 3.2.8 mach-o build for Carbon, and build for Classic.\
-Aug 7th, 2002 (3.2.8b3)\
+Oct 24rd, 2002 (3.2.8b9)\
 Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
@@ -24,6 +24,24 @@ Restarting the mac solved these problems. Force quit does not.\
 This is fixed in 3.2.7b3\
 Some issues with alias files and folder were fixed in 3.2.7b6 and 3.2.8b3\
 \
+3.2.8b9\
+a) recompiled os-x version, 3.2.8b8 seem to have a bad compiler option and gave 20% less performance.\
+ \
+3.2.8b8\
+a) exposed 
+\f2 vmParameter
+\f0  24 & 25 which control how memory is allocated/freed \
+
+\f2 Smalltalk vmParameterAt: 24 put: 48*1024*1024.\
+Smalltalk vmParameterAt: 25 put: 24*1024*1024.\
+
+\f0 b) Added argv,argc, env variables to main\
+c) Fixed for Jaguar 10.2. Full screen mode cmd-tab broke menu bar hiding, this is a 10.2 bug\
+d) Added support for IP_ADD/DROPMEMBERSHIP and the ability to bind to the wild card port (0).\
+e) OpenGL changes for TEA\
+\
+3.2.8b7 was testing release and not distributed to the public.\
+3.2.8b6 was testing release and not distributed to the public.\
 3.2.8b5\
 a) Oops broke the logic returning the vmversion information in classic. Also incremented os-x version (which was fine) to keep numbers in sync\
 \
