@@ -11,7 +11,7 @@
  * - added Z_PACKET_FLUSH (see zlib.h for details)
  * - added inflateIncomp
  *
- * $Id: zlib.c,v 1.1 2001/10/24 23:14:21 rowledge Exp $
+ * $Id: zlib.c,v 1.2 2002/05/09 01:36:51 rowledge Exp $
  */
 
 /*+++++*/
@@ -653,7 +653,9 @@ struct inflate_blocks_state {
  * The IBM 150 firmware munges the data right after _etext[].  This
  * protects it. -- Cort
  */
+#if 0
 local uInt protect_mask[] = {0, 0, 0, 0, 0, 0, 0, 0, 0 ,0 ,0 ,0};
+#endif
 /* And'ing with mask[n] masks the lower n bits */
 local uInt inflate_mask[] = {
     0x0000,

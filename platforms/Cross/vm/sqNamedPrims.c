@@ -6,12 +6,20 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqNamedPrims.c,v 1.1 2001/10/24 23:13:24 rowledge Exp $
+*   RCSID:   $Id: sqNamedPrims.c,v 1.2 2002/05/09 01:36:50 rowledge Exp $
 *
 *   NOTES:
 *
 *****************************************************************************/
 #include "sq.h"
+
+
+typedef struct {
+  char *pluginName;
+  char *primitiveName;
+  void *primitiveAddress;
+} sqExport;
+
 #include "sqNamedPrims.h"
 
 #ifdef DEBUG
@@ -88,7 +96,7 @@ static void *findExternalFunctionIn(char *functionName, ModuleEntry *module)
 {
 	void *result;
 
-	dprintf(("Looking (externally) for %s ... ", functionName));
+	dprintf(("Looking (externally) for %s in %s... ", functionName,module->name));
 	if(module->handle)
 		result = (void*) ioFindExternalFunctionIn(functionName, (int) module->handle);
 	else
@@ -105,39 +113,40 @@ static void *findExternalFunctionIn(char *functionName, ModuleEntry *module)
 */
 static void *findInternalFunctionIn(char *functionName, char *pluginName)
 {
-	char *function, *plugin;
-	int index;
+  char *function, *plugin;
+  int listIndex, index;
+  sqExport *exports;
 
-	dprintf(("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>")));
+  dprintf(("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>")));
 
-	/* canonicalize functionName and pluginName to be NULL if not specified */
-	if(functionName && !functionName[0]) functionName = NULL;
-	if(pluginName && !pluginName[0]) pluginName = NULL;
+  /* canonicalize functionName and pluginName to be NULL if not specified */
+  if(functionName && !functionName[0]) functionName = NULL;
+  if(pluginName && !pluginName[0]) pluginName = NULL;
+  for(listIndex=0;; listIndex++) {
+    exports = pluginExports[listIndex];
+    if(!exports) break;
+    for(index=0;; index++) {
+      plugin = exports[index].pluginName;
+      function = exports[index].primitiveName;
+      /* canonicalize plugin and function to be NULL if not specified */
+      if(plugin && !plugin[0]) plugin = NULL;
+      if(function && !function[0]) function = NULL;
+      if(!plugin && !function) break; /* At end of table. */
+      /* check for module name match */
+      if((pluginName == NULL) != (plugin == NULL)) continue; /* one is missing */
+      if(plugin && strcmp(pluginName, plugin)) continue; /* name mismatch */
+      /* check for function name match */
+      if((functionName == NULL) != (function == NULL)) continue; /* one is missing */
+      if(function && strcmp(functionName, function)) continue; /* name mismatch */
 
-	for(index=0;;index++) {
-		plugin = internalPrimitiveNames[index][0];
-		function = internalPrimitiveNames[index][1];
+      /* match */
+      dprintf(("found\n"));
+      return exports[index].primitiveAddress;
+    }
+  }
+  dprintf(("not found\n"));
+  return NULL;
 
-		/* canonicalize plugin and function to be NULL if not specified */
-		if(plugin && !plugin[0]) plugin = NULL;
-		if(function && !function[0]) function = NULL;
-
-		if(!plugin && !function) {/* At end of table. */
-			dprintf(("not found\n"));
-			return NULL;
-		}
-		/* check for module name match */
-		if((pluginName == NULL) != (plugin == NULL)) continue; /* one is missing */
-		if(plugin && strcmp(pluginName, plugin)) continue; /* name mismatch */
-
-		/* check for function name match */
-		if((functionName == NULL) != (function == NULL)) continue; /* one is missing */
-		if(function && strcmp(functionName, function)) continue; /* name mismatch */
-
-		/* match */
-		dprintf(("found\n"));
-		return internalPrimitiveAddresses[index];
-	}
 }
 
 
@@ -406,11 +415,6 @@ int ioUnloadModule(char *moduleName)
 		return 0;
 	}
 	/* Notify all interested parties about the fact */
-	/* Lookup moduleUnloaded: from the vm core */
-	{
-		void *fn = findFunctionIn("moduleUnloaded", squeakModule);
-		if(fn) {/* call it */ ((int (*) (char *))fn)(entry->name);}
-	}
 	temp = firstModule;
 	while(temp) {
 		if(temp != entry) {
@@ -452,30 +456,35 @@ int ioUnloadModuleOfLength(int moduleNameIndex, int moduleNameLength)
 
 char *ioListBuiltinModule(int moduleIndex)
 {
-	int index;
-	char *function;
-	char *plugin;
+  int index, listIndex;
+  char *function;
+  char *plugin;
+  sqExport *exports;
 
-	for(index=0;;index++) {
-		plugin = internalPrimitiveNames[index][0];
-		function = internalPrimitiveNames[index][1];
-		if(!function && !plugin) return NULL; /* no more plugins */
-		if(strcmp(function,"setInterpreter") == 0) {
-			/* new module */
-			if(--moduleIndex == 0) {
-				char *moduleName;
-				void * init0;
-		
-				init0 = findInternalFunctionIn("getModuleName", plugin);
-				if(init0) {
-					/* Check the compiled name of the module */
-					moduleName = ((char* (*) (void))init0)();
-					if(moduleName) { return moduleName;}
-				}
-				return plugin;
-			}
-		}
+  for(listIndex=0;; listIndex++) {
+    exports = pluginExports[listIndex];
+    if(!exports) break;
+    for(index=0;; index++) {
+      plugin = exports[index].pluginName;
+      function = exports[index].primitiveName;
+      if(!function && !plugin) break; /* no more plugins */
+      if(strcmp(function,"setInterpreter") == 0) {
+	/* new module */
+	if(--moduleIndex == 0) {
+	  char *moduleName;
+	  void * init0;
+	  init0 = findInternalFunctionIn("getModuleName", plugin);
+	  if(init0) {
+	    /* Check the compiled name of the module */
+	    moduleName = ((char* (*) (void))init0)();
+	    if(moduleName) { return moduleName;}
+	  }
+	  return plugin;
 	}
+      }
+    }
+  }
+  return NULL;
 }
 
 char *ioListLoadedModule(int moduleIndex) {
