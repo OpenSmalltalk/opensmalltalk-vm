@@ -158,16 +158,6 @@ typedef struct
 	int qscale_type, altscan;      /* picture coding extension */
 	int pict_scal;                /* picture spatial scalable extension */
 	int scalable_mode;            /* sequence scalable extension */
-    int  alphaChannelValue;
-    unsigned char blueScreenMappingR[256];
-    unsigned char blueScreenMappingG[256];
-    unsigned char blueScreenMappingB[256];
-    unsigned char clipArray_Red[1028];
-    unsigned char clipArray_Green[1028];
-    unsigned char clipArray_Blue[1028];
-    unsigned short clipArray16_Red[1028];
-    unsigned short clipArray16_Green[1028];
-    unsigned short clipArray16_Blue[1028];
 } mpeg3video_t;
 
 #endif
