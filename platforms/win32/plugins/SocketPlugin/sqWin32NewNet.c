@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32NewNet.c,v 1.3 2002/05/11 00:27:50 andreasraab Exp $
+*   RCSID:   $Id: sqWin32NewNet.c,v 1.4 2002/05/26 18:58:20 andreasraab Exp $
 *
 *   NOTES:
 *	1) TCP & UDP are now fully supported.
@@ -26,7 +26,61 @@
 #ifndef NO_NETWORK
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.3 2002/05/11 00:27:50 andreasraab Exp $";
+  static char RCSID[]="$Id: sqWin32NewNet.c,v 1.4 2002/05/26 18:58:20 andreasraab Exp $";
+#endif
+
+#if 0
+
+#ifdef __MINGW32__
+/*
+ * WinSock 2 extension -- manifest constants for WSAIoctl()
+ */
+#define IOC_UNIX                      0x00000000
+#define IOC_WS2                       0x08000000
+#define IOC_PROTOCOL                  0x10000000
+#define IOC_VENDOR                    0x18000000
+
+#define _WSAIO(x,y)                   (IOC_VOID|(x)|(y))
+#define _WSAIOR(x,y)                  (IOC_OUT|(x)|(y))
+#define _WSAIOW(x,y)                  (IOC_IN|(x)|(y))
+#define _WSAIORW(x,y)                 (IOC_INOUT|(x)|(y))
+
+#define SIO_ASSOCIATE_HANDLE          _WSAIOW(IOC_WS2,1)
+#define SIO_ENABLE_CIRCULAR_QUEUEING  _WSAIO(IOC_WS2,2)
+#define SIO_FIND_ROUTE                _WSAIOR(IOC_WS2,3)
+#define SIO_FLUSH                     _WSAIO(IOC_WS2,4)
+#define SIO_GET_BROADCAST_ADDRESS     _WSAIOR(IOC_WS2,5)
+#define SIO_GET_EXTENSION_FUNCTION_POINTER  _WSAIORW(IOC_WS2,6)
+#define SIO_GET_QOS                   _WSAIORW(IOC_WS2,7)
+#define SIO_GET_GROUP_QOS             _WSAIORW(IOC_WS2,8)
+#define SIO_MULTIPOINT_LOOPBACK       _WSAIOW(IOC_WS2,9)
+#define SIO_MULTICAST_SCOPE           _WSAIOW(IOC_WS2,10)
+#define SIO_SET_QOS                   _WSAIOW(IOC_WS2,11)
+#define SIO_SET_GROUP_QOS             _WSAIOW(IOC_WS2,12)
+#define SIO_TRANSLATE_HANDLE          _WSAIORW(IOC_WS2,13)
+#define SIO_ROUTING_INTERFACE_QUERY   _WSAIORW(IOC_WS2,20)
+#define SIO_ROUTING_INTERFACE_CHANGE  _WSAIOW(IOC_WS2,21)
+#define SIO_ADDRESS_LIST_QUERY        _WSAIOR(IOC_WS2,22)
+#define SIO_ADDRESS_LIST_CHANGE       _WSAIO(IOC_WS2,23)
+#define SIO_QUERY_TARGET_PNP_HANDLE   _WSAIOR(IOC_WS2,24)
+#define SIO_ADDRESS_LIST_SORT         _WSAIORW(IOC_WS2,25)
+
+
+int
+FAR PASCAL
+WSAIoctl(
+    SOCKET s,
+    DWORD dwIoControlCode,
+    LPVOID lpvInBuffer,
+    DWORD cbInBuffer,
+    LPVOID lpvOutBuffer,
+    DWORD cbOutBuffer,
+    LPDWORD lpcbBytesReturned,
+    LPOVERLAPPED lpOverlapped,
+    void *lpCompletionRoutine
+    );
+#endif
+
 #endif
 
 #ifndef NDEBUG
@@ -746,6 +800,7 @@ void sqSocketCloseConnection(SocketPtr s)
 {
   privateSocketStruct *pss = PSP(s);
   int err;
+  int failPrim = 0;
 
   if (!SocketValid(s)) return;
   /* Try to gracefully close the socket */
@@ -762,6 +817,7 @@ void sqSocketCloseConnection(SocketPtr s)
       SetEvent(pss->hReadWatcherEvent);
     } else {
       pss->sockError = err;
+      failPrim = 1;
     }
   } else {
     pss->s = NULL;
@@ -780,6 +836,7 @@ void sqSocketCloseConnection(SocketPtr s)
     GlobalFree(GlobalHandle(temp));
   }
   UNLOCKSOCKET(pss->mutex);
+  if(failPrim) FAIL();
 }
 
 /*****************************************************************************
@@ -863,7 +920,12 @@ void sqSocketListenOnPort(SocketPtr s, int port)
   addr.sin_port = htons((short)port);
   addr.sin_addr.s_addr = localHostAddress;
   
-  bind( SOCKET(s), (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
+  result = bind( SOCKET(s), (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
+  if(result == SOCKET_ERROR) {
+    pss->sockError = WSAGetLastError();
+    FAIL();
+    return;
+  }
   if(UDPSocketType == s->socketType) { /* UDP */
     SOCKETSTATE(s) = Connected | SOCK_BOUND_UDP | SOCK_DATA_WRITABLE;
   } else { /* TCP */
@@ -904,7 +966,12 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
   addr.sin_port = htons((short)port);
   addr.sin_addr.s_addr = localHostAddress;
 
-  bind( SOCKET(s), (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
+  result = bind( SOCKET(s), (struct sockaddr*) &addr, sizeof(struct sockaddr_in));
+  if(result == SOCKET_ERROR) {
+    pss->sockError = WSAGetLastError();
+    FAIL();
+    return;
+  }
   /* show our willingness to accept a backlogSize incoming connections */
   result = listen(SOCKET(s), backlogSize);
   if(result != SOCKET_ERROR) {
@@ -915,6 +982,7 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
     SetEvent(pss->hReadWatcherEvent);
     UNLOCKSOCKET(pss->mutex);
   } else {
+    pss->sockError = WSAGetLastError();
     FAIL();
   }
 }
@@ -1129,6 +1197,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
   privateSocketStruct *pss = PSP(s);
   int result;
   int addrSize;
+  int failPrim = 0;
 
   if (!SocketValid(s)) return -1;
   if(bufSize <= 0) return bufSize;
@@ -1167,11 +1236,13 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 	  if(pss->sockType != UDPSocketType)
 	    pss->sockState = OtherEndClosed;
 	  pss->sockError = err;
+	  failPrim = 1;
 	}
 	result = 0;
       }
     UNLOCKSOCKET(pss->mutex);
   }
+  if(failPrim) FAIL();
   return result;
 }
 
@@ -1199,7 +1270,8 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
   privateSocketStruct *pss = PSP(s);
   int result;
   int addrSize;
-  
+  int failPrim = 0;
+
   if (!SocketValid(s)) return -1;
   /***NOTE***NOTE***NOTE***NOTE***NOTE***
       It's not clear if we should just bail out here
@@ -1242,11 +1314,13 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 	  if(pss->sockType != UDPSocketType)
 	    pss->sockState = OtherEndClosed;
 	  pss->sockError = err;
+	  failPrim = 1;
 	}
 	result = 0;
       }
     UNLOCKSOCKET(pss->mutex);
   }
+  if(failPrim) FAIL();
   return result;
 }
 
@@ -1354,19 +1428,215 @@ int	sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port, int b
 	return FAIL();
 }
 
-int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(
-			SocketPtr s,int optionName, int optionNameSize, int optionValue, int optionValueSize, int *result)
-{
-	return FAIL();
+/*** socket options ***/
+
+
+/* NOTE: we only support the portable options here as an incentive for
+         people to write portable Squeak programs.  If you need
+         non-portable socket options then go write yourself a plugin
+         specific to your platform.  This decision is unilateral and
+         non-negotiable.  - ikp
+   NOTE: we only support the integer-valued options because the code
+	 in SocketPlugin doesn't seem able to cope with the others.
+	 (Personally I think that things like SO_SNDTIMEO et al would
+	 by far more interesting than the majority of things on this
+	 list, but there you go...)
+   NOTE: if your build fails because of a missing option in this list,
+	 simply DELETE THE OPTION (or comment it out) and then send
+	 me mail (andreas.raab@gmx.de) to let me know about it.
+*/
+
+typedef struct {
+  char *name;		/* name as known to Squeak */
+  int   optLevel;	/* protocol level */
+  int   optName;	/* name as known to the network layer */
+  int   optType;        /* type of option */
+} socketOption;
+
+#ifndef SOL_IP
+# define SOL_IP IPPROTO_IP
+#endif
+
+#ifndef SOL_UDP
+# define SOL_UDP IPPROTO_UDP
+#endif
+
+#ifndef SOL_TCP
+# define SOL_TCP IPPROTO_TCP
+#endif
+
+static socketOption socketOptions[]= {
+  { "SO_DEBUG",			SOL_SOCKET,	SO_DEBUG,          1 },
+  { "SO_REUSEADDR",		SOL_SOCKET,	SO_REUSEADDR,      1 },
+  { "SO_DONTROUTE",		SOL_SOCKET,	SO_DONTROUTE,      1 },
+  { "SO_BROADCAST",		SOL_SOCKET,	SO_BROADCAST,      1 },
+  { "SO_SNDBUF",		SOL_SOCKET,	SO_SNDBUF,         1 },
+  { "SO_RCVBUF",		SOL_SOCKET,	SO_RCVBUF,         1 },
+  { "SO_KEEPALIVE",		SOL_SOCKET,	SO_KEEPALIVE,      1 },
+  { "SO_OOBINLINE",		SOL_SOCKET,	SO_OOBINLINE,      1 },
+  { "SO_LINGER",		SOL_SOCKET,	SO_LINGER,         1 },
+  { "IP_MULTICAST_IF",		SOL_IP,		IP_MULTICAST_IF,   1 },
+  { "IP_MULTICAST_TTL",		SOL_IP,		IP_MULTICAST_TTL,  1 },
+  { "IP_MULTICAST_LOOP",	SOL_IP,		IP_MULTICAST_LOOP, 1 },
+  { "TCP_NODELAY",		SOL_TCP,	TCP_NODELAY,       1 },
+  { "SO_RCVLOWAT",		SOL_SOCKET,	SO_RCVLOWAT,       1 },
+  { "SO_SNDLOWAT",		SOL_SOCKET,	SO_SNDLOWAT,       1 },
+
+  /* multicast support */
+  {"IP_ADD_MEMBERSHIP",         SOL_IP,         IP_ADD_MEMBERSHIP,  100},
+  {"IP_DROP_MEMBERSHIP",        SOL_IP,         IP_DROP_MEMBERSHIP, 100},
+
+#if 0
+  /* WSAIoctl() support */
+  {"SIO_GET_BROADCAST_ADDRESS",	0,	SIO_GET_BROADCAST_ADDRESS, 200},
+#endif
+  { (char *)0,			0,		0,                  0 }
+};
+
+
+static socketOption *findOption(char *name, size_t nameSize) {
+  socketOption *opt= 0;
+  char buf[128];
+  if(nameSize > 127) return NULL;
+  strncpy(buf, name, nameSize);
+  buf[nameSize] = 0;
+  for (opt= socketOptions; opt->name != 0; ++opt)
+    if (!strcmp(buf, opt->name))
+      return opt;
+  return NULL;
 }
 
-int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(
-			SocketPtr s,int optionName, int optionNameSize, int *result)
+
+/*
+  set the given option for the socket.
+*/
+int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue
+    (SocketPtr s,int optionName, int optionNameSize,
+     int optionValueIndex, int optionValueSize, int *result)
 {
-	return FAIL();
+  char optionValue[256];
+  size_t bufSize;
+  unsigned char   buf[256];
+
+  if (SocketValid(s)) {
+    socketOption *opt= findOption((char *)optionName, (size_t)optionNameSize);
+
+    if (opt == 0) goto barf;
+    if(optionValueSize >= sizeof(optionValue)) goto barf;
+
+    memcpy(optionValue, (void*)optionValueIndex, optionValueSize);
+    optionValue[optionValueSize] = 0;
+
+    if(opt->optType == 1) {
+      /* integer options */
+      ((int*)buf)[0] = atoi(optionValue);
+      bufSize = sizeof(int);
+      /* printf("optionValue: %d (%s)\n", ((int*)buf)[0], optionValue); */
+    } else if(opt->optType == 100) {
+      /* multicast options, taking one or two IP addresses, e.g.,
+         '1.2.3.4|5.6.7.8' specifies multicast group + interface
+	 '1.2.3.4' specifies only multicast group (interface is INADDR_ANY)
+      */
+      if(optionValueSize == 4) {
+	((int*)buf)[0] = ((int*)optionValue)[0];
+	((int*)buf)[1] = INADDR_ANY;
+      } else if(optionValueSize == 8) {
+	((int*)buf)[0] = ((int*)optionValue)[0];
+	((int*)buf)[1] = ((int*)optionValue)[1];
+      } else {
+	goto barf;
+      }
+      bufSize = 8;
+    } else {
+      goto barf;
+    }
+    {
+      int err;
+      err = setsockopt(SOCKET(s), opt->optLevel, opt->optName,buf, bufSize);
+      /* printf("setsockopt(): %d\n", err); */
+      if(err < 0) goto barf;
+    }
+    /* it isn't clear what we're supposed to return here, since
+       setsockopt isn't supposed to have any value-result parameters
+       (go grok that `const' on the buffer argument if you don't
+       believe me).  the image says "the result of the negotiated
+       value".  what the fuck is there to negotiate?  either
+       setsockopt sets the value or it barfs.  and i'm not about to go
+       calling getsockopt just to see if the value got changed or not
+       (the image should send getOption: to the Socket if it really
+       wants to know).  if the following is wrong then I could
+       probably care (a lot) less...  fix the logic in the image and
+       then maybe i'll care about fixing the logic in here.  (i know
+       that isn't very helpful, but it's 05:47 in the morning and i'm
+       severely grumpy after fixing several very unpleasant bugs that
+       somebody introduced into this file while i wasn't looking.)  */
+    *result= 0;
+    return 0;
+  }
+ barf:
+  interpreterProxy->success(false);
+  return false;
 }
 
 
+/* query the socket for the given option.  */
+int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
+    (SocketPtr s,int optionName, int optionNameSize, int *result)
+{
+  int optval;
+  size_t len;
+  socketOption *opt;
+  if (!SocketValid(s)) goto barf;
+  opt= findOption((char *)optionName, (size_t)optionNameSize);
+  if (opt == 0) {
+    /* printf("option not found\n"); */
+    goto barf;
+  }
+  if (opt->optType == 1) {
+    len= sizeof(optval);
+    if ((getsockopt(SOCKET(s), opt->optLevel, opt->optName,&optval, &len)) < 0)
+      {
+	/* printf("getsockopt() returned < 0\n"); */
+	goto barf;
+      }
+    if (len != sizeof(optval)) {
+      /* printf("len != sizeof(optval)"); */
+      goto barf;
+    }
+    *result= optval;
+    return 0;
+  }
+
+#if 0
+  if(opt->optType == 200) {
+    int sz, err;
+    struct sockaddr_in addr;
+    /* WSAIoctl() */
+    if(opt->optName != SIO_GET_BROADCAST_ADDRESS) goto barf;
+    err = WSAIoctl(SOCKET(s), 
+		   SIO_GET_BROADCAST_ADDRESS, 
+		   NULL, 0, 
+		   &addr, sizeof(addr), 
+		   &sz, 
+		   NULL, NULL);
+    if(err) {
+      printf("WSAIoctl error: %d (WSAGetLastError=%d)\n", 
+	     err, WSAGetLastError());
+      goto barf;
+    }
+    if(sz != sizeof(addr)) {
+      printf("WSAIoctl returned %d instead of %d\n", sz, sizeof(addr));
+      goto barf;
+    }
+    *result = ntohl(addr.sin_addr.s_addr);
+    return 0;
+  }
+#endif
+
+ barf:
+  interpreterProxy->success(false);
+  return errno;
+}
 
 /*****************************************************************************
  *****                     Resolver Functions                            *****
