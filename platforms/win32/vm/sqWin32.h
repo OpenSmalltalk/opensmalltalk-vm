@@ -240,7 +240,7 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define SQUEAK_VM_VERSION TEXT("Squeak 3.4.3 / Tea 1.9 VM (release) from ") TEXT(__DATE__) \
+#define SQUEAK_VM_VERSION TEXT("Squeak 3.4.4 / Tea 1.9 VM (release) from ") TEXT(__DATE__) \
 	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
 /********************************************************/
