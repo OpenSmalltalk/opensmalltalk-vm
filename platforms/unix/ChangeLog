@@ -1,3 +1,54 @@
+2003-09-03  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/configure.ac: Version 3.6-beta11 3.6b-5411.
+
+	* platforms/unix/vm/sqGnu.h (PRIM_DISPATCH): Changes for global struct.
+	(GP_REG): Enable for PowerPC.
+
+	* platforms/unix/plugins/PseudoTTYPlugin/sqUnixPseudoTTYPlugin.c
+	(ptyForkAndExec): Add diagnostic dprintf().
+
+	* platforms/unix/config/gnuify: Insert GP_REG for global struct in
+	interpret().  Recognise optional 'foo->' before primitiveIndex for
+	prim dispatch rewrite.
+
+	* platforms/unix/config/config.h.in: Add HAVE_LIBUTIL_H for pty
+	plugin on FreeBSD.
+
+	* platforms/unix/vm/sqUnixExternalPrims.c
+	(ioFindExternalFunctionIn): Suppress warning for missing
+	"setInterpreter" or "getModuleName".
+
+2003-09-02  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/Cross/plugins/B3DAcceleratorPlugin/sqOpenGLRenderer.c:
+	Fix ARGB vs. RGBA problem and adhere to glColorMaterial
+	recommendations.
+
+	* platforms/unix/vm/sqUnixMain.c: Emergency dump conditional on
+	IMAGE_DUMP (default is disasbled at compiled time).
+
+	* platforms/unix/vm/sqUnixMain.c (ioProcessEvents): Create a
+	synchronous emergency image dump after SIGHUP received.
+	(sigquit): Create an asynchronous emergency image dump when
+	SIGQUIT received.  (Disabled at compile time by default.)
+
+	* platforms/unix/vm-display-Quartz/sqUnixQuartz.m
+	([Squeak -sendEvent:]): Add inverted CtrlKeyBit to modifiers for
+	mouse wheel events.
+
+2003-09-01  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/config/configure.ac: Version 3.6-beta9.
+
+	* platforms/Cross/plugins/SocketPlugin/SocketPlugin.h
+	(sqSocketListenOnPortBacklogSizeInterface): Added.
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c
+	(sqSocketListenOnPortBacklogSizeInterface): Add i/f address
+	argument.
+	(sqSocketListenOnPortBacklogSize): Punt to above with INADDR_ANY.
+
 2003-08-31  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/config/configure.ac: Version 3.6-beta8 3.6b-5402.
