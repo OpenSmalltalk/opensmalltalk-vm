@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2003-02-10 18:34:32 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-14 09:23:16 by piumarta on emilia.inria.fr
  *
  *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
@@ -1164,7 +1164,6 @@ static void  sound_parseEnvironment(void)
 
 static int   sound_parseArgument(int argc, char **argv)
 {
-  if (!strcmp(argv[0], "-oss")) return 1;
   if (!strcmp(argv[0], "-nomixer")) return noSoundMixer= 1;
   return 0;
 }
@@ -1172,7 +1171,7 @@ static int   sound_parseArgument(int argc, char **argv)
 static void  sound_printUsage(void)
 {
   printf("\nOSS <option>s:\n");
-  printf("  -nomixer              disable mixer (volume) controls\n");
+  printf("  -nomixer              disable mixer (volume) adjustment\n");
 }
 
 static void  sound_printUsageNotes(void)
