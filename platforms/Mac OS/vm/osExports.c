@@ -32,7 +32,7 @@ int serialPortNames(int portNum, char *portName, char *inName, char *outName);
 Boolean IsKeyDown(void);
 #if defined( BROWSERPLUGIN )
 int primitivePluginBrowserReady(void);
-#if !defined ( __APPLE__ ) && !defined ( __MACH__ )
+#if ENABLE_URL_FETCH
 int primitivePluginDestroyRequest(void);
 int primitivePluginRequestFileHandle(void);
 int primitivePluginRequestState(void);
@@ -66,7 +66,7 @@ void *os_exports[][3] = {
    We should make these primitives a proper plugin
    but right now we just need the exports. */
 XFN(primitivePluginBrowserReady)
-#if !defined ( __APPLE__ ) && !defined ( __MACH__ )
+#if ENABLE_URL_FETCH
 XFN(primitivePluginRequestURLStream)
 XFN(primitivePluginRequestURL)
 XFN(primitivePluginPostURL)
