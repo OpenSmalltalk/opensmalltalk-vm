@@ -1,2 +1,0 @@
-?package(squeak-vm):needs=X11 section=Apps/Programming\
-  title="squeak" command="/usr/bin/inisqueak"
