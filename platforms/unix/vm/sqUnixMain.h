@@ -11,4 +11,6 @@ extern int    textEncodingUTF8;
 
 extern void   imgInit(void);
 
+#define	EventTypeUpdate	100
+
 #endif /* __sqUnixMain_h */
