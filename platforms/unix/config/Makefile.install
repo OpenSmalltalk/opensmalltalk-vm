@@ -2,7 +2,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2004-04-02 04:17:33 by piumarta on emilia.local
+# Last edited: 2005-03-09 01:56:27 by piumarta on squeak.hpl.hp.com
 
 DOCFILES	= COPYING COPYRIGHT LICENSE \
 		  README.Contributing README.Keyboard README.Sound
@@ -48,10 +48,12 @@ install-plugins : plugins
 
 uninstall-plugins : .force
 	@list='$(PLUGINS_LA)'; for p in $$list; do \
-	  if test -f $(ROOT)/$(plgdir)/$$p; then \
-	    echo "$(LIBTOOL) --mode=uninstall rm -f $(ROOT)$(plgdir)/$$p"; \
-	    $(LIBTOOL) --mode=uninstall rm -f $(ROOT)$(plgdir)/$$p; \
-	  else :; fi; \
+	  filename=$(ROOT)/$(plgdir)/`basename $$p .la`;\
+	  if test -f $$filename; then \
+	    echo "$(LIBTOOL) --mode=uninstall rm -f $$filename"; \
+	    $(LIBTOOL) --mode=uninstall rm -f $$filename; \
+	  else
+	    echo "$$filename does not exist"; fi; \
 	done
 	@$(UNINSTALL) $(ROOT)$(plgdir)
 
@@ -70,6 +72,9 @@ install-doc : squeak.1
 	$(LN_S) squeak.1 $(ROOT)$(mandir)/man1/inisqueak.1
 
 uninstall-doc :
+	@list='$(DOCFILES)'; for f in $$list; do \
+	  rm -fv $(ROOT)$(docdir)/$$f.gz; \
+	done
 	@$(UNINSTALL) $(ROOT)$(docdir) $(DOCFILES)
 	@$(UNINSTALL) $(ROOT)$(mandir)/man1 squeak.1 inisqueak.1
 
@@ -105,7 +110,7 @@ uninstall-sources :
 # npsqueak
 
 install-npsqueak : npsqueak .force
-	$(SHELL) -ec 'cd nps; $(MAKE) install VM_VERSION=$(VM_VERSION) SQ_DIR=$(ROOT)$(imgdir) imgdir=$(imgdir)'
+	$(SHELL) -ec 'cd nps; $(MAKE) install ROOT=$(ROOT) VM_VERSION=$(VM_VERSION) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'
 
 uninstall-npsqueak : npsqueak .force
-	$(SHELL) -ec 'cd nps; $(MAKE) uninstall VM_VERSION=$(VM_VERSION) SQ_DIR=$(ROOT)$(imgdir) imgdir=$(imgdir)'
+	$(SHELL) -ec 'cd nps; $(MAKE) uninstall ROOT=$(ROOT) VM_VERSION=$(VM_VERSION) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'

@@ -35,7 +35,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2004-02-06 06:37:54 by piumarta on emilia.local
+# Last edited: 2005-03-09 01:43:36 by piumarta on squeak.hpl.hp.com
 
 @make_cfg@
 @make_prg@
@@ -76,7 +76,7 @@ nps :
 	$(SHELL) -ec 'cd nps; ln -s $(topdir)/platforms/unix/npsqueak/* .'
 
 nps/npsqueak.so : nps
-	$(SHELL) -ec 'cd nps; $(MAKE) VM_VERSION=$(VM_VERSION) SQ_DIR=$(imgdir)'
+	$(SHELL) -ec 'cd nps; $(MAKE) plgdir=$(plgdir) bindir=$(bindir) imgdir=$(imgdir)'
 
 # OSX app bundle
 
