@@ -18,12 +18,14 @@ plugins still are needed.\
 \f0 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 Notes About previous VM.\
-3.2.5 has a bug that prevents the use of accented characters without a image path to fix a VM issue (not an issue in 3.2.4)\
-3.2.5 does not support the AppleScript Plugin (not an issue in 3.2.4)\
+3.2.5 has a bug that prevents the use of accented characters without \
+	a image patch to fix a VM issue (not an issue in 3.2.4). Also you can't enter an double keystroke characters, ie ^ \
+	which makes life difficult. It also does not support the AppleScript Plugin (not an issue in 3.2.4)\
 3.2.4 a bug in project builder introduced a performance problem (bad compiler options).\
 \
 See the 3.2.5 about why this 3.2.6 is different inside.\
 \
+For 3.2.6:\
 a) Change an internal number that dictates how often pending interrupts should be looked at from 5ms to 3ms This improves \
 delay accuracy.\
 b) Change how sleeping is done when squeak is idle. This reduces CPU consumption, and improves Delay accuracy.\
@@ -41,6 +43,7 @@ i) Change iorelinquishPrcessorForMicroseconds to sleep the quatum between now an
    for os-9 it improves things by 1 or 2ms. Also in  os-x we sleep more when idle so CPU usage goes down.\
 j) On OS-9 umap AND free the VM backing store. Just doing the free doesn't work and you lose 128Mb of disk space until you reboot\
 k) 3.2.6b7 for post event processing ignore mouse move/drag/or scroll wheel events. These are ignored by the open/gl plugin and only suck a major amount of CPU time to process in the post event processing logic. \
+l) 3.2.6b8 (3.2.6b4 classic) removed call to uncouple shift keys introduced in 3.2.1. This causes some macs after sleeping not to respond to keyboard input\
 \
 Mac VM 3.2.5 mach-o build for Carbon, and build for Classic.\
 March 4th, 2002\
