@@ -27,6 +27,12 @@ int platAllocateMemory(int amount);
 extern void sqFilenameFromString(char*fileName, int sqString, int sqSize);
 #define sqFilenameFromString(dst, src, num) sqFilenameFromString(dst, src, num)
 
+#undef sqImageFileRead
+size_t sqImageFileRead(void *ptr, size_t sz, size_t count, FILE* f);
+
+#undef sqImageFileWrite
+size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, FILE* f);
+
 int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize);
 
 #define squeakFileOffsetType int

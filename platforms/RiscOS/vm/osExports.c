@@ -8,7 +8,6 @@
 #define XFN2(plugin, export) {#plugin, #export, (void*)plugin##_##export}
 extern void  setSocketPollFunction(int spf );
 void *os_exports[][3] = {
-//	#include "platform.exports"
    XFN(setSocketPollFunction)
 	{NULL, NULL, NULL}
 };

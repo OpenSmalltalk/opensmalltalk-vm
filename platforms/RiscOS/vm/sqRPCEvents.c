@@ -20,6 +20,10 @@
 #include "sq.h"
 #include "sqArguments.h"
 
+#define longAt(i) (*((int *) (i)))
+
+//#define DEBUG
+
 extern wimp_w	sqWindowHandle;
 wimp_block	wimpPollBlock;
 int		wimpPollWord;
@@ -27,6 +31,8 @@ int		windowActive = false;
 extern int	pointerBuffer[];
 extern os_coord	pointerOffset;
 extern os_coord	scalingFactor, scrollOffset, visibleArea;
+int displayBitmapIndex;
+extern unsigned int * displaySpriteBits;
 
 /*** Variables -- Event Recording ***/
 
@@ -60,21 +66,20 @@ int eventBufPut = 0;
 
 #define KEYBUF_SIZE 64
 int	keyBuf[KEYBUF_SIZE];	/* circular buffer */
-int	keyBufGet = 0;			/* ndex of next item of keyBuf to read */
-int	keyBufPut = 0;			/* ndex of next item of keyBuf to write */
+int	keyBufGet = 0;		/* index of next item of keyBuf to read */
+int	keyBufPut = 0;		/* index of next item of keyBuf to write */
 int	keyBufOverflows = 0;	/* number of characters dropped */
 
-int	buttonState = 0;		/* mouse button and modifier state  */
+int	buttonState = 0;	/* mouse button and modifier state  */
 os_coord	savedMousePosition;	/* mouse position; not modified when window is inactive */
-int	mouseButtonDown;		/* keep track of curent mouse button state - for drags outside window */
+int	mouseButtonDown;	/* keep track of curent mouse button state - for drags outside window */
 extern int	getInterruptKeycode(void);
-extern int		setInterruptPending(int value);
+extern int	setInterruptPending(int value);
 extern int	setInterruptCheckCounter(int value);
 
 int scanLine, startX, xLen, startY, stopY, pixelsPerWord, pixelsPerWordShift;
 void (*reverserFunction)(void);
-extern int displayBits;
-	void (*socketPollFunction)(int delay, int extraFd) = null;
+void (*socketPollFunction)(int delay, int extraFd) = null;
 
 
 /* Squeak expects to get kbd modifiers as the top 4bits of the 8bit char code, or
@@ -242,7 +247,6 @@ extern	 void displayModeChanged(void);
 	 void WindowClose(wimp_close * wblock);
 	 void WindowOpen( wimp_open * wblock);
 extern	 void claimCaret(wimp_pointer * wblock);
-extern	 void aioPollForIO(int, int);     /* see sqRPCNetwork.c */
 extern	 void receivedClaimEntity(wimp_message * wblock);
 extern	 void receivedDataRequest(wimp_message * wmessage);
 extern	 void receivedDataSave(wimp_message * wblock);
@@ -250,22 +254,19 @@ extern	 void receivedDataSave(wimp_message * wblock);
 	 void eventBufAppendMouseDown(int buttons, int x, int y);
 	 void eventBufAppendMouseUp(int buttons, int x, int y);
 	 void eventBufAppendMouseMove(int x, int y);
-		extern void platReportError( os_error * e);
+extern	 void platReportError( os_error * e);
 
-
-//#define dbg
 
 
 void setSocketPollFunction(int spf ) {
 	socketPollFunction = (void(*)(int, int))spf;
-#ifdef dbg
+#ifdef DEBUG
 {
-		extern os_error privateErr;
-
-		privateErr.errnum = (bits)0;
-		sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);
-		platReportError((os_error *)&privateErr);
-	}
+	extern os_error privateErr;
+	privateErr.errnum = (bits)0;
+	sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);
+	platReportError((os_error *)&privateErr);
+}
 #endif
 }
 
@@ -307,38 +308,55 @@ int kbdstate, pollDelay;
 
 	if(socketPollFunction) {
 		socketPollFunction(microSecondsToDelay, 0);
-#ifdef dbg
+#ifdef DEBUG
 {
-		extern os_error privateErr;
+	extern os_error privateErr;
 
-		privateErr.errnum = (bits)0;
-		sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);
-		platReportError((os_error *)&privateErr);
-	}
+	privateErr.errnum = (bits)0;
+	sprintf(privateErr.errmess, "socketPoll %0x", (int)socketPollFunction);
+	platReportError((os_error *)&privateErr);
+}
 #endif
 	}
 
 	while( true ) {
 		xwimp_poll_idle((wimp_MASK_POLLWORD| wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_SAVE_FP) , &wimpPollBlock, (os_t)pollDelay, &wimpPollWord, (wimp_event_no*)&wimpPollEvent);
 		switch ( wimpPollEvent ) {
-			case wimp_NULL_REASON_CODE		: /* null means no more interesting events, so return */
-											  return false ; break;
-			case wimp_REDRAW_WINDOW_REQUEST	: DisplayPixmap(); break;
-			case wimp_OPEN_WINDOW_REQUEST	: WindowOpen(&wimpPollBlock.open); break;
-			case wimp_CLOSE_WINDOW_REQUEST	: WindowClose(&wimpPollBlock.close); break;
-			case wimp_POINTER_LEAVING_WINDOW : PointerLeaveWindow(&wimpPollBlock); break;
-			case wimp_POINTER_ENTERING_WINDOW: PointerEnterWindow(&wimpPollBlock); break;
-			case wimp_MOUSE_CLICK			: MouseButtons(&wimpPollBlock.pointer); break;
-			case wimp_USER_DRAG_BOX			: DoNothing(); break;
-			case wimp_KEY_PRESSED			: KeyPressed( &wimpPollBlock.key); break;
-			case wimp_MENU_SELECTION		: DoNothing(); break;
-			case wimp_SCROLL_REQUEST		: DoNothing(); break;
+			case wimp_NULL_REASON_CODE:
+				/* null means no more interesting events,
+				   so return */
+				return false ; break;
+			case wimp_REDRAW_WINDOW_REQUEST	:
+				DisplayPixmap(); break;
+			case wimp_OPEN_WINDOW_REQUEST	:
+				WindowOpen(&wimpPollBlock.open); break;
+			case wimp_CLOSE_WINDOW_REQUEST	:
+				WindowClose(&wimpPollBlock.close); break;
+			case wimp_POINTER_LEAVING_WINDOW :
+				PointerLeaveWindow(&wimpPollBlock); break;
+			case wimp_POINTER_ENTERING_WINDOW:
+				PointerEnterWindow(&wimpPollBlock); break;
+			case wimp_MOUSE_CLICK			:
+				MouseButtons(&wimpPollBlock.pointer); break;
+			case wimp_USER_DRAG_BOX			:
+				DoNothing(); break;
+			case wimp_KEY_PRESSED			:
+				KeyPressed( &wimpPollBlock.key); break;
+			case wimp_MENU_SELECTION		:
+				DoNothing(); break;
+			case wimp_SCROLL_REQUEST		:
+				DoNothing(); break;
 			// dont use gain/lose when using clipboard protocols
-			//case wimp_LOSE_CARET			: DeactivateWindow(&wimpPollBlock); break;
-			//case wimp_GAIN_CARET			: ActivateWindow(&wimpPollBlock); break;
-			case wimp_USER_MESSAGE			: UserMessage(&wimpPollBlock.message); break;
-			case wimp_USER_MESSAGE_RECORDED		: UserMessage(&wimpPollBlock.message); break;
-			case wimp_USER_MESSAGE_ACKNOWLEDGE	: UserMessage(&wimpPollBlock.message); break;
+			//case wimp_LOSE_CARET			:
+			//	DeactivateWindow(&wimpPollBlock); break;
+			//case wimp_GAIN_CARET			:
+			//	ActivateWindow(&wimpPollBlock); break;
+			case wimp_USER_MESSAGE			:
+				UserMessage(&wimpPollBlock.message); break;
+			case wimp_USER_MESSAGE_RECORDED		:
+				UserMessage(&wimpPollBlock.message); break;
+			case wimp_USER_MESSAGE_ACKNOWLEDGE	:
+				UserMessage(&wimpPollBlock.message); break;
 		} 
 	}
 }
@@ -348,57 +366,57 @@ void reverseNothing(void) {
 }
 
 void reverse_image_1bpps(void) {
-unsigned int * linePtr, *pixPtr;
+unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
-		linePtr = (unsigned int *)(displayBits + 4) + j;
-		pixPtr = linePtr + startX;
+		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
+		dstPtr = displaySpriteBits + j + startX;
 		{ int i, k;
 		unsigned int w, nw;
-			for (i=xLen; i--; pixPtr++) {
-				w = (unsigned int ) *pixPtr;
+			for (i=xLen; i--; srcPtr++, dstPtr++) {
+				w = (unsigned int ) *srcPtr;
 				nw = w & 0x1;
 				for (k=31; k--;) {
 					w = w >> 1;
 					nw = (nw << 1) | (w & 0x1);
 				}
-				*pixPtr = nw;
+				*dstPtr = nw;
 			}
 		}
 	}
 }
 
 void reverse_image_2bpps(void) {
-unsigned int * linePtr, *pixPtr;
+unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
-		linePtr = (unsigned int *)(displayBits + 4) + j;
-		pixPtr = linePtr + startX;
+		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
+		dstPtr = displaySpriteBits + j + startX;
 		{ int i, k;
 		unsigned int w, nw;
-			for (i=xLen; i--; pixPtr++) {
-				w = (unsigned int ) *pixPtr;
+			for (i=xLen; i--; srcPtr++, dstPtr++) {
+				w = (unsigned int ) *srcPtr;
 				nw = w & 0x3;
 				for (k=15; k--;) {
 					w = w >> 2;
 					nw = (nw << 2) | (w & 0x3);
 				}
-				*pixPtr = nw;
+				*dstPtr = nw;
 			}
 		}
 	}
 }
 
 void reverse_image_4bpps(void) {
-unsigned int * linePtr, *pixPtr;
+unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
-		linePtr = (unsigned int *)(displayBits + 4) + j;
-		pixPtr = linePtr + startX;
+		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
+		dstPtr = displaySpriteBits + j + startX;
 		{ int i;
 		unsigned int w, nw;
-			for (i=xLen; i--; pixPtr++) {
-				w = (unsigned int ) *pixPtr;
+			for (i=xLen; i--; srcPtr++, dstPtr++) {
+				w = (unsigned int ) *srcPtr;
 				nw = w & 0xF;
 				w = w >> 4;
 				nw = (nw << 4) | (w & 0xF);
@@ -414,44 +432,45 @@ int j;
 				nw = (nw << 4) | (w & 0xF);
 				w = w >> 4;
 				nw = (nw << 4) | (w & 0xF);
-				*pixPtr = nw;
+				*dstPtr = nw;
 			}
 		}
 	}
 }
 
 void reverse_image_bytes(void)  {
-unsigned int *linePtr, *pixPtr;
-unsigned char * bytePtr;
+unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
-		linePtr = (unsigned int *)(displayBits  + 4)  + j;
-		pixPtr = linePtr + startX;
+		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
+		dstPtr = displaySpriteBits + j + startX;
 		{ int i;
-			unsigned int pix;
-			for (i=xLen; i--; pixPtr++) {
-				pix = *pixPtr;
-				bytePtr = (unsigned char *)pixPtr;
-				bytePtr[3] = pix & 0xFF;
-				bytePtr[2] = (pix >> 8) & 0xFF;
-				bytePtr[1] = (pix >> 16) & 0xFF;
-				bytePtr[0] = (pix >> 24);
-				/* *pixPtr = (((((pix >> 24)) & 255) + (((pix >> 8)) & 65280)) + (((pix << 8)) & 16711680)) + (((pix << 24)) & 4278190080U); */
+		unsigned int w, nw;
+			for (i=xLen; i--; srcPtr++, dstPtr++) {
+				w = *srcPtr;
+				nw = w & 0xFF;
+				w = w >>8;
+				nw = (nw << 8) | (w & 0xFF);
+				w = w >>8;
+				nw = (nw << 8) | (w & 0xFF);
+				w = w >>8;
+				nw = (nw << 8) | (w & 0xFF);
+				*dstPtr = nw;
 			}
 		}
 	}
 }
 
 void reverse_image_words(void) {
-unsigned int * linePtr, *pixPtr;
+unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
-		linePtr = (unsigned int *)(displayBits + 4) + j;
-		pixPtr = linePtr + startX;
+		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
+		dstPtr = displaySpriteBits + j + startX;
 		{ int i;
 		unsigned int w, nw;
-			for (i=xLen; i--; pixPtr++) {
-				w = (unsigned int ) *pixPtr;
+			for (i=xLen; i--; srcPtr++, dstPtr++) {
+				w = (unsigned int ) *srcPtr;
 				nw = w & 0x1F;
 				w = w >> 5;
 				nw = (nw << 5) | (w & 0x1F);
@@ -463,28 +482,28 @@ int j;
 				nw = (nw << 5) | (w & 0x1F);
 				w = w >> 5;
 				nw = (nw << 5) | (w & 0x1F);
-				*pixPtr = nw;
+				*dstPtr = nw;
 			}
 		}
 	}
 }
 
 void reverse_image_longs(void) {
-unsigned int * linePtr, *pixPtr;
+unsigned int * srcPtr, *dstPtr;
 int j;
 	for(j = startY; j < stopY; j += scanLine) {
-		linePtr = (unsigned int *)(displayBits + 4) + j;
-		pixPtr = linePtr + startX;
+		srcPtr = (unsigned int *)displayBitmapIndex + j + startX;
+		dstPtr = displaySpriteBits + j + startX;
 		{ int i;
 		unsigned int w, nw;
-			for (i=xLen; i--; pixPtr++) {
-				w = (unsigned int ) *pixPtr;
+			for (i=xLen; i--; srcPtr++, dstPtr++) {
+				w = (unsigned int ) *srcPtr;
 				nw = w & 0xFF;
 				w = w >> 8;
 				nw = (nw << 8) | (w & 0xFF);
 				w = w >> 8;
 				nw = (nw << 8) | (w & 0xFF);
-				*pixPtr = nw;
+				*dstPtr = nw;
 			}
 		}
 	}
@@ -504,9 +523,10 @@ int log2Depth;
 	case 1: log2Depth=0; reverserFunction = reverse_image_1bpps;break;
 	default: reverserFunction = reverseNothing; return; 
 	}
+	/* work out words per scan line */
 	pixelsPerWordShift = 5-log2Depth;
-	pixelsPerWord= 1 << pixelsPerWordShift;  /* was = 32/depth */
-	scanLine= (squeakDisplaySize.x + pixelsPerWord-1) >> pixelsPerWordShift;  /* words per scan line */
+	pixelsPerWord= 1 << pixelsPerWordShift;
+	scanLine= (squeakDisplaySize.x + pixelsPerWord-1) >> pixelsPerWordShift;
 }
 
 int DisplayReverseAreaSetup(int x0, int y0, int x1, int y1) {
@@ -525,13 +545,32 @@ void DisplayPixmap(void) {
 extern osspriteop_area *spriteAreaPtr;
 extern osspriteop_header *displaySprite;
 extern osspriteop_trans_tab *	pixelTranslationTable;
-//bool more;
-int more;
+extern int displayObject(void);
+osbool more;
 wimp_draw wblock;
 os_error * e;
 int xA, yA, xB, yB;
-	if ( sqWindowHandle == null ) return;
+	if ( displaySpriteBits == NULL ) {
+#ifdef DEBUG
+{
+		extern os_error privateErr;
+		privateErr.errnum = (bits)0;
+		sprintf(privateErr.errmess, "DisplayPixmap NULL");
+		platReportError((os_error *)&privateErr);
+}
+#endif
+		/* flush the damage rectangles */
+		wblock.w = sqWindowHandle;
+		more = wimp_redraw_window( &wblock );
+		while ( more ) {
+			xwimp_get_rectangle (&wblock, &more);
+		}
+		return;
+	}
 	wblock.w = sqWindowHandle;
+	/* Find latest address of source Bitmap.
+	   Sensitive to object format */
+	displayBitmapIndex = longAt((displayObject() + 4)+(0 * 4)) + 4; 
 	more = wimp_redraw_window( &wblock );
 	DisplayReverseSetup();
 	while ( more ) {
@@ -541,15 +580,17 @@ int xA, yA, xB, yB;
 		yB = (visibleArea.y -  wblock.clip.y0   ) >> scalingFactor.y;
 		DisplayReverseAreaSetup(xA, yA, xB, yB);
 		reverserFunction();
-		if ((e = xosspriteop_put_sprite_scaled (osspriteop_USER_AREA, spriteAreaPtr,
-					(osspriteop_id)&(displaySprite->name), wblock.box.x0, wblock.box.y0,
-					os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES, (os_factors const *)0,pixelTranslationTable)) != NULL) {
+		if ((e = xosspriteop_put_sprite_scaled (osspriteop_USER_AREA,
+			spriteAreaPtr,
+			(osspriteop_id)&(displaySprite->name),
+			wblock.box.x0, wblock.box.y0,
+			os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES,
+			(os_factors const *)0,pixelTranslationTable)) != NULL) {
 			if ( spriteAreaPtr != null) {
 				platReportError(e);
 				return;
 			}
 		}
-		reverserFunction();
 		xwimp_get_rectangle (&wblock, &more);
 	}
 }
@@ -583,15 +624,17 @@ int xA, yA, xB, yB;
 		yB = (visibleArea.y -  wblock.clip.y0   ) >> scalingFactor.y;
 		DisplayReverseAreaSetup(xA, yA, xB, yB);
 		reverserFunction();
-		if ((e = xosspriteop_put_sprite_scaled (osspriteop_USER_AREA, spriteAreaPtr,
-					(osspriteop_id)&(displaySprite->name), wblock.box.x0, wblock.box.y0,
-					os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES, (os_factors const *)0,pixelTranslationTable)) != NULL) {
+		if ((e = xosspriteop_put_sprite_scaled (osspriteop_USER_AREA,
+			spriteAreaPtr,
+			(osspriteop_id)&(displaySprite->name),
+			wblock.box.x0, wblock.box.y0,
+			os_ACTION_OVERWRITE | osspriteop_GIVEN_WIDE_ENTRIES,
+			(os_factors const *)0,pixelTranslationTable)) != NULL) {
 			if ( spriteAreaPtr != null) {
 				platReportError(e);
 				return;
 			}
 		}
-		reverserFunction();
 		xwimp_get_rectangle (&wblock, &more);
 	}
 }

@@ -3,8 +3,9 @@ Set Squeak$Dir <Obey$Dir>
 /<Squeak$Dir>.!Boot
 | specify amount of free space to attempt to allocate for Squeak's object
 | memory.  More will be claimed for the display sprite that is used.
-| 5m == 5 MB, which is plenty; 4m should be ok at a pinch.
+| 15m == 15 MB, which is usually plenty. Aim for 5Mb more than the size
+| of the image file on disc, or more if you can provide it.
 | 'k' is also acceptable for allocating Kb values
-/<Squeak$Dir>.!RunImage -memory:30m  %*0
+/<Squeak$Dir>.!RunImage -memory:15m  %*0
 | uncomment this to get  stdout logged
 | >> trace

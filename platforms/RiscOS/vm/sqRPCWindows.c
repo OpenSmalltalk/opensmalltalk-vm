@@ -23,6 +23,8 @@
 
 #define longAt(i) (*((int *) (i)))
 
+//#define DEBUG
+
 /*** Variables -- Imported from Virtual Machine ***/
 extern unsigned char	*memory;
 
@@ -73,7 +75,7 @@ wimp_icon_create	sqIconBarIcon;
 wimp_MESSAGE_LIST(4)	importantWimpMessages;
 wimp_version_no		actualOSLevel;
 os_error		privateErr;
-char			VMVersion[] = "3.2 of "__DATE__;
+char			versionString[20];
 
 /* argument handling stuff  -- see c.sqArgument */
 int 			numOptionsVM;
@@ -96,6 +98,7 @@ vmArg args[] = {
 
 /* screen description. Needs updating when screenmode changes */
 os_coord		squeakDisplaySize,
+			squeakWindowSize,
 			screenSize,
 			scalingFactor,
 			scrollOffset,
@@ -107,7 +110,7 @@ osspriteop_area *	spriteAreaPtr = NULL;
 osspriteop_header *	displaySprite = NULL;
 osspriteop_trans_tab *	pixelTranslationTable = NULL;
 os_PALETTE (256)	paletteTable;
-extern int		displayBits;
+unsigned int * displaySpriteBits = NULL;
 
 /*** Functions ***/
 void		SetColorEntry(int index, int red, int green, int blue);
@@ -116,8 +119,8 @@ void		displayModeChanged(void);
 extern int	HandleEvents(int);
 int		InitRiscOS(void);
 void		MouseButtons( wimp_pointer * wblock);
-void		SetUpWindow(void);
-void		SetInitialWindowSize(void);
+void		SetUpWindow(int w, int h);
+void		SetInitialWindowSize(int w, int h);
 int		SetupPixmap(int w, int h, int d);
 void		SetupPixelTranslationTable(void);
 void		SetupPaletteTable(void);
@@ -166,6 +169,15 @@ byte * daBaseAddress;
 		platReportFatalError(e);
 		return false;
 	}
+#ifdef DEBUG
+{
+	extern os_error privateErr;
+
+	privateErr.errnum = (bits)0;
+	sprintf(privateErr.errmess, "platAllocateMemory(%d) at %d", amount, (int)daBaseAddress);
+	platReportError((os_error *)&privateErr);
+}
+#endif
 	return (int)daBaseAddress;
 }
 
@@ -175,10 +187,6 @@ int platMallocChunk(int size) {
 	if ( chunk ==  NULL) return -1;
 	return chunk;
 }
-
-// int platFree(int chunk) {
-// 	free( (void *)chunk);
-// }          
 
 int InitRiscOS(void) {
 /* Initialise RiscOS for desktop wimp program use */
@@ -225,7 +233,7 @@ void setDefaultPointer(void) {
 
 
 int setWindowParameters(os_coord *origin) {
-/* arrange for the window to appear from origin to origin+squeakDisplaySize */
+/* arrange for the window to appear from origin to origin+squeakWindowSize */
 int width, height;
 wimp_window_info wblock;
 os_error * e;
@@ -236,23 +244,26 @@ os_error * e;
 		return false;
 	}
 	/* scale w & h by OSUnit/pixel factor */
-	width = squeakDisplaySize.x <<scalingFactor.x;
-	height = squeakDisplaySize.y << scalingFactor.y;
+	width  = squeakWindowSize.x <<scalingFactor.x;
+	height = squeakWindowSize.y << scalingFactor.y;
 	/* set work area to suit these values */
-	wblock.extent.y0 = -height;
+	wblock.extent.y0 = - height;
 	wblock.extent.x1 = width;
 	xwimp_set_extent( sqWindowHandle, &(wblock.extent));
+
 	/* set size of window */
-	if ( origin  != null ) { /* only set origin at start up */
+	if ( origin  != null ) {
+		/* only set origin & stack posn at start up */
 		wblock.visible.x0 = (int)(origin->x)<<scalingFactor.x;
 		wblock.visible.y1 = (int)(origin->y)<<scalingFactor.y;
+		wblock.next = (wimp_w)-1;
 	}
-
 	wblock.visible.x1 = (wblock.visible.x0)+width;
 	wblock.visible.y0 = (wblock.visible.y1) - height;
-	wblock.next = (wimp_w)-1;
+
 	wblock.xscroll = 0;
 	wblock.yscroll = 0;
+
 	if ( (e = xwimp_open_window((wimp_open *)&wblock)) != NULL) {
 		platReportFatalError(e);
 		return false;
@@ -271,9 +282,18 @@ os_error * e;
 	wblock.extent.x1 = /* width */ wblock.visible.x1 - wblock.visible.x0;
 	xwimp_set_extent( sqWindowHandle, &(wblock.extent));
 
-	/* now reset squeakDisplaySize to reflect the eventual sizes */
-	squeakDisplaySize.x = (wblock.extent.x1)>>scalingFactor.x;
-	squeakDisplaySize.y = ( -wblock.extent.y0)>> scalingFactor.y;
+	/* now reset squeakWindowSize to reflect the eventual sizes */
+	squeakWindowSize.x = (wblock.extent.x1)>>scalingFactor.x;
+	squeakWindowSize.y = ( -wblock.extent.y0)>> scalingFactor.y;
+#ifdef DEBUG
+{
+	extern os_error privateErr;
+
+	privateErr.errnum = (bits)0;
+	sprintf(privateErr.errmess, "setWindowParameters %d @ %d", squeakWindowSize.x, squeakWindowSize.y);
+	platReportError((os_error *)&privateErr);
+}
+#endif
 	return true;
 }
 
@@ -329,10 +349,10 @@ byte * daBaseAddress;
 
 	ptr = (int) daBaseAddress;
 	if ( ptr == NULL) {
-	privateErr.errnum = 0;
-	sprintf( privateErr.errmess, "Squeak failed to malloc sprite area of size &%0x\n", size);
-	platReportFatalError(&privateErr);
-		return false;
+		privateErr.errnum = 0;
+		sprintf( privateErr.errmess, "Squeak failed to malloc sprite area of size &%0x\n", size);
+		platReportFatalError(&privateErr);
+			return false;
 	}
 	/* setup the sprite area . Start it at the beginning of the allocated chunk */
 	spriteAreaPtr = (osspriteop_area *)(ptr); 
@@ -476,7 +496,6 @@ int i,r,g,b;
 			}
 		}
 	}
-
 }
 
 int SetupPixmap(int w, int h, int d) {
@@ -484,9 +503,7 @@ int SetupPixmap(int w, int h, int d) {
 os_error * e;
 int sprMode;
 
-	/* derive the sprite mode from the depth requested.
-	 * Needs to work with new spritemode stuff and support 16/32 bits etc
-	*/
+	/* derive the sprite mode from the depth(d) requested. */
 #define SPR_MODE_WORD(arg) ((arg<<osspriteop_TYPE_SHIFT) | (180<<osspriteop_YRES_SHIFT) | (180<<osspriteop_XRES_SHIFT) | 1 )
 	switch (d) {
 		case 1: sprMode = SPR_MODE_WORD(osspriteop_TYPE1BPP); break;
@@ -506,27 +523,22 @@ int sprMode;
 		platReportFatalError(e);
 		return false;
 	}
-	/* believe it or not, the following is derived from Acorn recommended code
-	to add a palette to a sprite...
-	we do this move-up to allow room for a Squeak object header just in front
-	of the  actual bits. Kinky huh?  */
-#define extraRoom (256 )
-	spriteAreaPtr->used = spriteAreaPtr->used + extraRoom;
 	displaySprite = (osspriteop_header *)((int)spriteAreaPtr + spriteAreaPtr->first);
-	displaySprite->size = displaySprite->size +extraRoom;
-	displaySprite->image = displaySprite->image + extraRoom;
-	displaySprite->mask = displaySprite->mask + extraRoom;
-
+	SetupPixelTranslationTable();
+	/* the displaySpriteBits ptr will be used when copying bits from the Display object to a RiscOS pixel format buffer */
+	displaySpriteBits = (unsigned int *)((int)displaySprite + displaySprite->image);
 	return true;
 }
 
-void SetUpWindow(void) {
+void SetUpWindow(int width, int height) {
 wimp_window wblock;
 os_error * e;
 wimp_w w;
 
 	/* create window block */
-	/* initial visible area on screen - almost irrelevant, but we need to set something */
+
+	/* initial visible area on screen -
+	   almost irrelevant, but we need to set something */
 	wblock.visible.x0 = 800;
 	wblock.visible.y0 = 1200;
 	wblock.visible.x1 = 1800;
@@ -537,7 +549,7 @@ wimp_w w;
 	/* open as top window */
 	wblock.next = (wimp_w)-1;
 	/* window flags */
-	wblock.flags = wimp_WINDOW_NEW_FORMAT | wimp_WINDOW_MOVEABLE | wimp_WINDOW_BOUNDED_ONCE | /* wimp_WINDOW_SIZE_ICON | wimp_WINDOW_VSCROLL |*/ wimp_WINDOW_TITLE_ICON | wimp_WINDOW_CLOSE_ICON | wimp_WINDOW_BACK_ICON /* | wimp_WINDOW_TOGGLE_ICON */;
+	wblock.flags = wimp_WINDOW_NEW_FORMAT | wimp_WINDOW_MOVEABLE | wimp_WINDOW_BOUNDED_ONCE | /* wimp_WINDOW_SIZE_ICON |  wimp_WINDOW_VSCROLL | */ wimp_WINDOW_TITLE_ICON | wimp_WINDOW_CLOSE_ICON | wimp_WINDOW_BACK_ICON /* | wimp_WINDOW_TOGGLE_ICON */;
 	/* colours */
 	wblock.title_fg = wimp_COLOUR_BLACK;
 	wblock.title_bg = wimp_COLOUR_LIGHT_GREY;
@@ -554,7 +566,7 @@ wimp_w w;
 	/* titlebar flags */
 	wblock.title_flags = wimp_ICON_TEXT | wimp_ICON_INDIRECTED | wimp_ICON_FILLED  | wimp_ICON_HCENTRED | wimp_ICON_VCENTRED | wimp_ICON_BORDER  ;
 	/* work area flags */
-	wblock.work_flags =  (wimp_BUTTON_CLICK)  <<12;
+	wblock.work_flags =  (wimp_BUTTON_CLICK) << 12;
 	/* sprite area +1 apparently refers to WIMP area */
 	wblock.sprite_area = (osspriteop_area *)1;
 	/* minimum window size allowed */
@@ -579,128 +591,63 @@ wimp_w w;
 	setDefaultPointer();
 
 	/* set the window size & position */
-	SetInitialWindowSize();
+	SetInitialWindowSize(width, height);
 
 	return;
 }
 
-void SetInitialWindowSize(void) {
-/* set the size of the SQ window, assuming there is one.
-	use the save window size value if the image had one,
-	use half the screen width/height otherwise.
-	If there is a window, do not use less than 64X64 pixels
+void SetInitialWindowSize(int width, int height) {
+/* set the size of the SQ window.
+   don't make it bigger than the screen size and centre it 
 */
-int maxWidth, maxHeight;
 os_coord origin;
 
-	/* is there an SQ window? */
-	if ( sqWindowHandle == null ) {
-		privateErr.errnum = 0;
-		sprintf( privateErr.errmess, "Squeak has no window\n");
-		platReportFatalError(&privateErr);
-		return;
-	}
-
-	/* if there is, find the screen width, height, bpp etc */
+	/*  find the screen width, height, bpp etc */
 	getDisplayParameters();
 
-	if (getSavedWindowSize() != 0) {
-	} else {
-		/* set h & w to half screen */
-		squeakDisplaySize.x = screenSize.x / 2;
-		squeakDisplaySize.y = screenSize.y / 2;
-	}
+	/* maximum size is screen size */
+	squeakWindowSize.x  = ( width <= screenSize.x) ? width : screenSize.x;
+	squeakWindowSize.y  = (height <= screenSize.y) ? height : screenSize.y;
 
-	/* minimum size is 64 x 64 */
-	squeakDisplaySize.x = ( squeakDisplaySize.x > 64) ? squeakDisplaySize.x : 64;
-	squeakDisplaySize.y = ( squeakDisplaySize.y > 64) ? squeakDisplaySize.y : 64;
-
-	/* maximum size is screen size (minus a little) */
-	maxWidth  = (int)(screenSize.x * 0.9);
-	maxHeight = (int)(screenSize.y * 0.9);
-	squeakDisplaySize.x  = ( squeakDisplaySize.x <= maxWidth)  ?  squeakDisplaySize.x : maxWidth;
-	squeakDisplaySize.y = (squeakDisplaySize.y <= maxHeight) ? squeakDisplaySize.y : maxHeight;
-
-	origin.x = (int)(screenSize.x * 0.05);
-	origin.y = (int)(screenSize.y * 0.95);
+	/* default origin is meant to centre the window */
+	origin.x = (int)(screenSize.x - squeakWindowSize.x) / 2;
+	origin.y = (int)(screenSize.y + squeakWindowSize.y) / 2;
 	setWindowParameters( &origin);
-	
-	return ;
 }
-int SetDisplayBitmap( int dispBitsIndex, int width, int height, int depth) {
+
+int SetDisplayBitmap( int width, int height, int depth) {
 /* setup the display bitmap */
-int dispBits, sizeHdr, classHdr, basicHdr, hdrSize, byteSize;
-int displayObj, w, h, d;
-extern int splObj(int index);
-extern int isPointers(int oop);
-extern int lengthOf(int oop);
-extern int fetchPointerofObject(int fieldIndex, int oop);
-extern int extraHeaderBytes(int oopOrChunk);
-extern int storePointerofObjectwithValue(int fieldIndex, int oop, int valuePointer);
+int byteSize;
+#ifdef DEBUG
+{
+	privateErr.errnum = (bits)0;
+	sprintf(privateErr.errmess, "SetDisplayBitmap %d @ %d", width, height);
+	platReportError((os_error *)&privateErr);
+}
+#endif
 
 	/* if there is no stWindow yet, open the main window */
-	if (0) {	privateErr.errnum = (bits)0;
-	sprintf(privateErr.errmess, "SetDisplayBitmap, dBI = %x\n", dispBitsIndex);
-	platReportError((os_error *)&privateErr);
-	}	
-	if (sqWindowHandle == null) SetUpWindow();
-
-	/* find the special object that is the display object*/
-	displayObj = splObj(14);
-	if (isPointers(displayObj) && (lengthOf(displayObj) >= 4)) {
-		w = fetchIntegerofObject(1, displayObj);
-		h = fetchIntegerofObject(2, displayObj);
-		d = fetchIntegerofObject(3, displayObj);
-		/* ought to double check the w/h/d against the passed in width/height/depth */
-	}
-
-	/* get the 0th oop from displayObj, the bits object */
-	dispBits = fetchPointerofObject( 0, displayObj);
-	/* cache the display bits header bytes ready to emplace in sprite. If we are re-doing the beDisplay, we may very well be nilling out these values in the current sprite ! */
-	switch(hdrSize = extraHeaderBytes(dispBits)) {
-		case 8: sizeHdr = longAt(dispBits - 8) /* sizeHeader(dispBits) */;
-		case 4: classHdr = longAt( dispBits - 4)/* classHeader(dispBits) */;
-		case 0: basicHdr = longAt(dispBits) /* baseHeader(dispBits) */;
-		break;
-	}
+	if (sqWindowHandle == null) SetUpWindow(width, height);
 
 	/* create the RiscOS pixmap to the right dimensions */
-	byteSize = ((w + 3)& ~3)  * h * d /8 ;
+	byteSize = ((width + 3)& ~3)  * height * depth /8 ;
 	byteSize += 4096;
 	if ( spriteAreaPtr == NULL ) {
-		/* if no sprite area yet, malloc enough room for bits + assorted headers */
+		/* if no sprite area yet, create one */
 		createSpriteArea( byteSize );
 	} else if ( spriteAreaPtr->size < byteSize) {
-		/* current size is too small, so free it and realloc */
+		/* current size is too small, so free it and recreate */
 		xosdynamicarea_delete ( SqueakDisplayDA );
-		//free( spriteAreaPtr);
 		createSpriteArea( byteSize );
 	} 
-	/* build the sprite area, sprite and translation table */
-	SetupPixmap(w, h, d);
-	SetupPixelTranslationTable();
+	/* build the sprite area, the actual sprite and translation table */
+	SetupPixmap(width, height, depth);
 
-	/* alter the window size to suit this display object */
-	squeakDisplaySize.x = w;
-	squeakDisplaySize.y = h;
-	squeakDisplayDepth  = d;
-	setWindowParameters( (os_coord *)null);
+	/* save the dimensions of this Display object */
+	squeakDisplaySize.x = width;
+	squeakDisplaySize.y = height;
+	squeakDisplayDepth  = depth;
 
-	/* insert the original header bytes in front of the Pixmap
-	so that the plain header word is at ((int)displaySprite + displaySprite->image - 4) */
-	displayBits = ((int)displaySprite + displaySprite->image - 4);
-	switch(hdrSize) {
-		case 8: *(int*)(displayBits-8) = sizeHdr;
-		case 4: *(int*)(displayBits-4) = classHdr;
-		case 0: *(int*)displayBits = basicHdr;
-		break;
-	}
-
-	/* memcpy the image bits to the new bitmap, just in case anything interesting is supposed to be there */
-	memcpy((void *)(displayBits+4), (void *)dispBitsIndex, (size_t)(((w + 3)& ~3)  * h * d /8));
-
-	/* finally, link the Display object to the new DisplayBits object */
-	storePointerofObjectwithValue(0, displayObj, displayBits);
 	return true;
 }
 
@@ -723,7 +670,9 @@ int ioAssertion(void) {
  
 void exit_function(void)
 {
-/* do we need to do any special tidy up here ? RiscOS needs to kill the pointer bitmap */
+/* do we need to do any special tidy up here ? RiscOS needs to kill the
+   pointer bitmap nad release the dynamic areas
+*/
 extern void ioShutdownAllModules(void);
 	ioShutdownAllModules(); 
 
@@ -748,7 +697,7 @@ extern int nextKeyPressOrNil(void);
 
 
 int ioMicroMSecs(void) {
-	/* The
+/* The
    function ioMicroMSecs() is used only to collect timing statistics
    for the garbage collector and other VM facilities. (The function
    name is meant to suggest that the function is based on a clock
@@ -756,7 +705,8 @@ int ioMicroMSecs(void) {
    in units of milliseconds.) This clock must have enough precision to
    provide accurate timings, and normally isn't called frequently
    enough to slow down the VM. Thus, it can use a more expensive clock
-   that ioMSecs(). */
+   that ioMSecs().
+*/
 	return ioMSecs();
 }
 
@@ -777,12 +727,13 @@ extern int peekKeyPressOrNil(void);
 }
 
 int ioProcessEvents(void) {
-	static clock_t nextPollTick = 0;
-	clock_t currentTick;
-	if( (currentTick = clock()) > nextPollTick) {
+static clock_t nextPollTick = 0;
+clock_t currentTick;
+
+//	if( (currentTick = clock()) >= nextPollTick) {
 		HandleEvents(0 );
-		nextPollTick = currentTick + 1;
-	}
+//		nextPollTick = currentTick + 1;
+//	}
 	return true; 
 }
 
@@ -799,39 +750,31 @@ int ioGetNextEvent(sqInputEvent *evt) {
 primitiveFail();
 }
 
-int ioIsEventVM(void) {
-	//return true;
-	return false;
-}
-
-int ioEventHandle(void) {
-/* do all the vm event stuff */
-	ioProcessEvents();
-	return 0;
-}
-
 int ioRelinquishProcessorForMicroseconds(int microSeconds) {
-	/* This operation is platform dependent. On the Mac, it simply calls
-	 * HandleEvents(), which gives other applications a chance to run.
-	 * Here, we use microSeconds as the parameter to HandleEvents, so that wimpPollIdle
-	 * gets a timeout.
-	 */
+/* This operation is platform dependent. On the Mac, it simply calls
+ * HandleEvents(), which gives other applications a chance to run.
+ * Here, we use microSeconds as the parameter to HandleEvents, so that wimpPollIdle
+ * gets a timeout.
+ */
 
 	HandleEvents(microSeconds);
 	return microSeconds;
 }
 
 int ioScreenSize(void) {
-/* return the size of the SQ window in use */
-int w = 10, h = 10;
+/* return the size of the SQ window in use,
+   or the default size held in the image */
+int w, h;
 int maxWidth, maxHeight;
+int minWidth = 100, minHeight = 0;
 
 	if (sqWindowHandle != null) {
 		/* get extent  from window object */
-		w = squeakDisplaySize.x;
-		h = squeakDisplaySize.y;
-	} else { /* derive from saved size in image */
-		/* if there's no window yet, we need to check the screen metrics to make sure we
+		w = squeakWindowSize.x;
+		h = squeakWindowSize.y;
+	} else {/* derive from saved size in image 
+		   if there's no window yet, we need to check the
+		   screen metrics to make sure we
 		   don't make too big a window later */
 		getDisplayParameters();
 		w = (unsigned) getSavedWindowSize() >> 16 ;
@@ -840,27 +783,34 @@ int maxWidth, maxHeight;
 		maxWidth  = (int)screenSize.x ;
 		maxHeight = (int)(screenSize.y * 0.9);
 		w = (w <= maxWidth)  ? w : maxWidth;
+		w = (w <= minWidth) ? minWidth : w;
 		h = (h <= maxHeight) ? h : maxHeight;
+		h = (h <= minHeight) ? minHeight : h;
 	}
+#ifdef DEBUG
+{
+	extern os_error privateErr;
+	privateErr.errnum = (bits)0;
+	sprintf(privateErr.errmess, "ioScreenSize %d @ %d", w, h);
+	platReportError((os_error *)&privateErr);
 
-	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
+}
+#endif
+	return (w << 16) | (h & 0xFFFF);
 }
 
 int ioSeconds(void) {
-	/*	  Unix epoch to Smalltalk epoch conversion.
-		(Date newDay: 1 year: 1970) asSeconds
-				- (Date newDay: 1 year: 1901) asSeconds
-		is
-				2177452800
-		limit is about 2057ad- this may cause problems...
-	*/
+/*	  Unix epoch to Smalltalk epoch conversion.
+	(Date newDay: 1 year: 1970) asSeconds
+			- (Date newDay: 1 year: 1901) asSeconds
+	is
+			2177452800
+	limit is about 2057ad - this may cause problems...
+*/
  
 	return  (int)((unsigned long)time(NULL) + 2177452800uL);
 }
 
-int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
-	return ioSetCursorWithMask(cursorBitsIndex, NULL, offsetX, offsetY);
-}
 
 int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
 /* Move 1-bit form to pointer buffer and use mask to affect result. Remember RPC pointer is 2-bits/pixel to allow 3 colours + mask. As of Sq2.2, there can also be a mask 1-bit form specified.
@@ -871,7 +821,6 @@ mask	cursor
   0		1		invert ?? Seems rather dumb-Mac */
 int i;
 os_error *e;
-/* expand each bit in cursor bitmap to two bits in cursor h/w word */
 
 	for (i = 0; i < 16; i++) {
 		register int cursorWord, maskWord;
@@ -879,61 +828,86 @@ os_error *e;
 		cursorWord = (checkedLongAt(cursorBitsIndex + (4 * i)) ) >>16;
 		 if (cursorMaskIndex != NULL) {
 			maskWord = (checkedLongAt(cursorMaskIndex + (4 * i)) ) >>16;
-		} else  maskWord = cursorWord;
+		} else
+			maskWord = cursorWord;
 		line = 0;
 		for(j = 15; j >= 0; j--) {
-				/* if the mask bit is 1, set 'white' and only then check the cursor word.
-				   if it is 1 as well, set 'black' */
-				if(maskWord & (1<<(j))) {
-						line |= (1<< ((15-j)<<1));
-						if(cursorWord & (1<<(j))) 
-								line |= (2<< ((15-j)<<1));
-				}
+			/* if the mask bit is 1, set 'white' and only
+			   then check the cursor word.
+			   if it is 1 as well, set 'black' */
+			if(maskWord & (1<<(j))) {
+				line |= (1<< ((15-j)<<1));
+				if(cursorWord & (1<<(j))) 
+					line |= (2<< ((15-j)<<1));
+			}
 		}
 		pointerBuffer[i] = line;
 	}
-	pointerOffset.x =  MIN(-offsetX, 15);
+	pointerOffset.x = MIN(-offsetX, 15);
 	pointerOffset.y = MIN(-offsetY, 15) ;
 	if ( windowActive) {
-		e = xwimp_set_pointer_shape(2, (byte const *)&pointerBuffer, 16, 16, pointerOffset.x, pointerOffset.y ); /* turn on pointer 2 */
+		/* turn on pointer 2 */
+		e = xwimp_set_pointer_shape(2, (byte const *)&pointerBuffer, 16, 16, pointerOffset.x, pointerOffset.y );
 	}
 
 	return true;
 }
 
-int ioSetFullScreen(int fullScreen) {
-	static os_coord prevOrigin = {0,0};
-	int width, height;
-	int oldWidth, oldHeight;
-	wimp_window_info wblock;
-	os_error * e;
+int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
+/* older API for cursor setting */
+	return ioSetCursorWithMask(cursorBitsIndex, NULL, offsetX, offsetY);
+}
 
-	if (fullScreen) {
-		os_coord screenTopLeft = {0,0};
-		oldWidth = squeakDisplaySize.x;
-		oldHeight = squeakDisplaySize.y;
-		width  = screenSize.x;
-		height = screenSize.y;
-		if ((oldWidth < width) || (oldHeight < height)) {
-			/* save old size if it wasn't already full-screen */ 
-			setSavedWindowSize( (oldWidth << 16) + (oldHeight & 0xFFFF));
-			squeakDisplaySize.x = width;
-			squeakDisplaySize.y = height;
-			/*  save the current window origin */
-			wblock.w = sqWindowHandle;
-			if ((e = xwimp_get_window_info(&wblock)) != NULL) {
-				platReportFatalError(e);
-				return false;
-			}
-			prevOrigin.x = wblock.visible.x0>>scalingFactor.x;
-			prevOrigin.y = wblock.visible.y1>>scalingFactor.y;
+
+int ioSetFullScreen(int fullScreenWanted) {
+/* if fullScreenWanted and we aren't already running fullScreen,
+   change the window size and store the current origin and size
+   for a later restore.
+   if !fullScreenWanted and we are running fullScreen, restore those saved
+   values
+*/
+
+static os_coord prevOrigin = {0,0}, prevSize;
+os_coord screenBottomLeft = {0,0};
+static int fullScreen = false;
+wimp_window_info wblock;
+os_error * e;
+
+	if (fullScreenWanted && !fullScreen) {
+		/* save the current window size */
+		prevSize.x = squeakWindowSize.x;
+		prevSize.y = squeakWindowSize.y;
+		/*  save the current window origin */
+		wblock.w = sqWindowHandle;
+		if ((e = xwimp_get_window_info(&wblock)) != NULL) {
+			platReportFatalError(e);
+			return false;
 		}
-		setWindowParameters(&screenTopLeft);
-	} else {
-		squeakDisplaySize.x = (unsigned) getSavedWindowSize() >> 16 ;
-		squeakDisplaySize.y  = getSavedWindowSize() & 0xFFFF;
-		setWindowParameters( &prevOrigin);
+		prevOrigin.x = wblock.visible.x0>>scalingFactor.x;
+		prevOrigin.y = wblock.visible.y1>>scalingFactor.y;
+		/* save the new size in case the image is saved */
+		setSavedWindowSize((screenSize.x << 16) + (screenSize.y & 0xFFFF));
+		/* set the window size */
+		squeakWindowSize.x =  screenSize.x ;
+		squeakWindowSize.y =  screenSize.y;
+		setWindowParameters(&screenBottomLeft);
+		fullScreen = true;
+		displaySpriteBits = NULL;
+		return true;
 	}
+
+	if (!fullScreenWanted && fullScreen) {
+		squeakWindowSize.x =  prevSize.x;
+		squeakWindowSize.y  = prevSize.y;
+		/* save the restored size in case the image is saved */
+		setSavedWindowSize((squeakWindowSize.x << 16) + (squeakWindowSize.y & 0xFFFF));
+		setWindowParameters( &prevOrigin);
+		fullScreen = false;
+		displaySpriteBits = NULL;
+		return true;
+	}
+
+	return false;
 }
 
 int ioShowDisplay( int dispBitsIndex, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB) {
@@ -941,19 +915,21 @@ os_error *e;
 
 	if(affectedR <= affectedL || affectedT >= affectedB) return true;
 
-		/* If the latest display bitmap does not match the cached one, fix it up. Remember that the dispBitsIndex is the _body_ address not the _header_ address so subtract 4! */
-	if( (dispBitsIndex-4) != displayBits ) {
-		SetDisplayBitmap(dispBitsIndex, width, height, depth);
-		//addEventToBuffer(1);
+	if( displaySpriteBits == NULL ||
+		squeakDisplaySize.x != width ||
+		squeakDisplaySize.y != height ||
+		squeakDisplayDepth != depth) {
+		/* if the displaySprite is not set up, sort it out */
+		SetDisplayBitmap( width, height, depth);
 	}
 
-
-	/* inform the Wimp of the affected area, scaled for the display mode etc */
+	/* inform the Wimp of the affected area,
+	   scaled for the display mode etc */
 	if( (e = xwimp_force_redraw( sqWindowHandle,
-					affectedL<<scalingFactor.x,
-					0-(affectedB<<scalingFactor.y),
-					affectedR<<scalingFactor.x,
-					0-(affectedT<<scalingFactor.y))) != NULL) {
+				affectedL<<scalingFactor.x,
+				0-(affectedB<<scalingFactor.y),
+				affectedR<<scalingFactor.x,
+				0-(affectedT<<scalingFactor.y))) != NULL) {
 		platReportFatalError(e);
 		return false;
 	}
@@ -976,6 +952,7 @@ int ioScreenDepth(void) {
 }
 
 int ioHasDisplayDepth(int bitsPerPixel) {
+// return true for all supported bpp supported. 
 	switch(bitsPerPixel) {
 		case 1:
 		case 2:
@@ -1030,11 +1007,6 @@ void sqFilenameFromString(char*fileName, int sqString, int sqSize) {
 	}
 }
 
-int plugInAllowAccessToFilePath ( char * path, int size) {
-// faked for now. What is really needed ?
-	return true;
-}
-
 int imageNameSize(void) {
 	return strlen(imageName);
 }
@@ -1058,6 +1030,66 @@ int count;
 	sqFilenameFromString( imageName, sqImageNameIndex, count);
 	return count;
 }
+
+void dummyWimpPoll(void) {
+/* quick wimp_poll to allow icon to appear and for interactivity
+   during loading */
+	wimp_event_no wimpPollEvent;
+	wimp_block wimpPollBlock;
+	int wimpPollWord;
+	do xwimp_poll((wimp_MASK_POLLWORD| wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_MESSAGE | wimp_MASK_RECORDED | wimp_SAVE_FP) , &wimpPollBlock,  &wimpPollWord, (wimp_event_no*)&wimpPollEvent);
+	while (wimpPollEvent != wimp_NULL_REASON_CODE);
+}
+
+/*** Image file reading and writing - do in chunks with a wimp-poll ***/
+#define CHUNK_SIZE 64 * 1024
+size_t sqImageFileRead(void *ptr, size_t sz, size_t count, sqImageFile f) {
+int remaining, actuallyRead=0;
+unsigned char *dstPtr;
+	remaining = sz * count;
+	dstPtr = (unsigned char *)ptr;
+
+	while (remaining >= CHUNK_SIZE) {
+		actuallyRead = fread(dstPtr, (size_t)1, (size_t)CHUNK_SIZE, f);
+		/* if we didnt read enough, return an error case */
+		if ( actuallyRead != CHUNK_SIZE) {
+			return 0;
+		}
+		dstPtr += CHUNK_SIZE;
+		remaining -= CHUNK_SIZE;
+		dummyWimpPoll();
+	}
+
+	actuallyRead = fread(dstPtr, (size_t)1, (size_t)remaining, f);
+	/* if we didnt read enough, return an error case */
+	if ( actuallyRead != remaining) {
+		return 0;
+	}
+	/* return the number of bytes read */
+
+	return count;
+}
+
+size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile f) {
+int remaining, actuallyWritten=0;
+unsigned char *dstPtr;
+	remaining = sz * count;
+	dstPtr = (unsigned char *)ptr;
+	while (remaining >= CHUNK_SIZE) {
+		actuallyWritten = fwrite(dstPtr, (size_t)1, (size_t)CHUNK_SIZE, f);
+		/* if we didnt write enough, return an error case */
+		if ( actuallyWritten != CHUNK_SIZE) return 0;
+		dstPtr += CHUNK_SIZE;
+		remaining -= CHUNK_SIZE;
+		dummyWimpPoll();
+	}
+	actuallyWritten = fwrite(dstPtr, (size_t)1, (size_t)remaining, f);
+	/* if we didnt write enough, return an error case */
+	if ( actuallyWritten != remaining) return 0;
+	/* return the number of bytes written */
+	return count;
+}
+
 
 
 /*** VM Home Directory Path ***/
@@ -1141,40 +1173,27 @@ int ioDisablePowerManager(int disableIfNonZero) {
 return 0;
 }
 
-/*** Profiling ***/
+/*** Profiling place holders ***/
 
-int clearProfile(void) {
-#ifdef MAKE_PROFILE
-		ProfilerClear();
-#endif
-}
+int clearProfile(void) {}
 
-int dumpProfile(void) {
-#ifdef MAKE_PROFILE
-	ProfilerDump("\pProfile.out");
-#endif
-}
+int dumpProfile(void) {}
 
-int startProfiling(void) {
-#ifdef MAKE_PROFILE
-	ProfilerSetStatus(true);
-#endif
-}
+int startProfiling(void) {}
 
-int stopProfiling(void) {
-#ifdef MAKE_PROFILE
-	ProfilerSetStatus(false);
-#endif
-}
+int stopProfiling(void) {}
 
 /*** System Attributes ***/
-
+char * osVersionString(void) {
+	sprintf(versionString, "RiscOS %-3.2f", actualOSLevel/100.0);
+	return versionString;
+}
 
 char * getAttributeString(int id) {
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
 	   such as the name of a file to be processed. Command line options
-	   could be reported this way as well.
+	   can be reported this way as well.
 	*/
 char * tmp;
 	if( (id < -1000) || (id >1004)) return "";
@@ -1183,7 +1202,7 @@ char * tmp;
 		case 0: return vmPath; break;
 		case 1: return imageName; break;
 		case 1001: return "RiscOS"; break;
-		case 1002: return "RiscOS 4"; break;
+		case 1002: return osVersionString(); break;
 		case 1003: return "ARM"; break;
 		case 1004: return  (char *)interpreterVersion; break;
 		default: break;
@@ -1194,7 +1213,8 @@ char * tmp;
 		if (*tmp) return tmp;
 	} 
 	if (id > 1) {
-		// we have an offset of 1 for + ids in order to accommodate the vmPath at 0
+		// we have an offset of 1 for + ids in
+		// order to accommodate the vmPath at 0
 		if ( id > numOptionsImage) return "";
 		tmp = imageOptions[id-1];
 		if (*tmp) return tmp;
@@ -1225,13 +1245,14 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 }
 
 /* Commandline option processing */
-void helpMessage(char * progname) {
+void helpMessage(char * progname, char * helpname) {
 char runHelp[256];
-	sprintf(runHelp, "chain:Filer_Run %s!Help\n", progname);
+	sprintf(runHelp, "chain:Filer_Run %s%s\n", progname, helpname);
 	system(runHelp); 
 }
 
 void versionMessage(char * progname) {
+extern char VMVersion[];
 	privateErr.errnum = (bits)0;
 	sprintf(privateErr.errmess, "This is version %s of %s.!Squeak\n", VMVersion, progname);
 	platReportError((os_error *)&privateErr);
@@ -1268,20 +1289,14 @@ extern void initGlobalStructure(void);
 	parseArguments( argv, argc, args);
 
 	if (versionMe) versionMessage(vmPath);
-	if (helpMe) helpMessage(vmPath);
+	if (helpMe) helpMessage(vmPath, "!Help");
 
 	atexit(exit_function);   // setup a clean exit function
 
 	InitRiscOS();
 	initGlobalStructure();
 
-	/* quick wimp_poll to allow icon to appear */
-	{	wimp_event_no wimpPollEvent;
-		wimp_block wimpPollBlock;
-		int wimpPollWord;
-		do xwimp_poll((wimp_MASK_POLLWORD| wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_MESSAGE | wimp_MASK_RECORDED | wimp_SAVE_FP) , &wimpPollBlock,  &wimpPollWord, (wimp_event_no*)&wimpPollEvent);
-		while (wimpPollEvent != wimp_NULL_REASON_CODE);
-	}
+	dummyWimpPoll();
 
 	/* read the image file and allocate memory for Squeak heap */
 	f = fopen(imageName, "rb");
@@ -1289,7 +1304,8 @@ extern void initGlobalStructure(void);
 		/* give a RPC-specific error message if image file is not found */
 		privateErr.errnum = (bits)0;
 		sprintf(privateErr.errmess, "Could not open the Squeak image file '%s'\n", imageName);
-		platReportFatalError((os_error *)&privateErr);
+		platReportError((os_error *)&privateErr);
+		helpMessage(vmPath, "!ImName");
 		ioExit();
 	}
 	readImageFromFileHeapSize(f, objectHeadroom);

@@ -12,8 +12,8 @@
 #include "rink.h"
 
 // define this to get lots of debug notifiers
-//#define dbg
-#ifdef dbg
+//#define DEBUG
+#ifdef DEBUG
 #define FPRINTF(s)\
 {\
 	extern os_error privateErr;\
@@ -30,20 +30,20 @@
 
 int ioFindExternalFunctionIn(char *symbol, int moduleHandle) {
 // find the function named symbol in the known loaded module moduleHandle
-int fnIndex, address;
-char * foundName;
-	fnIndex = 0;
-	FPRINTF((privateErr.errmess, "ioFindExternalFunctionIn: (%d)%s", strlen(symbol), symbol));
+int fnIndex= 0, address;
+const char * foundName;
 
-	do {
-		address = (int)rink_enum_named((rink_seghandle)moduleHandle, &fnIndex, &foundName);
+	FPRINTF((privateErr.errmess, "ioFindExternalFunctionIn: %s", symbol));
 
+	while ( (address = (int)rink_enum_named((rink_seghandle)moduleHandle, &fnIndex, &foundName)), fnIndex >= 0) {
 		if ( strcmp(foundName, symbol) == 0) {
+			FPRINTF((privateErr.errmess, "found: %s",foundName));
 			return address;
 		} 
-	} while(fnIndex >= 0);
+	}
+
 	// failed to find the function...
-	FPRINTF((privateErr.errmess, " did not find: %s",foundName));
+	FPRINTF((privateErr.errmess, " did not find: %s", symbol));
 	return 0;
 }
 
@@ -51,26 +51,19 @@ int ioLoadModule(char *modName) {
 // a routine to load a segment(module). Takes a pointer to the name
 // of the directory the code and links files are stored in
 extern char vmPath[];
-rink_version *Version;
-_kernel_oserror * e;
+const rink_version *Version;
+const _kernel_oserror * e;
 rink_seghandle moduleHandle;
 char codeName[256];
-char linksName[256];
-rink_check CheckBlock;
+const rink_check CheckBlock = {"SqueakSO", 100, 0};
 
 
-	// make filename of the code and links
-	sprintf(codeName, "%splugins.%s.Code", vmPath, modName);
-	sprintf(linksName, "%splugins.%s.Links", vmPath, modName);
+	// make filename of the code
+	sprintf(codeName, "%splugins.%s", vmPath, modName);
 	FPRINTF((privateErr.errmess, "Load: %s",modName));
-	
-	// set up the check block
-	strcpy(CheckBlock.id, "SqueakSO");
-	CheckBlock.main_version = 100;
-	CheckBlock.code_version = 0;
-	
+
 	// load the segment...
-	if((e = rink_load(codeName, linksName, &moduleHandle, &CheckBlock)) != NULL) {
+	if((e = rink_load(&CheckBlock, codeName, &moduleHandle)) != NULL) {
 		FPRINTF((privateErr.errmess, "Plugin load failed: %s", codeName));
 		return 0;
 	}
