@@ -1,6 +1,19 @@
-/* Nov 2001 John M McIntosh
-consolidate all this mac file stuff
-
+/****************************************************************************
+*   PROJECT: Mac window, memory, keyboard interface.
+*   FILE:    sqMacFileLogic.c
+*   CONTENT: 
+*
+*   AUTHOR:  John McIntosh,Karl Goiser, and others.
+*   ADDRESS: 
+*   EMAIL:   johnmci@smalltalkconsulting.com
+*   RCSID:   $Id: sqMacFileLogic.c,v 1.3 2001/12/27 22:44:17 johnmci Exp $
+*
+*   NOTES: See change log below.
+*	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
+*	12/27/2001 JMM Because of how os-x handles metadata I had to change how navgetfile functions
+*
+*****************************************************************************/
+/* 
 In a few places the VM needs an FSSpec.
 Given a path we need to create an FSSPec. Why? Well some  mac routines still need 
 FSSPecs to work, ie resolve alias. HFS+ will have funny formed names if the name is > 32 chars 
@@ -12,6 +25,8 @@ Someday this might become all FSRef aware
 Note that Squeak thinks of things in terms of HFS path names, but here sometimes we think 
 in terms of POSIX path names.
 
+Just to complicate things CW Pro likes to think of names in terms of HFS path names for unix calls.
+Also if you attempt to use Apple's StdClib it wants posix names, sigh...
 */
 
 #include "sq.h"
@@ -762,8 +777,13 @@ OSErr squeakFindImage(const FSSpecPtr defaultLocationfssPtr,FSSpecPtr documentFS
         {
             // Get 'open' resource. A nil handle being returned is OK,
             // this simply means no automatic file filtering.
-            NavTypeListHandle typeList = (NavTypeListHandle)GetResource(
-                                        'open', 128);
+            // 3.2.1, use filter proc, not open resource, because of os-x tag, metadata issues
+#if defined (__APPLE__) && defined(__MACH__)
+            NavTypeListHandle typeList = nil;
+#else
+            NavTypeListHandle typeList = (NavTypeListHandle)GetResource('open', 128);
+#endif
+            
             NavReplyRecord reply;
             
             // Call NavGetFile() with specified options and
@@ -837,15 +857,32 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
                             NavCallBackUserData callBackUD,
                             NavFilterModes filterMode)
 {
-    Boolean display = true;
     NavFileOrFolderInfo* theInfo = (NavFileOrFolderInfo*)info;
     
-    if (theItem->descriptorType == typeFSS)
-        if (!theInfo->isFolder)
-            if (theInfo->fileAndFolder.fileInfo.finderInfo.fdType 
-                != 'STim')
-                display = false;
-    return display;
+    if (theItem->descriptorType == typeFSS) {
+        char checkSuffix[256];
+        FSSpec	theSpec;
+        OSErr 	error;
+        Boolean check;
+        
+        if (theInfo->isFolder)
+            return true;
+            
+        if (theInfo->fileAndFolder.fileInfo.finderInfo.fdType == 'STim')
+            return true;
+            
+        error = AEGetDescData(theItem,&theSpec,sizeof(theSpec));
+        if (error != noErr) 
+            return true;
+        
+        CopyPascalStringToC(theSpec.name,checkSuffix);
+        check = IsImageName(checkSuffix);
+        if (check) 
+            return true;
+        else
+            return false;
+    }
+    return true;
 }
 
 #if !TARGET_API_MAC_CARBON
