@@ -1,5 +1,9 @@
 2003-08-23  Ian Piumarta  <ian.piumarta@inria.fr>
 
+	* platforms/unix/vm-display-Quartz/sqUnixQuartz.m
+	([Squeak -applicationDidFinishLaunching:]): Don't reset the vmPath
+	when starting up.
+
 	* platforms/unix/vm/sqUnixMain.c (recordFullPathForVmName): stat()
 	the result of readlink() to avoid embarassement on early linux
 	kernels.
