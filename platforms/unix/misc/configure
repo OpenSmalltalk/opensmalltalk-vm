@@ -9276,37 +9276,8 @@ EOF
 # do extra tests and/or setup depending on the device selected
 if test $with_audio = "oss"
 then
-    OSS_DEVICE=notfound
-echo "$as_me:9280: checking for /dev/dsp" >&5
-echo $ECHO_N "checking for /dev/dsp... $ECHO_C" >&6
-if test "${ac_cv_file__dev_dsp+set}" = set; then
-  echo $ECHO_N "(cached) $ECHO_C" >&6
-else
-  test "$cross_compiling" = yes &&
-  { { echo "$as_me:9286: error: cannot check for file existence when cross compiling" >&5
-echo "$as_me: error: cannot check for file existence when cross compiling" >&2;}
-   { (exit 1); exit 1; }; }
-if test -r "/dev/dsp"; then
-  ac_cv_file__dev_dsp=yes
-else
-  ac_cv_file__dev_dsp=no
-fi
-fi
-echo "$as_me:9295: result: $ac_cv_file__dev_dsp" >&5
-echo "${ECHO_T}$ac_cv_file__dev_dsp" >&6
-if test $ac_cv_file__dev_dsp = yes; then
-  OSS_DEVICE=/dev/dsp
-fi
-
-if test $OSS_DEVICE = notfound
-then
-  { { echo "$as_me:9303: error: No OSS device found!  Select another audio interface." >&5
-echo "$as_me: error: No OSS device found!  Select another audio interface." >&2;}
-   { (exit 1); exit 1; }; }
-fi
-{ echo "$as_me:9307: using OSS_DEVICE: $OSS_DEVICE" >&5
-echo "$as_me: using OSS_DEVICE: $OSS_DEVICE" >&6;}
-cat >>confdefs.h <<EOF
+    OSS_DEVICE=/dev/dsp
+  cat >>confdefs.h <<EOF
 #define OSS_DEVICE "$OSS_DEVICE"
 EOF
 
@@ -9317,23 +9288,23 @@ then
 for ac_header in sys/audioio.h
 do
 as_ac_Header=`echo "ac_cv_header_$ac_header" | $as_tr_sh`
-echo "$as_me:9320: checking for $ac_header" >&5
+echo "$as_me:9291: checking for $ac_header" >&5
 echo $ECHO_N "checking for $ac_header... $ECHO_C" >&6
 if eval "test \"\${$as_ac_Header+set}\" = set"; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   cat >conftest.$ac_ext <<_ACEOF
-#line 9326 "configure"
+#line 9297 "configure"
 #include "confdefs.h"
 #include <$ac_header>
 _ACEOF
-if { (eval echo "$as_me:9330: \"$ac_cpp conftest.$ac_ext\"") >&5
+if { (eval echo "$as_me:9301: \"$ac_cpp conftest.$ac_ext\"") >&5
   (eval $ac_cpp conftest.$ac_ext) 2>conftest.er1
   ac_status=$?
   egrep -v '^ *\+' conftest.er1 >conftest.err
   rm -f conftest.er1
   cat conftest.err >&5
-  echo "$as_me:9336: \$? = $ac_status" >&5
+  echo "$as_me:9307: \$? = $ac_status" >&5
   (exit $ac_status); } >/dev/null; then
   if test -s conftest.err; then
     ac_cpp_err=$ac_c_preproc_warn_flag
@@ -9352,7 +9323,7 @@ else
 fi
 rm -f conftest.err conftest.$ac_ext
 fi
-echo "$as_me:9355: result: `eval echo '${'$as_ac_Header'}'`" >&5
+echo "$as_me:9326: result: `eval echo '${'$as_ac_Header'}'`" >&5
 echo "${ECHO_T}`eval echo '${'$as_ac_Header'}'`" >&6
 if test `eval echo '${'$as_ac_Header'}'` = yes; then
   cat >>confdefs.h <<EOF
@@ -9371,7 +9342,7 @@ fi
 
 # Checks for platform characteristics.
 
-echo "$as_me:9374: checking for optimization flags" >&5
+echo "$as_me:9345: checking for optimization flags" >&5
 echo $ECHO_N "checking for optimization flags... $ECHO_C" >&6
 ac_optflags="no"
 if test "$GCC" = yes; then
@@ -9382,11 +9353,11 @@ if test "$GCC" = yes; then
   esac
 fi
 if test "$ac_optflags" = "no"; then
-  echo "$as_me:9385: result: (none)" >&5
+  echo "$as_me:9356: result: (none)" >&5
 echo "${ECHO_T}(none)" >&6
 else
   CFLAGS="$CFLAGS $ac_optflags"
-  echo "$as_me:9389: result: \"$ac_optflags\"" >&5
+  echo "$as_me:9360: result: \"$ac_optflags\"" >&5
 echo "${ECHO_T}\"$ac_optflags\"" >&6
 fi
 INTERP="interp"
@@ -9395,7 +9366,7 @@ for ac_prog in mawk gawk nawk awk
 do
   # Extract the first word of "$ac_prog", so it can be a program name with args.
 set dummy $ac_prog; ac_word=$2
-echo "$as_me:9398: checking for $ac_word" >&5
+echo "$as_me:9369: checking for $ac_word" >&5
 echo $ECHO_N "checking for $ac_word... $ECHO_C" >&6
 if test "${ac_cv_prog_AWK+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -9410,7 +9381,7 @@ for ac_dir in $ac_dummy; do
   test -z "$ac_dir" && ac_dir=.
   $as_executable_p "$ac_dir/$ac_word" || continue
 ac_cv_prog_AWK="$ac_prog"
-echo "$as_me:9413: found $ac_dir/$ac_word" >&5
+echo "$as_me:9384: found $ac_dir/$ac_word" >&5
 break
 done
 
@@ -9418,26 +9389,26 @@ fi
 fi
 AWK=$ac_cv_prog_AWK
 if test -n "$AWK"; then
-  echo "$as_me:9421: result: $AWK" >&5
+  echo "$as_me:9392: result: $AWK" >&5
 echo "${ECHO_T}$AWK" >&6
 else
-  echo "$as_me:9424: result: no" >&5
+  echo "$as_me:9395: result: no" >&5
 echo "${ECHO_T}no" >&6
 fi
 
   test -n "$AWK" && break
 done
 
-echo "$as_me:9431: checking whether we can gnuify interp.c" >&5
+echo "$as_me:9402: checking whether we can gnuify interp.c" >&5
 echo $ECHO_N "checking whether we can gnuify interp.c... $ECHO_C" >&6
 if test "$GCC" = "yes"; then
-  INTERP="gnu-$INTERP"; echo "$as_me:9434: result: yes" >&5
+  INTERP="gnu-$INTERP"; echo "$as_me:9405: result: yes" >&5
 echo "${ECHO_T}yes" >&6
 else
-  echo "$as_me:9437: result: no" >&5
+  echo "$as_me:9408: result: no" >&5
 echo "${ECHO_T}no" >&6
 fi
-echo "$as_me:9440: checking for prefix to use for loadable modules" >&5
+echo "$as_me:9411: checking for prefix to use for loadable modules" >&5
 echo $ECHO_N "checking for prefix to use for loadable modules... $ECHO_C" >&6
 if test "${ac_cv_module_prefix+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -9448,14 +9419,14 @@ then ac_cv_module_prefix="(none)";
 else ac_cv_module_prefix="lib"
 fi
 fi
-echo "$as_me:9451: result: $ac_cv_module_prefix" >&5
+echo "$as_me:9422: result: $ac_cv_module_prefix" >&5
 echo "${ECHO_T}$ac_cv_module_prefix" >&6
 cat >>confdefs.h <<EOF
 #define SQ_MODULE_PREFIX "$mkfrags_lib_prefix"
 EOF
 
 test "$ac_cv_module_prefix" = lib && mkfrags_lib_prefix=lib
-echo "$as_me:9458: checking for compiler flags to force 32-bit addresses" >&5
+echo "$as_me:9429: checking for compiler flags to force 32-bit addresses" >&5
 echo $ECHO_N "checking for compiler flags to force 32-bit addresses... $ECHO_C" >&6
 case $host in
   alpha*)
@@ -9463,12 +9434,12 @@ case $host in
     test "$GCC" = "yes" && CC="\$(utldir)/decgcc"
     ;;
 esac
-echo "$as_me:9466: result: $CFLAGS_32" >&5
+echo "$as_me:9437: result: $CFLAGS_32" >&5
 echo "${ECHO_T}$CFLAGS_32" >&6
 
 CFLAGS="$CFLAGS_32 $CFLAGS"
 
-echo "$as_me:9471: checking whether byte ordering is bigendian" >&5
+echo "$as_me:9442: checking whether byte ordering is bigendian" >&5
 echo $ECHO_N "checking whether byte ordering is bigendian... $ECHO_C" >&6
 if test "${ac_cv_c_bigendian+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
@@ -9476,7 +9447,7 @@ else
   ac_cv_c_bigendian=unknown
 # See if sys/param.h defines the BYTE_ORDER macro.
 cat >conftest.$ac_ext <<_ACEOF
-#line 9479 "configure"
+#line 9450 "configure"
 #include "confdefs.h"
 #include <sys/types.h>
 #include <sys/param.h>
@@ -9493,20 +9464,20 @@ main ()
 }
 _ACEOF
 rm -f conftest.$ac_objext
-if { (eval echo "$as_me:9496: \"$ac_compile\"") >&5
+if { (eval echo "$as_me:9467: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
-  echo "$as_me:9499: \$? = $ac_status" >&5
+  echo "$as_me:9470: \$? = $ac_status" >&5
   (exit $ac_status); } &&
          { ac_try='test -s conftest.$ac_objext'
-  { (eval echo "$as_me:9502: \"$ac_try\"") >&5
+  { (eval echo "$as_me:9473: \"$ac_try\"") >&5
   (eval $ac_try) 2>&5
   ac_status=$?
-  echo "$as_me:9505: \$? = $ac_status" >&5
+  echo "$as_me:9476: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
   # It does; now see whether it defined to BIG_ENDIAN or not.
 cat >conftest.$ac_ext <<_ACEOF
-#line 9509 "configure"
+#line 9480 "configure"
 #include "confdefs.h"
 #include <sys/types.h>
 #include <sys/param.h>
@@ -9523,16 +9494,16 @@ main ()
 }
 _ACEOF
 rm -f conftest.$ac_objext
-if { (eval echo "$as_me:9526: \"$ac_compile\"") >&5
+if { (eval echo "$as_me:9497: \"$ac_compile\"") >&5
   (eval $ac_compile) 2>&5
   ac_status=$?
-  echo "$as_me:9529: \$? = $ac_status" >&5
+  echo "$as_me:9500: \$? = $ac_status" >&5
   (exit $ac_status); } &&
          { ac_try='test -s conftest.$ac_objext'
-  { (eval echo "$as_me:9532: \"$ac_try\"") >&5
+  { (eval echo "$as_me:9503: \"$ac_try\"") >&5
   (eval $ac_try) 2>&5
   ac_status=$?
-  echo "$as_me:9535: \$? = $ac_status" >&5
+  echo "$as_me:9506: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
   ac_cv_c_bigendian=yes
 else
@@ -9548,12 +9519,12 @@ fi
 rm -f conftest.$ac_objext conftest.$ac_ext
 if test $ac_cv_c_bigendian = unknown; then
 if test "$cross_compiling" = yes; then
-  { { echo "$as_me:9551: error: cannot run test program while cross compiling" >&5
+  { { echo "$as_me:9522: error: cannot run test program while cross compiling" >&5
 echo "$as_me: error: cannot run test program while cross compiling" >&2;}
    { (exit 1); exit 1; }; }
 else
   cat >conftest.$ac_ext <<_ACEOF
-#line 9556 "configure"
+#line 9527 "configure"
 #include "confdefs.h"
 int
 main ()
@@ -9569,15 +9540,15 @@ main ()
 }
 _ACEOF
 rm -f conftest$ac_exeext
-if { (eval echo "$as_me:9572: \"$ac_link\"") >&5
+if { (eval echo "$as_me:9543: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
-  echo "$as_me:9575: \$? = $ac_status" >&5
+  echo "$as_me:9546: \$? = $ac_status" >&5
   (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (eval echo "$as_me:9577: \"$ac_try\"") >&5
+  { (eval echo "$as_me:9548: \"$ac_try\"") >&5
   (eval $ac_try) 2>&5
   ac_status=$?
-  echo "$as_me:9580: \$? = $ac_status" >&5
+  echo "$as_me:9551: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
   ac_cv_c_bigendian=no
 else
@@ -9590,7 +9561,7 @@ rm -f core core.* *.core conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
 fi
 fi
 fi
-echo "$as_me:9593: result: $ac_cv_c_bigendian" >&5
+echo "$as_me:9564: result: $ac_cv_c_bigendian" >&5
 echo "${ECHO_T}$ac_cv_c_bigendian" >&6
 if test $ac_cv_c_bigendian = yes; then
 
@@ -9603,32 +9574,32 @@ fi
 if test $ac_cv_c_bigendian != yes
 then CFLAGS="$CFLAGS -DLSB_FIRST=1"
 fi
-echo "$as_me:9606: checking whether misaligned access to doubles is ok" >&5
+echo "$as_me:9577: checking whether misaligned access to doubles is ok" >&5
 echo $ECHO_N "checking whether misaligned access to doubles is ok... $ECHO_C" >&6
 if test "${ac_cv_double_align+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   if test "$cross_compiling" = yes; then
-  { { echo "$as_me:9612: error: cannot run test program while cross compiling" >&5
+  { { echo "$as_me:9583: error: cannot run test program while cross compiling" >&5
 echo "$as_me: error: cannot run test program while cross compiling" >&2;}
    { (exit 1); exit 1; }; }
 else
   cat >conftest.$ac_ext <<_ACEOF
-#line 9617 "configure"
+#line 9588 "configure"
 #include "confdefs.h"
 f(int i){*(double *)i=*(double *)(i+4);}
               int main(){char b[12];f(b);return 0;}
 _ACEOF
 rm -f conftest$ac_exeext
-if { (eval echo "$as_me:9623: \"$ac_link\"") >&5
+if { (eval echo "$as_me:9594: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
-  echo "$as_me:9626: \$? = $ac_status" >&5
+  echo "$as_me:9597: \$? = $ac_status" >&5
   (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (eval echo "$as_me:9628: \"$ac_try\"") >&5
+  { (eval echo "$as_me:9599: \"$ac_try\"") >&5
   (eval $ac_try) 2>&5
   ac_status=$?
-  echo "$as_me:9631: \$? = $ac_status" >&5
+  echo "$as_me:9602: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
   ac_cv_double_align="yes"
 else
@@ -9640,37 +9611,37 @@ fi
 rm -f core core.* *.core conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
 fi
 fi
-echo "$as_me:9643: result: $ac_cv_double_align" >&5
+echo "$as_me:9614: result: $ac_cv_double_align" >&5
 echo "${ECHO_T}$ac_cv_double_align" >&6
 test "$ac_cv_double_align" = "no" && cat >>confdefs.h <<\EOF
 #define DOUBLE_WORD_ALIGNMENT 1
 EOF
 
-echo "$as_me:9649: checking whether doubles are stored in Squeak order" >&5
+echo "$as_me:9620: checking whether doubles are stored in Squeak order" >&5
 echo $ECHO_N "checking whether doubles are stored in Squeak order... $ECHO_C" >&6
 if test "${ac_cv_double_order+set}" = set; then
   echo $ECHO_N "(cached) $ECHO_C" >&6
 else
   if test "$cross_compiling" = yes; then
-  { { echo "$as_me:9655: error: cannot run test program while cross compiling" >&5
+  { { echo "$as_me:9626: error: cannot run test program while cross compiling" >&5
 echo "$as_me: error: cannot run test program while cross compiling" >&2;}
    { (exit 1); exit 1; }; }
 else
   cat >conftest.$ac_ext <<_ACEOF
-#line 9660 "configure"
+#line 9631 "configure"
 #include "confdefs.h"
 main(){ double d= 1.0; return *(int *)&d == 0;}
 _ACEOF
 rm -f conftest$ac_exeext
-if { (eval echo "$as_me:9665: \"$ac_link\"") >&5
+if { (eval echo "$as_me:9636: \"$ac_link\"") >&5
   (eval $ac_link) 2>&5
   ac_status=$?
-  echo "$as_me:9668: \$? = $ac_status" >&5
+  echo "$as_me:9639: \$? = $ac_status" >&5
   (exit $ac_status); } && { ac_try='./conftest$ac_exeext'
-  { (eval echo "$as_me:9670: \"$ac_try\"") >&5
+  { (eval echo "$as_me:9641: \"$ac_try\"") >&5
   (eval $ac_try) 2>&5
   ac_status=$?
-  echo "$as_me:9673: \$? = $ac_status" >&5
+  echo "$as_me:9644: \$? = $ac_status" >&5
   (exit $ac_status); }; }; then
   ac_cv_double_order="yes"
 else
@@ -9682,7 +9653,7 @@ fi
 rm -f core core.* *.core conftest$ac_exeext conftest.$ac_objext conftest.$ac_ext
 fi
 fi
-echo "$as_me:9685: result: $ac_cv_double_order" >&5
+echo "$as_me:9656: result: $ac_cv_double_order" >&5
 echo "${ECHO_T}$ac_cv_double_order" >&6
 test "$ac_cv_double_order" = "no" && cat >>confdefs.h <<\EOF
 #define DOUBLE_WORD_ORDER 1
@@ -9775,7 +9746,7 @@ DEFS=-DHAVE_CONFIG_H
 : ${CONFIG_STATUS=./config.status}
 ac_clean_files_save=$ac_clean_files
 ac_clean_files="$ac_clean_files $CONFIG_STATUS"
-{ echo "$as_me:9778: creating $CONFIG_STATUS" >&5
+{ echo "$as_me:9749: creating $CONFIG_STATUS" >&5
 echo "$as_me: creating $CONFIG_STATUS" >&6;}
 cat >$CONFIG_STATUS <<_ACEOF
 #! $SHELL
@@ -9948,7 +9919,7 @@ cat >>$CONFIG_STATUS <<\EOF
     echo "$ac_cs_version"; exit 0 ;;
   --he | --h)
     # Conflict between --help and --header
-    { { echo "$as_me:9951: error: ambiguous option: $1
+    { { echo "$as_me:9922: error: ambiguous option: $1
 Try \`$0 --help' for more information." >&5
 echo "$as_me: error: ambiguous option: $1
 Try \`$0 --help' for more information." >&2;}
@@ -9967,7 +9938,7 @@ Try \`$0 --help' for more information." >&2;}
     ac_need_defaults=false;;
 
   # This is an error.
-  -*) { { echo "$as_me:9970: error: unrecognized option: $1
+  -*) { { echo "$as_me:9941: error: unrecognized option: $1
 Try \`$0 --help' for more information." >&5
 echo "$as_me: error: unrecognized option: $1
 Try \`$0 --help' for more information." >&2;}
@@ -10005,7 +9976,7 @@ do
   "Makefile" ) CONFIG_FILES="$CONFIG_FILES Makefile" ;;
   "inisqueak" ) CONFIG_FILES="$CONFIG_FILES inisqueak" ;;
   "sqUnixConfig.h" ) CONFIG_HEADERS="$CONFIG_HEADERS sqUnixConfig.h" ;;
-  *) { { echo "$as_me:10008: error: invalid argument: $ac_config_target" >&5
+  *) { { echo "$as_me:9979: error: invalid argument: $ac_config_target" >&5
 echo "$as_me: error: invalid argument: $ac_config_target" >&2;}
    { (exit 1); exit 1; }; };;
   esac
@@ -10247,7 +10218,7 @@ done; }
   esac
 
   if test x"$ac_file" != x-; then
-    { echo "$as_me:10250: creating $ac_file" >&5
+    { echo "$as_me:10221: creating $ac_file" >&5
 echo "$as_me: creating $ac_file" >&6;}
     rm -f "$ac_file"
   fi
@@ -10265,7 +10236,7 @@ echo "$as_me: creating $ac_file" >&6;}
       -) echo $tmp/stdin ;;
       [\\/$]*)
          # Absolute (can't be DOS-style, as IFS=:)
-         test -f "$f" || { { echo "$as_me:10268: error: cannot find input file: $f" >&5
+         test -f "$f" || { { echo "$as_me:10239: error: cannot find input file: $f" >&5
 echo "$as_me: error: cannot find input file: $f" >&2;}
    { (exit 1); exit 1; }; }
          echo $f;;
@@ -10278,7 +10249,7 @@ echo "$as_me: error: cannot find input file: $f" >&2;}
            echo $srcdir/$f
          else
            # /dev/null tree
-           { { echo "$as_me:10281: error: cannot find input file: $f" >&5
+           { { echo "$as_me:10252: error: cannot find input file: $f" >&5
 echo "$as_me: error: cannot find input file: $f" >&2;}
    { (exit 1); exit 1; }; }
          fi;;
@@ -10339,7 +10310,7 @@ for ac_file in : $CONFIG_HEADERS; do test "x$ac_file" = x: && continue
   * )   ac_file_in=$ac_file.in ;;
   esac
 
-  test x"$ac_file" != x- && { echo "$as_me:10342: creating $ac_file" >&5
+  test x"$ac_file" != x- && { echo "$as_me:10313: creating $ac_file" >&5
 echo "$as_me: creating $ac_file" >&6;}
 
   # First look for the input files in the build tree, otherwise in the
@@ -10350,7 +10321,7 @@ echo "$as_me: creating $ac_file" >&6;}
       -) echo $tmp/stdin ;;
       [\\/$]*)
          # Absolute (can't be DOS-style, as IFS=:)
-         test -f "$f" || { { echo "$as_me:10353: error: cannot find input file: $f" >&5
+         test -f "$f" || { { echo "$as_me:10324: error: cannot find input file: $f" >&5
 echo "$as_me: error: cannot find input file: $f" >&2;}
    { (exit 1); exit 1; }; }
          echo $f;;
@@ -10363,7 +10334,7 @@ echo "$as_me: error: cannot find input file: $f" >&2;}
            echo $srcdir/$f
          else
            # /dev/null tree
-           { { echo "$as_me:10366: error: cannot find input file: $f" >&5
+           { { echo "$as_me:10337: error: cannot find input file: $f" >&5
 echo "$as_me: error: cannot find input file: $f" >&2;}
    { (exit 1); exit 1; }; }
          fi;;
@@ -10480,7 +10451,7 @@ cat >>$CONFIG_STATUS <<\EOF
   rm -f $tmp/in
   if test x"$ac_file" != x-; then
     if cmp -s $ac_file $tmp/config.h 2>/dev/null; then
-      { echo "$as_me:10483: $ac_file is unchanged" >&5
+      { echo "$as_me:10454: $ac_file is unchanged" >&5
 echo "$as_me: $ac_file is unchanged" >&6;}
     else
       ac_dir=`$as_expr X"$ac_file" : 'X\(.*[^/]\)//*[^/][^/]*/*$' \| \
