@@ -299,23 +299,19 @@ int keyBufGet= 0;		/* index of next item of keyBuf to read */
 int keyBufPut= 0;		/* index of next item of keyBuf to write */
 int keyBufOverflows= 0;		/* number of characters dropped */
 
-int buttonState= 0;		/* mouse button and modifier state when mouse
-				   button went down or 0 if not pressed */
 
-/* This table maps the X modifier key bits to 4 Squeak modifier
-   bits.  (The X caps lock key is mapped as shift, meta is
-   mapped to command, and ctrl+meta is mapped to option.
-	X bits:		<meta><control><shift-lock><shift>
-	Squeak bits:	<command><option><control><shift>
-*/
-char modifierMap[16]= {
-  0, 1, 1, 0, 2, 3, 3, 2, 8, 9, 9, 8, 4, 5, 5, 4
-};
+int stButtons= 0;               /* mouse buttons currently pressed down;
+				   the mask bits are described in sq.h as
+				   RedButtonBit, etc.  */
+int modifiers;                  /* the modifiers curretnly pressed down;
+				   the mask bits are described in sq.h
+				   as CtrlKeyBit, etc. */
+int buttonState= 0;		/* the combination of the stButtons and modifiers
+				   in the format Squeak expects:
+				      buttonState == (stButtons | (modifiers << 3)
+				*/
 
-/* masks for the XButtonEvent modifier state */
-#define MOD_SHIFT	1
-#define MOD_CONTROL	4
-#define MOD_META	8
+
 #endif   /* !HEADLESS */
 
 
@@ -401,9 +397,9 @@ void sendSelection(XSelectionRequestEvent *requestEv);
 char *getSelection(void);
 static void redrawDisplay(int l, int r, int t, int b);
 static int translateCode(KeySym symbolic);
-void recordKeystroke(XKeyEvent *theEvent);
-void recordMouseDown(XButtonEvent *theEvent);
-void recordModifierButtons(XButtonEvent *theEvent);
+static void recordMouseEvent(XButtonEvent *theEvent);
+static void recordKeystrokeEvent(XKeyEvent *theEvent);
+static void recordModifierButtons(XButtonEvent *theEvent);
 # ifdef USE_XSHM
 int XShmGetEventBase(Display *);
 # endif
@@ -862,79 +858,136 @@ static void signalInputEvent()
 
 
 
-static void recordMouseEvent(XButtonEvent *xevt, int pressFlag)
+
+
+/* record a mouse event.  This handles button presses, button releases, and motion notify.
+   Note that the fields in motion notify that this structure uses line up exactly
+   with the same-named fields in XButtonEvent */
+static void recordMouseEvent(XButtonEvent *theEvent) 
 {
- /* mouse wheel support */
-  if ((xevt->button == 4 || xevt->button == 5) && pressFlag)
-  {
-    sqKeyboardEvent *evt= allocateKeyboardEvent();
-    evt->charCode= (xevt->button + 26);       /* Up/Down */
-    evt->pressCode= EventKeyChar;
-    evt->modifiers= CtrlKeyBit | modifierMap[(xevt->state) & 0xF];
-    evt->reserved1=
-      evt->reserved2=
-        evt->reserved3= 0;
+  recordModifierButtons(theEvent);
+  
+  mousePosition.x= theEvent->x;
+  mousePosition.y= theEvent->y;
+
+  if(theEvent->type == ButtonPress) {
+    if(theEvent->button==4 || theEvent->button==5) {
+      /* Mouse wheel support */
+      keyBufAppend((theEvent->button + 26)        /* Up/Down */
+		   | (2 << 8)                          /* Ctrl  */
+		   | (modifiers << 8));
+
+
+      if(inputEventSemaIndex != 0) {
+      	sqKeyboardEvent *evt= allocateKeyboardEvent();
+	evt->charCode= (theEvent->button + 26);       /* Up/Down */
+	evt->pressCode= EventKeyChar;
+	evt->modifiers= CtrlKeyBit | modifiers;
+	evt->reserved1=
+	  evt->reserved2=
+	  evt->reserved3= 0;
+      }
+    }
+
+    if(theEvent->button > 5) {
+      ioBeep();
+    }
   }
-  else
-  {
-  sqMouseEvent *evt= allocateMouseEvent();
-  evt->x= mousePosition.x;
-  evt->y= mousePosition.y;
-  evt->buttons= buttonState & 0x7;
-  evt->modifiers= modifierMap[(xevt->state) & 0xF];
-  evt->reserved1= 0;
-  evt->reserved2= 0;
+  
+
+  if(inputEventSemaIndex != 0) {
+    sqMouseEvent *evt= allocateMouseEvent();
+    evt->x= mousePosition.x;
+    evt->y= mousePosition.y;
+    evt->buttons= stButtons;
+    evt->modifiers= modifiers;
+    evt->reserved1= 0;
+    evt->reserved2= 0;
+    
+    signalInputEvent();
   }
-  signalInputEvent();
 }
 
-static void recordKeyboardEvent(XKeyEvent *xevt, int pressCode)
+
+/* record a keystroke event, whether it is a release or a press */
+static void recordKeystrokeEvent(XKeyEvent *theEvent) 
 {
-  int charCode= 0;
-  int modifiers= 0;
-  int keystate= 0;
+  int charCode= 0;       /* the character code for the key, in Squeak's encoding */
+  int keystate= 0;       /* the combined character code and modifiers */
   unsigned char buf[32];
   int nConv= 0;
   KeySym symbolic;
 
-  nConv= XLookupString(xevt, buf, sizeof(buf), &symbolic, 0);
+  recordModifierButtons((XButtonEvent *) theEvent);
+
+
+  /* translate the key from X11 to Squeak */
+  nConv= XLookupString(theEvent, buf, sizeof(buf), &symbolic, 0);
 
   /* check for special keys */
   charCode= translateCode(symbolic);
   if(charCode < 0) {
     /* not a special key */
     if(nConv==0) {
-      /* unknown key */
+      /* key not known at all.  Give up */
       return;
     }
+
+    /* just use the first character of the string; conceivably all
+       the characters could be sent in */
     charCode= buf[0];
   }
 
-  /* Squeak uses a different character encoding than the rest of the world */
+  /* Squeak uses the Macintosh 8-bit character encoding */
   if (charCode >= 128)
     charCode= X_to_Squeak[charCode];
 
   
-  modifiers= modifierMap[(xevt->state) & 0xF];
   keystate= charCode | (modifiers << 8);
+
   if (keystate == interruptKeycode)
     {
-      /* Note: interrupt key is "meta"; it not reported as a keystroke */
-      interruptPending= true;
-      interruptCheckCounter= 0;
+      /* Treat the interrupt key specially; don't just pass it into the image */
+      if(theEvent->type==KeyPress) {
+	interruptPending= true;
+	interruptCheckCounter= 0;
+      }
+      
+      return;
     }
-  else
-    {
+
+  keyBufAppend(keystate);
+
+
+  if(inputEventSemaIndex != 0)     {
+    int codes[2];
+    int numCodes;
+    int i;
+
+    if(theEvent->type==KeyPress) {
+      codes[0] = EventKeyDown;
+      codes[1] = EventKeyChar;
+      numCodes=2;
+    }
+    else {
+      codes[0] = EventKeyUp;
+      numCodes=1;
+    }
+
+    for(i=0; i<numCodes; i++) {
       sqKeyboardEvent *evt= allocateKeyboardEvent();
+    
       evt->charCode= charCode;
-      evt->pressCode= pressCode;
+      evt->pressCode= codes[i];
       evt->modifiers= modifiers;
       evt->reserved1=
 	evt->reserved2=
 	evt->reserved3= 0;
     }
+  }
   signalInputEvent();
 }
+
 
 #endif /* !HEADLESS */
 
@@ -956,49 +1009,27 @@ int HandleEvents(void)
     switch (theEvent.type)
       {
       case MotionNotify:
-	mousePosition.x= ((XMotionEvent *)&theEvent)->x;
-	mousePosition.y= ((XMotionEvent *)&theEvent)->y;
-	if (inputEventSemaIndex != 0)
-	  {
-	    recordMouseEvent((XButtonEvent *)&theEvent, true);
-	  }
+	recordMouseEvent((XButtonEvent *)&theEvent);
 	break;
 
       case ButtonPress:
-	recordMouseDown((XButtonEvent *)&theEvent);
-	if (inputEventSemaIndex != 0)
-	  {
-	    recordMouseEvent((XButtonEvent *)&theEvent, true);
-	  }
+	recordMouseEvent((XButtonEvent *)&theEvent);
 	break;
 
       case ButtonRelease:
-	recordModifierButtons((XButtonEvent *)&theEvent);
+	recordMouseEvent((XButtonEvent *)&theEvent);
+
 	/* button up on "paste" causes a selection retrieval:
 	   record the event time in case we need it later */
 	stButtonTime= ((XButtonEvent *)&theEvent)->time;
-	if (inputEventSemaIndex != 0)
-	  {
-	    recordMouseEvent((XButtonEvent *)&theEvent, false);
-	  }
 	break;
 
       case KeyPress:
-	recordModifierButtons((XButtonEvent *)&theEvent);
-	recordKeystroke((XKeyEvent *)&theEvent);
-	if (inputEventSemaIndex != 0)
-	  {
-	    recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyDown);
-	    recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyChar);
-	  }
+	recordKeystrokeEvent((XKeyEvent *)&theEvent);
 	break;
 
       case KeyRelease:
-	recordModifierButtons((XButtonEvent *)&theEvent);
-	if (inputEventSemaIndex != 0)
-	  {
-	    recordKeyboardEvent((XKeyEvent *)&theEvent, EventKeyUp);
-	  }
+	recordKeystrokeEvent((XKeyEvent *)&theEvent);
 	break;
 
       case SelectionClear:
@@ -1590,10 +1621,12 @@ void SetWindowSize(void)
 
 /*** Event Recording Functions ***/
 
-
+/* translate special keys; return -1 if the key isn't recognized */
 static int translateCode(KeySym symbolic)
 {
-# define ALT (8<<8)
+  int ALT=(8<<8);
+  
+    
   switch (symbolic)
     {
     case XK_Left:	return 28;
@@ -1629,7 +1662,6 @@ static int translateCode(KeySym symbolic)
     default:		return -1;
     }
   /*NOTREACHED*/
-# undef ALT
 }
 
 
@@ -1647,91 +1679,45 @@ void keyBufAppend(int keystate)
 }
 
 
-void recordKeystroke(XKeyEvent *theEvent)
+
+/* record the mouse buttons and modifier keys pressed according to an X event.
+   This routine also translates meta-button1 into button3 */
+static void recordModifierButtons(XButtonEvent *theEvent)
 {
-  int charCode= 0;
-  int modifiers= 0;
-  int keystate= 0;
-  unsigned char buf[32];
-  int nConv= 0;
-  KeySym symbolic;
+  /* translate the button encodings */
+  stButtons= 0;
+  if(theEvent->state & Button1Mask)  stButtons|= RedButtonBit;
+  if(theEvent->state & Button2Mask)  stButtons|= YellowButtonBit;
+  if(theEvent->state & Button3Mask)  stButtons|= BlueButtonBit;
 
-  lastKeystrokeTime = theEvent->time;
-  nConv= XLookupString(theEvent, buf, sizeof(buf), &symbolic, 0);
 
-  /* check for special keys */
-  charCode= translateCode(symbolic);
-  if(charCode < 0) {
-    /* not a special key */
-    if(nConv==0) {
-      /* unknown key */
-      return;
-    }
-    charCode= buf[0];
+  /* translate the modifiers pressed */
+  modifiers= 0;
+  if(theEvent->state & ShiftMask)        modifiers|= ShiftKeyBit;
+  if(theEvent->state & LockMask)         modifiers|= ShiftKeyBit;
+  if(theEvent->state & ControlMask)      modifiers|= CtrlKeyBit;
+  if(theEvent->state & Mod1Mask)         modifiers|= CommandKeyBit;
+  
+
+
+  /* remap the red button, if Control or Meta is pressed */
+  if ((stButtons == 4) && (modifiers & CtrlKeyBit))
+  {
+    /* ctrl-red is mapped to the yellow button */
+    stButtons= 2;
+    modifiers &= ~CtrlKeyBit;
+  }
+    
+  if ((stButtons == 4) && (modifiers & CommandKeyBit)) {
+    /* meta-red is mapped to the blue button */
+    stButtons= 1;
+    modifiers &= ~CommandKeyBit;
   }
 
-  /* Squeak uses a different character encoding than the rest of the world */
-  if (charCode >= 128)
-    charCode= X_to_Squeak[charCode];
 
-  modifiers= modifierMap[(theEvent->state) & 0xF];
-  keystate= charCode | (modifiers << 8);
-
-  if (keystate == interruptKeycode)
-    {
-      /* Note: interrupt key is "meta"; it not reported as a keystroke */
-      interruptPending= true;
-      interruptCheckCounter= 0;
-    }
-  else
-    {
-      keyBufAppend(keystate);
-    }
-}
-
-void recordMouseDown(XButtonEvent *theEvent)
-{
-  int stButtons= 0;
-  int modifiers= 0;
-
-  switch (theEvent->button)
-    {
-    case 1: stButtons= 4; break;
-    case 2: stButtons= 2; break;
-    case 3: stButtons= 1; break;
-    case 4: /* Mouse wheel support */
-    case 5: keyBufAppend( (theEvent->button + 26)        /* Up/Down */
-		       | (2 << 8)                          /* Ctrl  */
-		       | (modifierMap[(theEvent->state) & 0xF] << 8));
-            return;
-    default: ioBeep(); break;
-    }
-
-  if (stButtons == 4)	/* red button honours the modifiers */
-    {
-      if (theEvent->state & MOD_CONTROL)
-	stButtons= 2;	/* yellow button if CTRL down */
-      else if (theEvent->state & MOD_META)
-	stButtons= 1;	/* blue button if META down */
-    }
-  modifiers= modifierMap[(theEvent->state) & 0xF];
-
-  /* button state: low three bits are mouse buttons; next 4 bits are modifier bits */
+  
+  /* combine the button state in the format Squeak likes */
   buttonState= (modifiers << 3) | (stButtons & 0x7);
-}
-
-
-/* both button and key events have the state member in the same place */
-void recordModifierButtons(XButtonEvent *theEvent)
-{
-  int stButtons= 0;
-
-  if (theEvent->type == ButtonPress)
-    stButtons= buttonState & 0x7;
-  else
-    stButtons= 0;
-  /* button state: low three bits are mouse buttons; next 4 bits are modifier bits */
-  buttonState= (modifierMap[(theEvent->state) & 0xF] << 3) | (stButtons & 0x7);
 }
 
 #endif /*!HEADLESS*/
@@ -4017,7 +4003,7 @@ void ParseEnvironment(void)
   if (getenv("SQUEAK_JIT"))		noJitter= 0;
   if (getenv("SQUEAK_SPY"))		withSpy= 1;
   if (getenv("SQUEAK_NOTITLE"))		noTitle= 1;
-  if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;  /* XXX should check whether the variable is 1 or 0 */
+  if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;  /* XXX should check whether the environment variable is 1 or 0 */
   if (getenv("SQUEAK_NOEVENTS"))	noEvents= 1;
 #if defined(USE_XSHM)
   if (getenv("SQUEAK_XSHM"))		useXshm= 1;
