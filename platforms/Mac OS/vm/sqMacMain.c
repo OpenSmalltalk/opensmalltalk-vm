@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.9 2002/08/06 21:44:10 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.10 2002/08/06 22:36:01 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -236,7 +236,7 @@ int main(void) {
     pthread_mutex_init(&gEventQueueLock, NULL);
     pthread_mutex_init(&gEventUILock, NULL);
     pthread_cond_init(&gEventUILockCondition,NULL);
-    err = pthread_create(&thread,null,interpret, null);
+    err = pthread_create(&thread,null,(void *) interpret, null);
     if (err == 0) {
         SetUpCarbonEvent();
         RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
