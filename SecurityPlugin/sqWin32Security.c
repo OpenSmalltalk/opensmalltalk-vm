@@ -184,10 +184,8 @@ int ioInitSecurity(void) {
   GetUserName(secureUserDirectory+dirLen, &dwSize);
 
   /* establish untrusted user directory */
-  lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\"));
+  lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
   dirLen = lstrlen(untrustedUserDirectory);
-  dwSize = MAX_PATH-dirLen;
-  GetUserName(untrustedUserDirectory+dirLen, &dwSize);
 
   /* Query Squeak.ini for network installations */
   GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
@@ -224,6 +222,11 @@ int ioInitSecurity(void) {
     strcpy(untrustedUserDirectory, tmp);
   }
   RegCloseKey(hk);
+
+  /* Expand any environment variables in user directory. */
+  dwSize = ExpandEnvironmentStrings(untrustedUserDirectory, tmp, MAX_PATH-1);
+  if(dwSize > 0 && dwSize < MAX_PATH)
+    strcpy(untrustedUserDirectory, tmp);
 
   return 1;
 }
