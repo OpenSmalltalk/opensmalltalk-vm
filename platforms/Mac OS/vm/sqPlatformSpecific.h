@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.7 2002/03/25 07:09:34 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.8 2002/04/27 19:04:21 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *
@@ -37,7 +37,7 @@
 #define squeakFileOffsetType off_t
 
 #undef sqFTruncate
-#define sqFTruncate(f,o) ftruncate(f, o)
+#define sqFTruncate(f,o) ftruncate(fileno(f), o)
 
 // CARBON
 #if defined (__APPLE__) && defined(__MACH__)
