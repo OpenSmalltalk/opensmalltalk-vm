@@ -15,7 +15,7 @@
  * 
  * !!! I had to add the missing URLNotify stuff here. If you find an official 
  * !!! version of this file which has it, use it instead. 
- * !!!        April 2000, Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
+ * !!!        April 2000, Bert Freudenberg
  *
  */
 

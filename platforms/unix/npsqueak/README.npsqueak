@@ -2,12 +2,12 @@
 
 Netscape Plugin for Squeak on Unix platforms
 
-Author:	     Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
+
+Author:	     Bert Freudenberg 
 Version:     @VM_VERSION@
-Last edited: Wed 02 Oct 2002 15:52:35 by bert on balloon
+Last edited: 2005-02-28 15:50:31 by jens on impara.de
 
-
-=================================================================
+================================================================
 
 Files:
 	Makefile
@@ -19,72 +19,34 @@ Files:
 
 =================================================================
 
-To compile and install the Squeak plugin
 
-  0a.	You have to compile and install the main VM first.
+	The Squeak plugin should be automatically compiled and installed with 
+	the normal squeak build process. This installs squeak into (probably) 
+	
+		imgdir=/usr/local/lib/squeak
 
-		mkdir build
-		cd build
-		../platforms/unix/config/configure
-		make
-		make install
+	You will need an image. Copy it to
 
-	This installs squeak into (probably) 
-
-		SQ_DIR=/usr/local/lib/squeak
-
-  0b.	You will need an image. Copy it to
-
-		${SQ_DIR}/npsqueak.image
+		${imgdir}/SqueakPlugin.image
 
 	A good place to look for an image suited as plugin is
 
-		http://squeakland.org/plugin/installers/files.html		
+	http://squeakland.org/plugin/installers/files.html		
 
-  1.	Change into the plugin source directory:
-
-		cd npsqueak
-
-  2a.	If necessary, edit the Makefile (compiler options):
-
-		emacs Makefile
-
-  2b.	Make the plugin:
-
-		make
-
-	"npsqueak.so" will be the output of a successful compile process.
-
-  3.	Install the plugin as superuser (root):
-
-		su
-		make install
-
-	This creates the following files and directories
-
-		${SQ_DIR}/@VM_VERSION@/npsqueakrun
-			(executed from plugin)
-		${SQ_DIR}/@VM_VERSION@/npsqueak.so
-			(the plugin itself)
-		${SQ_DIR}/npsqueakregister
-			(a shell script to register)
-
-	It also runs npsqueakregister which looks for various browsers
+	To register the plugin run ${imgdir}/npsqueakregister. 
+	It looks for various browsers
 	in various directories and creates links to the plugin. If
 	your browser is not found, hack the npsqueakregister script or
 	symlink the plugin manually:
 
-		ln -s ${SQ_DIR}/@VM_VERSION@/npsqueak.so \
+		ln -s ${imgdir}/@VM_VERSION@/npsqueak.so \
 			/usr/lib/mybrowser/plugins/
 
-	Finally, log out of the super user account:
 
-		exit
-
-  4.	Exit and restart the browser. Check if the Squeak plugin 
+  	Exit and restart the browser. Check if the Squeak plugin 
 	was recognized by selecting the Help>>About Plugins menu item.
 
-  5.	Open the html file in the test/ directory. This should
+  	Open the html file in the test/ directory. This should
 	activate the Squeak plugin. Since this is the first time the
 	plugin is executed, a .npsqueak folder will be created in your 
 	home directory and the plugin image is installed into it.
@@ -95,7 +57,7 @@ NOTE: If you are not the super user of your machine you can install
 everything into your home directory. Put npsqueak.so somewhere your
 browser will find it.  Make a .npsqueak dir in your home directory
 with subdirectories and files like shown below. Also create a
-.npsqueak/npsqueakvm file which points to a Squeak VM.
+.npsqueak/npsqueakrun file which points to a Squeak VM.
 
 =================================================================
 
@@ -110,11 +72,27 @@ DOCUMENTATION
          |
          +--- SqueakPlugin.image
          |
+         |--- *.image         
+         |
          +--- secure/
          |
-         +--- untrusted/
+         +--- My Squeak/
+
+   $(imgdir)/
+   |
+   +--- SqueakPlugin.image
+
 
 * Environment Variables:
+
+    SQUEAK_USERDIR
+	Identifies the sandbox directory, e.g., a place which can be
+	accessed from any (potentially unsafe) Squeaklet.  
+
+        * path must be absolute  
+
+	* Default: "~/.npsqueak/My Squeak"
+	
 
     NPSQUEAK_DEBUG
         logs debug info to /tmp/npsqueak.log
@@ -132,6 +110,8 @@ DOCUMENTATION
 
     SRC=...
     MEMORY=... (not by unix npsqueak)
+    FAILUREURL=...
+    IMAGENAME=... 
 
 * Communication with VM is via Pipes
 
@@ -140,15 +120,22 @@ DOCUMENTATION
 TODO
 
 * loop on read() and write() until all data is sent and received.
-* make sure Squeak really gets killed
-* fix crashing the browser when closing plugin page
 * make plugin not wait for browser when the url is loaded into a target.
 * use autoconf
-
 
 =================================================================
 
 Change log
+
+Jan 2005:
+	* npsqueak checks for image file in system and home dir
+	* modified npsqueakrun, runs with bash, other shells untested
+	* renamed untrusted -> My Squeak
+	* fixed make sure Squeak really gets killed
+	* fixed crashing the browser when closing plugin page
+
+Apr 2004: 
+	* (ikp) handle imageName and failureUrl tags
 
 Oct 2002:
 	* modified install from home directory to system-wide

@@ -2,11 +2,13 @@
  *
  * Browser Plugin for Squeak on Unix platforms
  * 
- * Author:  Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
+ * Author:  Bert Freudenberg
  *
- * Last edited: 2004-04-06 20:19:06 by piumarta on emilia.local
+ * Last edited: 2005-02-28 15:56:49 by jens on impara.de
  *
  * History:
+ *          Jan 2005 - looking for image and npsqueakrun in system and home dir
+ *                     kill squeak window when destroyed
  *          Apr 2004 - (ikp) handle imageName and failureUrl tags
  *          Oct 2002 - system-wide install
  *          Sep 2002 - create hard links for streamed files
@@ -32,21 +34,16 @@
 #include <X11/Intrinsic.h>
 #include <X11/StringDefs.h>
 
-/* VM install directory is passed via "cc -D..." or through autoconf */
-/* config.h is in the top build dir of the VM */
-#ifndef VM_LIBDIR
-# include "config.h"
-#endif
+#undef DEBUG 
 
-#undef DEBUG
-
-#ifdef DEBUG
+#if defined (DEBUG)
 static void DPRINT(char *format, ...)
 {
   static int debug= 42;
+  
   if (42 == debug) 
     debug= (NULL != getenv("NPSQUEAK_DEBUG"));
-
+  
   if (!debug) 
     {
       return;
@@ -130,7 +127,7 @@ static void InputCallback(SqueakPlugin *, int *source, XtInputId*);
 
 static char* NPN_StrDup(const char* s)
 {
-  return strcpy(NPN_MemAlloc(strlen(s)+1), s);
+  return strcpy(NPN_MemAlloc(strlen(s) + 1), s);
 }
 
 
@@ -169,70 +166,92 @@ NPP_GetValue(void *instance, NPPVariable variable, void *value)
   return NPERR_NO_ERROR;
 }
 
+
+
+/***********************************************************************
+ * search filename in list of dirs and write path into result 
+ * returns 0 if filename not found  
+ ***********************************************************************/ 
+
+static char*
+findFileInPaths(char* result, char *filename, int dirn, char *dirv[PATH_MAX]){
+  int i;
+  char path[PATH_MAX];
+
+  for(i= 0; i < dirn; i++){
+    DPRINT("NP: search \"%s\" in \"%s\" \n",filename,dirv[i]);
+
+    strcpy(path, dirv[i]);
+    strcat(path, filename); 
+    if (access(path, R_OK) == 0){ 
+      DPRINT("NP:  \"%s\" in \"%s\" found\n",filename,dirv[i]);
+      return strcpy(result, path);
+    }
+  }
+  DPRINT("NP: nothing found\n");
+  return 0;
+}
+
+
 /***********************************************************************
  * Plugin loading and termination
- ***********************************************************************/
+ ***********************************************************************/ 
+
+static int
+IgnoreErrors(Display *display, XErrorEvent *evt)
+{
+  DPRINT("NP: X Error ignored.\n");
+  return 1;
+}
+
 
 NPError 
 NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 		char* argn[], char* argv[], NPSavedData* saved)
 {
   SqueakPlugin *plugin;
-  char basedir[PATH_MAX];
+
+  char imagename[PATH_MAX];
   char *failureUrl= 0;
+
   if (instance == NULL)
     return NPERR_INVALID_INSTANCE_ERROR;
   plugin= (SqueakPlugin*) NPN_MemAlloc(sizeof(SqueakPlugin));
   if (!plugin)
     return NPERR_OUT_OF_MEMORY_ERROR;
-  plugin->argv= (char**) NPN_MemAlloc(sizeof(char*) * (16+2*argc));
+  plugin->argv= (char**) NPN_MemAlloc(sizeof(char*) * (16 + 2 * argc));
   if (!plugin->argv)
     return NPERR_OUT_OF_MEMORY_ERROR;
-  {
-    char* ev= getenv("HOME");
-    if (ev) {
-      strcpy(basedir, ev);
-      strcat(basedir, "/.npsqueak/");
-    } else {
-      basedir[0]= '\0';
-      fprintf(stderr, "Squeak Plugin: No home directory?!\n");
-      return NPERR_GENERIC_ERROR;
-    }
-  }
+
   /* Default settings */
-  plugin->instance= instance;
-  plugin->pid= 0;
-  plugin->nswindow= 0;
-  plugin->sqwindow= 0;
-  plugin->display= NULL;
-  plugin->input= 0;
-  plugin->embedded= (mode == NP_EMBED);
-  plugin->srcUrl= NULL;
+  strcpy(imagename, "SqueakPlugin.image"); 
+
+  plugin->instance=    instance;
+  plugin->pid=         0;
+  plugin->nswindow=    0;
+  plugin->sqwindow=    0;
+  plugin->display=     NULL;
+  plugin->input=       0;
+  plugin->embedded=    (mode == NP_EMBED);
+  plugin->srcUrl=      NULL;
   plugin->srcFilename= NULL;
-  plugin->srcId= -1;
-  plugin->failureUrl= 0;
-  strcpy(plugin->vmName, basedir);
-  strcat(plugin->vmName, "npsqueakvm");
-  strcpy(plugin->imageName, basedir);
-  strcat(plugin->imageName, "SqueakPlugin.image");
-  plugin->argv[0]= NPN_StrDup(plugin->vmName);
-  plugin->argv[1]= NPN_StrDup("-display");
-  plugin->argv[2]= NULL;              /* inserted later */
-  plugin->argv[3]= NPN_StrDup("-browserPipes");
-  plugin->argv[4]= NULL;              /* inserted later */
-  plugin->argv[5]= NULL;              /* inserted later */
-  plugin->argv[6]= NPN_StrDup(plugin->imageName); 
-  plugin->argv[7]= NPN_StrDup("");    /* empty document file on cmdline! */ 
-  plugin->argc= 8;
+  plugin->srcId=       -1;
+  plugin->failureUrl=  0;
+  plugin->argv[0]=     NPN_StrDup(plugin->vmName);
+  plugin->argv[1]=     NPN_StrDup("-display");
+  plugin->argv[2]=     NULL;             /* inserted later */
+  plugin->argv[3]=     NPN_StrDup("-browserPipes");
+  plugin->argv[4]=     NULL;             /* inserted later */
+  plugin->argv[5]=     NULL;             /* inserted later */
+  plugin->argv[7]=     NPN_StrDup("");   /* empty document file on cmdline! */ 
+  plugin->argc=        8;
+
   if (plugin->embedded) {
     int i;
     for (i= 0; i < argc; i++) {
       if (!strcasecmp(argn[i], "imagename"))
 	{
-	  strcpy(plugin->imageName, basedir);
-	  strcat(plugin->imageName, argv[i]);
-	  NPN_MemFree(plugin->argv[6]);
-	  plugin->argv[6]= NPN_StrDup(plugin->imageName); 
+	  strcpy(imagename, argv[i]);
 	}
       else if (!strcasecmp(argn[i], "failureurl"))
 	failureUrl= argv[i];
@@ -243,16 +262,49 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
     }
     if (!plugin->srcUrl)
       plugin->srcUrl= NPN_StrDup(""); /* we were embedded without a SRC */
-    if (access(plugin->imageName, R_OK))
+
+    
+    /* find npsqueakrun and image */
+    {
+      char user_bin_dir[PATH_MAX];
+      char user_img_dir[PATH_MAX];
+      char* home= getenv("HOME");
+      if (home == 0) {
+	fprintf(stderr, "Squeak Plugin: No home directory?!\n");
+	return NPERR_GENERIC_ERROR;
+      }
+      strcpy(user_bin_dir, home);
+      strcat(user_bin_dir, "/.npsqueak/");
+      
+      strcpy(user_img_dir, home);
+      strcat(user_img_dir, "/.npsqueak/");
+      
       {
-	if (failureUrl)
-	  plugin->failureUrl= NPN_StrDup(failureUrl);
-	else
-	  {
-	    fprintf(stderr, "Squeak Plugin: Image file not found: %s\n", plugin->imageName);
+	char* bin_dir_v[PATH_MAX]= {user_bin_dir,
+				    SYSTEM_BIN_DIR"/"};
+	if (findFileInPaths(plugin->vmName, NPSQUEAKRUN, 2 , bin_dir_v) == 0){
+	  fprintf(stderr, "Squeak Plugin: npsqueakrun not found!\n");
+	  return NPERR_GENERIC_ERROR;
+	}
+      }
+
+      {
+	char* img_dir_v[PATH_MAX]= {user_img_dir, SYSTEM_IMG_DIR"/"};
+	if (findFileInPaths(plugin->imageName, imagename, 2, img_dir_v) == 0){
+	  fprintf(stderr, "Squeak Plugin: Image file not found: %s\n", 
+		  imagename);
+	  if (failureUrl){
+	    fprintf(stderr, "Squeak Plugin: going to failure URL: %s\n", 
+		    failureUrl);
+	    plugin->failureUrl= NPN_StrDup(failureUrl);
+	  }else {
+	    fprintf(stderr, "Squeak Plugin: no failure URL: \n");
 	    return NPERR_GENERIC_ERROR;
 	  }
+	}
+	plugin->argv[6]= NPN_StrDup(plugin->imageName); 
       }
+    }
   } else {
     /* if not embedded srcUrl will be set in NewStream */
     plugin->srcUrl= NULL;
@@ -276,19 +328,29 @@ NPError
 NPP_Destroy(NPP instance, NPSavedData** save)
 {
   SqueakPlugin *plugin;
+  DPRINT("NP: NPP_Destroy\n");
   if (!instance)
     return NPERR_INVALID_INSTANCE_ERROR;
   plugin= (SqueakPlugin*) instance->pdata;
   if (plugin) {
     int i;
+    if (plugin->sqwindow && plugin->display) {
+      DPRINT("NP: DestroyWindow %x\n", 
+	     plugin->sqwindow);
+      XSetErrorHandler(IgnoreErrors);
+      XSync(plugin->display,0);
+      XKillClient(plugin->display, plugin->sqwindow);
+      XSync(plugin->display,0);
+    }
     if (plugin->pid) {
+      DPRINT("NP: kill 0x%i\n", plugin->pid);
       kill(plugin->pid, SIGTERM);
       plugin->pid= 0;
     }
     if (plugin->input) {
       XtRemoveInput(plugin->input);
     }
-    for (i=0; i<4; i++)
+    for (i= 0; i < 4; i++)
       if (plugin->pipes[i]) {
 	close(plugin->pipes[i]);
 	plugin->pipes[i]= 0;
@@ -306,7 +368,7 @@ NPP_Destroy(NPP instance, NPSavedData** save)
       plugin->failureUrl= NULL;
     }
     if (plugin->argv) {
-      for (i=0; i<plugin->argc; i++) {
+      for (i= 0; i < plugin->argc; i++) {
 	if (plugin->argv[i])
 	  NPN_MemFree(plugin->argv[i]);
       }
@@ -333,43 +395,44 @@ NPP_SetWindow(NPP instance, NPWindow *pNPWindow)
   plugin= (SqueakPlugin*) instance->pdata;
   if (!plugin)
     return NPERR_GENERIC_ERROR;
-  if (plugin->failureUrl) 
+  if (plugin->failureUrl) {
+    DPRINT("NP: opening failure URL");
+    NPN_GetURL(plugin->instance, plugin->failureUrl, "_self");
     return NPERR_NO_ERROR;
+  }
   if (pNPWindow == NULL) 
     return NPERR_NO_ERROR;
-
+  
   if (!plugin->display) {
     /* first time only */
-    plugin->display= ((NPSetWindowCallbackStruct *)pNPWindow->ws_info)->display;
+    plugin->display= 
+      ((NPSetWindowCallbackStruct *)pNPWindow->ws_info)->display;
   }
   SetWindow(plugin, (Window) pNPWindow->window, 
-		  pNPWindow->width, pNPWindow->height);
+	    pNPWindow->width, pNPWindow->height);
   if (!plugin->pid)
     Run(plugin);
   return NPERR_NO_ERROR;
 }
 
-
 NPError 
-NPP_NewStream(NPP instance, NPMIMEType type, NPStream *stream, NPBool seekable, uint16 *stype)
+NPP_NewStream(NPP instance, NPMIMEType type, 
+	      NPStream *stream, NPBool seekable, uint16 *stype)
 {
   SqueakPlugin *plugin= (SqueakPlugin*) instance->pdata;
   DPRINT("NP: NewStream(%s, id=%i)\n", stream->url,
-	   stream->notifyData ? ((SqueakStream*) stream->notifyData)->id : -1);
-  if (plugin->failureUrl)
-    NPN_GetURL(instance, plugin->failureUrl, "_self");
-  else
-    {
-      if (!stream->notifyData && !plugin->srcUrl) {
-	/* We did not request this stream, so it is our SRC file. */
-	plugin->srcUrl= NPN_StrDup(stream->url);
-	plugin->argv[plugin->argc++]= NPN_StrDup("SRC");
-	plugin->argv[plugin->argc++]= NPN_StrDup(plugin->srcUrl);
-	DPRINT("NP:   got srcUrl=%s\n", plugin->srcUrl);
-	Run(plugin);
-      }
-      *stype= NP_ASFILEONLY;          /* We want the file after download */
-    }
+	 stream->notifyData ? ((SqueakStream*) stream->notifyData)->id : -1);
+  
+  if (!stream->notifyData && !plugin->srcUrl) {
+    /* We did not request this stream, so it is our SRC file. */
+    plugin->srcUrl= NPN_StrDup(stream->url);
+    plugin->argv[plugin->argc++]= NPN_StrDup("SRC");
+    plugin->argv[plugin->argc++]= NPN_StrDup(plugin->srcUrl);
+    DPRINT("NP:   got srcUrl=%s\n", plugin->srcUrl);
+    Run(plugin);
+  }
+  *stype= NP_ASFILEONLY;          /* We want the file after download */
+  
   return NPERR_NO_ERROR;
 }
 
@@ -469,7 +532,8 @@ NPP_WriteReady(NPP instance, NPStream *stream)
 
 
 int32 
-NPP_Write(NPP instance, NPStream *stream, int32 offset, int32 len, void *buffer)
+NPP_Write(NPP instance, NPStream *stream, 
+	  int32 offset, int32 len, void *buffer)
 {
   return len;
 }
@@ -548,8 +612,9 @@ DeliverFile(SqueakPlugin *plugin, int id, const char* fname)
 static void 
 Run(SqueakPlugin *plugin)
 {
-  if (plugin->pid || !plugin->nswindow || !plugin->srcUrl || plugin->failureUrl)
+  if (plugin->pid || !plugin->nswindow || !plugin->srcUrl ||plugin->failureUrl)
     return;
+
   
   plugin->pid= fork();
   
@@ -577,8 +642,8 @@ Run(SqueakPlugin *plugin)
       DPRINT("NP: Cannot disinherit X connection fd\n");
     DPRINT("NP(child): trying %s\n", plugin->vmName);
     execv(plugin->vmName, plugin->argv);
-    /* ~/.npsqueak/npsqueakvm could not be executed */
-    strcpy(plugin->vmName, VM_LIBDIR "/npsqueakrun");
+    /* ~/.npsqueak/npsqueakrun could not be executed */
+    strcpy(plugin->vmName, SYSTEM_BIN_DIR "/" NPSQUEAKRUN);
     NPN_MemFree(plugin->argv[0]);
     plugin->argv[0]= NPN_StrDup(plugin->vmName);
     DPRINT("NP(child): trying %s\n", plugin->vmName);
@@ -587,19 +652,19 @@ Run(SqueakPlugin *plugin)
     fprintf(stderr, "Squeak Plugin: running \"%s\"\n", plugin->vmName);
     perror("Squeak execv() failed");
     _exit(1);
-  } 
-  /* establish communication via command pipes */
-  {
+  } else {
+    /* establish communication via command pipes */
     XtAppContext app= XtDisplayToApplicationContext(plugin->display);
     plugin->input= XtAppAddInput(app,
 				 plugin->pipes[PLUGIN_READ],
 				 (XtPointer) XtInputReadMask,
 				 (XtInputCallbackProc) InputCallback,
 				 plugin);
+  
+    /* send browser window */
+    DPRINT("NP: Sending browser window=0x%X\n", plugin->nswindow);
+    SendInt(plugin, plugin->nswindow);
   }
-  /* send browser window */
-  DPRINT("NP: Sending browser window=0x%X\n", plugin->nswindow);
-  SendInt(plugin, plugin->nswindow);
 }
 
 
@@ -656,12 +721,6 @@ SetUpSqueakWindow(SqueakPlugin *plugin)
   XMapWindow(plugin->display, plugin->sqwindow);
 }
 
-static int
-IgnoreErrors(Display *display, XErrorEvent *evt)
-{
-  DPRINT("NP: X Error ignored.\n");
-  return 1;
-}
 
 static void
 DestroyCallback(Widget widget, SqueakPlugin *plugin, XtPointer data)
@@ -743,7 +802,8 @@ GetUrl(SqueakPlugin *plugin)
       else
 	plugin->srcId= id;
     } else {
-      SqueakStream* notifyData= (SqueakStream*) NPN_MemAlloc(sizeof(SqueakStream));
+      SqueakStream* notifyData= 
+	(SqueakStream*) NPN_MemAlloc(sizeof(SqueakStream));
       if (!notifyData) { 
 	fprintf(stderr, "Squeak Plugin (GetUrl): alloc failed\n");
       } else {
@@ -790,7 +850,8 @@ PostUrl(SqueakPlugin *plugin)
   if (errno) {
     perror("Squeak Plugin (PostUrl)");
   } else {
-    SqueakStream* notifyData= (SqueakStream*) NPN_MemAlloc(sizeof(SqueakStream));
+    SqueakStream* notifyData= 
+      (SqueakStream*) NPN_MemAlloc(sizeof(SqueakStream));
     if (!notifyData) { 
       fprintf(stderr, "Squeak Plugin (PostUrl): alloc failed\n");
     } else {

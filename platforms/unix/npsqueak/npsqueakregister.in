@@ -1,15 +1,16 @@
 #! /bin/sh
 
 # File:        npsqueakregister
-# Author:      Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
+# Author:      Bert Freudenberg 
 # Description: Script to register the npsqueak plugin with 
 #              various browsers. 
 #              Rerun after you installed a new browser!
 # Parameters:  -u unregister
 
 NPSQUEAK_SO=@NPSQUEAK_SO@
-BROWSERS="netscape mozilla opera"
-BROWSER_DIRS="/usr/local/lib /usr/lib"
+BROWSERS="netscape mozilla mozilla-firefox opera MozillaFirefox/lib"
+BROWSER_DIRS="/usr/local/lib /usr/lib /opt"
+SYSTEM_BROWSER_DIR="/usr/lib/browser-plugins"
 
 ACTION=register
 
@@ -48,7 +49,7 @@ case "$1" in
          ;;
 esac
 
-if [ ! -x "$NPSQUEAK_SO" ] ; then
+if [ ! -e "$NPSQUEAK_SO" ] ; then
     echo File not found: $NPSQUEAK_SO
     echo Aborting.
     exit 1 
@@ -69,3 +70,8 @@ do
         done
     done
 done
+
+
+if [ -e $SYSTEM_BROWSER_DIR ]; then
+    $ACTION $SYSTEM_BROWSER_DIR/npsqueak.so
+fi
