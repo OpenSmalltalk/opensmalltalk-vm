@@ -174,7 +174,14 @@ typedef struct VirtualMachine {
 
 #if VM_PROXY_MINOR > 4
 	/* New for proxy 1.5 */
+/* This is clearly a sub-optimal way to check for the ability to handle 64 bit
+ * long long types but it suffices for the moment
+ */
+#ifndef ACORN
         #define squeakInt64 long long
+#else
+        #define squeakInt64 long int
+#endif
 	int (*positive64BitIntegerFor)(squeakInt64 integerValue);
 	squeakInt64 (*positive64BitValueOf)(int oop);
 	int (*signed64BitIntegerFor)(squeakInt64 integerValue);
