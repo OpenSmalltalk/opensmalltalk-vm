@@ -36,14 +36,14 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2005-03-28 02:01:17 by piumarta on graves.hpl.hp.com
+ * Last edited: 2005-04-06 06:09:36 by piumarta on pauillac.hpl.hp.com
  */
 
 #define DEBUG 0
  
 #include "sq.h"		/* sqUnixConfig.h */
 
-#if DEBUG
+#if (DEBUG)
 # define dprintf(ARGS) fprintf ARGS
 #else
 # define dprintf(ARGS)
@@ -106,7 +106,11 @@
 # endif
 #endif
 
-extern int sqIgnorePluginErrors;
+#if (DEBUG)
+# define sqIgnorePluginErrors 0
+#else
+  extern int sqIgnorePluginErrors;
+#endif
 
 /*** options ***/
 
