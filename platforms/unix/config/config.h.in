@@ -36,11 +36,15 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2005-03-19 12:23:21 by piumarta on emilia.local
+ * Last edited: 2005-03-19 21:06:30 by piumarta on squeak.hpl.hp.com
  */
 
 #ifndef __sq_config_h
 #define __sq_config_h
+
+/* explicit image width */
+
+#undef	HAVE_INTERP_H
 
 /* package options */
 
@@ -118,6 +122,18 @@
 #undef	HAVE_ALLOCA_H
 
 #undef	HAVE_UNSETENV
+
+#undef	HAVE_ALLOCA
+#undef	HAVE_ALLOCA_H
+
+#undef	HAVE_UNSETENV
+
+/* widths of primitive types */
+
+#undef	SIZEOF_INT
+#undef	SIZEOF_LONG
+#undef	SIZEOF_LONG_LONG
+#undef	SIZEOF_VOID_P
 
 /* structures */
 
