@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.6 2002/07/18 22:12:57 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Prefs.c,v 1.7 2003/03/08 21:06:56 andreasraab Exp $
 *
 *   NOTES:
 *****************************************************************************/
@@ -180,7 +180,7 @@ void LoadPreferences()
     GetPrivateProfileInt(U_GLOBAL,TEXT("PriorityBoost"),
 			 fPriorityBoost,squeakIniName);
 
-  fUseOpenGL   = 
+  fUseDirectSound   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("UseDirectSound"),
 			 fUseDirectSound,squeakIniName);
   fUseOpenGL   = 
