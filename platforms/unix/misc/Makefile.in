@@ -141,7 +141,7 @@ IMG=		../internal.image
 IMG_O=		squeak_image.o
 IMZ_O=		squeak_image_gz.o
 
-DOCFILES=	BUILD.UnixSqueak COPYING COPYRIGHT LICENSE README.CodingStandards
+DOCFILES=	COPYING COPYRIGHT LICENSE README.CodingStandards
 MANFILES=	squeak.1
 
 .SUFFIXES:
