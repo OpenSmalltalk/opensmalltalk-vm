@@ -2,9 +2,8 @@
 #define SQ_MAC_OPENGL_H
 
 #define MAX_RENDERER 16
-
-#include <QDOffscreen.h>
-#include <agl.h>
+#include <agl/agl.h>
+#include <agl/gl.h>
 
 typedef struct glRenderer {
 	GLint bufferRect[4];

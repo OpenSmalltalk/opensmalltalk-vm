@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGLInfo.c,v 1.2 2001/12/18 21:12:29 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGLInfo.c,v 1.3 2002/02/06 06:57:19 johnmci Exp $
 *
 *   NOTES:
 *
@@ -15,8 +15,8 @@
 #include <stdlib.h>
 #if TARGET_API_MAC_CARBON
 	#include <Carbon/Carbon.h>
-	#include <gl.h>
-	#include <agl.h>
+	#include <agl/gl.h>
+	#include <agl/agl.h>
 #else
 	#if defined(__MWERKS__) 
 		#include <GL/gl.h>
