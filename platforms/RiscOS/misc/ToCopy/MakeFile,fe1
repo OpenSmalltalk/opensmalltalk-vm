@@ -1,6 +1,7 @@
-# Project:   sq36plugin
-# Make the pluginised VM for v3.6
+# Project:   sq37plugin
+# Make the pluginised VM for v3.7
 # Reworked to use VMMaker non-copying of platform & cross files
+# Add check for Squeak3D dir to optionally compile the Squeak3D plugin
 
 # Toolflags:
 CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -Otime
@@ -27,13 +28,20 @@ CPlug=$(PLAT).Cross.plugins
 SPlug=@.plugins
 PlHdr=$(CVM).h.sqVirtualMachine $(PVM).h.sqConfig $(PVM).h.sqPlatformSpecific
 VMHdr=$(CVM).h.sq $(PlHdr)
+SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
+
+pluginList=B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SocketPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin pluginDir
 
 # Final targets:
-all: pluginList vm
+all: plugins vm
+
+ifeq ( $(wildcard $(SQ3DTestFile)), $(SQ3DTestFile)
+pluginList += Squeak3D
+endif
 
 vm:	$(Sqk).!Runimage vmobjdir
 	@
-
+	
 clean:
 	$(MAKEFILEDIR).each @ -type d -name o -exec wipe %0.* ~C ";"
 
@@ -47,12 +55,7 @@ pluginDir:
 	@ifthere $(SqPlugins) then else CDir $(SqPlugins) 
 	@ifthere @.o then else CDir @.o
 
-pluginList: B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims \
-		FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin \
-		GeniePlugin JPEGReaderPlugin  LargeIntegers \
-		Matrix2x3Plugin MiscPrimitivePlugin RePlugin SocketPlugin \
-		SoundPlugin StarSqueakPlugin  SurfacePlugin \
-		ZipPlugin pluginDir
+plugins: $(pluginList) 
 	@
 
 $(Sqk).!Runimage:	@.vm.o.sqRPCMain @.vm.o.interp @.vm.o.sqArgument \
@@ -198,7 +201,8 @@ $(SPlug).FFTPlugin.o.FFTPlugin: $(SPlug).FFTPlugin.c.FFTPlugin $(PlHdr)
 # More complex - involves files from several sources
 # FilePlugin.c is generated
 # FilePlugin.h is in Cross
-# sqFilePluginBasicPrims.c is in Cross
+# sqFilePluginBasicPrims.c is in Cross - except we have a local copy or Risc OS
+# to handle filetypes a bit better
 # sqRPCDirectory.c is in RiscOS
 ###########
 FilePlugin:	$(SqPlugins).FilePlugin
@@ -220,8 +224,8 @@ $(SPlug).FilePlugin.o.FilePlugin: $(SPlug).FilePlugin.c.FilePlugin $(PlHdr)
 	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(SPlug).FilePlugin.c.FilePlugin 
 $(SPlug).FilePlugin.o.sqRPCDirectory: $(PPlug).FilePlugin.c.sqRPCDirectory $(PlHdr)
 	cc $(ccflags) -o $@ $(PPlug).FilePlugin.c.sqRPCDirectory 
-$(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(CPlug).FilePlugin.c.sqFilePluginBasicPrims $(PlHdr)
-	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(CPlug).FilePlugin.c.sqFilePluginBasicPrims 
+$(SPlug).FilePlugin.o.sqFilePluginBasicPrims: $(PPlug).FilePlugin.c.sqFilePluginBasicPrims $(PlHdr)
+	cc $(ccflags) -I$(CPlug).FilePlugin -o $@ $(PPlug).FilePlugin.c.sqFilePluginBasicPrims 
 
 
 
@@ -409,6 +413,33 @@ $(SPlug).RePlugin.o.pcre: $(CPlug).RePlugin.c.pcre
 	
 $(SPlug).RePlugin.o.study: $(CPlug).RePlugin.c.study
 	cc $(ccflags) -o $@ $(CPlug).RePlugin.c.study
+
+
+###########
+# Security Plugin make rule.
+# More complex - involves files from several sources
+# SecurityPlugin.c is generated
+# SecurityPlugin.h is in Cross
+# sqRPCSecurity.c is in RiscOS
+
+###########
+SecurityPlugin:	$(SqPlugins).SecurityPlugin
+	@echo done $*
+
+$(SqPlugins).SecurityPlugin:	$(SPlug).SecurityPlugin.o.SecurityPlugin \
+		$(SPlug).SecurityPlugin.o.sqRPCSecurity  \
+		$(SPlug).SecurityPlugin.dsc.SecurityPlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).SecurityPlugin \
+		-h $(SPlug).SecurityPlugin.dsc.SecurityPlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).SecurityPlugin.o.SecurityPlugin \
+			$(SPlug).SecurityPlugin.o.sqRPCSecurity 
+
+$(SPlug).SecurityPlugin.o.SecurityPlugin: $(SPlug).SecurityPlugin.c.SecurityPlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SecurityPlugin -o $@ $*.c 
+$(SPlug).SecurityPlugin.o.sqRPCSecurity: $(PPlug).SecurityPlugin.c.sqRPCSecurity  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).SecurityPlugin -o $@ $(PPlug).SecurityPlugin.c.sqRPCSecurity
 
 
 
@@ -623,4 +654,5 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin  $(PlHdr)
 
 
 # Dynamic dependencies:
+
 
