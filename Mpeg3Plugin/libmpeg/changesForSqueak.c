@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: changesForSqueak.c,v 1.3 2001/12/27 23:14:13 johnmci Exp $
+*   RCSID:   $Id: changesForSqueak.c,v 1.4 2002/05/05 11:58:47 andreasraab Exp $
 *
 *   NOTES: See change log below.
 *	12/27/2001 JMM added support to build as a OS-X Bundle, a bit werid because its a mixture of unix and mac OS
@@ -111,13 +111,13 @@ int			strncasecmp(const char *s1, const char *s2, size_t len)
 		if ((c2 >= 'a') && (c2 <= 'z')) {
 			c2 = c2 - ('a' - 'A');
 		}
-		if (c1 != c2) return false;
+		if (c1 != c2) return 0;
 	}
-	return true;
+	return 1;
 }
 
 int			strcasecmp (const char *str1, const char *str2) {
-	if (strlen(str1) != strlen(str2)) return false;
+	if (strlen(str1) != strlen(str2)) return 0;
     return strncasecmp(str1,str2,strlen(str1));
 }
 
