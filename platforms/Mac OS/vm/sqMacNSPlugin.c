@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacNSPlugin.c,v 1.12 2003/10/03 19:02:06 johnmci Exp $
+*   RCSID:   $Id: sqMacNSPlugin.c,v 1.13 2003/10/23 17:02:26 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Some carbon cleanup
@@ -623,7 +623,13 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	                gButtonIsDown = true;				    
 					if(inputSemaphoreIndex) {
 			    		StartDraw();
+#if I_AM_CARBON_EVENT
+        pthread_mutex_lock(&gEventQueueLock);
+#endif                                        
 						recordMouseEvent(eventPtr,MouseModifierState(eventPtr));
+#if I_AM_CARBON_EVENT
+        pthread_mutex_unlock(&gEventQueueLock);
+#endif
 						EndDraw();
 						break;
 					}
@@ -636,7 +642,13 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 					gButtonIsDown = false;
 					if(inputSemaphoreIndex) {
 			    		StartDraw();
+#if I_AM_CARBON_EVENT
+        pthread_mutex_lock(&gEventQueueLock);
+#endif                                        
 						recordMouseEvent(eventPtr,MouseModifierState(eventPtr));
+#if I_AM_CARBON_EVENT
+        pthread_mutex_unlock(&gEventQueueLock);
+#endif                                        
 			    		EndDraw();
 						break;
 					}
@@ -646,7 +658,13 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	    		case keyDown:
 	    		case autoKey:
 	  				if(inputSemaphoreIndex) {
+#if I_AM_CARBON_EVENT
+        pthread_mutex_lock(&gEventQueueLock);
+#endif                                        
 						recordKeyboardEvent(eventPtr,EventKeyDown);
+#if I_AM_CARBON_EVENT
+        pthread_mutex_unlock(&gEventQueueLock);
+#endif                                        
 						break;
 					}
 					recordModifierButtons(eventPtr);
@@ -655,7 +673,13 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 
 				case keyUp:
 					if(inputSemaphoreIndex) {
+#if I_AM_CARBON_EVENT
+        pthread_mutex_lock(&gEventQueueLock);
+#endif                                        
 						recordKeyboardEvent(eventPtr,EventKeyUp);
+#if I_AM_CARBON_EVENT
+        pthread_mutex_unlock(&gEventQueueLock);
+#endif                                        
 					}
 				break;
 
@@ -674,7 +698,14 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	    				if(inputSemaphoreIndex && windowActive) {
 	    					eventPtr->modifiers = checkForModifierKeys();
 	    		    		StartDraw();
-	     					recordMouseEvent(eventPtr,MouseModifierState(eventPtr));     					
+#if I_AM_CARBON_EVENT
+        pthread_mutex_lock(&gEventQueueLock);
+#endif                                        
+	     					recordMouseEvent(eventPtr,MouseModifierState(eventPtr));     
+#if I_AM_CARBON_EVENT
+        pthread_mutex_unlock(&gEventQueueLock);
+#endif                                        
+					
 	     					EndDraw();
 	    		 		}
 					}
