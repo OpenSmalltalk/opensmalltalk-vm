@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.9 2003/03/05 19:57:02 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.10 2003/06/20 01:51:34 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -31,6 +31,8 @@ extern int setInterruptPending(int value);
     #include <sys/types.h>
     #include <sys/time.h>
     #include <unistd.h>
+    #include "aio.h"
+
     TMTask    gTMTask,gTMTask1000;
     struct timeval	 startUpTime;
     unsigned int	lowResMSecs= 0;
@@ -100,10 +102,10 @@ int ioMicroMSecs(void)
   return (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-TMTask    gWakeUpTimerProc;
+/*TMTask    gWakeUpTimerProc;
 static Boolean gWakeUpTimerProcNeedsInit=true;
 
-/*static pascal void MyWakeUTimerProc(QElemPtr time) {
+static pascal void MyWakeUTimerProc(QElemPtr time) {
     interruptCheckCounter = 0;
     return;
 }
@@ -249,17 +251,21 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     if (getNextWakeupTick() <= now)
         if (getNextWakeupTick() == 0)
             realTimeToWait = 16;
-        else 
+        else {
+            aioPoll(0);
             return;
+    }
     else
         realTimeToWait = getNextWakeupTick() - now; 
             
-    tspec.tv_sec=  realTimeToWait / 1000;
+    aioPoll(realTimeToWait*1000);
+        
+ /*       tspec.tv_sec=  realTimeToWait / 1000;
     tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
     
     err = pthread_mutex_lock(&gSleepLock);
     err = pthread_cond_timedwait_relative_np(&gSleepLockCondition,&gSleepLock,&tspec);	
-    err = pthread_mutex_unlock(&gSleepLock);
+        err = pthread_mutex_unlock(&gSleepLock); */
     
 
     //JMM foo usleep(microSeconds);
