@@ -6,8 +6,10 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.3 2002/01/22 19:22:38 johnmci Exp $
+*   RCSID:   $Id: sq.h,v 1.4 2002/01/31 21:10:06 johnmci Exp $
 *
+*	01/28/02	Tim add macro default for sqFilenameFromStringOpen
+*		and sqFTruncate
 *	01/22/2002 JMM change off_t to squeakOffsetFileType
 */
 #include <math.h>
@@ -39,9 +41,9 @@
 #define sqImageFile FILE *
 #define sqImageFileClose(f)                  fclose(f)
 #define sqImageFileOpen(fileName, mode)      fopen(fileName, mode)
-#define sqImageFilePosition(f)               ftello(f)
+#define sqImageFilePosition(f)               ftell(f)
 #define sqImageFileRead(ptr, sz, count, f)   fread(ptr, sz, count, f)
-#define sqImageFileSeek(f, pos)              fseeko(f, pos, SEEK_SET)
+#define sqImageFileSeek(f, pos)              fseek(f, pos, SEEK_SET)
 #define sqImageFileWrite(ptr, sz, count, f)  fwrite(ptr, sz, count, f)
 #define sqImageFileStartLocation(fileRef, fileName, size)  0
 
@@ -150,6 +152,16 @@ if (1) { \
 	} \
 	dst[num] = 0;\
 }
+
+/* macro needed to support MacOS-X file opening problems */
+#define sqFilenameFromStringOpen(d,s,n) sqFilenameFromString(d,s,n)
+
+/* macro to provide default null behaviour for ftruncate - a non-ansi call used
+   in FilePlugin.
+   Over ride in sqPlatformSpecific.h for each platform that implements a file
+   truncate. 
+*/
+#define sqFTruncate(filenum, fileoffset) true
 
 /* this include file may redefine earlier definitions and macros: */
 #include "sqPlatformSpecific.h"
