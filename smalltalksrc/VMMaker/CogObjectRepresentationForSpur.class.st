@@ -11,6 +11,7 @@ Class {
 		'ceStoreTrampolines'
 	],
 	#classVars : [
+		'CheckRememberedInTrampoline',
 		'NumStoreTrampolines'
 	],
 	#pools : [
@@ -32,6 +33,11 @@ CogObjectRepresentationForSpur class >> initialize [
 	"Number of trampolines for the combined IMMUTABILITY/store check instance variable store.
 	 Trampolines from 0 to NumStoreTrampolines - 2 are dedicated to an inst var index, the last one is generic."
 	NumStoreTrampolines := 5
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur class >> initializeMiscConstants [
+	CheckRememberedInTrampoline := initializationOptions at: #CheckRememberedInTrampoline ifAbsent: [false]
 ]
 
 { #category : #accessing }
@@ -213,6 +219,20 @@ CogObjectRepresentationForSpur >> genAllocFloatValue: dpreg into: resultReg scra
 	self genStoreHeader: newFloatHeader intoNewInstance: resultReg using: scratch1.
 	cogit MoveRd: dpreg M64: objectMemory baseHeaderSize r: resultReg.
 	^jumpFail
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSpur >> genCheckRememberedBitOf: objReg scratch: scratchReg [
+	"Check the remembered bit of the object in objReg; answer the jump taken if the bit is already set.
+	 Only need to fetch the byte containing it, which reduces the size of the mask constant."
+	| rememberedBitByteOffset mask |
+	rememberedBitByteOffset := cogit backEnd isBigEndian
+									ifTrue: [objectMemory baseHeaderSize - 1 - (objectMemory rememberedBitShift // 8)]
+									ifFalse:[objectMemory rememberedBitShift // 8].
+	mask := 1 << (objectMemory rememberedBitShift \\ 8).
+	cogit MoveMb: rememberedBitByteOffset r: objReg R: scratchReg.
+	cogit TstCq: mask R: scratchReg.
+	^cogit JumpNonZero: 0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -1011,7 +1031,7 @@ CogObjectRepresentationForSpur >> genStoreCheckContextReceiverTrampoline [
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: valueReg scratchReg: scratchReg inFrame: inFrame [
 	"Generate the code for a store check of valueReg into destReg."
-	| jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered mask rememberedBitByteOffset |
+	| jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered |
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	<var: #jmpDestYoung type: #'AbstractInstruction *'>
 	<var: #jmpSourceOld type: #'AbstractInstruction *'>
@@ -1027,16 +1047,9 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	cogit CmpR: scratchReg R: valueReg. "N.B. FLAGS := valueReg - scratchReg"
 	jmpSourceOld := cogit JumpAboveOrEqual: 0.
 	"value is young and target is old.
-	 Need to remember this only if the remembered bit is not already set.
-	 Test the remembered bit.  Only need to fetch the byte containing it,
-	 which reduces the size of the mask constant."
-	rememberedBitByteOffset := jmpSourceOld isBigEndian
-									ifTrue: [objectMemory baseHeaderSize - 1 - (objectMemory rememberedBitShift // 8)]
-									ifFalse:[objectMemory rememberedBitShift // 8].
-	mask := 1 << (objectMemory rememberedBitShift \\ 8).
-	cogit MoveMb: rememberedBitByteOffset r: destReg R: scratchReg.
-	cogit AndCq: mask R: scratchReg.
-	jmpAlreadyRemembered := cogit JumpNonZero: 0.
+	 Need to remember this only if the remembered bit is not already set."
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered := self genCheckRememberedBitOf: destReg scratch: scratchReg].
 	"Remembered bit is not set.  Call store check to insert dest into remembered table."
 	self assert: destReg = ReceiverResultReg.
 	cogit 
@@ -1045,9 +1058,36 @@ CogObjectRepresentationForSpur >> genStoreCheckReceiverReg: destReg valueReg: va
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
-	(jmpAlreadyRemembered jmpTarget:
-		cogit Label))).
+		cogit Label)).
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered jmpTarget: jmpSourceOld getJmpTarget].
 	^0
+]
+
+{ #category : #initialization }
+CogObjectRepresentationForSpur >> genStoreCheckTrampoline [
+	| jumpSC |
+	<var: #jumpSC type: #'AbstractInstruction *'>
+	<inline: true>
+	CheckRememberedInTrampoline ifTrue:
+		[cogit zeroOpcodeIndex.
+		 jumpSC := self genCheckRememberedBitOf: ReceiverResultReg scratch: cogit backEnd cResultRegister.
+		 self assert: jumpSC opcode = JumpNonZero.
+		 jumpSC opcode: JumpZero.
+		 cogit RetN: 0.
+		 jumpSC jmpTarget: cogit Label].
+	^cogit
+		genTrampolineFor: #remember:
+		called: 'ceStoreCheckTrampoline'
+		numArgs: 1
+		arg: ReceiverResultReg
+		arg: nil
+		arg: nil
+		arg: nil
+		regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
+		pushLinkReg: true
+		resultReg: cogit returnRegForStoreCheck
+		appendOpcodes: CheckRememberedInTrampoline
 ]
 
 { #category : #initialization }
@@ -1108,10 +1148,11 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName instV
 	Registers are not lived across this trampoline as the 
 	immutability failure may need new stack frames."
 	
-	| jumpSC |
+	| jumpSC jumpRC |
 	<option: #IMMUTABILITY>
 	<var: #trampolineName type: #'char *'>
 	<var: #jumpSC type: #'AbstractInstruction *'>
+	<var: #jumpRC type: #'AbstractInstruction *'>
 	<inline: false>
 	cogit zeroOpcodeIndex.
 	"SendNumArgsReg is mutated but we don't care as register are not live across the trampoline.
@@ -1133,6 +1174,19 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName instV
 		
 	"Store check"
 	jumpSC jmpTarget: cogit Label.
+	"If on 64-bits and doing the remembered bit test here, we can combine the tests to fetch the header once."
+	CheckRememberedInTrampoline ifTrue:
+		[objectMemory wordSize = 8
+			ifTrue:
+				[cogit TstCq: 1 << objectMemory rememberedBitShift R: SendNumArgsReg.
+				 jumpRC := cogit JumpZero: 0.
+				 cogit RetN: 0]
+			ifFalse:
+				[jumpRC := self genCheckRememberedBitOf: ReceiverResultReg scratch: SendNumArgsReg.
+				 self assert: jumpRC opcode = JumpNonZero.
+				 jumpRC opcode: JumpZero.
+				 cogit RetN: 0].
+		 jumpRC jmpTarget: cogit Label].
 	^ cogit genTrampolineFor: #remember:
 		called: trampolineName
 		numArgs: 1
@@ -1149,7 +1203,7 @@ CogObjectRepresentationForSpur >> genStoreTrampolineCalled: trampolineName instV
 { #category : #'compile abstract instructions' }
 CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg: sourceReg slotIndex: index destReg: destReg scratchReg: scratchReg needRestoreRcvr: needRestoreRcvr [ 
 	"Store check code is duplicated to use a single trampoline"
-	| immutableJump jmpImmediate jmpDestYoung jmpSourceOld rememberedBitByteOffset jmpAlreadyRemembered mask |
+	| immutableJump jmpImmediate jmpDestYoung jmpSourceOld jmpAlreadyRemembered |
 	<var: #immutableJump type: #'AbstractInstruction *'>
 	<var: #jmpImmediate type: #'AbstractInstruction *'>
 	<var: #jmpDestYoung type: #'AbstractInstruction *'>
@@ -1176,16 +1230,9 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg
 	cogit CmpR: scratchReg R: sourceReg. "N.B. FLAGS := valueReg - scratchReg"
 	jmpSourceOld := cogit JumpAboveOrEqual: 0.
 	"value is young and target is old.
-	 Need to remember this only if the remembered bit is not already set.
-	 Test the remembered bit.  Only need to fetch the byte containing it,
-	 which reduces the size of the mask constant."
-	rememberedBitByteOffset := jmpSourceOld isBigEndian
-									ifTrue: [objectMemory baseHeaderSize - 1 - (objectMemory rememberedBitShift // 8)]
-									ifFalse:[objectMemory rememberedBitShift // 8].
-	mask := 1 << (objectMemory rememberedBitShift \\ 8).
-	cogit MoveMb: rememberedBitByteOffset r: destReg R: scratchReg.
-	cogit AndCq: mask R: scratchReg.
-	jmpAlreadyRemembered := cogit JumpNonZero: 0.
+	 Need to remember this only if the remembered bit is not already set."
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered := self genCheckRememberedBitOf: destReg scratch: scratchReg].
 	"Set the inst var index for the benefit of the immutability check. The trampoline will
 	 repeat the check to choose between the immutbality violation and the store check."
 	immutableJump jmpTarget: cogit Label.
@@ -1195,9 +1242,9 @@ CogObjectRepresentationForSpur >> genStoreWithImmutabilityAndStoreCheckSourceReg
 	jmpImmediate jmpTarget:
 	(jmpDestYoung jmpTarget:
 	(jmpSourceOld jmpTarget:
-	(jmpAlreadyRemembered jmpTarget:
-		cogit Label))).
-	
+		cogit Label)).
+	CheckRememberedInTrampoline ifFalse:
+		[jmpAlreadyRemembered jmpTarget: jmpSourceOld getJmpTarget].
 	^ 0
 ]
 
@@ -1277,12 +1324,7 @@ CogObjectRepresentationForSpur >> generateObjectRepresentationTrampolines [
 															numArgs: instVarIndex 
 															limit: NumStoreTrampolines - 2) 
 							instVarIndex: instVarIndex)]].
-	ceStoreCheckTrampoline := cogit
-									genTrampolineFor: #remember:
-									called: 'ceStoreCheckTrampoline'
-									arg: ReceiverResultReg
-									regsToSave: (cogit callerSavedRegMask bitClear: (cogit registerMaskFor: ReceiverResultReg))
-									result: cogit returnRegForStoreCheck.
+	ceStoreCheckTrampoline := self genStoreCheckTrampoline.
 	ceStoreCheckContextReceiverTrampoline := self genStoreCheckContextReceiverTrampoline.
 	ceScheduleScavengeTrampoline := cogit
 											genTrampolineFor: #ceScheduleScavenge
