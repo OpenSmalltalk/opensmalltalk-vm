@@ -1,4 +1,4 @@
-#!/usr/bin/gawk -f
+#!/bin/awk -f
 # 
 #   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
 #      authors/contributors listed elsewhere in this file.
@@ -37,11 +37,12 @@
 # Rewrite the interpreter source in $1 to use GNU C extensions, writing the
 # modified file to stdout.  Author: Ian.Piumarta@inria.fr
 
+# 2001-8-1 Updated by Lex Spoon to (hopefully) work on all awk's
+# 2002-1-1 Updated by Lex Spoon again....
+
 BEGIN {
-  print "/* This file has been post-processed for GNU C */\n\
-\n\
-";
-  print "copying first section of file" > "/dev/stderr";
+  print "/* This file has been post-processed for GNU C */\n\n\n";
+#  print "copying first section of file" > "/dev/stderr";
   stage= 0;
 }
 
@@ -52,17 +53,18 @@ BEGIN {
 
 # An inlining comment means the interpreter was not inlined
 
-/inline\: true/ {
-  print NR, $0 > "/dev/stderr";
-  print "" > "/dev/stderr";
-  print "*** interpreter was not inlined: bailing out! ***" > "/dev/stderr";
-  print "" > "/dev/stderr";
-  exit 1;
+/inline: true/ {
+#  print NR, $0 > "/dev/stderr";
+#  print "" > "/dev/stderr";
+#  print "*** interpreter was not inlined: bailing out! ***" > "/dev/stderr";
+#  print "" > "/dev/stderr";
+  stage= 1000;
 }
 
 
+
 (stage == 0) && /^int interpret\(void\) \{/ {
-  print "interpret: adding static register assignments" > "/dev/stderr";
+#  print "interpret: adding static register assignments" > "/dev/stderr";
   stage= 1;
   print;
   next;
@@ -84,16 +86,16 @@ BEGIN {
 }
 
 (stage == 1) && /^$/ {
-  print "interpret: adding bytecode dispatch table" > "/dev/stderr";
+#  print "interpret: adding bytecode dispatch table" > "/dev/stderr";
   print "    JUMP_TABLE;\n";
-  print "interpret: rewriting case labels and outer breaks" > "/dev/stderr";
+#  print "interpret: rewriting case labels and outer breaks" > "/dev/stderr";
   stage= 2;
-  FS="[ 	:]+";
+  FS=" ";
   next;
 }
 
 (stage == 2) && /^		case / {
-  print "		CASE(" $3 ")";
+  print "		CASE(" (($NF) + 0) ")";
   next;
 }
 
@@ -110,29 +112,29 @@ BEGIN {
 
 (stage == 3) && /^int primitiveResponse\(/ {
   print;
-  print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
+#  print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
   print "    PRIM_TABLE;\n";
-  print "primitiveResponse: rewriting case labels" > "/dev/stderr";
+#  print "primitiveResponse: rewriting case labels" > "/dev/stderr";
   stage= 4;
-  FS="[ 	:]+";
+  FS=" ";
   next;
 }
 
 
 (stage == 4) && /^	switch \(primitiveIndex\) {/ {
-  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
+#  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
   print "	PRIM_DISPATCH;";
   print;
   next;
 }
 
 (stage == 4) && /^	case / {
-  print "	CASE(" $3 ")";
+  print "		CASE(" (($NF) + 0) ")";
   next;
 }
 
 (stage == 4) && /^\}/ {
-  print "copying last section of file" > "/dev/stderr";
+#  print "copying last section of file" > "/dev/stderr";
   stage= 5;
   FS=" ";
   print;

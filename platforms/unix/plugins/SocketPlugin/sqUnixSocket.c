@@ -59,6 +59,7 @@
 
 #include "sq.h"
 #include "SocketPlugin.h"
+#include "sqaio.h"
 
 #undef DEBUG
 
@@ -223,31 +224,12 @@ static int  resolverSema;
 extern struct VirtualMachine *interpreterProxy;
 int setHookFn;
 
-/*** asynchronous i/o support ***/
 
-/* handler flags */
-
-#define AIO_EX	(0<<0)
-#define AIO_RD	(1<<0)
-#define AIO_WR	(1<<1)
-#define AIO_RW	(AIO_RD | AIO_WR)
-
-typedef void (*AioHandler)(privateSocketStruct *pss, int errorFlag, int readFlag);
-
-static privateSocketStruct *sockets[FD_SETSIZE];
-static AioHandler	    handler[FD_SETSIZE];
-
-static int	lastSocket;
-static fd_set	readMask;
-static fd_set	writeMask;
-static fd_set	exceptionMask;
-
-static void nullHandler(privateSocketStruct *, int, int);
-static void acceptHandler(privateSocketStruct *, int, int);
-static void connectHandler(privateSocketStruct *, int, int);
-static void dataHandler(privateSocketStruct *, int, int);
-static void closeHandler(privateSocketStruct *, int, int);
-void aioPollForIO(int microSeconds, int extraFd);
+static void nullHandler(void *, int, int, int);
+static void acceptHandler(void *, int, int, int);
+static void connectHandler(void *, int, int, int);
+static void dataHandler(void *, int, int, int);
+static void closeHandler(void *, int, int, int);
 
 
 #ifdef DEBUG
@@ -266,246 +248,37 @@ static char *handlerName(AioHandler h)
 
 /*** module initialisation/shutdown ***/
 
-
-typedef void (*socketPollFunction_t)(int, int);
-
-extern socketPollFunction_t socketPollFunction;
-
 int socketInit(void)
 {
-  socketPollFunction= aioPollForIO;
+  signal(SIGPIPE, SIG_IGN);
   return 1;
 }
 
 
 int socketShutdown(void)
 {
-  /* disable the polling function */
-  socketPollFunction= (socketPollFunction_t)0;
   /* shutdown the network */
   sqNetworkShutdown();
   return 1;
 }
 
 
-/*** asynchronous io control functions  ***/
 
+/*** utility wrappers for AIO functions ***/
 
-/* poll for io activity and call the appropriate handler(s) *
- *
- * Note: this can be called from ioProcessEvents with a zero timeout
- *       and from ioRelinquishProcessor with a non-zero timeout.
- *
- *	 "extraFd" is a file descriptor that is polled for reading but
- *	 never handled -- this allows a relinquished CPU to return
- *	 early if there is mouse or keyboard input activity.  Essential
- *	 for (e.g.) handling keyboard interrupts during i/o wait.
- */
-void aioPollForIO(int microSeconds, int extraFd)
+static void sockSuspend(privateSocketStruct *pss) 
 {
-  int fd;
-  fd_set rd, wr, ex;
-  struct timeval tv;
-
-  DO_TICK();
-
-  /* get out early if there is no pending i/o and no need to relinquish cpu */
-
-  if ((lastSocket == 0) && (microSeconds == 0))
-    return;
-
-  rd= readMask;
-  wr= writeMask;
-  ex= exceptionMask;
-  if (extraFd)
-    FD_SET(extraFd, &rd);
-  tv.tv_sec=  microSeconds / 1000000;
-  tv.tv_usec= microSeconds % 1000000;
-
-  {
-    int limit= (extraFd > lastSocket ? extraFd : lastSocket) + 1;
-    int result;
-    int isException= 0;
-
-    do
-      {
-	result= select(limit, &rd, &wr, &ex, &tv);
-      }
-    while ((result < 0) && (errno == EINTR))
-      ;
-    if (result < 0)
-      perror("select");
-    if (result != 0)
-      {
-	for (fd= 0; fd < lastSocket + 1; ++fd)
-	  {
-	    if (FD_ISSET(fd, &ex))
-	      {
-		isException= 1;
-	      }
-	    if (FD_ISSET(fd, &rd))
-	      {
-		if (fd != extraFd)
-		  handler[fd](sockets[fd], isException, /*read*/ 1);
-	      }
-	    else if (FD_ISSET(fd, &wr))
-	      {
-		if (fd != extraFd)
-		  handler[fd](sockets[fd], isException, /*write*/ 0);
-	      }
-	  }
-      }
-  }
+  aioHandle(pss->s, nullHandler, pss, AIO_EX);
 }
 
-/* enable asynchronous notification for a socket */
-
-#define aioEnable(pss) \
-  FPRINTF((stderr, "%s:%-5d: ", __FILE__, __LINE__));  _aioEnable(pss)
-
-static void _aioEnable(privateSocketStruct *pss)
+static void sockEnable(privateSocketStruct *pss)
 {
-  int fd= pss->s;
-
-  FPRINTF((stderr, "aioEnable(%d)\n", fd));
-
-  if (sockets[fd] != 0)
-    {
-      fprintf(stderr, "aioEnable: descriptor busy\n");
-      exit(1);
-    }
-  sockets[fd]= pss;
-  handler[fd]= nullHandler;
-  if (ioctl(fd, FIONBIO, (char *)&one) < 0)
+  if (ioctl(pss->s, FIONBIO, (char *)&one) < 0)
     perror("ioctl(FIONBIO,1)");
+  aioHandle(pss->s, nullHandler, pss, AIO_EX);
 }
 
-/* install/change the handler for a socket */
 
-#define aioHandle(pss, hdlr, flgs) \
-  FPRINTF((stderr, "%s:%-5d: ", __FILE__, __LINE__));  _aioHandle(pss, hdlr, flgs)
-
-static void _aioHandle(privateSocketStruct *pss, AioHandler handlerFn, int flags)
-{
-  int fd= pss->s;
-
-  FPRINTF((stderr, "aioHandle(%d, %s, %d)\n", fd, handlerName(handlerFn), flags));
-
-  if (sockets[fd] != pss)
-    {
-      fprintf(stderr, "aioHandle: bad match %d %p %p\n",
-	      fd, sockets[fd], pss);
-      exit(1);
-      sockets[fd]= pss;
-    }
-  handler[fd]= handlerFn;
-  if (fd > lastSocket)
-    lastSocket= fd;
-  if (flags & AIO_RD)
-    FD_SET(fd, &readMask);
-  if (flags & AIO_WR)
-    FD_SET(fd, &writeMask);
-  FD_SET(fd, &exceptionMask);
-}
-
-/* temporarily suspend asynchronous notification for a socket */
-
-#define aioSuspend(pss) \
-  FPRINTF((stderr, "%s:%-5d: ", __FILE__, __LINE__));  _aioSuspend(pss)
-
-static void _aioSuspend(privateSocketStruct *pss)
-{
-  int fd= pss->s;
-
-  FPRINTF((stderr, "aioSuspend(%d)\n", fd));
-
-  if (fd == 0)
-    {
-      fprintf(stderr, "aioSuspend: null descriptor\n");
-      exit(1);
-    }
-  if (sockets[fd] != 0)
-    {
-      if (sockets[fd] != pss)
-	{
-	  fprintf(stderr, "aioSuspend: bad match %d %p %p\n",
-		  fd, sockets[fd], pss);
-	  exit(1);
-	}
-      FD_CLR(fd, &readMask);
-      FD_CLR(fd, &writeMask);
-      /* FD_CLR(fd, &exceptionMask); */
-      handler[fd]= nullHandler;
-      /* keep lastSocket accurate (drops to zero if no more sockets) */
-      while (lastSocket && !FD_ISSET(lastSocket, &exceptionMask))
-	--lastSocket;
-    }
-}
-
-/* definitively disable asynchronous notification for a socket */
-
-#define aioDisable(pss) \
-  FPRINTF((stderr, "%s:%-5d: ", __FILE__, __LINE__));  _aioDisable(pss)
-
-static void _aioDisable(privateSocketStruct *pss)
-{
-  int fd= pss->s;
-
-  FPRINTF((stderr, "aioDisable(%d)\n", fd));
-
-  if (fd == 0)
-    {
-      fprintf(stderr, "aioDisable: null descriptor\n");
-      exit(1);
-    }
-  if (sockets[fd] != 0)
-    {
-      if (sockets[fd] != pss)
-	{
-	  fprintf(stderr, "aioDisable: bad match %d %p %p\n",
-		  fd, sockets[fd], pss);
-	  exit(1);
-	}
-      FD_CLR(fd, &exceptionMask);
-      aioSuspend(pss);
-      sockets[fd]= 0;
-      handler[fd]= 0;
-    }
-}
-
-/* initialise asynchronous i/o handlers */
-
-static void aioInit()
-{
-  int i;
-
-  for (i= 0; i < FD_SETSIZE; i++)
-    {
-      sockets[i]= 0;
-      handler[i]= 0;
-    }
-  FD_ZERO(&readMask);
-  FD_ZERO(&writeMask);
-  FD_ZERO(&exceptionMask);
-  lastSocket= 0;
-# ifndef ACORN
-  signal(SIGPIPE, SIG_IGN);
-# endif
-}
-
-/* disable handlers and close all sockets */
-
-static void aioShutdown()
-{
-  int i;
-
-  for (i= 0; i < lastSocket+1; i++)
-    if (sockets[i])
-      {
-	aioDisable(sockets[i]);
-	close(sockets[i]->s);
-      }
-}
 
 
 
@@ -547,7 +320,7 @@ static int nameToAddr(char *hostName)
 
 static int socketValid(SocketPtr s)
 {
-  if ((s != 0) && (s->privateSocketPtr != 0) && (s->sessionID == thisNetSession))
+  if ((s != 0) && (thisNetSession != 0) && (s->privateSocketPtr != 0) && (s->sessionID == thisNetSession))
     return true;
   interpreterProxy->success(false);
   return false;
@@ -596,14 +369,19 @@ void notify(privateSocketStruct *pss, int eventMask)
   pss->pendingEvents= 0;
 }
 
-/* this handler should never normally be invoked */
 
-static void nullHandler(privateSocketStruct *pss, int errFlag, int readFlag)
+/* this handler should never normally be invoked */
+static void nullHandler(void *pssIn, int readFlag, int writeFlag, int errFlag)
 {
-  aioSuspend(pss);
+  privateSocketStruct *pss = (privateSocketStruct *)pssIn;
+  
+  sockSuspend(pss);
+  
   fprintf(stderr, "nullHandler(%d, %d, %d)\n", pss->s, errFlag, readFlag);
+  
   if (errFlag)
     pss->sockState= OtherEndClosed;
+  
   /* *** removed by ikp: this handler should NEVER be invoked during normal operation ***
      SET_WILLTAPCONNSEMA(pss);
      tapSemaphores(pss); */
@@ -614,9 +392,11 @@ static void nullHandler(privateSocketStruct *pss, int errFlag, int readFlag)
    and replace the server socket with the new client socket
    leaving the client socket unhandled
 */
-static void acceptHandler(privateSocketStruct *pss, int errFlag, int readFlag)
+static void acceptHandler(void *pssIn, int readFlag, int writeFlag, int errFlag)
 {
-  aioSuspend(pss);
+  privateSocketStruct *pss = (privateSocketStruct *)pssIn;
+  sockSuspend(pss);
+  
   FPRINTF((stderr, "acceptHandler(%d,%d,%d)\n", pss->s, errFlag, readFlag));
   if (errFlag)
     {
@@ -629,7 +409,7 @@ static void acceptHandler(privateSocketStruct *pss, int errFlag, int readFlag)
     {
       /* accept() is ready */
       int newSock= accept(pss->s, 0, 0);
-      aioDisable(pss);
+      aioStopHandling(pss->s);
       if (newSock < 0)
 	{
 #        if 0
@@ -643,7 +423,7 @@ static void acceptHandler(privateSocketStruct *pss, int errFlag, int readFlag)
 	  pss->sockError= errno;
 	  pss->sockState= WaitingForConnection;
 	  perror("acceptHandler (ignored)");
-	  aioEnable(pss);
+	  aioHandle(pss->s, acceptHandler, pss, AIO_RD|AIO_EX); /* => accept() possible */
 	  return;	/* do NOT notify connection below */
 #        endif
 	}
@@ -651,7 +431,7 @@ static void acceptHandler(privateSocketStruct *pss, int errFlag, int readFlag)
 	{
 	  /* connection accepted */
 	  pss->sockState= Connected;
-	  /* aioEnable(pss); *** removed by ikp *** */
+	  /* sockEnable(pss); *** removed by ikp *** */
 	  if(pss->multiListen)
 	    {
 	      pss->acceptedSock= newSock;
@@ -661,7 +441,7 @@ static void acceptHandler(privateSocketStruct *pss, int errFlag, int readFlag)
 	    {
 	      close(pss->s);
 	      pss->s= newSock;
-	      aioEnable(pss);	/*** added by ikp ***/
+	      sockEnable(pss);	/*** added by ikp ***/
 	    }
 	}
     }
@@ -671,9 +451,11 @@ static void acceptHandler(privateSocketStruct *pss, int errFlag, int readFlag)
 
 /* connect() has completed: check errors, leaving the socket unhandled */
 
-static void connectHandler(privateSocketStruct *pss, int errFlag, int readFlag)
+static void connectHandler(void *pssIn, int readFlag, int writeFlage, int errFlag)
 {
-  aioSuspend(pss);
+  privateSocketStruct *pss = (privateSocketStruct *)pssIn;
+  sockSuspend(pss);
+
   FPRINTF((stderr, "connectHandler(%d,%d,%d)\n", pss->s, errFlag, readFlag));
   if (errFlag)
     {
@@ -685,9 +467,23 @@ static void connectHandler(privateSocketStruct *pss, int errFlag, int readFlag)
     }
   else
     {
-      /* connect() has completed */
-      pss->sockState= Connected;
-      FPRINTF ((stderr, "connectHandler ok\n"));
+      /* connect() has completed.  Check whether it was successful */
+      int s_errno = 0;   /* errno from SO_ERROR */
+      socklen_t len;     /* Length of return buffer */
+
+      len = sizeof(s_errno);
+      getsockopt(pss->s, SOL_SOCKET, SO_ERROR, &s_errno, &len);
+      if(s_errno != 0) {
+	/* connection failure */
+        pss->pendingEvents |= CONN_NOTIFY;
+        pss->sockError = s_errno;
+        pss->sockState = Unconnected;  
+        FPRINTF ((stderr, "connectHandler failed\n"));
+      } else {
+	/* success! */
+        pss->sockState= Connected;
+        FPRINTF ((stderr, "connectHandler ok\n"));
+      }
     }
   notify(pss, CONN_NOTIFY);
 }
@@ -695,9 +491,10 @@ static void connectHandler(privateSocketStruct *pss, int errFlag, int readFlag)
 
 /* read or write data transfer is now possible for the socket */
 
-static void dataHandler(privateSocketStruct *pss, int errFlag, int readFlag)
+static void dataHandler(void *pssIn, int readFlag, int writeFlag, int errFlag)
 {
-  aioSuspend(pss);
+  privateSocketStruct *pss = (privateSocketStruct *)pssIn;
+  sockSuspend(pss);
 
   FPRINTF((stderr, "dataHandler(%d,%d,%d)\n", pss->s, errFlag, readFlag));
   if (errFlag)
@@ -709,9 +506,10 @@ static void dataHandler(privateSocketStruct *pss, int errFlag, int readFlag)
 
 /* a non-blocking close() has completed -- finish tidying up */
 
-static void closeHandler(privateSocketStruct *pss, int errFlag, int readFlag)
+static void closeHandler(void *pssIn, int readFlag, int writeFlag, int errFlag)
 {
-  aioDisable(pss);
+  privateSocketStruct *pss = (privateSocketStruct *)pssIn;
+  aioStopHandling(pss->s);
   FPRINTF((stderr, "closeHandler(%d,%d,%d)\n", pss->s, errFlag, readFlag));
   pss->sockState= Unconnected;
   pss->s= 0;
@@ -734,7 +532,6 @@ int sqNetworkInit(int resolverSemaIndex)
   if (0 == thisNetSession)
     thisNetSession= 1;  /* 0 => uninitialised */
   resolverSema= resolverSemaIndex;
-  aioInit();
   return 0;
 }
 
@@ -745,7 +542,6 @@ void sqNetworkShutdown(void)
 {
   thisNetSession= 0;
   resolverSema= 0;
-  aioShutdown();
 }
 
 
@@ -802,7 +598,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   if (UDPSocketType == socketType)
     {
       pss->sockState= Connected;
-      aioEnable(pss);
+      sockEnable(pss);
     }
   else
     {
@@ -819,7 +615,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   s->socketType= socketType;
   s->privateSocketPtr= pss;
   FPRINTF((stderr, "create(%d) -> %lx\n", SOCKET(s), (unsigned long)PSP(s)));
-  /* Note: socket is in BLOCKING mode until aioEnable is called for it! */
+  /* Note: socket is in BLOCKING mode until sockEnable is called for it! */
 }
 
 
@@ -867,8 +663,8 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
       /* hacked to use the backlogSize */
       listen(SOCKET(s), backlogSize);
       SOCKETSTATE(s)= WaitingForConnection;
-      aioEnable(PSP(s));
-      aioHandle(PSP(s), acceptHandler, AIO_RD); /* => accept() possible */
+      sockEnable(PSP(s));
+      aioHandle(SOCKET(s), acceptHandler, PSP(s), AIO_RD|AIO_EX); /* => accept() possible */
     }
   else
     {
@@ -901,7 +697,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
     {
       /* --- TCP --- */
       int result;
-      aioEnable(PSP(s));
+      sockEnable(PSP(s));
       result= connect(SOCKET(s), (struct sockaddr *)&saddr, sizeof(saddr));
       FPRINTF((stderr, "connect() => %d\n", result));
       if (result == 0)
@@ -916,7 +712,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 	    {
 	      /* asynchronous connection in progress */
 	      SOCKETSTATE(s)= WaitingForConnection;
-	      aioHandle(PSP(s), connectHandler, AIO_WR);  /* => connect() done */
+	      aioHandle(SOCKET(s), connectHandler, PSP(s), AIO_WR);  /* => connect() done */
 	    }
 	  else
 	    {
@@ -979,8 +775,8 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
   pss->s= PSP(serverSocket)->acceptedSock;
   PSP(serverSocket)->acceptedSock= -1;
   SOCKETSTATE(serverSocket)= WaitingForConnection;
-  aioEnable(PSP(serverSocket));
-  aioHandle(PSP(serverSocket), acceptHandler, AIO_RD);
+  sockEnable(PSP(serverSocket));
+  aioHandle(SOCKET(serverSocket), acceptHandler, PSP(serverSocket), AIO_RD|AIO_EX);
   s->sessionID= thisNetSession;
   pss->connSema= semaIndex;
   pss->readSema= readSemaIndex;
@@ -988,7 +784,7 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
   pss->pendingEvents= 0;
   pss->sockState= Connected;
   pss->sockError= 0;
-  aioEnable(PSP(s));
+  sockEnable(PSP(s));
 }
 
 
@@ -1001,7 +797,7 @@ void sqSocketCloseConnection(SocketPtr s)
   if (!socketValid(s))
     return;
   FPRINTF((stderr, "closeConnection(%d)\n", SOCKET(s)));
-  aioDisable(PSP(s));
+  aioStopHandling(SOCKET(s));
   SOCKETSTATE(s)= ThisEndClosed;
   result= close(SOCKET(s));
   if ((result == -1) && (errno != EWOULDBLOCK))
@@ -1022,7 +818,7 @@ void sqSocketCloseConnection(SocketPtr s)
     {
       /* asynchronous close in progress */
       SOCKETSTATE(s)= ThisEndClosed;
-      aioHandle(PSP(s), closeHandler, AIO_EX);  /* => close() done */
+      aioHandle(SOCKET(s), closeHandler, PSP(s), AIO_EX);  /* => close() done */
     }
 }
 
@@ -1155,7 +951,7 @@ int sqSocketReceiveDataAvailable(SocketPtr s)
       if (socketReadable(SOCKET(s)))
 	return true;
       PSP(s)->pendingEvents|= READ_NOTIFY;
-      aioHandle(PSP(s), dataHandler, AIO_RW);
+      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);
     }
   return false;
 }
@@ -1171,7 +967,7 @@ int sqSocketSendDone(SocketPtr s)
     {
       if (socketWritable(SOCKET(s))) return true;
       PSP(s)->pendingEvents|= WRITE_NOTIFY;
-      aioHandle(PSP(s), dataHandler, AIO_RW);
+      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);
     }
   return false;
 }
@@ -1198,7 +994,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 	  if (errno == EWOULDBLOCK)
 	    {
 	      /* asynchronous read in progress */
-	      aioHandle(PSP(s), dataHandler, AIO_RW);	/* => retry */
+	      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);	/* => retry */
 	      return 0;
 	    }
 	  SOCKETERROR(s)= errno;
@@ -1214,7 +1010,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 	  if (errno == EWOULDBLOCK)
 	    {
 	      /* asynchronous read in progress */
-	      aioHandle(PSP(s), dataHandler, AIO_RW);	/* => retry */
+	      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);	/* => retry */
 	      return 0;
 	    }
 	  else
@@ -1229,7 +1025,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
     }
   /* read completed synchronously */
   FPRINTF((stderr, "receiveData(%d) = %d\n", SOCKET(s), nread));
-  aioSuspend(PSP(s));
+  sockSuspend(PSP(s));
   return nread;
 }
 
@@ -1257,7 +1053,7 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 	  if (errno == EWOULDBLOCK)
 	    {
 	      /* asynchronous write in progress */
-	      aioHandle(PSP(s), dataHandler, AIO_RW);	/* => data sent */
+	      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);	/* => data sent */
 	      return 0;
 	    }
 	  FPRINTF((stderr, "UDP send failed\n"));
@@ -1274,7 +1070,7 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 	  if (errno == EWOULDBLOCK)
 	    {
 	      /* asynchronous write in progress */
-	      aioHandle(PSP(s), dataHandler, AIO_RW);	/* => data sent */
+	      aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);	/* => data sent */
 	      return 0;
 	    }
 	  else
@@ -1289,7 +1085,7 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
     }
   /* write completed synchronously */
   FPRINTF((stderr, "sendData done(%d) = %d\n", SOCKET(s), nsent));
-  aioSuspend(PSP(s));
+  sockSuspend(PSP(s));
   return nsent;
 }
 
@@ -1319,7 +1115,7 @@ int sqSocketReceiveUDPDataBufCountaddressportmoreFlag
 	if (errno == EWOULDBLOCK)
 	  {
 	    /* asynchronous read in progress */
-	    aioHandle(PSP(s), dataHandler, AIO_RW);	/* => retry */
+	    aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);	/* => retry */
 	    return 0;
 	  }
 	SOCKETERROR(s)= errno;
@@ -1356,7 +1152,7 @@ int sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port,
 	if (errno == EWOULDBLOCK)
 	  {
 	    /* asynchronous write in progress */
-	    aioHandle(PSP(s), dataHandler, AIO_RW);	/* => data sent */
+	    aioHandle(SOCKET(s), dataHandler, PSP(s), AIO_RW);	/* => data sent */
 	    return 0;
 	  }
 	FPRINTF((stderr, "UDP send failed\n"));

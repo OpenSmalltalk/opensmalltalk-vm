@@ -48,7 +48,7 @@ test "$GCC" = yes && WFLAGS="-Wall"
 AC_SUBST(WFLAGS)])
 
 AC_DEFUN(AC_GNU_OPT,
-[AC_MSG_CHECKING("for optimization flags")
+[AC_MSG_CHECKING([for optimization flags])
 ac_optflags="no"
 if test "$GCC" = yes; then
   case $host in
@@ -70,17 +70,7 @@ AC_SUBST(INTERP)
 AC_PROG_AWK
 AC_MSG_CHECKING(whether we can gnuify interp.c)
 if test "$GCC" = "yes"; then
-  case "$GAWK" in
-  yes|no) ;;
-  *) if $AWK --version /dev/null </dev/null 2>&1 | fgrep -i gnu >/dev/null
-     then GAWK=yes
-     else GAWK=no
-     fi ;;
-  esac
-  if test "$GAWK" = "yes"
-  then INTERP="gnu-$INTERP"; AC_MSG_RESULT(yes)
-  else AC_MSG_RESULT(no)
-  fi
+  INTERP="gnu-$INTERP"; AC_MSG_RESULT(yes)
 else
   AC_MSG_RESULT(no)
 fi])
@@ -136,6 +126,9 @@ AC_DEFUN(AC_CHECK_GETHOSTNAME,
     ac_cv_gethostname_p="yes", ac_cv_gethostname_p="no"))
 test "$ac_cv_gethostname_p" = "no" && AC_DEFINE(NEED_GETHOSTNAME_P)])
 
+# XXX this used to be used in just one place: the HAVE_OSS macro.  But
+# why?!  I observed a wierd bug using the variable and bash 2.05a.0(1),
+# so I'm changing to just using raw "test"  -Lex
 if test -x /bin/test; then
   test=/bin/test
 else
@@ -150,9 +143,27 @@ AC_DEFUN(AC_HAVE_OSS,
 [AC_CACHE_CHECK([for Open Sound System], ac_cv_oss,
   AC_TRY_COMPILE([#include <sys/soundcard.h>],[OPEN_SOUND_SYSTEM;],
     ac_cv_oss="yes", ac_cv_oss="no"))
-if $test "$ac_cv_oss" = "yes" -a -e /dev/dsp; then
+if test "$ac_cv_oss" = "yes" -a -e /dev/dsp; then
   AC_DEFINE(HAVE_OSS,1)
-  AC_DEFINE(OSS_DEVICE,"/dev/dsp")
+fi])
+
+AC_DEFUN(AC_FIND_OSS_DEVICE,
+[OSS_DEVICE=notfound
+AC_CHECK_FILE([/dev/dsp], [OSS_DEVICE=/dev/dsp])
+if test $OSS_DEVICE = notfound
+then
+  AC_MSG_ERROR(No OSS device found!  Select another audio interface.)
+fi
+AC_MSG_NOTICE([using OSS_DEVICE: $OSS_DEVICE])
+AC_DEFINE_UNQUOTED(OSS_DEVICE, "$OSS_DEVICE")])
+
+AC_DEFUN(AC_HAVE_NAS,
+[AC_CACHE_CHECK([for Network Audio System], ac_cv_nas,
+  AC_TRY_COMPILE([#include <audio/audio.h>],[AuElementNotifyKindLowWater;],
+    ac_cv_nas="yes", ac_cv_nas="no"))
+if test "$ac_cv_nas" = "yes"; then
+  AC_DEFINE(HAVE_NAS,1)
+  NAS_LIBS="-laudio -lXt"
 fi])
 
 AC_DEFUN(AC_C_BYTEORDER,
@@ -196,12 +207,3 @@ case $host in
 esac
 AC_MSG_RESULT($CFLAGS_32)])
 
-AC_DEFUN(AC_MAKE_FRAGS,
-[echo $ac_n "creating Makefile fragments""$ac_c" 1>&6
-topdir=`echo $srcdir | sed 's,/src/unix$,,'`
-AC_SUBST(topdir)
-mh_frag=$1
-mt_frag=$2
-AC_SUBST_FILE(mh_frag)
-AC_SUBST_FILE(mt_frag)
-$srcdir/util/mkfrags $3 $mh_frag $mt_frag "$ac_n" "$ac_c" "$mkfrags_lib_prefix" "$JIT"])

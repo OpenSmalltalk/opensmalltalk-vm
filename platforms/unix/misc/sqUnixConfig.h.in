@@ -44,8 +44,20 @@
 #undef	HAVE_LIBDL
 #undef	HAVE_LIBFFI
 
-#undef	HAVE_OSS
+/* memory setup  -- see sqUnixMemory.c  */
+#undef USE_MEMORY_MMAP
+
+
+/* audio choice and configuration */
+#undef AUDIO_INTERFACE
+
+#undef USE_AUDIO_NO
+#undef USE_AUDIO_OSS
+#undef USE_AUDIO_SUN
+#undef USE_AUDIO_NAS
+
 #undef	OSS_DEVICE
+
 
 /* header files */
 
@@ -65,6 +77,8 @@
 #undef	HAVE_SYS_FILIO_H
 
 #undef	NEED_SUNOS_H
+
+#undef HAVE_SYS_AUDIOIO_H
 
 /* system calls */
 
