@@ -596,6 +596,145 @@ int disconnectXDisplay()
 }
 #endif
 
+
+static void handleOneEvent(XEvent *theEvent) 
+{
+    switch (theEvent->type)
+      {
+      case MotionNotify:
+	recordMouseEvent((XButtonEvent *) theEvent);
+	break;
+
+      case ButtonPress:
+	recordMouseEvent((XButtonEvent *) theEvent);
+	break;
+
+      case ButtonRelease:
+	recordMouseEvent((XButtonEvent *) theEvent);
+
+	/* button up on "paste" causes a selection retrieval:
+	   record the event time in case we need it later */
+	stButtonTime= ((XButtonEvent *) theEvent)->time;
+	break;
+
+      case KeyPress:
+	recordKeystrokeEvent((XKeyEvent *) theEvent);
+	break;
+
+      case KeyRelease:
+	recordKeystrokeEvent((XKeyEvent *) theEvent);
+	break;
+
+      case SelectionClear:
+	stOwnsSelection= 0;
+	break;
+
+      case SelectionRequest:
+	sendSelection(&theEvent->xselectionrequest);
+	break;
+
+      case Expose:
+	{
+	  XExposeEvent *ex= (XExposeEvent *)theEvent;
+#      if defined(USE_XSHM)
+	  if (asyncUpdate)
+	    {
+	      /* wait for pending updates */
+	      /* XXX Lex Spoon has observed an infinite recursion here; it should be investigated further.... */
+	      while (completions) HandleEvents();
+	    }
+#      endif
+#      ifdef FULL_UPDATE_ON_EXPOSE
+	  /* ignore it if there are other exposures upstream */
+	  if (ex->count == 0)
+	    fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
+#      else
+	  redrawDisplay(ex->x, ex->x + ex->width, ex->y, ex->y + ex->height);
+#      endif /*!FULL_UPDATE_ON_EXPOSE*/
+	}
+	break;
+
+      case MapNotify:
+	/* The window has just been mapped, possibly for the first
+	   time: update mousePosition (which otherwise may not be
+	   set before the first button event). */
+	getMousePosition();
+	break;
+
+      case UnmapNotify:
+	{
+	  XEvent theEvent;
+	  
+	  if (sleepWhenUnmapped)
+	    do
+	      {
+		
+		XNextEvent(stDisplay, &theEvent);
+		switch (theEvent.type)
+		  {
+		  case SelectionClear:
+		    stOwnsSelection= 0;
+		    break;
+		  case SelectionRequest:
+		    sendSelection(&theEvent.xselectionrequest);
+		    break;
+		  }
+	      } while (theEvent.type != MapNotify);
+	  getMousePosition();
+	}
+	break;
+
+      case ConfigureNotify:
+	{
+	  XConfigureEvent *ec= (XConfigureEvent *) theEvent;
+	  int width= ec->width;
+	  int height= ec->height;
+	  
+	  
+	  /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
+	  if ((width % sizeof(void *)) != 0)
+	    {
+	      width= (width / sizeof(void *)) * sizeof(void *);
+	      if(! inBrowser) {
+		/* it would be rude to resize the window the browser gave us! */
+		XResizeWindow(stDisplay, stParent, width, height);
+	      }
+	    }
+	  
+
+#      if defined(USE_XSHM)
+	  if (asyncUpdate)
+	    {
+	      /* wait for pending updates */
+	      while (completions) HandleEvents();
+	    }
+#      endif
+
+	  /* resize the display window to match the parent, unless
+	     we are in full screen mode */
+	  if (! fullScreen)
+	    {
+	      XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
+	      stWindowWidth= ec->width;
+	      stWindowHeight= ec->height;
+	    }
+	}
+	
+	break;
+
+      case MappingNotify:
+	XRefreshKeyboardMapping((XMappingEvent *) theEvent);
+	break;
+	  
+#  ifdef USE_XSHM
+      default:
+	if (theEvent->type == completionType) --completions;
+	break;
+#  endif
+      }
+}
+
+
 void claimSelection(void)
 {
   XSetSelectionOwner(stDisplay, XA_PRIMARY, stWindow, lastKeystrokeTime);
@@ -659,12 +798,13 @@ char *getSelection(void)
   if(stXfd >= 0)
     FD_SET(stXfd, &fdMask);
 
+  /* loop until a selection notify event is received */
   do
     {
-
-      while(! XMaskEvent(stDisplay, 0, &ev))
+      /* wait until some event has arrived */
+      while(! XPending(stDisplay))
 	{
-	  /* no matching event; wait for a while */
+	  /* empty event queue; wait for a while */
 	  struct timeval timeout= {SELECTION_TIMEOUT, 0};
 	  int status;
 
@@ -684,39 +824,15 @@ char *getSelection(void)
 	      return stEmptySelection;
 	    }
 	}
-      
 
-      /* possible events with a mask of 0 are:
-  	   MappingNotify
-	   ClientMessage
-	   SelectionClear
-	   SelectionNotify
-	   SelectionRequest
-      */
-      switch (ev.type)
+      /* retrieve it */
+      XNextEvent(stDisplay, &ev);
+
+      if(ev.type != SelectionNotify)
 	{
-        /* this is necessary so that we can supply our own selection when we
-	   are the requestor -- this could (should) be optimised to return the
-	   stored selection value instead! */
-	case SelectionRequest:
-	  {
-	    sendSelection(&ev.xselectionrequest);
-#          ifdef USE_XSHM
-	    if (ev.type == completionType)
-	      --completions;
-#          endif
-	  }
-	  break;
-
-	case SelectionClear:
-	  stOwnsSelection= 0;
-	  break;
-
-	case MappingNotify:
-	  XRefreshKeyboardMapping((XMappingEvent *) &ev);
-	  break;
+	  /* wrong kind of event */
+	  handleOneEvent(&ev);
 	}
-      
     }
   while (ev.type != SelectionNotify);
 
@@ -1017,137 +1133,10 @@ int HandleEvents(void)
 
   while(XPending(stDisplay)) {
     XNextEvent(stDisplay, &theEvent);
+
+    handleOneEvent(&theEvent);
+    
       
-    switch (theEvent.type)
-      {
-      case MotionNotify:
-	recordMouseEvent((XButtonEvent *)&theEvent);
-	break;
-
-      case ButtonPress:
-	recordMouseEvent((XButtonEvent *)&theEvent);
-	break;
-
-      case ButtonRelease:
-	recordMouseEvent((XButtonEvent *)&theEvent);
-
-	/* button up on "paste" causes a selection retrieval:
-	   record the event time in case we need it later */
-	stButtonTime= ((XButtonEvent *)&theEvent)->time;
-	break;
-
-      case KeyPress:
-	recordKeystrokeEvent((XKeyEvent *)&theEvent);
-	break;
-
-      case KeyRelease:
-	recordKeystrokeEvent((XKeyEvent *)&theEvent);
-	break;
-
-      case SelectionClear:
-	stOwnsSelection= 0;
-	break;
-
-      case SelectionRequest:
-	sendSelection(&theEvent.xselectionrequest);
-	break;
-
-      case Expose:
-	{
-	  XExposeEvent *ex= (XExposeEvent *)&theEvent;
-#      if defined(USE_XSHM)
-	  if (asyncUpdate)
-	    {
-	      /* wait for pending updates */
-	      /* XXX Lex Spoon has observed an infinite recursion here; it should be investigated further.... */
-	      while (completions) HandleEvents();
-	    }
-#      endif
-#      ifdef FULL_UPDATE_ON_EXPOSE
-	  /* ignore it if there are other exposures upstream */
-	  if (ex->count == 0)
-	    fullDisplayUpdate();  /* this makes VM call ioShowDisplay */
-#      else
-	  redrawDisplay(ex->x, ex->x + ex->width, ex->y, ex->y + ex->height);
-#      endif /*!FULL_UPDATE_ON_EXPOSE*/
-	}
-	break;
-
-      case MapNotify:
-	/* The window has just been mapped, possibly for the first
-	   time: update mousePosition (which otherwise may not be
-	   set before the first button event). */
-	getMousePosition();
-	break;
-
-      case UnmapNotify:
-	{
-	  if (sleepWhenUnmapped)
-	    do
-	      {
-		XNextEvent(stDisplay, &theEvent);
-		switch (theEvent.type)
-		  {
-		  case SelectionClear:
-		    stOwnsSelection= 0;
-		    break;
-		  case SelectionRequest:
-		    sendSelection(&theEvent.xselectionrequest);
-		    break;
-		  }
-	      } while (theEvent.type != MapNotify);
-	  getMousePosition();
-	}
-	break;
-
-      case ConfigureNotify:
-	{
-	  XConfigureEvent *ec= (XConfigureEvent *)&theEvent;
-	  int width= ec->width;
-	  int height= ec->height;
-	  
-	  
-	  /* width must be a multiple of sizeof(void *), or X[Shm]PutImage goes gaga */
-	  if ((width % sizeof(void *)) != 0)
-	    {
-	      width= (width / sizeof(void *)) * sizeof(void *);
-	      if(! inBrowser) {
-		/* it would be rude to resize the window the browser gave us! */
-		XResizeWindow(stDisplay, stParent, width, height);
-	      }
-	    }
-	  
-
-#      if defined(USE_XSHM)
-	  if (asyncUpdate)
-	    {
-	      /* wait for pending updates */
-	      while (completions) HandleEvents();
-	    }
-#      endif
-
-	  /* resize the display window to match the parent, unless
-	     we are in full screen mode */
-	  if (! fullScreen)
-	    {
-	      XResizeWindow(stDisplay, stWindow, ec->width, ec->height);
-	      stWindowWidth= ec->width;
-	      stWindowHeight= ec->height;
-	    }
-	}
-	
-	break;
-
-      case MappingNotify:
-	XRefreshKeyboardMapping((XMappingEvent *) &theEvent);
-	break;
-	  
-#  ifdef USE_XSHM
-      default:
-	if (theEvent.type == completionType) --completions;
-	break;
-#  endif
-      }
   }
   
   return 0;
