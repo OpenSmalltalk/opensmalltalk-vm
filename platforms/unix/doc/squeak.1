@@ -33,7 +33,7 @@
 .\"   changes these copyright conditions.  Read the file `COPYING' in the
 .\"   directory `platforms/unix/doc' before proceeding with any such use.
 .\" 
-.\" Last edited: 2003-08-20 15:53:58 by piumarta on emilia.inria.fr
+.\" Last edited: 2003-08-21 20:42:57 by piumarta on felina.inria.fr
 .\" 
 .if @@\*(lq@ \{\
 .	ds lq "
@@ -495,7 +495,7 @@ instead of the default '/dev/fb0'.
 .BI "\-kbmap " "mapfile"
 Load the keyboard map from the given
 .I mapfile
-instead of using the built-in default (US PC-101) keymap.
+instead of reading it from the running kernel.
 Note that
 .B squeak
 cannot (currently) read compressed or 'shorthand'
@@ -537,6 +537,18 @@ Use the given mouse
 instead of the default.  The supported protocols are 'ps2' and 'adb'.
 The default is 'ps2' for mice attached to '/dev/psaux' or '/dev/input/mice',
 and 'adb' for mice attached to '/dev/adbmouse'.
+.TP
+.B \-vtlock
+Disallows VT switching, regardless of whether the request comes from
+the keyboard or from another program such as
+.BR chvt (1)\c
+\&.
+.TP
+.B \-vtswitch
+Enables keyboard VT switching.  Note that this option is effectively
+disabled if the '\c
+.B \-vtlock\c
+\&' option is also enabled.
 .PP
 Options specific to the OSS and MacOSX sound drivers are as follows:
 .TP
@@ -625,6 +637,21 @@ to the '\c
 the name of the mouse device to use when running on the console.  See the '\c
 .B \-msdev\c
 \&' option.
+.TP
+.B SQUEAK_MSPROTO
+the name of the mouse protocl to use when running on the console.  See the '\c
+.B \-msproto\c
+\&' option.
+.TP
+.B SQUEAK_VTLOCK
+if set then equivalent to specifying the '\c
+.B \-vtlock\c
+\&' option on the command line.
+.TP
+.B SQUEAK_VTSWITCH
+if set then equivalent to specifying the '\c
+.B \-vtswitch\c
+\&' option on the command line.
 .TP
 .B SQUEAK_NOEVENTS
 if set, equivalent to '\c
