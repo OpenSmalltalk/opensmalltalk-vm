@@ -3,7 +3,7 @@
 
 ############ Customize flags here #######################
 
-INC	= -I./include
+INC	= -I./include -I/usr/X11R6/include
 CC	= gcc
 CFLAGS	= $(INC) -O2 -fPIC -Wall
 LD	= gcc
@@ -52,17 +52,17 @@ $(VM_LIBDIR): $(SQ_DIR)
 	fi
 
 $(VM_LIBDIR)/npsqueak.so: npsqueak.so $(VM_LIBDIR)
-	cp $< $@
+	cp npsqueak.so $@
 	strip $@
 
 $(VM_LIBDIR)/npsqueakrun: npsqueakrun.in $(SQ_DIR)
 	sed "s|@SQ_DIR@|$(imgdir)|;s|@VM_VERSION@|$(VM_VERSION)|" \
-		$< > $@
+		npsqueakrun.in > $@
 	chmod +x $@
 
 $(SQ_DIR)/npsqueakregister: npsqueakregister.in $(SQ_DIR)
 	sed "s|@NPSQUEAK_SO@|$(libdir)/npsqueak.so|" \
-		$< > $@
+		npsqueakregister.in > $@
 	chmod +x $@
 
 ### Go! ###
