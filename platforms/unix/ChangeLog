@@ -1,11 +1,20 @@
-----------------------------------------------------------------
+2005-03-17  Ian Piumarta  <ian.piumarta@hp.com>
+
+	* src: Imported from generated sources.
+	* README, README.SVN: Updated.
+	* Makefile: Added for 'easy build'.
+	* doc/HowToBuildFromSource.*: Updated URIs and revised for 'easy build' instructions.
+	* doc/README.Sound,
+	  npsqueak/npsqueak.c,
+	  plugins/SqueakFFIPrims/00README,
+	  vm-display-Quartz/Resources/SqueakHelp/SqueakHelp.html,
+	  vm-display-fbdev/00_README.fbdev: E-mail and URL contact details updated.
+	* config/configure.ac: Version is 3.7g-6.
 
 2005-03-16  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* README.SVN (added): Brief instructions for SVN source builds.
 	* doc/squeak.1: Update URLs and email addresses.
-	* config/configure.ac: Version is 3.7-7.
-	* 3.7-7 Released.
 
 2005-03-15  Ian Piumarta  <ian.piumarta@hp.com>
 
