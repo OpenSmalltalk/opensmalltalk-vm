@@ -6,12 +6,13 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.5 2002/01/09 06:50:24 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.6 2002/01/22 19:06:47 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
 *	12/27/2001 JMM Added support to load os-x Bundles versus CFM, have broken CFM code too.
 *	1/2/2002   JMM Use unix io for image, much faster, cleanup window display and ioshow logic.
+*	1/18/2002  JMM Fix os-x memory mapping, new type for squeak file offsets
 *
 *****************************************************************************/
 #include "sq.h"
@@ -49,11 +50,13 @@
 	#include <Threads.h>
 	#include <DriverServices.h>
 	#include <USB.h> 
+    #include <FileMapping.h>
 #endif
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 	#include <sys/types.h>
 	#include <sys/time.h>
 	#include <unistd.h>
+        #include <sys/mman.h>
 	struct timeval	 startUpTime;
 	unsigned int	lowResMSecs= 0;
         
@@ -180,6 +183,12 @@ ThreadEntryUPP  gSqueakThreadUPP;
 QDGlobals 		qd;
 #endif
 
+UInt32	gHeapSize;
+UInt32  gMaxHeapSize=512*1024*1024;
+#if !TARGET_API_MAC_CARBON
+BackingFileID gBackingFile=0;
+FileViewID gFileViewID=0;
+#endif
 
 /*** Variables -- Event Recording ***/
 #if MINIMALVM
@@ -331,7 +340,7 @@ void SetUpWindow(void);
 void SetWindowTitle(char *title);
 void SqueakTerminate();
 void ExitCleanup();
-off_t calculateStartLocationForImage();
+squeakFileOffsetType calculateStartLocationForImage();
 Boolean RunningOnCarbonX(void);
 void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, short hMax, short vMax);
 GDHandle getDominateDevice(WindowPtr theWindow,Rect *windRect);
@@ -387,7 +396,7 @@ void InstallAppleEventHandlers() {
 
 pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon) {
 	/* User double-clicked application; look for "squeak.image" in same directory */
-    off_t                 checkValueForEmbeddedImage;
+    squeakFileOffsetType                 checkValueForEmbeddedImage;
     OSErr               err;
 	ProcessSerialNumber processID;
 	ProcessInfoRec      processInformation;
@@ -1678,6 +1687,14 @@ int ioExit(void) {
 	UnloadScrap();
     ioShutdownAllModules();
 	MenuBarRestore();
+#if !TARGET_API_MAC_CARBON
+    if((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) {
+        if (gBackingFile != 0) {
+            CloseMappedFile(gBackingFile);
+            gBackingFile = 0;
+        }
+    }
+#endif
 	ExitToShell();
 }
 #endif
@@ -2307,9 +2324,20 @@ int plugInShutdown(void) {
 	FreeClipboard();
 	FreePixmap();
 	if (memory != nil) {
-            if (gThreadManager)
-	    DisposeThread(gSqueakThread,null,true);
-		DisposePtr((void *) memory);
+        if (gThreadManager)
+	        DisposeThread(gSqueakThread,null,true);
+	    #if TARGET_API_MAC_CARBON
+        #else
+        if((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) {
+	        if (gBackingFile != 0) {
+	            CloseMappedFile(gBackingFile);
+	            gBackingFile = 0;
+	        }
+        } else {
+    		DisposePtr((void *) memory);
+        }
+        #endif
+
 		memory = nil;
 	}
 }
@@ -2424,7 +2452,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode) {
     return remember;
 }
 
-off_t sqImageFilePosition(sqImageFile f) {
+squeakFileOffsetType sqImageFilePosition(sqImageFile f) {
     if (f != 0)
       return ftello(f);
     return 0;
@@ -2436,7 +2464,7 @@ size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImage
     return 0;
 }
 
-void        sqImageFileSeek(sqImageFile f, off_t pos) {
+void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos) {
     if (f != 0)
       fseeko(f, pos, SEEK_SET);
 }
@@ -2446,11 +2474,11 @@ int sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f)
       return fwrite(ptr,elementSize,count,f);
 }
 
-off_t calculateStartLocationForImage() {
+squeakFileOffsetType calculateStartLocationForImage() {
     return 0;
 }
 
-off_t sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize){
+squeakFileOffsetType sqImageFileStartLocation(int fileRef, char *filename, squeakFileOffsetType imageSize){
     return 0;
 }
 #else
@@ -2497,7 +2525,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode) {
 	return (sqImageFile) fRefNum;
 }
 
-off_t sqImageFilePosition(sqImageFile f) {
+squeakFileOffsetType sqImageFilePosition(sqImageFile f) {
 	long int currentPosition = 0;
 
 	GetFPos(f, &currentPosition);
@@ -2522,7 +2550,7 @@ size_t sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile 
 	return byteCount / elementSize;
 }
 
-void sqImageFileSeek(sqImageFile f, off_t pos) {
+void sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos) {
 	SetFPos(f, fsFromStart, pos);
 }
 
@@ -2545,7 +2573,7 @@ int sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f)
 	return byteCount / elementSize;
 }
 
-off_t calculateStartLocationForImage() { 
+squeakFileOffsetType calculateStartLocationForImage() { 
 
 	Handle cfrgResource;  
 	long	memberCount,i;
@@ -2572,7 +2600,7 @@ off_t calculateStartLocationForImage() {
 	return 0;
 }
 
-off_t sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize){
+squeakFileOffsetType sqImageFileStartLocation(int fileRef, char *filename, squeakFileOffsetType imageSize){
     FInfo fileInfo;
 	OSErr   err; 
     SInt16  resFileRef;
@@ -2687,28 +2715,66 @@ off_t sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize){
 #endif
 
 
+
+void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
+    void * debug;
+    OSErr err;
+	minHeapSize;
+     
+#ifdef PLUGIN
+    gMaxHeapSize = gHeapSize = desiredHeapSize;
+    
+    #if TARGET_API_MAC_CARBON
+	    return NewPtr(desiredHeapSize);
+    #else
+        pointer = NewPtr(desiredHeapSize);
+        if (pointer == null) 
+	       return NewPtrSys(desiredHeapSize);
+	    else 
+	      return pointer;
+    #endif
+#endif
+
 #if TARGET_API_MAC_CARBON
-#if defined ( __APPLE__ ) && defined ( __MACH__ ) && JMMFoo
-UInt32	gHeapSize;
-
-#ifndef PLUGIN
-void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
-	/* Application allocates Squeak object heap memory from its own heap. */	
-        void * debug;
-	minHeapSize;
-        gHeapSize = desiredHeapSize;
-        debug = malloc(gHeapSize);
+    gHeapSize = gMaxHeapSize;
+    debug = mmap( NULL, gMaxHeapSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
+    if((debug == MAP_FAILED) || (((long) debug) < 0))
+        return 0;
 	return debug;
+#else
+/*     if((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) {
+        ByteCount  viewLength;
+        long       i;
+        
+        for(i=gMaxHeapSize;i>desiredHeapSize;i-=50*1024*1024) {
+            gHeapSize = gMaxHeapSize = i;
+            err = OpenMappedScratchFile(kFSInvalidVolumeRefNum,i,kCanReadMappedFile|kCanWriteMappedFile,&gBackingFile);
+            if (err == noErr) 
+                break;
+        }
+        if (err != noErr)
+            goto fallBack;
+      
+        err = MapFileView(gBackingFile, NULL, kMapEntireFork,kFileViewAccessReadWrite,0, kNilOptions, &debug, &viewLength, &gFileViewID);
+        if (err != noErr)
+            goto fallBack;
+        return debug;
+    } */
+    
+    
+fallBack:
+    gHeapSize = gMaxHeapSize = desiredHeapSize;
+	debug = NewPtr(desiredHeapSize);
+	return debug;
+#endif 
 }
-#endif
 
 int sqGrowMemoryBy(int memoryLimit, int delta) {
-   Ptr	check;
-   gHeapSize += delta;
-   check = realloc((char *) memory,  gHeapSize);
-    if (check != NULL) 
-        return memoryLimit + delta;
-   return memoryLimit;
+    if (memoryLimit + delta - (int) memory > gMaxHeapSize)
+        return memoryLimit;
+   
+    gHeapSize += delta;
+    return memoryLimit + delta;
 }
 
 int sqShrinkMemoryBy(int memoryLimit, int delta) {
@@ -2717,62 +2783,10 @@ int sqShrinkMemoryBy(int memoryLimit, int delta) {
 
 int sqMemoryExtraBytesLeft(Boolean flag) {
     if (flag) 
-        return 512*1024*1024 - gHeapSize;
+        return gMaxHeapSize - gHeapSize;
     else
         return 0;
 }
-#else
-#ifndef PLUGIN
-void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
-	/* Application allocates Squeak object heap memory from its own heap. */	
-        void * debug;
-	minHeapSize;
-        debug = NewPtr(desiredHeapSize);
-	return debug;
-}
-#endif
-
-int sqGrowMemoryBy(int memoryLimit, int delta) {
-   SetPtrSize ((char *) memory,  GetPtrSize((char *) memory) + delta);
-    if (MemError() == noErr) 
-        return memoryLimit + delta;
-   return memoryLimit;
-}
-
-int sqShrinkMemoryBy(int memoryLimit, int delta) {
-    return sqGrowMemoryBy(memoryLimit,0-delta);
-}
-
-int sqMemoryExtraBytesLeft(Boolean flag) {
-    if (flag) 
-        return FreeMem();
-    else
-        return 0;
-}
-#endif
-#else
-#ifndef PLUGIN
-void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
-	/* Application allocates Squeak object heap memory from its own heap. */	
-        void * debug;
-	minHeapSize;
-        debug = NewPtr(desiredHeapSize);
-	return debug;
-}
-#endif
-
-int sqGrowMemoryBy(int memoryLimit, int delta) {
-    return memoryLimit;
-}
-
-int sqShrinkMemoryBy(int memoryLimit, int delta) {
-    return memoryLimit;
-}
-
-int sqMemoryExtraBytesLeft(Boolean flag) {
-    return 0;
-}
-#endif
 
 void PowerMgrCheck(void) {
 	long pmgrAttributes;
@@ -2879,7 +2893,7 @@ void main(void) {
 #endif
 
 	if (RunningOnCarbonX())
-	    availableMemory = 50*1024*1024 - reservedMemory;
+	    availableMemory = 512*1024*1024 - reservedMemory;
 	else 
     	availableMemory = MaxBlock() - reservedMemory;
 	/******
