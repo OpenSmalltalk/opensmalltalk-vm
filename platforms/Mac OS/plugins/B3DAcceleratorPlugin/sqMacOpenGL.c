@@ -6,13 +6,14 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.4 2002/02/06 06:57:14 johnmci Exp $
+*   RCSID:   $Id: sqMacOpenGL.c,v 1.5 2002/03/01 00:15:57 johnmci Exp $
 * 
 *   NOTES:
 *
 *	Changes May 14th 2001 John M McIntosh Carbon support
 *   Changes Jun 2001 JMM browser internal plugin support
 * 	Changes Jan 2002 JMM carbon cleanup
+*  Feb 26th, 2002, JMM - use carbon get dominate device 
 *
 *****************************************************************************/
 #include <stdio.h>
@@ -278,7 +279,13 @@ int glCreateRenderer(int allowSoftware, int allowHardware, int x, int y, int w, 
 	renderer->gWorld = NULL;
 
 #ifdef INTERNAL
-    tempGDH = getDominateDevice(getSTWindow(),&ignore);
+    #if TARGET_API_MAC_CARBON
+        GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&tempGDH,&ignore); 
+    #else 
+        tempGDH = getDominateDevice(getSTWindow(),&ignore);
+    #endif
+        if (tempGDH == nil) 
+            return -1;
 	swAttrib[2] = (*(*tempGDH)->gdPMap)->pixelSize;
 #else
 	swAttrib[2] = (*(*GetMainDevice())->gdPMap)->pixelSize;
