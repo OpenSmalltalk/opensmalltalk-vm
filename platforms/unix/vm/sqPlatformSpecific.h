@@ -12,13 +12,17 @@
 
 #ifdef UNIX
 #include <string.h>
+#include <stdio.h>
 
 
+/* off_t should be available (XXX though really, we should
+   autoconf-check this, and substitute whatever fseeko is using) */
+typedef off_t squeakFileOffsetType;
 
 
 
 /* unix-specific prototypes and definitions */
-void aioPollForIO(int microSeconds, int extraFd);
+void aioPollForIO(int microSeconds, int extraFd);  /* XXX should no longer be needed -lex */
 #define SQ_FORM_FILENAME        "squeak-form.ppm"
 #define sqFilenameFromStringOpen(dst, src, num) sqFilenameFromString(dst, src, num)
 

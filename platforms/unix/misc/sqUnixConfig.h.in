@@ -97,10 +97,6 @@
 #undef	socklen_t
 
 
-/* XXX this should be checked by autoconf; use 'int' or something if not available */
-#define squeakFileOffsetType off_t
-
-
 
 
 /* architecture */
