@@ -1,3 +1,28 @@
+2003-08-22  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds):
+	Cap the sleep time if it's larger than the time to next wakeup tick.
+	(ioMSecs): Resync lowResMSecs on every call.
+
+2003-08-21  Ian Piumarta  <piumarta@felina.inria.fr>
+
+	* platforms/unix/doc/squeak.1: Add entries for -vtlock/-vtswitch
+	and equivalent environment variables.
+
+	* platforms/unix/vm-display-fbdev/sqUnixFBDev.c:
+	* platforms/unix/vm-display-fbdev/sqUnixFBDevKeyboard.c: Add
+	support for vt switching.
+
+	* platforms/unix/doc/squeak.1: Update '-kbmap' for changed keymap
+	behaviour.
+
+	* platforms/unix/vm-display-fbdev/sqUnixFBDev.c
+	(display_printUsage): Update printUsage() for changed keymap
+	behaviour.
+
+	* platforms/unix/vm-display-fbdev/sqUnixFBDevKeymap.c (kb_initKeyMap):
+	Load default keymap from kernel rather than from fixed data.
+
 2003-08-20  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/vm/glibc.h: Eliminate glibc2.3 dependencies on
