@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-21 00:24:13 by piumarta on felina.inria.fr
+ * Last edited: 2003-08-21 16:03:28 by piumarta on felina.inria.fr
  */
 
 
@@ -48,7 +48,7 @@
 static void kb_freeKeys(_self)
 {
   int column;
-  for (column= 0;  column < 256;  ++column)
+  for (column= 0;  column < MAX_NR_KEYMAPS;  ++column)
     if (self->keyMaps[column])
       free(self->keyMaps[column]);
   free(self->keyMaps);
@@ -72,8 +72,8 @@ static int kb_loadKeys(_self, char *mapfile)
       return 0;
     }
 
-  if (!(self->keyMaps= (unsigned short **)calloc(256, sizeof(unsigned short *))))
-    goto outOfMemory;
+  if (!(self->keyMaps= (unsigned short **)calloc(MAX_NR_KEYMAPS, sizeof(unsigned short *))))
+    outOfMemory();
 
   if (!fgets(line, sizeof(line), fp)) goto noKeyMaps;
   ++mapline;
@@ -100,8 +100,8 @@ static int kb_loadKeys(_self, char *mapfile)
       while (column <= last)
 	{
 	  kmprintf(" %d", column);
-	  self->keyMaps[column]= (unsigned short *)calloc(128, sizeof(unsigned short));
-	  if (!self->keyMaps[column]) goto outOfMemory;
+	  self->keyMaps[column]= (unsigned short *)calloc(NR_KEYS, sizeof(unsigned short));
+	  if (!self->keyMaps[column]) outOfMemory();
 	  ++column;
 	}
       if (',' == *field) ++field;
@@ -124,7 +124,7 @@ static int kb_loadKeys(_self, char *mapfile)
 	{
 	  long sym= strtol(field, &end, 0);
 	  if (field == end) break;
-	  while ((!self->keyMaps[column]) && (column < 256))
+	  while ((!self->keyMaps[column]) && (column < MAX_NR_KEYMAPS))
 	    {
 	      kmprintf("  -  ");
 	      ++column;
@@ -147,7 +147,6 @@ static int kb_loadKeys(_self, char *mapfile)
     badKeyMaps:	 err= "bad 'keymaps' entry";			break;
     noKeyCode:	 err= "bad 'keycode' entry";			break;
     tooManySyms: err= "too many columns to fit declared table";	break;
-    outOfMemory: err= "out of memory";				break;
     }
   fprintf(stderr, "%s:%d: %s\n", mapfile, mapline, err);
 
@@ -158,40 +157,52 @@ static int kb_loadKeys(_self, char *mapfile)
 }
 
 
-static void kb_initKeyMap(_self, char *mapfile)
+static void kb_loadKernelKeyMap(_self)
 {
-  if (mapfile)
+  int map;
+
+  dprintf("loading kernel keymap\n");
+
+  if (!(self->keyMaps= (unsigned short **)calloc(MAX_NR_KEYMAPS, sizeof(unsigned short *))))
+    outOfMemory();
+
+  for (map= 0;  map < MAX_NR_KEYMAPS;  ++map)
     {
-      if ((kb_loadKeys(self, mapfile)))
-	dprintf("using keymap '%s'\n", mapfile);
-      else
+      struct kbentry kb;
+      int key;
+
+      kb.kb_index= 0;
+      kb.kb_table= map;
+
+      if (ioctl(self->fd, KDGKBENT, (unsigned long)&kb))
+	fatalError("KDGKBENT");
+      if (K_NOSUCHMAP == kb.kb_value)
+	continue;
+
+      if (!(self->keyMaps[map]= (unsigned short *)calloc(NR_KEYS, sizeof(unsigned short))))
+	outOfMemory();
+
+      for (key= 0;  key < NR_KEYS;  ++key)
 	{
-	  fprintf(stderr, "could not load keymap '%s'\n", mapfile);
-	  exit(1);
+	  kb.kb_index= key;
+	  if (ioctl(self->fd, KDGKBENT, (unsigned long)&kb))
+	    fatalError("KDGKBENT");
+	  self->keyMaps[map][key]= kb.kb_value;
 	}
     }
 
-  if (!self->keyMaps)
-    {
-      int c, m;
-      if (!(self->keyMaps= (unsigned short **)calloc(256, sizeof(unsigned short *))))
-	fatal("out of memory");
-      for (c= 0;  c < 128;  ++c)
-	for (m= 0;  m < 13;  ++m)
-	  {
-	    static unsigned short defaultKeyMap[128][13]= {
-#	      include "defaultKeyboardMap.h"
-	    };
-	    int code= defaultKeyMap[c][m];
-	    if (code)
-	      {
-		if (!self->keyMaps[m])
-		  self->keyMaps[m]=
-		    (unsigned short *)calloc(128, sizeof(unsigned short));
-		self->keyMaps[m][c]= code;
-	      }
-	  }
-    }
+  dprintf("kernel keymap loaded\n");
+}
+
+
+static void kb_initKeyMap(_self, char *mapfile)
+{
+  if (!mapfile)
+    kb_loadKernelKeyMap(self);
+  else if ((kb_loadKeys(self, mapfile)))
+    dprintf("using keymap '%s'\n", mapfile);
+  else
+    fatal("could not load keymap '%s'\n", mapfile);
 }
 
 

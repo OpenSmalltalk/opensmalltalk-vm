@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2003-08-21 01:14:08 by piumarta on felina.inria.fr
+ * Last edited: 2003-08-21 15:02:15 by piumarta on felina.inria.fr
  */
 
 
@@ -218,7 +218,7 @@ static void ms_close(_self)
 static struct ms *ms_new(void)
 {
   _self= (struct ms *)calloc(1, sizeof(struct ms));
-  if (!self) fatal("out of memory");
+  if (!self) outOfMemory();
   self->fd= -1;
   self->callback= ms_noCallback;
   return self;

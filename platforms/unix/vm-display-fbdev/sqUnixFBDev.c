@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-21 01:56:33 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-22 16:35:25 by piumarta on emilia.inria.fr
  */
 
 
@@ -69,6 +69,7 @@
 
 #define DEBUG	0
 
+
 static void dprintf(const char *fmt, ...)
 {
 #if (DEBUG)
@@ -79,8 +80,26 @@ static void dprintf(const char *fmt, ...)
 #endif
 }
 
-#define fatal(M)	do { fprintf(stderr, "%s\n", M); exit(1); } while (0)
-#define fatalError(M)	do { perror(M); exit(1); } while (0)
+static void fatalError(const char *who)
+{
+  perror(who);
+  exit(1);
+}
+
+static void fatal(const char *fmt, ...)
+{
+  va_list ap;
+  va_start(ap, fmt);
+  vfprintf(stderr, fmt, ap);
+  va_end(ap);
+  fprintf(stderr, "\n");
+  exit(1);
+}
+
+static void outOfMemory(void)
+{
+  fatal("out of memory");
+}
 
 #include "sqUnixEvent.c"
 
@@ -89,20 +108,25 @@ static inline int max(int a, int b) { return a > b ? a : b; }
 
 static void failPermissions(const char *who);
 
-static char *msDev=   0;
-static char *msProto= 0;
-static char *kmPath=  0;
-static char *fbDev=   0;
+static char *msDev=    0;
+static char *msProto=  0;
+static char *kmPath=   0;
+static char *fbDev=    0;
+static int   vtLock=   0;
+static int   vtSwitch= 0;
 
-#include "sqUnixFBDevUtil.c"
-#include "sqUnixFBDevMouse.c"
-#include "sqUnixFBDevKeyboard.c"
-#include "sqUnixFBDevFramebuffer.c"
+struct kb;
+struct ms;
+struct fb;
 
 static struct ms *ms= 0;
 static struct kb *kb= 0;
 static struct fb *fb= 0;
 
+#include "sqUnixFBDevUtil.c"
+#include "sqUnixFBDevMouse.c"
+#include "sqUnixFBDevKeyboard.c"
+#include "sqUnixFBDevFramebuffer.c"
 
 static void openFramebuffer(void)
 {
@@ -139,7 +163,7 @@ static void enqueueKeyboardEvent(int key, int up, int modifiers)
 static void openKeyboard(void)
 {
   kb= kb_new();
-  kb_open(kb);
+  kb_open(kb, vtSwitch, vtLock);
   kb_setCallback(kb, enqueueKeyboardEvent);
 }
 
@@ -205,6 +229,9 @@ static int display_ioProcessEvents(void)
 
 static int display_ioScreenDepth(void)
 {
+  // we could match negative depths for little-endian machines here, but:
+  //   1. some kinds of BitBlt seem to be broken at depth -8;
+  //   2. doing our own conversionis 20% faster than having BitBlt do it.
   return fb_depth(fb);
 }
 
@@ -309,22 +336,29 @@ static void display_printUsage(void)
 {
   printf("\nFBDev <option>s:\n");
   printf("  -fbdev <dev>          use framebuffer device <dev> (default: /dev/fb)\n");
-  printf("  -kbmap <file>         load keymap from <file> (default: generic US PC-101)\n");
+  printf("  -kbmap <file>         load keymap from <file> (default: use kernel keymap)\n");
   printf("  -msdev <dev>          use mouse device <dev> (default: /dev/psaux)\n");
   printf("  -msproto <protocol>   use the given <protocol> for the mouse (default: ps2)\n");
+  printf("  -vtlock               disallow all vt switching (for any reason)\n");
+  printf("  -vtswitch             enable keyboard vt switching (Alt+FNx)\n");
 }
 
 
-static void display_printUsageNotes(void) {}
+static void display_printUsageNotes(void)
+{
+  printf("  -vtlock disables keyboard vt switching even when -vtswitch is enabled\n");
+}
 
 
 static void display_parseEnvironment(void)
 {
   char *ev= 0;
-  if ((ev= getenv("SQUEAK_FBDEV")))	fbDev=   strdup(ev);
-  if ((ev= getenv("SQUEAK_KBMAP")))	kmPath=  strdup(ev);
-  if ((ev= getenv("SQUEAK_MSDEV")))	msDev=   strdup(ev);
-  if ((ev= getenv("SQUEAK_MSPROTO")))	msProto= strdup(ev);
+  if ((ev= getenv("SQUEAK_FBDEV")))	fbDev=    strdup(ev);
+  if ((ev= getenv("SQUEAK_KBMAP")))	kmPath=   strdup(ev);
+  if ((ev= getenv("SQUEAK_MSDEV")))	msDev=    strdup(ev);
+  if ((ev= getenv("SQUEAK_MSPROTO")))	msProto=  strdup(ev);
+  if ((ev= getenv("SQUEAK_VTLOCK")))	vtLock=   1;
+  if ((ev= getenv("SQUEAK_VTSWITCH")))	vtSwitch= 1;
 }
 
 
@@ -333,7 +367,9 @@ static int display_parseArgument(int argc, char **argv)
   int n= 1;
   char *arg= argv[0];
 
-  if (argv[1])	/* option requires an argument */
+  if      (!strcmp(arg, "-vtlock"))	 vtLock=   1;
+  else if (!strcmp(arg, "-vtswitch"))	 vtSwitch= 1;
+  else if (argv[1])	/* option requires an argument */
     {
       n= 2;
       if      (!strcmp(arg, "-fbdev"))	 fbDev=   argv[1];

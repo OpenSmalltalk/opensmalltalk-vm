@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-20 15:09:25 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-21 15:00:23 by piumarta on felina.inria.fr
  */
 
 
@@ -708,7 +708,7 @@ static void fb_close(_self)
 static struct fb *fb_new(void)
 {
   _self= (struct fb *)calloc(1, sizeof(struct fb));
-  if (!self) fatal("out of memory");
+  if (!self) outOfMemory();
   self->fd=  -1;
   return self;
 }

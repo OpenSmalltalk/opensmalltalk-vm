@@ -1,6 +1,5 @@
 option: fb mode switch at startup
 option: mapdelbs for 127 -> 8
-option: enable VT switch with Alt-Fn
 option: find and run on a free VT rather than taking over the active one
 option: mouse acceleration
 

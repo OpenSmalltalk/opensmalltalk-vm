@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2003-08-21 02:28:27 by piumarta on felina.inria.fr
+ * Last edited: 2003-08-21 20:44:36 by piumarta on felina.inria.fr
  */
 
 
@@ -59,8 +59,11 @@ struct kb
 {
   char			 *kbName;
   int			  fd;
-  int			  mode;
-  struct termios	  attr;
+  int			  kbMode;
+  struct termios	  tcAttr;
+  int			  vtActive;
+  int			  vtLock;
+  int			  vtSwitch;
   int			  state;
   kb_callback_t		  callback;
   unsigned short	**keyMaps;
@@ -77,6 +80,24 @@ static void updateModifiers(int kstate)
   if (kstate & (1 << KG_ALT))	modifierState |= CommandKeyBit;
   if (kstate & (1 << KG_ALTGR))	modifierState |= OptionKeyBit;
   dprintf("state %2d %02x mod %2d %02x\n", kstate, modifierState);
+}
+
+
+static void kb_chvt(_self, int vt)
+{
+  if (ioctl(self->fd, VT_ACTIVATE, vt))
+    perror("chvt: VT_ACTIVATE");
+  else
+    {
+      while (ioctl(self->fd, VT_WAITACTIVE, vt))
+	{
+	  if (EINTR == errno)
+	    continue;
+	  perror("VT_WAITACTIVE");
+	  break;
+	}
+      updateModifiers(self->state= 0);
+    }
 }
 
 
@@ -141,6 +162,11 @@ static void kb_translate(_self, int code, int up)
 	    }
 	  break;
 
+	case KT_CONS:
+	  if (self->vtSwitch && !self->vtLock)
+	    kb_chvt(self, sym + 1);
+	  break;
+
 	default:
 	  if (type > KT_SLOCK)
 	    dprintf("ignoring unknown scancode %d.%d\n", type, sym);
@@ -196,9 +222,50 @@ static void kb_bell(_self)
 }
 
 
+static void sigusr1(int sig)
+{
+  _self= kb;					// ugh
+  struct vt_stat v;
+
+  if (ioctl(self->fd, VT_GETSTATE, &v))		fatalError("VT_GETSTATE");
+  if (self->vtActive && !self->vtLock)
+    {
+      ioctl(self->fd, VT_RELDISP, 1);
+      self->vtActive= 0;
+      updateModifiers(self->state= 0);
+    }
+  else
+    {
+      extern int fullDisplayUpdate(void);
+      self->vtActive= 1;
+      updateModifiers(self->state= 0);
+      fullDisplayUpdate();
+    }
+}
+
+
 static void kb_initGraphics(_self)
 {
+  struct vt_mode vt;
+
   if (ioctl(self->fd, KDSETMODE, KD_GRAPHICS)) perror("KDSETMODE(KDGRAPHICS)");
+    
+  if (ioctl(self->fd, VT_GETMODE, &vt) < 0)
+    perror("VT_GETMODE");
+  else
+    {
+      struct sigaction sa;
+      sa.sa_handler= sigusr1;
+      sigemptyset(&sa.sa_mask);
+      sa.sa_flags= 0;
+      sa.sa_restorer= 0;
+      sigaction(SIGUSR1, &sa, 0);
+      vt.mode=   VT_PROCESS;
+      vt.relsig= SIGUSR1;
+      vt.acqsig= SIGUSR1;
+      if (ioctl(self->fd, VT_SETMODE, &vt) < 0) 
+	perror("VT_SETMODE");
+    }
 }
 
 static void kb_freeGraphics(_self)
@@ -207,7 +274,7 @@ static void kb_freeGraphics(_self)
 }
 
 
-void kb_open(_self)
+void kb_open(_self, int vtSwitch, int vtLock)
 {
   struct termios nattr;
 
@@ -235,13 +302,16 @@ void kb_open(_self)
     sprintf(vtname, "/dev/tty%d", v.v_active);
     if ((self->fd= open(self->kbName= vtname, O_RDWR | O_NDELAY)) < 0)
       fatalError(vtname);
+    self->vtActive= 1;
+    self->vtSwitch= vtSwitch;
+    self->vtLock=   vtLock;
   }
 
-  if (ioctl(self->fd, KDGKBMODE, &self->mode))			perror("KDGKBMODE");
-  if (ioctl(self->fd, KDSKBMODE, K_MEDIUMRAW))			perror("KDSKBMODE(K_MEDIUMRAW)");
-  tcgetattr(self->fd, &self->attr);
+  if (ioctl(self->fd, KDGKBMODE, &self->kbMode))	perror("KDGKBMODE");
+  if (ioctl(self->fd, KDSKBMODE, K_MEDIUMRAW))		perror("KDSKBMODE(K_MEDIUMRAW)");
+  tcgetattr(self->fd, &self->tcAttr);
 
-  nattr= self->attr;
+  nattr= self->tcAttr;
   nattr.c_iflag= (IGNPAR | IGNBRK) & (~PARMRK) & (~ISTRIP);
   nattr.c_cflag= CREAD | CS8;
   nattr.c_lflag= 0;
@@ -250,6 +320,8 @@ void kb_open(_self)
   cfsetispeed(&nattr, 9600);
   cfsetospeed(&nattr, 9600);
   tcsetattr(self->fd, TCSANOW, &nattr);
+
+  kb_initKeyMap(self, kmPath);
 }
 
 
@@ -257,8 +329,8 @@ void kb_close(_self)
 {
   if (self->fd >= 0)
     {
-      ioctl(self->fd, KDSKBMODE, self->mode);
-      tcsetattr(self->fd, TCSANOW, &self->attr);
+      ioctl(self->fd, KDSKBMODE, self->kbMode);
+      tcsetattr(self->fd, TCSANOW, &self->tcAttr);
       close(self->fd);
       dprintf("%s (%d) closed\n", self->kbName, self->fd);
       self->fd= -1;
@@ -271,7 +343,6 @@ struct kb *kb_new(void)
   _self= (struct kb *)calloc(1, sizeof(struct kb));
   self->fd= -1;
   self->callback= kb_noCallback;
-  kb_initKeyMap(self, kmPath);
   return self;
 }
 
