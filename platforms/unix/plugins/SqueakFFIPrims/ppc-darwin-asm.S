@@ -1,8 +1,8 @@
-/* ppc-sysv-asm.S -- PowerPC FFI trampoline for SVr4-like ABIs		-*- asm -*-
+/* ppc-sysv-asm.S -- PowerPC FFI trampoline for Mach-O			-*- asm -*-
  *
  * Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited:	2003-01-28 22:43:45 by piumarta on calvin.local.
+ * Last edited:	2003-08-15 15:36:13 by piumarta on emilia.inria.fr
  *
  *   Copyright (C) 1996-2002 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
@@ -59,6 +59,7 @@
 #define GPR_MAX   8
 #define FPR_MAX  13
 #define ARG_MAX 512
+#define FRAMESZ	 32
 
 #include "ppc-global.h"
 
@@ -68,13 +69,13 @@
 	.globl	_ffiCallAddressOf
 
 _ffiCallAddressOf:
-	stwu	sp, -32(sp)			// push trampoline frame
+	stwu	sp, -FRAMESZ(sp)		// push trampoline frame
 	mflr	r0
-	stw	r0, 40(sp)
+	stw	r0, (FRAMESZ+8)(sp)
         mfcr	r0
-        stw	r0, 36(sp)			// saved ccr
+        stw	r0, (FRAMESZ+4)(sp)		// saved ccr
 	mtlr	r3				// destination fn address
-	stw	r4, 28(sp)			// globals
+	stw	r4, (FRAMESZ-4)(sp)		// globals
 	lwz	r5, stackIndex(r4)
 	slwi	r10, r5, 2			// param save area size
 	addi	r10, r10, 32+15			// round to quad word
@@ -126,13 +127,13 @@ _ffiCallAddressOf:
 	lwz	r6,  12(r11)
 6:	blrl					// callout
 	lwz	sp, 0(sp)			// pop ffi caller frame
-	lwz	r5, 28(sp)			// globals
+	lwz	r5, (FRAMESZ-4)(sp)		// globals
 	stw	r3, longReturnValue+0(r5)
 	stw	r4, longReturnValue+4(r5)
 	stfd	f1, floatReturnValue(r5)
-	lwz	r0, 40(sp)
+	lwz	r0, (FRAMESZ+8)(sp)
  	mtlr	r0
-        lwz	r0, 36(sp)			// saved ccr
+        lwz	r0, (FRAMESZ+4)(sp)		// saved ccr
         mtcr	r0
-	addi	sp, sp, 32			// pop trampoline frame
+	addi	sp, sp, FRAMESZ			// pop trampoline frame
 	blr
