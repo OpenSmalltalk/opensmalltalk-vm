@@ -4,7 +4,7 @@ Provide bitblt support for the vm simulator
 Class {
 	#name : #BitBltSimulator,
 	#superclass : #BitBltSimulation,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'instance creation' }

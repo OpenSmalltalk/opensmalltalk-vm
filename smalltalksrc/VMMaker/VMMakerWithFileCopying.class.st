@@ -6,7 +6,7 @@ The default class will NOT do the file copies and gradually the platform specifi
 Class {
 	#name : #VMMakerWithFileCopying,
 	#superclass : #VMMaker,
-	#category : #'VMMaker-Building'
+	#category : 'VMMaker-Building'
 }
 
 { #category : #'copying files' }

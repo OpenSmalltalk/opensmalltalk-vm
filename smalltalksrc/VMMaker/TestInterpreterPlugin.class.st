@@ -1,7 +1,7 @@
 Class {
 	#name : #TestInterpreterPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : #'VMMaker-SmartSyntaxPlugins'
+	#category : 'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #translation }

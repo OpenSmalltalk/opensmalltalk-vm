@@ -7,7 +7,7 @@ Cooercion specification for Identity coercions:
 Class {
 	#name : #Oop,
 	#superclass : #Behavior,
-	#category : #'VMMaker-SmartSyntaxPlugins'
+	#category : 'VMMaker-SmartSyntaxPlugins'
 }
 
 { #category : #'plugin generation' }

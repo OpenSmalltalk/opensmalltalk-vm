@@ -11,7 +11,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #accessing }

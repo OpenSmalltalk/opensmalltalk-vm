@@ -17,11 +17,11 @@ Class {
 		'sHFAfn'
 	],
 	#classVars : [
+		'DirBadPath',
 		'DirEntryFound',
-		'DirNoMoreEntries',
-		'DirBadPath'
+		'DirNoMoreEntries'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

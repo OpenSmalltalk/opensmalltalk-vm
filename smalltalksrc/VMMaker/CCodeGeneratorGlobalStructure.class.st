@@ -9,7 +9,7 @@ Class {
 	#instVars : [
 		'localStructDef'
 	],
-	#category : #'VMMaker-Translation to C'
+	#category : 'VMMaker-Translation to C'
 }
 
 { #category : #'C code generator' }

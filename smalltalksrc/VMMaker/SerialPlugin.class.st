@@ -4,7 +4,7 @@ Implement the serial port primitives.  Since it requires platform support it wil
 Class {
 	#name : #SerialPlugin,
 	#superclass : #SmartSyntaxInterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #translation }

@@ -12,7 +12,7 @@ Class {
 		'remainderDigitCount',
 		'divisorDigitCount'
 	],
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #'plugin translation' }

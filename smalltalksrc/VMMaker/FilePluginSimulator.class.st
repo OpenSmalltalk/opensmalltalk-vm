@@ -4,7 +4,7 @@ File plugin simulation for the VM simulator
 Class {
 	#name : #FilePluginSimulator,
 	#superclass : #FilePlugin,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #translation }

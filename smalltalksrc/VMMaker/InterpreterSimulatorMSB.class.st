@@ -1,7 +1,7 @@
 Class {
 	#name : #InterpreterSimulatorMSB,
 	#superclass : #InterpreterSimulator,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'memory access' }

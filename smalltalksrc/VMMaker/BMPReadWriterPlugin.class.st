@@ -4,7 +4,7 @@ A plugin to provide fast read and write of .bmp files
 Class {
 	#name : #BMPReadWriterPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : #'VMMaker-Plugins'
+	#category : 'VMMaker-Plugins'
 }
 
 { #category : #primitives }
