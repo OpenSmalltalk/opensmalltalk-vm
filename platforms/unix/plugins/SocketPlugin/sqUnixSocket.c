@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2005-03-09 02:24:15 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-03-31 14:39:17 by piumarta on margaux.hpl.hp.com
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -231,12 +231,12 @@ char *socketHandlerName(aioHandler h)
 /*** module initialisation/shutdown ***/
 
 
-int socketInit(void)
+sqInt socketInit(void)
 {
   return 1;
 }
 
-int socketShutdown(void)
+sqInt socketShutdown(void)
 {
   /* shutdown the network */
   sqNetworkShutdown();
@@ -484,7 +484,7 @@ static void closeHandler(int fd, void *data, int flags)
 
 /* start a new network session */
 
-int sqNetworkInit(int resolverSemaIndex)
+sqInt sqNetworkInit(sqInt resolverSemaIndex)
 {
   if (0 != thisNetSession)
     return 0;  /* already initialised */
@@ -514,19 +514,12 @@ void sqNetworkShutdown(void)
 
 /* create a new socket */
 
-void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID
-    (SocketPtr s, int netType, int socketType,
-     int recvBufSize, int sendBufSize, int semaIndex)
+void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaID(SocketPtr s, sqInt netType, sqInt socketType, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex)
 {
-  sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
-    (s, netType, socketType,recvBufSize, sendBufSize,
-     semaIndex, semaIndex, semaIndex);
+  sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(s, netType, socketType,recvBufSize, sendBufSize, semaIndex, semaIndex, semaIndex);
 }
 
-void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
-    (SocketPtr s, int netType, int socketType,
-     int recvBufSize, int sendBufSize,
-     int semaIndex, int readSemaIndex, int writeSemaIndex)
+void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, sqInt netType, sqInt socketType, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex, sqInt readSemaIndex, sqInt writeSemaIndex)
 {
   int newSocket= -1;
   privateSocketStruct *pss;
@@ -589,7 +582,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
 
 /* return the state of a socket */
 
-int sqSocketConnectionStatus(SocketPtr s)
+sqInt sqSocketConnectionStatus(SocketPtr s)
 {
   if (!socketValid(s))
     return Invalid;
@@ -624,12 +617,12 @@ int sqSocketConnectionStatus(SocketPtr s)
 /* TCP => start listening for incoming connections.
  * UDP => associate the local port number with the socket.
  */
-void sqSocketListenOnPort(SocketPtr s, int port)
+void sqSocketListenOnPort(SocketPtr s, sqInt port)
 {
   sqSocketListenOnPortBacklogSize(s, port, 1);
 }
 
-void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, int port, int backlogSize, int addr)
+void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, sqInt port, sqInt backlogSize, sqInt addr)
 {
   struct sockaddr_in saddr;
 
@@ -664,7 +657,7 @@ void sqSocketListenOnPortBacklogSizeInterface(SocketPtr s, int port, int backlog
     }
 }
 
-void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
+void sqSocketListenOnPortBacklogSize(SocketPtr s, sqInt port, sqInt backlogSize)
 {
   sqSocketListenOnPortBacklogSizeInterface(s, port, backlogSize, INADDR_ANY);
 }
@@ -672,7 +665,7 @@ void sqSocketListenOnPortBacklogSize(SocketPtr s, int port, int backlogSize)
 /* TCP => open a connection.
  * UDP => set remote address.
  */
-void sqSocketConnectToPort(SocketPtr s, int addr, int port)
+void sqSocketConnectToPort(SocketPtr s, sqInt addr, sqInt port)
 {
   struct sockaddr_in saddr;
 
@@ -727,20 +720,13 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port)
 }
 
 
-void sqSocketAcceptFromRecvBytesSendBytesSemaID
-    (SocketPtr s, SocketPtr serverSocket,
-     int recvBufSize, int sendBufSize, int semaIndex)
+void sqSocketAcceptFromRecvBytesSendBytesSemaID(SocketPtr s, SocketPtr serverSocket, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex)
 {
-  sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
-    (s, serverSocket, recvBufSize, sendBufSize, 
-     semaIndex, semaIndex, semaIndex);
+  sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(s, serverSocket, recvBufSize, sendBufSize, semaIndex, semaIndex, semaIndex);
 }
 
 
-void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID
-    (SocketPtr s, SocketPtr serverSocket,
-     int recvBufSize, int sendBufSize,
-     int semaIndex, int readSemaIndex, int writeSemaIndex)
+void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s, SocketPtr serverSocket, sqInt recvBufSize, sqInt sendBufSize, sqInt semaIndex, sqInt readSemaIndex, sqInt writeSemaIndex)
 {
   /* The image has already called waitForConnection, so there is no
      need to signal the server's connection semaphore again. */
@@ -866,7 +852,7 @@ void sqSocketDestroy(SocketPtr s)
 
 /* answer the OS error code for the last socket operation */
 
-int sqSocketError(SocketPtr s)
+sqInt sqSocketError(SocketPtr s)
 {
   if (!socketValid(s))
     return -1;
@@ -876,7 +862,7 @@ int sqSocketError(SocketPtr s)
 
 /* return the local IP address bound to a socket */
 
-int sqSocketLocalAddress(SocketPtr s)
+sqInt sqSocketLocalAddress(SocketPtr s)
 {
   struct sockaddr_in saddr;
   socklen_t saddrSize= sizeof(saddr);
@@ -892,7 +878,7 @@ int sqSocketLocalAddress(SocketPtr s)
 
 /* return the peer's IP address */
 
-int sqSocketRemoteAddress(SocketPtr s)
+sqInt sqSocketRemoteAddress(SocketPtr s)
 {
   struct sockaddr_in saddr;
   socklen_t saddrSize= sizeof(saddr);
@@ -914,7 +900,7 @@ int sqSocketRemoteAddress(SocketPtr s)
 
 /* return the local port number of a socket */
 
-int sqSocketLocalPort(SocketPtr s)
+sqInt sqSocketLocalPort(SocketPtr s)
 {
   struct sockaddr_in saddr;
   socklen_t saddrSize= sizeof(saddr);
@@ -930,7 +916,7 @@ int sqSocketLocalPort(SocketPtr s)
 
 /* return the peer's port number */
 
-int sqSocketRemotePort(SocketPtr s)
+sqInt sqSocketRemotePort(SocketPtr s)
 {
   struct sockaddr_in saddr;
   socklen_t saddrSize= sizeof(saddr);
@@ -957,7 +943,7 @@ int sqSocketRemotePort(SocketPtr s)
    if the socket is closed by peer, change the state to OtherEndClosed
 	and answer "false";
 */
-int sqSocketReceiveDataAvailable(SocketPtr s)
+sqInt sqSocketReceiveDataAvailable(SocketPtr s)
 {
   if (!socketValid(s)) return false;
   if (SOCKETSTATE(s) == Connected)
@@ -987,7 +973,7 @@ int sqSocketReceiveDataAvailable(SocketPtr s)
 
 /* answer whether the socket has space to receive more data */
 
-int sqSocketSendDone(SocketPtr s)
+sqInt sqSocketSendDone(SocketPtr s)
 {
   if (!socketValid(s))
     return false;
@@ -1004,7 +990,7 @@ int sqSocketSendDone(SocketPtr s)
    answer the number actually read.  For UDP, fill in the peer's address
    with the approriate value.
 */
-int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
+sqInt sqSocketReceiveDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
   int nread= 0;
 
@@ -1014,9 +1000,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
     {
       /* --- UDP --- */
       socklen_t addrSize= sizeof(SOCKETPEER(s));
-      if ((nread= recvfrom(SOCKET(s), (void *)buf, bufSize, 0,
-			   (struct sockaddr *)&SOCKETPEER(s),
-			   &addrSize)) <= 0)
+      if ((nread= recvfrom(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), &addrSize)) <= 0)
 	{
 	  if ((nread == -1) && (errno == EWOULDBLOCK))
 	    {
@@ -1031,7 +1015,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
   else
     {
       /* --- TCP --- */
-      if ((nread= read(SOCKET(s), (void *)buf, bufSize)) <= 0)
+      if ((nread= read(SOCKET(s), buf, bufSize)) <= 0)
 	{
 	  if ((nread == -1) && (errno == EWOULDBLOCK))
 	    {
@@ -1055,7 +1039,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize)
 /* write data to the socket s from buf for at most bufSize bytes.
    answer the number of bytes actually written.
 */ 
-int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
+sqInt sqSocketSendDataBufCount(SocketPtr s, char *buf, sqInt bufSize)
 {
   int nsent= 0;
 
@@ -1066,9 +1050,7 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
     {
       /* --- UDP --- */
       FPRINTF((stderr, "UDP sendData(%d, %d)\n", SOCKET(s), bufSize));
-      if ((nsent= sendto(SOCKET(s), (void *)buf, bufSize, 0,
-			 (struct sockaddr *)&SOCKETPEER(s),
-			 sizeof(SOCKETPEER(s)))) <= 0)
+      if ((nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&SOCKETPEER(s), sizeof(SOCKETPEER(s)))) <= 0)
 	{
 	  if (errno == EWOULDBLOCK)	/* asynchronous write in progress */
 	    return 0;
@@ -1081,7 +1063,7 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
     {
       /* --- TCP --- */
       FPRINTF((stderr, "TCP sendData(%d, %d)\n", SOCKET(s), bufSize));
-      if ((nsent= write(SOCKET(s), (char *)buf, bufSize)) <= 0)
+      if ((nsent= write(SOCKET(s), buf, bufSize)) <= 0)
 	{
 	  if ((nsent == -1) && (errno == EWOULDBLOCK))
 	    {
@@ -1108,8 +1090,7 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize)
 /* read data from the UDP socket s into buf for at most bufSize bytes.
    answer the number of bytes actually read.
 */ 
-int sqSocketReceiveUDPDataBufCountaddressportmoreFlag
-    (SocketPtr s, int buf, int bufSize,  int *address,  int *port, int *moreFlag)
+sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, sqInt bufSize,  sqInt *address,  sqInt *port, sqInt *moreFlag)
 {
   if (socketValid(s) && (UDPSocketType == s->socketType))
     {
@@ -1119,9 +1100,7 @@ int sqSocketReceiveUDPDataBufCountaddressportmoreFlag
       FPRINTF((stderr, "recvFrom(%d)\n", SOCKET(s)));
       memset(&saddr, 0, sizeof(saddr));
       { 
-	int nread= recvfrom(SOCKET(s), (void *)buf, bufSize, 0,
-			    (struct sockaddr *)&saddr,
-			    &addrSize);
+	int nread= recvfrom(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&saddr, &addrSize);
 	if (nread >= 0)
 	  {
 	    *address= ntohl(saddr.sin_addr.s_addr);
@@ -1142,8 +1121,7 @@ int sqSocketReceiveUDPDataBufCountaddressportmoreFlag
 /* write data to the UDP socket s from buf for at most bufSize bytes.
  * answer the number of bytes actually written.
  */ 
-int sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port,
-				       int buf, int bufSize)
+sqInt sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port, char *buf, sqInt bufSize)
 {
   if (socketValid(s) && (UDPSocketType == s->socketType))
     {
@@ -1155,9 +1133,7 @@ int sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port,
       saddr.sin_port= htons((short)port);
       saddr.sin_addr.s_addr= htonl(address);
       {
-	int nsent= sendto(SOCKET(s), (void *)buf, bufSize, 0,
-			  (struct sockaddr *)&saddr,
-			  sizeof(saddr));
+	int nsent= sendto(SOCKET(s), buf, bufSize, 0, (struct sockaddr *)&saddr, sizeof(saddr));
 	if (nsent >= 0)
 	  return nsent;
 	
@@ -1270,13 +1246,11 @@ static socketOption *findOption(char *name, size_t nameSize)
  * copy it verbatim, assuming it's really a ByteArray pretending to be
  * a struct.  caveat hackor.)
  */
-int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue
-    (SocketPtr s,int optionName, int optionNameSize,
-     int optionValue, int optionValueSize, int *result)
+sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(SocketPtr s, char *optionName, sqInt optionNameSize, char *optionValue, sqInt optionValueSize, sqInt *result)
 {
   if (socketValid(s))
     {
-      socketOption *opt= findOption((char *)optionName, (size_t)optionNameSize);
+      socketOption *opt= findOption(optionName, (size_t)optionNameSize);
       if (opt != 0)
 	{
 	  int   val= 0;
@@ -1289,7 +1263,7 @@ int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSi
 	    goto barf;
 
 	  memset((void *)buf, 0, sizeof(buf));
-	  memcpy((void *)buf, (void *)optionValue, optionValueSize);
+	  memcpy((void *)buf, optionValue, optionValueSize);
 	  if (optionValueSize == 1)	/* character `1' or `0' */
 	    {
 	      val= strtol(buf, &endptr, 0);
@@ -1330,18 +1304,16 @@ int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSi
 
 
 /* query the socket for the given option.  */
-int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
-    (SocketPtr s,int optionName, int optionNameSize, int *result)
+sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, char *optionName, sqInt optionNameSize, sqInt *result)
 {
   if (socketValid(s))
     {
-      socketOption *opt= findOption((char *)optionName, (size_t)optionNameSize);
+      socketOption *opt= findOption(optionName, (size_t)optionNameSize);
       if (opt != 0)
 	{
-	  int optval;
+	  int optval;	/* NOT sqInt */
 	  socklen_t optlen= sizeof(optval);
-	  if ((getsockopt(PSP(s)->s, opt->optlevel, opt->optname,
-			  (void *)&optval, &optlen)) < 0)
+	  if ((getsockopt(PSP(s)->s, opt->optlevel, opt->optname, (void *)&optval, &optlen)) < 0)
 	    goto barf;
 	  if (optlen != sizeof(optval))
 	    goto barf;
@@ -1369,7 +1341,7 @@ int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
 
 void sqResolverAbort(void) {}
 
-void sqResolverStartAddrLookup(int address)
+void sqResolverStartAddrLookup(sqInt address)
 {
   const char *res;
   res= addrToName(address);
@@ -1378,7 +1350,7 @@ void sqResolverStartAddrLookup(int address)
 }
 
 
-int sqResolverStatus(void)
+sqInt sqResolverStatus(void)
 {
   if(!thisNetSession)
     return ResolverUninitialised;
@@ -1389,19 +1361,19 @@ int sqResolverStatus(void)
 
 /*** trivialities ***/
 
-int sqResolverAddrLookupResultSize(void)	{ return strlen(lastName); }
-int sqResolverError(void)			{ return lastError; }
-int sqResolverLocalAddress(void)		{ return nameToAddr(localHostName); }
-int sqResolverNameLookupResult(void)		{ return lastAddr; }
+sqInt sqResolverAddrLookupResultSize(void)	{ return strlen(lastName); }
+sqInt sqResolverError(void)			{ return lastError; }
+sqInt sqResolverLocalAddress(void)		{ return nameToAddr(localHostName); }
+sqInt sqResolverNameLookupResult(void)		{ return lastAddr; }
 
-void sqResolverAddrLookupResult(char *nameForAddress, int nameSize)
+void sqResolverAddrLookupResult(char *nameForAddress, sqInt nameSize)
 {
   memcpy(nameForAddress, lastName, nameSize);
 }
 
 /*** name resolution ***/
 
-void sqResolverStartNameLookup(char *hostName, int nameSize)
+void sqResolverStartNameLookup(char *hostName, sqInt nameSize)
 {
   int len= (nameSize < MAXHOSTNAMELEN) ? nameSize : MAXHOSTNAMELEN;
   memcpy(lastName, hostName, len);

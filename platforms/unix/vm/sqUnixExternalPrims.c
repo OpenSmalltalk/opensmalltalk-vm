@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2005-03-18 08:28:46 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-03-28 02:01:17 by piumarta on graves.hpl.hp.com
  */
 
 #define DEBUG 0
@@ -191,7 +191,7 @@ static void *tryLoadingPath(char *varName, char *pluginName)
 /*  Find and load the named module.  Answer 0 if not found (do NOT fail
  *  the primitive!).
  */
-sqModule ioLoadModule(char *pluginName)
+void *ioLoadModule(char *pluginName)
 {
   void *handle= 0;
 
@@ -203,7 +203,7 @@ sqModule ioLoadModule(char *pluginName)
       else
 	{
 	  dprintf((stderr, "loaded: <intrinsic>\n"));
-	  return (sqModule)handle;
+	  return handle;
 	}
     }
 
@@ -226,11 +226,11 @@ sqModule ioLoadModule(char *pluginName)
 	dprintf((stderr, "ioLoadModule plugins = %s\n                path = %s\n",
 		 squeakPlugins, path));
 	if ((handle= tryLoading("", path)))
-	  return (sqModule)handle;
+	  return handle;
 	*out++= '/';
 	*out= '\0';
 	if ((handle= tryLoading(path, pluginName)))
-	  return (sqModule)handle;
+	  return handle;
       }
 
   if ((   handle= tryLoading(    "./",			pluginName))
@@ -242,7 +242,7 @@ sqModule ioLoadModule(char *pluginName)
       || (handle= tryLoading(VM_X11DIR"/",		pluginName))
 #    endif
       )
-    return (sqModule)handle;
+    return handle;
 
 #if defined(DARWIN)
   // look in the bundle contents dir
@@ -256,7 +256,7 @@ sqModule ioLoadModule(char *pluginName)
 	  delim[1]= '\0';
       }
     if ((handle= tryLoading(contents, pluginName)))
-      return (sqModule)handle;
+      return handle;
   }
   // the following is needed so that, for example, the FFI can pick up
   // things like <cdecl: 'xyz' module: 'CoreServices'>
@@ -275,7 +275,7 @@ sqModule ioLoadModule(char *pluginName)
 	char path[NAME_MAX];
 	sprintf(path, "%s/%s.framework/", *framework, pluginName);
 	if ((handle= tryLoading(path, pluginName)))
-	  return (sqModule)handle;
+	  return handle;
       }
   }
 #endif
@@ -286,10 +286,10 @@ sqModule ioLoadModule(char *pluginName)
 #  ifdef HAVE_SNPRINTF
     snprintf(pluginDir, sizeof(pluginDir), "%s%s/.libs/", vmPath, pluginName);
 #  else
-    sprintf(buf, "%s%s/.libs/", vmPath, pluginDir);
+    sprintf(pluginDir, "%s%s/.libs/", vmPath, pluginName);
 #  endif
     if ((handle= tryLoading(pluginDir, pluginName)))
-      return (sqModule)handle;
+      return handle;
   }
 
 #if DEBUG
@@ -302,7 +302,7 @@ sqModule ioLoadModule(char *pluginName)
 /*  Find a function in a loaded module.  Answer 0 if not found (do NOT
  *  fail the primitive!).
  */
-sqFunction ioFindExternalFunctionIn(char *lookupName, sqModule moduleHandle)
+void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 {
   char buf[256];
   void *fn;
@@ -313,7 +313,7 @@ sqFunction ioFindExternalFunctionIn(char *lookupName, sqModule moduleHandle)
   sprintf(buf, "%s", lookupName);
 #endif
 
-  fn= dlsym((void *)moduleHandle, buf);
+  fn= dlsym(moduleHandle, buf);
 
   dprintf((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
 	   lookupName, moduleHandle));
@@ -323,10 +323,10 @@ sqFunction ioFindExternalFunctionIn(char *lookupName, sqModule moduleHandle)
       && strcmp(lookupName, "shutdownModule")
       && strcmp(lookupName, "setInterpreter")
       && strcmp(lookupName, "getModuleName"))
-    fprintf(stderr, "ioFindExternalFunctionIn(%s, %d):\n  %s\n",
+    fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
 	    lookupName, moduleHandle, dlerror());
 
-  return (sqFunction)fn;
+  return fn;
 }
 
 
@@ -334,9 +334,9 @@ sqFunction ioFindExternalFunctionIn(char *lookupName, sqModule moduleHandle)
 /*  Free the module with the associated handle.  Answer 0 on error (do
  *  NOT fail the primitive!).
 */
-sqInt ioFreeModule(sqModule moduleHandle)
+sqInt ioFreeModule(void *moduleHandle)
 {
-  if (dlclose((void *)moduleHandle))
+  if (dlclose(moduleHandle))
     {
       dprintf((stderr, "ioFreeModule(%d): %s\n", moduleHandle, dlerror()));
       return 0;
@@ -349,17 +349,17 @@ sqInt ioFreeModule(sqModule moduleHandle)
 
 
 
-sqModule ioLoadModule(char *pluginName)
+void *ioLoadModule(char *pluginName)
 {
   return 0;
 }
 
-sqModule ioFindExternalFunctionIn(char *lookupName, sqModule moduleHandle)
+void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 {
   return 0;
 }
 
-sqInt ioFreeModule(sqModule moduleHandle)
+sqInt ioFreeModule(void *moduleHandle)
 {
   return 0;
 }

@@ -1,8 +1,8 @@
 /* sqUnixCharConv.h -- conversion between character encodings
  * 
- * Author: Ian.Piumarta@INRIA.Fr
+ * Author: Ian.Piumarta@squeakland.org
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2003-03-03 03:52:52 by piumarta on emilia.inria.fr
+ * Last edited: 2005-03-17 21:11:25 by piumarta on squeak.hpl.hp.com
  */
 
 #ifndef __sqUnixCharConv_h

@@ -3,7 +3,7 @@
 AC_MSG_CHECKING([for Objective C support])
 
 case $host_os in
-  darwin*)
+  darwin-DSIABLED*)
     AC_MSG_RESULT(yes)
     ;;
   *)

@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2005-03-17 21:27:29 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-03-26 19:11:28 by piumarta on graves.hpl.hp.com
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -664,7 +664,7 @@ static void dspHandler(int fd, void *data, int flags)
 /*** sound output ***/
 
 
-static int sound_Stop(void)
+static sqInt sound_Stop(void)
 {
   PRINTF(("sound: stop\n"));
   if (out)
@@ -685,7 +685,7 @@ static int sound_Stop(void)
 }
 
 
-static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   int nChannels= (stereo ? 2 : 1);
   PRINTF(("sound: start\n"));
@@ -729,7 +729,7 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIn
 }
 
 
-static int sound_AvailableSpace(void)
+static sqInt sound_AvailableSpace(void)
 {
   int bytes= 0;
 
@@ -753,20 +753,20 @@ static int sound_AvailableSpace(void)
 }
 
 
-static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)
 {
   return success(false);
 }
 
 
-static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
 {
   assert(out->write != 0);
   return out->write(out, pointerForOop(arrayIndex) + startIndex * out->sq.bpf, frameCount);
 }
 
 
-static int sound_PlaySilence(void)
+static sqInt sound_PlaySilence(void)
 {
   if (!out) return success(false);
   return out->sq.fragSize;
@@ -776,7 +776,7 @@ static int sound_PlaySilence(void)
 /* sound input */
 
 
-static int sound_StopRecording(void)
+static sqInt sound_StopRecording(void)
 {
   PRINTF(("sound: stop recording\n"));
   if (in)
@@ -797,7 +797,7 @@ static int sound_StopRecording(void)
 }
 
 
-static int sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex)
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   int nChannels= (stereo ? 2 : 1);
   PRINTF(("sound: start recording\n"));
@@ -831,7 +831,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   /*PRINTF(("record %d %d %d\n", buf, startSliceIndex, bufferSizeInBytes));*/
 
@@ -990,7 +990,7 @@ static void sound_Volume(double *left, double *right)
  * levels should always be left to an external mixer program.  The
  * option `-nommixer' therefore disables all writing to the mixer
  * device for those of us who object to Squeak abritrarily resetting
- * out carefully adjusted input levels whenever sound recording is
+ * our carefully-adjusted input levels whenever sound recording is
  * started.
  */
 static void sound_SetVolume(double left, double right)
@@ -1010,6 +1010,7 @@ static void sound_SetVolume(double left, double right)
 }
 
 
+#if 0
 static int sound_RecordLevel(int *level)
 {
   if (mixer || (mixer= mixerOpen(&dev_mixer)))
@@ -1025,9 +1026,10 @@ static int sound_RecordLevel(int *level)
     }
   return success(false);
 }
+#endif
 
 
-static int sound_SetRecordLevel(int level)
+static sqInt sound_SetRecordLevel(sqInt level)
 {
   if (noSoundMixer) return 1;
   if (mixer || (mixer= mixerOpen(&dev_mixer)))

@@ -52,7 +52,10 @@ Part 2 -- Building the HARD way
 2.4 Configure the build by running the 'configure' script
     in the 'platforms/unix/config' directory:
 
-        $ ../platforms/unix/config/configure
+        $ ../platforms/unix/config/configure --with-src=srcNN
+
+    where srcNN is src32 or src64, depending on whether you
+    want to build a 32- or 64-bit VM.
 
 2.5 Build the VM and plugins and (if you like) install them.
 
@@ -60,4 +63,4 @@ Part 2 -- Building the HARD way
         $ sudo make install
 
 ----
-Last edited: 2005-03-16 22:31:53 by piumarta on squeak.hpl.hp.com
+Last edited: 2005-03-31 14:55:38 by piumarta on margaux.hpl.hp.com

@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2005-03-19 21:06:30 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-03-28 22:47:17 by piumarta on emilia.local
  */
 
 #ifndef __sq_config_h
@@ -117,11 +117,6 @@
 #undef	HAVE_DYLD
 
 #undef	HAVE_LANGINFO_CODESET
-
-#undef	HAVE_ALLOCA
-#undef	HAVE_ALLOCA_H
-
-#undef	HAVE_UNSETENV
 
 #undef	HAVE_ALLOCA
 #undef	HAVE_ALLOCA_H

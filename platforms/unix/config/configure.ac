@@ -37,28 +37,30 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2005-03-22 13:33:11 by piumarta on emilia.local
+# Last edited: 2005-03-31 15:15:28 by piumarta on margaux.hpl.hp.com
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,8a,1, 3,8g,6548)
+AC_VM_VERSION(3,8a,2, 3,8g,6548)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
 
 AC_ARG_WITH(src,
 [  --with-src=dir          generated src directory [default=src]],
-[ vmmdir="${topdir}/${with_src}"],
-[ vmmdir="${topdir}/src"])
+[ vmmsrc="${with_src}"],
+[ vmmsrc="src"])
 
-if test "${vmmdir}" = "${topdir}/src"; then
-  if test ! -d "${vmmdir}"; then
-    if test -d "${topdir}/platforms/unix/src"; then
-      vmmdir="${topdir}/platforms/unix/src"
-      AC_MSG_RESULT([using built-in src directory])
-    fi
+vmmdir="${topdir}/${vmmsrc}"
+
+if test ! -d "${topdir}/${vmmsrc}"; then
+  if test -d "${topdir}/platforms/unix/${vmmsrc}"; then
+    vmmdir="${topdir}/platforms/unix/${vmmsrc}"
+    AC_MSG_RESULT([using built-in src directory])
   fi
 fi
+
+AC_MSG_RESULT(${vmmdir})
 
 # Check the generated src dir looks sane
 
@@ -161,7 +163,7 @@ AC_PROG_LIBTOOL
 
 # Configured headers (pretty much everybody needs blddir and vm)
 
-INCLUDES="-I${blddir} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm"
+INCLUDES="-I${blddir} -I${topdir}/platforms/unix/vm -I${topdir}/platforms/Cross/vm -I${vmmdir}/vm"
 
 AC_SUBST(INCLUDES)
 
@@ -176,6 +178,11 @@ AC_HAVE_HEADERS(features.h)
 AC_HAVE_HEADERS(alloca.h) # SunOS5
 AC_HEADER_TIME
 AC_HEADER_DIRENT
+
+if test -f "${vmmdir}/vm/interp.h"; then
+  AC_DEFINE(HAVE_INTERP_H, 1)
+fi
+AC_SUBST(HAVE_INTERP_H)
 
 AC_STRUCT_TIMEZONE
 

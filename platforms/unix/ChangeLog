@@ -1,5 +1,69 @@
 ----------------------------------------------------------------
 
+2005-03-31  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* 3.8a-2 released.
+
+2005-03-31  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* platforms/Cross/plugins/SocketPlugin/SocketPlugin.h: 64-bit clean.
+	* plugins/SocketPlugin/sqUnixSocket.c: 64-bit clean.
+
+----------------------------------------------------------------
+
+2005-03-29  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* Initial 64-bit merge complete.
+
+2005-03-29  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* platforms/Cross/plugins/Mpeg3Plugin/libmpeg/video/motion.c (mpeg3video_calc_dmv):
+	Don't inline on Solaris.
+
+	* platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c: Fix
+	unaligned accesses to 64-bit members of SQFile.
+
+	* platforms/Cross/vm/sqVirtualMachine.c: 64-bit cleaned.
+
+	* platforms/Cross/vm/sqMemoryAccess.h: Conditionally include
+	"interp.h"; warn obnoxiously if missing.
+
+	* platforms/Cross/vm/sq.h: Thorough cleanup.
+
+	* plugins/SecurityPlugin/sqUnixSecurity.c (ioInitSecurity):
+	Obey SQUEAK_USERDIR if set.
+
+	* vm/sqUnixMemory.c (sqAllocateMemory): Answer an oop (not a
+	pointer).
+
+	* vm/sqPlatformSpecific.h: Allocation anwsers an oop (not a
+	pointer); undefine prim dispatch nonsense left over from sq.h;
+	declare alloca().
+
+	* vm/sqUnixExternalPrims.c: Fix uses of sprintf() when snprintf()
+	missing.  Cosmetic improvements.
+
+	* vm-sound-OSS/sqUnixSoundOSS.c: 64-bit cleaned.
+
+	* config/Makefile.install (install-doc): Deal with compressed
+	manpages.
+
+	* config/acinclude.m4 (ac_optflags): Compiler flags default to
+	'-O'.
+
+	* config/config.h.in: Set HAVE_ALLOCA, HAVE_ALLOCA_H, and
+	HAVE_UNSETENV.
+
+	* config/configure.ac: Detect alloca() and interp.h; add src/vm to
+	INCLUDES.
+
+	* config/gnuify: Use 64-bit types.
+
+	* Cross/plugins/Mpeg3Plugin/libmpeg/video (mpeg3video_calc_dmv):
+	don't inline on Solaris.
+
+----------------------------------------------------------------
+
 2005-03-19  Ian Piumarta  <ian.piumarta@squeakland.org>
 
 	* 3.7-7 Released.

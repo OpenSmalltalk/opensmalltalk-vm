@@ -5,7 +5,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 #
-# Last edited: 2005-03-09 03:01:59 by piumarta on emilia.local
+# Last edited: 2005-03-31 12:37:58 by piumarta on margaux.hpl.hp.com
 
 #   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
@@ -69,6 +69,13 @@ BEGIN {
   next;
 }
 
+(stage == 0) && /^sqInt interpret\(void\) \{/ {
+# print "interpret: adding static register assignments" > "/dev/stderr";
+  stage= 1;
+  print;
+  next;
+}
+
 (stage == 1) && /^    char\* localIP;/ {
   print "    register char* localIP IP_REG;";
   next;
@@ -85,6 +92,11 @@ BEGIN {
 }
 
 (stage == 1) && /^    int currentBytecode;/ {
+  print "    register int currentBytecode CB_REG;";
+  next;
+}
+
+(stage == 1) && /^    sqInt currentBytecode;/ {
   print "    register int currentBytecode CB_REG;";
   next;
 }
@@ -117,6 +129,17 @@ BEGIN {
 }
 
 (stage == 3) && /^int primitiveResponse\(/ {
+  print;
+# print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
+  print "    PRIM_TABLE;\n";
+# print "primitiveResponse: rewriting case labels" > "/dev/stderr";
+  stage= 4;
+  FS=" ";
+# FS="[ 	:]+";
+  next;
+}
+
+(stage == 3) && /^sqInt primitiveResponse\(/ {
   print;
 # print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
   print "    PRIM_TABLE;\n";

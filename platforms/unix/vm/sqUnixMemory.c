@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2005-03-17 22:30:25 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-03-31 15:53:07 by piumarta on margaux.hpl.hp.com
  */
 
 /* Note:
@@ -152,7 +152,7 @@ void *uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
 
   if (!heap)
     {
-      fprintf(stderr, "uxAllocateMemory: failed to allocate at least %d bytes)\n", minHeapSize);
+      fprintf(stderr, "uxAllocateMemory: failed to allocate at least %lld bytes)\n", (long long)minHeapSize);
       useMmap= 0;
       return malloc(desiredHeapSize);
     }
@@ -257,12 +257,12 @@ sqInt uxMemoryExtraBytesLeft(sqInt includingSwap)			{ return 0; }
 
 #if defined(SQ_IMAGE32) && defined(SQ_HOST64)
 
-void *sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
+sqInt sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
 {
   sqMemoryBase= uxAllocateMemory(minHeapSize, desiredHeapSize);
   if (!sqMemoryBase) return 0;
   sqMemoryBase -= SQ_FAKE_MEMORY_OFFSET;
-  return (void *)SQ_FAKE_MEMORY_OFFSET;
+  return (sqInt)SQ_FAKE_MEMORY_OFFSET;
 }
 
 sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta)
@@ -282,9 +282,9 @@ sqInt sqMemoryExtraBytesLeft(sqInt includingSwap)
 
 #else
 
-void *sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)	{ return uxAllocateMemory(minHeapSize, desiredHeapSize); }
-sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta)			{ return (sqInt)uxGrowMemoryBy((char *)oldLimit, delta); }
-sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta)			{ return (sqInt)uxShrinkMemoryBy((char *)oldLimit, delta); }
+sqInt sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)	{ return (sqInt)(long)uxAllocateMemory(minHeapSize, desiredHeapSize); }
+sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta)			{ return (sqInt)(long)uxGrowMemoryBy((char *)(long)oldLimit, delta); }
+sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta)			{ return (sqInt)(long)uxShrinkMemoryBy((char *)(long)oldLimit, delta); }
 sqInt sqMemoryExtraBytesLeft(sqInt includingSwap)			{ return uxMemoryExtraBytesLeft(includingSwap); }
 
 #endif

@@ -35,7 +35,7 @@
  * 
  * Author: ian.piumarta@squeakland.org
  * 
- * Last edited: 2005-03-19 20:55:19 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-03-28 22:59:56 by piumarta on emilia.local
  */
 
 /* undefine clock macros (these are implemented as functions) */
@@ -51,7 +51,7 @@
 
 #include "sqMemoryAccess.h"
 
-extern void *sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize);
+extern sqInt sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize);
 extern sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta);
 extern sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta);
 extern sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);
@@ -65,6 +65,10 @@ typedef off_t squeakFileOffsetType;
 #define sqFilenameFromStringOpen sqFilenameFromString
 
 extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLength);
+
+#undef dispatchFunctionPointer
+#undef dispatchFunctionPointerOnin
+/* we'd like to untypedef fptr too, but such is life */
 
 #include <unistd.h>
 
