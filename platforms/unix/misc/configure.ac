@@ -38,12 +38,10 @@
 
 # Hacked by Tim Rowledge (tim@sumeru.stanford.edu) to suport VMMaker system
 
-# Hacked further by Lex Spoon (lex@cc.gatech.edu), to start supporting
-# compiling directly from the unix subdirectory, without needing files
-# to be copied around.  Plugin files still get copied....  Also, the file
-# was renamed to configure.ac, to conform to more recent autoconf expectations.
+# Hacked further by Lex Spoon (lex@cc.gatech.edu) for various things.
+# Along the way, it has been updated to a newer autoconf version.
 
-AC_INIT(squeak, 3.1a-4164)
+AC_INIT(squeak, 3.2a-4599)
 AC_CONFIG_SRCDIR(inisqueak.in)
 
 VERSION=$PACKAGE_VERSION
@@ -222,7 +220,7 @@ AC_C_DOUBLE_ORDER
 # Configure files.
 
 AC_CONFIG_HEADER(sqUnixConfig.h)
-$srcdir/util/mkMake $srcdir > make_auto
+$srcdir/util/mkMake $srcdir/.. > make_auto
 AC_SUBST_FILE(make_auto)
 make_auto=make_auto
 AC_OUTPUT(Makefile inisqueak)
