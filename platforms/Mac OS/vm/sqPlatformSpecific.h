@@ -6,10 +6,11 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.9 2002/05/09 19:28:04 johnmci Exp $
+*   RCSID:   $Id: sqPlatformSpecific.h,v 1.10 2002/05/13 19:57:39 johnmci Exp $
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *   May 5th, 2002, JMM added define for PLUGIN for CW
+*   May 12th, 2002, JMM added SQUEAK_BUILTIN_PLUGIN for CW Pro
 *
    How to use this file:
    This file is for general platform-specific macros and declarations.
@@ -25,6 +26,7 @@
 
 #ifdef macintoshSqueak
 //#define PLUGIN
+#define SQUEAK_BUILTIN_PLUGIN
 /* replace the image file manipulation macros with functions */
 #undef sqImageFile
 #undef sqImageFileClose
