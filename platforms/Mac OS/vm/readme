@@ -79,7 +79,7 @@ For comparison, my entries were, respectively:
 
 Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
-	A.	http://www.werdna.com/Gnuifier.1.cs
+	A.	http://www.mucow.com/Gnuifier.1.cs
 	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
 
 		(Gnuifier on:
