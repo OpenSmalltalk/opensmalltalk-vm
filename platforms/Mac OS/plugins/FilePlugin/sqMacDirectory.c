@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.7 2003/02/08 18:26:23 johnmci Exp $
+*   RCSID:   $Id: sqMacDirectory.c,v 1.8 2003/06/20 01:43:45 johnmci Exp $
 *
 *   NOTES: See change log below.
 * 
@@ -23,6 +23,7 @@
  3.2.1B6 Jan 2,2002 JMM make lookup faster
  3.2.2B1 Jan 18th,2002 JMM check macroman, fix issues with squeak file offset
  3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
+ 3.5.1b1 May 20th, 2003 JMM isDirectory ? ENTRY_FOUND versus always found because path could be a file. 
  */
 
 #include "sq.h"
@@ -245,14 +246,14 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 	    spec = lastSpec;
 				*sizeIfFile   = 0;
 		okay = fetchFileInfo(index,&spec,(unsigned char *) name,true,&parentDirectory,isDirectory,creationDate,modificationDate,sizeIfFile,&longFileName);
-		if (okay) {
+		if (okay == noErr) {
 			CopyPascalStringToC((ConstStr255Param) longFileName,name);
 			*nameLength       = strlen(name);
 			*creationDate     = convertToSqueakTime(*creationDate);
 			*modificationDate = convertToSqueakTime(*modificationDate);
 			return ENTRY_FOUND;
 		} else
-			return NO_MORE_ENTRIES;
+			return okay == fnfErr ? NO_MORE_ENTRIES : BAD_PATH;
 	}
 }
 
@@ -440,14 +441,18 @@ static void set_file_type(FSSpec * spec, int binary_file)
 int	__open_file			(const char * name, __std(__file_modes) mode, __std(__file_handle) * handle);
 OSErr __path2fss(const char * pathName, FSSpecPtr spec);
 
+extern OSErr			gSqueakFileLastError; 
 int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
 {
 	FSSpec					spec;
 	OSErr						ioResult;
 	HParamBlockRec	pb;
 	
-
 	ioResult = __path2fss(name, &spec);
+	
+	if (ioResult) 
+		gSqueakFileLastError = ioResult;
+		
 	if (__system7present())												/* mm 980424 */
 	{																	/* mm 980424 */
 		Boolean targetIsFolder, wasAliased;								/* mm 980424 */
@@ -498,6 +503,8 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
 
 		ioResult = FSCreateFileUnicode(&parentFSRef,tokenLength,buffer,kFSCatInfoNone,NULL,NULL,&spec);  
     	if (ioResult)
+			gSqueakFileLastError = ioResult;
+    	if (ioResult)
 	    	return(__io_error);
 	    	
         pb.ioParam.ioNamePtr    = spec.name;
@@ -528,8 +535,12 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
 	{
 		if (!(ioResult = PBHCreateSync(&pb)))
 		{
+			if (ioResult) 
+				gSqueakFileLastError = ioResult;
 			set_file_type(&spec, mode.binary_io);
 			ioResult = PBHOpenDFSync(&pb);  /* HH 10/25/97  was PBHOpenSync */
+			if (ioResult) 
+				gSqueakFileLastError = ioResult;
 		}
 	}
 	else
@@ -542,7 +553,14 @@ int	__open_file(const char * name, __file_modes mode, __file_handle * handle)
 			ioResult = PBSetEOFSync((ParmBlkPtr) &pb);
 			
 			if (ioResult)
+				gSqueakFileLastError = ioResult;
+
+			if (ioResult)
 				PBCloseSync((ParmBlkPtr) &pb);
+		} else {
+			if (ioResult) 
+				gSqueakFileLastError = ioResult;
+
 		}
 	}
 	
