@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32D3D.c,v 1.1 2001/10/24 23:14:23 rowledge Exp $
+*   RCSID:   $Id: sqWin32D3D.c,v 1.2 2002/01/19 22:34:27 slosher Exp $
 *
 *   NOTES:
 *
@@ -1977,7 +1977,7 @@ int d3dRenderVertexBuffer(int handle, int primType, int flags, int texHandle, fl
 /* Win32 specific handling                                                   */
 /*****************************************************************************/
 /*****************************************************************************/
-// static messageHook *preMessageHook = NULL;
+static messageHook *localPreMessageHook = NULL;
 static messageHook nextPreMessageHook = NULL;
 
 /* Message hook for processing Windows messages sent to stWindow */
@@ -2048,14 +2048,14 @@ int d3dInitialize(void)
     DPRINTF(1,(fp,"ERROR: Failed to look up ioFindSurface()\n"));
     return 0;
   }
-  preMessageHook = (messageHook*)
+  localPreMessageHook = (messageHook*)
     interpreterProxy->ioLoadFunctionFrom("preMessageHook","");
-  if(!preMessageHook) {
+  if(!localPreMessageHook) {
     DPRINTF(1,(fp,"ERROR: Failed to look up preMessageHook()\n"));
     return 0;
   }
-  nextPreMessageHook = *preMessageHook;
-  *preMessageHook = (messageHook) d3dMessageHook;
+  nextPreMessageHook = *localPreMessageHook;
+  preMessageHook = (messageHook) d3dMessageHook;
 
   /* Recompute the stWindow rectangle */
   GetClientRect(*theSTWindow,&stWindowRect);

@@ -15,6 +15,9 @@
 #undef putchar
 #include "sqWin32Alloc.h"
 
+#define off_t int
+#define size_t int
+
 #ifdef WIN32_FILE_SUPPORT
 
 #undef sqImageFile

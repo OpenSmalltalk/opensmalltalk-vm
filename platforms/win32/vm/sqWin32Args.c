@@ -1,0 +1,202 @@
+/****************************************************************************
+*   PROJECT: Squeak port for Win32 (NT / Win95)
+*   FILE:    sqWin32Args.c
+*   CONTENT: Command line processing
+*
+*   AUTHOR:  Andreas Raab (ar)
+*   ADDRESS: University of Magdeburg, Germany
+*   EMAIL:   raab@isg.cs.uni-magdeburg.de
+*   RCSID:   $Id: sqWin32Args.c,v 1.1 2002/01/19 22:34:27 slosher Exp $
+*
+*   NOTES:
+*
+*****************************************************************************/
+#include <string.h>
+#include <stdlib.h>
+#include <stdio.h>
+#include <ctype.h>
+#include "sq.h"
+#include "sqWin32Args.h"
+
+static int IsImage(char *name)
+{ FILE *fp;
+  int magic;
+  int byteSwapped(int);
+
+  fp = fopen(name,"rb");
+  if(!fp) return 0; /* not an image */
+  if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic))
+    {
+      fclose(fp);
+      return 0;
+    }
+  fclose(fp);
+  return readableFormat(magic) || readableFormat(byteSwapped(magic));
+}
+
+/* parse a possibly quoted string argument */
+static char *parseStringArg(char *src, char **argPtr)
+{
+  while(*src && *src == ' ') src++; /* skip blanks */
+  if(*src == '"') /* double quoted string */
+    { 
+      (*argPtr)++;
+      do {
+        src++;
+        while(*src && *src != '"') src++;
+      } while(*src && *(src-1) == '\\');
+    }
+  else /* not quoted */
+    { 
+      while(*src && *src != ' ') src++;
+    }
+  if(*src) *(src++) = 0;
+  return src;
+}
+
+/* parse an unsigned integer argument */
+static char *parseUnsignedArg(char *src, unsigned *dst)
+{ char buf[50];
+  char *tmp = buf;
+
+  while(*src && *src == ' ') src++; /* skip blanks */
+  while(isdigit(*src)) *(tmp++) = *(src++);
+  if(*src && *src != ' ') /* strange chars at end */
+    return NULL;
+  if(tmp == buf) /* no numbers found */
+    return NULL;
+  *dst = atol(buf);
+  if(*src) *(src++) = 0;
+  return src;
+}
+
+/* parse a (possibly signed) integer argument */
+static char *parseSignedArg(char *src, int *dst)
+{
+  int negative;
+  unsigned value;
+
+  while(*src && *src == ' ') src++; /* skip blanks */
+  negative = *src == '-';
+  if(negative) src++;
+  src = parseUnsignedArg(src, &value);
+  if(!src) return NULL;
+  if(negative) *dst = 0-(int)value;
+  else *dst = (int) value;
+  return src;
+}
+
+/* parse all arguments meaningful to the VM */
+static char* parseVMArgs(char *string, vmArg args[])
+{ vmArg *arg;
+  int arglen;
+
+  while(1)
+    {
+      if(numOptionsVM >= MAX_OPTIONS)
+        return NULL; /* too many args */
+      while(*string && *string == ' ') string++; /* skip blanks */
+      if(*string != '-') return string; /* image name */
+      vmOptions[numOptionsVM++] = string;
+
+      /* search args list */
+      arg = args;
+      while(arg->type != ARG_NONE)
+        {
+          arglen = strlen(arg->name);
+          if(strncmp(arg->name, string, strlen(arg->name)) == 0)
+            break;
+          arg++;
+        }
+      if(arg->type == ARG_NONE)
+        return string; /* done */
+
+      string += arglen;
+      if(*string) *(string++) = 0;
+
+      while(*string && *string == ' ') string++; /* skip blanks */
+
+      switch(arg->type) {
+        case ARG_FLAG:
+          *(int*)arg->value = 1;
+          break;
+
+        case ARG_STRING:
+          vmOptions[numOptionsVM++] = string;
+          *(char**) arg->value = string;
+          string = parseStringArg(string, (char**) arg->value);
+          if(!string) return NULL;
+          break;
+
+        case ARG_INT:
+          vmOptions[numOptionsVM++] = string;
+          *(char**) arg->value = string;
+          string = parseSignedArg(string, (int*)arg->value);
+          if(!string) return NULL;
+          break;
+
+        case ARG_UINT:
+          vmOptions[numOptionsVM++] = string;
+          *(char**) arg->value = string;
+          string = parseUnsignedArg(string, (unsigned int*)arg->value);
+          if(!string) return NULL;
+          break;
+
+        default:
+          fprintf(stderr,"Unknown option encountered!\n");
+          return NULL;
+       };
+    }
+}
+
+/* parse all arguments starting with the image name */
+static char *parseGenericArgs(char *string)
+{ char *tmpImageName;
+
+  while(*string && *string == ' ') string++; /* skip blanks */
+  /* now get the image name */
+  tmpImageName = string;
+  string = parseStringArg(string, &tmpImageName);
+  if(!string) return NULL; /* parse error */
+
+  if(*tmpImageName && IsImage(tmpImageName))
+    {
+      strcpy(imageName, tmpImageName);
+    }
+  /* The default image names are taken out so we always
+     present a file open dialog when more than one image
+     file is in the current directory */
+#if 0
+  else
+    { /* Not the image name -- use default */
+      if(IsImage(DEFAULT_IMAGE_NAME))
+        strcpy(imageName, DEFAULT_IMAGE_NAME);
+      else if(IsImage(BASE_IMAGE_NAME))
+        strcpy(imageName, BASE_IMAGE_NAME);
+    }
+#endif
+  imageOptions[numOptionsImage++] = imageName;
+  while(string && *string)
+    {
+      if(numOptionsImage > MAX_OPTIONS) return string; /* too many args */
+      while(*string && *string == ' ') string++; /* skip blanks */
+      imageOptions[numOptionsImage++] = string;
+      string = parseStringArg(string, &(imageOptions[numOptionsImage-1]));
+      if(!string) return NULL;
+    }
+  return string;
+}
+
+int parseArguments(char *cmdLine, vmArg args[])
+{
+  /* argv[0] = executable name */
+  vmOptions[numOptionsVM++] = cmdLine;
+  cmdLine = parseStringArg(cmdLine, &(vmOptions[numOptionsVM-1]));
+  if(!cmdLine) return 0;
+  /* parse VM options */
+  cmdLine = parseVMArgs(cmdLine, args);
+  if(cmdLine == NULL) return 0;
+  /* parse image and generic args */
+  cmdLine = parseGenericArgs(cmdLine);
+  return cmdLine != NULL;
+}
