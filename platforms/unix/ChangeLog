@@ -1,4 +1,18 @@
-2003-08-20  Ian Piumarta  <piumarta@felina.inria.fr>
+2003-08-20  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm/glibc.h: Eliminate glibc2.3 dependencies on
+	toupper() and realpath().
+
+	* platforms/unix/config/config.h.in: Include "glibc.h" if
+	HAVE_FEATURES_H.
+
+	* platforms/unix/config/configure.ac: Check for <features.h>.
+
+	* platforms/unix/plugins/SocketPlugin/sqUnixSocket.c: Set socket
+	fd to -1 on close.  Don't attempt to re-close sockets with fd < 0.
+
+	* platforms/unix/vm/aio.c (aioEnable, aioHandle, aioSuspend,
+	aioDisable): Ignore descriptors < 0.
 
 	* platforms/unix/vm-display-fbdev: Framebuffer display driver added.
 
