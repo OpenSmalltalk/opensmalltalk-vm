@@ -243,14 +243,16 @@ int	windowState=	WIN_CHANGED;
 #else
 /* some vars need setting for headless */
 int		 noEvents= 1;		/* 1 to disable new event handling */
-/* XXX is there a reason to allow this? -lex */
+/* XXX is there a reason to turn off event-based input?  what's it matter?
+   feel free to replace this query with an explanation :)  -lex */
 
 #endif  /* !HEADLESS */
 
 /* events */
 
 int inputEventSemaIndex= 0;
-#define IEB_SIZE	 64	/* must be power of 2 */
+#define IEB_SIZE	 64	/* must be power of 2
+				   XXX does it?  why?  -lex  */
 
 sqInputEvent inputEventBuffer[IEB_SIZE];
 int iebIn=  0;	/* next IEB location to write */
@@ -268,9 +270,6 @@ int		 fullScreen= 0;
 struct timeval	 startUpTime;
 int		 noEvents= 0;		/* 1 to disable new event handling */
 
-/* maximum input polling frequency */
-/* LEX -- I took this out -- see comment in ioProcessEvents() */
-#define	MAXPOLLSPERSEC	33
 
 #ifndef HEADLESS
 
@@ -2402,7 +2401,16 @@ int ioShowDisplay(int dispBitsIndex, int width, int height, int depth,
   if (stWindow == 0)
     return 0;
 
-  if(affectedR <= affectedL || affectedT >= affectedB)
+
+  /* Sanitize the input values */
+  if (affectedR >= width)    affectedR= width-1;
+  if (affectedB >= height) affectedB= height-1;
+  if (affectedL >= width) affectedL= width-1;
+  if (affectedT >= height) affectedT= height-1;
+
+  
+  /* quit, if its a trivial region */
+  if(affectedR < affectedL || affectedT > affectedB)
     return 1;
 
   if (!(depth == 1 || depth == 2 || depth == 4
