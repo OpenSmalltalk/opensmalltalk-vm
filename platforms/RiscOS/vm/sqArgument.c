@@ -1,3 +1,16 @@
+/**************************************************************************/
+/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
+/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqArgument.c                                     */
+/*  handle commandline arguments                                          */
+/**************************************************************************/
+
+/* To recompile this reliably you will need    */           
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
+/* and a little luck                           */
 #include <string.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -17,10 +30,14 @@ static char* nextOption() {
 
 
 static int IsImage(char *name) {
-/* check the named file to see if it is a decent candidate for a Squeak image file. Remember to check both the very beginning of the file and 512 bytes into it, just in case it was written from a unix machine - which adds a short extra header */
-	FILE *fp;
-	int magic;
-	int byteSwapped(int);
+/* check the named file to see if it is a decent candidate for a Squeak image
+ * file. Remember to check both the very beginning of the file and 512 bytes
+ * into it, just in case it was written from a unix machine - which adds a
+ * short extra header
+ */
+FILE *fp;
+int magic;
+int byteSwapped(int);
 extern int readableFormat(int imageVersion);
 
 	fp = fopen(name,"rb");
@@ -64,9 +81,9 @@ extern int readableFormat(int imageVersion);
 
 /* parse an unsigned integer argument */
 static char *parseUnsignedArg(char *src, unsigned *dst) {
-	char buf[50];
-	char *tmp = buf;
-	int factor = 1;
+char buf[50];
+char *tmp = buf;
+int factor = 1;
 
 	while(isdigit(*src)) *(tmp++) = *(src++);
 
@@ -84,8 +101,8 @@ static char *parseUnsignedArg(char *src, unsigned *dst) {
 
 /* parse a (possibly signed) integer argument */
 static char *parseSignedArg(char *src, int *dst) {
-	int negative;
-	unsigned value;
+int negative;
+unsigned value;
 
 	negative = *src == '-';
 	if(negative) src++;
@@ -98,9 +115,9 @@ static char *parseSignedArg(char *src, int *dst) {
 
 /* parse all arguments meaningful to the VM */
 static int parseVMArgs(vmArg args[]) {
-	vmArg *arg;
-	int arglen;
-	char * string;
+vmArg *arg;
+int arglen;
+char * string;
 
 	while(1)
 		{
@@ -126,7 +143,9 @@ static int parseVMArgs(vmArg args[]) {
 			if(arg->type == ARG_NONE)
 				return NULL; /* done */
 
-			// if the char at the end of the option name is ':', null it out and skip ahead one
+			/* if the char at the end of the option name is ':',
+			 * null it out and skip ahead one
+			 */
 			string += (arglen-1);
 			if(*string== ':') *(string++) = 0;
 
@@ -161,9 +180,9 @@ static int parseVMArgs(vmArg args[]) {
 
 /* parse all arguments starting with the image name */
 static int parseGenericArgs(void) {
-	char *string;
-	extern char vmPath[];
-	extern void decodePath(char*, char*);
+char *string;
+extern char vmPath[];
+extern void decodePath(char*, char*);
 
 	if (!(string = nextOption()) ) {
 		// no options left, so can only use default image name
@@ -188,8 +207,10 @@ static int parseGenericArgs(void) {
 
 	// now go through any more options
 	while((string = nextOption()) && *string) {
-			if(numOptionsImage > MAX_OPTIONS) return NULL; /* too many args */
-			while(*string && *string == ' ') string++; /* skip blanks */
+			if(numOptionsImage > MAX_OPTIONS)
+				return NULL; /* too many args */
+			while(*string && *string == ' ')
+				string++; /* skip blanks */
 			imageOptions[numOptionsImage++] = string;
 			if(!string) return NULL;
 	}
@@ -198,12 +219,12 @@ static int parseGenericArgs(void) {
 
 
 int parseArguments(char *argv[], int argc, vmArg args[]) {
-	extern char vmPath[];
-	extern void decodeVMPath(char*);
-	numOptionsVM = 0;
-	numOptionsImage = 0;
-	numOptions = argc;
-	optionArray = &argv[0];
+extern char vmPath[];
+extern void decodeVMPath(char*);
+numOptionsVM = 0;
+numOptionsImage = 0;
+numOptions = argc;
+optionArray = &argv[0];
 
 	/* argv[0] = executable name */
 	decodeVMPath( nextOption());

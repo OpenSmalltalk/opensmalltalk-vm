@@ -1,15 +1,15 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
-/*                       sqRPCEvents.c                                     */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqRPCEvents.c                                    */
 /* OS interface stuff                                                     */
 /**************************************************************************/
 
 /* To recompile this reliably you will need    */           
-/* Jonathon Coxhead's OSLib,                   */
-/* AcornC_C++, the Acorn sockets libs          */
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
@@ -36,34 +36,13 @@ extern unsigned int * displaySpriteBits;
 
 /*** Variables -- Event Recording ***/
 
-// TPR ultra simplistic event queue stuff
-/* For now events will all be 5 words -
-	event type
-	mouse x
-	mouse y
-	button state
-	keypress
- so that it is easy to handle the circular buffer.
- When an event is pulled, the keyBuf will be flushed, to hopefully avoid
- the blast of chars when moving away from a Morphic window.
- When a keyBuf entry is pulled, the event Q will likewise be flushed  */
+int inputSemaphoreIndex = 0;
 #define EVENTQ_SIZE 1024
-struct SQEvent {
-	int type;
-	int mx;
-	int my;
-	int b;
-	int k;
-};
-struct SQEvent eventBuf[EVENTQ_SIZE ]; /* circular buffer */
+sqInputEvent eventBuf[EVENTQ_SIZE ]; /* circular buffer */
 int eventBufGet = 0;
 int eventBufPut = 0;
-#define SQ_KEYPRESS 1
-#define SQ_MOUSE_DOWN 2
-#define SQ_MOUSE_UP 3
-#define SQ_MOUSE_MOVE 4
 
-
+/* older polling stuff still needs supporting */
 #define KEYBUF_SIZE 64
 int	keyBuf[KEYBUF_SIZE];	/* circular buffer */
 int	keyBufGet = 0;		/* index of next item of keyBuf to read */
@@ -250,6 +229,7 @@ extern	 void claimCaret(wimp_pointer * wblock);
 extern	 void receivedClaimEntity(wimp_message * wblock);
 extern	 void receivedDataRequest(wimp_message * wmessage);
 extern	 void receivedDataSave(wimp_message * wblock);
+extern	 void receivedDataSaveAck(wimp_message * wblock);
 	 void eventBufAppendKey( int key, int buttons, int x, int y);
 	 void eventBufAppendMouseDown(int buttons, int x, int y);
 	 void eventBufAppendMouseUp(int buttons, int x, int y);
@@ -279,7 +259,7 @@ os_error *e;
 int kbdstate, pollDelay;
 
 	pollDelay = microSecondsToDelay /* * CLOCKS_PER_SEC / 1000000 */
-					>> 14 /* will always give small answer, but good enough */;
+			>> 14 /* will always give small answer, but good enough */;
 	if ( mouseButtonDown | windowActive) {
 		/* if the window is active or mouse buttons are supposedly down, */
 		/* check for current state */
@@ -346,11 +326,6 @@ int kbdstate, pollDelay;
 				DoNothing(); break;
 			case wimp_SCROLL_REQUEST		:
 				DoNothing(); break;
-			// dont use gain/lose when using clipboard protocols
-			//case wimp_LOSE_CARET			:
-			//	DeactivateWindow(&wimpPollBlock); break;
-			//case wimp_GAIN_CARET			:
-			//	ActivateWindow(&wimpPollBlock); break;
 			case wimp_USER_MESSAGE			:
 				UserMessage(&wimpPollBlock.message); break;
 			case wimp_USER_MESSAGE_RECORDED		:
@@ -688,30 +663,40 @@ void MouseButtons( wimp_pointer * wblock) {
 }
 
 void KeyPressed( wimp_key * wblock) {
-/* deal with a keypress. This is complicated by the RiscOS habit of "helpfully" cinverting keycodes into fully processed key events. We do not even get notification of most alt presses, for example. We also have to convert to Mac numbering in order to satisfy the image code */
+/* deal with a keypress. This is complicated by the RiscOS habit of "helpfully"
+ * converting keycodes into fully processed key events. We do not even get
+ * notification of most alt presses, for example. We also have to convert to
+ * Mac numbering in order to satisfy the image code
+ */
 
 	int keystate, testkey;
 
-	// basically keystate will be the event idea of the key pressed
+	/* basically keystate will be the event idea of the key pressed */
 	keystate = wblock->c;
 
 	if (keystate == getInterruptKeycode() || ( (keystate == wimp_KEY_PRINT)) ) {
-		// The image tends to set the interruptKeycode to suit the Mac cmd-. nonsense
-		// this is decidedly not Acorn compatible, so check for printscrn/SysRq as well
-		// interrupt is a meta-event; do not report it as a keypress
+		/* The image tends to set the interruptKeycode to suit the Mac
+		 * cmd-. nonsense this is decidedly not Acorn compatible, so
+		 * check for printscrn/SysRq as well
+		 * interrupt is a meta-event; do not report it as a keypress
+		 */
 		setInterruptPending(true); 
 		setInterruptCheckCounter(0);
 		return;
 	}
 
 	if ( buttonState & 0x70) {
-		// if a metakey is pressed, try looking up the magic number and dealing with a metakey situation
+		/* if a metakey is pressed, try looking up the magic number
+		 * and dealing with a metakey situation
+		 */
 		xosbyte1(osbyte_SCAN_KEYBOARD_LIMITED , 0, 0, &testkey);
-		// if a key is scanned ok and it maps, replace the keystate with the result
+		/* if a key is scanned ok and it maps, replace the keystate
+		 * with the result
+		 */
 		if ( (testkey != 0xFF) && (testkey = keymap[testkey]) )
 			keystate = testkey;
 	} else {
-		// no metakey, so check for special key values.
+		/* no metakey, so check for special key values. */
 		switch(keystate) {
 			case wimp_KEY_TAB: keystate = 0x09; break;
 			case wimp_KEY_LEFT: keystate = MacLeftCursor; break;
@@ -728,6 +713,71 @@ void KeyPressed( wimp_key * wblock) {
 	eventBufAppendKey((keystate & 0xFF), buttonState, savedMousePosition.x, savedMousePosition.y);
 }
 
+/* set an asynchronous input semaphore index for events */
+int ioSetInputSemaphore(int semaIndex) {
+	if( semaIndex < 1)
+		return primitiveFail();
+	inputSemaphoreIndex = semaIndex;
+	return true;
+}
+
+void signalInputEvent(void) {
+	if(inputSemaphoreIndex > 0)
+		signalSemaphoreWithIndex(inputSemaphoreIndex);
+}
+
+/* Event buffer functions */
+
+#define iebEmptyP()	(eventBufPut == eventBufGet)
+#define iebAdvance(P)	(P= ((P + 1) % EVENTQ_SIZE))
+
+sqInputEvent *eventBufAppendEvent(int  type) {
+/* code stolen from ikp's unix code. blame him if it doesn't work.
+ * complement me if it does.
+ */
+	sqInputEvent *evt= &eventBuf[eventBufPut];
+	iebAdvance(eventBufPut);
+	if (iebEmptyP()) {
+		/* overrun: discard oldest event */
+		iebAdvance(eventBufGet);
+	}
+	evt->type= type;
+	evt->timeStamp= ioMSecs();
+	signalInputEvent();
+	return evt;
+
+}
+
+void eventBufAppendKey( int keyValue, int buttons, int x, int y) {
+/* add an event record for a keypress */
+
+	eventBufAppendEvent( EventTypeKeyboard);
+}
+
+void eventBufAppendMouseDown( int buttons, int x, int y) {
+/* add an event record for a mouse press */
+	eventBufAppendEvent( EventTypeMouse);
+}
+
+void eventBufAppendMouseUp( int buttons, int x, int y) {
+/* add an event record for a mouse up */
+	eventBufAppendEvent( EventTypeMouse);
+}
+
+void eventBufAppendMouseMove( int x, int y) {
+/* add an event record for a mouse up */
+	eventBufAppendEvent( EventTypeMouse);
+}
+
+
+
+/* retrieve the next input event from the OS */
+int ioGetNextEvent(sqInputEvent *evt) {
+	HandleEvents(0);
+	primitiveFail();
+}
+
+/* key buffer functions to support older images */
 void keyBufAppend(int keystate) {
 	keyBuf[keyBufPut] = keystate;
 	keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
@@ -736,100 +786,6 @@ void keyBufAppend(int keystate) {
 		keyBufOverflows++;
 	}
 }
-
-void eventBufAppendEvent(int  type, int mouseX, int mouseY, int buttons, int key) {
-/* append an event to the queue. DO NOT signal the input semaphore here since the 
- * HandleEvents() routine is called from place where that causes segfaults!!
- * Leave the signalling to the ioEventsCount() routine.
- */
-int peek;
-	/* first check there is room on the queue */
-	peek = (eventBufPut + 1) % EVENTQ_SIZE;
-	if ( peek == eventBufGet) {/* no room, drop the whole thing */
-		return;
-	}
-	/* now add the event to the queue - */
-
-	/* if the previous event is still on the q and was a mouse move, just overwrite it */
-	if ( (type == SQ_MOUSE_MOVE) && (eventBufPut != eventBufGet)) {
-		int prevEvent;
-		prevEvent = eventBufPut -1;
-		if ( prevEvent == -1)
-			prevEvent = EVENTQ_SIZE -1 ; /* wrap around */
-		if ( eventBuf[prevEvent].type == SQ_MOUSE_MOVE ) {
-			/* overwrite previous event data */
-			eventBuf[eventBufPut].type = type;
-			eventBuf[eventBufPut].mx = mouseX;
-			eventBuf[eventBufPut].my = mouseY;
-			eventBuf[eventBufPut].b = buttons;
-			eventBuf[eventBufPut].k = key;
-			return;
-		}
-	}
-
-	eventBuf[eventBufPut].type = type;
-	eventBuf[eventBufPut].mx = mouseX;
-	eventBuf[eventBufPut].my = mouseY;
-	eventBuf[eventBufPut].b = buttons;
-	/* the key value NOT the 12bit keystate! */
-	eventBuf[eventBufPut].k = key;
-
-	/* finally advance the eventBufPut pointer */
-	eventBufPut = peek;
-
-
-}
-
-void eventBufAppendKey( int keyValue, int buttons, int x, int y) {
-/* add an event record for a keypress */
-
-	eventBufAppendEvent( SQ_KEYPRESS, x, y, buttons, keyValue);
-}
-
-void eventBufAppendMouseDown( int buttons, int x, int y) {
-/* add an event record for a mouse press */
-	eventBufAppendEvent( SQ_MOUSE_DOWN, x, y, buttons, 0);
-}
-
-void eventBufAppendMouseUp( int buttons, int x, int y) {
-/* add an event record for a mouse up */
-	eventBufAppendEvent( SQ_MOUSE_UP, x, y, buttons, 0);
-}
-
-void eventBufAppendMouseMove( int x, int y) {
-/* add an event record for a mouse up */
-	eventBufAppendEvent( SQ_MOUSE_MOVE, x, y, buttonState, 0);
-}
-
-int ioLoadNextEvent( int arrayPtr) {
-/* fill the array with
- * 	event type
- * 	mouse pos x
- * 	mouse pos y
- * 	button state
- * 	keypress
- */
-extern int nilObject (void);
-	if ( eventBufGet == eventBufPut ) {
-		/* no events left to fetch, so put nil in at least the type slot of the array*/
-		((int*)arrayPtr)[0] = nilObject();
-		((int*)arrayPtr)[1] = nilObject();
-		((int*)arrayPtr)[2] = nilObject();
-		((int*)arrayPtr)[3] = nilObject();
-		((int*)arrayPtr)[4] = nilObject();
-		return false;
-	}
-#define INT_OBJ(val) (((val) <<1) | 1)
-	((int*)arrayPtr)[0] = INT_OBJ(eventBuf[eventBufGet].type);
-	((int*)arrayPtr)[1] = INT_OBJ(eventBuf[eventBufGet].mx);
-	((int*)arrayPtr)[2] = INT_OBJ(eventBuf[eventBufGet].my);
-	((int*)arrayPtr)[3] = INT_OBJ(eventBuf[eventBufGet].b);
-	((int*)arrayPtr)[4] = INT_OBJ(eventBuf[eventBufGet].k);
-
-	eventBufGet = (eventBufGet+1) % EVENTQ_SIZE;
-	return true;
-}
-
 
 int nextKeyPressOrNil(void) {
 /*  return the next keypress in the buffer, or -1 if nothing there */
@@ -853,21 +809,80 @@ int keystate;
 	}
 	return keystate;
 }
+int ioGetButtonState(void) {
+	ioProcessEvents();  /* process all pending events */
+	return buttonState;
+}
+
+int ioGetKeystroke(void) {
+	ioProcessEvents();  /* process all pending events */
+	return nextKeyPressOrNil();
+}
+
+int ioMousePoint(void) {
+/* return the mouse point as 16bits of x | 16bits of y */
+	ioProcessEvents();  /* process all pending events */
+	return (savedMousePosition.x << 16 | savedMousePosition.y & 0xFFFF);
+}
+
+int ioPeekKeystroke(void) {
+	ioProcessEvents();  /* process all pending events */
+	return peekKeyPressOrNil();
+}
+
+/*** I/O Primitives ***/
+
+int ioProcessEvents(void) {
+static clock_t nextPollTick = 0;
+clock_t currentTick;
+
+//	if( (currentTick = clock()) >= nextPollTick) {
+		HandleEvents(0 );
+//		nextPollTick = currentTick + 1;
+//	}
+	return true; 
+}
+
+int ioRelinquishProcessorForMicroseconds(int microSeconds) {
+/* This operation is platform dependent. On the Mac, it simply calls
+ * HandleEvents(), which gives other applications a chance to run.
+ * Here, we use microSeconds as the parameter to HandleEvents, so that wimpPollIdle
+ * gets a timeout.
+ */
+
+	HandleEvents(microSeconds);
+	return microSeconds;
+}
 
 void UserMessage(wimp_message * wblock) {
-/* Deal with user messages; only Quit and MODE_CHANGE for now */
+/* Deal with user messages */
+extern wimp_t Task_Handle;
+	if( wblock->sender == Task_Handle) {
+		/* it's me - do nothing */
+		return;
+	}
 	switch( wblock->action) {
 		case message_QUIT:		ioExit();
 								break;
 		case message_MODE_CHANGE: displayModeChanged();
 								break;
-		// add message claimentity, messagedatarequest & messagedatasave handling
 		case message_CLAIM_ENTITY: receivedClaimEntity(wblock);
 								break;
+		/* these are the two messages we respond to in order
+		 * to initiate clipboard transactions
+		 * DATA_REQUEST is another app asking for our clipboard
+		 * and DATA_SAVE_ACK is part of the dance for giving
+		 * it to them. Us asking for some outside clipboard
+		 * can be found in sqRPCCLipboard>fetchClipboard()
+		 */
 		case message_DATA_REQUEST: receivedDataRequest(wblock);
 								break; 
-		case message_DATA_SAVE: receivedDataSave(wblock);
-								break; 
+		case message_DATA_SAVE_ACK: receivedDataSaveAck(wblock);
+								break;
+		/* We _might_ sometime respond to DATA_LOAD & DATA_SAVE
+		 * here in order to allo dropping of text files via the
+		 * DropPlugin
+		 */ 
 		default: return;
 	}
 }

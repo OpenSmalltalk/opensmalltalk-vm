@@ -1,11 +1,16 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
 /*                       sqRPCSound.c                                     */
-/*  sound output                                                          */
+/*  hook up to RiscOS sound stuff - eventually                            */
 /**************************************************************************/
+
+/* To recompile this reliably you will need    */           
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
+/* and a little luck                           */
 
 #include "sq.h"
 #include "SoundPlugin.h"

@@ -51,8 +51,9 @@ if(1) {int sqfni;\
 /* undefine clock macros that are implemented as functions */
 #undef ioMicroMSecs
 #undef ioMSecs
-#define ioMSecs() (10* (int)os_read_monotonic_time())
+#define ioMSecs()  (ioMicroMSecs())
 #undef ioLowResMSecs
-#define ioLowResMSecs() (ioMSecs())
+#define ioLowResMSecs() (ioMicroMSecs())
 #else
+
 #endif /* ACORN */

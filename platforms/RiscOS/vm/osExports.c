@@ -1,7 +1,21 @@
+/**************************************************************************/
+/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
+/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       osExports.c                                      */
+/*  internal plugin hookups                                               */
+/**************************************************************************/
+
+/* To recompile this reliably you will need    */           
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
+/* and a little luck                           */
 /* note: this file is only a backward compatible wrapper
-   for the old-style "platform.exports" definitions.
-   If your platform has migrated to the new exports
-   style you may as well insert the exports right here */
+ * for the old-style "platform.exports" definitions.
+ * If your platform has migrated to the new exports
+ * style you may as well insert the exports right here
+ */
 #include <stdio.h>
 /* duh ... this is ugly */
 #define XFN(export) {"", #export, (void*)export},

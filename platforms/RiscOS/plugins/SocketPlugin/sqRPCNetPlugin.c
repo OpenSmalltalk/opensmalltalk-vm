@@ -1,4 +1,18 @@
-/* Unix socket support.
+/**************************************************************************/
+/*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
+/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqRPCNetPlugin.c                                 */
+/*  hook up to RiscOS socket stuff                                        */
+/**************************************************************************/
+
+/* To recompile this reliably you will need    */           
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
+/* and a little luck                           */
+
+/* Shamelessly copied from Unix socket support.
  *
  * Author: Ian Piumarta (ian.piumarta@inria.fr)
  * Minor Acorn changes: Tim Rowledge (tim@sumeru.stanford.edu)

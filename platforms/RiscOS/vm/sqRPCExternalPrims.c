@@ -1,11 +1,16 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
 /*                       sqRPCExternalPrims.c                             */
 /* hook up to RiscOS external code modules using 'rink'                   */
 /**************************************************************************/
+
+/* To recompile this reliably you will need    */           
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
+/* and a little luck                           */
 #include "oslib/os.h"
 #include "sq.h"
 #include <kernel.h>
@@ -29,7 +34,7 @@
 
 
 int ioFindExternalFunctionIn(char *symbol, int moduleHandle) {
-// find the function named symbol in the known loaded module moduleHandle
+/* find the function named symbol in the known loaded module moduleHandle */
 int fnIndex= 0, address;
 const char * foundName;
 
@@ -42,14 +47,15 @@ const char * foundName;
 		} 
 	}
 
-	// failed to find the function...
+	/* failed to find the function... */
 	FPRINTF((privateErr.errmess, " did not find: %s", symbol));
 	return 0;
 }
 
 int ioLoadModule(char *modName) {
-// a routine to load a segment(module). Takes a pointer to the name
-// of the directory the code and links files are stored in
+/* a routine to load a segment(module). Takes a pointer to the name
+ * of the directory the code and links files are stored in
+ */
 extern char vmPath[];
 const rink_version *Version;
 const _kernel_oserror * e;
@@ -58,21 +64,22 @@ char codeName[256];
 const rink_check CheckBlock = {"SqueakSO", 100, 0};
 
 
-	// make filename of the code
+	/* make filename of the code */
 	sprintf(codeName, "%splugins.%s", vmPath, modName);
 	FPRINTF((privateErr.errmess, "Load: %s",modName));
 
-	// load the segment...
+	/* load the segment... */
 	if((e = rink_load(&CheckBlock, codeName, &moduleHandle)) != NULL) {
 		FPRINTF((privateErr.errmess, "Plugin load failed: %s", codeName));
 		return 0;
 	}
 	
-	// OK, let's have a look at the version of the segment we've just loaded.
-	// It might be nice to check them to see that it's acceptable.
-	// It is a bad plan to alter the returned structure.
+	/* OK, let's have a look at the version of the segment we've just
+	 * loaded. It might be nice to check them to see that it's acceptable.
+	 * It is a bad plan to alter the returned structure.
+	 */
 	Version = rink_readversion(moduleHandle);
-	// report the version
+	/* report the version */
 	//FPRINTF( (privateErr.errmess, "Plugin version: %d:%d", Version->main, Version->code));
 
 	return (int)moduleHandle;

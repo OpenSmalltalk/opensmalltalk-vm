@@ -1,15 +1,15 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
 /*                       sqRPCWindows.c                                   */
 /* Window & OS interface stuff, commandline option handling and so on     */
 /**************************************************************************/
 
 /* To recompile this reliably you will need    */           
-/* Jonathon Coxhead's OSLib,                   */
-/* AcornC_C++, the Acorn sockets libs          */
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
@@ -49,10 +49,7 @@ wimp_w			sqWindowHandle = null;
 char			sqTaskName[] = "Squeak!";
 wimp_t			Task_Handle;
 os_dynamic_area_no	SqueakObjectSpaceDA, SqueakDisplayDA;
-char *			clipboardBuffer = null;
-int			clipboardByteSize = 0;
 extern int		windowActive;
-extern int		sqHasClipboard;
 int			pointerBuffer[16] =
 				{0x99999999,
 				0x99999999,
@@ -72,7 +69,7 @@ int			pointerBuffer[16] =
 				0x99999999};
 os_coord		pointerOffset;
 wimp_icon_create	sqIconBarIcon;
-wimp_MESSAGE_LIST(4)	importantWimpMessages;
+wimp_MESSAGE_LIST(8)	importantWimpMessages;
 wimp_version_no		actualOSLevel;
 os_error		privateErr;
 char			versionString[20];
@@ -87,12 +84,14 @@ int			headlessFlag = 0;
 int			helpMe = 0;
 int			versionMe = 0;
 int			objectHeadroom = 4*1024*1024;
+char * windowLabel = NULL;
 
 vmArg args[] = {
 		{ ARG_FLAG,   &headlessFlag, "-headless" },
 		{ ARG_FLAG,   &helpMe, "-help" },
 		{ ARG_FLAG,   &versionMe, "-version" },
-		{ ARG_UINT,    &objectHeadroom, "-memory:"},
+		{ ARG_UINT,   &objectHeadroom, "-memory:"},
+		{ ARG_STRING, &windowLabel, "-windowlabel:"},
 		{ ARG_NONE, NULL, NULL }
 	};
 
@@ -129,8 +128,6 @@ int		platAllocateMemory( int amount);
 void		platReportFatalError( os_error * e);
 void		platReportError( os_error * e);
 void		setDefaultPointer(void);
-extern void	claimClipboard(void);
-extern void	fetchClipboard(void);
 extern void	setFPStatus(int stat); 
 
 /*** RPC-related Functions ***/
@@ -193,6 +190,11 @@ int InitRiscOS(void) {
 os_error * e;
 
 	importantWimpMessages.messages[0] = message_MODE_CHANGE;
+	importantWimpMessages.messages[1] = message_CLAIM_ENTITY;
+	importantWimpMessages.messages[2] = message_DATA_REQUEST;
+	importantWimpMessages.messages[3] = message_DATA_SAVE;
+	importantWimpMessages.messages[4] = message_DATA_LOAD;
+	importantWimpMessages.messages[5] = message_DATA_SAVE_ACK;
 
 	if ((e = xwimp_initialise (wimp_VERSION_RO35,
 					sqTaskName,
@@ -572,10 +574,17 @@ wimp_w w;
 	/* minimum window size allowed */
 	wblock.xmin = (short)0;
 	wblock.ymin = (short)0;
-	/* title data */
-	wblock.title_data.indirected_text.text =  &imageName[0];
-	wblock.title_data.indirected_text.validation = (char*)-1;
-	wblock.title_data.indirected_text.size = strlen(imageName);
+	/* title data; if the -windowlabel vm option was set, use its arg
+	 * instead of the image pathname */
+	if( strlen(windowLabel)) {
+		wblock.title_data.indirected_text.text =  windowLabel;
+		wblock.title_data.indirected_text.validation = (char*)-1;
+		wblock.title_data.indirected_text.size = strlen(windowLabel);
+	} else {
+		wblock.title_data.indirected_text.text =  &imageName[0];
+		wblock.title_data.indirected_text.validation = (char*)-1;
+		wblock.title_data.indirected_text.size = strlen(imageName);
+	}
 	/* icon count Assuming .icons=0 is ok for no icons ? */
 	wblock.icon_count = 0;
 	/* wblock.icons = (wimp_icon *)NULL;*/
@@ -683,83 +692,6 @@ extern void ioShutdownAllModules(void);
 		xosdynamicarea_delete ( SqueakDisplayDA );
 }
 
-int ioGetButtonState(void) {
-extern int buttonState;
-	ioProcessEvents();  /* process all pending events */
-	return buttonState;
-}
-
-int ioGetKeystroke(void) {
-extern int nextKeyPressOrNil(void);
-	ioProcessEvents();  /* process all pending events */
-	return nextKeyPressOrNil();
-}
-
-
-int ioMicroMSecs(void) {
-/* The
-   function ioMicroMSecs() is used only to collect timing statistics
-   for the garbage collector and other VM facilities. (The function
-   name is meant to suggest that the function is based on a clock
-   with microsecond accuracy, even though the times it returns are
-   in units of milliseconds.) This clock must have enough precision to
-   provide accurate timings, and normally isn't called frequently
-   enough to slow down the VM. Thus, it can use a more expensive clock
-   that ioMSecs().
-*/
-	return ioMSecs();
-}
-
-
-
-int ioMousePoint(void) {
-extern os_coord savedMousePosition;
-/* return the mouse point as 16bits of x | 16bits of y */
-	ioProcessEvents();  /* process all pending events */
-	return (savedMousePosition.x << 16 | savedMousePosition.y & 0xFFFF);
-}
-
-int ioPeekKeystroke(void) {
-extern int peekKeyPressOrNil(void);
-
-	ioProcessEvents();  /* process all pending events */
-	return peekKeyPressOrNil();
-}
-
-int ioProcessEvents(void) {
-static clock_t nextPollTick = 0;
-clock_t currentTick;
-
-//	if( (currentTick = clock()) >= nextPollTick) {
-		HandleEvents(0 );
-//		nextPollTick = currentTick + 1;
-//	}
-	return true; 
-}
-
-
-/*** I/O Primitives ***/
-
-/* set an asynchronous input semaphore index for events */
-int ioSetInputSemaphore(int semaIndex) {
-primitiveFail();
-}
-
-/* retrieve the next input event from the OS */
-int ioGetNextEvent(sqInputEvent *evt) {
-primitiveFail();
-}
-
-int ioRelinquishProcessorForMicroseconds(int microSeconds) {
-/* This operation is platform dependent. On the Mac, it simply calls
- * HandleEvents(), which gives other applications a chance to run.
- * Here, we use microSeconds as the parameter to HandleEvents, so that wimpPollIdle
- * gets a timeout.
- */
-
-	HandleEvents(microSeconds);
-	return microSeconds;
-}
 
 int ioScreenSize(void) {
 /* return the size of the SQ window in use,
@@ -799,6 +731,22 @@ int minWidth = 100, minHeight = 0;
 	return (w << 16) | (h & 0xFFFF);
 }
 
+int ioMicroMSecs(void) {
+/* The
+   function ioMicroMSecs() is used only to collect timing statistics
+   for the garbage collector and other VM facilities. (The function
+   name is meant to suggest that the function is based on a clock
+   with microsecond accuracy, even though the times it returns are
+   in units of milliseconds.) This clock must have enough precision to
+   provide accurate timings, and normally isn't called frequently
+   enough to slow down the VM. Thus, it can use a more expensive clock
+   that ioMSecs().
+*/
+_kernel_swi_regs regs;
+	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
+	return (regs.r[0] * 1000) + (int)(regs.r[1] / 1000); 
+}
+
 int ioSeconds(void) {
 /*	  Unix epoch to Smalltalk epoch conversion.
 	(Date newDay: 1 year: 1970) asSeconds
@@ -807,10 +755,8 @@ int ioSeconds(void) {
 			2177452800
 	limit is about 2057ad - this may cause problems...
 */
- 
 	return  (int)((unsigned long)time(NULL) + 2177452800uL);
 }
-
 
 int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
 /* Move 1-bit form to pointer buffer and use mask to affect result. Remember RPC pointer is 2-bits/pixel to allow 3 colours + mask. As of Sq2.2, there can also be a mask 1-bit form specified.
@@ -858,7 +804,6 @@ int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
 	return ioSetCursorWithMask(cursorBitsIndex, NULL, offsetX, offsetY);
 }
 
-
 int ioSetFullScreen(int fullScreenWanted) {
 /* if fullScreenWanted and we aren't already running fullScreen,
    change the window size and store the current origin and size
@@ -866,7 +811,6 @@ int ioSetFullScreen(int fullScreenWanted) {
    if !fullScreenWanted and we are running fullScreen, restore those saved
    values
 */
-
 static os_coord prevOrigin = {0,0}, prevSize;
 os_coord screenBottomLeft = {0,0};
 static int fullScreen = false;
@@ -907,12 +851,11 @@ os_error * e;
 		return true;
 	}
 
-	return false;
+	return true;
 }
 
 int ioShowDisplay( int dispBitsIndex, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB) {
 os_error *e;
-
 	if(affectedR <= affectedL || affectedT >= affectedB) return true;
 
 	if( displaySpriteBits == NULL ||
@@ -943,7 +886,37 @@ int ioForceDisplayUpdate(void) {
 }
 
 int ioSetDisplayMode(int width, int height, int depth, int fullScreenFlag) {
-	return false;
+/* if fullScreenFlag, we are to try to change to a screen mode that matches
+ * width, height and depth and then go fullscreen in that mode. Remember
+ * the original screen mode _even if we change several times _. Somehow..
+ * if not fullScreenFlag, simply change the window size.
+ * Fail if we can't meet the request 'reasonably'.
+ */
+	if (fullScreenFlag) {
+		/* find out if we can do a screen mode change to requested size.
+		 * fail if not.
+		 * save the current screen mode UNLESS we already have one saved
+		 * save current window origin
+		 * change screen mode
+		 * set to fullScreen mode (what if we already were?)
+		 */
+		return false;
+	}
+	if (!fullScreenFlag) {
+		/* IF we have a saved screen mode, return to it and clear the
+		 * saved value (use it as a flag)
+		 * restore saved origin point as well
+		 * The only time we change the window size is when
+		 * fullscreen is false  */
+		squeakWindowSize.x =  width;
+		squeakWindowSize.y  = height;
+		/* save the restored size in case the image is saved */
+		setSavedWindowSize((squeakWindowSize.x << 16) + (squeakWindowSize.y & 0xFFFF));
+		setWindowParameters( (os_coord*)null);
+		displaySpriteBits = NULL;
+	}
+
+	return true;
 }
 
 int ioScreenDepth(void) {
@@ -969,8 +942,8 @@ int ioHasDisplayDepth(int bitsPerPixel) {
 
 void sqStringFromFilename( int sqString, char*fileName, int sqSize) {
 // copy chars TO a Squeak String FROM a C filename char array. You may transform the characters as needed
-	int i;
-	char c;
+int i;
+char c;
 
 	for (i = 0; i < sqSize; i++) {
 		c =  *fileName++; ;
@@ -982,11 +955,11 @@ void sqStringFromFilename( int sqString, char*fileName, int sqSize) {
 
 void sqFilenameFromString(char*fileName, int sqString, int sqSize) {
 // copy chars from a Squeak String to a C filename char array. You may transform the characters as needed
-	int i;
-	int junk;
-	char c;
-	char temp[1000];
-	os_error * e;
+int i;
+int junk;
+char c;
+char temp[1000];
+os_error * e;
 
 	for (i = 0; i < sqSize; i++) {
 		c =  *((char *) (sqString + i));
@@ -1028,15 +1001,19 @@ int count;
 
 	/* copy the file name into a null-terminated C string */
 	sqFilenameFromString( imageName, sqImageNameIndex, count);
+	if (actualOSLevel >= 380) {
+		xwimp_force_redraw_furniture(sqWindowHandle, wimp_FURNITURE_TITLE);
+	} /* else  older WIMP modules will just have to live with it */
+
 	return count;
 }
 
 void dummyWimpPoll(void) {
 /* quick wimp_poll to allow icon to appear and for interactivity
    during loading */
-	wimp_event_no wimpPollEvent;
-	wimp_block wimpPollBlock;
-	int wimpPollWord;
+wimp_event_no wimpPollEvent;
+wimp_block wimpPollBlock;
+int wimpPollWord;
 	do xwimp_poll((wimp_MASK_POLLWORD| wimp_MASK_GAIN | wimp_MASK_LOSE | wimp_MASK_MESSAGE | wimp_MASK_RECORDED | wimp_SAVE_FP) , &wimpPollBlock,  &wimpPollWord, (wimp_event_no*)&wimpPollEvent);
 	while (wimpPollEvent != wimp_NULL_REASON_CODE);
 }
@@ -1081,7 +1058,11 @@ unsigned char *dstPtr;
 		if ( actuallyWritten != CHUNK_SIZE) return 0;
 		dstPtr += CHUNK_SIZE;
 		remaining -= CHUNK_SIZE;
-		dummyWimpPoll();
+		/* drop this for now; it seems to clash with
+		 * the threading of Oregano at least, causing loss
+		 * of the iamge !!
+		 dummyWimpPoll();
+		 */
 	}
 	actuallyWritten = fwrite(dstPtr, (size_t)1, (size_t)remaining, f);
 	/* if we didnt write enough, return an error case */
@@ -1109,64 +1090,6 @@ int count;
 	return count;
 }
 
-
-/*** Clipboard Support (text only for now) Not integrated into the RiscOS clipboard system yet ***/
-#define clipboardDefaultSize (10 * 1024)
-
-int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
-// paste - clipboardSize() will actually do any fetching
-	int clipSize, charsToMove;
-	char *srcPtr, *dstPtr;
-	clipSize = clipboardSize();
-	charsToMove = (count < clipSize) ? count : clipSize;
-
-	srcPtr = (char *) clipboardBuffer;
-	dstPtr = (char *) byteArrayIndex + startIndex;
-	copyNCharsFromTo( charsToMove, srcPtr, dstPtr);
-
-	return charsToMove;
-}
-
-int clipboardSize(void)
-{
-	if (sqHasClipboard) {
-		if ( clipboardByteSize == 0) {
-			if ((clipboardBuffer = malloc (clipboardDefaultSize)) == null) return 0;
-			clipboardByteSize = clipboardDefaultSize;
-			memset(clipboardBuffer, 0, (size_t)clipboardDefaultSize);
-			// *clipboardBuffer  = (char)NULL;
-		}
-	} else {
-		// need to fetch the clipboard contents from the current holder
-		fetchClipboard();
-	} 
-	return strlen(clipboardBuffer);
-}
-
-int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
-	int  charsToMove;
-	char *srcPtr, *dstPtr, *newPtr;
-
-	// write from the String to the clipboard buffer
-	if ( clipboardByteSize < count) {
-		/* try to realloc to match sizes */
-		newPtr = realloc( clipboardBuffer, count+4);
-		if ( newPtr != null ) {
-				clipboardByteSize = count+4;
-				clipboardBuffer = newPtr;
-		}
-	}
-	charsToMove = (count < clipboardByteSize) ? count : clipboardByteSize;
-
-	srcPtr = (char *) byteArrayIndex + startIndex;
-	dstPtr = (char *) clipboardBuffer;
-	copyNCharsFromTo( charsToMove,  srcPtr, dstPtr);
-
-	// need to claim the clipboard
-	if (!sqHasClipboard ) claimClipboard();
-
-	return charsToMove;
-}
 
 /* null version */
 int ioDisablePowerManager(int disableIfNonZero) {
@@ -1227,8 +1150,8 @@ int attributeSize(int id) {
 }
 
 int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
-	char *srcPtr, *dstPtr, *end;
-	int charsToMove;
+char *srcPtr, *dstPtr, *end;
+int charsToMove;
 
 	srcPtr = getAttributeString(id);
 	charsToMove = strlen(srcPtr);
@@ -1258,7 +1181,6 @@ extern char VMVersion[];
 	platReportError((os_error *)&privateErr);
 }
 
-
 void decodePath(char *srcptr, char * dstPtr) {
 os_error * e;
 int spare;
@@ -1268,8 +1190,8 @@ int spare;
 		platReportFatalError(e);
 		return;
 	}
-
 }
+
 void decodeVMPath(char *srcptr) {
 char * endChar;
 
@@ -1278,7 +1200,6 @@ char * endChar;
 	   null to make the end of the string. */
 	endChar = strrchr( vmPath, '.');
 	if (endChar) *(++endChar) = null;
-
 }
 
 /*** Main ***/
@@ -1302,8 +1223,9 @@ extern void initGlobalStructure(void);
 	f = fopen(imageName, "rb");
 	if (f == NULL) {
 		/* give a RPC-specific error message if image file is not found */
+		extern char VMVersion[];
 		privateErr.errnum = (bits)0;
-		sprintf(privateErr.errmess, "Could not open the Squeak image file '%s'\n", imageName);
+		sprintf(privateErr.errmess, "Could not open the Squeak image file '%s' (Squeak version: %s)", imageName, VMVersion);
 		platReportError((os_error *)&privateErr);
 		helpMessage(vmPath, "!ImName");
 		ioExit();

@@ -1,11 +1,16 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
-/*                       sqRPCDirec.c                                     */
-/*  Directory reading etc                                                 */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqRPCDirectory.c                                 */
+/*  hook up to RiscOS directory listing etc                               */
 /**************************************************************************/
+
+/* To recompile this reliably you will need    */           
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
+/* and a little luck                           */
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
 #include "oslib/osgbpb.h"
@@ -15,6 +20,7 @@
 #include "oslib/adfs.h"
 #include "oslib/ramfs.h"
 #include "oslib/cdfs.h"
+#include "oslib/territory.h"
 #include "sq.h"
 #include <kernel.h>
 
@@ -47,19 +53,34 @@ if(1){\
 extern struct VirtualMachine * interpreterProxy;
 extern void sqStringFromFilename( int sqString, char*fileName, int sqSize);
 /*** Functions ***/
-int convertToSqueakTime(os_date_and_time fileTime);
 
 int convertToSqueakTime(os_date_and_time fileTime) {
-	/* Squeak epoch is Jan 1, 1901, one year later than RiscOS one @ 1/1/1900. fileTime is stored as 5 bytes of the centiseconds since then !  Arithmetic on 5byte numbers is simpler to do in float.... */
-	float theTime;
-	theTime  = 0.0;
-	theTime = theTime + (int)*(fileTime++)*0.01;
-	theTime = theTime + (int)*(fileTime++)*2.560;
-	theTime = theTime + (int)*(fileTime++)*655.360;
-	theTime = theTime + (int)*(fileTime++)*167772.160;
-	theTime = theTime + (int)*(fileTime++)*42949672.960;
-	theTime = theTime - (365.0  * 24 * 60 * 60);
-	return (int)(unsigned long)theTime ;
+/* Squeak epoch is Jan 1, 1901, one year later than the RiscOS
+ * one @ 1/1/1900. fileTime is stored as 5 bytes of the centiseconds
+ * since then. Use territory call to get timezone & DST offset  */
+unsigned int high, low, tc;
+char tzname[50];
+int tzoffset;
+	low =  *(unsigned int*)fileTime;
+	high = *(unsigned int*)(fileTime+4);
+
+	high = high & 0xff; /* clear all but bottom byte */
+
+	/* Firstly, subtract 365 * 24 *60 * 60 * 100 = 3153600000 = 0xBBF81E00
+	 * centiseconds from the RISC OS time */
+	tc = 0xBBF81E00;
+	/* now use the territory to find the timezone/dst offset */
+	xterritory_read_current_time_zone((char**)&tzname, &tzoffset);
+	if (low < tc) /* check for a carry */
+		high--;
+	low -= tc;
+
+	/* Remove the centiseconds from the time.
+	 * 0x1000000000 / 100 = 42949672.96 */
+	low = (low / 100) + (high * 42949673U); 
+	low -= (high / 25); /* compensate for that 0.04 error.  */
+
+	return (int)low + (tzoffset/100);
 }
 
 void dirReportError( os_error * e) {

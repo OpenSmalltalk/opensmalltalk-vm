@@ -1,15 +1,15 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
 /*                       sqRPCSyscall.c                                   */
 /* OS interface SWI call stuff                                            */
 /**************************************************************************/
 
 /* To recompile this reliably you will need    */           
-/* Jonathon Coxhead's OSLib,                   */
-/* AcornC_C++, the Acorn sockets libs          */
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
 #include "oslib/os.h"
 #include "oslib/osbyte.h"

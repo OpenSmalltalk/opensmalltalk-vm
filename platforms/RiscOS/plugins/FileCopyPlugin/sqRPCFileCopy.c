@@ -1,11 +1,16 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
-/*                       sqRPCfileCopy.c                                  */
-/*  Copying files  via OS calls                                           */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqRPCFileCopy.c                                  */
+/*  hook up to RiscOS file copy to preserve filtypes etc                  */
 /**************************************************************************/
+
+/* To recompile this reliably you will need    */           
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
+/* and a little luck                           */
 #include "oslib/os.h"
 #include "oslib/osfile.h"
 #include "oslib/osfscontrol.h"

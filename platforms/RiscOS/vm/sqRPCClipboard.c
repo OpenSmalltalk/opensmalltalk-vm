@@ -1,19 +1,20 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
 /*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
-/*  Known to work on RiscOS 3.7 for StrongARM RPCs, other machines        */
-/*  not yet tested.                                                       */
-/*                       sqRPCClipb.c                                     */
-/* attempt to hook up to RiscOS clipboard stuff                           */
+/*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
+/*  other machines not yet tested.                                        */
+/*                       sqRPCClipboard.c                                 */
+/*  hook up to RiscOS clipboard stuff                                     */
 /**************************************************************************/
 
 /* To recompile this reliably you will need    */           
-/* Jonathon Coxhead's OSLib,                   */
-/* AcornC_C++, the Acorn sockets libs          */
+/* OSLib -  http://ro-oslib.sourceforge.net/   */
+/* Castle/AcornC/C++, the Acorn TCPIPLib       */
 /* and a little luck                           */
 #include "oslib/os.h"
 #include "oslib/osbyte.h"
 #include "oslib/osfscontrol.h"
+#include "oslib/osfile.h"
 #include "oslib/wimp.h"
 #include "oslib/wimpspriteop.h"
 #include "oslib/colourtrans.h"
@@ -23,246 +24,382 @@
 
 // CBDEBUG is for printfs related to the clipboard stuff
 #define CBDEBUG 0
-extern wimp_t			Task_Handle;
-extern wimp_w	sqWindowHandle;
-int						sqHasInputFocus = false;
-int						sqHasClipboard = false;
+int		sqHasInputFocus = false;
+int		sqHasClipboard = false;
+char *		clipboardBuffer = NULL;
+int		clipboardByteSize = 0;
+int		clipboardMessageID = 0;
 
-void			claimCaret(wimp_pointer * wblock);
+int allocClipboard(size_t size);
+ 
+/* caret (input focus) and clipboard claiming functions */
 
 void ClaimEntity( int flags) {
 	wimp_message wmessage;
-// broadcast the Message_ClaimEntity using the flags value to decide whether it is a claim of the caret or the clipboard or both
-//   Message_ClaimEntity (15)<BR>
-//     0 message size (24)<BR>
-//     4 task handle of task making the claim
-//     8 message id<BR>
-//    12 your_ref (0)<BR>
-//    16 Message_ClaimEntity<BR>
-//    20 flags:<BR>
-// <PRE>
-//         bits 0 and 1 set => caret or selection being claimed
-//         bit 2 set => clipboard being claimed
-//         all other bits reserved (must be 0)
-// </PRE>
-// 
-// <p>
-// This message should be broadcast to all tasks as the caret / selection or
-// clipboard are claimed.
-// When claiming the input focus or clipboard, a task should check to see if it
-// already owns that entity, and if so, there is no need to issue the broadcast.
-// It should then take care of updating the caret / selection / clipboard to the
-// new value (updating the display in the case of the selection).
+/* broadcast the Message_ClaimEntity using the flags value to decide whether
+ * it is a claim of the caret or the clipboard (or both?)
+ * When claiming the input focus or clipboard, a task should check to see if
+ * it already owns that entity, and if so, there is no need to issue the
+ * broadcast.
+ * It should then take care of updating the caret / selection / clipboard
+ * to the new value (updating the display in the case of the selection).
+ */
 
 	wmessage.size = 24;
-	wmessage.sender = Task_Handle;
-	wmessage.my_ref = (int)Task_Handle; // some better message id ??
+	wmessage.sender = (wimp_t)NULL;
+	wmessage.my_ref = 0;
 	wmessage.your_ref = 0;
 	wmessage.action = message_CLAIM_ENTITY;
 	wmessage.data.claim_entity.flags = (wimp_claim_flags)flags;
 	xwimp_send_message(wimp_USER_MESSAGE, &wmessage, wimp_BROADCAST);
-	if(CBDEBUG) {
+#if CBDEBUG
 		printf("ClaimEntity sent message with flags %x\n", flags);
 		if (sqHasInputFocus) printf("has focus ");
 		if (sqHasClipboard) printf("has clipboard\n");
-	}
+#endif
 	
 }
 
 void claimCaret(wimp_pointer * wblock) {
-#define flagsForClaimingInputFocus 0x03
-// claim the input focus if I dont already have it
+/* claim the input focus if I dont already have it */
 	if (!sqHasInputFocus) {
-		ClaimEntity( flagsForClaimingInputFocus);
+		ClaimEntity( wimp_CLAIM_CARET_OR_SELECTION);
 		sqHasInputFocus = true;
 	}
 
-// When the user positions the caret or makes a selection, the application
-// should claim ownership of the input focus by broadcasting this message with
-// bits 0 and 1 set. When positioning the caret, the application can choose
-// whether to use the Wimp's caret or draw its own representation of the caret
-// more appropriate to the type of data being edited. When making a selection,
-// the application must hide the caret; it should do this by setting the Wimp's
-// caret to the window containing the selection, but invisible. This is
-// necessary to direct keystroke events to this window.
 }
 
 void claimClipboard(void) {
-#define flagsForClaimingClipboard 0x04
-// claim the clipboard if I dont already have it
+/* claim the clipboard if I dont already have it */
 	if (!sqHasClipboard ) {
-		ClaimEntity( flagsForClaimingClipboard);
+		ClaimEntity( wimp_CLAIM_CLIPBOARD);
 		sqHasClipboard = true;
 	}
-// When the user performs a Cut or Copy operation, the application should claim
-// ownership of the clipboard by broadcasting this message with bit 2 set.
-
 }
 
 void receivedClaimEntity(wimp_message * wblock) {
-// When a task receives this message with bits 0 or 1 set, it should check to
-// see if any of its windows currently own the input focus. If so, it should
-// update its flag to indicate that it no longer has the focus, and remove any
-// representation of the caret which it has drawn (unless it uses the Wimp
-// caret, which will be undrawn automatically.) It may optionally alter the
-// appearance of its window to emphasize the fact that it does not have the
-// input focus, for example by shading the selection. A task that receives
-// Message_ClaimEntity with only one of bits 0 and 1 set should act as if both
-// bits were set.
-
-// When a task receives this message with bit 2 set it should set a flag to
-// indicate that the clipboard is held by another application and deallocate the
-// memory being used to store the clipboard contents.
-	if(CBDEBUG) {
-		printf("receivedClaimEntity with flags %x\n", wblock->data.claim_entity.flags);
+/* When a task receives this message with bits 0 or 1 set, it should check
+ *to see if any of its windows currently own the input focus. If so, it
+ * should update its flag to indicate that it no longer has the focus, and
+ * remove any representation of the caret which it has drawn (unless it uses
+ * the Wimp caret, which will be undrawn automatically.) It may optionally
+ * alter the appearance of its window to emphasize the fact that it does not
+ * have the input focus, for example by shading the selection. A task that
+ * receives Message_ClaimEntity with only one of bits 0 and 1 set should act
+ * as if both bits were set.
+ *
+ * When a task receives this message with bit 2 set it should set a flag to
+ * indicate that the clipboard is held by another application and deallocate
+ * the memory being used to store the clipboard contents.
+ */
+#if CBDEBUG
+		printf("receivedClaimEntity with flags %x\n",
+			wblock->data.claim_entity.flags);
 		if (sqHasInputFocus) printf("has focus ");
 		if (sqHasClipboard) printf("has clipboard\n");
-	}
+#endif
 
-	if ( (wblock->data.claim_entity.flags & flagsForClaimingInputFocus)  > 0 ) {
+	if ( (wblock->data.claim_entity.flags
+		& wimp_CLAIM_CARET_OR_SELECTION) > 0 ) {
 		sqHasInputFocus = false;
 	}
-	if ( wblock->data.claim_entity.flags == flagsForClaimingClipboard) {
+	if ( wblock->data.claim_entity.flags == wimp_CLAIM_CLIPBOARD) {
 		sqHasClipboard = false;
+		allocClipboard(1);
 	}
-	if(CBDEBUG) {
-		printf("post claim entity sq now ");
+#if CBDEBUG
+	printf("post claim entity sq now ");
 		if (sqHasInputFocus) printf("has focus ");
 		if (sqHasClipboard) printf("has clipboard\n");
-	}
+#endif
 
+}
+
+/* clipboard buffer management  */
+int allocClipboard(size_t size) {
+void * ptr;
+	ptr = realloc(clipboardBuffer, size);
+	if( ptr == NULL) {
+		/* failed to reallocate but old buffer is stil in place
+		 * so remember to clear it
+		 */
+		memset(clipboardBuffer,0, (size_t)clipboardByteSize);
+		return false;
+	}
+	clipboardBuffer = ptr;
+	clipboardByteSize = (int)size;
+	memset(clipboardBuffer,0, (size_t)clipboardByteSize);
+	return true;
+}
+
+void freeClipboard(void) {
+	free(clipboardBuffer);
+	clipboardBuffer = NULL;
+	clipboardByteSize = 0;
+}
+
+/* clipboard fetching - we don't own the clipboard and do want the contents */
+ 
+void sendDataRequest(wimp_message* wmessage) {
+/* We want to fetch the clipboard contents from some other application
+ * Broadcast the message_DATA_REQUEST message
+ */
+extern wimp_w	sqWindowHandle;
+#if CBDEBUG
+	printf("sendDataRequest  ");
+	if (sqHasInputFocus) printf("has focus ");
+	if (sqHasClipboard) printf("has clipboard\n");
+#endif
+
+	wmessage->size = 52;
+	wmessage->sender = (wimp_t)NULL;
+	wmessage->my_ref = 0; 
+	wmessage->your_ref = 0;
+	wmessage->action = message_DATA_REQUEST;
+	wmessage->data.data_request.w = sqWindowHandle;
+	wmessage->data.data_request.i = wimp_ICON_WINDOW;
+	wmessage->data.data_request.pos.x = 0;
+	wmessage->data.data_request.pos.y = 0;
+	wmessage->data.data_request.flags = 0x04; // request clipboard
+	wmessage->data.data_request.file_types[0] = 0xFFF; //TEXT
+	wmessage->data.data_request.file_types[1] = 0xFFD; // DATA
+	wmessage->data.data_request.file_types[2] = -1;
+	xwimp_send_message(wimp_USER_MESSAGE, wmessage, wimp_BROADCAST);
+	clipboardMessageID = wmessage->my_ref;
+}
+
+
+int receivedClipboardDataSave(wimp_message * wmessage) {
+/* When the application that initiated the Paste receives the
+ * Message_DataSave, it should check the filetype to ensure that it
+ * knows how to deal with it - it may be the clipboard owner's native
+ * format. If it cannot, it may back out of the transaction by ignoring
+ * the message. Otherwise, it should continue with the DataSave
+ * protocol as detailed in the Programmer's Reference Manual.
+ */
+#if CBDEBUG
+	printf("receivedClipboardDataSave ");
+	if (sqHasInputFocus) printf("has focus ");
+	if (sqHasClipboard) printf("has clipboard\n");
+#endif
+	if(wmessage->data.data_xfer.file_type != (bits)0xfff) {
+		/* if not text type, empty clipboard buffer & return */
+		memset(clipboardBuffer,0, (size_t)clipboardByteSize);
+		return false;
+	}
+	/* We modify the received block and return to sender */
+	wmessage->size = 60;
+	wmessage->action = message_DATA_SAVE_ACK;
+	wmessage->your_ref = wmessage->my_ref;
+	wmessage->data.data_xfer.est_size = -1;
+	wmessage->data.data_xfer.file_type = (bits)0xfff;
+	strcpy(&(wmessage->data.data_xfer.file_name[0]), "<Wimp$Scrap>");
+	xwimp_send_message(wimp_USER_MESSAGE, wmessage, wmessage->sender);
+	return true;
+}
+void receivedClipboardDataLoad(wimp_message * wmessage) {
+/* we got a dataload message, so grab the <Wimp$Scrap> file, then delete it
+ * and return a dataloadack to the sender
+ */
+bits load_addr, exec_addr, file_type;
+fileswitch_attr attr;
+fileswitch_object_type obj_type;
+int length;
+#if CBDEBUG
+	printf("receivedClipboardDataLoad ");
+	if (sqHasInputFocus) printf("has focus ");
+	if (sqHasClipboard) printf("has clipboard\n");
+#endif
+	/* find the file size */
+	xosfile_read_stamped_no_path(&(wmessage->data.data_xfer.file_name[0]),
+		&obj_type, &load_addr, &exec_addr, &length, &attr, &file_type);
+	/* if the obj_type is not-found, clear the buffer and return */
+	if(obj_type == fileswitch_NOT_FOUND) {
+		allocClipboard(1);
+		return;
+	}
+	/* make sure we have enough buffer space for it
+	 * fail if not */
+	if(!allocClipboard(length+1))
+		return;
+	/* now load the file */
+	xosfile_load_stamped_no_path(&(wmessage->data.data_xfer.file_name[0]),		(byte*)clipboardBuffer, &obj_type,
+		&load_addr, &exec_addr, &length, &attr);
+	/* delete the file */
+	xosfscontrol_wipe(&(wmessage->data.data_xfer.file_name[0]), osfscontrol_WIPE_FORCE, 0,0,0,0);
+	/* We modify the received block and return it to sender */
+	wmessage->action = message_DATA_LOAD_ACK;
+	wmessage->your_ref = wmessage->my_ref;
+	xwimp_send_message(wimp_USER_MESSAGE, wmessage, wmessage->sender);
+}
+
+int pollForClipboardMessage(bits messageAction, wimp_block* wblock) {
+/* poll for a message relating to the clipboard protocols (either datasave or
+ * dataload usually) and return true if one is found or false if we either get
+ * a null or go round more than a few times (avoid loop-of-death)
+ */
+wimp_event_no reason;
+int pollword, i;
+extern void WindowOpen(wimp_open* wblock);
+extern void WindowClose(wimp_close* wblock);
+extern void PointerLeaveWindow(wimp_block* wblock);
+extern void PointerEnterWindow(wimp_block* wblock);
+	for(i=0;i<100;i++) {
+		xwimp_poll((wimp_MASK_POLLWORD| wimp_MASK_GAIN | wimp_MASK_LOSE
+| wimp_SAVE_FP | wimp_QUEUE_REDRAW | wimp_QUEUE_MOUSE | wimp_QUEUE_KEY), wblock, &pollword, &reason);
+		switch(reason) {
+			case wimp_NULL_REASON_CODE:
+				return false; break;
+			case wimp_OPEN_WINDOW_REQUEST	:
+				WindowOpen(&wblock->open); break;
+			case wimp_CLOSE_WINDOW_REQUEST	:
+				WindowClose(&wblock->close); break;
+			case wimp_POINTER_LEAVING_WINDOW :
+				PointerLeaveWindow(wblock); break;
+			case wimp_POINTER_ENTERING_WINDOW:
+				PointerEnterWindow(wblock); break;
+			case wimp_USER_MESSAGE			:
+			case wimp_USER_MESSAGE_RECORDED		:
+				if( wblock->message.action == messageAction)
+					return true; break;
+		}
+	}
+	return false;
 }
 
 void fetchClipboard(void) {
-	// fetch the clipboard from the current owner
-	// send a data request, put the returned clipboard text into the buffer etc.
-	if(CBDEBUG) {
-		printf("fetchClipboard ");
-		if (sqHasInputFocus) printf("has focus ");
-		if (sqHasClipboard) printf("has clipboard\n");
-	}
-	// we can't fetch the outside clipboard yet, so fake it
-	sqHasClipboard = true;
-	clipboardSize();
-}
- 
-void sendDataRequest(void) {
-//   Paste related fetching of clipboard text
-// 
-// <p>
-// The application should first check to see if it owns the clipboard, and use
-// the data directly if so. If is does not own it, it should broadcast the
-// following message:
-// 
-// <p>
-//   Message_DataRequest (16)<BR>
-//     0 message size<BR>
-//     4 task handle of task requesting data
-//     8 message id<BR>
-//    12 your_ref (0)<BR>
-//    16 Message_DataRequest<BR>
-//    20 window handle<BR>
-//    24 internal handle to indicate destination of data
-//    28 x<BR>
-//    32 y<BR>
-//    36 flags:<BR>
-// <PRE>
-//         bit 2 set => send data from clipboard (must be 1)
-//         all other bits reserved (must be 0)
-// </PRE>
-//    40 list of filetypes in order of preference,
-// <PRE>
-//       terminated by -1
-// </PRE>
-// 
-// <p>
-// The sender must set flags bit 2, and the receiver must check this bit, and
-// ignore the message if it is not set. All other flags bits must be cleared by
-// the sender and ignored by the receiver.
-
-	wimp_message wmessage;
-	if(CBDEBUG) {
-		printf("sendDataRequest  ");
-		if (sqHasInputFocus) printf("has focus ");
-		if (sqHasClipboard) printf("has clipboard\n");
-	}
-
-	wmessage.size = 0;
-	wmessage.sender = Task_Handle;
-	wmessage.my_ref = (int)Task_Handle; // some better message id ??
-	wmessage.your_ref = 0;
-	wmessage.action = message_DATA_REQUEST;
-	wmessage.data.data_request.w = sqWindowHandle;
-	wmessage.data.data_request.i = wimp_ICON_WINDOW;
-	wmessage.data.data_request.pos.x = 0;
-	wmessage.data.data_request.pos.y = 0;
-	wmessage.data.data_request.flags = 0x04;
-	// fill in filetypes somehow
-	wmessage.data.data_request.file_types[0] = 0xFFF;  //TEXT
-	wmessage.data.data_request.file_types[1] = 0xFFD;   // DATA
-	wmessage.data.data_request.file_types[2] = -1;
-	xwimp_send_message(wimp_USER_MESSAGE, &wmessage, wimp_BROADCAST);
-
+/*  fetch the clipboard from the current owner */
+wimp_block wblock; 
+#if CBDEBUG
+	printf("fetchClipboard ");
+	if (sqHasInputFocus) printf("has focus ");
+	if (sqHasClipboard) printf("has clipboard\n");
+#endif
+	/* ask for the clipboard contents */
+	sendDataRequest(&wblock.message);
+	if( !pollForClipboardMessage(message_DATA_SAVE, &wblock))
+		/* didn't get any reply, so return empty */
+		return ;
+	if( !receivedClipboardDataSave(&wblock.message))
+		return; /* no acceptable filetype, so give up */
+	if( !pollForClipboardMessage(message_DATA_LOAD, &wblock))
+		/* didn't get any reply, so return empty */
+		return;
+	receivedClipboardDataLoad(&wblock.message);
+	return;
 }
 
+/* clipboard serving - what to do when we own the clipboard and somebody
+ * else wants the contents
+ */
 void receivedDataRequest(wimp_message * wmessage) {
-	if ( sqHasClipboard ) {
-		// somebody requested data & I have the clipboard
-// If an application receiving this message owns the clipboard, it should choose
-// the earliest filetype in the list that it can provide, and if none are
-// possible it should provide the data its original (native) format. Note that
-// the list can be null, to indicate that the native data should be sent.
-//		check the filetype list. My native format is text for this purpose
-	if(CBDEBUG) {
+	if ( !sqHasClipboard ) return;
+
+	/* somebody requested data & I have the clipboard
+	* If an application receiving this message owns the clipboard,
+	* it should choose the earliest filetype in the list that it
+	* can provide, and if none are possible it should provide the
+	* data its original (native) format. Note that the list can be
+	* null, to indicate that the native data should be sent.
+	*/
+#if CBDEBUG
 		printf("receivedDataRequest ");
 		if (sqHasInputFocus) printf("has focus ");
 		if (sqHasClipboard) printf("has clipboard\n");
-	}
+#endif
+	/* reply using the normal Message_DataSave protocol.
+	 * Bytes 20 through 35 of the DataSave block should be copied directly
+	 * from the corresponding bytes of the Message_DataRequest block,
+	 * whilst the estimated size field, filetype and filename must be
+	 * filled in.
+	 */
 
-		// loop until filetype is -1 or we find TEXT
-		// (- types are 'bits' which is unsigned int) in a list up to 54 words long.
-		// since I will only handle text, and I am using it as native format, I can skip
-		// this test. It would always suceed!
-
-
-// It
-// should reply using the normal Message_DataSave protocol. Bytes 20 through 35
-// of the DataSave block should be copied directly from the corresponding bytes
-// of the Message_DataRequest block, whilst the estimated size field, filetype
-// and filename must be filled in.
-		//make up a datasave block
-		//send the data save message
-		//sendDataSave(dsblock);
-// <p>
-// If your application needs to find out whether there is data available to
-// paste, but does not actually want to receive the data, you should broadcast
-// a Message_DataRequest as described above. If no task replies (i.e. you get
-// the message back) then there is no clipboard data available. If a
-// Message_DataSave is received, then you should ignore it (fail to reply),
-// which will cause the operation to be silently aborted by the other task. You
-// can then use the filetype field of the Message_DataSave to determine whether
-// the data being offered by the other task is in a suitable format for you to
-// receive.
-	}
-	// what to do if I don't have the clipboard? No reply?
+	/* We modify the received block and return to sender */
+	wmessage->size = 52;
+	wmessage->action = message_DATA_SAVE;
+	wmessage->your_ref = wmessage->my_ref;
+	wmessage->data.data_xfer.est_size = strlen(clipboardBuffer);
+	wmessage->data.data_xfer.file_type = (bits) 0xfff;
+	strcpy(&(wmessage->data.data_xfer.file_name[0]), "SqClip");
+	xwimp_send_message(wimp_USER_MESSAGE, wmessage, wmessage->sender);
 }
 
-void receivedDataSave(wimp_message * wblock) {
-// 
-// <p>
-// When the application that initiated the Paste receives the Message_DataSave,
-// it should check the filetype to ensure that it knows how to deal with it - it
-// may be the clipboard owner's native format. If it cannot, it may back out of
-// the transaction by ignoring the message. Otherwise, it should continue with
-// the DataSave protocol as detailed in the Programmer's Reference Manual.
-		// check the filetype - only deal with text for now. What others might be useful ?
-		// Do the data save protocols to get the clipboard text
-//
-	if(CBDEBUG) {
-		printf("receivedDataSave ");
+
+void receivedDataSaveAck(wimp_message * wmessage) {
+/* we've been asked to save the clipboard contents to the wimpScrap */
+#if CBDEBUG
+		printf("receivedDataSaveAck ");
 		if (sqHasInputFocus) printf("has focus ");
 		if (sqHasClipboard) printf("has clipboard\n");
-	}
- 
+#endif
+	osfile_save_stamped(&(wmessage->data.data_xfer.file_name[0]),
+		(bits)0xfff, (byte const *)clipboardBuffer,
+		(byte const *)(clipboardBuffer +
+			strlen(clipboardBuffer)));
+	/* modify the block to be a data load message and return to sender */
+	wmessage->action = message_DATA_LOAD;
+	wmessage->your_ref = wmessage->my_ref;
+	wmessage->data.data_xfer.est_size = strlen(clipboardBuffer);
+	xwimp_send_message(wimp_USER_MESSAGE, wmessage, wmessage->sender);
 }
 
+/*** Clipboard Support interface to interp.c ***/
+
+int clipboardSize(void) {
+/* return the number of characters in the clipboard entry */
+	if (!sqHasClipboard) {
+		/* if squeak doesn't have the clipboard, we need to
+		 * fetch the clipboard contents from the current holder
+		 */
+		fetchClipboard();
+	} 
+	return strlen(clipboardBuffer);
+}
+
+int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
+// paste - clipboardSize() will actually do any fetching
+int clipSize, charsToMove, i;
+char *srcPtr, *dstPtr, cc;
+	clipSize = strlen(clipboardBuffer);
+	charsToMove = (count < clipSize) ? count : clipSize;
+
+	srcPtr = (char *) clipboardBuffer;
+	dstPtr = (char *) byteArrayIndex + startIndex;
+	for (i = 0; i < charsToMove; i++, srcPtr++, dstPtr++) {
+		*dstPtr = cc = *srcPtr;
+		/* swap CR/LF */
+		if( cc == (char)10) *dstPtr = (char)13;
+		if( cc == (char)13) *dstPtr = (char)10;
+	}
+
+	return charsToMove;
+}
+
+int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
+/* copy count bytes, starting from startIndex, from byteArrayIndex to the
+ * clipboard. return value not (yet) used but send the number of chars moved
+ * the prim code has no way to handle any failure as yet, so do our best
+ */
+int  charsToMove, i;
+char *srcPtr, *dstPtr, cc;
+
+	/* buffer size must be at least 1 more than count to allow for
+	 * terminating \0. Realloc if needed and then recheck size
+	 */
+	allocClipboard(count + 1);
+	charsToMove = (count < clipboardByteSize) ? count : clipboardByteSize-1;
+
+	srcPtr = (char *) byteArrayIndex + startIndex;
+	dstPtr = (char *) clipboardBuffer;
+	for (i = 0; i < charsToMove; i++, srcPtr++, dstPtr++) {
+		*dstPtr = cc = *srcPtr;
+		/* swap CR/LF */
+		if( cc == (char)10) *dstPtr = (char)13;
+		if( cc == (char)13) *dstPtr = (char)10;
+	}
+	*dstPtr = (char)NULL;
+
+	claimClipboard();
+
+	return charsToMove;
+}
