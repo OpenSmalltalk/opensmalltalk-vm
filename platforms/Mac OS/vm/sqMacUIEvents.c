@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.8 2002/03/25 07:09:01 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.9 2002/04/27 19:02:16 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -14,6 +14,7 @@
 *  Mar 8th,  2002, JMM Add logic to pass in external prim calls that require main thread UI execution
 *  Mar 10th, 2002, JMM correct bad char cast, ensure we can get all characters.
 *  Mar 14th, 2002, JMM fix text input for encoding keys (textinput versus raw char)
+*  Apr 17th, 2002, JMM Use accessors for VM variables.
 
 notes: see incontent, I think it's a bug, click to bring to foreground signls mousedown. bad...
 IsUserCancelEventRef
@@ -50,10 +51,10 @@ IsUserCancelEventRef
 #define MAX_EVENT_BUFFER 1024
 #endif
 
-extern int interruptCheckCounter;
-extern int interruptKeycode;
-extern int interruptPending;  /* set to true by recordKeystroke if interrupt key is pressed */
-extern int fullScreenFlag;
+extern int getInterruptKeycode();
+extern int setInterruptPending(int value);
+extern int setInterruptCheckCounter(int value);
+extern int getFullScreenFlag();
 extern struct VirtualMachine* interpreterProxy;
 
 extern MenuHandle editMenu;
@@ -163,7 +164,6 @@ int ioProcessEvents(void) {
         }        
 	}
 #endif
-	return interruptPending;
 }
 
 int HandleEvents(void) {
@@ -247,11 +247,11 @@ int HandleEvents(void) {
 					if ((theEvent.message & resumeFlag) == 0) {
 						GetMouse(&savedMousePosition);
 						windowActive = false;
-						if (fullScreenFlag)
+						if (getFullScreenFlag())
 							MenuBarRestore();
 					} else {
 						windowActive = true;
- 						if (fullScreenFlag) {
+ 						if (getFullScreenFlag()) {
 							MenuBarHide();
             				fullDisplayUpdate();  /* Fix for full screen menu bar tabbing*/
 						}
@@ -325,7 +325,7 @@ void HandleMouseDown(EventRecord *theEvent) {
 #ifndef IHAVENOHEAD
 		case inDrag:
 
-			if (fullScreenFlag) 	
+			if (getFullScreenFlag()) 	
 				break;
 				
 			GetRegionBounds(GetGrayRgn(), &dragBounds);
@@ -336,7 +336,7 @@ void HandleMouseDown(EventRecord *theEvent) {
 
 		case inGrow:
 			if (theWindow == getSTWindow()) {
-				if (fullScreenFlag) 	
+				if (getFullScreenFlag()) 	
 					break;
 				newSize = GrowWindow(getSTWindow(), theEvent->where, &growLimits);
 				if (newSize != 0) {
@@ -348,7 +348,7 @@ void HandleMouseDown(EventRecord *theEvent) {
 		case inZoomIn:
 		case inZoomOut:
 			if (theWindow == getSTWindow()) {
-				if (fullScreenFlag) 	
+				if (getFullScreenFlag()) 	
 					break;
 					DoZoomWindow(theEvent,getSTWindow(), windowCode,10000, 10000);
 				}
@@ -395,10 +395,10 @@ void recordKeystroke(EventRecord *theEvent) {
 	}
 
 	keystate = (modifierBits << 8) | asciiChar;
-	if (keystate == interruptKeycode) {
+	if (keystate == getInterruptKeycode()) {
 		/* Note: interrupt key is "meta"; it not reported as a keystroke */
-		interruptPending = true;
-		interruptCheckCounter = 0;
+		setInterruptPending(true);
+		setInterruptCheckCounter(0);
 	} else {
 		keyBuf[keyBufPut] = keystate;
 		keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
@@ -1281,7 +1281,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
     {
         case kEventAppActivated:
             windowActive = true;
-            if (fullScreenFlag) {
+            if (getFullScreenFlag()) {
                 MenuBarHide();
             }
             break;
@@ -1291,7 +1291,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
             SetPortWindowPort(getSTWindow());
             GlobalToLocal(&savedMousePosition);
             windowActive = false;
-            if (fullScreenFlag)
+            if (getFullScreenFlag())
                 MenuBarRestore();
             break;
         default:
@@ -1627,10 +1627,10 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
             /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
     
             keystate = (evt->modifiers << 8) | asciiChar;
-            if (keystate == interruptKeycode) {
+            if (keystate == getInterruptKeycode()) {
                     /* Note: interrupt key is "meta"; it not reported as a keystroke */
-                    interruptPending = true;
-                    interruptCheckCounter = 0;
+                    setInterruptPending(true);
+                    setInterruptCheckCounter(0);
             } else {
                     keyBuf[keyBufPut] = keystate;
                     keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
@@ -1756,10 +1756,10 @@ void recordKeyboardEventCarbon(EventRef event) {
         /* keystate: low byte is the ascii character; next 8 bits are modifier bits */
 
         keystate = (evt->modifiers << 8) | asciiChar;
-        if (keystate == interruptKeycode) {
+        if (keystate == getInterruptKeycode()) {
                 /* Note: interrupt key is "meta"; it not reported as a keystroke */
-                interruptPending = true;
-                interruptCheckCounter = 0;
+		setInterruptPending(true);
+		setInterruptCheckCounter(0);
         } else {
                 keyBuf[keyBufPut] = keystate;
                 keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
@@ -1859,7 +1859,6 @@ int ioProcessEvents(void) {
         QuitApplicationEventLoop();
         pthread_exit(null);
     }
-    return interruptPending;
 }
 
 int getUIToLock(long *data) {
