@@ -1,9 +1,16 @@
-2005-03-15  Ian Piumarta  <ian.piumarta@inria.fr>
+----------------------------------------------------------------
+
+2005-03-16  Ian Piumarta  <ian.piumarta@hp.com>
+
+	* config/configure.ac: Version is 3.7-7.
+	* 3.7-7 Released.
+
+2005-03-15  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* vm/sqUnixMain.c (getImageName): Added, under extreme duress, to
 	deal with tpr laziness/sloppiness.
 
-2005-03-09  Ian Piumarta  <ian.piumarta@inria.fr>
+2005-03-09  Ian Piumarta  <ian.piumarta@hp.com>
 
 	* vm/sqUnixEvent.c (recordMouseEvent): Clear windowIndex field in
 	events.

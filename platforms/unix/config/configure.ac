@@ -37,11 +37,11 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2005-03-09 03:03:07 by piumarta on emilia.local
+# Last edited: 2005-03-16 21:35:28 by piumarta on squeak.hpl.hp.com
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,7b,6, 3,7b,5989)
+AC_VM_VERSION(3,7,7, 3,7,5989)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
