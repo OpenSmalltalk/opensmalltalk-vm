@@ -16,6 +16,7 @@ typedef struct
 /* Hypothetical position of file pointer */
 	long current_byte;
 	long total_bytes;
+	unsigned long id3v2_offset;
 } mpeg3_fs_t;
 
 #define mpeg3io_tell(fs) (((mpeg3_fs_t *)(fs))->current_byte)
