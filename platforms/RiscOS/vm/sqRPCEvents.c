@@ -793,11 +793,27 @@ sqInputEvent *EventBufAppendEvent(int  type) {
 }
 
 void EventBufAppendKey( int keyValue, int modifiers, int x, int y, int windowIndex) {
-/* add an event record for a keypress */
+/* add an event record for a keypress
+ * add it three times - once for key down, once for the key pressed
+ * and once for key up. Better if we could actually get the real events. */
 sqKeyboardEvent *evt;
 	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
 	evt->charCode = keyValue;
+	evt->pressCode = EventKeyDown;
+	evt->modifiers = modifiers;
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+	evt->windowIndex = windowIndex; 
+	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
+	evt->charCode = keyValue;
 	evt->pressCode = EventKeyChar;
+	evt->modifiers = modifiers;
+	evt->reserved1 = 0;
+	evt->reserved2 = 0;
+	evt->windowIndex = windowIndex; 
+	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
+	evt->charCode = keyValue;
+	evt->pressCode = EventKeyUp;
 	evt->modifiers = modifiers;
 	evt->reserved1 = 0;
 	evt->reserved2 = 0;

@@ -54,6 +54,7 @@ clean:
 vmobjdir:	  
         @ifthere $(Sqk) then else CDir $(Sqk)
         @ifthere @.vm.o then else CDir @.vm.o
+        @ifthere @.vm.o.sqRPCVersion then delete @.vm.o.sqRPCVersion
 
 pluginDir:	
 	@ifthere $(SqPlugins) then else CDir $(SqPlugins) 
