@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIEvents.c,v 1.7 2002/03/15 21:08:32 johnmci Exp $
+*   RCSID:   $Id: sqMacUIEvents.c,v 1.8 2002/03/25 07:09:01 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -63,9 +63,6 @@ extern Boolean gTapPowerManager;
 extern Boolean gDisablePowerManager;
 
 int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
-
-const long      gDisableIdleTickCount=60*10;
-long            gDisableIdleTickLimit=0;
 
 sqInputEvent eventBuffer[MAX_EVENT_BUFFER];
 int eventBufferGet = 0;
@@ -137,33 +134,33 @@ void HandleMenu(int mSelect);
 void HandleMouseDown(EventRecord *theEvent);
 int ioProcessEvents(void) {
 	/* This is a noop when running as a plugin; the browser handles events. */
-	const int nextPollOffsetCheck = CLOCKS_PER_SEC/60, nextPowerCheckOffset=CLOCKS_PER_SEC/2; 
-	static clock_t nextPollTick = 0, nextPowerCheck=0;
-	long    clockTime;
+	static unsigned long   nextPollTick = 0, nextPowerCheck=0, disableIdleTickLimit=0;
+	unsigned long   clockTime;
 
 #ifndef PLUGIN
-	if ((ioLowResMSecs() & 536870911) >= nextPollTick) {
+    clockTime = ioLowResMSecs();
+	if (abs(nextPollTick - clockTime) >= 16) {
 		/* time to process events! */
 		while (HandleEvents()) {
 			/* process all pending events */
 		}
+
+        clockTime = ioLowResMSecs();        
+		nextPollTick = clockTime;
 		
-        clockTime = ioLowResMSecs() & 536870911;
-        
         if (gDisablePowerManager && gTapPowerManager) {
-            if (clockTime > gDisableIdleTickLimit)
-                gDisableIdleTickLimit = (IdleUpdate() + gDisableIdleTickCount)  & 536870911;
+            if (abs(disableIdleTickLimit - clockTime) >= 6000) {
+                IdleUpdate();
+                disableIdleTickLimit = clockTime;
+            }
                 
 #if !defined(MINIMALVM)
-            if (clockTime > nextPowerCheck) {
+            if (abs(nextPowerCheck - clockTime) >= 500) {
                  UpdateSystemActivity(UsrActivity);
-                 nextPowerCheck = (clockTime + nextPowerCheckOffset) & 536870911;
+                 nextPowerCheck = clockTime;
             }
 #endif
-        }
-        
-		/* wait a while before trying again */
-		nextPollTick = (clockTime + nextPollOffsetCheck) & 536870911;
+        }        
 	}
 #endif
 	return interruptPending;
@@ -442,7 +439,7 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 
 	/* first the basics */
 	evt->type = EventTypeMouse;
-	evt->timeStamp = ioLowResMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & 536870911; 
 	GlobalToLocal((Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
@@ -486,7 +483,7 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioLowResMSecs() & 536870911;
+	evt->timeStamp = ioMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = (theEvent->message & keyCodeMask) >> 8;
@@ -554,7 +551,7 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 	/* first the basics */
 	theButtonState = MouseModifierState(theEvent);
 	evt->type = EventTypeDragDropFiles;
-	evt->timeStamp = ioLowResMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & 536870911; 
 	GlobalToLocal((Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
@@ -1556,7 +1553,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 
 	/* first the basics */
 	evt->type = EventTypeMouse;
-	evt->timeStamp = ioLowResMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & 536870911; 
         evt->x = where.h;
 	evt->y = where.v;
 	/* then the buttons */
@@ -1609,7 +1606,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	evt = (sqKeyboardEvent*) nextEventPut();
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioLowResMSecs() & 536870911;
+	evt->timeStamp = ioMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
@@ -1650,7 +1647,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
     	evt = (sqKeyboardEvent*) nextEventPut();
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioLowResMSecs() & 536870911;
+	evt->timeStamp = ioMSecs() & 536870911;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
@@ -1738,7 +1735,7 @@ void recordKeyboardEventCarbon(EventRef event) {
 
     /* first the basics */
     evt->type = EventTypeKeyboard;
-    evt->timeStamp = ioLowResMSecs() & 536870911;
+    evt->timeStamp = ioMSecs() & 536870911;
     /* now the key code */
     /* press code must differentiate */
     evt->charCode = text;
@@ -1778,7 +1775,7 @@ void recordKeyboardEventCarbon(EventRef event) {
 
     /* first the basics */
     evt->type = EventTypeKeyboard;
-    evt->timeStamp = ioLowResMSecs() & 536870911;
+    evt->timeStamp = ioMSecs() & 536870911;
     /* now the key code */
     /* press code must differentiate */
     evt->charCode = text;
