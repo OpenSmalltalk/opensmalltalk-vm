@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Window.c,v 1.14 2003/08/01 18:39:41 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Window.c,v 1.15 2003/08/14 21:31:55 andreasraab Exp $
 *
 *   NOTES:
 *    1) Currently supported Squeak color depths include 1,4,8,16,32 bits
@@ -29,7 +29,7 @@
 #include "sqWin32Prefs.h"
 
 #ifndef NO_RCSID
-static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.14 2003/08/01 18:39:41 andreasraab Exp $");
+static TCHAR RCSID[]= TEXT("$Id: sqWin32Window.c,v 1.15 2003/08/14 21:31:55 andreasraab Exp $");
 #endif
 
 /****************************************************************************/
@@ -2450,11 +2450,14 @@ char * GetAttributeString(int id) {
       return WIN32_PROCESSOR_NAME;
   if(id == 1004) /* Interpreter version */
 	  return (char*) interpreterVersion;
-  return "";
+  return NULL;
 }
 
 int attributeSize(int id) {
-	return strlen(GetAttributeString(id));
+  char *attrValue;
+  attrValue = GetAttributeString(id);
+  if(!attrValue) return primitiveFail();
+  return strlen(attrValue);
 }
 
 int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
@@ -2462,6 +2465,7 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
   int charsToMove;
   
   srcPtr = GetAttributeString(id);
+  if(!srcPtr) return 0;
   charsToMove = strlen(srcPtr);
   if (charsToMove > length) {
     charsToMove = length;

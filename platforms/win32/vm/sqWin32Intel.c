@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c,v 1.6 2003/03/08 21:06:15 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Intel.c,v 1.7 2003/08/14 21:31:55 andreasraab Exp $
 *
 *   NOTES:
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -300,7 +300,7 @@ char *GetVMOption(int id)
   if(id < numOptionsVM)
     return vmOptions[id];
   else
-    return "";
+    return NULL;
 }
 
 char *GetImageOption(int id)
@@ -308,7 +308,7 @@ char *GetImageOption(int id)
   if(id < numOptionsImage)
     return imageOptions[id];
   else
-    return "";
+    return NULL;
 }
 
 
