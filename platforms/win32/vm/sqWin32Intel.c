@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c,v 1.4 2002/05/26 18:52:10 andreasraab Exp $
+*   RCSID:   $Id: sqWin32Intel.c,v 1.5 2002/09/05 19:33:54 andreasraab Exp $
 *
 *   NOTES:
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -706,6 +706,17 @@ int sqMain(char *lpCmdLine, int nCmdShow)
 #else
   __try {
 #endif
+    /* set the CWD to the image location */
+    if(*imageName) {
+      char path[MAX_PATH+1], *ptr;
+      strcpy(path,imageName);
+      ptr = strrchr(path, '\\');
+      if(ptr) {
+	*ptr = 0;
+	SetCurrentDirectory(path);
+      }
+    }
+
     /* read the image file */
     if(!imageFile) {
       imageFile = sqImageFileOpen(imageName,"rb");
