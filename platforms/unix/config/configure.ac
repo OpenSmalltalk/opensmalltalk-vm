@@ -37,7 +37,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 # 
-# Last edited: 2004-04-06 20:05:35 by piumarta on cartman.inria.fr
+# Last edited: 2004-04-28 11:49:00 by piumarta on LPA-wlan-3-6.external.hpl.hp.com
 
 AC_INIT([config.h.in])
 
@@ -136,7 +136,7 @@ AC_CHECK_PROG(LN, ln, ln)
 # Check size assumptions of basic data types
 
 AC_REQUIRE_SIZEOF(int,    4)
-AC_REQUIRE_SIZEOF(time_t, 4)
+# AC_REQUIRE_SIZEOF(time_t, 4)
 AC_REQUIRE_SIZEOF(double, 8)
 AC_CHECK_INT64_T
 
