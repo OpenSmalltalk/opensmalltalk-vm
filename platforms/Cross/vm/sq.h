@@ -6,7 +6,7 @@
 *   AUTHOR:  
 *   ADDRESS: 
 *   EMAIL:   
-*   RCSID:   $Id: sq.h,v 1.9 2003/05/20 18:57:27 rowledge Exp $
+*   RCSID:   $Id: sq.h,v 1.10 2003/11/12 23:10:31 nedkonz Exp $
 *
 *	05/20/03	tim - move browser related macros in front of
 *			include of sqPlatformSpecific.h
@@ -57,22 +57,24 @@
    obviates sometimes having to word-swap floats when reading an image.
 */
 #if defined(DOUBLE_WORD_ALIGNMENT) || defined(DOUBLE_WORD_ORDER)
+/* this is to allow strict aliasing assumption in the optimizer */
+typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 # ifdef DOUBLE_WORD_ORDER
 /* word-based copy with swapping for non-PowerPC order */
-#   define storeFloatAtfrom(i, floatVarName) \
-	*((int *) (i) + 0) = *((int *) &(floatVarName) + 1); \
-	*((int *) (i) + 1) = *((int *) &(floatVarName) + 0);
-#   define fetchFloatAtinto(i, floatVarName) \
-	*((int *) &(floatVarName) + 0) = *((int *) (i) + 1); \
-	*((int *) &(floatVarName) + 1) = *((int *) (i) + 0);
+#   define storeFloatAtfrom(intPointerToFloat, floatVarName) \
+	*((int *)(intPointerToFloat) + 0) = ((_swapper *)(&floatVarName))->i[1]; \
+	*((int *)(intPointerToFloat) + 1) = ((_swapper *)(&floatVarName))->i[0];
+#   define fetchFloatAtinto(intPointerToFloat, floatVarName) \
+	((_swapper *)(&floatVarName))->i[1] = *((int *)(intPointerToFloat) + 0); \
+	((_swapper *)(&floatVarName))->i[0] = *((int *)(intPointerToFloat) + 1);
 # else /*!DOUBLE_WORD_ORDER*/
 /* word-based copy for machines with alignment restrictions */
-#   define storeFloatAtfrom(i, floatVarName) \
-	*((int *) (i) + 0) = *((int *) &(floatVarName) + 0); \
-	*((int *) (i) + 1) = *((int *) &(floatVarName) + 1);
-#   define fetchFloatAtinto(i, floatVarName) \
-	*((int *) &(floatVarName) + 0) = *((int *) (i) + 0); \
-	*((int *) &(floatVarName) + 1) = *((int *) (i) + 1);
+#   define storeFloatAtfrom(intPointerToFloat, floatVarName) \
+	*((int *)(intPointerToFloat) + 0) = ((_swapper *)(&floatVarName))->i[0]; \
+	*((int *)(intPointerToFloat) + 1) = ((_swapper *)(&floatVarName))->i[1];
+#   define fetchFloatAtinto(intPointerToFloat, floatVarName) \
+	((_swapper *)(&floatVarName))->i[0] = *((int *)(intPointerToFloat) + 0); \
+	((_swapper *)(&floatVarName))->i[1] = *((int *)(intPointerToFloat) + 1);
 # endif /*!DOUBLE_WORD_ORDER*/
 #else /*!(DOUBLE_WORD_ORDER||DOUBLE_WORD_ALIGNMENT)*/
 /* for machines that allow doubles to be on any word boundary */
