@@ -8,6 +8,7 @@
  3.0.17 May 24th 2001 JMM add flush vol on flush file (needed according to apple tech notes)
  3.0.19 Aug 2001 JMM make it a real plugin 
  3.2.1  Nov 2001 JMM build with Apple's project builder and convert to use StdCLib.
+ 3.2.1B5 Dec 27,2001 JMM alter mkdir def to make cw pro 5 happy
  */
 
 #include "sq.h"
@@ -20,7 +21,7 @@
 #else
 	#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
 		#include <unistd.h>
-		int mkdir(const char *,...);
+		int mkdir(const char *,int);
 		int ftruncate(short int file,int offset);
 	#endif
 
