@@ -4,7 +4,7 @@ FloatArrayPlugin provides fast access to FloatArrays for batch processing of flo
 Class {
 	#name : #FloatArrayPlugin,
 	#superclass : #InterpreterPlugin,
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #'translation to C' }

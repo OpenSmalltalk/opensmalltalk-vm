@@ -89,7 +89,7 @@ Class {
 	#classVars : [
 		'DirNames'
 	],
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #initialisation }
@@ -275,6 +275,7 @@ VMMaker >> copyFilesFromSourceDirectory: srcDir toTargetDirectory: dstDir recurs
 	"copy all the files"
 	| dirList  |
 	srcDir localName = 'CVS' ifTrue:[logger show: 'CVS files NOT copied by VMMaker'; cr. ^self].
+	srcDir localName = '.svn' ifTrue:[logger show: 'SVN files NOT copied by VMMaker'; cr. ^self].
 
 	self copyFilesFrom: srcDir to: dstDir.
 
@@ -282,6 +283,7 @@ VMMaker >> copyFilesFromSourceDirectory: srcDir toTargetDirectory: dstDir recurs
 	"If we are recursing create the subdirectories of srcDir in dstDir, and then copy that 
 	subtree "
 	dirList _ srcDir directoryNames copyWithout: 'CVS'.
+	dirList _ srcDir directoryNames copyWithout: '.svn'.
 	dirList do: 
 		[:newDstDir | 
 		(dstDir directoryExists: newDstDir)

@@ -24,7 +24,7 @@ Class {
 		'StateNoMoreData',
 		'MaxBits'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #translation }

@@ -27,14 +27,14 @@ Class {
 	#classVars : [
 		'FillTable',
 		'EdgeStepTable',
-		'EdgeInitTable',
 		'WideLineWidthTable',
+		'EdgeInitTable',
 		'WideLineFillTable'
 	],
 	#pools : [
 		'BalloonEngineConstants'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
 
 { #category : #documentation }

@@ -4,7 +4,7 @@ A special form of VMMaker to suit Windows machines.  Copies files around a littl
 Class {
 	#name : #Win32VMMaker,
 	#superclass : #VMMakerWithFileCopying,
-	#category : 'VMMaker-Building'
+	#category : #'VMMaker-Building'
 }
 
 { #category : #'target directories' }

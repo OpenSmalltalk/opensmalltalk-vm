@@ -4,7 +4,7 @@ Class {
 	#instVars : [
 		'comment'
 	],
-	#category : 'VMMaker-Translation to C'
+	#category : #'VMMaker-Translation to C'
 }
 
 { #category : #'as yet unclassified' }

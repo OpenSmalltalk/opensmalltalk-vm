@@ -151,7 +151,7 @@ Class {
 	#classInstVars : [
 		'timeStamp'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #translation }
@@ -166,7 +166,12 @@ ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #headerTypeBytes
 		declareC: 'int headerTypeBytes[4]'.
-		
+	
+	aCCodeGenerator var: #youngStart type: 'unsigned'.
+	aCCodeGenerator var: #endOfMemory type: 'unsigned'.
+	aCCodeGenerator var: #memoryLimit type: 'unsigned'.
+	aCCodeGenerator var: #youngStartLocal type: 'unsigned'.
+
 ]
 
 { #category : #initialization }
@@ -291,7 +296,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 { #category : #translation }
 ObjectMemory class >> noteCompilationOf: aSelector meta: isMeta [
 	"note the recompiliation by resetting the timeStamp "
-	self touch.
+	timeStamp _ Time totalSeconds.
 	^super noteCompilationOf: aSelector meta: isMeta
 ]
 
@@ -304,11 +309,6 @@ ObjectMemory class >> requiredMethodNames [
 { #category : #translation }
 ObjectMemory class >> timeStamp [
 	^timeStamp ifNil:[0]
-]
-
-{ #category : #accessing }
-ObjectMemory class >> touch [
-	timeStamp _ Time totalSeconds
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -461,7 +461,8 @@ ObjectMemory >> allocate: byteSize headerSize: hdrSize h1: baseHeader h2: classO
 	May cause a GC"
 	| newObj remappedClassOop end i |
 	self inline: true.
-
+	self var: #i type: 'unsigned'.
+	self var: #end type: 'unsigned'.
 	"remap classOop in case GC happens during allocation"
 	hdrSize > 1 ifTrue: [self pushRemappableOop: classOop].
 	newObj _ self allocateChunk: byteSize + (hdrSize - 1 * 4).
@@ -2254,7 +2255,7 @@ ObjectMemory >> startObj [
 ObjectMemory >> startOfMemory [
 	"Return the start of object memory."
 
-	^ self cCode: '(int) memory'
+	^ self cCode: '(unsigned) memory'
 ]
 
 { #category : #'interpreter access' }

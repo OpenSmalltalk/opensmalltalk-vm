@@ -161,7 +161,7 @@ Class {
 		'ColorMapFixedPart',
 		'ColorMapPresent'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #'system simulation' }
