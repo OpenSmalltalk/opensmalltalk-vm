@@ -112,7 +112,7 @@ CXX=		@CXX@
 DEFS=		@DEFS@ -DUNIX -DSQ_LIBDIR=\"$(vsqlibdir)\" -DVM_NAME=\"$(DESTDIR)$(bindir)/squeak\"  -DDISABLE_SECURITY
 # FilePlugin and SocketPlugin are counted as standard includes,
 # because some plugins (notably OSProcess) need them
-INCLUDES=	-I. -I$(unixdir)/misc -I$(unixdir)/vm -I$(crossdir)/vm -I$(gendir) -I$(gendir)/vm -I$(gendir)/vm/intplugins/FilePlugin -I$(gendir)/plugins/FilePlugin -I$(gendir)/vm/intplugins/SocketPlugin -I$(gendir)/plugins/SocketPlugin
+INCLUDES=	-I. -I$(unixdir)/misc -I$(unixdir)/vm -I$(crossdir)/vm -I$(gendir) -I$(gendir)/vm -I$(crossdir)/plugins/FilePlugin  -I$(crossdir)/plugins/SocketPlugin 
 CPPFLAGS=	@CPPFLAGS@
 CFLAGS=		@CFLAGS@ @J_CFLAGS@ -funroll-loops
 WFLAGS=		@WFLAGS@
