@@ -6,13 +6,14 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacWindow.c,v 1.6 2002/01/22 19:06:47 johnmci Exp $
+*   RCSID:   $Id: sqMacWindow.c,v 1.7 2002/01/31 21:26:09 johnmci Exp $
 *
 *   NOTES: See change log below.
 *	12/19/2001 JMM Fix for USB on non-usb devices, and fix for ext keyboard use volatile
 *	12/27/2001 JMM Added support to load os-x Bundles versus CFM, have broken CFM code too.
 *	1/2/2002   JMM Use unix io for image, much faster, cleanup window display and ioshow logic.
 *	1/18/2002  JMM Fix os-x memory mapping, new type for squeak file offsets
+*	1/27/2002  JMM added logic to get framework bundles 
 *
 *****************************************************************************/
 #include "sq.h"
@@ -1546,6 +1547,60 @@ void	*MachOFunctionPointerForCFMFunctionPointer( void *cfmfp )
 #endif
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
+
+OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef *bundlePtr)
+{
+	OSStatus 	err;
+	FSRef 		frameworksFolderRef;
+	CFURLRef	baseURL;
+	CFURLRef	bundleURL;
+	
+	*bundlePtr = nil;
+	
+	baseURL = nil;
+	bundleURL = nil;
+	
+	err = FSFindFolder(kOnAppropriateDisk, kFrameworksFolderType, true, &frameworksFolderRef);
+	if (err == noErr) {
+		baseURL = CFURLCreateFromFSRef(kCFAllocatorSystemDefault, &frameworksFolderRef);
+		if (baseURL == nil) {
+			err = coreFoundationUnknownErr;
+		}
+	}
+	if (err == noErr) {
+		bundleURL = CFURLCreateCopyAppendingPathComponent(kCFAllocatorSystemDefault, baseURL, framework, false);
+		if (bundleURL == nil) {
+			err = coreFoundationUnknownErr;
+		}
+	}
+	if (err == noErr) {
+		*bundlePtr = CFBundleCreate(kCFAllocatorSystemDefault, bundleURL);
+		if (*bundlePtr == nil) {
+			err = coreFoundationUnknownErr;
+		}
+	}
+	if (err == noErr) {
+	    if ( ! CFBundleLoadExecutable( *bundlePtr ) ) {
+			err = coreFoundationUnknownErr;
+	    }
+	}
+
+	// Clean up.
+	
+	if (err != noErr && *bundlePtr != nil) {
+		CFRelease(*bundlePtr);
+		*bundlePtr = nil;
+	}
+	if (bundleURL != nil) {
+		CFRelease(bundleURL);
+	}	
+	if (baseURL != nil) {
+		CFRelease(baseURL);
+	}	
+	
+	return err;
+}
+
 int 	ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
 	void * 		functionPtr = 0;
 	OSErr 		err;
@@ -1581,6 +1636,7 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         CFURLRef 			theURLRef;
         CFBundleRef			theBundle;
         CFStringRef			filePath;
+        OSStatus			err;
         
 	strncpy(tempDirPath,pluginDirPath,1023);
         if (tempDirPath[strlen(tempDirPath)-1] != ':')
@@ -1599,11 +1655,22 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         if (filePath == nil)
             return nil;
             
-        theURLRef = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+        theURLRef = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+	CFRelease(filePath);
+        if (theURLRef == nil)
+            return nil;
 
         theBundle = CFBundleCreate(NULL,theURLRef);
-        CFRelease(filePath);
         CFRelease(theURLRef);
+        
+        if (theBundle == nil) {
+            CFStringRef libNameCFString;
+           libNameCFString = CFStringCreateWithCString(kCFAllocatorDefault,libName,kCFStringEncodingMacRoman);
+            err = LoadFrameworkBundle(libNameCFString, &theBundle);
+            CFRelease(libNameCFString);
+            if (err != noErr)
+                return nil;
+        }  
         
         if (theBundle == nil) 
             return nil;
@@ -1684,9 +1751,9 @@ int ioBeep(void) {
 
 #ifndef PLUGIN
 int ioExit(void) {
-	UnloadScrap();
+    UnloadScrap();
     ioShutdownAllModules();
-	MenuBarRestore();
+    MenuBarRestore();
 #if !TARGET_API_MAC_CARBON
     if((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) {
         if (gBackingFile != 0) {
@@ -1695,7 +1762,7 @@ int ioExit(void) {
         }
     }
 #endif
-	ExitToShell();
+    ExitToShell();
 }
 #endif
 
@@ -2740,7 +2807,7 @@ void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
     debug = mmap( NULL, gMaxHeapSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
     if((debug == MAP_FAILED) || (((long) debug) < 0))
         return 0;
-	return debug;
+    return debug;
 #else
 /*     if((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) {
         ByteCount  viewLength;
