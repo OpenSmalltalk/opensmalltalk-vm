@@ -5,7 +5,7 @@
 # 
 # Author: Ian.Piumarta@INRIA.Fr
 #
-# Last edited: 2004-04-12 12:56:01 by piumarta on emilia.local
+# Last edited: 2005-03-09 03:01:59 by piumarta on emilia.local
 
 #   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
@@ -111,7 +111,7 @@ BEGIN {
 }
 
 (stage == 2) && /^\}/ {
-  stage= 3;
+  stage= -1;
   print;
   next;
 }
@@ -164,6 +164,6 @@ BEGIN {
 
 END {
   if (stage != -1) {
-    print "#error GNUIFICATION FAILED"
+    print "#error GNUIFICATION FAILED (", stage, ")"
   }
 }
