@@ -128,5 +128,9 @@ binary: binary-indep binary-arch
 origtgz: clean
 	cd ..; tar cfvz squeak_$(version).orig.tar.gz squeak-$(shell echo $(version) | tr - . )/{platforms/unix,platforms/Cross,src,debian} --exclude=CVS
 
+# print the current version, as this file sees it
+version:
+	@echo The version is $(version)
+
 
 .PHONY: build clean binary-indep binary-arch binary install configure origtgz
