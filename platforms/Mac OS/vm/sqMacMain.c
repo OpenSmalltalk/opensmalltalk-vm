@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.6 2002/03/19 21:33:33 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.7 2002/03/25 07:04:31 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -91,7 +91,6 @@ extern char shortImageName[];
 extern char documentName[];
 extern char vmPath[];
 extern int  fullScreenFlag;
-extern long gDisableIdleTickLimit;
 extern unsigned char *memory;
 extern squeakFileOffsetType calculateStartLocationForImage();
 Boolean         gTapPowerManager=false;
@@ -308,7 +307,6 @@ void PowerMgrCheck(void) {
 		    && (pmgrAttributes & (1<<gestaltPMgrDispatchExists))
 		    && (PMSelectorCount() >= 0x24)) {
 		    gTapPowerManager = true;
-                    gDisableIdleTickLimit = ioLowResMSecs()  & 536870911;
 		}
 #endif
 }
