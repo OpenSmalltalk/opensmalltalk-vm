@@ -10,11 +10,6 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
-{ #category : #'instance creation' }
-BalloonEngineSimulation class >> new [
-	^super new initialize
-]
-
 { #category : #simulation }
 BalloonEngineSimulation >> assert: bool [
 	bool ifFalse:[^self error:'Assertion failed'].

@@ -16,11 +16,6 @@ Class {
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
-{ #category : #'instance creation' }
-InterpreterProxy class >> new [
-	^super new initialize
-]
-
 { #category : #private }
 InterpreterProxy class >> validateProxyImplementation: anInterpreter [ 
 	"InterpreterProxy validateProxyImplementation: Interpreter"
