@@ -1,39 +1,50 @@
 #include "sq.h"
 #include "sqMacFileLogic.h"
 #include "DropPlugin.h"
-#include <AppleEvents.h>
-#include <Dialogs.h>
-#include <Deskbus.h>
-#include <Devices.h>
-#include <Files.h>
-#include <Fonts.h>
-#include <Gestalt.h>
-#include <LowMem.h>
-#include <Memory.h>
-#include <Menus.h>
-#include <OSUtils.h>
-#include <Power.h>
-#include <QuickDraw.h>
-#include <Scrap.h>
-#include <Strings.h>
-#include <Timer.h>
-#include <ToolUtils.h>
-#include <Windows.h>
-#if !defined( __MPW__ ) &&  !defined ( __APPLE__ ) && !defined ( __MACH__ )
-#include <profiler.h>
+#if TARGET_API_MAC_CARBON
+	#include <Carbon/Carbon.h>
+#else
+	#include <AppleEvents.h>
+	#include <Dialogs.h>
+	#include <Deskbus.h>
+	#include <Devices.h>
+	#include <Files.h>
+	#include <Fonts.h>
+	#include <Gestalt.h>
+	#include <LowMem.h>
+	#include <Memory.h>
+	#include <Menus.h>
+	#include <OSUtils.h>
+	#include <Power.h>
+	#include <QuickDraw.h>
+	#include <Scrap.h>
+	#include <Strings.h>
+	#include <Timer.h>
+	#include <ToolUtils.h>
+	#include <Windows.h>
+	#if defined(__MWERKS__)  && !TARGET_API_MAC_CARBON
+		#include <profiler.h>
+		#include <cstddef>
+	#endif
+	#include <sound.h>
+	#include <Math64.h>
+	#include <processes.h>
+	#include <OpenTransport.h>
+	#include <Threads.h>
+	#include <DriverServices.h>
+	#include <USB.h> 
 #endif
-#include <sound.h>
-#include <Math64.h>
-#if !defined( __MPW__ ) &&  !defined ( __APPLE__ ) && !defined ( __MACH__ )
-#include <cstddef>
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+	#include <sys/types.h>
+	#include <sys/time.h>
+	#include <unistd.h>
+	struct timeval	 startUpTime;
+	unsigned int	lowResMSecs= 0;
+	#define USE_ITIMER
+	#define LOW_RES_TICK_MSECS 16
 #endif
-#include <processes.h>
-#include <OpenTransport.h>
-#include <Threads.h>
-#include <DriverServices.h>
-#include <stddef.h>
-
-
+	#include <stddef.h>
+	#include <unistd.h>
 
 /*** Compilation Options:
 *
@@ -74,7 +85,7 @@
 //May 24th 2001, JMM V3.17 add logic to sleep/wait in carbon on excessive idle time, plus change data return on attribute gets
 //June 18th 2001, JMM V3.18 fix for cast of version info for CW 6.1
 //June 18th 2001, JMM V3.19 fix for saveAsEmbeddedImage. Broken in 3.0 Also added fix for powerpc only cfrg, and rework of security interface for VMMaker via Tim
-//Oct 1,2001, JMM V3.1.2  open document support and fix scrap issues. 
+//Oct 1,2001, JMM V3.1.2  open document support and fix scrap issues, add ext keyboard unlock shift key logic. 
 
 #if TARGET_API_MAC_CARBON
     #define EnableMenuItemCarbon(m1,v1)  EnableMenuItem(m1,v1);
@@ -101,9 +112,6 @@ pascal short YieldToAnyThread(void) {
 enum { appleID = 1, fileID, editID };
 enum { quitItem = 1 };
 
-/* The following prototype is missing from the CW11 header files: */
-pascal void ExitToShell(void);
-
 /*** Variables -- Imported from Browser Plugin Module ***/
 #ifdef PLUGIN
 extern int pluginArgCount;
@@ -118,18 +126,19 @@ extern int interruptKeycode;
 extern int interruptPending;  /* set to true by recordKeystroke if interrupt key is pressed */
 extern unsigned char *memory;
 extern int savedWindowSize;   /* set from header when image file is loaded */
+extern struct VirtualMachine* interpreterProxy;
 
 /*** Variables -- image and path names ***/
-#define IMAGE_NAME_SIZE 300
+#define IMAGE_NAME_SIZE 1000
 char imageName[IMAGE_NAME_SIZE + 1];  /* full path to image file */
 
-#define SHORTIMAGE_NAME_SIZE 100
+#define SHORTIMAGE_NAME_SIZE 255
 char shortImageName[SHORTIMAGE_NAME_SIZE + 1];  /* just the image file name */
 
-#define DOCUMENT_NAME_SIZE 300
+#define DOCUMENT_NAME_SIZE 1000
 char documentName[DOCUMENT_NAME_SIZE + 1];  /* full path to document file */
 
-#define VMPATH_SIZE 300
+#define VMPATH_SIZE 1000
 char vmPath[VMPATH_SIZE + 1];  /* full path to interpreter's directory */
 
 /*** Variables -- Mac Related ***/
@@ -199,14 +208,30 @@ int	gDelayTime=0;
 		Mac bits: <control><option><caps lock><shift><command>
 		ST bits:  <command><option><control><shift>
 */
-char modifierMap[32] = {
+char modifierMap[256] = {
 //	0,  8, 1,  9, 1,  9, 1,  9, 4, 12, 5, 13, 5, 13, 5, 13, caps lock
 //	2, 10, 3, 11, 3, 11, 3, 11, 6, 14, 7, 15, 7, 15, 7, 15
-    0,  8, 1,  9, 0,  8, 1,  9, 4, 12, 5, 13, 4, 12, 5, 13, //no caps lock
-    2, 10, 3, 11, 2, 10, 3, 11, 6, 14, 7, 15, 6, 14, 7, 15
+//    0,  8, 1,  9, 0,  8, 1,  9, 4, 12, 5, 13, 4, 12, 5, 13, //no caps lock
+//    2, 10, 3, 11, 2, 10, 3, 11, 6, 14, 7, 15, 6, 14, 7, 15
 	
- };
-
+ 0, 8, 1, 9, 0, 8, 1, 9, 4, 12, 5, 13, 4, 12, 5, 13, //Track left and right shift keys
+ 2, 10, 3, 11, 2, 10, 3, 11, 6, 14, 7, 15, 6, 14, 7, 
+15, 1, 9, 1, 9, 1, 9, 1, 9, 5, 13, 5, 13, 5, 13, 5, 
+13, 3, 11, 3, 11, 3, 11, 3, 11, 7, 15, 7, 15, 7, 15,
+ 7, 15, 4, 12, 5, 13, 4, 12, 5, 13, 4, 12, 5, 13, 4,
+12, 5, 13, 6, 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 
+ 6, 14, 7, 15, 5, 13, 5, 13, 5, 13, 5, 13, 5, 13, 5,
+13, 5, 13, 5, 13, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 
+ 7, 15, 7, 15, 7, 15, 2, 10, 3, 11, 2, 10, 3, 11, 6, 
+14, 7, 15, 6, 14, 7, 15, 2, 10, 3, 11, 2, 10, 3, 11, 
+ 6, 14, 7, 15, 6, 14, 7, 15, 3, 11, 3, 11, 3, 11, 3, 
+ 11, 7, 15, 7, 15, 7, 15, 7, 15, 3, 11, 3, 11, 3, 11, 
+ 3, 11, 7, 15, 7, 15, 7, 15, 7, 15, 6, 14, 7, 15, 6, 
+ 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 
+ 6, 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 7, 15, 7, 
+ 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 
+ 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15 };
+ 
 // requestFlags bit values in VideoRequestRec (example use: 1<<kAbsoluteRequestBit)
 enum {
 	kBitDepthPriorityBit		= 0,	// Bit depth setting has priority over resolution
@@ -288,7 +313,7 @@ void SetUpWindow(void);
 void SetWindowTitle(char *title);
 void SqueakTerminate();
 void ExitCleanup();
-int calculateStartLocationForImage();
+off_t calculateStartLocationForImage();
 Boolean RunningOnCarbonX(void);
 void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, short hMax, short vMax);
 GDHandle getDominateDevice(WindowPtr theWindow,Rect *windRect);
@@ -299,16 +324,16 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude);
 /* event capture */
 sqInputEvent *nextEventPut(void);
 
-int recordKeystroke(EventRecord *theEvent);
-int recordModifierButtons(EventRecord *theEvent);
-int recordMouseDown(EventRecord *theEvent);
+void recordKeystroke(EventRecord *theEvent);
+void recordModifierButtons(EventRecord *theEvent);
+void recordMouseDown(EventRecord *theEvent);
 int recordMouseEvent(EventRecord *theEvent, int theButtonState);
 int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType);
 int recordKeyboardEvent(EventRecord *theEvent, int keyType);
 int MouseModifierState(EventRecord *theEvent);
 WindowPtr getSTWindow(void);
-int setMessageHook(eventMessageHook theHook);
-int setPostMessageHook(eventMessageHook theHook);
+void setMessageHook(eventMessageHook theHook);
+void setPostMessageHook(eventMessageHook theHook);
 int checkForModifierKeys();
 void ignoreLastEvent();
 
@@ -317,7 +342,7 @@ static pascal void* squeakThread(void *threadParm);
 OSErr   createNewThread();
 void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command);
 void SetupKeyboard(void);    
-Boolean IsKeyDown(short n);    
+Boolean IsKeyDown(void);    
   
  
 /*** Apple Event Handlers ***/
@@ -344,22 +369,19 @@ void InstallAppleEventHandlers() {
 
 pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon) {
 	/* User double-clicked application; look for "squeak.image" in same directory */
-    int                 checkValueForEmbeddedImage;
+    off_t                 checkValueForEmbeddedImage;
     OSErr               err;
 	ProcessSerialNumber processID;
 	ProcessInfoRec      processInformation;
-	Str32                name; 
-	
-/* record path to VM's home folder */
-	short vRefNum;
-	long dirID;
+	Str255              name; 
+	FSSpec 		    workingDirectory;
 
-	// Get the Volume ref and Directory id of the Application's directory.
-    err = GetApplicationDirectory(&vRefNum, &dirID);
+	// Get spec to the working directory
+    err = GetApplicationDirectory(&workingDirectory);
     if (err != noErr) return err;
 
 	// Convert that to a full path string.
-	PathToWorkingDir(vmPath, VMPATH_SIZE, vRefNum, dirID);
+	PathToDir(vmPath, VMPATH_SIZE,&workingDirectory);
 
 	checkValueForEmbeddedImage = calculateStartLocationForImage();
 	if (checkValueForEmbeddedImage == 0) {
@@ -370,7 +392,7 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 
     GetCurrentProcess(&processID); 
     processInformation.processInfoLength = sizeof(ProcessInfoRec);
-    processInformation.processAppSpec = nil;
+    processInformation.processAppSpec = &workingDirectory;
     processInformation.processName = (StringPtr) &name;
 	err = GetProcessInformation(&processID,&processInformation);
 
@@ -380,7 +402,7 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 	}
 	
 	CopyPascalStringToC(name,shortImageName);
-	StoreFullPathForLocalNameInto(shortImageName, imageName, IMAGE_NAME_SIZE, vRefNum, dirID);
+    PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
 
     return noErr;
 }
@@ -395,22 +417,19 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 	long		numFiles, size, imageFileIsNumber;
 	DescType	type;
 	AEKeyword	keyword;
-	FSSpec		fileSpec;
+	FSSpec		fileSpec,workingDirectory;
 	WDPBRec		pb;
 	FInfo		finderInformation;
-	char 		tempShortName[SHORTIMAGE_NAME_SIZE + 1];	
-	short       vRefNum;
-	long        dirID;
 	
 	reply; refCon;  /* reference args to avoid compiler warnings */
 
 	/* record path to VM's home folder */
 	
     if (vmPath[0] == 0) {
-        err = GetApplicationDirectory(&vRefNum, &dirID);
+        err = GetApplicationDirectory(&workingDirectory);
         if (err != noErr) 
             return err;    
-	    PathToWorkingDir(vmPath, VMPATH_SIZE, vRefNum, dirID);
+        PathToDir(vmPath, VMPATH_SIZE, &workingDirectory);
 	}
 	
 	/* copy document list */
@@ -434,9 +453,9 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     if (imageFileIsNumber == 0) { 
         // Test is open change set 
 		strcpy(shortImageName, "squeak.image");
-		StoreFullPathForLocalNameInto(shortImageName, imageName, IMAGE_NAME_SIZE, vRefNum, dirID);
-        fileSpec.vRefNum = vRefNum;
-        fileSpec.parID = dirID;
+        CopyCStringToPascal(shortImageName,workingDirectory.name);
+        PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
+        fileSpec = workingDirectory;
     } else {
     	/* get image name */
     	err = AEGetNthPtr(&fileList, imageFileIsNumber, typeFSS, &keyword, &type, (Ptr) &fileSpec, sizeof(fileSpec), &size);
@@ -448,7 +467,7 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     	    goto done;
     		
     	CopyPascalStringToC(fileSpec.name,shortImageName);
- 		StoreFullPathForLocalNameInto(shortImageName, imageName, IMAGE_NAME_SIZE,fileSpec.vRefNum,fileSpec.parID);
+        PathToFile(imageName, IMAGE_NAME_SIZE,&fileSpec);
    }
     
 	/* make the image or document directory the working directory */
@@ -1171,12 +1190,12 @@ void SetWindowTitle(char *title) {
 
 /*** Event Recording Functions ***/
 
-int recordKeystroke(EventRecord *theEvent) {
+void recordKeystroke(EventRecord *theEvent) {
 	int asciiChar, modifierBits, keystate;
 
-	/* keystate: low byte is the ascii character; next 4 bits are modifier bits */
+	/* keystate: low byte is the ascii character; next 8 bits are modifier bits */
 	asciiChar = theEvent->message & charCodeMask;
-	modifierBits = modifierMap[(theEvent->modifiers >> 8) & 0x1F];
+	modifierBits = modifierMap[(theEvent->modifiers >> 8)];
 	if ((modifierBits & 0x9) == 0x9) {  /* command and shift */
 		if ((asciiChar >= 97) && (asciiChar <= 122)) {
 			/* convert ascii code of command-shift-letter to upper case */
@@ -1200,7 +1219,7 @@ int recordKeystroke(EventRecord *theEvent) {
 	}
 }
 
-int recordMouseDown(EventRecord *theEvent) {
+void recordMouseDown(EventRecord *theEvent) {
 
 	/* button state: low three bits are mouse buttons; next 4 bits are modifier bits */
 	buttonState = MouseModifierState(theEvent);
@@ -1221,12 +1240,12 @@ int MouseModifierState(EventRecord *theEvent) {
 		}
 	} 
 
-	/* button state: low three bits are mouse buttons; next 4 bits are modifier bits */
-	return ((modifierMap[(theEvent->modifiers >> 8) & 0x1F] << 3) |
+	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
+	return ((modifierMap[(theEvent->modifiers >> 8)] << 3) |
 		(stButtons & 0x7));
 }
 
-int recordModifierButtons(EventRecord *theEvent) {
+void recordModifierButtons(EventRecord *theEvent) {
 	int stButtons = 0;
 
 	if ((theEvent->modifiers & btnState) == false) {
@@ -1234,9 +1253,9 @@ int recordModifierButtons(EventRecord *theEvent) {
 	} else {
 		stButtons = 0;
 	}
-	/* button state: low three bits are mouse buttons; next 4 bits are modifier bits */
+	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
 	buttonState =
-		(modifierMap[(theEvent->modifiers >> 8) & 0x1F] << 3) |
+		(modifierMap[(theEvent->modifiers >> 8)] << 3) |
 		(stButtons & 0x7);
 }
 
@@ -1298,7 +1317,6 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 }
 
 int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
-	int stButtons = 0;
 	int asciiChar, modifierBits;
 	sqKeyboardEvent *evt, *extra;
 
@@ -1336,7 +1354,7 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	return 1;
 }
 
-static sqInputEvent *nextEventPut(void) {
+sqInputEvent *nextEventPut(void) {
 	sqInputEvent *evt;
 	evt = eventBuffer + eventBufferPut;
 	eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
@@ -1379,6 +1397,9 @@ int checkForModifierKeys() {
 		kVirtualShiftKey = 0x038,
 		kVirtualControlKey = 0x03B,
 		kVirtualOptionKey = 0x03A,
+		kVirtualRShiftKey = 0x03C,
+		kVirtualRControlKey = 0x03E,
+		kVirtualROptionKey = 0x03D,
 		kVirtualCommandKey = 0x037
 	};
 	KeyMap theKeys;
@@ -1392,6 +1413,9 @@ int checkForModifierKeys() {
 	result += ((keybytes[kVirtualShiftKey>>3] & (1 << (kVirtualShiftKey&7))) != 0)       ? shiftKey : 0;
 	result += ((keybytes[kVirtualControlKey>>3] & (1 << (kVirtualControlKey&7))) != 0)   ? controlKey : 0;
 	result += ((keybytes[kVirtualOptionKey>>3] & (1 << (kVirtualOptionKey&7))) != 0)     ? optionKey : 0;
+	result += ((keybytes[kVirtualRShiftKey>>3] & (1 << (kVirtualRShiftKey&7))) != 0)       ? shiftKey : 0;
+	result += ((keybytes[kVirtualRControlKey>>3] & (1 << (kVirtualRControlKey&7))) != 0)   ? controlKey : 0;
+	result += ((keybytes[kVirtualROptionKey>>3] & (1 << (kVirtualROptionKey&7))) != 0)     ? optionKey : 0;
 	result += ((keybytes[kVirtualCommandKey>>3] & (1 << (kVirtualCommandKey&7))) != 0)   ? cmdKey : 0;
 	
 	return result;
@@ -1478,30 +1502,20 @@ int ioFreeModule(int moduleHandle) {
 }
 
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
-	short 				vRefNum;
-	long				ignore;
-	CInfoPBRec 			pb;
 	FSSpec				fileSpec;
-	Str255				problemLibName,fileSpecName,tempPlugindirPath;
-    Ptr					junk;
-	CFragConnectionID	libHandle = 0;
+	Str255				problemLibName;
+        char				tempDirPath[1024];
+        Ptr				junk;
+	CFragConnectionID		libHandle = 0;
 	OSErr				err = noErr;
 
-	/* get the default volume */
-	HGetVol( nil, &vRefNum, &ignore);
-
-	/* get the directory ID for the given path */
-	CopyCStringToPascal(pluginDirPath,tempPlugindirPath);
-	pb.hFileInfo.ioNamePtr = tempPlugindirPath;
-	pb.hFileInfo.ioVRefNum = 0;  /* use the default volume */
-	pb.hFileInfo.ioFDirIndex = 0;
-	pb.hFileInfo.ioDirID = 0;
-	err = PBGetCatInfoSync(&pb);
+	strncpy(tempDirPath,pluginDirPath,1023);
+        if (tempDirPath[strlen(tempDirPath)-1] != ':')
+            strcat(tempDirPath,":");
+            
+        strcat(tempDirPath,libName);
+	err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
 	if (err) return nil; /* bad plugin directory path */
-
-	/* make a file spec for the given file name in the plugin directory */
-	CopyCStringToPascal(libName,fileSpecName);
-	FSMakeFSSpec(vRefNum,pb.hFileInfo.ioDirID,fileSpecName,&fileSpec);
 
 	err = GetDiskFragment(
 		&fileSpec, 0, kCFragGoesToEOF, nil, kLoadCFrag, &libHandle, &junk, problemLibName);
@@ -1584,7 +1598,73 @@ int ioHasDisplayDepth(int depth) {
 	return false;
 }
 
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
 
+#ifdef USE_ITIMER
+void sigalrm(int signum)
+{
+  lowResMSecs = ioMicroMSecs();
+}
+#endif
+
+
+void SetUpTimers(void)
+{
+  /* set up the micro/millisecond clock */
+  gettimeofday(&startUpTime, 0);
+#ifdef USE_ITIMER
+  /* set up the low-res (50th second) millisecond clock */
+  /* WARNING: all system calls must check for EINTR!!! */
+  {
+    struct sigaction sa;
+    sigset_t ss1, ss2;
+    sigemptyset(&ss1);
+    sigprocmask(SIG_BLOCK, &ss1, &ss2);
+    sa.sa_handler= sigalrm;
+    sa.sa_mask= ss2;
+#ifdef SA_RESTART
+    sa.sa_flags= SA_RESTART;
+#else
+    sa.sa_flags= 0;	/* assume that we have default BSD behaviour */
+#endif
+#ifdef __linux__
+    sa.sa_restorer= 0;
+#endif
+    sigaction(SIGALRM, &sa, 0);
+  }
+  {
+    struct itimerval iv;
+    iv.it_interval.tv_sec= 0;
+    iv.it_interval.tv_usec= LOW_RES_TICK_MSECS * 1000;
+    iv.it_value.tv_sec= 0;
+    iv.it_value.tv_usec= LOW_RES_TICK_MSECS;
+    setitimer(ITIMER_REAL, &iv, 0);
+  }
+#endif
+}
+
+int ioLowResMSecs(void)
+{
+#ifdef USE_ITIMER
+  return lowResMSecs;
+#else
+  return ioMicroMSecs();
+#endif
+}
+
+int ioMicroMSecs(void)
+{
+  struct timeval now;
+  gettimeofday(&now, 0);
+  if ((now.tv_usec-= startUpTime.tv_usec) < 0) {
+    now.tv_usec+= 1000000;
+    now.tv_sec-= 1;
+  }
+  now.tv_sec-= startUpTime.tv_sec;
+  return (now.tv_usec / 1000 + now.tv_sec * 1000);
+}
+
+#else
 int ioMicroMSecsExpensive(void);
 
 int ioMicroMSecsExpensive(void) {
@@ -1594,19 +1674,6 @@ int ioMicroMSecsExpensive(void) {
 }
 
 #if TARGET_CPU_PPC & !MINIMALVM
-#if TARGET_API_MAC_CARBON
-int ioMicroMSecs(void) { //Some versions of mac os/x return 0 when using OTElapsedMilliseconds
-	Nanoseconds elapsedNanoseconds;   // an UnsignedWide integer
-
-	if((Ptr)UpTime!=(Ptr)kUnresolvedCFragSymbolAddress){
-		elapsedNanoseconds=AbsoluteToNanoseconds(UpTime());
-		// NOTE: 4294967296.0 == (double)0x10000*0x10000
-		return (4294967296.0*elapsedNanoseconds.hi+elapsedNanoseconds.lo)*1e-6;
-	}else {
-	    return ioMicroMSecsExpensive();
-	}
-}
-#else
 int ioMicroMSecs(void) {
 	/* Note: This function and ioMSecs() both return a time in milliseconds. The difference
 	   is that ioMicroMSecs() is called only when precise millisecond resolution is essential,
@@ -1627,19 +1694,12 @@ int ioMicroMSecs(void) {
 	    return ioMicroMSecsExpensive();
 	}
 }
-#endif
 #else
 int ioMicroMSecs(void) {
     return ioMicroMSecsExpensive();
 }
 #endif
-
-int ioMSecs(void) {
-	/* return a time in milliseconds for use in Delays and Time millisecondClockValue */
-	/* Note: This was once a macro based on clock(); it now uses the microsecond clock for
-	   greater resolution. See the comment in ioMicroMSecs(). */
-	return ioMicroMSecs();
-}
+#endif
 
 int ioMousePoint(void) {
 	Point p;
@@ -1681,13 +1741,13 @@ int ioProcessEvents(void) {
 	long    clockTime;
 
 #ifndef PLUGIN
-	if (clock() >= nextPollTick) {
+	if (ioLowResMSecs() >= nextPollTick) {
 		/* time to process events! */
 		while (HandleEvents()) {
 			/* process all pending events */
 		}
 		
-        clockTime = clock();
+        clockTime = ioLowResMSecs();
         
         if (gDisablePowerManager && gTapPowerManager) {
             if (clockTime > gDisableIdleTickLimit)
@@ -1713,17 +1773,28 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     static long counter = 0;
     microSeconds;
     
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    usleep(microSeconds);
+      {
+      /* can't rely on BSD usleep */
+     /* struct timeval tv;
+      tv.tv_sec=  microSeconds / 1000000;
+      tv.tv_usec= microSeconds % 1000000;
+      select(0, 0, 0, 0, &tv); */
+      }
+#else
     if (counter++ >= 100) {
 #if TARGET_API_MAC_CARBON
     	gDelayTime = 1;  // wait 1/30 second next time because we are idle
 #endif
        	counter = 0;
     }
-    if (gThreadManager)
+#endif	
+
+	if (gThreadManager)
 		YieldToAnyThread();
 	else
 	    ioProcessEvents();
-	
 }
 
 int ioScreenDepth(void) {
@@ -1824,7 +1895,6 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	UInt32			depthMode=depth;
 	long			value = 0,displayMgrPresent;
 	DMDisplayModeListIteratorUPP	myModeIteratorProc = nil;	
-	OSErr			error;
 	DisplayIDType	theDisplayID;				
 	DMListIndexType	theDisplayModeCount;		
 	DMListType		theDisplayModeList;			
@@ -1837,7 +1907,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	displayMgrPresent=value&(1<<gestaltDisplayMgrPresent);
     if (!displayMgrPresent) {
     	success(false);
-    	return;
+    	return 0;
     }
 
     dominantGDevice = getDominateDevice(stWindow,&windRect);
@@ -1864,14 +1934,14 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 		DisposeDMDisplayModeListIteratorUPP(myModeIteratorProc);
 	if (request.displayMode == 0)  {
     	success(false);
-    	return;
+    	return 0;
     }
 	DMBeginConfigureDisplays(&displayState);
 	DMSetDisplayMode(dominantGDevice,request.displayMode,&depthMode,null,displayState);
 	DMEndConfigureDisplays(displayState);
 	ioSetFullScreen(fullscreenFlag);
 	
-	
+    return 1;
 #endif
 }
 
@@ -2085,6 +2155,7 @@ int plugInShutdown(void) {
 	FreeClipboard();
 	FreePixmap();
 	if (memory != nil) {
+            if (gThreadManager)
 	    DisposeThread(gSqueakThread,null,true);
 		DisposePtr((void *) memory);
 		memory = nil;
@@ -2152,7 +2223,9 @@ char * GetAttributeString(int id) {
 			return "PowerPC";
 	}
 	if (id == 1004) return (char *) interpreterVersion;
-
+#if TARGET_API_MAC_CARBON
+	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
+#endif
 	/* attribute undefined by this platform */
 	success(false);
 	return "";
@@ -2188,27 +2261,27 @@ void sqImageFileClose(sqImageFile f) {
 
 sqImageFile sqImageFileOpen(char *fileName, char *mode) {
 	short int err, err2, fRefNum;
-	Str255 tempPascalFileName; 
-    FInfo fileInfo;
-
-	CopyCStringToPascal(fileName,tempPascalFileName);
+	FInfo fileInfo;
+        FSSpec imageSpec;
+        
+        makeFSSpec(fileName, strlen(fileName), &imageSpec);
 	if (strchr(mode, 'w') != null) 
-	    err = HOpenDF(0,0,tempPascalFileName,fsRdWrPerm, &fRefNum);
+	    err = FSpOpenDF(&imageSpec,fsRdWrPerm, &fRefNum);
 	 else
-	    err = HOpenDF(0,0,tempPascalFileName,fsRdPerm, &fRefNum);
+	    err = FSpOpenDF(&imageSpec,fsRdPerm, &fRefNum);
 	    
-	if ((err != 0) && (strchr(mode, 'w') != null)) {
+	if ((err != noErr) && (strchr(mode, 'w') != null)) {
 		/* creating a new file for "save as" */
-		err2 = HCreate(0,0,tempPascalFileName,  'FAST', 'STim');
-		if (err2 == 0) {
-			err = HOpenDF(0,0,tempPascalFileName,fsRdWrPerm, &fRefNum);
+		err2 = FSpCreate(&imageSpec,'FAST', 'STim',smSystemScript);
+		if (err2 == noErr) {
+                    err = FSpOpenDF(&imageSpec,fsRdWrPerm, &fRefNum);
 		}
 	}
 
 	if (err != 0) return null;
 
 	if (strchr(mode, 'w') != null) {
-        err = HGetFInfo(0,0,tempPascalFileName,&fileInfo);
+        err = FSpGetFInfo(&imageSpec,&fileInfo);
         if (err != noErr) return 0; //This should not happen
         
         //On the mac we start at location 0 if this isn't an VM
@@ -2225,15 +2298,15 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode) {
 	return (sqImageFile) fRefNum;
 }
 
-int sqImageFilePosition(sqImageFile f) {
+off_t sqImageFilePosition(sqImageFile f) {
 	long int currentPosition = 0;
 
 	GetFPos(f, &currentPosition);
 	return currentPosition;
 }
 
-int sqImageFileRead(void *ptr, int elementSize, int count, sqImageFile f) {
-	long int byteCount = elementSize * count;
+size_t sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+	size_t byteCount = elementSize * count;
 	ParamBlockRec pb;
     OSErr error;
 
@@ -2250,11 +2323,11 @@ int sqImageFileRead(void *ptr, int elementSize, int count, sqImageFile f) {
 	return byteCount / elementSize;
 }
 
-void sqImageFileSeek(sqImageFile f, int pos) {
+void sqImageFileSeek(sqImageFile f, off_t pos) {
 	SetFPos(f, fsFromStart, pos);
 }
 
-int sqImageFileWrite(void *ptr, int elementSize, int count, sqImageFile f) {
+int sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
 	long int byteCount = elementSize * count;
 	ParamBlockRec pb;
     OSErr error;
@@ -2273,7 +2346,7 @@ int sqImageFileWrite(void *ptr, int elementSize, int count, sqImageFile f) {
 	return byteCount / elementSize;
 }
 
-int calculateStartLocationForImage() { 
+off_t calculateStartLocationForImage() { 
 
 	Handle cfrgResource;  
 	long	memberCount,i;
@@ -2300,19 +2373,18 @@ int calculateStartLocationForImage() {
 	return 0;
 }
 
-int sqImageFileStartLocation(int fileRef, char *filename, int imageSize){
+off_t sqImageFileStartLocation(int fileRef, char *filename, off_t imageSize){
     FInfo fileInfo;
-	Str255 tempPascalFileName;
 	OSErr   err; 
-    int     resFileRef;
+    SInt16  resFileRef;
 	Handle  cfrgResource,newcfrgResource;  
-	UInt32	maxOffset=0,maxOffsetLength,targetOffset;
+    UInt32  maxOffset=0,maxOffsetLength,targetOffset;
 	long    memberCount,i;
 	CFragResourceMember *target;
-  
+    FSSpec  imageSpec;
     
-	CopyCStringToPascal(filename,tempPascalFileName);
-    err = HGetFInfo(0,0,tempPascalFileName,&fileInfo);
+    makeFSSpec(filename, strlen(filename), &imageSpec);
+    err = FSpGetFInfo(&imageSpec,&fileInfo);
     if (err != noErr) return 0; //This should not happen
     
     //On the mac we start at location 0 if this isn't an VM
@@ -2321,8 +2393,8 @@ int sqImageFileStartLocation(int fileRef, char *filename, int imageSize){
     
     //Ok we have an application file, open the resource part and attempt to find the crfg
     
-    resFileRef = HOpenResFile(0,0,tempPascalFileName,fsWrPerm);
-    if (resFileRef == -1) return 0;
+    err = FSpOpenDF(&imageSpec,fsWrPerm, &resFileRef);
+    if (err != noErr || resFileRef == -1) return 0;
     
 	cfrgResource = GetResource(kCFragResourceType,0);
 	if (cfrgResource == nil || ResError() != noErr) {CloseResFile(resFileRef); return 0;};  
@@ -2336,8 +2408,7 @@ int sqImageFileStartLocation(int fileRef, char *filename, int imageSize){
 	   if (target->length == 0) {
         	SInt16 fileRef;
         	long lengthOfDataFork;
-        	
-        	err = HOpenDF(0,0,tempPascalFileName,fsRdPerm,&fileRef);
+        	err = FSpOpenDF(&imageSpec,fsRdPerm, &fileRef);
         	if (err) {ReleaseResource(cfrgResource); CloseResFile(resFileRef); FSClose(fileRef); return 0;}; 
         	
         	GetEOF(fileRef,&lengthOfDataFork);
@@ -2417,8 +2488,10 @@ int sqImageFileStartLocation(int fileRef, char *filename, int imageSize){
 #ifndef PLUGIN
 void * sqAllocateMemory(int minHeapSize, int desiredHeapSize) {
 	/* Application allocates Squeak object heap memory from its own heap. */	
+        void * debug;
 	minHeapSize;
-	return NewPtr(desiredHeapSize);;
+        debug = NewPtr(desiredHeapSize);
+	return debug;
 }
 #endif
 
@@ -2465,7 +2538,7 @@ void PowerMgrCheck(void) {
 		    && (pmgrAttributes & (1<<gestaltPMgrDispatchExists))
 		    && (PMSelectorCount() >= 0x24)) {
 		    gTapPowerManager = true;
-			gDisableIdleTickLimit = clock();
+			gDisableIdleTickLimit = ioLowResMSecs();
 		}
 #endif
 }
@@ -2491,12 +2564,11 @@ void main(void) {
 	sqImageFile f;
 	int reservedMemory, availableMemory;
 
-	short vRefNum;
-	long dirID;
 	OSErr err;
     long threadGestaltInfo;
+        FSSpec	workingDirectory;
  
-	InitMacintosh();
+ 	InitMacintosh();
 	PowerMgrCheck();
 	
 	SetUpMenus();
@@ -2510,7 +2582,9 @@ void main(void) {
 	if((Ptr)OTGetTimeStamp!=(Ptr)kUnresolvedCFragSymbolAddress)
  	    OTGetTimeStamp(&timeStart);
 #endif 
-
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+      SetUpTimers();
+#endif
 	/* install apple event handlers and wait for open event */
 	imageName[0] = shortImageName[0] = documentName[0] = vmPath[0] = 0;
 	InstallAppleEventHandlers();
@@ -2521,9 +2595,11 @@ void main(void) {
 		}
 	}
 	if (imageName[0] == 0) {
-		err = GetApplicationDirectory(&vRefNum, &dirID);
-		if (err != noErr) error("Could not obtain default directory");
-		StoreFullPathForLocalNameInto(shortImageName, imageName, IMAGE_NAME_SIZE, vRefNum, dirID);
+		err = GetApplicationDirectory(&workingDirectory);
+		if (err != noErr) 
+                    error("Could not obtain default directory");
+                CopyCStringToPascal("squeak.image",workingDirectory.name);
+		PathToFile(imageName, IMAGE_NAME_SIZE, &workingDirectory);
 	}
 
 	/* check the interpreter's size assumptions for basic data types */
@@ -2555,10 +2631,9 @@ void main(void) {
 #endif
 
 	if (RunningOnCarbonX())
-	    availableMemory = 1000*1024*1024 - reservedMemory;
+	    availableMemory = 50*1024*1024 - reservedMemory;
 	else 
     	availableMemory = MaxBlock() - reservedMemory;
-
 	/******
 	  Note: This is platform-specific. On the Mac, the user specifies the desired
 	    memory partition for each application using the Finder's Get Info command.
@@ -2589,14 +2664,14 @@ void main(void) {
 	    FSSpec vmfsSpec,imageFsSpec;
 	    WDPBRec wdPB;
 	    
-	    err =  FSpLocationFromFullPath(vmPathSize(),vmPath,&vmfsSpec);
+	    err =  makeFSSpec(vmPath,vmPathSize(),&vmfsSpec);
 	    if (err) 
 	        ioExit();
 		err = squeakFindImage(&vmfsSpec,&imageFsSpec);
 	    if (err) 
 	        ioExit();
 	    CopyPascalStringToC(imageFsSpec.name,shortImageName);
-        StoreFullPathForLocalNameInto(shortImageName, imageName, IMAGE_NAME_SIZE, imageFsSpec.vRefNum, imageFsSpec.parID);
+            PathToFile(imageName, IMAGE_NAME_SIZE, &imageFsSpec);
 
 			/* make the image or document directory the working directory */
     	wdPB.ioNamePtr = NULL;
@@ -2621,7 +2696,7 @@ void main(void) {
 	atexit(SqueakTerminate);
 #endif
 
-#if TARGET_CPU_PPC & !MINIMALVM 
+#if TARGET_CPU_PPC && !MINIMALVM  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
     if( Gestalt( gestaltThreadMgrAttr, &threadGestaltInfo) == noErr &&
         threadGestaltInfo & (1<<gestaltThreadMgrPresent) &&
         ((Ptr) NewThread != (Ptr)kUnresolvedCFragSymbolAddress)) {
@@ -2681,11 +2756,11 @@ WindowPtr getSTWindow(void) {
     return stWindow;
 }
 
-int setMessageHook(eventMessageHook theHook) {
+void setMessageHook(eventMessageHook theHook) {
     messageHook = theHook;
 }
 
-int setPostMessageHook(eventMessageHook theHook) {
+void setPostMessageHook(eventMessageHook theHook) {
     postMessageHook = theHook;
 }
 
@@ -2746,7 +2821,7 @@ void CopyCStringToPascal(const char* src, Str255 dst)
 		short 				overflow = 255;		// count down so test it loop is faster
 		register char		temp;
 	
-		// Can't do the K&R C thing of ³while (*s++ = *t++)² because it will copy trailing zero
+		// Can't do the K&R C thing of Òwhile (*s++ = *t++)Ó because it will copy trailing zero
 		// which might overrun pascal buffer.  Instead we use a temp variable.
 		while ( (temp = *src++) != 0 ) 
 		{
@@ -2919,7 +2994,7 @@ void getDominateGDeviceRect(GDHandle dominantGDevice,Rect *dGDRect,Boolean forge
 		}
 }
 
-/*#	MacOS Sample Code
+/*#	MacOSª Sample Code
 #	
 #	Written by: Eric Anderson
 #	 email: eric3@apple.com
@@ -2935,7 +3010,7 @@ void getDominateGDeviceRect(GDHandle dominantGDevice,Rect *dGDRect,Boolean forge
 #	and will be included in post 7.5 System Software releases. 
 */
 
-pascal void ModeListIterator(void *userData, DMListIndexType, DMDisplayModeListEntryPtr displaymodeInfo)
+pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDisplayModeListEntryPtr displaymodeInfo)
 {
 	unsigned long			depthCount;
 	short					iCount;
@@ -3022,7 +3097,7 @@ void GetRequestTheDM2Way (	VideoRequestRecPtr requestRecPtr,
 
 Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigned long horizontal, unsigned long vertical)
 {
-	// €€ do the big comparison €€
+	// ¥¥ do the big comparison ¥¥
 	// first time only if	(no mode yet) and
 	//						(bounds are greater/equal or kMaximizeRes not set) and
 	//						(depth is less/equal or kShallowDepth not set) and
@@ -3084,7 +3159,7 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 		}
 		else
 		{
-			// match resolution: minimize h & v
+			// match resolution: minimize Æh & Æv
 			if	(	abs((requestRecPtr->reqHorizontal - horizontal)) <=
 					abs((requestRecPtr->reqHorizontal - requestRecPtr->availHorizontal)) &&
 					abs((requestRecPtr->reqVertical - vertical)) <=
@@ -3139,20 +3214,47 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 }
   
   
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+  
+Boolean USBKeyboardCheckKey(int macKeyCode);
+#define kNumberOfKeyboardDispatch 10
+static USBHIDModuleDispatchTable *keyboardDispatch[kNumberOfKeyboardDispatch] = { NULL, NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL,NULL};
 
-#if !TARGET_API_MAC_CARBON
-Boolean IsKeyDown(short n)
+Boolean IsKeyDown()
  {
    KeyMap theKeys;
-   GetKeys(theKeys);
-   return ((theKeys[n>>3]  >>  (n & 7)) & 1);
+   int    keyToCheck,result;
+   Boolean  checkValue;
+   
+    keyToCheck = interpreterProxy->stackIntegerValue(0);
+    if (interpreterProxy->failed()) {
+		return null;
+    }
+    if (keyboardDispatch[0] == NULL ) {
+        GetKeys(theKeys);
+        checkValue = ((unsigned char *)(theKeys))[keyToCheck/ 8] & 1 << ((keyToCheck) % 8);
+    } else {
+        checkValue = USBKeyboardCheckKey(keyToCheck);
+    }
+    
+    result = checkValue ? interpreterProxy->trueObject(): interpreterProxy->falseObject();
+	
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(2, result);
+	return null;
  }
 
+void USBKeyboardInit(void);
+
+#if !TARGET_API_MAC_CARBON
 void ADBIOCompletionPPC(Byte *dataBufPtr, Byte *opDataPtr, long command) {
 	*opDataPtr = true;
 }
   
  
+
 void SetupKeyboard(void) {
  	ADBAddress     currentDev;
  	ADBDataBlock   info;
@@ -3160,11 +3262,11 @@ void SetupKeyboard(void) {
  	Byte        buffer[3], ADBReg;
  	short       talk, listen,i;
  	OSErr       myErr;
-    ADBCompletionUPP  compProcPtr;      // PPC completion routine 
+    ADBCompletionUPP  compProcPtr=NULL;      // PPC completion routine 
     ADBDataBlock    adbData;
-    
-    return;
-    
+        
+    USBKeyboardInit();
+
     number = CountADBs();
     for(i=1;i<=number;i++) {
         currentDev = GetIndADB(&info, i);
@@ -3172,8 +3274,8 @@ void SetupKeyboard(void) {
            return;
            
         myErr = GetADBInfo(&adbData, currentDev);
-        if (!(adbData.origADBAddr == 2))
-                continue;
+        if (!((adbData.origADBAddr == 2) && (adbData.devType == 2) ))
+          continue;
                         
         buffer[0] = 2;             // length byte
         buffer[1] = 0;
@@ -3189,7 +3291,6 @@ void SetupKeyboard(void) {
      
         while(!data); 
         
-             
     	data = 0;
         buffer[2] = 3; // change from 2 to 3 so we can differentiate between left and right shift keys
         listen = (currentDev << 4) + 0x08 + ADBReg; 
@@ -3198,6 +3299,338 @@ void SetupKeyboard(void) {
         while(!data); 
     }
 done:  
-    DisposeRoutineDescriptor(compProcPtr);
+    if (compProcPtr)
+        DisposeRoutineDescriptor(compProcPtr);
+}
+#endif
+
+
+
+// index represents USB keyboard usage value, content is Mac virtual keycode
+static UInt8	USBKMAPReverse[256],USBKMAP[256] = {  
+	0xFF, 	/* 00 no event */		
+	0xFF,	/* 01 ErrorRollOver */	
+	0xFF,	/* 02 POSTFail */	
+	0xFF,	/* 03 ErrorUndefined */	
+	0x00,	/* 04 A */
+	0x0B,	/* 05 B */
+	0x08,	/* 06 C */
+	0x02,	/* 07 D */
+	0x0E,	/* 08 E */
+	0x03,	/* 09 F */
+	0x05,	/* 0A G */
+	0x04,	/* 0B H */
+	0x22,	/* 0C I */
+	0x26,	/* 0D J */
+	0x28,	/* 0E K */
+	0x25,	/* 0F L */
+
+	0x2E, 	/* 10 M */		
+	0x2D,	/* 11 N */	
+	0x1F,	/* 12 O */	
+	0x23,	/* 13 P */	
+	0x0C,	/* 14 Q */
+	0x0F,	/* 15 R */
+	0x01,	/* 16 S */
+	0x11,	/* 17 T */
+	0x20,	/* 18 U */
+	0x09,	/* 19 V */
+	0x0D,	/* 1A W */
+	0x07,	/* 1B X */
+	0x10,	/* 1C Y */
+	0x06,	/* 1D Z */
+	0x12,	/* 1E 1/! */
+	0x13,	/* 1F 2/@ */
+
+	0x14, 	/* 20 3 # */		
+	0x15,	/* 21 4 $ */	
+	0x17,	/* 22 5 % */	
+	0x16,	/* 23 6 ^ */	
+	0x1A,	/* 24 7 & */
+	0x1C,	/* 25 8 * */
+	0x19,	/* 26 9 ( */
+	0x1D,	/* 27 0 ) */
+	0x24,	/* 28 Return (Enter) */
+	0x35,	/* 29 ESC */
+	0x33,	/* 2A Delete (Backspace) */
+	0x30,	/* 2B Tab */
+	0x31,	/* 2C Spacebar */
+	0x1B,	/* 2D - _ */
+	0x18,	/* 2E = + */
+	0x21,	/* 2F [ { */
+
+	0x1E, 	/* 30 ] } */		
+	0x2A,	/* 31 \ | */	
+	0xFF,	/* 32 Non-US # and ~ (what?!!!) */	
+	0x29,	/* 33 ; : */	
+	0x27,	/* 34 ' " */
+	0x32,	/* 35 ` ~ */
+	0x2B,	/* 36 , < */
+	0x2F,	/* 37 . > */
+	0x2C,	/* 38 / ? */
+	0x39,	/* 39 Caps Lock */
+	0x7A,	/* 3A F1 */
+	0x78,	/* 3B F2 */
+	0x63,	/* 3C F3 */
+	0x76,	/* 3D F4 */
+	0x60,	/* 3E F5 */
+	0x61,	/* 3F F6 */
+
+	0x62, 	/* 40 F7 */		
+	0x64,	/* 41 F8 */	
+	0x65,	/* 42 F9 */	
+	0x6D,	/* 43 F10 */	
+	0x67,	/* 44 F11 */
+	0x6F,	/* 45 F12 */
+	0x69,	/* 46 F13/PrintScreen */
+	0x6B,	/* 47 F14/ScrollLock */
+	0x71,	/* 48 F15/Pause */				
+	0x72,	/* 49 Insert */
+	0x73,	/* 4A Home */
+	0x74,	/* 4B PageUp */
+	0x75,	/* 4C Delete Forward */
+	0x77,	/* 4D End */
+	0x79,	/* 4E PageDown */
+	0x7C,	/* 4F RightArrow */
+
+	0x7B, 	/* 50 LeftArrow */		
+	0x7D,	/* 51 DownArrow */	
+	0x7E,	/* 52 UpArrow */	
+	0x47,	/* 53 NumLock/Clear */	
+	0x4B,	/* 54 Keypad / */
+	0x43,	/* 55 Keypad * */
+	0x4E,	/* 56 Keypad - */
+	0x45,	/* 57 Keypad + */
+	0x4C,	/* 58 Keypad Enter */
+	0x53,	/* 59 Keypad 1 */
+	0x54,	/* 5A Keypad 2 */
+	0x55,	/* 5B Keypad 3 */
+	0x56,	/* 5C Keypad 4 */
+	0x57,	/* 5D Keypad 5 */
+	0x58,	/* 5E Keypad 6 */
+	0x59,	/* 5F Keypad 7 */
+
+	0x5B, 	/* 60 Keypad 8 */		
+	0x5C,	/* 61 Keypad 9 */	
+	0x52,	/* 62 Keypad 0 */	
+	0x41,	/* 63 Keypad . */	
+	0xFF,	/* 64 Non-US \ and  | (what ??!!) */
+	0x6E,	/* 65 ApplicationKey (not on a mac!)*/
+	0x7F,	/* 66 PowerKey  */
+	0x51,	/* 67 Keypad = */
+	0x69,	/* 68 F13 */
+	0x6B,	/* 69 F14 */
+	0x71,	/* 6A F15 */
+	0xFF,	/* 6B F16 */
+	0xFF,	/* 6C F17 */
+	0xFF,	/* 6D F18 */
+	0xFF,	/* 6E F19 */
+	0xFF,	/* 6F F20 */
+
+	0x5B, 	/* 70 F21 */		
+	0x5C,	/* 71 F22 */	
+	0x52,	/* 72 F23 */	
+	0x41,	/* 73 F24 */	
+	0xFF,	/* 74 Execute */
+	0xFF,	/* 75 Help */
+	0x7F,	/* 76 Menu */
+	0x4C,	/* 77 Select */
+	0x69,	/* 78 Stop */
+	0x6B,	/* 79 Again */
+	0x71,	/* 7A Undo */
+	0xFF,	/* 7B Cut */
+	0xFF,	/* 7C Copy */
+	0xFF,	/* 7D Paste */
+	0xFF,	/* 7E Find */
+	0xFF,	/* 7F Mute */
+	
+	0xFF, 	/* 80 no event */		
+	0xFF,	/* 81 no event */	
+	0xFF,	/* 82 no event */	
+	0xFF,	/* 83 no event */	
+	0xFF,	/* 84 no event */
+	0xFF,	/* 85 no event */
+	0xFF,	/* 86 no event */
+	0xFF,	/* 87 no event */
+	0xFF,	/* 88 no event */
+	0xFF,	/* 89 no event */
+	0xFF,	/* 8A no event */
+	0xFF,	/* 8B no event */
+	0xFF,	/* 8C no event */
+	0xFF,	/* 8D no event */
+	0xFF,	/* 8E no event */
+	0xFF,	/* 8F no event */
+
+	0xFF, 	/* 90 no event */		
+	0xFF,	/* 91 no event */	
+	0xFF,	/* 92 no event */	
+	0xFF,	/* 93 no event */	
+	0xFF,	/* 94 no event */
+	0xFF,	/* 95 no event */
+	0xFF,	/* 96 no event */
+	0xFF,	/* 97 no event */
+	0xFF,	/* 98 no event */
+	0xFF,	/* 99 no event */
+	0xFF,	/* 9A no event */
+	0xFF,	/* 9B no event */
+	0xFF,	/* 9C no event */
+	0xFF,	/* 9D no event */
+	0xFF,	/* 9E no event */
+	0xFF,	/* 9F no event */
+
+	0xFF, 	/* A0 no event */		
+	0xFF,	/* A1 no event */	
+	0xFF,	/* A2 no event */	
+	0xFF,	/* A3 no event */	
+	0xFF,	/* A4 no event */
+	0xFF,	/* A5 no event */
+	0xFF,	/* A6 no event */
+	0xFF,	/* A7 no event */
+	0xFF,	/* A8 no event */
+	0xFF,	/* A9 no event */
+	0xFF,	/* AA no event */
+	0xFF,	/* AB no event */
+	0xFF,	/* AC no event */
+	0xFF,	/* AD no event */
+	0xFF,	/* AE no event */
+	0xFF,	/* AF no event */
+
+	0xFF, 	/* B0 no event */		
+	0xFF,	/* B1 no event */	
+	0xFF,	/* B2 no event */	
+	0xFF,	/* B3 no event */	
+	0xFF,	/* B4 no event */
+	0xFF,	/* B5 no event */
+	0xFF,	/* B6 no event */
+	0xFF,	/* B7 no event */
+	0xFF,	/* B8 no event */
+	0xFF,	/* B9 no event */
+	0xFF,	/* BA no event */
+	0xFF,	/* BB no event */
+	0xFF,	/* BC no event */
+	0xFF,	/* BD no event */
+	0xFF,	/* BE no event */
+	0xFF,	/* BF no event */
+
+	0xFF, 	/* C0 no event */		
+	0xFF,	/* C1 no event */	
+	0xFF,	/* C2 no event */	
+	0xFF,	/* C3 no event */	
+	0xFF,	/* C4 no event */
+	0xFF,	/* C5 no event */
+	0xFF,	/* C6 no event */
+	0xFF,	/* C7 no event */
+	0xFF,	/* C8 no event */
+	0xFF,	/* C9 no event */
+	0xFF,	/* CA no event */
+	0xFF,	/* CB no event */
+	0xFF,	/* CC no event */
+	0xFF,	/* CD no event */
+	0xFF,	/* CE no event */
+	0xFF,	/* CF no event */
+
+	0xFF, 	/* D0 no event */		
+	0xFF,	/* D1 no event */	
+	0xFF,	/* D2 no event */	
+	0xFF,	/* D3 no event */	
+	0xFF,	/* D4 no event */
+	0xFF,	/* D5 no event */
+	0xFF,	/* D6 no event */
+	0xFF,	/* D7 no event */
+	0xFF,	/* D8 no event */
+	0xFF,	/* D9 no event */
+	0xFF,	/* DA no event */
+	0xFF,	/* DB no event */
+	0xFF,	/* DC no event */
+	0xFF,	/* DD no event */
+	0xFF,	/* DE no event */
+	0xFF,	/* DF no event */
+
+	0x3B, 	/* E0 left control key */		
+	0x38,	/* E1 left shift key key */	
+	0x3A,	/* E2 left alt/option key */	
+	0x37,	/* E3 left GUI (windows/cmd) key */	
+	
+	0x3E,	/* E4 right control key */ 
+	0x3C,	/* E5 right shift key key */ 
+	0x3D,	/* E6 right alt/option key */ 
+	0x37,	/* E7 right GUI (windows/cmd) key */
+	0xFF,	/* E8 no event */
+	0xFF,	/* E9 no event */
+	0xFF,	/* EA no event */
+	0xFF,	/* EB no event */
+	0xFF,	/* EC no event */
+	0xFF,	/* ED no event */
+	0xFF,	/* EE no event */
+	0xFF,	/* EF no event */
+	
+	0xFF, 	/* F0 no event */		
+	0xFF,	/* F1 no event */	
+	0xFF,	/* F2 no event */	
+	0xFF,	/* F3 no event */	
+	0xFF,	/* F4 no event */
+	0xFF,	/* F5 no event */
+	0xFF,	/* F6 no event */
+	0xFF,	/* F7 no event */
+	0xFF,	/* F8 no event */
+	0xFF,	/* F9 no event */
+	0xFF,	/* FA no event */
+	0xFF,	/* FB no event */
+	0xFF,	/* FC no event */
+	0xFF,	/* FD no event */
+	0xFF,	/* FE no event */
+	0xFF,	/* FF no event */
+};
+
+
+/* USBKeyboardInit - find a USB keyboard driver, and get its dispatch 
+table.
+ */
+void USBKeyboardInit(void){
+    int i;
+    OSErr          errCode;
+    USBDeviceRef      deviceRef;
+    CFragConnectionID connID;
+    CFragSymbolClass  symClass;
+    THz curzone;
+    
+    for(i=0;i<256;i++) {
+        USBKMAPReverse[USBKMAP[i]] = i;
+    }
+    
+#if CALL_NOT_IN_CARBON
+    deviceRef = kNoDeviceRef;
+    for (i=0;i< kNumberOfKeyboardDispatch; i++ ) {
+          errCode = USBGetNextDeviceByClass(&deviceRef, &connID, kUSBHIDInterfaceClass, kUSBAnySubClass, kUSBKeyboardInterfaceProtocol);
+          if (errCode == fnfErr) 
+            return;
+            
+          curzone = GetZone();
+          SetZone(SystemZone());
+          errCode =  FindSymbol(connID,"\pTheHIDModuleDispatchTable", (Ptr*) &keyboardDispatch[i], &symClass);
+          SetZone(curzone); 
+    } 
+#endif
+}
+
+
+Boolean USBKeyboardCheckKey(int macKeyCode) {
+    USBHIDData  data;
+    SInt16 i,j;
+    for(i=0;i<kNumberOfKeyboardDispatch;i++) {
+        if(NULL != keyboardDispatch[i] && NULL != keyboardDispatch[i]->pUSBHIDGetDeviceInfo) {
+          if(noErr == (*keyboardDispatch[i]->pUSBHIDGetDeviceInfo)(kHIDGetCurrentKeys, &data)) {
+                for(j = 0;j < data.kbd.keycount;j++){
+                    if (USBKMAPReverse[macKeyCode] ==  data.kbd.usbkeycode[i])
+                        return true;
+             }
+          }
+        }
+    }
+    return false;
+} 
+#else
+Boolean IsKeyDown() {
+    interpreterProxy->success(false);
 }
 #endif
