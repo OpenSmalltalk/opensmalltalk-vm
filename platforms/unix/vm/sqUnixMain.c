@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2004-04-02 14:30:12 by piumarta on emilia.local
+ * Last edited: 2005-03-15 19:39:53 by piumarta on margaux.hpl.hp.com
  */
 
 #include "sq.h"
@@ -320,6 +320,14 @@ int imageNamePutLength(int sqImageNameIndex, int length)
   dpy->winSetName(imageName);
 
   return count;
+}
+
+
+/* Why on Earth VMM couldn't use imageNameGetLength() instead is a total mystery. */
+
+char *getImageName(void)
+{
+  return imageName;
 }
 
 
