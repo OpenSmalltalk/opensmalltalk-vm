@@ -4,7 +4,7 @@ I am a class that helps simulate the StackInterpreter's stack organization on li
 Class {
 	#name : #InterpreterStackPagesLSB,
 	#superclass : #InterpreterStackPages,
-	#category : #'VMMaker-InterpreterSimulation'
+	#category : 'VMMaker-InterpreterSimulation'
 }
 
 { #category : #'memory access' }

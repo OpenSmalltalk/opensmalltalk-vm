@@ -4,7 +4,7 @@ These tests require VMMaker and should be considered part of it.
 Class {
 	#name : #BitBltSimulationTest,
 	#superclass : #TestCase,
-	#category : #'VMMaker-Tests'
+	#category : 'VMMaker-Tests'
 }
 
 { #category : #running }
