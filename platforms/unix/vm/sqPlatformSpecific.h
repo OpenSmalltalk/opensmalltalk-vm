@@ -11,6 +11,12 @@
 
 
 #ifdef UNIX
+#include <string.h>
+
+
+
+
+
 /* unix-specific prototypes and definitions */
 void aioPollForIO(int microSeconds, int extraFd);
 #define SQ_FORM_FILENAME        "squeak-form.ppm"
@@ -20,6 +26,42 @@ void aioPollForIO(int microSeconds, int extraFd);
 #undef ioMSecs
 #undef ioMicroMSecs
 #undef ioLowResMSecs
+
+
+
+
+/* use non-default heap-allocation functions; see sqUnixMemory.c */
+#undef sqAllocateMemory
+#undef sqGrowMemoryBy
+#undef sqShrinkMemoryBy
+#undef sqMemoryExtraBytesLeft
+
+void * sqAllocateMemory(int minHeapSize, int desiredHeapSize);
+int sqGrowMemoryBy(int oldLimit, int delta);
+int sqShrinkMemoryBy(int oldLimit, int delta);
+int sqMemoryExtraBytesLeft(int includingSwap);
+  
+
+
+
+
+#ifdef sqImageFileOpen  /* this is horrible, but is necessary because
+                           plugins don't include sq.h; so, we should
+                           redefine these macros only when all of sq.h
+                           is being used */
+
+/* use non-default image IO functions; see sqUnixImage.c */
+#undef sqImageFileOpen
+#undef sqImageFileStartLocation
+
+sqImageFile sqImageFileOpen(const char *fileName, const char *mode);
+int sqImageFileStartLocation(sqImageFile file, const char *fileName, int size);
+#endif
+
+
 #else
+
+#error This sqPlatformSpecific.h file is for Unix; you either have the wrong source code, or you forgot to -DUNIX
+
 #endif /* UNIX */
 
