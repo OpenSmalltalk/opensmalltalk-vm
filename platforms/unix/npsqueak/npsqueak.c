@@ -4,9 +4,10 @@
  * 
  * Author:  Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  *
- * Last edited: Wed 02 Oct 2002 14:43:26 by bert on balloon
+ * Last edited: 2004-04-06 20:19:06 by piumarta on emilia.local
  *
  * History:
+ *          Apr 2004 - (ikp) handle imageName and failureUrl tags
  *          Oct 2002 - system-wide install
  *          Sep 2002 - create hard links for streamed files
  *          Mar 2002 - moved to ~/.npsqueak dir
@@ -105,6 +106,7 @@ typedef struct SqueakPlugin {
   char* srcUrl;                    /* set by browser in first NewStream */
   char* srcFilename;
   int   srcId;                     /* if requested */
+  char *failureUrl;
 } SqueakPlugin;
 
 /* URL notify data */
@@ -177,6 +179,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 {
   SqueakPlugin *plugin;
   char basedir[PATH_MAX];
+  char *failureUrl= 0;
   if (instance == NULL)
     return NPERR_INVALID_INSTANCE_ERROR;
   plugin= (SqueakPlugin*) NPN_MemAlloc(sizeof(SqueakPlugin));
@@ -207,6 +210,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   plugin->srcUrl= NULL;
   plugin->srcFilename= NULL;
   plugin->srcId= -1;
+  plugin->failureUrl= 0;
   strcpy(plugin->vmName, basedir);
   strcat(plugin->vmName, "npsqueakvm");
   strcpy(plugin->imageName, basedir);
@@ -223,6 +227,15 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   if (plugin->embedded) {
     int i;
     for (i= 0; i < argc; i++) {
+      if (!strcasecmp(argn[i], "imagename"))
+	{
+	  strcpy(plugin->imageName, basedir);
+	  strcat(plugin->imageName, argv[i]);
+	  NPN_MemFree(plugin->argv[6]);
+	  plugin->argv[6]= NPN_StrDup(plugin->imageName); 
+	}
+      else if (!strcasecmp(argn[i], "failureurl"))
+	failureUrl= argv[i];
       plugin->argv[plugin->argc++]= NPN_StrDup(argn[i]);
       plugin->argv[plugin->argc++]= NPN_StrDup(argv[i] ? argv[i] : "");
       if (strcasecmp("SRC", argn[i]) == 0)
@@ -230,11 +243,21 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
     }
     if (!plugin->srcUrl)
       plugin->srcUrl= NPN_StrDup(""); /* we were embedded without a SRC */
+    if (access(plugin->imageName, R_OK))
+      {
+	if (failureUrl)
+	  plugin->failureUrl= NPN_StrDup(failureUrl);
+	else
+	  {
+	    fprintf(stderr, "Squeak Plugin: Image file not found: %s\n", plugin->imageName);
+	    return NPERR_GENERIC_ERROR;
+	  }
+      }
   } else {
     /* if not embedded srcUrl will be set in NewStream */
     plugin->srcUrl= NULL;
   }
-  plugin->argv[plugin->argc]= 0; 
+  plugin->argv[plugin->argc]= 0;
   if (pipe(&plugin->pipes[SQUEAK_READ])
       || pipe(&plugin->pipes[PLUGIN_READ])) {
     perror("Squeak Plugin: Creating pipes failed");
@@ -278,6 +301,10 @@ NPP_Destroy(NPP instance, NPSavedData** save)
       NPN_MemFree(plugin->srcFilename);
       plugin->srcFilename= NULL;
     }
+    if (plugin->failureUrl) {
+      NPN_MemFree(plugin->failureUrl);
+      plugin->failureUrl= NULL;
+    }
     if (plugin->argv) {
       for (i=0; i<plugin->argc; i++) {
 	if (plugin->argv[i])
@@ -306,6 +333,8 @@ NPP_SetWindow(NPP instance, NPWindow *pNPWindow)
   plugin= (SqueakPlugin*) instance->pdata;
   if (!plugin)
     return NPERR_GENERIC_ERROR;
+  if (plugin->failureUrl) 
+    return NPERR_NO_ERROR;
   if (pNPWindow == NULL) 
     return NPERR_NO_ERROR;
 
@@ -325,18 +354,22 @@ NPError
 NPP_NewStream(NPP instance, NPMIMEType type, NPStream *stream, NPBool seekable, uint16 *stype)
 {
   SqueakPlugin *plugin= (SqueakPlugin*) instance->pdata;
-  DPRINT("NP: NewStream(%s, id=%i)\n", stream->url, 
+  DPRINT("NP: NewStream(%s, id=%i)\n", stream->url,
 	   stream->notifyData ? ((SqueakStream*) stream->notifyData)->id : -1);
-  if (!stream->notifyData && !plugin->srcUrl) {
-    /* We did not request this stream, so it is our SRC file. */
-    plugin->srcUrl= NPN_StrDup(stream->url);
-    plugin->argv[plugin->argc++]= NPN_StrDup("SRC");
-    plugin->argv[plugin->argc++]= NPN_StrDup(plugin->srcUrl);
-    DPRINT("NP:   got srcUrl=%s\n", plugin->srcUrl);
-    Run(plugin);
-  }
-    
-  *stype= NP_ASFILEONLY;          /* We want the file after download */
+  if (plugin->failureUrl)
+    NPN_GetURL(instance, plugin->failureUrl, "_self");
+  else
+    {
+      if (!stream->notifyData && !plugin->srcUrl) {
+	/* We did not request this stream, so it is our SRC file. */
+	plugin->srcUrl= NPN_StrDup(stream->url);
+	plugin->argv[plugin->argc++]= NPN_StrDup("SRC");
+	plugin->argv[plugin->argc++]= NPN_StrDup(plugin->srcUrl);
+	DPRINT("NP:   got srcUrl=%s\n", plugin->srcUrl);
+	Run(plugin);
+      }
+      *stype= NP_ASFILEONLY;          /* We want the file after download */
+    }
   return NPERR_NO_ERROR;
 }
 
@@ -515,7 +548,7 @@ DeliverFile(SqueakPlugin *plugin, int id, const char* fname)
 static void 
 Run(SqueakPlugin *plugin)
 {
-  if (plugin->pid || !plugin->nswindow || !plugin->srcUrl)
+  if (plugin->pid || !plugin->nswindow || !plugin->srcUrl || plugin->failureUrl)
     return;
   
   plugin->pid= fork();
