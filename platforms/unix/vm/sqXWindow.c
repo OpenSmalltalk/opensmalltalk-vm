@@ -2031,12 +2031,18 @@ int ioScreenDepth(void)
 int ioScreenSize(void)
 {
 #ifdef HEADLESS
-  return ((64 << 16) | 64);
+  int headless= 1;
 #else
 
-  if (!isConnectedToXServer)
-    return (64 << 16) | 64;
-
+  if (headless || !isConnectedToXServer)
+    {
+      if(savedWindowSize != 0)
+	return savedWindowSize;
+      else
+	return (64 << 16) | 64;
+    }
+  
+    
   return (stWindowWidth << 16) | stWindowHeight;
 
 #endif
