@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  *
- * Last edited: 2003-08-22 19:37:59 by piumarta on emilia.inria.fr
+ * Last edited: 2003-08-23 22:52:22 by piumarta on emilia.inria.fr
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -1313,7 +1313,6 @@ int handleEvents(void)
       XNextEvent(stDisplay, &evt);
       handleEvent(&evt);
     }
-  setInterruptCheckCounter(0);
   return 1;
 }
 
