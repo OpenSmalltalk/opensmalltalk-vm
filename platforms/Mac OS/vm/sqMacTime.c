@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.3 2002/03/01 00:25:02 johnmci Exp $
+*   RCSID:   $Id: sqMacTime.c,v 1.4 2002/03/15 01:52:00 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -16,17 +16,24 @@
 #include "sqMacTime.h"
 #include "sqMacUIEvents.h"
 
+
 extern Boolean  gThreadManager;
+extern int interruptCheckCounter;
+extern int nextWakeupTick;
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 
+    #include <pthread.h>
     #include <sys/types.h>
     #include <sys/time.h>
     #include <unistd.h>
-    TMTask    gTMTask;
+    TMTask    gTMTask,gTMTask1000;
     struct timeval	 startUpTime;
     unsigned int	lowResMSecs= 0;
+    int	    gCounter=0;
     #define LOW_RES_TICK_MSECS 16
+    #define HIGH_RES_TICK_MSECS 2
+    #define COUNTER_LIMIT LOW_RES_TICK_MSECS/HIGH_RES_TICK_MSECS
 
 
 
@@ -37,10 +44,24 @@ static pascal void MyTimerProc(QElemPtr time)
     return;
 }
 
+/*static pascal void MyTimerProc1000(QElemPtr time)
+{
+    if (nextWakeupTick != 0)
+    	interruptCheckCounter = 0;
+    gCounter++;
+    if(gCounter > COUNTER_LIMIT) {
+        lowResMSecs = ioMicroMSecs();
+        gCounter = 0;
+    }
+    PrimeTime((QElemPtr)time, HIGH_RES_TICK_MSECS);
+    return;
+}*/
+
 void SetUpTimers(void)
 {
   /* set up the micro/millisecond clock */
     gettimeofday(&startUpTime, 0);
+    
     gTMTask.tmAddr = NewTimerUPP((TimerProcPtr) MyTimerProc);
     gTMTask.tmCount = 0;
     gTMTask.tmWakeUp = 0;
@@ -48,6 +69,14 @@ void SetUpTimers(void)
      
     InsXTime((QElemPtr)&gTMTask);
     PrimeTime((QElemPtr)&gTMTask,LOW_RES_TICK_MSECS);
+
+    /*gTMTask1000.tmAddr = NewTimerUPP((TimerProcPtr) MyTimerProc1000);
+    gTMTask1000.tmCount = 0;
+    gTMTask1000.tmWakeUp = 0;
+    gTMTask1000.tmReserved = 0;    
+     
+    InsXTime((QElemPtr)&gTMTask1000);
+    PrimeTime((QElemPtr)&gTMTask1000,HIGH_RES_TICK_MSECS);*/
 }
 
 int ioLowResMSecs(void)
@@ -66,6 +95,33 @@ int ioMicroMSecs(void)
   now.tv_sec-= startUpTime.tv_sec;
   return (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
+
+TMTask    gWakeUpTimerProc;
+static Boolean gWakeUpTimerProcNeedsInit=true;
+
+/*static pascal void MyWakeUTimerProc(QElemPtr time) {
+    interruptCheckCounter = 0;
+    return;
+}
+
+int ioMakeAnExernalTimerCall(int ticksInFuture) {
+    int ticks;
+    
+    if (gWakeUpTimerProcNeedsInit) {
+        gWakeUpTimerProcNeedsInit = false;
+        gWakeUpTimerProc.tmAddr = NewTimerUPP((TimerProcPtr) MyWakeUTimerProc);
+        gWakeUpTimerProc.tmCount = 0;
+        gWakeUpTimerProc.tmWakeUp = 0;
+        gWakeUpTimerProc.tmReserved = 0;    
+     
+        InsXTime((QElemPtr)&gWakeUpTimerProc);
+    }
+    
+    ticks = ticksInFuture-(ioMSecs()& 536870911);
+    if (ticks < 0)
+        return;
+    PrimeTime((QElemPtr)&gWakeUpTimerProc,ticks);
+}*/
 
 #else
 #if !TARGET_API_MAC_CARBON
@@ -115,9 +171,20 @@ int ioMicroMSecs(void) {
     return ioMicroMSecsExpensive();
 }
 #endif
+
 #endif
 
 int ioSeconds(void) {
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+    time_t unixTime;
+    
+    unixTime = time(0);
+    unixTime += localtime(&unixTime)->tm_gmtoff;
+    /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+        and 52 non-leap years later than Squeak. */
+    return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
+
+#else
 	struct tm timeRec;
 	time_t time1904, timeNow;
 
@@ -137,15 +204,47 @@ int ioSeconds(void) {
 
 	/* Squeak epoch is Jan 1, 1901, 3 non-leap years earlier than ANSI one */
 	return (timeNow - time1904) + (3 * 365 * 24 * 60 * 60);
+#endif
 }
 
 
 int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 	/* This operation is platform dependent. 	 */
-    microSeconds;
     
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-    usleep(microSeconds);
+    static pthread_mutex_t gSleepLock;
+    static pthread_cond_t  gSleepLockCondition;
+    static Boolean doInitialization=true;
+    int	   realTimeToWait,now,err;
+    struct timespec tspec;
+    
+    if (doInitialization) {
+        doInitialization = false;
+        pthread_mutex_init(&gSleepLock, NULL);
+        pthread_cond_init(&gSleepLockCondition,NULL);
+    }
+    
+    interruptCheckCounter = 0;
+    now = (ioMSecs() & 536870911);
+    if (nextWakeupTick <= now)
+        if (nextWakeupTick == 0)
+            realTimeToWait = 16;
+        else 
+            return;
+    else
+        realTimeToWait = nextWakeupTick - now; 
+            
+    tspec.tv_sec=  realTimeToWait / 1000;
+    tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
+    
+    err = pthread_mutex_lock(&gSleepLock);
+    err = pthread_cond_timedwait_relative_np(&gSleepLockCondition,&gSleepLock,&tspec);	
+    err = pthread_mutex_unlock(&gSleepLock);
+    
+
+    //JMM foo usleep(microSeconds);
+    //JMM fooif (nextWakeupTick != 0 && (ioMSecs() & 536870911) >= nextWakeupTick)
+    //JMM foo    interruptCheckCounter = 0;
      /* This is unix code, but seems to be problem under osx
       {
       struct timeval tv;
@@ -155,6 +254,11 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
       }*/
 #else
 #if !I_AM_CARBON_EVENT
+    microSeconds;
+    if ((nextWakeupTick <= (ioMSecs() & 536870911)) && (nextWakeupTick != 0)) {
+            interruptCheckCounter = 0;
+            return;
+    }
 	if (gThreadManager)
             SqueakYieldToAnyThread();
 	else
