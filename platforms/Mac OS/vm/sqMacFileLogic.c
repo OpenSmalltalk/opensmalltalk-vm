@@ -1,41 +1,219 @@
+/* Nov 2001 John M McIntosh
+consolidate all this mac file stuff
+
+In a few places the VM needs an FSSpec.
+Given a path we need to create an FSSPec. Why? Well some  mac routines still need 
+FSSPecs to work, ie resolve alias. HFS+ will have funny formed names if the name is > 32 chars 
+
+Also given an FSSpec we need to get a path name back. 
+
+Someday this might become all FSRef aware
+
+Note that Squeak thinks of things in terms of HFS path names, but here sometimes we think 
+in terms of POSIX path names.
+
+*/
+
+#include "sq.h"
+#include "sqVirtualMachine.h"
 #include "sqMacFileLogic.h"	
-#include <string.h>	
 
-void StoreFullPathForLocalNameInto(char *shortName, char *fullName, int length, short volumeNumber,long directoryID) {
-	int offset, sz, i;
+static void resolveLongName(short vRefNum, long parID, unsigned char *shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakInt64 *sizeOfFile);
+static int fetchFileSpec(FSSpec *spec,unsigned char *name,long *parentDirectory);
+static OSErr FSpGetFullPath(const FSSpec *spec, short *fullPathLength, Handle *fullPath);
+extern Boolean RunningOnCarbonX(void);
 
-	offset = PathToWorkingDir(fullName, length, volumeNumber, directoryID);
+#if TARGET_API_MAC_CARBON
 
-	/* copy the file name into a null-terminated C string */
-	sz = strlen(shortName);
-	for (i = 0; i <= sz; i++) {
-		/* append shortName to fullName, including terminator */
-		fullName[i + offset] = shortName[i];
-	}
+OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
+{	
+    CFURLRef    sillyThing;
+    CFStringRef filePath;
+    FSRef	theFSRef;
+    OSErr	err;
+    
+    filePath = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,pathStringLength,kCFStringEncodingMacRoman,false);
+    sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+    if (!CFURLGetFSRef(sillyThing,&theFSRef)) {
+        // name contains multiple aliases or does not exist, so fallback to lookupPath
+        CFRelease(filePath);
+        CFRelease(sillyThing);
+        return lookupPath(pathString,pathStringLength,spec,true);
+    } 
+            
+    CFRelease(filePath);
+    err = FSGetCatalogInfo (&theFSRef,kFSCatInfoNone,nil,nil,spec,nil);
+    CFRelease(sillyThing);
+    return err;
 }
 
-pascal	OSErr	GetFullPath(short vRefNum,
-							long dirID,
-							ConstStr255Param name,
-							short *fullPathLength,
-							Handle *fullPath)
-{
-	OSErr		result;
-	FSSpec		spec;
-	
-	*fullPathLength = 0;
-	*fullPath = NULL;
-	
-	result = FSMakeFSSpecCompat(vRefNum, dirID, name, &spec);
-	if ( (result == noErr) || (result == fnfErr) )
-	{
-		result = FSpGetFullPath(&spec, fullPathLength, fullPath);
-	}
-	
-	return ( result );
+/* Fill in the given string with the full path from a root volume to the given directory. */
+
+int PathToDir(char *pathName, int pathNameMax, FSSpec *where) {
+    CopyCStringToPascal(":",where->name);
+	return PathToFile(pathName,pathNameMax,where);  
 }
 
-pascal	OSErr	FSpGetFullPath(const FSSpec *spec,
+/* Fill in the given string with the full path from a root volume to the given file. */
+
+int PathToFile(char *pathName, int pathNameMax, FSSpec *where) {        
+        CFURLRef sillyThing;
+        CFStringRef filePath;
+        FSSpec	failureRetry;
+        FSRef	theFSRef;
+        OSErr	error;
+        Boolean isDirectory=false,retryWithDirectory=false;
+        char	rememberName[256];
+        
+        *pathName = 0x00;
+        error = FSpMakeFSRef (where, &theFSRef);
+        if (error != noErr) {
+            retryWithDirectory = true;
+            failureRetry = *where;
+            CopyCStringToPascal(":",failureRetry.name);
+            CopyPascalStringToC(where->name,(char *) &rememberName);
+            error = FSpMakeFSRef(&failureRetry,&theFSRef);
+            if (error != noErr) 
+                return -1;
+	}
+        
+        sillyThing =  CFURLCreateFromFSRef (kCFAllocatorDefault, &theFSRef);
+        isDirectory = CFURLHasDirectoryPath(sillyThing);
+        
+        filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
+        CFRelease(sillyThing);
+        
+        CFStringGetCString (filePath,pathName,pathNameMax, kCFStringEncodingMacRoman);
+        CFRelease(filePath);
+        
+        if (retryWithDirectory) {
+            strcat(pathName,":");
+            strcat(pathName,rememberName);
+            isDirectory = false;
+        }
+        if (isDirectory)
+            strcat(pathName,":");
+        return 0;
+}
+
+/* Convert the squeak path to an OS-X path. This path because of alias resolving may point 
+to another directory tree */
+
+void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
+        FSRef		theFSRef;
+        FSSpec		convertFileNameSpec,failureRetry;
+        OSErr		err;
+        Boolean		isFolder,isAlias;
+        CFURLRef 	sillyThing,appendedSillyThing;
+        CFStringRef 	filePath,lastPartOfPath;
+        
+        *dst = 0x00;
+        err = makeFSSpec((char *) src,num,&convertFileNameSpec);
+        if ((err == noErr) && resolveAlias) {
+            err = ResolveAliasFile(&convertFileNameSpec,true,&isFolder,&isAlias);
+        }
+        if (err == fnfErr) {
+            failureRetry = convertFileNameSpec;
+            CopyCStringToPascal(":",failureRetry.name);
+            err = FSpMakeFSRef(&failureRetry,&theFSRef);
+            if (err != noErr) 
+                return;
+            filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)src,num,kCFStringEncodingMacRoman,false);
+            sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+            CFRelease(filePath);
+            lastPartOfPath = CFURLCopyLastPathComponent(sillyThing);
+            CFRelease(sillyThing);
+            sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
+            appendedSillyThing = CFURLCreateCopyAppendingPathComponent(kCFAllocatorDefault,sillyThing,lastPartOfPath,false);
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+            filePath = CFURLCopyFileSystemPath (appendedSillyThing, kCFURLHFSPathStyle);
+#else
+            filePath = CFURLCopyFileSystemPath (appendedSillyThing, kCFURLPOSIXPathStyle);
+#endif
+            CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+            CFRelease(sillyThing);
+            CFRelease(appendedSillyThing);
+            CFRelease(lastPartOfPath);
+            CFRelease(filePath);        
+            return; 
+        }
+        err = FSpMakeFSRef(&convertFileNameSpec,&theFSRef);
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
+		sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
+        filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
+        CFStringGetCString (filePath,dst,1000, kCFStringEncodingMacRoman);
+		CFRelease(sillyThing);
+        CFRelease(filePath);        
+ #else
+        err = FSRefMakePath(&theFSRef,(UInt8 *)dst,1000); 
+ #endif
+}
+
+/* This method is used to lookup paths, chunk by chunk. It builds specs for each chunk and fetchs the file 
+information, Note the special case when noDrilldown */
+
+int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown) {
+    char *token;
+    Str255 lookup;
+    UniChar   buffer[1024];
+    Boolean firstTime=true;
+    OSErr   err;
+    long    parentDirectory,tokenLength;
+    FSRef   parentFSRef,childFSRef;
+    CFStringRef aLevel;
+    FSSpec	fix;
+    
+    token = strtok((char*) pathString,":");
+    if (token == 0) return -1;
+    while (token) 
+    {
+        tokenLength = strlen(token);
+        if (firstTime) {// Mmm will crash if volume name is 255 characters, unlikely
+            strncpy((char*) lookup+1,(char*) token,tokenLength);
+            lookup[0] = tokenLength+1;
+            lookup[lookup[0]] = ':';
+            firstTime = false;
+            err = FSMakeFSSpecCompat(spec->vRefNum,spec->parID, lookup, spec);
+            if (err != noErr)
+                return err;
+            err = FSpMakeFSRef(spec,&parentFSRef);
+            if (err != noErr)
+                return err;
+        } else {
+            fix = *spec;
+            fix.name[0] = 0;
+            err = FSpMakeFSRef(&fix,&parentFSRef);
+            if (err != noErr)
+                return err;
+           aLevel = CFStringCreateWithCString(kCFAllocatorDefault,token,kCFStringEncodingMacRoman);
+           tokenLength = CFStringGetLength(aLevel);
+           CFStringGetCharacters(aLevel,CFRangeMake(0,tokenLength),buffer);
+           err = FSMakeFSRefUnicode(&parentFSRef,tokenLength,buffer,kCFStringEncodingMacRoman,&childFSRef);
+           if (err != noErr) {
+                CFStringGetPascalString(aLevel,spec->name,64,kCFStringEncodingMacRoman);
+                CFRelease(aLevel);
+               return err;
+            }
+           CFRelease(aLevel);
+           parentFSRef = childFSRef;
+           err = FSGetCatalogInfo (&parentFSRef,kFSCatInfoNone,nil,nil,spec,nil);
+            if (err != noErr)
+                return err;
+        }
+        fetchFileSpec(spec,spec->name,&parentDirectory);
+        token = strtok(nil,":"); 
+    }
+   if (noDrillDown) 
+       spec->parID = parentDirectory;
+     return noErr;
+}
+
+
+
+#else
+/* OS 8 and pre carbon logic */
+
+static OSErr	FSpGetFullPath(const FSSpec *spec,
 							   short *fullPathLength,
 							   Handle *fullPath)
 {
@@ -45,30 +223,13 @@ pascal	OSErr	FSpGetFullPath(const FSSpec *spec,
 	CInfoPBRec	pb;
 	
 	*fullPathLength = 0;
-	*fullPath = NULL;
+	*fullPath = nil;
 	
 	
 	/* Default to noErr */
 	realResult = result = noErr;
 	
-#if 0
-//The following code doesn't seem to work in OS X, the BlockMoveData crashes the
-// machine, the the FSMakeFSSpecCompat works, so go figure...  KG 4/1/01
-
-	/* work around Nav Services "bug" (it returns invalid FSSpecs with empty names) */
-	if ( spec->name[0] == 0 )
-	{
-		result = FSMakeFSSpecCompat(spec->vRefNum, spec->parID, spec->name, &tempSpec);
-	}
-	else
-	{
-		/* Make a copy of the input FSSpec that can be modified */
-		BlockMoveData(spec, &tempSpec, sizeof(FSSpec));
-	}
-#endif 0
-
 	result = FSMakeFSSpecCompat(spec->vRefNum, spec->parID, spec->name, &tempSpec);
-
 
 	if ( result == noErr )
 	{
@@ -126,7 +287,7 @@ pascal	OSErr	FSpGetFullPath(const FSSpec *spec,
 							tempSpec.name[tempSpec.name[0]] = ':';
 							
 							/* Add directory name to beginning of fullPath */
-							(void) Munger(*fullPath, 0, NULL, 0, &tempSpec.name[1], tempSpec.name[0]);
+							(void) Munger(*fullPath, 0, nil, 0, &tempSpec.name[1], tempSpec.name[0]);
 							*fullPathLength += tempSpec.name[0];
 							result = MemError();
 						}
@@ -144,12 +305,12 @@ pascal	OSErr	FSpGetFullPath(const FSSpec *spec,
 	}
 	else
 	{
-		/* Dispose of the handle and return NULL and zero length */
-		if ( *fullPath != NULL )
+		/* Dispose of the handle and return nil and zero length */
+		if ( *fullPath != nil )
 		{
 			DisposeHandle(*fullPath);
 		}
-		*fullPath = NULL;
+		*fullPath = nil;
 		*fullPathLength = 0;
 	}
 	
@@ -157,11 +318,327 @@ pascal	OSErr	FSpGetFullPath(const FSSpec *spec,
 }
 
 
-pascal	OSErr	FSMakeFSSpecCompat(short vRefNum,
-								   long dirID,
-								   ConstStr255Param fileName,
-								   FSSpec *spec)
+
+int PathToDir(char *pathName, int pathNameMax, FSSpec *where) {
+	/* Fill in the given string with the full path from a root volume to
+	   to given  directory.
+	*/
+        CopyCStringToPascal(":",where->name);
+	return PathToFile(pathName,pathNameMax,where);  
+}
+
+int PathToFile(char *pathName, int pathNameMax, FSSpec *where) {
+        OSErr	error;
+        short 	pathLength;
+        Handle fullPathHandle;
+        
+	error =  FSpGetFullPath(where, &pathLength, &fullPathHandle);
+	if (fullPathHandle != 0) {
+            pathLength = pathLength+1 > pathNameMax ? pathNameMax-1 : pathLength;
+            strncpy((char *) pathName, (char *) *fullPathHandle, pathLength);
+            pathName[pathLength] = 0x00;
+            DisposeHandle(fullPathHandle);
+        } else {
+            *pathName = 0x00;
+            pathLength = 0;
+        }
+	return pathLength;
+}
+
+
+OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
+{	
+	char name[1001];
+	
+	if (pathStringLength > 1000 ) 
+	    return -1;
+   
+    strncpy((char *) name,pathString,pathStringLength);
+    name[pathStringLength] = 0x00;
+    return __path2fss((char *) name, spec);
+}
+
+
+/* This method is used to lookup paths, chunk by chunk. It builds specs for each chunk and fetchs the file 
+information, Note the special case when noDrilldown */
+
+int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown) {
+    char *token;
+    Str255 lookup;
+    Boolean firstTime=true;
+    OSErr   err;
+    long    parentDirectory,tokenLength;
+    
+    token = strtok((char*) pathString,":");
+    if (token == 0) return -1;
+    while (token) 
+    {
+        tokenLength = strlen(token) > 255 ? 255 : strlen(token);
+        if (firstTime) {
+            strncpy((char*) lookup+1,(char*) token,tokenLength);
+            lookup[0] = tokenLength+1;
+            lookup[lookup[0]] = ':';
+            firstTime = false;
+        } else {
+            if (tokenLength == 255) { /* This is broken */
+                FSSpec spec2;
+                strncpy((char*) lookup+1,(char*) token,tokenLength);
+                lookup[0] = tokenLength;
+                if ((err = FSMakeFSSpecCompat(spec->vRefNum,spec->parID, lookup, &spec2)) != noErr) 
+                    return err;               
+            } else {
+            strncpy((char*) lookup+2,(char*) token,tokenLength);
+            lookup[0] = tokenLength+1;
+            lookup[1] = ':';
+            }
+        }
+        if ((err = FSMakeFSSpecCompat(spec->vRefNum,spec->parID, lookup, spec)) != noErr) 
+            return err;
+        fetchFileSpec(spec,spec->name,&parentDirectory);
+        token = strtok(nil,":"); 
+    }
+   if (noDrillDown) 
+       spec->parID = parentDirectory;
+     return noErr;
+}		 
+#endif
+
+/*
+JMM 2001/02/02 rewrote 
+These are common routines
+
+*/
+
+int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown) {
+	/* Resolve the given path and return the resulting folder or volume
+	   reference number in *refNumPtr. Return error if the path is bad. */
+
+	char          	tempName[1001];
+ 	OSErr		    err;
+ 	int		        i;
+ 	
+    if (pathStringLength < 256) {
+        /* First locate by farily normal methods, with perhaps an alias lookup */
+ 		tempName[0] = pathStringLength;
+		strncpy((char *)tempName+1,pathString,pathStringLength);
+    
+        err = FSMakeFSSpecCompat(0,0,(unsigned char*) tempName,spec);
+    
+        if (err == noErr) {
+            if (noDrillDown == false) {
+                fetchFileSpec(spec,spec->name,nil);
+            }
+            return noErr;
+        }         
+    }
+    /* Than failed, we might have an alias chain, or other issue so 
+    first setup for directory or file then do it the hard way */
+    
+    strncpy((char *)tempName,pathString,pathStringLength);
+    if (noDrillDown) {
+        tempName[pathStringLength] = 0x00;
+    }
+    else {
+        tempName[pathStringLength] = ':';
+        tempName[pathStringLength+1] = 0x00;
+    }
+
+  	i = 0;
+  	while(tempName[i]) {
+   		if(tempName[i] == ':') {
+      		if(tempName[i+1] == ':')
+				return fnfErr; /* fix for :: doItTheHardWay can't deal with this */
+   		 }
+   		i++;
+    }
+
+    err = doItTheHardWay((unsigned char*) tempName,spec,noDrillDown);
+    return err;
+}
+
+
+/*Get the file ID that unique IDs this file or directory, also resolve any alias if required */
+int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,long *parentDirectory,
+ int *isFolder,int *createDateStorage,int *modificationDateStorage,squeakInt64 *sizeOfFile,Str255 *longFileName) {
+    long        aliasGestaltInfo;
+    CInfoPBRec pb;
+    Boolean     result,isFolder2;
+    *isFolder = false;
+        
+    pb.hFileInfo.ioNamePtr = name;
+    pb.hFileInfo.ioFVersNum = 0;
+    pb.hFileInfo.ioFDirIndex = dirIndex;
+    pb.hFileInfo.ioVRefNum = spec->vRefNum;
+    pb.hFileInfo.ioDirID = spec->parID;
+
+    if (PBGetCatInfoSync(&pb) == noErr) {
+    	if ((pb.hFileInfo.ioFlFndrInfo.fdFlags & kIsAlias) && doAlias) {
+		    FSSpec spec2,spec3;
+		    Boolean isAlias;
+		    OSErr   err;
+		    
+		   
+		   err = FSMakeFSSpecCompat(spec->vRefNum, spec->parID, name,&spec2);
+           spec3 = spec2;
+#if TARGET_CPU_PPC
+           if ((Gestalt(gestaltAliasMgrAttr, &aliasGestaltInfo) == noErr) &&
+                aliasGestaltInfo & (1<<gestaltAliasMgrResolveAliasFileWithMountOptions)  &&
+                ((Ptr) ResolveAliasFileWithMountFlags != (Ptr)kUnresolvedCFragSymbolAddress)) {
+                err = ResolveAliasFileWithMountFlags(&spec2,false,&isFolder2,&isAlias,kResolveAliasFileNoUI);
+            } else {
+                err = ResolveAliasFile(&spec2,false,&isFolder2,&isAlias);
+            }
+#else
+			err = ResolveAliasFile(&spec2,false,&isFolder2,&isAlias);
+#endif         
+			*isFolder = isFolder2;
+            if (err == noErr) {
+                resolveLongName(0,0,nil,&spec3,*isFolder,longFileName,sizeOfFile);
+                result = true;
+                goto done;
+		    }
+    	}
+        *sizeOfFile =  pb.hFileInfo.ioFlLgLen;
+        resolveLongName(pb.hFileInfo.ioVRefNum,pb.hFileInfo.ioFlParID,name,nil,((pb.hFileInfo.ioFlAttrib & kioFlAttribDirMask) > 0),longFileName,sizeOfFile);
+        spec->parID = pb.hFileInfo.ioDirID;
+        result = true;
+        goto done;
+    }
+    result = false;
+    memcpy(longFileName,name,sizeof(StrFileName));
+    
+    done:
+    *isFolder = ((pb.hFileInfo.ioFlAttrib & kioFlAttribDirMask) > 0) || *isFolder;
+    *createDateStorage =  pb.hFileInfo.ioFlCrDat;
+    *modificationDateStorage =  pb.hFileInfo.ioFlMdDat;
+    *parentDirectory = pb.dirInfo.ioDrParID;
+    return result;
+}
+
+static int fetchFileSpec(FSSpec *spec,unsigned char *name,long *parentDirectory) {
+    long        aliasGestaltInfo;
+    CInfoPBRec  pb;
+    Boolean     result,ignore;
+    FSSpec      spec2;
+    OSErr       err;
+        
+    pb.hFileInfo.ioNamePtr = name;
+    pb.hFileInfo.ioFVersNum = 0;
+    pb.hFileInfo.ioFDirIndex = 0;
+    pb.hFileInfo.ioVRefNum = spec->vRefNum;
+    pb.hFileInfo.ioDirID = spec->parID;
+
+    if (PBGetCatInfoSync(&pb) == noErr) {
+    	if (pb.hFileInfo.ioFlFndrInfo.fdFlags & kIsAlias) {     	   
+    	   err = FSMakeFSSpecCompat(spec->vRefNum, spec->parID, name,&spec2);
+    #if TARGET_CPU_PPC
+           if ((Gestalt(gestaltAliasMgrAttr, &aliasGestaltInfo) == noErr) &&
+                aliasGestaltInfo & (1<<gestaltAliasMgrResolveAliasFileWithMountOptions)  &&
+                ((Ptr) ResolveAliasFileWithMountFlags != (Ptr)kUnresolvedCFragSymbolAddress)) {
+                err = ResolveAliasFileWithMountFlags(&spec2,false,&ignore,&ignore,kResolveAliasFileNoUI);
+            } 
+            else 
+    #endif
+    			err = ResolveAliasFile(&spec2,false,&ignore,&ignore);
+                if (err == noErr) {
+             	    fetchFileSpec(&spec2,spec2.name,parentDirectory);
+            	    *spec = spec2;
+                    result = true;
+                    goto done;
+    		    }
+    	}
+        spec->parID = pb.hFileInfo.ioDirID;
+        result = true;
+        goto done;
+    }
+    result = false;
+    
+    done:
+        if (parentDirectory != nil)
+            *parentDirectory = pb.dirInfo.ioDrParID;
+        return result;
+}
+
+static void resolveLongName(short vRefNum, long parID,unsigned char*shortFileName,FSSpec *possibleSpec,Boolean isFolder,Str255 *name,squeakInt64 *sizeOfFile) {
+    
+#if TARGET_API_MAC_CARBON 
+    if ((Ptr) PBGetCatalogInfoSync != (Ptr)kUnresolvedCFragSymbolAddress) {
+        FSSpec spec;
+        FSRefParam FSRefData;
+        FSRef      theFSRef;
+        FSCatalogInfo theCatalogInfo;
+        HFSUniStr255 	unicodeName;
+        OSErr     err;
+
+        if (possibleSpec == nil) {
+            err = FSMakeFSSpecCompat(vRefNum,parID,shortFileName,&spec);
+            if (err != noErr)
+                goto done1;   
+            err = FSpMakeFSRef(&spec,&theFSRef);
+            if (err != noErr)
+             goto done1;   
+        } else {
+            err = FSpMakeFSRef(possibleSpec,&theFSRef);
+            if (err != noErr)
+             goto done1;   
+        }
+                
+        FSRefData.ref = &theFSRef;
+        FSRefData.whichInfo = kFSCatInfoDataSizes;
+        FSRefData.catInfo = &theCatalogInfo;
+        FSRefData.spec = nil;
+        FSRefData.parentRef = nil;
+        FSRefData.outName = &unicodeName;
+        
+        if (PBGetCatalogInfoSync(&FSRefData) == noErr) {
+           CFStringRef 	theString;
+           
+            if (isFolder) 
+                *sizeOfFile = 0;
+            else
+                *sizeOfFile =  theCatalogInfo.dataLogicalSize; 
+                
+           theString = CFStringCreateWithCharacters (kCFAllocatorDefault, unicodeName.unicode, (CFIndex) unicodeName.length);
+           CFStringGetPascalString(theString,(unsigned char *) name,256, kCFStringEncodingMacRoman);
+           CFRelease(theString);
+           return;
+        }
+   }
+   done1:
+   memcpy(name,shortFileName,sizeof(StrFileName));
+#else
+   if (shortFileName == nil)
+   	  memcpy(name,possibleSpec->name,sizeof(StrFileName));
+   else
+   	  memcpy(name,shortFileName,sizeof(StrFileName));
+#endif
+}
+
+
+#if defined(__MWERKS__) && !TARGET_API_MAC_CARBON
+OSErr __path2fss(const char * pathName, FSSpecPtr spec)
 {
+    return lookupPath((char *) pathName, strlen(pathName),spec,true);
+}
+#endif
+
+
+Boolean isVmPathVolumeHFSPlus() {
+    XVolumeParam        xpb;
+    OSErr               err;
+     
+    xpb.ioNamePtr   = NULL;
+    xpb.ioVRefNum   = 0;
+    xpb.ioXVersion  = 0;
+    xpb.ioVolIndex  = 0;
+
+    err = PBXGetVolInfoSync( &xpb );
+    if (err != noErr) 
+        return false;
+    return ( xpb.ioVSigWord == kHFSPlusSigWord );
+}
+
+OSErr	FSMakeFSSpecCompat(short vRefNum, long dirID, ConstStr255Param fileName,  FSSpec *spec) {
 	OSErr	result;
 	
 	/* Let the file system create the FSSpec if it can since it does the job */
@@ -177,37 +654,41 @@ pascal	OSErr	FSMakeFSSpecCompat(short vRefNum,
 	return ( result );
 }
 
-OSErr FSpLocationFromFullPath(short fullPathLength,
-									 const void *fullPath,
-									 FSSpec *spec)
-{
-	AliasHandle	alias;
-	OSErr		result;
-	Boolean		wasChanged;
-	Str32		nullString;
-	
-	/* Create a minimal alias from the full pathname */
-	nullString[0] = 0;	/* null string to indicate no zone or server name */
-	result = NewAliasMinimalFromFullPath(fullPathLength, fullPath, nullString, nullString, &alias);
-	if ( result == noErr )
-	{
-		/* Let the Alias Manager resolve the alias. */
-		result = ResolveAlias(NULL, alias, spec, &wasChanged);
-		
-		/* work around Alias Mgr sloppy volume matching bug */
-		if ( spec->vRefNum == 0 )
-		{
-			/* invalidate wrong FSSpec */
-			spec->parID = 0;
-			spec->name[0] =  0;
-			result = nsvErr;
-		}
-		DisposeHandle((Handle)alias);	/* Free up memory used */
-	}
-	return ( result );
+/*****************************************************************************************
+GetApplicationDirectory
+
+Get the volume reference number and directory id of this application.
+Code taken from Apple:
+	Technical Q&As: FL 14 - Finding your application's directory (19-June-2000)
+
+Karl Goiser 14/01/01
+*****************************************************************************************/
+
+        /* GetApplicationDirectory returns the volume reference number
+        and directory ID for the current application's directory. */
+
+OSStatus GetApplicationDirectory(FSSpec *workingDirectory) {
+        ProcessSerialNumber PSN;
+        ProcessInfoRec pinfo;
+        OSErr	err;
+        
+                  /* set up process serial number */
+        PSN.highLongOfPSN = 0;
+        PSN.lowLongOfPSN = kCurrentProcess;
+            /* set up info block */
+        pinfo.processInfoLength = sizeof(pinfo);
+        pinfo.processName = 0;
+        pinfo.processAppSpec = workingDirectory;
+        err = GetProcessInformation(&PSN, &pinfo);
+#if defined (__APPLE__) && defined(__MACH__)
+        if (err == noErr) {
+            FSMakeFSSpecCompat(workingDirectory->vRefNum, workingDirectory->parID,"\p:::",workingDirectory);
+        }
+#endif
+        return err;
 }
 
-#if !defined (__APPLE__) && !defined(__MACH__)
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
 typedef struct {
 	StandardFileReply *theSFR;
 	FSSpec *itemSpec;
@@ -233,7 +714,7 @@ OSErr squeakFindImage(const FSSpecPtr defaultLocationfssPtr,FSSpecPtr documentFS
 		// the file spec for the system file
 		
      	StandardFileReply mySFR;
-#if !defined (__APPLE__) && !defined(__MACH__)
+#if defined(__MWERKS__) && !defined(__APPLE__) && !defined(__MACH__)
     	HookRecord hookRec;
 #endif
 
@@ -318,7 +799,7 @@ OSErr squeakFindImage(const FSSpecPtr defaultLocationfssPtr,FSSpecPtr documentFS
                 //  Dispose of NavReplyRecord, resources, descriptors
                 anErr = NavDisposeReply(&reply);
             }
-            if (typeList != NULL)
+            if (typeList != nil)
             {
                 ReleaseResource( (Handle)typeList);
             }
@@ -356,7 +837,6 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
                             NavCallBackUserData callBackUD,
                             NavFilterModes filterMode)
 {
-    OSErr theErr = noErr;
     Boolean display = true;
     NavFileOrFolderInfo* theInfo = (NavFileOrFolderInfo*)info;
     
@@ -392,7 +872,7 @@ pascal short DialogHook(short item, DialogPtr theDialog,
 			// make the reply record hold the spec of the specified item
 			hookRecPtr->theSFR->sfFile = *hookRecPtr->itemSpec;
 			
-			// There¹s a gotcha in Standard File when using sfHookChangeSelection. 
+			// ThereÕs a gotcha in Standard File when using sfHookChangeSelection. 
 			// Even though New Inside Macintosh: Files has a sample that doesn't set
 			// the sfScript field, it should be set, or the last object in the
 			// selected directory  will always be selected.
@@ -405,254 +885,120 @@ pascal short DialogHook(short item, DialogPtr theDialog,
 		
 	return item;
 }
+
 #endif
-/*****************************************************************************************
-GetApplicationDirectory
-
-Get the volume reference number and directory id of this application.
-Code taken from Apple:
-	Technical Q&As: FL 14 - Finding your application's directory (19-June-2000)
-
-Karl Goiser 14/01/01
-*****************************************************************************************/
-
-        /* GetApplicationDirectory returns the volume reference number
-        and directory ID for the current application's directory. */
-
-    OSStatus GetApplicationDirectory(short *vRefNum, long *dirID) {
-        ProcessSerialNumber PSN;
-        ProcessInfoRec pinfo;
-        FSSpec pspec;
-        OSStatus err;
-            /* valid parameters */
-        if (vRefNum == NULL || dirID == NULL) return paramErr;
-            /* set up process serial number */
-        PSN.highLongOfPSN = 0;
-        PSN.lowLongOfPSN = kCurrentProcess;
-            /* set up info block */
-        pinfo.processInfoLength = sizeof(pinfo);
-        pinfo.processName = NULL;
-        pinfo.processAppSpec = &pspec;
-            /* grab the vrefnum and directory */
-        err = GetProcessInformation(&PSN, &pinfo);
-        if (err == noErr) {
-            *vRefNum = pspec.vRefNum;
-            *dirID = pspec.parID;
-        }
-        return err;
-    }
 
 
-/*** Initializing the path to Working Dir ***/
+/* 
+ Some trial code, to keep for now, must delete some day
 
-int PathToWorkingDir(char *pathName, int pathNameMax, short volumeNumber,long directoryID) {
-	/* Fill in the given string with the full path from a root volume to
-	   to current working directory. (At startup time, the working directory
-	   is set to the application's directory. Fails if the given string is not
-	   long enough to hold the entire path. (Use at least 1000 characters to
-	   be safe.)
-	*/
-
-	short	fullPathLength;
-	Handle	fullPathHandle;
-
-	if (GetFullPath(volumeNumber, directoryID, nil, &fullPathLength, &fullPathHandle) != noErr) {
-		//Some sort of random guff for failure:
-		pathName[0] = 1;
-		pathName[1] = (char)":";
-		return 1;
-	}
-
-	strncpy((char *) pathName, (char *) *fullPathHandle, fullPathLength);
-	DisposeHandle(fullPathHandle);
-	return fullPathLength;
-}
-
-
-
-/*****************************************************************************/
-
-
-int PrefixPathWith(char *pathName, int pathNameSize, int pathNameMax, char *prefix) {
-	/* Insert the given prefix C string plus a delimitor character at the
-	   beginning of the given C string. Return the new pathName size. Fails
-	   if pathName is does not have sufficient space for the result.
-	   Assume: pathName is null terminated.
-	*/
-
-	int offset, i;
-
-	offset = strlen(prefix) + 1;
-	if ((pathNameSize + offset) > pathNameMax) {
-		return pathNameSize;
-	}
-
-	for (i = pathNameSize; i >= 0; i--) {
-		/* make room in pathName for prefix (moving string terminator, too) */
-		pathName[i + offset] = pathName[i];
-	}
-	for (i = 0; i < offset; i++) {
-		/* make room in pathName for prefix */
-		pathName[i] = prefix[i];
-	}
-	pathName[offset - 1] = ':';  /* insert delimitor */
-	return pathNameSize + offset;
-}
-
-OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
-{	
-	char name[256];
-	
-	if (pathStringLength > 255 ) 
-	    return -1;
-   
-    strncpy((char *) name,pathString,pathStringLength);
-    name[pathStringLength] = 0x00;
-    return __path2fss((char *) name, spec);
-}
-
-OSErr __path2fss(const char * pathName, FSSpecPtr spec)
-{
-    return lookupPath((char *) pathName, strlen(pathName),spec,true);
-}
-									 								 
-/*
-JMM 2001/02/02 rewrote 
-*/
-
-int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown) {
-	/* Resolve the given path and return the resulting folder or volume
-	   reference number in *refNumPtr. Return error if the path is bad. */
-
-	CInfoPBRec      pb;
-	Str255          tempName;
- 	OSErr		    err;
-    Boolean         ignore;
- 	int				i;
- 	
-    /* First locate by farily normal methods, with perhaps an alias lookup */
-    makePascalStringFromSqName(pathString,pathStringLength,tempName);
-
-    err = FSMakeFSSpecCompat(0,0,tempName,spec);
-
-    if (err == noErr) {
-        if (noDrillDown == false) {
-            fetchFileInfo(&pb,0,spec,spec->name,true,&ignore);
-        }
-        return noErr;
-    }         
-         
-    /* Than failed, we might have an alias chain, or other issue so 
-    first setup for directory or file then do it the hard way */
-    
-    strncpy((char *)tempName,pathString,pathStringLength);
-    if (noDrillDown) {
-        tempName[pathStringLength] = 0x00;
-    }
-    else {
-        tempName[pathStringLength] = ':';
-        tempName[pathStringLength+1] = 0x00;
-    }
-
-  	i = 0;
-  	while(tempName[i]) {
-   		if(tempName[i] == ':') {
-      		if(tempName[i+1] == ':')
-				return fnfErr; /* fix for :: doItTheHardWay can't deal with this */
-   		 }
-   		i++;
-    }
-
-    err = doItTheHardWay(tempName,spec,&pb,noDrillDown);
-    return err;
-}
-
-/* This method is used to lookup paths, chunk by chunk. It builds specs for each chuck and fetchs the file 
-information, Note the special case when noDrilldown */
-
-int doItTheHardWay(unsigned char *pathString,FSSpec *spec,CInfoPBRec *pb,Boolean noDrillDown) {
-    char *token;
-    Str255 lookup;
-    Boolean ignore,firstTime=true;
-    OSErr   err;
-    
-    token = strtok((char*) pathString,":");
-    if (token == 0) return -1;
-    while (token) 
-    {
-        if (firstTime) {
-            strncpy((char*) lookup+1,(char*) token,63);
-            lookup[0] = strlen(token)+1;
-            lookup[lookup[0]] = ':';
-            firstTime = false;
-        } else {
-            strncpy((char*) lookup+2,(char*) token,63);
-            lookup[0] = strlen(token)+1;
-            lookup[1] = ':';
-        }
-        if ((err = FSMakeFSSpecCompat(spec->vRefNum,spec->parID, lookup, spec)) != noErr) 
-            return err;
-        
-        fetchFileInfo(pb,0,spec,spec->name,true,&ignore);
-        token = strtok(NULL,":"); 
-    }
-   if (noDrillDown) 
-       spec->parID = pb->dirInfo.ioDrParID;
-     return noErr;
-}
-
-/*Get the file ID that unique IDs this file or directory, also resolve any alias if required */
+            err = makeFSSpec((char *) src,num,&convertFileNameSpec);
+            if ((err == noErr) && resolveAlias)
+                err = ResolveAliasFile(&convertFileNameSpec,true,&isFolder,&isAlias);
+                
+            err = FSpMakeFSRef(&convertFileNameSpec,&theFSRef);
+            if (err == fnfErr) {
+                failureRetry = convertFileNameSpec;
+                CopyCStringToPascal(":",failureRetry.name);
+                err = FSpMakeFSRef(&failureRetry,&theFSRef);
+                if (err != noErr) 
+                    return;
+                err = FSRefMakePath(&theFSRef,(UInt8 *) dst,1000); 
+                if (err != noErr) 
+                    return;
+                if (dst[strlen(dst)-1] != ':')
+                strcat(dst,"/");
+                CopyPascalStringToC(convertFileNameSpec.name,(char *)convertFileNameSpec.name);
+                strcat(dst,(char *)convertFileNameSpec.name);
+                return;
+            }
+            err = FSRefMakePath(&theFSRef,(UInt8 *)dst,1000); 
 
 int fetchFileInfo(CInfoPBRec *pb,int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,Boolean *isFolder) {
-    long    aliasGestaltInfo;
-     
-    *isFolder = false;
-    pb->hFileInfo.ioNamePtr = name;
-	pb->hFileInfo.ioFVersNum = 0;
-	pb->hFileInfo.ioFDirIndex = dirIndex;
-	pb->hFileInfo.ioVRefNum = spec->vRefNum;
-	pb->hFileInfo.ioDirID = spec->parID;
+    OSErr		error;
+    FSCatalogInfo 	catalogInfo;
+    HFSUniStr255 	unicodeName;
+    LocalDateTime 	localDateTime;
+    CFStringRef 	theString;
+    ItemCount		actualObjects;
+    FSSpec		currentFSSpec;
+    static FSSpec 	rememberCurrentSpec;
+    static int 	  	rememberLastDirIndex=-32768;
+    static FSRef  	theFSRef;
+    static FSIterator 	theIterator;
+    static Boolean 	interatorInitialized=false;
+    
+    if (!(memcmp(&rememberCurrentSpec,(char *) spec,sizeof(FSSpec)) == 0) 
+        || (++rememberLastDirIndex != dirIndex)) {
+        if (interatorInitialized) {
+            FSCloseIterator(theIterator);
+            interatorInitialized = false;
+        }
+        error = FSpMakeFSRef (spec, &theFSRef);
+        if (error != noErr) 
+            return false;
+        error = FSOpenIterator(&theFSRef, kFSIterateFlat, &theIterator);
+        if (error != noErr) 
+            return false;
+        interatorInitialized = true;
+        rememberLastDirIndex = dirIndex;
+        rememberCurrentSpec = *spec;
+    }
+    
+     error = FSGetCatalogInfoBulk(theIterator,1,&actualObjects,nil,
+            kFSCatInfoNodeFlags+kFSCatInfoCreateDate+kFSCatInfoContentMod+kFSCatInfoDataSizes+kFSCatInfoFinderInfo,
+            &catalogInfo,nil,&currentFSSpec,&unicodeName);
+             
+    if (error != noErr) 
+        return false;
 
-	if (PBGetCatInfoSync(pb) == noErr) {
-		if ((pb->hFileInfo.ioFlFndrInfo.fdFlags & kIsAlias) && doAlias) {
-		    FSSpec spec2;
-		    Boolean isAlias;
-		    OSErr   err;
+    memcpy(&pb->hFileInfo.ioFlFndrInfo,catalogInfo.finderInfo,sizeof(FInfo));
+    if ((pb->hFileInfo.ioFlFndrInfo.fdFlags & kIsAlias) && doAlias) {
+        Boolean isAlias;
+        OSErr   err;
 		    
-		   
-		   err = FSMakeFSSpecCompat(spec->vRefNum, spec->parID, name,&spec2);
-#if TARGET_CPU_PPC
-           if ((Gestalt(gestaltAliasMgrAttr, &aliasGestaltInfo) == noErr) &&
-                aliasGestaltInfo & (1<<gestaltAliasMgrResolveAliasFileWithMountOptions)  &&
-                ((Ptr) ResolveAliasFileWithMountFlags != (Ptr)kUnresolvedCFragSymbolAddress)) {
-                err = ResolveAliasFileWithMountFlags(&spec2,false,isFolder,&isAlias,kResolveAliasFileNoUI);
+        if (((Ptr) ResolveAliasFileWithMountFlags != (Ptr)kUnresolvedCFragSymbolAddress)) {
+            err = ResolveAliasFileWithMountFlags(&currentFSSpec,false,isFolder,&isAlias,kResolveAliasFileNoUI);
             } 
-            else 
-#endif
-    			err = ResolveAliasFile(&spec2,false,isFolder,&isAlias);
-    		
+        else 
+            err = ResolveAliasFile(&currentFSSpec,false,isFolder,&isAlias);    		
     			
-            if (err == noErr) {
-            	if (dirIndex == 0) {
-            	    fetchFileInfo(pb,dirIndex,&spec2,spec2.name,false,isFolder);
-            	    *spec = spec2;
-            	}
-        		return true;
-			}
-		}
-        spec->parID = pb->hFileInfo.ioDirID;
-		return true;
-	}
-	return false;
+       if (err == noErr) {
+            if (dirIndex == 0) {
+                fetchFileInfo(pb,dirIndex,&currentFSSpec,name,false,isFolder);
+                *spec = currentFSSpec;
+                return true;
+            }
+            error = FSpMakeFSRef (&currentFSSpec, &theFSRef);
+            if (error != noErr) 
+                return false;
+            error = FSGetCatalogInfo(&theFSRef,
+                kFSCatInfoNodeFlags+kFSCatInfoCreateDate+kFSCatInfoContentMod
+                +kFSCatInfoDataSizes+kFSCatInfoFinderInfo,
+                &catalogInfo,&unicodeName,&currentFSSpec,nil);
+            if (error != noErr) 
+                return false;
+                
+        }
+    }  
+    ConvertUTCToLocalDateTime(&catalogInfo.createDate,&localDateTime); 
+    pb->hFileInfo.ioFlCrDat = localDateTime.lowSeconds;
+    ConvertUTCToLocalDateTime(&catalogInfo.contentModDate,&localDateTime); 
+    pb->hFileInfo.ioFlMdDat = localDateTime.lowSeconds;
+    memcpy(&pb->hFileInfo.ioFlFndrInfo,catalogInfo.finderInfo,sizeof(FInfo));
+    pb->hFileInfo.ioFlAttrib = 0;
+    *isFolder = false;
+    if (catalogInfo.nodeFlags & kFSNodeIsDirectoryMask) {
+        pb->hFileInfo.ioFlAttrib = kioFlAttribDirMask;
+        *isFolder = true;
+    }
+        
+    pb->hFileInfo.ioFlLgLen = catalogInfo.dataLogicalSize; 
+    theString = CFStringCreateWithCharacters (nil, unicodeName.unicode, (CFIndex) unicodeName.length);
+    CFStringGetCString (theString,name,256, kCFStringEncodingMacRoman);
+    CopyCStringToPascal(name,name);
+    CFRelease(theString);
 
+    return true;
 }
-
-void makePascalStringFromSqName(char *pathString, int pathStringLength,unsigned char *name)
-{
-	/* copy file name into a Pascal string */
-	
-	name[0] = pathStringLength;
-	strncpy((char *)name+1,pathString,pathStringLength);
-
-} 
-
+*/
