@@ -12,12 +12,14 @@ AC_DEFUN([AC_LANGINFO_CODESET], [
 ])
 
 AC_DEFUN([AC_ICONV], [
-  AC_CHECK_LIB(iconv, iconv_open, ac_cv_iconv=yes, [
-    AC_CHECK_LIB(iconv, libiconv_open, ac_cv_iconv=yes, ac_cv_iconv=no)
+  AC_CHECK_FUNC(_dyld_present,[],[
+    AC_CHECK_LIB(iconv, iconv_open, ac_cv_iconv=yes, [
+      AC_CHECK_LIB(iconv, libiconv_open, ac_cv_iconv=yes, ac_cv_iconv=no)
+    ])
+    if test $ac_cv_iconv = yes; then
+      LIBS="$LIBS -liconv"
+    fi
   ])
-  if test $ac_cv_iconv = yes; then
-    LIBS="$LIBS -liconv"
-  fi
 ])
 
 AC_CHECK_HEADERS(iconv.h)
