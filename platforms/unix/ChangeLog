@@ -1,3 +1,17 @@
+2004-04-04  Ian Piumarta  <ian.piumarta@inria.fr>
+
+	* platforms/unix/vm-display-X11/sqUnixXdnd.c: New file.
+	XDND-based drag-and-drop support.
+
+	* platforms/unix/vm-display-X11/sqUnixX11.c: New option "-noxdnd"
+	with attendant flag, command-line option, env var, and help entry.
+	Include "sqUnixXdnd.c" appropriately.
+	(handleEvent): Pass SelectionNotify to dnd if enabled.
+	(handleEvent): Pass ClientMessage to dnd if enabled.
+	(initWindow): Add EnterWindowMask to stParent event_mask if dnd
+	enabled.
+	(initWindow): Call dndInitialise() if dnd enabled.
+
 2004-04-03  Ian Piumarta  <ian.piumarta@inria.fr>
 
 	* platforms/unix/vm/dlfcn-dyld.c (dlsym): Don't automatically
