@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMemory.c,v 1.9 2002/08/06 21:45:49 johnmci Exp $
+*   RCSID:   $Id: sqMacMemory.c,v 1.10 2003/03/05 19:53:14 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -183,6 +183,9 @@ void sqMacMemoryFree() {
 	if (memory == nil) 
 		return;
 #if TARGET_API_MAC_CARBON
+    #ifdef PLUGIN
+    DisposePtr((void *) memory);
+    #endif
 #else
     if(((Ptr)OpenMappedScratchFile != (Ptr)kUnresolvedCFragSymbolAddress) && (gBackingFile != 0)) {       
 	    OSErr	error;
@@ -190,7 +193,6 @@ void sqMacMemoryFree() {
 		error = CloseMappedFile(gBackingFile);
         gBackingFile = 0;
     } else {
-		if (memory != nil)
 			DisposePtr((void *) memory);
     }
 #endif
