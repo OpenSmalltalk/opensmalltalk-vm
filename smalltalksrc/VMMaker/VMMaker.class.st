@@ -715,7 +715,7 @@ VMMaker >> logger: aStream [
 
 { #category : #'UI access' }
 VMMaker >> makeAllModulesAvailable [
-	self internal: #() external: #().
+	self internal: #() external: #().
 	self reinitializePluginsLists
 ]
 

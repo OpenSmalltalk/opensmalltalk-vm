@@ -21,8 +21,8 @@ Class {
 		'zipDistTableSize'
 	],
 	#classVars : [
-		'MaxBits',
-		'StateNoMoreData'
+		'StateNoMoreData',
+		'MaxBits'
 	],
 	#category : 'VMMaker-Plugins'
 }

@@ -73,79 +73,79 @@ Class {
 		'pollChecksEveryNms'
 	],
 	#classVars : [
-		'ActiveProcessIndex',
-		'AtCacheEntries',
-		'AtCacheFixedFields',
-		'AtCacheFmt',
+		'SemaphoresToSignalSize',
+		'StreamIndexIndex',
 		'AtCacheMask',
+		'MethodIndex',
+		'StreamArrayIndex',
+		'MethodArrayIndex',
+		'DirEntryFound',
+		'CompilerHooksSize',
+		'MethodCachePrim',
+		'CrossedX',
+		'ExcessSignalsIndex',
+		'MaxPrimitiveIndex',
+		'MethodCacheSize',
+		'MyListIndex',
+		'MillisecondClockMask',
+		'BlockMethodIndex',
+		'MethodCacheSelector',
+		'AtPutBase',
+		'InstanceSpecificationIndex',
+		'ActiveProcessIndex',
+		'MessageSelectorIndex',
+		'MethodCachePrimFunction',
+		'PrimitiveExternalCallIndex',
+		'SenderIndex',
+		'MethodCacheEntrySize',
+		'MethodCacheMethod',
+		'InitialIPIndex',
+		'MethodCacheNative',
+		'HeaderIndex',
+		'BytecodeTable',
+		'InstructionPointerIndex',
+		'ProcessListsIndex',
+		'SuspendedContextIndex',
+		'MaxExternalPrimitiveTableSize',
+		'MethodCacheMask',
+		'BlockArgumentCountIndex',
+		'CallerIndex',
+		'DirBadPath',
+		'CacheProbeMax',
+		'StreamWriteLimitIndex',
+		'FirstLinkIndex',
+		'EndOfRun',
+		'JitterTable',
 		'AtCacheOop',
 		'AtCacheSize',
-		'AtCacheTotalSize',
-		'AtPutBase',
-		'BlockArgumentCountIndex',
-		'BlockMethodIndex',
-		'BytecodeTable',
-		'CacheProbeMax',
-		'CallerIndex',
-		'CharacterValueIndex',
-		'CompilerHooksSize',
-		'CrossedX',
-		'DirBadPath',
-		'DirEntryFound',
-		'DirNoMoreEntries',
-		'EndOfRun',
-		'ExcessSignalsIndex',
-		'FirstLinkIndex',
-		'HeaderIndex',
-		'HomeIndex',
-		'InitialIPIndex',
-		'InstanceSpecificationIndex',
-		'InstructionPointerIndex',
-		'JitterTable',
-		'LastLinkIndex',
-		'LiteralStart',
-		'MaxExternalPrimitiveTableSize',
-		'MaxPrimitiveIndex',
-		'MessageArgumentsIndex',
-		'MessageDictionaryIndex',
-		'MessageLookupClassIndex',
-		'MessageSelectorIndex',
-		'MethodArrayIndex',
-		'MethodCacheClass',
-		'MethodCacheEntries',
-		'MethodCacheEntrySize',
-		'MethodCacheMask',
-		'MethodCacheMethod',
-		'MethodCacheNative',
-		'MethodCachePrim',
-		'MethodCachePrimFunction',
-		'MethodCacheSelector',
-		'MethodCacheSize',
-		'MethodIndex',
-		'MillisecondClockMask',
-		'MyListIndex',
-		'NextLinkIndex',
-		'PrimitiveExternalCallIndex',
-		'PrimitiveTable',
 		'PriorityIndex',
-		'ProcessListsIndex',
 		'ReceiverIndex',
+		'MessageDictionaryIndex',
+		'AtCacheFmt',
+		'DirNoMoreEntries',
+		'NextLinkIndex',
+		'MethodCacheClass',
 		'SelectorStart',
-		'SemaphoresToSignalSize',
-		'SenderIndex',
-		'StackPointerIndex',
-		'StreamArrayIndex',
-		'StreamIndexIndex',
-		'StreamReadLimitIndex',
-		'StreamWriteLimitIndex',
-		'SuperclassIndex',
-		'SuspendedContextIndex',
+		'MessageLookupClassIndex',
 		'TempFrameStart',
+		'MethodCacheEntries',
 		'ValueIndex',
 		'XIndex',
-		'YIndex'
+		'YIndex',
+		'LiteralStart',
+		'AtCacheFixedFields',
+		'AtCacheTotalSize',
+		'CharacterValueIndex',
+		'HomeIndex',
+		'StreamReadLimitIndex',
+		'PrimitiveTable',
+		'SuperclassIndex',
+		'MessageArgumentsIndex',
+		'AtCacheEntries',
+		'StackPointerIndex',
+		'LastLinkIndex'
 	],
-	#category : 'VMMaker-Interpreter'
+	#category : #'VMMaker-Interpreter'
 }
 
 { #category : #constants }
@@ -612,13 +612,16 @@ Interpreter class >> initializePrimitiveTable [
 		"Sound Primitives (170-199) - NO LONGER INDEXED"
 		(170 185 primitiveObsoleteIndexedPrimitive)
 
-		"Closure primitives"
-		(186 primitiveClosureValue)
-		(187 primitiveClosureValueWithArgs)
-		(188 primitiveExecuteMethod)
+		"Old closure primitives"
+		(186 primitiveFail) "was primitiveClosureValue"
+		(187 primitiveFail) "was primitiveClosureValueWithArgs"
+
+		"Perform method directly"
+		(188 primitiveExecuteMethodArgsArray)
+		(189 primitiveExecuteMethod)
 
 		"Sound Primitives (continued) - NO LONGER INDEXED"
-		(189 194 primitiveObsoleteIndexedPrimitive)
+		(190 194 primitiveObsoleteIndexedPrimitive)
 
 		"Unwind primitives"
 		(195 primitiveFindNextUnwindContext)
@@ -2684,8 +2687,33 @@ Interpreter >> enableCompiler [
 
 { #category : #'message sending' }
 Interpreter >> executeNewMethod [
+	"execute a method not found in the mCache - which means that 
+	primitiveIndex must be manually set. Used by primitiveClosureValue & primitiveExecuteMethod, where no lookup is previously done"
 	primitiveIndex > 0
 		ifTrue: [self primitiveResponse.
+			successFlag ifTrue: [^ nil]].
+	"if not primitive, or primitive failed, activate the method"
+	self activateNewMethod.
+	"check for possible interrupts at each real send"
+	self quickCheckForInterrupts
+]
+
+{ #category : #'message sending' }
+Interpreter >> executeNewMethodFromCache [
+	"execute a method found in the mCache - which means that 
+	primitiveIndex & primitiveFunctionPointer are already set. Any sender 
+	needs to have previously sent findMethodInClass: or equivalent"
+	| nArgs delta |
+	primitiveIndex > 0
+		ifTrue: [DoBalanceChecks ifTrue: ["check stack balance"
+					nArgs := argumentCount.
+					delta := stackPointer - activeContext].
+			successFlag := true.
+			self dispatchFunctionPointer: primitiveFunctionPointer.
+			"branch direct to prim function from address stored in mcache"
+			DoBalanceChecks
+				ifTrue: [(self balancedStack: delta afterPrimitive: primitiveIndex withArgs: nArgs)
+						ifFalse: [self printUnbalancedStack: primitiveIndex]].
 			successFlag ifTrue: [^ nil]].
 	"if not primitive, or primitive failed, activate the method"
 	self activateNewMethod.
@@ -4922,29 +4950,6 @@ Interpreter >> primitiveClone [
 	self pop: 1 thenPush: newCopy.
 ]
 
-{ #category : #'control primitives' }
-Interpreter >> primitiveClosureValue [
-
-	| blockClosure |
-	blockClosure _ self stackValue: argumentCount.
-	newMethod _ self fetchPointer: BlockMethodIndex ofObject: blockClosure.
-	primitiveIndex _ self primitiveIndexOf: newMethod.
-	self success: (argumentCount = (self argumentCountOf: newMethod)).
-	successFlag ifTrue: [self executeNewMethod].
-
-]
-
-{ #category : #'control primitives' }
-Interpreter >> primitiveClosureValueWithArgs [
-
-	| blockClosure |
-	blockClosure _ self stackValue: 1.
-	self push: (self fetchPointer: BlockMethodIndex ofObject: blockClosure).
-	self primitiveExecuteMethod.
-	successFlag ifFalse: [self pop: 1].
-
-]
-
 { #category : #'sound primitives' }
 Interpreter >> primitiveConstantFill [
 	"Fill the receiver, which must be an indexable bytes or words 
@@ -5095,6 +5100,18 @@ Interpreter >> primitiveEquivalent [
 
 { #category : #'control primitives' }
 Interpreter >> primitiveExecuteMethod [
+	"receiver, args, then method are on top of stack. Execute method against receiver and args"
+	newMethod := self popStack.
+	primitiveIndex := self primitiveIndexOf: newMethod.
+	self success: argumentCount - 1 = (self argumentCountOf: newMethod).
+	successFlag
+		ifTrue: [argumentCount := argumentCount - 1.
+			self executeNewMethod]
+		ifFalse: [self unPop: 1]
+]
+
+{ #category : #'control primitives' }
+Interpreter >> primitiveExecuteMethodArgsArray [
 	"receiver, argsArray, then method are on top of stack.  Execute method against receiver and args"
 
 	| argCnt argumentArray |
@@ -5102,7 +5119,8 @@ Interpreter >> primitiveExecuteMethod [
 	primitiveIndex _ self primitiveIndexOf: newMethod.
 	argCnt _ self argumentCountOf: newMethod.
 	argumentArray _ self popStack.
-	(self isArray: argumentArray) ifFalse:[^self primitiveFail].
+	"If the argArray isnt actually an Array we have to unPop both the above"
+	(self isArray: argumentArray) ifFalse:[self unPop: 2. ^self primitiveFail].
 	successFlag ifTrue: [self success: (argCnt = (self fetchWordLengthOf: argumentArray))].
 	successFlag
 		ifTrue: [self transfer: argCnt from: argumentArray + BaseHeaderSize to: stackPointer + 4.
@@ -5176,35 +5194,9 @@ Interpreter >> primitiveExternalCall [
 	30% per failed primitive call which may be noticable but if, 
 	for any reasons, we run into problems (like with J3) we can 
 	always remove the rewrite. 
-	Timer code details: Since primitives can run for a long time, 
-	we must check to see if it is time to process a timer 
-	interrupt. However, on the Mac, the high-resolution 
-	millisecond clock is expensive to poll. Thus, we use a fast, 
-	low-resolution (1/60th second) clock to determine if the 
-	primitive took enough time to justify polling the 
-	high-resolution clock. Seems Byzantine, but Bob Arning 
-	showed that the performance of primitive-intensive code 
-	decreased substantially if there was another process waiting 
-	on a Delay. 
-	One other timer detail: If the primitive fails, we want to 
-	postpone the timer interrupt until just after the primitive 
-	failure code has been entered. This is accomplished by 
-	setting the interrupt check counter to zero, thus triggering 
-	a check for interrupts when activating the method 
-	containing the primitive. 
 	"
-	| timerPending startTime lit addr moduleName functionName moduleLength functionLength index nArgs delta |
+	| lit addr moduleName functionName moduleLength functionLength index |
 	
-	"start the prim timing initialise"
-	timerPending _ nextWakeupTick ~= 0.
-	timerPending
-		ifTrue: [startTime _ self ioLowResMSecs].
-
-	DoBalanceChecks
-		ifTrue: ["check stack balance"
-			nArgs _ argumentCount.
-			delta _ stackPointer - activeContext].
-
 	"Fetch the first literal of the method"
 	self success: (self literalCountOf: newMethod) > 0. "@@: Could this be omitted for speed?!"
 	successFlag ifFalse: [^ nil].
@@ -5226,30 +5218,14 @@ Interpreter >> primitiveExternalCall [
 				rewriteMethodCacheSel: messageSelector
 				class: lkupClass
 				primIndex: 0.
-			"No need to do timer check here since the above will be quick - tpr"
 			^ self success: false].
 
 	"Try to call the function directly"
 	(index > 0 and: [index <= MaxExternalPrimitiveTableSize])
 		ifTrue: [addr _ externalPrimitiveTable at: index - 1.
 			addr ~= 0
-				ifTrue: [self callExternalPrimitive: addr.
-					DoBalanceChecks
-						ifTrue: [(self
-									balancedStack: delta
-									afterPrimitive: primitiveIndex
-									withArgs: nArgs)
-								ifFalse: [self printUnbalancedStackFromNamedPrimitive]].
-					"Do the time check here since the external prim may have taken a long time - tpr"
-					timerPending
-						ifTrue: [self ioLowResMSecs ~= startTime
-								ifTrue: ["primitive ran for more than a tick; check for possible timer  interrupts "
-									(self ioMSecs bitAnd: MillisecondClockMask) >= nextWakeupTick
-										ifTrue: [successFlag
-												ifTrue: ["process the interrupt now"
-													self checkForInterrupts]
-												ifFalse: ["process the interrupt in primtive failure code"
-													self forceInterruptCheck]]]].
+				ifTrue: [self rewriteMethodCacheSel: messageSelector class: lkupClass primIndex: (1000 + index) primFunction: addr.
+					self callExternalPrimitive: addr.
 					^ nil].
 			"if we get here, then an index to the external prim was 
 			kept on the ST side although the underlying prim 
@@ -5298,24 +5274,8 @@ Interpreter >> primitiveExternalCall [
 
 	"If the function has been successfully loaded process it"
 	(successFlag and: [addr ~= 0])
-		ifTrue: [self callExternalPrimitive: addr.
-			DoBalanceChecks
-				ifTrue: [(self
-							balancedStack: delta
-							afterPrimitive: primitiveIndex
-							withArgs: nArgs)
-						ifFalse: [self printUnbalancedStackFromNamedPrimitive]].
-			"Do the time check here since the external prim may have taken a long time - tpr"
-			timerPending
-				ifTrue: [self ioLowResMSecs ~= startTime
-						ifTrue: ["primitive ran for more than a tick; 
-							check for possible timer interrupts"
-							(self ioMSecs bitAnd: MillisecondClockMask) >= nextWakeupTick
-								ifTrue: [successFlag
-										ifTrue: ["process the interrupt now"
-											self checkForInterrupts]
-										ifFalse: ["process the interrupt in primtive failure code"
-											self forceInterruptCheck]]]]]
+		ifTrue: [self rewriteMethodCacheSel: messageSelector class: lkupClass primIndex: (1000 + index) primFunction: addr.
+				self callExternalPrimitive: addr]
 		ifFalse: ["Otherwise rewrite the primitive index"
 			self
 				rewriteMethodCacheSel: messageSelector
@@ -5922,7 +5882,7 @@ Interpreter >> primitiveInvokeObjectAsMethod [
 
 	lookupClass _ self fetchClassOf: newReceiver.
 	self findNewMethodInClass: lookupClass.
-	self executeNewMethod.  "Recursive xeq affects successFlag"
+	self executeNewMethodFromCache.  "Recursive xeq affects successFlag"
 	successFlag _ true.
 
 ]
@@ -6476,7 +6436,7 @@ Interpreter >> primitivePerform [
 		ifTrue: [self success: (self argumentCountOf: newMethod) = argumentCount].
 
 	successFlag
-		ifTrue: [self executeNewMethod.
+		ifTrue: [self executeNewMethodFromCache.
 			"Recursive xeq affects successFlag"
 			successFlag _ true]
 		ifFalse: ["Slide the args back up (sigh) and re-insert the 
@@ -6502,18 +6462,21 @@ Interpreter >> primitivePerformAt: lookupClass [
 	The only failures are arg types and consistency of argumentCount."
 
 	| performSelector argumentArray arraySize index cntxSize performMethod performArgCount |
-	argumentArray _ self popStack.
+	argumentArray _ self stackTop.
 	(self isArray: argumentArray) ifFalse:[^self primitiveFail].
+
 	successFlag ifTrue:
-		["Check for enough space to push all args"
+		["Check for enough space in thisContext to push all args"
 		arraySize _ self fetchWordLengthOf: argumentArray.
 		cntxSize _ self fetchWordLengthOf: activeContext.
 		self success: (self stackPointerIndex + arraySize) < cntxSize].
-	successFlag ifFalse: [^ self unPop: 1].
+	successFlag ifFalse: [^nil].
 
 	performSelector _ messageSelector.
 	performMethod _ newMethod.
 	performArgCount _ argumentCount.
+	"pop the arg array and the selector, then push the args out of the array, as if they were on the stack"
+	self popStack.
 	messageSelector _ self popStack.
 
 	"Copy the arguments to the stack, and execute"
@@ -6523,16 +6486,17 @@ Interpreter >> primitivePerformAt: lookupClass [
 		[self push: (self fetchPointer: index - 1 ofObject: argumentArray).
 		index _ index + 1].
 	argumentCount _ arraySize.
+
 	self findNewMethodInClass: lookupClass.
 
-	"Only test CompiledMethods for argument count - other objects will have to take their chances"
+	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"
 	(self isCompiledMethod: newMethod)
 		ifTrue: [self success: (self argumentCountOf: newMethod) = argumentCount].
 
 	successFlag
-		ifTrue: [self executeNewMethod.  "Recursive xeq affects successFlag"
+		ifTrue: [self executeNewMethodFromCache.  "Recursive xeq affects successFlag"
 				successFlag _ true]
-		ifFalse: ["Restore the state and fail"
+		ifFalse: ["Restore the state by popping all those array entries and pushing back the selector and array, and fail"
 				self pop: argumentCount.
 				self push: messageSelector.
 				self push: argumentArray.
@@ -7578,7 +7542,9 @@ Interpreter >> primitiveValueWithArgs [
 	argumentArray _ self popStack.
 	blockContext _ self popStack.
 	blockArgumentCount _ self argumentCountOfBlock: blockContext.
-	(self isArray: argumentArray) ifFalse: [^self primitiveFail].
+	"If the argArray isnt actually an Array we ahve to unpop the above two"
+	(self isArray: argumentArray) ifFalse: [self unPop:2. ^self primitiveFail].
+
 	successFlag ifTrue: [arrayArgumentCount _ self fetchWordLengthOf: argumentArray.
 			self success: (arrayArgumentCount = blockArgumentCount
 						and: [(self fetchPointer: CallerIndex ofObject: blockContext) = nilObj])].

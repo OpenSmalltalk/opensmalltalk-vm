@@ -1,5 +1,19 @@
 "
-LargeIntegersPlugin provides functions for speeding up LargeInteger arithmetics.
+LargeIntegersPlugin provides functions for speeding up LargeInteger arithmetics. Usually it is part of your installation as 'LargeIntegers' plugin (a C-compiled binary).
+
+
+Correctly installed?
+----------------------
+Probably you are just working with it.
+
+To be really sure try
+	100 factorial. ""to force plugin loading""
+	SmalltalkImage current listLoadedModules.
+Then you should see 'LargeIntegers' somewhere in the output strings. If this should not be the case, you probably have a problem.
+
+
+Variables
+-----------
 
 Inst vars:
 	andOpIndex			C constant
@@ -11,18 +25,29 @@ Class vars:
 	none
 
 
-Evaluations
--------------
-
-Try
-
-	LargeIntegersTest getModuleName.
-
-If it is nil, you probably have an older LargeInteger module or none at all; it works for version number 'v1.1' or higher.
-
-
 History
 --------
+
+v1.5
+
+- no code change at all compared to v1.4
+- made to outsource testing code (LargeIntegersPluginTest) introduced in earlier versions
+- updated class comment: reference to LargeIntegersPluginTest removed
+
+v1.4
+
+- no semantic change compared to v1.3
+- >>cHighBit: improved (could be faster now)
+- fix: class comment
+- improved class comment
+- >>flag: introduced to allow #flag: messages (does nothing)
+- new: class>>buildCodeGeneratorUpTo: as hook for switching debugMode (default is not to change anything)
+- removed: class>>new (obsolete)
+- minor cleanup of source code layout
+
+v1.3
+
+- fix: >>primDigitDiv:negative: now checks if its Integer args are normalized; without this change the plugin crashes, if a division by zero through a non normalized - filled with zero bytes - arg occurs. This can happen through printing by the inspector windows after changing the bytes of a LargeInteger manually.
 
 v1.2
 
@@ -39,7 +64,6 @@ v1.0
 - speeds up digitDiv:neg: at about 20%.
 	In >>cCoreDigitDivDiv:len:rem:len:quo:len: the 'nibble' arithmetic is removed.
 
-
 "
 Class {
 	#name : #LargeIntegersPlugin,
@@ -49,8 +73,18 @@ Class {
 		'orOpIndex',
 		'xorOpIndex'
 	],
-	#category : 'VMMaker-Plugins'
+	#category : #'VMMaker-Plugins'
 }
+
+{ #category : #translation }
+LargeIntegersPlugin class >> buildCodeGeneratorUpTo: someClass [ 
+	"A hook to control generation of the plugin. Don't know how to set the 
+	debug mode otherwise if using the VMMaker gui. Possibly there is a better way."
+	| cg |
+	cg := super buildCodeGeneratorUpTo: someClass.
+	"example: cg generateDebugCode: true."
+	^ cg
+]
 
 { #category : #translation }
 LargeIntegersPlugin class >> declareCVarsIn: cg [ 
@@ -71,16 +105,11 @@ LargeIntegersPlugin class >> moduleNameAndVersion [
 	^ self moduleName, Character space asString, self version, Character space asString, Date today asString
 ]
 
-{ #category : #'instance creation' }
-LargeIntegersPlugin class >> new [
-	^super new initialize
-]
-
 { #category : #translation }
 LargeIntegersPlugin class >> version [
 	"Answer the receiver's version info as String."
 
-	^ 'v1.3'
+	^ 'v1.5'
 ]
 
 { #category : #util }
@@ -128,15 +157,14 @@ LargeIntegersPlugin >> anyBitOfBytes: aBytesOop from: start to: stopArg [
 { #category : #util }
 LargeIntegersPlugin >> byteSizeOfBytes: bytesOop [ 
 	"Precondition: bytesOop is not anInteger and a bytes object."
-	"Function #byteSizeOf: is used by the interpreter, be careful with name  
-	     clashes..."
+	"Function #byteSizeOf: is used by the interpreter, be careful with name
+	clashes..."
 	^ interpreterProxy slotSizeOf: bytesOop
 ]
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> bytes: aBytesOop Lshift: shiftCount [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at    
-	       return."
+	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
 	"Does not normalize."
 	| newBytes highBit newLen oldLen |
 	oldLen _ self byteSizeOfBytes: aBytesOop.
@@ -156,8 +184,7 @@ LargeIntegersPlugin >> bytes: aBytesOop Lshift: shiftCount [
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> bytes: aBytesOop Rshift: anInteger bytes: b lookfirst: a [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at    
-	  return."
+	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
 	"Shift right 8*b+anInteger bits, 0<=n<8.         
 	Discard all digits beyond a, and all zeroes at or below a."
 	"Does not normalize."
@@ -201,8 +228,7 @@ LargeIntegersPlugin >> bytes: aBytesOop Rshift: anInteger bytes: b lookfirst: a 
 
 { #category : #'oop util' }
 LargeIntegersPlugin >> bytes: aBytesObject growTo: newLen [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at    
-	     return."
+	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
 	"Does not normalize."
 	| newBytes oldLen copyLen |
 	self remapOop: aBytesObject in: [newBytes _ interpreterProxy instantiateClass: (interpreterProxy fetchClassOf: aBytesObject)
@@ -220,8 +246,7 @@ LargeIntegersPlugin >> bytes: aBytesObject growTo: newLen [
 
 { #category : #'oop util' }
 LargeIntegersPlugin >> bytesOrInt: oop growTo: len [ 
-	"Attention: this method invalidates all oop's! Only newBytes is valid at    
-	          return."
+	"Attention: this method invalidates all oop's! Only newBytes is valid at return."
 	| newBytes val class |
 	(interpreterProxy isIntegerObject: oop)
 		ifTrue: 
@@ -272,7 +297,6 @@ LargeIntegersPlugin >> cByteOp: opIndex short: pByteShort len: shortLen long: pB
 
 { #category : #'C core util' }
 LargeIntegersPlugin >> cBytesCopyFrom: pFrom to: pTo len: len [ 
-	""
 	| limit |
 	self returnTypeC: 'int'.
 	self var: #pFrom declareC: 'unsigned char * pFrom'.
@@ -651,19 +675,29 @@ LargeIntegersPlugin >> cDigitSub: pByteSmall
 LargeIntegersPlugin >> cHighBit: uint [ 
 	"Answer the index of the high order bit of the argument, or zero if the  
 	argument is zero."
+	"For 64 bit uints there could be added a 32-shift."
 	| shifted bitNo |
+	self flag: #is64bitClean.
 	self var: #shifted declareC: 'unsigned int  shifted'.
-	shifted _ uint.
-	bitNo _ 0.
-	[shifted < 16]
-		whileFalse: 
-			[shifted _ shifted bitShift: -4.
-			bitNo _ bitNo + 4].
-	[shifted = 0]
-		whileFalse: 
-			[shifted _ shifted bitShift: -1.
-			bitNo _ bitNo + 1].
-	^ bitNo
+	shifted := uint.
+	bitNo := 0.
+	shifted < (1 << 16)
+		ifFalse: [shifted := shifted bitShift: -16.
+			bitNo := bitNo + 16].
+	shifted < (1 << 8)
+		ifFalse: [shifted := shifted bitShift: -8.
+			bitNo := bitNo + 8].
+	shifted < (1 << 4)
+		ifFalse: [shifted := shifted bitShift: -4.
+			bitNo := bitNo + 4].
+	shifted < (1 << 2)
+		ifFalse: [shifted := shifted bitShift: -2.
+			bitNo := bitNo + 2].
+	shifted < (1 << 1)
+		ifFalse: [shifted := shifted bitShift: -1.
+			bitNo := bitNo + 1].
+	"shifted 0 or 1 now"
+	^ bitNo + shifted
 ]
 
 { #category : #'oop util' }
@@ -727,8 +761,8 @@ LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitBitLogic: firstInteger with: secondInteger opIndex: opIx [ 
-	"Bit logic here is only implemented for positive integers or Zero; if rec 
-	or arg is negative, it fails."
+	"Bit logic here is only implemented for positive integers or Zero;
+	if rec or arg is negative, it fails."
 	| firstLarge secondLarge firstLen secondLen shortLen shortLarge longLen longLarge result |
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: 
@@ -943,6 +977,12 @@ LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [
 	^ self normalize: res
 ]
 
+{ #category : #debugging }
+LargeIntegersPlugin >> flag: aSymbol [
+	"Flag for marking methods."
+	"Needed as dummy to avoid an external reference in C."
+]
+
 { #category : #util }
 LargeIntegersPlugin >> highBitOfBytes: aBytesOop [ 
 	^ self cBytesHighBit: (interpreterProxy firstIndexableField: aBytesOop)
@@ -1019,8 +1059,8 @@ LargeIntegersPlugin >> normalize: aLargeInteger [
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> normalizeNegative: aLargeNegativeInteger [ 
-	"Check for leading zeroes and return shortened copy if so"
-	"First establish len = significant length"
+	"Check for leading zeroes and return shortened copy if so."
+	"First establish len = significant length."
 	| sLen val len oldLen minVal |
 	len _ oldLen _ self digitLength: aLargeNegativeInteger.
 	[len ~= 0 and: [(self unsafeByteOf: aLargeNegativeInteger at: len)
@@ -1064,8 +1104,8 @@ LargeIntegersPlugin >> normalizeNegative: aLargeNegativeInteger [
 
 { #category : #'oop functions' }
 LargeIntegersPlugin >> normalizePositive: aLargePositiveInteger [ 
-	"Check for leading zeroes and return shortened copy if so"
-	"First establish len = significant length"
+	"Check for leading zeroes and return shortened copy if so."
+	"First establish len = significant length."
 	| sLen val len oldLen |
 	len _ oldLen _ self digitLength: aLargePositiveInteger.
 	[len ~= 0 and: [(self unsafeByteOf: aLargePositiveInteger at: len)
@@ -1128,7 +1168,7 @@ LargeIntegersPlugin >> primAsLargeInteger: anInteger [
 		ifFalse: [^ anInteger]
 ]
 
-{ #category : #'control & support primitives' }
+{ #category : #obsolete }
 LargeIntegersPlugin >> primCheckIfCModuleExists [
 	"If calling this primitive fails, then C module does not exist. Do not check for forced fail, because we want to know if module exists during forced fail, too."
 	self
@@ -1162,8 +1202,7 @@ LargeIntegersPlugin >> primDigit: anInteger bitShift: shiftCount [
 ]
 
 { #category : #'Integer primitives' }
-LargeIntegersPlugin >> primDigitAdd: secondInteger [ 
-	""
+LargeIntegersPlugin >> primDigitAdd: secondInteger [
 	| firstLarge secondLarge firstInteger |
 	self debugCode: [self msg: 'primDigitAdd: secondInteger'].
 	firstInteger _ self
@@ -1183,7 +1222,6 @@ LargeIntegersPlugin >> primDigitAdd: secondInteger [
 
 { #category : #'development primitives' }
 LargeIntegersPlugin >> primDigitAdd: firstInteger with: secondInteger [ 
-	""
 	| firstLarge secondLarge |
 	self debugCode: [self msg: 'primDigitAdd: firstInteger with: secondInteger'].
 	self
@@ -1313,16 +1351,16 @@ LargeIntegersPlugin >> primDigitBitXor: secondInteger [
 LargeIntegersPlugin >> primDigitCompare: secondInteger [ 
 	| firstVal secondVal firstInteger |
 	self debugCode: [self msg: 'primDigitCompare: secondInteger'].
-	firstInteger _ self
-		primitive: 'primDigitCompare'
-		parameters: #(Integer  )
-		receiver: #Integer.
+	firstInteger := self
+				primitive: 'primDigitCompare'
+				parameters: #(#Integer )
+				receiver: #Integer.
 	"shortcut: aSmallInteger has to be smaller in Magnitude as aLargeInteger"
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: ["first"
 			(interpreterProxy isIntegerObject: secondInteger)
 				ifTrue: ["second"
-					(firstVal _ interpreterProxy integerValueOf: firstInteger) > (secondVal _ interpreterProxy integerValueOf: secondInteger)
+					(firstVal := interpreterProxy integerValueOf: firstInteger) > (secondVal := interpreterProxy integerValueOf: secondInteger)
 						ifTrue: [^ 1 asOop: SmallInteger"first > second"]
 						ifFalse: [firstVal < secondVal
 								ifTrue: [^ -1 asOop: SmallInteger"first < second"]
@@ -1365,26 +1403,26 @@ LargeIntegersPlugin >> primDigitCompare: firstInteger with: secondInteger [
 
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [ 
-	"Answer the result of dividing firstInteger by secondInteger.
-	Fail if parameters are not integers, not normalized or secondInteger is zero."
+	"Answer the result of dividing firstInteger by secondInteger. 
+	Fail if parameters are not integers, not normalized or secondInteger is 
+	zero. "
 	| firstAsLargeInteger secondAsLargeInteger firstInteger |
-	self
-		debugCode: [self msg: 'primDigitDiv: secondInteger negative: neg'].
+	self debugCode: [self msg: 'primDigitDiv: secondInteger negative: neg'].
 	firstInteger := self
 				primitive: 'primDigitDivNegative'
 				parameters: #(#Integer #Boolean )
 				receiver: #Integer.
-
 	"Avoid crashes in case of getting unnormalized args."
 	(self isNormalized: firstInteger)
-		ifFalse: [self debugCode:[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-			self msg: '------> receiver *not* normalized!'].
+		ifFalse: [self
+				debugCode: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+					self msg: '------> receiver *not* normalized!'].
 			^ interpreterProxy primitiveFail].
 	(self isNormalized: secondInteger)
-		ifFalse: [self debugCode:[self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
-			self msg: '------> argument *not* normalized!'].
+		ifFalse: [self
+				debugCode: [self msg: 'ERROR in primDigitDiv: secondInteger negative: neg'.
+					self msg: '------> argument *not* normalized!'].
 			^ interpreterProxy primitiveFail].
-		
 	"Coerce SmallIntegers to corresponding (not normalized) large integers  
 	and check for zerodivide."
 	(interpreterProxy isIntegerObject: firstInteger)
@@ -1393,7 +1431,6 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 				remapOop: secondInteger
 				in: [firstAsLargeInteger := self createLargeFromSmallInteger: firstInteger]]
 		ifFalse: [firstAsLargeInteger := firstInteger].
-		
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: ["check for zerodivide and convert to LargeInteger"
 			(interpreterProxy integerValueOf: secondInteger)
@@ -1411,8 +1448,8 @@ LargeIntegersPlugin >> primDigitDiv: secondInteger negative: neg [
 
 { #category : #'development primitives' }
 LargeIntegersPlugin >> primDigitDiv: firstInteger with: secondInteger negative: neg [ 
-	"Answer the result of dividing firstInteger by secondInteger.  Fail if     
-	parameters are not integers or secondInteger is zero."
+	"Answer the result of dividing firstInteger by secondInteger.
+	Fail if parameters are not integers or secondInteger is zero."
 	| firstAsLargeInteger secondAsLargeInteger |
 	self debugCode: [self msg: 'primDigitDiv: firstInteger with: secondInteger negative: neg'].
 	self
@@ -1440,21 +1477,24 @@ LargeIntegersPlugin >> primDigitDiv: firstInteger with: secondInteger negative: 
 
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitMultiply: secondInteger negative: neg [ 
-	""
 	| firstLarge secondLarge firstInteger |
 	self debugCode: [self msg: 'primDigitMultiply: secondInteger negative: neg'].
-	firstInteger _ self
-		primitive: 'primDigitMultiplyNegative'
-		parameters: #( Integer Boolean )
-		receiver: #Integer.
+	firstInteger := self
+				primitive: 'primDigitMultiplyNegative'
+				parameters: #(#Integer #Boolean )
+				receiver: #Integer.
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: secondInteger in: [firstLarge _ self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstLarge _ firstInteger].
+			self
+				remapOop: secondInteger
+				in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
+		ifFalse: [firstLarge := firstInteger].
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: firstLarge in: [secondLarge _ self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondLarge _ secondInteger].
+			self
+				remapOop: firstLarge
+				in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
+		ifFalse: [secondLarge := secondInteger].
 	^ self
 		digitMultiplyLarge: firstLarge
 		with: secondLarge
@@ -1463,7 +1503,6 @@ LargeIntegersPlugin >> primDigitMultiply: secondInteger negative: neg [
 
 { #category : #'development primitives' }
 LargeIntegersPlugin >> primDigitMultiply: firstInteger with: secondInteger negative: neg [
-	""
 	| firstLarge secondLarge |
 	self debugCode: [self msg: 'primDigitMultiply: firstInteger with: secondInteger negative: neg'].
 	self
@@ -1486,27 +1525,29 @@ LargeIntegersPlugin >> primDigitMultiply: firstInteger with: secondInteger negat
 
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primDigitSubtract: secondInteger [ 
-	""
 	| firstLarge secondLarge firstInteger |
 	self debugCode: [self msg: 'primDigitSubtract: secondInteger'].
-	firstInteger _ self
-		primitive: 'primDigitSubtract'
-		parameters: #( Integer )
-		receiver: #Integer.
+	firstInteger := self
+				primitive: 'primDigitSubtract'
+				parameters: #(#Integer )
+				receiver: #Integer.
 	(interpreterProxy isIntegerObject: firstInteger)
 		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: secondInteger in: [firstLarge _ self createLargeFromSmallInteger: firstInteger]]
-		ifFalse: [firstLarge _ firstInteger].
+			self
+				remapOop: secondInteger
+				in: [firstLarge := self createLargeFromSmallInteger: firstInteger]]
+		ifFalse: [firstLarge := firstInteger].
 	(interpreterProxy isIntegerObject: secondInteger)
 		ifTrue: ["convert it to a not normalized LargeInteger"
-			self remapOop: firstLarge in: [secondLarge _ self createLargeFromSmallInteger: secondInteger]]
-		ifFalse: [secondLarge _ secondInteger].
+			self
+				remapOop: firstLarge
+				in: [secondLarge := self createLargeFromSmallInteger: secondInteger]]
+		ifFalse: [secondLarge := secondInteger].
 	^ self digitSubLarge: firstLarge with: secondLarge
 ]
 
 { #category : #'development primitives' }
 LargeIntegersPlugin >> primDigitSubtract: firstInteger with: secondInteger [
-	""
 	| firstLarge secondLarge |
 	self debugCode: [self msg: 'primDigitSubtract: firstInteger with: secondInteger'].
 	self
@@ -1557,10 +1598,9 @@ LargeIntegersPlugin >> primNormalize: anInteger [
 
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primNormalizeNegative [
-	""
 	| rcvr |
 	self debugCode: [self msg: 'primNormalizeNegative'].
-	rcvr _ self
+	rcvr := self
 				primitive: 'primNormalizeNegative'
 				parameters: #()
 				receiver: #LargeNegativeInteger.
@@ -1570,23 +1610,23 @@ LargeIntegersPlugin >> primNormalizeNegative [
 { #category : #'Integer primitives' }
 LargeIntegersPlugin >> primNormalizePositive [
 	| rcvr |
-	""
 	self debugCode: [self msg: 'primNormalizePositive'].
-	rcvr _ self
-		primitive: 'primNormalizePositive'
-		parameters: #()
-		receiver: #LargePositiveInteger.
+	rcvr := self
+				primitive: 'primNormalizePositive'
+				parameters: #()
+				receiver: #LargePositiveInteger.
 	^ self normalizePositive: rcvr
 ]
 
 { #category : #debugging }
 LargeIntegersPlugin >> think [
 	"Flag for marking methods for later thinking."
-	^ self msg: '#think should not be called'
+	self debugCode: [self msg: '#think should not be called'].
+	^nil
 ]
 
 { #category : #util }
-LargeIntegersPlugin >> unsafeByteOf: bytesOop at: ix [ 
-"Argument bytesOop must not be aSmallInteger!"
+LargeIntegersPlugin >> unsafeByteOf: bytesOop at: ix [
+	"Argument bytesOop must not be aSmallInteger!"
 	^ interpreterProxy integerValueOf: (interpreterProxy stObject: bytesOop at: ix)
 ]

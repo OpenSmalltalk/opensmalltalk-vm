@@ -25,11 +25,11 @@ Class {
 		'bbPluginName'
 	],
 	#classVars : [
-		'EdgeInitTable',
-		'EdgeStepTable',
 		'FillTable',
-		'WideLineFillTable',
-		'WideLineWidthTable'
+		'EdgeStepTable',
+		'EdgeInitTable',
+		'WideLineWidthTable',
+		'WideLineFillTable'
 	],
 	#pools : [
 		'BalloonEngineConstants'
