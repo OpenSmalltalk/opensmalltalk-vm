@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacMain.c,v 1.16 2003/07/31 13:00:00 johnmci Exp $
+*   RCSID:   $Id: sqMacMain.c,v 1.17 2003/09/02 17:51:05 johnmci Exp $
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -62,7 +62,7 @@
 *	2/25/2002  JMM additions for carbon event managment.
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
 *  3.5.1b3 June 7th, 2003 JMM fix up full screen pthread issue.
-
+*  3.6.x  Sept 1st, 2003 JMM per note from Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>  changed 1003 parm to lowercase. 
 */
 
 
@@ -171,7 +171,6 @@ int main(void) {
 	SetUpMenus();
 	SetUpClipboard();
 	SetUpWindow();
-        SetUpTimers();
 
 #ifndef I_AM_CARBON_EVENT
 	SetEventMask(everyEvent); // also get key up events
@@ -259,6 +258,8 @@ int main(void) {
 #if (!(defined JITTER) && defined(__MPW__))
 	atexit(SqueakTerminate);
 #endif
+
+    SetUpTimers();
 
 #if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
     {
@@ -483,7 +484,7 @@ char * GetAttributeString(int id) {
 		if (myattr == gestalt68k) 
 			return "68K";
 		else
-			return "PowerPC";
+			return "powerpc";
 	}
 
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
