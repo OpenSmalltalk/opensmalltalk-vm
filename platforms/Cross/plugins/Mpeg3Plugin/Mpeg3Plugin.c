@@ -234,8 +234,9 @@ EXPORT(int) primitiveMPEG3CheckSig(void) {
 		return null;
 	}
 	sz = interpreterProxy->byteSizeOf(((int) (path) -4));
-	strncpy(storage,path,sz);
-	storage[sz] = 0;
+	sqFilenameFromStringOpen(storage, path, sz);
+	//strncpy(storage,path,sz);
+	//storage[sz] = 0;
 	result = mpeg3_check_sig(storage);
 	_return_value = (result? interpreterProxy->trueObject(): interpreterProxy->falseObject());
 	if (interpreterProxy->failed()) {
@@ -627,8 +628,9 @@ EXPORT(int) primitiveMPEG3Open(void) {
 		return null;
 	}
 	sz = interpreterProxy->byteSizeOf(((int) (path) -4));
-	strncpy(storage,path,sz);
-	storage[sz] = 0;
+	sqFilenameFromStringOpen(storage, path, sz);
+        //strncpy(storage,path,sz);
+	//storage[sz] = 0;
 	mpeg3Oop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classByteArray(), 4);
 	index = ((mpeg3_t **) (interpreterProxy->firstIndexableField(mpeg3Oop)));
 	*index = mpeg3_open(storage); makeFileEntry(*index);
