@@ -143,7 +143,7 @@ AC_DEFUN(AC_HAVE_OSS,
 [AC_CACHE_CHECK([for Open Sound System], ac_cv_oss,
   AC_TRY_COMPILE([#include <sys/soundcard.h>],[OPEN_SOUND_SYSTEM;],
     ac_cv_oss="yes", ac_cv_oss="no"))
-if test "$ac_cv_oss" = "yes" -a -e /dev/dsp; then
+if test "$ac_cv_oss" = "yes" -a -c /dev/dsp; then
   AC_DEFINE(HAVE_OSS,1)
 fi])
 
