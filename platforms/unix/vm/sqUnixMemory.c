@@ -33,7 +33,7 @@
    so on such OS's the maximum should be reduced.  */
 
 #ifndef MEMORY_TO_TRY
-#define MEMORY_TO_TRY (1024*1024*1024)   /* 1 gig */
+# define MEMORY_TO_TRY (1024*1024*1024)   /* 1 gig */
 #endif
 
 
