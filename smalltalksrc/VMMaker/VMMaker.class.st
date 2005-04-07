@@ -217,6 +217,7 @@ VMMaker >> configurationInfo [
 		 nextPut: platformName;
 		 nextPut: self sourceDirectory pathName;
 		 nextPut: self platformRootDirectory pathName;
+		nextPut: self bytesPerWord;
 	contents
 ]
 
@@ -749,6 +750,9 @@ VMMaker >> loadConfiguration: aConfigArray [
 	self platformRootDirectoryName: ( aConfigArray at:7).
 	self initializeAllPlugins.
 	self internal: (aConfigArray at:1) external:(aConfigArray at:2).
+	aConfigArray size >7 ifTrue:["new enough to have 64bitness flag"
+		(aConfigArray at:8) =8 ifTrue:[self for64BitVM].
+		(aConfigArray at:8) =4 ifTrue:[self for32BitVM]].
 	self changed: #reinitialize 
 ]
 
