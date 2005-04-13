@@ -27,6 +27,7 @@
 *  3.8.0b1 July 20th, 2004 JMM Multiple window support
 *  3.8.5b2 Jan 25th, 2005 JMM reduce qd buffer flushing.
 *  3.8.7b1 Mar 13th, 2005 JMM fire keydown/keychar on key repeat to mimic ms windows behavior.
+*  3.8.7b2 Mar 19th, 2005 JMM change keydown/up back to virtual keycode, add unicode to keychar
 
 notes: IsUserCancelEventRef
 
@@ -69,7 +70,7 @@ notes: IsUserCancelEventRef
     void postFullScreenUpdate(void);
     void signalAnyInterestedParties(void);
     Boolean gQuitNowRightNow=false;
-	sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, long m);
+	sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
 	
 	static int addToKeyMap(int keyCode, int keyChar);
 	static int findInKeyMap(int keyCode);
@@ -611,8 +612,8 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	/* press code must differentiate */
 	// Jan 2004, changed for TWEAK instead of doing virtual keycode return  unicode
 	// Unicode generated from CFSTring
-	//evt->charCode = (theEvent->message & keyCodeMask) >> 8;
-	evt->charCode = MacRomanToUnicode[asciiChar];
+	// March 19th 2005, again alter we pass keyCode on keydown/keyup but pass unicode in keychar as extra field
+	evt->charCode = (theEvent->message & keyCodeMask) >> 8;
 	evt->pressCode = keyType;
 	evt->modifiers = modifierBits >> 3;
 	evt->windowIndex = windowActive;
@@ -624,6 +625,7 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 		*extra = *evt;
 		extra->charCode = asciiChar;
 		extra->pressCode = EventKeyChar;
+		extra->utf32Code = MacRomanToUnicode[asciiChar];
 	}
 //	signalSemaphoreWithIndex(inputSemaphoreIndex);
 	return 1;
@@ -1566,9 +1568,12 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
     
     if (!PtInRgn(mouseLocation,ioWinRgn)) {
-		if (mouseDownActivate && whatHappened == kEventMouseUp)
+		if (mouseDownActivate && whatHappened == kEventMouseUp) {
 			mouseDownActivate = false;
-        return result;
+			return result;
+		}
+		if (!gButtonIsDown) 
+			return result;
     }
     
    /* if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating && 
@@ -1655,12 +1660,12 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
 			//fprintf(stdout,"\nrawkey up %i",ioMSecs());
 			key = findInKeyMap(keyCode);
 			if (key != -1) {
-				enterKeystroke ( EventTypeKeyboard,key, EventKeyUp, ModifierStateCarbon(event,0));
+				enterKeystroke ( EventTypeKeyboard,keyCode, EventKeyUp, 0, ModifierStateCarbon(event,0));
 			}
 			removeFromKeyMap(keyCode);
             result = eventNotHandledErr;
             break;
-        case kEventRawKeyModifiersChanged:
+        case kEventRawKeyModifiersChanged: 
             /* ok in this case we fake a mouse event to deal with the modifiers changing */
             if(inputSemaphoreIndex)
                 recordMouseEventCarbon(event,kEventMouseMoved);
@@ -1846,12 +1851,11 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	evt->pressCode = EventKeyDown;
 	evt->modifiers = modifierMap[(controlKey >> 8)];
 	evt->windowIndex = windowActive;
-	/* clean up reserved */
-	evt->reserved1 = 0;
 	/* generate extra character event */
         extra = (sqKeyboardEvent*)nextEventPut();
         *extra = *evt;
         extra->charCode = asciiChar;
+        extra->utf32Code = asciiChar;
         extra->pressCode = EventKeyChar;
         
        if(!inputSemaphoreIndex) {
@@ -1887,9 +1891,6 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	evt->pressCode = EventKeyUp;
 	evt->modifiers = modifierMap[(controlKey >> 8)];
 	evt->windowIndex = windowActive;
-	/* clean up reserved */
-	evt->reserved1 = 0;
-
     }
     pthread_mutex_unlock(&gEventQueueLock);
     signalAnyInterestedParties();                
@@ -1902,6 +1903,7 @@ void recordKeyboardEventCarbon(EventRef event) {
     OSErr			err;
     UInt32			actualSize,macKeyCode,textEntryServices; 
     EventRef		actualEvent;
+	char		mackeycodeFromCarbon;
     
     //  Tetsuya HAYASHI <tetha@st.rim.or.jp> supplied multiple unicode extraction
     
@@ -1944,6 +1946,10 @@ void recordKeyboardEventCarbon(EventRef event) {
 	err = GetEventParameter( actualEvent, kEventParamKeyCode, 
 			typeUInt32, NULL, sizeof(UInt32), NULL, &macKeyCode); 
 
+	err = GetEventParameter( actualEvent, kEventParamKeyMacCharCodes, 
+			typeChar, NULL, sizeof(char), NULL, &mackeycodeFromCarbon);
+
+
     modifiedUniChar = *uniCharBufPtr;
     buttonState = modifierBits =ModifierStateCarbon(actualEvent,0); //Capture option states
     if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
@@ -1974,14 +1980,14 @@ void recordKeyboardEventCarbon(EventRef event) {
         CFRelease(theString);
         
        /* Put the sqKeyboardEvent for KeyDown */
-		enterKeystroke ( EventTypeKeyboard, modifiedUniChar, EventKeyDown, modifierBits);
+		enterKeystroke ( EventTypeKeyboard, macKeyCode, EventKeyDown, 0, modifierBits);
 		
         /* generate extra character event */
-		enterKeystroke ( EventTypeKeyboard, (macRomanCode == '\0') ? modifiedUniChar : macRomanCode, EventKeyChar, modifierBits);
+		enterKeystroke ( EventTypeKeyboard, macRomanCode, EventKeyChar, modifiedUniChar, modifierBits);
         
     /* Put the sqKeyboardEvent for KeyUp */
 		if (!ISawRawKeyRepeat && (uniCharCount> 1 || (keyIndex < 0)))
-			enterKeystroke ( EventTypeKeyboard, modifiedUniChar, EventKeyUp, modifierBits);
+			enterKeystroke ( EventTypeKeyboard, macKeyCode, EventKeyUp, 0,  modifierBits);
         
         uniCharBufPtr++;
         modifiedUniChar = *uniCharBufPtr;
@@ -2137,7 +2143,7 @@ void signalAnyInterestedParties() {
 }
 
 
-sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, long m) {
+sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Code, long m) {
 	sqKeyboardEvent 	*evt;
 	evt = (sqKeyboardEvent*) nextEventPut();
 
@@ -2151,25 +2157,26 @@ sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, long m) {
 	evt->pressCode = pc;
 	evt->modifiers = m;
 	evt->windowIndex = windowActive;
-	/* clean up reserved */
-	evt->reserved1 = 0;
-	if(pc == EventKeyChar && !inputSemaphoreIndex) {
-		int  keystate;
+	if(pc == EventKeyChar) {
+		evt->utf32Code = utf32Code;
+		if (!inputSemaphoreIndex) {
+			int  keystate;
 
-		/* keystate: low byte is the ascii character; next 8 bits are modifier bits */
-			keystate = (evt->modifiers << 8) | (unsigned char)  ((char) cc);
-		if (keystate == getInterruptKeycode()) {
-				/* Note: interrupt key is "meta"; it not reported as a keystroke */
-				setInterruptPending(true);
-				setInterruptCheckCounter(0);
-		} else {
-				keyBuf[keyBufPut] = keystate;
-				keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
-				if (keyBufGet == keyBufPut) {
-						/* buffer overflow; drop the last character */
-						keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
-						keyBufOverflows++;
-				}
+			/* keystate: low byte is the ascii character; next 8 bits are modifier bits */
+				keystate = (evt->modifiers << 8) | (unsigned char)  ((char) cc);
+			if (keystate == getInterruptKeycode()) {
+					/* Note: interrupt key is "meta"; it not reported as a keystroke */
+					setInterruptPending(true);
+					setInterruptCheckCounter(0);
+			} else {
+					keyBuf[keyBufPut] = keystate;
+					keyBufPut = (keyBufPut + 1) % KEYBUF_SIZE;
+					if (keyBufGet == keyBufPut) {
+							/* buffer overflow; drop the last character */
+							keyBufGet = (keyBufGet + 1) % KEYBUF_SIZE;
+							keyBufOverflows++;
+					}
+			}
 		}
 	}
 	return evt;
