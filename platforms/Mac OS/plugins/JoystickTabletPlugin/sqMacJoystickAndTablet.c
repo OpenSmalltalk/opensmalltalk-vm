@@ -10,49 +10,260 @@
 #include "sq.h"
 #include "JoystickTabletPlugin.h"
 
-/* initialize/shutdown */
-int joystickShutdown() {	
-	return 1;
-}
-
 /* End of adjustments for pluginized VM */
 
-#if TARGET_API_MAC_CARBON
-#include <Carbon/Carbon.h>
-#else
-	#include <DeskBus.h>
-	#include <Devices.h>
-	#include <Timer.h>
-#endif
 
-/* Joystick Record */
+#if TARGET_API_MAC_CARBON
+
+#pragma mark Joystick support for Mac OS X
+
+#include <Carbon/Carbon.h>
+#include <IOKit/HID/IOHIDKeys.h>
+#include <IOKit/hid/IOHIDUsageTables.h>
+#include "HID_Utilities_External.h"
+
+/* joystickDevice should contain a valid HID GamePad */
+pRecDevice joystickDevice = NULL;
+pRecElement* joystickCapability;
+enum { XAXIS  = 0, YAXIS = 1, BTN1 = 2, BTN2 = 3, BTN3 = 4, BTN4 = 5, MAXCAPABILITY = 6 };
+
+int joystickInit(void) {
+    pRecDevice deviceCandidate = NULL;
+    int numberOfDevices = 0, i = 0;
+    
+    /* Build list of Generic Desktop devices. */
+    HIDBuildDeviceList(kHIDPage_GenericDesktop, NULL);
+    
+    if (HIDHaveDeviceList()) {
+		numberOfDevices = HIDCountDevices();
+		/* We only support one device at a time. We will select the first valid one. */
+		deviceCandidate = HIDGetFirstDevice();
+		
+		while (i < numberOfDevices) {
+			if (deviceCandidate) {
+				if ( (deviceCandidate->usage == kHIDUsage_GD_Joystick) || (deviceCandidate->usage == kHIDUsage_GD_GamePad) ) {
+					if (HIDIsValidDevice(deviceCandidate)) {
+					/* The device is valid. */
+					joystickDevice = deviceCandidate;
+					} 
+				} else {
+					/* The device is not valid, check the next one. */
+					deviceCandidate = HIDGetNextDevice(deviceCandidate);
+				}
+			}
+			i++;
+		}
+		
+		joystickDevice = deviceCandidate;
+    }
+    
+    if (joystickDevice) {
+		/* Now that we have a valid device, we try to find its capabilities. */
+		joystickCapability = calloc(MAXCAPABILITY, sizeof(pRecElement));
+		joystickCapabilities(joystickDevice, joystickCapability);
+		return 1;
+    } else {
+		return 0;
+    }
+}
+
+int joystickShutdown() {
+    if (joystickDevice) {
+		free(joystickCapability);
+    }
+    /* Release the device list */
+    HIDReleaseDeviceList();
+    return 1;
+}
+
+int joystickCapabilities(pRecDevice device, pRecElement* capability) {
+    /* Find the device capabilities. */
+    pRecElement element = NULL;
+    
+    for (element = HIDGetFirstDeviceElement(device, kHIDElementTypeInput); element != NULL; element = HIDGetNextDeviceElement(element, kHIDElementTypeInput)) {
+		if (element) {
+			switch (element->usagePage) {
+				case kHIDPage_GenericDesktop:
+					switch (element->usage) {
+						/* X axis */
+						case kHIDUsage_GD_X:
+							joystickCapability[XAXIS] = element;
+							break;
+						/* Y axis */
+						case kHIDUsage_GD_Y:
+							joystickCapability[YAXIS] = element;
+							break;
+					}
+					break;
+				case kHIDPage_Button:
+					switch (element->usage) {
+						/* Primary/Trigger */
+						case kHIDUsage_Button_1:
+							joystickCapability[BTN1] = element;
+							break;
+							/* Secondary */
+						case kHIDUsage_Button_2:
+							joystickCapability[BTN2] = element;
+							break;
+							/* Tertiary */
+						case kHIDUsage_Button_3:
+							joystickCapability[BTN3] = element;
+							break;
+							/* 5th button */
+						case kHIDUsage_Button_4:
+							joystickCapability[BTN4] = element;
+							break;
+					}
+					break;
+			}
+		}
+    }
+}
+
+int joystickScaleValue(pRecDevice device, pRecElement element) {
+    /* Get a calibrated value on a scale from 0 to 255. */ 
+    SInt32 valueRaw = 0, valueCalibrated = 0, valueScaled = 0;
+    
+    if (HIDIsValidElement(device, element)) {
+		valueRaw = HIDGetElementValue(device, element); 
+		valueCalibrated = HIDCalibrateValue(valueRaw, element);
+		valueScaled = HIDScaleValue(valueCalibrated, element);
+    }
+    
+    return (int)valueScaled;
+}
+
+int joystickRead(int stickIndex) {
+    /* Read the current state of the device. */
+    int buttons = 0, xBits, yBits, value;
+    
+    if (joystickDevice) {
+		value = HIDGetElementValue(joystickDevice, joystickCapability[BTN1]);
+		value += (HIDGetElementValue(joystickDevice, joystickCapability[BTN2]) + 1);
+		value += (HIDGetElementValue(joystickDevice, joystickCapability[BTN3]) + 2);
+		value += (HIDGetElementValue(joystickDevice, joystickCapability[BTN4]) + 3);
+		buttons = value & 0x0F;
+		
+		// Generic Desktop X
+		value = joystickScaleValue(joystickDevice, joystickCapability[XAXIS]);
+		xBits = value & 0xFF;
+		
+		// Generic Desktop Y
+		value = joystickScaleValue(joystickDevice, joystickCapability[YAXIS]);  
+		yBits = value & 0xFF;
+		
+		//return (1 << 27) | (buttons << 22) | (yBits << 11) | xBits;
+		
+		/* The x/y range is between 0 and 255, convert to 0..2047 by shifting left 3 bits */
+		return (1 << 27) | (buttons << 22) | (yBits << 14) | (xBits << 3);
+    } else {
+		return 0;
+    }
+}
+
+#else
+
+#pragma mark Joystick support for older versions of Mac OS
+
+#include <DeskBus.h>
+#include <Devices.h>
+#include <Timer.h>
 
 #define MOUSESTICK_SIGNATURE 0x4A656666
 #define MAX_STICKS 4
 
+/* Joystick Record */
+
 typedef struct {
-	short			rawX;				/* absolute stick position */
-	short			rawY;
-	unsigned char	buttons;
-	char			private1;
-	short			cursorX;			/* cursor position */
-	short			cursorY;
-	char			oldStickType;
-	char			private2;
-	char			stickOn;			/* true if stick is connected */
-	char			private3;
-	char			stickControlsCursor;
-	char			applicationAware;	/* settings change with application changes */
-	char			private4[152];
+    short		rawX;			/* absolute stick position */
+    short		rawY;
+    unsigned char	buttons;
+    char		private1;
+    short		cursorX;		/* cursor position */
+    short		cursorY;
+    char		oldStickType;
+    char		private2;
+    char		stickOn;		/* true if stick is connected */
+    char		private3;
+    char		stickControlsCursor;
+    char		applicationAware;	/* settings change with application changes */
+    char		private4[152];
 } MouseStickRec;
 
 typedef struct {
-	long			signature;
-	char			private1[18];
-	short			stickCount;
-	char			private2[22];
-	MouseStickRec	stick[MAX_STICKS];
+    long		signature;
+    char		private1[18];
+    short		stickCount;
+    char		private2[22];
+    MouseStickRec	stick[MAX_STICKS];
 } MouseStickSetRec, *MouseStickSetPtr;
+
+/*** Variables ***/
+
+MouseStickSetPtr joySticks = nil;	/* pointer to a joystick set or nil */
+
+int joystickInit(void) {
+    /* If a joystick is plugged in and its control panel is installed,
+	   initialize the global pointer 'joySticks' to the joystick set
+	   data structure. Otherwise, set it to nil.
+    */
+    
+    ADBDataBlock adbGetInfo;
+    MouseStickSetPtr sticks;
+    int count, i;
+    
+    joySticks = nil;  /* set to nil in case we don't find any joysticks */
+    
+    count = CountADBs();
+    for (i = 1; i <= count; i++) {
+	GetADBInfo(&adbGetInfo, GetIndADB(&adbGetInfo, i));
+	sticks = (MouseStickSetPtr) adbGetInfo.dbDataAreaAddr;
+	if ((sticks != nil) && (sticks->signature == MOUSESTICK_SIGNATURE)) {
+	    joySticks = sticks;
+	    return true;
+	}
+    }
+    return true;
+}
+
+int joystickShutdown() {
+    return 1;
+}
+
+int joystickRead(int stickIndex) {
+    /* Return input word for the joystick with the given index (in range [1..2]
+    on the Macintosh; other platforms may vary). This word is encoded as follows:
+
+    <onFlag (1 bit)><buttonFlags (5 bits)><x-value (11 bits)><y-value (11 bits)>
+
+    The highest four bits of the input word are zero. If the onFlag bit is zero,
+    there is no joystick at the given index. This may be because no joystick
+    is connected or the joystick control panel is not installed. In such,
+    cases, the entire word will be zero. A maximum of two joysticks are supported
+    by Gravis's current version of the control panel. The x and y values are
+    11-bit signed values in the range [-1024..1023] representing the raw (unencoded)
+    joystick position. The MouseStick II only uses the approximate range [-650..650].
+    The range and center values of poorly adjusted joysticks may vary; the client
+    software should provide a way to adjust the center and scaling to correct.
+    */
+    
+    MouseStickRec stickData;
+    int buttons, xBits, yBits;
+    
+    if ((joySticks == nil) || (stickIndex < 1) || (stickIndex > 2) ||
+	(stickIndex > joySticks->stickCount)) {
+	return 0;  /* no joystick at the given index */
+    }
+    stickData = joySticks->stick[stickIndex - 1];  /* 1-based index */
+    buttons = ~stickData.buttons & 0x1F;
+    xBits = (0x400 + stickData.rawX) & 0x7FF;
+    yBits = (0x400 + stickData.rawY) & 0x7FF;
+    return (1 << 27) | (buttons << 22) | (yBits << 11) | xBits;
+}
+
+#endif
+
+#pragma mark Tablet support for older versions of Mac OS
 
 /* Tablet Record (see  Apple Tech. Note 266, version 2) */
 
@@ -102,67 +313,7 @@ typedef struct {
 
 /*** Variables ***/
 
-MouseStickSetPtr joySticks = nil;	/* pointer to a joystick set or nil */
 TabletRecPtr tablet = nil;  		/* pointer to a tablet record or nil */
-
-int joystickInit(void) {
-	/* If a joystick is plugged in and its control panel is installed,
-	   initialize the global pointer 'joySticks' to the joystick set
-	   data structure. Otherwise, set it to nil.
-	*/
-#if TARGET_API_MAC_CARBON
-	joySticks = nil;  /* set to nil in case we don't find any joysticks */
-	return false;
-#else
-	ADBDataBlock adbGetInfo;
-	MouseStickSetPtr sticks;
-	int count, i;
-
-	joySticks = nil;  /* set to nil in case we don't find any joysticks */
-
-	count = CountADBs();
-	for (i = 1; i <= count; i++) {
-		GetADBInfo(&adbGetInfo, GetIndADB(&adbGetInfo, i));
-		sticks = (MouseStickSetPtr) adbGetInfo.dbDataAreaAddr;
-		if ((sticks != nil) && (sticks->signature == MOUSESTICK_SIGNATURE)) {
-			joySticks = sticks;
-			return true;
-		}
-	}
-	return true;
-#endif
-}
-
-int joystickRead(int stickIndex) {
-	/* Return input word for the joystick with the given index (in range [1..2]
-	   on the Macintosh; other platforms may vary). This word is encoded as follows:
-
-		<onFlag (1 bit)><buttonFlags (5 bits)><x-value (11 bits)><y-value (11 bits)>
-
-	   The highest four bits of the input word are zero. If the onFlag bit is zero,
-	   there is no joystick at the given index. This may be because no joystick
-	   is connected or the joystick control panel is not installed. In such,
-	   cases, the entire word will be zero. A maximum of two joysticks are supported
-	   by Gravis's current version of the control panel. The x and y values are
-	   11-bit signed values in the range [-1024..1023] representing the raw (unencoded)
-	   joystick position. The MouseStick II only uses the approximate range [-650..650].
-	   The range and center values of poorly adjusted joysticks may vary; the client
-	   software should provide a way to adjust the center and scaling to correct.
-	*/
-
-	MouseStickRec stickData;
-	int buttons, xBits, yBits;
-
-	if ((joySticks == nil) || (stickIndex < 1) || (stickIndex > 2) ||
-		(stickIndex > joySticks->stickCount)) {
-			return 0;  /* no joystick at the given index */
-	}
-	stickData = joySticks->stick[stickIndex - 1];  /* 1-based index */
-	buttons = ~stickData.buttons & 0x1F;
-	xBits = (0x400 + stickData.rawX) & 0x7FF;
-	yBits = (0x400 + stickData.rawY) & 0x7FF;
-	return (1 << 27) | (buttons << 22) | (yBits << 11) | xBits;
-}
 
 int tabletInit(void);
 int tabletInit(void) {

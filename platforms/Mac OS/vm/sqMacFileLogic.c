@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh,Karl Goiser, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.c,v 1.15 2004/09/03 00:19:45 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: See change log below.
 *	11/01/2001 JMM Consolidation of fsspec handling for os-x FSRef transition.
@@ -17,6 +17,7 @@
 *   5/12/2002 JMM add logic to enable you to put plugins beside macclassic VM
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
     3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+	3.8.7bx Mar 24th, 2005 JMM Add feature to convert from posix to HFS+
 
 *
 *****************************************************************************/
@@ -318,6 +319,37 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
  #else
         err = FSRefMakePath(&theFSRef,(UInt8 *)dst,1000); 
  #endif
+}
+
+int makeHFSFromPosixPath(char *pathString, int pathStringLength,char *dst,char *lastpart) {
+		CFStringRef filePath;
+        CFURLRef 	sillyThing;
+        CFStringRef	filePath2,lastPathPart;
+		
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,
+                    (UInt8 *)pathString,pathStringLength,gCurrentVMEncoding,false);
+        if (filePath == nil)
+            return -1;
+			
+		// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+		CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, filePath);
+		if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
+			CFStringNormalize(str, kCFStringNormalizationFormKC); // canonical decomposition
+
+		sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault, str, kCFURLPOSIXPathStyle,false);
+		CFRelease(str);
+        
+		filePath2 = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
+		CFStringGetCString (filePath2,dst,1000, gCurrentVMEncoding);
+		if (lastpart) {
+			lastPathPart = CFURLCopyLastPathComponent(sillyThing);
+			CFStringGetCString(lastPathPart,lastpart,256, gCurrentVMEncoding);
+			CFRelease(lastPathPart);
+		}
+        CFRelease(filePath);
+        CFRelease(sillyThing);
+        CFRelease(filePath2);
+        return 0;
 }
 
 /* This method is used to lookup paths, chunk by chunk. It builds specs for each chunk and fetchs the file 

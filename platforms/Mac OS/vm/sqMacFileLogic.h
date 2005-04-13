@@ -6,13 +6,14 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFileLogic.h,v 1.5 2003/12/02 04:52:26 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: See change log below.
 *	Jan 2nd 2002 JMM added logic to make lookups faster
 *	Jan 22nd 2002 JMM squeak file type offset change
 *       Nov 25th 2003 JMM add gCurrentVMEncoding
         3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+	Mar 24th, 2005 JMM add routine for posix to HFS+
 */
 #if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
@@ -45,3 +46,4 @@ int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown);
 int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown,Boolean tryShortCut);
 void makeOSXPath(char * dst, int src, int num,Boolean resolveAlias);
 Boolean isVmPathVolumeHFSPlus(void);
+int makeHFSFromPosixPath(char *pathString, int pathStringLength,char *dst, char *lastPath) ;

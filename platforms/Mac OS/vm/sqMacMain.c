@@ -65,6 +65,7 @@
 *  3.6.x  Sept 1st, 2003 JMM per note from Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>  changed 1003 parm to lowercase. 
 *  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 *  3.8.0bx Jul 20th, 2004 JMM multiple window support
+*  3.8.7b2 March 19th, 2005 JMM add command line unix interface
 */
 
 
@@ -85,6 +86,7 @@
 #include "sqMacUIEvents.h"
 #include "sqMacMemory.h"
 #include "sqMacEncoding.h"
+#include "sqMacUnixCommandLineInterface.h"
 
 #ifdef __MPW__
 QDGlobals 		qd;
@@ -175,9 +177,11 @@ int main(void) {
 	
 	SetUpMenus();
 	SetUpClipboard();
-        fetchPrefrences();
+	fetchPrefrences();
 	SetUpPixmap();
-
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+	unixArgcInterface(argCnt,argVec,envVec);
+#endif
 
 #ifndef I_AM_CARBON_EVENT
 	SetEventMask(everyEvent); // also get key up events
@@ -539,6 +543,13 @@ char * GetAttributeString(int id) {
 
 		sprintf(data,"%i",gSqueakFileLastError);
 		return data;
+	}
+	
+	if (id < 0 || (id > 2 && id <= 1000))  {
+		char *results;
+		results = unixArgcInterfaceGetParm(id);
+		if (results) 
+			return results;
 	}
 
 	/* attribute undefined by this platform */
