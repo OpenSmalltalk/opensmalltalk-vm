@@ -306,7 +306,7 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
 }
 #else
 void * copy124BitsTheHardWay(
-	unsigned* dispBitsIndex, int width, int height, int depth, int desiredDepth,
+	unsigned int * dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex,int *pixPitch);
 	
 int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int depth, 
@@ -367,7 +367,7 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
             pixDepth = GetPixDepth(pix);
             
 			if (depth == 1 || depth == 2 || depth == 4) {
-				dispBitsIndex = (int) copy124BitsTheHardWay((unsigned *) dispBitsIndex, width, height, depth, pixDepth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
+				dispBitsIndex = (int) copy124BitsTheHardWay((unsigned int *) dispBitsIndex, width, height, depth, pixDepth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
 				depth = pixDepth;
 			} else {
             pitch = bytesPerLine(width, depth);
@@ -556,7 +556,7 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
 	return 1;
 }
 
-void * copy124BitsTheHardWay(unsigned* dispBitsIndex, int width, int height, int depth, int desiredDepth,
+void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch) {
 	
 	static GWorldPtr offscreenGWorld = nil;
