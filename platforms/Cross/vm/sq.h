@@ -288,8 +288,8 @@ typedef struct sqKeyboardEvent
   int charCode;			/* character code in Mac Roman encoding */
   int pressCode;		/* press code; any of EventKeyXXX */
   int modifiers;		/* combination of xxxKeyBit */
+  int utf32Code;		/* UTF-32 unicode value */
   int reserved1;		/* reserved for future use */
-  int reserved2;		/* reserved for future use */
   int windowIndex;		/* host window structure */
 } sqKeyboardEvent;
 
