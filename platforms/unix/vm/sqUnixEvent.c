@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2005-03-17 21:19:36 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2005-04-19 09:06:38 by piumarta on pauillac.hpl.hp.com
  *
  * NOTE: this file is included by the window support files that need it.
  */
@@ -181,7 +181,6 @@ static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers)
   evt->pressCode= pressCode;
   evt->modifiers= modifiers;
   evt->reserved1=
-    evt->reserved2=
     evt->windowIndex= 0;
   signalInputEvent();
 #ifdef DEBUG_EVENTS
