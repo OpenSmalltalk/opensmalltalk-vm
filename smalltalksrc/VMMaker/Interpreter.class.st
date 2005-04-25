@@ -51,6 +51,7 @@ Class {
 		'semaphoresToSignalCountA',
 		'semaphoresToSignalB',
 		'semaphoresToSignalCountB',
+		'processSignalingLowSpace',
 		'savedWindowSize',
 		'fullScreenFlag',
 		'deferDisplayUpdates',
@@ -8355,6 +8356,22 @@ Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrim
 ]
 
 { #category : #processes }
+Interpreter >> saveProcessSignalingLowSpace [
+	"The low space semaphore is about to be signaled. Save the currently active
+	process in the special objects array so that the low space handler will be able
+	to determine the process that first triggered a low space condition. The low
+	space handler (in the image) is expected to nil out the special objects array
+	slot when it handles the low space condition."
+
+	| lastSavedProcess sched currentProc |
+	lastSavedProcess _ self splObj: ProcessSignalingLowSpace.
+	(lastSavedProcess == self nilObject) ifTrue:
+		[sched _ self schedulerPointer.
+		currentProc _ self fetchPointer: ActiveProcessIndex ofObject: sched.
+		self storePointer: ProcessSignalingLowSpace ofObject: specialObjectsOop withValue: currentProc]
+]
+
+{ #category : #processes }
 Interpreter >> schedulerPointer [
 
 	^ self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation)
@@ -8958,18 +8975,18 @@ Interpreter >> success: successValue [
 Interpreter >> sufficientSpaceToInstantiate: classOop indexableSize: size [ 
 	"Return the number of bytes required to allocate an instance of the given class with the given number of indexable fields."
 	"Details: For speed, over-estimate space needed for fixed fields or literals; the low space threshold is a blurry line."
-	| format okay |
+	| format atomSize|
 	self inline: true.
 	format _ (self formatOfClass: classOop) >> 8 bitAnd: 15.
+
 	"fail if attempting to call new: on non-indexable class"
 	((self cCoerce: size to: 'usqInt ') > 0 and: [format < 2])
 		ifTrue: [^ false].
-	format < 8
-		ifTrue: ["indexable fields are words or pointers"
-			okay _ self sufficientSpaceToAllocate: 2500 + (size * BytesPerWord)]
-		ifFalse: ["indexable fields are bytes"
-			okay _ self sufficientSpaceToAllocate: 2500 + size].
-	^ okay
+
+	atomSize _ format < 8
+		ifTrue: ["indexable fields are words or pointers" BytesPerWord]
+		ifFalse: ["indexable fields are bytes" 1].
+	^self sufficientSpaceToAllocate: 2500 + (size * atomSize)
 ]
 
 { #category : #'message sending' }
