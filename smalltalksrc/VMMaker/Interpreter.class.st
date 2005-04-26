@@ -5051,6 +5051,7 @@ Interpreter >> primitiveClipboardText [
 					self clipboardWrite: sz From: s + BaseHeaderSize At: 0.
 					self pop: 1]]
 		ifFalse: [sz _ self clipboardSize.
+			(self sufficientSpaceToAllocate: sz) ifFalse:[^self primitiveFail].
 			s _ self instantiateClass: (self splObj: ClassString) indexableSize: sz.
 			self clipboardRead: sz Into: s + BaseHeaderSize At: 0.
 			self pop: 1 thenPush: s]
@@ -5062,6 +5063,8 @@ Interpreter >> primitiveClone [
 
 	| newCopy |
 	newCopy _ self clone: (self stackTop).
+	newCopy = 0
+		ifTrue:["not enough memory most likely" ^self primitiveFail].
 	self pop: 1 thenPush: newCopy.
 ]
 
