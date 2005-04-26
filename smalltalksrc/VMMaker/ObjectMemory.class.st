@@ -922,6 +922,8 @@ ObjectMemory >> clone: oop [
 
 	"allocate space for the copy, remapping oop in case of a GC"
 	self pushRemappableOop: oop.
+	"check it is safe to allocate this much memory. Return 0 if not"
+	(self sufficientSpaceToAllocate: 2500 + bytes) ifFalse:[^0].
 	newChunk _ self allocateChunk: bytes.
 	remappedOop _ self popRemappableOop.
 
