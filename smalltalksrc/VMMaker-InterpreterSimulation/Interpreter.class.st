@@ -70,8 +70,7 @@ Class {
 		'interruptCheckCounterFeedBackReset',
 		'interruptChecksEveryNms',
 		'externalPrimitiveTable',
-		'primitiveTable',
-		'pollChecksEveryNms'
+		'primitiveTable'
 	],
 	#classVars : [
 		'SemaphoresToSignalSize',
@@ -638,11 +637,14 @@ Interpreter class >> initializePrimitiveTable [
 		(198 primitiveMarkUnwindMethod)
 		(199 primitiveMarkHandlerMethod)
 
-		"Networking Primitives (200-229) - NO LONGER INDEXED"
+		"Networking Primitives (200-225) - NO LONGER INDEXED"
 		(200 225 primitiveObsoleteIndexedPrimitive)
-		(226 229 primitiveFail)
 
-		"Other Primitives (230-249)"
+		"Other Primitives (226-249)"
+		(226 primitiveFail)
+		(227 primitiveFail)
+		(228 primitiveFail)	
+		(229 primitiveFail)	
 		(230 primitiveRelinquishProcessor)
 		(231 primitiveForceDisplayUpdate)
 		(232 primitiveFormPrint)
@@ -682,8 +684,9 @@ Interpreter class >> initializePrimitiveTable [
 		"Quick Push Const Methods"
 		(264 519 primitiveLoadInstVar)
 
-		"MIDI Primitives (520-539) - NO LONGER INDEXED"
-		(520 529 primitiveObsoleteIndexedPrimitive)
+		(520 primitiveFail)
+		"MIDI Primitives (521-539) - NO LONGER INDEXED"
+		(521 529 primitiveObsoleteIndexedPrimitive)
 		(530 539 primitiveFail)  "reserved for extended MIDI primitives"
 
 		"Experimental Asynchrous File Primitives - NO LONGER INDEXED"
@@ -846,7 +849,7 @@ Interpreter class >> obsoleteIndexedPrimitiveTable [
 		(245 (MiscPrimitivePlugin primitiveIndexOfAsciiInString))
 		(246 (MiscPrimitivePlugin primitiveFindSubstring))
 
-		"MIDI Primitives (520-539)"
+		"MIDI Primitives (521-539)"
 		(521 (MIDIPlugin primitiveMIDIClosePort))
 		(522 (MIDIPlugin primitiveMIDIGetClock))
 		(523 (MIDIPlugin primitiveMIDIGetPortCount))
@@ -1954,6 +1957,12 @@ Interpreter >> callExternalPrimitive: functionID [
 { #category : #contexts }
 Interpreter >> caller [
 	^self fetchPointer: CallerIndex ofObject: activeContext
+]
+
+{ #category : #'debug support' }
+Interpreter >> capturePendingFinalizationSignals [
+	statpendingFinalizationSignals _ pendingFinalizationSignals.
+
 ]
 
 { #category : #'array and stream primitive support' }
@@ -4652,6 +4661,7 @@ Interpreter >> postGCAction [
 	"Mark the active and home contexts as roots if old. This 
 	allows the interpreter to use storePointerUnchecked to 
 	store into them."
+
 	compilerInitialized
 		ifTrue: [self compilerPostGC]
 		ifFalse: [activeContext < youngStart
@@ -4661,7 +4671,10 @@ Interpreter >> postGCAction [
 	(self sizeOfFree: freeBlock) > shrinkThreshold
 		ifTrue: ["Attempt to shrink memory after successfully 
 			reclaiming lots of memory"
-			self shrinkObjectMemory: (self sizeOfFree: freeBlock) - growHeadroom]
+			self shrinkObjectMemory: (self sizeOfFree: freeBlock) - growHeadroom].
+	
+	self signalSemaphoreWithIndex: gcSemaphoreIndex.
+
 ]
 
 { #category : #'object memory support' }
@@ -5667,6 +5680,14 @@ Interpreter >> primitiveForceDisplayUpdate [
 ]
 
 { #category : #'I/O primitives' }
+Interpreter >> primitiveForceTenure [
+	"Set force tenure flag to true, this forces a tenure operation on the next incremental GC"
+
+	self export: true.
+	forceTenureFlag _ 1
+]
+
+{ #category : #'I/O primitives' }
 Interpreter >> primitiveFormPrint [
 	"On platforms that support it, this primitive prints the receiver, assumed to be a Form, to the default printer."
 
@@ -6015,6 +6036,30 @@ Interpreter >> primitiveInvokeObjectAsMethod [
 	self executeNewMethodFromCache.  "Recursive xeq affects successFlag"
 	successFlag _ true.
 
+]
+
+{ #category : #'memory space primitives' }
+Interpreter >> primitiveIsRoot [
+	"Primitive. Answer whether the argument to the primitive is a root for young space"
+	| oop |
+	self export: true.
+	oop := self stackObjectValue: 0.
+	successFlag ifTrue:[
+		self pop: argumentCount + 1.
+		self pushBool: ((self baseHeader: oop) bitAnd: RootBit).
+	].
+]
+
+{ #category : #'memory space primitives' }
+Interpreter >> primitiveIsYoung [
+	"Primitive. Answer whether the argument to the primitive resides in young space."
+	| oop |
+	self export: true.
+	oop := self stackObjectValue: 0.
+	successFlag ifTrue:[
+		self pop: argumentCount + 1.
+		self pushBool: oop >= youngStart.
+	].
 ]
 
 { #category : #'I/O primitives' }
@@ -6812,6 +6857,43 @@ Interpreter >> primitiveResume [
 	successFlag ifTrue: [ self resume: proc ].
 ]
 
+{ #category : #'memory space primitives' }
+Interpreter >> primitiveRootTable [
+	"Primitive. Answer a copy (snapshot) element of the root table.
+	The primitive can cause GC itself and if so the return value may
+	be inaccurate - in this case one should guard the read operation
+	by looking at the gc counter statistics."
+	| oop sz |
+	self export: true.
+	sz := rootTableCount.
+	oop := self instantiateClass: self classArray indexableSize: sz. "can cause GC"
+	sz > rootTableCount ifTrue:[sz := rootTableCount].
+	1 to: sz do:[:i| 
+		self storePointer: i-1 ofObject: oop withValue: (rootTable at: i).
+	].
+	self pop: argumentCount + 1.
+	self push: oop.
+]
+
+{ #category : #'memory space primitives' }
+Interpreter >> primitiveRootTableAt [
+	"Primitive. Answer the nth element of the root table.
+	This primitive avoids the creation of an extra array;
+	it is intended for enumerations of the form:
+		index := 1.
+		[root := Smalltalk rootTableAt: index.
+		root == nil] whileFalse:[index := index + 1].
+	"
+	| index |
+	self export: true.
+	index := self stackIntegerValue: 0.
+	self success: (index > 0 and:[index <= rootTableCount]).
+	successFlag ifTrue:[
+		self pop: argumentCount + 1.
+		self push: (rootTable at: index).
+	].
+]
+
 { #category : #'I/O primitives' }
 Interpreter >> primitiveScanCharacters [
 	"The character scanner primitive."
@@ -6941,6 +7023,43 @@ Interpreter >> primitiveSetFullScreen [
 				ifFalse: [self primitiveFail]].
 	successFlag ifTrue: [self pop: 1].
 
+]
+
+{ #category : #'memory space primitives' }
+Interpreter >> primitiveSetGCBiasToGrow [
+	"Primitive. Indicate if the GC logic should have bias to grow"
+	| flag |
+	self export: true.
+	flag := self stackIntegerValue: 0.
+	successFlag ifTrue:[
+		gcBiasToGrow := flag.
+		self pop: argumentCount.
+	].
+]
+
+{ #category : #'memory space primitives' }
+Interpreter >> primitiveSetGCBiasToGrowGCLimit [
+	"Primitive. If the GC logic has  bias to grow, set growth limit"
+	| value |
+	self export: true.
+	value := self stackIntegerValue: 0.
+	successFlag ifTrue:[
+		gcBiasToGrowGCLimit := value.
+		gcBiasToGrowThreshold _ youngStart - (self cCoerce: memory to: 'int').
+		self pop: argumentCount.
+	].
+]
+
+{ #category : #'memory space primitives' }
+Interpreter >> primitiveSetGCSemaphore [
+	"Primitive. Indicate the semaphore to be signalled for upon garbage collection"
+	| index |
+	self export: true.
+	index := self stackIntegerValue: 0.
+	successFlag ifTrue:[
+		gcSemaphoreIndex := index.
+		self pop: argumentCount.
+	].
 ]
 
 { #category : #'I/O primitives' }
@@ -7502,7 +7621,7 @@ Interpreter >> primitiveUnloadModule [
 	self pop: 1 "pop moduleName; return receiver"
 ]
 
-{ #category : #'other primitives' }
+{ #category : #'system control primitives' }
 Interpreter >> primitiveVMParameter [
 	"Behaviour depends on argument count:
 		0 args:	return an Array of VM parameter values;
@@ -7524,39 +7643,64 @@ Interpreter >> primitiveVMParameter [
 		21	root table size (read-only)
 		22	root table overflows since startup (read-only)
 		23	bytes of extra memory to reserve for VM buffers, plugins, etc.
-
-		24	memory headroom when growing object memory (rw)
-		25	memory threshold above which shrinking object memory (rw)
-		26	interruptChecksEveryNms - force an ioProcessEvents every N milliseconds, in case the image is not calling getNextEvent often (rw)
-		27	BytesPerWord for this image
-
+		24	memory threshold above which shrinking object memory (rw)
+		25	memory headroom when growing object memory (rw)
+		26  interruptChecksEveryNms - force an ioProcessEvents every N milliseconds, in case the image  is not calling getNextEvent often (rw)
+		27	number of times mark loop iterated for current IGC/FGC (read-only) includes ALL marking
+		28	number of times sweep loop iterated  for current IGC/FGC (read-only)
+		29	number of times make forward loop iterated for current IGC/FGC (read-only)
+		30	number of times compact move loop iterated for current IGC/FGC (read-only)
+		31	number of grow memory requests (read-only)
+		32	number of shrink memory requests (read-only)
+		33	number of root table entries used for current IGC/FGC (read-only)
+		34	number of allocations done before current IGC/FGC (read-only)
+		35	number of survivor objects after current IGC/FGC (read-only)
+		36  millisecond clock when current IGC/FGC completed (read-only)
+		37  number of marked objects for Roots of the world, not including Root Table entries for current IGC/FGC (read-only)
+		38  milliseconds taken by current IGC  (read-only)
+		39  Number of finalization signals for Weak Objects pending when current IGC/FGC completed (read-only)
+		40 BytesPerWord for this image
+		
 	Note: Thanks to Ian Piumarta for this primitive."
 
 	| mem paramsArraySize result arg index |
 	mem _ self startOfMemory.
-	paramsArraySize _ 27.
+	paramsArraySize _ 40.
 	argumentCount = 0 ifTrue: [
 		result _ self instantiateClass: (self splObj: ClassArray) indexableSize: paramsArraySize.
 		0 to: paramsArraySize - 1 do:
-			[:i | self storePointer: i ofObject: result withValue: (self integerObjectOf: 0)].
-		self storePointer: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
-		self storePointer: 1		ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
-		self storePointer: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
-		self storePointer: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
-		self storePointer: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
-		self storePointer: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
-		self storePointer: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
-		self storePointer: 7	ofObject: result withValue: (self integerObjectOf: statFullGCMSecs).
-		self storePointer: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
-		self storePointer: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCMSecs).
-		self storePointer: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
-		self storePointer: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
-		self storePointer: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
-		self storePointer: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
-		self storePointer: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
-		self storePointer: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
-		self storePointer: 25	ofObject: result withValue: (self integerObjectOf: interruptChecksEveryNms).
-		self storePointer: 26	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
+			[:i | self storeWord: i ofObject: result withValue: ConstZero].
+		self storeWord: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
+		self storeWord: 1		ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
+		self storeWord: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
+		self storeWord: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
+		self storeWord: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
+		self storeWord: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
+		self storeWord: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
+		self storeWord: 7	ofObject: result withValue: (self integerObjectOf: statFullGCMSecs).
+		self storeWord: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
+		self storeWord: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCMSecs).
+		self storeWord: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
+		self storeWord: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
+		self storeWord: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
+		self storeWord: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
+		self storeWord: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
+		self storeWord: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
+		self storeWord: 25	ofObject: result withValue: (self integerObjectOf: interruptChecksEveryNms).
+		self storeWord: 26	ofObject: result withValue: (self integerObjectOf: statMarkCount).
+		self storeWord: 27	ofObject: result withValue: (self integerObjectOf: statSweepCount).
+		self storeWord: 28	ofObject: result withValue: (self integerObjectOf: statMkFwdCount).
+		self storeWord: 29	ofObject: result withValue: (self integerObjectOf: statCompMoveCount).
+		self storeWord: 30	ofObject: result withValue: (self integerObjectOf: statGrowMemory).
+		self storeWord: 31	ofObject: result withValue: (self integerObjectOf: statShrinkMemory).
+		self storeWord: 32	ofObject: result withValue: (self integerObjectOf: statRootTableCount).
+		self storeWord: 33	ofObject: result withValue: (self integerObjectOf: statAllocationCount).
+		self storeWord: 34	ofObject: result withValue: (self integerObjectOf: statSurvivorCount).
+		self storeWord: 35	ofObject: result withValue: (self integerObjectOf: statGCTime).
+		self storeWord: 36	ofObject: result withValue: (self integerObjectOf: statSpecialMarkCount).
+		self storeWord: 37	ofObject: result withValue: (self integerObjectOf: statIGCDeltaTime).
+		self storeWord: 38	ofObject: result withValue: (self integerObjectOf: statpendingFinalizationSignals).
+		self storeWord: 39	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
 		self pop: 1 thenPush: result.
 		^nil].
 
@@ -7581,9 +7725,22 @@ Interpreter >> primitiveVMParameter [
 		arg = 22		ifTrue: [result _ statRootTableOverflows].
 		arg = 23		ifTrue: [result _ extraVMMemory].
 		arg = 24		ifTrue: [result _ shrinkThreshold].
-		arg = 25 	ifTrue: [result _ growHeadroom].
+		arg = 25		ifTrue: [result _ growHeadroom].
 		arg = 26		ifTrue: [result _ interruptChecksEveryNms]. 
-		arg = 27 	ifTrue: [result _ BytesPerWord].
+		arg = 27		ifTrue: [result _ statMarkCount]. 
+		arg = 28		ifTrue: [result _ statSweepCount]. 
+		arg = 29		ifTrue: [result _ statMkFwdCount]. 
+		arg = 30		ifTrue: [result _ statCompMoveCount]. 
+		arg = 31		ifTrue: [result _ statGrowMemory]. 
+		arg = 32		ifTrue: [result _ statShrinkMemory]. 
+		arg = 33		ifTrue: [result _ statRootTableCount]. 
+		arg = 34		ifTrue: [result _ statAllocationCount]. 
+		arg = 35		ifTrue: [result _ statSurvivorCount]. 
+		arg = 36  	ifTrue: [result _ statGCTime]. 
+		arg = 37  	ifTrue: [result _ statSpecialMarkCount]. 
+		arg = 38  	ifTrue: [result _ statIGCDeltaTime]. 
+		arg = 39  	ifTrue: [result _ statpendingFinalizationSignals]. 
+		arg = 40  	ifTrue: [result _ BytesPerWord]. 
 		self pop: 2 thenPush: (self integerObjectOf: result).
 		^nil].
 
@@ -7627,6 +7784,9 @@ Interpreter >> primitiveVMParameter [
 		^ nil].
 
 	self primitiveFail.  "attempting to write a read-only parameter"
+
+
+
 
 ]
 
