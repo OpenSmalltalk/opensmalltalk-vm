@@ -482,6 +482,7 @@ InterpreterSimulator >> initialize [
 	atCache _ Array new: AtCacheTotalSize.
 	self flushMethodCache.
 	rootTable _ Array new: RootTableSize.
+	weakRoots _ Array new: RootTableSize + RemapBufferSize + 100.
 	remapBuffer _ Array new: RemapBufferSize.
 	semaphoresUseBufferA _ true.
 	semaphoresToSignalA _ Array new: SemaphoresToSignalSize.

@@ -40,6 +40,8 @@ Class {
 		'specialObjectsOop',
 		'rootTable',
 		'rootTableCount',
+		'weakRoots',
+		'weakRootCount',
 		'child',
 		'field',
 		'parentField',
@@ -56,6 +58,10 @@ Class {
 		'remapBufferCount',
 		'allocationsBetweenGCs',
 		'tenuringThreshold',
+		'gcSemaphoreIndex',
+		'gcBiasToGrow',
+		'gcBiasToGrowGCLimit',
+		'gcBiasToGrowThreshold',
 		'statFullGCs',
 		'statFullGCMSecs',
 		'statIncrGCs',
@@ -69,123 +75,136 @@ Class {
 		'shrinkThreshold',
 		'growHeadroom',
 		'headerTypeBytes',
-		'youngStartLocal'
+		'youngStartLocal',
+		'statMarkCount',
+		'statSweepCount',
+		'statMkFwdCount',
+		'statCompMoveCount',
+		'statGrowMemory',
+		'statShrinkMemory',
+		'statRootTableCount',
+		'statAllocationCount',
+		'statSurvivorCount',
+		'statGCTime',
+		'statSpecialMarkCount',
+		'statIGCDeltaTime',
+		'statpendingFinalizationSignals',
+		'forceTenureFlag'
 	],
 	#classVars : [
-		'SelectorCannotReturn',
-		'SelectorRunWithIn',
-		'SelectorCannotInterpret',
-		'LargeContextBit',
-		'ClassPoint',
-		'Byte7Shift',
-		'Byte2Mask',
-		'Bytes7to4Mask',
-		'SelectorMustBeBoolean',
-		'ConstMinusOne',
-		'CompactClassMask',
-		'Byte0Mask',
-		'GCTopMarker',
-		'Byte2Shift',
-		'SelectorAboutToReturn',
-		'ProcessSignalingLowSpace',
-		'Byte4Mask',
-		'TheInterruptSemaphore',
-		'RootTableSize',
-		'HeaderTypeClass',
-		'ClassBitmap',
-		'RootBit',
-		'SmallContextSize',
-		'TheLowSpaceSemaphore',
-		'RootTableRedZone',
-		'TrueObject',
-		'Byte6Mask',
-		'ClassFloat',
-		'ClassExternalData',
 		'Byte1ShiftNegated',
-		'HashBits',
-		'HeaderTypeGC',
-		'CtxtTempFrameStart',
-		'Byte3Shift',
-		'Done',
+		'SchedulerAssociation',
 		'ClassExternalAddress',
-		'HeaderTypeFree',
-		'ClassInteger',
-		'TheDisplay',
-		'RemapBufferSize',
-		'AllButHashBits',
-		'ClassTranslatedMethod',
-		'ClassSemaphore',
-		'ClassByteArray',
-		'SpecialSelectors',
-		'AllButMarkBit',
-		'ConstTwo',
-		'TheTimerSemaphore',
-		'SelectorDoesNotUnderstand',
-		'ContextFixedSizePlusHeader',
-		'LongSizeMask',
-		'Upward',
-		'ConstZero',
-		'NilObject',
-		'ClassCharacter',
-		'ClassPseudoContext',
 		'DoBalanceChecks',
-		'Byte4ShiftNegated',
+		'AllButRootBit',
+		'SizeMask',
+		'SelectorCannotInterpret',
+		'TypeMask',
+		'HashBitsOffset',
+		'HeaderTypeShort',
+		'SelectorRunWithIn',
+		'Done',
+		'Byte5Shift',
+		'TrueObject',
+		'BytesPerWord',
+		'MethodContextProto',
+		'HashBits',
+		'ClassBlockContext',
+		'ClassTranslatedMethod',
+		'ConstMinusOne',
+		'ClassExternalData',
+		'HeaderTypeClass',
+		'CtxtTempFrameStart',
+		'BaseHeaderSize',
+		'ClassFloat',
+		'CompactClasses',
+		'AllButMarkBit',
+		'HeaderTypeSizeAndClass',
+		'Byte2Mask',
+		'ContextFixedSizePlusHeader',
+		'ClassArray',
+		'Byte3ShiftNegated',
+		'ClassLargePositiveInteger',
+		'Byte3Shift',
+		'Byte1Mask',
+		'RootBit',
+		'TheDisplay',
+		'LongSizeMask',
+		'Byte7Mask',
+		'Bytes3to0Mask',
+		'ClassPseudoContext',
+		'BlockContextProto',
+		'NilContext',
+		'Byte0Mask',
+		'ClassString',
+		'Byte6Mask',
+		'ClassCharacter',
+		'Byte1Shift',
+		'HeaderTypeFree',
+		'StartField',
+		'StackStart',
+		'ClassExternalFunction',
+		'AllButMarkBitAndTypeMask',
+		'MarkBit',
+		'TheLowSpaceSemaphore',
+		'ConstTwo',
+		'ProcessSignalingLowSpace',
+		'Upward',
+		'Byte6Shift',
+		'RootTableSize',
+		'ClassProcess',
+		'RemapBufferSize',
+		'ShiftForWord',
+		'LargeContextBit',
+		'WordMask',
+		'SpecialSelectors',
+		'Byte5ShiftNegated',
+		'RootTableRedZone',
+		'ClassInteger',
+		'DoAssertionChecks',
+		'AllButTypeMask',
+		'SelectorDoesNotUnderstand',
 		'Byte4Shift',
 		'ClassMessage',
-		'ClassExternalFunction',
-		'Byte5ShiftNegated',
-		'BaseHeaderSize',
-		'ShiftForWord',
-		'Byte3ShiftNegated',
-		'HeaderTypeShort',
-		'Byte1Mask',
-		'TheFinalizationSemaphore',
-		'ClassLargePositiveInteger',
-		'ClassExternalLibrary',
-		'Byte5Mask',
-		'MarkBit',
-		'MethodContextProto',
-		'Byte3Mask',
-		'Byte5Shift',
-		'ClassBlockContext',
-		'Byte7ShiftNegated',
-		'FloatProto',
-		'StartObj',
-		'AllButMarkBitAndTypeMask',
-		'ConstOne',
-		'ClassString',
-		'Byte0Shift',
-		'Byte7Mask',
-		'BlockContextProto',
-		'WordMask',
-		'FalseObject',
-		'StartField',
-		'SchedulerAssociation',
-		'LargeContextSize',
+		'ConstZero',
 		'TheInputSemaphore',
-		'BytesPerWord',
-		'ExternalObjectsArray',
-		'SizeMask',
-		'Byte6Shift',
-		'CharacterTable',
+		'LargeContextSize',
+		'Byte5Mask',
+		'SmallContextSize',
+		'AllButHashBits',
+		'CompactClassMask',
+		'ClassExternalLibrary',
+		'ClassBitmap',
+		'HeaderTypeGC',
 		'ClassLargeNegativeInteger',
-		'HashBitsOffset',
-		'HeaderTypeSizeAndClass',
-		'Byte1Shift',
-		'NilContext',
-		'StackStart',
-		'AllButTypeMask',
-		'ClassMethodContext',
-		'TypeMask',
-		'DoAssertionChecks',
-		'AllButRootBit',
-		'Size4Bit',
-		'Bytes3to0Mask',
-		'ClassCompiledMethod',
-		'ClassArray',
+		'GCTopMarker',
+		'SelectorCannotReturn',
+		'Byte4Mask',
+		'TheTimerSemaphore',
+		'Bytes7to4Mask',
+		'Byte2Shift',
+		'StartObj',
+		'CharacterTable',
+		'Byte7ShiftNegated',
+		'NilObject',
+		'Byte3Mask',
 		'ClassExternalStructure',
-		'ClassProcess',
-		'CompactClasses'
+		'TheInterruptSemaphore',
+		'ClassMethodContext',
+		'Size4Bit',
+		'Byte4ShiftNegated',
+		'SelectorAboutToReturn',
+		'ExternalObjectsArray',
+		'ClassByteArray',
+		'ClassSemaphore',
+		'FalseObject',
+		'TheFinalizationSemaphore',
+		'ConstOne',
+		'Byte7Shift',
+		'Byte0Shift',
+		'ClassCompiledMethod',
+		'SelectorMustBeBoolean',
+		'ClassPoint'
 	],
 	#classInstVars : [
 		'timeStamp'
@@ -215,6 +234,10 @@ ObjectMemory class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
 		var: #rootTable
 		declareC: 'sqInt rootTable[', (RootTableSize + 1) printString, ']'.
+	"Weak roots must be large enough for roots+remapBuffer+sizeof(allCallsOn: #markAndTrace:)"
+	aCCodeGenerator
+		var: #weakRoots
+		declareC: 'sqInt weakRoots[', (RootTableSize + RemapBufferSize + 100) printString, ']'.
 	aCCodeGenerator
 		var: #headerTypeBytes
 		declareC: 'sqInt headerTypeBytes[4]'.
@@ -341,7 +364,6 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	CompactClasses _ 28.
 	TheTimerSemaphore _ 29.
 	TheInterruptSemaphore _ 30.
-	FloatProto _ 31.
 	SelectorCannotInterpret _ 34.
 	MethodContextProto _ 35.
 	BlockContextProto _ 37.
@@ -480,14 +502,14 @@ ObjectMemory >> aFinalizationComment [
 		o1 become: o2.
 The become: operation makes w1 point to o2 and because o2 has been created AFTER w1 the object reference in w1 points forward. Why might this be a problem? Well, if the GC would start after the weak reference AND free the object then the weak reference would simply point to an invalid memory location (since we've not been checking the weak reference during sweep phase).
 
-	Fortunately, this can not happen in the current ObjectMemory implementation. Why? Well, the only GC not starting at the beginning of the memory is incremental GC. Incremental GC however is only executed in so-called youngSpace. If both, the weak reference AND the object it points to reside in youngSpace then we can still check the weak reference. If however, the weak reference is not in youngSpace but the object is, then the object is itself a root in young space and will be marked by the GC even if it is only referenced by the WeakReference.
+	Fortunately, this can not happen in the current ObjectMemory implementation. Why? Well, the only GC not starting at the beginning of the memory is incremental GC. Incremental GC however is only executed in so-called youngSpace. If both, the weak reference AND the object it points to reside in youngSpace then we can still check the weak reference. If however, the weak reference is not in youngSpace but the object is, then the reference is itself a root for young space and will be processed by the GC.
 
 	In the end, we just need a little adjustment in step 2b) of the above procedure which looks as follows:
 		If the weak reference points 
 			* backwards: check if the object header is marked free
 			* forwards: check if the object has been marked in markPhase.
 
-	Note that a number of finalizations will only be executed during a fullGC. This happens if either the WeakReference or the object reside outside youngSpace. So, if you must garantuee that some object has been finalized you definitely need to do a fullGC.
+	Note that a number of finalizations will only be executed during a fullGC. So, if you must garantuee that some object has been finalized you definitely need to do a fullGC.
 
 ar 3/20/98 17:20"
 
@@ -736,6 +758,27 @@ ObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copyHas
 	self forceInterruptCheck. "pretty much guaranteed to take a long time, so check for timers etc ASAP"
 
 	^true "success"
+]
+
+{ #category : #'garbage collection' }
+ObjectMemory >> biasToGrow [
+	| growSize |
+	growSize _  growHeadroom*3/2 - (self sizeOfFree: freeBlock) 
+	self growObjectMemory: growSize
+]
+
+{ #category : #'garbage collection' }
+ObjectMemory >> biasToGrowCheckGCLimit [
+	| mem growth |
+	mem _ self cCoerce: memory to: 'int'.
+	growth _ (youngStart - mem) - gcBiasToGrowThreshold.
+	growth < 0 ifTrue: [gcBiasToGrowThreshold _ youngStart - mem].
+	growth > gcBiasToGrowGCLimit
+		 ifTrue: 
+			[self fullGC.
+			gcBiasToGrowThreshold _ youngStart - mem].
+
+					
 ]
 
 { #category : #allocation }
@@ -1063,7 +1106,11 @@ ObjectMemory >> finalizeReference: oop [
 	lastField _ self lastPointerOf: oop.
 	firstField to: lastField by: BytesPerWord do: [:i | 
 			weakOop _ self longAt: oop + i.
-			(weakOop == nilObj or: [self isIntegerObject: weakOop])
+			"ar 1/18/2005: Added oop < youngStart test to make sure we're not testing
+			objects in non-GCable region. This could lead to a forward reference in
+			old space with the oop pointed to not being marked and thus treated as free."
+			(weakOop == nilObj or: [(self isIntegerObject: weakOop) or:[weakOop < youngStart]])
+
 				ifFalse: ["Check if the object is being collected. 
 					If the weak reference points  
 					* backward: check if the weakOops chunk is free
@@ -1146,6 +1193,7 @@ ObjectMemory >> fullGC [
 	DoAssertionChecks ifTrue: [self reverseDisplayFrom: 0 to: 7].
 	self preGCAction: true.
 	startTime _ self ioMicroMSecs.
+	statSweepCount _ statMarkCount _ statMkFwdCount _ statCompMoveCount _ 0.
 	self clearRootsTable.
 	youngStart _ self startOfMemory.  "process all of memory"
 	self markPhase.
@@ -1155,7 +1203,9 @@ ObjectMemory >> fullGC [
 	self fullCompaction.
 	allocationCount _ 0.
 	statFullGCs _ statFullGCs + 1.
-	statFullGCMSecs _ statFullGCMSecs + (self ioMicroMSecs - startTime).
+	statGCTime _ self ioMicroMSecs.
+	statFullGCMSecs _ statFullGCMSecs + (statGCTime - startTime).
+	self capturePendingFinalizationSignals.
 
 	youngStart _ freeBlock.  "reset the young object boundary"
 	self postGCAction.
@@ -1231,6 +1281,7 @@ ObjectMemory >> growObjectMemory: delta [
 	"Attempt to grow the object memory by the given delta 
 	amount "
 	| limit |
+	statGrowMemory _ statGrowMemory + 1.
 	limit _ self sqGrowMemory: memoryLimit By: delta.
 	limit = memoryLimit
 		ifFalse: [memoryLimit _ limit - 24.
@@ -1281,7 +1332,9 @@ ObjectMemory >> incCompMakeFwd [
 	bytesFreed _ 0.
 	oop _ self oopFromChunk: compStart.
 	[oop < endOfMemory]
-		whileTrue: [(self isFreeObject: oop)
+		whileTrue: [
+				statMkFwdCount _ statMkFwdCount + 1.
+				(self isFreeObject: oop)
 				ifTrue: [bytesFreed _ bytesFreed + (self sizeOfFree: oop)]
 				ifFalse: ["create a forwarding block for oop"
 					fwdBlock _ self fwdBlockGet: BytesPerWord*2.
@@ -1310,7 +1363,8 @@ ObjectMemory >> incCompMove: bytesFreed [
 	newOop _ nil.
 	oop _ self oopFromChunk: compStart.
 	[oop < compEnd]
-		whileTrue: [next _ self objectAfterWhileForwarding: oop.
+		whileTrue: [statCompMoveCount _ statCompMoveCount + 1.
+			next _ self objectAfterWhileForwarding: oop.
 			(self isFreeObject: oop)
 				ifFalse: ["a moving object; unwind its forwarding block"
 					fwdBlock _ ((self longAt: oop) bitAnd: AllButMarkBitAndTypeMask) << 1.
@@ -1370,7 +1424,7 @@ ObjectMemory >> incrementalGC [
 	area of object memory (i.e., objects above youngStart), using 
 	the root table to identify objects containing pointers to 
 	young objects from the old object area."
-	| survivorCount startTime |
+	| survivorCount startTime weDidGrow |
 	self inline: false.
 	rootTableCount >= RootTableSize
 		ifTrue: ["root table overflow; cannot do an incremental GC (this should be very rare)"
@@ -1384,17 +1438,28 @@ ObjectMemory >> incrementalGC [
 	"incremental GC and compaction"
 
 	startTime _ self ioMicroMSecs.
+	weakRootCount := 0.
+	statSweepCount _ statMarkCount _ statMkFwdCount _ statCompMoveCount _ 0.
 	self markPhase.
+	1 to: weakRootCount do:[:i| self finalizeReference: (weakRoots at: i)].
 	survivorCount _ self sweepPhase.
 	self incrementalCompaction.
+	statAllocationCount _ allocationCount.
 	allocationCount _ 0.
 	statIncrGCs _ statIncrGCs + 1.
-	statIncrGCMSecs _ statIncrGCMSecs + (self ioMicroMSecs - startTime).
+	statGCTime _ self ioMicroMSecs.
+	statIGCDeltaTime _ statGCTime - startTime.
+	statIncrGCMSecs _ statIncrGCMSecs + statIGCDeltaTime.
+	self capturePendingFinalizationSignals.
 
 	self forceInterruptCheck. "Force an an interrupt check ASAP.We could choose to be clever here and only do this under certain time conditions. Keep it simple for now"
 	
-	(survivorCount > tenuringThreshold
+	statRootTableCount  _ rootTableCount.
+	statSurvivorCount _ survivorCount.
+	weDidGrow _ false.
+	(((survivorCount > tenuringThreshold)
 			or: [rootTableCount >= RootTableRedZone])
+			or: [forceTenureFlag == true])
 		ifTrue: ["move up the young space boundary if 
 			* there are too many survivors: 
 			this limits the number of objects that must be 
@@ -1402,13 +1467,19 @@ ObjectMemory >> incrementalGC [
 			* we're about to overflow the roots table 
 			this limits the number of full GCs that may be caused 
 			by root table overflows in the near future"
+			forceTenureFlag _ false.
 			statTenures _ statTenures + 1.
 			self clearRootsTable.
+			(((self sizeOfFree: freeBlock) < growHeadroom) and: 
+				[gcBiasToGrow > 0]) 
+				ifTrue: [self biasToGrow.
+						weDidGrow _ true].
 			youngStart _ freeBlock].
 	self postGCAction.
 	DoAssertionChecks
 		ifTrue: [self validateRoots; validate.
-			self reverseDisplayFrom: 8 to: 15]
+			self reverseDisplayFrom: 8 to: 15].
+	weDidGrow ifTrue: [self biasToGrowCheckGCLimit]
 ]
 
 { #category : #'gc -- compaction' }
@@ -1536,7 +1607,11 @@ ObjectMemory >> initializeObjectMemory: bytesToShift [
 	statIncrGCMSecs _ 0.
 	statTenures _ 0.
 	statRootTableOverflows _ 0.
-
+	statGrowMemory _ 0.
+	statShrinkMemory _ 0.
+	forceTenureFlag _ 0.
+	gcBiasToGrow _ 0.
+	gcBiasToGrowGCLimit _ 0.
 ]
 
 { #category : #'object enumeration' }
@@ -1903,7 +1978,7 @@ ObjectMemory >> markAndTrace: oop [
 		field		next field of child to examine
 		parentField	field where child was stored in its referencing object"
 
-	| header lastFieldOffset action |
+	| header lastFieldOffset action statMarkCountLocal |
 	header _ self longAt: oop.
 	(header bitAnd: MarkBit) = 0 ifFalse: [^ 0  "already marked"].
 
@@ -1915,16 +1990,28 @@ ObjectMemory >> markAndTrace: oop [
 	"initialize the tracer state machine"
 	parentField _ GCTopMarker.
 	child _ oop.
-	lastFieldOffset _ self lastPointerOf: oop.
+	(self isWeakNonInt: oop) ifTrue: [
+		"Set lastFieldOffset before the weak fields in the receiver"
+		lastFieldOffset := (self nonWeakFieldsOf: oop) << ShiftForWord.
+		"And remember as weak root"
+		weakRootCount := weakRootCount + 1.
+		weakRoots at: weakRootCount put: oop.
+	] ifFalse: [
+		"Do it the usual way"
+		lastFieldOffset _ self lastPointerOf: oop.
+	].
 	field _ oop + lastFieldOffset.
 	action _ StartField.
 	youngStartLocal _ youngStart.
+	statMarkCountLocal _ statMarkCount.
 	"run the tracer state machine until all objects reachable from oop are marked"
 	[action = Done] whileFalse: [
+		statMarkCountLocal _ statMarkCountLocal + 1.
 		action = StartField ifTrue: [ action _ self startField ].
 		action = StartObj ifTrue: [ action _ self startObj ].
 		action = Upward ifTrue: [ action _ self upward ].
 	].
+	statMarkCount _ statMarkCountLocal.
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -1943,6 +2030,7 @@ ObjectMemory >> markPhase [
 	"trace the interpreter's objects, including the active stack 
 	and special objects array"
 	self markAndTraceInterpreterOops.
+	statSpecialMarkCount _ statMarkCount.
 	"trace the roots"
 	1 to: rootTableCount do: [:i | 
 			oop _ rootTable at: i.
@@ -2305,6 +2393,7 @@ ObjectMemory >> shrinkObjectMemory: delta [
 	"Attempt to shrink the object memory by the given delta 
 	amount "
 	| limit |
+	statShrinkMemory _ statShrinkMemory + 1. 
 	limit _ self sqShrinkMemory: memoryLimit By: delta.
 	limit = memoryLimit
 		ifFalse: [memoryLimit _ limit - 24.
@@ -2538,6 +2627,7 @@ ObjectMemory >> sweepPhase [
 	oop _ self oopFromChunk: youngStart.
 	[oop < endOfMemoryLocal]
 		whileTrue: ["get oop's header, header type, size, and header size"
+			statSweepCount _ statSweepCount + 1.
 			oopHeader _ self baseHeader: oop.
 			oopHeaderType _ oopHeader bitAnd: TypeMask.
 			hdrBytes _ headerTypeBytes at: oopHeaderType.
