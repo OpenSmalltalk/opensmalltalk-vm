@@ -9146,9 +9146,9 @@ Interpreter >> sufficientSpaceToInstantiate: classOop indexableSize: size [
 	((self cCoerce: size to: 'usqInt ') > 0 and: [format < 2])
 		ifTrue: [^ false].
 
-	atomSize _ format < 8
-		ifTrue: ["indexable fields are words or pointers" BytesPerWord]
-		ifFalse: ["indexable fields are bytes" 1].
+	format < 8
+		ifTrue: ["indexable fields are words or pointers" atomSize _ BytesPerWord]
+		ifFalse: ["indexable fields are bytes" atomSize _ 1].
 	^self sufficientSpaceToAllocate: 2500 + (size * atomSize)
 ]
 
