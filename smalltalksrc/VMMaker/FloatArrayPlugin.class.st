@@ -117,7 +117,7 @@ FloatArrayPlugin >> primitiveDivFloatArray [
 	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
 	"Check if any of the argument's values is zero"
 	0 to: length-1 do:[:i|
-		(interpreterProxy longAt: (argPtr + i)) = 0 ifTrue:[^interpreterProxy primitiveFail]].
+		( interpreterProxy intAtPointer:(self cCoerce: (argPtr + i) to: 'char*')) = 0 ifTrue:[^interpreterProxy primitiveFail]].
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) / (argPtr at: i).
 	].
