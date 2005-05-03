@@ -187,6 +187,7 @@ CCodeGenerator >> builtin: sel [
 	((sel = #longAt:) or: [(sel = #longAt:put:) or: [sel = #error:]]) ifTrue: [ ^true ].
 	((sel = #byteAtPointer:) or: [sel = #byteAtPointer:put:]) ifTrue: [ ^true ].
 	((sel = #shortAtPointer:) or: [sel = #shortAtPointer:put:]) ifTrue: [ ^true ].
+	((sel = #intAtPointer:) or: [sel = #intAtPointer:put:]) ifTrue: [ ^true ].
 	((sel = #longAtPointer:) or: [(sel = #longAtPointer:put:) or: [sel = #error:]]) ifTrue: [ ^true ].
 	^translationDict includesKey: sel
 ]
