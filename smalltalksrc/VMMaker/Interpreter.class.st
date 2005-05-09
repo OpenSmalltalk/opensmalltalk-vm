@@ -2596,7 +2596,7 @@ Interpreter >> disableCompiler [
 	compilerInitialized _ false
 ]
 
-{ #category : #'Ian fixes for missing stuff' }
+{ #category : #'message sending' }
 Interpreter >> dispatchFunctionPointer: aFunctionPointer [
 
 	self var: #aFunctionPointer type: 'void *'.
@@ -2604,7 +2604,7 @@ Interpreter >> dispatchFunctionPointer: aFunctionPointer [
 			inSmalltalk: [self error: 'my simulator should simulate me']
 ]
 
-{ #category : #'Ian fixes for missing stuff' }
+{ #category : #'message sending' }
 Interpreter >> dispatchFunctionPointerOn: primIdx in: primTable [
 	"Call the primitive at index primIdx in the primitiveTable."
 
@@ -5149,7 +5149,7 @@ Interpreter >> primitiveDeferDisplayUpdates [
 
 { #category : #'system control primitives' }
 Interpreter >> primitiveDisablePowerManager [
-	"Pass in a non-negative value to disable the architectures powermanager if any, zero to enable"
+	"Pass in a non-negative value to disable the architectures powermanager if any, zero to enable. This is a named (not numbered) primitive in the null module (ie the VM)"
 
 	| integer |
 	self export: true.
@@ -5754,14 +5754,19 @@ Interpreter >> primitiveFullGC [
 Interpreter >> primitiveGetAttribute [
 	"Fetch the system attribute with the given integer ID. The 
 	result is a string, which will be empty if the attribute is not 
-	defined. "
+	defined."
 	| attr sz s |
-	attr _ self stackIntegerValue: 0.
+	attr := self stackIntegerValue: 0.
 	successFlag
-		ifTrue: [sz _ self attributeSize: attr].
+		ifTrue: [sz := self attributeSize: attr].
 	successFlag
-		ifTrue: [s _ self instantiateClass: (self splObj: ClassString) indexableSize: sz.
-			self getAttribute: attr Into: s + BaseHeaderSize Length: sz.
+		ifTrue: [s := self
+						instantiateClass: (self splObj: ClassString)
+						indexableSize: sz.
+			self
+				getAttribute: attr
+				Into: s + BaseHeaderSize
+				Length: sz.
 			self pop: 2 thenPush: s]
 ]
 
@@ -7153,22 +7158,26 @@ Interpreter >> primitiveSignalAtBytesLeft [
 
 { #category : #'system control primitives' }
 Interpreter >> primitiveSignalAtMilliseconds [
-	"Cause the time semaphore, if one has been registered, to be signalled when the millisecond clock is greater than or equal to the given tick value. A tick value of zero turns off timer interrupts."
-
+	"Cause the time semaphore, if one has been registered, to
+	be signalled when the millisecond clock is greater than or
+	equal to the given tick value. A tick value of zero turns off
+	timer interrupts."
 	| tick sema |
-	tick _ self popInteger.
-	sema _ self popStack.
-	successFlag ifTrue: [
-		(self fetchClassOf: sema) = (self splObj: ClassSemaphore) ifTrue: [
-			self storePointer: TheTimerSemaphore ofObject: specialObjectsOop withValue: sema.
-			nextWakeupTick _ tick.
-		] ifFalse: [
-			self storePointer: TheTimerSemaphore ofObject: specialObjectsOop withValue: nilObj.
-			nextWakeupTick _ 0.
-		].
-	] ifFalse: [
-		self unPop: 2.  "sema, tick"
-	].
+	tick := self popInteger.
+	sema := self popStack.
+	successFlag
+		ifTrue: [(self fetchClassOf: sema) = (self splObj: ClassSemaphore)
+				ifTrue: [self
+						storePointer: TheTimerSemaphore
+						ofObject: specialObjectsOop
+						withValue: sema.
+					nextWakeupTick := tick]
+				ifFalse: [self
+						storePointer: TheTimerSemaphore
+						ofObject: specialObjectsOop
+						withValue: nilObj.
+					nextWakeupTick := 0]]
+		ifFalse: [self unPop: 2]
 ]
 
 { #category : #'float primitives' }
@@ -7196,7 +7205,7 @@ Interpreter >> primitiveSize [
 
 { #category : #'system control primitives' }
 Interpreter >> primitiveSnapshot [
-"save a normal snapshot under the same name as it was loaded or rename it as per the last primitiveImageName"
+"save a normal snapshot under the same name as it was loaded unless it has been renamed by the last primitiveImageName"
 	self inline: false.
 	^self snapshot: false
 
@@ -7669,38 +7678,38 @@ Interpreter >> primitiveVMParameter [
 	argumentCount = 0 ifTrue: [
 		result _ self instantiateClass: (self splObj: ClassArray) indexableSize: paramsArraySize.
 		0 to: paramsArraySize - 1 do:
-			[:i | self storeWord: i ofObject: result withValue: ConstZero].
-		self storeWord: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
-		self storeWord: 1		ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
-		self storeWord: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
-		self storeWord: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
-		self storeWord: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
-		self storeWord: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
-		self storeWord: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
-		self storeWord: 7	ofObject: result withValue: (self integerObjectOf: statFullGCMSecs).
-		self storeWord: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
-		self storeWord: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCMSecs).
-		self storeWord: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
-		self storeWord: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
-		self storeWord: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
-		self storeWord: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
-		self storeWord: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
-		self storeWord: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
-		self storeWord: 25	ofObject: result withValue: (self integerObjectOf: interruptChecksEveryNms).
-		self storeWord: 26	ofObject: result withValue: (self integerObjectOf: statMarkCount).
-		self storeWord: 27	ofObject: result withValue: (self integerObjectOf: statSweepCount).
-		self storeWord: 28	ofObject: result withValue: (self integerObjectOf: statMkFwdCount).
-		self storeWord: 29	ofObject: result withValue: (self integerObjectOf: statCompMoveCount).
-		self storeWord: 30	ofObject: result withValue: (self integerObjectOf: statGrowMemory).
-		self storeWord: 31	ofObject: result withValue: (self integerObjectOf: statShrinkMemory).
-		self storeWord: 32	ofObject: result withValue: (self integerObjectOf: statRootTableCount).
-		self storeWord: 33	ofObject: result withValue: (self integerObjectOf: statAllocationCount).
-		self storeWord: 34	ofObject: result withValue: (self integerObjectOf: statSurvivorCount).
-		self storeWord: 35	ofObject: result withValue: (self integerObjectOf: statGCTime).
-		self storeWord: 36	ofObject: result withValue: (self integerObjectOf: statSpecialMarkCount).
-		self storeWord: 37	ofObject: result withValue: (self integerObjectOf: statIGCDeltaTime).
-		self storeWord: 38	ofObject: result withValue: (self integerObjectOf: statpendingFinalizationSignals).
-		self storeWord: 39	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
+			[:i | self storePointer: i ofObject: result withValue: ConstZero].
+		self storePointer: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
+		self storePointer: 1		ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
+		self storePointer: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
+		self storePointer: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
+		self storePointer: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
+		self storePointer: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
+		self storePointer: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
+		self storePointer: 7	ofObject: result withValue: (self integerObjectOf: statFullGCMSecs).
+		self storePointer: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
+		self storePointer: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCMSecs).
+		self storePointer: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
+		self storePointer: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
+		self storePointer: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
+		self storePointer: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
+		self storePointer: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
+		self storePointer: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
+		self storePointer: 25	ofObject: result withValue: (self integerObjectOf: interruptChecksEveryNms).
+		self storePointer: 26	ofObject: result withValue: (self integerObjectOf: statMarkCount).
+		self storePointer: 27	ofObject: result withValue: (self integerObjectOf: statSweepCount).
+		self storePointer: 28	ofObject: result withValue: (self integerObjectOf: statMkFwdCount).
+		self storePointer: 29	ofObject: result withValue: (self integerObjectOf: statCompMoveCount).
+		self storePointer: 30	ofObject: result withValue: (self integerObjectOf: statGrowMemory).
+		self storePointer: 31	ofObject: result withValue: (self integerObjectOf: statShrinkMemory).
+		self storePointer: 32	ofObject: result withValue: (self integerObjectOf: statRootTableCount).
+		self storePointer: 33	ofObject: result withValue: (self integerObjectOf: statAllocationCount).
+		self storePointer: 34	ofObject: result withValue: (self integerObjectOf: statSurvivorCount).
+		self storePointer: 35	ofObject: result withValue: (self integerObjectOf: statGCTime).
+		self storePointer: 36	ofObject: result withValue: (self integerObjectOf: statSpecialMarkCount).
+		self storePointer: 37	ofObject: result withValue: (self integerObjectOf: statIGCDeltaTime).
+		self storePointer: 38	ofObject: result withValue: (self integerObjectOf: statpendingFinalizationSignals).
+		self storePointer: 39	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
 		self pop: 1 thenPush: result.
 		^nil].
 
