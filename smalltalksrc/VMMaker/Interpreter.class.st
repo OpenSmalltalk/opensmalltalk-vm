@@ -1948,7 +1948,7 @@ Interpreter >> bytecodePrimValueWithArg [
 
 { #category : #'plugin primitive support' }
 Interpreter >> callExternalPrimitive: functionID [
-	"Call the external plugin function identified. In the VM this is an address, see 	InterpreterSimulator for it's version. dispatch... is a macro in the VM C code."
+	"Call the external plugin function identified. In the VM this is an address, see 	InterpreterSimulator for it's version. "
 
 	self var: #functionID type: 'void *'.
 	self dispatchFunctionPointer: functionID
@@ -3175,7 +3175,7 @@ Interpreter >> floatObjectOf: aFloat [
 	| newFloatObj |
 self flag: #Dan.
 	self var: #aFloat declareC: 'double aFloat'.
-	newFloatObj _ self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize fill: 0.
+	newFloatObj _ self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize.
 	self storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
 	^ newFloatObj.
 
@@ -3206,8 +3206,9 @@ Interpreter >> flushExternalPrimitiveOf: methodPtr [
 	lit _ self literal: 0 ofMethod: methodPtr.
 	((self isArray: lit) and:[(self lengthOf: lit) = 4])
 		ifFalse:[^nil]. "Something's broken"
-	self storePointer: 2 ofObject: lit withValue: ConstZero.
-	self storePointer: 3 ofObject: lit withValue: ConstZero.
+	"ConstZero is a known SmallInt so no root check needed"
+	self storePointerUnchecked: 2 ofObject: lit withValue: ConstZero.
+	self storePointerUnchecked: 3 ofObject: lit withValue: ConstZero.
 
 ]
 
@@ -3707,6 +3708,7 @@ Interpreter >> internalPrimitiveValue [
 			argumentCount = 1
 				ifTrue: [self storePointer: TempFrameStart ofObject: newContext withValue: self internalStackTop].
 			self internalPop: argumentCount + 1.
+			"copy the initialIP value to the ip slot"
 			initialIP _ self fetchPointer: InitialIPIndex ofObject: newContext.
 			self storePointerUnchecked: InstructionPointerIndex ofObject: newContext withValue: initialIP.
 			self storeStackPointerValue: argumentCount inContext: newContext.
@@ -3759,10 +3761,10 @@ Interpreter >> internalStoreContextRegisters: activeCntx [
 		-1 because it gets incremented BEFORE fetching currentByte"
 
 	self inline: true.
-	self storePointer: InstructionPointerIndex ofObject: activeCntx
+	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: 
 			((self oopForPointer: localIP) + 2 - (method + BaseHeaderSize))).
-	self storePointer: StackPointerIndex		  ofObject: activeCntx
+	self storePointerUnchecked: StackPointerIndex		  ofObject: activeCntx
 		withValue: (self integerObjectOf:
 			((((self oopForPointer: localSP) - (activeCntx + BaseHeaderSize)) >> ShiftForWord) - TempFrameStart + 1)).
 
@@ -4165,11 +4167,12 @@ Interpreter >> lookupMethodInDictionary: dictionary [
 
 { #category : #utilities }
 Interpreter >> makePointwithxValue: xValue yValue: yValue [
-
+"make a Point xValue@yValue.
+We know both will be integers so no value nor root checking is needed"
 	| pointResult |
-	pointResult _ self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 3*BytesPerWord fill: nilObj.
-	self storePointer: XIndex ofObject: pointResult withValue: (self integerObjectOf: xValue).
-	self storePointer: YIndex ofObject: pointResult withValue: (self integerObjectOf: yValue).
+	pointResult _ self instantiateSmallClass: (self splObj: ClassPoint) sizeInBytes: 3*BytesPerWord.
+	self storePointerUnchecked: XIndex ofObject: pointResult withValue: (self integerObjectOf: xValue).
+	self storePointerUnchecked: YIndex ofObject: pointResult withValue: (self integerObjectOf: yValue).
 	^ pointResult
 ]
 
@@ -4515,6 +4518,15 @@ Interpreter >> pop: nItems thenPush: oop [
 
 ]
 
+{ #category : #contexts }
+Interpreter >> pop: nItems thenPushInteger: integerVal [
+"lots of places pop a few items off the stack and then push an integer. MAke it convenient"
+	| sp |
+	self longAt: (sp _ stackPointer - ((nItems - 1) * BytesPerWord)) put:(self integerObjectOf: integerVal).
+	stackPointer _ sp.
+
+]
+
 { #category : #'stack bytecodes' }
 Interpreter >> popFloat [
 	"Note: May be called by translated primitive code."
@@ -4577,7 +4589,7 @@ Interpreter >> positive32BitIntegerFor: integerValue [
 	BytesPerWord = 4
 	ifTrue: ["Faster instantiateSmallClass: currently only works with integral word size."
 			newLargeInteger _ self instantiateSmallClass: (self splObj: ClassLargePositiveInteger)
-					sizeInBytes: BaseHeaderSize + 4 fill: 0]
+					sizeInBytes: BaseHeaderSize + 4]
 	ifFalse: ["Cant use instantiateSmallClass: due to integral word requirement."
 			newLargeInteger _ self instantiateClass: (self splObj: ClassLargePositiveInteger)
 					indexableSize: 4].
@@ -4624,7 +4636,7 @@ Interpreter >> positive64BitIntegerFor: integerValue [
 	check = 0 ifTrue: [^self positive32BitIntegerFor: integerValue].
 	
 	newLargeInteger _
-		self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: BaseHeaderSize + 8 fill: 0.
+		self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: BaseHeaderSize + 8.
 	0 to: 7 do: [:i |
 		self cCode: 'value = ( integerValue >> (i * 8)) & 255'.
 		self storeByte: i ofObject: newLargeInteger withValue: value].
@@ -4756,11 +4768,10 @@ Interpreter >> primitiveAsFloat [
 { #category : #'object access primitives' }
 Interpreter >> primitiveAsOop [
 	| thisReceiver |
-	thisReceiver _ self popStack.
+	thisReceiver _ self stackTop.
 	self success: (self isIntegerObject: thisReceiver) not.
 	successFlag
-		ifTrue: [self pushInteger: (self hashBitsOf: thisReceiver)]
-		ifFalse: [self unPop: 1]
+		ifTrue: [self pop:1 thenPushInteger: (self hashBitsOf: thisReceiver)]
 ]
 
 { #category : #'array and stream primitives' }
@@ -4946,8 +4957,8 @@ Interpreter >> primitiveBlockCopy [
 	"Assume: have just allocated a new context; it must be young.
 	 Thus, can use uncheck stores. See the comment in fetchContextRegisters."
 
-	self storePointer: InitialIPIndex ofObject: newContext withValue: initialIP.
-	self storePointer: InstructionPointerIndex ofObject: newContext withValue: initialIP.
+	self storePointerUnchecked: InitialIPIndex ofObject: newContext withValue: initialIP.
+	self storePointerUnchecked: InstructionPointerIndex ofObject: newContext withValue: initialIP.
 	self storeStackPointerValue: 0 inContext: newContext.
 	self storePointerUnchecked: BlockArgumentCountIndex ofObject: newContext withValue: (self stackValue: 0).
 	self storePointerUnchecked: HomeIndex ofObject: newContext withValue: methodContext.
@@ -4964,14 +4975,12 @@ Interpreter >> primitiveBytesLeft [
 	| aBool |
 	self methodArgumentCount = 0
 		ifTrue: ["old behavior - just return the size of the free block"
-			self pop: 1.
-			^ self pushInteger: (self sizeOfFree: freeBlock)].
+			^self pop: 1 thenPushInteger: (self sizeOfFree: freeBlock)].
 	self methodArgumentCount = 1
 		ifTrue: ["new behaviour -including or excluding swap space depending on aBool"
 			aBool _ self booleanValueOf: self stackTop.
 			successFlag ifFalse: [^ nil].
-			self pop: 2.
-			^ self pushInteger: (self bytesLeft: aBool)].
+			^self pop: 2 thenPushInteger: (self bytesLeft: aBool)].
 	^ self primitiveFail
 ]
 
@@ -5366,8 +5375,8 @@ Interpreter >> primitiveExternalCall [
 			^ self primitiveFail].
 
 	"Clean up session id and external primitive index"
-	self storeInteger: 2 ofObject: lit withValue: ConstZero.
-	self storeInteger: 3 ofObject: lit withValue: ConstZero.
+	self storePointerUnchecked: 2 ofObject: lit withValue: ConstZero.
+	self storePointerUnchecked: 3 ofObject: lit withValue: ConstZero.
 
 	"The function has not been loaded yet. Fetch module and function name."
 	moduleName _ self fetchPointer: 0 ofObject: lit.
@@ -5406,7 +5415,7 @@ Interpreter >> primitiveExternalCall [
 			index _ self addToExternalPrimitiveTable: addr].
 	self success: index >= 0.
 	"Store the index (or -1 if failure) back in the literal"
-	self storePointer: 3 ofObject: lit withValue: (self integerObjectOf: index).
+	self storePointerUnchecked: 3 ofObject: lit withValue: (self integerObjectOf: index).
 
 	"If the function has been successfully loaded process it"
 	(successFlag and: [addr ~= 0])
@@ -5903,8 +5912,7 @@ Interpreter >> primitiveInputSemaphore [
 Interpreter >> primitiveInputWord [
 	"Return an integer indicating the reason for the most recent input interrupt."
 
-	self pop: 1.
-	self pushInteger: 0.	"noop for now"
+	self pop: 1 thenPushInteger: 0.	"noop for now"
 ]
 
 { #category : #'object access primitives' }
@@ -6474,8 +6482,7 @@ Interpreter >> primitiveNextObject [
 	object _ self stackTop.
 	instance _ self accessibleObjectAfter: object.
 	instance = nil
-		ifTrue: [ self pop: argumentCount+1.
-			self pushInteger: 0 ]
+		ifTrue: [ self pop: argumentCount+1 thenPushInteger: 0 ]
 		ifFalse: [ self pop: argumentCount+1 thenPush: instance ].
 ]
 
@@ -6980,8 +6987,7 @@ Interpreter >> primitiveScreenDepth [
 	self export: true.
 	depth _ self ioScreenDepth.
 	self failed ifTrue:[^self primitiveFail].
-	self pop: 1.
-	self pushInteger: depth.
+	self pop: 1 thenPushInteger: depth.
 ]
 
 { #category : #'I/O primitives' }
@@ -7092,8 +7098,7 @@ Interpreter >> primitiveShortAt [
 	successFlag ifTrue: [
 		addr _ rcvr + BaseHeaderSize + (2 * (index - 1)).
 		value _ self shortAt: addr.
-		self pop: 2.  "pop rcvr, index"
-		self pushInteger: value.  "push element value"
+		self pop: 2 thenPushInteger: value. 
 	]
 ]
 
@@ -8759,7 +8764,7 @@ Interpreter >> signed64BitIntegerFor: integerValue [
 	self cCode: 'check = value >> 32'.
 	check = 0 ifTrue: [^self signed32BitIntegerFor: integerValue].
 
-	newLargeInteger _ self instantiateSmallClass: largeClass sizeInBytes:  12 fill: 0.
+	newLargeInteger _ self instantiateSmallClass: largeClass sizeInBytes:  BaseHeaderSize + 8.
 	0 to: 7 do: [:i |
 		self cCode: 'intValue = ( value >> (i * 8)) & 255'.
 		self storeByte: i ofObject: newLargeInteger withValue: intValue].
@@ -9061,9 +9066,9 @@ Interpreter >> storeContextRegisters: activeCntx [
 		-1 because it gets incremented BEFORE fetching currentByte"
 
 	self inline: true.
-	self storePointer: InstructionPointerIndex ofObject: activeCntx
+	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (instructionPointer - method - (BaseHeaderSize - 2))).
-	self storePointer: StackPointerIndex ofObject: activeCntx
+	self storePointerUnchecked: StackPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (self stackPointerIndex - TempFrameStart + 1)).
 
 ]
@@ -9072,7 +9077,7 @@ Interpreter >> storeContextRegisters: activeCntx [
 Interpreter >> storeInstructionPointerValue: value inContext: contextPointer [
 	"Assume: value is an integerValue"
 
-	self storePointer: InstructionPointerIndex ofObject: contextPointer withValue: (self integerObjectOf: value).
+	self storePointerUnchecked: InstructionPointerIndex ofObject: contextPointer withValue: (self integerObjectOf: value).
 ]
 
 { #category : #utilities }
@@ -9088,7 +9093,7 @@ Interpreter >> storeInteger: fieldIndex ofObject: objectPointer withValue: integ
 Interpreter >> storeStackPointerValue: value inContext: contextPointer [
 	"Assume: value is an integerValue"
 
-	self storePointer: StackPointerIndex ofObject: contextPointer
+	self storePointerUnchecked: StackPointerIndex ofObject: contextPointer
 		withValue: (self integerObjectOf: value).
 ]
 

@@ -1302,8 +1302,7 @@ InterpreterSimulator >> primitiveFileOpen [
 				ifTrue: [f _ (FileStream readOnlyFileNamed: fileName).
 						f ifNil:[^self primitiveFail] ifNotNil:[f binary]]
 				ifFalse: [^ self primitiveFail]]).
-		self pop: 3.  "rcvr, name, write"
-		self pushInteger: filesOpen size]
+		self pop: 3 thenPushInteger: filesOpen size]
 ]
 
 { #category : #'file primitives' }
