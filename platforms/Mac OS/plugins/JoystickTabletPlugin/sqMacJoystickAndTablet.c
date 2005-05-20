@@ -17,148 +17,97 @@
 
 #pragma mark Joystick support for Mac OS X
 
-#include <Carbon/Carbon.h>
-#include <IOKit/HID/IOHIDKeys.h>
-#include <IOKit/hid/IOHIDUsageTables.h>
-#include "HID_Utilities_External.h"
+#include "HID_Utilities.h"
 
-/* joystickDevice should contain a valid HID GamePad */
-pRecDevice joystickDevice = NULL;
-pRecElement* joystickCapability;
-enum { XAXIS  = 0, YAXIS = 1, BTN1 = 2, BTN2 = 3, BTN3 = 4, BTN4 = 5, MAXCAPABILITY = 6 };
-
-int joystickInit(void) {
-    pRecDevice deviceCandidate = NULL;
-    int numberOfDevices = 0, i = 0;
-    
-    /* Build list of Generic Desktop devices. */
+int joystickInit(void)
+{
     HIDBuildDeviceList(kHIDPage_GenericDesktop, NULL);
-    
-    if (HIDHaveDeviceList()) {
-		numberOfDevices = HIDCountDevices();
-		/* We only support one device at a time. We will select the first valid one. */
-		deviceCandidate = HIDGetFirstDevice();
-		
-		while (i < numberOfDevices) {
-			if (deviceCandidate) {
-				if ( (deviceCandidate->usage == kHIDUsage_GD_Joystick) || (deviceCandidate->usage == kHIDUsage_GD_GamePad) ) {
-					if (HIDIsValidDevice(deviceCandidate)) {
-					/* The device is valid. */
-					joystickDevice = deviceCandidate;
-					} 
-				} else {
-					/* The device is not valid, check the next one. */
-					deviceCandidate = HIDGetNextDevice(deviceCandidate);
-				}
-			}
-			i++;
-		}
-		
-		joystickDevice = deviceCandidate;
-    }
-    
-    if (joystickDevice) {
-		/* Now that we have a valid device, we try to find its capabilities. */
-		joystickCapability = calloc(MAXCAPABILITY, sizeof(pRecElement));
-		joystickCapabilities(joystickDevice, joystickCapability);
-		return 1;
-    } else {
-		return 0;
-    }
+	return true;
 }
-
-int joystickShutdown() {
-    if (joystickDevice) {
-		free(joystickCapability);
-    }
-    /* Release the device list */
+ 
+int joystickShutdown()
+{
     HIDReleaseDeviceList();
-    return 1;
+    return true;
 }
 
-int joystickCapabilities(pRecDevice device, pRecElement* capability) {
-    /* Find the device capabilities. */
-    pRecElement element = NULL;
-    
-    for (element = HIDGetFirstDeviceElement(device, kHIDElementTypeInput); element != NULL; element = HIDGetNextDeviceElement(element, kHIDElementTypeInput)) {
-		if (element) {
-			switch (element->usagePage) {
+static pRecDevice getJoystickDevice(int stickIndex)
+{
+	pRecDevice device = HIDGetFirstDevice();
+	int stickCount = 0;
+	while (device)
+	{
+		if ( (device->usage == kHIDUsage_GD_Joystick) || (device->usage == kHIDUsage_GD_GamePad) )
+		{
+			stickCount++;
+			if (stickCount == stickIndex)
+				return device;
+		}
+		device = HIDGetNextDevice(device);
+	}
+	return NULL;
+}
+
+
+static int getScaledAxisValue(pRecDevice device, pRecElement element, int userMin, int userMax)
+{
+	SInt32 raw = HIDGetElementValue(device, element);
+	element -> userMin = userMin;
+	element -> userMax = userMax;
+	return (int) HIDScaleValue(raw, element);
+}
+
+int joystickRead(int stickIndex)
+{
+   /* Return input word for the joystick with the given index (starting at 1).
+	This word is encoded as follows:
+
+    <onFlag (1 bit)><buttonFlags (5 bits)><x-value (11 bits)><y-value (11 bits)>
+
+    The highest four bits of the input word are zero. If the onFlag bit is zero,
+    there is no joystick at the given index. The x and y values are
+    11-bit signed values in the range [-1024..1023] representing the raw (unencoded)
+    joystick position.
+    */
+
+	int onFlag = 0;
+	int buttons = 0;
+	int xValue = 0;
+	int yValue = 0;
+	
+	pRecDevice device = getJoystickDevice(stickIndex);	
+	if (device)
+	{
+		onFlag = 1;
+	
+		pRecElement element = HIDGetFirstDeviceElement(device, kHIDElementTypeAll);
+		while (element)
+		{
+			switch (element->usagePage)
+			{
 				case kHIDPage_GenericDesktop:
-					switch (element->usage) {
-						/* X axis */
+					switch (element->usage)
+					{
 						case kHIDUsage_GD_X:
-							joystickCapability[XAXIS] = element;
+							xValue = getScaledAxisValue(device, element, -1024, 1023);
 							break;
-						/* Y axis */
 						case kHIDUsage_GD_Y:
-							joystickCapability[YAXIS] = element;
+							yValue = getScaledAxisValue(device, element, -1024, 1023);
 							break;
 					}
 					break;
 				case kHIDPage_Button:
-					switch (element->usage) {
-						/* Primary/Trigger */
-						case kHIDUsage_Button_1:
-							joystickCapability[BTN1] = element;
-							break;
-							/* Secondary */
-						case kHIDUsage_Button_2:
-							joystickCapability[BTN2] = element;
-							break;
-							/* Tertiary */
-						case kHIDUsage_Button_3:
-							joystickCapability[BTN3] = element;
-							break;
-							/* 5th button */
-						case kHIDUsage_Button_4:
-							joystickCapability[BTN4] = element;
-							break;
+					{
+						int button = element->usage - kHIDUsage_Button_1;
+						if ((button >= 0) && (button <= 4) ) 
+							buttons |= (HIDGetElementValue(device, element) << button);
 					}
 					break;
 			}
+			element = HIDGetNextDeviceElement(element, kHIDElementTypeAll);	
 		}
-    }
-}
-
-int joystickScaleValue(pRecDevice device, pRecElement element) {
-    /* Get a calibrated value on a scale from 0 to 255. */ 
-    SInt32 valueRaw = 0, valueCalibrated = 0, valueScaled = 0;
-    
-    if (HIDIsValidElement(device, element)) {
-		valueRaw = HIDGetElementValue(device, element); 
-		valueCalibrated = HIDCalibrateValue(valueRaw, element);
-		valueScaled = HIDScaleValue(valueCalibrated, element);
-    }
-    
-    return (int)valueScaled;
-}
-
-int joystickRead(int stickIndex) {
-    /* Read the current state of the device. */
-    int buttons = 0, xBits, yBits, value;
-    
-    if (joystickDevice) {
-		value = HIDGetElementValue(joystickDevice, joystickCapability[BTN1]);
-		value += (HIDGetElementValue(joystickDevice, joystickCapability[BTN2]) + 1);
-		value += (HIDGetElementValue(joystickDevice, joystickCapability[BTN3]) + 2);
-		value += (HIDGetElementValue(joystickDevice, joystickCapability[BTN4]) + 3);
-		buttons = value & 0x0F;
-		
-		// Generic Desktop X
-		value = joystickScaleValue(joystickDevice, joystickCapability[XAXIS]);
-		xBits = value & 0xFF;
-		
-		// Generic Desktop Y
-		value = joystickScaleValue(joystickDevice, joystickCapability[YAXIS]);  
-		yBits = value & 0xFF;
-		
-		//return (1 << 27) | (buttons << 22) | (yBits << 11) | xBits;
-		
-		/* The x/y range is between 0 and 255, convert to 0..2047 by shifting left 3 bits */
-		return (1 << 27) | (buttons << 22) | (yBits << 14) | (xBits << 3);
-    } else {
-		return 0;
-    }
+	}
+	return (onFlag << 27) | (buttons << 22) | ((yValue + 1024) << 11) | (xValue + 1024);
 }
 
 #else
@@ -234,7 +183,7 @@ int joystickRead(int stickIndex) {
     /* Return input word for the joystick with the given index (in range [1..2]
     on the Macintosh; other platforms may vary). This word is encoded as follows:
 
-    <onFlag (1 bit)><buttonFlags (5 bits)><x-value (11 bits)><y-value (11 bits)>
+    <onFlag (1 bit)><buttonFlags (5 bits)><y-value (11 bits)><x-value (11 bits)>
 
     The highest four bits of the input word are zero. If the onFlag bit is zero,
     there is no joystick at the given index. This may be because no joystick
