@@ -126,7 +126,7 @@ char empty[256] = { 0 };
 // 
  char *str4(UInt32 chars)
 {
-   char str[5];
+  static char str[5];
   *(int *)&str= chars;
   str[4]= '\0';
   return str;
