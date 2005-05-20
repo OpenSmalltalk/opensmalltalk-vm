@@ -16,7 +16,14 @@ extern struct VirtualMachine *interpreterProxy;
 /* Quicktime MIDI note allocator and channels */
 #define FIRST_DRUM_KIT 16385
 
-int portNamesFn,portIsOpenFn,portSetControlFn,serialPortOpenFn,serialPortCloseFn,serialPortCountFn,serialPortReadIntoFn,serialPortWriteFromFn;
+void* portNamesFn;
+void* portIsOpenFn;
+void* portSetControlFn;
+void* serialPortOpenFn;
+void* serialPortCloseFn;
+void* serialPortCountFn;
+void* serialPortReadIntoFn;
+void* serialPortWriteFromFn;
 
 NoteAllocator na = nil;
 NoteChannel channel[16] = {

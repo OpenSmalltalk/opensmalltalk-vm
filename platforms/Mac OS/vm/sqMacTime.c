@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacTime.c,v 1.16 2004/08/03 02:41:48 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
@@ -31,7 +31,7 @@ extern int setInterruptPending(int value);
     #include <sys/types.h>
     #include <sys/time.h>
     #include <unistd.h>
-    #include "aio.h"
+    #include "sqaio.h"
 
     TMTask    gTMTask,gTMTask1000;
     struct timeval	 startUpTime;

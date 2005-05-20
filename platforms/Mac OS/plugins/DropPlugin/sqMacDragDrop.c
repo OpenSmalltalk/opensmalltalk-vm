@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDragDrop.c,v 1.7 2004/08/03 02:39:43 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: See change log below.
 *	1/4/2002   JMM Carbon cleanup
@@ -102,7 +102,8 @@ extern struct VirtualMachine *interpreterProxy;
 
 int dropInit(void)
 {
-    long response,fn;
+    long response;
+	void *fn;
     Boolean  installedReceiver=false, installedTracker=false;
     OSErr err;
     
@@ -198,7 +199,8 @@ char *dropRequestFileName(int dropIndex) {
 //Primitive to get file stream handle.
 
 int dropRequestFileHandle(int dropIndex) {
-    int  fileOop,fn;
+    int  fileOop;
+	void *fn;
     char *dropName = dropRequestFileName(dropIndex);
 
     if(!dropName)
@@ -284,7 +286,7 @@ pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWin
 		/* we're drawing into the image well if we hilite... */
     Rect  bounds;
 	EventRecord		theEvent;
-    int     fn;
+    void *     fn;
 
 	switch (message) {
 	
@@ -362,7 +364,8 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
 	Size            theSize;
 	OSErr           err;
 	EventRecord		theEvent;
-	long            i,countActualItems,fn;
+	long            i,countActualItems;
+	void *			fn;
 	FInfo 			finderInfo;
 	HFSFlavor		targetHFSFlavor;
 	

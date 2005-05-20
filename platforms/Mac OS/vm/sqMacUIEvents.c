@@ -46,7 +46,7 @@ notes: IsUserCancelEventRef
 
 #if I_AM_CARBON_EVENT
     #include <pthread.h>
-    #include "aio.h"
+    #include "sqaio.h"
     
 	enum { KeyMapSize= 32 };
 

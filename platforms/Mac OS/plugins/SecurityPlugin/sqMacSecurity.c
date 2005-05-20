@@ -195,7 +195,7 @@ int ioInitSecurity(void) {
   long  dirID;
   OSErr err;
   FSSpec spec;
-  int   iLoadAS;
+  void *iLoadAS;
   char  *data;
   
   if (gInitialized) return 1;

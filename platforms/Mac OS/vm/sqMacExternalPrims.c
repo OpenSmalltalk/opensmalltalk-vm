@@ -30,7 +30,7 @@ void createBrowserPluginPath(char *pluginDirPath);
 	WARNING: this always loads a *new* module. Don't even attempt to find a loaded one.
 	WARNING: never primitiveFail() within, just return 0
 */
-int ioLoadModule(char *pluginName) {
+void* ioLoadModule(char *pluginName) {
 	char pluginDirPath[1000];
 	CFragConnectionID libHandle;
 #ifndef BROWSERPLUGIN
@@ -50,13 +50,13 @@ int ioLoadModule(char *pluginName) {
 #endif 	
     
     libHandle = LoadLibViaPath(pluginName, pluginDirPath);
-	if (libHandle != nil) return (int) libHandle;
+	if (libHandle != nil) return (void *) libHandle;
 
 #ifndef BROWSERPLUGIN
 	/* second, look directly in Squeak VM directory for the library */
         getVMPathWithEncoding(pluginDirPath,gCurrentVMEncoding);
 	libHandle = LoadLibViaPath(pluginName, pluginDirPath);
-	if (libHandle != nil) return (int) libHandle;
+	if (libHandle != nil) return (void*) libHandle;
     
     #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
         /* Lastly look for it as a shared import library */
@@ -65,7 +65,7 @@ int ioLoadModule(char *pluginName) {
         err = GetSharedLibrary(tempPluginName, kAnyCFragArch, kLoadCFrag, &libHandle, &mainAddr, errorMsg);
             if (err == noErr) 
                 err = GetSharedLibrary(tempPluginName, kAnyCFragArch, kFindCFrag, &libHandle, &mainAddr, errorMsg);
-            if (libHandle != nil) return (int) libHandle;
+            if (libHandle != nil) return (void*) libHandle;
     #endif
 #endif
     
@@ -175,7 +175,7 @@ OSStatus LoadFrameworkBundle(SInt16 folderLocation,CFStringRef framework, CFBund
 	return err;
 }
 
-int 	ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
+void* 	ioFindExternalFunctionIn(char *lookupName, void * moduleHandle) {
 	void * 		functionPtr = 0;
         CFStringRef	theString;
         
@@ -188,14 +188,14 @@ int 	ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
         functionPtr = (void*)CFBundleGetFunctionPointerForName((CFBundleRef) moduleHandle,theString);
         CFRelease(theString);
                 
-	return (int) functionPtr;
+	return (void*) functionPtr;
 }
 
 /* ioFreeModule:
 	Free the module with the associated handle.
 	WARNING: never primitiveFail() within, just return 0.
 */
-int ioFreeModule(int moduleHandle) {
+sqInt ioFreeModule(void * moduleHandle) {
 	if (!moduleHandle) 
             return 0;
 	CFBundleUnloadExecutable((CFBundleRef) moduleHandle);

@@ -156,7 +156,8 @@ void asyncFileInitPB(AsyncFileState *state, int fPosition) {
 }
 
 int asyncFileValid(AsyncFile *f) {
-	int ithisSessionfn,thisSession;
+	void* ithisSessionfn;
+	int thisSession;
 
 	ithisSessionfn = interpreterProxy->ioLoadFunctionFrom("getThisSession", "FilePlugin");
 	if (ithisSessionfn != 0)
@@ -210,7 +211,8 @@ int asyncFileOpen(AsyncFile *f, int fileNamePtr, int fileNameSize, int writeFlag
 	short int fileRefNum;
 	AsyncFileState *state;
 	OSErr err;
-	int ithisSessionfn,thisSession;
+	void * ithisSessionfn;
+	int thisSession;
         FSSpec	theSpec; 
 
 	/* don't open an already open file */

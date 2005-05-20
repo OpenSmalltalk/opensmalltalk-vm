@@ -66,7 +66,8 @@ int ioPositionOfWindow(wIndexType windowIndex)
 
 int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 {
-	int giLocker,return_value=0;
+	void *giLocker;
+	int return_value=0;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
 #if TARGET_API_MAC_CARBON
@@ -108,7 +109,8 @@ int ioSizeOfWindow(wIndexType windowIndex)
 
 int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 {
-	int giLocker,return_value=0;
+	void * giLocker;
+	int return_value=0;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
 #if TARGET_API_MAC_CARBON

@@ -101,7 +101,7 @@ QDGlobals 		qd;
 #endif
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-    #include "aio.h"
+    #include "sqaio.h"
 #endif 
 
 extern int  getFullScreenFlag();

@@ -64,7 +64,8 @@ int ioSetFullScreenActual(int fullScreen);
 void SetupSurface(void);
 
 int ioSetFullScreen(int fullScreen) {
-        int giLocker,return_value=0;
+        void *  giLocker;
+		int return_value=0;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
@@ -214,7 +215,7 @@ void sqShowWindow(int windowIndex);
 void sqShowWindowActual(int windowIndex);
 
 void sqShowWindow(int windowIndex) {
-        int giLocker;
+        void *  giLocker;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
