@@ -6,14 +6,14 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqPlatformSpecific.h,v 1.14 2004/09/03 00:17:38 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   Jan 22nd 2002, JMM type for squeak file offset
 *   May 5th, 2002, JMM added define for plugin for CW
 *   May 12th, 2002, JMM added SQUEAK_BUILTIN_PLUGIN for CW Pro
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
 *   3.5.1  May 28th, 2003 JMM SQUEAK_BUILTIN_PLUGIN in PB defs
-
+*	3.8.8b2 May 23rd, 2005 JMM Undef 64bit procedure function ptrs
 
 *
    How to use this file:
@@ -41,6 +41,10 @@
 #undef sqImageFileWrite
 #undef sqImageFileStartLocation
 #undef sqAllocateMemory
+
+//64bit function pointers undef
+#undef dispatchFunctionPointer
+#undef dispatchFunctionPointerOnin
 
 #undef squeakFileOffsetType
 #define squeakFileOffsetType off_t
