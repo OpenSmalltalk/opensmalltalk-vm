@@ -244,9 +244,24 @@ int main(void) {
             err = squeakFindImage(&vmfsSpec,&imageFsSpec);
 	    if (err) 
 	        ioExit();
-	    CopyPascalStringToC(imageFsSpec.name,shortImageName);
-            SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
-            SetImageName(&imageFsSpec);
+		
+		{
+			Boolean okay;
+			unsigned char	name[256];
+			int			isDirectory=0,index=0,creationDate,modificationDate;
+			long        parentDirectory;
+			squeakFileOffsetType sizeIfFile;
+			Str255		longFileName;
+			FSSpec	tempFsSpec = imageFsSpec;
+			
+			memcpy(name,tempFsSpec.name,64);
+			okay = fetchFileInfo(index,&tempFsSpec,name,true,
+								&parentDirectory,&isDirectory,&creationDate,
+								&modificationDate,&sizeIfFile,&longFileName);
+			CopyPascalStringToC(longFileName,shortImageName);
+		}
+		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+		SetImageName(&imageFsSpec);
 
 			/* make the image or document directory the working directory */
     	wdPB.ioNamePtr = NULL;

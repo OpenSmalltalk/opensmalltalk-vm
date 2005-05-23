@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIAppleEvents.c,v 1.4 2004/08/03 02:42:00 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  encoding for image name at startup time.
@@ -155,8 +155,22 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     	if (err) 
     	    goto done;
     		
-    	CopyPascalStringToC(fileSpec.name,shortImageName);
-          SetShortImageNameViaString(shortImageName,getEncoding());
+ 		{
+			Boolean okay;
+			unsigned char	name[256];
+			int			isDirectory=0,index=0,creationDate,modificationDate;
+			long        parentDirectory;
+			squeakFileOffsetType sizeIfFile;
+			Str255		longFileName;
+			FSSpec	tempFsSpec = fileSpec;
+			
+			memcpy(name,tempFsSpec.name,64);
+			okay = fetchFileInfo(index,&tempFsSpec,name,true,
+								&parentDirectory,&isDirectory,&creationDate,
+								&modificationDate,&sizeIfFile,&longFileName);
+			CopyPascalStringToC(longFileName,shortImageName);
+		}
+		SetShortImageNameViaString(shortImageName,getEncoding());
         SetImageName(&fileSpec);
    }
     
@@ -280,8 +294,22 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	    if (err) 
 	        goto done;
                 
-            CopyPascalStringToC(fileSpec.name,shortImageName);
-            SetShortImageNameViaString(shortImageName,getEncoding());
+		{
+			Boolean okay;
+			unsigned char	name[256];
+			int			isDirectory=0,index=0,creationDate,modificationDate;
+			long        parentDirectory;
+			squeakFileOffsetType sizeIfFile;
+			Str255		longFileName;
+			FSSpec	tempFsSpec = fileSpec;
+			
+			memcpy(name,fileSpec.name,64);
+			okay = fetchFileInfo(index,&tempFsSpec,name,true,
+								&parentDirectory,&isDirectory,&creationDate,
+								&modificationDate,&sizeIfFile,&longFileName);
+			CopyPascalStringToC(longFileName,shortImageName);
+		}
+		SetShortImageNameViaString(shortImageName,getEncoding());
 
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim')
             return i;
