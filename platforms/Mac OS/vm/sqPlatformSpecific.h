@@ -73,6 +73,15 @@
  	    #define fileno(n) n->handle
 		#undef squeakFileOffsetType
 		#define squeakFileOffsetType unsigned long
+		#undef sqFilenameFromString
+		#define sqFilenameFromString(dst, src, num) \
+		if (1) { \
+			int i; \
+			for (i = 0; i < num; i++) { \
+				dst[i] = *((char *) (src + i)); \
+			} \
+			dst[num] = 0;\
+		}
     #endif
 
     int ftruncate(short int file,int offset);
