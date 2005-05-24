@@ -86,7 +86,9 @@
 #include "sqMacUIEvents.h"
 #include "sqMacMemory.h"
 #include "sqMacEncoding.h"
+#if defined(__APPLE__) && defined(__MACH__)
 #include "sqMacUnixCommandLineInterface.h"
+#endif 
 
 #ifdef __MPW__
 QDGlobals 		qd;
@@ -560,12 +562,14 @@ char * GetAttributeString(int id) {
 		return data;
 	}
 	
+#if !defined(__MWERKS__)
 	if (id < 0 || (id > 2 && id <= 1000))  {
 		char *results;
 		results = unixArgcInterfaceGetParm(id);
 		if (results) 
 			return results;
 	}
+#endif
 
 	/* attribute undefined by this platform */
 	success(false);
