@@ -69,6 +69,9 @@
 # define sqMemoryBase		((char *)0)
 #endif
 
+#ifdef INLINING_WORKS_FOR_SMALL_ACCESSORS
+/* use these if static inline produces efficient code for such small accessor
+ * functions. It doesn't on RISC OS and OSX as of may 2005 */
 static inline sqInt byteAtPointer(char *ptr)			{ return (sqInt)(*((unsigned char *)ptr)); }
 static inline sqInt byteAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned char *)ptr)= (unsigned char)val); }
 static inline sqInt shortAtPointer(char *ptr)			{ return (sqInt)(*((short *)ptr)); }
@@ -96,6 +99,43 @@ static inline sqInt oopAtput(sqInt oop, sqInt val)		{ return oopAtPointerput(poi
 
 #define long32At	intAt
 #define long32Atput	intAtput
+
+#else
+/* use these macros when static inline foo() isn't efficiently compiled */
+#define pointerForOop(oop) ((char*)(sqMemoryBase + (oop)))
+#define oopForPointer(ptr) ((sqInt)(ptr))
+
+#define byteAtPointer(ptr) ((sqInt)(*((unsigned char *)(ptr))))
+#define byteAtPointerput(ptr, val) ((sqInt)(*((unsigned char *)(ptr)) = (unsigned char)(val)))
+
+
+#define shortAtPointer(ptr) ((sqInt)(*((short *)(ptr))))
+#define shortAtPointerput(ptr, val) ((sqInt)(*((short *)(ptr)) = (short)(val)))
+
+#define intAtPointer(ptr) ((sqInt)(*((unsigned int *)(ptr))))
+#define intAtPointerput(ptr, val) ((sqInt)(*((unsigned int *)(ptr)) = (int)(val)))
+
+
+#define longAtPointer(ptr) ((sqInt)(*((sqInt *)(ptr))))
+#define longAtPointerput( ptr, val) ( (sqInt)( *((sqInt *)(ptr))= (sqInt)(val)))
+
+#define byteAt(oop) byteAtPointer(pointerForOop(oop))
+#define byteAtput(oop, val) byteAtPointerput(pointerForOop(oop), (val))
+
+#define shortAt(oop) shortAtPointer(pointerForOop(oop))
+#define shortAtput(oop, val) shortAtPointerput(pointerForOop(oop), (val))
+
+
+#define longAt(oop) longAtPointer(pointerForOop(oop))
+#define longAtput(oop, val) longAtPointerput(pointerForOop(oop), (val))
+
+#define intAt(oop) intAtPointer(pointerForOop(oop)) 
+#define intAtput(oop, val) intAtPointerput(pointerForOop(oop), (val))
+
+#define long32At	intAt
+#define long32Atput	intAtput
+
+#endif
 
 /* platform-dependent float conversion macros */
 /* Note: Second argument must be a variable name, not an expression! */
