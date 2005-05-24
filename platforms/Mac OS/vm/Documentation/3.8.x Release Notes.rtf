@@ -1,5 +1,5 @@
 {\rtf1\mac\ansicpg10000\cocoartf102
-{\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fnil\fcharset77 Monaco;\f2\fnil\fcharset77 LucidaGrande;
+{\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fnil\fcharset77 LucidaGrande;\f2\fnil\fcharset77 Monaco;
 \f3\fswiss\fcharset77 Helvetica;}
 {\colortbl;\red255\green255\blue255;\red137\green19\blue21;\red26\green26\blue255;}
 \margl1440\margr1440\vieww20700\viewh15660\viewkind0
@@ -18,17 +18,20 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 3.8.7.x seems a fine VM, from what people tell me, but now we've 3.8.8.\
 \
 3.8.8b2			Revisions to the 32/64bit memory access to improve VM performance\
-				sqMacJoystickAndTablet.c	More rewrites by Bert.\
+				
+\f1 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
+				
+\f0 sqMacJoystickAndTablet.c	More rewrites by Bert.\
 				sqPlatformSpecific.h		Add undefs for dispatchFunctionPointer, dispatchFunctionPointerOnin\
 				sqMacUIAppleEvents.c		Fix issue with window title not showing long image name on drag & drop image\
 				sqMacMain.c				Fix issue with window title not showing long image name on image selection from dialog prompt. \
 				sqMacUnixCommandLineInterface.c	New, enable command line functions and environment variables. \
 			
-\f1\fs20 \CocoaLigature0  		\cf2 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
+\f2\fs20 \CocoaLigature0  		\cf2 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
 
 \f0\fs24 \CocoaLigature1 					or as environment variables\
 					
-\f1\fs20 \cf2 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
+\f2\fs20 \cf2 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
 \f0\fs24 \cf0 \CocoaLigature1 \
 				\
 \
@@ -65,7 +68,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 3.8.7b1			sqUIEvents.c changed keyUp/keyDown logic to match Windows pattern, key repeat becomes keyDown/keyDown/keyUp\
 \
 3.8.6b6			
-\f2 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
+\f1 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
 				sqMacEncoding.c, sqMacEncoding.h  Minor changes so I can compile user code warrior os-9 again\
 				sqMacUnixInterfaceSound.c  Fix problem with empty buffer being full of junk under certain conditions, that causes a sharp sound  bite. \
 
@@ -226,7 +229,7 @@ sqMacEncoding.c	Alter SetVMPath()
 \f0 per request from 
 \f3 Tetsuya HAYASHI , \
 				add support for 
-\f1\fs20 \CocoaLigature0       \
+\f2\fs20 \CocoaLigature0       \
 				\cf2 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
 
 \f3\fs24 \CocoaLigature1 \
@@ -523,7 +526,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f2 mpeg3Plugin.bundle.\
+\f1 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
@@ -567,7 +570,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f2 mpeg3Plugin.bundle.\
+\f1 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
