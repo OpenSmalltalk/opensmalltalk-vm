@@ -3,6 +3,7 @@
  *  SqueakVMForCarbon
  *
  *  Created by John M McIntosh on Mon Dec 01 2003.
+ *	May 24th, 2005, JMM. bug in SetImageNameViaCFString
  *
  */
 #include "sq.h"
@@ -68,7 +69,6 @@ void SetImageNameViaCFString(CFStringRef string) {
     char *ignore;
 	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
 	CFMutableStringRef mutableStr= CFStringCreateMutableCopy(NULL, 0, string);
-	CFRelease(string);
 	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
 		CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
     CFRetain(mutableStr);
@@ -77,9 +77,13 @@ void SetImageNameViaCFString(CFStringRef string) {
 }
 
 void SetImageNameViaString(char *string,UInt32 encoding) {
-    if (imageNameString != NULL)
+	CFStringRef path;
+	
+	if (imageNameString != NULL)
         CFRelease(imageNameString);
-    SetImageNameViaCFString(CFStringCreateWithCString(NULL, string, encoding));
+	path = CFStringCreateWithCString(NULL, string, encoding);
+    SetImageNameViaCFString(path);
+	CFRelease(path);
 }
 
 void SetImageName(FSSpec *workingDirectory) {
