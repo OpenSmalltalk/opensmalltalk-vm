@@ -25,7 +25,6 @@
 #include <kernel.h>
 #include <stdarg.h>
 
-#define longAt(i) (*((int *) (i)))
 
 /*** Variables -- Imported from Virtual Machine ***/
 
@@ -58,12 +57,14 @@ int				helpMe = 0;
 int				versionMe = 0;
 int				swapMeta = 0;
 int				objectHeadroom = 4*1024*1024;
-char			*windowLabel, *taskNameArg;
+char			*windowLabel, *taskNameArg; 
+int				useDAMemory = 0;
 
 vmArg args[] = {
 		{ ARG_FLAG,   &headlessFlag, "-headless" },
 		{ ARG_FLAG,   &helpMe, "-help" },
 		{ ARG_FLAG,   &versionMe, "-version" },
+		{ ARG_FLAG,   &useDAMemory, "-useDA" },
 		{ ARG_FLAG,   &swapMeta,  "-swapmeta"},
 		{ ARG_UINT,   &objectHeadroom, "-memory:"},
 		{ ARG_STRING, &windowLabel, "-windowlabel:"}, 
@@ -160,6 +161,11 @@ int platAllocateMemory( int amount) {
 os_error * e;
 int daSizeLimit, daSize;
 byte * daBaseAddress;
+
+	PRINTF(("\\t platAllocateMemory requesting: %08x\n", amount));
+	/* work out the size of dynamic area allowed to see if we can use a large
+	 * application space allocation. On RISC OS 4 or if Aemulor is running
+	 * on RISC OS 5, we can't. We also have the -useDA cmdline flag */ 
 	if ((e = xos_read_dynamic_area(
 				os_DYNAMIC_AREA_APPLICATION_SPACE,
 				&daBaseAddress,
@@ -169,10 +175,11 @@ byte * daBaseAddress;
 		platReportFatalError(e);
 		return false;
 	}
-	PRINTF(("\\t platAllocateMemory DA size check: %08x @ %08x\n", (int)daSizeLimit, (int)daBaseAddress));
-	if (daSizeLimit <= 0x1BF8000 ) {
+ 	PRINTF(("\\t platAllocateMemory DA size check: %08x @ %08x\n", (int)daSizeLimit, (int)daBaseAddress));
+
+	if (useDAMemory || (daSizeLimit <= 0x1BF8000) ) {
 		/* RISC OS 4 or Aemulor is preventing a large application slot,
-		 * so use a DA instead */
+		 * or useDAMemory is set, so use a DA instead */
 		if ((e = xosdynamicarea_create (
 					os_DYNAMIC_AREA_APPLICATION_SPACE,
 					amount,
@@ -188,7 +195,8 @@ byte * daBaseAddress;
 				)) !=NULL) {
 			platReportFatalError(e);
 			return false;
-		}
+		};
+		PRINTF(("\\t platAllocateMemory DA \n"));
 	} else {
 		/* Looks like we can use a large application slot so
 		 * just malloc the memory */
@@ -332,9 +340,13 @@ sqInt ioMicroMSecs(void) {
    enough to slow down the VM. Thus, it can use a more expensive clock
    that ioMSecs().
 */
+#ifdef TIMERMOD
 _kernel_swi_regs regs;
 	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
 	return (regs.r[0] * 1000) + (int)(regs.r[1] / 1000);
+#else
+	return (clock() * 1000/CLOCKS_PER_SEC);
+#endif
 
 }
 

@@ -22,8 +22,6 @@
 #include <kernel.h>
 #include <ctype.h>
 
-#define longAt(i) (*((int *) (i)))
-
 
 /* set from header when image file is loaded */
 extern int	getSavedWindowSize(void);

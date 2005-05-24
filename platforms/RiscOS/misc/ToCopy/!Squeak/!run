@@ -14,6 +14,9 @@ RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
 |      Specify amount of free space to attempt to allocate for Squeak's object
 |      memory.  More will be claimed for the display sprite that is used.
 |      15m == 15 MB, for example.
+| -useDA
+|      force use of DynamicArea memory even if you are on RISC OS 5 and
+|      Aemulor is not running.
 |      I recommend a setting of around double the image file size
 | -windowlabel:<string>
 |      Specify the label for the window, default is the pathname %*0 below
@@ -25,6 +28,7 @@ RMEnsure TimerMod 4.12 RMLoad <Squeak$Dir>.modules.TimerMod.TimerMod
 | -swapmeta
 |      Swap the left and right ctrl key meanings; see the !help file.
 | startupfile/URL - path for a Smalltalk file or a URL that will yield one
+|
 | imageoption - any words following will be available to the image via
 | Smalltalk getSystemAttribute: -{1000, 1}
-/<Squeak$Dir>.!RunImage -memory:22m  %*0
+/<Squeak$Dir>.!RunImage -memory:28m  %*0

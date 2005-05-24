@@ -23,8 +23,6 @@
 #include "sq.h"
 #include "sqArguments.h"
 
-#define longAt(i) (*((int *) (i)))
-
 wimp_block			wimpPollBlock;
 wimp_event_no		wimpPollEvent;
 int					wimpPollWord;
