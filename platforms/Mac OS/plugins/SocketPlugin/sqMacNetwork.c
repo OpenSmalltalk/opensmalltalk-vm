@@ -895,7 +895,7 @@ void sqSocketConnectToPort(SocketPtr s, int addr, int port) {
 }
 
 
-int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize) {
+int sqSocketSendDataBufCount(SocketPtr s, char * buf, int bufSize) {
 	//
 	// Send data really fast
 	// We create a copy of the data and give it to OT to play with
@@ -964,7 +964,7 @@ int sqSocketSendDataBufCount(SocketPtr s, int buf, int bufSize) {
 //Avoids race conditions between binding and send in Smalltalk
 //
 
-int sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port, int buf, int bufSize) {
+int sqSockettoHostportSendDataBufCount(SocketPtr s, int address, int port, char * buf, int bufSize) {
  sqSocketConnectToPort(s, address, port);
  return sqSocketSendDataBufCount(s, buf, bufSize);
 }
@@ -1155,7 +1155,7 @@ int sqSocketReceiveDataAvailable(SocketPtr s)
 //
 //Read data into the buffer supplied
 //
-int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize) {
+int sqSocketReceiveDataBufCount(SocketPtr s, char * buf, int bufSize) {
     EPInfo* epi;
  	UInt32  bytesRead = 0;
     Boolean doLeave;
@@ -1181,7 +1181,7 @@ int sqSocketReceiveDataBufCount(SocketPtr s, int buf, int bufSize) {
 //
 //New primitive to read UDP data and get data, host/port, and more flag
 //
-int sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, int buf, int bufSize,  int *address,  int *port, int *moreFlag) {
+int sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char * buf, int bufSize,  int *address,  int *port, int *moreFlag) {
     EPInfo* epi;
  	UInt32 bytesRead = 0;
     Boolean doLeave;
@@ -2358,7 +2358,7 @@ static SInt32 SendData(EPInfo* epi,char* buffer, UInt32 size)
 //
 //Set the options
 //
-int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(SocketPtr s,int optionNameT, int optionNameSize, int optionValueT, int optionValueSize, int *result)	{
+int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(SocketPtr s,char * optionNameT, int optionNameSize, char * optionValueT, int optionValueSize, int *result)	{
     EPInfo*     epi;
     OTResult    error;
     char        optionName[80],optionValue[80];
@@ -2386,20 +2386,20 @@ int sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSi
 //
 //Get the options
 //
-int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s,int optionNameT, int optionNameSize, int *result)	{
+int sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s,char * optionNameT, int optionNameSize, int *result)	{
     EPInfo*     epi;
     OTResult    error;
-    char        optionName[80];
+    char        optionNameTemp[80];
    
 	*result = 0;
 	if (!SocketValid(s)) return -1;
     epi = (EPInfo *) s->privateSocketPtr;
 
-	OTMemcpy(optionName,(char *) optionNameT,optionNameSize);  //NEED to fiddle with error number JMM to say readonly notvalid etc.
-	optionName[optionNameSize] = 0x00;
+	OTMemcpy(optionNameTemp,(char *) optionNameT,optionNameSize);  //NEED to fiddle with error number JMM to say readonly notvalid etc.
+	optionNameTemp[optionNameSize] = 0x00;
 	
      	
-   error = lookupOptionName(epi, true, (char *) &optionName, NULL,(long *)  result);
+   error = lookupOptionName(epi, true, (char *) &optionNameTemp, NULL,(long *)  result);
    return error;
 }
 
