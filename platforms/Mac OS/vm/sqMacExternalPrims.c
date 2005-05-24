@@ -264,7 +264,7 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 }
 
 #else
-int  ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
+void *  ioFindExternalFunctionIn(char *lookupName, void * moduleHandle) {
 	CFragSymbolClass ignored;
 	Ptr functionPtr = 0;
 	OSErr err;
@@ -279,14 +279,14 @@ int  ioFindExternalFunctionIn(char *lookupName, int moduleHandle) {
 		&functionPtr, &ignored);
 	if (err) 
 	    return 0;
-	return (int) functionPtr;
+	return (void *) functionPtr;
 }
 
 /* ioFreeModule:
 	Free the module with the associated handle.
 	WARNING: never primitiveFail() within, just return 0.
 */
-int ioFreeModule(int moduleHandle) {
+sqInt ioFreeModule( void  *moduleHandle) {
 	CFragConnectionID libHandle;
 	OSErr err;
 
