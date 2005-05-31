@@ -18,10 +18,11 @@
 #pragma mark Joystick support for Mac OS X
 
 #include "HID_Utilities.h"
+long HIDGetElementValue (pRecDevice pDevice, pRecElement pElement);
 
 int joystickInit(void)
 {
-    HIDBuildDeviceList(kHIDPage_GenericDesktop, NULL);
+    HIDBuildDeviceList(kHIDPage_GenericDesktop, 0);
 	return true;
 }
  
