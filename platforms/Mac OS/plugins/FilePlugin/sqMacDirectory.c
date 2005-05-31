@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacDirectory.c,v 1.11 2004/08/03 02:39:35 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: See change log below.
 * 
@@ -205,7 +205,6 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 	*/
 
 	int okay;
-	HVolumeParam volumeParams;
     FSSpec      spec;
     long        parentDirectory;
     OSErr       err;
@@ -227,9 +226,10 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 		fsVolumeParam.volumeName = &uniStr;
 		fsVolumeParam.ioVRefNum = kFSInvalidVolumeRefNum;
 		fsVolumeParam.volumeIndex = index;
-		fsVolumeParam.whichInfo = NULL;
+		fsVolumeParam.whichInfo = 0;
 		fsVolumeParam.volumeInfo = &volumeInfo;
 		fsVolumeParam.ref = NULL;
+		fsVolumeParam.whichInfo = kFSVolInfoCreateDate + kFSVolInfoModDate; 
 		okay = PBGetVolumeInfoSync( &fsVolumeParam) == noErr;
 /*
 		FSGetVolumeInfo (kFSInvalidVolumeRefNum,
@@ -250,8 +250,18 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 				// strncpy(name, &(uniStr.unicode), uniStr.length);
 				// *nameLength       = uniStr.length;
 				*nameLength       = strlen(name);
-				*creationDate     = convertToSqueakTime(volumeParams.ioVCrDate);
-				*modificationDate = convertToSqueakTime(volumeParams.ioVLsMod);
+				{	
+					LocalDateTime local;
+					
+					ConvertUTCToLocalDateTime(&fsVolumeParam.volumeInfo->createDate,&local);
+					*creationDate     = convertToSqueakTime(local.lowSeconds);
+				}
+				{	
+					LocalDateTime local;
+					
+					ConvertUTCToLocalDateTime(&fsVolumeParam.volumeInfo->modifyDate,&local);
+					*modificationDate     = convertToSqueakTime(local.lowSeconds);
+				}
 				*isDirectory      = true;
 				*sizeIfFile       = 0;
 				return ENTRY_FOUND;
