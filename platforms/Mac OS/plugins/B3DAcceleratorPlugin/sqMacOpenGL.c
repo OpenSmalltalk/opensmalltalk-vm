@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacOpenGL.c,v 1.11 2004/09/23 16:33:26 johnmci Exp $
+*   RCSID:   $Id$
 * 
 *   NOTES:
 *
@@ -537,7 +537,8 @@ int glSwapBuffers(glRenderer *renderer) {
 	} else {
 		WindowPtr win;
 		Rect src, dst, portBounds;
-		GrafPtr oldPort;
+		GrafPtr oldPort,winPort;
+		Boolean portChanged;
 		
 		/* ensure execution for offscreen contexts */
 		glFinish();
@@ -547,22 +548,35 @@ int glSwapBuffers(glRenderer *renderer) {
 		win =  getSTWindow();
 		if(!win) return 0;
 		
+		winPort = GetWindowPort(win);
 #ifdef BROWSERPLUGIN
 		StartDraw();
 #else
+#if TARGET_API_MAC_CARBON
+		portChanged = QDSwapPort(winPort, &oldPort);
+#else
 		GetPort(&oldPort);
-		SetPortWindowPort(win);
-		GetPortBounds((CGrafPtr) win,&portBounds);
+		SetPort(winPort);
+#endif
+		GetPortBounds(winPort,&portBounds);
+
+//  Draw into the new port here
+
 #endif		
 		SetRect(&src, 0, 0, renderer->bufferRect[2], renderer->bufferRect[3]);
 		SetRect(&dst, renderer->bufferRect[0], renderer->bufferRect[1], 
 				renderer->bufferRect[0] + renderer->bufferRect[2],
 				renderer->bufferRect[1] + renderer->bufferRect[3]);
-		CopyBits(GetPortBitMapForCopyBits(renderer->gWorld), GetPortBitMapForCopyBits(GetWindowPort(win)), &src, &dst, srcCopy, NULL);
+		CopyBits(GetPortBitMapForCopyBits(renderer->gWorld), GetPortBitMapForCopyBits(winPort), &src, &dst, srcCopy, NULL);
 #ifdef BROWSERPLUGIN
 		EndDraw();
 #else
+#if TARGET_API_MAC_CARBON
+		if (portChanged)
+			QDSwapPort(oldPort, NULL);
+#else
 		SetPort(oldPort);
+#endif		
 #endif		
 	}
 	return 1;
