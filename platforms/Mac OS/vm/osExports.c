@@ -14,7 +14,7 @@
 
 #include <stdio.h>
 #include "sqMacUIEvents.h"
-#include "serialPlugin.h"
+#include "SerialPlugin.h"
 
 /* duh ... this is ugly */
 
