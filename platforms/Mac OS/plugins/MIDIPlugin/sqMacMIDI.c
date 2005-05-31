@@ -1,5 +1,5 @@
 #include "sq.h"
-#include "MidiPlugin.h"
+#include "MIDIPlugin.h"
 #if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
     #include <QuickTime/QuickTimeMusic.h>
