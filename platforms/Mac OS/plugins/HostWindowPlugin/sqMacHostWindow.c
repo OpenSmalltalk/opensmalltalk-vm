@@ -199,7 +199,7 @@ windowDescriptorBlock *entry;
 		if(entry->handle == windowHandle) return entry->windowIndex;
 		entry = entry->next;
 	}
-	return NULL;
+	return 0;
 }
 
 int windowIndexFromBlock( windowDescriptorBlock * thisWindow) {
@@ -209,7 +209,7 @@ windowDescriptorBlock *entry;
 		if(entry == thisWindow) return entry->windowIndex;
 		entry = entry->next;
 	}
-	return NULL;
+	return 0;
 }
 
 windowDescriptorBlock *AddWindowBlock(void) {
@@ -247,7 +247,7 @@ windowDescriptorBlock *prevEntry;
 		prevEntry = windowListRoot;
 		while(prevEntry->next != thisWindow) {
 			prevEntry = prevEntry->next;
-			if (prevEntry == NULL) return NULL;
+			if (prevEntry == NULL) return 0;
 		}
 		prevEntry->next = thisWindow->next;
 	}
