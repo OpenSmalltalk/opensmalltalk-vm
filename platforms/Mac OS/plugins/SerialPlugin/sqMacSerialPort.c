@@ -6,7 +6,7 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacSerialPort.c,v 1.4 2004/08/03 02:41:31 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM enable 16 ports for serial, versus four, which was capped at 2?
@@ -22,7 +22,6 @@
 	#include <Serial.h>
 	#include <Strings.h>
 #endif
-#include "SerialPlugin.h"
 extern struct VirtualMachine *interpreterProxy;
 
 /*** Constants ***/
