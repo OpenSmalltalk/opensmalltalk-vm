@@ -1,7 +1,8 @@
-# Project:   sq37plugin
-# Make the pluginised VM for v3.7
+# Project:   sq38plugin
+# Make the pluginised VM for v3.8
 # Reworked to use VMMaker non-copying of platform & cross files
 # Add check for Squeak3D dir to optionally compile the Squeak3D plugin
+# Ditto for HostWindow and LocalePlugin
 
 # Toolflags:
 CCflags = -c -fa -Wabp -depend !Depend -IC:,OSLib:,C:^.rink,$(PVM),$(CVM),$(SVM) -throwback  -DACORN -Otime
@@ -30,6 +31,7 @@ PlHdr=$(CVM).h.sqVirtualMachine $(PVM).h.sqConfig $(PVM).h.sqPlatformSpecific
 VMHdr=$(CVM).h.sq $(PlHdr)
 SQ3DTestFile= $(SPlug).Squeak3D.dsc.Squeak3D
 HWTestFile= $(SPlug).HostWindowPlugin.dsc.HostWindowPlugin
+LocaleTestFile= $(Plug).LocalePlugin.dsc.LocalePlugin
 
 pluginList=B2DPlugin BitBltPlugin BMPReadWriterPlugin DSAPrims FFTPlugin FilePlugin FileCopyPlugin FloatArrayPlugin GeniePlugin JPEGReaderPlugin  LargeIntegers Matrix2x3Plugin MiscPrimitivePlugin RePlugin SecurityPlugin SocketPlugin SoundPlugin StarSqueakPlugin  SurfacePlugin ZipPlugin
 
@@ -41,6 +43,9 @@ pluginList += Squeak3D
 endif
 ifeq ( $(wildcard $(HWTestFile)), $(HWTestFile)
 pluginList += HostWindowPlugin
+endif
+ifeq ( $(wildcard $(LocaleTestFile)), $(LocaleTestFile)
+pluginList += LocalePlugin
 endif
 
 vm:	$(Sqk).!Runimage vmobjdir
@@ -362,6 +367,33 @@ $(SPlug).LargeIntegers.o.LargeIntegers: $(SPlug).LargeIntegers.c.LargeIntegers $
 	cc $(ccflags) -o $@ $*.c
 
 
+
+###########
+# Locale Plugin make rule.
+# More complex - involves files from several sources
+# LocalePlugin.c is generated
+# LocalePlugin.h is in Cross
+# sqRPCLocale.c is in RiscOS
+
+###########
+LocalePlugin:	$(SqPlugins).LocalePlugin
+	@echo done $*
+
+$(SqPlugins).LocalePlugin:	$(SPlug).LocalePlugin.o.LocalePlugin \
+		$(SPlug).LocalePlugin.o.sqRPCLocale  \
+		$(SPlug).LocalePlugin.dsc.LocalePlugin \
+		$(Sqk).ptrblkmap
+	rink -o $(SqPlugins).LocalePlugin \
+		-h $(SPlug).LocalePlugin.dsc.LocalePlugin \
+		-m $(Sqk).ptrblkmap \
+		-a $(SPlug).LocalePlugin.o.LocalePlugin \
+			$(SPlug).LocalePlugin.o.sqRPCLocale 
+
+$(SPlug).LocalePlugin.o.LocalePlugin: $(SPlug).LocalePlugin.c.LocalePlugin $(PlHdr)
+	cc $(ccflags) -I$(CPlug).LocalePlugin -o $@ $*.c 
+$(SPlug).LocalePlugin.o.sqRPCLocale: $(PPlug).LocalePlugin.c.sqRPCLocale  $(PlHdr)
+	cc $(ccflags) -I$(CPlug).LocalePlugin -o $@ $(PPlug).LocalePlugin.c.sqRPCLocale
+
 ###########
 # Matrix2x3 Plugin make rule.
 # Very simple, only the one source file
@@ -679,5 +711,4 @@ $(SPlug).ZipPlugin.o.ZipPlugin: $(SPlug).ZipPlugin.c.ZipPlugin  $(PlHdr)
 
 
 # Dynamic dependencies:
-
 
