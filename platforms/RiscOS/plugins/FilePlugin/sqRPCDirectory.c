@@ -46,7 +46,7 @@ int convertToSqueakTime(os_date_and_time fileTime) {
  * one @ 1/1/1900. fileTime is stored as 5 bytes of the centiseconds
  * since then. Use territory call to get timezone & DST offset  */
 unsigned int high, low, tc;
-char tzname[50];
+char *tzname;
 int tzoffset;
 	low =  *(unsigned int*)fileTime;
 	high = *(unsigned int*)(fileTime+4);
@@ -57,7 +57,7 @@ int tzoffset;
 	 * centiseconds from the RISC OS time */
 	tc = 0xBBF81E00;
 	/* now use the territory to find the timezone/dst offset */
-	xterritory_read_current_time_zone((char**)&tzname, &tzoffset);
+	xterritory_read_current_time_zone(&tzname, &tzoffset);
 	if (low < tc) /* check for a carry */
 		high--;
 	low -= tc;
