@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacPrinting.c,v 1.5 2002/11/10 09:24:22 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *	Take carbon sample code, and alter it a bit
@@ -284,7 +284,7 @@ OSStatus 	DoPageSetupDialog(PrintingLogicPtr printJob)
 	//	Display the Page Setup dialog.	
 	if (status == noErr)
             {
-            int giLocker;
+            void * giLocker;
             giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
             if (giLocker != 0) {
                 long *foo;
@@ -370,7 +370,7 @@ OSStatus 	DoPrintDialog(PrintingLogicPtr printJob)
 	//	Display the Print dialog.
 	if (status == noErr)
             {
-            int giLocker;
+            void * giLocker;
             giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
             if (giLocker != 0) {
                 long *foo;
