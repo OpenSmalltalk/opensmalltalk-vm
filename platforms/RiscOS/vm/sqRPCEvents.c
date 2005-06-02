@@ -799,22 +799,22 @@ sqKeyboardEvent *evt;
 	evt->charCode = keyValue;
 	evt->pressCode = EventKeyDown;
 	evt->modifiers = modifiers;
+	evt->utf32Code = keyValue; /* what Unicode ? */
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
 	evt->windowIndex = windowIndex; 
 	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
 	evt->charCode = keyValue;
 	evt->pressCode = EventKeyChar;
 	evt->modifiers = modifiers;
+	evt->utf32Code = keyValue; /* what Unicode ? */
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
 	evt->windowIndex = windowIndex; 
 	evt = (sqKeyboardEvent *)EventBufAppendEvent( EventTypeKeyboard);
 	evt->charCode = keyValue;
 	evt->pressCode = EventKeyUp;
 	evt->modifiers = modifiers;
+	evt->utf32Code = keyValue; /* what Unicode ? */
 	evt->reserved1 = 0;
-	evt->reserved2 = 0;
 	evt->windowIndex = windowIndex; 
 }
 
