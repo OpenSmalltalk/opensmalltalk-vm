@@ -1,23 +1,18 @@
-'From Squeak3.6beta of ''4 July 2003'' [latest update: #5373] on 12 August 2003 at 10:40:14 pm'!
+'From Squeak3.8 of ''5 May 2005'' [latest update: #6665] on 5 June 2005 at 2:45:12 pm'!
 "Change Set:		Gnuifier
 Date:			1 January 2002
 Author:			acg
-
 Some code to automate building a VM under GCC.  To run, fileIn and execute:
-
 	(Gnuifier on: aFileDirectory) gnuify
-
 For example, try something like the following: 
-
 	(Gnuifier on: 
 		((FileDirectory default 
 			directoryNamed: 'src') 
 				directoryNamed: 'vm') pathName) gnuify
-
 "!
 
 Object subclass: #Gnuifier
-	instanceVariableNames: 'directory '
+	instanceVariableNames: 'directory'
 	classVariableNames: ''
 	poolDictionaries: ''
 	category: 'VMConstruction-Building'!
@@ -93,7 +88,7 @@ Do you want to gnuify anyway?') ifFalse: [^nil].
 	
 ! !
 
-!Gnuifier methodsFor: 'as yet unclassified' stamp: 'JMM 8/12/2003 22:39'!
+!Gnuifier methodsFor: 'as yet unclassified' stamp: 'JMM 6/5/2005 14:42'!
 gnuifyFrom: inFileStream to: outFileStream
 
 "convert interp.c to use GNU features"
@@ -120,13 +115,9 @@ gnuifyFrom: inFileStream to: outFileStream
 			outLine := inLine. 	"print out one line for each input line; by default, print out the line that was input, but some rules modify it"
 			extraOutLine := nil.   "occasionally print a second output line..."
 			beforeInterpret ifTrue: [
-				(inLine findString: 'inline:') > 0 ifTrue: [
-					"oops!!!!"
-					outFileStream nextPutAll: '#error interp was not inlined, so cannot be gnuified'.
-					Smalltalk snapshot: false andQuit: true. ].
 				(inLine = '#include "sq.h"') ifTrue: [
 					outLine := '#include "sqGnu.h"'. ].
-				(inLine = 'int interpret(void) {') ifTrue: [
+				(inLine = 'sqInt interpret(void) {') ifTrue: [
 					"reached the beginning of interpret"
 					beforeInterpret := false.
 					inInterpret := true.
@@ -142,7 +133,7 @@ gnuifyFrom: inFileStream to: outFileStream
 				(inLine findString: ' localSP;') > 0 ifTrue: [
 					outLine := '    register char* localSP SP_REG;'. ].
 				(inLine findString: ' currentBytecode;') > 0 ifTrue: [
-					outLine := '    register int currentBytecode CB_REG;' ].
+					outLine := '    register sqInt currentBytecode CB_REG;' ].
 				inLine isEmpty ifTrue: [
 					"reached end of variables"
 					inInterpretVars := false.
@@ -161,7 +152,7 @@ gnuifyFrom: inFileStream to: outFileStream
 					inInterpret := false. ] ]
 			ifFalse: [
 			beforePrimitiveResponse ifTrue: [
-				(inLine beginsWith: 'int primitiveResponse(') ifTrue: [
+				(inLine beginsWith: 'sqInt primitiveResponse(') ifTrue: [
 					"into primitiveResponse we go"
 					beforePrimitiveResponse := false.
 					inPrimitiveResponse := true.
