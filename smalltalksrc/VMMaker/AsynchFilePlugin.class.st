@@ -11,6 +11,13 @@ Class {
 }
 
 { #category : #translation }
+AsynchFilePlugin class >> declareCVarsIn: cg [
+	super declareCVarsIn: cg.
+	cg var: #sCOAFfn type: #'void *'.
+
+]
+
+{ #category : #translation }
 AsynchFilePlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^true
