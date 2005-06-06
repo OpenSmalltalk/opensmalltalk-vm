@@ -74,13 +74,13 @@ Class {
 	],
 	#classVars : [
 		'SemaphoresToSignalSize',
-		'StreamArrayIndex',
+		'StreamIndexIndex',
 		'AtCacheMask',
 		'MethodIndex',
-		'MessageArgumentsIndex',
+		'StreamArrayIndex',
 		'MethodArrayIndex',
 		'DirEntryFound',
-		'LastLinkIndex',
+		'CompilerHooksSize',
 		'MethodCachePrim',
 		'CrossedX',
 		'ExcessSignalsIndex',
@@ -102,8 +102,8 @@ Class {
 		'InitialIPIndex',
 		'MethodCacheNative',
 		'HeaderIndex',
-		'InstructionPointerIndex',
 		'BytecodeTable',
+		'InstructionPointerIndex',
 		'ProcessListsIndex',
 		'SuspendedContextIndex',
 		'MaxExternalPrimitiveTableSize',
@@ -140,10 +140,10 @@ Class {
 		'StreamReadLimitIndex',
 		'PrimitiveTable',
 		'SuperclassIndex',
+		'MessageArgumentsIndex',
 		'AtCacheEntries',
-		'StreamIndexIndex',
 		'StackPointerIndex',
-		'CompilerHooksSize'
+		'LastLinkIndex'
 	],
 	#category : #'VMMaker-Interpreter'
 }
