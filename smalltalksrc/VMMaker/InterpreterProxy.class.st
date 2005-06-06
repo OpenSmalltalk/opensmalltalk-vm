@@ -258,13 +258,14 @@ InterpreterProxy >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPointer
 ]
 
 { #category : #'object access' }
-InterpreterProxy >> fetchPointer: index ofObject: oop [
-	^oop instVarAt: index+1
+InterpreterProxy >> fetchLong32: fieldIndex ofObject: oop [
+"fetchWord:ofObject: is rescinded as of VMMaker 3.8 64bit VM. This is the same code as used therein and may need revision for 64 bit cleanliness"
+	^oop instVarAt: fieldIndex+1
 ]
 
 { #category : #'object access' }
-InterpreterProxy >> fetchWord: fieldIndex ofObject: oop [
-	^oop instVarAt: fieldIndex+1
+InterpreterProxy >> fetchPointer: index ofObject: oop [
+	^oop instVarAt: index+1
 ]
 
 { #category : #'object access' }
@@ -501,6 +502,12 @@ InterpreterProxy >> methodPrimitiveIndex [
 { #category : #'special objects' }
 InterpreterProxy >> nilObject [
 	^nil
+]
+
+{ #category : #'object access' }
+InterpreterProxy >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
+"fetchWord:ofObject: is rescinded as of VMMaker 3.8 64bit VM. This is a placeholder to sit in the sqVirtualMachine structure to support older plugins for a while"
+	self halt: 'deprecated method'
 ]
 
 { #category : #'stack access' }
