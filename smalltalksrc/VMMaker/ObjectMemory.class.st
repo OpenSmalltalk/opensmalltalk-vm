@@ -1056,7 +1056,7 @@ ObjectMemory >> fetchClassOfNonInt: oop [
 
 { #category : #'interpreter access' }
 ObjectMemory >> fetchLong32: fieldIndex ofObject: oop [
-	"index by 32-bit units, and return a 32-bit value"
+	" index by 32-bit units, and return a 32-bit value. Intended to replace fetchWord:ofObject:"
 
 	^ self long32At: oop + BaseHeaderSize + (fieldIndex << 2)
 ]
@@ -1075,13 +1075,6 @@ ObjectMemory >> fetchPointer: fieldIndex ofObject: oop [
 	"index by word size, and return a pointer as long as the word size"
 
 	^ self longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
-]
-
-{ #category : #'interpreter access' }
-ObjectMemory >> fetchWord: fieldIndex ofObject: oop [
-	"This message is deprecated.  Use fetchLong32, fetchLong64 or fetchPointer"
-
-	self error: 'deprecated -- do not use -- and then delete me'
 ]
 
 { #category : #'interpreter access' }
