@@ -2121,6 +2121,13 @@ ObjectMemory >> objectAfterWhileForwarding: oop [
 	^ self oopFromChunk: (oop + sz)
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
+	"This message is deprecated but supported for a while via a tweak to sqVirtualMachine.[ch] Use fetchLong32, fetchLong64 or fetchPointer instead for new code"
+
+	self fetchLong32: fieldIndex ofObject: oop
+]
+
 { #category : #'oop/chunk conversion' }
 ObjectMemory >> oopFromChunk: chunk [
 	"Compute the oop of this chunk by adding its extra header bytes."
