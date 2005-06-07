@@ -677,7 +677,7 @@ LargeIntegersPlugin >> cHighBit: uint [
 	argument is zero."
 	"For 64 bit uints there could be added a 32-shift."
 	| shifted bitNo |
-	self flag: #is64bitClean.
+
 	self var: #shifted declareC: 'unsigned int  shifted'.
 	shifted := uint.
 	bitNo := 0.
