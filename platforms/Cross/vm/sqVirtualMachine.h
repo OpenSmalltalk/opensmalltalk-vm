@@ -52,7 +52,7 @@ typedef struct VirtualMachine {
  * something utterly horrible to scare off the natives. A new      *
  * equivalent but 64 bit valid function is added as                *
  * 'fetchLong32OfObject'                                           */
-	sqInt  (*obsoleteDontUseThisFetchWordOfObject)(sqInt fieldFieldIndex, sqInt oop);
+	sqInt  (*obsoleteDontUseThisFetchWordofObject)(sqInt fieldFieldIndex, sqInt oop);
 	void  *(*firstFixedField)(sqInt oop);
 	void  *(*firstIndexableField)(sqInt oop);
 	sqInt  (*literalofMethod)(sqInt offset, sqInt methodPointer);

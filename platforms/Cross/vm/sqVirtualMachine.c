@@ -40,7 +40,7 @@ sqInt  fetchPointerofObject(sqInt index, sqInt oop);
  * something utterly horrible to scare off the natives. A new *
  * equivalent but 64 bit valid function is added as           *
  * 'fetchLong32OfObject'                                      */
-sqInt  obsoleteDontUseThisFetchWordOfObject(sqInt index, sqInt oop);
+sqInt  obsoleteDontUseThisFetchWordofObject(sqInt index, sqInt oop);
 sqInt  fetchLong32ofObject(sqInt index, sqInt oop); 
 void  *firstFixedField(sqInt oop);
 void  *firstIndexableField(sqInt oop);
@@ -196,7 +196,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fetchFloatofObject = fetchFloatofObject;
 	VM->fetchIntegerofObject = fetchIntegerofObject;
 	VM->fetchPointerofObject = fetchPointerofObject;
-	VM->obsoleteDontUseThisFetchWordOfObject = obsoleteDontUseThisFetchWordOfObject;
+	VM->obsoleteDontUseThisFetchWordofObject = obsoleteDontUseThisFetchWordofObject;
 	VM->firstFixedField = firstFixedField;
 	VM->firstIndexableField = firstIndexableField;
 	VM->literalofMethod = literalofMethod;
@@ -327,7 +327,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #endif
 
 #if VM_PROXY_MINOR > 6
-	VM->fetchLong32ofObject = fetchLong32OfObject;
+	VM->fetchLong32ofObject = fetchLong32ofObject;
 #endif
 
 	return VM;
