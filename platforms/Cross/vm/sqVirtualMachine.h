@@ -9,7 +9,7 @@
    should work with older VMs. */
 #ifndef VM_PROXY_MINOR
 /* Increment the following number if you add functions at the end */
-#define VM_PROXY_MINOR 6
+#define VM_PROXY_MINOR 7
 #endif
 
 #include "sqMemoryAccess.h"
@@ -45,7 +45,14 @@ typedef struct VirtualMachine {
 	double (*fetchFloatofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchIntegerofObject)(sqInt fieldIndex, sqInt objectPointer);
 	sqInt  (*fetchPointerofObject)(sqInt fieldIndex, sqInt oop);
-	sqInt  (*fetchWordofObject)(sqInt fieldFieldIndex, sqInt oop);
+/*  sqInt  (*fetchWordofObject)(sqInt fieldFieldIndex, sqInt oop); *
+ * has been rescinded as of VMMaker 3.8 and the 64bitclean VM      *
+ * work. To support old plugins we keep a valid function in        *
+ * the same location in the VM struct but rename it to             *
+ * something utterly horrible to scare off the natives. A new      *
+ * equivalent but 64 bit valid function is added as                *
+ * 'fetchLong32OfObject'                                           */
+	sqInt  (*obsoleteDontUseThisFetchWordOfObject)(sqInt fieldFieldIndex, sqInt oop)
 	void  *(*firstFixedField)(sqInt oop);
 	void  *(*firstIndexableField)(sqInt oop);
 	sqInt  (*literalofMethod)(sqInt offset, sqInt methodPointer);
@@ -192,6 +199,10 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 5
 	sqInt (*isArray)(sqInt oop);
 	sqInt (*forceInterruptCheck)(void);
+#endif
+
+#if VM_PROXY_MINOR > 6
+	sqInt  (*fetchLong32ofObject)(sqInt fieldFieldIndex, sqInt oop);
 #endif
 
 

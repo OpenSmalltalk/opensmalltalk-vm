@@ -33,7 +33,15 @@ sqInt  fetchClassOf(sqInt oop);
 double fetchFloatofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchIntegerofObject(sqInt fieldIndex, sqInt objectPointer);
 sqInt  fetchPointerofObject(sqInt index, sqInt oop);
-sqInt  fetchWordofObject(sqInt fieldIndex, sqInt oop);
+/* sqInt  fetchWordofObject(sqInt fieldIndex, sqInt oop);     *
+ * has been rescinded as of VMMaker 3.8 and the 64bitclean VM *
+ * work. To support old plugins we keep a valid function in   *
+ * the same location in the VM struct but rename it to        *
+ * something utterly horrible to scare off the natives. A new *
+ * equivalent but 64 bit valid function is added as           *
+ * 'fetchLong32OfObject'                                      */
+sqInt  obsoleteDontUseThisFetchWordOfObject(sqInt index, sqInt oop);
+sqInt  fetchLong32ofObject(sqInt index, sqInt oop); 
 void  *firstFixedField(sqInt oop);
 void  *firstIndexableField(sqInt oop);
 sqInt  literalofMethod(sqInt offset, sqInt methodPointer);
@@ -188,7 +196,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fetchFloatofObject = fetchFloatofObject;
 	VM->fetchIntegerofObject = fetchIntegerofObject;
 	VM->fetchPointerofObject = fetchPointerofObject;
-	VM->fetchWordofObject = fetchWordofObject;
+	VM->fetchWordofObject = obsoleteDontUseThisFetchWordOfObject;
 	VM->firstFixedField = firstFixedField;
 	VM->firstIndexableField = firstIndexableField;
 	VM->literalofMethod = literalofMethod;
@@ -316,6 +324,10 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #if VM_PROXY_MINOR > 5
 	VM->isArray = isArray;
 	VM->forceInterruptCheck = forceInterruptCheck;
+#endif
+
+#if VM_PROXY_MINOR > 6
+	VM->fetchLong32ofObject = fetchLong32OfObject;
 #endif
 
 	return VM;
