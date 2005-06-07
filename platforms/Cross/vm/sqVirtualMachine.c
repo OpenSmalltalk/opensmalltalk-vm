@@ -196,7 +196,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->fetchFloatofObject = fetchFloatofObject;
 	VM->fetchIntegerofObject = fetchIntegerofObject;
 	VM->fetchPointerofObject = fetchPointerofObject;
-	VM->fetchWordofObject = obsoleteDontUseThisFetchWordOfObject;
+	VM->obsoleteDontUseThisFetchWordOfObject = obsoleteDontUseThisFetchWordOfObject;
 	VM->firstFixedField = firstFixedField;
 	VM->firstIndexableField = firstIndexableField;
 	VM->literalofMethod = literalofMethod;
