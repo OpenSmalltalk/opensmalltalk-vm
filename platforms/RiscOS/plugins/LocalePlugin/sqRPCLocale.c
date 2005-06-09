@@ -61,7 +61,7 @@ sqInt	sqLocCurrencySymbolSize(void) {
 }
 /* write the currency symbol into the string ptr */
 void	sqLocGetCurrencySymbolInto(char * str) {
-	strcpy(str, localeTable->currency_symbol);
+	strncpy(str, localeTable->currency_symbol, strlen(localeTable->currency_symbol));
 }
 
 
@@ -121,7 +121,7 @@ sqInt	sqLocLongDateFormatSize(void) {
  * 		dddd weekday
  * 		mmmm month name */
 void	sqLocGetLongDateFormatInto(char * str) {
-	strcpy(str, longDateFormat);
+	strncpy(str, longDateFormat, strlen(longDateFormat) );
 }
 
 static char shortDateFormat[] = "dd/mm/yy";
@@ -136,7 +136,7 @@ sqInt	sqLocShortDateFormatSize(void) {
  * 		dddd weekday
  * 		mmmm month name */
 void	sqLocGetShortDateFormatInto(char * str) {
-	strcpy(str, shortDateFormat);
+	strncpy(str, shortDateFormat, strlen(shortDateFormat));
 }
 
 static char timeFormat[] = "h:m:s";
@@ -149,5 +149,5 @@ sqInt	sqLocTimeFormatSize(void) {
  * 		h hour (h 12, H 24), m minute, s seconds, x (am/pm String)
  * 		double symbol is null padded, single not padded (h=6, hh=06)  */
 void	sqLocGetTimeFormatInto(char * str) {
-	strcpy(str, timeFormat);
+	strncpy(str, timeFormat, strlen(timeFormat));
 }

@@ -279,14 +279,14 @@ void HandleMousePoll(void) {
  */
 int kbdstate, thisTick;
 static int draggingWindow = false;
-static int lastMousePollTick = 0;
+static unsigned int nextMousePollTick = 0;
 wimp_pointer wblock;
 windowDescriptorBlock * thisWindow;
 static windowDescriptorBlock * lastWindow = NULL;
 
-	/* Don't mouse poll more than once every millisecond */
-	if ( lastMousePollTick == (thisTick = (ioMSecs() & 0x1fffffff))) return;
-	lastMousePollTick = thisTick;
+	/* Don't mouse poll more than once every 5 milliseconds */
+	if ( nextMousePollTick > (thisTick = millisecondValue())) return;
+	nextMousePollTick = thisTick + 5;
 
 	if ( mouseButtonDown || windowActive) {
 
@@ -513,11 +513,11 @@ int HandleEventsNotTooOften(void) {
 /* If we are using the older style polling stuff, we typically end up
  * calling HandleEvents an awful lot of times. Since at least 3/4 of
  * those times are redundant, throttle it back a little */
-static int lastPollTick = 0;
-int thisTick;
-	if ( lastPollTick == (thisTick = (ioMSecs() & 0x1fffffff))) return false;
+static int nextPollTick = 0;
+unsigned int thisTick;
+	if ( nextPollTick > (thisTick = millisecondValue())) return false;
 	HandleEvents();
-	lastPollTick = thisTick;
+	nextPollTick = thisTick +5;
 	return true; 
 }
 

@@ -63,9 +63,10 @@ if(1) {int sqfni;\
 /* we'd like to untypedef fptr too, but no way to do it */
 
 
-/* undefine this to stop using druck's TimerMod and rely upon clock()
+/* undefine this to stop using my MillisecondTimer module and rely upon clock()
  * instead. You lose millisecond precision in the process */
 #define TIMERMOD
+usqInt millisecondValue(void);
 /* undefine clock macros that are implemented as functions */
 #undef ioMicroMSecs
 #undef ioMSecs
