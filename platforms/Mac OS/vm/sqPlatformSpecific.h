@@ -104,7 +104,7 @@ size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImage
 void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
 int         sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 squeakFileOffsetType       sqImageFileStartLocation(int fileRef, char *filename,squeakFileOffsetType imageSize);
-void *	    sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize);
+usqInt	    sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize);
 
 #define sqAllocateMemory(x,y) sqAllocateMemoryMac(x,&y);
 
