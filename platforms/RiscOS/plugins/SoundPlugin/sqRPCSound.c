@@ -60,7 +60,9 @@ int snd_PlaySilence(void) {
 
 int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 
-/*	Start the double-buffered sound output with the given buffer size, sample rate, and stereo flag. */
+/*	Start the double-buffered sound output with the given buffer size, sample rate, stereo flag and semaphore index. */
+	interpreterProxy->primitiveFail();
+	return null;
 }
 
 int snd_Stop(void) {
