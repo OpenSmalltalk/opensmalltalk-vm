@@ -344,14 +344,7 @@ sqInt ioMicroMSecs(void) {
    enough to slow down the VM. Thus, it can use a more expensive clock
    than ioMSecs().
 */
-#ifdef TIMERMOD
-_kernel_swi_regs regs;
-//	_kernel_swi(/* MillisecondTimer_Value */ 0x58100, &regs, &regs);
-//	return (regs.r[0]) ;
-	return *timerValPtr;
-#else
-	return (clock() * 1000/CLOCKS_PER_SEC);
-#endif
+	return (sqInt)millisecondValue();
 }
 
 usqInt millisecondValue(void) {

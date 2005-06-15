@@ -68,11 +68,11 @@ if(1) {int sqfni;\
 #define TIMERMOD
 usqInt millisecondValue(void);
 /* undefine clock macros that are implemented as functions */
-#undef ioMicroMSecs
 #undef ioMSecs
-#define ioMSecs()  (ioMicroMSecs())
+#define ioMSecs()  (sqInt)(millisecondValue())
+#undef ioMicroMSecs
 #undef ioLowResMSecs
-#define ioLowResMSecs() (ioMicroMSecs())
+#define ioLowResMSecs() (ioMSecs())
 
 /* extended fileplugin support */
 extern int dir_DirectoryExists(char *pathString, int pathStringLength);

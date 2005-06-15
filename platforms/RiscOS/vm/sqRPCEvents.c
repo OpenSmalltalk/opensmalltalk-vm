@@ -277,9 +277,10 @@ void HandleMousePoll(void) {
  * This is very unsatisfactory by comparison to a proper mouse event system !
  * NB sets the GLOBAL state of buttonState and modifierState
  */
-int kbdstate, thisTick;
+int kbdstate;
 static int draggingWindow = false;
 static unsigned int nextMousePollTick = 0;
+unsigned int thisTick;
 wimp_pointer wblock;
 windowDescriptorBlock * thisWindow;
 static windowDescriptorBlock * lastWindow = NULL;
