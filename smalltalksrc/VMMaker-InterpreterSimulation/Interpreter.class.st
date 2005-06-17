@@ -70,7 +70,8 @@ Class {
 		'interruptCheckCounterFeedBackReset',
 		'interruptChecksEveryNms',
 		'externalPrimitiveTable',
-		'primitiveTable'
+		'primitiveTable',
+		'globalSessionID'
 	],
 	#classVars : [
 		'SemaphoresToSignalSize',
@@ -1101,7 +1102,7 @@ Interpreter class >> requiredMethodNames [
 	| requiredList |
 	requiredList _ Set new:400.
 	"A number of methods required by VM support code, jitter, specific platforms etc"
-	requiredList addAll: #(fullDisplayUpdate interpret printCallStack printAllStacks readImageFromFile:HeapSize:StartingAt: success: readableFormat: getCurrentBytecode characterForAscii: findClassOfMethod:forReceiver: findSelectorOfMethod:forReceiver: loadInitialContext nullCompilerHook primitiveFlushExternalPrimitives setCompilerInitialized: getFullScreenFlag getInterruptCheckCounter getInterruptKeycode getInterruptPending getNextWakeupTick getSavedWindowSize setFullScreenFlag: setInterruptCheckCounter: setInterruptKeycode: setInterruptPending: setNextWakeupTick: setSavedWindowSize: forceInterruptCheck).
+	requiredList addAll: #(fullDisplayUpdate interpret printCallStack printAllStacks readImageFromFile:HeapSize:StartingAt: success: readableFormat: getCurrentBytecode characterForAscii: findClassOfMethod:forReceiver: findSelectorOfMethod:forReceiver: loadInitialContext nullCompilerHook primitiveFlushExternalPrimitives setCompilerInitialized: getFullScreenFlag getInterruptCheckCounter getInterruptKeycode getInterruptPending getNextWakeupTick getSavedWindowSize setFullScreenFlag: setInterruptCheckCounter: setInterruptKeycode: setInterruptPending: setNextWakeupTick: setSavedWindowSize: forceInterruptCheck getThisSessionID).
 
 	"Nice to actually have all the primitives available"
 	requiredList addAll: self primitiveTable.
@@ -3386,6 +3387,13 @@ Interpreter >> getSavedWindowSize [
 	^savedWindowSize
 ]
 
+{ #category : #'plugin support' }
+Interpreter >> getThisSessionID [
+	"return the global session ID value"
+	self inline: false.
+	^globalSessionID
+]
+
 { #category : #'compiled methods' }
 Interpreter >> headerOf: methodPointer [
 	^self fetchPointer: HeaderIndex ofObject: methodPointer
@@ -3459,43 +3467,43 @@ Interpreter >> initialCleanup [
 ]
 
 { #category : #initialization }
-Interpreter >> initializeInterpreter: bytesToShift [
+Interpreter >> initializeInterpreter: bytesToShift [ 
 	"Initialize Interpreter state before starting execution of a new image."
-
 	interpreterProxy _ self sqGetInterpreterProxy.
 	self dummyReferToProxy.
 	self initializeObjectMemory: bytesToShift.
 	self initCompilerHooks.
-	
-	activeContext	_ nilObj.
-	theHomeContext	_ nilObj.
-	method			_ nilObj.
-	receiver		_ nilObj.
-	messageSelector	_ nilObj.
-	newMethod		_ nilObj.
-	methodClass		_ nilObj.
-	lkupClass		_ nilObj.
-	receiverClass	_ nilObj.
-	newNativeMethod		_ nilObj.
-
+	activeContext _ nilObj.
+	theHomeContext _ nilObj.
+	method _ nilObj.
+	receiver _ nilObj.
+	messageSelector _ nilObj.
+	newMethod _ nilObj.
+	methodClass _ nilObj.
+	lkupClass _ nilObj.
+	receiverClass _ nilObj.
+	newNativeMethod _ nilObj.
 	self flushMethodCache.
 	self loadInitialContext.
 	self initialCleanup.
-
 	interruptCheckCounter _ 0.
 	interruptCheckCounterFeedBackReset _ 1000.
 	interruptChecksEveryNms _ 1.
 	nextPollTick _ 0.
 	nextWakeupTick _ 0.
 	lastTick _ 0.
-	interruptKeycode _ 2094.  "cmd-."
+	interruptKeycode _ 2094. "cmd-. as used for Mac but no other OS"
 	interruptPending _ false.
 	semaphoresUseBufferA _ true.
 	semaphoresToSignalCountA _ 0.
 	semaphoresToSignalCountB _ 0.
 	deferDisplayUpdates _ false.
 	pendingFinalizationSignals _ 0.
-
+	globalSessionID _ 0.
+	[globalSessionID = 0]
+		whileTrue: [globalSessionID _ self
+						cCode: 'time(NULL) + ioMSecs()'
+						inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]]
 ]
 
 { #category : #'array and stream primitives' }
