@@ -1,5 +1,5 @@
 "
-This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the Sourceforge tree.
+This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the SVN tree at hplabs .
 The main use of the class is to support the vm simulator
 "
 Class {
@@ -11,7 +11,8 @@ Class {
 		'stack',
 		'method',
 		'argumentCount',
-		'bb'
+		'bb',
+		'thisSessionID'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -303,6 +304,19 @@ InterpreterProxy >> fullDisplayUpdate [
 { #category : #other }
 InterpreterProxy >> fullGC [
 	Smalltalk garbageCollect.
+]
+
+{ #category : #other }
+InterpreterProxy >> getThisSession [
+	"Answer a session identifier which represents the current instance of Squeak.
+	The identifier is expected to be unique among all instances of Squeak on a
+	network at any point in time."
+
+	[thisSessionID = 0]
+		whileTrue:
+			[thisSessionID _ (Random new next * SmallInteger maxVal) asInteger].
+	^ thisSessionID
+
 ]
 
 { #category : #testing }
