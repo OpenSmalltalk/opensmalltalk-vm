@@ -745,9 +745,13 @@ sqInt  sqNetworkInit(sqInt  resolverSemaIndex)
     return 0;  /* already initialised */
   gethostname(localHostName, MAXHOSTNAMELEN);
   localHostAddress= nameToAddr(localHostName);
+#if VM_PROXY_MINOR > 6
+	thisNetSession = interpreterProxy->getThisSessionID();
+#else
   thisNetSession= clock() + time(0);
   if (0 == thisNetSession)
     thisNetSession= 1;  /* 0 => uninitialised */
+#endif
   resolverSema= resolverSemaIndex;
   aioInit();
   return 0;

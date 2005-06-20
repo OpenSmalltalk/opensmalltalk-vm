@@ -185,7 +185,7 @@ OpenFileListEntry *prevEntry;
 		prevEntry->next = entry->next;
 	}
 	free(entry);
-	return 1;
+	return true;
 }
 
 OpenFileListEntry * entryForFileNamed(char * fname, int writeFlag) {
@@ -318,6 +318,7 @@ sqInt sqFileClose(SQFile *f) {
 	f->sessionID = 0;
 	f->writable = false;
 	f->fileSize = 0;
+	return true;
 }
 
 sqInt sqFileAtEnd(SQFile *f) {
@@ -352,6 +353,7 @@ sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position) {
 	}
 	PRINTF(("\\t sqFileSetPosition: file %x to %d\n", FILE_HANDLE(f), position));
 	FILE_POSITION(f) = position;
+	return true;
 }
 
 squeakFileOffsetType sqFileSize(SQFile *f) {
@@ -368,7 +370,7 @@ sqInt sqFileFlush(SQFile *f) {
 /* Return the length of the given file. */
 	if (!sqFileValid(f)) FAIL();
 	xosargs_ensurew(FILE_HANDLE(f));
-	return 1;
+	return true;
 }
 
 sqInt sqFileTruncate(SQFile *f,squeakFileOffsetType offset) {
@@ -380,7 +382,7 @@ int extent;
 	} 
 	xosargs_read_extw(FILE_HANDLE(f), &extent);
 	f->fileSize = extent;
-	return 1;
+	return true;
 }
 
 size_t sqFileReadIntoAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex) {
@@ -441,6 +443,7 @@ char cNewName[MAXDIRNAMELENGTH];
 	if (xosfscontrol_rename(cFilename, cNewName) != NULL) {
 		FAIL();
 	}
+	return true;
 }
 
 sqInt sqFileDeleteNameSize(sqInt sqFileNameIndex, sqInt sqFileNameSize) {
@@ -464,6 +467,7 @@ fileswitch_attr attr;
 		PRINTF(("\\t sqFileDeleteNameSize: failed\n"));
 		FAIL();
 	}
+	return true;
 }
 
 sqInt sqFileThisSession() {
@@ -482,10 +486,13 @@ sqInt sqFileInit(void) {
  * Zero is never used for a valid session number.
  * Should be called once at startup time.
  */
-
-	thisSession = ioLowResMSecs() + time(NULL);
+#if VM_PROXY_MINOR > 6
+	thisSession = interpreterProxy->getThisSessionID();
+#else
+	thisSession = ioMSecs() + time(NULL);
+#endif
 	if (thisSession == 0) thisSession = 1;	/* don't use 0 */
-	return 1;
+	return true;
 }
 
 sqInt sqFileShutdown(void) {
@@ -496,6 +503,6 @@ OpenFileListEntry *entry;
 		xosfind_closew(entry->handle);
 		entry = entry->next;
 	}
-	return 1;
+	return true;
 }
 
