@@ -8,13 +8,6 @@
 *   EMAIL:   
 *   RCSID:   $Id$
 *
-*	11/12/03	nedkonz - float bug fix for gcc 3.3 optimization
-*	05/20/03	tim - move browser related macros in front of
-*			include of sqPlatformSpecific.h
-*	02/26/03	tim change browser plugin support code
-*	01/28/02	Tim add macro default for sqFilenameFromStringOpen
-*			and sqFTruncate
-*	01/22/2002 JMM change off_t to squeakOffsetFileType
 */
 #include <math.h>
 #include <stdio.h>
@@ -57,12 +50,13 @@
 /* Platform-dependent macros for handling object memory. */
 
 /* Note: The grow/shrink macros assume that the object memory can be extended
-   continuously at its prior end. The garbage collector cannot deal with 'holes'
-   in the object memory so the support code needs to reserve the virtual maximum
-   of pages that can be allocated beforehand. The amount of 'extra' memory should
-   describe the amount of memory that can be allocated from the OS (including swap
-   space if the flag is set to true) and must not exceed the prior reserved memory.
-   (in other words: don't you dare to report more free space then you can actually allocate).
+   continuously at its prior end. The garbage collector cannot deal with
+   'holes' in the object memory so the support code needs to reserve the virtual   maximum of pages that can be allocated beforehand. The amount of 'extra'
+   memory should describe the amount of memory that can be allocated from the
+   OS (including swap space if the flag is set to true) and must not exceed the
+   prior reserved memory.
+   In other words: don't you dare to report more free space then you can
+   actually allocate.
    The default implementation assumes a fixed size memory allocated at startup.
 */
 #define sqAllocateMemory(minHeapSize, desiredHeapSize)  malloc(desiredHeapSize)
@@ -85,28 +79,30 @@
 
 /* Platform-dependent millisecond clock macros. */
 
-/* Note: The Squeak VM uses three different clocks functions for
-   timing. The primary one, ioMSecs(), is used to implement Delay
+/* Note: The Squeak VM uses two different clock functions for
+   timing.
+   The primary one, ioMSecs(), is used to implement Delay
    and Time millisecondClockValue. The resolution of this clock
    determines the resolution of these basic timing functions. For
    doing real-time control of music and MIDI, a clock with resolution
    down to one millisecond is preferred, but a coarser clock (say,
-   1/60th second) can be used in a pinch. The VM calls a different
-   clock function, ioLowResMSecs(), in order to detect long-running
-   primitives. This function must be inexpensive to call because when
-   a Delay is active it is polled twice per primitive call. On several
-   platforms (Mac, Win32), the high-resolution system clock used in
-   ioMSecs() would incur enough overhead in this case to slow down the
-   the VM significantly. Thus, a cheaper clock with low resolution is
-   used to implement ioLowResMSecs() on these platforms. Finally, the
-   function ioMicroMSecs() is used only to collect timing statistics
+   1/60th second) can be used in a pinch.
+   The function ioMicroMSecs() is used only to collect timing statistics
    for the garbage collector and other VM facilities. (The function
    name is meant to suggest that the function is based on a clock
    with microsecond accuracy, even though the times it returns are
    in units of milliseconds.) This clock must have enough precision to
    provide accurate timings, and normally isn't called frequently
    enough to slow down the VM. Thus, it can use a more expensive clock
-   than ioMSecs(). By default, all three clock functions are defined
+   than ioMSecs(). This function is listed in the sqVirtualMachine plugin
+   support mechanism and thus needs to be a real function, even if a macro is
+   use to point to it.
+
+   There was a third form that used to be used for quickly timing primitives in
+   order to try to keep millisecond delays up to date. That is no longer used
+   but the definition is kept here temporarily
+
+   By default, all three clock functions are defined
    here as macros based on the standard C library function clock().
    Any of these macros can be overridden in sqPlatformSpecific.h.
 */
@@ -117,10 +113,15 @@ sqInt ioMicroMSecs(void);
 
 #define ioMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
 #define ioLowResMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
+
+/* this macro cannot be used now that ioMicroMSecs is involved in the
+   sqVirtualMachine structures */
+#if 0   
 #define ioMicroMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
+#endif
 
 /* Filename copy macro, and an opportunity to transform filenames if
-   necesasry.
+   neccesary.
 */
 #define sqFilenameFromString(dst, src, num)	\
   do {						\
@@ -157,13 +158,6 @@ sqInt plugInTimeToReturn(void);
 #define unableToReadImageError()		error("Read failed or premature end of image file")
 #define browserPluginReturnIfNeeded()
 #define browserPluginInitialiseIfNeeded()
-
-/* Type definitions and macros to handle primitive dispatch through an
-   array of pointers to functions.  (Deprecated, but kept for while.)
- */
-typedef sqInt (*fptr)();
-#define dispatchFunctionPointerOnin(index, table)	(((fptr)((table)[index]))())
-#define dispatchFunctionPointer(fnPtr)			(((fptr)fnPtr)())
 
 /* Platform-specific header file may redefine earlier definitions and macros. */
 

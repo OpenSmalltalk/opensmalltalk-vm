@@ -203,6 +203,7 @@ typedef struct VirtualMachine {
 
 #if VM_PROXY_MINOR > 6
 	sqInt  (*fetchLong32ofObject)(sqInt fieldFieldIndex, sqInt oop);
+	sqInt  (*getThisSessionID)(void);
 #endif
 
 

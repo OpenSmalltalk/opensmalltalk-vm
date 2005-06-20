@@ -134,6 +134,7 @@ sqInt success(sqInt aBoolean);
 sqInt superclassOf(sqInt classPointer);
 sqInt ioMicroMSecs(void);
 sqInt forceInterruptCheck(void);
+sqInt getThisSessionID(void);
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
 sqInt loadBitBltFrom(sqInt bbOop);
@@ -328,6 +329,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 #if VM_PROXY_MINOR > 6
 	VM->fetchLong32ofObject = fetchLong32ofObject;
+	VM->getThisSessionID = getThisSessionID;
 #endif
 
 	return VM;
