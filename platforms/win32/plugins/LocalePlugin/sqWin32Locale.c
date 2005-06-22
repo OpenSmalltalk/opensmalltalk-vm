@@ -1,0 +1,188 @@
+/****************************************************************************
+*   PROJECT: Squeak port for Win32
+*   FILE:    sqWin32LocalePlugin.c
+*   CONTENT: locale support
+*
+*   AUTHORS: Andreas Raab (ar) , Bernd Eckardt (be)
+*   ADDRESS: Magdeburg, Germany
+*   EMAIL:   andreas.raab@gmx.de, bernd.eckardt@impara.de
+*****************************************************************************/
+
+#include <windows.h>
+#include <winnls.h>
+#include "sq.h"
+#include "LocalePlugin.h"
+
+
+/* Locale support functions */
+
+
+sqInt sqLocInitialize(void) {
+
+	return true;
+}
+
+/************** Country and language ******************/
+
+/* write the country code into the string ptr. ISO 3166 is the relevant source
+ * here; see http://www.unicode.org/onlinedat/countries.html for details.
+ * Using the 3 character Alpha-3 codes */
+void	sqLocGetCountryInto(char * str) {
+
+/*	GEOID geoID;
+	char *isoString;
+	geoID = GetUserGeoID(GEOCLASS_NATION);
+	GetGeoInfo (geoID, GEO_ISO3, *isoString, 3,0 );
+	strncpy(str, isoString, 3);*/
+}
+
+/* write the 3 char string describing the language in use into string ptr.
+ * ISO 639 is the relevant source here;
+ * see http://www.w3.org/WAI/ER/IG/ert/iso639.html
+ * for details */
+void	sqLocGetLanguageInto(char * str) {
+
+/*	GEOID geoID;
+	char *isoString;
+	geoID = GetUserGeoID(GEOCLASS_NATION);
+	GetGeoInfo (geoId, GEO_LCID, *isoString, 3,0 );
+	strncpy(str, isoString, 3);*/
+}
+
+/***************** Currency ********************/
+
+/* return 1 (true) if the currency symbol is to be placed in front of the
+ *currency amount */
+sqInt	sqLocCurrencyNotation(void) {
+	char currString[6];
+	int r;
+	if (GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_ICURRENCY,currString, 6) != 0){
+		r =(((int) currString % 2) == 0);
+		return r;
+	}
+	return 0;
+}
+
+/* return the length in chars of the curency symbol string */
+sqInt	sqLocCurrencySymbolSize(void) {
+	char currString[6];
+	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SCURRENCY,currString, 6);
+}
+
+/* write the currency symbol into the string ptr */
+void	sqLocGetCurrencySymbolInto(char * str) {
+	char currString[6];
+	int length;
+	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SCURRENCY,currString, 6);
+	strncpy(str, currString, length);
+
+
+}
+
+
+/***************** Numbers and measurements **************/
+
+/* return true if the metric measurements system is to be used, false otherwise
+ * (USA is about it) */
+sqInt	sqLocMeasurementMetric(void) {
+	char resultString[2];
+	if (GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_IMEASURE,resultString, 2) != 0){
+		if (strcmp (resultString,"0")) return false;
+		else return true;
+	}
+	return true;
+}
+
+/* write the 1 char used for digit grouping into string ptr.
+ * Usually this is . or ,  as in 1,000,000 */
+void	sqLocGetDigitGroupingSymbolInto(char * str) {
+	char groupString[4];
+	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STHOUSAND,groupString, 4);
+	strncpy(str, groupString, 1);
+
+}
+/* write the 1 char used for decimal separation into string ptr.
+ * Usually this is . or , */
+void	sqLocGetDecimalSymbolInto(char * str) {
+	char deciString[4];
+	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SDECIMAL, deciString, 4);
+	strncpy(str, deciString, 1);
+}
+
+
+/****************** time and date *********************/
+
+sqInt	sqLocGetVMOffsetToUTC(void) {
+	/* return 0 for now */
+	return 0;
+}
+
+sqInt	sqLocGetTimezoneOffset(void) {
+	TIME_ZONE_INFORMATION timeZoneInformation;
+	GetTimeZoneInformation(&timeZoneInformation);
+	return (-timeZoneInformation.Bias);
+}
+
+/* return true if DST is in use, false otherwise */
+sqInt	sqLocDaylightSavings(void) {
+	TIME_ZONE_INFORMATION timeZoneInformation;
+	GetTimeZoneInformation(&timeZoneInformation);
+	if(timeZoneInformation.DaylightBias == 0) return 0;
+	return 1;
+}
+
+static char longDateFormat[] = "dddd dd mmmm yy";
+/* return the size in chars of the long date format string */
+sqInt	sqLocLongDateFormatSize(void) {
+	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SLONGDATE, NULL, 0);
+}
+
+/*Write the string describing the long date formatting into string ptr.
+ * Format is made up of
+ * 		d day, m month, y year,
+ * 		double symbol is null padded, single not padded (m=6, mm=06)
+ * 		dddd weekday
+ * 		mmmm month name
+*/
+void	sqLocGetLongDateFormatInto(char * str) {
+	char dateString[80];
+	int length;
+	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SLONGDATE, dateString, 80);
+	strncpy(str, dateString, length);
+}
+
+static char shortDateFormat[] = "dd/mm/yy";
+/* return the size in chars of the short date format string */
+sqInt	sqLocShortDateFormatSize(void) {
+	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SSHORTDATE, NULL, 0);
+}
+
+/*Write the string describing the short date formatting into string ptr.
+ * Format is made up of
+ * 		d day, m month, y year,
+ * 		double symbol is null padded, single not padded (m=6, mm=06)
+ * 		dddd weekday
+ * 		mmmm month name */
+void	sqLocGetShortDateFormatInto(char * str) {
+	char dateString[80];
+	int length;
+	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SSHORTDATE, dateString, 80);
+	strncpy(str, dateString, length);
+}
+
+static char timeFormat[] = "h:m:s";
+/* return the size in chars of the time format string */
+sqInt	sqLocTimeFormatSize(void) {
+	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, NULL, 0);
+}
+
+/* write the string describing the time formatting into string ptr.
+ * Format is made up of
+ * 		h hour (h 12, H 24), m minute, s seconds, x (am/pm String)
+ * 		double symbol is null padded, single not padded (h=6, hh=06)  */
+void	sqLocGetTimeFormatInto(char * str) {
+	char timeString[80];
+	int length;
+	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, timeString, 80);
+	strncpy(str, timeString, length);
+}
