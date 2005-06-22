@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32ExternalPrims.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *     1) Currently, we're looking for DLLs named either sample.dll or sample32.dll
@@ -34,7 +34,7 @@ HANDLE tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
 }
 
 /* Return the module entry for the given module name */
-int ioLoadModule(char *pluginName)
+void *ioLoadModule(char *pluginName)
 {
 	HANDLE handle;
 	TCHAR *name;
@@ -46,30 +46,30 @@ int ioLoadModule(char *pluginName)
 #endif
 
 	handle = tryLoading(TEXT(""),name,TEXT(""));
-	if(handle) return (int) handle;
+	if(handle) return handle;
 	handle = tryLoading(TEXT(""),name,TEXT(".dll"));
-	if(handle) return (int) handle;
+	if(handle) return handle;
 	handle = tryLoading(TEXT(""),name,TEXT("32.dll"));
-	if(handle) return (int) handle;
+	if(handle) return handle;
 	handle = tryLoading(imagePath,name,TEXT(""));
-	if(handle) return (int) handle;
+	if(handle) return handle;
 	handle = tryLoading(imagePath,name,TEXT(".dll"));
-	if(handle) return (int) handle;
+	if(handle) return handle;
 	handle = tryLoading(imagePath,name,TEXT("32.dll"));
-	if(handle) return (int) handle;
+	if(handle) return handle;
 	return 0;
 }
 
-int ioFindExternalFunctionIn(char *lookupName, int moduleHandle)
+void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 {
 #ifdef UNICODE
-	return (int) GetProcAddress((HANDLE)moduleHandle, toUnicode(lookupName));
+	return GetProcAddress((HANDLE)moduleHandle, toUnicode(lookupName));
 #else
-	return (int) GetProcAddress((HANDLE)moduleHandle, lookupName);
+	return GetProcAddress((HANDLE)moduleHandle, lookupName);
 #endif
 }
 
-int ioFreeModule(int moduleHandle)
+sqInt ioFreeModule(void *moduleHandle)
 {
 	return FreeLibrary((HANDLE) moduleHandle);
 }

@@ -218,7 +218,8 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       evt->charCode = (zDelta > 0) ? 30 : 31;
       evt->pressCode = EventKeyChar;
       evt->modifiers = CtrlKeyBit;
-      evt->reserved1 = evt->reserved2 = 0;
+      evt->utf32Code = 0;
+      evt->reserved1 = 0;
     } else {
       buttonState = 64;
       if (zDelta < 0) {
@@ -1098,9 +1099,9 @@ int recordKeyboardEvent(MSG *msg) {
   evt->modifiers |= shift ? ShiftKeyBit : 0;
   evt->modifiers |= ctrl ? CtrlKeyBit : 0;
   evt->windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
+  evt->utf32Code = 0;
   /* clean up reserved */
   evt->reserved1 = 0;
-  evt->reserved2 = 0;
   /* note: several keys are not reported as character events;
      most noticably the mapped virtual keys. For those we
      generate extra character events here */
