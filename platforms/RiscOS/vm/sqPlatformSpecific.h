@@ -67,6 +67,7 @@ if(1) {int sqfni;\
  * instead. You lose millisecond precision in the process */
 #define TIMERMOD
 usqInt millisecondValue(void);
+unsigned int microsecondsvalue(void);
 /* undefine clock macros that are implemented as functions */
 #undef ioMSecs
 #define ioMSecs()  (sqInt)(millisecondValue())

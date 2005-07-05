@@ -333,6 +333,16 @@ extern void SetDefaultPointer(void);
 	if ( (int)logfile > 0) fclose( logfile);
 }
 
+unsigned int microsecondsvalue(void) {
+/* return the microsecond value (ignoring wrap arounds etc) for debug timer
+ * purposes
+ */
+_kernel_swi_regs regs;
+	_kernel_swi(/* Timer_Value*/ 0x490C2, &regs, &regs);
+	return  ((regs.r[0] %1000) * 1000000)   + (int)(regs.r[1]) ;
+
+}
+
 sqInt ioMicroMSecs(void) {
 /* The
    function ioMicroMSecs() is used only to collect timing statistics

@@ -399,6 +399,10 @@ int j;
 
 void DisplayReverseArea(windowDescriptorBlock * thisWindow, int x0, int y0, int x1, int y1) {
 int stopX, pixelsPerWord, pixelsPerWordShift;
+#ifdef DEBUG
+unsigned int startTime, stopTime;
+	startTime = microsecondsvalue();
+#endif
 	switch (thisWindow->squeakDisplayDepth) {
 	case 32:pixelsPerWordShift = 0;
 			pixelsPerWord = 1;
@@ -430,6 +434,10 @@ int stopX, pixelsPerWord, pixelsPerWordShift;
 	displaySpriteBits = (unsigned int *)((int)thisWindow->displaySprite
 			+ thisWindow->displaySprite->image);
 	reverserFunction();
+#ifdef DEBUG
+	stopTime = microsecondsvalue();
+	PRINTF(("\\t DisplayReverseArea @ %d for w:%d h:%d took: %d\n", startTime, x1 - x0, y1 - y0, stopTime - startTime));
+#endif 
 	return;
 }
 
@@ -452,7 +460,8 @@ windowDescriptorBlock * thisWindow;
 		return;
 	}
 	more = wimp_redraw_window( wblock );
-	while ( more ) { 
+	while ( more ) {
+		PRINTF(("\\t display pixmap l:%d t:%d r:%d b:%d\n", wblock->box.x0, wblock->box.y1, wblock->box.x1, wblock->box.y0)); 
 		if ((e = xosspriteop_put_sprite_scaled (
 			osspriteop_PTR,
 			spriteAreaPtr,
@@ -1144,8 +1153,8 @@ windowDescriptorBlock * thisWindow;
 	affectedB = MIN(affectedB, height);
 	
 	if(affectedR <= affectedL || affectedT >= affectedB) return true;
-	
 
+	PRINTF(("\\t ioShowDisplayOnWindow: %d @ %d l:%d t:%d r:%d b:%d\n", windowIndex, microsecondsvalue(), affectedL, affectedT, affectedR, affectedB));
 
 	thisWindow = (windowDescriptorBlock *)windowBlockFromIndex(windowIndex);
 	if ( !thisWindow) return false;
@@ -1169,7 +1178,6 @@ windowDescriptorBlock * thisWindow;
 	displayBitmapIndex = (unsigned int *)dispBitsIndex;
 	DisplayReverseArea(thisWindow, affectedL, affectedT, affectedR, affectedB);
 
-	PRINTF(("\\t ioShowDisplayOnWindow: %d\n", windowIndex));
 	/* inform the Wimp of the affected area,
 	   scaled for the display mode etc */
 	if( (e = xwimp_force_redraw( thisWindow->handle,
@@ -1409,7 +1417,7 @@ sqInt ioShowDisplay( sqInt dispBitsIndex, sqInt width, sqInt height, sqInt depth
 
 
 sqInt ioForceDisplayUpdate(void) {
-	PRINTF(("\\t ioForceDisplayUpdate\n"));
+	PRINTF(("\\t ioForceDisplayUpdate @ %d\n", microsecondsvalue()));
 	// This immediate display update seems to display the right bits but
 	// takes a huge % of the machine time. By going back to the older
 	// HandleEvents we get a nice snappy machine. Weird.
