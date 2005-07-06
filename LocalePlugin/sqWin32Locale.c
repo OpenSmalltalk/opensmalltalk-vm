@@ -29,11 +29,11 @@ sqInt sqLocInitialize(void) {
  * Using the 3 character Alpha-3 codes */
 void	sqLocGetCountryInto(char * str) {
 
-/*	GEOID geoID;
-	char *isoString;
-	geoID = GetUserGeoID(GEOCLASS_NATION);
-	GetGeoInfo (geoID, GEO_ISO3, *isoString, 3,0 );
-	strncpy(str, isoString, 3);*/
+	char currString[6];
+	int length;
+	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SISO3166CTRYNAME,currString, 6);
+	strncpy(str, currString, length);
+
 }
 
 /* write the 3 char string describing the language in use into string ptr.
@@ -42,11 +42,10 @@ void	sqLocGetCountryInto(char * str) {
  * for details */
 void	sqLocGetLanguageInto(char * str) {
 
-/*	GEOID geoID;
-	char *isoString;
-	geoID = GetUserGeoID(GEOCLASS_NATION);
-	GetGeoInfo (geoId, GEO_LCID, *isoString, 3,0 );
-	strncpy(str, isoString, 3);*/
+	char currString[6];
+	int length;
+	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SISO639LANGNAME,currString, 6);
+	strncpy(str, currString, length);
 }
 
 /***************** Currency ********************/
