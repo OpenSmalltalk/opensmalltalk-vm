@@ -21,6 +21,7 @@ typedef struct windowDescriptorBlock {
 	wHandleType		handle;
 	wIndexType		windowIndex;
 	/* extra fields to support your platform needs */
+	Rect			dirtyRectangle;
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
@@ -29,3 +30,5 @@ int windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
 windowDescriptorBlock *windowBlockFromIndex(int windowIndex);
+void	FlushWindowsViaBlockLogic();
+extern volatile Boolean gPortIsLocked;

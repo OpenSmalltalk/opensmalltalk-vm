@@ -20,6 +20,7 @@
  3.8.1b1 Jul 20th, 2004 JMM Start on multiple window logic
  3.8.6b1 Jan 25th, 2005 JMM flush qd buffers less often
  3.8.6b3 Jan 25th, 2005 JMM Change locking of pixels (less often)
+ 8.8.8b3 Jul 15th, 2005 JMM Add window(s) flush logic every 1/60 second for os-x
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -151,62 +152,31 @@ int ioSetFullScreen(int fullScreen) {
 
 #if TARGET_API_MAC_CARBON
 
-void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle, int affectedL, int affectedT, int affectedR, int affectedB);
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse,  int affectedL, int affectedT, int affectedR, int affectedB);
 
-Boolean gPortIsLocked=false;
+volatile Boolean gPortIsLocked=false;
 
-void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle,int affectedL, int affectedT, int affectedR, int affectedB) {
-	static int pastTime=0,rememberWindowIndex=1;
-	int check;
-	static RgnHandle dirtyRgn = NULL;
-	static Rect dirtyRect = {0,0,0,0};
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL, int affectedT, int affectedR, int affectedB) {
 	Rect rect;
+	windowDescriptorBlock * validWindowHandle = windowBlockFromIndex(windowIndexToUse);
 
-	if (dirtyRgn == NULL) 
-		dirtyRgn = NewRgn();
 		
 	rect.top = affectedT;
 	rect.left = affectedL;
 	rect.bottom = affectedB;
 	rect.right = affectedR; 
 
-	if (EmptyRect(&dirtyRect))
-		dirtyRect = rect;
-		
-	/* If the window index to use is different we must flush the old window 
-	   but only if the old window is still valid, it have have been closed */
-	   
-	if (rememberWindowIndex != windowIndexToUse) {
-		wHandleType validWindowHandle = windowHandleFromIndex(rememberWindowIndex);
-		if (validWindowHandle) {
-			RectRgn(dirtyRgn, &dirtyRect);
-			if (gPortIsLocked)
-				UnlockPortBits(GetWindowPort(windowHandleFromIndex(rememberWindowIndex)));
-			gPortIsLocked = false;
-			QDFlushPortBuffer(GetWindowPort(validWindowHandle), dirtyRgn);
-		}
-		dirtyRect = rect;
-		rememberWindowIndex = windowIndexToUse;
-	}
-
-	if (!noRectangle)
-		UnionRect(&dirtyRect,&rect,&dirtyRect);
+	if (EmptyRect(&validWindowHandle->dirtyRectangle))
+		validWindowHandle->dirtyRectangle = rect;
+	else
+		UnionRect(&validWindowHandle->dirtyRectangle,&rect,&validWindowHandle->dirtyRectangle);
 			
-	/* Flush every 8ms or if the clock rolls over */ 
-	//7
-	if (((check = (ioMSecs() - pastTime)) > 10) || check < 0) {
-		pastTime = pastTime + check;
-		if (gPortIsLocked) {
-			UnlockPortBits(windowPort);
-			gPortIsLocked = false;
-		}
+}
 
-		if (!EmptyRect(&dirtyRect)) {
-			RectRgn(dirtyRgn, &dirtyRect);
-			QDFlushPortBuffer(windowPort, dirtyRgn);
-			SetRect(&dirtyRect,0,0,0,0);
-		}
-	}
+void QDFlushWindows() {
+
+FlushWindowsViaBlockLogic();	
+
 }
 
 
@@ -240,13 +210,13 @@ int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
 	
-	ioShowDisplayOnWindow( (unsigned *)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
+	ioShowDisplayOnWindow( (unsigned int*)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 	return 1;
 }
 
 #define bytesPerLine(width, depth)	((((width)*(depth) + 31) >> 5) << 2)
 #if !TARGET_API_MAC_CARBON
-int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int depth, 
+int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, int depth, 
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
         CGrafPtr	windowPort;
@@ -310,7 +280,7 @@ void * copy124BitsTheHardWay(
 	unsigned int * dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex,int *pixPitch);
 	
-int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int depth, 
+int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, int depth, 
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
         CGrafPtr	windowPort;
@@ -341,22 +311,19 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
             maskRect = NewRgn();            
         }
 		
+		while(gPortIsLocked) {}; //Spin lock
+		gPortIsLocked = true;
+
 		if (lastWindowIndex != windowIndex) {
             Rect structureRect;
             GetWindowRegion(windowHandleFromIndex(windowIndex),kWindowTitleBarRgn,maskRect);
             GetRegionBounds(maskRect,&structureRect);
-			if (gPortIsLocked && windowHandleFromIndex(lastWindowIndex))
-				UnlockPortBits(GetWindowPort(windowHandleFromIndex(lastWindowIndex)));
-			gPortIsLocked = false;
             titleH = structureRect.bottom- structureRect.top;
 			lastWindowIndex = windowIndex;
         }
 
 #if TARGET_API_MAC_CARBON
-		if (!gPortIsLocked) {
-			LockPortBits(windowPort);
-			gPortIsLocked = true;
-			}
+		LockPortBits(windowPort);
 #endif          
        {
             PixMapHandle    pix;
@@ -368,7 +335,7 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
             pixDepth = GetPixDepth(pix);
             
 			if (depth == 1 || depth == 2 || depth == 4) {
-				dispBitsIndex = (int) copy124BitsTheHardWay((unsigned int *) dispBitsIndex, width, height, depth, pixDepth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
+				dispBitsIndex = copy124BitsTheHardWay((unsigned int *) dispBitsIndex, width, height, depth, pixDepth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
 				depth = pixDepth;
 			} else {
             pitch = bytesPerLine(width, depth);
@@ -544,16 +511,17 @@ int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int height, int d
             }
 
 #if TARGET_API_MAC_CARBON
-			ReduceQDFlushLoad(windowPort, windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
+			ReduceQDFlushLoad(windowPort, windowIndex, affectedL,  affectedT,  affectedR,  affectedB);		
 #endif
         }
 
-        if (gWindowsIsInvisible) {
-            sqShowWindow(1);
-            gWindowsIsInvisible = false;
-           //  NOT YET givers poor performance SetupSurface();
-        }
-			 
+	UnlockPortBits(windowPort);			 //JMM BEWARE
+	gPortIsLocked = false;
+	if (gWindowsIsInvisible) {
+		sqShowWindow(1);
+		gWindowsIsInvisible = false;
+	   //  NOT YET givers poor performance SetupSurface();
+	}
 	return 1;
 }
 
@@ -1447,7 +1415,25 @@ int ioShowDisplay(
             */
             provider = CGDataProviderCreateWithData(NULL, (void*)dispBitsIndex, bytes * height, NULL);
             colorspace = CGColorSpaceCreateDeviceRGB();
-            /* Create the image  **** NOT COMPLETE ONLY GOOD FOR 16BIT NEED TO ADJUST FOR OTHER SQUEAK COLOR SPACE 1 8 or 32 */
+			
+ CGColorSpaceRef CreateSystemColorSpace () {
+  CMProfileRef sysprof = NULL;
+  CGColorSpaceRef dispColorSpace = NULL;
+
+  // Get the Systems Profile for the main display
+  if (CMGetSystemProfile(&sysprof) == noErr)
+  {
+    // Create a colorspace with the systems profile
+    dispColorSpace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
+
+    // Close the profile
+    CMCloseProfile(sysprof);
+  }
+  
+  return dispColorSpace;
+}
+
+           /* Create the image  **** NOT COMPLETE ONLY GOOD FOR 16BIT NEED TO ADJUST FOR OTHER SQUEAK COLOR SPACE 1 8 or 32 */
             image = CGImageCreate(width, height, 5 /* bitsPerComponent */,
                     16 /* bitsPerPixel */,
                     bytes, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
@@ -1465,6 +1451,10 @@ int ioShowDisplay(
 
         /* Draw the image to the Core Graphics context */
         CGContextSaveGState(context);
+		
+CGContextSetShouldAntialias(CGContextRef c, bool shouldAntialias);
+CGContextSetInterpolationQuality(CGContextRef c, CGInterpolationQuality quality); (with kCGInterpolationLow? kCGInterpolationNone)
+
         clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
         CGContextClipToRect(context, clip);
         CGContextDrawImage(context, rectangle, image);

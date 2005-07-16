@@ -806,7 +806,8 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
                     
         
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-    pthread_mutex_lock(&gEventDrawLock);
+	waitAFewMilliseconds();
+	pthread_mutex_lock(&gEventDrawLock);
 	pthread_mutex_unlock(&gEventNSAccept);
 #endif
 	return true;
@@ -971,7 +972,7 @@ void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRect
 			
 	/* Flush every 8ms or if the clock rolls over */ 
 	//7
-	if (((check = (ioMSecs() - pastTime)) > 10) || check < 0) {
+	if (((check = (ioMSecs() - pastTime)) > 15) || check < 0) {
 		pastTime = pastTime + check;
 
 		if (!EmptyRect(&dirtyRect)) {

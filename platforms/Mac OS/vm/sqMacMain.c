@@ -563,12 +563,14 @@ char * GetAttributeString(int id) {
 	}
 	
 #if !defined(__MWERKS__)
+#ifndef BROWSERPLUGIN
 	if (id < 0 || (id > 2 && id <= 1000))  {
 		char *results;
 		results = unixArgcInterfaceGetParm(id);
 		if (results) 
 			return results;
 	}
+#endif
 #endif
 
 	/* attribute undefined by this platform */

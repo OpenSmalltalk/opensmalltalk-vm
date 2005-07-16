@@ -4,6 +4,7 @@
  *
  *  Created by John M McIntosh on Tue Jul 20 2004.
  *
+	July 15th 2005 add logic to flush QD buffers for os-x 10.4
  */
 
 #include "sqVirtualMachine.h"
@@ -220,15 +221,24 @@ windowDescriptorBlock *AddWindowBlock(void) {
  */
 static int nextIndex = 1; 
 windowDescriptorBlock *thisWindow;
+	while(gPortIsLocked) {}; //Spin lock
+	gPortIsLocked = true;
+
 	thisWindow = (windowDescriptorBlock*) calloc(1, sizeof(windowDescriptorBlock));
 	if ( thisWindow == NULL) {
+		gPortIsLocked = false;
 		return NULL;
 	}
 	thisWindow->next = windowListRoot;
 	thisWindow->windowIndex = nextIndex++;
 	thisWindow->handle = NULL;
 	/* additional platform init code here */
+	thisWindow->dirtyRectangle.top = 0;
+	thisWindow->dirtyRectangle.left = 0;
+	thisWindow->dirtyRectangle.bottom = 0;
+	thisWindow->dirtyRectangle.right = 0; 
 	windowListRoot = thisWindow;
+	gPortIsLocked = false;
 	return windowListRoot;
 }
 
@@ -240,6 +250,9 @@ windowDescriptorBlock *thisWindow;
 static int RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
 windowDescriptorBlock *prevEntry;
 
+	while(gPortIsLocked) {}; //Spin lock
+	gPortIsLocked = true;
+
 	/* Unlink the entry from the module chain */
 	if(thisWindow == windowListRoot) {
 		windowListRoot = thisWindow->next;
@@ -247,11 +260,36 @@ windowDescriptorBlock *prevEntry;
 		prevEntry = windowListRoot;
 		while(prevEntry->next != thisWindow) {
 			prevEntry = prevEntry->next;
-			if (prevEntry == NULL) return 0;
+			if (prevEntry == NULL) {
+				gPortIsLocked = false;
+				return 0;
+			}
 		}
 		prevEntry->next = thisWindow->next;
 	}
 	free(thisWindow);
+	gPortIsLocked = false;
 	return 1;
 }
 
+void FlushWindowsViaBlockLogic() {
+	static RgnHandle dirtyRgn = NULL;
+	windowDescriptorBlock * validWindowHandle;
+
+	while(gPortIsLocked) {}; //Spin lock
+	gPortIsLocked = true;
+	
+	if (dirtyRgn == NULL) 
+		dirtyRgn = NewRgn();
+	
+	validWindowHandle = windowListRoot;
+	while(validWindowHandle) {
+		if (!EmptyRect(&validWindowHandle->dirtyRectangle)) {
+			RectRgn(dirtyRgn, &validWindowHandle->dirtyRectangle);
+			QDFlushPortBuffer(GetWindowPort(validWindowHandle->handle), dirtyRgn);
+			SetRect(&validWindowHandle->dirtyRectangle,0,0,0,0);
+		}
+		validWindowHandle = validWindowHandle->next;
+	}
+	gPortIsLocked = false;
+}

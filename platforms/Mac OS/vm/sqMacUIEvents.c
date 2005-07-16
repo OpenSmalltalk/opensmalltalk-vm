@@ -79,7 +79,7 @@ notes: IsUserCancelEventRef
 	static int findRepeatInKeyMap(int keyCode);
 	static void setRepeatInKeyMap(int keyCode);
 	void SetUpCarbonEventForWindowIndex(int index);
-	void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle, int affectedL, int affectedT, int affectedR, int affectedB);
+	void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL, int affectedT, int affectedR, int affectedB);
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -737,10 +737,8 @@ int ioSetInputSemaphore(int semaIndex) {
 
 int ioGetNextEvent(sqInputEvent *evt) {
 #if I_AM_CARBON_EVENT
-        aioPoll(0);
-		if (windowActive != 0)
-			ReduceQDFlushLoad(GetWindowPort(windowHandleFromIndex(windowActive)),windowActive, true, 0, 0, 0, 0);
-        pthread_mutex_lock(&gEventQueueLock);
+        aioPoll(0);		
+		pthread_mutex_lock(&gEventQueueLock);
 #else
     if (eventBufferGet == eventBufferPut) {
         if (gThreadManager)
@@ -1282,6 +1280,7 @@ Boolean IsKeyDown() {
 
 extern MenuHandle fileMenu, editMenu;
 EventLoopTimerRef  gPowerManagerDefeatTimer;
+EventLoopTimerRef  gQDFlushTimer;
 
 EventTypeSpec appEventCmdList[] = {{kEventClassCommand, kEventCommandProcess}};
 
@@ -1333,6 +1332,7 @@ static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData);
+static pascal void QDFlushTimer (EventLoopTimerRef theTimer,void* userData);
             
 int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
 int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
@@ -1353,11 +1353,17 @@ void SetUpCarbonEvent() {
     
 /* timmer loops */
     if (gTapPowerManager) 
-    InstallEventLoopTimer (GetMainEventLoop(),
+		InstallEventLoopTimer (GetMainEventLoop(),
                        6*kEventDurationSecond,
                        kEventDurationSecond,
                        NewEventLoopTimerUPP(PowerManagerDefeatTimer),
                        NULL,&gPowerManagerDefeatTimer);
+
+	InstallEventLoopTimer (GetMainEventLoop(),
+                       20*kEventDurationMillisecond,
+                       kEventDurationMillisecond,
+                       NewEventLoopTimerUPP(QDFlushTimer),
+                       NULL,&gQDFlushTimer);
 }
 
 void SetUpCarbonEventForWindowIndex(int index) {
@@ -2063,12 +2069,14 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 #endif
 }
 
+static pascal void QDFlushTimer (EventLoopTimerRef theTimer,void* userData) {
+	extern void QDFlushWindows(void);
+	QDFlushWindows();
+}
+
 #ifndef BROWSERPLUGIN
 
 int ioProcessEvents(void) {
-
-	if (windowActive != 0)
-		ReduceQDFlushLoad(GetWindowPort(windowHandleFromIndex(windowActive)),windowActive, true, 0, 0, 0, 0);
 
     if (gQuitNowRightNow) {
         ioExit();  //This might not return, might call exittoshell
