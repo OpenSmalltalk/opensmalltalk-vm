@@ -143,7 +143,7 @@ usqInt sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
         err = MapFileView(gBackingFile, NULL, kMapEntireFork,kFileViewAccessReadWrite,0, kNilOptions, &debug, &viewLength, &gFileViewID);
         if (err != noErr)
             goto fallBack;
-        return debug;
+        return (usqInt) debug;
     } 
     
 fallBack:
@@ -156,7 +156,7 @@ fallBack:
     	return 0;
     *desiredHeapSize = gHeapSize;
 	debug = NewPtr(gHeapSize);
-	return debug;
+	return (usqInt) debug;
 #endif 
 #endif
 }

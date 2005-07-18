@@ -972,7 +972,7 @@ void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRect
 			
 	/* Flush every 8ms or if the clock rolls over */ 
 	//7
-	if (((check = (ioMSecs() - pastTime)) > 15) || check < 0) {
+	if (((check = (ioMSecs() - pastTime)) > 20) || check < 0) {
 		pastTime = pastTime + check;
 
 		if (!EmptyRect(&dirtyRect)) {

@@ -1359,11 +1359,13 @@ void SetUpCarbonEvent() {
                        NewEventLoopTimerUPP(PowerManagerDefeatTimer),
                        NULL,&gPowerManagerDefeatTimer);
 
+#ifndef BROWSERPLUGIN
 	InstallEventLoopTimer (GetMainEventLoop(),
                        20*kEventDurationMillisecond,
                        kEventDurationMillisecond,
                        NewEventLoopTimerUPP(QDFlushTimer),
                        NULL,&gQDFlushTimer);
+#endif
 }
 
 void SetUpCarbonEventForWindowIndex(int index) {
@@ -2069,12 +2071,12 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 #endif
 }
 
+
+#ifndef BROWSERPLUGIN
 static pascal void QDFlushTimer (EventLoopTimerRef theTimer,void* userData) {
 	extern void QDFlushWindows(void);
 	QDFlushWindows();
 }
-
-#ifndef BROWSERPLUGIN
 
 int ioProcessEvents(void) {
 

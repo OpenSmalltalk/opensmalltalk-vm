@@ -48,6 +48,8 @@ extern struct VirtualMachine *interpreterProxy;
 CTabHandle	stColorTable = nil;
 PixMapHandle	stPixMap = nil;
 Boolean  	gWindowsIsInvisible=true;
+volatile Boolean gPortIsLocked=false;
+
 
 /*** Functions ***/
 void SetColorEntry(int index, int red, int green, int blue);
@@ -153,8 +155,6 @@ int ioSetFullScreen(int fullScreen) {
 #if TARGET_API_MAC_CARBON
 
 void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse,  int affectedL, int affectedT, int affectedR, int affectedB);
-
-volatile Boolean gPortIsLocked=false;
 
 void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL, int affectedT, int affectedR, int affectedB) {
 	Rect rect;
@@ -517,6 +517,7 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
 
 	UnlockPortBits(windowPort);			 //JMM BEWARE
 	gPortIsLocked = false;
+
 	if (gWindowsIsInvisible) {
 		sqShowWindow(1);
 		gWindowsIsInvisible = false;

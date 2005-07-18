@@ -548,7 +548,7 @@ int glSwapBuffers(glRenderer *renderer) {
 		win =  getSTWindow();
 		if(!win) return 0;
 		
-		winPort = GetWindowPort(win);
+		winPort = (GrafPtr) GetWindowPort((GrafPtr) win);
 #ifdef BROWSERPLUGIN
 		StartDraw();
 #else
@@ -558,7 +558,7 @@ int glSwapBuffers(glRenderer *renderer) {
 		GetPort(&oldPort);
 		SetPort(winPort);
 #endif
-		GetPortBounds(winPort,&portBounds);
+		GetPortBounds((CGrafPtr) winPort,&portBounds);
 
 //  Draw into the new port here
 
@@ -567,7 +567,7 @@ int glSwapBuffers(glRenderer *renderer) {
 		SetRect(&dst, renderer->bufferRect[0], renderer->bufferRect[1], 
 				renderer->bufferRect[0] + renderer->bufferRect[2],
 				renderer->bufferRect[1] + renderer->bufferRect[3]);
-		CopyBits(GetPortBitMapForCopyBits(renderer->gWorld), GetPortBitMapForCopyBits(winPort), &src, &dst, srcCopy, NULL);
+		CopyBits(GetPortBitMapForCopyBits(renderer->gWorld), GetPortBitMapForCopyBits((CGrafPtr) winPort), &src, &dst, srcCopy, NULL);
 #ifdef BROWSERPLUGIN
 		EndDraw();
 #else
