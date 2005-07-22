@@ -20,7 +20,8 @@
  3.8.1b1 Jul 20th, 2004 JMM Start on multiple window logic
  3.8.6b1 Jan 25th, 2005 JMM flush qd buffers less often
  3.8.6b3 Jan 25th, 2005 JMM Change locking of pixels (less often)
- 8.8.8b3 Jul 15th, 2005 JMM Add window(s) flush logic every 1/60 second for os-x
+ 3.8.8b3 Jul 15th, 2005 JMM Add window(s) flush logic every 1/60 second for os-x
+ 3.8.8b6 Jul 19th, 2005 JMM tuning of the window flush
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -154,6 +155,8 @@ int ioSetFullScreen(int fullScreen) {
 
 #if TARGET_API_MAC_CARBON
 
+<<<<<<< .mine
+=======
 void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse,  int affectedL, int affectedT, int affectedR, int affectedB);
 
 void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL, int affectedT, int affectedR, int affectedB) {
@@ -180,6 +183,7 @@ FlushWindowsViaBlockLogic();
 }
 
 
+>>>>>>> .r1231
 extern struct VirtualMachine *interpreterProxy;
 void sqShowWindow(int windowIndex);
 void sqShowWindowActual(int windowIndex);
@@ -279,6 +283,9 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
 void * copy124BitsTheHardWay(
 	unsigned int * dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex,int *pixPitch);
+
+#ifdef JMMFoo
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse,  int affectedL, int affectedT, int affectedR, int affectedB);
 	
 int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, int depth, 
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
@@ -311,9 +318,7 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
             maskRect = NewRgn();            
         }
 		
-		while(gPortIsLocked) {}; //Spin lock
-		gPortIsLocked = true;
-
+		
 		if (lastWindowIndex != windowIndex) {
             Rect structureRect;
             GetWindowRegion(windowHandleFromIndex(windowIndex),kWindowTitleBarRgn,maskRect);
@@ -338,7 +343,7 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
 				dispBitsIndex = copy124BitsTheHardWay((unsigned int *) dispBitsIndex, width, height, depth, pixDepth, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
 				depth = pixDepth;
 			} else {
-            pitch = bytesPerLine(width, depth);
+				pitch = bytesPerLine(width, depth);
 			}
  
             bytes= affectedW * (depth / 8);
@@ -516,7 +521,7 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
         }
 
 	UnlockPortBits(windowPort);			 //JMM BEWARE
-	gPortIsLocked = false;
+
 
 	if (gWindowsIsInvisible) {
 		sqShowWindow(1);
@@ -525,6 +530,148 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
 	}
 	return 1;
 }
+
+void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL, int affectedT, int affectedR, int affectedB) {
+	Rect rect;
+	windowDescriptorBlock * validWindowHandle = windowBlockFromIndex(windowIndexToUse);
+
+		
+	rect.top = affectedT;
+	rect.left = affectedL;
+	rect.bottom = affectedB;
+	rect.right = affectedR; 
+
+	if (EmptyRect(&validWindowHandle->dirtyRectangle))
+		validWindowHandle->dirtyRectangle = rect;
+	else
+		UnionRect(&validWindowHandle->dirtyRectangle,&rect,&validWindowHandle->dirtyRectangle);
+			
+}
+
+
+#endif 
+static  unsigned int*rememberDispBitsIndex=0;
+
+static const void *get_byte_pointer(void *bitmap)
+{
+    return (void *) rememberDispBitsIndex;
+}
+
+CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
+    get_byte_pointer,
+    NULL,
+    NULL,
+    NULL
+};
+
+
+int ioShowDisplayOnWindow(
+	 unsigned int*  dispBitsIndex, int width, int height, int depth,
+	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
+
+	int 		affectedW,affectedH,pitch;
+	static int  rememberWidth=0,rememberHeight=0,rememberDepth=0,rememberTicker=0;
+	
+	static CGContextRef context=NULL;
+	static CGImageRef image;
+	static CGRect rectangle;
+	CGRect clip;
+
+	if (gWindowsIsInvisible) {
+		makeMainWindow();
+	}
+
+	if (affectedL < 0) affectedL = 0;
+	if (affectedT < 0) affectedT = 0;
+	if (affectedR > width) affectedR = width;
+	if (affectedB > height) affectedB = height;
+	
+	affectedW= affectedR - affectedL;
+	affectedH= affectedB - affectedT;
+
+	if ((windowHandleFromIndex(windowIndex) == nil) || (affectedW <= 0) || (affectedH <= 0)){
+            return 0;
+	}
+
+	if (depth == 1 || depth == 2 || depth == 4 || depth == 8) {
+		dispBitsIndex = copy124BitsTheHardWay((unsigned int *) dispBitsIndex, width, height, depth, 32, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
+		depth = 32;
+	} else {
+		pitch = bytesPerLine(width, depth);
+	}
+			
+	if (!((rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth) && (rememberDispBitsIndex == dispBitsIndex))) {
+            CGDataProviderRef provider;
+            CGColorSpaceRef colorspace;
+			CMProfileRef sysprof = NULL;
+            // long    bytes = (((width * depth) + 31) / 32) * 4;
+            
+            rememberWidth  = width;
+            rememberHeight = height;
+            rememberDepth  = depth;
+			rememberDispBitsIndex = dispBitsIndex;
+            rectangle = CGRectMake(0, 0, width, height);  
+			if (context) {
+				CGContextFlush(context);
+				CFRelease(context);
+			}
+			CreateCGContextForPort(GetWindowPort(windowHandleFromIndex(windowIndex)), &context);
+			CGContextSetShouldAntialias(context, false);
+			CGContextSetInterpolationQuality(context,kCGInterpolationNone);
+            
+            if (image)    
+                CGImageRelease(image);
+            /* Create a data provider with a pointer to the memory bits
+            for testing just do the 16bit argb and ignore other color space issues
+            see http://developer.apple.com/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_images/chapter_6_section_3.html
+            */
+           provider = CGDataProviderCreateWithData(NULL, (void*)dispBitsIndex, pitch * height, NULL);
+		   //provider = CGDataProviderCreateDirectAccess(NULL,  pitch * height, &gProviderCallbacks);
+					
+			  // Get the Systems Profile for the main display
+			if (CMGetSystemProfile(&sysprof) == noErr) {
+				// Create a colorspace with the systems profile
+				colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
+				CMCloseProfile(sysprof);
+			} else 
+				colorspace = CGColorSpaceCreateDeviceRGB();
+		
+
+           /* Create the image  */
+            image = CGImageCreate(width, height, depth==32 ? 8 : 5 /* bitsPerComponent */,
+                    depth /* bitsPerPixel */,
+                    pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
+            /* Once the image is created we can release our reference to the
+            provider and the colorspace. They will be retained by the
+            image */
+            CGDataProviderRelease(provider);
+            CGColorSpaceRelease(colorspace);
+        }
+
+        if (gWindowsIsInvisible) {
+            sqShowWindow(1);
+            gWindowsIsInvisible = false;
+        }
+
+        /* Draw the image to the Core Graphics context */
+        CGContextSaveGState(context);
+        clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
+        CGContextClipToRect(context, clip);
+        CGContextDrawImage(context, rectangle, image);
+		{ 
+			int delay = ioLowResMSecs() - rememberTicker;
+			
+			if (delay > 100 || delay < 0) {
+				CGContextFlush(context);
+				rememberTicker = ioLowResMSecs();
+			} else 
+				CGContextSynchronize(context);
+		}
+		
+        CGContextRestoreGState(context);
+		return 1;
+}
+
 
 void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch) {
@@ -1372,98 +1519,6 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 	return (false);
 }
   
-#ifdef JMMFOO2
-
-int ioShowDisplay(
-	int dispBitsIndex, int width, int height, int depth,
-	int affectedL, int affectedR, int affectedT, int affectedB) {
-
-        static int  rememberWidth=0,rememberHeight=0,rememberDepth=0,rememberDispBitsIndex=0;
-        static CGContextRef context=NULL;
-        static CGImageRef image;
-        static CGRect rectangle;
-        CGRect clip;
-
-	if (gWindowsIsInvisible) {
-		makeMainWindow();
-	}
-
-	if (getSTWindow() == nil) {
-            return;
-	}
-
-
-	if (!((rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth) && (rememberDispBitsIndex == dispBitsIndex))) {
-            CGDataProviderRef provider;
-            CGColorSpaceRef colorspace;
-            size_t size;
-            long    bytes = (((width * depth) + 31) / 32) * 4;
-            
-            rememberWidth  = width;
-            rememberHeight = height;
-            rememberDepth  = depth;
-            rectangle = CGRectMake(0, 0, width, height);  
-
-            if (context == NULL) {
-                CreateCGContextForPort(GetWindowPort(getSTWindow()), &context);
-            }
-            
-            if (image)    
-                CGImageRelease(image);
-            /* Create a data provider with a pointer to the memory bits
-            for testing just do the 16bit argb and ignore other color space issues
-            see http://developer.apple.com/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_images/chapter_6_section_3.html
-            */
-            provider = CGDataProviderCreateWithData(NULL, (void*)dispBitsIndex, bytes * height, NULL);
-            colorspace = CGColorSpaceCreateDeviceRGB();
-			
- CGColorSpaceRef CreateSystemColorSpace () {
-  CMProfileRef sysprof = NULL;
-  CGColorSpaceRef dispColorSpace = NULL;
-
-  // Get the Systems Profile for the main display
-  if (CMGetSystemProfile(&sysprof) == noErr)
-  {
-    // Create a colorspace with the systems profile
-    dispColorSpace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
-
-    // Close the profile
-    CMCloseProfile(sysprof);
-  }
-  
-  return dispColorSpace;
-}
-
-           /* Create the image  **** NOT COMPLETE ONLY GOOD FOR 16BIT NEED TO ADJUST FOR OTHER SQUEAK COLOR SPACE 1 8 or 32 */
-            image = CGImageCreate(width, height, 5 /* bitsPerComponent */,
-                    16 /* bitsPerPixel */,
-                    bytes, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
-            /* Once the image is created we can release our reference to the
-            provider and the colorspace. They will be retained by the
-            image */
-            CGDataProviderRelease(provider);
-            CGColorSpaceRelease(colorspace);
-        }
-
-        if (gWindowsIsInvisible) {
-            sqShowWindow(1);
-            gWindowsIsInvisible = false;
-        }
-
-        /* Draw the image to the Core Graphics context */
-        CGContextSaveGState(context);
-		
-CGContextSetShouldAntialias(CGContextRef c, bool shouldAntialias);
-CGContextSetInterpolationQuality(CGContextRef c, CGInterpolationQuality quality); (with kCGInterpolationLow? kCGInterpolationNone)
-
-        clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
-        CGContextClipToRect(context, clip);
-        CGContextDrawImage(context, rectangle, image);
-        CGContextFlush(context);
-        CGContextRestoreGState(context);
-        return;
-}
-#endif
 
 #if JMMFoo 
 #include "SurfacePlugin.h"

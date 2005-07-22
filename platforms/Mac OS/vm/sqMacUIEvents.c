@@ -1280,7 +1280,6 @@ Boolean IsKeyDown() {
 
 extern MenuHandle fileMenu, editMenu;
 EventLoopTimerRef  gPowerManagerDefeatTimer;
-EventLoopTimerRef  gQDFlushTimer;
 
 EventTypeSpec appEventCmdList[] = {{kEventClassCommand, kEventCommandProcess}};
 
@@ -1332,7 +1331,6 @@ static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData);
-static pascal void QDFlushTimer (EventLoopTimerRef theTimer,void* userData);
             
 int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
 int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
@@ -1347,7 +1345,7 @@ void SetUpCarbonEvent() {
     AdjustMenus();
 
 /* Installing the application event handler */
-    InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventCmdHandler), GetEventTypeCount(appEventCmdList), appEventCmdList, 0, NULL);
+	InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventCmdHandler), GetEventTypeCount(appEventCmdList), appEventCmdList, 0, NULL);
     InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventHandler), GetEventTypeCount(appEventList), appEventList, 0, NULL);
     InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), GetEventTypeCount(customEventEventList), customEventEventList, 0, NULL);
     
@@ -1359,12 +1357,15 @@ void SetUpCarbonEvent() {
                        NewEventLoopTimerUPP(PowerManagerDefeatTimer),
                        NULL,&gPowerManagerDefeatTimer);
 
+<<<<<<< .mine
+=======
 #ifndef BROWSERPLUGIN
 	InstallEventLoopTimer (GetMainEventLoop(),
                        20*kEventDurationMillisecond,
                        kEventDurationMillisecond,
                        NewEventLoopTimerUPP(QDFlushTimer),
                        NULL,&gQDFlushTimer);
+>>>>>>> .r1231
 #endif
 }
 
@@ -1473,6 +1474,9 @@ EventRef event, void* userData)
             if (commandStruct.menu.menuRef == fileMenu && commandStruct.menu.menuItemIndex == quitItem) {
                         gQuitNowRightNow = true;
 				result = noErr;
+			} else if (commandStruct.commandID == kHICommandHide) {
+			} else if (commandStruct.commandID == kHICommandHideOthers) {
+			} else if (commandStruct.commandID == kHICommandShowAll) {
 			} else if (windowActive) {
 				recordMenuEventCarbon(commandStruct.menu.menuRef,commandStruct.menu.menuItemIndex);
 				result = noErr;
@@ -2071,12 +2075,15 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 #endif
 }
 
+<<<<<<< .mine
+=======
 
 #ifndef BROWSERPLUGIN
 static pascal void QDFlushTimer (EventLoopTimerRef theTimer,void* userData) {
 	extern void QDFlushWindows(void);
 	QDFlushWindows();
 }
+>>>>>>> .r1231
 
 int ioProcessEvents(void) {
 
