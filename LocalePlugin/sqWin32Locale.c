@@ -14,11 +14,16 @@
 #include "LocalePlugin.h"
 
 
+/* extra definitions for older include files */
+#ifndef LOCALE_SISO3166CTRYNAME
+#define LOCALE_SISO3166CTRYNAME 90
+#endif
+#ifndef LOCALE_SISO639LANGNAME
+#define LOCALE_SISO639LANGNAME 89
+#endif
+
 /* Locale support functions */
-
-
 sqInt sqLocInitialize(void) {
-
 	return true;
 }
 
