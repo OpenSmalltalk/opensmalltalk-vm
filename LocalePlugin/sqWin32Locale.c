@@ -37,7 +37,7 @@ void	sqLocGetCountryInto(char * str) {
 	char currString[6];
 	int length;
 	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SISO3166CTRYNAME,currString, 6);
-	strncpy(str, currString, length);
+	strncpy(str, currString, length-1);
 
 }
 
@@ -50,7 +50,7 @@ void	sqLocGetLanguageInto(char * str) {
 	char currString[6];
 	int length;
 	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SISO639LANGNAME,currString, 6);
-	strncpy(str, currString, length);
+	strncpy(str, currString, length-1);
 }
 
 /***************** Currency ********************/
@@ -70,7 +70,7 @@ sqInt	sqLocCurrencyNotation(void) {
 /* return the length in chars of the curency symbol string */
 sqInt	sqLocCurrencySymbolSize(void) {
 	char currString[6];
-	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SCURRENCY,currString, 6);
+	return GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SCURRENCY,currString, 6)-1;
 }
 
 /* write the currency symbol into the string ptr */
@@ -78,7 +78,7 @@ void	sqLocGetCurrencySymbolInto(char * str) {
 	char currString[6];
 	int length;
 	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SCURRENCY,currString, 6);
-	strncpy(str, currString, length);
+	strncpy(str, currString, length-1);
 
 
 }
@@ -138,7 +138,7 @@ sqInt	sqLocDaylightSavings(void) {
 static char longDateFormat[] = "dddd dd mmmm yy";
 /* return the size in chars of the long date format string */
 sqInt	sqLocLongDateFormatSize(void) {
-	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SLONGDATE, NULL, 0);
+	return GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SLONGDATE, NULL, 0)-1;
 }
 
 /*Write the string describing the long date formatting into string ptr.
@@ -152,13 +152,13 @@ void	sqLocGetLongDateFormatInto(char * str) {
 	char dateString[80];
 	int length;
 	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SLONGDATE, dateString, 80);
-	strncpy(str, dateString, length);
+	strncpy(str, dateString, length-1);
 }
 
 static char shortDateFormat[] = "dd/mm/yy";
 /* return the size in chars of the short date format string */
 sqInt	sqLocShortDateFormatSize(void) {
-	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SSHORTDATE, NULL, 0);
+	return GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SSHORTDATE, NULL, 0)-1;
 }
 
 /*Write the string describing the short date formatting into string ptr.
@@ -171,13 +171,13 @@ void	sqLocGetShortDateFormatInto(char * str) {
 	char dateString[80];
 	int length;
 	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_SSHORTDATE, dateString, 80);
-	strncpy(str, dateString, length);
+	strncpy(str, dateString, length-1);
 }
 
 static char timeFormat[] = "h:m:s";
 /* return the size in chars of the time format string */
 sqInt	sqLocTimeFormatSize(void) {
-	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, NULL, 0);
+	GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, NULL, 0)-1;
 }
 
 /* write the string describing the time formatting into string ptr.
@@ -188,5 +188,5 @@ void	sqLocGetTimeFormatInto(char * str) {
 	char timeString[80];
 	int length;
 	length = GetLocaleInfo(LOCALE_USER_DEFAULT,LOCALE_STIMEFORMAT, timeString, 80);
-	strncpy(str, timeString, length);
+	strncpy(str, timeString, length-1);
 }
