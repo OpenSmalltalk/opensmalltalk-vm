@@ -49,7 +49,6 @@ extern struct VirtualMachine *interpreterProxy;
 CTabHandle	stColorTable = nil;
 PixMapHandle	stPixMap = nil;
 Boolean  	gWindowsIsInvisible=true;
-volatile Boolean gPortIsLocked=false;
 
 
 /*** Functions ***/
@@ -155,35 +154,6 @@ int ioSetFullScreen(int fullScreen) {
 
 #if TARGET_API_MAC_CARBON
 
-<<<<<<< .mine
-=======
-void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse,  int affectedL, int affectedT, int affectedR, int affectedB);
-
-void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL, int affectedT, int affectedR, int affectedB) {
-	Rect rect;
-	windowDescriptorBlock * validWindowHandle = windowBlockFromIndex(windowIndexToUse);
-
-		
-	rect.top = affectedT;
-	rect.left = affectedL;
-	rect.bottom = affectedB;
-	rect.right = affectedR; 
-
-	if (EmptyRect(&validWindowHandle->dirtyRectangle))
-		validWindowHandle->dirtyRectangle = rect;
-	else
-		UnionRect(&validWindowHandle->dirtyRectangle,&rect,&validWindowHandle->dirtyRectangle);
-			
-}
-
-void QDFlushWindows() {
-
-FlushWindowsViaBlockLogic();	
-
-}
-
-
->>>>>>> .r1231
 extern struct VirtualMachine *interpreterProxy;
 void sqShowWindow(int windowIndex);
 void sqShowWindowActual(int windowIndex);
@@ -521,7 +491,6 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
         }
 
 	UnlockPortBits(windowPort);			 //JMM BEWARE
-
 
 	if (gWindowsIsInvisible) {
 		sqShowWindow(1);

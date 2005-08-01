@@ -9,39 +9,14 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation\
 \
-<<<<<<< .mine
 July 21th, 2005 (3.8.8b6)\
-=======
-July 15th, 2005 (3.8.8b5)\
->>>>>>> .r1231
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.8.7.x seems a fine VM, from what people tell me, but now we've 3.8.8.\
-3.8.8b5			Window flush every 1/50 of a second to make os-x 10.4 happy. \
-				Add getSessionID logic\
-				\
-				osExports.c			compiler warning message about file name case\
-				sqMacDirectory		correctly get volume size and creation date, was always broken.\
-				sqMacHostWindow.c	deal with flushing multiple open windows\
-				sqMacHostWinodw.h	\
-				sqMacOpenGL.c		use of QDSwapPort versus get/set port for non-open/gl macs\
-				sqMacPrinting.c		deal with compiler warning message\
-				sqMacSecurity.c		compiler warning message about file name case\
-				sqMacNetwork.c		compiler warning messages\
-				sqExports.c			compiler warning messages\
-				sqMacEncoding.c		double CFRelease (bad)\
-				sqMacExternalPrims.c	compiler warning messages\
-				sqMacMain.c			NSPlugin related changes\
-				sqMacMemory.c		compiler warning messages\
-				sqMacNSPlugin.c		alter screen update logic, wait a few milliseconds for squeak to do screen redraws\
-				sqMacUIEvents.c		Alter screen flush logic.\
-				sqMacWindow.c		Alter screen flush logic\
-				Gnuifier.5.cs			Gunifier changes for 32/65bit changes\
 \
-<<<<<<< .mine
 3.8.8b6			Sigh, found flush window via QDFlushPort logic every 1/50 of a second via carbon event was too expensive (CPU TIME)\
 				So I poked at Quartz example code and reworked for Squeak, with addition of quickdraw off-screen conversion for 1/2/4/8 bit color spaces.\
 				This has reduced cpu overhead when in background quite a bit and seem to have made Croquet faster. \
@@ -76,12 +51,6 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 d\
 3.8.8b3			Limited release\
 \
-=======
-3.8.8b4			Limited release\
-d\
-3.8.8b3			Limited release\
-\
->>>>>>> .r1231
 3.8.8b2			Revisions to the 32/64bit memory access to improve VM performance\
 				
 \f1 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
