@@ -79,6 +79,7 @@ March	2005	JMM 3.7.6	Add host window support
 #include "sqMacImageIO.h"
 #include "sqMacEncoding.h"
 #include "sqMacMemory.h"
+#include "sqMacWindow.h"
 
 #include <Events.h>
 #include <Files.h>
@@ -188,7 +189,7 @@ NPWindow* 	netscapeWindow	= nil;
 int			pluginArgCount	= 0;
 char		*pluginArgName[MAX_ARG_STRING_LENGTH];
 char		*pluginArgValue[MAX_ARG_STRING_LENGTH];
-Boolean     ignoreFirstEvent=false,gIWasRunning=false;
+Boolean     ignoreFirstEvent=false,gIWasRunning=false,gPendingFullScreen=false;
 int			squeakHeapMBytes = STARTINGsqueakHeapMBytes;  /* default heap size, override via the "memory" EMBED tag */
 char		squeakPluginImageName[256] = IMAGE_NAME;
 char		failureURL[1024] = "";
@@ -196,7 +197,7 @@ NPP			thisInstance	= nil;
 WindowPtr gAFullscreenWindow = nil;
 char        rememberMemoryString[128]="";
 extern Boolean         gAllowAccessToFilePlease;
-
+int			gEventDrawLockCounter=0;
 
 #define URL_REQUEST_COUNT 100
 
@@ -419,9 +420,12 @@ NPError NPP_SetWindow(NPP instance, NPWindow* window) {
 	netscapeWindow = window;
 	port = (NP_Port *) netscapeWindow->window;
 	realWindow = GetWindowFromPort(port->port);
-	windowBlock = AddWindowBlock();
+	windowBlock = windowBlockFromHandle(windowHandleFromIndex(1));
+	if (windowBlock == NULL) {
+		windowBlock = AddWindowBlock();
+	}
 	windowBlock->handle = (wHandleType) realWindow;
-
+	
 	needsUpdate	= true;
 
 	if (gIWasRunning)
@@ -596,30 +600,18 @@ int16 NPP_HandleEvent(NPP instance, void *rawEvent) {
 	EventRecord *eventPtr = (EventRecord*) rawEvent;
 	EventRecord	theEvent;
 	int				ok;
-    Boolean windowActive=true;
-    GrafPtr         rememberFrontWindow=null;
-    Boolean			rememberWindowOnce=true;
-    
+
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 	pthread_mutex_lock(&gEventNSAccept);
     pthread_mutex_unlock(&gEventDrawLock);
 #endif
 
-    if (rememberWindowOnce) { //Remember who the front window is
-        rememberWindowOnce = false;
-        rememberFrontWindow = (GrafPtr) FrontWindow();
-    }
-
+			
 	if (gThreadManager)
-SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
+		SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
  
 	do {
 	
-	    if (rememberFrontWindow == (GrafPtr)  FrontWindow())
-			windowActive = true;
-		else 
-			windowActive = false;
-
     	if (exitRequested) {
     		exitRequested = false;
     		ExitCleanup();
@@ -640,8 +632,6 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 		if(!((messageHook) && (messageHook(eventPtr)))) {
 	    	switch (eventPtr->what) {
 	    		case mouseDown:
-					if (!windowActive) 
-					    break;
 	                gButtonIsDown = true;				    
 					if(inputSemaphoreIndex) {
 			    		StartDraw();
@@ -659,8 +649,6 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	    		break;
 
 				case mouseUp:
-					if (!windowActive) 
-					    break;
 					gButtonIsDown = false;
 					if(inputSemaphoreIndex) {
 			    		StartDraw();
@@ -708,10 +696,17 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 	    		case updateEvt:
 	    			needsUpdate = true;
 	    		break;
+	    		case getFocusEvent:
+	    		break;
+	    		case loseFocusEvent:
+	    		break;
+	    		case adjustCursorEvent:
+	    		break;
 	    		
-	    		case nullEvent :
+	    	
+				case nullEvent :
 					{
-	    				if(inputSemaphoreIndex && windowActive) {
+	    				if(inputSemaphoreIndex) {
 	    					eventPtr->modifiers = checkForModifierKeys();
 	    		    		StartDraw();
 #if I_AM_CARBON_EVENT
@@ -729,22 +724,23 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 				case activateEvt:
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 				{
-				/* serious hack to show safari after hiding, 
-				issue with safari 1.1.1 not seeing activate when full screen terminates */
-				
-				ProcessSerialNumber psn = { 0, kCurrentProcess }; 
-				OSStatus err;
-				if (!IsProcessVisible(&psn)) {
-					err = ShowHideProcess (&psn,true);
-					SetFrontProcess(&psn);
+					/* serious hack to show safari after hiding, 
+					issue with safari 1.1.1 not seeing activate when full screen terminates */
+					
+					ProcessSerialNumber psn = { 0, kCurrentProcess }; 
+					OSStatus err;
+					if (!IsProcessVisible(&psn)) {
+						err = ShowHideProcess (&psn,true);
+						SetFrontProcess(&psn);
+						}
 				}
-				}
-				pthread_mutex_lock(&gEventDrawLock);
-				pthread_mutex_unlock(&gEventNSAccept);
+
+					pthread_mutex_lock(&gEventDrawLock);
+					pthread_mutex_unlock(&gEventNSAccept);
 #endif
-				return false;
-				break;
-	    	}
+					return false;
+					break;
+			}
 		}
     	if (needsUpdate && (netscapeWindow != nil) && (memory)) {
      		needsUpdate = false;
@@ -759,7 +755,7 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 				pthread_mutex_unlock(&gEventNSAccept);
 #endif
 				return true;
-     		}
+				}
 			else {
              fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
  			}
@@ -789,15 +785,15 @@ SqueakYieldToAnyThread(); //Give some time up, needed for Netscape
 #endif
     	    return false;
     	} */
-	if (getFullScreenFlag()) {
+	if (getFullScreenFlag() ) {
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
             pthread_mutex_lock(&gEventDrawLock);
 			pthread_mutex_unlock(&gEventNSAccept);
 #endif
      	    ok = WaitNextEvent(everyEvent, &theEvent,1,null);
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-            pthread_mutex_unlock(&gEventDrawLock);
 			pthread_mutex_lock(&gEventNSAccept);
+			pthread_mutex_unlock(&gEventDrawLock);
 #endif
             eventPtr = &theEvent;
     		SqueakYieldToAnyThread();
@@ -846,7 +842,9 @@ void StartDraw(void) {
 
 	/* save old graphics port and switch to ours */
 	GetPort((GrafPtr *) &gOldPort);
-	realWindow = (WindowPtr) port->port;
+	// was realWindow = (WindowPtr) port->port;
+	realWindow = GetWindowFromPort(port->port);
+
 	mangleWindowInfo = windowBlockFromIndex(1);
 	mangleWindowInfo->handle = realWindow;
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
@@ -875,7 +873,7 @@ int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
 
-	ioShowDisplayOnWindow(  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
+	return ioShowDisplayOnWindow( (unsigned *) dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 }
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
@@ -883,7 +881,7 @@ void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRect
 #endif
 
 int ioShowDisplayOnWindow(
-	int dispBitsIndex, int width, int height, int depth,
+	unsigned * dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
 
@@ -892,7 +890,7 @@ int ioShowDisplayOnWindow(
 	static RgnHandle	maskRect = nil;
     
 	if (windowHandleFromIndex(windowIndex) == nil || exitRequested) {
-		return;
+		return 0;
 	}
 	
 	StartDraw();
@@ -930,7 +928,7 @@ int ioShowDisplayOnWindow(
 		GetPortBitMapForCopyBits(GetWindowPort(windowHandleFromIndex(1))), 
 		&srcRect, &dstRect, srcCopy, maskRect);
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
-		ReduceQDFlushLoad(windowHandleFromIndex(1), windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
+		ReduceQDFlushLoad(GetWindowPort(windowHandleFromIndex(1)), windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
 #endif
 	EndDraw();
 	return 0;
@@ -1117,7 +1115,7 @@ int URLPostCreate(char *url, char *buffer, char * window,int semaIndex) {
             URLSetProperty(URLRef, kURLHTTPRequestMethod, "POST", 4);
             URLSetProperty(URLRef, kURLHTTPRequestBody, buffer, strlen(buffer));
             GetTempFSSpec(&tempFileSpec);
-            status = URLOpen(URLRef, &tempFileSpec, 0, NULL, NULL, NULL);
+            status = URLOpen(URLRef, &tempFileSpec, 0, NULL, 0, NULL);
             currentState = kURLNullState;
             while (status == noErr && !(currentState == kURLCompletedState || currentState == kURLErrorOccurredState)){
                 URLIdle();
@@ -1154,7 +1152,7 @@ void URLRequestDestroy(int requestHandle) {
 	urlRequests[requestHandle].status = STATUS_IDLE;
 	urlRequests[requestHandle].semaIndex = 0;
         
-        if (urlRequests[requestHandle].fileName[0] != NULL) {
+        if (urlRequests[requestHandle].fileName[0] != 0) {
             sqFileDeleteNameSize((int) &urlRequests[requestHandle].fileName, strlen(urlRequests[requestHandle].fileName));
             urlRequests[requestHandle].fileName[0] = 0x00;
         }
@@ -1318,8 +1316,15 @@ int ioSetFullScreen(int fullScreen) {
 		desiredHeight = 0;
 		oldNetscapeWindow = netscapeWindow;
 		oldStWindow = getSTWindow();
-		dominantGDevice = getThatDominateGDevice();
+		dominantGDevice = getThatDominateGDevice(oldStWindow);
+	
+    	ignoreFirstEvent = true;
 		setFullScreenFlag(true);  //JMM Moved before to test
+		waitAFewMilliseconds();
+		waitAFewMilliseconds();
+		waitAFewMilliseconds();
+		waitAFewMilliseconds();
+		waitAFewMilliseconds();
 		BeginFullScreen	(&gRestorableStateForScreen,
 								dominantGDevice,
 								 &desiredWidth,
@@ -1344,7 +1349,7 @@ int ioSetFullScreen(int fullScreen) {
 		gFullScreenNPWindow.clipRect.right = desiredWidth;
     	
     	netscapeWindow = &gFullScreenNPWindow;
-    	ignoreFirstEvent = true;
+
  	} else {
 	    if (!getFullScreenFlag()) return 0;
 		setFullScreenFlag(false);
@@ -1472,7 +1477,7 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
     char fileName[MAX_STRING_LENGTH + 1];
     
     GetTempFSSpec(&tempFileSpec);
-    error = URLSimpleDownload (url,&tempFileSpec,NULL,NULL,NULL,notifyData);
+    error = URLSimpleDownload (url,&tempFileSpec,NULL,0,NULL,notifyData);
     PathToFile(fileName,MAX_STRING_LENGTH, &tempFileSpec,gCurrentVMEncoding);
     URLRequestCompleted((int) notifyData, fileName);
 	return 0;
@@ -1794,7 +1799,7 @@ void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 	   failure flag if not successful. */
     char fileName[1024];
     
-    if (*MacfileName == NULL) {
+    if (*MacfileName == 0x00) {
         interpreterProxy->success(false);
         return;
     }
