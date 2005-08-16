@@ -27,6 +27,6 @@ WindowPtr getSTWindow(void);
 WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes);
 void SetUpPixmap(void);
 void FreePixmap(void);
-GDHandle	getThatDominateGDevice(void);
+GDHandle	getThatDominateGDevice(WindowPtr window);
 int makeMainWindow(void);
 void sqShowWindow(int windowIndex);

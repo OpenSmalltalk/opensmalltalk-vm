@@ -21,6 +21,9 @@ typedef struct windowDescriptorBlock {
 	wHandleType		handle;
 	wIndexType		windowIndex;
 	/* extra fields to support your platform needs */
+#if TARGET_API_MAC_CARBON
+	int rememberTicker;
+#endif
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);

@@ -94,7 +94,7 @@ int ioSetFullScreen(int fullScreen) {
     static Rect		rememberOldLocation = {0,0,0,0};		
     GDHandle            dominantGDevice;
 
-	dominantGDevice = getThatDominateGDevice();
+	dominantGDevice = getThatDominateGDevice(getSTWindow());
     if (dominantGDevice == null) {
         success(false);
         return 0;
@@ -519,11 +519,10 @@ void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL,
 
 
 #endif 
-static  unsigned int*rememberDispBitsIndex=0;
 
 static const void *get_byte_pointer(void *bitmap)
 {
-    return (void *) rememberDispBitsIndex;
+    return (void *) bitmap;
 }
 
 CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
@@ -535,19 +534,30 @@ CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
 
 
 int ioShowDisplayOnWindow(
-	 unsigned int*  dispBitsIndex, int width, int height, int depth,
+	unsigned int*  dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
-	int 		affectedW,affectedH,pitch;
-	static int  rememberWidth=0,rememberHeight=0,rememberDepth=0,rememberTicker=0;
+	static CGColorSpaceRef colorspace = NULL;
+	int 		pitch;
+	CGImageRef image;
+	CGContextRef context;
+	CGRect		clip;
+	windowDescriptorBlock *targetWindowBlock;
+	CGrafPtr windowPort;
+	CGDataProviderRef provider;
 	
-	static CGContextRef context=NULL;
-	static CGImageRef image;
-	static CGRect rectangle;
-	CGRect clip;
-
 	if (gWindowsIsInvisible) {
 		makeMainWindow();
+		if (colorspace == NULL) {
+				// Get the Systems Profile for the main display
+			CMProfileRef sysprof = NULL;
+			if (CMGetSystemProfile(&sysprof) == noErr) {
+				// Create a colorspace with the systems profile
+				colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
+				CMCloseProfile(sysprof);
+			} else 
+				colorspace = CGColorSpaceCreateDeviceRGB();
+		}
 	}
 
 	if (affectedL < 0) affectedL = 0;
@@ -555,90 +565,59 @@ int ioShowDisplayOnWindow(
 	if (affectedR > width) affectedR = width;
 	if (affectedB > height) affectedB = height;
 	
-	affectedW= affectedR - affectedL;
-	affectedH= affectedB - affectedT;
-
-	if ((windowHandleFromIndex(windowIndex) == nil) || (affectedW <= 0) || (affectedH <= 0)){
+	if ((windowHandleFromIndex(windowIndex) == nil) || ((affectedR - affectedL) <= 0) || ((affectedB - affectedT) <= 0)){
             return 0;
 	}
 
-	if (depth == 1 || depth == 2 || depth == 4 || depth == 8) {
+	if (depth > 0 && depth <= 8) {
 		dispBitsIndex = copy124BitsTheHardWay((unsigned int *) dispBitsIndex, width, height, depth, 32, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
 		depth = 32;
 	} else {
 		pitch = bytesPerLine(width, depth);
 	}
 			
-	if (!((rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth) && (rememberDispBitsIndex == dispBitsIndex))) {
-            CGDataProviderRef provider;
-            CGColorSpaceRef colorspace;
-			CMProfileRef sysprof = NULL;
-            // long    bytes = (((width * depth) + 31) / 32) * 4;
-            
-            rememberWidth  = width;
-            rememberHeight = height;
-            rememberDepth  = depth;
-			rememberDispBitsIndex = dispBitsIndex;
-            rectangle = CGRectMake(0, 0, width, height);  
-			if (context) {
-				CGContextFlush(context);
-				CFRelease(context);
-			}
-			CreateCGContextForPort(GetWindowPort(windowHandleFromIndex(windowIndex)), &context);
-			CGContextSetShouldAntialias(context, false);
-			CGContextSetInterpolationQuality(context,kCGInterpolationNone);
-            
-            if (image)    
-                CGImageRelease(image);
-            /* Create a data provider with a pointer to the memory bits
-            for testing just do the 16bit argb and ignore other color space issues
-            see http://developer.apple.com/documentation/GraphicsImaging/Conceptual/drawingwithquartz2d/dq_images/chapter_6_section_3.html
-            */
-           provider = CGDataProviderCreateWithData(NULL, (void*)dispBitsIndex, pitch * height, NULL);
-		   //provider = CGDataProviderCreateDirectAccess(NULL,  pitch * height, &gProviderCallbacks);
-					
-			  // Get the Systems Profile for the main display
-			if (CMGetSystemProfile(&sysprof) == noErr) {
-				// Create a colorspace with the systems profile
-				colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
-				CMCloseProfile(sysprof);
-			} else 
-				colorspace = CGColorSpaceCreateDeviceRGB();
+	targetWindowBlock = windowBlockFromIndex(windowIndex);
+	windowPort = GetWindowPort(windowHandleFromIndex(windowIndex));
+	
+	provider = CGDataProviderCreateDirectAccess((void*)dispBitsIndex
+				+ pitch*affectedT 
+				+ affectedL*(depth==32 ? 4 : 2),  
+				pitch * (affectedB-affectedT)-affectedL*(depth==32 ? 4 : 2), 
+				&gProviderCallbacks);
+	image = CGImageCreate( affectedR-affectedL, affectedB-affectedT, depth==32 ? 8 : 5 /* bitsPerComponent */,
+				depth /* bitsPerPixel */,
+				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
+
+	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
+
+	/* Draw the image to the Core Graphics context */
+	QDBeginCGContext(windowPort,&context); 
+	CGContextSaveGState(context);
+	CGContextSetShouldAntialias(context, false);
+	CGContextSetInterpolationQuality(context,kCGInterpolationNone);
+	CGContextDrawImage(context, clip, image);
+	CGImageRelease(image);
+	CGDataProviderRelease(provider);
+	
+	{ 
+		int delay = ioLowResMSecs() - targetWindowBlock->rememberTicker;
 		
-
-           /* Create the image  */
-            image = CGImageCreate(width, height, depth==32 ? 8 : 5 /* bitsPerComponent */,
-                    depth /* bitsPerPixel */,
-                    pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
-            /* Once the image is created we can release our reference to the
-            provider and the colorspace. They will be retained by the
-            image */
-            CGDataProviderRelease(provider);
-            CGColorSpaceRelease(colorspace);
-        }
-
-        if (gWindowsIsInvisible) {
-            sqShowWindow(1);
-            gWindowsIsInvisible = false;
-        }
-
-        /* Draw the image to the Core Graphics context */
-        CGContextSaveGState(context);
-        clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
-        CGContextClipToRect(context, clip);
-        CGContextDrawImage(context, rectangle, image);
-		{ 
-			int delay = ioLowResMSecs() - rememberTicker;
-			
-			if (delay > 100 || delay < 0) {
-				CGContextFlush(context);
-				rememberTicker = ioLowResMSecs();
-			} else 
-				CGContextSynchronize(context);
-		}
-		
-        CGContextRestoreGState(context);
-		return 1;
+		if (delay > 100 || delay < 0) {
+			CGContextSynchronize(context);
+			CGContextFlush(context);
+			targetWindowBlock->rememberTicker = ioLowResMSecs();
+		} else 
+			CGContextSynchronize(context);
+	} 
+	
+	CGContextRestoreGState(context);
+	QDEndCGContext(windowPort,&context);
+	if (gWindowsIsInvisible) {
+		sqShowWindow(1);
+		gWindowsIsInvisible = false;
+	}
+	
+	return 1;
 }
 
 
@@ -899,8 +878,7 @@ int ioHasDisplayDepth(int depth) {
 int ioScreenDepth(void) {
     GDHandle mainDevice;
     
-	mainDevice = getThatDominateGDevice();
-
+	mainDevice = getThatDominateGDevice(getSTWindow());
     if (mainDevice == null) 
         return 8;
     
@@ -1049,7 +1027,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
     	return 0;
     }
 
-	dominantGDevice = getThatDominateGDevice();
+	dominantGDevice = getThatDominateGDevice(getSTWindow());
         if (dominantGDevice == null) {
             success(false);
             return 0;
@@ -1088,14 +1066,15 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 #endif
 }
 
-GDHandle	getThatDominateGDevice() {
-	GDHandle		dominantGDevice;
-	Rect 			ignore;
+GDHandle	getThatDominateGDevice(WindowPtr window) {
+	GDHandle		dominantGDevice=NULL;
+	Rect			ignore;
 #if TARGET_API_MAC_CARBON
-        GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&dominantGDevice,&ignore); 
+	GetWindowGreatestAreaDevice((WindowRef) window,kWindowContentRgn,&dominantGDevice,NULL); 
 #else
-        dominantGDevice = getDominateDevice(getSTWindow(),&ignore);
+        dominantGDevice = getDominateDevice((WindowRef) window,&ignore);
 #endif
+	
 	return dominantGDevice;
 }
 

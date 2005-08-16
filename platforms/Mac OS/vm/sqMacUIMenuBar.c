@@ -38,7 +38,7 @@ extern struct VirtualMachine* interpreterProxy;
 
 void MenuBarHide(void) {
  	if (menuBarRegion != nil) return;  /* saved state, so menu bar is already hidden */
-	if (!(getThatDominateGDevice() == GetMainDevice())) return;  /*Do not did if main window on secondary screen */
+	if (!(getThatDominateGDevice(getSTWindow()) == GetMainDevice())) return;  /*Do not did if main window on secondary screen */
     menuBarRegion = (RgnHandle) 1;
     ShowMenuBar();
     HideMenuBar();

@@ -30,6 +30,7 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 	
 	windowBlock = AddWindowBlock();
 	windowBlock->handle = (wHandleType) window;
+	
 	index = windowBlock->windowIndex;
 #if I_AM_CARBON_EVENT
 	SetUpCarbonEventForWindowIndex(index);
@@ -259,3 +260,4 @@ windowDescriptorBlock *prevEntry;
 	free(thisWindow);
 	return 1;
 }
+
