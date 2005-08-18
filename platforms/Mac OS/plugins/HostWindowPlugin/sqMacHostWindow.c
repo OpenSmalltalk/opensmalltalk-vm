@@ -34,6 +34,7 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 	index = windowBlock->windowIndex;
 #if I_AM_CARBON_EVENT
 	SetUpCarbonEventForWindowIndex(index);
+	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
 #endif
 #ifndef BROWSERPLUGIN
 	sqShowWindow(index);
@@ -46,6 +47,11 @@ int closeWindow(int windowIndex) {
 	windowHandle = windowHandleFromIndex(windowIndex);
 	if(windowHandle == NULL) 
 		return 0;
+#if I_AM_CARBON_EVENT
+	if (windowBlockFromIndex(windowIndex)->context)
+		CGContextRelease(windowBlockFromIndex(windowIndex)->context);
+	windowBlockFromIndex(windowIndex)->context = NULL;
+#endif
 	RemoveWindowBlock(windowBlockFromIndex(windowIndex));
 	DisposeWindow(windowHandle);
 	return 1;
@@ -214,13 +220,14 @@ windowDescriptorBlock *entry;
 	return 0;
 }
 
+static int nextIndex = 1; 
+
 windowDescriptorBlock *AddWindowBlock(void) {
 /* create a new entry in the linkedlist of windows.
  * If the calloc fails, return NULL which will then go back to the
  * prim and fail it cleanly.
  * Initialize the block to a sensible state
  */
-static int nextIndex = 1; 
 windowDescriptorBlock *thisWindow;
 
 	thisWindow = (windowDescriptorBlock*) calloc(1, sizeof(windowDescriptorBlock));
@@ -261,3 +268,6 @@ windowDescriptorBlock *prevEntry;
 	return 1;
 }
 
+int getCurrentIndexInUse(void) {
+	return nextIndex-1;
+}

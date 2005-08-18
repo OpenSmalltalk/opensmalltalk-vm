@@ -22,7 +22,9 @@ typedef struct windowDescriptorBlock {
 	wIndexType		windowIndex;
 	/* extra fields to support your platform needs */
 #if TARGET_API_MAC_CARBON
+	CGContextRef context;
 	int rememberTicker;
+	int dirty;
 #endif
 } windowDescriptorBlock;
 
@@ -32,3 +34,4 @@ int windowIndexFromHandle(wHandleType windowHandle);
 wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
 windowDescriptorBlock *windowBlockFromIndex(int windowIndex);
+int getCurrentIndexInUse(void);

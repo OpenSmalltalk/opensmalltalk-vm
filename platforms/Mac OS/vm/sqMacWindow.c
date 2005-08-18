@@ -540,7 +540,6 @@ int ioShowDisplayOnWindow(
 	static CGColorSpaceRef colorspace = NULL;
 	int 		pitch;
 	CGImageRef image;
-	CGContextRef context;
 	CGRect		clip;
 	windowDescriptorBlock *targetWindowBlock;
 	CGrafPtr windowPort;
@@ -591,27 +590,30 @@ int ioShowDisplayOnWindow(
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 
 	/* Draw the image to the Core Graphics context */
-	QDBeginCGContext(windowPort,&context); 
-	CGContextSaveGState(context);
-	CGContextSetShouldAntialias(context, false);
-	CGContextSetInterpolationQuality(context,kCGInterpolationNone);
-	CGContextDrawImage(context, clip, image);
-	CGImageRelease(image);
-	CGDataProviderRelease(provider);
+	//QDBeginCGContext(windowPort,&context); 
+	//CGContextSaveGState(context);
+	//CGContextSetShouldAntialias(context, false);
+	//CGContextSetInterpolationQuality(context,kCGInterpolationNone);
+	CGContextDrawImage(targetWindowBlock->context, clip, image);
 	
 	{ 
-		int delay = ioLowResMSecs() - targetWindowBlock->rememberTicker;
-		
-		if (delay > 100 || delay < 0) {
-			CGContextSynchronize(context);
-			CGContextFlush(context);
+		int now = ioLowResMSecs() - targetWindowBlock->rememberTicker;
+
+		if ((now > 16) || (now < 0)) {
+			//CGContextSynchronize(targetWindowBlock->context);
+			CGContextFlush(targetWindowBlock->context);
+			targetWindowBlock->dirty = 0;
 			targetWindowBlock->rememberTicker = ioLowResMSecs();
-		} else 
-			CGContextSynchronize(context);
+		} else {
+			//CGContextSynchronize(targetWindowBlock->context);
+			targetWindowBlock->dirty = 1;
+		}
 	} 
 	
-	CGContextRestoreGState(context);
-	QDEndCGContext(windowPort,&context);
+	//CGContextRestoreGState(targetWindowBlock->context);
+	//QDEndCGContext(windowPort,&targetWindowBlock->context);
+	CGImageRelease(image);
+	CGDataProviderRelease(provider);
 	if (gWindowsIsInvisible) {
 		sqShowWindow(1);
 		gWindowsIsInvisible = false;
@@ -801,6 +803,7 @@ int makeMainWindow(void) {
 	windowBlock-> handle = (wHandleType) window;
 #if I_AM_CARBON_EVENT
 	SetUpCarbonEventForWindowIndex(1);
+	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
 #endif
 
 #ifndef MINIMALVM
