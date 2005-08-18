@@ -17,7 +17,14 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.8.7.x seems a fine VM, from what people tell me, but now we've 3.8.8.\
 \
-3.8.8b7			First iteration of quartz code fails for Quartz Extreme. Rewrite and optimize for Quartz Extreme.\
+3.8.8b9			sqMacWindow.c		Discovered code that fetches CGContext is locked out when other applications draw. Reworked that and how flush works\
+									Now seems to draw hilbert example quickly, does bouncing atoms ok, has lower WindowServer overhead and \
+									works with quartz extreme.\
+ \
+3.8.8b8			sqMacWindow.c		Add code to sqMacUIEvents.c to flush pending draws\
+ \
+3.8.8b7			sqMacWindow.c		Change Quartz logic to fetch GCContext from quickdraw port, then build and draw image, flush or synch\
+									This makes it work with Quartz extreme3.8.8b7			First iteration of quartz code fails for Quartz Extreme. Rewrite and optimize for Quartz Extreme.\
 \
 3.8.8b6			Sigh, found flush window via QDFlushPort logic every 1/50 of a second via carbon event was too expensive (CPU TIME)\
 				So I poked at Quartz example code and reworked for Squeak, with addition of quickdraw off-screen conversion for 1/2/4/8 bit color spaces.\
