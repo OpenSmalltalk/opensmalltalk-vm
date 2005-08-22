@@ -25,6 +25,8 @@ typedef struct windowDescriptorBlock {
 	CGContextRef context;
 	int rememberTicker;
 	int dirty;
+	int	width;
+	int	height;
 #endif
 } windowDescriptorBlock;
 

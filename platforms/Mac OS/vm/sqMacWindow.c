@@ -588,32 +588,35 @@ int ioShowDisplayOnWindow(
 				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
+	//CGContextSaveGState(targetWindowBlock->context);
+	//CGContextClipToRect(targetWindowBlock->context, clip);
 
+	if (targetWindowBlock->width != width && targetWindowBlock->height  != height) {
+		if (targetWindowBlock->context)
+			CGContextRelease(targetWindowBlock->context);
+		CreateCGContextForPort(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context); 
+		targetWindowBlock->width = width;
+		targetWindowBlock->height = height; 
+	}
+	
 	/* Draw the image to the Core Graphics context */
-	//QDBeginCGContext(windowPort,&context); 
-	//CGContextSaveGState(context);
-	//CGContextSetShouldAntialias(context, false);
-	//CGContextSetInterpolationQuality(context,kCGInterpolationNone);
 	CGContextDrawImage(targetWindowBlock->context, clip, image);
 	
 	{ 
 		int now = ioLowResMSecs() - targetWindowBlock->rememberTicker;
-
+ 
 		if ((now > 16) || (now < 0)) {
-			//CGContextSynchronize(targetWindowBlock->context);
 			CGContextFlush(targetWindowBlock->context);
 			targetWindowBlock->dirty = 0;
 			targetWindowBlock->rememberTicker = ioLowResMSecs();
 		} else {
-			//CGContextSynchronize(targetWindowBlock->context);
 			targetWindowBlock->dirty = 1;
 		}
 	} 
 	
-	//CGContextRestoreGState(targetWindowBlock->context);
-	//QDEndCGContext(windowPort,&targetWindowBlock->context);
 	CGImageRelease(image);
 	CGDataProviderRelease(provider);
+	//CGContextRestoreGState(targetWindowBlock->context);
 	if (gWindowsIsInvisible) {
 		sqShowWindow(1);
 		gWindowsIsInvisible = false;

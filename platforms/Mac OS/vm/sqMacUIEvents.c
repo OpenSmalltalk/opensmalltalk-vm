@@ -28,6 +28,7 @@
 *  3.8.5b2 Jan 25th, 2005 JMM reduce qd buffer flushing.
 *  3.8.7b1 Mar 13th, 2005 JMM fire keydown/keychar on key repeat to mimic ms windows behavior.
 *  3.8.7b2 Mar 19th, 2005 JMM change keydown/up back to virtual keycode, add unicode to keychar
+*  3.8.8b9 Aug 15th, 2005 JMM flush quartz buffer if needded
 
 notes: IsUserCancelEventRef
 
@@ -79,7 +80,7 @@ notes: IsUserCancelEventRef
 	static int findRepeatInKeyMap(int keyCode);
 	static void setRepeatInKeyMap(int keyCode);
 	void SetUpCarbonEventForWindowIndex(int index);
-	void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, int affectedL, int affectedT, int affectedR, int affectedB);
+	void doPendingFlush(void);
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -2068,7 +2069,7 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 
 #ifndef BROWSERPLUGIN
 
-int ioProcessEvents(void) {
+void doPendingFlush(void) {
 	static int lastTick = 0;
 	int now = ioLowResMSecs();
 	int delta = now - lastTick;
@@ -2079,7 +2080,7 @@ int ioProcessEvents(void) {
 		
 		for(i=1;i<=getCurrentIndexInUse();i++) {
 			windowBlock = windowBlockFromIndex(i);
-			if ((windowBlock) && (windowBlock-> dirty) ) {
+			if ((windowBlock) && (windowBlock->dirty) ) {
 				delta = now - windowBlock->rememberTicker;
 				if ((delta > 20) || (delta < 0))  {
 					CGContextFlush(windowBlock->context);
@@ -2090,7 +2091,11 @@ int ioProcessEvents(void) {
 		}
 		lastTick = now;
 	} 
+}
 
+int ioProcessEvents(void) {
+
+	doPendingFlush();
     if (gQuitNowRightNow) {
         ioExit();  //This might not return, might call exittoshell
         QuitApplicationEventLoop();

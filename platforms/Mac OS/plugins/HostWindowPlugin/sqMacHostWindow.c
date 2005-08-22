@@ -34,7 +34,9 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 	index = windowBlock->windowIndex;
 #if I_AM_CARBON_EVENT
 	SetUpCarbonEventForWindowIndex(index);
-	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
+	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context); 
+	windowBlock->width = w;
+	windowBlock->height = h; 
 #endif
 #ifndef BROWSERPLUGIN
 	sqShowWindow(index);
