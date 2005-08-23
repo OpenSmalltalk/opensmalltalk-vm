@@ -9,13 +9,18 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation\
 \
-Aug 16th, 2005 (3.8.8b7)\
+Aug 22th, 2005 (3.8.8b11)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.8.7.x seems a fine VM, from what people tell me, but now we've 3.8.8.\
+\
+3.8.8b11			sqMacWindow.c		Make window creation occur when we ask for window size so we can build full screen window correctly and \
+									draw in one draw cycle. \
+\
+3.8.8b10			sqMacWindow.c		Fix issue with window resize, need to rebuild CGContext from newly changed window port after resize. \
 \
 3.8.8b9			sqMacWindow.c		Discovered code that fetches CGContext is locked out when other applications draw. Reworked that and how flush works\
 									Now seems to draw hilbert example quickly, does bouncing atoms ok, has lower WindowServer overhead and \

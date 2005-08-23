@@ -199,7 +199,7 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
 	static Rect	srcRect = { 0, 0, 0, 0 };
         static int	rememberWidth=0,rememberHeight=0,rememberDepth=0;
         
-	if (gWindowsIsInvisible) {
+	if (gWindowsIsInvisible && getSTWindow() == NULL) {
 		makeMainWindow();
 	}
 	
@@ -265,7 +265,7 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
         static int	titleH=0,lastWindowIndex=-1;
         int 		affectedW,affectedH;
         
-	if (gWindowsIsInvisible) {
+	if (gWindowsIsInvisible && getSTWindow() == NULL) {
 		makeMainWindow();
 	}
 		if (affectedL < 0) affectedL = 0;
@@ -546,7 +546,8 @@ int ioShowDisplayOnWindow(
 	CGDataProviderRef provider;
 	
 	if (gWindowsIsInvisible) {
-		makeMainWindow();
+		if (getSTWindow() == NULL)
+			makeMainWindow();
 		if (colorspace == NULL) {
 				// Get the Systems Profile for the main display
 			CMProfileRef sysprof = NULL;
@@ -588,8 +589,11 @@ int ioShowDisplayOnWindow(
 				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
-	//CGContextSaveGState(targetWindowBlock->context);
-	//CGContextClipToRect(targetWindowBlock->context, clip);
+
+	if (gWindowsIsInvisible) {
+		sqShowWindow(1);
+		gWindowsIsInvisible = false;
+	}
 
 	if (targetWindowBlock->width != width && targetWindowBlock->height  != height) {
 		if (targetWindowBlock->context)
@@ -616,11 +620,6 @@ int ioShowDisplayOnWindow(
 	
 	CGImageRelease(image);
 	CGDataProviderRelease(provider);
-	//CGContextRestoreGState(targetWindowBlock->context);
-	if (gWindowsIsInvisible) {
-		sqShowWindow(1);
-		gWindowsIsInvisible = false;
-	}
 	
 	return 1;
 }
@@ -804,10 +803,6 @@ int makeMainWindow(void) {
 	window = SetUpWindow(44, 8, 44+height, 8+width,gSqueakWindowType,gSqueakWindowAttributes);
 	windowBlock = AddWindowBlock();
 	windowBlock-> handle = (wHandleType) window;
-#if I_AM_CARBON_EVENT
-	SetUpCarbonEventForWindowIndex(1);
-	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
-#endif
 
 #ifndef MINIMALVM
 	 ioLoadFunctionFrom(NULL, "DropPlugin");
@@ -821,6 +816,18 @@ int makeMainWindow(void) {
 #ifndef BROWSERPLUGIN
 #if I_AM_CARBON_EVENT	
         ioSetFullScreenActual(getFullScreenFlag());
+		SetUpCarbonEventForWindowIndex(1);
+		CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
+   
+ 	Rect portRect;
+	int	w,h;
+	
+		GetPortBounds(GetWindowPort(windowBlock->handle),&portRect);
+		w =  portRect.right -  portRect.left;
+		h =  portRect.bottom - portRect.top;
+		setSavedWindowSize((w << 16) |(h & 0xFFFF));
+		windowBlock->width = w;
+		windowBlock->height = h; 
 #else
 	ioSetFullScreen(getFullScreenFlag());
 #endif
@@ -900,6 +907,10 @@ int ioScreenSize(void) {
 	h= getSavedWindowSize() & 0xFFFF;
 
 #ifndef IHAVENOHEAD
+	if (getSTWindow() == NULL && gWindowsIsInvisible) {
+		makeMainWindow();
+	}
+
 	if (getSTWindow() != nil) {
             GetPortBounds(GetWindowPort(getSTWindow()),&portRect);
             w =  portRect.right -  portRect.left;
