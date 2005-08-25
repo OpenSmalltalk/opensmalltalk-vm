@@ -9,13 +9,15 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation\
 \
-Aug 22th, 2005 (3.8.8b11)\
+Aug 24th, 2005 (3.8.8b12)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.8.7.x seems a fine VM, from what people tell me, but now we've 3.8.8.\
+\
+3.8.8b12			sqMacUIEvents.c		Call flush window code each time the get next event prim is called to ensure flushes happen within a 32/1000 or 64/1000 sec period\
 \
 3.8.8b11			sqMacWindow.c		Make window creation occur when we ask for window size so we can build full screen window correctly and \
 									draw in one draw cycle. \
