@@ -738,6 +738,7 @@ int ioSetInputSemaphore(int semaIndex) {
 
 int ioGetNextEvent(sqInputEvent *evt) {
 #if I_AM_CARBON_EVENT
+		doPendingFlush();
         aioPoll(0);		
 		pthread_mutex_lock(&gEventQueueLock);
 #else
