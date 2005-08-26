@@ -609,11 +609,13 @@ int ioShowDisplayOnWindow(
 	{ 
 		int now = ioLowResMSecs() - targetWindowBlock->rememberTicker;
  
-		if ((now > 16) || (now < 0)) {
+		if ((now >= 20) || (now < 0)) {
 			CGContextFlush(targetWindowBlock->context);
 			targetWindowBlock->dirty = 0;
 			targetWindowBlock->rememberTicker = ioLowResMSecs();
 		} else {
+			if (!targetWindowBlock->dirty)
+				CGContextSynchronize(targetWindowBlock->context);
 			targetWindowBlock->dirty = 1;
 		}
 	} 

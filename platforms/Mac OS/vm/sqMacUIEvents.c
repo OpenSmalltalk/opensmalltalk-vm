@@ -279,7 +279,7 @@ int HandleEvents(void) {
 			break;
 
 			case activateEvt:
-				if (theEvent.modifiers & activeFlag) {
+				if (theEvent.modifiers & activeFlag && ((windowIndexFromHandle((WindowPtr))) {
 					windowActive = (windowIndexFromHandle((WindowPtr) theEvent.message));
 					recordWindowEvent(WindowEventActivated,0, 0, 0, 0);
 				} else {
@@ -1507,8 +1507,13 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
             if (gSqueakWindowIsFloating) break;
             GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
-            SetPortWindowPort(windowHandleFromIndex(windowIndexFromHandle((wHandleType)window)));
-            GlobalToLocal(&savedMousePosition);
+			if (windowIndexFromHandle((wHandleType)window)) {
+				GrafPtr	oldPort;
+				GetPort(&oldPort);
+				SetPortWindowPort(windowHandleFromIndex(windowIndexFromHandle((wHandleType)window)));
+				GlobalToLocal(&savedMousePosition);
+				SetPort(oldPort);
+			}
             windowActive = 0;
              break;
        case kEventWindowHandleContentClick:
@@ -1530,7 +1535,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
 			result = noErr;
 			break;
         case kEventWindowHidden:
-            if (gSqueakWindowIsFloating) {
+            if (gSqueakWindowIsFloating && windowIndexFromHandle((wHandleType)window)) {
                 ShowWindow(windowHandleFromIndex(windowIndexFromHandle((wHandleType)window)));
                 result = noErr;
             }
@@ -2075,7 +2080,7 @@ void doPendingFlush(void) {
 	int now = ioLowResMSecs();
 	int delta = now - lastTick;
 		
-	if ((delta > 20) || (delta < 0))  {
+	if ((delta >= 16) || (delta < 0))  {
 		windowDescriptorBlock *windowBlock;
 		int i;
 		
@@ -2083,7 +2088,7 @@ void doPendingFlush(void) {
 			windowBlock = windowBlockFromIndex(i);
 			if ((windowBlock) && (windowBlock->dirty) ) {
 				delta = now - windowBlock->rememberTicker;
-				if ((delta > 20) || (delta < 0))  {
+				if ((delta >= 20) || (delta < 0))  {
 					CGContextFlush(windowBlock->context);
 					windowBlock-> dirty = 0;
 					windowBlock->rememberTicker = now =  ioLowResMSecs();
