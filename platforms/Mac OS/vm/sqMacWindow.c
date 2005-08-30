@@ -607,12 +607,14 @@ int ioShowDisplayOnWindow(
 	CGContextDrawImage(targetWindowBlock->context, clip, image);
 	
 	{ 
-		int now = ioLowResMSecs() - targetWindowBlock->rememberTicker;
+			extern Boolean gSqueakUIFlushUseHighPercisionClock;
+			extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
+			int now = (gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs()) - targetWindowBlock->rememberTicker;
  
-		if ((now >= 20) || (now < 0)) {
+		if ((now >= gSqueakUIFlushPrimaryDeferNMilliseconds) || (now < 0)) {
 			CGContextFlush(targetWindowBlock->context);
 			targetWindowBlock->dirty = 0;
-			targetWindowBlock->rememberTicker = ioLowResMSecs();
+			targetWindowBlock->rememberTicker = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 		} else {
 			if (!targetWindowBlock->dirty)
 				CGContextSynchronize(targetWindowBlock->context);

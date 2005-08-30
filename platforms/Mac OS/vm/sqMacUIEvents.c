@@ -2076,11 +2076,13 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 #ifndef BROWSERPLUGIN
 
 void doPendingFlush(void) {
+	extern  Boolean gSqueakUIFlushUseHighPercisionClock;
+	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
 	static int lastTick = 0;
-	int now = ioLowResMSecs();
+	int now = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 	int delta = now - lastTick;
 		
-	if ((delta >= 16) || (delta < 0))  {
+	if ((delta >= gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds) || (delta < 0))  {
 		windowDescriptorBlock *windowBlock;
 		int i;
 		
@@ -2088,10 +2090,10 @@ void doPendingFlush(void) {
 			windowBlock = windowBlockFromIndex(i);
 			if ((windowBlock) && (windowBlock->dirty) ) {
 				delta = now - windowBlock->rememberTicker;
-				if ((delta >= 20) || (delta < 0))  {
+				if ((delta >= gSqueakUIFlushSecondaryCleanupDelayMilliseconds) || (delta < 0))  {
 					CGContextFlush(windowBlock->context);
 					windowBlock-> dirty = 0;
-					windowBlock->rememberTicker = now =  ioLowResMSecs();
+					windowBlock->rememberTicker = now =  gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 				}
 			}
 		}

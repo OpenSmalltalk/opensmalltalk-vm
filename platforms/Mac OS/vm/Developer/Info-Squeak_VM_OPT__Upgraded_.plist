@@ -364,7 +364,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak VM Opt</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 3.8.8b2 http://www.squeak.org </string>
+	<string>Squeak VM 3.8.8b14 http://www.squeak.org </string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -376,17 +376,25 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak VM 3.8.8b2</string>
+	<string>Squeak VM 3.8.8b14</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>3.8.8b2</string>
+	<string>3.8.8b14</string>
 	<key>SqueakEncodingType</key>
 	<string>macintosh</string>
 	<key>SqueakFloatingWindowGetsFocus</key>
 	<true/>
 	<key>SqueakMaxHeapSize</key>
 	<integer>536870912</integer>
+	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
+	<integer>20</integer>
+	<key>SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds</key>
+	<integer>20</integer>
+	<key>SqueakUIFlushSecondaryCleanupDelayMilliseconds</key>
+	<integer>25</integer>
+	<key>SqueakUIFlushUseHighPercisionClock</key>
+	<true/>
 	<key>SqueakWindowAttribute</key>
 	<data>
 	ggAAHg==

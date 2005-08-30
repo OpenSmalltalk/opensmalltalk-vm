@@ -115,8 +115,9 @@ Boolean         gThreadManager=false;
 ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
 OSErr			gSqueakFileLastError; 
-Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false;
+Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false;
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
+long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
 
 #ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
@@ -656,8 +657,8 @@ int plugInShutdown(void) {
 void fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
-    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType;
-    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType;
+    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
+    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock;
     CFDataRef 	SqueakWindowAttributeType;    
     CFStringRef    SqueakVMEncodingType;
     char        encoding[256];
@@ -670,8 +671,11 @@ void fetchPrefrences() {
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
-    
-    
+    SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
+    SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
+    SqueakUIFlushSecondaryCleanupDelayMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCleanupDelayMilliseconds"));
+    SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds"));
+
     if (SqueakVMEncodingType) 
         CFStringGetCString (SqueakVMEncodingType, encoding, 255, kCFStringEncodingMacRoman);
     else
@@ -709,6 +713,19 @@ void fetchPrefrences() {
 
     if (SqueakMaxHeapSizeType) 
         CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
+		
+	if (SqueakUIFlushUseHighPercisionClock)
+        gSqueakUIFlushUseHighPercisionClock = CFBooleanGetValue(SqueakUIFlushUseHighPercisionClock);
+    
+	if (SqueakUIFlushPrimaryDeferNMilliseconds)
+        CFNumberGetValue(SqueakUIFlushPrimaryDeferNMilliseconds,kCFNumberLongType,(long *) &gSqueakUIFlushPrimaryDeferNMilliseconds);
+    
+	if (SqueakUIFlushSecondaryCleanupDelayMilliseconds)
+        CFNumberGetValue(SqueakUIFlushSecondaryCleanupDelayMilliseconds,kCFNumberLongType,(long *) &gSqueakUIFlushSecondaryCleanupDelayMilliseconds);
+
+	if (SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds)
+        CFNumberGetValue(SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,kCFNumberLongType,(long *) &gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds);
+    
     
 }
 #else

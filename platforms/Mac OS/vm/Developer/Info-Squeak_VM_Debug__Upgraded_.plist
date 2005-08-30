@@ -357,6 +357,14 @@
 	<true/>
 	<key>SqueakMaxHeapSize</key>
 	<integer>536870912</integer>
+	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
+	<integer>25</integer>
+	<key>SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds</key>
+	<integer>25</integer>
+	<key>SqueakUIFlushSecondaryCleanupDelayMilliseconds</key>
+	<integer>30</integer>
+	<key>SqueakUIFlushUseHighPercisionClock</key>
+	<true/>
 	<key>SqueakWindowAttribute</key>
 	<data>
 	ggAAHg==
