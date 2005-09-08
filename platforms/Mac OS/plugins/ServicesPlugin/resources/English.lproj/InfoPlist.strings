@@ -1,0 +1,6 @@
+/* Localized versions of Info.plist keys */
+
+CFBundleName = "ServicesPlugin";
+CFBundleShortVersionString = "ServicesPlugin version 1.0.0B2";
+CFBundleGetInfoString = "ServicesPlugin version 1.0.0B2";
+NSHumanReadableCopyright = "http://www.squeak.org";
