@@ -10,6 +10,7 @@
 *
 *   NOTES: 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  encoding for image name at startup time.
+*  3.8.9b1 Sept 13th, 2005 JMM add logic to open application to open image files
 */
 
 #include "sq.h"
@@ -25,6 +26,7 @@ extern squeakFileOffsetType calculateStartLocationForImage();
 int getFirstImageNameIfPossible(AEDesc	*fileList);
 void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude);
 UInt32 getEncoding();
+OSStatus SimpleRunAppleScript(const char* theScript);
 
 /*** Apple Event Handlers ***/
 static pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon);
@@ -197,6 +199,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     EventRecord theEvent;
     HFSFlavor   dropFile;
     Point       where;
+	char        shortImageName[256];
     
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
@@ -225,7 +228,40 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	        (finderInformation.fdType == 'fold' ||
     		finderInformation.fdType == 'disk'))) 
 	        continue;
-	     
+        if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim') {
+			char pathname[2049],commandStuff[4096];
+			int	error;
+			extern       char **argVec;
+					
+			error = PathToFile(pathname, 2048, &fileSpec, gCurrentVMEncoding);
+			commandStuff [0] = 0x00;
+			strcat(commandStuff,"set pimage to POSIX path of file  \"");
+			strcat(commandStuff,pathname);
+			strcat(commandStuff,"\" \n");
+			strcat(commandStuff,"set qimage to quoted form of pimage\n");
+			strcat(commandStuff,"set pVM to \"");
+			strcat(commandStuff,argVec[0]);
+			strcat(commandStuff,"\"\n");
+			strcat(commandStuff,"set qVM to quoted form of pVM\n");
+			strcat(commandStuff,"do shell script qVM");
+			strcat(commandStuff," & \" \" &  qimage");
+			strcat(commandStuff," & \" &> /dev/null &  echo $!\" \n");
+			strcat(commandStuff,"set pid to the result as number\n");
+			strcat(commandStuff,"on findProcessID(appID)\n");
+			strcat(commandStuff,"  tell application \"Finder\"\n");
+			strcat(commandStuff,"    repeat with ap in every application process\n");
+			strcat(commandStuff,"      if «class idux» of ap is appID then return ap\n");
+			strcat(commandStuff,"    end repeat\n");
+			strcat(commandStuff,"  end tell\n");
+			strcat(commandStuff,"end findProcessID\n");
+			strcat(commandStuff,"delay 1\n");
+			strcat(commandStuff,"set a to findProcessID(pid)\n");
+			strcat(commandStuff,"set the frontmost of a to true\n");
+
+			SimpleRunAppleScript(commandStuff);
+			continue;
+			}
+			     
 	    actualFilteredNumber++;
 
     }
@@ -249,7 +285,8 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	        (finderInformation.fdType == 'fold' ||
     		finderInformation.fdType == 'disk'))) 
 	        continue;
-	        
+
+		
 	    dropFile.fileType = finderInformation.fdType;
 	    dropFile.fileCreator = finderInformation.fdCreator;
 	    dropFile.fdFlags = finderInformation.fdFlags;
@@ -339,5 +376,74 @@ UInt32 getEncoding() {
 #else
 	return 0;
 #endif
+}
+
+/* LowRunAppleScript compiles and runs an AppleScript
+    provided as text in the buffer pointed to by text.  textLength
+    bytes will be compiled from this buffer and run as an AppleScript
+    using all of the default environment and execution settings.  If
+    resultData is not NULL, then the result returned by the execution
+    command will be returned as typeChar in this descriptor record
+    (or typeNull if there is no result information).  If the function
+    returns errOSAScriptError, then resultData will be set to a
+    descriptive error message describing the error (if one is
+    available).  */
+static OSStatus LowRunAppleScript(const void* text, long textLength,
+                                    AEDesc *resultData) {
+    ComponentInstance theComponent;
+    AEDesc scriptTextDesc;
+    OSStatus err;
+    OSAID scriptID, resultID;
+
+        /* set up locals to a known state */
+    theComponent = NULL;
+    AECreateDesc(typeNull, NULL, 0, &scriptTextDesc);
+    scriptID = kOSANullScript;
+    resultID = kOSANullScript;
+
+        /* open the scripting component */
+    theComponent = OpenDefaultComponent(kOSAComponentType,
+                    typeAppleScript);
+    if (theComponent == NULL) { err = paramErr; goto bail; }
+
+        /* put the script text into an aedesc */
+    err = AECreateDesc(typeChar, text, textLength, &scriptTextDesc);
+    if (err != noErr) goto bail;
+
+        /* compile the script */
+    err = OSACompile(theComponent, &scriptTextDesc,
+                    kOSAModeNull, &scriptID);
+    if (err != noErr) goto bail;
+
+        /* run the script */
+    err = OSAExecute(theComponent, scriptID, kOSANullScript,
+                    kOSAModeNull, &resultID);
+
+        /* collect the results - if any */
+    if (resultData != NULL) {
+        AECreateDesc(typeNull, NULL, 0, resultData);
+        if (err == errOSAScriptError) {
+            OSAScriptError(theComponent, kOSAErrorMessage,
+                        typeChar, resultData);
+        } else if (err == noErr && resultID != kOSANullScript) {
+            OSADisplay(theComponent, resultID, typeChar,
+                        kOSAModeNull, resultData);
+        }
+    }
+bail:
+    AEDisposeDesc(&scriptTextDesc);
+    if (scriptID != kOSANullScript) OSADispose(theComponent, scriptID);
+    if (resultID != kOSANullScript) OSADispose(theComponent, resultID);
+    if (theComponent != NULL) CloseComponent(theComponent);
+    return err;
+}
+
+
+    /* SimpleRunAppleScript compiles and runs the AppleScript in
+    the c-style string provided as a parameter.  The result returned
+    indicates the success of the operation. */
+
+OSStatus SimpleRunAppleScript(const char* theScript) {
+    return LowRunAppleScript(theScript, strlen(theScript), NULL);
 }
 

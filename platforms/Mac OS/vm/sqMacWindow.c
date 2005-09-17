@@ -22,6 +22,7 @@
  3.8.6b3 Jan 25th, 2005 JMM Change locking of pixels (less often)
  3.8.8b3 Jul 15th, 2005 JMM Add window(s) flush logic every 1/60 second for os-x
  3.8.8b6 Jul 19th, 2005 JMM tuning of the window flush
+ 3.8.8b15	Sept 12th, 2005, JMM set full screen only if not in full screen. 
 *****************************************************************************/
 
 #if TARGET_API_MAC_CARBON
@@ -93,6 +94,9 @@ int ioSetFullScreen(int fullScreen) {
     int                 oldWidth, oldHeight;
     static Rect		rememberOldLocation = {0,0,0,0};		
     GDHandle            dominantGDevice;
+	
+	if (fullScreen && getFullScreenFlag() && !gWindowsIsInvisible)
+			return 0;
 
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
     if (dominantGDevice == null) {

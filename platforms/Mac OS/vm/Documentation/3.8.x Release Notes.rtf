@@ -1,7 +1,8 @@
 {\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf110
 {\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fnil\fcharset77 Monaco;\f2\fnil\fcharset77 LucidaGrande;
 \f3\fswiss\fcharset77 Helvetica;}
-{\colortbl;\red255\green255\blue255;\red137\green19\blue21;\red26\green26\blue255;}
+{\colortbl;\red255\green255\blue255;\red35\green110\blue37;\red137\green19\blue21;\red26\green26\blue255;
+}
 \margl1440\margr1440\vieww20700\viewh15660\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
@@ -16,6 +17,14 @@ Still yet to do, in future versions -> Verify that file delete rename etc works 
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.8.7.x seems a fine VM, from what people tell me, but now we've 3.8.8.\
+\
+3.8.9b1			sqMacWindow.c		Altered ioFullScreen logic to avoid problems if you do full screen on twice or more, then full screen off. \
+									Bug was the window would be positioned at 0 & 0 and you could not grab it in order to move it. \
+\
+				
+\f1\fs20 \cf2 \CocoaLigature0 sqMacUIAppleEvents.c	
+\f0\fs24 \cf0 \CocoaLigature1 Add logic to launch new shell script via apple script to startup same executable with image on an open doc request. \
+									This allows us to double-click on an image when a squeak VM is running. \
 \
 3.8.8b15			info.plist				Add NSService tag to allow Squeak to be a Mac OS-X service.\
 \
@@ -119,11 +128,11 @@ d\
 				sqMacMain.c				Fix issue with window title not showing long image name on image selection from dialog prompt. \
 				sqMacUnixCommandLineInterface.c	New, enable command line functions and environment variables. \
 			
-\f1\fs20 \CocoaLigature0  		\cf2 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
+\f1\fs20 \CocoaLigature0  		\cf3 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
 
 \f0\fs24 \CocoaLigature1 					or as environment variables\
 					
-\f1\fs20 \cf2 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
+\f1\fs20 \cf3 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
 \f0\fs24 \cf0 \CocoaLigature1 \
 				\
 \
@@ -322,7 +331,7 @@ sqMacEncoding.c	Alter SetVMPath()
 \f3 Tetsuya HAYASHI , \
 				add support for 
 \f1\fs20 \CocoaLigature0       \
-				\cf2 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
+				\cf3 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
 
 \f3\fs24 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
@@ -466,9 +475,9 @@ sqMacWindows.c			- watch out for memory leak when we free the color table. \
 a)Added options SqueakWindowType & SqueakWIndowAttributes to info.plist. The SqueakWindowType of 6 is the standard document window, a type of 8 is the floating utility window. The attributes control with window attributes and behavior according to\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f3 \cf3 \ul \ulc3 http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_2.html#//apple_ref/c/tdef/WindowAttributes\
+\f3 \cf4 \ul \ulc4 http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_2.html#//apple_ref/c/tdef/WindowAttributes\
 &\cf0 \ulnone \
-\cf3 \ul http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_1.html#//apple_ref/doc/c_ref/WindowClass\cf0 \ulnone \
+\cf4 \ul http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_1.html#//apple_ref/doc/c_ref/WindowClass\cf0 \ulnone \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0 \cf0 b) Sockets are not valid if the network is not initialized. \
