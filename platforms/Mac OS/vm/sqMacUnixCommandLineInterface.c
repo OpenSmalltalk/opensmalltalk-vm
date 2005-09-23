@@ -172,7 +172,7 @@ static void usage(void)
   printf("       %s [<option>...] -- [<argument>...]\n", argVec[0]);
   printUsage();
   printf("\nNotes:\n");
-  printf("  <imageName> defaults to `squeak.image'.\n");
+  printf("  <imageName> defaults to `Squeak.image'.\n");
   printUsageNotes();
   exit(1);
 }
