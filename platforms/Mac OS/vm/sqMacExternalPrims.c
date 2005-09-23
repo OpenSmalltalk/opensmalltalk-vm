@@ -13,6 +13,7 @@
 *  Oct 2nd, 2003, JMM bug in browser file name creation in os-x, rework how path is resolved
  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
  3.7.5b1 Aug 24th, 2004 JMM Joliet support for loading bundles?
+ 3.8.9b2 Sep 22nd, 2005 JMM look in os-x resource folders for bundles too
 *****************************************************************************/
 
 #include "sq.h"
@@ -31,7 +32,7 @@ void createBrowserPluginPath(char *pluginDirPath);
 	WARNING: never primitiveFail() within, just return 0
 */
 void* ioLoadModule(char *pluginName) {
-	char pluginDirPath[1000];
+	char pluginDirPath[1024];
 	CFragConnectionID libHandle;
 #ifndef BROWSERPLUGIN
     #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
@@ -54,7 +55,7 @@ void* ioLoadModule(char *pluginName) {
 
 #ifndef BROWSERPLUGIN
 	/* second, look directly in Squeak VM directory for the library */
-        getVMPathWithEncoding(pluginDirPath,gCurrentVMEncoding);
+	getVMPathWithEncoding(pluginDirPath,gCurrentVMEncoding);
 	libHandle = LoadLibViaPath(pluginName, pluginDirPath);
 	if (libHandle != nil) return (void*) libHandle;
     
@@ -66,9 +67,33 @@ void* ioLoadModule(char *pluginName) {
             if (err == noErr) 
                 err = GetSharedLibrary(tempPluginName, kAnyCFragArch, kFindCFrag, &libHandle, &mainAddr, errorMsg);
             if (libHandle != nil) return (void*) libHandle;
-    #endif
-#endif
-    
+    #else
+		{
+            CFBundleRef mainBundle;
+            CFURLRef	bundleURL,bundleURL2,resourceURL;
+			CFStringRef filePath,resourcePathString;
+			
+            mainBundle = CFBundleGetMainBundle();   
+			bundleURL = CFBundleCopyBundleURL(mainBundle);
+			resourceURL = CFBundleCopyResourcesDirectoryURL(mainBundle);
+			resourcePathString = CFURLCopyPath(resourceURL);
+			CFRelease(resourceURL);
+
+			bundleURL2 = CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, bundleURL, resourcePathString, false );
+			CFRelease(bundleURL);
+	
+			filePath = CFURLCopyFileSystemPath (bundleURL2, kCFURLHFSPathStyle);
+			CFRelease(bundleURL2);
+			
+			CFStringGetCString (filePath,pluginDirPath,1000, gCurrentVMEncoding);
+			CFRelease(filePath);
+			
+			libHandle = LoadLibViaPath(pluginName, pluginDirPath);
+			if (libHandle != nil) return (void *) libHandle;
+ 		}
+	#endif
+    #endif 
+	
 	return nil;
 }
 
