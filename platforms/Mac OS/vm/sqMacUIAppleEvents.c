@@ -22,6 +22,7 @@
 #include "DropPlugin.h"
 
 extern squeakFileOffsetType calculateStartLocationForImage();
+extern char gSqueakImageName;
 
 int getFirstImageNameIfPossible(AEDesc	*fileList);
 void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude);
@@ -73,7 +74,7 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 	checkValueForEmbeddedImage = calculateStartLocationForImage();
 	if (checkValueForEmbeddedImage == 0) {
 	    /* use default image name in same directory as the VM */
-        SetShortImageNameViaString("Squeak.image",gCurrentVMEncoding);
+        SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
 	    return noErr;
 	}
 
@@ -84,7 +85,7 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 	err = GetProcessInformation(&processID,&processInformation);
 
 	if (err != noErr) {
-        SetShortImageNameViaString("Squeak.image",gCurrentVMEncoding);
+        SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
         return noErr;
     }
     
@@ -142,9 +143,9 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     
     if (imageFileIsNumber == 0) { 
         // Test is open change set 
-        strcpy(shortImageName, "Squeak.image");
+        strcpy(shortImageName, &gSqueakImageName);
         CopyCStringToPascal(shortImageName,workingDirectory.name);
-          SetShortImageNameViaString(shortImageName,getEncoding());
+		SetShortImageNameViaString(shortImageName,getEncoding());
         SetImageName(&workingDirectory);
         fileSpec = workingDirectory;
     } else {
@@ -228,6 +229,8 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	        (finderInformation.fdType == 'fold' ||
     		finderInformation.fdType == 'disk'))) 
 	        continue;
+#if defined(__APPLE__) && defined(__MACH__)
+	     
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim') {
 			char pathname[2049],commandStuff[4096];
 			int	error;
@@ -261,7 +264,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 			SimpleRunAppleScript(commandStuff);
 			continue;
 			}
-			     
+#endif			     
 	    actualFilteredNumber++;
 
     }
@@ -378,6 +381,9 @@ UInt32 getEncoding() {
 #endif
 }
 
+#if defined(__APPLE__) && defined(__MACH__)
+
+
 /* LowRunAppleScript compiles and runs an AppleScript
     provided as text in the buffer pointed to by text.  textLength
     bytes will be compiled from this buffer and run as an AppleScript
@@ -447,3 +453,4 @@ OSStatus SimpleRunAppleScript(const char* theScript) {
     return LowRunAppleScript(theScript, strlen(theScript), NULL);
 }
 
+#endif
