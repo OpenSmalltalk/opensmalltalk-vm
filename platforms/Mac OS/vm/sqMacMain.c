@@ -66,6 +66,7 @@
 *  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 *  3.8.0bx Jul 20th, 2004 JMM multiple window support
 *  3.8.7b2 March 19th, 2005 JMM add command line unix interface
+*  3.8.9b2 Sept 22nd, 2005 JMM add logic to override Squeak.image name 
 */
 
 
@@ -118,6 +119,7 @@ OSErr			gSqueakFileLastError;
 Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false;
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
+char            gSqueakImageName[256] = "Squeak.image";
 
 #ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
@@ -220,7 +222,7 @@ int main(void) {
 		err = GetApplicationDirectory(&workingDirectory);
 		if (err != noErr) 
                     error("Could not obtain default directory");
-                CopyCStringToPascal("Squeak.image",workingDirectory.name);
+		CopyCStringToPascal(gSqueakImageName,workingDirectory.name);
 		SetImageName(&workingDirectory);
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
             }
@@ -660,29 +662,34 @@ void fetchPrefrences() {
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
     CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock;
     CFDataRef 	SqueakWindowAttributeType;    
-    CFStringRef    SqueakVMEncodingType;
+    CFStringRef    SqueakVMEncodingType,SqueakImageName;
     char        encoding[256];
     
     myBundle = CFBundleGetMainBundle();
     myDictionary = CFBundleGetInfoDictionary(myBundle);
+	
     SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));
     SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
     SqueakWindowHasTitleType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowHasTitle"));
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
+    SqueakImageName = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
     SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
     SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
     SqueakUIFlushSecondaryCleanupDelayMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCleanupDelayMilliseconds"));
     SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds"));
 
     if (SqueakVMEncodingType) 
-        CFStringGetCString (SqueakVMEncodingType, encoding, 255, kCFStringEncodingMacRoman);
+        CFStringGetCString (SqueakVMEncodingType, encoding, 256, kCFStringEncodingMacRoman);
     else
         *encoding = 0x00;
 
     setEncodingType(encoding);
     
+    if (SqueakImageName) 
+        CFStringGetCString (SqueakImageName, gSqueakImageName, 256, kCFStringEncodingMacRoman);
+	
     if (SqueakWindowType) 
         CFNumberGetValue(SqueakWindowType,kCFNumberLongType,&gSqueakWindowType);
     else
