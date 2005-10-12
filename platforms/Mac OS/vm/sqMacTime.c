@@ -13,11 +13,13 @@
 *  Feb 27th, 2002, JMM a bit of cleanup for carbon event usage
 *  Apr 17th, 2002, JMM Use accessors for VM variables.
 *  Apr 25th, 2002, JMM low res clock is broken after 0x7FFFFFF
+*  3.9.1b2 Oct 4th, 2005 Jmm add MillisecondClockMask
 
 *****************************************************************************/
 #include "sq.h"
 #include "sqMacTime.h"
 #include "sqMacUIEvents.h"
+#define MillisecondClockMask 536870911
 
 
 extern Boolean  gThreadManager;
@@ -123,7 +125,7 @@ int ioMakeAnExernalTimerCall(int ticksInFuture) {
         InsXTime((QElemPtr)&gWakeUpTimerProc);
     }
     
-    ticks = ticksInFuture-(ioMSecs()& 536870911);
+    ticks = ticksInFuture-(ioMSecs()& MillisecondClockMask);
     if (ticks < 0)
         return;
     PrimeTime((QElemPtr)&gWakeUpTimerProc,ticks);
@@ -246,7 +248,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     }
     
     setInterruptCheckCounter(0);
-    now = (ioMSecs() & 536870911);
+    now = (ioMSecs() & MillisecondClockMask);
     if (getNextWakeupTick() <= now)
         if (getNextWakeupTick() == 0)
             realTimeToWait = 16;
@@ -273,7 +275,7 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
             SqueakYieldToAnyThread();
 	else
 	    ioProcessEvents();
-    if ((getNextWakeupTick() <= (ioMSecs() & 536870911)) && (getNextWakeupTick() != 0)) {
+    if ((getNextWakeupTick() <= (ioMSecs() & MillisecondClockMask)) && (getNextWakeupTick() != 0)) {
         setInterruptCheckCounter(0);
         return 0;
     }

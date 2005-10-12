@@ -76,6 +76,9 @@ OSErr makeFSSpec(char *pathString, int pathStringLength,FSSpec *spec)
 	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
 		CFStringNormalize(filePath, kCFStringNormalizationFormD);
     sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+	if (sillyThing == NULL) 
+		return -2000;
+		
     if (CFURLGetFSRef(sillyThing,&theFSRef) == false) {
         // name contains multiple aliases or does not exist, so fallback to lookupPath
         CFRelease(filePath);
@@ -162,6 +165,10 @@ static int quicklyMakePath(char *pathString, int pathStringLength,char *dst, Boo
 			CFStringNormalize(str, kCFStringNormalizationFormKC); // canonical decomposition
 
 		sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault, str, kCFURLHFSPathStyle,false);
+		if (sillyThing == NULL) {
+			CFRelease(filePath);
+			return -2;
+		}
 		CFRelease(str);
         
         if (!CFURLGetFSRef(sillyThing,&theFSRef)) {
@@ -291,6 +298,9 @@ void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
 
             sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
             CFRelease(filePath);
+			if (sillyThing == NULL) 
+					return;
+
             lastPartOfPath = CFURLCopyLastPathComponent(sillyThing);
             CFRelease(sillyThing);
             sillyThing = CFURLCreateFromFSRef(kCFAllocatorDefault,&theFSRef);
@@ -326,7 +336,10 @@ int makeHFSFromPosixPath(char *pathString, int pathStringLength,char *dst,char *
         CFURLRef 	sillyThing;
         CFStringRef	filePath2,lastPathPart;
 		
-        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,
+        dst[0] = 0x00;
+		if (lastpart)
+			lastpart[0] = 0x00;
+		filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,
                     (UInt8 *)pathString,pathStringLength,gCurrentVMEncoding,false);
         if (filePath == nil)
             return -1;
@@ -338,7 +351,9 @@ int makeHFSFromPosixPath(char *pathString, int pathStringLength,char *dst,char *
 
 		sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault, str, kCFURLPOSIXPathStyle,false);
 		CFRelease(str);
-        
+		if (sillyThing == NULL) 
+			return -2;
+		
 		filePath2 = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
 		CFStringGetCString (filePath2,dst,1000, gCurrentVMEncoding);
 		if (lastpart) {

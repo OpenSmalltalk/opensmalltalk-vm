@@ -69,6 +69,7 @@
 *  3.8.9b2 Sept 22nd, 2005 JMM add logic to override Squeak.image name 
 */
 
+#include <objc/objc-runtime.h>
 
 #if !TARGET_API_MAC_CARBON 
 #include <Power.h>
@@ -119,7 +120,8 @@ OSErr			gSqueakFileLastError;
 Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false;
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
-char            gSqueakImageName[256] = "Squeak.image";
+char            gSqueakImageName[2048] = "Squeak.image";
+CFStringRef		gSqueakImageNameStringRef;
 
 #ifdef BROWSERPLUGIN
 /*** Variables -- Imported from Browser Plugin Module ***/
@@ -202,32 +204,43 @@ int main(void) {
                 
         getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
          
-	if (ImageNameIsEmpty()) {
-            FSSpec	workingDirectory;
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
+	if (ImageNameIsEmpty()) {
             CFBundleRef mainBundle;
             CFURLRef imageURL;
-            CFStringRef imagePath;
 
             mainBundle = CFBundleGetMainBundle();            
-            imageURL = CFBundleCopyResourceURL (mainBundle, CFSTR("Squeak"), CFSTR("image"), NULL);
+            imageURL = CFBundleCopyResourceURL (mainBundle, gSqueakImageNameStringRef, NULL, NULL);
             if (imageURL != NULL) {
+				CFStringRef imagePath;
+				
                 imagePath = CFURLCopyFileSystemPath (imageURL, kCFURLHFSPathStyle);
                 SetImageNameViaCFString(imagePath);
                 CFRelease(imageURL);
                 CFRelease(imagePath);
             } else {
-#endif
+				extern void resolveWhatTheImageNameIs(char *string);
+				extern SEL NSSelectorFromString(CFStringRef thing);
+				CFStringRef checkFortilda;
+				char	afterCheckForTilda[2048];
+				
+				checkFortilda=(CFStringRef)objc_msgSend((id)gSqueakImageNameStringRef, NSSelectorFromString((CFStringRef)CFSTR("stringByExpandingTildeInPath")));
+				CFStringGetCString (checkFortilda, afterCheckForTilda, 2048, gCurrentVMEncoding);
 
+				resolveWhatTheImageNameIs(afterCheckForTilda);
+				CFRelease(checkFortilda);
+			}
+	}
+#else
+	if (ImageNameIsEmpty()) {
+            FSSpec	workingDirectory;
 		err = GetApplicationDirectory(&workingDirectory);
 		if (err != noErr) 
                     error("Could not obtain default directory");
 		CopyCStringToPascal(gSqueakImageName,workingDirectory.name);
 		SetImageName(&workingDirectory);
-#if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
-            }
-#endif
 	}
+#endif
 
 	/* uncomment the following when using the C transcript window for debugging: */
 	//printf("Move this window, then hit CR\n"); getchar();
@@ -662,7 +675,7 @@ void fetchPrefrences() {
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
     CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock;
     CFDataRef 	SqueakWindowAttributeType;    
-    CFStringRef    SqueakVMEncodingType,SqueakImageName;
+    CFStringRef    SqueakVMEncodingType;
     char        encoding[256];
     
     myBundle = CFBundleGetMainBundle();
@@ -674,7 +687,7 @@ void fetchPrefrences() {
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
-    SqueakImageName = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
+    gSqueakImageNameStringRef = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
     SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
     SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
     SqueakUIFlushSecondaryCleanupDelayMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCleanupDelayMilliseconds"));
@@ -687,8 +700,8 @@ void fetchPrefrences() {
 
     setEncodingType(encoding);
     
-    if (SqueakImageName) 
-        CFStringGetCString (SqueakImageName, gSqueakImageName, 256, kCFStringEncodingMacRoman);
+    if (gSqueakImageNameStringRef) 
+        CFStringGetCString (gSqueakImageNameStringRef, gSqueakImageName, 2048, kCFStringEncodingMacRoman);
 	
     if (SqueakWindowType) 
         CFNumberGetValue(SqueakWindowType,kCFNumberLongType,&gSqueakWindowType);

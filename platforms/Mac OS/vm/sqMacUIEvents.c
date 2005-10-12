@@ -29,7 +29,7 @@
 *  3.8.7b1 Mar 13th, 2005 JMM fire keydown/keychar on key repeat to mimic ms windows behavior.
 *  3.8.7b2 Mar 19th, 2005 JMM change keydown/up back to virtual keycode, add unicode to keychar
 *  3.8.8b9 Aug 15th, 2005 JMM flush quartz buffer if needded
-
+*  3.9.1b2 Oct 4th, 2005 Jmm add MillisecondClockMask
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -38,6 +38,9 @@ notes: IsUserCancelEventRef
 #include <USB.h>
 #include <DeskBus.h>
 #endif
+
+#define MillisecondClockMask 536870911
+
 
 #include "sq.h"
 #include "sqMacUIEvents.h"
@@ -515,7 +518,7 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 
 	/* first the basics */
 	evt->type = EventTypeMouse;
-	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
 	SetPortWindowPort(windowHandleFromIndex(windowActive));
 	GlobalToLocal((Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
@@ -545,7 +548,7 @@ void recordMenu(int menuID,UInt32 menuItem) {
 	evt = (sqMenuEvent*) nextEventPut();
 
 	evt->type = EventTypeMenu;
-	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
 	evt->menu = menuID;
 	evt->menuItem = menuItem;
 	evt->reserved1 = 0;
@@ -563,7 +566,7 @@ void recordWindowEvent(int windowType,int left, int top, int right, int bottom)
 	evt = (sqWindowEvent*) nextEventPut();
 
 	evt->type = EventTypeWindow;
-	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
 	evt->action = windowType;
 	evt->value1 = left;
 	evt->value2 = top;
@@ -608,7 +611,7 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioMSecs() & 536870911;
+	evt->timeStamp = ioMSecs() & MillisecondClockMask;
 	/* now the key code */
 	/* press code must differentiate */
 	// Jan 2004, changed for TWEAK instead of doing virtual keycode return  unicode
@@ -677,7 +680,7 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 	/* first the basics */
 	theButtonState = MouseModifierState(theEvent);
 	evt->type = EventTypeDragDropFiles;
-	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
 	GlobalToLocal((Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
@@ -1729,7 +1732,7 @@ void recordMenuEventCarbon(MenuRef menu,UInt32 menuItem) {
 	evt = (sqMenuEvent*) nextEventPut();
 
 	evt->type = EventTypeMenu;
-	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
 	evt->menu = (int) GetMenuID(menu);
 	evt->menuItem = menuItem;
 	evt->reserved1 = 0;
@@ -1747,7 +1750,7 @@ void recordWindowEventCarbon(int windowType,int left, int top, int right, int bo
 	evt = (sqWindowEvent*) nextEventPut();
 
 	evt->type = EventTypeWindow;
-	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
 	evt->action = windowType;
 	evt->value1 = left;
 	evt->value2 = top;
@@ -1800,7 +1803,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 
 	/* first the basics */
 	evt->type = EventTypeMouse;
-	evt->timeStamp = ioMSecs() & 536870911; 
+	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
         evt->x = where.h;
 	evt->y = where.v;
 	/* then the buttons */
@@ -1853,7 +1856,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
 	evt = (sqKeyboardEvent*) nextEventPut();
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioMSecs() & 536870911;
+	evt->timeStamp = ioMSecs() & MillisecondClockMask;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
@@ -1893,7 +1896,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
     	evt = (sqKeyboardEvent*) nextEventPut();
 	/* first the basics */
 	evt->type = EventTypeKeyboard;
-	evt->timeStamp = ioMSecs() & 536870911;
+	evt->timeStamp = ioMSecs() & MillisecondClockMask;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
@@ -2184,7 +2187,7 @@ sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Code,
 	/* first the basics */
 	//fprintf(stdout,"\nKeyStroke time %i Type %i Value %i",ioMSecs(),pc,cc);
 	evt->type = type;
-	evt->timeStamp = ioMSecs() & 536870911;
+	evt->timeStamp = ioMSecs() & MillisecondClockMask;
 	/* now the key code */
 	/* press code must differentiate */
 	evt->charCode = cc;

@@ -61,7 +61,7 @@ static void parseEnvironment(void);
 static int strtobkm(const char *str);
 static void printUsage(void);
 static void printUsageNotes(void);
-static void resolveWhatTheImageNameIs(char *guess);
+void resolveWhatTheImageNameIs(char *guess);
 
 char *unixArgcInterfaceGetParm(int n) {
 	int actual;
@@ -127,7 +127,7 @@ static void parseArguments(int argc, char **argv)
 # undef skipArg
 }
 
-static void resolveWhatTheImageNameIs(char *guess)  
+void resolveWhatTheImageNameIs(char *guess)  
 {
 	char possibleImageName[1001], partial [1001], fullPath [1001], finalHFS [1001], lastPath [256];
 	FSSpec		workingDirectory;
