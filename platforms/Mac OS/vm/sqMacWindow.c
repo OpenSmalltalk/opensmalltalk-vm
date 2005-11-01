@@ -181,6 +181,7 @@ void sqShowWindowActual(int windowIndex){
 #else
 void sqShowWindow(int windowIndex) {
 #endif
+	if ( windowHandleFromIndex(windowIndex))
 	ShowWindow( windowHandleFromIndex(windowIndex));
 }
 
@@ -870,6 +871,7 @@ void SetWindowTitle(int windowIndex,char *title) {
     Str255 tempTitle;
 	CopyCStringToPascal(title,tempTitle);
 #ifndef IHAVENOHEAD
+	if (windowHandleFromIndex(windowIndex))
 	SetWTitle(windowHandleFromIndex(windowIndex), tempTitle);
 #endif
 }

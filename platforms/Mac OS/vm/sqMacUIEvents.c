@@ -282,7 +282,7 @@ int HandleEvents(void) {
 			break;
 
 			case activateEvt:
-				if (theEvent.modifiers & activeFlag && ((windowIndexFromHandle((WindowPtr))) {
+				if (theEvent.modifiers & activeFlag && ((windowIndexFromHandle((WindowPtr) theEvent.message)))) {
 					windowActive = (windowIndexFromHandle((WindowPtr) theEvent.message));
 					recordWindowEvent(WindowEventActivated,0, 0, 0, 0);
 				} else {
@@ -2194,6 +2194,7 @@ sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Code,
 	evt->pressCode = pc;
 	evt->modifiers = m;
 	evt->windowIndex = windowActive;
+	evt->utf32Code = 0;
 	if(pc == EventKeyChar) {
 		evt->utf32Code = utf32Code;
 		if (!inputSemaphoreIndex) {
