@@ -230,7 +230,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     		finderInformation.fdType == 'disk'))) 
 	        continue;
 #if defined(__APPLE__) && defined(__MACH__)
-	     
+		CopyPascalStringToC(fileSpec.name,shortImageName);
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim') {
 			char pathname[2049],commandStuff[4096];
 			int	error;
