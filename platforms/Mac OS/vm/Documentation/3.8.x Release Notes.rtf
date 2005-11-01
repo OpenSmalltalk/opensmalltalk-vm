@@ -10,15 +10,21 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
 \
-Oct 12th, 2005 (3.8.9b5)\
+Oct 24th, 2005 (3.8.9b7)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
-3.8.9.x seems a fine VM, from what people tell me, but now we've 3.8.9.\
 \
-3.8.9b5								3.8.9b2,b3,b4 had limited distribution for testing\
+3.8.9b7 			sqMacMain.c			#ifdef change to enable compile under os-9\
+				sqMacUIAppleEvents.c	Handle case where the file name ends with *.image but we have no hfs meta data. \
+				sqMacUIEvents.c		#ifdef change to enable compile under os-9.\
+				sqMacWindow.c		Recheck window handle on window open, or window title set.\
+\
+\
+3.8.9b5								3.8.9b2,b3,b4,b6 had limited distribution for testing\
+\
 				sqMacExternalPrims.c	Look for plugin bundles in the resource folder. This allows you to place bundles in the resource folder, now Squeak\
 									will look for a plugin in the "Plugins" folder, the root folder where the app is, and lastly the resource folder in the app. \
 									This enables you to customize a VM with the right set of plugins for your vertical application.\
@@ -368,9 +374,8 @@ sqMacEncoding.c	Alter SetVMPath()
 				add support for 
 \f1\fs20 \CocoaLigature0       \
 				\cf3 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f2\fs24 \cf0 \CocoaLigature1 \
+\f2\fs24 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 				Alter PathToFile(), get kCFStringNormalizationFormKC path name\
 				Alter QuicklyMakePath() get kCFStringNormalizationFormKC path name\
@@ -412,13 +417,11 @@ JPEG READER WRITER\
 \f2 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
 				Broke high bit ascii macroman in 3.7.0bx.\
 				For multi-byte character input you get EventKeyDown/EventKeyChar/EventKeyUp for each unicode character coming from the input sequence.\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 \
+\f0 \
 3.7.0b2		\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f2 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f2 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -426,17 +429,14 @@ JPEG READER WRITER\
 				b) Support for sqSocketListenOnPortBacklogSizeInterface, which allows you to specify the interface to use for the listen should work both for os-x and os-9.\
 				c) Usage of VMMaker3-7a2.\
 				d) Special change sets: make primitive point x/y internal, and slightly faster activate.\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 \
+\f0 \
 3.7.0b1 			\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f2 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f2 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 3.6.1b7			\
+\f0 3.6.1b7			\
 SqMacWindow.c	Fix for new rending code when used with 2.8 or earlier images, mouse clicks reported in wrong place\
 \
 3.6.1b6\
