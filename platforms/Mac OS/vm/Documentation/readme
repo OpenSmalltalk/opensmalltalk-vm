@@ -67,7 +67,7 @@ Step Three: Build an interpeter
 
 	0.  Grab your 3.9 image, and then install the 32/64bit version of VMMaker or better, and Balloon 3D.
 	As of Nov 10th 2005, You need a beta VMMaker from
-	http://www.rowledge.org/tim/squeak/SqFiles/packages/VMMaker/VMMaker-tpr-37.mcz
+	http://www.rowledge.org/tim/squeak/SqFiles/packages/VMMaker/VMMaker-tpr.37.mcz
 
 	When this loads rely yes to move FloatProto to Undeclared.
 	Now load the following two change sets found in the specialChangeSets folder.
