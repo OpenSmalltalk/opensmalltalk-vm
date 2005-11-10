@@ -1,4 +1,4 @@
-Updated Jun 4th, 2005
+Updated Nov 10th, 2005
 
 Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- John Maloney, May 25, 2000,
@@ -15,6 +15,7 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes John McIntosh Feb 18th, 2004 3.7.x updates (pending)  (xcode changes)
 	-- Changes John McIntosh May 23rd, 2005 3.8.8b2 revise for SVN usage
 	-- Changes John McIntosh Jun 4th, 2005 3.8.8b2 revised for 3.9
+	-- Changes John McIntosh Nov 10th, 2005 3.8.9b8 revised SVN location, misc updats
 
 (Note to readers, it is possible a step was missed, so beware)
 
@@ -55,20 +56,28 @@ Step Two: Get the current SVN Platforms tree
 			http://homepage.mac.com/martinott/
 		to get the SVN binaries
 		Checkout a working copy of the squeak/trunk, either via the GUI tool, or from a terminal session go to the directory
-		you want to build in, then enter svn co http://squeak.hpl.hp.com/svn/squeak/trunk svnSqueakTree 
+		you want to build in, then enter svn co http://squeakvm.org/svn/squeak/trunk svnSqueakTree 
 	B.	You may need to copy the platform directory out of the svnSqueakTree directory into your build directory
 		to avoid confusion.
-	C.  	For printing support visit the PrintJobPlugin plugin in the mac folder, and later file in RealPrinting-JMM.6.cs.gz and    RealPrintingPlugin-JMM.5.cs.zip	
+	C.  	For printing support visit the PrintJobPlugin plugin in the mac folder, and later file in RealPrinting-JMM.6.cs.gz and    RealPrintingPlugin-JMM.5.cs.zip. See http://www.smalltalkconsulting.com/squeak.html
 		
 After so much mumbo-jumbo, your squeak folder should have a directory entitled platforms.
 
 Step Three: Build an interpeter
 
-	0.  Grab your 3.9 image, and then install the 32/64bit version of VMMaker or better, and Ballon 3D.
+	0.  Grab your 3.9 image, and then install the 32/64bit version of VMMaker or better, and Balloon 3D.
+	As of Nov 10th 2005, You need a beta VMMaker from
+	http://www.rowledge.org/tim/squeak/SqFiles/packages/VMMaker/VMMaker-tpr-37.mcz
+
+	When this loads rely yes to move FloatProto to Undeclared.
+	Now load the following two change sets found in the specialChangeSets folder.
+	load VMM38-gc-instrument-image.1.cs 
+	load VMM38-64bit-imageUpdates.1.cs
+	That should provide a version of VMMaker that is sufficient to build 3.8.9b7
 	
 	A.  Install change sets from the specialChangeSets Folder. 
 		There has been some discussion that the line endings 
-		might be wrong for the following change sets that might depend on what CVS thinks, 
+		might be wrong for the following change sets that might depend on what CVS/SVN thinks, 
 		so do a "remove linefeeds" first. 
 		
 		Gnuifier.5.cs
@@ -76,7 +85,7 @@ Step Three: Build an interpeter
 				
 		ArraysToGlobalStruct-JMM.1.cs  - Put arrays in the structure, this fixes some issues with 'global code elimination' in the compiler.
 		
-	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure)
+	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure, see Step 3 above)
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
 		If you created an alias to the squeak platform folder, it might come up with for example
 		Mac OS X:Users:Shared:Squeak:platforms
@@ -103,7 +112,7 @@ Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
 		(Gnuifier on:
 			((FileDirectory default
-				directoryNamed: 'src')
+				directoryNamed: 'src')  "Perhaps src32 depending on how VMMaker 32/64 thinks about this"
 				directoryNamed: 'vm') pathName) gnuify
 
 Step Five: Shove and Tweak some files around the buildspace
@@ -145,7 +154,6 @@ Step Six: Run ProjectBuilder and build yourself an interpreter {for xcode 1.5 }
 
 Step Seven: Download and print your Squeak VM Developer's Certificate
 
-	{Broken URL} 
 	http://www.rowledge.org/tim/squeak/SqueakVMBuilderCertificate.pdf
 
 Congratulations! Take a bow!
