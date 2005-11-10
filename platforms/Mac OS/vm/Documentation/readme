@@ -128,6 +128,9 @@ Step Five: Shove and Tweak some files around the buildspace
 	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit' (same deal as step B)
 	D.	Drag 'SqueakVMForCarbon.pbproj' to the folder containing
 		the 'platforms' and 'src' folders.
+
+		For XCode 2.1 you should use SqueakVMForCarbon.xcodeproj.zip instead
+
 	E.	Ensure a copy of the files (again found in the Developer directory):
 			Info-NPSqueak__Upgraded_.plist
 			Info-Squeak_VM_Debug__Upgraded_.plist
