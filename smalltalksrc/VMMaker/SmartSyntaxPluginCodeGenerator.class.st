@@ -942,7 +942,7 @@ SmartSyntaxPluginCodeGenerator >> initializeCTranslationDictionary [
 		#asCInt						#generateAsCInt:on:indent:
 		#asCUnsigned				#generateAsCUnsigned:on:indent:
 		#asCBoolean					#generateAsCBoolean:on:indent:
-		#asCDouble					#generateAsCDouble
+		#asCDouble					#generateAsCDouble:on:indent:
 
 		#asSmallIntegerObj			#generateAsSmallIntegerObj:on:indent:
 		#asPositiveIntegerObj		#generateAsPositiveIntegerObj:on:indent:
