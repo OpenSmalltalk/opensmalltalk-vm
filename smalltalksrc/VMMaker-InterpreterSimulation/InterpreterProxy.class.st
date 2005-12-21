@@ -307,7 +307,7 @@ InterpreterProxy >> fullGC [
 ]
 
 { #category : #other }
-InterpreterProxy >> getThisSession [
+InterpreterProxy >> getThisSessionID [
 	"Answer a session identifier which represents the current instance of Squeak.
 	The identifier is expected to be unique among all instances of Squeak on a
 	network at any point in time."
