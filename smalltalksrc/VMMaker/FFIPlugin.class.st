@@ -48,7 +48,13 @@ FFIPlugin class >> requiresPlatformFiles [
 ]
 
 { #category : #'primitive support' }
-FFIPlugin >> addressOf: rcvr startingAt: byteOffset size: byteSize [
+FFIPlugin >> atomicTypeOf: value [
+	^(value bitAnd: FFIAtomicTypeMask) >> FFIAtomicTypeShift
+]
+
+{ #category : #'primitive support' }
+FFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
+"return an int of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr. Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical reasons) with plain Byte or Word Arrays as well. "
 	| rcvrClass rcvrSize addr |
 	(interpreterProxy isBytes: rcvr) ifFalse:[^interpreterProxy primitiveFail].
 	(byteOffset > 0) ifFalse:[^interpreterProxy primitiveFail].
@@ -67,11 +73,6 @@ FFIPlugin >> addressOf: rcvr startingAt: byteOffset size: byteSize [
 	].
 	addr _ addr + byteOffset - 1.
 	^addr
-]
-
-{ #category : #'primitive support' }
-FFIPlugin >> atomicTypeOf: value [
-	^(value bitAnd: FFIAtomicTypeMask) >> FFIAtomicTypeShift
 ]
 
 { #category : #'callout support' }
@@ -1003,7 +1004,7 @@ FFIPlugin >> primitiveFFIDoubleAt [
 	byteOffset _ interpreterProxy stackIntegerValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
-	addr _ self addressOf: rcvr startingAt: byteOffset size: 8.
+	addr _ self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
 	self cCode:'((int*)(&floatValue))[1] = ((int*)addr)[1]'.
@@ -1026,7 +1027,7 @@ FFIPlugin >> primitiveFFIDoubleAtPut [
 	byteOffset _ interpreterProxy stackIntegerValue: 1.
 	rcvr _ interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^0].
-	addr _ self addressOf: rcvr startingAt: byteOffset size: 8.
+	addr _ self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
@@ -1044,7 +1045,7 @@ FFIPlugin >> primitiveFFIFloatAt [
 	byteOffset _ interpreterProxy stackIntegerValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
-	addr _ self addressOf: rcvr startingAt: byteOffset size: 4.
+	addr _ self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
 	interpreterProxy pop: 2.
@@ -1065,7 +1066,7 @@ FFIPlugin >> primitiveFFIFloatAtPut [
 	byteOffset _ interpreterProxy stackIntegerValue: 1.
 	rcvr _ interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^0].
-	addr _ self addressOf: rcvr startingAt: byteOffset size: 4.
+	addr _ self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	interpreterProxy pop: 3.
@@ -1117,7 +1118,7 @@ FFIPlugin >> primitiveFFIIntegerAt [
 	interpreterProxy failed ifTrue:[^0].
 	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
 		ifFalse:[^interpreterProxy primitiveFail].
-	addr _ self addressOf: rcvr startingAt: byteOffset size: byteSize.
+	addr _ self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
 	interpreterProxy failed ifTrue:[^0].
 	byteSize < 4 ifTrue:[
 		"short/byte"
@@ -1156,7 +1157,7 @@ FFIPlugin >> primitiveFFIIntegerAtPut [
 	interpreterProxy failed ifTrue:[^0].
 	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
 		ifFalse:[^interpreterProxy primitiveFail].
-	addr _ self addressOf: rcvr startingAt: byteOffset size: byteSize.
+	addr _ self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
 	interpreterProxy failed ifTrue:[^0].
 	isSigned 
 		ifTrue:[value _ interpreterProxy signed32BitValueOf: valueOop]

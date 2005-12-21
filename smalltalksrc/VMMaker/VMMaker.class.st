@@ -170,6 +170,14 @@ VMMaker class >> sourceDirName [
 	^DirNames at: #sourceDir
 ]
 
+{ #category : #'version testing' }
+VMMaker class >> versionString [
+
+	"VMMaker versionString"
+
+	^'3.8b4'
+]
+
 { #category : #'plugin lists' }
 VMMaker >> allModuleNames [
 	"return the list of all the all plugins' moduleNames"
