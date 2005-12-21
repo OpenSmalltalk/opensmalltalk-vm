@@ -1240,6 +1240,20 @@ Interpreter >> addToExternalPrimitiveTable: functionAddress [
 	^0
 ]
 
+{ #category : #utilities }
+Interpreter >> addressOf: rcvr startingAt: byteOffset size: byteSize [
+"Return the int of the address of the (byteSize) slot at btyeOffset in rcvr. Usde for getting byte/word/int/float/double out of Byte/WordArrays"
+	| rcvrSize addr |
+	(self isBytes: rcvr) ifFalse:[^self primitiveFail].
+	(byteOffset > 0) ifFalse:[^self primitiveFail].
+	rcvrSize _ self byteSizeOf: rcvr.
+	(byteOffset+byteSize-1 <= rcvrSize)
+			ifFalse:[^self primitiveFail].
+	addr _ self cCoerce: (self firstIndexableField: rcvr) to: 'int'.
+	addr _ addr + byteOffset - 1.
+	^addr
+]
+
 { #category : #'debug support' }
 Interpreter >> allAccessibleObjectsOkay [
 	"Ensure that all accessible objects in the heap are okay."
@@ -4973,6 +4987,161 @@ Interpreter >> primitiveBlockCopy [
 	self storePointerUnchecked: SenderIndex ofObject: newContext withValue: nilObj.
 
 	self pop: 2 thenPush: newContext.
+]
+
+{ #category : #'array and stream primitive support' }
+Interpreter >> primitiveByteArrayDoubleAt [
+	"Return a double from the given byte offset in a ByteArray."
+	| byteOffset rcvr addr floatValue |
+	self export: true.
+	self inline: false.
+	self var: #floatValue declareC:'double floatValue'.
+	byteOffset _ self stackIntegerValue: 0.
+	rcvr _ self stackObjectValue: 1.
+	self failed ifTrue:[^0].
+	addr _ self addressOf: rcvr startingAt: byteOffset size: 8.
+	self failed ifTrue:[^0].
+	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
+	self cCode:'((int*)(&floatValue))[1] = ((int*)addr)[1]'.
+	self pop: 2.
+	^self pushFloat: floatValue
+
+]
+
+{ #category : #'array and stream primitive support' }
+Interpreter >> primitiveByteArrayDoubleAtPut [
+	"Store a Double at given byte offset in a ByteArray."
+	| byteOffset rcvr addr floatValue floatOop |
+	self export: true.
+	self inline: false.
+	self var: #floatValue declareC:'double floatValue'.
+	floatOop _ self stackValue: 0.
+	(self isIntegerObject: floatOop)
+		ifTrue:[floatValue _ self cCoerce: (self integerValueOf: floatOop) to:'double']
+		ifFalse:[floatValue _ self cCoerce: (self floatValueOf: floatOop) to:'double'].
+	byteOffset _ self stackIntegerValue: 1.
+	rcvr _ self stackObjectValue: 2.
+	self failed ifTrue:[^0].
+	addr _ self addressOf: rcvr startingAt: byteOffset size: 8.
+	self failed ifTrue:[^0].
+	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
+	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
+	self pop: 3.
+	^self push: floatOop
+]
+
+{ #category : #'array and stream primitive support' }
+Interpreter >> primitiveByteArrayFloatAt [
+	"Return a Float from the given byte offset in a ByteArray."
+	| byteOffset rcvr addr floatValue |
+	self export: true.
+	self inline: false.
+	self var: #floatValue declareC:'float floatValue'.
+	byteOffset _ self stackIntegerValue: 0.
+	rcvr _ self stackObjectValue: 1.
+	self failed ifTrue:[^0].
+	addr _ self addressOf: rcvr startingAt: byteOffset size: 4.
+	self failed ifTrue:[^0].
+	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
+	self pop: 2.
+	^self pushFloat: floatValue
+]
+
+{ #category : #'array and stream primitive support' }
+Interpreter >> primitiveByteArrayFloatAtPut [
+	"Store a Float at the given byteOffset in a ByteArray"
+	| byteOffset rcvr addr floatValue floatOop |
+	self export: true.
+	self inline: false.
+	self var: #floatValue declareC:'float floatValue'.
+	floatOop _ self stackValue: 0.
+	(self isIntegerObject: floatOop)
+		ifTrue:[floatValue _ self cCoerce: (self integerValueOf: floatOop) to:'float']
+		ifFalse:[floatValue _ self cCoerce: (self floatValueOf: floatOop) to:'float'].
+	byteOffset _ self stackIntegerValue: 1.
+	rcvr _ self stackObjectValue: 2.
+	self failed ifTrue:[^0].
+	addr _ self addressOf: rcvr startingAt: byteOffset size: 4.
+	self failed ifTrue:[^0].
+	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
+	self pop: 3.
+	^self push: floatOop
+]
+
+{ #category : #'array and stream primitive support' }
+Interpreter >> primitiveByteArrayNByteIIntegerAtPut [
+	"Store a (signed or unsigned) n byte integer at the given byte offset."
+	| isSigned byteSize byteOffset rcvr addr value max valueOop |
+	self export: true.
+	self inline: false.
+	isSigned _ self booleanValueOf: (self stackValue: 0).
+	byteSize _ self stackIntegerValue: 1.
+	valueOop _ self stackValue: 2.
+	byteOffset _ self stackIntegerValue: 3.
+	rcvr _ self stackObjectValue: 4.
+	self failed ifTrue:[^0].
+	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
+		ifFalse:[^self primitiveFail].
+	addr _ self addressOf: rcvr startingAt: byteOffset size: byteSize.
+	self failed ifTrue:[^0].
+	isSigned 
+		ifTrue:[value _ self signed32BitValueOf: valueOop]
+		ifFalse:[value _ self positive32BitValueOf: valueOop].
+	self failed ifTrue:[^0].
+	byteSize < 4 ifTrue:[
+		isSigned ifTrue:[
+			max _ 1 << (8 * byteSize - 1).
+			value >= max ifTrue:[^self primitiveFail].
+			value < (0 - max) ifTrue:[^self primitiveFail].
+		] ifFalse:[
+			value >= (1 << (8*byteSize)) ifTrue:[^self primitiveFail].
+		].
+		"short/byte"
+		byteSize = 1 
+			ifTrue:[self byteAt: addr put: value]
+			ifFalse:[	self cCode: '*((short int *) addr) = value' 
+						inSmalltalk: [self shortAt: addr put: value]].
+	] ifFalse:[self longAt: addr put: value].
+	self pop: 5.
+	^self push: valueOop.
+]
+
+{ #category : #'array and stream primitive support' }
+Interpreter >> primitiveByteArrayNByteIntegerAt [
+	"Return a (signed or unsigned) n byte integer from the given byte offset."
+	| isSigned byteSize byteOffset rcvr addr value mask |
+	self export: true.
+	self inline: false.
+	isSigned _ self booleanValueOf: (self stackValue: 0).
+	byteSize _ self stackIntegerValue: 1.
+	byteOffset _ self stackIntegerValue: 2.
+	rcvr _ self stackObjectValue: 3.
+	self failed ifTrue:[^0].
+	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
+		ifFalse:[^self primitiveFail].
+	addr _ self addressOf: rcvr startingAt: byteOffset size: byteSize.
+	self failed ifTrue:[^0].
+	byteSize < 4 ifTrue:[
+		"short/byte"
+		byteSize = 1 
+			ifTrue:[value _ self byteAt: addr]
+			ifFalse:[	value _ self cCode: '*((short int *) addr)' 
+								inSmalltalk: [self shortAt: addr]].
+		isSigned ifTrue:["sign extend value"
+			mask _ 1 << (byteSize * 8 - 1).
+			value _ (value bitAnd: mask-1) - (value bitAnd: mask)].
+		"note: byte/short never exceed SmallInteger range"
+		value _ self integerObjectOf: value.
+	] ifFalse:[
+		"general 32 bit integer"
+		value _ self longAt: addr.
+		isSigned
+			ifTrue:[value _ self signed32BitIntegerFor: value]
+			ifFalse:[value _ self positive32BitIntegerFor: value].
+	].
+	self pop: 4.
+	^self push: value
+
 ]
 
 { #category : #'memory space primitives' }
