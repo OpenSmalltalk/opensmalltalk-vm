@@ -75,13 +75,13 @@ Class {
 	],
 	#classVars : [
 		'SemaphoresToSignalSize',
-		'StreamIndexIndex',
+		'StackPointerIndex',
 		'AtCacheMask',
 		'MethodIndex',
 		'StreamArrayIndex',
 		'MethodArrayIndex',
 		'DirEntryFound',
-		'CompilerHooksSize',
+		'LastLinkIndex',
 		'MethodCachePrim',
 		'CrossedX',
 		'ExcessSignalsIndex',
@@ -103,8 +103,8 @@ Class {
 		'InitialIPIndex',
 		'MethodCacheNative',
 		'HeaderIndex',
-		'BytecodeTable',
 		'InstructionPointerIndex',
+		'BytecodeTable',
 		'ProcessListsIndex',
 		'SuspendedContextIndex',
 		'MaxExternalPrimitiveTableSize',
@@ -142,9 +142,9 @@ Class {
 		'PrimitiveTable',
 		'SuperclassIndex',
 		'MessageArgumentsIndex',
+		'StreamIndexIndex',
 		'AtCacheEntries',
-		'StackPointerIndex',
-		'LastLinkIndex'
+		'CompilerHooksSize'
 	],
 	#category : #'VMMaker-Interpreter'
 }
@@ -3820,6 +3820,14 @@ Interpreter >> interpret [
 Interpreter >> interruptCheckForced [
 	"was this interrupt check forced by outside code?"
 	^interruptCheckCounter < -100
+]
+
+{ #category : #'plugin support' }
+Interpreter >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength [
+"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer."
+	self cCode:'sqFilenameFromString(aCharBuffer, aFilenameString, filenameLength)'
+		inSmalltalk:["this doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can"
+			aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString]
 ]
 
 { #category : #'plugin primitive support' }
@@ -9461,6 +9469,12 @@ Interpreter >> verifyCleanHeaders [
 			ifFalse: [((self longAt: oop) bitAnd: MarkBit) = 0
 						ifFalse: [self error: 'Invalid obj with MarkBit set.']].
 		oop _ self objectAfter: oop]
+]
+
+{ #category : #'plugin support' }
+Interpreter >> vmEndianness [
+	"return 0 for little endian, 1 for big endian"
+	^self cCode:'VMENDIANNESS'
 ]
 
 { #category : #processes }
