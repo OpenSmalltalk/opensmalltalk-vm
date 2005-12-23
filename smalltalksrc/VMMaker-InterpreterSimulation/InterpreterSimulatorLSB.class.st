@@ -134,3 +134,9 @@ InterpreterSimulatorLSB >> shortAt: byteAddress put: a16BitValue [
 				put: ((long bitAnd: 16rFFFF) bitOr: (a16BitValue bitShift: 16))
 		]
 ]
+
+{ #category : #'memory access' }
+InterpreterSimulatorLSB >> vmEndianness [
+	"return 0 for little endian, 1 for big endian"
+	^0
+]
