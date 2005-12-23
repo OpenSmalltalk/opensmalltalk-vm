@@ -1,5 +1,5 @@
 "
-This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the SVN tree at hplabs .
+This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the SVN tree at www.squeakvm.org .
 The main use of the class is to support the vm simulator
 "
 Class {
@@ -20,7 +20,6 @@ Class {
 { #category : #private }
 InterpreterProxy class >> validateProxyImplementation: anInterpreter [ 
 	"InterpreterProxy validateProxyImplementation: Interpreter"
-	"InterpreterProxy validateProxyImplementation: DynamicInterpreter"
 
 	| proxyClass catList |
 	proxyClass _ InterpreterProxy.
@@ -353,6 +352,12 @@ InterpreterProxy >> integerObjectOf: value [
 InterpreterProxy >> integerValueOf: oop [
 	oop class == SmallInteger ifFalse:[self error:'Not a SmallInteger'].
 	^oop
+]
+
+{ #category : #converting }
+InterpreterProxy >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength [
+	"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer. This doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can"
+	aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString
 ]
 
 { #category : #'FFI support' }
@@ -741,4 +746,10 @@ InterpreterProxy >> superclassOf: classPointer [
 { #category : #'special objects' }
 InterpreterProxy >> trueObject [
 	^true
+]
+
+{ #category : #other }
+InterpreterProxy >> vmEndianness [
+	"return 0 for little endian, 1 for big endian"
+	^SmalltalkImage current endianness =#big ifTrue:[1] ifFalse:[0]
 ]

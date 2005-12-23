@@ -97,3 +97,9 @@ InterpreterSimulatorMSB >> shortAt: byteAddress put: a16BitValue [
 	self longAt: longAddress put: longWord
 
 ]
+
+{ #category : #'memory access' }
+InterpreterSimulatorMSB >> vmEndianness [
+	"return 0 for little endian, 1 for big endian"
+	^1
+]
