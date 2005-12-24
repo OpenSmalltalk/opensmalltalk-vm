@@ -99,8 +99,7 @@
    use to point to it.
 
    There was a third form that used to be used for quickly timing primitives in
-   order to try to keep millisecond delays up to date. That is no longer used
-   but the definition is kept here temporarily
+   order to try to keep millisecond delays up to date. That is no longer used.
 
    By default, all three clock functions are defined
    here as macros based on the standard C library function clock().
@@ -108,17 +107,16 @@
 */
 
 sqInt ioMSecs(void);
-sqInt ioLowResMSecs(void);
+/* deprecated out ofexistence sqInt ioLowResMSecs(void); */
 sqInt ioMicroMSecs(void);
 
 #define ioMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
-#define ioLowResMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
+/* no more #define ioLowResMSecs()	((1000 * clock()) / CLOCKS_PER_SEC) */
 
 /* this macro cannot be used now that ioMicroMSecs is involved in the
-   sqVirtualMachine structures */
-#if 0   
+   sqVirtualMachine structures 
 #define ioMicroMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
-#endif
+*/
 
 /* Filename copy macro, and an opportunity to transform filenames if
    neccesary.
@@ -139,17 +137,6 @@ sqInt ioMicroMSecs(void);
    Override in sqPlatformSpecific.h for each platform that implements a file truncate. 
 */
 #define sqFTruncate(filenum, fileoffset) true
-
-/* Old browser plug-in support, maintained for a little while. */
-
-#if 1
-void plugInForceTimeToReturn(void);
-sqInt plugInInit(char *imageName);
-sqInt plugInNotifyUser(char *msg);
-void plugInSetStartTime(void);
-sqInt plugInShutdown(void);
-sqInt plugInTimeToReturn(void);
-#endif
 
 /* Macros to support Mac browser plugin without ugly code in Interpreter. */
 
@@ -358,11 +345,6 @@ sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length);
 sqInt ioCanRenameImage(void);
 sqInt ioCanWriteImage(void);
 sqInt ioDisableImageWrite(void);
-#ifdef DISABLE_SECURITY
-# define ioCanRenameImage() 1
-# define ioCanWriteImage() 1
-# define ioDisableImageWrite() 1
-#endif
 
 /* Save/restore. */
 /* Read the image from the given file starting at the given image offset */
