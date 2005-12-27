@@ -114,7 +114,7 @@ sqInt ioMicroMSecs(void);
 /* no more #define ioLowResMSecs()	((1000 * clock()) / CLOCKS_PER_SEC) */
 
 /* this macro cannot be used now that ioMicroMSecs is involved in the
-   sqVirtualMachine structures 
+   sqVirtualMachine structures - we must have a function 
 #define ioMicroMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
 */
 
@@ -325,7 +325,7 @@ typedef struct sqWindowEvent
 #define WindowEventIconise	3 /* window iconised or hidden etc */
 #define WindowEventActivated	4 /* window made active - some platforms only - do not rely upon this */
 #define WindowEventPaint	5 /* window area (in value1-4) needs updating. Some platforms do not need to send this, do not rely on it in image */
-#define WindowEventStinks	6 /* this window stinks (obvious and descriptive name, no?) */
+#define WindowEventStinks	6 /* this window stinks (just to see if people read this stuff) */
 
 /* Set an asynchronous input semaphore index for events. */
 sqInt ioSetInputSemaphore(sqInt semaIndex);
