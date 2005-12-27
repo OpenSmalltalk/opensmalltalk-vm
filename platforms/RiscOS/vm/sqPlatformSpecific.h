@@ -34,7 +34,7 @@ int platAllocateMemory(int amount);
 
 #undef sqFilenameFromString
 extern int canonicalizeFilenameToString(char * sqString, int sqSize, char * cString);
-#define sqFilenameFromString(dst, src, num) (canonicalizeFilenameToString(dst, src, num))
+#define sqFilenameFromString(dst, src, num) (canonicalizeFilenameToString((char*)src, (int)num, (char*)dst))
 
 int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize);
 
@@ -56,11 +56,6 @@ if(1) {int sqfni;\
 	}\
 	dst[num] = 0;\
 }
-
-/* for experimental 64bit support period we keep the macros and have to undef them here */
-#undef dispatchFunctionPointer
-#undef dispatchFunctionPointerOnin
-/* we'd like to untypedef fptr too, but no way to do it */
 
 
 /* undefine this to stop using my MillisecondTimer module and rely upon clock()
