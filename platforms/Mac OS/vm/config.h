@@ -152,7 +152,14 @@
 /* #undef	VM_HOST_VENDOR */
 #define	VM_HOST_OS "darwin7.8.0"
 
+#if defined(__BIG_ENDIAN__)
 #define	WORDS_BIGENDIAN 1
+#define VMENDIANNESS 1
+#else
+#undefine	WORDS_BIGENDIAN 
+#define VMENDIANNESS 0
+#endif
+
 /* #undef	DOUBLE_WORD_ALIGNMENT */
 /* #undef	DOUBLE_WORD_ORDER */
 
