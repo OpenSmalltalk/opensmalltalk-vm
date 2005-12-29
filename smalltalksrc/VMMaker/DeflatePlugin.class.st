@@ -405,7 +405,7 @@ DeflatePlugin >> primitiveDeflateUpdateHashTable [
 	"Primitive. Update the hash tables after data has been moved by delta."
 	| delta table tableSize tablePtr entry |
 	self export: true.
-	self var: #tablePtr declareC:'int *tablePtr'.
+	self var: #tablePtr type:'int *'.
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
 	delta _ interpreterProxy stackIntegerValue: 0.
@@ -428,8 +428,8 @@ DeflatePlugin >> primitiveUpdateAdler32 [
 	"Primitive. Update a 32bit CRC value."
 	| collection stopIndex startIndex length bytePtr s1 adler32 s2 b |
 	self export: true.
-	self var: #adler32 declareC:'unsigned int adler32'.
-	self var: #bytePtr declareC:'unsigned char *bytePtr'.
+	self var: #adler32 type:'unsigned int '.
+	self var: #bytePtr type:'unsigned char *'.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	collection _ interpreterProxy stackObjectValue: 0.
@@ -461,9 +461,9 @@ DeflatePlugin >> primitiveUpdateGZipCrc32 [
 	"Primitive. Update a 32bit CRC value."
 	| collection stopIndex startIndex crc length bytePtr |
 	self export: true.
-	self var: #crc declareC:'unsigned int crc'.
-	self var: #bytePtr declareC:'unsigned char *bytePtr'.
-	self var: #crcTable declareC:'unsigned int *crcTable'.
+	self var: #crc type:'unsigned int '.
+	self var: #bytePtr type:'unsigned char *'.
+	self var: #crcTable type:'unsigned int *'.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	collection _ interpreterProxy stackObjectValue: 0.
@@ -538,12 +538,12 @@ DeflatePlugin >> sendBlock: literalStream with: distanceStream with: litTree wit
 		zipBitBuf, zipBitPos.
 	"
 	| oop litPos litLimit litArray distArray lit dist sum llBitLengths llCodes distBitLengths distCodes code extra litBlCount distBlCount |
-	self var: #litArray declareC:'unsigned char *litArray'.
-	self var: #distArray declareC:'unsigned int *distArray'.
-	self var: #llBitLengths declareC:'unsigned int *llBitLengths'.
-	self var: #llCodes declareC:'unsigned int *llCodes'.
-	self var: #distBitLengths declareC:'unsigned int *distBitLengths'.
-	self var: #distCodes declareC:'unsigned int *distCodes'.
+	self var: #litArray type:'unsigned char *'.
+	self var: #distArray type:'unsigned int *'.
+	self var: #llBitLengths type:'unsigned int *'.
+	self var: #llCodes type:'unsigned int *'.
+	self var: #distBitLengths type:'unsigned int *'.
+	self var: #distCodes type:'unsigned int *'.
 	oop _ interpreterProxy fetchPointer: 0 ofObject: literalStream.
 	litPos _ interpreterProxy fetchInteger: 1 ofObject: literalStream.
 	litLimit _ interpreterProxy fetchInteger: 2 ofObject: literalStream.

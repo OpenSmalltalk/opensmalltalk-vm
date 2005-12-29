@@ -25,8 +25,8 @@ StarSqueakPlugin >> primitiveDiffuseFromToWidthHeightDelta [
 
 	| srcOop dstOop height width delta src dst area startY endY startX endX sum rowStart |
 	self export: true.
-	self var: 'src' declareC: 'unsigned int *src'.
-	self var: 'dst' declareC: 'unsigned int *dst'.
+	self var: 'src' type: 'unsigned int *'.
+	self var: 'dst' type: 'unsigned int *'.
 
 	srcOop _ interpreterProxy stackValue: 4.
 	dstOop _ interpreterProxy stackValue: 3.
@@ -71,7 +71,7 @@ StarSqueakPlugin >> primitiveEvaporateRate [
 
 	| patchVarOop rate patchVar sz |
 	self export: true.
-	self var: 'patchVar' declareC: 'unsigned int *patchVar'.
+	self var: 'patchVar' type: 'unsigned int *'.
 
 	patchVarOop _ interpreterProxy stackValue: 1.
 	rate _ interpreterProxy stackIntegerValue: 0.
@@ -91,8 +91,8 @@ StarSqueakPlugin >> primitiveMapFromToWidthHeightPatchSizeRgbFlagsShift [
 
 	| srcOop dstOop w h patchSize rgbFlags shiftAmount src dst rgbMult srcIndex level pixel offset |
 	self export: true.
-	self var: 'src' declareC: 'unsigned int *src'.
-	self var: 'dst' declareC: 'unsigned int *dst'.
+	self var: 'src' type: 'unsigned int *'.
+	self var: 'dst' type: 'unsigned int *'.
 
 	srcOop _ interpreterProxy stackValue: 6.
 	dstOop _ interpreterProxy stackValue: 5.

@@ -392,7 +392,7 @@ FFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
 FFIPlugin >> ffiCreateLongLongReturn: isSigned [
 	"Create a longlong return value from a previous call out"
 	| lowWord highWord largeClass nBytes largeInt ptr |
-	self var: #ptr declareC:'unsigned char *ptr'.
+	self var: #ptr type:'unsigned char *'.
 	lowWord _ self ffiLongLongResultLow.
 	highWord _ self ffiLongLongResultHigh.
 	isSigned ifTrue:["check for 32 bit signed"
@@ -509,7 +509,7 @@ FFIPlugin >> ffiCreateReturnOop: retVal [
 FFIPlugin >> ffiCreateReturnPointer: retVal [
 	"Generic callout support. Create a pointer return value from an external function call"
 	| atomicType retOop oop ptr classOop |
-	self var: #ptr declareC:'int *ptr'.
+	self var: #ptr type:'int *'.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy pop: interpreterProxy methodArgumentCount+1.
 	(ffiRetClass == interpreterProxy nilObject) ifTrue:[
@@ -619,7 +619,7 @@ FFIPlugin >> ffiIntegerValueOf: oop [
 FFIPlugin >> ffiLoadCalloutAddress: lit [
 	"Load the address of the foreign function from the given object"
 	| addressPtr address ptr |
-	self var: #ptr declareC:'int *ptr'.
+	self var: #ptr type:'int *'.
 	"Lookup the address"
 	addressPtr _ interpreterProxy fetchPointer: 0 ofObject: lit.
 	"Make sure it's an external handle"
@@ -661,7 +661,7 @@ FFIPlugin >> ffiLoadCalloutAddressFrom: oop [
 FFIPlugin >> ffiLoadCalloutModule: module [
 	"Load the given module and return its handle"
 	| moduleHandlePtr moduleHandle ffiModuleName moduleLength rcvr theClass ptr |
-	self var: #ptr declareC:'int *ptr'.
+	self var: #ptr type:'int *'.
 	(interpreterProxy isBytes: module) ifTrue:[
 		"plain module name"
 		ffiModuleName _ module.
@@ -714,7 +714,7 @@ FFIPlugin >> ffiPushSignedLongLongOop: oop [
 	"Push a longlong type (e.g., a 64bit integer).
 	Note: Coercions from float are *not* supported."
 	| lowWord highWord length oopClass negative ptr |
-	self var: #ptr declareC:'unsigned char *ptr'.
+	self var: #ptr type:'unsigned char *'.
 	oop == interpreterProxy nilObject 
 		ifTrue:[^self ffiPushSignedLong: 0 Long: 0.]. "@@: check this"
 	oop == interpreterProxy falseObject
@@ -792,7 +792,7 @@ FFIPlugin >> ffiPushUnsignedLongLongOop: oop [
 	"Push a longlong type (e.g., a 64bit integer).
 	Note: Coercions from float are *not* supported."
 	| lowWord highWord length ptr |
-	self var: #ptr declareC:'unsigned char *ptr'.
+	self var: #ptr type:'unsigned char *'.
 	oop == interpreterProxy nilObject 
 		ifTrue:[^self ffiPushUnsignedLong: 0 Long: 0.]. "@@: check this"
 	oop == interpreterProxy falseObject 
@@ -831,8 +831,8 @@ FFIPlugin >> ffiPushVoid: ignored [
 FFIPlugin >> ffiReturnCStringFrom: cPointer [
 	"Create a Smalltalk string from a zero terminated C string"
 	| strLen strOop cString strPtr |
-	self var: #cString declareC:'char *cString'.
-	self var: #strPtr declareC:'char *strPtr'.
+	self var: #cString type:'char *'.
+	self var: #strPtr type:'char *'.
 	cPointer = nil ifTrue:[
 		^interpreterProxy push: interpreterProxy nilObject]. "nil always returs as nil"
 	cString _ self cCoerce: cPointer to:'char *'.
@@ -979,7 +979,7 @@ FFIPlugin >> primitiveFFIAllocate [
 	| byteSize addr oop ptr |
 	self export: true.
 	self inline: false.
-	self var: #ptr declareC:'int *ptr'.
+	self var: #ptr type:'int *'.
 	byteSize _ interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	addr _ self ffiAlloc: byteSize.
@@ -1000,7 +1000,7 @@ FFIPlugin >> primitiveFFIDoubleAt [
 	| byteOffset rcvr addr floatValue |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'double floatValue'.
+	self var: #floatValue type:'double '.
 	byteOffset _ interpreterProxy stackIntegerValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
@@ -1019,7 +1019,7 @@ FFIPlugin >> primitiveFFIDoubleAtPut [
 	| byteOffset rcvr addr floatValue floatOop |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'double floatValue'.
+	self var: #floatValue type:'double '.
 	floatOop _ interpreterProxy stackValue: 0.
 	(interpreterProxy isIntegerObject: floatOop)
 		ifTrue:[floatValue _ self cCoerce: (interpreterProxy integerValueOf: floatOop) to:'double']
@@ -1041,7 +1041,7 @@ FFIPlugin >> primitiveFFIFloatAt [
 	| byteOffset rcvr addr floatValue |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'float floatValue'.
+	self var: #floatValue type:'float '.
 	byteOffset _ interpreterProxy stackIntegerValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
@@ -1058,7 +1058,7 @@ FFIPlugin >> primitiveFFIFloatAtPut [
 	| byteOffset rcvr addr floatValue floatOop |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'float floatValue'.
+	self var: #floatValue type:'float '.
 	floatOop _ interpreterProxy stackValue: 0.
 	(interpreterProxy isIntegerObject: floatOop)
 		ifTrue:[floatValue _ self cCoerce: (interpreterProxy integerValueOf: floatOop) to:'float']
@@ -1079,7 +1079,7 @@ FFIPlugin >> primitiveFFIFree [
 	| addr oop ptr |
 	self export: true.
 	self inline: false.
-	self var: #ptr declareC:'int *ptr'.
+	self var: #ptr type:'int *'.
 	oop _ interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy fetchClassOf: oop) = (interpreterProxy classExternalAddress)
@@ -1187,7 +1187,7 @@ FFIPlugin >> primitiveForceLoad [
 	| rcvr theClass moduleHandlePtr moduleHandle ffiModuleName moduleLength ptr |
 	self export: true.
 	self inline: false.
-	self var: #ptr declareC:'int *ptr'.
+	self var: #ptr type:'int *'.
 	self ffiSetLastError: FFIErrorGenericError. "educated guess if we fail silently"
 	interpreterProxy methodArgumentCount = 0
 		ifFalse:[^interpreterProxy primitiveFail].

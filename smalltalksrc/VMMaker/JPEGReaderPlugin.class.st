@@ -465,7 +465,7 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 JPEGReaderPlugin >> jpegDecodeValueFrom: table size: tableSize [
 	"Decode the next value in the receiver using the given huffman table."
 	| bits bitsNeeded tableIndex value index |
-	self var: #table declareC:'int *table'.
+	self var: #table type:'int *'.
 	bitsNeeded _ (table at: 0) >> 24.	"Initial bits needed"
 	bitsNeeded > MaxBits ifTrue:[^-1].
 	tableIndex _ 2.							"First real table"

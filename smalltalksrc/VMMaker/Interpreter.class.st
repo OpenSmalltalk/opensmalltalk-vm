@@ -2074,8 +2074,8 @@ Interpreter >> checkImageVersionFrom: f startingAt: imageOffset [
 	"This code is based on C code by Ian Piumarta."
 
 	| version firstVersion |
-	self var: #f declareC: 'sqImageFile f'.
-	self var: #imageOffset declareC: 'squeakFileOffsetType imageOffset'.
+	self var: #f type: 'sqImageFile '.
+	self var: #imageOffset type: 'squeakFileOffsetType '.
 
 	"check the version number"
 	self sqImageFile: f Seek: imageOffset.
@@ -2132,8 +2132,8 @@ Interpreter >> checkedIntegerValueOf: intOop [
 Interpreter >> classNameOf: aClass Is: className [ 
 	"Check if aClass's name is className"
 	| srcName name length |
-	self var: #className declareC: 'char *className'.
-	self var: #srcName declareC: 'char *srcName'.
+	self var: #className type: 'char *'.
+	self var: #srcName type: 'char *'.
 	(self lengthOf: aClass) <= 6 ifTrue: [^ false].
 
 	"Not a class but might be behavior"
@@ -2519,7 +2519,7 @@ Interpreter >> copyBits [
 	compatibility this stub is provided"
 
 	| fn |
-	self var: #fn declareC: 'void *fn'.
+	self var: #fn type: 'void *'.
 	fn _ self ioLoadFunction: 'copyBits' From: 'BitBltPlugin'.
 	fn = 0 ifTrue: [^self primitiveFail].
 	^self cCode: '((sqInt (*)(void))fn)()'
@@ -2534,7 +2534,7 @@ Interpreter >> copyBitsFrom: x0 to: x1 at: y [
 	compatibility this stub is provided"
 
 	| fn |
-	self var: #fn declareC: 'void *fn'.
+	self var: #fn type: 'void *'.
 	fn _ self ioLoadFunction: 'copyBitsFromtoat' From: 'BitBltPlugin'.
 	fn = 0 ifTrue: [^self primitiveFail].
 	^self cCode: '((sqInt (*)(sqInt, sqInt, sqInt))fn)(x0, x1, y)'
@@ -3016,9 +3016,9 @@ Interpreter >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPointer [
 
 	| intOrFloat floatVal frac trunc |
 	self inline: false.
-	self var: #floatVal declareC: 'double floatVal'.
-	self var: #frac declareC: 'double frac'.
-	self var: #trunc declareC: 'double trunc'.
+	self var: #floatVal type: 'double '.
+	self var: #frac type: 'double '.
+	self var: #trunc type: 'double '.
 
 	intOrFloat _ self fetchPointer: fieldIndex ofObject: objectPointer.
 	(self isIntegerObject: intOrFloat) ifTrue: [^ self integerValueOf: intOrFloat].
@@ -3189,7 +3189,7 @@ Interpreter >> fixedFieldsOf: oop format: fmt length: wordLength [
 Interpreter >> floatObjectOf: aFloat [
 	| newFloatObj |
 self flag: #Dan.
-	self var: #aFloat declareC: 'double aFloat'.
+	self var: #aFloat type: 'double '.
 	newFloatObj _ self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize.
 	self storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
 	^ newFloatObj.
@@ -3204,7 +3204,7 @@ Interpreter >> floatValueOf: oop [
 	| result |
 	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
 	self returnTypeC: 'double'.
-	self var: #result declareC: 'double result'.
+	self var: #result type: 'double '.
 	self assertClassOf: oop is: (self splObj: ClassFloat).
 	successFlag
 		ifTrue: [self cCode: '' inSmalltalk: [result _ Float new: 2].
@@ -3382,7 +3382,7 @@ Interpreter >> getLongFromFile: aFile swap: swapFlag [
 	"Answer the next word read from aFile, byte-swapped according to the swapFlag."
 
 	| w |
-	self var: #aFile declareC: 'sqImageFile aFile'.
+	self var: #aFile type: 'sqImageFile '.
 	w _ 0.
 	self cCode: 'sqImageFileRead(&w, sizeof(w), 1, aFile)'.
 	swapFlag
@@ -3525,7 +3525,7 @@ Interpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	"Install the oop of this object in the given cache (at or atPut), along with
 	its size, format and fixedSize"
 	| hdr fmt totalLength fixedFields |
-	self var: #cache declareC: 'sqInt *cache'.
+	self var: #cache type: 'sqInt *'.
 
 	hdr _ self baseHeader: rcvr.
 	fmt _ (hdr >> 8) bitAnd: 16rF.
@@ -3823,9 +3823,12 @@ Interpreter >> interruptCheckForced [
 ]
 
 { #category : #'plugin support' }
-Interpreter >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength [
-"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer."
-	self cCode:'sqFilenameFromString(aCharBuffer, aFilenameString, filenameLength)'
+Interpreter >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength resolveAliases: aBoolean [
+"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer.
+Note the resolveAliases flag - this is an awful artefact of OSX and Apples demented alias handling. When opening a file, the flag must be  true, when closing or renaming it must be false. Sigh."
+	self var: #aCharBuffer type: 'char *'.
+	self var: #aFilenameString type: 'char *'.
+	self cCode:'sqGetFilenameFromString(aCharBuffer, aFilenameString, filenameLength, aBoolean)'
 		inSmalltalk:["this doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can"
 			aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString]
 ]
@@ -3834,7 +3837,7 @@ Interpreter >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: fil
 Interpreter >> is: oop KindOf: className [
 	"Support for external primitives."
 	| oopClass |
-	self var: #className declareC:'char *className'.
+	self var: #className type:'char *'.
 	oopClass _ self fetchClassOf: oop.
 	[oopClass == nilObj] whileFalse:[
 		(self classNameOf: oopClass Is: className) ifTrue:[^true].
@@ -3846,7 +3849,7 @@ Interpreter >> is: oop KindOf: className [
 Interpreter >> is: oop MemberOf: className [
 	"Support for external primitives"
 	| oopClass |
-	self var: #className declareC:'char *className'.
+	self var: #className type:'char *'.
 	oopClass _ self fetchClassOf: oop.
 	^(self classNameOf: oopClass Is: className)
 ]
@@ -3856,7 +3859,6 @@ Interpreter >> isBigEnder [
 	"Answer true (non-zero) if running on a big endian machine."
 
 	| endianness anInt cString len i |
-	self var: 'anInt' type: 'int'.
 	self var: 'cString' type: 'char *'.
 	self var: 'endianness' declareC: 'static sqInt endianness = -1'.
 	(endianness == -1) ifFalse: [^ endianness]. "answer cached value"
@@ -4039,7 +4041,7 @@ Interpreter >> loadBitBltFrom: bb [
 	replaced with a dynamic lookup from BitBltPlugin itself but for backward
 	compatibility this stub is provided"
 	| fn |
-	self var: #fn declareC: 'void *fn'.
+	self var: #fn type: 'void *'.
 	fn _ self ioLoadFunction: 'loadBitBltFrom' From: 'BitBltPlugin'.
 	fn = 0 ifTrue: [^self primitiveFail].
 	^self cCode: '((sqInt (*)(sqInt))fn)(bb)'
@@ -4584,7 +4586,7 @@ Interpreter >> popFloat [
 
 	| top result |
 	self returnTypeC: 'double'.
-	self var: #result declareC: 'double result'.
+	self var: #result type: 'double '.
 	top _ self popStack.
 	self assertClassOf: top is: (self splObj: ClassFloat).
 	successFlag ifTrue:
@@ -4763,7 +4765,7 @@ Interpreter >> primitiveAdd [
 Interpreter >> primitiveArctan [
 
 	| rcvr |
-	self var: #rcvr declareC: 'double rcvr'.
+	self var: #rcvr type: 'double '.
 	rcvr _ self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'atan(rcvr)' inSmalltalk: [rcvr arcTan])]
@@ -5024,7 +5026,7 @@ Interpreter >> primitiveByteArrayDoubleAt [
 	| byteOffset rcvr addr floatValue |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'double floatValue'.
+	self var: #floatValue type:'double '.
 	byteOffset _ self stackIntegerValue: 0.
 	rcvr _ self stackObjectValue: 1.
 	self failed ifTrue:[^0].
@@ -5043,7 +5045,7 @@ Interpreter >> primitiveByteArrayDoubleAtPut [
 	| byteOffset rcvr addr floatValue floatOop |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'double floatValue'.
+	self var: #floatValue type:'double '.
 	floatOop _ self stackValue: 0.
 	(self isIntegerObject: floatOop)
 		ifTrue:[floatValue _ self cCoerce: (self integerValueOf: floatOop) to:'double']
@@ -5065,7 +5067,7 @@ Interpreter >> primitiveByteArrayFloatAt [
 	| byteOffset rcvr addr floatValue |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'float floatValue'.
+	self var: #floatValue type:'float '.
 	byteOffset _ self stackIntegerValue: 0.
 	rcvr _ self stackObjectValue: 1.
 	self failed ifTrue:[^0].
@@ -5082,7 +5084,7 @@ Interpreter >> primitiveByteArrayFloatAtPut [
 	| byteOffset rcvr addr floatValue floatOop |
 	self export: true.
 	self inline: false.
-	self var: #floatValue declareC:'float floatValue'.
+	self var: #floatValue type:'float '.
 	floatOop _ self stackValue: 0.
 	(self isIntegerObject: floatOop)
 		ifTrue:[floatValue _ self cCoerce: (self integerValueOf: floatOop) to:'float']
@@ -5488,7 +5490,7 @@ Interpreter >> primitiveExp [
 	"Computes E raised to the receiver power."
 
 	| rcvr |
-	self var: #rcvr declareC: 'double rcvr'.
+	self var: #rcvr type: 'double '.
 	rcvr _ self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'exp(rcvr)' inSmalltalk: [rcvr exp])]
@@ -5500,9 +5502,9 @@ Interpreter >> primitiveExponent [
 	"Exponent part of this float."
 
 	| rcvr frac pwr |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #frac declareC: 'double frac'.
-	self var: #pwr declareC: 'int pwr'.
+	self var: #rcvr type: 'double '.
+	self var: #frac type: 'double '.
+	self var: #pwr type: 'int '.
 	rcvr _ self popFloat.
 	successFlag
 		ifTrue: [  "rcvr = frac * 2^pwr, where frac is in [0.5..1.0)"
@@ -5543,7 +5545,7 @@ Interpreter >> primitiveExternalCall [
 	always remove the rewrite. 
 	"
 	| lit addr moduleName functionName moduleLength functionLength index |
-	self var: #addr declareC: 'void *addr'.
+	self var: #addr type: 'void *'.
 	
 	"Fetch the first literal of the method"
 	self success: (self literalCountOf: newMethod) > 0. "@@: Could this be omitted for speed?!"
@@ -5697,8 +5699,8 @@ Interpreter >> primitiveFloatAdd [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatAdd: rcvrOop toArg: argOop [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #arg declareC: 'double arg'.
+	self var: #rcvr type: 'double '.
+	self var: #arg type: 'double '.
 
 	rcvr _ self loadFloatOrIntFrom: rcvrOop.
 	arg _ self loadFloatOrIntFrom: argOop.
@@ -5715,8 +5717,8 @@ Interpreter >> primitiveFloatDivide [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatDivide: rcvrOop byArg: argOop [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #arg declareC: 'double arg'.
+	self var: #rcvr type: 'double '.
+	self var: #arg type: 'double '.
 
 	rcvr _ self loadFloatOrIntFrom: rcvrOop.
 	arg _ self loadFloatOrIntFrom: argOop.
@@ -5738,8 +5740,8 @@ Interpreter >> primitiveFloatEqual [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatEqual: rcvrOop toArg: argOop [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #arg declareC: 'double arg'.
+	self var: #rcvr type: 'double '.
+	self var: #arg type: 'double '.
 
 	rcvr _ self loadFloatOrIntFrom: rcvrOop.
 	arg _ self loadFloatOrIntFrom: argOop.
@@ -5749,8 +5751,8 @@ Interpreter >> primitiveFloatEqual: rcvrOop toArg: argOop [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatGreater: rcvrOop thanArg: argOop [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #arg declareC: 'double arg'.
+	self var: #rcvr type: 'double '.
+	self var: #arg type: 'double '.
 
 	rcvr _ self loadFloatOrIntFrom: rcvrOop.
 	arg _ self loadFloatOrIntFrom: argOop.
@@ -5777,8 +5779,8 @@ Interpreter >> primitiveFloatGreaterThan [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatLess: rcvrOop thanArg: argOop [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #arg declareC: 'double arg'.
+	self var: #rcvr type: 'double '.
+	self var: #arg type: 'double '.
 
 	rcvr _ self loadFloatOrIntFrom: rcvrOop.
 	arg _ self loadFloatOrIntFrom: argOop.
@@ -5810,8 +5812,8 @@ Interpreter >> primitiveFloatMultiply [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatMultiply: rcvrOop byArg: argOop [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #arg declareC: 'double arg'.
+	self var: #rcvr type: 'double '.
+	self var: #arg type: 'double '.
 
 	rcvr _ self loadFloatOrIntFrom: rcvrOop.
 	arg _ self loadFloatOrIntFrom: argOop.
@@ -5836,8 +5838,8 @@ Interpreter >> primitiveFloatSubtract [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #arg declareC: 'double arg'.
+	self var: #rcvr type: 'double '.
+	self var: #arg type: 'double '.
 
 	rcvr _ self loadFloatOrIntFrom: rcvrOop.
 	arg _ self loadFloatOrIntFrom: argOop.
@@ -5909,8 +5911,8 @@ Interpreter >> primitiveFormPrint [
 	| landscapeFlag vScale hScale rcvr bitsArray w h
 	 depth pixelsPerWord wordsPerLine bitsArraySize ok |
 
-	self var: #vScale declareC: 'double vScale'.
-	self var: #hScale declareC: 'double hScale'.
+	self var: #vScale type: 'double '.
+	self var: #hScale type: 'double '.
 	landscapeFlag _ self booleanValueOf: self stackTop.
 	vScale _ self floatValueOf: (self stackValue: 1).
 	hScale _ self floatValueOf: (self stackValue: 2).
@@ -5945,9 +5947,9 @@ Interpreter >> primitiveFormPrint [
 { #category : #'float primitives' }
 Interpreter >> primitiveFractionalPart [
 	| rcvr frac trunc |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #frac declareC: 'double frac'.
-	self var: #trunc declareC: 'double trunc'.
+	self var: #rcvr type: 'double '.
+	self var: #frac type: 'double '.
+	self var: #trunc type: 'double '.
 	rcvr _ self popFloat.
 	successFlag
 		ifTrue: [self cCode: 'frac = modf(rcvr, &trunc)' inSmalltalk: [frac _ rcvr fractionPart].
@@ -6041,7 +6043,7 @@ Interpreter >> primitiveImageName [
 	"When called with a single string argument, record the string as the current image file name. When called with zero arguments, return a string containing the current image file name."
 
 	| s sz sCRIfn okToRename |
-	self var: #sCRIfn declareC: 'void *sCRIfn'.
+	self var: #sCRIfn type: 'void *'.
 	argumentCount = 1 ifTrue: [
 		"If the security plugin can be loaded, use it to check for rename permission.
 		If not, assume it's ok"
@@ -6486,7 +6488,7 @@ Interpreter >> primitiveLogN [
 	"Natural log."
 
 	| rcvr |
-	self var: #rcvr declareC: 'double rcvr'.
+	self var: #rcvr type: 'double '.
 	rcvr _ self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'log(rcvr)' inSmalltalk: [rcvr ln])]
@@ -6783,9 +6785,9 @@ Interpreter >> primitiveObsoleteIndexedPrimitive [
 	"Primitive. Invoke an obsolete indexed primitive."
 
 	| pluginName functionName functionAddress |
-	self var: #pluginName declareC: 'char *pluginName'.
-	self var: #functionName declareC: 'char *functionName'.
-	self var: #functionAddress declareC: 'void *functionAddress'.
+	self var: #pluginName type: 'char *'.
+	self var: #functionName type: 'char *'.
+	self var: #functionAddress type: 'void *'.
 	functionAddress _ self cCoerce: ((obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 2) to: 'void *'.
 	functionAddress = nil 
 		ifFalse: [^self cCode: '((sqInt (*)(void))functionAddress)()'
@@ -7395,7 +7397,7 @@ Interpreter >> primitiveSignalAtMilliseconds [
 Interpreter >> primitiveSine [
 
 	| rcvr |
-	self var: #rcvr declareC: 'double rcvr'.
+	self var: #rcvr type: 'double '.
 	rcvr _ self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'sin(rcvr)' inSmalltalk: [rcvr sin])]
@@ -7457,7 +7459,7 @@ Interpreter >> primitiveSpecialObjectsOop [
 { #category : #'float primitives' }
 Interpreter >> primitiveSquareRoot [
 	| rcvr |
-	self var: #rcvr declareC: 'double rcvr'.
+	self var: #rcvr type: 'double '.
 	rcvr _ self popFloat.
 	self success: rcvr >= 0.0.
 	successFlag
@@ -7798,7 +7800,7 @@ Interpreter >> primitiveTestDisplayDepth [
 { #category : #'float primitives' }
 Interpreter >> primitiveTimesTwoPower [
 	| rcvr arg |
-	self var: #rcvr declareC: 'double rcvr'.
+	self var: #rcvr type: 'double '.
 	arg _ self popInteger.
 	rcvr _ self popFloat.
 	successFlag
@@ -7809,9 +7811,9 @@ Interpreter >> primitiveTimesTwoPower [
 { #category : #'float primitives' }
 Interpreter >> primitiveTruncated [ 
 	| rcvr frac trunc |
-	self var: #rcvr declareC: 'double rcvr'.
-	self var: #frac declareC: 'double frac'.
-	self var: #trunc declareC: 'double trunc'.
+	self var: #rcvr type: 'double '.
+	self var: #frac type: 'double '.
+	self var: #trunc type: 'double '.
 	rcvr _ self popFloat.
 	successFlag ifTrue:
 		[self cCode: 'frac = modf(rcvr, &trunc)'
@@ -8128,7 +8130,7 @@ Interpreter >> primitiveYield [
 Interpreter >> print: s [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 
-	self var: #s declareC: 'char *s'.
+	self var: #s type: 'char *'.
 	self cCode: 'printf("%s", s)'.
 ]
 
@@ -8353,7 +8355,7 @@ Interpreter >> pushConstantZeroBytecode [
 { #category : #'stack bytecodes' }
 Interpreter >> pushFloat: f [
 
-	self var: #f declareC: 'double f'.
+	self var: #f type: 'double '.
 	self push: (self floatObjectOf: f).
 ]
 
@@ -8439,7 +8441,7 @@ Interpreter >> putLong: aWord toFile: aFile [
 	the write fails."
 
 	| objectsWritten |
-	self var: #aFile declareC: 'sqImageFile aFile'.
+	self var: #aFile type: 'sqImageFile '.
 
 	objectsWritten _ self cCode: 'sqImageFileWrite(&aWord, sizeof(aWord), 1, aFile)'.
 	self success: objectsWritten = 1.
@@ -8482,10 +8484,10 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	"This code is based on C code by Ian Piumarta and Smalltalk code by Tim Rowledge. Many thanks to both of you!!"
 
 	| swapBytes headerStart headerSize dataSize oldBaseAddr minimumMemory memStart bytesRead bytesToShift heapSize |
-	self var: #f declareC: 'sqImageFile f'.
-	self var: #headerStart declareC: 'squeakFileOffsetType headerStart'.
-	self var: #dataSize declareC: 'size_t dataSize'.
-	self var: #imageOffset declareC: 'squeakFileOffsetType imageOffset'.
+	self var: #f type: 'sqImageFile '.
+	self var: #headerStart type: 'squeakFileOffsetType '.
+	self var: #dataSize type: 'size_t '.
+	self var: #imageOffset type: 'squeakFileOffsetType '.
 
 	swapBytes _ self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart _ (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
@@ -9033,7 +9035,7 @@ Interpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
 	"Note: Only called by translated primitive code."
 
 	| oop |
-	self var: #cPtr declareC: 'void *cPtr'.
+	self var: #cPtr type: 'void *'.
 	oop _ (self oopForPointer: cPtr) - BaseHeaderSize.
 	(self isWordsOrBytes: oop) ifFalse: [
 		self primitiveFail.
@@ -9188,7 +9190,7 @@ Interpreter >> stackFloatValue: offset [
 	"Note: May be called by translated primitive code."
 	| result floatPointer |
 	self returnTypeC: 'double'.
-	self var: #result declareC: 'double result'.
+	self var: #result type: 'double '.
 	floatPointer _ self longAt: stackPointer - (offset*BytesPerWord).
 	(self fetchClassOf: floatPointer) = (self splObj: ClassFloat) 
 		ifFalse:[self primitiveFail. ^0.0].
@@ -9531,7 +9533,7 @@ Interpreter >> wordSwapped: w [
 Interpreter >> writeImageFile: imageBytes [
 
 	| fn |
-	self var: #fn declareC: 'void *fn'.
+	self var: #fn type: 'void *'.
 	self writeImageFileIO: imageBytes.
 	"set Mac file type and creator; this is a noop on other platforms"
 	fn _ self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
@@ -9545,9 +9547,9 @@ Interpreter >> writeImageFile: imageBytes [
 Interpreter >> writeImageFileIO: imageBytes [
 
 	| headerStart headerSize f bytesWritten sCWIfn okToWrite |
-	self var: #f declareC: 'sqImageFile f'.
-	self var: #headerStart declareC: 'squeakFileOffsetType headerStart'.
-	self var: #sCWIfn declareC: 'void *sCWIfn'.
+	self var: #f type: 'sqImageFile'.
+	self var: #headerStart type: 'squeakFileOffsetType '.
+	self var: #sCWIfn type: 'void *'.
 
 	"If the security plugin can be loaded, use it to check for write permission.
 	If not, assume it's ok"
