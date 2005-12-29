@@ -129,8 +129,8 @@ BalloonEnginePlugin >> allocateBezierStackEntry [
 { #category : #allocation }
 BalloonEnginePlugin >> allocateBitmapFill: cmSize colormap: cmBits [
 	| fill fillSize cm |
-	self var:#cm declareC:'int *cm'.
-	self var:#cmBits declareC:'int *cmBits'.
+	self var:#cm type:'int *'.
+	self var:#cmBits type:'int *'.
 	fillSize _ GBMBaseSize + cmSize.
 	(self allocateObjEntry: fillSize) ifFalse:[^0].
 	fill _ objUsed.
@@ -151,8 +151,8 @@ BalloonEnginePlugin >> allocateBitmapFill: cmSize colormap: cmBits [
 { #category : #allocation }
 BalloonEnginePlugin >> allocateGradientFill: ramp rampWidth: rampWidth isRadial: isRadial [
 	| fill fillSize rampPtr |
-	self var:#ramp declareC:'int *ramp'.
-	self var:#rampPtr declareC:'int *rampPtr'.
+	self var:#ramp type:'int *'.
+	self var:#rampPtr type:'int *'.
 	fillSize _ GGBaseSize + rampWidth.
 	(self allocateObjEntry: fillSize) ifFalse:[^0].
 	fill _ objUsed.
@@ -477,7 +477,7 @@ BalloonEnginePlugin >> checkCompressedFillIndexList: fillList max: maxIndex segm
 	"Check the fill indexes in the run-length encoded fillList"
 	| length runLength runValue nFills fillPtr |
 	self inline: false.
-	self var: #fillPtr declareC:'int *fillPtr'.
+	self var: #fillPtr type:'int *'.
 	length _ interpreterProxy slotSizeOf: fillList.
 	fillPtr _ interpreterProxy firstIndexableField: fillList.
 	nFills _ 0.
@@ -495,7 +495,7 @@ BalloonEnginePlugin >> checkCompressedFills: indexList [
 	"Check if the indexList (containing fill handles) is okay."
 	| fillPtr length fillIndex |
 	self inline: false.
-	self var: #fillPtr declareC:'int *fillPtr'.
+	self var: #fillPtr type:'int *'.
 	"First check if the oops have the right format"
 	(interpreterProxy isWords: indexList) ifFalse:[^false].
 
@@ -515,7 +515,7 @@ BalloonEnginePlugin >> checkCompressedLineWidths: lineWidthList segments: nSegme
 	"Check the run-length encoded lineWidthList matches nSegments"
 	| length runLength nItems ptr |
 	self inline: false.
-	self var: #ptr declareC:'int *ptr'.
+	self var: #ptr type:'int *'.
 	length _ interpreterProxy slotSizeOf: lineWidthList.
 	ptr _ interpreterProxy firstIndexableField: lineWidthList.
 	nItems _ 0.
@@ -673,7 +673,7 @@ BalloonEnginePlugin >> computeBezier: index splitAt: param [
 	leftViaX  leftViaY rightViaX rightViaY sharedX sharedY |
 	self inline: false.
 
-	self var: #param declareC:'double param'.
+	self var: #param type:'double '.
 	leftViaX _ startX _ self bzStartX: index.
 	leftViaY _ startY _ self bzStartY: index.
 	rightViaX _ viaX _ self bzViaX: index.
@@ -779,7 +779,7 @@ BalloonEnginePlugin >> fillBitmapSpan [
 BalloonEnginePlugin >> fillBitmapSpan: bmFill from: leftX to: rightX at: yValue [
 	| x x1 dsX ds dtX dt deltaX deltaY bits xp yp bmWidth bmHeight fillValue tileFlag |
 	self inline: false.
-	self var: #bits declareC:'int *bits'.
+	self var: #bits type:'int *'.
 	self aaLevelGet = 1
 		ifFalse:[^self fillBitmapSpanAA: bmFill from: leftX to: rightX at: yValue].
 
@@ -821,7 +821,7 @@ BalloonEnginePlugin >> fillBitmapSpan: bmFill from: leftX to: rightX at: yValue 
 BalloonEnginePlugin >> fillBitmapSpanAA: bmFill from: leftX to: rightX at: yValue [
 	| x dsX ds dtX dt deltaX deltaY bits xp yp bmWidth bmHeight fillValue baseShift cMask cShift idx aaLevel firstPixel lastPixel tileFlag |
 	self inline: false.
-	self var: #bits declareC:'int *bits'.
+	self var: #bits type:'int *'.
 	bits _ self loadBitsFrom: bmFill.
 	bits == nil ifTrue:[^nil].
 	bmWidth _ self bitmapWidthOf: bmFill.
@@ -943,7 +943,7 @@ BalloonEnginePlugin >> fillLinearGradient: fill from: leftX to: rightX at: yValu
 	"Draw a linear gradient fill."
 	| x0 x1 ramp rampSize dsX ds x rampIndex |
 	self inline: false.
-	self var: #ramp declareC:'int *ramp'.
+	self var: #ramp type:'int *'.
 	ramp _ self gradientRampOf: fill.
 	rampSize _ self gradientRampLengthOf: fill.
 
@@ -987,7 +987,7 @@ BalloonEnginePlugin >> fillLinearGradientAA: fill ramp: ramp ds: deltaS dsX: dsX
 	| colorMask colorShift baseShift rampIndex ds rampSize x idx rampValue 
 	 aaLevel firstPixel lastPixel |
 	self inline: false.
-	self var: #ramp declareC:'int *ramp'.
+	self var: #ramp type:'int *'.
 
 	aaLevel _ self aaLevelGet.
 	baseShift _ self aaShiftGet.
@@ -1135,8 +1135,8 @@ BalloonEnginePlugin >> fillRadialDecreasingAA: fill ramp: ramp deltaST: deltaST 
 	| ds dt rampIndex rampValue length2 x nextLength x1
 	aaLevel colorMask colorShift baseShift index firstPixel lastPixel |
 	self inline: false.
-	self var: #ramp declareC:'int *ramp'.
-	self var: #deltaST declareC:' int *deltaST'.
+	self var: #ramp type:'int *'.
+	self var: #deltaST type:' int *'.
 
 	ds _ (self cCoerce: deltaST to:'int*') at: 0.
 	dt _ (self cCoerce: deltaST to:'int*') at: 1.
@@ -1242,8 +1242,8 @@ BalloonEnginePlugin >> fillRadialGradient: fill from: leftX to: rightX at: yValu
 	"Draw a radial gradient fill."
 	| x x1 ramp rampSize dsX ds dtX dt length2 deltaX deltaY deltaST |
 	self inline: false.
-	self var: #ramp declareC:'int *ramp'.
-	self var: #deltaST declareC:'int *deltaST'.
+	self var: #ramp type:'int *'.
+	self var: #deltaST type:'int *'.
 
 	ramp _ self gradientRampOf: fill.
 	rampSize _ self gradientRampLengthOf: fill.
@@ -1336,8 +1336,8 @@ BalloonEnginePlugin >> fillRadialIncreasingAA: fill ramp: ramp deltaST: deltaST 
 	| ds dt rampIndex rampValue length2 x nextLength rampSize lastLength 
 	aaLevel colorMask colorShift baseShift index firstPixel lastPixel |
 	self inline: false.
-	self var: #ramp declareC:'int *ramp'.
-	self var: #deltaST declareC:' int *deltaST'.
+	self var: #ramp type:'int *'.
+	self var: #deltaST type:' int *'.
 
 	ds _ (self cCoerce: deltaST to:'int*') at: 0.
 	dt _ (self cCoerce: deltaST to:'int*') at: 1.
@@ -1579,9 +1579,9 @@ BalloonEnginePlugin >> loadAndSubdivideBezierFrom: point1 via: point2 to: point3
 	If wideFlag is set then make sure the curve is monoton in X."
 	| bz1 bz2 index2 index1 |
 	self inline: false.
-	self var: #point1 declareC:'int *point1'.
-	self var: #point2 declareC:'int *point2'.
-	self var: #point3 declareC:'int *point3'.
+	self var: #point1 type:'int *'.
+	self var: #point2 type:'int *'.
+	self var: #point3 type:'int *'.
 	bz1 _ self allocateBezierStackEntry.	
 	engineStopped ifTrue:[^0].
 	"Load point1/point2/point3 on the top of the stack"
@@ -1705,10 +1705,10 @@ BalloonEnginePlugin >> loadBezier: bezier segment: index leftFill: leftFillIndex
 BalloonEnginePlugin >> loadBitmapFill: formOop colormap: cmOop tile: tileFlag from: point1 along: point2 normal: point3 xIndex: xIndex [
 	"Load the bitmap fill."
 	| bmFill cmSize cmBits bmBits bmBitsSize bmWidth bmHeight bmDepth ppw bmRaster |
-	self var: #cmBits declareC:'int *cmBits'.
-	self var: #point1 declareC:'int *point1'.
-	self var: #point2 declareC:'int *point2'.
-	self var: #point3 declareC:'int *point3'.
+	self var: #cmBits type:'int *'.
+	self var: #point1 type:'int *'.
+	self var: #point2 type:'int *'.
+	self var: #point3 type:'int *'.
 
 	cmOop == interpreterProxy nilObject ifTrue:[
 		cmSize _ 0.
@@ -1844,12 +1844,12 @@ BalloonEnginePlugin >> loadCompressedShape: points segments: nSegments leftFills
 
 	self inline: false. "Don't you!!!!"
 
-	self var: #points declareC:'int *points'.
-	self var: #leftFills declareC:'int *leftFills'.
-	self var: #rightFills declareC:'int *rightFills'.
-	self var: #lineWidths declareC:'int *lineWidths'.
-	self var: #lineFills declareC:'int *lineFills'.
-	self var: #fillIndexList declareC:'int *fillIndexList'.
+	self var: #points type:'int *'.
+	self var: #leftFills type:'int *'.
+	self var: #rightFills type:'int *'.
+	self var: #lineWidths type:'int *'.
+	self var: #lineFills type:'int *'.
+	self var: #fillIndexList type:'int *'.
 
 	nSegments = 0 ifTrue:[^0].
 
@@ -1900,9 +1900,9 @@ BalloonEnginePlugin >> loadCompressedShape: points segments: nSegments leftFills
 BalloonEnginePlugin >> loadFillOrientation: fill from: point1 along: point2 normal: point3 width: fillWidth height: fillHeight [
 	"Transform the points"
 	| dirX dirY nrmX nrmY dsLength2 dsX dsY dtLength2 dtX dtY |
-	self var: #point1 declareC:'int *point1'.
-	self var: #point2 declareC:'int *point2'.
-	self var: #point3 declareC:'int *point3'.
+	self var: #point1 type:'int *'.
+	self var: #point2 type:'int *'.
+	self var: #point3 type:'int *'.
 
 	point2 at: 0 put: (point2 at: 0) + (point1 at: 0).
 	point2 at: 1 put: (point2 at: 1) + (point1 at: 1).
@@ -1941,9 +1941,9 @@ BalloonEnginePlugin >> loadGradientFill: rampOop from: point1 along: point2 norm
 	"Load the gradient fill as defined by the color ramp."
 	| rampWidth fill |
 	self inline: false.
-	self var: #point1 declareC:'int *point1'.
-	self var: #point2 declareC:'int *point2'.
-	self var: #point3 declareC:'int *point3'.
+	self var: #point1 type:'int *'.
+	self var: #point2 type:'int *'.
+	self var: #point3 type:'int *'.
 	(interpreterProxy fetchClassOf: rampOop) = interpreterProxy classBitmap
 		ifFalse:[^interpreterProxy primitiveFail].
 	rampWidth _ interpreterProxy slotSizeOf: rampOop.
@@ -1960,10 +1960,10 @@ BalloonEnginePlugin >> loadGradientFill: rampOop from: point1 along: point2 norm
 BalloonEnginePlugin >> loadLine: line from: point1 to: point2 offset: yOffset leftFill: leftFill rightFill: rightFill [
 	"Load the line defined by point1 and point2."
 	| p1 p2 yDir |
-	self var: #point1 declareC:'int *point1'.
-	self var: #point2 declareC:'int *point2'.
-	self var: #p1 declareC:'int *p1'.
-	self var: #p2 declareC:'int *p2'.
+	self var: #point1 type:'int *'.
+	self var: #point2 type:'int *'.
+	self var: #p1 type:'int *'.
+	self var: #p2 type:'int *'.
 
 	(point1 at: 1) <= (point2 at: 1) 
 		ifTrue:[	p1 _ point1.
@@ -2045,7 +2045,7 @@ BalloonEnginePlugin >> loadPointShortAt: index from: shortArray [
 { #category : #'shapes-polygons' }
 BalloonEnginePlugin >> loadPolygon: points nPoints: nPoints fill: fillIndex lineWidth: lineWidth lineFill: lineFill pointsShort: isShort [
 	| x0 y0 x1 y1 |
-	self var:#points declareC:'int *points'.
+	self var:#points type:'int *'.
 	isShort ifTrue:[
 		x0 _ self loadPointShortAt: 0 from: points.
 		y0 _ self loadPointShortAt: 1 from: points.
@@ -2096,7 +2096,7 @@ BalloonEnginePlugin >> loadRectangle: lineWidth lineFill: lineFill leftFill: lef
 { #category : #'shapes-polygons' }
 BalloonEnginePlugin >> loadShape: points nSegments: nSegments fill: fillIndex lineWidth: lineWidth lineFill: lineFill  pointsShort: pointsShort [
 	self inline: false.
-	self var:#points declareC:'int *points'.
+	self var:#points type:'int *'.
 	1 to: nSegments do:[:i|
 		self loadCompressedSegment: i-1
 			from: points
@@ -2144,8 +2144,8 @@ BalloonEnginePlugin >> loadWideBezier: lineWidth lineFill: lineFill leftFill: le
 BalloonEnginePlugin >> loadWideLine: lineWidth from: p1 to: p2 lineFill: lineFill leftFill: leftFill rightFill: rightFill [
 	"Load a (possibly wide) line defined by the points p1 and p2"
 	| line offset |
-	self var: #p1 declareC:'int *p1'.
-	self var: #p2 declareC:'int *p2'.
+	self var: #p1 type:'int *'.
+	self var: #p2 type:'int *'.
 	(lineWidth = 0 or:[lineFill = 0])
 		ifTrue:[	line _ self allocateLine.
 				offset _ 0]
@@ -2730,7 +2730,7 @@ BalloonEnginePlugin >> primitiveGetBezierStats [
 	| statOop stats |
 	self export: true.
 	self inline: false.
-	self var: #stats declareC:'int *stats'.
+	self var: #stats type:'int *'.
 
 	interpreterProxy methodArgumentCount = 1
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -2830,7 +2830,7 @@ BalloonEnginePlugin >> stepToFirstBezierIn: bezier at: yValue [
 	fwX1 fwX2 fwY1 fwY2 
 	fwDx fwDDx fwDy fwDDy |
 	self inline: false. "Too many temps for useful inlining"
-	self var: #updateData declareC:'int *updateData'.
+	self var: #updateData type:'int *'.
 
 
 	"Do a quick check if there is anything at all to do"

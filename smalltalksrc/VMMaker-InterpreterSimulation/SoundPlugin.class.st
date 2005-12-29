@@ -47,7 +47,7 @@ SoundPlugin >> primitiveSoundGetRecordingSampleRate [
 	"Return a float representing the actual sampling rate during recording. Fail if not currently recording."
 
 	| rate |
-	self var: #rate declareC: 'double rate'.
+	self var: #rate type: 'double '.
 	self primitive: 'primitiveSoundGetRecordingSampleRate'.
 	rate _ self cCode: 'snd_GetRecordingSampleRate()'.  "fail if not recording"
 	^rate asFloatObj
@@ -59,8 +59,8 @@ SoundPlugin >> primitiveSoundGetVolume [
 	| left right results | 
 	self primitive: 'primitiveSoundGetVolume'
 		parameters: #( ).
-	self var: #left declareC: 'double left'.
-	self var: #right declareC: 'double right'.
+	self var: #left type: 'double '.
+	self var: #right type: 'double '.
 	left _ 0.
 	right _ 0.
 	self cCode: 'snd_Volume((double *) &left,(double *) &right)'.
