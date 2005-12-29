@@ -283,7 +283,7 @@ Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from 
 
 	| searchObject searchBuffer length  result matchSpacePtr matchSpaceSize fromInteger toInteger |
 	self export: true.
-	self var:#searchBuffer	type: 'char *searchBuffer'.
+	self var:#searchBuffer	type: 'char *'.
 	self var:#matchSpacePtr	type: 'int *'.
 	
 	"Load Parameters"

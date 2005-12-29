@@ -3857,7 +3857,6 @@ Interpreter >> is: oop MemberOf: className [
 { #category : #'plugin support' }
 Interpreter >> isBigEnder [
 	"Answer true (non-zero) if running on a big endian machine."
-
 	| endianness anInt cString len i |
 	self var: 'cString' type: 'char *'.
 	self var: 'endianness' declareC: 'static sqInt endianness = -1'.
@@ -3869,7 +3868,7 @@ Interpreter >> isBigEnder [
 	[i < len] whileTrue:
 		[cString at: i put: i.
 		i := i + 1].
-	endianness :=  self cCode: 'anInt & 255'.
+	endianness :=  anInt bitAnd: 255.
 	^ endianness
 
 ]
