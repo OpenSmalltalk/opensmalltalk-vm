@@ -86,7 +86,7 @@ FFTPlugin >> loadFFTFrom: fftOop [
 { #category : #transforming }
 FFTPlugin >> permuteData [
 	| i end a b tmp |
-	self var: #tmp declareC: 'float tmp'.
+	self var: #tmp type: 'float '.
 	i _ 0.
 	end _ permTableSize.
 	[i < end] whileTrue:
@@ -144,7 +144,7 @@ FFTPlugin >> primitiveFFTTransformData [
 FFTPlugin >> scaleData [
 	"Scale all elements by 1/n when doing inverse"
 	| realN |
-	self var: #realN declareC: 'float realN'.
+	self var: #realN type: 'float '.
 	fftSize <= 1 ifTrue:[^nil].
 	realN _ self cCoerce: (1.0 / (self cCoerce: fftSize to: 'double')) to: 'float'.
 	0 to: fftSize-1 do:
@@ -167,10 +167,10 @@ FFTPlugin >> transformData: forward [
 { #category : #transforming }
 FFTPlugin >> transformForward: forward [
 	| lev lev1 ip theta realU imagU realT imagT i fftSize2 fftSize4 fftScale ii |
-	self var: #realU declareC:'float realU'.
-	self var: #realT declareC:'float realT'.
-	self var: #imagU declareC:'float imagU'.
-	self var: #imagT declareC:'float imagT'.
+	self var: #realU type:'float '.
+	self var: #realT type:'float '.
+	self var: #imagU type:'float '.
+	self var: #imagT type:'float '.
 	fftSize2 _ fftSize // 2.
 	fftSize4 _ fftSize // 4.
 	1 to: nu do:

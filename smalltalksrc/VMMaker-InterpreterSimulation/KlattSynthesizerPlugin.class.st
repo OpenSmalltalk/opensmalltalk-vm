@@ -144,11 +144,11 @@ KlattSynthesizerPlugin >> addFlutter [
 	slowly varying sine waves."
 	| timeCount asin bsin csin deltaF0 |
 	self returnTypeC: 'void'.
-	self var: 'timeCount' declareC: 'float timeCount'.
-	self var: 'asin' declareC: 'float asin'.
-	self var: 'bsin' declareC: 'float bsin'.
-	self var: 'csin' declareC: 'float csin'.
-	self var: 'deltaF0' declareC: 'double deltaF0'.
+	self var: 'timeCount' type: 'float '.
+	self var: 'asin' type: 'float '.
+	self var: 'bsin' type: 'float '.
+	self var: 'csin' type: 'float '.
+	self var: 'deltaF0' type: 'double '.
 	timeCount _ (self cCoerce: samplesCount to: 'float') / (self cCoerce: samplingRate to: 'float').
 	asin _ (2.0 * PI * 12.7 * timeCount) sin.
 	bsin _ (2.0 * PI * 7.1 * timeCount) sin.
@@ -187,13 +187,13 @@ KlattSynthesizerPlugin >> antiResonator: index frequency: freq bandwidth: bw [
 	"Set up an anti-resonator"
 	| arg r a b c |
 	self returnTypeC: 'void'.
-	self var: 'freq' declareC: 'float freq'.
-	self var: 'bw' declareC: 'float bw'.
-	self var: 'arg' declareC: 'double arg'.
-	self var: 'a' declareC: 'float a'.
-	self var: 'b' declareC: 'float b'.
-	self var: 'c' declareC: 'float c'.
-	self var: 'r' declareC: 'float r'.
+	self var: 'freq' type: 'float '.
+	self var: 'bw' type: 'float '.
+	self var: 'arg' type: 'double '.
+	self var: 'a' type: 'float '.
+	self var: 'b' type: 'float '.
+	self var: 'c' type: 'float '.
+	self var: 'r' type: 'float '.
 	arg _ 0.0 - PI / samplingRate * bw.
 	r _ arg exp.
 	c _ 0.0 - (r * r).
@@ -213,9 +213,9 @@ KlattSynthesizerPlugin >> antiResonator: index value: aFloat [
 	| answer p1 |
 	self inline: true.
 	self returnTypeC: 'float'.
-	self var: 'aFloat' declareC: 'double aFloat'.
-	self var: 'answer' declareC: 'double answer'.
-	self var: 'p1' declareC: 'double p1'.
+	self var: 'aFloat' type: 'double '.
+	self var: 'answer' type: 'double '.
+	self var: 'p1' type: 'double '.
 	answer _ (self resonatorA: index) * aFloat
 			+ ((self resonatorB: index) * (p1 _ self resonatorP1: index))
 			+ ((self resonatorC: index) * (self resonatorP2: index)).
@@ -232,8 +232,8 @@ KlattSynthesizerPlugin >> cascadeBranch: source [
 	| out |
 	self inline: true.
 	self returnTypeC: 'float'.
-	self var: 'source' declareC: 'float source'.
-	self var: 'out' declareC: 'float out'.
+	self var: 'source' type: 'float '.
+	self var: 'out' type: 'float '.
 	cascade > 0 ifFalse: [^ 0.0].
 	out _ self antiResonator: Rnz value: source.
 	out _ self resonator: Rnpc value: out.
@@ -276,7 +276,7 @@ KlattSynthesizerPlugin >> glottalSource [
 	| x0 |
 	self inline: true.
 	self returnTypeC: 'float'.
-	self var: 'x0' declareC: 'float x0'.
+	self var: 'x0' type: 'float '.
 	t0 = 0 ifTrue: [^ 0].
 	nper < nopen
 		ifTrue: [x0 _ a1 * x1 + (a2 * x2).
@@ -294,7 +294,7 @@ KlattSynthesizerPlugin >> glottalSource [
 KlattSynthesizerPlugin >> linearFromdB: aNumber [
 	self inline: true.
 	self returnTypeC: 'float'.
-	self var: 'aNumber' declareC: 'double aNumber'.
+	self var: 'aNumber' type: 'double '.
 	^ (2.0 raisedTo: (aNumber-87.0/6.0)) * 32.767
 ]
 
@@ -344,9 +344,9 @@ KlattSynthesizerPlugin >> normalizeGlottalPulse [
 	| s1 s2 s0 |
 	self inline: true.
 	self returnTypeC: 'void'.
-	self var: 's0' declareC: 'float s0'.
-	self var: 's1' declareC: 'float s1'.
-	self var: 's2' declareC: 'float s2'.
+	self var: 's0' type: 'float '.
+	self var: 's1' type: 'float '.
+	self var: 's2' type: 'float '.
 	s0 _ 0.0.
 	s1 _ x1.
 	s2 _ x2.
@@ -365,7 +365,7 @@ KlattSynthesizerPlugin >> parallelFrictionBranch: source [
 	voicing waveform."
 	self inline: true.
 	self returnTypeC: 'float'.
-	self var: 'source' declareC: 'float source'.
+	self var: 'source' type: 'float '.
 	^ (self resonator: R2fp value: source) - (self resonator: R3fp value: source) + (self resonator: R4fp value: source) - (self resonator: R5fp value: source) + (self resonator: R6fp value: source)
 ]
 
@@ -374,7 +374,7 @@ KlattSynthesizerPlugin >> parallelVoicedBranch: source [
 	"Voice-excited parallel vocal tract F1, F2, F3, F4, FNP and FTP."
 	self inline: true.
 	self returnTypeC: 'float'.
-	self var: 'source' declareC: 'float source'.
+	self var: 'source' type: 'float '.
 	^ (self resonator: R1vp value: source) + (self resonator: R2vp value: source) + (self resonator: R3vp value: source) + (self resonator: R4vp value: source) + (self resonator: Rnpp value: source) + (self resonator: Rtpp value: source)
 ]
 
@@ -392,8 +392,8 @@ KlattSynthesizerPlugin >> pitchSynchronousReset [
 KlattSynthesizerPlugin >> primitiveSynthesizeFrameIntoStartingAt [
 	| aKlattFrame buffer startIndex rcvr bufferOop |
 	self export: true.
-	self var: 'aKlattFrame' declareC: 'float *aKlattFrame'.
-	self var: 'buffer' declareC: 'short *buffer'.
+	self var: 'aKlattFrame' type: 'float *'.
+	self var: 'buffer' type: 'short *'.
 	aKlattFrame _ self checkedFloatPtrOf: (interpreterProxy stackValue: 2).
 	buffer _ self checkedShortPtrOf: (bufferOop _ interpreterProxy stackValue: 1).
 	startIndex _ interpreterProxy stackIntegerValue: 0.
@@ -411,12 +411,12 @@ KlattSynthesizerPlugin >> primitiveSynthesizeFrameIntoStartingAt [
 KlattSynthesizerPlugin >> qu: u phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid [
 	| expuphi |
 	self returnTypeC: 'float'.
-	self var: 'u' declareC: 'float u'.
-	self var: 'phi' declareC: 'float phi'.
-	self var: 'cosphi' declareC: 'float cosphi'.
-	self var: 'sinphi' declareC: 'float sinphi'.
-	self var: 'rphid' declareC: 'float rphid'.
-	self var: 'expuphi' declareC: 'float expuphi'.
+	self var: 'u' type: 'float '.
+	self var: 'phi' type: 'float '.
+	self var: 'cosphi' type: 'float '.
+	self var: 'sinphi' type: 'float '.
+	self var: 'rphid' type: 'float '.
+	self var: 'expuphi' type: 'float '.
 	expuphi _ (u * phi) exp.
 	^ expuphi * ((rphid * (u*u + 1.0) + u) * sinphi - cosphi) + 1.0
 ]
@@ -427,13 +427,13 @@ KlattSynthesizerPlugin >> resonator: index frequency: freq bandwidth: bw [
 	resonator difference equation coefficients."
 	| arg r a b c |
 	self returnTypeC: 'void'.
-	self var: 'freq' declareC: 'float freq'.
-	self var: 'bw' declareC: 'float bw'.
-	self var: 'arg' declareC: 'double arg'.
-	self var: 'a' declareC: 'float a'.
-	self var: 'b' declareC: 'float b'.
-	self var: 'c' declareC: 'float c'.
-	self var: 'r' declareC: 'float r'.
+	self var: 'freq' type: 'float '.
+	self var: 'bw' type: 'float '.
+	self var: 'arg' type: 'double '.
+	self var: 'a' type: 'float '.
+	self var: 'b' type: 'float '.
+	self var: 'c' type: 'float '.
+	self var: 'r' type: 'float '.
 	arg _ 0.0 - PI / samplingRate * bw.
 	r _ arg exp.
 	c _ 0.0 - (r * r).
@@ -450,9 +450,9 @@ KlattSynthesizerPlugin >> resonator: index frequency: freq bandwidth: bw gain: g
 	"Convert formant frequencies and bandwidth into
 	resonator difference equation coefficients."
 	self returnTypeC: 'void'.
-	self var: 'freq' declareC: 'float freq'.
-	self var: 'bw' declareC: 'float bw'.
-	self var: 'gain' declareC: 'float gain'.
+	self var: 'freq' type: 'float '.
+	self var: 'bw' type: 'float '.
+	self var: 'gain' type: 'float '.
 	self resonator: index frequency: freq bandwidth: bw.
 	self resonatorA: index put: (self resonatorA: index) * gain
 ]
@@ -462,9 +462,9 @@ KlattSynthesizerPlugin >> resonator: index value: aFloat [
 	| answer p1 |
 	self inline: true.
 	self returnTypeC: 'float'.
-	self var: 'aFloat' declareC: 'float aFloat'.
-	self var: 'answer' declareC: 'float answer'.
-	self var: 'p1' declareC: 'float p1'.
+	self var: 'aFloat' type: 'float '.
+	self var: 'answer' type: 'float '.
+	self var: 'p1' type: 'float '.
 	answer _ (self resonatorA: index) * aFloat
 			+ ((self resonatorB: index) * (p1 _ self resonatorP1: index))
 			+ ((self resonatorC: index) * (self resonatorP2: index)).
@@ -486,7 +486,7 @@ KlattSynthesizerPlugin >> resonatorA: index [
 KlattSynthesizerPlugin >> resonatorA: index put: aFloat [
 	self inline: true.
 	self returnTypeC: 'void'.
-	self var: 'aFloat' declareC: 'float aFloat'.
+	self var: 'aFloat' type: 'float '.
 	resonators at: index*5-5 put: aFloat
 ]
 
@@ -501,7 +501,7 @@ KlattSynthesizerPlugin >> resonatorB: index [
 KlattSynthesizerPlugin >> resonatorB: index put: aFloat [
 	self inline: true.
 	self returnTypeC: 'void'.
-	self var: 'aFloat' declareC: 'float aFloat'.
+	self var: 'aFloat' type: 'float '.
 	resonators at: index*5-4 put: aFloat
 ]
 
@@ -516,7 +516,7 @@ KlattSynthesizerPlugin >> resonatorC: index [
 KlattSynthesizerPlugin >> resonatorC: index put: aFloat [
 	self inline: true.
 	self returnTypeC: 'void'.
-	self var: 'aFloat' declareC: 'float aFloat'.
+	self var: 'aFloat' type: 'float '.
 	resonators at: index*5-3 put: aFloat
 ]
 
@@ -531,7 +531,7 @@ KlattSynthesizerPlugin >> resonatorP1: index [
 KlattSynthesizerPlugin >> resonatorP1: index put: aFloat [
 	self inline: true.
 	self returnTypeC: 'void'.
-	self var: 'aFloat' declareC: 'float aFloat'.
+	self var: 'aFloat' type: 'float '.
 	resonators at: index*5-2 put: aFloat
 ]
 
@@ -546,7 +546,7 @@ KlattSynthesizerPlugin >> resonatorP2: index [
 KlattSynthesizerPlugin >> resonatorP2: index put: aFloat [
 	self inline: true.
 	self returnTypeC: 'void'.
-	self var: 'aFloat' declareC: 'float aFloat'.
+	self var: 'aFloat' type: 'float '.
 	resonators at: index*5-1 put: aFloat
 ]
 
@@ -555,23 +555,23 @@ KlattSynthesizerPlugin >> ro: roNumber ra: raNumber rk: rkNumber [
 	| r d phi cosphi sinphi rphid u theta rho gamma gammapwr te ro ra rk |
 
 	self returnTypeC: 'void'.
-	self var: 'roNumber' declareC: 'float roNumber'.
-	self var: 'raNumber' declareC: 'float raNumber'.
-	self var: 'rkNumber' declareC: 'float rkNumber'.
-	self var: 'r' declareC: 'float r'.
-	self var: 'd' declareC: 'float d'.
-	self var: 'phi' declareC: 'float phi'.
-	self var: 'cosphi' declareC: 'float cosphi'.
-	self var: 'sinphi' declareC: 'float sinphi'.
-	self var: 'rphid' declareC: 'float rphid'.
-	self var: 'u' declareC: 'float u'.
-	self var: 'theta' declareC: 'float theta'.
-	self var: 'rho' declareC: 'float rho'.
-	self var: 'gamma' declareC: 'float gamma'.
-	self var: 'gammapwr' declareC: 'float gammapwr'.
-	self var: 'ro' declareC: 'float ro'.
-	self var: 'ra' declareC: 'float ra'.
-	self var: 'rk' declareC: 'float rk'.
+	self var: 'roNumber' type: 'float '.
+	self var: 'raNumber' type: 'float '.
+	self var: 'rkNumber' type: 'float '.
+	self var: 'r' type: 'float '.
+	self var: 'd' type: 'float '.
+	self var: 'phi' type: 'float '.
+	self var: 'cosphi' type: 'float '.
+	self var: 'sinphi' type: 'float '.
+	self var: 'rphid' type: 'float '.
+	self var: 'u' type: 'float '.
+	self var: 'theta' type: 'float '.
+	self var: 'rho' type: 'float '.
+	self var: 'gamma' type: 'float '.
+	self var: 'gammapwr' type: 'float '.
+	self var: 'ro' type: 'float '.
+	self var: 'ra' type: 'float '.
+	self var: 'rk' type: 'float '.
 
 	te _ (t0 * roNumber) asInteger.
 	ro _ te asFloat / t0 asFloat.
@@ -656,18 +656,18 @@ KlattSynthesizerPlugin >> saveTo: origKlattOop [
 KlattSynthesizerPlugin >> setCurrentFrame: aKlattFrame [
 	| ampFNV ampFTV ampF1V ampF2V ampF3V ampF4V ampF2F ampF3F ampF4F ampF5F ampF6F |
 	self returnTypeC: 'void'.
-	self var: 'aKlattFrame' declareC: 'float *aKlattFrame'.
-	self var: 'ampFNV' declareC: 'float ampFNV'.
-	self var: 'ampFTV' declareC: 'float ampFTV'.
-	self var: 'ampF1V' declareC: 'float ampF1V'.
-	self var: 'ampF2V' declareC: 'float ampF2V'.
-	self var: 'ampF3V' declareC: 'float ampF3V'.
-	self var: 'ampF4V' declareC: 'float ampF4V'.
-	self var: 'ampF2F' declareC: 'float ampF2F'.
-	self var: 'ampF3F' declareC: 'float ampF3F'.
-	self var: 'ampF4F' declareC: 'float ampF4F'.
-	self var: 'ampF5F' declareC: 'float ampF5F'.
-	self var: 'ampF6F' declareC: 'float ampF6F'.
+	self var: 'aKlattFrame' type: 'float *'.
+	self var: 'ampFNV' type: 'float '.
+	self var: 'ampFTV' type: 'float '.
+	self var: 'ampF1V' type: 'float '.
+	self var: 'ampF2V' type: 'float '.
+	self var: 'ampF3V' type: 'float '.
+	self var: 'ampF4V' type: 'float '.
+	self var: 'ampF2F' type: 'float '.
+	self var: 'ampF3F' type: 'float '.
+	self var: 'ampF4F' type: 'float '.
+	self var: 'ampF5F' type: 'float '.
+	self var: 'ampF6F' type: 'float '.
 
 	frame _ aKlattFrame.
 
@@ -729,24 +729,24 @@ KlattSynthesizerPlugin >> synthesizeFrame: aKlattFrame into: buffer startingAt: 
 	gain ampGain |
 
 	self returnTypeC: 'void'.
-	self var: 'aKlattFrame' declareC: 'float *aKlattFrame'.
-	self var: 'buffer' declareC: 'short *buffer'.
-	self var: 'noise' declareC: 'float noise'.
-	self var: 'voice' declareC: 'float voice'.
-	self var: 'frictionNoise' declareC: 'float frictionNoise'.
-	self var: 'aspirationNoise' declareC: 'float aspirationNoise'.
-	self var: 'voicing' declareC: 'float voicing'.
-	self var: 'parVoicing' declareC: 'float parVoicing'.
-	self var: 'turbulence' declareC: 'float turbulence'.
-	self var: 'friction' declareC: 'float friction'.
-	self var: 'aspiration' declareC: 'float aspiration'.
-	self var: 'bypass' declareC: 'float bypass'.
-	self var: 'glotout' declareC: 'float glotout'.
-	self var: 'parGlotout' declareC: 'float parGlotout'.
-	self var: 'source' declareC: 'float source'.
-	self var: 'gain' declareC: 'float gain'.
-	self var: 'ampGain' declareC: 'float ampGain'.
-	self var: 'out' declareC: 'float out'.
+	self var: 'aKlattFrame' type: 'float *'.
+	self var: 'buffer' type: 'short *'.
+	self var: 'noise' type: 'float '.
+	self var: 'voice' type: 'float '.
+	self var: 'frictionNoise' type: 'float '.
+	self var: 'aspirationNoise' type: 'float '.
+	self var: 'voicing' type: 'float '.
+	self var: 'parVoicing' type: 'float '.
+	self var: 'turbulence' type: 'float '.
+	self var: 'friction' type: 'float '.
+	self var: 'aspiration' type: 'float '.
+	self var: 'bypass' type: 'float '.
+	self var: 'glotout' type: 'float '.
+	self var: 'parGlotout' type: 'float '.
+	self var: 'source' type: 'float '.
+	self var: 'gain' type: 'float '.
+	self var: 'ampGain' type: 'float '.
+	self var: 'out' type: 'float '.
 
 	self setCurrentFrame: aKlattFrame.
 
@@ -866,17 +866,17 @@ KlattSynthesizerPlugin >> voicedPitchSynchronousReset [
 KlattSynthesizerPlugin >> zeroQphi: phi cosphi: cosphi sinphi: sinphi rphid: rphid [
 	| qzero ua ub qa qb uc qc |
 	self returnTypeC: 'float'.
-	self var: 'qzero' declareC: 'float qzero'.
-	self var: 'ua' declareC: 'float ua'.
-	self var: 'ub' declareC: 'float ub'.
-	self var: 'qa' declareC: 'float qa'.
-	self var: 'qb' declareC: 'float qb'.
-	self var: 'uc' declareC: 'float uc'.
-	self var: 'qc' declareC: 'float qc'.
-	self var: 'phi' declareC: 'float phi'.
-	self var: 'cosphi' declareC: 'float cosphi'.
-	self var: 'sinphi' declareC: 'float sinphi'.
-	self var: 'rphid' declareC: 'float rphid'.
+	self var: 'qzero' type: 'float '.
+	self var: 'ua' type: 'float '.
+	self var: 'ub' type: 'float '.
+	self var: 'qa' type: 'float '.
+	self var: 'qb' type: 'float '.
+	self var: 'uc' type: 'float '.
+	self var: 'qc' type: 'float '.
+	self var: 'phi' type: 'float '.
+	self var: 'cosphi' type: 'float '.
+	self var: 'sinphi' type: 'float '.
+	self var: 'rphid' type: 'float '.
 
 	qzero _ self qu: 0 phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
 

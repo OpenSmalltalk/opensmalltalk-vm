@@ -47,7 +47,7 @@ Mpeg3Plugin class >> requiresPlatformFiles [
 
 { #category : #support }
 Mpeg3Plugin >> checkFileEntry: aMpegFile [
-	self var: #aMpegFile declareC: 'mpeg3_t * aMpegFile'.
+	self var: #aMpegFile type: 'mpeg3_t * '.
 	1 to: maximumNumberOfFilesToWatch do: 
 		[:i | ((mpegFiles at: i) = aMpegFile) ifTrue: 
 				[^true]].
@@ -66,7 +66,7 @@ Mpeg3Plugin >> initialiseModule [
 
 { #category : #support }
 Mpeg3Plugin >> makeFileEntry: aMpegFile [
-	self var: #aMpegFile declareC: 'mpeg3_t * aMpegFile'.
+	self var: #aMpegFile type: 'mpeg3_t * '.
 	1 to: maximumNumberOfFilesToWatch do: 
 		[:i | ((mpegFiles at: i) = 0) ifTrue: 
 				[mpegFiles at: i put: aMpegFile.
@@ -84,7 +84,7 @@ Mpeg3Plugin >> mpeg3tValueOf: mpeg3tHandle [
 	| index check |
 
 	self returnTypeC: 'mpeg3_t *'.
-	self var: #index declareC: 'mpeg3_t ** index'.
+	self var: #index type: 'mpeg3_t ** '.
 	interpreterProxy success: ((interpreterProxy isBytes: mpeg3tHandle)
 			and: [(interpreterProxy byteSizeOf: mpeg3tHandle)
 					= 4]).
@@ -103,7 +103,7 @@ Mpeg3Plugin >> primitiveMPEG3AudioChannels: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_audio_channels(mpeg3_t *file,int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3AudioChannels'
 		parameters: #(Oop SmallInteger).
 
@@ -124,7 +124,7 @@ Mpeg3Plugin >> primitiveMPEG3AudioSamples: fileHandle stream: aNumber [
 	| file result |
 
 	"long mpeg3_audio_samples(mpeg3_t *file, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3AudioSamples'
 		parameters: #(Oop SmallInteger).
 
@@ -161,8 +161,8 @@ Mpeg3Plugin >> primitiveMPEG3Close: fileHandle [
 	| file index |
 
 	"int mpeg3_close(mpeg3_t *file)"
-	self var: #file declareC: 'mpeg3_t * file'.
-	self var: #index declareC: 'mpeg3_t ** index'.
+	self var: #file type: 'mpeg3_t * '.
+	self var: #index type: 'mpeg3_t ** '.
 	self primitive: 'primitiveMPEG3Close'
 		parameters: #(Oop).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -179,7 +179,7 @@ Mpeg3Plugin >> primitiveMPEG3DropFrames: fileHandle frames: aFrameNumber stream:
 	| file result |
 
 	"int mpeg3_drop_frames(mpeg3_t *file, long frames, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3DropFrames'
 		parameters: #(Oop SmallInteger SmallInteger).
 
@@ -200,7 +200,7 @@ Mpeg3Plugin >> primitiveMPEG3EndOfAudio: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_end_of_audio(mpeg3_t *file, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3EndOfAudio'
 		parameters: #(Oop SmallInteger).
 
@@ -220,7 +220,7 @@ Mpeg3Plugin >> primitiveMPEG3EndOfVideo: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_end_of_video(mpeg3_t *file, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: ''.
 	self primitive: 'primitiveMPEG3EndOfVideo'
 		parameters: #(Oop SmallInteger).
 
@@ -241,8 +241,8 @@ Mpeg3Plugin >> primitiveMPEG3FrameRate: fileHandle stream: aNumber [
 	| file result |
 
 	"float mpeg3_frame_rate(mpeg3_t *file, int stream)"
-	self var: #result declareC: 'double result'.
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #result type: 'double '.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3FrameRate'
 		parameters: #(Oop SmallInteger).
 
@@ -263,7 +263,7 @@ Mpeg3Plugin >> primitiveMPEG3GenerateToc: fileHandle useSearch: timecode doStrea
 	| file bufferSize |
 
 	"int mpeg3_generate_toc_for_Squeak(FILE *output, char *path, int timecode_search, int print_streams, char *buffer)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3GenerateToc'
 		parameters: #(Oop SmallInteger Boolean  String).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -278,7 +278,7 @@ Mpeg3Plugin >> primitiveMPEG3GetFrame: fileHandle stream: aNumber [
 	| file result |
 
 	"long mpeg3_get_frame(mpeg3_t *file,int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3GetFrame'
 		parameters: #(Oop SmallInteger).
 
@@ -298,7 +298,7 @@ Mpeg3Plugin >> primitiveMPEG3GetSample: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_video_width(mpeg3_t *file, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3GetSample'
 		parameters: #(Oop SmallInteger).
 
@@ -319,8 +319,8 @@ Mpeg3Plugin >> primitiveMPEG3GetTime: fileHandle [
 	| file result |
 
 	"double mpeg3_get_time(mpeg3_t *file)"
-	self var: # result declareC: 'double result'.
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: # result type: 'double '.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3GetTime'
 		parameters: #(Oop).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -335,7 +335,7 @@ Mpeg3Plugin >> primitiveMPEG3HasAudio: fileHandle [
 	| file result |
 
 	"int mpeg3_has_audio(mpeg3_t *file)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3HasAudio'
 		parameters: #(Oop).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -350,7 +350,7 @@ Mpeg3Plugin >> primitiveMPEG3HasVideo: fileHandle [
 	| file result |
 
 	"int mpeg3_has_video(mpeg3_t *file)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3HasVideo'
 		parameters: #(Oop).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -365,7 +365,7 @@ Mpeg3Plugin >> primitiveMPEG3Open: path [
 	| mpeg3Oop index sz storage |
 
 	"mpeg3_t* mpeg3_open(char *path)"
-	self var: #index declareC: 'mpeg3_t ** index'.
+	self var: #index type: 'mpeg3_t ** '.
 	self var: #storage declareC: 'char storage[1024]'.
 	self primitive: 'primitiveMPEG3Open'
 		parameters: #(String).
@@ -386,7 +386,7 @@ Mpeg3Plugin >> primitiveMPEG3PreviousFrame: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_previous_frame(mpeg3_t *file, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3PreviousFrame'
 		parameters: #(Oop SmallInteger).
 
@@ -412,8 +412,8 @@ Mpeg3Plugin >> primitiveMPEG3ReReadAudio: fileHandle shortArray: anArray channel
 		int channel, 
 		long samples,
 		int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
-	self var: #arrayBase declareC: 'short * arrayBase'.
+	self var: #file type: 'mpeg3_t * '.
+	self var: #arrayBase type: 'short * '.
 	self primitive: 'primitiveMPEG3ReReadAudio'
 		parameters: #(Oop Array SmallInteger SmallInteger SmallInteger).
 
@@ -441,8 +441,8 @@ Mpeg3Plugin >> primitiveMPEG3ReadAudio: fileHandle shortArray: anArray channel: 
 		int channel, 
 		long samples,
 		int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
-	self var: #arrayBase declareC: 'short * arrayBase'.
+	self var: #file type: 'mpeg3_t * '.
+	self var: #arrayBase type: 'short * '.
 	self primitive: 'primitiveMPEG3ReadAudio'
 		parameters: #(Oop Array SmallInteger SmallInteger SmallInteger).
 
@@ -476,9 +476,9 @@ Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer x: xNumber y:
 
 	self primitive: 'primitiveMPEG3ReadFrame'
 		parameters: #(Oop WordArray  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger SmallInteger).
-	self var: #file declareC: 'mpeg3_t * file'.
-	self var: #bufferBaseAddr declareC: 'unsigned char *bufferBaseAddr'.
-	self var: #outputRowsPtr declareC: 'unsigned char  ** outputRowsPtr'.
+	self var: #file type: 'mpeg3_t * '.
+	self var: #bufferBaseAddr type: 'unsigned char *'.
+	self var: #outputRowsPtr type: 'unsigned char  ** '.
 
 	file _ self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
@@ -502,7 +502,7 @@ Mpeg3Plugin >> primitiveMPEG3SampleRate: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_sample_rate(mpeg3_t *file,int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SampleRate'
 		parameters: #(Oop SmallInteger).
 
@@ -523,7 +523,7 @@ Mpeg3Plugin >> primitiveMPEG3SeekPercentage: fileHandle percentage: aNumber [
 	| file result |
 
 	"int mpeg3_seek_percentage(mpeg3_t *file, double percentage)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SeekPercentage'
 		parameters: #(Oop Float).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -540,7 +540,7 @@ Mpeg3Plugin >> primitiveMPEG3SetCpus: fileHandle number: cpus [
 	| file |
 
 	"int mpeg3_set_cpus(mpeg3_t *file, int cpus)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SetCpus'
 		parameters: #(Oop SmallInteger).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -555,7 +555,7 @@ Mpeg3Plugin >> primitiveMPEG3SetFrame: fileHandle frame: aFrameNumber stream: aN
 	| file result |
 
 	"int mpeg3_set_frame(mpeg3_t *file, long frame, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SetFrame'
 		parameters: #(Oop Float SmallInteger).
 
@@ -576,7 +576,7 @@ Mpeg3Plugin >> primitiveMPEG3SetMmx: fileHandle useMmx: mmx [
 	| file |
 
 	"int mpeg3_set_mmx(mpeg3_t *file, int use_mmx)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SetMmx'
 		parameters: #(Oop Boolean).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -590,7 +590,7 @@ Mpeg3Plugin >> primitiveMPEG3SetSample: fileHandle sample: aSampleNumber stream:
 	| file result |
 
 	"int mpeg3_set_sample(mpeg3_t *file, long sample, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SetSample'
 		parameters: #(Oop Float SmallInteger).
 
@@ -612,8 +612,8 @@ Mpeg3Plugin >> primitiveMPEG3TellPercentage: fileHandle [
 	| file result |
 
 	"double mpeg3_tell_percentage(mpeg3_t *file)"
-	self var: # result declareC: 'double result'.
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: # result type: 'double '.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3TellPercentage'
 		parameters: #(Oop).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -628,7 +628,7 @@ Mpeg3Plugin >> primitiveMPEG3TotalAStreams: fileHandle [
 	| file result |
 
 	"int mpeg3_total_astreams(mpeg3_t *file)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3TotalAStreams'
 		parameters: #(Oop).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -643,7 +643,7 @@ Mpeg3Plugin >> primitiveMPEG3TotalVStreams: fileHandle [
 	| file result |
 
 	"int mpeg3_total_vstreams(mpeg3_t *file)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3TotalVStreams'
 		parameters: #(Oop).
 	file _ self mpeg3tValueOf: fileHandle.
@@ -658,7 +658,7 @@ Mpeg3Plugin >> primitiveMPEG3VideoFrames: fileHandle stream: aNumber [
 	| file result |
 
 	"long mpeg3_video_frames(mpeg3_t *file, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3VideoFrames'
 		parameters: #(Oop SmallInteger).
 
@@ -679,7 +679,7 @@ Mpeg3Plugin >> primitiveMPEG3VideoHeight: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_video_height(mpeg3_t *file,int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3VideoHeight'
 		parameters: #(Oop SmallInteger).
 
@@ -700,7 +700,7 @@ Mpeg3Plugin >> primitiveMPEG3VideoWidth: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_video_width(mpeg3_t *file, int stream)"
-	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3VideoWidth'
 		parameters: #(Oop SmallInteger).
 
@@ -718,7 +718,7 @@ Mpeg3Plugin >> primitiveMPEG3VideoWidth: fileHandle stream: aNumber [
 
 { #category : #support }
 Mpeg3Plugin >> removeFileEntry: aMpegFile [
-	self var: #aMpegFile declareC: 'mpeg3_t * aMpegFile'.
+	self var: #aMpegFile type: 'mpeg3_t * '.
 	1 to: maximumNumberOfFilesToWatch do: 
 		[:i | ((mpegFiles at: i) = aMpegFile) ifTrue: 
 				[mpegFiles at: i put: 0.

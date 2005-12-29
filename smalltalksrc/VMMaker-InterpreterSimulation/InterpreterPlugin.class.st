@@ -215,7 +215,7 @@ InterpreterPlugin >> halt [
 
 { #category : #debugging }
 InterpreterPlugin >> msg: s [ 
-	self var: #s declareC: 'char *s'.
+	self var: #s type: 'char *'.
 	self cCode: 'fprintf(stderr, "\n%s: %s", moduleName, s)' inSmalltalk: [Transcript cr; show: self class moduleName , ': ' , s; endEntry]
 ]
 

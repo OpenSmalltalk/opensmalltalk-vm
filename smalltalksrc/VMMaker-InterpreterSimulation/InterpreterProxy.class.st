@@ -282,7 +282,7 @@ InterpreterProxy >> firstIndexableField: oop [
 
 { #category : #converting }
 InterpreterProxy >> floatObjectOf: aFloat [
-	self var: #aFloat declareC: 'double aFloat'.
+	self var: #aFloat type: 'double '.
 	aFloat class == Float ifFalse:[self error:'Not a float object'].
 	^aFloat
 ]
@@ -355,8 +355,9 @@ InterpreterProxy >> integerValueOf: oop [
 ]
 
 { #category : #converting }
-InterpreterProxy >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength [
-	"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer. This doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can"
+InterpreterProxy >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength resolveAliases: aBoolean [
+	"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer. This doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can.
+Note the resolveAliases flag - this is an awful artefact of OSX and Apples demented alias handling. When opening a file, the flag must be  true, when closing or renaming it must be false. Sigh."
 	aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString
 ]
 
@@ -387,7 +388,7 @@ InterpreterProxy >> ioMicroMSecs [
 InterpreterProxy >> is: oop KindOf: aString [
 	"InterpreterProxy new is: 42 KindOf: 'Number'"
 	| theClass |
-	self var: #aString declareC:'char *aString'.
+	self var: #aString type:'char *'.
 	theClass _ Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
@@ -398,7 +399,7 @@ InterpreterProxy >> is: oop KindOf: aString [
 InterpreterProxy >> is: oop MemberOf: aString [
 	"InterpreterProxy new is: 42 MemberOf:'SmallInteger'"
 	| theClass |
-	self var: #aString declareC:'char *aString'.
+	self var: #aString type:'char *'.
 	theClass _ Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
@@ -607,7 +608,7 @@ InterpreterProxy >> pushBool: trueOrFalse [
 
 { #category : #'stack access' }
 InterpreterProxy >> pushFloat: f [
-	self var: #f declareC: 'double f'.
+	self var: #f type: 'double '.
 	f class == Float ifFalse:[^self error:'Not a Float'].
 	self push: f.
 ]
@@ -660,7 +661,7 @@ InterpreterProxy >> signed64BitValueOf: oop [
 { #category : #'object access' }
 InterpreterProxy >> sizeOfSTArrayFromCPrimitive: cPtr [
 	"Note: Only called by translated primitive code."
-	self var: #cPtr declareC: 'void *cPtr'.
+	self var: #cPtr type: 'void *'.
 	^self shouldNotImplement
 ]
 

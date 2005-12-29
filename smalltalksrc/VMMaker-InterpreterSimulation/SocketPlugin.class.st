@@ -53,7 +53,7 @@ SocketPlugin >> intToNetAddress: addr [
 	"Convert the given 32-bit integer into an internet network address represented as a four-byte ByteArray."
 
 	| netAddressOop naPtr |
-	self var: #naPtr declareC: 'char * naPtr'.
+	self var: #naPtr type: 'char * '.
 
 	netAddressOop _
 		interpreterProxy instantiateClass: interpreterProxy classByteArray
@@ -83,7 +83,7 @@ SocketPlugin >> netAddressToInt: ptrToByteArray [
 	"Convert the given internet network address (represented as a four-byte ByteArray) into a 32-bit integer. Fail if the given ptrToByteArray does not appear to point to a four-byte ByteArray."
 
 	| sz |
-	self var: #ptrToByteArray declareC: 'unsigned char * ptrToByteArray'.
+	self var: #ptrToByteArray type: 'unsigned char * '.
 	sz _ interpreterProxy byteSizeOf: ptrToByteArray cPtrAsOop.
 	sz = 4 ifFalse: [^ interpreterProxy primitiveFail].
 	^ (ptrToByteArray at: 3	) +
@@ -208,13 +208,11 @@ SocketPlugin >> primitiveResolverStatus [
 { #category : #primitives }
 SocketPlugin >> primitiveSocket: socket connectTo: address port: port [ 
 	| addr s okToConnect  |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr' .
 	self primitive: 'primitiveSocketConnectToPort' parameters: #(#Oop #ByteArray #SmallInteger ).
-	addr _ self
-				netAddressToInt: (self cCoerce: address to: 'unsigned char *').
+	addr _ self netAddressToInt: (self cCoerce: address to: 'unsigned char *').
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCCTPfn ~= 0
 		ifTrue: [okToConnect _ self cCode: ' ((int (*) (int, int)) sCCTPfn)(addr, port)'.
 			okToConnect
@@ -231,8 +229,8 @@ SocketPlugin >> primitiveSocket: socket connectTo: address port: port [
 SocketPlugin >> primitiveSocket: socket getOptions: optionName [
 
 	| s optionNameStart optionNameSize returnedValue errorCode results |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #optionNameStart declareC: 'char *optionNameStart'.
+	self var: #s type: 'SocketPtr'.
+	self var: #optionNameStart type: 'char *'.
 	self primitive: 'primitiveSocketGetOptions'
 		parameters: #(Oop Oop).
 
@@ -264,12 +262,11 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port [
 	was warped by some demented evil person determined to twist the very 
 	nature of reality"
 	| s  okToListen |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketListenOnPort' parameters: #(#Oop #SmallInteger ).
 	s _ self socketValueOf: socket.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If  not, assume it's ok"
 	sCCLOPfn ~= 0
 		ifTrue: [okToListen _ self cCode: ' ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port)'.
 			okToListen
@@ -283,12 +280,11 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port backlogSize: backlog 
 	which was warped by some demented evil person determined to twist the 
 	very nature of reality"
 	| s okToListen |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketListenOnPortBacklog' parameters: #(#Oop #SmallInteger #SmallInteger ).
 	s _ self socketValueOf: socket.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCCLOPfn ~= 0
 		ifTrue: [okToListen _ self cCode: ' ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port)'.
 			okToListen
@@ -304,12 +300,11 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port backlogSize: backlog 
 	"Bind a socket to the given port and interface address with no more than backlog pending connections.  The socket can be UDP, in which case the backlog should be specified as zero."
 
 	| s okToListen addr |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketListenOnPortBacklogInterface' parameters: #(#Oop #SmallInteger #SmallInteger #ByteArray).
 	s _ self socketValueOf: socket.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If  not, assume it's ok"
 	sCCLOPfn ~= 0
 		ifTrue: [okToListen _ self cCode: ' ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port)'.
 			okToListen
@@ -325,9 +320,9 @@ SocketPlugin >> primitiveSocket: socket listenOnPort: port backlogSize: backlog 
 { #category : #primitives }
 SocketPlugin >> primitiveSocket: socket receiveDataBuf: array start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesReceived |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #arrayBase declareC: 'char *arrayBase'.
-	self var: #bufStart declareC: 'char *bufStart'.
+	self var: #s type: 'SocketPtr'.
+	self var: #arrayBase type: 'char *'.
+	self var: #bufStart type: 'char *'.
 	self primitive: 'primitiveSocketReceiveDataBufCount'
 		parameters: #(Oop Oop SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -353,9 +348,9 @@ SocketPlugin >> primitiveSocket: socket receiveDataBuf: array start: startIndex 
 { #category : #primitives }
 SocketPlugin >> primitiveSocket: socket receiveUDPDataBuf: array start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesReceived results address port moreFlag |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #arrayBase declareC: 'char *arrayBase'.
-	self var: #bufStart declareC: 'char *bufStart'.
+	self var: #s type: 'SocketPtr'.
+	self var: #arrayBase type: 'char *'.
+	self var: #bufStart type: 'char *'.
 	self primitive: 'primitiveSocketReceiveUDPDataBufCount'
 		parameters: #(Oop Oop SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -403,9 +398,9 @@ SocketPlugin >> primitiveSocket: socket receiveUDPDataBuf: array start: startInd
 { #category : #primitives }
 SocketPlugin >> primitiveSocket: socket sendData: array start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesSent |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #arrayBase declareC: 'char *arrayBase'.
-	self var: #bufStart declareC: 'char *bufStart'.
+	self var: #s type: 'SocketPtr'.
+	self var: #arrayBase type: 'char *'.
+	self var: #bufStart type: 'char *'.
 	self primitive: 'primitiveSocketSendDataBufCount'
 		parameters: #(Oop Oop SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -431,9 +426,9 @@ SocketPlugin >> primitiveSocket: socket sendData: array start: startIndex count:
 { #category : #primitives }
 SocketPlugin >> primitiveSocket: socket sendUDPData: array toHost: hostAddress  port: portNumber start: startIndex count: count [ 
 	| s byteSize arrayBase bufStart bytesSent address |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #arrayBase declareC: 'char *arrayBase'.
-	self var: #bufStart declareC: 'char *bufStart'.
+	self var: #s type: 'SocketPtr'.
+	self var: #arrayBase type: 'char *'.
+	self var: #bufStart type: 'char *'.
 	self primitive: 'primitiveSocketSendUDPDataBufCount'
 		parameters: #(Oop Oop ByteArray SmallInteger SmallInteger SmallInteger ).
 	s _ self socketValueOf: socket.
@@ -463,9 +458,9 @@ SocketPlugin >> primitiveSocket: socket sendUDPData: array toHost: hostAddress  
 SocketPlugin >> primitiveSocket: socket setOptions: optionName value: optionValue [
 
 	| s optionNameStart optionNameSize optionValueStart optionValueSize returnedValue errorCode results |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #optionNameStart declareC: 'char *optionNameStart'.
-	self var: #optionValueStart declareC: 'char *optionValueStart'.
+	self var: #s type: 'SocketPtr'.
+	self var: #optionNameStart type: 'char *'.
+	self var: #optionValueStart type: 'char *'.
 	self primitive: 'primitiveSocketSetOptions'
 		parameters: #(Oop Oop Oop).
 
@@ -500,7 +495,7 @@ SocketPlugin >> primitiveSocket: socket setOptions: optionName value: optionValu
 SocketPlugin >> primitiveSocketAbortConnection: socket [
 
 	| s |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketAbortConnection'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -511,8 +506,8 @@ SocketPlugin >> primitiveSocketAbortConnection: socket [
 { #category : #primitives }
 SocketPlugin >> primitiveSocketAcceptFrom: sockHandle rcvBufferSize: recvBufSize sndBufSize: sendBufSize semaIndex: semaIndex [ 
 	| socketOop s serverSocket |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #serverSocket declareC: 'SocketPtr serverSocket'.
+	self var: #s type: 'SocketPtr '.
+	self var: #serverSocket type: 'SocketPtr '.
 	self primitive: 'primitiveSocketAccept'
 		parameters: #(Oop SmallInteger SmallInteger SmallInteger ).
 	serverSocket _ self socketValueOf: sockHandle.
@@ -532,8 +527,8 @@ SocketPlugin >> primitiveSocketAcceptFrom: sockHandle rcvBufferSize: recvBufSize
 { #category : #primitives }
 SocketPlugin >> primitiveSocketAcceptFrom: sockHandle rcvBufferSize: recvBufSize sndBufSize: sendBufSize semaIndex: semaIndex readSemaIndex: aReadSema writeSemaIndex: aWriteSema [
 	| socketOop s serverSocket |
-	self var: #s declareC: 'SocketPtr s'.
-	self var: #serverSocket declareC: 'SocketPtr serverSocket'.
+	self var: #s type: 'SocketPtr '.
+	self var: #serverSocket type: 'SocketPtr '.
 	self primitive: 'primitiveSocketAccept3Semaphores'
 		parameters: #(Oop SmallInteger SmallInteger SmallInteger SmallInteger SmallInteger).
 	serverSocket _ self socketValueOf: sockHandle.
@@ -556,7 +551,7 @@ SocketPlugin >> primitiveSocketAcceptFrom: sockHandle rcvBufferSize: recvBufSize
 SocketPlugin >> primitiveSocketCloseConnection: socket [
 
 	| s |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketCloseConnection'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -568,7 +563,7 @@ SocketPlugin >> primitiveSocketCloseConnection: socket [
 SocketPlugin >> primitiveSocketConnectionStatus: socket [
 
 	| s status |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketConnectionStatus'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -580,7 +575,7 @@ SocketPlugin >> primitiveSocketConnectionStatus: socket [
 { #category : #primitives }
 SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBufferSize: recvBufSize sendBufSize: sendBufSize semaIndex: semaIndex [ 
 	| socketOop s okToCreate |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketCreate' parameters: #(#SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger ).
 	"If the security plugin can be loaded, use it to check for permission.
 	If 
@@ -604,7 +599,7 @@ SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBu
 { #category : #primitives }
 SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBufferSize: recvBufSize sendBufSize: sendBufSize semaIndex: semaIndex readSemaIndex: aReadSema writeSemaIndex: aWriteSema [ 
 	| socketOop s okToCreate |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketCreate3Semaphores' parameters: #(#SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger ).
 	"If the security plugin can be loaded, use it to check for permission.
 	If 
@@ -631,7 +626,7 @@ SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBu
 SocketPlugin >> primitiveSocketDestroy: socket [
 
 	| s |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketDestroy'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -643,7 +638,7 @@ SocketPlugin >> primitiveSocketDestroy: socket [
 SocketPlugin >> primitiveSocketError: socket [
 
 	| s err |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketError'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -666,7 +661,7 @@ SocketPlugin >> primitiveSocketListenWithOrWithoutBacklog [
 SocketPlugin >> primitiveSocketLocalAddress: socket [
 
 	| s addr |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketLocalAddress'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -678,7 +673,7 @@ SocketPlugin >> primitiveSocketLocalAddress: socket [
 SocketPlugin >> primitiveSocketLocalPort: socket [
 
 	| s port |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketLocalPort'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -690,7 +685,7 @@ SocketPlugin >> primitiveSocketLocalPort: socket [
 SocketPlugin >> primitiveSocketReceiveDataAvailable: socket [
 
 	| s dataIsAvailable |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketReceiveDataAvailable'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -702,7 +697,7 @@ SocketPlugin >> primitiveSocketReceiveDataAvailable: socket [
 SocketPlugin >> primitiveSocketRemoteAddress: socket [
 
 	| s addr |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketRemoteAddress'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -714,7 +709,7 @@ SocketPlugin >> primitiveSocketRemoteAddress: socket [
 SocketPlugin >> primitiveSocketRemotePort: socket [
 
 	| s port |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketRemotePort'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.
@@ -726,7 +721,7 @@ SocketPlugin >> primitiveSocketRemotePort: socket [
 SocketPlugin >> primitiveSocketSendDone: socket [
 
 	| s done |
-	self var: #s declareC: 'SocketPtr s'.
+	self var: #s type: 'SocketPtr'.
 	self primitive: 'primitiveSocketSendDone'
 		parameters: #(Oop).
 	s _ self socketValueOf: socket.

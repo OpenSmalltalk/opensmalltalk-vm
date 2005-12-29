@@ -17,8 +17,8 @@ FloatArrayPlugin >> primitiveAddFloatArray [
 	"Primitive. Add the receiver and the argument, both FloatArrays and store the result into the receiver."
 	| rcvr arg rcvrPtr argPtr length |
 	self export: true.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
-	self var: #argPtr declareC:'float *argPtr'.
+	self var: #rcvrPtr type:'float *'.
+	self var: #argPtr type:'float *'.
 	arg _ interpreterProxy stackObjectValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -31,8 +31,7 @@ FloatArrayPlugin >> primitiveAddFloatArray [
 	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
 	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
 	0 to: length-1 do:[:i|
-		rcvrPtr at: i put: (rcvrPtr at: i) + (argPtr at: i).
-	].
+		rcvrPtr at: i put: (rcvrPtr at: i) + (argPtr at: i)].
 	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
@@ -41,8 +40,8 @@ FloatArrayPlugin >> primitiveAddScalar [
 	"Primitive. Add the argument, a scalar value to the receiver, a FloatArray"
 	| rcvr rcvrPtr value length |
 	self export: true.
-	self var: #value declareC:'double value'.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
+	self var: #value type:'double '.
+	self var: #rcvrPtr type:'float *'.
 	value _ interpreterProxy stackFloatValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -51,8 +50,7 @@ FloatArrayPlugin >> primitiveAddScalar [
 	length _ interpreterProxy stSizeOf: rcvr.
 	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
 	0 to: length-1 do:[:i|
-		rcvrPtr at: i put: (rcvrPtr at: i) + value.
-	].
+		rcvrPtr at: i put: (rcvrPtr at: i) + value].
 	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
@@ -61,8 +59,8 @@ FloatArrayPlugin >> primitiveAt [
 
 	| index rcvr floatValue floatPtr |
 	self export: true.
-	self var: #floatValue declareC:'double floatValue'.
-	self var: #floatPtr declareC:'float *floatPtr'.
+	self var: #floatValue type:'double '.
+	self var: #floatPtr type:'float *'.
 	index _ interpreterProxy stackIntegerValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -80,8 +78,8 @@ FloatArrayPlugin >> primitiveAtPut [
 
 	| value floatValue index rcvr floatPtr |
 	self export: true.
-	self var: #floatValue declareC: 'double floatValue'.
-	self var: #floatPtr declareC:'float *floatPtr'.
+	self var: #floatValue type: 'double '.
+	self var: #floatPtr type:'float *'.
 	value _ interpreterProxy stackValue: 0.
 	(interpreterProxy isIntegerObject: value)
 		ifTrue:[floatValue _ (interpreterProxy integerValueOf: value) asFloat]
@@ -102,8 +100,8 @@ FloatArrayPlugin >> primitiveDivFloatArray [
 	"Primitive. Add the receiver and the argument, both FloatArrays and store the result into the receiver."
 	| rcvr arg rcvrPtr argPtr length |
 	self export: true.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
-	self var: #argPtr declareC:'float *argPtr'.
+	self var: #rcvrPtr type:'float *'.
+	self var: #argPtr type:'float *'.
 	arg _ interpreterProxy stackObjectValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -129,9 +127,9 @@ FloatArrayPlugin >> primitiveDivScalar [
 	"Primitive. Add the argument, a scalar value to the receiver, a FloatArray"
 	| rcvr rcvrPtr value inverse length |
 	self export: true.
-	self var: #value declareC:'double value'.
-	self var: #inverse declareC:'double inverse'.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
+	self var: #value type:'double '.
+	self var: #inverse type:'double '.
+	self var: #rcvrPtr type:'float *'.
 	value _ interpreterProxy stackFloatValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -153,9 +151,9 @@ FloatArrayPlugin >> primitiveDotProduct [
 	The dot product is defined as the sum of the products of the individual elements."
 	| rcvr arg rcvrPtr argPtr length result |
 	self export: true.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
-	self var: #argPtr declareC:'float *argPtr'.
-	self var: #result declareC:'double result'.
+	self var: #rcvrPtr type:'float *'.
+	self var: #argPtr type:'float *'.
+	self var: #result type:'double '.
 	arg _ interpreterProxy stackObjectValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -180,8 +178,8 @@ FloatArrayPlugin >> primitiveEqual [
 
 	| rcvr arg rcvrPtr argPtr length |
 	self export: true.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
-	self var: #argPtr declareC:'float *argPtr'.
+	self var: #rcvrPtr type:'float *'.
+	self var: #argPtr type:'float *'.
 	arg _ interpreterProxy stackObjectValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -205,7 +203,7 @@ FloatArrayPlugin >> primitiveHashArray [
 
 	| rcvr rcvrPtr length result |
 	self export: true.
-	self var: #rcvrPtr declareC:'int *rcvrPtr'.
+	self var: #rcvrPtr type:'int *'.
 	rcvr _ interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
@@ -225,8 +223,8 @@ FloatArrayPlugin >> primitiveMulFloatArray [
 	"Primitive. Add the receiver and the argument, both FloatArrays and store the result into the receiver."
 	| rcvr arg rcvrPtr argPtr length |
 	self export: true.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
-	self var: #argPtr declareC:'float *argPtr'.
+	self var: #rcvrPtr type:'float *'.
+	self var: #argPtr type:'float *'.
 	arg _ interpreterProxy stackObjectValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -249,8 +247,8 @@ FloatArrayPlugin >> primitiveMulScalar [
 	"Primitive. Add the argument, a scalar value to the receiver, a FloatArray"
 	| rcvr rcvrPtr value length |
 	self export: true.
-	self var: #value declareC:'double value'.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
+	self var: #value type:'double '.
+	self var: #rcvrPtr type:'float *'.
 	value _ interpreterProxy stackFloatValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -269,8 +267,8 @@ FloatArrayPlugin >> primitiveSubFloatArray [
 	"Primitive. Add the receiver and the argument, both FloatArrays and store the result into the receiver."
 	| rcvr arg rcvrPtr argPtr length |
 	self export: true.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
-	self var: #argPtr declareC:'float *argPtr'.
+	self var: #rcvrPtr type:'float *'.
+	self var: #argPtr type:'float *'.
 	arg _ interpreterProxy stackObjectValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -293,8 +291,8 @@ FloatArrayPlugin >> primitiveSubScalar [
 	"Primitive. Add the argument, a scalar value to the receiver, a FloatArray"
 	| rcvr rcvrPtr value length |
 	self export: true.
-	self var: #value declareC:'double value'.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
+	self var: #value type:'double '.
+	self var: #rcvrPtr type:'float *'.
 	value _ interpreterProxy stackFloatValue: 0.
 	rcvr _ interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
@@ -313,8 +311,8 @@ FloatArrayPlugin >> primitiveSum [
 	"Primitive. Find the sum of each float in the receiver, a FloatArray, and stash the result into the argument Float."
 	| rcvr rcvrPtr length sum |
 	self export: true.
-	self var: #sum declareC:'double sum'.
-	self var: #rcvrPtr declareC:'float *rcvrPtr'.
+	self var: #sum type:'double '.
+	self var: #rcvrPtr type:'float *'.
 	rcvr _ interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).

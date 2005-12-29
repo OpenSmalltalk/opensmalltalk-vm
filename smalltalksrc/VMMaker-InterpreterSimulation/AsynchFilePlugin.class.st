@@ -65,7 +65,7 @@ AsynchFilePlugin >> moduleUnloaded: aModuleName [
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileClose: fh [ 
 	| f |
-	self var: #f declareC: 'AsyncFile *f'.
+	self var: #f type: 'AsyncFile *'.
 	self primitive: 'primitiveAsyncFileClose' parameters: #(Oop ).
 	f _ self asyncFileValueOf: fh.
 	self asyncFileClose: f
@@ -74,7 +74,7 @@ AsynchFilePlugin >> primitiveAsyncFileClose: fh [
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaIndex: semaIndex [ 
 	| fileNameSize fOop f okToOpen |
-	self var: #f declareC: 'AsyncFile *f'.
+	self var: #f type: 'AsyncFile *'.
 	self primitive: 'primitiveAsyncFileOpen' parameters: #(#String #Boolean #SmallInteger ).
 	fileNameSize _ interpreterProxy slotSizeOf: (fileName asOop: String).
 	"If the security plugin can be loaded, use it to check for permission.
@@ -91,7 +91,7 @@ AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaInd
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at: start count: num [ 
 	| bufferSize bufferPtr r f count startIndex |
-	self var: #f declareC: 'AsyncFile *f'.
+	self var: #f type: 'AsyncFile *'.
 	self primitive: 'primitiveAsyncFileReadResult' parameters: #(Oop Oop SmallInteger SmallInteger ).
 
 	f _ self asyncFileValueOf: fhandle.
@@ -113,7 +113,7 @@ AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at:
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition count: count [
 	| f |
-	self var: #f declareC: 'AsyncFile *f'.
+	self var: #f type: 'AsyncFile *'.
 	self primitive: 'primitiveAsyncFileReadStart' parameters: #(Oop SmallInteger SmallInteger).
 	f _ self asyncFileValueOf: fHandle.
 	self cCode: 'asyncFileReadStart(f, fPosition, count)'
@@ -124,7 +124,7 @@ AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition co
 AsynchFilePlugin >> primitiveAsyncFileWriteResult: fHandle [
 
 	| f r |
-	self var: #f declareC: 'AsyncFile *f'.
+	self var: #f type: 'AsyncFile *'.
 	self primitive: 'primitiveAsyncFileWriteResult' parameters:#(Oop).
 
 	f _ self asyncFileValueOf: fHandle.
@@ -135,7 +135,7 @@ AsynchFilePlugin >> primitiveAsyncFileWriteResult: fHandle [
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileWriteStart: fHandle fPosition: fPosition fromBuffer: buffer at: start count: num [ 
 	| f bufferSize bufferPtr count startIndex |
-	self var: #f declareC: 'AsyncFile *f'.
+	self var: #f type: 'AsyncFile *'.
 	self primitive: 'primitiveAsyncFileWriteStart' parameters: #(Oop SmallInteger Oop SmallInteger SmallInteger ).
 	f _ self asyncFileValueOf: fHandle.
 	interpreterProxy failed ifTrue: [^ nil].
