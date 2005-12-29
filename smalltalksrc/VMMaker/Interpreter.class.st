@@ -3851,6 +3851,27 @@ Interpreter >> is: oop MemberOf: className [
 	^(self classNameOf: oopClass Is: className)
 ]
 
+{ #category : #'plugin support' }
+Interpreter >> isBigEnder [
+	"Answer true (non-zero) if running on a big endian machine."
+
+	| endianness anInt cString len i |
+	self var: 'anInt' type: 'int'.
+	self var: 'cString' type: 'char *'.
+	self var: 'endianness' declareC: 'static sqInt endianness = -1'.
+	(endianness == -1) ifFalse: [^ endianness]. "answer cached value"
+	len := self cCode: 'sizeof(anInt)'
+			inSmalltalk: [^ (Smalltalk endianness == #little) not].
+	cString := self cCode: '(char *) &anInt' inSmalltalk: [].
+	i := 0.
+	[i < len] whileTrue:
+		[cString at: i put: i.
+		i := i + 1].
+	endianness :=  self cCode: 'anInt & 255'.
+	^ endianness
+
+]
+
 { #category : #contexts }
 Interpreter >> isContext: oop header: hdr [
 	"NOTE: anOop is assumed not to be an integer"
@@ -9474,7 +9495,9 @@ Interpreter >> verifyCleanHeaders [
 { #category : #'plugin support' }
 Interpreter >> vmEndianness [
 	"return 0 for little endian, 1 for big endian"
-	^self cCode:'VMENDIANNESS'
+
+	self isBigEnder ifTrue: [^ 1] ifFalse: [^ 0]
+
 ]
 
 { #category : #processes }
