@@ -995,7 +995,7 @@ InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	isDir: dirFlag fileSize: fileSize [
 
 	| modDateOop createDateOop nameString results |
-	self var: 'entryName' declareC: 'char *entryName'.
+	self var: 'entryName' type: 'char *'.
 
 	"allocate storage for results, remapping newly allocated
 	 oops in case GC happens during allocation"

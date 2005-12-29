@@ -95,7 +95,7 @@ DSAPlugin >> bigDivideLoop [
 DSAPlugin >> leftRotate: anInteger by: bits [
 	"Rotate the given 32-bit integer left by the given number of bits and answer the result."
 
-	self var: #anInteger declareC: 'unsigned int anInteger'.
+	self var: #anInteger type: 'unsigned int '.
 	^ (anInteger << bits) bitOr: (anInteger >> (32 - bits))
 
 ]
@@ -143,9 +143,9 @@ DSAPlugin >> primitiveBigMultiply [
 
 	| prod f2 f1 prodLen f1Len f2Len prodPtr f2Ptr f1Ptr digit carry k sum |
 	self export: true.
-	self var: #prodPtr declareC: 'unsigned char *prodPtr'.
-	self var: #f2Ptr declareC: 'unsigned char *f2Ptr'.
-	self var: #f1Ptr declareC: 'unsigned char *f1Ptr'.
+	self var: #prodPtr type: 'unsigned char *'.
+	self var: #f2Ptr type: 'unsigned char *'.
+	self var: #f1Ptr type: 'unsigned char *'.
 
 	prod _ interpreterProxy stackObjectValue: 0.
 	f2 _ interpreterProxy stackObjectValue: 1.
@@ -193,8 +193,8 @@ DSAPlugin >> primitiveExpandBlock [
 
 	| expanded buf wordPtr bytePtr src v |
 	self export: true.
-	self var: #wordPtr declareC: 'unsigned int *wordPtr'.
-	self var: #bytePtr declareC: 'unsigned char *bytePtr'.
+	self var: #wordPtr type: 'unsigned int *'.
+	self var: #bytePtr type: 'unsigned char *'.
 
 	expanded _ interpreterProxy stackObjectValue: 0.
 	buf _ interpreterProxy stackObjectValue: 1.
@@ -246,8 +246,8 @@ DSAPlugin >> primitiveHashBlock [
 
 	| state buf statePtr bufPtr a b c d e tmp |
 	self export: true.
-	self var: #statePtr declareC: 'unsigned int *statePtr'.
-	self var: #bufPtr declareC: 'unsigned int *bufPtr'.
+	self var: #statePtr type: 'unsigned int *'.
+	self var: #bufPtr type: 'unsigned int *'.
 
 	state _ interpreterProxy stackObjectValue: 0.
 	buf _ interpreterProxy stackObjectValue: 1.
@@ -304,7 +304,7 @@ DSAPlugin >> primitiveHighestNonZeroDigitIndex [
 
 	| arg bigIntPtr i |
 	self export: true.
-	self var: #bigIntPtr declareC: 'unsigned char *bigIntPtr'.
+	self var: #bigIntPtr type: 'unsigned char *'.
 
 	arg _ interpreterProxy stackObjectValue: 0.
 	interpreterProxy success:

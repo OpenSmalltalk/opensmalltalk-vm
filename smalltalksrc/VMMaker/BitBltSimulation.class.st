@@ -208,18 +208,18 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 		declareC:'int warpBitShiftTable[32]'.
 
 	aCCodeGenerator var:'cmShiftTable' 
-		declareC:'int *cmShiftTable'.
+		type:'int *'.
 	aCCodeGenerator var:'cmMaskTable' 
-		declareC:'unsigned int *cmMaskTable'.
+		type:'unsigned int *'.
 	aCCodeGenerator var:'cmLookupTable' 
-		declareC:'unsigned int *cmLookupTable'.
+		type:'unsigned int *'.
 
 	aCCodeGenerator var: 'dither8Lookup'
 		declareC:' unsigned char dither8Lookup[4096]'.
 
-	aCCodeGenerator var: 'querySurfaceFn' declareC: 'void *querySurfaceFn'.
-	aCCodeGenerator var: 'lockSurfaceFn' declareC: 'void *lockSurfaceFn'.
-	aCCodeGenerator var: 'unlockSurfaceFn' declareC: 'void *unlockSurfaceFn'
+	aCCodeGenerator var: 'querySurfaceFn' type: 'void *'.
+	aCCodeGenerator var: 'lockSurfaceFn' type: 'void *'.
+	aCCodeGenerator var: 'unlockSurfaceFn' type: 'void *'
 ]
 
 { #category : #initialization }
@@ -811,7 +811,7 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
 	self inline: false. "This particular method should be optimized in itself"
-	self var: #mappingTable declareC:'unsigned int *mappingTable'.
+	self var: #mappingTable type:'unsigned int *'.
 	mappingTable _ self default8To32Table.
 	mapperFlags _ cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 	deltaY _ bbH + 1. "So we can pre-decrement"
@@ -1603,7 +1603,7 @@ BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	self var: #floatValue declareC:'double floatValue'.
+	self var: #floatValue type:'double '.
 	fieldOop _ interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1617,7 +1617,7 @@ BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer ifNil: defaultValue [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	self var: #floatValue declareC:'double floatValue'.
+	self var: #floatValue type:'double '.
 	fieldOop _ interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1722,8 +1722,8 @@ BitBltSimulation >> initialiseModule [
 { #category : #'interpreter interface' }
 BitBltSimulation >> isIdentityMap: shifts with: masks [
 	"Return true if shiftTable/maskTable define an identity mapping."
-	self var: #shifts declareC:'int *shifts'.
-	self var: #masks declareC:'unsigned int *masks'.
+	self var: #shifts type:'int *'.
+	self var: #masks type:'unsigned int *'.
 	(shifts == nil or:[masks == nil]) ifTrue:[^true].
 	((shifts at: RedIndex) = 0 
 		and:[(shifts at: GreenIndex) = 0

@@ -899,7 +899,7 @@ BalloonEngineBase >> fillBitmapSpan: bits from: leftX to: rightX [
 	Note: We always start from zero - this avoids using huge bitmap buffers if the bitmap is to be displayed at the very far right hand side and also gives us a chance of using certain bitmaps (e.g., those with depth 32) directly."
 	| x0 x1 x bitX colorMask colorShift baseShift fillValue |
 	self inline: false.
-	self var: #bits declareC:'int *bits'.
+	self var: #bits type:'int *'.
 
 	x0 _ leftX.
 	x1 _ rightX.
@@ -1374,7 +1374,7 @@ BalloonEngineBase >> hideFill: fillIndex depth: depth [
 
 { #category : #transforming }
 BalloonEngineBase >> incrementPoint: point by: delta [
-	self var: #point declareC:'int *point'.
+	self var: #point type:'int *'.
 	point at: 0 put: (point at: 0) + delta.
 	point at: 1 put: (point at: 1) + delta.
 ]
@@ -1406,7 +1406,7 @@ BalloonEngineBase >> indexForInsertingIntoAET: edge [
 BalloonEngineBase >> initColorTransform [
 	| transform |
 	self inline: false.
-	self var: #transform declareC:'float *transform'.
+	self var: #transform type:'float *'.
 	transform _ self colorTransform.
 	transform at: 0 put: (self cCoerce: 1.0 to: 'float').
 	transform at: 1 put: (self cCoerce: 0.0 to: 'float').
@@ -1423,7 +1423,7 @@ BalloonEngineBase >> initColorTransform [
 BalloonEngineBase >> initEdgeTransform [
 	| transform |
 	self inline: false.
-	self var: #transform declareC:'float *transform'.
+	self var: #transform type:'float *'.
 	transform _ self edgeTransform.
 	transform at: 0 put: (self cCoerce: 1.0 to: 'float').
 	transform at: 1 put: (self cCoerce: 0.0 to: 'float').
@@ -1611,7 +1611,7 @@ BalloonEngineBase >> loadArrayTransformFrom: transformOop into: destPtr length: 
 	"Load a transformation from the given array."
 	| value |
 	self inline: false.
-	self var: #destPtr declareC:'float *destPtr'.
+	self var: #destPtr type:'float *'.
 	0 to: n-1 do:[:i|
 		value _ interpreterProxy fetchPointer: i ofObject: transformOop.
 		((interpreterProxy isIntegerObject: value) or:[interpreterProxy isFloatObject: value])
@@ -1639,7 +1639,7 @@ BalloonEngineBase >> loadColorTransformFrom: transformOop [
 	"Load a 2x3 transformation matrix from the given oop.
 	Return true if the matrix is not nil, false otherwise"
 	| okay transform |
-	self var: #transform declareC:'float *transform'.
+	self var: #transform type:'float *'.
 	transform _ self colorTransform.
 	self hasColorTransformPut: 0.
 	okay _ self loadTransformFrom: transformOop into: transform length: 8.
@@ -1677,7 +1677,7 @@ BalloonEngineBase >> loadEdgeTransformFrom: transformOop [
 	Return true if the matrix is not nil, false otherwise"
 	| transform okay |
 	self inline: false.
-	self var: #transform declareC:'float *transform'.
+	self var: #transform type:'float *'.
 	self hasEdgeTransformPut: 0.
 	transform _ self edgeTransform.
 	okay _ self loadTransformFrom: transformOop into: transform length: 6.
@@ -1725,7 +1725,7 @@ BalloonEngineBase >> loadPoint: pointArray from: pointOop [
 	"Load the contents of pointOop into pointArray"
 	| value |
 	self inline: false.
-	self var: #pointArray declareC:'int *pointArray'.
+	self var: #pointArray type:'int *'.
 	(interpreterProxy fetchClassOf: pointOop) = interpreterProxy classPoint 
 		ifFalse:[^interpreterProxy primitiveFail].
 	value _ interpreterProxy fetchPointer: 0 ofObject: pointOop.
@@ -1800,7 +1800,7 @@ BalloonEngineBase >> loadTransformFrom: transformOop into: destPtr length: n [
 	defined by destPtr. The transformation is assumed to be either
 	an array or a FloatArray of length n."
 	self inline: false.
-	self var: #destPtr declareC:'float *destPtr'.
+	self var: #destPtr type:'float *'.
 	transformOop = interpreterProxy nilObject ifTrue:[^false].
 	(interpreterProxy isIntegerObject: transformOop)
 		ifTrue:[^interpreterProxy primitiveFail].
@@ -1817,8 +1817,8 @@ BalloonEngineBase >> loadWordTransformFrom: transformOop into: destPtr length: n
 	"Load a float array transformation from the given oop"
 	| srcPtr |
 	self inline: false.
-	self var: #srcPtr declareC:'float *srcPtr'.
-	self var: #destPtr declareC:'float *destPtr'.
+	self var: #srcPtr type:'float *'.
+	self var: #destPtr type:'float *'.
 	srcPtr _ self cCoerce: (interpreterProxy firstIndexableField: transformOop) to: 'float *'.
 	0 to: n-1 do:[:i| destPtr at: i put: (srcPtr at: i)].
 ]
@@ -2116,8 +2116,8 @@ BalloonEngineBase >> primitiveCopyBuffer [
 	self export: true.
 	self inline: false.
 
-	self var: #src declareC:'int * src'.
-	self var: #dst declareC:'int * dst'.
+	self var: #src type:'int * '.
+	self var: #dst type:'int * '.
 
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -2281,7 +2281,7 @@ BalloonEngineBase >> primitiveGetCounts [
 	| statOop stats |
 	self export: true.
 	self inline: false.
-	self var: #stats declareC:'int *stats'.
+	self var: #stats type:'int *'.
 
 	interpreterProxy methodArgumentCount = 1
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -2367,7 +2367,7 @@ BalloonEngineBase >> primitiveGetTimes [
 	| statOop stats |
 	self export: true.
 	self inline: false.
-	self var: #stats declareC:'int *stats'.
+	self var: #stats type:'int *'.
 
 	interpreterProxy methodArgumentCount = 1
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -2813,7 +2813,7 @@ BalloonEngineBase >> primitiveSetBitBltPlugin [
 	"Primitive. Set the BitBlt plugin to use."
 	| pluginName length ptr needReload |
 	self export: true.
-	self var: #ptr declareC:'char *ptr'.
+	self var: #ptr type:'char *'.
 	pluginName _ interpreterProxy stackValue: 0.
 	"Must be string to work"
 	(interpreterProxy isBytes: pluginName) 
@@ -3157,7 +3157,7 @@ BalloonEngineBase >> quickSortGlobalEdgeTable: array from: i to: j [
 	sortBlock."
 	"Note: The original loop has been heavily re-written for C translation"
 	| di dij dj tt ij k l n tmp again before |
-	self var: #array declareC:'int *array'.
+	self var: #array type:'int *'.
 	self inline: false.
 	"The prefix d means the data at that index."
 	(n _ j + 1  - i) <= 1 ifTrue: [^0].	"Nothing to sort." 
@@ -3650,8 +3650,8 @@ BalloonEngineBase >> topRightX [
 { #category : #transforming }
 BalloonEngineBase >> transformColor: fillIndex [
 	| r g b a transform alphaScale |
-	self var: #transform declareC:'float *transform'.
-	self var: #alphaScale declareC:'double alphaScale'.
+	self var: #transform type:'float *'.
+	self var: #alphaScale type:'double '.
 	(fillIndex = 0 or:[self isFillColor: fillIndex]) ifFalse:[^fillIndex].
 	b _ fillIndex bitAnd: 255.
 	g _ (fillIndex >> 8) bitAnd: 255.
@@ -3679,7 +3679,7 @@ BalloonEngineBase >> transformColor: fillIndex [
 { #category : #transforming }
 BalloonEngineBase >> transformPoint: point [
 	"Transform the given point. If haveMatrix is true then use the current transformation."
-	self var:#point declareC:'int *point'.
+	self var:#point type:'int *'.
 	self hasEdgeTransform ifFalse:[
 		"Multiply each component by aaLevel and add a half pixel"
 		point at: 0 put: (point at: 0) + self destOffsetXGet * self aaLevelGet.
@@ -3708,10 +3708,10 @@ BalloonEngineBase >> transformPointX: xValue y: yValue into: dstPoint [
 	the declarations and adding argument coercions at the appropriate points)"
 	| x y transform |
 	self inline: true. "Won't help at the moment ;-("
-	self var: #dstPoint declareC:'int *dstPoint'.
-	self var: #xValue declareC: 'double xValue'.
-	self var: #yValue declareC: 'double yValue'.
-	self var: #transform declareC:'float *transform'.
+	self var: #dstPoint type:'int *'.
+	self var: #xValue type: 'double '.
+	self var: #yValue type: 'double '.
+	self var: #transform type:'float *'.
 	transform _ self edgeTransform.
 	x _ ((((transform at: 0) * xValue) +
 		((transform at: 1) * yValue) +
@@ -3739,8 +3739,8 @@ BalloonEngineBase >> transformWidth: w [
 	"Transform the given width"
 	| deltaX deltaY dstWidth dstWidth2 |
 	self inline: false.
-	self var: #deltaX declareC:'double deltaX'.
-	self var: #deltaY declareC:'double deltaY'.
+	self var: #deltaX type:'double '.
+	self var: #deltaY type:'double '.
 	w = 0 ifTrue:[^0].
 	self point1Get at: 0 put: 0.
 	self point1Get at: 1 put: 0.
@@ -3764,7 +3764,7 @@ BalloonEngineBase >> transformWidth: w [
 { #category : #transforming }
 BalloonEngineBase >> uncheckedTransformColor: fillIndex [
 	| r g b a transform |
-	self var: #transform declareC:'float *transform'.
+	self var: #transform type:'float *'.
 	(self hasColorTransform) ifFalse:[^fillIndex].
 	b _ fillIndex bitAnd: 255.
 	g _ (fillIndex >> 8) bitAnd: 255.

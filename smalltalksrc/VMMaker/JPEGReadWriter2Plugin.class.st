@@ -188,8 +188,8 @@ JPEGReadWriter2Plugin >> primJPEGReadHeader: aJPEGDecompressStruct fromByteArray
 	self
 		primitive: 'primJPEGReadHeaderfromByteArrayerrorMgr'
 		parameters: #(ByteArray ByteArray ByteArray).
- 	self var: #pcinfo declareC: 'j_decompress_ptr pcinfo'.
- 	self var: #pjerr declareC: 'error_ptr2 pjerr'.
+ 	self var: #pcinfo type: 'j_decompress_ptr '.
+ 	self var: #pjerr type: 'error_ptr2 '.
 
 
 		pcinfo _ nil. pjerr _ nil. sourceSize _ nil.
@@ -234,10 +234,10 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 		primitive: 'primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgr'
 		parameters: #(ByteArray ByteArray Form Boolean ByteArray).
 
- 	self var: #pcinfo declareC: 'j_decompress_ptr pcinfo'.
- 	self var: #pjerr declareC: 'error_ptr2 pjerr'.
-	self var: #buffer declareC: 'JSAMPARRAY buffer'.
-	self var: #formBits declareC: 'unsigned * formBits'.
+ 	self var: #pcinfo type: 'j_decompress_ptr '.
+ 	self var: #pjerr type: 'error_ptr2 '.
+	self var: #buffer type: 'JSAMPARRAY '.
+	self var: #formBits type: 'unsigned * '.
 
 	"Avoid warnings when saving method"
 	 pcinfo _ nil. pjerr _ nil. buffer _ nil. rowStride _ nil.
@@ -387,10 +387,10 @@ JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: de
 	self
 		primitive: 'primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgr'
 		parameters: #(ByteArray ByteArray Form SmallInteger Boolean ByteArray).
- 	self var: #pcinfo declareC: 'j_compress_ptr pcinfo'.
- 	self var: #pjerr declareC: 'error_ptr2 pjerr'.
-	self var: #buffer declareC: 'JSAMPARRAY buffer'.
-	self var: #formBits declareC: 'unsigned * formBits'.
+ 	self var: #pcinfo type: 'j_compress_ptr '.
+ 	self var: #pjerr type: 'error_ptr2 '.
+	self var: #buffer type: 'JSAMPARRAY '.
+	self var: #formBits type: 'unsigned * '.
 	self var: #destinationSize type: 'unsigned int'.
 
 	

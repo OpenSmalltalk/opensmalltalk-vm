@@ -145,9 +145,9 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 	isDir: dirFlag fileSize: fileSize [
 
 	| modDateOop createDateOop nameString results stringPtr fileSizeOop |
-	self var: 'entryName' declareC: 'char *entryName'.
-	self var: 'stringPtr' declareC:'char *stringPtr'.
-	self var: 'fileSize' declareC:'squeakFileOffsetType fileSize'.
+	self var: 'entryName' type: 'char *'.
+	self var: 'stringPtr' type:'char *'.
+	self var: 'fileSize' type:'squeakFileOffsetType '.
 
 	"allocate storage for results, remapping newly allocated
 	 oops in case GC happens during allocation"
@@ -317,24 +317,21 @@ FilePlugin >> primitiveDirectoryLookup [
 		ifFalse: [okToList _ true].
 	okToList
 		ifTrue: [status _ self cCode: 'dir_Lookup(pathNameIndex, pathNameSize, index,
-												entryName, &entryNameSize, &createDate, &modifiedDate,
-												&dirFlag, &fileSize)']
+												entryName, &entryNameSize, &createDate,
+												&modifiedDate, &dirFlag, &fileSize)']
 		ifFalse: [status _ DirNoMoreEntries].
 	interpreterProxy failed
 		ifTrue: [^nil].
 	status = DirNoMoreEntries
 		ifTrue: ["no more entries; return nil"
-			interpreterProxy pop: 3.
-			"pop pathName, index, rcvr"
-			interpreterProxy push: interpreterProxy nilObject.
+			interpreterProxy pop: 3 "pop pathName, index, rcvr"
+				thenPush: interpreterProxy nilObject.
 			^nil].
 	status = DirBadPath
-		ifTrue: [^interpreterProxy primitiveFail].
-	"bad path"
-	interpreterProxy pop: 3.
-	"pop pathName, index, rcvr"
-	interpreterProxy
-		push: (self
+		ifTrue: [^interpreterProxy primitiveFail]."bad path"
+
+	interpreterProxy pop: 3	"pop pathName, index, rcvr" 
+		thenPush: (self
 				makeDirEntryName: entryName
 				size: entryNameSize
 				createDate: createDate
@@ -397,16 +394,15 @@ FilePlugin >> primitiveDisableFileAccess [
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileAtEnd [
-
 	| file atEnd |
 	self export: true.
-	self var: 'file' declareC: 'SQFile *file'.
-	file _ self fileValueOf: (interpreterProxy stackValue: 0).
-	interpreterProxy failed ifFalse:[atEnd _ self sqFileAtEnd: file ].
-	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 2.  "rcvr, file"
-		interpreterProxy pushBool: atEnd.
-	].
+	self var: 'file' type: 'SQFile *'.
+	file := self fileValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed
+		ifFalse: [atEnd := self sqFileAtEnd: file].
+	interpreterProxy failed
+		ifFalse: [interpreterProxy pop: 2. "rcvr, file"
+			interpreterProxy pushBool: atEnd]
 ]
 
 { #category : #'file primitives' }
@@ -414,7 +410,7 @@ FilePlugin >> primitiveFileClose [
 
 	| file |
 	self export: true.
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	file _ self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse: [ self sqFileClose: file ].
 	interpreterProxy failed ifFalse: [ interpreterProxy pop: 1  "pop file; leave rcvr on stack" ].
@@ -449,7 +445,7 @@ FilePlugin >> primitiveFileDelete [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileFlush [
 	| file |
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	self export: true.
 	file _ self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse:[self sqFileFlush: file].
@@ -459,14 +455,13 @@ FilePlugin >> primitiveFileFlush [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileGetPosition [
 	| file position |
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	self var: 'position' type: 'squeakFileOffsetType'.
 	self export: true.
 	file _ self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse: [position _ self sqFileGetPosition: file].
 	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 2.
-		interpreterProxy push: (interpreterProxy positive64BitIntegerFor: position)].
+		interpreterProxy pop: 2 thenPush: (interpreterProxy positive64BitIntegerFor: position)].
 ]
 
 { #category : #'file primitives' }
@@ -493,7 +488,7 @@ FilePlugin >> primitiveFileOpen [
 FilePlugin >> primitiveFileRead [
 
 	| count startIndex array file byteSize arrayIndex bytesRead |
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	self var: 'arrayIndex' type: 'char *'.
 	self var: 'count' type: 'size_t'.
 	self var: 'startIndex' type: 'size_t'.
@@ -523,8 +518,8 @@ FilePlugin >> primitiveFileRead [
 		Into: (self oopForPointer: arrayIndex)
 		At: ((startIndex - 1) * byteSize).
 	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 5.  "pop rcvr, file, array, startIndex, count"
-		interpreterProxy pushInteger: bytesRead // byteSize.  "push # of elements read"
+		interpreterProxy pop: 5 "pop rcvr, file, array, startIndex, count"
+			thenPushInteger: bytesRead // byteSize.  "push # of elements read"
 	].
 ]
 
@@ -561,7 +556,7 @@ FilePlugin >> primitiveFileRename [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileSetPosition [
 	| newPosition file sz |
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	self var: 'newPosition' type: 'squeakFileOffsetType'.
 	self export: true.
 	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0)) ifFalse:
@@ -579,73 +574,66 @@ FilePlugin >> primitiveFileSetPosition [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileSize [
 	| file size |
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	self var: 'size' type: 'squeakFileOffsetType'.
 	self export: true.
 	file _ self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse:[size _ self sqFileSize: file].
 	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 2.
-		interpreterProxy push: (interpreterProxy positive64BitIntegerFor: size)].
+		interpreterProxy pop: 2 thenPush: (interpreterProxy positive64BitIntegerFor: size)].
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileTruncate [
+"ftruncate is not an ansi function so we have a macro to point to a suitable platform implementation" 
 	| truncatePosition file sz |
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	self var: 'truncatePosition' type: 'squeakFileOffsetType'.
 	self export: true.
-	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0)) ifFalse:
-		[sz _ self cCode: 'sizeof(squeakFileOffsetType)'.
-		(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) > sz 
-			ifTrue: [^interpreterProxy primitiveFail]].
-	truncatePosition _ interpreterProxy positive64BitValueOf: (interpreterProxy stackValue: 0).
-	file _ self fileValueOf: (interpreterProxy stackValue: 1).
-	interpreterProxy failed ifFalse:[
-		self sqFile: file Truncate: truncatePosition ].
-	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 2 "pop position, file; leave rcvr on stack" ].
+	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0))
+		ifFalse: [sz := self cCode: 'sizeof(squeakFileOffsetType)'.
+			(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) > sz
+				ifTrue: [^ interpreterProxy primitiveFail]].
+	truncatePosition := interpreterProxy
+				positive64BitValueOf: (interpreterProxy stackValue: 0).
+	file := self fileValueOf: (interpreterProxy stackValue: 1).
+	interpreterProxy failed
+		ifFalse: [self sqFile: file Truncate: truncatePosition].
+	interpreterProxy failed
+		ifFalse: [interpreterProxy pop: 2 "pop position, file; leave rcvr on stack"]
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileWrite [
-
 	| count startIndex array file byteSize arrayIndex bytesWritten |
-	self var: 'file' declareC: 'SQFile *file'.
+	self var: 'file' type: 'SQFile *'.
 	self var: 'arrayIndex' type: 'char *'.
 	self var: 'count' type: 'size_t'.
 	self var: 'startIndex' type: 'size_t'.
 	self var: 'byteSize' type: 'size_t'.
 	self export: true.
-
-	count		_ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	startIndex	_ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
-	array		_ interpreterProxy stackValue: 2.
-	file			_ self fileValueOf: (interpreterProxy stackValue: 3).
-
-	"buffer can be any indexable words or bytes object except CompiledMethod"
-	(interpreterProxy isWordsOrBytes: array) 
-		ifFalse: [^interpreterProxy primitiveFail].
-
+	count := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	startIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
+	array := interpreterProxy stackValue: 2.
+	file := self fileValueOf: (interpreterProxy stackValue: 3).
+	"buffer can be any indexable words or bytes object except CompiledMethod "
+	(interpreterProxy isWordsOrBytes: array)
+		ifFalse: [^ interpreterProxy primitiveFail].
 	(interpreterProxy isWords: array)
-		ifTrue: [ byteSize _ 4 ]
-		ifFalse: [ byteSize _ 1 ].
-	((startIndex >= 1) and:
-		[(startIndex + count - 1) <= (interpreterProxy slotSizeOf: array)])
-			ifFalse: [^interpreterProxy primitiveFail].
-	interpreterProxy failed ifFalse: [
-		arrayIndex _ interpreterProxy firstIndexableField: array.
-		"Note: adjust startIndex for zero-origin indexing"
-		bytesWritten _
-			self sqFile: file
-				Write: (count * byteSize)
-				From: (self oopForPointer: arrayIndex)
-				At: ((startIndex - 1) * byteSize).
-	].
-	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 5.  "pop rcvr, file, array, startIndex, count"
-		interpreterProxy pushInteger: bytesWritten // byteSize.  "push # of elements written"
-	].
+		ifTrue: [byteSize := 4]
+		ifFalse: [byteSize := 1].
+	(startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)])
+		ifFalse: [^ interpreterProxy primitiveFail].
+	interpreterProxy failed
+		ifFalse: [arrayIndex := interpreterProxy firstIndexableField: array.
+			"Note: adjust startIndex for zero-origin indexing"
+			bytesWritten := self
+						sqFile: file
+						Write: count * byteSize
+						From: (self oopForPointer: arrayIndex)
+						At: startIndex - 1 * byteSize].
+	interpreterProxy failed
+		ifFalse: [interpreterProxy pop: 5 thenPushInteger: bytesWritten // byteSize]
 ]
 
 { #category : #'security primitives' }

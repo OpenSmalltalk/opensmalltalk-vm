@@ -62,16 +62,16 @@ Matrix2x3Plugin >> loadArgumentPoint: point [
 Matrix2x3Plugin >> matrix2x3ComposeMatrix: m1 with: m2 into: m3 [
 	"Multiply matrix m1 with m2 and store the result into m3."
 	| a11 a12 a13 a21 a22 a23 |
-	self var: #m1 declareC:'const float *m1'.
-	self var: #m2 declareC:'const float *m2'.
-	self var: #m3 declareC:'float *m3'.
+	self var: #m1 type:'const float *'.
+	self var: #m2 type:'const float *'.
+	self var: #m3 type:'float *'.
 
-	self var: #a11 declareC:'double a11'.
-	self var: #a12 declareC:'double a12'.
-	self var: #a13 declareC:'double a13'.
-	self var: #a21 declareC:'double a21'.
-	self var: #a22 declareC:'double a22'.
-	self var: #a23 declareC:'double a23'.
+	self var: #a11 type:'double '.
+	self var: #a12 type:'double '.
+	self var: #a13 type:'double '.
+	self var: #a21 type:'double '.
+	self var: #a22 type:'double '.
+	self var: #a23 type:'double '.
 
 	a11 _ ((m1 at: 0) * (m2 at: 0)) + ((m1 at: 1) * (m2 at: 3)).
 	a12 _ ((m1 at: 0) * (m2 at: 1)) + ((m1 at: 1) * (m2 at: 4)).
@@ -93,12 +93,12 @@ Matrix2x3Plugin >> matrix2x3ComposeMatrix: m1 with: m2 into: m3 [
 Matrix2x3Plugin >> matrix2x3InvertPoint: m [
 	"Invert the pre-loaded argument point by the given matrix"
 	| x y det detX detY |
-	self var: #m declareC:'float *m'.
-	self var: #x declareC:'double x'.
-	self var: #y declareC:'double y'.
-	self var: #det declareC:'double det'.
-	self var: #detX declareC:'double detX'.
-	self var: #detY declareC:'double detY'.
+	self var: #m type:'float *'.
+	self var: #x type:'double '.
+	self var: #y type:'double '.
+	self var: #det type:'double '.
+	self var: #detX type:'double '.
+	self var: #detY type:'double '.
 
 	x _ m23ArgX - (m at: 2).
 	y _ m23ArgY - (m at: 5).
@@ -114,7 +114,7 @@ Matrix2x3Plugin >> matrix2x3InvertPoint: m [
 { #category : #transforming }
 Matrix2x3Plugin >> matrix2x3TransformPoint: m [
 	"Transform the pre-loaded argument point by the given matrix"
-	self var: #m declareC:'float *m'.
+	self var: #m type:'float *'.
 	m23ResultX _ (m23ArgX * (m at: 0)) + (m23ArgY * (m at: 1)) + (m at: 2).
 	m23ResultY _ (m23ArgX * (m at: 3)) + (m23ArgY * (m at: 4)) + (m at: 5).
 ]
@@ -132,9 +132,9 @@ Matrix2x3Plugin >> primitiveComposeMatrix [
 		inSmalltalk: [interpreterProxy success: false. ^ nil].
 	self export: true.
 	self inline: false.
-	self var: #m1 declareC:'float *m1'.
-	self var: #m2 declareC:'float *m2'.
-	self var: #m3 declareC:'float *m3'.
+	self var: #m1 type:'float *'.
+	self var: #m2 type:'float *'.
+	self var: #m3 type:'float *'.
 	m3 _ self loadArgumentMatrix: (result _ interpreterProxy stackObjectValue: 0).
 	m2 _ self loadArgumentMatrix: (interpreterProxy stackObjectValue: 1).
 	m1 _ self loadArgumentMatrix: (interpreterProxy stackObjectValue: 2).
@@ -149,7 +149,7 @@ Matrix2x3Plugin >> primitiveInvertPoint [
 	| matrix |
 	self export: true.
 	self inline: false.
-	self var: #matrix declareC:'float *matrix'.
+	self var: #matrix type:'float *'.
 	self loadArgumentPoint: (interpreterProxy stackObjectValue: 0).
 	matrix _ self loadArgumentMatrix: (interpreterProxy stackObjectValue: 1).
 	interpreterProxy failed ifTrue:[^nil].
@@ -162,15 +162,15 @@ Matrix2x3Plugin >> primitiveInvertRectInto [
 	| matrix srcOop dstOop originX originY cornerX cornerY minX maxX minY maxY |
 	self export: true.
 	self inline: false.
-	self var: #matrix declareC:'float *matrix'.
-	self var: #originX declareC:'double originX'.
-	self var: #originY declareC:'double originY'.
-	self var: #cornerX declareC:'double cornerX'.
-	self var: #cornerY declareC:'double cornerY'.
-	self var: #minX declareC:'double minX'.
-	self var: #maxX declareC:'double maxX'.
-	self var: #minY declareC:'double minY'.
-	self var: #maxY declareC:'double maxY'.
+	self var: #matrix type:'float *'.
+	self var: #originX type:'double '.
+	self var: #originY type:'double '.
+	self var: #cornerX type:'double '.
+	self var: #cornerY type:'double '.
+	self var: #minX type:'double '.
+	self var: #maxX type:'double '.
+	self var: #minY type:'double '.
+	self var: #maxY type:'double '.
 
 	dstOop _ interpreterProxy stackObjectValue: 0.
 	srcOop _ interpreterProxy stackObjectValue: 1.
@@ -235,7 +235,7 @@ Matrix2x3Plugin >> primitiveIsIdentity [
 	| matrix |
 	self export: true.
 	self inline: false.
-	self var: #matrix declareC:'float *matrix'.
+	self var: #matrix type:'float *'.
 	matrix _ self loadArgumentMatrix: (interpreterProxy stackObjectValue: 0).
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy pop: 1.
@@ -253,7 +253,7 @@ Matrix2x3Plugin >> primitiveIsPureTranslation [
 	| matrix |
 	self export: true.
 	self inline: false.
-	self var: #matrix declareC:'float *matrix'.
+	self var: #matrix type:'float *'.
 	matrix _ self loadArgumentMatrix: (interpreterProxy stackObjectValue: 0).
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy pop: 1.
@@ -269,7 +269,7 @@ Matrix2x3Plugin >> primitiveTransformPoint [
 	| matrix |
 	self export: true.
 	self inline: false.
-	self var: #matrix declareC:'float *matrix'.
+	self var: #matrix type:'float *'.
 	self loadArgumentPoint: (interpreterProxy stackObjectValue: 0).
 	matrix _ self loadArgumentMatrix: (interpreterProxy stackObjectValue: 1).
 	interpreterProxy failed ifTrue:[^nil].
@@ -282,15 +282,15 @@ Matrix2x3Plugin >> primitiveTransformRectInto [
 	| matrix srcOop dstOop originX originY cornerX cornerY minX maxX minY maxY |
 	self export: true.
 	self inline: false.
-	self var: #matrix declareC:'float *matrix'.
-	self var: #originX declareC:'double originX'.
-	self var: #originY declareC:'double originY'.
-	self var: #cornerX declareC:'double cornerX'.
-	self var: #cornerY declareC:'double cornerY'.
-	self var: #minX declareC:'double minX'.
-	self var: #maxX declareC:'double maxX'.
-	self var: #minY declareC:'double minY'.
-	self var: #maxY declareC:'double maxY'.
+	self var: #matrix type:'float *'.
+	self var: #originX type:'double '.
+	self var: #originY type:'double '.
+	self var: #cornerX type:'double '.
+	self var: #cornerY type:'double '.
+	self var: #minX type:'double '.
+	self var: #maxX type:'double '.
+	self var: #minY type:'double '.
+	self var: #maxY type:'double '.
 
 	dstOop _ interpreterProxy stackObjectValue: 0.
 	srcOop _ interpreterProxy stackObjectValue: 1.
@@ -367,14 +367,14 @@ Matrix2x3Plugin >> roundAndStoreResultPoint: nItemsToPop [
 Matrix2x3Plugin >> roundAndStoreResultRect: dstOop x0: x0 y0: y0 x1: x1 y1: y1 [
 	"Check, round and store the result of a rectangle operation"
 	| minX maxX minY maxY originOop cornerOop rectOop |
-	self var: #x0 declareC:'double x0'.
-	self var: #y0 declareC:'double y0'.
-	self var: #x1 declareC:'double x1'.
-	self var: #y1 declareC:'double y1'.
-	self var: #minX declareC:'double minX'.
-	self var: #maxX declareC:'double maxX'.
-	self var: #minY declareC:'double minY'.
-	self var: #maxY declareC:'double maxY'.
+	self var: #x0 type:'double '.
+	self var: #y0 type:'double '.
+	self var: #x1 type:'double '.
+	self var: #y1 type:'double '.
+	self var: #minX type:'double '.
+	self var: #maxX type:'double '.
+	self var: #minY type:'double '.
+	self var: #maxY type:'double '.
 
 	minX _ x0 + 0.5.
 	(self okayIntValue: minX) ifFalse:[^interpreterProxy primitiveFail].

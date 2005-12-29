@@ -1991,11 +1991,15 @@ CCodeGenerator >> var: varName declareC: declarationString [
 
 { #category : #public }
 CCodeGenerator >> var: varName type: type [
+"Use this in preference to #var:declareC: whenver possible since it avoids typing the varname twice and thus avoids the potential for a typo. See also #var:type:array:"
 	self var: varName declareC: type , ' ' , varName
 ]
 
 { #category : #public }
 CCodeGenerator >> var: varName type: type array: array [
+"use this in preference to #var:declareC: when possible. This produces a C statment of the form
+int * fooArray[]={1,2,3}
+See also #var:type: for simple var decls" 
 	self
 		var: varName
 		declareC: (String streamContents: [:s |

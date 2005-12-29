@@ -59,27 +59,15 @@ RePlugin class >> declareCVarsIn: cg [
 
 	cg addHeaderFile:'"rePlugin.h"'.
 
-	"Memory Managament Error Checking"
+	"Memory Management Error Checking"
 	cg var: 'netMemory' 	declareC: 'int netMemory = 0'.
 	cg var: 'numAllocs' 	declareC: 'int numAllocs = 0'.
 	cg var: 'numFrees' 		declareC: 'int numFrees = 0'.
 	cg var: 'lastAlloc'		declareC: 'int lastAlloc = 0'.
 
-	"The receiver Object Pointer"
-	cg var: 'rcvr'			declareC: 'int rcvr'.
-
-	"Instance Variables of Receiver Object"
-	cg var: 'patternStr'		declareC: 'int patternStr'.
-	cg var: 'compileFlags'	declareC: 'int compileFlags'.
-	cg var: 'pcrePtr'		declareC: 'int pcrePtr'.
-	cg var: 'extraPtr'		declareC: 'int extraPtr'.
-	cg var: 'errorStr'		declareC: 'int errorStr'.
-	cg var: 'errorOffset'	declareC: 'int errorOffset'.
-	cg var: 'matchFlags'	declareC: 'int matchFlags'.
-
 	"Support Variables for Access to Receiver Instance Variables"
-	cg var: 'patternStrPtr' declareC: 'const char * patternStrPtr'.
-	cg var: 'errorStrBuffer'	declareC: 'const char * errorStrBuffer'.
+	cg var: 'patternStrPtr' type: 'const char * '.
+	cg var: 'errorStrBuffer'	type: 'const char * '.
 ]
 
 { #category : #'plugin code generation' }
@@ -104,7 +92,7 @@ RePlugin class >> requiresCrossPlatformFiles [
 RePlugin >> allocateByteArrayAndSetRcvrExtraPtrFrom: anExtraPtr [
 
 	| extraObject extraByteArrayPtr |
-	self var: #extraByteArrayPtr declareC: 'void *extraByteArrayPtr'.
+	self var: #extraByteArrayPtr type: 'void *'.
 
 	anExtraPtr
 		ifFalse: [extraObject _ interpreterProxy nilObject]
@@ -130,7 +118,7 @@ RePlugin >> allocateByteArrayAndSetRcvrExtraPtrFrom: anExtraPtr [
 RePlugin >> allocateByteArrayAndSetRcvrPCREPtrFromPCRE: aPCREPtr [
 
 	| patObject patByteArrayPtr |
-	self var: #patByteArrayPtr declareC: 'void *patByteArrayPtr'.
+	self var: #patByteArrayPtr type: 'void *'.
 
 	"Allocate a Smalltalk ByteArray -- lastAlloc contains the length"
 	patObject _ interpreterProxy
@@ -153,8 +141,8 @@ RePlugin >> allocateByteArrayAndSetRcvrPCREPtrFromPCRE: aPCREPtr [
 RePlugin >> allocateStringAndSetRcvrErrorStrFromCStr: aCStrBuffer [
 
 	|length errorStrObj errorStrObjPtr |
-	self var: #aCStrBuffer declareC: 'const char *aCStrBuffer'.
-	self var: #errorStrObjPtr declareC: 'void *errorStrObjPtr'.
+	self var: #aCStrBuffer type: 'const char *'.
+	self var: #errorStrObjPtr type: 'void *'.
 	"Allocate errorStrObj"
 	length _ self cCode: 'strlen(aCStrBuffer)'.
 	errorStrObj _ interpreterProxy
@@ -256,9 +244,8 @@ Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from 
 
 	| searchObject searchBuffer length  result matchSpacePtr matchSpaceSize |
 	self export: true.
-	self var:#searchBuffer	declareC: 'char *searchBuffer'.
-	self var:#matchSpacePtr	declareC: 'int *matchSpacePtr'.
-	self var:#result			declareC: 'int result'.
+	self var:#searchBuffer	type: 'char *'.
+	self var:#matchSpacePtr	type: 'int *'.
 	
 	"Load Parameters"
 	searchObject _ interpreterProxy stackObjectValue: 0.	
@@ -296,11 +283,8 @@ Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from 
 
 	| searchObject searchBuffer length  result matchSpacePtr matchSpaceSize fromInteger toInteger |
 	self export: true.
-	self var:#searchBuffer	declareC: 'char *searchBuffer'.
-	self var:#fromInteger declareC: 'int fromInteger'.
-	self var:#toInteger declareC: 'int toInteger'.
-	self var:#matchSpacePtr	declareC: 'int *matchSpacePtr'.
-	self var:#result			declareC: 'int result'.
+	self var:#searchBuffer	type: 'char *searchBuffer'.
+	self var:#matchSpacePtr	type: 'int *'.
 	
 	"Load Parameters"
 	toInteger _ interpreterProxy stackIntegerValue: 0.
@@ -466,7 +450,7 @@ RePlugin >> rePluginFree: aPointer [
 	"Free a block of fixed memory allocated with rePluginMalloc.  Instrumented version of C free() to facilitate leak analysis from Smalltalk.   OS-specific variations on malloc/free, such as with MacOS, are handled by adding a C macro to the header file redefining malloc/free -- see the class comment"
 
 	self inline: true.
-	self var: #aPointer declareC: 'void * aPointer'.
+	self var: #aPointer type: 'void * '.
 	self returnTypeC: 'void'.
 
 	numFrees _ numFrees + 1.
@@ -480,8 +464,8 @@ RePlugin >> rePluginMalloc: anInteger [
 
 	| aPointer |
 	self inline: true.
-	self var: #anInteger declareC: 'size_t anInteger'.
-	self var: #aPointer declareC: 'void *aPointer'.
+	self var: #anInteger type: 'size_t '.
+	self var: #aPointer type: 'void *'.
 	self returnTypeC: 'void *'.
 	numAllocs _ numAllocs + 1.
 	(aPointer _ self cCode: 'malloc(anInteger)')

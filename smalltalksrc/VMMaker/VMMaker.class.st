@@ -175,7 +175,7 @@ VMMaker class >> versionString [
 
 	"VMMaker versionString"
 
-	^'3.8b4'
+	^'3.8b5-64.2'
 ]
 
 { #category : #'plugin lists' }
