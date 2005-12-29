@@ -519,8 +519,7 @@ FilePlugin >> primitiveFileRead [
 		At: ((startIndex - 1) * byteSize).
 	interpreterProxy failed ifFalse: [
 		interpreterProxy pop: 5 "pop rcvr, file, array, startIndex, count"
-			thenPushInteger: bytesRead // byteSize.  "push # of elements read"
-	].
+			thenPush:(interpreterProxy integerObjectOf: bytesRead // byteSize).  "push # of elements read"].
 ]
 
 { #category : #'file primitives' }
@@ -633,7 +632,7 @@ FilePlugin >> primitiveFileWrite [
 						From: (self oopForPointer: arrayIndex)
 						At: startIndex - 1 * byteSize].
 	interpreterProxy failed
-		ifFalse: [interpreterProxy pop: 5 thenPushInteger: bytesWritten // byteSize]
+		ifFalse: [interpreterProxy pop: 5 thenPush:( interpreterProxy integerObjectOf: bytesWritten // byteSize)]
 ]
 
 { #category : #'security primitives' }
