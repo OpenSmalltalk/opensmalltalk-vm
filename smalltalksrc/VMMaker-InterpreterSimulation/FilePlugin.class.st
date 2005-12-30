@@ -94,7 +94,7 @@ FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: se
 						okToOpen
 							ifFalse: [interpreterProxy primitiveFail]]]].
 	interpreterProxy failed
-		ifFalse: [self cCode: 'sqFileOpen(file, oopForPointer(nameIndex), nameSize, writeFlag)' inSmalltalk: [file]].
+		ifFalse: [self cCode: 'sqFileOpen(file, nameIndex, nameSize, writeFlag)' inSmalltalk: [file]].
 	^ fileOop
 ]
 
@@ -381,11 +381,9 @@ FilePlugin >> primitiveDirectorySetMacTypeAndCreator [
 
 { #category : #'security primitives' }
 FilePlugin >> primitiveDisableFileAccess [
-
 	self export: true.
 	"If the security plugin can be loaded, use it to turn off file access
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sDFAfn ~= 0
 		ifTrue: [self cCode: ' ((sqInt (*)(void))sDFAfn)()'].
 	interpreterProxy failed
@@ -429,14 +427,13 @@ FilePlugin >> primitiveFileDelete [
 	nameIndex _ interpreterProxy firstIndexableField: namePointer.
 	nameSize _ interpreterProxy byteSizeOf: namePointer.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCDFfn ~= 0
 		ifTrue: [okToDelete _ self cCode: ' ((sqInt (*)(char *, sqInt))sCDFfn)(nameIndex, nameSize)'.
 			okToDelete
 				ifFalse: [^ interpreterProxy primitiveFail]].
 	self
-		sqFileDeleteName: (self oopForPointer: nameIndex)
+		sqFileDeleteName: nameIndex
 		Size: nameSize.
 	interpreterProxy failed
 		ifFalse: [interpreterProxy pop: 1]
@@ -478,9 +475,8 @@ FilePlugin >> primitiveFileOpen [
 	nameSize _ interpreterProxy byteSizeOf: namePointer.
 	filePointer _ self fileOpenName: nameIndex size: nameSize write: writeFlag secure: true.
 	interpreterProxy failed
-		ifFalse: [interpreterProxy pop: 3.
-			"rcvr, name, writeFlag"
-			interpreterProxy push: filePointer]
+		ifFalse: [interpreterProxy pop: 3 "rcvr, name, writeFlag"
+			thenPush: filePointer]
 
 ]
 
@@ -515,7 +511,7 @@ FilePlugin >> primitiveFileRead [
 	"Note: adjust startIndex for zero-origin indexing"
 	bytesRead _ self
 		sqFile: file Read: (count * byteSize)
-		Into: (self oopForPointer: arrayIndex)
+		Into: arrayIndex
 		At: ((startIndex - 1) * byteSize).
 	interpreterProxy failed ifFalse: [
 		interpreterProxy pop: 5 "pop rcvr, file, array, startIndex, count"
@@ -546,8 +542,8 @@ FilePlugin >> primitiveFileRename [
 			okToRename
 				ifFalse: [^interpreterProxy primitiveFail]].
 	self
-		sqFileRenameOld: (self oopForPointer: oldNameIndex) Size: oldNameSize
-		New: (self oopForPointer: newNameIndex) Size: newNameSize.
+		sqFileRenameOld: oldNameIndex Size: oldNameSize
+		New: newNameIndex Size: newNameSize.
 	interpreterProxy failed
 		ifFalse: [interpreterProxy pop: 2]
 ]
@@ -629,7 +625,7 @@ FilePlugin >> primitiveFileWrite [
 			bytesWritten := self
 						sqFile: file
 						Write: count * byteSize
-						From: (self oopForPointer: arrayIndex)
+						From: arrayIndex
 						At: startIndex - 1 * byteSize].
 	interpreterProxy failed
 		ifFalse: [interpreterProxy pop: 5 thenPush:( interpreterProxy integerObjectOf: bytesWritten // byteSize)]
@@ -640,8 +636,7 @@ FilePlugin >> primitiveHasFileAccess [
 	|  hasAccess |
 	self export: true.
 	"If the security plugin can be loaded, use it to check . 
-	If not, assume 
-	it's ok"
+	If not, assume it's ok"
 	sHFAfn ~= 0
 		ifTrue: [hasAccess _ self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]]
 		ifFalse: [hasAccess _ true].

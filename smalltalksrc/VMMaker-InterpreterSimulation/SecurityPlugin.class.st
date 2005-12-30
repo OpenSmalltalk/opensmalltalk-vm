@@ -75,8 +75,7 @@ SecurityPlugin >> primitiveGetSecureUserDirectory [
 	dirPtr _ interpreterProxy firstIndexableField: dirOop.
 	0 to: dirLen-1 do:[:i|
 		dirPtr at: i put: (dirName at: i)].
-	interpreterProxy pop: 1.
-	interpreterProxy push: dirOop.
+	interpreterProxy pop: 1 thenPush: dirOop.
 ]
 
 { #category : #primitives }
@@ -95,8 +94,7 @@ SecurityPlugin >> primitiveGetUntrustedUserDirectory [
 	dirPtr _ interpreterProxy firstIndexableField: dirOop.
 	0 to: dirLen-1 do:[:i|
 		dirPtr at: i put: (dirName at: i)].
-	interpreterProxy pop: 1.
-	interpreterProxy push: dirOop.
+	interpreterProxy pop: 1 thenPush: dirOop.
 ]
 
 { #category : #'exported functions' }
