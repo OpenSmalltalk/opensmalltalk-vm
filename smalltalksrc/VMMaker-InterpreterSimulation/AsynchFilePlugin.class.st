@@ -80,7 +80,7 @@ AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaInd
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
 	sCOAFfn ~= 0
-		ifTrue: [okToOpen _ self cCode: ' ((int (*) (char *, int, int)) sCOAFfn)(fileName, fileNameSize, writeFlag)'.
+		ifTrue: [okToOpen _ self cCode: ' ((sqInt (*) (char *, sqInt, sqInt)) sCOAFfn)(fileName, fileNameSize, writeFlag)'.
 			okToOpen ifFalse: [^ interpreterProxy primitiveFail]].
 	fOop _ interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: (self cCode: 'sizeof(AsyncFile)').
 	f _ self asyncFileValueOf: fOop.
