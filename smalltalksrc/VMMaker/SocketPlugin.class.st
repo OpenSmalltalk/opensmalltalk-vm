@@ -578,8 +578,7 @@ SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBu
 	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketCreate' parameters: #(#SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger ).
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If  not, assume it's ok"
 	sCCSOTfn ~= 0
 		ifTrue: [okToCreate _ self cCode: ' ((int (*) (int, int)) sCCSOTfn)(netType, socketType)'.
 			okToCreate
@@ -602,8 +601,7 @@ SocketPlugin >> primitiveSocketCreateNetwork: netType type: socketType receiveBu
 	self var: #s type: 'SocketPtr '.
 	self primitive: 'primitiveSocketCreate3Semaphores' parameters: #(#SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger #SmallInteger ).
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCCSOTfn ~= 0
 		ifTrue: [okToCreate _ self cCode: ' ((int (*) (int, int)) sCCSOTfn)(netType, socketType)'.
 			okToCreate
