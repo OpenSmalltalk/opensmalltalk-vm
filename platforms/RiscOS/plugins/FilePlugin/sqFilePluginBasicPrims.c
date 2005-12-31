@@ -246,7 +246,7 @@ os_fw handle;
 
 /* primitive support */
 
-sqInt sqFileOpen(SQFile *f, sqInt sqFileNameIndex, sqInt sqFileNameSize, sqInt writeFlag) {
+sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 /* Opens the given file using the supplied sqFile structure
  * to record its state. Fails with no side effects if f is
  * already open. Files are always opened in binary mode;
@@ -261,7 +261,7 @@ OpenFileListEntry * entry;
 		FAIL();
 	}
 
-	if (!canonicalizeFilenameToString((char*)sqFileNameIndex, sqFileNameSize, cFilename)) FAIL();
+	if (!canonicalizeFilenameToString(sqFileName, sqFileNameSize, cFilename)) FAIL();
 
 	PRINTF(("\\t sqFileOpen: canonicalized filename: %s\n", cFilename));
 
@@ -385,7 +385,7 @@ int extent;
 	return true;
 }
 
-size_t sqFileReadIntoAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex) {
+size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
 /* Read count bytes from the given file into byteArray starting at
  * startIndex. byteArray is the address of the first byte of a
  * Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -406,7 +406,7 @@ int bytesUnread;
 	return count - bytesUnread;
 }
 
-size_t sqFileWriteFromAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex) {
+size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
 /* Write count bytes to the given writable file starting at startIndex
  * in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
  * of byteArray and startIndex).
@@ -434,11 +434,11 @@ int extent;
 	return count;
 }
 
-sqInt sqFileRenameOldSizeNewSize(sqInt oldNameIndex, sqInt oldNameSize, sqInt newNameIndex, sqInt newNameSize) {
+sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize) {
 char cNewName[MAXDIRNAMELENGTH];
 
-	if (!canonicalizeFilenameToString((char*)oldNameIndex, oldNameSize, cFilename)) FAIL();
-	if (!canonicalizeFilenameToString((char*)newNameIndex, newNameSize, cNewName)) FAIL();
+	if (!canonicalizeFilenameToString(oldNameIndex, oldNameSize, cFilename)) FAIL();
+	if (!canonicalizeFilenameToString(newNameIndex, newNameSize, cNewName)) FAIL();
 
 	if (xosfscontrol_rename(cFilename, cNewName) != NULL) {
 		FAIL();
@@ -446,14 +446,14 @@ char cNewName[MAXDIRNAMELENGTH];
 	return true;
 }
 
-sqInt sqFileDeleteNameSize(sqInt sqFileNameIndex, sqInt sqFileNameSize) {
+sqInt sqFileDeleteNameSize(char * sqFileName, sqInt sqFileNameSize) {
 os_error *err;
 fileswitch_object_type objtype;
 bits loadaddr, execaddr;
 int size;
 fileswitch_attr attr;
 
-	if (!canonicalizeFilenameToString((char*)sqFileNameIndex, sqFileNameSize, cFilename)) FAIL();;
+	if (!canonicalizeFilenameToString(sqFileName, sqFileNameSize, cFilename)) FAIL();;
 
 	PRINTF(("\\t sqFileDeleteNameSize: canonicalized name %s\n",cFilename));
 

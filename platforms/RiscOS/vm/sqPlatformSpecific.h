@@ -36,6 +36,9 @@ int platAllocateMemory(int amount);
 extern int canonicalizeFilenameToString(char * sqString, int sqSize, char * cString);
 #define sqFilenameFromString(dst, src, num) (canonicalizeFilenameToString((char*)src, (int)num, (char*)dst))
 
+#define sqGetFilenameFromString(dst, src, sz, aBoolean)\
+ canonicalizeFilenameToString(src, sz, dst)
+
 int sqCopyFilesizetosize(char *srcName, int srcNameSize, char *dstName, int dstNameSize);
 
 #undef sqImageFileRead
