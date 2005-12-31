@@ -204,7 +204,7 @@ typedef struct VirtualMachine {
 #if VM_PROXY_MINOR > 6
 	sqInt  (*fetchLong32ofObject)(sqInt fieldFieldIndex, sqInt oop);
 	sqInt  (*getThisSessionID)(void);
-	sqInt	  (*ioFilenamefromStringofLength)(sqInt aCharBuffer, sqInt filenameIndex, sqInt filenameLength);
+	sqInt	  (*ioFilenamefromStringofLengthresolveAliases)(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 	sqInt  (*vmEndianness)(void);	
 #endif
 

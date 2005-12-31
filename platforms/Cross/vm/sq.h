@@ -51,10 +51,11 @@
 
 /* Note: The grow/shrink macros assume that the object memory can be extended
    continuously at its prior end. The garbage collector cannot deal with
-   'holes' in the object memory so the support code needs to reserve the virtual   maximum of pages that can be allocated beforehand. The amount of 'extra'
-   memory should describe the amount of memory that can be allocated from the
-   OS (including swap space if the flag is set to true) and must not exceed the
-   prior reserved memory.
+   'holes' in the object memory so the support code needs to reserve the
+   virtual maximum of pages that can be allocated beforehand. The amount of
+   'extra' memory should describe the amount of memory that can be allocated
+   from the OS (including swap space if the flag is set to true) and must not
+   exceed the prior reserved memory.
    In other words: don't you dare to report more free space then you can
    actually allocate.
    The default implementation assumes a fixed size memory allocated at startup.
@@ -81,12 +82,14 @@
 
 /* Note: The Squeak VM uses two different clock functions for
    timing.
-   The primary one, ioMSecs(), is used to implement Delay
-   and Time millisecondClockValue. The resolution of this clock
+
+   The primary one, ioMSecs(), is used to implement Delay and Time
+   millisecondClockValue. The resolution of this clock
    determines the resolution of these basic timing functions. For
    doing real-time control of music and MIDI, a clock with resolution
    down to one millisecond is preferred, but a coarser clock (say,
    1/60th second) can be used in a pinch.
+
    The function ioMicroMSecs() is used only to collect timing statistics
    for the garbage collector and other VM facilities. (The function
    name is meant to suggest that the function is based on a clock
@@ -101,9 +104,9 @@
    There was a third form that used to be used for quickly timing primitives in
    order to try to keep millisecond delays up to date. That is no longer used.
 
-   By default, all three clock functions are defined
-   here as macros based on the standard C library function clock().
-   Any of these macros can be overridden in sqPlatformSpecific.h.
+   By default, the basic ioMSec() clock function is defined
+   here as a macro based on the standard C library function clock().
+   Any of this can be overridden in sqPlatformSpecific.h.
 */
 
 sqInt ioMSecs(void);
@@ -111,30 +114,24 @@ sqInt ioMSecs(void);
 sqInt ioMicroMSecs(void);
 
 #define ioMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
-/* no more #define ioLowResMSecs()	((1000 * clock()) / CLOCKS_PER_SEC) */
 
 /* this macro cannot be used now that ioMicroMSecs is involved in the
    sqVirtualMachine structures - we must have a function 
 #define ioMicroMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
 */
 
-/* Filename copy macro, and an opportunity to transform filenames if
-   neccesary.
+/* New filename converting function; used by the interpreterProxy function 
+  ioFilenamefromStringofLengthresolveAliases. Most platforms can ignore the
+  resolveAlias boolean - it seems to only be of use by OSX but is crucial there.
 */
-#define sqFilenameFromString(dst, src, num)	\
-  do {						\
-    int i;					\
-    for (i= 0;  i < num;  ++i)			\
-      (dst)[i]= (src)[i];			\
-    dst[num]= '\0';				\
-  } while(0)
+sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean);
 
-/* Macro needed to support MacOS-X file opening problems. */
-
-#define sqFilenameFromStringOpen(d,s,n) sqFilenameFromString(d,s,n)
-
-/* Macro to provide default null behaviour for ftruncate - a non-ansi call used in FilePlugin.
-   Override in sqPlatformSpecific.h for each platform that implements a file truncate. 
+/* Macro to provide default null behaviour for ftruncate - a non-ansi call
+   used in FilePlugin.
+   Override in sqPlatformSpecific.h for each platform that implements a
+   file truncate, or consider replacing the
+   ../Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c
+   file with a platform specific version as Win32 and RISC OS do. 
 */
 #define sqFTruncate(filenum, fileoffset) true
 
@@ -399,7 +396,8 @@ void  *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNam
 /* The next three functions must be implemented by sqXYZExternalPrims.c */
 /* ioLoadModule:
 	Load a module from disk.
-	WARNING: this always loads a *new* module. Don't even attempt to find a loaded one.
+	WARNING: this always loads a *new* module. Don't even attempt to find
+	a loaded one.
 	WARNING: never primitiveFail() within, just return 0
 */
 void *ioLoadModule(char *pluginName);

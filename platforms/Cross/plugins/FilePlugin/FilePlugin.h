@@ -29,17 +29,17 @@ typedef struct {
 
 sqInt   sqFileAtEnd(SQFile *f);
 sqInt   sqFileClose(SQFile *f);
-sqInt   sqFileDeleteNameSize(sqInt sqFileNameIndex, sqInt sqFileNameSize);
+sqInt   sqFileDeleteNameSize(char* sqFileNameIndex, sqInt sqFileNameSize);
 squeakFileOffsetType sqFileGetPosition(SQFile *f);
 sqInt   sqFileInit(void);
 sqInt   sqFileShutdown(void);
-sqInt   sqFileOpen(SQFile *f, sqInt sqFileNameIndex, sqInt sqFileNameSize, sqInt writeFlag);
-size_t  sqFileReadIntoAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex);
-sqInt   sqFileRenameOldSizeNewSize(sqInt oldNameIndex, sqInt oldNameSize, sqInt newNameIndex, sqInt newNameSize);
+sqInt   sqFileOpen(SQFile *f, char* sqFileNameIndex, sqInt sqFileNameSize, sqInt writeFlag);
+size_t  sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex);
+sqInt   sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize);
 sqInt   sqFileSetPosition(SQFile *f, squeakFileOffsetType position);
 squeakFileOffsetType sqFileSize(SQFile *f);
 sqInt   sqFileValid(SQFile *f);
-size_t  sqFileWriteFromAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex);
+size_t  sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex);
 sqInt   sqFileFlush(SQFile *f);
 sqInt   sqFileTruncate(SQFile *f,squeakFileOffsetType offset);
 sqInt   sqFileThisSession(void);

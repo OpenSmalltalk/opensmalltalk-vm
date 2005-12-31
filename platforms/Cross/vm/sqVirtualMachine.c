@@ -135,7 +135,7 @@ sqInt superclassOf(sqInt classPointer);
 sqInt ioMicroMSecs(void);
 sqInt forceInterruptCheck(void);
 sqInt getThisSessionID(void);
-sqInt ioFilenamefromStringofLength(sqInt aCharBuffer, sqInt filenameIndex, sqInt filenameLength);
+sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
 sqInt  vmEndianness(void);	
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
@@ -332,7 +332,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 #if VM_PROXY_MINOR > 6
 	VM->fetchLong32ofObject = fetchLong32ofObject;
 	VM->getThisSessionID = getThisSessionID;
-	VM->ioFilenamefromStringofLength = ioFilenamefromStringofLength;
+	VM->ioFilenamefromStringofLengthresolveAliases = ioFilenamefromStringofLengthresolveAliases;
 	VM->vmEndianness = vmEndianness;
 #endif
 
