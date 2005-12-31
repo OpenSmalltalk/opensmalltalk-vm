@@ -128,7 +128,7 @@ sqInt sqFileClose(SQFile *f) {
 	f->lastOp = UNCOMMITTED;
 }
 
-sqInt sqFileDeleteNameSize(sqInt sqFileNameIndex, sqInt sqFileNameSize) {
+sqInt sqFileDeleteNameSize(char* sqFileName, sqInt sqFileNameSize) {
 	char cFileName[1000];
 	int err;
 
@@ -137,7 +137,7 @@ sqInt sqFileDeleteNameSize(sqInt sqFileNameIndex, sqInt sqFileNameSize) {
 	}
 
 	/* copy the file name into a null-terminated C string */
-	sqFilenameFromString(cFileName, sqFileNameIndex, sqFileNameSize);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, false);
 
 	err = remove(cFileName);
 	if (err) {
@@ -174,7 +174,7 @@ sqInt sqFileShutdown(void) {
 	return 1;
 }
 
-sqInt sqFileOpen(SQFile *f, sqInt sqFileNameIndex, sqInt sqFileNameSize, sqInt writeFlag) {
+sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	/* Opens the given file using the supplied sqFile structure
 	   to record its state. Fails with no side effects if f is
 	   already open. Files are always opened in binary mode;
@@ -190,7 +190,7 @@ sqInt sqFileOpen(SQFile *f, sqInt sqFileNameIndex, sqInt sqFileNameSize, sqInt w
 	if (sqFileNameSize > 1000) {
 		return interpreterProxy->success(false);
 	}
-        sqFilenameFromStringOpen(cFileName, sqFileNameIndex, sqFileNameSize);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, true);
 
 	if (writeFlag) {
 		/* First try to open an existing file read/write: */
@@ -202,9 +202,9 @@ sqInt sqFileOpen(SQFile *f, sqInt sqFileNameIndex, sqInt sqFileNameSize, sqInt w
 			setFile(f, fopen(cFileName, "w+b"));
 			if (getFile(f) != NULL) {
 			    char type[4],creator[4];
-				dir_GetMacFileTypeAndCreator(pointerForOop(sqFileNameIndex), sqFileNameSize, type, creator);
+				dir_GetMacFileTypeAndCreator(sqFileName, sqFileNameSize, type, creator);
 				if (strncmp(type,"BINA",4) == 0 || strncmp(type,"????",4) == 0 || *(int *)type == 0 ) 
-				    dir_SetMacFileTypeAndCreator(pointerForOop(sqFileNameIndex), sqFileNameSize,"TEXT","R*ch");	
+				    dir_SetMacFileTypeAndCreator(sqFileName, sqFileNameSize,"TEXT","R*ch");	
 			}
 		}
 		f->writable = true;
@@ -228,7 +228,7 @@ sqInt sqFileOpen(SQFile *f, sqInt sqFileNameIndex, sqInt sqFileNameSize, sqInt w
 	f->lastOp = UNCOMMITTED;
 }
 
-size_t sqFileReadIntoAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex) {
+size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
 	/* Read count bytes from the given file into byteArray starting at
 	   startIndex. byteArray is the address of the first byte of a
 	   Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -243,13 +243,13 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t st
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
 	file= getFile(f);
 	if (f->writable && (f->lastOp == WRITE_OP)) fseek(file, 0, SEEK_CUR);  /* seek between writing and reading */
-	dst = pointerForOop(byteArrayIndex) + startIndex;
+	dst = byteArrayIndex + startIndex;
 	bytesRead = fread(dst, 1, count, file);
 	f->lastOp = READ_OP;
 	return bytesRead;
 }
 
-sqInt sqFileRenameOldSizeNewSize(sqInt oldNameIndex, sqInt oldNameSize, sqInt newNameIndex, sqInt newNameSize) {
+sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize) {
 	char cOldName[1000], cNewName[1000];
 	int err;
 
@@ -258,9 +258,9 @@ sqInt sqFileRenameOldSizeNewSize(sqInt oldNameIndex, sqInt oldNameSize, sqInt ne
 	}
 
 	/* copy the file names into null-terminated C strings */
-	sqFilenameFromString(cOldName, oldNameIndex, oldNameSize);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cOldName, oldNameIndex, oldNameSize, false);
 
-	sqFilenameFromString(cNewName, newNameIndex, newNameSize);
+	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cNewName, newNameIndex, newNameSize, false);
 
 	err = rename(cOldName, cNewName);
 	if (err) {
@@ -310,7 +310,7 @@ sqInt sqFileValid(SQFile *f) {
 		(f->sessionID == thisSession));
 }
 
-size_t sqFileWriteFromAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t startIndex) {
+size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
 	/* Write count bytes to the given writable file starting at startIndex
 	   in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
 	   of byteArray and startIndex).
@@ -324,7 +324,7 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, sqInt byteArrayIndex, size_t s
 	if (!(sqFileValid(f) && f->writable)) return interpreterProxy->success(false);
 	file= getFile(f);
 	if (f->lastOp == READ_OP) fseek(file, 0, SEEK_CUR);  /* seek between reading and writing */
-	src = pointerForOop(byteArrayIndex + startIndex);
+	src = byteArrayIndex + startIndex;
 	bytesWritten = fwrite(src, 1, count, file);
 
 	position = ftell(file);
