@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32FilePrims.c,v 1.8 2003/06/21 18:15:57 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *     1) This is a bare windows implementation *not* using any stdio stuff.
@@ -44,7 +44,6 @@ extern struct VirtualMachine *interpreterProxy;
       File	*file;
       int		sessionID;
       int		writable;
-      int		fileSize;
     } SQFile;
 
 ***/
@@ -74,7 +73,7 @@ int sqFileAtEnd(SQFile *f) {
   if (!sqFileValid(f)) FAIL();
   ofs.offset = 0;
   ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
-  return ofs.offset == f->fileSize;
+  return ofs.offset == sqFileSize(f);
 }
 
 int sqFileClose(SQFile *f) {
@@ -85,7 +84,6 @@ int sqFileClose(SQFile *f) {
   f->file = NULL;
   f->sessionID = 0;
   f->writable = false;
-  f->fileSize = 0;
   return 1;
 }
 
@@ -134,7 +132,6 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
   TCHAR *win32Path = fromSqueak((char*)sqFileNameIndex, sqFileNameSize);
   if(hasCaseSensitiveDuplicate(win32Path)) {
     f->sessionID = 0;
-    f->fileSize = 0;
     FAIL();
   }
   h = CreateFile(win32Path,
@@ -146,7 +143,6 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
                  NULL /* No template */);
   if(h == INVALID_HANDLE_VALUE) {
     f->sessionID = 0;
-    f->fileSize = 0;
     FAIL();
   } else {
     win32FileOffset ofs;
@@ -155,7 +151,6 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
     /* compute and cache file size */
     ofs.offset = 0;
     ofs.dwLow = SetFilePointer(h, 0, &ofs.dwHigh, FILE_END);
-    f->fileSize = ofs.offset;
     SetFilePointer(h, 0, NULL, FILE_BEGIN);
     f->writable = writeFlag ? true : false;
   }
@@ -197,9 +192,11 @@ int sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
 
 squeakFileOffsetType sqFileSize(SQFile *f) {
   /* Return the length of the given file. */
-  
+  win32FileOffset ofs;
   if (!sqFileValid(f)) FAIL();
-  return f->fileSize;
+  ofs.offset = 0;
+  ofs.dwLow = GetFileSize(FILE_HANDLE(f), &ofs.dwHigh);
+  return ofs.offset;
 }
 
 int sqFileFlush(SQFile *f) {
@@ -235,10 +232,6 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t sta
   if (!(sqFileValid(f) && f->writable)) FAIL();
 
   WriteFile(FILE_HANDLE(f), (LPVOID) (byteArrayIndex + startIndex), count, &dwReallyWritten, NULL);
-  /* update file size */
-  ofs.offset = 0;
-  ofs.dwLow = GetFileSize(FILE_HANDLE(f), &ofs.dwHigh);
-  f->fileSize = ofs.offset;
   
   if ((int)dwReallyWritten != count) FAIL();
   return (int) dwReallyWritten;
