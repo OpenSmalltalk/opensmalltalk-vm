@@ -48,6 +48,12 @@ extern struct VirtualMachine *interpreterProxy;
 
 ***/
 
+
+/**********************************************************************/
+#include "sqWin32HandleTable.h"
+static HandleTable *win32Files = NULL;
+/**********************************************************************/
+
 /*** Variables ***/
 int thisSession = 0;
 
@@ -81,6 +87,7 @@ int sqFileClose(SQFile *f) {
 
   if (!sqFileValid(f)) FAIL();
   if(!CloseHandle(FILE_HANDLE(f))) FAIL();
+  RemoveHandleFromTable(win32Files, FILE_HANDLE(f));
   f->file = NULL;
   f->sessionID = 0;
   f->writable = false;
@@ -113,8 +120,13 @@ int sqFileInit(void) {
      Should be called once at startup time.
   */
 
+#if VM_PROXY_MINOR > 6
+  thisSession = interpreterProxy->getThisSessionID();
+#else
   thisSession = GetTickCount();
   if (thisSession == 0) thisSession = 1;	/* don't use 0 */
+#endif
+  win32Files = (HandleTable*) calloc(1, sizeof(HandleTable));
   return 1;
 }
 
@@ -148,6 +160,7 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
     win32FileOffset ofs;
     f->sessionID = thisSession;
     FILE_HANDLE(f) = h;
+    AddHandleToTable(win32Files, h);
     /* compute and cache file size */
     ofs.offset = 0;
     ofs.dwLow = SetFilePointer(h, 0, &ofs.dwHigh, FILE_END);
@@ -216,10 +229,13 @@ int sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
 }
 
 int sqFileValid(SQFile *f) {
-  return (
-	  (f != NULL) &&
-	  (f->file != INVALID_HANDLE_VALUE) &&
-	  (f->sessionID == thisSession));
+  if(NULL == f) return false;
+  if(f->sessionID != thisSession) return false;
+  if(!IsHandleInTable(win32Files, FILE_HANDLE(f))) {
+    printf("WARNING: Manifactured file handle detected!\n");
+    return false;
+  }
+  return true;
 }
 
 size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
