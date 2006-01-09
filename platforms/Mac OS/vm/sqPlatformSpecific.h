@@ -88,15 +88,13 @@
     typedef int sqImageFile;
 
 #endif
-  
-#if TARGET_API_MAC_CARBON
+
+#ifdef TARGET_API_MAC_CARBON  
     #undef sqFilenameFromStringOpen
     #undef sqFilenameFromString
-    void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias);
-    #define sqFilenameFromStringOpen(dst, src, num) makeOSXPath(dst,src,num,true)
-    #define sqFilenameFromString(dst, src, num) makeOSXPath(dst,src,num,false)
+void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength);
+void		sqFilenameFromString(char *buffer,long fileIndex, long fileLength);
 #endif
-
 void        sqImageFileClose(sqImageFile f);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
 squeakFileOffsetType       sqImageFilePosition(sqImageFile f);

@@ -69,10 +69,11 @@
 *  3.8.9b2 Sept 22nd, 2005 JMM add logic to override Squeak.image name 
 */
 
-#include <objc/objc-runtime.h>
 
 #if !TARGET_API_MAC_CARBON 
 #include <Power.h>
+#else
+#include <objc/objc-runtime.h>
 #endif
 
 #include "sq.h"
@@ -286,8 +287,20 @@ int main(void) {
     	wdPB.ioVRefNum = imageFsSpec.vRefNum;
     	wdPB.ioWDDirID = imageFsSpec.parID;
     	PBHSetVolSync(&wdPB);
+		
     	f = sqImageFileOpen(getImageName(), "rb");
  	}
+	
+#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
+	{
+		// Change working directory, this works under os-x, previous logic worked pre os-x 10.4
+		
+		char target[4097],temp[4097];
+		getVMPathWithEncoding(target,gCurrentVMEncoding);
+		sqFilenameFromStringOpen(temp,(long) target, strlen(target));
+		chdir(temp);
+	}
+#endif 
 	
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
 	sqImageFileClose(f);

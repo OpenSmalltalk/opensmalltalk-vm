@@ -18,7 +18,7 @@
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
     3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 	3.8.7bx Mar 24th, 2005 JMM Add feature to convert from posix to HFS+
-
+	3.8.9b8 Jan 8th, 2006 JMM rework ioFilenamefromStringofLengthresolveAliases and makeosxpath
 *
 *****************************************************************************/
 /* 
@@ -259,7 +259,15 @@ void unicode2NativePascalString(ConstStr255Param fromString, StringPtr toString)
 /* Convert the squeak path to an OS-X path. This path because of alias resolving may point 
 to another directory tree */
 
-void	makeOSXPath(char * dst, int src, int num,Boolean resolveAlias) {
+void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength) {
+	ioFilenamefromStringofLengthresolveAliases(buffer,(char *) fileIndex, fileLength, true);
+}
+
+void		sqFilenameFromString(char *buffer,long fileIndex, long fileLength) {
+	ioFilenamefromStringofLengthresolveAliases(buffer,(char *) fileIndex, fileLength, false);
+}
+
+sqInt	ioFilenamefromStringofLengthresolveAliases(char* dst, char* src, sqInt num, sqInt resolveAlias) {
         FSRef		theFSRef;
         FSSpec		convertFileNameSpec,failureRetry;
         OSErr		err;
@@ -412,7 +420,11 @@ int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown) {
            if (err != noErr) {
                 CFStringGetPascalString(aLevel,spec->name,64,gCurrentVMEncoding);
                 CFRelease(aLevel);
-               return err;
+				token = strtok(nil,":"); 
+				if (token == nil)
+					return err;
+				else
+					return -1001;
             }
            CFRelease(aLevel);
            parentFSRef = childFSRef;

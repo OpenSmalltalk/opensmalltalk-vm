@@ -14,6 +14,7 @@
 *       Nov 25th 2003 JMM add gCurrentVMEncoding
         3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
 	Mar 24th, 2005 JMM add routine for posix to HFS+
+	Jan 7th, 2006 JMM rework macosxpath & ioFilenamefromStringofLengthresolveAliases
 */
 #if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
@@ -44,6 +45,5 @@ pascal short DialogHook(short item, DialogPtr theDialog,  void *userData);
 int fetchFileInfo(int dirIndex,FSSpec *spec,unsigned char *name,Boolean doAlias,long *parentDirectory, int *isFolder,int *createDateStorage,int *modificationDateStorage,squeakFileOffsetType *sizeOfFile,Str255 *longFileName);
 int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown);
 int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown,Boolean tryShortCut);
-void makeOSXPath(char * dst, int src, int num,Boolean resolveAlias);
 Boolean isVmPathVolumeHFSPlus(void);
 int makeHFSFromPosixPath(char *pathString, int pathStringLength,char *dst, char *lastPath) ;
