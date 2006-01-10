@@ -547,7 +547,6 @@ int ioShowDisplayOnWindow(
 	CGImageRef image;
 	CGRect		clip;
 	windowDescriptorBlock *targetWindowBlock;
-	CGrafPtr windowPort;
 	CGDataProviderRef provider;
 	
 	if (gWindowsIsInvisible) {
@@ -581,9 +580,7 @@ int ioShowDisplayOnWindow(
 		pitch = bytesPerLine(width, depth);
 	}
 			
-	targetWindowBlock = windowBlockFromIndex(windowIndex);
-	windowPort = GetWindowPort(windowHandleFromIndex(windowIndex));
-	
+	targetWindowBlock = windowBlockFromIndex(windowIndex);	
 	provider = CGDataProviderCreateDirectAccess((void*)dispBitsIndex
 				+ pitch*affectedT 
 				+ affectedL*(depth==32 ? 4 : 2),  
@@ -601,13 +598,30 @@ int ioShowDisplayOnWindow(
 	}
 
 	if (targetWindowBlock->width != width && targetWindowBlock->height  != height) {
-		if (targetWindowBlock->context)
-			CGContextRelease(targetWindowBlock->context);
-		CreateCGContextForPort(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context); 
+		if (targetWindowBlock->context) {
+			QDEndCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
+			//CGContextRelease(targetWindowBlock->context);
+		}
+ 		//CreateCGContextForPort(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context); 
+		QDBeginCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context); 
+		targetWindowBlock->sync = false;
+		
 		targetWindowBlock->width = width;
 		targetWindowBlock->height = height; 
 	}
 	
+	if (targetWindowBlock->sync) {
+			CGRect	clip2;
+			Rect	portRect;
+			int		w,h;
+			
+			GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
+            w =  portRect.right -  portRect.left;
+            h =  portRect.bottom - portRect.top;
+			clip2 = CGRectMake(0,0, w, h);
+			CGContextClipToRect(targetWindowBlock->context, clip2);
+	}
+		
 	/* Draw the image to the Core Graphics context */
 	CGContextDrawImage(targetWindowBlock->context, clip, image);
 	
@@ -621,7 +635,7 @@ int ioShowDisplayOnWindow(
 			targetWindowBlock->dirty = 0;
 			targetWindowBlock->rememberTicker = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 		} else {
-			if (!targetWindowBlock->dirty)
+			if (targetWindowBlock->sync)
 				CGContextSynchronize(targetWindowBlock->context);
 			targetWindowBlock->dirty = 1;
 		}

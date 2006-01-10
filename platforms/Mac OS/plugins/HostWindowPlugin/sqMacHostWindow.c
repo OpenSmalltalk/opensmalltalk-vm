@@ -51,7 +51,10 @@ int closeWindow(int windowIndex) {
 		return 0;
 #if I_AM_CARBON_EVENT
 	if (windowBlockFromIndex(windowIndex)->context)
-		CGContextRelease(windowBlockFromIndex(windowIndex)->context);
+		QDEndCGContext(GetWindowPort(windowBlockFromIndex(windowIndex)->handle),&windowBlockFromIndex(windowIndex)->context);
+		//CGContextRelease(windowBlockFromIndex(windowIndex)->context);
+	
+
 	windowBlockFromIndex(windowIndex)->context = NULL;
 #endif
 	RemoveWindowBlock(windowBlockFromIndex(windowIndex));

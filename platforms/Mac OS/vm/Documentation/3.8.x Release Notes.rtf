@@ -10,11 +10,21 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
 \
-Jan 8th, 2006 (3.8.9b8)\
+Jan 10th, 2006 (3.8.9b9)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.9b9			display tuning\
+				sqMacHostWindow.c	Remove getwindowport call from screen drawing routine, not needed. \
+									Remove CGContextSynchronize from general usage, not needed, improves performance a bit\
+									Add feature to call CGContextSynchronize on window resize event, also to clip display area\
+									to avoid writting in title bar when you resize window smaller. \
+									Use more modern QDEndCGContext/QDStartCGContext calls.\
+				sqMacHostWindow.h\
+				sqMacUIEvents.c		Capture kEventWindowResizeStarted event so we can signal that we want to clip. \
+				sqMacHostWindow.c	Use more modern QDEndCGContext/QDStartCGContext calls, add flag to block for syncing clipping\
+				sqmacHostWindow.h\
 \
 3.8.9b8			There are a number of interesting changes this revision.\
 				a) We set the working directory via chdir, in the past this might have been the vm directory, but sometimes it was the os-x root directory\

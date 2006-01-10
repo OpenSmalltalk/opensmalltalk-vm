@@ -1295,6 +1295,7 @@ EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
                             { kEventClassWindow, kEventWindowHidden },
                             { kEventClassWindow, kEventWindowActivated},
 							{ kEventClassWindow, kEventWindowBoundsChanged},
+							{ kEventClassWindow, kEventWindowResizeStarted},
 							{ kEventClassWindow, kEventWindowClose},
 							{ kEventClassWindow, kEventWindowCollapsed},
                             { kEventClassWindow, kEventWindowDeactivated}};
@@ -1519,16 +1520,20 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
 			}
             windowActive = 0;
              break;
-       case kEventWindowHandleContentClick:
-			result = eventNotHandledErr;
-             break;
        case kEventWindowDrawContent:
             result = noErr;
+            break;
+       case kEventWindowResizeStarted:
+			{ 
+				windowDescriptorBlock *targetWindowBlock;
+				targetWindowBlock = windowBlockFromHandle((wHandleType)window);	
+				targetWindowBlock->sync = true;
+			}
             break;
 		case kEventWindowBoundsChanged:
 			GetWindowBounds(window,kWindowContentRgn,&globalBounds);
 			recordWindowEventCarbon(WindowEventMetricChange,globalBounds.left, globalBounds.top, 
-	globalBounds.right, globalBounds.bottom,windowIndexFromHandle((wHandleType)window));
+					globalBounds.right, globalBounds.bottom,windowIndexFromHandle((wHandleType)window));
 			break;
 		case kEventWindowCollapsed:
 			recordWindowEventCarbon(WindowEventIconise,0, 0, 0, 0,windowIndexFromHandle((wHandleType)window));
