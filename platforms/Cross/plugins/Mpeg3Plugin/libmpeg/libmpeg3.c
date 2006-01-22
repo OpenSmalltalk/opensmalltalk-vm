@@ -41,12 +41,12 @@
 
 #define MAX(a, b) ((a) > (b) ? (a) : (b))
 
-mpeg3_t* mpeg3_new(char *path)
+mpeg3_t* mpeg3_new(char *path,int size)
 {
 	int i;
 	mpeg3_t *file = (mpeg3_t *) memoryAllocate(1, sizeof(mpeg3_t));
 	file->cpus = 1;
-	file->fs = mpeg3_new_fs(path);
+	file->fs = mpeg3_new_fs(path,size);
 	file->have_mmx = mpeg3_mmx_test();
 	file->demuxer = mpeg3_new_demuxer(file, 0, 0, -1);
 	return file;
@@ -74,7 +74,7 @@ int mpeg3_check_sig(char *path)
 	char *ext;
 	int result = 0;
 
-	fs = mpeg3_new_fs(path);
+	fs = mpeg3_new_fs(path,0);
 	if(mpeg3io_open_file(fs))
 	{
 /* File not found */
@@ -122,14 +122,14 @@ int mpeg3_check_sig(char *path)
 	return result;
 }
 
-mpeg3_t* mpeg3_open_copy(char *path, mpeg3_t *old_file)
+mpeg3_t* mpeg3_open_copy(char *path, mpeg3_t *old_file,int size)
 {
 	mpeg3_t *file = 0;
 	unsigned int bits;
 	int i, done;
 
 /* Initialize the file structure */
-	file = mpeg3_new(path);
+	file = mpeg3_new(path,size);
 
 /* Need to perform authentication before reading a single byte. */
 	if(mpeg3io_open_file(file->fs))
@@ -263,9 +263,9 @@ mpeg3_t* mpeg3_open_copy(char *path, mpeg3_t *old_file)
 	return file;
 }
 
-mpeg3_t* mpeg3_open(char *path)
+mpeg3_t* mpeg3_open(char *path,int size)
 {
-	return mpeg3_open_copy(path, 0);
+	return mpeg3_open_copy(path, 0,size);
 }
 
 int mpeg3_close(mpeg3_t *file)
@@ -295,7 +295,7 @@ int mpeg3_set_mmx(mpeg3_t *file, int use_mmx)
 
 int mpeg3_generate_toc(FILE *output, char *path, int timecode_search, int print_streams)
 {
-	mpeg3_t *file = mpeg3_open(path);
+	mpeg3_t *file = mpeg3_open(path,0);
 	mpeg3_demuxer_t *demuxer;
 	int i;
 
@@ -328,7 +328,11 @@ int mpeg3_read_toc(mpeg3_t *file)
 /* Test version number */
 	file->is_program_stream = 1;
 	mpeg3io_seek(file->fs, 0);
-	fscanf(file->fs->fd, "%s %d", string, &number1);
+	
+//	fscanf(file->fs->fd, "%s %d", string, &number1);
+//  Jan 20th 2006, John M Mcintosh (johnmci@smalltalkconsulting.com  move logic to mpeg3io.c
+
+	mpeg3io_scanf(file->fs,"%s %d",string,&number1);
 	if(number1 > 2 || number1 < 2) return 1;
 
 /* Read titles */

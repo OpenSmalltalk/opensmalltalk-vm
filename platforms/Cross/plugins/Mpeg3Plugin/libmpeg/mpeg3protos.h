@@ -57,11 +57,15 @@ int mpeg3video_read_frame(mpeg3video_t *video,
 
 /* FILESYSTEM */
 
-mpeg3_fs_t* mpeg3_new_fs(char *path);
+mpeg3_fs_t* mpeg3_new_fs(char *path,int size);
 int mpeg3_delete_fs(mpeg3_fs_t *fs);
 int mpeg3io_open_file(mpeg3_fs_t *fs);
 int mpeg3io_close_file(mpeg3_fs_t *fs);
 int mpeg3io_read_data(unsigned char *buffer, long bytes, mpeg3_fs_t *fs);
+int mpeg3io_end_of_file(mpeg3_fs_t *fs);
+int mpeg3io_scanf (mpeg3_fs_t *fs,char *format, void * string1, void * string2);
+int mpeg3io_scanf5 (mpeg3_fs_t *fs,char *format, void * string1, void * string2, void * string3, void * string4, void * string5);
+int mpeg3io_fgetc(mpeg3_fs_t *fs);
 
 /* BITSTREAM */
 mpeg3_bits_t* mpeg3bits_new_stream(mpeg3_t *file, mpeg3_demuxer_t *demuxer);

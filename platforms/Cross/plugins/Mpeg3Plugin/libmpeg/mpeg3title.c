@@ -39,7 +39,12 @@
 mpeg3_title_t* mpeg3_new_title(mpeg3_t *file, char *path)
 {
 	mpeg3_title_t *title = (mpeg3_title_t *) memoryAllocate(1, sizeof(mpeg3_title_t));
-	title->fs = mpeg3_new_fs(path);
+	
+	if (file->fs->mpeg_buffer_size) {
+		title->fs = mpeg3_new_fs(file->fs->mpeg_is_in_buffer,file->fs->mpeg_buffer_size);
+	} else {
+		title->fs = mpeg3_new_fs(path,0);
+	}
 	title->file = file;
 	return title;
 }
