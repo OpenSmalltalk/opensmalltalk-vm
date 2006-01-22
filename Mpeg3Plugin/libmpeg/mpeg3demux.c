@@ -1515,14 +1515,14 @@ int mpeg3demux_read_titles(mpeg3_demuxer_t *demuxer)
 	mpeg3_t *file = (mpeg3_t *) demuxer->file;
 
 // Eventually use IFO file to generate titles
-	while(!feof(file->fs->fd))
+	while(!mpeg3io_end_of_file(file->fs))   //JMM use accessors 
 	{
-		fscanf(file->fs->fd, "%s %s %ld %f %f %f", 
+		mpeg3io_scanf5(file->fs, "%s %s %ld %f %f %f", 
 			string1,
 			string2,
 			&end_byte, 
 			&start_time, 
-			&end_time);
+			&end_time); //JMM use accessors
 
 		if(!strncasecmp(string1, "PATH:", 5))
 		{

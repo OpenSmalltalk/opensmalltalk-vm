@@ -37,11 +37,11 @@ extern "C" {
 int mpeg3_check_sig(char *path);
 
 /* Open the MPEG3 stream. */
-mpeg3_t* mpeg3_open(char *path);
+mpeg3_t* mpeg3_open(char *path,int size);
 
 /* Open the MPEG3 stream and copy the tables from an already open stream. */
 /* Eliminates the initial timecode search. */
-mpeg3_t* mpeg3_open_copy(char *path, mpeg3_t *old_file);
+mpeg3_t* mpeg3_open_copy(char *path, mpeg3_t *old_file,int size);
 int mpeg3_close(mpeg3_t *file);
 
 /* Performance */

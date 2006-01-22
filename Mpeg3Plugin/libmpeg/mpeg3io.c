@@ -34,6 +34,9 @@
      (specifically ones with binary data in them)
      - Added mpeg3io_get_id3v2_size
      - modified all fseek's to use the id3v2 offset
+	 
+	Changed Jan 20th 2006 by John M McIntosh to support reading mpeg file from a buffer
+	
  */
 #include "mpeg3private.h"
 #include "mpeg3protos.h"
@@ -51,17 +54,31 @@
 #include <stdlib.h>
 #include <string.h>
 
-mpeg3_fs_t* mpeg3_new_fs(char *path)
+mpeg3_fs_t* mpeg3_new_fs(char *path,int size)
 {
 	mpeg3_fs_t *fs = (mpeg3_fs_t *) memoryAllocate(1, sizeof(mpeg3_fs_t));
 	fs->css = mpeg3_new_css();
+	if (size) {
+		fs->mpeg_is_in_buffer = (char *) memoryAllocate(1, size);
+		fs->mpeg_is_in_buffer_file_position = 0;
+		fs->mpeg_buffer_size = size;
+		memmove(fs->mpeg_is_in_buffer,path,size);
+		fs->path[0] = 0x00;
+	} else {
 	strcpy(fs->path, path);
+		fs->mpeg_is_in_buffer = NULL;
+		fs->mpeg_is_in_buffer_file_position = 0;
+		fs->mpeg_buffer_size = 0;
+	}
 	return fs;
 }
 
 int mpeg3_delete_fs(mpeg3_fs_t *fs)
 {
 	mpeg3_delete_css(fs->css);
+	if (fs->mpeg_is_in_buffer)
+		memoryFree(fs->mpeg_is_in_buffer);
+	fs->mpeg_is_in_buffer = NULL;
 	memoryFree(fs);
 	return 0;
 }
@@ -80,6 +97,11 @@ long mpeg3io_get_total_bytes(mpeg3_fs_t *fs)
  * 	if(stat(fs->path, &st) < 0) return 0;
  * 	return (long)st.st_size;
  */
+	if (fs->mpeg_is_in_buffer) {
+		fs->total_bytes = fs->mpeg_buffer_size - fs->id3v2_offset;
+		fs->mpeg_is_in_buffer_file_position = fs->id3v2_offset;
+		return fs->total_bytes;
+	}
 
 	fseek(fs->fd, 0, SEEK_END);
 	fs->total_bytes = ftell(fs->fd) - fs->id3v2_offset;
@@ -91,7 +113,11 @@ int mpeg3io_get_id3v2_size(mpeg3_fs_t *fs)
 {
   unsigned long synchsafe_size = 0;
   
+  if (fs->mpeg_is_in_buffer) {
+	fs->mpeg_is_in_buffer_file_position = 6;
+  } else {
   fseek(fs->fd, 6, SEEK_SET);
+  }
 
   synchsafe_size = mpeg3io_read_int32(fs);
 
@@ -101,13 +127,15 @@ int mpeg3io_get_id3v2_size(mpeg3_fs_t *fs)
 int mpeg3io_open_file(mpeg3_fs_t *fs)
 {
         unsigned int bits;
+
+  if (!fs->mpeg_is_in_buffer) {
 /* Need to perform authentication before reading a single byte. */
 	mpeg3_get_keys(fs->css, fs->path);
-
 	if(!(fs->fd = fopen(fs->path, "rb")))
 	{
 		perror("mpeg3io_open_file");
 		return 1;
+	}
 	}
 
 	bits = mpeg3io_read_int32(fs);
@@ -125,6 +153,7 @@ int mpeg3io_open_file(mpeg3_fs_t *fs)
 	
 	if(!fs->total_bytes)
 	{
+		if (!fs->mpeg_is_in_buffer)
 		fclose(fs->fd);
 		return 1;
 	}
@@ -134,7 +163,13 @@ int mpeg3io_open_file(mpeg3_fs_t *fs)
 
 int mpeg3io_close_file(mpeg3_fs_t *fs)
 {
+	if (!fs->mpeg_is_in_buffer)
 	if(fs->fd) fclose(fs->fd);
+	else {
+		if (fs->mpeg_is_in_buffer)
+			memoryFree(fs->mpeg_is_in_buffer);
+		fs->mpeg_is_in_buffer = 0; 
+	}
 	fs->fd = 0;
 	return 0;
 }
@@ -142,7 +177,20 @@ int mpeg3io_close_file(mpeg3_fs_t *fs)
 int mpeg3io_read_data(unsigned char *buffer, long bytes, mpeg3_fs_t *fs)
 {
 	int result = 0;
+	if (fs->mpeg_is_in_buffer) {
+		int normalizedBytes;
+		normalizedBytes = fs->mpeg_is_in_buffer_file_position + bytes;
+		if (normalizedBytes > fs->mpeg_buffer_size) {
+			normalizedBytes = fs->mpeg_buffer_size - fs->mpeg_is_in_buffer_file_position;
+		}
+		else 
+			normalizedBytes = bytes;
+		memmove(buffer,fs->mpeg_is_in_buffer+fs->mpeg_is_in_buffer_file_position,normalizedBytes);
+		fs->mpeg_is_in_buffer_file_position += normalizedBytes;
+		result = !normalizedBytes;
+	} else {
 	result = !fread(buffer, 1, bytes, fs->fd);
+	}
 	fs->current_byte += bytes;
 	return (result && bytes);
 }
@@ -181,12 +229,79 @@ int mpeg3io_device(char *path, char *device)
 int mpeg3io_seek(mpeg3_fs_t *fs, long byte)
 {
 	fs->current_byte = byte;
+	if (fs->mpeg_is_in_buffer) {
+		int target;
+		
+		target = byte + fs->id3v2_offset;
+		if (target > fs->mpeg_buffer_size) 
+				return -1;
+		if (target < 0) 
+				return -1;
+		fs->mpeg_is_in_buffer_file_position = target;
+		return 0;
+	}
 	return fseek(fs->fd, byte + fs->id3v2_offset, SEEK_SET);
 }
 
 int mpeg3io_seek_relative(mpeg3_fs_t *fs, long bytes)
 {
 	fs->current_byte += bytes;
+	if (fs->mpeg_is_in_buffer) {
+		int target;
+		
+		target = fs->current_byte + fs->id3v2_offset;
+		if (target > fs->mpeg_buffer_size)
+			return -1;
+		if (target < 0) {
+			return -1;		}
+		fs->mpeg_is_in_buffer_file_position = target;
+		return 0;
+	}
 	return fseek(fs->fd, fs->current_byte + fs->id3v2_offset, SEEK_SET);
+}
+
+int mpeg3io_scanf (mpeg3_fs_t *fs,char *format, void * string1, void * string2) {
+	int return_value;
+	if (fs->mpeg_is_in_buffer) {
+		return_value = sscanf(fs->mpeg_is_in_buffer+fs->mpeg_is_in_buffer_file_position,format, string1, string2);
+		return return_value;
+	}
+	
+	return_value = fscanf(fs->fd,format, string1, string2);
+	return return_value;
+}
+
+int mpeg3io_scanf5 (mpeg3_fs_t *fs,char *format, void * string1, void * string2, void * string3, void * string4, void * string5) {
+	int return_value;
+	
+	if (fs->mpeg_is_in_buffer) {
+		return_value = sscanf(fs->mpeg_is_in_buffer+fs->mpeg_is_in_buffer_file_position,format, string1, string2, string3, string4, string5);
+		return return_value;
+	}
+
+	return_value = fscanf(fs->fd,format, string1, string2, string3, string4, string5);
+	return return_value;
+}
+
+int mpeg3io_end_of_file(mpeg3_fs_t *fs ) {
+	if (fs->mpeg_is_in_buffer) {
+		return fs->mpeg_is_in_buffer_file_position == fs->mpeg_buffer_size;
+	}
+	
+	return feof(fs->fd);
+}
+
+inline int mpeg3io_fgetc(mpeg3_fs_t *fs) {
+	if (fs->mpeg_is_in_buffer) {
+		unsigned int value;
+		fs->mpeg_is_in_buffer_file_position++;
+		if (fs->mpeg_is_in_buffer_file_position >= fs->mpeg_buffer_size) {
+			fs->mpeg_is_in_buffer_file_position = fs->mpeg_buffer_size;
+			return 0;
+		}
+		value = (unsigned int) fs->mpeg_is_in_buffer[fs->mpeg_is_in_buffer_file_position-1];
+		return value;
+	}
+	return fgetc(fs->fd);
 }
 
