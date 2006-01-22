@@ -229,10 +229,10 @@
 						<key>_historyCapacity</key>
 						<integer>0</integer>
 						<key>bookmark</key>
-						<string>94ECA675097EC7CE00C2C7BA</string>
+						<string>9491968C09804F6D000FC37A</string>
 						<key>history</key>
 						<array>
-							<string>94ECA66A097EC7BD00C2C7BA</string>
+							<string>94ECA675097EC7CE00C2C7BA</string>
 						</array>
 					</dict>
 					<key>SplitCount</key>
@@ -285,6 +285,8 @@
 			<key>Layout</key>
 			<array>
 				<dict>
+					<key>BecomeActive</key>
+					<true/>
 					<key>ContentConfiguration</key>
 					<dict>
 						<key>PBXBottomSmartGroupGIDs</key>
@@ -336,12 +338,12 @@
 							<key>PBXSmartGroupTreeModuleOutlineStateSelectionKey</key>
 							<array>
 								<array>
-									<integer>12</integer>
+									<integer>3</integer>
 									<integer>0</integer>
 								</array>
 							</array>
 							<key>PBXSmartGroupTreeModuleOutlineStateVisibleRectKey</key>
-							<string>{{0, 9}, {339, 671}}</string>
+							<string>{{0, 0}, {339, 671}}</string>
 						</dict>
 						<key>PBXTopSmartGroupGIDs</key>
 						<array/>
@@ -371,8 +373,6 @@
 					<key>Dock</key>
 					<array>
 						<dict>
-							<key>BecomeActive</key>
-							<true/>
 							<key>ContentConfiguration</key>
 							<dict>
 								<key>PBXProjectModuleGUID</key>
@@ -387,35 +387,17 @@
 										<string>1CE0B20406471E060097A5F4</string>
 										<key>PBXProjectModuleLabel</key>
 										<string>QuicktimePlugin.h</string>
-										<key>_historyCapacity</key>
-										<integer>0</integer>
-										<key>bookmark</key>
-										<string>94ECA672097EC7CE00C2C7BA</string>
 										<key>history</key>
 										<array>
 											<string>944D6240085F473000600D6E</string>
-											<string>94ECA221097DC63900C2C7BA</string>
-											<string>94ECA4AE097E13C500C2C7BA</string>
 											<string>94ECA500097E16B400C2C7BA</string>
-											<string>94ECA520097E18C600C2C7BA</string>
 											<string>94ECA55F097E1D2B00C2C7BA</string>
-											<string>94ECA562097E1D2B00C2C7BA</string>
-											<string>94ECA5BE097E226600C2C7BA</string>
-											<string>94ECA667097EC7BD00C2C7BA</string>
-											<string>94ECA669097EC7BD00C2C7BA</string>
 										</array>
 										<key>prevStack</key>
 										<array>
 											<string>949CD5C5085CC32700EB8605</string>
-											<string>949CD5C6085CC32700EB8605</string>
-											<string>944D621E085F45A500600D6E</string>
 											<string>94ECA4AA097E137A00C2C7BA</string>
-											<string>94ECA522097E18C600C2C7BA</string>
 											<string>94ECA566097E1D2B00C2C7BA</string>
-											<string>94ECA567097E1D2B00C2C7BA</string>
-											<string>94ECA56A097E1D2B00C2C7BA</string>
-											<string>94ECA56B097E1D2B00C2C7BA</string>
-											<string>94ECA56C097E1D2B00C2C7BA</string>
 										</array>
 									</dict>
 									<key>SplitCount</key>
@@ -473,9 +455,9 @@
 			</array>
 			<key>TableOfContents</key>
 			<array>
-				<string>94ECA673097EC7CE00C2C7BA</string>
+				<string>9491968A09804F6D000FC37A</string>
 				<string>1CE0B1FE06471DED0097A5F4</string>
-				<string>94ECA674097EC7CE00C2C7BA</string>
+				<string>9491968B09804F6D000FC37A</string>
 				<string>1CE0B20306471E060097A5F4</string>
 				<string>1CE0B20506471E060097A5F4</string>
 			</array>
@@ -594,7 +576,7 @@
 	<key>StatusbarIsVisible</key>
 	<true/>
 	<key>TimeStamp</key>
-	<real>159303621.502314</real>
+	<real>159403871.59758699</real>
 	<key>ToolbarDisplayMode</key>
 	<integer>1</integer>
 	<key>ToolbarIsVisible</key>
@@ -609,10 +591,10 @@
 	<integer>5</integer>
 	<key>WindowOrderList</key>
 	<array>
-		<string>94ECA67C097EC7CE00C2C7BA</string>
+		<string>9491969409804F6D000FC37A</string>
 		<string>94ECA626097E2D7F00C2C7BA</string>
 		<string>1CD10A99069EF8BA00B06720</string>
-		<string>/Users/johnmci/Documents/SqueakQuicktimePlugin/SqueakQuicktime.xcodeproj</string>
+		<string>/Users/johnmci/Documents/Squeak3.8.0/platforms/Mac OS/plugins/QuicktimePlugin/SqueakQuicktime.xcodeproj</string>
 	</array>
 	<key>WindowString</key>
 	<string>338 54 1011 730 0 0 1440 878 </string>
@@ -736,8 +718,8 @@
 										<string>yes</string>
 										<key>sizes</key>
 										<array>
-											<string>{{0, 0}, {319, 314}}</string>
-											<string>{{0, 314}, {319, 390}}</string>
+											<string>{{0, 0}, {296, 309}}</string>
+											<string>{{0, 309}, {296, 395}}</string>
 										</array>
 									</dict>
 									<key>VerticalSplitView</key>
@@ -752,8 +734,8 @@
 										<string>yes</string>
 										<key>sizes</key>
 										<array>
-											<string>{{0, 0}, {319, 704}}</string>
-											<string>{{319, 0}, {823, 704}}</string>
+											<string>{{0, 0}, {296, 704}}</string>
+											<string>{{296, 0}, {846, 704}}</string>
 										</array>
 									</dict>
 								</dict>
@@ -800,14 +782,14 @@
 			<key>TableOfContents</key>
 			<array>
 				<string>1CD10A99069EF8BA00B06720</string>
-				<string>94ECA676097EC7CE00C2C7BA</string>
+				<string>9491968E09804F6D000FC37A</string>
 				<string>1C162984064C10D400B95A72</string>
-				<string>94ECA677097EC7CE00C2C7BA</string>
-				<string>94ECA678097EC7CE00C2C7BA</string>
-				<string>94ECA679097EC7CE00C2C7BA</string>
-				<string>94ECA67A097EC7CE00C2C7BA</string>
-				<string>94ECA67B097EC7CE00C2C7BA</string>
-				<string>94ECA67C097EC7CE00C2C7BA</string>
+				<string>9491968F09804F6D000FC37A</string>
+				<string>9491969009804F6D000FC37A</string>
+				<string>9491969109804F6D000FC37A</string>
+				<string>9491969209804F6D000FC37A</string>
+				<string>9491969309804F6D000FC37A</string>
+				<string>9491969409804F6D000FC37A</string>
 			</array>
 			<key>ToolbarConfiguration</key>
 			<string>xcode.toolbar.config.debug</string>
