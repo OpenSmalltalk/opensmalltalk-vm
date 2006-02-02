@@ -129,20 +129,31 @@ static void parseArguments(int argc, char **argv)
 
 void resolveWhatTheImageNameIs(char *guess)  
 {
-	char possibleImageName[1001], partial [1001], fullPath [1001], finalHFS [1001], lastPath [256];
+	char possibleImageName[MAXPATHLEN+1], partial [MAXPATHLEN+1], fullPath [MAXPATHLEN+1], finalHFS [MAXPATHLEN+1], lastPath [SHORTIMAGE_NAME_SIZE+1];
 	FSSpec		workingDirectory;
+	FSRef		theFSRef;
 	OSErr		err;
 
-	strcpy(possibleImageName, guess);
+	strncpy(possibleImageName, guess,MAXPATHLEN);
+#ifdef MACINTOSHUSEUNIXFILENAMES
+	sqFilenameFromStringOpen(fullPath, (int) possibleImageName, strlen(possibleImageName));
+	err = getFSRef(possibleImageName,&theFSRef,kCFStringEncodingUTF8);
+	if (err) {
+		SetImageNameViaString("",gCurrentVMEncoding);
+		SetShortImageNameViaString("",gCurrentVMEncoding);
+		return;
+	}
+	PathToFileViaFSRef(fullPath,MAXPATHLEN, &theFSRef, false,NULL,gCurrentVMEncoding);
+	getLastPathComponent(fullPath,lastPath,gCurrentVMEncoding);
+	SetImageNameViaString(fullPath,gCurrentVMEncoding);
+	SetShortImageNameViaString(lastPath,gCurrentVMEncoding);
+#else
 	makeHFSFromPosixPath(possibleImageName, strlen(possibleImageName), partial, nil);
 	sqFilenameFromStringOpen(fullPath, (int) partial, strlen(partial));
 	makeHFSFromPosixPath(fullPath, strlen(fullPath), finalHFS, lastPath);
 	SetImageNameViaString(finalHFS,gCurrentVMEncoding);
 	SetShortImageNameViaString(lastPath,gCurrentVMEncoding);
-	if (VMPathIsEmpty()) {
-		err = GetApplicationDirectory(&workingDirectory);
-		SetVMPath(&workingDirectory);
-	}
+#endif
 }
 
 
@@ -219,7 +230,8 @@ static void parseEnvironment(void)
 {
   char *ev= 0;
 
-  if ((ev= getenv("SQUEAK_IMAGE")))		resolveWhatTheImageNameIs(ev);
+  if ((ev= getenv("SQUEAK_IMAGE")))		
+	resolveWhatTheImageNameIs(ev);
   if ((ev= getenv("SQUEAK_MEMORY")))	gMaxHeapSize= strtobkm(ev);
   if ((ev= getenv("SQUEAK_PATHENC")))	setEncodingType(ev);
 }

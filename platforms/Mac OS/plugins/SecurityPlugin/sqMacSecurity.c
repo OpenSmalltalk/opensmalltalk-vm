@@ -36,6 +36,8 @@ static int isAccessiblePathName(char *pathName) {
   if(pathName[i] == 0) return 1; /* allow access to trusted directory */
   /* check last character in image path (e.g., backslash) */
   if(untrustedUserDirectory[i] != pathName[i]) return 0;
+
+#ifndef MACINTOSHUSEUNIXFILENAMES
   /* check if somebody wants to trick us into using relative
      paths ala Foo:My Squeak:allowed::" */
   while(pathName[i]) {
@@ -45,7 +47,8 @@ static int isAccessiblePathName(char *pathName) {
     }
     i++;
   }
-  return 1;
+#endif
+return 1;
 }
 
 static int isAccessibleFileName(char *fileName) {
@@ -55,6 +58,7 @@ static int isAccessibleFileName(char *fileName) {
     if(untrustedUserDirectory[i] != fileName[i]) return 0;
   /* check if somebody wants to trick us into using relative
      paths ala Foo:My Squeak:allowed::" */
+#ifndef MACINTOSHUSEUNIXFILENAMES
   while(fileName[i]) {
     if(fileName[i] == ':') {
       if(fileName[i+1] == ':')
@@ -62,6 +66,7 @@ static int isAccessibleFileName(char *fileName) {
     }
     i++;
   }
+#endif
   return 1;
 }
 
@@ -210,19 +215,21 @@ int ioInitSecurity(void) {
   data =  ((char * (*) (int)) iLoadAS)(1);
   strcpy(secureUserDirectory, data);
   fixPath(secureUserDirectory);
+#ifndef MACINTOSHUSEUNIXFILENAMES
+  strcat(secureUserDirectory, ":secure");
+#else
+  strcat(secureUserDirectory,  "/secure");
+#endif
+  fixPath(secureUserDirectory);
   
-  /* establish untrusted user directory */
-
-	/* get the path to the system folder preference area*/
+#ifndef MACINTOSHUSEUNIXFILENAMES
 	err = FindFolder(kOnSystemDisk, kPreferencesFolderType, kDontCreateFolder, &vRefNum, &dirID);
 	if (err != noErr) {
       strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-      fixPath(untrustedUserDirectory);
+	  fixPath(untrustedUserDirectory);
       return 1;
 	}
-	
-	// Look for folder, if not found abort */
-        FSMakeFSSpecCompat(vRefNum,dirID,"\p",&spec);
+	FSMakeFSSpecCompat(vRefNum,dirID,"\p",&spec);
 	PathToFile(untrustedUserDirectory,255,&spec,gCurrentVMEncoding);
 	strcat(untrustedUserDirectory,"Squeak:Internet");
  	err = makeFSSpec(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec);
@@ -237,8 +244,35 @@ int ioInitSecurity(void) {
 		if (!dir_CreateSecurity(untrustedUserDirectory,strlen(untrustedUserDirectory))) {
 	      strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
 		  fixPath(untrustedUserDirectory);
+		  return 0;
 		}
 	}
+#else
+	FSRef prefFolder;
+	err = FSFindFolder(kOnSystemDisk,kPreferencesFolderType,kDontCreateFolder,&prefFolder);
+  	if (err != noErr) {
+	  strcpy(untrustedUserDirectory, "/foobar/tooBar/forSqueak/bogus/");
+      fixPath(untrustedUserDirectory);
+      return 1;
+	}
+	PathToFileViaFSRef(untrustedUserDirectory,255,&prefFolder,false,NULL,gCurrentVMEncoding);        
+	strcat(untrustedUserDirectory,"Squeak/Internet");
+ 	if (err != noErr) {
+	      strcpy(untrustedUserDirectory, "/foobar/tooBar/forSqueak/bogus/");
+	      fixPath(untrustedUserDirectory);
+		return 0;
+	}	
+	strcat(untrustedUserDirectory,"/My Squeak");
+	FSRef theFSRef;
+	err = getFSRef(untrustedUserDirectory,&theFSRef,gCurrentVMEncoding);	
+	if (err != noErr) {
+		if (!dir_CreateSecurity(untrustedUserDirectory,strlen(untrustedUserDirectory))) {
+	      strcpy(untrustedUserDirectory, "foobar/tooBar/forSqueak/bogus/");
+		  fixPath(untrustedUserDirectory);
+		  return 0;
+		}
+	}
+#endif
   return 1;
 }
 
@@ -269,7 +303,7 @@ int _ioSetSocketAccess(int enable) {
 void fixPath(char *path) {
     long i;
     for(i=strlen(path);i>0;i--) 
-        if(path[i-1]==':') {
+        if(path[i-1]==DELIMITERInt) {
             path[i-1]=0x00;
             return;
         }
@@ -282,6 +316,7 @@ int dir_CreateSecurity(char *pathString, int pathStringLength) {
 	   create folders elsewhere. */
 
     //JMM tests create file in Vm directory, other place, other volume
+#ifndef MACINTOSHUSEUNIXFILENAMES
     
     FSSpec spec;
     OSErr  err;
@@ -291,4 +326,8 @@ int dir_CreateSecurity(char *pathString, int pathStringLength) {
         return false;
         
    	return FSpDirCreate(&spec,smSystemScript,&createdDirID) == noErr;
+#else
+	return dir_Create(pathString, pathStringLength);
+#endif
+
 }

@@ -31,6 +31,7 @@
 #ifdef macintoshSqueak
 //#define BROWSERPLUGIN
 //#define SQUEAK_BUILTIN_PLUGIN
+
 /* replace the image file manipulation macros with functions */
 #undef sqImageFile
 #undef sqImageFileClose
@@ -40,6 +41,7 @@
 #undef sqImageFileSeek
 #undef sqImageFileWrite
 #undef sqImageFileStartLocation
+
 #undef sqAllocateMemory
 
 //64bit function pointers undef
@@ -65,6 +67,7 @@
     #define fseek fseeko
 	int	 ftruncate(int, off_t);
     typedef FILE *sqImageFile;
+	#define MAXPATHLEN 1000
 #else
     #if defined(__MWERKS__)
         #include <stat.h>
@@ -102,6 +105,7 @@ size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImage
 void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
 int         sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 squeakFileOffsetType       sqImageFileStartLocation(int fileRef, char *filename,squeakFileOffsetType imageSize);
+
 usqInt	    sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize);
 
 #define sqAllocateMemory(x,y) sqAllocateMemoryMac(x,&y);

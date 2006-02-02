@@ -16,6 +16,11 @@
 	Mar 24th, 2005 JMM add routine for posix to HFS+
 	Jan 7th, 2006 JMM rework macosxpath & ioFilenamefromStringofLengthresolveAliases
 */
+#ifdef MACINTOSHUSEUNIXFILENAMES
+	#include "sqMacUnixFileInterface.h"
+#endif
+
+#ifndef MACINTOSHUSEUNIXFILENAMES
 #if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
     extern CFStringEncoding gCurrentVMEncoding;
@@ -47,3 +52,5 @@ int doItTheHardWay(unsigned char *pathString,FSSpec *spec,Boolean noDrillDown);
 int lookupPath(char *pathString, int pathStringLength, FSSpec *spec,Boolean noDrillDown,Boolean tryShortCut);
 Boolean isVmPathVolumeHFSPlus(void);
 int makeHFSFromPosixPath(char *pathString, int pathStringLength,char *dst, char *lastPath) ;
+
+#endif

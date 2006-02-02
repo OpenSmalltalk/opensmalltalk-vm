@@ -67,6 +67,7 @@
 *  3.8.0bx Jul 20th, 2004 JMM multiple window support
 *  3.8.7b2 March 19th, 2005 JMM add command line unix interface
 *  3.8.9b2 Sept 22nd, 2005 JMM add logic to override Squeak.image name 
+*  3.8.10b1 Jan 31st, 2005 JMM convert to unix file names.
 */
 
 
@@ -91,7 +92,11 @@
 #include "sqMacEncoding.h"
 #if defined(__APPLE__) && defined(__MACH__)
 #include "sqMacUnixCommandLineInterface.h"
+#include <unistd.h>
 #endif 
+#ifdef MACINTOSHUSEUNIXFILENAMES
+#include "sqMacUnixFileInterface.h"
+#endif
 
 #ifdef __MPW__
 QDGlobals 		qd;
@@ -157,7 +162,7 @@ int main(void) {
 	EventRecord theEvent;
 	sqImageFile f;
 	OSErr err;
-	char shortImageName[256];
+	char shortImageName[SHORTIMAGE_NAME_SIZE+1];
 #if !defined(MINIMALVM)  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
         long threadGestaltInfo;
 #endif
@@ -187,6 +192,26 @@ int main(void) {
 	SetUpClipboard();
 	fetchPrefrences();
 	SetUpPixmap();
+
+// Get spec to the working directory
+#ifdef MACINTOSHUSEUNIXFILENAMES
+	SetVMPathFromApplicationDirectory();
+#else
+	FSSpec	workingDirectory;
+    err = GetApplicationDirectory(&workingDirectory);
+	// Convert that to a full path string.
+    SetVMPath(&workingDirectory);
+#endif
+
+	{
+		// Change working directory, this works under os-x, previous logic worked pre os-x 10.4
+		
+		char target[4097],temp[4097];
+		getVMPathWithEncoding(target,gCurrentVMEncoding);
+		sqFilenameFromStringOpen(temp,(long) target, strlen(target));
+		chdir(temp);
+	}
+
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 	unixArgcInterface(argCnt,argVec,envVec);
 #endif
@@ -215,8 +240,12 @@ int main(void) {
             if (imageURL != NULL) {
 				CFStringRef imagePath;
 				
+	#ifdef MACINTOSHUSEUNIXFILENAMES
+                imagePath = CFURLCopyFileSystemPath (imageURL, kCFURLPOSIXPathStyle);
+	#else
                 imagePath = CFURLCopyFileSystemPath (imageURL, kCFURLHFSPathStyle);
-                SetImageNameViaCFString(imagePath);
+	#endif 
+				SetImageNameViaCFString(imagePath);
                 CFRelease(imageURL);
                 CFRelease(imagePath);
             } else {
@@ -234,10 +263,6 @@ int main(void) {
 	}
 #else
 	if (ImageNameIsEmpty()) {
-            FSSpec	workingDirectory;
-		err = GetApplicationDirectory(&workingDirectory);
-		if (err != noErr) 
-                    error("Could not obtain default directory");
 		CopyCStringToPascal(gSqueakImageName,workingDirectory.name);
 		SetImageName(&workingDirectory);
 	}
@@ -251,22 +276,33 @@ int main(void) {
 	while (f == NULL) {
 	    //Failure attempt to ask the user to find the image file
 	    
+		
+#ifdef MACINTOSHUSEUNIXFILENAMES
+		{
+			char pathName[MAXPATHLEN+1];
+            err = squeakFindImage(pathName);
+			if (err) 
+				ioExit();
+			getLastPathComponent(pathName,shortImageName,gCurrentVMEncoding);
+			SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
+			SetImageNameViaString(pathName,gCurrentVMEncoding);
+		}
+#else
 	    FSSpec vmfsSpec,imageFsSpec;
-	    WDPBRec wdPB;
-            char path[VMPATH_SIZE + 1];
+		char path[VMPATH_SIZE + 1];
             
-            getVMPathWithEncoding(path,gCurrentVMEncoding);
+		getVMPathWithEncoding(path,gCurrentVMEncoding);
 
-	    err =  makeFSSpec(path,strlen(path),&vmfsSpec);
+	    err =  makeFSSpec(path,&vmfsSpec);
 	    if (err) 
 	        ioExit();
             err = squeakFindImage(&vmfsSpec,&imageFsSpec);
 	    if (err) 
 	        ioExit();
-		
+
 		{
 			Boolean okay;
-			unsigned char	name[256];
+			unsigned char	name[SHORTIMAGE_NAME_SIZE+1];
 			int			isDirectory=0,index=0,creationDate,modificationDate;
 			long        parentDirectory;
 			squeakFileOffsetType sizeIfFile;
@@ -279,29 +315,21 @@ int main(void) {
 								&modificationDate,&sizeIfFile,&longFileName);
 			CopyPascalStringToC(longFileName,shortImageName);
 		}
+			/* make the image or document directory the working directory */
+		{
+			WDPBRec wdPB;
+			wdPB.ioNamePtr = NULL;
+			wdPB.ioVRefNum = imageFsSpec.vRefNum;
+			wdPB.ioWDDirID = imageFsSpec.parID;
+			PBHSetVolSync(&wdPB);
+		}
 		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
 		SetImageName(&imageFsSpec);
+#endif
 
-			/* make the image or document directory the working directory */
-    	wdPB.ioNamePtr = NULL;
-    	wdPB.ioVRefNum = imageFsSpec.vRefNum;
-    	wdPB.ioWDDirID = imageFsSpec.parID;
-    	PBHSetVolSync(&wdPB);
-		
-    	f = sqImageFileOpen(getImageName(), "rb");
+		f = sqImageFileOpen(getImageName(), "rb");
  	}
-	
-#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
-	{
-		// Change working directory, this works under os-x, previous logic worked pre os-x 10.4
-		
-		char target[4097],temp[4097];
-		getVMPathWithEncoding(target,gCurrentVMEncoding);
-		sqFilenameFromStringOpen(temp,(long) target, strlen(target));
-		chdir(temp);
-	}
-#endif 
-	
+
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
 	sqImageFileClose(f);
         
@@ -557,8 +585,10 @@ char * GetAttributeString(int id) {
 		Gestalt(gestaltSysArchitecture, &myattr);
 		if (myattr == gestalt68k) 
 			return "68K";
-		else
+		if (myattr == gestaltPowerPC) 
 			return "powerpc";
+		if (myattr == gestaltIntel) 
+			return "intel";
 	}
 
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
@@ -566,7 +596,7 @@ char * GetAttributeString(int id) {
             CFBundleRef mainBundle;
             CFStringRef versionString;
             static char data[255];
-            
+#warning does not work for nsplugin            
             mainBundle = CFBundleGetMainBundle ();
             versionString = CFBundleGetValueForInfoDictionaryKey(mainBundle, CFSTR("CFBundleShortVersionString"));
             bzero(data,255);
@@ -582,7 +612,11 @@ char * GetAttributeString(int id) {
 #endif
 
 #if TARGET_API_MAC_CARBON
+  #ifdef MACINTOSHUSEUNIXFILENAMES
+	if (id == 1201) return "255";
+  #else
 	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
+  #endif
 #endif
 	if (id == 1202) {
 		static char data[32];
@@ -714,7 +748,7 @@ void fetchPrefrences() {
     setEncodingType(encoding);
     
     if (gSqueakImageNameStringRef) 
-        CFStringGetCString (gSqueakImageNameStringRef, gSqueakImageName, 2048, kCFStringEncodingMacRoman);
+        CFStringGetCString (gSqueakImageNameStringRef, gSqueakImageName, IMAGE_NAME_SIZE+1, kCFStringEncodingMacRoman);
 	
     if (SqueakWindowType) 
         CFNumberGetValue(SqueakWindowType,kCFNumberLongType,&gSqueakWindowType);

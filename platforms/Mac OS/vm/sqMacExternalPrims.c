@@ -20,7 +20,9 @@
 #include "sqMacExternalPrims.h"
 #include "sqMacFileLogic.h"
 #include "sqMacEncoding.h"
+#include "sqMacUIConstants.h"
 
+//#define JMMDEBUG
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath);
 void createBrowserPluginPath(char *pluginDirPath);
 
@@ -32,7 +34,7 @@ void createBrowserPluginPath(char *pluginDirPath);
 	WARNING: never primitiveFail() within, just return 0
 */
 void* ioLoadModule(char *pluginName) {
-	char pluginDirPath[1024];
+	char pluginDirPath[MAXPATHLEN+1];
 	CFragConnectionID libHandle;
 #ifndef BROWSERPLUGIN
     #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
@@ -81,11 +83,14 @@ void* ioLoadModule(char *pluginName) {
 
 			bundleURL2 = CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, bundleURL, resourcePathString, false );
 			CFRelease(bundleURL);
-	
+	#ifdef MACINTOSHUSEUNIXFILENAMES
+			filePath = CFURLCopyFileSystemPath (bundleURL2, kCFURLPOSIXPathStyle);
+	#else
 			filePath = CFURLCopyFileSystemPath (bundleURL2, kCFURLHFSPathStyle);
+	#endif
 			CFRelease(bundleURL2);
 			
-			CFStringGetCString (filePath,pluginDirPath,1000, gCurrentVMEncoding);
+			CFStringGetCString (filePath,pluginDirPath,DOCUMENT_NAME_SIZE, gCurrentVMEncoding);
 			CFRelease(filePath);
 			
 			libHandle = LoadLibViaPath(pluginName, pluginDirPath);
@@ -196,6 +201,10 @@ OSStatus LoadFrameworkBundle(SInt16 folderLocation,CFStringRef framework, CFBund
 	if (baseURL != nil) {
 		CFRelease(baseURL);
 	}	
+
+	#ifdef JMMDEBUG
+	fprintf(stderr,"\nsystem location %i error %i",folderLocation,err);
+	#endif
 	
 	return err;
 }
@@ -229,19 +238,19 @@ sqInt ioFreeModule(void * moduleHandle) {
 }
 
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
-        char				tempDirPath[1024];
-		char				cFileName[1000];
+        char				tempDirPath[MAXPATHLEN+1];
+		char				cFileName[MAXPATHLEN+1];
 		CFragConnectionID   libHandle = 0;
 		CFStringRef			filePath;
         CFURLRef 			theURLRef;
         CFBundleRef			theBundle;
         OSStatus			err;
         
-	strncpy(tempDirPath,pluginDirPath,1023);
-        if (tempDirPath[strlen(tempDirPath)-1] != ':')
-            strcat(tempDirPath,":");
+		strncpy(tempDirPath,pluginDirPath,MAXPATHLEN);
+        if (tempDirPath[strlen(tempDirPath)-1] != DELIMITERInt)
+            strcat(tempDirPath,DELIMITER);
             
-        if ((strlen(tempDirPath) + strlen(libName) + 7) > 1023)
+        if ((strlen(tempDirPath) + strlen(libName) + 7) > MAXPATHLEN)
             return nil;
         
         strcat(tempDirPath,libName);
@@ -250,18 +259,29 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 
 		/* copy the file name into a null-terminated C string */
 		sqFilenameFromString(cFileName, (int) &tempDirPath, strlen(tempDirPath));
+		#ifdef JMMDEBUG
+		fprintf(stderr,"\nLoadLibViaPath file %s",cFileName);
+		#endif
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),gCurrentVMEncoding,false);
     
         theURLRef = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
-	CFRelease(filePath);
-        if (theURLRef == nil)
+		CFRelease(filePath);
+        if (theURLRef == nil) {
+			#ifdef JMMDEBUG
+			fprintf(stderr,"\ntheURLRef was nil so bail");
+			#endif
             return nil;
+		}
 
         theBundle = CFBundleCreate(NULL,theURLRef);
         CFRelease(theURLRef);
         
         if (theBundle == nil) {
             CFStringRef libNameCFString;
+			#ifdef JMMDEBUG
+			fprintf(stderr,"\nbundle was nil, trying to load from other system locations");
+			#endif
+
            libNameCFString = CFStringCreateWithCString(kCFAllocatorDefault,libName,gCurrentVMEncoding);
             err = LoadFrameworkBundle(kUserDomain,libNameCFString, &theBundle);
 			if (err != noErr)
@@ -272,19 +292,33 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 				err = LoadFrameworkBundle(kSystemDomain,libNameCFString, &theBundle);
 				
             CFRelease(libNameCFString);
-            if (err != noErr)
+            if (err != noErr) {
+				#ifdef JMMDEBUG
+				fprintf(stderr,"\nno bundle so bail, last error %i",err);
+				#endif
                 return nil;
+			}
         }  
         
-        if (theBundle == nil) 
+        if (theBundle == nil) {
+			#ifdef JMMDEBUG
+			fprintf(stderr,"\nno bundle so bail");
+			#endif
             return nil;
+		}
             
         if (!CFBundleLoadExecutable(theBundle)) {
+			#ifdef JMMDEBUG
+			fprintf(stderr,"\nBundle found but failed CFBundleLoadExecutable");
+			#endif
             CFRelease(theBundle);
             return nil;
         }
         libHandle = (CFragConnectionID) theBundle;
 
+	#ifdef JMMDEBUG
+		fprintf(stderr,"\nFound Bundle %i",libHandle);
+	#endif
 	return libHandle;
 }
 
@@ -324,17 +358,17 @@ sqInt ioFreeModule( void  *moduleHandle) {
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 	FSSpec				fileSpec;
 	Str255				problemLibName;
-        char				tempDirPath[1024];
+        char				tempDirPath[MAXPATHLEN+1];
         Ptr				junk;
 	CFragConnectionID		libHandle = 0;
 	OSErr				err = noErr;
 
-	strncpy(tempDirPath,pluginDirPath,1023);
-        if (tempDirPath[strlen(tempDirPath)-1] != ':')
-            strcat(tempDirPath,":");
+	strncpy(tempDirPath,pluginDirPath,MAXPATHLEN);
+        if (tempDirPath[strlen(tempDirPath)-1] != DELIMITER)
+            strcat(tempDirPath,DELIMITER);
             
         strcat(tempDirPath,libName);
-	err =makeFSSpec(tempDirPath,strlen(tempDirPath),&fileSpec);
+	err =makeFSSpec(tempDirPath,&fileSpec);
 	if (err) return nil; /* bad plugin directory path */
 
         err = GetDiskFragment(
@@ -353,7 +387,7 @@ void createBrowserPluginPath(char *pluginDirPath) {
     
     lengthOfPath--;
     pluginDirPath[lengthOfPath] = 0x00;
-    
+#warning broken    
     for (i=lengthOfPath;i>=0;i--) {
         if (pluginDirPath[i] == ':') {
             pluginDirPath[i] = 0x00;

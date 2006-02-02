@@ -33,6 +33,7 @@ void getVMPathWithEncoding(char *target,UInt32 encoding) {
     CFStringGetCString (vmPathString, target, VMPATH_SIZE, encoding);
 }
 
+#ifndef MACINTOSHUSEUNIXFILENAMES
 void SetVMPath(FSSpec *workingDirectory) {
     char path[VMPATH_SIZE + 1];
     
@@ -47,6 +48,15 @@ void SetVMPath(FSSpec *workingDirectory) {
 		CFStringNormalize((CFMutableStringRef)vmPathString, kCFStringNormalizationFormKC); // pre-combined
 	CFRetain(vmPathString);
 }
+#else
+void SetVMPathFromCFString(CFMutableStringRef strRef) {    
+    if (vmPathString != NULL)  
+        CFRelease(vmPathString);
+ 	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+	vmPathString = strRef;
+	CFRetain(vmPathString);
+}
+#endif 
 
 Boolean VMPathIsEmpty() {
     char path[VMPATH_SIZE + 1];
@@ -208,6 +218,10 @@ void setEncodingType (char * string) {
 #if TARGET_API_MAC_CARBON
       if (strcmp("ShiftJIS",string) == 0)
           gCurrentVMEncoding = kCFStringEncodingShiftJIS;
+#endif
+#ifdef MACINTOSHUSEUNIXFILENAMES
+		extern void *uxPathEncoding;
+		setEncoding(&uxPathEncoding, string);
 #endif
   }
   

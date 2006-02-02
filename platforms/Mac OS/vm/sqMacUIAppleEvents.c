@@ -57,24 +57,14 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 	ProcessSerialNumber processID;
 	ProcessInfoRec      processInformation;
 	Str255              name; 
-        char                cname[256];
+        char                cname[SHORTIMAGE_NAME_SIZE+1];
 	FSSpec 		    workingDirectory;
 #pragma unused(aevt)
 #pragma unused(refCon)
 #pragma unused(reply)
 
-	// Get spec to the working directory
-    err = GetApplicationDirectory(&workingDirectory);
-    if (err != noErr) 
-        return err;
-
-	// Convert that to a full path string.
-    SetVMPath(&workingDirectory);
-
 	checkValueForEmbeddedImage = calculateStartLocationForImage();
 	if (checkValueForEmbeddedImage == 0) {
-	    /* use default image name in same directory as the VM */
-        SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
 	    return noErr;
 	}
 
@@ -109,19 +99,10 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 	FSSpec		fileSpec,workingDirectory;
 	WDPBRec		pb;
 	FInfo		finderInformation;
-	char            shortImageName[256];
+	char            shortImageName[SHORTIMAGE_NAME_SIZE+1];
 	
 #pragma unused(reply)
 #pragma unused(refCon)  /* reference args to avoid compiler warnings */
-
-	/* record path to VM's home folder */
-	
-    if (VMPathIsEmpty()) {
-        err = GetApplicationDirectory(&workingDirectory);
-        if (err != noErr) 
-            return err;    
-        SetVMPath(&workingDirectory);
-	}
 	
 	/* copy document list */
 	err = AEGetKeyDesc(aevt, keyDirectObject, typeAEList, &fileList);
@@ -158,9 +139,16 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     	if (err) 
     	    goto done;
     		
+#ifdef MACINTOSHUSEUNIXFILENAMES
+		{
+			char pathName[IMAGE_NAME_SIZE+1];				
+			PathToFile(pathName, IMAGE_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
+			getLastPathComponent(pathName,shortImageName,gCurrentVMEncoding);
+		}
+#else
  		{
 			Boolean okay;
-			unsigned char	name[256];
+			unsigned char	name[SHORTIMAGE_NAME_SIZE+1];
 			int			isDirectory=0,index=0,creationDate,modificationDate;
 			long        parentDirectory;
 			squeakFileOffsetType sizeIfFile;
@@ -173,6 +161,7 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 								&modificationDate,&sizeIfFile,&longFileName);
 			CopyPascalStringToC(longFileName,shortImageName);
 		}
+#endif
 		SetShortImageNameViaString(shortImageName,getEncoding());
         SetImageName(&fileSpec);
    }
@@ -200,7 +189,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     EventRecord theEvent;
     HFSFlavor   dropFile;
     Point       where;
-	char        shortImageName[256];
+	char        shortImageName[SHORTIMAGE_NAME_SIZE+1];
     
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
@@ -316,7 +305,7 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	AEKeyword	keyword;
 	FSSpec		fileSpec;
 	FInfo		finderInformation;
-        char            shortImageName[256];
+        char            shortImageName[SHORTIMAGE_NAME_SIZE+1];
 
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
@@ -334,9 +323,17 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	    if (err) 
 	        goto done;
                 
+#ifdef MACINTOSHUSEUNIXFILENAMES
+		{
+			char pathName[MAXPATHLEN+1];
+				
+			PathToFile(pathName, MAXPATHLEN, &fileSpec,gCurrentVMEncoding);
+			getLastPathComponent(pathName,shortImageName,gCurrentVMEncoding);
+		}
+#else
 		{
 			Boolean okay;
-			unsigned char	name[256];
+			unsigned char	name[SHORTIMAGE_NAME_SIZE+1];
 			int			isDirectory=0,index=0,creationDate,modificationDate;
 			long        parentDirectory;
 			squeakFileOffsetType sizeIfFile;
@@ -349,6 +346,7 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 								&modificationDate,&sizeIfFile,&longFileName);
 			CopyPascalStringToC(longFileName,shortImageName);
 		}
+#endif
 		SetShortImageNameViaString(shortImageName,getEncoding());
 
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim')

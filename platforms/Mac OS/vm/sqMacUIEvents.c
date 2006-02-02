@@ -84,6 +84,7 @@ notes: IsUserCancelEventRef
 	static void setRepeatInKeyMap(int keyCode);
 	void SetUpCarbonEventForWindowIndex(int index);
 	void doPendingFlush(void);
+	int ioLowResMSecs(void);
 #endif
 
 /*** Variables -- Event Recording ***/
@@ -2070,6 +2071,7 @@ int ModifierStateCarbon(EventRef event,UInt32 whatHappened) {
 }
 
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData) {
+#ifndef UNIVERSALBINARY
 #ifndef BROWSERPLUGIN
     if (gDisablePowerManager && gTapPowerManager) {
         IdleUpdate();
@@ -2078,6 +2080,7 @@ static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* use
 #endif
     }
 #endif
+#endif 
 }
 
 

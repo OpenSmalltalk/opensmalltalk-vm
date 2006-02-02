@@ -191,7 +191,7 @@ char		*pluginArgName[MAX_ARG_STRING_LENGTH];
 char		*pluginArgValue[MAX_ARG_STRING_LENGTH];
 Boolean     ignoreFirstEvent=false,gIWasRunning=false,gPendingFullScreen=false;
 int			squeakHeapMBytes = STARTINGsqueakHeapMBytes;  /* default heap size, override via the "memory" EMBED tag */
-char		squeakPluginImageName[256] = IMAGE_NAME;
+char		squeakPluginImageName[SHORTIMAGE_NAME_SIZE+1] = IMAGE_NAME;
 char		failureURL[1024] = "";
 NPP			thisInstance	= nil;
 WindowPtr gAFullscreenWindow = nil;
@@ -1385,7 +1385,7 @@ int  ioSetFullScreenRestore()
 
 int InitFilePathsViaDomain(SInt16 domain) {
 	short vRefNum;
-	char imageInPreferenceFolder[256];
+	char imageInPreferenceFolder[SHORTIMAGE_NAME_SIZE+1];
 	long dirID;
 	OSErr err;
 	FSSpec fileSpec;
@@ -1484,7 +1484,7 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
 }
 
 void GetTempFSSpec(FSSpec *spec) {
-    char tempName[1024+1];
+    char tempName[MAXPATHLEN+1];
     CFURLRef    sillyThing;
     CFStringRef filePath;
     
@@ -1495,9 +1495,9 @@ void GetTempFSSpec(FSSpec *spec) {
     CFRelease(filePath);
     filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
     CFRelease(sillyThing);
-    CFStringGetCString (filePath,tempName, 1024, kCFStringEncodingMacRoman);
+    CFStringGetCString (filePath,tempName, MAXPATHLEN, kCFStringEncodingMacRoman);
     CFRelease(filePath);
-    makeFSSpec(tempName, strlen(tempName),spec);
+    makeFSSpec(tempName,spec);
 }
 
 #endif
@@ -1797,7 +1797,7 @@ void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 	   cache folder is outside the Squeak sandbox. That is why
 	   we only allow reading of this file. Sets the primitive
 	   failure flag if not successful. */
-    char fileName[1024];
+    char fileName[MAXPATHLEN+1];
     
     if (*MacfileName == 0x00) {
         interpreterProxy->success(false);

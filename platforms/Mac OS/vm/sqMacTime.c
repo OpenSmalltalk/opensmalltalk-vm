@@ -290,6 +290,23 @@ int ioMSecs() {
     return ioMicroMSecs();
 }
 
+time_t convertToSqueakTime(time_t unixTime)
+{
+#ifdef HAVE_TM_GMTOFF
+  unixTime+= localtime(&unixTime)->tm_gmtoff;
+#else
+# ifdef HAVE_TIMEZONE
+  unixTime+= ((daylight) * 60*60) - timezone;
+# else
+#  error: cannot determine timezone correction
+# endif
+#endif
+  /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+     and 52 non-leap years later than Squeak. */
+  return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
+}
+
+
 /*void sqHeartBeatActions(int now) {
     static int past=0;
     

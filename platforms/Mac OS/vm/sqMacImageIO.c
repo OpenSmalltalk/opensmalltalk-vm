@@ -124,7 +124,7 @@ void sqImageFileClose(sqImageFile f) {
 }
 
 sqImageFile sqImageFileOpen(char *fileName, char *mode) {
-    char cFileName[1024];
+    char cFileName[MAXPATHLEN+1];
     sqImageFile remember;
     
     sqFilenameFromStringOpen(cFileName,(long) fileName, strlen(fileName));
@@ -175,7 +175,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode) {
 	FInfo fileInfo;
         FSSpec imageSpec;
         
-        makeFSSpec(fileName, strlen(fileName), &imageSpec);
+        makeFSSpec(fileName, &imageSpec);
 	if (strchr(mode, 'w') != null) 
 	    err = FSpOpenDF(&imageSpec,fsRdWrPerm, &fRefNum);
 	 else
@@ -295,7 +295,7 @@ squeakFileOffsetType sqImageFileStartLocation(int fileRef, char *filename, squea
     FSSpec  imageSpec;
     
 #pragma unused(fileRef)
-    makeFSSpec(filename, strlen(filename), &imageSpec);
+    makeFSSpec(filename, &imageSpec);
     err = FSpGetFInfo(&imageSpec,&fileInfo);
     if (err != noErr) return 0; //This should not happen
     
