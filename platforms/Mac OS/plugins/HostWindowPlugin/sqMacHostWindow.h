@@ -26,6 +26,7 @@ typedef struct windowDescriptorBlock {
 	int rememberTicker;
 	int dirty;
 	int sync;
+	int locked;
 	int	width;
 	int	height;
 #endif

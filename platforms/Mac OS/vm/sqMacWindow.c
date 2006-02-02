@@ -65,7 +65,8 @@ WindowPtr getSTWindow(void) {
 #if TARGET_API_MAC_CARBON
 extern struct VirtualMachine *interpreterProxy;
 int ioSetFullScreenActual(int fullScreen);
-void SetupSurface(void);
+void SetupSurface(int whichWindowIndex);
+extern int ioLowResMSecs(void);
 
 int ioSetFullScreen(int fullScreen) {
         void *  giLocker;
@@ -500,7 +501,6 @@ int ioShowDisplayOnWindow( unsigned int* dispBitsIndex, int width, int height, i
 	if (gWindowsIsInvisible) {
 		sqShowWindow(1);
 		gWindowsIsInvisible = false;
-	   //  NOT YET givers poor performance SetupSurface();
 	}
 	return 1;
 }
@@ -548,10 +548,11 @@ int ioShowDisplayOnWindow(
 	CGRect		clip;
 	windowDescriptorBlock *targetWindowBlock;
 	CGDataProviderRef provider;
-	
+
 	if (gWindowsIsInvisible) {
-		if (getSTWindow() == NULL)
+		if (getSTWindow() == NULL) {
 			makeMainWindow();
+		}
 		if (colorspace == NULL) {
 				// Get the Systems Profile for the main display
 			CMProfileRef sysprof = NULL;
@@ -628,9 +629,10 @@ int ioShowDisplayOnWindow(
 	{ 
 			extern Boolean gSqueakUIFlushUseHighPercisionClock;
 			extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
+			
 			int now = (gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs()) - targetWindowBlock->rememberTicker;
  
-		if ((now >= gSqueakUIFlushPrimaryDeferNMilliseconds) || (now < 0)) {
+		if (((now >= gSqueakUIFlushPrimaryDeferNMilliseconds) || (now < 0))) {
 			CGContextFlush(targetWindowBlock->context);
 			targetWindowBlock->dirty = 0;
 			targetWindowBlock->rememberTicker = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
@@ -856,6 +858,8 @@ int makeMainWindow(void) {
 #endif
 #endif 
 #endif
+
+	//SetupSurface(1);
 	return (int) window;
 }
 
@@ -1109,7 +1113,6 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 
 GDHandle	getThatDominateGDevice(WindowPtr window) {
 	GDHandle		dominantGDevice=NULL;
-	Rect			ignore;
 #if TARGET_API_MAC_CARBON
 	GetWindowGreatestAreaDevice((WindowRef) window,kWindowContentRgn,&dominantGDevice,NULL); 
 #else
@@ -1509,11 +1512,10 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 }
   
 
-#if JMMFoo 
 #include "SurfacePlugin.h"
 
 int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* isMSB);
-int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h);
+char *osxLockSurface(int handle, int *pitch, int x, int y, int w, int h);
 int osxUnlockSurface(int handle, int x, int y, int w, int h);
 int osxShowSurface(int handle, int x, int y, int w, int h);
 
@@ -1530,48 +1532,51 @@ static sqSurfaceDispatch osxTargetDispatch = {
 static fn_ioRegisterSurface registerSurface = 0;
 static fn_ioUnregisterSurface unregisterSurface = 0;
 static int surfaceID;
-static int unknown=0x0000BEEF;
 
-void SetupSurface() {
+void SetupSurface(int whichWindowIndex) {
     registerSurface = (fn_ioRegisterSurface) interpreterProxy->ioLoadFunctionFrom("ioRegisterSurface","SurfacePlugin");
     unregisterSurface = (fn_ioUnregisterSurface) interpreterProxy->ioLoadFunctionFrom("ioUnregisterSurface","SurfacePlugin");
-    (*registerSurface)(unknown, &osxTargetDispatch, &surfaceID);
+    (*registerSurface)(whichWindowIndex, &osxTargetDispatch, &surfaceID);
 }
 
 
-int osxGetSurfaceFormat(int handle, int* width, int* height, int* depth, int* isMSB) {
-    CGrafPtr	windowPort = GetWindowPort(getSTWindow());
+int osxGetSurfaceFormat(int index, int* width, int* height, int* depth, int* isMSB) {
     PixMapHandle pix;
     Rect        rectangle;
     
-    LockPortBits(windowPort); 
-    pix = GetPortPixMap(windowPort);
+    pix = GetPortPixMap(GetWindowPort(windowHandleFromIndex(index)));
     *depth= GetPixDepth(pix);
     GetPixBounds(pix,&rectangle);
     *width = rectangle.right - rectangle.left;
     *height = rectangle.bottom - rectangle.top;
     *isMSB = 1;
-    UnlockPortBits(windowPort);
+#warning "fix for intel"
     return 1;
 }
 
-int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h) {
-    static Boolean firstTime=true;
+char *osxLockSurface(int index, int *pitch, int x, int y, int w, int h) {
+    static int rememberW=0;
     static int offsetTitle=0;
-    CGrafPtr    windowPort = GetWindowPort(getSTWindow());
+	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(index);
+    CGrafPtr    windowPort = GetWindowPort(targetWindowBlock->handle);
     PixMapHandle pixMap;
-    
-    LockPortBits(windowPort);
+	
+    if (!targetWindowBlock->locked) {
+		LockPortBits(windowPort);
+		targetWindowBlock->locked = ioMSecs();
+//		fprintf(stderr,"<L %i> ",ioMSecs());
+	}
+	
     pixMap =  GetPortPixMap(windowPort);
     *pitch = GetPixRowBytes(pixMap);
 
-    if (firstTime) {
+    if (rememberW == 0) {
         Rect structureRect;
         RgnHandle rect;
-        firstTime = false;
-             
+
+		rememberW = 1;	
         rect = NewRgn();            
-        GetWindowRegion(getSTWindow(),kWindowTitleBarRgn,rect);
+        GetWindowRegion(windowHandleFromIndex(index),kWindowTitleBarRgn,rect);
         GetRegionBounds(rect,&structureRect);
         offsetTitle = (structureRect.bottom- structureRect.top)* *pitch;
         DisposeRgn(rect);
@@ -1580,20 +1585,46 @@ int osxLockSurface(int handle, int *pitch, int x, int y, int w, int h) {
     return (char *)GetPixBaseAddr(pixMap) + offsetTitle;
 }
 
-int osxUnlockSurface(int handle, int x, int y, int w, int h) {
-    UnlockPortBits(GetWindowPort(getSTWindow())); 
+int osxUnlockSurface(int index, int x, int y, int w, int h) {
+    //NOPE UnlockPortBits(GetWindowPort(windowHandleFromIndex(index))); 
+	return 1;
 }
 
-int osxShowSurface(int handle, int x, int y, int w, int h) {
-    
-    static RgnHandle maskRect=NULL;
-    
-    if (maskRect == NULL)
-        maskRect = NewRgn();
-        
-    SetRectRgn(maskRect, x, y, x+w, y+h);
-    QDFlushPortBuffer(GetWindowPort(getSTWindow()), maskRect); 
+int osxShowSurface(int index, int x, int y, int w, int h) {
+	static RgnHandle dirtyRgn = NULL;
+	static RgnHandle maskRect;
+	extern Boolean gSqueakUIFlushUseHighPercisionClock;
+	extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
+	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(index);
+	int now = (gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs()) - targetWindowBlock->rememberTicker;
+
+	if (dirtyRgn == NULL) {
+		dirtyRgn = NewRgn();
+		maskRect = NewRgn();
+	}
+							
+	SetRectRgn(maskRect, x, y, x+w, y+h);
+	UnionRgn (dirtyRgn, maskRect, dirtyRgn);
+	
+	if (targetWindowBlock->dirty && ((now >= gSqueakUIFlushPrimaryDeferNMilliseconds) || (now < 0))) {
+		if ((ioMSecs() - targetWindowBlock->locked) > 500) {
+			UnlockPortBits(GetWindowPort(targetWindowBlock->handle)); 
+//			fprintf(stderr,"<U %i> ",ioMSecs());
+			targetWindowBlock->locked = 0;
+		}
+		QDFlushPortBuffer(GetWindowPort(targetWindowBlock->handle), dirtyRgn);
+//		fprintf(stderr,"<F %i> ",ioMSecs());
+		SetEmptyRgn(dirtyRgn);
+		targetWindowBlock->dirty = 0;
+		targetWindowBlock->rememberTicker = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+	} else {
+		targetWindowBlock->dirty = 1;
+//		fprintf(stderr,"<W %i> ",ioMSecs());
+	}
+	return 1;
 }
+
+#if JMMFoo 
 
 inline void DuffsDevicesCopyLong(long *to, long *from, long count) {
     long n=(count+7)/8;
