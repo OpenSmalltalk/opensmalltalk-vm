@@ -44,6 +44,7 @@ void SetVMPath(FSSpec *workingDirectory) {
 	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
 	vmPathString = CFStringCreateMutableCopy(NULL, 0, strRef);
 	CFRelease(strRef);
+	// normalization because we get here from looking for file name in resource folder directly at startup time. 
 	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
 		CFStringNormalize((CFMutableStringRef)vmPathString, kCFStringNormalizationFormKC); // pre-combined
 	CFRetain(vmPathString);
@@ -77,6 +78,7 @@ char *getImageName(void) {
     
 void SetImageNameViaCFString(CFStringRef string) {
     char *ignore;
+	// normalization because we get here from looking for file name in resource folder directly at startup time. 
 	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
 	CFMutableStringRef mutableStr= CFStringCreateMutableCopy(NULL, 0, string);
 	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
@@ -218,10 +220,6 @@ void setEncodingType (char * string) {
 #if TARGET_API_MAC_CARBON
       if (strcmp("ShiftJIS",string) == 0)
           gCurrentVMEncoding = kCFStringEncodingShiftJIS;
-#endif
-#ifdef MACINTOSHUSEUNIXFILENAMES
-		extern void *uxPathEncoding;
-		setEncoding(&uxPathEncoding, string);
 #endif
   }
   

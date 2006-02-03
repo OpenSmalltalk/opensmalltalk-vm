@@ -263,6 +263,7 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 		fprintf(stderr,"\nLoadLibViaPath file %s",cFileName);
 		#endif
         filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),gCurrentVMEncoding,false);
+#warning what about utf-8 D versus KC
     
         theURLRef = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
 		CFRelease(filePath);

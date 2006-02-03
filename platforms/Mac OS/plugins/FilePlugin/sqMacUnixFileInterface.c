@@ -116,7 +116,9 @@ int IsImageName(char *name);
 extern time_t convertToSqueakTime(time_t unixTime);
 void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolean retryWithDirectory,char * rememberName,CFStringEncoding encoding);
 OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding);
-sqInt	ioFilenamefromStringofLengthresolveAliases(char* dst, char* src, sqInt num, sqInt resolveAlias);
+int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term);
+sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqInt num, sqInt resolveAlias, Boolean retry);
+CFURLRef makeFileSystemURLFromString(char *pathString,int length,CFStringEncoding encoding);
 
 sqInt dir_Create(char *pathString, sqInt pathStringLength)
 {
@@ -125,8 +127,9 @@ sqInt dir_Create(char *pathString, sqInt pathStringLength)
   char name[MAXPATHLEN+1];
   if (pathStringLength >= MAXPATHLEN)
     return false;
-  if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
-    return false;
+  sqFilenameFromString(name,pathString,pathStringLength);
+  if (!ioFilenamefromStringofLengthresolveAliasesRetry(name,pathString, pathStringLength, false, true))
+     return false;
   return mkdir(name, 0777) == 0;	/* rwxrwxrwx & ~umask */
 }
 
@@ -137,7 +140,7 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength)
   char name[MAXPATHLEN+1];
   if (pathStringLength >= MAXPATHLEN)
     return false;
-  if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
+  if (!ioFilenamefromStringofLengthresolveAliasesRetry(name,pathString, pathStringLength, false, true))
     return false;
   return rmdir(name) == 0;
 }
@@ -200,7 +203,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   if ((pathStringLength == 0))
     strcpy(unixPath, ".");
   else  {
-	if (!ioFilenamefromStringofLengthresolveAliases(unixPath, pathString,pathStringLength, true))
+	if (!ioFilenamefromStringofLengthresolveAliasesRetry(unixPath, pathString,pathStringLength, true, true))
 		return BAD_PATH;
 	}
 
@@ -240,7 +243,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   *nameLength= ux2sqPath(dirEntry->d_name, nameLen, name, MAXPATHLEN, 0);
 
   {
-    char terminatedName[MAXPATHLEN];
+    char terminatedName[MAXPATHLEN+1];
     strncpy(terminatedName, dirEntry->d_name, nameLen);
     terminatedName[nameLen]= '\0';
     strcat(unixPath, "/");
@@ -260,12 +263,15 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 	{
 		FSRef targetFSRef;
 		Boolean	targetIsFolder,wasAliased;
+		OSErr err;
 		
-		getFSRef(unixPath,&targetFSRef,kCFStringEncodingUTF8);
-		FSResolveAliasFileWithMountFlags(&targetFSRef,true,&targetIsFolder,&wasAliased,kResolveAliasFileNoUI);
-		if (wasAliased && targetIsFolder) {
-			*isDirectory= true;
-			return ENTRY_FOUND;
+		err = getFSRef(unixPath,&targetFSRef,kCFStringEncodingUTF8);
+		if (!err) {
+			FSResolveAliasFileWithMountFlags(&targetFSRef,true,&targetIsFolder,&wasAliased,kResolveAliasFileNoUI);
+			if (wasAliased && targetIsFolder) {
+				*isDirectory= true;
+				return ENTRY_FOUND;
+			}
 		}
 	}
   if (S_ISDIR(statBuf.st_mode))
@@ -276,59 +282,90 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   return ENTRY_FOUND;
 }
 
+int wanderDownPath(char *src,int bytes,char *possiblePath);
 
 void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength) {
-	ioFilenamefromStringofLengthresolveAliases(buffer,(char *) fileIndex, fileLength, true);
+	ioFilenamefromStringofLengthresolveAliasesRetry(buffer,(char *) fileIndex, fileLength, true, true);
+}
+
+void		sqFilenameFromString(char *buffer,long fileIndex, long fileLength) {
+	ioFilenamefromStringofLengthresolveAliasesRetry(buffer,(char *) fileIndex, fileLength, false, true);
 }
 
 sqInt	ioFilenamefromStringofLengthresolveAliases(char* dst, char* src, sqInt num, sqInt resolveAlias) {
- int bytes;
+	return ioFilenamefromStringofLengthresolveAliasesRetry(dst, src, num, resolveAlias, true);
+}
+
+sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqInt num, sqInt resolveAlias, Boolean retry) {
+ int		bytes;
+ FSRef targetFSRef;
+ OSStatus err; 
  
- bytes = sq2uxPath(src, num, dst, MAXPATHLEN, 1);
- if(resolveAlias) {
-	FSRef targetFSRef;
-	Boolean	targetIsFolder,wasAliased;
-	
-	getFSRef(dst,&targetFSRef,kCFStringEncodingUTF8);
-	FSResolveAliasFileWithMountFlags(&targetFSRef,true,&targetIsFolder,&wasAliased,0);
-	if (wasAliased) {
-		PathToFileViaFSRef(dst, num, &targetFSRef, false,nil,kCFStringEncodingUTF8);
-		bytes = strlen(dst);
+ if (retry)
+	bytes = sq2uxPath(src, num, dst, MAXPATHLEN, 1);
+ else {
+	memcpy(dst,src,num);
+	dst[num] = 0x00;
+	bytes = num;
+ }
+  		
+ err = getFSRef(dst,&targetFSRef,kCFStringEncodingUTF8); 
+ if (retry) {
+	if (err) {
+		char possiblePath[MAXPATHLEN+1];
+		
+		bytes = wanderDownPath(dst,bytes,possiblePath);
+		if (bytes) 
+			strcpy(dst,possiblePath);
+		return bytes;
 	}
  }
+
+  if (err == 0 && resolveAlias) {
+		Boolean	targetIsFolder,wasAliased;
+		err = FSResolveAliasFileWithMountFlags(&targetFSRef,true,&targetIsFolder,&wasAliased,kResolveAliasFileNoUI);
+		if (err || wasAliased == false)
+			return bytes; 
+		PathToFileViaFSRef(dst, MAXPATHLEN, &targetFSRef, false,nil,kCFStringEncodingUTF8);
+		bytes = strlen(dst);
+	 }
+  
  return bytes;
+}
+
+CFURLRef makeFileSystemURLFromString(char *pathString,int length, CFStringEncoding encoding) {
+    CFStringRef tmpStrRef;
+ 	CFMutableStringRef filePath;
+    CFURLRef    sillyThing;
+	
+	tmpStrRef = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,
+										length, encoding, true);
+    if (tmpStrRef == nil)
+        return null;
+	filePath = CFStringCreateMutableCopy(NULL, 0, tmpStrRef);
+	CFRelease(tmpStrRef);
+	if (encoding == kCFStringEncodingUTF8) 
+		CFStringNormalize(filePath, kCFStringNormalizationFormD); 
+    sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
+	CFRelease(filePath);
+	return sillyThing;
 }
 
 OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding)
 {	
-    CFURLRef    sillyThing;
-    CFStringRef tmpStrRef;
-	CFMutableStringRef filePath;
-    
-    tmpStrRef = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,
-										strlen(pathString), encoding, true);
-    if (tmpStrRef == nil)
-        return -1000;
-	filePath = CFStringCreateMutableCopy(NULL, 0, tmpStrRef);
-	if (encoding == kCFStringEncodingUTF8) 
-		CFStringNormalize(filePath, kCFStringNormalizationFormD);
-    sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
-	CFRelease(tmpStrRef);
+    CFURLRef sillyThing;
+
+	sillyThing = makeFileSystemURLFromString(pathString,strlen(pathString),encoding);
 	if (sillyThing == NULL) {
-		CFRelease(filePath);
 		return -2000;
 	}
 	
-    if (CFURLGetFSRef(sillyThing,theFSRef) == false) {
-		Boolean check;
-		UInt8	possiblePath[MAXPATHLEN+1];
-		check = CFURLGetFileSystemRepresentation (sillyThing,true,possiblePath,MAXPATHLEN);
-        CFRelease(filePath);
+    if (CFURLGetFSRef(sillyThing,theFSRef) == false) {		
+		//errorIsFalse = CFURLGetFileSystemRepresentation(sillyThing,true,possiblePath,MAXPATHLEN);		
         CFRelease(sillyThing);
         return -3000;
 	} 
             
-    CFRelease(filePath);
 	CFRelease(sillyThing);
     return 0;
 }
@@ -338,18 +375,8 @@ OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding)
 int getLastPathComponent(char *pathString,char * lastPathPart,CFStringEncoding encoding) {
     CFURLRef    sillyThing;
     CFStringRef tmpStrRef;
-	CFMutableStringRef filePath;
- 
-    tmpStrRef = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) pathString,
-										strlen(pathString), encoding, true);
-    if (tmpStrRef == nil)
-        return -1000;
-	filePath = CFStringCreateMutableCopy(NULL, 0, tmpStrRef);
-	if (encoding == kCFStringEncodingUTF8) 
-		CFStringNormalize(filePath, kCFStringNormalizationFormD);
-    sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
-	CFRelease(tmpStrRef);
-	CFRelease(filePath);
+
+	sillyThing = makeFileSystemURLFromString(pathString,strlen(pathString),encoding);
 	if (sillyThing == NULL) 
 		return -2000;
 	tmpStrRef = CFURLCopyLastPathComponent(sillyThing);
@@ -398,7 +425,10 @@ void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolea
         CFStringRef filePath;
         Boolean isDirectory;
 		
+		pathName[0]=  0x00;
         sillyThing =  CFURLCreateFromFSRef (kCFAllocatorDefault, theFSRef);
+		if (sillyThing == NULL)
+			return;
         isDirectory = CFURLHasDirectoryPath(sillyThing);
         
         filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLPOSIXPathStyle);
@@ -445,16 +475,18 @@ int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
     OSErr	err;
     FSRef	theFSRef;
 	char	fileNameBuffer[MAXPATHLEN+1];
+	int		bytes;
 	
-	memcpy(fileNameBuffer,filename,filenameSize);
-	fileNameBuffer[filenameSize] = 0x00;
-    if (getFInfo(fileNameBuffer,&finderInfo,gCurrentVMEncoding) != noErr)
+ 	bytes = ioFilenamefromStringofLengthresolveAliasesRetry(fileNameBuffer,filename, filenameSize, true, true);
+	if (bytes == 0) 
+		return false;
+    if (getFInfo(fileNameBuffer,&finderInfo,kCFStringEncodingUTF8) != noErr)
         return false;
        
 	finderInfo.fdType = *((int *) fType);
 	finderInfo.fdCreator = *((int *) fCreator);
 	
-	err =  getFSRef(fileNameBuffer,&theFSRef,gCurrentVMEncoding);
+	err =  getFSRef(fileNameBuffer,&theFSRef,kCFStringEncodingUTF8);
 	if (err != 0)
 		return err;
 	memcpy(&catInfo.finderInfo,&finderInfo,8);
@@ -469,11 +501,13 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
 
     FInfo   finderInfo;
 	char	fileNameBuffer[MAXPATHLEN+1];
+	int		bytes;
 	
-	memcpy(fileNameBuffer,filename,filenameSize);
-	fileNameBuffer[filenameSize] = 0x00;
+ 	bytes = ioFilenamefromStringofLengthresolveAliasesRetry(fileNameBuffer,filename, filenameSize, true, true);
+	if (bytes == 0) 
+		return false;
     
-    if (getFInfo(fileNameBuffer,&finderInfo,gCurrentVMEncoding) != noErr)
+    if (getFInfo(fileNameBuffer,&finderInfo,kCFStringEncodingUTF8) != noErr)
         return false;
        
 	*((int *) fType) = finderInfo.fdType;
@@ -596,3 +630,86 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
     return true;
 }
 
+int wanderDownPath(char *src,int bytes,char *parts) {
+	char tokens[MAXPATHLEN+1],results[MAXPATHLEN+1];
+	Boolean firstTime =  true;
+	char *token;
+	int	tokenLength,numberOfBytes;
+	
+	parts[0] = 0x00;
+	memcpy(tokens,src,bytes);
+	tokens[bytes] = 0x00;
+	token = strtok((char*) tokens,"/");
+    if (token == 0) 
+		return 0;
+    while (token)  {
+        tokenLength = strlen(token);
+        if (firstTime) {
+            firstTime = false;
+			strcat(parts,"/");
+			strcat(parts,token);
+			numberOfBytes = ioFilenamefromStringofLengthresolveAliasesRetry(results, parts, strlen(parts), true, false);
+			strcat(parts,"/");
+			if (numberOfBytes) {
+				strcpy(parts,results);
+			} else {
+				strcpy(parts,token);
+			}
+         } else {
+			if (parts[strlen(parts)-1] != '/')
+				strcat(parts,"/");
+			strcat(parts,token);
+			numberOfBytes = ioFilenamefromStringofLengthresolveAliasesRetry(results, parts, strlen(parts), true, false);
+			if (numberOfBytes) 
+				strcpy(parts,results);
+			else 
+				strcpy(parts,token);
+         }
+        token = strtok(nil,"/"); 
+    }
+	return strlen(parts);
+}
+
+  int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term)	
+  {			
+	CFStringEncoding unixEncoding = kCFStringEncodingUTF8;
+    int n= convertChars(from, fromLen, gCurrentVMEncoding, to, toLen, unixEncoding, true, term);		
+    return n;									
+  }
+
+  int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term)	
+  {										
+	CFStringEncoding unixEncoding = kCFStringEncodingUTF8;
+    int n= convertChars(from, fromLen, unixEncoding, to, toLen, gCurrentVMEncoding, false, term);		
+    return n;									
+  }
+
+#define min(X, Y) (  ((X)>(Y)) ? (Y) : (X) )
+
+static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
+{
+  int len= min(toLen - term, fromLen);
+  strncpy(to, from, len);
+  if (term) to[len]= '\0';
+  return len;
+}
+
+int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
+{
+  CFStringRef	     cfs= CFStringCreateWithBytes(NULL, from, fromLen, (CFStringEncoding)fromCode, 0);
+  CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, cfs);
+  CFRelease(cfs);
+  if (norm) // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
+    CFStringNormalize(str, kCFStringNormalizationFormD); // canonical decomposition
+  {
+    CFRange rng= CFRangeMake(0, CFStringGetLength(str));
+    CFIndex len= 0;
+    CFIndex num= CFStringGetBytes(str, rng, (CFStringEncoding)toCode, '?', 0, (UInt8 *)to, toLen - term, &len);
+    CFRelease(str);
+    if (!num)
+      return convertCopy(from, fromLen, to, toLen, term);
+    if (term)
+      to[len]= '\0';
+    return len;
+  }
+}
