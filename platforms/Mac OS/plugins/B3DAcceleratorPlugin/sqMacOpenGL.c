@@ -43,7 +43,7 @@
 #include "sqConfig.h"
 /* Platform specific definitions */
 #include "sqPlatformSpecific.h"
-
+#include "sqMacUIConstants.h"
 #include "B3DAcceleratorPlugin.h"
 #include "sqMacOpenGL.h"
 #include "sqOpenGLRenderer.h"
@@ -99,10 +99,10 @@ static FILE *xopenf(char *filename,char* attr);
 #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
 static FILE *xopenf(char *filename,char* attr) {
 	FSSpec imageSpec;
-	char fullName[MAXPATHLEN+1];
+	char fullName[DOCUMENT_NAME_SIZE+1];
 	FILE *fp;
 	makeFSSpec("", &imageSpec);
-	PathToFile(fullName,MAXPATHLEN,&imageSpec,gCurrentVMEncoding);
+	PathToFile(fullName,DOCUMENT_NAME_SIZE,&imageSpec,gCurrentVMEncoding);
 	strcat(fullName,filename);
 	fp = fopen(fullName, attr);
 return fp;
@@ -113,7 +113,7 @@ return fp;
 #undef DPRINTF
 #if defined (__APPLE__) && defined(__MACH__)
 # define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
-	char fileName[MAXPATHLEN+1]; \
+	char fileName[DOCUMENT_NAME_SIZE+1]; \
 	sqFilenameFromStringOpen(fileName,(long) &"Squeak3D.log", strlen("Squeak3D.log")); \
 	FILE *fp = fopen(fileName, "at");\
 	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
@@ -550,7 +550,7 @@ int glSwapBuffers(glRenderer *renderer) {
 		win =  getSTWindow();
 		if(!win) return 0;
 		
-		winPort = (GrafPtr) GetWindowPort((GrafPtr) win);
+		winPort = (GrafPtr) GetWindowPort((WindowRef) win);
 #ifdef BROWSERPLUGIN
 		StartDraw();
 #else

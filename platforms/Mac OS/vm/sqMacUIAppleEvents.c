@@ -65,6 +65,8 @@ pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 
 	checkValueForEmbeddedImage = calculateStartLocationForImage();
 	if (checkValueForEmbeddedImage == 0) {
+	    /* use default image name in same directory as the VM */
+        SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
 	    return noErr;
 	}
 
@@ -227,7 +229,11 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 					
 			error = PathToFile(pathname, 2048, &fileSpec, gCurrentVMEncoding);
 			commandStuff [0] = 0x00;
+#ifdef MACINTOSHUSEUNIXFILENAMES
+			strcat(commandStuff,"set pimage to  \"");
+#else
 			strcat(commandStuff,"set pimage to POSIX path of file  \"");
+#endif
 			strcat(commandStuff,pathname);
 			strcat(commandStuff,"\" \n");
 			strcat(commandStuff,"set qimage to quoted form of pimage\n");
@@ -325,9 +331,9 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
                 
 #ifdef MACINTOSHUSEUNIXFILENAMES
 		{
-			char pathName[MAXPATHLEN+1];
+			char pathName[DOCUMENT_NAME_SIZE+1];
 				
-			PathToFile(pathName, MAXPATHLEN, &fileSpec,gCurrentVMEncoding);
+			PathToFile(pathName, DOCUMENT_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
 			getLastPathComponent(pathName,shortImageName,gCurrentVMEncoding);
 		}
 #else
@@ -451,4 +457,4 @@ OSStatus SimpleRunAppleScript(const char* theScript) {
     return LowRunAppleScript(theScript, strlen(theScript), NULL);
 }
 
-#endif
+#endif 

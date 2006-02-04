@@ -28,7 +28,7 @@
 
 #include "sq.h"
 #include "sqVirtualMachine.h"
-
+#include "sqMacUIConstants.h"
 int printRendererInfo(void);
 int printFormatInfo(AGLPixelFormat info);
 
@@ -52,10 +52,10 @@ int verboseLevel = 3;
 static FILE * xopenf(char *filename,char* attr);
 static FILE *xopenf(char *filename,char* attr) {
 	FSSpec imageSpec;
-	char fullName[MAXPATHLEN+1];
+	char fullName[DOCUMENT_NAME_SIZE+1];
 	FILE *fp;
 	makeFSSpec("", &imageSpec);
-	PathToFile(fullName,MAXPATHLEN,&imageSpec,gCurrentVMEncoding);
+	PathToFile(fullName,DOCUMENT_NAME_SIZE,&imageSpec,gCurrentVMEncoding);
 	strcat(fullName,filename);
 	fp = fopen(fullName, attr);
 return fp;
@@ -68,7 +68,7 @@ return fp;
 #undef DPRINTF
 #if defined (__APPLE__) && defined(__MACH__)
 # define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
-	char fileName[MAXPATHLEN+1]; \
+	char fileName[DOCUMENT_NAME_SIZE+1]; \
 	sqFilenameFromStringOpen(fileName,(long) &"Squeak3D.log", strlen("Squeak3D.log")); \
 	FILE *fp = fopen(fileName, "at");\
 	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}

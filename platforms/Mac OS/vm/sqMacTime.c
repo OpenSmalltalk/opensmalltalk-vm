@@ -290,6 +290,7 @@ int ioMSecs() {
     return ioMicroMSecs();
 }
 
+#ifdef MACINTOSHUSEUNIXFILENAMES
 time_t convertToSqueakTime(time_t unixTime)
 {
 #ifdef HAVE_TM_GMTOFF
@@ -305,6 +306,7 @@ time_t convertToSqueakTime(time_t unixTime)
      and 52 non-leap years later than Squeak. */
   return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
 }
+#endif
 
 
 /*void sqHeartBeatActions(int now) {

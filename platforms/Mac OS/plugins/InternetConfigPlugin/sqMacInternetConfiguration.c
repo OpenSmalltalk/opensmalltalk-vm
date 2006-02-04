@@ -14,6 +14,7 @@
 #include "sq.h"
 #include "InternetConfigPlugin.h"
 #include "sqMacFileLogic.h"
+#include "sqMacUIConstants.h"
 
 static OSType GetApplicationSignature();
 void convertPassword(unsigned char *buffer);
@@ -79,7 +80,7 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
         error  = ICGetPref(gICInstance, "\pDownloadFolder", nil, &buffer, &size);
         if (error == noErr || error == icTruncatedErr) {
             tempICFileSpec = (ICFileSpec *) &buffer;
-            PathToFile(aString, MAXPATHLEN, &tempICFileSpec->fss,gCurrentVMEncoding);
+            PathToFile(aString, DOCUMENT_NAME_SIZE, &tempICFileSpec->fss,gCurrentVMEncoding);
             size = strlen(aString);
        } else 
             return 0;

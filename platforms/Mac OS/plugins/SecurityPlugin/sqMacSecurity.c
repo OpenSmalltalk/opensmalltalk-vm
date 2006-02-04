@@ -8,6 +8,9 @@
 #include "sq.h"
 #include "sqMacFileLogic.h"	
 #include "SecurityPlugin.h"
+#include "sqMacUIConstants.h"
+#include "FilePlugin.h"
+
 #include <files.h> 
 extern struct VirtualMachine * interpreterProxy;
 

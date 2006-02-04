@@ -42,6 +42,11 @@
 #include "sqMacUnixCommandLineInterface.h"
 #include "sqMacEncoding.h"
 #include "sqMacFileLogic.h"
+#include "sqMacUIConstants.h"
+#ifdef MACINTOSHUSEUNIXFILENAMES
+#include "sqMacUnixFileInterface.h"
+#endif
+
 
 extern CFStringEncoding gCurrentVMEncoding;
 static int    vmArgCnt=		0;	/* for getAttributeIntoLength() */
@@ -129,12 +134,12 @@ static void parseArguments(int argc, char **argv)
 
 void resolveWhatTheImageNameIs(char *guess)  
 {
-	char possibleImageName[MAXPATHLEN+1], partial [MAXPATHLEN+1], fullPath [MAXPATHLEN+1], finalHFS [MAXPATHLEN+1], lastPath [SHORTIMAGE_NAME_SIZE+1];
+	char possibleImageName[DOCUMENT_NAME_SIZE+1], partial [DOCUMENT_NAME_SIZE+1], fullPath [DOCUMENT_NAME_SIZE+1], finalHFS [DOCUMENT_NAME_SIZE+1], lastPath [SHORTIMAGE_NAME_SIZE+1];
 	FSSpec		workingDirectory;
 	FSRef		theFSRef;
 	OSErr		err;
 
-	strncpy(possibleImageName, guess,MAXPATHLEN);
+	strncpy(possibleImageName, guess,DOCUMENT_NAME_SIZE);
 #ifdef MACINTOSHUSEUNIXFILENAMES
 	sqFilenameFromStringOpen(fullPath, (int) possibleImageName, strlen(possibleImageName));
 	err = getFSRef(possibleImageName,&theFSRef,kCFStringEncodingUTF8);
@@ -143,7 +148,7 @@ void resolveWhatTheImageNameIs(char *guess)
 		SetShortImageNameViaString("",gCurrentVMEncoding);
 		return;
 	}
-	PathToFileViaFSRef(fullPath,MAXPATHLEN, &theFSRef, false,NULL,gCurrentVMEncoding);
+	PathToFileViaFSRef(fullPath,DOCUMENT_NAME_SIZE, &theFSRef, false,NULL,gCurrentVMEncoding);
 	getLastPathComponent(fullPath,lastPath,gCurrentVMEncoding);
 	SetImageNameViaString(fullPath,gCurrentVMEncoding);
 	SetShortImageNameViaString(lastPath,gCurrentVMEncoding);

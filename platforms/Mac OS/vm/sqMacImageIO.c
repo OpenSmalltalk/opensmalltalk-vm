@@ -124,7 +124,7 @@ void sqImageFileClose(sqImageFile f) {
 }
 
 sqImageFile sqImageFileOpen(char *fileName, char *mode) {
-    char cFileName[MAXPATHLEN+1];
+    char cFileName[DOCUMENT_NAME_SIZE+1];
     sqImageFile remember;
     
     sqFilenameFromStringOpen(cFileName,(long) fileName, strlen(fileName));

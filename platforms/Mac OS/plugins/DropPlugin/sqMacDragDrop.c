@@ -63,7 +63,7 @@ Some of this code comes from
 
 #include "sqVirtualMachine.h"
 #include "sqMacFileLogic.h"	
-
+#include "sqMacUIConstants.h"
 #include "DropPlugin.h"
 
 	/* promise flavor types */
@@ -84,7 +84,6 @@ enum {
  UInt16 gNumDropFiles=0;
  HFSFlavor *dropFiles;
 
-#define DOCUMENT_NAME_SIZE 1000
 char tempName[DOCUMENT_NAME_SIZE + 1];  
 
 	/* these routines are used both in the receive handler and inside of the

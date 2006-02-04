@@ -105,7 +105,7 @@
 
 
 /*** Variables ***/
-char lastPath[MAXPATHLEN+1];
+char lastPath[DOCUMENT_NAME_SIZE+1];
 int  lastPathValid = false;
 int  lastIndex= -1;
 DIR *openDir= 0;
@@ -114,8 +114,6 @@ int IsImageName(char *name);
 /*** Functions ***/
 
 extern time_t convertToSqueakTime(time_t unixTime);
-void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolean retryWithDirectory,char * rememberName,CFStringEncoding encoding);
-OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding);
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term);
 sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqInt num, sqInt resolveAlias, Boolean retry);
 CFURLRef makeFileSystemURLFromString(char *pathString,int length,CFStringEncoding encoding);
@@ -124,10 +122,9 @@ sqInt dir_Create(char *pathString, sqInt pathStringLength)
 {
   /* Create a new directory with the given path. By default, this
      directory is created relative to the cwd. */
-  char name[MAXPATHLEN+1];
-  if (pathStringLength >= MAXPATHLEN)
+  char name[DOCUMENT_NAME_SIZE+1];
+  if (pathStringLength >= DOCUMENT_NAME_SIZE)
     return false;
-  sqFilenameFromString(name,pathString,pathStringLength);
   if (!ioFilenamefromStringofLengthresolveAliasesRetry(name,pathString, pathStringLength, false, true))
      return false;
   return mkdir(name, 0777) == 0;	/* rwxrwxrwx & ~umask */
@@ -137,8 +134,8 @@ sqInt dir_Create(char *pathString, sqInt pathStringLength)
 sqInt dir_Delete(char *pathString, sqInt pathStringLength)
 {
   /* Delete the existing directory with the given path. */
-  char name[MAXPATHLEN+1];
-  if (pathStringLength >= MAXPATHLEN)
+  char name[DOCUMENT_NAME_SIZE+1];
+  if (pathStringLength >= DOCUMENT_NAME_SIZE)
     return false;
   if (!ioFilenamefromStringofLengthresolveAliasesRetry(name,pathString, pathStringLength, false, true))
     return false;
@@ -189,7 +186,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   int i;
   int nameLen= 0;
   struct dirent *dirEntry= 0;
-  char unixPath[MAXPATHLEN+1];
+  char unixPath[DOCUMENT_NAME_SIZE+1];
   struct stat statBuf;
 
   /* default return values */
@@ -240,10 +237,10 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 	  goto nextEntry;
     }
 
-  *nameLength= ux2sqPath(dirEntry->d_name, nameLen, name, MAXPATHLEN, 0);
+  *nameLength= ux2sqPath(dirEntry->d_name, nameLen, name, 256, 0);
 
   {
-    char terminatedName[MAXPATHLEN+1];
+    char terminatedName[DOCUMENT_NAME_SIZE+1];
     strncpy(terminatedName, dirEntry->d_name, nameLen);
     terminatedName[nameLen]= '\0';
     strcat(unixPath, "/");
@@ -282,7 +279,7 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
   return ENTRY_FOUND;
 }
 
-int wanderDownPath(char *src,int bytes,char *possiblePath);
+int wanderDownPath(char *src,int bytes,char *possiblePath, Boolean resolveLastAlias);
 
 void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength) {
 	ioFilenamefromStringofLengthresolveAliasesRetry(buffer,(char *) fileIndex, fileLength, true, true);
@@ -302,7 +299,7 @@ sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqIn
  OSStatus err; 
  
  if (retry)
-	bytes = sq2uxPath(src, num, dst, MAXPATHLEN, 1);
+	bytes = sq2uxPath(src, num, dst, DOCUMENT_NAME_SIZE, 1);
  else {
 	memcpy(dst,src,num);
 	dst[num] = 0x00;
@@ -312,9 +309,9 @@ sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqIn
  err = getFSRef(dst,&targetFSRef,kCFStringEncodingUTF8); 
  if (retry) {
 	if (err) {
-		char possiblePath[MAXPATHLEN+1];
+		char possiblePath[DOCUMENT_NAME_SIZE+1];
 		
-		bytes = wanderDownPath(dst,bytes,possiblePath);
+		bytes = wanderDownPath(dst,bytes,possiblePath,resolveAlias);
 		if (bytes) 
 			strcpy(dst,possiblePath);
 		return bytes;
@@ -326,7 +323,7 @@ sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqIn
 		err = FSResolveAliasFileWithMountFlags(&targetFSRef,true,&targetIsFolder,&wasAliased,kResolveAliasFileNoUI);
 		if (err || wasAliased == false)
 			return bytes; 
-		PathToFileViaFSRef(dst, MAXPATHLEN, &targetFSRef, false,nil,kCFStringEncodingUTF8);
+		PathToFileViaFSRef(dst, DOCUMENT_NAME_SIZE, &targetFSRef, false,nil,kCFStringEncodingUTF8);
 		bytes = strlen(dst);
 	 }
   
@@ -361,7 +358,6 @@ OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding)
 	}
 	
     if (CFURLGetFSRef(sillyThing,theFSRef) == false) {		
-		//errorIsFalse = CFURLGetFileSystemRepresentation(sillyThing,true,possiblePath,MAXPATHLEN);		
         CFRelease(sillyThing);
         return -3000;
 	} 
@@ -474,7 +470,7 @@ int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
     FSCatalogInfo catInfo;
     OSErr	err;
     FSRef	theFSRef;
-	char	fileNameBuffer[MAXPATHLEN+1];
+	char	fileNameBuffer[DOCUMENT_NAME_SIZE+1];
 	int		bytes;
 	
  	bytes = ioFilenamefromStringofLengthresolveAliasesRetry(fileNameBuffer,filename, filenameSize, true, true);
@@ -500,7 +496,7 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
 	/* Note: On other platforms, this is just a noop. */
 
     FInfo   finderInfo;
-	char	fileNameBuffer[MAXPATHLEN+1];
+	char	fileNameBuffer[DOCUMENT_NAME_SIZE+1];
 	int		bytes;
 	
  	bytes = ioFilenamefromStringofLengthresolveAliasesRetry(fileNameBuffer,filename, filenameSize, true, true);
@@ -586,7 +582,7 @@ OSErr squeakFindImage(char* pathName)
 	anErr = AEGetNthPtr(&(outReply.selection), 1, typeFSRef, NULL, NULL, &fileAsFSRef, sizeof(FSRef), NULL);
 	//  Dispose of NavReplyRecord, resources, descriptors
 	anErr = NavDisposeReply(&outReply);
-	PathToFileViaFSRef(pathName,MAXPATHLEN, &fileAsFSRef, false,NULL,gCurrentVMEncoding);
+	PathToFileViaFSRef(pathName,DOCUMENT_NAME_SIZE, &fileAsFSRef, false,NULL,gCurrentVMEncoding);
 
     DisposeNavObjectFilterUPP(filterProc);
     return anErr;
@@ -630,10 +626,10 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
     return true;
 }
 
-int wanderDownPath(char *src,int bytes,char *parts) {
-	char tokens[MAXPATHLEN+1],results[MAXPATHLEN+1];
+int wanderDownPath(char *src,int bytes,char *parts,Boolean resolveLastAlias) {
+	char tokens[DOCUMENT_NAME_SIZE+1],results[DOCUMENT_NAME_SIZE+1];
 	Boolean firstTime =  true;
-	char *token;
+	char *token,*nexttoken;
 	int	tokenLength,numberOfBytes;
 	
 	parts[0] = 0x00;
@@ -655,17 +651,22 @@ int wanderDownPath(char *src,int bytes,char *parts) {
 			} else {
 				strcpy(parts,token);
 			}
+			token = strtok(nil,"/"); 
          } else {
 			if (parts[strlen(parts)-1] != '/')
 				strcat(parts,"/");
 			strcat(parts,token);
-			numberOfBytes = ioFilenamefromStringofLengthresolveAliasesRetry(results, parts, strlen(parts), true, false);
+			nexttoken = strtok(nil,"/"); 
+			if (nexttoken == nil) 
+				numberOfBytes = ioFilenamefromStringofLengthresolveAliasesRetry(results, parts, strlen(parts), resolveLastAlias, false);
+			else
+				numberOfBytes = ioFilenamefromStringofLengthresolveAliasesRetry(results, parts, strlen(parts), true, false);
 			if (numberOfBytes) 
 				strcpy(parts,results);
 			else 
 				strcpy(parts,token);
+			token = nexttoken;
          }
-        token = strtok(nil,"/"); 
     }
 	return strlen(parts);
 }
@@ -673,14 +674,14 @@ int wanderDownPath(char *src,int bytes,char *parts) {
   int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term)	
   {			
 	CFStringEncoding unixEncoding = kCFStringEncodingUTF8;
-    int n= convertChars(from, fromLen, gCurrentVMEncoding, to, toLen, unixEncoding, true, term);		
+    int n= convertChars(from, fromLen, (char *) gCurrentVMEncoding, to, toLen,(char *)  unixEncoding, true, term);		
     return n;									
   }
 
   int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term)	
   {										
 	CFStringEncoding unixEncoding = kCFStringEncodingUTF8;
-    int n= convertChars(from, fromLen, unixEncoding, to, toLen, gCurrentVMEncoding, false, term);		
+    int n= convertChars(from, fromLen,(char *)  unixEncoding, to, toLen, (char *) gCurrentVMEncoding, false, term);		
     return n;									
   }
 

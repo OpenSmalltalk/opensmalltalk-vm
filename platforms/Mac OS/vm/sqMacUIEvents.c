@@ -2071,7 +2071,8 @@ int ModifierStateCarbon(EventRef event,UInt32 whatHappened) {
 }
 
 static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData) {
-#ifndef UNIVERSALBINARY
+#ifdef UNIVERSALBINARY
+#else
 #ifndef BROWSERPLUGIN
     if (gDisablePowerManager && gTapPowerManager) {
         IdleUpdate();

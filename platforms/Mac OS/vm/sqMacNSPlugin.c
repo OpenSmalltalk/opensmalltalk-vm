@@ -1484,7 +1484,7 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
 }
 
 void GetTempFSSpec(FSSpec *spec) {
-    char tempName[MAXPATHLEN+1];
+    char tempName[DOCUMENT_NAME_SIZE+1];
     CFURLRef    sillyThing;
     CFStringRef filePath;
     
@@ -1495,7 +1495,7 @@ void GetTempFSSpec(FSSpec *spec) {
     CFRelease(filePath);
     filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLHFSPathStyle);
     CFRelease(sillyThing);
-    CFStringGetCString (filePath,tempName, MAXPATHLEN, kCFStringEncodingMacRoman);
+    CFStringGetCString (filePath,tempName, DOCUMENT_NAME_SIZE, kCFStringEncodingMacRoman);
     CFRelease(filePath);
     makeFSSpec(tempName,spec);
 }
@@ -1797,7 +1797,7 @@ void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 	   cache folder is outside the Squeak sandbox. That is why
 	   we only allow reading of this file. Sets the primitive
 	   failure flag if not successful. */
-    char fileName[MAXPATHLEN+1];
+    char fileName[DOCUMENT_NAME_SIZE+1];
     
     if (*MacfileName == 0x00) {
         interpreterProxy->success(false);

@@ -67,7 +67,6 @@
     #define fseek fseeko
 	int	 ftruncate(int, off_t);
     typedef FILE *sqImageFile;
-	#define MAXPATHLEN 1000
 #else
     #if defined(__MWERKS__)
         #include <stat.h>

@@ -13,3 +13,5 @@ int PathToFile(char *pathName, int pathNameMax, FSSpec *workingDirectory,UInt32 
 int getLastPathComponent(char *pathString,char * lastPathPart,CFStringEncoding encoding);
 extern UInt32 gCurrentVMEncoding;
 OSErr squeakFindImage(char *pathName);
+OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding);
+void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolean retryWithDirectory,char * rememberName,CFStringEncoding encoding);

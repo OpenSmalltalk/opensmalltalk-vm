@@ -18,4 +18,6 @@
 #endif
 
 void SetUpTimers(void);
+#ifdef MACINTOSHUSEUNIXFILENAMES
 time_t convertToSqueakTime(time_t unixTime);
+#endif

@@ -212,10 +212,6 @@ int main(void) {
 		chdir(temp);
 	}
 
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
-	unixArgcInterface(argCnt,argVec,envVec);
-#endif
-
 #ifndef I_AM_CARBON_EVENT
 	SetEventMask(everyEvent); // also get key up events
 #endif
@@ -227,8 +223,12 @@ int main(void) {
 			AEProcessAppleEvent(&theEvent);
 		}
 	}
-                
-        getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
+
+#if defined ( __APPLE__ ) && defined ( __MACH__ )
+	unixArgcInterface(argCnt,argVec,envVec);
+#endif
+
+	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
          
 #if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
 	if (ImageNameIsEmpty()) {
@@ -279,7 +279,7 @@ int main(void) {
 		
 #ifdef MACINTOSHUSEUNIXFILENAMES
 		{
-			char pathName[MAXPATHLEN+1];
+			char pathName[DOCUMENT_NAME_SIZE+1];
             err = squeakFindImage(pathName);
 			if (err) 
 				ioExit();
@@ -293,7 +293,7 @@ int main(void) {
             
 		getVMPathWithEncoding(path,gCurrentVMEncoding);
 
-	    err =  makeFSSpec(path,&vmfsSpec);
+	    err =  makeFSSpec(path,strlen(path),&vmfsSpec);
 	    if (err) 
 	        ioExit();
             err = squeakFindImage(&vmfsSpec,&imageFsSpec);

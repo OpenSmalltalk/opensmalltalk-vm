@@ -34,7 +34,7 @@ void createBrowserPluginPath(char *pluginDirPath);
 	WARNING: never primitiveFail() within, just return 0
 */
 void* ioLoadModule(char *pluginName) {
-	char pluginDirPath[MAXPATHLEN+1];
+	char pluginDirPath[DOCUMENT_NAME_SIZE+1];
 	CFragConnectionID libHandle;
 #ifndef BROWSERPLUGIN
     #if !defined ( __APPLE__ ) && !defined ( __MACH__ )
@@ -238,19 +238,19 @@ sqInt ioFreeModule(void * moduleHandle) {
 }
 
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
-        char				tempDirPath[MAXPATHLEN+1];
-		char				cFileName[MAXPATHLEN+1];
+        char				tempDirPath[DOCUMENT_NAME_SIZE+1];
+		char				cFileName[DOCUMENT_NAME_SIZE+1];
 		CFragConnectionID   libHandle = 0;
 		CFStringRef			filePath;
         CFURLRef 			theURLRef;
         CFBundleRef			theBundle;
         OSStatus			err;
         
-		strncpy(tempDirPath,pluginDirPath,MAXPATHLEN);
+		strncpy(tempDirPath,pluginDirPath,DOCUMENT_NAME_SIZE);
         if (tempDirPath[strlen(tempDirPath)-1] != DELIMITERInt)
             strcat(tempDirPath,DELIMITER);
             
-        if ((strlen(tempDirPath) + strlen(libName) + 7) > MAXPATHLEN)
+        if ((strlen(tempDirPath) + strlen(libName) + 7) > DOCUMENT_NAME_SIZE)
             return nil;
         
         strcat(tempDirPath,libName);
@@ -258,12 +258,11 @@ CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
         //Watch out for the bundle suffix, not a normal thing in squeak plugins
 
 		/* copy the file name into a null-terminated C string */
-		sqFilenameFromString(cFileName, (int) &tempDirPath, strlen(tempDirPath));
+		sqFilenameFromStringOpen(cFileName, (int) &tempDirPath, strlen(tempDirPath));
 		#ifdef JMMDEBUG
 		fprintf(stderr,"\nLoadLibViaPath file %s",cFileName);
 		#endif
-        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),gCurrentVMEncoding,false);
-#warning what about utf-8 D versus KC
+        filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *)cFileName,strlen(cFileName),kCFStringEncodingUTF8,false);
     
         theURLRef = CFURLCreateWithFileSystemPath(kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
 		CFRelease(filePath);
@@ -359,12 +358,12 @@ sqInt ioFreeModule( void  *moduleHandle) {
 CFragConnectionID LoadLibViaPath(char *libName, char *pluginDirPath) {
 	FSSpec				fileSpec;
 	Str255				problemLibName;
-        char				tempDirPath[MAXPATHLEN+1];
+        char				tempDirPath[DOCUMENT_NAME_SIZE+1];
         Ptr				junk;
 	CFragConnectionID		libHandle = 0;
 	OSErr				err = noErr;
 
-	strncpy(tempDirPath,pluginDirPath,MAXPATHLEN);
+	strncpy(tempDirPath,pluginDirPath,DOCUMENT_NAME_SIZE);
         if (tempDirPath[strlen(tempDirPath)-1] != DELIMITER)
             strcat(tempDirPath,DELIMITER);
             
