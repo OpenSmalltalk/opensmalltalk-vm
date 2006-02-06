@@ -53,7 +53,6 @@ void SetVMPath(FSSpec *workingDirectory) {
 void SetVMPathFromCFString(CFMutableStringRef strRef) {    
     if (vmPathString != NULL)  
         CFRelease(vmPathString);
- 	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
 	vmPathString = strRef;
 	CFRetain(vmPathString);
 }
