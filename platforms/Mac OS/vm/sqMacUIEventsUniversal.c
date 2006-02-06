@@ -159,7 +159,7 @@ char modifierMap[256] = {
  6, 14, 7, 15, 6, 14, 7, 15, 6, 14, 7, 15, 7, 15, 7, 
  15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 
  7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15, 7, 15 };
- 
+
 Boolean IsKeyDown(void);    
 
 int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) {
@@ -293,13 +293,9 @@ int ioMousePoint(void) {
 	else
 	    ioProcessEvents();
 	if (windowActive) {
-				GrafPtr	oldPort;
-				Boolean swapped=false;
-				swapped = QDSwapPort(GetWindowPort(windowHandleFromIndex(windowActive)),&oldPort);
-				GetMouse(&p);
+		GetMouse(&p);
  #warning foocheck
-				if (swapped) 
-					QDSwapPort(oldPort,NULL);
+		QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&p);
 	} else {
 		/* don't report mouse motion if window is not active */
 		p = savedMousePosition;
@@ -487,15 +483,10 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
     switch (whatHappened)
     {
         case kEventAppActivated:
-            if (getFullScreenFlag()) {
-                MenuBarHide();
-            }
             break;
         case kEventAppDeactivated:
             if (gSqueakWindowIsFloating) break;
 			windowActive = 0;
-            if (getFullScreenFlag())
-                MenuBarRestore();
             break;
         default:
             break;
@@ -567,13 +558,8 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
             GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
 			if (windowIndexFromHandle((wHandleType)window)) {
-				GrafPtr	oldPort;
-				Boolean swapped=false;
-				swapped = QDSwapPort(GetWindowPort(windowHandleFromIndex(windowIndexFromHandle((wHandleType)window))),&oldPort);
 #warning foocheck
-				GlobalToLocal(&savedMousePosition);
-				if (swapped) 
-					QDSwapPort(oldPort,NULL);
+				QDGlobalToLocalPoint(GetWindowPort((wHandleType)window),&savedMousePosition);
 			}
             windowActive = 0;
              break;
@@ -620,6 +606,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 {
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
+	OSStatus crosscheckForErrors;
  	static Boolean mouseDownActivate=false;
     extern Boolean gSqueakWindowIsFloating,gSqueakFloatingWindowGetsFocus;
     WindowPartCode windowPartCode;
@@ -627,7 +614,8 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     whatHappened	= GetEventKind(event);
 	
 
-	//fprintf(stderr,"\nMouseEvent %i-%i ",whatHappened,windowActive);
+	//if (whatHappened != 5) 
+	//	fprintf(stderr,"\nMouseEvent %i-%i ",whatHappened,windowActive);
 
 	if (!windowActive) {
 		if (whatHappened == kEventMouseDown)
@@ -635,7 +623,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
         return result;
 	}
 #warning is this valid.        
-     GetEventParameter (event, kEventParamWindowPartCode, typeWindowPartCode,NULL,sizeof(windowPartCode), NULL, &windowPartCode);
+	crosscheckForErrors = GetEventParameter (event, kEventParamWindowPartCode, typeWindowPartCode,NULL,sizeof(WindowPartCode), NULL, &windowPartCode);
     if (windowPartCode < 3) {
 		if (mouseDownActivate && whatHappened == kEventMouseUp) {
 			mouseDownActivate = false;
@@ -665,7 +653,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
-            if (windowPartCode = inGrow)
+            if (windowPartCode == inGrow)
                 return result;
 			if (mouseDownActivate) 
 				return result;
