@@ -63,7 +63,7 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
     long     size=0;
     OSStatus error;
     Str255   key;
-    char     convertedKey[256],buffer[1025];
+    char     convertedKey[256],buffer[DOCUMENT_NAME_SIZE+1];
     ICFileSpec *tempICFileSpec;
     
     if (!gInitializedOk) 
