@@ -107,50 +107,6 @@ void* ioLoadModule(char *pluginName) {
 	WARNING: never primitiveFail() within, just return 0.
 */
 
-#if defined ( __APPLE__ ) && defined ( __MACH__ ) && JMMFoo
-/* This code is here because it was mentioned as a way to link to CFM 
-libraries. However it seems to core dump the VM when we go to set the interpreter ptr
-Getting the Module name seemed to work. 
-This code comes from the Carbon samples.
-
- ?THought I wonder if the malloc is return non-aligned address (shouldnt)?
- ?However others can try to see if this works 
- ?The code would need to try as a bundle, if failure then try as a CFM
- ?Not quite sure how to carry forward info about bundle, or CFM
- ?Perhaps a structure is needed pass back that indicates what the handle is? 
- 
-      This of course goes in ioFindExternalFunctionIn, it's glue code that a CFM 
-      application does for you, but we must manually do for mach-o applications
-      
-     functionPtr = MachOFunctionPointerForCFMFunctionPointer(functionPtr);
-    
-*/
-
-//
-//	This function allocates a block of CFM glue code which contains the instructions to call CFM routines
-//
-UInt32 CFMLinkageTemplate[6] = {0x3D800000, 0x618C0000, 0x800C0000, 0x804C0004, 0x7C0903A6, 0x4E800420};
-
-void	*MachOFunctionPointerForCFMFunctionPointer( void *cfmfp );
-void	*MachOFunctionPointerForCFMFunctionPointer( void *cfmfp )
-{
-    UInt32	*mfp;
-    
-    mfp = malloc(sizeof(CFMLinkageTemplate)); //No we don't need to free, this linkage might be needed later. Freed when we terminate!
-    mfp[0] = CFMLinkageTemplate[0] | ((UInt32)cfmfp >> 16);
-    mfp[1] = CFMLinkageTemplate[1] | ((UInt32)cfmfp & 0xFFFF);
-    mfp[2] = CFMLinkageTemplate[2];
-    mfp[3] = CFMLinkageTemplate[3];
-    mfp[4] = CFMLinkageTemplate[4];
-    mfp[5] = CFMLinkageTemplate[5];
- 
-    MakeDataExecutable( mfp, sizeof(CFMLinkageTemplate) );
-    return( mfp );
-}
-
-#endif
-
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
 
 OSStatus LoadFrameworkBundle(SInt16 folderLocation,CFStringRef framework, CFBundleRef *bundlePtr)
 {
