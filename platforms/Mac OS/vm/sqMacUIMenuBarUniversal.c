@@ -34,7 +34,18 @@ extern struct VirtualMachine* interpreterProxy;
     #define DisableMenuItemCarbon(m1,v1)  DisableItem(m1,v1);
 #endif
 
-void MenuBarRestore() {
+
+void MenuBarHide(void) {
+ 	if (menuBarRegion != nil) return;  /* saved state, so menu bar is already hidden */
+	if (!(getThatDominateGDevice(getSTWindow()) == GetMainDevice())) return;  /*Do not did if main window on secondary screen */
+    menuBarRegion = (RgnHandle) 1;
+    ShowMenuBar();
+    HideMenuBar();
+}
+void MenuBarRestore(void) {
+	if (menuBarRegion == nil) return;  /* no saved state, so menu bar is not hidden */
+    ShowMenuBar();
+    menuBarRegion = nil;
 }
 
 void SetUpMenus(void) {

@@ -49,7 +49,6 @@ extern struct VirtualMachine *interpreterProxy;
 /*** Variables -- Mac Related ***/
 CTabHandle	stColorTable = nil;
 PixMapHandle	stPixMap = nil;
-Boolean  	gWindowsIsInvisible=true;
 
 
 /*** Functions ***/
@@ -86,20 +85,94 @@ int ioSetFullScreen(int fullScreen) {
 }
 
 int ioSetFullScreenActual(int fullScreen) {
+    Rect                screen,portRect;
+    int                 width, height, maxWidth, maxHeight;
+    int                 oldWidth, oldHeight;
+    static Rect			rememberOldLocation = {0,0,0,0};		
     GDHandle            dominantGDevice;
-	windowDescriptorBlock *	targetWindowBlock;
-	static Ptr gRestorableStateForScreen = nil;
-	static WindowPtr gAFullscreenWindow = nil,oldStWindow;
+	windowDescriptorBlock *	targetWindowBlock  = windowBlockFromIndex(1);
 
-	if (fullScreen && getFullScreenFlag() && !gWindowsIsInvisible)
+	if ((targetWindowBlock == NULL) || (fullScreen && getFullScreenFlag() && !targetWindowBlock->isInvisible))
+		return 0;
+
+	dominantGDevice = getThatDominateGDevice(targetWindowBlock->handle);
+    if (dominantGDevice == null) {
+        success(false);
+        return 0;
+    }
+    screen = (**dominantGDevice).gdRect;
+	        
+    if (fullScreen) {
+		GetPortBounds(GetWindowPort(targetWindowBlock->handle),&rememberOldLocation);
+		if (targetWindowBlock->isInvisible) {
+			rememberOldLocation.top = 44;
+			rememberOldLocation.left = 8;
+		}
+		LocalToGlobal((Point*) &rememberOldLocation.top);
+		LocalToGlobal((Point*) &rememberOldLocation.bottom);
+		MenuBarHide();
+		GetPortBounds(GetWindowPort(targetWindowBlock->handle),&portRect);
+		oldWidth =  portRect.right -  portRect.left;
+		oldHeight =  portRect.bottom -  portRect.top;
+		width  = screen.right - screen.left; 
+		height = (screen.bottom - screen.top);
+		MoveWindow(targetWindowBlock->handle, screen.left, screen.top, true);
+		SizeWindow(targetWindowBlock->handle, width, height, true);
+		setFullScreenFlag(true);
+	} else {
+		MenuBarRestore();
+
+		if (EmptyRect(&rememberOldLocation)) {
+			/* get old window size */
+			width  = (unsigned) getSavedWindowSize() >> 16;
+			height = getSavedWindowSize() & 0xFFFF;
+
+			/* minimum size is 1 x 1 */
+			width  = (width  > 0) ?  width : 64;
+			height = (height > 0) ? height : 64;
+
+		/* maximum size is screen size inset slightly */
+		maxWidth  = (screen.right  - screen.left) - 16;
+		maxHeight = (screen.bottom - screen.top)  - 52;
+		width  = (width  <= maxWidth)  ?  width : maxWidth;
+		height = (height <= maxHeight) ? height : maxHeight;
+			MoveWindow(targetWindowBlock->handle, 8, 44, true);
+			SizeWindow(targetWindowBlock->handle, width, height, true);
+		} else {
+			MoveWindow(targetWindowBlock->handle, rememberOldLocation.left, rememberOldLocation.top, true);
+			SizeWindow(targetWindowBlock->handle, rememberOldLocation.right - rememberOldLocation.left, rememberOldLocation.bottom - rememberOldLocation.top, true);
+		}
+		
+		setFullScreenFlag(false);
+	}
+	return 0;
+}
+/*
+int ioSetFullScreenActual(int fullScreen) {
+    GDHandle            dominantGDevice;
+	windowDescriptorBlock *	targetWindowBlock  = windowBlockFromIndex(1);
+	static Ptr gRestorableStateForScreen = nil;
+	static WindowPtr gAFullscreenWindow = nil,oldStWindow = nil;
+	static int oldWidth, oldHeight;
+	extern int windowActive;
+
+	if (fullScreen && getFullScreenFlag() && !targetWindowBlock->isInvisible)
 		return 0;
 
     if (fullScreen) {
+		
 		dominantGDevice = getThatDominateGDevice(getSTWindow());
 		if (dominantGDevice == null) {
 			success(false);
 			return 0;
 		}
+		oldStWindow = targetWindowBlock->handle;
+		oldWidth = targetWindowBlock->width;
+		oldHeight = targetWindowBlock->height;
+		if (targetWindowBlock->context)
+			QDEndCGContext(GetWindowPort(oldStWindow),&targetWindowBlock->context);
+		targetWindowBlock->context = nil;
+		HideWindow(oldStWindow);
 		BeginFullScreen	(&gRestorableStateForScreen,
 								dominantGDevice,
 								 NULL,
@@ -107,24 +180,29 @@ int ioSetFullScreenActual(int fullScreen) {
 								 &gAFullscreenWindow,
 								 nil,
 								 fullScreenAllowEvents);
-		targetWindowBlock = windowBlockFromIndex(1);
-		oldStWindow = targetWindowBlock->handle;
 		targetWindowBlock->handle = gAFullscreenWindow;
 		setFullScreenFlag(true);
 		SetUpCarbonEventForWindowIndex(1);
+		windowActive = 1;
 	} else {
 		if (gRestorableStateForScreen == NULL) 
 			return 0;
-		targetWindowBlock = windowBlockFromIndex(1);
+		if (targetWindowBlock->context)
+			QDEndCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
 		targetWindowBlock->handle = oldStWindow;
+		QDBeginCGContext(GetWindowPort(oldStWindow),&targetWindowBlock->context); 
 		setFullScreenFlag(false);
+		targetWindowBlock->isInvisible = true;
+		targetWindowBlock->width = oldWidth;
+		targetWindowBlock->height = oldWidth;
 		EndFullScreen(gRestorableStateForScreen,nil);
+		windowActive = 1;
 		gRestorableStateForScreen = NULL;
 	}
 	return 0;
 }
 
-/*int ioSetFullScreenActual(int fullScreen) {
+int ioSetFullScreenActual(int fullScreen) {
     GDHandle            dominantGDevice;
 	CGDirectDisplayID	mainDominateWindow;
 	CGDisplayErr err;
@@ -132,7 +210,7 @@ int ioSetFullScreenActual(int fullScreen) {
 	static CGContextRef savedContext = NULL;
 	windowDescriptorBlock *	targetWindowBlock;
 	
-	if (fullScreen && getFullScreenFlag() && !gWindowsIsInvisible)
+	if (fullScreen && getFullScreenFlag() && !targetWindowBlock->isInvisible)
 		return 0;
 
     if (fullScreen) {
@@ -194,8 +272,10 @@ void sqShowWindow(int windowIndex) {
 }
 
 void sqShowWindowActual(int windowIndex){
-	if ( windowHandleFromIndex(windowIndex))
-	ShowWindow( windowHandleFromIndex(windowIndex));
+	if (windowHandleFromIndex(windowIndex)) {
+		ShowWindow( windowHandleFromIndex(windowIndex));
+		windowBlockFromIndex(windowIndex)->isInvisible  = false;
+	}
 }
 
 int ioShowDisplay(
@@ -231,31 +311,33 @@ int ioShowDisplayOnWindow(
 	int 		pitch;
 	CGImageRef image;
 	CGRect		clip;
-	windowDescriptorBlock *targetWindowBlock;
+	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(windowIndex);	
 	CGDataProviderRef provider;
 
-	if (gWindowsIsInvisible) {
-		if (getSTWindow() == NULL) {
-			makeMainWindow();
-		}
-		if (colorspace == NULL) {
-				// Get the Systems Profile for the main display
-			CMProfileRef sysprof = NULL;
-			if (CMGetSystemProfile(&sysprof) == noErr) {
-				// Create a colorspace with the systems profile
-				colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
-				CMCloseProfile(sysprof);
-			} else 
-				colorspace = CGColorSpaceCreateDeviceRGB();
-		}
+	if (targetWindowBlock == NULL) {
+		if (windowIndex == 1) 
+				makeMainWindow();
+		else
+			return 0;
 	}
 
+	if (colorspace == NULL) {
+			// Get the Systems Profile for the main display
+		CMProfileRef sysprof = NULL;
+		if (CMGetSystemProfile(&sysprof) == noErr) {
+			// Create a colorspace with the systems profile
+			colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
+			CMCloseProfile(sysprof);
+		} else 
+			colorspace = CGColorSpaceCreateDeviceRGB();
+	}
+		
 	if (affectedL < 0) affectedL = 0;
 	if (affectedT < 0) affectedT = 0;
 	if (affectedR > width) affectedR = width;
 	if (affectedB > height) affectedB = height;
 	
-	if ((windowHandleFromIndex(windowIndex) == nil) || ((affectedR - affectedL) <= 0) || ((affectedB - affectedT) <= 0)){
+	if ((targetWindowBlock->handle == nil) || ((affectedR - affectedL) <= 0) || ((affectedB - affectedT) <= 0)){
             return 0;
 	}
 
@@ -266,7 +348,6 @@ int ioShowDisplayOnWindow(
 		pitch = bytesPerLine(width, depth);
 	}
 			
-	targetWindowBlock = windowBlockFromIndex(windowIndex);	
 	provider = CGDataProviderCreateDirectAccess((void*)dispBitsIndex
 				+ pitch*affectedT 
 				+ affectedL*(depth==32 ? 4 : 2),  
@@ -278,12 +359,11 @@ int ioShowDisplayOnWindow(
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 
-	if (gWindowsIsInvisible) {
-		sqShowWindow(1);
-		gWindowsIsInvisible = false;
+	if (targetWindowBlock->isInvisible) {
+		sqShowWindow(windowIndex);
 	}
 
-		if (targetWindowBlock->width != width || targetWindowBlock->height  != height) {
+		if (targetWindowBlock->context == nil || (targetWindowBlock->width != width || targetWindowBlock->height  != height)) {
 			if (targetWindowBlock->context) {
 				QDEndCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
 				//CGContextRelease(targetWindowBlock->context);
@@ -512,6 +592,7 @@ int makeMainWindow(void) {
 	window = SetUpWindow(44, 8, 44+height, 8+width,gSqueakWindowType,gSqueakWindowAttributes);
 	windowBlock = AddWindowBlock();
 	windowBlock-> handle = (wHandleType) window;
+	windowBlock->isInvisible = !MacIsWindowVisible(window);
 
 #ifndef MINIMALVM
 	 ioLoadFunctionFrom(NULL, "DropPlugin");
@@ -525,8 +606,8 @@ int makeMainWindow(void) {
 #ifndef BROWSERPLUGIN
         ioSetFullScreenActual(getFullScreenFlag());
 		SetUpCarbonEventForWindowIndex(1);
-		CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
-   
+		//CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
+		QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context);    
  	Rect portRect;
 	int	w,h;
 	
@@ -608,7 +689,7 @@ int ioScreenSize(void) {
 	h= getSavedWindowSize() & 0xFFFF;
 
 #ifndef IHAVENOHEAD
-	if (getSTWindow() == NULL && gWindowsIsInvisible) {
+	if (getSTWindow() == NULL) {
 		makeMainWindow();
 	}
 

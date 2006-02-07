@@ -545,10 +545,12 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
     GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL,sizeof(window), NULL, &window);
     whatHappened = GetEventKind(event);
 	//fprintf(stderr,"\nWindowEvent %i %i %i",whatHappened,IsWindowActive(window),windowIndexFromHandle((int)window));
+	if (windowIndexFromHandle((int)window) == 0) 
+		return result;
     switch (whatHappened)
     {
          case kEventWindowActivated:
-            windowActive = windowIndexFromHandle((wHandleType)window);
+          windowActive = windowIndexFromHandle((wHandleType)window);
             postFullScreenUpdate();
 			recordWindowEventCarbon(WindowEventActivated,0, 0, 0, 0,windowActive);
              break;
@@ -653,7 +655,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
-            if (windowPartCode == inGrow)
+            if (windowPartCode != inContent)
                 return result;
 			if (mouseDownActivate) 
 				return result;
@@ -1297,7 +1299,8 @@ static int removeFromKeyMap(int keyCode)
   int idx= indexInKeyMap(keyCode);
   int keyChar= -1;
   //fprintf(stdout, "\nremoveFromKeyMap T %i c %i i %i",ioMSecs(),keyCode,keyMapSize-1);
-  if (idx == -1) { fprintf(stderr, "keymap underflow\n");  return -1; }
+  if (idx == -1) { //fprintf(stderr, "keymap underflow\n");  
+		return -1; }
   keyChar= keyMap[idx].keyChar;
   for (; idx < keyMapSize - 1;  ++idx)
     keyMap[idx]= keyMap[idx + 1];
