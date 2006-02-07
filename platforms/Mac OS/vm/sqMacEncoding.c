@@ -219,6 +219,10 @@ void setEncodingType (char * string) {
 #if TARGET_API_MAC_CARBON
       if (strcmp("ShiftJIS",string) == 0)
           gCurrentVMEncoding = kCFStringEncodingShiftJIS;
+      if (strcmp("Latin1",string) == 0)
+          gCurrentVMEncoding = kCFStringEncodingISOLatin1;
+      if (strcmp("iso-8859-1",string) == 0)
+          gCurrentVMEncoding = kCFStringEncodingISOLatin1;
 #endif
   }
   
@@ -230,6 +234,8 @@ void setEncodingType (char * string) {
 #if TARGET_API_MAC_CARBON
       if (aType == kCFStringEncodingShiftJIS) 
           return (char *)&"ShiftJIS";
+      if (aType == kCFStringEncodingISOLatin1) 
+          return (char *)&"Latin1";
 #endif
       return (char *)&"macintosh";
   }
