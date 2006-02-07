@@ -164,6 +164,7 @@ OSStatus LoadFrameworkBundle(SInt16 folderLocation,CFStringRef framework, CFBund
 	
 	return err;
 }
+#if defined(__APPLE__) && defined(__MACH__)
 
 void* 	ioFindExternalFunctionIn(char *lookupName, void * moduleHandle) {
 	void * 		functionPtr = 0;
