@@ -29,6 +29,7 @@ typedef struct windowDescriptorBlock {
 	int locked;
 	int	width;
 	int	height;
+	int isInvisible;
 #endif
 } windowDescriptorBlock;
 

@@ -33,6 +33,7 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 	
 	index = windowBlock->windowIndex;
 #if I_AM_CARBON_EVENT
+	windowBlock->isInvisible = !MacIsWindowVisible(window);
 	SetUpCarbonEventForWindowIndex(index);
 	QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context); 
 //	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context); 
