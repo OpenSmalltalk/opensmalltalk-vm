@@ -10,12 +10,24 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
 \
-Feb 5th, 2006 (3.8.10b5)\
+Feb 6th, 2006 (3.8.10b6)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
-\
+3.8.10b6\
+		sqMacMenubarUniversal.c\
+			Add hide/show menu logic back in\
+		sqMacWindowUniversal.c\
+			Revert back to full screen resize, move window logic.\
+			In draw logic look at window is invisible flag now on windowBlock structure. \
+			Cleanup termination logic in draw logic method when block is bad, or window is invisible. \
+		sqMacEventUniversal.c\
+			Fix issues with window part codes on click to ensure clicks in window bar are handled correctly\
+		sqMacHostWindow.c/sqMacHostWindow.h\
+			Add window is invisible flag\
+		sqMacEncoding.c\
+			Add logic for 	Latin1 support, make that the default for path names, versus macroman. \
 3.8.10b4\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
 \cf0 		Work for os-x universal, intel port. \
@@ -23,7 +35,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f1 \cf0 		sqMacEvent.c\
+\f1 \cf0 		sqMacEventUniversal.c\
 			removal of power managment\
 			removal of USB logic which was originally for Jeff Raskin\
 			removal of 1984 event loop\
@@ -35,7 +47,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 			*MyWindowEventMouseHandler - use kEventParamWindowPartCode, versus getting kWindowGlobalPortRgn, to figure out where mouse was, such as outside window, or in grow box. \
 			PowerManagerDefeatTimer - remove power manager logic. \
 \
-		sqMacWindow.c\
+		sqMacWindowUniversal.c\
 			remove ifdef I_AM_CARBON_EVENT\
 			ioSetFullScreenActual - use BeginFullScreen call with SetUpCarbonEventForWindowIndex\
 			? full screen open, implications? what if screen size changes? \
@@ -54,8 +66,9 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 			redefine DPRINTF\
 			glSwapBuffers - GetWindowPort  use proper cast\
 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
 
-\f0 		sqMacOpenGLInfo.c\
+\f0 \cf0 		sqMacOpenGLInfo.c\
 			redefine DPRINTF\
 \
 		sqMacDragDrop.c\
@@ -78,7 +91,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 			add logic to put /secure in vm path as secure directory\
 			change logic to use unix file names for making My Squeak directory, also call out to dir creation\
 \
-		sqMacEncoding\
+		sqMacEncoding.c\
 			SetVMPathFromCFString - for  unix file names we only need to set the vmPathString\
 			For HFS+ add comments about why we need to do normalization here and in SetImageNameViaCFString\
 			\
@@ -520,8 +533,9 @@ sqMacEncoding.c	Alter SetVMPath()
 				add support for 
 \f3\fs20 \CocoaLigature0       \
 				\cf3 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1\fs24 \CocoaLigature1 \
+\f1\fs24 \cf0 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 				Alter PathToFile(), get kCFStringNormalizationFormKC path name\
 				Alter QuicklyMakePath() get kCFStringNormalizationFormKC path name\
@@ -563,11 +577,13 @@ JPEG READER WRITER\
 \f1 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
 				Broke high bit ascii macroman in 3.7.0bx.\
 				For multi-byte character input you get EventKeyDown/EventKeyChar/EventKeyUp for each unicode character coming from the input sequence.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \
+\f0 \cf0 \
 3.7.0b2		\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f1 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -575,14 +591,17 @@ JPEG READER WRITER\
 				b) Support for sqSocketListenOnPortBacklogSizeInterface, which allows you to specify the interface to use for the listen should work both for os-x and os-9.\
 				c) Usage of VMMaker3-7a2.\
 				d) Special change sets: make primitive point x/y internal, and slightly faster activate.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \
+\f0 \cf0 \
 3.7.0b1 			\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f1 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 3.6.1b7			\
+\f0 \cf0 3.6.1b7			\
 SqMacWindow.c	Fix for new rending code when used with 2.8 or earlier images, mouse clicks reported in wrong place\
 \
 3.6.1b6\
