@@ -86,7 +86,7 @@ int imageNamePutLength(int sqImageNameIndex, int length) {
 	/* copy the file name into a null-terminated C string */
 	for (i = 0; i < count; i++) {
 		ch = name[i] = sqImageName[i];
-		if (ch == ':') {
+		if (ch == DELIMITERInt) {
 			lastColonIndex = i;
 		}
 	}
