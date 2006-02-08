@@ -10,11 +10,19 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
 \
-Feb 6th, 2006 (3.8.10b6)\
+Feb 7th, 2006 (3.8.10b7)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.10b7\
+		sqMacUnixFileInterface.c\
+			Finder information comes in as part of catalog information, ensure we get all 16 bytes\
+			versus just the file owner/type which is only 8 bytes. That fixes problem in 10b6 where \
+			we wrote garbage to the 8 bytes, dates, and permissions\
+		sqMacImageIO.c\
+			missed a ':', delimits where the short image name is for the window title. Use DELIMITORInt\
+\
 3.8.10b6\
 		sqMacMenubarUniversal.c\
 			Add hide/show menu logic back in\
