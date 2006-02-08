@@ -449,16 +449,14 @@ void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolea
 }
 
 
-OSErr getFInfo(char *filename,FInfo *finderInfo,CFStringEncoding encoding) {
+OSErr getFInfo(char *filename,FSCatalogInfo *catInfo,CFStringEncoding encoding) {
    FSRef	theFSRef;
-   FSCatalogInfo catInfo;
    OSErr	err;
    
 	err =  getFSRef(filename,&theFSRef,encoding);
 	if (err != 0)
 		return err;
-    err = FSGetCatalogInfo (&theFSRef,kFSCatInfoFinderInfo,&catInfo,nil,nil,nil);
-	memcpy(finderInfo,catInfo.finderInfo,sizeof(FInfo));
+    err = FSGetCatalogInfo (&theFSRef,kFSCatInfoFinderInfo,catInfo,nil,nil,nil);
     return noErr;
 }
 
@@ -466,8 +464,8 @@ int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
 	/* Set the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 
-    FInfo   finderInfo;
     FSCatalogInfo catInfo;
+	FInfo	finderInfo;
     OSErr	err;
     FSRef	theFSRef;
 	char	fileNameBuffer[DOCUMENT_NAME_SIZE+1];
@@ -476,17 +474,17 @@ int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
  	bytes = ioFilenamefromStringofLengthresolveAliasesRetry(fileNameBuffer,filename, filenameSize, true, true);
 	if (bytes == 0) 
 		return false;
-    if (getFInfo(fileNameBuffer,&finderInfo,kCFStringEncodingUTF8) != noErr)
+    if (getFInfo(fileNameBuffer,&catInfo,kCFStringEncodingUTF8) != noErr)
         return false;
-       
+	memcpy(&finderInfo,&catInfo.finderInfo,16);
 	finderInfo.fdType = *((int *) fType);
 	finderInfo.fdCreator = *((int *) fCreator);
+	memcpy(&catInfo.finderInfo,&finderInfo,16);
 	
 	err =  getFSRef(fileNameBuffer,&theFSRef,kCFStringEncodingUTF8);
 	if (err != 0)
 		return err;
-	memcpy(&catInfo.finderInfo,&finderInfo,8);
-    err = FSSetCatalogInfo (&theFSRef,kFSCatInfoFinderInfo,&catInfo);
+   err = FSSetCatalogInfo (&theFSRef,kFSCatInfoFinderInfo,&catInfo);
 
     return true;
 }
@@ -495,7 +493,8 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
 	/* Get the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 
-    FInfo   finderInfo;
+    FSCatalogInfo catInfo;
+	FInfo	finderInfo;
 	char	fileNameBuffer[DOCUMENT_NAME_SIZE+1];
 	int		bytes;
 	
@@ -503,9 +502,10 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
 	if (bytes == 0) 
 		return false;
     
-    if (getFInfo(fileNameBuffer,&finderInfo,kCFStringEncodingUTF8) != noErr)
+    if (getFInfo(fileNameBuffer,&catInfo,kCFStringEncodingUTF8) != noErr)
         return false;
-       
+		
+	memcpy(&finderInfo,&catInfo.finderInfo,16);
 	*((int *) fType) = finderInfo.fdType;
 	*((int *) fCreator) = finderInfo.fdCreator;
 
@@ -697,7 +697,7 @@ static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
 
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
 {
-  CFStringRef	     cfs= CFStringCreateWithBytes(NULL, from, fromLen, (CFStringEncoding)fromCode, 0);
+  CFStringRef	     cfs= CFStringCreateWithBytes(NULL, (UInt8 *) from, fromLen, (CFStringEncoding)fromCode, 0);
   CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, cfs);
   CFRelease(cfs);
   if (norm) // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
