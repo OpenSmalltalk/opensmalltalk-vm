@@ -544,14 +544,19 @@ void openQuicktimeMIDIPort(void) {
 	NoteRequest nr;
 	NoteChannel nc;
 	int i;
-
+	short shortpoly;
+	Fixed fixedtypical;
+	
 	closeQuicktimeMIDIPort();
 	na = OpenDefaultComponent('nota', 0);
 	if (!na) return;
 
 	for (i = 0; i < 16; i++) {
-		nr.info.polyphony = 11;					/* max simultaneous tones */
-		nr.info.typicalPolyphony = 0x00010000;	/* typical simultaneous tones */
+		shortpoly = CFSwapInt16HostToBig(11);
+		memcpy(&nr.info.polyphony,&shortpoly,2);			/* max simultaneous tones */
+		fixedtypical = CFSwapInt32HostToBig(0x00010000);
+		memcpy(&nr.info.typicalPolyphony,&fixedtypical,4);
+
 		NAStuffToneDescription(na, 1, &nr.tone);
 		err = NANewNoteChannel(na, &nr, &nc);
 		if (err || !nc) {

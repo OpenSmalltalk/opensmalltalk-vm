@@ -156,7 +156,7 @@
 #define	WORDS_BIGENDIAN 1
 #define VMENDIANNESS 1
 #else
-#undefine	WORDS_BIGENDIAN 
+#undef	WORDS_BIGENDIAN 
 #define VMENDIANNESS 0
 #endif
 
