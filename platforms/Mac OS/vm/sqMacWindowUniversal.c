@@ -443,7 +443,7 @@ void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height,
 			if (offscreenGWorld != nil)
 				DisposeGWorld(offscreenGWorld);
 			
-			error	= NewGWorld (&offscreenGWorld,desiredDepth,&structureRect,0,0,keepLocal | kNativeEndianPixMap | pixelsLockedBit);
+			error	= NewGWorld (&offscreenGWorld,desiredDepth,&structureRect,0,0,keepLocal | kNativeEndianPixMap);
 			LockPixels(GetGWorldPixMap(offscreenGWorld));
 			
             rememberWidth  = dstRect.right = width;
