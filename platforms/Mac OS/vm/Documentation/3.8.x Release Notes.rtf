@@ -6,15 +6,27 @@
 \margl1440\margr1440\vieww13660\viewh14740\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.8.9 mach-o build for Carbon, and build for Classic. \
+\f0\fs24 \cf0 Mac VM 3.8.10 mach-o build for Carbon, and build for Classic. \
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
 \
-Feb 7th, 2006 (3.8.10b7)\
+Feb 17th, 2006 (3.8.10b8)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.10b8 \
+		sqMacUnixFileInterface.c\
+			delete cached directory name if we delete the directory, this invalidates the cache later if we look up\
+			the name again. \
+		sqMacWindowUniversal.c\
+			Fix issues with intel compile\
+		sqMacMIDI.c\
+			endian issues with structure (not sure if fixed)\
+		config.h\
+			endian issues\
+		\
 3.8.10b7\
 		sqMacUnixFileInterface.c\
 			Finder information comes in as part of catalog information, ensure we get all 16 bytes\
