@@ -139,6 +139,9 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength)
     return false;
   if (!ioFilenamefromStringofLengthresolveAliasesRetry(name,pathString, pathStringLength, false, true))
     return false;
+  if (strcmp(lastPath, name) == 0)
+		lastPath[0] = 0x00;
+		
   return rmdir(name) == 0;
 }
 
