@@ -147,17 +147,20 @@
 
 #define	OS_TYPE "unix"
 
-#define	VM_HOST "powerpc-apple-darwin7.8.0"
-#define	VM_HOST_CPU "powerpc"
 /* #undef	VM_HOST_VENDOR */
-#define	VM_HOST_OS "darwin7.8.0"
+#define	VM_HOST_OS "darwin8.5.0"
 
 #if defined(__BIG_ENDIAN__)
 #define	WORDS_BIGENDIAN 1
 #define VMENDIANNESS 1
+#define	VM_HOST "powerpc-apple-darwin8.5.0"
+#define	VM_HOST_CPU "powerpc"
 #else
 #undef	WORDS_BIGENDIAN 
 #define VMENDIANNESS 0
+#define	VM_HOST "intel-apple-darwin8.5.0"
+#define	VM_HOST_CPU "intel"
+#define	DOUBLE_WORD_ORDER 1
 #endif
 
 /* #undef	DOUBLE_WORD_ALIGNMENT */
