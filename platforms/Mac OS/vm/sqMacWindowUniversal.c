@@ -108,8 +108,7 @@ int ioSetFullScreenActual(int fullScreen) {
 			rememberOldLocation.top = 44;
 			rememberOldLocation.left = 8;
 		}
-		LocalToGlobal((Point*) &rememberOldLocation.top);
-		LocalToGlobal((Point*) &rememberOldLocation.bottom);
+		QDLocalToGlobalPoint(GetWindowPort(targetWindowBlock->handle),&rememberOldLocation);
 		MenuBarHide();
 		GetPortBounds(GetWindowPort(targetWindowBlock->handle),&portRect);
 		oldWidth =  portRect.right -  portRect.left;
@@ -355,7 +354,7 @@ int ioShowDisplayOnWindow(
 				&gProviderCallbacks);
 	image = CGImageCreate( affectedR-affectedL, affectedB-affectedT, depth==32 ? 8 : 5 /* bitsPerComponent */,
 				depth /* bitsPerPixel */,
-				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
+				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Big : kCGBitmapByteOrder16Big), provider, NULL, 0, kCGRenderingIntentDefault);
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 
@@ -721,7 +720,7 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	*/
 	Cursor macCursor;
 	int i;
-
+	
 	if (cursorMaskIndex == nil) {
 		for (i = 0; i < 16; i++) {
 			macCursor.data[i] = (checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFFFF;
