@@ -108,7 +108,8 @@ int ioSetFullScreenActual(int fullScreen) {
 			rememberOldLocation.top = 44;
 			rememberOldLocation.left = 8;
 		}
-		QDLocalToGlobalPoint(GetWindowPort(targetWindowBlock->handle),&rememberOldLocation);
+		LocalToGlobal((Point*) &rememberOldLocation.top);
+		LocalToGlobal((Point*) &rememberOldLocation.bottom);
 		MenuBarHide();
 		GetPortBounds(GetWindowPort(targetWindowBlock->handle),&portRect);
 		oldWidth =  portRect.right -  portRect.left;
@@ -354,7 +355,7 @@ int ioShowDisplayOnWindow(
 				&gProviderCallbacks);
 	image = CGImageCreate( affectedR-affectedL, affectedB-affectedT, depth==32 ? 8 : 5 /* bitsPerComponent */,
 				depth /* bitsPerPixel */,
-				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Big : kCGBitmapByteOrder16Big), provider, NULL, 0, kCGRenderingIntentDefault);
+				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Host : kCGBitmapByteOrder16Host), provider, NULL, 0, kCGRenderingIntentDefault);
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 
