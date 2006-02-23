@@ -144,8 +144,8 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 #ifdef MACINTOSHUSEUNIXFILENAMES
 		{
 			char pathName[IMAGE_NAME_SIZE+1];				
-			PathToFile(pathName, IMAGE_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
-			getLastPathComponent(pathName,shortImageName,gCurrentVMEncoding);
+			PathToFileViaFSSpec(pathName, IMAGE_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
+			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 		}
 #else
  		{
@@ -227,7 +227,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 			int	error;
 			extern       char **argVec;
 					
-			error = PathToFile(pathname, 2048, &fileSpec, gCurrentVMEncoding);
+			error = PathToFileViaFSSpec(pathname, 2048, &fileSpec, kCFStringEncodingMacRoman);
 			commandStuff [0] = 0x00;
 #ifdef MACINTOSHUSEUNIXFILENAMES
 			strcat(commandStuff,"set pimage to  \"");
@@ -333,8 +333,8 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 		{
 			char pathName[DOCUMENT_NAME_SIZE+1];
 				
-			PathToFile(pathName, DOCUMENT_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
-			getLastPathComponent(pathName,shortImageName,gCurrentVMEncoding);
+			PathToFileViaFSSpec(pathName, DOCUMENT_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
+			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 		}
 #else
 		{

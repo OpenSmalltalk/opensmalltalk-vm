@@ -187,7 +187,7 @@ int sqSecFileAccessCallback(void *function) {
 char *dropRequestFileName(int dropIndex) {
     if(dropIndex < 1 || dropIndex > gNumDropFiles) 
         return NULL;
-    PathToFile(tempName, 
+    PathToFileViaFSSpec(tempName, 
         DOCUMENT_NAME_SIZE,
         &dropFiles[dropIndex-1].fileSpec,gCurrentVMEncoding);
     if (dropIndex == gNumDropFiles) 

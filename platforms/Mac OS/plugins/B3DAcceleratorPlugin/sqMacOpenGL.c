@@ -102,7 +102,7 @@ static FILE *xopenf(char *filename,char* attr) {
 	char fullName[DOCUMENT_NAME_SIZE+1];
 	FILE *fp;
 	makeFSSpec("", &imageSpec);
-	PathToFile(fullName,DOCUMENT_NAME_SIZE,&imageSpec,gCurrentVMEncoding);
+	PathToFileViaFSSpec(fullName,DOCUMENT_NAME_SIZE,&imageSpec,kCFStringEncodingUTF8);
 	strcat(fullName,filename);
 	fp = fopen(fullName, attr);
 return fp;

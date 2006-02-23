@@ -283,7 +283,7 @@ int main(void) {
             err = squeakFindImage(pathName);
 			if (err) 
 				ioExit();
-			getLastPathComponent(pathName,shortImageName,gCurrentVMEncoding);
+			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 			SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
 			SetImageNameViaString(pathName,gCurrentVMEncoding);
 		}

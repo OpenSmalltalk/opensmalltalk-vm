@@ -141,7 +141,6 @@ void resolveWhatTheImageNameIs(char *guess)
 
 	strncpy(possibleImageName, guess,DOCUMENT_NAME_SIZE);
 #ifdef MACINTOSHUSEUNIXFILENAMES
-	sqFilenameFromStringOpen(fullPath, (int) possibleImageName, strlen(possibleImageName));
 	err = getFSRef(possibleImageName,&theFSRef,kCFStringEncodingUTF8);
 	if (err) {
 		SetImageNameViaString("",gCurrentVMEncoding);
@@ -149,7 +148,7 @@ void resolveWhatTheImageNameIs(char *guess)
 		return;
 	}
 	PathToFileViaFSRef(fullPath,DOCUMENT_NAME_SIZE, &theFSRef, false,NULL,gCurrentVMEncoding);
-	getLastPathComponent(fullPath,lastPath,gCurrentVMEncoding);
+	getLastPathComponentInCurrentEncoding(fullPath,lastPath,gCurrentVMEncoding);
 	SetImageNameViaString(fullPath,gCurrentVMEncoding);
 	SetShortImageNameViaString(lastPath,gCurrentVMEncoding);
 #else

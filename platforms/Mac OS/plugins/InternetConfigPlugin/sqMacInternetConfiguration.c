@@ -80,7 +80,7 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
         error  = ICGetPref(gICInstance, "\pDownloadFolder", nil, &buffer, &size);
         if (error == noErr || error == icTruncatedErr) {
             tempICFileSpec = (ICFileSpec *) &buffer;
-            PathToFile(aString, DOCUMENT_NAME_SIZE, &tempICFileSpec->fss,gCurrentVMEncoding);
+            PathToFileViaFSSpec(aString, DOCUMENT_NAME_SIZE, &tempICFileSpec->fss,gCurrentVMEncoding);
             size = strlen(aString);
        } else 
             return 0;

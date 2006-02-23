@@ -23,8 +23,6 @@ void getImageNameWithEncoding(char *target,UInt32 encoding);
 void SetImageNameViaCFString(CFStringRef string);
 void SetImageNameViaString(char *string,UInt32 encoding);
 void SetImageName(FSSpec *workingDirectory);
-void SetImageNameWithEncoding(FSSpec *workingDirectory,
-							  CFStringEncodings encoding);
 Boolean ImageNameIsEmpty();
 char *getImageName();
 void getShortImageNameWithEncoding(char *target,UInt32 encoding);

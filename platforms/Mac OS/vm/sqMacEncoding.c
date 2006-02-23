@@ -98,15 +98,10 @@ void SetImageNameViaString(char *string,UInt32 encoding) {
 }
 
 void SetImageName(FSSpec *workingDirectory) {
-	SetImageNameWithEncoding(workingDirectory, gCurrentVMEncoding);
-}
-
-void SetImageNameWithEncoding(FSSpec *workingDirectory,
-							  CFStringEncodings encoding) {
     char path[IMAGE_NAME_SIZE + 1];
     
-    PathToFile(path,IMAGE_NAME_SIZE, workingDirectory, encoding);
-    SetImageNameViaString(path, encoding);
+    PathToFileViaFSSpec(path,IMAGE_NAME_SIZE, workingDirectory, gCurrentVMEncoding);
+    SetImageNameViaString(path, gCurrentVMEncoding);
 }
 
 Boolean ImageNameIsEmpty() {
@@ -179,7 +174,7 @@ void SetImageNameViaString(char *string,UInt32 encoding) {
 }
 
 void SetImageName(FSSpec *workingDirectory) {
-    PathToFile(imageName,IMAGE_NAME_SIZE, workingDirectory,kCFStringEncodingUTF8);
+    PathToFileViaFSSpec(imageName,IMAGE_NAME_SIZE, workingDirectory,kCFStringEncodingUTF8);
 }
 
 Boolean ImageNameIsEmpty() {

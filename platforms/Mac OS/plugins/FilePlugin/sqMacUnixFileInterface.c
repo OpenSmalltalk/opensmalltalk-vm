@@ -371,7 +371,7 @@ OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding)
 
 /* Returns in gCurrentVMEncoding */
 
-int getLastPathComponent(char *pathString,char * lastPathPart,CFStringEncoding encoding) {
+int getLastPathComponentInCurrentEncoding(char *pathString,char * lastPathPart,CFStringEncoding encoding) {
     CFURLRef    sillyThing;
     CFStringRef tmpStrRef;
 
@@ -395,7 +395,7 @@ int getLastPathComponent(char *pathString,char * lastPathPart,CFStringEncoding e
 /* Fill in the given string with the full path from a root volume to the given file. */
 /* From FSSpec to C-string pathName */
 /* FSSpec -> FSRef -> URL(Unix) -> HPFS+ */
-int PathToFile(char *pathName, int pathNameMax, FSSpec *where,CFStringEncoding encoding) {        
+int PathToFileViaFSSpec(char *pathName, int pathNameMax, FSSpec *where,CFStringEncoding encoding) {        
         FSRef	theFSRef;
         OSErr	error;
         Boolean retryWithDirectory=false;

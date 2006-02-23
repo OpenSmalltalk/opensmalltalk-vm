@@ -233,7 +233,7 @@ int ioInitSecurity(void) {
       return 1;
 	}
 	FSMakeFSSpecCompat(vRefNum,dirID,"\p",&spec);
-	PathToFile(untrustedUserDirectory,255,&spec,gCurrentVMEncoding);
+	PathToFileViaFSSpec(untrustedUserDirectory,255,&spec,gCurrentVMEncoding);
 	strcat(untrustedUserDirectory,"Squeak:Internet");
  	err = makeFSSpec(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec);
  	if (err != noErr) {
