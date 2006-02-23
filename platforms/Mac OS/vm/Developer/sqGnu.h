@@ -35,6 +35,7 @@
  *
  * Last edited: Fri Aug 11 08:20:28 2000 by piumarta (Ian Piumarta) on emilia
  * April 17th, 2002, John M McIntosh use jumptable register logic for PPC
+ * Feb 23rd, 2006, John M McIntosh watch usage of __Apple__ also Ian's changes for GCC i386
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -43,7 +44,7 @@
 #include "sq.h"
 
 #define CASE(N)	case N: _##N:
-#if defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined (__APPLE__)
+#if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
     #define BREAK		goto *jumpTableR[currentBytecode]
     #define PPC_REG_JUMP	; register void **jumpTableR JP_REG; jumpTableR = &jumpTable[0]
 #else
@@ -176,11 +177,15 @@
 # define CB_REG asm("$11")
 #endif
 #if defined(__i386__)
-# define IP_REG asm("%esi")
-# define SP_REG asm("%edi")
-# define CB_REG	/* asm("%ebx") ; avoid undue register pressure */
+# define IP_REG __asm__("%esi")
+# define SP_REG __asm__("%edi")
+# if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
+#   define CB_REG __asm__("%ebx")
+# else
+#   define CB_REG /* avoid undue register pressure */
+# endif
 #endif
-#if defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined (__APPLE__)
+#if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define FOO_REG asm("24")
 # define JP_REG asm("25")
 # define IP_REG asm("26")
