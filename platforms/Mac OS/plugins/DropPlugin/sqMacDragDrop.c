@@ -340,6 +340,42 @@ pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWin
 	return noErr; // there's no point in confusing Drag Manager or its caller
 }
 
+static pascal OSErr SetDropFolder
+    (DragReference dragRef, FSRef *folder)
+{
+    OSErr err = noErr;
+
+    AliasHandle aliasH;
+
+    if (!(err = FSNewAliasMinimal (folder,&aliasH)))
+    {
+        HLockHi ((Handle) aliasH);
+        if (!(err = MemError ( )))
+        {
+            Size size = GetHandleSize ((Handle) aliasH);
+            if (!(err = MemError ( )))
+            {
+                AEDesc dropLoc;
+
+                if (!(err = AECreateDesc
+                    (typeAlias,*aliasH,size,&dropLoc)))
+                {
+                    OSErr err2;
+
+                    err = SetDropLocation (dragRef,&dropLoc);
+
+                    err2 = AEDisposeDesc (&dropLoc);
+                    if (!err) err = err2;
+                }
+            }
+        }
+
+        DisposeHandle ((Handle) aliasH);
+        if (!err) err = MemError ( );
+    }
+
+    return err;
+}
 
 /* MyDragReceiveHandler is the receive handler for the main window.  It is called
 	when a file or folder (or a promised file or folder) is dropped into the drop
@@ -419,8 +455,19 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
     	
     		/* check for a drop from find file */
     	if (targetPromise.promisedFlavor == kPromisedFlavorFindFile) {
-    	
     			/* from find file, no need to set the file location... */
+    		if (err != noErr) 
+    			continue;
+    	} else {
+			FSRef	targetFolder;
+			
+			err = FSFindFolder(kLocalDomain, kTemporaryFolderType, kDontCreateFolder, &targetFolder);
+    		if (err != noErr) 
+    			continue;
+			err = SetDropFolder(theDragRef, &targetFolder);
+    		if (err != noErr) 
+    			continue;
+    	}
     		theSize = sizeof(FSSpec);
     		err = GetFlavorData(theDragRef, theItem, targetPromise.promisedFlavor, &dropFiles[countActualItems].fileSpec, &theSize, 0);
     		if (err != noErr) 
@@ -431,10 +478,6 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
 	        dropFiles[countActualItems].fileCreator = finderInfo.fdCreator;
 	        dropFiles[countActualItems].fdFlags =  finderInfo.fdFlags;
     		countActualItems++;
-    	} else {
-    		err = badDragFlavorErr;
-    		return err;
-    	}
     }
     
 	gNumDropFiles = countActualItems;
