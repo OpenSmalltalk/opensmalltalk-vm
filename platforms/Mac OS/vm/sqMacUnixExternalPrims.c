@@ -42,7 +42,7 @@
  
  */
 
-#define DEBUG 1
+#define DEBUG 0
  
 #include "sq.h"		/* sqUnixConfig.h */
 #include "sqMacUIConstants.h"

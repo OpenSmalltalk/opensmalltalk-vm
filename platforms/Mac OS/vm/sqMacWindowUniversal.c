@@ -315,8 +315,10 @@ int ioShowDisplayOnWindow(
 	CGDataProviderRef provider;
 
 	if (targetWindowBlock == NULL) {
-		if (windowIndex == 1) 
+		if (windowIndex == 1) {
 				makeMainWindow();
+				targetWindowBlock = windowBlockFromIndex(windowIndex);
+		}
 		else
 			return 0;
 	}
