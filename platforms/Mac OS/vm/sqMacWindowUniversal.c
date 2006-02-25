@@ -354,7 +354,7 @@ int ioShowDisplayOnWindow(
 				pitch * (affectedB-affectedT)-affectedL*(depth==32 ? 4 : 2), 
 				&gProviderCallbacks);
 	image = CGImageCreate( affectedR-affectedL, affectedB-affectedT, depth==32 ? 8 : 5 /* bitsPerComponent */,
-				depth /* bitsPerPixel */,
+				depth /* bitsPerPixel */, 
 				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Host : kCGBitmapByteOrder16Host), provider, NULL, 0, kCGRenderingIntentDefault);
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);

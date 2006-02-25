@@ -123,7 +123,7 @@ Boolean         gThreadManager=false;
 ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
 OSErr			gSqueakFileLastError; 
-Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false;
+Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false;
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
 char            gSqueakImageName[2048] = "Squeak.image";
@@ -720,7 +720,7 @@ void fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
-    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock;
+    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly;
     CFDataRef 	SqueakWindowAttributeType;    
     CFStringRef    SqueakVMEncodingType;
     char        encoding[256];
@@ -734,6 +734,7 @@ void fetchPrefrences() {
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
+    SqueakPluginsBuiltInOrLocalOnly = CFDictionaryGetValue(myDictionary, CFSTR("SqueakPluginsBuiltInOrLocalOnly"));
     gSqueakImageNameStringRef = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
     SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
     SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
@@ -768,16 +769,21 @@ void fetchPrefrences() {
             -kWindowCloseBoxAttribute;
     }
     
-    if (SqueakWindowHasTitleType) 
-        gSqueakWindowHasTitle = CFBooleanGetValue(SqueakWindowHasTitleType);
+    if (SqueakPluginsBuiltInOrLocalOnly) 
+        gSqueakPluginsBuiltInOrLocalOnly = CFBooleanGetValue(SqueakPluginsBuiltInOrLocalOnly);
     else 
-        gSqueakWindowHasTitle = true;
+        gSqueakPluginsBuiltInOrLocalOnly = false;
         
     if (SqueakFloatingWindowGetsFocusType) 
         gSqueakFloatingWindowGetsFocus = CFBooleanGetValue(SqueakFloatingWindowGetsFocusType);
     else
         gSqueakFloatingWindowGetsFocus = false;
 
+    if (SqueakWindowHasTitleType) 
+        gSqueakWindowHasTitle = CFBooleanGetValue(SqueakWindowHasTitleType);
+    else 
+        gSqueakWindowHasTitle = true;
+        
     if (SqueakMaxHeapSizeType) 
         CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
 		

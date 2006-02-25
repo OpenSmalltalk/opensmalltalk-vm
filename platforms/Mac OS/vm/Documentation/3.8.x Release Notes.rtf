@@ -1,7 +1,7 @@
 {\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf330
-{\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fswiss\fcharset77 Helvetica;\f2\fnil\fcharset77 LucidaGrande;
-\f3\fnil\fcharset77 Monaco;}
-{\colortbl;\red255\green255\blue255;\red35\green110\blue37;\red137\green19\blue21;\red26\green26\blue255;
+{\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fnil\fcharset77 Monaco;\f2\fswiss\fcharset77 Helvetica;
+\f3\fnil\fcharset77 LucidaGrande;}
+{\colortbl;\red255\green255\blue255;\red137\green19\blue21;\red35\green110\blue37;\red26\green26\blue255;
 }
 \margl1440\margr1440\vieww13660\viewh14740\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
@@ -10,11 +10,46 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
 \
-Feb 17th, 2006 (3.8.10b8)\
+Feb 24th, 2006 (3.8.10b13)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.10b13	\
+		sqMacUnixExternalPrims.c\
+			new file to replace sqMacExternalPrims.c\
+			clone of sqUnixExternalPrims.c, \
+				tries to find bundle, then various forms of file as foo, foo.so, foo.dylib, libfoo, libfoo.so (etc) \
+				looks in more places, ./Plugins, ./, Resources/, 
+\f1\fs20 \cf2 \CocoaLigature0 SQUEAK_PLUGIN_PATH, \
+				X11 library, /usr/local/lib/squeak/3.8a-2
+\f0\fs24 \cf0 \CocoaLigature1 \
+				various frameworks locations, foo.framework, CoreServices.framework, Applicationservices.framework, Carbon.framework\
+\
+		sqMacOpenGL.c\
+			return UTF8 file name for fopen for debugging \
+		sqMacOpenGLInfo.c\
+			return UTF8 file name for fopen for debugging \
+		sqMacDragDrop.c\
+		sqMacInternetConfiguration.c\
+		sqMacSecurity.c\
+			rename PathToFile to PathToFileViaFSSpec\
+		sqMacUnixFileInterface.c\
+		sqMacUnixFileInterface.h\
+			rename PathToFile to PathToFileViaFSSpec\
+			rename  getLastPathComponet to getLastPathComponetinCurrentEncoding\
+		sqMacEncoding.c\
+		sqMacEnconding.h\
+			consolidate SetImageName()\
+		sqMacMain.c\
+			rename  getLastPathComponet to getLastPathComponetinCurrentEncoding\
+		sqMacUIAppleEvents.c\
+			rename  getLastPathComponet to getLastPathComponetinCurrentEncoding\
+		sqMacUnixCommandLineInterface.c\
+			rework resolvewhatTheImageNameIs(), ensure encoding is correct\
+		sqMacWindowUniversal.c\
+			add kCGBitmapByteOrder32Host/16 to GCImageCreate\
 \
 3.8.10b8 \
 		sqMacUnixFileInterface.c\
@@ -55,7 +90,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f1 \cf0 		sqMacEventUniversal.c\
+\f2 \cf0 		sqMacEventUniversal.c\
 			removal of power managment\
 			removal of USB logic which was originally for Jeff Raskin\
 			removal of 1984 event loop\
@@ -79,7 +114,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
 
-\f2 \cf0 		sqMacUIMenuBarUniversal.c\
+\f3 \cf0 		sqMacUIMenuBarUniversal.c\
 			remove hide/show menu bar logic\
 		\
 		sqMacOpenGL.c\
@@ -214,23 +249,23 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 				sqMacMain.c			Add logic to allow you to specify foobar.toobar as Squeak.image, or anything else you decide\
 									This is done via the plist\
 									
-\f3\fs20 \CocoaLigature0 SqueakImageName = Squeak.image\
+\f1\fs20 \CocoaLigature0 SqueakImageName = Squeak.image\
 	
 \f0\fs24 \CocoaLigature1 \
 									Were we first look in the Resource folder in the app. If not found we then look for it as a path name \
 									which could be:  (partial, tilda based, or full)\
 									foobar.toobar\
 									
-\f1 ~/Documents/Squeak/foobar.thing\
+\f2 ~/Documents/Squeak/foobar.thing\
 
 \f0 									
-\f1 /HardDisk/User/Foo/Documents/Squeak/foobar.thing\
+\f2 /HardDisk/User/Foo/Documents/Squeak/foobar.thing\
 \
 
 \f0 				sqMacTime.c			use #define for MillisecondClockMask\
 \
 				sqMacUIAppleEvents.c	use plist info (
-\f3\fs20 \CocoaLigature0 SqueakImageName) 
+\f1\fs20 \CocoaLigature0 SqueakImageName) 
 \f0\fs24 \CocoaLigature1 as short image name.\
 \
 				sqMacUIEvents.c		use  #define for MillisecondClockMask\
@@ -243,7 +278,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 									Bug was the window would be positioned at 0 & 0 and you could not grab it in order to move it. \
 \
 				
-\f3\fs20 \cf2 \CocoaLigature0 sqMacUIAppleEvents.c	
+\f1\fs20 \cf3 \CocoaLigature0 sqMacUIAppleEvents.c	
 \f0\fs24 \cf0 \CocoaLigature1 Add logic to launch new shell script via apple script to startup same executable with image on an open doc request. \
 									This allows us to double-click on an image when a squeak VM is running. \
 \
@@ -253,7 +288,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 				sqMacWindow.c		In the info.plist within the application you will find 4 keys which alter this behavior.\
 \
 									
-\f3\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds = 20  \
+\f1\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds = 20  \
 										Attempt to accumulate draw events in a 20 ms window. If a draw occurs and the time is greater than 20 ms from the \
 										last draw we draw and flush. If the draw is in the 20ms window we draw, and do a CGSync (once) and do not do the flush. \
 										The sync should schedule an flush by the carbon event handler within 20ms or so. Setting this value towards 0 will \
@@ -279,10 +314,10 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 
 \f0\fs24 \CocoaLigature1 									Squeakers are welcome to alter these values to obtain best behaviour which might change based on versions of OS-X.\
 									Altering 
-\f3\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds 
+\f1\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds 
 \f0\fs24 \CocoaLigature1 will affect frame rate.\
 									Altering 
-\f3\fs20 \CocoaLigature0 SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds & SqueakUIFlushSecondaryCleanupDelayMilliseconds 
+\f1\fs20 \CocoaLigature0 SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds & SqueakUIFlushSecondaryCleanupDelayMilliseconds 
 \f0\fs24 \CocoaLigature1 will affect 									menu drawing.\
 									Feedback about these choices is welcome. \
 \
@@ -341,7 +376,7 @@ d\
 \
 3.8.8b2			Revisions to the 32/64bit memory access to improve VM performance\
 				
-\f2 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
+\f3 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
 				
 \f0 sqMacJoystickAndTablet.c	More rewrites by Bert.\
 				sqPlatformSpecific.h		Add undefs for dispatchFunctionPointer, dispatchFunctionPointerOnin\
@@ -349,11 +384,11 @@ d\
 				sqMacMain.c				Fix issue with window title not showing long image name on image selection from dialog prompt. \
 				sqMacUnixCommandLineInterface.c	New, enable command line functions and environment variables. \
 			
-\f3\fs20 \CocoaLigature0  		\cf3 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
+\f1\fs20 \CocoaLigature0  		\cf2 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
 
 \f0\fs24 \CocoaLigature1 					or as environment variables\
 					
-\f3\fs20 \cf3 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
+\f1\fs20 \cf2 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
 \f0\fs24 \cf0 \CocoaLigature1 \
 				\
 \
@@ -390,7 +425,7 @@ d\
 3.8.7b1			sqUIEvents.c changed keyUp/keyDown logic to match Windows pattern, key repeat becomes keyDown/keyDown/keyUp\
 \
 3.8.6b6			
-\f2 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
+\f3 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
 				sqMacEncoding.c, sqMacEncoding.h  Minor changes so I can compile user code warrior os-9 again\
 				sqMacUnixInterfaceSound.c  Fix problem with empty buffer being full of junk under certain conditions, that causes a sharp sound  bite. \
 
@@ -401,7 +436,7 @@ d\
 3.8.6b4			Ensure VMMaker 3.8b2 - the VM code classes and tools for building a working vm for Squeak version  > 3.8-6461. is incorporated.\
 				Add Andreas's GC improvement changes for \
 				
-\f1 * primitiveIsYoung: This answers the question whether an object currently lives in young or in old space.\
+\f2 * primitiveIsYoung: This answers the question whether an object currently lives in young or in old space.\
 \
 				* primitiveIsRoot: Answers the question whether any given object is currently a root for young space.\
 \
@@ -545,17 +580,17 @@ interp.c			New VMMaker code update, major change is to use dispatchFunctionPoint
 \
 sqMacDirectory.c	Change dir_Lookup  // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements\
 				Per request from 
-\f1 Tetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}>\
+\f2 Tetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}>\
 \
 sqMacEncoding.c	Alter SetVMPath() 
 \f0 per request from 
-\f1 Tetsuya HAYASHI , \
+\f2 Tetsuya HAYASHI , \
 				add support for 
-\f3\fs20 \CocoaLigature0       \
-				\cf3 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
+\f1\fs20 \CocoaLigature0       \
+				\cf2 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1\fs24 \cf0 \CocoaLigature1 \
+\f2\fs24 \cf0 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 				Alter PathToFile(), get kCFStringNormalizationFormKC path name\
 				Alter QuicklyMakePath() get kCFStringNormalizationFormKC path name\
@@ -564,7 +599,7 @@ sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 \f0 \
 				Alter resolveLongName, get kCFStringNormalizationFormKC path name\
 				Alter FSMakeFSSpecCompat(), call 
-\f1 unicode2NativePascalString to normalize path name
+\f2 unicode2NativePascalString to normalize path name
 \f0 \
 \
 sqMacMemory.c	Allow browser plugin to allocate 512MB of VM space for image under os-x. \
@@ -594,7 +629,7 @@ JPEG READER WRITER\
 3.7.1b1\
 				Use of "-fast" apple gcc 3.3 compiler option, improves sends by significant %\
 				
-\f1 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
+\f2 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
 				Broke high bit ascii macroman in 3.7.0bx.\
 				For multi-byte character input you get EventKeyDown/EventKeyChar/EventKeyUp for each unicode character coming from the input sequence.\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
@@ -603,7 +638,7 @@ JPEG READER WRITER\
 3.7.0b2		\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f2 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -617,7 +652,7 @@ JPEG READER WRITER\
 3.7.0b1 			\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f2 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
@@ -702,7 +737,7 @@ sqMacWindows.c			- watch out for memory leak when we free the color table. \
 a)Added options SqueakWindowType & SqueakWIndowAttributes to info.plist. The SqueakWindowType of 6 is the standard document window, a type of 8 is the floating utility window. The attributes control with window attributes and behavior according to\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf4 \ul \ulc4 http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_2.html#//apple_ref/c/tdef/WindowAttributes\
+\f2 \cf4 \ul \ulc4 http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_2.html#//apple_ref/c/tdef/WindowAttributes\
 &\cf0 \ulnone \
 \cf4 \ul http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_1.html#//apple_ref/doc/c_ref/WindowClass\cf0 \ulnone \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
@@ -794,11 +829,11 @@ a) recompiled os-x version, 3.2.8b8 seem to have a bad compiler option and gave 
  \
 3.2.8b8\
 a) exposed 
-\f1 vmParameter
+\f2 vmParameter
 \f0  24 & 25 which control how memory is allocated/freed \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf0 Smalltalk vmParameterAt: 24 put: 48*1024*1024.\
+\f2 \cf0 Smalltalk vmParameterAt: 24 put: 48*1024*1024.\
 Smalltalk vmParameterAt: 25 put: 24*1024*1024.\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
@@ -854,7 +889,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f2 mpeg3Plugin.bundle.\
+\f3 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
@@ -898,7 +933,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f2 mpeg3Plugin.bundle.\
+\f3 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
@@ -909,7 +944,7 @@ Beware this version of the VM is significantly different inside! \
 \
 \pard\tx1440\tx2880\tx4320\tx5760\tx7200\ql\qnatural
 
-\f1 \cf0 a) Broke sqMacWindow.c into 10 different files by function type.\
+\f2 \cf0 a) Broke sqMacWindow.c into 10 different files by function type.\
 \
 b) Moved most of the memory allocation logic out of sqMacMain.c into sqMacMemory.c. and ensure memory is freed when Squeak is terminated. \
 The major change in this code is support for OS 9.x virtual memory mapping. This only applies to Mac OS 9.2.0 or higher, excluding os-x. It appears  Mac OS 9.1 has a bug that prevents this feature from working.\
