@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqMacFFIPPC.c,v 1.4 2002/12/21 06:36:37 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
@@ -57,6 +57,7 @@ staticIssue int      intReturnValue;
 static LONGLONG longReturnValue;
 static double   floatReturnValue;
 static int *structReturnValue = NULL;
+static sqInt giLocker = 0;
 
 /**************************************************************/
 #define ARG_CHECK() if(gpRegCount >= GP_MAX_REGS && ffiStackIndex >= FFI_MAX_STACK) return primitiveFail();
@@ -464,15 +465,84 @@ _0_gpregs:
 #endif
 #endif
 
+int ffiCallAddressOfWithPointerReturnx(int fn, int callType);
+int ffiCallAddressOfWithStructReturnx(int fn, int callType, int* structSpec, int specSize);
+int ffiCallAddressOfWithReturnTypex(int fn, int callType, int typeSpec);
+
+int ffiCallAddressOfWithPointerReturnx(int fn, int callType)
+{
+	int resultsOfCall;
+
+	if (giLocker == 0)
+		giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*5);
+		foo[0] = 2;
+		foo[1] = ffiCallAddressOfWithPointerReturnx;
+		foo[2] = fn;
+		foo[3] = callType;
+		foo[4] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		resultsOfCall = foo[4];
+		free(foo);
+		return resultsOfCall;
+	}
+}
+
 int ffiCallAddressOfWithPointerReturn(int fn, int callType)
 {
 	return ffiCallAddressOf(fn);
 }
+
+int ffiCallAddressOfWithStructReturnx(int fn, int callType, int* structSpec, int specSize)
+{
+	int resultsOfCall;
+
+	if (giLocker == 0)
+		giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*7);
+		foo[0] = 4;
+		foo[1] = ffiCallAddressOfWithStructReturnx;
+		foo[2] = fn;
+		foo[3] = callType;
+		foo[4] = structSpec;
+		foo[5] = specSize;
+		foo[6] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		resultsOfCall = foo[6];
+		free(foo);
+		return resultsOfCall;
+	}
+}
 int ffiCallAddressOfWithStructReturn(int fn, int callType, int* structSpec, int specSize)
 {
-	return ffiCallAddressOf(fn);
+return ffiCallAddressOf(fn);
 }
 
+int ffiCallAddressOfWithReturnTypex(int fn, int callType, int typeSpec)
+{
+	int resultsOfCall;
+
+	if (giLocker == 0)
+		giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*6);
+		foo[0] = 3;
+		foo[1] = ffiCallAddressOfWithReturnTypex;
+		foo[2] = fn;
+		foo[3] = callType;
+		foo[4] = typeSpec;
+		foo[5] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		resultsOfCall = foo[5];
+		free(foo);
+		return resultsOfCall;
+	}
+}
 int ffiCallAddressOfWithReturnType(int fn, int callType, int typeSpec)
 {
 	return ffiCallAddressOf(fn);

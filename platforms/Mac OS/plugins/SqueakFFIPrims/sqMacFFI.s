@@ -6,13 +6,14 @@
 *   AUTHOR:  Andreas Raab (ar), John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacFFI.s,v 1.2 2002/11/14 19:52:20 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: See change log below.
 *	1/24/2002  JMM hacked from the original code for os-x, added save for CCR and 
 *			tweaked _4_gpregs compare
 *	
 *	11/14/2002 JMM clean & fix quad word alignment issue
+*   2/24/2006 JMM unable to compile and work on GCC 3.3, perhaps linkage area is 32, not 24? 
 *****************************************************************************/
 #import <architecture/ppc/asm_help.h>
 #import	<architecture/ppc/pseudo_inst.h>
@@ -29,7 +30,7 @@ _ffiCallAddressOf:
 
 	/* compute frame size */
 	rlwinm r5, r4, 2, 0, 29  /* ffiStackIndex words to bytes (e.g., "slwi r5, r4, 2") */
-	addi r5, r5, 24+15 	/* linkage area */
+	addi r5, r5, 32+15 	/* linkage area */ //* JMM 02/25/06 was 24, Ian has 32 */
         rlwinm r5,r5,0,0,27 	/* JMM round up to quad word*/
 	neg  r5, r5    		/* stack goes down */
 	stwux sp, sp, r5 	/* adjust stack frame */
