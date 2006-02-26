@@ -36,6 +36,8 @@
      - modified all fseek's to use the id3v2 offset
 	 
 	Changed Jan 20th 2006 by John M McIntosh to support reading mpeg file from a buffer
+	setvbuf(remember,0, _IOFBF, 64*1024);  //JMM Feb 26th, 2006 for CD reader performance
+
 	
  */
 #include "mpeg3private.h"
@@ -136,6 +138,8 @@ int mpeg3io_open_file(mpeg3_fs_t *fs)
 		perror("mpeg3io_open_file");
 		return 1;
 	}
+			setvbuf(fs->fd,0, _IOFBF, 64*1024);  //JMM Feb 26th, 2006 for CD reader performance
+
 	}
 
 	bits = mpeg3io_read_int32(fs);
