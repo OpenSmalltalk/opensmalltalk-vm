@@ -10,11 +10,62 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
 \
-Feb 24th, 2006 (3.8.10b14)\
+March 1th, 2006 (3.8.10b16)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.10b16\
+		Update info.plists and xcode projects on SVN\
+		\
+		Drop #ifdefs for this below, we always compile on MACH now, versus CodeWarrior\
+		Certain end of CodeWarrior OS-9 Support. \
+			#if defined (__APPLE__) && defined(__MACH__)\
+			#if defined I_AM_CARBON_EVENT\
+			#if defined MINIMALVM  (sorry Dan)\
+		sqMacOpenGL..c\
+		sqMacOpenGLInfo.c\
+		sqMacWindowPlugin.c  \
+		sqMacImageIO.c\
+		sqMacMain.c\
+		sqMacMemory.c\
+		sqMacTime.c\
+		sqMacUIAppleEvents.c\
+		sqMacWindowsUniversal.c\
+		sqPlatformSpecific.c\
+		sqMacNSPlugin.c\
+\
+		osExport.c\
+			Export GetUIToLock api so we can callback from FFI on browser plugin UI thread.\
+		sqConfig.h\
+			Remove #ifdefs above and references to Codewarrior 8\
+		sqmacMain.c\
+			change logic to support Sophie Browser plugin SOPHIEVI			change logic to get bundle by bundle id when a browser plugin so we can \
+			get bundle info.plist for startup logic and when we ask for VM version info\
+			remove the gThreadManager OS-9 cooperative thread logic\
+\
+		sqMacUIAppleEvents.c\
+			browser plugin VM should not Launch Squeak VM on double click.\
+	 	\
+		sqMacUIEventsUniversal.c\
+			add getUIToLock() logic for Browser plugin support \
+\
+		sqMacUnixExternalPrims.c\
+			Browser plugin loading bundles support (for squeakland and Sophie)\
+\
+		sqMacWindowUniversal.c\
+			Fiddle with CGImageCreate  32 host endiness issues\
+			Fix cursors data/mask on intel\
+\
+		info.plist for Squeak VM Universal\
+		\
+		sqmacNSPluginUILogic.c\
+			complete refactor of bits for Squeak browser plugin, put squeak VM stuff in seperate file\
+\
+		sqMacNSPlugin.c\
+			complete refactor of bits for Squeak browser plugin, move squeak stuff to other file. \
+			Make work with unix file names\
+\
 \
 3.8.10b14\
 		sqMacDragDrop.c\

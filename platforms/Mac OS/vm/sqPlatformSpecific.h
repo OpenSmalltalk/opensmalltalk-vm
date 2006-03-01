@@ -55,7 +55,6 @@
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
 
 // CARBON
-#if defined (__APPLE__) && defined(__MACH__)
 
     #ifdef TARGET_API_MAC_CARBON  
         #undef TARGET_API_MAC_CARBON
@@ -67,36 +66,11 @@
     #define fseek fseeko
 	int	 ftruncate(int, off_t);
     typedef FILE *sqImageFile;
-#else
-    #if defined(__MWERKS__)
-        #include <stat.h>
-        #define fseeko fseek
-        #define ftello ftell
- 	    #define fileno(n) n->handle
-		#undef squeakFileOffsetType
-		#define squeakFileOffsetType unsigned long
-		#undef sqFilenameFromString
-		#define sqFilenameFromString(dst, src, num) \
-		if (1) { \
-			int i; \
-			for (i = 0; i < num; i++) { \
-				dst[i] = *((char *) (src + i)); \
-			} \
-			dst[num] = 0;\
-		}
-    #endif
 
-    int ftruncate(short int file,int offset);
-    typedef int sqImageFile;
-
-#endif
-
-#ifdef TARGET_API_MAC_CARBON  
     #undef sqFilenameFromStringOpen
     #undef sqFilenameFromString
 void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,long fileIndex, long fileLength);
-#endif
 void        sqImageFileClose(sqImageFile f);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
 squeakFileOffsetType       sqImageFilePosition(sqImageFile f);

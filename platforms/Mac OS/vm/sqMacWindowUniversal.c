@@ -357,7 +357,9 @@ int ioShowDisplayOnWindow(
 				&gProviderCallbacks);
 	image = CGImageCreate( affectedR-affectedL, affectedB-affectedT, depth==32 ? 8 : 5 /* bitsPerComponent */,
 				depth /* bitsPerPixel */, 
-				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Host : kCGBitmapByteOrder16Host), provider, NULL, 0, kCGRenderingIntentDefault);
+//				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
+				pitch, colorspace, kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host, provider, NULL, 0, kCGRenderingIntentDefault);
+//				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Host : kCGBitmapByteOrder16Host), provider, NULL, 0, kCGRenderingIntentDefault);
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 
@@ -596,9 +598,7 @@ int makeMainWindow(void) {
 	windowBlock-> handle = (wHandleType) window;
 	windowBlock->isInvisible = !MacIsWindowVisible(window);
 
-#ifndef MINIMALVM
 	 ioLoadFunctionFrom(NULL, "DropPlugin");
-#endif
     
 #ifndef IHAVENOHEAD
 	if (gSqueakWindowHasTitle) {
@@ -726,13 +726,13 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	
 	if (cursorMaskIndex == nil) {
 		for (i = 0; i < 16; i++) {
-			macCursor.data[i] = (checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFFFF;
-			macCursor.mask[i] = (checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFFFF;
+			macCursor.data[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
+			macCursor.mask[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
 		}
 	} else {
 		for (i = 0; i < 16; i++) {
-			macCursor.data[i] = (checkedLongAt(cursorBitsIndex + (4 * i)) >> 16) & 0xFFFF;
-			macCursor.mask[i] = (checkedLongAt(cursorMaskIndex + (4 * i)) >> 16) & 0xFFFF;
+			macCursor.data[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
+			macCursor.mask[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorMaskIndex + (4 * i)) >> 16)) & 0xFFFF;
 		}
 	}
 

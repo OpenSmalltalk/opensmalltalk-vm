@@ -334,7 +334,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 3.8.10b6  http://www.squeak.org </string>
+	<string>Squeak VM 3.8.10b16  http://www.squeak.org </string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -348,11 +348,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak VM 3.8.10b6</string>
+	<string>Squeak VM 3.8.10b16</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>3.8.10b6</string>
+	<string>3.8.10b16</string>
 	<key>NSServices</key>
 	<array>
 		<dict>
@@ -376,9 +376,11 @@
 		</dict>
 	</array>
 	<key>SqueakEncodingType</key>
-	<string>Latin1</string>
+	<string>macintosh</string>
 	<key>SqueakFloatingWindowGetsFocus</key>
 	<true/>
+	<key>SqueakPluginsBuiltInOrLocalOnly</key>
+	<false/>
 	<key>SqueakImageName</key>
 	<string>Squeak.image</string>
 	<key>SqueakMaxHeapSize</key>

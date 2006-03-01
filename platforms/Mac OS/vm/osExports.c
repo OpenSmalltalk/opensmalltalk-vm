@@ -58,9 +58,7 @@ void *os_exports[][3] = {
 	XFN(serialPortReadInto)
 	XFN(serialPortWriteFrom)
 	XFN(IsKeyDown)
-#if !defined(BROWSERPLUGIN) & I_AM_CARBON_EVENT
 	XFN(getUIToLock)
-#endif
 #if defined( BROWSERPLUGIN ) 
 /* Plugin support primitives
    We should make these primitives a proper plugin

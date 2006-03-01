@@ -19,7 +19,6 @@
 
 //#define BROWSERPLUGIN to compile code for Netscape or IE Plug-in
 //#define IHAVENOHEAD for no head
-//#define MINIMALVM to make small small vm
 
 // These are the comments from the orginal sqMacWindow.c before it was divided into 10 files
 //Aug 7th 2000,JMM Added logic for interrupt driven dispatching
@@ -71,11 +70,7 @@
 */
 
 
-#if !TARGET_API_MAC_CARBON 
-#include <Power.h>
-#else
 #include <objc/objc-runtime.h>
-#endif
 
 #include "sq.h"
 #include "sqMacUIConstants.h"
@@ -90,36 +85,25 @@
 #include "sqMacUIEvents.h"
 #include "sqMacMemory.h"
 #include "sqMacEncoding.h"
-#if defined(__APPLE__) && defined(__MACH__)
 #include "sqMacUnixCommandLineInterface.h"
 #include <unistd.h>
-#endif 
 #ifdef MACINTOSHUSEUNIXFILENAMES
 #include "sqMacUnixFileInterface.h"
 #endif
 
-#ifdef __MPW__
-QDGlobals 		qd;
-#endif
 
-#if I_AM_CARBON_EVENT
     #include <pthread.h>
     extern pthread_mutex_t gEventQueueLock,gEventUILock,gEventDrawLock,gEventNSAccept,gSleepLock;
     extern pthread_cond_t  gEventUILockCondition,gSleepLockCondition;
 
     pthread_t gSqueakPThread;
-#endif
-
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
     #include "sqaio.h"
-#endif 
 
 extern int  getFullScreenFlag();
 extern unsigned char *memory;
 extern squeakFileOffsetType calculateStartLocationForImage();
 Boolean         gTapPowerManager=false;
 Boolean         gDisablePowerManager=false;
-Boolean         gThreadManager=false;
 ThreadID        gSqueakThread = kNoThreadID;
 ThreadEntryUPP  gSqueakThreadUPP;
 OSErr			gSqueakFileLastError; 
@@ -142,30 +126,22 @@ void SqueakTerminate();
 void ExitCleanup();
 void PowerMgrCheck(void);
 OSErr   createNewThread();
-static pascal void* squeakThread(void *threadParm);
 void SetUpCarbonEvent();
 void fetchPrefrences();
   
 /*** Main ***/
 
 #ifndef BROWSERPLUGIN
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
 /*** Variables -- globals for access from pluggable primitives ***/
 int    argCnt= 0;
 char **argVec= 0;
 char **envVec= 0;
 
 int main(int argc, char **argv, char **envp) {
-#else
-int main(void) {
-#endif
 	EventRecord theEvent;
 	sqImageFile f;
 	OSErr err;
 	char shortImageName[SHORTIMAGE_NAME_SIZE+1];
-#if !defined(MINIMALVM)  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-        long threadGestaltInfo;
-#endif
         
 	/* check the interpreter's size assumptions for basic data types */
 	if (sizeof(int) != 4) {
@@ -178,13 +154,12 @@ int main(void) {
 		error("This C compiler's time_t's are not 32 bits.");
 	}
 
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
+#ifndef BROWSERPLUGIN
   /* Make parameters global for access from pluggable primitives */
   argCnt= argc;
   argVec= argv;
   envVec= envp;
 #endif
-
  	InitMacintosh();
 	PowerMgrCheck();
 	
@@ -212,9 +187,6 @@ int main(void) {
 		chdir(temp);
 	}
 
-#ifndef I_AM_CARBON_EVENT
-	SetEventMask(everyEvent); // also get key up events
-#endif
 	/* install apple event handlers and wait for open event */
 	InstallAppleEventHandlers();
 	while (ShortImageNameIsEmpty()) {
@@ -224,13 +196,11 @@ int main(void) {
 		}
 	}
 
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
+#ifndef BROWSERPLUGIN
 	unixArgcInterface(argCnt,argVec,envVec);
 #endif
-
 	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
          
-#if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
 	if (ImageNameIsEmpty()) {
             CFBundleRef mainBundle;
             CFURLRef imageURL;
@@ -261,12 +231,6 @@ int main(void) {
 				CFRelease(checkFortilda);
 			}
 	}
-#else
-	if (ImageNameIsEmpty()) {
-		CopyCStringToPascal(gSqueakImageName,workingDirectory.name);
-		SetImageName(&workingDirectory);
-	}
-#endif
 
 	/* uncomment the following when using the C transcript window for debugging: */
 	//printf("Move this window, then hit CR\n"); getchar();
@@ -333,18 +297,11 @@ int main(void) {
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
 	sqImageFileClose(f);
         
-
-#if (!(defined JITTER) && defined(__MPW__))
-	atexit(SqueakTerminate);
-#endif
-
     SetUpTimers();
 
-#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
     {
     
     aioInit();
-    gThreadManager = false;
     pthread_mutex_init(&gEventQueueLock, NULL);
     pthread_mutex_init(&gEventUILock, NULL);
     pthread_cond_init(&gEventUILockCondition,NULL);
@@ -354,39 +311,16 @@ int main(void) {
         RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
         }
     }
-    return 0; //Note the return, need to refactor this ugly code
-#endif
-
-#if !defined(MINIMALVM)  && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-    if( Gestalt( gestaltThreadMgrAttr, &threadGestaltInfo) == noErr &&
-        threadGestaltInfo & (1<<gestaltThreadMgrPresent) &&
-        ((Ptr) NewThread != (Ptr)kUnresolvedCFragSymbolAddress)) {
-        gThreadManager = true;
-        err = createNewThread();
-        if (err == noErr) {
-            while(true)  {
-                ioProcessEvents();
-        		SqueakYieldToAnyThread();
-            }
-            return 0;
-        }
-    }
-#endif
-    gThreadManager = false;
-    /* run Squeak */
-    squeakThread(0);
     return 0;
 }
 #endif
 
 #ifdef BROWSERPLUGIN
 OSErr createNewThread() {
-#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
     {
         OSErr err;
         
         aioInit();
-        gThreadManager = false;
         pthread_mutex_init(&gEventQueueLock, NULL);
         pthread_mutex_init(&gEventUILock, NULL);
         pthread_mutex_init(&gEventDrawLock, NULL);
@@ -394,75 +328,31 @@ OSErr createNewThread() {
         pthread_cond_init(&gEventUILockCondition,NULL);
         err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
     }
-    #else
-        gSqueakThreadUPP = NewThreadEntryUPP(squeakThread); //We should dispose of someday
-	return NewThread( kCooperativeThread, gSqueakThreadUPP, nil, 80*1024, kCreateIfNeeded+kNewSuspend, 0L, &gSqueakThread);
-    #endif
 	return 0;
 }
 
 #else
-OSErr createNewThread() {
-    gSqueakThreadUPP = NewThreadEntryUPP(squeakThread); //We should dispose of someday
-    return NewThread( kCooperativeThread, gSqueakThreadUPP, nil, 80*1024, kCreateIfNeeded, 0L, &gSqueakThread);
-}
-
 #endif
 pascal short SqueakYieldToAnyThread(void) {
-#if !defined( I_AM_CARBON_EVENT) && !defined ( __APPLE__ ) && !defined ( __MACH__ )
-    YieldToAnyThread();
-    #endif
 	return 0;
 }
 
-static pascal void* squeakThread(void *threadParm) {
-	/* run Squeak */
-#pragma unused(threadParm)
-#	ifdef JITTER
-	j_interpret();
-#	else
-	interpret();
-#	endif
-	return 0;
-}
-
-#if TARGET_API_MAC_CARBON
 void InitMacintosh(void) {
-#ifndef I_AM_CARBON_EVENT
-	FlushEvents(everyEvent, 0);
-#endif
 	LoadScrap();
 	InitCursor();
 }
-#else
-void InitMacintosh(void) {
-    MaxApplZone();
-    InitGraf(&qd.thePort);
-    InitFonts();
-    FlushEvents(everyEvent, 0);
-    InitWindows();
-    InitMenus();
-    TEInit();
-    InitDialogs(NULL);
-    InitCursor();
-    LoadScrap();
-    //JMM causes sleep wakeup issues. SetupKeyboard();	
-}
-#endif
 
 void PowerMgrCheck(void) {
 	long pmgrAttributes;
 	
 	gTapPowerManager = false;
 	gDisablePowerManager = false;
-#ifndef MINIMALVM
 	if (! Gestalt(gestaltPowerMgrAttr, &pmgrAttributes))
 		if ((pmgrAttributes & (1<<gestaltPMgrExists)) 
 		    && (pmgrAttributes & (1<<gestaltPMgrDispatchExists))
 		    && (PMSelectorCount() >= 0x24)) {
 		    gTapPowerManager = true;
 		}
-#endif
 }
 
 int ioDisablePowerManager(int disableIfNonZero) {
@@ -572,7 +462,7 @@ char * GetAttributeString(int id) {
 
 	if (id == 1001) return "Mac OS";
 	if (id == 1002) {
-		unsigned int myattr;
+		unsigned long myattr;
 		static char data[32];
 		
 		Gestalt(gestaltSystemVersion, (long *) &myattr);
@@ -591,13 +481,21 @@ char * GetAttributeString(int id) {
 			return "intel";
 	}
 
-#if TARGET_API_MAC_CARBON && !defined(__MWERKS__)
    if (id == 1004) {
             CFBundleRef mainBundle;
             CFStringRef versionString;
             static char data[255];
-#warning does not work for nsplugin            
+#if BROWSERPLUGIN
+	#if SOPHIEVM
+	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SophiePlugin",kCFStringEncodingMacRoman);
+	#else
+	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SqueakPlugin",kCFStringEncodingMacRoman);
+	#endif
+    mainBundle = CFBundleGetBundleWithIdentifier(bundleID);
+	CFRelease(bundleID);
+#else
             mainBundle = CFBundleGetMainBundle ();
+#endif
             versionString = CFBundleGetValueForInfoDictionaryKey(mainBundle, CFSTR("CFBundleShortVersionString"));
             bzero(data,255);
             strcat(data,interpreterVersion);
@@ -605,19 +503,13 @@ char * GetAttributeString(int id) {
             CFStringGetCString (versionString, data+strlen(data), 255-strlen(data), gCurrentVMEncoding);
             return data;            
         }
-#endif
 
-#if defined(__MWERKS__)
-	if (id == 1004) return (char *) interpreterVersion;
-#endif
-
-#if TARGET_API_MAC_CARBON
   #ifdef MACINTOSHUSEUNIXFILENAMES
 	if (id == 1201) return "255";
   #else
 	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
   #endif
-#endif
+
 	if (id == 1202) {
 		static char data[32];
 
@@ -625,7 +517,6 @@ char * GetAttributeString(int id) {
 		return data;
 	}
 	
-#if !defined(__MWERKS__)
 #ifndef BROWSERPLUGIN
 	if (id < 0 || (id > 2 && id <= 1000))  {
 		char *results;
@@ -633,7 +524,6 @@ char * GetAttributeString(int id) {
 		if (results) 
 			return results;
 	}
-#endif
 #endif
 
 	/* attribute undefined by this platform */
@@ -663,59 +553,7 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 	return charsToMove;
 }
 
-#ifdef BROWSERPLUGIN
 
-/*** Plugin Support ***/
-
-int plugInInit(char *fullImagePath) {
-
-	#pragma unused(fullImagePath)
-	/* check the interpreter's size assumptions for basic data types */
-	if (sizeof(int) != 4) {
-		error("This C compiler's integers are not 32 bits.");
-	}
-	if (sizeof(double) != 8) {
-		error("This C compiler's floats are not 64 bits.");
-	}
-	if (sizeof(time_t) != 4) {
-		error("This C compiler's time_t's are not 32 bits.");
-	}
-
-	PowerMgrCheck();
-	SetUpClipboard();
-	SetUpPixmap();
-	return 0;
-}
-
-int plugInShutdown(void) {
-        int err;
-        
-	ioShutdownAllModules();
-	FreeClipboard();
-	FreePixmap();
-	if (memory != nil) {
-        if (gThreadManager)
-	        DisposeThread(gSqueakThread,null,true);
-#if I_AM_CARBON_EVENT && defined ( __APPLE__ ) && defined ( __MACH__ )
-        err = pthread_cancel(gSqueakPThread);
-        if (err == 0 )
-        pthread_join(gSqueakPThread,NULL);
-        pthread_mutex_destroy(&gEventQueueLock);
-        pthread_mutex_destroy(&gEventUILock);
-        pthread_mutex_destroy(&gEventDrawLock);
-		pthread_mutex_destroy(&gEventNSAccept);
-        pthread_mutex_destroy(&gSleepLock);
-        pthread_cond_destroy(&gEventUILockCondition);
-        pthread_cond_destroy(&gSleepLockCondition);
-#endif        
-	    sqMacMemoryFree();
-	}
-	return 0;
-}
-
-#endif
-
-#if TARGET_API_MAC_CARBON
 void fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
@@ -723,9 +561,20 @@ void fetchPrefrences() {
     CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly;
     CFDataRef 	SqueakWindowAttributeType;    
     CFStringRef    SqueakVMEncodingType;
+
     char        encoding[256];
     
+#if BROWSERPLUGIN
+	#if SOPHIEVM
+	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SophiePlugin",kCFStringEncodingMacRoman);
+	#else
+	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SqueakPlugin",kCFStringEncodingMacRoman);
+	#endif
+	myBundle = CFBundleGetBundleWithIdentifier(bundleID);
+	CFRelease(bundleID);
+#else
     myBundle = CFBundleGetMainBundle();
+#endif
     myDictionary = CFBundleGetInfoDictionary(myBundle);
 	
     SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));
@@ -801,10 +650,6 @@ void fetchPrefrences() {
     
     
 }
-#else
-void fetchPrefrences() {}
-#endif 
-
 
 /*** Profiling Stubs ***/
 
@@ -812,119 +657,3 @@ int clearProfile(void){return 0;}
 int dumpProfile(void){return 0;}														
 int startProfiling(void){return 0;}													
 int stopProfiling(void)	{return 0;}													
-
-#if TARGET_API_MAC_CARBON && defined(__MWERKS__)
-int printOnOSX(char * string);
-int printOnOSXNumber(int number);
-int printOnOSXPascal(unsigned char * string);
-int printOnOSXFormat(char * string,char *format);
-OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef
-*bundlePtr);
-
-OSStatus LoadFrameworkBundle(CFStringRef framework, CFBundleRef
-*bundlePtr)
-{
-    OSStatus    err;
-    FSRef       frameworksFolderRef;
-    CFURLRef    baseURL;
-    CFURLRef    bundleURL;
-
-    if ( bundlePtr == nil ) return( -1 );
-
-    *bundlePtr = nil;
- 
-    baseURL = nil;
-    bundleURL = nil;
- 
-    err = FSFindFolder(kOnAppropriateDisk, kFrameworksFolderType, true,
-&frameworksFolderRef);
-    if (err == noErr) {
-        baseURL = CFURLCreateFromFSRef(kCFAllocatorSystemDefault,
-&frameworksFolderRef);
-        if (baseURL == nil) {
-            err = coreFoundationUnknownErr;
-        }
-    }
-    if (err == noErr) {
-        bundleURL =
-CFURLCreateCopyAppendingPathComponent(kCFAllocatorSystemDefault, baseURL,
-framework, false);
-        if (bundleURL == nil) {
-            err = coreFoundationUnknownErr;
-        }
-    }
-    if (err == noErr) {
-        *bundlePtr = CFBundleCreate(kCFAllocatorSystemDefault, bundleURL);
-        if (*bundlePtr == nil) {
-            err = coreFoundationUnknownErr;
-        }
-    }
-    if (err == noErr) {
-        if ( ! CFBundleLoadExecutable( *bundlePtr ) ) {
-            err = coreFoundationUnknownErr;
-        }
-    }
-
-    // Clean up.
-    if (err != noErr && *bundlePtr != nil) {
-        CFRelease(*bundlePtr);
-        *bundlePtr = nil;
-    }
-    if (bundleURL != nil) {
-        CFRelease(bundleURL);
-    }
-
-    if (baseURL != nil) {
-        CFRelease(baseURL);
-    }
-
-    return err;
-}
-
-int printOnOSXFormat(char * string,char *format) {
-	CFBundleRef bundle;
-	int(*fprintf_ptr)(FILE *stream, const char *format, ...) = NULL;
-	void* fcn_ptr = NULL;
-	OSErr	err;
-	FILE* stderr_ptr = NULL;
-	void* __sf_ptr = NULL;
-	
-	err = LoadFrameworkBundle( CFSTR("System.framework"), &bundle );
-
-	fcn_ptr = CFBundleGetFunctionPointerForName(bundle, CFSTR("fprintf"));
-	__sf_ptr = CFBundleGetDataPointerForName(bundle, CFSTR("__sF"));
-	
-	if(fcn_ptr) {
-	   /* cast it */
-	   fprintf_ptr = ( int(*)(FILE *stream, const char *format, ...) ) fcn_ptr;
-	} else {
-	   /* it failed, handle that somehow */
-	   return;
-	}
-
-	if(__sf_ptr) {
-	   stderr_ptr = (FILE*) ( ((char*)__sf_ptr) + 176);
-	   /* 176 = 88*2, where 88=sizeof(FILE) under BSD */
-	} else {
-	   /* it failed */
-	   return;
-	}
-
-	fprintf_ptr(stderr_ptr, format,string);
-}
-
-int printOnOSX(char * string) {
-	return printOnOSXFormat(string,"\n+-+%s");
-}
-
-int printOnOSXNumber(int number) {
-	return printOnOSXFormat((char *) number,"\n+-+%d");
-}
-
-int printOnOSXPascal(unsigned char *string) {
-	CopyPascalStringToC((ConstStr255Param) string,(char*) string);
-	printOnOSX((char*) string);
-	CopyCStringToPascal((char*)string,(void *) string);
-}
-
-#endif

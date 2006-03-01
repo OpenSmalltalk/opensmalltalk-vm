@@ -22,12 +22,9 @@
 #define MillisecondClockMask 536870911
 
 
-extern Boolean  gThreadManager;
 extern int getNextWakeupTick();
 extern int setInterruptCheckCounter(int value);
 extern int setInterruptPending(int value);
-
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
 
     #include <pthread.h>
     #include <sys/types.h>
@@ -52,19 +49,6 @@ static pascal void MyTimerProc(QElemPtr time)
     return;
 }
 
-/*static pascal void MyTimerProc1000(QElemPtr time)
-{
-    if (getNextWakeupTick() != 0)
-    	interruptCheckCounter = 0;
-    gCounter++;
-    if(gCounter > COUNTER_LIMIT) {
-        lowResMSecs = ioMicroMSecs();
-        gCounter = 0;
-    }
-    PrimeTime((QElemPtr)time, HIGH_RES_TICK_MSECS);
-    return;
-}*/
-
 void SetUpTimers(void)
 {
   /* set up the micro/millisecond clock */
@@ -75,16 +59,8 @@ void SetUpTimers(void)
     gTMTask.tmWakeUp = 0;
     gTMTask.tmReserved = 0;    
      
-    InsXTime((QElemPtr)(&gTMTask));
-    PrimeTime((QElemPtr)&gTMTask,LOW_RES_TICK_MSECS);
-
-    /*gTMTask1000.tmAddr = NewTimerUPP((TimerProcPtr) MyTimerProc1000);
-    gTMTask1000.tmCount = 0;
-    gTMTask1000.tmWakeUp = 0;
-    gTMTask1000.tmReserved = 0;    
-     
-    InsXTime((QElemPtr)&gTMTask1000);
-    PrimeTime((QElemPtr)&gTMTask1000,HIGH_RES_TICK_MSECS);*/
+    InsXTime((QElemPtr)(&gTMTask.qLink));
+    PrimeTime((QElemPtr)&gTMTask.qLink,LOW_RES_TICK_MSECS);
 }
 
 int ioLowResMSecs(void)
@@ -104,99 +80,7 @@ int ioMicroMSecs(void)
   return (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
-/*TMTask    gWakeUpTimerProc;
-static Boolean gWakeUpTimerProcNeedsInit=true;
-
-static pascal void MyWakeUTimerProc(QElemPtr time) {
-    interruptCheckCounter = 0;
-    return;
-}
-
-int ioMakeAnExernalTimerCall(int ticksInFuture) {
-    int ticks;
-    
-    if (gWakeUpTimerProcNeedsInit) {
-        gWakeUpTimerProcNeedsInit = false;
-        gWakeUpTimerProc.tmAddr = NewTimerUPP((TimerProcPtr) MyWakeUTimerProc);
-        gWakeUpTimerProc.tmCount = 0;
-        gWakeUpTimerProc.tmWakeUp = 0;
-        gWakeUpTimerProc.tmReserved = 0;    
-     
-        InsXTime((QElemPtr)&gWakeUpTimerProc);
-    }
-    
-    ticks = ticksInFuture-(ioMSecs()& MillisecondClockMask);
-    if (ticks < 0)
-        return;
-    PrimeTime((QElemPtr)&gWakeUpTimerProc,ticks);
-}*/
-
-#else
-#if !TARGET_API_MAC_CARBON
-    #include <OpenTransport.h>
-#endif
-
-OTTimeStamp     timeStart;
-int ioMicroMSecsExpensive(void);
-
-int ioMicroMSecsExpensive(void) {
-	UnsignedWide microTicks;
-	Microseconds(&microTicks);
-	return (microTicks.lo / 1000) + (microTicks.hi * 4294967);
-}
-
-void SetUpTimers(void)
-{
-#if !defined(MINIMALVM)
-	if((Ptr)OTGetTimeStamp!=(Ptr)kUnresolvedCFragSymbolAddress)
- 	    OTGetTimeStamp(&timeStart);
-#endif 
-}
-
-#if !defined(MINIMALVM)
-int ioMicroMSecs(void) {
-	/* Note: This function and ioMSecs() both return a time in milliseconds. The difference
-	   is that ioMicroMSecs() is called only when precise millisecond resolution is essential,
-	   and thus it can use a more expensive timer than ioMSecs, which is called frequently.
-	   However, later VM optimizations reduced the frequency of calls to ioMSecs to the point
-	   where clock performance became less critical, and we also started to want millisecond-
-	   resolution timers for real time applications such as music. */
-	
-	register long check;
-	
-	if((Ptr)OTElapsedMilliseconds!=(Ptr)kUnresolvedCFragSymbolAddress){
-    	check = OTElapsedMilliseconds(&timeStart);
-    	if (check != -1) 
-    	    return check;
-    	OTGetTimeStamp(&timeStart);
-	    return ioMicroMSecs();
-	}else {
-	    return ioMicroMSecsExpensive();
-	}
-}
-#else
-int ioMicroMSecs(void) {
-    return ioMicroMSecsExpensive();
-}
-#endif
-
-int ioLowResMSecs(void)
-{
-  double convert;
-  long long temp;
-  int final;
-  
-  convert = (unsigned int) TickCount();
-  temp = convert*1000.0/60.0;
-  temp = temp & 0x7FFFFFFF;
-  final = temp;
-  return final;
-}
-
-#endif
-
 int ioSeconds(void) {
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
     time_t unixTime;
     
     unixTime = time(0);
@@ -204,40 +88,14 @@ int ioSeconds(void) {
     /* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
         and 52 non-leap years later than Squeak. */
     return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
-
-#else
-	struct tm timeRec;
-	time_t time1904, timeNow;
-
-	/* start of ANSI epoch is midnight of Jan 1, 1904 */
-	timeRec.tm_sec   = 0;
-	timeRec.tm_min   = 0;
-	timeRec.tm_hour  = 0;
-	timeRec.tm_mday  = 1;
-	timeRec.tm_mon   = 0;
-	timeRec.tm_year  = 4;
-	timeRec.tm_wday  = 0;
-	timeRec.tm_yday  = 0;
-	timeRec.tm_isdst = 0;
-	time1904 = mktime(&timeRec);
-
-	timeNow = time(NULL);
-
-	/* Squeak epoch is Jan 1, 1901, 3 non-leap years earlier than ANSI one */
-	return (timeNow - time1904) + (3 * 365 * 24 * 60 * 60);
-#endif
 }
 
-
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
 pthread_mutex_t gSleepLock;
 pthread_cond_t  gSleepLockCondition;
-#endif
 
 int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 	/* This operation is platform dependent. 	 */
-    
-#if defined ( __APPLE__ ) && defined ( __MACH__ )
+
     static Boolean doInitialization=true;
     int	   realTimeToWait,now;
     
@@ -267,20 +125,6 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     err = pthread_cond_timedwait_relative_np(&gSleepLockCondition,&gSleepLock,&tspec);	
     err = pthread_mutex_unlock(&gSleepLock); */
     
-
-#else
-#if !I_AM_CARBON_EVENT
-    microSeconds;
-	if (gThreadManager)
-            SqueakYieldToAnyThread();
-	else
-	    ioProcessEvents();
-    if ((getNextWakeupTick() <= (ioMSecs() & MillisecondClockMask)) && (getNextWakeupTick() != 0)) {
-        setInterruptCheckCounter(0);
-        return 0;
-    }
-#endif
-#endif	
 	return 0;
 }
 #undef ioMSecs

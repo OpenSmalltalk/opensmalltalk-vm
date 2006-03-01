@@ -96,32 +96,13 @@ extern int verboseLevel;
 static FILE *xopenf(char *filename,char* attr);
 #include "sqMacFileLogic.h"	
 
-#if !defined ( __APPLE__ ) && !defined ( __MACH__ )
-static FILE *xopenf(char *filename,char* attr) {
-	FSSpec imageSpec;
-	char fullName[DOCUMENT_NAME_SIZE+1];
-	FILE *fp;
-	makeFSSpec("", &imageSpec);
-	PathToFileViaFSSpec(fullName,DOCUMENT_NAME_SIZE,&imageSpec,kCFStringEncodingUTF8);
-	strcat(fullName,filename);
-	fp = fopen(fullName, attr);
-return fp;
-}
-#endif
-
 /* Note: Print this stuff into a file in case we lock up*/
 #undef DPRINTF
-#if defined (__APPLE__) && defined(__MACH__)
 # define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
 	char fileName[DOCUMENT_NAME_SIZE+1]; \
 	sqFilenameFromStringOpen(fileName,(long) &"Squeak3D.log", strlen("Squeak3D.log")); \
 	FILE *fp = fopen(fileName, "at");\
 	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
-#else
-# define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
-	FILE *fp = xopenf("Squeak3D.log", "at");\
-	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
-#endif
         
 /* Plugin refs */
 extern struct VirtualMachine *interpreterProxy;

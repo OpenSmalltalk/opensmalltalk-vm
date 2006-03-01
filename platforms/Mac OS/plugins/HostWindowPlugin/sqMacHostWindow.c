@@ -32,14 +32,12 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 	windowBlock->handle = (wHandleType) window;
 	
 	index = windowBlock->windowIndex;
-#if I_AM_CARBON_EVENT
 	windowBlock->isInvisible = !MacIsWindowVisible(window);
 	SetUpCarbonEventForWindowIndex(index);
 	QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context); 
 //	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context); 
 	windowBlock->width = w;
 	windowBlock->height = h; 
-#endif
 #ifndef BROWSERPLUGIN
 	sqShowWindow(index);
 #endif
@@ -51,14 +49,12 @@ int closeWindow(int windowIndex) {
 	windowHandle = windowHandleFromIndex(windowIndex);
 	if(windowHandle == NULL) 
 		return 0;
-#if I_AM_CARBON_EVENT
 	if (windowBlockFromIndex(windowIndex)->context)
 		QDEndCGContext(GetWindowPort(windowBlockFromIndex(windowIndex)->handle),&windowBlockFromIndex(windowIndex)->context);
 		//CGContextRelease(windowBlockFromIndex(windowIndex)->context);
 	
 
 	windowBlockFromIndex(windowIndex)->context = NULL;
-#endif
 	RemoveWindowBlock(windowBlockFromIndex(windowIndex));
 	DisposeWindow(windowHandle);
 	return 1;

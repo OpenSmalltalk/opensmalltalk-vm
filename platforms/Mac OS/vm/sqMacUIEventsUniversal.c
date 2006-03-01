@@ -80,11 +80,7 @@ notes: IsUserCancelEventRef
 	int ioLowResMSecs(void);
 
 /*** Variables -- Event Recording ***/
-#ifdef MINIMALVM
-#define MAX_EVENT_BUFFER 128
-#else
 #define MAX_EVENT_BUFFER 1024
-#endif
 
 extern int getInterruptKeycode();
 extern int setInterruptPending(int value);
@@ -94,7 +90,6 @@ extern struct VirtualMachine* interpreterProxy;
 
 extern MenuHandle editMenu;
 extern MenuHandle appleMenu;
-extern Boolean gThreadManager;
 extern Boolean gTapPowerManager;
 extern Boolean gDisablePowerManager;
 
@@ -255,9 +250,6 @@ int ioGetNextEvent(sqInputEvent *evt) {
 }
 
 int ioGetButtonState(void) {
-	if (gThreadManager)
-		SqueakYieldToAnyThread();
-	else
 	    ioProcessEvents();
 	if ((cachedButtonState & 0x7) != 0) {
 		int result = cachedButtonState;
@@ -271,9 +263,6 @@ int ioGetButtonState(void) {
 int ioGetKeystroke(void) {
 	int keystate;
 
-	if (gThreadManager)
-		SqueakYieldToAnyThread();
-	else
 	    ioProcessEvents();
 	if (keyBufGet == keyBufPut) {
 		return -1;  /* keystroke buffer is empty */
@@ -288,9 +277,6 @@ int ioGetKeystroke(void) {
 int ioMousePoint(void) {
 	Point p;
 
-	if (gThreadManager)
-		SqueakYieldToAnyThread();
-	else
 	    ioProcessEvents();
 	if (windowActive) {
 		GetMouse(&p);
@@ -305,10 +291,6 @@ int ioMousePoint(void) {
 
 int ioPeekKeystroke(void) {
 	int keystate;
-
-	if (gThreadManager)
-		SqueakYieldToAnyThread();
-	else
 	    ioProcessEvents();
 	if (keyBufGet == keyBufPut) {
 		return -1;  /* keystroke buffer is empty */
@@ -545,7 +527,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
     GetEventParameter(event, kEventParamDirectObject, typeWindowRef, NULL,sizeof(window), NULL, &window);
     whatHappened = GetEventKind(event);
 	//fprintf(stderr,"\nWindowEvent %i %i %i",whatHappened,IsWindowActive(window),windowIndexFromHandle((int)window));
-	if (windowIndexFromHandle((int)window) == 0) 
+	if (windowIndexFromHandle(window) == 0) 
 		return result;
     switch (whatHappened)
     {
@@ -1154,6 +1136,16 @@ int ioProcessEvents(void) {
 }
 #endif 
 
+#ifdef BROWSERPLUGIN
+int getUIToLock(long *data) {
+	extern pthread_mutex_t  gEventDrawLock;
+
+    pthread_mutex_lock(&gEventDrawLock);
+    customHandleForUILocks(NULL,NULL,(void*) data);
+    pthread_mutex_unlock(&gEventDrawLock);
+	return 0;
+}
+#else
 int getUIToLock(long *data) {
     OSStatus err;
     EventRef dummyEvent;
@@ -1169,6 +1161,7 @@ int getUIToLock(long *data) {
     }
 	return 0;
 }
+#endif
 
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
@@ -1179,7 +1172,13 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
         
     pthread_mutex_lock(&gEventUILock);
         
-    err = GetEventParameter(event, 1, 1, NULL, sizeof(long *), NULL, &data);
+    if (myHandler)
+		err = GetEventParameter(event, 1, 1, NULL, sizeof(long *), NULL, &data);
+	else {
+		data = userData;
+		err = noErr;
+	}
+		
     if (err != noErr) {
         pthread_cond_signal(&gEventUILockCondition);	
         pthread_mutex_unlock(&gEventUILock);

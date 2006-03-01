@@ -220,7 +220,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	        (finderInformation.fdType == 'fold' ||
     		finderInformation.fdType == 'disk'))) 
 	        continue;
-#if defined(__APPLE__) && defined(__MACH__)
+#ifndef BROWSERPLUGIN
 		CopyPascalStringToC(fileSpec.name,shortImageName);
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim') {
 			char pathname[2049],commandStuff[4096];
@@ -378,15 +378,8 @@ pascal OSErr HandleQuitAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 }
 
 UInt32 getEncoding() {
-#if TARGET_API_MAC_CARBON
 	return CFStringGetSystemEncoding();
-#else
-	return 0;
-#endif
 }
-
-#if defined(__APPLE__) && defined(__MACH__)
-
 
 /* LowRunAppleScript compiles and runs an AppleScript
     provided as text in the buffer pointed to by text.  textLength
@@ -456,5 +449,3 @@ bail:
 OSStatus SimpleRunAppleScript(const char* theScript) {
     return LowRunAppleScript(theScript, strlen(theScript), NULL);
 }
-
-#endif 
