@@ -41,15 +41,13 @@
  * Altered by John M McIntosh johnmci@smalltalkconsulting.com Feb 24th, 2006 for os-x carbon support
  
  */
-
-#define DEBUG 0
  
 #include "sq.h"		/* sqUnixConfig.h */
 #include "sqMacUIConstants.h"
 #include "sqMacEncoding.h"
 #include "sqMacUnixFileInterface.h"
 
-#if (DEBUG)
+#if (EXTERNALPRIMSDEBUG)
 # define dprintf(ARGS) fprintf ARGS
 #else
 # define dprintf(ARGS)
@@ -144,7 +142,7 @@ static void *tryLoadingInternals(char *libName)
 	      }
 	    else
 	      {
-#if DEBUG
+#if EXTERNALPRIMSDEBUG
 			fprintf(stderr,"squeak: loaded plugin `%s'\n", libName);
 #endif
 		    return handle;
@@ -379,7 +377,7 @@ void *ioLoadModule(char *pluginName)
       return handle;
   }
 
-#if DEBUG
+#if EXTERNALPRIMSDEBUG
   fprintf(stderr, "squeak: could not load plugin `%s'\n", pluginName);
 #endif 
   return 0;
