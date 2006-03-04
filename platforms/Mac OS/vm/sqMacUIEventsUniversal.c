@@ -468,6 +468,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
             break;
         case kEventAppDeactivated:
             if (gSqueakWindowIsFloating) break;
+			InitCursor();
 			windowActive = 0;
             break;
         default:
