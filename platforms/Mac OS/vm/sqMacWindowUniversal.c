@@ -357,9 +357,11 @@ int ioShowDisplayOnWindow(
 				&gProviderCallbacks);
 	image = CGImageCreate( affectedR-affectedL, affectedB-affectedT, depth==32 ? 8 : 5 /* bitsPerComponent */,
 				depth /* bitsPerPixel */, 
-//				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
-				pitch, colorspace, kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host, provider, NULL, 0, kCGRenderingIntentDefault);
-//				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Host : kCGBitmapByteOrder16Host), provider, NULL, 0, kCGRenderingIntentDefault);
+#ifdef __BIG_ENDIAN__
+				pitch, colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
+#else
+				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Host : kCGBitmapByteOrder16Host), provider, NULL, 0, kCGRenderingIntentDefault);
+#endif
 
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 
