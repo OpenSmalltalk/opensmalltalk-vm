@@ -600,22 +600,8 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 			mouseDownActivate = true;
         return result;
 	}
-#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_3
 	crosscheckForErrors = GetEventParameter (event, kEventParamWindowPartCode, typeWindowPartCode,NULL,sizeof(WindowPartCode), NULL, &windowPartCode);
     if (windowPartCode < 3) {
-
-#else
-	static RgnHandle	ioWinRgn=null;
-    Point  mouseLocation;
-
-	if (ioWinRgn == null) 
-        ioWinRgn = NewRgn();
-        
-    GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGlobalPortRgn,ioWinRgn);
-    GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
-    
-    if (!PtInRgn(mouseLocation,ioWinRgn)) {
-#endif
 		if (mouseDownActivate && whatHappened == kEventMouseUp) {
 			mouseDownActivate = false;
 			return result;
@@ -623,7 +609,6 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 		if (!gButtonIsDown) 
 			return result;
     }
-    
    /* if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating && 
             GetUserFocusWindow() != getSTWindowXXXX()) {
         SetUserFocusWindow(kUserFocusAuto);

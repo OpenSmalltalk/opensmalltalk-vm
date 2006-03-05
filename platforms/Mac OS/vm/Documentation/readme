@@ -15,7 +15,8 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes John McIntosh Feb 18th, 2004 3.7.x updates (pending)  (xcode changes)
 	-- Changes John McIntosh May 23rd, 2005 3.8.8b2 revise for SVN usage
 	-- Changes John McIntosh Jun 4th, 2005 3.8.8b2 revised for 3.9
-	-- Changes John McIntosh Nov 10th, 2005 3.8.9b8 revised SVN location, misc updats
+	-- Changes John McIntosh Nov 10th, 2005 3.8.9b8 revised SVN location, misc updates
+	-- Changes John McIntosh Mar 5th, 2006 3.8.11b1 Drop os-9, non-carbon logic. 
 
 (Note to readers, it is possible a step was missed, so beware)
 
@@ -39,7 +40,8 @@ Step One: Get the Apple Developer Tools (free)
 
 		http://developer.apple.com/membership/online.html
 		
-		(Note building with GCC 3.3 produces better code than gcc 4.0, gcc 3.1 or gcc 2.95, FYI gcc 3.1 produces lousy code)
+		(Note building with GCC 3.3 ppc produces better code than gcc 4.0, gcc 3.1 or gcc 2.95, FYI gcc 3.1 produces lousy code). 
+		Of course you must build with GCC 4.x for MacIntel, but the XCode project does this automatically for you
 				
 		
 Step One (b):
@@ -87,12 +89,8 @@ Step Three: Build an interpeter
 		
 	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure, see Step 3 above)
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
-		If you created an alias to the squeak platform folder, it might come up with for example
-		Mac OS X:Users:Shared:Squeak:platforms
 	D.	Enter the Platform name: (default is fine) "Mac OS"
 	E.	Enter the Path for your generates sources (default is fine).
-		It might come up with for example
-		Mac OS X:Users:Shared:Squeak:src
 	F.	Select plugins. (Suggest selecting menu item "make all internal",
 		then drag back the following back to Plugins not built:
 			FFIPlugin
@@ -125,22 +123,20 @@ Step Five: Shove and Tweak some files around the buildspace
 		4. click the box and select Stuffit Expander, or your decompression tool
 		5. go back and double-click the .sit, put the resulting resource folder in the folder containing
 		the 'platforms' and 'src' folders.
-	C.	Unstuff 'SqueakVMForCarbon.pbproj.sit' (same deal as step B)
-	D.	Drag 'SqueakVMForCarbon.pbproj' to the folder containing
+	C.	Unstuff 'SqueakVMUNIXPATHS.xcodeproj.zip' (same deal as step B)
+	D.	Drag 'SqueakVMUNIXPATHS.xcodeproj' to the folder containing
 		the 'platforms' and 'src' folders.
-
-		For XCode 2.1 you should use SqueakVMForCarbon.xcodeproj.zip instead
 
 	E.	Ensure a copy of the files (again found in the Developer directory):
 			Info-NPSqueak__Upgraded_.plist
 			Info-Squeak_VM_Debug__Upgraded_.plist
-			Info-Squeak_VM_OPT__Upgraded_.plist
+			Squeak VM Universal-Info.plist
 		can be found in the folder containing the 'platforms' and 'src' folders.
 
 Step Six: Run ProjectBuilder and build yourself an interpreter {for xcode 1.5 }
 
-	A.	Double-click the SqueakVMForCarbon.pbproj file
-	B.	On the left pane, see the SqueakVMForCarbon blue xcode icon.
+	A.	Double-click the SqueakVMUNIXPATHS.xcodeproj file
+	B.	On the left pane, see the SqueakVMUNIXPATHS blue xcode icon.
 		Click on  it to see the files.
 		Files which can't be found are listed in red. For any red highlighted files you'll need to 
 		resolve where or why the files is/are missing.
@@ -161,7 +157,8 @@ Step Seven: Download and print your Squeak VM Developer's Certificate
 
 Congratulations! Take a bow!
 
-
+--------------------------------------------
+yes yes, rewrite someday, please ignore all below, sorry
 {Mostly broken below, changes pending}
 
 Building with PrintJobPlugin as internal
