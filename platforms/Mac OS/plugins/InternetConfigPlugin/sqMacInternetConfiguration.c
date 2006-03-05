@@ -39,13 +39,6 @@ int sqInternetConfigurationInit(void) {
     if (error != noErr) 
         return 0;
         
-#if !TARGET_API_MAC_CARBON
-    error = ICFindConfigFile(gICInstance, 0, nil);
-    if (error != noErr) {
-        ICStop(gICInstance);
-        return 0;
-    }
-#endif
     gInitializedOk = true;
     return 1;
 }

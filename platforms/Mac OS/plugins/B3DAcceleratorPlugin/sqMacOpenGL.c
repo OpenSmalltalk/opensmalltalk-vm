@@ -20,22 +20,10 @@
 #include <stdio.h>
 #include <stdlib.h>
 
-#if TARGET_API_MAC_CARBON
         #include <Carbon/Carbon.h>
 	#include <unistd.h>
 	#include <agl/agl.h>
 	#include <agl/gl.h>
-#else
-	#include <QuickDraw.h>
-	#include <Windows.h>
-	#if defined(__MWERKS__) 
-	#include <GL/gl.h>
-	#else
-	#include <gl.h>
-	#endif
-	#include <agl.h> 
-	#include <Events.h>
-#endif
 /* Do not include the entire sq.h file but just those parts needed. */
 /*  The virtual machine proxy definition */
 #include "sqVirtualMachine.h"
@@ -57,8 +45,8 @@
 int printRendererInfo(void);
 int printFormatInfo(AGLPixelFormat info);
 
-glRenderer *current = NULL;
-glRenderer allRenderer[MAX_RENDERER];
+static glRenderer *current = NULL;
+static glRenderer allRenderer[MAX_RENDERER];
 typedef int (*eventMessageHook)(EventRecord* event);
 
 #ifdef INTERNAL
@@ -93,7 +81,6 @@ extern int verboseLevel;
 /* define forceFlush if we should fflush() before closing file */
 #define forceFlush 1
 
-static FILE *xopenf(char *filename,char* attr);
 #include "sqMacFileLogic.h"	
 
 /* Note: Print this stuff into a file in case we lock up*/
@@ -299,11 +286,7 @@ int glDestroyRenderer(int handle)
 	renderer->gWorld = NULL;
 
 #ifdef INTERNAL
-    #if TARGET_API_MAC_CARBON
         GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&tempGDH,&ignore); 
-    #else 
-        tempGDH = getDominateDevice(getSTWindow(),&ignore);
-    #endif
         if (tempGDH == nil) 
             return -1;
 	swAttrib[2] = (*(*tempGDH)->gdPMap)->pixelSize;
@@ -535,12 +518,7 @@ int glSwapBuffers(glRenderer *renderer) {
 #ifdef BROWSERPLUGIN
 		StartDraw();
 #else
-#if TARGET_API_MAC_CARBON
 		portChanged = QDSwapPort(winPort, &oldPort);
-#else
-		GetPort(&oldPort);
-		SetPort(winPort);
-#endif
 		GetPortBounds((CGrafPtr) winPort,&portBounds);
 
 //  Draw into the new port here
@@ -554,12 +532,8 @@ int glSwapBuffers(glRenderer *renderer) {
 #ifdef BROWSERPLUGIN
 		EndDraw();
 #else
-#if TARGET_API_MAC_CARBON
 		if (portChanged)
 			QDSwapPort(oldPort, NULL);
-#else
-		SetPort(oldPort);
-#endif		
 #endif		
 	}
 	return 1;

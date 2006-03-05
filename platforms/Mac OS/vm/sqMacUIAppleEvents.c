@@ -11,6 +11,7 @@
 *   NOTES: 
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  encoding for image name at startup time.
 *  3.8.9b1 Sept 13th, 2005 JMM add logic to open application to open image files
+ 3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
 */
 
 #include "sq.h"
@@ -21,12 +22,10 @@
 #include "sqMacFileLogic.h"
 #include "DropPlugin.h"
 
-extern squeakFileOffsetType calculateStartLocationForImage();
 extern char gSqueakImageName;
 
 int getFirstImageNameIfPossible(AEDesc	*fileList);
 void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude);
-UInt32 getEncoding();
 OSStatus SimpleRunAppleScript(const char* theScript);
 
 /*** Apple Event Handlers ***/
@@ -52,40 +51,13 @@ void InstallAppleEventHandlers() {
 
 pascal OSErr HandleOpenAppEvent(const AEDescList *aevt,  AEDescList *reply, long refCon) {
 	/* User double-clicked application; look for "Squeak.image" in same directory */
-    squeakFileOffsetType                 checkValueForEmbeddedImage;
-    OSErr               err;
-	ProcessSerialNumber processID;
-	ProcessInfoRec      processInformation;
-	Str255              name; 
-        char                cname[SHORTIMAGE_NAME_SIZE+1];
-	FSSpec 		    workingDirectory;
 #pragma unused(aevt)
 #pragma unused(refCon)
 #pragma unused(reply)
 
-	checkValueForEmbeddedImage = calculateStartLocationForImage();
-	if (checkValueForEmbeddedImage == 0) {
-	    /* use default image name in same directory as the VM */
-        SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
-	    return noErr;
-	}
-
-    GetCurrentProcess(&processID); 
-    processInformation.processInfoLength = sizeof(ProcessInfoRec);
-    processInformation.processAppSpec = &workingDirectory;
-    processInformation.processName = (StringPtr) &name;
-	err = GetProcessInformation(&processID,&processInformation);
-
-	if (err != noErr) {
-        SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
-        return noErr;
-    }
-    
-    CopyPascalStringToC(name,cname);
-      SetShortImageNameViaString(cname,getEncoding());
-    SetImageName( &workingDirectory);
-
-    return noErr;
+	/* use default image name in same directory as the VM */
+	SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
+	return noErr;
 }
 
 pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long refCon) {
@@ -128,7 +100,7 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
         // Test is open change set 
         strcpy(shortImageName, &gSqueakImageName);
         CopyCStringToPascal(shortImageName,workingDirectory.name);
-		SetShortImageNameViaString(shortImageName,getEncoding());
+		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
         SetImageName(&workingDirectory);
         fileSpec = workingDirectory;
     } else {
@@ -141,30 +113,12 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     	if (err) 
     	    goto done;
     		
-#ifdef MACINTOSHUSEUNIXFILENAMES
 		{
 			char pathName[IMAGE_NAME_SIZE+1];				
 			PathToFileViaFSSpec(pathName, IMAGE_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
 			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 		}
-#else
- 		{
-			Boolean okay;
-			unsigned char	name[SHORTIMAGE_NAME_SIZE+1];
-			int			isDirectory=0,index=0,creationDate,modificationDate;
-			long        parentDirectory;
-			squeakFileOffsetType sizeIfFile;
-			Str255		longFileName;
-			FSSpec	tempFsSpec = fileSpec;
-			
-			memcpy(name,tempFsSpec.name,64);
-			okay = fetchFileInfo(index,&tempFsSpec,name,true,
-								&parentDirectory,&isDirectory,&creationDate,
-								&modificationDate,&sizeIfFile,&longFileName);
-			CopyPascalStringToC(longFileName,shortImageName);
-		}
-#endif
-		SetShortImageNameViaString(shortImageName,getEncoding());
+		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
         SetImageName(&fileSpec);
    }
     
@@ -191,8 +145,9 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     EventRecord theEvent;
     HFSFlavor   dropFile;
     Point       where;
+#ifndef BROWSERPLUGIN
 	char        shortImageName[SHORTIMAGE_NAME_SIZE+1];
-    
+#endif
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
 	if (err)
@@ -229,11 +184,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 					
 			error = PathToFileViaFSSpec(pathname, 2048, &fileSpec, kCFStringEncodingMacRoman);
 			commandStuff [0] = 0x00;
-#ifdef MACINTOSHUSEUNIXFILENAMES
 			strcat(commandStuff,"set pimage to  \"");
-#else
-			strcat(commandStuff,"set pimage to POSIX path of file  \"");
-#endif
 			strcat(commandStuff,pathname);
 			strcat(commandStuff,"\" \n");
 			strcat(commandStuff,"set qimage to quoted form of pimage\n");
@@ -329,31 +280,13 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	    if (err) 
 	        goto done;
                 
-#ifdef MACINTOSHUSEUNIXFILENAMES
 		{
 			char pathName[DOCUMENT_NAME_SIZE+1];
 				
 			PathToFileViaFSSpec(pathName, DOCUMENT_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
 			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 		}
-#else
-		{
-			Boolean okay;
-			unsigned char	name[SHORTIMAGE_NAME_SIZE+1];
-			int			isDirectory=0,index=0,creationDate,modificationDate;
-			long        parentDirectory;
-			squeakFileOffsetType sizeIfFile;
-			Str255		longFileName;
-			FSSpec	tempFsSpec = fileSpec;
-			
-			memcpy(name,fileSpec.name,64);
-			okay = fetchFileInfo(index,&tempFsSpec,name,true,
-								&parentDirectory,&isDirectory,&creationDate,
-								&modificationDate,&sizeIfFile,&longFileName);
-			CopyPascalStringToC(longFileName,shortImageName);
-		}
-#endif
-		SetShortImageNameViaString(shortImageName,getEncoding());
+		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
 
         if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim')
             return i;
@@ -377,9 +310,6 @@ pascal OSErr HandleQuitAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 	return noErr;  //Note under Carbon it sends us a Quit event, but we don't process because image might not get saved?
 }
 
-UInt32 getEncoding() {
-	return CFStringGetSystemEncoding();
-}
 
 /* LowRunAppleScript compiles and runs an AppleScript
     provided as text in the buffer pointed to by text.  textLength

@@ -104,19 +104,15 @@ March	2005	JMM 3.7.6	Add host window support
 #endif
 /*** Exported Primitives ***/
 
-#pragma export on
 int primitivePluginBrowserReady(void);
-#pragma export off
 
 #ifdef ENABLE_URL_FETCH
-#pragma export on
 int primitivePluginDestroyRequest(void);
 int primitivePluginRequestFileHandle(void);
 int primitivePluginRequestState(void);
 int primitivePluginRequestURL(void);
 int primitivePluginRequestURLStream(void);
 int primitivePluginPostURL(void);
-#pragma export off
 #endif
 
 /* Constants */
@@ -147,7 +143,7 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent);
 extern unsigned char *memory;
 extern struct VirtualMachine *interpreterProxy;
 extern RgnHandle   gSavePortClipRgn;
-
+extern int windowActive;
 extern int thisSession;  /* from sqFilePrims.c: */
 extern pthread_mutex_t  gEventDrawLock;
 extern int	needsUpdate;
@@ -296,6 +292,7 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
 
 	memory = nil;
 	thisInstance = instance;
+	windowActive = 1;
 	ReadSqueakImage();
 	if (!memory) return NPERR_GENERIC_ERROR;
 	gSavePortClipRgn = NewRgn();

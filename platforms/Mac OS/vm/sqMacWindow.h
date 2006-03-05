@@ -16,17 +16,11 @@
 *  Jul 20th, 2004, JMM support for multiple windows
 ****************************************************************************/
 
-#if TARGET_API_MAC_CARBON
-    #include <Carbon/Carbon.h>
-int ioSetFullScreenActual(int fullScreen);
-#else
-#endif
-
+#include <Carbon/Carbon.h>
 void SetWindowTitle(int windowIndex,char *title);
 WindowPtr getSTWindow(void);
 WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes);
 void SetUpPixmap(void);
 void FreePixmap(void);
 GDHandle	getThatDominateGDevice(WindowPtr window);
-int makeMainWindow(void);
 void sqShowWindow(int windowIndex);

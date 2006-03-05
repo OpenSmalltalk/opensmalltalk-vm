@@ -74,24 +74,22 @@ enum {
 };
 
 
- Boolean gHasDragManager = false;                    /* true if the Drag Manager is installed */
- Boolean gCanTranslucentDrag = false;                /* true if translucent dragging is available */
- Boolean gDragDropThrottleSpinLock = false;	     /* true if waiting for Squeak to process D&D */
- DragReceiveHandlerUPP gMainReceiveHandler = NULL;   /* receive handler for the main dialog */
- DragTrackingHandlerUPP gMainTrackingHandler = NULL; /* tracking handler for the main dialog */
- WindowPtr   gWindowPtr;
+ static Boolean gDragDropThrottleSpinLock = false;	     /* true if waiting for Squeak to process D&D */
+ static DragReceiveHandlerUPP gMainReceiveHandler = NULL;   /* receive handler for the main dialog */
+ static DragTrackingHandlerUPP gMainTrackingHandler = NULL; /* tracking handler for the main dialog */
+ static WindowPtr   gWindowPtr;
  
- UInt16 gNumDropFiles=0;
- HFSFlavor *dropFiles;
+ static UInt16 gNumDropFiles=0;
+ static HFSFlavor *dropFiles;
 
-char tempName[DOCUMENT_NAME_SIZE + 1];  
+ static char tempName[DOCUMENT_NAME_SIZE + 1];  
 
 	/* these routines are used both in the receive handler and inside of the
 		tracking handler.  The following variables are shared between MyDragTrackingHandler
 		and MyDragReceiveHandler.  */
 		
- Boolean gApprovedDrag = false;   /* set to true if the drag is approved */
- Boolean gInIconBox = false;      /* set true if the drag is inside our drop box */
+ static Boolean gApprovedDrag = false;   /* set to true if the drag is approved */
+ static Boolean gInIconBox = false;      /* set true if the drag is inside our drop box */
  
 extern struct VirtualMachine *interpreterProxy;
  pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef);
@@ -105,7 +103,9 @@ int dropInit(void)
 	void *fn;
     Boolean  installedReceiver=false, installedTracker=false;
     OSErr err;
-    
+	Boolean gHasDragManager = false;                    /* true if the Drag Manager is installed */
+   Boolean gCanTranslucentDrag = false;                /* true if translucent dragging is available */
+  
     /* check for the drag manager & translucent feature??? */
     
 	if (gMainReceiveHandler != NULL) return 1;

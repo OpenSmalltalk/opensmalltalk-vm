@@ -13,18 +13,9 @@
 *****************************************************************************/
 #include <stdio.h>
 #include <stdlib.h>
-#if TARGET_API_MAC_CARBON
 	#include <Carbon/Carbon.h>
 	#include <agl/gl.h>
 	#include <agl/agl.h>
-#else
-	#if defined(__MWERKS__) 
-		#include <GL/gl.h>
-	#else
-		#include <gl.h>
-	#endif
-	#include <agl.h>
-#endif
 
 #include "sq.h"
 #include "sqVirtualMachine.h"

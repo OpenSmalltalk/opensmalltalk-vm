@@ -1,15 +1,7 @@
 #include "sq.h"
 #include "MIDIPlugin.h"
-#if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
     #include <QuickTime/QuickTimeMusic.h>
-#else
-    #include <MacTypes.h>
-typedef struct OpaqueIdleManager*       IdleManager;
-    #include <QuickTimeComponents.h>
-    #include <QuickTimeMusic.h>
-    #include <Strings.h>
-#endif
 
 extern struct VirtualMachine *interpreterProxy;
 
@@ -146,39 +138,7 @@ int setMidiClockRate(int portNum, int interfaceClockRate) {
 /* Put the given port into MIDI mode, which uses a clock supplied
    by an external MIDI interface adaptor to determine the baud rate.
    Possible external clock rates: 31.25 KHz, 0.5 MHz, 1 MHz, or 2 MHz. */
-#if TARGET_API_MAC_CARBON
     return false;
-#else
-
-	char midiParam = 15;  /* dummy value */
-	int osErr;
-
-    if (portIsOpenFn == 0) {
-		return interpreterProxy->success(false);
-	}
-
-	if (!(((int (*) (int)) portIsOpenFn)(portNum))) {
-		return interpreterProxy->success(false);
-	}
-
-	if (interfaceClockRate ==   31250) midiParam = 0x00;
-	if (interfaceClockRate ==  500000) midiParam = 0x40;
-	if (interfaceClockRate == 1000000) midiParam = 0x80;
-	if (interfaceClockRate == 2000000) midiParam = 0xC0;
-	if (midiParam == 15) {
-		return interpreterProxy->success(false);  /* bad interfaceClockRate */
-	}
-
-    if (portSetControlFn == 0) {
-		return interpreterProxy->success(false);
-	}
-
-	osErr = ((int (*) (int,int, char*)) portSetControlFn)(portNum, 15, &midiParam);
-	if (osErr != noErr) {
-		return interpreterProxy->success(false);
-	}
-#endif
-return 0;
 }/*** MIDI Parameters (used with sqMIDIParameter function) ***/
 
 #define sqMIDIInstalled				1

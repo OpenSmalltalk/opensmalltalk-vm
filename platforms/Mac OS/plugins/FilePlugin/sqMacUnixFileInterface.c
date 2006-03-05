@@ -11,9 +11,7 @@
 #include "sqMacUnixFileInterface.h"
 #include "sqMacUIConstants.h"
 
-#if TARGET_API_MAC_CARBON
 	extern CFStringEncoding gCurrentVMEncoding;
-#endif 
 
 /* sqUnixFile.c -- directory operations for Unix
  * 
@@ -60,6 +58,8 @@
 #include "FilePlugin.h"
 #include "sqUnixCharConv.h"
 #include "sqMacEncoding.h"
+#include "sqMacTime.h"
+#include "sqMacImageIO.h"
 
 #ifdef HAVE_DIRENT_H
 # include <dirent.h>
@@ -105,18 +105,20 @@
 
 
 /*** Variables ***/
-char lastPath[DOCUMENT_NAME_SIZE+1];
-int  lastPathValid = false;
-int  lastIndex= -1;
-DIR *openDir= 0;
-int IsImageName(char *name);
+static char lastPath[DOCUMENT_NAME_SIZE+1];
+static int  lastPathValid = false;
+static int  lastIndex= -1;
+static DIR *openDir= 0;
+
 
 /*** Functions ***/
 
-extern time_t convertToSqueakTime(time_t unixTime);
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term);
 sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqInt num, sqInt resolveAlias, Boolean retry);
-CFURLRef makeFileSystemURLFromString(char *pathString,int length,CFStringEncoding encoding);
+sqInt	ioFilenamefromStringofLengthresolveAliases(char* dst, char* src, sqInt num, sqInt resolveAlias);
+static CFURLRef makeFileSystemURLFromString(char *pathString,int length,CFStringEncoding encoding);
+static OSErr getFInfo(char *filename,FSCatalogInfo *catInfo,CFStringEncoding encoding);
+OSStatus SetVMPathFromApplicationDirectory();
 
 sqInt dir_Create(char *pathString, sqInt pathStringLength)
 {
@@ -333,7 +335,7 @@ sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqIn
  return bytes;
 }
 
-CFURLRef makeFileSystemURLFromString(char *pathString,int length, CFStringEncoding encoding) {
+static CFURLRef makeFileSystemURLFromString(char *pathString,int length, CFStringEncoding encoding) {
     CFStringRef tmpStrRef;
  	CFMutableStringRef filePath;
     CFURLRef    sillyThing;
@@ -452,7 +454,7 @@ void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolea
 }
 
 
-OSErr getFInfo(char *filename,FSCatalogInfo *catInfo,CFStringEncoding encoding) {
+static OSErr getFInfo(char *filename,FSCatalogInfo *catInfo,CFStringEncoding encoding) {
    FSRef	theFSRef;
    OSErr	err;
    

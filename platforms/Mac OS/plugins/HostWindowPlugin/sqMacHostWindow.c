@@ -12,8 +12,7 @@
 #include "sqMacWindow.h"
 
 extern struct VirtualMachine *interpreterProxy;
-static int RemoveWindowBlock(windowDescriptorBlock * thisWindow);
-int SetUpCarbonEventForWindowIndex(int index);
+int RemoveWindowBlock(windowDescriptorBlock * thisWindow);
 
 int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * list, int listLength) {
 	int index;
@@ -63,15 +62,11 @@ int closeWindow(int windowIndex) {
 int ioPositionOfWindow(wIndexType windowIndex)
 {
 	Rect portRect;
-	GrafPtr oldPort;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
 		
-	GetPort(&oldPort);
-	SetPortWindowPort(windowHandleFromIndex(windowIndex));
 	GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
- 	LocalToGlobal((Point *) &portRect);
-	SetPort(oldPort);
+ 	QDLocalToGlobalRect(GetWindowPort(windowHandleFromIndex(windowIndex)), &portRect);
 	return (portRect.left << 16) | (portRect.top & 0xFFFF);  /* left is high 16 bits; top is low 16 bits */
 }
 
@@ -81,7 +76,7 @@ int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 	int return_value=0;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
-#if TARGET_API_MAC_CARBON
+
 	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
 	if (giLocker != 0) {
 		long *foo;
@@ -97,9 +92,6 @@ int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
 		free(foo);
 	}
-#else
-	MoveWindow(windowHandleFromIndex(windowIndex),x,y,true);
-#endif
 	return ioPositionOfWindow(windowIndex);
 }
 
@@ -124,7 +116,6 @@ int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 	int return_value=0;
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
-#if TARGET_API_MAC_CARBON
 	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
 	if (giLocker != 0) {
 		long *foo;
@@ -140,9 +131,6 @@ int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
 		free(foo);
 	}
-#else
-	SizeWindow(windowHandleFromIndex(windowIndex),x,y,true);
-#endif
 	return ioSizeOfWindow(windowIndex);
 }
 
@@ -250,7 +238,7 @@ windowDescriptorBlock *thisWindow;
  * Remove the given entry from the list of windows.
  * free it, if found.
  */
-static int RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
+ int RemoveWindowBlock(windowDescriptorBlock * thisWindow) {
 windowDescriptorBlock *prevEntry;
 
 

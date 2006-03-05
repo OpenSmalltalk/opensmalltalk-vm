@@ -24,7 +24,8 @@
  3.8.8b6 Jul 19th, 2005 JMM tuning of the window flush
  3.8.8b15	Sept 12th, 2005, JMM set full screen only if not in full screen. 
  3.8.10B5  Feb 3rd, 2006 JMM complete rewrite carbon only for universal
- 
+ 3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
+
 *****************************************************************************/
 
     #include <Carbon/Carbon.h>
@@ -38,6 +39,7 @@
 #include "sqMacUIMenuBar.h"
 #include "sqMacEncoding.h"
 #include "sqMacHostWindow.h"
+#include "sqMacTime.h"
 
 /*** Variables -- Imported from Virtual Machine ***/
 extern int getFullScreenFlag();    /* set from header when image file is loaded */
@@ -47,24 +49,20 @@ extern int setSavedWindowSize(int value);   /* set from header when image file i
 extern struct VirtualMachine *interpreterProxy;
 
 /*** Variables -- Mac Related ***/
-CTabHandle	stColorTable = nil;
+static CTabHandle	stColorTable = nil;
 PixMapHandle	stPixMap = nil;
 
 
 /*** Functions ***/
-void SetColorEntry(int index, int red, int green, int blue);
-GDHandle getDominateDevice(WindowPtr theWindow,Rect *windRect);
-extern int SetUpCarbonEventForWindowIndex(int index);
+static void SetColorEntry(int index, int red, int green, int blue);
 
 WindowPtr getSTWindow(void) {
     return  windowHandleFromIndex(1);
 }
 
 #ifndef BROWSERPLUGIN
-extern struct VirtualMachine *interpreterProxy;
-int ioSetFullScreenActual(int fullScreen);
-void SetupSurface(int whichWindowIndex);
-extern int ioLowResMSecs(void);
+static int makeMainWindow(void);
+static int ioSetFullScreenActual(int fullScreen);
 
 int ioSetFullScreen(int fullScreen) {
         void *  giLocker;
@@ -84,8 +82,8 @@ int ioSetFullScreen(int fullScreen) {
         return return_value;
 }
 
-int ioSetFullScreenActual(int fullScreen) {
-    Rect                screen,portRect;
+static int ioSetFullScreenActual(int fullScreen) {
+    Rect                screen;
     int                 width, height, maxWidth, maxHeight;
     int                 oldWidth, oldHeight;
     static Rect			rememberOldLocation = {0,0,0,0};		
@@ -104,16 +102,15 @@ int ioSetFullScreenActual(int fullScreen) {
 	        
     if (fullScreen) {
 		GetPortBounds(GetWindowPort(targetWindowBlock->handle),&rememberOldLocation);
+		oldWidth =  rememberOldLocation.right -  rememberOldLocation.left;
+		oldHeight =  rememberOldLocation.bottom -  rememberOldLocation.top;
+
 		if (targetWindowBlock->isInvisible) {
 			rememberOldLocation.top = 44;
 			rememberOldLocation.left = 8;
 		}
-		LocalToGlobal((Point*) &rememberOldLocation.top);
-		LocalToGlobal((Point*) &rememberOldLocation.bottom);
+		QDLocalToGlobalRect(GetWindowPort(targetWindowBlock->handle),&rememberOldLocation);
 		MenuBarHide();
-		GetPortBounds(GetWindowPort(targetWindowBlock->handle),&portRect);
-		oldWidth =  portRect.right -  portRect.left;
-		oldHeight =  portRect.bottom -  portRect.top;
 		width  = screen.right - screen.left; 
 		height = (screen.bottom - screen.top);
 		MoveWindow(targetWindowBlock->handle, screen.left, screen.top, true);
@@ -131,11 +128,11 @@ int ioSetFullScreenActual(int fullScreen) {
 			width  = (width  > 0) ?  width : 64;
 			height = (height > 0) ? height : 64;
 
-		/* maximum size is screen size inset slightly */
-		maxWidth  = (screen.right  - screen.left) - 16;
-		maxHeight = (screen.bottom - screen.top)  - 52;
-		width  = (width  <= maxWidth)  ?  width : maxWidth;
-		height = (height <= maxHeight) ? height : maxHeight;
+			/* maximum size is screen size inset slightly */
+			maxWidth  = (screen.right  - screen.left) - 16;
+			maxHeight = (screen.bottom - screen.top)  - 52;
+			width  = (width  <= maxWidth)  ?  width : maxWidth;
+			height = (height <= maxHeight) ? height : maxHeight;
 			MoveWindow(targetWindowBlock->handle, 8, 44, true);
 			SizeWindow(targetWindowBlock->handle, width, height, true);
 		} else {
@@ -252,9 +249,8 @@ int ioSetFullScreenActual(int fullScreen) {
 } */
 
 
-extern struct VirtualMachine *interpreterProxy;
 void sqShowWindow(int windowIndex);
-void sqShowWindowActual(int windowIndex);
+static void sqShowWindowActual(int windowIndex);
 
 void sqShowWindow(int windowIndex) {
         void *  giLocker;
@@ -271,7 +267,7 @@ void sqShowWindow(int windowIndex) {
         }
 }
 
-void sqShowWindowActual(int windowIndex){
+static void sqShowWindowActual(int windowIndex){
 	if (windowHandleFromIndex(windowIndex)) {
 		ShowWindow( windowHandleFromIndex(windowIndex));
 		windowBlockFromIndex(windowIndex)->isInvisible  = false;
@@ -293,14 +289,14 @@ static const void *get_byte_pointer(void *bitmap)
     return (void *) bitmap;
 }
 
-CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
+static CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
     get_byte_pointer,
     NULL,
     NULL,
     NULL
 };
 
-void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
+static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch);
 
 int ioShowDisplayOnWindow(
@@ -422,7 +418,7 @@ int ioShowDisplayOnWindow(
 }
 
 
-void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
+static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height, int depth, int desiredDepth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch) {
 	
 	static GWorldPtr offscreenGWorld = nil;
@@ -449,7 +445,11 @@ void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int height,
 			if (offscreenGWorld != nil)
 				DisposeGWorld(offscreenGWorld);
 			
+#ifdef __BIG_ENDIAN__
+			error	= NewGWorld (&offscreenGWorld,desiredDepth,&structureRect,0,0,keepLocal);
+#else
 			error	= NewGWorld (&offscreenGWorld,desiredDepth,&structureRect,0,0,keepLocal | kNativeEndianPixMap);
+#endif		
 			LockPixels(GetGWorldPixMap(offscreenGWorld));
 			
             rememberWidth  = dstRect.right = width;
@@ -563,7 +563,7 @@ void SetUpPixmap(void) {
 	(*stPixMap)->pmTable = stColorTable;
 }
 
-void SetColorEntry(int index, int red, int green, int blue) {
+static void SetColorEntry(int index, int red, int green, int blue) {
 	(*stColorTable)->ctTable[index].value = index;
 	(*stColorTable)->ctTable[index].rgb.red = red;
 	(*stColorTable)->ctTable[index].rgb.green = green;
@@ -582,13 +582,15 @@ void FreePixmap(void) {
 	}
 }
 
-extern Boolean gSqueakWindowHasTitle;
-int makeMainWindow(void) {
+#ifndef BROWSERPLUGIN
+
+static int makeMainWindow(void) {
 	WindowPtr window;
 	char	shortImageName[256];
 	int width,height;
 	windowDescriptorBlock *windowBlock;
 	extern UInt32 gSqueakWindowType,gSqueakWindowAttributes;
+	extern Boolean gSqueakWindowHasTitle;
 		
 	/* get old window size */
 	width  = (unsigned) getSavedWindowSize() >> 16;
@@ -602,32 +604,30 @@ int makeMainWindow(void) {
 
 	 ioLoadFunctionFrom(NULL, "DropPlugin");
     
-#ifndef IHAVENOHEAD
 	if (gSqueakWindowHasTitle) {
 		getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
 		SetWindowTitle(1,shortImageName);
 	}
-#ifndef BROWSERPLUGIN
-        ioSetFullScreenActual(getFullScreenFlag());
-		SetUpCarbonEventForWindowIndex(1);
-		//CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
-		QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context);    
- 	Rect portRect;
+
+	ioSetFullScreenActual(getFullScreenFlag());
+	SetUpCarbonEventForWindowIndex(1);
+	//CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context);  
+	QDBeginCGContext(GetWindowPort(windowBlock->handle),&windowBlock->context);    
+
+	Rect portRect;
 	int	w,h;
-	
-		GetPortBounds(GetWindowPort(windowBlock->handle),&portRect);
-		w =  portRect.right -  portRect.left;
-		h =  portRect.bottom - portRect.top;
-		setSavedWindowSize((w << 16) |(h & 0xFFFF));
-		windowBlock->width = w;
-		windowBlock->height = h; 
-#endif 
-#endif
+
+	GetPortBounds(GetWindowPort(windowBlock->handle),&portRect);
+	w =  portRect.right -  portRect.left;
+	h =  portRect.bottom - portRect.top;
+	setSavedWindowSize((w << 16) |(h & 0xFFFF));
+	windowBlock->width = w;
+	windowBlock->height = h; 
 
 	//SetupSurface(1);
 	return (int) window;
 }
-
+#endif
 
 WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes) {
 	Rect windowBounds;
@@ -636,20 +636,15 @@ WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 window
 	windowBounds.top = t;
 	windowBounds.right = r;
 	windowBounds.bottom = b;
-#ifndef IHAVENOHEAD
 	CreateNewWindow(windowType,windowAttributes,&windowBounds,&createdWindow);
-#endif
-
 	return createdWindow;
 }
 
 void SetWindowTitle(int windowIndex,char *title) {
 	CFStringRef tempTitle = CFStringCreateWithCString(NULL, title, kCFStringEncodingMacRoman);
-#ifndef IHAVENOHEAD
 	if (windowHandleFromIndex(windowIndex))
 		SetWindowTitleWithCFString(windowHandleFromIndex(windowIndex), tempTitle);
 	CFRelease(tempTitle);
-#endif
 }
 
 int ioForceDisplayUpdate(void) {
@@ -664,8 +659,6 @@ int ioHasDisplayDepth(int depth) {
 	case 1:
 	case 2:
 	case 4:
-//            return false;  //OS-X 10.3.0/1 bug in copybits, force silly manual move
-//            break;
 	case 8:
 	case 16:
 	case 32:
@@ -692,7 +685,6 @@ int ioScreenSize(void) {
 	w  = (unsigned) getSavedWindowSize() >> 16;
 	h= getSavedWindowSize() & 0xFFFF;
 
-#ifndef IHAVENOHEAD
 	if (getSTWindow() == NULL) {
 		makeMainWindow();
 	}
@@ -702,7 +694,6 @@ int ioScreenSize(void) {
             w =  portRect.right -  portRect.left;
             h =  portRect.bottom - portRect.top;
 	}
-#endif
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 #endif
@@ -755,7 +746,6 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	CGDisplayErr err;
 	boolean_t exactMatch;
 	
-#ifndef IHAVENOHEAD
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
        if (dominantGDevice == null) {
             success(false);
@@ -772,7 +762,6 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	ioSetFullScreen(fullscreenFlag);
 	
     return 1;
-#endif
 }
 
 GDHandle	getThatDominateGDevice(WindowPtr window) {

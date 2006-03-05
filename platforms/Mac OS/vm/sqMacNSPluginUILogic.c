@@ -54,7 +54,6 @@ extern int setInterruptCheckCounter(int value);
 extern int setInterruptPending(int value);
 extern int getInterruptKeycode();
 extern sqInputEvent *nextEventPut(void);
-extern void PowerMgrCheck(void);
 
 extern NPWindow* netscapeWindow;
 extern Boolean  gAllowAccessToFilePlease;
@@ -94,6 +93,7 @@ int	squeakHeapMBytes;
 extern int inputSemaphoreIndex;
 extern eventMessageHook messageHook ;
 extern eventMessageHook postMessageHook;
+extern void aioInit(void);
 int checkImageVersionFromstartingAt(sqImageFile f, squeakFileOffsetType imageOffset);
 int getLongFromFileswap(sqImageFile f, int swapFlag);
 int recordMouseEvent(EventRecord *theEvent, int theButtonState);
@@ -106,6 +106,7 @@ void fetchPrefrences();
 /*** Functions Imported from sqMacWindow ***/
 
 extern PixMapHandle	stPixMap;
+static Boolean gPortChanged;
 
 static int MacRomanToUnicode[256] = 
 {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,
@@ -335,7 +336,6 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
 			pthread_mutex_lock(&gEventNSAccept);
 			pthread_mutex_unlock(&gEventDrawLock);
             eventPtr = &theEvent;
-    		SqueakYieldToAnyThread();
     	}
 	} while (getFullScreenFlag());
                     
@@ -353,7 +353,8 @@ void EndDraw(void) {
             return;
 	SetOrigin(gSavePortPortRect.left, gSavePortPortRect.top);
 	SetClip(gSavePortClipRgn);
-	SetPort((GrafPtr) gOldPort);
+	if (gPortChanged)
+			QDSwapPort(gOldPort, NULL);
 	UnlockPortBits((GrafPtr)GetWindowPort(getSTWindow()));
     pthread_mutex_unlock(&gEventDrawLock);
 }
@@ -371,15 +372,13 @@ void StartDraw(void) {
         }
 	port = (NP_Port *) netscapeWindow->window;
 
-	/* save old graphics port and switch to ours */
-	GetPort((GrafPtr *) &gOldPort);
 	// was realWindow = (WindowPtr) port->port;
 	realWindow = GetWindowFromPort(port->port);
 
 	mangleWindowInfo = windowBlockFromIndex(1);
 	mangleWindowInfo->handle = realWindow;
 	LockPortBits((GrafPtr)GetWindowPort(getSTWindow()));
-	SetPort((GrafPtr) port->port);
+	gPortChanged = QDSwapPort((GrafPtr) port->port, &gOldPort);
 
 	/* save old drawing environment */
 	GetPortBounds(port->port,&gSavePortPortRect);
@@ -448,13 +447,15 @@ int ioShowDisplayOnWindow(
 
 	/* create a mask region so that only the affected rectangle is copied */
 	if (maskRect == nil) 
-	maskRect = NewRgn();
+		maskRect = NewRgn();
 	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
 
+	CGrafPtr rememberPort = GetWindowPort(windowHandleFromIndex(1));
+	
 	CopyBits((BitMap *) *stPixMap, 
-		GetPortBitMapForCopyBits(GetWindowPort(windowHandleFromIndex(1))), 
+		GetPortBitMapForCopyBits(rememberPort), 
 		&srcRect, &dstRect, srcCopy, maskRect);
-		ReduceQDFlushLoad(GetWindowPort(windowHandleFromIndex(1)), windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
+	ReduceQDFlushLoad(rememberPort,windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
 	EndDraw();
 	return 0;
 }
@@ -966,8 +967,7 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 	/* first the basics */
 	evt->type = EventTypeMouse;
 	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
-	SetPortWindowPort(windowHandleFromIndex(windowActive));
-	GlobalToLocal((Point *) &theEvent->where);
+	QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),(Point *) &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
 	/* then the buttons */
@@ -1130,7 +1130,6 @@ int plugInInit(char *fullImagePath) {
 		error("This C compiler's time_t's are not 32 bits.");
 	}
 
-	PowerMgrCheck();
 	SetUpClipboard();
 	SetUpPixmap();
 	return 0;
@@ -1161,5 +1160,22 @@ int plugInShutdown(void) {
 	}
 	return 0;
 }
+
+#ifdef BROWSERPLUGIN
+OSErr createNewThread() {
+        OSErr err;
+				      
+        aioInit();
+        pthread_mutex_init(&gEventQueueLock, NULL);
+        pthread_mutex_init(&gEventUILock, NULL);
+        pthread_mutex_init(&gEventDrawLock, NULL);
+        pthread_mutex_init(&gEventNSAccept, NULL);
+        pthread_cond_init(&gEventUILockCondition,NULL);
+        err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
+	return 0;
+}
+
+#endif
+
 
 

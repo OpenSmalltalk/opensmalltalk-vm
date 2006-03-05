@@ -15,11 +15,6 @@
 #define DOCUMENT_NAME_SIZE 1000
 #define VMPATH_SIZE 1000
 
-#ifdef MACINTOSHUSEUNIXFILENAMES
   #define DELIMITER "/"
   #define DELIMITERInt '/'
-#else
-  #define DELIMITER ":"
-  #define DELIMITERInt ':'
-#endif
 

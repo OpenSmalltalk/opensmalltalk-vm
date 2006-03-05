@@ -17,9 +17,6 @@
 *  Jun 25th, 2003, JMM optional window title. globals for various user preferences
 ****************************************************************************/
 
-//#define BROWSERPLUGIN to compile code for Netscape or IE Plug-in
-//#define IHAVENOHEAD for no head
-
 // These are the comments from the orginal sqMacWindow.c before it was divided into 10 files
 //Aug 7th 2000,JMM Added logic for interrupt driven dispatching
 //Sept 1st 2000, JMM fix problem with modifier information being passed back incorrectly.
@@ -66,7 +63,9 @@
 *  3.8.0bx Jul 20th, 2004 JMM multiple window support
 *  3.8.7b2 March 19th, 2005 JMM add command line unix interface
 *  3.8.9b2 Sept 22nd, 2005 JMM add logic to override Squeak.image name 
-*  3.8.10b1 Jan 31st, 2005 JMM convert to unix file names.
+*  3.8.10b1 Jan 31st, 2006 JMM convert to unix file names.
+*  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
+
 */
 
 
@@ -86,28 +85,18 @@
 #include "sqMacMemory.h"
 #include "sqMacEncoding.h"
 #include "sqMacUnixCommandLineInterface.h"
-#include <unistd.h>
-#ifdef MACINTOSHUSEUNIXFILENAMES
 #include "sqMacUnixFileInterface.h"
-#endif
+#include "sqaio.h"
+#include <unistd.h>
+#include <pthread.h>
 
-
-    #include <pthread.h>
-    extern pthread_mutex_t gEventQueueLock,gEventUILock,gEventDrawLock,gEventNSAccept,gSleepLock;
-    extern pthread_cond_t  gEventUILockCondition,gSleepLockCondition;
+extern pthread_mutex_t gEventQueueLock,gEventUILock,gSleepLock;
+extern pthread_cond_t  gEventUILockCondition,gSleepLockCondition;
 
     pthread_t gSqueakPThread;
-    #include "sqaio.h"
 
-extern int  getFullScreenFlag();
-extern unsigned char *memory;
-extern squeakFileOffsetType calculateStartLocationForImage();
-Boolean         gTapPowerManager=false;
-Boolean         gDisablePowerManager=false;
-ThreadID        gSqueakThread = kNoThreadID;
-ThreadEntryUPP  gSqueakThreadUPP;
 OSErr			gSqueakFileLastError; 
-Boolean		gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false;
+Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false;
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
 char            gSqueakImageName[2048] = "Squeak.image";
@@ -120,15 +109,7 @@ extern char *pluginArgName[100];
 extern char *pluginArgValue[100];
 #endif
 
-void InitMacintosh(void);
-char * GetAttributeString(int id);
-void SqueakTerminate();
-void ExitCleanup();
-void PowerMgrCheck(void);
-OSErr   createNewThread();
-void SetUpCarbonEvent();
-void fetchPrefrences();
-  
+
 /*** Main ***/
 
 #ifndef BROWSERPLUGIN
@@ -154,29 +135,20 @@ int main(int argc, char **argv, char **envp) {
 		error("This C compiler's time_t's are not 32 bits.");
 	}
 
-#ifndef BROWSERPLUGIN
   /* Make parameters global for access from pluggable primitives */
   argCnt= argc;
   argVec= argv;
   envVec= envp;
-#endif
- 	InitMacintosh();
-	PowerMgrCheck();
+
+	LoadScrap();
+	InitCursor();
 	
 	SetUpMenus();
 	SetUpClipboard();
 	fetchPrefrences();
 	SetUpPixmap();
 
-// Get spec to the working directory
-#ifdef MACINTOSHUSEUNIXFILENAMES
 	SetVMPathFromApplicationDirectory();
-#else
-	FSSpec	workingDirectory;
-    err = GetApplicationDirectory(&workingDirectory);
-	// Convert that to a full path string.
-    SetVMPath(&workingDirectory);
-#endif
 
 	{
 		// Change working directory, this works under os-x, previous logic worked pre os-x 10.4
@@ -196,9 +168,7 @@ int main(int argc, char **argv, char **envp) {
 		}
 	}
 
-#ifndef BROWSERPLUGIN
 	unixArgcInterface(argCnt,argVec,envVec);
-#endif
 	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
          
 	if (ImageNameIsEmpty()) {
@@ -210,11 +180,8 @@ int main(int argc, char **argv, char **envp) {
             if (imageURL != NULL) {
 				CFStringRef imagePath;
 				
-	#ifdef MACINTOSHUSEUNIXFILENAMES
                 imagePath = CFURLCopyFileSystemPath (imageURL, kCFURLPOSIXPathStyle);
-	#else
-                imagePath = CFURLCopyFileSystemPath (imageURL, kCFURLHFSPathStyle);
-	#endif 
+
 				SetImageNameViaCFString(imagePath);
                 CFRelease(imageURL);
                 CFRelease(imagePath);
@@ -232,75 +199,25 @@ int main(int argc, char **argv, char **envp) {
 			}
 	}
 
-	/* uncomment the following when using the C transcript window for debugging: */
-	//printf("Move this window, then hit CR\n"); getchar();
-
 	/* read the image file and allocate memory for Squeak heap */
 	f = sqImageFileOpen(getImageName(), "rb");
 	while (f == NULL) {
 	    //Failure attempt to ask the user to find the image file
-	    
-		
-#ifdef MACINTOSHUSEUNIXFILENAMES
-		{
-			char pathName[DOCUMENT_NAME_SIZE+1];
-            err = squeakFindImage(pathName);
-			if (err) 
-				ioExit();
-			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
-			SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
-			SetImageNameViaString(pathName,gCurrentVMEncoding);
-		}
-#else
-	    FSSpec vmfsSpec,imageFsSpec;
-		char path[VMPATH_SIZE + 1];
-            
-		getVMPathWithEncoding(path,gCurrentVMEncoding);
-
-	    err =  makeFSSpec(path,strlen(path),&vmfsSpec);
-	    if (err) 
-	        ioExit();
-            err = squeakFindImage(&vmfsSpec,&imageFsSpec);
-	    if (err) 
-	        ioExit();
-
-		{
-			Boolean okay;
-			unsigned char	name[SHORTIMAGE_NAME_SIZE+1];
-			int			isDirectory=0,index=0,creationDate,modificationDate;
-			long        parentDirectory;
-			squeakFileOffsetType sizeIfFile;
-			Str255		longFileName;
-			FSSpec	tempFsSpec = imageFsSpec;
-			
-			memcpy(name,tempFsSpec.name,64);
-			okay = fetchFileInfo(index,&tempFsSpec,name,true,
-								&parentDirectory,&isDirectory,&creationDate,
-								&modificationDate,&sizeIfFile,&longFileName);
-			CopyPascalStringToC(longFileName,shortImageName);
-		}
-			/* make the image or document directory the working directory */
-		{
-			WDPBRec wdPB;
-			wdPB.ioNamePtr = NULL;
-			wdPB.ioVRefNum = imageFsSpec.vRefNum;
-			wdPB.ioWDDirID = imageFsSpec.parID;
-			PBHSetVolSync(&wdPB);
-		}
+		char pathName[DOCUMENT_NAME_SIZE+1];
+		err = squeakFindImage(pathName);
+		if (err) 
+			ioExit();
+		getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
-		SetImageName(&imageFsSpec);
-#endif
-
+		SetImageNameViaString(pathName,gCurrentVMEncoding);
 		f = sqImageFileOpen(getImageName(), "rb");
  	}
 
-	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), calculateStartLocationForImage());
+	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), 0);
 	sqImageFileClose(f);
         
     SetUpTimers();
 
-    {
-    
     aioInit();
     pthread_mutex_init(&gEventQueueLock, NULL);
     pthread_mutex_init(&gEventUILock, NULL);
@@ -309,85 +226,10 @@ int main(int argc, char **argv, char **envp) {
     if (err == 0) {
         SetUpCarbonEvent();
         RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
-        }
-    }
+	}
     return 0;
 }
-#endif
 
-#ifdef BROWSERPLUGIN
-OSErr createNewThread() {
-    {
-        OSErr err;
-        
-        aioInit();
-        pthread_mutex_init(&gEventQueueLock, NULL);
-        pthread_mutex_init(&gEventUILock, NULL);
-        pthread_mutex_init(&gEventDrawLock, NULL);
-        pthread_mutex_init(&gEventNSAccept, NULL);
-        pthread_cond_init(&gEventUILockCondition,NULL);
-        err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
-    }
-	return 0;
-}
-
-#else
-#endif
-pascal short SqueakYieldToAnyThread(void) {
-	return 0;
-}
-
-void InitMacintosh(void) {
-	LoadScrap();
-	InitCursor();
-}
-
-void PowerMgrCheck(void) {
-	long pmgrAttributes;
-	
-	gTapPowerManager = false;
-	gDisablePowerManager = false;
-	if (! Gestalt(gestaltPowerMgrAttr, &pmgrAttributes))
-		if ((pmgrAttributes & (1<<gestaltPMgrExists)) 
-		    && (pmgrAttributes & (1<<gestaltPMgrDispatchExists))
-		    && (PMSelectorCount() >= 0x24)) {
-		    gTapPowerManager = true;
-		}
-}
-
-int ioDisablePowerManager(int disableIfNonZero) {
-    gDisablePowerManager = disableIfNonZero;
-	return 0;
-}
-
-Boolean RunningOnCarbonX(void)
-{
-    UInt32 response;
-    
-    return (Gestalt(gestaltSystemVersion, 
-                    (SInt32 *) &response) == noErr)
-                && (response >= 0x01000);
-}
-
-Boolean isSystem9_0_or_better(void)
-{
-    UInt32	response;
-    OSErr	error;
-    
-    error = Gestalt(gestaltSystemVersion, 
-                    (SInt32 *) &response);
-    return ((error == noErr)
-                && (response >= 0x0900));
-}
-
-/*** I/O Primitives ***/
-
-int ioBeep(void) {
-	SysBeep(1000);
-	return 0;
-}
-
-#ifndef BROWSERPLUGIN
 int ioExit(void) {
     UnloadScrap();
     ioShutdownAllModules();
@@ -396,7 +238,20 @@ int ioExit(void) {
     ExitToShell();
 	return 0;
 }
+
 #endif
+
+int ioDisablePowerManager(int disableIfNonZero) {
+	#pragma unused(disableIfNonZero)
+	return 0;
+}
+
+/*** I/O Primitives ***/
+
+int ioBeep(void) {
+	SysBeep(1000);
+	return 0;
+}
 
 void SqueakTerminate() {
 #ifdef BROWSERPLUGIN
@@ -462,10 +317,10 @@ char * GetAttributeString(int id) {
 
 	if (id == 1001) return "Mac OS";
 	if (id == 1002) {
-		unsigned long myattr;
+		long myattr;
 		static char data[32];
 		
-		Gestalt(gestaltSystemVersion, (long *) &myattr);
+		Gestalt(gestaltSystemVersion, &myattr);
 		sprintf(data,"%X",myattr);
 		return data;
 	}
@@ -504,12 +359,8 @@ char * GetAttributeString(int id) {
             return data;            
         }
 
-  #ifdef MACINTOSHUSEUNIXFILENAMES
-	if (id == 1201) return "255";
-  #else
-	if (id == 1201) return (isVmPathVolumeHFSPlus() ? "255" : "31");  //name size on hfs plus volumes
-  #endif
-
+ 	if (id == 1201) return "255";
+ 
 	if (id == 1202) {
 		static char data[32];
 

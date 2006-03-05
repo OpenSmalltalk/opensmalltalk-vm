@@ -6,10 +6,7 @@
  *
  */
 
-#if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
-#else
-#endif
 #include "HostWindowPlugin.h"
 
 /* window handle type */
@@ -21,7 +18,6 @@ typedef struct windowDescriptorBlock {
 	wHandleType		handle;
 	wIndexType		windowIndex;
 	/* extra fields to support your platform needs */
-#if TARGET_API_MAC_CARBON
 	CGContextRef context;
 	int rememberTicker;
 	int dirty;
@@ -30,7 +26,6 @@ typedef struct windowDescriptorBlock {
 	int	width;
 	int	height;
 	int isInvisible;
-#endif
 } windowDescriptorBlock;
 
 windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
@@ -40,3 +35,4 @@ wHandleType windowHandleFromIndex(wIndexType windowIndex);
 windowDescriptorBlock *AddWindowBlock(void);
 windowDescriptorBlock *windowBlockFromIndex(int windowIndex);
 int getCurrentIndexInUse(void);
+void SetUpCarbonEventForWindowIndex(int index);

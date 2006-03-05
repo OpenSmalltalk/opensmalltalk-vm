@@ -40,17 +40,6 @@ static int isAccessiblePathName(char *pathName) {
   /* check last character in image path (e.g., backslash) */
   if(untrustedUserDirectory[i] != pathName[i]) return 0;
 
-#ifndef MACINTOSHUSEUNIXFILENAMES
-  /* check if somebody wants to trick us into using relative
-     paths ala Foo:My Squeak:allowed::" */
-  while(pathName[i]) {
-    if(pathName[i] == ':') {
-      if(pathName[i+1] == ':')
-	return 0; /* Gotcha! */
-    }
-    i++;
-  }
-#endif
 return 1;
 }
 
@@ -59,17 +48,6 @@ static int isAccessibleFileName(char *fileName) {
   /* Check if the path/file name is subdirectory of the image path */
   for(i=0; i<strlen(untrustedUserDirectory); i++)
     if(untrustedUserDirectory[i] != fileName[i]) return 0;
-  /* check if somebody wants to trick us into using relative
-     paths ala Foo:My Squeak:allowed::" */
-#ifndef MACINTOSHUSEUNIXFILENAMES
-  while(fileName[i]) {
-    if(fileName[i] == ':') {
-      if(fileName[i+1] == ':')
-	return 0; /* Gotcha! */
-    }
-    i++;
-  }
-#endif
   return 1;
 }
 
@@ -199,10 +177,7 @@ char *ioGetUntrustedUserDirectory(void) {
 
 /* note: following is called from VM directly, not from plugin */
 int ioInitSecurity(void) {
-  short vRefNum;
-  long  dirID;
   OSErr err;
-  FSSpec spec;
   void *iLoadAS;
   char  *data;
   
@@ -218,39 +193,9 @@ int ioInitSecurity(void) {
   data =  ((char * (*) (int)) iLoadAS)(1);
   strcpy(secureUserDirectory, data);
   fixPath(secureUserDirectory);
-#ifndef MACINTOSHUSEUNIXFILENAMES
-  strcat(secureUserDirectory, ":secure");
-#else
   strcat(secureUserDirectory,  "/secure");
-#endif
   fixPath(secureUserDirectory);
   
-#ifndef MACINTOSHUSEUNIXFILENAMES
-	err = FindFolder(kOnSystemDisk, kPreferencesFolderType, kDontCreateFolder, &vRefNum, &dirID);
-	if (err != noErr) {
-      strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-	  fixPath(untrustedUserDirectory);
-      return 1;
-	}
-	FSMakeFSSpecCompat(vRefNum,dirID,"\p",&spec);
-	PathToFileViaFSSpec(untrustedUserDirectory,255,&spec,gCurrentVMEncoding);
-	strcat(untrustedUserDirectory,"Squeak:Internet");
- 	err = makeFSSpec(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec);
- 	if (err != noErr) {
-	      strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-	      fixPath(untrustedUserDirectory);
-		return 0;
-	}	
-	strcat(untrustedUserDirectory,":My Squeak");
-	err = makeFSSpec(untrustedUserDirectory, strlen(untrustedUserDirectory),&spec);
-	if (err != noErr) {
-		if (!dir_CreateSecurity(untrustedUserDirectory,strlen(untrustedUserDirectory))) {
-	      strcpy(untrustedUserDirectory, "foobar:tooBar:forSqueak:bogus:");
-		  fixPath(untrustedUserDirectory);
-		  return 0;
-		}
-	}
-#else
 	FSRef prefFolder;
 	err = FSFindFolder(kOnSystemDisk,kPreferencesFolderType,kDontCreateFolder,&prefFolder);
   	if (err != noErr) {
@@ -275,7 +220,6 @@ int ioInitSecurity(void) {
 		  return 0;
 		}
 	}
-#endif
   return 1;
 }
 
@@ -319,18 +263,5 @@ int dir_CreateSecurity(char *pathString, int pathStringLength) {
 	   create folders elsewhere. */
 
     //JMM tests create file in Vm directory, other place, other volume
-#ifndef MACINTOSHUSEUNIXFILENAMES
-    
-    FSSpec spec;
-    OSErr  err;
-    long  createdDirID;
-    
-    if ((err = makeFSSpec(pathString, pathStringLength,&spec)) == -1)
-        return false;
-        
-   	return FSpDirCreate(&spec,smSystemScript,&createdDirID) == noErr;
-#else
 	return dir_Create(pathString, pathStringLength);
-#endif
-
 }

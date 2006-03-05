@@ -266,11 +266,7 @@ void *ioLoadModule(char *pluginName)
 
 			bundleURL2 = CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, bundleURL, resourcePathString, false );
 			CFRelease(bundleURL);
-	#ifdef MACINTOSHUSEUNIXFILENAMES
 			filePath = CFURLCopyFileSystemPath (bundleURL2, kCFURLPOSIXPathStyle);
-	#else
-			filePath = CFURLCopyFileSystemPath (bundleURL2, kCFURLHFSPathStyle);
-	#endif
 			CFRelease(bundleURL2);
 			
 			CFStringGetCString (filePath,vmDirPath,DOCUMENT_NAME_SIZE, kCFStringEncodingUTF8);

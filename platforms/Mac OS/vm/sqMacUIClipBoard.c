@@ -6,17 +6,17 @@
 *   AUTHOR:  John Maloney, John McIntosh, and others.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUIClipBoard.c,v 1.3 2004/08/03 02:42:09 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
+ 3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
 *****************************************************************************/
 #include "sq.h"
 #include "sqMacUIClipBoard.h"
 
 int clipboardSize(void);
 
-#if TARGET_API_MAC_CARBON
 /*** Clipboard Support (text only for now) ***/
 
 void SetUpClipboard(void) {
@@ -66,60 +66,3 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 	return 0;
 }
 
-#else 
-/*** Clipboard Support (text only for now) ***/
-Handle			clipboardBuffer = nil;
-
-void SetUpClipboard(void) {
-	/* allocate clipboard in the system heap to support really big copy/paste */
-	THz oldZone;
-
-	oldZone = GetZone();
-	SetZone(SystemZone());
-	clipboardBuffer = NewHandle(0);
-	SetZone(oldZone);
-}
-
-void FreeClipboard(void) {
-	if (clipboardBuffer != nil) {
-		DisposeHandle(clipboardBuffer);
-		clipboardBuffer = nil;
-	}
-}
-
-int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
-	long clipSize, charsToMove;
-	char *srcPtr, *dstPtr, *end;
-
-	clipSize = clipboardSize();
-	charsToMove = (count < clipSize) ? count : clipSize;
-    //JMM locking
-    HLock(clipboardBuffer); 
-	srcPtr = (char *) *clipboardBuffer;
-	dstPtr = (char *) byteArrayIndex + startIndex;
-	end = srcPtr + charsToMove;
-	while (srcPtr < end) {
-		*dstPtr++ = *srcPtr++;
-	}
-    HUnlock(clipboardBuffer); 
-	return charsToMove;
-}
-
-int clipboardSize(void) {
-	long count, offset;
-
-	count = GetScrap(clipboardBuffer, 'TEXT', &offset);
-	if (count < 0) {
-		return 0;
-	} else {
-		return count;
-	}
-}
-
-int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
-	ZeroScrap();
-	PutScrap(count, 'TEXT', (char *) (byteArrayIndex + startIndex));
-	return 0;
-}
-
-#endif

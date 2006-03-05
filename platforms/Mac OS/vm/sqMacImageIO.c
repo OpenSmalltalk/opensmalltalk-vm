@@ -11,6 +11,7 @@
 *   NOTES: 
 *  Feb 22nd, 2002, JMM moved code into 10 other files, see sqMacMain.c for comments
  3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
+ 3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
 *****************************************************************************/
 
 #include "sq.h"
@@ -23,8 +24,6 @@
 
 
 /*** VM Home Directory Path ***/
-
-squeakFileOffsetType calculateStartLocationForImage(void);
 
 int vmPathSize(void) {
         char path[VMPATH_SIZE + 1];
@@ -155,10 +154,6 @@ int sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f)
     if (f != 0)
       return fwrite(ptr,elementSize,count,f);
 	return 0;
-}
-
-squeakFileOffsetType calculateStartLocationForImage() {
-    return 0;
 }
 
 squeakFileOffsetType sqImageFileStartLocation(int fileRef, char *filename, squeakFileOffsetType imageSize){

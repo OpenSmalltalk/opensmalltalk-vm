@@ -6,18 +6,10 @@
  *
  */
 
-#if TARGET_API_MAC_CARBON
 #include <Carbon/Carbon.h>
-#else
-#define CFStringEncodings UInt32
-#endif 
 
 void getVMPathWithEncoding(char *target,UInt32 encoding);
-#ifndef MACINTOSHUSEUNIXFILENAMES
-void SetVMPath(FSSpec *workingDirectory);
-#else
 void SetVMPathFromCFString(CFMutableStringRef strRef);
-#endif
 Boolean VMPathIsEmpty();
 void getImageNameWithEncoding(char *target,UInt32 encoding);
 void SetImageNameViaCFString(CFStringRef string);

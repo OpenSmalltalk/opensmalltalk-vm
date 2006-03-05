@@ -6,7 +6,7 @@
 *   AUTHOR:  John McIntosh.
 *   ADDRESS: 
 *   EMAIL:   johnmci@smalltalkconsulting.com
-*   RCSID:   $Id: sqMacUUID.c,v 1.4 2004/08/03 02:42:26 johnmci Exp $
+*   RCSID:   $Id$
 *
 *   Feb 5 2002, JMM cleanup for windows port
 *
@@ -17,8 +17,9 @@
 
 extern struct VirtualMachine *interpreterProxy;
 
-#if TARGET_API_MAC_CARBON
 #include <CFUUID.h>
+int sqUUIDInit();
+int sqUUIDShutdown();
 
 int MakeUUID(sqUUID location) {
     CFUUIDRef theUUID;
@@ -38,21 +39,3 @@ int sqUUIDInit() {
 int sqUUIDShutdown() {
     return 1;
 }
-#else
-static Boolean gInit= false;
-int sqUUIDInit() {
-    return 0;
-}
-
-MakeUUID(sqUUID location) {
-#pragma unused(location)
-    interpreterProxy->success(false);
-    return 0;
-}
-
-int sqUUIDShutdown() {
-    return 0;
-}
-#endif
-
-

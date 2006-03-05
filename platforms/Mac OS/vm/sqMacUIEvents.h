@@ -15,10 +15,7 @@
 *   3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding, plus multiple keystrokes for input
 ****************************************************************************/
  
-#if TARGET_API_MAC_CARBON
     #include <Carbon/Carbon.h>
-#else
-#endif
 
 typedef int (*eventMessageHook)(EventRecord* event);
 
@@ -38,5 +35,6 @@ int checkForModifierKeys();
 void ignoreLastEvent();
 void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, short hMax, short vMax);
 void SetupKeyboard(void);    
-pascal short SqueakYieldToAnyThread(void);
 int getUIToLock(long *);
+void SetUpCarbonEvent();
+void SetUpCarbonEventForWindowIndex(int index);

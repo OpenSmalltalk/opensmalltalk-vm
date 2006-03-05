@@ -30,6 +30,7 @@
 *  3.8.7b2 Mar 19th, 2005 JMM change keydown/up back to virtual keycode, add unicode to keychar
 *  3.8.8b9 Aug 15th, 2005 JMM flush quartz buffer if needded
 *  3.9.1b2 Oct 4th, 2005 Jmm add MillisecondClockMask
+ 3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -41,43 +42,42 @@ notes: IsUserCancelEventRef
 #include "sqMacUIMenuBar.h"
 #include "sqMacWindow.h"
 #include "sqMacHostWindow.h"
+#include "sqMacTime.h"
 
-    #include <pthread.h>
-    #include "sqaio.h"
-    
-	enum { KeyMapSize= 32 };
+#include <pthread.h>
+#include "sqaio.h"
 
-	typedef struct
-	{
-	  int keyCode;
-	  int keyChar;
-	  int keyRepeated;
-	} KeyMapping;
+enum { KeyMapSize= 32 };
 
-	static KeyMapping keyMap[KeyMapSize];
-	static int keyMapSize=	   0;
-    
-    pthread_mutex_t gEventQueueLock,gEventUILock;
-    pthread_cond_t  gEventUILockCondition;
-    extern pthread_mutex_t gSleepLock;
-    extern pthread_cond_t  gSleepLockCondition;
-    #define EventTypeFullScreenUpdate 98
-    #define EventTypePostEventProcessing 99
-    void doPostMessageHook(EventRef event);
-    void postFullScreenUpdate(void);
-    void signalAnyInterestedParties(void);
-    Boolean gQuitNowRightNow=false;
-	sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
-	
-	static int addToKeyMap(int keyCode, int keyChar);
-	static int findInKeyMap(int keyCode);
-	static int removeFromKeyMap(int keyCode);
-	static int indexInKeyMap(int keyCode);
-	static int findRepeatInKeyMap(int keyCode);
-	static void setRepeatInKeyMap(int keyCode);
-	void SetUpCarbonEventForWindowIndex(int index);
-	void doPendingFlush(void);
-	int ioLowResMSecs(void);
+typedef struct
+{
+  int keyCode;
+  int keyChar;
+  int keyRepeated;
+} KeyMapping;
+
+pthread_mutex_t gEventQueueLock,gEventUILock;
+pthread_cond_t  gEventUILockCondition;
+
+#define EventTypeFullScreenUpdate 98
+#define EventTypePostEventProcessing 99
+static void doPostMessageHook(EventRef event);
+static void postFullScreenUpdate(void);
+static void signalAnyInterestedParties(void);
+static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
+
+static int addToKeyMap(int keyCode, int keyChar);
+static int findInKeyMap(int keyCode);
+static int removeFromKeyMap(int keyCode);
+static int indexInKeyMap(int keyCode);
+static int findRepeatInKeyMap(int keyCode);
+static void setRepeatInKeyMap(int keyCode);
+
+#ifdef BROWSERPLUGIN
+void doPendingFlush(void);
+#else
+static void doPendingFlush(void);
+#endif
 
 /*** Variables -- Event Recording ***/
 #define MAX_EVENT_BUFFER 1024
@@ -88,40 +88,47 @@ extern int setInterruptCheckCounter(int value);
 extern int getFullScreenFlag();
 extern struct VirtualMachine* interpreterProxy;
 
+static KeyMapping keyMap[KeyMapSize];
+static int keyMapSize=	   0;
+static Boolean gQuitNowRightNow=false;
+
 extern MenuHandle editMenu;
 extern MenuHandle appleMenu;
-extern Boolean gTapPowerManager;
-extern Boolean gDisablePowerManager;
 
-int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
+static sqInputEvent eventBuffer[MAX_EVENT_BUFFER];
+static int eventBufferGet = 0;
+static int eventBufferPut = 0;
 
-sqInputEvent eventBuffer[MAX_EVENT_BUFFER];
-int eventBufferGet = 0;
-int eventBufferPut = 0;
-
-/* declaration of the event message hook */
-eventMessageHook messageHook = NULL;
-eventMessageHook postMessageHook = NULL;
 
 /* event capture */
 sqInputEvent *nextEventPut(void);
 
+#ifdef BROWSERPLUGIN
+#define MAKETHESESTATIC 
+#else
+#define MAKETHESESTATIC static
+#endif
+ 
 #define KEYBUF_SIZE 64
-int keyBuf[KEYBUF_SIZE];	/* circular buffer */
-int keyBufGet = 0;			/* index of next item of keyBuf to read */
-int keyBufPut = 0;			/* index of next item of keyBuf to write */
-int keyBufOverflows = 0;	/* number of characters dropped */
+/* declaration of the event message hook */
+MAKETHESESTATIC eventMessageHook messageHook = NULL;
+MAKETHESESTATIC eventMessageHook postMessageHook = NULL;
+MAKETHESESTATIC int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
+MAKETHESESTATIC int keyBuf[KEYBUF_SIZE];	/* circular buffer */
+MAKETHESESTATIC int keyBufGet = 0;			/* index of next item of keyBuf to read */
+MAKETHESESTATIC int keyBufPut = 0;			/* index of next item of keyBuf to write */
+MAKETHESESTATIC int keyBufOverflows = 0;	/* number of characters dropped */
 
-int buttonState = 0;		/* mouse button and modifier state when mouse
+MAKETHESESTATIC int buttonState = 0;		/* mouse button and modifier state when mouse
 							   button went down or 0 if not pressed */
-int cachedButtonState = 0;	/* buffered mouse button and modifier state for
+MAKETHESESTATIC int cachedButtonState = 0;	/* buffered mouse button and modifier state for
 							   last mouse click even if button has since gone up;
 							   this cache is kept until the next time ioGetButtonState()
 							   is called to avoid missing short clicks */
-int gButtonIsDown = 0;
+MAKETHESESTATIC int gButtonIsDown = 0;
+MAKETHESESTATIC int windowActive = 0;		/* positive indicates the active window */
 
-Point savedMousePosition;	/* mouse position when window is inactive */
-int windowActive = 0;		/* positive indicates the active window */
+static Point savedMousePosition;	/* mouse position when window is inactive */
 
 /* This table maps the 5 Macintosh modifier key bits to 4 Squeak modifier
    bits. (The Mac shift and caps lock keys are both mapped to the single
@@ -131,12 +138,7 @@ int windowActive = 0;		/* positive indicates the active window */
 		Mac bits: <control><option><caps lock><shift><command>
 		ST bits:  <command><option><control><shift>
 */
-char modifierMap[256] = {
-//	0,  8, 1,  9, 1,  9, 1,  9, 4, 12, 5, 13, 5, 13, 5, 13, caps lock
-//	2, 10, 3, 11, 3, 11, 3, 11, 6, 14, 7, 15, 7, 15, 7, 15
-//    0,  8, 1,  9, 0,  8, 1,  9, 4, 12, 5, 13, 4, 12, 5, 13, //no caps lock
-//    2, 10, 3, 11, 2, 10, 3, 11, 6, 14, 7, 15, 6, 14, 7, 15
-	
+MAKETHESESTATIC char modifierMap[256] = {	
  0, 8, 1, 9, 0, 8, 1, 9, 4, 12, 5, 13, 4, 12, 5, 13, //Track left and right shift keys
  2, 10, 3, 11, 2, 10, 3, 11, 6, 14, 7, 15, 6, 14, 7, 
 15, 1, 9, 1, 9, 1, 9, 1, 9, 5, 13, 5, 13, 5, 13, 5, 
@@ -182,6 +184,7 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 //	signalSemaphoreWithIndex(inputSemaphoreIndex);
 	return 1;
 }
+
 int MouseModifierState(EventRecord *theEvent) {
 	int stButtons;
 
@@ -316,14 +319,13 @@ Boolean IsKeyDown() {
 }
 
 extern MenuHandle fileMenu, editMenu;
-EventLoopTimerRef  gPowerManagerDefeatTimer;
 
-EventTypeSpec appEventCmdList[] = {{kEventClassCommand, kEventCommandProcess}};
+static EventTypeSpec appEventCmdList[] = {{kEventClassCommand, kEventCommandProcess}};
 
-EventTypeSpec appEventList[] = {{kEventClassApplication, kEventAppActivated},
+static EventTypeSpec appEventList[] = {{kEventClassApplication, kEventAppActivated},
                                 {kEventClassApplication, kEventAppDeactivated}};
 
-EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
+static EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
                             { kEventClassWindow, kEventWindowHidden },
                             { kEventClassWindow, kEventWindowActivated},
 							{ kEventClassWindow, kEventWindowBoundsChanged},
@@ -332,7 +334,7 @@ EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawContent },
 							{ kEventClassWindow, kEventWindowCollapsed},
                             { kEventClassWindow, kEventWindowDeactivated}};
                             
-EventTypeSpec windEventMouseList[] = {
+static EventTypeSpec windEventMouseList[] = {
 							{ kEventClassMouse, kEventMouseMoved},
                             { kEventClassMouse, kEventMouseWheelMoved},
                             { kEventClassMouse, kEventMouseDragged},
@@ -340,17 +342,17 @@ EventTypeSpec windEventMouseList[] = {
 							{ kEventClassMouse, kEventMouseDown}
 							};
                             
-EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
+static EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
                             { kEventClassKeyboard, kEventRawKeyUp},
 							{ kEventClassKeyboard, kEventRawKeyRepeat},
                             { kEventClassKeyboard, kEventRawKeyModifiersChanged}};
                             
                             
-EventTypeSpec appleEventEventList[] = {{ kEventClassAppleEvent, kEventAppleEvent}};
+static EventTypeSpec appleEventEventList[] = {{ kEventClassAppleEvent, kEventAppleEvent}};
 
-EventTypeSpec textInputEventList[] = {{ kEventClassTextInput, kEventTextInputUnicodeForKeyEvent}};
+static EventTypeSpec textInputEventList[] = {{ kEventClassTextInput, kEventTextInputUnicodeForKeyEvent}};
 
-EventTypeSpec customEventEventList[] = {{ 'JMM1', 'JMM1'}};
+static EventTypeSpec customEventEventList[] = {{ 'JMM1', 'JMM1'}};
 
 static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
                 EventRef event, void* userData);
@@ -368,16 +370,15 @@ static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
-static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData);
             
-int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
-int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
-void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
-void recordKeyboardEventCarbon(EventRef event);
-void recordMenuEventCarbon(MenuRef menu, UInt32 menuItem);
-void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom,int windowIndex);
-int doPreMessageHook(EventRef event); 
-void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta);
+static int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
+static int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
+static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
+static void recordKeyboardEventCarbon(EventRef event);
+static void recordMenuEventCarbon(MenuRef menu, UInt32 menuItem);
+static void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom,int windowIndex);
+static int doPreMessageHook(EventRef event); 
+static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta);
             
 void SetUpCarbonEvent() {
     AdjustMenus();
@@ -387,14 +388,6 @@ void SetUpCarbonEvent() {
     InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventHandler), GetEventTypeCount(appEventList), appEventList, 0, NULL);
     InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), GetEventTypeCount(customEventEventList), customEventEventList, 0, NULL);
     
-/* timmer loops */
-    if (gTapPowerManager) 
-		InstallEventLoopTimer (GetMainEventLoop(),
-                       6*kEventDurationSecond,
-                       kEventDurationSecond,
-                       NewEventLoopTimerUPP(PowerManagerDefeatTimer),
-                       NULL,&gPowerManagerDefeatTimer);
-
 }
 
 void SetUpCarbonEventForWindowIndex(int index) {
@@ -406,7 +399,7 @@ void SetUpCarbonEventForWindowIndex(int index) {
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyTextInputEventHandler), GetEventTypeCount(textInputEventList), textInputEventList, 0, NULL);
 }
 
-int   doPreMessageHook(EventRef event) {
+static int   doPreMessageHook(EventRef event) {
    /* jmm rethink, breaks not thread safe
     if (messageHook) {
         EventRecord theOldEventType;
@@ -418,7 +411,7 @@ int   doPreMessageHook(EventRef event) {
     return eventNotHandledErr;
 }
 
-void   doPostMessageHook(EventRef event) {
+static void   doPostMessageHook(EventRef event) {
     if (postMessageHook) {
         EventRecord *theOldEventType;
         sqInputEvent *evt;
@@ -439,7 +432,7 @@ void   doPostMessageHook(EventRef event) {
     }
 }
 
-void   postFullScreenUpdate() {
+static void   postFullScreenUpdate() {
     sqInputEvent *evt;
     
     pthread_mutex_lock(&gEventQueueLock);
@@ -607,9 +600,22 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 			mouseDownActivate = true;
         return result;
 	}
-#warning is this valid.        
+#if MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_3
 	crosscheckForErrors = GetEventParameter (event, kEventParamWindowPartCode, typeWindowPartCode,NULL,sizeof(WindowPartCode), NULL, &windowPartCode);
     if (windowPartCode < 3) {
+
+#else
+	static RgnHandle	ioWinRgn=null;
+    Point  mouseLocation;
+
+	if (ioWinRgn == null) 
+        ioWinRgn = NewRgn();
+        
+    GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGlobalPortRgn,ioWinRgn);
+    GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
+    
+    if (!PtInRgn(mouseLocation,ioWinRgn)) {
+#endif
 		if (mouseDownActivate && whatHappened == kEventMouseUp) {
 			mouseDownActivate = false;
 			return result;
@@ -755,7 +761,7 @@ static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
     return result;
 }
 
-void recordMenuEventCarbon(MenuRef menu,UInt32 menuItem) {
+static void recordMenuEventCarbon(MenuRef menu,UInt32 menuItem) {
 	sqMenuEvent *evt;
 	pthread_mutex_lock(&gEventQueueLock);
 	evt = (sqMenuEvent*) nextEventPut();
@@ -773,7 +779,7 @@ void recordMenuEventCarbon(MenuRef menu,UInt32 menuItem) {
 	return;
 }
 
-void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom, int windowIndex) {
+static void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom, int windowIndex) {
 	sqWindowEvent *evt;
 	pthread_mutex_lock(&gEventQueueLock);
 	evt = (sqWindowEvent*) nextEventPut();
@@ -791,7 +797,7 @@ void recordWindowEventCarbon(int windowType,int left, int top, int right, int bo
 	return;
 }
 
-void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
+static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	sqMouseEvent *evt;
 	static sqMouseEvent oldEvent;
 	Point  where;
@@ -858,7 +864,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
             fakeMouseWheelKeyboardEvents(wheelMouseDirection,wheelMouseDelta);
 }
 
-void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta) {
+static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta) {
     long 	i,asciiChar;
     sqKeyboardEvent *evt,*extra;
     UInt32	macKeyCode;
@@ -937,7 +943,7 @@ void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long w
     signalAnyInterestedParties();                
 }
 
-void recordKeyboardEventCarbon(EventRef event) {
+static void recordKeyboardEventCarbon(EventRef event) {
     int				modifierBits, keyIndex, i, ISawRawKeyRepeat;
     UniCharCount	uniCharCount;
     UniChar			modifiedUniChar, *uniCharBufPtr, *uniCharBuf;
@@ -1040,7 +1046,7 @@ void recordKeyboardEventCarbon(EventRef event) {
 }
 
 
-int MouseModifierStateCarbon(EventRef event,UInt32 whatHappened) {
+static int MouseModifierStateCarbon(EventRef event,UInt32 whatHappened) {
 	long stButtons = 0;
         UInt32 keyBoardModifiers=0;
         EventMouseButton mouseButton=0;
@@ -1093,13 +1099,10 @@ int ModifierStateCarbon(EventRef event,UInt32 whatHappened) {
 	return ((modifierMap[((keyBoardModifiers & 0xFFFF) >> 8)] << 3));
 }
 
-static pascal void PowerManagerDefeatTimer (EventLoopTimerRef theTimer,void* userData) {
-}
-
 
 #ifndef BROWSERPLUGIN
 
-void doPendingFlush(void) {
+static void doPendingFlush(void) {
 	extern  Boolean gSqueakUIFlushUseHighPercisionClock;
 	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
 	static int lastTick = 0;
@@ -1207,18 +1210,13 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
     return noErr;
 }
 
-void signalAnyInterestedParties() {
+static void signalAnyInterestedParties() {
     if (inputSemaphoreIndex != 0)
         signalSemaphoreWithIndex(inputSemaphoreIndex);
-    /* I'm not sure this buys anything, usually we are waiting for mophic to step so 
-    waking up early doesn't do much except drive CPU up
-    pthread_mutex_lock(&gSleepLock);
-    pthread_cond_signal(&gSleepLockCondition);	
-    pthread_mutex_unlock(&gSleepLock);*/
 }
 
 
-sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Code, long m) {
+static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Code, long m) {
 	sqKeyboardEvent 	*evt;
 	evt = (sqKeyboardEvent*) nextEventPut();
 

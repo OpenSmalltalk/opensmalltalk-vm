@@ -14,6 +14,7 @@
 *  Apr 17th, 2002, JMM Use accessors for VM variables.
 *  Apr 25th, 2002, JMM low res clock is broken after 0x7FFFFFF
 *  3.9.1b2 Oct 4th, 2005 Jmm add MillisecondClockMask
+ 3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
 
 *****************************************************************************/
 #include "sq.h"
@@ -21,24 +22,24 @@
 #include "sqMacUIEvents.h"
 #define MillisecondClockMask 536870911
 
+#include <pthread.h>
+#include <sys/types.h>
+#include <sys/time.h>
+#include <unistd.h>
+#include "sqaio.h"
 
-extern int getNextWakeupTick();
-extern int setInterruptCheckCounter(int value);
-extern int setInterruptPending(int value);
+#ifdef BROWSERPLUGIN
+TMTask    gTMTask;
+#else
+static TMTask    gTMTask;
+#endif
+static struct timeval	 startUpTime;
+static unsigned int	lowResMSecs= 0;
 
-    #include <pthread.h>
-    #include <sys/types.h>
-    #include <sys/time.h>
-    #include <unistd.h>
-    #include "sqaio.h"
 
-    TMTask    gTMTask,gTMTask1000;
-    struct timeval	 startUpTime;
-    unsigned int	lowResMSecs= 0;
-    int	    gCounter=0;
-    #define LOW_RES_TICK_MSECS 16
-    #define HIGH_RES_TICK_MSECS 2
-    #define COUNTER_LIMIT LOW_RES_TICK_MSECS/HIGH_RES_TICK_MSECS
+#define LOW_RES_TICK_MSECS 16
+#define HIGH_RES_TICK_MSECS 2
+#define COUNTER_LIMIT LOW_RES_TICK_MSECS/HIGH_RES_TICK_MSECS
 
 
 
@@ -95,9 +96,12 @@ pthread_cond_t  gSleepLockCondition;
 
 int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 	/* This operation is platform dependent. 	 */
+	#pragma unused(disableIfNonZero)
 
     static Boolean doInitialization=true;
     int	   realTimeToWait,now;
+	extern int getNextWakeupTick();
+	extern int setInterruptCheckCounter(int value);
     
     if (doInitialization) {
         doInitialization = false;
@@ -134,7 +138,6 @@ int ioMSecs() {
     return ioMicroMSecs();
 }
 
-#ifdef MACINTOSHUSEUNIXFILENAMES
 time_t convertToSqueakTime(time_t unixTime)
 {
 #ifdef HAVE_TM_GMTOFF
@@ -150,7 +153,6 @@ time_t convertToSqueakTime(time_t unixTime)
      and 52 non-leap years later than Squeak. */
   return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
 }
-#endif
 
 
 /*void sqHeartBeatActions(int now) {
