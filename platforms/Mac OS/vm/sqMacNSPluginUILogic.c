@@ -700,7 +700,7 @@ int InitFilePathsViaDomain(SInt16 domain) {
 
 #ifdef SOPHIEVM
 	/* get the path to the sytem folder preference area*/
-	err = FSFindFolder(domain, kInternetPlugInFolderType, kDontCreateFolder, &theFSRef);
+	err = FSFindFolder(domain, kApplicationsFolderType, kDontCreateFolder, &theFSRef);
 	if (err != noErr) {
 		return err;
 	}
@@ -708,11 +708,7 @@ int InitFilePathsViaDomain(SInt16 domain) {
 	// Look for folder, if not found abort */
 	PathToFileViaFSRef(imageInPreferenceFolder,IMAGE_NAME_SIZE, &theFSRef, false,nil,kCFStringEncodingUTF8);
 
-#ifdef SOPHIEVM
-	strcat(imageInPreferenceFolder,"NPSophie.bundle/Contents/Resources/");
-#else
-	strcat(imageInPreferenceFolder,"NPSqueak.bundle/Contents/Resources/");
-#endif
+	strcat(imageInPreferenceFolder,"Sophie.app/Contents/Resources/");
 	strcpy(path,imageInPreferenceFolder);
 	strcat(imageInPreferenceFolder,squeakPluginImageName);
 	err = getFSRef(imageInPreferenceFolder,&theFSRef,kCFStringEncodingUTF8);	
