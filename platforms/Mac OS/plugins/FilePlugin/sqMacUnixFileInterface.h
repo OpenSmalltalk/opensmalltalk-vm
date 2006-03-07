@@ -8,10 +8,10 @@
  */
 #include "sqMacUIConstants.h"
 
-OSStatus SetVMPathFromApplicationDirectory();
-int PathToFileViaFSSpec(char *pathName, int pathNameMax, FSSpec *workingDirectory,UInt32 encoding);
+OSStatus SetVMPathFromApplicationDirectory(void);
 int getLastPathComponentInCurrentEncoding(char *pathString,char * lastPathPart,CFStringEncoding encoding);
 extern UInt32 gCurrentVMEncoding;
 OSErr squeakFindImage(char *pathName);
 OSErr getFSRef(char *pathString,FSRef *theFSRef,CFStringEncoding encoding);
-void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolean retryWithDirectory,char * rememberName,CFStringEncoding encoding);
+void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef,CFStringEncoding encoding);
+OSErr getFInfoViaFSRef(FSRef *theFSRef,	FInfo *finderInfo);

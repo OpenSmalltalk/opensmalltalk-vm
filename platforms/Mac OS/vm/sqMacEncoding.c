@@ -75,12 +75,6 @@ void SetImageNameViaString(char *string,UInt32 encoding) {
 	CFRelease(path);
 }
 
-void SetImageName(FSSpec *workingDirectory) {
-    char path[IMAGE_NAME_SIZE + 1];
-    
-    PathToFileViaFSSpec(path,IMAGE_NAME_SIZE, workingDirectory, gCurrentVMEncoding);
-    SetImageNameViaString(path, gCurrentVMEncoding);
-}
 
 Boolean ImageNameIsEmpty() {
     if (imageNameString == NULL) 

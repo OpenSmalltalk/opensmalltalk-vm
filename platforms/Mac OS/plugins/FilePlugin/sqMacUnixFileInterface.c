@@ -328,7 +328,7 @@ sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqIn
 		err = FSResolveAliasFileWithMountFlags(&targetFSRef,true,&targetIsFolder,&wasAliased,kResolveAliasFileNoUI);
 		if (err || wasAliased == false)
 			return bytes; 
-		PathToFileViaFSRef(dst, DOCUMENT_NAME_SIZE, &targetFSRef, false,nil,kCFStringEncodingUTF8);
+		PathToFileViaFSRef(dst, DOCUMENT_NAME_SIZE, &targetFSRef,kCFStringEncodingUTF8);
 		bytes = strlen(dst);
 	 }
   
@@ -394,34 +394,8 @@ int getLastPathComponentInCurrentEncoding(char *pathString,char * lastPathPart,C
 }
 
 
-/* Fill in the given string with the full path from a root volume to the given file. */
-/* From FSSpec to C-string pathName */
-/* FSSpec -> FSRef -> URL(Unix) -> HPFS+ */
-int PathToFileViaFSSpec(char *pathName, int pathNameMax, FSSpec *where,CFStringEncoding encoding) {        
-        FSRef	theFSRef;
-        OSErr	error;
-        Boolean retryWithDirectory=false;
-        char	rememberName[256];
-        
-        *pathName = 0x00;
-        error = FSpMakeFSRef (where, &theFSRef);
-        if (error != noErr) {
-			FSSpec	failureRetry;
-			
-			retryWithDirectory = true;
-            failureRetry = *where;
-            CopyCStringToPascal(":",failureRetry.name);
-            CopyPascalStringToC(where->name,(char *) &rememberName);
-            error = FSpMakeFSRef(&failureRetry,&theFSRef);
-            if (error != noErr) 
-                return -1;
-		}
-        
-		PathToFileViaFSRef(pathName,pathNameMax,&theFSRef,retryWithDirectory,rememberName,encoding);
-        return 0;
-}
 
-void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolean retryWithDirectory,char * rememberName,CFStringEncoding encoding) {        
+void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef,CFStringEncoding encoding) {        
         CFURLRef sillyThing;
         CFStringRef filePath;
         Boolean isDirectory;
@@ -444,11 +418,6 @@ void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef, Boolea
   
           CFStringGetCString (mutableStr, pathName,pathNameMax, encoding);
         
-        if (retryWithDirectory) {
-            strcat(pathName,"/");
-            strcat(pathName,rememberName);
-            isDirectory = false;
-        }
         if (isDirectory)
             strcat(pathName,"/");
 }
@@ -465,6 +434,15 @@ static OSErr getFInfo(char *filename,FSCatalogInfo *catInfo,CFStringEncoding enc
     return noErr;
 }
 
+OSErr getFInfoViaFSRef(FSRef *theFSRef,	FInfo *finderInfo) {
+   OSErr	err;
+	FSCatalogInfo catInfo;
+	
+	err = FSGetCatalogInfo (theFSRef,kFSCatInfoFinderInfo,&catInfo,nil,nil,nil);
+	memcpy(finderInfo,&catInfo.finderInfo,sizeof(FInfo));	
+	return err;
+	
+}
 int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
 	/* Set the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
@@ -587,7 +565,7 @@ OSErr squeakFindImage(char* pathName)
 	anErr = AEGetNthPtr(&(outReply.selection), 1, typeFSRef, NULL, NULL, &fileAsFSRef, sizeof(FSRef), NULL);
 	//  Dispose of NavReplyRecord, resources, descriptors
 	anErr = NavDisposeReply(&outReply);
-	PathToFileViaFSRef(pathName,DOCUMENT_NAME_SIZE, &fileAsFSRef, false,NULL,gCurrentVMEncoding);
+	PathToFileViaFSRef(pathName,DOCUMENT_NAME_SIZE, &fileAsFSRef, gCurrentVMEncoding);
 
     DisposeNavObjectFilterUPP(filterProc);
     return anErr;
@@ -602,11 +580,10 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
     NavFileOrFolderInfo* theInfo = (NavFileOrFolderInfo*)info;
     
     if (theItem->descriptorType == typeFSRef) {
-        char checkSuffix[256];
+        char checkSuffix[256],pathName[1024];
         OSErr 	error;
         Boolean check;
 		FSRef theFSRef;
-        FSSpec	theSpec;
 		
         if (theInfo->isFolder)
             return true;
@@ -617,11 +594,8 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
         error = AEGetDescData(theItem,&theFSRef,sizeof(FSRef));
         if (error != noErr) 
             return true;
-		error = FSGetCatalogInfo (&theFSRef,kFSCatInfoNone,nil,nil,&theSpec,nil);
-        if (error != noErr) 
-            return true;
-       
-        CopyPascalStringToC(theSpec.name,checkSuffix);
+		PathToFileViaFSRef(pathName, 1024, &theFSRef,kCFStringEncodingUTF8);
+		getLastPathComponentInCurrentEncoding(pathName,checkSuffix,kCFStringEncodingUTF8);        
         check = IsImageName(checkSuffix);
         if (check) 
             return true;

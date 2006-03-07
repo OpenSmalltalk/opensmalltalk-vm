@@ -321,7 +321,7 @@ char * GetAttributeString(int id) {
 		static char data[32];
 		
 		Gestalt(gestaltSystemVersion, &myattr);
-		sprintf(data,"%X",myattr);
+		sprintf(data,"%X",(unsigned int) myattr);
 		return data;
 	}
 	if (id == 1003) {

@@ -144,7 +144,7 @@ void resolveWhatTheImageNameIs(char *guess)
 		SetShortImageNameViaString("",gCurrentVMEncoding);
 		return;
 	}
-	PathToFileViaFSRef(fullPath,DOCUMENT_NAME_SIZE, &theFSRef, false,NULL,gCurrentVMEncoding);
+	PathToFileViaFSRef(fullPath,DOCUMENT_NAME_SIZE, &theFSRef,gCurrentVMEncoding);
 	getLastPathComponentInCurrentEncoding(fullPath,lastPath,gCurrentVMEncoding);
 	SetImageNameViaString(fullPath,gCurrentVMEncoding);
 	SetShortImageNameViaString(lastPath,gCurrentVMEncoding);

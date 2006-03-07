@@ -706,7 +706,7 @@ int InitFilePathsViaDomain(SInt16 domain) {
 	}
 	
 	// Look for folder, if not found abort */
-	PathToFileViaFSRef(imageInPreferenceFolder,IMAGE_NAME_SIZE, &theFSRef, false,nil,kCFStringEncodingUTF8);
+	PathToFileViaFSRef(imageInPreferenceFolder,IMAGE_NAME_SIZE, &theFSRef,kCFStringEncodingUTF8);
 
 	strcat(imageInPreferenceFolder,"Sophie.app/Contents/Resources/");
 	strcpy(path,imageInPreferenceFolder);
@@ -724,7 +724,7 @@ int InitFilePathsViaDomain(SInt16 domain) {
 	}
 	
 	// Look for folder, if not found abort */
-	PathToFileViaFSRef(imageInPreferenceFolder,IMAGE_NAME_SIZE, &theFSRef, false,nil,kCFStringEncodingUTF8);
+	PathToFileViaFSRef(imageInPreferenceFolder,IMAGE_NAME_SIZE, &theFSRef,kCFStringEncodingUTF8);
 
 	strcat(imageInPreferenceFolder,"Squeak/Internet/");
 	strcpy(path,imageInPreferenceFolder);
@@ -735,7 +735,7 @@ int InitFilePathsViaDomain(SInt16 domain) {
 		err = FSFindFolder(domain, kApplicationsFolderType, kDontCreateFolder, &theFSRef);
 		if (err != noErr) 
 			goto error;
-		PathToFileViaFSRef(imageInPreferenceFolder,IMAGE_NAME_SIZE, &theFSRef, false,nil,kCFStringEncodingUTF8);
+		PathToFileViaFSRef(imageInPreferenceFolder,IMAGE_NAME_SIZE, &theFSRef,kCFStringEncodingUTF8);
 		strcat(imageInPreferenceFolder,"SqueakLand/Squeak/Internet/");
 		strcpy(path,imageInPreferenceFolder);
 		strcat(imageInPreferenceFolder,squeakPluginImageName);

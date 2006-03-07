@@ -73,6 +73,13 @@ enum {
 	kPromisedFlavorFindFile = 'rWm1' /* Find File promise -- special case */
 };
 
+ struct HFSFlavorSqueak {
+  OSType              fileType;               /* file type */
+  OSType              fileCreator;            /* file creator */
+  UInt16              fdFlags;                /* Finder flags */
+  FSRef               theFSRef;               /* file system Ref */
+  };
+typedef struct HFSFlavorSqueak                HFSFlavorSqueak;
 
  static Boolean gDragDropThrottleSpinLock = false;	     /* true if waiting for Squeak to process D&D */
  static DragReceiveHandlerUPP gMainReceiveHandler = NULL;   /* receive handler for the main dialog */
@@ -80,7 +87,8 @@ enum {
  static WindowPtr   gWindowPtr;
  
  static UInt16 gNumDropFiles=0;
- static HFSFlavor *dropFiles;
+
+ static HFSFlavorSqueak *dropFiles;
 
  static char tempName[DOCUMENT_NAME_SIZE + 1];  
 
@@ -99,26 +107,14 @@ extern struct VirtualMachine *interpreterProxy;
 
 int dropInit(void)
 {
-    long response;
-	void *fn;
+ 	void *fn;
     Boolean  installedReceiver=false, installedTracker=false;
     OSErr err;
-	Boolean gHasDragManager = false;                    /* true if the Drag Manager is installed */
-   Boolean gCanTranslucentDrag = false;                /* true if translucent dragging is available */
   
     /* check for the drag manager & translucent feature??? */
     
 	if (gMainReceiveHandler != NULL) return 1;
-	
-	if (Gestalt(gestaltDragMgrAttr, &response) != noErr) return 0;
-	
-	gHasDragManager = (((1 << gestaltDragMgrPresent)) != 0);
-	gCanTranslucentDrag = (((1 << gestaltDragMgrHasImageSupport)) != 0);
-
-    if (!(gHasDragManager && gCanTranslucentDrag)) return 0;
-	
-	if ((Ptr)InstallTrackingHandler==(Ptr)kUnresolvedCFragSymbolAddress) return 0;
-	
+		
 	fn = interpreterProxy->ioLoadFunctionFrom("getSTWindow", "");
 	if (fn == 0) {
 	    goto bail; 
@@ -187,9 +183,8 @@ int sqSecFileAccessCallback(void *function) {
 char *dropRequestFileName(int dropIndex) {
     if(dropIndex < 1 || dropIndex > gNumDropFiles) 
         return NULL;
-    PathToFileViaFSSpec(tempName, 
-        DOCUMENT_NAME_SIZE,
-        &dropFiles[dropIndex-1].fileSpec,gCurrentVMEncoding);
+		
+	PathToFileViaFSRef(tempName, DOCUMENT_NAME_SIZE, &dropFiles[dropIndex-1].theFSRef,gCurrentVMEncoding);
     if (dropIndex == gNumDropFiles) 
         gDragDropThrottleSpinLock = false;
   return tempName;
@@ -283,27 +278,31 @@ bail:
 pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWindow, void *refCon, DragReference theDragRef) {
 #pragma unused(refCon)
 		/* we're drawing into the image well if we hilite... */
-    Rect  bounds;
 	EventRecord		theEvent;
     void *     fn;
+	Point mouse;
 
 	switch (message) {
 	
 		case kDragTrackingEnterWindow:
 			{	
-				Point mouse;
+				DragAttributes currDragFlags;
 				
 				gApprovedDrag = false;
 				if (theWindow == gWindowPtr) {
 					if (ApproveDragReference(theDragRef, &gApprovedDrag) != noErr) break;
 					if ( ! gApprovedDrag ) break;
-					SetPortWindowPort(theWindow);
-					GetMouse(&mouse);
-					GetPortBounds(GetWindowPort(gWindowPtr),&bounds);
-					if (PtInRect(mouse, &bounds)) {  // if we're in the box, hilite... 
+					GetDragAttributes(theDragRef,&currDragFlags);
+
+					if (currDragFlags) {  // if we're in the box, hilite... 
 						gInIconBox = true;					
                     	    /* queue up an event */
-                        WaitNextEvent(0, &theEvent,0,null);
+						GetDragMouse (theDragRef,&mouse,NULL);
+						theEvent.what = 0;
+						theEvent.message = 0;
+						theEvent.modifiers = 0;
+						theEvent.when = 0;
+						theEvent.where = mouse;
                     	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
                     	if (fn != 0) {
                     	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,DragEnter);
@@ -315,8 +314,13 @@ pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWin
 
 		case kDragTrackingInWindow:
 			if (gApprovedDrag) {
-                WaitNextEvent(0, &theEvent,0,null);
-            	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
+				GetDragMouse (theDragRef,&mouse,NULL);
+				theEvent.what = 0;
+				theEvent.message = 0;
+				theEvent.modifiers = 0;
+				theEvent.when = 0;
+				theEvent.where = mouse;
+             	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
             	if (fn != 0) {
             	    ((int (*) (EventRecord *theEvent,  int numberOfItems, int dragType)) fn)(&theEvent,gNumDropFiles,DragMove);
             	    
@@ -327,7 +331,12 @@ pascal OSErr MyDragTrackingHandler(DragTrackingMessage message, WindowPtr theWin
 		case kDragTrackingLeaveWindow:
 			if (gApprovedDrag && gInIconBox) {
             	    /* queue up an event */
-                WaitNextEvent(0, &theEvent,0,null);
+				GetDragMouse (theDragRef,&mouse,NULL);
+				theEvent.what = 0;
+				theEvent.message = 0;
+				theEvent.modifiers = 0;
+				theEvent.when = 0;
+				theEvent.where = mouse;
             	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
             	if (fn != 0) {
             	    ((int (*) (EventRecord *theEvent, int numberOfItems, int dragType)) fn)(&theEvent, gNumDropFiles,DragLeave);
@@ -418,14 +427,13 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
 	if ((err = CountDragItems(theDragRef, &gNumDropFiles)) != noErr) 
 	    return paramErr;
 	
-	dropFiles = (HFSFlavor *) NewPtr(sizeof(HFSFlavor)*gNumDropFiles);
+	dropFiles = (HFSFlavorSqueak *) NewPtr(sizeof(HFSFlavorSqueak)*gNumDropFiles);
 	
 	if (dropFiles == null) {
 	    gNumDropFiles = 0;
 	    return userCanceledErr;
 	}
 	
-    WaitNextEvent(0, &theEvent,0,null);
     countActualItems = 0;
     		
     for(i=1;i<=gNumDropFiles;i++) {
@@ -436,15 +444,16 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
     		/* try to get a  HFSFlavor*/
     	theSize = sizeof(HFSFlavor);
     	err = GetFlavorData(theDragRef, theItem, flavorTypeHFS, &targetHFSFlavor, &theSize, 0);
-    	if (err == noErr) {
-    		if (dropFiles[countActualItems].fileCreator == 'MACS' && (
-    				dropFiles[countActualItems].fileType == 'fold' ||
-    				dropFiles[countActualItems].fileType == 'disk')) 
-    				continue;
-    		dropFiles[countActualItems] = targetHFSFlavor;
+ 
+     	if (err == noErr) {
+    		dropFiles[countActualItems].fileType = targetHFSFlavor.fileType;
+    		dropFiles[countActualItems].fileCreator = targetHFSFlavor.fileCreator;
+    		dropFiles[countActualItems].fdFlags = targetHFSFlavor.fdFlags;
+			FSpMakeFSRef(&targetHFSFlavor.fileSpec, &dropFiles[countActualItems].theFSRef);
     		countActualItems++;
     		continue;
-    	} else if (err != badDragFlavorErr) 
+    	} else 
+			if (err != badDragFlavorErr) 
     	        continue; 
     	
     		/* try to get a  promised HFSFlavor*/
@@ -468,16 +477,21 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
     		if (err != noErr) 
     			continue;
     	}
-    		theSize = sizeof(FSSpec);
-    		err = GetFlavorData(theDragRef, theItem, targetPromise.promisedFlavor, &dropFiles[countActualItems].fileSpec, &theSize, 0);
-    		if (err != noErr) 
-    			continue;
-    		FSpGetFInfo(&dropFiles[countActualItems].fileSpec, &finderInfo);
-	    		/* queue up an event */
-	        dropFiles[countActualItems].fileType = finderInfo.fdType;
-	        dropFiles[countActualItems].fileCreator = finderInfo.fdCreator;
-	        dropFiles[countActualItems].fdFlags =  finderInfo.fdFlags;
-    		countActualItems++;
+		FSSpec	aFSSpec;
+		
+		theSize = sizeof(FSSpec);
+		err = GetFlavorData(theDragRef, theItem, targetPromise.promisedFlavor, &aFSSpec, &theSize, 0);
+		if (err != noErr) 
+			continue;
+		FSpMakeFSRef(&aFSSpec, &dropFiles[countActualItems].theFSRef);
+		err = getFInfoViaFSRef(&dropFiles[countActualItems].theFSRef,&finderInfo);
+		if (err != noErr) 
+			continue;
+			
+		dropFiles[countActualItems].fileType = finderInfo.fdType;
+		dropFiles[countActualItems].fileCreator = finderInfo.fdCreator;
+		dropFiles[countActualItems].fdFlags =  finderInfo.fdFlags;
+ 		countActualItems++;
     }
     
 	gNumDropFiles = countActualItems;
@@ -487,6 +501,14 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
     }
 	
 	    /* queue up an event */
+	Point mouse;
+	
+	GetDragMouse (theDragRef,&mouse,NULL);
+	theEvent.what = 0;
+	theEvent.message = 0;
+	theEvent.modifiers = 0;
+	theEvent.when = 0;
+	theEvent.where = mouse;
 
 	fn = interpreterProxy->ioLoadFunctionFrom("recordDragDropEvent", "");
 	if (fn != 0) {
@@ -503,7 +525,7 @@ void sqSetNumberOfDropFiles(int numberOfFiles) {
 	    gNumDropFiles = 0;
 	}
 	gNumDropFiles = numberOfFiles;
-	dropFiles = (HFSFlavor *) NewPtr(sizeof(HFSFlavor)*gNumDropFiles);
+	dropFiles = (HFSFlavorSqueak *) NewPtr(sizeof(HFSFlavorSqueak)*gNumDropFiles);
 	if (dropFiles == null) {
 	    gNumDropFiles = 0;
 	}
@@ -513,5 +535,5 @@ void sqSetNumberOfDropFiles(int numberOfFiles) {
 void sqSetFileInformation(int dropIndex, void *dropFile) { 
     if(dropIndex < 1 || dropIndex > gNumDropFiles) 
         return;
-    memcpy(&dropFiles[dropIndex-1],(char *) dropFile,sizeof(HFSFlavor));
+    memcpy(&dropFiles[dropIndex-1],(char *) dropFile,sizeof(HFSFlavorSqueak));
 }

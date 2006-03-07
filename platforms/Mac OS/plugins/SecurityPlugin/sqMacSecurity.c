@@ -203,7 +203,7 @@ int ioInitSecurity(void) {
       fixPath(untrustedUserDirectory);
       return 1;
 	}
-	PathToFileViaFSRef(untrustedUserDirectory,255,&prefFolder,false,NULL,gCurrentVMEncoding);        
+	PathToFileViaFSRef(untrustedUserDirectory,255,&prefFolder,gCurrentVMEncoding);        
 	strcat(untrustedUserDirectory,"Squeak/Internet");
  	if (err != noErr) {
 	      strcpy(untrustedUserDirectory, "/foobar/tooBar/forSqueak/bogus/");

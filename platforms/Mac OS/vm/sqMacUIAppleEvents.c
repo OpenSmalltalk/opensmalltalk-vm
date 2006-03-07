@@ -24,6 +24,14 @@
 
 extern char gSqueakImageName;
 
+struct HFSFlavorSqueak {
+  OSType              fileType;               /* file type */
+  OSType              fileCreator;            /* file creator */
+  UInt16              fdFlags;                /* Finder flags */
+  FSRef               theFSRef;               /* file system Ref */
+  };
+typedef struct HFSFlavorSqueak                HFSFlavorSqueak;
+
 int getFirstImageNameIfPossible(AEDesc	*fileList);
 void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude);
 OSStatus SimpleRunAppleScript(const char* theScript);
@@ -70,11 +78,10 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
 	long		numFiles, size, imageFileIsNumber;
 	DescType	type;
 	AEKeyword	keyword;
-	FSSpec		fileSpec,workingDirectory;
-	WDPBRec		pb;
-	FInfo		finderInformation;
-	char            shortImageName[SHORTIMAGE_NAME_SIZE+1];
-	
+	FSRef		theFSRef;
+	char        shortImageName[SHORTIMAGE_NAME_SIZE+1];
+	char		pathName[IMAGE_NAME_SIZE+1];				
+
 #pragma unused(reply)
 #pragma unused(refCon)  /* reference args to avoid compiler warnings */
 	
@@ -97,37 +104,20 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     imageFileIsNumber = getFirstImageNameIfPossible(&fileList);
     
     if (imageFileIsNumber == 0) { 
-        // Test is open change set 
-        strcpy(shortImageName, &gSqueakImageName);
-        CopyCStringToPascal(shortImageName,workingDirectory.name);
-		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
-        SetImageName(&workingDirectory);
-        fileSpec = workingDirectory;
+		SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
+		goto done;
     } else {
     	/* get image name */
-    	err = AEGetNthPtr(&fileList, imageFileIsNumber, typeFSS, &keyword, &type, (Ptr) &fileSpec, sizeof(fileSpec), &size);
+    	err = AEGetNthPtr(&fileList, imageFileIsNumber, typeFSRef, &keyword, &type, (Ptr) &theFSRef, sizeof(theFSRef), &size);
     	if (err) 
     	    goto done;
-    	    
-    	err = FSpGetFInfo(&fileSpec,&finderInformation);
-    	if (err) 
-    	    goto done;
-    		
-		{
-			char pathName[IMAGE_NAME_SIZE+1];				
-			PathToFileViaFSSpec(pathName, IMAGE_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
-			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
-		}
+    	        		
+		PathToFileViaFSRef(pathName, IMAGE_NAME_SIZE, &theFSRef,gCurrentVMEncoding);
+		getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);
-        SetImageName(&fileSpec);
+        SetImageNameViaString(pathName,gCurrentVMEncoding);
    }
     
-	/* make the image or document directory the working directory */
-	pb.ioNamePtr = NULL;
-	pb.ioVRefNum = fileSpec.vRefNum;
-	pb.ioWDDirID = fileSpec.parID;
-	PBHSetVolSync(&pb);
-
     /* Do the rest of the documents */
     processDocumentsButExcludeOne(&fileList,imageFileIsNumber);
 done:
@@ -140,13 +130,14 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	long		numFiles, size, i, actualFilteredNumber=0,actualFilteredIndexNumber;
 	DescType	type;
 	AEKeyword	keyword;
-	FSSpec		fileSpec;
+	FSRef		theFSRef;
 	FInfo		finderInformation;
     EventRecord theEvent;
-    HFSFlavor   dropFile;
+    HFSFlavorSqueak   dropFile;
     Point       where;
 #ifndef BROWSERPLUGIN
 	char        shortImageName[SHORTIMAGE_NAME_SIZE+1];
+	char		pathName[IMAGE_NAME_SIZE+1];				
 #endif
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
@@ -156,18 +147,17 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	theEvent.what = 0;
 	theEvent.message = 0;
 	theEvent.when = TickCount();
-	where.v = 1;
-	where.h = 1;
-	LocalToGlobal(&where);
+	where.v = 100;
+	where.h = 100;
 	theEvent.where = where;
 	theEvent.modifiers = 0;
 	
 	for(i=1;i<=numFiles;i++) {
-	    err = AEGetNthPtr(fileList, i, typeFSS,  &keyword, &type, (Ptr) &fileSpec, sizeof(fileSpec), &size);
+	    err = AEGetNthPtr(fileList, i, typeFSRef,  &keyword, &type, (Ptr) &theFSRef, sizeof(FSRef), &size);
 	    if (err) 
 	        goto done;
 	
-	    err = FSpGetFInfo(&fileSpec,&finderInformation);
+		err = getFInfoViaFSRef(&theFSRef,&finderInformation);
 	    if (err) 
 	        goto done;
 		
@@ -176,16 +166,17 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     		finderInformation.fdType == 'disk'))) 
 	        continue;
 #ifndef BROWSERPLUGIN
-		CopyPascalStringToC(fileSpec.name,shortImageName);
-        if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim') {
-			char pathname[2049],commandStuff[4096];
-			int	error;
-			extern       char **argVec;
+		PathToFileViaFSRef(pathName, IMAGE_NAME_SIZE, &theFSRef,gCurrentVMEncoding);
+		getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
+
+       if (IsImageName(shortImageName)  || finderInformation.fdType == 'STim') {
+			char commandStuff[4096];
+			extern char **argVec;
 					
-			error = PathToFileViaFSSpec(pathname, 2048, &fileSpec, kCFStringEncodingMacRoman);
+			PathToFileViaFSRef(pathName, 2048, &theFSRef,kCFStringEncodingMacRoman);
 			commandStuff [0] = 0x00;
 			strcat(commandStuff,"set pimage to  \"");
-			strcat(commandStuff,pathname);
+			strcat(commandStuff,pathName);
 			strcat(commandStuff,"\" \n");
 			strcat(commandStuff,"set qimage to quoted form of pimage\n");
 			strcat(commandStuff,"set pVM to \"");
@@ -206,7 +197,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 			strcat(commandStuff,"delay 1\n");
 			strcat(commandStuff,"set a to findProcessID(pid)\n");
 			strcat(commandStuff,"set the frontmost of a to true\n");
-
+			
 			SimpleRunAppleScript(commandStuff);
 			continue;
 			}
@@ -222,11 +213,11 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     
     recordDragDropEvent(&theEvent, actualFilteredNumber, DragEnter);
     for(i=1;i<=numFiles;i++) {
-	    err = AEGetNthPtr(fileList, i, typeFSS,  &keyword, &type, (Ptr) &fileSpec, sizeof(fileSpec), &size);
+	    err = AEGetNthPtr(fileList, i, typeFSRef,  &keyword, &type, (Ptr) &theFSRef, sizeof(FSRef), &size);
 	    if (err) 
 	        goto done;
 	
-	    err = FSpGetFInfo(&fileSpec,&finderInformation);
+		err = getFInfoViaFSRef(&theFSRef,&finderInformation);
 	    if (err) 
 	        goto done;
 		
@@ -239,7 +230,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	    dropFile.fileType = finderInformation.fdType;
 	    dropFile.fileCreator = finderInformation.fdCreator;
 	    dropFile.fdFlags = finderInformation.fdFlags;
-	    memcpy(&dropFile.fileSpec,&fileSpec,sizeof(FSSpec));
+		dropFile.theFSRef = theFSRef;
 	     
         sqSetFileInformation(actualFilteredIndexNumber, &dropFile);
         actualFilteredIndexNumber++;
@@ -260,9 +251,9 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	long		numFiles, size, i;
 	DescType	type;
 	AEKeyword	keyword;
-	FSSpec		fileSpec;
+	FSRef		theFSRef;
 	FInfo		finderInformation;
-        char            shortImageName[SHORTIMAGE_NAME_SIZE+1];
+	char        shortImageName[SHORTIMAGE_NAME_SIZE+1];
 
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
@@ -271,19 +262,18 @@ int getFirstImageNameIfPossible(AEDesc	*fileList) {
 	
 	/* get image name */
 	for(i=1;i<=numFiles;i++) {
-	    err = AEGetNthPtr(fileList, i, typeFSS,
-					  &keyword, &type, (Ptr) &fileSpec, sizeof(fileSpec), &size);
+	    err = AEGetNthPtr(fileList, i, typeFSRef,
+					  &keyword, &type, (Ptr) &theFSRef, sizeof(FSRef), &size);
 	    if (err) 
 	        goto done;
-	
-	    err = FSpGetFInfo(&fileSpec,&finderInformation);
+		err = getFInfoViaFSRef(&theFSRef,&finderInformation);
 	    if (err) 
 	        goto done;
                 
 		{
 			char pathName[DOCUMENT_NAME_SIZE+1];
 				
-			PathToFileViaFSSpec(pathName, DOCUMENT_NAME_SIZE, &fileSpec,gCurrentVMEncoding);
+			PathToFileViaFSRef(pathName, DOCUMENT_NAME_SIZE, &theFSRef,gCurrentVMEncoding);
 			getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 		}
 		SetShortImageNameViaString(shortImageName,gCurrentVMEncoding);

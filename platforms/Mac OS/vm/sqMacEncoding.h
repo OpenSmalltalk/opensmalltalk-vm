@@ -14,7 +14,6 @@ Boolean VMPathIsEmpty();
 void getImageNameWithEncoding(char *target,UInt32 encoding);
 void SetImageNameViaCFString(CFStringRef string);
 void SetImageNameViaString(char *string,UInt32 encoding);
-void SetImageName(FSSpec *workingDirectory);
 Boolean ImageNameIsEmpty();
 char *getImageName();
 void getShortImageNameWithEncoding(char *target,UInt32 encoding);

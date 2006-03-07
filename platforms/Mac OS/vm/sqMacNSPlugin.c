@@ -195,7 +195,7 @@ int  URLRequestStatus(int requestHandle);
 int AbortIfFileURL(char *url);
 int URLPostCreate(char *url, char *buffer, char * window,int semaIndex);
 NP_Port	  *getNP_Port(void);
-void GetTempFSSpec(FSSpec *spec);
+void GetTempFSSpec(FSSpec *spec,FSRef *theFSRef);
 
 
 /*** Initialize/Shutdown ***/
@@ -555,7 +555,7 @@ int URLPostCreate(char *url, char *buffer, char * window,int semaIndex) {
             // kURLHTTPRequestBody, and kURLHTTPUserAgent.
             URLSetProperty(URLRef, kURLHTTPRequestMethod, "POST", 4);
             URLSetProperty(URLRef, kURLHTTPRequestBody, buffer, strlen(buffer));
-            GetTempFSSpec(&tempFileSpec);
+            GetTempFSSpec(&tempFileSpec,&theFSRef);
             status = URLOpen(URLRef, &tempFileSpec, 0, NULL, 0, NULL);
             currentState = kURLNullState;
             while (status == noErr && !(currentState == kURLCompletedState || currentState == kURLErrorOccurredState)){
@@ -566,7 +566,7 @@ int URLPostCreate(char *url, char *buffer, char * window,int semaIndex) {
             URLDisposeReference(URLRef);
             if (status != noErr) 
                 return -1;
-            PathToFileViaFSSpec(fileName,MAX_STRING_LENGTH, &tempFileSpec,gCurrentVMEncoding);
+			PathToFileViaFSRef(fileName, MAX_STRING_LENGTH, &theFSRef,gCurrentVMEncoding);
             URLRequestCompleted(notifyData, fileName);
         } else
             return -1;
@@ -707,18 +707,18 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
     FSSpec  tempFileSpec;
     char fileName[MAX_STRING_LENGTH + 1];
     
-    GetTempFSSpec(&tempFileSpec);
+    GetTempFSSpec(&tempFileSpec,&theFSRef);
     error = URLSimpleDownload (url,&tempFileSpec,NULL,0,NULL,notifyData);
-    PathToFileViaFSSpec(fileName,MAX_STRING_LENGTH, &tempFileSpec,gCurrentVMEncoding);
+	PathToFileViaFSRef(fileName, MAX_STRING_LENGTH,NULL,gCurrentVMEncoding);
+done:
     URLRequestCompleted((int) notifyData, fileName);
 	return 0;
 }
 
-void GetTempFSSpec(FSSpec *spec) {
+void GetTempFSSpec(FSSpec *spec,FSRef *theFSRef) {
     char tempName[DOCUMENT_NAME_SIZE+1];
     CFURLRef    sillyThing;
     CFStringRef filePath;
-  	FSRef	theFSRef;
 	OSErr	err;
 	FILE	*file;
 	
@@ -731,9 +731,9 @@ void GetTempFSSpec(FSSpec *spec) {
     filePath = CFStringCreateWithBytes(kCFAllocatorDefault,(UInt8 *) tempName,strlen(tempName),kCFStringEncodingUTF8,false);
     sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLPOSIXPathStyle,false);
     CFRelease(filePath);
-	CFURLGetFSRef(sillyThing, &theFSRef);
+	CFURLGetFSRef(sillyThing, theFSRef);
     CFRelease(sillyThing);
-    err = FSGetCatalogInfo (&theFSRef,kFSCatInfoNone,nil,nil,spec,nil);
+    err = FSGetCatalogInfo (theFSRef,kFSCatInfoNone,nil,nil,spec,nil);
 }
 
 int primitivePluginDestroyRequest(void) {

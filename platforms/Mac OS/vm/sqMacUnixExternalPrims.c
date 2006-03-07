@@ -241,7 +241,7 @@ void *ioLoadModule(char *pluginName)
 			}
 			
 			// Look for folder, if not found abort */
-			PathToFileViaFSRef(pluginDirPath,DOCUMENT_NAME_SIZE, &theFSRef, false,nil,kCFStringEncodingUTF8);
+			PathToFileViaFSRef(pluginDirPath,DOCUMENT_NAME_SIZE, &theFSRef,kCFStringEncodingUTF8);
 #ifdef SOPHIEVM
 			strcat(pluginDirPath,"NPSophie.bundle/Contents/Resources/");
 #else
@@ -321,7 +321,7 @@ void *ioLoadModule(char *pluginName)
 		if (err) 
 			strcpy(systemFolder,"/System/Library/Frameworks/");
 		else {
-			PathToFileViaFSRef(systemFolder,MAXPATHLEN,&frameworksFolderRef,false,NULL,kCFStringEncodingUTF8);     
+			PathToFileViaFSRef(systemFolder,MAXPATHLEN,&frameworksFolderRef,kCFStringEncodingUTF8);     
 		}
 	}
 	
