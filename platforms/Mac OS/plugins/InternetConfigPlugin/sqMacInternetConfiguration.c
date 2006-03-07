@@ -101,9 +101,9 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
                strcmp(convertedKey,"UsePassiveFTP") == 0  ||
                strcmp(convertedKey,"UseSocks") == 0)) {
                     if (buffer[0] == 0x01)
-                        CopyPascalStringToC("\p1",aString);
+                        strcpy(aString,"1");
                     else
-                        CopyPascalStringToC("\p0",aString);
+                        strcpy(aString,"0");
                     size = 1; 
             } else if (strcmp(convertedKey,"NoProxyDomains") == 0) {
                 convertPSTRToString((unsigned char *)buffer,aString); 

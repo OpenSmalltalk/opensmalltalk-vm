@@ -544,7 +544,8 @@ int URLPostCreate(char *url, char *buffer, char * window,int semaIndex) {
         OSStatus		status; //kURLDisplayProgressFlag
         URLState                currentState;
         URLReference            URLRef;
-        
+        FSRef					theFSRef;
+		
         status = URLNewReference(url, &URLRef);
         if (status == noErr) {
             FSSpec        tempFileSpec;
@@ -705,6 +706,7 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
 {
     OSStatus error;
     FSSpec  tempFileSpec;
+	FSRef	theFSRef;
     char fileName[MAX_STRING_LENGTH + 1];
     
     GetTempFSSpec(&tempFileSpec,&theFSRef);
