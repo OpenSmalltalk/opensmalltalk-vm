@@ -372,7 +372,7 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData);
             
 static int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
-static int ModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
+static int ModifierStateCarbon(EventRef theEvent);   
 static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
 static void recordKeyboardEventCarbon(EventRef event);
 static void recordMenuEventCarbon(MenuRef menu, UInt32 menuItem);
@@ -532,7 +532,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
              break;
         case kEventWindowDeactivated:
             if (gSqueakWindowIsFloating) break; 
-#warning HIViewPoint
+#warning HIView Point
             GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
 			if (windowIndexFromHandle((wHandleType)window)) {
@@ -692,7 +692,7 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
 			//fprintf(stdout,"\nrawkey up %i",ioMSecs());
 			key = findInKeyMap(keyCode);
 			if (key != -1) {
-				enterKeystroke ( EventTypeKeyboard,keyCode, EventKeyUp, 0, ModifierStateCarbon(event,0));
+				enterKeystroke ( EventTypeKeyboard,keyCode, EventKeyUp, 0, ModifierStateCarbon(event));
 			}
 			removeFromKeyMap(keyCode);
             result = eventNotHandledErr;
@@ -793,12 +793,12 @@ static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
         err = GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &where);
                     
-        SetPortWindowPort(windowHandleFromIndex(windowActive));
-	if (err != noErr)
+ 	if (err != noErr)
             GetMouse(&where); //fake mouse event
         else
-            GlobalToLocal((Point *) &where);
-        buttonState = MouseModifierStateCarbon(event,whatHappened);
+            QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&where);
+	
+	buttonState = MouseModifierStateCarbon(event,whatHappened);
  	cachedButtonState = cachedButtonState | buttonState;
        
         if (whatHappened == kEventMouseWheelMoved) {
@@ -983,7 +983,7 @@ static void recordKeyboardEventCarbon(EventRef event) {
 
 
     modifiedUniChar = *uniCharBufPtr;
-    buttonState = modifierBits =ModifierStateCarbon(actualEvent,0); //Capture option states
+    buttonState = modifierBits =ModifierStateCarbon(actualEvent); //Capture option states
     if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
             if ((modifiedUniChar >= 97) && (modifiedUniChar <= 122)) {
                     /* convert ascii code of command-shift-letter to upper case */
@@ -1069,7 +1069,7 @@ static int MouseModifierStateCarbon(EventRef event,UInt32 whatHappened) {
 		(stButtons & 0x7));
 }
 
-int ModifierStateCarbon(EventRef event,UInt32 whatHappened) {
+static int ModifierStateCarbon(EventRef event) {
         UInt32 keyBoardModifiers=0;
         OSErr err;
         
