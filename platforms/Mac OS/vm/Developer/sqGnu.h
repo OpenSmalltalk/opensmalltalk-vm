@@ -53,7 +53,7 @@
 #endif
 #define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
 #define JUMP_TABLE \
-   void *jumpTable[256]= { \
+   static void *jumpTable[256]= { \
       &&_0,   &&_1,   &&_2,   &&_3,   &&_4,   &&_5,   &&_6,   &&_7,   &&_8,   &&_9, \
      &&_10,  &&_11,  &&_12,  &&_13,  &&_14,  &&_15,  &&_16,  &&_17,  &&_18,  &&_19, \
      &&_20,  &&_21,  &&_22,  &&_23,  &&_24,  &&_25,  &&_26,  &&_27,  &&_28,  &&_29, \
@@ -162,19 +162,19 @@
         especially Intel.
   */
 #if defined(__mips__)
-# define IP_REG asm("$16")
-# define SP_REG asm("$17")
-# define CB_REG asm("$18")
+# define IP_REG __asm__("$16")
+# define SP_REG __asm__("$17")
+# define CB_REG __asm__("$18")
 #endif
 #if defined(__sparc__)
-# define IP_REG asm("%l0")
-# define SP_REG asm("%l1")
-# define CB_REG asm("%l2")
+# define IP_REG __asm__("%l0")
+# define SP_REG __asm__("%l1")
+# define CB_REG __asm__("%l2")
 #endif
 #if defined(__alpha__)
-# define IP_REG asm("$9")
-# define SP_REG asm("$10")
-# define CB_REG asm("$11")
+# define IP_REG __asm__("$9")
+# define SP_REG __asm__("$10")
+# define CB_REG __asm__("$11")
 #endif
 #if defined(__i386__)
 # define IP_REG __asm__("%esi")
@@ -186,19 +186,35 @@
 # endif
 #endif
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
-# define FOO_REG asm("24")
-# define JP_REG asm("25")
-# define IP_REG asm("26")
-# define SP_REG asm("27")
-# define CB_REG asm("28")
+# define FOO_REG __asm__("24")
+# define JP_REG __asm__("25")
+# define IP_REG __asm__("26")
+# define SP_REG __asm__("27")
+# define CB_REG __asm__("28")
 #endif
 #if defined(__hppa__)
-# define IP_REG asm("%r18")
-# define SP_REG asm("%r17")
-# define CB_REG asm("%r16")
+# define IP_REG __asm__("%r18")
+# define SP_REG __asm__("%r17")
+# define CB_REG __asm__("%r16")
 #endif
 #if defined(__mc68000__)
-# define IP_REG asm("a5")
-# define SP_REG asm("a4")
-# define CB_REG asm("d7")
+# define IP_REG __asm__("a5")
+# define SP_REG __asm__("a4")
+# define CB_REG __asm__("d7")
+#endif
+
+#ifndef JP_REG
+# define JP_REG
+#endif
+#ifndef IP_REG
+# define IP_REG
+#endif
+#ifndef SP_REG
+# define SP_REG
+#endif
+#ifndef CB_REG
+# define CB_REG
+#endif
+#ifndef GP_REG
+# define GP_REG
 #endif
