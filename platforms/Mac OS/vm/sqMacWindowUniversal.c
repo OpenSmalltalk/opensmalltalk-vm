@@ -339,7 +339,7 @@ int ioShowDisplayOnWindow(
             return 0;
 	}
 
-	if (depth > 0 && depth <= 8) {
+	if (depth > 0 && depth <= 16) {
 		dispBitsIndex = copy124BitsTheHardWay((unsigned int *) dispBitsIndex, width, height, depth, 32, affectedL, affectedR, affectedT,  affectedB,  windowIndex, &pitch);
 		depth = 32;
 	} else {

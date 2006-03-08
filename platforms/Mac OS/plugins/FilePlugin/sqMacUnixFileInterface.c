@@ -460,8 +460,8 @@ int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
     if (getFInfo(fileNameBuffer,&catInfo,kCFStringEncodingUTF8) != noErr)
         return false;
 	memcpy(&finderInfo,&catInfo.finderInfo,16);
-	finderInfo.fdType = *((int *) fType);
-	finderInfo.fdCreator = *((int *) fCreator);
+	finderInfo.fdType = CFSwapInt32HostToBig(*((int *) fType));
+	finderInfo.fdCreator = CFSwapInt32HostToBig(*((int *) fCreator));
 	memcpy(&catInfo.finderInfo,&finderInfo,16);
 	
 	err =  getFSRef(fileNameBuffer,&theFSRef,kCFStringEncodingUTF8);
@@ -489,8 +489,8 @@ int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
         return false;
 		
 	memcpy(&finderInfo,&catInfo.finderInfo,16);
-	*((int *) fType) = finderInfo.fdType;
-	*((int *) fCreator) = finderInfo.fdCreator;
+	*((int *) fType) = CFSwapInt32BigToHost(finderInfo.fdType);
+	*((int *) fCreator) = CFSwapInt32BigToHost(finderInfo.fdCreator);
 
 	return true;
 }

@@ -462,6 +462,7 @@ void fetchPrefrences() {
             const UInt8 *where;
             where = CFDataGetBytePtr(SqueakWindowAttributeType);
             memmove(&gSqueakWindowAttributes,where,4);
+			gSqueakWindowAttributes = CFSwapInt32BigToHost(gSqueakWindowAttributes);
     } else {
         gSqueakWindowAttributes = kWindowStandardDocumentAttributes
             +kWindowStandardHandlerAttribute
