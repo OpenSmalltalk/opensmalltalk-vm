@@ -538,7 +538,7 @@ typedef struct Stream
 
   imgFmt.mSampleRate	   = sampleRate;
   imgFmt.mFormatID	   = kAudioFormatLinearPCM;
-  imgFmt.mFormatFlags	   = kLinearPCMFormatFlagIsBigEndian | kLinearPCMFormatFlagIsSignedInteger;
+  imgFmt.mFormatFlags	   = kAudioFormatFlagsNativeEndian | kLinearPCMFormatFlagIsSignedInteger;
   imgFmt.mBytesPerPacket   = SqueakFrameSize / (3 - nChannels);
   imgFmt.mFramesPerPacket  = 1;
   imgFmt.mBytesPerFrame    = SqueakFrameSize / (3 - nChannels);

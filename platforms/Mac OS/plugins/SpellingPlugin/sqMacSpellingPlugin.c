@@ -3,7 +3,7 @@
  *  SqueakSpelling
  *
  *  Created by John M McIntosh on 14/06/05.
- *  Copyright 2005 __MyCompanyName__. All rights reserved.
+ *  Copyright 2005 Corporate Smalltalk Consulting Ltd. All rights reserved. Licenced under the Squeak-L
  *
  */
 
@@ -15,6 +15,13 @@
 #include "sqConfig.h"
 /* Platform specific definitions */
 #include "sqPlatformSpecific.h"
+
+#if __BIG_ENDIAN__
+#define kCFStringEncodingUTF16Squeak kCFStringEncodingUnicode
+#else
+#define kCFStringEncodingUTF16Squeak kCFStringEncodingUTF16BE
+
+#endif
 
 extern struct VirtualMachine *interpreterProxy;
 CFBundleRef			gSpellingBundle=0;		//	"SpellCheck.bundle" reference 
@@ -94,10 +101,11 @@ void	sqSpellingCheckSpellingstartingAtlengthresults(char * data,int startLocatio
 		ignore = sqSpellingGetLanguageLength();
 	}
 		
-	stringToSpellCheck = CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar *)data, length);
+	stringToSpellCheck = CFStringCreateWithBytes(kCFAllocatorDefault, data, length*2, kCFStringEncodingUTF16Squeak, false);
+
 	range = CocoaCheckSpellingOfStringWithOptions( stringToSpellCheck, startLocation, gLanguage, 0, gDocumentTag,0);
-	results[0] = range.location+1;
-	results[1] = range.length;
+	results[0] = (range.location+1);
+	results[1] = (range.length);
 	CFRelease(stringToSpellCheck);
 }
 
@@ -121,7 +129,7 @@ int		sqSpellingGetUniqueSpellingTag(void) {
 void	sqSpellingSetLanguagelength(char *string,int length) {
 	CFStringRef lang;
 	
-	lang = CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar *)string, length);
+	lang = CFStringCreateWithBytes(kCFAllocatorDefault, string, length, kCFStringEncodingMacRoman, false);
 	CocoaSetLanguage(lang);
 	CFRelease(lang);
 }
@@ -135,7 +143,7 @@ int		sqSpellingGuessForWordListLengthwithTaglength(char *data, int tag,int size)
 	if ( guessArray != NULL ) 
 			{ CFRelease( (void*)guessArray ); guessArray = NULL; }
 			
-	word = CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar *)data, size);
+	word = CFStringCreateWithBytes(kCFAllocatorDefault, data, size*2, kCFStringEncodingUTF16Squeak, false);
 	guessArray	= CocoaGuessesForWord( word );
 	count	= CFArrayGetCount( guessArray );
 	if (count == 0)
@@ -162,7 +170,7 @@ void	sqSpellingGuessForWordwithTagatinto(int aTag,int index, char *data) {
 		CFRange range = { 0, CFStringGetLength(guess)};
 		CFIndex usedBufLen,actual;
 
-		actual = CFStringGetBytes(guess, range, kCFStringEncodingUnicode, 0, false,
+		actual = CFStringGetBytes(guess, range, kCFStringEncodingUTF16Squeak, 0, false,
 					data,CFStringGetLength(guess)*2, &usedBufLen);
 					
 		if (index+1 == CFArrayGetCount( guessArray )) {
@@ -202,7 +210,7 @@ void	sqSpellingGetIgnoredWordWithTagatinto(int aTag, int anIndex, char *data) {
 	CFRange range = { 0, CFStringGetLength(ignoreWord)};
 	CFIndex usedBufLen,actual;
 
-	actual = CFStringGetBytes(ignoreWord, range, kCFStringEncodingUnicode, 0, false,
+	actual = CFStringGetBytes(ignoreWord, range, kCFStringEncodingUTF16Squeak, 0, false,
 					data,CFStringGetLength(ignoreWord)*2, &usedBufLen);
 	}
 }
@@ -228,7 +236,7 @@ void	sqSpellingSetIgnoredWordwithTagatlength(char *data,int aTag, int anIndex, i
 	CFStringRef word;
 	if (newIgnoredWordsArray == NULL) 
 			return;
-	word = CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar *)data, length);
+	word = CFStringCreateWithBytes(kCFAllocatorDefault, data, length*2, kCFStringEncodingUTF16Squeak, false);
 	CFArraySetValueAtIndex (newIgnoredWordsArray,anIndex,word);
 	if ((anIndex+1) == newIgnoredWordsArrayLength) {
 		CocoaSetIgnoredWords(newIgnoredWordsArray,aTag);
@@ -239,7 +247,7 @@ void	sqSpellingSetIgnoredWordwithTagatlength(char *data,int aTag, int anIndex, i
 
 void	sqSpellingSetNewIgnoredWordwithTaglength(char *data,int aTag, int length) {
 	CFStringRef	word;
-	word = CFStringCreateWithCharacters(kCFAllocatorDefault, (UniChar *)data, length);
+	word = CFStringCreateWithBytes(kCFAllocatorDefault, data, length*2, kCFStringEncodingUTF16Squeak, false);
 	CocoaIgnoreWord(word,aTag);
 	CFRelease(word);
 }

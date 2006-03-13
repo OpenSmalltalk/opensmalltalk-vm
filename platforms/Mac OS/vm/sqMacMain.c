@@ -113,10 +113,14 @@ extern char *pluginArgValue[100];
 /*** Main ***/
 
 #ifndef BROWSERPLUGIN
+#pragma export on
 /*** Variables -- globals for access from pluggable primitives ***/
 int    argCnt= 0;
 char **argVec= 0;
 char **envVec= 0;
+#pragma export off
+
+int main(int argc, char **argv, char **envp);
 
 int main(int argc, char **argv, char **envp) {
 	EventRecord theEvent;
@@ -192,6 +196,8 @@ int main(int argc, char **argv, char **envp) {
 				char	afterCheckForTilda[2048];
 				
 				checkFortilda=(CFStringRef)objc_msgSend((id)gSqueakImageNameStringRef, NSSelectorFromString((CFStringRef)CFSTR("stringByExpandingTildeInPath")));
+				
+				
 				CFStringGetCString (checkFortilda, afterCheckForTilda, 2048, gCurrentVMEncoding);
 
 				resolveWhatTheImageNameIs(afterCheckForTilda);

@@ -179,11 +179,11 @@
 #if defined(__i386__)
 # define IP_REG __asm__("%esi")
 # define SP_REG __asm__("%edi")
-# if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
+//# if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
 #   define CB_REG __asm__("%ebx")
-# else
-#   define CB_REG /* avoid undue register pressure */
-# endif
+//# else
+//#   define CB_REG /* avoid undue register pressure */
+//# endif
 #endif
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define FOO_REG __asm__("24")
@@ -203,18 +203,3 @@
 # define CB_REG __asm__("d7")
 #endif
 
-#ifndef JP_REG
-# define JP_REG
-#endif
-#ifndef IP_REG
-# define IP_REG
-#endif
-#ifndef SP_REG
-# define SP_REG
-#endif
-#ifndef CB_REG
-# define CB_REG
-#endif
-#ifndef GP_REG
-# define GP_REG
-#endif

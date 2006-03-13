@@ -1,3 +1,4 @@
+#if __BIG_ENDIAN__
 /* ppc-darwin.c -- FFI support for PowerPC on Mach-O (Darwin)
  * 
  * Author: Ian.Piumarta@INRIA.Fr
@@ -538,3 +539,5 @@ void ffiDoAssertions(void)
 }
 
 #endif
+#endif
+

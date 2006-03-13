@@ -39,6 +39,7 @@
  * Last edited: 2005-04-06 06:09:36 by piumarta on pauillac.hpl.hp.com
 	
  * Altered by John M McIntosh johnmci@smalltalkconsulting.com Feb 24th, 2006 for os-x carbon support
+ 3.8.11b2 load from resource location first, avoid plugins external directory because of intel migration effort issues.
  
  */
  
@@ -137,8 +138,9 @@ static void *tryLoadingInternals(char *libName)
 	    handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 	    if (handle == 0)
 	      {
+			char* why = dlerror();
 			if ((!err) && !(sqIgnorePluginErrors))
-			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
+			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 	      }
 	    else
 	      {
@@ -160,6 +162,11 @@ static void *tryLoading(char *dirName, char *moduleName)
   char        libName[MAXPATHLEN + 32];	/* headroom for prefix/suffix */
   
   sprintf(libName, "%s%s%s%s", dirName, moduleName,".bundle/Contents/MacOS/", moduleName);
+  handle = tryLoadingInternals(libName);
+  if (handle) 
+	 return handle;
+
+  sprintf(libName, "%s%s", dirName, moduleName);
   handle = tryLoadingInternals(libName);
   if (handle) 
 	 return handle;
@@ -276,21 +283,22 @@ void *ioLoadModule(char *pluginName)
  		}
  #endif
     if (gSqueakPluginsBuiltInOrLocalOnly) {
-	  if ((   handle= tryLoading( pluginDirPath,	pluginName))
-		|| (handle= tryLoading( vmDirPath, pluginName)))
+	  if ( (handle= tryLoading( vmDirPath, pluginName))
+		|| (handle= tryLoading( pluginDirPath,	pluginName))
+		)
 			return handle;
-  } else {
-	  if ((   handle= tryLoading( pluginDirPath,	pluginName))
-		  || (handle= tryLoading(    "./",			pluginName))
-		  || (handle= tryLoading( vmDirPath,		pluginName))
-		  || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH",	pluginName))
-		  || (handle= tryLoading(    VM_LIBDIR"/",		pluginName))
-	//JMM       || (handle= tryLoadingPath("LD_LIBRARY_PATH",	pluginName))
-		  || (handle= tryLoading(    "",			pluginName))
-	#    if defined(VM_X11DIR)
-		  || (handle= tryLoading(VM_X11DIR"/",		pluginName))
-	#    endif
-		  )
+    } else {
+		  if ((   handle= tryLoading( pluginDirPath,	pluginName))
+			  || (handle= tryLoading(    "./",			pluginName))
+			  || (handle= tryLoading( vmDirPath,		pluginName))
+			  || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH",	pluginName))
+			  || (handle= tryLoading(    VM_LIBDIR"/",		pluginName))
+		//JMM       || (handle= tryLoadingPath("LD_LIBRARY_PATH",	pluginName))
+			  || (handle= tryLoading(    "",			pluginName))
+		#    if defined(VM_X11DIR)
+			  || (handle= tryLoading(VM_X11DIR"/",		pluginName))
+		#    endif
+			  )
 			return handle;
 	}
 
