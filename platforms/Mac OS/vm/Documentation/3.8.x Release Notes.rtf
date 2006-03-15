@@ -6,15 +6,36 @@
 \margl1440\margr1440\vieww13660\viewh14740\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.8.10 mach-o build for Carbon, and build for Classic. \
+\f0\fs24 \cf0 Mac VM 3.8.11 mach-o build for Carbon, and build for Classic. \
 \
-Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing.\
+Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-March 6th, 2006 (3.8.11b1)\
+March 15th, 2006 (3.8.11b2)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.11b2	\
+		sqMacUnixFileInterface.c\
+			byte swap finderinfo in get and set mac file type and creator methods\
+		sqMacService.c\
+			remove callbacks to get event loop and window, these are not used\
+			byte swap OSType\
+		sqUnixSoundMacOSXJMM.c\
+			use kAudioFormatFlagsNativeEndian, versus big in sound stream\
+		sqMacSpellingPlugin.c\
+			utf-16 from squeak is big endian. \
+		sqMacFFIPPC.\
+		config.h\
+			drop socklen_t \
+		sqMacMain.c\
+			gSqueakWindowAttributes needs to be byte swapped\
+		sqMacUnixExternalPrims.c\
+			Change lookup, lookup bundle, or unix plugin in resources folder first, then in plugins directory\
+			if gSqueakPluginsBuiltInOrLocalOnly is set\
+		sqMacWindowUniversal.c\
+			make 16 bit go to quicktime because of 16bit intel draw error\
+	\
 \
 3.8.11b1 	Refactor, remove old OS-9 code, always carbon, etc. \
 		remove TARGET_API_MAC_CARBON\
