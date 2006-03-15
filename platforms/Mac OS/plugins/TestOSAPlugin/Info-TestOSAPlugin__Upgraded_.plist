@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>TestOSAPlugin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>TestOSAPlugin v1.0.1b1 for Squeak, see http://www.squeak.org</string>
+	<string>TestOSAPlugin v1.0.2b1 for Squeak, see http://www.squeak.org</string>
 	<key>CFBundleIconFile</key>
 	<string>SqueakPlugin.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -19,10 +19,10 @@
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.0.1b1</string>
+	<string>1.0.2b1</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>1.0.1b1</string>
+	<string>1.0.2b1</string>
 </dict>
 </plist>
