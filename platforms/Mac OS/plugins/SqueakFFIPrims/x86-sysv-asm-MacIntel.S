@@ -42,20 +42,26 @@
 	.text
 	.globl	_ffiCallAddressOf
 
- e:	/* 8=addr, 12=stack, 16=stackSize */
+_ffiCallAddressOf:	/* 8=addr, 12=stack, 16=stackSize */
 	pushl	%ebp
 	movl	%esp, %ebp
 	movl	16(%ebp), %ecx
 	testl	%ecx, %ecx
 	je	2f
 	subl	%ecx, %esp
+	and     $0xFFFFFFF0,%esp /*align to 128-bits*/
 	subl	$4, %ecx
 	movl	12(%ebp), %edx
 1:	movl	(%edx,%ecx,1), %eax
 	movl	%eax, (%esp,%ecx,1)
 	subl	$4, %ecx
 	jnc	1b
-2:	call	*8(%ebp)
+	jmp 3f
+2:	and     $0xFFFFFFF0,%esp /*align to 128-bits*/
+
+3:
+	cld
+	call	*8(%ebp)
 	movl	%eax, _ffiIntReturnValue
 	movl	%edx, _ffiLongReturnValue
 	fstl	_ffiFloatReturnValue
