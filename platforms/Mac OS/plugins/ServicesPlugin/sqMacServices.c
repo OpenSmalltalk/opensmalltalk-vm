@@ -20,9 +20,6 @@
 
 
 extern struct VirtualMachine *interpreterProxy;
-static EventTargetRef myEventTarget=NULL;
-static void *getSTWindow=NULL;
-WindowPtr myDocumentWindow;
 
 OSType	MyAppsDataTypes[64];
 long	MyAppsDataTypesSize;
@@ -50,15 +47,12 @@ void makeItHideLogic();
 void waitAFewMilliseconds();
 
 int sqServicesInitialize() {
-	if (myEventRef) 
+	static Boolean initialized=false;
+	if (initialized) 
 		return 1;
-	
-	getSTWindow = interpreterProxy->ioLoadFunctionFrom("getSTWindow", "");
-	if (getSTWindow == 0) {
-		return 0;
-	}
-	myDocumentWindow = (WindowPtr) ((int (*) ()) getSTWindow)();
-	myEventTarget = GetWindowEventTarget (myDocumentWindow);
+	else 
+		initialized = true;
+		
 	InstallApplicationEventHandler(NewEventHandlerUPP(MyServicesEventHandler), GetEventTypeCount(serviceEventList), serviceEventList, 0, &myEventRef);
 	return 1;
 }
@@ -115,7 +109,7 @@ void sqServicesSetByteslengthosType(char *aByteArray, long dataTypesLength, char
 	
 	if(specificScrap == NULL) 
 		return;
-	memcpy(&typeToUse,aOSTypeString,4);
+	typeToUse = CFSwapInt32HostToBig((int) *(int *) aOSTypeString);
 	ClearScrap (&specificScrap); 
 	PutScrapFlavor (specificScrap, typeToUse ,kScrapFlavorMaskNone,dataTypesLength,aByteArray);
 	gWaiting = false;
@@ -123,15 +117,15 @@ void sqServicesSetByteslengthosType(char *aByteArray, long dataTypesLength, char
 }
 
 void sqServicesSetCopyOSTypeString(char *aOSTypeString) {
-	memcpy(&myEventServiceCopyOSType,aOSTypeString,4);
+	myEventServiceCopyOSType = CFSwapInt32HostToBig((int) *(int *) aOSTypeString);
 }
 
 void sqServicesSetPasteOSTypeString(char *aOSTypeString) {
-	memcpy(&myEventServicePasteOSType,aOSTypeString,4);
+	myEventServicePasteOSType = CFSwapInt32HostToBig((int) *(int *) aOSTypeString);
 }
 
 void sqServicesSetPerformOSTypeString(char *aOSTypeString) {
-	memcpy(&myEventServicePerformOSType,aOSTypeString,4);
+	myEventServicePerformOSType = CFSwapInt32HostToBig((int) *(int *)aOSTypeString);
 }
 
 int sqServicesGetTextStringLength(void){
@@ -175,7 +169,7 @@ EventRef event, void* userData)
 				count = MyAppsDataTypesSize / sizeof (OSType); 
 				for ( index = 0; index < count; index++ ) {
 					CFStringRef type = 
-								CreateTypeStringWithOSType (MyAppsDataTypes [index]); 
+								CreateTypeStringWithOSType (CFSwapInt32HostToBig(MyAppsDataTypes [index])); 
 					if (type) {
 						if (textSelection) 
 								CFArrayAppendValue (copyTypes, type);  
