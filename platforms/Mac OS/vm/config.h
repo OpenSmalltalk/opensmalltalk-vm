@@ -139,7 +139,6 @@
 /* typedefs */
 
 /* #undef	size_t */
-#define	socklen_t int
 
 #define	squeakInt64 long long
 
