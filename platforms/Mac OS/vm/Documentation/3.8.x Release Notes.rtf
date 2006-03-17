@@ -10,11 +10,21 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-March 15th, 2006 (3.8.11b2)\
+March 17th, 2006 (3.8.11b3)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.11b3 \
+		sqGnu.h\
+			readjust yet again the __asm__ versus asm and use register starting at 13 versus 24 for interp.c\
+		config.h\
+			remove socket type, collides with sdk 10.3.9\
+		sqMacMain.h\
+			ensure getSystemAttribute: 0 returns full path to executable\
+		sqMacMemory.c\
+			Ensure memory returned from mmap is on 4k page boundary\
+\
 3.8.11b2	\
 		sqMacUnixFileInterface.c\
 			byte swap finderinfo in get and set mac file type and creator methods\
@@ -33,6 +43,33 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 		sqMacUnixExternalPrims.c\
 			Change lookup, lookup bundle, or unix plugin in resources folder first, then in plugins directory\
 			if gSqueakPluginsBuiltInOrLocalOnly is set\
+		sqMacWindowUniversal.c\
+			make 16 bit go to quicktime because of 16bit intel draw error\
+	\
+>>>>>>> .r1362\
+		Compile adjustments, arch=pentium-m and align-functions=16. The alignment gives 5% speedup in \
+		tinybenchmark sents, seems core solo is picky about where instruction alignment is. Found by adding \
+		new static buffer area to binary and having performance fall off by 5%\
+\
+3.8.11b2	\
+		sqMacUnixFileInterface.c\
+			byte swap finderinfo in get and set mac file type and creator methods\
+		sqMacService.c\
+			remove callbacks to get event loop and window, these are not used\
+			byte swap OSType\
+		sqUnixSoundMacOSXJMM.c\
+			use kAudioFormatFlagsNativeEndian, versus big in sound stream\
+		sqMacSpellingPlugin.c\
+			utf-16 from squeak is big endian. \
+		sqMacFFIPPC.\
+		config.h\
+			drop socklen_t \
+		sqMacMain.c\
+			gSqueakWindowAttributes needs to be byte swapped\
+		sqMacUnixExternalPrims.c\
+			Change lookup, lookup bundle, or unix plugin in resources folder first, then in plugins directory\
+			if gSqueakPluginsBuiltInOrLocalOnly is set\
+			if debug vm, then print loader errors\
 		sqMacWindowUniversal.c\
 			make 16 bit go to quicktime because of 16bit intel draw error\
 	\
