@@ -110,7 +110,11 @@
 
 /*** options ***/
 
+#ifdef EXTERNALPRIMSDEBUG
+int sqIgnorePluginErrors=0;
+#else
 int sqIgnorePluginErrors=1;
+#endif
 extern Boolean gSqueakPluginsBuiltInOrLocalOnly;
 
 /*** configured variables ***/
