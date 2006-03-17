@@ -288,11 +288,11 @@ char * GetAttributeString(int id) {
 	   are reported this way as well, on platforms that support them.
 	*/
 
-	// id #0 should return the full name of VM; for now it just returns its path
+	// id #0 should return the full name of VM
 	if (id == 0) {
-            static char path[VMPATH_SIZE + 1];
-            getVMPathWithEncoding(path,gCurrentVMEncoding);
-            return path;
+            static char pathToGiveToSqueak[VMPATH_SIZE + 1];
+			ux2sqPath(argVec[0], strlen(argVec[0]), pathToGiveToSqueak, VMPATH_SIZE,0);	
+            return pathToGiveToSqueak;
         }
 	/* Note: 1.3x images will try to read the image as a document because they
 	   expect attribute #1 to be the document name. A 1.3x image can be patched
