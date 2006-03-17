@@ -81,6 +81,40 @@ long stQuicktimeSetSurfacewidthheightrowBytesdepthmovie(char * buffer, int width
 	return sqHandle;
 }
 
+long stQuicktimeSetToExistingSurfacegworldwidthheightrowBytesdepthmovie
+	(int sqHandle, char * buffer, int width, int height, int rowBytes, int depth, void *movie)
+{
+	QuickTimeBitMapForSqueak *bitMap;
+	
+	/* see if the handle really describes a MyBitmap surface */
+	if( ! (*findSurface)(sqHandle, &QuicktimeTargetDispatch, (int*) (&bitMap)) ) {
+		/* i don't know what it is but certainly not MyBitmap */
+		return interpreterProxy->primitiveFail();
+	}
+	
+	bitMap->width = width;
+	bitMap->height = height;
+	bitMap->depth = depth;
+	bitMap->rowBytes = rowBytes;
+	bitMap->bits = buffer;
+	bitMap->movie = movie;
+    (*registerSurface)((long) bitMap, &QuicktimeTargetDispatch, &sqHandle);
+	
+	return sqHandle;
+}
+
+int stQuicktimeDestroySurface(int sqHandle) {
+	QuickTimeBitMapForSqueak *myBM;
+
+	/* see if the handle really describes a MyBitmap surface */
+	if( ! (*findSurface)(sqHandle, &QuicktimeTargetDispatch, (int*) (&myBM)) ) {
+		/* i don't know what it is but certainly not MyBitmap */
+		return interpreterProxy->primitiveFail();
+	}
+	/* unregister and destroy */
+	(*unregisterSurface)(sqHandle);
+	free(myBM);
+}
 
 int stQuicktimeDestroy(int sqHandle) {
 	QuickTimeBitMapForSqueak *myBM;
@@ -92,7 +126,7 @@ int stQuicktimeDestroy(int sqHandle) {
 	}
 	/* unregister and destroy */
 	(*unregisterSurface)(sqHandle);
-	if (myBM->semaIndex) {
+	if (myBM->semaIndex && !((myBM->movie == nil) || (*myBM->movie == 0xFFFFFFFFU))) {
 		DisposeMovieDrawingCompleteUPP(myBM->myDrawCompleteProc);
  		SetMovieDrawingCompleteProc (myBM->movie,0,0,0);
 	}
@@ -109,6 +143,8 @@ int stQuicktimeSetSemaphorefor(int index, int sqHandle) {
 		/* i don't know what it is but certainly not MyBitmap */
 		return interpreterProxy->primitiveFail();
 	}
+	if	((myBM->movie == nil) || (*myBM->movie == 0xFFFFFFFFU))	
+		return interpreterProxy->primitiveFail();
 	myBM->myDrawCompleteProc = NewMovieDrawingCompleteUPP(DrawCompleteProc);
 	SetMovieDrawingCompleteProc (myBM->movie,movieDrawingCallWhenChanged,myBM->myDrawCompleteProc,(long) index);
 	myBM->semaIndex = index;
@@ -121,6 +157,8 @@ int stQuicktimeClearSemaphore(int sqHandle) {
 		/* i don't know what it is but certainly not MyBitmap */
 		return interpreterProxy->primitiveFail();
 	}
+	if	((myBM->movie == nil) || (*myBM->movie == 0xFFFFFFFFU))	
+		return interpreterProxy->primitiveFail();
 	if (myBM->semaIndex) {
 		SetMovieDrawingCompleteProc (myBM->movie,0,0,0);
 	}
