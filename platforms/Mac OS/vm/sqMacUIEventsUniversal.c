@@ -283,8 +283,6 @@ int ioMousePoint(void) {
 	    ioProcessEvents();
 	if (windowActive) {
 		GetMouse(&p);
- #warning foocheck
-		QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&p);
 	} else {
 		/* don't report mouse motion if window is not active */
 		p = savedMousePosition;
@@ -785,18 +783,17 @@ static void recordWindowEventCarbon(int windowType,int left, int top, int right,
 static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	sqMouseEvent *evt;
 	static sqMouseEvent oldEvent;
-	Point  where;
-        EventMouseWheelAxis wheelMouseDirection=0;
-        long	wheelMouseDelta=0;
-        OSErr		err;
-        
-        err = GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
-                    sizeof(Point), NULL, &where);
+	static Point  where;
+	EventMouseWheelAxis wheelMouseDirection=0;
+	long	wheelMouseDelta=0;
+	OSErr		err;
+	
+	err = GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
+				sizeof(Point), NULL, &where);
                     
- 	if (err != noErr)
-            GetMouse(&where); //fake mouse event
-        else
-            QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&where);
+ 	if (err == noErr)
+		QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&where);
+	// on error use last known mouse location. 
 	
 	buttonState = MouseModifierStateCarbon(event,whatHappened);
  	cachedButtonState = cachedButtonState | buttonState;

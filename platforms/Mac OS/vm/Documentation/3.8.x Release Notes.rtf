@@ -10,11 +10,33 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-March 17th, 2006 (3.8.11b3)\
+March 18th, 2006 (3.8.11b4)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.11b4\
+		compiler should asks for inlined sqSqueakMemory accessors if intel, these generate better assembler than\
+		non-inline which is better for powerpc. \
+		\
+		sqMacMain.c\
+			Browser plugin code must return VM Path name, can't use argv[0].\
+		\
+		sqMacMemory.c (see 3.8.11b3, perhaps not checked in correctly)\
+\
+		sqMacNSPlugin.c\
+			Start poking at  code to make work under browser again\
+\
+		sqMacUIEventsUniversal.c\
+			old getmousepoints should not covert coord to global, on cmd-key remember old coordianates\
+			versus doing getmousepoints since the port is not set. Likely we've stored the last mouse move!\
+	\
+		mpeg3plugin\
+			audio.c\
+			output.c\
+				Change to set Alpha to OxFF versus 0x00 in order to play better with Tweak in 32bit mode\
+				misc poking at MMX (not working) for MacIntel\
+		 \
 3.8.11b3 \
 		sqGnu.h\
 			readjust yet again the __asm__ versus asm and use register starting at 13 versus 24 for interp.c\

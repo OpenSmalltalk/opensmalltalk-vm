@@ -290,8 +290,12 @@ char * GetAttributeString(int id) {
 
 	// id #0 should return the full name of VM
 	if (id == 0) {
-            static char pathToGiveToSqueak[VMPATH_SIZE + 1];
+		static char pathToGiveToSqueak[2048];
+#ifdef BROWSERPLUGIN
+            getVMPathWithEncoding(pathToGiveToSqueak,gCurrentVMEncoding);
+#else
 			ux2sqPath(argVec[0], strlen(argVec[0]), pathToGiveToSqueak, VMPATH_SIZE,0);	
+#endif
             return pathToGiveToSqueak;
         }
 	/* Note: 1.3x images will try to read the image as a document because they

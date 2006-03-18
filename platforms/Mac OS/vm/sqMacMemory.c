@@ -22,9 +22,11 @@
 #include "sqMacMain.h"
 
 #include <sys/mman.h>
+#include <unistd.h>
 
 extern UInt32  gMaxHeapSize;
 static UInt32	gHeapSize;
+void *mmapWasAt;
 
 /* compute the desired memory allocation */
 
@@ -46,14 +48,23 @@ UInt32	sqGetAvailableMemory() {
 }
 
 usqInt sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
-    void * debug;
+    void * debug, *actually;
+	int	    pageSize = 0;
+	unsigned int pageMask = 0;
 	#pragma unused(minHeapSize,desiredHeapSize)
      
+	pageSize= getpagesize();
+	pageMask= ~(pageSize - 1);
     gHeapSize = gMaxHeapSize;
-    debug = mmap( NULL, gMaxHeapSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
+    debug = mmap( NULL, gMaxHeapSize+pageSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
+	
     if((debug == MAP_FAILED) || (((long) debug) < 0))
         return 0;
-    return (usqInt) debug;
+	mmapWasAt = debug;
+	actually = debug+pageSize-1;
+	actually = (void*) (((unsigned int) actually) & pageMask);
+	
+    return (usqInt) actually;
 }
 
 int sqGrowMemoryBy(int memoryLimit, int delta) {
@@ -79,7 +90,7 @@ void sqMacMemoryFree() {
 	if (memory == nil) 
 		return;
     #ifdef BROWSERPLUGIN
-    munmap((void *) memory,gMaxHeapSize);
+    munmap((void *) mmapWasAt,gMaxHeapSize);
     #endif
 	memory = nil;
 }

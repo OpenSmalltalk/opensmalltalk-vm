@@ -117,7 +117,7 @@ int primitivePluginPostURL(void);
 
 /* Constants */
 
-#define MAX_STRING_LENGTH 255
+#define MAX_STRING_LENGTH 1000
 #define MAX_ARG_STRING_LENGTH 100
 #define STATUS_BAD_HANDLE -1
 #define STATUS_IDLE 0
@@ -711,7 +711,7 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
     
     GetTempFSSpec(&tempFileSpec,&theFSRef);
     error = URLSimpleDownload (url,&tempFileSpec,NULL,0,NULL,notifyData);
-	PathToFileViaFSRef(fileName, MAX_STRING_LENGTH,NULL,gCurrentVMEncoding);
+	PathToFileViaFSRef(fileName, MAX_STRING_LENGTH,&theFSRef,gCurrentVMEncoding);
 done:
     URLRequestCompleted((int) notifyData, fileName);
 	return 0;
