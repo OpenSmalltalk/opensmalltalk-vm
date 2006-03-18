@@ -33,6 +33,7 @@
       do specialized 16 and 32 bit Crb to rgb mapping (Intel should do this too?)
       I also coded up clip arrays versus using CLIP() This avoid test/branchs which slows things down
  	  May 19th, 2003, Ivo Roessling <ivo@wettinet.de> changes to asm syntax to enable compile in GCC 3.3.x
+	  March 17th, 2006, John M McIntosh, set alpha to 0xff versus 0x00. 
  */
 #include "libmpeg3.h"
 #include "mpeg3video.h"
@@ -49,6 +50,8 @@ int doClippingArrays=1;
 static unsigned char mpeg3_601_to_rgb[256];
 
 #ifdef HAVE_MMX
+
+#warning Beware of alpha this is not in the mmx code, and it appears tweak really wants it now
 
 static long long mpeg3_MMX_0 = 0L;
 static unsigned long  mpeg3_MMX_10w[]         = {0x00100010, 0x00100010};                     /*dd    00010 0010h, 000100010h */
@@ -93,8 +96,7 @@ inline void mpeg3video_rgb16_mmx(unsigned char *lum,
 	y = lum + cols * rows;
     x = 0;
 
-    __asm__ __volatile__(
-        ".align 8\n"
+    __asm__ __volatile__(	//"align 8\n"
         "1:\n"
             "movd           (%1),                   %%mm0\n"  /* 4 Cb	  0  0  0  0 u3 u2 u1 u0 */
             "pxor           %%mm7,                  %%mm7\n"
@@ -250,50 +252,51 @@ inline void mpeg3video_rgb16_mmx(unsigned char *lum,
 		);
 }
 
-static unsigned long long  mpeg3_MMX_U_80 = 0x0000008000800000;
-static unsigned long long  mpeg3_MMX_V_80 = 0x0000000000800080;
-static long long  mpeg3_MMX_U_COEF        = 0x00000058ffd30000;
-static long long  mpeg3_MMX_V_COEF        = 0x00000000ffea006f;
-static long long  mpeg3_MMX_601_Y_COEF    = 0x0000004800480048;
-static long long  mpeg3_MMX_601_Y_DIFF    = 0x0000000000000010;
+static unsigned long long  mpeg3_MMX_U_80 = 0x0000008000800000LL;
+static unsigned long long  mpeg3_MMX_V_80 = 0x0000000000800080LL;
+static long long  mpeg3_MMX_U_COEF        = 0x00000058ffd30000LL;
+static long long  mpeg3_MMX_V_COEF        = 0x00000000ffea006fLL;
+static long long  mpeg3_MMX_601_Y_COEF    = 0x0000004800480048LL;
+static long long  mpeg3_MMX_601_Y_DIFF    = 0x0000000000000010LL;
 
 inline void mpeg3_bgra32_mmx(unsigned long y, 
 		unsigned long u, 
 		unsigned long v, 
 		unsigned long *output)
 {
-asm("\n".
-"/* Output will be 0x00rrggbb with the 00 trailing so this can also be used */\n".
-"/* for bgr24. */\n".
-"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n".
-"	movd (%1), %%mm1;          /* Load u    0x00000000000000cr */\n".
-"	movq %%mm0, %%mm3;         /* Copy y to temp */\n".
-"	psllq $16, %%mm1;          /* Shift u   0x0000000000cr0000 */\n".
-"	movd (%2), %%mm2;          /* Load v    0x00000000000000cb */\n".
-"	psllq $16, %%mm3;          /* Shift y */\n".
-"	movq %%mm1, %%mm4;         /* Copy u to temp */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n".
-"	psllq $16, %%mm4;          /* Shift u */\n".
-"	movq %%mm2, %%mm5;         /* Copy v to temp */\n".
-"	psllq $16, %%mm3;          /* Shift y  */\n".
-"	por %%mm4, %%mm1;          /* Overlay new u byte 0x000000cr00cr0000 */\n".
-"	psllq $16, %%mm5;          /* Shift v  */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n".
-"	por %%mm5, %%mm2;          /* Overlay new v byte 0x0000000000cb00cb */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy mm1: 0x000000uu00uu0000 mm2: 0x0000000000vv00vv */\n".
-" 	psubw _mpeg3_MMX_U_80, %%mm1;    /* Subtract 128 from u 0x000000uu00uu0000 */\n".
-" 	pmullw _mpeg3_MMX_U_COEF, %%mm1; /* Multiply u coeffs 0x0000uuuuuuuu0000 */\n".
-" 	psllw $6, %%mm0;                /* Shift y coeffs 0x0000yyy0yyy0yyy0 */\n".
-" 	psubw _mpeg3_MMX_V_80, %%mm2;    /* Subtract 128 from v 0x0000000000cb00cb */\n".
-" 	pmullw _mpeg3_MMX_V_COEF, %%mm2; /* Multiply v coeffs 0x0000crcrcrcrcrcr */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy mm1: 0x0000uuuuuuuu0000 mm2: 0x00000000vvvvvvvv */\n".
-"	paddsw %%mm1, %%mm0;        /* Add u to result */\n".
-"	paddsw %%mm2, %%mm0;        /* Add v to result 0x0000rrrrggggbbbb */\n".
-"	psraw $6, %%mm0;           /* Demote precision */\n".
-"	packuswb %%mm0, %%mm0;     /* Pack into ARGB 0x0000000000rrggbb */\n".
-"	movd %%mm0, (%3);          /* Store output */\n".
+	asm(
+"\n"
+"/* Output will be 0x00rrggbb with the 00 trailing so this can also be used */\n"
+"/* for bgr24. */\n"
+"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n"
+"	movd (%1), %%mm1;          /* Load u    0x00000000000000cr */\n"
+"	movq %%mm0, %%mm3;         /* Copy y to temp */\n"
+"	psllq $16, %%mm1;          /* Shift u   0x0000000000cr0000 */\n"
+"	movd (%2), %%mm2;          /* Load v    0x00000000000000cb */\n"
+"	psllq $16, %%mm3;          /* Shift y */\n"
+"	movq %%mm1, %%mm4;         /* Copy u to temp */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n"
+"	psllq $16, %%mm4;          /* Shift u */\n"
+"	movq %%mm2, %%mm5;         /* Copy v to temp */\n"
+"	psllq $16, %%mm3;          /* Shift y  */\n"
+"	por %%mm4, %%mm1;          /* Overlay new u byte 0x000000cr00cr0000 */\n"
+"	psllq $16, %%mm5;          /* Shift v  */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n"
+"	por %%mm5, %%mm2;          /* Overlay new v byte 0x0000000000cb00cb */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy mm1: 0x000000uu00uu0000 mm2: 0x0000000000vv00vv */\n"
+" 	psubw _mpeg3_MMX_U_80, %%mm1;    /* Subtract 128 from u 0x000000uu00uu0000 */\n"
+" 	pmullw _mpeg3_MMX_U_COEF, %%mm1; /* Multiply u coeffs 0x0000uuuuuuuu0000 */\n"
+" 	psllw $6, %%mm0;                /* Shift y coeffs 0x0000yyy0yyy0yyy0 */\n"
+" 	psubw _mpeg3_MMX_V_80, %%mm2;    /* Subtract 128 from v 0x0000000000cb00cb */\n"
+" 	pmullw _mpeg3_MMX_V_COEF, %%mm2; /* Multiply v coeffs 0x0000crcrcrcrcrcr */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy mm1: 0x0000uuuuuuuu0000 mm2: 0x00000000vvvvvvvv */\n"
+"	paddsw %%mm1, %%mm0;        /* Add u to result */\n"
+"	paddsw %%mm2, %%mm0;        /* Add v to result 0x0000rrrrggggbbbb */\n"
+"	psraw $6, %%mm0;           /* Demote precision */\n"
+"	packuswb %%mm0, %%mm0;     /* Pack into ARGB 0x0000000000rrggbb */\n"
+"	movd %%mm0, (%3);          /* Store output */\n"
 "	\n"
 :
 : "r" (&y), "r" (&u), "r" (&v), "r" (output));
@@ -304,86 +307,86 @@ inline void mpeg3_601_bgra32_mmx(unsigned long y,
 		unsigned long v, 
 		unsigned long *output)
 {
-asm("\n".
-"/* Output will be 0x00rrggbb with the 00 trailing so this can also be used */\n".
-"/* for bgr24. */\n".
-"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n".
-"	psubsw _mpeg3_MMX_601_Y_DIFF, %%mm0;      /* Subtract 16 from y */\n".
-"	movd (%1), %%mm1;          /* Load u    0x00000000000000cr */\n".
-"	movq %%mm0, %%mm3;         /* Copy y to temp */\n".
-"	psllq $16, %%mm1;          /* Shift u   0x0000000000cr0000 */\n".
-"	movd (%2), %%mm2;          /* Load v    0x00000000000000cb */\n".
-"	psllq $16, %%mm3;          /* Shift y */\n".
-"	movq %%mm1, %%mm4;         /* Copy u to temp */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n".
-"	psllq $16, %%mm4;          /* Shift u */\n".
-"	movq %%mm2, %%mm5;         /* Copy v to temp */\n".
-"	psllq $16, %%mm3;          /* Shift y  */\n".
-"	por %%mm4, %%mm1;          /* Overlay new u byte 0x000000cr00cr0000 */\n".
-"	psllq $16, %%mm5;          /* Shift v  */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n".
-"	por %%mm5, %%mm2;          /* Overlay new v byte 0x0000000000cb00cb */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy mm1: 0x000000uu00uu0000 mm2: 0x0000000000vv00vv */\n".
-"	pmullw _mpeg3_MMX_601_Y_COEF, %%mm0; /* Scale and shift y coeffs */\n".
-"	psubw _mpeg3_MMX_U_80, %%mm1;     /* Subtract 128 from u 0x000000uu00uu0000 */\n".
-" 	pmullw _mpeg3_MMX_U_COEF, %%mm1;  /* Multiply u coeffs 0x0000uuuuuuuu0000 */\n".
-"	psubw _mpeg3_MMX_V_80, %%mm2;     /* Subtract 128 from v 0x0000000000cb00cb */\n".
-" 	pmullw _mpeg3_MMX_V_COEF, %%mm2;  /* Multiply v coeffs 0x0000crcrcrcrcrcr */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy mm1: 0x0000uuuuuuuu0000 mm2: 0x00000000vvvvvvvv */\n".
-"	paddsw %%mm1, %%mm0;        /* Add u to result */\n".
-"	paddsw %%mm2, %%mm0;        /* Add v to result 0x0000rrrrggggbbbb */\n".
-"	psraw $6, %%mm0;           /* Demote precision */\n".
-"	packuswb %%mm0, %%mm0;     /* Pack into ARGB 0x0000000000rrggbb */\n".
-"	movd %%mm0, (%3);          /* Store output */\n".
+asm("\n"
+"/* Output will be 0x00rrggbb with the 00 trailing so this can also be used */\n"
+"/* for bgr24. */\n"
+"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n"
+"	psubsw _mpeg3_MMX_601_Y_DIFF, %%mm0;      /* Subtract 16 from y */\n"
+"	movd (%1), %%mm1;          /* Load u    0x00000000000000cr */\n"
+"	movq %%mm0, %%mm3;         /* Copy y to temp */\n"
+"	psllq $16, %%mm1;          /* Shift u   0x0000000000cr0000 */\n"
+"	movd (%2), %%mm2;          /* Load v    0x00000000000000cb */\n"
+"	psllq $16, %%mm3;          /* Shift y */\n"
+"	movq %%mm1, %%mm4;         /* Copy u to temp */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n"
+"	psllq $16, %%mm4;          /* Shift u */\n"
+"	movq %%mm2, %%mm5;         /* Copy v to temp */\n"
+"	psllq $16, %%mm3;          /* Shift y  */\n"
+"	por %%mm4, %%mm1;          /* Overlay new u byte 0x000000cr00cr0000 */\n"
+"	psllq $16, %%mm5;          /* Shift v  */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n"
+"	por %%mm5, %%mm2;          /* Overlay new v byte 0x0000000000cb00cb */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy mm1: 0x000000uu00uu0000 mm2: 0x0000000000vv00vv */\n"
+"	pmullw _mpeg3_MMX_601_Y_COEF, %%mm0; /* Scale and shift y coeffs */\n"
+"	psubw _mpeg3_MMX_U_80, %%mm1;     /* Subtract 128 from u 0x000000uu00uu0000 */\n"
+" 	pmullw _mpeg3_MMX_U_COEF, %%mm1;  /* Multiply u coeffs 0x0000uuuuuuuu0000 */\n"
+"	psubw _mpeg3_MMX_V_80, %%mm2;     /* Subtract 128 from v 0x0000000000cb00cb */\n"
+" 	pmullw _mpeg3_MMX_V_COEF, %%mm2;  /* Multiply v coeffs 0x0000crcrcrcrcrcr */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy mm1: 0x0000uuuuuuuu0000 mm2: 0x00000000vvvvvvvv */\n"
+"	paddsw %%mm1, %%mm0;        /* Add u to result */\n"
+"	paddsw %%mm2, %%mm0;        /* Add v to result 0x0000rrrrggggbbbb */\n"
+"	psraw $6, %%mm0;           /* Demote precision */\n"
+"	packuswb %%mm0, %%mm0;     /* Pack into ARGB 0x0000000000rrggbb */\n"
+"	movd %%mm0, (%3);          /* Store output */\n"
 "	\n"
 :
 : "r" (&y), "r" (&u), "r" (&v), "r" (output));
 }
 
-static unsigned long long  mpeg3_MMX_U_80_RGB    = 0x0000000000800080;
-static unsigned long long  mpeg3_MMX_V_80_RGB    = 0x0000008000800000;
-static long long  mpeg3_MMX_U_COEF_RGB    = 0x00000000ffd30058;
-static long long  mpeg3_MMX_V_COEF_RGB    = 0x0000006fffea0000;
+static unsigned long long  mpeg3_MMX_U_80_RGB    = 0x0000000000800080LL;
+static unsigned long long  mpeg3_MMX_V_80_RGB    = 0x0000008000800000LL;
+static long long  mpeg3_MMX_U_COEF_RGB    = 0x00000000ffd30058LL;
+static long long  mpeg3_MMX_V_COEF_RGB    = 0x0000006fffea0000LL;
 
 inline void mpeg3_rgba32_mmx(unsigned long y, 
 		unsigned long u, 
 		unsigned long v, 
 		unsigned long *output)
 {
-asm("\n".
-"/* Output will be 0x00bbggrr with the 00 trailing so this can also be used */\n".
-"/* for rgb24. */\n".
-"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n".
-"	movd (%1), %%mm1;          /* Load v    0x00000000000000vv */\n".
-"	movq %%mm0, %%mm3;         /* Copy y to temp */\n".
-"	psllq $16, %%mm1;          /* Shift v   0x0000000000vv0000 */\n".
-"	movd (%2), %%mm2;          /* Load u    0x00000000000000uu */\n".
-"	psllq $16, %%mm3;          /* Shift y */\n".
-"	movq %%mm1, %%mm4;         /* Copy v to temp */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n".
-"	psllq $16, %%mm4;          /* Shift v */\n".
-"	movq %%mm2, %%mm5;         /* Copy u to temp */\n".
-"	psllq $16, %%mm3;          /* Shift y  */\n".
-"	por %%mm4, %%mm1;          /* Overlay new v byte 0x000000vv00vv0000 */\n".
-"	psllq $16, %%mm5;          /* Shift u  */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n".
-"	por %%mm5, %%mm2;          /* Overlay new u byte 0x0000000000uu00uu */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy mm1: 0x000000vv00vv0000 mm2: 0x0000000000uu00uu */\n".
-" 	psubw _mpeg3_MMX_V_80_RGB, %%mm1;    /* Subtract 128 from v 0x000000vv00vv0000 */\n".
-" 	pmullw _mpeg3_MMX_V_COEF_RGB, %%mm1; /* Multiply v coeffs 0x0000vvvvvvvv0000 */\n".
-" 	psllw $6, %%mm0;                /* Shift y coeffs 0x0000yyy0yyy0yyy0 */\n".
-" 	psubw _mpeg3_MMX_U_80_RGB, %%mm2;    /* Subtract 128 from u 0x0000000000uu00uu */\n".
-" 	pmullw _mpeg3_MMX_U_COEF_RGB, %%mm2; /* Multiply u coeffs 0x0000uuuuuuuuuuuu */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy mm1: 0x0000vvvvvvvv0000 mm2: 0x00000000uuuuuuuu */\n".
-"	paddsw %%mm1, %%mm0;        /* Add v to result */\n".
-"	paddsw %%mm2, %%mm0;        /* Add u to result 0x0000bbbbggggrrrr */\n".
-"	psraw $6, %%mm0;           /* Demote precision */\n".
-"	packuswb %%mm0, %%mm0;     /* Pack into RGBA 0x0000000000bbggrr */\n".
-"	movd %%mm0, (%3);          /* Store output */\n".
+asm("\n"
+"/* Output will be 0x00bbggrr with the 00 trailing so this can also be used */\n"
+"/* for rgb24. */\n"
+"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n"
+"	movd (%1), %%mm1;          /* Load v    0x00000000000000vv */\n"
+"	movq %%mm0, %%mm3;         /* Copy y to temp */\n"
+"	psllq $16, %%mm1;          /* Shift v   0x0000000000vv0000 */\n"
+"	movd (%2), %%mm2;          /* Load u    0x00000000000000uu */\n"
+"	psllq $16, %%mm3;          /* Shift y */\n"
+"	movq %%mm1, %%mm4;         /* Copy v to temp */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n"
+"	psllq $16, %%mm4;          /* Shift v */\n"
+"	movq %%mm2, %%mm5;         /* Copy u to temp */\n"
+"	psllq $16, %%mm3;          /* Shift y  */\n"
+"	por %%mm4, %%mm1;          /* Overlay new v byte 0x000000vv00vv0000 */\n"
+"	psllq $16, %%mm5;          /* Shift u  */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n"
+"	por %%mm5, %%mm2;          /* Overlay new u byte 0x0000000000uu00uu */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy mm1: 0x000000vv00vv0000 mm2: 0x0000000000uu00uu */\n"
+" 	psubw _mpeg3_MMX_V_80_RGB, %%mm1;    /* Subtract 128 from v 0x000000vv00vv0000 */\n"
+" 	pmullw _mpeg3_MMX_V_COEF_RGB, %%mm1; /* Multiply v coeffs 0x0000vvvvvvvv0000 */\n"
+" 	psllw $6, %%mm0;                /* Shift y coeffs 0x0000yyy0yyy0yyy0 */\n"
+" 	psubw _mpeg3_MMX_U_80_RGB, %%mm2;    /* Subtract 128 from u 0x0000000000uu00uu */\n"
+" 	pmullw _mpeg3_MMX_U_COEF_RGB, %%mm2; /* Multiply u coeffs 0x0000uuuuuuuuuuuu */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy mm1: 0x0000vvvvvvvv0000 mm2: 0x00000000uuuuuuuu */\n"
+"	paddsw %%mm1, %%mm0;        /* Add v to result */\n"
+"	paddsw %%mm2, %%mm0;        /* Add u to result 0x0000bbbbggggrrrr */\n"
+"	psraw $6, %%mm0;           /* Demote precision */\n"
+"	packuswb %%mm0, %%mm0;     /* Pack into RGBA 0x0000000000bbggrr */\n"
+"	movd %%mm0, (%3);          /* Store output */\n"
 "	\n"
 :
 : "r" (&y), "r" (&v), "r" (&u), "r" (output));
@@ -394,39 +397,39 @@ inline void mpeg3_601_rgba32_mmx(unsigned long y,
 		unsigned long v, 
 		unsigned long *output)
 {
-asm("\n".
-"/* Output will be 0x00bbggrr with the 00 trailing so this can also be used */\n".
-"/* for rgb24. */\n".
-"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n".
-"	psubsw _mpeg3_MMX_601_Y_DIFF, %%mm0;      /* Subtract 16 from y */\n".
-"	movd (%1), %%mm1;          /* Load v    0x00000000000000vv */\n".
-"	movq %%mm0, %%mm3;         /* Copy y to temp */\n".
-"	psllq $16, %%mm1;          /* Shift v   0x0000000000vv0000 */\n".
-"	movd (%2), %%mm2;          /* Load u    0x00000000000000uu */\n".
-"	psllq $16, %%mm3;          /* Shift y */\n".
-"	movq %%mm1, %%mm4;         /* Copy v to temp */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n".
-"	psllq $16, %%mm4;          /* Shift v */\n".
-"	movq %%mm2, %%mm5;         /* Copy u to temp */\n".
-"	psllq $16, %%mm3;          /* Shift y  */\n".
-"	por %%mm4, %%mm1;          /* Overlay new v byte 0x000000vv00vv0000 */\n".
-"	psllq $16, %%mm5;          /* Shift u  */\n".
-"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n".
-"	por %%mm5, %%mm2;          /* Overlay new u byte 0x0000000000uu00uu */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy     mm1: 0x000000vv00vv0000     mm2: 0x0000000000uu00uu */\n".
-"	pmullw _mpeg3_MMX_601_Y_COEF, %%mm0;     /* Scale y coeffs */\n".
-" 	psubw _mpeg3_MMX_V_80_RGB, %%mm1;    /* Subtract 128 from v 0x000000vv00vv0000 */\n".
-" 	pmullw _mpeg3_MMX_V_COEF_RGB, %%mm1; /* Multiply v coeffs 0x0000vvvvvvvv0000 */\n".
-" 	psubw _mpeg3_MMX_U_80_RGB, %%mm2;    /* Subtract 128 from u 0x0000000000uu00uu */\n".
-" 	pmullw _mpeg3_MMX_U_COEF_RGB, %%mm2; /* Multiply u coeffs 0x0000uuuuuuuuuuuu */\n".
-"\n".
-"/* mm0: 0x000000yy00yy00yy mm1: 0x0000vvvvvvvv0000 mm2: 0x00000000uuuuuuuu */\n".
-"	paddsw %%mm1, %%mm0;        /* Add v to result */\n".
-"	paddsw %%mm2, %%mm0;        /* Add u to result 0x0000bbbbggggrrrr */\n".
-"	psraw $6, %%mm0;           /* Demote precision */\n".
-"	packuswb %%mm0, %%mm0;     /* Pack into RGBA 0x0000000000bbggrr */\n".
-"	movd %%mm0, (%3);          /* Store output */\n".
+asm("\n"
+"/* Output will be 0x00bbggrr with the 00 trailing so this can also be used */\n"
+"/* for rgb24. */\n"
+"	movd (%0), %%mm0;          /* Load y   0x00000000000000yy */\n"
+"	psubsw _mpeg3_MMX_601_Y_DIFF, %%mm0;      /* Subtract 16 from y */\n"
+"	movd (%1), %%mm1;          /* Load v    0x00000000000000vv */\n"
+"	movq %%mm0, %%mm3;         /* Copy y to temp */\n"
+"	psllq $16, %%mm1;          /* Shift v   0x0000000000vv0000 */\n"
+"	movd (%2), %%mm2;          /* Load u    0x00000000000000uu */\n"
+"	psllq $16, %%mm3;          /* Shift y */\n"
+"	movq %%mm1, %%mm4;         /* Copy v to temp */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x0000000000yy00yy */\n"
+"	psllq $16, %%mm4;          /* Shift v */\n"
+"	movq %%mm2, %%mm5;         /* Copy u to temp */\n"
+"	psllq $16, %%mm3;          /* Shift y  */\n"
+"	por %%mm4, %%mm1;          /* Overlay new v byte 0x000000vv00vv0000 */\n"
+"	psllq $16, %%mm5;          /* Shift u  */\n"
+"	por %%mm3, %%mm0;          /* Overlay new y byte 0x000000yy00yy00yy */\n"
+"	por %%mm5, %%mm2;          /* Overlay new u byte 0x0000000000uu00uu */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy     mm1: 0x000000vv00vv0000     mm2: 0x0000000000uu00uu */\n"
+"	pmullw _mpeg3_MMX_601_Y_COEF, %%mm0;     /* Scale y coeffs */\n"
+" 	psubw _mpeg3_MMX_V_80_RGB, %%mm1;    /* Subtract 128 from v 0x000000vv00vv0000 */\n"
+" 	pmullw _mpeg3_MMX_V_COEF_RGB, %%mm1; /* Multiply v coeffs 0x0000vvvvvvvv0000 */\n"
+" 	psubw _mpeg3_MMX_U_80_RGB, %%mm2;    /* Subtract 128 from u 0x0000000000uu00uu */\n"
+" 	pmullw _mpeg3_MMX_U_COEF_RGB, %%mm2; /* Multiply u coeffs 0x0000uuuuuuuuuuuu */\n"
+"\n"
+"/* mm0: 0x000000yy00yy00yy mm1: 0x0000vvvvvvvv0000 mm2: 0x00000000uuuuuuuu */\n"
+"	paddsw %%mm1, %%mm0;        /* Add v to result */\n"
+"	paddsw %%mm2, %%mm0;        /* Add u to result 0x0000bbbbggggrrrr */\n"
+"	psraw $6, %%mm0;           /* Demote precision */\n"
+"	packuswb %%mm0, %%mm0;     /* Pack into RGBA 0x0000000000bbggrr */\n"
+"	movd %%mm0, (%3);          /* Store output */\n"
 "	\n"
 :
 : "r" (&y), "r" (&v), "r" (&u), "r" (output));
@@ -523,7 +526,7 @@ asm("\n".
 	*data++ = clipArray_ptr[b_l]; \
 	*data++ = clipArray_ptr[g_l]; \
 	*data++ = clipArray_ptr[r_l]; \
-	*data++ = 0;
+	*data++ = 0xFF;
 
 #define STORE_PIXEL_RGB565 \
     foo = ((clipArray_ptr[r_l] & 0xf8) << 8) | \
@@ -558,10 +561,10 @@ asm("\n".
 	*data++ = clipArray_ptr[r_l]; \
 	*data++ = clipArray_ptr[g_l]; \
 	*data++ = clipArray_ptr[b_l]; \
-	*data++ = 0;
+	*data++ = 0xFF;
 
 #define STORE_PIXEL_ARGB8888 \
-	*data++ = 0; \
+	*data++ = 0xFF; \
 	*data++ = clipArray_ptr[r_l]; \
 	*data++ = clipArray_ptr[g_l]; \
 	*data++ = clipArray_ptr[b_l]; 
@@ -570,7 +573,7 @@ asm("\n".
 	*data_s++ = clipArray_ptr[r_l]; \
 	*data_s++ = clipArray_ptr[g_l]; \
 	*data_s++ = clipArray_ptr[b_l]; \
-	*data_s++ = 0;
+	*data_s++ = 0xFFFF;
 
 
 
@@ -1036,14 +1039,15 @@ int mpeg3video_ditherframeFastRGBA(mpeg3video_t *video, unsigned char **src, uns
 	register unsigned char *y_in, *cb_in, *cr_in, *clipArray_ptr;
 	long y_l, r_l, b_l, g_l;
 	register unsigned long *data;
-	register int uv_subscript, step, w = -1,t1,t2;
-    register long *cr_to_gPtr,*cr_to_rPtr,*cb_to_bPtr,*cb_to_gPtr;;
+	register int uv_subscript, step, w = -1,t1,t2,alpha;
+    register long *cr_to_gPtr,*cr_to_rPtr,*cb_to_bPtr,*cb_to_gPtr;
 
 	clipArray_ptr = gClipArray_ptr;
 	cr_to_rPtr = &video->cr_to_r[0];
 	cr_to_gPtr = &video->cr_to_g[0];
 	cb_to_bPtr = &video->cb_to_b[0];
 	cb_to_gPtr = &video->cb_to_g[0];
+	alpha = 0xFF000000;
 	
 	for(h = 0; h < video->out_h; h++) 
     	{ 
@@ -1061,7 +1065,7 @@ int mpeg3video_ditherframeFastRGBA(mpeg3video_t *video, unsigned char **src, uns
              		g_l = (g_l + cr_to_gPtr[*cr_in] + cb_to_gPtr[*cb_in]) >> 16;
              		r_l = (r_l + cr_to_rPtr[*cr_in])  >> 16; 
              		b_l = (b_l + cb_to_bPtr[*cb_in])  >> 16;
-                 	*data++ = (clipArray_ptr[r_l] << 16) | (clipArray_ptr[g_l] << 8) | clipArray_ptr[b_l];
+                 	*data++ = alpha |(clipArray_ptr[r_l] << 16) | (clipArray_ptr[g_l] << 8) | clipArray_ptr[b_l];
                 	if(w & 1) { 
                     	cr_in++; 
                     	cb_in++; 
@@ -1077,7 +1081,7 @@ int mpeg3video_ditherframeFastRGBA(mpeg3video_t *video, unsigned char **src, uns
              		g_l = (g_l + cr_to_gPtr[t1] + cb_to_gPtr[t2]) >> 16;
             		r_l = (r_l + cr_to_rPtr[t1]) >> 16; 
              		b_l = (b_l + cb_to_bPtr[t2]) >> 16;
-                 	*data++ = (clipArray_ptr[r_l] << 16) | (clipArray_ptr[g_l] << 8) | clipArray_ptr[b_l];
+                 	*data++ = alpha | (clipArray_ptr[r_l] << 16) | (clipArray_ptr[g_l] << 8) | clipArray_ptr[b_l];
                     }
                 }
             }     
