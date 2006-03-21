@@ -42,9 +42,7 @@ sqExport *pluginExports[] = {
 	os_exports,
 	ADPCMCodecPlugin_exports,
 	AsynchFilePlugin_exports,
-#ifndef BROWSERPLUGIN
 	B3DAcceleratorPlugin_exports,
-#endif
 	Squeak3D_exports,
 	BMPReadWriterPlugin_exports,
 	B2DPlugin_exports,

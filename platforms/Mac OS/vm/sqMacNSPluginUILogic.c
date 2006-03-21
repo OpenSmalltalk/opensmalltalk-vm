@@ -280,13 +280,13 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
 				{
 					/* serious hack to show safari after hiding, 
 					issue with safari 1.1.1 not seeing activate when full screen terminates */
-					
+			/*		
 					ProcessSerialNumber psn = { 0, kCurrentProcess }; 
 					OSStatus err;
 					if (!IsProcessVisible(&psn)) {
 						err = ShowHideProcess (&psn,true);
 						SetFrontProcess(&psn);
-						}
+						} */
 				}
 
 					pthread_mutex_lock(&gEventDrawLock);
@@ -1157,7 +1157,6 @@ int plugInShutdown(void) {
 	return 0;
 }
 
-#ifdef BROWSERPLUGIN
 OSErr createNewThread() {
         OSErr err;
 				      
@@ -1170,8 +1169,6 @@ OSErr createNewThread() {
         err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
 	return 0;
 }
-
-#endif
 
 
 

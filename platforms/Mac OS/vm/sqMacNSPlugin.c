@@ -710,7 +710,7 @@ int	CFNetworkGoGetURL(NPP instance, const char* url, const char* window, void* n
     char fileName[MAX_STRING_LENGTH + 1];
     
     GetTempFSSpec(&tempFileSpec,&theFSRef);
-    error = URLSimpleDownload (url,&tempFileSpec,NULL,0,NULL,notifyData);
+    error = URLSimpleDownload (url,&tempFileSpec,NULL,kURLReplaceExistingFlag,NULL,notifyData);
 	PathToFileViaFSRef(fileName, MAX_STRING_LENGTH,&theFSRef,gCurrentVMEncoding);
 done:
     URLRequestCompleted((int) notifyData, fileName);
@@ -1053,9 +1053,14 @@ void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 	} else {
 		f->sessionID = thisSession;
 		/* compute and cache file size */
-		fseeko(f->file, 0, SEEK_END);
-		f->fileSize = ftello(f->file);
-		fseeko(f->file, 0, SEEK_SET);
+		fseek(f->file, 0, SEEK_END);
+		{
+		  squeakFileOffsetType size=ftello(f->file);
+		  void *in= (void *)&size;
+		  void *out= (void *)&f->fileSize;
+		  memcpy(out, in, sizeof(squeakFileOffsetType));
+		}
+		fseek(f->file, 0, SEEK_SET);
 	}
 	f->lastOp = 0;
 }
