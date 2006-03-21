@@ -145,7 +145,6 @@ extern struct VirtualMachine *interpreterProxy;
 extern RgnHandle   gSavePortClipRgn;
 extern int windowActive;
 extern int thisSession;  /* from sqFilePrims.c: */
-extern pthread_mutex_t  gEventDrawLock;
 extern int	needsUpdate;
 extern int			squeakHeapMBytes;  /* default heap size, override via the "memory" EMBED tag */
 
@@ -245,7 +244,6 @@ NPP_GetJavaClass(void)
 
 void NPP_Shutdown(void) {
 	exitRequested = true;
-    pthread_mutex_unlock(&gEventDrawLock);
 	ExitCleanup();
 }
 
@@ -317,7 +315,6 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
 NPError NPP_Destroy(NPP instance, NPSavedData** save) {
 	
 	exitRequested = true;
-    pthread_mutex_unlock(&gEventDrawLock);
 	ExitCleanup();
 	return NPERR_NO_ERROR;
 }

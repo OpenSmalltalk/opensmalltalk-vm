@@ -546,14 +546,14 @@ int glMakeCurrentRenderer(glRenderer *renderer) {
 	if(current == renderer) return 1;
 	if(renderer)
 		if(!renderer->used || !renderer->context) return 0;
-	ERROR_CHECK;
+	// ERROR_CHECK;
 	ok = aglSetCurrentContext(renderer ? renderer->context : NULL);
 	if((err = aglGetError()) != AGL_NO_ERROR) DPRINTF(3,(fp,"ERROR (glMakeCurrentRenderer): aglGetError - %s\n", aglErrorString(err)));
 	if(!ok) {
 		DPRINTF(1, (fp, "ERROR (glMakeCurrentRenderer): aglSetCurrentContext failed\n"));
 		return 0;
 	}
-	ERROR_CHECK;
+	// ERROR_CHECK;
 	current = renderer;
 	return 1;
 }

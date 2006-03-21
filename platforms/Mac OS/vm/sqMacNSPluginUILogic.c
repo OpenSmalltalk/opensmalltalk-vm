@@ -78,13 +78,11 @@ extern int keyBufGet;			/* index of next item of keyBuf to read */
 extern int keyBufPut;			/* index of next item of keyBuf to write */
 extern int keyBufOverflows;	/* number of characters dropped */
 
-
-int			gEventDrawLockCounter=0;
 WindowPtr gAFullscreenWindow = nil;
 Boolean     ignoreFirstEvent=false,gIWasRunning=false,gPendingFullScreen=false;
 CGrafPtr	gOldPort		= nil;
 Rect    	gSavePortPortRect;
-pthread_mutex_t gEventNSAccept,gEventDrawLock;
+pthread_mutex_t gEventNSAccept;
 RgnHandle   gSavePortClipRgn;
 int			needsUpdate		= false;
 int	squeakHeapMBytes;
@@ -173,7 +171,6 @@ NPError Mac_NPP_SetWindow(NPP instance, NPWindow* window) {
         gIWasRunning = true;
 	ioLoadFunctionFrom(NULL, "DropPlugin");
 
-    pthread_mutex_lock(&gEventDrawLock);
 	err = createNewThread();
 	if (err != noErr)
             return err;
@@ -188,7 +185,6 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
 	int				ok;
 
 	pthread_mutex_lock(&gEventNSAccept);
-    pthread_mutex_unlock(&gEventDrawLock);
 			 
 	do {
 	
@@ -289,7 +285,6 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
 						} */
 				}
 
-					pthread_mutex_lock(&gEventDrawLock);
 					pthread_mutex_unlock(&gEventNSAccept);
 					return false;
 					break;
@@ -297,54 +292,49 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
 		}
     	if (needsUpdate && (netscapeWindow != nil) && (memory)) {
      		needsUpdate = false;
+			
     		if (getFullScreenFlag()) {
-    		    //BeginUpdate((WindowPtr) eventPtr->message);
 				BeginUpdate(FrontWindow());
 				fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
 				EndUpdate(FrontWindow());
-    		    //EndUpdate((WindowPtr) eventPtr->message);
-				pthread_mutex_lock(&gEventDrawLock);
 				pthread_mutex_unlock(&gEventNSAccept);
 				return true;
 				}
 			else {
              fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
  			}
+			
 			if (!getFullScreenFlag()) {
 				ProcessSerialNumber psn = { 0, kCurrentProcess }; 
 				OSStatus err;
 				err = ShowHideProcess (&psn,true);
 				waitAFewMilliseconds();
-				pthread_mutex_lock(&gEventDrawLock);
 				pthread_mutex_unlock(&gEventNSAccept);
 				return false;
 			}
     	}
 		
-		if(postMessageHook) postMessageHook(eventPtr);
-    	
-    	/* JMM HUH if (ignoreFirstEvent  &&  getFullScreenFlag()) {
-    	    ignoreFirstEvent = false;
-            pthread_mutex_lock(&gEventDrawLock);
-			pthread_mutex_unlock(&gEventNSAccept);
-    	    return false;
-    	} */
+	if(postMessageHook) postMessageHook(eventPtr);
+
 	if (getFullScreenFlag() ) {
-            pthread_mutex_lock(&gEventDrawLock);
 			pthread_mutex_unlock(&gEventNSAccept);
      	    ok = WaitNextEvent(everyEvent, &theEvent,1,null);
 			pthread_mutex_lock(&gEventNSAccept);
-			pthread_mutex_unlock(&gEventDrawLock);
             eventPtr = &theEvent;
     	}
 	} while (getFullScreenFlag());
                     
         
-	waitAFewMilliseconds();
-	pthread_mutex_lock(&gEventDrawLock);
+	// waitAFewMilliseconds();
 	pthread_mutex_unlock(&gEventNSAccept);
 	return true;
 }
+void EndDraw() {}
+void StartDraw(void) {}
+void makeMainWindow() {}
+void sqShowWindow(int windowIndex){}
+
+#ifdef JMMFOO
 
 /*** Drawing ***/
 
@@ -507,6 +497,7 @@ void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRect
 	}
 }
 
+#endif 
 /*** Image File Reading ***/
 
 void ReadSqueakImage(void) {
@@ -593,10 +584,6 @@ int ioScreenSize(void) {
 	}
 	
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
-}
-
-int doPendingFlush() {
-	return 0;
 }
 
 int ioProcessEvents(void) {
@@ -801,11 +788,10 @@ void ExitCleanup(void) {
   /* Clean up and stop running plugin. */
 	int i;
 
-        pthread_mutex_lock(&gEventDrawLock);
 	if (thisInstance == nil) return;
 	thisInstance = nil;
 	exitRequested = true;
-        pthread_mutex_unlock(&gEventDrawLock);
+
 	/* do { This hangs things, not sure what to do about outstanding URL requests...
 		Boolean URLFetchInProgress;
 		URLFetchInProgress = false;
@@ -935,7 +921,7 @@ pthread_cond_t  sleepLockCondition;
 void waitAFewMilliseconds()
 {
     static Boolean doInitialization=true;
-    const int	   realTimeToWait = 16;
+    const int	   realTimeToWait = 100;
     struct timespec tspec;
     int err;
     
@@ -1147,7 +1133,6 @@ int plugInShutdown(void) {
               pthread_join(gSqueakPThread,NULL);
         pthread_mutex_destroy(&gEventQueueLock);
         pthread_mutex_destroy(&gEventUILock);
-        pthread_mutex_destroy(&gEventDrawLock);
 		pthread_mutex_destroy(&gEventNSAccept);
         pthread_mutex_destroy(&gSleepLock);
         pthread_cond_destroy(&gEventUILockCondition);
@@ -1163,7 +1148,6 @@ OSErr createNewThread() {
         aioInit();
         pthread_mutex_init(&gEventQueueLock, NULL);
         pthread_mutex_init(&gEventUILock, NULL);
-        pthread_mutex_init(&gEventDrawLock, NULL);
         pthread_mutex_init(&gEventNSAccept, NULL);
         pthread_cond_init(&gEventUILockCondition,NULL);
         err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);

@@ -274,6 +274,8 @@ static void sqShowWindowActual(int windowIndex){
 	}
 }
 
+#endif
+
 int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
@@ -481,8 +483,6 @@ static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int 
 	*pitch = GetPixRowBytes(GetGWorldPixMap(offscreenGWorld));
 	return GetPixBaseAddr(GetGWorldPixMap(offscreenGWorld));
 }
-
-#endif
 
 void SetUpPixmap(void) {
 	int i, r, g, b;

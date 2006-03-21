@@ -1082,9 +1082,12 @@ static int ModifierStateCarbon(EventRef event) {
 }
 
 
-#ifndef BROWSERPLUGIN
-
+#ifdef BROWSERPLUGIN
+void doPendingFlush(void) {
+#else
 static void doPendingFlush(void) {
+#endif
+
 	extern  Boolean gSqueakUIFlushUseHighPercisionClock;
 	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
 	static int lastTick = 0;
@@ -1110,6 +1113,7 @@ static void doPendingFlush(void) {
 	} 
 }
 
+#ifndef BROWSERPLUGIN
 int ioProcessEvents(void) {
 
 	doPendingFlush();
@@ -1124,11 +1128,7 @@ int ioProcessEvents(void) {
 
 #ifdef BROWSERPLUGIN
 int getUIToLock(long *data) {
-	extern pthread_mutex_t  gEventDrawLock;
-
-    pthread_mutex_lock(&gEventDrawLock);
-    customHandleForUILocks(NULL,NULL,(void*) data);
-    pthread_mutex_unlock(&gEventDrawLock);
+	customHandleForUILocks(NULL,NULL,(void*) data);
 	return 0;
 }
 #else
