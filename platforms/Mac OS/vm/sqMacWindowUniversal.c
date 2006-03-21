@@ -28,8 +28,11 @@
 
 *****************************************************************************/
 
-    #include <Carbon/Carbon.h>
+#include <Carbon/Carbon.h>
 #include <movies.h>
+#ifdef BROWSERPLUGIN
+#include <npapi.h>
+#endif
 
 #include "sq.h"
 #include "sqMacUIConstants.h"
@@ -361,7 +364,17 @@ int ioShowDisplayOnWindow(
 				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (depth==32 ? kCGBitmapByteOrder32Host : kCGBitmapByteOrder16Host), provider, NULL, 0, kCGRenderingIntentDefault);
 #endif
 
+
+#ifdef BROWSERPLUGIN
+	NP_Port * getNP_Port(void);
+	NP_Port	* port;
+	extern NPWindow* 	netscapeWindow;
+	port = getNP_Port();
+	clip = CGRectMake(affectedL+netscapeWindow->x,height-affectedB+netscapeWindow->y, affectedR-affectedL, affectedB-affectedT);
+#else
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
+#endif
+
 
 	if (targetWindowBlock->isInvisible) {
 		sqShowWindow(windowIndex);

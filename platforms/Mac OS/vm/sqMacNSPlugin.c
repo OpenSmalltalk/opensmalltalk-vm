@@ -142,7 +142,6 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent);
 
 extern unsigned char *memory;
 extern struct VirtualMachine *interpreterProxy;
-extern RgnHandle   gSavePortClipRgn;
 extern int windowActive;
 extern int thisSession;  /* from sqFilePrims.c: */
 extern int	needsUpdate;
@@ -151,7 +150,6 @@ extern int			squeakHeapMBytes;  /* default heap size, override via the "memory" 
 /*** Local Variables ***/
 
 int			exitRequested	= false;
-NPWindow* 	netscapeWindow	= nil;
 int			pluginArgCount	= 0;
 char		*pluginArgName[MAX_ARG_STRING_LENGTH];
 char		*pluginArgValue[MAX_ARG_STRING_LENGTH];
@@ -193,7 +191,6 @@ char * URLRequestFileName(int requestHandle);
 int  URLRequestStatus(int requestHandle);
 int AbortIfFileURL(char *url);
 int URLPostCreate(char *url, char *buffer, char * window,int semaIndex);
-NP_Port	  *getNP_Port(void);
 void GetTempFSSpec(FSSpec *spec,FSRef *theFSRef);
 
 
@@ -212,7 +209,6 @@ void GetTempFSSpec(FSSpec *spec,FSRef *theFSRef);
 NPError NPP_Initialize(void) {
 	exitRequested = false;
 	needsUpdate = false;
-	netscapeWindow = nil;
 	pluginArgCount = 0;
 	thisInstance = nil;
 	InitURLRequestTable();
@@ -292,9 +288,7 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
 	thisInstance = instance;
 	windowActive = 1;
 	ReadSqueakImage();
-	if (!memory) return NPERR_GENERIC_ERROR;
-	gSavePortClipRgn = NewRgn();
-	
+	if (!memory) return NPERR_GENERIC_ERROR;	
 	
 	return NPERR_NO_ERROR;
 }
@@ -486,11 +480,6 @@ void NPP_Print(NPP instance, NPPrint* printInfo) {
 
 int16 NPP_HandleEvent(NPP instance, void *rawEvent) {
 	return Mac_NPP_HandleEvent(instance,rawEvent);
-}
-
-
-NP_Port * getNP_Port(void) {
-    return (NP_Port *) netscapeWindow->window;
 }
 
 

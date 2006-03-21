@@ -55,7 +55,6 @@ extern int setInterruptPending(int value);
 extern int getInterruptKeycode();
 extern sqInputEvent *nextEventPut(void);
 
-extern NPWindow* netscapeWindow;
 extern Boolean  gAllowAccessToFilePlease;
 extern TMTask	gTMTask;
 extern pthread_mutex_t gEventQueueLock;
@@ -78,14 +77,13 @@ extern int keyBufGet;			/* index of next item of keyBuf to read */
 extern int keyBufPut;			/* index of next item of keyBuf to write */
 extern int keyBufOverflows;	/* number of characters dropped */
 
-WindowPtr gAFullscreenWindow = nil;
+WindowPtr	gAFullscreenWindow = nil;
 Boolean     ignoreFirstEvent=false,gIWasRunning=false,gPendingFullScreen=false;
-CGrafPtr	gOldPort		= nil;
-Rect    	gSavePortPortRect;
 pthread_mutex_t gEventNSAccept;
-RgnHandle   gSavePortClipRgn;
 int			needsUpdate		= false;
-int	squeakHeapMBytes;
+int			squeakHeapMBytes;
+NPWindow* 	netscapeWindow	= nil;
+
 
 /*** From VM ***/
 extern int inputSemaphoreIndex;
@@ -135,6 +133,11 @@ int plugInNotifyUser(char *msg);
 int CaseInsensitiveMatch(char *s1, char *s2);
 int  InitFilePaths(void);
 void StartDraw(void);
+NP_Port	  *getNP_Port(void);
+
+NP_Port * getNP_Port(void) {
+    return (NP_Port *) netscapeWindow->window;
+}
 
 
 NPError Mac_NPP_SetWindow(NPP instance, NPWindow* window) {
@@ -168,7 +171,10 @@ NPError Mac_NPP_SetWindow(NPP instance, NPWindow* window) {
 
 	if (gIWasRunning)
             return NPERR_NO_ERROR;
-        gIWasRunning = true;
+	
+	//Start the VM running
+	
+	gIWasRunning = true;
 	ioLoadFunctionFrom(NULL, "DropPlugin");
 
 	err = createNewThread();
@@ -334,170 +340,6 @@ void StartDraw(void) {}
 void makeMainWindow() {}
 void sqShowWindow(int windowIndex){}
 
-#ifdef JMMFOO
-
-/*** Drawing ***/
-
-void EndDraw(void) {
-        if (exitRequested) 
-            return;
-	SetOrigin(gSavePortPortRect.left, gSavePortPortRect.top);
-	SetClip(gSavePortClipRgn);
-	if (gPortChanged)
-			QDSwapPort(gOldPort, NULL);
-	UnlockPortBits((GrafPtr)GetWindowPort(getSTWindow()));
-    pthread_mutex_unlock(&gEventDrawLock);
-}
-
-void StartDraw(void) {
-	NP_Port* port;
-	Rect clipRect;
-	WindowPtr realWindow;
-	windowDescriptorBlock *mangleWindowInfo;
-	
-    pthread_mutex_lock(&gEventDrawLock);
-        if (exitRequested) {
-            pthread_mutex_unlock(&gEventDrawLock);
-            return;
-        }
-	port = (NP_Port *) netscapeWindow->window;
-
-	// was realWindow = (WindowPtr) port->port;
-	realWindow = GetWindowFromPort(port->port);
-
-	mangleWindowInfo = windowBlockFromIndex(1);
-	mangleWindowInfo->handle = realWindow;
-	LockPortBits((GrafPtr)GetWindowPort(getSTWindow()));
-	gPortChanged = QDSwapPort((GrafPtr) port->port, &gOldPort);
-
-	/* save old drawing environment */
-	GetPortBounds(port->port,&gSavePortPortRect);
-	GetClip(gSavePortClipRgn);
-
-	/* setup our drawing environment */
-	SetOrigin(port->portx, port->porty);
-	clipRect.top    = netscapeWindow->clipRect.top    + port->porty;
-	clipRect.left   = netscapeWindow->clipRect.left   + port->portx;
-	clipRect.bottom = netscapeWindow->clipRect.bottom + port->porty;
-	clipRect.right  = netscapeWindow->clipRect.right  + port->portx;
-	if (clipRect.top == 0 && clipRect.left ==0 && clipRect.bottom==0 && clipRect.right==0) {
-		// Not sure what to do IE is lying... this gets the full screen, not a table cell GetPortBounds(GetWindowPort(getSTWindow()),&clipRect);
-	}
-	ClipRect(&clipRect);
-	BackColor(whiteColor);  /* needed to avoid funny colors */
-}
-
-int ioShowDisplay(
-	int dispBitsIndex, int width, int height, int depth,
-	int affectedL, int affectedR, int affectedT, int affectedB) {
-
-	return ioShowDisplayOnWindow( (unsigned *) dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
-}
-
-void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle, int affectedL, int affectedT, int affectedR, int affectedB);
-
-int ioShowDisplayOnWindow(
-	unsigned * dispBitsIndex, int width, int height, int depth,
-	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
-
-
-	Rect		dstRect = { 0, 0, 0, 0 };
-	Rect		srcRect = { 0, 0, 0, 0 };
-	static RgnHandle	maskRect = nil;
-    
-	if (windowHandleFromIndex(windowIndex) == nil || exitRequested) {
-		return 0;
-	}
-	
-	StartDraw();
-        if (exitRequested) 
-            return 0;
-    
-	dstRect.right	= width;
-	dstRect.bottom	= height;
-	srcRect.right	= width;
-	srcRect.bottom	= height;
-
-	(*stPixMap)->baseAddr = (void *) dispBitsIndex;
-	/* Note: top three bits of rowBytes indicate this is a PixMap, not a BitMap */
-	(*stPixMap)->rowBytes = (((((width * depth) + 31) / 32) * 4) & 0x1FFF) | 0x8000;
-	(*stPixMap)->bounds = srcRect;
-	(*stPixMap)->pixelSize = depth;
-
-    if (depth<=8) { /*Duane Maxwell <dmaxwell@exobox.com> fix cmpSize Sept 18,2000 */
-    	(*stPixMap)->cmpSize = depth;
-    	(*stPixMap)->cmpCount = 1;
-    } else if (depth==16) {
-    	(*stPixMap)->cmpSize = 5;
-    	(*stPixMap)->cmpCount = 3;
-    } else if (depth==32) {
-    	(*stPixMap)->cmpSize = 8;
-    	(*stPixMap)->cmpCount = 3;
-    }
-
-	/* create a mask region so that only the affected rectangle is copied */
-	if (maskRect == nil) 
-		maskRect = NewRgn();
-	SetRectRgn(maskRect, affectedL, affectedT, affectedR, affectedB);
-
-	CGrafPtr rememberPort = GetWindowPort(windowHandleFromIndex(1));
-	
-	CopyBits((BitMap *) *stPixMap, 
-		GetPortBitMapForCopyBits(rememberPort), 
-		&srcRect, &dstRect, srcCopy, maskRect);
-	ReduceQDFlushLoad(rememberPort,windowIndex, false, affectedL,  affectedT,  affectedR,  affectedB);		
-	EndDraw();
-	return 0;
-}
-
-void ReduceQDFlushLoad(CGrafPtr	windowPort, int windowIndexToUse, Boolean noRectangle,int affectedL, int affectedT, int affectedR, int affectedB) {
-	static int pastTime=0,rememberWindowIndex=1;
-	int check;
-	static RgnHandle dirtyRgn = NULL;
-	static Rect dirtyRect = {0,0,0,0};
-	Rect rect;
-
-	if (dirtyRgn == NULL) 
-		dirtyRgn = NewRgn();
-		
-	rect.top = affectedT;
-	rect.left = affectedL;
-	rect.bottom = affectedB;
-	rect.right = affectedR; 
-
-	if (EmptyRect(&dirtyRect))
-		dirtyRect = rect;
-		
-	/* If the window index to use is different we must flush the old window 
-	   but only if the old window is still valid, it have have been closed */
-	   
-	if (rememberWindowIndex != windowIndexToUse) {
-		wHandleType validWindowHandle = windowHandleFromIndex(rememberWindowIndex);
-		if (validWindowHandle) {
-			RectRgn(dirtyRgn, &dirtyRect);
-			QDFlushPortBuffer(GetWindowPort(validWindowHandle), dirtyRgn);
-		}
-		dirtyRect = rect;
-		rememberWindowIndex = windowIndexToUse;
-	}
-
-	if (!noRectangle)
-		UnionRect(&dirtyRect,&rect,&dirtyRect);
-			
-	/* Flush every 8ms or if the clock rolls over */ 
-	//7
-	if (((check = (ioMSecs() - pastTime)) > 20) || check < 0) {
-		pastTime = pastTime + check;
-
-		if (!EmptyRect(&dirtyRect)) {
-			RectRgn(dirtyRgn, &dirtyRect);
-			QDFlushPortBuffer(windowPort, dirtyRgn);
-			SetRect(&dirtyRect,0,0,0,0);
-		}
-	}
-}
-
-#endif 
 /*** Image File Reading ***/
 
 void ReadSqueakImage(void) {
