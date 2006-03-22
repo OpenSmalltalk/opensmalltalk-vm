@@ -1,3 +1,4 @@
+#if __BIG_ENDIAN__
 /****************************************************************************
 *   PROJECT: mac os-x FFI assembler, from the os-9 version
 *   FILE:    sqMacFFI.s
@@ -22,22 +23,22 @@
 _ffiCallAddressOf:	
 	mflr r0		/* Save link register */
 	stw r0, 8(sp)
-        mfcr r0		/* save CCR  */
-        stw r0,4(sp)
+	mfcr r0		/* save CCR  */
+	stw r0, 4(sp)
 
 	/* get stack index and preserve it for copying stuff later */
-        EXTERN_TO_REG(r4, _ffiStackIndex) // lwz r4, ffiStackIndex(r2)
+	EXTERN_TO_REG(r4, _ffiStackIndex) // lwz r4, ffiStackIndex(r2)
 
 	/* compute frame size */
 	rlwinm r5, r4, 2, 0, 29  /* ffiStackIndex words to bytes (e.g., "slwi r5, r4, 2") */
 	addi r5, r5, 32+15 	/* linkage area */ //* JMM 02/25/06 was 24, Ian has 32 */
-        rlwinm r5,r5,0,0,27 	/* JMM round up to quad word*/
+	rlwinm r5,r5,0,0,27 	/* JMM round up to quad word*/
 	neg  r5, r5    		/* stack goes down */
 	stwux sp, sp, r5 	/* adjust stack frame */
 
 	/* load the stack frame area */
 	/* note: r4 == ffiStackIndex */
-	addi r5, sp, 24         /* dst = r1 + linkage area */
+	addi r5, sp, 24         /* dst = r1 + linkage area, was 24 */
 	EXTERN_TO_REG(r6, _ffiStackLocation) //lwz r6, ffiStack(r2)  /* src = ffiStack */
 	li r7, 0                /* i = 0 */
 	b nextItem
@@ -95,7 +96,7 @@ _4_gpregs:
 _0_gpregs:
 
 	/* go calling out */
-        //Note: OS-X mach-o does not use TVectors rather the addr is the entry point
+	//Note: OS-X mach-o does not use TVectors rather the addr is the entry point
 	lwz r12, 20(sp) /* fetch addr */
 	mtctr r12       /* move entry point into count register */
 	bctrl           /* jump through count register and link */
@@ -118,3 +119,4 @@ _0_gpregs:
 	lwz r0, 8(sp)	/* restore ltr */
  	mtlr r0
 	blr
+#endif
