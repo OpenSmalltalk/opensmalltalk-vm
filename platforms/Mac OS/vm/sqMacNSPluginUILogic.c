@@ -55,7 +55,6 @@ extern int setInterruptPending(int value);
 extern int getInterruptKeycode();
 extern sqInputEvent *nextEventPut(void);
 
-extern Boolean  gAllowAccessToFilePlease;
 extern TMTask	gTMTask;
 extern pthread_mutex_t gEventQueueLock;
 extern char	squeakPluginImageName[];
@@ -102,7 +101,6 @@ void fetchPrefrences();
 /*** Functions Imported from sqMacWindow ***/
 
 extern PixMapHandle	stPixMap;
-static Boolean gPortChanged;
 
 static int MacRomanToUnicode[256] = 
 {0,1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20,21,22,23,24,
@@ -169,6 +167,13 @@ NPError Mac_NPP_SetWindow(NPP instance, NPWindow* window) {
 	
 	needsUpdate	= true;
 
+	fprintf(stderr,"\n realWindowGrafPtr %i port %i x %i y %i windowX %i windowY %i windowW %i windowH %i",
+		realWindow,
+		port,
+		port->portx, port->porty,
+		netscapeWindow->x, netscapeWindow->y,
+		netscapeWindow->width,netscapeWindow->height);
+		
 	if (gIWasRunning)
             return NPERR_NO_ERROR;
 	

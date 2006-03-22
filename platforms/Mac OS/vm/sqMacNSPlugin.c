@@ -143,9 +143,6 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent);
 extern unsigned char *memory;
 extern struct VirtualMachine *interpreterProxy;
 extern int windowActive;
-extern int thisSession;  /* from sqFilePrims.c: */
-extern int	needsUpdate;
-extern int			squeakHeapMBytes;  /* default heap size, override via the "memory" EMBED tag */
 
 /*** Local Variables ***/
 
@@ -170,9 +167,6 @@ typedef struct {
 
 URLRequestRecord urlRequests[URL_REQUEST_COUNT];
 int nextRequestID = 1;
-
-
-
 
 int  CaseInsensitiveMatch(char *s1, char *s2);
 void ExitCleanup(void);
@@ -208,7 +202,6 @@ void GetTempFSSpec(FSSpec *spec,FSRef *theFSRef);
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 NPError NPP_Initialize(void) {
 	exitRequested = false;
-	needsUpdate = false;
 	pluginArgCount = 0;
 	thisInstance = nil;
 	InitURLRequestTable();
@@ -1037,6 +1030,8 @@ void OpenFileReadOnly(SQFile *f, char *MacfileName) {
 		interpreterProxy->success(false);
 		return;
 	} else {
+		extern int thisSession;  /* from sqFilePrims.c: */
+
 		f->sessionID = thisSession;
 		/* compute and cache file size */
 		fseek(f->file, 0, SEEK_END);
