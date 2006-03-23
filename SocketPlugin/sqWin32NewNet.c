@@ -314,8 +314,6 @@ static int inplaceAcceptHandler(privateSocketStruct *pss)
     ioctlsocket(newSocket,FIONBIO,&zero);
     closesocket(pss->s);
     pss->s = 0;
-    /* Disable TCP delays */
-    setsockopt(newSocket, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
     /* Make the socket non-blocking */
     ioctlsocket(newSocket,FIONBIO,&one);
     /* And install the new socket */
@@ -1328,8 +1326,6 @@ void	sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   /* Allow the re-use of the current port */
   setsockopt(newSocket, SOL_SOCKET, SO_REUSEADDR, (char*) &one, sizeof(one));
   /* Disable TCP delays */
-  setsockopt(newSocket, IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
-  /* Make the socket non-blocking */
   ioctlsocket(newSocket,FIONBIO,&one);
 
   /* initialize private socket structure */
@@ -1438,8 +1434,6 @@ void sqSocketAcceptFromRecvBytesSendBytesSemaIDReadSemaIDWriteSemaID(SocketPtr s
   s->socketType = pss->sockType;
   s->privateSocketPtr = pss;
 
-  /* Disable TCP delays */
-  setsockopt(SOCKET(s), IPPROTO_TCP, TCP_NODELAY, (char*) &one, sizeof(one));
   /* Make the socket non-blocking */
   ioctlsocket(SOCKET(s),FIONBIO,&one);
 
@@ -1473,7 +1467,7 @@ sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, 
   sqSocketConnectToPort(s, *address, *port);
   if(interpreterProxy->failed()) return 0;
   /* receive data */
-  nRead = sqSocketSendDataBufCount(s, buf, bufSize);
+  nRead = sqSocketReceiveDataBufCount(s, buf, bufSize);
   if(nRead >= 0) {
     *address= ntohl(ADDRESS(s)->sin_addr.s_addr);
     *port= ntohs(ADDRESS(s)->sin_port);
