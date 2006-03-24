@@ -163,7 +163,8 @@ NPError Mac_NPP_SetWindow(NPP instance, NPWindow* window) {
 	if (windowBlock == NULL) {
 		windowBlock = AddWindowBlock();
 	}
-	windowBlock->handle = (wHandleType) realWindow;
+	//windowBlock->handle = (wHandleType) realWindow;
+	windowBlock->handle = (wHandleType) netscapeWindow->window;
 	
 	needsUpdate	= true;
 

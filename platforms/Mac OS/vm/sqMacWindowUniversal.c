@@ -369,8 +369,16 @@ int ioShowDisplayOnWindow(
 	NP_Port * getNP_Port(void);
 	NP_Port	* port;
 	extern NPWindow* 	netscapeWindow;
+	CGRect	clip2;
+	int		w,h;
+	
 	port = getNP_Port();
 	clip = CGRectMake(affectedL+netscapeWindow->x,height-affectedB+netscapeWindow->y, affectedR-affectedL, affectedB-affectedT);
+	
+	w =  netscapeWindow->clipRect.right -  netscapeWindow->clipRect.left;
+	h =  netscapeWindow->clipRect.bottom - netscapeWindow->clipRect.top;
+	clip2 = CGRectMake(netscapeWindow->clipRect.left,netscapeWindow->clipRect.top, w, h);
+	CGContextClipToRect(targetWindowBlock->context, clip2);
 #else
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 #endif
