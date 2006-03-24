@@ -62,9 +62,9 @@ _ffiCallAddressOf:	/* 8=addr, 12=stack, 16=stackSize */
 3:
 	cld
 	call	*8(%ebp)
-	movl	%eax, _ffiIntReturnValue
-	movl	%edx, _ffiLongReturnValue
-	fstl	_ffiFloatReturnValue
+	movl	%eax, _intReturnValue 
+	movl	%edx, _intReturnValue2 
+	fstpl	_floatReturnValue 
 	movl	%ebp, %esp
 	popl	%ebp
 	ret

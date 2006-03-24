@@ -1,4 +1,7 @@
 #if __BIG_ENDIAN__
+
+// LIKELY BROKEN? FOR CROQUET? NOT SURE COULD BE COMPANION C CODE
+
 /* ppc-sysv-asm.S -- PowerPC FFI trampoline for Mach-O			-*- asm -*-
  *
  * Author: Ian.Piumarta@INRIA.Fr

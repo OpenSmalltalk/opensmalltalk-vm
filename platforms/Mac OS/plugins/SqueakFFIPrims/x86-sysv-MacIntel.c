@@ -1,4 +1,9 @@
 #if __LITTLE_ENDIAN__
+
+
+// THIS IS BROKEN FOR CROQUET
+
+
 /* ppc-sysv.c -- FFI support for PowerPC SVr4 ABI
  * 
  * Author: Ian.Piumarta@INRIA.Fr
@@ -54,7 +59,7 @@
 # define LONGLONG long long
 #endif
 
-#if 0
+#if 1
 # define dprintf(ARGS)printf ARGS
 #else
 # define dprintf(ARGS)
@@ -78,10 +83,10 @@ static char	*ffiTempStrings[FFI_MAX_STACK];
 static int	 ffiTempStringCount= 0;
 
 
-int	 ffiIntReturnValue;
-int	 ffiLongReturnValue;
-double	 ffiFloatReturnValue;
-int	*ffiStructReturnValue;
+volatile int	 ffiIntReturnValue;
+volatile int	 ffiLongReturnValue;
+volatile double	 ffiFloatReturnValue;
+volatile int	*ffiStructReturnValue;
 
 
 extern int ffiCallAddressOf(void *addr, void *stack, int size);
@@ -127,6 +132,7 @@ int ffiFree(int ptr)
 int ffiCanReturn(int *structSpec, int specSize)
 {
   int header= *structSpec;
+  dprintf(("ffiCanReturn structSpec %d specSize %d\n", structSpec, specSize));
   if (header & FFIFlagPointer)
     return 1;
   if (header & FFIFlagStructure)
@@ -135,7 +141,8 @@ int ffiCanReturn(int *structSpec, int specSize)
       int structSize= header & FFIStructSizeMask;
       ffiStructReturnValue= malloc(structSize);
       if (!ffiStructReturnValue)
-	return 0;
+		return 0;
+	  dprintf(("ffiCanReturn allocated Spec %d \n", ffiStructReturnValue));
       pushInt((int)ffiStructReturnValue);
     }
   return 1;
@@ -274,11 +281,22 @@ int	ffiLongLongResultHigh(void)	{ return ffiLongReturnValue; }
 int ffiStoreStructure(int address, int structSize)
 {
   dprintf(("ffiStoreStructure %d %d\n", address, structSize));
-  memcpy((void *)address, (ffiStructReturnValue
-			   ? (void *)ffiStructReturnValue
-			   : (void *)&ffiIntReturnValue),
-	 structSize);
-  return 1;
+// JMM  memcpy((void *)address, (ffiStructReturnValue
+//			   ? (void *)ffiStructReturnValue
+//			   : (void *)&ffiIntReturnValue),
+//	 structSize);
+	if(structSize <= 4) {
+		*(int*)address = ffiIntReturnValue;
+		return 1;
+	}
+	if(structSize <= 8) {
+		*(int*)address = ffiIntReturnValue;
+		*(int*)(address+4) = ffiLongReturnValue;
+		return 1;
+	}
+	/* assume pointer to hidden structure */
+	memcpy((void*)address, (void*) ffiStructReturnValue, structSize);
+	return 1;
 }
 
 
@@ -304,18 +322,21 @@ int ffiCleanup(void)
 
 int ffiCallAddressOfWithPointerReturnx(int fn, int callType)
 {
+  dprintf(("ffiCallAddressOfWithPointerReturnx fn %d callType %d \n", fn, callType));
   return ffiCallAddressOf((void *)fn, (void *)ffiStack,
 			  ffiStackIndex * sizeof(int));
 }
 
 int ffiCallAddressOfWithStructReturnx(int fn, int callType, int* structSpec, int specSize)
 {
+  dprintf(("ffiCallAddressOfWithStructReturnx fn %d callType %d structSpec %d specSize %d\n", fn, callType, structSpec, specSize));
   return ffiCallAddressOf((void *)fn, (void *)ffiStack,
 			  ffiStackIndex * sizeof(int));
 }
 
 int ffiCallAddressOfWithReturnTypex(int fn, int callType, int typeSpec)
 {
+  dprintf(("ffiCallAddressOfWithReturnTypex fn %d callType %d \n", fn, callType, typeSpec));
   return ffiCallAddressOf((void *)fn, (void *)ffiStack,
 			  ffiStackIndex * sizeof(int));
 }

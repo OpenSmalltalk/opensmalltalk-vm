@@ -1,4 +1,12 @@
 #if __BIG_ENDIAN__
+
+// THIS IS BROKEN FOR CROQUET
+
+
+
+
+
+
 /* ppc-darwin.c -- FFI support for PowerPC on Mach-O (Darwin)
  * 
  * Author: Ian.Piumarta@INRIA.Fr
