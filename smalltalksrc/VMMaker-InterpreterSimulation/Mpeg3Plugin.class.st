@@ -149,8 +149,7 @@ Mpeg3Plugin >> primitiveMPEG3CheckSig: path [
 	self primitive: 'primitiveMPEG3CheckSig'
 		parameters: #(String).
 	sz _ interpreterProxy byteSizeOf: path cPtrAsOop.
-	self cCode: 'strncpy(storage,path,sz)'.
-	storage at: sz put: 0.
+	self cCode: 'sqFilenameFromStringOpen(storage, path, sz)'.
 	self cCode: 'result = mpeg3_check_sig(storage)'.
 	^result asOop: Boolean
 
@@ -220,7 +219,7 @@ Mpeg3Plugin >> primitiveMPEG3EndOfVideo: fileHandle stream: aNumber [
 	| file result |
 
 	"int mpeg3_end_of_video(mpeg3_t *file, int stream)"
-	self var: #file type: ''.
+	self var: #file type: 'mpeg3_t *'.
 	self primitive: 'primitiveMPEG3EndOfVideo'
 		parameters: #(Oop SmallInteger).
 
@@ -365,18 +364,33 @@ Mpeg3Plugin >> primitiveMPEG3Open: path [
 	| mpeg3Oop index sz storage |
 
 	"mpeg3_t* mpeg3_open(char *path)"
-	self var: #index type: 'mpeg3_t ** '.
+	self var: #index declareC: 'mpeg3_t ** index'.
 	self var: #storage declareC: 'char storage[1024]'.
 	self primitive: 'primitiveMPEG3Open'
 		parameters: #(String).
-	sz _ interpreterProxy byteSizeOf: path cPtrAsOop.
-	self cCode: 'strncpy(storage,path,sz)'.
-	storage at: sz put: 0.
-	mpeg3Oop _ interpreterProxy instantiateClass: interpreterProxy classByteArray
-					indexableSize: 4.	
-	index _ self cCoerce: (interpreterProxy firstIndexableField: mpeg3Oop)
+	sz := interpreterProxy byteSizeOf: path cPtrAsOop.
+	self cCode: 'sqFilenameFromStringOpen(storage, path, sz)'.
+	mpeg3Oop := interpreterProxy instantiateClass: interpreterProxy classByteArray
+					indexableSize: 4.
+	index := self cCoerce: (interpreterProxy firstIndexableField: mpeg3Oop)
 						to: 'mpeg3_t **'.
-	self cCode: '*index = mpeg3_open(storage); makeFileEntry(*index)'.
+	self cCode: '*index = mpeg3_open(storage,0); makeFileEntry(*index)'.
+	^mpeg3Oop.
+
+]
+
+{ #category : #primitives }
+Mpeg3Plugin >> primitiveMPEG3OpenABuffer: path size: size [
+	| mpeg3Oop index |
+
+	self var: #index declareC: 'mpeg3_t ** index'.
+	self primitive: 'primitiveMPEG3OpenABuffer'
+		parameters: #(String SmallInteger).
+	mpeg3Oop := interpreterProxy instantiateClass: interpreterProxy classByteArray
+					indexableSize: 4.	
+	index := self cCoerce: (interpreterProxy firstIndexableField: mpeg3Oop)
+						to: 'mpeg3_t **'.
+	self cCode: '*index = mpeg3_open(path,size); makeFileEntry(*index)'.
 	^mpeg3Oop.
 
 ]
@@ -455,6 +469,44 @@ Mpeg3Plugin >> primitiveMPEG3ReadAudio: fileHandle shortArray: anArray channel: 
 	interpreterProxy failed ifTrue: [^nil].
 
 	self cCode: 'result = mpeg3_read_audio(file,(float *) NULL,arrayBase,aChannelNumber,aSampleNumber,aNumber)'.
+	^result asSmallIntegerObj
+
+]
+
+{ #category : #primitives }
+Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer bufferOffset: aBufferOffset x: xNumber y: yNumber w: width h: height ow: outWidth oh: outHeight colorModel: model stream: aNumber bytesPerRow: aByteNumber [ 
+	| file result outputRowsPtr bufferBaseAddr |
+
+	"int mpeg3_read_frame(mpeg3_t *file, 
+		unsigned char **output_rows, 
+		int in_x, 
+		int in_y, 
+		int in_w, 
+		int in_h, 
+		int out_w, 
+		int out_h, 
+		int color_model,
+		int stream)"
+
+	self primitive: 'primitiveMPEG3ReadFrameBufferOffset'
+		parameters: #(Oop WordArray  SmallInteger SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger  SmallInteger SmallInteger).
+	self var: #file declareC: 'mpeg3_t * file'.
+	self var: #bufferBaseAddr declareC: 'unsigned char *bufferBaseAddr'.
+	self var: #outputRowsPtr declareC: 'unsigned char  ** outputRowsPtr'.
+
+	file := self mpeg3tValueOf: fileHandle.
+	file = nil ifTrue: [^0].
+	aNumber < 0 ifTrue: [ interpreterProxy success: false.  ^nil ].
+	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
+		interpreterProxy success: false.  ^0 ].
+
+	bufferBaseAddr := self cCoerce: aBuffer to: 'unsigned char *'.
+	self cCode: 'outputRowsPtr = (unsigned char **) memoryAllocate(1,sizeof(unsigned char*) * outHeight)'.
+
+	0 to: outHeight-1 do: [:i | outputRowsPtr at: i put: (bufferBaseAddr + aBufferOffset + (aByteNumber*i))].
+		
+	self cCode: 'result = mpeg3_read_frame(file,outputRowsPtr,xNumber,yNumber,width,height,outWidth,outHeight,model,aNumber)'.
+	self cCode: 'memoryFree(outputRowsPtr)'.
 	^result asSmallIntegerObj
 
 ]
