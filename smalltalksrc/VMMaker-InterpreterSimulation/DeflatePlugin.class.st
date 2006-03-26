@@ -27,17 +27,17 @@ Class {
 		'zipBaseDistance'
 	],
 	#classVars : [
-		'DeflateHashShift',
-		'DeflateHashTableSize',
-		'DeflateMaxDistanceCodes',
-		'DeflateMaxMatch',
-		'DeflateWindowSize',
-		'DeflateWindowMask',
-		'DeflateMaxLiteralCodes',
-		'DeflateMinMatch',
 		'DeflateHashBits',
 		'DeflateHashMask',
-		'DeflateMaxDistance'
+		'DeflateHashShift',
+		'DeflateHashTableSize',
+		'DeflateMaxDistance',
+		'DeflateMaxDistanceCodes',
+		'DeflateMaxLiteralCodes',
+		'DeflateMaxMatch',
+		'DeflateMinMatch',
+		'DeflateWindowMask',
+		'DeflateWindowSize'
 	],
 	#category : #'VMMaker-Plugins'
 }
