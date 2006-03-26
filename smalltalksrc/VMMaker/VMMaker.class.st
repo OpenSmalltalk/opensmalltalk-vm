@@ -912,10 +912,12 @@ VMMaker >> primitiveCopyFileNamed: srcName to: dstName [
 	[[src _ FileStream readOnlyFileNamed: srcName]
 		on: FileDoesNotExistException
 		do: [^ self couldNotOpenFile: srcName].
+	src binary.
 	[dst _ FileStream forceNewFileNamed: dstName]
 		on: FileDoesNotExistException
 		do: [^ self couldNotOpenFile: dstName].
-	buffer _ String new: 50000.
+	dst binary.
+	buffer _ ByteArray new: 50000.
 	[src atEnd]
 		whileFalse: [dst
 				nextPutAll: (src nextInto: buffer)]]
