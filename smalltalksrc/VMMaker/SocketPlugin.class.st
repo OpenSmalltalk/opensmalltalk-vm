@@ -206,6 +206,18 @@ SocketPlugin >> primitiveResolverStatus [
 ]
 
 { #category : #primitives }
+SocketPlugin >> primitiveSocket: socket bindTo: address port: port [ 
+	| addr s  |
+	self var: #s declareC: 'SocketPtr s'.
+	self primitive: 'primitiveSocketBindToPort' parameters: #(#Oop #ByteArray #SmallInteger ).
+	addr _ self
+				netAddressToInt: (self cCoerce: address to: 'unsigned char *').
+	s _ self socketValueOf: socket.
+	interpreterProxy failed 
+		ifFalse:[self sqSocket: s BindTo: addr Port: port]
+]
+
+{ #category : #primitives }
 SocketPlugin >> primitiveSocket: socket connectTo: address port: port [ 
 	| addr s okToConnect  |
 	self var: #s type: 'SocketPtr' .
@@ -725,6 +737,18 @@ SocketPlugin >> primitiveSocketSendDone: socket [
 	s _ self socketValueOf: socket.
 	done _ self sqSocketSendDone: s.
 	^done asBooleanObj
+]
+
+{ #category : #primitives }
+SocketPlugin >> primitiveSocketSetReusable: socket [
+	"Set the socket to be reusable"
+	| s |
+	self var: #s declareC: 'SocketPtr s'.
+	self primitive: 'primitiveSocketSetReusable'
+		parameters: #(Oop).
+	s _ self socketValueOf: socket.
+	interpreterProxy failed ifFalse: [
+		self sqSocketSetReusable: s]
 ]
 
 { #category : #'initialize-release' }
