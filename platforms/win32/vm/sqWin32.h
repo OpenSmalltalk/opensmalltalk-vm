@@ -299,6 +299,8 @@ extern BOOL  f1ButtonMouse;  /* Should we use a 1 button mouse mapping? */
 extern BOOL  f3ButtonMouse;  /* Should we use a 3 button mouse mapping? */
 extern BOOL  fShowAllocations; /* Show memory allocations */
 extern BOOL  fPriorityBoost; /* thread priority boost */
+extern BOOL  fEnableAltF4Quit; /* can we quit using Alt-F4? */
+extern BOOL  fEnableF2Menu;    /* can we get prefs menu via F2? */
 
 extern HANDLE vmSemaphoreMutex;   /* the mutex for synchronization */
 extern HANDLE vmWakeUpEvent;      /* wakeup event for interpret() */

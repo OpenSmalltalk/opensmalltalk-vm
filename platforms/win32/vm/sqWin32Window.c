@@ -52,6 +52,7 @@ TCHAR imagePath[MAX_PATH+1];	  /* full path to image */
 TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
 TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
 TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
+TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
 
 const TCHAR U_ON[]  = TEXT("1");
 const TCHAR U_OFF[] = TEXT("0");
@@ -108,6 +109,11 @@ BOOL  fHeadlessImage = 0;      /* Do we run headless? */
 BOOL  fRunService = 0;         /* Do we run as NT service? */
 DWORD dwMemorySize = 0;        /* How much memory do we use? */
 BOOL  fBrowserMode = 0;        /* Are we running in a web browser? */
+
+/* Misc preferences */
+BOOL  fEnableAltF4Quit = 1; /* can we quit using Alt-F4? */
+BOOL  fEnableF2Menu = 1;    /* can we get prefs menu via F2? */
+
 
 HANDLE vmSemaphoreMutex = 0; /* the mutex for synchronization */
 HANDLE vmWakeUpEvent = 0;      /* wake up interpret() from sleep */
@@ -249,11 +255,18 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     }
 #endif /* defined(_WIN32_WCE) */
     if(cmd == SC_CLOSE) {
-      /* do not attempt to close the window directly ! */
-      if(MessageBox(stWindow,TEXT("Quit Squeak without saving?"),
-		    TEXT("Squeak"),MB_YESNO) != IDYES) return 0;
-      DestroyWindow(stWindow);
-      exit(1);
+      if(fEnableAltF4Quit) {
+	TCHAR msg[1001], label[1001];
+	GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
+				TEXT("Quit Squeak without saving?"), 
+				msg, 1000, squeakIniName);
+	GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogLabel"), 
+				TEXT("Squeak"), 
+				label, 1000, squeakIniName);
+	if(MessageBox(stWindow, msg, label, MB_YESNO) != IDYES) return 0;
+	DestroyWindow(stWindow);
+	exit(1);
+      }
       break;
     }
     return DefWindowProc(hwnd,message,wParam,lParam);
@@ -313,10 +326,10 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       return DefWindowProc(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
-      if(wParam == VK_F2) {
+      if(wParam == VK_F2 && fEnableF2Menu) {
 	TrackPrefsMenu();
       }
-      if(wParam == VK_F4) {
+      if(wParam == VK_F4 && fEnableAltF4Quit) {
 	return DefWindowProc(hwnd, message, wParam, lParam);
       }
       break;

@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Prefs.c,v 1.8 2003/06/21 18:16:54 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *****************************************************************************/
@@ -22,7 +22,7 @@ void HandlePrefsMenu(int) {}
 
 
 /* VM preference variables */
-TCHAR squeakIniName[MAX_PATH+1]; /* full path and name to ini file */
+extern TCHAR squeakIniName[]; /* full path and name to ini file */
 HMENU vmPrefsMenu;         /* preferences menu */
 extern int caseSensitiveFileMode;
 
@@ -133,6 +133,22 @@ void SetCaseSensitiveFileMode() {
 			    caseSensitiveFileMode ? U_ON : U_OFF,squeakIniName);
 }
 
+#if 0 /* I don't think we need those in the menu */
+void SetEnableF2Menu() {
+  CheckMenuItem(vmPrefsMenu, ID_ENABLEF2MENU, MF_BYCOMMAND | 
+		(fEnableF2Menu ? MF_CHECKED : MF_UNCHECKED));
+  WritePrivateProfileString(U_GLOBAL,TEXT("EnableF2Menu"),
+			    fEnableF2Menu ? U_ON : U_OFF,squeakIniName);
+}
+
+void SetEnableAltF4Quit() {
+  CheckMenuItem(vmPrefsMenu, ID_ENABLEALTF4QUIT, MF_BYCOMMAND | 
+		(fEnableAltF4Quit ? MF_CHECKED : MF_UNCHECKED));
+  WritePrivateProfileString(U_GLOBAL,TEXT("EnableAltF4Quit"),
+			    enableAltF4Quit ? U_ON : U_OFF,squeakIniName);
+}
+#endif
+
 void LoadPreferences()
 {
   /* Set preferences */
@@ -197,6 +213,13 @@ void LoadPreferences()
   caseSensitiveFileMode   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("CaseSensitiveFileMode"),
 			 caseSensitiveFileMode,squeakIniName);
+  fEnableAltF4Quit   = 
+    GetPrivateProfileInt(U_GLOBAL,TEXT("EnableAltF4Quit"),
+			 fEnableAltF4Quit,squeakIniName);
+
+  fEnableF2Menu   = 
+    GetPrivateProfileInt(U_GLOBAL,TEXT("EnableF2Menu"),
+			 fEnableF2Menu,squeakIniName);
 #endif
 }
 
