@@ -20,6 +20,8 @@
 #define LONGLONG long long
 #endif
 
+#define DEBUGFFI 0
+
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 #define staticIssue 
 #else
@@ -60,10 +62,18 @@ static double   floatReturnValue;
 static int *structReturnValue = NULL;
 
 /**************************************************************/
+
+#if DEBUGFFI
+# define dprintf(ARGS)	printf ARGS; fflush(stdout)
+#else
+# define dprintf(ARGS)
+#endif
+
 #define ARG_CHECK() if(gpRegCount >= GP_MAX_REGS && ffiStackIndex >= FFI_MAX_STACK) return primitiveFail();
 #define ARG_PUSH(value) { \
 	ARG_CHECK(); \
 	if(gpRegCount < GP_MAX_REGS) GPRegs[gpRegCount++] = value; \
+	dprintf(("ARG_PUSH %i (%08x)\n", ffiStackIndex, value)); \
 	ffiStack[ffiStackIndex++] = value; \
 }
 
@@ -92,11 +102,14 @@ int ffiSupportsCallingConvention(int callType)
 
 int ffiAlloc(int byteSize)
 {
-	return (int) malloc(byteSize);
+	int data = (int) malloc(byteSize);
+	dprintf(("ffiAlloc (%08x)\n",data));
+	return data;
 }
 
 int ffiFree(int ptr)
 {
+	dprintf(("ffiFree (%08x)\n",ptr));
 	if(ptr) free((void*)ptr);
 	return 1;
 }
@@ -297,6 +310,7 @@ int ffiCanReturn(int *structSpec, int specSize)
 	Return the value from a previous ffi call with float return type. */
 double ffiReturnFloatValue(void)
 {
+	dprintf(("ffiReturnFloatValue %d\n",floatReturnValue));
 	return floatReturnValue;
 }
 
@@ -304,6 +318,7 @@ double ffiReturnFloatValue(void)
 	Return the low 32bit from the 64bit result of a call to an external function */
 int ffiLongLongResultLow(void)
 {
+	dprintf(("ffiLongLongResultLow %i\n",((int*) &longReturnValue)[1]));
 	return ((int*) &longReturnValue)[1];
 }
 
@@ -311,6 +326,7 @@ int ffiLongLongResultLow(void)
 	Return the high 32bit from the 64bit result of a call to an external function */
 int ffiLongLongResultHigh(void)
 {
+	dprintf(("ffiLongLongResultHigh %i\n",((int*) &longReturnValue)[0]));
 	return ((int*) &longReturnValue)[0];
 }
 
@@ -318,6 +334,7 @@ int ffiLongLongResultHigh(void)
 	Store the structure result of a previous ffi call into the given address. */
 int ffiStoreStructure(int address, int structSize)
 {
+	dprintf(("ffiStoreStructure\n"));
 	if(structReturnValue) {
 		memcpy((void*)address, (void*)structReturnValue, structSize);
 	} else {
@@ -352,133 +369,90 @@ int  floatReturnValueLocation=(int) &floatReturnValue;
 /*****************************************************************************/
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 extern int ffiCallAddressOf(int);
-#else
-asm int ffiCallAddressOf(int);
+#endif
 
-#if TARGET_CPU_PPC
-asm int ffiCallAddressOf(int addr) {
-	/* Save link register */
-	mflr r0
-	stw r0, 8(SP)
-    mfcr r0		/* save CCR  */
-    stw r0,4(sp)
+static int giLocker;
 
-	/* get stack index and preserve it for copying stuff later */
-	lwz r4, ffiStackIndex(RTOC)
-
-	/* compute frame size */
-	rlwinm r5, r4, 2, 0, 29  /* ffiStackIndex words to bytes (e.g., "slwi r5, r4, 2") */
-	addi r5, r5, 24+15 	/* linkage area */
-    rlwinm r5,r5,0,0,27 	/* JMM round up to quad word*/
-	neg  r5, r5     /* stack goes down */
-
-	/* adjust stack frame */
-	stwux SP, SP, r5
-
-	/* load the stack frame area */
-	/* note: r4 == ffiStackIndex */
-	addi r5, SP, 24         /* dst = SP + linkage area */
-	lwz r6, ffiStack(RTOC)  /* src = ffiStack */
-	li r7, 0                /* i = 0 */
-	b nextItem
-copyItem:
-	rlwinm r8, r7, 2, 0, 29 /* r8 = i << 2 (e.g., "slwi r8, r7, 2") */
-	lwzx r0, r6, r8         /* r0 = ffiStack[r8] */
-	addi r7, r7, 1          /* i = i + 1 */
-	stwx r0, r5, r8         /* dst[r8] = r0 */
-nextItem:
-	cmpw r7, r4             /* i < ffiStackIndex ? */
-	blt copyItem
-
-	/* Keep addr in GPR0 so we can load all regs beforehand */
-	mr r0, r3
-
-	/* load all the floating point registers */
-	lwz r3, fpRegCount
-	lwz r12, FPRegs(RTOC)
-	cmpwi r3, 0     /* skip all fpregs if no FP values used */
-	beq _0_fpregs
-	cmpwi r3, 8
-	blt _7_fpregs   /* skip last N fpregs if unused */
-_all_fpregs:
-	lfd  fp8, 56(r12)
-	lfd  fp9, 64(r12)
-	lfd fp10, 72(r12)
-	lfd fp11, 80(r12)
-	lfd fp12, 88(r12)
-	lfd fp13, 96(r12)
-_7_fpregs:
-	lfd  fp1,  0(r12)
-	lfd  fp2,  8(r12)
-	lfd  fp3, 16(r12)
-	lfd  fp4, 24(r12)
-	lfd  fp5, 32(r12)
-	lfd  fp6, 40(r12)
-	lfd  fp7, 48(r12)
-_0_fpregs:
-
-	/* load all the general purpose registers */
-	lwz  r3, gpRegCount
-	lwz  r12, GPRegs(RTOC)
-	cmpwi r3, 5
-	blt _4_gpregs    /* skip last four gpregs if unused */
-_all_gpregs:
-	lwz  r7, 16(r12)
-	lwz  r8, 20(r12)
-	lwz  r9, 24(r12)
-	lwz r10, 28(r12)
-_4_gpregs:
-	lwz  r3,  0(r12)
-	lwz  r4,  4(r12)
-	lwz  r5,  8(r12)
-	lwz  r6, 12(r12)
-_0_gpregs:
-
-	/* go calling out */
-	mr r12, r0      /* tvector into GPR12 */
-	/* Note: The code below is nearly identical to to what's described in
-		"MacOS Runtime Architectures"
-		Chapter 2, Listing 2-2, pp. 2-11
-	*/
-	lwz r0, 0(r12)  /* get entry point */
-	stw r2, 20(SP)  /* save GPR2 */
-	mtctr r0        /* move entry point into count register */
-	lwz r2, 4(r12)  /* new base pointer */
-	bctrl           /* jump through count register and link */
-	lwz r2, 20(SP)  /* restore GPR2 */
-	lwz SP, 0(SP)   /* restore frame */
-
-	/* store the result of the call */
-	stw r3, intReturnValue(RTOC)
-	lwz r12, longReturnValue(RTOC)
-	stw r3, 0(r12)
-	stw r4, 4(r12)
-	stfd fp1, floatReturnValue(RTOC)
-
-	/* and get out of here */
-    lwz r0, 4(sp) 	/*restore CCR */
-    mtcrf 0xff,r0                               
-	lwz r0, 8(SP)
-	mtlr r0
-	blr
+int ffiCallAddressOfWithPointerReturnx(int fn, int callType)
+{
+	return ffiCallAddressOf(fn);
 }
-#endif
-#endif
+int ffiCallAddressOfWithStructReturnx(int fn, int callType, int* structSpec, int specSize)
+{
+	return ffiCallAddressOf(fn);
+}
+
+int ffiCallAddressOfWithReturnTypex(int fn, int callType, int typeSpec)
+{
+	return ffiCallAddressOf(fn);
+}
+
 
 int ffiCallAddressOfWithPointerReturn(int fn, int callType)
 {
-	return ffiCallAddressOf(fn);
+	int resultsOfCall;
+
+	if (giLocker == 0)
+		giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*5);
+		foo[0] = 2;
+		foo[1] = ffiCallAddressOfWithPointerReturnx;
+		foo[2] = fn;
+		foo[3] = callType;
+		foo[4] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		resultsOfCall = foo[4];
+		free(foo);
+		return resultsOfCall;
+	}
 }
+
 int ffiCallAddressOfWithStructReturn(int fn, int callType, int* structSpec, int specSize)
 {
-	return ffiCallAddressOf(fn);
+	int resultsOfCall;
+
+	if (giLocker == 0)
+		giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*7);
+		foo[0] = 4;
+		foo[1] = ffiCallAddressOfWithStructReturnx;
+		foo[2] = fn;
+		foo[3] = callType;
+		foo[4] = structSpec;
+		foo[5] = specSize;
+		foo[6] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		resultsOfCall = foo[6];
+		free(foo);
+		return resultsOfCall;
+	}
 }
 
 int ffiCallAddressOfWithReturnType(int fn, int callType, int typeSpec)
 {
-	return ffiCallAddressOf(fn);
-}
+	int resultsOfCall;
 
+	if (giLocker == 0)
+		giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
+	if (giLocker != 0) {
+		long *foo;
+		foo = malloc(sizeof(long)*6);
+		foo[0] = 3;
+		foo[1] = ffiCallAddressOfWithReturnTypex;
+		foo[2] = fn;
+		foo[3] = callType;
+		foo[4] = typeSpec;
+		foo[5] = 0;
+		((int (*) (void *)) giLocker)(foo);
+		resultsOfCall = foo[5];
+		free(foo);
+		return resultsOfCall;
+	}
+}
 /*****************************************************************************/
 /*****************************************************************************/
 /*****************************************************************************/
