@@ -52,15 +52,9 @@ size_t sqImageFileWrite(void *ptr, size_t sz, size_t count, sqImageFile h);
 #undef ioLowResMSecs
 #undef ioMicroMSecs
 
-#if 0 /* no longer used - phase this out */
-/* Declare GetTickCount() in case <windows.h> is not included */
-#if !defined(_WINDOWS_) && !defined(_WIN32_WCE) && !defined(_WINDOWS_H)
-__declspec(dllimport) unsigned long __stdcall GetTickCount(void);
-#endif
-#endif
-
 extern int _lowResMSecs;
 #define ioLowResMSecs() _lowResMSecs
-#else error!
+
+#else error "Not Win32!"
 #endif /* WIN32 */
 
