@@ -366,19 +366,34 @@ int ioShowDisplayOnWindow(
 
 
 #ifdef BROWSERPLUGIN
-	NP_Port * getNP_Port(void);
-	NP_Port	* port;
 	extern NPWindow* 	netscapeWindow;
 	CGRect	clip2;
 	int		w,h;
+	Rect	portRect;
+	float fx, fy, bottomEdgeSize, edgeToDrawArea;
 	
-	port = getNP_Port();
-	clip = CGRectMake(affectedL+netscapeWindow->x,height-affectedB+netscapeWindow->y, affectedR-affectedL, affectedB-affectedT);
+	GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
+	fx = affectedL+netscapeWindow->x;
+	bottomEdgeSize = (portRect.bottom - portRect.top) - netscapeWindow->clipRect.bottom;
+	edgeToDrawArea = netscapeWindow->height - affectedB;
+	fy = bottomEdgeSize + edgeToDrawArea - netscapeWindow->clipRect.top;
+	clip = CGRectMake(fx,
+			fy, 
+			affectedR-affectedL, 
+			affectedB-affectedT); 
 	
 	w =  netscapeWindow->clipRect.right -  netscapeWindow->clipRect.left;
 	h =  netscapeWindow->clipRect.bottom - netscapeWindow->clipRect.top;
-	clip2 = CGRectMake(netscapeWindow->clipRect.left,netscapeWindow->clipRect.top, w, h);
-	CGContextClipToRect(targetWindowBlock->context, clip2);
+	h = affectedB-affectedT;
+	clip2 = CGRectMake(netscapeWindow->x,bottomEdgeSize, w, h);
+//	CGContextClipToRect(targetWindowBlock->context, clip2);
+	
+	fprintf(stderr,"\n drawable x %f y %f w %i h %i clip x %d  y %f  w %i h %i bottomEdge %f edgeToDrawArea %f",
+		fx,fy,
+		affectedR-affectedL, affectedB-affectedT,
+		netscapeWindow->x, bottomEdgeSize,
+		w, h,
+		bottomEdgeSize, edgeToDrawArea);
 #else
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
 #endif
@@ -399,7 +414,7 @@ int ioShowDisplayOnWindow(
 			
 			targetWindowBlock->width = width;
 			targetWindowBlock->height = height; 
-		}
+	}
 
 	
 	if (targetWindowBlock->sync) {

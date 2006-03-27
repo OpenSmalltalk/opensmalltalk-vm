@@ -301,6 +301,7 @@ NPError NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode,
  +++++++++++++++++++++++++++++++++++++++++++++++++*/
 NPError NPP_Destroy(NPP instance, NPSavedData** save) {
 	
+
 	exitRequested = true;
 	ExitCleanup();
 	return NPERR_NO_ERROR;

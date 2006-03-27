@@ -163,17 +163,21 @@ NPError Mac_NPP_SetWindow(NPP instance, NPWindow* window) {
 	if (windowBlock == NULL) {
 		windowBlock = AddWindowBlock();
 	}
-	//windowBlock->handle = (wHandleType) realWindow;
-	windowBlock->handle = (wHandleType) netscapeWindow->window;
+	windowBlock->handle = (wHandleType) realWindow;
 	
 	needsUpdate	= true;
 
-	fprintf(stderr,"\n realWindowGrafPtr %i port %i x %i y %i windowX %i windowY %i windowW %i windowH %i",
+	fprintf(stderr,"\n realWindowGrafPtr %i port %i x %i y %i windowX %i windowY %i windowW %i windowH %i clipT %i clipL %i clipB %i clipR %i",
 		realWindow,
 		port,
 		port->portx, port->porty,
 		netscapeWindow->x, netscapeWindow->y,
-		netscapeWindow->width,netscapeWindow->height);
+		netscapeWindow->width,netscapeWindow->height,
+		netscapeWindow->clipRect.top,
+		netscapeWindow->clipRect.left,
+		netscapeWindow->clipRect.bottom,
+		netscapeWindow->clipRect.right
+		);
 		
 	if (gIWasRunning)
             return NPERR_NO_ERROR;
@@ -213,6 +217,9 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
     		return false;
     	}
 
+		if (!(eventPtr->what == 0))
+			fprintf(stderr,"\n Mac_NPP_HandleEvent %i ",eventPtr->what);
+		
 		if(!((messageHook) && (messageHook(eventPtr)))) {
 	    	switch (eventPtr->what) {
 	    		case mouseDown:
@@ -262,7 +269,7 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
 				break;
 
 	    		case updateEvt:
-	    			needsUpdate = true;
+					fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
 	    		break;
 	    		case getFocusEvent:
 	    		break;
@@ -306,24 +313,21 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) {
      		needsUpdate = false;
 			
     		if (getFullScreenFlag()) {
-				BeginUpdate(FrontWindow());
 				fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
-				EndUpdate(FrontWindow());
 				pthread_mutex_unlock(&gEventNSAccept);
 				return true;
 				}
 			else {
-             fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
  			}
 			
-			if (!getFullScreenFlag()) {
+	/*		if (!getFullScreenFlag()) {
 				ProcessSerialNumber psn = { 0, kCurrentProcess }; 
 				OSStatus err;
 				err = ShowHideProcess (&psn,true);
 				waitAFewMilliseconds();
 				pthread_mutex_unlock(&gEventNSAccept);
 				return false;
-			}
+			} */
     	}
 		
 	if(postMessageHook) postMessageHook(eventPtr);
@@ -797,9 +801,12 @@ int recordMouseEvent(EventRecord *theEvent, int theButtonState) {
 	/* first the basics */
 	evt->type = EventTypeMouse;
 	evt->timeStamp = ioMSecs() & MillisecondClockMask; 
-	QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),(Point *) &theEvent->where);
+//JMM? 	QD GlobalToLocal Point(getNP_Port()->port,(Point *) &theEvent->where);
+	GlobalToLocal( &theEvent->where);
 	evt->x = theEvent->where.h;
 	evt->y = theEvent->where.v;
+	fprintf(stderr,"\n Mouse at x %i y %i ",evt->x,evt->y);
+
 	/* then the buttons */
 	evt->buttons = theButtonState & 0x07;
 	/* then the modifiers */
