@@ -616,6 +616,15 @@ static vmArg args[] = {
 int sqMain(char *lpCmdLine, int nCmdShow)
 { 
   int virtualMemory;
+  
+#ifdef NO_MULTIBLE_INSTANCES    
+  HANDLE hMutex;
+  hMutex = CreateMutex(NULL, TRUE, "Squeak"); /*more unique value needed here ?!*/
+  if(GetLastError() == ERROR_ALREADY_EXISTS)
+  {
+    return(0);//Mutex exist, return
+  }
+#endif
 
   /* set default fpu control word */
   _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
