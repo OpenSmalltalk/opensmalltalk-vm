@@ -974,6 +974,32 @@ void sqSocketListenOnPort(SocketPtr s, int port)
 }
 
 /*****************************************************************************
+  sqSocketBindToPort: allow binding a socket to a specific port and address
+*****************************************************************************/
+void sqSocketBindToPort(SocketPtr s, int addr, int port)
+{
+  int result;
+  struct sockaddr_in inaddr;
+  privateSocketStruct *pss = PSP(s);
+
+  if (!SocketValid(s)) return;
+
+  /* bind the socket */
+  ZeroMemory(&inaddr,sizeof(struct sockaddr_in));
+  inaddr.sin_family = AF_INET;
+  inaddr.sin_port = htons((short)port);
+  inaddr.sin_addr.s_addr = htonl(addr);
+
+  result = bind( SOCKET(s), (struct sockaddr*) &inaddr, sizeof(struct sockaddr_in));
+  if(result == SOCKET_ERROR) {
+    pss->sockError = WSAGetLastError();
+    FAIL();
+    return;
+  }
+}
+
+
+/*****************************************************************************
   sqSocketListenOnPortBacklogSize:
 	TCP => start listening for incoming connections.
 	UDP => Just call sqListenOnPort
@@ -1289,6 +1315,22 @@ int sqSocketRemotePort(SocketPtr s)
   return ntohs(sin.sin_port);
 }
 
+
+/*****************************************************************************
+  sqSocketSetReusable: set the SO_REUSEADDR option for the socket.
+*****************************************************************************/
+void sqSocketSetReusable (SocketPtr s)
+{
+  size_t bufSize;
+  unsigned char   buf[4];
+  int err;
+
+  if (!SocketValid(s)) return;
+  *(int *)buf = 1;
+  bufSize = 4;
+  err = setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize);
+  if(err < 0) interpreterProxy->success(false);
+}
 
 /*****************************************************************************
  *****                     New Socket Functions                          *****
