@@ -10,11 +10,26 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-March 18th, 2006 (3.8.11b4)\
+March 27th, 2006 (3.8.11b6)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.11b5\
+		sqMacOpenGL.c	\
+			print diagnostics\
+		\
+		sqMacFFIPPC.c\
+			Migrate back to carbon FFI prims and Andreas' FFI interface because unix one is broken for Croquet.\
+			print diagnostics, use UI Locking code to call FFI functions to avoid crash with quicktime. \
+		\
+		sqMacNSPlugin.c\
+		sqMacNSPLuginUILogic.c\
+		sqMacWindowUniversal.c\
+			Lots of changes to reconsider when SetWindow() is called, and migrate to Context draw logic\
+			Add logic so that we can do OpenGL.\
+			Still broken\
+	\
 3.8.11b4\
 		compiler should asks for inlined sqSqueakMemory accessors if intel, these generate better assembler than\
 		non-inline which is better for powerpc. \
