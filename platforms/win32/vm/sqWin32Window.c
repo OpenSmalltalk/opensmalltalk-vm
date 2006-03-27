@@ -2426,6 +2426,12 @@ int imageNamePutLength(int sqImageNameIndex, int length)
   return 1;
 }
 
+int sqGetFilenameFromString(char *buf, char *fileName, int length, int alias) {
+  memcpy(buf, fileName, length);
+  buf[length] = 0;
+  return 1;
+}
+
 /****************************************************************************/
 /*                      System Attributes                                   */
 /****************************************************************************/
@@ -2444,14 +2450,20 @@ char * GetAttributeString(int id) {
   if(id < 0)
     return GetVMOption(0-id-1);
   /* special attributes */
-  if(id == 1001) /* Primary OS type */
+  switch(id) {
+    case 1001: /* Primary OS type */
       return WIN32_NAME;
-  if(id == 1002) /* Secondary OS type */
+    case 1002: /* Secondary OS type */
       return WIN32_OS_NAME;
-  if(id == 1003) /* Processor type */
+    case 1003:/* Processor type */
       return WIN32_PROCESSOR_NAME;
-  if(id == 1004) /* Interpreter version */
-	  return (char*) interpreterVersion;
+    case 1004:
+      return (char*) interpreterVersion;
+    case 1005: /* window system name */
+      return "Win32";
+    case 1006: /* VM build ID */
+      return vmBuildString;
+  }
   return NULL;
 }
 

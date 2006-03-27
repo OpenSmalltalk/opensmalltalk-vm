@@ -20,7 +20,7 @@ BEGIN {
 
 # A prototype for internalPush means the interprer was not inlined
 
-/^int internalPush\(/ \
+/^sqInt internalPush\(/ \
 {
   print "" > "/dev/stderr";
   print "*** interpreter was not inlined: bailing out! ***" > "/dev/stderr";
@@ -29,7 +29,7 @@ BEGIN {
 }
 
 
-(stage == 0) && /^int interpret\(void\) \{/ {
+(stage == 0) && /^sqInt interpret\(void\) \{/ {
   print "interpret: adding static register assignments" > "/dev/stderr";
   stage= 1;
   print;
@@ -46,9 +46,9 @@ BEGIN {
   next;
 }
 
-(stage == 1) && /^    int currentBytecode;/ {
+(stage == 1) && /^    sqInt currentBytecode;/ {
 # print "    register unsigned char currentBytecode CB_REG;" */
-  print "    register int currentBytecode CB_REG;";
+  print "    register sqInt currentBytecode CB_REG;";
   next;
 }
 
@@ -119,7 +119,7 @@ BEGIN {
   next;
 }
 
-(stage == 4) && /^int primitiveResponse\(/ {
+(stage == 4) && /^sqInt primitiveResponse\(/ {
   print;
   print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
   print "    PRIM_TABLE;\n";

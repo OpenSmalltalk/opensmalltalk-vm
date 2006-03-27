@@ -151,6 +151,7 @@ all:	$(VM) $(EXTERNAL_LIBS)
 
 $(VM):	$(ALLOBJ) $(INTERNAL_LIBS) $(VMEXP) resource.o
 		$(LD) $(LDFLAGS) -o $(VMOUTDIR)/$(VM) $(addprefix $(VMOUTDIR)/,$(ALLOBJ)) $(VMOUTDIR)/$(VMEXP) $(VMOUTDIR)/resource.o $(addprefix $(VMOUTDIR)/,$(INTERNAL_LIBS)) $(LIBS)
+		$(RM) $(VMOUTDIR)/version.o
 		strip --strip-all $(VMOUTDIR)/$(VM)
 
 #############################################################################

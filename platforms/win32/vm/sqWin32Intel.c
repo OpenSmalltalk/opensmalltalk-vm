@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Intel.c,v 1.7 2003/08/14 21:31:55 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *    1) When using this module the virtual machine MUST NOT be compiled
@@ -65,6 +65,13 @@ static int imageSize = 0;
 
 void SetSystemTrayIcon(BOOL on);
 
+/* default fpu control word:
+   _RC_NEAR: round to nearest
+   _PC_53 :  double precision arithmetic (instead of extended)
+   _EM_XXX: silent operations (no signals please)
+*/
+#define FPU_DEFAULT (_RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
+
 /****************************************************************************/
 /*                     Exception handling                                   */
 /****************************************************************************/
@@ -73,9 +80,6 @@ void SetSystemTrayIcon(BOOL on);
 /* not as sophisticated as MSVC's support. However, with this new handling  */
 /* scheme the entire thing becomes actually a lot simpler...                */
 /****************************************************************************/
-#ifndef _CW_DEFAULT
-#define _CW_DEFAULT ( _RC_NEAR + _PC_53 + _EM_INVALID + _EM_ZERODIVIDE + _EM_OVERFLOW + _EM_UNDERFLOW + _EM_INEXACT + _EM_DENORMAL)
-#endif
 static LPTOP_LEVEL_EXCEPTION_FILTER TopLevelFilter = NULL;
 
 LONG CALLBACK squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
@@ -95,7 +99,7 @@ LONG CALLBACK squeakExceptionHandler(LPEXCEPTION_POINTERS exp)
     DWORD code = exp->ExceptionRecord->ExceptionCode;
     if((code >= EXCEPTION_FLT_DENORMAL_OPERAND) && (code <= EXCEPTION_FLT_UNDERFLOW)) {
       /* turn on the default masking of exceptions in the FPU and proceed */
-      _control87( _CW_DEFAULT, _MCW_EM); /* | _MCW_RC | _MCW_PC | _MCW_IC | _MCW_DN */
+      _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
       result = EXCEPTION_CONTINUE_EXECUTION;
     }
   }
@@ -612,6 +616,9 @@ static vmArg args[] = {
 int sqMain(char *lpCmdLine, int nCmdShow)
 { 
   int virtualMemory;
+
+  /* set default fpu control word */
+  _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
 
   LoadPreferences();
 

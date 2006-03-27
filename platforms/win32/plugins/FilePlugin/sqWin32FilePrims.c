@@ -69,11 +69,11 @@ typedef union {
 } win32FileOffset;
 
 
-int sqFileThisSession(void) {
+sqInt sqFileThisSession(void) {
   return thisSession;
 }
 
-int sqFileAtEnd(SQFile *f) {
+sqInt sqFileAtEnd(SQFile *f) {
   win32FileOffset ofs;
   /* Return true if the file's read/write head is at the end of the file. */
   if (!sqFileValid(f)) FAIL();
@@ -82,7 +82,7 @@ int sqFileAtEnd(SQFile *f) {
   return ofs.offset == sqFileSize(f);
 }
 
-int sqFileClose(SQFile *f) {
+sqInt sqFileClose(SQFile *f) {
   /* Close the given file. */
 
   if (!sqFileValid(f)) FAIL();
@@ -94,7 +94,7 @@ int sqFileClose(SQFile *f) {
   return 1;
 }
 
-int sqFileDeleteNameSize(int sqFileNameIndex, int sqFileNameSize) {
+sqInt sqFileDeleteNameSize(char* sqFileNameIndex, sqInt sqFileNameSize) {
 
   TCHAR *win32Path;
   if (sqFileNameSize >= MAX_PATH) FAIL();
@@ -114,7 +114,7 @@ squeakFileOffsetType sqFileGetPosition(SQFile *f) {
   return ofs.offset;
 }
 
-int sqFileInit(void) {
+sqInt sqFileInit(void) {
   /* Create a session ID that is unlikely to be repeated.
      Zero is never used for a valid session number.
      Should be called once at startup time.
@@ -130,11 +130,11 @@ int sqFileInit(void) {
   return 1;
 }
 
-int sqFileShutdown(void) {
+sqInt sqFileShutdown(void) {
   return 1;
 }
 
-int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag) {
+sqInt sqFileOpen(SQFile *f, char* sqFileNameIndex, sqInt sqFileNameSize, sqInt writeFlag) {
   /* Opens the given file using the supplied sqFile structure
      to record its state. Fails with no side effects if f is
      already open. Files are always opened in binary mode;
@@ -170,7 +170,7 @@ int sqFileOpen(SQFile *f, int sqFileNameIndex, int sqFileNameSize, int writeFlag
   return 1;
 }
 
-size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
+size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
   /* Read count bytes from the given file into byteArray starting at
      startIndex. byteArray is the address of the first byte of a
      Squeak bytes object (e.g. String or ByteArray). startIndex
@@ -184,7 +184,7 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, int byteArrayIndex, size_t star
   return (int)dwReallyRead;
 }
 
-int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameIndex, int newNameSize)
+sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize)
 {
   TCHAR *oldPath = fromSqueak((char*)oldNameIndex, oldNameSize);
   TCHAR *newPath = fromSqueak2((char*)newNameIndex,newNameSize);
@@ -193,7 +193,7 @@ int sqFileRenameOldSizeNewSize(int oldNameIndex, int oldNameSize, int newNameInd
   return 1;
 }
 
-int sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
+sqInt sqFileSetPosition(SQFile *f, squeakFileOffsetType position)
 {
   win32FileOffset ofs;
   ofs.offset = position;
@@ -212,14 +212,14 @@ squeakFileOffsetType sqFileSize(SQFile *f) {
   return ofs.offset;
 }
 
-int sqFileFlush(SQFile *f) {
+sqInt sqFileFlush(SQFile *f) {
   if (!sqFileValid(f)) FAIL();
   /* note: ignores the return value in case of read-only access */
   FlushFileBuffers(FILE_HANDLE(f));
   return 1;
 }
 
-int sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
+sqInt sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
   win32FileOffset ofs;
   ofs.offset = offset;
   if (!sqFileValid(f)) FAIL();
@@ -228,7 +228,7 @@ int sqFileTruncate(SQFile *f, squeakFileOffsetType offset) {
   return 1;
 }
 
-int sqFileValid(SQFile *f) {
+sqInt sqFileValid(SQFile *f) {
   if(NULL == f) return false;
   if(f->sessionID != thisSession) return false;
   if(!IsHandleInTable(win32Files, FILE_HANDLE(f))) {
@@ -238,7 +238,7 @@ int sqFileValid(SQFile *f) {
   return true;
 }
 
-size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t startIndex) {
+size_t sqFileWriteFromAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
   /* Write count bytes to the given writable file starting at startIndex
      in the given byteArray. (See comment in sqFileReadIntoAt for interpretation
      of byteArray and startIndex).
@@ -256,7 +256,7 @@ size_t sqFileWriteFromAt(SQFile *f, size_t count, int byteArrayIndex, size_t sta
 /***************************************************************************/
 /* Image file functions                                                    */
 /***************************************************************************/
-int sqImageFileClose(sqImageFile h)
+sqInt sqImageFileClose(sqImageFile h)
 {
   SetEndOfFile((HANDLE)(h-1));
   return CloseHandle((HANDLE)(h-1));

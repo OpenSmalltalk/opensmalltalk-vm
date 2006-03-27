@@ -241,7 +241,7 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define SQUEAK_VM_VERSION TEXT("Squeak 3.7.1 (release) from ") TEXT(__DATE__) \
+#define SQUEAK_VM_VERSION TEXT("Croquet 1.0.0 (beta) from ") TEXT(__DATE__) \
 	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
 /********************************************************/
@@ -257,7 +257,8 @@ extern char imageName[];		/* full path and name to image */
 extern TCHAR imagePath[];		/* full path to image */
 extern TCHAR vmPath[];		    /* full path to interpreter's directory */
 extern TCHAR vmName[];		    /* name of the interpreter's executable */
-extern TCHAR windowTitle[];     /* window title string */
+extern TCHAR windowTitle[];             /* window title string */
+extern char vmBuildString[];            /* the vm build string */
 
 extern const TCHAR U_ON[];
 extern const TCHAR U_OFF[];
