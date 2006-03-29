@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Alloc.c,v 1.4 2002/05/05 18:08:38 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *
 *****************************************************************************/
@@ -18,7 +18,7 @@
 #define EXPERIMENTAL
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Alloc.c,v 1.4 2002/05/05 18:08:38 andreasraab Exp $";
+  static char RCSID[]="$Id$";
 #endif
 
 static LPSTR  pageBase;     /* base address of allocated memory */
@@ -80,7 +80,7 @@ void *sqAllocateMemory(int minHeapSize, int desiredHeapSize)
     }
   } while(!pageBase);
   if(!pageBase) {
-    sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("Squeak Error:"),
+    sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 		 "Unable to allocate memory (%d bytes requested)",
 		 maxReserved);
     return pageBase;
@@ -88,7 +88,7 @@ void *sqAllocateMemory(int minHeapSize, int desiredHeapSize)
   /* commit initial memory as requested */
   commit = nowReserved;
   if(!VirtualAlloc(pageBase, commit, MEM_COMMIT, PAGE_READWRITE)) {
-    sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("Squeak Error:"),
+    sqMessageBox(MB_OK | MB_ICONSTOP, TEXT("VM Error:"),
 		 "Unable to commit memory (%d bytes requested)",
 		 commit);
     return NULL;

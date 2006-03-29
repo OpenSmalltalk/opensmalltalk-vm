@@ -247,7 +247,7 @@ void CreatePrefsMenu(void) {
 
   pMenu = CreatePopupMenu();
   AppendMenu(pMenu,MF_STRING | MF_DISABLED, 0,
-	     TEXT("[Squeak VM Preferences]"));
+	     TEXT("[VM Preferences]"));
   AppendMenu(pMenu,MF_SEPARATOR, 0,NULL);
   { /* Create mouse button menu */
     hMenu = CreatePopupMenu();
@@ -342,7 +342,7 @@ void HandlePrefsMenu(int cmd) {
   switch(cmd) {
   case ID_ABOUT: 
     MessageBox(stWindow,SQUEAK_VM_VERSION,
-	       TEXT("About Squeak VM on Win32"), MB_OK);
+	       TEXT("About " VM_NAME " on Win32"), MB_OK);
     break;
   case ID_DEFERUPDATES:
     fDeferredUpdate = !fDeferredUpdate;

@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Utils.c,v 1.3 2002/05/26 18:52:10 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *****************************************************************************/
@@ -148,7 +148,7 @@ int __cdecl abortMessage(const TCHAR* fmt, ...)
 	wvsprintf(buf, fmt, args);
 	va_end(args);
 
-	MessageBox(NULL,buf,TEXT("Squeak!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
+	MessageBox(NULL,buf,TEXT(VM_NAME"!"),MB_OK | MB_TASKMODAL | MB_SETFOREGROUND);
   free(buf);
   exit(-1);
 }
@@ -166,7 +166,7 @@ int __cdecl warnPrintf(const TCHAR *fmt, ...)
 	va_start(args, fmt);
 	wvsprintf(buf, fmt, args);
 	va_end(args);
-  MessageBox(stWindow, buf, TEXT("Squeak Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
+  MessageBox(stWindow, buf, TEXT(VM_NAME" Warning!"), MB_OK | MB_ICONSTOP | MB_SETFOREGROUND);
   free(buf);
 }
 #endif

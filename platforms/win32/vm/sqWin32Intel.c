@@ -260,7 +260,7 @@ void SetSystemTrayIcon(BOOL on)
   nid.uFlags = NIF_MESSAGE | NIF_TIP | NIF_ICON;
   nid.uCallbackMessage = WM_USER+42;
   nid.hIcon  = LoadIcon(hInstance, MAKEINTRESOURCE(1));
-  strcpy(nid.szTip, "Squeak!");
+  strcpy(nid.szTip, VM_NAME "!");
   if(on)
     (*ShellNotifyIcon)(NIM_ADD, &nid);
   else
@@ -377,7 +377,7 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
                      vmPath,
                      TEXT("crash.dmp"));
   if(!fHeadlessImage)
-    MessageBox(0,crashInfo,TEXT("Squeak fatal error"),
+    MessageBox(0,crashInfo,TEXT("Fatal VM error"),
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
   SetCurrentDirectory(vmPath);
@@ -453,10 +453,10 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
     /* that's to bad ... */
     if(!fHeadlessImage)
-      MessageBox(0,TEXT("Squeak has crashed. Sorry."),TEXT("Squeak fatal error:"),
+      MessageBox(0,TEXT("The VM has crashed. Sorry."),TEXT("Fatal error:"),
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
     else
-      abortMessage(TEXT("Squeak has crashed. Sorry."));
+      abortMessage(TEXT("The VM has crashed. Sorry."));
   }
 }
 
@@ -484,7 +484,7 @@ void printErrors()
   errorMsg[stdoutSize] = '\n';
   fread(&errorMsg[(int)(stdoutSize+1)],(int)stderrSize,1,stderr);
   if(!fHeadlessImage)
-    MessageBox(0,errorMsg,TEXT("Squeak Error:"),MB_OK);
+    MessageBox(0,errorMsg,TEXT("Error:"),MB_OK);
   free(errorMsg);
 }
 
@@ -544,7 +544,7 @@ int sqImageFile findEmbeddedImage(void) {
 
 	f = sqImageFileOpen(vmName, "rb");
 	if(!f) {
-		MessageBox(0,"Error opening VM","Squeak",MB_OK);
+		MessageBox(0,"Error opening VM",VM_NAME,MB_OK);
 		return 0;
 	}
 	endMarker = sqImageFileSize(f) - 8;
@@ -619,7 +619,7 @@ int sqMain(char *lpCmdLine, int nCmdShow)
   
 #ifdef NO_MULTIBLE_INSTANCES    
   HANDLE hMutex;
-  hMutex = CreateMutex(NULL, TRUE, "Squeak"); /*more unique value needed here ?!*/
+  hMutex = CreateMutex(NULL, TRUE, VM_NAME); /*more unique value needed here ?!*/
   if(GetLastError() == ERROR_ALREADY_EXISTS)
   {
     return(0);//Mutex exist, return

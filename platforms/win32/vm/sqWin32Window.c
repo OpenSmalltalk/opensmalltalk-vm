@@ -258,10 +258,10 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       if(fEnableAltF4Quit) {
 	TCHAR msg[1001], label[1001];
 	GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
-				TEXT("Quit Squeak without saving?"), 
+				TEXT("Quit " VM_NAME " without saving?"), 
 				msg, 1000, squeakIniName);
 	GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogLabel"), 
-				TEXT("Squeak"), 
+				TEXT(VM_NAME), 
 				label, 1000, squeakIniName);
 	if(MessageBox(stWindow, msg, label, MB_YESNO) != IDYES) return 0;
 	DestroyWindow(stWindow);
@@ -698,7 +698,7 @@ void SetWindowTitle()
   if(*windowTitle) {
 	  lstrcpy(titleString, windowTitle);
   } else {
-      wsprintf(titleString,TEXT("Squeak! (%s)"), toUnicode(imageName));
+      wsprintf(titleString,TEXT(VM_NAME"! (%s)"), toUnicode(imageName));
   }
   SetWindowText(stWindow,titleString);
 }
@@ -733,7 +733,7 @@ void SetupWindows()
   if(!browserWindow)
     stWindow = CreateWindowEx(WS_EX_APPWINDOW | WS_EX_OVERLAPPEDWINDOW,
 			      TEXT("SqueakWindowClass"),
-			      TEXT("Squeak!"),
+			      TEXT(VM_NAME"!"),
 			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -748,7 +748,7 @@ void SetupWindows()
     fBrowserMode = 1;
     stWindow = CreateWindowEx(0,
 			      TEXT("SqueakWindowClass"),
-			      TEXT("Squeak!"),
+			      TEXT(VM_NAME"!"),
 			      WS_CHILD | WS_CLIPCHILDREN,
 			      0,
 			      0,
@@ -1903,7 +1903,7 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hDPI, dou
     }
 
   di.cbSize      = sizeof(DOCINFO);
-  di.lpszDocName = TEXT("Squeak Print Job");
+  di.lpszDocName = TEXT(VM_NAME" Print Job");
   di.lpszOutput  = NULL;
 
   StartDoc  (dc, &di);
@@ -2136,7 +2136,7 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
   bmi = BmiForDepth(depth);
   if(!bmi)
     {
-      abortMessage(TEXT("Aborting Squeak!!!!\nColor depth %d not supported"),depth);
+      abortMessage(TEXT("Aborting!!!!\nColor depth %d not supported"),depth);
     }
 
   /* reverse the image bits if necessary */
@@ -2694,7 +2694,7 @@ int openImageFile(void)
   ofn.lpstrFilter = TEXT("Image Files (*.image)\0*.image\0All Files (*.*)\0*.*\0");
   ofn.lpstrFile = vmPath;
   ofn.nMaxFile = MAX_PATH;
-  ofn.lpstrTitle = TEXT("SQUEAK: Please select an image file...");
+  ofn.lpstrTitle = TEXT(VM_NAME": Please select an image file...");
   ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
   ofn.lpstrDefExt = TEXT("image");
   MessageBeep(MB_ICONSTOP);
@@ -2716,9 +2716,9 @@ int printUsage(int level)
       break;
     case 1: /* full usage */
       abortMessage(TEXT("%s"),
-                   TEXT("Usage: squeak [vmOptions] imageFile [imageOptions]\n\n")
+                   TEXT("Usage: " VM_NAME " [vmOptions] imageFile [imageOptions]\n\n")
                    TEXT("vmOptions:\n")
-                   TEXT("\t-service: ServiceName \t(install Squeak as NT service)\n")
+		   /* TEXT("\t-service: ServiceName \t(install Squeak as NT service)\n") */
                    TEXT("\t-headless \t\t(force Squeak to run headless)\n")
                    TEXT("\t-log: LogFile \t\t(use LogFile for VM messages)\n")
                    TEXT("\t-memory: megaByte \t(set memory to megaByte MB)"));
@@ -2726,10 +2726,10 @@ int printUsage(int level)
     case 2: /* No image found */
     default:
       abortMessage(
-        TEXT("Could not open the Squeak image file '%s'\n\n")
-        TEXT("There are several ways to open a Squeak image file. You can:\n")
+        TEXT("Could not open the " VM_NAME " image file '%s'\n\n")
+        TEXT("There are several ways to open an image file. You can:\n")
         TEXT("  1. Double-click on the desired image file.\n")
-        TEXT("  2. Drop the image file onto the Squeak application.\n")
+        TEXT("  2. Drop the image file onto the application.\n")
         TEXT("Aborting...\n"), toUnicode(imageName));
   }
   return -1;
