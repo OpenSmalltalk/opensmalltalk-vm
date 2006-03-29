@@ -29,17 +29,18 @@ endif
 #############################################################################
 # Default targets
 #
-VM=	Squeak.exe
 
 
 #############################################################################
-# VM definitions
+# SqueakVM definitions
 #
-VMDEF=	Squeak.def
-VMEXP=	Squeak.exp
-VMLIB=	Squeak.lib
-VMRES=	Squeak.res
-VMDEFIN=misc/Squeak.def.in
+VM=	Croquet
+VMEXE=  $(VM).exe
+VMDEF=	$(VM).def
+VMEXP=	$(VM).exp
+VMLIB=	$(VM).lib
+VMRES=	$(VM).res
+VMDEFIN=  misc/$(VM).def.in
 
 #############################################################################
 # Generic VM source file definitions
@@ -96,12 +97,16 @@ CXX=		g++
 CFLAGS=		-g -mpentium -mwindows -O3 -fomit-frame-pointer -funroll-loops -fschedule-insns2
 CXXFLAGS= $(CFLAGS) -felide-constructors
 WFLAGS=		
-DEFS=		-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG -DLSB_FIRST -DX86 $(XDEFS)
+DEFS=		-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS)
 #-DUSE_DIB_SECTIONS
 #-DPROFILE
 XDEFS=		-DSQUEAK_BUILTIN_PLUGIN
 INCS=		-I. -I$(SRCDIR) -I$(VMDIR) -I$(DXDIR) $(XINC)
 MD=			mkdir
+
+ifeq ($(VM),Croquet)
+	DEFS := $(DEFS) -DCROQUET
+endif
 
 #############################################################################
 # Linker settings
@@ -142,17 +147,17 @@ RCFLAGS=	--include-dir $(SRCDIR)/misc
 .SUFFIXES:
 .SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg
 
-all:	$(VM) $(EXTERNAL_LIBS)
+all:	$(VMEXE) $(EXTERNAL_LIBS)
 
 #############################################################################
 # Compiling Squeak itself
 #
 #  Mpeg3Plugin.o sqOpenGLRenderer.o sqWin32FilePrims.o 
 
-$(VM):	$(ALLOBJ) $(INTERNAL_LIBS) $(VMEXP) resource.o
-		$(LD) $(LDFLAGS) -o $(VMOUTDIR)/$(VM) $(addprefix $(VMOUTDIR)/,$(ALLOBJ)) $(VMOUTDIR)/$(VMEXP) $(VMOUTDIR)/resource.o $(addprefix $(VMOUTDIR)/,$(INTERNAL_LIBS)) $(LIBS)
+$(VMEXE):	$(ALLOBJ) $(INTERNAL_LIBS) $(VMEXP) resource.o
+		$(LD) $(LDFLAGS) -o $(VMOUTDIR)/$(VMEXE) $(addprefix $(VMOUTDIR)/,$(ALLOBJ)) $(VMOUTDIR)/$(VMEXP) $(VMOUTDIR)/resource.o $(addprefix $(VMOUTDIR)/,$(INTERNAL_LIBS)) $(LIBS)
 		$(RM) $(VMOUTDIR)/version.o
-		strip --strip-all $(VMOUTDIR)/$(VM)
+		strip --strip-all $(VMOUTDIR)/$(VMEXE)
 
 #############################################################################
 # The exports for named primitives from Squeak (required by VM)
@@ -180,7 +185,7 @@ makedll: $(LIBOBJ)
 		-o   $(OBJDIR)/$(LIB).dll \
 		$(LIBS) \
 		$(OBJDIR)/$(LIB).exp \
-		$(LIBOBJ)
+		$(LIBOBJ) $(DLLLIBS)
 	strip --strip-all $(OBJDIR)/$(LIB).dll
 	-$(RM) -f $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
 
@@ -193,6 +198,11 @@ Mpeg3Plugin.dll:
 	@$(MAKE) -Cplugins/Mpeg3Plugin -f Makefile.win32 makedll
 	$(CP) plugins/Mpeg3Plugin/Mpeg3Plugin.dll release/Mpeg3Plugin.dll
 	-$(RM) plugins/Mpeg3Plugin/Mpeg3Plugin.dll
+
+OpenALPlugin.dll:
+	@$(MAKE) -C plugins/OpenALPlugin -f ../../Makefile.mingw32 SRCDIR=../../ LIB=OpenALPlugin OBJDIR=.  XDEFS=-DNIX makedll DLLLIBS="openal32.lib"
+	$(CP) plugins/OpenALPlugin/OpenALPlugin.dll release/OpenALPlugin.dll
+	-$(RM) plugins/OpenALPlugin/OpenALPlugin.dll
 
 %.lib:
 	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
@@ -256,6 +266,9 @@ gnu-interp.c: interp.c misc/gnuify
 Mpeg3Plugin.o:	Mpeg3Plugin.c
 
 Squeak.res: misc/Squeak.rc
+	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
+
+Croquet.res: misc/Croquet.rc
 	$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
 
 #############################################################################
