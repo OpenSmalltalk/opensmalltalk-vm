@@ -241,7 +241,7 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define SQUEAK_VM_VERSION TEXT("Croquet 1.0.0 (beta) from ") TEXT(__DATE__) \
+#define SQUEAK_VM_VERSION TEXT("Croquet 1.0.1 (beta) from ") TEXT(__DATE__) \
 	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
 /********************************************************/
