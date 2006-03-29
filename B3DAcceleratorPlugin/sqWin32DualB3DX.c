@@ -3,7 +3,11 @@
 
 extern struct VirtualMachine *interpreterProxy;
 
+#ifdef CROQUET
+int glMode = 1; /* default to OpenGL */
+#else
 int glMode = 0; /* default to D3D */
+#endif
 
 int b3dxInitialize(void) {
   int *ptr;
@@ -11,19 +15,6 @@ int b3dxInitialize(void) {
   if(ptr) {
     glMode = *ptr;
   }
-
-#ifdef TEA
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning
-#warning "TEA: D3D disabled"
-#warning
-#warning "**************************************************************"
-#warning "**************************************************************"
-#warning "**************************************************************"
-  glMode = 1;
-#endif
   if(glMode)
     return glInitialize();
   else 
