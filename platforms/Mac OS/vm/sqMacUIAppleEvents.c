@@ -105,7 +105,10 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
     
     if (imageFileIsNumber == 0) { 
 		SetShortImageNameViaString(&gSqueakImageName,gCurrentVMEncoding);
-		goto done;
+		if (numFiles)
+			goto processPendingDocs;
+		else
+			goto done;
     } else {
     	/* get image name */
     	err = AEGetNthPtr(&fileList, imageFileIsNumber, typeFSRef, &keyword, &type, (Ptr) &theFSRef, sizeof(theFSRef), &size);
@@ -119,6 +122,7 @@ pascal OSErr HandleOpenDocEvent(const AEDescList *aevt, AEDescList *reply, long 
    }
     
     /* Do the rest of the documents */
+processPendingDocs:
     processDocumentsButExcludeOne(&fileList,imageFileIsNumber);
 done:
 	AEDisposeDesc(&fileList);
@@ -139,6 +143,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	char        shortImageName[SHORTIMAGE_NAME_SIZE+1];
 	char		pathName[IMAGE_NAME_SIZE+1];				
 #endif
+
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
 	if (err)
@@ -205,6 +210,7 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	    actualFilteredNumber++;
 
     }
+
     if (actualFilteredNumber == 0) 
         goto done;
         
