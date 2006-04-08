@@ -81,12 +81,12 @@ enum {
   };
 typedef struct HFSFlavorSqueak                HFSFlavorSqueak;
 
- static Boolean gDragDropThrottleSpinLock = false;	     /* true if waiting for Squeak to process D&D */
+ volatile static Boolean gDragDropThrottleSpinLock = false;	     /* true if waiting for Squeak to process D&D */
  static DragReceiveHandlerUPP gMainReceiveHandler = NULL;   /* receive handler for the main dialog */
  static DragTrackingHandlerUPP gMainTrackingHandler = NULL; /* tracking handler for the main dialog */
  static WindowPtr   gWindowPtr;
  
- static UInt16 gNumDropFiles=0;
+volatile static UInt16 gNumDropFiles=0;
 
  static HFSFlavorSqueak *dropFiles;
 
