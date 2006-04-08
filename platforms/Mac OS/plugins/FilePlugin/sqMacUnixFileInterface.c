@@ -115,7 +115,6 @@ static DIR *openDir= 0;
 
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term);
 sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqInt num, sqInt resolveAlias, Boolean retry);
-sqInt	ioFilenamefromStringofLengthresolveAliases(char* dst, char* src, sqInt num, sqInt resolveAlias);
 static CFURLRef makeFileSystemURLFromString(char *pathString,int length,CFStringEncoding encoding);
 static OSErr getFInfo(char *filename,FSCatalogInfo *catInfo,CFStringEncoding encoding);
 OSStatus SetVMPathFromApplicationDirectory();
@@ -286,16 +285,16 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 
 int wanderDownPath(char *src,int bytes,char *possiblePath, Boolean resolveLastAlias);
 
+sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean){
+	ioFilenamefromStringofLengthresolveAliasesRetry(aCharBuffer,(char *) aFilenameString, filenameLength, aBoolean, true);
+}
+
 void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength) {
 	ioFilenamefromStringofLengthresolveAliasesRetry(buffer,(char *) fileIndex, fileLength, true, true);
 }
 
 void		sqFilenameFromString(char *buffer,long fileIndex, long fileLength) {
 	ioFilenamefromStringofLengthresolveAliasesRetry(buffer,(char *) fileIndex, fileLength, false, true);
-}
-
-sqInt	ioFilenamefromStringofLengthresolveAliases(char* dst, char* src, sqInt num, sqInt resolveAlias) {
-	return ioFilenamefromStringofLengthresolveAliasesRetry(dst, src, num, resolveAlias, true);
 }
 
 sqInt	ioFilenamefromStringofLengthresolveAliasesRetry(char* dst, char* src, sqInt num, sqInt resolveAlias, Boolean retry) {
