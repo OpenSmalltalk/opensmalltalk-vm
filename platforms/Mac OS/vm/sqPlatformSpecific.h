@@ -29,6 +29,7 @@
 */
 
 #ifdef macintoshSqueak
+#include <types.h>
 //#define BROWSERPLUGIN
 //#define SQUEAK_BUILTIN_PLUGIN
 
