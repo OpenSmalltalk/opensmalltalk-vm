@@ -10,11 +10,23 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-March 27th, 2006 (3.8.11b6)\
+April 7th, 2006 (3.8.11b6)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.11b6\
+		sqMacDragDrop.c	\
+			Code volatile for gDragDropThrottleSpinLock and gNumDropFiles to ensure spin lock is not optimized \
+			into problem code\
+		sqMacUnixFileInterface.c\
+			drop ioFilenamefromStringofLengthresolveAliases, it's in the interp.c, fiddle a bit with other names\
+		sqMacUIAppleEvents.c\
+			Fix bug where we ignore open doc event if it only has one non-image document at open time. \
+		sqPlatformSpecific.h\
+			Add <types.h> include for Croquet plugins\
+\
 3.8.11b5\
 		sqMacOpenGL.c	\
 			print diagnostics\
