@@ -366,7 +366,7 @@
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 3.8.11b6 http://www.squeak.org </string>
+	<string>Squeak VM 3.8.11b7 http://www.squeak.org </string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -378,11 +378,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak VM 3.8.11b6</string>
+	<string>Squeak VM 3.8.11b7</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>3.8.11b6</string>
+	<string>3.8.11b7</string>
 	<key>NSServices</key>
 	<array>
 		<dict>
