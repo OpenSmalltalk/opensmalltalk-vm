@@ -80,7 +80,13 @@
 /* #undef	HAVE_SYS_NDIR_H */
 /* #undef	HAVE_SYS_DIR_H */
 /* #undef	HAVE_NDIR_H */
+
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+#undef	HAVE_DLFCN_H 
+#else
 #define	HAVE_DLFCN_H 1
+#endif
+
 #define	HAVE_ICONV_H 1
 
 #define	HAVE_SYS_TIME_H 1
