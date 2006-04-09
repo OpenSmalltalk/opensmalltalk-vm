@@ -577,6 +577,7 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
     return result;
 }
 
+
 static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
@@ -586,7 +587,10 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
  	static Boolean mouseDownActivate=false;
     extern Boolean gSqueakWindowIsFloating,gSqueakFloatingWindowGetsFocus;
     WindowPartCode windowPartCode;
-	
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+    Point  mouseLocation;
+	static RgnHandle	ioWinRgn=null;
+#endif	
     whatHappened	= GetEventKind(event);
 	
 
@@ -598,6 +602,22 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 			mouseDownActivate = true;
         return result;
 	}
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+    if (ioWinRgn == null) 
+        ioWinRgn = NewRgn();
+        
+    GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGlobalPortRgn,ioWinRgn);
+    GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
+    
+    if (!PtInRgn(mouseLocation,ioWinRgn)) {
+		if (mouseDownActivate && whatHappened == kEventMouseUp) {
+			mouseDownActivate = false;
+			return result;
+		}
+		if (!gButtonIsDown) 
+			return result;
+    }
+#else
 	crosscheckForErrors = GetEventParameter (event, kEventParamWindowPartCode, typeWindowPartCode,NULL,sizeof(WindowPartCode), NULL, &windowPartCode);
     if (windowPartCode < 3) {
 		if (mouseDownActivate && whatHappened == kEventMouseUp) {
@@ -607,11 +627,8 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 		if (!gButtonIsDown) 
 			return result;
     }
-   /* if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating && 
-            GetUserFocusWindow() != getSTWindowXXXX()) {
-        SetUserFocusWindow(kUserFocusAuto);
-        SetUserFocusWindow(getSTWindowXXXX());
-    }*/
+#endif
+
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
     
@@ -627,8 +644,14 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+			GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGrowRgn,ioWinRgn);
+            if (PtInRgn(mouseLocation,ioWinRgn))
+                return result;
+#else
             if (windowPartCode != inContent)
                 return result;
+#endif
 			if (mouseDownActivate) 
 				return result;
             if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating) {
