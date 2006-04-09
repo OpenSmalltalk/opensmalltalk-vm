@@ -772,6 +772,347 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	return 0;
 }
 
+#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
+// requestFlags bit values in VideoRequestRec (example use: 1<<kAbsoluteRequestBit)
+enum {
+	kBitDepthPriorityBit		= 0,	// Bit depth setting has priority over resolution
+	kAbsoluteRequestBit			= 1,	// Available setting must match request
+	kShallowDepthBit			= 2,	// Match bit depth less than or equal to request
+	kMaximizeResBit				= 3,	// Match screen resolution greater than or equal to request
+	kAllValidModesBit			= 4		// Match display with valid timing modes (may include modes which are not marked as safe)
+};
+
+// availFlags bit values in VideoRequestRec (example use: 1<<kModeValidNotSafeBit)
+enum {
+	kModeValidNotSafeBit		= 0		//  Available timing mode is valid but not safe (requires user confirmation of switch)
+};
+
+// video request structure
+struct VideoRequestRec	{
+	GDHandle		screenDevice;		// <in/out>	nil will force search of best device, otherwise search this device only
+	short			reqBitDepth;		// <in>		requested bit depth
+	short			availBitDepth;		// <out>	available bit depth
+	unsigned long	reqHorizontal;		// <in>		requested horizontal resolution
+	unsigned long	reqVertical;		// <in>		requested vertical resolution
+	unsigned long	availHorizontal;	// <out>	available horizontal resolution
+	unsigned long	availVertical;		// <out>	available vertical resolution
+	unsigned long	requestFlags;		// <in>		request flags
+	unsigned long	availFlags;			// <out>	available mode flags
+	unsigned long	displayMode;		// <out>	mode used to set the screen resolution
+	unsigned long	depthMode;			// <out>	mode used to set the depth
+	VDSwitchInfoRec	switchInfo;			// <out>	DM2.0 uses this rather than displayMode/depthMode combo
+};
+typedef struct VideoRequestRec VideoRequestRec;
+typedef struct VideoRequestRec *VideoRequestRecPtr;
+
+struct DepthInfo {
+	VDSwitchInfoRec			depthSwitchInfo;			// This is the switch mode to choose this timing/depth
+	VPBlock					depthVPBlock;				// VPBlock (including size, depth and format)
+};
+typedef struct DepthInfo DepthInfo;
+
+struct ListIteratorDataRec {
+	VDTimingInfoRec			displayModeTimingInfo;		// Contains timing flags and such
+	unsigned long			depthBlockCount;			// How many depths available for a particular timing
+	DepthInfo				*depthBlocks;				// Array of DepthInfo
+};
+typedef struct ListIteratorDataRec ListIteratorDataRec;
+void GetRequestTheDM2Way (		VideoRequestRecPtr requestRecPtr,
+								GDHandle walkDevice,
+								DMDisplayModeListIteratorUPP myModeIteratorProc,
+								DMListIndexType theDisplayModeCount,
+								DMListType *theDisplayModeList);
+
+pascal void ModeListIterator (	void *userData,
+								DMListIndexType itemIndex,
+								DMDisplayModeListEntryPtr displaymodeInfo);
+
+Boolean FindBestMatch (			VideoRequestRecPtr requestRecPtr,
+								short bitDepth,
+								unsigned long horizontal,
+								unsigned long vertical);
+
+
+int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
+	/* Set the window to the given width, height, and color depth. Put the window
+	   into the full screen mode specified by fullscreenFlag. */
+	
+
+    GDHandle		dominantGDevice;
+	Handle			displayState;
+	UInt32			depthMode=depth;
+	long			value = 0,displayMgrPresent;
+	DMDisplayModeListIteratorUPP	myModeIteratorProc = nil;	
+	DisplayIDType	theDisplayID;				
+	DMListIndexType	theDisplayModeCount;		
+	DMListType		theDisplayModeList;			
+	VideoRequestRec	request;
+	
+	Gestalt(gestaltDisplayMgrAttr,&value);
+	displayMgrPresent=value&(1<<gestaltDisplayMgrPresent);
+    if (!displayMgrPresent) {
+    	success(false);
+    	return 0;
+    }
+
+	dominantGDevice = getThatDominateGDevice(getSTWindow());
+        if (dominantGDevice == null) {
+            success(false);
+            return 0;
+        }
+	request.screenDevice  = dominantGDevice;
+	request.reqBitDepth = depth;
+	request.reqHorizontal = width;
+	request.reqVertical = height;
+	request.requestFlags = 1<<kAbsoluteRequestBit;
+	request.displayMode = 0;
+	myModeIteratorProc = NewDMDisplayModeListIteratorUPP(ModeListIterator);	// for DM2.0 searches
+
+	if  (dominantGDevice && myModeIteratorProc) {
+		if( noErr == DMGetDisplayIDByGDevice( dominantGDevice, &theDisplayID, false ) ) {
+			theDisplayModeCount = 0;
+			if (noErr == DMNewDisplayModeList(theDisplayID, 0, 0, &theDisplayModeCount, &theDisplayModeList) ) {
+				GetRequestTheDM2Way (&request, dominantGDevice, myModeIteratorProc, theDisplayModeCount, &theDisplayModeList);
+				DMDisposeList(theDisplayModeList);	
+			} else {
+			}
+		}
+	}
+	
+	if (myModeIteratorProc)
+		DisposeDMDisplayModeListIteratorUPP(myModeIteratorProc);
+	if (request.displayMode == 0)  {
+    	success(false);
+    	return 0;
+    }
+	DMBeginConfigureDisplays(&displayState);
+	DMSetDisplayMode(dominantGDevice,request.displayMode,&depthMode,null,displayState);
+	DMEndConfigureDisplays(displayState);
+	ioSetFullScreen(fullscreenFlag);
+	
+    return 1;
+}
+
+/*#	MacOSª Sample Code
+#	
+#	Written by: Eric Anderson
+#	 email: eric3@apple.com
+#
+#	Display Manager sample code
+#	RequestVideo demonstrates the usage of the Display Manager introduced
+#	with the PowerMacs and integrated into the system under System 7.5. With
+#	the RequestVideo sample code library, developers will be able to explore
+#	the Display Manager API by changing bit depth and screen resolution on
+#	multisync displays on built-in, NuBus, and PCI based video. Display Manager 1.0
+#	is built into the Systems included with the first PowerMacs up through System 7.5.
+#	Display Manager 2.0 is included with the release of the new PCI based PowerMacs,
+#	and will be included in post 7.5 System Software releases. 
+*/
+
+pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDisplayModeListEntryPtr displaymodeInfo)
+{
+	unsigned long			depthCount;
+	short					iCount;
+	ListIteratorDataRec		*myIterateData		= (ListIteratorDataRec*) userData;
+	DepthInfo				*myDepthInfo;
+	
+	// set user data in a round about way
+	myIterateData->displayModeTimingInfo		= *displaymodeInfo->displayModeTimingInfo;
+	
+	// now get the DMDepthInfo info into memory we own
+	depthCount = displaymodeInfo->displayModeDepthBlockInfo->depthBlockCount;
+	myDepthInfo = (DepthInfo*)NewPtrClear(depthCount * sizeof(DepthInfo));
+
+	// set the info for the caller
+	myIterateData->depthBlockCount = depthCount;
+	myIterateData->depthBlocks = myDepthInfo;
+
+	// and fill out all the entries
+	if (depthCount) for (iCount=0; iCount < depthCount; iCount++)
+	{
+		myDepthInfo[iCount].depthSwitchInfo = 
+			*displaymodeInfo->displayModeDepthBlockInfo->depthVPBlock[iCount].depthSwitchInfo;
+		myDepthInfo[iCount].depthVPBlock = 
+			*displaymodeInfo->displayModeDepthBlockInfo->depthVPBlock[iCount].depthVPBlock;
+	}
+}
+
+void GetRequestTheDM2Way (	VideoRequestRecPtr requestRecPtr,
+							GDHandle walkDevice,
+							DMDisplayModeListIteratorUPP myModeIteratorProc,
+							DMListIndexType theDisplayModeCount,
+							DMListType *theDisplayModeList)
+{
+	short					jCount;
+	short					kCount;
+	ListIteratorDataRec		searchData;
+
+	searchData.depthBlocks = nil;
+	// get the mode lists for this GDevice
+	for (jCount=0; jCount<theDisplayModeCount; jCount++)		// get info on all the resolution timings
+	{
+		DMGetIndexedDisplayModeFromList(*theDisplayModeList, jCount, 0, myModeIteratorProc, &searchData);
+		
+		// for all the depths for this resolution timing (mode)...
+		if (searchData.depthBlockCount) for (kCount = 0; kCount < searchData.depthBlockCount; kCount++)
+		{
+			// only if the mode is valid and is safe or we override it with the kAllValidModesBit request flag
+			if	(	searchData.displayModeTimingInfo.csTimingFlags & 1<<kModeValid && 
+					(	searchData.displayModeTimingInfo.csTimingFlags & 1<<kModeSafe ||
+						requestRecPtr->requestFlags & 1<<kAllValidModesBit
+					)
+				)
+			{
+				if (FindBestMatch (	requestRecPtr,
+									searchData.depthBlocks[kCount].depthVPBlock.vpPixelSize,
+									searchData.depthBlocks[kCount].depthVPBlock.vpBounds.right,
+									searchData.depthBlocks[kCount].depthVPBlock.vpBounds.bottom))
+				{
+					requestRecPtr->screenDevice = walkDevice;
+					requestRecPtr->availBitDepth = searchData.depthBlocks[kCount].depthVPBlock.vpPixelSize;
+					requestRecPtr->availHorizontal = searchData.depthBlocks[kCount].depthVPBlock.vpBounds.right;
+					requestRecPtr->availVertical = searchData.depthBlocks[kCount].depthVPBlock.vpBounds.bottom;
+					
+					// now set the important info for DM to set the display
+					requestRecPtr->depthMode = searchData.depthBlocks[kCount].depthSwitchInfo.csMode;
+					requestRecPtr->displayMode = searchData.depthBlocks[kCount].depthSwitchInfo.csData;
+					requestRecPtr->switchInfo = searchData.depthBlocks[kCount].depthSwitchInfo;
+					if (searchData.displayModeTimingInfo.csTimingFlags & 1<<kModeSafe)
+						requestRecPtr->availFlags = 0;							// mode safe
+					else requestRecPtr->availFlags = 1<<kModeValidNotSafeBit;	// mode valid but not safe, requires user validation of mode switch
+	
+				}
+			}
+
+		}
+	
+		if (searchData.depthBlocks)
+		{
+			DisposePtr ((Ptr)searchData.depthBlocks);	// toss for this timing mode of this gdevice
+			searchData.depthBlocks = nil;				// init it just so we know
+		}
+	}
+}
+
+Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigned long horizontal, unsigned long vertical)
+{
+	// ¥¥ do the big comparison ¥¥
+	// first time only if	(no mode yet) and
+	//						(bounds are greater/equal or kMaximizeRes not set) and
+	//						(depth is less/equal or kShallowDepth not set) and
+	//						(request match or kAbsoluteRequest not set)
+	if	(	nil == requestRecPtr->displayMode
+			&&
+			(	(horizontal >= requestRecPtr->reqHorizontal &&
+				vertical >= requestRecPtr->reqVertical)
+				||														
+				!(requestRecPtr->requestFlags & 1<<kMaximizeResBit)	
+			)
+			&&
+			(	bitDepth <= requestRecPtr->reqBitDepth ||	
+				!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)		
+			)
+			&&
+			(	(horizontal == requestRecPtr->reqHorizontal &&	
+				vertical == requestRecPtr->reqVertical &&
+				bitDepth == requestRecPtr->reqBitDepth)
+				||
+				!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)	
+			)
+		)
+		{
+			// go ahead and set the new values
+			return (true);
+		}
+	else	// can we do better than last time?
+	{
+		// if	(kBitDepthPriority set and avail not equal req) and
+		//		((depth is greater avail and depth is less/equal req) or kShallowDepth not set) and
+		//		(avail depth less reqested and new greater avail)
+		//		(request match or kAbsoluteRequest not set)
+		if	(	(	requestRecPtr->requestFlags & 1<<kBitDepthPriorityBit && 
+					requestRecPtr->availBitDepth != requestRecPtr->reqBitDepth
+				)
+				&&
+				(	(	bitDepth > requestRecPtr->availBitDepth &&
+						bitDepth <= requestRecPtr->reqBitDepth
+					)
+					||
+					!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)	
+				)
+				&&
+				(	requestRecPtr->availBitDepth < requestRecPtr->reqBitDepth &&
+					bitDepth > requestRecPtr->availBitDepth	
+				)
+				&&
+				(	(horizontal == requestRecPtr->reqHorizontal &&	
+					vertical == requestRecPtr->reqVertical &&
+					bitDepth == requestRecPtr->reqBitDepth)
+					||
+					!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)	
+				)
+			)
+		{
+			// go ahead and set the new values
+			return (true);
+		}
+		else
+		{
+			// match resolution: minimize Æh & Æv
+			if	(	abs((requestRecPtr->reqHorizontal - horizontal)) <=
+					abs((requestRecPtr->reqHorizontal - requestRecPtr->availHorizontal)) &&
+					abs((requestRecPtr->reqVertical - vertical)) <=
+					abs((requestRecPtr->reqVertical - requestRecPtr->availVertical))
+				)
+			{
+				// now we have a smaller or equal delta
+				//	if (h or v greater/equal to request or kMaximizeRes not set) 
+				if (	(horizontal >= requestRecPtr->reqHorizontal &&
+						vertical >= requestRecPtr->reqVertical)
+						||
+						!(requestRecPtr->requestFlags & 1<<kMaximizeResBit)
+					)
+				{
+					// if	(depth is equal or kBitDepthPriority not set) and
+					//		(depth is less/equal or kShallowDepth not set) and
+					//		([h or v not equal] or [avail depth less reqested and new greater avail] or depth equal avail) and
+					//		(request match or kAbsoluteRequest not set)
+					if	(	(	requestRecPtr->availBitDepth == bitDepth ||			
+								!(requestRecPtr->requestFlags & 1<<kBitDepthPriorityBit)
+							)
+							&&
+							(	bitDepth <= requestRecPtr->reqBitDepth ||	
+								!(requestRecPtr->requestFlags & 1<<kShallowDepthBit)		
+							)
+							&&
+							(	(requestRecPtr->availHorizontal != horizontal ||
+								requestRecPtr->availVertical != vertical)
+								||
+								(requestRecPtr->availBitDepth < requestRecPtr->reqBitDepth &&
+								bitDepth > requestRecPtr->availBitDepth)
+								||
+								(bitDepth == requestRecPtr->reqBitDepth)
+							)
+							&&
+							(	(horizontal == requestRecPtr->reqHorizontal &&	
+								vertical == requestRecPtr->reqVertical &&
+								bitDepth == requestRecPtr->reqBitDepth)
+								||
+								!(requestRecPtr->requestFlags & 1<<kAbsoluteRequestBit)	
+							)
+						)
+					{
+						// go ahead and set the new values
+						return (true);
+					}
+				}
+			}
+		}
+	}
+	return (false);
+}
+  
+  #else
 int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	/* Set the window to the given width, height, and color depth. Put the window
 	   into the full screen mode specified by fullscreenFlag. */
@@ -799,6 +1140,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	
     return 1;
 }
+#endif
 
 GDHandle	getThatDominateGDevice(WindowPtr window) {
 	GDHandle		dominantGDevice=NULL;
