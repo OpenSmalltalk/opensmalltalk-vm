@@ -118,51 +118,51 @@ JPEGReaderPlugin class >> declareCVarsIn: cg [
 { #category : #'class initialization' }
 JPEGReaderPlugin class >> initialize [
 	"JPEGReaderPlugin initialize"
-	DCTSize _ 8.
-	MaxSample _ (2 raisedToInteger: DCTSize) - 1.
-	SampleOffset _ MaxSample // 2.
-	DCTSize2 _ DCTSize squared.
-	ConstBits _ 13.
-	Pass1Bits _ 2.
-	Pass1Div _ 1 bitShift: ConstBits - Pass1Bits.
-	Pass2Div _ 1 bitShift: ConstBits + Pass1Bits + 3.
+	DCTSize := 8.
+	MaxSample := (2 raisedToInteger: DCTSize) - 1.
+	SampleOffset := MaxSample // 2.
+	DCTSize2 := DCTSize squared.
+	ConstBits := 13.
+	Pass1Bits := 2.
+	Pass1Div := 1 bitShift: ConstBits - Pass1Bits.
+	Pass2Div := 1 bitShift: ConstBits + Pass1Bits + 3.
 
 	"fixed-point Inverse Discrete Cosine Transform (IDCT) constants"
-	FIXn0n298631336 _ 2446.
-	FIXn0n390180644 _ 3196.
-	FIXn0n541196100 _ 4433.
-	FIXn0n765366865 _ 6270.
-	FIXn0n899976223 _ 7373.
-	FIXn1n175875602 _ 9633.
-	FIXn1n501321110 _ 12299.
-	FIXn1n847759065 _ 15137.
-	FIXn1n961570560 _ 16069.
-	FIXn2n053119869 _ 16819.
-	FIXn2n562915447 _ 20995.
-	FIXn3n072711026 _ 25172.
+	FIXn0n298631336 := 2446.
+	FIXn0n390180644 := 3196.
+	FIXn0n541196100 := 4433.
+	FIXn0n765366865 := 6270.
+	FIXn0n899976223 := 7373.
+	FIXn1n175875602 := 9633.
+	FIXn1n501321110 := 12299.
+	FIXn1n847759065 := 15137.
+	FIXn1n961570560 := 16069.
+	FIXn2n053119869 := 16819.
+	FIXn2n562915447 := 20995.
+	FIXn3n072711026 := 25172.
 
 	"fixed-point color conversion constants"
-	FIXn0n34414 _ 22554.
-	FIXn0n71414 _ 46802.
-	FIXn1n40200 _ 91881.
-	FIXn1n77200 _  116130.
+	FIXn0n34414 := 22554.
+	FIXn0n71414 := 46802.
+	FIXn1n40200 := 91881.
+	FIXn1n77200 :=  116130.
 
-	CurrentXIndex _ 0.
-	CurrentYIndex _ 1.
-	HScaleIndex _ 2.
-	VScaleIndex _ 3.
-	MCUBlockIndex _ 4.
-	BlockWidthIndex _ 5.
-	MCUWidthIndex _ 8.
-	PriorDCValueIndex _ 10.
-	MinComponentSize _ 11.
+	CurrentXIndex := 0.
+	CurrentYIndex := 1.
+	HScaleIndex := 2.
+	VScaleIndex := 3.
+	MCUBlockIndex := 4.
+	BlockWidthIndex := 5.
+	MCUWidthIndex := 8.
+	PriorDCValueIndex := 10.
+	MinComponentSize := 11.
 
-	RedIndex _ 0.
-	GreenIndex _ 1.
-	BlueIndex _ 2.
+	RedIndex := 0.
+	GreenIndex := 1.
+	BlueIndex := 2.
 
-	MaxMCUBlocks _ 128.
-	MaxBits _ 16.
+	MaxMCUBlocks := 128.
+	MaxBits := 16.
 ]
 
 { #category : #decoding }
@@ -202,13 +202,13 @@ JPEGReaderPlugin >> colorComponentBlocks: blocks from: oop [
 	(interpreterProxy isPointers: oop) ifFalse:[^false].
 	(interpreterProxy slotSizeOf: oop) < MinComponentSize ifTrue:[^false].
 
-	arrayOop _ interpreterProxy fetchPointer: MCUBlockIndex ofObject: oop.
+	arrayOop := interpreterProxy fetchPointer: MCUBlockIndex ofObject: oop.
 	(interpreterProxy isIntegerObject: arrayOop) ifTrue:[^false].
 	(interpreterProxy isPointers: arrayOop) ifFalse:[^false].
-	max _ interpreterProxy slotSizeOf: arrayOop.
+	max := interpreterProxy slotSizeOf: arrayOop.
 	max > MaxMCUBlocks ifTrue:[^false].
 	0 to: max-1 do:[:i|
-		blockOop _ interpreterProxy fetchPointer: i ofObject: arrayOop.
+		blockOop := interpreterProxy fetchPointer: i ofObject: arrayOop.
 		(interpreterProxy isIntegerObject: blockOop) ifTrue:[^false].
 		(interpreterProxy isWords: blockOop) ifFalse:[^false].
 		(interpreterProxy slotSizeOf: blockOop) = DCTSize2 ifFalse:[^false].
@@ -223,12 +223,12 @@ JPEGReaderPlugin >> colorConvertGrayscaleMCU [
 	yComponent at: CurrentXIndex put: 0.
 	yComponent at: CurrentYIndex put: 0.
 	0 to: jpegBitsSize-1 do:[:i|
-		y _ self nextSampleY.
-		y _ y + (residuals at: GreenIndex).
-		y _ y min: MaxSample.
+		y := self nextSampleY.
+		y := y + (residuals at: GreenIndex).
+		y := y min: MaxSample.
 		residuals at: GreenIndex put: (y bitAnd: ditherMask).
-		y _ y bitAnd: MaxSample - ditherMask.
-		y _ y max: 1.
+		y := y bitAnd: MaxSample - ditherMask.
+		y := y max: 1.
 		jpegBits at: i put: 16rFF000000 + (y<<16) + (y<<8) + y.
 	].
 ]
@@ -243,27 +243,27 @@ JPEGReaderPlugin >> colorConvertMCU [
 	crComponent at: CurrentXIndex put: 0.
 	crComponent at: CurrentYIndex put: 0.
 	0 to: jpegBitsSize-1 do:[:i|
-		y _ self nextSampleY.
-		cb _ self nextSampleCb.
-		cb _ cb - SampleOffset.
-		cr _ self nextSampleCr.
-		cr _ cr - SampleOffset.
-		red _ y + ((FIXn1n40200 * cr) // 65536) + (residuals at: RedIndex).
-		red _ red min: MaxSample. red _ red max: 0.
+		y := self nextSampleY.
+		cb := self nextSampleCb.
+		cb := cb - SampleOffset.
+		cr := self nextSampleCr.
+		cr := cr - SampleOffset.
+		red := y + ((FIXn1n40200 * cr) // 65536) + (residuals at: RedIndex).
+		red := red min: MaxSample. red := red max: 0.
 		residuals at: RedIndex put: (red bitAnd: ditherMask).
-		red _ red bitAnd: MaxSample - ditherMask.
-		red _ red max: 1.
-		green _ y - ((FIXn0n34414 * cb) // 65536) -
+		red := red bitAnd: MaxSample - ditherMask.
+		red := red max: 1.
+		green := y - ((FIXn0n34414 * cb) // 65536) -
 			((FIXn0n71414 * cr) // 65536) + (residuals at: GreenIndex).
-		green _ green min: MaxSample. green _ green max: 0.
+		green := green min: MaxSample. green := green max: 0.
 		residuals at: GreenIndex put: (green bitAnd: ditherMask).
-		green _ green bitAnd: MaxSample - ditherMask.
-		green _ green max: 1.
-		blue _ y + ((FIXn1n77200 * cb) // 65536) + (residuals at: BlueIndex).
-		blue _ blue min: MaxSample. blue _ blue max: 0.
+		green := green bitAnd: MaxSample - ditherMask.
+		green := green max: 1.
+		blue := y + ((FIXn1n77200 * cb) // 65536) + (residuals at: BlueIndex).
+		blue := blue min: MaxSample. blue := blue max: 0.
 		residuals at: BlueIndex put: (blue bitAnd: ditherMask).
-		blue _ blue bitAnd: MaxSample - ditherMask.
-		blue _ blue max: 1.
+		blue := blue bitAnd: MaxSample - ditherMask.
+		blue := blue max: 1.
 		jpegBits at: i put: 16rFF000000 + (red bitShift: 16) + (green bitShift: 8) + blue.
 	].
 ]
@@ -279,32 +279,32 @@ JPEGReaderPlugin >> decodeBlockInto: anArray component: aColorComponent [
 	| byte zeroCount bits index |
 	self var: #anArray type: 'int *'.
 	self var: #aColorComponent type: 'int *'.
-	byte _ self jpegDecodeValueFrom: dcTable size: dcTableSize.
+	byte := self jpegDecodeValueFrom: dcTable size: dcTableSize.
 	byte < 0 ifTrue:[^interpreterProxy primitiveFail].
 	byte ~= 0 ifTrue: [
-		bits _ self getBits: byte.
-		byte _ self scaleAndSignExtend: bits inFieldWidth: byte].
-	byte _ aColorComponent 
+		bits := self getBits: byte.
+		byte := self scaleAndSignExtend: bits inFieldWidth: byte].
+	byte := aColorComponent 
 				at: PriorDCValueIndex 
 				put: (aColorComponent at: PriorDCValueIndex) + byte.
 	anArray at: 0 put: byte.
 	1 to: DCTSize2 - 1 do:[:i| anArray at: i put: 0].
-	index _ 1.
+	index := 1.
 	[index < DCTSize2] whileTrue:[
-		byte _ self jpegDecodeValueFrom: acTable size: acTableSize.
+		byte := self jpegDecodeValueFrom: acTable size: acTableSize.
 		byte < 0 ifTrue:[^interpreterProxy primitiveFail].
-		zeroCount _ byte >> 4.
-		byte _ byte bitAnd: 16r0F.
+		zeroCount := byte >> 4.
+		byte := byte bitAnd: 16r0F.
 		byte ~= 0 ifTrue:[
-			index _ index + zeroCount.
-			bits _  self getBits: byte.
-			byte _ self scaleAndSignExtend: bits inFieldWidth: byte.
+			index := index + zeroCount.
+			bits :=  self getBits: byte.
+			byte := self scaleAndSignExtend: bits inFieldWidth: byte.
 			(index < 0 or:[index >= DCTSize2]) ifTrue:[^interpreterProxy primitiveFail].
 			anArray at:	 (jpegNaturalOrder at: index) put: byte.
 		] ifFalse:[
-			zeroCount = 15 ifTrue: [index _ index + zeroCount] ifFalse: [^ nil].
+			zeroCount = 15 ifTrue: [index := index + zeroCount] ifFalse: [^ nil].
 		].
-		index _ index + 1
+		index := index + 1
 	].
 ]
 
@@ -313,15 +313,15 @@ JPEGReaderPlugin >> fillBuffer [
 	| byte |
 	[jsBitCount <= 16] whileTrue:[
 		jsPosition < jsReadLimit ifFalse:[^jsBitCount].
-		byte _ jsCollection at: jsPosition.
-		jsPosition _ jsPosition + 1.
+		byte := jsCollection at: jsPosition.
+		jsPosition := jsPosition + 1.
 		byte = 16rFF ifTrue:["peek for 00"
 			((jsPosition < jsReadLimit) and:[(jsCollection at: jsPosition) = 16r00]) ifFalse:[
-				jsPosition _ jsPosition - 1.
+				jsPosition := jsPosition - 1.
 				^jsBitCount].
-			jsPosition _ jsPosition + 1].
-		jsBitBuffer _ (jsBitBuffer bitShift: 8) bitOr: byte.
-		jsBitCount _ jsBitCount + 8].
+			jsPosition := jsPosition + 1].
+		jsBitBuffer := (jsBitBuffer bitShift: 8) bitOr: byte.
+		jsBitCount := jsBitCount + 8].
 	^jsBitCount
 ]
 
@@ -331,9 +331,9 @@ JPEGReaderPlugin >> getBits: requestedBits [
 	requestedBits > jsBitCount ifTrue:[
 		self fillBuffer.
 		requestedBits > jsBitCount ifTrue:[^-1]].
-	value _ jsBitBuffer bitShift: (requestedBits - jsBitCount).
-	jsBitBuffer _ jsBitBuffer bitAnd: (1 bitShift: (jsBitCount - requestedBits)) -1.
-	jsBitCount _ jsBitCount - requestedBits.
+	value := jsBitBuffer bitShift: (requestedBits - jsBitCount).
+	jsBitBuffer := jsBitBuffer bitAnd: (1 bitShift: (jsBitCount - requestedBits)) -1.
+	jsBitCount := jsBitCount - requestedBits.
 	^ value
 ]
 
@@ -343,53 +343,53 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 	self var: #anArray type:'int *'.
 	self var: #qt type:'int *'.
 	self var: #ws declareC:'int ws[64]'.
-	self cCode:'' inSmalltalk:[ws _ CArrayAccessor on: (IntegerArray new: 64)].
+	self cCode:'' inSmalltalk:[ws := CArrayAccessor on: (IntegerArray new: 64)].
 	"Pass 1: process columns from anArray, store into work array"
 	0 to: DCTSize-1 do:[:i |
-		anACTerm _ -1.
+		anACTerm := -1.
 		1 to: DCTSize-1 do:[:row|
 			anACTerm = -1 ifTrue:[
-				(anArray at: row * DCTSize + i) = 0 ifFalse:[anACTerm _ row]]].
+				(anArray at: row * DCTSize + i) = 0 ifFalse:[anACTerm := row]]].
 		anACTerm = -1 ifTrue:[
-			dcval _ (anArray at: i) * (qt at: 0) bitShift: Pass1Bits.
+			dcval := (anArray at: i) * (qt at: 0) bitShift: Pass1Bits.
 			0 to: DCTSize-1 do: [:j | ws at: (j * DCTSize + i) put: dcval]
 		] ifFalse:[
-			z2 _ (anArray at: (DCTSize * 2 + i)) * (qt at: (DCTSize * 2 + i)).
-			z3 _ (anArray at: (DCTSize * 6 + i)) * (qt at: (DCTSize * 6 + i)).
-			z1 _ (z2 + z3) * FIXn0n541196100.
-			t2 _ z1 + (z3 * (0 - FIXn1n847759065)).
-			t3 _ z1 + (z2 * FIXn0n765366865).
-			z2 _ (anArray at: i) * (qt at: i).
-			z3 _ (anArray at: (DCTSize * 4 + i)) * (qt at: (DCTSize * 4 + i)).
-			t0 _ (z2 + z3) bitShift: ConstBits.
-			t1 _ (z2 - z3) bitShift: ConstBits.
-			t10 _ t0 + t3.
-			t13 _ t0 - t3.
-			t11 _ t1 + t2.
-			t12 _ t1 - t2.
-			t0 _ (anArray at: (DCTSize * 7 + i)) * (qt at: (DCTSize * 7 + i)).
-			t1 _ (anArray at: (DCTSize * 5 + i)) * (qt at: (DCTSize * 5 + i)).
-			t2 _ (anArray at: (DCTSize * 3 + i)) * (qt at: (DCTSize * 3 + i)).
-			t3 _ (anArray at: (DCTSize + i)) * (qt at: (DCTSize + i)).
-			z1 _ t0 + t3.
-			z2 _ t1 + t2.
-			z3 _ t0 + t2.
-			z4 _ t1 + t3.
-			z5 _ (z3 + z4) * FIXn1n175875602.
-			t0 _ t0 * FIXn0n298631336.
-			t1 _ t1 * FIXn2n053119869.
-			t2 _ t2 * FIXn3n072711026.
-			t3 _ t3 * FIXn1n501321110.
-			z1 _ z1 * (0 - FIXn0n899976223).
-			z2 _ z2 * (0 - FIXn2n562915447).
-			z3 _ z3 * (0 - FIXn1n961570560).
-			z4 _ z4 * (0 - FIXn0n390180644).
-			z3 _ z3 + z5.
-			z4 _ z4 + z5.
-			t0 _ t0 + z1 + z3.
-			t1 _ t1 +z2 +z4.
-			t2 _ t2 + z2 + z3.
-			t3 _ t3 + z1 + z4.
+			z2 := (anArray at: (DCTSize * 2 + i)) * (qt at: (DCTSize * 2 + i)).
+			z3 := (anArray at: (DCTSize * 6 + i)) * (qt at: (DCTSize * 6 + i)).
+			z1 := (z2 + z3) * FIXn0n541196100.
+			t2 := z1 + (z3 * (0 - FIXn1n847759065)).
+			t3 := z1 + (z2 * FIXn0n765366865).
+			z2 := (anArray at: i) * (qt at: i).
+			z3 := (anArray at: (DCTSize * 4 + i)) * (qt at: (DCTSize * 4 + i)).
+			t0 := (z2 + z3) bitShift: ConstBits.
+			t1 := (z2 - z3) bitShift: ConstBits.
+			t10 := t0 + t3.
+			t13 := t0 - t3.
+			t11 := t1 + t2.
+			t12 := t1 - t2.
+			t0 := (anArray at: (DCTSize * 7 + i)) * (qt at: (DCTSize * 7 + i)).
+			t1 := (anArray at: (DCTSize * 5 + i)) * (qt at: (DCTSize * 5 + i)).
+			t2 := (anArray at: (DCTSize * 3 + i)) * (qt at: (DCTSize * 3 + i)).
+			t3 := (anArray at: (DCTSize + i)) * (qt at: (DCTSize + i)).
+			z1 := t0 + t3.
+			z2 := t1 + t2.
+			z3 := t0 + t2.
+			z4 := t1 + t3.
+			z5 := (z3 + z4) * FIXn1n175875602.
+			t0 := t0 * FIXn0n298631336.
+			t1 := t1 * FIXn2n053119869.
+			t2 := t2 * FIXn3n072711026.
+			t3 := t3 * FIXn1n501321110.
+			z1 := z1 * (0 - FIXn0n899976223).
+			z2 := z2 * (0 - FIXn2n562915447).
+			z3 := z3 * (0 - FIXn1n961570560).
+			z4 := z4 * (0 - FIXn0n390180644).
+			z3 := z3 + z5.
+			z4 := z4 + z5.
+			t0 := t0 + z1 + z3.
+			t1 := t1 +z2 +z4.
+			t2 := t2 + z2 + z3.
+			t3 := t3 + z1 + z4.
 			ws at: i put: (t10 + t3) // Pass1Div.
 			ws at: (DCTSize * 7 + i) put: (t10 - t3) // Pass1Div.
 			ws at: (DCTSize * 1 + i) put: (t11 + t2) // Pass1Div.
@@ -401,63 +401,63 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 
 	"Pass 2: process rows from work array, store back into anArray"
 	0 to: DCTSize2-DCTSize by: DCTSize do:[:i |
-		z2 _ ws at: i + 2.
-		z3 _ ws at: i + 6.
-		z1 _ (z2 + z3) * FIXn0n541196100.
-		t2 _ z1 + (z3 * (0-FIXn1n847759065)).
-		t3 _ z1 + (z2 * FIXn0n765366865).
-		t0 _ (ws at: i) + (ws at: (i + 4)) bitShift: ConstBits.
-		t1 _ (ws at: i) - (ws at: (i + 4)) bitShift: ConstBits.
-		t10 _ t0 + t3.
-		t13 _ t0 - t3.
-		t11 _ t1 + t2.
-		t12 _ t1 -t2.
-		t0 _ ws at: (i + 7).
-		t1 _ ws at: (i + 5).
-		t2 _ ws at: (i + 3).
-		t3 _ ws at: (i + 1).
-		z1 _ t0 + t3.
-		z2 _ t1 + t2.
-		z3 _ t0 + t2.
-		z4 _ t1 + t3.
-		z5 _ (z3 + z4) * FIXn1n175875602.
-		t0 _ t0 * FIXn0n298631336.
-		t1 _ t1 * FIXn2n053119869.
-		t2 _ t2 * FIXn3n072711026.
-		t3 _ t3 * FIXn1n501321110.
-		z1 _ z1 * (0-FIXn0n899976223).
-		z2 _ z2 * (0-FIXn2n562915447).
-		z3 _ z3 * (0-FIXn1n961570560).
-		z4 _ z4 * (0-FIXn0n390180644).
-		z3 _ z3 + z5.
-		z4 _ z4 + z5.
-		t0 _ t0 + z1 + z3.
-		t1 _ t1 + z2 + z4.
-		t2 _ t2 + z2 + z3.
-		t3 _ t3 + z1 + z4.
-		v _ (t10 + t3) // Pass2Div + SampleOffset.
-		v _ v min: MaxSample. v _ v max: 0.
+		z2 := ws at: i + 2.
+		z3 := ws at: i + 6.
+		z1 := (z2 + z3) * FIXn0n541196100.
+		t2 := z1 + (z3 * (0-FIXn1n847759065)).
+		t3 := z1 + (z2 * FIXn0n765366865).
+		t0 := (ws at: i) + (ws at: (i + 4)) bitShift: ConstBits.
+		t1 := (ws at: i) - (ws at: (i + 4)) bitShift: ConstBits.
+		t10 := t0 + t3.
+		t13 := t0 - t3.
+		t11 := t1 + t2.
+		t12 := t1 -t2.
+		t0 := ws at: (i + 7).
+		t1 := ws at: (i + 5).
+		t2 := ws at: (i + 3).
+		t3 := ws at: (i + 1).
+		z1 := t0 + t3.
+		z2 := t1 + t2.
+		z3 := t0 + t2.
+		z4 := t1 + t3.
+		z5 := (z3 + z4) * FIXn1n175875602.
+		t0 := t0 * FIXn0n298631336.
+		t1 := t1 * FIXn2n053119869.
+		t2 := t2 * FIXn3n072711026.
+		t3 := t3 * FIXn1n501321110.
+		z1 := z1 * (0-FIXn0n899976223).
+		z2 := z2 * (0-FIXn2n562915447).
+		z3 := z3 * (0-FIXn1n961570560).
+		z4 := z4 * (0-FIXn0n390180644).
+		z3 := z3 + z5.
+		z4 := z4 + z5.
+		t0 := t0 + z1 + z3.
+		t1 := t1 + z2 + z4.
+		t2 := t2 + z2 + z3.
+		t3 := t3 + z1 + z4.
+		v := (t10 + t3) // Pass2Div + SampleOffset.
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: i put: v.
-		v _ (t10 - t3) // Pass2Div + SampleOffset.
-		v _ v min: MaxSample. v _ v max: 0.
+		v := (t10 - t3) // Pass2Div + SampleOffset.
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: (i + 7) put: v.
-		v _ (t11 + t2) // Pass2Div + SampleOffset. 
-		v _ v min: MaxSample. v _ v max: 0.
+		v := (t11 + t2) // Pass2Div + SampleOffset. 
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: (i + 1) put: v.
-		v _ (t11 - t2) // Pass2Div + SampleOffset.
-		v _ v min: MaxSample. v _ v max: 0.
+		v := (t11 - t2) // Pass2Div + SampleOffset.
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: (i + 6) put: v.
-		v _  (t12 + t1) // Pass2Div + SampleOffset.
-		v _ v min: MaxSample. v _ v max: 0.
+		v :=  (t12 + t1) // Pass2Div + SampleOffset.
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: (i + 2) put: v.
-		v _  (t12 - t1) // Pass2Div + SampleOffset.
-		v _ v min: MaxSample. v _ v max: 0.
+		v :=  (t12 - t1) // Pass2Div + SampleOffset.
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: (i + 5) put: v.
-		v _ (t13 + t0) // Pass2Div + SampleOffset.
-		v _ v min: MaxSample. v _ v max: 0.
+		v := (t13 + t0) // Pass2Div + SampleOffset.
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: (i + 3) put: v.
-		v _ (t13 - t0) // Pass2Div + SampleOffset.
-		v _ v min: MaxSample. v _ v max: 0.
+		v := (t13 - t0) // Pass2Div + SampleOffset.
+		v := v min: MaxSample. v := v max: 0.
 		anArray at: (i + 4) put: v].
 ]
 
@@ -466,19 +466,19 @@ JPEGReaderPlugin >> jpegDecodeValueFrom: table size: tableSize [
 	"Decode the next value in the receiver using the given huffman table."
 	| bits bitsNeeded tableIndex value index |
 	self var: #table type:'int *'.
-	bitsNeeded _ (table at: 0) >> 24.	"Initial bits needed"
+	bitsNeeded := (table at: 0) >> 24.	"Initial bits needed"
 	bitsNeeded > MaxBits ifTrue:[^-1].
-	tableIndex _ 2.							"First real table"
+	tableIndex := 2.							"First real table"
 	[true] whileTrue:[
-		bits _ self getBits: bitsNeeded.		"Get bits"
+		bits := self getBits: bitsNeeded.		"Get bits"
 		bits < 0 ifTrue:[^-1].
-		index _ tableIndex + bits - 1.
+		index := tableIndex + bits - 1.
 		index >= tableSize ifTrue:[^-1].
-		value _ table at: index.					"Lookup entry in table"
+		value := table at: index.					"Lookup entry in table"
 		(value bitAnd: 16r3F000000) = 0 ifTrue:[^value]. "Check if it is a leaf node"
 		"Fetch sub table"
-		tableIndex _ value bitAnd: 16rFFFF.	"Table offset in low 16 bit"
-		bitsNeeded _ (value >> 24) bitAnd: 255. "Additional bits in high 8 bit"
+		tableIndex := value bitAnd: 16rFFFF.	"Table offset in low 16 bit"
+		bitsNeeded := (value >> 24) bitAnd: 255. "Additional bits in high 8 bit"
 		bitsNeeded > MaxBits ifTrue:[^-1]].
 	^-1
 ]
@@ -488,15 +488,15 @@ JPEGReaderPlugin >> loadJPEGStreamFrom: streamOop [
 	| oop sz |
 	(interpreterProxy slotSizeOf: streamOop) < 5 ifTrue:[^false].
 	(interpreterProxy isPointers: streamOop) ifFalse:[^false].
-	oop _ interpreterProxy fetchPointer: 0 ofObject: streamOop.
+	oop := interpreterProxy fetchPointer: 0 ofObject: streamOop.
 	(interpreterProxy isIntegerObject: oop) ifTrue:[^false].
 	(interpreterProxy isBytes: oop) ifFalse:[^false].
-	jsCollection _ interpreterProxy firstIndexableField: oop.
-	sz _ interpreterProxy byteSizeOf: oop.
-	jsPosition _ interpreterProxy fetchInteger: 1 ofObject: streamOop.
-	jsReadLimit _ interpreterProxy fetchInteger: 2 ofObject: streamOop.
-	jsBitBuffer _ interpreterProxy fetchInteger: 3 ofObject: streamOop.
-	jsBitCount _ interpreterProxy fetchInteger: 4 ofObject: streamOop.
+	jsCollection := interpreterProxy firstIndexableField: oop.
+	sz := interpreterProxy byteSizeOf: oop.
+	jsPosition := interpreterProxy fetchInteger: 1 ofObject: streamOop.
+	jsReadLimit := interpreterProxy fetchInteger: 2 ofObject: streamOop.
+	jsBitBuffer := interpreterProxy fetchInteger: 3 ofObject: streamOop.
+	jsBitCount := interpreterProxy fetchInteger: 4 ofObject: streamOop.
 	interpreterProxy failed ifTrue:[^false].
 	sz < jsReadLimit ifTrue:[^false].
 	(jsPosition < 0 or:[jsPosition >= jsReadLimit]) ifTrue:[^false].
@@ -507,18 +507,18 @@ JPEGReaderPlugin >> loadJPEGStreamFrom: streamOop [
 JPEGReaderPlugin >> nextSampleCb [
 	| dx dy blockIndex sampleIndex sample curX sx sy |
 	self inline: true.
-	dx _ curX _ cbComponent at: CurrentXIndex.
-	dy _ cbComponent at: CurrentYIndex.
-	sx _ cbComponent at: HScaleIndex.
-	sy _ cbComponent at: VScaleIndex.
+	dx := curX := cbComponent at: CurrentXIndex.
+	dy := cbComponent at: CurrentYIndex.
+	sx := cbComponent at: HScaleIndex.
+	sy := cbComponent at: VScaleIndex.
 	(sx = 0 and:[sy = 0]) ifFalse:[
-		dx _ dx // sx.
-		dy _ dy // sy.
+		dx := dx // sx.
+		dy := dy // sy.
 	].
-	blockIndex _ (dy bitShift: -3) * (cbComponent at: BlockWidthIndex) + (dx bitShift: -3).
-	sampleIndex _ ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
-	sample _ (cbBlocks at: blockIndex) at: sampleIndex.
-	curX _ curX + 1.
+	blockIndex := (dy bitShift: -3) * (cbComponent at: BlockWidthIndex) + (dx bitShift: -3).
+	sampleIndex := ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
+	sample := (cbBlocks at: blockIndex) at: sampleIndex.
+	curX := curX + 1.
 	curX < ((cbComponent at: MCUWidthIndex) * 8) ifTrue:[
 		cbComponent at: CurrentXIndex put: curX.
 	] ifFalse:[
@@ -532,18 +532,18 @@ JPEGReaderPlugin >> nextSampleCb [
 JPEGReaderPlugin >> nextSampleCr [
 	| dx dy blockIndex sampleIndex sample curX sx sy |
 	self inline: true.
-	dx _ curX _ crComponent at: CurrentXIndex.
-	dy _ crComponent at: CurrentYIndex.
-	sx _ crComponent at: HScaleIndex.
-	sy _ crComponent at: VScaleIndex.
+	dx := curX := crComponent at: CurrentXIndex.
+	dy := crComponent at: CurrentYIndex.
+	sx := crComponent at: HScaleIndex.
+	sy := crComponent at: VScaleIndex.
 	(sx = 0 and:[sy = 0]) ifFalse:[
-		dx _ dx // sx.
-		dy _ dy // sy.
+		dx := dx // sx.
+		dy := dy // sy.
 	].
-	blockIndex _ (dy bitShift: -3) * (crComponent at: BlockWidthIndex) + (dx bitShift: -3).
-	sampleIndex _ ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
-	sample _ (crBlocks at: blockIndex) at: sampleIndex.
-	curX _ curX + 1.
+	blockIndex := (dy bitShift: -3) * (crComponent at: BlockWidthIndex) + (dx bitShift: -3).
+	sampleIndex := ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
+	sample := (crBlocks at: blockIndex) at: sampleIndex.
+	curX := curX + 1.
 	curX < ((crComponent at: MCUWidthIndex) * 8) ifTrue:[
 		crComponent at: CurrentXIndex put: curX.
 	] ifFalse:[
@@ -559,18 +559,18 @@ JPEGReaderPlugin >> nextSampleFrom: aComponent blocks: aBlockArray [
 	self var: #aComponent type: 'int *'.
 	self var: #aBlockArray type: 'int **'.
 	self inline: true.
-	dx _ curX _ aComponent at: CurrentXIndex.
-	dy _ aComponent at: CurrentYIndex.
-	sx _ aComponent at: HScaleIndex.
-	sy _ aComponent at: VScaleIndex.
+	dx := curX := aComponent at: CurrentXIndex.
+	dy := aComponent at: CurrentYIndex.
+	sx := aComponent at: HScaleIndex.
+	sy := aComponent at: VScaleIndex.
 	(sx = 0 and:[sy = 0]) ifFalse:[
-		dx _ dx // sx.
-		dy _ dy // sy.
+		dx := dx // sx.
+		dy := dy // sy.
 	].
-	blockIndex _ (dy bitShift: -3) * (aComponent at: BlockWidthIndex) + (dx bitShift: -3).
-	sampleIndex _ ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
-	sample _ (aBlockArray at: blockIndex) at: sampleIndex.
-	curX _ curX + 1.
+	blockIndex := (dy bitShift: -3) * (aComponent at: BlockWidthIndex) + (dx bitShift: -3).
+	sampleIndex := ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
+	sample := (aBlockArray at: blockIndex) at: sampleIndex.
+	curX := curX + 1.
 	curX < ((aComponent at: MCUWidthIndex) * 8) ifTrue:[
 		aComponent at: CurrentXIndex put: curX.
 	] ifFalse:[
@@ -584,18 +584,18 @@ JPEGReaderPlugin >> nextSampleFrom: aComponent blocks: aBlockArray [
 JPEGReaderPlugin >> nextSampleY [
 	| dx dy blockIndex sampleIndex sample curX sx sy |
 	self inline: true.
-	dx _ curX _ yComponent at: CurrentXIndex.
-	dy _ yComponent at: CurrentYIndex.
-	sx _ yComponent at: HScaleIndex.
-	sy _ yComponent at: VScaleIndex.
+	dx := curX := yComponent at: CurrentXIndex.
+	dy := yComponent at: CurrentYIndex.
+	sx := yComponent at: HScaleIndex.
+	sy := yComponent at: VScaleIndex.
 	(sx = 0 and:[sy = 0]) ifFalse:[
-		dx _ dx // sx.
-		dy _ dy // sy.
+		dx := dx // sx.
+		dy := dy // sy.
 	].
-	blockIndex _ (dy bitShift: -3) * (yComponent at: BlockWidthIndex) + (dx bitShift: -3).
-	sampleIndex _ ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
-	sample _ (yBlocks at: blockIndex) at: sampleIndex.
-	curX _ curX + 1.
+	blockIndex := (dy bitShift: -3) * (yComponent at: BlockWidthIndex) + (dx bitShift: -3).
+	sampleIndex := ((dy bitAnd: 7) bitShift: 3) + (dx bitAnd: 7).
+	sample := (yBlocks at: blockIndex) at: sampleIndex.
+	curX := curX + 1.
 	curX < ((yComponent at: MCUWidthIndex) * 8) ifTrue:[
 		yComponent at: CurrentXIndex put: curX.
 	] ifFalse:[
@@ -618,19 +618,19 @@ JPEGReaderPlugin >> primitiveColorConvertGrayscaleMCU [
 	self stInit.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
-	ditherMask _ interpreterProxy stackIntegerValue: 0.
-	arrayOop _ interpreterProxy stackObjectValue: 1.
+	ditherMask := interpreterProxy stackIntegerValue: 0.
+	arrayOop := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = 3])
 		ifFalse:[^interpreterProxy primitiveFail].
-	residuals _ interpreterProxy firstIndexableField: arrayOop.
-	arrayOop _ interpreterProxy stackObjectValue: 2.
+	residuals := interpreterProxy firstIndexableField: arrayOop.
+	arrayOop := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	jpegBitsSize _ interpreterProxy slotSizeOf: arrayOop.
-	jpegBits _ interpreterProxy firstIndexableField: arrayOop.
-	arrayOop _ interpreterProxy stackObjectValue: 3.
+	jpegBitsSize := interpreterProxy slotSizeOf: arrayOop.
+	jpegBits := interpreterProxy firstIndexableField: arrayOop.
+	arrayOop := interpreterProxy stackObjectValue: 3.
 	interpreterProxy failed ifTrue:[^nil].
 	(self yColorComponentFrom: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -651,19 +651,19 @@ JPEGReaderPlugin >> primitiveColorConvertMCU [
 	self stInit.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
-	ditherMask _ interpreterProxy stackIntegerValue: 0.
-	arrayOop _ interpreterProxy stackObjectValue: 1.
+	ditherMask := interpreterProxy stackIntegerValue: 0.
+	arrayOop := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = 3])
 		ifFalse:[^interpreterProxy primitiveFail].
-	residuals _ interpreterProxy firstIndexableField: arrayOop.
-	arrayOop _ interpreterProxy stackObjectValue: 2.
+	residuals := interpreterProxy firstIndexableField: arrayOop.
+	arrayOop := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	jpegBitsSize _ interpreterProxy slotSizeOf: arrayOop.
-	jpegBits _ interpreterProxy firstIndexableField: arrayOop.
-	arrayOop _ interpreterProxy stackObjectValue: 3.
+	jpegBitsSize := interpreterProxy slotSizeOf: arrayOop.
+	jpegBits := interpreterProxy firstIndexableField: arrayOop.
+	arrayOop := interpreterProxy stackObjectValue: 3.
 	interpreterProxy failed ifTrue:[^nil].
 	((interpreterProxy isPointers: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = 3])
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -694,37 +694,37 @@ JPEGReaderPlugin >> primitiveDecodeMCU [
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	oop _ interpreterProxy stackObjectValue: 0.
+	oop := interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	(self loadJPEGStreamFrom: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	arrayOop _ interpreterProxy stackObjectValue: 1.
+	arrayOop := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	acTableSize _ interpreterProxy slotSizeOf: arrayOop.
-	acTable _ interpreterProxy firstIndexableField: arrayOop.
+	acTableSize := interpreterProxy slotSizeOf: arrayOop.
+	acTable := interpreterProxy firstIndexableField: arrayOop.
 
-	arrayOop _ interpreterProxy stackObjectValue: 2.
+	arrayOop := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	dcTableSize _ interpreterProxy slotSizeOf: arrayOop.
-	dcTable _ interpreterProxy firstIndexableField: arrayOop.
+	dcTableSize := interpreterProxy slotSizeOf: arrayOop.
+	dcTable := interpreterProxy firstIndexableField: arrayOop.
 
-	oop _ interpreterProxy stackObjectValue: 3.
+	oop := interpreterProxy stackObjectValue: 3.
 	interpreterProxy failed ifTrue:[^nil].
 	(self colorComponent: yComponent from: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	arrayOop _ interpreterProxy stackObjectValue: 4.
+	arrayOop := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: arrayOop)
 		ifFalse:[^interpreterProxy primitiveFail].
 	(interpreterProxy slotSizeOf: arrayOop) = DCTSize2
 		ifFalse:[^interpreterProxy primitiveFail].
-	anArray _ interpreterProxy firstIndexableField: arrayOop.
+	anArray := interpreterProxy firstIndexableField: arrayOop.
 
 	interpreterProxy failed ifTrue:[^nil].
 
@@ -753,16 +753,16 @@ JPEGReaderPlugin >> primitiveIdctInt [
 	self cCode:'' inSmalltalk:[self stInit].
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
-	arrayOop _ interpreterProxy stackObjectValue: 0.
+	arrayOop := interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = DCTSize2])
 		ifFalse:[^interpreterProxy primitiveFail].
-	qt _ interpreterProxy firstIndexableField: arrayOop.
-	arrayOop _ interpreterProxy stackObjectValue: 1.
+	qt := interpreterProxy firstIndexableField: arrayOop.
+	arrayOop := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	((interpreterProxy isWords: arrayOop) and:[(interpreterProxy slotSizeOf: arrayOop) = DCTSize2])
 		ifFalse:[^interpreterProxy primitiveFail].
-	anArray _ interpreterProxy firstIndexableField: arrayOop.
+	anArray := interpreterProxy firstIndexableField: arrayOop.
 	self idctBlockInt: anArray qt: qt.
 	interpreterProxy pop: 2.
 ]
@@ -778,13 +778,13 @@ JPEGReaderPlugin >> scaleAndSignExtend: aNumber inFieldWidth: w [
 { #category : #initialize }
 JPEGReaderPlugin >> stInit [
 	self cCode:'' inSmalltalk:[
-		yComponent _ CArrayAccessor on: (IntegerArray new: MinComponentSize).
-		cbComponent _ CArrayAccessor on: (IntegerArray new: MinComponentSize).
-		crComponent _ CArrayAccessor on: (IntegerArray new: MinComponentSize).
-		yBlocks _ CArrayAccessor on: (Array new: MaxMCUBlocks).
-		crBlocks _ CArrayAccessor on: (Array new: MaxMCUBlocks).
-		cbBlocks _ CArrayAccessor on: (Array new: MaxMCUBlocks).
-		jpegNaturalOrder _ CArrayAccessor on: #(
+		yComponent := CArrayAccessor on: (IntegerArray new: MinComponentSize).
+		cbComponent := CArrayAccessor on: (IntegerArray new: MinComponentSize).
+		crComponent := CArrayAccessor on: (IntegerArray new: MinComponentSize).
+		yBlocks := CArrayAccessor on: (Array new: MaxMCUBlocks).
+		crBlocks := CArrayAccessor on: (Array new: MaxMCUBlocks).
+		cbBlocks := CArrayAccessor on: (Array new: MaxMCUBlocks).
+		jpegNaturalOrder := CArrayAccessor on: #(
 			0 1 8 16 9 2 3 10 
 			17 24 32 25 18 11 4 5 
 			12 19 26 33 40 48 41 34 

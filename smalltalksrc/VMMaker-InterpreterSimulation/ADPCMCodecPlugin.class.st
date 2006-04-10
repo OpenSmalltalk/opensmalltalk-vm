@@ -14,7 +14,7 @@ ADPCMCodecPlugin class >> translateInDirectory: directory doInlining: inlineFlag
 	| cg |
 	self initialize.
 
-	cg _ self buildCodeGeneratorUpTo: InterpreterPlugin.
+	cg := self buildCodeGeneratorUpTo: InterpreterPlugin.
 
 	cg addMethodsForPrimitives: ADPCMCodec translatedPrimitives.
 	inlineFlag ifTrue:[

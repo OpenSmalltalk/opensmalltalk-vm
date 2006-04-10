@@ -19,8 +19,8 @@ BalloonEnginePlugin >> absoluteSquared8Dot24: value [
 	e.g., compute (value * value) bitShift: -24"
 	| word1 word2 |
 	self inline: true.
-	word1 _ value bitAnd: 16rFFFF.
-	word2 _ (value bitShift: -16) bitAnd: 255.
+	word1 := value bitAnd: 16rFFFF.
+	word2 := (value bitShift: -16) bitAnd: 255.
 	^(( (self cCoerce: (word1 * word1) to:'unsigned') bitShift: -16) +
 		((word1 * word2) * 2) +
 			((word2 * word2) bitShift: 16)) bitShift: -8
@@ -34,10 +34,10 @@ BalloonEnginePlugin >> adjustWideBezierLeft: bezier width: lineWidth offset: lin
 	(self bezierUpdateDataOf: bezier) at: GBUpdateX put: 
 		(((self bezierUpdateDataOf: bezier) at: GBUpdateX) - (lineOffset * 256)).
 	"Set the lastX/Y value of the second curve lineWidth pixels right/down"
-	lastX _ (self wideBezierUpdateDataOf: bezier) at: GBUpdateX.
+	lastX := (self wideBezierUpdateDataOf: bezier) at: GBUpdateX.
 	(self wideBezierUpdateDataOf: bezier) at: GBUpdateX put: lastX + (lineWidth - lineOffset * 256).
 	"Set lineWidth pixels down"
-	lastY _ (self wideBezierUpdateDataOf: bezier) at: GBUpdateY.
+	lastY := (self wideBezierUpdateDataOf: bezier) at: GBUpdateY.
 	(self wideBezierUpdateDataOf: bezier) at: GBUpdateY put: lastY + (lineWidth * 256).
 	"Record the last X value"
 	self bezierFinalXOf: bezier put: endX - lineOffset.
@@ -53,9 +53,9 @@ BalloonEnginePlugin >> adjustWideBezierRight: bezier width: lineWidth offset: li
 		(((self bezierUpdateDataOf: bezier) at: GBUpdateX) + (lineOffset * 256)).
 	"Set the lastX/Y value of the second curve lineWidth pixels right/down"
 	"Set lineWidth-lineOffset pixels left"
-	lastX _ (self wideBezierUpdateDataOf: bezier) at: GBUpdateX.
+	lastX := (self wideBezierUpdateDataOf: bezier) at: GBUpdateX.
 	(self wideBezierUpdateDataOf: bezier) at: GBUpdateX put: lastX - (lineWidth - lineOffset * 256).
-	lastY _ (self wideBezierUpdateDataOf: bezier) at: GBUpdateY.
+	lastY := (self wideBezierUpdateDataOf: bezier) at: GBUpdateY.
 	"Set lineWidth pixels down"
 	(self wideBezierUpdateDataOf: bezier) at: GBUpdateY put: lastY + (lineWidth * 256).
 	"Record the last X value"
@@ -72,36 +72,36 @@ BalloonEnginePlugin >> adjustWideLine: line afterSteppingFrom: lastX to: nextX [
 
 
 	"Fetch the values the adjustment decisions are based on"
-	yEntry _ (self wideLineEntryOf: line).
-	yExit _ (self wideLineExitOf: line).
-	baseWidth _ self wideLineExtentOf: line.
-	lineOffset _ self offsetFromWidth: baseWidth.
-	lineWidth _ self wideLineWidthOf: line.
-	xDir _ self lineXDirectionOf: line.
-	deltaX _ nextX - lastX.
+	yEntry := (self wideLineEntryOf: line).
+	yExit := (self wideLineExitOf: line).
+	baseWidth := self wideLineExtentOf: line.
+	lineOffset := self offsetFromWidth: baseWidth.
+	lineWidth := self wideLineWidthOf: line.
+	xDir := self lineXDirectionOf: line.
+	deltaX := nextX - lastX.
 
 	"Adjust the start of the line to fill an entire rectangle"
 	yEntry < baseWidth ifTrue:[
 		xDir < 0
-			ifTrue:[	lineWidth _ lineWidth - deltaX] "effectively adding"
-			ifFalse:[	lineWidth _ lineWidth + deltaX.
+			ifTrue:[	lineWidth := lineWidth - deltaX] "effectively adding"
+			ifFalse:[	lineWidth := lineWidth + deltaX.
 					self edgeXValueOf: line put: lastX].
 	].
 
 	"Adjust the end of x-major lines"
 	((yExit + lineOffset) = 0) ifTrue:[
 		xDir > 0
-			ifTrue:[lineWidth _ lineWidth - (self lineXIncrementOf: line)]
-			ifFalse:[lineWidth _ lineWidth + (self lineXIncrementOf: line).	"effectively subtracting"
+			ifTrue:[lineWidth := lineWidth - (self lineXIncrementOf: line)]
+			ifFalse:[lineWidth := lineWidth + (self lineXIncrementOf: line).	"effectively subtracting"
 					self edgeXValueOf: line put: lastX].
 	].
 
 	"Adjust the end of the line to fill an entire rectangle"
 	(yExit + lineOffset) > 0 ifTrue:[
 		xDir < 0
-			ifTrue:[	lineWidth _ lineWidth + deltaX. "effectively subtracting"
+			ifTrue:[	lineWidth := lineWidth + deltaX. "effectively subtracting"
 					self edgeXValueOf: line put: lastX]
-			ifFalse:[	lineWidth _ lineWidth - deltaX]
+			ifFalse:[	lineWidth := lineWidth - deltaX]
 	].
 
 	"Store the manipulated line width back"
@@ -112,8 +112,8 @@ BalloonEnginePlugin >> adjustWideLine: line afterSteppingFrom: lastX to: nextX [
 BalloonEnginePlugin >> allocateBezier [
 	| bezier |
 	(self allocateObjEntry: GBBaseSize) ifFalse:[^0].
-	bezier _ objUsed.
-	objUsed _ bezier + GBBaseSize.
+	bezier := objUsed.
+	objUsed := bezier + GBBaseSize.
 	self objectTypeOf: bezier put: GEPrimitiveBezier.
 	self objectIndexOf: bezier put: 0.
 	self objectLengthOf: bezier put: GBBaseSize.
@@ -131,14 +131,14 @@ BalloonEnginePlugin >> allocateBitmapFill: cmSize colormap: cmBits [
 	| fill fillSize cm |
 	self var:#cm type:'int *'.
 	self var:#cmBits type:'int *'.
-	fillSize _ GBMBaseSize + cmSize.
+	fillSize := GBMBaseSize + cmSize.
 	(self allocateObjEntry: fillSize) ifFalse:[^0].
-	fill _ objUsed.
-	objUsed _ fill + fillSize.
+	fill := objUsed.
+	objUsed := fill + fillSize.
 	self objectTypeOf: fill put: GEPrimitiveClippedBitmapFill.
 	self objectIndexOf: fill put: 0.
 	self objectLengthOf: fill put: fillSize.
-	cm _ self colormapOf: fill.
+	cm := self colormapOf: fill.
 	self hasColorTransform ifTrue:[
 		0 to: cmSize-1 do:[:i| cm at: i put: (self transformColor: (cmBits at: i))].
 	] ifFalse:[
@@ -153,16 +153,16 @@ BalloonEnginePlugin >> allocateGradientFill: ramp rampWidth: rampWidth isRadial:
 	| fill fillSize rampPtr |
 	self var:#ramp type:'int *'.
 	self var:#rampPtr type:'int *'.
-	fillSize _ GGBaseSize + rampWidth.
+	fillSize := GGBaseSize + rampWidth.
 	(self allocateObjEntry: fillSize) ifFalse:[^0].
-	fill _ objUsed.
-	objUsed _ fill + fillSize.
+	fill := objUsed.
+	objUsed := fill + fillSize.
 	isRadial
 		ifTrue:[self objectTypeOf: fill put: GEPrimitiveRadialGradientFill]
 		ifFalse:[self objectTypeOf: fill put: GEPrimitiveLinearGradientFill].
 	self objectIndexOf: fill put: 0.
 	self objectLengthOf: fill put: fillSize.
-	rampPtr _ self gradientRampOf: fill.
+	rampPtr := self gradientRampOf: fill.
 	self hasColorTransform ifTrue:[
 		0 to: rampWidth-1 do:[:i| rampPtr at: i put: (self transformColor: (ramp at: i))].
 	] ifFalse:[
@@ -176,8 +176,8 @@ BalloonEnginePlugin >> allocateGradientFill: ramp rampWidth: rampWidth isRadial:
 BalloonEnginePlugin >> allocateLine [
 	| line |
 	(self allocateObjEntry: GLBaseSize) ifFalse:[^0].
-	line _ objUsed.
-	objUsed _ line + GLBaseSize.
+	line := objUsed.
+	objUsed := line + GLBaseSize.
 	self objectTypeOf: line put: GEPrimitiveLine.
 	self objectIndexOf: line put: 0.
 	self objectLengthOf: line put: GLBaseSize.
@@ -188,8 +188,8 @@ BalloonEnginePlugin >> allocateLine [
 BalloonEnginePlugin >> allocateWideBezier [
 	| bezier |
 	(self allocateObjEntry: GBWideSize) ifFalse:[^0].
-	bezier _ objUsed.
-	objUsed _ bezier + GBWideSize.
+	bezier := objUsed.
+	objUsed := bezier + GBWideSize.
 	self objectTypeOf: bezier put: GEPrimitiveWideBezier.
 	self objectIndexOf: bezier put: 0.
 	self objectLengthOf: bezier put: GBWideSize.
@@ -200,8 +200,8 @@ BalloonEnginePlugin >> allocateWideBezier [
 BalloonEnginePlugin >> allocateWideLine [
 	| line |
 	(self allocateObjEntry: GLWideSize) ifFalse:[^0].
-	line _ objUsed.
-	objUsed _ line + GLWideSize.
+	line := objUsed.
+	objUsed := line + GLWideSize.
 	self objectTypeOf: line put: GEPrimitiveWideLine.
 	self objectIndexOf: line put: 0.
 	self objectLengthOf: line put: GLWideSize.
@@ -367,35 +367,35 @@ BalloonEnginePlugin >> bitmapValue: bmFill bits: bits atX: xp y: yp [
 	| bmDepth bmRaster value rShift cMask r g b a |
 	self inline: true.
 
-	bmDepth _ self bitmapDepthOf: bmFill.
-	bmRaster _ self bitmapRasterOf: bmFill.
+	bmDepth := self bitmapDepthOf: bmFill.
+	bmRaster := self bitmapRasterOf: bmFill.
 	bmDepth = 32 ifTrue: [
-		value _ (self cCoerce: bits to:'int*') at: (bmRaster * yp) + xp.
+		value := (self cCoerce: bits to:'int*') at: (bmRaster * yp) + xp.
 		(value ~= 0 and: [(value bitAnd: 16rFF000000) = 0])
-				ifTrue: [value _ value bitOr: 16rFF000000].
+				ifTrue: [value := value bitOr: 16rFF000000].
 		^self uncheckedTransformColor: value].
 	"rShift - shift value to convert from pixel to word index"
-	rShift _ self rShiftTable at: bmDepth.
-	value _ self makeUnsignedFrom: 
+	rShift := self rShiftTable at: bmDepth.
+	value := self makeUnsignedFrom: 
 		((self cCoerce: bits to:'int*') at: (bmRaster * yp) + (xp >> rShift)).
 	"cMask - mask out the pixel from the word"
-	cMask _ (1 << bmDepth) - 1.
+	cMask := (1 << bmDepth) - 1.
 	"rShift - shift value to move the pixel in the word to the lowest bit position"
-	rShift _ 32 - bmDepth - ((xp bitAnd: (1 << rShift - 1)) * bmDepth).
-	value _ (value >> rShift) bitAnd: cMask.
+	rShift := 32 - bmDepth - ((xp bitAnd: (1 << rShift - 1)) * bmDepth).
+	value := (value >> rShift) bitAnd: cMask.
 	bmDepth = 16 ifTrue: [
 		"Must convert by expanding bits"
 		value = 0 ifFalse: [
-			b _ (value bitAnd: 31) << 3.		b _ b + (b >> 5).
-			g _ (value >> 5 bitAnd: 31) << 3.	g _ g + (g >> 5).
-			r _ (value >> 10 bitAnd: 31) << 3.	r _ r + (r >> 5).
-			a _ 255.
-			value _ b + (g << 8) + (r << 16) + (a << 24)].
+			b := (value bitAnd: 31) << 3.		b := b + (b >> 5).
+			g := (value >> 5 bitAnd: 31) << 3.	g := g + (g >> 5).
+			r := (value >> 10 bitAnd: 31) << 3.	r := r + (r >> 5).
+			a := 255.
+			value := b + (g << 8) + (r << 16) + (a << 24)].
 	] ifFalse: [
 		"Must convert by using color map"
 		(self bitmapCmSizeOf: bmFill) = 0
-			ifTrue: [value _ 0]
-			ifFalse: [value _ self makeUnsignedFrom: ((self colormapOf: bmFill) at: value)].
+			ifTrue: [value := 0]
+			ifFalse: [value := self makeUnsignedFrom: ((self colormapOf: bmFill) at: value)].
 	].
 	^self uncheckedTransformColor: value.
 ]
@@ -478,14 +478,14 @@ BalloonEnginePlugin >> checkCompressedFillIndexList: fillList max: maxIndex segm
 	| length runLength runValue nFills fillPtr |
 	self inline: false.
 	self var: #fillPtr type:'int *'.
-	length _ interpreterProxy slotSizeOf: fillList.
-	fillPtr _ interpreterProxy firstIndexableField: fillList.
-	nFills _ 0.
+	length := interpreterProxy slotSizeOf: fillList.
+	fillPtr := interpreterProxy firstIndexableField: fillList.
+	nFills := 0.
 	0 to: length-1 do:[:i |
-		runLength _ self shortRunLengthAt: i from: fillPtr.
-		runValue _ self shortRunValueAt: i from: fillPtr.
+		runLength := self shortRunLengthAt: i from: fillPtr.
+		runValue := self shortRunValueAt: i from: fillPtr.
 		(runValue >= 0 and:[runValue <= maxIndex]) ifFalse:[^false].
-		nFills _ nFills + runLength.
+		nFills := nFills + runLength.
 	].
 	^nFills = nSegs
 ]
@@ -500,10 +500,10 @@ BalloonEnginePlugin >> checkCompressedFills: indexList [
 	(interpreterProxy isWords: indexList) ifFalse:[^false].
 
 	"Then check the fill entries"
-	length _ interpreterProxy slotSizeOf: indexList.
-	fillPtr _ interpreterProxy firstIndexableField: indexList.
+	length := interpreterProxy slotSizeOf: indexList.
+	fillPtr := interpreterProxy firstIndexableField: indexList.
 	0 to: length-1 do:[:i |
-		fillIndex _ fillPtr at: i.
+		fillIndex := fillPtr at: i.
 		"Make sure the fill is okay"
 		(self isFillOkay: fillIndex) ifFalse:[^false]].
 
@@ -516,12 +516,12 @@ BalloonEnginePlugin >> checkCompressedLineWidths: lineWidthList segments: nSegme
 	| length runLength nItems ptr |
 	self inline: false.
 	self var: #ptr type:'int *'.
-	length _ interpreterProxy slotSizeOf: lineWidthList.
-	ptr _ interpreterProxy firstIndexableField: lineWidthList.
-	nItems _ 0.
+	length := interpreterProxy slotSizeOf: lineWidthList.
+	ptr := interpreterProxy firstIndexableField: lineWidthList.
+	nItems := 0.
 	0 to: length-1 do:[:i|
-		runLength _ self shortRunLengthAt: i from: ptr.
-		nItems _ nItems + runLength.
+		runLength := self shortRunLengthAt: i from: ptr.
+		nItems := nItems + runLength.
 	].
 	^nItems = nSegments
 ]
@@ -532,7 +532,7 @@ BalloonEnginePlugin >> checkCompressedPoints: points segments: nSegments [
 	| pSize |
 	self inline: false.
 	(interpreterProxy isWords: points) ifFalse:[^false].
-	pSize _ interpreterProxy slotSizeOf: points.
+	pSize := interpreterProxy slotSizeOf: points.
 	"The points must be either in PointArray format or ShortPointArray format.
 	Also, we currently handle only quadratic segments (e.g., 3 points each) and thus either
 		pSize = nSegments * 3,		for ShortPointArrays or,
@@ -552,7 +552,7 @@ BalloonEnginePlugin >> checkCompressedShape: points segments: nSegments leftFill
 		ifFalse:[^false].
 	(self checkCompressedFills: fillIndexList)
 		ifFalse:[^false].
-	maxFillIndex _ interpreterProxy slotSizeOf: fillIndexList.
+	maxFillIndex := interpreterProxy slotSizeOf: fillIndexList.
 	(self checkCompressedFillIndexList: leftFills max: maxFillIndex segments: nSegments)
 		ifFalse:[^false].
 	(self checkCompressedFillIndexList: rightFills max: maxFillIndex segments: nSegments)
@@ -571,8 +571,8 @@ BalloonEnginePlugin >> checkedAddBezierToGET: bezier [
 	self inline: true.
 
 	(self isWide: bezier) 
-		ifTrue:[lineWidth _ (self wideBezierExtentOf: bezier)]
-		ifFalse:[lineWidth _ 0].
+		ifTrue:[lineWidth := (self wideBezierExtentOf: bezier)]
+		ifFalse:[lineWidth := 0].
 	(self bezierEndYOf: bezier) + lineWidth < (self fillMinYGet) ifTrue:[^0].
 	"Overlaps in Y but may still be entirely right of clip region"
 	((self edgeXValueOf: bezier) - lineWidth >= self fillMaxXGet and:[
@@ -600,8 +600,8 @@ BalloonEnginePlugin >> checkedAddLineToGET: line [
 	self inline: true.
 
 	(self isWide: line) 
-		ifTrue:[lineWidth _ (self wideLineExtentOf: line)]
-		ifFalse:[lineWidth _ 0].
+		ifTrue:[lineWidth := (self wideLineExtentOf: line)]
+		ifFalse:[lineWidth := 0].
 	(self lineEndYOf: line) + lineWidth < (self fillMinYGet) ifTrue:[^0].
 	"Overlaps in Y but may still be entirely right of clip region"
 	((self edgeXValueOf: line) - lineWidth >= self fillMaxXGet and:[
@@ -674,27 +674,27 @@ BalloonEnginePlugin >> computeBezier: index splitAt: param [
 	self inline: false.
 
 	self var: #param type:'double '.
-	leftViaX _ startX _ self bzStartX: index.
-	leftViaY _ startY _ self bzStartY: index.
-	rightViaX _ viaX _ self bzViaX: index.
-	rightViaY _ viaY _ self bzViaY: index.
-	endX _ self bzEndX: index.
-	endY _ self bzEndY: index.
+	leftViaX := startX := self bzStartX: index.
+	leftViaY := startY := self bzStartY: index.
+	rightViaX := viaX := self bzViaX: index.
+	rightViaY := viaY := self bzViaY: index.
+	endX := self bzEndX: index.
+	endY := self bzEndY: index.
 
 	"Compute intermediate points"
-	sharedX _ leftViaX _ leftViaX + ((viaX - startX) asFloat * param) asInteger.
-	sharedY _ leftViaY _ leftViaY + ((viaY - startY) asFloat * param) asInteger.
-	rightViaX _ rightViaX + ((endX - viaX) asFloat * param) asInteger.
-	rightViaY _ rightViaY + ((endY - viaY) asFloat * param) asInteger.
+	sharedX := leftViaX := leftViaX + ((viaX - startX) asFloat * param) asInteger.
+	sharedY := leftViaY := leftViaY + ((viaY - startY) asFloat * param) asInteger.
+	rightViaX := rightViaX + ((endX - viaX) asFloat * param) asInteger.
+	rightViaY := rightViaY + ((endY - viaY) asFloat * param) asInteger.
 	"Compute new shared point"
-	sharedX _ sharedX + ((rightViaX - leftViaX) asFloat * param) asInteger.
-	sharedY _ sharedY + ((rightViaY - leftViaY) asFloat * param) asInteger.
+	sharedX := sharedX + ((rightViaX - leftViaX) asFloat * param) asInteger.
+	sharedY := sharedY + ((rightViaY - leftViaY) asFloat * param) asInteger.
 
 	"Check the new via points"
-	leftViaY _ self assureValue: leftViaY between: startY and: sharedY.
-	rightViaY _ self assureValue: rightViaY between: sharedY and: endY.
+	leftViaY := self assureValue: leftViaY between: startY and: sharedY.
+	rightViaY := self assureValue: rightViaY between: sharedY and: endY.
 
-	newIndex _ self allocateBezierStackEntry.
+	newIndex := self allocateBezierStackEntry.
 	engineStopped ifTrue:[^0]. "Something went wrong"
 
 	"Store the first part back"
@@ -720,23 +720,23 @@ BalloonEnginePlugin >> computeBezierSplitAtHalf: index [
 	leftViaX  leftViaY rightViaX rightViaY sharedX sharedY |
 	self inline: false.
 
-	newIndex _ self allocateBezierStackEntry.
+	newIndex := self allocateBezierStackEntry.
 	engineStopped ifTrue:[^0]. "Something went wrong"
 
-	leftViaX _ startX _ self bzStartX: index.
-	leftViaY _ startY _ self bzStartY: index.
-	rightViaX _ viaX _ self bzViaX: index.
-	rightViaY _ viaY _ self bzViaY: index.
-	endX _ self bzEndX: index.
-	endY _ self bzEndY: index.
+	leftViaX := startX := self bzStartX: index.
+	leftViaY := startY := self bzStartY: index.
+	rightViaX := viaX := self bzViaX: index.
+	rightViaY := viaY := self bzViaY: index.
+	endX := self bzEndX: index.
+	endY := self bzEndY: index.
 	"Compute intermediate points"
-	leftViaX _ leftViaX + ((viaX - startX) // 2).
-	leftViaY _ leftViaY + ((viaY - startY) // 2).
-	sharedX _ rightViaX _ rightViaX + ((endX - viaX) // 2).
-	sharedY _ rightViaY _ rightViaY + ((endY - viaY) // 2).
+	leftViaX := leftViaX + ((viaX - startX) // 2).
+	leftViaY := leftViaY + ((viaY - startY) // 2).
+	sharedX := rightViaX := rightViaX + ((endX - viaX) // 2).
+	sharedY := rightViaY := rightViaY + ((endY - viaY) // 2).
 	"Compute new shared point"
-	sharedX _ sharedX + ((leftViaX - rightViaX) // 2).
-	sharedY _ sharedY + ((leftViaY - rightViaY) // 2).
+	sharedX := sharedX + ((leftViaX - rightViaX) // 2).
+	sharedY := sharedY + ((leftViaY - rightViaY) // 2).
 	"Store the first part back"
 	self bzViaX: index put: leftViaX.
 	self bzViaY: index put: leftViaY.
@@ -758,9 +758,9 @@ BalloonEnginePlugin >> computeFinalWideBezierValues: bezier width: lineWidth [
 	"Get both values from the two boundaries of the given bezier 
 	and compute the actual position/width of the line"
 	| leftX rightX temp |
-	leftX _ ((self bezierUpdateDataOf: bezier) at: GBUpdateX) // 256.
-	rightX _ ((self wideBezierUpdateDataOf: bezier) at: GBUpdateX) // 256.
-	leftX > rightX ifTrue:[temp _ leftX. leftX _ rightX. rightX _ temp].
+	leftX := ((self bezierUpdateDataOf: bezier) at: GBUpdateX) // 256.
+	rightX := ((self wideBezierUpdateDataOf: bezier) at: GBUpdateX) // 256.
+	leftX > rightX ifTrue:[temp := leftX. leftX := rightX. rightX := temp].
 	self edgeXValueOf: bezier put: leftX.
 	(rightX - leftX) > lineWidth ifTrue:[
 		self wideBezierWidthOf: bezier put: (rightX - leftX).
@@ -783,37 +783,37 @@ BalloonEnginePlugin >> fillBitmapSpan: bmFill from: leftX to: rightX at: yValue 
 	self aaLevelGet = 1
 		ifFalse:[^self fillBitmapSpanAA: bmFill from: leftX to: rightX at: yValue].
 
-	bits _ self loadBitsFrom: bmFill.
+	bits := self loadBitsFrom: bmFill.
 	bits == nil ifTrue:[^nil].
-	bmWidth _ self bitmapWidthOf: bmFill.
-	bmHeight _ self bitmapHeightOf: bmFill.
-	tileFlag _ (self bitmapTileFlagOf: bmFill) = 1.
-	deltaX _ leftX - (self fillOriginXOf: bmFill).
-	deltaY _ yValue - (self fillOriginYOf: bmFill).
-	dsX _ self fillDirectionXOf: bmFill.
-	dtX _ self fillNormalXOf: bmFill.
+	bmWidth := self bitmapWidthOf: bmFill.
+	bmHeight := self bitmapHeightOf: bmFill.
+	tileFlag := (self bitmapTileFlagOf: bmFill) = 1.
+	deltaX := leftX - (self fillOriginXOf: bmFill).
+	deltaY := yValue - (self fillOriginYOf: bmFill).
+	dsX := self fillDirectionXOf: bmFill.
+	dtX := self fillNormalXOf: bmFill.
 
-	ds _ (deltaX * dsX) + (deltaY * (self fillDirectionYOf: bmFill)).
-	dt _ (deltaX * dtX) + (deltaY * (self fillNormalYOf: bmFill)).
+	ds := (deltaX * dsX) + (deltaY * (self fillDirectionYOf: bmFill)).
+	dt := (deltaX * dtX) + (deltaY * (self fillNormalYOf: bmFill)).
 
-	x _ leftX.
-	x1 _ rightX.
+	x := leftX.
+	x1 := rightX.
 	[x < x1] whileTrue:[
 		tileFlag ifTrue:[
-			ds _ self repeatValue: ds max: bmWidth << 16.
-			dt _ self repeatValue: dt max: bmHeight << 16].
-		xp _ ds // 16r10000.
-		yp _ dt // 16r10000.
+			ds := self repeatValue: ds max: bmWidth << 16.
+			dt := self repeatValue: dt max: bmHeight << 16].
+		xp := ds // 16r10000.
+		yp := dt // 16r10000.
 		tileFlag ifFalse:[
-			xp _ self clampValue: xp max: bmWidth.
-			yp _ self clampValue: yp max: bmHeight].
+			xp := self clampValue: xp max: bmWidth.
+			yp := self clampValue: yp max: bmHeight].
 		(xp >= 0 and:[yp >= 0 and:[xp < bmWidth and:[yp < bmHeight]]]) ifTrue:[
-			fillValue _ self bitmapValue: bmFill bits: bits atX: xp y: yp.
+			fillValue := self bitmapValue: bmFill bits: bits atX: xp y: yp.
 			spanBuffer at: x put: fillValue.
 		].
-		ds _ ds + dsX.
-		dt _ dt + dtX.
-		x _ x + 1.
+		ds := ds + dsX.
+		dt := dt + dtX.
+		x := x + 1.
 	].
 ]
 
@@ -822,88 +822,88 @@ BalloonEnginePlugin >> fillBitmapSpanAA: bmFill from: leftX to: rightX at: yValu
 	| x dsX ds dtX dt deltaX deltaY bits xp yp bmWidth bmHeight fillValue baseShift cMask cShift idx aaLevel firstPixel lastPixel tileFlag |
 	self inline: false.
 	self var: #bits type:'int *'.
-	bits _ self loadBitsFrom: bmFill.
+	bits := self loadBitsFrom: bmFill.
 	bits == nil ifTrue:[^nil].
-	bmWidth _ self bitmapWidthOf: bmFill.
-	bmHeight _ self bitmapHeightOf: bmFill.
-	tileFlag _ (self bitmapTileFlagOf: bmFill) = 1.
-	deltaX _ leftX - (self fillOriginXOf: bmFill).
-	deltaY _ yValue - (self fillOriginYOf: bmFill).
-	dsX _ self fillDirectionXOf: bmFill.
-	dtX _ self fillNormalXOf: bmFill.
+	bmWidth := self bitmapWidthOf: bmFill.
+	bmHeight := self bitmapHeightOf: bmFill.
+	tileFlag := (self bitmapTileFlagOf: bmFill) = 1.
+	deltaX := leftX - (self fillOriginXOf: bmFill).
+	deltaY := yValue - (self fillOriginYOf: bmFill).
+	dsX := self fillDirectionXOf: bmFill.
+	dtX := self fillNormalXOf: bmFill.
 
-	ds _ (deltaX * dsX) + (deltaY * (self fillDirectionYOf: bmFill)).
-	dt _ (deltaX * dtX) + (deltaY * (self fillNormalYOf: bmFill)).
+	ds := (deltaX * dsX) + (deltaY * (self fillDirectionYOf: bmFill)).
+	dt := (deltaX * dtX) + (deltaY * (self fillNormalYOf: bmFill)).
 
-	aaLevel _ self aaLevelGet.
-	firstPixel _ self aaFirstPixelFrom: leftX to: rightX.
-	lastPixel _ self aaLastPixelFrom: leftX to: rightX.
-	baseShift _ self aaShiftGet.
-	cMask _ self aaColorMaskGet.
-	cShift _ self aaColorShiftGet.
-	x _ leftX.
+	aaLevel := self aaLevelGet.
+	firstPixel := self aaFirstPixelFrom: leftX to: rightX.
+	lastPixel := self aaLastPixelFrom: leftX to: rightX.
+	baseShift := self aaShiftGet.
+	cMask := self aaColorMaskGet.
+	cShift := self aaColorShiftGet.
+	x := leftX.
 	[x < firstPixel] whileTrue:[
 		tileFlag ifTrue:[
-			ds _ self repeatValue: ds max: bmWidth << 16.
-			dt _ self repeatValue: dt max: bmHeight << 16].
-		xp _ ds // 16r10000.
-		yp _ dt // 16r10000.
+			ds := self repeatValue: ds max: bmWidth << 16.
+			dt := self repeatValue: dt max: bmHeight << 16].
+		xp := ds // 16r10000.
+		yp := dt // 16r10000.
 		tileFlag ifFalse:[
-			xp _ self clampValue: xp max: bmWidth.
-			yp _ self clampValue: yp max: bmHeight].
+			xp := self clampValue: xp max: bmWidth.
+			yp := self clampValue: yp max: bmHeight].
 		(xp >= 0 and:[yp >= 0 and:[xp < bmWidth and:[yp < bmHeight]]]) ifTrue:[
-			fillValue _ self bitmapValue: bmFill bits: bits atX: xp y: yp.
-			fillValue _ (fillValue bitAnd: cMask) >> cShift.
-			idx _ x >> baseShift.
+			fillValue := self bitmapValue: bmFill bits: bits atX: xp y: yp.
+			fillValue := (fillValue bitAnd: cMask) >> cShift.
+			idx := x >> baseShift.
 			spanBuffer at: idx put: (spanBuffer at: idx) + fillValue.
 		].
-		ds _ ds + dsX.
-		dt _ dt + dtX.
-		x _ x + 1.
+		ds := ds + dsX.
+		dt := dt + dtX.
+		x := x + 1.
 	].
 
-	cMask _ (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
-	cShift _ self aaShiftGet.
+	cMask := (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
+	cShift := self aaShiftGet.
 	[x < lastPixel] whileTrue:[
 		tileFlag ifTrue:[
-			ds _ self repeatValue: ds max: bmWidth << 16.
-			dt _ self repeatValue: dt max: bmHeight << 16].
-		xp _ ds // 16r10000.
-		yp _ dt // 16r10000.
+			ds := self repeatValue: ds max: bmWidth << 16.
+			dt := self repeatValue: dt max: bmHeight << 16].
+		xp := ds // 16r10000.
+		yp := dt // 16r10000.
 		tileFlag ifFalse:[
-			xp _ self clampValue: xp max: bmWidth.
-			yp _ self clampValue: yp max: bmHeight].
+			xp := self clampValue: xp max: bmWidth.
+			yp := self clampValue: yp max: bmHeight].
 		(xp >= 0 and:[yp >= 0 and:[xp < bmWidth and:[yp < bmHeight]]]) ifTrue:[
-			fillValue _ self bitmapValue: bmFill bits: bits atX: xp y: yp.
-			fillValue _ (fillValue bitAnd: cMask) >> cShift.
-			idx _ x >> baseShift.
+			fillValue := self bitmapValue: bmFill bits: bits atX: xp y: yp.
+			fillValue := (fillValue bitAnd: cMask) >> cShift.
+			idx := x >> baseShift.
 			spanBuffer at: idx put: (spanBuffer at: idx) + fillValue.
 		].
-		ds _ ds + (dsX << cShift).
-		dt _ dt + (dtX << cShift).
-		x _ x + aaLevel.
+		ds := ds + (dsX << cShift).
+		dt := dt + (dtX << cShift).
+		x := x + aaLevel.
 	].
 
-	cMask _ self aaColorMaskGet.
-	cShift _ self aaColorShiftGet.
+	cMask := self aaColorMaskGet.
+	cShift := self aaColorShiftGet.
 	[x < rightX] whileTrue:[
 		tileFlag ifTrue:[
-			ds _ self repeatValue: ds max: bmWidth << 16.
-			dt _ self repeatValue: dt max: bmHeight << 16].
-		xp _ ds // 16r10000.
-		yp _ dt // 16r10000.
+			ds := self repeatValue: ds max: bmWidth << 16.
+			dt := self repeatValue: dt max: bmHeight << 16].
+		xp := ds // 16r10000.
+		yp := dt // 16r10000.
 		tileFlag ifFalse:[
-			xp _ self clampValue: xp max: bmWidth.
-			yp _ self clampValue: yp max: bmHeight].
+			xp := self clampValue: xp max: bmWidth.
+			yp := self clampValue: yp max: bmHeight].
 		(xp >= 0 and:[yp >= 0 and:[xp < bmWidth and:[yp < bmHeight]]]) ifTrue:[
-			fillValue _ self bitmapValue: bmFill bits: bits atX: xp y: yp.
-			fillValue _ (fillValue bitAnd: cMask) >> cShift.
-			idx _ x >> baseShift.
+			fillValue := self bitmapValue: bmFill bits: bits atX: xp y: yp.
+			fillValue := (fillValue bitAnd: cMask) >> cShift.
+			idx := x >> baseShift.
 			spanBuffer at: idx put: (spanBuffer at: idx) + fillValue.
 		].
-		ds _ ds + dsX.
-		dt _ dt + dtX.
-		x _ x + 1.
+		ds := ds + dsX.
+		dt := dt + dtX.
+		x := x + 1.
 	].
 
 ]
@@ -944,39 +944,39 @@ BalloonEnginePlugin >> fillLinearGradient: fill from: leftX to: rightX at: yValu
 	| x0 x1 ramp rampSize dsX ds x rampIndex |
 	self inline: false.
 	self var: #ramp type:'int *'.
-	ramp _ self gradientRampOf: fill.
-	rampSize _ self gradientRampLengthOf: fill.
+	ramp := self gradientRampOf: fill.
+	rampSize := self gradientRampLengthOf: fill.
 
-	dsX _ self fillDirectionXOf: fill.
-	ds _ ((leftX - (self fillOriginXOf: fill)) * dsX) + 
+	dsX := self fillDirectionXOf: fill.
+	ds := ((leftX - (self fillOriginXOf: fill)) * dsX) + 
 			((yValue - (self fillOriginYOf: fill)) * (self fillDirectionYOf: fill)).
 
-	x _ x0 _ leftX.
-	x1 _ rightX.
+	x := x0 := leftX.
+	x1 := rightX.
 
 	"Note: The inner loop has been divided into three parts for speed"
 	"Part one: Fill everything outside the left boundary"
-	[((rampIndex _ ds // 16r10000) < 0 or:[rampIndex >= rampSize]) and:[x < x1]] 
-		whileTrue:[	x _ x + 1.
-					ds _ ds + dsX].
+	[((rampIndex := ds // 16r10000) < 0 or:[rampIndex >= rampSize]) and:[x < x1]] 
+		whileTrue:[	x := x + 1.
+					ds := ds + dsX].
 	x > x0 ifTrue:[
-		rampIndex < 0 ifTrue:[rampIndex _ 0].
-		rampIndex >= rampSize ifTrue:[rampIndex _ rampSize - 1].
+		rampIndex < 0 ifTrue:[rampIndex := 0].
+		rampIndex >= rampSize ifTrue:[rampIndex := rampSize - 1].
 		self fillColorSpan: (self makeUnsignedFrom: (ramp at: rampIndex)) from: x0 to: x].
 
 	"Part two: Fill everything inside the boundaries"
 	self aaLevelGet = 1 ifTrue:[
 		"Fast version w/o anti-aliasing"
-		[((rampIndex _ ds // 16r10000) < rampSize and:[rampIndex >= 0]) and:[x < x1]] whileTrue:[
+		[((rampIndex := ds // 16r10000) < rampSize and:[rampIndex >= 0]) and:[x < x1]] whileTrue:[
 			spanBuffer at: x put: (self makeUnsignedFrom: (ramp at: rampIndex)).
-			x _ x + 1.
-			ds _ ds + dsX.
+			x := x + 1.
+			ds := ds + dsX.
 		].
-	] ifFalse:[x _ self fillLinearGradientAA: fill ramp: ramp ds: ds dsX: dsX from: x to: rightX].
+	] ifFalse:[x := self fillLinearGradientAA: fill ramp: ramp ds: ds dsX: dsX from: x to: rightX].
 	"Part three fill everything outside right boundary"
 	x < x1 ifTrue:[
-		rampIndex < 0 ifTrue:[rampIndex _ 0].
-		rampIndex >= rampSize ifTrue:[rampIndex _ rampSize-1].
+		rampIndex < 0 ifTrue:[rampIndex := 0].
+		rampIndex >= rampSize ifTrue:[rampIndex := rampSize-1].
 		self fillColorSpan: (self makeUnsignedFrom: (ramp at: rampIndex)) from: x to: x1].
 
 ]
@@ -989,59 +989,59 @@ BalloonEnginePlugin >> fillLinearGradientAA: fill ramp: ramp ds: deltaS dsX: dsX
 	self inline: false.
 	self var: #ramp type:'int *'.
 
-	aaLevel _ self aaLevelGet.
-	baseShift _ self aaShiftGet.
-	rampSize _ self gradientRampLengthOf: fill.
-	ds _ deltaS.
-	x _ leftX.
-	rampIndex _ ds // 16r10000.
+	aaLevel := self aaLevelGet.
+	baseShift := self aaShiftGet.
+	rampSize := self gradientRampLengthOf: fill.
+	ds := deltaS.
+	x := leftX.
+	rampIndex := ds // 16r10000.
 
-	firstPixel _ self aaFirstPixelFrom: leftX to: rightX.
-	lastPixel _ self aaLastPixelFrom: leftX to: rightX.
+	firstPixel := self aaFirstPixelFrom: leftX to: rightX.
+	lastPixel := self aaLastPixelFrom: leftX to: rightX.
 
 	"Deal with the first n sub-pixels"
-	colorMask _ self aaColorMaskGet.
-	colorShift _ self aaColorShiftGet.
+	colorMask := self aaColorMaskGet.
+	colorShift := self aaColorShiftGet.
 	[x < firstPixel and:[rampIndex < rampSize and:[rampIndex >= 0]]] whileTrue:[
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		"Copy as many pixels as possible"
 		[x < firstPixel and:[(ds//16r10000) = rampIndex]] whileTrue:[
-			idx _ x >> baseShift.
+			idx := x >> baseShift.
 			spanBuffer at: idx put: (spanBuffer at: idx) + rampValue.
-			x _ x + 1.
-			ds _ ds + dsX].
-		rampIndex _ ds // 16r10000.
+			x := x + 1.
+			ds := ds + dsX].
+		rampIndex := ds // 16r10000.
 	].
 
 	"Deal with the full pixels"
-	colorMask _ (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
-	colorShift _ self aaShiftGet.
+	colorMask := (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
+	colorShift := self aaShiftGet.
 	[x < lastPixel and:[rampIndex < rampSize and:[rampIndex >= 0]]] whileTrue:[
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		"Copy as many pixels as possible"
 		[x < lastPixel and:[(ds//16r10000) = rampIndex]] whileTrue:[
-			idx _ x >> baseShift.
+			idx := x >> baseShift.
 			spanBuffer at: idx put: (spanBuffer at: idx) + rampValue.
-			x _ x + aaLevel.
-			ds _ ds + (dsX << colorShift)].
-		rampIndex _ ds // 16r10000.
+			x := x + aaLevel.
+			ds := ds + (dsX << colorShift)].
+		rampIndex := ds // 16r10000.
 	].
 
 	"Deal with the last n sub-pixels"
-	colorMask _ self aaColorMaskGet.
-	colorShift _ self aaColorShiftGet.
+	colorMask := self aaColorMaskGet.
+	colorShift := self aaColorShiftGet.
 	[x < rightX and:[rampIndex < rampSize and:[rampIndex>=0]]] whileTrue:[
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		"Copy as many pixels as possible"
 		[x < rightX and:[(ds//16r10000) = rampIndex]] whileTrue:[
-			idx _ x >> baseShift.
+			idx := x >> baseShift.
 			spanBuffer at: idx put: (spanBuffer at: idx) + rampValue.
-			x _ x + 1.
-			ds _ ds + dsX].
-		rampIndex _ ds // 16r10000.
+			x := x + 1.
+			ds := ds + dsX].
+		rampIndex := ds // 16r10000.
 	].
 	^x
 ]
@@ -1099,28 +1099,28 @@ BalloonEnginePlugin >> fillRadialDecreasing: fill ramp: ramp deltaST: deltaST ds
 	"Part 2a) Compute the decreasing part of the ramp"
 	| ds dt rampIndex rampValue length2 x x1 nextLength |
 	self inline: true.
-	ds _ (self cCoerce: deltaST to:'int*') at: 0.
-	dt _ (self cCoerce: deltaST to:'int*') at: 1.
-	rampIndex _ self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
-	rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-	length2 _ (rampIndex-1) * (rampIndex-1).
+	ds := (self cCoerce: deltaST to:'int*') at: 0.
+	dt := (self cCoerce: deltaST to:'int*') at: 1.
+	rampIndex := self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
+	rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+	length2 := (rampIndex-1) * (rampIndex-1).
 
-	x _ leftX.
-	x1 _ rightX.
-	x1 > (self fillOriginXOf: fill) ifTrue:[x1 _ self fillOriginXOf: fill].
+	x := leftX.
+	x1 := rightX.
+	x1 > (self fillOriginXOf: fill) ifTrue:[x1 := self fillOriginXOf: fill].
 	[x < x1] whileTrue:[
 		"Try to copy the current value more than just once"
 		[x < x1 and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) >= length2]]
 			whileTrue:[	spanBuffer at: x put: rampValue.
-						x _ x + 1.
-						ds _ ds + dsX.
-						dt _ dt + dtX].
+						x := x + 1.
+						ds := ds + dsX.
+						dt := dt + dtX].
 		"Step to next ramp value"
-		nextLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+		nextLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 		[nextLength < length2] whileTrue:[
-			rampIndex _ rampIndex - 1.
-			rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-			length2 _ (rampIndex-1) * (rampIndex-1).
+			rampIndex := rampIndex - 1.
+			rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+			length2 := (rampIndex-1) * (rampIndex-1).
 		].
 	].
 
@@ -1138,90 +1138,90 @@ BalloonEnginePlugin >> fillRadialDecreasingAA: fill ramp: ramp deltaST: deltaST 
 	self var: #ramp type:'int *'.
 	self var: #deltaST type:' int *'.
 
-	ds _ (self cCoerce: deltaST to:'int*') at: 0.
-	dt _ (self cCoerce: deltaST to:'int*') at: 1.
-	aaLevel _ self aaLevelGet.
-	baseShift _ self aaShiftGet.
-	rampIndex _ self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
-	length2 _ (rampIndex-1) * (rampIndex-1).
+	ds := (self cCoerce: deltaST to:'int*') at: 0.
+	dt := (self cCoerce: deltaST to:'int*') at: 1.
+	aaLevel := self aaLevelGet.
+	baseShift := self aaShiftGet.
+	rampIndex := self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
+	length2 := (rampIndex-1) * (rampIndex-1).
 
-	x _ leftX.
-	x1 _ self fillOriginXOf: fill.
-	x1 > rightX ifTrue:[x1 _ rightX].
-	firstPixel _ self aaFirstPixelFrom: leftX to: x1.
-	lastPixel _ self aaLastPixelFrom: leftX to: x1.
+	x := leftX.
+	x1 := self fillOriginXOf: fill.
+	x1 > rightX ifTrue:[x1 := rightX].
+	firstPixel := self aaFirstPixelFrom: leftX to: x1.
+	lastPixel := self aaLastPixelFrom: leftX to: x1.
 
 	"Deal with the first n sub-pixels"
 	(x < firstPixel) ifTrue:[
-		colorMask _ self aaColorMaskGet.
-		colorShift _ self aaColorShiftGet.
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		colorMask := self aaColorMaskGet.
+		colorShift := self aaColorShiftGet.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		[x < firstPixel] whileTrue:[
 			"Try to copy the current value more than just once"
 			[x < firstPixel and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) >= length2]]
-				whileTrue:[	index _ x >> baseShift.
+				whileTrue:[	index := x >> baseShift.
 							spanBuffer at: index put: (spanBuffer at: index) + rampValue.
-							x _ x + 1.
-							ds _ ds + dsX.
-							dt _ dt + dtX].
+							x := x + 1.
+							ds := ds + dsX.
+							dt := dt + dtX].
 			"Step to next ramp value"
-			nextLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+			nextLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 			[nextLength < length2] whileTrue:[
-				rampIndex _ rampIndex - 1.
-				rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-				rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
-				length2 _ (rampIndex-1) * (rampIndex-1).
+				rampIndex := rampIndex - 1.
+				rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+				rampValue := (rampValue bitAnd: colorMask) >> colorShift.
+				length2 := (rampIndex-1) * (rampIndex-1).
 			].
 		].
 	].
 
 	"Deal with the full pixels"
 	(x < lastPixel) ifTrue:[
-		colorMask _ (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
-		colorShift _ self aaShiftGet.
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		colorMask := (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
+		colorShift := self aaShiftGet.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		[x < lastPixel] whileTrue:[
 			"Try to copy the current value more than just once"
 			[x < lastPixel and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) >= length2]]
-				whileTrue:[	index _ x >> baseShift.
+				whileTrue:[	index := x >> baseShift.
 							spanBuffer at: index put: (spanBuffer at: index) + rampValue.
-							x _ x + aaLevel.
-							ds _ ds + (dsX << colorShift).
-							dt _ dt + (dtX << colorShift)].
+							x := x + aaLevel.
+							ds := ds + (dsX << colorShift).
+							dt := dt + (dtX << colorShift)].
 			"Step to next ramp value"
-			nextLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+			nextLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 			[nextLength < length2] whileTrue:[
-				rampIndex _ rampIndex - 1.
-				rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-				rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
-				length2 _ (rampIndex-1) * (rampIndex-1).
+				rampIndex := rampIndex - 1.
+				rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+				rampValue := (rampValue bitAnd: colorMask) >> colorShift.
+				length2 := (rampIndex-1) * (rampIndex-1).
 			].
 		].
 	].
 
 	"Deal with the last n sub-pixels"
 	(x < x1) ifTrue:[
-		colorMask _ self aaColorMaskGet.
-		colorShift _ self aaColorShiftGet.
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		colorMask := self aaColorMaskGet.
+		colorShift := self aaColorShiftGet.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		[x < x1] whileTrue:[
 			"Try to copy the current value more than just once"
 			[x < x1 and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) >= length2]]
-				whileTrue:[	index _ x >> baseShift.
+				whileTrue:[	index := x >> baseShift.
 							spanBuffer at: index put: (spanBuffer at: index) + rampValue.
-							x _ x + 1.
-							ds _ ds + dsX.
-							dt _ dt + dtX].
+							x := x + 1.
+							ds := ds + dsX.
+							dt := dt + dtX].
 			"Step to next ramp value"
-			nextLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+			nextLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 			[nextLength < length2] whileTrue:[
-				rampIndex _ rampIndex - 1.
-				rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-				rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
-				length2 _ (rampIndex-1) * (rampIndex-1).
+				rampIndex := rampIndex - 1.
+				rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+				rampValue := (rampValue bitAnd: colorMask) >> colorShift.
+				length2 := (rampIndex-1) * (rampIndex-1).
 			].
 		].
 	].
@@ -1245,46 +1245,46 @@ BalloonEnginePlugin >> fillRadialGradient: fill from: leftX to: rightX at: yValu
 	self var: #ramp type:'int *'.
 	self var: #deltaST type:'int *'.
 
-	ramp _ self gradientRampOf: fill.
-	rampSize _ self gradientRampLengthOf: fill.
+	ramp := self gradientRampOf: fill.
+	rampSize := self gradientRampLengthOf: fill.
 
-	deltaX _ leftX - (self fillOriginXOf: fill).
-	deltaY _ yValue - (self fillOriginYOf: fill).
+	deltaX := leftX - (self fillOriginXOf: fill).
+	deltaY := yValue - (self fillOriginYOf: fill).
 
-	dsX _ self fillDirectionXOf: fill.
-	dtX _ self fillNormalXOf: fill.
+	dsX := self fillDirectionXOf: fill.
+	dtX := self fillNormalXOf: fill.
 
-	ds _ (deltaX * dsX) + (deltaY * (self fillDirectionYOf: fill)).
-	dt _ (deltaX * dtX) + (deltaY * (self fillNormalYOf: fill)).
+	ds := (deltaX * dsX) + (deltaY * (self fillDirectionYOf: fill)).
+	dt := (deltaX * dtX) + (deltaY * (self fillNormalYOf: fill)).
 
-	x _ leftX.
-	x1 _ rightX.
+	x := leftX.
+	x1 := rightX.
 
 	"Note: The inner loop has been divided into three parts for speed"
 	"Part one: Fill everything outside the left boundary"
-	length2 _ (rampSize-1) * (rampSize-1). "This is the upper bound"
+	length2 := (rampSize-1) * (rampSize-1). "This is the upper bound"
 	[(self squaredLengthOf: ds // 16r10000 with: dt // 16r10000) >= length2 and:[x < x1]]
-		whileTrue:[	x _ x + 1.	ds _ ds + dsX.	dt _ dt + dtX].
+		whileTrue:[	x := x + 1.	ds := ds + dsX.	dt := dt + dtX].
 	x > leftX ifTrue:[self fillColorSpan: (self makeUnsignedFrom: (ramp at: rampSize-1)) from: leftX to: x].
 
 	"Part two: Fill everything inside the boundaries"
-	deltaST _ self point1Get.
+	deltaST := self point1Get.
 	deltaST at: 0 put: ds.
 	deltaST at: 1 put: dt.
 	(x < (self fillOriginXOf: fill)) ifTrue:[
 		"Draw the decreasing part"
 		self aaLevelGet = 1 
-			ifTrue:[x _ self fillRadialDecreasing: fill ramp: ramp deltaST: deltaST 
+			ifTrue:[x := self fillRadialDecreasing: fill ramp: ramp deltaST: deltaST 
 							dsX: dsX dtX: dtX from: x to: x1]
-			ifFalse:[x _ self fillRadialDecreasingAA: fill ramp: ramp deltaST: deltaST 
+			ifFalse:[x := self fillRadialDecreasingAA: fill ramp: ramp deltaST: deltaST 
 							dsX: dsX dtX: dtX from: x to: x1].
 	].
 	x < x1 ifTrue:[
 		"Draw the increasing part"
 		self aaLevelGet = 1
-			ifTrue:[x _ self fillRadialIncreasing: fill ramp: ramp deltaST: deltaST
+			ifTrue:[x := self fillRadialIncreasing: fill ramp: ramp deltaST: deltaST
 							dsX: dsX dtX: dtX from: x to: x1]
-			ifFalse:[x _ self fillRadialIncreasingAA: fill ramp: ramp deltaST: deltaST
+			ifFalse:[x := self fillRadialIncreasingAA: fill ramp: ramp deltaST: deltaST
 							dsX: dsX dtX: dtX from: x to: x1].
 	].
 
@@ -1298,30 +1298,30 @@ BalloonEnginePlugin >> fillRadialIncreasing: fill ramp: ramp deltaST: deltaST ds
 	"Part 2b) Compute the increasing part of the ramp"
 	| ds dt rampIndex rampValue length2 x x1 nextLength rampSize lastLength |
 	self inline: true.
-	ds _ (self cCoerce: deltaST to:'int*') at: 0.
-	dt _ (self cCoerce: deltaST to:'int*') at: 1.
-	rampIndex _ self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
-	rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-	rampSize _ self gradientRampLengthOf: fill.
-	length2 _ (rampSize-1) * (rampSize-1). "This is the upper bound"
-	nextLength _ (rampIndex+1) * (rampIndex+1).
-	lastLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+	ds := (self cCoerce: deltaST to:'int*') at: 0.
+	dt := (self cCoerce: deltaST to:'int*') at: 1.
+	rampIndex := self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
+	rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+	rampSize := self gradientRampLengthOf: fill.
+	length2 := (rampSize-1) * (rampSize-1). "This is the upper bound"
+	nextLength := (rampIndex+1) * (rampIndex+1).
+	lastLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 
-	x _ leftX.
-	x1 _ rightX.
+	x := leftX.
+	x1 := rightX.
 
 	[x < x1 and:[lastLength < length2]] whileTrue:[
 		"Try to copy the current value more than once"
 		[x < x1 and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) <= nextLength]]
 			whileTrue:[	spanBuffer at: x put: rampValue.
-						x _ x + 1.
-						ds _ ds + dsX.
-						dt _ dt + dtX].
-		lastLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+						x := x + 1.
+						ds := ds + dsX.
+						dt := dt + dtX].
+		lastLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 		[lastLength > nextLength] whileTrue:[
-			rampIndex _ rampIndex + 1.
-			rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-			nextLength _ (rampIndex+1) * (rampIndex+1).
+			rampIndex := rampIndex + 1.
+			rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+			nextLength := (rampIndex+1) * (rampIndex+1).
 		].
 	].
 
@@ -1339,89 +1339,89 @@ BalloonEnginePlugin >> fillRadialIncreasingAA: fill ramp: ramp deltaST: deltaST 
 	self var: #ramp type:'int *'.
 	self var: #deltaST type:' int *'.
 
-	ds _ (self cCoerce: deltaST to:'int*') at: 0.
-	dt _ (self cCoerce: deltaST to:'int*') at: 1.
-	aaLevel _ self aaLevelGet.
-	baseShift _ self aaShiftGet.
-	rampIndex _ self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
-	rampSize _ self gradientRampLengthOf: fill.
-	length2 _ (rampSize-1) * (rampSize-1). "This is the upper bound"
-	nextLength _ (rampIndex+1) * (rampIndex+1).
-	lastLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+	ds := (self cCoerce: deltaST to:'int*') at: 0.
+	dt := (self cCoerce: deltaST to:'int*') at: 1.
+	aaLevel := self aaLevelGet.
+	baseShift := self aaShiftGet.
+	rampIndex := self accurateLengthOf: ds // 16r10000 with: dt // 16r10000.
+	rampSize := self gradientRampLengthOf: fill.
+	length2 := (rampSize-1) * (rampSize-1). "This is the upper bound"
+	nextLength := (rampIndex+1) * (rampIndex+1).
+	lastLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 
-	x _ leftX.
+	x := leftX.
 
-	firstPixel _ self aaFirstPixelFrom: leftX to: rightX.
-	lastPixel _ self aaLastPixelFrom: leftX to: rightX.
+	firstPixel := self aaFirstPixelFrom: leftX to: rightX.
+	lastPixel := self aaLastPixelFrom: leftX to: rightX.
 
 	"Deal with the first n subPixels"
 	(x < firstPixel and:[lastLength < length2]) ifTrue:[
-		colorMask _ self aaColorMaskGet.
-		colorShift _ self aaColorShiftGet.
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		colorMask := self aaColorMaskGet.
+		colorShift := self aaColorShiftGet.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		[x < firstPixel and:[lastLength < length2]] whileTrue:[
 			"Try to copy the current value more than once"
 			[x < firstPixel and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) <= nextLength]]
-				whileTrue:[	index _ x >> baseShift.
+				whileTrue:[	index := x >> baseShift.
 							spanBuffer at: index put: (spanBuffer at: index) + rampValue.
-							x _ x + 1.
-							ds _ ds + dsX.
-							dt _ dt + dtX].
-			lastLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+							x := x + 1.
+							ds := ds + dsX.
+							dt := dt + dtX].
+			lastLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 			[lastLength > nextLength] whileTrue:[
-				rampIndex _ rampIndex + 1.
-				rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-				rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
-				nextLength _ (rampIndex+1) * (rampIndex+1).
+				rampIndex := rampIndex + 1.
+				rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+				rampValue := (rampValue bitAnd: colorMask) >> colorShift.
+				nextLength := (rampIndex+1) * (rampIndex+1).
 			].
 		].
 	].
 
 	"Deal with the full pixels"
 	(x < lastPixel and:[lastLength < length2]) ifTrue:[
-		colorMask _ (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
-		colorShift _ self aaShiftGet.
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		colorMask := (self aaColorMaskGet >> self aaShiftGet) bitOr: 16rF0F0F0F0.
+		colorShift := self aaShiftGet.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		[x < lastPixel and:[lastLength < length2]] whileTrue:[
 			"Try to copy the current value more than once"
 			[x < lastPixel and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) <= nextLength]]
-				whileTrue:[	index _ x >> baseShift.
+				whileTrue:[	index := x >> baseShift.
 							spanBuffer at: index put: (spanBuffer at: index) + rampValue.
-							x _ x + aaLevel.
-							ds _ ds + (dsX << colorShift).
-							dt _ dt + (dtX << colorShift)].
-			lastLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+							x := x + aaLevel.
+							ds := ds + (dsX << colorShift).
+							dt := dt + (dtX << colorShift)].
+			lastLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 			[lastLength > nextLength] whileTrue:[
-				rampIndex _ rampIndex + 1.
-				rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-				rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
-				nextLength _ (rampIndex+1) * (rampIndex+1).
+				rampIndex := rampIndex + 1.
+				rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+				rampValue := (rampValue bitAnd: colorMask) >> colorShift.
+				nextLength := (rampIndex+1) * (rampIndex+1).
 			].
 		].
 	].
 
 	"Deal with last n sub-pixels"
 	(x < rightX and:[lastLength < length2]) ifTrue:[
-		colorMask _ self aaColorMaskGet.
-		colorShift _ self aaColorShiftGet.
-		rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-		rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
+		colorMask := self aaColorMaskGet.
+		colorShift := self aaColorShiftGet.
+		rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+		rampValue := (rampValue bitAnd: colorMask) >> colorShift.
 		[x < rightX and:[lastLength < length2]] whileTrue:[
 			"Try to copy the current value more than once"
 			[x < rightX and:[(self squaredLengthOf: ds //  16r10000 with: dt // 16r10000) <= nextLength]]
-				whileTrue:[	index _ x >> baseShift.
+				whileTrue:[	index := x >> baseShift.
 							spanBuffer at: index put: (spanBuffer at: index) + rampValue.
-							x _ x + 1.
-							ds _ ds + dsX.
-							dt _ dt + dtX].
-			lastLength _ self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
+							x := x + 1.
+							ds := ds + dsX.
+							dt := dt + dtX].
+			lastLength := self squaredLengthOf: ds //  16r10000 with: dt // 16r10000.
 			[lastLength > nextLength] whileTrue:[
-				rampIndex _ rampIndex + 1.
-				rampValue _ self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
-				rampValue _ (rampValue bitAnd: colorMask) >> colorShift.
-				nextLength _ (rampIndex+1) * (rampIndex+1).
+				rampIndex := rampIndex + 1.
+				rampValue := self makeUnsignedFrom: ((self cCoerce: ramp to:'int *') at: rampIndex).
+				rampValue := (rampValue bitAnd: colorMask) >> colorShift.
+				nextLength := (rampIndex+1) * (rampIndex+1).
 			].
 		].
 	].
@@ -1582,7 +1582,7 @@ BalloonEnginePlugin >> loadAndSubdivideBezierFrom: point1 via: point2 to: point3
 	self var: #point1 type:'int *'.
 	self var: #point2 type:'int *'.
 	self var: #point3 type:'int *'.
-	bz1 _ self allocateBezierStackEntry.	
+	bz1 := self allocateBezierStackEntry.	
 	engineStopped ifTrue:[^0].
 	"Load point1/point2/point3 on the top of the stack"
 	self bzStartX: bz1 put: (point1 at: 0).
@@ -1593,10 +1593,10 @@ BalloonEnginePlugin >> loadAndSubdivideBezierFrom: point1 via: point2 to: point3
 	self bzEndY: bz1 put: (point3 at: 1).
 
 	"Now check if the bezier curve is monoton. If not, subdivide it."
-	index2 _ bz2 _ self subdivideToBeMonoton: bz1 inX: wideFlag.
+	index2 := bz2 := self subdivideToBeMonoton: bz1 inX: wideFlag.
 	bz1 to: bz2 by: 6 do:[:index|
-		index1 _ self subdivideBezierFrom: index.
-		index1 > index2 ifTrue:[index2 _ index1].
+		index1 := self subdivideBezierFrom: index.
+		index1 > index2 ifTrue:[index2 := index1].
 		engineStopped ifTrue:[^0]. "Something went wrong"
 	].
 	"Return the number of segments"
@@ -1608,13 +1608,13 @@ BalloonEnginePlugin >> loadArrayPolygon: points nPoints: nPoints fill: fillIndex
 	| x0 y0 x1 y1 |
 	self loadPoint: self point1Get from: (interpreterProxy fetchPointer: 0 ofObject: points).
 	interpreterProxy failed ifTrue:[^nil].
-	x0 _ self point1Get at: 0.
-	y0 _ self point1Get at: 1.
+	x0 := self point1Get at: 0.
+	y0 := self point1Get at: 1.
 	1 to: nPoints-1 do:[:i|
 		self loadPoint: self point1Get from: (interpreterProxy fetchPointer: i ofObject: points).
 		interpreterProxy failed ifTrue:[^nil].
-		x1 _ self point1Get at: 0.
-		y1 _ self point1Get at: 1.
+		x1 := self point1Get at: 0.
+		y1 := self point1Get at: 1.
 		self point1Get at: 0 put: x0.
 		self point1Get at: 1 put: y0.
 		self point2Get at: 0 put: x1.
@@ -1627,8 +1627,8 @@ BalloonEnginePlugin >> loadArrayPolygon: points nPoints: nPoints fill: fillIndex
 			leftFill: fillIndex
 			rightFill: 0.
 		engineStopped ifTrue:[^nil].
-		x0 _ x1.
-		y0 _ y1.
+		x0 := x1.
+		y0 := y1.
 	].
 ]
 
@@ -1637,20 +1637,20 @@ BalloonEnginePlugin >> loadArrayShape: points nSegments: nSegments fill: fillInd
 	| pointOop x0 y0 x1 y1 x2 y2 segs |
 	self inline: false.
 	0 to: nSegments-1 do:[:i|
-		pointOop _ interpreterProxy fetchPointer: (i * 3) ofObject: points.
+		pointOop := interpreterProxy fetchPointer: (i * 3) ofObject: points.
 		self loadPoint: self point1Get from: pointOop.
-		pointOop _ interpreterProxy fetchPointer: (i * 3 + 1) ofObject: points.
+		pointOop := interpreterProxy fetchPointer: (i * 3 + 1) ofObject: points.
 		self loadPoint: self point2Get from: pointOop.
-		pointOop _ interpreterProxy fetchPointer: (i * 3 + 2) ofObject: points.
+		pointOop := interpreterProxy fetchPointer: (i * 3 + 2) ofObject: points.
 		self loadPoint: self point3Get from: pointOop.
 		interpreterProxy failed ifTrue:[^nil].
 		self transformPoints: 3.
-		x0 _ self point1Get at: 0.
-		y0 _ self point1Get at: 1.
-		x1 _ self point2Get at: 0.
-		y1 _ self point2Get at: 1.
-		x2 _ self point3Get at: 0.
-		y2 _ self point3Get at: 1.
+		x0 := self point1Get at: 0.
+		y0 := self point1Get at: 1.
+		x1 := self point2Get at: 0.
+		y1 := self point2Get at: 1.
+		x2 := self point3Get at: 0.
+		y2 := self point3Get at: 1.
 		"Check if we can use a line"
 		((x0 = y0 and:[x1 = y1]) or:[x1 = x2 and:[y1 = y2]]) ifTrue:[
 			self loadWideLine: lineWidth
@@ -1660,7 +1660,7 @@ BalloonEnginePlugin >> loadArrayShape: points nSegments: nSegments fill: fillInd
 				leftFill: fillIndex
 				rightFill: 0.
 		] ifFalse:["Need bezier"
-			segs _ self loadAndSubdivideBezierFrom: self point1Get
+			segs := self loadAndSubdivideBezierFrom: self point1Get
 					via: self point2Get
 					to: self point3Get
 					isWide: (lineWidth ~= 0 and:[lineFill ~= 0]).
@@ -1711,13 +1711,13 @@ BalloonEnginePlugin >> loadBitmapFill: formOop colormap: cmOop tile: tileFlag fr
 	self var: #point3 type:'int *'.
 
 	cmOop == interpreterProxy nilObject ifTrue:[
-		cmSize _ 0.
-		cmBits _ nil.
+		cmSize := 0.
+		cmBits := nil.
 	] ifFalse:[
 		(interpreterProxy fetchClassOf: cmOop) == interpreterProxy classBitmap
 			ifFalse:[^interpreterProxy primitiveFail].
-		cmSize _ interpreterProxy slotSizeOf: cmOop.
-		cmBits _ interpreterProxy firstIndexableField: cmOop.
+		cmSize := interpreterProxy slotSizeOf: cmOop.
+		cmBits := interpreterProxy firstIndexableField: cmOop.
 	].
 	(interpreterProxy isIntegerObject: formOop) 
 		ifTrue:[^interpreterProxy primitiveFail].
@@ -1725,13 +1725,13 @@ BalloonEnginePlugin >> loadBitmapFill: formOop colormap: cmOop tile: tileFlag fr
 		ifFalse:[^interpreterProxy primitiveFail].
 	(interpreterProxy slotSizeOf: formOop) < 5 
 		ifTrue:[^interpreterProxy primitiveFail].
-	bmBits _ interpreterProxy fetchPointer: 0 ofObject: formOop.
+	bmBits := interpreterProxy fetchPointer: 0 ofObject: formOop.
 	(interpreterProxy fetchClassOf: bmBits) == interpreterProxy classBitmap
 		ifFalse:[^interpreterProxy primitiveFail].
-	bmBitsSize _ interpreterProxy slotSizeOf: bmBits.
-	bmWidth _ interpreterProxy fetchInteger: 1 ofObject: formOop.
-	bmHeight _ interpreterProxy fetchInteger: 2 ofObject: formOop.
-	bmDepth _ interpreterProxy fetchInteger: 3 ofObject: formOop.
+	bmBitsSize := interpreterProxy slotSizeOf: bmBits.
+	bmWidth := interpreterProxy fetchInteger: 1 ofObject: formOop.
+	bmHeight := interpreterProxy fetchInteger: 2 ofObject: formOop.
+	bmDepth := interpreterProxy fetchInteger: 3 ofObject: formOop.
 	interpreterProxy failed ifTrue:[^nil].
 	(bmWidth >= 0 and:[bmHeight >= 0]) ifFalse:[^interpreterProxy primitiveFail].
 	(bmDepth = 32) | (bmDepth = 8) | (bmDepth = 16) | 
@@ -1739,11 +1739,11 @@ BalloonEnginePlugin >> loadBitmapFill: formOop colormap: cmOop tile: tileFlag fr
 			ifFalse:[^interpreterProxy primitiveFail].
 	(cmSize = 0 or:[cmSize = (1 << bmDepth)])
 		ifFalse:[^interpreterProxy primitiveFail].
-	ppw _ 32 // bmDepth.
-	bmRaster _ bmWidth + (ppw-1) // ppw.
+	ppw := 32 // bmDepth.
+	bmRaster := bmWidth + (ppw-1) // ppw.
 	bmBitsSize = (bmRaster * bmHeight)
 		ifFalse:[^interpreterProxy primitiveFail].
-	bmFill _ self allocateBitmapFill: cmSize colormap: cmBits.
+	bmFill := self allocateBitmapFill: cmSize colormap: cmBits.
 	engineStopped ifTrue:[^nil].
 	self bitmapWidthOf: bmFill put: bmWidth.
 	self bitmapHeightOf: bmFill put: bmHeight.
@@ -1763,11 +1763,11 @@ BalloonEnginePlugin >> loadBitsFrom: bmFill [
 	"Note: Assumes that the contents of formArray has been checked before"
 	| xIndex formOop bitsOop bitsLen |
 	self returnTypeC:'int *'.
-	xIndex _ self objectIndexOf: bmFill.
+	xIndex := self objectIndexOf: bmFill.
 	xIndex > (interpreterProxy slotSizeOf: formArray) ifTrue:[^nil].
-	formOop _ interpreterProxy fetchPointer: xIndex ofObject: formArray.
-	bitsOop _ interpreterProxy fetchPointer: 0 ofObject: formOop.
-	bitsLen _ interpreterProxy slotSizeOf: bitsOop.
+	formOop := interpreterProxy fetchPointer: xIndex ofObject: formArray.
+	bitsOop := interpreterProxy fetchPointer: 0 ofObject: formOop.
+	bitsLen := interpreterProxy slotSizeOf: bitsOop.
 	bitsLen = (self bitmapSizeOf: bmFill) ifFalse:[^nil].
 	^interpreterProxy firstIndexableField: bitsOop
 ]
@@ -1782,21 +1782,21 @@ BalloonEnginePlugin >> loadCompressedSegment: segmentIndex from: points short: p
 	(leftFill = rightFill and:[lineWidth = 0 or:[lineFill = 0]]) 
 		ifTrue:[^nil]. "Nothing to do"
 
-	index _ segmentIndex * 6. "3 points with x/y each"
+	index := segmentIndex * 6. "3 points with x/y each"
 	pointsShort ifTrue:["Load short points"
-		x0 _ self loadPointShortAt: (index+0) from: points.
-		y0 _ self loadPointShortAt: (index+1) from: points.
-		x1 _ self loadPointShortAt: (index+2) from: points.
-		y1 _ self loadPointShortAt: (index+3) from: points.
-		x2 _ self loadPointShortAt: (index+4) from: points.
-		y2 _ self loadPointShortAt: (index+5) from: points.
+		x0 := self loadPointShortAt: (index+0) from: points.
+		y0 := self loadPointShortAt: (index+1) from: points.
+		x1 := self loadPointShortAt: (index+2) from: points.
+		y1 := self loadPointShortAt: (index+3) from: points.
+		x2 := self loadPointShortAt: (index+4) from: points.
+		y2 := self loadPointShortAt: (index+5) from: points.
 	] ifFalse:[
-		x0 _ self loadPointIntAt: (index+0) from: points.
-		y0 _ self loadPointIntAt: (index+1) from: points.
-		x1 _ self loadPointIntAt: (index+2) from: points.
-		y1 _ self loadPointIntAt: (index+3) from: points.
-		x2 _ self loadPointIntAt: (index+4) from: points.
-		y2 _ self loadPointIntAt: (index+5) from: points.
+		x0 := self loadPointIntAt: (index+0) from: points.
+		y0 := self loadPointIntAt: (index+1) from: points.
+		x1 := self loadPointIntAt: (index+2) from: points.
+		y1 := self loadPointIntAt: (index+3) from: points.
+		x2 := self loadPointIntAt: (index+4) from: points.
+		y2 := self loadPointIntAt: (index+5) from: points.
 	].
 	"Briefly check if can represent the bezier as a line"
 	((x0 = x1 and:[y0 = y1]) or:[x1 = x2 and:[y1 = y2]]) ifTrue:[
@@ -1824,7 +1824,7 @@ BalloonEnginePlugin >> loadCompressedSegment: segmentIndex from: points short: p
 	self point3Get at: 0 put: x2.
 	self point3Get at: 1 put: y2.
 	self transformPoints: 3.
-	segs _ self loadAndSubdivideBezierFrom: self point1Get 
+	segs := self loadAndSubdivideBezierFrom: self point1Get 
 				via: self point2Get 
 				to: self point3Get 
 				isWide: (lineWidth ~= 0 and:[lineFill ~= 0]).
@@ -1854,37 +1854,37 @@ BalloonEnginePlugin >> loadCompressedShape: points segments: nSegments leftFills
 	nSegments = 0 ifTrue:[^0].
 
 	"Initialize run length encodings"
-	leftRun _  rightRun _ widthRun _ lineFillRun _ -1.
-	leftLength _ rightLength _ widthLength _ lineFillLength _ 1.
-	leftValue _ rightValue _ widthValue _ lineFillValue _ 0.
+	leftRun :=  rightRun := widthRun := lineFillRun := -1.
+	leftLength := rightLength := widthLength := lineFillLength := 1.
+	leftValue := rightValue := widthValue := lineFillValue := 0.
 
 	1 to: nSegments do:[:i|
 		"Decrement current run length and load new stuff"
-		(leftLength _ leftLength - 1) <= 0 ifTrue:[
-			leftRun _ leftRun + 1.
-			leftLength _ self shortRunLengthAt: leftRun from: leftFills.
-			leftValue _ self shortRunValueAt: leftRun from: leftFills.
+		(leftLength := leftLength - 1) <= 0 ifTrue:[
+			leftRun := leftRun + 1.
+			leftLength := self shortRunLengthAt: leftRun from: leftFills.
+			leftValue := self shortRunValueAt: leftRun from: leftFills.
 			leftValue = 0 ifFalse:[
-				leftValue _ fillIndexList at: leftValue-1.
-				leftValue _ self transformColor: leftValue.
+				leftValue := fillIndexList at: leftValue-1.
+				leftValue := self transformColor: leftValue.
 				engineStopped ifTrue:[^nil]]].
-		(rightLength _ rightLength - 1) <= 0 ifTrue:[
-			rightRun _ rightRun + 1.
-			rightLength _ self shortRunLengthAt: rightRun from: rightFills.
-			rightValue _ self shortRunValueAt: rightRun from: rightFills.
+		(rightLength := rightLength - 1) <= 0 ifTrue:[
+			rightRun := rightRun + 1.
+			rightLength := self shortRunLengthAt: rightRun from: rightFills.
+			rightValue := self shortRunValueAt: rightRun from: rightFills.
 			rightValue = 0 ifFalse:[
-				rightValue _ fillIndexList at: rightValue-1.
-				rightValue _ self transformColor: rightValue]].
-		(widthLength _ widthLength - 1) <= 0 ifTrue:[
-			widthRun _ widthRun + 1.
-			widthLength _ self shortRunLengthAt: widthRun from: lineWidths.
-			widthValue _ self shortRunValueAt: widthRun from: lineWidths.
-			widthValue = 0 ifFalse:[widthValue _ self transformWidth: widthValue]].
-		(lineFillLength _ lineFillLength - 1) <= 0 ifTrue:[
-			lineFillRun _ lineFillRun + 1.
-			lineFillLength _ self shortRunLengthAt: lineFillRun from: lineFills.
-			lineFillValue _ self shortRunValueAt: lineFillRun from: lineFills.
-			lineFillValue = 0 ifFalse:[lineFillValue _ fillIndexList at: lineFillValue-1]].
+				rightValue := fillIndexList at: rightValue-1.
+				rightValue := self transformColor: rightValue]].
+		(widthLength := widthLength - 1) <= 0 ifTrue:[
+			widthRun := widthRun + 1.
+			widthLength := self shortRunLengthAt: widthRun from: lineWidths.
+			widthValue := self shortRunValueAt: widthRun from: lineWidths.
+			widthValue = 0 ifFalse:[widthValue := self transformWidth: widthValue]].
+		(lineFillLength := lineFillLength - 1) <= 0 ifTrue:[
+			lineFillRun := lineFillRun + 1.
+			lineFillLength := self shortRunLengthAt: lineFillRun from: lineFills.
+			lineFillValue := self shortRunValueAt: lineFillRun from: lineFills.
+			lineFillValue = 0 ifFalse:[lineFillValue := fillIndexList at: lineFillValue-1]].
 		self loadCompressedSegment: i - 1
 			from: points 
 			short: pointsShort 
@@ -1911,22 +1911,22 @@ BalloonEnginePlugin >> loadFillOrientation: fill from: point1 along: point2 norm
 	self transformPoint: point1.
 	self transformPoint: point2.
 	self transformPoint: point3.
-	dirX _ (point2 at: 0) - (point1 at: 0).
-	dirY _ (point2 at: 1) - (point1 at: 1).
-	nrmX _ (point3 at: 0) - (point1 at: 0).
-	nrmY _ (point3 at: 1) - (point1 at: 1).
+	dirX := (point2 at: 0) - (point1 at: 0).
+	dirY := (point2 at: 1) - (point1 at: 1).
+	nrmX := (point3 at: 0) - (point1 at: 0).
+	nrmY := (point3 at: 1) - (point1 at: 1).
 
 	"Compute the scale from direction/normal into ramp size"
-	dsLength2 _ (dirX * dirX) + (dirY * dirY).
+	dsLength2 := (dirX * dirX) + (dirY * dirY).
 	dsLength2 > 0 ifTrue:[
-		dsX _ (dirX asFloat * fillWidth asFloat * 65536.0 / dsLength2 asFloat) asInteger.
-		dsY _ (dirY asFloat * fillWidth asFloat * 65536.0 / dsLength2 asFloat) asInteger.
-	] ifFalse:[ dsX _ 0. dsY _ 0].
-	dtLength2 _ (nrmX * nrmX) + (nrmY * nrmY).
+		dsX := (dirX asFloat * fillWidth asFloat * 65536.0 / dsLength2 asFloat) asInteger.
+		dsY := (dirY asFloat * fillWidth asFloat * 65536.0 / dsLength2 asFloat) asInteger.
+	] ifFalse:[ dsX := 0. dsY := 0].
+	dtLength2 := (nrmX * nrmX) + (nrmY * nrmY).
 	dtLength2 > 0 ifTrue:[
-		dtX _ (nrmX asFloat * fillHeight asFloat * 65536.0 / dtLength2 asFloat) asInteger.
-		dtY _ (nrmY asFloat * fillHeight asFloat * 65536.0 / dtLength2 asFloat) asInteger.
-	] ifFalse:[dtX _ 0. dtY _ 0].
+		dtX := (nrmX asFloat * fillHeight asFloat * 65536.0 / dtLength2 asFloat) asInteger.
+		dtY := (nrmY asFloat * fillHeight asFloat * 65536.0 / dtLength2 asFloat) asInteger.
+	] ifFalse:[dtX := 0. dtY := 0].
 	self fillOriginXOf: fill put: (point1 at: 0).
 	self fillOriginYOf: fill put: (point1 at: 1).
 	self fillDirectionXOf: fill put: dsX.
@@ -1946,8 +1946,8 @@ BalloonEnginePlugin >> loadGradientFill: rampOop from: point1 along: point2 norm
 	self var: #point3 type:'int *'.
 	(interpreterProxy fetchClassOf: rampOop) = interpreterProxy classBitmap
 		ifFalse:[^interpreterProxy primitiveFail].
-	rampWidth _ interpreterProxy slotSizeOf: rampOop.
-	fill _ self allocateGradientFill: (interpreterProxy firstIndexableField: rampOop)
+	rampWidth := interpreterProxy slotSizeOf: rampOop.
+	fill := self allocateGradientFill: (interpreterProxy firstIndexableField: rampOop)
 				rampWidth: rampWidth isRadial: isRadial.
 	engineStopped ifTrue:[^nil].
 	self loadFillOrientation: fill 
@@ -1966,12 +1966,12 @@ BalloonEnginePlugin >> loadLine: line from: point1 to: point2 offset: yOffset le
 	self var: #p2 type:'int *'.
 
 	(point1 at: 1) <= (point2 at: 1) 
-		ifTrue:[	p1 _ point1.
-				p2 _ point2.
-				yDir _ 1]
-		ifFalse:[	p1 _ point2.
-				p2 _ point1.
-				yDir _ -1].
+		ifTrue:[	p1 := point1.
+				p2 := point2.
+				yDir := 1]
+		ifFalse:[	p1 := point2.
+				p2 := point1.
+				yDir := -1].
 	self edgeXValueOf: line put: (p1 at: 0).
 	self edgeYValueOf: line put: (p1 at: 1) - yOffset.
 	self edgeZValueOf: line put: self currentZGet.
@@ -1987,14 +1987,14 @@ BalloonEnginePlugin >> loadOval: lineWidth lineFill: lineFill leftFill: leftFill
 	"Load a rectangular oval currently defined by point1/point2"
 	| w h cx cy nSegments |
 	self inline: false.
-	w _ ((self point2Get at: 0) - (self point1Get at: 0)) // 2.
-	h _ ((self point2Get at: 1) - (self point1Get at: 1)) // 2.
-	cx _ ((self point2Get at: 0) + (self point1Get at: 0)) // 2.
-	cy _ ((self point2Get at: 1) + (self point1Get at: 1)) // 2.
+	w := ((self point2Get at: 0) - (self point1Get at: 0)) // 2.
+	h := ((self point2Get at: 1) - (self point1Get at: 1)) // 2.
+	cx := ((self point2Get at: 0) + (self point1Get at: 0)) // 2.
+	cy := ((self point2Get at: 1) + (self point1Get at: 1)) // 2.
 	0 to: 15 do:[:i|
 		self loadOvalSegment: i w: w h: h cx: cx cy: cy.
 		self transformPoints: 3.
-		nSegments _ self loadAndSubdivideBezierFrom: self point1Get 
+		nSegments := self loadAndSubdivideBezierFrom: self point1Get 
 							via: self point2Get to: self point3Get
 							isWide: (lineWidth ~= 0 and:[lineFill ~= 0]).
 		engineStopped ifTrue:[^nil].
@@ -2009,22 +2009,22 @@ BalloonEnginePlugin >> loadOvalSegment: seg w: w h: h cx: cx cy: cy [
 	| x0 y0 x2 y2 x1 y1 |
 	self inline: false.
 	"Load start point of segment"
-	x0 _ ((self circleCosTable at: seg * 2 + 0) * w asFloat + cx) asInteger.
-	y0 _ ((self circleSinTable at: seg * 2 + 0) * h asFloat + cy) asInteger.
+	x0 := ((self circleCosTable at: seg * 2 + 0) * w asFloat + cx) asInteger.
+	y0 := ((self circleSinTable at: seg * 2 + 0) * h asFloat + cy) asInteger.
 	self point1Get at: 0 put: x0.
 	self point1Get at: 1 put: y0.
 	"Load end point of segment"
-	x2 _ ((self circleCosTable at: seg * 2 + 2) * w asFloat + cx) asInteger.
-	y2 _ ((self circleSinTable at: seg * 2 + 2) * h asFloat + cy) asInteger.
+	x2 := ((self circleCosTable at: seg * 2 + 2) * w asFloat + cx) asInteger.
+	y2 := ((self circleSinTable at: seg * 2 + 2) * h asFloat + cy) asInteger.
 	self point3Get at: 0 put: x2.
 	self point3Get at: 1 put: y2.
 	"Load intermediate point of segment"
-	x1 _ ((self circleCosTable at: seg * 2 + 1) * w asFloat + cx) asInteger.
-	y1 _ ((self circleSinTable at: seg * 2 + 1) * h asFloat + cy) asInteger.
+	x1 := ((self circleCosTable at: seg * 2 + 1) * w asFloat + cx) asInteger.
+	y1 := ((self circleSinTable at: seg * 2 + 1) * h asFloat + cy) asInteger.
 	"NOTE: The intermediate point is the point ON the curve
 	and not yet the control point (which is OFF the curve)"
-	x1 _ (x1 * 2) - (x0 + x2 // 2).
-	y1 _ (y1 * 2) - (y0 + y2 // 2).
+	x1 := (x1 * 2) - (x0 + x2 // 2).
+	y1 := (y1 * 2) - (y0 + y2 // 2).
 	self point2Get at: 0 put: x1.
 	self point2Get at: 1 put: y1.
 ]
@@ -2047,19 +2047,19 @@ BalloonEnginePlugin >> loadPolygon: points nPoints: nPoints fill: fillIndex line
 	| x0 y0 x1 y1 |
 	self var:#points type:'int *'.
 	isShort ifTrue:[
-		x0 _ self loadPointShortAt: 0 from: points.
-		y0 _ self loadPointShortAt: 1 from: points.
+		x0 := self loadPointShortAt: 0 from: points.
+		y0 := self loadPointShortAt: 1 from: points.
 	] ifFalse:[
-		x0 _ self loadPointIntAt: 0 from: points.
-		y0 _ self loadPointIntAt: 1 from: points.
+		x0 := self loadPointIntAt: 0 from: points.
+		y0 := self loadPointIntAt: 1 from: points.
 	].
 	1 to: nPoints-1 do:[:i|
 		isShort ifTrue:[
-			x1 _ self loadPointShortAt: i*2 from: points.
-			y1 _ self loadPointShortAt: i*2+1 from: points.
+			x1 := self loadPointShortAt: i*2 from: points.
+			y1 := self loadPointShortAt: i*2+1 from: points.
 		] ifFalse:[
-			x1 _ self loadPointIntAt: i*2 from: points.
-			y1 _ self loadPointIntAt: i*2+1 from: points.
+			x1 := self loadPointIntAt: i*2 from: points.
+			y1 := self loadPointIntAt: i*2+1 from: points.
 		].
 		self point1Get at: 0 put: x0.
 		self point1Get at: 1 put: y0.
@@ -2073,8 +2073,8 @@ BalloonEnginePlugin >> loadPolygon: points nPoints: nPoints fill: fillIndex line
 			leftFill: fillIndex
 			rightFill: 0.
 		engineStopped ifTrue:[^nil].
-		x0 _ x1.
-		y0 _ y1.
+		x0 := x1.
+		y0 := y1.
 	].
 ]
 
@@ -2115,15 +2115,15 @@ BalloonEnginePlugin >> loadWideBezier: lineWidth lineFill: lineFill leftFill: le
 	| index bezier wide offset |
 	self inline: false.
 	(lineWidth = 0 or:[lineFill = 0])
-		ifTrue:[wide _ false.
-				offset _ 0]
-		ifFalse:[wide _ true.
-				offset _ self offsetFromWidth: lineWidth].
-	index _ nSegments * 6.
+		ifTrue:[wide := false.
+				offset := 0]
+		ifFalse:[wide := true.
+				offset := self offsetFromWidth: lineWidth].
+	index := nSegments * 6.
 	[index > 0] whileTrue:[
 		wide 
-			ifTrue:[bezier _ self allocateWideBezier]
-			ifFalse:[bezier _ self allocateBezier].
+			ifTrue:[bezier := self allocateWideBezier]
+			ifFalse:[bezier := self allocateBezier].
 		engineStopped ifTrue:[^0].
 		self loadBezier: bezier 
 			segment: index 
@@ -2135,7 +2135,7 @@ BalloonEnginePlugin >> loadWideBezier: lineWidth lineFill: lineFill leftFill: le
 			self wideBezierWidthOf: bezier put: lineWidth.
 			self wideBezierExtentOf: bezier put: lineWidth.
 		].
-		index _ index - 6.
+		index := index - 6.
 	].
 	self wbStackClear.
 ]
@@ -2147,10 +2147,10 @@ BalloonEnginePlugin >> loadWideLine: lineWidth from: p1 to: p2 lineFill: lineFil
 	self var: #p1 type:'int *'.
 	self var: #p2 type:'int *'.
 	(lineWidth = 0 or:[lineFill = 0])
-		ifTrue:[	line _ self allocateLine.
-				offset _ 0]
-		ifFalse:[	line _ self allocateWideLine.
-				offset _ self offsetFromWidth: lineWidth].
+		ifTrue:[	line := self allocateLine.
+				offset := 0]
+		ifFalse:[	line := self allocateWideLine.
+				offset := self offsetFromWidth: lineWidth].
 	engineStopped ifTrue:[^0].
 	self loadLine: line 
 		from: p1
@@ -2190,11 +2190,11 @@ BalloonEnginePlugin >> primitiveAddBezier [
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	rightFill _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	leftFill _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
-	viaOop _ interpreterProxy stackObjectValue: 2.
-	endOop _ interpreterProxy stackObjectValue: 3.
-	startOop _ interpreterProxy stackObjectValue: 4.
+	rightFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	leftFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
+	viaOop := interpreterProxy stackObjectValue: 2.
+	endOop := interpreterProxy stackObjectValue: 3.
+	startOop := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
@@ -2217,14 +2217,14 @@ BalloonEnginePlugin >> primitiveAddBezier [
 
 	self transformPoints: 3.
 
-	nSegments _ self loadAndSubdivideBezierFrom: self point1Get 
+	nSegments := self loadAndSubdivideBezierFrom: self point1Get 
 						via: self point2Get 
 						to: self point3Get 
 						isWide: false.
 	self needAvailableSpace: nSegments * GBBaseSize.
 	engineStopped ifFalse:[
-		leftFill _ self transformColor: leftFill.
-		rightFill _ self transformColor: rightFill].
+		leftFill := self transformColor: leftFill.
+		rightFill := self transformColor: rightFill].
 	engineStopped ifFalse:[
 		self loadWideBezier: 0 lineFill: 0 leftFill: leftFill rightFill: rightFill n: nSegments.
 	].
@@ -2249,20 +2249,20 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	lineFill _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	lineWidth _ interpreterProxy stackIntegerValue: 1.
-	fillIndex _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
-	nSegments _ interpreterProxy stackIntegerValue: 3.
-	points _ interpreterProxy stackObjectValue: 4.
+	lineFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	lineWidth := interpreterProxy stackIntegerValue: 1.
+	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
+	nSegments := interpreterProxy stackIntegerValue: 3.
+	points := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
 		ifFalse:[^interpreterProxy primitiveFail].
 
 	"First, do a check if the points look okay"
-	length _ interpreterProxy slotSizeOf: points.
+	length := interpreterProxy slotSizeOf: points.
 	(interpreterProxy isWords: points) ifTrue:[
-		isArray _ false.
+		isArray := false.
 		"Either PointArray or ShortPointArray"
 		(length = (nSegments * 3) or:[length = (nSegments * 6)])
 			ifFalse:[^interpreterProxy primitiveFail].
@@ -2271,7 +2271,7 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 			ifFalse:[^interpreterProxy primitiveFail].
 		length = (nSegments * 3)
 			ifFalse:[^interpreterProxy primitiveFail].
-		isArray _ true.
+		isArray := true.
 	].
 
 	"Now check that we have some hope to have enough free space.
@@ -2280,8 +2280,8 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 	will be line segments"
 
 	(lineWidth = 0 or:[lineFill = 0])
-		ifTrue:[segSize _ GLBaseSize]
-		ifFalse:[segSize _ GLWideSize].
+		ifTrue:[segSize := GLBaseSize]
+		ifFalse:[segSize := GLWideSize].
 	(self needAvailableSpace: segSize * nSegments)
 		ifFalse:[^interpreterProxy primitiveFail].
 
@@ -2290,8 +2290,8 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 		ifFalse:[^interpreterProxy primitiveFail]. 
 
 	"Transform colors"
-	lineFill _ self transformColor: lineFill.
-	fillIndex _ self transformColor: fillIndex.
+	lineFill := self transformColor: lineFill.
+	fillIndex := self transformColor: fillIndex.
 	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if have anything at all to do"
@@ -2300,8 +2300,8 @@ BalloonEnginePlugin >> primitiveAddBezierShape [
 
 	"Transform the lineWidth"
 	lineWidth = 0 ifFalse:[
-		lineWidth _ self transformWidth: lineWidth.
-		lineWidth < 1 ifTrue:[lineWidth _ 1]].
+		lineWidth := self transformWidth: lineWidth.
+		lineWidth < 1 ifTrue:[lineWidth := 1]].
 
 	"And load the actual shape"
 	isArray ifTrue:[
@@ -2332,15 +2332,15 @@ BalloonEnginePlugin >> primitiveAddBitmapFill [
 	interpreterProxy methodArgumentCount = 7 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	xIndex _ interpreterProxy stackIntegerValue: 0.
+	xIndex := interpreterProxy stackIntegerValue: 0.
 	xIndex <= 0 ifTrue:[^interpreterProxy primitiveFail].
-	nrmOop _ interpreterProxy stackObjectValue: 1.
-	dirOop _ interpreterProxy stackObjectValue: 2.
-	originOop _ interpreterProxy stackObjectValue: 3.
-	tileFlag _ interpreterProxy booleanValueOf: (interpreterProxy stackValue: 4).
-	tileFlag ifTrue:[tileFlag _ 1] ifFalse:[tileFlag _ 0].
-	cmOop _ interpreterProxy stackObjectValue: 5.
-	formOop _ interpreterProxy stackObjectValue: 6.
+	nrmOop := interpreterProxy stackObjectValue: 1.
+	dirOop := interpreterProxy stackObjectValue: 2.
+	originOop := interpreterProxy stackObjectValue: 3.
+	tileFlag := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 4).
+	tileFlag ifTrue:[tileFlag := 1] ifFalse:[tileFlag := 0].
+	cmOop := interpreterProxy stackObjectValue: 5.
+	formOop := interpreterProxy stackObjectValue: 6.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 7) requiredState: GEStateUnlocked)
@@ -2351,7 +2351,7 @@ BalloonEnginePlugin >> primitiveAddBitmapFill [
 	self loadPoint: self point3Get from: nrmOop.
 	interpreterProxy failed ifTrue:[^0].
 
-	fill _ self loadBitmapFill: formOop 
+	fill := self loadBitmapFill: formOop 
 				colormap: cmOop
 				tile: tileFlag
 				from: self point1Get 
@@ -2379,13 +2379,13 @@ BalloonEnginePlugin >> primitiveAddCompressedShape [
 	interpreterProxy methodArgumentCount = 7 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	fillIndexList _ interpreterProxy stackObjectValue: 0.
-	lineFills _ interpreterProxy stackObjectValue: 1.
-	lineWidths _ interpreterProxy stackObjectValue: 2.
-	rightFills _ interpreterProxy stackObjectValue: 3.
-	leftFills _ interpreterProxy stackObjectValue: 4.
-	nSegments _ interpreterProxy stackIntegerValue: 5.
-	points _ interpreterProxy stackObjectValue: 6.
+	fillIndexList := interpreterProxy stackObjectValue: 0.
+	lineFills := interpreterProxy stackObjectValue: 1.
+	lineWidths := interpreterProxy stackObjectValue: 2.
+	rightFills := interpreterProxy stackObjectValue: 3.
+	leftFills := interpreterProxy stackObjectValue: 4.
+	nSegments := interpreterProxy stackIntegerValue: 5.
+	points := interpreterProxy stackObjectValue: 6.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 7) requiredState: GEStateUnlocked)
@@ -2409,7 +2409,7 @@ BalloonEnginePlugin >> primitiveAddCompressedShape [
 		ifFalse:[^interpreterProxy primitiveFail].
 
 	"Check if the points are short"
-	pointsShort _ (interpreterProxy slotSizeOf: points) = (nSegments * 3).
+	pointsShort := (interpreterProxy slotSizeOf: points) = (nSegments * 3).
 
 	"Then actually load the compressed shape"
 	self loadCompressedShape: (interpreterProxy firstIndexableField: points)
@@ -2441,11 +2441,11 @@ BalloonEnginePlugin >> primitiveAddGradientFill [
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	isRadial _ interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
-	nrmOop _ interpreterProxy stackValue: 1.
-	dirOop _ interpreterProxy stackValue: 2.
-	originOop _ interpreterProxy stackValue: 3.
-	rampOop _ interpreterProxy stackValue: 4.
+	isRadial := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
+	nrmOop := interpreterProxy stackValue: 1.
+	dirOop := interpreterProxy stackValue: 2.
+	originOop := interpreterProxy stackValue: 3.
+	rampOop := interpreterProxy stackValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
@@ -2456,7 +2456,7 @@ BalloonEnginePlugin >> primitiveAddGradientFill [
 	self loadPoint: self point3Get from: nrmOop.
 	interpreterProxy failed ifTrue:[^0].
 
-	fill _ self loadGradientFill: rampOop 
+	fill := self loadGradientFill: rampOop 
 				from: self point1Get 
 				along: self point2Get 
 				normal: self point3Get 
@@ -2482,10 +2482,10 @@ BalloonEnginePlugin >> primitiveAddLine [
 	interpreterProxy methodArgumentCount = 4 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	rightFill _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	leftFill _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
-	endOop _ interpreterProxy stackObjectValue: 2.
-	startOop _ interpreterProxy stackObjectValue: 3.
+	rightFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	leftFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
+	endOop := interpreterProxy stackObjectValue: 2.
+	startOop := interpreterProxy stackObjectValue: 3.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 4) requiredState: GEStateUnlocked)
@@ -2504,8 +2504,8 @@ BalloonEnginePlugin >> primitiveAddLine [
 	self transformPoints: 2.
 
 	"Transform colors"
-	leftFill _ self transformColor: leftFill.
-	rightFill _ self transformColor: rightFill.
+	leftFill := self transformColor: leftFill.
+	rightFill := self transformColor: rightFill.
 	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Load line"
@@ -2529,11 +2529,11 @@ BalloonEnginePlugin >> primitiveAddOval [
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	borderIndex _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	borderWidth _ interpreterProxy stackIntegerValue: 1.
-	fillIndex _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
-	endOop _ interpreterProxy stackObjectValue: 3.
-	startOop _ interpreterProxy stackObjectValue: 4.
+	borderIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	borderWidth := interpreterProxy stackIntegerValue: 1.
+	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
+	endOop := interpreterProxy stackObjectValue: 3.
+	startOop := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
@@ -2544,8 +2544,8 @@ BalloonEnginePlugin >> primitiveAddOval [
 			ifFalse:[^interpreterProxy primitiveFail].
 
 	"Transform colors"
-	fillIndex _ self transformColor: fillIndex.
-	borderIndex _ self transformColor: borderIndex.
+	fillIndex := self transformColor: fillIndex.
+	borderIndex := self transformColor: borderIndex.
 	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if we have anything at all to do"
@@ -2559,8 +2559,8 @@ BalloonEnginePlugin >> primitiveAddOval [
 
 	"Check if we need a border"
 	(borderWidth > 0 and:[borderIndex ~= 0]) 
-		ifTrue:[borderWidth _ self transformWidth: borderWidth]
-		ifFalse:[borderWidth _ 0].
+		ifTrue:[borderWidth := self transformWidth: borderWidth]
+		ifFalse:[borderWidth := 0].
 
 
 	"Load the rectangle points"
@@ -2592,20 +2592,20 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	lineFill _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	lineWidth _ interpreterProxy stackIntegerValue: 1.
-	fillIndex _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
-	nPoints _ interpreterProxy stackIntegerValue: 3.
-	points _ interpreterProxy stackObjectValue: 4.
+	lineFill := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	lineWidth := interpreterProxy stackIntegerValue: 1.
+	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
+	nPoints := interpreterProxy stackIntegerValue: 3.
+	points := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
 		ifFalse:[^interpreterProxy primitiveFail].
 
 	"First, do a check if the points look okay"
-	length _ interpreterProxy slotSizeOf: points.
+	length := interpreterProxy slotSizeOf: points.
 	(interpreterProxy isWords: points) ifTrue:[
-		isArray _ false.
+		isArray := false.
 		"Either PointArray or ShortPointArray"
 		(length = nPoints or:[nPoints * 2 = length])
 			ifFalse:[^interpreterProxy primitiveFail].
@@ -2614,7 +2614,7 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 			ifFalse:[^interpreterProxy primitiveFail].
 		length = nPoints
 			ifFalse:[^interpreterProxy primitiveFail].
-		isArray _ true.
+		isArray := true.
 	].
 
 	"Now check that we have some hope to have enough free space.
@@ -2623,8 +2623,8 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 	will be line segments"
 
 	(lineWidth = 0 or:[lineFill = 0])
-		ifTrue:[segSize _ GLBaseSize]
-		ifFalse:[segSize _ GLWideSize].
+		ifTrue:[segSize := GLBaseSize]
+		ifFalse:[segSize := GLWideSize].
 	(self needAvailableSpace: segSize * nPoints)
 		ifFalse:[^interpreterProxy primitiveFail].
 
@@ -2633,8 +2633,8 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 		ifFalse:[^interpreterProxy primitiveFail]. 
 
 	"Transform colors"
-	lineFill _ self transformColor: lineFill.
-	fillIndex _ self transformColor: fillIndex.
+	lineFill := self transformColor: lineFill.
+	fillIndex := self transformColor: fillIndex.
 	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if have anything at all to do"
@@ -2642,7 +2642,7 @@ BalloonEnginePlugin >> primitiveAddPolygon [
 		ifTrue:[^interpreterProxy pop: 6].
 
 	"Transform the lineWidth"
-	lineWidth = 0 ifFalse:[lineWidth _ self transformWidth: lineWidth].
+	lineWidth = 0 ifFalse:[lineWidth := self transformWidth: lineWidth].
 
 	"And load the actual polygon"
 	isArray ifTrue:[
@@ -2672,11 +2672,11 @@ BalloonEnginePlugin >> primitiveAddRect [
 	interpreterProxy methodArgumentCount = 5 
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	borderIndex _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	borderWidth _ interpreterProxy stackIntegerValue: 1.
-	fillIndex _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
-	endOop _ interpreterProxy stackObjectValue: 3.
-	startOop _ interpreterProxy stackObjectValue: 4.
+	borderIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	borderWidth := interpreterProxy stackIntegerValue: 1.
+	fillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 2).
+	endOop := interpreterProxy stackObjectValue: 3.
+	startOop := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 
 	(self quickLoadEngineFrom: (interpreterProxy stackObjectValue: 5) requiredState: GEStateUnlocked)
@@ -2687,8 +2687,8 @@ BalloonEnginePlugin >> primitiveAddRect [
 			ifFalse:[^interpreterProxy primitiveFail].
 
 	"Transform colors"
-	borderIndex _ self transformColor: borderIndex.
-	fillIndex _ self transformColor: fillIndex.
+	borderIndex := self transformColor: borderIndex.
+	fillIndex := self transformColor: fillIndex.
 	engineStopped ifTrue:[^interpreterProxy primitiveFail].
 
 	"Check if we have anything at all to do"
@@ -2702,8 +2702,8 @@ BalloonEnginePlugin >> primitiveAddRect [
 
 	"Check if we need a border"
 	(borderWidth > 0 and:[borderIndex ~= 0]) 
-		ifTrue:[borderWidth _ self transformWidth: borderWidth]
-		ifFalse:[borderWidth _ 0].
+		ifTrue:[borderWidth := self transformWidth: borderWidth]
+		ifFalse:[borderWidth := 0].
 
 	"Load the rectangle"
 	self loadPoint: self point1Get from: startOop.
@@ -2735,8 +2735,8 @@ BalloonEnginePlugin >> primitiveGetBezierStats [
 	interpreterProxy methodArgumentCount = 1
 		ifFalse:[^interpreterProxy primitiveFail].
 
-	statOop _ interpreterProxy stackObjectValue: 0.
-	engine _ interpreterProxy stackObjectValue: 1.
+	statOop := interpreterProxy stackObjectValue: 0.
+	engine := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	(self quickLoadEngineFrom: engine)
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -2745,7 +2745,7 @@ BalloonEnginePlugin >> primitiveGetBezierStats [
 		ifFalse:[^interpreterProxy primitiveFail].
 	(interpreterProxy slotSizeOf: statOop) < 4
 		ifTrue:[^interpreterProxy primitiveFail].
-	stats _ interpreterProxy firstIndexableField: statOop.
+	stats := interpreterProxy firstIndexableField: statOop.
 	stats at: 0 put: (stats at: 0) + (workBuffer at: GWBezierMonotonSubdivisions).
 	stats at: 1 put: (stats at: 1) + (workBuffer at: GWBezierHeightSubdivisions).
 	stats at: 2 put: (stats at: 2) + (workBuffer at: GWBezierOverflowSubdivisions).
@@ -2768,32 +2768,32 @@ BalloonEnginePlugin >> rShiftTable [
 BalloonEnginePlugin >> repeatValue: delta max: maxValue [
 	| newDelta |
 	self inline: true.
-	newDelta _ delta.
-	[newDelta < 0] whileTrue:[newDelta _ newDelta + maxValue].
-	[newDelta >= maxValue] whileTrue:[newDelta _ newDelta - maxValue].
+	newDelta := delta.
+	[newDelta < 0] whileTrue:[newDelta := newDelta + maxValue].
+	[newDelta >= maxValue] whileTrue:[newDelta := newDelta - maxValue].
 	^newDelta
 ]
 
 { #category : #'beziers-wide' }
 BalloonEnginePlugin >> returnWideBezierFill [
-	^(dispatchReturnValue _ self wideBezierFillOf: dispatchedValue).
+	^(dispatchReturnValue := self wideBezierFillOf: dispatchedValue).
 ]
 
 { #category : #'beziers-wide' }
 BalloonEnginePlugin >> returnWideBezierWidth [
-	^(dispatchReturnValue _ self wideBezierWidthOf: dispatchedValue).
+	^(dispatchReturnValue := self wideBezierWidthOf: dispatchedValue).
 ]
 
 { #category : #'lines-wide' }
 BalloonEnginePlugin >> returnWideLineFill [
 	"Return the fill of the (wide) line - this method is called from a case."
-	^(dispatchReturnValue _ self wideLineFillOf: dispatchedValue).
+	^(dispatchReturnValue := self wideLineFillOf: dispatchedValue).
 ]
 
 { #category : #'lines-wide' }
 BalloonEnginePlugin >> returnWideLineWidth [
 	"Return the width of the (wide) line - this method is called from a case."
-	^(dispatchReturnValue _ self wideLineWidthOf: dispatchedValue).
+	^(dispatchReturnValue := self wideLineWidthOf: dispatchedValue).
 ]
 
 { #category : #private }
@@ -2838,34 +2838,34 @@ BalloonEnginePlugin >> stepToFirstBezierIn: bezier at: yValue [
 		ifTrue:[^self edgeNumLinesOf: bezier put: 0].
 
 	"Now really initialize bezier"
-	startX _ self edgeXValueOf: bezier.
-	startY _ self edgeYValueOf: bezier.
-	viaX _ self bezierViaXOf: bezier.
-	viaY _ self bezierViaYOf: bezier.
-	endX _ self bezierEndXOf: bezier.
-	endY _ self bezierEndYOf: bezier.
-	deltaY _ endY - startY.
+	startX := self edgeXValueOf: bezier.
+	startY := self edgeYValueOf: bezier.
+	viaX := self bezierViaXOf: bezier.
+	viaY := self bezierViaYOf: bezier.
+	endX := self bezierEndXOf: bezier.
+	endY := self bezierEndYOf: bezier.
+	deltaY := endY - startY.
 
 	"Initialize integer forward differencing"
-	fwX1 _ (viaX - startX) * 2.
-	fwX2 _ startX + endX - (viaX * 2).
-	fwY1 _ (viaY - startY) * 2.
-	fwY2 _ startY + endY - (viaY * 2).
-	maxSteps _ deltaY * 2.
-	maxSteps < 2 ifTrue:[maxSteps _ 2].
-	scaledStepSize _ 16r1000000 // maxSteps.
-	squaredStepSize _ self absoluteSquared8Dot24: scaledStepSize.
-	fwDx _ fwX1 * scaledStepSize.
-	fwDDx _ fwX2 * squaredStepSize * 2.
-	fwDx _ fwDx + (fwDDx // 2).
-	fwDy _ fwY1 * scaledStepSize.
-	fwDDy _ fwY2 * squaredStepSize * 2.
-	fwDy _ fwDy + (fwDDy // 2).
+	fwX1 := (viaX - startX) * 2.
+	fwX2 := startX + endX - (viaX * 2).
+	fwY1 := (viaY - startY) * 2.
+	fwY2 := startY + endY - (viaY * 2).
+	maxSteps := deltaY * 2.
+	maxSteps < 2 ifTrue:[maxSteps := 2].
+	scaledStepSize := 16r1000000 // maxSteps.
+	squaredStepSize := self absoluteSquared8Dot24: scaledStepSize.
+	fwDx := fwX1 * scaledStepSize.
+	fwDDx := fwX2 * squaredStepSize * 2.
+	fwDx := fwDx + (fwDDx // 2).
+	fwDy := fwY1 * scaledStepSize.
+	fwDDy := fwY2 * squaredStepSize * 2.
+	fwDy := fwDy + (fwDDy // 2).
 
 	"Store the values"
 	self edgeNumLinesOf: bezier put: deltaY.
 
-	updateData _ self bezierUpdateDataOf: bezier.
+	updateData := self bezierUpdateDataOf: bezier.
 	updateData at: GBUpdateX put: (startX * 256).
 	updateData at: GBUpdateY put: (startY * 256).
 	updateData at: GBUpdateDX put: fwDx.
@@ -2874,7 +2874,7 @@ BalloonEnginePlugin >> stepToFirstBezierIn: bezier at: yValue [
 	updateData at: GBUpdateDDY put: fwDDy.
 
 	"And step to the first scan line"
-	(startY _ self edgeYValueOf: bezier) = yValue ifFalse:[
+	(startY := self edgeYValueOf: bezier) = yValue ifFalse:[
 		self stepToNextBezierIn: bezier at: yValue.
 		"Adjust number of lines remaining"
 		self edgeNumLinesOf: bezier put: deltaY - (yValue - startY).
@@ -2898,31 +2898,31 @@ BalloonEnginePlugin >> stepToFirstLineIn: line at: yValue [
 	((self isWide: line) not and:[yValue >= (self lineEndYOf: line)])
 		ifTrue:[^self edgeNumLinesOf: line put: 0].
 
-	deltaX _ (self lineEndXOf: line) - (self edgeXValueOf: line).
-	deltaY _ (self lineEndYOf: line) - (self edgeYValueOf: line).
+	deltaX := (self lineEndXOf: line) - (self edgeXValueOf: line).
+	deltaY := (self lineEndYOf: line) - (self edgeYValueOf: line).
 
 	"Check if edge goes left to right"
 	deltaX >= 0 
-		ifTrue:[	xDir _ 1.
-				widthX _ deltaX.
-				error _ 0]
-		ifFalse:[	xDir _ -1.
-				widthX _ 0 - deltaX.
-				error _ 1 - deltaY].
+		ifTrue:[	xDir := 1.
+				widthX := deltaX.
+				error := 0]
+		ifFalse:[	xDir := -1.
+				widthX := 0 - deltaX.
+				error := 1 - deltaY].
 
 	"Check if deltaY is zero.
 	Note: We could actually get out here immediately 
 	but wide lines rely on an accurate setup in this case"
 	deltaY = 0
-		ifTrue:[	error _ 0.			"No error for horizontal edges"
-				xInc _ deltaX.		"Encodes width and direction"
-				errorAdjUp _ 0]
+		ifTrue:[	error := 0.			"No error for horizontal edges"
+				xInc := deltaX.		"Encodes width and direction"
+				errorAdjUp := 0]
 		ifFalse:["Check if edge is y-major"
 				deltaY > widthX "Note: The '>' instead of '>=' could be important here..."
-					ifTrue:[	xInc _ 0.
-							errorAdjUp _ widthX]
-					ifFalse:[	xInc _ (widthX // deltaY) * xDir.
-							errorAdjUp _ widthX \\ deltaY]].
+					ifTrue:[	xInc := 0.
+							errorAdjUp := widthX]
+					ifFalse:[	xInc := (widthX // deltaY) * xDir.
+							errorAdjUp := widthX \\ deltaY]].
 
 	"Store the values"
 	self edgeNumLinesOf: line put: deltaY.
@@ -2934,7 +2934,7 @@ BalloonEnginePlugin >> stepToFirstLineIn: line at: yValue [
 	self lineErrorAdjDownOf: line put: deltaY.
 
 	"And step to the first scan line"
-	(startY _ self edgeYValueOf: line) = yValue ifFalse:[
+	(startY := self edgeYValueOf: line) = yValue ifFalse:[
 		startY to: yValue-1 do:[:i| self stepToNextLineIn: line at: i].
 		"Adjust number of lines remaining"
 		self edgeNumLinesOf: line put: deltaY - (yValue - startY).
@@ -2955,14 +2955,14 @@ BalloonEnginePlugin >> stepToFirstWideBezierIn: bezier at: yValue [
 	self inline: false.
 
 	"Get some values"
-	lineWidth _ self wideBezierExtentOf: bezier.
-	lineOffset _ self offsetFromWidth: lineWidth.
+	lineWidth := self wideBezierExtentOf: bezier.
+	lineOffset := self offsetFromWidth: lineWidth.
 
 	"Compute the incremental values of the bezier"
-	endX _ self bezierEndXOf: bezier.
-	startY _ self edgeYValueOf: bezier.
+	endX := self bezierEndXOf: bezier.
+	startY := self edgeYValueOf: bezier.
 	self stepToFirstBezierIn: bezier at: startY.
-	nLines _ (self edgeNumLinesOf: bezier).
+	nLines := (self edgeNumLinesOf: bezier).
 
 	"Copy the incremental update data"
 	0 to: 5 do:[:i|
@@ -2971,9 +2971,9 @@ BalloonEnginePlugin >> stepToFirstWideBezierIn: bezier at: yValue [
 	].
 
 	"Compute primary x direction of curve (e.g., 1: left to right; -1: right to left)."
-	xDir _ ((self bezierUpdateDataOf: bezier) at: GBUpdateDX).
+	xDir := ((self bezierUpdateDataOf: bezier) at: GBUpdateDX).
 	xDir = 0 ifTrue:[((self bezierUpdateDataOf: bezier) at: GBUpdateDDX)].
-	xDir >= 0 ifTrue:[xDir _ 1] ifFalse:[xDir _ -1].
+	xDir >= 0 ifTrue:[xDir := 1] ifFalse:[xDir := -1].
 
 	"Adjust the curve to start/end at the right position"
 	xDir < 0
@@ -2987,8 +2987,8 @@ BalloonEnginePlugin >> stepToFirstWideBezierIn: bezier at: yValue [
 	self edgeNumLinesOf: bezier put: nLines + lineWidth.
 
 	"Compute the points where we have to turn on/off the fills"
-	yEntry _ 0.						"turned on at lineOffset"
-	yExit _ 0 - nLines - lineOffset.	"turned off at zero"
+	yEntry := 0.						"turned on at lineOffset"
+	yExit := 0 - nLines - lineOffset.	"turned off at zero"
 	self wideBezierEntryOf: bezier put: yEntry.
 	self wideBezierExitOf: bezier put: yExit.
 
@@ -3022,15 +3022,15 @@ BalloonEnginePlugin >> stepToFirstWideLineIn: line at: yValue [
 	self inline: false.
 
 	"Get some values"
-	lineWidth _ self wideLineExtentOf: line.
-	lineOffset _ self offsetFromWidth: lineWidth.
+	lineWidth := self wideLineExtentOf: line.
+	lineOffset := self offsetFromWidth: lineWidth.
 
 	"Compute the incremental values of the line"
-	startX _ self edgeXValueOf: line.
-	startY _ self edgeYValueOf: line.
+	startX := self edgeXValueOf: line.
+	startY := self edgeYValueOf: line.
 	self stepToFirstLineIn: line at: startY.
-	nLines _ (self edgeNumLinesOf: line).
-	xDir _ self lineXDirectionOf: line.
+	nLines := (self edgeNumLinesOf: line).
+	xDir := self lineXDirectionOf: line.
 
 	"Adjust the line to start at the correct X position"
 	self edgeXValueOf: line put: startX - lineOffset.
@@ -3047,8 +3047,8 @@ BalloonEnginePlugin >> stepToFirstWideLineIn: line at: yValue [
 	].
 
 	"Compute the points where we have to turn on/off the fills"
-	yEntry _ 0.						"turned on at lineOffset"
-	yExit _ 0 - nLines - lineOffset.	"turned off at zero"
+	yEntry := 0.						"turned on at lineOffset"
+	yExit := 0 - nLines - lineOffset.	"turned off at zero"
 	self wideLineEntryOf: line put: yEntry.
 	self wideLineExitOf: line put: yExit.
 
@@ -3080,20 +3080,20 @@ BalloonEnginePlugin >> stepToNextBezierForward: updateData at: yValue [
 		not declaring updateData as 'int*' but casting it on every use."
 	| minY lastX lastY fwDx fwDy |
 	self inline: true.
-	lastX _ (self cCoerce: updateData to: 'int*') at: GBUpdateX.
-	lastY _ (self cCoerce: updateData to: 'int*') at: GBUpdateY.
-	fwDx _ (self cCoerce: updateData to: 'int*') at: GBUpdateDX.
-	fwDy _ (self cCoerce: updateData to: 'int*') at: GBUpdateDY.
-	minY _ yValue * 256.
+	lastX := (self cCoerce: updateData to: 'int*') at: GBUpdateX.
+	lastY := (self cCoerce: updateData to: 'int*') at: GBUpdateY.
+	fwDx := (self cCoerce: updateData to: 'int*') at: GBUpdateDX.
+	fwDy := (self cCoerce: updateData to: 'int*') at: GBUpdateDY.
+	minY := yValue * 256.
 	"Step as long as we haven't yet reached minY and also
 	as long as fwDy is greater than zero thus stepping down.
 	Note: The test for fwDy should not be necessary in theory
 		but is a good insurance in practice."
 	[minY > lastY and:[fwDy >= 0]] whileTrue:[
-		lastX _ lastX + ((fwDx + 16r8000) // 16r10000).
-		lastY _ lastY + ((fwDy + 16r8000) // 16r10000).
-		fwDx _ fwDx + ((self cCoerce: updateData to: 'int*') at: GBUpdateDDX).
-		fwDy _ fwDy + ((self cCoerce: updateData to: 'int*') at: GBUpdateDDY).
+		lastX := lastX + ((fwDx + 16r8000) // 16r10000).
+		lastY := lastY + ((fwDy + 16r8000) // 16r10000).
+		fwDx := fwDx + ((self cCoerce: updateData to: 'int*') at: GBUpdateDDX).
+		fwDy := fwDy + ((self cCoerce: updateData to: 'int*') at: GBUpdateDDY).
 	].
 	(self cCoerce: updateData to: 'int*') at: GBUpdateX put: lastX.
 	(self cCoerce: updateData to: 'int*') at: GBUpdateY put: lastY.
@@ -3108,7 +3108,7 @@ BalloonEnginePlugin >> stepToNextBezierIn: bezier at: yValue [
 	"Incrementally step to the next scan line in the given bezier"
 	|  xValue |
 	self inline: true.
-	xValue _ self stepToNextBezierForward: (self bezierUpdateDataOf: bezier) at: yValue.
+	xValue := self stepToNextBezierForward: (self bezierUpdateDataOf: bezier) at: yValue.
 	self edgeXValueOf: bezier put: xValue.
 ]
 
@@ -3124,11 +3124,11 @@ BalloonEnginePlugin >> stepToNextLineIn: line at: yValue [
 	"Incrementally step to the next scan line in the given line"
 	| x  err |
 	self inline: true.
-	x _ (self edgeXValueOf: line) + (self lineXIncrementOf: line).
-	err _ (self lineErrorOf: line) + (self lineErrorAdjUpOf: line).
+	x := (self edgeXValueOf: line) + (self lineXIncrementOf: line).
+	err := (self lineErrorOf: line) + (self lineErrorAdjUpOf: line).
 	err > 0 ifTrue:[
-		x _ x + (self lineXDirectionOf: line).
-		err _ err - (self lineErrorAdjDownOf: line).
+		x := x + (self lineXDirectionOf: line).
+		err := err - (self lineErrorAdjDownOf: line).
 	].
 	self lineErrorOf: line put: err.
 	self edgeXValueOf: line put: x.
@@ -3147,11 +3147,11 @@ BalloonEnginePlugin >> stepToNextWideBezierIn: bezier at: yValue [
 	|  yEntry yExit lineWidth lineOffset |
 	self inline: false.	"Don't inline this"
 
-	lineWidth _ self wideBezierExtentOf: bezier.
-	lineOffset _ self offsetFromWidth: lineWidth.
+	lineWidth := self wideBezierExtentOf: bezier.
+	lineOffset := self offsetFromWidth: lineWidth.
 
-	yEntry _ (self wideBezierEntryOf: bezier) + 1.
-	yExit _ (self wideBezierExitOf: bezier) + 1.
+	yEntry := (self wideBezierEntryOf: bezier) + 1.
+	yExit := (self wideBezierExitOf: bezier) + 1.
 	self wideBezierEntryOf: bezier put: yEntry.
 	self wideBezierExitOf: bezier put: yExit.
 	yEntry >= lineOffset ifTrue:[self edgeFillsValidate: bezier].
@@ -3184,21 +3184,21 @@ BalloonEnginePlugin >> stepToNextWideLineIn: line at: yValue [
 	self inline: true.
 
 	"Adjust entry/exit values"
-	yEntry _ (self wideLineEntryOf: line) + 1.
-	yExit _ (self wideLineExitOf: line) + 1.
+	yEntry := (self wideLineEntryOf: line) + 1.
+	yExit := (self wideLineExitOf: line) + 1.
 	self wideLineEntryOf: line put: yEntry.
 	self wideLineExitOf: line put: yExit.
 
 	"Turn fills on/off"
-	lineWidth _ self wideLineExtentOf: line.
-	lineOffset _ self offsetFromWidth: lineWidth.
+	lineWidth := self wideLineExtentOf: line.
+	lineOffset := self offsetFromWidth: lineWidth.
 	yEntry >= lineOffset ifTrue:[self edgeFillsValidate: line].
 	yExit >= 0 ifTrue:[self edgeFillsInvalidate: line].
 
 	"Step to the next scan line"
-	lastX _ self edgeXValueOf: line.
+	lastX := self edgeXValueOf: line.
 	self stepToNextLineIn: line at: yValue.
-	nextX _ self edgeXValueOf: line.
+	nextX := self edgeXValueOf: line.
 
 	"Check for special start/end adjustments"
 	(yEntry <= lineWidth or:[yExit+lineOffset >= 0]) ifTrue:[
@@ -3212,8 +3212,8 @@ BalloonEnginePlugin >> subdivideBezier: index [
 	"Subdivide the given bezier curve if necessary"
 	| startX startY endX endY deltaX deltaY |
 	self inline: false.
-	startY _ self bzStartY: index.
-	endY _ self bzEndY: index.
+	startY := self bzStartY: index.
+	endY := self bzEndY: index.
 
 	"If the receiver is horizontal, don't do anything"
 	(endY = startY) ifTrue:[^index].
@@ -3222,17 +3222,17 @@ BalloonEnginePlugin >> subdivideBezier: index [
 
 	"If the height of the curve exceeds 256 pixels, subdivide 
 	(forward differencing is numerically not very stable)"
-	deltaY _ endY - startY.
-	deltaY < 0 ifTrue:[deltaY _ 0 - deltaY].
+	deltaY := endY - startY.
+	deltaY < 0 ifTrue:[deltaY := 0 - deltaY].
 	(deltaY > 255) ifTrue:[
 		self incrementStat: GWBezierHeightSubdivisions by: 1.
 		^self computeBezierSplitAtHalf: index].
 
 	"Check if the incremental values could possibly overflow the scaled integer range"
-	startX _ self bzStartX: index.
-	endX _ self bzEndX: index.
-	deltaX _ endX - startX.
-	deltaX < 0 ifTrue:[deltaX _ 0 - deltaX].
+	startX := self bzStartX: index.
+	endX := self bzEndX: index.
+	deltaX := endX - startX.
+	deltaX < 0 ifTrue:[deltaX := 0 - deltaX].
 	deltaY * 32 < deltaX ifTrue:[
 		self incrementStat: GWBezierOverflowSubdivisions by: 1.
 		^self computeBezierSplitAtHalf: index].
@@ -3245,11 +3245,11 @@ BalloonEnginePlugin >> subdivideBezierFrom: index [
 	"Recursively subdivide the curve on the bezier stack."
 	| otherIndex index1 index2 |
 	self inline: false.
-	otherIndex _ self subdivideBezier: index.
+	otherIndex := self subdivideBezier: index.
 	otherIndex = index ifFalse:[
-		index1 _ self subdivideBezierFrom: index.
+		index1 := self subdivideBezierFrom: index.
 		engineStopped ifTrue:[^0].
-		index2 _ self subdivideBezierFrom: otherIndex.
+		index2 := self subdivideBezierFrom: otherIndex.
 		engineStopped ifTrue:[^0].
 		index1 >= index2
 			ifTrue:[^index1]
@@ -3264,11 +3264,11 @@ BalloonEnginePlugin >> subdivideToBeMonoton: base inX: doTestX [
 	If not, subdivide it"
 	| index1 index2 base2 |
 	self inline: false.
-	base2 _ index1 _ index2 _ self subdivideToBeMonotonInY: base.
-	doTestX ifTrue:[index1 _ self subdivideToBeMonotonInX: base].
-	index1 > index2 ifTrue:[index2 _ index1].
-	(base ~= base2 and:[doTestX]) ifTrue:[index1 _ self subdivideToBeMonotonInX: base2].
-	index1 > index2 ifTrue:[index2 _ index1].
+	base2 := index1 := index2 := self subdivideToBeMonotonInY: base.
+	doTestX ifTrue:[index1 := self subdivideToBeMonotonInX: base].
+	index1 > index2 ifTrue:[index2 := index1].
+	(base ~= base2 and:[doTestX]) ifTrue:[index1 := self subdivideToBeMonotonInX: base2].
+	index1 > index2 ifTrue:[index2 := index1].
 	^index2
 ]
 
@@ -3277,20 +3277,20 @@ BalloonEnginePlugin >> subdivideToBeMonotonInX: index [
 	"Check if the given bezier curve is monoton in X. If not, subdivide it"
 	| denom num startX viaX endX dx1 dx2 |
 	self inline: false.
-	startX _ self bzStartX: index.
-	viaX _ self bzViaX: index.
-	endX _ self bzEndX: index.
+	startX := self bzStartX: index.
+	viaX := self bzViaX: index.
+	endX := self bzEndX: index.
 
-	dx1 _ viaX - startX.
-	dx2 _ endX - viaX.
+	dx1 := viaX - startX.
+	dx2 := endX - viaX.
 	(dx1 * dx2) >= 0 ifTrue:[^index]. "Bezier is monoton"
 
 	self incrementStat: GWBezierMonotonSubdivisions by: 1.
 	"Compute split value"
-	denom _ dx2 - dx1.
-	num _ dx1.
-	num < 0 ifTrue:[num _ 0 - num].
-	denom < 0 ifTrue:[denom _ 0 - denom].
+	denom := dx2 - dx1.
+	num := dx1.
+	num < 0 ifTrue:[num := 0 - num].
+	denom < 0 ifTrue:[denom := 0 - denom].
 	^self computeBezier: index splitAt: (num asFloat / denom asFloat).
 ]
 
@@ -3299,20 +3299,20 @@ BalloonEnginePlugin >> subdivideToBeMonotonInY: index [
 	"Check if the given bezier curve is monoton in Y. If not, subdivide it"
 	| startY viaY endY dy1 dy2 denom num |
 	self inline: false.
-	startY _ self bzStartY: index.
-	viaY _ self bzViaY: index.
-	endY _ self bzEndY: index.
+	startY := self bzStartY: index.
+	viaY := self bzViaY: index.
+	endY := self bzEndY: index.
 
-	dy1 _ viaY - startY.
-	dy2 _ endY - viaY.
+	dy1 := viaY - startY.
+	dy2 := endY - viaY.
 	(dy1 * dy2) >= 0 ifTrue:[^index]. "Bezier is monoton"
 
 	self incrementStat: GWBezierMonotonSubdivisions by: 1.
 	"Compute split value"
-	denom _ dy2 - dy1.
-	num _ dy1.
-	num < 0 ifTrue:[num _ 0 - num].
-	denom < 0 ifTrue:[denom _ 0 - denom].
+	denom := dy2 - dy1.
+	num := dy1.
+	num < 0 ifTrue:[num := 0 - num].
+	denom < 0 ifTrue:[denom := 0 - denom].
 	^self computeBezier: index splitAt: (num asFloat / denom asFloat).
 ]
 

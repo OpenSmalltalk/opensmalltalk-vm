@@ -14,8 +14,8 @@ Class {
 { #category : #'memory access' }
 InterpreterSimulatorLSB >> byteAt: byteAddress [
 	| lowBits long |
-	lowBits _ byteAddress bitAnd: 3.
-	long _ self longAt: byteAddress - lowBits.
+	lowBits := byteAddress bitAnd: 3.
+	long := self longAt: byteAddress - lowBits.
 	^(lowBits caseOf: {
 		[0] -> [ long ].
 		[1] -> [ long bitShift: -8  ].
@@ -28,10 +28,10 @@ InterpreterSimulatorLSB >> byteAt: byteAddress [
 { #category : #'memory access' }
 InterpreterSimulatorLSB >> byteAt: byteAddress put: byte [
 	| lowBits long longAddress |
-	lowBits _ byteAddress bitAnd: 3.
-	longAddress _ byteAddress - lowBits.
-	long _ self longAt: longAddress.
-	long _ (lowBits caseOf: {
+	lowBits := byteAddress bitAnd: 3.
+	longAddress := byteAddress - lowBits.
+	long := self longAt: longAddress.
+	long := (lowBits caseOf: {
 		[0] -> [ (long bitAnd: 16rFFFFFF00) bitOr: byte ].
 		[1] -> [ (long bitAnd: 16rFFFF00FF) bitOr: (byte bitShift: 8) ].
 		[2] -> [ (long bitAnd: 16rFF00FFFF) bitOr: (byte bitShift: 16)  ].
@@ -53,13 +53,13 @@ InterpreterSimulatorLSB >> charsOfLong: long [
 { #category : #'debug support' }
 InterpreterSimulatorLSB >> displayForm: f [
 	| width height depth bits realForm simDisp realDisp |
-	bits _ self fetchPointer: 0 ofObject: f.
-	width _ self fetchInteger: 1 ofObject: f.
-	height _ self fetchInteger: 2 ofObject: f.
-	depth _ self fetchInteger: 3 ofObject: f.
-	realForm _ Form extent: width@height depth: depth.
-	simDisp _ Form new hackBits: memory.
-	realDisp _ Form new hackBits: realForm bits.
+	bits := self fetchPointer: 0 ofObject: f.
+	width := self fetchInteger: 1 ofObject: f.
+	height := self fetchInteger: 2 ofObject: f.
+	depth := self fetchInteger: 3 ofObject: f.
+	realForm := Form extent: width@height depth: depth.
+	simDisp := Form new hackBits: memory.
+	realDisp := Form new hackBits: realForm bits.
 	realDisp
 		copy: (0 @ 0 extent: 4 @ realForm bits size)
 		from: (0 @ (bits + 4 // 4))
@@ -95,10 +95,10 @@ InterpreterSimulatorLSB >> putLong: n toFile: f [
 
 	| remainingValue |
 
-	remainingValue _ n.
+	remainingValue := n.
 	4 timesRepeat: [
 		f nextPut: (remainingValue bitAnd: 16rFF).
-		remainingValue _ remainingValue bitShift: -8].
+		remainingValue := remainingValue bitShift: -8].
 
 	self success: true
 ]
@@ -107,8 +107,8 @@ InterpreterSimulatorLSB >> putLong: n toFile: f [
 InterpreterSimulatorLSB >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
 	| lowBits long |
-	lowBits _ byteAddress bitAnd: 2.
-	long _ self longAt: byteAddress - lowBits.
+	lowBits := byteAddress bitAnd: 2.
+	long := self longAt: byteAddress - lowBits.
 	^ lowBits = 2
 		ifTrue: [ long bitShift: -16 ]
 		ifFalse: [ long bitAnd: 16rFFFF ].
@@ -119,17 +119,17 @@ InterpreterSimulatorLSB >> shortAt: byteAddress [
 InterpreterSimulatorLSB >> shortAt: byteAddress put: a16BitValue [
     "Return the half-word at byteAddress which must be even."
 	| lowBits long longAddress |
-	lowBits _ byteAddress bitAnd: 2.
+	lowBits := byteAddress bitAnd: 2.
 	lowBits = 0
 		ifTrue:
 		[ "storing into LS word"
-		long _ self longAt: byteAddress.
+		long := self longAt: byteAddress.
 		self longAt: byteAddress
 				put: ((long bitAnd: 16rFFFF0000) bitOr: a16BitValue)
 		]
 		ifFalse:
-		[longAddress _ byteAddress - 2.
-		long _ self longAt: longAddress.
+		[longAddress := byteAddress - 2.
+		long := self longAt: longAddress.
 		self longAt: longAddress
 				put: ((long bitAnd: 16rFFFF) bitOr: (a16BitValue bitShift: 16))
 		]

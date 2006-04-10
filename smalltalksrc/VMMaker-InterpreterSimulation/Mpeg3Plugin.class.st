@@ -59,7 +59,7 @@ Mpeg3Plugin >> checkFileEntry: aMpegFile [
 { #category : #support }
 Mpeg3Plugin >> initialiseModule [
 	self export: true.
-	maximumNumberOfFilesToWatch _ 1024.
+	maximumNumberOfFilesToWatch := 1024.
 	1 to: maximumNumberOfFilesToWatch do: [:i | mpegFiles at: i put: 0].
 	^self cCode: 'true' inSmalltalk:[true]
 ]
@@ -91,7 +91,7 @@ Mpeg3Plugin >> mpeg3tValueOf: mpeg3tHandle [
 	interpreterProxy failed
 		ifTrue: [^ nil]
 		ifFalse: 
-			[index _ self cCoerce: (interpreterProxy firstIndexableField: mpeg3tHandle)
+			[index := self cCoerce: (interpreterProxy firstIndexableField: mpeg3tHandle)
 						to: 'mpeg3_t **'.
 			self cCode: 'check = checkFileEntry(*index)'.
 			check = 0 ifTrue: [^nil]. 
@@ -107,7 +107,7 @@ Mpeg3Plugin >> primitiveMPEG3AudioChannels: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3AudioChannels'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^0].
 	aNumber >= (self cCode: 'mpeg3_total_astreams(file)') ifTrue: [
@@ -128,7 +128,7 @@ Mpeg3Plugin >> primitiveMPEG3AudioSamples: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3AudioSamples'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'mpeg3_total_astreams(file)') ifTrue: [
@@ -148,7 +148,7 @@ Mpeg3Plugin >> primitiveMPEG3CheckSig: path [
 	self var: #storage declareC: 'char storage[1024] '.
 	self primitive: 'primitiveMPEG3CheckSig'
 		parameters: #(String).
-	sz _ interpreterProxy byteSizeOf: path cPtrAsOop.
+	sz := interpreterProxy byteSizeOf: path cPtrAsOop.
 	self cCode: 'sqFilenameFromStringOpen(storage, path, sz)'.
 	self cCode: 'result = mpeg3_check_sig(storage)'.
 	^result asOop: Boolean
@@ -164,10 +164,10 @@ Mpeg3Plugin >> primitiveMPEG3Close: fileHandle [
 	self var: #index type: 'mpeg3_t ** '.
 	self primitive: 'primitiveMPEG3Close'
 		parameters: #(Oop).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
 	self cCode: 'removeFileEntry(file); mpeg3_close(file)'.
-	index _ self cCoerce: (interpreterProxy firstIndexableField: fileHandle)
+	index := self cCoerce: (interpreterProxy firstIndexableField: fileHandle)
 						to: 'mpeg3_t **'.
 	self cCode: '*index = 0'.
 
@@ -182,7 +182,7 @@ Mpeg3Plugin >> primitiveMPEG3DropFrames: fileHandle frames: aFrameNumber stream:
 	self primitive: 'primitiveMPEG3DropFrames'
 		parameters: #(Oop SmallInteger SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -203,7 +203,7 @@ Mpeg3Plugin >> primitiveMPEG3EndOfAudio: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3EndOfAudio'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_astreams(file)') ifTrue: [
@@ -223,7 +223,7 @@ Mpeg3Plugin >> primitiveMPEG3EndOfVideo: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3EndOfVideo'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -245,7 +245,7 @@ Mpeg3Plugin >> primitiveMPEG3FrameRate: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3FrameRate'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -265,9 +265,9 @@ Mpeg3Plugin >> primitiveMPEG3GenerateToc: fileHandle useSearch: timecode doStrea
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3GenerateToc'
 		parameters: #(Oop SmallInteger Boolean  String).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
-	bufferSize _ interpreterProxy slotSizeOf: (interpreterProxy stackValue: 0).
+	bufferSize := interpreterProxy slotSizeOf: (interpreterProxy stackValue: 0).
 	self cCode: 'mpeg3_generate_toc_for_Squeak(file,timecode,streams,aString,bufferSize)'.
 
 ]
@@ -281,7 +281,7 @@ Mpeg3Plugin >> primitiveMPEG3GetFrame: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3GetFrame'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -301,7 +301,7 @@ Mpeg3Plugin >> primitiveMPEG3GetSample: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3GetSample'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_astreams(file)') ifTrue: [
@@ -322,7 +322,7 @@ Mpeg3Plugin >> primitiveMPEG3GetTime: fileHandle [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3GetTime'
 		parameters: #(Oop).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
 	self cCode: 'result = mpeg3_get_time(file)'.
 	^result asOop: Float.
@@ -337,7 +337,7 @@ Mpeg3Plugin >> primitiveMPEG3HasAudio: fileHandle [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3HasAudio'
 		parameters: #(Oop).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
 	self cCode: 'result = mpeg3_has_audio(file)'.
 	^result asOop: Boolean
@@ -352,7 +352,7 @@ Mpeg3Plugin >> primitiveMPEG3HasVideo: fileHandle [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3HasVideo'
 		parameters: #(Oop).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
 	self cCode: 'result = mpeg3_has_video(file)'.
 	^result asOop: Boolean
@@ -404,7 +404,7 @@ Mpeg3Plugin >> primitiveMPEG3PreviousFrame: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3PreviousFrame'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	file = nil ifTrue: [^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -431,14 +431,14 @@ Mpeg3Plugin >> primitiveMPEG3ReReadAudio: fileHandle shortArray: anArray channel
 	self primitive: 'primitiveMPEG3ReReadAudio'
 		parameters: #(Oop Array SmallInteger SmallInteger SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_astreams(file)') ifTrue: [
 		interpreterProxy success: false.  ^0 ].
 
 
-	arrayBase _ self cCoerce: anArray to: 'short *'.
+	arrayBase := self cCoerce: anArray to: 'short *'.
 	interpreterProxy failed ifTrue: [^nil].
 	self cCode: 'result = mpeg3_reread_audio(file,(float *) NULL,arrayBase,aChannelNumber,aSampleNumber,aNumber)'.
 	^result asSmallIntegerObj
@@ -460,12 +460,12 @@ Mpeg3Plugin >> primitiveMPEG3ReadAudio: fileHandle shortArray: anArray channel: 
 	self primitive: 'primitiveMPEG3ReadAudio'
 		parameters: #(Oop Array SmallInteger SmallInteger SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_astreams(file)') ifTrue: [
 		interpreterProxy success: false.  ^0 ].
-	arrayBase _ self cCoerce: anArray to: 'short *'.
+	arrayBase := self cCoerce: anArray to: 'short *'.
 	interpreterProxy failed ifTrue: [^nil].
 
 	self cCode: 'result = mpeg3_read_audio(file,(float *) NULL,arrayBase,aChannelNumber,aSampleNumber,aNumber)'.
@@ -532,13 +532,13 @@ Mpeg3Plugin >> primitiveMPEG3ReadFrame: fileHandle buffer: aBuffer x: xNumber y:
 	self var: #bufferBaseAddr type: 'unsigned char *'.
 	self var: #outputRowsPtr type: 'unsigned char  ** '.
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [ interpreterProxy success: false.  ^nil ].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
 		interpreterProxy success: false.  ^0 ].
 
-	bufferBaseAddr _ self cCoerce: aBuffer to: 'unsigned char *'.
+	bufferBaseAddr := self cCoerce: aBuffer to: 'unsigned char *'.
 	self cCode: 'outputRowsPtr = (unsigned char **) memoryAllocate(1,sizeof(unsigned char*) * outHeight)'.
 
 	0 to: outHeight-1 do: [:i | outputRowsPtr at: i put: (bufferBaseAddr + (aByteNumber*i))].
@@ -558,7 +558,7 @@ Mpeg3Plugin >> primitiveMPEG3SampleRate: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3SampleRate'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_astreams(file)') ifTrue: [
@@ -578,7 +578,7 @@ Mpeg3Plugin >> primitiveMPEG3SeekPercentage: fileHandle percentage: aNumber [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SeekPercentage'
 		parameters: #(Oop Float).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	aNumber < 0.0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber > 1.0 ifTrue: [interpreterProxy success: false. ^nil].
 	file = nil ifTrue: [^nil].
@@ -595,7 +595,7 @@ Mpeg3Plugin >> primitiveMPEG3SetCpus: fileHandle number: cpus [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SetCpus'
 		parameters: #(Oop SmallInteger).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	cpus < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	file = nil ifTrue: [^nil].
 	self cCode: 'mpeg3_set_cpus(file,cpus)'.
@@ -611,7 +611,7 @@ Mpeg3Plugin >> primitiveMPEG3SetFrame: fileHandle frame: aFrameNumber stream: aN
 	self primitive: 'primitiveMPEG3SetFrame'
 		parameters: #(Oop Float SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -631,7 +631,7 @@ Mpeg3Plugin >> primitiveMPEG3SetMmx: fileHandle useMmx: mmx [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3SetMmx'
 		parameters: #(Oop Boolean).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
 	self cCode: 'mpeg3_set_mmx(file,mmx)'.
 
@@ -646,7 +646,7 @@ Mpeg3Plugin >> primitiveMPEG3SetSample: fileHandle sample: aSampleNumber stream:
 	self primitive: 'primitiveMPEG3SetSample'
 		parameters: #(Oop Float SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_astreams(file)') ifTrue: [
@@ -668,7 +668,7 @@ Mpeg3Plugin >> primitiveMPEG3TellPercentage: fileHandle [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3TellPercentage'
 		parameters: #(Oop).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
 	self cCode: 'result = mpeg3_tell_percentage(file)'.
 	^result asOop: Float.
@@ -683,7 +683,7 @@ Mpeg3Plugin >> primitiveMPEG3TotalAStreams: fileHandle [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3TotalAStreams'
 		parameters: #(Oop).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	self cCode: 'result = mpeg3_total_astreams(file)'.
 	^result asSmallIntegerObj
@@ -698,7 +698,7 @@ Mpeg3Plugin >> primitiveMPEG3TotalVStreams: fileHandle [
 	self var: #file type: 'mpeg3_t * '.
 	self primitive: 'primitiveMPEG3TotalVStreams'
 		parameters: #(Oop).
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^nil].
 	self cCode: 'result = mpeg3_total_vstreams(file)'.
 	^result asSmallIntegerObj
@@ -714,7 +714,7 @@ Mpeg3Plugin >> primitiveMPEG3VideoFrames: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3VideoFrames'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -735,7 +735,7 @@ Mpeg3Plugin >> primitiveMPEG3VideoHeight: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3VideoHeight'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [
@@ -756,7 +756,7 @@ Mpeg3Plugin >> primitiveMPEG3VideoWidth: fileHandle stream: aNumber [
 	self primitive: 'primitiveMPEG3VideoWidth'
 		parameters: #(Oop SmallInteger).
 
-	file _ self mpeg3tValueOf: fileHandle.
+	file := self mpeg3tValueOf: fileHandle.
 	file = nil ifTrue: [^0].
 	aNumber < 0 ifTrue: [interpreterProxy success: false. ^nil].
 	aNumber >= (self cCode: 'result = mpeg3_total_vstreams(file)') ifTrue: [

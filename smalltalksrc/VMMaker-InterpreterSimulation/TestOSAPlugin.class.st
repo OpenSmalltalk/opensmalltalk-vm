@@ -27,7 +27,7 @@ TestOSAPlugin class >> requiresPlatformFiles [
 TestOSAPlugin >> primAECoerceDesc: typeCode to: result [
 
 	|rcvr |
-	rcvr _ self 	primitive: 	'primAECoerceDesc'
+	rcvr := self 	primitive: 	'primAECoerceDesc'
 				parameters:	#(DescType AEDesc)
 				receiver:	#AEDesc.
 	^(self 
@@ -39,10 +39,10 @@ TestOSAPlugin >> primAECoerceDesc: typeCode to: result [
 TestOSAPlugin >> primAECreateDesc: typeCode from: aString [
 
 	|rcvr size |
-	rcvr _ self 	primitive: 	'primAECreateDesc'
+	rcvr := self 	primitive: 	'primAECreateDesc'
 				parameters:	#(DescType String)
 				receiver:	#AEDesc.
-	size _ aString size.
+	size := aString size.
 	^(self 
 		cCode: 'AECreateDesc(*typeCode, aString, size, rcvr)'
 		inSmalltalk: [[rcvr. size]. -1]) asOop: Unsigned
@@ -53,10 +53,10 @@ TestOSAPlugin >> primAECreateDesc: typeCode from: aString [
 TestOSAPlugin >> primAEDescToString: aString [
 
 	| rcvr size |
-	rcvr _ self	primitive: 	'primAEDescToString'
+	rcvr := self	primitive: 	'primAEDescToString'
 				parameters: #(String)
 				receiver: #AEDesc.
-	size _ aString size.
+	size := aString size.
 	self cCode: 'BlockMove(*(rcvr->dataHandle), aString, size)'
 		 inSmalltalk: [rcvr. size].
 	^aString asOop: String
@@ -68,7 +68,7 @@ TestOSAPlugin >> primAEDescToString: aString [
 TestOSAPlugin >> primAEDisposeDesc [
 	
 	|rcvr|
-	rcvr _	self	primitive: 	'primAEDisposeDesc'
+	rcvr :=	self	primitive: 	'primAEDisposeDesc'
 				parameters:	#()
 				receiver: 	#AEDesc.
 	^(self 
@@ -81,10 +81,10 @@ TestOSAPlugin >> primAEGetKeyPtr: key type: type actual: ignoreDesc to: bytes [
 
 	| rcvr size ignoreSize |
 	self var: #ignoreSize type: 'Size '.
-	rcvr _ self	primitive: 	'primAEGetKeyPtr'
+	rcvr := self	primitive: 	'primAEGetKeyPtr'
 				parameters: #(DescType DescType DescType ByteArray)
 				receiver: #AEDesc.
-	size _ ignoreSize _ bytes size.
+	size := ignoreSize := bytes size.
 	^(self cCode: 'AEGetKeyPtr(rcvr, *key, *type, ignoreDesc, bytes, size, &ignoreSize)'
 		 inSmalltalk: [[rcvr. size. ignoreSize]. -1]) asOop: Unsigned
 ]
@@ -93,7 +93,7 @@ TestOSAPlugin >> primAEGetKeyPtr: key type: type actual: ignoreDesc to: bytes [
 TestOSAPlugin >> primGetHandleSize: anIndex [
 
 	|rcvr|
-	rcvr _ self	primitive: 'primGetHandleSize'
+	rcvr := self	primitive: 'primGetHandleSize'
 				parameters: #(SmallInteger)
 				receiver:	#WordArray.
 	^(self
@@ -105,7 +105,7 @@ TestOSAPlugin >> primGetHandleSize: anIndex [
 TestOSAPlugin >> primOSACompile: source mode: mode to: object [
 
 	|component|
-	component _ self primitive: 	'primOSACompile'
+	component := self primitive: 	'primOSACompile'
 					parameters: #(AEDesc SmallInteger OSAID)
 					receiver:	#ComponentInstance.
 
@@ -117,7 +117,7 @@ TestOSAPlugin >> primOSACompile: source mode: mode to: object [
 TestOSAPlugin >> primOSADisplay: source as: type mode: mode to: result [
 
 	|component|
-	component _ self primitive: 	'primOSADisplay'
+	component := self primitive: 	'primOSADisplay'
 					parameters: #(OSAID DescType SmallInteger AEDesc)
 					receiver:	#ComponentInstance.
 
@@ -129,7 +129,7 @@ TestOSAPlugin >> primOSADisplay: source as: type mode: mode to: result [
 TestOSAPlugin >> primOSADispose: anOSAID [
 
 	|component|
-	component _ self primitive: 	'primOSADispose'
+	component := self primitive: 	'primOSADispose'
 					parameters: #(OSAID)
 					receiver:	#ComponentInstance.
 
@@ -191,7 +191,7 @@ TestOSAPlugin >> primOSAExecute: script in: context mode: mode to: result [
             resultsOfCall = interpreterProxy->positive32BitIntegerFor(foo[7]);
             free(foo); }
 '
-			inSmalltalk: [[component. giLocker]. resultsOfCall _ -1].
+			inSmalltalk: [[component. giLocker]. resultsOfCall := -1].
 	^resultsOfCall asOop: Unsigned
 ]
 
@@ -199,7 +199,7 @@ TestOSAPlugin >> primOSAExecute: script in: context mode: mode to: result [
 TestOSAPlugin >> primOSAGetScriptInfo: aScriptID type: aDescType to: resultData [
 
 	|component|
-	component _ self	primitive: 	'primOSAGetScriptInfo'
+	component := self	primitive: 	'primOSAGetScriptInfo'
 						parameters: #(OSAID DescType IntegerArray)
 						receiver:	#ComponentInstance.
 	
@@ -211,7 +211,7 @@ TestOSAPlugin >> primOSAGetScriptInfo: aScriptID type: aDescType to: resultData 
 TestOSAPlugin >> primOSAGetSource: aScriptID type: aDescType to: resultData [
 
 	|component|
-	component _ self	primitive: 	'primOSAGetSource'
+	component := self	primitive: 	'primOSAGetSource'
 						parameters: #(OSAID DescType AEDesc)
 						receiver:	#ComponentInstance.
 	
@@ -223,7 +223,7 @@ TestOSAPlugin >> primOSAGetSource: aScriptID type: aDescType to: resultData [
 TestOSAPlugin >> primOSALoad: source mode: mode to: result [
 
 	|component|
-	component _ self primitive: 	'primOSALoad'
+	component := self primitive: 	'primOSALoad'
 					parameters: #(AEDesc SmallInteger OSAID)
 					receiver:	#ComponentInstance.
 
@@ -235,7 +235,7 @@ TestOSAPlugin >> primOSALoad: source mode: mode to: result [
 TestOSAPlugin >> primOSAMakeContext: name parent: parent to: result [
 
 	|component|
-	component _ self primitive: 	#primOSAMakeContext
+	component := self primitive: 	#primOSAMakeContext
 					parameters: #(AEDesc OSAID OSAID)
 					receiver:	#ComponentInstance.
 
@@ -247,7 +247,7 @@ TestOSAPlugin >> primOSAMakeContext: name parent: parent to: result [
 TestOSAPlugin >> primOSAScriptError: selector type: type to: result [
 
 	|component|
-	component _ self primitive: 	'primOSAScriptError'
+	component := self primitive: 	'primOSAScriptError'
 					parameters: #(DescType DescType AEDesc)
 					receiver:	#ComponentInstance.
 
@@ -259,7 +259,7 @@ TestOSAPlugin >> primOSAScriptError: selector type: type to: result [
 TestOSAPlugin >> primOSAScriptingComponentNameTo: anAEDesc [
 
 	|component|
-	component _ self	primitive: 	'primOSAScriptingComponentName'
+	component := self	primitive: 	'primOSAScriptingComponentName'
 						parameters: #(AEDesc)
 						receiver:	#ComponentInstance.
 	
@@ -271,7 +271,7 @@ TestOSAPlugin >> primOSAScriptingComponentNameTo: anAEDesc [
 TestOSAPlugin >> primOSAStore: source resultType: type mode: mode to: result [
 
 	|component|
-	component _ self primitive: 	#primOSAStore
+	component := self primitive: 	#primOSAStore
 					parameters: #(OSAID DescType SmallInteger AEDesc)
 					receiver:	#ComponentInstance.
 
@@ -283,7 +283,7 @@ TestOSAPlugin >> primOSAStore: source resultType: type mode: mode to: result [
 TestOSAPlugin >> primOpenDefaultConfiguration: type subtype: subtype [
 
 	| component |
-	component _ self	primitive: 	'primOpenDefaultConfiguration'
+	component := self	primitive: 	'primOpenDefaultConfiguration'
 						parameters: #(DescType DescType)
 						receiver:	#ComponentInstance.
 	self	cCode: '*component = OpenDefaultComponent(*type,*subtype)'

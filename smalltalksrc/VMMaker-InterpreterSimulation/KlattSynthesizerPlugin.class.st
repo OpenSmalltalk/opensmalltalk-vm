@@ -113,8 +113,8 @@ KlattSynthesizerPlugin class >> initialize [
 	"
 	KlattFrame parameterNames
 		doWithIndex: [ :each :i | self classPool at: each capitalized asSymbol put: i-1].
-	PI _ Float pi	.
-	Epsilon _ 1.0e-04
+	PI := Float pi	.
+	Epsilon := 1.0e-04
 ]
 
 { #category : #translation }
@@ -130,9 +130,9 @@ KlattSynthesizerPlugin >> addAmplitudeDiplophonia [
 	"Add diplophonia (bicyclic voice). Change voicing amplitude."
 	self returnTypeC: 'void'.
 	periodCount \\ 2 = 0
-		ifFalse: [x1 _ x1 * (1.0 - (frame at: Diplophonia)).
+		ifFalse: [x1 := x1 * (1.0 - (frame at: Diplophonia)).
 				"x1 must be <= 0"
-				x1 > 0 ifTrue: [x1 _ 0]]
+				x1 > 0 ifTrue: [x1 := 0]]
 ]
 
 { #category : #'processing-voice' }
@@ -149,12 +149,12 @@ KlattSynthesizerPlugin >> addFlutter [
 	self var: 'bsin' type: 'float '.
 	self var: 'csin' type: 'float '.
 	self var: 'deltaF0' type: 'double '.
-	timeCount _ (self cCoerce: samplesCount to: 'float') / (self cCoerce: samplingRate to: 'float').
-	asin _ (2.0 * PI * 12.7 * timeCount) sin.
-	bsin _ (2.0 * PI * 7.1 * timeCount) sin.
-	csin _ (2.0 * PI * 4.7 * timeCount) sin.
-	deltaF0 _ (frame at: Flutter) * 2.0 * (frame at: F0) / 100.0 * (asin + bsin + csin).
-	pitch _ pitch + deltaF0
+	timeCount := (self cCoerce: samplesCount to: 'float') / (self cCoerce: samplingRate to: 'float').
+	asin := (2.0 * PI * 12.7 * timeCount) sin.
+	bsin := (2.0 * PI * 7.1 * timeCount) sin.
+	csin := (2.0 * PI * 4.7 * timeCount) sin.
+	deltaF0 := (frame at: Flutter) * 2.0 * (frame at: F0) / 100.0 * (asin + bsin + csin).
+	pitch := pitch + deltaF0
 ]
 
 { #category : #'processing-voice' }
@@ -162,24 +162,24 @@ KlattSynthesizerPlugin >> addFrequencyDiplophonia [
 	"Add diplophonia (bicyclic voice). Change F0."
 	self returnTypeC: 'void'.
 	periodCount \\ 2 = 0
-		ifTrue: [pitch _ pitch + ((frame at: Diplophonia) * (frame at: F0) * (1.0 - (frame at: Ro)))]
-		ifFalse: [pitch _ pitch - ((frame at: Diplophonia) * (frame at: F0) * (1.0 - (frame at: Ro)))]
+		ifTrue: [pitch := pitch + ((frame at: Diplophonia) * (frame at: F0) * (1.0 - (frame at: Ro)))]
+		ifFalse: [pitch := pitch - ((frame at: Diplophonia) * (frame at: F0) * (1.0 - (frame at: Ro)))]
 ]
 
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> addJitter [
 	"Add jitter (random F0 perturbation)."
 	self returnTypeC: 'void'.
-	pitch _ pitch + (self nextRandom - 32767 * (frame at: Jitter) / 32768.0 * (frame at: F0))
+	pitch := pitch + (self nextRandom - 32767 * (frame at: Jitter) / 32768.0 * (frame at: F0))
 ]
 
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> addShimmer [
 	"Add shimmer (random voicing amplitude perturbation)."
 	self returnTypeC: 'void'.
-	x1 _ x1 + (self nextRandom - 32767 * (frame at: Shimmer) / 32768.0 * x1).
+	x1 := x1 + (self nextRandom - 32767 * (frame at: Shimmer) / 32768.0 * x1).
 	"x1 must be <= 0"
-	x1 > 0 ifTrue: [x1 _ 0]
+	x1 > 0 ifTrue: [x1 := 0]
 ]
 
 { #category : #resonators }
@@ -194,15 +194,15 @@ KlattSynthesizerPlugin >> antiResonator: index frequency: freq bandwidth: bw [
 	self var: 'b' type: 'float '.
 	self var: 'c' type: 'float '.
 	self var: 'r' type: 'float '.
-	arg _ 0.0 - PI / samplingRate * bw.
-	r _ arg exp.
-	c _ 0.0 - (r * r).
-	arg _ PI * 2.0 / samplingRate * freq.
-	b _ r * arg cos * 2.0.
-	a _ 1.0 - b - c.
-	a _ 1.0 / a.
-	b _ 0.0 - b * a.
-	c _ 0.0 - c * a.
+	arg := 0.0 - PI / samplingRate * bw.
+	r := arg exp.
+	c := 0.0 - (r * r).
+	arg := PI * 2.0 / samplingRate * freq.
+	b := r * arg cos * 2.0.
+	a := 1.0 - b - c.
+	a := 1.0 / a.
+	b := 0.0 - b * a.
+	c := 0.0 - c * a.
 	self resonatorA: index put: a.
 	self resonatorB: index put: b.
 	self resonatorC: index put: c
@@ -216,8 +216,8 @@ KlattSynthesizerPlugin >> antiResonator: index value: aFloat [
 	self var: 'aFloat' type: 'double '.
 	self var: 'answer' type: 'double '.
 	self var: 'p1' type: 'double '.
-	answer _ (self resonatorA: index) * aFloat
-			+ ((self resonatorB: index) * (p1 _ self resonatorP1: index))
+	answer := (self resonatorA: index) * aFloat
+			+ ((self resonatorB: index) * (p1 := self resonatorP1: index))
 			+ ((self resonatorC: index) * (self resonatorP2: index)).
 	self resonatorP2: index put: p1.
 	self resonatorP1: index put: aFloat.
@@ -235,21 +235,21 @@ KlattSynthesizerPlugin >> cascadeBranch: source [
 	self var: 'source' type: 'float '.
 	self var: 'out' type: 'float '.
 	cascade > 0 ifFalse: [^ 0.0].
-	out _ self antiResonator: Rnz value: source.
-	out _ self resonator: Rnpc value: out.
-	out _ self antiResonator: Rtz value: out.
-	out _ self resonator: Rtpc value: out.
+	out := self antiResonator: Rnz value: source.
+	out := self resonator: Rnpc value: out.
+	out := self antiResonator: Rtz value: out.
+	out := self resonator: Rtpc value: out.
 	"Do not use unless sample rate >= 16000"
-	cascade >= 8 ifTrue: [out _ self resonator: R8c value: out].
+	cascade >= 8 ifTrue: [out := self resonator: R8c value: out].
 	"Do not use unless sample rate >= 16000"
-	cascade >= 7 ifTrue: [out _ self resonator: R7c value: out].
+	cascade >= 7 ifTrue: [out := self resonator: R7c value: out].
 	"Do not use unless long vocal tract or sample rate increased"
-	cascade >= 6 ifTrue: [out _ self resonator: R6c value: out].
-	cascade >= 5 ifTrue: [out _ self resonator: R5c value: out].
-	cascade >= 4 ifTrue: [out _ self resonator: R4c value: out].
-	cascade >= 3 ifTrue: [out _ self resonator: R3c value: out].
-	cascade >= 2 ifTrue: [out _ self resonator: R2c value: out].
-	cascade >= 1 ifTrue: [out _ self resonator: R1c value: out].
+	cascade >= 6 ifTrue: [out := self resonator: R6c value: out].
+	cascade >= 5 ifTrue: [out := self resonator: R5c value: out].
+	cascade >= 4 ifTrue: [out := self resonator: R4c value: out].
+	cascade >= 3 ifTrue: [out := self resonator: R3c value: out].
+	cascade >= 2 ifTrue: [out := self resonator: R2c value: out].
+	cascade >= 1 ifTrue: [out := self resonator: R1c value: out].
 	^ out
 ]
 
@@ -279,14 +279,14 @@ KlattSynthesizerPlugin >> glottalSource [
 	self var: 'x0' type: 'float '.
 	t0 = 0 ifTrue: [^ 0].
 	nper < nopen
-		ifTrue: [x0 _ a1 * x1 + (a2 * x2).
-				x2 _ x1.
-				x1 _ x0]
-		ifFalse: [x0 _ b1 * x1 - c1.
-				x1 _ x0].
+		ifTrue: [x0 := a1 * x1 + (a2 * x2).
+				x2 := x1.
+				x1 := x0]
+		ifFalse: [x0 := b1 * x1 - c1.
+				x1 := x0].
 	"Reset period when 'nper' reaches t0."
-	nper >= t0 ifTrue: [nper _ 0. self pitchSynchronousReset].
-	nper _ nper + 1.
+	nper >= t0 ifTrue: [nper := 0. self pitchSynchronousReset].
+	nper := nper + 1.
 	^ x0
 ]
 
@@ -304,29 +304,29 @@ KlattSynthesizerPlugin >> loadFrom: klattOop [
 	interpreterProxy success: (interpreterProxy slotSizeOf: klattOop) = 22.
 	interpreterProxy failed ifTrue:[^ false].
 
-	oop _ interpreterProxy fetchPointer: 0 ofObject: klattOop.
-	resonators _ self checkedFloatPtrOf: oop.
+	oop := interpreterProxy fetchPointer: 0 ofObject: klattOop.
+	resonators := self checkedFloatPtrOf: oop.
 
-	pitch _ interpreterProxy fetchFloat: 2 ofObject: klattOop.
-	t0 _ interpreterProxy fetchInteger: 3 ofObject: klattOop.
-	nper _ interpreterProxy fetchInteger: 4 ofObject: klattOop.
-	nopen _ interpreterProxy fetchInteger: 5 ofObject: klattOop.
-	nmod _ interpreterProxy fetchInteger: 6 ofObject: klattOop.
-	a1 _ interpreterProxy fetchFloat: 7 ofObject: klattOop.
-	a2 _ interpreterProxy fetchFloat: 8 ofObject: klattOop.
-	x1 _ interpreterProxy fetchFloat: 9 ofObject: klattOop.
-	x2 _ interpreterProxy fetchFloat: 10 ofObject: klattOop.
-	b1 _ interpreterProxy fetchFloat: 11 ofObject: klattOop.
-	c1 _ interpreterProxy fetchFloat: 12 ofObject: klattOop.
-	glast _ interpreterProxy fetchFloat: 13 ofObject: klattOop.
-	vlast _ interpreterProxy fetchFloat: 14 ofObject: klattOop.
-	nlast _ interpreterProxy fetchFloat: 15 ofObject: klattOop.
-	periodCount _ interpreterProxy fetchInteger: 16 ofObject: klattOop.
-	samplesCount _ interpreterProxy fetchInteger: 17 ofObject: klattOop.
-	seed _ interpreterProxy fetchInteger: 18 ofObject: klattOop.
-	cascade _ interpreterProxy fetchInteger: 19 ofObject: klattOop.
-	samplesPerFrame _ interpreterProxy fetchInteger: 20 ofObject: klattOop.
-	samplingRate _ interpreterProxy fetchInteger: 21 ofObject: klattOop.
+	pitch := interpreterProxy fetchFloat: 2 ofObject: klattOop.
+	t0 := interpreterProxy fetchInteger: 3 ofObject: klattOop.
+	nper := interpreterProxy fetchInteger: 4 ofObject: klattOop.
+	nopen := interpreterProxy fetchInteger: 5 ofObject: klattOop.
+	nmod := interpreterProxy fetchInteger: 6 ofObject: klattOop.
+	a1 := interpreterProxy fetchFloat: 7 ofObject: klattOop.
+	a2 := interpreterProxy fetchFloat: 8 ofObject: klattOop.
+	x1 := interpreterProxy fetchFloat: 9 ofObject: klattOop.
+	x2 := interpreterProxy fetchFloat: 10 ofObject: klattOop.
+	b1 := interpreterProxy fetchFloat: 11 ofObject: klattOop.
+	c1 := interpreterProxy fetchFloat: 12 ofObject: klattOop.
+	glast := interpreterProxy fetchFloat: 13 ofObject: klattOop.
+	vlast := interpreterProxy fetchFloat: 14 ofObject: klattOop.
+	nlast := interpreterProxy fetchFloat: 15 ofObject: klattOop.
+	periodCount := interpreterProxy fetchInteger: 16 ofObject: klattOop.
+	samplesCount := interpreterProxy fetchInteger: 17 ofObject: klattOop.
+	seed := interpreterProxy fetchInteger: 18 ofObject: klattOop.
+	cascade := interpreterProxy fetchInteger: 19 ofObject: klattOop.
+	samplesPerFrame := interpreterProxy fetchInteger: 20 ofObject: klattOop.
+	samplingRate := interpreterProxy fetchInteger: 21 ofObject: klattOop.
 
 	^ interpreterProxy failed == false
 ]
@@ -335,7 +335,7 @@ KlattSynthesizerPlugin >> loadFrom: klattOop [
 KlattSynthesizerPlugin >> nextRandom [
 	"Answer a random number between 0 and 65535."
 	self inline: true.
-	seed _ (seed * 1309) + 13849 bitAnd: 65535.
+	seed := (seed * 1309) + 13849 bitAnd: 65535.
 	^ seed
 ]
 
@@ -347,14 +347,14 @@ KlattSynthesizerPlugin >> normalizeGlottalPulse [
 	self var: 's0' type: 'float '.
 	self var: 's1' type: 'float '.
 	self var: 's2' type: 'float '.
-	s0 _ 0.0.
-	s1 _ x1.
-	s2 _ x2.
+	s0 := 0.0.
+	s1 := x1.
+	s2 := x2.
 	1 to: nopen do: [ :ingore |
-		s0 _ a1 * s1 + (a2 * s2).
-		s2 _ s1.
-		s1 _ s0].
-	s0 = 0.0 ifFalse: [x1 _ x1 / s0 * 10000.0]
+		s0 := a1 * s1 + (a2 * s2).
+		s2 := s1.
+		s1 := s0].
+	s0 = 0.0 ifFalse: [x1 := x1 / s0 * 10000.0]
 ]
 
 { #category : #processing }
@@ -383,9 +383,9 @@ KlattSynthesizerPlugin >> pitchSynchronousReset [
 	self returnTypeC: 'void'.
 	(frame at: F0) > 0
 		ifTrue: [self voicedPitchSynchronousReset.
-				periodCount _ periodCount + 1 \\ 65535]
-		ifFalse: [t0 _ 1.
-				nmod _ t0]
+				periodCount := periodCount + 1 \\ 65535]
+		ifFalse: [t0 := 1.
+				nmod := t0]
 ]
 
 { #category : #primitives }
@@ -394,11 +394,11 @@ KlattSynthesizerPlugin >> primitiveSynthesizeFrameIntoStartingAt [
 	self export: true.
 	self var: 'aKlattFrame' type: 'float *'.
 	self var: 'buffer' type: 'short *'.
-	aKlattFrame _ self checkedFloatPtrOf: (interpreterProxy stackValue: 2).
-	buffer _ self checkedShortPtrOf: (bufferOop _ interpreterProxy stackValue: 1).
-	startIndex _ interpreterProxy stackIntegerValue: 0.
+	aKlattFrame := self checkedFloatPtrOf: (interpreterProxy stackValue: 2).
+	buffer := self checkedShortPtrOf: (bufferOop := interpreterProxy stackValue: 1).
+	startIndex := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue: [^nil].
-	rcvr _ interpreterProxy stackObjectValue: 3.
+	rcvr := interpreterProxy stackObjectValue: 3.
 	(self loadFrom: rcvr) ifFalse:[^nil].
 	interpreterProxy success: (interpreterProxy stSizeOf: bufferOop) * 2 >= samplesPerFrame.
 	interpreterProxy failed ifTrue: [^nil].
@@ -417,7 +417,7 @@ KlattSynthesizerPlugin >> qu: u phi: phi cosphi: cosphi sinphi: sinphi rphid: rp
 	self var: 'sinphi' type: 'float '.
 	self var: 'rphid' type: 'float '.
 	self var: 'expuphi' type: 'float '.
-	expuphi _ (u * phi) exp.
+	expuphi := (u * phi) exp.
 	^ expuphi * ((rphid * (u*u + 1.0) + u) * sinphi - cosphi) + 1.0
 ]
 
@@ -434,12 +434,12 @@ KlattSynthesizerPlugin >> resonator: index frequency: freq bandwidth: bw [
 	self var: 'b' type: 'float '.
 	self var: 'c' type: 'float '.
 	self var: 'r' type: 'float '.
-	arg _ 0.0 - PI / samplingRate * bw.
-	r _ arg exp.
-	c _ 0.0 - (r * r).
-	arg _ PI * 2.0 / samplingRate * freq.
-	b _ r * arg cos * 2.0.
-	a _ 1.0 - b - c.
+	arg := 0.0 - PI / samplingRate * bw.
+	r := arg exp.
+	c := 0.0 - (r * r).
+	arg := PI * 2.0 / samplingRate * freq.
+	b := r * arg cos * 2.0.
+	a := 1.0 - b - c.
 	self resonatorA: index put: a.
 	self resonatorB: index put: b.
 	self resonatorC: index put: c
@@ -465,8 +465,8 @@ KlattSynthesizerPlugin >> resonator: index value: aFloat [
 	self var: 'aFloat' type: 'float '.
 	self var: 'answer' type: 'float '.
 	self var: 'p1' type: 'float '.
-	answer _ (self resonatorA: index) * aFloat
-			+ ((self resonatorB: index) * (p1 _ self resonatorP1: index))
+	answer := (self resonatorA: index) * aFloat
+			+ ((self resonatorB: index) * (p1 := self resonatorP1: index))
 			+ ((self resonatorC: index) * (self resonatorP2: index)).
 	"(p1 between: -100000 and: 100000) ifFalse: [self halt].
 	(answer between: -100000 and: 100000) ifFalse: [self halt]."
@@ -573,34 +573,34 @@ KlattSynthesizerPlugin >> ro: roNumber ra: raNumber rk: rkNumber [
 	self var: 'ra' type: 'float '.
 	self var: 'rk' type: 'float '.
 
-	te _ (t0 * roNumber) asInteger.
-	ro _ te asFloat / t0 asFloat.
-	rk _ rkNumber.
-	ra _ raNumber.
+	te := (t0 * roNumber) asInteger.
+	ro := te asFloat / t0 asFloat.
+	rk := rkNumber.
+	ra := raNumber.
 
 	ra <= 0.0
-		ifTrue: [d _ 1.0]
-		ifFalse: [r _ 1.0 - ro / ra.
-				d _ 1.0 - (r / (r exp - 1.0))].
+		ifTrue: [d := 1.0]
+		ifFalse: [r := 1.0 - ro / ra.
+				d := 1.0 - (r / (r exp - 1.0))].
 
-	phi _ PI * (rk + 1.0).
-	cosphi _ phi cos.
-	sinphi _ phi sin.
-	rphid _ ra / ro * phi * d.
+	phi := PI * (rk + 1.0).
+	cosphi := phi cos.
+	sinphi := phi sin.
+	rphid := ra / ro * phi * d.
 
-	u _ self zeroQphi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
-	theta _ phi / te.
-	rho _ (u * theta) exp.
-	a1 _ 2.0 * theta cos * rho.
-	a2 _ 0.0 - (rho * rho).
-	x2 _ 0.0.
-	x1 _ rho * theta sin.
+	u := self zeroQphi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
+	theta := phi / te.
+	rho := (u * theta) exp.
+	a1 := 2.0 * theta cos * rho.
+	a2 := 0.0 - (rho * rho).
+	x2 := 0.0.
+	x1 := rho * theta sin.
 
-	gamma _ (-1.0 / (ra * t0)) exp.
-	gammapwr _ gamma raisedTo: t0 - te.
+	gamma := (-1.0 / (ra * t0)) exp.
+	gammapwr := gamma raisedTo: t0 - te.
 
-	b1 _ gamma.
-	c1 _ (1.0 - gamma) * gammapwr / (1.0 - gammapwr).
+	b1 := gamma.
+	c1 := (1.0 - gamma) * gammapwr / (1.0 - gammapwr).
 
 	self normalizeGlottalPulse
 ]
@@ -618,17 +618,17 @@ KlattSynthesizerPlugin >> saveTo: origKlattOop [
 	interpreterProxy pushRemappableOop: (interpreterProxy floatObjectOf: c1).
 	interpreterProxy pushRemappableOop: (interpreterProxy floatObjectOf: glast).
 	interpreterProxy pushRemappableOop: (interpreterProxy floatObjectOf: vlast).
-	nlastOop _ interpreterProxy floatObjectOf: nlast.
-	vlastOop _ interpreterProxy popRemappableOop.
-	glastOop _ interpreterProxy popRemappableOop.
-	c1Oop _ interpreterProxy popRemappableOop.
-	b1Oop _ interpreterProxy popRemappableOop.
-	x2Oop _ interpreterProxy popRemappableOop.
-	x1Oop _ interpreterProxy popRemappableOop.
-	a2Oop _ interpreterProxy popRemappableOop.
-	a1Oop _ interpreterProxy popRemappableOop.
-	pitchOop _ interpreterProxy popRemappableOop.
-	klattOop _ interpreterProxy popRemappableOop.
+	nlastOop := interpreterProxy floatObjectOf: nlast.
+	vlastOop := interpreterProxy popRemappableOop.
+	glastOop := interpreterProxy popRemappableOop.
+	c1Oop := interpreterProxy popRemappableOop.
+	b1Oop := interpreterProxy popRemappableOop.
+	x2Oop := interpreterProxy popRemappableOop.
+	x1Oop := interpreterProxy popRemappableOop.
+	a2Oop := interpreterProxy popRemappableOop.
+	a1Oop := interpreterProxy popRemappableOop.
+	pitchOop := interpreterProxy popRemappableOop.
+	klattOop := interpreterProxy popRemappableOop.
 	interpreterProxy failed ifTrue:[^ false].
 
 	interpreterProxy storePointer: 2 ofObject: klattOop withValue: pitchOop.
@@ -669,30 +669,30 @@ KlattSynthesizerPlugin >> setCurrentFrame: aKlattFrame [
 	self var: 'ampF5F' type: 'float '.
 	self var: 'ampF6F' type: 'float '.
 
-	frame _ aKlattFrame.
+	frame := aKlattFrame.
 
 	"Fudge factors..."
-	ampFNV _ (self linearFromdB: (frame at: Anv)) * 0.6.	"-4.44 dB"
-	ampFTV _ (self linearFromdB: (frame at: Atv)) * 0.6.		"-4.44 dB"
-	ampF1V _ (self linearFromdB: (frame at: A1v)) * 0.4.		"-7.96 dB"
-	ampF2V _ (self linearFromdB: (frame at: A2v)) * 0.15.	"-16.5 dB"
-	ampF3V _ (self linearFromdB: (frame at: A3v)) * 0.06.	"-24.4 dB"
-	ampF4V _ (self linearFromdB: (frame at: A4v)) * 0.04.	"-28.0 dB"
-	ampF2F _ (self linearFromdB: (frame at: A2f)) * 0.15.		"-16.5 dB"
-	ampF3F _ (self linearFromdB: (frame at: A3f)) * 0.06.	"-24.4 dB"
-	ampF4F _ (self linearFromdB: (frame at: A4f)) * 0.04.	"-28.0 dB"
-	ampF5F _ (self linearFromdB: (frame at: A5f)) * 0.022.	"-33.2 dB"
-	ampF6F _ (self linearFromdB: (frame at: A6f)) * 0.03.	"-30.5 dB"
+	ampFNV := (self linearFromdB: (frame at: Anv)) * 0.6.	"-4.44 dB"
+	ampFTV := (self linearFromdB: (frame at: Atv)) * 0.6.		"-4.44 dB"
+	ampF1V := (self linearFromdB: (frame at: A1v)) * 0.4.		"-7.96 dB"
+	ampF2V := (self linearFromdB: (frame at: A2v)) * 0.15.	"-16.5 dB"
+	ampF3V := (self linearFromdB: (frame at: A3v)) * 0.06.	"-24.4 dB"
+	ampF4V := (self linearFromdB: (frame at: A4v)) * 0.04.	"-28.0 dB"
+	ampF2F := (self linearFromdB: (frame at: A2f)) * 0.15.		"-16.5 dB"
+	ampF3F := (self linearFromdB: (frame at: A3f)) * 0.06.	"-24.4 dB"
+	ampF4F := (self linearFromdB: (frame at: A4f)) * 0.04.	"-28.0 dB"
+	ampF5F := (self linearFromdB: (frame at: A5f)) * 0.022.	"-33.2 dB"
+	ampF6F := (self linearFromdB: (frame at: A6f)) * 0.03.	"-30.5 dB"
 
 	"Set coefficients of variable cascade resonators"
 	cascade >= 8
 		ifTrue: [samplingRate >= 16000	"Inside Nyquist rate?"
 					ifTrue: [self resonator: R8c frequency: 7500 bandwidth: 600]
-					ifFalse: [cascade _ 6]].
+					ifFalse: [cascade := 6]].
 	cascade >= 7
 		ifTrue: [samplingRate >= 16000	"Inside Nyquist rate?"
 					ifTrue: [self resonator: R7c frequency: 6500 bandwidth: 500]
-					ifFalse: [cascade _ 6]].
+					ifFalse: [cascade := 6]].
 	cascade >= 6 ifTrue: [self resonator: R6c frequency: (frame at: F6) bandwidth: (frame at: B6)].
 	cascade >= 5 ifTrue: [self resonator: R5c frequency: (frame at: F5) bandwidth: (frame at: B5)].
 	self resonator: R4c frequency: (frame at: F4) bandwidth: (frame at: B4).
@@ -751,83 +751,83 @@ KlattSynthesizerPlugin >> synthesizeFrame: aKlattFrame into: buffer startingAt: 
 	self setCurrentFrame: aKlattFrame.
 
 	pitch > 0
-		ifTrue: [voicing _ self linearFromdB: (frame at: Voicing) - 7.
-				parVoicing _ self linearFromdB: (frame at: Voicing).
-				turbulence _ (self linearFromdB: (frame at: Turbulence)) * 0.1]
-		ifFalse: [voicing _ parVoicing _ turbulence _ 0.0].
+		ifTrue: [voicing := self linearFromdB: (frame at: Voicing) - 7.
+				parVoicing := self linearFromdB: (frame at: Voicing).
+				turbulence := (self linearFromdB: (frame at: Turbulence)) * 0.1]
+		ifFalse: [voicing := parVoicing := turbulence := 0.0].
 
-	friction _ (self linearFromdB: (frame at: Friction)) * 0.25.
-	aspiration _ (self linearFromdB: (frame at: Aspiration)) * 0.05.
-	bypass _ (self linearFromdB: (frame at: Bypass)) * 0.05.		"-26.0 dB"
+	friction := (self linearFromdB: (frame at: Friction)) * 0.25.
+	aspiration := (self linearFromdB: (frame at: Aspiration)) * 0.05.
+	bypass := (self linearFromdB: (frame at: Bypass)) * 0.05.		"-26.0 dB"
 
 	"Flod overall gain into output resonator (low-pass filter)"
-	gain _ (frame at: Gain) - 3.
-	gain <= 0 ifTrue: [gain _ 57].
-	ampGain _ self linearFromdB: gain.
+	gain := (frame at: Gain) - 3.
+	gain <= 0 ifTrue: [gain := 57].
+	ampGain := self linearFromdB: gain.
 	self resonator: Rout frequency: 0 bandwidth: samplingRate gain: ampGain.
 
-	noise _ nlast.
-	index _ startIndex.
-	top _ samplesPerFrame + startIndex - 1.
+	noise := nlast.
+	index := startIndex.
+	top := samplesPerFrame + startIndex - 1.
 	[index <= top] whileTrue: [
 		"Get low-passed random number for aspiration and friction noise"
-		noise _ (self nextRandom - 32768) asFloat / 4.0. "radom number between -8196.0 and 8196.0"
+		noise := (self nextRandom - 32768) asFloat / 4.0. "radom number between -8196.0 and 8196.0"
 
 		"Tilt down noise spectrum by soft low-pass filter having
 		 a pole near the origin in the z-plane."
-		noise _ noise + (0.75 * nlast).
-		nlast _ noise.
+		noise := noise + (0.75 * nlast).
+		nlast := noise.
 
 		"Amplitude modulate noise (reduce noise amplitude during second
 		 half of glottal period) if voicing  simultaneously present."
-		nper > nmod ifTrue: [noise _ noise * 0.5].
+		nper > nmod ifTrue: [noise := noise * 0.5].
 
 		"Compute frictation noise"
-		frictionNoise _ friction * noise.
+		frictionNoise := friction * noise.
 
 		"Compute voicing waveform."
-		voice _ self glottalSource.
-		vlast _ voice.
+		voice := self glottalSource.
+		vlast := voice.
 
 		"Add turbulence during glottal open phase.
 		 Use random rather than noise because noise is low-passed."
-		nper < nopen ifTrue: [voice _ voice + (turbulence * (self nextRandom - 32768) asFloat / 4.0)].
+		nper < nopen ifTrue: [voice := voice + (turbulence * (self nextRandom - 32768) asFloat / 4.0)].
 
 		"Set amplitude of voicing."
-		glotout _ voicing * voice.
-		parGlotout _ parVoicing * voice.
+		glotout := voicing * voice.
+		parGlotout := parVoicing * voice.
 
 		"Compute aspiration amplitude and add to voicing source."
-		aspirationNoise _ aspiration * noise.
-		glotout _ glotout + aspirationNoise.
-		parGlotout _ parGlotout + aspirationNoise.
+		aspirationNoise := aspiration * noise.
+		glotout := glotout + aspirationNoise.
+		parGlotout := parGlotout + aspirationNoise.
 
 		"Cascade vocal tract, excited by laryngeal sources.
 		 Nasal antiresonator, nasal resonator, trachearl antirresonator,
 		 tracheal resonator, then formants F8, F7, F6, F5, F4, F3, F2, F1."
-		out _ self cascadeBranch: glotout.
+		out := self cascadeBranch: glotout.
 
 		"Voice-excited parallel vocal tract F1, F2, F3, F4, FNP and FTP."
-		source _ parGlotout.	"Source is voicing plus aspiration."
-		out _ out + (self parallelVoicedBranch: source).
+		source := parGlotout.	"Source is voicing plus aspiration."
+		out := out + (self parallelVoicedBranch: source).
 
 		"Friction-excited parallel vocal tract formants F6, F5, F4, F3, F2,
 		 outputs added with alternating sign. Sound source for other
 		 parallel resonators is friction plus first difference of
 		 voicing waveform."
-		source _ frictionNoise + parGlotout - glast.
-		glast _ parGlotout.
-		out _ (self parallelFrictionBranch: source) - out.
+		source := frictionNoise + parGlotout - glast.
+		glast := parGlotout.
+		out := (self parallelFrictionBranch: source) - out.
 
 		"Apply bypas and output low-pass filter"
-		out _ bypass * source - out.
-		out _ self resonator: Rout value: out.
-		temp _ (out * ampGain) asInteger.
-		temp < -32768 ifTrue: [temp _ -32768].
-		temp > 32767 ifTrue: [temp _ 32767].
+		out := bypass * source - out.
+		out := self resonator: Rout value: out.
+		temp := (out * ampGain) asInteger.
+		temp < -32768 ifTrue: [temp := -32768].
+		temp > 32767 ifTrue: [temp := 32767].
 		buffer at: index - 1 put: temp.
-		index _ index + 1.
-		samplesCount _ samplesCount + 1]
+		index := index + 1.
+		samplesCount := samplesCount + 1]
 ]
 
 { #category : #'processing-voice' }
@@ -835,23 +835,23 @@ KlattSynthesizerPlugin >> voicedPitchSynchronousReset [
 	self returnTypeC: 'void'.
 
 	"Set the pitch."
-	pitch _ frame at: F0.
+	pitch := frame at: F0.
 
 	"Add flutter and jitter (F0 perturbations)."
 	self addFlutter.
 	self addJitter.
 	self addFrequencyDiplophonia.
-	pitch < 0 ifTrue: [pitch _ 0].
+	pitch < 0 ifTrue: [pitch := 0].
 
 	"Recompute t0 (it is the number of samples in one pitch period)."
-	t0 _ (samplingRate / pitch) asInteger.
+	t0 := (samplingRate / pitch) asInteger.
 
 	"Duration of period before amplitude modulation."
-	nmod _ t0.
-	(frame at: Voicing) > 0 ifTrue: [nmod _ nmod // 2].
+	nmod := t0.
+	(frame at: Voicing) > 0 ifTrue: [nmod := nmod // 2].
 
 	"Set open phase of glottal period."
-	nopen _ (t0 * (frame at: Ro)) asInteger.
+	nopen := (t0 * (frame at: Ro)) asInteger.
 
 	"Set the LF glottal pulse model parameters."
 	self ro: (frame at: Ro) ra: (frame at: Ra) rk: (frame at: Rk).
@@ -878,21 +878,21 @@ KlattSynthesizerPlugin >> zeroQphi: phi cosphi: cosphi sinphi: sinphi rphid: rph
 	self var: 'sinphi' type: 'float '.
 	self var: 'rphid' type: 'float '.
 
-	qzero _ self qu: 0 phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
+	qzero := self qu: 0 phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
 
 	qzero > 0
-		ifTrue: [ua _ 0. ub _ 1.
-				qa _ qzero. qb _ self qu: ub phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
+		ifTrue: [ua := 0. ub := 1.
+				qa := qzero. qb := self qu: ub phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
 				[qb > 0]
-					whileTrue: [ua _ ub. qa _ qb.
-								ub _ ub * 2. qb _ self qu: ub phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid]]
-		ifFalse: [ua _ -1. ub _ 0.
-				qa _ self qu: ua phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid. qb _ qzero.
+					whileTrue: [ua := ub. qa := qb.
+								ub := ub * 2. qb := self qu: ub phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid]]
+		ifFalse: [ua := -1. ub := 0.
+				qa := self qu: ua phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid. qb := qzero.
 				[qa < 0]
-					whileTrue: [ub _ ua. qb _ qa.
-								ua _ ua * 2. qa _ self qu: ua phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid]].
+					whileTrue: [ub := ua. qb := qa.
+								ua := ua * 2. qa := self qu: ua phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid]].
 	[ub - ua > Epsilon]
-		whileTrue: [uc _ ub + ua / 2.0. qc _ self qu: uc phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
-					qc > 0 ifTrue: [ua _ uc. qa _ qc] ifFalse: [ub _ uc. qb _ qc]].
+		whileTrue: [uc := ub + ua / 2.0. qc := self qu: uc phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
+					qc > 0 ifTrue: [ua := uc. qa := qc] ifFalse: [ub := uc. qb := qc]].
 	^ ub + ua / 2.0
 ]

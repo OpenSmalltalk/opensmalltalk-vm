@@ -37,7 +37,7 @@ SoundPlugin >> primitiveSoundAvailableSpace [
 
 	| frames |
 	self primitive: 'primitiveSoundAvailableSpace'.
-	frames _ self cCode: 'snd_AvailableSpace()'.  "-1 if sound output not started"
+	frames := self cCode: 'snd_AvailableSpace()'.  "-1 if sound output not started"
 	interpreterProxy success: frames >= 0.
 	^frames asPositiveIntegerObj
 ]
@@ -49,7 +49,7 @@ SoundPlugin >> primitiveSoundGetRecordingSampleRate [
 	| rate |
 	self var: #rate type: 'double '.
 	self primitive: 'primitiveSoundGetRecordingSampleRate'.
-	rate _ self cCode: 'snd_GetRecordingSampleRate()'.  "fail if not recording"
+	rate := self cCode: 'snd_GetRecordingSampleRate()'.  "fail if not recording"
 	^rate asFloatObj
 ]
 
@@ -61,13 +61,13 @@ SoundPlugin >> primitiveSoundGetVolume [
 		parameters: #( ).
 	self var: #left type: 'double '.
 	self var: #right type: 'double '.
-	left _ 0.
-	right _ 0.
+	left := 0.
+	right := 0.
 	self cCode: 'snd_Volume((double *) &left,(double *) &right)'.
 	interpreterProxy pushRemappableOop: (right asOop: Float).
 	interpreterProxy pushRemappableOop: (left asOop: Float).
 	interpreterProxy pushRemappableOop: (interpreterProxy instantiateClass: (interpreterProxy classArray) indexableSize: 2).
-	results _ interpreterProxy popRemappableOop.
+	results := interpreterProxy popRemappableOop.
 	interpreterProxy storePointer: 0 ofObject: results withValue: interpreterProxy popRemappableOop.
 	interpreterProxy storePointer: 1 ofObject: results withValue: interpreterProxy popRemappableOop.
 	^ results
@@ -89,7 +89,7 @@ SoundPlugin >> primitiveSoundInsertSamples: frameCount from: buf leadTime: leadT
 	interpreterProxy success: frameCount <= (interpreterProxy slotSizeOf: buf cPtrAsOop).
 
 	interpreterProxy failed
-		ifFalse: [framesPlayed _ self cCode: 'snd_InsertSamplesFromLeadTime(frameCount, (int)buf, leadTime)'.
+		ifFalse: [framesPlayed := self cCode: 'snd_InsertSamplesFromLeadTime(frameCount, (int)buf, leadTime)'.
 			interpreterProxy success: framesPlayed >= 0].
 	^ framesPlayed asPositiveIntegerObj
 ]
@@ -103,7 +103,7 @@ SoundPlugin >> primitiveSoundPlaySamples: frameCount from: buf startingAt: start
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + frameCount - 1 <= (interpreterProxy slotSizeOf: buf cPtrAsOop)]).
 
 	interpreterProxy failed
-		ifFalse: [framesPlayed _ self cCode: 'snd_PlaySamplesFromAtLength(frameCount, (int)buf, startIndex - 1)'.
+		ifFalse: [framesPlayed := self cCode: 'snd_PlaySamplesFromAtLength(frameCount, (int)buf, startIndex - 1)'.
 			interpreterProxy success: framesPlayed >= 0].
 	^ framesPlayed asPositiveIntegerObj
 ]
@@ -114,7 +114,7 @@ SoundPlugin >> primitiveSoundPlaySilence [
 
 	| framesPlayed |
 	self primitive: 'primitiveSoundPlaySilence'.
-	framesPlayed _ self cCode: 'snd_PlaySilence()'.  "-1 if sound output not started"
+	framesPlayed := self cCode: 'snd_PlaySilence()'.  "-1 if sound output not started"
 	interpreterProxy success: framesPlayed >= 0.
 	^framesPlayed asPositiveIntegerObj
 ]
@@ -127,10 +127,10 @@ SoundPlugin >> primitiveSoundRecordSamplesInto: buf startingAt: startWordIndex [
 		parameters: #(WordArray SmallInteger ).
 
 	interpreterProxy failed
-		ifFalse: [bufSizeInBytes _ (interpreterProxy slotSizeOf: buf cPtrAsOop) * 4.
+		ifFalse: [bufSizeInBytes := (interpreterProxy slotSizeOf: buf cPtrAsOop) * 4.
 			interpreterProxy success: (startWordIndex >= 1 and: [startWordIndex - 1 * 2 < bufSizeInBytes])].
 
-	interpreterProxy failed ifFalse: [samplesRecorded _ self cCode: 'snd_RecordSamplesIntoAtLength((int)buf, startWordIndex - 1, bufSizeInBytes)'].
+	interpreterProxy failed ifFalse: [samplesRecorded := self cCode: 'snd_RecordSamplesIntoAtLength((int)buf, startWordIndex - 1, bufSizeInBytes)'].
 	^ samplesRecorded asPositiveIntegerObj
 ]
 

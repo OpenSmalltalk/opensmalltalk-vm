@@ -35,10 +35,10 @@ InternetConfigPlugin >> primitiveGetMacintoshFileTypeAndCreatorFrom: aFileName [
 	self var: #creator declareC: 'char creator[8]'.
 	self var: #ptr type: 'char *'.
 	
-	keyLength _ interpreterProxy byteSizeOf: aFileName cPtrAsOop.
+	keyLength := interpreterProxy byteSizeOf: aFileName cPtrAsOop.
 	self sqInternetGetMacintoshFileTypeAndCreatorFrom: aFileName keySize: keyLength into: creator.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 8.
-	ptr _ interpreterProxy firstIndexableField: oop.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 8.
+	ptr := interpreterProxy firstIndexableField: oop.
 	0 to: 7 do:[:i|
 		ptr at: i put: (creator at: i)].
 	^oop.
@@ -54,10 +54,10 @@ InternetConfigPlugin >> primitiveGetStringKeyedBy: aKey [
 	self var: #aString declareC: 'char aString[1025]'.
 	self var: #ptr type: 'char *'.
 	
-	keyLength _ interpreterProxy byteSizeOf: aKey cPtrAsOop.
-	size _ self sqInternetConfigurationGetStringKeyedBy: aKey keySize: keyLength into: aString.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: size.
-	ptr _ interpreterProxy firstIndexableField: oop.
+	keyLength := interpreterProxy byteSizeOf: aKey cPtrAsOop.
+	size := self sqInternetConfigurationGetStringKeyedBy: aKey keySize: keyLength into: aString.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: size.
+	ptr := interpreterProxy firstIndexableField: oop.
 	0 to: size-1 do:[:i|
 		ptr at: i put: (aString at: i)].
 	^oop.

@@ -91,7 +91,7 @@ VMMakerTool >> addSecondButtonRowToWindow: sysWin startingAt: initialVerticalOff
 	| verticalOffset box |
 	verticalOffset := initialVerticalOffset.
 	"add a row of buttons to start up various actions"
-	box _ AlignmentMorph new vResizing: #shrinkWrap;  layoutInset: 6@3; cellInset: 6@0; wrapCentering: #center.
+	box := AlignmentMorph new vResizing: #shrinkWrap;  layoutInset: 6@3; cellInset: 6@0; wrapCentering: #center.
 	box addMorph: (TextMorph new contents: 'Generate:' translated asText allBold) lock.
 	box addMorphBack: (SimpleButtonMorph new target: self;
 			 label: 'Entire';
@@ -119,7 +119,7 @@ VMMakerTool >> addSecondButtonRowToWindow: sysWin startingAt: initialVerticalOff
 		addMorph: box
 		fullFrame: (LayoutFrame
 				fractions: (0 @ 0 corner: 1 @ 0)
-				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset _ verticalOffset + box height - 1))).
+				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset := verticalOffset + box height - 1))).
 
 	^verticalOffset.
 ]
@@ -398,7 +398,7 @@ VMMakerTool >> currentAvailableModuleIndex [
 
 { #category : #'list access' }
 VMMakerTool >> currentAvailableModuleIndex: anInteger [
-	allPluginsSelection _ anInteger.
+	allPluginsSelection := anInteger.
 	self changed: #currentAvailableModuleIndex
 ]
 
@@ -410,7 +410,7 @@ VMMakerTool >> currentExternalModuleIndex [
 
 { #category : #'list access' }
 VMMakerTool >> currentExternalModuleIndex: anInteger [
-	externalPluginsSelection _ anInteger.
+	externalPluginsSelection := anInteger.
 	self changed: #currentExternalModuleIndex
 ]
 
@@ -422,7 +422,7 @@ VMMakerTool >> currentInternalModuleIndex [
 
 { #category : #'list access' }
 VMMakerTool >> currentInternalModuleIndex: anInteger [
-	internalPluginsSelection _ anInteger.
+	internalPluginsSelection := anInteger.
 	self changed: #currentInternalModuleIndex
 ]
 
@@ -512,7 +512,7 @@ VMMakerTool >> externalModules [
 { #category : #'path access' }
 VMMakerTool >> findPlatformsPath [
 	| dir |
-	dir _ FileList2 modalFolderSelector.
+	dir := FileList2 modalFolderSelector.
 	dir ifNil: [^nil].
 	self platformsPathText: dir pathName
 ]
@@ -615,12 +615,12 @@ VMMakerTool >> initialModules [
 { #category : #initialisation }
 VMMakerTool >> initialize [
 	logger := TranscriptStream new.
-	vmMaker _ VMMaker default.
+	vmMaker := VMMaker default.
 	vmMaker logger: logger.
 	vmMaker addDependent: self.
-	allPluginsSelectionsArray _ Array new: self availableModules size withAll: false.
-	internalPluginsSelectionsArray _ Array new.
-	externalPluginsSelectionsArray _ Array new.
+	allPluginsSelectionsArray := Array new: self availableModules size withAll: false.
+	internalPluginsSelectionsArray := Array new.
+	externalPluginsSelectionsArray := Array new.
 ]
 
 { #category : #menus }
@@ -696,11 +696,11 @@ VMMakerTool >> listMorphs [
 { #category : #configurations }
 VMMakerTool >> loadConfig [
 	| fileResult file |
-	fileResult _ (StandardFileMenu oldFileMenu: FileDirectory default withPattern: '*.config')
+	fileResult := (StandardFileMenu oldFileMenu: FileDirectory default withPattern: '*.config')
 				startUpWithCaption: 'Select VMMaker configuration...'.
 	fileResult
-		ifNotNil: [file _ fileResult directory fullNameFor: fileResult name.
-			[vmMaker _ VMMaker forConfigurationFile: file.
+		ifNotNil: [file := fileResult directory fullNameFor: fileResult name.
+			[vmMaker := VMMaker forConfigurationFile: file.
 			vmMaker logger: logger.
 			vmMaker platformDirectory]
 				on: Error
@@ -740,9 +740,9 @@ VMMakerTool >> moveItem: transferedMorph from: sourceListMorph to: destListMorph
 	sourceListMorph = destListMorph
 		ifTrue: [^ false].
 
-	(destlist _ self listForMorph: destListMorph)
+	(destlist := self listForMorph: destListMorph)
 		ifNil: [^ false].
-	(srclist _ self listForMorph: sourceListMorph)
+	(srclist := self listForMorph: sourceListMorph)
 		ifNil: [^ false].
 	vmMaker
 		movePlugin: transferedMorph contents
@@ -775,9 +775,9 @@ VMMakerTool >> platformNameText: aText [
 	"set the platform name - this will almost certainly mean replacing the  
 	vmMaker with one suited to the platform so we do it anyway."
 	| prevVMMaker |
-	prevVMMaker _ vmMaker.
+	prevVMMaker := vmMaker.
 	"make a new vmmaker and ensure I depend on it correctly"
-	vmMaker _ VMMaker forPlatform: aText string.
+	vmMaker := VMMaker forPlatform: aText string.
 	vmMaker logger: logger.
 	vmMaker addDependent: self.
 	prevVMMaker removeDependent: self.
