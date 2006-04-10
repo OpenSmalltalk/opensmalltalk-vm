@@ -35,7 +35,7 @@
 
 # Author: Ian.Piumarta@inria.fr
 # 
-# Last edited: 2003-08-31 19:55:21 by piumarta on emilia.inria.fr
+# Last edited: 2006-04-07 11:05:52 by piumarta on emilia.local
 
 MAKEFLAGS=	--no-print-directory
 
@@ -98,6 +98,7 @@ CFLAGS=		@CFLAGS@
 WFLAGS=		@WFLAGS@
 LDFLAGS=	@LDFLAGS@
 SOFLAGS=	@SOFLAGS@
+LIBM_CFLAGS=	@LIBM_CFLAGS@
 
 LIBS=		@LIBS@
 
