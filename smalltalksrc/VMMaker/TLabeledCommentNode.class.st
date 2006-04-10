@@ -73,21 +73,21 @@ TLabeledCommentNode >> printOptionalLabelOn: aStream [
 { #category : #'as yet unclassified' }
 TLabeledCommentNode >> setComment: commentString [
 
-	label _ nil.
-	comment _ commentString.
+	label := nil.
+	comment := commentString.
 ]
 
 { #category : #'as yet unclassified' }
 TLabeledCommentNode >> setLabel: labelString [
 
-	label _ labelString.
+	label := labelString.
 ]
 
 { #category : #'as yet unclassified' }
 TLabeledCommentNode >> setLabel: labelString comment: commentString [
 
-	label _ labelString.
-	comment _ commentString.
+	label := labelString.
+	comment := commentString.
 ]
 
 { #category : #'as yet unclassified' }

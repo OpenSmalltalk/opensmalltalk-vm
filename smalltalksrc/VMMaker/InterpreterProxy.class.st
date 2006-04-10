@@ -22,8 +22,8 @@ InterpreterProxy class >> validateProxyImplementation: anInterpreter [
 	"InterpreterProxy validateProxyImplementation: Interpreter"
 
 	| proxyClass catList |
-	proxyClass _ InterpreterProxy.
-	catList _ proxyClass organization categories copy asOrderedCollection.
+	proxyClass := InterpreterProxy.
+	catList := proxyClass organization categories copy asOrderedCollection.
 	catList remove: 'initialize' ifAbsent:[].
 	catList remove: 'private' ifAbsent:[].
 	catList do:[:categ|
@@ -216,7 +216,7 @@ InterpreterProxy >> fetchArray: fieldIndex ofObject: objectPointer [
 
 	| arrayOop |
 	self returnTypeC: 'void *'.
-	arrayOop _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	arrayOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^ self arrayValueOf: arrayOop
 
 ]
@@ -233,7 +233,7 @@ InterpreterProxy >> fetchFloat: fieldIndex ofObject: objectPointer [
 
 	| floatOop |
 	self returnTypeC: 'double'.
-	floatOop _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	floatOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^ self floatValueOf: floatOop
 ]
 
@@ -243,7 +243,7 @@ InterpreterProxy >> fetchInteger: fieldIndex ofObject: objectPointer [
 
 	| intOop |
 	self inline: false.
-	intOop _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	intOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^self checkedIntegerValueOf: intOop
 ]
 
@@ -251,7 +251,7 @@ InterpreterProxy >> fetchInteger: fieldIndex ofObject: objectPointer [
 InterpreterProxy >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPointer [
 	"Support for BitBlt simulation only"
 	| intOrFloat |
-	intOrFloat _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	intOrFloat := self fetchPointer: fieldIndex ofObject: objectPointer.
 	(self isIntegerObject: intOrFloat) ifTrue: [^ self integerValueOf: intOrFloat].
 	intOrFloat isFloat ifTrue:[^intOrFloat truncated].
 	^self primitiveFail.
@@ -313,7 +313,7 @@ InterpreterProxy >> getThisSessionID [
 
 	[thisSessionID = 0]
 		whileTrue:
-			[thisSessionID _ (Random new next * SmallInteger maxVal) asInteger].
+			[thisSessionID := (Random new next * SmallInteger maxVal) asInteger].
 	^ thisSessionID
 
 ]
@@ -330,9 +330,9 @@ InterpreterProxy >> incrementalGC [
 
 { #category : #initialize }
 InterpreterProxy >> initialize [
-	successFlag _ true.
-	remapBuffer _ OrderedCollection new.
-	stack _ OrderedCollection new.
+	successFlag := true.
+	remapBuffer := OrderedCollection new.
+	stack := OrderedCollection new.
 ]
 
 { #category : #'instance creation' }
@@ -389,7 +389,7 @@ InterpreterProxy >> is: oop KindOf: aString [
 	"InterpreterProxy new is: 42 KindOf: 'Number'"
 	| theClass |
 	self var: #aString type:'char *'.
-	theClass _ Smalltalk at: aString asSymbol ifAbsent:[nil].
+	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
 		ifFalse:[^oop isKindOf: theClass]
@@ -400,7 +400,7 @@ InterpreterProxy >> is: oop MemberOf: aString [
 	"InterpreterProxy new is: 42 MemberOf:'SmallInteger'"
 	| theClass |
 	self var: #aString type:'char *'.
-	theClass _ Smalltalk at: aString asSymbol ifAbsent:[nil].
+	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
 		ifFalse:[^oop isMemberOf: theClass]
@@ -481,14 +481,14 @@ InterpreterProxy >> literalCountOf: methodPointer [
 
 { #category : #'BitBlt support' }
 InterpreterProxy >> loadBitBltFrom: bbOop [
-	bb _ bbOop.
+	bb := bbOop.
 ]
 
 { #category : #initialize }
 InterpreterProxy >> loadStackFrom: aContext [
 	self push: aContext receiver.
-	method _ aContext method.
-	argumentCount _ method numArgs.
+	method := aContext method.
+	argumentCount := method numArgs.
 	1 to: argumentCount do:[:i| self push: (aContext at: i) ].
 ]
 
@@ -581,7 +581,7 @@ InterpreterProxy >> positive64BitValueOf: oop [
 { #category : #other }
 InterpreterProxy >> primitiveFail [
 	(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt].
-	successFlag _ false.
+	successFlag := false.
 ]
 
 { #category : #'object access' }
@@ -693,7 +693,7 @@ InterpreterProxy >> stSizeOf: oop [
 InterpreterProxy >> stackFloatValue: offset [
 	| oop |
 	self returnTypeC: 'double'.
-	oop _ self stackValue: offset.
+	oop := self stackValue: offset.
 	(self isFloatObject: oop) ifFalse: [self primitiveFail. ^0.0].
 	^oop
 ]
@@ -701,7 +701,7 @@ InterpreterProxy >> stackFloatValue: offset [
 { #category : #'stack access' }
 InterpreterProxy >> stackIntegerValue: offset [
 	| oop |
-	oop _ self stackValue: offset.
+	oop := self stackValue: offset.
 	(self isIntegerObject: oop) ifFalse: [self primitiveFail. ^0].
 	^oop
 ]
@@ -709,7 +709,7 @@ InterpreterProxy >> stackIntegerValue: offset [
 { #category : #'stack access' }
 InterpreterProxy >> stackObjectValue: offset [
 	| oop |
-	oop _ self stackValue: offset.
+	oop := self stackValue: offset.
 	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
 	^oop
 ]
@@ -734,7 +734,7 @@ InterpreterProxy >> storePointer: index ofObject: oop withValue: valuePointer [
 { #category : #other }
 InterpreterProxy >> success: aBoolean [
 	successFlag not ifTrue:[^self].
-	successFlag _ successFlag and:[aBoolean].
+	successFlag := successFlag and:[aBoolean].
 	successFlag not ifTrue:[
 		(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt]].
 ]

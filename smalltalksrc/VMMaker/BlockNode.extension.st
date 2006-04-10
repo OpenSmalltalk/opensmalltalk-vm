@@ -4,10 +4,10 @@ Extension { #name : #BlockNode }
 BlockNode >> asTranslatorNode [
 	"make a CCodeGenerator equivalent of me"
 	| statementList newS |
-	statementList _ OrderedCollection new.
+	statementList := OrderedCollection new.
 	statements
 		do: [:s | 
-			newS _ s asTranslatorNode.
+			newS := s asTranslatorNode.
 			newS isStmtList
 				ifTrue: ["inline the statement list returned when a CascadeNode is 
 					translated "

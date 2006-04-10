@@ -33,9 +33,9 @@ JoystickTabletPlugin >> primitiveGetTabletParameters: cursorIndex [
 	self var: #resultPtr type: 'int * '.
 	self primitive: 'primitiveGetTabletParameters'
 		parameters: #(SmallInteger).
-	resultSize _ self tabletResultSize.
-	result _ interpreterProxy instantiateClass: interpreterProxy classBitmap indexableSize: resultSize.
-	resultPtr _ result asIntPtr.
+	resultSize := self tabletResultSize.
+	result := interpreterProxy instantiateClass: interpreterProxy classBitmap indexableSize: resultSize.
+	resultPtr := result asIntPtr.
 	interpreterProxy success: (self cCode: 'tabletGetParameters(cursorIndex, resultPtr)').
 	^result
 ]
@@ -57,9 +57,9 @@ JoystickTabletPlugin >> primitiveReadTablet: cursorIndex [
 	self var: #resultPtr type: 'int * '.
 	self primitive: 'primitiveReadTablet'
 		parameters: #(SmallInteger).
-	resultSize _ self tabletResultSize.
-	result _ interpreterProxy instantiateClass: interpreterProxy classBitmap indexableSize: resultSize.
-	resultPtr _ result asIntPtr.
+	resultSize := self tabletResultSize.
+	result := interpreterProxy instantiateClass: interpreterProxy classBitmap indexableSize: resultSize.
+	resultPtr := result asIntPtr.
 	interpreterProxy success: (self cCode: 'tabletRead(cursorIndex, resultPtr)').
 	^result
 ]

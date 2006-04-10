@@ -19,17 +19,17 @@ FloatArrayPlugin >> primitiveAddFloatArray [
 	self export: true.
 	self var: #rcvrPtr type:'float *'.
 	self var: #argPtr type:'float *'.
-	arg _ interpreterProxy stackObjectValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	arg := interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: arg).
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: arg.
+	length := interpreterProxy stSizeOf: arg.
 	interpreterProxy success: (length = (interpreterProxy stSizeOf: rcvr)).
 	interpreterProxy failed ifTrue:[^nil].
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) + (argPtr at: i)].
 	interpreterProxy pop: 1. "Leave rcvr on stack"
@@ -42,13 +42,13 @@ FloatArrayPlugin >> primitiveAddScalar [
 	self export: true.
 	self var: #value type:'double '.
 	self var: #rcvrPtr type:'float *'.
-	value _ interpreterProxy stackFloatValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	value := interpreterProxy stackFloatValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: rcvr.
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	length := interpreterProxy stSizeOf: rcvr.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) + value].
 	interpreterProxy pop: 1. "Leave rcvr on stack"
@@ -61,14 +61,14 @@ FloatArrayPlugin >> primitiveAt [
 	self export: true.
 	self var: #floatValue type:'double '.
 	self var: #floatPtr type:'float *'.
-	index _ interpreterProxy stackIntegerValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	index := interpreterProxy stackIntegerValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy success: (index > 0 and:[index <= (interpreterProxy slotSizeOf: rcvr)]).
 	interpreterProxy failed ifTrue:[^nil].
-	floatPtr _ interpreterProxy firstIndexableField: rcvr.
-	floatValue _ (floatPtr at: index-1) asFloat.
+	floatPtr := interpreterProxy firstIndexableField: rcvr.
+	floatValue := (floatPtr at: index-1) asFloat.
 	interpreterProxy pop: 2.
 	interpreterProxy pushFloat: floatValue.
 ]
@@ -80,17 +80,17 @@ FloatArrayPlugin >> primitiveAtPut [
 	self export: true.
 	self var: #floatValue type: 'double '.
 	self var: #floatPtr type:'float *'.
-	value _ interpreterProxy stackValue: 0.
+	value := interpreterProxy stackValue: 0.
 	(interpreterProxy isIntegerObject: value)
-		ifTrue:[floatValue _ (interpreterProxy integerValueOf: value) asFloat]
-		ifFalse:[floatValue _ interpreterProxy floatValueOf: value].
-	index _ interpreterProxy stackIntegerValue: 1.
-	rcvr _ interpreterProxy stackObjectValue: 2.
+		ifTrue:[floatValue := (interpreterProxy integerValueOf: value) asFloat]
+		ifFalse:[floatValue := interpreterProxy floatValueOf: value].
+	index := interpreterProxy stackIntegerValue: 1.
+	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy success: (index > 0 and:[index <= (interpreterProxy slotSizeOf: rcvr)]).
 	interpreterProxy failed ifTrue:[^nil].
-	floatPtr _ interpreterProxy firstIndexableField: rcvr.
+	floatPtr := interpreterProxy firstIndexableField: rcvr.
 	floatPtr at: index-1 put: (self cCoerce: floatValue to:'float').
 	interpreterProxy failed ifFalse: [interpreterProxy pop: 3 thenPush: value].
 ]
@@ -102,17 +102,17 @@ FloatArrayPlugin >> primitiveDivFloatArray [
 	self export: true.
 	self var: #rcvrPtr type:'float *'.
 	self var: #argPtr type:'float *'.
-	arg _ interpreterProxy stackObjectValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	arg := interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: arg).
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: arg.
+	length := interpreterProxy stSizeOf: arg.
 	interpreterProxy success: (length = (interpreterProxy stSizeOf: rcvr)).
 	interpreterProxy failed ifTrue:[^nil].
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
 	"Check if any of the argument's values is zero"
 	0 to: length-1 do:[:i|
 		( interpreterProxy intAtPointer:(self cCoerce: (argPtr + i) to: 'char*')) = 0 ifTrue:[^interpreterProxy primitiveFail]].
@@ -130,15 +130,15 @@ FloatArrayPlugin >> primitiveDivScalar [
 	self var: #value type:'double '.
 	self var: #inverse type:'double '.
 	self var: #rcvrPtr type:'float *'.
-	value _ interpreterProxy stackFloatValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	value := interpreterProxy stackFloatValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	value = 0.0 ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: rcvr.
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	inverse _ 1.0 / value.
+	length := interpreterProxy stSizeOf: rcvr.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	inverse := 1.0 / value.
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) * inverse.
 	].
@@ -154,20 +154,20 @@ FloatArrayPlugin >> primitiveDotProduct [
 	self var: #rcvrPtr type:'float *'.
 	self var: #argPtr type:'float *'.
 	self var: #result type:'double '.
-	arg _ interpreterProxy stackObjectValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	arg := interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: arg).
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: arg.
+	length := interpreterProxy stSizeOf: arg.
 	interpreterProxy success: (length = (interpreterProxy stSizeOf: rcvr)).
 	interpreterProxy failed ifTrue:[^nil].
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
-	result _ 0.0.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
+	result := 0.0.
 	0 to: length-1 do:[:i|
-		result _ result + ((rcvrPtr at: i) * (argPtr at: i)).
+		result := result + ((rcvrPtr at: i) * (argPtr at: i)).
 	].
 	interpreterProxy pop: 2. "Pop args + rcvr"
 	interpreterProxy pushFloat: result. "Return result"
@@ -180,18 +180,18 @@ FloatArrayPlugin >> primitiveEqual [
 	self export: true.
 	self var: #rcvrPtr type:'float *'.
 	self var: #argPtr type:'float *'.
-	arg _ interpreterProxy stackObjectValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	arg := interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: arg).
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy pop: 2.
-	length _ interpreterProxy stSizeOf: arg.
+	length := interpreterProxy stSizeOf: arg.
 	length = (interpreterProxy stSizeOf: rcvr) ifFalse:[^interpreterProxy pushBool: false].
 
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
 	0 to: length-1 do:[:i|
 		(rcvrPtr at: i) = (argPtr at: i) ifFalse:[^interpreterProxy pushBool: false].
 	].
@@ -204,15 +204,15 @@ FloatArrayPlugin >> primitiveHashArray [
 	| rcvr rcvrPtr length result |
 	self export: true.
 	self var: #rcvrPtr type:'int *'.
-	rcvr _ interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: rcvr.
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'int *'.
-	result _ 0.
+	length := interpreterProxy stSizeOf: rcvr.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'int *'.
+	result := 0.
 	0 to: length-1 do:[:i|
-		result _ result + (rcvrPtr at: i).
+		result := result + (rcvrPtr at: i).
 	].
 	interpreterProxy pop: 1.
 	^interpreterProxy pushInteger: (result bitAnd: 16r1FFFFFFF)
@@ -225,17 +225,17 @@ FloatArrayPlugin >> primitiveMulFloatArray [
 	self export: true.
 	self var: #rcvrPtr type:'float *'.
 	self var: #argPtr type:'float *'.
-	arg _ interpreterProxy stackObjectValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	arg := interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: arg).
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: arg.
+	length := interpreterProxy stSizeOf: arg.
 	interpreterProxy success: (length = (interpreterProxy stSizeOf: rcvr)).
 	interpreterProxy failed ifTrue:[^nil].
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) * (argPtr at: i).
 	].
@@ -249,13 +249,13 @@ FloatArrayPlugin >> primitiveMulScalar [
 	self export: true.
 	self var: #value type:'double '.
 	self var: #rcvrPtr type:'float *'.
-	value _ interpreterProxy stackFloatValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	value := interpreterProxy stackFloatValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: rcvr.
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	length := interpreterProxy stSizeOf: rcvr.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) * value.
 	].
@@ -269,17 +269,17 @@ FloatArrayPlugin >> primitiveSubFloatArray [
 	self export: true.
 	self var: #rcvrPtr type:'float *'.
 	self var: #argPtr type:'float *'.
-	arg _ interpreterProxy stackObjectValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	arg := interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: arg).
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: arg.
+	length := interpreterProxy stSizeOf: arg.
 	interpreterProxy success: (length = (interpreterProxy stSizeOf: rcvr)).
 	interpreterProxy failed ifTrue:[^nil].
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	argPtr _ self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	argPtr := self cCoerce: (interpreterProxy firstIndexableField: arg) to: 'float *'.
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) - (argPtr at: i).
 	].
@@ -293,13 +293,13 @@ FloatArrayPlugin >> primitiveSubScalar [
 	self export: true.
 	self var: #value type:'double '.
 	self var: #rcvrPtr type:'float *'.
-	value _ interpreterProxy stackFloatValue: 0.
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	value := interpreterProxy stackFloatValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: rcvr.
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	length := interpreterProxy stSizeOf: rcvr.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
 	0 to: length-1 do:[:i|
 		rcvrPtr at: i put: (rcvrPtr at: i) - value.
 	].
@@ -313,15 +313,15 @@ FloatArrayPlugin >> primitiveSum [
 	self export: true.
 	self var: #sum type:'double '.
 	self var: #rcvrPtr type:'float *'.
-	rcvr _ interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy success: (interpreterProxy isWords: rcvr).
 	interpreterProxy failed ifTrue:[^nil].
-	length _ interpreterProxy stSizeOf: rcvr.
-	rcvrPtr _ self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
-	sum _ 0.0.
+	length := interpreterProxy stSizeOf: rcvr.
+	rcvrPtr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'float *'.
+	sum := 0.0.
 	0 to: length-1 do:[:i|
-		sum _ sum + (rcvrPtr at: i).
+		sum := sum + (rcvrPtr at: i).
 	].
 	interpreterProxy pop: 1 thenPush: (interpreterProxy floatObjectOf: sum)
 ]

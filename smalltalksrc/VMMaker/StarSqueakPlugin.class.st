@@ -28,36 +28,36 @@ StarSqueakPlugin >> primitiveDiffuseFromToWidthHeightDelta [
 	self var: 'src' type: 'unsigned int *'.
 	self var: 'dst' type: 'unsigned int *'.
 
-	srcOop _ interpreterProxy stackValue: 4.
-	dstOop _ interpreterProxy stackValue: 3.
-	width _ interpreterProxy stackIntegerValue: 2.
-	height _ interpreterProxy stackIntegerValue: 1.
-	delta _ interpreterProxy stackIntegerValue: 0.
-	src _ self checkedUnsignedIntPtrOf: srcOop.
-	dst _ self checkedUnsignedIntPtrOf: dstOop.
+	srcOop := interpreterProxy stackValue: 4.
+	dstOop := interpreterProxy stackValue: 3.
+	width := interpreterProxy stackIntegerValue: 2.
+	height := interpreterProxy stackIntegerValue: 1.
+	delta := interpreterProxy stackIntegerValue: 0.
+	src := self checkedUnsignedIntPtrOf: srcOop.
+	dst := self checkedUnsignedIntPtrOf: dstOop.
 	interpreterProxy success:
 		(interpreterProxy stSizeOf: srcOop) = (interpreterProxy stSizeOf: dstOop).
 	interpreterProxy success:
 		(interpreterProxy stSizeOf: srcOop) = (width * height).
 	interpreterProxy failed ifTrue: [^ nil].
 
-	area _ ((2 * delta) + 1) * ((2 * delta) + 1).
+	area := ((2 * delta) + 1) * ((2 * delta) + 1).
 	0 to: height - 1 do: [:y |
-		startY _ y - delta.
-		startY < 0 ifTrue: [startY _ 0].
-		endY _ y + delta.
-		endY >= height ifTrue: [endY _ height - 1].
+		startY := y - delta.
+		startY < 0 ifTrue: [startY := 0].
+		endY := y + delta.
+		endY >= height ifTrue: [endY := height - 1].
 		0 to: width - 1 do: [:x |
-			startX _ x - delta.
-			startX < 0 ifTrue: [startX _ 0].
-			endX _ x + delta.
-			endX >= width ifTrue: [endX _ width - 1].
+			startX := x - delta.
+			startX < 0 ifTrue: [startX := 0].
+			endX := x + delta.
+			endX >= width ifTrue: [endX := width - 1].
 
-			sum _ 0.
+			sum := 0.
 			startY to: endY do: [:y2 |
-				rowStart _ y2 * width.
+				rowStart := y2 * width.
 				startX to: endX do: [:x2 |
-					sum _ sum + (src at: rowStart + x2)]].
+					sum := sum + (src at: rowStart + x2)]].
 
 			dst at: ((y * width) + x) put: (sum // area)]].
 
@@ -73,10 +73,10 @@ StarSqueakPlugin >> primitiveEvaporateRate [
 	self export: true.
 	self var: 'patchVar' type: 'unsigned int *'.
 
-	patchVarOop _ interpreterProxy stackValue: 1.
-	rate _ interpreterProxy stackIntegerValue: 0.
-	patchVar _ self checkedUnsignedIntPtrOf: patchVarOop.
-	sz _ interpreterProxy stSizeOf: patchVarOop.
+	patchVarOop := interpreterProxy stackValue: 1.
+	rate := interpreterProxy stackIntegerValue: 0.
+	patchVar := self checkedUnsignedIntPtrOf: patchVarOop.
+	sz := interpreterProxy stSizeOf: patchVarOop.
 	interpreterProxy failed ifTrue: [^ nil].
 
 	0 to: sz - 1 do: [:i |
@@ -94,37 +94,37 @@ StarSqueakPlugin >> primitiveMapFromToWidthHeightPatchSizeRgbFlagsShift [
 	self var: 'src' type: 'unsigned int *'.
 	self var: 'dst' type: 'unsigned int *'.
 
-	srcOop _ interpreterProxy stackValue: 6.
-	dstOop _ interpreterProxy stackValue: 5.
-	w _ interpreterProxy stackIntegerValue: 4.
-	h _ interpreterProxy stackIntegerValue: 3.
-	patchSize _ interpreterProxy stackIntegerValue: 2.
-	rgbFlags _ interpreterProxy stackIntegerValue: 1.
-	shiftAmount _ interpreterProxy stackIntegerValue: 0.
+	srcOop := interpreterProxy stackValue: 6.
+	dstOop := interpreterProxy stackValue: 5.
+	w := interpreterProxy stackIntegerValue: 4.
+	h := interpreterProxy stackIntegerValue: 3.
+	patchSize := interpreterProxy stackIntegerValue: 2.
+	rgbFlags := interpreterProxy stackIntegerValue: 1.
+	shiftAmount := interpreterProxy stackIntegerValue: 0.
 
-	src _ self checkedUnsignedIntPtrOf: srcOop.
-	dst _ self checkedUnsignedIntPtrOf: dstOop.
+	src := self checkedUnsignedIntPtrOf: srcOop.
+	dst := self checkedUnsignedIntPtrOf: dstOop.
 	interpreterProxy success:
 		(interpreterProxy stSizeOf: dstOop) = (w * h).
 	interpreterProxy success:
 		(interpreterProxy stSizeOf: dstOop) = ((interpreterProxy stSizeOf: srcOop) * patchSize * patchSize).
 	interpreterProxy failed ifTrue: [^ nil].
 
-	rgbMult _ 0.
-	(rgbFlags bitAnd: 2r100) > 0 ifTrue: [rgbMult _ rgbMult + 16r10000].
-	(rgbFlags bitAnd: 2r10) > 0 ifTrue: [rgbMult _ rgbMult + 16r100].
-	(rgbFlags bitAnd: 2r1) > 0 ifTrue: [rgbMult _ rgbMult + 16r1].
-	srcIndex _ -1.
+	rgbMult := 0.
+	(rgbFlags bitAnd: 2r100) > 0 ifTrue: [rgbMult := rgbMult + 16r10000].
+	(rgbFlags bitAnd: 2r10) > 0 ifTrue: [rgbMult := rgbMult + 16r100].
+	(rgbFlags bitAnd: 2r1) > 0 ifTrue: [rgbMult := rgbMult + 16r1].
+	srcIndex := -1.
 	0 to: (h // patchSize) - 1 do: [:y |
 		0 to: (w // patchSize) - 1 do: [:x |
-			level _ (src at: (srcIndex _ srcIndex + 1)) bitShift: shiftAmount.
-			level > 255 ifTrue: [level _ 255].
+			level := (src at: (srcIndex := srcIndex + 1)) bitShift: shiftAmount.
+			level > 255 ifTrue: [level := 255].
 			level <= 0
-				ifTrue: [pixel _ 1]  "non-transparent black"
-				ifFalse: [pixel _ level * rgbMult].
+				ifTrue: [pixel := 1]  "non-transparent black"
+				ifFalse: [pixel := level * rgbMult].
 
 			"fill a patchSize x patchSize square with the pixel value"
-			offset _ ((y * w) + x) * patchSize.
+			offset := ((y * w) + x) * patchSize.
 			offset to: offset + ((patchSize - 1) * w) by: w do: [:rowStart |
 				rowStart to: rowStart + patchSize - 1 do: [:dstIndex |
 					dst at: dstIndex put: pixel]] ]].

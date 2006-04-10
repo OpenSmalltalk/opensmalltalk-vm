@@ -53,24 +53,24 @@ FFTPlugin >> loadFFTFrom: fftOop [
 	| oop |
 	interpreterProxy success: (interpreterProxy slotSizeOf: fftOop) >= 6.
 	interpreterProxy failed ifTrue:[^false].
-	nu _ interpreterProxy fetchInteger: 0 ofObject: fftOop.
-	fftSize _ interpreterProxy fetchInteger: 1 ofObject: fftOop.
+	nu := interpreterProxy fetchInteger: 0 ofObject: fftOop.
+	fftSize := interpreterProxy fetchInteger: 1 ofObject: fftOop.
 
-	oop _ interpreterProxy fetchPointer: 2 ofObject: fftOop.
-	sinTableSize _ interpreterProxy stSizeOf: oop.
-	sinTable _ self checkedFloatPtrOf: oop.
+	oop := interpreterProxy fetchPointer: 2 ofObject: fftOop.
+	sinTableSize := interpreterProxy stSizeOf: oop.
+	sinTable := self checkedFloatPtrOf: oop.
 
-	oop _ interpreterProxy fetchPointer: 3 ofObject: fftOop.
-	permTableSize _ interpreterProxy stSizeOf: oop.
-	permTable _ self checkedWordPtrOf: oop.
+	oop := interpreterProxy fetchPointer: 3 ofObject: fftOop.
+	permTableSize := interpreterProxy stSizeOf: oop.
+	permTable := self checkedWordPtrOf: oop.
 
-	oop _ interpreterProxy fetchPointer: 4 ofObject: fftOop.
-	realDataSize _ interpreterProxy stSizeOf: oop.
-	realData _ self checkedFloatPtrOf: oop.
+	oop := interpreterProxy fetchPointer: 4 ofObject: fftOop.
+	realDataSize := interpreterProxy stSizeOf: oop.
+	realData := self checkedFloatPtrOf: oop.
 
-	oop _ interpreterProxy fetchPointer: 5 ofObject: fftOop.
-	imagDataSize _ interpreterProxy stSizeOf: oop.
-	imagData _ self checkedFloatPtrOf: oop.
+	oop := interpreterProxy fetchPointer: 5 ofObject: fftOop.
+	imagDataSize := interpreterProxy stSizeOf: oop.
+	imagData := self checkedFloatPtrOf: oop.
 
 	"Check assumptions about sizes"
 	interpreterProxy success:
@@ -87,30 +87,30 @@ FFTPlugin >> loadFFTFrom: fftOop [
 FFTPlugin >> permuteData [
 	| i end a b tmp |
 	self var: #tmp type: 'float '.
-	i _ 0.
-	end _ permTableSize.
+	i := 0.
+	end := permTableSize.
 	[i < end] whileTrue:
-		[a _ (permTable at: i) - 1.
-		b _ (permTable at: i+1) - 1.
+		[a := (permTable at: i) - 1.
+		b := (permTable at: i+1) - 1.
 
 		(a < realDataSize and:[b < realDataSize]) ifFalse:[^interpreterProxy success: false].
 
-		tmp _ realData at: a.
+		tmp := realData at: a.
 		realData at: a put: (realData at: b).
 		realData at: b put: tmp.
 
-		tmp _ imagData at: a.
+		tmp := imagData at: a.
 		imagData at: a put: (imagData at: b).
 		imagData at: b put: tmp.
 
-		i _ i + 2]
+		i := i + 2]
 ]
 
 { #category : #primitives }
 FFTPlugin >> primitiveFFTPermuteData [
 	| rcvr |
 	self export: true.
-	rcvr _ interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 0.
 	(self loadFFTFrom: rcvr) ifFalse:[^nil].
 	self permuteData.
 	interpreterProxy failed ifTrue:[
@@ -122,7 +122,7 @@ FFTPlugin >> primitiveFFTPermuteData [
 FFTPlugin >> primitiveFFTScaleData [
 	| rcvr |
 	self export: true.
-	rcvr _ interpreterProxy stackObjectValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 0.
 	(self loadFFTFrom: rcvr) ifFalse:[^nil].
 	self scaleData.
 ]
@@ -131,8 +131,8 @@ FFTPlugin >> primitiveFFTScaleData [
 FFTPlugin >> primitiveFFTTransformData [
 	| rcvr forward |
 	self export: true.
-	forward _ interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
-	rcvr _ interpreterProxy stackObjectValue: 1.
+	forward := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
+	rcvr := interpreterProxy stackObjectValue: 1.
 	(self loadFFTFrom: rcvr) ifFalse:[^nil].
 	self transformData: forward.
 	interpreterProxy failed ifFalse:[
@@ -146,7 +146,7 @@ FFTPlugin >> scaleData [
 	| realN |
 	self var: #realN type: 'float '.
 	fftSize <= 1 ifTrue:[^nil].
-	realN _ self cCoerce: (1.0 / (self cCoerce: fftSize to: 'double')) to: 'float'.
+	realN := self cCoerce: (1.0 / (self cCoerce: fftSize to: 'double')) to: 'float'.
 	0 to: fftSize-1 do:
 		[:i |
 		realData at: i put: (realData at: i) * realN.
@@ -171,38 +171,38 @@ FFTPlugin >> transformForward: forward [
 	self var: #realT type:'float '.
 	self var: #imagU type:'float '.
 	self var: #imagT type:'float '.
-	fftSize2 _ fftSize // 2.
-	fftSize4 _ fftSize // 4.
+	fftSize2 := fftSize // 2.
+	fftSize4 := fftSize // 4.
 	1 to: nu do:
 		[:level |
-		lev _ 1 bitShift: level.
-		lev1 _ lev // 2.
-		fftScale _ fftSize // lev.
+		lev := 1 bitShift: level.
+		lev1 := lev // 2.
+		fftScale := fftSize // lev.
 		1 to: lev1 do:
 			[:j |
-			theta _ j-1 * fftScale.   "pi * (j-1) / lev1 mapped onto 0..n/2"
+			theta := j-1 * fftScale.   "pi * (j-1) / lev1 mapped onto 0..n/2"
 			theta < fftSize4  "Compute U, the complex multiplier for each level"
 				ifTrue:
-					[realU _ sinTable at: sinTableSize - theta - 1.
-					imagU _ sinTable at: theta]
+					[realU := sinTable at: sinTableSize - theta - 1.
+					imagU := sinTable at: theta]
 				ifFalse:
-					[realU _ 0.0 - (sinTable at: theta - fftSize4).
-					imagU _ sinTable at: fftSize2 - theta].
-			forward ifFalse: [imagU _ 0.0 - imagU].
+					[realU := 0.0 - (sinTable at: theta - fftSize4).
+					imagU := sinTable at: fftSize2 - theta].
+			forward ifFalse: [imagU := 0.0 - imagU].
 "
 			Here is the inner loop...
 			j to: n by: lev do:
 				[:i |   hand-transformed to whileTrue...
 "
-			i _ j.
+			i := j.
 			[i <= fftSize] whileTrue:
-				[ip _ i + lev1 - 1.
-				ii _ i-1.
-				realT _ ((realData at: ip) * realU) - ((imagData at: ip) * imagU).
-				imagT _ ((realData at: ip) * imagU) + ((imagData at: ip) * realU).
+				[ip := i + lev1 - 1.
+				ii := i-1.
+				realT := ((realData at: ip) * realU) - ((imagData at: ip) * imagU).
+				imagT := ((realData at: ip) * imagU) + ((imagData at: ip) * realU).
 				realData at: ip put: (realData at: ii) - realT.
 				imagData at: ip put: (imagData at: ii) - imagT.
 				realData at: ii put: (realData at: ii) + realT.
 				imagData at: ii put: (imagData at: ii) + imagT.
-				i _ i + lev]]].
+				i := i + lev]]].
 ]

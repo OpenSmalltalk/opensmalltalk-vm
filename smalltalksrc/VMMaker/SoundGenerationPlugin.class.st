@@ -25,7 +25,7 @@ NB sqOldSoundsPrims IS NOT FULLY INTEGRATED - it still isn't included in the exp
 	| cg |
 	self initialize.
 
-	cg _ self buildCodeGeneratorUpTo: InterpreterPlugin.
+	cg := self buildCodeGeneratorUpTo: InterpreterPlugin.
 
 	cg addMethodsForPrimitives: AbstractSound translatedPrimitives.
 	self storeString: cg generateCodeStringForPrimitives onFileNamed: (directory fullNameFor: self moduleName, '.c').

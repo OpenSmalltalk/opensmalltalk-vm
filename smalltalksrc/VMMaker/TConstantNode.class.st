@@ -53,7 +53,7 @@ TConstantNode >> printOn: aStream level: level [
 { #category : #'as yet unclassified' }
 TConstantNode >> setValue: anObject [
 
-	value _ anObject.
+	value := anObject.
 ]
 
 { #category : #'as yet unclassified' }

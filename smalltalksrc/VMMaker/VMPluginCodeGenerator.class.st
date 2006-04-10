@@ -130,8 +130,8 @@ void* ', pluginName,'_exports[][3] = {'.
 VMPluginCodeGenerator >> generateCodeStringForPrimitives [
 "TPR - moved down from CCodeGenerator"
 	| s methodList |
-	s _ ReadWriteStream on: (String new: 1000).
-	methodList _ methods asSortedCollection: [:m1 :m2 | m1 selector < m2 selector].
+	s := ReadWriteStream on: (String new: 1000).
+	methodList := methods asSortedCollection: [:m1 :m2 | m1 selector < m2 selector].
 	self emitCHeaderForPrimitivesOn: s.
 	self emitCConstantsOn: s.
 	self emitCVariablesOn: s.
@@ -156,14 +156,14 @@ VMPluginCodeGenerator >> localizeGlobalVariables [
 VMPluginCodeGenerator >> pluginName: aString [
 "TPR - moved from CCodeGenerator"
 	"Set the plugin name when generating plugins."
-	pluginName _ aString.
+	pluginName := aString.
 ]
 
 { #category : #private }
 VMPluginCodeGenerator >> storeVirtualMachineProxyHeader: categoryList on: fileName [
 	"Store the interpreter definitions on the given file"
 	| stream |
-	stream _ FileStream newFileNamed: fileName.
+	stream := FileStream newFileNamed: fileName.
 	stream nextPutAll:
 '#ifndef _SqueakVM_H
 #define _SqueakVM_H
@@ -198,7 +198,7 @@ typedef struct VirtualMachine {
 VMPluginCodeGenerator >> storeVirtualMachineProxyImplementation: categoryList on: fileName [
 	"Store the interpreter definitions on the given file"
 	| stream |
-	stream _ FileStream newFileNamed: fileName.
+	stream := FileStream newFileNamed: fileName.
 	stream nextPutAll:'
 #include <math.h>
 #include <stdio.h>

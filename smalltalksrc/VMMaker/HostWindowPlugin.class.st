@@ -24,7 +24,7 @@ HostWindowPlugin >> primitiveCloseHostWindow: windowIndex [
 	self primitive: 'primitiveCloseHostWindow'
 		parameters: #(SmallInteger).
 	
-	ok _ self closeWindow: windowIndex.
+	ok := self closeWindow: windowIndex.
 	ok ifFalse:[interpreterProxy primitiveFail].
 
 ]
@@ -42,8 +42,8 @@ Return the SmallInt value of the internal index to the window description block
 	"createWindowWidthheightoriginXyattr(int w, int h, int x, int y, int*
 attributeList) must create a hostwindow and return an integer index. Return 0 if
 failed"
-	listLength _ interpreterProxy slotSizeOf: list cPtrAsOop.
-	windowIndex _ self createWindowWidth: w height: h originX: x y: y attr: list
+	listLength := interpreterProxy slotSizeOf: list cPtrAsOop.
+	windowIndex := self createWindowWidth: w height: h originX: x y: y attr: list
 length: listLength.
 	windowIndex > 0 ifTrue:[^windowIndex asSmallIntegerObj]
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -104,7 +104,7 @@ HostWindowPlugin >> primitiveHostWindowTitle: id string: titleString [
 	| res titleLength |
 	self primitive: 'primitiveHostWindowTitle'
 		parameters: #(SmallInteger String).
-	titleLength _ interpreterProxy slotSizeOf: titleString cPtrAsOop.
+	titleLength := interpreterProxy slotSizeOf: titleString cPtrAsOop.
 	res := self cCode: 'ioSetTitleOfWindow(id, titleString, titleLength)'.
 	res = -1
 		ifTrue: [interpreterProxy primitiveFail]
@@ -124,7 +124,7 @@ SmallInteger SmallInteger SmallInteger SmallInteger).
 
 	"Tell the vm to copy pixel's from dispBits to the screen - this is just
 ioShowDisplay with the extra parameter of the windowIndex integer"
-	ok _ self cCode: 'ioShowDisplayOnWindow(dispBits, w, h, d, left, right, top,
+	ok := self cCode: 'ioShowDisplayOnWindow(dispBits, w, h, d, left, right, top,
 bottom, windowIndex)'.
 	ok ifFalse:[interpreterProxy primitiveFail]
 ]

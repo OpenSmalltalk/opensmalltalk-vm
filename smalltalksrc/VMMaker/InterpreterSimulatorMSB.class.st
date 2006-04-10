@@ -7,8 +7,8 @@ Class {
 { #category : #'memory access' }
 InterpreterSimulatorMSB >> byteAt: byteAddress [
 	| lowBits bpwMinus1 |
-	bpwMinus1 _ BytesPerWord-1.
-	lowBits _ byteAddress bitAnd: bpwMinus1.
+	bpwMinus1 := BytesPerWord-1.
+	lowBits := byteAddress bitAnd: bpwMinus1.
 	^ ((self longAt: byteAddress - lowBits)
 		bitShift: (lowBits - bpwMinus1) * 8)
 		bitAnd: 16rFF
@@ -17,12 +17,12 @@ InterpreterSimulatorMSB >> byteAt: byteAddress [
 { #category : #'memory access' }
 InterpreterSimulatorMSB >> byteAt: byteAddress put: byte [
 	| longWord shift lowBits bpwMinus1 longAddress |
-	bpwMinus1 _ BytesPerWord-1.
-	lowBits _ byteAddress bitAnd: bpwMinus1.
-	longAddress _ byteAddress - lowBits.
-	longWord _ self longAt: longAddress.
-	shift _ (bpwMinus1 - lowBits) * 8.
-	longWord _ longWord
+	bpwMinus1 := BytesPerWord-1.
+	lowBits := byteAddress bitAnd: bpwMinus1.
+	longAddress := byteAddress - lowBits.
+	longWord := self longAt: longAddress.
+	shift := (bpwMinus1 - lowBits) * 8.
+	longWord := longWord
 				- (longWord bitAnd: (16rFF bitShift: shift))
 				+ (byte bitShift: shift).
 	self longAt: longAddress put: longWord
@@ -74,8 +74,8 @@ InterpreterSimulatorMSB >> putLong: n toFile: f [
 InterpreterSimulatorMSB >> shortAt: byteAddress [
     "Return the half-word at byteAddress which must be even."
 	| lowBits bpwMinus2 |
-	bpwMinus2 _ BytesPerWord-2.
-	lowBits _ byteAddress bitAnd: bpwMinus2.
+	bpwMinus2 := BytesPerWord-2.
+	lowBits := byteAddress bitAnd: bpwMinus2.
 	^ ((self longAt: byteAddress - lowBits)
 		bitShift: (lowBits - bpwMinus2) * 8)
 		bitAnd: 16rFFFF
@@ -86,12 +86,12 @@ InterpreterSimulatorMSB >> shortAt: byteAddress [
 InterpreterSimulatorMSB >> shortAt: byteAddress put: a16BitValue [
     "Return the half-word at byteAddress which must be even."
 	| longWord shift lowBits bpwMinus2 longAddress |
-	bpwMinus2 _ BytesPerWord-2.
-	lowBits _ byteAddress bitAnd: bpwMinus2.
-	longAddress _ byteAddress - lowBits.
-	longWord _ self longAt: longAddress.
-	shift _ (bpwMinus2 - lowBits) * 8.
-	longWord _ longWord
+	bpwMinus2 := BytesPerWord-2.
+	lowBits := byteAddress bitAnd: bpwMinus2.
+	longAddress := byteAddress - lowBits.
+	longWord := self longAt: longAddress.
+	shift := (bpwMinus2 - lowBits) * 8.
+	longWord := longWord
 				- (longWord bitAnd: (16rFFFF bitShift: shift))
 				+ (a16BitValue bitShift: shift).
 	self longAt: longAddress put: longWord

@@ -19,15 +19,15 @@ TSendNode >> args [
 { #category : #'as yet unclassified' }
 TSendNode >> bindVariableUsesIn: aDictionary [
 
-	receiver _ receiver bindVariableUsesIn: aDictionary.
-	arguments _ arguments collect: [ :a | a bindVariableUsesIn: aDictionary ].
+	receiver := receiver bindVariableUsesIn: aDictionary.
+	arguments := arguments collect: [ :a | a bindVariableUsesIn: aDictionary ].
 ]
 
 { #category : #'as yet unclassified' }
 TSendNode >> bindVariablesIn: aDictionary [
 
-	receiver _ receiver bindVariablesIn: aDictionary.
-	arguments _ arguments collect: [ :a | a bindVariablesIn: aDictionary ].
+	receiver := receiver bindVariablesIn: aDictionary.
+	arguments := arguments collect: [ :a | a bindVariablesIn: aDictionary ].
 ]
 
 { #category : #'as yet unclassified' }
@@ -73,7 +73,7 @@ TSendNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 { #category : #'as yet unclassified' }
 TSendNode >> inlineMethodsUsing: aDictionary [
 
-	arguments _ arguments collect: [ :arg |
+	arguments := arguments collect: [ :arg |
 		arg inlineMethodsUsing: aDictionary.
 	].
 	"xxx inline this message if it is in the dictionary xxx"
@@ -93,7 +93,7 @@ TSendNode >> isBuiltinOperator [
 { #category : #'as yet unclassified' }
 TSendNode >> isBuiltinOperator: builtinFlag [
 
-	isBuiltinOperator _ builtinFlag.
+	isBuiltinOperator := builtinFlag.
 ]
 
 { #category : #'as yet unclassified' }
@@ -119,7 +119,7 @@ TSendNode >> printOn: aStream level: level [
 		aStream space; nextPutAll: selector.
 		^self
 	].
-	keywords _ selector keywords.
+	keywords := selector keywords.
 	1 to: keywords size do: [ :i |
 		aStream space.
 		aStream nextPutAll: (keywords at: i); space.
@@ -136,7 +136,7 @@ TSendNode >> receiver [
 { #category : #'as yet unclassified' }
 TSendNode >> receiver: aNode [
 
-	receiver _ aNode.
+	receiver := aNode.
 ]
 
 { #category : #'as yet unclassified' }
@@ -149,8 +149,8 @@ TSendNode >> removeAssertions [
 TSendNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [
-		receiver _ receiver replaceNodesIn: aDictionary.
-		arguments _ arguments collect: [ :a | a replaceNodesIn: aDictionary ].
+		receiver := receiver replaceNodesIn: aDictionary.
+		arguments := arguments collect: [ :a | a replaceNodesIn: aDictionary ].
 		self]
 ]
 
@@ -163,17 +163,17 @@ TSendNode >> selector [
 { #category : #'as yet unclassified' }
 TSendNode >> setSelector: aSymbol receiver: rcvrNode arguments: argList [
 
-	selector _ aSymbol.
-	receiver _ rcvrNode.
-	arguments _ argList asArray.
-	isBuiltinOperator _ false.
+	selector := aSymbol.
+	receiver := rcvrNode.
+	arguments := argList asArray.
+	isBuiltinOperator := false.
 ]
 
 { #category : #'as yet unclassified' }
 TSendNode >> setSelector: aSymbol receiver: rcvrNode arguments: argList isBuiltInOp: builtinFlag [
 
-	selector _ aSymbol.
-	receiver _ rcvrNode.
-	arguments _ argList asArray.
-	isBuiltinOperator _ builtinFlag.
+	selector := aSymbol.
+	receiver := rcvrNode.
+	arguments := argList asArray.
+	isBuiltinOperator := builtinFlag.
 ]

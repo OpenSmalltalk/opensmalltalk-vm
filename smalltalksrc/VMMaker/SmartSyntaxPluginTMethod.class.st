@@ -29,7 +29,7 @@ SmartSyntaxPluginTMethod class >> fromContext: aContext primitive: aString param
 { #category : #accessing }
 SmartSyntaxPluginTMethod >> args: anInteger [
 
-	^args _ anInteger
+	^args := anInteger
 ]
 
 { #category : #private }
@@ -45,7 +45,7 @@ SmartSyntaxPluginTMethod >> checkSuccessExpr [
 	"Return the parse tree for an expression that aborts the primitive if the successFlag is not true."
 
 	| expr |
-	expr _ 'interpreterProxy failed ifTrue: [^nil]'.
+	expr := 'interpreterProxy failed ifTrue: [^nil]'.
 	^ self statementsFor: expr varName: ''
 
 ]
@@ -94,7 +94,7 @@ or an assignment of that expression to a local, and manipulate the state and par
 					ifFalse: [sStream nextPut: stmt]]]).
 	isPrimitive 
 		ifTrue:
-			[export _ true.
+			[export := true.
 			 parseTree 
 				setStatements: self namedPrimitiveProlog, 
 								parseTree statements.
@@ -114,11 +114,11 @@ SmartSyntaxPluginTMethod >> extractSuppressFailureGuardDirective [
 	 and remove the directive from the method body. Answer the argument of the directive or false if there is no #supressFailureGuards: directive."
 
 	| result newStatements |
-	result _ false.
-	newStatements _ OrderedCollection new: parseTree statements size.
+	result := false.
+	newStatements := OrderedCollection new: parseTree statements size.
 	parseTree statements do: [ :stmt |
 		(stmt isSend and: [stmt selector = #suppressFailureGuards:]) ifTrue: [
-			result _ stmt args first name = 'true'.
+			result := stmt args first name = 'true'.
 		] ifFalse: [
 			newStatements add: stmt.
 		].
@@ -175,7 +175,7 @@ SmartSyntaxPluginTMethod >> fixUpReturns [
 { #category : #initializing }
 SmartSyntaxPluginTMethod >> fromContext: aContext primitive: aString parameters: aClassList receiver: aClass [
 
-	fullArgs _ args _ aContext tempNames
+	fullArgs := args := aContext tempNames
 				copyFrom: 1
 				to: aContext method numArgs.
 	self 
@@ -194,10 +194,10 @@ SmartSyntaxPluginTMethod >> generateFailureGuardOn: sStream [
 { #category : #'specifying primitives' }
 SmartSyntaxPluginTMethod >> handlePrimitiveDirective: aStmt on: sStream [
 
-	isPrimitive _ true.
-	fullArgs _ args.
+	isPrimitive := true.
+	fullArgs := args.
 	locals addAll: args.
-	args _ OrderedCollection new.
+	args := OrderedCollection new.
 	fullArgs with: parmSpecs do:
 		[:argName :spec |
 			declarations
@@ -211,7 +211,7 @@ SmartSyntaxPluginTMethod >> handlePrimitiveDirective: aStmt on: sStream [
 			statementsFor:
 				(rcvrSpec
 					ccg:		SmartSyntaxPluginCodeGenerator new
-					prolog:  [:expr | aStmt variable name, ' _ ', expr]
+					prolog:  [:expr | aStmt variable name, ' := ', expr]
 					expr: 	aStmt variable name
 					index: 	(fullArgs size))
 			varName: '')].
@@ -247,7 +247,7 @@ SmartSyntaxPluginTMethod >> isPrimitiveDirectiveSend: stmt [
 SmartSyntaxPluginTMethod >> namedPrimitiveProlog [
 
 	| cg |
-	cg _ SmartSyntaxPluginCodeGenerator new.
+	cg := SmartSyntaxPluginCodeGenerator new.
 	^Array streamContents: [:sStream |
 		1 to: fullArgs size do:
 			[:i |
@@ -256,7 +256,7 @@ SmartSyntaxPluginTMethod >> namedPrimitiveProlog [
 					statementsFor: 
 						((parmSpecs at: i) 
 							ccg: 	cg
-							prolog:  [:expr | (fullArgs at: i), ' _ ', expr]
+							prolog:  [:expr | (fullArgs at: i), ' := ', expr]
 							expr: (fullArgs at: i)
 							index: (fullArgs size - i))
 					varName: '')]]
@@ -276,7 +276,7 @@ SmartSyntaxPluginTMethod >> oldReplaceSizeMessages [
 	| argExpr |
 	parseTree nodesDo: [:n |
 		(n isSend and: [n selector = #size]) ifTrue: [
-			argExpr _ TSendNode new
+			argExpr := TSendNode new
 				setSelector: #+
 				receiver: n receiver
 				arguments: (Array with: (TConstantNode new setValue: 1)).
@@ -330,16 +330,16 @@ SmartSyntaxPluginTMethod >> popExpr: anInteger [
 { #category : #'specifying primitives' }
 SmartSyntaxPluginTMethod >> primitive: aString parameters: anArray receiver: aClassSymbol [
 
-	fullSelector _ selector.
-	selector _ aString asSymbol.
+	fullSelector := selector.
+	selector := aString asSymbol.
 	anArray size == args size ifFalse: 
 		[^self error: selector, ': incorrect number of parameter specifications'].
-	parmSpecs _ anArray collect:
+	parmSpecs := anArray collect:
 		[:each | Smalltalk at: each ifAbsent:
 			[^self error: selector, ': parameter spec must be a Behavior']].
 	parmSpecs do: [:each | each isBehavior ifFalse:
 		[^self error: selector, ': parameter spec must be a Behavior']].
-	rcvrSpec _ Smalltalk at: aClassSymbol asSymbol ifAbsent:
+	rcvrSpec := Smalltalk at: aClassSymbol asSymbol ifAbsent:
 		[^self error: selector, ': receiver spec must be a Behavior'].
 	rcvrSpec isBehavior ifFalse:
 		[^self error: selector, ': receiver spec must be a Behavior'].
@@ -392,23 +392,23 @@ SmartSyntaxPluginTMethod >> recordDeclarations [
 	 and remove the declarations from the method body."
 
 	| newStatements isDeclaration theClass varName varType |
-	newStatements _ OrderedCollection new: parseTree statements size.
+	newStatements := OrderedCollection new: parseTree statements size.
 	parseTree statements do: 
 		[:stmt |
-		 isDeclaration _ false.
+		 isDeclaration := false.
 		 stmt isSend ifTrue: 
 			[stmt selector = #var:declareC: ifTrue:
-				[isDeclaration _ true.
+				[isDeclaration := true.
 				declarations at: stmt args first value asString put: stmt args last value].
 			stmt selector = #var:type: ifTrue: [
-				isDeclaration _ true.
-				varName _ stmt args first value asString.
-				varType _ stmt args last value.
+				isDeclaration := true.
+				varName := stmt args first value asString.
+				varType := stmt args last value.
 				declarations at: varName put: (varType, ' ', varName).
 			].
 			 stmt selector = #var:as: ifTrue:
-				[isDeclaration _ true.
-				 theClass _ Smalltalk 
+				[isDeclaration := true.
+				 theClass := Smalltalk 
 					at: stmt args last name asSymbol
 					ifAbsent: [^self error: 'declarator must be a Behavior'].
 				 (theClass isKindOf: Behavior)
@@ -417,8 +417,8 @@ SmartSyntaxPluginTMethod >> recordDeclarations [
 					at: stmt args first value asString 
 					put: (theClass ccgDeclareCForVar: stmt args first value asString)].
 			 stmt selector = #returnTypeC: ifTrue: 
-				[isDeclaration _ true.
-				 returnType _ stmt args last value]].
+				[isDeclaration := true.
+				 returnType := stmt args last value]].
 		 isDeclaration ifFalse: [newStatements add: stmt]].
 	parseTree setStatements: newStatements asArray
 ]
@@ -428,8 +428,8 @@ SmartSyntaxPluginTMethod >> removeFinalSelfReturn [
 	"The Smalltalk parser automatically adds the statement '^self' to the end of methods without explicit returns. This method removes such statements, since the generated code has no notion of 'self' anyway."
 
 	| stmtList lastStmt |
-	stmtList _ parseTree statements asOrderedCollection.
-	lastStmt _ stmtList last.
+	stmtList := parseTree statements asOrderedCollection.
+	lastStmt := stmtList last.
 
 	((lastStmt isReturn) and:
 	 [(lastStmt expression isVariable) and:
@@ -464,20 +464,20 @@ SmartSyntaxPluginTMethod >> replaceSizeMessages [
 SmartSyntaxPluginTMethod >> setSelector: sel args: argList locals: localList block: aBlockNode primitive: aNumber [
 	"Initialize this method using the given information."
 
-	selector _ sel.
-	returnType _ 'sqInt'. 	 "assume return type is sqInt for now"
-	args _ argList asOrderedCollection collect: [:arg | arg key].
-	locals _ localList asOrderedCollection collect: [:arg | arg key].
-	declarations _ Dictionary new.
-	primitive _ aNumber.
-	parseTree _ aBlockNode asTranslatorNode.
-	labels _ OrderedCollection new.
-	complete _ false.  "set to true when all possible inlining has been done"
-	export _ self extractExportDirective.
-	static _ self extractStaticDirective.
+	selector := sel.
+	returnType := 'sqInt'. 	 "assume return type is sqInt for now"
+	args := argList asOrderedCollection collect: [:arg | arg key].
+	locals := localList asOrderedCollection collect: [:arg | arg key].
+	declarations := Dictionary new.
+	primitive := aNumber.
+	parseTree := aBlockNode asTranslatorNode.
+	labels := OrderedCollection new.
+	complete := false.  "set to true when all possible inlining has been done"
+	export := self extractExportDirective.
+	static := self extractStaticDirective.
 	self extractSharedCase.
-	isPrimitive _ false.  "set to true only if you find a primtive direction."
-	suppressingFailureGuards _ self extractSuppressFailureGuardDirective.
+	isPrimitive := false.  "set to true only if you find a primtive direction."
+	suppressingFailureGuards := self extractSuppressFailureGuardDirective.
 	self recordDeclarations.
 	self extractPrimitiveDirectives.
 
@@ -487,10 +487,10 @@ SmartSyntaxPluginTMethod >> setSelector: sel args: argList locals: localList blo
 SmartSyntaxPluginTMethod >> simulatePrologInContext: aContext [
 
 	|cg instructions |
-	cg _ SmartSyntaxPluginCodeGenerator new.
+	cg := SmartSyntaxPluginCodeGenerator new.
 	parmSpecs keysAndValuesDo: 
 		[:index :each |
-		 instructions _ ((parmSpecs at: index)
+		 instructions := ((parmSpecs at: index)
 			ccg: cg 
 			prolog: (cg ccgTVarBlock: index) 
 			expr: '<foo>' 
@@ -501,7 +501,7 @@ SmartSyntaxPluginTMethod >> simulatePrologInContext: aContext [
 			to: aContext receiver
 			notifying: nil
 			ifFail: nil].
-	instructions _ (rcvrSpec
+	instructions := (rcvrSpec
 		ccg: cg 
 		prolog: [:expr | '^', expr]
 		expr: '<foo>' 

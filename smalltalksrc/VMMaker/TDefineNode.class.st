@@ -28,7 +28,7 @@ TDefineNode >> name [
 
 { #category : #'as yet unclassified' }
 TDefineNode >> name: aName [
-	name _ aName
+	name := aName
 ]
 
 { #category : #'as yet unclassified' }

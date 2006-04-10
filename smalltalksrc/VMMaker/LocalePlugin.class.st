@@ -45,7 +45,7 @@ LocalePlugin >> primitiveCountry [
 	"return a 3 char string describing the country in use. ISO 3166 is the relevant source here; see http://www.unicode.org/onlinedat/countries.html for details. Using the 3 character Alpha-3 codes"
 	| oop |
 	self primitive:'primitiveCountry'.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 3.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 3.
 	self sqLocGetCountryInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 
@@ -64,8 +64,8 @@ LocalePlugin >> primitiveCurrencySymbol [
 Still need to find details on standard symbols - ISO 4217 is supposed to be it but cannot find on web"
 	| oop length |
 	self primitive:'primitiveCurrencySymbol'.
-	length _ self sqLocCurrencySymbolSize.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
+	length := self sqLocCurrencySymbolSize.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
 	self sqLocGetCurrencySymbolInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 
@@ -83,7 +83,7 @@ LocalePlugin >> primitiveDecimalSymbol [
 	"return a 1 char string describing the decimal symbol used - usually a . or a ,"
 	| oop |
 	self primitive:'primitiveDecimalSymbol'.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 1.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 1.
 	self sqLocGetDecimalSymbolInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 
@@ -94,7 +94,7 @@ LocalePlugin >> primitiveDigitGroupingSymbol [
 	"return a 1 char string describing the digitGrouping symbol used - usually a . or a , between triples of digits"
 	| oop |
 	self primitive:'primitiveDigitGroupingSymbol'.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 1.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 1.
 	self sqLocGetDigitGroupingSymbolInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 
@@ -105,7 +105,7 @@ LocalePlugin >> primitiveLanguage [
 	"return a 3 char string describing the language in use. ISO 639 is the relevant source here; see http://www.w3.org/WAI/ER/IG/ert/iso639.html for details"
 	| oop |
 	self primitive:'primitiveLanguage'.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 3.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: 3.
 	self sqLocGetLanguageInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 
@@ -122,8 +122,8 @@ mmmm month name
 "
 	| oop length |
 	self primitive:'primitiveLongDateFormat'.
-	length _ self sqLocLongDateFormatSize.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
+	length := self sqLocLongDateFormatSize.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
 	self sqLocGetLongDateFormatInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 
@@ -147,8 +147,8 @@ mmmm month name
 "
 	| oop length |
 	self primitive:'primitiveShortDateFormat'.
-	length _ self sqLocShortDateFormatSize.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
+	length := self sqLocShortDateFormatSize.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
 	self sqLocGetShortDateFormatInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 
@@ -162,8 +162,8 @@ h hour (h 12, H 24), m minute, s seconds, x (am/pm String)
 double symbol is null padded, single not padded (h=6, hh=06)"
 	| oop length |
 	self primitive:'primitiveTimeFormat'.
-	length _ self sqLocTimeFormatSize.
-	oop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
+	length := self sqLocTimeFormatSize.
+	oop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: length.
 	self sqLocGetTimeFormatInto: (interpreterProxy firstIndexableField: oop).
 	^oop
 

@@ -12,7 +12,7 @@ TParseNode >> allCalls [
 	"Answer a collection of selectors for the messages sent in this parse tree."
 
 	| calls |
-	calls _ Set new: 100.
+	calls := Set new: 100.
 	self nodesDo: [ :node |
 		node isSend ifTrue: [ calls add: node selector ].
 	].
@@ -36,7 +36,7 @@ TParseNode >> bindVariablesIn: aDictionary [
 { #category : #'emit comments' }
 TParseNode >> comment: aComment [
 
-	comment _ aComment 
+	comment := aComment 
 ]
 
 { #category : #'as yet unclassified' }
@@ -164,8 +164,8 @@ TParseNode >> nodeCount [
 	"Answer the number of nodes in this parseTree (a rough measure of its size)."
 
 	| cnt |
-	cnt _ 0.
-	self nodesDo: [ :n | cnt _ cnt + 1 ].
+	cnt := 0.
+	self nodesDo: [ :n | cnt := cnt + 1 ].
 	^cnt
 ]
 

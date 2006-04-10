@@ -6,7 +6,7 @@ Integer >> coerceTo: cTypeString sim: interpreter [
 	| unitSize |
 
 	cTypeString last = $* ifTrue: [  "C pointer"
-		unitSize _ cTypeString caseOf: {
+		unitSize := cTypeString caseOf: {
 		['char *'] -> [1].
 		['int *'] -> [4].
 		['float *'] -> [4].
@@ -27,7 +27,7 @@ Integer >> signedIntFromLong [
 
 	| sign |
 	self < 0 ifTrue: [self error: 'only valid for unsigned ints'].
-	sign _ self bitAnd: 16r80000000.
+	sign := self bitAnd: 16r80000000.
 	sign = 0 ifTrue: [^ self].
 	^ self - sign - sign
 ]
@@ -38,7 +38,7 @@ Integer >> signedIntFromShort [
 
 	| sign |
 	self < 0 ifTrue: [self error: 'only valid for unsigned ints'].
-	sign _ self bitAnd: 16r8000.
+	sign := self bitAnd: 16r8000.
 	sign = 0 ifTrue: [^ self].
 	^ self - sign - sign
 ]

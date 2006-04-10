@@ -29,7 +29,7 @@ Class {
 { #category : #'class initialization' }
 TMethod class >> initialize [
 	"TMethod initialize"	
-	CaseStatements _ IdentitySet new: 10.
+	CaseStatements := IdentitySet new: 10.
 	CaseStatements addAll: #(dispatchOn:in: dispatchOn:in:with: dispatchOn:in:with:with:).
 ]
 
@@ -61,8 +61,8 @@ TMethod >> argAssignmentsFor: meth args: argList in: aCodeGen [
 	"Optimization: If the actual parameters are either constants or local variables in the target method (the receiver), substitute them directly into the body of meth. Note that global variables cannot be subsituted because the inlined method might depend on the exact ordering of side effects to the globals."
 
 	| stmtList substitutionDict |
-	stmtList _ OrderedCollection new: 100.
-	substitutionDict _ Dictionary new: 100.
+	stmtList := OrderedCollection new: 100.
+	substitutionDict := Dictionary new: 100.
 	meth args with: argList do: [ :argName :exprNode |
 		(self isSubstitutableNode: exprNode intoMethod: meth in: aCodeGen) ifTrue: [
 			substitutionDict at: argName put: exprNode.
@@ -82,23 +82,23 @@ TMethod >> argConversionExprFor: varName stackIndex: stackIndex [
 	"Return the parse tree for an expression that fetches and converts the 
 	primitive argument at the given stack offset."
 	| exprList decl stmtList |
-	exprList _ OrderedCollection new.
+	exprList := OrderedCollection new.
 	(declarations includesKey: varName)
 		ifTrue: 
-			[decl _ declarations at: varName.
+			[decl := declarations at: varName.
 			(decl includes: $*)
 				ifTrue: 
 					["array"
-					exprList add: varName , ' _ ', self vmNameString, ' arrayValueOf: (', self vmNameString, ' stackValue: (' , stackIndex printString , '))'.
-					exprList add: varName , ' _ ' , varName , ' - 1']
+					exprList add: varName , ' := ', self vmNameString, ' arrayValueOf: (', self vmNameString, ' stackValue: (' , stackIndex printString , '))'.
+					exprList add: varName , ' := ' , varName , ' - 1']
 				ifFalse: 
 					["must be a double"
 					(decl findString: 'double' startingAt: 1)
 						= 0 ifTrue: [self error: 'unsupported type declaration in a primitive method'].
-					exprList add: varName , ' _ ', self vmNameString, ' stackFloatValue: ' , stackIndex printString]]
+					exprList add: varName , ' := ', self vmNameString, ' stackFloatValue: ' , stackIndex printString]]
 		ifFalse: ["undeclared variables are taken to be integer"
-			exprList add: varName , ' _ ', self vmNameString, ' stackIntegerValue: ' , stackIndex printString].
-	stmtList _ OrderedCollection new.
+			exprList add: varName , ' := ', self vmNameString, ' stackIntegerValue: ' , stackIndex printString].
+	stmtList := OrderedCollection new.
 	exprList do: [:e | stmtList addAll: (self statementsFor: e varName: varName)].
 	^ stmtList
 ]
@@ -119,12 +119,12 @@ TMethod >> asInlineNode [
 TMethod >> bindClassVariablesIn: constantDictionary [
 	"Class variables are used as constants. This method replaces all references to class variables in the body of this method with the corresponding constant looked up in the class pool dictionary of the source class. The source class class variables should be initialized before this method is called."
 
-	parseTree _ parseTree bindVariablesIn: constantDictionary.
+	parseTree := parseTree bindVariablesIn: constantDictionary.
 ]
 
 { #category : #transformations }
 TMethod >> bindVariableUsesIn: aDictionary [
-	parseTree _ parseTree bindVariableUsesIn: aDictionary.
+	parseTree := parseTree bindVariableUsesIn: aDictionary.
 ]
 
 { #category : #transformations }
@@ -148,18 +148,18 @@ TMethod >> buildCaseStmt: aSendNode [
 TMethod >> checkForCompleteness: stmtLists in: aCodeGen [
 	"Set the complete flag if none of the given statement list nodes contains further candidates for inlining."
 
-	complete _ true.
+	complete := true.
 	stmtLists do: [ :stmtList |
 		stmtList statements do: [ :node |
 			(self inlineableSend: node in: aCodeGen) ifTrue: [
-				complete _ false.  "more inlining to do"
+				complete := false.  "more inlining to do"
 				^self
 			].
 		].
 	].
 	parseTree nodesDo: [ :n |
 		(self inlineableFunctionCall: n in: aCodeGen) ifTrue: [
-			complete _ false.  "more inlining to do"
+			complete := false.  "more inlining to do"
 			^self
 		].
 	].
@@ -170,7 +170,7 @@ TMethod >> checkSuccessExpr [
 	"Return the parse tree for an expression that aborts the primitive if the successFlag is not true."
 
 	| expr |
-	expr _ 'successFlag ifFalse: [^ nil ]'.
+	expr := 'successFlag ifFalse: [^ nil ]'.
 	^ self statementsFor: expr varName: ''
 
 ]
@@ -178,7 +178,7 @@ TMethod >> checkSuccessExpr [
 { #category : #accessing }
 TMethod >> comment: aComment [
 
-	comment _ aComment 
+	comment := aComment 
 ]
 
 { #category : #'inlining support' }
@@ -221,13 +221,13 @@ TMethod >> covertToZeroBasedArrayReferences [
 	| oldIndexExpr newIndexExpr |
 	parseTree nodesDo: [ :n |
 		(n isSend and: [(n selector = #at:) or: [ n selector = #at:put: ]]) ifTrue: [
-			oldIndexExpr _ n args first.
+			oldIndexExpr := n args first.
 			oldIndexExpr isConstant ifTrue: [
 				"index expression is a constant: decrement the constant now"
-				newIndexExpr _ TConstantNode new setValue: (n args first value - 1).
+				newIndexExpr := TConstantNode new setValue: (n args first value - 1).
 			] ifFalse: [
 				"index expression is complex: build an expression to decrement result at runtime"
-				newIndexExpr _ TSendNode new
+				newIndexExpr := TSendNode new
 					setSelector: #-
 					receiver: oldIndexExpr
 					arguments: (Array with: (TConstantNode new setValue: 1)).
@@ -252,7 +252,7 @@ TMethod >> definingClass [
 
 { #category : #accessing }
 TMethod >> definingClass: aClass [
-	definingClass _ aClass.
+	definingClass := aClass.
 ]
 
 { #category : #'C code generation' }
@@ -293,7 +293,7 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen [
 	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector), '('.
 	args isEmpty ifTrue: [ aStream nextPutAll: 'void' ].
 	1 to: args size do: [ :i |
-		arg _ args at: i.
+		arg := args at: i.
 		(declarations includesKey: arg) ifTrue: [
 			aStream nextPutAll: (declarations at: arg).
 		] ifFalse: [
@@ -356,7 +356,7 @@ TMethod >> emitProxyFunctionPrototype: aStream generator: aCodeGen [
 	aStream nextPutAll: '(*', (aCodeGen cFunctionNameFor: selector), ')('.
 	args isEmpty ifTrue: [ aStream nextPutAll: 'void' ].
 	1 to: args size do: [ :i |
-		arg _ args at: i.
+		arg := args at: i.
 		(declarations includesKey: arg) ifTrue: [
 			aStream nextPutAll: (declarations at: arg).
 		] ifFalse: [
@@ -380,10 +380,10 @@ TMethod >> exitVar: exitVar label: exitLabel [
 	"Optimization: If exitVar is nil, the return value of the inlined method is not being used, so don't add the assignment statement."
 
 	| newStmts labelUsed |
-	labelUsed _ false.
+	labelUsed := false.
 	parseTree nodesDo: [ :node |
 		node isStmtList ifTrue: [
-			newStmts _ OrderedCollection new: 100.
+			newStmts := OrderedCollection new: 100.
 			node statements do: [ :stmt |
 				(stmt isReturn) ifTrue: [
 					exitVar = nil ifTrue: [
@@ -401,7 +401,7 @@ TMethod >> exitVar: exitVar label: exitLabel [
 					(stmt == parseTree statements last) ifFalse: [
 						"generate a goto (this return is NOT the last statement in the method)"
 						newStmts add: (TGoToNode new setLabel: exitLabel).
-						labelUsed _ true.
+						labelUsed := true.
 					].
 				] ifFalse: [
 					newStmts addLast: stmt.
@@ -429,11 +429,11 @@ TMethod >> extractExportDirective [
 	 and remove the directive from the method body. Return the argument of the directive or false if there is no export directive."
 
 	| result newStatements |
-	result _ false.
-	newStatements _ OrderedCollection new: parseTree statements size.
+	result := false.
+	newStatements := OrderedCollection new: parseTree statements size.
 	parseTree statements do: [ :stmt |
 		(stmt isSend and: [stmt selector = #export:]) ifTrue: [
-			result _ stmt args first value = true.
+			result := stmt args first value = true.
 		] ifFalse: [
 			newStatements add: stmt.
 		].
@@ -452,11 +452,11 @@ TMethod >> extractInlineDirective [
 
 	| result newStatements |
 	sharedCase ifNotNil:[^false]. "don't auto-inline shared code; it gets handled specially"
-	result _ #dontCare.
-	newStatements _ OrderedCollection new: parseTree statements size.
+	result := #dontCare.
+	newStatements := OrderedCollection new: parseTree statements size.
 	parseTree statements do: [ :stmt |
 		(stmt isSend and: [stmt selector = #inline:]) ifTrue: [
-			result _ stmt args first value = true.
+			result := stmt args first value = true.
 		] ifFalse: [
 			newStatements add: stmt.
 		].
@@ -474,11 +474,11 @@ TMethod >> extractSharedCase [
 	and remove the directive from the method body."
 
 	| newStatements |
-	newStatements _ OrderedCollection new: parseTree statements size.
+	newStatements := OrderedCollection new: parseTree statements size.
 	parseTree statements do: [ :stmt |
 		(stmt isSend and: [stmt selector = #sharedCodeNamed:inCase:]) ifTrue: [
-			sharedLabel _ stmt args first value.
-			sharedCase _ stmt args last value
+			sharedLabel := stmt args first value.
+			sharedCase := stmt args last value
 		] ifFalse: [
 			newStatements add: stmt.
 		].
@@ -498,11 +498,11 @@ TMethod >> extractStaticDirective [
 	 and remove the directive from the method body. Return the argument of the directive or true if there is no static directive."
 
 	| result newStatements |
-	result _ true.
-	newStatements _ OrderedCollection new: parseTree statements size.
+	result := true.
+	newStatements := OrderedCollection new: parseTree statements size.
 	parseTree statements do: [ :stmt |
 		(stmt isSend and: [stmt selector = #static:]) ifTrue: [
-			result _ stmt args first value ~= false.
+			result := stmt args first value ~= false.
 		] ifFalse: [
 			newStatements add: stmt.
 		].
@@ -516,7 +516,7 @@ TMethod >> fetchRcvrExpr [
 	"Return the parse tree for an expression that fetches the receiver from the stack."
 
 	| expr |
-	expr _ 'rcvr _ ', self vmNameString, ' stackValue: (', args size printString, ')'.
+	expr := 'rcvr := ', self vmNameString, ' stackValue: (', args size printString, ')'.
 	^ self statementsFor: expr varName: ''
 
 ]
@@ -528,7 +528,7 @@ TMethod >> fixUpReturns: argCount postlog: postlog [
 	| newStmts |
 	parseTree nodesDo: [:node |
 		node isStmtList ifTrue: [
-			newStmts _ OrderedCollection new: 100.
+			newStmts := OrderedCollection new: 100.
 			node statements do: [:stmt |
 				stmt isReturn
 					ifTrue: [
@@ -558,7 +558,7 @@ TMethod >> freeVariableReferences [
 	"Answer a collection of variables referenced this method, excluding locals, arguments, and pseudovariables."
 
 	| refs |
-	refs _ Set new.
+	refs := Set new.
 	parseTree nodesDo: [ :node |
 		node isVariable ifTrue: [ refs add: node name asString ].
 	].
@@ -575,7 +575,7 @@ TMethod >> globalStructureBuildMethodHasFoo [
 
 { #category : #accessing }
 TMethod >> globalStructureBuildMethodHasFoo: number [
-	globalStructureBuildMethodHasFoo _ number
+	globalStructureBuildMethodHasFoo := number
 ]
 
 { #category : #utilities }
@@ -604,27 +604,27 @@ TMethod >> hasReturn [
 TMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 
 	| stmt sel meth newStatements maxTemp usedVars exitLabel v |
-	maxTemp _ 0.
+	maxTemp := 0.
 	parseTree nodesDo: [ :n |
 		n isCaseStmt ifTrue: [
 			n cases do: [ :stmtNode |
-				stmt _ stmtNode statements first.
+				stmt := stmtNode statements first.
 				stmt isSend ifTrue: [
-					sel _ stmt selector.
-					meth _ aCodeGen methodNamed: sel.
+					sel := stmt selector.
+					meth := aCodeGen methodNamed: sel.
 					((meth ~= nil) and:
 					 [meth hasNoCCode and:
 					 [meth args size = 0]]) ifTrue: [
-						meth _ meth copy.
+						meth := meth copy.
 						meth hasReturn ifTrue: [
-							exitLabel _ self unusedLabelForInliningInto: self.
+							exitLabel := self unusedLabelForInliningInto: self.
 							meth exitVar: nil label: exitLabel.
 							labels add: exitLabel.
-						] ifFalse: [ exitLabel _ nil ].
+						] ifFalse: [ exitLabel := nil ].
 
 						meth renameLabelsForInliningInto: self.
 						meth labels do: [ :label | labels add: label ].
-						newStatements _ stmtNode statements asOrderedCollection.
+						newStatements := stmtNode statements asOrderedCollection.
 						newStatements removeFirst.
 
 						exitLabel ~= nil ifTrue: [
@@ -642,9 +642,9 @@ TMethod >> inlineCaseStatementBranchesIn: aCodeGen localizingVars: varsList [
 			].
 		].
 	].
-	usedVars _ (locals, args) asSet.
+	usedVars := (locals, args) asSet.
 	1 to: maxTemp do: [ :i |
-		v _ ('t', i printString).
+		v := ('t', i printString).
 		(usedVars includes: v) ifTrue: [ self error: 'temp variable name conflicts with an existing local or arg' ].
 		locals addLast: v.
 	].
@@ -663,7 +663,7 @@ TMethod >> inlineCodeOrNilForStatement: aNode in: aCodeGen [
 	| stmts |
 	aNode isReturn ifTrue: [
 		(self inlineableSend: aNode expression in: aCodeGen) ifTrue: [
-			stmts _ self inlineSend: aNode expression
+			stmts := self inlineSend: aNode expression
 				directReturn: true exitVar: nil in: aCodeGen.
 			^stmts
 		].
@@ -691,12 +691,12 @@ TMethod >> inlineFunctionCall: aSendNode in: aCodeGen [
 		2. the method to be inlined contains no additional embedded returns."
 
 	| sel meth substitutionDict |
-	sel _ aSendNode selector.
-	meth _ (aCodeGen methodNamed: sel) copy.
+	sel := aSendNode selector.
+	meth := (aCodeGen methodNamed: sel) copy.
 	meth renameVarsForInliningInto: self in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
 	self addVarsDeclarationsAndLabelsOf: meth.
-	substitutionDict _ Dictionary new: 100.
+	substitutionDict := Dictionary new: 100.
 	meth args with: aSendNode args do: [ :argName :exprNode |
 		substitutionDict at: argName put: exprNode.
 		locals remove: argName].
@@ -709,8 +709,8 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 	"Answer a collection of statments to replace the given send. directReturn indicates that the send is the expression of a return statement, so returns can be left in the body of the inlined method. If exitVar is nil, the value returned by the send is not used; thus, returns need not assign to the output variable."
 
 	| sel meth exitLabel labelUsed inlineStmts |
-	sel _ aSendNode selector.
-	meth _ (aCodeGen methodNamed: sel) copy.
+	sel := aSendNode selector.
+	meth := (aCodeGen methodNamed: sel) copy.
 	meth renameVarsForInliningInto: self in: aCodeGen.
 	meth renameLabelsForInliningInto: self.
 	self addVarsDeclarationsAndLabelsOf: meth.
@@ -718,20 +718,20 @@ TMethod >> inlineSend: aSendNode directReturn: directReturn exitVar: exitVar in:
 		directReturn ifTrue: [
 			"propagate the return type, if necessary"
 			returnType = meth returnType ifFalse: [ self halt ].  "caller's return type should be declared by user"
-			returnType _ meth returnType.
+			returnType := meth returnType.
 		] ifFalse: [
-			exitLabel _ self unusedLabelForInliningInto: self.
-			labelUsed _ meth exitVar: exitVar label: exitLabel.
+			exitLabel := self unusedLabelForInliningInto: self.
+			labelUsed := meth exitVar: exitVar label: exitLabel.
 			labelUsed
 				ifTrue: [ labels add: exitLabel ]
-				ifFalse: [ exitLabel _ nil ].
+				ifFalse: [ exitLabel := nil ].
 		].
 		"propagate type info if necessary"
 		((exitVar ~= nil) and: [meth returnType ~= 'sqInt']) ifTrue: [
 			declarations at: exitVar put: meth returnType, ' ', exitVar.
 		].
 	].
-	inlineStmts _ OrderedCollection new: 100.
+	inlineStmts := OrderedCollection new: 100.
 	inlineStmts add: (TLabeledCommentNode new setComment: 'begin ', sel).
 	inlineStmts addAll:
 		(self argAssignmentsFor: meth args: aSendNode args in: aCodeGen).
@@ -753,7 +753,7 @@ TMethod >> inlineableFunctionCall: aNode in: aCodeGen [
 
 	| m |
 	aNode isSend ifFalse: [ ^false ].
-	m _ aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
+	m := aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
 	((m ~= nil) and: [m isFunctional and: [aCodeGen mayInline: m selector]]) ifTrue: [
 		aNode args do: [ :a | (self isSubstitutableNode: a intoMethod: m in: aCodeGen) ifFalse: [ ^false ]].
 		^true
@@ -768,7 +768,7 @@ TMethod >> inlineableSend: aNode in: aCodeGen [
 
 	| m |
 	aNode isSend ifFalse: [ ^false ].
-	m _ aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
+	m := aCodeGen methodNamed: aNode selector.  "nil if builtin or external function"
 	^(m ~= nil) and: [m isComplete and: [aCodeGen mayInline: m selector]]
 ]
 
@@ -777,24 +777,24 @@ TMethod >> instVarGetExprFor: varName offset: instIndex [
 	"Return the parse tree for an expression that fetches and converts the value of the instance variable at the given offset."
 
 	| exprList decl stmtList |
-	exprList _ OrderedCollection new.
+	exprList := OrderedCollection new.
 	(declarations includesKey: varName) ifTrue: [
-		decl _ declarations at: varName.
+		decl := declarations at: varName.
 		(decl includes: $*) ifTrue: [  "array"
 			exprList add:
-				(varName, ' _ ', self vmNameString, ' fetchArray: ', instIndex printString, ' ofObject: rcvr').
-			exprList add: (varName, ' _ ', varName, ' - 1').
+				(varName, ' := ', self vmNameString, ' fetchArray: ', instIndex printString, ' ofObject: rcvr').
+			exprList add: (varName, ' := ', varName, ' - 1').
 		] ifFalse: [  "must be a double"
 			((decl findString: 'double' startingAt: 1) = 0)
 				ifTrue: [ self error: 'unsupported type declaration in a primitive method' ].
 			exprList add:
-				(varName, ' _ ', self vmNameString, ' fetchFloat: ', instIndex printString, ' ofObject: rcvr').
+				(varName, ' := ', self vmNameString, ' fetchFloat: ', instIndex printString, ' ofObject: rcvr').
 		].
 	] ifFalse: [  "undeclared variables are taken to be integer"
 		exprList add:
-			(varName, ' _ ', self vmNameString, ' fetchInteger: ', instIndex printString, ' ofObject: rcvr').
+			(varName, ' := ', self vmNameString, ' fetchInteger: ', instIndex printString, ' ofObject: rcvr').
 	].
-	stmtList _ OrderedCollection new.
+	stmtList := OrderedCollection new.
 	exprList do: [:e | stmtList addAll: (self statementsFor: e varName: varName)].
 	^ stmtList
 
@@ -808,7 +808,7 @@ TMethod >> instVarPutExprFor: varName offset: instIndex [
 	(declarations includesKey: varName) ifTrue: [
 		self error: 'a primitive method can only modify integer instance variables'.
 	].
-	expr _ '', self vmNameString, ' storeInteger: ', instIndex printString, ' ofObject: rcvr withValue: ', varName.
+	expr := '', self vmNameString, ' storeInteger: ', instIndex printString, ' ofObject: rcvr withValue: ', varName.
 	^ self statementsFor: expr varName: varName
 
 ]
@@ -858,7 +858,7 @@ TMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 	aNode isConstant ifTrue: [ ^ true ].
 
 	aNode isVariable ifTrue: [
-		var _ aNode name.
+		var := aNode name.
 		((locals includes: var) or: [args includes: var]) ifTrue: [ ^ true ].
 		(#(self true false nil) includes: var) ifTrue: [ ^ true ].
 		(targetMeth maySubstituteGlobal: var in: aCodeGen) ifTrue: [ ^ true ].
@@ -870,7 +870,7 @@ TMethod >> isSubstitutableNode: aNode intoMethod: targetMeth in: aCodeGen [
 			node isBuiltinOperator ifFalse: [ ^false ].
 		].
 		node isVariable ifTrue: [
-			var _ node name.
+			var := node name.
 			((locals includes: var) or:
 			 [(args includes: var) or:
 			 [(#(self true false nil) includes: var) or:
@@ -901,7 +901,7 @@ TMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
 
 	possibleSideEffectsCache = nil ifTrue: [
 		"see if this calls any other method and record the result"
-		possibleSideEffectsCache _ self computePossibleSideEffectsIn: aCodeGen.
+		possibleSideEffectsCache := self computePossibleSideEffectsIn: aCodeGen.
 	].
 	possibleSideEffectsCache ifTrue: [ ^ false ].
 
@@ -921,8 +921,8 @@ TMethod >> nodeCount [
 	"Answer the number of nodes in this method's parseTree (a rough measure of its size)."
 
 	| cnt |
-	cnt _ 0.
-	parseTree nodesDo: [ :n | cnt _ cnt + 1 ].
+	cnt := 0.
+	parseTree nodesDo: [ :n | cnt := cnt + 1 ].
 	^cnt
 ]
 
@@ -937,7 +937,7 @@ TMethod >> parseTree [
 TMethod >> parseTree: aNode [
 	"Set the parse tree of this method."
 
-	parseTree _ aNode.
+	parseTree := aNode.
 ]
 
 { #category : #'primitive compilation' }
@@ -945,7 +945,7 @@ TMethod >> popArgsExpr: argCount [
 	"Return the parse tree for an expression that pops the given number of arguments from the stack."
 
 	| expr |
-	expr _ '', self vmNameString, ' pop: ', argCount printString.
+	expr := '', self vmNameString, ' pop: ', argCount printString.
 	^ self statementsFor: expr varName: ''
 
 ]
@@ -963,9 +963,9 @@ TMethod >> prepareMethodIn: aCodeGen [
 		].
 		node isStmtList ifTrue: [
 			"replace dispatchOn:in: with case statement node"
-			stmts _ node statements.
+			stmts := node statements.
 			1 to: stmts size do: [ :i |
-				stmt _ stmts at: i.
+				stmt := stmts at: i.
 				(stmt isSend and: [CaseStatements includes: stmt selector]) ifTrue: [
 					stmts at: i put: (self buildCaseStmt: stmt).
 				].
@@ -978,13 +978,13 @@ TMethod >> prepareMethodIn: aCodeGen [
 TMethod >> preparePrimitiveName [
 	"Prepare the selector for this method in translation"
 	| aClass |
-	aClass _ definingClass.
+	aClass := definingClass.
 	primitive = 117 
-		ifTrue:[selector _ ((aClass includesSelector: selector)
+		ifTrue:[selector := ((aClass includesSelector: selector)
 					ifTrue: [aClass compiledMethodAt: selector]
 					ifFalse: [aClass class compiledMethodAt: selector]) literals first at: 2.
-				export _ true]
-		ifFalse:[selector _ 'prim', aClass name, selector].
+				export := true]
+		ifFalse:[selector := 'prim', aClass name, selector].
 
 
 ]
@@ -1011,18 +1011,18 @@ Undeclared variables are taken to be integers and will be converted from Smallta
 
 	| prolog postlog instVarsUsed varsAssignedTo instVarList primArgCount varName endsWithReturn aClass |
 selector == #setInterpreter: ifTrue:[self halt].
-	aClass _ definingClass.
-	prolog _ OrderedCollection new.
-	postlog _ OrderedCollection new.
-	instVarsUsed _ self freeVariableReferences asSet.
-	varsAssignedTo _ self variablesAssignedTo asSet.
-	instVarList _ aClass allInstVarNames.
-	primArgCount _ args size.
+	aClass := definingClass.
+	prolog := OrderedCollection new.
+	postlog := OrderedCollection new.
+	instVarsUsed := self freeVariableReferences asSet.
+	varsAssignedTo := self variablesAssignedTo asSet.
+	instVarList := aClass allInstVarNames.
+	primArgCount := args size.
 
 	"add receiver fetch and arg conversions to prolog"
 	prolog addAll: self fetchRcvrExpr.
 	1 to: args size do: [:argIndex |
-		varName _ args at: argIndex.
+		varName := args at: argIndex.
 		prolog addAll:
 			(self argConversionExprFor: varName stackIndex: args size - argIndex)].
 
@@ -1031,7 +1031,7 @@ selector == #setInterpreter: ifTrue:[self halt].
 
 	"add instance variable fetches to prolog and instance variable stores to postlog"
 	1 to: instVarList size do: [:varIndex |
-		varName _ instVarList at: varIndex.
+		varName := instVarList at: varIndex.
 		(instVarsUsed includes: varName) ifTrue: [
 			locals add: varName.
 			prolog addAll: (self instVarGetExprFor: varName offset: varIndex - 1).
@@ -1041,10 +1041,10 @@ selector == #setInterpreter: ifTrue:[self halt].
 
 	locals addAllFirst: args.
 	locals addFirst: 'rcvr'.
-	args _ args class new.
+	args := args class new.
 	locals asSet size = locals size
 		ifFalse: [self error: 'local name conflicts with instance variable name'].
-	endsWithReturn _ self endsWithReturn.
+	endsWithReturn := self endsWithReturn.
 	self fixUpReturns: primArgCount postlog: postlog.
 
 	endsWithReturn
@@ -1088,23 +1088,23 @@ TMethod >> recordDeclarations [
 	 and remove the declarations from the method body."
 
 	| newStatements isDeclaration varName varType |
-	newStatements _ OrderedCollection new: parseTree statements size.
+	newStatements := OrderedCollection new: parseTree statements size.
 	parseTree statements do: [ :stmt |
-		isDeclaration _ false.
+		isDeclaration := false.
 		stmt isSend ifTrue: [
 			stmt selector = #var:declareC: ifTrue: [
-				isDeclaration _ true.
+				isDeclaration := true.
 				declarations at: stmt args first value asString put: stmt args last value.
 			].
 			stmt selector = #var:type: ifTrue: [
-				isDeclaration _ true.
-				varName _ stmt args first value asString.
-				varType _ stmt args last value.
+				isDeclaration := true.
+				varName := stmt args first value asString.
+				varType := stmt args last value.
 				declarations at: varName put: (varType, ' ', varName).
 			].
 			stmt selector = #returnTypeC: ifTrue: [
-				isDeclaration _ true.
-				returnType _ stmt args last value.
+				isDeclaration := true.
+				returnType := stmt args last value.
 			].
 		].
 		isDeclaration ifFalse: [
@@ -1116,12 +1116,12 @@ TMethod >> recordDeclarations [
 
 { #category : #accessing }
 TMethod >> referencesGlobalStructIncrementBy: value [
-	globalStructureBuildMethodHasFoo _ globalStructureBuildMethodHasFoo + value.
+	globalStructureBuildMethodHasFoo := globalStructureBuildMethodHasFoo + value.
 ]
 
 { #category : #accessing }
 TMethod >> referencesGlobalStructMakeZero [
-	globalStructureBuildMethodHasFoo _ 0
+	globalStructureBuildMethodHasFoo := 0
 ]
 
 { #category : #transformations }
@@ -1134,8 +1134,8 @@ TMethod >> removeFinalSelfReturn [
 	"The Smalltalk parser automatically adds the statement '^self' to the end of methods without explicit returns. This method removes such statements, since the generated code has no notion of 'self' anyway."
 
 	| stmtList lastStmt |
-	stmtList _ parseTree statements asOrderedCollection.
-	lastStmt _ stmtList last.
+	stmtList := parseTree statements asOrderedCollection.
+	lastStmt := stmtList last.
 
 	((lastStmt isReturn) and:
 	 [(lastStmt expression isVariable) and:
@@ -1151,7 +1151,7 @@ TMethod >> removeUnusedTemps [
 	"After inlining some variable references are now obsolete, we could fix them there but the 
 	code seems a bit complicated, the other choice to to rebuild the locals before extruding. This is done here"
 	| refs |
-	refs _ Bag new.
+	refs := Bag new.
 	"find all the variable names referenced in this method"
 	parseTree nodesDo: [ :node |
 		node isVariable ifTrue: [ refs add: node name asString ].
@@ -1159,7 +1159,7 @@ TMethod >> removeUnusedTemps [
 	"add all the non-arg declarations (might be variables usedonly in cCode sections)"
 	refs addAll:((self declarations keys) reject: [:e | self args includes: e]).
 	"reset the locals to be only those still referred to"
-	locals _ locals select: [:e | refs includes: e].
+	locals := locals select: [:e | refs includes: e].
 	^refs
 
 ]
@@ -1169,13 +1169,13 @@ TMethod >> renameLabelsForInliningInto: destMethod [
 	"Rename any labels that would clash with those of the destination method."
 
 	| destLabels usedLabels labelMap newLabelName |
-	destLabels _ destMethod labels asSet.
-	usedLabels _ destLabels copy.  "usedLabels keeps track of labels in use"
+	destLabels := destMethod labels asSet.
+	usedLabels := destLabels copy.  "usedLabels keeps track of labels in use"
 	usedLabels addAll: labels.
-	labelMap _ Dictionary new: 100.
+	labelMap := Dictionary new: 100.
 	self labels do: [ :l |
 		(destLabels includes: l) ifTrue: [
-			newLabelName _ self unusedNamePrefixedBy: 'l' avoiding: usedLabels.
+			newLabelName := self unusedNamePrefixedBy: 'l' avoiding: usedLabels.
 			labelMap at: l put: newLabelName.
 		].
 	].
@@ -1186,7 +1186,7 @@ TMethod >> renameLabelsForInliningInto: destMethod [
 TMethod >> renameLabelsUsing: aDictionary [
 	"Rename all labels according to the old->new mappings of the given dictionary."
 
-	labels _ labels collect: [ :label |
+	labels := labels collect: [ :label |
 		(aDictionary includesKey: label) ifTrue: [ aDictionary at: label ] ifFalse: [ label ].
 	].
 
@@ -1206,21 +1206,21 @@ TMethod >> renameVariablesUsing: aDictionary [
 
 	| newDecls |
 	"map args and locals"
-	args _ args collect: [ :arg |
+	args := args collect: [ :arg |
 		(aDictionary includesKey: arg) ifTrue: [ aDictionary at: arg ] ifFalse: [ arg ].
 	].
-	locals _ locals collect: [ :v |
+	locals := locals collect: [ :v |
 		(aDictionary includesKey: v) ifTrue: [ aDictionary at: v ] ifFalse: [ v ].
 	].
 
 	"map declarations"
-	newDecls _ declarations species new.
+	newDecls := declarations species new.
 	declarations associationsDo: [ :assoc |
 		(aDictionary includesKey: assoc key)
 			ifTrue: [ newDecls at: (aDictionary at: assoc key) put: assoc value ]
 			ifFalse: [ newDecls add: assoc ].
 	].
-	declarations _ newDecls.
+	declarations := newDecls.
 
 	"map variable names in parse tree"
 	parseTree nodesDo: [ :node |
@@ -1244,11 +1244,11 @@ TMethod >> renameVarsForCaseStmt [
 	"Rename the arguments and locals of this method with names like t1, t2, t3, etc. Return the number of variable names assigned. This is done to allow registers to be shared among the cases."
 
 	| i varMap |
-	i _ 1.
-	varMap _ Dictionary new: 100.
+	i := 1.
+	varMap := Dictionary new: 100.
 	args, locals do: [ :v |
 		varMap at: v put: ('t', i printString) asSymbol.
-		i _ i + 1.
+		i := i + 1.
 	].
 	self renameVariablesUsing: varMap.
 	^ i - 1
@@ -1259,15 +1259,15 @@ TMethod >> renameVarsForInliningInto: destMethod in: aCodeGen [
 	"Rename any variables that would clash with those of the destination method."
 
 	| destVars usedVars varMap newVarName |
-	destVars _ aCodeGen globalsAsSet copy.
+	destVars := aCodeGen globalsAsSet copy.
 	destVars addAll: destMethod locals.
 	destVars addAll: destMethod args.
-	usedVars _ destVars copy.  "keeps track of names in use"
+	usedVars := destVars copy.  "keeps track of names in use"
 	usedVars addAll: args; addAll: locals.
-	varMap _ Dictionary new: 100.
+	varMap := Dictionary new: 100.
 	args, locals do: [ :v |
 		(destVars includes: v) ifTrue: [
-			newVarName _ self unusedNamePrefixedBy: v avoiding: usedVars.
+			newVarName := self unusedNamePrefixedBy: v avoiding: usedVars.
 			varMap at: v put: newVarName.
 		].
 	].
@@ -1286,7 +1286,7 @@ TMethod >> replaceSizeMessages [
 	| argExpr |
 	parseTree nodesDo: [:n |
 		(n isSend and: [n selector = #size]) ifTrue: [
-			argExpr _ TSendNode new
+			argExpr := TSendNode new
 				setSelector: #+
 				receiver: n receiver
 				arguments: (Array with: (TConstantNode new setValue: 1)).
@@ -1314,43 +1314,43 @@ TMethod >> selector [
 { #category : #accessing }
 TMethod >> selector: newSelector [
 
-	selector _ newSelector.
+	selector := newSelector.
 ]
 
 { #category : #initialization }
 TMethod >> setSelector: sel args: argList locals: localList block: aBlockNode primitive: aNumber [
 	"Initialize this method using the given information."
 
-	selector _ sel.
-	returnType _ 'sqInt'. 	 "assume return type is long for now"
-	args _ argList asOrderedCollection collect: [:arg | arg key].
-	locals _ localList asOrderedCollection collect: [:arg | arg key].
-	declarations _ Dictionary new.
-	primitive _ aNumber.
-	parseTree _ aBlockNode asTranslatorNode.
-	labels _ OrderedCollection new.
-	complete _ false.  "set to true when all possible inlining has been done"
-	export _ self extractExportDirective.
-	static _ self extractStaticDirective.
+	selector := sel.
+	returnType := 'sqInt'. 	 "assume return type is long for now"
+	args := argList asOrderedCollection collect: [:arg | arg key].
+	locals := localList asOrderedCollection collect: [:arg | arg key].
+	declarations := Dictionary new.
+	primitive := aNumber.
+	parseTree := aBlockNode asTranslatorNode.
+	labels := OrderedCollection new.
+	complete := false.  "set to true when all possible inlining has been done"
+	export := self extractExportDirective.
+	static := self extractStaticDirective.
 	self extractSharedCase.
 	self removeFinalSelfReturn.
 	self recordDeclarations.
-	globalStructureBuildMethodHasFoo _ 0.
+	globalStructureBuildMethodHasFoo := 0.
 ]
 
 { #category : #initialization }
 TMethod >> setSelector: sel returnType: retType args: argList locals: localList declarations: decls primitive: primNumber parseTree: aNode labels: labelList complete: completeFlag [
 	"Initialize this method using the given information. Used for copying."
 
-	selector _ sel.
-	returnType _ retType.
-	args _ argList.
-	locals _ localList.
-	declarations _ decls.
-	primitive _ primNumber.
-	parseTree _ aNode.
-	labels _ labelList.
-	complete _ completeFlag.
+	selector := sel.
+	returnType := retType.
+	args := argList.
+	locals := localList.
+	declarations := decls.
+	primitive := primNumber.
+	parseTree := aNode.
+	labels := labelList.
+	complete := completeFlag.
 ]
 
 { #category : #accessing }
@@ -1390,7 +1390,7 @@ TMethod >> statementsFor: sourceText varName: varName [
 	"Details: Various variables are declared as locals to avoid Undeclared warnings from the parser."
 
 	| s |
-	s _ WriteStream on: ''.
+	s := WriteStream on: ''.
 	s nextPutAll: 'temp'; cr; cr; tab.
 	self printTempsAndVar: varName on: s.
 	s nextPutAll: sourceText.
@@ -1404,7 +1404,7 @@ TMethod >> statementsListsForInlining [
 	"Answer a collection of statement list nodes that are candidates for inlining. Currently, we cannot inline into the argument blocks of and: and or: messages."
 
 	| stmtLists |
-	stmtLists _ OrderedCollection new: 10.
+	stmtLists := OrderedCollection new: 10.
 	parseTree nodesDo: [ :node | 
 		node isStmtList ifTrue: [ stmtLists add: node ].
 	].
@@ -1451,33 +1451,33 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 	"Expand any (complete) inline methods called by this method. Set the complete bit when all inlining has been done. Return true if something was inlined."
 
 	| stmtLists didSomething newStatements inlinedStmts sendsToInline |
-	didSomething _ false.
+	didSomething := false.
 
-	sendsToInline _ Dictionary new: 100.
+	sendsToInline := Dictionary new: 100.
 	parseTree nodesDo: [ :n |
 		(self inlineableFunctionCall: n in: aCodeGen) ifTrue: [
 			sendsToInline at: n put: (self inlineFunctionCall: n in: aCodeGen).
 		].
 	].
 	sendsToInline isEmpty ifFalse: [
-		didSomething _ true.
-		parseTree _ parseTree replaceNodesIn: sendsToInline.
+		didSomething := true.
+		parseTree := parseTree replaceNodesIn: sendsToInline.
 	].
 
 	didSomething ifTrue: [
-		possibleSideEffectsCache _ nil.
+		possibleSideEffectsCache := nil.
 		^didSomething
 	].
 
-	stmtLists _ self statementsListsForInlining.
+	stmtLists := self statementsListsForInlining.
 	stmtLists do: [ :stmtList | 
-		newStatements _ OrderedCollection new: 100.
+		newStatements := OrderedCollection new: 100.
 		stmtList statements do: [ :stmt |
-			inlinedStmts _ self inlineCodeOrNilForStatement: stmt in: aCodeGen.
+			inlinedStmts := self inlineCodeOrNilForStatement: stmt in: aCodeGen.
 			(inlinedStmts = nil) ifTrue: [
 				newStatements addLast: stmt.
 			] ifFalse: [
-				didSomething _ true.
+				didSomething := true.
 				newStatements addAllLast: inlinedStmts.
 			].
 		].
@@ -1485,13 +1485,13 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 	].
 
 	didSomething ifTrue: [
-		possibleSideEffectsCache _ nil.
+		possibleSideEffectsCache := nil.
 		^didSomething
 	].
 
 	complete ifFalse: [
 		self checkForCompleteness: stmtLists in: aCodeGen.
-		complete ifTrue: [ didSomething _ true ].  "marking a method complete is progress"
+		complete ifTrue: [ didSomething := true ].  "marking a method complete is progress"
 	].
 	^didSomething
 ]
@@ -1500,7 +1500,7 @@ TMethod >> tryToInlineMethodsIn: aCodeGen [
 TMethod >> unusedLabelForInliningInto: targetMethod [
 
 	| usedLabels |
-	usedLabels _ labels asSet.
+	usedLabels := labels asSet.
 	usedLabels addAll: targetMethod labels.
 	^self unusedNamePrefixedBy: 'l' avoiding: usedLabels
 ]
@@ -1510,11 +1510,11 @@ TMethod >> unusedNamePrefixedBy: aString avoiding: usedNames [
 	"Choose a unique variable or label name with the given string as a prefix, avoiding the names in the given collection. The selected name is added to usedNames."
 
 	| n newVarName |
-	n _ 1.
-	newVarName _ aString, n printString.
+	n := 1.
+	newVarName := aString, n printString.
 	[usedNames includes: newVarName] whileTrue: [
-		n _ n + 1.
-		newVarName _ aString, n printString.
+		n := n + 1.
+		newVarName := aString, n printString.
 	].
 	usedNames add: newVarName.
 	^ newVarName
@@ -1525,7 +1525,7 @@ TMethod >> variablesAssignedTo [
 	"Answer a collection of variables assigned to by this method."
 
 	| refs |
-	refs _ Set new.
+	refs := Set new.
 	parseTree nodesDo: [ :node |
 		node isAssignment ifTrue: [ refs add: node variable name ].
 	].

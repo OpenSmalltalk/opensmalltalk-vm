@@ -12,8 +12,8 @@ Class {
 { #category : #'copying files' }
 VMMakerWithFileCopying >> copyCrossPlatformFilesFor: plugin internal: aBoolean [
 	| srcDir targetDir |
-	[srcDir _ self crossPlatformPluginsDirectory directoryNamed: plugin moduleName.
-	targetDir _ aBoolean ifTrue:[self internalPluginsDirectoryFor: plugin]
+	[srcDir := self crossPlatformPluginsDirectory directoryNamed: plugin moduleName.
+	targetDir := aBoolean ifTrue:[self internalPluginsDirectoryFor: plugin]
 					ifFalse:[self externalPluginsDirectoryFor: plugin].
 	logger show: 'Copy any cross platform files from: ' , srcDir printString , ' to ' , targetDir printString; cr.
 	self copyFilesFromSourceDirectory: srcDir toTargetDirectory: targetDir]
@@ -25,20 +25,20 @@ VMMakerWithFileCopying >> copyCrossPlatformFilesFor: plugin internal: aBoolean [
 { #category : #'copying files' }
 VMMakerWithFileCopying >> copyCrossPlatformVMFiles [
 	| srcDir targetDir vmDirName |
-	vmDirName _ self class coreVMDirName.
+	vmDirName := self class coreVMDirName.
 
 	"Is there a crossPlatformDirectory subdirectory called 'vmDirName'?"
 	(self crossPlatformDirectory directoryExists: vmDirName)
-		ifTrue: [srcDir _ self crossPlatformDirectory directoryNamed: vmDirName.
-			targetDir _ self coreVMDirectory.
+		ifTrue: [srcDir := self crossPlatformDirectory directoryNamed: vmDirName.
+			targetDir := self coreVMDirectory.
 			self copyFilesFromSourceDirectory: srcDir toTargetDirectory: targetDir]
 ]
 
 { #category : #'copying files' }
 VMMakerWithFileCopying >> copyPlatformFilesFor: plugin internal: aBoolean [
 	| srcDir targetDir |
-	[srcDir _ self platformPluginsDirectory directoryNamed: plugin moduleName.
-	targetDir _ aBoolean ifTrue:[self internalPluginsDirectoryFor: plugin]
+	[srcDir := self platformPluginsDirectory directoryNamed: plugin moduleName.
+	targetDir := aBoolean ifTrue:[self internalPluginsDirectoryFor: plugin]
 					ifFalse:[self externalPluginsDirectoryFor: plugin].
 	logger show: 'Copy any platform files from: ' , srcDir printString , ' to ' , targetDir printString; cr.
 	self copyFilesFromSourceDirectory: srcDir toTargetDirectory: targetDir]
@@ -50,12 +50,12 @@ VMMakerWithFileCopying >> copyPlatformFilesFor: plugin internal: aBoolean [
 { #category : #'copying files' }
 VMMakerWithFileCopying >> copyPlatformVMFiles [
 	| srcDir targetDir vmDirName |
-	vmDirName _ self class coreVMDirName.
+	vmDirName := self class coreVMDirName.
 
 	"Is there a platformDirectory subdirectory called 'vmDirName'?"
 	(self platformDirectory directoryExists: vmDirName)
-		ifTrue: [srcDir _ self platformDirectory directoryNamed: vmDirName.
-			targetDir _ self coreVMDirectory.
+		ifTrue: [srcDir := self platformDirectory directoryNamed: vmDirName.
+			targetDir := self coreVMDirectory.
 			self copyFilesFromSourceDirectory: srcDir toTargetDirectory: targetDir]
 ]
 
@@ -67,11 +67,11 @@ VMMakerWithFileCopying >> processAssortedFiles [
 	| srcDir |
 	"Is there a crossPlatformDirectory subdirectory called 'misc'?"
 	(self crossPlatformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir _ self crossPlatformDirectory directoryNamed: 'misc'.
+		ifTrue: [srcDir := self crossPlatformDirectory directoryNamed: 'misc'.
 			self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory].
 	"Is there a platformDirectory subdirectory called 'misc'?"
 	(self platformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir _ self platformDirectory directoryNamed: 'misc'.
+		ifTrue: [srcDir := self platformDirectory directoryNamed: 'misc'.
 			self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory].
 
 	"Now copy any files that are always copied for all platforms"

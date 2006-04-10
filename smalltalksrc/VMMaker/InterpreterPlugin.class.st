@@ -33,15 +33,15 @@ InterpreterPlugin class >> baseDirectoryName [
 InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
 	"Build a CCodeGenerator for the plugin"
 	 | cg theClass |
-	cg _ self codeGeneratorClass new initialize.
+	cg := self codeGeneratorClass new initialize.
 	cg pluginName: self moduleName.
 	"Add an extra declaration for module name"
 	cg declareModuleName: self moduleNameAndVersion.
 
-	theClass _ aPluginClass.
+	theClass := aPluginClass.
 	[theClass == Object | (theClass == InterpreterSimulationObject)] whileFalse:[
 		cg addClass: theClass.
-		theClass _ theClass superclass].
+		theClass := theClass superclass].
 	^cg
 ]
 
@@ -71,9 +71,9 @@ InterpreterPlugin class >> declareHeaderFilesIn: aCCodeGenerator [
 { #category : #'instance creation' }
 InterpreterPlugin class >> doPrimitive: primitiveName [ 
 	| proxy plugin |
-	proxy _ InterpreterProxy new.
+	proxy := InterpreterProxy new.
 	proxy loadStackFrom: thisContext sender.
-	plugin _ self simulatorClass new.
+	plugin := self simulatorClass new.
 	plugin setInterpreter: proxy.
 	(plugin respondsTo: #initialiseModule) ifTrue:[plugin initialiseModule].
 	plugin perform: primitiveName asSymbol.
@@ -118,7 +118,7 @@ InterpreterPlugin class >> moduleNameAndVersion [
 { #category : #compiling }
 InterpreterPlugin class >> noteCompilationOf: aSelector meta: isMeta [
 	"note the recompiliation by resetting the timeStamp "
-	timeStamp _ Time totalSeconds.
+	timeStamp := Time totalSeconds.
 	^super noteCompilationOf: aSelector meta: isMeta
 ]
 
@@ -163,7 +163,7 @@ InterpreterPlugin class >> storeString: s onFileNamed: fileName [
 	"Store the given string in a file of the given name."
 
 	| f |
-	f _ CrLfFileStream forceNewFileNamed: fileName.
+	f := CrLfFileStream forceNewFileNamed: fileName.
 	f nextPutAll: s.
 	f close.
 ]
@@ -177,14 +177,14 @@ InterpreterPlugin class >> timeStamp [
 InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 "This is the default method for writing out sources for a plugin. Several classes need special handling, so look at all implementors of this message"
 	| cg fname fstat |
-	 fname _ self moduleName, '.c'.
+	 fname := self moduleName, '.c'.
 
 	"don't translate if the file is newer than my timeStamp"
-	fstat _ directory entryAt: fname ifAbsent:[nil].
+	fstat := directory entryAt: fname ifAbsent:[nil].
 	fstat ifNotNil:[self timeStamp < fstat modificationTime ifTrue:[^nil]].
 
 	self initialize.
-	cg _ self buildCodeGeneratorUpTo: self.
+	cg := self buildCodeGeneratorUpTo: self.
 	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
 	^cg exportedPrimitiveNames asArray
 ]
@@ -226,9 +226,9 @@ InterpreterPlugin >> setInterpreter: anInterpreter [
 	| ok |
 	self export: true.
 	self var: #anInterpreter type: #'struct VirtualMachine*'.
-	interpreterProxy _ anInterpreter.
-	ok _ self cCode: 'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'.
+	interpreterProxy := anInterpreter.
+	ok := self cCode: 'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'.
 	ok == false ifTrue: [^ false].
-	ok _ self cCode: 'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'.
+	ok := self cCode: 'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'.
 	^ ok
 ]

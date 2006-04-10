@@ -28,7 +28,7 @@ CArray >> + n [
 { #category : #'pointer arithmetic' }
 CArray >> += increment [
 
-	ptrOffset _ ptrOffset + increment
+	ptrOffset := ptrOffset + increment
 ]
 
 { #category : #'int arithmetic' }
@@ -40,7 +40,7 @@ CArray >> - n [
 { #category : #'pointer arithmetic' }
 CArray >> -= decrement [
 
-	ptrOffset _ ptrOffset - decrement
+	ptrOffset := ptrOffset - decrement
 ]
 
 { #category : #'int arithmetic' }
@@ -157,10 +157,10 @@ CArray >> intAt: index put: signedInt [
 { #category : #private }
 CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numBytes [
 
-	interpreter _ interpreterSimulator.
-	arrayBaseAddress _ arrayAddress.
-	unitSize _ numBytes.
-	ptrOffset _ 0.
+	interpreter := interpreterSimulator.
+	arrayBaseAddress := arrayAddress.
+	unitSize := numBytes.
+	ptrOffset := 0.
 
 ]
 
