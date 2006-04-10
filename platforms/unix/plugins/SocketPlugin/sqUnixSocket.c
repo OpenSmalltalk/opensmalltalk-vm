@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2005-04-06 08:09:57 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-04-06 08:39:30 by piumarta on emilia.local
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -1326,6 +1326,46 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, 
   return errno;
 }
 
+void sqSocketBindToPort(SocketPtr s, int addr, int port)
+{
+  int result;
+  struct sockaddr_in inaddr;
+  privateSocketStruct *pss= PSP(s);
+
+  if (!socketValid(s)) return;
+
+  /* bind the socket */
+  memset(&inaddr, 0, sizeof(inaddr));
+  inaddr.sin_family= AF_INET;
+  inaddr.sin_port= htons(port);
+  inaddr.sin_addr.s_addr= htonl(addr);
+
+  if (bind(SOCKET(s), (struct sockaddr *)&inaddr, sizeof(struct sockaddr_in)) < 0)
+    {
+      pss->sockError= errno;
+      interpreterProxy->success(false);
+      return;
+    }
+}
+
+void sqSocketSetReusable(SocketPtr s)
+{
+  char optionValue[256];
+  size_t bufSize;
+  unsigned char buf[4];
+  int err;
+
+  if (!socketValid(s)) return;
+
+  *(int *)buf= 1;
+  bufSize= 4;
+  if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
+    {
+      PSP(s)->sockError= errno;
+      interpreterProxy->success(false);
+      return;
+    }
+}
 
 /*** Resolver functions ***/
 
@@ -1383,5 +1423,3 @@ void sqResolverStartNameLookup(char *hostName, sqInt nameSize)
   /* we're done before we even started */
   interpreterProxy->signalSemaphoreWithIndex(resolverSema);
 }
-
-
