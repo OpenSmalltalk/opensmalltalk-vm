@@ -93,16 +93,12 @@ VPATH=		$(SRCDIR) $(VMDIR) $(VMOUTDIR) $(PLUGINOUTDIR)
 # C compiler settings (for egcs-1.1.2)
 #
 CC=		gcc
-CXX=		g++
-CFLAGS=		-g -mpentium -mwindows -O3 -fomit-frame-pointer -funroll-loops -fschedule-insns2
-CXXFLAGS= $(CFLAGS) -felide-constructors
-WFLAGS=		
+OFLAGS=         -O2
+CFLAGS=		-g -mpentium -mwindows -fomit-frame-pointer -funroll-loops -fschedule-insns2 $(OFLAGS)
 DEFS=		-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS)
-#-DUSE_DIB_SECTIONS
-#-DPROFILE
 XDEFS=		-DSQUEAK_BUILTIN_PLUGIN
 INCS=		-I. -I$(SRCDIR) -I$(VMDIR) -I$(DXDIR) $(XINC)
-MD=			mkdir
+MD=		mkdir
 
 ifeq ($(VM),Croquet)
 	DEFS := $(DEFS) -DCROQUET
@@ -205,12 +201,20 @@ OpenALPlugin.dll:
 	-$(RM) plugins/OpenALPlugin/OpenALPlugin.dll
 
 %.lib:
-	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
+ifneq ((), $(wildcard plugins/$*/Makefile.win32))
+	$(MAKE) -C plugins/$* -fMakefile.win32 LIB=$*.lib SRCDIR=../../ OBJDIR=. LIB=$*.lib XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
+else
+	$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
+endif
 	$(CP) plugins/$*/$*.lib release/$*.lib
 	-$(RM) plugins/$*/$*.lib
 
 %.dll:
-	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
+ifneq ((), $(wildcard plugins/$*/Makefile.win32))
+	$(MAKE) -C plugins/$* -fMakefile.win32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
+else
+	$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
+endif
 	$(CP) plugins/$*/$*.dll release/$*.dll
 	-$(RM) plugins/$*/$*.dll
 
