@@ -90,10 +90,8 @@
 #include <unistd.h>
 #include <pthread.h>
 
-extern pthread_mutex_t gEventQueueLock,gEventUILock,gSleepLock;
-extern pthread_cond_t  gEventUILockCondition,gSleepLockCondition;
-
-    pthread_t gSqueakPThread;
+extern pthread_mutex_t gEventQueueLock,gSleepLock;
+extern pthread_cond_t  gSleepLockCondition;
 
 OSErr			gSqueakFileLastError; 
 Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false;
@@ -226,13 +224,7 @@ int main(int argc, char **argv, char **envp) {
 
     aioInit();
     pthread_mutex_init(&gEventQueueLock, NULL);
-    pthread_mutex_init(&gEventUILock, NULL);
-    pthread_cond_init(&gEventUILockCondition,NULL);
-    err = pthread_create(&gSqueakPThread,null,(void *) interpret, null);
-    if (err == 0) {
-        SetUpCarbonEvent();
-        RunApplicationEventLoop(); //Note the application under carbon event mgr starts running here
-	}
+	RunApplicationEventLoopWithSqueak();
     return 0;
 }
 

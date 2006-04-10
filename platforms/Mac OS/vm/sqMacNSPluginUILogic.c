@@ -972,9 +972,8 @@ int plugInInit(char *fullImagePath) {
 	return 0;
 }
 
-extern pthread_t gSqueakPThread;
-extern pthread_mutex_t gEventUILock,gSleepLock;
-extern pthread_cond_t  gEventUILockCondition,gSleepLockCondition;
+extern pthread_mutex_t gSleepLock;
+extern pthread_cond_t  gSleepLockCondition;
 
 int plugInShutdown(void) {
         int err;

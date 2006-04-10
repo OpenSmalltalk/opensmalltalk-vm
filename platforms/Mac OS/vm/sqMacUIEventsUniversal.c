@@ -56,8 +56,7 @@ typedef struct
   int keyRepeated;
 } KeyMapping;
 
-pthread_mutex_t gEventQueueLock,gEventUILock;
-pthread_cond_t  gEventUILockCondition;
+pthread_mutex_t gEventQueueLock;
 
 #define EventTypeFullScreenUpdate 98
 #define EventTypePostEventProcessing 99
@@ -350,8 +349,6 @@ static EventTypeSpec appleEventEventList[] = {{ kEventClassAppleEvent, kEventApp
 
 static EventTypeSpec textInputEventList[] = {{ kEventClassTextInput, kEventTextInputUnicodeForKeyEvent}};
 
-static EventTypeSpec customEventEventList[] = {{ 'JMM1', 'JMM1'}};
-
 static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
                 EventRef event, void* userData);
 static pascal OSStatus MyAppEventCmdHandler (EventHandlerCallRef myHandlerChain,
@@ -384,7 +381,6 @@ void SetUpCarbonEvent() {
 /* Installing the application event handler */
 	InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventCmdHandler), GetEventTypeCount(appEventCmdList), appEventCmdList, 0, NULL);
     InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventHandler), GetEventTypeCount(appEventList), appEventList, 0, NULL);
-    InstallApplicationEventHandler (NewEventHandlerUPP(customHandleForUILocks), GetEventTypeCount(customEventEventList), customEventEventList, 0, NULL);
     
 }
 
@@ -1114,6 +1110,7 @@ static void doPendingFlush(void) {
 	extern  Boolean gSqueakUIFlushUseHighPercisionClock;
 	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
 	static int lastTick = 0;
+	static int nextPollTick = 0;
 	int now = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 	int delta = now - lastTick;
 		
@@ -1134,6 +1131,21 @@ static void doPendingFlush(void) {
 		}
 		lastTick = now;
 	} 
+
+	if (ioLowResMSecs() != nextPollTick) {
+		EventRef event;
+		static EventTargetRef target = NULL;
+		
+		if (target == NULL)
+			target = GetEventDispatcherTarget();
+	  
+		if (ReceiveNextEvent(0, NULL, kEventDurationNoWait, true, &event) == noErr) {
+			SendEventToEventTarget (event, target);
+			ReleaseEvent(event);
+		}
+		nextPollTick = ioLowResMSecs();
+	}
+
 }
 
 #ifndef BROWSERPLUGIN
@@ -1149,28 +1161,10 @@ int ioProcessEvents(void) {
 }
 #endif 
 
-#ifdef BROWSERPLUGIN
 int getUIToLock(long *data) {
 	customHandleForUILocks(NULL,NULL,(void*) data);
 	return 0;
 }
-#else
-int getUIToLock(long *data) {
-    OSStatus err;
-    EventRef dummyEvent;
-    
-    err = MacCreateEvent(null,'JMM1','JMM1', 0, kEventAttributeUserEvent, &dummyEvent);
-    if (err == noErr) {
-        err = SetEventParameter(dummyEvent,1,1,sizeof(long *),&data);
-        pthread_mutex_lock(&gEventUILock);
-        err = PostEventToQueue(GetMainEventQueue(), dummyEvent,kEventPriorityHigh);
-		ReleaseEvent(dummyEvent);
-        pthread_cond_wait(&gEventUILockCondition,&gEventUILock);	
-        pthread_mutex_unlock(&gEventUILock);
-    }
-	return 0;
-}
-#endif
 
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
@@ -1179,20 +1173,9 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
     long numberOfParms;
     OSErr	err;
         
-    pthread_mutex_lock(&gEventUILock);
-        
-    if (myHandler)
-		err = GetEventParameter(event, 1, 1, NULL, sizeof(long *), NULL, &data);
-	else {
-		data = userData;
-		err = noErr;
-	}
-		
-    if (err != noErr) {
-        pthread_cond_signal(&gEventUILockCondition);	
-        pthread_mutex_unlock(&gEventUILock);
-    }
-    
+         
+	data = userData;
+		    
     numberOfParms = data[0];
     
     if (0 == numberOfParms)
@@ -1210,8 +1193,6 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
     if (6 == numberOfParms)
         data[8] = ((int (*) (long,long,long,long,long,long)) data[1]) (data[2],data[3],data[4],data[5],data[6], data[7]);
 
-    pthread_cond_signal(&gEventUILockCondition);	
-    pthread_mutex_unlock(&gEventUILock);
     return noErr;
 }
 
@@ -1220,6 +1201,87 @@ static void signalAnyInterestedParties() {
         signalSemaphoreWithIndex(inputSemaphoreIndex);
 }
 
+static EventHandlerUPP gEventLoopEventHandlerUPP;   // -> EventLoopEventHandler
+
+static pascal OSStatus EventLoopEventHandler(EventHandlerCallRef inHandlerCallRef,
+                                             EventRef inEvent, void *inUserData)
+    // This code contains the standard Carbon event dispatch loop,
+    // as per "Inside Macintosh: Handling Carbon Events", Listing 3-10,
+{
+        // Run our event loop until quitNow is set.
+	SetUpCarbonEvent();
+	interpret(); //Note the application under carbon event mgr starts running here
+	return 0;
+ }
+
+
+void RunApplicationEventLoopWithSqueak(void)
+    // A reimplementation of RunApplicationEventLoop that supports
+    // yielding time to cooperative threads.  It relies on the
+    // rest of your application to maintain a global variable,
+    // gNumberOfRunningThreads, that reflects the number of threads
+    // that are ready to run.
+{
+    static const EventTypeSpec eventSpec = {'JMM2', 'JMM2' };
+    OSStatus        err;
+    OSStatus        junk;
+    EventHandlerRef installedHandler;
+    EventRef        dummyEvent;
+
+
+    dummyEvent = nil;
+
+    // Create a UPP for EventLoopEventHandler and QuitEventHandler
+    // (if we haven't already done so).
+
+    err = noErr;
+    if (gEventLoopEventHandlerUPP == nil) {
+        gEventLoopEventHandlerUPP = NewEventHandlerUPP(EventLoopEventHandler);
+    }
+    if (gEventLoopEventHandlerUPP == nil) {
+        err = memFullErr;
+    }
+
+    // Install EventLoopEventHandler, create a dummy event and post it,
+    // and then call RunApplicationEventLoop.  The rationale for this
+    // is as follows:  We want to unravel RunApplicationEventLoop so
+    // that we can can yield to cooperative threads.  In fact, the
+    // core code for RunApplicationEventLoop is pretty easy (you
+    // can see it above in EventLoopEventHandler).  However, if you
+    // just execute this code you miss out on all the standard event
+    // handlers.  These are relatively easy to reproduce (handling
+    // the quit event and so on), but doing so is a pain because
+    // a) it requires a bunch boilerplate code, and b) if Apple
+    // extends the list of standard event handlers, your application
+    // wouldn't benefit.  So, we execute our event loop from within
+    // a Carbon event handler that we cause to be executed by
+    // explicitly posting an event to our event loop.  Thus, the
+    // standard event handlers are installed while our event loop runs.
+
+    if (err == noErr) {
+        err = InstallEventHandler(GetApplicationEventTarget(), gEventLoopEventHandlerUPP,
+                                  1, &eventSpec, nil, &installedHandler);
+        if (err == noErr) {
+            err = MacCreateEvent(nil, 'JMM2', 'JMM2', GetCurrentEventTime(),
+                                  kEventAttributeNone, &dummyEvent);
+            if (err == noErr) {
+                err = PostEventToQueue(GetMainEventQueue(), dummyEvent,
+                                  kEventPriorityHigh);
+            }
+            if (err == noErr) {
+                RunApplicationEventLoop();
+            }
+
+            junk = RemoveEventHandler(installedHandler);
+        }
+    }
+
+    // Clean up.
+
+    if (dummyEvent != nil) {
+        ReleaseEvent(dummyEvent);
+    }
+}
 
 static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Code, long m) {
 	sqKeyboardEvent 	*evt;
