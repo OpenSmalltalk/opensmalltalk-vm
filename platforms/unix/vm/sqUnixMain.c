@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2005-04-06 05:10:35 by piumarta on pauillac.hpl.hp.com
+ * Last edited: 2006-04-07 14:55:15 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -389,34 +389,40 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero)
 
 static char *getAttribute(sqInt id)
 {
-  if (id < 0) {
-    /* VM argument */
-    if (-id  < vmArgCnt)
-      return vmArgVec[-id];
-  } else switch (id) {
-    case 0:
-      return vmName[0] ? vmName : vmArgVec[0];
-    case 1:
-      return imageName;
-    case 1001:
-      /* OS type: "unix", "win32", "mac", ... */
-      return OS_TYPE;
-    case 1002:
-      /* OS name: "solaris2.5" on unix, "win95" on win32, ... */
-      return VM_HOST_OS;
-    case 1003:
-      /* processor architecture: "68k", "x86", "PowerPC", ...  */
-      return VM_HOST_CPU;
-    case 1004:
-      /* Interpreter version string */
-      return  (char *)interpreterVersion;
-    case 1005:
-      /* window system name */
-      return  dpy->winSystemName();
-    default:
-      if ((id-2) < squeakArgCnt)
-	return squeakArgVec[id-2];
-  }
+  if (id < 0)	/* VM argument */
+    {
+      if (-id  < vmArgCnt)
+	return vmArgVec[-id];
+    }
+  else
+    switch (id)
+      {
+      case 0:
+	return vmName[0] ? vmName : vmArgVec[0];
+      case 1:
+	return imageName;
+      case 1001:
+	/* OS type: "unix", "win32", "mac", ... */
+	return OS_TYPE;
+      case 1002:
+	/* OS name: "solaris2.5" on unix, "win95" on win32, ... */
+	return VM_HOST_OS;
+      case 1003:
+	/* processor architecture: "68k", "x86", "PowerPC", ...  */
+	return VM_HOST_CPU;
+      case 1004:
+	/* Interpreter version string */
+	return  (char *)interpreterVersion;
+      case 1005:
+	/* window system name */
+	return  dpy->winSystemName();
+      case 1006:
+	/* vm build string */
+	return VM_BUILD_STRING;
+      default:
+	if ((id - 2) < squeakArgCnt)
+	  return squeakArgVec[id - 2];
+      }
   success(false);
   return "";
 }
@@ -1260,9 +1266,33 @@ void imgInit(void)
     }
 }
 
+#if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
+			|| defined(i486) || defined(__i486) || defined (__i486__) \
+			|| defined(intel) || defined(x86) || defined(i86pc) )
+  static void fldcw(unsigned int cw)
+  {
+    __asm__("fldcw %0" :: "m"(cw));
+  }
+#else
+# define fldcw(cw)
+#endif
+
+#if defined(__GNUC__) && ( defined(ppc) || defined(__ppc) || defined(__ppc__)  \
+			|| defined(POWERPC) || defined(__POWERPC) || defined (__POWERPC__) )
+  void mtfsfi(unsigned long long fpscr)
+  {
+    __asm__("lfd   f0, %0" :: "m"(fpscr));
+    __asm__("mtfsf 0xff, f0");
+  }
+#else
+# define mtfsfi(fpscr)
+#endif
 
 int main(int argc, char **argv, char **envp)
 {
+  fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
+  mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
+
   /* Make parameters global for access from plugins */
 
   argCnt= argc;
@@ -1378,9 +1408,36 @@ int main(int argc, char **argv, char **envp)
   return 0;
 }
 
-
 sqInt ioExit(void)
 {
   dpy->winExit();
   exit(0);
+}
+
+sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt aBoolean)
+{
+  memcpy(aCharBuffer, aFilenameString, filenameLength);
+  aCharBuffer[filenameLength]= 0;
+  return 0;
+}
+
+
+sqInt ioGatherEntropy(char *buffer, sqInt bufSize)
+{
+  int fd, count= 0;
+
+  if ((fd= open("/dev/urandom", O_RDONLY)) < 0)
+    return 0;
+
+  while (count < bufSize)
+    {
+      int n;
+      if ((n= read(fd, buffer + count, bufSize)) < 1)
+	break;
+      count += n;
+    }
+
+  close(fd);
+
+  return count == bufSize;
 }
