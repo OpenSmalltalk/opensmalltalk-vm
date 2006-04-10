@@ -7,7 +7,7 @@ Part 0 -- Stuff you have to do, regardless
 
 0.1 Checkout the sources (duh).
  
-        $ svn co http://squeak.hpl.hp.com/squeak/trunk squeak
+        $ svn co http://squeakvm.org/squeak/trunk squeak
  
     This will checkout a directory called "squeak".
 
@@ -63,4 +63,4 @@ Part 2 -- Building the HARD way
         $ sudo make install
 
 ----
-Last edited: 2005-03-31 14:55:38 by piumarta on margaux.hpl.hp.com
+Last edited: 2006-04-05 10:44:30 by piumarta on emilia.local
