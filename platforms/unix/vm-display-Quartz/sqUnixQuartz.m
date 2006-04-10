@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2005-04-06 08:08:33 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-04-05 15:05:17 by piumarta on emilia.local
  */
 
 
@@ -288,7 +288,7 @@ extern inline int testAndSet(int *lock)
   return valu;
 }
 
-extern inline int doLock(int *lock, char *who)
+extern inline int doLock(int *lock, const char *who)
 {
   while (testAndSet(lock))
     ;
@@ -359,7 +359,7 @@ static sqInt display_ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqIn
 
   dprintf(("ioFormPrint %f %f\n", hScale, vScale));
   {
-    unsigned char    *planes[1]= { pointerForOop(bitsAddr) };
+    unsigned char    *planes[1]= { (unsigned char *)pointerForOop(bitsAddr) };
     NSBitmapImageRep *bitmap= 	 0;
     NSImage	     *image=  	 0;
     NSImageView	     *view=   	 0;
@@ -607,8 +607,8 @@ static void noteKeyboardEvent(int keyCode, int pressCode, int modifiers)
   evt.charCode= keyCode;
   evt.pressCode= pressCode;
   evt.modifiers= modifiers;
+  evt.utf32Code= 0;	/* xxx TODO xxx */
   evt.reserved1= 0;
-  evt.reserved2= 0;
   evt.windowIndex= 0;
 #ifdef DEBUG_EVENTS
   printf("EVENT: keyboard");
@@ -2255,7 +2255,7 @@ static int removeFromKeyMap(int keyCode)
   return removeFromKeyMap([event keyCode]);
 }
 
-- (void) insertText: (NSString *)text
+- (void) insertText: text
 {
   inputMark= NSMakeRange(NSNotFound, 0);
   inputSelection= NSMakeRange(0, 0);
