@@ -39,7 +39,7 @@ MIDIPlugin >> primitiveMIDIGetClock [
 
 	| clockValue |
 	self primitive: 'primitiveMIDIGetClock'.
-	clockValue _ self sqMIDIGetClock bitAnd: 16r1FFFFFFF.
+	clockValue := self sqMIDIGetClock bitAnd: 16r1FFFFFFF.
 	^clockValue asSmallIntegerObj
 ]
 
@@ -48,7 +48,7 @@ MIDIPlugin >> primitiveMIDIGetPortCount [
 
 	| n |
 	self primitive: 'primitiveMIDIGetPortCount'.
-	n _ self sqMIDIGetPortCount.
+	n := self sqMIDIGetPortCount.
 	^n asSmallIntegerObj
 
 ]
@@ -59,7 +59,7 @@ MIDIPlugin >> primitiveMIDIGetPortDirectionality: portNum [
 	|  dir |
 	self primitive: 'primitiveMIDIGetPortDirectionality'
 		parameters: #(SmallInteger).
-	dir _ self sqMIDIGetPortDirectionality: portNum.
+	dir := self sqMIDIGetPortDirectionality: portNum.
 	^dir asSmallIntegerObj
 ]
 
@@ -72,10 +72,10 @@ MIDIPlugin >> primitiveMIDIGetPortName: portNum [
 	self primitive: 'primitiveMIDIGetPortName'
 		parameters: #(SmallInteger).
 
-	sz _ self cCode: 'sqMIDIGetPortName(portNum, (int) &portName, 255)'.
-	nameObj _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: sz.
+	sz := self cCode: 'sqMIDIGetPortName(portNum, (int) &portName, 255)'.
+	nameObj := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: sz.
 	interpreterProxy failed ifTrue:[^nil].
-	namePtr _ nameObj asValue: String .
+	namePtr := nameObj asValue: String .
 	self cCode: 'memcpy(namePtr, portName, sz)'.
 	^nameObj
 ]
@@ -95,7 +95,7 @@ MIDIPlugin >> primitiveMIDIParameterGet: whichParameter [
 	"read parameter"
 	self primitive: 'primitiveMIDIParameterGet'
 		parameters: #(SmallInteger).
-	currentValue _ self cCode: 'sqMIDIParameterGet(whichParameter)'.
+	currentValue := self cCode: 'sqMIDIParameterGet(whichParameter)'.
 	^currentValue asSmallIntegerObj
 ]
 
@@ -123,8 +123,8 @@ MIDIPlugin >> primitiveMIDIRead: portNum into: array [
 	| arrayLength bytesRead |
 	self primitive: 'primitiveMIDIRead'
 		parameters: #(SmallInteger ByteArray).
-	arrayLength _ interpreterProxy byteSizeOf: array cPtrAsOop.
-	bytesRead _ self sqMIDIPort: portNum
+	arrayLength := interpreterProxy byteSizeOf: array cPtrAsOop.
+	bytesRead := self sqMIDIPort: portNum
 			Read: arrayLength
 			Into: array asInteger.
 	^bytesRead asSmallIntegerObj
@@ -136,8 +136,8 @@ MIDIPlugin >> primitiveMIDIWrite: portNum from: array at: time [
 	| arrayLength bytesWritten |
 	self primitive: 'primitiveMIDIWrite'
 		parameters: #(SmallInteger ByteArray SmallInteger).
-	arrayLength _ interpreterProxy byteSizeOf: array cPtrAsOop.
-	bytesWritten _ self sqMIDIPort: portNum
+	arrayLength := interpreterProxy byteSizeOf: array cPtrAsOop.
+	bytesWritten := self sqMIDIPort: portNum
 			Write: arrayLength
 			From: array asInteger
 			At: time.

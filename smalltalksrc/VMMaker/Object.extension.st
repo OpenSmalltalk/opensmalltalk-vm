@@ -4,7 +4,7 @@ Extension { #name : #Object }
 Object >> asIf: aClass var: aString [
 
 	|index|
-	index _ aClass allInstVarNames 
+	index := aClass allInstVarNames 
 		indexOf: aString
 		ifAbsent: [self error: 'must use instVar name'].
 	^self instVarAt: index
@@ -22,7 +22,7 @@ Object >> asIf: aClass var: aString asValue: someClass [
 Object >> asIf: aClass var: aString put: aValue [
 
 	|index|
-	index _ aClass allInstVarNames 
+	index := aClass allInstVarNames 
 		indexOf: aString
 		ifAbsent: [self error: 'must use instVar name'].
 	^self instVarAt: index put: aValue
@@ -141,7 +141,7 @@ Object >> primitive: primName parameters: parms [
 Object >> primitive: primID parameters: parmSpecs receiver: rcvrSpec [
 "belongs in CCG package"
 	| tMethod |
-	tMethod _ SmartSyntaxPluginTMethod new 
+	tMethod := SmartSyntaxPluginTMethod new 
 		fromContext: thisContext sender 
 		primitive: primID 
 		parameters: parmSpecs 

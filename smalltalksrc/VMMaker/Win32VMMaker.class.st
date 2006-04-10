@@ -61,7 +61,7 @@ Win32VMMaker >> makefileDirectory [
 Win32VMMaker >> pluginsDirectory [
 	"return the target directory for the plugins sources - for Windows this is the platforms source directory for the plugin"
 	| fd |
-	fd _ self sourceDirectory directoryNamed: self class pluginsDirName.
+	fd := self sourceDirectory directoryNamed: self class pluginsDirName.
 	fd assureExistence.
 	^fd
 ]
@@ -83,11 +83,11 @@ Win32VMMaker >> validatePlugin:	plName in: listOfPlugins [
 	| plugin |
 	plName isString
 		ifTrue: [(listOfPlugins includes: plName)
-				ifTrue: [plugin _ Smalltalk classNamed: plName]]
+				ifTrue: [plugin := Smalltalk classNamed: plName]]
 		ifFalse: [((plName isBehavior
 						and: [plName inheritsFrom: InterpreterPlugin])
 					and: [listOfPlugins includes: plName name])
-				ifTrue: [plugin _ plName]].
+				ifTrue: [plugin := plName]].
 	plugin ifNil: [^ self couldNotFindPluginClass: plName].
 
 	"Is there a cross-platform or platform files directory of the same name as this plugin?"

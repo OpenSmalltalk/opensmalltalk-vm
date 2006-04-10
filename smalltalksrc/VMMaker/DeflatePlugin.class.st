@@ -63,17 +63,17 @@ DeflatePlugin class >> declareCVarsIn: cg [
 { #category : #'class initialization' }
 DeflatePlugin class >> initialize [
 	"DeflatePlugin initialize"
-	DeflateWindowSize _ 16r8000.
-	DeflateWindowMask _ DeflateWindowSize - 1.
-	DeflateMinMatch _ 3.
-	DeflateMaxMatch _ 258.
-	DeflateMaxDistance _ DeflateWindowSize.
-	DeflateHashBits _ 15.
-	DeflateHashTableSize _ 1 << DeflateHashBits.
-	DeflateHashMask _ DeflateHashTableSize - 1.
-	DeflateHashShift _ (DeflateHashBits + DeflateMinMatch - 1) // DeflateMinMatch.
-	DeflateMaxLiteralCodes _ ZipWriteStream maxLiteralCodes.
-	DeflateMaxDistanceCodes _ ZipWriteStream maxDistanceCodes.
+	DeflateWindowSize := 16r8000.
+	DeflateWindowMask := DeflateWindowSize - 1.
+	DeflateMinMatch := 3.
+	DeflateMaxMatch := 258.
+	DeflateMaxDistance := DeflateWindowSize.
+	DeflateHashBits := 15.
+	DeflateHashTableSize := 1 << DeflateHashBits.
+	DeflateHashMask := DeflateHashTableSize - 1.
+	DeflateHashShift := (DeflateHashBits + DeflateMinMatch - 1) // DeflateMinMatch.
+	DeflateMaxLiteralCodes := ZipWriteStream maxLiteralCodes.
+	DeflateMaxDistanceCodes := ZipWriteStream maxDistanceCodes.
 ]
 
 { #category : #deflating }
@@ -94,10 +94,10 @@ DeflatePlugin >> compare: here with: matchPos min: minLength [
 	(zipCollection at: here+1) = (zipCollection at: matchPos+1)
 		ifFalse:[^1].
 	"Finally do the real comparison"
-	length _ 2.
+	length := 2.
 	[length < DeflateMaxMatch and:[
 		(zipCollection at: here+length) = (zipCollection at: matchPos+length)]]
-			whileTrue:[length _ length + 1].
+			whileTrue:[length := length + 1].
 	^length
 ]
 
@@ -109,58 +109,58 @@ DeflatePlugin >> deflateBlock: lastIndex chainLength: chainLength goodMatch: goo
 	self inline: false.
 	zipBlockPos > lastIndex ifTrue:[^false]. "Nothing to deflate"
 	zipLiteralCount >= zipLiteralSize ifTrue:[^true].
-	hasMatch _ false.
-	here _ zipBlockPos.
+	hasMatch := false.
+	here := zipBlockPos.
 	[here <= lastIndex] whileTrue:[
 		hasMatch ifFalse:[
 			"Find the first match"
-			matchResult _ self findMatch: here
+			matchResult := self findMatch: here
 								lastLength: DeflateMinMatch-1
 								lastMatch: here
 								chainLength: chainLength
 								goodMatch: goodMatch.
 			self insertStringAt: here. "update hash table"
-			hereMatch _ matchResult bitAnd: 16rFFFF.
-			hereLength _ matchResult bitShift: -16].
+			hereMatch := matchResult bitAnd: 16rFFFF.
+			hereLength := matchResult bitShift: -16].
 
 		"Look ahead if there is a better match at the next position"
-		matchResult _ self findMatch: here+1
+		matchResult := self findMatch: here+1
 							lastLength: hereLength
 							lastMatch: hereMatch
 							chainLength: chainLength
 							goodMatch: goodMatch.
-		newMatch _ matchResult bitAnd: 16rFFFF.
-		newLength _ matchResult bitShift: -16.
+		newMatch := matchResult bitAnd: 16rFFFF.
+		newLength := matchResult bitShift: -16.
 
 		"Now check if the next match is better than the current one.
 		If not, output the current match (provided that the current match
 		is at least MinMatch long)"
 		(hereLength >= newLength and:[hereLength >= DeflateMinMatch]) ifTrue:[
 			"Encode the current match"
-			flushNeeded _ self
+			flushNeeded := self
 				encodeMatch: hereLength
 				distance: here - hereMatch.
 			"Insert all strings up to the end of the current match.
 			Note: The first string has already been inserted."
-			1 to: hereLength-1 do:[:i| self insertStringAt: (here _ here + 1)].
-			hasMatch _ false.
-			here _ here + 1.
+			1 to: hereLength-1 do:[:i| self insertStringAt: (here := here + 1)].
+			hasMatch := false.
+			here := here + 1.
 		] ifFalse:[
 			"Either the next match is better than the current one or we didn't
 			have a good match after all (e.g., current match length < MinMatch).
 			Output a single literal."
-			flushNeeded _ self encodeLiteral: (zipCollection at: here).
-			here _ here + 1.
+			flushNeeded := self encodeLiteral: (zipCollection at: here).
+			here := here + 1.
 			(here <= lastIndex and:[flushNeeded not]) ifTrue:[
 				"Cache the results for the next round"
 				self insertStringAt: here.
-				hasMatch _ true.
-				hereMatch _ newMatch.
-				hereLength _ newLength].
+				hasMatch := true.
+				hereMatch := newMatch.
+				hereLength := newLength].
 		].
-		flushNeeded ifTrue:[zipBlockPos _ here. ^true].
+		flushNeeded ifTrue:[zipBlockPos := here. ^true].
 	].
-	zipBlockPos _ here.
+	zipBlockPos := here.
 	^false
 ]
 
@@ -171,7 +171,7 @@ DeflatePlugin >> encodeLiteral: lit [
 	zipLiterals at: zipLiteralCount put: lit.
 	zipDistances at: zipLiteralCount put: 0.
 	zipLiteralFreq at: lit put: (zipLiteralFreq at: lit) + 1.
-	zipLiteralCount _ zipLiteralCount + 1.
+	zipLiteralCount := zipLiteralCount + 1.
 	^zipLiteralCount = zipLiteralSize "We *must* flush"
 		or:[(zipLiteralCount bitAnd: 16rFFF) = 0 "Only check every N kbytes"
 			and:[self shouldFlush]]
@@ -184,14 +184,14 @@ DeflatePlugin >> encodeMatch: length distance: dist [
 	self inline: true.
 	zipLiterals at: zipLiteralCount put: length - DeflateMinMatch.
 	zipDistances at: zipLiteralCount put: dist.
-	literal _ (zipMatchLengthCodes at: length - DeflateMinMatch).
+	literal := (zipMatchLengthCodes at: length - DeflateMinMatch).
 	zipLiteralFreq at: literal put: (zipLiteralFreq at: literal) + 1.
 	dist < 257
-		ifTrue:[distance _ zipDistanceCodes at: dist - 1]
-		ifFalse:[distance _ zipDistanceCodes at: 256 + (dist - 1 bitShift: -7)].
+		ifTrue:[distance := zipDistanceCodes at: dist - 1]
+		ifFalse:[distance := zipDistanceCodes at: 256 + (dist - 1 bitShift: -7)].
 	zipDistanceFreq at: distance put: (zipDistanceFreq at: distance) + 1.
-	zipLiteralCount _ zipLiteralCount + 1.
-	zipMatchCount _ zipMatchCount + 1.
+	zipLiteralCount := zipLiteralCount + 1.
+	zipMatchCount := zipMatchCount + 1.
 	^zipLiteralCount = zipLiteralSize "We *must* flush"
 		or:[(zipLiteralCount bitAnd: 16rFFF) = 0 "Only check every N kbytes"
 			and:[self shouldFlush]]
@@ -206,48 +206,48 @@ DeflatePlugin >> findMatch: here lastLength: lastLength lastMatch: lastMatch cha
 	| matchResult matchPos distance chainLength limit bestLength length |
 	self inline: false.
 	"Compute the default match result"
-	matchResult _ (lastLength bitShift: 16) bitOr: lastMatch.
+	matchResult := (lastLength bitShift: 16) bitOr: lastMatch.
 
 	"There is no way to find a better match than MaxMatch"
 	lastLength >= DeflateMaxMatch ifTrue:[^matchResult].
 
 	"Start position for searches"
-	matchPos _ zipHashHead at: (self updateHashAt: here + DeflateMinMatch - 1).
+	matchPos := zipHashHead at: (self updateHashAt: here + DeflateMinMatch - 1).
 
 	"Compute the distance to the (possible) match"
-	distance _ here - matchPos.
+	distance := here - matchPos.
 
 	"Note: It is required that 0 < distance < MaxDistance"
 	(distance > 0 and:[distance < DeflateMaxDistance]) ifFalse:[^matchResult].
 
-	chainLength _ maxChainLength.	"Max. nr of match chain to search"
+	chainLength := maxChainLength.	"Max. nr of match chain to search"
 	here > DeflateMaxDistance	"Limit for matches that are too old"
-		ifTrue:[limit _ here - DeflateMaxDistance]
-		ifFalse:[limit _ 0].
+		ifTrue:[limit := here - DeflateMaxDistance]
+		ifFalse:[limit := 0].
 
 	"Best match length so far (current match must be larger to take effect)"
-	bestLength _ lastLength.
+	bestLength := lastLength.
 
 	[true] whileTrue:[
 		"Compare the current string with the string at match position"
-		length _ self compare: here with: matchPos min: bestLength.
+		length := self compare: here with: matchPos min: bestLength.
 		"Truncate accidental matches beyound stream position"
-		(here + length > zipPosition) ifTrue:[length _ zipPosition - here].
+		(here + length > zipPosition) ifTrue:[length := zipPosition - here].
 		"Ignore very small matches if they are too far away"
 		(length = DeflateMinMatch and:[(here - matchPos) > (DeflateMaxDistance // 4)])
-			ifTrue:[length _ DeflateMinMatch - 1].
+			ifTrue:[length := DeflateMinMatch - 1].
 		length > bestLength ifTrue:["We have a new (better) match than before"
 			"Compute the new match result"
-			matchResult _ (length bitShift: 16) bitOr: matchPos.
-			bestLength _ length.
+			matchResult := (length bitShift: 16) bitOr: matchPos.
+			bestLength := length.
 			"There is no way to find a better match than MaxMatch"
 			bestLength >= DeflateMaxMatch ifTrue:[^matchResult].
 			"But we may have a good, fast match"
 			bestLength > goodMatch ifTrue:[^matchResult].
 		].
-		(chainLength _ chainLength - 1) > 0 ifFalse:[^matchResult].
+		(chainLength := chainLength - 1) > 0 ifFalse:[^matchResult].
 		"Compare with previous entry in hash chain"
-		matchPos _ zipHashTail at: (matchPos bitAnd: DeflateWindowMask).
+		matchPos := zipHashTail at: (matchPos bitAnd: DeflateWindowMask).
 		matchPos <= limit ifTrue:[^matchResult]. "Match position is too old"
 	].
 ]
@@ -260,8 +260,8 @@ DeflatePlugin >> insertStringAt: here [
 	(and the hash value is updated as well)."
 	| prevEntry |
 	self inline: true.
-	zipHashValue _ self updateHashAt: (here + DeflateMinMatch - 1).
-	prevEntry _ zipHashHead at: zipHashValue.
+	zipHashValue := self updateHashAt: (here + DeflateMinMatch - 1).
+	prevEntry := zipHashHead at: zipHashValue.
 	zipHashHead at: zipHashValue put: here.
 	zipHashTail at: (here bitAnd: DeflateWindowMask) put: prevEntry.
 ]
@@ -272,57 +272,57 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 	self inline: false.
 	((interpreterProxy isPointers: rcvr) and:[
 		(interpreterProxy slotSizeOf: rcvr) >= 15]) ifFalse:[^false].
-	oop _ interpreterProxy fetchPointer: 0 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 	(interpreterProxy isIntegerObject: oop)
 		ifTrue:[^interpreterProxy primitiveFail].
 	(interpreterProxy isBytes: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipCollection _ interpreterProxy firstIndexableField: oop.
-	zipCollectionSize _ interpreterProxy byteSizeOf: oop.
+	zipCollection := interpreterProxy firstIndexableField: oop.
+	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
-	zipPosition _ interpreterProxy fetchInteger: 1 ofObject: rcvr.
-	zipReadLimit _ interpreterProxy fetchInteger: 2 ofObject: rcvr.
-	"zipWriteLimit _ interpreterProxy fetchInteger: 3 ofObject: rcvr."
+	zipPosition := interpreterProxy fetchInteger: 1 ofObject: rcvr.
+	zipReadLimit := interpreterProxy fetchInteger: 2 ofObject: rcvr.
+	"zipWriteLimit := interpreterProxy fetchInteger: 3 ofObject: rcvr."
 
-	oop _ interpreterProxy fetchPointer: 4 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 4 ofObject: rcvr.
 	((interpreterProxy isIntegerObject: oop) or:[
 		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
 	(interpreterProxy slotSizeOf: oop) = DeflateHashTableSize ifFalse:[^false].
-	zipHashHead _ interpreterProxy firstIndexableField: oop.
-	oop _ interpreterProxy fetchPointer: 5 ofObject: rcvr.
+	zipHashHead := interpreterProxy firstIndexableField: oop.
+	oop := interpreterProxy fetchPointer: 5 ofObject: rcvr.
 	((interpreterProxy isIntegerObject: oop) or:[
 		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
 	(interpreterProxy slotSizeOf: oop) = DeflateWindowSize ifFalse:[^false].
-	zipHashTail _ interpreterProxy firstIndexableField: oop.
-	zipHashValue _ interpreterProxy fetchInteger: 6 ofObject: rcvr.
-	zipBlockPos _ interpreterProxy fetchInteger: 7 ofObject: rcvr.
-	"zipBlockStart _ interpreterProxy fetchInteger: 8 ofObject: rcvr."
-	oop _ interpreterProxy fetchPointer: 9 ofObject: rcvr.
+	zipHashTail := interpreterProxy firstIndexableField: oop.
+	zipHashValue := interpreterProxy fetchInteger: 6 ofObject: rcvr.
+	zipBlockPos := interpreterProxy fetchInteger: 7 ofObject: rcvr.
+	"zipBlockStart := interpreterProxy fetchInteger: 8 ofObject: rcvr."
+	oop := interpreterProxy fetchPointer: 9 ofObject: rcvr.
 	((interpreterProxy isIntegerObject: oop) or:[
 		(interpreterProxy isBytes: oop) not]) ifTrue:[^false].
-	zipLiteralSize _ interpreterProxy slotSizeOf: oop.
-	zipLiterals _ interpreterProxy firstIndexableField: oop.
+	zipLiteralSize := interpreterProxy slotSizeOf: oop.
+	zipLiterals := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 10 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 10 ofObject: rcvr.
 	((interpreterProxy isIntegerObject: oop) or:[
 		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
 	(interpreterProxy slotSizeOf: oop) < zipLiteralSize ifTrue:[^false].
-	zipDistances _ interpreterProxy firstIndexableField: oop.
+	zipDistances := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 11 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 11 ofObject: rcvr.
 	((interpreterProxy isIntegerObject: oop) or:[
 		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
 	(interpreterProxy slotSizeOf: oop) = DeflateMaxLiteralCodes ifFalse:[^false].
-	zipLiteralFreq _ interpreterProxy firstIndexableField: oop.
+	zipLiteralFreq := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 12 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 12 ofObject: rcvr.
 	((interpreterProxy isIntegerObject: oop) or:[
 		(interpreterProxy isWords: oop) not]) ifTrue:[^false].
 	(interpreterProxy slotSizeOf: oop) = DeflateMaxDistanceCodes ifFalse:[^false].
-	zipDistanceFreq _ interpreterProxy firstIndexableField: oop.
+	zipDistanceFreq := interpreterProxy firstIndexableField: oop.
 
-	zipLiteralCount _ interpreterProxy fetchInteger: 13 ofObject: rcvr.
-	zipMatchCount _ interpreterProxy fetchInteger: 14 ofObject: rcvr.
+	zipLiteralCount := interpreterProxy fetchInteger: 13 ofObject: rcvr.
+	zipMatchCount := interpreterProxy fetchInteger: 14 ofObject: rcvr.
 
 	^interpreterProxy failed not
 ]
@@ -333,19 +333,19 @@ DeflatePlugin >> loadZipEncoderFrom: rcvr [
 	self inline: false.
 	((interpreterProxy isPointers: rcvr) and:[
 		(interpreterProxy slotSizeOf: rcvr) >= 6]) ifFalse:[^false].
-	oop _ interpreterProxy fetchPointer: 0 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 	(interpreterProxy isIntegerObject: oop)
 		ifTrue:[^interpreterProxy primitiveFail].
 	(interpreterProxy isBytes: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipCollection _ interpreterProxy firstIndexableField: oop.
-	zipCollectionSize _ interpreterProxy byteSizeOf: oop.
+	zipCollection := interpreterProxy firstIndexableField: oop.
+	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
-	zipPosition _ interpreterProxy fetchInteger: 1 ofObject: rcvr.
-	zipReadLimit _ interpreterProxy fetchInteger: 2 ofObject: rcvr.
-	"zipWriteLimit _ interpreterProxy fetchInteger: 3 ofObject: rcvr."
-	zipBitBuf _ interpreterProxy fetchInteger: 4 ofObject: rcvr.
-	zipBitPos _ interpreterProxy fetchInteger: 5 ofObject: rcvr.
+	zipPosition := interpreterProxy fetchInteger: 1 ofObject: rcvr.
+	zipReadLimit := interpreterProxy fetchInteger: 2 ofObject: rcvr.
+	"zipWriteLimit := interpreterProxy fetchInteger: 3 ofObject: rcvr."
+	zipBitBuf := interpreterProxy fetchInteger: 4 ofObject: rcvr.
+	zipBitPos := interpreterProxy fetchInteger: 5 ofObject: rcvr.
 
 	^interpreterProxy failed not
 ]
@@ -359,13 +359,13 @@ DeflatePlugin >> nextZipBits: nBits put: value [
 	self inline: true.
 	(value >= 0 and:[(1 << nBits) > value])
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipBitBuf _ zipBitBuf bitOr: (value bitShift: zipBitPos).
-	zipBitPos _ zipBitPos + nBits.
+	zipBitBuf := zipBitBuf bitOr: (value bitShift: zipBitPos).
+	zipBitPos := zipBitPos + nBits.
 	[zipBitPos >= 8 and:[zipPosition < zipCollectionSize]] whileTrue:[
 		zipCollection at: zipPosition put: (zipBitBuf bitAnd: 255).
-		zipPosition _ zipPosition + 1.
-		zipBitBuf _ zipBitBuf >> 8.
-		zipBitPos _ zipBitPos - 8].
+		zipPosition := zipPosition + 1.
+		zipBitBuf := zipBitBuf >> 8.
+		zipBitPos := zipBitPos - 8].
 
 ]
 
@@ -377,17 +377,17 @@ DeflatePlugin >> primitiveDeflateBlock [
 	self inline: false.
 	interpreterProxy methodArgumentCount = 3
 		ifFalse:[^interpreterProxy primitiveFail].
-	goodMatch _ interpreterProxy stackIntegerValue: 0.
-	chainLength _ interpreterProxy stackIntegerValue: 1.
-	lastIndex _ interpreterProxy stackIntegerValue: 2.
-	rcvr _ interpreterProxy stackObjectValue: 3.
+	goodMatch := interpreterProxy stackIntegerValue: 0.
+	chainLength := interpreterProxy stackIntegerValue: 1.
+	lastIndex := interpreterProxy stackIntegerValue: 2.
+	rcvr := interpreterProxy stackObjectValue: 3.
 	interpreterProxy failed ifTrue:[^nil].
 	self cCode:'' inSmalltalk:[
-		zipMatchLengthCodes _ CArrayAccessor on: ZipWriteStream matchLengthCodes.
-		zipDistanceCodes _ CArrayAccessor on: ZipWriteStream distanceCodes].
+		zipMatchLengthCodes := CArrayAccessor on: ZipWriteStream matchLengthCodes.
+		zipDistanceCodes := CArrayAccessor on: ZipWriteStream distanceCodes].
 	(self loadDeflateStreamFrom: rcvr)
 		ifFalse:[^interpreterProxy primitiveFail].
-	result _ self deflateBlock: lastIndex chainLength: chainLength goodMatch: goodMatch.
+	result := self deflateBlock: lastIndex chainLength: chainLength goodMatch: goodMatch.
 	interpreterProxy failed ifFalse:[
 		"Store back modified values"
 		interpreterProxy storeInteger: 6 ofObject: rcvr withValue: zipHashValue.
@@ -408,15 +408,15 @@ DeflatePlugin >> primitiveDeflateUpdateHashTable [
 	self var: #tablePtr type:'int *'.
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
-	delta _ interpreterProxy stackIntegerValue: 0.
-	table _ interpreterProxy stackObjectValue: 1.
+	delta := interpreterProxy stackIntegerValue: 0.
+	table := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: table)
 		ifFalse:[^interpreterProxy primitiveFail].
-	tableSize _ interpreterProxy slotSizeOf: table.
-	tablePtr _ interpreterProxy firstIndexableField: table.
+	tableSize := interpreterProxy slotSizeOf: table.
+	tablePtr := interpreterProxy firstIndexableField: table.
 	0 to: tableSize-1 do:[:i|
-		entry _ tablePtr at: i.
+		entry := tablePtr at: i.
 		entry >= delta
 			ifTrue:[tablePtr at: i put: entry - delta]
 			ifFalse:[tablePtr at: i put: 0]].
@@ -432,18 +432,18 @@ DeflatePlugin >> primitiveUpdateAdler32 [
 	self var: #bytePtr type:'unsigned char *'.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
-	collection _ interpreterProxy stackObjectValue: 0.
-	stopIndex _ interpreterProxy stackIntegerValue: 1.
-	startIndex _ interpreterProxy stackIntegerValue: 2.
-	adler32 _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 3).
+	collection := interpreterProxy stackObjectValue: 0.
+	stopIndex := interpreterProxy stackIntegerValue: 1.
+	startIndex := interpreterProxy stackIntegerValue: 2.
+	adler32 := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 3).
 	interpreterProxy failed ifTrue:[^0].
 	((interpreterProxy isBytes: collection) and:[stopIndex >= startIndex and:[startIndex > 0]])
 		ifFalse:[^interpreterProxy primitiveFail].
-	length _ interpreterProxy byteSizeOf: collection.
+	length := interpreterProxy byteSizeOf: collection.
 	(stopIndex <= length) ifFalse:[^interpreterProxy primitiveFail].
-	bytePtr _ interpreterProxy firstIndexableField: collection.
-	startIndex _ startIndex - 1.
-	stopIndex _ stopIndex - 1.
+	bytePtr := interpreterProxy firstIndexableField: collection.
+	startIndex := startIndex - 1.
+	stopIndex := stopIndex - 1.
 	s1 := adler32 bitAnd: 16rFFFF.
 	s2 := (adler32 >> 16) bitAnd: 16rFFFF.
 	startIndex to: stopIndex do:[:i|
@@ -466,21 +466,21 @@ DeflatePlugin >> primitiveUpdateGZipCrc32 [
 	self var: #crcTable type:'unsigned int *'.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
-	collection _ interpreterProxy stackObjectValue: 0.
-	stopIndex _ interpreterProxy stackIntegerValue: 1.
-	startIndex _ interpreterProxy stackIntegerValue: 2.
-	crc _ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 3).
+	collection := interpreterProxy stackObjectValue: 0.
+	stopIndex := interpreterProxy stackIntegerValue: 1.
+	startIndex := interpreterProxy stackIntegerValue: 2.
+	crc := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 3).
 	interpreterProxy failed ifTrue:[^0].
 	((interpreterProxy isBytes: collection) and:[stopIndex >= startIndex and:[startIndex > 0]])
 		ifFalse:[^interpreterProxy primitiveFail].
-	length _ interpreterProxy byteSizeOf: collection.
+	length := interpreterProxy byteSizeOf: collection.
 	(stopIndex <= length) ifFalse:[^interpreterProxy primitiveFail].
-	bytePtr _ interpreterProxy firstIndexableField: collection.
-	self cCode:'' inSmalltalk:[zipCrcTable _ CArrayAccessor on: GZipWriteStream crcTable].
-	startIndex _ startIndex - 1.
-	stopIndex _ stopIndex - 1.
+	bytePtr := interpreterProxy firstIndexableField: collection.
+	self cCode:'' inSmalltalk:[zipCrcTable := CArrayAccessor on: GZipWriteStream crcTable].
+	startIndex := startIndex - 1.
+	stopIndex := stopIndex - 1.
 	startIndex to: stopIndex do:[:i|
-		crc _ (zipCrcTable at: ((crc bitXor: (bytePtr at: i)) bitAnd: 255)) bitXor: (crc >> 8).
+		crc := (zipCrcTable at: ((crc bitXor: (bytePtr at: i)) bitAnd: 255)) bitXor: (crc >> 8).
 	].
 	interpreterProxy pop: 5. "args + rcvr"
 	interpreterProxy push: (interpreterProxy positive32BitIntegerFor: crc).
@@ -492,11 +492,11 @@ DeflatePlugin >> primitiveZipSendBlock [
 	self export: true.
 	interpreterProxy methodArgumentCount = 4 
 		ifFalse:[^interpreterProxy primitiveFail].
-	distTree _ interpreterProxy stackObjectValue: 0.
-	litTree _ interpreterProxy stackObjectValue: 1.
-	distStream _ interpreterProxy stackObjectValue: 2.
-	litStream _ interpreterProxy stackObjectValue: 3.
-	rcvr _ interpreterProxy stackObjectValue: 4.
+	distTree := interpreterProxy stackObjectValue: 0.
+	litTree := interpreterProxy stackObjectValue: 1.
+	distStream := interpreterProxy stackObjectValue: 2.
+	litStream := interpreterProxy stackObjectValue: 3.
+	rcvr := interpreterProxy stackObjectValue: 4.
 	interpreterProxy failed ifTrue:[^nil].
 	(self loadZipEncoderFrom: rcvr)
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -513,13 +513,13 @@ DeflatePlugin >> primitiveZipSendBlock [
 		(interpreterProxy slotSizeOf: distStream) >= 3])
 			ifFalse:[^interpreterProxy primitiveFail].
 	self cCode:'' inSmalltalk:[
-		zipMatchLengthCodes _ CArrayAccessor on: ZipWriteStream matchLengthCodes.
-		zipDistanceCodes _ CArrayAccessor on: ZipWriteStream distanceCodes.
-		zipExtraLengthBits _ CArrayAccessor on: ZipWriteStream extraLengthBits.
-		zipExtraDistanceBits _ CArrayAccessor on: ZipWriteStream extraDistanceBits.
-		zipBaseLength _ CArrayAccessor on: ZipWriteStream baseLength.
-		zipBaseDistance _ CArrayAccessor on: ZipWriteStream baseDistance].
-	result _ self sendBlock: litStream with: distStream with: litTree with: distTree.
+		zipMatchLengthCodes := CArrayAccessor on: ZipWriteStream matchLengthCodes.
+		zipDistanceCodes := CArrayAccessor on: ZipWriteStream distanceCodes.
+		zipExtraLengthBits := CArrayAccessor on: ZipWriteStream extraLengthBits.
+		zipExtraDistanceBits := CArrayAccessor on: ZipWriteStream extraDistanceBits.
+		zipBaseLength := CArrayAccessor on: ZipWriteStream baseLength.
+		zipBaseDistance := CArrayAccessor on: ZipWriteStream baseDistance].
+	result := self sendBlock: litStream with: distStream with: litTree with: distTree.
 	interpreterProxy failed ifFalse:[
 		interpreterProxy storeInteger: 1 ofObject: rcvr withValue: zipPosition.
 		interpreterProxy storeInteger: 4 ofObject: rcvr withValue: zipBitBuf.
@@ -544,15 +544,15 @@ DeflatePlugin >> sendBlock: literalStream with: distanceStream with: litTree wit
 	self var: #llCodes type:'unsigned int *'.
 	self var: #distBitLengths type:'unsigned int *'.
 	self var: #distCodes type:'unsigned int *'.
-	oop _ interpreterProxy fetchPointer: 0 ofObject: literalStream.
-	litPos _ interpreterProxy fetchInteger: 1 ofObject: literalStream.
-	litLimit _ interpreterProxy fetchInteger: 2 ofObject: literalStream.
+	oop := interpreterProxy fetchPointer: 0 ofObject: literalStream.
+	litPos := interpreterProxy fetchInteger: 1 ofObject: literalStream.
+	litLimit := interpreterProxy fetchInteger: 2 ofObject: literalStream.
 	((interpreterProxy isIntegerObject: oop) not and:[litPos <= litLimit and:[
 		litLimit <= (interpreterProxy byteSizeOf: oop) and:[interpreterProxy isBytes: oop]]])
 			ifFalse:[^interpreterProxy primitiveFail].
-	litArray _ interpreterProxy firstIndexableField: oop.
+	litArray := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 0 ofObject: distanceStream.
+	oop := interpreterProxy fetchPointer: 0 ofObject: distanceStream.
 	((interpreterProxy isIntegerObject: oop) not and:[
 		(interpreterProxy fetchInteger: 1 ofObject: distanceStream) = litPos and:[
 			(interpreterProxy fetchInteger: 2 ofObject: distanceStream) = litLimit]])
@@ -560,66 +560,66 @@ DeflatePlugin >> sendBlock: literalStream with: distanceStream with: litTree wit
 	((interpreterProxy isWords: oop) and:[
 		litLimit <= (interpreterProxy slotSizeOf: oop)])
 			ifFalse:[^interpreterProxy primitiveFail].
-	distArray _ interpreterProxy firstIndexableField: oop.
+	distArray := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 0 ofObject: litTree.
+	oop := interpreterProxy fetchPointer: 0 ofObject: litTree.
 	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
 		ifFalse:[^interpreterProxy primitiveFail].
-	litBlCount _ interpreterProxy slotSizeOf: oop.
-	llBitLengths _ interpreterProxy firstIndexableField: oop.
+	litBlCount := interpreterProxy slotSizeOf: oop.
+	llBitLengths := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 1 ofObject: litTree.
+	oop := interpreterProxy fetchPointer: 1 ofObject: litTree.
 	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
 		ifFalse:[^interpreterProxy primitiveFail].
 	(litBlCount = (interpreterProxy slotSizeOf: oop))
 		ifFalse:[^interpreterProxy primitiveFail].
-	llCodes _ interpreterProxy firstIndexableField: oop.
+	llCodes := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 0 ofObject: distTree.
+	oop := interpreterProxy fetchPointer: 0 ofObject: distTree.
 	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
 		ifFalse:[^interpreterProxy primitiveFail].
-	distBlCount _ interpreterProxy slotSizeOf: oop.
-	distBitLengths _ interpreterProxy firstIndexableField: oop.
+	distBlCount := interpreterProxy slotSizeOf: oop.
+	distBitLengths := interpreterProxy firstIndexableField: oop.
 
-	oop _ interpreterProxy fetchPointer: 1 ofObject: distTree.
+	oop := interpreterProxy fetchPointer: 1 ofObject: distTree.
 	((interpreterProxy isIntegerObject: oop) not and:[interpreterProxy isWords: oop])
 		ifFalse:[^interpreterProxy primitiveFail].
 	(distBlCount = (interpreterProxy slotSizeOf: oop))
 		ifFalse:[^interpreterProxy primitiveFail].
-	distCodes _ interpreterProxy firstIndexableField: oop.
+	distCodes := interpreterProxy firstIndexableField: oop.
 
 	interpreterProxy failed ifTrue:[^nil].
 
 	self nextZipBits: 0 put: 0. "Flush pending bits if necessary"
-	sum _ 0.
+	sum := 0.
 	[litPos < litLimit and:[zipPosition + 4 < zipCollectionSize]] whileTrue:[
-		lit _ litArray at: litPos.
-		dist _ distArray at: litPos.
-		litPos _ litPos + 1.
+		lit := litArray at: litPos.
+		dist := distArray at: litPos.
+		litPos := litPos + 1.
 		dist = 0 ifTrue:["literal"
-			sum _ sum + 1.
+			sum := sum + 1.
 			lit < litBlCount ifFalse:[^interpreterProxy primitiveFail].
 			self nextZipBits: (llBitLengths at: lit) put: (llCodes at: lit).
 		] ifFalse:["match"
-			sum _ sum + lit + DeflateMinMatch.
+			sum := sum + lit + DeflateMinMatch.
 			lit < 256 ifFalse:[^interpreterProxy primitiveFail].
-			code _ zipMatchLengthCodes at: lit.
+			code := zipMatchLengthCodes at: lit.
 			code < litBlCount ifFalse:[^interpreterProxy primitiveFail].
 			self nextZipBits: (llBitLengths at: code) put: (llCodes at: code).
-			extra _ zipExtraLengthBits at: code - 257.
+			extra := zipExtraLengthBits at: code - 257.
 			extra = 0 ifFalse:[
-				lit _ lit - (zipBaseLength at: code - 257).
+				lit := lit - (zipBaseLength at: code - 257).
 				self nextZipBits: extra put: lit].
-			dist _ dist - 1.
+			dist := dist - 1.
 			dist < 16r8000 ifFalse:[^interpreterProxy primitiveFail].
 			dist < 256
-				ifTrue:[code _ zipDistanceCodes at: dist]
-				ifFalse:[code _ zipDistanceCodes at: 256 + (dist >> 7)].
+				ifTrue:[code := zipDistanceCodes at: dist]
+				ifFalse:[code := zipDistanceCodes at: 256 + (dist >> 7)].
 			code < distBlCount ifFalse:[^interpreterProxy primitiveFail].
 			self nextZipBits: (distBitLengths at: code) put: (distCodes at: code).
-			extra _ zipExtraDistanceBits at: code.
+			extra := zipExtraDistanceBits at: code.
 			extra = 0 ifFalse:[
-				dist _ dist - (zipBaseDistance at: code).
+				dist := dist - (zipBaseDistance at: code).
 				self nextZipBits: extra put: dist].
 		].
 	].
@@ -645,7 +645,7 @@ DeflatePlugin >> shouldFlush [
 	"Try to adapt to the input data.
 	We flush if the ratio between matches and literals
 	changes beyound a certain threshold"
-	nLits _ zipLiteralCount - zipMatchCount.
+	nLits := zipLiteralCount - zipMatchCount.
 	nLits <= zipMatchCount ifTrue:[^false]. "whow! so many matches"
 	^nLits * 4 <= zipMatchCount
 ]

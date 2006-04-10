@@ -19,13 +19,13 @@ CCodeGeneratorGlobalStructure >> buildSortedVariablesCollection [
 
 	| globalNames sorted |
 
-	globalNames _ Bag new: globalVariableUsage size.
+	globalNames := Bag new: globalVariableUsage size.
 	globalVariableUsage keysAndValuesDo: [:k :v | 
 		(variableDeclarations includesKey: k) ifFalse: 
 			[globalNames add: k withOccurrences: v size]].	
 	variableDeclarations keysDo: 
 		[:e | globalNames add: e withOccurrences: 0].
-	sorted _ SortedCollection sortBlock: 
+	sorted := SortedCollection sortBlock: 
 		[:a :b | (globalNames occurrencesOf: a) > (globalNames occurrencesOf: b)].
 	sorted addAll: variables.
 	^sorted
@@ -59,13 +59,13 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 	break logic into vars for structure and vars for non-structure"
 	| varString structure nonstruct target |
 
-	structure _ WriteStream on: (String new: 32768).
-	nonstruct _ WriteStream on: (String new: 32768).
+	structure := WriteStream on: (String new: 32768).
+	nonstruct := WriteStream on: (String new: 32768).
 	aStream nextPutAll: '/*** Variables ***/'; cr.
 	structure nextPutAll: 'struct foo {'; cr.
 	self buildSortedVariablesCollection do: [ :var |
-		varString _ var asString.
-		target _ (self placeInStructure: var) 
+		varString := var asString.
+		target := (self placeInStructure: var) 
 			ifTrue: [structure]
 			ifFalse: [nonstruct].
 		(self isGeneratingPluginCode) ifTrue:[
@@ -111,13 +111,13 @@ CCodeGeneratorGlobalStructure >> emitStructureInitFunctionOn: aStream [
 
 { #category : #'C code generator' }
 CCodeGeneratorGlobalStructure >> globalStructDefined: aBool [
-	localStructDef _ aBool
+	localStructDef := aBool
 ]
 
 { #category : #'C code generator' }
 CCodeGeneratorGlobalStructure >> initialize [
 	super initialize.
-	localStructDef _ false
+	localStructDef := false
 ]
 
 { #category : #public }
@@ -131,7 +131,7 @@ CCodeGeneratorGlobalStructure >> localizeGlobalVariables [
 actually what will happen is the folding code will fold these variables into the method"
 
 	super localizeGlobalVariables.
-	globalVariableUsage _ globalVariableUsage select: [:e | e size > 1].
+	globalVariableUsage := globalVariableUsage select: [:e | e size > 1].
 
 ]
 
@@ -143,7 +143,7 @@ CCodeGeneratorGlobalStructure >> placeInStructure: var [
 	Also let's ignore variables that have special definitions that require initialization, and the function def which has problems"
 
 	| check |
-	check _ variableDeclarations at: var ifAbsent: [''].
+	check := variableDeclarations at: var ifAbsent: [''].
 	(check includes: $=) ifTrue: [^false].
 	(check includes: $() ifTrue: [^false].
 

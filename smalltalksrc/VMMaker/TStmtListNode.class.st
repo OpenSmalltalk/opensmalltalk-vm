@@ -17,13 +17,13 @@ TStmtListNode >> args [
 { #category : #'as yet unclassified' }
 TStmtListNode >> bindVariableUsesIn: aDictionary [
 
-	statements _ statements collect: [ :s | s bindVariableUsesIn: aDictionary ].
+	statements := statements collect: [ :s | s bindVariableUsesIn: aDictionary ].
 ]
 
 { #category : #'as yet unclassified' }
 TStmtListNode >> bindVariablesIn: aDictionary [
 
-	statements _ statements collect: [ :s | s bindVariablesIn: aDictionary ].
+	statements := statements collect: [ :s | s bindVariablesIn: aDictionary ].
 ]
 
 { #category : #'as yet unclassified' }
@@ -53,9 +53,9 @@ TStmtListNode >> endsWithCloseBracket: aStream [
 	"Answer true if the given stream ends in a $} character."
 
 	| ch pos |
-	(pos _ aStream position) > 0 ifTrue: [
+	(pos := aStream position) > 0 ifTrue: [
 		aStream position: pos - 1.
-		ch _ aStream next].
+		ch := aStream next].
 	^ ch = $}
 
 ]
@@ -71,7 +71,7 @@ TStmtListNode >> isNilStmtListNode [
 
 	|stmt|
 	statements size = 1 ifFalse: [^false].
-	stmt _ statements at: 1.
+	stmt := statements at: 1.
 	^ stmt isVariable and: [stmt name = 'nil']
 ]
 
@@ -119,7 +119,7 @@ TStmtListNode >> printStatementsOn: aStream level: level [
 { #category : #'as yet unclassified' }
 TStmtListNode >> removeAssertions [
 	| newStatements |
-	newStatements _ OrderedCollection new: statements size.
+	newStatements := OrderedCollection new: statements size.
 	statements do: [ :stmt |
 		stmt isAssertion ifFalse: [
 			newStatements add: (stmt removeAssertions; yourself).
@@ -132,28 +132,28 @@ TStmtListNode >> removeAssertions [
 TStmtListNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [
-		statements _ statements collect: [ :s | s replaceNodesIn: aDictionary ].
+		statements := statements collect: [ :s | s replaceNodesIn: aDictionary ].
 		self]
 ]
 
 { #category : #'as yet unclassified' }
 TStmtListNode >> setArguments: argList [
 
-	arguments _ argList.
+	arguments := argList.
 ]
 
 { #category : #'as yet unclassified' }
 TStmtListNode >> setArguments: argList statements: statementList [
 	"Initialize this method using the given information."
 
-	arguments _ argList.
-	statements _ statementList.
+	arguments := argList.
+	statements := statementList.
 ]
 
 { #category : #'as yet unclassified' }
 TStmtListNode >> setStatements: stmtList [
 
-	statements _ stmtList asOrderedCollection.
+	statements := stmtList asOrderedCollection.
 ]
 
 { #category : #'as yet unclassified' }

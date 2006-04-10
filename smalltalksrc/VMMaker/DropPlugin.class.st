@@ -53,8 +53,8 @@ DropPlugin >> primitiveDropRequestFileHandle [
 	self inline: false.
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
-	dropIndex _ interpreterProxy stackIntegerValue: 0.
-	handleOop _ self dropRequestFileHandle: dropIndex.
+	dropIndex := interpreterProxy stackIntegerValue: 0.
+	handleOop := self dropRequestFileHandle: dropIndex.
 	"dropRequestFileHandle needs to return the actual oop returned"
 	interpreterProxy failed ifFalse:[
 		interpreterProxy pop: 2.
@@ -72,14 +72,14 @@ DropPlugin >> primitiveDropRequestFileName [
 	self var: #namePtr type: 'char *'.
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
-	dropIndex _ interpreterProxy stackIntegerValue: 0.
-	dropName _ self dropRequestFileName: dropIndex.
+	dropIndex := interpreterProxy stackIntegerValue: 0.
+	dropName := self dropRequestFileName: dropIndex.
 	"dropRequestFileName returns name or NULL on error"
 	dropName == nil 
 		ifTrue:[^interpreterProxy primitiveFail].
-	nameLength _ self strlen: dropName.
-	nameOop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: nameLength.
-	namePtr _ interpreterProxy firstIndexableField: nameOop.
+	nameLength := self strlen: dropName.
+	nameOop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: nameLength.
+	namePtr := interpreterProxy firstIndexableField: nameOop.
 	0 to: nameLength-1 do:[:i| namePtr at: i put: (dropName at: i)].
 	interpreterProxy pop: 2.
 	interpreterProxy push: nameOop.

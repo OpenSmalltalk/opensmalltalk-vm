@@ -73,7 +73,7 @@ CroquetPlugin >> primitiveARC4Transform [
 	interpreterProxy pushRemappableOop: ptOop.
 	xOop := interpreterProxy positive32BitIntegerFor: x.
 	interpreterProxy pushRemappableOop: xOop.
-	yOop := interpreterProxy positive32BitIntegerFor: x.
+	yOop := interpreterProxy positive32BitIntegerFor: y.
 	xOop := interpreterProxy popRemappableOop.
 	ptOop := interpreterProxy popRemappableOop.
 	interpreterProxy storePointer: 0 ofObject: ptOop withValue: xOop.
@@ -81,6 +81,26 @@ CroquetPlugin >> primitiveARC4Transform [
 	interpreterProxy pop: interpreterProxy methodArgumentCount + 1.
 	interpreterProxy push: ptOop.
 
+]
+
+{ #category : #cryptography }
+CroquetPlugin >> primitiveGatherEntropy [
+	"Primitive. Gather good random entropy from a system source."
+	| bufOop bufSize bufPtr okay |
+	self export: true.
+	self var: 'bufPtr' type: 'void *'.
+	(interpreterProxy methodArgumentCount = 1)
+		ifFalse:[^interpreterProxy primitiveFail].
+	bufOop := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue:[^nil].
+	(interpreterProxy isBytes: bufOop)
+		ifFalse:[^interpreterProxy primitiveFail].
+	bufSize := interpreterProxy byteSizeOf: bufOop.
+	bufPtr := interpreterProxy firstIndexableField: bufOop.
+	okay := self cCode: 'ioGatherEntropy(bufPtr, bufSize)' inSmalltalk:[bufPtr. bufSize. false].
+	okay ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy pop: interpreterProxy methodArgumentCount + 1.
+	interpreterProxy pushBool: true.
 ]
 
 { #category : #transforms }

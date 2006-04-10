@@ -10,13 +10,13 @@ Class {
 { #category : #'as yet unclassified' }
 TReturnNode >> bindVariableUsesIn: aDictionary [
 
-	expression _ expression bindVariableUsesIn: aDictionary.
+	expression := expression bindVariableUsesIn: aDictionary.
 ]
 
 { #category : #'as yet unclassified' }
 TReturnNode >> bindVariablesIn: aDictionary [
 
-	expression _ expression bindVariablesIn: aDictionary.
+	expression := expression bindVariablesIn: aDictionary.
 ]
 
 { #category : #'as yet unclassified' }
@@ -42,7 +42,7 @@ TReturnNode >> expression [
 { #category : #'as yet unclassified' }
 TReturnNode >> inlineMethodsUsing: aDictionary [
 
-	expression _ expression inlineMethodsUsing: aDictionary.
+	expression := expression inlineMethodsUsing: aDictionary.
 ]
 
 { #category : #'as yet unclassified' }
@@ -74,12 +74,12 @@ TReturnNode >> removeAssertions [
 TReturnNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [
-		expression _ expression replaceNodesIn: aDictionary.
+		expression := expression replaceNodesIn: aDictionary.
 		self]
 ]
 
 { #category : #'as yet unclassified' }
 TReturnNode >> setExpression: aNode [
 
-	expression _ aNode.
+	expression := aNode.
 ]

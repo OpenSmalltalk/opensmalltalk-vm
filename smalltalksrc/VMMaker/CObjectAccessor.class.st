@@ -23,7 +23,7 @@ CObjectAccessor >> + increment [
 
 { #category : #'pointer arithmetic' }
 CObjectAccessor >> += increment [
-	offset _ offset + increment
+	offset := offset + increment
 ]
 
 { #category : #'pointer arithmetic' }
@@ -33,7 +33,7 @@ CObjectAccessor >> - decrement [
 
 { #category : #'pointer arithmetic' }
 CObjectAccessor >> -= decrement [
-	offset _ offset - decrement
+	offset := offset - decrement
 ]
 
 { #category : #converting }
@@ -132,6 +132,6 @@ CObjectAccessor >> printOnStream: aStream [
 
 { #category : #private }
 CObjectAccessor >> setObject: anObject [
-	object _ anObject.
-	offset _ 0.
+	object := anObject.
+	offset := 0.
 ]

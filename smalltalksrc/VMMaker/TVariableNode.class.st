@@ -65,5 +65,5 @@ TVariableNode >> printOn: aStream level: level [
 { #category : #'as yet unclassified' }
 TVariableNode >> setName: aString [
 
-	name _ aString.
+	name := aString.
 ]
