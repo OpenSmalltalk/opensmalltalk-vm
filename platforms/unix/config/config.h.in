@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2005-03-28 22:47:17 by piumarta on emilia.local
+ * Last edited: 2006-04-06 09:12:12 by piumarta on emilia.local
  */
 
 #ifndef __sq_config_h
@@ -150,6 +150,7 @@
 #undef	VM_HOST_CPU
 #undef	VM_HOST_VENDOR
 #undef	VM_HOST_OS
+#undef	VM_BUILD_STRING
 
 #undef	WORDS_BIGENDIAN
 #undef	DOUBLE_WORD_ALIGNMENT
