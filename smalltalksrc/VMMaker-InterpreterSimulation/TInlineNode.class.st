@@ -9,7 +9,7 @@ Class {
 
 { #category : #accessing }
 TInlineNode >> bindVariableUsesIn: aDictionary [
-	method _ method bindVariableUsesIn: aDictionary.
+	method := method bindVariableUsesIn: aDictionary.
 
 ]
 

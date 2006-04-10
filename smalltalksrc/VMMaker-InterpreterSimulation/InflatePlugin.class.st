@@ -38,8 +38,8 @@ InflatePlugin class >> declareCVarsIn: cg [
 { #category : #'class initialization' }
 InflatePlugin class >> initialize [
 	"InflatePlugin initialize"
-	MaxBits _ 16.
-	StateNoMoreData _ 1.
+	MaxBits := 16.
+	StateNoMoreData := 1.
 ]
 
 { #category : #translation }
@@ -60,24 +60,24 @@ InflatePlugin >> primitiveInflateDecompressBlock [
 	self export: true.
 	interpreterProxy methodArgumentCount = 2 ifFalse:[^interpreterProxy primitiveFail].
 	"distance table"
-	oop _ interpreterProxy stackObjectValue: 0.
+	oop := interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipDistTable _ interpreterProxy firstIndexableField: oop.
-	zipDistTableSize _ interpreterProxy slotSizeOf: oop.
+	zipDistTable := interpreterProxy firstIndexableField: oop.
+	zipDistTableSize := interpreterProxy slotSizeOf: oop.
 
 	"literal table"
-	oop _ interpreterProxy stackObjectValue: 1.
+	oop := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isWords: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipLitTable _ interpreterProxy firstIndexableField: oop.
-	zipLitTableSize _ interpreterProxy slotSizeOf: oop.
+	zipLitTable := interpreterProxy firstIndexableField: oop.
+	zipLitTableSize := interpreterProxy slotSizeOf: oop.
 
 
 	"Receiver (InflateStream)"
-	rcvr _ interpreterProxy stackObjectValue: 2.
+	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy isPointers: rcvr)
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -85,33 +85,33 @@ InflatePlugin >> primitiveInflateDecompressBlock [
 		ifTrue:[^interpreterProxy primitiveFail].
 
 	"All the integer instvars"
-	zipReadLimit _ interpreterProxy fetchInteger: 2 ofObject: rcvr.
-	zipState _ interpreterProxy fetchInteger: 3 ofObject: rcvr.
-	zipBitBuf _ interpreterProxy fetchInteger: 4 ofObject: rcvr.
-	zipBitPos _ interpreterProxy fetchInteger: 5 ofObject: rcvr.
-	zipSourcePos _ interpreterProxy fetchInteger: 7 ofObject: rcvr.
-	zipSourceLimit _ interpreterProxy fetchInteger: 8 ofObject: rcvr.
+	zipReadLimit := interpreterProxy fetchInteger: 2 ofObject: rcvr.
+	zipState := interpreterProxy fetchInteger: 3 ofObject: rcvr.
+	zipBitBuf := interpreterProxy fetchInteger: 4 ofObject: rcvr.
+	zipBitPos := interpreterProxy fetchInteger: 5 ofObject: rcvr.
+	zipSourcePos := interpreterProxy fetchInteger: 7 ofObject: rcvr.
+	zipSourceLimit := interpreterProxy fetchInteger: 8 ofObject: rcvr.
 	interpreterProxy failed ifTrue:[^nil].
-	zipReadLimit _ zipReadLimit - 1.
-	zipSourcePos _ zipSourcePos - 1.
-	zipSourceLimit _ zipSourceLimit - 1.
+	zipReadLimit := zipReadLimit - 1.
+	zipSourcePos := zipSourcePos - 1.
+	zipSourceLimit := zipSourceLimit - 1.
 
 	"collection"
-	oop _ interpreterProxy fetchPointer: 0 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 	(interpreterProxy isIntegerObject: oop)
 		ifTrue:[^interpreterProxy primitiveFail].
 	(interpreterProxy isBytes: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipCollection _ interpreterProxy firstIndexableField: oop.
-	zipCollectionSize _ interpreterProxy byteSizeOf: oop.
+	zipCollection := interpreterProxy firstIndexableField: oop.
+	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
 	"source"
-	oop _ interpreterProxy fetchPointer: 6 ofObject: rcvr.
+	oop := interpreterProxy fetchPointer: 6 ofObject: rcvr.
 	(interpreterProxy isIntegerObject: oop)
 		ifTrue:[^interpreterProxy primitiveFail].
 	(interpreterProxy isBytes: oop)
 		ifFalse:[^interpreterProxy primitiveFail].
-	zipSource _ interpreterProxy firstIndexableField: oop.
+	zipSource := interpreterProxy firstIndexableField: oop.
 
 	"do the primitive"
 	self zipDecompressBlock.
@@ -131,18 +131,18 @@ InflatePlugin >> zipDecodeValueFrom: table size: tableSize [
 	"Decode the next value in the receiver using the given huffman table."
 	| bits bitsNeeded tableIndex value index |
 	self var: #table type:'unsigned int *'.
-	bitsNeeded _ (table at: 0) bitShift: -24.	"Initial bits needed"
+	bitsNeeded := (table at: 0) bitShift: -24.	"Initial bits needed"
 	bitsNeeded > MaxBits ifTrue:[interpreterProxy primitiveFail. ^0].
-	tableIndex _ 2.							"First real table"
+	tableIndex := 2.							"First real table"
 	[true] whileTrue:[
-		bits _ self zipNextBits: bitsNeeded.		"Get bits"
-		index _ tableIndex + bits - 1.
+		bits := self zipNextBits: bitsNeeded.		"Get bits"
+		index := tableIndex + bits - 1.
 		index >= tableSize ifTrue:[interpreterProxy primitiveFail. ^0].
-		value _ table at: index.					"Lookup entry in table"
+		value := table at: index.					"Lookup entry in table"
 		(value bitAnd: 16r3F000000) = 0 ifTrue:[^value]. "Check if it is a leaf node"
 		"Fetch sub table"
-		tableIndex _ value bitAnd: 16rFFFF.	"Table offset in low 16 bit"
-		bitsNeeded _ (value bitShift: -24) bitAnd: 255. "Additional bits in high 8 bit"
+		tableIndex := value bitAnd: 16rFFFF.	"Table offset in low 16 bit"
+		bitsNeeded := (value bitShift: -24) bitAnd: 255. "Additional bits in high 8 bit"
 		bitsNeeded > MaxBits ifTrue:[interpreterProxy primitiveFail. ^0]].
 	^0
 ]
@@ -151,38 +151,38 @@ InflatePlugin >> zipDecodeValueFrom: table size: tableSize [
 InflatePlugin >> zipDecompressBlock [
 	| value extra length distance oldPos oldBits oldBitPos dstPos srcPos max |
 	self inline: false.
-	max _ zipCollectionSize - 1.
+	max := zipCollectionSize - 1.
 	[zipReadLimit < max and:[zipSourcePos <= zipSourceLimit]] whileTrue:[
 		"Back up stuff if we're running out of space"
-		oldBits _ zipBitBuf.
-		oldBitPos _ zipBitPos.
-		oldPos _ zipSourcePos.
-		value _ self zipDecodeValueFrom: zipLitTable size: zipLitTableSize.
+		oldBits := zipBitBuf.
+		oldBitPos := zipBitPos.
+		oldPos := zipSourcePos.
+		value := self zipDecodeValueFrom: zipLitTable size: zipLitTableSize.
 		value < 256 ifTrue:[ "A literal"
-			zipCollection at: (zipReadLimit _ zipReadLimit + 1) put: value.
+			zipCollection at: (zipReadLimit := zipReadLimit + 1) put: value.
 		] ifFalse:["length/distance or end of block"
 			value = 256 ifTrue:["End of block"
-				zipState _ zipState bitAnd: StateNoMoreData.
+				zipState := zipState bitAnd: StateNoMoreData.
 				^0].
 			"Compute the actual length value (including possible extra bits)"
-			extra _ (value bitShift: -16) - 1.
-			length _ value bitAnd: 16rFFFF.
-			extra > 0 ifTrue:[length _ length + (self zipNextBits: extra)].
+			extra := (value bitShift: -16) - 1.
+			length := value bitAnd: 16rFFFF.
+			extra > 0 ifTrue:[length := length + (self zipNextBits: extra)].
 			"Compute the distance value"
-			value _ self zipDecodeValueFrom: zipDistTable size: zipDistTableSize.
-			extra _ (value bitShift: -16).
-			distance _ value bitAnd: 16rFFFF.
-			extra > 0 ifTrue:[distance _ distance + (self zipNextBits: extra)].
+			value := self zipDecodeValueFrom: zipDistTable size: zipDistTableSize.
+			extra := (value bitShift: -16).
+			distance := value bitAnd: 16rFFFF.
+			extra > 0 ifTrue:[distance := distance + (self zipNextBits: extra)].
 			(zipReadLimit + length >= max) ifTrue:[
-				zipBitBuf _ oldBits.
-				zipBitPos _ oldBitPos.
-				zipSourcePos _ oldPos.
+				zipBitBuf := oldBits.
+				zipBitPos := oldBitPos.
+				zipSourcePos := oldPos.
 				^0].
-			dstPos _ zipReadLimit.
-			srcPos _ zipReadLimit - distance.
+			dstPos := zipReadLimit.
+			srcPos := zipReadLimit - distance.
 			1 to: length do:[:i|
 				zipCollection at: dstPos+i put: (zipCollection at: srcPos+i)].
-			zipReadLimit _ zipReadLimit + length.
+			zipReadLimit := zipReadLimit + length.
 		].
 	].
 ]
@@ -192,11 +192,11 @@ InflatePlugin >> zipNextBits: n [
 	| bits byte |
 	self inline: true.
 	[zipBitPos < n] whileTrue:[
-		byte _ zipSource at: (zipSourcePos _ zipSourcePos + 1).
-		zipBitBuf _ zipBitBuf + (byte << zipBitPos).
-		zipBitPos _ zipBitPos + 8].
-	bits _ zipBitBuf bitAnd: (1 << n)-1.
-	zipBitBuf _ zipBitBuf >> n.
-	zipBitPos _ zipBitPos - n.
+		byte := zipSource at: (zipSourcePos := zipSourcePos + 1).
+		zipBitBuf := zipBitBuf + (byte << zipBitPos).
+		zipBitPos := zipBitPos + 8].
+	bits := zipBitBuf bitAnd: (1 << n)-1.
+	zipBitBuf := zipBitBuf >> n.
+	zipBitPos := zipBitPos - n.
 	^bits
 ]

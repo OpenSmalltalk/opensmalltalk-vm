@@ -15,14 +15,14 @@ Class {
 { #category : #'check installed plugin' }
 GeniePlugin class >> majorNO [
 	| no |
-	^ (no _ self versionNO) ifNotNil: [no // 1000]
+	^ (no := self versionNO) ifNotNil: [no // 1000]
 
 ]
 
 { #category : #'check installed plugin' }
 GeniePlugin class >> minorNO [
 	| no |
-	^ (no _ self versionNO) ifNotNil: [no \\ 1000]
+	^ (no := self versionNO) ifNotNil: [no \\ 1000]
 
 ]
 
@@ -39,7 +39,7 @@ GeniePlugin class >> version [
 	"Somewhat a hack, but calling class methods from inst methods doesn't result in usable C-code..."
 
 	| inst |
-	inst _ self new.
+	inst := self new.
 	^ 'v', inst majorNO asString, '.', inst minorNO asString
 ]
 
@@ -61,21 +61,21 @@ GeniePlugin >> cSquaredDistanceFrom: aPoint to: bPoint [
 	| aPointX aPointY bPointX bPointY xDiff yDiff |
 	self var: #aPoint type: 'int *  '.
 	self var: #bPoint type: 'int *  '.
-	aPointX _ aPoint at: 0.
-	aPointY _ aPoint at: 1.
-	bPointX _ bPoint at: 0.
-	bPointY _ bPoint at: 1.
+	aPointX := aPoint at: 0.
+	aPointY := aPoint at: 1.
+	bPointX := bPoint at: 0.
+	bPointY := bPoint at: 1.
 
-	xDiff _ bPointX - aPointX.
-	yDiff _ bPointY - aPointY.
+	xDiff := bPointX - aPointX.
+	yDiff := bPointY - aPointY.
 	^ xDiff * xDiff + (yDiff * yDiff)
 ]
 
 { #category : #computation }
 GeniePlugin >> cSubstAngleFactorFrom: startDegreeNumber to: endDegreeNumber [ 
 	| absDiff |
-	absDiff _ (endDegreeNumber - startDegreeNumber) abs.
-	absDiff > 180 ifTrue: [absDiff _ 360 - absDiff].
+	absDiff := (endDegreeNumber - startDegreeNumber) abs.
+	absDiff > 180 ifTrue: [absDiff := 360 - absDiff].
 	^ absDiff * absDiff bitShift: -6
 ]
 
@@ -130,26 +130,26 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 	interpreterProxy failed
 		ifTrue: [self msg: 'failed 3'.
 			^ nil].
-	myPoints _ interpreterProxy firstIndexableField: myPointsOop.
-	otherPoints _ interpreterProxy firstIndexableField: otherPointsOop.
-	myVectors _ interpreterProxy firstIndexableField: myVectorsOop.
-	otherVectors _ interpreterProxy firstIndexableField: otherVectorsOop.
-	mySquaredLengths _ interpreterProxy firstIndexableField: mySquaredLengthsOop.
-	otherSquaredLengths _ interpreterProxy firstIndexableField: otherSquaredLengthsOop.
-	myAngles _ interpreterProxy firstIndexableField: myAnglesOop.
-	otherAngles _ interpreterProxy firstIndexableField: otherAnglesOop.
-	rowBase _ interpreterProxy firstIndexableField: rowBaseOop.
-	rowInsertRemove _ interpreterProxy firstIndexableField: rowInsertRemoveOop.
-	rowInsertRemoveCount _ interpreterProxy firstIndexableField: rowInsertRemoveCountOop.
+	myPoints := interpreterProxy firstIndexableField: myPointsOop.
+	otherPoints := interpreterProxy firstIndexableField: otherPointsOop.
+	myVectors := interpreterProxy firstIndexableField: myVectorsOop.
+	otherVectors := interpreterProxy firstIndexableField: otherVectorsOop.
+	mySquaredLengths := interpreterProxy firstIndexableField: mySquaredLengthsOop.
+	otherSquaredLengths := interpreterProxy firstIndexableField: otherSquaredLengthsOop.
+	myAngles := interpreterProxy firstIndexableField: myAnglesOop.
+	otherAngles := interpreterProxy firstIndexableField: otherAnglesOop.
+	rowBase := interpreterProxy firstIndexableField: rowBaseOop.
+	rowInsertRemove := interpreterProxy firstIndexableField: rowInsertRemoveOop.
+	rowInsertRemoveCount := interpreterProxy firstIndexableField: rowInsertRemoveCountOop.
 	"PointArrays"
-	myPointsSize _ (interpreterProxy stSizeOf: myPointsOop) bitShift: -1.
-	otherPointsSize _ (interpreterProxy stSizeOf: otherPointsOop) bitShift: -1.
-	myVectorsSize _ (interpreterProxy stSizeOf: myVectorsOop) bitShift: -1.
-	otherVectorsSize _ (interpreterProxy stSizeOf: otherVectorsOop) bitShift: -1.
+	myPointsSize := (interpreterProxy stSizeOf: myPointsOop) bitShift: -1.
+	otherPointsSize := (interpreterProxy stSizeOf: otherPointsOop) bitShift: -1.
+	myVectorsSize := (interpreterProxy stSizeOf: myVectorsOop) bitShift: -1.
+	otherVectorsSize := (interpreterProxy stSizeOf: otherVectorsOop) bitShift: -1.
 	"IntegerArrays"
-	mySquaredLengthsSize _ interpreterProxy stSizeOf: mySquaredLengthsOop.
-	otherSquaredLengthsSize _ interpreterProxy stSizeOf: otherSquaredLengthsOop.
-	rowBaseSize _ interpreterProxy stSizeOf: rowBaseOop.
+	mySquaredLengthsSize := interpreterProxy stSizeOf: mySquaredLengthsOop.
+	otherSquaredLengthsSize := interpreterProxy stSizeOf: otherSquaredLengthsOop.
+	rowBaseSize := interpreterProxy stSizeOf: rowBaseOop.
 
 	interpreterProxy success: rowBaseSize
 			= (interpreterProxy stSizeOf: rowInsertRemoveOop) & (rowBaseSize
@@ -168,12 +168,12 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 	the reference flag (boolean) is set. Therefore the maximum size is moved to the left 
 	and the reference flag is stored in the LSB.
 	Note: This is necessary to avoid more than 12 primitive parameters"
-	forReference _ maxSizeAndRefFlag bitAnd: 1.
-	maxSize _ maxSizeAndRefFlag bitShift: -1.
-	maxDist _ 1 bitShift: 29.
+	forReference := maxSizeAndRefFlag bitAnd: 1.
+	maxSize := maxSizeAndRefFlag bitShift: -1.
+	maxDist := 1 bitShift: 29.
 	forReference
-		ifTrue: [additionalMultiInsertRemoveCost _ 0]
-		ifFalse: [additionalMultiInsertRemoveCost _ maxSize * maxSize bitShift: -10].
+		ifTrue: [additionalMultiInsertRemoveCost := 0]
+		ifFalse: [additionalMultiInsertRemoveCost := maxSize * maxSize bitShift: -10].
 	"C indices!!"
 	rowBase
 		at: 0
@@ -184,15 +184,15 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 	rowInsertRemoveCount
 		at: 0
 		put: 2.
-	insertRemove _ 0 - additionalMultiInsertRemoveCost.
-	jLimiT _ otherVectorsSize.
+	insertRemove := 0 - additionalMultiInsertRemoveCost.
+	jLimiT := otherVectorsSize.
 	otherPointsSize >= (jLimiT - 1) & (otherSquaredLengthsSize >= (jLimiT - 1))
 		ifFalse: [^ interpreterProxy primitiveFail].
 	1
 		to: jLimiT
 		do: [:j |
-			jM1 _ j - 1.
-			insertRemove _ insertRemove + ((otherSquaredLengths at: jM1)
+			jM1 := j - 1.
+			insertRemove := insertRemove + ((otherSquaredLengths at: jM1)
 							+ (self
 									cSquaredDistanceFrom: (otherPoints + (jM1 bitShift: 1))
 									to: myPoints) bitShift: -7) + additionalMultiInsertRemoveCost.
@@ -205,15 +205,15 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 			rowInsertRemoveCount
 				at: j
 				put: j + 1].
-	insertRemove _ (rowInsertRemove at: 0)
+	insertRemove := (rowInsertRemove at: 0)
 				- additionalMultiInsertRemoveCost.
 	1
 		to: myVectorsSize
 		do: [:i |
-			iM1 _ i - 1.
-			iM1T2 _ iM1 bitShift: 1.
-			substBase _ rowBase at: 0.
-			insertRemove _ insertRemove + ((mySquaredLengths at: iM1)
+			iM1 := i - 1.
+			iM1T2 := iM1 bitShift: 1.
+			substBase := rowBase at: 0.
+			insertRemove := insertRemove + ((mySquaredLengths at: iM1)
 							+ (self
 									cSquaredDistanceFrom: (myPoints + iM1T2)
 									to: otherPoints) bitShift: -7) + additionalMultiInsertRemoveCost.
@@ -226,35 +226,35 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 			rowInsertRemoveCount
 				at: 0
 				put: i + 1.
-			jLimiT _ otherVectorsSize.
+			jLimiT := otherVectorsSize.
 			1
 				to: jLimiT
 				do: [:j |
-					jM1 _ j - 1.
-					jM1T2 _ jM1 bitShift: 1.
-					removeBase _ rowBase at: j.
-					insertBase _ rowBase at: jM1.
-					remove _ (mySquaredLengths at: iM1)
+					jM1 := j - 1.
+					jM1T2 := jM1 bitShift: 1.
+					removeBase := rowBase at: j.
+					insertBase := rowBase at: jM1.
+					remove := (mySquaredLengths at: iM1)
 								+ (self
 										cSquaredDistanceFrom: (myPoints + iM1T2)
 										to: (otherPoints + (j bitShift: 1))) bitShift: -7.
-					(insertRemove _ rowInsertRemove at: j) = 0
-						ifTrue: [removeBase _ removeBase + remove]
-						ifFalse: [removeBase _ removeBase + insertRemove + (remove
+					(insertRemove := rowInsertRemove at: j) = 0
+						ifTrue: [removeBase := removeBase + remove]
+						ifFalse: [removeBase := removeBase + insertRemove + (remove
 											* (rowInsertRemoveCount at: j)).
-							remove _ remove + insertRemove].
-					insert _ (otherSquaredLengths at: jM1)
+							remove := remove + insertRemove].
+					insert := (otherSquaredLengths at: jM1)
 								+ (self
 										cSquaredDistanceFrom: (otherPoints + jM1T2)
 										to: (myPoints + (i bitShift: 1))) bitShift: -7.
-					(insertRemove _ rowInsertRemove at: jM1) = 0
-						ifTrue: [insertBase _ insertBase + insert]
-						ifFalse: [insertBase _ insertBase + insertRemove + (insert
+					(insertRemove := rowInsertRemove at: jM1) = 0
+						ifTrue: [insertBase := insertBase + insert]
+						ifFalse: [insertBase := insertBase + insertRemove + (insert
 											* (rowInsertRemoveCount at: jM1)).
-							insert _ insert + insertRemove].
+							insert := insert + insertRemove].
 					forReference
-						ifTrue: [substBase _ maxDist]
-						ifFalse: [subst _ (self
+						ifTrue: [substBase := maxDist]
+						ifFalse: [subst := (self
 										cSquaredDistanceFrom: (otherVectors + jM1T2)
 										to: (myVectors + iM1T2))
 										+ (self
@@ -263,22 +263,22 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 											+ (self
 													cSubstAngleFactorFrom: (otherAngles at: jM1)
 													to: (myAngles at: iM1))) bitShift: -11.
-							substBase _ substBase + subst].
+							substBase := substBase + subst].
 					(substBase <= removeBase
 							and: [substBase <= insertBase])
-						ifTrue: [base _ substBase.
-							insertRemove _ 0.
-							insertRemoveCount _ 1]
+						ifTrue: [base := substBase.
+							insertRemove := 0.
+							insertRemoveCount := 1]
 						ifFalse: [removeBase <= insertBase
-								ifTrue: [base _ removeBase.
-									insertRemove _ remove + additionalMultiInsertRemoveCost.
-									insertRemoveCount _ (rowInsertRemoveCount at: j)
+								ifTrue: [base := removeBase.
+									insertRemove := remove + additionalMultiInsertRemoveCost.
+									insertRemoveCount := (rowInsertRemoveCount at: j)
 												+ 1]
-								ifFalse: [base _ insertBase.
-									insertRemove _ insert + additionalMultiInsertRemoveCost.
-									insertRemoveCount _ (rowInsertRemoveCount at: jM1)
+								ifFalse: [base := insertBase.
+									insertRemove := insert + additionalMultiInsertRemoveCost.
+									insertRemoveCount := (rowInsertRemoveCount at: jM1)
 												+ 1]].
-					substBase _ rowBase at: j.
+					substBase := rowBase at: j.
 					rowBase
 						at: j
 						put: (base min: maxDist).
@@ -288,7 +288,7 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 					rowInsertRemoveCount
 						at: j
 						put: insertRemoveCount].
-			insertRemove _ rowInsertRemove at: 0].
+			insertRemove := rowInsertRemove at: 0].
 	^ base asOop: SmallInteger
 
 ]

@@ -43,5 +43,5 @@ TGoToNode >> printOn: aStream level: level [
 { #category : #'as yet unclassified' }
 TGoToNode >> setLabel: aString [
 
-	label _ aString.
+	label := aString.
 ]

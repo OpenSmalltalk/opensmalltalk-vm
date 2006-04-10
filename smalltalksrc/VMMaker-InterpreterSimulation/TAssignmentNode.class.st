@@ -12,15 +12,15 @@ Class {
 TAssignmentNode >> bindVariableUsesIn: aDictionary [
 	"Do NOT bind the variable on the left-hand-side of an assignment statement."
 	"was bindVariablesIn:"
-	expression _ expression bindVariableUsesIn: aDictionary.
+	expression := expression bindVariableUsesIn: aDictionary.
 
 ]
 
 { #category : #'as yet unclassified' }
 TAssignmentNode >> bindVariablesIn: aDictionary [
 
-	variable _ variable bindVariablesIn: aDictionary.
-	expression _ expression bindVariablesIn: aDictionary.
+	variable := variable bindVariablesIn: aDictionary.
+	expression := expression bindVariablesIn: aDictionary.
 ]
 
 { #category : #'as yet unclassified' }
@@ -37,7 +37,7 @@ TAssignmentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	| sel |
 	self isVariableUpdatingAssignment ifTrue: [
 		variable emitCCodeOn: aStream level: level generator: aCodeGen.
-		sel _ expression selector.
+		sel := expression selector.
 		sel = #+
 			ifTrue: [aStream nextPutAll: ' += ']
 			ifFalse: [aStream nextPutAll: ' -= '].
@@ -77,7 +77,7 @@ TAssignmentNode >> isVariableUpdatingAssignment [
 
 	| sel |
 	(expression isSend and: [expression receiver isVariable]) ifFalse: [^ false].
-	sel _ expression selector.
+	sel := expression selector.
 	^ (expression receiver name = variable name) and: [(sel = #+) or: [sel = #-]]
 ]
 
@@ -93,7 +93,7 @@ TAssignmentNode >> nodesDo: aBlock [
 TAssignmentNode >> printOn: aStream level: level [
 
 	variable printOn: aStream level: level.
-	aStream nextPutAll: ' _ '.
+	aStream nextPutAll: ' := '.
 	expression printOn: aStream level: level + 2.
 ]
 
@@ -107,16 +107,16 @@ TAssignmentNode >> removeAssertions [
 TAssignmentNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [
-		variable _ variable replaceNodesIn: aDictionary.
-		expression _ expression replaceNodesIn: aDictionary.
+		variable := variable replaceNodesIn: aDictionary.
+		expression := expression replaceNodesIn: aDictionary.
 		self]
 ]
 
 { #category : #'as yet unclassified' }
 TAssignmentNode >> setVariable: varNode expression: expressionNode [
 
-	variable _ varNode.
-	expression _ expressionNode.
+	variable := varNode.
+	expression := expressionNode.
 ]
 
 { #category : #'as yet unclassified' }

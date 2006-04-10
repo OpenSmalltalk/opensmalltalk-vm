@@ -13,7 +13,7 @@ Class {
 { #category : #'memory access' }
 BalloonArray >> at: index [
 	| value |
-	value _ simArray at: index+1.
+	value := simArray at: index+1.
 	"Debug only..."
 	value ifNil:
 		[self error: 'attempt to read an uninitialized field'.
@@ -47,7 +47,7 @@ BalloonArray >> bitsOf: value [
 { #category : #'memory access' }
 BalloonArray >> floatAt: index [
 	| value |
-	value _ self at: index.
+	value := self at: index.
 	value isFloat ifFalse:
 		[value = 0 ifTrue: [^ 0.0].
 		self error: 'non-float was stored'.
@@ -66,7 +66,7 @@ BalloonArray >> floatAt: index put: value [
 { #category : #'memory access' }
 BalloonArray >> intAt: index [
 	| value |
-	value _ self at: index.
+	value := self at: index.
 	value isInteger
 		ifFalse: [self error: 'inconsistent values'].
 	^ value
@@ -83,5 +83,5 @@ BalloonArray >> intAt: index put: value [
 { #category : #'memory access' }
 BalloonArray >> setSimArray: anArray [
 
-	simArray _ anArray
+	simArray := anArray
 ]

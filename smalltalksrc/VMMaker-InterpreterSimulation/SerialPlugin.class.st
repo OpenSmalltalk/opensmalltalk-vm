@@ -52,8 +52,8 @@ SerialPlugin >> primitiveSerialPortRead: portNum into: array startingAt: startIn
 
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
 	"adjust for zero-origin indexing"
-	arrayPtr _ array asInteger + startIndex - 1.
-	bytesRead _ self cCode: 'serialPortReadInto( portNum, count, arrayPtr)'.
+	arrayPtr := array asInteger + startIndex - 1.
+	bytesRead := self cCode: 'serialPortReadInto( portNum, count, arrayPtr)'.
 	^ bytesRead asSmallIntegerObj
 ]
 
@@ -65,8 +65,8 @@ SerialPlugin >> primitiveSerialPortWrite: portNum from: array startingAt: startI
 
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy byteSizeOf: array cPtrAsOop)]).
 	interpreterProxy failed
-		ifFalse: [arrayPtr _ array asInteger + startIndex - 1.
-			bytesWritten _ self
+		ifFalse: [arrayPtr := array asInteger + startIndex - 1.
+			bytesWritten := self
 						serialPort: portNum
 						Write: count
 						From: arrayPtr].

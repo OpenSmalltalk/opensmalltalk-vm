@@ -8,8 +8,8 @@ MessageNode >> asTranslatorNode [
 	arguments as a place to store the extra expressions needed to generate
 	code for in-line to:by:do:, etc.  see below, where it is used."
 	| sel args |
-	sel _ (selector isSymbol) ifTrue: [selector] ifFalse: [selector key].
-	args _ (1 to: sel numArgs) collect:
+	sel := (selector isSymbol) ifTrue: [selector] ifFalse: [selector key].
+	args := (1 to: sel numArgs) collect:
 			[:i | (arguments at: i) asTranslatorNode].
 	(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]])
 		ifTrue: ["Restore limit expr that got moved by transformToDo:"

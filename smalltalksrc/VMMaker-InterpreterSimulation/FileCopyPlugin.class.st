@@ -20,9 +20,9 @@ FileCopyPlugin >> primitiveFile: srcName copyTo: dstName [
 	self primitive: 'primitiveFileCopyNamedTo'
 		parameters: #(String String).
 
-	srcSz _ interpreterProxy slotSizeOf: srcName cPtrAsOop.
-	dstSz _ interpreterProxy slotSizeOf: dstName cPtrAsOop.
-	ok _ self sqCopyFile: srcName size: srcSz to: dstName size: dstSz.
+	srcSz := interpreterProxy slotSizeOf: srcName cPtrAsOop.
+	dstSz := interpreterProxy slotSizeOf: dstName cPtrAsOop.
+	ok := self sqCopyFile: srcName size: srcSz to: dstName size: dstSz.
 	ok ifFalse:[interpreterProxy primitiveFail].
 
 ]
