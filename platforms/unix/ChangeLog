@@ -1,4 +1,42 @@
-----------------------------------------------------------------
+2006-04-10  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* 3.9-1 release candidate.
+
+	* src: Regeneratated.
+
+2006-04-06  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* config/acinclude.m4: Define VM_BUILD_STRING.
+
+	* config/config.h.in: Declare VM_BUILD_STRING.
+
+	* vm/sqUnixMain.c (getAttribute): Answer VM_BUILD_STRING for
+	attribute 1006.
+
+	* sqMemoryAccess.h: Clean up recent edits.  Rename
+	INLINING_WORKS_FOR_SMALL_ACCESSORS -> USE_INLINE_MEMORY_ACCESSORS.
+
+	* plugins/UUIDPlugin/acinclude.m4: Require <uuid/uuid.h>.  Link
+	against libuuid, if present.
+
+	* plugins/UUIDPlugin/sqUnixUUID.c: Implemented.
+
+2006-04-05  Ian Piumarta  <ian.piumarta@squeakland.org>
+
+	* UnixOSProcessPlugin.c (SQAIO_H): Rename aio.h -> sqaio.h.
+
+	* vm-display-Quartz/sqUnixQuartz.m (noteKeyboardEvent): Set
+	utf32code to 0, for now.
+
+	* vm/sqUnixMain.c (ioGatherEntropy): Implemented.
+
+	* plugins/SocketPlugin/sqUnixSocket.c (sqSocketBindToPort)
+	(sqSocketSetReusable): Implemented.
+
+	* vm/sqUnixMain.c (sqGetFilenameFromString): Copy input to
+	output.
+
+	----------------------------------------------------------------
 
 2005-03-31  Ian Piumarta  <ian.piumarta@squeakland.org>
 
@@ -101,8 +139,8 @@
 
 2005-03-15  Ian Piumarta  <ian.piumarta@hp.com>
 
-	* vm/sqUnixMain.c (getImageName): Added, under extreme duress, to
-	deal with tpr laziness/sloppiness.
+	* vm/sqUnixMain.c (getImageName): Getter for global variable,
+	FWIW.
 
 2005-03-09  Ian Piumarta  <ian.piumarta@hp.com>
 
