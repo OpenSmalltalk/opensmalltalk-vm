@@ -35,7 +35,7 @@
 # 
 # Author: Ian.Piumarta@squeakland.org
 # 
-# Last edited: 2005-03-19 12:21:17 by piumarta on emilia.local
+# Last edited: 2006-04-06 15:09:50 by piumarta on emilia.local
 
 AC_DEFUN([AC_CHECK_VMM_DIR],[
   AC_MSG_CHECKING([sanity of generated src directory])
@@ -124,11 +124,14 @@ if test "$GCC" = yes; then
     ac_optflags="-fomit-frame-pointer"
     ;;
   powerpc|ppc)
-    ac_optflags="-O3 -mcpu=750 -funroll-loops"
+    ac_optflags="-O3 -funroll-loops -mcpu=750 -mno-fused-madd"
     ;;
   esac
+  AC_DEFINE(VM_BUILD_STRING, ["Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__])
 else
   ac_optflags="-O"
+  ac_vm_build_date="`date`"
+  AC_DEFINE(VM_BUILD_STRING, ["Unix built on ${ac_vm_build_date}"])
 fi
 if test "$ac_optflags" = "no"; then
   AC_MSG_RESULT([(none)])
