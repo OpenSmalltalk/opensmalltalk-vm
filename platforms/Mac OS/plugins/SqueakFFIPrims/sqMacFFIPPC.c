@@ -10,6 +10,9 @@
 *   RCSID:   $Id$
 *
 *   NOTES:
+
+* April 9th, 2006 JMM fix, double was pushed on stack incorrectly, this affected things only when 14 values passed
+
 *
 *****************************************************************************/
 #include "sq.h"
@@ -20,7 +23,7 @@
 #define LONGLONG long long
 #endif
 
-#define DEBUGFFI 0
+//#define DEBUGFFI 1
 
 #if defined ( __APPLE__ ) && defined ( __MACH__ )
 #define staticIssue 
@@ -202,8 +205,8 @@ int ffiPushDoubleFloat(double value)
 	/* Note: Even for args that are passed in FPRegs 
 	   we pass the actual 64bit value in either GPRegs
 	   or stack frame for varargs calls. */
+	ARG_PUSH(((int*)(&value))[0]);  //JMM April 9th, 2006 was push 1 push 0, but testing shows it was wrong
 	ARG_PUSH(((int*)(&value))[1]);
-	ARG_PUSH(((int*)(&value))[0]);
 	return 1;
 }
 
@@ -481,12 +484,19 @@ EXPORT(int) ffiTestInts8(int c1, int c2, int c3, int c4, int c5, int c6, int c7,
 EXPORT(float) ffiTestFloats(float f1, float f2);
 EXPORT(float) ffiTestFloats7(float f1, float f2, float f3, float f4, float f5, float f6, float f7);
 EXPORT(float) ffiTestFloats13(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13);
+EXPORT(float) ffiTestFloats14(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13, float f14);
+EXPORT(double) ffiTestDoubles14(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9, double f10, double f11, double f12, double f13, double f14);
 EXPORT(double) ffiTestDoubles(double d1, double d2);
 EXPORT(char *) ffiPrintString(char *string);
 EXPORT(ffiTestPoint2) ffiTestStruct64(ffiTestPoint2 pt1, ffiTestPoint2 pt2);
 EXPORT(ffiTestPoint4) ffiTestStructBig(ffiTestPoint4 pt1, ffiTestPoint4 pt2);
 EXPORT(ffiTestPoint4*) ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2);
 EXPORT(LONGLONG) ffiTestLongLong(LONGLONG i1, LONGLONG i2);
+EXPORT(LONGLONG) ffiTestLongLong8(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, LONGLONG i1, LONGLONG i2);
+EXPORT(LONGLONG) ffiTestLongLong8a1(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, LONGLONG i1, LONGLONG i2);
+EXPORT(LONGLONG) ffiTestLongLong8a2(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9,  char c10, LONGLONG i1, LONGLONG i2);
+EXPORT(LONGLONG) ffiTestLongLonga1(char c1, LONGLONG i1, LONGLONG i2);
+EXPORT(LONGLONG) ffiTestLongLonga2(char c1, char c2, LONGLONG i1, LONGLONG i2);
 #pragma export off
 
 
@@ -530,6 +540,15 @@ EXPORT(float) ffiTestFloats13(float f1, float f2, float f3, float f4, float f5, 
 	return (float) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10 + f11 + f12 + f13);
 }
 
+EXPORT(float) ffiTestFloats14(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13, float f14) {
+	printf("The 14 floats are %f %f %f %f %f %f %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13);
+	return (float) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10 + f11 + f12 + f13 + f14);
+}
+
+EXPORT(double) ffiTestDoubles14(double f1, double f2, double f3, double f4, double f5, double f6, double f7, double f8, double f9, double f10, double f11, double f12, double f13, double f14) {
+	printf("The 14 double are %f %f %f %f %f %f %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7, f8, f9, f10, f11, f12, f13);
+	return (double) (f1 + f2 + f3 + f4 + f5 + f6 + f7 + f8 + f9 + f10 + f11 + f12 + f13 + f14);
+}
 
 /* test passing and returning doubles */
 EXPORT(double) ffiTestDoubles(double d1, double d2) {
@@ -585,6 +604,26 @@ EXPORT(ffiTestPoint4*) ffiTestPointers(ffiTestPoint4 *pt1, ffiTestPoint4 *pt2) {
 /* test passing and returning longlongs */
 EXPORT(LONGLONG) ffiTestLongLong(LONGLONG i1, LONGLONG i2) {
 	return i1 + i2;
+}
+
+EXPORT(LONGLONG) ffiTestLongLonga1(char c1, LONGLONG i1, LONGLONG i2) {
+	return c1 + i1 + i2;
+}
+
+EXPORT(LONGLONG) ffiTestLongLonga2(char c1, char c2, LONGLONG i1, LONGLONG i2) {
+	return c1 + c2 + i1 + i2;
+}
+
+EXPORT(LONGLONG) ffiTestLongLong8(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, LONGLONG i1, LONGLONG i2) {
+	return c1+c2+c3+c4+c5+c6+c7+c8+i1 + i2;
+}
+
+EXPORT(LONGLONG) ffiTestLongLong8a1(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, LONGLONG i1, LONGLONG i2) {
+	return c1+c2+c3+c4+c5+c6+c7+c8+c9+i1 + i2;
+}
+
+EXPORT(LONGLONG) ffiTestLongLong8a2(char c1, char c2, char c3, char c4, char c5, char c6, char c7, char c8, char c9, char c10, LONGLONG i1, LONGLONG i2) {
+	return c1+c2+c3+c4+c5+c6+c7+c8+c9+c10+i1 + i2;
 }
 
 #endif /* NO_FFI_TEST */

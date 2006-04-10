@@ -6,15 +6,33 @@
 \margl1440\margr1440\vieww13660\viewh14740\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.8.11 mach-o build for Carbon, and build for Classic. \
+\f0\fs24 \cf0 Mac VM 3.8.12 mach-o build for Carbon, Sophie, and Croquet\
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-April 7th, 2006 (3.8.11b6)\
+April 9th, 2006 (3.8.12b1)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.12b1\
+\
+3.8.12b1	Major change to VM. When the VM was converted to carbon events I decided to place the interpreter() thread on a pthread. However over the years it became apparent this was an issue because many UI calls needed to run on the main UI thread, versus a sub pthread. To solve this I added the getUIToLock() call which locked the UI, actually it would setup a custom UI event and block until the UI thread did the callback. This worked well until the Sophie team started to experiment with Quicktime via FFI and we discovered that quicktime FFI calls needed to be on the main UI thread to avoid a crash. Thus in early 2006 we altered the FFI plugin so that it would call getUIToLock when it makes the FFI function call. This worked well until the Croquet folks complained that this caused Croquet to crash in glEnable. Further investigation showed that mixing Open/GL calls between pthreads caused a serious issue. Therefore I altered the VM to run under the main UI thread and poll for events. Polling is done before each callback looking for UI events and in the flush screen logic which is invoked about every 1/60 of a second to ensure pending screen updates are sent to the screen.  \
+\
+	Needless to say people should confirm their applications work as expected, the UI performance isn't greatly affected and overall performance is roughly the same.\
+\
+		sqMacMain.c\
+			remove pthread logic to startup interpreter()\
+		sqMacUIEventsUniversal.c\
+			add logic to setup a custom event handler to run the interpreter() loop, and to poll  and dispatch events.\
+		\
+	\
+3.8.11b7	 Limited distribution\
+		sqMacUIEventsUniversal.c\
+			Alter mouse logic to fall back to old logic if built with 10.2.8 sdk.\
+		sqMacUnixExternalPrims.c\
+			When compiling for osx 10.2.8 sdk we must use the unix version of dlopen/etc versus one in 10.3.9 sdk.\
 \
 3.8.11b6\
 		sqMacDragDrop.c	\
