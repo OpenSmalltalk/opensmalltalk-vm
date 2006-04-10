@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-04 16:29:42 by tpr
+ * Last edited: 2006-04-06 09:47:39 by piumarta on emilia.local
  */
 
 /* Systematic use of the macros defined in this file within the
@@ -69,76 +69,55 @@
 # define sqMemoryBase		((char *)0)
 #endif
 
-#ifdef INLINING_WORKS_FOR_SMALL_ACCESSORS
-/* use these if static inline produces efficient code for such small accessor
- * functions. It doesn't on RISC OS and OSX as of may 2005 */
-static inline sqInt byteAtPointer(char *ptr)			{ return (sqInt)(*((unsigned char *)ptr)); }
-static inline sqInt byteAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned char *)ptr)= (unsigned char)val); }
-
-static inline sqInt shortAtPointer(char *ptr)			{ return (sqInt)(*((short *)ptr)); }
-static inline sqInt shortAtPointerput(char *ptr, int val)	{ return (sqInt)(*((short *)ptr)= (short)val); }
-
-static inline sqInt intAtPointer(char *ptr)			{ return (sqInt)(*((unsigned int *)ptr)); }
-static inline sqInt intAtPointerput(char *ptr, int val)		{ return (sqInt)(*((unsigned int *)ptr)= (int)val); }
-static inline sqInt longAtPointer(char *ptr)			{ return (sqInt)(*((sqInt *)ptr)); }
-static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
-
-static inline sqInt oopAtPointer(char *ptr)			{ return (sqInt)(*((sqInt *)ptr)); }
-static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
-
-static inline char *pointerForOop(sqInt oop)			{ return sqMemoryBase + oop; }
-static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)(ptr - sqMemoryBase); }
-
-static inline sqInt byteAt(sqInt oop)				{ return byteAtPointer(pointerForOop(oop)); }
-static inline sqInt byteAtput(sqInt oop, int val)		{ return byteAtPointerput(pointerForOop(oop), val); }
-
-static inline sqInt shortAt(sqInt oop)				{ return shortAtPointer(pointerForOop(oop)); }
-static inline sqInt shortAtput(sqInt oop, int val)		{ return shortAtPointerput(pointerForOop(oop), val); }
-
-static inline sqInt intAt(sqInt oop)				{ return intAtPointer(pointerForOop(oop)); }
-static inline sqInt intAtput(sqInt oop, int val)		{ return intAtPointerput(pointerForOop(oop), val); }
-
-static inline sqInt longAt(sqInt oop)				{ return longAtPointer(pointerForOop(oop)); }
-static inline sqInt longAtput(sqInt oop, sqInt val)		{ return longAtPointerput(pointerForOop(oop), val); }
-
-static inline sqInt oopAt(sqInt oop)				{ return oopAtPointer(pointerForOop(oop)); }
-static inline sqInt oopAtput(sqInt oop, sqInt val)	{ return oopAtPointerput(pointerForOop(oop), val); }
-
+#ifdef USE_INLINE_MEMORY_ACCESSORS
+  /* Use static inline functions when the compiler produces efficient code for small accessors.
+     These are preferred because static type checking will prevent inadvertent confusion of pointers and oops. */
+  static inline sqInt byteAtPointer(char *ptr)			{ return (sqInt)(*((unsigned char *)ptr)); }
+  static inline sqInt byteAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned char *)ptr)= (unsigned char)val); }
+  static inline sqInt shortAtPointer(char *ptr)			{ return (sqInt)(*((short *)ptr)); }
+  static inline sqInt shortAtPointerput(char *ptr, int val)	{ return (sqInt)(*((short *)ptr)= (short)val); }
+  static inline sqInt intAtPointer(char *ptr)			{ return (sqInt)(*((unsigned int *)ptr)); }
+  static inline sqInt intAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned int *)ptr)= (int)val); }
+  static inline sqInt longAtPointer(char *ptr)			{ return (sqInt)(*((sqInt *)ptr)); }
+  static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
+  static inline sqInt oopAtPointer(char *ptr)			{ return (sqInt)(*((sqInt *)ptr)); }
+  static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
+  static inline char *pointerForOop(sqInt oop)			{ return sqMemoryBase + oop; }
+  static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)(ptr - sqMemoryBase); }
+  static inline sqInt byteAt(sqInt oop)				{ return byteAtPointer(pointerForOop(oop)); }
+  static inline sqInt byteAtput(sqInt oop, int val)		{ return byteAtPointerput(pointerForOop(oop), val); }
+  static inline sqInt shortAt(sqInt oop)			{ return shortAtPointer(pointerForOop(oop)); }
+  static inline sqInt shortAtput(sqInt oop, int val)		{ return shortAtPointerput(pointerForOop(oop), val); }
+  static inline sqInt intAt(sqInt oop)				{ return intAtPointer(pointerForOop(oop)); }
+  static inline sqInt intAtput(sqInt oop, int val)		{ return intAtPointerput(pointerForOop(oop), val); }
+  static inline sqInt longAt(sqInt oop)				{ return longAtPointer(pointerForOop(oop)); }
+  static inline sqInt longAtput(sqInt oop, sqInt val)		{ return longAtPointerput(pointerForOop(oop), val); }
+  static inline sqInt oopAt(sqInt oop)				{ return oopAtPointer(pointerForOop(oop)); }
+  static inline sqInt oopAtput(sqInt oop, sqInt val)		{ return oopAtPointerput(pointerForOop(oop), val); }
 #else
-/* use these macros when static inline foo() isn't efficiently compiled */
-#define byteAtPointer(ptr) ((sqInt)(*((unsigned char *)(ptr))))
-#define byteAtPointerput(ptr, val) ((sqInt)(*((unsigned char *)(ptr)) = (unsigned char)(val)))
-
-#define shortAtPointer(ptr) ((sqInt)(*((short *)(ptr))))
-#define shortAtPointerput(ptr, val) ((sqInt)(*((short *)(ptr)) = (short)(val)))
-
-#define intAtPointer(ptr) ((sqInt)(*((unsigned int *)(ptr))))
-#define intAtPointerput(ptr, val) ((sqInt)(*((unsigned int *)(ptr)) = (int)(val)))
-
-#define longAtPointer(ptr) ((sqInt)(*((sqInt *)(ptr))))
-#define longAtPointerput( ptr, val) ( (sqInt)( *((sqInt *)(ptr))= (sqInt)(val)))
-
-#define oopAtPointer(ptr) (sqInt)(*((sqInt *)ptr))
-#define oopAtPointerput(ptr, val) (sqInt)(*((sqInt *)ptr)= (sqInt)val)
-
-#define pointerForOop(oop) ((char*)(sqMemoryBase + (oop)))
-#define oopForPointer(ptr) ((sqInt)(ptr))
-
-#define byteAt(oop) byteAtPointer(pointerForOop(oop))
-#define byteAtput(oop, val) byteAtPointerput(pointerForOop(oop), (val))
-
-#define shortAt(oop) shortAtPointer(pointerForOop(oop))
-#define shortAtput(oop, val) shortAtPointerput(pointerForOop(oop), (val))
-
-#define longAt(oop) longAtPointer(pointerForOop(oop))
-#define longAtput(oop, val) longAtPointerput(pointerForOop(oop), (val))
-
-#define intAt(oop) intAtPointer(pointerForOop(oop)) 
-#define intAtput(oop, val) intAtPointerput(pointerForOop(oop), (val))
-
-#define oopAt(oop) oopAtPointer(pointerForOop(oop))
-#define oopAtput(oop, val) oopAtPointerput(pointerForOop(oop), (val))
-
+  /* Use macros when static inline functions aren't efficient. */
+# define byteAtPointer(ptr)		((sqInt)(*((unsigned char *)(ptr))))
+# define byteAtPointerput(ptr, val)	((sqInt)(*((unsigned char *)(ptr))= (unsigned char)(val)))
+# define shortAtPointer(ptr)		((sqInt)(*((short *)(ptr))))
+# define shortAtPointerput(ptr, val)	((sqInt)(*((short *)(ptr))= (short)(val)))
+# define intAtPointer(ptr)		((sqInt)(*((unsigned int *)(ptr))))
+# define intAtPointerput(ptr, val)	((sqInt)(*((unsigned int *)(ptr))= (int)(val)))
+# define longAtPointer(ptr)		((sqInt)(*((sqInt *)(ptr))))
+# define longAtPointerput(ptr, val)	((sqInt)(*((sqInt *)(ptr))= (sqInt)(val)))
+# define oopAtPointer(ptr)		(sqInt)(*((sqInt *)ptr))
+# define oopAtPointerput(ptr, val)	(sqInt)(*((sqInt *)ptr)= (sqInt)val)
+# define pointerForOop(oop)		((char *)(sqMemoryBase + (oop)))
+# define oopForPointer(ptr)		((sqInt)(ptr))
+# define byteAt(oop)			byteAtPointer(pointerForOop(oop))
+# define byteAtput(oop, val)		byteAtPointerput(pointerForOop(oop), (val))
+# define shortAt(oop)			shortAtPointer(pointerForOop(oop))
+# define shortAtput(oop, val)		shortAtPointerput(pointerForOop(oop), (val))
+# define longAt(oop)			longAtPointer(pointerForOop(oop))
+# define longAtput(oop, val)		longAtPointerput(pointerForOop(oop), (val))
+# define intAt(oop)			intAtPointer(pointerForOop(oop))
+# define intAtput(oop, val)		intAtPointerput(pointerForOop(oop), (val))
+# define oopAt(oop)			oopAtPointer(pointerForOop(oop))
+# define oopAtput(oop, val)		oopAtPointerput(pointerForOop(oop), (val))
 #endif
 
 #define long32At	intAt
