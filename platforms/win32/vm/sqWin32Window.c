@@ -98,7 +98,12 @@ BOOL fShowAllocations = 0; /* Show allocation activity */
 BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
 BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
 BOOL fUseDirectSound = 1; /* Do we use DirectSound?! */
+#ifdef CROQUET
+BOOL fUseOpenGL = 1;      /* Do we use OpenGL vs. D3D?! */
+#else /* Squeak */
 BOOL fUseOpenGL = 0;      /* Do we use OpenGL vs. D3D?! */
+#endif
+
 BOOL fPriorityBoost = 1;
 
 BOOL f1ButtonMouse = 0;   /* Should we use a 1 button mouse mapping? */
