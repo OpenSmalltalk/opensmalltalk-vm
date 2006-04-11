@@ -415,7 +415,7 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
     /* print version information */
-    fprintf(f,"VM Version: %s\n", SQUEAK_VM_VERSION);
+    fprintf(f,"VM Version: %s\n", VM_VERSION);
     fflush(f);
     fprintf(f,"\n"
 	    "Current byte code: %d\n"

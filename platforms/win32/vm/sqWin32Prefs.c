@@ -336,12 +336,10 @@ void TrackPrefsMenu(void) {
   TrackPopupMenu(vmPrefsMenu, TPM_LEFTALIGN, p.x, p.y, 0, stWindow, NULL);
 }
 
-
-
 void HandlePrefsMenu(int cmd) {
   switch(cmd) {
   case ID_ABOUT: 
-    MessageBox(stWindow,SQUEAK_VM_VERSION,
+    MessageBox(stWindow,VM_VERSION,
 	       TEXT("About " VM_NAME " on Win32"), MB_OK);
     break;
   case ID_DEFERUPDATES:
