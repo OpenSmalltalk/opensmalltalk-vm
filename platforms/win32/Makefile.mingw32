@@ -195,26 +195,18 @@ Mpeg3Plugin.dll:
 	$(CP) plugins/Mpeg3Plugin/Mpeg3Plugin.dll release/Mpeg3Plugin.dll
 	-$(RM) plugins/Mpeg3Plugin/Mpeg3Plugin.dll
 
-OpenALPlugin.dll:
-	@$(MAKE) -C plugins/OpenALPlugin -f ../../Makefile.mingw32 SRCDIR=../../ LIB=OpenALPlugin OBJDIR=.  XDEFS=-DNIX makedll DLLLIBS="openal32.lib"
-	$(CP) plugins/OpenALPlugin/OpenALPlugin.dll release/OpenALPlugin.dll
-	-$(RM) plugins/OpenALPlugin/OpenALPlugin.dll
+FloatMathPlugin.lib:
+	@$(MAKE) -Cplugins/FloatMathPlugin -f Makefile.win32 SRCDIR=../../ LIB=FloatMathPlugin.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
+	$(CP) plugins/FloatMathPlugin/FloatMathPlugin.lib release/FloatMathPlugin.lib
+	-$(RM) plugins/FloatMathPlugin/FloatMathPlugin.lib
 
 %.lib:
-ifneq ((), $(wildcard plugins/$*/Makefile.win32))
-	$(MAKE) -C plugins/$* -fMakefile.win32 LIB=$*.lib SRCDIR=../../ OBJDIR=. LIB=$*.lib XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
-else
 	$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
-endif
 	$(CP) plugins/$*/$*.lib release/$*.lib
 	-$(RM) plugins/$*/$*.lib
 
 %.dll:
-ifneq ((), $(wildcard plugins/$*/Makefile.win32))
-	$(MAKE) -C plugins/$* -fMakefile.win32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
-else
 	$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
-endif
 	$(CP) plugins/$*/$*.dll release/$*.dll
 	-$(RM) plugins/$*/$*.dll
 
