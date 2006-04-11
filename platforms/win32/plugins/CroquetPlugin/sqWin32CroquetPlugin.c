@@ -3,7 +3,7 @@
 
 static int loaded = 0;
 static HMODULE hAdvApi32 = NULL;
-static BOOLEAN (*RtlGenRandom)(PVOID, ULONG) = NULL;
+static BOOLEAN __stdcall (*RtlGenRandom)(PVOID, ULONG) = NULL;
 
 int ioGatherEntropy(char *bufPtr, int bufSize) {
   if(!loaded) {
