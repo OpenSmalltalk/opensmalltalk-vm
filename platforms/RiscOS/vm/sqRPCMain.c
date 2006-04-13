@@ -1,6 +1,6 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
 /*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
 /*  other machines not yet tested.                                        */
 /*                       sqRPCMain.c                                      */
@@ -586,6 +586,7 @@ char * getAttributeString(sqInt id) {
 	   Fail the prim if the id is not of a valid attribute
 	*/
 char * tmp;
+extern char VMVersion[];
 
 	switch ((int)id) {
 		case 0: return vmPath; break;
@@ -594,6 +595,8 @@ char * tmp;
 		case 1002: return osVersionString(); break;
 		case 1003: return "ARM"; break;
 		case 1004: return  (char *)interpreterVersion; break;
+		case 1005: return  "RiscOS"; break;
+		case 1006: return  VMVersion; break
 		default: break;
 	}
 	if ((id < 0) && ( -id < numOptionsVM)) {

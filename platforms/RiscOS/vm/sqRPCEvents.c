@@ -1,6 +1,6 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
 /*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
 /*  other machines not yet tested.                                        */
 /*                       sqRPCEvents.c                                    */
