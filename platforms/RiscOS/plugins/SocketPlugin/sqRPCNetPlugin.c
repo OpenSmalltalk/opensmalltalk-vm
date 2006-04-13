@@ -1,6 +1,6 @@
 /**************************************************************************/
 /*  A Squeak VM for Acorn RiscOS machines by Tim Rowledge                 */
-/*  tim@sumeru.stanford.edu & http://sumeru.stanford.edu/tim              */
+/*  tim@rowledge.org & http://www.rowledge.org/tim                        */
 /*  Known to work on RiscOS >3.7 for StrongARM RPCs and Iyonix,           */
 /*  other machines not yet tested.                                        */
 /*                       sqRPCNetPlugin.c                                 */
@@ -15,9 +15,10 @@
 /* Shamelessly copied from Unix socket support.
  *
  * Original Author: Ian Piumarta (ian.piumarta@inria.fr)
- * Minor Acorn changes: Tim Rowledge (tim@sumeru.stanford.edu)
+ * Minor Acorn changes: Tim Rowledge (tim@rowledge.org)
  */
- /* sqUnixSocket.c -- Unix socket support
+
+/* sqUnixSocket.c -- Unix socket support
  * 
  *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
  *     as listed elsewhere in this file.
@@ -1603,6 +1604,47 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue
  barf:
   interpreterProxy->success(false);
   return errno;
+}
+   
+void sqSocketBindToPort(SocketPtr s, int addr, int port)
+{
+  int result;
+  struct sockaddr_in inaddr;
+  privateSocketStruct *pss= PSP(s);
+
+  if (!socketValid(s)) return;
+
+  /* bind the socket */
+  memset(&inaddr, 0, sizeof(inaddr));
+  inaddr.sin_family= AF_INET;
+  inaddr.sin_port= htons(port);
+  inaddr.sin_addr.s_addr= htonl(addr);
+
+  if (bind(SOCKET(s), (struct sockaddr *)&inaddr, sizeof(struct sockaddr_in)) < 0)
+    {
+      pss->sockError= errno;
+      interpreterProxy->success(false);
+      return;
+    }
+}
+
+void sqSocketSetReusable(SocketPtr s)
+{
+  char optionValue[256];
+  size_t bufSize;
+  unsigned char buf[4];
+  int err;
+
+  if (!socketValid(s)) return;
+
+  *(int *)buf= 1;
+  bufSize= 4;
+  if (setsockopt(SOCKET(s), SOL_SOCKET, SO_REUSEADDR, buf, bufSize) < 0)
+    {
+      PSP(s)->sockError= errno;
+      interpreterProxy->success(false);
+      return;
+    }
 }
 
 
