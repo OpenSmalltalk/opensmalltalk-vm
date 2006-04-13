@@ -1,4 +1,4 @@
-/* squeak socket record; see sqMacNetwork.c for details */
+/* squeak socket support header file */
 
 /* module initialization/shutdown */
 sqInt socketInit(void);
@@ -49,3 +49,6 @@ sqInt sqSocketReceiveUDPDataBufCountaddressportmoreFlag(SocketPtr s, char *buf, 
 sqInt sqSockettoHostportSendDataBufCount(SocketPtr s, sqInt address, sqInt port, char *buf, sqInt bufSize);
 sqInt sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(SocketPtr s, char *optionName, sqInt optionNameSize, char *optionValue, sqInt optionValueSize, sqInt *result);
 sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, char *optionName, sqInt optionNameSize, sqInt *result);
+/* tpr 4/12/06 add declarations for two new socket routines */
+void sqSocketBindToPort(SocketPtr s, int addr, int port);
+void sqSocketSetReusable(SocketPtr s);
