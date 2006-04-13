@@ -596,7 +596,7 @@ extern char VMVersion[];
 		case 1003: return "ARM"; break;
 		case 1004: return  (char *)interpreterVersion; break;
 		case 1005: return  "RiscOS"; break;
-		case 1006: return  VMVersion; break
+		case 1006: return  VMVersion; break;
 		default: break;
 	}
 	if ((id < 0) && ( -id < numOptionsVM)) {
