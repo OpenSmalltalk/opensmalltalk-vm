@@ -1,3 +1,17 @@
+2006-04-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds): Don't
+	nanosleep if events can be processed.
+
+	* vm/aio.c (FPRINTF): Absolute and relative timestamps on debug
+	messages.
+
+	* plugins/SocketPlugin/sqUnixSocket.c (FPRINTF): Absolute and
+	relative timestamps on debug messages.
+
+	* plugins/SocketPlugin/sqUnixSocket.c (socketOptions): Enable
+	SO_REUSEPORT.
+
 2006-04-10  Ian Piumarta  <ian.piumarta@squeakland.org>
 
 	* src: Regeneratated.
