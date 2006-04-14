@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2006-04-06 08:39:30 by piumarta on emilia.local
+ * Last edited: 2006-04-14 14:22:10 by piumarta on margaux.local
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -114,7 +114,8 @@
       platReportError((os_error *)&privateErr); \
     };
 # else /* !ACORN */
-#   define FPRINTF(X) fprintf X
+    extern int aioLastTick, aioThisTick;
+#   define FPRINTF(X) { aioThisTick= ioLowResMSecs();  fprintf(stderr, "%8d %8d ", aioThisTick, aioThisTick - aioLastTick);  aioLastTick= aioThisTick;  fprintf X; }
 # endif
 #else /* !DEBUG */
 # define FPRINTF(X)
@@ -1206,8 +1207,10 @@ static socketOption socketOptions[]= {
 #endif
   { "TCP_MAXSEG",			SOL_TCP,	TCP_MAXSEG },
   { "TCP_NODELAY",			SOL_TCP,	TCP_NODELAY },
-# if 0 /*** deliberately unsupported options -- do NOT enable these! ***/
+#ifdef SO_REUSEPORT
   { "SO_REUSEPORT",			SOL_SOCKET,	SO_REUSEPORT },
+#endif SO_REUSEPORT
+#if 0 /*** deliberately unsupported options -- do NOT enable these! ***/
   { "SO_PRIORITY",			SOL_SOCKET,	SO_PRIORITY },
   { "SO_RCVLOWAT",			SOL_SOCKET,	SO_RCVLOWAT },
   { "SO_SNDLOWAT",			SOL_SOCKET,	SO_SNDLOWAT },
@@ -1219,7 +1222,7 @@ static socketOption socketOptions[]= {
   { "TCP_CONN_ABORT_THRESHOLD",		SOL_TCP,	TCP_CONN_ABORT_THRESHOLD },
   { "TCP_NOTIFY_THRESHOLD",		SOL_TCP,	TCP_NOTIFY_THRESHOLD },
   { "TCP_URGENT_PTR_TYPE",		SOL_TCP,	TCP_URGENT_PTR_TYPE },
-# endif
+#endif
   { (char *)0,				0,		0 }
 };
 
@@ -1235,6 +1238,7 @@ static socketOption *findOption(char *name, size_t nameSize)
       for (opt= socketOptions; opt->name != 0; ++opt)
 	if (!strcmp(buf, opt->name))
 	  return opt;
+      fprintf(stderr, "SocketPlugin: ignoring unknown option '%s'\n", buf);
     }
   return 0;
 }
