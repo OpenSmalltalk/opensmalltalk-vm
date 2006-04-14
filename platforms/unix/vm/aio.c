@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2005-04-06 08:09:41 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-04-14 14:45:28 by piumarta on margaux.local
  */
 
 #include "sqaio.h"
@@ -101,7 +101,9 @@
 #undef	DEBUG_TICKER
 
 #if defined(DEBUG)
-# define FPRINTF(X) fprintf X
+  int aioLastTick= 0;
+  int aioThisTick= 0;
+# define FPRINTF(X) { aioThisTick= ioLowResMSecs();  fprintf(stderr, "%8d %8d ", aioThisTick, aioThisTick - aioLastTick);  aioLastTick= aioThisTick;  fprintf X; }
 #else
 # define FPRINTF(X)
 #endif
@@ -197,6 +199,7 @@ int aioPoll(int microSeconds)
   int	 fd, ms;
   fd_set rd, wr, ex;
 
+  FPRINTF((stderr, "aioPoll(%d)\n", microSeconds));
   DO_TICK();
 
   /* get out early if there is no pending i/o and no need to relinquish cpu */
