@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-07 14:55:15 by piumarta on emilia.local
+ * Last edited: 2006-04-14 14:48:57 by piumarta on margaux.local
  */
 
 #include "sq.h"
@@ -479,10 +479,13 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
   if (ms < (1000/60))		/* < 1 timeslice? */
     {
 #    if defined(__MACH__)	/* can sleep with 1ms resolution */
-      struct timespec rqtp= { 0, ms * 1000*1000 };
-      struct timespec rmtp;
-      while ((nanosleep(&rqtp, &rmtp) < 0) && (errno == EINTR))
-	rqtp= rmtp;
+      if (!aioPoll(0))
+	{
+	  struct timespec rqtp= { 0, ms * 1000*1000 };
+	  struct timespec rmtp;
+	  while ((nanosleep(&rqtp, &rmtp) < 0) && (errno == EINTR))
+	    rqtp= rmtp;
+	}
 #    endif
       ms= 0;			/* poll but don't block */
     }
