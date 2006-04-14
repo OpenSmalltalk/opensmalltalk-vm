@@ -4808,6 +4808,7 @@ register struct foo * foo = &fum;
 
 sqInt forceInterruptCheck(void) {
 	foo->interruptCheckCounter = -1000;
+	foo->nextPollTick = 0;
 }
 
 
