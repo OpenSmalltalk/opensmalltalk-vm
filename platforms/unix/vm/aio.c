@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-14 14:45:28 by piumarta on margaux.local
+ * Last edited: 2006-04-14 16:24:09 by piumarta on margaux.local
  */
 
 #include "sqaio.h"
@@ -57,6 +57,7 @@
 # include <stdio.h>
 # include <signal.h>
 # include <errno.h>
+# include <fcntl.h>
 # include <sys/ioctl.h>
   
 # ifdef HAVE_SYS_TIME_H
@@ -161,6 +162,8 @@ static char *handlerName(aioHandler h)
 
 void aioInit(void)
 {
+  extern void forceInterruptCheck(int);	/* not really, but hey */
+
   FD_ZERO(&fdMask);
   FD_ZERO(&rdMask);
   FD_ZERO(&wrMask);
@@ -168,6 +171,7 @@ void aioInit(void)
   FD_ZERO(&xdMask);
   maxFd= 0;
   signal(SIGPIPE, SIG_IGN);
+  signal(SIGIO,   forceInterruptCheck);
 }
 
 
@@ -283,9 +287,12 @@ void aioEnable(int fd, void *data, int flags)
     }
   else
     {
+      /* enable non-blocking asynchronous i/o and delivery of SIGIO to the active process */
+      int flags;
       FD_CLR(fd, &xdMask);
-      if (ioctl(fd, FIONBIO, (char *)&one) < 0)
-	perror("ioctl(FIONBIO, 1)");
+      if (        fcntl(fd, F_SETOWN, getpid()                    )  < 0)  perror("fcntl(F_SETOWN, getpid())");
+      if ((flags= fcntl(fd, F_GETFL,  0                           )) < 0)  perror("fcntl(F_GETFL)");
+      if (        fcntl(fd, F_SETFL,  flags | O_NONBLOCK | O_ASYNC)  < 0)  perror("fcntl(F_SETFL, O_ASYNC)");
     }
 }
 
