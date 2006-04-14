@@ -1,5 +1,9 @@
 2006-04-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* vm/aio.c (aioInit): SIGIO handled by forceInterruptCheck().
+
+	* vm/aio.c (aioEnable): Set ASYNC on internal descriptors.
+
 	* vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds): Don't
 	nanosleep if events can be processed.
 
