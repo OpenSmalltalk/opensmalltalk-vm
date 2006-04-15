@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2006-04-14 14:22:10 by piumarta on margaux.local
+ * Last edited: 2006-04-15 09:57:25 by piumarta on margaux.local
  * 
  * Support for BSD-style "accept" primitives contributed by:
  *	Lex Spoon <lex@cc.gatech.edu>
@@ -1209,7 +1209,7 @@ static socketOption socketOptions[]= {
   { "TCP_NODELAY",			SOL_TCP,	TCP_NODELAY },
 #ifdef SO_REUSEPORT
   { "SO_REUSEPORT",			SOL_SOCKET,	SO_REUSEPORT },
-#endif SO_REUSEPORT
+#endif
 #if 0 /*** deliberately unsupported options -- do NOT enable these! ***/
   { "SO_PRIORITY",			SOL_SOCKET,	SO_PRIORITY },
   { "SO_RCVLOWAT",			SOL_SOCKET,	SO_RCVLOWAT },
