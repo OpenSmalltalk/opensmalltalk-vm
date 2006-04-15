@@ -1,6 +1,6 @@
 /* aio.c -- asynchronous file i/o
  * 
- *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2006 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-14 16:24:09 by piumarta on margaux.local
+ * Last edited: 2006-04-15 11:13:25 by piumarta on margaux.local
  */
 
 #include "sqaio.h"
