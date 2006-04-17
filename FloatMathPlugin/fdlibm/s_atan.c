@@ -83,9 +83,9 @@ one   = 1.0,
 huge   = 1.0e300;
 
 #ifdef __STDC__
-	double atan(double x)
+	double __ieee754_atan(double x)
 #else
-	double atan(x)
+	double __ieee754_atan(x)
 	double x;
 #endif
 {
