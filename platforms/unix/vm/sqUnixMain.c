@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-15 11:13:55 by piumarta on margaux.local
+ * Last edited: 2006-04-17 17:10:06 by piumarta on margaux.local
  */
 
 #include "sq.h"
@@ -324,8 +324,6 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length)
 }
 
 
-/* why on earth tpr couldn't use imageName[Get]Length() instead is a total mystery */
-
 char *getImageName(void)
 {
   return imageName;
@@ -476,21 +474,9 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
       ms= ((nwt <= now) ? (1000/60) : nwt - now);
     }
 
-  if (ms < (1000/60))		/* < 1 timeslice? */
-    {
-#    if defined(__MACH__)	/* can sleep with 1ms resolution */
-      if (!aioPoll(0))
-	{
-	  struct timespec rqtp= { 0, ms * 1000*1000 };
-	  struct timespec rmtp;
-	  while ((nanosleep(&rqtp, &rmtp) < 0) && (errno == EINTR))
-	    rqtp= rmtp;
-	}
-#    endif
-      ms= 0;			/* poll but don't block */
-    }
   dpy->ioRelinquishProcessorForMicroseconds(ms*1000);
   setInterruptCheckCounter(0);
+
   return 0;
 }
 

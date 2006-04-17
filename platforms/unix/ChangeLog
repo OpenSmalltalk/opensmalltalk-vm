@@ -1,3 +1,18 @@
+2006-04-17  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/aio.c (aioSleep): Sleep in aioPoll (i.e, select) or
+	nanosleep, for timeouts < 1 timeslice.
+
+	* vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds):
+	Nanosecond sleep moved to aioSleep().
+
+	* vm-display-X11/sqUnixX11.c (display_ioRelinquishProcessorForMicroseconds): 
+	* vm-display-Quartz/sqUnixQuartz.m (display_ioRelinquishProcessorForMicroseconds):
+	* vm-display-null/sqUnixDisplayNull.c (display_ioRelinquishProcessorForMicroseconds): 
+	* vm-display-fbdev/sqUnixFBDev.c (display_ioRelinquishProcessorForMicroseconds): 
+	* vm-display-custom/sqUnixCustomWindow.c (display_ioRelinquishProcessorForMicroseconds): 
+	Call aioSleep() instead of aioPoll().
+
 2006-04-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/aio.c (aioInit): SIGIO handled by forceInterruptCheck().

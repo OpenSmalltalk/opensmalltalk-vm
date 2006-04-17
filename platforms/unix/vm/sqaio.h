@@ -36,7 +36,7 @@
 
 /* author: ian.piumarta@inria.fr
  *
- * last edited: 2005-04-06 08:09:25 by piumarta on squeak.hpl.hp.com
+ * last edited: 2006-04-17 16:54:03 by piumarta on margaux.local
  */
 
 #ifndef __sqaio_h
@@ -93,11 +93,17 @@ extern void aioSuspend(int fd, int mask);
  */
 extern void aioDisable(int fd);
 
-/* Sleep for at most `microSeconds'.  Any event(s) arriving for any
+/* Sleep for at most `microSeconds'.  Any event(s) arriving for
  * handled fd(s) will terminate the sleep, with the appropriate
  * handler(s) being called before returning.
  */
 extern int aioPoll(int microSeconds);
+
+/* As above, but avoid sleeping in select() if microSeconds is small
+ * (less than a timeslice).  Handlers are called, if neccessary, at
+ * the start and end of the sleep.
+ */
+extern int aioSleep(int microSeconds);
 
 
 #endif /* __sqaio_h */

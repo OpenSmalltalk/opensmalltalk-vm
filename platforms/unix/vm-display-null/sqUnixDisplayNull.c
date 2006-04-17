@@ -22,7 +22,7 @@ static sqInt display_ioBeep(void) { return 0; }
 
 static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  aioPoll(microSeconds);
+  aioSleep(microSeconds);
   return 0;
 }
 

@@ -1,6 +1,6 @@
 /* sqUnixCustomWindow.c -- support for display via your custom window system.
  * 
- * Last edited: 2005-04-06 05:32:40 by piumarta on pauillac.hpl.hp.com
+ * Last edited: 2006-04-17 16:57:12 by piumarta on margaux.local
  * 
  * This is a template for creating your own window drivers for Squeak:
  * 
@@ -67,7 +67,7 @@ static sqInt display_ioBeep(void)
 
 static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  aioPoll(handleEvents() ? 0 : microSeconds);
+  aioSleep(handleEvents() ? 0 : microSeconds);
   return 0;
 }
 

@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2005-04-06 08:08:49 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-04-17 16:56:37 by piumarta on margaux.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -2293,7 +2293,7 @@ static sqInt display_ioBeep(void)
 
 static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  aioPoll(handleEvents() ? 0 : microSeconds);
+  aioSleep(handleEvents() ? 0 : microSeconds);
   return 0;
 }
 

@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-15 11:13:25 by piumarta on margaux.local
+ * Last edited: 2006-04-17 16:54:40 by piumarta on margaux.local
  */
 
 #include "sqaio.h"
@@ -196,7 +196,7 @@ void aioFini(void)
 }
 
 
-/* poll for i/o activity, with microSeconds wait */
+/* answer whether i/o becomes possible within the given number of microSeconds */
 
 int aioPoll(int microSeconds)
 {
@@ -254,6 +254,28 @@ int aioPoll(int microSeconds)
 #     undef _DO
     }
   return 1;
+}
+
+
+/* sleep for microSeconds or until i/o becomes possible, avoiding
+   sleeping in select() is timeout too small */
+
+int aioSleep(int microSeconds)
+{
+  if (microSeconds < (1000000/60))	/* < 1 timeslice? */
+    {
+#    if defined(__MACH__)		/* can sleep with 1ms resolution */
+      if (!aioPoll(0))
+	{
+	  struct timespec rqtp= { 0, microSeconds * 1000 };
+	  struct timespec rmtp;
+	  while ((nanosleep(&rqtp, &rmtp) < 0) && (errno == EINTR))
+	    rqtp= rmtp;
+	}
+#    endif
+      microSeconds= 0;			/* poll but don't block */
+    }
+  return aioPoll(microSeconds);
 }
 
 

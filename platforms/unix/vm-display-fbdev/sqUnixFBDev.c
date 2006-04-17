@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2005-04-06 08:08:42 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-04-17 16:57:36 by piumarta on margaux.local
  */
 
 
@@ -228,7 +228,7 @@ static sqInt display_ioBeep(void)
 
 static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  aioPoll(microSeconds);
+  aioSleep(microSeconds);
   return 0;
 }
 

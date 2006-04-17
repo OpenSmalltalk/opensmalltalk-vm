@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2006-04-05 15:05:17 by piumarta on emilia.local
+ * Last edited: 2006-04-17 16:56:53 by piumarta on margaux.local
  */
 
 
@@ -406,7 +406,7 @@ static sqInt display_ioBeep(void)
 
 static sqInt display_ioRelinquishProcessorForMicroseconds(sqInt microSeconds)
 {
-  aioPoll(microSeconds);
+  aioSleep(microSeconds);
   return 0;
 }
 
