@@ -3299,7 +3299,8 @@ Interpreter >> flushObsoleteIndexedPrimitives [
 { #category : #processes }
 Interpreter >> forceInterruptCheck [
 	"force an interrupt check ASAP"
-	interruptCheckCounter := -1000
+	interruptCheckCounter := -1000.
+	nextPollTick := 0
 ]
 
 { #category : #'object format' }
