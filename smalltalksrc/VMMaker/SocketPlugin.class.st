@@ -739,18 +739,6 @@ SocketPlugin >> primitiveSocketSendDone: socket [
 	^done asBooleanObj
 ]
 
-{ #category : #primitives }
-SocketPlugin >> primitiveSocketSetReusable: socket [
-	"Set the socket to be reusable"
-	| s |
-	self var: #s declareC: 'SocketPtr s'.
-	self primitive: 'primitiveSocketSetReusable'
-		parameters: #(Oop).
-	s := self socketValueOf: socket.
-	interpreterProxy failed ifFalse: [
-		self sqSocketSetReusable: s]
-]
-
 { #category : #'initialize-release' }
 SocketPlugin >> shutdownModule [
 	self export: true.
