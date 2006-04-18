@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-17 16:54:40 by piumarta on margaux.local
+ * Last edited: 2006-04-17 21:44:32 by piumarta on margaux.local
  */
 
 #include "sqaio.h"
@@ -94,6 +94,7 @@
 # include <sys/time.h>
 # include <sys/select.h>
 # include <sys/ioctl.h>
+# include <fcntl.h>
 
 #endif
 
