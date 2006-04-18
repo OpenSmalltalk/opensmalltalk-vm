@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-17 16:56:37 by piumarta on margaux.local
+ * Last edited: 2006-04-18 16:46:44 by piumarta on margaux.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -1350,7 +1350,15 @@ static void handleEvent(XEvent *evt)
     case KeyRelease:
       noteEventState(evt->xkey);
       {
-	int keyCode= x2sqKey(&evt->xkey);
+	int keyCode;
+	if (XPending(stDisplay))
+	  {
+	    XEvent evt2;
+	    XPeekEvent(stDisplay, &evt2);
+	    if ((evt2.type == KeyPress) && (evt2.xkey.keycode == evt->xkey.keycode) && ((evt2.xkey.time - evt->xkey.time < 2)))
+	      break;
+	  }
+	keyCode= x2sqKey(&evt->xkey);
 	if (keyCode >= 0)
 	  recordKeyboardEvent(keyCode, EventKeyUp, modifierState);
       }

@@ -1,3 +1,8 @@
+2006-04-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c (handleEvent): Suppress reporting key
+	up when KeyRelease event is from autorepeat.
+
 2006-04-17  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/aio.c (aioSleep): Sleep in aioPoll (i.e, select) or
