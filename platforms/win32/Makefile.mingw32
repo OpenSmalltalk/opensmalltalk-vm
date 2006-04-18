@@ -94,7 +94,7 @@ VPATH=		$(SRCDIR) $(VMDIR) $(VMOUTDIR) $(PLUGINOUTDIR)
 #
 CC=		gcc
 OFLAGS=         -O2
-CFLAGS=		-g -mpentium -mwindows -fomit-frame-pointer -funroll-loops -fschedule-insns2 $(OFLAGS)
+CFLAGS=		-g -mpentium -mwindows -Werror-implicit-function-declaration -fomit-frame-pointer -funroll-loops -fschedule-insns2 $(OFLAGS)
 DEFS=		-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS)
 XDEFS=		-DSQUEAK_BUILTIN_PLUGIN
 INCS=		-I. -I$(SRCDIR) -I$(VMDIR) -I$(DXDIR) $(XINC)
