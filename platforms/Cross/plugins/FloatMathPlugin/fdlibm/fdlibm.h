@@ -181,6 +181,7 @@ extern double __ieee754_acos __P((double));
 extern double __ieee754_acosh __P((double));			
 extern double __ieee754_log __P((double));			
 extern double __ieee754_atanh __P((double));			
+extern double __ieee754_atan __P((double));			
 extern double __ieee754_asin __P((double));			
 extern double __ieee754_atan2 __P((double,double));			
 extern double __ieee754_exp __P((double));

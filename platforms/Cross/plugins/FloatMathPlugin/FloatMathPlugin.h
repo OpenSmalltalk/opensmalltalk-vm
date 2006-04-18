@@ -1,5 +1,10 @@
 /* we only declare those functions from fdlibm that we actually use
    and avoid including fdlibm.h alltogether as it conflicts with math.h */
+
+#ifndef NO_ISNAN
+/* by default we use fdlibm's isnan() */
+extern int isnan(double);
+#endif
 extern double __ieee754_sqrt(double);
 
 extern double __ieee754_acos(double);
