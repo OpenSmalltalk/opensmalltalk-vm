@@ -120,9 +120,10 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds) {
     else
         realTimeToWait = getNextWakeupTick() - now; 
             
-    aioPoll(realTimeToWait*1000);
-    
-    /* tspec.tv_sec=  realTimeToWait / 1000;
+	aioSleep(realTimeToWait*1000);
+	    
+		
+ /* tspec.tv_sec=  realTimeToWait / 1000;
     tspec.tv_nsec= (realTimeToWait % 1000)*1000000;
     
     err = pthread_mutex_lock(&gSleepLock);
@@ -153,13 +154,3 @@ time_t convertToSqueakTime(time_t unixTime)
      and 52 non-leap years later than Squeak. */
   return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
 }
-
-
-/*void sqHeartBeatActions(int now) {
-    static int past=0;
-    
-    if ((now-past) > 10) {
-        aioPoll(0);
-    }
-    past = now;
-} */

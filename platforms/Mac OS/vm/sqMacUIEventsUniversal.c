@@ -227,8 +227,7 @@ int ioSetInputSemaphore(int semaIndex) {
 }
 
 int ioGetNextEvent(sqInputEvent *evt) {
-		doPendingFlush();
-        aioPoll(0);		
+		ioProcessEvents();
 		pthread_mutex_lock(&gEventQueueLock);
 	if (eventBufferGet == eventBufferPut) {
             pthread_mutex_unlock(&gEventQueueLock);
@@ -1151,6 +1150,7 @@ static void doPendingFlush(void) {
 #ifndef BROWSERPLUGIN
 int ioProcessEvents(void) {
 
+	aioPoll(0);		
 	doPendingFlush();
     if (gQuitNowRightNow) {
         ioExit();  //This might not return, might call exittoshell
