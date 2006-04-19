@@ -1,5 +1,7 @@
 2006-04-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* plugins/FloatMathPlugin/Makefile.inc (CFLAGS): Define NO_ISNAN=1.
+
 	* vm-display-X11/sqUnixX11.c (handleEvent): Suppress reporting key
 	up when KeyRelease event is from autorepeat.
 
