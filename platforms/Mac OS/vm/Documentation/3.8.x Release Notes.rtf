@@ -10,11 +10,22 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-April 11th, 2006 (3.8.12b2)\
+April 18th, 2006 (3.8.12b3)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.12b3\
+	sqMacMain.c\
+		rev version number, set hardware bits for math units. \
+	sqMacTime.c\
+		call aioSleep() versus aioPoll()\
+	sqMacUIEventsUniversal.c\
+		make aioPoll() calls in the right places.\
+\
+	Update xcode project build, also change headers to include REPlugin as internal plugin\
+	\
 3.8.12b2\
 	Add plugins for Croquet, and FloatMath.\
 	sqMacMain.c\

@@ -120,6 +120,28 @@ char **envVec= 0;
 
 int main(int argc, char **argv, char **envp);
 
+#if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
+			|| defined(i486) || defined(__i486) || defined (__i486__) \
+			|| defined(intel) || defined(x86) || defined(i86pc) )
+  static void fldcw(unsigned int cw)
+  {
+    __asm__("fldcw %0" :: "m"(cw));
+  }
+#else
+# define fldcw(cw)
+#endif
+
+#if defined(__GNUC__) && ( defined(ppc) || defined(__ppc) || defined(__ppc__)  \
+			|| defined(POWERPC) || defined(__POWERPC) || defined (__POWERPC__) )
+  void mtfsfi(unsigned long long fpscr)
+  {
+    __asm__("lfd   f0, %0" :: "m"(fpscr));
+    __asm__("mtfsf 0xff, f0");
+  }
+#else
+# define mtfsfi(fpscr)
+#endif
+
 int main(int argc, char **argv, char **envp) {
 	EventRecord theEvent;
 	sqImageFile f;
@@ -141,6 +163,9 @@ int main(int argc, char **argv, char **envp) {
   argCnt= argc;
   argVec= argv;
   envVec= envp;
+
+  fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
+  mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 
 	LoadScrap();
 	InitCursor();
@@ -364,7 +389,7 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.12b2 10-apr-06 >52BCC999-CAD7-470A-A5ED-E5018937B2C4<";
+			return "Mac Carbon 3.8.12b3 13-apr-06 >437DC510-0D27-46AA-B326-74B1E04DAE0D<";
 			
 
  	if (id == 1201) return "255";
