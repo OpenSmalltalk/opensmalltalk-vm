@@ -27,6 +27,7 @@ extern sqExport MIDIPlugin_exports[];
 extern sqExport MacMenubarPlugin_exports[];
 extern sqExport Matrix2x3Plugin_exports[];
 extern sqExport MiscPrimitivePlugin_exports[];
+extern sqExport RePlugin_exports[];
 extern sqExport SecurityPlugin_exports[];
 extern sqExport SerialPlugin_exports[];
 extern sqExport SocketPlugin_exports[];
@@ -67,6 +68,7 @@ sqExport *pluginExports[] = {
 	MIDIPlugin_exports,
 	Matrix2x3Plugin_exports,
 	MiscPrimitivePlugin_exports,
+	RePlugin_exports,
 	SecurityPlugin_exports,
 	SerialPlugin_exports,
 	SocketPlugin_exports,
