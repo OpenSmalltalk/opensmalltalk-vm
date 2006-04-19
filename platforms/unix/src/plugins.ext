@@ -1,2 +1,0 @@
-# Automatically generated makefile include for external plugins
-EXTERNAL_PLUGINS = B3DAcceleratorPlugin PseudoTTYPlugin UnixOSProcessPlugin XDisplayControlPlugin
