@@ -1,3 +1,15 @@
+2006-04-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/config.h.in: Add HAVE_NANOSLEEP.
+
+	* vm/acinclude.m4: Define HAVE_NANOSLEEP if nanosleep() available.
+
+	* vm/aio.c (aioSleep): For small timeouts always nanosleep() if
+	available.
+
+	* vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds): Obey the
+	requested timeout without testing for overdue wakeup ticks.
+
 ----------------------------------------------------------------
 	
 2006-04-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
