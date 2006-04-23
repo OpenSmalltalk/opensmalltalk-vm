@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-17 21:44:32 by piumarta on margaux.local
+ * Last edited: 2006-04-23 12:55:59 by piumarta on emilia.local
  */
 
 #include "sqaio.h"
@@ -263,6 +263,7 @@ int aioPoll(int microSeconds)
 
 int aioSleep(int microSeconds)
 {
+#if defined(HAVE_NANOSLEEP)
   if (microSeconds < (1000000/60))	/* < 1 timeslice? */
     {
       if (!aioPoll(0))
@@ -273,6 +274,7 @@ int aioSleep(int microSeconds)
 	  microSeconds= 0;			/* poll but don't block */
 	}
     }
+#endif
   return aioPoll(microSeconds);
 }
 

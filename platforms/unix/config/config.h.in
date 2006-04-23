@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2006-04-06 09:12:12 by piumarta on emilia.local
+ * Last edited: 2006-04-23 12:34:41 by piumarta on emilia.local
  */
 
 #ifndef __sq_config_h
@@ -122,6 +122,8 @@
 #undef	HAVE_ALLOCA_H
 
 #undef	HAVE_UNSETENV
+
+#undef	HAVE_NANOSLEEP
 
 /* widths of primitive types */
 

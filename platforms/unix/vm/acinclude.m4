@@ -39,3 +39,8 @@ if test "$with_iconv" = "yes"; then
 else
   AC_MSG_RESULT([******** disabling iconv])
 fi
+
+AC_CHECK_FUNC(nanosleep, [
+  AC_DEFINE(HAVE_NANOSLEEP, 1)
+  AC_SUBST(HAVE_NANOSLEEP)
+])
