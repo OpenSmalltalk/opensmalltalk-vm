@@ -465,18 +465,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 
 sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 {
-  int nwt= getNextWakeupTick();
-  int ms=  0;
-
-  if (nwt)
-    {
-      int now= (ioMSecs() & 0x1fffffff);
-      ms= ((nwt <= now) ? (1000/60) : nwt - now);
-    }
-
-  dpy->ioRelinquishProcessorForMicroseconds(ms*1000);
-  setInterruptCheckCounter(0);
-
+  dpy->ioRelinquishProcessorForMicroseconds(us);
   return 0;
 }
 
@@ -1261,6 +1250,7 @@ void imgInit(void)
   static void fldcw(unsigned int cw)
   {
     __asm__("fldcw %0" :: "m"(cw));
+    printf("387 flags are set\n");
   }
 #else
 # define fldcw(cw)

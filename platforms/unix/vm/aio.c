@@ -265,16 +265,13 @@ int aioSleep(int microSeconds)
 {
   if (microSeconds < (1000000/60))	/* < 1 timeslice? */
     {
-#    if defined(__MACH__)		/* can sleep with 1ms resolution */
       if (!aioPoll(0))
 	{
 	  struct timespec rqtp= { 0, microSeconds * 1000 };
 	  struct timespec rmtp;
-	  while ((nanosleep(&rqtp, &rmtp) < 0) && (errno == EINTR))
-	    rqtp= rmtp;
+	  nanosleep(&rqtp, &rmtp);
+	  microSeconds= 0;			/* poll but don't block */
 	}
-#    endif
-      microSeconds= 0;			/* poll but don't block */
     }
   return aioPoll(microSeconds);
 }
