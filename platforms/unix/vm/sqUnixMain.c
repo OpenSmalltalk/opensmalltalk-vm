@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-23 23:33:36 by piumarta on margaux.local
+ * Last edited: 2006-04-24 11:51:00 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -463,10 +463,18 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
   return dpy->ioFormPrint(bitsAddr, width, height, depth, hScale, vScale, landscapeFlag);
 }
 
+static int lastInterruptCheck= 0;
+
 sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 {
+  int now;
   dpy->ioRelinquishProcessorForMicroseconds(us);
-  setInterruptCheckCounter(0);
+  now= ioLowResMSecs();
+  if (now - lastInterruptCheck > (1000/25))	/* avoid thrashing intr checks from 1ms loop in idle proc  */
+    {
+      setInterruptCheckCounter(-1000);	/* ensure timely poll for semaphore activity */
+      lastInterruptCheck= now;
+    }
   return 0;
 }
 
