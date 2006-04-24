@@ -28502,9 +28502,11 @@ fi
 echo "$as_me:$LINENO: result: $ac_cv_lib_uuid_uuid_generate" >&5
 echo "${ECHO_T}$ac_cv_lib_uuid_uuid_generate" >&6
 if test $ac_cv_lib_uuid_uuid_generate = yes; then
-  cat >>confdefs.h <<\_ACEOF
+
+    cat >>confdefs.h <<\_ACEOF
 #define LIB_UUID -luuid
 _ACEOF
+
 
 fi
 
