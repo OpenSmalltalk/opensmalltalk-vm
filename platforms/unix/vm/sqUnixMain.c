@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-23 21:12:49 by piumarta on margaux.local
+ * Last edited: 2006-04-23 23:33:36 by piumarta on margaux.local
  */
 
 #include "sq.h"
@@ -1251,7 +1251,6 @@ void imgInit(void)
   static void fldcw(unsigned int cw)
   {
     __asm__("fldcw %0" :: "m"(cw));
-    printf("387 flags are set\n");
   }
 #else
 # define fldcw(cw)
