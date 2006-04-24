@@ -10,11 +10,16 @@
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
 \
-April 18th, 2006 (3.8.12b3)\
+April 24th, 2006 (3.8.12b4)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.12b4\
+	sqMacMain.c\
+		rev version number.\
+	sqMacTime.c\
+		Use select(), no nano-sleep call, nano-sleep makes vm use 35% cpu, versus say %12 for test image\
 \
 3.8.12b3\
 	sqMacMain.c\
