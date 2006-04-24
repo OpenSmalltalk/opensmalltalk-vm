@@ -1,4 +1,11 @@
+----------------------------------------------------------------
+	
 2006-04-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* 3.9-6 released.
+
+	* vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds): Reset
+	interrupt check counter at end of sleep.
 
 	* config/config.h.in: Add HAVE_NANOSLEEP.
 

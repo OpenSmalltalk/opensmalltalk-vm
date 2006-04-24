@@ -37,11 +37,11 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2006-04-23 12:43:51 by piumarta on emilia.local
+# Last edited: 2006-04-23 20:16:07 by piumarta on margaux.local
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,9,5, 3,9a,7024)
+AC_VM_VERSION(3,9,6, 3,9a,7024)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
