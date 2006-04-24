@@ -1,7 +1,0 @@
-Changes since 3.9-4:
-
-VM:
-
-  Check for and use nanosleep() on all platforms.  This prevents the
-  VM comsuming 100% CPU on some platforms due to small (1ms) timeouts
-  in ioRelinquishProcessor() coming from the idle process.
