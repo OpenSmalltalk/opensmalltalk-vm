@@ -35,7 +35,7 @@
 
 # Author: Ian.Piumarta@inria.fr
 # 
-# Last edited: 2006-04-07 11:05:52 by piumarta on emilia.local
+# Last edited: 2006-04-23 22:57:19 by piumarta on margaux.local
 
 MAKEFLAGS=	--no-print-directory
 
@@ -105,6 +105,8 @@ LIBS=		@LIBS@
 X_CFLAGS=	@X_CFLAGS@
 X_INCLUDES=	@X_INCLUDES@
 X_LIBS=		@X_LIBS@
+
+LIB_UUID=	@LIB_UUID@
 
 FFI_DIR=	@FFI_DIR@
 FFI_C=		@FFI_C@
