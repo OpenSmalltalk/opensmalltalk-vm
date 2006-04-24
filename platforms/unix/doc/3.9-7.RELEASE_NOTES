@@ -12,3 +12,5 @@ VM:
 Plugins:
 
   Added Balloon3DEngine (aka Squeak3D) plugin and bundled it.
+
+  Added AioPlugin plugin and bundled it.
