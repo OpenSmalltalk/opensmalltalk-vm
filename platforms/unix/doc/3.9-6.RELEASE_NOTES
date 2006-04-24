@@ -5,3 +5,10 @@ VM:
   Check for and use nanosleep() on all platforms.  This prevents the
   VM comsuming 100% CPU on some platforms due to small (1ms) timeouts
   in ioRelinquishProcessor() coming from the idle process.
+
+  Reset interruptCheckCounter at the end of ioRelinquishProcessor to
+  ensure input semaphore signalled promptly after events.
+
+Plugins:
+
+  Added Balloon3DEngine (aka Squeak3D) plugin and bundled it.
