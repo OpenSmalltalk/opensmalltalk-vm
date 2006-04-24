@@ -1,2 +1,2 @@
 # Automatically generated makefile include for external plugins
-EXTERNAL_PLUGINS = B3DAcceleratorPlugin Squeak3D PseudoTTYPlugin UnixOSProcessPlugin UUIDPlugin XDisplayControlPlugin
+EXTERNAL_PLUGINS = AioPlugin B3DAcceleratorPlugin Squeak3D PseudoTTYPlugin UnixOSProcessPlugin UUIDPlugin XDisplayControlPlugin
