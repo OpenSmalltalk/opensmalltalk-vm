@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-17 17:10:06 by piumarta on margaux.local
+ * Last edited: 2006-04-23 21:12:49 by piumarta on margaux.local
  */
 
 #include "sq.h"
@@ -466,6 +466,7 @@ sqInt ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqInt depth, double
 sqInt ioRelinquishProcessorForMicroseconds(sqInt us)
 {
   dpy->ioRelinquishProcessorForMicroseconds(us);
+  setInterruptCheckCounter(0);
   return 0;
 }
 
