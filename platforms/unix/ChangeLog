@@ -1,3 +1,11 @@
+2006-04-24  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/AioPlugin/Makefile.inc (XCPPFLAGS): XCPPFLAGS defines
+	SQAIO_H="sqaio.h".
+
+	* vm/sqUnixMain.c (ioRelinquishProcessorForMicroseconds): Reset
+	interruptCheckCounter iff > 1/25 sec has elapsed.
+
 ----------------------------------------------------------------
 	
 2006-04-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
