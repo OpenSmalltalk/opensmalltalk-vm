@@ -1,5 +1,13 @@
 2006-04-24  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* vm/acinclude.m4: Add CoreServices framework to link libs on
+	Darwin.
+
+	* vm/sqUnixMain.c (sqGetFilenameFromString): Resolve links and
+	aliases if resolveAliases is nonzero.
+
+	* vm/mac-alias.c: Added.
+
 	* plugins/AioPlugin/Makefile.inc (XCPPFLAGS): XCPPFLAGS defines
 	SQAIO_H="sqaio.h".
 
