@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-24 15:32:24 by piumarta on emilia.local
+ * Last edited: 2006-04-24 20:04:36 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -1421,32 +1421,33 @@ sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt fi
   memcpy(aCharBuffer, aFilenameString, filenameLength);
   aCharBuffer[filenameLength]= 0;
 
-  for (;;)	/* aCharBuffer might refer to link or alias */
-    {
-      if (!lstat(aCharBuffer, &st) && S_ISLNK(st.st_mode))	/* symlink */
-	{
-	  if (++numLinks > MAXSYMLINKS)
-	    return -1;	/* too many levels of indirection */
+  if (resolveAlias)
+    for (;;)	/* aCharBuffer might refer to link or alias */
+      {
+	if (!lstat(aCharBuffer, &st) && S_ISLNK(st.st_mode))	/* symlink */
+	  {
+	    if (++numLinks > MAXSYMLINKS)
+	      return -1;	/* too many levels of indirection */
 
-	  filenameLength= readlink(aCharBuffer, aCharBuffer, PATH_MAX);
-	  if ((filenameLength < 0) || (filenameLength >= PATH_MAX))
-	    return -1;	/* link unavailable or path too long */
+	    filenameLength= readlink(aCharBuffer, aCharBuffer, PATH_MAX);
+	    if ((filenameLength < 0) || (filenameLength >= PATH_MAX))
+	      return -1;	/* link unavailable or path too long */
 
-	  aCharBuffer[filenameLength]= 0;
-	  continue;
-	}
+	    aCharBuffer[filenameLength]= 0;
+	    continue;
+	  }
 
 #    if defined(DARWIN)
-      if (isMacAlias(aCharBuffer))
-	{
-	  if ((++numLinks > MAXSYMLINKS) || !resolveMacAlias(aCharBuffer, aCharBuffer, PATH_MAX))
-	    return -1;		/* too many levels or bad alias */
-	  continue;
-	}
+	if (isMacAlias(aCharBuffer))
+	  {
+	    if ((++numLinks > MAXSYMLINKS) || !resolveMacAlias(aCharBuffer, aCharBuffer, PATH_MAX))
+	      return -1;		/* too many levels or bad alias */
+	    continue;
+	  }
 #    endif
 
-      break;			/* target is no longer a symlink or alias */
-    }
+	break;			/* target is no longer a symlink or alias */
+      }
 
   return 0;
 }
