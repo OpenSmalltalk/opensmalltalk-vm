@@ -28,14 +28,15 @@ AC_ARG_ENABLE(iconv,
   [with_iconv="yes"])
 
 
+case $host_os in
+  darwin*) LIBS="$LIBS -framework CoreFoundation -framework CoreServices";;
+  *)       ;;
+esac
+
 if test "$with_iconv" = "yes"; then
   AC_CHECK_HEADERS(iconv.h)
   AC_ICONV
   AC_LANGINFO_CODESET
-  case $host_os in
-    darwin*) LIBS="$LIBS -framework CoreFoundation";;
-    *)       ;;
-  esac
 else
   AC_MSG_RESULT([******** disabling iconv])
 fi

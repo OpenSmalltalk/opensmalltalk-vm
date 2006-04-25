@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-24 11:51:00 by piumarta on emilia.local
+ * Last edited: 2006-04-24 15:32:24 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -1401,10 +1401,53 @@ sqInt ioExit(void)
   exit(0);
 }
 
-sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt aBoolean)
+#if defined(DARWIN)
+# include "mac-alias.c"
+#endif
+
+
+/* Copy aFilenameString to aCharBuffer and optionally resolveAlias (or
+   symbolic link) to the real path of the target.  Answer 0 if
+   successful of -1 to indicate an error.  Assume aCharBuffer is at
+   least PATH_MAX bytes long.  Note that MAXSYMLINKS is a lower bound
+   on the (potentially unlimited) number of symlinks allowed in a
+   path, but calling sysconf() seems like overkill. */
+
+sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt filenameLength, sqInt resolveAlias)
 {
+  int numLinks= 0;
+  struct stat st;
+
   memcpy(aCharBuffer, aFilenameString, filenameLength);
   aCharBuffer[filenameLength]= 0;
+
+  for (;;)	/* aCharBuffer might refer to link or alias */
+    {
+      if (!lstat(aCharBuffer, &st) && S_ISLNK(st.st_mode))	/* symlink */
+	{
+	  if (++numLinks > MAXSYMLINKS)
+	    return -1;	/* too many levels of indirection */
+
+	  filenameLength= readlink(aCharBuffer, aCharBuffer, PATH_MAX);
+	  if ((filenameLength < 0) || (filenameLength >= PATH_MAX))
+	    return -1;	/* link unavailable or path too long */
+
+	  aCharBuffer[filenameLength]= 0;
+	  continue;
+	}
+
+#    if defined(DARWIN)
+      if (isMacAlias(aCharBuffer))
+	{
+	  if ((++numLinks > MAXSYMLINKS) || !resolveMacAlias(aCharBuffer, aCharBuffer, PATH_MAX))
+	    return -1;		/* too many levels or bad alias */
+	  continue;
+	}
+#    endif
+
+      break;			/* target is no longer a symlink or alias */
+    }
+
   return 0;
 }
 

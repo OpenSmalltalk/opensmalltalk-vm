@@ -27078,6 +27078,11 @@ else
 fi;
 
 
+case $host_os in
+  darwin*) LIBS="$LIBS -framework CoreFoundation -framework CoreServices";;
+  *)       ;;
+esac
+
 if test "$with_iconv" = "yes"; then
 
 for ac_header in iconv.h
@@ -27537,10 +27542,6 @@ _ACEOF
   fi
 
 
-  case $host_os in
-    darwin*) LIBS="$LIBS -framework CoreFoundation";;
-    *)       ;;
-  esac
 else
   echo "$as_me:$LINENO: result: ******** disabling iconv" >&5
 echo "${ECHO_T}******** disabling iconv" >&6
