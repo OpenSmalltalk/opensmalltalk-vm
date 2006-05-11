@@ -25,8 +25,9 @@
 
 #define ID_USEOPENGL 0x0120
 #define ID_CASEFILES 0x0130
+#define ID_PRINTALLSTACKS 0x0140
 
-#define ID_PREF_LAST 0x0130
+#define ID_PREF_LAST 0x0140
 
 void TrackPrefsMenu(void);
 void CreatePrefsMenu(void);

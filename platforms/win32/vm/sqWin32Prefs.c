@@ -315,6 +315,8 @@ void CreatePrefsMenu(void) {
 #endif
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DBGPRINTSTACK,
 	       TEXT("Dump call stack"));
+    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_PRINTALLSTACKS,
+	       TEXT("Dump all processes"));
     AppendMenu(pMenu, MF_STRING | MF_POPUP, (int)hMenu,
 	       TEXT("Debug Options"));
   }
@@ -400,6 +402,10 @@ void HandlePrefsMenu(int cmd) {
     break;
   case ID_DBGPRINTSTACK:
     printCallStack();
+    break;
+  case ID_PRINTALLSTACKS:
+    printf("Printing all processes:\n");
+    printAllStacks();
     break;
   case ID_PRIORITYBOOST:
     fPriorityBoost = !fPriorityBoost;
