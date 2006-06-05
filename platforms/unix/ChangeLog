@@ -1,3 +1,8 @@
+2006-06-05  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/FilePlugin/sqUnixFile.c (dir_Delete): Invalidate cached
+	info when deleting lastPath.
+
 2006-04-24  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/acinclude.m4: Add CoreServices framework to link libs on

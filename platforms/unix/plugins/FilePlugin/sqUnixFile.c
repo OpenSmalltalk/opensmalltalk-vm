@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2004-06-13 19:42:03 by piumarta on emilia.local
+ * Last edited: 2006-06-05 17:02:30 by piumarta on margaux.local
  */
 
 #include "sq.h"
@@ -122,6 +122,13 @@ sqInt dir_Delete(char *pathString, sqInt pathStringLength)
     return false;
   if (!sq2uxPath(pathString, pathStringLength, name, MAXPATHLEN, 1))
     return false;
+  if (lastPathValid && !strcmp(lastPath, name))
+    {
+      closedir(openDir);
+      lastPathValid= false;
+      lastIndex= -1;
+      lastPath[0]= '\0';
+    }
   return rmdir(name) == 0;
 }
 
