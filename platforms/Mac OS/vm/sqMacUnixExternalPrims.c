@@ -344,6 +344,24 @@ void *ioLoadModule(char *pluginName)
 		if (strcmp(workingData,".framework") == 0) {
 			strncpy(workingData,pluginName,pluginNameLength-10);
 			workingData[pluginNameLength-10] = 0x00;
+			sprintf(path, "%s%s/",vmDirPath,pluginName);
+			if (gSqueakPluginsBuiltInOrLocalOnly) {
+				sprintf(path2, "%s%s", path, workingData);
+				if ((handle = tryLoadingInternals(path2)))
+					return handle;
+			} else {
+				if ((handle= tryLoading(path, workingData)))
+					return handle;
+			}
+			sprintf(path, "%s%s/",pluginDirPath,pluginName);
+			if (gSqueakPluginsBuiltInOrLocalOnly) {
+				sprintf(path2, "%s%s", path, workingData);
+				if ((handle = tryLoadingInternals(path2)))
+					return handle;
+			} else {
+				if ((handle= tryLoading(path, workingData)))
+					return handle;
+			}
 			sprintf(path, "%s%s/",systemFolder,pluginName);
 			if (gSqueakPluginsBuiltInOrLocalOnly) {
 				sprintf(path2, "%s%s", path, workingData);
