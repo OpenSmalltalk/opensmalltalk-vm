@@ -16,10 +16,12 @@ Still yet to do, in future versions -> Verify that file delete rename etc works 
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
-3.8.12b4\
+3.8.12b5\
 		sqMacUnixExternalPrims.c\
-			Ensure frameworks get loaded out of application resources, plugins, then system area. Before\
-			we only looked in system area which was wrong if you want to override framework\
+			Ensure frameworks get loaded out of application resources, then system area. Before\
+			we only looked in system area which was wrong if you want to override framework.\
+			I'll note we can't load from plugin folder for system frameworks, does not see to work, \
+			if first path not found it resolve to system area.\
 \
 3.8.12b4\
 	sqMacMain.c\
