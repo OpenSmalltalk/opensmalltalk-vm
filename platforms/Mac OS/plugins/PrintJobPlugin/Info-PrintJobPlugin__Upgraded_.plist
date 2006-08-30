@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>PrintJobPlugin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>PrintJobPlugin V1.2.0 for Squeak, see http://www.squeak.org</string>
+	<string>PrintJobPlugin V1.3.0 for Squeak, see http://www.squeak.org</string>
 	<key>CFBundleIconFile</key>
 	<string>SqueakPlugin.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -15,14 +15,14 @@
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>PrintJobPlugin V1.2.0 for Squeak</string>
+	<string>PrintJobPlugin V1.3.0 for Squeak</string>
 	<key>CFBundlePackageType</key>
 	<string>BNDL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>1.2.0</string>
+	<string>1.3.0</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>1.2.1</string>
+	<string>1.3.0</string>
 </dict>
 </plist>
