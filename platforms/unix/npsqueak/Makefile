@@ -1,6 +1,6 @@
 # Netscape Plugin for Squeak on Unix platforms
 # Author: Bert Freudenberg
-# Last edited: 2005-02-28 16:57:51 by jens on impara.de
+# Last edited: 2006-09-15 07:20:51 by piumarta on vps.piumarta.com
 
 ############ Customize flags here #######################
 
@@ -8,7 +8,7 @@ INC	= -I./include -I/usr/X11R6/include
 CC	= gcc
 CFLAGS	= $(INC) -O2 -fPIC -Wall
 LD	= gcc
-LDFLAGS = -shared
+LDFLAGS = 
 
 # usually overridden from top level makefile
 VM_VERSION=  3.7b-5
@@ -24,17 +24,20 @@ npsqueakrun=	npsqueakrun
 ############ compile and link ###########################
 all: npsqueak.so npsqueakrun
 
-npsqueak.so : npsqueak.o npunix.o 
-	$(LD) $(LDFLAGS) npsqueak.o npunix.o -o npsqueak.so 
+npsqueak.so : npsqueak.la 
+	ln .libs/npsqueak $@ 
 
-npsqueak.o: npsqueak.c ../config.h
-	$(CC) -c $(CFLAGS) \
+npsqueak.la : npsqueak.lo npunix.lo 
+	../libtool --mode=link $(LD) $(LDFLAGS) npsqueak.lo npunix.lo -avoid-version -module -rpath $(plgdir) -o $@
+
+npsqueak.lo: npsqueak.c ../config.h
+	../libtool --mode=compile $(CC) -c $(CFLAGS) \
 		-DSYSTEM_BIN_DIR=\"$(scriptdir)\" \
 		-DSYSTEM_IMG_DIR=\"$(imgdir)\" \
 		-DNPSQUEAKRUN=\"$(npsqueakrun)\" $<
 
-npunix.o: npunix.c
-	$(CC) -c $(CFLAGS) $<
+npunix.lo: npunix.c
+	../libtool --mode=compile $(CC) -c $(CFLAGS) $<
 
 npsqueakrun: npsqueakrun.in 
 	sed "s|@imgdir@|$(imgdir)|; \
@@ -49,7 +52,7 @@ npsqueakregister: npsqueakregister.in
 
 
 clean:
-	-rm -f *.o *.so *~ .*~ */*~ */.*~
+	-rm -rf *.lo *.la *.o *.so *~ .*~ */*~ */.*~ .libs
 
 
 ############ install ####################################
