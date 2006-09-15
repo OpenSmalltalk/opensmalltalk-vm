@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2006-04-17 16:56:53 by piumarta on margaux.local
+ * Last edited: 2006-09-15 11:45:20 by piumarta on wireless-21.media.mit.edu
  */
 
 
@@ -276,6 +276,11 @@ void feedback(int offset, int pixel)
 extern inline int testAndSet(int *lock)
 {
   int valu;
+# if defined(__i386__)
+  asm volatile("        movl	$1, %0		\n"
+               "        xchg	%0, %1		\n"
+               : "=&r"(valu) : "r"(lock));
+# else
   asm volatile("        lwarx   %0, 0, %1       \n"
                "        cmpwi   %0, 0           \n"
                "        bne-    1f              \n"
@@ -285,6 +290,7 @@ extern inline int testAndSet(int *lock)
                "        li      %0, 0           \n"
                "1:                              \n"
                : "=&r"(valu) : "r"(lock) : "cr0","memory");
+# endif
   return valu;
 }
 
