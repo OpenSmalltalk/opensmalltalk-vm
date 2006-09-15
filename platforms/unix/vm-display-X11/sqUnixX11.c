@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-18 16:46:44 by piumarta on margaux.local
+ * Last edited: 2006-09-14 14:47:19 by piumarta on wireless-76.media.mit.edu
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -273,7 +273,7 @@ int inModalLoop= 0, dpyPitch= 0, dpyPixels= 0;
  */
 #define	EVENTMASK	ButtonPressMask | ButtonReleaseMask | \
 			KeyPressMask | KeyReleaseMask | PointerMotionMask | \
-			ExposureMask
+			ExposureMask | VisibilityChangeMask
 
 #define	WM_EVENTMASK	StructureNotifyMask
 
@@ -1424,6 +1424,17 @@ static void handleEvent(XEvent *evt)
 #      endif /*!FULL_UPDATE_ON_EXPOSE*/
       }
       break;
+
+#  if 0
+    case VisibilityNotify:
+      {
+	static int previousState= VisibilityFullyObscured;
+	XVisibilityEvent *ex= &evt->xvisibility;
+	if (ex->state < previusState)
+	  fullDisplayUpdate();
+	previousState= ex->state;
+      }
+#  endif
 
     case MapNotify:
       /* The window has just been mapped, possibly for the first
