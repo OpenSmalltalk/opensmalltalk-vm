@@ -1,3 +1,13 @@
+2006-09-15  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c (handleEvent): Redraw display when
+	visibility changes to a less obscured state.  (Disabled by
+	default.)
+
+	* vm/sqGnu.h: Don't assign %ebx to CB_REG on Darwin-i386.
+
+	* npsqueak/Makefile: Use libtool to build browser plugin.
+
 2006-06-05  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/FilePlugin/sqUnixFile.c (dir_Delete): Invalidate cached
