@@ -36,7 +36,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2005-03-17 21:05:30 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-09-15 11:52:01 by piumarta on wireless-21.media.mit.edu
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -188,7 +188,7 @@
 #if defined(__i386__)
 # define IP_REG __asm__("%esi")
 # define SP_REG __asm__("%edi")
-# if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
+# if !defined(__MACH__) && ((__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95)))
 #   define CB_REG __asm__("%ebx")
 # else
 #   define CB_REG /* avoid undue register pressure */
