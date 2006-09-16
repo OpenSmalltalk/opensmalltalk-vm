@@ -1,2 +1,2 @@
-#define atan __ieee754_atan
+#include "ieee754names.h"
 #include "fdlibm/s_atan.c"

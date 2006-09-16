@@ -1,2 +1,2 @@
-#define tanh __ieee754_tanh
+#include "ieee754names.h"
 #include "fdlibm/s_tanh.c"

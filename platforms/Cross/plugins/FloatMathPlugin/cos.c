@@ -1,2 +1,2 @@
-#define cos __ieee754_cos
+#include "ieee754names.h"
 #include "fdlibm/s_cos.c"

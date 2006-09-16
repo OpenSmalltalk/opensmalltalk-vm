@@ -1,2 +1,2 @@
-#define asinh __ieee754_asinh
+#include "ieee754names.h"
 #include "fdlibm/s_asinh.c"

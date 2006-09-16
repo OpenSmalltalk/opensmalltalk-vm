@@ -1,2 +1,2 @@
-#define tan __ieee754_tan
+#include "ieee754names.h"
 #include "fdlibm/s_tan.c"
