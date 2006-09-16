@@ -1,2 +1,2 @@
-#define ldexp __ieee754_ldexp
+#include "ieee754names.h"
 #include "fdlibm/s_ldexp.c"
