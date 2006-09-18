@@ -1241,8 +1241,10 @@ static int x2sqModifier(int state)
 
 static void waitForCompletions(void)
 {
+#if defined(USE_XSHM)
   while (completions > 0)
     handleEvents();
+#endif
 }
 
 
@@ -2354,6 +2356,7 @@ static sqInt display_ioScreenSize(void)
   if (resized())
     {
       windowState= WIN_NORMAL;
+#    if defined (USE_XSHM)
       if (useXshm && !isAligned(void *, xWidth))
 	{
 	  xWidth= align(void *, xWidth);
@@ -2362,6 +2365,7 @@ static sqInt display_ioScreenSize(void)
 	      XResizeWindow(stDisplay, stParent, xWidth, xHeight);
 	    }
 	}
+#    endif
       XResizeWindow(stDisplay, stWindow, (stWidth= xWidth), (stHeight= xHeight));
     }
   return (stWidth << 16) | stHeight;  /* w is high 16 bits; h is low 16 bits */
