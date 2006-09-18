@@ -1,6 +1,6 @@
 # Netscape Plugin for Squeak on Unix platforms
 # Author: Bert Freudenberg
-# Last edited: 2006-09-15 07:20:51 by piumarta on vps.piumarta.com
+# Last edited: 2006-09-18 12:32:40 by piumarta on wireless-58.media.mit.edu
 
 ############ Customize flags here #######################
 
@@ -25,6 +25,7 @@ npsqueakrun=	npsqueakrun
 all: npsqueak.so npsqueakrun
 
 npsqueak.so : npsqueak.la 
+	-@rm -f $@ 
 	ln .libs/npsqueak $@ 
 
 npsqueak.la : npsqueak.lo npunix.lo 

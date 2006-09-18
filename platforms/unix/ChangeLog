@@ -1,3 +1,11 @@
+2006-09-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* npsqueak/Makefile (npsqueak.so): Delete target before making
+	hard link to libtool output file.
+
+	* config/Makefile.install (install-doc): Ignore errors when
+	compressing documentation.
+
 2006-09-17  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-sound-ALSA: Add support for ALSA sound output.

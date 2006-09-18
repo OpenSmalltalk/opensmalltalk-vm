@@ -2,7 +2,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2005-03-22 13:05:47 by piumarta on squeak.hpl.hp.com
+# Last edited: 2006-09-18 12:35:20 by piumarta on wireless-58.media.mit.edu
 
 DOCFILES	= COPYING COPYRIGHT LICENSE \
 		  README.Contributing README.Keyboard README.Sound
@@ -65,7 +65,7 @@ install-doc : squeak.1
 	  echo $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
 	  $(INSTALL_DATA) $(topdir)/platforms/unix/doc/$$f $(ROOT)$(docdir); \
 	done
-	gzip -f9 $(ROOT)$(docdir)/*
+	-gzip -f9 $(ROOT)$(docdir)/*
 	$(MKINSTALLDIRS) $(ROOT)$(mandir)/man1
 	$(INSTALL_DATA) squeak.1 $(ROOT)$(mandir)/man1
 	rm -f $(ROOT)$(mandir)/man1/inisqueak.1 $(ROOT)$(mandir)/man1/inisqueak.1.gz
