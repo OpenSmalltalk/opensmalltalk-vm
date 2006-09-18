@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-09-17 02:18:19 by piumarta on ubuntu
+ * Last edited: 2006-09-17 03:32:55 by piumarta on ubuntu
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -92,7 +92,7 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   unsigned int		 uval;
   int			 dir;
 
-  fprintf(stderr, "sound_Start: %i %i %i %i\n", frameCount, samplesPerSec, stereo, semaIndex);
+  //fprintf(stderr, "sound_Start: %i %i %i %i\n", frameCount, samplesPerSec, stereo, semaIndex);
 
   if (output_handle) sound_Stop();
 
@@ -125,7 +125,7 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   snd(async_add_pcm_handler(&output_handler, output_handle, output_callback, 0), "soundStart: snd_add_pcm_handler");
   snd(pcm_start(output_handle), "soundStart: snd_pcm_start");
 
-  fprintf(stderr, "ok\n");
+  //fprintf(stderr, "ok\n");
 
   return 1;
 }
@@ -177,7 +177,7 @@ static unsigned int		 input_rate= 0;
 static void input_callback(snd_async_handler_t *handler)
 {
   signalSemaphoreWithIndex(input_semaphore);
-  fprintf(stderr, "+");  fflush(stderr);
+  //fprintf(stderr, "+");  fflush(stderr);
 }
 
 static sqInt sound_StopRecording(void)
@@ -199,7 +199,7 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   unsigned int		 uval;
   int			 dir;
 
-  fprintf(stderr, "sound_StartRecording: %i %i %i %i\n", desiredSamplesPerSec, stereo, semaIndex);
+  //fprintf(stderr, "sound_StartRecording: %i %i %i %i\n", desiredSamplesPerSec, stereo, semaIndex);
 
   if (input_handle) sound_StopRecording();
 
@@ -229,7 +229,7 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   snd(async_add_pcm_handler(&input_handler, input_handle, input_callback, 0), "sound_StartRecording: snd_add_pcm_handler");
   snd(pcm_start(input_handle), "sound_StartRecording: snd_pcm_start");
 
-  fprintf(stderr, "ok\n");
+  //fprintf(stderr, "ok\n");
 
 }
 
