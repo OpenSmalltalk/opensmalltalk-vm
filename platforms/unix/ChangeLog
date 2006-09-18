@@ -1,3 +1,10 @@
+2006-09-17  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-sound-ALSA: Add support for ALSA sound output.
+
+	* vm-display-X11/sqUnixX11.c: Only refer to completions and
+	useXshm when USE_XSHM defined.
+
 2006-09-15  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/sqUnixX11.c (handleEvent): Redraw display when
