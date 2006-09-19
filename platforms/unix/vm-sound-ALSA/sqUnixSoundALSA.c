@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-09-17 08:16:32 by piumarta on ubuntu
+ * Last edited: 2006-09-19 08:09:17 by piumarta on ubuntu
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -42,7 +42,13 @@
 
 #define SQ_SND_RESAMPLE			1
 
-#define FAIL(X) { fprintf(stderr, "FAIL: %s:%d: %s\n", __FILE__, __LINE__, __PRETTY_FUNCTION__);  exit(1);  return X; }
+#define FAIL(X)										\
+{											\
+  /* fprintf(stderr, "FAIL: %s:%d: %s\n", __FILE__, __LINE__, __PRETTY_FUNCTION__); */	\
+  /* exit(1); */									\
+  success(false);									\
+  return X;										\
+}
 
 #define snd(expr, what)						\
   if ((err= snd_##expr) < 0)					\
@@ -130,9 +136,9 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   return 1;
 }
 
-static sqInt  sound_AvailableSpace(void)
+static sqInt sound_AvailableSpace(void)
 {
-  return snd_pcm_avail_update(output_handle);
+  return output_handle ? snd_pcm_avail_update(output_handle) : 0;
 }
 
 static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
