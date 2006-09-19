@@ -1,3 +1,9 @@
+2006-09-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/SecurityPlugin/sqUnixSecurity.c (ioInitSecurity): Set
+	secure directory from SQUEAK_SECUREDIR if set, otherwise
+	implicitly from image path.
+
 2006-09-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* npsqueak/Makefile (npsqueak.so): Delete target before making
