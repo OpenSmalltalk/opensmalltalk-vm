@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-09-17 03:32:55 by piumarta on ubuntu
+ * Last edited: 2006-09-17 08:16:32 by piumarta on ubuntu
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -139,26 +139,31 @@ static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr,
 
 static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
 {
-  void *samples= (void *)arrayIndex + startIndex * output_channels * 2;
-  int   count=   snd_pcm_writei(output_handle, samples, frameCount);
-  //fprintf(stderr, "+");  fflush(stderr);
-  if (count < frameCount / 2)
+  if (output_handle)
     {
-      output_buffer_frames_available= 0;
-      //fprintf(stderr, "!");  fflush(stderr);
-    }
-  if (count < 0)
-    {
-      if (count == -EPIPE)    /* underrun */
+      void *samples= (void *)arrayIndex + startIndex * output_channels * 2;
+      int   count=   snd_pcm_writei(output_handle, samples, frameCount);
+      //fprintf(stderr, "+");  fflush(stderr);
+      if (count < frameCount / 2)
 	{
-	  int err;
-	  snd(pcm_prepare(output_handle), "sound_PlaySamples: snd_pcm_prepare");
+	  output_buffer_frames_available= 0;
+	  //fprintf(stderr, "!");  fflush(stderr);
+	}
+      if (count < 0)
+	{
+	  if (count == -EPIPE)    /* underrun */
+	    {
+	      int err;
+	      snd(pcm_prepare(output_handle), "sound_PlaySamples: snd_pcm_prepare");
+	      return 0;
+	    }
+	  fprintf(stderr, "snd_pcm_writei returned %i\n", count);
 	  return 0;
 	}
-      fprintf(stderr, "snd_pcm_writei returned %i\n", count);
-      return 0;
+      return count;
     }
-  return count;
+  success(false);
+  return 0;
 }
 
 static sqInt  sound_PlaySilence(void)										FAIL(8192)
@@ -240,18 +245,23 @@ static double sound_GetRecordingSampleRate(void)
 
 static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
-  void *samples=    (void *)buf + (startSliceIndex * 2);
-  int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
-  int   count=      snd_pcm_readi(input_handle, samples, frameCount);
-  if (count < 0)
-    {    
-      if (count == -EPIPE)
-	snd_pcm_prepare(input_handle);
-      else if (count != -EAGAIN)
-	fprintf(stderr, "snd_pcm_readi returned %i\n", count);
-      return 0;
+  if (input_handle)
+    {
+      void *samples=    (void *)buf + (startSliceIndex * 2);
+      int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
+      int   count=      snd_pcm_readi(input_handle, samples, frameCount);
+      if (count < 0)
+	{    
+	  if (count == -EPIPE)
+	    snd_pcm_prepare(input_handle);
+	  else if (count != -EAGAIN)
+	    fprintf(stderr, "snd_pcm_readi returned %i\n", count);
+	  return 0;
+	}
+      return count * input_channels;
     }
-  return count * input_channels;
+  success(false);
+  return 0;
 }
 
 /* mixer */
