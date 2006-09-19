@@ -1509,7 +1509,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
   VM_MAJOR=3
   VM_MINOR=9
-  VM_RELEASE=7
+  VM_RELEASE=8
   SQ_MAJOR=3
   SQ_MINOR=9a
   SQ_UPDATE=7024
@@ -27106,19 +27106,19 @@ plibs=""
 rm -f vm-sound-OSS.sub vm-sound-OSS.lib
 # -*- sh -*-
 
-echo "$as_me:$LINENO: checking for Open Sound System" >&5
-echo $ECHO_N "checking for Open Sound System... $ECHO_C" >&6
+echo "$as_me:$LINENO: checking for Advanced Linux Sound Architecture" >&5
+echo $ECHO_N "checking for Advanced Linux Sound Architecture... $ECHO_C" >&6
 cat >conftest.$ac_ext <<_ACEOF
 /* confdefs.h.  */
 _ACEOF
 cat confdefs.h >>conftest.$ac_ext
 cat >>conftest.$ac_ext <<_ACEOF
 /* end confdefs.h.  */
-#include <sys/soundcard.h>
+#include <alsa/asoundlib.h>
 int
 main ()
 {
-OPEN_SOUND_SYSTEM;
+(void)snd_pcm_open;
   ;
   return 0;
 }
