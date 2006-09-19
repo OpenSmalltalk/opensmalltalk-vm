@@ -2,7 +2,7 @@
  * 
  * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
  * 
- * Last edited: 2005-03-19 20:47:40 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-09-19 07:00:06 by piumarta on ubuntu
  * 
  * Note: According to Ian Piumarta, the Unix VM is inherently insecure since
  *       pluggable primitives can access all of libc! It would need 
@@ -219,29 +219,42 @@ char *ioGetUntrustedUserDirectory(void)
 
 
 /* note: following is called from VM directly, not from plugin */
+
 sqInt ioInitSecurity(void)
 {
   int imagePathLen= strrchr(imageName, '/') - imageName;
-  char *squeakUserDirectory= 0;
+  char *directory= 0;
 
   /* establish the secure user directory */
-  strncpy(secureUserDirectory, imageName, imagePathLen);
-  strcpy(secureUserDirectory + imagePathLen, "/secure");
+  directory= getenv("SQUEAK_SECUREDIR");
+  if (0 == directory)
+    {
+      strncpy(secureUserDirectory, imageName, imagePathLen);
+      strcpy(secureUserDirectory + imagePathLen, "/secure");
+    }
+  else
+    {
+      int lastChar= strlen(directory);
+      /*  path is not allowed to end with "/" */
+      if ('/' == directory[lastChar - 1])
+	directory[lastChar - 1]= '\0';
+      strcpy(secureUserDirectory, directory);
+    }
 
   /* establish untrusted user directory */
-  squeakUserDirectory= getenv("SQUEAK_USERDIR");
-  if (0 == squeakUserDirectory)
+  directory= getenv("SQUEAK_USERDIR");
+  if (0 == directory)
     {
       strncpy(untrustedUserDirectory, imageName, imagePathLen);
       strcpy(untrustedUserDirectory + imagePathLen, "/My Squeak");
     }
   else
     {
-      int lastChar= strlen(squeakUserDirectory);
+      int lastChar= strlen(directory);
       /*  path is not allowed to end with "/" */
-      if ('/' == squeakUserDirectory[lastChar - 1])
-	squeakUserDirectory[lastChar - 1]= '\0';
-      strcpy(untrustedUserDirectory, squeakUserDirectory);
+      if ('/' == directory[lastChar - 1])
+	directory[lastChar - 1]= '\0';
+      strcpy(untrustedUserDirectory, directory);
     }
   untrustedUserDirectoryLen= strlen(untrustedUserDirectory);
 
