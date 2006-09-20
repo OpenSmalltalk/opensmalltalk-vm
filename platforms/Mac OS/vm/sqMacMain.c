@@ -95,6 +95,7 @@ extern pthread_cond_t  gSleepLockCondition;
 
 OSErr			gSqueakFileLastError; 
 Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false;
+long			gSqueakMouseMappings[4][4] = {0};
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
 char            gSqueakImageName[2048] = "Squeak.image";
@@ -443,11 +444,13 @@ void fetchPrefrences() {
     CFDictionaryRef myDictionary;
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
     CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly;
+	CFNumberRef SqueakMouseMappings[4][4] = {0};
     CFDataRef 	SqueakWindowAttributeType;    
     CFStringRef    SqueakVMEncodingType;
 
     char        encoding[256];
-    
+    long		i,j;
+	
 #if BROWSERPLUGIN
 	#if SOPHIEVM
 	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SophiePlugin",kCFStringEncodingMacRoman);
@@ -473,6 +476,18 @@ void fetchPrefrences() {
     SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
     SqueakUIFlushSecondaryCleanupDelayMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCleanupDelayMilliseconds"));
     SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds"));
+    SqueakMouseMappings[0][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseNoneButton1"));
+    SqueakMouseMappings[0][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseNoneButton2"));
+    SqueakMouseMappings[0][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseNoneButton3"));
+    SqueakMouseMappings[1][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseCmdButton1"));
+    SqueakMouseMappings[1][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseCmdButton2"));
+    SqueakMouseMappings[1][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseCmdButton3"));
+    SqueakMouseMappings[2][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseOptionButton1"));
+    SqueakMouseMappings[2][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseOptionButton2"));
+    SqueakMouseMappings[2][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseOptionButton3"));
+    SqueakMouseMappings[3][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseControlButton1"));
+    SqueakMouseMappings[3][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseControlButton2"));
+    SqueakMouseMappings[3][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseControlButton3"));
 
     if (SqueakVMEncodingType) 
         CFStringGetCString (SqueakVMEncodingType, encoding, 256, kCFStringEncodingMacRoman);
@@ -518,6 +533,14 @@ void fetchPrefrences() {
     else 
         gSqueakWindowHasTitle = true;
         
+    for(i=0;i<4;i++)
+		for(j=1;j<4;j++)
+			if (SqueakMouseMappings[i][j]) {
+				CFNumberGetValue(SqueakMouseMappings[i][j],kCFNumberLongType,(long *) &gSqueakMouseMappings[i][j]);
+				if (gSqueakMouseMappings[i][j] < 0 || gSqueakMouseMappings[i][j] > 3)
+					gSqueakMouseMappings[i][j] = 0;
+				}
+		
     if (SqueakMaxHeapSizeType) 
         CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
 		

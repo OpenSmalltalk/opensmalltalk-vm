@@ -31,6 +31,7 @@
 *  3.8.8b9 Aug 15th, 2005 JMM flush quartz buffer if needded
 *  3.9.1b2 Oct 4th, 2005 Jmm add MillisecondClockMask
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
+ 3.8.12b6u Sept 5th, 2006 JMM rework mouse logic for mac
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -1047,12 +1048,20 @@ static void recordKeyboardEventCarbon(EventRef event) {
 
 
 static int MouseModifierStateCarbon(EventRef event,UInt32 whatHappened) {
-	long stButtons = 0;
-        UInt32 keyBoardModifiers=0;
-        EventMouseButton mouseButton=0;
-        static long buttonState[4] = {0,0,0,0};
-        OSErr err;
-        
+/* On a two- or three-button mouse, the left button is normally considered primary and the 
+right button secondary, 
+but left-handed users can reverse these settings as a matter of preference. 
+The middle button on a three-button mouse is always the tertiary button. '
+
+But mapping assumes 1,2,3  red, yellow, blue
+*/
+	extern long gSqueakMouseMappings[4][4];
+	long stButtons = 0,modifier,mappedButton;
+	UInt32 keyBoardModifiers=0;
+	EventMouseButton mouseButton=0;
+	OSErr err;
+	static long buttonState[4] = {0,0,0,0};
+
 	err = GetEventParameter( event,
                                 kEventParamKeyModifiers,
                                 typeUInt32,
@@ -1060,28 +1069,45 @@ static int MouseModifierStateCarbon(EventRef event,UInt32 whatHappened) {
                                 sizeof(UInt32),
                                 NULL,
                                 &keyBoardModifiers); 
-  	if (whatHappened != kEventMouseMoved && whatHappened != kEventMouseWheelMoved)
-            err = GetEventParameter( event,
+								
+  	if (whatHappened != kEventMouseMoved && whatHappened != kEventMouseWheelMoved) {
+		err = GetEventParameter( event,
                                 kEventParamMouseButton,
                                 typeMouseButton,
                                 NULL,
                                 sizeof(EventMouseButton),
                                 NULL,
                                 &mouseButton); 
-                                
+							
         if (mouseButton > 0 && mouseButton < 4) {
-            buttonState[mouseButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
+          /* OLD original carbon code 
+			buttonState[mouseButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
             stButtons |= buttonState[1]*4*
                         (!((keyBoardModifiers & optionKey) || (keyBoardModifiers & cmdKey)));
             stButtons |= buttonState[1]*((keyBoardModifiers & optionKey)> 0)*2;
             stButtons |= buttonState[1]*((keyBoardModifiers & cmdKey)> 0)*1;
             stButtons |= buttonState[2]*1;
-            stButtons |= buttonState[3]*2;
-       }
-            
-	/* button state: low three bits are mouse buttons; next 8 bits are modifier bits */
-	return ((modifierMap[((keyBoardModifiers & 0xFFFF) >> 8)] << 3) |
-		(stButtons & 0x7));
+            stButtons |= buttonState[3]*2; */
+			
+			modifier = 0;
+			if (keyBoardModifiers & cmdKey)
+				modifier = 1;
+			if (keyBoardModifiers & optionKey)
+				modifier = 2;
+			if (keyBoardModifiers & controlKey)
+				modifier = 3;
+				
+			mappedButton = gSqueakMouseMappings[modifier][mouseButton];
+			buttonState[mappedButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
+			stButtons |= mappedButton == 1 ? (buttonState[mappedButton] ? RedButtonBit : 0) : 0;
+			stButtons |= mappedButton == 2 ? (buttonState[mappedButton] ? YellowButtonBit : 0) : 0;
+			stButtons |= mappedButton == 3 ? (buttonState[mappedButton] ? BlueButtonBit : 0)  : 0;
+		}
+	}
+	
+	// button state: low three bits are mouse buttons; next 8 bits are modifier bits
+	return ((modifierMap[((keyBoardModifiers & 0xFFFF) >> 8)] << 3) | (stButtons & 0x7));
+
 }
 
 static int ModifierStateCarbon(EventRef event) {
