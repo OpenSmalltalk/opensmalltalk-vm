@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-09-19 08:09:17 by piumarta on ubuntu
+ * Last edited: 2006-09-21 12:43:56 by piumarta on ubuntu
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -129,7 +129,29 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
 
   snd(pcm_nonblock(output_handle, 1), "sound_Start: snd_pcm_nonblock");
   snd(async_add_pcm_handler(&output_handler, output_handle, output_callback, 0), "soundStart: snd_add_pcm_handler");
-  snd(pcm_start(output_handle), "soundStart: snd_pcm_start");
+
+  if ((err= snd_pcm_start(output_handle)) < 0)
+    {
+      if (err != -EPIPE)
+	{
+	  fprintf(stderr, "snd_pcm_start(1): %s\n", snd_strerror(err));
+	  success(false);
+	  return 0;
+	}
+    }
+
+  if ((err= snd_pcm_prepare(output_handle)) < 0)
+    fprintf(stderr, "snd_pcm_prepare: %s\n", snd_strerror(err));
+
+  if ((err= snd_pcm_start(output_handle)) < 0)
+    {
+      if (err != -EPIPE)
+	{
+	  fprintf(stderr, "snd_pcm_start(2): %s\n", snd_strerror(err));
+	  success(false);
+	  return 0;
+	}
+    }
 
   //fprintf(stderr, "ok\n");
 

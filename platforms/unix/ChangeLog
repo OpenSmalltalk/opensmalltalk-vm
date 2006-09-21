@@ -1,3 +1,8 @@
+2006-09-21  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-sound-ALSA/sqUnixSoundALSA.c (sound_Start): EPIPE is not a
+	fatal error suring sound startup.
+
 2006-09-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/SecurityPlugin/sqUnixSecurity.c (ioInitSecurity): Set
