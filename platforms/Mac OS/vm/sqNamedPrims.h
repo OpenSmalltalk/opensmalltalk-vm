@@ -10,6 +10,7 @@ extern sqExport BMPReadWriterPlugin_exports[];
 extern sqExport B2DPlugin_exports[];
 extern sqExport BitBltPlugin_exports[];
 extern sqExport DSAPrims_exports[];
+extern sqExport ExuperyPlugin_exports[];
 extern sqExport ZipPlugin_exports[];
 extern sqExport DropPlugin_exports[];
 extern sqExport FFTPlugin_exports[];
@@ -49,6 +50,7 @@ sqExport *pluginExports[] = {
 	B2DPlugin_exports,
 	BitBltPlugin_exports,
 	DSAPrims_exports,
+	ExuperyPlugin_exports,
 	ZipPlugin_exports,
 	DropPlugin_exports,
 	FFTPlugin_exports,

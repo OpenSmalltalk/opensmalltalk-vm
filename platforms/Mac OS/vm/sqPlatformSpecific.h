@@ -123,6 +123,9 @@ int sqMemoryExtraBytesLeft(Boolean flag);
     #define browserPluginInitialiseIfNeeded()
 #endif
 
+//exupery
+#define addressOf(x) &x
+
 #endif /* macintoshSqueak */
 
 
