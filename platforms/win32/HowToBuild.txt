@@ -46,7 +46,7 @@ and will be tremendously helpful for debugging etc.
 
 If you want to do some of your own development you may instead check out the
 platform tree from SqueakVM.org via
-  svn co http://squeakvm.org/svn/squeak/trunc platforms
+  svn co http://squeakvm.org/svn/squeak/trunk platforms
 and work from there. If you do this be advised of the following
 
 **** WARNING ****: Working from the HEAD of the SVN repository will almost 
