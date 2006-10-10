@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-04-24 20:04:36 by piumarta on emilia.local
+ * Last edited: 2006-10-10 13:13:15 by piumarta on vps.piumarta.com
  */
 
 #include "sq.h"
@@ -680,12 +680,13 @@ static struct moduleDescription moduleDescriptions[]=
   { &displayModule, "display", "null"   },	/*** NO DEFAULT ***/
   { &displayModule, "display", "custom" },	/*** NO DEFAULT ***/
   { &soundModule,   "sound",   "NAS"    },	/*** NO DEFAULT ***/
+  { &soundModule,   "sound",   "OSS"    },
   { &soundModule,   "sound",   "custom" },	/*** NO DEFAULT ***/
   /* defaults */
   { &displayModule, "display", "Quartz" },
   { &soundModule,   "sound",   "MacOSX" },
   { &soundModule,   "sound",   "Sun"    },
-  { &soundModule,   "sound",   "OSS"    },
+  { &soundModule,   "sound",   "ALSA"   },
   { &soundModule,   "sound",   "null"   },
   { 0,              0,         0	}
 };
