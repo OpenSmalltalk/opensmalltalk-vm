@@ -58,6 +58,7 @@
 # include <signal.h>
 # include <errno.h>
 # include <fcntl.h>
+# include <sys/file.h>
 # include <sys/ioctl.h>
   
 # ifdef HAVE_SYS_TIME_H
@@ -81,6 +82,13 @@
 #       error: FIONBIO is not defined
 #     endif
 #   endif
+# endif
+
+# if !defined(O_NONBLOCK) && defined(O_NDELAY)
+#   define O_NONBLOCK O_NDELAY
+# endif
+# if !defined(FASYNC) && defined(O_ASYNC)
+#   define FASYNC O_ASYNC
 # endif
 
 #else /* !HAVE_CONFIG_H -- assume lowest common demoninator */
@@ -310,11 +318,20 @@ void aioEnable(int fd, void *data, int flags)
   else
     {
       /* enable non-blocking asynchronous i/o and delivery of SIGIO to the active process */
-      int flags;
+      int arg;
       FD_CLR(fd, &xdMask);
-      if (        fcntl(fd, F_SETOWN, getpid()                    )  < 0)  perror("fcntl(F_SETOWN, getpid())");
-      if ((flags= fcntl(fd, F_GETFL,  0                           )) < 0)  perror("fcntl(F_GETFL)");
-      if (        fcntl(fd, F_SETFL,  flags | O_NONBLOCK | O_ASYNC)  < 0)  perror("fcntl(F_SETFL, O_ASYNC)");
+#    if defined(O_ASYNC)
+      if (      fcntl(fd, F_SETOWN, getpid()                  )  < 0)	perror("fcntl(F_SETOWN, getpid())");
+      if ((arg= fcntl(fd, F_GETFL,  0                         )) < 0)	perror("fcntl(F_GETFL)");
+      if (      fcntl(fd, F_SETFL,  arg | O_NONBLOCK | O_ASYNC)  < 0)	perror("fcntl(F_SETFL, O_ASYNC)");
+#    elif defined(FASYNC)
+      if (      fcntl(fd, F_SETOWN, getpid()                  )  < 0)	perror("fcntl(F_SETOWN, getpid())");
+      if ((arg= fcntl(fd, F_GETFL,  0                         )) < 0)	perror("fcntl(F_GETFL)");
+      if (      fcntl(fd, F_SETFL,  arg | O_NONBLOCK | FASYNC )  < 0)	perror("fcntl(F_SETFL, FASYNC)");
+#    elif defined(FIOASYNC)
+      arg= getpid();	if (ioctl(fd, SIOCSPGRP, &arg) < 0)		perror("ioctl(SIOCSPGRP, getpid())");
+      arg= 1;		if (ioctl(fd, FIOASYNC,  &arg) < 0)		perror("ioctl(FIOASYNC, 1)");
+#    endif
     }
 }
 

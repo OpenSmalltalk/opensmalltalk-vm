@@ -1,3 +1,11 @@
+2006-10-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixMain.c: PATH_MAX -> MAXPATHLEN.
+
+	* vm/sqUnixCharConv.c: Require both HAVE_ICONV and HAVE_ICONV_H.
+
+	* vm/aio.c: If O_ASYNC missing try on FASYNC followed by FIOASYNC.
+
 2006-09-21  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-sound-ALSA/sqUnixSoundALSA.c (sound_Start): EPIPE is not a
