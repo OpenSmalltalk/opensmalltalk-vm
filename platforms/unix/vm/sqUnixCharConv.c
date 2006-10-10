@@ -65,7 +65,6 @@ static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
 // we have to do something special on MacOSX (surprise surprise) because:
 // - MacOSX is not Unix98 compliant and lacks builtin iconv functions
 // - the free libiconv cannot handle the canonical decomposition used in HFS+
-// ho hum dee dumb
 
 # include <CoreFoundation/CoreFoundation.h>
 # include "sqMemoryAccess.h"
@@ -145,7 +144,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 }
 
 
-#elif defined(HAVE_ICONV_H)
+#elif defined(HAVE_ICONV_H) && defined(HAVE_ICONV)
 
 
 #include <iconv.h>
