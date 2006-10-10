@@ -1409,7 +1409,7 @@ sqInt ioExit(void)
 /* Copy aFilenameString to aCharBuffer and optionally resolveAlias (or
    symbolic link) to the real path of the target.  Answer 0 if
    successful of -1 to indicate an error.  Assume aCharBuffer is at
-   least PATH_MAX bytes long.  Note that MAXSYMLINKS is a lower bound
+   least MAXPATHLEN bytes long.  Note that MAXSYMLINKS is a lower bound
    on the (potentially unlimited) number of symlinks allowed in a
    path, but calling sysconf() seems like overkill. */
 
@@ -1429,8 +1429,8 @@ sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt fi
 	    if (++numLinks > MAXSYMLINKS)
 	      return -1;	/* too many levels of indirection */
 
-	    filenameLength= readlink(aCharBuffer, aCharBuffer, PATH_MAX);
-	    if ((filenameLength < 0) || (filenameLength >= PATH_MAX))
+	    filenameLength= readlink(aCharBuffer, aCharBuffer, MAXPATHLEN);
+	    if ((filenameLength < 0) || (filenameLength >= MAXPATHLEN))
 	      return -1;	/* link unavailable or path too long */
 
 	    aCharBuffer[filenameLength]= 0;
@@ -1440,7 +1440,7 @@ sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt fi
 #    if defined(DARWIN)
 	if (isMacAlias(aCharBuffer))
 	  {
-	    if ((++numLinks > MAXSYMLINKS) || !resolveMacAlias(aCharBuffer, aCharBuffer, PATH_MAX))
+	    if ((++numLinks > MAXSYMLINKS) || !resolveMacAlias(aCharBuffer, aCharBuffer, MAXPATHLEN))
 	      return -1;		/* too many levels or bad alias */
 	    continue;
 	  }
