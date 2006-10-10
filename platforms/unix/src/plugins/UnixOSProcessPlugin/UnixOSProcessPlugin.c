@@ -1818,7 +1818,7 @@ EXPORT(sqInt) primitiveIsAtEndOfFile(void) {
 		return interpreterProxy->primitiveFail();
 	}
 	sqFile = interpreterProxy->arrayValueOf(sqFileOop);
-	if ((feof(sqFile->file)) == 0) {
+	if ((feof((FILE *)sqFile->file)) == 0) {
 		result = interpreterProxy->falseObject();
 	} else {
 		result = interpreterProxy->trueObject();
