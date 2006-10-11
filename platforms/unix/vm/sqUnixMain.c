@@ -36,7 +36,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-10-10 13:13:15 by piumarta on vps.piumarta.com
+ * Last edited: 2006-10-10 11:56:02 by piumarta on ubuntu
  */
 
 #include "sq.h"
@@ -1052,7 +1052,6 @@ static void vm_printUsage(void)
   printf("  -display <dpy>        quivalent to '-vm-display-X11 -display <dpy>'\n");
   printf("  -headless             quivalent to '-vm-display-X11 -headless'\n");
   printf("  -nodisplay            quivalent to '-vm-display-null'\n");
-  printf("  -nomixer              disable modification of mixer settings\n");
   printf("  -nosound              quivalent to '-vm-sound-null'\n");
   printf("  -quartz               quivalent to '-vm-display-Quartz'\n");
 #endif
