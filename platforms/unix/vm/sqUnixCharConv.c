@@ -151,11 +151,11 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 
 typedef char ichar_t;
 
-#ifdef __sparc
+#ifdef __sun__
 void *sqTextEncoding=	(void *)"mac";		/* xxxFIXME -> "ISO-8859-15" */ 
-void *uxPathEncoding=	(void *)"iso";
-void *uxTextEncoding=	(void *)"iso";
-void *uxXWinEncoding=	(void *)"iso";
+void *uxPathEncoding=	(void *)"iso5";
+void *uxTextEncoding=	(void *)"iso5";
+void *uxXWinEncoding=	(void *)"iso5";
 void *uxUTF8Encoding=	(void *)"UTF-8";
 #else
 void *sqTextEncoding=	(void *)"MACINTOSH";	/* xxxFIXME -> "ISO-8859-15" */ 
