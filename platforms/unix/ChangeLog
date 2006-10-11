@@ -1,8 +1,10 @@
 2006-10-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
-	* vm/sqUnixMain.c: PATH_MAX -> MAXPATHLEN.
+	* vm-sound-ALSA/sqUnixSoundALSA.c: Implement mixer functions.
 
-	* vm/sqUnixCharConv.c: Require both HAVE_ICONV and HAVE_ICONV_H.
+	* vm/sqUnixMain.c: -nomixer is no longer deprecated.
+
+	* vm/sqUnixMain.c: PATH_MAX -> MAXPATHLEN.
 
 	* vm/aio.c: If O_ASYNC missing try on FASYNC followed by FIOASYNC.
 

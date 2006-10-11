@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-09-21 12:43:56 by piumarta on ubuntu
+ * Last edited: 2006-10-10 12:15:23 by piumarta on ubuntu
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -39,15 +39,18 @@
 
 #include "sq.h"
 #include <alsa/asoundlib.h>
+#include <errno.h>
 
-#define SQ_SND_RESAMPLE			1
 
-#define FAIL(X)										\
-{											\
-  /* fprintf(stderr, "FAIL: %s:%d: %s\n", __FILE__, __LINE__, __PRETTY_FUNCTION__); */	\
-  /* exit(1); */									\
-  success(false);									\
-  return X;										\
+static char *sound_device	= "default";
+static char *sound_playback	= "Master";
+static char *sound_capture	= "Capture";
+
+
+#define FAIL(X)		\
+{			\
+  success(false);	\
+  return X;		\
 }
 
 #define snd(expr, what)						\
@@ -55,12 +58,12 @@
     {								\
       fprintf(stderr, "%s: %s\n", what, snd_strerror(err));	\
       success(false);						\
-      return 0;							\
+      return err;						\
     }
 
-extern inline int min(int x, int y) { return (x < y) ? x : y; }
 
 /* output */
+
 
 #define SQ_SND_PLAY_START_THRESHOLD	7/8
 #define SQ_SND_PLAY_AVAIL_MIN		4/8
@@ -75,7 +78,6 @@ static int			 output_buffer_frames_available= 0;
 static void output_callback(snd_async_handler_t *handler)
 {
   signalSemaphoreWithIndex(output_semaphore);
-  //fprintf(stderr, "-");  fflush(stderr);
   output_buffer_frames_available= 1;
 }
 
@@ -98,13 +100,11 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   unsigned int		 uval;
   int			 dir;
 
-  //fprintf(stderr, "sound_Start: %i %i %i %i\n", frameCount, samplesPerSec, stereo, semaIndex);
-
   if (output_handle) sound_Stop();
 
   output_semaphore= semaIndex;
   output_channels= stereo ? 2 : 1;
-  snd(pcm_open(&output_handle, "default", SND_PCM_STREAM_PLAYBACK, 0), "startSound: snd_pcm_open");
+  snd(pcm_open(&output_handle, sound_device, SND_PCM_STREAM_PLAYBACK, 0), "startSound: snd_pcm_open");
 
   snd_pcm_hw_params_alloca(&hwparams);
   snd_pcm_hw_params_any(output_handle, hwparams);
@@ -153,8 +153,6 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
 	}
     }
 
-  //fprintf(stderr, "ok\n");
-
   return 1;
 }
 
@@ -171,11 +169,9 @@ static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, 
     {
       void *samples= (void *)arrayIndex + startIndex * output_channels * 2;
       int   count=   snd_pcm_writei(output_handle, samples, frameCount);
-      //fprintf(stderr, "+");  fflush(stderr);
       if (count < frameCount / 2)
 	{
 	  output_buffer_frames_available= 0;
-	  //fprintf(stderr, "!");  fflush(stderr);
 	}
       if (count < 0)
 	{
@@ -196,7 +192,9 @@ static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, 
 
 static sqInt  sound_PlaySilence(void)										FAIL(8192)
 
+
 /* input */
+
 
 #define SQ_SND_REC_START_THRESHOLD	4/8
 #define SQ_SND_REC_AVAIL_MIN		4/8
@@ -210,7 +208,6 @@ static unsigned int		 input_rate= 0;
 static void input_callback(snd_async_handler_t *handler)
 {
   signalSemaphoreWithIndex(input_semaphore);
-  //fprintf(stderr, "+");  fflush(stderr);
 }
 
 static sqInt sound_StopRecording(void)
@@ -232,13 +229,11 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   unsigned int		 uval;
   int			 dir;
 
-  //fprintf(stderr, "sound_StartRecording: %i %i %i %i\n", desiredSamplesPerSec, stereo, semaIndex);
-
   if (input_handle) sound_StopRecording();
 
   input_semaphore= semaIndex;
   input_channels= stereo ? 2 : 1;
-  snd(pcm_open(&input_handle, "default", SND_PCM_STREAM_CAPTURE, 0), "start_SoundRecording: snd_pcm_open");
+  snd(pcm_open(&input_handle, sound_device, SND_PCM_STREAM_CAPTURE, 0), "start_SoundRecording: snd_pcm_open");
 
   snd_pcm_hw_params_alloca(&hwparams);
   snd_pcm_hw_params_any(input_handle, hwparams);
@@ -261,9 +256,6 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   snd(pcm_nonblock(input_handle, 1), "sound_StartRecording: snd_pcm_nonblock");
   snd(async_add_pcm_handler(&input_handler, input_handle, input_callback, 0), "sound_StartRecording: snd_add_pcm_handler");
   snd(pcm_start(input_handle), "sound_StartRecording: snd_pcm_start");
-
-  //fprintf(stderr, "ok\n");
-
 }
 
 static double sound_GetRecordingSampleRate(void)
@@ -292,13 +284,151 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
   return 0;
 }
 
+
 /* mixer */
 
-static void   sound_Volume(double *left, double *right)								{ return; }
 
-static void   sound_SetVolume(double left, double right)							{ return; }
+static int		 sound_nomixer	= 0;
+static snd_mixer_t	*mixer_handle	= 0;
+static snd_mixer_elem_t	*mixer_element	= 0;
 
-static sqInt  sound_SetRecordLevel(sqInt level)									{ return level; }
+
+static int mixer_open(char *name)
+{
+  struct snd_mixer_selem_regopt  smixer_options;
+  int				 err;
+  snd_mixer_selem_id_t		*sid;
+
+  if (sound_nomixer) return -EACCES;
+
+  smixer_options.device= sound_device;
+  snd_mixer_selem_id_alloca(&sid);
+  snd_mixer_selem_id_set_name(sid, name);
+  snd(mixer_open(&mixer_handle, 0),			"snd_mixer_open");
+  snd(mixer_attach(mixer_handle, sound_device),		"snd_mixer_attach");
+  snd(mixer_selem_register(mixer_handle, NULL, NULL),	"snd_selem_register");
+  snd(mixer_load(mixer_handle),				"snd_mixer_load");
+
+  mixer_element= snd_mixer_find_selem(mixer_handle, sid);
+
+  if (!mixer_element)
+    {
+      fprintf(stderr, "unable to find control %s, %i\n", snd_mixer_selem_id_get_name(sid), snd_mixer_selem_id_get_index(sid));
+      return -ENOENT;
+    }
+
+  return 0;
+}
+
+static void mixer_close(void)
+{
+  snd_mixer_close(mixer_handle);
+  mixer_handle= 0;
+}
+
+
+static inline void mixer_getVolume(char *name, int captureFlag, double *leftLevel, double *rightLevel)
+{
+  if (mixer_open(name))
+    {
+      mixer_close();
+      return;
+    }
+
+  if (!(captureFlag ? snd_mixer_selem_has_capture_volume : snd_mixer_selem_has_playback_volume)(mixer_element))
+    fprintf(stderr, "%s: no %s volume\n", name, captureFlag ? "capture" : "playback");
+  else
+    {
+      long vmin, vmax;
+      int channel= -1;
+      (captureFlag ? snd_mixer_selem_get_capture_volume_range : snd_mixer_selem_get_playback_volume_range)(mixer_element, &vmin, &vmax);
+      fprintf(stderr, "%s range  %li - %li\n", captureFlag ? "capture" : "playback", vmin, vmax);
+      while (++channel <= SND_MIXER_SCHN_LAST)
+	if ((captureFlag ? snd_mixer_selem_has_capture_channel : snd_mixer_selem_has_playback_channel)(mixer_element, channel))
+	  {
+	    long vol;
+	    (captureFlag ? snd_mixer_selem_get_capture_volume : snd_mixer_selem_get_playback_volume)(mixer_element, channel, &vol);
+	    *leftLevel= *rightLevel= (double)(vol - vmin) / (double)(vmax - vmin);
+	    break;
+	  }
+      while (++channel <= SND_MIXER_SCHN_LAST)
+	if ((captureFlag ? snd_mixer_selem_has_capture_channel : snd_mixer_selem_has_playback_channel)(mixer_element, channel))
+	  {
+	    long vol;
+	    (captureFlag ? snd_mixer_selem_get_capture_volume : snd_mixer_selem_get_playback_volume)(mixer_element, channel, &vol);
+	    *rightLevel= (double)(vol - vmin) / (double)(vmax - vmin);
+	    break;
+	  }
+    }
+
+  mixer_close();
+}
+
+
+static inline void mixer_setVolume(char *name, int captureFlag, double leftLevel, double rightLevel)
+{
+  if (mixer_open(name))
+    {
+      mixer_close();
+      return;
+    }
+
+  if (!(captureFlag ? snd_mixer_selem_has_capture_volume : snd_mixer_selem_has_playback_volume)(mixer_element))
+    fprintf(stderr, "%s: no %s volume\n", name, captureFlag ? "capture" : "playback");
+  else
+    {
+      long vmin, vmax;
+      int channel= -1;
+      (captureFlag ? snd_mixer_selem_get_capture_volume_range : snd_mixer_selem_get_playback_volume_range)(mixer_element, &vmin, &vmax);
+      fprintf(stderr, "playback range  %li - %li\n", vmin, vmax);
+      while (++channel <= SND_MIXER_SCHN_LAST)
+	if ((captureFlag ? snd_mixer_selem_has_capture_channel : snd_mixer_selem_has_playback_channel)(mixer_element, channel))
+	  {
+	    long vol= vmin + (double)(vmax - vmin) * leftLevel;
+	    (captureFlag ? snd_mixer_selem_set_capture_volume : snd_mixer_selem_set_playback_volume)(mixer_element, channel, vol);
+	    (captureFlag ? snd_mixer_selem_set_capture_switch : snd_mixer_selem_set_playback_switch)(mixer_element, channel, 1);
+	    break;
+	  }
+      while (++channel <= SND_MIXER_SCHN_LAST)
+	if ((captureFlag ? snd_mixer_selem_has_capture_channel : snd_mixer_selem_has_playback_channel)(mixer_element, channel))
+	  {
+	    long vol= vmin + (double)(vmax - vmin) * rightLevel;
+	    (captureFlag ? snd_mixer_selem_set_capture_volume : snd_mixer_selem_set_playback_volume)(mixer_element, channel, vol);
+	    (captureFlag ? snd_mixer_selem_set_capture_switch : snd_mixer_selem_set_playback_switch)(mixer_element, channel, 1);
+	    break;
+	  }
+    }
+
+  mixer_close();
+}
+
+
+
+static void sound_Volume(double *left, double *right)
+{
+  mixer_getVolume(sound_playback, 0, left, right);
+}
+
+static void sound_SetVolume(double left, double right)
+{
+  mixer_setVolume(sound_playback, 0, left, right);
+  if (strcmp("Master", sound_playback))
+    {
+      /* unmute the master volume */
+      mixer_getVolume("Master", 0, &left, &right);
+      mixer_setVolume("Master", 0,  left,  right);
+    }
+}
+
+static sqInt sound_SetRecordLevel(sqInt level)
+{
+  mixer_setVolume(sound_capture, 1, (double)level / 100.0, (double)level / 100.0);
+  return 1;
+}
+
+
+/* module */
+
 
 #include "SqSound.h"
 
@@ -306,16 +436,38 @@ SqSoundDefine(ALSA);
 
 #include "SqModule.h"
 
-static void sound_parseEnvironment(void) {}
+static void sound_parseEnvironment(void)
+{
+  char *ev= 0;
+  if (     getenv("SQUEAK_NOMIXER"   ))	sound_nomixer= 1;
+  if ((ev= getenv("SQUEAK_SOUNDCARD")))	sound_device= strdup(ev);
+  if ((ev= getenv("SQUEAK_PLAYBACK" )))	sound_device= strdup(ev);
+  if ((ev= getenv("SQUEAK_CAPTURE"  )))	sound_device= strdup(ev);
+}
 
 static int  sound_parseArgument(int argc, char **argv)
 {
-  if (!strcmp(argv[0], "-nosound")) return 1;
+  if     (!strcmp(argv[0], "-nomixer"  )) { sound_nomixer= 1;		return 1; }
+  else if (argv[1])
+    {
+      if (!strcmp(argv[0], "-soundcard")) { sound_device=   argv[1];	return 2; }
+      if (!strcmp(argv[0], "-playback" )) { sound_playback= argv[1];	return 2; }
+      if (!strcmp(argv[0], "-capture"  )) { sound_capture=  argv[1];	return 2; }
+    }
   return 0;
 }
 
-static void  sound_printUsage(void) {}
+static void  sound_printUsage(void)
+{
+  printf("\nALSA <option>s:\n");
+  printf("  -nomixer              disable mixer (volume) adjustment\n");
+  printf("  -soundcard <name>     open the named sound card (default: %s)\n", sound_device);
+  printf("  -playback <name>      play to the named sound device (default: %s)\n", sound_playback);
+  printf("  -capture <name>       record from the named sound device (default: %s)\n", sound_capture);
+}
+
 static void  sound_printUsageNotes(void) {}
+
 static void *sound_makeInterface(void) { return &sound_ALSA_itf; }
 
 SqModuleDefine(sound, ALSA);
