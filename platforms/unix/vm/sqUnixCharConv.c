@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2005-03-17 21:09:51 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2006-10-10 07:30:19 by piumarta on ubuntu
  */
 
 #if !defined(__MACH__)
@@ -144,7 +144,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 }
 
 
-#elif defined(HAVE_ICONV_H) && defined(HAVE_ICONV)
+#elif defined(HAVE_ICONV_H)
 
 
 #include <iconv.h>
