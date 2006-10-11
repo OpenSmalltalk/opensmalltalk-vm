@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-10-10 12:15:23 by piumarta on ubuntu
+ * Last edited: 2006-10-11 09:11:37 by piumarta on margaux.piumarta.com
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -158,7 +158,14 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
 
 static sqInt sound_AvailableSpace(void)
 {
-  return output_handle ? snd_pcm_avail_update(output_handle) : 0;
+  if (output_handle)
+    {
+      int count = snd_pcm_avail_update(output_handle);
+      if (count >= 0)
+	return count;
+      fprintf(stderr, "squeak: snd_pcm_avail_update returned %i\n", count);
+    }
+  return 0;
 }
 
 static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
