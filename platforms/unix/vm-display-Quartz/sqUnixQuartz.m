@@ -35,7 +35,7 @@
  *   changes these copyright conditions.  Read the file `COPYING' in the
  *   directory `platforms/unix/doc' before proceeding with any such use.
  * 
- * Last edited: 2006-09-15 11:45:20 by piumarta on wireless-21.media.mit.edu
+ * Last edited: 2006-10-13 11:52:02 by piumarta on emilia.local
  */
 
 
@@ -106,7 +106,11 @@
 /// No more user-serviceable parts in this file.  Stop Tweaking Now!
 /// 
 
-#define USE_SPINLOCK	1
+#if defined (__ppc__)
+# define USE_SPINLOCK	1
+#else
+# define USE_SPINLOCK	0
+#endif
 #define USE_OWN_ICON	0
 
 static inline int min(int x, int y) { return x < y ? x : y; }
