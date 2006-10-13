@@ -1,6 +1,10 @@
 2006-10-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
-	* vm-display-Quartz/sqUnixQuartz.m: Disable spin lock on non-PPC arch.
+	* vm-sound-ALSA/sqUnixSoundALSA.c: Prepare output_handle after
+	snd_pcm_avail_update failure.
+
+	* vm-display-Quartz/sqUnixQuartz.m: Disable spin lock on non-PPC
+	arch.
 
 2006-10-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 

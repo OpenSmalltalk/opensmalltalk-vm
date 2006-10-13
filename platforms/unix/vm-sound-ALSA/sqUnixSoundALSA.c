@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-10-11 09:11:37 by piumarta on margaux.piumarta.com
+ * Last edited: 2006-10-13 07:40:45 by piumarta on ubuntu
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -163,7 +163,8 @@ static sqInt sound_AvailableSpace(void)
       int count = snd_pcm_avail_update(output_handle);
       if (count >= 0)
 	return count;
-      fprintf(stderr, "squeak: snd_pcm_avail_update returned %i\n", count);
+      fprintf(stderr, "sound_AvailablaSpace: snd_pcm_avail_update: %s\n", snd_strerror(count));
+      snd_pcm_prepare(output_handle);
     }
   return 0;
 }
