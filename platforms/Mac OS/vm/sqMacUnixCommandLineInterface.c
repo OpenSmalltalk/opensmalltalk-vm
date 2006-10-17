@@ -36,6 +36,9 @@
  
  * Much of this code comes from the unix port
  * Ian Piumarta <ian.piumarta@inria.fr>
+ 
+ 
+ * 3.8.13b4  Oct 16th, 2006 JMM headless
  */
 
 #include "sq.h"
@@ -47,6 +50,7 @@
 
 
 extern CFStringEncoding gCurrentVMEncoding;
+extern Boolean gSqueakHeadless;
 static int    vmArgCnt=		0;	/* for getAttributeIntoLength() */
 static char **vmArgVec=		0;
 static int    squeakArgCnt=	0;
@@ -160,6 +164,8 @@ static int parseArgument(int argc, char **argv)
 	return 1; }
   else if (!strncmp(argv[0], "-psn_", 5)) { 
 	return 1; }
+  else if (!strcmp(argv[0], "-headless")) { 
+	gSqueakHeadless = true; return 1; }
   else if (argc > 1) {
 	  if (!strcmp(argv[0], "-memory"))	{ 
 		gMaxHeapSize=	 strtobkm(argv[1]);	 
@@ -187,7 +193,8 @@ static void printUsage(void)
   printf("\nCommon <option>s:\n");
   printf("  -help                 print this help message, then exit\n");
   printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
-  printf("  -pathenc <enc>        set encoding for pathnames (default: UTF-8)\n");
+  printf("  -pathenc <enc>        set encoding for pathnames (default: macintosh)\n");
+  printf("  -headless             run in headless (no window) mode (default: false)\n");
 }
 
 static void printUsageNotes(void)

@@ -32,6 +32,7 @@
 *  3.9.1b2 Oct 4th, 2005 Jmm add MillisecondClockMask
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
  3.8.12b6u Sept 5th, 2006 JMM rework mouse logic for mac
+ 3.8.13b4u  Oct 16th, 2006 JMM headless
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -87,6 +88,7 @@ extern int setInterruptPending(int value);
 extern int setInterruptCheckCounter(int value);
 extern int getFullScreenFlag();
 extern struct VirtualMachine* interpreterProxy;
+extern Boolean gSqueakHeadless;
 
 static KeyMapping keyMap[KeyMapSize];
 static int keyMapSize=	   0;
@@ -376,7 +378,8 @@ static int doPreMessageHook(EventRef event);
 static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta);
             
 void SetUpCarbonEvent() {
-    AdjustMenus();
+	
+	if (!gSqueakHeadless) AdjustMenus();
 
 /* Installing the application event handler */
 	InstallApplicationEventHandler(NewEventHandlerUPP(MyAppEventCmdHandler), GetEventTypeCount(appEventCmdList), appEventCmdList, 0, NULL);

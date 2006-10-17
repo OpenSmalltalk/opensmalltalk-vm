@@ -6,19 +6,57 @@
 \margl1440\margr1440\vieww13660\viewh14740\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.8.12 mach-o build for Carbon, Sophie, and Croquet\
+\f0\fs24 \cf0 Mac VM 3.8.13 mach-o build for Carbon, Sophie, Exupery, and Croquet.\
 \
-Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, and finally MacIntel Machines.\
+Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, MacIntel Machines, mappable mouse buttons, and Exupery.\
 April 24th, 2006 (3.8.12b4)\
 June 5th, 2006 (3.8.12b5)\
 Sept xth, 2006 (3.8.12b5)\
 Sept 22th, 2006 (3.8.12b7)\
 Sept 25th, 2006 (3.8.13b1)\
+Oct 13th, 2006 (3.8.13b3\
+Oct 16th 2006 (3.8.13b4)\
 \
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.13.b4  Headless support\
+		sqMacMain.c\
+			headless, set background to false if not headless. \
+			alter uuid returned to signify which VM this is\
+\
+		info.plist\
+		swap buttons to ensure cmd/opt of trackpad is right\
+		Add LSBackgroundOnly to yes i\
+\
+		sqMacEventsUniversal.c\
+		headless support\
+		\
+		sqMacUnixCommandLineInterface.c\
+		headless parm -headless added\
+		\
+		sqMacWindowUniversal.c\
+		headless support\
+		\
+		platforms/Cross/plugins/ExuperyPLugin created\
+\
+3.8.13.b4, b5, b6, b7 \
+		Had limited distribution to test new button modification logic\
+		\
+3.8.13.b3\
+		bitBlt>copyLoop changes, normally it prefetchs the next byte for barrel shifting 64 bits when copying from \
+		one form to another, and a dirty secret and old bug is that it reads one word past the end of the Form\
+		when it processes the last word in the Form. However when you use surfaces where the surface is\
+		allocated elsewhere not in object space and in fact say the allocated form is 2MB and the vm memory \
+		system makes the frame past the 2MB range non-readable, why then you die on a read protection failure. \
+		So alter the loop to consider if it's preload and the last line we don't do the pre-fetch because that could \
+		cause a read failure. \
+3.8.13.b2\
+		
+\f1 Exupery support, via plugin and changes in the VM for Mac Intel, use merged VMMaker-Exupery change set\
+
+\f0 \
 3.8.13.b1\
 		
 \f1 Exupery support, via plugin and changes in the VM for Mac Intel. \
@@ -931,9 +969,8 @@ sqMacEncoding.c	Alter SetVMPath()
 				add support for 
 \f2\fs20 \CocoaLigature0       \
 				\cf2 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1\fs24 \cf0 \CocoaLigature1 \
+\f1\fs24 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 				Alter PathToFile(), get kCFStringNormalizationFormKC path name\
 				Alter QuicklyMakePath() get kCFStringNormalizationFormKC path name\
@@ -975,13 +1012,11 @@ JPEG READER WRITER\
 \f1 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
 				Broke high bit ascii macroman in 3.7.0bx.\
 				For multi-byte character input you get EventKeyDown/EventKeyChar/EventKeyUp for each unicode character coming from the input sequence.\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 \
+\f0 \
 3.7.0b2		\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f1 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -989,17 +1024,14 @@ JPEG READER WRITER\
 				b) Support for sqSocketListenOnPortBacklogSizeInterface, which allows you to specify the interface to use for the listen should work both for os-x and os-9.\
 				c) Usage of VMMaker3-7a2.\
 				d) Special change sets: make primitive point x/y internal, and slightly faster activate.\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 \
+\f0 \
 3.7.0b1 			\
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f1 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f1 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
-\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \cf0 3.6.1b7			\
+\f0 3.6.1b7			\
 SqMacWindow.c	Fix for new rending code when used with 2.8 or earlier images, mouse clicks reported in wrong place\
 \
 3.6.1b6\

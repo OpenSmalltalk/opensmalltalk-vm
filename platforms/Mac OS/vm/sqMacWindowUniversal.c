@@ -25,6 +25,7 @@
  3.8.8b15	Sept 12th, 2005, JMM set full screen only if not in full screen. 
  3.8.10B5  Feb 3rd, 2006 JMM complete rewrite carbon only for universal
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
+ 3.8.13b4 Oct 16th, 2006 JMM headless
 
 *****************************************************************************/
 
@@ -50,6 +51,7 @@ extern int setFullScreenFlag(int value);    /* set from header when image file i
 extern int getSavedWindowSize();   /* set from header when image file is loaded */
 extern int setSavedWindowSize(int value);   /* set from header when image file is loaded */
 extern struct VirtualMachine *interpreterProxy;
+extern Boolean gSqueakHeadless;
 
 /*** Variables -- Mac Related ***/
 static CTabHandle	stColorTable = nil;
@@ -60,6 +62,7 @@ PixMapHandle	stPixMap = nil;
 static void SetColorEntry(int index, int red, int green, int blue);
 
 WindowPtr getSTWindow(void) {
+	if (gSqueakHeadless) return NULL;	
     return  windowHandleFromIndex(1);
 }
 
@@ -70,6 +73,7 @@ static int ioSetFullScreenActual(int fullScreen);
 int ioSetFullScreen(int fullScreen) {
         void *  giLocker;
 		int return_value=0;
+		if (gSqueakHeadless) return 0;	
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
@@ -257,6 +261,8 @@ static void sqShowWindowActual(int windowIndex);
 
 void sqShowWindow(int windowIndex) {
         void *  giLocker;
+		
+		if (gSqueakHeadless) return;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
@@ -283,6 +289,7 @@ int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
 	
+	if (gSqueakHeadless) return 1;
 	ioShowDisplayOnWindow( (unsigned int*)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 	return 1;
 }
@@ -314,6 +321,8 @@ int ioShowDisplayOnWindow(
 	CGRect		clip;
 	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(windowIndex);	
 	CGDataProviderRef provider;
+
+	if (gSqueakHeadless) return 1;
 
 	if (targetWindowBlock == NULL) {
 		if (windowIndex == 1) {
@@ -607,6 +616,7 @@ static void SetColorEntry(int index, int red, int green, int blue) {
 }
 
 void FreePixmap(void) {
+	if (gSqueakHeadless) return;
 	if (stPixMap != nil) {
 		DisposePixMap(stPixMap);
 		stPixMap = nil;
@@ -677,6 +687,7 @@ WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 window
 }
 
 void SetWindowTitle(int windowIndex,char *title) {
+	if (gSqueakHeadless) return;
 	CFStringRef tempTitle = CFStringCreateWithCString(NULL, title, kCFStringEncodingMacRoman);
 	if (windowHandleFromIndex(windowIndex))
 		SetWindowTitleWithCFString(windowHandleFromIndex(windowIndex), tempTitle);
@@ -706,6 +717,7 @@ int ioHasDisplayDepth(int depth) {
 int ioScreenDepth(void) {
     GDHandle mainDevice;
     
+	if (gSqueakHeadless) return 1;
 	mainDevice = getThatDominateGDevice(getSTWindow());
     if (mainDevice == null) 
         return 8;
@@ -718,6 +730,8 @@ int ioScreenSize(void) {
 	int w, h;
     Rect portRect;
     
+	if (gSqueakHeadless) return ((16 << 16) | 16);
+	
 	w  = (unsigned) getSavedWindowSize() >> 16;
 	h= getSavedWindowSize() & 0xFFFF;
 
@@ -752,6 +766,8 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	*/
 	Cursor macCursor;
 	int i;
+	
+	if (gSqueakHeadless) return 0;
 	
 	if (cursorMaskIndex == nil) {
 		for (i = 0; i < 16; i++) {
@@ -847,6 +863,8 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	DMListIndexType	theDisplayModeCount;		
 	DMListType		theDisplayModeList;			
 	VideoRequestRec	request;
+	
+	if (gSqueakHeadless) return 0;
 	
 	Gestalt(gestaltDisplayMgrAttr,&value);
 	displayMgrPresent=value&(1<<gestaltDisplayMgrPresent);
@@ -1123,6 +1141,8 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	CGDisplayErr err;
 	boolean_t exactMatch;
 	
+		if (gSqueakHeadless) return 0;
+
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
        if (dominantGDevice == null) {
             success(false);

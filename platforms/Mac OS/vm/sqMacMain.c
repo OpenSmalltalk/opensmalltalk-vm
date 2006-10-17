@@ -65,6 +65,7 @@
 *  3.8.9b2 Sept 22nd, 2005 JMM add logic to override Squeak.image name 
 *  3.8.10b1 Jan 31st, 2006 JMM convert to unix file names.
 *  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
+*  3.8.13b4 Oct 16th, 2006 JMM headless
 
 */
 
@@ -89,12 +90,13 @@
 #include "sqaio.h"
 #include <unistd.h>
 #include <pthread.h>
+#include <Processes.h>
 
 extern pthread_mutex_t gEventQueueLock,gSleepLock;
 extern pthread_cond_t  gSleepLockCondition;
 
 OSErr			gSqueakFileLastError; 
-Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false;
+Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false;
 long			gSqueakMouseMappings[4][4] = {0};
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
@@ -169,12 +171,8 @@ int main(int argc, char **argv, char **envp) {
   mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 
 	LoadScrap();
-	InitCursor();
-	
-	SetUpMenus();
 	SetUpClipboard();
 	fetchPrefrences();
-	SetUpPixmap();
 
 	SetVMPathFromApplicationDirectory();
 
@@ -197,8 +195,19 @@ int main(int argc, char **argv, char **envp) {
 	}
 
 	unixArgcInterface(argCnt,argVec,envVec);
+	
+	if (!gSqueakHeadless) {
+		extern OSErr SetFrontProcess(const ProcessSerialNumber * PSN);
+ 		ProcessSerialNumber psn = { 0, kCurrentProcess };
+		OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
+		InitCursor();	
+		SetFrontProcess(&psn);
+	}
+	
 	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
-         
+    if (gSqueakHeadless && ImageNameIsEmpty()) 
+		exit(-42);
+		
 	if (ImageNameIsEmpty()) {
             CFBundleRef mainBundle;
             CFURLRef imageURL;
@@ -231,6 +240,8 @@ int main(int argc, char **argv, char **envp) {
 
 	/* read the image file and allocate memory for Squeak heap */
 	f = sqImageFileOpen(getImageName(), "rb");
+    if (gSqueakHeadless && f == NULL) 
+			exit(-43);
 	while (f == NULL) {
 	    //Failure attempt to ask the user to find the image file
 		char pathName[DOCUMENT_NAME_SIZE+1];
@@ -246,6 +257,11 @@ int main(int argc, char **argv, char **envp) {
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), 0);
 	sqImageFileClose(f);
         
+	if (!gSqueakHeadless) {
+		SetUpMenus();
+		SetUpPixmap();
+	}
+		
     SetUpTimers();
 
     aioInit();
@@ -257,7 +273,7 @@ int main(int argc, char **argv, char **envp) {
 int ioExit(void) {
     UnloadScrap();
     ioShutdownAllModules();
-    MenuBarRestore();
+	if (!gSqueakHeadless) MenuBarRestore();
 	sqMacMemoryFree();
     ExitToShell();
 	return 0;
@@ -390,7 +406,7 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.12b5 6-Jun-06 >BA037700-B8B0-4089-B25E-338707613B8A<";
+			return "Mac Carbon 3.8.13b4 16-Oct-06 >37C763C2-14E3-4547-AD9D-46FD12B50673<";
 			
 
  	if (id == 1201) return "255";

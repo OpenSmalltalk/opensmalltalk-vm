@@ -364,7 +364,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak VM Opt</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 3.8.13b1 http://www.squeak.org </string>
+	<string>Squeak VM 3.8.13b4 http://www.squeak.org </string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -376,12 +376,14 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak VM 3.8.13b1</string>
+	<string>Squeak VM 3.8.13b4</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>3.8.13b1</string>
+	<string>3.8.13b4</string>
 	<key>CGDisableCoalescedUpdates</key>
+	<true/>
+	<key>LSBackgroundOnly</key>
 	<true/>
 	<key>NSServices</key>
 	<array>
@@ -414,13 +416,13 @@
 	<key>SqueakMouseNoneButton3</key>
 	<integer>2</integer>
 	<key>SqueakMouseCmdButton1</key>
-	<integer>2</integer>
+	<integer>3</integer>
 	<key>SqueakMouseCmdButton2</key>
 	<integer>3</integer>
 	<key>SqueakMouseCmdButton3</key>
 	<integer>2</integer>
 	<key>SqueakMouseOptionButton1</key>
-	<integer>3</integer>
+	<integer>2</integer>
 	<key>SqueakMouseOptionButton2</key>
 	<integer>3</integer>
 	<key>SqueakMouseOptionButton3</key>

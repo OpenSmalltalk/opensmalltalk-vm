@@ -64,7 +64,7 @@ Step Three: Build an interpeter
 	http://map.squeak.org/accountbyid/4340a66e-2296-48b7-9aa8-5305d303752f/files/VMMaker-3.8b6.mcz
 	or later...
 
-	When this loads rely yes to move FloatProto to Undeclared.
+	When this loads rely yes to move FloatProto to Undeclared if you did not use the basic image. 
 	Now load the following two change sets found in the specialChangeSets folder.
 	Note these might be in the VMMaker update since this doc was written, check the change set and 
 	the image after loading VMMaker to see if you need these items. 
@@ -73,6 +73,11 @@ Step Three: Build an interpeter
 	load VMM38-64bit-imageUpdates.1.cs
 
 	That should provide a version of VMMaker that is sufficient to build 3.8.12b5U
+
+	For 3.8.13b2U Ex
+
+	File in VMMaker-wbk.40.6.cs or higher change set from the specialChangeSets Folder  (differences  between VMMaker-wbk.40 and VMMaker 3.8b6). Please note these changes might be folded into a later release of VMMaker-wbk, please check. Also then you must add the exupery plugin to the list of internal plugins. 
+
 	
 	A.  Install additional change sets from the specialChangeSets Folder. 
 		There has been some discussion that the line endings 
