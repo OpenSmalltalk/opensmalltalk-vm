@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2006-04-17 16:57:36 by piumarta on margaux.local
+ * Last edited: 2006-10-18 10:04:04 by piumarta on emilia.local
  */
 
 
@@ -17,28 +17,23 @@
  * 
  * This file is part of Unix Squeak.
  * 
- *    You are NOT ALLOWED to distribute modified versions of this file
- *    under its original name.  If you want to modify it and then make
- *    your modifications available publicly, rename the file first.
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
  * 
- * This file is distributed in the hope that it will be useful, but WITHOUT
- * ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- * FITNESS FOR A PARTICULAR PURPOSE.
+ *   The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
  * 
- * You may use and/or distribute this file under the terms of the Squeak
- * License as described in `LICENSE' in the base of this distribution,
- * subject to the following additional restrictions:
- * 
- * 1. The origin of this software must not be misrepresented; you must not
- *    claim that you wrote the original software.  If you use this software
- *    in a product, an acknowledgment to the original author(s) (and any
- *    other contributors mentioned herein) in the product documentation
- *    would be appreciated but is not required.
- * 
- * 2. You must not distribute (or make publicly available by any
- *    means) a modified copy of this file unless you first rename it.
- * 
- * 3. This notice must not be removed or altered in any source distribution.
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
  */
 
 

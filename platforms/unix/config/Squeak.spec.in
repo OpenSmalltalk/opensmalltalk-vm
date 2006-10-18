@@ -5,7 +5,7 @@ Requires:
 Summary: A portable implementation of the Smalltalk programming system.
 Vendor: Squeak.org
 Source: [source]
-Copyright: Squeak Software License
+Copyright: MIT
 Group: Development/Languages
 BuildRoot: /var/tmp/%{name}-root
 
