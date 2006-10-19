@@ -1,4 +1,4 @@
-Updated  Sept 3rd, 2006
+Updated  Oct 18th, 2006
 
 Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- John Maloney, May 25, 2000,
@@ -17,7 +17,8 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes John McIntosh Jun 4th, 2005 3.8.8b2 revised for 3.9
 	-- Changes John McIntosh Nov 10th, 2005 3.8.9b8 revised SVN location, misc updates
 	-- Changes John McIntosh Mar 5th, 2006 3.8.11b1 Drop os-9, non-carbon logic. 
-	-- Changes John McIntosh Sept 34d, 2006 3.8.12b5u clarify build instructions
+	-- Changes John McIntosh Sept 3rd, 2006 3.8.12b5u clarify build instructions
+	-- Changes John McIntosh, Craig Latta, Oct 19th, 2006 3.8.13b4
 	--
 
 (Note to readers, it is possible a step was missed, so beware)
@@ -159,14 +160,33 @@ Step Six: Run ProjectBuilder and build yourself an interpreter {for xcode 1.5 or
 			typedef struct objc_object Protocol;
 		#endif
 
-		2) We use a sqNamedPrims.h in the Mac OS source tree, versus the sqNamedPrims.h that is created in the src
+		2) Corrections to 10.3.9 SDKs api for IOHIDLib.h. If you build with the 10.2.8SDK this file is not a problem. If you build with the 10.4U SDK this is not a problem. But if you build with the default 10.3.9 SDK then you get a redefinition of IOHIDQueueInterface and IOHIDOutputTransactionInterface error. To fix this you must change your 10.3.9 SDK version of IOHIDLib.h based on changes in the 10.4u SDK. 
+
+		in the 10.4u SDK api's it's 
+
+struct IOHIDQueueInterface
+{
+IUNKNOWN_C_GUTS;
+IOHIDQUEUEINTERFACE_FUNCS_100;
+};
+
+and
+
+struct IOHIDOutputTransactionInterface
+{
+IUNKNOWN_C_GUTS;
+IOHIDOUTPUTTRANSACTIONINTERFACE_FUNCS_120;
+};
+
+
+		3) We use a sqNamedPrims.h in the Mac OS source tree, versus the sqNamedPrims.h that is created in the src
 		directory. You may need to repoint the xcode source file to point to your sqNamedPrims.h if the internal plugins built are 
 		different. 
 
-		3) All this work only builds the VM, external plugins such as the mpeg plugin or services, speilling or quicktime can then 
+		4) All this work only builds the VM, external plugins such as the mpeg plugin or services, speilling or quicktime can then 
 		be copied over from a distributed production VM if required. 
 
-		4) (The errors you should get are 
+		5) (The errors you should get are 
 		
 		warning: passing arg 1 of `sqImageFileStartLocation' makes integer from pointer without a cast)
 
