@@ -27,15 +27,6 @@ Building a Carbon Squeak VM with ProjectBuilder:
 {JMM notes this is building with 10.4.x, and Squeak 3.9 (for croquet & Tweak)}
 {JMM notes the browser plugin was fully broken with changes to the code for 3.8.12, likely you need to pull a 3.8.11 or 3.8.10 version to make it}
 
-Overview
-
-	1.	Get the Apple Developer Tools (free)
-	2.	Get the current SVN Platforms tree
-	3.	Build an interpreter with VMMaker
-	4.	Get, and install, the Gnuifier, and gnuify the interpreter
-	5.	Shove some files around the buildspace
-	6.	Run ProjectBuilder and build yourself an VM
-	7.	Download and print your Squeak VM Developer's Certificate
 
 Step One: Get the Apple Developer Tools (free)
 
@@ -51,20 +42,31 @@ Step Two: Get the current SVN Platforms tree
 	A.	Visit http://subversion.tigris.org/ to understand SVN, and I suspect install SVN on your machine.
 		You should visit
 			http://www.lachoseinteractive.net/en/community/subversion/svnx/download/
-		to get the client gui. Checkout a working copy of the squeak/trunk, either via the GUI tool, or from a terminal session
-		go to the directory you want to build in, then enter svn co http://squeakvm.org/svn/squeak/trunk svnSqueakTree 
-	B.	You may need to copy the platform directory out of the svnSqueakTree directory into your build directory
-		to avoid confusion.
+		to get the client gui. Checkout a working copy of the squeak/trunk, either via the GUI tool
+		where you select the version you want to check out and hit the svn checkout button, then when prompted
+		point to your build folder.  
+
+		or from a terminal session go to the directory you want to build in, say your vmmaker image folder, 
+		then enter svn co http://squeakvm.org/svn/squeak/trunk svnSqueakTree.
+
+		I will note which version of SVN you check out is dependent on which version of the mac carbon VM you want to build
+		you should check the SVN version numbers and comments to identify the point in the versions where one version of 
+		the VM ends and a new version starts. 
+
 		
 After so much mumbo-jumbo, your squeak folder should have a directory entitled platforms.
 
 Step Three: Build an interpeter
 
-	0.  Grab your 3.8.1 image, install Balloon 3D, and then install version 3.8b6 of VMMaker, from
+	0.  Grab your 3.8 image (6665 was last trial patch level tested). Using a basic image versus a full image might be faster. 
+	3.8.1 might work too, since most logic is in VMMaker not the image. 
+	3.9 *has* been used occasionally but most VM building has occurred in a 3.8 image.
+ 
+	Install Balloon 3D, and then install version 3.8b6 of VMMaker, from
 	http://map.squeak.org/accountbyid/4340a66e-2296-48b7-9aa8-5305d303752f/files/VMMaker-3.8b6.mcz
 	or later...
 
-	When this loads rely yes to move FloatProto to Undeclared if you did not use the basic image. 
+	When this loads reply yes to move FloatProto to Undeclared if you did not use the basic image. 
 	Now load the following two change sets found in the specialChangeSets folder.
 	Note these might be in the VMMaker update since this doc was written, check the change set and 
 	the image after loading VMMaker to see if you need these items. 
@@ -74,9 +76,11 @@ Step Three: Build an interpeter
 
 	That should provide a version of VMMaker that is sufficient to build 3.8.12b5U
 
-	For 3.8.13b2U Ex
+	For 3.8.13b2U Expury
 
-	File in VMMaker-wbk.40.6.cs or higher change set from the specialChangeSets Folder  (differences  between VMMaker-wbk.40 and VMMaker 3.8b6). Please note these changes might be folded into a later release of VMMaker-wbk, please check. Also then you must add the exupery plugin to the list of internal plugins. 
+	File in Exupery-wbk.195 from Exupery site and VMMaker-wbk.40.8.cs or higher change set from the specialChangeSets Folder 
+	(VMMaker-wbk.40.8.cs is the differences between VMMaker-wbk.40 and VMMaker 3.8b6). Please note these changes might be folded
+	 into a later release of VMMaker-wbk, please check. Also then you must add the exupery plugin to the list of internal plugins. 
 
 	
 	A.  Install additional change sets from the specialChangeSets Folder. 
@@ -84,34 +88,36 @@ Step Three: Build an interpeter
 		might be wrong for the following change sets that might depend on what CVS/SVN thinks, 
 		so do a "remove linefeeds" first. 
 		
-		Gnuifier.6.cs - A smalltalk version of the AWK example. 	
+		Gnuifier.7.cs - A smalltalk version of the AWK example. 	
 		ArraysToGlobalStruct-JMM.1.cs  - Put arrays in the structure, this fixes some issues with 'global code elimination' in the compiler.
 		
 	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure, see Step 3 above)
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
 	D.	Enter the Platform name: (default is fine) "Mac OS"
-	E.	Enter the Path for your generates sources (default is fine).
+	E.	Enter the Path for your generates sources (note src32 should be renamed to src to make XCode happy). 
+	E2. 	Note mac carbon VM only supports a 32 bit VM since the entire carbon/osx api set is 32bit, not 64. 
 	F.	Select plugins. (Suggest selecting menu item "make all internal",
 		then drag back the following back to Plugins not built:
 			FFIPlugin
 			FileCopyPlugin
-			IntegerPokerPlugin
 			Mpeg3Plugin
 			TestOSAPlugin
-			PrintJobPlugin (if installed, we'll discuss how to built this later as built in)
+			PrintJobPlugin (if installed, we'll discuss how to built this later)
 	G.	Press button "Save Configuration" to save your configuration for later.
-	H.	Press button "Generate All" to build the interpreter
+	H.	Press button "Generate All" to build the interpreter, it then builds a source tree in a folder called src or src32
 
 
 Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
-	A.	See the Gnuifier.6.cs changeset in the specialChangeSetsFolder
+	A.	See the Gnuifier.7.cs or higher changeset in the specialChangeSetsFolder
 	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
 
 		(Gnuifier on:
 			((FileDirectory default
 				directoryNamed: 'src')  "Perhaps src32 depending on how VMMaker 32/64 thinks about this"
 				directoryNamed: 'vm') pathName) gnuify
+	C. 	Note that if the src folder is called src32, you will need to rename it to src in order for xcode to find it.
+
 
 Step Five: Shove and Tweak some files around the buildspace
 
@@ -127,7 +133,7 @@ Step Five: Shove and Tweak some files around the buildspace
 			Squeak VM Universal-Info.plist
 		can be found in the folder containing the 'platforms' and 'src' folders.
 
-Step Six: Run ProjectBuilder and build yourself an interpreter {for xcode 1.5 }
+Step Six: Run ProjectBuilder and build yourself an interpreter {for xcode 1.5 or higher }
 
 	A.	Double-click the SqueakVMUNIXPATHS.xcodeproj file
 	B.	On the left pane, see the SqueakVMUNIXPATHS blue xcode icon.
@@ -136,13 +142,38 @@ Step Six: Run ProjectBuilder and build yourself an interpreter {for xcode 1.5 }
 		resolve where or why the files is/are missing.
 	c.	On the left pane, find the Targets icon. 
 	d.	Select "Squeak VM Opt"
-	e.	On the upper window area pick "Deployment" (This is the active build style) {This depends on how you have xcode configured}
- 	f.	Click on the hammer icon at the top  to build your VM.
-		The final product should live in the build folder, named "Squeak VM Opt"
+	e.	From the Project menu pick the active build configuration you want to use.
+		Click on the hammer icon at the top  to build your VM.
+
+
+		Problems: 
+		1) It is possible depending on which updated SDK from apple that you have that you might get an error 
+		in obj-class.h  parsing @class Protocol;   That is an error in Apple's source code. 
+
+		You must then use sudo vi {path to the file}/obj-class.h to edit the read ony system file and 
+		alter the @class Protocol to 
+
+		#ifdef __OBJC__
+			@class Protocol;
+		#else
+			typedef struct objc_object Protocol;
+		#endif
+
+		2) We use a sqNamedPrims.h in the Mac OS source tree, versus the sqNamedPrims.h that is created in the src
+		directory. You may need to repoint the xcode source file to point to your sqNamedPrims.h if the internal plugins built are 
+		different. 
+
+		3) All this work only builds the VM, external plugins such as the mpeg plugin or services, speilling or quicktime can then 
+		be copied over from a distributed production VM if required. 
+
+		4) (The errors you should get are 
+		
+		warning: passing arg 1 of `sqImageFileStartLocation' makes integer from pointer without a cast)
+
+		The final product should live in the build folder, a subfolder depending on build configuration and, and 
+		the bundle is named "Squeak VM Opt"
 		Compare VM against the offical build to see if it is the same. 
 		Note you should look at the binary in the Contents subfolder to see if it is the same size.
-		(The errors you should get are 
-		warning: passing arg 1 of `sqImageFileStartLocation' makes integer from pointer without a cast)
 		Run a tinyBenchmark benchmark against your VM, versus the production VM to confirm yours is simular in performance.
 
 Step Seven: Download and print your Squeak VM Developer's Certificate
