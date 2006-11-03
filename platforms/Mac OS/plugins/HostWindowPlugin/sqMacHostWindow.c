@@ -37,9 +37,7 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 //	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context); 
 	windowBlock->width = w;
 	windowBlock->height = h; 
-#ifndef BROWSERPLUGIN
 	sqShowWindow(index);
-#endif
 	return index;
 }
 

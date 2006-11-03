@@ -66,7 +66,7 @@
 *  3.8.10b1 Jan 31st, 2006 JMM convert to unix file names.
 *  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
 *  3.8.13b4 Oct 16th, 2006 JMM headless
-
+*  3.8.14b1 Oct  2006, JMM browser rewrite
 */
 
 
@@ -102,18 +102,12 @@ UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueak
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
 char            gSqueakImageName[2048] = "Squeak.image";
 CFStringRef		gSqueakImageNameStringRef;
-
-#ifdef BROWSERPLUGIN
-/*** Variables -- Imported from Browser Plugin Module ***/
-extern int pluginArgCount;
-extern char *pluginArgName[100];
-extern char *pluginArgValue[100];
-#endif
-
+int				gSqueakBrowserPipes[]= {-1, -1}; 
+Boolean			gSqueakBrowserSubProcess = false;
+Boolean			gSqueakBrowserExitRequested = false;
 
 /*** Main ***/
 
-#ifndef BROWSERPLUGIN
 #pragma export on
 /*** Variables -- globals for access from pluggable primitives ***/
 int    argCnt= 0;
@@ -199,9 +193,9 @@ int main(int argc, char **argv, char **envp) {
 	if (!gSqueakHeadless) {
 		extern OSErr SetFrontProcess(const ProcessSerialNumber * PSN);
  		ProcessSerialNumber psn = { 0, kCurrentProcess };
-		OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
+		//OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
 		InitCursor();	
-		SetFrontProcess(&psn);
+		//SetFrontProcess(&psn);
 	}
 	
 	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
@@ -266,6 +260,8 @@ int main(int argc, char **argv, char **envp) {
 
     aioInit();
     pthread_mutex_init(&gEventQueueLock, NULL);
+	if (gSqueakBrowserSubProcess) 
+		setupPipes();
 	RunApplicationEventLoopWithSqueak();
     return 0;
 }
@@ -278,8 +274,6 @@ int ioExit(void) {
     ExitToShell();
 	return 0;
 }
-
-#endif
 
 int ioDisablePowerManager(int disableIfNonZero) {
 	#pragma unused(disableIfNonZero)
@@ -294,13 +288,9 @@ int ioBeep(void) {
 }
 
 void SqueakTerminate() {
-#ifdef BROWSERPLUGIN
-	ExitCleanup();
-#else
 	UnloadScrap();
 	ioShutdownAllModules();
 	sqMacMemoryFree();
-#endif
 }
 
 int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, double vScale, int landscapeFlag) {
@@ -325,11 +315,7 @@ char * GetAttributeString(int id) {
 	// id #0 should return the full name of VM
 	if (id == 0) {
 		static char pathToGiveToSqueak[2048];
-#ifdef BROWSERPLUGIN
-            getVMPathWithEncoding(pathToGiveToSqueak,gCurrentVMEncoding);
-#else
 			ux2sqPath(argVec[0], strlen(argVec[0]), pathToGiveToSqueak, VMPATH_SIZE,0);	
-#endif
             return pathToGiveToSqueak;
         }
 	/* Note: 1.3x images will try to read the image as a document because they
@@ -346,18 +332,6 @@ char * GetAttributeString(int id) {
             getDocumentNameWithEncoding(path,gCurrentVMEncoding);
             return path;
         }
-
-#ifdef BROWSERPLUGIN
-	/* When running in browser, return the EMBED tag info */
-	if ((id > 2) && (id <= (2 + (2 * pluginArgCount)))) {
-		int i = id - 3;
-		if ((i & 1) == 0) {  /* i is even */
-			return pluginArgName[i/2];
-		} else {
-			return pluginArgValue[i/2];
-		}
-	}
-#endif
 
 	if (id == 1001) return "Mac OS";
 	if (id == 1002) {
@@ -384,17 +358,7 @@ char * GetAttributeString(int id) {
             CFBundleRef mainBundle;
             CFStringRef versionString;
             static char data[255];
-#if BROWSERPLUGIN
-	#if SOPHIEVM
-	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SophiePlugin",kCFStringEncodingMacRoman);
-	#else
-	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SqueakPlugin",kCFStringEncodingMacRoman);
-	#endif
-    mainBundle = CFBundleGetBundleWithIdentifier(bundleID);
-	CFRelease(bundleID);
-#else
             mainBundle = CFBundleGetMainBundle ();
-#endif
             versionString = CFBundleGetValueForInfoDictionaryKey(mainBundle, CFSTR("CFBundleShortVersionString"));
             bzero(data,255);
             strcat(data,interpreterVersion);
@@ -418,14 +382,12 @@ char * GetAttributeString(int id) {
 		return data;
 	}
 	
-#ifndef BROWSERPLUGIN
 	if (id < 0 || (id > 2 && id <= 1000))  {
 		char *results;
 		results = unixArgcInterfaceGetParm(id);
 		if (results) 
 			return results;
 	}
-#endif
 
 	/* attribute undefined by this platform */
 	success(false);
@@ -467,17 +429,7 @@ void fetchPrefrences() {
     char        encoding[256];
     long		i,j;
 	
-#if BROWSERPLUGIN
-	#if SOPHIEVM
-	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SophiePlugin",kCFStringEncodingMacRoman);
-	#else
-	CFStringRef		bundleID= CFStringCreateWithCString(null,"org.squeak.SqueakPlugin",kCFStringEncodingMacRoman);
-	#endif
-	myBundle = CFBundleGetBundleWithIdentifier(bundleID);
-	CFRelease(bundleID);
-#else
     myBundle = CFBundleGetMainBundle();
-#endif
     myDictionary = CFBundleGetInfoDictionary(myBundle);
 	
     SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));

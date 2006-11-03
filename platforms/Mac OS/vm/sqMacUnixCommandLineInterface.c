@@ -140,7 +140,7 @@ void resolveWhatTheImageNameIs(char *guess)
 	char possibleImageName[DOCUMENT_NAME_SIZE+1],  fullPath [DOCUMENT_NAME_SIZE+1],  lastPath [SHORTIMAGE_NAME_SIZE+1];
 	FSRef		theFSRef;
 	OSErr		err;
-
+	
 	strncpy(possibleImageName, guess,DOCUMENT_NAME_SIZE);
 	err = getFSRef(possibleImageName,&theFSRef,kCFStringEncodingUTF8);
 	if (err) {
@@ -166,13 +166,25 @@ static int parseArgument(int argc, char **argv)
 	return 1; }
   else if (!strcmp(argv[0], "-headless")) { 
 	gSqueakHeadless = true; return 1; }
+  else if (!strcmp(argv[0], "-headfull")) { 
+	gSqueakHeadless = false; return 1; }
   else if (argc > 1) {
 	  if (!strcmp(argv[0], "-memory"))	{ 
-		gMaxHeapSize=	 strtobkm(argv[1]);	 
+		gMaxHeapSize = strtobkm(argv[1]);	 
 		return 2; }
-      else if (!strcmp(argv[0], "-pathenc"))	{ 
+      else if (!strcmp(argv[0], "-pathenc")) { 
 		setEncodingType(argv[1]); 
 		return 2; }
+      else if (!strcmp(argv[0], "-browserPipes")) {
+		extern int		 gSqueakBrowserPipes[]; /* read/write fd for browser communication */
+		extern Boolean gSqueakBrowserSubProcess;
+		
+		if (!argv[2]) return 0;
+		sscanf(argv[1], "%i", &gSqueakBrowserPipes[0]);
+		sscanf(argv[2], "%i", &gSqueakBrowserPipes[1]);
+		gSqueakBrowserSubProcess = true;
+		return 3;
+	}
   }
   return 0;	/* option not recognised */
 }

@@ -26,14 +26,13 @@
  3.8.10B5  Feb 3rd, 2006 JMM complete rewrite carbon only for universal
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
  3.8.13b4 Oct 16th, 2006 JMM headless
+ 3.8.14b1 Oct	,2006 JMM browser rewrite
 
 *****************************************************************************/
 
 #include <Carbon/Carbon.h>
 #include <movies.h>
-#ifdef BROWSERPLUGIN
-#include <npapi.h>
-#endif
+#include <sys/shm.h>
 
 #include "sq.h"
 #include "sqMacUIConstants.h"
@@ -66,7 +65,6 @@ WindowPtr getSTWindow(void) {
     return  windowHandleFromIndex(1);
 }
 
-#ifndef BROWSERPLUGIN
 static int makeMainWindow(void);
 static int ioSetFullScreenActual(int fullScreen);
 
@@ -283,8 +281,6 @@ static void sqShowWindowActual(int windowIndex){
 	}
 }
 
-#endif
-
 int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
@@ -316,22 +312,17 @@ int ioShowDisplayOnWindow(
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
 	static CGColorSpaceRef colorspace = NULL;
+	extern CGContextRef SharedBrowserBitMapContextRef;
+	extern Boolean gSqueakBrowserSubProcess;
+	void browserSendInt(int);
+	
 	int 		pitch;
 	CGImageRef image;
 	CGRect		clip;
 	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(windowIndex);	
 	CGDataProviderRef provider;
-
+	
 	if (gSqueakHeadless) return 1;
-
-	if (targetWindowBlock == NULL) {
-		if (windowIndex == 1) {
-				makeMainWindow();
-				targetWindowBlock = windowBlockFromIndex(windowIndex);
-		}
-		else
-			return 0;
-	}
 
 	if (colorspace == NULL) {
 			// Get the Systems Profile for the main display
@@ -343,6 +334,16 @@ int ioShowDisplayOnWindow(
 		} else 
 			colorspace = CGColorSpaceCreateDeviceRGB();
 	}
+
+	if (targetWindowBlock == NULL) {
+		if (windowIndex == 1) {
+				makeMainWindow();
+				targetWindowBlock = windowBlockFromIndex(windowIndex);
+		}
+		else
+			return 0;
+	}
+
 		
 	if (affectedL < 0) affectedL = 0;
 	if (affectedT < 0) affectedT = 0;
@@ -374,39 +375,7 @@ int ioShowDisplayOnWindow(
 #endif
 
 
-#ifdef BROWSERPLUGIN
-	extern NPWindow* 	netscapeWindow;
-	CGRect	clip2;
-	int		w,h;
-	Rect	portRect;
-	float fx, fy, bottomEdgeSize, edgeToDrawArea;
-	
-	GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
-	fx = affectedL+netscapeWindow->x;
-	bottomEdgeSize = (portRect.bottom - portRect.top) - netscapeWindow->clipRect.bottom;
-	edgeToDrawArea = netscapeWindow->height - affectedB;
-	fy = bottomEdgeSize + edgeToDrawArea - netscapeWindow->clipRect.top;
-	clip = CGRectMake(fx,
-			fy, 
-			affectedR-affectedL, 
-			affectedB-affectedT); 
-	
-	w =  netscapeWindow->clipRect.right -  netscapeWindow->clipRect.left;
-	h =  netscapeWindow->clipRect.bottom - netscapeWindow->clipRect.top;
-	h = affectedB-affectedT;
-	clip2 = CGRectMake(netscapeWindow->x,bottomEdgeSize, w, h);
-//	CGContextClipToRect(targetWindowBlock->context, clip2);
-	
-	fprintf(stderr,"\n drawable x %f y %f w %i h %i clip x %d  y %f  w %i h %i bottomEdge %f edgeToDrawArea %f",
-		fx,fy,
-		affectedR-affectedL, affectedB-affectedT,
-		netscapeWindow->x, bottomEdgeSize,
-		w, h,
-		bottomEdgeSize, edgeToDrawArea);
-#else
 	clip = CGRectMake(affectedL,height-affectedB, affectedR-affectedL, affectedB-affectedT);
-#endif
-
 
 	if (targetWindowBlock->isInvisible) {
 		sqShowWindow(windowIndex);
@@ -440,7 +409,15 @@ int ioShowDisplayOnWindow(
 		
 	/* Draw the image to the Core Graphics context */
 	CGContextDrawImage(targetWindowBlock->context, clip, image);
-	
+	if (gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef) {
+		CGContextDrawImage(SharedBrowserBitMapContextRef, clip, image);
+		browserSendInt(6);
+		browserSendInt(affectedL);
+		browserSendInt(affectedR);
+		browserSendInt(affectedT);
+		browserSendInt(affectedB);
+	}
+
 	{ 
 			extern Boolean gSqueakUIFlushUseHighPercisionClock;
 			extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
@@ -628,7 +605,6 @@ void FreePixmap(void) {
 	}
 }
 
-#ifndef BROWSERPLUGIN
 
 static int makeMainWindow(void) {
 	WindowPtr window;
@@ -673,7 +649,6 @@ static int makeMainWindow(void) {
 	//SetupSurface(1);
 	return (int) window;
 }
-#endif
 
 WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes) {
 	Rect windowBounds;
@@ -725,7 +700,6 @@ int ioScreenDepth(void) {
     return (*(*mainDevice)->gdPMap)->pixelSize;
 }
 
-#ifndef BROWSERPLUGIN
 int ioScreenSize(void) {
 	int w, h;
     Rect portRect;
@@ -746,7 +720,6 @@ int ioScreenSize(void) {
 	}
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
-#endif
 
 int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
 	/* Old version; forward to new version. */

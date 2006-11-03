@@ -15,6 +15,7 @@
 *  Apr 25th, 2002, JMM low res clock is broken after 0x7FFFFFF
 *  3.9.1b2 Oct 4th, 2005 Jmm add MillisecondClockMask
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
+*	3.8.14b1 Oct	,2006 JMM browser rewrite
 
 *****************************************************************************/
 #include "sq.h"
@@ -28,11 +29,7 @@
 #include <unistd.h>
 #include "sqaio.h"
 
-#ifdef BROWSERPLUGIN
-TMTask    gTMTask;
-#else
 static TMTask    gTMTask;
-#endif
 static struct timeval	 startUpTime;
 static unsigned int	lowResMSecs= 0;
 

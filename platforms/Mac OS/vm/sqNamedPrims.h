@@ -50,7 +50,7 @@ sqExport *pluginExports[] = {
 	B2DPlugin_exports,
 	BitBltPlugin_exports,
 	DSAPrims_exports,
-	ExuperyPlugin_exports,
+ 	ExuperyPlugin_exports,
 	ZipPlugin_exports,
 	DropPlugin_exports,
 	FFTPlugin_exports,
@@ -64,9 +64,7 @@ sqExport *pluginExports[] = {
 	JoystickTabletPlugin_exports,
 	Klatt_exports,
 	LargeIntegers_exports,
-#ifndef BROWSERPLUGIN
 	MacMenubarPlugin_exports,
-#endif
 	MIDIPlugin_exports,
 	Matrix2x3Plugin_exports,
 	MiscPrimitivePlugin_exports,

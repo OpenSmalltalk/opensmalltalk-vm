@@ -240,29 +240,6 @@ void *ioLoadModule(char *pluginName)
 	/* first, look in the "<Squeak VM directory>Plugins" directory for the library */
 	getVMPathWithEncoding(pluginDirPath,kCFStringEncodingUTF8);
 	
-#ifdef BROWSERPLUGIN
-	{
-		FSRef	theFSRef;
-		OSErr	err;
-		
-		if (!vmDirPath[0]) {
-			err = FSFindFolder(kUserDomain, kInternetPlugInFolderType, kDontCreateFolder, &theFSRef);
-			if (err != noErr) {
-				return 0;
-			}
-			
-			// Look for folder, if not found abort */
-			PathToFileViaFSRef(pluginDirPath,DOCUMENT_NAME_SIZE, &theFSRef,kCFStringEncodingUTF8);
-#ifdef SOPHIEVM
-			strcat(pluginDirPath,"NPSophie.bundle/Contents/Resources/");
-#else
-			strcat(pluginDirPath,"NPSqueak.bundle/Contents/Resources/");
-#endif
-			strcpy(vmDirPath,pluginDirPath);
-		}
-	}
-	
-#else
 	strcat(pluginDirPath, "Plugins/");
 	if (!vmDirPath[0]) {
             CFBundleRef mainBundle;
@@ -285,7 +262,7 @@ void *ioLoadModule(char *pluginName)
 			CFRelease(filePath);
 			
  		}
- #endif
+
     if (gSqueakPluginsBuiltInOrLocalOnly) {
 	  if ( (handle= tryLoading( vmDirPath, pluginName))
 		|| (handle= tryLoading( pluginDirPath,	pluginName))

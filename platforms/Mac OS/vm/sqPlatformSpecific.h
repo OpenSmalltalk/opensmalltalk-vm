@@ -14,7 +14,7 @@
 *   3.2.8b1 July 24th, 2002 JMM support for os-x plugin under IE 5.x
 *   3.5.1  May 28th, 2003 JMM SQUEAK_BUILTIN_PLUGIN in PB defs
 *	3.8.8b2 May 23rd, 2005 JMM Undef 64bit procedure function ptrs
-
+*	3.8.14b1 Oct	,2006 JMM browser rewrite
 *
    How to use this file:
    This file is for general platform-specific macros and declarations.
@@ -30,7 +30,6 @@
 
 #ifdef macintoshSqueak
 #include <types.h>
-//#define BROWSERPLUGIN
 //#define SQUEAK_BUILTIN_PLUGIN
 
 /* replace the image file manipulation macros with functions */
@@ -110,7 +109,7 @@ void CopyCStringToPascal(const char* src, Str255 dst);
 int sqGrowMemoryBy(int memoryLimit, int delta);
 int sqShrinkMemoryBy(int memoryLimit, int delta);
 int sqMemoryExtraBytesLeft(Boolean flag);
-#ifdef BROWSERPLUGIN
+
     #undef insufficientMemorySpecifiedError
     #undef insufficientMemoryAvailableError
     #undef unableToReadImageError
@@ -121,7 +120,6 @@ int sqMemoryExtraBytesLeft(Boolean flag);
     #define unableToReadImageError() plugInNotifyUser("Read failed or premature end of image file")
     #define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
     #define browserPluginInitialiseIfNeeded()
-#endif
 
 //exupery
 #define addressOf(x) &x

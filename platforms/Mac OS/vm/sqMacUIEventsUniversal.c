@@ -33,6 +33,8 @@
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
  3.8.12b6u Sept 5th, 2006 JMM rework mouse logic for mac
  3.8.13b4u  Oct 16th, 2006 JMM headless
+ *	3.8.14b1 Oct	,2006 JMM browser rewrite
+
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -64,7 +66,7 @@ pthread_mutex_t gEventQueueLock;
 #define EventTypePostEventProcessing 99
 static void doPostMessageHook(EventRef event);
 static void postFullScreenUpdate(void);
-static void signalAnyInterestedParties(void);
+void signalAnyInterestedParties(void);
 static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
 
 static int addToKeyMap(int keyCode, int keyChar);
@@ -74,11 +76,7 @@ static int indexInKeyMap(int keyCode);
 static int findRepeatInKeyMap(int keyCode);
 static void setRepeatInKeyMap(int keyCode);
 
-#ifdef BROWSERPLUGIN
-void doPendingFlush(void);
-#else
 static void doPendingFlush(void);
-#endif
 
 /*** Variables -- Event Recording ***/
 #define MAX_EVENT_BUFFER 1024
@@ -105,30 +103,26 @@ static int eventBufferPut = 0;
 /* event capture */
 sqInputEvent *nextEventPut(void);
 
-#ifdef BROWSERPLUGIN
-#define MAKETHESESTATIC 
-#else
 #define MAKETHESESTATIC static
-#endif
  
 #define KEYBUF_SIZE 64
 /* declaration of the event message hook */
 MAKETHESESTATIC eventMessageHook messageHook = NULL;
 MAKETHESESTATIC eventMessageHook postMessageHook = NULL;
 MAKETHESESTATIC int inputSemaphoreIndex = 0;/* if non-zero the event semaphore index */
-MAKETHESESTATIC int keyBuf[KEYBUF_SIZE];	/* circular buffer */
-MAKETHESESTATIC int keyBufGet = 0;			/* index of next item of keyBuf to read */
-MAKETHESESTATIC int keyBufPut = 0;			/* index of next item of keyBuf to write */
-MAKETHESESTATIC int keyBufOverflows = 0;	/* number of characters dropped */
+ int keyBuf[KEYBUF_SIZE];	/* circular buffer */
+ int keyBufGet = 0;			/* index of next item of keyBuf to read */
+ int keyBufPut = 0;			/* index of next item of keyBuf to write */
+ int keyBufOverflows = 0;	/* number of characters dropped */
 
-MAKETHESESTATIC int buttonState = 0;		/* mouse button and modifier state when mouse
+ int buttonState = 0;		/* mouse button and modifier state when mouse
 							   button went down or 0 if not pressed */
-MAKETHESESTATIC int cachedButtonState = 0;	/* buffered mouse button and modifier state for
+ int cachedButtonState = 0;	/* buffered mouse button and modifier state for
 							   last mouse click even if button has since gone up;
 							   this cache is kept until the next time ioGetButtonState()
 							   is called to avoid missing short clicks */
-MAKETHESESTATIC int gButtonIsDown = 0;
-MAKETHESESTATIC int windowActive = 0;		/* positive indicates the active window */
+int gButtonIsDown = 0;
+int windowActive = 0;		/* positive indicates the active window */
 
 static Point savedMousePosition;	/* mouse position when window is inactive */
 
@@ -140,7 +134,7 @@ static Point savedMousePosition;	/* mouse position when window is inactive */
 		Mac bits: <control><option><caps lock><shift><command>
 		ST bits:  <command><option><control><shift>
 */
-MAKETHESESTATIC char modifierMap[256] = {	
+ char modifierMap[256] = {	
  0, 8, 1, 9, 0, 8, 1, 9, 4, 12, 5, 13, 4, 12, 5, 13, //Track left and right shift keys
  2, 10, 3, 11, 2, 10, 3, 11, 6, 14, 7, 15, 6, 14, 7, 
 15, 1, 9, 1, 9, 1, 9, 1, 9, 5, 13, 5, 13, 5, 13, 5, 
@@ -370,7 +364,7 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             
 static int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
 static int ModifierStateCarbon(EventRef theEvent);   
-static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
+void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
 static void recordKeyboardEventCarbon(EventRef event);
 static void recordMenuEventCarbon(MenuRef menu, UInt32 menuItem);
 static void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom,int windowIndex);
@@ -802,7 +796,7 @@ static void recordWindowEventCarbon(int windowType,int left, int top, int right,
 	return;
 }
 
-static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
+void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	sqMouseEvent *evt;
 	static sqMouseEvent oldEvent;
 	static Point  where;
@@ -817,9 +811,12 @@ static void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 		QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&where);
 	// on error use last known mouse location. 
 	
+
 	buttonState = MouseModifierStateCarbon(event,whatHappened);
  	cachedButtonState = cachedButtonState | buttonState;
-       
+
+	//fprintf(stderr,"VM: recordMouseEventCarbon v %i h %i buttonState %i \n ",where.v,where.h,buttonState);
+      
         if (whatHappened == kEventMouseWheelMoved) {
             GetEventParameter( event,
                                 kEventParamKeyModifiers,
@@ -1082,7 +1079,9 @@ But mapping assumes 1,2,3  red, yellow, blue
                                 NULL,
                                 &mouseButton); 
 							
-        if (mouseButton > 0 && mouseButton < 4) {
+	//fprintf(stderr,"VM: MouseModifierStateCarbon buttonState %i modifiers %i\n ",mouseButton,keyBoardModifiers);
+ 
+		         if (mouseButton > 0 && mouseButton < 4) {
           /* OLD original carbon code 
 			buttonState[mouseButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
             stButtons |= buttonState[1]*4*
@@ -1129,11 +1128,7 @@ static int ModifierStateCarbon(EventRef event) {
 }
 
 
-#ifdef BROWSERPLUGIN
-void doPendingFlush(void) {
-#else
 static void doPendingFlush(void) {
-#endif
 
 	extern  Boolean gSqueakUIFlushUseHighPercisionClock;
 	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
@@ -1176,7 +1171,6 @@ static void doPendingFlush(void) {
 
 }
 
-#ifndef BROWSERPLUGIN
 int ioProcessEvents(void) {
 
 	aioPoll(0);		
@@ -1188,7 +1182,6 @@ int ioProcessEvents(void) {
     }
 	return 0;
 }
-#endif 
 
 int getUIToLock(long *data) {
 	customHandleForUILocks(NULL,NULL,(void*) data);
@@ -1225,7 +1218,7 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
     return noErr;
 }
 
-static void signalAnyInterestedParties() {
+void signalAnyInterestedParties() {
     if (inputSemaphoreIndex != 0)
         signalSemaphoreWithIndex(inputSemaphoreIndex);
 }

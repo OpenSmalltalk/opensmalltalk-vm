@@ -12,6 +12,8 @@
 *  3.7.3b2 Apr 10th, 2004 JMM Tetsuya HAYASHI <tetha@st.rim.or.jp>  encoding for image name at startup time.
 *  3.8.9b1 Sept 13th, 2005 JMM add logic to open application to open image files
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
+ *	3.8.14b1 Oct	,2006 JMM browser rewrite
+
 */
 
 #include "sq.h"
@@ -139,10 +141,8 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
     EventRecord theEvent;
     HFSFlavorSqueak   dropFile;
     Point       where;
-#ifndef BROWSERPLUGIN
 	char        shortImageName[SHORTIMAGE_NAME_SIZE+1];
 	char		pathName[IMAGE_NAME_SIZE+1];				
-#endif
 
 	/* count list elements */
 	err = AECountItems( fileList, &numFiles);
@@ -170,7 +170,6 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 	        (finderInformation.fdType == 'fold' ||
     		finderInformation.fdType == 'disk'))) 
 	        continue;
-#ifndef BROWSERPLUGIN
 		PathToFileViaFSRef(pathName, IMAGE_NAME_SIZE, &theFSRef,gCurrentVMEncoding);
 		getLastPathComponentInCurrentEncoding(pathName,shortImageName,gCurrentVMEncoding);
 
@@ -206,7 +205,6 @@ void processDocumentsButExcludeOne(AEDesc	*fileList,long whichToExclude) {
 			SimpleRunAppleScript(commandStuff);
 			continue;
 			}
-#endif			     
 	    actualFilteredNumber++;
 
     }
