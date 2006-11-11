@@ -1194,7 +1194,6 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
 {
     long *data;
     long numberOfParms;
-    OSErr	err;
         
          
 	data = userData;

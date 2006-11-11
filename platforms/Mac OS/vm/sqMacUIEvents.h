@@ -22,7 +22,6 @@ typedef int (*eventMessageHook)(EventRecord* event);
 void recordKeystroke(EventRecord *theEvent);
 void recordModifierButtons(EventRecord *theEvent);
 void recordMouseDown(EventRecord *theEvent);
-int recordMouseEvent(EventRecord *theEvent, int theButtonState);
 int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType);
 int recordKeyboardEvent(EventRecord *theEvent, int keyType);
 void recordWindowEvent(int windowType,int left, int top, int right, int bottom);

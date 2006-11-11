@@ -13,10 +13,22 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdio.h>
+#include <pthread.h>
+
 #include "sqMacNSPluginUILogic2.h"
 #include "sqMacHostWindow.h"
 #include "sq.h"
 #include "sqaio.h"
+#include "sqVirtualMachine.h"
+#include "sqUnixCharConv.h"
+
+static void browserReceiveData();
+static void browserSend(const void *buf, size_t count);
+static void browserReceive(void *buf, size_t count);
+static void browserReceiveData(void);
+static void npHandler(int fd, void *data, int flags);
+static void handle_CMD_SHARED_MEMORY(void);
+static void handle_CMD_EVENT(void);void browserSendInt(int value);
 
 #if (EXTERNALPRIMSDEBUG)
 # define dprintf(ARGS) fprintf ARGS
@@ -102,7 +114,7 @@ Boolean browserActiveAndDrawingContextOk() {
 	return gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef;
 }
 
-int setupPipes() { 
+void setupPipes() { 
 	dprintf((stderr,"VM: setupPipes()\n"));
 	aioEnable(gSqueakBrowserPipes[SQUEAK_READ], 0, AIO_EXT); 
 	aioHandle(gSqueakBrowserPipes[SQUEAK_READ], npHandler, AIO_RX);
@@ -426,7 +438,7 @@ static int MacRomanToUnicode[256] =
  732,175,728,729,730,184,733,731,711};
 
 
-int recordMouseEvent(EventRecord *theEvent)  {
+void recordMouseEvent(EventRecord *theEvent)  {
 	UInt32  carbonModifiers;
 	EventRef tmpEvent;
 	EventMouseButton mouseButton=0;
@@ -469,6 +481,7 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	int asciiChar, modifierBits;
 	sqKeyboardEvent *evt, *extra;
 	extern pthread_mutex_t gEventQueueLock;
+	extern sqInputEvent *nextEventPut(void);
 
 	pthread_mutex_lock(&gEventQueueLock);
 	evt = (sqKeyboardEvent*) nextEventPut();

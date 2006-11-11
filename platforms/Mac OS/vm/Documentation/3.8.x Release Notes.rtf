@@ -16,11 +16,42 @@ Sept 22th, 2006 (3.8.12b7)\
 Sept 25th, 2006 (3.8.13b1)\
 Oct 13th, 2006 (3.8.13b3\
 Oct 16th 2006 (3.8.13b4)\
-\
+Nov 10th, 2006 (3.8.14b2)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.14b2 Fixes for browser support\
+		\
+3.8.14b1	New browser support on os-x mac/macintel for safari and firefox. \
+		This logic now follows the example set by the unix plugin, where we \
+		run the VM headless and talk to the browser plugin stub via a two-way pipe to \
+		enable fetching data via a URL, drawing the screen, and setting the cursor.\
+\
+		Thanks to Viewpoint Research for funding this effort. \
+		This VM had limited distribution. \
+\
+		sqMacOpenGL.c			- remove BROWSERPLUGIN\
+		sqMacUnixFileInterface.c 	- needed include for sqUnixCharConv.h\
+		sqMacHostWindow.c		- remove BROWSERPLUGIN\
+		sqMacMain.c				- remove BROWSERPLUGIN, add browser pipe logic, \
+								rearrange startup to handle startup with out window for browser support.\
+		sqMacMemory.c			- remove BROWSERPLUGIN\
+		sqMacTime.c				- remove BROWSERPLUGIN\
+		sqMacUIAppleEvents.c		- remove BROWSERPLUGIN\
+		sqMacUIEventsUniversal.c	- remove BROWSERPLUGIN, expose some internals so new browser \
+								support code can call or access. \
+		sqMacUnixCommandLineInterface.c	- add headfull cmd for browser testing\
+		sqMacUnixExernalPrims.c	- remove BROWSERPLUGIN\
+		sqMacWIndowUnversial.c	- remove BROWSERPLUGIN, changes for browser support, \
+								assume window is hidden which is different from being headless. \
+		sqNamedPrims.h			- remove BROWSERPLUGIN\
+		sqPlatformSpecific.h		- remove BROWSERPLUGIN, add URL_FETCH\
+		npSqueak					- Directory, add plugin for browser into source tree\
+		sqMacNSPLuginUILogic2.c	- new file to replace sqmacNSPluginUILogic.c\
+		sqMacNSPLuginUILogic2.h	- new file to replace sqmacNSPluginUILogic2.c\
+\
+\
 3.8.13.b4  Headless support\
 		sqMacMain.c\
 			headless, set background to false if not headless. \

@@ -88,6 +88,9 @@
 #include "sqMacUnixCommandLineInterface.h"
 #include "sqMacUnixFileInterface.h"
 #include "sqaio.h"
+#include "sqMacNSPluginUILogic2.h"
+#include "sqUnixCharConv.h"
+
 #include <unistd.h>
 #include <pthread.h>
 #include <Processes.h>
@@ -373,7 +376,7 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.14b1 06-Nov-06 >F82CEF3E-AEAA-4733-AF54-E0A9BB939F62<";
+			return "Mac Carbon 3.8.14b2 10-Nov-06 >B00658FB-CBC3-46E5-93DA-C8C1BF68D55E<";
 			
 
  	if (id == 1201) return "255";

@@ -43,6 +43,7 @@
 #include "sqMacEncoding.h"
 #include "sqMacHostWindow.h"
 #include "sqMacTime.h"
+#include "sqMacNSPluginUILogic2.h"
 
 /*** Variables -- Imported from Virtual Machine ***/
 extern int getFullScreenFlag();    /* set from header when image file is loaded */
