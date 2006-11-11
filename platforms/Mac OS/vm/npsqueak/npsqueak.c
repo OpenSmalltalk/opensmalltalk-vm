@@ -74,6 +74,7 @@ static void DPRINT(char *format, ...) { }
 #define CMD_SHARED_MEMORY  5
 #define CMD_DRAW_CLIP	   6
 #define CMD_EVENT		   7
+#define CMD_SET_CURSOR	   8
 
 #define MAX_STREAMS 128
 
@@ -136,6 +137,22 @@ static char* NPN_StrDup(const char* s)
   return strcpy(browser->memalloc(strlen(s) + 1), s);
 }
 
+/*
+ * NP_GetMIMEDescription
+ *	- Netscape needs to know about this symbol
+ *	- Netscape uses the return value to identify when an object instance
+ *	  of this plugin should be created.
+ */
+char * NPP_GetMIMEDescription(void);
+#pragma export on
+char *
+NP_GetMIMEDescription(void);
+#pragma export off
+char *
+NP_GetMIMEDescription(void)
+{
+	return NPP_GetMIMEDescription();
+}
 
 /***********************************************************************
  * Plugin registration
@@ -255,8 +272,10 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
       strcat(user_img_dir, "/.npsqueak/");
       
 	{
-	char* bin_dir_v[PATH_MAX]= {user_bin_dir,"/Users/johnmci/Documents/Squeak3.8.0/build/Development/Squeak VM Opt.app/Contents/MacOS/"};
-		if (findFileInPaths(plugin->vmName, "Squeak VM Opt", 2 , bin_dir_v) == 0){
+	char* bin_dir_v[PATH_MAX]= {user_bin_dir,
+			"/Users/johnmci/Documents/Squeak3.8.0/build/Development/Squeak VM Opt.app/Contents/MacOS/",
+			"/Applications/SqueakLand/Squeak/Internet/Squeak VM Opt.app/Contents/MacOS/"};
+		if (findFileInPaths(plugin->vmName, "Squeak VM Opt", 3 , bin_dir_v) == 0){
 		  fprintf(stderr, "Squeak Plugin: VM not found!\n");
 		  return NPERR_GENERIC_ERROR;
 		} else {
@@ -345,8 +364,9 @@ NPP_Destroy(NPP instance, NPSavedData** save)
 
 	shmdt(plugin->sharedMemoryBlock);
 	shmctl(plugin->sharedMemID,IPC_STAT,&SharedMemDS);
-	if(SharedMemDS.shm_nattch==0)	//if nobody is attached anymore
-		shmctl(plugin->sharedMemID,IPC_RMID,NULL);             //remove the segment so the key  and memory can be reused
+	shmctl(plugin->sharedMemID,IPC_RMID,NULL);             //remove the segment so the key  and memory can be reused
+	DPRINT("NP: destroy memory ID %i at %i \n", plugin->sharedMemID,plugin->sharedMemoryBlock);
+
     browser->memfree(plugin);
   }
   instance->pdata= NULL;
@@ -425,33 +445,51 @@ void
 NPP_StreamAsFile(NPP instance, NPStream *stream, const char* fname)
 {
   int id= stream->notifyData ? ((SqueakStream*) stream->notifyData)->id : -1;
+        CFStringRef 	filePath;
+        CFURLRef 	    sillyThing;
+		char			pathName[4096],lname[4096];
   SqueakPlugin *plugin= (SqueakPlugin*) instance->pdata;
+
   DPRINT("NP: StreamAsFile(%s, id=%i)\n", stream->url, id);
   DPRINT("NP:   fname=%s\n", fname ? fname : "<NULL>");
+
+  pathName[0] = 0x00;
   if (!plugin || !fname) return;
+
+	filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(const UInt8 *)fname,strlen(fname),kCFStringEncodingMacRoman,false);
+	sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
+	CFRelease(filePath);
+	filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLPOSIXPathStyle);
+	CFRelease(sillyThing);
+	CFStringGetCString (filePath, pathName,4096, kCFStringEncodingUTF8);
+	CFRelease(filePath);
   
+  /* need to copy file because it might be deleted after return */
+  strncpy(lname, pathName, PATH_MAX);
+  strcat(lname, "$");
+  DPRINT("NP:  lname=%s\n", lname);
+  if (-1 == link(pathName, lname))
+    DPRINT("NP:   Link failed: %s\n", strerror(errno));
+  strcpy(pathName, lname);
+	
   if (!stream->notifyData && !plugin->srcFilename) {
     /* We did not request this stream, so it is our SRC file. */
-    plugin->srcFilename= NPN_StrDup(fname);
+		
+    plugin->srcFilename= NPN_StrDup(pathName);
     DPRINT("NP:   got srcFilename=%s\n", plugin->srcFilename);
     if (plugin->srcId >= 0) {
       /* plugin wanted it already */
       DeliverFile(plugin, plugin->srcId, plugin->srcFilename);
       plugin->srcId= -1;
-		{
-			  struct timespec rqtp= { 0, 1000 };
-			  struct timespec rmtp;
-			  nanosleep(&rqtp, &rmtp);
-		}
     }
     return;
   }
 
-  DeliverFile(plugin, id, fname);
+  DeliverFile(plugin, id, pathName);
 
   /* signal URLNotify that we're done */
   ((SqueakStream*) stream->notifyData)->id= -1;
-  ((SqueakStream*) stream->notifyData)->fname= NPN_StrDup(fname);
+  ((SqueakStream*) stream->notifyData)->fname= NPN_StrDup(pathName);
 }
 
 void
@@ -741,21 +779,23 @@ void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
 	rowBytes = (((((width * 32) + 31) / 32) * 4) & 0x1FFF);
 	totalBytes = height*rowBytes;
 					
-	if (plugin->sharedMemID)
+	if (plugin->sharedMemID) {
+		struct shmid_ds	SharedMemDS;
 		shmdt(plugin->sharedMemoryBlock);
-	if (totalBytes > 5000000)
-		Debugger();
-	plugin->sharedMemID=shmget(47382,totalBytes,IPC_CREAT | 0666);
+		shmctl(plugin->sharedMemID,IPC_STAT,&SharedMemDS);
+		DPRINT("NP: setWindowLogic delete memory ID %i at %i \n", plugin->sharedMemID,plugin->sharedMemoryBlock);
+	}
+	plugin->sharedMemID=shmget(47382+plugin->pid,totalBytes,IPC_CREAT | 0666); 
 	
 	plugin->sharedMemoryBlock=shmat(plugin->sharedMemID,0,0666);
-	if (plugin->sharedMemoryBlock == -1) {
+	if (plugin->sharedMemoryBlock == (void*) -1) {
 		DPRINT("NP: setWindowLogic shmat failed\n");
 			return;
 	}
 	
 	plugin->width = width;
 	plugin->height = height;
-	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i at id %i)\n", width, height, rowBytes,plugin->sharedMemID);
+	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i memory at id %i at %i)\n", width, height, rowBytes,plugin->sharedMemID,plugin->sharedMemoryBlock);
 	SendInt(plugin,CMD_SHARED_MEMORY);
 	SendInt(plugin,plugin->sharedMemID);
 	SendInt(plugin,width);
@@ -767,16 +807,21 @@ void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
 	if (plugin->sharedBrowserBitMapContextRef)
 		CFRelease(plugin->sharedBrowserBitMapContextRef);
 	plugin->sharedBrowserBitMapContextRef = NULL;
-	if (width > 2000 || height > 2000 || rowBytes > 5000) 
-		Debugger();
 	plugin->sharedBrowserBitMapContextRef = CGBitmapContextCreate (plugin->sharedMemoryBlock,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
 	CreateCGContextForPort(plugin->display->port,&plugin->context); 
-	  //  Adjust for any SetOrigin calls on qdPort
+	
+	//  Adjust for any SetOrigin calls on qdPort
     SyncCGContextOriginWithPort( plugin->context, plugin->display->port );
 
     //  Move the CG origin to the upper left of the port
     GetPortBounds( plugin->display->port, &plugin->portRect );
+
     CGContextTranslateCTM( plugin->context, 0, (float)(plugin->portRect.bottom - plugin->portRect.top) );
+	{	
+		CGRect	clip2;
+		clip2 = CGRectMake(plugin->portRect.left,plugin->portRect.top,plugin->portRect.right-plugin->portRect.left, plugin->portRect.bottom-plugin->portRect.top);
+		CGContextClipToRect(plugin->sharedBrowserBitMapContextRef, clip2);
+	}
 
     DPRINT("NP: NewContext %i\n",  plugin->sharedBrowserBitMapContextRef);
     	
@@ -801,8 +846,10 @@ browserProcessCommand(SqueakPlugin *plugin)
 		  Receive(plugin, &sharedMemID, 4);
 		  shmctl(sharedMemID,IPC_STAT,&SharedMemDS);
 		  DPRINT("NP: CMD_SHARED_MEMORY drop existing with id %i \n",sharedMemID);
-		  if (SharedMemDS.shm_nattch==0)
-			shmctl(plugin->sharedMemID,IPC_RMID,NULL);            
+		  if (SharedMemDS.shm_nattch==0) {
+			shmctl(plugin->sharedMemID,IPC_RMID,NULL);  
+			DPRINT("NP: CMD_SHARED_MEMORY destroy memory id %i \n",sharedMemID);
+		}
 	  }
       break;
   case CMD_DRAW_CLIP:
@@ -818,8 +865,6 @@ browserProcessCommand(SqueakPlugin *plugin)
 
 			//DPRINT("NP: CMD_DRAW_CLIP(tlbr %i %i %i %i)\n", top, left, bottom, right);
   
-			imageclip = CGRectMake(0,0, plugin->width, plugin->height);
-			targetclip = CGRectMake(0,0-plugin->height, plugin->width, plugin->height);
 			imageclip = CGRectMake(left,top, right-left, bottom-top);
 			targetclip = CGRectMake(left,(0-plugin->height)+(plugin->height-bottom), right-left, bottom-top);
 
@@ -842,6 +887,13 @@ browserProcessCommand(SqueakPlugin *plugin)
   case CMD_POST_URL: 
     PostUrl(plugin);
     break;
+  case CMD_SET_CURSOR:
+	{
+		Cursor macCursor;
+		Receive(plugin, &macCursor, sizeof(Cursor));
+		SetCursor(&macCursor);
+	}
+	break;
   default:
     fprintf(stderr, "Unknown command from Squeak: %i\n", cmd);
   }

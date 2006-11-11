@@ -31,7 +31,7 @@ int serialPortIsOpen(int portNum);
 int serialPortNames(int portNum, char *portName, char *inName, char *outName);
 Boolean IsKeyDown(void);
 int primitivePluginBrowserReady(void);
-#if ENABLE_URL_FETCH
+#ifdef ENABLE_URL_FETCH
 int primitivePluginDestroyRequest(void);
 int primitivePluginRequestFileHandle(void);
 int primitivePluginRequestState(void);
@@ -61,7 +61,7 @@ void *os_exports[][3] = {
    We should make these primitives a proper plugin
    but right now we just need the exports. */
 XFN(primitivePluginBrowserReady)
-#if ENABLE_URL_FETCH
+#ifdef ENABLE_URL_FETCH
 XFN(primitivePluginRequestURLStream)
 XFN(primitivePluginRequestURL)
 XFN(primitivePluginPostURL)

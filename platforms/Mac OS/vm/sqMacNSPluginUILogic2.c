@@ -39,6 +39,7 @@ extern int	gSqueakBrowserPipes[];
 #define CMD_SHARED_MEMORY  5
 #define CMD_DRAW_CLIP	   6
 #define CMD_EVENT		   7
+#define CMD_SET_CURSOR	   8
 
 typedef struct sqStreamRequest {
   char *localName;
@@ -97,6 +98,9 @@ int plugInTimeToReturn(void) {
     return false;
 }
 
+Boolean browserActiveAndDrawingContextOk() {
+	return gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef;
+}
 
 int setupPipes() { 
 	dprintf((stderr,"VM: setupPipes()\n"));
@@ -158,7 +162,7 @@ static void handle_CMD_SHARED_MEMORY() {
 		CFRelease(SharedBrowserBitMapContextRef);
 		SharedBrowserBitMapContextRef = NULL;
 		shmdt(SharedMemoryBlock);
-		dprintf((stderr,"VM: drop shred memoryBlock %i with ID %i \n", SharedMemoryBlock,SharedMemID));
+		dprintf((stderr,"VM: drop  memoryBlock id %i at %i \n", SharedMemID, SharedMemoryBlock));
 		browserSendInt(CMD_SHARED_MEMORY);
 		browserSendInt(SharedMemID);
 	}
@@ -167,12 +171,12 @@ static void handle_CMD_SHARED_MEMORY() {
 	browserReceive(&width, 4);
 	browserReceive(&height, 4);
 	browserReceive(&rowBytes, 4);
-	SharedMemoryBlock=shmat(SharedMemID,(void*) 0,0666);
-	if (SharedMemoryBlock == -1)	{
+	SharedMemoryBlock=(void*)shmat(SharedMemID,(void*) 0,0666);
+	if (SharedMemoryBlock == (void*)-1)	{
 		dprintf((stderr,"VM: handle_CMD_SHARED_MEMORY failed shmat \n"));
 		return;
 	}
-	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i with %i)\n", width, height, rowBytes,SharedMemoryBlock,SharedMemID));
+	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i at %i)\n", width, height, rowBytes,SharedMemID,SharedMemoryBlock));
 	  {
 			// Get the Systems Profile for the main display
 		CMProfileRef sysprof = NULL;
@@ -197,7 +201,6 @@ static void handle_CMD_SHARED_MEMORY() {
 static void handle_CMD_EVENT() {
 	EventRecord	theEvent;
 	EventRecord *eventPtr = &theEvent;
-	extern pthread_mutex_t gEventQueueLock;
 	extern int gButtonIsDown;
 	
 #define getFocusEvent	    (osEvt + 16)
@@ -232,8 +235,8 @@ static void handle_CMD_EVENT() {
 				break;
 
 	    		case updateEvt:
-					//if (gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef)
-					//	fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
+					if (browserActiveAndDrawingContextOk())
+						fullDisplayUpdate();  /* ask VM to call ioShowDisplay */
 	    		break;
 	    		case getFocusEvent:
 	    		break;
@@ -265,8 +268,8 @@ static void browserReceiveData(void)
 {
   char *localName= NULL;
   int id, ok;
-  char  hfsName[4096];
   char  unixName[4096];
+  char pathToGiveToSqueak[2048];
   
   browserReceive(&id, 4);
   browserReceive(&ok, 4);
@@ -277,13 +280,13 @@ static void browserReceiveData(void)
     int length= 0;
     browserReceive(&length, 4);
     if (length) {
-      browserReceive(hfsName, length);
-      hfsName[length]= 0;
-      dprintf((stderr,"VM:   got filename %s\n", hfsName));
-	  sqFilenameFromStringOpen(unixName,(long) hfsName, length);
-	  localName = malloc(strlen(unixName)+1);
-	  strcpy(localName,unixName);
-      dprintf((stderr,"VM:   becomes unix filename %s\n", localName));
+      browserReceive(unixName, length);
+      unixName[length]= 0;
+      dprintf((stderr,"VM:   got filename %s\n", unixName));
+	  ux2sqPath(unixName,length, pathToGiveToSqueak, 2048,0);	
+      localName = malloc(strlen(pathToGiveToSqueak)+1);
+	  strcpy(localName,pathToGiveToSqueak);
+      dprintf((stderr,"VM:   becomes squeak filename %s\n", localName));
     }
   }
   if (id >= 0 && id < MAX_REQUESTS) {
@@ -357,6 +360,11 @@ static void browserPostURLRequest(int id, char* url, int urlSize,
     browserSend(postData, postDataSize);
 }
 
+void browserSetCursor(Cursor *macCursor) {
+	browserSendInt(CMD_SET_CURSOR);
+    browserSend(macCursor, sizeof(Cursor));
+
+}
 
 /* helper functions */
 
@@ -372,7 +380,7 @@ static void browserReceive(void *buf, size_t count)
 
   if (n == -1)
     perror("Squeak read failed:");
-  if (n < count)
+  if (n < (ssize_t) count)
     dprintf((stderr, "Squeak read too few data from pipe\n"));
 }
 
@@ -389,7 +397,7 @@ static void browserSend(const void *buf, size_t count)
 
   if (n == -1)
     perror("Squeak plugin write failed:");
-  if (n < count)
+  if (n < (ssize_t) count)
     dprintf((stderr, "Squeak wrote too few data to pipe\n"));
 }
 
@@ -427,8 +435,11 @@ int recordMouseEvent(EventRecord *theEvent)  {
 	mouseButton = MouseModifierStateFromBrowser(theEvent);
 	carbonModifiers = theEvent->modifiers;
 	QDLocalToGlobalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&theEvent->where);
-	if (!(theEvent->what == 5))
+	//if (!(theEvent->what == 5))
 		dprintf((stderr,"VM: recordMouseEvent() carbonModifers %i mouseButton %i \n",carbonModifiers,mouseButton));
+	if (theEvent->what == kEventMouseMoved && mouseButton) 
+		theEvent->what = kEventMouseDragged;
+		
 	MacCreateEvent(kCFAllocatorDefault, kEventClassMouse, theEvent->what, 0, kEventAttributeUserEvent, &tmpEvent);
 	SetEventParameter(tmpEvent,kEventParamMouseLocation,typeQDPoint,sizeof(Point),&theEvent->where);
 	SetEventParameter(tmpEvent,kEventParamKeyModifiers,typeUInt32,sizeof(UInt32),&carbonModifiers);
@@ -464,7 +475,7 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 
 	/* keystate: low byte is the ascii character; next 4 bits are modifier bits */
 	asciiChar = theEvent->message & charCodeMask;
-	modifierBits = MouseModifierState(theEvent); //Capture mouse/option states
+	modifierBits = MouseModifierStateFromBrowser(theEvent); //Capture mouse/option states
 	if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
 		if ((asciiChar >= 97) && (asciiChar <= 122)) {
 			/* convert ascii code of command-shift-letter to upper case */
@@ -557,6 +568,8 @@ int primitivePluginRequestURL()
   int id, semaIndex;
 
   if (!gSqueakBrowserSubProcess) return primitiveFail();
+  dprintf((stderr,"VM: primitivePluginRequestURL()\n"));
+
   for (id=0; id<MAX_REQUESTS; id++) {
     if (!requests[id]) break;
   }
@@ -586,14 +599,76 @@ int primitivePluginRequestURL()
   return 1;
 }
 
+static int isFileURL(int urlOop) {
+  int urlLen;
+  char *urlPtr;
+  urlLen = byteSizeOf(urlOop);
+  urlPtr = firstIndexableField(urlOop);
+  while(*urlPtr == ' ' && urlLen) {
+    urlPtr++;
+    urlLen--;
+  }
+  if(urlLen < 5) return 0;
+  return strncmp("file:", urlPtr, 5) == 0;
+}
 
 /*
   primitivePluginPostURL
 */
-int primitivePluginPostURL()
+/*
+  primitivePluginPostURL: url target: target data: data semaIndex: semaIndex
+  Post data to a URL.
+*/
+EXPORT(int) primitivePluginPostURL(void)
 {
-  fprintf(stderr, "primitivePluginPostURL() not yet implemented\n");
-  return primitiveFail(); 
+  sqStreamRequest *req;
+  int url, urlLength;
+  int target, targetLength;
+  int data, dataLength;
+  int id, semaIndex;
+
+  if (!gSqueakBrowserSubProcess) return primitiveFail();
+  if(methodArgumentCount() != 4) return primitiveFail();
+  for(id=0; id<MAX_REQUESTS;id++) {
+    if(!requests[id]) break;
+  }
+
+  if(id >= MAX_REQUESTS) return primitiveFail();
+
+  semaIndex = stackIntegerValue(0);
+  data = stackObjectValue(1);
+  target = stackObjectValue(2);
+  url = stackObjectValue(3);
+
+  if(failed()) return 0;
+  if(!isBytes(url) || !isBytes(data)) return primitiveFail();
+  if(isFileURL(url)) return primitiveFail();
+
+  if(target == nilObject()) {
+    target = 0;
+    targetLength = 0;
+  } else {
+    if(!isBytes(target)) return primitiveFail();
+    targetLength = byteSizeOf(target);
+  }
+
+  urlLength = byteSizeOf(url);
+  dataLength = byteSizeOf(data);
+
+  req = calloc(1, sizeof(sqStreamRequest));
+  if(!req) return primitiveFail();
+  req->localName = NULL;
+  req->semaIndex = semaIndex;
+  req->state = -1;
+  requests[id] = req;
+
+  browserPostURLRequest(id, 
+		firstIndexableField(url), urlLength, 
+		target ? (firstIndexableField(target)) : NULL, targetLength,
+		firstIndexableField(data), dataLength); 
+  pop(4);
+  push(positive32BitIntegerFor(id));
+  return 1;
 }
 
 /* 
@@ -609,6 +684,7 @@ int primitivePluginRequestFileHandle()
   int id, fileOop;
   void *openFn;
 
+  dprintf((stderr,"VM: primitivePluginRequestFileHandle()\n"));
   id= stackIntegerValue(0);
   if (failed()) return 0;
   if (id < 0 || id >= MAX_REQUESTS) return primitiveFail();
@@ -661,6 +737,7 @@ sqInt primitivePluginDestroyRequest()
   sqStreamRequest *req;
   int id;
 
+  dprintf((stderr,"VM: primitivePluginDestroyRequest()\n"));
   id= stackIntegerValue(0);
   if (id < 0 || id >= MAX_REQUESTS) return primitiveFail();
   req= requests[id];
@@ -685,6 +762,7 @@ sqInt primitivePluginRequestState()
   sqStreamRequest *req;
   int id;
 
+  dprintf((stderr,"VM: primitivePluginRequestState()\n"));
   id= stackIntegerValue(0);
   if (id < 0 || id >= MAX_REQUESTS) return primitiveFail();
   req= requests[id];

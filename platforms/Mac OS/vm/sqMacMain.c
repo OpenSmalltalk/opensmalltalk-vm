@@ -193,9 +193,9 @@ int main(int argc, char **argv, char **envp) {
 	if (!gSqueakHeadless) {
 		extern OSErr SetFrontProcess(const ProcessSerialNumber * PSN);
  		ProcessSerialNumber psn = { 0, kCurrentProcess };
-		//OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
+		OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
 		InitCursor();	
-		//SetFrontProcess(&psn);
+		SetFrontProcess(&psn);
 	}
 	
 	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
@@ -253,6 +253,8 @@ int main(int argc, char **argv, char **envp) {
         
 	if (!gSqueakHeadless) {
 		SetUpMenus();
+	}
+	if (!gSqueakHeadless || (gSqueakHeadless && gSqueakBrowserSubProcess)) {
 		SetUpPixmap();
 	}
 		
@@ -269,7 +271,8 @@ int main(int argc, char **argv, char **envp) {
 int ioExit(void) {
     UnloadScrap();
     ioShutdownAllModules();
-	if (!gSqueakHeadless) MenuBarRestore();
+	if (!gSqueakHeadless) 
+		MenuBarRestore();
 	sqMacMemoryFree();
     ExitToShell();
 	return 0;
@@ -370,7 +373,7 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.13b4 16-Oct-06 >37C763C2-14E3-4547-AD9D-46FD12B50673<";
+			return "Mac Carbon 3.8.14b1 06-Nov-06 >F82CEF3E-AEAA-4733-AF54-E0A9BB939F62<";
 			
 
  	if (id == 1201) return "255";

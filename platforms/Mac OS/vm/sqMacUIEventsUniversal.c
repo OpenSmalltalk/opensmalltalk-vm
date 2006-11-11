@@ -87,6 +87,7 @@ extern int setInterruptCheckCounter(int value);
 extern int getFullScreenFlag();
 extern struct VirtualMachine* interpreterProxy;
 extern Boolean gSqueakHeadless;
+extern Boolean			gSqueakBrowserSubProcess;
 
 static KeyMapping keyMap[KeyMapSize];
 static int keyMapSize=	   0;

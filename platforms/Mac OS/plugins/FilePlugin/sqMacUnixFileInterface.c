@@ -10,6 +10,7 @@
 #include <Carbon/Carbon.h>
 #include "sqMacUnixFileInterface.h"
 #include "sqMacUIConstants.h"
+#include "sqUnixCharConv.h"
 
 	extern CFStringEncoding gCurrentVMEncoding;
 

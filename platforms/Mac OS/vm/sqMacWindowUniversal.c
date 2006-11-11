@@ -61,7 +61,7 @@ PixMapHandle	stPixMap = nil;
 static void SetColorEntry(int index, int red, int green, int blue);
 
 WindowPtr getSTWindow(void) {
-	if (gSqueakHeadless) return NULL;	
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return NULL;	
     return  windowHandleFromIndex(1);
 }
 
@@ -71,7 +71,7 @@ static int ioSetFullScreenActual(int fullScreen);
 int ioSetFullScreen(int fullScreen) {
         void *  giLocker;
 		int return_value=0;
-		if (gSqueakHeadless) return 0;	
+		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;	
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
@@ -285,7 +285,7 @@ int ioShowDisplay(
 	int dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
 	
-	if (gSqueakHeadless) return 1;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 1;
 	ioShowDisplayOnWindow( (unsigned int*)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 	return 1;
 }
@@ -313,7 +313,6 @@ int ioShowDisplayOnWindow(
 
 	static CGColorSpaceRef colorspace = NULL;
 	extern CGContextRef SharedBrowserBitMapContextRef;
-	extern Boolean gSqueakBrowserSubProcess;
 	void browserSendInt(int);
 	
 	int 		pitch;
@@ -322,7 +321,7 @@ int ioShowDisplayOnWindow(
 	windowDescriptorBlock *targetWindowBlock = windowBlockFromIndex(windowIndex);	
 	CGDataProviderRef provider;
 	
-	if (gSqueakHeadless) return 1;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 1;
 
 	if (colorspace == NULL) {
 			// Get the Systems Profile for the main display
@@ -409,7 +408,7 @@ int ioShowDisplayOnWindow(
 		
 	/* Draw the image to the Core Graphics context */
 	CGContextDrawImage(targetWindowBlock->context, clip, image);
-	if (gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef) {
+	if (browserActiveAndDrawingContextOk()) {
 		CGContextDrawImage(SharedBrowserBitMapContextRef, clip, image);
 		browserSendInt(6);
 		browserSendInt(affectedL);
@@ -593,7 +592,7 @@ static void SetColorEntry(int index, int red, int green, int blue) {
 }
 
 void FreePixmap(void) {
-	if (gSqueakHeadless) return;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return;
 	if (stPixMap != nil) {
 		DisposePixMap(stPixMap);
 		stPixMap = nil;
@@ -662,7 +661,7 @@ WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 window
 }
 
 void SetWindowTitle(int windowIndex,char *title) {
-	if (gSqueakHeadless) return;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return;
 	CFStringRef tempTitle = CFStringCreateWithCString(NULL, title, kCFStringEncodingMacRoman);
 	if (windowHandleFromIndex(windowIndex))
 		SetWindowTitleWithCFString(windowHandleFromIndex(windowIndex), tempTitle);
@@ -692,7 +691,7 @@ int ioHasDisplayDepth(int depth) {
 int ioScreenDepth(void) {
     GDHandle mainDevice;
     
-	if (gSqueakHeadless) return 1;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 32;
 	mainDevice = getThatDominateGDevice(getSTWindow());
     if (mainDevice == null) 
         return 8;
@@ -704,7 +703,7 @@ int ioScreenSize(void) {
 	int w, h;
     Rect portRect;
     
-	if (gSqueakHeadless) return ((16 << 16) | 16);
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return ((16 << 16) | 16);
 	
 	w  = (unsigned) getSavedWindowSize() >> 16;
 	h= getSavedWindowSize() & 0xFFFF;
@@ -740,7 +739,7 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	Cursor macCursor;
 	int i;
 	
-	if (gSqueakHeadless) return 0;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 	
 	if (cursorMaskIndex == nil) {
 		for (i = 0; i < 16; i++) {
@@ -757,6 +756,8 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	/* Squeak hotspot offsets are negative; Mac's are positive */
 	macCursor.hotSpot.h = -offsetX;
 	macCursor.hotSpot.v = -offsetY;
+	if (browserActiveAndDrawingContextOk())
+		browserSetCursor(&macCursor);
 	SetCursor(&macCursor);
 	return 0;
 }
@@ -837,7 +838,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	DMListType		theDisplayModeList;			
 	VideoRequestRec	request;
 	
-	if (gSqueakHeadless) return 0;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 	
 	Gestalt(gestaltDisplayMgrAttr,&value);
 	displayMgrPresent=value&(1<<gestaltDisplayMgrPresent);
@@ -1114,7 +1115,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	CGDisplayErr err;
 	boolean_t exactMatch;
 	
-		if (gSqueakHeadless) return 0;
+		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
        if (dominantGDevice == null) {
