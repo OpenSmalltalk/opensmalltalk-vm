@@ -265,8 +265,12 @@ int main(int argc, char **argv, char **envp) {
 
     aioInit();
     pthread_mutex_init(&gEventQueueLock, NULL);
-	if (gSqueakBrowserSubProcess) 
+	if (gSqueakBrowserSubProcess) {
+		extern CGContextRef SharedBrowserBitMapContextRef;
 		setupPipes();
+		while (SharedBrowserBitMapContextRef == NULL)
+			aioSleep(100*1000);
+	}
 	RunApplicationEventLoopWithSqueak();
     return 0;
 }
@@ -321,7 +325,7 @@ char * GetAttributeString(int id) {
 	// id #0 should return the full name of VM
 	if (id == 0) {
 		static char pathToGiveToSqueak[2048];
-			ux2sqPath(argVec[0], strlen(argVec[0]), pathToGiveToSqueak, VMPATH_SIZE,0);	
+			ux2sqPath(argVec[0], strlen(argVec[0]), pathToGiveToSqueak, VMPATH_SIZE,1);	
             return pathToGiveToSqueak;
         }
 	/* Note: 1.3x images will try to read the image as a document because they
