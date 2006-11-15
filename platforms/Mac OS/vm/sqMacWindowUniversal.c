@@ -716,7 +716,7 @@ int ioScreenSize(void) {
     Rect portRect;
     
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return ((16 << 16) | 16);
-	if (browserActiveAndDrawingContextOk)
+	if (browserActiveAndDrawingContextOk())
 		return browserGetWindowSize();
 	
 	w  = (unsigned) getSavedWindowSize() >> 16;
