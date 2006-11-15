@@ -31,11 +31,12 @@
 #include <fcntl.h>
 #include <errno.h>
 #include <sys/stat.h>
-#include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/mman.h>
 #include "sqaio.h"
 
 
-#define DEBUG 
+//#define DEBUG 
 
 #if defined (DEBUG)
 static void DPRINT(char *format, ...)
@@ -67,7 +68,6 @@ static void DPRINT(char *format, ...) { }
  * Plugin instance data
  ***********************************************************************/
 
-#define CMD_BROWSER_WINDOW 1
 #define CMD_GET_URL        2
 #define CMD_POST_URL       3
 #define CMD_RECEIVE_DATA   4
@@ -82,31 +82,34 @@ static void DPRINT(char *format, ...) { }
 #define PLUGIN_WRITE 1
 #define PLUGIN_READ  2
 #define SQUEAK_WRITE 3
+
 extern NPNetscapeFuncs* browser;
 
 /* plugin state */
 typedef struct SqueakPlugin {
-  NPP instance;                    /* plugin instance */
-  pid_t pid;                       /* the child process pid */
+  NPP		instance;                    /* plugin instance */
+  pid_t		pid;                       /* the child process pid */
   NP_Port	*display;
   void		*sharedMemoryBlock;                 /* the Squeak window */
-  int		sharedMemID;
+  int		sharedMemoryfd;
+  char		sharedMemoryName[256];
   CGContextRef sharedBrowserBitMapContextRef;
   CGContextRef context;
   int		width;
   int		height;
   NPRect    clipRect;    /* Clipping rectangle in port coordinates */
   Rect		portRect;
-  Boolean embedded;                   /* false if we have the whole window */
-  char **argv;                     /* the commandline for Squeak vm */
-  int  argc;
-  char vmName[PATH_MAX];
-  char imageName[PATH_MAX];
-  int pipes[4];                    /* 4 ends of 2 pipes */
-  char* srcUrl;                    /* set by browser in first NewStream */
-  char* srcFilename;
-  int   srcId;                     /* if requested */
-  char *failureUrl;
+  Boolean	embedded;                   /* false if we have the whole window */
+  Boolean	buttonIsDown;
+  char		**argv;                     /* the commandline for Squeak vm */
+  int		argc;
+  char		vmName[PATH_MAX];
+  char		imageName[PATH_MAX];
+  int		pipes[4];                    /* 4 ends of 2 pipes */
+  char*		srcUrl;                    /* set by browser in first NewStream */
+  char*		srcFilename;
+  int		srcId;                     /* if requested */
+  char*		failureUrl;
 } SqueakPlugin;
 
 /* URL notify data */
@@ -117,6 +120,8 @@ typedef struct SqueakStream {
 } SqueakStream;
 
 static struct timeval	 startUpTime;
+static int sharedMemIDIncremental=0;
+static int gWindowMaxLength;
 
 /***********************************************************************
  * Prototypes
@@ -129,51 +134,22 @@ static void Run(SqueakPlugin*);
 static void GetUrl(SqueakPlugin*);
 static void PostUrl(SqueakPlugin*);
 static void browserProcessCommand(SqueakPlugin *plugin);
-void setWindowLogic(SqueakPlugin *plugin, int width, int height);
+static void setWindowLogic(SqueakPlugin *plugin, int width, int height);
+static void	getCStringForInfoString(char *cString,char *infoString,int maxLength, CFStringBuiltInEncodings encoding);
+static CFTypeRef getRefForInfoString(char *infoString);
+static int	getNumberForInfoString(char *infoString);
 
 
 static char* NPN_StrDup(const char* s)
 {
   return strcpy(browser->memalloc(strlen(s) + 1), s);
 }
-
-/*
- * NP_GetMIMEDescription
- *	- Netscape needs to know about this symbol
- *	- Netscape uses the return value to identify when an object instance
- *	  of this plugin should be created.
- */
-char * NPP_GetMIMEDescription(void);
-#pragma export on
-char *
-NP_GetMIMEDescription(void);
-#pragma export off
-char *
-NP_GetMIMEDescription(void)
-{
-	return NPP_GetMIMEDescription();
-}
-
-/***********************************************************************
- * Plugin registration
- ***********************************************************************/
-
-char*
-NPP_GetMIMEDescription(void)
-{
-  return("application/x-squeak-source:sts:Squeak source"
-	 ";application/x-squeak-object:sqo:Squeak object"
-	 ";application/x-squeak-project:pr:Squeak project");
-}
-
-
 /***********************************************************************
  * search filename in list of dirs and write path into result 
  * returns 0 if filename not found  
  ***********************************************************************/ 
 
-static char*
-findFileInPaths(char* result, char *filename, int dirn, char *dirv[PATH_MAX]){
+static char* findFileInPaths(char* result, char *filename, int dirn, char *dirv[PATH_MAX]){
   int i;
   char path[PATH_MAX];
 
@@ -191,6 +167,42 @@ findFileInPaths(char* result, char *filename, int dirn, char *dirv[PATH_MAX]){
   return 0;
 }
 
+static CFTypeRef getRefForInfoString(char *infoString) {
+	static CFBundleRef  myBundle = NULL;
+	static CFDictionaryRef myDictionary = NULL;
+	static CFStringRef	bundleID = NULL;
+	CFStringRef	stringRef = NULL,infoStringKey;	
+	
+	if (bundleID == NULL) {
+		bundleID= CFStringCreateWithCString(NULL,"org.squeak.SqueakPlugin",kCFStringEncodingMacRoman);
+		myBundle = CFBundleGetBundleWithIdentifier(bundleID);
+		if (myBundle == NULL) 
+			return NULL;
+		myDictionary = CFBundleGetInfoDictionary(myBundle);
+	}
+	if (myDictionary == NULL) 
+		return NULL ;
+	infoStringKey = CFStringCreateWithCString(NULL,infoString,kCFStringEncodingMacRoman);
+	stringRef = CFDictionaryGetValue(myDictionary,infoStringKey);
+	CFRelease(infoStringKey);
+	return stringRef;
+}
+
+static void	getCStringForInfoString(char *cString,char *infoString,int maxLength, CFStringBuiltInEncodings encoding) {
+	CFStringRef	stringRef = getRefForInfoString(infoString);
+	
+	if (stringRef) 
+			CFStringGetCString (stringRef, cString, maxLength, encoding);
+}
+
+static int	getNumberForInfoString(char *infoString) {
+	CFNumberRef	numberRef = getRefForInfoString(infoString);
+	long number;
+    if (numberRef == NULL) 
+		return 0;
+	CFNumberGetValue(numberRef,kCFNumberLongType,(long *) &number);
+	return number;
+}
 
 /***********************************************************************
  * Plugin loading and termination
@@ -215,13 +227,18 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
     return NPERR_OUT_OF_MEMORY_ERROR;
 
   /* Default settings */
-  strcpy(imagename, "SqueakPlugin.image"); 
-
+  getCStringForInfoString(imagename,"SqueakImageName",PATH_MAX, kCFStringEncodingUTF8);
+  gWindowMaxLength = getNumberForInfoString("SqueakWindowMaxLength");
+  if (gWindowMaxLength == 0) 
+		gWindowMaxLength = 2048;
+		
   plugin->instance=    instance;
   plugin->pid=         0;
   plugin->sharedMemoryBlock=    0;
-  plugin->sharedMemID= 0;
+  plugin->sharedMemoryfd	= 0;
+  *plugin->sharedMemoryName = 0x00;
   plugin->sharedBrowserBitMapContextRef = 0;
+  plugin->buttonIsDown = false;
   plugin->context = 0;
   plugin->display=     NULL;
   plugin->embedded=    (mode == NP_EMBED);
@@ -230,7 +247,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   plugin->srcId=       -1;
   plugin->failureUrl=  0;
   plugin->argv[0]=     NPN_StrDup("squeakvm");
-  plugin->argv[1]=     NPN_StrDup("-headfull");
+  plugin->argv[1]=     NPN_StrDup("-headless");
   plugin->argv[2]=     NPN_StrDup("-browserPipes");
   plugin->argv[3]=     NULL;             /* inserted later */
   plugin->argv[4]=     NULL;             /* inserted later */
@@ -241,10 +258,9 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   if (plugin->embedded) {
     int i;
     for (i= 0; i < argc; i++) {
-      if (!strcasecmp(argn[i], "imagename"))
-	{
-	  strcpy(imagename, argv[i]);
-	}
+      if (!strcasecmp(argn[i], "imagename")) {
+		strcpy(imagename, argv[i]);
+	  }
       else if (!strcasecmp(argn[i], "failureurl"))
 			failureUrl= argv[i];
       plugin->argv[plugin->argc++]= NPN_StrDup(argn[i]);
@@ -255,37 +271,29 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
     if (!plugin->srcUrl)
       plugin->srcUrl= NPN_StrDup(""); /* we were embedded without a SRC */
 
-    
     /* find npsqueakrun and image */
-    {
-      char user_bin_dir[PATH_MAX];
-      char user_img_dir[PATH_MAX];
-      char* home= getenv("HOME");
-      if (home == 0) {
-		fprintf(stderr, "Squeak Plugin: No home directory?!\n");
-		return NPERR_GENERIC_ERROR;
-      }
-      strcpy(user_bin_dir, home);
-      strcat(user_bin_dir, "/.npsqueak/");
-      
-      strcpy(user_img_dir, home);
-      strcat(user_img_dir, "/.npsqueak/");
-      
+
 	{
-	char* bin_dir_v[PATH_MAX]= {user_bin_dir,
-			"/Users/johnmci/Documents/Squeak3.8.0/build/Development/Squeak VM Opt.app/Contents/MacOS/",
-			"/Applications/SqueakLand/Squeak/Internet/Squeak VM Opt.app/Contents/MacOS/"};
-		if (findFileInPaths(plugin->vmName, "Squeak VM Opt", 3 , bin_dir_v) == 0){
+		char squeakVMPath[PATH_MAX+1],squeakVMName[256];
+		getCStringForInfoString(squeakVMPath,"SqueakVMPath",PATH_MAX, kCFStringEncodingUTF8);
+		getCStringForInfoString(squeakVMName,"SqueakVMName",256, kCFStringEncodingUTF8);
+	
+		char* bin_dir_v[PATH_MAX]= {squeakVMPath,
+			"/Users/johnmci/Documents/Squeak3.8.0/build/DeploymentSymbols/Squeak VM Opt.app/Contents/MacOS/"};
+		if (findFileInPaths(plugin->vmName, squeakVMName, 2 , bin_dir_v) == 0){
 		  fprintf(stderr, "Squeak Plugin: VM not found!\n");
 		  return NPERR_GENERIC_ERROR;
 		} else {
 			plugin->argv[0]= NPN_StrDup(plugin->vmName); 
 		}
-      }
+	}
 
 	{
-		char* img_dir_v[PATH_MAX]= {user_img_dir,"/Applications/SqueakLand/Squeak/Internet/" };
-		if (findFileInPaths(plugin->imageName, imagename, 2, img_dir_v) == 0){
+		char imagePath[PATH_MAX+1];
+		getCStringForInfoString(imagePath,"SqueakImagePath",PATH_MAX, kCFStringEncodingUTF8);
+
+		char* img_dir_v[PATH_MAX]= {imagePath};
+		if (findFileInPaths(plugin->imageName, imagename, 1, img_dir_v) == 0){
 			  fprintf(stderr, "Squeak Plugin: Image file not found: %s\n", imagename);
 			  if (failureUrl){
 				fprintf(stderr, "Squeak Plugin: going to failure URL: %s\n", failureUrl);
@@ -295,8 +303,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 				return NPERR_GENERIC_ERROR;
 			  } 
 		}  
-      }
-    } 
+	}
 
 	plugin->argv[5]= NPN_StrDup(plugin->imageName); 
   } else {
@@ -322,7 +329,6 @@ NPError
 NPP_Destroy(NPP instance, NPSavedData** save)
 {
   SqueakPlugin *plugin;
-  struct shmid_ds	SharedMemDS;
   
   DPRINT("NP: NPP_Destroy\n");
   if (!instance)
@@ -337,8 +343,9 @@ NPP_Destroy(NPP instance, NPSavedData** save)
     }
     for (i= 0; i < 4; i++)
       if (plugin->pipes[i]) {
-	close(plugin->pipes[i]);
-	plugin->pipes[i]= 0;
+		aioDisable(plugin->pipes[i]);
+		close(plugin->pipes[i]);
+		plugin->pipes[i]= 0;
       }
     if (plugin->srcUrl) {
       browser->memfree(plugin->srcUrl);
@@ -362,16 +369,27 @@ NPP_Destroy(NPP instance, NPSavedData** save)
       plugin->argv= NULL;
     }
 
-	shmdt(plugin->sharedMemoryBlock);
-	shmctl(plugin->sharedMemID,IPC_STAT,&SharedMemDS);
-	shmctl(plugin->sharedMemID,IPC_RMID,NULL);             //remove the segment so the key  and memory can be reused
-	DPRINT("NP: destroy memory ID %i at %i \n", plugin->sharedMemID,plugin->sharedMemoryBlock);
-
+	if (plugin->sharedMemoryfd) {
+		int possibleError;
+		DPRINT("NP: destroy memory ID %i at %i \n", plugin->sharedMemoryfd,plugin->sharedMemoryBlock);
+		munmap(plugin->sharedMemoryBlock,gWindowMaxLength*gWindowMaxLength*4);
+		close(plugin->sharedMemoryfd);
+		possibleError = shm_unlink(plugin->sharedMemoryName);
+		plugin->sharedMemoryfd = 0;
+	}
+	
     browser->memfree(plugin);
   }
   instance->pdata= NULL;
   return NPERR_NO_ERROR;
 }
+
+
+void NP_Shutdown(void)
+{
+
+}
+ 
 
 /***********************************************************************
  * Plugin events we need to handle
@@ -398,10 +416,16 @@ NPP_SetWindow(NPP instance, NPWindow *pNPWindow)
     /* first time only */
     plugin->display= pNPWindow->window;
   }
+  if (pNPWindow->clipRect.top == 0 &&
+	pNPWindow->clipRect.left == 0 &&
+	pNPWindow->clipRect.bottom == 0 &&
+	pNPWindow->clipRect.right == 0)
+		return NPERR_NO_ERROR;
+	
   if (!plugin->pid)
     Run(plugin);
   plugin->clipRect = pNPWindow->clipRect;
-  SetWindow(plugin, pNPWindow->window, pNPWindow->width, pNPWindow->height);
+  SetWindow(plugin, pNPWindow, pNPWindow->width, pNPWindow->height);
   return NPERR_NO_ERROR;
 }
 
@@ -447,7 +471,7 @@ NPP_StreamAsFile(NPP instance, NPStream *stream, const char* fname)
   int id= stream->notifyData ? ((SqueakStream*) stream->notifyData)->id : -1;
         CFStringRef 	filePath;
         CFURLRef 	    sillyThing;
-		char			pathName[4096],lname[4096];
+		char			pathName[PATH_MAX+1],lname[PATH_MAX+1];
   SqueakPlugin *plugin= (SqueakPlugin*) instance->pdata;
 
   DPRINT("NP: StreamAsFile(%s, id=%i)\n", stream->url, id);
@@ -455,14 +479,17 @@ NPP_StreamAsFile(NPP instance, NPStream *stream, const char* fname)
 
   pathName[0] = 0x00;
   if (!plugin || !fname) return;
-
+   if (strncmp(fname,(char *) &"/",1) == 0) {
+	strncpy(pathName,fname, PATH_MAX);
+   } else {
 	filePath   = CFStringCreateWithBytes(kCFAllocatorDefault,(const UInt8 *)fname,strlen(fname),kCFStringEncodingMacRoman,false);
 	sillyThing = CFURLCreateWithFileSystemPath (kCFAllocatorDefault,filePath,kCFURLHFSPathStyle,false);
 	CFRelease(filePath);
 	filePath = CFURLCopyFileSystemPath (sillyThing, kCFURLPOSIXPathStyle);
 	CFRelease(sillyThing);
-	CFStringGetCString (filePath, pathName,4096, kCFStringEncodingUTF8);
+	CFStringGetCString (filePath, pathName,PATH_MAX, kCFStringEncodingUTF8);
 	CFRelease(filePath);
+  }
   
   /* need to copy file because it might be deleted after return */
   strncpy(lname, pathName, PATH_MAX);
@@ -637,8 +664,6 @@ Receive(SqueakPlugin *plugin, void *buf, size_t count)
   do {
     n= read(plugin->pipes[PLUGIN_READ], buf, count);
   } while (n == -1 && (errno == EINTR || errno == EAGAIN));
-  if (count == 44444) 
-	DPRINT("NP: Read 4 bytes %i\n",*(int*)buf);
   if (n == -1)
     perror("Squeak plugin pipe read failed:");
   if (n < count)
@@ -654,8 +679,6 @@ Send(SqueakPlugin *plugin, const void *buf, size_t count)
   do {
     n= write(plugin->pipes[PLUGIN_WRITE], buf, count);
   } while (n == -1 && (errno == EINTR  || errno == EAGAIN));
-  if (count == 44444) 
-	DPRINT("NP: Send 4 bytes %i\n",*(int*)buf);
   if (n == -1)
     perror("Squeak plugin write failed:");
   if (n < count)
@@ -673,7 +696,7 @@ static void
 DeliverFile(SqueakPlugin *plugin, int id, const char* fname)
 {
   int ok= fname != NULL;
-	DPRINT("NP:   Send RECEIVE_DATA id=%i ok=%i\n", id, ok);
+	DPRINT("NP:   Send RECEIVE_DATA id=%i ok=%i filename %s\n", id, ok,fname);
  
   errno= 0;
   SendInt(plugin, CMD_RECEIVE_DATA);
@@ -713,6 +736,29 @@ Run(SqueakPlugin *plugin)
 	aioEnable(plugin->pipes[PLUGIN_READ], plugin, AIO_EXT); 
 	aioHandle(plugin->pipes[PLUGIN_READ], npHandler, AIO_RX);
 
+	if (*plugin->sharedMemoryName == 0x00) {
+		sharedMemIDIncremental++;
+		sprintf(plugin->sharedMemoryName,"%i",42+plugin->pid+sharedMemIDIncremental);
+		plugin->sharedMemoryfd = shm_open(plugin->sharedMemoryName,O_RDWR | O_CREAT,S_IRUSR+S_IWUSR);
+		if (plugin->sharedMemoryfd < 0) {
+			plugin->sharedMemoryfd = 0;
+			perror("NP: shared memory shm_open failed\n");
+			return;
+		}
+		ftruncate(plugin->sharedMemoryfd,gWindowMaxLength*gWindowMaxLength*4);
+		plugin->sharedMemoryBlock= mmap(0, gWindowMaxLength*gWindowMaxLength*4, PROT_READ | PROT_WRITE, MAP_SHARED, plugin->sharedMemoryfd,0);
+		DPRINT("NP: shared memory mmap memory fd %i at %i \n", plugin->sharedMemoryfd,plugin->sharedMemoryBlock);
+		if (plugin->sharedMemoryBlock == MAP_FAILED) {  
+			perror("NP: shared memory mmap failed %i\n");
+			plugin->sharedMemoryBlock = NULL;
+			close(plugin->sharedMemoryfd);
+			shm_unlink(plugin->sharedMemoryName);
+			*plugin->sharedMemoryName = 0x00;
+			plugin->sharedMemoryfd = 0;
+			return;
+		}
+	}
+
   DPRINT("NP: Thunder into fork\n");
   plugin->pid= fork();
   
@@ -732,7 +778,7 @@ Run(SqueakPlugin *plugin)
     {
       int i;
       for (i= 1; i<plugin->argc; i++)
-	DPRINT("    %s\n", plugin->argv[i]);
+		DPRINT("    %s\n", plugin->argv[i]);
     }
 	plugin->argv[plugin->argc] = 0;
     execv(plugin->vmName, plugin->argv);
@@ -751,63 +797,44 @@ SetWindow(SqueakPlugin *plugin,  NPWindow *window, int width, int height)
 	NPRect    clipRect;
 	clipRect = window->clipRect;
 	
-  DPRINT("NP: SetWindow(0x%X, %i@%i tlbr %i %i %i %i)\n", window, width, height,
+  DPRINT("NP: SetWindow(0x%X, %i@%i clip tlbr %i %i %i %i  v %i h %i)\n", window, width, height,
   clipRect.top,
   clipRect.left,
   clipRect.bottom,
-  clipRect.right);
+  clipRect.right,
+  window->y,
+  window->x);
 
 	/* New window */
 	setWindowLogic(plugin,width,height);
 }
 
-void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
+static void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
 	int rowBytes,totalBytes;
+	CMProfileRef sysprof = NULL;
 	CGColorSpaceRef colorspace;
   
-  {
 		// Get the Systems Profile for the main display
-	CMProfileRef sysprof = NULL;
 	if (CMGetSystemProfile(&sysprof) == noErr) {
 		// Create a colorspace with the systems profile
 		colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
 		CMCloseProfile(sysprof);
 	} else 
 		colorspace = CGColorSpaceCreateDeviceRGB();
-  }
 
-	rowBytes = (((((width * 32) + 31) / 32) * 4) & 0x1FFF);
-	totalBytes = height*rowBytes;
-					
-	if (plugin->sharedMemID) {
-		struct shmid_ds	SharedMemDS;
-		shmdt(plugin->sharedMemoryBlock);
-		shmctl(plugin->sharedMemID,IPC_STAT,&SharedMemDS);
-		DPRINT("NP: setWindowLogic delete memory ID %i at %i \n", plugin->sharedMemID,plugin->sharedMemoryBlock);
-	}
-	plugin->sharedMemID=shmget(47382+plugin->pid,totalBytes,IPC_CREAT | 0666); 
-	
-	plugin->sharedMemoryBlock=shmat(plugin->sharedMemID,0,0666);
-	if (plugin->sharedMemoryBlock == (void*) -1) {
-		DPRINT("NP: setWindowLogic shmat failed\n");
-			return;
-	}
-	
-	plugin->width = width;
-	plugin->height = height;
-	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i memory at id %i at %i)\n", width, height, rowBytes,plugin->sharedMemID,plugin->sharedMemoryBlock);
-	SendInt(plugin,CMD_SHARED_MEMORY);
-	SendInt(plugin,plugin->sharedMemID);
-	SendInt(plugin,width);
-	SendInt(plugin,height);
-	SendInt(plugin,rowBytes);
+	plugin->width = width > gWindowMaxLength ? gWindowMaxLength : width;
+	plugin->height = height > gWindowMaxLength ? gWindowMaxLength : height;
+	rowBytes = (((((plugin->width * 32) + 31) / 32) * 4) & 0x1FFF);
+	totalBytes = plugin->height*rowBytes;
+						
 	if (plugin->context)
 		CFRelease(plugin->context);
 	plugin->context = NULL;
+
 	if (plugin->sharedBrowserBitMapContextRef)
 		CFRelease(plugin->sharedBrowserBitMapContextRef);
-	plugin->sharedBrowserBitMapContextRef = NULL;
-	plugin->sharedBrowserBitMapContextRef = CGBitmapContextCreate (plugin->sharedMemoryBlock,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
+	
+	plugin->sharedBrowserBitMapContextRef = CGBitmapContextCreate (plugin->sharedMemoryBlock,plugin->width,plugin->height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
 	CreateCGContextForPort(plugin->display->port,&plugin->context); 
 	
 	//  Adjust for any SetOrigin calls on qdPort
@@ -818,13 +845,17 @@ void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
 
     CGContextTranslateCTM( plugin->context, 0, (float)(plugin->portRect.bottom - plugin->portRect.top) );
 	{	
-		CGRect	clip2;
-		clip2 = CGRectMake(plugin->portRect.left,plugin->portRect.top,plugin->portRect.right-plugin->portRect.left, plugin->portRect.bottom-plugin->portRect.top);
-		CGContextClipToRect(plugin->sharedBrowserBitMapContextRef, clip2);
+		//CGRect	clip2;
+		//clip2 = CGRectMake(plugin->portRect.left,plugin->portRect.top,plugin->portRect.right-plugin->portRect.left, plugin->portRect.bottom-plugin->portRect.top);
+		//CGContextClipToRect(plugin->sharedBrowserBitMapContextRef, clip2);
 	}
 
-    DPRINT("NP: NewContext %i\n",  plugin->sharedBrowserBitMapContextRef);
-    	
+	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i memory at id %i at %i)\n", plugin->width, plugin->height, rowBytes,plugin->sharedMemoryfd,plugin->sharedMemoryBlock);
+	SendInt(plugin,CMD_SHARED_MEMORY);
+	SendInt(plugin,plugin->sharedMemoryfd);
+	SendInt(plugin,plugin->width);
+	SendInt(plugin,plugin->height);
+	SendInt(plugin,rowBytes);
 }
 
 static void 
@@ -838,20 +869,7 @@ browserProcessCommand(SqueakPlugin *plugin)
     GetUrl(plugin);
     break;
   case CMD_SHARED_MEMORY: 
-      {
-		  /* setup shared memory*/
-		  struct shmid_ds SharedMemDS;
-		  int sharedMemID;
-			
-		  Receive(plugin, &sharedMemID, 4);
-		  shmctl(sharedMemID,IPC_STAT,&SharedMemDS);
-		  DPRINT("NP: CMD_SHARED_MEMORY drop existing with id %i \n",sharedMemID);
-		  if (SharedMemDS.shm_nattch==0) {
-			shmctl(plugin->sharedMemID,IPC_RMID,NULL);  
-			DPRINT("NP: CMD_SHARED_MEMORY destroy memory id %i \n",sharedMemID);
-		}
-	  }
-      break;
+	break;
   case CMD_DRAW_CLIP:
 		{
 			int left,right,top,bottom;
@@ -1006,34 +1024,33 @@ int16 NPP_HandleEvent(NPP instance, void *rawEvent) {
 	return Mac_NPP_HandleEvent(instance,rawEvent);
 }
 
-int gButtonIsDown;
-
 int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent) 
 {
 	EventRecord *eventPtr = (EventRecord*) rawEvent;
 	SqueakPlugin *plugin= (SqueakPlugin*) instance->pdata;
-	CGrafPtr   port;
-	GetPort(&port);
-	  
+  
 	aioPoll(0);
  
 	if (plugin->pid == 0) return 0;
 	
 	if (eventPtr == NULL) return false;
-
-	QDGlobalToLocalPoint(port,(Point *) &eventPtr->where);
+	SetOrigin(plugin->display->portx, plugin->display->porty);
+	QDGlobalToLocalPoint(plugin->display->port,(Point *) &eventPtr->where);
 
 	if (!(eventPtr->what == 0)) {
-		 DPRINT("NP: handelEventL %i where v %i h %i, modifiers %i\n",eventPtr->what,eventPtr->where.v,eventPtr->where.h,eventPtr->modifiers);
+		 DPRINT("NP: handelEventL %i where v %i h %i, modifiers %i plugin-cliprect v %i h %i  portxy v %i h %i\n",
+		 eventPtr->what,eventPtr->where.v,eventPtr->where.h,eventPtr->modifiers,
+		 plugin->clipRect.top,plugin->clipRect.left, 
+		 plugin->display->porty,plugin->display->portx);
 	}
 	if (eventPtr->what == mouseUp)
-		gButtonIsDown = false;
+		plugin->buttonIsDown = false;
 		
 	if (eventPtr->what == mouseDown)
-		gButtonIsDown = true;
+		plugin->buttonIsDown = true;
 
 	if (eventPtr->what == nullEvent)
-		eventPtr->modifiers = checkForModifierKeys();
+		eventPtr->modifiers = checkForModifierKeys(plugin);
 		
 	SendInt(plugin, CMD_EVENT);
 	Send(plugin, rawEvent, sizeof(struct EventRecord));
@@ -1093,7 +1110,7 @@ int ioMSecs() {
 }
 
 
-int checkForModifierKeys() {
+int checkForModifierKeys(SqueakPlugin *plugin) {
 	enum {
 			/* modifier keys */
 		kVirtualCapsLockKey = 0x039,
@@ -1111,7 +1128,7 @@ int checkForModifierKeys() {
 	
 	GetKeys(theKeys);
 	keybytes = (unsigned char *) theKeys;
-	result  = gButtonIsDown ?  0 : btnState ;
+	result  = plugin->buttonIsDown ?  0 : btnState ;
 	result += ((keybytes[kVirtualCapsLockKey>>3] & (1 << (kVirtualCapsLockKey&7))) != 0) ? alphaLock : 0;
 	result += ((keybytes[kVirtualShiftKey>>3] & (1 << (kVirtualShiftKey&7))) != 0)       ? shiftKey : 0;
 	result += ((keybytes[kVirtualControlKey>>3] & (1 << (kVirtualControlKey&7))) != 0)   ? controlKey : 0;

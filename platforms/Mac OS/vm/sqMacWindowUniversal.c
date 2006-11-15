@@ -32,7 +32,8 @@
 
 #include <Carbon/Carbon.h>
 #include <movies.h>
-#include <sys/shm.h>
+#include <sys/types.h>
+#include <sys/mman.h>
 
 #include "sq.h"
 #include "sqMacUIConstants.h"
@@ -44,6 +45,12 @@
 #include "sqMacHostWindow.h"
 #include "sqMacTime.h"
 #include "sqMacNSPluginUILogic2.h"
+
+#if (EXTERNALPRIMSDEBUG)
+# define dprintf(ARGS) fprintf ARGS
+#else
+# define dprintf(ARGS)
+#endif
 
 /*** Variables -- Imported from Virtual Machine ***/
 extern int getFullScreenFlag();    /* set from header when image file is loaded */
@@ -66,7 +73,7 @@ WindowPtr getSTWindow(void) {
     return  windowHandleFromIndex(1);
 }
 
-static int makeMainWindow(void);
+int makeMainWindow(void);
 static int ioSetFullScreenActual(int fullScreen);
 
 int ioSetFullScreen(int fullScreen) {
@@ -314,6 +321,8 @@ int ioShowDisplayOnWindow(
 
 	static CGColorSpaceRef colorspace = NULL;
 	extern CGContextRef SharedBrowserBitMapContextRef;
+	extern void *SharedMemoryBlock;
+	extern int SharedBrowserBitMapLength;
 	void browserSendInt(int);
 	
 	int 		pitch;
@@ -408,15 +417,17 @@ int ioShowDisplayOnWindow(
 	}
 		
 	/* Draw the image to the Core Graphics context */
-	CGContextDrawImage(targetWindowBlock->context, clip, image);
 	if (browserActiveAndDrawingContextOk()) {
 		CGContextDrawImage(SharedBrowserBitMapContextRef, clip, image);
+		msync(SharedMemoryBlock,SharedBrowserBitMapLength,MS_SYNC);
 		browserSendInt(6);
 		browserSendInt(affectedL);
 		browserSendInt(affectedR);
 		browserSendInt(affectedT);
 		browserSendInt(affectedB);
-	}
+	} else
+		CGContextDrawImage(targetWindowBlock->context, clip, image);
+
 
 	{ 
 			extern Boolean gSqueakUIFlushUseHighPercisionClock;
@@ -606,7 +617,7 @@ void FreePixmap(void) {
 }
 
 
-static int makeMainWindow(void) {
+int makeMainWindow(void) {
 	WindowPtr window;
 	char	shortImageName[256];
 	int width,height;
@@ -705,6 +716,8 @@ int ioScreenSize(void) {
     Rect portRect;
     
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return ((16 << 16) | 16);
+	if (browserActiveAndDrawingContextOk)
+		return browserGetWindowSize();
 	
 	w  = (unsigned) getSavedWindowSize() >> 16;
 	h= getSavedWindowSize() & 0xFFFF;
@@ -718,6 +731,7 @@ int ioScreenSize(void) {
             w =  portRect.right -  portRect.left;
             h =  portRect.bottom - portRect.top;
 	}
+	
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 

@@ -56,7 +56,7 @@ NPError		NPP_SetValue(NPP instance, NPNVariable variable, void *value);
 // Mach-o entry points
 NPError NP_Initialize(NPNetscapeFuncs *browserFuncs);
 NPError NP_GetEntryPoints(NPPluginFuncs *pluginFuncs);
-void NP_Shutdown(void);
+extern void NP_Shutdown(void);
 // For compatibility with CFM browsers.
 int main(NPNetscapeFuncs *browserFuncs, NPPluginFuncs *pluginFuncs, NPP_ShutdownProcPtr *shutdown);
 #pragma export off
@@ -95,14 +95,12 @@ NPError NP_GetEntryPoints(NPPluginFuncs* pluginFuncs)
     return NPERR_NO_ERROR;
 }
 
-void NP_Shutdown(void)
-{
-
-}
- 
 // For compatibility with CFM browsers.
 int main(NPNetscapeFuncs *browserFuncs, NPPluginFuncs *pluginFuncs, NPP_ShutdownProcPtr *shutdown)
 {
+
+	    aioInit();
+
     browser = malloc(sizeof(NPNetscapeFuncs));
     bzero(browser, sizeof(NPNetscapeFuncs));
     

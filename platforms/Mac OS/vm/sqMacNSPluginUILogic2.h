@@ -22,3 +22,4 @@ int primitivePluginRequestFileHandle(void);
 int primitivePluginPostURL(void);
 int primitivePluginRequestURLStream(void);
 int primitivePluginRequestURL(void);
+int browserGetWindowSize();

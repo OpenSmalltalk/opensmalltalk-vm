@@ -5,23 +5,31 @@
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleExecutable</key>
-	<string>SqueakBrowser</string>
+	<string>SqueakBrowserPlugin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Browser Plugin  3.8.14b1 http://www.squeak.org </string>
+	<string>Squeak Browser Plugin  3.8.14b2 http://www.squeak.org </string>
 	<key>CFBundleIdentifier</key>
 	<string>org.squeak.SqueakPlugin</string>
+	<key>SqueakVMPath</key>
+	<string>/Applications/SqueakLand/Squeak/Internet/Squeak 3.8.14beta2U.app/Contents/MacOS/</string>
+	<key>SqueakVMName</key>
+	<string>Squeak VM Opt</string>
+	<key>SqueakImagePath</key>
+	<string>/Applications/SqueakLand/Squeak/Internet/</string>
+	<key>SqueakImageName</key>
+	<string>SqueakPlugin.image</string>
+	<key>SqueakWindowMaxLength</key>
+	<integer>2048</integer>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
 	<string>BRPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.8.14b1</string>
+	<string>3.8.14b2</string>
 	<key>CFBundleSignature</key>
-	<string>MOSS</string>
+	<string>????</string>
 	<key>CFBundleVersion</key>
 	<string>1.0</string>
-	<key>CSResourcesFileMapped</key>
-	<string>yes</string>
 	<key>CFPlugInDynamicRegisterFunction</key>
 	<string></string>
 	<key>CFPlugInDynamicRegistration</key>
@@ -40,19 +48,39 @@
 	</dict>
 	<key>CFPlugInUnloadFunction</key>
 	<string></string>
-	<key>WebPluginName</key>
-    <string>Squeak Thing Plug-in</string>
+	<key>WebPluginDescription</key>
+	<string>Squeak Browser Plugin  3.8.14b2 http://www.squeak.org </string>
 	<key>WebPluginMIMETypes</key>
-    <dict>
-        <key>application/x-squeak-project</key>
-        <dict>
-            <key>WebPluginExtensions</key>
-            <array>
-                <string>pr</string>
-            </array>
-            <key>WebPluginTypeDescription</key>
-            <string>Squeak Project Files</string>
-        </dict>
-    </dict>
+	<dict>
+		<key>application/x-squeak-object</key>
+		<dict>
+			<key>WebPluginExtensions</key>
+			<array>
+				<string>sqo</string>
+			</array>
+			<key>WebPluginTypeDescription</key>
+			<string>Squeak Object Files</string>
+		</dict>
+		<key>application/x-squeak-project</key>
+		<dict>
+			<key>WebPluginExtensions</key>
+			<array>
+				<string>pr</string>
+			</array>
+			<key>WebPluginTypeDescription</key>
+			<string>Squeak Project Files</string>
+		</dict>
+		<key>application/x-squeak-source</key>
+		<dict>
+			<key>WebPluginExtensions</key>
+			<array>
+				<string>sts</string>
+			</array>
+			<key>WebPluginTypeDescription</key>
+			<string>Squeak Source Files</string>
+		</dict>
+	</dict>
+	<key>WebPluginName</key>
+	<string>Squeak Plug-in</string>
 </dict>
 </plist>

@@ -14,6 +14,8 @@
 #include <unistd.h>
 #include <stdio.h>
 #include <pthread.h>
+#include <sys/types.h>
+#include <sys/mman.h>
 
 #include "sqMacNSPluginUILogic2.h"
 #include "sqMacHostWindow.h"
@@ -21,6 +23,7 @@
 #include "sqaio.h"
 #include "sqVirtualMachine.h"
 #include "sqUnixCharConv.h"
+#include "sqMacWindow.h"
 
 static void browserReceiveData();
 static void browserSend(const void *buf, size_t count);
@@ -29,6 +32,8 @@ static void browserReceiveData(void);
 static void npHandler(int fd, void *data, int flags);
 static void handle_CMD_SHARED_MEMORY(void);
 static void handle_CMD_EVENT(void);void browserSendInt(int value);
+
+
 
 #if (EXTERNALPRIMSDEBUG)
 # define dprintf(ARGS) fprintf ARGS
@@ -44,7 +49,6 @@ extern int	gSqueakBrowserPipes[];
 #define SQUEAK_READ 0
 #define SQUEAK_WRITE 1
 
-#define CMD_BROWSER_WINDOW 1
 #define CMD_GET_URL        2
 #define CMD_POST_URL       3
 #define CMD_RECEIVE_DATA   4
@@ -60,15 +64,37 @@ typedef struct sqStreamRequest {
 } sqStreamRequest;
 
 static sqStreamRequest *requests[MAX_REQUESTS];
-void *SharedMemoryBlock;
-int SharedMemID;
+void *SharedMemoryBlock = NULL;
+static int SharedMemoryfd;
 CGContextRef SharedBrowserBitMapContextRef=NULL;
+int SharedBrowserBitMapLength = 0;
 extern Boolean gSqueakBrowserSubProcess;
+static int rowBytes=0, width=0,  height=0;
+	
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
 #endif
 struct VirtualMachine* interpreterProxy;
+
+
+/*** Proxy Functions ***/
+#define stackValue(i) (interpreterProxy->stackValue(i))
+#define stackIntegerValue(i) (interpreterProxy->stackIntegerValue(i))
+#define successFlag (!interpreterProxy->failed())
+#define success(bool) (interpreterProxy->success(bool))
+#define arrayValueOf(oop) (interpreterProxy->arrayValueOf(oop))
+#define checkedIntegerValueOf(oop) (interpreterProxy->checkedIntegerValueOf(oop))
+#define fetchArrayofObject(idx,oop) (interpreterProxy->fetchArrayofObject(idx,oop))
+#define fetchFloatofObject(idx,oop) (interpreterProxy->fetchFloatofObject(idx,oop))
+#define fetchIntegerofObject(idx,oop) (interpreterProxy->fetchIntegerofObject(idx,oop))
+#define floatValueOf(oop) (interpreterProxy->floatValueOf(oop))
+#define pop(n) (interpreterProxy->pop(n))
+#define pushInteger(n) (interpreterProxy->pushInteger(n))
+#define sizeOfSTArrayFromCPrimitive(cPtr) (interpreterProxy->sizeOfSTArrayFromCPrimitive(cPtr))
+#define storeIntegerofObjectwithValue(idx,oop,value) (interpreterProxy->storeIntegerofObjectwithValue(idx,oop,value))
+#define primitiveFail() interpreterProxy->primitiveFail()
+
 
 int primitivePluginBrowserReady(void) {
    if (gSqueakBrowserSubProcess)
@@ -110,7 +136,7 @@ int plugInTimeToReturn(void) {
     return false;
 }
 
-Boolean browserActiveAndDrawingContextOk() {
+Boolean inline browserActiveAndDrawingContextOk() {
 	return gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef;
 }
 
@@ -150,11 +176,6 @@ void browserProcessCommand(void)
       /* Data is coming in */
       browserReceiveData();
       break;
-    case CMD_BROWSER_WINDOW:
-      /* Parent window has changed () */
-      browserReceive(&browserWindow, 4);
-      dprintf((stderr,"VM:  got browser window 0x%X\n", browserWindow));
-      break;
 	case CMD_SHARED_MEMORY:
 		handle_CMD_SHARED_MEMORY();		
 		break;
@@ -167,28 +188,36 @@ void browserProcessCommand(void)
 }
 
 static void handle_CMD_SHARED_MEMORY() {
-	int rowBytes, width,  height;
+
+	int tempRowBytes,tempWidth,tempHeight;
+	
 	CGColorSpaceRef colorspace;
 	
-	if (SharedBrowserBitMapContextRef) {
-		CFRelease(SharedBrowserBitMapContextRef);
-		SharedBrowserBitMapContextRef = NULL;
-		shmdt(SharedMemoryBlock);
-		dprintf((stderr,"VM: drop  memoryBlock id %i at %i \n", SharedMemID, SharedMemoryBlock));
-		browserSendInt(CMD_SHARED_MEMORY);
-		browserSendInt(SharedMemID);
-	}
+	browserReceive(&SharedMemoryfd, 4);
+	browserReceive(&tempWidth, 4);
+	browserReceive(&tempHeight, 4);
+	browserReceive(&tempRowBytes, 4);
+	if (rowBytes == tempRowBytes &&
+		width == tempWidth &&
+		height == tempHeight) 
+			return;
+			
+	rowBytes = tempRowBytes;
+	width = tempWidth;
+	height = tempHeight;
 	
-	browserReceive(&SharedMemID, 4);
-	browserReceive(&width, 4);
-	browserReceive(&height, 4);
-	browserReceive(&rowBytes, 4);
-	SharedMemoryBlock=(void*)shmat(SharedMemID,(void*) 0,0666);
-	if (SharedMemoryBlock == (void*)-1)	{
-		dprintf((stderr,"VM: handle_CMD_SHARED_MEMORY failed shmat \n"));
+	if (SharedMemoryBlock) {
+		dprintf((stderr,"VM: munmap %i \n",SharedMemoryBlock));
+		munmap(SharedMemoryBlock,SharedBrowserBitMapLength);
+	}
+			
+	SharedBrowserBitMapLength = rowBytes*height;
+	SharedMemoryBlock= mmap(0, SharedBrowserBitMapLength, PROT_READ | PROT_WRITE, MAP_SHARED, SharedMemoryfd,0);
+	if (SharedMemoryBlock == MAP_FAILED)	{
+		dprintf((stderr,"VM: handle_CMD_SHARED_MEMORY failed mmap \n"));
 		return;
 	}
-	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i at %i)\n", width, height, rowBytes,SharedMemID,SharedMemoryBlock));
+	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i at %i)\n", width, height, rowBytes,SharedMemoryfd,SharedMemoryBlock));
 	  {
 			// Get the Systems Profile for the main display
 		CMProfileRef sysprof = NULL;
@@ -200,12 +229,17 @@ static void handle_CMD_SHARED_MEMORY() {
 			colorspace = CGColorSpaceCreateDeviceRGB();
 	  }
 	{ 
-		windowDescriptorBlock *	targetWindowBlock  = windowBlockFromIndex(1);
-		if (targetWindowBlock)
-		  SizeWindow(targetWindowBlock->handle, width, height, true);
+		extern int makeMainWindow(void);
+		if (getSTWindow() == NULL) {
+			makeMainWindow();
+		}
+		  SizeWindow(getSTWindow(), width, height, true);
+		dprintf((stderr,"VM: Size Window to %i @ %i \n",width,height));
 	}
-	if (width > 2000 || height > 2000 || rowBytes > 5000) 
-		Debugger();
+	if (SharedBrowserBitMapContextRef) {
+		dprintf((stderr,"VM: free bitmap context %i \n",SharedBrowserBitMapContextRef));
+		CFRelease(SharedBrowserBitMapContextRef);
+	}
 	SharedBrowserBitMapContextRef = CGBitmapContextCreate (SharedMemoryBlock,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
 	dprintf((stderr,"VM: made bitmap context ref %i\n", SharedBrowserBitMapContextRef));
 }
@@ -295,10 +329,10 @@ static void browserReceiveData(void)
       browserReceive(unixName, length);
       unixName[length]= 0;
       dprintf((stderr,"VM:   got filename %s\n", unixName));
-	  ux2sqPath(unixName,length, pathToGiveToSqueak, 2048,0);	
+	  ux2sqPath(unixName,length, pathToGiveToSqueak, 2048,1);	
       localName = malloc(strlen(pathToGiveToSqueak)+1);
 	  strcpy(localName,pathToGiveToSqueak);
-      dprintf((stderr,"VM:   becomes squeak filename %s\n", localName));
+      dprintf((stderr,"VM:   becomes squeak filename for %s\n", localName));
     }
   }
   if (id >= 0 && id < MAX_REQUESTS) {
@@ -447,7 +481,7 @@ void recordMouseEvent(EventRecord *theEvent)  {
 	mouseButton = MouseModifierStateFromBrowser(theEvent);
 	carbonModifiers = theEvent->modifiers;
 	QDLocalToGlobalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&theEvent->where);
-	//if (!(theEvent->what == 5))
+	if (!(theEvent->what == 5))
 		dprintf((stderr,"VM: recordMouseEvent() carbonModifers %i mouseButton %i \n",carbonModifiers,mouseButton));
 	if (theEvent->what == kEventMouseMoved && mouseButton) 
 		theEvent->what = kEventMouseDragged;
@@ -784,5 +818,9 @@ sqInt primitivePluginRequestState()
   if (req->state == -1) push(nilObject());
   else pushBool(req->state);
   return 1;
+}
+
+int browserGetWindowSize() {
+	return (width << 16) | (height & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
