@@ -194,11 +194,17 @@ int main(int argc, char **argv, char **envp) {
 	unixArgcInterface(argCnt,argVec,envVec);
 	
 	if (!gSqueakHeadless) {
-		extern OSErr SetFrontProcess(const ProcessSerialNumber * PSN);
- 		ProcessSerialNumber psn = { 0, kCurrentProcess };
-		OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
+		ProcessSerialNumber psn = { 0, kCurrentProcess };
+		ProcessInfoRec info;
+		info.processName = NULL;
+		info.processAppSpec = NULL;
+		info.processInfoLength = sizeof(ProcessInfoRec);
+		GetProcessInformation(&psn,&info);
+		if (info.processMode & modeOnlyBackground) {
+			OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
+			SetFrontProcess(&psn);
+		}
 		InitCursor();	
-		SetFrontProcess(&psn);
 	}
 	
 	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
