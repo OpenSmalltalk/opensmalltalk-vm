@@ -1,0 +1,41 @@
+// SqueakOCX2.idl : IDL source for SqueakOCX2.dll
+//
+
+// This file will be processed by the MIDL tool to
+// produce the type library (SqueakOCX2.tlb) and marshalling code.
+
+import "oaidl.idl";
+import "ocidl.idl";
+#include "olectl.h"
+	
+
+	[
+		object,
+		uuid(24A4DFFA-3C16-487D-BF4F-0A6324717619),
+		dual,
+		helpstring("ISqueakOCX Interface"),
+		pointer_default(unique)
+	]
+	interface ISqueakOCX : IDispatch
+	{
+	};
+
+[
+	uuid(9163DD61-8348-4660-917B-94300FAE6979),
+	version(1.0),
+	helpstring("SqueakOCX2 1.0 Type Library")
+]
+library SQUEAKOCX2Lib
+{
+	importlib("stdole32.tlb");
+	importlib("stdole2.tlb");
+
+	[
+		uuid(2BE9C39E-8386-4435-B337-FCDAD8EAB006),
+		helpstring("SqueakOCX Class")
+	]
+	coclass SqueakOCX
+	{
+		[default] interface ISqueakOCX;
+	};
+};

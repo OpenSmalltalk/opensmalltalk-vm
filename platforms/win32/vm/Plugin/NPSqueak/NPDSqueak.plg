@@ -1,0 +1,28 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: NPSqueak - Win32 IEDebug--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "c:\windows\TEMP\RSPE2A1.TMP" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /incremental:yes /pdb:"NPSqueak___Win32_IEDebug/NPDGame.pdb" /debug /machine:I386 /def:".\NPDSqueak.def" /out:"C:\Program Files\Internet Explorer\PLUGINS\NPDGame.dll" /implib:"NPSqueak___Win32_IEDebug/NPDGame.lib" /pdbtype:sept 
+.\NPSqueak___Win32_IEDebug\NPSqueak.obj
+.\NPSqueak___Win32_IEDebug\npwin.obj
+.\NPSqueak___Win32_IEDebug\sqWin32Plugin.obj
+.\NPSqueak___Win32_IEDebug\NPDSqueak.res
+]
+Creating command line "link.exe @c:\windows\TEMP\RSPE2A1.TMP"
+<h3>Output Window</h3>
+Linking...
+   Creating library NPSqueak___Win32_IEDebug/NPDGame.lib and object NPSqueak___Win32_IEDebug/NPDGame.exp
+
+
+
+<h3>Results</h3>
+NPDGame.dll - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

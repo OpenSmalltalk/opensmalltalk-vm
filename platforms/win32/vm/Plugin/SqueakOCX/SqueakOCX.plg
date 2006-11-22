@@ -1,0 +1,49 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: SqueakOCX - Win32 Debug--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating temporary file "C:\DOKUME~1\andreas\LOKALE~1\Temp\RSP21D.tmp" with contents
+[
+/nologo /MDd /W3 /Gm /GX /ZI /Od /D "WIN32" /D "_DEBUG" /D "_WINDOWS" /D "_WINDLL" /D "_AFXDLL" /D "_USRDLL" /FR"Debug/" /Fo"Debug/" /Fd"Debug/" /FD /c 
+"C:\Dokumente und Einstellungen\andreas\Eigene Dateien\Bander\Home\andreasr\dev\Squeak\3.0\src\win32\Plugin\SqueakOCX\SqueakOCXCtl.cpp"
+]
+Creating command line "cl.exe @C:\DOKUME~1\andreas\LOKALE~1\Temp\RSP21D.tmp" 
+Creating temporary file "C:\DOKUME~1\andreas\LOKALE~1\Temp\RSP21E.tmp" with contents
+[
+/nologo /subsystem:windows /dll /incremental:yes /pdb:"Debug/SqueakOCX.pdb" /debug /machine:I386 /def:".\SqueakOCX.def" /out:"Debug/SqueakOCX.ocx" /implib:"Debug/SqueakOCX.lib" /pdbtype:sept 
+".\Debug\SqueakOCX.obj"
+".\Debug\SqueakOCXCtl.obj"
+".\Debug\SqueakOCXPpg.obj"
+".\Debug\sqWin32Plugin.obj"
+".\Debug\StdAfx.obj"
+".\Debug\SqueakOCX.res"
+]
+Creating command line "link.exe @C:\DOKUME~1\andreas\LOKALE~1\Temp\RSP21E.tmp"
+Creating temporary file "C:\DOKUME~1\andreas\LOKALE~1\Temp\RSP21F.bat" with contents
+[
+@echo off
+regsvr32 /s /c ".\Debug\SqueakOCX.ocx"
+echo regsvr32 exec. time > ".\Debug\regsvr32.trg"
+]
+Creating command line "C:\DOKUME~1\andreas\LOKALE~1\Temp\RSP21F.bat"
+Compiling...
+SqueakOCXCtl.cpp
+Linking...
+   Creating library Debug/SqueakOCX.lib and object Debug/SqueakOCX.exp
+<h3>Output Window</h3>
+Registering ActiveX Control...
+Creating command line "bscmake.exe /nologo /o"Debug/SqueakOCX.bsc"  ".\Debug\StdAfx.sbr" ".\Debug\SqueakOCX.sbr" ".\Debug\SqueakOCXCtl.sbr" ".\Debug\SqueakOCXPpg.sbr" ".\Debug\sqWin32Plugin.sbr""
+Creating browse info file...
+<h3>Output Window</h3>
+
+
+
+<h3>Results</h3>
+SqueakOCX.ocx - 0 error(s), 0 warning(s)
+</pre>
+</body>
+</html>

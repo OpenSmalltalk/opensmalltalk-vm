@@ -1,0 +1,48 @@
+<html>
+<body>
+<pre>
+<h1>Build Log</h1>
+<h3>
+--------------------Configuration: NPSqueak - Win32 Release--------------------
+</h3>
+<h3>Command Lines</h3>
+Creating command line "rc.exe /l 0x409 /fo"Release/NPSqueak.res" /d "NDEBUG" "C:\dev\Squeak\Squeak28\WinSrc\Plugin\NPSqueak\NPSqueak.rc"" 
+Creating temporary file "c:\windows\TEMP\RSP72F2.TMP" with contents
+[
+/nologo /MT /W3 /GX /O2 /I "c:\dev\Netscape\PluginSDK\include" /D "WIN32" /D "NDEBUG" /D "_WINDOWS" /D "_MBCS" /D "_USRDLL" /D "NPSQUEAK_EXPORTS" /Fp"Release/NPSqueak.pch" /YX /Fo"Release/" /Fd"Release/" /FD /c 
+"C:\dev\Squeak\Squeak28\WinSrc\Plugin\NPSqueak\NPSqueak.cpp"
+"C:\dev\Netscape\PluginSDK\Common\npwin.cpp"
+"C:\dev\Squeak\Squeak28\WinSrc\Plugin\sqWin32Plugin.c"
+]
+Creating command line "cl.exe @c:\windows\TEMP\RSP72F2.TMP" 
+Creating temporary file "c:\windows\TEMP\RSP72F3.TMP" with contents
+[
+kernel32.lib user32.lib gdi32.lib winspool.lib comdlg32.lib advapi32.lib shell32.lib ole32.lib oleaut32.lib uuid.lib odbc32.lib odbccp32.lib /nologo /dll /incremental:no /pdb:"Release/NPSqueak.pdb" /machine:I386 /def:".\NPSqueak.def" /out:"Release/NPSqueak.dll" /implib:"Release/NPSqueak.lib" 
+.\Release\NPSqueak.obj
+.\Release\npwin.obj
+.\Release\sqWin32Plugin.obj
+.\Release\NPSqueak.res
+]
+Creating command line "link.exe @c:\windows\TEMP\RSP72F3.TMP"
+<h3>Output Window</h3>
+Compiling resources...
+Compiling...
+NPSqueak.cpp
+npwin.cpp
+C:\dev\Netscape\PluginSDK\Common\npwin.cpp(65) : warning C4518: '__declspec(dllexport ) ' : storage-class or type specifier(s) unexpected here; ignored
+C:\dev\Netscape\PluginSDK\Common\npwin.cpp(65) : warning C4230: anachronism used : modifiers/qualifiers interspersed, qualifier ignored
+C:\dev\Netscape\PluginSDK\Common\npwin.cpp(98) : warning C4518: '__declspec(dllexport ) ' : storage-class or type specifier(s) unexpected here; ignored
+C:\dev\Netscape\PluginSDK\Common\npwin.cpp(98) : warning C4230: anachronism used : modifiers/qualifiers interspersed, qualifier ignored
+C:\dev\Netscape\PluginSDK\Common\npwin.cpp(139) : warning C4518: '__declspec(dllexport ) ' : storage-class or type specifier(s) unexpected here; ignored
+C:\dev\Netscape\PluginSDK\Common\npwin.cpp(139) : warning C4230: anachronism used : modifiers/qualifiers interspersed, qualifier ignored
+sqWin32Plugin.c
+Linking...
+   Creating library Release/NPSqueak.lib and object Release/NPSqueak.exp
+
+
+
+<h3>Results</h3>
+NPSqueak.dll - 0 error(s), 6 warning(s)
+</pre>
+</body>
+</html>

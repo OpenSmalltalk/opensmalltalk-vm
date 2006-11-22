@@ -1,0 +1,36 @@
+HKCR
+{
+	SqueakOCX2.SqueakOCX.1 = s 'SqueakOCX Class'
+	{
+		CLSID = s '{2BE9C39E-8386-4435-B337-FCDAD8EAB006}'
+	}
+	SqueakOCX2.SqueakOCX = s 'SqueakOCX Class'
+	{
+		CLSID = s '{2BE9C39E-8386-4435-B337-FCDAD8EAB006}'
+		CurVer = s 'SqueakOCX2.SqueakOCX.1'
+	}
+	NoRemove CLSID
+	{
+		ForceRemove {2BE9C39E-8386-4435-B337-FCDAD8EAB006} = s 'SqueakOCX Class'
+		{
+			ProgID = s 'SqueakOCX2.SqueakOCX.1'
+			VersionIndependentProgID = s 'SqueakOCX2.SqueakOCX'
+			ForceRemove 'Programmable'
+			InprocServer32 = s '%MODULE%'
+			{
+				val ThreadingModel = s 'Apartment'
+			}
+			ForceRemove 'Control'
+			ForceRemove 'ToolboxBitmap32' = s '%MODULE%, 101'
+			'MiscStatus' = s '0'
+			{
+			    '1' = s '131473'
+			}
+			'TypeLib' = s '{9163DD61-8348-4660-917B-94300FAE6979}'
+			'Version' = s '1.0'
+			ForceRemove 'Implemented Categories' {
+				{7DD95802-9882-11CF-9FA9-00AA006C42C4}
+			}
+		}
+	}
+}
