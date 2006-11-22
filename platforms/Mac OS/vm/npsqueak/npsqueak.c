@@ -67,7 +67,6 @@ static void DPRINT(char *format, ...) { }
 /***********************************************************************
  * Plugin instance data
  ***********************************************************************/
-
 #define CMD_GET_URL        2
 #define CMD_POST_URL       3
 #define CMD_RECEIVE_DATA   4
@@ -279,7 +278,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 		getCStringForInfoString(squeakVMName,"SqueakVMName",256, kCFStringEncodingUTF8);
 	
 		char* bin_dir_v[PATH_MAX]= {squeakVMPath,
-			"/Users/johnmci/Documents/Squeak3.8.0/build/DeploymentSymbols/Squeak VM Opt.app/Contents/MacOS/"};
+			"/Users/johnmci/Documents/Squeak3.8.0/build/Development/Squeak VM Opt.app/Contents/MacOS/"};
 		if (findFileInPaths(plugin->vmName, squeakVMName, 2 , bin_dir_v) == 0){
 		  fprintf(stderr, "Squeak Plugin: VM not found!\n");
 		  return NPERR_GENERIC_ERROR;
@@ -1046,8 +1045,13 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 	if (eventPtr->what == mouseUp)
 		plugin->buttonIsDown = false;
 		
-	if (eventPtr->what == mouseDown)
+	if (eventPtr->what == mouseDown) {
 		plugin->buttonIsDown = true;
+		 DPRINT("NP: handelEventL cmd %i option %i control %i shift %i\n",eventPtr->modifiers & cmdKey, 
+		 eventPtr->modifiers & optionKey, 
+		 eventPtr->modifiers & controlKey, 
+		 eventPtr->modifiers & shiftKey);
+	}
 
 	if (eventPtr->what == nullEvent)
 		eventPtr->modifiers = checkForModifierKeys(plugin);

@@ -34,7 +34,7 @@
  3.8.12b6u Sept 5th, 2006 JMM rework mouse logic for mac
  3.8.13b4u  Oct 16th, 2006 JMM headless
  *	3.8.14b1 Oct	,2006 JMM browser rewrite
-
+ 3.8.14b4 Nov 17th, 2006 JMM fix issue with mouse location and pre 3.0 (input semaphore driven) squeak images
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -126,6 +126,7 @@ int gButtonIsDown = 0;
 int windowActive = 0;		/* positive indicates the active window */
 
 static Point savedMousePosition;	/* mouse position when window is inactive */
+static Point carbonMousePosition;	/* mouse position when carbon is running for squeak 2.8 images */
 
 /* This table maps the 5 Macintosh modifier key bits to 4 Squeak modifier
    bits. (The Mac shift and caps lock keys are both mapped to the single
@@ -278,7 +279,7 @@ int ioMousePoint(void) {
 
 	    ioProcessEvents();
 	if (windowActive) {
-		GetMouse(&p);
+		p = carbonMousePosition;
 	} else {
 		/* don't report mouse motion if window is not active */
 		p = savedMousePosition;
@@ -811,7 +812,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
  	if (err == noErr)
 		QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&where);
 	// on error use last known mouse location. 
-	
+	carbonMousePosition = where;
 
 	buttonState = MouseModifierStateCarbon(event,whatHappened);
  	cachedButtonState = cachedButtonState | buttonState;
@@ -1128,6 +1129,16 @@ static int ModifierStateCarbon(EventRef event) {
 	return ((modifierMap[((keyBoardModifiers & 0xFFFF) >> 8)] << 3));
 }
 
+static void checkBrowserForHeartBeat(void) {
+	static int counter=0;
+	if (counter++ > 200) {
+		counter = 0;
+		if (getppid() == 1) 
+			gQuitNowRightNow = 1;
+			
+	}
+	
+}
 
 static void doPendingFlush(void) {
 
@@ -1167,6 +1178,9 @@ static void doPendingFlush(void) {
 			SendEventToEventTarget (event, target);
 			ReleaseEvent(event);
 		}
+		if (browserActiveAndDrawingContextOk())
+			checkBrowserForHeartBeat();
+			
 		nextPollTick = ioLowResMSecs();
 	}
 

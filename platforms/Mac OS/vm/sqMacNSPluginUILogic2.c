@@ -167,6 +167,9 @@ void browserProcessCommand(void)
   if (0 == n || (-1 == n && EAGAIN == errno))
     return;
 
+ if (n == -1)
+	dprintf((stderr,"VM: browserProcessCommand() error on read %i\n",errno));
+
  if (!(cmd == CMD_EVENT))
 	dprintf((stderr,"VM: browserProcessCommand() %i\n",cmd));
 
@@ -485,7 +488,12 @@ void recordMouseEvent(EventRecord *theEvent)  {
 		dprintf((stderr,"VM: recordMouseEvent() carbonModifers %i mouseButton %i \n",carbonModifiers,mouseButton));
 	if (theEvent->what == kEventMouseMoved && mouseButton) 
 		theEvent->what = kEventMouseDragged;
-		
+	if (theEvent->what == kEventMouseDown)
+		dprintf((stderr,"VM: recordMouseEvent() cmd %i option %i control %i shift %i\n",carbonModifiers & cmdKey,
+		carbonModifiers & optionKey,
+		carbonModifiers & controlKey,
+		carbonModifiers & shiftKey));
+	
 	MacCreateEvent(kCFAllocatorDefault, kEventClassMouse, theEvent->what, 0, kEventAttributeUserEvent, &tmpEvent);
 	SetEventParameter(tmpEvent,kEventParamMouseLocation,typeQDPoint,sizeof(Point),&theEvent->where);
 	SetEventParameter(tmpEvent,kEventParamKeyModifiers,typeUInt32,sizeof(UInt32),&carbonModifiers);
@@ -516,13 +524,16 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 	sqKeyboardEvent *evt, *extra;
 	extern pthread_mutex_t gEventQueueLock;
 	extern sqInputEvent *nextEventPut(void);
-
+	extern int MouseModifierState(EventRecord *theEvent);
+	
 	pthread_mutex_lock(&gEventQueueLock);
 	evt = (sqKeyboardEvent*) nextEventPut();
 
 	/* keystate: low byte is the ascii character; next 4 bits are modifier bits */
 	asciiChar = theEvent->message & charCodeMask;
-	modifierBits = MouseModifierStateFromBrowser(theEvent); //Capture mouse/option states
+	//modifierBits = MouseModifierStateFromBrowser(theEvent); //Capture mouse/option states
+	//modifierBits = (modifierMap[(theEvent->modifiers >> 8)] << 3) | (modifierBits  & 0x7);
+	modifierBits = MouseModifierState(theEvent);
 	if (((modifierBits >> 3) & 0x9) == 0x9) {  /* command and shift */
 		if ((asciiChar >= 97) && (asciiChar <= 122)) {
 			/* convert ascii code of command-shift-letter to upper case */

@@ -386,7 +386,7 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.14b3 15-Nov-06 >3C13D8B6-4DDE-4118-970D-213001F336F0<";
+			return "Mac Carbon 3.8.14b5 21-Nov-06 >FD1F4C94-6762-40D9-8D36-512594BFD6D2<";
 			
 
  	if (id == 1201) return "255";
