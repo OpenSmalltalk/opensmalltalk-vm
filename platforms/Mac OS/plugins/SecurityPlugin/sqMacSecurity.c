@@ -19,8 +19,8 @@ void fixPath(char *path);
 int dir_CreateSecurity(char *pathString, int pathStringLength);
 int _ioSetFileAccess(int enable);
 
-static char secureUserDirectory[256];
-static char untrustedUserDirectory[256];
+static char secureUserDirectory[PATH_MAX];
+static char untrustedUserDirectory[PATH_MAX];
 static Boolean gInitialized = false;
 
 /***************************************************************************/
@@ -180,6 +180,7 @@ int ioInitSecurity(void) {
   OSErr err;
   void *iLoadAS;
   char  *data;
+  extern char *gSqueakUntrustedDirectoryName;
   
   if (gInitialized) return 1;
   gInitialized  = true;
@@ -195,31 +196,9 @@ int ioInitSecurity(void) {
   fixPath(secureUserDirectory);
   strcat(secureUserDirectory,  "/secure");
   fixPath(secureUserDirectory);
-  
-	FSRef prefFolder;
-	err = FSFindFolder(kOnSystemDisk,kPreferencesFolderType,kDontCreateFolder,&prefFolder);
-  	if (err != noErr) {
-	  strcpy(untrustedUserDirectory, "/foobar/tooBar/forSqueak/bogus/");
-      fixPath(untrustedUserDirectory);
-      return 1;
-	}
-	PathToFileViaFSRef(untrustedUserDirectory,255,&prefFolder,gCurrentVMEncoding);        
-	strcat(untrustedUserDirectory,"Squeak/Internet");
- 	if (err != noErr) {
-	      strcpy(untrustedUserDirectory, "/foobar/tooBar/forSqueak/bogus/");
-	      fixPath(untrustedUserDirectory);
-		return 0;
-	}	
-	strcat(untrustedUserDirectory,"/My Squeak");
-	FSRef theFSRef;
-	err = getFSRef(untrustedUserDirectory,&theFSRef,gCurrentVMEncoding);	
-	if (err != noErr) {
-		if (!dir_CreateSecurity(untrustedUserDirectory,strlen(untrustedUserDirectory))) {
-	      strcpy(untrustedUserDirectory, "foobar/tooBar/forSqueak/bogus/");
-		  fixPath(untrustedUserDirectory);
-		  return 0;
-		}
-	}
+  untrustedUserDirectory[0] = 0x00;
+  strcpy(&untrustedUserDirectory, &gSqueakUntrustedDirectoryName);
+  fixPath(untrustedUserDirectory);
   return 1;
 }
 

@@ -101,9 +101,11 @@ extern pthread_cond_t  gSleepLockCondition;
 OSErr			gSqueakFileLastError; 
 Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false;
 long			gSqueakMouseMappings[4][4] = {0};
+long			gSqueakBrowserMouseMappings[4][4] = {0};
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
-char            gSqueakImageName[2048] = "Squeak.image";
+char            gSqueakImageName[PATH_MAX] = "Squeak.image";
+char            gSqueakUntrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 CFStringRef		gSqueakImageNameStringRef;
 int				gSqueakBrowserPipes[]= {-1, -1}; 
 Boolean			gSqueakBrowserSubProcess = false;
@@ -229,12 +231,12 @@ int main(int argc, char **argv, char **envp) {
 				extern void resolveWhatTheImageNameIs(char *string);
 				extern SEL NSSelectorFromString(CFStringRef thing);
 				CFStringRef checkFortilda;
-				char	afterCheckForTilda[2048];
+				char	afterCheckForTilda[PATH_MAX];
 				
 				checkFortilda=(CFStringRef)objc_msgSend((id)gSqueakImageNameStringRef, NSSelectorFromString((CFStringRef)CFSTR("stringByExpandingTildeInPath")));
 				
 				
-				CFStringGetCString (checkFortilda, afterCheckForTilda, 2048, gCurrentVMEncoding);
+				CFStringGetCString (checkFortilda, afterCheckForTilda, PATH_MAX, gCurrentVMEncoding);
 
 				resolveWhatTheImageNameIs(afterCheckForTilda);
 				CFRelease(checkFortilda);
@@ -330,7 +332,7 @@ char * GetAttributeString(int id) {
 
 	// id #0 should return the full name of VM
 	if (id == 0) {
-		static char pathToGiveToSqueak[2048];
+		static char pathToGiveToSqueak[PATH_MAX];
 			ux2sqPath(argVec[0], strlen(argVec[0]), pathToGiveToSqueak, VMPATH_SIZE,1);	
             return pathToGiveToSqueak;
         }
@@ -386,7 +388,7 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.14b5 21-Nov-06 >FD1F4C94-6762-40D9-8D36-512594BFD6D2<";
+			return "Mac Carbon 3.8.14b6 22-Nov-06 >818D8349-57A7-4CD1-86CF-2C7170CD7931<";
 			
 
  	if (id == 1201) return "255";
@@ -439,8 +441,9 @@ void fetchPrefrences() {
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
     CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly;
 	CFNumberRef SqueakMouseMappings[4][4] = {0};
+	CFNumberRef SqueakBrowserMouseMappings[4][4] = {0};
     CFDataRef 	SqueakWindowAttributeType;    
-    CFStringRef    SqueakVMEncodingType;
+    CFStringRef    SqueakVMEncodingType, SqueakBrowserUnTrustedDirectoryTypeRef;
 
     char        encoding[256];
     long		i,j;
@@ -454,7 +457,8 @@ void fetchPrefrences() {
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
-    SqueakPluginsBuiltInOrLocalOnly = CFDictionaryGetValue(myDictionary, CFSTR("SqueakPluginsBuiltInOrLocalOnly"));
+    SqueakBrowserUnTrustedDirectoryTypeRef  = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserUnTrustedDirectory"));
+	SqueakPluginsBuiltInOrLocalOnly = CFDictionaryGetValue(myDictionary, CFSTR("SqueakPluginsBuiltInOrLocalOnly"));
     gSqueakImageNameStringRef = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
     SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
     SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
@@ -472,7 +476,19 @@ void fetchPrefrences() {
     SqueakMouseMappings[3][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseControlButton1"));
     SqueakMouseMappings[3][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseControlButton2"));
     SqueakMouseMappings[3][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMouseControlButton3"));
-
+    SqueakBrowserMouseMappings[0][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseNoneButton1"));
+    SqueakBrowserMouseMappings[0][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseNoneButton2"));
+    SqueakBrowserMouseMappings[0][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseNoneButton3"));
+    SqueakBrowserMouseMappings[1][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseCmdButton1"));
+    SqueakBrowserMouseMappings[1][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseCmdButton2"));
+    SqueakBrowserMouseMappings[1][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseCmdButton3"));
+    SqueakBrowserMouseMappings[2][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseOptionButton1"));
+    SqueakBrowserMouseMappings[2][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseOptionButton2"));
+    SqueakBrowserMouseMappings[2][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseOptionButton3"));
+    SqueakBrowserMouseMappings[3][1] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseControlButton1"));
+    SqueakBrowserMouseMappings[3][2] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseControlButton2"));
+    SqueakBrowserMouseMappings[3][3] = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserMouseControlButton3"));
+	
     if (SqueakVMEncodingType) 
         CFStringGetCString (SqueakVMEncodingType, encoding, 256, kCFStringEncodingMacRoman);
     else
@@ -482,6 +498,16 @@ void fetchPrefrences() {
     
     if (gSqueakImageNameStringRef) 
         CFStringGetCString (gSqueakImageNameStringRef, gSqueakImageName, IMAGE_NAME_SIZE+1, kCFStringEncodingMacRoman);
+	
+	if (SqueakBrowserUnTrustedDirectoryTypeRef) {
+		extern SEL NSSelectorFromString(CFStringRef thing);
+		CFStringRef checkFortilda;
+		char	afterCheckForTilda[PATH_MAX];
+
+		checkFortilda=(CFStringRef)objc_msgSend((id)SqueakBrowserUnTrustedDirectoryTypeRef, NSSelectorFromString((CFStringRef)CFSTR("stringByExpandingTildeInPath")));
+		CFStringGetCString (checkFortilda, gSqueakUntrustedDirectoryName, PATH_MAX, gCurrentVMEncoding);
+		CFRelease(checkFortilda);
+	}
 	
     if (SqueakWindowType) 
         CFNumberGetValue(SqueakWindowType,kCFNumberLongType,&gSqueakWindowType);
@@ -525,6 +551,13 @@ void fetchPrefrences() {
 					gSqueakMouseMappings[i][j] = 0;
 				}
 		
+    for(i=0;i<4;i++)
+		for(j=1;j<4;j++)
+			if (SqueakBrowserMouseMappings[i][j]) {
+				CFNumberGetValue(SqueakBrowserMouseMappings[i][j],kCFNumberLongType,(long *) &gSqueakBrowserMouseMappings[i][j]);
+				if (gSqueakBrowserMouseMappings[i][j] < 0 || gSqueakBrowserMouseMappings[i][j] > 3)
+					gSqueakBrowserMouseMappings[i][j] = 0;
+				}
     if (SqueakMaxHeapSizeType) 
         CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
 		

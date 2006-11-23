@@ -1058,6 +1058,7 @@ The middle button on a three-button mouse is always the tertiary button. '
 But mapping assumes 1,2,3  red, yellow, blue
 */
 	extern long gSqueakMouseMappings[4][4];
+	extern long gSqueakBrowserMouseMappings[4][4];
 	long stButtons = 0,modifier,mappedButton;
 	UInt32 keyBoardModifiers=0;
 	EventMouseButton mouseButton=0;
@@ -1101,7 +1102,10 @@ But mapping assumes 1,2,3  red, yellow, blue
 			if (keyBoardModifiers & controlKey)
 				modifier = 3;
 				
-			mappedButton = gSqueakMouseMappings[modifier][mouseButton];
+			if (browserActiveAndDrawingContextOk())
+					mappedButton = gSqueakBrowserMouseMappings[modifier][mouseButton];
+				else
+					mappedButton = gSqueakMouseMappings[modifier][mouseButton];
 			buttonState[mappedButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
 			stButtons |= mappedButton == 1 ? (buttonState[mappedButton] ? RedButtonBit : 0) : 0;
 			stButtons |= mappedButton == 2 ? (buttonState[mappedButton] ? YellowButtonBit : 0) : 0;
