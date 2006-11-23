@@ -99,7 +99,8 @@ void CSqueakOCX::GetURL(char *url, char *target, int id) {
 		SqueakPluginStreamState(squeak, url, 0);
 		return;
 	}
-	hRes = CoInternetCombineUrl(bstrURL, bstrRelURL, 0, bstrFullURL, MAX_PATH, &sz, 0);
+    hRes = CoInternetCombineUrl(bstrURL, bstrRelURL, 0, bstrFullURL, MAX_PATH, &sz, 0);
+    if(FAILED(hRes)) hRes = CoInternetCombineUrl(bstrURL, bstrRelURL, 0, bstrFullURL, sz, &sz, 0);
     if(FAILED(hRes)) {
 		MessageBox("Failed to CoInternetCombineURL", "Squeak");
 		SqueakPluginStreamState(squeak, url, 0);
@@ -117,12 +118,12 @@ void CSqueakOCX::GetURL(char *url, char *target, int id) {
 		if(FAILED(hRes)) {
 			SqueakPluginStreamState(squeak, url, 0);
 		} else {
-			SqueakPluginStreamFile(squeak, url, "");
+			SqueakPluginStreamFile(squeak, url, "",id);
 		}
 	} else {
 		localFile = CSqueakStatusCallback::Download(this, bstrFullURL, m_spClientSite, NULL, 0, FALSE);
 		if(localFile) {
-			SqueakPluginStreamFile(squeak, url, OLE2A(localFile));
+			SqueakPluginStreamFile(squeak, url, OLE2A(localFile),id);
 			CoTaskMemFree(localFile);
 		} else {
 			SqueakPluginStreamState(squeak, url, 0);
@@ -157,7 +158,8 @@ void CSqueakOCX::PostURL(char* url, char *target, char *postData, int id) {
 		SqueakPluginStreamState(squeak, url, 0);
 		return;
 	}
-	hRes = CoInternetCombineUrl(bstrURL, bstrRelURL, 0, bstrFullURL, MAX_PATH, &sz, 0);
+    hRes = CoInternetCombineUrl(bstrURL, bstrRelURL, 0, bstrFullURL, MAX_PATH, &sz, 0);
+    if(FAILED(hRes)) hRes = CoInternetCombineUrl(bstrURL, bstrRelURL, 0, bstrFullURL, sz, &sz, 0);
     if(FAILED(hRes)) {
 		MessageBox("Failed to CoInternetCombineURL", "Squeak");
 		SqueakPluginStreamState(squeak, url, 0);
@@ -184,12 +186,12 @@ void CSqueakOCX::PostURL(char* url, char *target, char *postData, int id) {
 		if(FAILED(hRes)) {
 			SqueakPluginStreamState(squeak, url, 0);
 		} else {
-			SqueakPluginStreamFile(squeak, url, "");
+			SqueakPluginStreamFile(squeak, url, "",id);
 		}
 	} else {
 		localFile = CSqueakStatusCallback::Download(this, bstrFullURL, m_spClientSite, postData, strlen(postData)+1, FALSE);
 		if(localFile) {
-			SqueakPluginStreamFile(squeak, url, OLE2A(localFile));
+			SqueakPluginStreamFile(squeak, url, OLE2A(localFile),id);
 			CoTaskMemFree(localFile);
 		} else {
 			SqueakPluginStreamState(squeak, url, 0);

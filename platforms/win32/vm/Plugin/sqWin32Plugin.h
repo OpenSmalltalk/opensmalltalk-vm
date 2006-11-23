@@ -19,6 +19,7 @@
 typedef struct sqStreamRequest {
   char *url;
   char *localName;
+  FILE *file; /* file */
   int id;
   int state;
 } sqStreamRequest;
@@ -49,7 +50,7 @@ typedef struct SqueakPlugin {
 #ifdef __cplusplus
 extern "C" {
 #endif
-
+  void DPRINT(char *format, ...);
   void SqueakPluginInitialize(void);
   SqueakPlugin *SqueakPluginNew(HANDLE hPluginModule, void *cbData);
   int SqueakPluginDestroy(SqueakPlugin *squeak);
@@ -65,7 +66,7 @@ extern "C" {
 
   void SqueakPluginRequestStream(void *cbData, char *url, char *target, int id);
   void SqueakPluginPostData(void *instance, char *url, char *target, char *data, int id);
-  void SqueakPluginStreamFile(SqueakPlugin *squeak, char *url, char *localName);
+  void SqueakPluginStreamFile(SqueakPlugin *squeak, char *url, char *localName, int id);
   void SqueakPluginNotify(SqueakPlugin *squeak, int id, char *url, int ok);
   void SqueakPluginStreamState(SqueakPlugin *squeak, char *url, int ok);
 

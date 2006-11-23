@@ -29,9 +29,10 @@
 *		4) I HATE browsers. Did I mention this already?!
 *
 *****************************************************************************/
+#include <windows.h>
 #include <stdio.h>
 #include <stdlib.h>
-#include <windows.h>
+
 #include "sqWin32Plugin.h"
 
 const char* gInstanceLookupString = "hWnd->squeak";
@@ -64,6 +65,32 @@ HANDLE hCurrentProcess = NULL;
 #else
 #define NULL_TEST(x,y)
 #endif
+
+
+
+#if defined (NDEBUG)
+void DPRINT(char *format, ...) { }
+#else
+void DPRINT(char *format, ...)
+{
+    static FILE *debuglog;
+    va_list ap;
+     if (!debuglog) 
+	{
+	  debuglog = fopen("npsqueak.log", "a+");
+	  fprintf(debuglog, "=== START PLUGIN ===\n");
+	}
+
+
+	va_start(ap, format);
+	vfprintf(debuglog, format, ap);
+	va_end(ap);
+	fflush(debuglog);
+
+}
+
+#endif
+
 
 /********************************************************************/
 /* Initialization stuff                                             */
@@ -626,10 +653,9 @@ void SqueakReturnRequest(SqueakPlugin *squeak, int index)
   squeak->maxStreams--;
 }
 
-void SqueakPluginStreamFile(SqueakPlugin *squeak, char *url, char *localName)
+void SqueakPluginStreamFile(SqueakPlugin *squeak, char *url, char *localName, int id)
 {
   int i;
-
   if(!squeak->maxStreams) return; /* no streams requested */
   NULL_TEST(url,"PluginStreamFile(url)");
   NULL_TEST(localName, url);
@@ -648,6 +674,7 @@ void SqueakPluginStreamFile(SqueakPlugin *squeak, char *url, char *localName)
     /* Cache the URL and the local name */
     for(i = 0; i < MAX_STREAMS; i++)
       if(!squeak->requests[i].url) {
+	squeak->requests[i].id = id;
 	squeak->requests[i].url = STRDUP(url);
 	squeak->requests[i].localName = STRDUP(localName);
 	return;
@@ -664,13 +691,21 @@ void SqueakPluginNotify(SqueakPlugin *squeak, int id, char *url, int ok)
   NULL_TEST(url,"PluginNotify");
   /* See comments 1), 2), and 4) on top */
   for(i = 0; i < MAX_STREAMS; i++) {
-    if(squeak->requests[i].url && stricmp(squeak->requests[i].url, url) == 0) {
+    if(squeak->requests[i].url && (stricmp(squeak->requests[i].url, url) == 0 || (squeak->requests[i].id == id))) {
       squeak->requests[i].id = id;
       squeak->requests[i].state = ok;
       SqueakReturnRequest(squeak, i);
+      DPRINT("NP: notifySqueak request found for notification %s (id: %i state ok:%i)\n",url,id,ok);
       return;
     }
+    else{
+      if(squeak->requests[i].url){
+      DPRINT("NP: notifySqueak %s not equal \n",url);
+      DPRINT("NP: notifySqueak %s not equal \n",squeak->requests[i].url);
+      }
+    }
   }
+  DPRINT("NP: notifySqueak no request found for notification\n");
   /* Note: If we come here, NS has never created a stream for the request.
      Handle it as if it were an empty request */
   for(i = 0; i < MAX_STREAMS; i++) {
