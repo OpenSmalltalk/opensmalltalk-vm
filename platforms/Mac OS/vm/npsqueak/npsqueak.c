@@ -834,20 +834,6 @@ static void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
 		CFRelease(plugin->sharedBrowserBitMapContextRef);
 	
 	plugin->sharedBrowserBitMapContextRef = CGBitmapContextCreate (plugin->sharedMemoryBlock,plugin->width,plugin->height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
-	CreateCGContextForPort(plugin->display->port,&plugin->context); 
-	
-	//  Adjust for any SetOrigin calls on qdPort
-    SyncCGContextOriginWithPort( plugin->context, plugin->display->port );
-
-    //  Move the CG origin to the upper left of the port
-    GetPortBounds( plugin->display->port, &plugin->portRect );
-
-    CGContextTranslateCTM( plugin->context, 0, (float)(plugin->portRect.bottom - plugin->portRect.top) );
-	{	
-		//CGRect	clip2;
-		//clip2 = CGRectMake(plugin->portRect.left,plugin->portRect.top,plugin->portRect.right-plugin->portRect.left, plugin->portRect.bottom-plugin->portRect.top);
-		//CGContextClipToRect(plugin->sharedBrowserBitMapContextRef, clip2);
-	}
 
 	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i memory at id %i at %i)\n", plugin->width, plugin->height, rowBytes,plugin->sharedMemoryfd,plugin->sharedMemoryBlock);
 	SendInt(plugin,CMD_SHARED_MEMORY);
@@ -891,10 +877,29 @@ browserProcessCommand(SqueakPlugin *plugin)
 			if (myImage == NULL) 
 				return;
 					
-			mySubimage = CGImageCreateWithImageInRect (myImage, imageclip); 
+ 			QDBeginCGContext (plugin->display->port,&plugin->context);
+			//  Adjust for any SetOrigin calls on qdPort
+			SyncCGContextOriginWithPort( plugin->context, plugin->display->port );
+			//  Move the CG origin to the upper left of the port
+			GetPortBounds( plugin->display->port, &plugin->portRect );
+			CGContextTranslateCTM( plugin->context, 0, (float)(plugin->portRect.bottom - plugin->portRect.top) );
+
+		    mySubimage = CGImageCreateWithImageInRect (myImage, imageclip); 
+
+			{	
+				CGRect	clip2;
+				clip2 = CGRectMake(plugin->portRect.left + plugin->clipRect.left,
+					0 - 
+						(plugin->clipRect.bottom-plugin->clipRect.top)  - (plugin->clipRect.top + plugin->portRect.top),
+						plugin->clipRect.right-plugin->clipRect.left, plugin->clipRect.bottom-plugin->clipRect.top);
+				CGContextClipToRect(plugin->context, clip2);
+			}
 
 			CGContextDrawImage(plugin->context, targetclip, mySubimage);
 			CGContextFlush(plugin->context);
+			QDEndCGContext(plugin->display->port,&plugin->context);
+
+
 			CFRelease(myImage);
 			if (mySubimage)
 				CFRelease(mySubimage);
