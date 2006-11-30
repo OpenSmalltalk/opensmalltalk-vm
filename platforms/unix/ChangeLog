@@ -1,5 +1,12 @@
 2006-11-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* config/configure.ac (ext_plugins): add VideoForLinuxPlugin.
+
+	* plugins/VideoForLinuxPlugin: Added.
+
+	* vm-sound-ALSA/sqUnixSoundALSA.c: Save and restore SIGIO
+	handler (since ALSA doesn't bother to restore it correctly).
+
 	* vm/sqGnu.h: Don't assign register vars on Darwin-i386.
 
 2006-10-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>

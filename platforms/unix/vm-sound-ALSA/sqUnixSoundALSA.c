@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-10-18 09:59:12 by piumarta on emilia.local
+ * Last edited: 2006-11-30 14:08:17 by piumarta on emilia.local
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -31,6 +31,7 @@
 #include "sq.h"
 #include <alsa/asoundlib.h>
 #include <errno.h>
+#include <signal.h>
 
 
 static char *sound_device	= "default";
@@ -51,6 +52,9 @@ static char *sound_capture	= "Capture";
       success(false);						\
       return err;						\
     }
+
+static void sigio_save(void);
+static void sigio_restore(void);
 
 
 /* output */
@@ -78,6 +82,7 @@ static sqInt sound_Stop(void)
     {
       snd_pcm_close(output_handle);
       output_handle= 0;
+      sigio_restore();
     }
   return 0;
 }
@@ -154,7 +159,7 @@ static sqInt sound_AvailableSpace(void)
       int count = snd_pcm_avail_update(output_handle);
       if (count >= 0)
 	return count;
-      fprintf(stderr, "sound_AvailablaSpace: snd_pcm_avail_update: %s\n", snd_strerror(count));
+      fprintf(stderr, "sound_AvailableSpace: snd_pcm_avail_update: %s\n", snd_strerror(count));
       snd_pcm_prepare(output_handle);
     }
   return 0;
@@ -215,6 +220,7 @@ static sqInt sound_StopRecording(void)
     {
       snd_pcm_close(input_handle);
       input_handle= 0;
+      sigio_restore();
     }
   return 0;
 }
@@ -426,6 +432,27 @@ static sqInt sound_SetRecordLevel(sqInt level)
 }
 
 
+/* signal support */
+
+
+static void *sigio_handler= 0;
+
+static void sigio_save(void)
+{
+  if (!sigio_handler)
+    {
+      sigio_handler= signal(SIGIO, SIG_IGN);
+      signal(SIGIO, sigio_handler);
+    }
+}
+
+static void sigio_restore(void)
+{ 
+  if (sigio_handler && !output_handle && !input_handle)
+    signal(SIGIO, sigio_handler);
+}
+
+
 /* module */
 
 
@@ -467,6 +494,10 @@ static void  sound_printUsage(void)
 
 static void  sound_printUsageNotes(void) {}
 
-static void *sound_makeInterface(void) { return &sound_ALSA_itf; }
+static void *sound_makeInterface(void)
+{
+  sigio_save();
+  return &sound_ALSA_itf;
+}
 
 SqModuleDefine(sound, ALSA);
