@@ -1,3 +1,7 @@
+2006-11-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqGnu.h: Don't assign register vars on Darwin-i386.
+
 2006-10-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-sound-ALSA/sqUnixSoundALSA.c: Prepare output_handle after
