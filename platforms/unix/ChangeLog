@@ -19,6 +19,8 @@
 
 2006-10-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* vm/sqUnixMain.c: Linux sounds defaults to ALSA.
+
 	* vm/sqUnixCharConv.c: Solaris uses "iso5" external charset.
 
 	* vm-sound-ALSA/sqUnixSoundALSA.c: Implement mixer functions.
