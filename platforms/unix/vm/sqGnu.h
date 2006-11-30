@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2006-10-18 10:06:21 by piumarta on emilia.local
+ * Last edited: 2006-10-24 11:10:51 by piumarta on emilia.local
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -177,10 +177,12 @@
 # define CB_REG __asm__("$11")
 #endif
 #if defined(__i386__)
-# define IP_REG __asm__("%esi")
-# define SP_REG __asm__("%edi")
-# if !defined(__MACH__) && ((__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95)))
-#   define CB_REG __asm__("%ebx")
+# if !defined(__MACH__)
+#   define IP_REG __asm__("%esi")
+#   define SP_REG __asm__("%edi")
+#   if ((__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95)))
+#     define CB_REG __asm__("%ebx")
+#   endif
 # else
 #   define CB_REG /* avoid undue register pressure */
 # endif
