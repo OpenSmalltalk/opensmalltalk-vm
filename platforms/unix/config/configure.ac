@@ -2,7 +2,7 @@
 # 
 # Process this file with autoconf to produce a configure script
 
-#   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2006 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -28,11 +28,11 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2006-11-30 14:23:57 by piumarta on emilia.local
+# Last edited: 2006-11-30 14:54:54 by piumarta on emilia.local
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,9,9, 3,9a,7024)
+AC_VM_VERSION(3,9,10, 3,9a,7024)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`

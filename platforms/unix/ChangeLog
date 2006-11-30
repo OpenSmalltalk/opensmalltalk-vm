@@ -1,5 +1,7 @@
 2006-11-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* config/configure.ac: Version is 3.9-10.
+
 	* config/configure.ac (ext_plugins): add VideoForLinuxPlugin.
 
 	* plugins/VideoForLinuxPlugin: Added.
