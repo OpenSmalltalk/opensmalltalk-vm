@@ -606,8 +606,8 @@ BOOLEAN nextFrameMMap(Device device) {
    /* fprintf(stderr, "- capturing buffer #%d\n", device->bufferIndex); */
 
    /* send a request to begin capturing to the currently indexed buffer */
-   //if (EINTR_RETRY(ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex])) < 0) {
-   if (ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex]) < 0) {
+   if (EINTR_RETRY(ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex])) < 0) {
+   //if (ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex]) < 0) {
       perror("VIDIOCMCAPTURE2");
       return FALSE;
    }

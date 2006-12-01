@@ -1,3 +1,7 @@
+2006-12-01  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/VideoForLinuxPlugin: update palette.c, videolib.[ch].
+
 2006-11-30  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/configure.ac: Version is 3.9-10.
