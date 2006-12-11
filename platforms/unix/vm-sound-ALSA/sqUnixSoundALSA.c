@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-11-30 14:08:17 by piumarta on emilia.local
+ * Last edited: 2006-12-11 11:34:44 by piumarta on emilia.local
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -53,6 +53,9 @@ static char *sound_capture	= "Capture";
       return err;						\
     }
 
+#define MIN(X, Y)	((X) < (Y) ? (X) : (Y))
+#define MAX(X, Y)	((X) > (Y) ? (X) : (Y))
+
 static void sigio_save(void);
 static void sigio_restore(void);
 
@@ -67,8 +70,10 @@ static snd_pcm_t		*output_handle= 0;
 static snd_async_handler_t	*output_handler= 0;
 static int			 output_semaphore= 0;
 static int			 output_channels= 0;
-static int			 output_buffer_frames_size= 0;
 static int			 output_buffer_frames_available= 0;
+static snd_pcm_uframes_t	 output_buffer_period_size= 0;
+static snd_pcm_uframes_t	 output_buffer_size= 0;
+static double			 max_delay_frames= 0;
 
 static void output_callback(snd_async_handler_t *handler)
 {
@@ -92,7 +97,6 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   int			 err;
   snd_pcm_hw_params_t	*hwparams;
   snd_pcm_sw_params_t	*swparams;
-  snd_pcm_uframes_t	 frames;
   unsigned int		 uval;
   int			 dir;
 
@@ -109,8 +113,8 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   snd_pcm_hw_params_set_channels(output_handle, hwparams, output_channels);
   uval= samplesPerSec;
   snd_pcm_hw_params_set_rate_near(output_handle, hwparams, &uval, &dir);
-  frames= frameCount;
-  snd_pcm_hw_params_set_period_size_near(output_handle, hwparams, &frames, &dir);
+  output_buffer_period_size= frameCount;
+  snd_pcm_hw_params_set_period_size_near(output_handle, hwparams, &output_buffer_period_size, &dir);
   snd(pcm_hw_params(output_handle, hwparams), "sound_Start: snd_pcm_hw_params");
 
   snd_pcm_sw_params_alloca(&swparams);
@@ -119,9 +123,9 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
   snd(pcm_sw_params_set_avail_min(output_handle, swparams, frameCount * SQ_SND_PLAY_AVAIL_MIN), "sound_Start: snd_pcm_sw_parama_set_avail_min");
   snd(pcm_sw_params_set_xfer_align(output_handle, swparams, 1), "sound_Start: snd_pcm_sw_params_set_xfer_align");
   snd(pcm_sw_params(output_handle, swparams), "sound_Start: snd_pcm_sw_params");
-
-  output_buffer_frames_size= frameCount;
+  snd(pcm_hw_params_get_buffer_size(hwparams, &output_buffer_size), "sound_Start: pcm_hw_params_get_buffer_size");
   output_buffer_frames_available= 1;
+  max_delay_frames= output_buffer_period_size * 2;	/* set initial delay frames */
 
   snd(pcm_nonblock(output_handle, 1), "sound_Start: snd_pcm_nonblock");
   snd(async_add_pcm_handler(&output_handler, output_handle, output_callback, 0), "soundStart: snd_add_pcm_handler");
@@ -154,6 +158,29 @@ static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sq
 
 static sqInt sound_AvailableSpace(void)
 {
+#if 1
+  snd_pcm_sframes_t delay;    /* distance to playback point (in frames) */
+  snd_pcm_state_t   state;    /* current state of the stream */
+  sqInt             avail= 0; /* available space for the answer (in bytes) */
+
+  if (!output_handle) return 0;
+
+  snd_pcm_delay(output_handle, &delay);
+  state= snd_pcm_state (output_handle);
+
+  /* if underrun causes, max delay is loosened */
+  if (state == SND_PCM_STATE_XRUN)
+    max_delay_frames=	MIN(max_delay_frames * 1.5, output_buffer_size - output_buffer_period_size);
+
+  /* if the state is not running, new sound is needed because nobody can signal the semaphore */
+  if (delay <= max_delay_frames || state != SND_PCM_STATE_RUNNING)
+    {
+      avail= output_buffer_period_size;
+      max_delay_frames= MAX(max_delay_frames * 0.9995, output_buffer_period_size);
+    }
+  /*fprintf(stderr, "delay=%i, ans_avail=%i, state=%i, real_delay=%.1fms\n", (int) delay, avail, state, 1000 * max_delay_frames / 22050);*/
+  return avail * output_channels * 2;	/* bytes */
+#else
   if (output_handle)
     {
       int count = snd_pcm_avail_update(output_handle);
@@ -163,6 +190,7 @@ static sqInt sound_AvailableSpace(void)
       snd_pcm_prepare(output_handle);
     }
   return 0;
+#endif
 }
 
 static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
@@ -231,7 +259,6 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   snd_pcm_hw_params_t	*hwparams;
   snd_pcm_sw_params_t	*swparams;
   snd_pcm_uframes_t	 frames;
-  unsigned int		 uval;
   int			 dir;
 
   if (input_handle) sound_StopRecording();
@@ -261,6 +288,7 @@ static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqIn
   snd(pcm_nonblock(input_handle, 1), "sound_StartRecording: snd_pcm_nonblock");
   snd(async_add_pcm_handler(&input_handler, input_handle, input_callback, 0), "sound_StartRecording: snd_add_pcm_handler");
   snd(pcm_start(input_handle), "sound_StartRecording: snd_pcm_start");
+  return 1;
 }
 
 static double sound_GetRecordingSampleRate(void)
