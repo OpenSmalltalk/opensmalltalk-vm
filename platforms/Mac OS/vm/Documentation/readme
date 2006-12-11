@@ -19,7 +19,7 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes John McIntosh Mar 5th, 2006 3.8.11b1 Drop os-9, non-carbon logic. 
 	-- Changes John McIntosh Sept 3rd, 2006 3.8.12b5u clarify build instructions
 	-- Changes John McIntosh, Craig Latta, Oct 19th, 2006 3.8.13b4
-	--
+	-- Changes John McIntosh, Dec 11th, 2006 3.8.14b6U, clarify, cross check
 
 (Note to readers, it is possible a step was missed, so beware)
 
@@ -63,21 +63,24 @@ Step Three: Build an interpeter
 	3.8.1 might work too, since most logic is in VMMaker not the image. 
 	3.9 *has* been used occasionally but most VM building has occurred in a 3.8 image.
  
-	Install Balloon 3D, and then install version 3.8b6 of VMMaker, from
+	Install Balloon 3D, then install FFI if you are using a 3.9 image.
+
+
+	Finally install version 3.8b6 of VMMaker, from
 	http://map.squeak.org/accountbyid/4340a66e-2296-48b7-9aa8-5305d303752f/files/VMMaker-3.8b6.mcz
 	or later...
 
-	When this loads reply yes to move FloatProto to Undeclared if you did not use the basic image. 
+	When this loads reply yes to move FloatProto to Undeclared if you did not use the basic image. {This prompt does not occur in a 3.9 image}
 	Now load the following two change sets found in the specialChangeSets folder.
 	Note these might be in the VMMaker update since this doc was written, check the change set and 
-	the image after loading VMMaker to see if you need these items. 
+	the image after loading VMMaker to see if you need these items. {In a 3.9 7067 image these change sets appear NOT to be needed.}
 
 	load VMM38-gc-instrument-image.1.cs 
 	load VMM38-64bit-imageUpdates.1.cs
 
 	That should provide a version of VMMaker that is sufficient to build 3.8.12b5U
 
-	For 3.8.13b2U Expury
+	For 3.8.13b2U OPTIONAL Expury if you want Expury support.
 
 	File in Exupery-wbk.195 from Exupery site and VMMaker-wbk.40.8.cs or higher change set from the specialChangeSets Folder 
 	(VMMaker-wbk.40.8.cs is the differences between VMMaker-wbk.40 and VMMaker 3.8b6). Please note these changes might be folded
