@@ -1,3 +1,11 @@
+2006-12-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/VideoForLinuxPlugin/palettes.c: Add YUYV format
+	conversion.
+
+	* plugins/VideoForLinuxPlugin/acinclude.m4: Include stdlib before
+	videodev to work around GNU/Linux header bug.
+
 2006-12-04  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/UnixOSProcessPlugin/acinclude.m4: Require pthreads.

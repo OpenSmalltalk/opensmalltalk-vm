@@ -74,6 +74,28 @@ inline void YUV444toRGB888(const unsigned char y, const unsigned char u, const u
 }
 
 // from: http://en.wikipedia.org/wiki/YUV422
+void YUYVToRGB24(int width, int height, const void *voidSrc, void *voidDst) {
+   int i;
+
+   unsigned char* dest = (unsigned char*) voidDst;
+   unsigned char* src  = (unsigned char*) voidSrc;
+
+   unsigned char u, y1, v, y2;
+
+   for (i = 0; i < width * height; i += 2) {
+      y1 = *src++;
+      u  = *src++;
+      y2 = *src++;
+      v  = *src++;
+
+      YUV444toRGB888(y1, u, v, dest);
+      dest += 3;
+
+      YUV444toRGB888(y2, u, v, dest);
+      dest += 3;
+   }
+}
+
 void YUV422ToRGB24(int width, int height, const void *voidSrc, void *voidDst) {
    int i;
 
@@ -96,7 +118,6 @@ void YUV422ToRGB24(int width, int height, const void *voidSrc, void *voidDst) {
    }
 }
 
-
 static struct palette_info palette_info_list[] = {
    { 0,  "UNKOWN - Unkown palette",                        0.0,                0,  0},
    { 1,  "GREY - Linear greyscale",                        0.0,                0,  8},
@@ -106,7 +127,7 @@ static struct palette_info palette_info_list[] = {
    { 5,  "RGB32 - 32bit RGB",                              4.0, ccvt_bgr32_rgb24, 32},
    { 6,  "RGB555 - 555 15bit RGB",                         0.0,                0, 16},
    { 7,  "YUV422 - YUV422 capture",                        1.5,    YUV422ToRGB24, 16},
-   { 8,  "YUYV",                                           0.0,                0, 16},
+   { 8,  "YUYV",                                           2.0,      YUYVToRGB24, 16},
    { 9,  "UYVY - The great thing about standards is ...",  0.0,                0, 16},
    {10,  "YUV420",                                         1.5,  ccvt_420p_rgb24, 16},
    {11,  "YUV411 - YUV411 capture",                        0.0,                0, 12},
