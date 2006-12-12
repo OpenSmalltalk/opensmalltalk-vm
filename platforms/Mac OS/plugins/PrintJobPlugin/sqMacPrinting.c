@@ -13,6 +13,7 @@
 *	Feb 20th 2002, JMM - add offset logic, free printsession only if allocated (duh)
 *   Jun 27th 2002, JMM - use UILock code to lock UI to prevent os-x seg fault
 *       Aug 7th, 2002, JMM - fixes to build as internal
+*   Dec 1st, 2006, PE - removed big_endian check in DrawPage(). This prevents to work correctly on intel
 *
 *****************************************************************************/
 #include "sqVirtualMachine.h"
@@ -49,15 +50,15 @@ static CTabHandle	stColorTable = nil;
 static PixMapHandle	stPixMap = nil;
 extern struct VirtualMachine *interpreterProxy;
 
+
 /*------------------------------------------------------------------------------
 	Prototypes
 ------------------------------------------------------------------------------*/
 static void 	SetColorEntry(int index, int red, int green, int blue);
 static void 	SetUpPixmap(void);
 static void 	FreePixmap(void);
-static Boolean RunningOnCarbonX(void);
 OSStatus	DoPrintLoop(PrintingLogicPtr printJob);
-OSStatus 	DrawPage(PrintingLogicPtr printJob);
+OSStatus 	DrawPage(PrintingLogicPtr printJob,CGContextRef printingContext);
 
 #if TARGET_API_MAC_CARBON
 OSStatus 	DoPageSetupDialog(PrintingLogicPtr printJob);
@@ -88,6 +89,7 @@ int ioPrintSetup(PrintingLogicPtr *token)
     printJob->printSettings = kPMNoPrintSettings;
     printJob->flatFormatHandle = NULL;
     printJob->numberOfPages = 0;
+    printJob->aGWorld = NULL;
     
     //	Initialize the printing manager and create a printing session.
     status = PMCreateSession(&printJob->printSession);
@@ -148,8 +150,27 @@ int ioPrintPreProcessing(PrintingLogicPtr printJob,int numberOfPages) {
 	if (status == noErr)
             status = PMSetPageRange(printJob->printSettings, 1, printJob->lastPage-printJob->firstPage+1);
         //	Check if we can add PostScript to the spool file
-        if (status == noErr)
-            printJob->allowPostscript = IncludePostScriptInSpoolFile(printJob);
+        if (status == noErr) { 
+			CFStringRef         strings[1];
+			CFArrayRef          ourGraphicsContextsArray;
+			OSErr               err = noErr;
+			
+            printJob->allowPostscript = true;   //IncludePostScriptInSpoolFile(printJob);
+			//
+			//    at this point you've already created a print session
+			//
+			strings[0] = kPMGraphicsContextCoreGraphics; // This is important!
+			ourGraphicsContextsArray = CFArrayCreate (kCFAllocatorDefault,
+								(const void **)strings,
+								1, &kCFTypeArrayCallBacks);
+			if (ourGraphicsContextsArray != NULL) {
+					err = PMSessionSetDocumentFormatGeneration (printJob->printSession,
+									kPMDocumentFormatPDF,
+									ourGraphicsContextsArray, NULL);
+					CFRelease (ourGraphicsContextsArray);
+			}
+					
+			}
         
         //	Begin a new print job.
         status = PMSessionBeginDocument(printJob->printSession, printJob->printSettings, printJob->pageFormat);
@@ -186,11 +207,17 @@ int ioPagePostProcessing(PrintingLogicPtr printJob) {
     
     //	Close the page.
     status = PMSessionEndPage(printJob->printSession);
+	if (printJob->aGWorld) {
+		DisposeGWorld(printJob->aGWorld);
+		printJob->aGWorld = NULL;
+	}
+
     return status;
 }
 
 
-int ioPrintPostProcessing(PrintingLogicPtr printJob) {                                                                	OSStatus	status = noErr;
+int ioPrintPostProcessing(PrintingLogicPtr printJob) {                                                                	
+	OSStatus	status = noErr;
 
      // Close the print job.  This dismisses the progress dialog on Mac OS X.
     status = PMSessionEndDocument(printJob->printSession);
@@ -397,6 +424,7 @@ OSStatus 	DoPrintDialog(PrintingLogicPtr printJob)
 }	//	DoPrintDialog
 
 
+
 /*------------------------------------------------------------------------------
 	Function:
 		DoPrintLoop
@@ -408,6 +436,60 @@ OSStatus 	DoPrintDialog(PrintingLogicPtr printJob)
 		loop, calling DrawPage for each page.
 				
 ------------------------------------------------------------------------------*/
+OSStatus DoPrintLoop(PrintingLogicPtr printJob)
+{
+    OSStatus	status = noErr, tempErr;
+    CGContextRef  printingContext;
+                 
+	
+    //	Note, we don't have to worry about the number of copies.  The printing
+    //	manager handles this.  So we just iterate through the document from the
+    //	first page to be printed, to the last.
+
+    //	Note, we don't have to deal with the classic Printing Manager's
+    //	128-page boundary limit.
+                    
+    //	Set up a page for printing.  Under the classic Printing Manager, applications
+    //	could provide a page rect different from the one in the print record to achieve
+    //	scaling. This is no longer recommended and on Mac OS X, the PageRect argument
+    //	is ignored.
+    
+
+        
+ 	//    Now you are ready to request the printing context
+	status = PMSessionGetGraphicsContext (printJob->printSession,
+		kPMGraphicsContextCoreGraphics, (void **) &printingContext);
+
+    if (status == noErr) {
+       //	Draw the page.
+        status = DrawPage(printJob,printingContext);
+    }
+            
+    //	Only report a printing error once we have completed the print loop. This
+    //	ensures that every PMBeginXXX call that returns no error is followed by
+    //	a matching PMEndXXX call, so the Printing Manager can release all temporary 
+    //	memory and close properly.
+    tempErr = PMSessionError(printJob->printSession);
+    if(status == noErr)
+        status = tempErr;
+
+    if (status == kPMCancel) 
+        status = noErr;
+            
+    return status;
+}	//	DoPrintLoop
+
+/*------------------------------------------------------------------------------
+	Function:
+		DoPrintLoop
+	
+	Parameters:
+	
+	Description:
+		DoPrintLoop calculates which pages to print and executes the print
+		loop, calling DrawPage for each page.
+				
+------------------------------------------------------------------------------
 OSStatus DoPrintLoop(PrintingLogicPtr printJob)
 {
     OSStatus	status = noErr, tempErr;
@@ -459,7 +541,7 @@ OSStatus DoPrintLoop(PrintingLogicPtr printJob)
             
     return status;
 }	//	DoPrintLoop
-
+*/
 
 
 /*------------------------------------------------------------------------------
@@ -531,11 +613,11 @@ OSStatus	LoadAndUnflattenPageFormat(PrintingLogicPtr printJob)
 OSStatus	DetermineNumberOfPagesInDoc(UInt32 *numPages,PrintingLogicPtr printJob)
 {
     OSStatus	status;
-    PMRect	pageRect;
 
     //	PMGetAdjustedPageRect returns the page size taking into account rotation,
     //	resolution and scaling settings.
-    status = PMGetAdjustedPageRect(printJob->pageFormat, &pageRect);
+    status = PMGetAdjustedPageRect(printJob->pageFormat, &printJob->pageRect);
+    status = PMGetAdjustedPaperRect(printJob->pageFormat, &printJob->paperRect);
 
     //	In this sample code we simply return a hard coded number.  In your application,
     //	you will need to figure out how many page rects are needed to image the
@@ -582,16 +664,18 @@ Boolean IncludePostScriptInSpoolFile(PrintingLogicPtr printJob)
         
         for (i=0; i < numSupportedFormats; i++)
         {
-           /* if ( CFStringCompare(CFArrayGetValueAtIndex(supportedFormats, i),
+       /*    if ( CFStringCompare(CFArrayGetValueAtIndex(supportedFormats, i),
                 kPMDocumentFormatPDF, kCFCompareCaseInsensitive) == kCFCompareEqualTo )
                     return true;
                     
             if ( CFStringCompare(CFArrayGetValueAtIndex(supportedFormats, i),
                 kPMDocumentFormatPostScript, kCFCompareCaseInsensitive) == kCFCompareEqualTo )
-                    return true;*/
-                    
-            if ( CFStringCompare(CFArrayGetValueAtIndex(supportedFormats, i),
-                kPMDocumentFormatPICTPS, kCFCompareCaseInsensitive) == kCFCompareEqualTo )
+                    return true; */
+					
+            if (( CFStringCompare(CFArrayGetValueAtIndex(supportedFormats, i),
+                kPMDocumentFormatPICTPS, kCFCompareCaseInsensitive) == kCFCompareEqualTo ) ||
+				( CFStringCompare(CFArrayGetValueAtIndex(supportedFormats, i),
+                kPMDocumentFormatPICTPSwPSNormalizer, kCFCompareCaseInsensitive) == kCFCompareEqualTo ))
             {
                 // PICT w/ PS is supported, so tell the Printing Mgr to generate a PICT w/ PS spool file
                 
@@ -613,6 +697,17 @@ Boolean IncludePostScriptInSpoolFile(PrintingLogicPtr printJob)
                         if (status == noErr) {
                              includePostScript = true;	// Enable use of PS PicComments in DrawPage.
                         }
+    
+	                     if (status != noErr) {
+										// Request a PICT w/ PS spool file
+							status = PMSessionSetDocumentFormatGeneration(printJob->printSession, kPMDocumentFormatPICTPSwPSNormalizer, 
+								arrayOfGraphicsContexts, NULL);
+						
+							if (status == noErr) {
+								 includePostScript = true;	// Enable use of PS PicComments in DrawPage.
+							}
+                        }
+						
                         // Deallocate the array used for the list of graphics contexts.
                             CFRelease(arrayOfGraphicsContexts);
                 }
@@ -822,14 +917,6 @@ int ioShutdownPrintJob() {
     return 1;
 }
 
-static Boolean RunningOnCarbonX(void)
-{
-    UInt32 response;
-    
-    return (Gestalt(gestaltSystemVersion, 
-                    (SInt32 *) &response) == noErr)
-                && (response >= 0x01000);
-}
 
 int ioPagePostscript(PrintingLogicPtr printJob,char *postscript,int postscriptLength) {
 
@@ -864,6 +951,190 @@ int ioPageForm(PrintingLogicPtr printJob, char *aBitMap,int h,int w,int d,float 
         PicComments.
 		
 ------------------------------------------------------------------------------*/
+
+#define bytesPerLine(width, depth)	((((width)*(depth) + 31) >> 5) << 2)
+#ifndef kCGBitmapByteOrder32Host
+enum {
+    kCGBitmapAlphaInfoMask = 0x1F,
+    kCGBitmapFloatComponents = (1 << 8),
+    
+    kCGBitmapByteOrderMask = 0x7000,
+    kCGBitmapByteOrderDefault = (0 << 12),
+    kCGBitmapByteOrder16Little = (1 << 12),
+    kCGBitmapByteOrder32Little = (2 << 12),
+    kCGBitmapByteOrder16Big = (3 << 12),
+    kCGBitmapByteOrder32Big = (4 << 12)
+};
+
+#ifdef __BIG_ENDIAN__
+#define kCGBitmapByteOrder16Host kCGBitmapByteOrder16Big
+#define kCGBitmapByteOrder32Host kCGBitmapByteOrder32Big
+#else    /* Little endian. */
+#define kCGBitmapByteOrder16Host kCGBitmapByteOrder16Little
+#define kCGBitmapByteOrder32Host kCGBitmapByteOrder32Little
+#endif
+
+#endif 
+
+static const void *get_byte_pointer(void *bitmap)
+{
+    return (void *) bitmap;
+}
+
+static CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
+    get_byte_pointer,
+    NULL,
+    NULL,
+    NULL
+};
+
+OSStatus DrawPage(PrintingLogicPtr printJob,CGContextRef printingContext)
+{
+    OSStatus status = noErr; 
+    Rect	dstRect = { 0, 0, 0, 0 };
+    Rect	srcRect = { 0, 0, 0, 0 };
+	static CGColorSpaceRef colorspace = NULL;
+
+	if (colorspace == NULL) {
+			// Get the Systems Profile for the main display
+		CMProfileRef sysprof = NULL;
+		if (CMGetSystemProfile(&sysprof) == noErr) {
+			// Create a colorspace with the systems profile
+			colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
+			CMCloseProfile(sysprof);
+		} else 
+			colorspace = CGColorSpaceCreateDeviceRGB();
+	}
+    
+		dstRect.top = printJob->offsetHeight;
+        dstRect.left = printJob->offsetWidth;
+        dstRect.right = printJob->width*printJob->scaleW + printJob->offsetWidth;
+        dstRect.bottom = printJob->height*printJob->scaleH + printJob->offsetHeight;
+
+	if (printJob->formBitMap != nil) {
+    
+        srcRect.right = printJob->width;
+        srcRect.bottom = printJob->height;
+
+        HLock((Handle)stPixMap);
+        (*stPixMap)->baseAddr = (void *) printJob->formBitMap;
+        (*stPixMap)->rowBytes = (((((printJob->width * printJob->depth) + 31) / 32) * 4) & 0x1FFF) | 0x8000;
+        (*stPixMap)->bounds = srcRect;
+        (*stPixMap)->pixelSize = printJob->depth;
+    
+        if (printJob->depth<=8) { 
+            (*stPixMap)->cmpSize = printJob->depth;
+            (*stPixMap)->cmpCount = 1;
+        } else if (printJob->depth==16) {
+            (*stPixMap)->cmpSize = 5;
+            (*stPixMap)->cmpCount = 3;
+        } else if (printJob->depth==32) {
+            (*stPixMap)->cmpSize = 8;
+            (*stPixMap)->cmpCount = 3;
+        }
+
+         
+		{
+            PixMapHandle thePix;
+            int			pitch;
+			CGDataProviderRef provider;			
+			CGImageRef image;
+			CGRect		clip;
+			Ptr			baseAddr;
+			
+            if (printJob->depth == 32) {
+				pitch =  (((((printJob->width * printJob->depth) + 31) / 32) * 4) & 0x1FFF);
+				baseAddr =  (void *) printJob->formBitMap;
+			} else {
+				if (printJob->aGWorld == NULL)
+					NewGWorld(&printJob->aGWorld, 32, &srcRect, stColorTable, NULL, keepLocal+useTempMem+pixelsLocked);
+					
+				thePix = GetGWorldPixMap (printJob->aGWorld);
+				CopyBits((BitMap *) *stPixMap, (BitMap *) *thePix, &srcRect, &srcRect, srcCopy, NULL);
+				
+				pitch = GetPixRowBytes(thePix);
+				baseAddr = GetPixBaseAddr(thePix);
+			}
+			
+			provider = CGDataProviderCreateDirectAccess((void*)baseAddr, pitch * (srcRect.bottom-srcRect.top), &gProviderCallbacks);
+			image = CGImageCreate( srcRect.right-srcRect.left, srcRect.bottom-srcRect.top, 8 /* bitsPerComponent */, 32 /* bitsPerPixel */, 
+				pitch, colorspace, kCGImageAlphaNoneSkipFirst | (printJob->depth==32 ? kCGBitmapByteOrder32Host : 0), provider, NULL, 0, kCGRenderingIntentDefault);
+
+			clip = CGRectMake(dstRect.left+(printJob->pageRect.left-printJob->paperRect.left),
+				(printJob->paperRect.bottom-printJob->pageRect.bottom) + (printJob->pageRect.bottom - printJob->pageRect.top) - (dstRect.bottom-dstRect.top) - dstRect.top, 
+				dstRect.right-dstRect.left, 
+				dstRect.bottom-dstRect.top);
+			
+			CGContextDrawImage(printingContext, clip, image);
+			CGContextFlush(printingContext);
+			CGImageRelease(image);
+			CGDataProviderRelease(provider);
+       }
+        HUnlock((Handle)stPixMap);
+    }
+	else {
+	}
+	
+#if TARGET_API_MAC_CARBON	
+     if (printJob->allowPostscript && printJob->postscriptLength > 0) {
+	
+		CGDataProviderRef provider,providerFakeImage;			
+		CGImageRef image,imageFake;
+		CGRect		clip;
+		static long  dirt=0xBBBBBBBB;
+		
+		//PMPrinter  currentPrinter = NULL;
+		//CFArrayRef mimeTypes;
+		//status = PMSessionGetCurrentPrinter(printJob->printSession,&currentPrinter);
+		//status = PMPrinterGetMimeTypes(currentPrinter,printJob->printSettings,&mimeTypes);
+ 		
+		provider = CGDataProviderCreateDirectAccess((void*)printJob->postscript,printJob->postscriptLength, &gProviderCallbacks);
+		providerFakeImage = CGDataProviderCreateDirectAccess((void*)&dirt,4, &gProviderCallbacks);
+		
+		//OK make fake image using tiny bit of data
+		imageFake = CGImageCreate(1, 1, 8 /* bitsPerComponent */, 32 /* bitsPerPixel */, 4, colorspace, kCGImageAlphaNoneSkipFirst , providerFakeImage, NULL, 0, kCGRenderingIntentDefault);
+		image = PMCGImageCreateWithEPSDataProvider(provider,imageFake);
+
+
+		dstRect.top = 0;
+		dstRect.left = 0;
+		dstRect.bottom = CGImageGetHeight(image);
+		dstRect.right = CGImageGetWidth(image);
+		
+		clip = CGRectMake(dstRect.left+(printJob->pageRect.left-printJob->paperRect.left),
+			(printJob->paperRect.bottom-printJob->pageRect.bottom) + (printJob->pageRect.bottom - printJob->pageRect.top) - (dstRect.bottom-dstRect.top) - dstRect.top, 
+			dstRect.right-dstRect.left, 
+			dstRect.bottom-dstRect.top); 
+			
+		//PMPrinterPrintWithProvider
+		
+		CGContextDrawImage(printingContext, clip, image);
+		CGContextFlush(printingContext);
+		CGImageRelease(image);
+		CGImageRelease(imageFake);
+		CGDataProviderRelease(provider);
+		CGDataProviderRelease(providerFakeImage);
+    }   
+#else
+	return PrError();
+#endif
+		
+    return status;
+}	//	DrawPage
+
+
+/*------------------------------------------------------------------------------
+    Function:	DrawPage
+	
+    Parameters:
+	
+    Description:
+        Draws the contents of a single page.  If allowPostscript is true, DrawPage
+        adds PostScript code into the spool file.  See the Printing chapter in
+        Inside Macintosh, Imaging with QuickDraw, for details about PostScript
+        PicComments.
+		
+------------------------------------------------------------------------------
 OSStatus DrawPage(PrintingLogicPtr printJob)
 {
     OSStatus status = noErr; 
@@ -871,11 +1142,12 @@ OSStatus DrawPage(PrintingLogicPtr printJob)
     Rect	dstRect = { 0, 0, 0, 0 };
     Rect	srcRect = { 0, 0, 0, 0 };
     
-    if (printJob->formBitMap != nil) {
-        dstRect.top = printJob->offsetHeight;
+		dstRect.top = printJob->offsetHeight;
         dstRect.left = printJob->offsetWidth;
         dstRect.right = printJob->width*printJob->scaleW + printJob->offsetWidth;
         dstRect.bottom = printJob->height*printJob->scaleH + printJob->offsetHeight;
+
+	if (printJob->formBitMap != nil) {
     
         srcRect.right = printJob->width;
         srcRect.bottom = printJob->height;
@@ -917,7 +1189,9 @@ OSStatus DrawPage(PrintingLogicPtr printJob)
         }
         HUnlock((Handle)stPixMap);
     }
-        
+	else {
+		ClipRect(&dstRect);
+	}
 #if TARGET_API_MAC_CARBON	
     //	Conditionally insert PostScript into the spool file.
     if (printJob->allowPostscript && printJob->postscriptLength > 0) {
@@ -936,7 +1210,7 @@ OSStatus DrawPage(PrintingLogicPtr printJob)
     return status;
 }	//	DrawPage
 
-
+*/
 
 static void SetUpPixmap(void) {
 	int i, r, g, b;
