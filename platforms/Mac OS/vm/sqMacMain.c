@@ -120,6 +120,21 @@ char **argVec= 0;
 char **envVec= 0;
 #pragma export off
 
+static void sigsegv(int ignore)
+{
+  /* error("Segmentation fault"); */
+  static int printingStack= 0;
+
+  printf("\nSegmentation fault\n\n");
+  if (!printingStack)
+    {
+      printingStack= 1;
+      printAllStacks();
+    }
+  abort();
+}
+
+
 int main(int argc, char **argv, char **envp);
 
 #if defined(__GNUC__) && ( defined(i386) || defined(__i386) || defined(__i386__)  \
@@ -165,6 +180,8 @@ int main(int argc, char **argv, char **envp) {
   argCnt= argc;
   argVec= argv;
   envVec= envp;
+  
+  signal(SIGSEGV, sigsegv);
 
   fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
   mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
@@ -388,7 +405,7 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.14b6 22-Nov-06 >818D8349-57A7-4CD1-86CF-2C7170CD7931<";
+			return "Mac Carbon 3.8.14b7 11-Dec-06 >7259C320-48F9-47A5-B4CA-151D34A7A825<";
 			
 
  	if (id == 1201) return "255";
