@@ -183,6 +183,7 @@ void Buffer_delete(Buffer *b)
 {
   assert(b && b->data);
   free(b->data);
+  b->data = NULL;
   free(b);
 }
 
@@ -308,6 +309,35 @@ inline int Buffer_write(Buffer *b, char *buf, int nbytes)
   int headroom= b->size - iptr;
   int bytesCopied= 0;
 
+  if (bytesToCopy >= headroom)
+    {
+      memcpy(b->data + iptr, buf, headroom);
+      iptr= 0;
+      bytesCopied += headroom;
+      bytesToCopy -= headroom;
+    }
+  if (bytesToCopy)
+    {
+      memcpy(b->data + iptr, buf + bytesCopied, bytesToCopy);
+      iptr += bytesToCopy;
+      bytesCopied += bytesToCopy;
+    }
+  b->iptr= iptr;
+  b->avail += bytesCopied;
+  assert(b->avail <= b->size);
+  return bytesCopied;
+}
+
+inline int Buffer_writeRecheck(Buffer *b, char *buf, int nbytes)
+{
+  int iptr= b->iptr;
+  int bytesToCopy= min(nbytes, Buffer_free(b));
+  int headroom= b->size - iptr;
+  int bytesCopied= 0;
+
+  if (b->data == NULL || buf == NULL) 
+	return 0;
+  
   if (bytesToCopy >= headroom)
     {
       memcpy(b->data + iptr, buf, headroom);
@@ -465,7 +495,7 @@ typedef struct Stream
   Buffer *b= s->buffer;
   int     n= Buffer_free(b);
   if (n >= inputData->mBuffers[0].mDataByteSize)
-    Buffer_write(b, inputData->mBuffers[0].mData, inputData->mBuffers[0].mDataByteSize);
+    Buffer_writeRecheck(b, inputData->mBuffers[0].mData, inputData->mBuffers[0].mDataByteSize);
   if (Buffer_avail(b) >= s->imgBufSize)
     ioProcSignal(s->semaphore);		// restart SoundRecorder
   return kAudioHardwareNoError;
