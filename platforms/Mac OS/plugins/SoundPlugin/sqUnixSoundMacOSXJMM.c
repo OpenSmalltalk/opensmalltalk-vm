@@ -108,7 +108,8 @@ char empty[256] = { 0 };
 #else // !DEBUG
 
  inline void dumpFormat(AudioStreamBasicDescription *fmt) {}
- inline void dprintf(const char *fmt, ...) {}
+ #define  dprintf(ARGS, ...)
+ // inline void dprintf(const char *fmt, ...) {}
 
 #endif // !DEBUG
 

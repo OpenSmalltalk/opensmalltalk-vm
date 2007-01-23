@@ -198,7 +198,6 @@ int ioInitSecurity(void) {
   fixPath(secureUserDirectory);
   untrustedUserDirectory[0] = 0x00;
   strcpy(&untrustedUserDirectory, &gSqueakUntrustedDirectoryName);
-  fixPath(untrustedUserDirectory);
   return 1;
 }
 
