@@ -150,8 +150,8 @@ $(OBJDIR):
 #############################################################################
 # The exports for named primitives from Squeak (required by VM)
 #
-$(VMDEF) $(VMEXP) $(VMLIB): $(ALLOBJ)
-	$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-exp $(OBJDIR)/$(VMEXP) --output-lib $(OBJDIR)/$(VMLIB) $(addprefix $(OBJDIR)/,$(ALLOBJ))
+$(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
+	$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(OBJDIR)/$(VMDEF) --output-exp $(OBJDIR)/$(VMEXP) --output-lib $(OBJDIR)/$(VMLIB) $(addprefix $(OBJDIR)/,$(VMOBJ))
 
 #############################################################################
 # Building plugins
