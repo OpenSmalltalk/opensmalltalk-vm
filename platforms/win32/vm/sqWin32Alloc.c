@@ -63,13 +63,7 @@ void *sqAllocateMemory(int minHeapSize, int desiredHeapSize)
 
   /* Here, we only reserve the maximum memory to be used
      It will later be committed during actual access */
-  maxReserved = 1*1024*1024*1024;
-  /* Ugh. Note. Some people really *are* crazy...
-     ... as if 512MB wouldn't be enough, no sir...
-     ... so we give you all we have (1GB) ...
-     ... except a bit for the C allocator ...
-  */
-  maxReserved -= 128*1024*1024;
+  maxReserved = MAX_VIRTUAL_MEMORY;
   do {
     pageBase = VirtualAlloc(NULL,maxReserved,MEM_RESERVE, PAGE_NOACCESS);
     if(!pageBase) {

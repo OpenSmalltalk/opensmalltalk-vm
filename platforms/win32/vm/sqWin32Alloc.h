@@ -3,9 +3,16 @@
 
 #ifndef NO_VIRTUAL_MEMORY
 
-/* use a maximum of 16 MB if nothing else is defined*/
+/*
+   Limit the default size for virtual memory to 512MB to avoid nasty
+   spurious problems when large dynamic libraries are loaded later.
+   Applications needing more virtual memory can increase the size by
+   defining it appropriately - here we try to cater for the common
+   case by using a "reasonable" size that will leave enough space for
+   other libraries. 
+*/
 #ifndef MAX_VIRTUAL_MEMORY
-#define MAX_VIRTUAL_MEMORY 16
+#define MAX_VIRTUAL_MEMORY 512*1024*1024
 #endif
 
 /* Memory initialize-release */
