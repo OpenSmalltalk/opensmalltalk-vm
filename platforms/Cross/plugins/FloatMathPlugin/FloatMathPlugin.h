@@ -1,6 +1,8 @@
 /* we only declare those functions from fdlibm that we actually use
    and avoid including fdlibm.h alltogether as it conflicts with math.h */
-#define NO_ISNAN
+
+/* #define NO_ISNAN */
+
 #ifndef NO_ISNAN
 /* by default we use fdlibm's isnan() */
 extern int isnan(double);
