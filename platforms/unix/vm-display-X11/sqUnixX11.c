@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-10-18 09:59:33 by piumarta on emilia.local
+ * Last edited: 2007-02-19 19:18:58 by piumarta on emilia
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -1751,7 +1751,17 @@ void initPixmap(void)
 
 static int xError(Display *dpy, XErrorEvent *evt)
 {
-  fprintf(stderr, "X error\n");
+  char buf[1024];
+  XGetErrorText(dpy, evt->error_code, buf, sizeof(buf));
+  fprintf(stderr,
+	  "X Error: %s\n"
+	  "  Major opcode of failed request:  %lu\n"
+	  "  Minor opcode of failed request:  %lu\n"
+	  "  Serial number of failed request: %d\n",
+	  buf,
+	  evt->request_code,
+	  evt->minor_code,
+	  evt->serial);
   return 0;
 }
 
@@ -1893,8 +1903,8 @@ void initWindow(char *displayName)
 				    stVisual,
 				    AllocNone);
 	attributes.colormap= stColormap;
-	valuemask|= CWColormap;
-	parentValuemask|= CWColormap;
+	valuemask |= CWColormap;
+	parentValuemask |= CWColormap;
       }
 
 #  if defined(DEBUG_BROWSER)
@@ -4059,10 +4069,13 @@ static sqInt display_ioGLcreateRenderer(glRenderer *r, sqInt x, sqInt y, sqInt w
 
       attributes.colormap= XCreateColormap(stDisplay, DefaultRootWindow(stDisplay),
 					   visinfo->visual, AllocNone);
-      valuemask|= CWColormap;
+      valuemask |= CWColormap;
 
       attributes.background_pixel= BlackPixel(stDisplay, DefaultScreen(stDisplay));
-      valuemask|= CWBackPixel;
+      valuemask |= CWBackPixel;
+
+      attributes.border_pixel= 0;
+      valuemask |= CWBorderPixel;
 
       if (!(_renderWindow(r)= (void *)XCreateWindow(stDisplay, stWindow, x, y, w, h, 0,
 						    visinfo->depth, InputOutput, visinfo->visual, 
