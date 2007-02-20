@@ -52,7 +52,9 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2004-06-13 19:42:03 by piumarta on emilia.local
+
+ 3.8.15b3  Feb 19th, 2007 JMM fix bug with crash on bogus file path.
+
  */
 
 #include "sq.h"
@@ -677,6 +679,12 @@ static int convertCopy(char *from, int fromLen, char *to, int toLen, int term)
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
 {
   CFStringRef	     cfs= CFStringCreateWithBytes(NULL, (UInt8 *) from, fromLen, (CFStringEncoding)fromCode, 0);
+  if (cfs == NULL) {
+      toLen = 0;
+	  to[toLen]= '\0';
+	  return toLen;
+	}
+	
   CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, cfs);
   CFRelease(cfs);
   if (norm) // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
