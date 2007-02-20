@@ -27,6 +27,7 @@
  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
  3.8.13b4 Oct 16th, 2006 JMM headless
  3.8.14b1 Oct	,2006 JMM browser rewrite
+ 3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
 
 *****************************************************************************/
 
@@ -59,6 +60,8 @@ extern int getSavedWindowSize();   /* set from header when image file is loaded 
 extern int setSavedWindowSize(int value);   /* set from header when image file is loaded */
 extern struct VirtualMachine *interpreterProxy;
 extern Boolean gSqueakHeadless;
+
+Boolean gSqueakHasCursor = false;
 
 /*** Variables -- Mac Related ***/
 static CTabHandle	stColorTable = nil;
@@ -741,6 +744,8 @@ int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
 	return 0;
 }
 
+Cursor macCursor;
+
 int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
 	/* Set the 16x16 cursor bitmap. If cursorMaskIndex is nil, then make the mask the same as
 	   the cursor bitmap. If not, then mask and cursor bits combined determine how cursor is
@@ -751,7 +756,6 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 			 1		  0		opaque white
 			 0		  1		invert the underlying pixel
 	*/
-	Cursor macCursor;
 	int i;
 	
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
@@ -773,7 +777,10 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	macCursor.hotSpot.v = -offsetY;
 	if (browserActiveAndDrawingContextOk())
 		browserSetCursor(&macCursor);
-	SetCursor(&macCursor);
+	if (!gSqueakHeadless) {
+		gSqueakHasCursor = true;
+		SetCursor(&macCursor);
+	}
 	return 0;
 }
 

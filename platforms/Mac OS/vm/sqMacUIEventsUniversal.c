@@ -35,6 +35,8 @@
  3.8.13b4u  Oct 16th, 2006 JMM headless
  *	3.8.14b1 Oct	,2006 JMM browser rewrite
  3.8.14b4 Nov 17th, 2006 JMM fix issue with mouse location and pre 3.0 (input semaphore driven) squeak images
+ 3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+ 
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -50,6 +52,7 @@ notes: IsUserCancelEventRef
 
 #include <pthread.h>
 #include "sqaio.h"
+#include <quickdraw.h>
 
 enum { KeyMapSize= 32 };
 
@@ -99,6 +102,7 @@ extern MenuHandle appleMenu;
 static sqInputEvent eventBuffer[MAX_EVENT_BUFFER];
 static int eventBufferGet = 0;
 static int eventBufferPut = 0;
+static Boolean NeedToSetCursorBack=false;
 
 
 /* event capture */
@@ -325,6 +329,7 @@ static EventTypeSpec windEventList[] = {{kEventClassWindow, kEventWindowDrawCont
                             { kEventClassWindow, kEventWindowActivated},
 							{ kEventClassWindow, kEventWindowBoundsChanged},
 							{ kEventClassWindow, kEventWindowResizeStarted},
+							{ kEventClassWindow, kEventWindowResizeCompleted},
 							{ kEventClassWindow, kEventWindowClose},
 							{ kEventClassWindow, kEventWindowCollapsed},
                             { kEventClassWindow, kEventWindowDeactivated}};
@@ -334,7 +339,9 @@ static EventTypeSpec windEventMouseList[] = {
                             { kEventClassMouse, kEventMouseWheelMoved},
                             { kEventClassMouse, kEventMouseDragged},
                             { kEventClassMouse, kEventMouseUp},
-							{ kEventClassMouse, kEventMouseDown}
+							{ kEventClassMouse, kEventMouseDown},
+		                    { kEventClassMouse, kEventMouseEntered },
+		                    { kEventClassMouse, kEventMouseExited }
 							};
                             
 static EventTypeSpec windEventKBList[] = {{ kEventClassKeyboard, kEventRawKeyDown},
@@ -384,12 +391,14 @@ void SetUpCarbonEvent() {
 }
 
 void SetUpCarbonEventForWindowIndex(int index) {
+	extern 	void setWindowTrackingRgn(int index);
 /* Installing the window event handler */
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventHandler), GetEventTypeCount(windEventList), windEventList, 0, NULL);
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventMouseHandler), GetEventTypeCount(windEventMouseList), windEventMouseList, 0, NULL);
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyWindowEventKBHandler), GetEventTypeCount(windEventKBList), windEventKBList, 0, NULL);
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyAppleEventEventHandler), GetEventTypeCount(appleEventEventList), appleEventEventList, 0, NULL);
     InstallWindowEventHandler(windowHandleFromIndex(index), NewEventHandlerUPP(MyTextInputEventHandler), GetEventTypeCount(textInputEventList), textInputEventList, 0, NULL);
+	setWindowTrackingRgn(index);
 }
 
 static int   doPreMessageHook(EventRef event) {
@@ -441,7 +450,8 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
     extern Boolean gSqueakWindowIsFloating;
-    
+	extern Boolean gSqueakHasCursor;
+
     if (messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
 
@@ -450,12 +460,24 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
 	//fprintf(stderr,"\nAppEvent %i",whatHappened);
     switch (whatHappened)
     {
-        case kEventAppActivated:
-            break;
-        case kEventAppDeactivated:
+        case kEventAppActivated: {
+			extern Cursor macCursor;
+			if (!gSqueakHeadless && NeedToSetCursorBack) {
+				SetCursor(&macCursor);
+				NeedToSetCursorBack = false;
+				gSqueakHasCursor = true;
+			}
+			}
+             break;
+        case kEventAppDeactivated: {
             if (gSqueakWindowIsFloating) break;
 			InitCursor();
+			if (!gSqueakHeadless && gSqueakHasCursor) {
+				gSqueakHasCursor = false;
+				NeedToSetCursorBack = true;
+			}
 			windowActive = 0;
+			}
             break;
         default:
             break;
@@ -544,10 +566,17 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
 				targetWindowBlock->sync = true;
 			}
             break;
-		case kEventWindowBoundsChanged:
+       case kEventWindowResizeCompleted:
+			{ 
+				extern void setWindowTrackingRgn(int index);
+				setWindowTrackingRgn(windowIndexFromHandle((wHandleType)window));
+			}
+            break;
+		case kEventWindowBoundsChanged: {
 			GetWindowBounds(window,kWindowContentRgn,&globalBounds);
 			recordWindowEventCarbon(WindowEventMetricChange,globalBounds.left, globalBounds.top, 
 					globalBounds.right, globalBounds.bottom,windowIndexFromHandle((wHandleType)window));
+			}
 			break;
 		case kEventWindowCollapsed:
 			recordWindowEventCarbon(WindowEventIconise,0, 0, 0, 0,windowIndexFromHandle((wHandleType)window));
@@ -589,14 +618,39 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     whatHappened	= GetEventKind(event);
 	
 
-	//if (whatHappened != 5) 
-	//	fprintf(stderr,"\nMouseEvent %i-%i ",whatHappened,windowActive);
+//	if (whatHappened != 5) 
+//		fprintf(stderr,"\nMouseEvent %i-%i ",whatHappened,windowActive);
 
 	if (!windowActive) {
 		if (whatHappened == kEventMouseDown)
 			mouseDownActivate = true;
         return result;
 	}
+	
+    switch (whatHappened)
+    {
+			case kEventMouseEntered: {
+				extern Cursor macCursor;
+				extern Boolean gSqueakHasCursor;
+				if (!gSqueakHeadless && gSqueakHasCursor && NeedToSetCursorBack) {
+					SetCursor(&macCursor);
+					NeedToSetCursorBack = false;
+				}
+			}
+			break;
+		case kEventMouseExited: {
+				extern Boolean gSqueakHasCursor;
+				if (!gSqueakHeadless && gSqueakHasCursor) {
+					InitCursor();
+					NeedToSetCursorBack = true;
+				}
+				}
+			break;
+        default:
+        /* If nobody handled the event */
+        break;
+    }
+
 #if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
     if (ioWinRgn == null) 
         ioWinRgn = NewRgn();
@@ -627,7 +681,6 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
     
-
     switch (whatHappened)
     {
         case kEventMouseMoved:
@@ -1059,12 +1112,13 @@ But mapping assumes 1,2,3  red, yellow, blue
 */
 	extern long gSqueakMouseMappings[4][4];
 	extern long gSqueakBrowserMouseMappings[4][4];
-	long stButtons = 0,modifier,mappedButton;
+	long stButtons,modifier,mappedButton;
 	UInt32 keyBoardModifiers=0;
 	EventMouseButton mouseButton=0;
 	OSErr err;
-	static long buttonState[4] = {0,0,0,0};
-
+	static long buttonStateBits[4] = {0,0,0,0};
+	stButtons = buttonState;
+	
 	err = GetEventParameter( event,
                                 kEventParamKeyModifiers,
                                 typeUInt32,
@@ -1074,6 +1128,7 @@ But mapping assumes 1,2,3  red, yellow, blue
                                 &keyBoardModifiers); 
 								
   	if (whatHappened != kEventMouseMoved && whatHappened != kEventMouseWheelMoved) {
+		stButtons = 0;
 		err = GetEventParameter( event,
                                 kEventParamMouseButton,
                                 typeMouseButton,
@@ -1082,17 +1137,17 @@ But mapping assumes 1,2,3  red, yellow, blue
                                 NULL,
                                 &mouseButton); 
 							
-	//fprintf(stderr,"VM: MouseModifierStateCarbon buttonState %i modifiers %i\n ",mouseButton,keyBoardModifiers);
+	//fprintf(stderr,"VM: MouseModifierStateCarbon buttonStateBits %i modifiers %i\n ",mouseButton,keyBoardModifiers);
  
 		         if (mouseButton > 0 && mouseButton < 4) {
           /* OLD original carbon code 
-			buttonState[mouseButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
-            stButtons |= buttonState[1]*4*
+			buttonStateBits[mouseButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
+            stButtons |= buttonStateBits[1]*4*
                         (!((keyBoardModifiers & optionKey) || (keyBoardModifiers & cmdKey)));
-            stButtons |= buttonState[1]*((keyBoardModifiers & optionKey)> 0)*2;
-            stButtons |= buttonState[1]*((keyBoardModifiers & cmdKey)> 0)*1;
-            stButtons |= buttonState[2]*1;
-            stButtons |= buttonState[3]*2; */
+            stButtons |= buttonStateBits[1]*((keyBoardModifiers & optionKey)> 0)*2;
+            stButtons |= buttonStateBits[1]*((keyBoardModifiers & cmdKey)> 0)*1;
+            stButtons |= buttonStateBits[2]*1;
+            stButtons |= buttonStateBits[3]*2; */
 			
 			modifier = 0;
 			if (keyBoardModifiers & cmdKey)
@@ -1106,10 +1161,10 @@ But mapping assumes 1,2,3  red, yellow, blue
 					mappedButton = gSqueakBrowserMouseMappings[modifier][mouseButton];
 				else
 					mappedButton = gSqueakMouseMappings[modifier][mouseButton];
-			buttonState[mappedButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
-			stButtons |= mappedButton == 1 ? (buttonState[mappedButton] ? RedButtonBit : 0) : 0;
-			stButtons |= mappedButton == 2 ? (buttonState[mappedButton] ? YellowButtonBit : 0) : 0;
-			stButtons |= mappedButton == 3 ? (buttonState[mappedButton] ? BlueButtonBit : 0)  : 0;
+			buttonStateBits[mappedButton] = (whatHappened == kEventMouseUp) ? 0 : 1;
+			stButtons |= mappedButton == 1 ? (buttonStateBits[mappedButton] ? RedButtonBit : 0) : 0;
+			stButtons |= mappedButton == 2 ? (buttonStateBits[mappedButton] ? YellowButtonBit : 0) : 0;
+			stButtons |= mappedButton == 3 ? (buttonStateBits[mappedButton] ? BlueButtonBit : 0)  : 0;
 		}
 	}
 	

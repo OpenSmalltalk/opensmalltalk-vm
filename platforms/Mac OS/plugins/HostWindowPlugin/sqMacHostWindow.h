@@ -4,6 +4,9 @@
  *
  *  Created by John M McIntosh on Tue Jul 20 2004.
  *
+ 
+   3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+
  */
 
     #include <Carbon/Carbon.h>
@@ -19,6 +22,7 @@ typedef struct windowDescriptorBlock {
 	wIndexType		windowIndex;
 	/* extra fields to support your platform needs */
 	CGContextRef context;
+	MouseTrackingRef windowTrackingRef;
 	int rememberTicker;
 	int dirty;
 	int sync;

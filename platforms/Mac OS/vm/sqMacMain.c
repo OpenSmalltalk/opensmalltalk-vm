@@ -67,6 +67,8 @@
 *  3.8.11b1 Mar 4th, 2006 JMM refactor, cleanup and add headless support
 *  3.8.13b4 Oct 16th, 2006 JMM headless
 *  3.8.14b1 Oct  2006, JMM browser rewrite
+ 3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+
 */
 
 
@@ -336,8 +338,6 @@ int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, d
 	return true;
 }
 
-
-
 /*** System Attributes ***/
 
 char * GetAttributeString(int id) {
@@ -405,7 +405,11 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-			return "Mac Carbon 3.8.15b1 22-Jan-07 >4AE66794-B628-44CF-BAA3-1BF3E916054D<";
+		return "Mac Carbon 3.8.15b3 19-Feb-07 >15CEBDA8-05ED-4CCD-86C4-E737B2E33A64<";
+ //			return "Mac Carbon 3.8.15b2X 09-Feb-07 >D0AA85C3-05E7-4709-B8F4-174DB6F1ACDB<";
+ //		return "Mac Carbon 3.8.15b2 27-Jan-07 >02EF6EF4-41CE-46DF-8ADF-E4D2EBBD542C<";
+ //			return "Mac Carbon 3.8.15b1 22-Jan-07 >4AE66794-B628-44CF-BAA3-1BF3E916054D<";
+
 			
  	if (id == 1201) return "255";
  

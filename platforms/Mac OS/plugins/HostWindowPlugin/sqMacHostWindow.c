@@ -5,6 +5,8 @@
  *  Created by John M McIntosh on Tue Jul 20 2004.
  *
 	July 15th 2005 add logic to flush QD buffers for os-x 10.4
+	 3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+
  */
 
 #include "sqVirtualMachine.h"
@@ -37,9 +39,42 @@ int createWindowWidthheightoriginXyattrlength(int w,int h,int x,int y,  char * l
 //	CreateCGContextForPort(GetWindowPort(windowBlock->handle),&windowBlock->context); 
 	windowBlock->width = w;
 	windowBlock->height = h; 
+	
 	sqShowWindow(index);
 	return index;
 }
+
+void setWindowTrackingRgn(int windowIndex) {
+		
+	Rect rgnRect;
+	RgnHandle rgn = NewRgn();
+	MouseTrackingRegionID id;
+	windowDescriptorBlock *windowBlock = windowBlockFromIndex(windowIndex);
+	
+	if (windowBlock->windowTrackingRef) {
+		GetWindowBounds(windowBlock->handle, kWindowContentRgn, &rgnRect);	
+		SetRectRgn( rgn, rgnRect.left, rgnRect.top, rgnRect.right, rgnRect.bottom );
+		ChangeMouseTrackingRegion(windowBlock->windowTrackingRef,rgn, NULL);
+		DisposeRgn( rgn );	
+		return;
+	}
+
+	GetWindowBounds(windowBlock->handle, kWindowContentRgn, &rgnRect);	
+	SetRectRgn( rgn, rgnRect.left, rgnRect.top, rgnRect.right, rgnRect.bottom );
+		
+	id.signature = 'FAST';
+	id.id = windowIndex;
+		
+	OSStatus err = CreateMouseTrackingRegion(windowBlock->handle, rgn, NULL, kMouseTrackingOptionsLocalClip,
+						id, NULL, NULL, &windowBlock->windowTrackingRef);
+	if ( noErr == err ) {
+		RetainMouseTrackingRegion( windowBlock->windowTrackingRef);
+		err = SetMouseTrackingRegionEnabled( windowBlock->windowTrackingRef, TRUE );
+	}
+		
+	DisposeRgn( rgn );	
+}
+
 
 int closeWindow(int windowIndex) {
 	wHandleType	windowHandle;
@@ -51,8 +86,13 @@ int closeWindow(int windowIndex) {
 		//CGContextRelease(windowBlockFromIndex(windowIndex)->context);
 	
 
+	if (windowBlockFromIndex(windowIndex)->windowTrackingRef) {
+		ReleaseMouseTrackingRegion(windowBlockFromIndex(windowIndex)->windowTrackingRef );
+		windowBlockFromIndex(windowIndex)->windowTrackingRef = NULL;
+	}
+
 	windowBlockFromIndex(windowIndex)->context = NULL;
-	RemoveWindowBlock(windowBlockFromIndex(windowIndex));
+	RemoveWindowBlock(windowBlockFromIndex(windowIndex));	
 	DisposeWindow(windowHandle);
 	return 1;
 }
@@ -129,6 +169,7 @@ int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
 		free(foo);
 	}
+	setWindowTrackingRgn(windowIndex);
 	return ioSizeOfWindow(windowIndex);
 }
 
