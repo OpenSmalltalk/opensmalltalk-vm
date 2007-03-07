@@ -2,7 +2,7 @@
  * 
  * Author: Ned Konz, July 14, 2000
  * 
- * Last edited: 2002-10-26 14:36:11 by piumarta on emilia.inria.fr
+ * Last edited: 2007-03-07 12:46:44 by piumarta on emilia
  *
  * Separated from MIDI, plus various portability problems fixed, by:
  *	Ian Piumarta <Ian.Piumarta@INRIA.Fr>
@@ -95,6 +95,8 @@ static drDecode dataRateDecode[] = {
 	{ 1152000, B1152000 },
 	{ 1500000, B1500000 },
 	{ 2000000, B2000000 },
+#	endif
+#       if defined(B2500000)	/* missing on GNU/Linux Sparc64 */
 	{ 2500000, B2500000 },
 	{ 3000000, B3000000 },
 	{ 3500000, B3500000 },
