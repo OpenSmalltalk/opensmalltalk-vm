@@ -61,6 +61,8 @@ void SetImageNameViaCFString(CFStringRef string) {
 	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
 		CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
     CFRetain(mutableStr);
+	if (imageNameString != NULL)
+        CFRelease(imageNameString);
     imageNameString = mutableStr;
     ignore = getImageName();
 }

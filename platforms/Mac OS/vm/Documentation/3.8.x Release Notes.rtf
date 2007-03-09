@@ -25,12 +25,36 @@ Dec 12th, 2006 (3.8.14b7)\
 Jan  07th, 2007 (3.8.14b8)\
 Jan  22th, 2007 (3.8.15b1)\
 Feb 19th, 2007 (3.8.15b3)\
+Mar 8th, 2007 (38.8.15b4)\
 \
-3.8.15b3\
+3.8.15b4\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.15b4	\
+			sqMacUnixFileInterface.c\
+				Memory leak issue,  PathToFileViaFSRef  was not freeing mutable string.\
+					Free nav services dialog, cleanup  that routine a bit more. 			\
+			sqMacEncoding.c\
+				Memory leak issue, SetImageNameViaCFString not freeing imageNameString\
+\
+			sqMacMain.c\
+				Add cocoInterfaceForTilda to invoke cocoa interface properly for tilda resolving, to avoid \
+				msg in console log about forgetting to free nsstring.\
+			\
+			sqMacNSPluginUILogic2.c\
+				Ensure SharedBrowserBitMapContextRef is freed early in process of rebuilding to minimize\
+				race conditions. \
+\
+			sqMacWindowUniversal.c\
+				In ioShowDisplayOnWindow be a bit more paranoid if drawing surface exists. \
+				In copy124BitsTheHardWay, cleanup a bit because of a bug Bert found where in a browser \
+				headless app the virtual window size is changed. however the original code asks the hidden\
+				window what it's size is after being resized, but the VM has already see the new size, so 				copy124BitsTheHardWay is using stale information, and we're hosed. Really we want to \
+				use information from the ioShowDisplayOnWindow about the drawing size, and ignore what\
+				size the window is because that's not important. \
 \
 3.8.15b3 		\
 			sqMacUnixFileInterface.c \

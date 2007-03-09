@@ -419,6 +419,7 @@ void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef,CFStrin
   			CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
   
           CFStringGetCString (mutableStr, pathName,pathNameMax, encoding);
+			CFRelease(mutableStr);
         
         if (isDirectory)
             strcat(pathName,"/");
@@ -560,17 +561,26 @@ OSErr squeakFindImage(char* pathName)
 		
 	NavReplyRecord outReply;
 	anErr = NavDialogGetReply (navDialog,&outReply);
-	if (anErr != noErr )
+	
+    DisposeNavObjectFilterUPP(filterProc);
+	NavDialogDispose(navDialog);	
+		
+	if (anErr != noErr)
 		return anErr;
 		
+	if (!outReply.validRecord) {
+		anErr = NavDisposeReply(&outReply);
+		return -1;
+	}
+
 	// Get the file
 	anErr = AEGetNthPtr(&(outReply.selection), 1, typeFSRef, NULL, NULL, &fileAsFSRef, sizeof(FSRef), NULL);
-	//  Dispose of NavReplyRecord, resources, descriptors
-	anErr = NavDisposeReply(&outReply);
 	PathToFileViaFSRef(pathName,DOCUMENT_NAME_SIZE, &fileAsFSRef, gCurrentVMEncoding);
 
-    DisposeNavObjectFilterUPP(filterProc);
-    return anErr;
+	//  Dispose of NavReplyRecord, resources, descriptors
+	anErr = NavDisposeReply(&outReply);
+
+    return 0;
 }
 
 
@@ -594,15 +604,17 @@ pascal Boolean findImageFilterProc(AEDesc* theItem, void* info,
             return true;
             
         error = AEGetDescData(theItem,&theFSRef,sizeof(FSRef));
-        if (error != noErr) 
+		if (error != noErr) 
             return true;
 		PathToFileViaFSRef(pathName, 1024, &theFSRef,kCFStringEncodingUTF8);
 		getLastPathComponentInCurrentEncoding(pathName,checkSuffix,kCFStringEncodingUTF8);        
         check = IsImageName(checkSuffix);
+
         if (check) 
             return true;
-        else
-            return false;
+        else {
+           return false;
+		}
     }
     return true;
 }

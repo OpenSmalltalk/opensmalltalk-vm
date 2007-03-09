@@ -1,4 +1,4 @@
-Updated  Oct 18th, 2006
+Updated  March 4th, 2007
 
 Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- John Maloney, May 25, 2000,
@@ -20,7 +20,8 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes John McIntosh Sept 3rd, 2006 3.8.12b5u clarify build instructions
 	-- Changes John McIntosh, Craig Latta, Oct 19th, 2006 3.8.13b4
 	-- Changes John McIntosh, Dec 11th, 2006 3.8.14b6U, clarify, cross check
-
+	-- Changes John McIntosh, Feb 6th, 2007 3.8.15b3U, clarify, cross check
+	-- Changes John McIntosh, Mar 4th, 2007 3.8.15b4u, extra changeset added 
 (Note to readers, it is possible a step was missed, so beware)
 
 Building a Carbon Squeak VM with ProjectBuilder:
@@ -77,10 +78,11 @@ Step Three: Build an interpeter
 
 	load VMM38-gc-instrument-image.1.cs 
 	load VMM38-64bit-imageUpdates.1.cs
+	load JMM-fixBiasToGrow.1.cs.zip  (may be in VMMaker some day_
 
-	That should provide a version of VMMaker that is sufficient to build 3.8.12b5U
+	That should provide a version of VMMaker that is sufficient to build 3.8.15b3U
 
-	For 3.8.13b2U OPTIONAL Expury if you want Expury support.
+	OPTIONAL Expury if you want Expury support.
 
 	File in Exupery-wbk.195 from Exupery site and VMMaker-wbk.40.8.cs or higher change set from the specialChangeSets Folder 
 	(VMMaker-wbk.40.8.cs is the differences between VMMaker-wbk.40 and VMMaker 3.8b6). Please note these changes might be folded
@@ -92,7 +94,7 @@ Step Three: Build an interpeter
 		might be wrong for the following change sets that might depend on what CVS/SVN thinks, 
 		so do a "remove linefeeds" first. 
 		
-		Gnuifier.7.cs - A smalltalk version of the AWK example. 	
+		Gnuifier.8.cs - A smalltalk version of the AWK example. 	
 		ArraysToGlobalStruct-JMM.1.cs  - Put arrays in the structure, this fixes some issues with 'global code elimination' in the compiler.
 		
 	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure, see Step 3 above)
@@ -113,7 +115,7 @@ Step Three: Build an interpeter
 
 Step Four: Get, and install, the Gnifier, and gnuify the interpreter
 
-	A.	See the Gnuifier.7.cs or higher changeset in the specialChangeSetsFolder
+	A.	See the Gnuifier.8.cs or higher changeset in the specialChangeSetsFolder
 	B.	DoIt: 	(Gnuifier on: pathToInterpreterfile) gnuify, in my case:
 
 		(Gnuifier on:

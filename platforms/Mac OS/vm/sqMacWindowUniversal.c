@@ -420,7 +420,8 @@ int ioShowDisplayOnWindow(
 	}
 		
 	/* Draw the image to the Core Graphics context */
-	if (browserActiveAndDrawingContextOk()) {
+	if (provider && image) {
+		if (browserActiveAndDrawingContextOk() ) {
 		CGContextDrawImage(SharedBrowserBitMapContextRef, clip, image);
 		msync(SharedMemoryBlock,SharedBrowserBitMapLength,MS_SYNC);
 		browserSendInt(6);
@@ -429,8 +430,9 @@ int ioShowDisplayOnWindow(
 		browserSendInt(affectedT);
 		browserSendInt(affectedB);
 	} else
+			if (targetWindowBlock->context)
 		CGContextDrawImage(targetWindowBlock->context, clip, image);
-
+	}
 
 	{ 
 			extern Boolean gSqueakUIFlushUseHighPercisionClock;
@@ -460,7 +462,6 @@ static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int 
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch) {
 	
 	static GWorldPtr offscreenGWorld = nil;
-	Rect structureRect;
 	QDErr error;
 	static 		RgnHandle maskRect = nil;
 	static Rect	dstRect = { 0, 0, 0, 0 };
@@ -474,28 +475,18 @@ static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int 
         
 	if (!((lastWindowIndex == windowIndex) && (rememberHeight == height) && (rememberWidth == width) && (rememberDepth == depth))) {
 			lastWindowIndex = windowIndex;
-			GetWindowRegion(windowHandleFromIndex(windowIndex),kWindowContentRgn,maskRect);
-			GetRegionBounds(maskRect,&structureRect);
-			structureRect.bottom = structureRect.bottom - structureRect.top;
-			structureRect.right = structureRect.right - structureRect.left;
-			structureRect.top = structureRect.left = 0;
-			
+            rememberWidth  = srcRect.right = dstRect.right = width;
+            rememberHeight = srcRect.bottom = dstRect.bottom = height;
 			if (offscreenGWorld != nil)
 				DisposeGWorld(offscreenGWorld);
 			
 #ifdef __BIG_ENDIAN__
-			error	= NewGWorld (&offscreenGWorld,desiredDepth,&structureRect,0,0,keepLocal);
+			error	= NewGWorld (&offscreenGWorld,desiredDepth,&dstRect,0,0,keepLocal);
 #else
-			error	= NewGWorld (&offscreenGWorld,desiredDepth,&structureRect,0,0,keepLocal | kNativeEndianPixMap);
+			error	= NewGWorld (&offscreenGWorld,desiredDepth,&dstRect,0,0,keepLocal | kNativeEndianPixMap);
 #endif		
 			LockPixels(GetGWorldPixMap(offscreenGWorld));
 			
-            rememberWidth  = dstRect.right = width;
-            rememberHeight = dstRect.bottom = height;
-    
-            srcRect.right = width;
-            srcRect.bottom = height;
-    
             /* Note: top three bits of rowBytes indicate this is a PixMap, not a BitMap */
             (*stPixMap)->rowBytes = (((((width * depth) + 31) / 32) * 4) & 0x1FFF) | 0x8000;
             (*stPixMap)->bounds = srcRect;
@@ -666,12 +657,13 @@ int makeMainWindow(void) {
 
 WindowPtr SetUpWindow(int t,int l,int b, int r, UInt32 windowType, UInt32 windowAttributes) {
 	Rect windowBounds;
+	OSStatus err;
 	WindowPtr   createdWindow;
 	windowBounds.left = l;
 	windowBounds.top = t;
 	windowBounds.right = r;
 	windowBounds.bottom = b;
-	CreateNewWindow(windowType,windowAttributes,&windowBounds,&createdWindow);
+	err = CreateNewWindow(windowType,windowAttributes,&windowBounds,&createdWindow);
 	return createdWindow;
 }
 

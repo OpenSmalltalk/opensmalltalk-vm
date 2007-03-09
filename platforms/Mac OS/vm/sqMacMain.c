@@ -113,6 +113,7 @@ int				gSqueakBrowserPipes[]= {-1, -1};
 Boolean			gSqueakBrowserSubProcess = false;
 Boolean			gSqueakBrowserExitRequested = false;
 
+void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size);
 /*** Main ***/
 
 #pragma export on
@@ -248,17 +249,10 @@ int main(int argc, char **argv, char **envp) {
                 CFRelease(imagePath);
             } else {
 				extern void resolveWhatTheImageNameIs(char *string);
-				extern SEL NSSelectorFromString(CFStringRef thing);
-				CFStringRef checkFortilda;
 				char	afterCheckForTilda[PATH_MAX];
 				
-				checkFortilda=(CFStringRef)objc_msgSend((id)gSqueakImageNameStringRef, NSSelectorFromString((CFStringRef)CFSTR("stringByExpandingTildeInPath")));
-				
-				
-				CFStringGetCString (checkFortilda, afterCheckForTilda, PATH_MAX, gCurrentVMEncoding);
-
+				cocoInterfaceForTilda(gSqueakImageNameStringRef, afterCheckForTilda,PATH_MAX);
 				resolveWhatTheImageNameIs(afterCheckForTilda);
-				CFRelease(checkFortilda);
 			}
 	}
 
@@ -405,7 +399,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
-		return "Mac Carbon 3.8.15b3 19-Feb-07 >15CEBDA8-05ED-4CCD-86C4-E737B2E33A64<";
+ 		return "Mac Carbon 3.8.15b4 26-Feb-07 >639DEC8A-D541-4AF1-8DFF-40D02C177C51<";
+//		return "Mac Carbon 3.8.15b3 19-Feb-07 >15CEBDA8-05ED-4CCD-86C4-E737B2E33A64<";
  //			return "Mac Carbon 3.8.15b2X 09-Feb-07 >D0AA85C3-05E7-4709-B8F4-174DB6F1ACDB<";
  //		return "Mac Carbon 3.8.15b2 27-Jan-07 >02EF6EF4-41CE-46DF-8ADF-E4D2EBBD542C<";
  //			return "Mac Carbon 3.8.15b1 22-Jan-07 >4AE66794-B628-44CF-BAA3-1BF3E916054D<";
@@ -520,13 +515,8 @@ void fetchPrefrences() {
         CFStringGetCString (gSqueakImageNameStringRef, gSqueakImageName, IMAGE_NAME_SIZE+1, kCFStringEncodingMacRoman);
 	
 	if (SqueakBrowserUnTrustedDirectoryTypeRef) {
-		extern SEL NSSelectorFromString(CFStringRef thing);
-		CFStringRef checkFortilda;
-		char	afterCheckForTilda[PATH_MAX];
 
-		checkFortilda=(CFStringRef)objc_msgSend((id)SqueakBrowserUnTrustedDirectoryTypeRef, NSSelectorFromString((CFStringRef)CFSTR("stringByExpandingTildeInPath")));
-		CFStringGetCString (checkFortilda, gSqueakUntrustedDirectoryName, PATH_MAX, gCurrentVMEncoding);
-		CFRelease(checkFortilda);
+		cocoInterfaceForTilda(SqueakBrowserUnTrustedDirectoryTypeRef, gSqueakUntrustedDirectoryName,PATH_MAX);
 	}
 	
     if (SqueakWindowType) 
@@ -595,6 +585,29 @@ void fetchPrefrences() {
     
     
 }
+
+void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size) {
+   extern SEL NSSelectorFromString(CFStringRef thing);
+   id  autopoolClass = objc_getClass("NSAutoreleasePool");
+   id  autopool;
+   
+	CFStringRef checkFortilda, selectorRef = CFSTR("stringByExpandingTildeInPath"), 
+		releaseRef = CFSTR("release"),
+		allocRef = CFSTR("alloc"), 
+		initRef = CFSTR("init");
+	SEL selector		=  NSSelectorFromString(selectorRef);
+	SEL selectorRelease =  NSSelectorFromString(releaseRef);
+	SEL selectoralloc	=  NSSelectorFromString(allocRef);
+	SEL selectorInit	=  NSSelectorFromString(initRef);
+
+	autopool = objc_msgSend(autopoolClass, selectoralloc);
+	autopool = objc_msgSend(autopool, selectorInit);
+	checkFortilda=(CFStringRef)objc_msgSend((id)aStringRef,selector);
+	CFStringGetCString (checkFortilda, buffer, max_size, gCurrentVMEncoding);
+	autopool = objc_msgSend(autopool, selectorRelease);
+
+}
+
 
 /*** Profiling Stubs ***/
 

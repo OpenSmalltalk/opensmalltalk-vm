@@ -5,6 +5,7 @@
  *  Created by John M McIntosh on 19/10/06.
  *  Copyright 2006 Corporate Smalltalk Consulting Ltd. All rights reserved.
  *  Distributed under the Squeak-L
+ *  Feb 4, 2007. JMM Licence changed to MIT
  *
  */
 
@@ -66,7 +67,7 @@ typedef struct sqStreamRequest {
 static sqStreamRequest *requests[MAX_REQUESTS];
 void *SharedMemoryBlock = NULL;
 static int SharedMemoryfd;
-CGContextRef SharedBrowserBitMapContextRef=NULL;
+volatile CGContextRef SharedBrowserBitMapContextRef=NULL;
 int SharedBrowserBitMapLength = 0;
 extern Boolean gSqueakBrowserSubProcess;
 static int rowBytes=0, width=0,  height=0;
@@ -195,6 +196,13 @@ static void handle_CMD_SHARED_MEMORY() {
 	int tempRowBytes,tempWidth,tempHeight;
 	
 	CGColorSpaceRef colorspace;
+	CGContextRef TempSharedBrowserBitMapContextRef;
+	
+	if (TempSharedBrowserBitMapContextRef = SharedBrowserBitMapContextRef) {
+		SharedBrowserBitMapContextRef = NULL;
+		dprintf((stderr,"VM: free bitmap context %i \n",TempSharedBrowserBitMapContextRef));
+		CFRelease(TempSharedBrowserBitMapContextRef);
+	}
 	
 	browserReceive(&SharedMemoryfd, 4);
 	browserReceive(&tempWidth, 4);
@@ -238,10 +246,6 @@ static void handle_CMD_SHARED_MEMORY() {
 		}
 		  SizeWindow(getSTWindow(), width, height, true);
 		dprintf((stderr,"VM: Size Window to %i @ %i \n",width,height));
-	}
-	if (SharedBrowserBitMapContextRef) {
-		dprintf((stderr,"VM: free bitmap context %i \n",SharedBrowserBitMapContextRef));
-		CFRelease(SharedBrowserBitMapContextRef);
 	}
 	SharedBrowserBitMapContextRef = CGBitmapContextCreate (SharedMemoryBlock,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
 	dprintf((stderr,"VM: made bitmap context ref %i\n", SharedBrowserBitMapContextRef));
