@@ -17,6 +17,10 @@
  *          Apr 2000 - url requests through browser
  *          Nov 1999 - report attributes to vm
  *          Aug 99   - initial version 
+ 
+	March 10th, 2007 - JMM add feature to enable debug printing
+	
+  
  */
  
 #define TARGET_CARBON   1
@@ -35,34 +39,18 @@
 #include <sys/mman.h>
 #include "sqaio.h"
 
+static int gDebugPrintIsOn=0;
 
-//#define DEBUG 
-
-#if defined (DEBUG)
 static void DPRINT(char *format, ...)
 {
-  static int debug= 43;
-  
-  if (42 == debug) 
-    debug= (NULL != getenv("NPSQUEAK_DEBUG"));
-  
-  if (!debug) 
-    {
-      return;
-    }
-  else
-    {
-      {
+	 if (!gDebugPrintIsOn) 
+		return;
 	va_list ap;
 	va_start(ap, format);
 	vfprintf(stderr, format, ap);
 	va_end(ap);
-      }
-    }
+
 }
-#else
-static void DPRINT(char *format, ...) { }
-#endif
 
 /***********************************************************************
  * Plugin instance data
@@ -93,7 +81,6 @@ typedef struct SqueakPlugin {
   int		sharedMemoryfd;
   char		sharedMemoryName[256];
   CGContextRef sharedBrowserBitMapContextRef;
-  CGContextRef context;
   int		width;
   int		height;
   NPRect    clipRect;    /* Clipping rectangle in port coordinates */
@@ -227,6 +214,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 
   /* Default settings */
   getCStringForInfoString(imagename,"SqueakImageName",PATH_MAX, kCFStringEncodingUTF8);
+  gDebugPrintIsOn = getNumberForInfoString("SqueakDebug");
   gWindowMaxLength = getNumberForInfoString("SqueakWindowMaxLength");
   if (gWindowMaxLength == 0) 
 		gWindowMaxLength = 2048;
@@ -238,7 +226,6 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   *plugin->sharedMemoryName = 0x00;
   plugin->sharedBrowserBitMapContextRef = 0;
   plugin->buttonIsDown = false;
-  plugin->context = 0;
   plugin->display=     NULL;
   plugin->embedded=    (mode == NP_EMBED);
   plugin->srcUrl=      NULL;
@@ -826,10 +813,6 @@ static void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
 	rowBytes = (((((plugin->width * 32) + 31) / 32) * 4) & 0x1FFF);
 	totalBytes = plugin->height*rowBytes;
 						
-	if (plugin->context)
-		CFRelease(plugin->context);
-	plugin->context = NULL;
-
 	if (plugin->sharedBrowserBitMapContextRef)
 		CFRelease(plugin->sharedBrowserBitMapContextRef);
 	
@@ -857,51 +840,50 @@ browserProcessCommand(SqueakPlugin *plugin)
 	break;
   case CMD_DRAW_CLIP:
 		{
-			int left,right,top,bottom;
-			CGImageRef myImage,mySubimage;
-			CGRect		imageclip,targetclip;
+			int			 left,right,top,bottom;
+			CGImageRef	 myImage,mySubimage;
+			CGRect		 imageclip,targetclip,clip2;
+			CGContextRef context;
 			
 			Receive(plugin, &left, 4);
 			Receive(plugin, &right, 4);
 			Receive(plugin, &top, 4);
 			Receive(plugin, &bottom, 4);
 
-			//DPRINT("NP: CMD_DRAW_CLIP(tlbr %i %i %i %i)\n", top, left, bottom, right);
+			DPRINT("NP: CMD_DRAW_CLIP(tlbr %i %i %i %i)\n", top, left, bottom, right);
   
 			imageclip = CGRectMake(left,top, right-left, bottom-top);
 			targetclip = CGRectMake(left,(0-plugin->height)+(plugin->height-bottom), right-left, bottom-top);
 
 			if (plugin->sharedBrowserBitMapContextRef == NULL)
 				return;
+				
 			myImage = CGBitmapContextCreateImage(plugin->sharedBrowserBitMapContextRef);
 			if (myImage == NULL) 
 				return;
 					
- 			QDBeginCGContext (plugin->display->port,&plugin->context);
+ 		    mySubimage = CGImageCreateWithImageInRect (myImage, imageclip); 
+			if (mySubimage == NULL) {
+				CFRelease(myImage);
+				return;
+			}
+				
+			QDBeginCGContext (plugin->display->port,&context);
 			//  Adjust for any SetOrigin calls on qdPort
-			SyncCGContextOriginWithPort( plugin->context, plugin->display->port );
+			SyncCGContextOriginWithPort(context, plugin->display->port );
 			//  Move the CG origin to the upper left of the port
 			GetPortBounds( plugin->display->port, &plugin->portRect );
-			CGContextTranslateCTM( plugin->context, 0, (float)(plugin->portRect.bottom - plugin->portRect.top) );
+			CGContextTranslateCTM(context, 0, (float)(plugin->portRect.bottom - plugin->portRect.top) );
 
-		    mySubimage = CGImageCreateWithImageInRect (myImage, imageclip); 
-
-			{	
-				CGRect	clip2;
 				clip2 = CGRectMake(plugin->portRect.left + plugin->clipRect.left,
 					0 - 
 						(plugin->clipRect.bottom-plugin->clipRect.top)  - (plugin->clipRect.top + plugin->portRect.top),
 						plugin->clipRect.right-plugin->clipRect.left, plugin->clipRect.bottom-plugin->clipRect.top);
-				CGContextClipToRect(plugin->context, clip2);
-			}
-
-			CGContextDrawImage(plugin->context, targetclip, mySubimage);
-			CGContextFlush(plugin->context);
-			QDEndCGContext(plugin->display->port,&plugin->context);
-
-
+			CGContextClipToRect(context, clip2);
+			CGContextDrawImage(context, targetclip, mySubimage);
+			CGContextFlush(context);
+			QDEndCGContext(plugin->display->port,&context);
 			CFRelease(myImage);
-			if (mySubimage)
 				CFRelease(mySubimage);
 		}
 
@@ -1060,6 +1042,12 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 
 	if (eventPtr->what == nullEvent)
 		eventPtr->modifiers = checkForModifierKeys(plugin);
+		
+	if (eventPtr->what == activateEvt) 
+		DPRINT("NP: handelEventL activate\n %i %i",eventPtr->message,eventPtr->modifiers & activeFlag);
+	if (eventPtr->what == updateEvt)
+		 DPRINT("NP: handelEventL update %i\n",eventPtr->message);
+	
 		
 	SendInt(plugin, CMD_EVENT);
 	Send(plugin, rawEvent, sizeof(struct EventRecord));

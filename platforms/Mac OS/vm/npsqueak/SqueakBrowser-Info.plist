@@ -7,25 +7,15 @@
 	<key>CFBundleExecutable</key>
 	<string>SqueakBrowserPlugin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Browser Plugin  3.8.14b6 http://www.squeak.org </string>
+	<string>Squeak Browser Plugin  3.8.14b8 http://www.squeak.org </string>
 	<key>CFBundleIdentifier</key>
 	<string>org.squeak.SqueakPlugin</string>
-	<key>SqueakVMPath</key>
-	<string>/Applications/SqueakLand/Squeak/Internet/Squeak 3.8.14beta6U.app/Contents/MacOS/</string>
-	<key>SqueakVMName</key>
-	<string>Squeak VM Opt</string>
-	<key>SqueakImagePath</key>
-	<string>/Applications/SqueakLand/Squeak/Internet/</string>
-	<key>SqueakImageName</key>
-	<string>SqueakPlugin.image</string>
-	<key>SqueakWindowMaxLength</key>
-	<integer>2048</integer>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
 	<string>BRPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.8.14b6</string>
+	<string>3.8.14b8</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
@@ -48,8 +38,20 @@
 	</dict>
 	<key>CFPlugInUnloadFunction</key>
 	<string></string>
+	<key>SqueakDebug</key>
+	<integer>0</integer>
+	<key>SqueakImageName</key>
+	<string>SqueakPlugin.image</string>
+	<key>SqueakImagePath</key>
+	<string>/Applications/SqueakLand/Squeak/Internet/</string>
+	<key>SqueakVMName</key>
+	<string>Squeak VM Opt</string>
+	<key>SqueakVMPath</key>
+	<string>/Applications/SqueakLand/Squeak/Internet/Squeak.app/Contents/MacOS/</string>
+	<key>SqueakWindowMaxLength</key>
+	<integer>2048</integer>
 	<key>WebPluginDescription</key>
-	<string>Squeak Browser Plugin  3.8.14b6 http://www.squeak.org </string>
+	<string>Squeak Browser Plugin  3.8.14b8 http://www.squeak.org </string>
 	<key>WebPluginMIMETypes</key>
 	<dict>
 		<key>application/x-squeak-object</key>
