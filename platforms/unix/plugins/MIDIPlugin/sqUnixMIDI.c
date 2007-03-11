@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@INRIA.FR
  * 
- * Last edited: 2007-03-11 14:21:52 by piumarta on emilia.local
+ * Last edited: 2007-03-11 16:56:02 by piumarta on emilia.local
  */
 
 #include "sq.h"
@@ -36,7 +36,7 @@
 #include "config.h"
 
 #if defined(USE_MIDI_ALSA)
-# include "sqUnixMIDIALSA.c"
+# include "sqUnixMIDIALSA.inc"
 #else
-# include "sqUnixMIDINone.c"
+# include "sqUnixMIDINone.inc"
 #endif
