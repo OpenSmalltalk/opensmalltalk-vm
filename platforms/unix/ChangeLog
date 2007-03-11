@@ -1,3 +1,17 @@
+2007-03-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/MIDIPlugin/acinclude.m4: Check for MIDI support via
+	ALSA.
+
+	* plugins/MIDIPlugin/sqUnixMIDI.c: Determine available MIDI
+	support and include appropriate source file.
+
+	* plugins/MIDIPlugin/sqUnixMIDINone.c: Created from sqUnixMIDI.c.
+
+	* plugins/MIDIPlugin/sqUnixMIDIALSA.c: ALSA-based support added.
+
+	* config/config.h.in: Add USE_MIDI_ALSA.
+
 2007-03-07  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/SerialPlugin/sqUnixSerial.c: Speeds >2500k are

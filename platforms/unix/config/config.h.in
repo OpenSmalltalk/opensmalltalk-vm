@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2006-10-18 10:15:03 by piumarta on emilia.local
+ * Last edited: 2007-03-11 13:27:16 by piumarta on emilia.local
  */
 
 #ifndef __sq_config_h
@@ -60,6 +60,8 @@
 #undef	USE_AUDIO_OSS
 #undef	USE_AUDIO_MACOSX
 #undef	OSS_DEVICE
+
+#undef	USE_MIDI_ALSA
 
 /* header files */
 
