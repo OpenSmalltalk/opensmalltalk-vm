@@ -27,11 +27,13 @@
 
 /* Author: Ian.Piumarta@INRIA.FR
  * 
- * Last edited: 2007-03-11 13:31:02 by piumarta on emilia.local
+ * Last edited: 2007-03-11 14:21:52 by piumarta on emilia.local
  */
 
 #include "sq.h"
 #include "MIDIPlugin.h"
+
+#include "config.h"
 
 #if defined(USE_MIDI_ALSA)
 # include "sqUnixMIDIALSA.c"
