@@ -1,0 +1,172 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- -*- html -*- -->
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Lovingly hand-crafted by Ian">
+   <meta name="Author" content="Ian Piumarta">
+   <meta name="Description" content="Win32 Squeak">
+   <meta name="Keywords" content="Smalltalk-80, Squeak, Win32">
+   <style type="text/css">
+     <-- HR { border: solid #639e9c } -->
+     H2, H3 { font-weight: bold; color: #639e9c }
+     H2 { background-color: #bdd3bd }
+   </style>
+   <title>Win32 Ini File Settings</title>
+</head>
+<body text="#000000" bgcolor="#ffffff" link="#0000ff" vlink="#9a0065" alink="#FF0000" font="Arial,Verdana">
+<hr>
+<table width="100%" bgcolor="white" cellspacing="0" height="52">
+  <tr><td width="65" height="52" align="left" bgcolor="white">
+        <a href="http://www.smalltalk.org/">
+          <img src="balloon_sm.gif" width="62" height="46"
+               hspace="10" border="0"></a></td>
+      <td align="center" width="100%">
+        <table bgcolor="black" width="100%" height="52" cellspacing="1">
+          <tr><td bgcolor="#bdd3bd" align="center">
+                <font size="+3"; style="font-size: x-large; font-weight: bold">
+                  Win32 Ini File Settings</font></td></tr></table></td>
+      <td width="65" height="46" align="right" bgcolor="white">
+        <a href="http://www.squeak.org">
+          <img src="mouse_sm.gif" width="65" height="46" hspace="10" border="0"></a></td>
+  </tr>
+</table>
+<hr>
+
+<br>
+
+The Win32 VM creates a file named Squeak.ini when it first starts. This file 
+contains a variety of settings (mostly preferences) which should be preserved 
+across sessions.<p>
+
+The name of the ini file always matches the name of the VM, which allows for 
+having different preferences in different VMs. For example, a VM named 
+"Squeak.exe" will look for "Squeak.ini" whereas a VM named "Hanoi.exe" 
+will look for "Hanoi.ini".<p>
+
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Preferences</b></font></td></tr></table><p>
+
+All of the persistent Win32 VM Preferences are stored under [Global] section 
+of the ini file. They are:
+<ul>
+    <li><b>DeferUpdate</b> - Preference "defer display updates"
+    <li><b>ShowConsole</b> - Preference "show console"
+    <li><b>DynamicConsole</b> - Preference "show console on errors"
+    <li><b>ReduceCPUUsage</b> - Preference "reduce CPU usage"
+    <li><b>ReduceCPUInBackground</b> - Preference "reduce background CPU usage"
+    <li><b>1ButtonMouse</b> - Preference "1 button mouse"
+    <li><b>3ButtonMouse</b> - Preference "3 button mouse"
+    <li><b>PriorityBoost</b> - Preference "thread priority boost"
+    <li><b>UseDirectSound</b> - Preference "use DirectSound"
+    <li><b>B3DXUsesOpenGL</b> - Preference "use OpenGL (instead of D3D)"
+    <li><b>CaseSensitiveFileMode</b> - Preference "case sensitive files" 
+</ul>
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Security Settings</b></font></td></tr></table><p>
+Entries appearing under the [Security] section of Squeak.ini control some 
+of the sandbox functionality of Squeak
+
+<ul>
+    <li> <b>UserDirectory</b> - Identifies the sandbox directory, e.g., a place
+    which can be accessed from any (potentially unsafe) Squeaklet. By default 
+    it is set to "C:\My Squeak\%USERNAME%" but if this location is either 
+    read-only or simply inconvenient (for example in a network setup) this 
+    is the place to change it.<p>
+    <b>NOTE</b>: Up to and including the 3.5.1 VM environment variables will 
+    NOT be expanded correctly.
+    <li> <b>SecureDirectory</b> - Identifies a safe place for the VM to store 
+    security relevant data. By default this is set to the VMs locations 
+    but if the VM location is read-only you may wish to change it. 
+</ul>
+
+From a running Squeak image, these locations can be retrieved by evaluating
+<pre>
+ SecurityManager default untrustedUserDirectory.
+ SecurityManager default secureUserDirectory.
+</pre>
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Deployment Settings</b></font></td></tr></table><p>
+In addition to the above the ini file can contain the following entries in the [Global] section.<p>
+
+<ul>
+    <li> <b>WindowTitle</b>: This entry allows you to override the default 
+    label shown in the Window's title bar. This is useful when you want 
+    to ship an application and not display the default 
+    "Squeak! (C:\Squeak\Squeak.image)" title.
+    <li> <b>ImageFile</b>:This entry allows you to specify a specific 
+    image file to use when the user double clicks on the VM. This option 
+    is for shipping apps where you want to give the user the impression 
+    that there is an app which has the name of the VM rather than a 
+    VM/image pair. The name of the image does <b>not</b> have to end 
+    with .image. In addition, the name can be either given in relative 
+    or absolute form. If the name is relative (e.g., does not start with 
+    a drive letter) then it is assumed to be relative to the VM directory.
+    <li> <b>EnableF2Menu</b>: This entry allows you to determine whether 
+    the preference menu should be shown when pressing F2. The default 
+    is 1 (true).
+    <li> <b>EnableAltF4Quit</b>: This entry allows you to specify whether 
+    Alt-F4 (and the windows close button) should be honored or not. 
+    The default is 1 (true).
+    <li> <b>QuitDialogMessage</b>: This entry allows you to specify what 
+    message to display upon the Alt-F4 quit dialog.
+    <li> <b>QuitDialogLabel</b>: This entry allows you to specify what 
+    label to display upon the Alt-F4 quit dialog. 
+</ul>
+
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Examples</b></font></td></tr></table><p>
+
+This sets the window title to "The Towers of Hanoi":<p>
+<pre>
+     [Global]
+     WindowTitle="The Towers Of Hanoi"
+</pre>
+
+This sets the image file to use "hanoi.data":<p>
+<pre>
+     [Global]
+     ImageFile="hanoi.data"
+</pre>
+
+Alternatively, this will use an image file called hanoi.data which must be 
+in the "data" sub-directory of the VM directory:<p>
+<pre>
+     [Global]
+     ImageFile="data\hanoi.data"
+</pre>
+
+And this will use the image file hanoi.data from the given absolute location:<p>
+<pre>
+     [Global]
+     ImageFile="C:\The Towers Of Hanoi\hanoi.data"
+</pre>
+
+The following will disable, both the F2 preferences menu and the Alt-F4 quit 
+dialog (in which case your only way to quit Squeak is via 
+"Smalltalk quitPrimitive"):<p>
+
+<pre>
+     [Global]
+     EnableF2Menu=0
+     EnableAltF4Quit=0
+</pre>
+
+And this is an example to customize the Alt-F4 quit dialog accordingly:<p>
+
+<pre>
+     [Global]
+     QuitDialogMessage="Do you really want to quit the game?"
+     QuitDialogLabel="The Towers of Hanoi"
+</pre>
+
+
+</body>
+</html>

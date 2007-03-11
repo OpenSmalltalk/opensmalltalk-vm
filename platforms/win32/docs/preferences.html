@@ -1,0 +1,112 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- -*- html -*- -->
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Lovingly hand-crafted by Ian">
+   <meta name="Author" content="Ian Piumarta">
+   <meta name="Description" content="Win32 Squeak">
+   <meta name="Keywords" content="Smalltalk-80, Squeak, Win32">
+   <style type="text/css">
+     <-- HR { border: solid #639e9c } -->
+     H2, H3 { font-weight: bold; color: #639e9c }
+     H2 { background-color: #bdd3bd }
+   </style>
+   <title>Squeak: Win32 VM Preferences</title>
+</head>
+<body text="#000000" bgcolor="#ffffff" link="#0000ff" vlink="#9a0065" alink="#FF0000" font="Arial,Verdana">
+<hr>
+<table width="100%" bgcolor="white" cellspacing="0" height="52">
+  <tr><td width="65" height="52" align="left" bgcolor="white">
+        <a href="http://www.smalltalk.org/">
+          <img src="balloon_sm.gif" width="62" height="46"
+               hspace="10" border="0"></a></td>
+      <td align="center" width="100%">
+        <table bgcolor="black" width="100%" height="52" cellspacing="1">
+          <tr><td bgcolor="#bdd3bd" align="center">
+                <font size="+3"; style="font-size: x-large; font-weight: bold">
+                  Win32 VM Preferences</font></td></tr></table></td>
+      <td width="65" height="46" align="right" bgcolor="white">
+        <a href="http://www.squeak.org">
+          <img src="mouse_sm.gif" width="65" height="46" hspace="10" border="0"></a></td>
+  </tr>
+</table>
+<hr>
+
+<br>
+
+To get to the preferences, run Squeak, press F2 or go to the system menu and choose "VM preferences". Here is the list of preferences and what they do:
+
+<ul>
+    <li><b>mouse mapping</b>: This menu describes how to (re)map 
+    various mouse buttons
+    <ul>
+        <li><b>1 button mouse</b><BR>Simulates a one-button mouse; all mouse 
+	buttons are mapped to the primary button
+	<li><b>3 button mouse</b><BR>Swaps handling of middle and right mouse 
+	button<BR>
+    </ul>
+    <li><b>security settings</b>: Enables/disables access to various
+    resources on your system.
+    <ul>
+      <li><b>Allow file access</b><BR>If enabled, the VM will grant access 
+      to files anywhere on your system. <BR>
+      If disabled, the VM will enforce "sandbox rules" - no files outside 
+      the untrusted directory (typically "C:\My Squeak") will be accessible
+      <li><b>Allow image writes</b><BR>If disabled, the image cannot be 
+      saved (to prevent persistent modifications)
+      <li><b>Allow socket access</b><BR>If disabled, sockets cannot be 
+      used from Squeak.<BR>
+    </ul>
+    <li><b>display and sound</b>: Changes various aspects of how display 
+    and sound are handled
+    <ul>
+      <li><b>Use DirectSound</b><BR>If enabled, Squeak will use DirectSound 
+      instead of the (outdated) Win32 sound functions. This option only 
+      takes affect after the sound system has been shut down and restarted 
+      (you may want to quit and restart Squeak).
+      <li><b>Use OpenGL (instead of D3D)</b><BR>This preference controls 
+      the default 3D hardware acceleration API to use with Squeak. If 
+      enabled, Squeak will use OpenGL, if disabled Squeak will use 
+      Direct3D. This option will only take effect after restarting Squeak.
+      <li><b>Defer display update</b> (obsolete)<BR>Controls whether the VM 
+      tries to defer display updates in order to accumulate changes and be 
+      more efficient.<BR>
+    </ul>
+    <li><b>system configuration</b>: Handles some of the integration aspects 
+    of Squeak on Windows
+    <ul>
+      <li><b>Reduce CPU usage</b><BR>If enabled, the VM tries to (agressively)
+      reduce the CPU usage of Squeak.
+      <li><b>Reduce background CPU usage</b><BR>If enabled, the VM tries to 
+      (aggressively) reduce the CPU usage of Squeak if it is not the active 
+      application.
+      <li><b>Thread priority boost</b><BR>If enabled, the VM uses a slightly 
+      increased priority for its main process in order to handle time-critical 
+      operations (such as sound synthesis with short latencies) more 
+      accurately.
+      <li><b>Printer configuration...</b><BR>Opens the Windows printer 
+      configuration dialog for the default printer used by some primitives.<BR>
+    </ul>
+    <li><b>debug options</b>: Various options for debug purposes
+    <ul>
+      <li><b>case sensitive files (<font color="red">New for 3.5.1</font>)</b>
+      <BR>Enforces strict file name matching by the VM (useful for debugging 
+      cross-platform file handling). This slows down all operations which 
+      deal with file names.
+      <li><b>show output console</b><BR>Opens or closes the VMs console 
+      window which contains error, debug, or other log information.
+      <li><b>show console on errors</b><BR>If enabled, the VMs console 
+      will be opened automatically if an error is logged
+      <li><b>show allocation activity</b><BR>If enabled, the VM will log 
+      information about growing and/or shrinking Squeak's object memory.
+      <li><b>dump network state</b><BR>Dumps the current state of all sockets 
+      in the console.
+      <li><b>dump call stack</b><BR>Dumps the call stack of the currently 
+      active process in the console.<BR>
+    </ul>
+    <li><b>display version information</b><BR>Displays information about 
+    the VM, its build number, compiler etc.
+</ul>
+
+</body>
+</html>

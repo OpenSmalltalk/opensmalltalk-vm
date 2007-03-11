@@ -1,0 +1,198 @@
+<!doctype html public "-//W3C//DTD HTML 4.0 Transitional//EN"><!-- -*- html -*- -->
+<html>
+<head>
+   <meta http-equiv="Content-Type" content="text/html; charset=iso-8859-1">
+   <meta name="GENERATOR" content="Lovingly hand-crafted by Ian">
+   <meta name="Author" content="Ian Piumarta">
+   <meta name="Description" content="Win32 Squeak">
+   <meta name="Keywords" content="Smalltalk-80, Squeak, Win32">
+   <style type="text/css">
+     <-- HR { border: solid #639e9c } -->
+     H2, H3 { font-weight: bold; color: #639e9c }
+     H2 { background-color: #bdd3bd }
+   </style>
+   <title>Win32 Squeak</title>
+</head>
+<body text="#000000" bgcolor="#ffffff" link="#0000ff" vlink="#9a0065" alink="#FF0000" font="Arial,Verdana">
+<hr>
+<table width="100%" bgcolor="white" cellspacing="0" height="52">
+  <tr><td width="65" height="52" align="left" bgcolor="white">
+        <a href="http://www.smalltalk.org/">
+          <img src="balloon_sm.gif" width="62" height="46"
+               hspace="10" border="0"></a></td>
+      <td align="center" width="100%">
+        <table bgcolor="black" width="100%" height="52" cellspacing="1">
+          <tr><td bgcolor="#bdd3bd" align="center">
+                <font size="+3"; style="font-size: x-large; font-weight: bold">
+                  Win32 Squeak</font></td></tr></table></td>
+      <td width="65" height="46" align="right" bgcolor="white">
+        <a href="http://www.squeak.org">
+          <img src="mouse_sm.gif" width="65" height="46" hspace="10" border="0"></a></td>
+  </tr>
+</table>
+<hr>
+
+<br>
+
+This page describes the steps necessary to build a Squeak VM on Windows.
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Tool Setup</b></font></td></tr></table><p>
+
+Download the <a href="releases/Squeak-Win32-Tools-1.2.zip">
+Squeak-Win32-Tools</a> package. This package contains the entire too chain 
+that I am using to compile Squeak for Win32. It is provided as REFERENCE 
+so that you don't have to dig the entire web for exactly this version of 
+(for instance) the MINGW headers and libs or where to find the headers and
+libs for DirectX (etc etc etc).The package contains:
+<ul>
+    <li> GNU binutils
+    <li> gawk-3.0.3
+    <li> make-3.77
+    <li> mingw-crtdll
+    <li> gcc-2.95.2-1
+    <li> DirectX7 
+</ul>
+
+
+To install the package, extract everything you have into C:\ (make sure 
+the directory structure stays intact) or to another convenient place 
+(I strongly recommend putting everything into C:\ as this will avoid 
+needless changes further down the road).<p>
+Add "C:\GNUTools\bin" to your PATH environment variable in  autoexec.bat 
+by going to the control panel, open the "system" panel, click on the 
+"Advanced" tab, and on the "Environment variables" button. You can change 
+the PATH environment variable from there.<p>
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Source Code Setup</b></font></td></tr></table><p>
+
+Grab the Squeak-Win32 source release from the <a href="release">release 
+directory</a>. Source releases are packaged for easy recompilation and plugin 
+development - using the SVN sources directly runs the risk of it not being
+in sync with some of the latest modifications in other areas.<p>
+
+
+If you want to do some of your own development you may instead 
+check out the platform tree from SqueakVM.org via<p>
+<pre>
+  svn co http://squeakvm.org/svn/squeak/trunk platforms
+</pre>
+and work from there. If you do this be advised of the following<p>
+
+<b>WARNING</b>: Working from the HEAD of the SVN repository 
+will almost certainly require additional work. That's because the VM 
+maintainers work at different schedules and one maintainer's modification 
+at HEAD may break another VM. If you want to make sure the VM compiles 
+out of the box, <b>USE A FILE RELEASE</b>.
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Regenerating the Source</b></font></td></tr></table><p>
+
+To regenerate the entire VM you will have to get aquainted to 
+<a href="http://wiki.squeak.org/squeak/2105">VMMaker</a> and 
+<a href="http://wiki.squeak.org/squeak/2444">VMMakerTool</a>.<p>
+
+First, check that you have a VMMaker version that is applicable for the build 
+structure. The best way to check this is to open a browser and see whether
+Win32VMMaker is a subclass of VMMakerWithFileCopying or just plain old
+VMMaker. If the latter (i.e., VMMaker subclass: #Win32VMMaker) leave
+everything is as is. If the former (i.e., VMMakerWithFileCopying subclass: 
+#Win32VMMaker) do the following:<p>
+<ul>
+<li> <b>REMOVE</b> Win32VMMaker completely. Yes, <b>NUKE IT</b>.
+<li> Load Win32VMMaker from the build directory of the C support code:
+  platforms/win32/build/Win32VMMaker.st
+</ul>
+<p>
+
+If you just want to rebuild the VM use the build location provided by the
+file release you are using. If you do your own development you need to decide
+where to put the build files. You have two choices:<p>
+<ol>
+<li>Use the platforms/win32/build directory. The advantage is that the location
+is what is being used by the Makefiles and will work out of the box. The 
+disadvantage is that this directory is backed by the squeakvm.org repository
+(as is the entire path) and may be problematic if you need to maintain your
+own repository.<p>
+<li> Use your own build directory outside of the platforms tree. This is the
+approach that is used for all of the release builds, simply because it makes 
+a clear separation between the (static) platforms tree and the generated
+and build tree. To set this up you should:<p>
+<ul>
+<li> Copy the contents of platforms/win32/build to your build location
+<li> Adjust PLATDIR in build/Makefile to point to the platforms directory
+(see one of the win32 release builds for an example)
+</ul>
+</ol>
+<p>
+
+Once you have decided to set up your build environment, open VMMaker from
+the world menu and provide it with  the path to the platforms 
+code. Assuming you've put the platforms tree into C:\SqueakVM\ this would be 
+C:\SqueakVM\platforms. You also need to provide the path to the generated 
+sources, which should be the src directory inside your build directory, e.g.,
+either
+<pre>
+  C:\SqueakVM\platforms\win32\build\src (default build location)
+  C:\SqueakVM\mybuild\src (custom build location in C:\SqueakVM\mybuild)
+</pre>
+<b>NOTE</b>: If you can't seem to change the path to the generated sources,
+make sure you've got the right version of Win32VMMaker.<p>
+
+Next, customize VMMaker for the plugins you'd like to have internal vs.
+external. Generally, the release builds have "everything builtin" except 
+from the FFI plugin (SqueakFFIPrims). Some plugins (as of this time of writing
+FileCopyPlugin, InternetConfigPlugin, MacMenuBarPlugin, and TestOSAPlugin)
+cannot be built on Windows. If you have a large number of plugins that can't
+be made either internal or external, your paths are most likely incorrect.<p>
+
+Finally, generate the entire sources for the build.<p>
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Sanity Check</b></font></td></tr></table><p>
+Make sure you have a sane build setup before going on. Your directories
+should look roughly like this (assuming C:\SqueakVM\ is the root of the 
+installation):<p>
+<pre>
+C:\SqueakVM\platforms - the platform tree originating from squeakvm.org
+C:\SqueakVM\platforms\Cross - the cross platform files (required)
+C:\SqueakVM\platforms\win32 - the win32 platform files (required)
+
+C:\SqueakVM\mybuild - the build tree (may differ if you use another location)
+C:\SqueakVM\mybuild\src - the place for generated sources
+C:\SqueakVM\mybuild\vm - the core vm sources
+C:\SqueakVM\mybuild\XYZPlugin - the sources for XYZPlugin
+</pre>
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Customization</b></font></td></tr></table><p>
+
+If you need a custom VM, the build process is also a great place to add a few
+customizations.<p>
+
+To change the <b>name</b> of the VM edit the Makefile (in your build directory)
+and change the VM definition to, e.g.,
+<pre>
+  VM = MyCustomVM
+</pre>
+This will change various VM related settings to use your name, including
+titles for quit messages etc. It will also require you to provide a 
+MyCustomVM.rc file which you can use to provide custom icons and other 
+resources. Have a look at Squeak.rc and Croquet.rc to see examples.
+
+<p><table bgcolor="#bdd3bd" width="100%">
+  <tr><td cellvalign="center" align="center">
+        <font size="+1" color="#639e9c"><b>Compiling</b></font></td></tr></table><p>
+
+After following the above steps, cd into the build directory and invoke make.
+If you've followed the above instructions, you should be rewarded with a
+brand new VM.
+
+</body>
+</html>
