@@ -36,7 +36,7 @@
  *	3.8.14b1 Oct	,2006 JMM browser rewrite
  3.8.14b4 Nov 17th, 2006 JMM fix issue with mouse location and pre 3.0 (input semaphore driven) squeak images
  3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
- 
+ 3.8.15b5	Mar 10th, 2007 JMM check on menu item quit
 notes: IsUserCancelEventRef
 
 *****************************************************************************/
@@ -94,7 +94,7 @@ extern Boolean			gSqueakBrowserSubProcess;
 
 static KeyMapping keyMap[KeyMapSize];
 static int keyMapSize=	   0;
-static Boolean gQuitNowRightNow=false;
+Boolean gQuitNowRightNow=false;
 
 extern MenuHandle editMenu;
 extern MenuHandle appleMenu;
@@ -504,7 +504,15 @@ EventRef event, void* userData)
                 typeHICommand, NULL, sizeof(HICommand),NULL, &commandStruct);
 
             if (commandStruct.menu.menuRef == fileMenu && commandStruct.menu.menuItemIndex == quitItem) {
-                        gQuitNowRightNow = true;
+				Str255  itemString;
+				char	cString[256];
+				GetMenuItemText(commandStruct.menu.menuRef,commandStruct.menu.menuItemIndex,itemString);
+				CopyPascalStringToC((unsigned char *)itemString,cString);
+				if (strcmp(cString, "Quit do not save") == 0)
+					gQuitNowRightNow = true;
+				else
+					recordMenuEventCarbon(commandStruct.menu.menuRef,commandStruct.menu.menuItemIndex);
+				
 				result = noErr;
 			} else if (commandStruct.commandID == kHICommandHide) {
 			} else if (commandStruct.commandID == kHICommandHideOthers) {

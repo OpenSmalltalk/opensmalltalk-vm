@@ -25,14 +25,38 @@ Dec 12th, 2006 (3.8.14b7)\
 Jan  07th, 2007 (3.8.14b8)\
 Jan  22th, 2007 (3.8.15b1)\
 Feb 19th, 2007 (3.8.15b3)\
-Mar 8th, 2007 (38.8.15b4)\
+Mar 8th, 2007 (3.8.15b4)\
+Mar 10th, 2007 (3.8.15b5)\
 \
-3.8.15b4\
+3.8.15b5\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
+3.8.15b5\
+			squeakBrowser-info.plist 	add SqueakDebug parm (1) debug msgs, (0) no debug msgs\
+\
+			npsqueak.c		streamline context usage a bit, make local var versus on structure\
+							add logic to print msgs based on info.plist\
+\
+			sqMacMain.c		Add SqueakDebug parm (1) debug msgs, (0) no debug msgs\
+							debug messages for browser interface, and module loading\
+							Add SqueakQuitOnQuitAppleEvent, true if we should quit immediately if \
+							operating system sends us quit msg, as a result of logout. Normally false. \
+\
+			sqMacUIAppleEvents.c	If you logout we get a quit apple event msg, normally we ignore,\
+							unless SqueakQuitOnQuitAppleEvent is set.\
+\
+			sqMacUIEventsUniversal.c  If the user picks edit menu, item one, actually check to see if \
+							the string is "Quit do not save", if so then quit, otherwise pass revised menu\
+							choice to Smalltalk. \
+\
+			sqMacUnixExternalPrims.c	Look to SqueakDebug for msg printing\
+\
+		\
+			sqMacWindowUniversal.c	Look to SqueakDebug for msg printing, mind file does not print any msgs yet\
+						\
 3.8.15b4	\
 			sqMacUnixFileInterface.c\
 				Memory leak issue,  PathToFileViaFSRef  was not freeing mutable string.\

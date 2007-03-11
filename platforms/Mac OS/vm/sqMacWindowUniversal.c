@@ -47,11 +47,9 @@
 #include "sqMacTime.h"
 #include "sqMacNSPluginUILogic2.h"
 
-#if (EXTERNALPRIMSDEBUG)
-# define dprintf(ARGS) fprintf ARGS
-#else
-# define dprintf(ARGS)
-#endif
+extern int gSqueakDebug;
+
+# define dprintf(ARGS) if (gSqueakDebug) fprintf ARGS
 
 /*** Variables -- Imported from Virtual Machine ***/
 extern int getFullScreenFlag();    /* set from header when image file is loaded */

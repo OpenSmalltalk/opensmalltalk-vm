@@ -47,12 +47,9 @@
 #include "sqMacUIConstants.h"
 #include "sqMacEncoding.h"
 #include "sqMacUnixFileInterface.h"
+extern int gSqueakDebug;
 
-#if (EXTERNALPRIMSDEBUG)
-# define dprintf(ARGS) fprintf ARGS
-#else
-# define dprintf(ARGS)
-#endif
+# define dprintf(ARGS) if (gSqueakDebug) fprintf ARGS
  
 #if defined(HAVE_LIBDL)	/* non-starter without this! */
 
@@ -110,11 +107,6 @@
 
 /*** options ***/
 
-#ifdef EXTERNALPRIMSDEBUG
-int sqIgnorePluginErrors=0;
-#else
-int sqIgnorePluginErrors=1;
-#endif
 extern Boolean gSqueakPluginsBuiltInOrLocalOnly;
 
 /*** configured variables ***/
@@ -134,8 +126,9 @@ static void *tryLoadingInternals(char *libName)
   int         err;
   void        *handle= 0;
 
-	if ((!(err= stat(libName, &buf))) && S_ISDIR(buf.st_mode))
+	if ((!(err= stat(libName, &buf))) && S_ISDIR(buf.st_mode)) {
 	  dprintf((stderr, "ignoring directory: %s\n", libName));
+	}
 	else
 	  {
 	    dprintf((stderr, "tryLoading %s\n", libName));
@@ -143,7 +136,7 @@ static void *tryLoadingInternals(char *libName)
 	    if (handle == 0)
 	      {
 			char* why = dlerror();
-			if ((!err) && !(sqIgnorePluginErrors))
+			if ((!err) && (gSqueakDebug))
 			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 	      }
 	    else
@@ -406,7 +399,7 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
   dprintf((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
 	   lookupName, moduleHandle));
 
-  if ((fn == 0) && (!sqIgnorePluginErrors)
+  if ((fn == 0) && (gSqueakDebug)
       && strcmp(lookupName, "initialiseModule")
       && strcmp(lookupName, "shutdownModule")
       && strcmp(lookupName, "setInterpreter")

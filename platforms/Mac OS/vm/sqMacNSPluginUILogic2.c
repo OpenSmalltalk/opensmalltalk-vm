@@ -33,14 +33,10 @@ static void browserReceiveData(void);
 static void npHandler(int fd, void *data, int flags);
 static void handle_CMD_SHARED_MEMORY(void);
 static void handle_CMD_EVENT(void);void browserSendInt(int value);
+extern int gSqueakDebug;
 
 
-
-#if (EXTERNALPRIMSDEBUG)
-# define dprintf(ARGS) fprintf ARGS
-#else
-# define dprintf(ARGS)
-#endif
+# define dprintf(ARGS) if (gSqueakDebug) fprintf ARGS
 
 
 extern int	gSqueakBrowserPipes[];
@@ -198,12 +194,6 @@ static void handle_CMD_SHARED_MEMORY() {
 	CGColorSpaceRef colorspace;
 	CGContextRef TempSharedBrowserBitMapContextRef;
 	
-	if (TempSharedBrowserBitMapContextRef = SharedBrowserBitMapContextRef) {
-		SharedBrowserBitMapContextRef = NULL;
-		dprintf((stderr,"VM: free bitmap context %i \n",TempSharedBrowserBitMapContextRef));
-		CFRelease(TempSharedBrowserBitMapContextRef);
-	}
-	
 	browserReceive(&SharedMemoryfd, 4);
 	browserReceive(&tempWidth, 4);
 	browserReceive(&tempHeight, 4);
@@ -229,6 +219,13 @@ static void handle_CMD_SHARED_MEMORY() {
 		return;
 	}
 	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i at %i)\n", width, height, rowBytes,SharedMemoryfd,SharedMemoryBlock));
+
+	if (TempSharedBrowserBitMapContextRef = SharedBrowserBitMapContextRef) {
+		SharedBrowserBitMapContextRef = NULL;
+		dprintf((stderr,"VM: free bitmap context %i \n",TempSharedBrowserBitMapContextRef));
+		CFRelease(TempSharedBrowserBitMapContextRef);
+	}
+	
 	  {
 			// Get the Systems Profile for the main display
 		CMProfileRef sysprof = NULL;

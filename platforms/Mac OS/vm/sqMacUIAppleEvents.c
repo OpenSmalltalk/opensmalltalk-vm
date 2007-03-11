@@ -301,7 +301,12 @@ pascal OSErr HandleQuitAppEvent(const AEDescList *aevt,  AEDescList *reply, long
 #pragma unused(aevt)
 #pragma unused(reply)
 #pragma unused(refCon)  /* reference args to avoid compiler warnings */
-	return noErr;  //Note under Carbon it sends us a Quit event, but we don't process because image might not get saved?
+	extern Boolean gQuitNowRightNow,gSqueakQuitOnQuitAppleEvent;
+	
+	if (gSqueakQuitOnQuitAppleEvent)
+		gQuitNowRightNow = true;
+
+	return noErr;  //Note under Carbon it sends us a Quit event, processing it means image is not saved
 }
 
 

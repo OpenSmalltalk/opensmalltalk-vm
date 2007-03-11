@@ -68,6 +68,7 @@
 *  3.8.13b4 Oct 16th, 2006 JMM headless
 *  3.8.14b1 Oct  2006, JMM browser rewrite
  3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+ 8.8.15b5  Mar 7th, 2007 Add SqueakDebug, SqueakQuitOnQuitAppleEvent 
 
 */
 
@@ -101,11 +102,11 @@ extern pthread_mutex_t gEventQueueLock,gSleepLock;
 extern pthread_cond_t  gSleepLockCondition;
 
 OSErr			gSqueakFileLastError; 
-Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false;
+Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false,gSqueakQuitOnQuitAppleEvent=false;
 long			gSqueakMouseMappings[4][4] = {0};
 long			gSqueakBrowserMouseMappings[4][4] = {0};
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
-long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16;
+long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16,gSqueakDebug=0;
 char            gSqueakImageName[PATH_MAX] = "Squeak.image";
 char            gSqueakUntrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 CFStringRef		gSqueakImageNameStringRef;
@@ -399,7 +400,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
- 		return "Mac Carbon 3.8.15b4 26-Feb-07 >639DEC8A-D541-4AF1-8DFF-40D02C177C51<";
+ 		return "Mac Carbon 3.8.15b5 10-Mar-07 >9E3E99A8-A5BD-4360-B425-43380C6057C9<";
+// 		return "Mac Carbon 3.8.15b4 26-Feb-07 >639DEC8A-D541-4AF1-8DFF-40D02C177C51<";
 //		return "Mac Carbon 3.8.15b3 19-Feb-07 >15CEBDA8-05ED-4CCD-86C4-E737B2E33A64<";
  //			return "Mac Carbon 3.8.15b2X 09-Feb-07 >D0AA85C3-05E7-4709-B8F4-174DB6F1ACDB<";
  //		return "Mac Carbon 3.8.15b2 27-Jan-07 >02EF6EF4-41CE-46DF-8ADF-E4D2EBBD542C<";
@@ -453,8 +455,8 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 void fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
-    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
-    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly;
+    CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,SqueakDebug;
+    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly,SqueakQuitOnQuitAppleEvent;
 	CFNumberRef SqueakMouseMappings[4][4] = {0};
 	CFNumberRef SqueakBrowserMouseMappings[4][4] = {0};
     CFDataRef 	SqueakWindowAttributeType;    
@@ -467,6 +469,8 @@ void fetchPrefrences() {
     myDictionary = CFBundleGetInfoDictionary(myBundle);
 	
     SqueakWindowType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowType"));
+    SqueakDebug = CFDictionaryGetValue(myDictionary, CFSTR("SqueakDebug"));
+    SqueakQuitOnQuitAppleEvent = CFDictionaryGetValue(myDictionary, CFSTR("SqueakQuitOnQuitAppleEvent"));
     SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
     SqueakWindowHasTitleType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowHasTitle"));
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
@@ -583,7 +587,15 @@ void fetchPrefrences() {
 	if (SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds)
         CFNumberGetValue(SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,kCFNumberLongType,(long *) &gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds);
     
-    
+	if (SqueakDebug) 
+        CFNumberGetValue(SqueakDebug,kCFNumberLongType,&gSqueakDebug);
+		
+	if (SqueakQuitOnQuitAppleEvent) 
+        gSqueakQuitOnQuitAppleEvent = CFBooleanGetValue(SqueakQuitOnQuitAppleEvent);
+    else
+        gSqueakQuitOnQuitAppleEvent = false;
+
+
 }
 
 void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size) {
