@@ -53,6 +53,7 @@ notes: IsUserCancelEventRef
 #include <pthread.h>
 #include "sqaio.h"
 #include <quickdraw.h>
+#include <unistd.h>
 
 enum { KeyMapSize= 32 };
 
@@ -63,13 +64,17 @@ typedef struct
   int keyRepeated;
 } KeyMapping;
 
+extern int gSqueakDebug;
 pthread_mutex_t gEventQueueLock;
+
+# define dprintf(ARGS) if (gSqueakDebug) fprintf ARGS
 
 #define EventTypeFullScreenUpdate 98
 #define EventTypePostEventProcessing 99
 static void doPostMessageHook(EventRef event);
 static void postFullScreenUpdate(void);
 void signalAnyInterestedParties(void);
+Boolean inline browserActiveAndDrawingContextOk();
 static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
 
 static int addToKeyMap(int keyCode, int keyChar);
@@ -373,7 +378,7 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             
 static int MouseModifierStateCarbon(EventRef theEvent,UInt32 whatHappened);   
 static int ModifierStateCarbon(EventRef theEvent);   
-void recordMouseEventCarbon(EventRef event,UInt32 whatHappened);
+void recordMouseEventCarbon(EventRef event,UInt32 whatHappened,Boolean noPointConversion);
 static void recordKeyboardEventCarbon(EventRef event);
 static void recordMenuEventCarbon(MenuRef menu, UInt32 menuItem);
 static void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom,int windowIndex);
@@ -696,7 +701,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
         case kEventMouseWheelMoved:
 			if (mouseDownActivate) 
 				return result;
-            recordMouseEventCarbon(event,whatHappened);
+            recordMouseEventCarbon(event,whatHappened,false);
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
@@ -715,7 +720,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
                 SetUserFocusWindow(windowHandleFromIndex(windowActive));
             }
             gButtonIsDown = true;
-            recordMouseEventCarbon(event,whatHappened);
+            recordMouseEventCarbon(event,whatHappened,false);
             result = noErr;
             break;
         case kEventMouseUp:
@@ -724,7 +729,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 				return result;
 			}
             gButtonIsDown = false;
-            recordMouseEventCarbon(event,whatHappened);
+            recordMouseEventCarbon(event,whatHappened,false);
             result = noErr;
             break;
         default:
@@ -777,7 +782,7 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
         case kEventRawKeyModifiersChanged: 
             /* ok in this case we fake a mouse event to deal with the modifiers changing */
             if(inputSemaphoreIndex)
-                recordMouseEventCarbon(event,kEventMouseMoved);
+                recordMouseEventCarbon(event,kEventMouseMoved,false);
             result = noErr;
             break;
         default: 
@@ -859,7 +864,7 @@ static void recordWindowEventCarbon(int windowType,int left, int top, int right,
 	return;
 }
 
-void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
+void recordMouseEventCarbon(EventRef event,UInt32 whatHappened,Boolean noPointConversion) {
 	sqMouseEvent *evt;
 	static sqMouseEvent oldEvent;
 	static Point  where;
@@ -870,7 +875,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	err = GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
 				sizeof(Point), NULL, &where);
                     
- 	if (err == noErr)
+ 	if (err == noErr && !noPointConversion)
 		QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&where);
 	// on error use last known mouse location. 
 	carbonMousePosition = where;
@@ -878,7 +883,6 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 	buttonState = MouseModifierStateCarbon(event,whatHappened);
  	cachedButtonState = cachedButtonState | buttonState;
 
-	//fprintf(stderr,"VM: recordMouseEventCarbon v %i h %i buttonState %i \n ",where.v,where.h,buttonState);
       
         if (whatHappened == kEventMouseWheelMoved) {
             GetEventParameter( event,
@@ -931,7 +935,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened) {
 static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta) {
     long 	i,asciiChar;
     sqKeyboardEvent *evt,*extra;
-    UInt32	macKeyCode;
+    UInt32	macKeyCode=0;
     
     pthread_mutex_lock(&gEventQueueLock);
     for(i=0;i<abs(wheelMouseDelta);i++) {
@@ -1145,7 +1149,7 @@ But mapping assumes 1,2,3  red, yellow, blue
                                 NULL,
                                 &mouseButton); 
 							
-	//fprintf(stderr,"VM: MouseModifierStateCarbon buttonStateBits %i modifiers %i\n ",mouseButton,keyBoardModifiers);
+	dprintf((stderr,"VM: MouseModifierStateCarbon buttonStateBits %i modifiers %ui\n ",mouseButton,keyBoardModifiers));
  
 		         if (mouseButton > 0 && mouseButton < 4) {
           /* OLD original carbon code 

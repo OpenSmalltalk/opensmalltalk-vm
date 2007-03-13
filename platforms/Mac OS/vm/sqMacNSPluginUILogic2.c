@@ -484,9 +484,9 @@ void recordMouseEvent(EventRecord *theEvent)  {
 	
 	mouseButton = MouseModifierStateFromBrowser(theEvent);
 	carbonModifiers = theEvent->modifiers;
-	QDLocalToGlobalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&theEvent->where);
+
 	if (!(theEvent->what == 5))
-		dprintf((stderr,"VM: recordMouseEvent() carbonModifers %i mouseButton %i \n",carbonModifiers,mouseButton));
+		dprintf((stderr,"VM: recordMouseEvent() carbonModifers %i mouseButton %i v %i h %i\n",carbonModifiers,mouseButton,theEvent->where.v,theEvent->where.h));
 	if (theEvent->what == kEventMouseMoved && mouseButton) 
 		theEvent->what = kEventMouseDragged;
 	if (theEvent->what == kEventMouseDown)
@@ -499,7 +499,7 @@ void recordMouseEvent(EventRecord *theEvent)  {
 	SetEventParameter(tmpEvent,kEventParamMouseLocation,typeQDPoint,sizeof(Point),&theEvent->where);
 	SetEventParameter(tmpEvent,kEventParamKeyModifiers,typeUInt32,sizeof(UInt32),&carbonModifiers);
 	SetEventParameter(tmpEvent,kEventParamMouseButton,typeMouseButton,sizeof(EventMouseButton),&mouseButton);
-	recordMouseEventCarbon(tmpEvent,theEvent->what);
+	recordMouseEventCarbon(tmpEvent,theEvent->what,true);
 	ReleaseEvent(tmpEvent);
 }
 

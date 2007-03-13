@@ -13,7 +13,7 @@ int MouseModifierStateFromBrowser(EventRecord*);
 void signalAnyInterestedParties(void);
 int recordKeyboardEvent(EventRecord *, int );
 void recordMouseEvent(EventRecord *);
-void recordMouseEventCarbon(EventRef ,UInt32 );
+void recordMouseEventCarbon(EventRef ,UInt32 ,Boolean noPointConversion);
 Boolean browserActiveAndDrawingContextOk(void);
 void browserSetCursor(Cursor *macCursor);
 int primitivePluginRequestState(void);
