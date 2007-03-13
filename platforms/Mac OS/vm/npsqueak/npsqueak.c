@@ -19,9 +19,10 @@
  *          Aug 99   - initial version 
  
 	March 10th, 2007 - JMM add feature to enable debug printing
-	
+	March 12th, 2007 - JMM remove aio logic, revert to simple pipe for I/O to avoid race
+					 -		Try to make clipping and drawing work for both safari and firefox. 
   
- */
+    */
  
 #define TARGET_CARBON   1
 #import <WebKit/npapi.h>
@@ -37,12 +38,12 @@
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/mman.h>
-#include "sqaio.h"
+#include <pthread.h>
 
 static int gDebugPrintIsOn=0;
 
 static void DPRINT(char *format, ...)
-{
+{  
 	 if (!gDebugPrintIsOn) 
 		return;
 	va_list ap;
@@ -80,9 +81,10 @@ typedef struct SqueakPlugin {
   void		*sharedMemoryBlock;                 /* the Squeak window */
   int		sharedMemoryfd;
   char		sharedMemoryName[256];
-  CGContextRef sharedBrowserBitMapContextRef;
+  CGColorSpaceRef colorspace;
   int		width;
   int		height;
+  int		rowBytes;
   NPRect    clipRect;    /* Clipping rectangle in port coordinates */
   Rect		portRect;
   Boolean	embedded;                   /* false if we have the whole window */
@@ -95,6 +97,9 @@ typedef struct SqueakPlugin {
   char*		srcUrl;                    /* set by browser in first NewStream */
   char*		srcFilename;
   int		srcId;                     /* if requested */
+  EventLoopTimerUPP	eventLoopTimerUPP;	/* timer proc address */
+  EventLoopTimerRef  eventLoopTimerRef; /* timer event thread */
+  pthread_mutex_t	readPipeMutex;      /* mutex just in case */ 
   char*		failureUrl;
 } SqueakPlugin;
 
@@ -105,7 +110,6 @@ typedef struct SqueakStream {
    int fd;                          /* file descriptor when streaming */
 } SqueakStream;
 
-static struct timeval	 startUpTime;
 static int sharedMemIDIncremental=0;
 static int gWindowMaxLength;
 
@@ -119,7 +123,7 @@ static void SetUpSqueakWindow(SqueakPlugin*);
 static void Run(SqueakPlugin*);
 static void GetUrl(SqueakPlugin*);
 static void PostUrl(SqueakPlugin*);
-static void browserProcessCommand(SqueakPlugin *plugin);
+static void browserProcessCommand(SqueakPlugin *plugin,int cmd);
 static void setWindowLogic(SqueakPlugin *plugin, int width, int height);
 static void	getCStringForInfoString(char *cString,char *infoString,int maxLength, CFStringBuiltInEncodings encoding);
 static CFTypeRef getRefForInfoString(char *infoString);
@@ -224,7 +228,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   plugin->sharedMemoryBlock=    0;
   plugin->sharedMemoryfd	= 0;
   *plugin->sharedMemoryName = 0x00;
-  plugin->sharedBrowserBitMapContextRef = 0;
+  plugin->colorspace		= NULL;
   plugin->buttonIsDown = false;
   plugin->display=     NULL;
   plugin->embedded=    (mode == NP_EMBED);
@@ -329,7 +333,6 @@ NPP_Destroy(NPP instance, NPSavedData** save)
     }
     for (i= 0; i < 4; i++)
       if (plugin->pipes[i]) {
-		aioDisable(plugin->pipes[i]);
 		close(plugin->pipes[i]);
 		plugin->pipes[i]= 0;
       }
@@ -361,7 +364,16 @@ NPP_Destroy(NPP instance, NPSavedData** save)
 		munmap(plugin->sharedMemoryBlock,gWindowMaxLength*gWindowMaxLength*4);
 		close(plugin->sharedMemoryfd);
 		possibleError = shm_unlink(plugin->sharedMemoryName);
+		plugin->sharedMemoryBlock = 0;
 		plugin->sharedMemoryfd = 0;
+	}
+	
+	if (plugin->eventLoopTimerRef) { /* take event timer down */
+		RemoveEventLoopTimer(plugin->eventLoopTimerRef);
+		DisposeEventLoopTimerUPP(plugin->eventLoopTimerUPP);
+		pthread_mutex_destroy(&plugin->readPipeMutex);
+		plugin->eventLoopTimerRef = NULL;
+		plugin->eventLoopTimerUPP = NULL;
 	}
 	
     browser->memfree(plugin);
@@ -699,16 +711,34 @@ DeliverFile(SqueakPlugin *plugin, int id, const char* fname)
     perror("Squeak Plugin (StreamAsFile)");
 }
 
-static void npHandler(int fd, void *data, int flags)
-{
-  SqueakPlugin *plugin = (SqueakPlugin *) data;
-  browserProcessCommand(plugin);
-  aioHandle(plugin->pipes[PLUGIN_READ], npHandler, AIO_RX);
-  aioPoll(0);
+static pascal void eventLoopPolling (EventLoopTimerRef theTimer,SqueakPlugin *plugin) {
+	int n; 
+	int cmd;
 
+	/* Not sure if the lock is needed, but disaster if we run this routine on two cpus at the same time */
+	
+	pthread_mutex_lock(&plugin->readPipeMutex);
+	n= read(plugin->pipes[PLUGIN_READ], &cmd, 4);
+	if (n == -1) {
+		pthread_mutex_unlock(&plugin->readPipeMutex);
+		return;
+	}
+	browserProcessCommand(plugin,cmd);
+	pthread_mutex_unlock(&plugin->readPipeMutex);
 }
 
-void forceInterruptCheck(int ignore) {};
+void eventLoopParasite(SqueakPlugin *plugin) {
+	OSStatus error;
+	
+	pthread_mutex_init(&plugin->readPipeMutex, NULL);
+	plugin->eventLoopTimerUPP = NewEventLoopTimerUPP((EventLoopTimerProcPtr)&eventLoopPolling);
+	error = InstallEventLoopTimer (GetMainEventLoop(),
+                       10*kEventDurationMillisecond,
+                       kEventDurationMillisecond,
+                       plugin->eventLoopTimerUPP,
+                       plugin,&plugin->eventLoopTimerRef);
+					   
+}
 
 static void 
 Run(SqueakPlugin *plugin)
@@ -716,11 +746,8 @@ Run(SqueakPlugin *plugin)
   if (plugin->pid || !plugin->srcUrl ||plugin->failureUrl)
     return;
 	
-	DPRINT("NP: Setup aio logic \n");
-	gettimeofday(&startUpTime, 0);
-
-	aioEnable(plugin->pipes[PLUGIN_READ], plugin, AIO_EXT); 
-	aioHandle(plugin->pipes[PLUGIN_READ], npHandler, AIO_RX);
+	fcntl(plugin->pipes[PLUGIN_READ], F_SETFL, O_NONBLOCK);
+	eventLoopParasite(plugin);
 
 	if (*plugin->sharedMemoryName == 0x00) {
 		sharedMemIDIncremental++;
@@ -796,42 +823,36 @@ SetWindow(SqueakPlugin *plugin,  NPWindow *window, int width, int height)
 }
 
 static void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
-	int rowBytes,totalBytes;
+	int		totalBytes;
 	CMProfileRef sysprof = NULL;
-	CGColorSpaceRef colorspace;
   
 		// Get the Systems Profile for the main display
-	if (CMGetSystemProfile(&sysprof) == noErr) {
-		// Create a colorspace with the systems profile
-		colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
-		CMCloseProfile(sysprof);
-	} else 
-		colorspace = CGColorSpaceCreateDeviceRGB();
+	if (plugin->colorspace == 0) {
+		if (CMGetSystemProfile(&sysprof) == noErr) {
+			// Create a colorspace with the systems profile
+			plugin->colorspace = CGColorSpaceCreateWithPlatformColorSpace(sysprof);
+			CMCloseProfile(sysprof);
+		} else 
+			plugin->colorspace = CGColorSpaceCreateDeviceRGB();
+	}
 
 	plugin->width = width > gWindowMaxLength ? gWindowMaxLength : width;
 	plugin->height = height > gWindowMaxLength ? gWindowMaxLength : height;
-	rowBytes = (((((plugin->width * 32) + 31) / 32) * 4) & 0x1FFF);
-	totalBytes = plugin->height*rowBytes;
+	plugin->rowBytes = (((((plugin->width * 32) + 31) / 32) * 4) & 0x1FFF);
+	totalBytes = plugin->height*plugin->rowBytes;
 						
-	if (plugin->sharedBrowserBitMapContextRef)
-		CFRelease(plugin->sharedBrowserBitMapContextRef);
-	
-	plugin->sharedBrowserBitMapContextRef = CGBitmapContextCreate (plugin->sharedMemoryBlock,plugin->width,plugin->height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
-
-	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i memory at id %i at %i)\n", plugin->width, plugin->height, rowBytes,plugin->sharedMemoryfd,plugin->sharedMemoryBlock);
+	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i memory at id %i at %i)\n", plugin->width, plugin->height, plugin->rowBytes,plugin->sharedMemoryfd,plugin->sharedMemoryBlock);
 	SendInt(plugin,CMD_SHARED_MEMORY);
 	SendInt(plugin,plugin->sharedMemoryfd);
 	SendInt(plugin,plugin->width);
 	SendInt(plugin,plugin->height);
-	SendInt(plugin,rowBytes);
+	SendInt(plugin,plugin->rowBytes);
 }
 
 static void 
-browserProcessCommand(SqueakPlugin *plugin)
+browserProcessCommand(SqueakPlugin *plugin,int cmd)
 {
-  int cmd;
 
-  Receive(plugin, &cmd, 4);
   switch (cmd) {
   case CMD_GET_URL: 
     GetUrl(plugin);
@@ -841,50 +862,50 @@ browserProcessCommand(SqueakPlugin *plugin)
   case CMD_DRAW_CLIP:
 		{
 			int			 left,right,top,bottom;
-			CGImageRef	 myImage,mySubimage;
-			CGRect		 imageclip,targetclip,clip2;
-			CGContextRef context;
+			CGRect		 targetDrawArea,clipToWindowInterior;
+			CGImageRef	 mySubimage;
+			CGContextRef context,aBitMapContextRef;
 			
 			Receive(plugin, &left, 4);
 			Receive(plugin, &right, 4);
 			Receive(plugin, &top, 4);
 			Receive(plugin, &bottom, 4);
 
+			if (plugin->sharedMemoryBlock == 0) 
+				return;
+
 			DPRINT("NP: CMD_DRAW_CLIP(tlbr %i %i %i %i)\n", top, left, bottom, right);
-  
-			imageclip = CGRectMake(left,top, right-left, bottom-top);
-			targetclip = CGRectMake(left,(0-plugin->height)+(plugin->height-bottom), right-left, bottom-top);
-
-			if (plugin->sharedBrowserBitMapContextRef == NULL)
+			aBitMapContextRef = CGBitmapContextCreate(plugin->sharedMemoryBlock+top*plugin->rowBytes+left*4,
+				right-left, bottom-top,8,plugin->rowBytes,plugin->colorspace,kCGImageAlphaNoneSkipFirst);
+			mySubimage = CGBitmapContextCreateImage(aBitMapContextRef);
+			CFRelease(aBitMapContextRef);
+			if (mySubimage == NULL) 
 				return;
-				
-			myImage = CGBitmapContextCreateImage(plugin->sharedBrowserBitMapContextRef);
-			if (myImage == NULL) 
-				return;
-					
- 		    mySubimage = CGImageCreateWithImageInRect (myImage, imageclip); 
-			if (mySubimage == NULL) {
-				CFRelease(myImage);
-				return;
-			}
-				
+			
 			QDBeginCGContext (plugin->display->port,&context);
-			//  Adjust for any SetOrigin calls on qdPort
-			SyncCGContextOriginWithPort(context, plugin->display->port );
-			//  Move the CG origin to the upper left of the port
+			
 			GetPortBounds( plugin->display->port, &plugin->portRect );
-			CGContextTranslateCTM(context, 0, (float)(plugin->portRect.bottom - plugin->portRect.top) );
 
-				clip2 = CGRectMake(plugin->portRect.left + plugin->clipRect.left,
-					0 - 
-						(plugin->clipRect.bottom-plugin->clipRect.top)  - (plugin->clipRect.top + plugin->portRect.top),
-						plugin->clipRect.right-plugin->clipRect.left, plugin->clipRect.bottom-plugin->clipRect.top);
-			CGContextClipToRect(context, clip2);
-			CGContextDrawImage(context, targetclip, mySubimage);
+			/* portRect on safari is always 0,0, but it's non-zero on FireFox
+			also firefox *seems* to want "-2*plugin->portRect.top" to get clip right (sigh?) */
+
+			/* First clip to window, based on x,y lower left */
+			clipToWindowInterior = CGRectMake(plugin->portRect.left+plugin->clipRect.left,
+					plugin->portRect.bottom-plugin->clipRect.bottom-plugin->portRect.top-plugin->portRect.top,
+					plugin->clipRect.right-plugin->clipRect.left, plugin->clipRect.bottom-plugin->clipRect.top);
+			CGContextClipToRect(context, clipToWindowInterior);
+			
+			/* now change the the coordinate system as we figure out where to draw */ 
+			
+			CGContextTranslateCTM(context, (float) 0-plugin->display->portx+plugin->portRect.left, 
+				(float)(plugin->portRect.bottom - plugin->portRect.top)+plugin->display->porty-plugin->portRect.top);
+			
+			targetDrawArea = CGRectMake(left,0-bottom, right-left, bottom-top);
+			
+			CGContextDrawImage(context, targetDrawArea, mySubimage);
 			CGContextFlush(context);
 			QDEndCGContext(plugin->display->port,&context);
-			CFRelease(myImage);
-				CFRelease(mySubimage);
+			CFRelease(mySubimage);
 		}
 
 		break;
@@ -1014,15 +1035,22 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 {
 	EventRecord *eventPtr = (EventRecord*) rawEvent;
 	SqueakPlugin *plugin= (SqueakPlugin*) instance->pdata;
-  
-	aioPoll(0);
- 
-	if (plugin->pid == 0) return 0;
+	Point zot,prezot;
 	
+	if (plugin->pid == 0) return 0;	
 	if (eventPtr == NULL) return false;
-	SetOrigin(plugin->display->portx, plugin->display->porty);
-	QDGlobalToLocalPoint(plugin->display->port,(Point *) &eventPtr->where);
 
+	//eventLoopPolling (NULL,plugin);
+
+	SetOrigin(plugin->display->portx, plugin->display->porty);
+	//QDGlobalToLocalPoint(plugin->display->port,(Point *) &eventPtr->where);
+	prezot = eventPtr->where;
+	zot.v = 0;
+	zot.h = 0;
+	QDGlobalToLocalPoint(plugin->display->port,&zot);
+	eventPtr->where.v = eventPtr->where.v  + zot.v; // -  plugin->display->porty;
+	eventPtr->where.h = eventPtr->where.h  + zot.h; // -  plugin->display->portx;
+	
 	if (!(eventPtr->what == 0)) {
 		 DPRINT("NP: handelEventL %i where v %i h %i, modifiers %i plugin-cliprect v %i h %i  portxy v %i h %i\n",
 		 eventPtr->what,eventPtr->where.v,eventPtr->where.h,eventPtr->modifiers,
@@ -1088,24 +1116,6 @@ NPN_PostURLNotify(NPP instance, const char* url, const char* window,
 	return browser->posturlnotify (instance,
 					 url, window, len, buf, file, notifyData);
 }
-
-int ioMicroMSecs(void)
-{
-  struct timeval now;
-  gettimeofday(&now, 0);
-  if ((now.tv_usec-= startUpTime.tv_usec) < 0) {
-    now.tv_usec+= 1000000;
-    now.tv_sec-= 1;
-  }
-  now.tv_sec-= startUpTime.tv_sec;
-  return (now.tv_usec / 1000 + now.tv_sec * 1000);
-}
-
-
-int ioMSecs() {
-    return ioMicroMSecs();
-}
-
 
 int checkForModifierKeys(SqueakPlugin *plugin) {
 	enum {

@@ -99,7 +99,6 @@ NPError NP_GetEntryPoints(NPPluginFuncs* pluginFuncs)
 int main(NPNetscapeFuncs *browserFuncs, NPPluginFuncs *pluginFuncs, NPP_ShutdownProcPtr *shutdown)
 {
 
-	    aioInit();
 
     browser = malloc(sizeof(NPNetscapeFuncs));
     bzero(browser, sizeof(NPNetscapeFuncs));
