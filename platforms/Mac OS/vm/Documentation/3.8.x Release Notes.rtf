@@ -27,12 +27,21 @@ Jan  22th, 2007 (3.8.15b1)\
 Feb 19th, 2007 (3.8.15b3)\
 Mar 8th, 2007 (3.8.15b4)\
 Mar 10th, 2007 (3.8.15b5)\
+Mar 12th, 2007 (3.8.15b6)\
 \
-3.8.15b5\
+3.8.15b6\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.15b6		sqMacUIEventsUniversal.c 	add logic to swap global to local on mouse point on demand.\
+\
+			sqMacNSPluginUILogic2.c	add logic to avoid swapping local mouse point from browser \
+									to global and back\
+\
+			npsqueak.c (3.8.15b1)		remove aio logic, remove 10.4 only CGimageFromImageRect\
+									cleanup, test on safari and firefox for proper rendering and clipping\
+									when scrolled and placed in arbitrary frame. \
 \
 3.8.15b5\
 			squeakBrowser-info.plist 	add SqueakDebug parm (1) debug msgs, (0) no debug msgs\
