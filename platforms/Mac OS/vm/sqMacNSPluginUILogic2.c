@@ -61,7 +61,7 @@ typedef struct sqStreamRequest {
 } sqStreamRequest;
 
 static sqStreamRequest *requests[MAX_REQUESTS];
-void *SharedMemoryBlock = NULL;
+SqueakSharedMemoryBlock *SharedMemoryBlock = NULL;
 static int SharedMemoryfd;
 volatile CGContextRef SharedBrowserBitMapContextRef=NULL;
 int SharedBrowserBitMapLength = 0;
@@ -212,12 +212,14 @@ static void handle_CMD_SHARED_MEMORY() {
 		munmap(SharedMemoryBlock,SharedBrowserBitMapLength);
 	}
 			
-	SharedBrowserBitMapLength = rowBytes*height;
+	SharedBrowserBitMapLength = rowBytes*height+20;
 	SharedMemoryBlock= mmap(0, SharedBrowserBitMapLength, PROT_READ | PROT_WRITE, MAP_SHARED, SharedMemoryfd,0);
 	if (SharedMemoryBlock == MAP_FAILED)	{
 		dprintf((stderr,"VM: handle_CMD_SHARED_MEMORY failed mmap \n"));
 		return;
 	}
+	SharedMemoryBlock->written = 0;
+	
 	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i at %i)\n", width, height, rowBytes,SharedMemoryfd,SharedMemoryBlock));
 
 	if (TempSharedBrowserBitMapContextRef = SharedBrowserBitMapContextRef) {
@@ -244,7 +246,7 @@ static void handle_CMD_SHARED_MEMORY() {
 		  SizeWindow(getSTWindow(), width, height, true);
 		dprintf((stderr,"VM: Size Window to %i @ %i \n",width,height));
 	}
-	SharedBrowserBitMapContextRef = CGBitmapContextCreate (SharedMemoryBlock,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
+	SharedBrowserBitMapContextRef = CGBitmapContextCreate (SharedMemoryBlock->screenBits,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
 	dprintf((stderr,"VM: made bitmap context ref %i\n", SharedBrowserBitMapContextRef));
 }
 

@@ -1220,23 +1220,25 @@ static void doPendingFlush(void) {
 	int now = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 	int delta = now - lastTick;
 		
-	if ((delta >= gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds) || (delta < 0))  {
-		windowDescriptorBlock *windowBlock;
-		int i;
-		
-		for(i=1;i<=getCurrentIndexInUse();i++) {
-			windowBlock = windowBlockFromIndex(i);
-			if ((windowBlock) && (windowBlock->dirty) ) {
-				delta = now - windowBlock->rememberTicker;
-				if ((delta >= gSqueakUIFlushSecondaryCleanupDelayMilliseconds) || (delta < 0))  {
-					CGContextFlush(windowBlock->context);
-					windowBlock-> dirty = 0;
-					windowBlock->rememberTicker = now =  gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+	if (!browserActiveAndDrawingContextOk()) {
+			if ((delta >= gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds) || (delta < 0))  {
+			windowDescriptorBlock *windowBlock;
+			int i;
+			
+			for(i=1;i<=getCurrentIndexInUse();i++) {
+				windowBlock = windowBlockFromIndex(i);
+				if ((windowBlock) && (windowBlock->dirty) ) {
+					delta = now - windowBlock->rememberTicker;
+					if ((delta >= gSqueakUIFlushSecondaryCleanupDelayMilliseconds) || (delta < 0))  {
+						CGContextFlush(windowBlock->context);
+						windowBlock-> dirty = 0;
+						windowBlock->rememberTicker = now =  gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
+					}
 				}
 			}
+			lastTick = now;
 		}
-		lastTick = now;
-	} 
+	}
 
 	if (ioLowResMSecs() != nextPollTick) {
 		EventRef event;

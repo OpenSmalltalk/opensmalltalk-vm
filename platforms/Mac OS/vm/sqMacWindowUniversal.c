@@ -35,6 +35,7 @@
 #include <movies.h>
 #include <sys/types.h>
 #include <sys/mman.h>
+#include <pthread.h>
 
 #include "sq.h"
 #include "sqMacUIConstants.h"
@@ -322,9 +323,8 @@ int ioShowDisplayOnWindow(
 
 	static CGColorSpaceRef colorspace = NULL;
 	extern CGContextRef SharedBrowserBitMapContextRef;
-	extern void *SharedMemoryBlock;
+	extern SqueakSharedMemoryBlock *SharedMemoryBlock;
 	extern int SharedBrowserBitMapLength;
-	void browserSendInt(int);
 	
 	int 		pitch;
 	CGImageRef image;
@@ -419,19 +419,50 @@ int ioShowDisplayOnWindow(
 		
 	/* Draw the image to the Core Graphics context */
 	if (provider && image) {
+		
 		if (browserActiveAndDrawingContextOk() ) {
-		CGContextDrawImage(SharedBrowserBitMapContextRef, clip, image);
-		msync(SharedMemoryBlock,SharedBrowserBitMapLength,MS_SYNC);
-		browserSendInt(6);
-		browserSendInt(affectedL);
-		browserSendInt(affectedR);
-		browserSendInt(affectedT);
-		browserSendInt(affectedB);
+			static pthread_mutex_t SleepLock;
+			static pthread_cond_t SleepLockCondition;
+			struct timespec tspec;	
+			static bool mutexTimerStartNeeded = true;
+			int err,counter = 0;
+					
+			if (mutexTimerStartNeeded) {
+				mutexTimerStartNeeded = false;
+				pthread_mutex_init(&SleepLock, NULL);
+				pthread_cond_init(&SleepLockCondition,NULL);
+			}
+
+			while (SharedMemoryBlock->written && counter++ < 100) {
+				
+				tspec.tv_sec=  10 / 1000;
+				tspec.tv_nsec= (10 % 1000)*1000000;
+		
+				err = pthread_mutex_lock(&SleepLock);
+				err = pthread_cond_timedwait_relative_np(&SleepLockCondition,&SleepLock,&tspec);	
+				err = pthread_mutex_unlock(&SleepLock);
+			}
+			
+			CGContextDrawImage(SharedBrowserBitMapContextRef, clip, image);
+			CGContextFlush(SharedBrowserBitMapContextRef);
+			SharedMemoryBlock->top = affectedT;
+			SharedMemoryBlock->left = affectedL;
+			SharedMemoryBlock->bottom = affectedB;
+			SharedMemoryBlock->right = affectedR;
+			SharedMemoryBlock->written = 1;
+			msync(SharedMemoryBlock,SharedBrowserBitMapLength,MS_SYNC);
+			
 	} else
 			if (targetWindowBlock->context)
 		CGContextDrawImage(targetWindowBlock->context, clip, image);
 	}
 
+	CGImageRelease(image);
+	CGDataProviderRelease(provider);
+
+	if (browserActiveAndDrawingContextOk()) 
+		return 1;
+		
 	{ 
 			extern Boolean gSqueakUIFlushUseHighPercisionClock;
 			extern	long	gSqueakUIFlushPrimaryDeferNMilliseconds;
@@ -447,10 +478,7 @@ int ioShowDisplayOnWindow(
 				CGContextSynchronize(targetWindowBlock->context);
 			targetWindowBlock->dirty = 1;
 		}
-	} 
-	
-	CGImageRelease(image);
-	CGDataProviderRelease(provider);
+	} 	
 	
 	return 1;
 }

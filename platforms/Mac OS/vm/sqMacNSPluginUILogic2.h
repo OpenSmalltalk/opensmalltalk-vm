@@ -23,3 +23,12 @@ int primitivePluginPostURL(void);
 int primitivePluginRequestURLStream(void);
 int primitivePluginRequestURL(void);
 int browserGetWindowSize(void);
+
+typedef struct SqueakSharedMemoryBlock {
+	int		written;
+	int		top;
+	int		right;
+	int		bottom;
+	int		left;
+	char	screenBits[];
+} SqueakSharedMemoryBlock;
