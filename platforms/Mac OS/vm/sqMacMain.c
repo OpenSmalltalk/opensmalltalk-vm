@@ -111,7 +111,7 @@ char            gSqueakImageName[PATH_MAX] = "Squeak.image";
 char            gSqueakUntrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 CFStringRef		gSqueakImageNameStringRef;
 int				gSqueakBrowserPipes[]= {-1, -1}; 
-Boolean			gSqueakBrowserSubProcess = false;
+Boolean			gSqueakBrowserSubProcess = false,gSqueakBrowserWasHeadlessButMadeFullScreen=false;
 Boolean			gSqueakBrowserExitRequested = false;
 
 void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size);
@@ -300,7 +300,7 @@ int main(int argc, char **argv, char **envp) {
 int ioExit(void) {
     UnloadScrap();
     ioShutdownAllModules();
-	if (!gSqueakHeadless) 
+	if (!gSqueakHeadless || gSqueakBrowserWasHeadlessButMadeFullScreen) 
 		MenuBarRestore();
 	sqMacMemoryFree();
     ExitToShell();
@@ -400,7 +400,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) 
- 		return "Mac Carbon 3.8.15b8 13-Mar-07 >6C3CEECE-17C9-488F-B9A0-8CCF48A19352<";
+ 		return "Mac Carbon 3.8.16b1 16-Mar-07 >B7FBAF59-7235-44A3-9E3E-173C619EE214<";
+// 		return "Mac Carbon 3.8.15b8 13-Mar-07 >6C3CEECE-17C9-488F-B9A0-8CCF48A19352<";
 // 		return "Mac Carbon 3.8.15b7 13-Mar-07 >3E759905-E8C5-41EA-95B0-8A3B71C80C97<";
 // 		return "Mac Carbon 3.8.15b6 11-Mar-07 >E02C430E-69FD-4AC5-8740-70D3A365A5CC<";
 // 		return "Mac Carbon 3.8.15b5 10-Mar-07 >9E3E99A8-A5BD-4360-B425-43380C6057C9<";

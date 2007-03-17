@@ -137,6 +137,15 @@ Boolean inline browserActiveAndDrawingContextOk() {
 	return gSqueakBrowserSubProcess && SharedBrowserBitMapContextRef;
 }
 
+Boolean inline browserActiveAndDrawingContextOkAndInFullScreenMode() {
+	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
+	return browserActiveAndDrawingContextOk() && gSqueakBrowserWasHeadlessButMadeFullScreen && getFullScreenFlag();
+}
+
+Boolean inline browserActiveAndDrawingContextOkAndNOTInFullScreenMode() {
+	return browserActiveAndDrawingContextOk() && !getFullScreenFlag();
+}
+
 void setupPipes() { 
 	dprintf((stderr,"VM: setupPipes()\n"));
 	aioEnable(gSqueakBrowserPipes[SQUEAK_READ], 0, AIO_EXT); 
@@ -260,7 +269,9 @@ static void handle_CMD_EVENT() {
 #define adjustCursorEvent   (osEvt + 18)
 
 	browserReceive(&theEvent, sizeof(EventRecord));
-		 
+	if (browserActiveAndDrawingContextOkAndInFullScreenMode())
+			return;
+			
 	switch (eventPtr->what) {
 				case mouseUp:
 					gButtonIsDown = false;

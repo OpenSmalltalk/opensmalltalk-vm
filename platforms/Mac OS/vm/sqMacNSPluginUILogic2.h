@@ -14,7 +14,7 @@ void signalAnyInterestedParties(void);
 int recordKeyboardEvent(EventRecord *, int );
 void recordMouseEvent(EventRecord *);
 void recordMouseEventCarbon(EventRef ,UInt32 ,Boolean noPointConversion);
-Boolean browserActiveAndDrawingContextOk(void);
+Boolean inline browserActiveAndDrawingContextOk(void);
 void browserSetCursor(Cursor *macCursor);
 int primitivePluginRequestState(void);
 int primitivePluginDestroyRequest(void);
@@ -23,6 +23,8 @@ int primitivePluginPostURL(void);
 int primitivePluginRequestURLStream(void);
 int primitivePluginRequestURL(void);
 int browserGetWindowSize(void);
+Boolean inline browserActiveAndDrawingContextOkAndNOTInFullScreenMode();
+Boolean inline browserActiveAndDrawingContextOkAndInFullScreenMode();
 
 typedef struct SqueakSharedMemoryBlock {
 	int		written;

@@ -37,3 +37,4 @@ void SetupKeyboard(void);
 int getUIToLock(long *);
 void SetUpCarbonEvent();
 void SetUpCarbonEventForWindowIndex(int index);
+void RunApplicationEventLoopWithSqueak(void);

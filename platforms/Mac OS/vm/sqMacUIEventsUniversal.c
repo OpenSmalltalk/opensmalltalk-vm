@@ -49,6 +49,7 @@ notes: IsUserCancelEventRef
 #include "sqMacWindow.h"
 #include "sqMacHostWindow.h"
 #include "sqMacTime.h"
+#include "sqMacNSPluginUILogic2.h"
 
 #include <pthread.h>
 #include "sqaio.h"
@@ -74,7 +75,6 @@ pthread_mutex_t gEventQueueLock;
 static void doPostMessageHook(EventRef event);
 static void postFullScreenUpdate(void);
 void signalAnyInterestedParties(void);
-Boolean inline browserActiveAndDrawingContextOk();
 static sqKeyboardEvent *enterKeystroke (long type, long cc, long pc, UniChar utf32Char, long m);
 
 static int addToKeyMap(int keyCode, int keyChar);
@@ -85,6 +85,7 @@ static int findRepeatInKeyMap(int keyCode);
 static void setRepeatInKeyMap(int keyCode);
 
 static void doPendingFlush(void);
+void ignoreLastEvent();
 
 /*** Variables -- Event Recording ***/
 #define MAX_EVENT_BUFFER 1024
@@ -95,7 +96,6 @@ extern int setInterruptCheckCounter(int value);
 extern int getFullScreenFlag();
 extern struct VirtualMachine* interpreterProxy;
 extern Boolean gSqueakHeadless;
-extern Boolean			gSqueakBrowserSubProcess;
 
 static KeyMapping keyMap[KeyMapSize];
 static int keyMapSize=	   0;
@@ -467,7 +467,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
     {
         case kEventAppActivated: {
 			extern Cursor macCursor;
-			if (!gSqueakHeadless && NeedToSetCursorBack) {
+			if ((!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode()) && NeedToSetCursorBack) {
 				SetCursor(&macCursor);
 				NeedToSetCursorBack = false;
 				gSqueakHasCursor = true;
@@ -477,7 +477,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
         case kEventAppDeactivated: {
             if (gSqueakWindowIsFloating) break;
 			InitCursor();
-			if (!gSqueakHeadless && gSqueakHasCursor) {
+			if ((!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode()) && gSqueakHasCursor) {
 				gSqueakHasCursor = false;
 				NeedToSetCursorBack = true;
 			}
@@ -645,7 +645,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 			case kEventMouseEntered: {
 				extern Cursor macCursor;
 				extern Boolean gSqueakHasCursor;
-				if (!gSqueakHeadless && gSqueakHasCursor && NeedToSetCursorBack) {
+				if ((!gSqueakHeadless  || browserActiveAndDrawingContextOkAndInFullScreenMode()) && gSqueakHasCursor && NeedToSetCursorBack) {
 					SetCursor(&macCursor);
 					NeedToSetCursorBack = false;
 				}
@@ -653,7 +653,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 			break;
 		case kEventMouseExited: {
 				extern Boolean gSqueakHasCursor;
-				if (!gSqueakHeadless && gSqueakHasCursor) {
+				if ((!gSqueakHeadless  || browserActiveAndDrawingContextOkAndInFullScreenMode()) && gSqueakHasCursor) {
 					InitCursor();
 					NeedToSetCursorBack = true;
 				}
@@ -1169,7 +1169,7 @@ But mapping assumes 1,2,3  red, yellow, blue
 			if (keyBoardModifiers & controlKey)
 				modifier = 3;
 				
-			if (browserActiveAndDrawingContextOk())
+			if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 					mappedButton = gSqueakBrowserMouseMappings[modifier][mouseButton];
 				else
 					mappedButton = gSqueakMouseMappings[modifier][mouseButton];
@@ -1220,7 +1220,7 @@ static void doPendingFlush(void) {
 	int now = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 	int delta = now - lastTick;
 		
-	if (!browserActiveAndDrawingContextOk()) {
+	if (browserActiveAndDrawingContextOkAndInFullScreenMode()) {
 			if ((delta >= gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds) || (delta < 0))  {
 			windowDescriptorBlock *windowBlock;
 			int i;

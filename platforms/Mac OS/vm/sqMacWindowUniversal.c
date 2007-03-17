@@ -36,6 +36,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <unistd.h>
 
 #include "sq.h"
 #include "sqMacUIConstants.h"
@@ -59,6 +60,7 @@ extern int getSavedWindowSize();   /* set from header when image file is loaded 
 extern int setSavedWindowSize(int value);   /* set from header when image file is loaded */
 extern struct VirtualMachine *interpreterProxy;
 extern Boolean gSqueakHeadless;
+static void sqShowWindowActual(int windowIndex);
 
 Boolean gSqueakHasCursor = false;
 
@@ -104,6 +106,19 @@ static int ioSetFullScreenActual(int fullScreen) {
     static Rect			rememberOldLocation = {0,0,0,0};		
     GDHandle            dominantGDevice;
 	windowDescriptorBlock *	targetWindowBlock  = windowBlockFromIndex(1);
+	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
+	
+	if (browserActiveAndDrawingContextOk()) {
+		if (!gSqueakBrowserWasHeadlessButMadeFullScreen) {
+			gSqueakBrowserWasHeadlessButMadeFullScreen = true;
+			SetUpMenus();
+			AdjustMenus();
+		}
+		sqShowWindowActual(1);
+		if (targetWindowBlock->context)  //Set context to NULL, if screen is same size as fullscreen we wouldn't get new context
+				QDEndCGContext(GetWindowPort(targetWindowBlock->handle),&targetWindowBlock->context);
+		targetWindowBlock->context = NULL;
+	}
 
 	if ((targetWindowBlock == NULL) || (fullScreen && getFullScreenFlag() && !targetWindowBlock->isInvisible))
 		return 0;
@@ -131,8 +146,32 @@ static int ioSetFullScreenActual(int fullScreen) {
 		MoveWindow(targetWindowBlock->handle, screen.left, screen.top, true);
 		SizeWindow(targetWindowBlock->handle, width, height, true);
 		setFullScreenFlag(true);
+		if (browserActiveAndDrawingContextOk()) {
+			ProcessSerialNumber psn = { 0, kCurrentProcess };
+			ProcessInfoRec info;
+			info.processName = NULL;
+			info.processAppSpec = NULL;
+			info.processInfoLength = sizeof(ProcessInfoRec);
+			GetProcessInformation(&psn,&info);
+			SetFrontProcess(&psn);
+		}
 	} else {
 		MenuBarRestore();
+
+		if (gSqueakBrowserWasHeadlessButMadeFullScreen) {
+			HideWindow(targetWindowBlock->handle);
+			{
+				ProcessSerialNumber psn;
+				pid_t parent;
+				OSStatus err;
+				parent = getppid();
+				if (parent != 1) {
+					err = GetProcessForPID(parent,&psn); 
+					if(err == 0) 
+						SetFrontProcess(&psn);
+				}
+			}
+		}
 
 		if (EmptyRect(&rememberOldLocation)) {
 			/* get old window size */
@@ -265,12 +304,11 @@ int ioSetFullScreenActual(int fullScreen) {
 
 
 void sqShowWindow(int windowIndex);
-static void sqShowWindowActual(int windowIndex);
 
 void sqShowWindow(int windowIndex) {
         void *  giLocker;
 		
-		if (gSqueakHeadless) return;
+		if (gSqueakHeadless && browserActiveAndDrawingContextOkAndNOTInFullScreenMode()) return;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
             long *foo;
@@ -402,6 +440,7 @@ int ioShowDisplayOnWindow(
 			
 			targetWindowBlock->width = width;
 			targetWindowBlock->height = height; 
+			dprintf((stderr,"targetWindow index %i, width %i height %i\n",windowIndex,width,height));
 	}
 
 	
@@ -420,7 +459,7 @@ int ioShowDisplayOnWindow(
 	/* Draw the image to the Core Graphics context */
 	if (provider && image) {
 		
-		if (browserActiveAndDrawingContextOk() ) {
+		if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode() ) {
 			static pthread_mutex_t SleepLock;
 			static pthread_cond_t SleepLockCondition;
 			struct timespec tspec;	
@@ -460,7 +499,7 @@ int ioShowDisplayOnWindow(
 	CGImageRelease(image);
 	CGDataProviderRelease(provider);
 
-	if (browserActiveAndDrawingContextOk()) 
+	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode()) 
 		return 1;
 		
 	{ 
@@ -624,7 +663,9 @@ static void SetColorEntry(int index, int red, int green, int blue) {
 }
 
 void FreePixmap(void) {
-	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return;
+	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
+	
+	if (gSqueakHeadless && !gSqueakBrowserWasHeadlessButMadeFullScreen) return;
 	if (stPixMap != nil) {
 		DisposePixMap(stPixMap);
 		stPixMap = nil;
@@ -737,7 +778,7 @@ int ioScreenSize(void) {
     Rect portRect;
     
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return ((16 << 16) | 16);
-	if (browserActiveAndDrawingContextOk())
+	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		return browserGetWindowSize();
 	
 	w  = (unsigned) getSavedWindowSize() >> 16;
@@ -793,9 +834,9 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	/* Squeak hotspot offsets are negative; Mac's are positive */
 	macCursor.hotSpot.h = -offsetX;
 	macCursor.hotSpot.v = -offsetY;
-	if (browserActiveAndDrawingContextOk())
+	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		browserSetCursor(&macCursor);
-	if (!gSqueakHeadless) {
+	if (!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode()) {
 		gSqueakHasCursor = true;
 		SetCursor(&macCursor);
 	}

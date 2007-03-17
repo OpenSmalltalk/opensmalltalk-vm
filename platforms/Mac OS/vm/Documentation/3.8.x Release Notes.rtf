@@ -29,12 +29,35 @@ Mar 8th, 2007 (3.8.15b4)\
 Mar 10th, 2007 (3.8.15b5)\
 Mar 12th, 2007 (3.8.15b6)\
 Mar 15th, 2007 (3.8.15b8) \
+Mar 16th, 2007 (3.8.16b1)\
 \
-3.8.15b8\
+3.8.16b1\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.16b1		Revision to 3.8.16 because of adding browser full screen support\
+		\
+			sqMacMain.c				on exit reset menu bar if was headless, browser, and went full screen\
+			\
+			sqMacNSPluginUILogic2.c	add helper methods for when in browser mode and gone full screen, also \
+									then ignore cmds from browser when in full screen mode. \
+			\
+			sqMacNSPluginUILogic2.h	header changes\
+\
+			sqMacUIEvents.h			Add missing RunApplicationEventLoopWithSqueak declare\
+\
+			sqMacUIEventsUniversal.c	When running full screen in browser mode, we need to consider application activation,\
+									deactivation, mouse cursor enter/leave, gSqueakBrowserMouseMappings versus\
+									gSqueakMouseMappings, screen flushing\
+\
+			sqMacWindowUniversal.c	On going full screen we need to fix the menu bar, show the window, ensure window \
+									context is set correctly, send bits to the window, versus browser, flip squeak to\
+									the foreground, and ensure cursor sets go to the foreground versus the browser. \
+						\
+									On leaving full screen, we must flip to the browser, and hide the window. \
+\
 \
 3.8.15b8  	sqMacNSPluginUILogic2.c	Alter shared memory include 20 more bytes to \
 									indicate a drawing request and the co-ordinates versus using the pipe.\
