@@ -873,7 +873,7 @@ static void setWindowLogic(SqueakPlugin *plugin, int width, int height) {
 
 	plugin->width = width > gWindowMaxLength ? gWindowMaxLength : width;
 	plugin->height = height > gWindowMaxLength ? gWindowMaxLength : height;
-	plugin->rowBytes = (((((plugin->width * 32) + 31) / 32) * 4) & 0x1FFF);
+	plugin->rowBytes = (plugin->width*4*8 + 7)/8;
 	totalBytes = plugin->height*plugin->rowBytes;
 						
 	DPRINT("NP: setWindowLogic(width %i height %i rowbytes %i memory at id %i at %i)\n", plugin->width, plugin->height, plugin->rowBytes,plugin->sharedMemoryfd,plugin->sharedMemoryBlock);
@@ -910,11 +910,28 @@ browserProcessCommand(SqueakPlugin *plugin,int cmd)
   }
 }
 
+
+static const void *get_byte_pointer(void *bitmap)
+{
+    return (void *) bitmap;
+}
+
+static CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
+    get_byte_pointer,
+    NULL,
+    NULL,
+    NULL
+};
+
+CG_EXTERN CGImageRef CGBitmapContextCreateImage(CGContextRef c) AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER;
+
 void drawToScreen(SqueakPlugin *plugin) {
 	int			 left,right,top,bottom;
 	CGRect		 targetDrawArea,clipToWindowInterior;
 	CGImageRef	 mySubimage;
 	CGContextRef context,aBitMapContextRef;
+	CGDataProviderRef provider;
+
 	
 	
 	if (plugin->sharedMemoryBlock == 0) 
@@ -931,13 +948,30 @@ void drawToScreen(SqueakPlugin *plugin) {
 	DPRINT("NP: CMD_DRAW_CLIP(tlbr %i %i %i %i)\n", top, left, bottom, right);
 	aBitMapContextRef = CGBitmapContextCreate(plugin->sharedMemoryBlock->screenBits+top*plugin->rowBytes+left*4,
 		right-left, bottom-top,8,plugin->rowBytes,plugin->colorspace,kCGImageAlphaNoneSkipFirst);
-	mySubimage = CGBitmapContextCreateImage(aBitMapContextRef);
+	if (aBitMapContextRef == NULL) 
+		return;
+		
+	if (CGBitmapContextCreateImage == NULL) {
+		provider = CGDataProviderCreateDirectAccess(CGBitmapContextGetData(aBitMapContextRef),CGBitmapContextGetBytesPerRow(aBitMapContextRef)*CGBitmapContextGetHeight(aBitMapContextRef),&gProviderCallbacks);
+		if(provider == NULL)
+			return;
+		mySubimage = CGImageCreate(CGBitmapContextGetWidth(aBitMapContextRef), CGBitmapContextGetHeight(aBitMapContextRef), 
+					CGBitmapContextGetBitsPerComponent(aBitMapContextRef),
+					CGBitmapContextGetBitsPerPixel(aBitMapContextRef), 
+					CGBitmapContextGetBytesPerRow(aBitMapContextRef), plugin->colorspace, kCGImageAlphaNoneSkipFirst, provider, NULL, 0, kCGRenderingIntentDefault);
+		CGDataProviderRelease(provider);
+	} else {
+		mySubimage = CGBitmapContextCreateImage(aBitMapContextRef);
+	}
+
 	CFRelease(aBitMapContextRef);
 	if (mySubimage == NULL) 
 		return;
 	
 	if (plugin->threadPleaseStop) return;
 	QDBeginCGContext (plugin->display->port,&context);
+	if (context == NULL) 
+		return;
 	
 	GetPortBounds( plugin->display->port, &plugin->portRect );
 
