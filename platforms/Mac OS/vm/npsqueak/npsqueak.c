@@ -39,6 +39,8 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <pthread.h>
+#include <Math.h>
+
 
 static int gDebugPrintIsOn=0;
 
@@ -97,6 +99,8 @@ typedef struct SqueakPlugin {
   Rect		portRect;
   Boolean	embedded;                   /* false if we have the whole window */
   Boolean	buttonIsDown;
+  Boolean   hasCursor;
+  Boolean	customCursor;
   char		**argv;                     /* the commandline for Squeak vm */
   int		argc;
   char		vmName[PATH_MAX];
@@ -111,6 +115,7 @@ typedef struct SqueakPlugin {
   pthread_t			SqueakPThread;
   int		threadPleaseStop;
   char*		failureUrl;
+  Cursor macCursor;
 } SqueakPlugin;
 
 /* URL notify data */
@@ -233,6 +238,12 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   if (gWindowMaxLength == 0) 
 		gWindowMaxLength = 2048;
 		
+	
+ if (sharedMemIDIncremental == 0) {
+	srandomdev();
+	sharedMemIDIncremental = random();
+ }
+
   plugin->instance=    instance;
   plugin->pid=         0;
   plugin->sharedMemoryBlock=    0;
@@ -242,6 +253,8 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   plugin->buttonIsDown = false;
   plugin->display=     NULL;
   plugin->embedded=    (mode == NP_EMBED);
+  plugin->hasCursor =  true;
+  plugin->customCursor = false;
   plugin->srcUrl=      NULL;
   plugin->srcFilename= NULL;
   plugin->srcId=       -1;
@@ -324,6 +337,8 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 	 plugin->pipes[PLUGIN_READ],
 	 plugin->pipes[SQUEAK_WRITE]);
   instance->pdata= (void*) plugin;
+  fcntl(plugin->pipes[PLUGIN_WRITE], F_SETFL, O_NONBLOCK);
+  //signal(SIGPIPE,SIG_IGN);
   return NPERR_NO_ERROR;
 }
 
@@ -689,14 +704,24 @@ static void
 Send(SqueakPlugin *plugin, const void *buf, size_t count)
 {
   ssize_t n;
+  int retry=0;
+  
   do {
     n= write(plugin->pipes[PLUGIN_WRITE], buf, count);
+	if (n == -1 && errno == EAGAIN)  {
+		retry++;
+		if (retry > 20)
+			return;
+		}
+		
   } while (n == -1 && (errno == EINTR  || errno == EAGAIN));
   if (n == -1)
     perror("Squeak plugin write failed:");
   if (n < count)
     fprintf(stderr, "Squeak plugin wrote too few data to pipe\n");
 }
+
+
 
 void
 SendInt(SqueakPlugin *plugin, int value)
@@ -899,10 +924,12 @@ browserProcessCommand(SqueakPlugin *plugin,int cmd)
     break;
   case CMD_SET_CURSOR:
 	{
-		Cursor macCursor;
-		Receive(plugin, &macCursor, sizeof(Cursor));
-		if (plugin->threadPleaseStop) return;
-		SetCursor(&macCursor);
+		Receive(plugin, &plugin->macCursor, sizeof(Cursor));
+		if (plugin->threadPleaseStop)
+			return;
+		plugin->customCursor = true;
+		if (plugin->hasCursor) 
+			SetCursor(&plugin->macCursor);
 	}
 	break;
   default:
@@ -925,8 +952,26 @@ static CGDataProviderDirectAccessCallbacks gProviderCallbacks = {
 
 CG_EXTERN CGImageRef CGBitmapContextCreateImage(CGContextRef c) AVAILABLE_MAC_OS_X_VERSION_10_4_AND_LATER;
 
+void drawToScreenActual(SqueakPlugin *plugin,int top, int left, int bottom, int right);
+
 void drawToScreen(SqueakPlugin *plugin) {
-	int			 left,right,top,bottom;
+	int			 left,right,top,bottom;	
+	
+	if (plugin->sharedMemoryBlock == 0) 
+		return;
+		
+	if (!plugin->sharedMemoryBlock->written)
+		return;
+
+	left = plugin->sharedMemoryBlock->left;
+	right = plugin->sharedMemoryBlock->right;
+	top = plugin->sharedMemoryBlock->top;
+	bottom = plugin->sharedMemoryBlock->bottom;
+	drawToScreenActual(plugin,top,left,bottom,right);
+	
+}
+
+void drawToScreenActual(SqueakPlugin *plugin,int top, int left, int bottom, int right) {
 	CGRect		 targetDrawArea,clipToWindowInterior;
 	CGImageRef	 mySubimage;
 	CGContextRef context,aBitMapContextRef;
@@ -939,11 +984,6 @@ void drawToScreen(SqueakPlugin *plugin) {
 		
 	if (!plugin->sharedMemoryBlock->written)
 		return;
-
-	left = plugin->sharedMemoryBlock->left;
-	right = plugin->sharedMemoryBlock->right;
-	top = plugin->sharedMemoryBlock->top;
-	bottom = plugin->sharedMemoryBlock->bottom;
 
 	DPRINT("NP: CMD_DRAW_CLIP(tlbr %i %i %i %i)\n", top, left, bottom, right);
 	aBitMapContextRef = CGBitmapContextCreate(plugin->sharedMemoryBlock->screenBits+top*plugin->rowBytes+left*4,
@@ -1155,12 +1195,50 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 	if (eventPtr->what == nullEvent)
 		eventPtr->modifiers = checkForModifierKeys(plugin);
 		
-	if (eventPtr->what == activateEvt) 
+	if (eventPtr->what == activateEvt) {
 		DPRINT("NP: handelEventL activate\n %i %i",eventPtr->message,eventPtr->modifiers & activeFlag);
-	if (eventPtr->what == updateEvt)
-		 DPRINT("NP: handelEventL update %i\n",eventPtr->message);
+		if (eventPtr->modifiers & activeFlag) {
+		}
+		return 1;
+	}
+	if (eventPtr->what == updateEvt) {
+		/* Draw the entire screen, don't ask VM, that is too slow */
+		 WindowPtr window;
+		 RgnHandle clip;
+		 Rect clipRect;
+		 
+		 window = (WindowPtr)eventPtr->message;
+		 BeginUpdate( window );
+
+		 clip = NewRgn();
+		 GetClip(clip);
+		 GetRegionBounds(clip,&clipRect);
+		 
+		 pthread_mutex_lock(&plugin->readPipeMutex);
+		 plugin->sharedMemoryBlock->written = 1;
+		 drawToScreenActual(plugin,clipRect.top,clipRect.left,clipRect.bottom, clipRect.right);
+		 pthread_mutex_unlock(&plugin->readPipeMutex);
+
+		 EndUpdate( window );
+		 DisposeRgn(clip);
+		 DPRINT("NP: handelEventL update (clip tlbr %i %i %i %i) \n", clipRect.top,clipRect.left,clipRect.bottom, clipRect.right);
+		 return 1;
+	}
 	
-		
+	if (eventPtr->what == getFocusEvent) {}
+	if (eventPtr->what == loseFocusEvent) {}
+	if (eventPtr->what == adjustCursorEvent) {
+		plugin->hasCursor = eventPtr->modifiers;
+		if (eventPtr->modifiers) {
+			if (plugin->customCursor)
+				SetCursor(&plugin->macCursor);
+		} else {
+			InitCursor();
+		}
+		 DPRINT("NP: adjust cursor  %i\n",plugin->hasCursor);
+		return 1;
+	}
+	
 	SendInt(plugin, CMD_EVENT);
 	Send(plugin, rawEvent, sizeof(struct EventRecord));
 	return 1;

@@ -30,12 +30,33 @@ Mar 10th, 2007 (3.8.15b5)\
 Mar 12th, 2007 (3.8.15b6)\
 Mar 15th, 2007 (3.8.15b8) \
 Mar 16th, 2007 (3.8.16b1)\
+Mar 19th, 2007 (3.8.15b8 Browser plugin)\
 \
 3.8.16b1\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.15b8<<<>>>>browser plugin\
+			\
+			Fixed issue where when we go to setup the shared memory region the file name is not random enough, thus \
+			if timing is right you end up sharing the same shared memory region if you run Safari and FireFox at the \
+			same time. That gave one of our testers interesting visual side effects. \
+\
+			Fixed window draw issue in Safari, would blank Safari window to white, then not redraw properly, have to follow os-9\
+			rules for updatewindow logic on a update window request. \
+\
+			Update cursor logic so that moving out of the plugin window restores the cursor, moving back in \
+			sets the special squeak cursor. \
+\
+			Don't pass activate or update events to the VM, activate is pointless, update is handled internally, we can draw \
+			the screen according to the clip area. \
+\
+			Finally make pipe to VM non-blocking, if we get a EAGAIN, we try 20 times then give up. This solves the issue when\
+			a person uses the Quit Button in the plugin and stops the VM from running. Of course the screen is not updated now\
+			but we still retain control of the cursor,keyboard  so you can reload the etoy application via the browser. Before Safari\
+			would lockup trying to send data to the non-existant VM.\
 \
 3.8.16b1		Revision to 3.8.16 because of adding browser full screen support\
 		\
@@ -1214,8 +1235,9 @@ sqMacEncoding.c	Alter SetVMPath()
 				add support for 
 \f1\fs20 \CocoaLigature0       \
 				\cf2 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f2\fs24 \CocoaLigature1 \
+\f2\fs24 \cf0 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 				Alter PathToFile(), get kCFStringNormalizationFormKC path name\
 				Alter QuicklyMakePath() get kCFStringNormalizationFormKC path name\
@@ -1257,11 +1279,13 @@ JPEG READER WRITER\
 \f2 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
 				Broke high bit ascii macroman in 3.7.0bx.\
 				For multi-byte character input you get EventKeyDown/EventKeyChar/EventKeyUp for each unicode character coming from the input sequence.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \
+\f0 \cf0 \
 3.7.0b2		\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f2 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f2 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -1269,14 +1293,17 @@ JPEG READER WRITER\
 				b) Support for sqSocketListenOnPortBacklogSizeInterface, which allows you to specify the interface to use for the listen should work both for os-x and os-9.\
 				c) Usage of VMMaker3-7a2.\
 				d) Special change sets: make primitive point x/y internal, and slightly faster activate.\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \
+\f0 \cf0 \
 3.7.0b1 			\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f2 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f2 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 3.6.1b7			\
+\f0 \cf0 3.6.1b7			\
 SqMacWindow.c	Fix for new rending code when used with 2.8 or earlier images, mouse clicks reported in wrong place\
 \
 3.6.1b6\
