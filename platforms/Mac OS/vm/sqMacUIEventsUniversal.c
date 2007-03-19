@@ -1213,14 +1213,14 @@ static void checkBrowserForHeartBeat(void) {
 
 static void doPendingFlush(void) {
 
-	extern  Boolean gSqueakUIFlushUseHighPercisionClock;
+	extern  Boolean gSqueakUIFlushUseHighPercisionClock,gSqueakBrowserSubProcess;
 	extern	long	gSqueakUIFlushSecondaryCleanupDelayMilliseconds,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds;
 	static int lastTick = 0;
 	static int nextPollTick = 0;
 	int now = gSqueakUIFlushUseHighPercisionClock ? ioMSecs(): ioLowResMSecs();
 	int delta = now - lastTick;
 		
-	if (browserActiveAndDrawingContextOkAndInFullScreenMode()) {
+	if (browserActiveAndDrawingContextOkAndInFullScreenMode() || (!gSqueakHeadless && !gSqueakBrowserSubProcess)) {
 			if ((delta >= gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds) || (delta < 0))  {
 			windowDescriptorBlock *windowBlock;
 			int i;
