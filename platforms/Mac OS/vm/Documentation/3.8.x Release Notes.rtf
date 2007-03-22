@@ -6,7 +6,7 @@
 \margl1440\margr1440\vieww15540\viewh15540\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.8.15 mach-o build for Carbon, Sophie, Exupery, (Safari & Firefox browsers) and Croquet. Scratch VM from MIT uses subset of this VM (less plugins). \
+\f0\fs24 \cf0 Mac VM 3.8.16 mach-o build for Carbon, Sophie, Exupery, (Safari & Firefox browsers) and Croquet. Scratch VM from MIT uses subset of this VM (less plugins). \
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, MacIntel Machines, mappable mouse buttons, Safari and Firefox browser support and finally Exupery interfaces.\
 \
@@ -32,14 +32,23 @@ Mar 15th, 2007 (3.8.15b8) \
 Mar 16th, 2007 (3.8.16b1)\
 Mar 19th, 2007 (3.8.15b8 Browser plugin)\
 Mar 19th, 2007 (3.8.16b2) \
+Mar 21st, 2007 (3.8.16b3) \
 \
 3.8.16b2\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.16b3 	Changed SqueakBrowserUntrustedDirectory info.plist to SqueakUntrustedDirectory and added SqueakTrustedDirectory. \
+			\
+			sqMacMain.c		warning msg cleanup, add logic to get gSqueakTrustedDirectoryName\
+\
+			sqMacSecurity.c	Rework how trusted directory is made, always make from info.plist entry, versus old unix hack.\
+							warning msg cleanup. \
 3.8.16b2 \
 			sqMacUIEventsUniversal.c  Bug fix, optimized out stale screen flushing.\
+			experimental, pulled, had bug where asking for vmParm < 0 or >2 < 1000 or 1201 or 1202 \
+			would give uuid back, oops\
 \
 3.8.15b8<<<>>>>browser plugin\
 			\
