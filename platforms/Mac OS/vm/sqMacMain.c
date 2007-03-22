@@ -68,7 +68,8 @@
 *  3.8.13b4 Oct 16th, 2006 JMM headless
 *  3.8.14b1 Oct  2006, JMM browser rewrite
  3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
- 8.8.15b5  Mar 7th, 2007 Add SqueakDebug, SqueakQuitOnQuitAppleEvent 
+ 3.8.15b5  Mar 7th, 2007 JMM Add SqueakDebug, SqueakQuitOnQuitAppleEvent 
+ 3.8.16b3  Mar 21th, 2007 JMM trusted/untrusted directory cleanup, warning msg cleanup
 
 */
 
@@ -103,12 +104,13 @@ extern pthread_cond_t  gSleepLockCondition;
 
 OSErr			gSqueakFileLastError; 
 Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false,gSqueakQuitOnQuitAppleEvent=false;
-long			gSqueakMouseMappings[4][4] = {0};
-long			gSqueakBrowserMouseMappings[4][4] = {0};
+long			gSqueakMouseMappings[4][4] = {{0},{0}};
+long			gSqueakBrowserMouseMappings[4][4] = {{0},{0}};
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16,gSqueakDebug=0;
 char            gSqueakImageName[PATH_MAX] = "Squeak.image";
 char            gSqueakUntrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
+char            gSqueakTrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
 CFStringRef		gSqueakImageNameStringRef;
 int				gSqueakBrowserPipes[]= {-1, -1}; 
 Boolean			gSqueakBrowserSubProcess = false,gSqueakBrowserWasHeadlessButMadeFullScreen=false;
@@ -126,6 +128,8 @@ char **envVec= 0;
 
 static void sigsegv(int ignore)
 {
+#pragma unused(ignore)
+
   /* error("Segmentation fault"); */
   static int printingStack= 0;
 
@@ -154,7 +158,8 @@ int main(int argc, char **argv, char **envp);
 
 #if defined(__GNUC__) && ( defined(ppc) || defined(__ppc) || defined(__ppc__)  \
 			|| defined(POWERPC) || defined(__POWERPC) || defined (__POWERPC__) )
-  void mtfsfi(unsigned long long fpscr)
+void mtfsfi(unsigned long long fpscr);
+void mtfsfi(unsigned long long fpscr)
   {
     __asm__("lfd   f0, %0" :: "m"(fpscr));
     __asm__("mtfsf 0xff, f0");
@@ -225,6 +230,7 @@ int main(int argc, char **argv, char **envp) {
 		GetProcessInformation(&psn,&info);
 		if (info.processMode & modeOnlyBackground) {
 			OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
+#pragma unused(returnCode)
 			SetFrontProcess(&psn);
 		}
 		InitCursor();	
@@ -399,19 +405,20 @@ char * GetAttributeString(int id) {
 
 	/* vm build string */
 
-    if (id == 1006) 
- 		return "Mac Carbon 3.8.16b2 19-Mar-07 >3F52787C-BDE4-42E2-B72D-3CC68F8EE9C1<";
- 		return "Mac Carbon 3.8.16b1 16-Mar-07 >B7FBAF59-7235-44A3-9E3E-173C619EE214<";
+    if (id == 1006) {
+ 		return "Mac Carbon 3.8.16b3 20-Mar-07 >3ABB8EA0-DA9D-47FD-BD1B-6B0A2CB05EE6<";
+//		return "Mac Carbon 3.8.16b2 19-Mar-07 >3F52787C-BDE4-42E2-B72D-3CC68F8EE9C1<";
+// 		return "Mac Carbon 3.8.16b1 16-Mar-07 >B7FBAF59-7235-44A3-9E3E-173C619EE214<";
 // 		return "Mac Carbon 3.8.15b8 13-Mar-07 >6C3CEECE-17C9-488F-B9A0-8CCF48A19352<";
 // 		return "Mac Carbon 3.8.15b7 13-Mar-07 >3E759905-E8C5-41EA-95B0-8A3B71C80C97<";
 // 		return "Mac Carbon 3.8.15b6 11-Mar-07 >E02C430E-69FD-4AC5-8740-70D3A365A5CC<";
 // 		return "Mac Carbon 3.8.15b5 10-Mar-07 >9E3E99A8-A5BD-4360-B425-43380C6057C9<";
 // 		return "Mac Carbon 3.8.15b4 26-Feb-07 >639DEC8A-D541-4AF1-8DFF-40D02C177C51<";
 //		return "Mac Carbon 3.8.15b3 19-Feb-07 >15CEBDA8-05ED-4CCD-86C4-E737B2E33A64<";
- //			return "Mac Carbon 3.8.15b2X 09-Feb-07 >D0AA85C3-05E7-4709-B8F4-174DB6F1ACDB<";
+ //		return "Mac Carbon 3.8.15b2X 09-Feb-07 >D0AA85C3-05E7-4709-B8F4-174DB6F1ACDB<";
  //		return "Mac Carbon 3.8.15b2 27-Jan-07 >02EF6EF4-41CE-46DF-8ADF-E4D2EBBD542C<";
- //			return "Mac Carbon 3.8.15b1 22-Jan-07 >4AE66794-B628-44CF-BAA3-1BF3E916054D<";
-
+ //		return "Mac Carbon 3.8.15b1 22-Jan-07 >4AE66794-B628-44CF-BAA3-1BF3E916054D<";
+	}
 			
  	if (id == 1201) return "255";
  
@@ -462,10 +469,10 @@ void fetchPrefrences() {
     CFDictionaryRef myDictionary;
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,SqueakDebug;
     CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly,SqueakQuitOnQuitAppleEvent;
-	CFNumberRef SqueakMouseMappings[4][4] = {0};
-	CFNumberRef SqueakBrowserMouseMappings[4][4] = {0};
+	CFNumberRef SqueakMouseMappings[4][4] = {{0},{0}};
+	CFNumberRef SqueakBrowserMouseMappings[4][4] = {{0},{0}};
     CFDataRef 	SqueakWindowAttributeType;    
-    CFStringRef    SqueakVMEncodingType, SqueakBrowserUnTrustedDirectoryTypeRef;
+    CFStringRef    SqueakVMEncodingType, SqueakUnTrustedDirectoryTypeRef, SqueakTrustedDirectoryTypeRef;
 
     char        encoding[256];
     long		i,j;
@@ -481,7 +488,8 @@ void fetchPrefrences() {
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
-    SqueakBrowserUnTrustedDirectoryTypeRef  = CFDictionaryGetValue(myDictionary, CFSTR("SqueakBrowserUnTrustedDirectory"));
+    SqueakUnTrustedDirectoryTypeRef  = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUnTrustedDirectory"));
+    SqueakTrustedDirectoryTypeRef  = CFDictionaryGetValue(myDictionary, CFSTR("SqueakTrustedDirectory"));
 	SqueakPluginsBuiltInOrLocalOnly = CFDictionaryGetValue(myDictionary, CFSTR("SqueakPluginsBuiltInOrLocalOnly"));
     gSqueakImageNameStringRef = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
     SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
@@ -523,9 +531,14 @@ void fetchPrefrences() {
     if (gSqueakImageNameStringRef) 
         CFStringGetCString (gSqueakImageNameStringRef, gSqueakImageName, IMAGE_NAME_SIZE+1, kCFStringEncodingMacRoman);
 	
-	if (SqueakBrowserUnTrustedDirectoryTypeRef) {
+	if (SqueakUnTrustedDirectoryTypeRef) {
 
-		cocoInterfaceForTilda(SqueakBrowserUnTrustedDirectoryTypeRef, gSqueakUntrustedDirectoryName,PATH_MAX);
+		cocoInterfaceForTilda(SqueakUnTrustedDirectoryTypeRef, gSqueakUntrustedDirectoryName,PATH_MAX);
+	}
+	
+	if (SqueakTrustedDirectoryTypeRef) {
+
+		cocoInterfaceForTilda(SqueakTrustedDirectoryTypeRef, gSqueakTrustedDirectoryName,PATH_MAX);
 	}
 	
     if (SqueakWindowType) 

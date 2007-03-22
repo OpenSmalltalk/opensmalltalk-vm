@@ -15,10 +15,7 @@
 
     #include <Carbon/Carbon.h>
 
-void SqueakTerminate();
-void ExitCleanup();
-void fetchPrefrences();
+void fetchPrefrences(void);
 char * GetAttributeString(int id);
-void SqueakTerminate();
-void ExitCleanup();
-void fetchPrefrences();  
+void SqueakTerminate(void);
+void ExitCleanup(void);

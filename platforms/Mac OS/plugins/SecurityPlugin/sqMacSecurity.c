@@ -177,27 +177,15 @@ char *ioGetUntrustedUserDirectory(void) {
 
 /* note: following is called from VM directly, not from plugin */
 int ioInitSecurity(void) {
-  OSErr err;
-  void *iLoadAS;
-  char  *data;
-  extern char *gSqueakUntrustedDirectoryName;
+  extern char *gSqueakUntrustedDirectoryName,*gSqueakTrustedDirectoryName;
   
   if (gInitialized) return 1;
   gInitialized  = true;
 
-  iLoadAS = interpreterProxy->ioLoadFunctionFrom("GetAttributeString", "");
-  if (iLoadAS == 0) {
-    return 0;
-  }
-
-    /* establish the secure user directory */
-  data =  ((char * (*) (int)) iLoadAS)(1);
-  strcpy(secureUserDirectory, data);
-  fixPath(secureUserDirectory);
-  strcat(secureUserDirectory,  "/secure");
-  fixPath(secureUserDirectory);
+  secureUserDirectory[0] = 0x00;
+  strcpy(secureUserDirectory, gSqueakTrustedDirectoryName);
   untrustedUserDirectory[0] = 0x00;
-  strcpy(&untrustedUserDirectory, &gSqueakUntrustedDirectoryName);
+  strcpy(untrustedUserDirectory, gSqueakUntrustedDirectoryName);
   return 1;
 }
 
