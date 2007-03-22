@@ -119,12 +119,12 @@ Boolean			gSqueakBrowserExitRequested = false;
 void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size);
 /*** Main ***/
 
-#pragma export on
 /*** Variables -- globals for access from pluggable primitives ***/
 int    argCnt= 0;
 char **argVec= 0;
 char **envVec= 0;
-#pragma export off
+
+sqInt printAllStacks(void);
 
 static void sigsegv(int ignore)
 {
@@ -406,7 +406,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.16b3 20-Mar-07 >3ABB8EA0-DA9D-47FD-BD1B-6B0A2CB05EE6<";
+ 		return "Mac Carbon 3.8.16b4 22-Mar-07 >A74B40BA-9CB2-4E3E-A9DA-FB0002315FE6<";
+// 		return "Mac Carbon 3.8.16b3 20-Mar-07 >3ABB8EA0-DA9D-47FD-BD1B-6B0A2CB05EE6<";
 //		return "Mac Carbon 3.8.16b2 19-Mar-07 >3F52787C-BDE4-42E2-B72D-3CC68F8EE9C1<";
 // 		return "Mac Carbon 3.8.16b1 16-Mar-07 >B7FBAF59-7235-44A3-9E3E-173C619EE214<";
 // 		return "Mac Carbon 3.8.15b8 13-Mar-07 >6C3CEECE-17C9-488F-B9A0-8CCF48A19352<";

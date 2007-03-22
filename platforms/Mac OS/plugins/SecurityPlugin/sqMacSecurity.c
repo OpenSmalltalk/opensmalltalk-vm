@@ -177,7 +177,7 @@ char *ioGetUntrustedUserDirectory(void) {
 
 /* note: following is called from VM directly, not from plugin */
 int ioInitSecurity(void) {
-  extern char *gSqueakUntrustedDirectoryName,*gSqueakTrustedDirectoryName;
+  extern char gSqueakUntrustedDirectoryName[],gSqueakTrustedDirectoryName[];
   
   if (gInitialized) return 1;
   gInitialized  = true;
