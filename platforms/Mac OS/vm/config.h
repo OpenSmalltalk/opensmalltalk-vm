@@ -166,6 +166,7 @@
 #define	VM_HOST "intel-apple-darwin8.5.0"
 #define	VM_HOST_CPU "intel"
 #define	DOUBLE_WORD_ORDER 1
+#define LSB_FIRST 1
 #endif
 
 #define HAVE_LIBDL 1
