@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>SqueakBrowserPlugin</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak Browser Plugin  3.8.15b8 http://www.squeak.org </string>
+	<string>Squeak Browser Plugin  3.8.15b12 http://www.squeak.org </string>
 	<key>CFBundleIdentifier</key>
 	<string>org.squeak.SqueakPlugin</string>
 	<key>CFBundleInfoDictionaryVersion</key>
@@ -15,7 +15,7 @@
 	<key>CFBundlePackageType</key>
 	<string>BRPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>3.8.15b8</string>
+	<string>3.8.15b12</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
@@ -51,7 +51,7 @@
 	<key>SqueakWindowMaxLength</key>
 	<integer>2048</integer>
 	<key>WebPluginDescription</key>
-	<string>Squeak Browser Plugin  3.8.15b8 http://www.squeak.org </string>
+	<string>Squeak Browser Plugin  3.8.15b12 http://www.squeak.org </string>
 	<key>WebPluginMIMETypes</key>
 	<dict>
 		<key>application/x-squeak-object</key>

@@ -109,10 +109,12 @@ typedef struct SqueakPlugin {
   char*		srcUrl;                    /* set by browser in first NewStream */
   char*		srcFilename;
   int		srcId;                     /* if requested */
-  pthread_mutex_t   SleepLock;
-  pthread_cond_t    SleepLockCondition;
+//  pthread_mutex_t   SleepLock;
+//  pthread_cond_t    SleepLockCondition;
   pthread_mutex_t	readPipeMutex;      /* mutex just in case */ 
-  pthread_t			SqueakPThread;
+//  pthread_t			SqueakPThread;
+  EventLoopTimerUPP	eventLoopTimerUPP;	/* timer proc address */
+  EventLoopTimerRef  eventLoopTimerRef; /* timer event thread */
   int		threadPleaseStop;
   char*		failureUrl;
   Cursor macCursor;
@@ -267,9 +269,10 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
   plugin->argv[5]=     NULL;             /* inserted later */
   plugin->argv[6]=     NPN_StrDup("");   /* empty document file on cmdline! */ 
   plugin->argc=        7;
-  plugin->SqueakPThread = 0;
+//  plugin->SqueakPThread = 0;
   plugin->threadPleaseStop = 0;
-
+  plugin->eventLoopTimerRef = NULL;
+  plugin->eventLoopTimerUPP = NULL;
   if (plugin->embedded) {
     int i;
     for (i= 0; i < argc; i++) {
@@ -396,16 +399,23 @@ NPP_Destroy(NPP instance, NPSavedData** save)
 		plugin->sharedMemoryfd = 0;
 	}
 	
-	if (plugin->SqueakPThread) { /* take event timer down */
+/*	if (plugin->SqueakPThread) { /* take event timer down 
 		int err;
         err = pthread_cancel(plugin->SqueakPThread);
        if (err == 0 )
 			pthread_join(plugin->SqueakPThread,NULL);
-		pthread_mutex_destroy(&plugin->readPipeMutex);
 		pthread_mutex_destroy(&plugin->SleepLock);
         pthread_cond_destroy(&plugin->SleepLockCondition);
-	}
+	} */
 	
+	if (plugin->eventLoopTimerRef) { /* take event timer down */
+		RemoveEventLoopTimer(plugin->eventLoopTimerRef);
+		DisposeEventLoopTimerUPP(plugin->eventLoopTimerUPP);
+		pthread_mutex_destroy(&plugin->readPipeMutex);
+		plugin->eventLoopTimerRef = NULL;
+		plugin->eventLoopTimerUPP = NULL;
+	}
+
     browser->memfree(plugin);
   }
   instance->pdata= NULL;
@@ -754,7 +764,7 @@ DeliverFile(SqueakPlugin *plugin, int id, const char* fname)
 /*  Ok look every 10 milliseconds, 100 second we consider drawing, 
 but use pipeReadThrottle flag to only read pipe 1/2 the time, say 50 times a second*/
 
-void forkedSleepLoop(SqueakPlugin *plugin) {
+/* void forkedSleepLoop(SqueakPlugin *plugin) {
 	int n,err;
 	int cmd;
 	static bool pipeReadThrottle=true;
@@ -788,16 +798,39 @@ void forkedSleepLoop(SqueakPlugin *plugin) {
 		}
 	}
 }
+*/
 
+static pascal void eventLoopPolling (EventLoopTimerRef theTimer,SqueakPlugin *plugin) {
+	int n; 
+	int cmd;
+
+	/* Not sure if the lock is needed, but disaster if we run this routine on two cpus at the same time */
+	
+	pthread_mutex_lock(&plugin->readPipeMutex);
+	drawToScreen(plugin);
+	n= read(plugin->pipes[PLUGIN_READ], &cmd, 4);
+	if (n == -1) {
+		pthread_mutex_unlock(&plugin->readPipeMutex);
+		return;
+	}
+	browserProcessCommand(plugin,cmd);
+	pthread_mutex_unlock(&plugin->readPipeMutex);
+}
 
 void eventLoopParasite(SqueakPlugin *plugin) {
-	int err;
+	int error;
 	
 	pthread_mutex_init(&plugin->readPipeMutex, NULL);
-	pthread_mutex_init(&plugin->SleepLock, 0);
-	pthread_cond_init(&plugin->SleepLockCondition,0);
-	err = pthread_create(&plugin->SqueakPThread,0,(void *) forkedSleepLoop, plugin);
-					   
+//	pthread_mutex_init(&plugin->SleepLock, 0);
+//	pthread_cond_init(&plugin->SleepLockCondition,0);
+//	err = pthread_create(&plugin->SqueakPThread,0,(void *) forkedSleepLoop, plugin);
+					
+	plugin->eventLoopTimerUPP = NewEventLoopTimerUPP((EventLoopTimerProcPtr)&eventLoopPolling);
+	error = InstallEventLoopTimer (GetMainEventLoop(),
+                       10*kEventDurationMillisecond,
+                       kEventDurationMillisecond,
+                       plugin->eventLoopTimerUPP,
+                       plugin,&plugin->eventLoopTimerRef);
 }
 
 static void 
@@ -991,7 +1024,7 @@ void drawToScreenActual(SqueakPlugin *plugin,int top, int left, int bottom, int 
 	if (aBitMapContextRef == NULL) 
 		return;
 		
-	if (CGBitmapContextCreateImage == NULL) {
+	if (CGBitmapContextCreateImage == NULL || true) {
 		provider = CGDataProviderCreateDirectAccess(CGBitmapContextGetData(aBitMapContextRef),CGBitmapContextGetBytesPerRow(aBitMapContextRef)*CGBitmapContextGetHeight(aBitMapContextRef),&gProviderCallbacks);
 		if(provider == NULL)
 			return;
@@ -1162,6 +1195,7 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 	EventRecord *eventPtr = (EventRecord*) rawEvent;
 	SqueakPlugin *plugin= (SqueakPlugin*) instance->pdata;
 	Point zot,prezot;
+	int	handled=0;
 	
 	if (plugin->pid == 0) return 0;	
 	if (eventPtr == NULL) return false;
@@ -1175,14 +1209,17 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 	eventPtr->where.v = eventPtr->where.v  + zot.v; // -  plugin->display->porty;
 	eventPtr->where.h = eventPtr->where.h  + zot.h; // -  plugin->display->portx;
 	
-	if (!(eventPtr->what == 0)) {
+	if (!(eventPtr->what == nullEvent)) {
 		 DPRINT("NP: handelEventL %i where v %i h %i, modifiers %i plugin-cliprect v %i h %i  portxy v %i h %i\n",
 		 eventPtr->what,eventPtr->where.v,eventPtr->where.h,eventPtr->modifiers,
 		 plugin->clipRect.top,plugin->clipRect.left, 
 		 plugin->display->porty,plugin->display->portx);
+		 handled = 1;
 	}
-	if (eventPtr->what == mouseUp)
+	if (eventPtr->what == mouseUp) {
 		plugin->buttonIsDown = false;
+		handled = 1;
+	}
 		
 	if (eventPtr->what == mouseDown) {
 		plugin->buttonIsDown = true;
@@ -1190,6 +1227,7 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 		 eventPtr->modifiers & optionKey, 
 		 eventPtr->modifiers & controlKey, 
 		 eventPtr->modifiers & shiftKey);
+		handled = 1;
 	}
 
 	if (eventPtr->what == nullEvent)
@@ -1206,23 +1244,36 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 		 WindowPtr window;
 		 RgnHandle clip;
 		 Rect clipRect;
+		 GrafPtr  oldPort;
+		 
 		 
 		 window = (WindowPtr)eventPtr->message;
 		 BeginUpdate( window );
 
+		 GetPort(&oldPort);
+		 SetPort(GetWindowPort(window));
+		 
 		 clip = NewRgn();
 		 GetClip(clip);
 		 GetRegionBounds(clip,&clipRect);
 		 
-		 pthread_mutex_lock(&plugin->readPipeMutex);
-		 plugin->sharedMemoryBlock->written = 1;
+		pthread_mutex_lock(&plugin->readPipeMutex);
+		plugin->sharedMemoryBlock->written = 1;
+		/* if (clipRect.top == 0 && clipRect.left == 0 && clipRect.bottom == 0 && clipRect.right == 0) {
+			clipRect.top = 0;
+			clipRect.left = 0;
+			clipRect.bottom = plugin->height;
+			clipRect.right = plugin->width;
+			ClipRect(&clipRect);
+		 } */
 		 drawToScreenActual(plugin,clipRect.top,clipRect.left,clipRect.bottom, clipRect.right);
 		 pthread_mutex_unlock(&plugin->readPipeMutex);
-
+		 
 		 EndUpdate( window );
 		 DisposeRgn(clip);
+		 SetPort(oldPort);
 		 DPRINT("NP: handelEventL update (clip tlbr %i %i %i %i) \n", clipRect.top,clipRect.left,clipRect.bottom, clipRect.right);
-		 return 1;
+		handled = 1;
 	}
 	
 	if (eventPtr->what == getFocusEvent) {}
@@ -1239,9 +1290,19 @@ int16 Mac_NPP_HandleEvent(NPP instance, void *rawEvent)
 		return 1;
 	}
 	
+	if (eventPtr->what == keyDown) {
+		handled = 1;
+	}
+	if (eventPtr->what == keyUp) {
+		handled = 1;
+	}
+	if (eventPtr->what == autoKey) {
+		handled = 1;
+	}
+	
 	SendInt(plugin, CMD_EVENT);
 	Send(plugin, rawEvent, sizeof(struct EventRecord));
-	return 1;
+	return 	handled;  // 
 }
 
 
