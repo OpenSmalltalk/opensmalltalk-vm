@@ -1,7 +1,7 @@
 #include <CoreServices/CoreServices.r>
 
 resource 'STR#' (126) { {
-    "Squeak Plugin v3.8.15b12",
+    "Squeak Plugin v3.8.15b13",
     "Squeak Plug-In"
 } };
 

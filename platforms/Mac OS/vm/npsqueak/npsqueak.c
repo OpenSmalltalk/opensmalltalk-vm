@@ -242,7 +242,11 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 		
 	
  if (sharedMemIDIncremental == 0) {
-	srandomdev();
+	extern void srandomdev(void) __attribute__((weak_import));
+	if (srandomdev == NULL)
+		srandom(time(NULL));
+	else
+		srandomdev();
 	sharedMemIDIncremental = random();
  }
 
