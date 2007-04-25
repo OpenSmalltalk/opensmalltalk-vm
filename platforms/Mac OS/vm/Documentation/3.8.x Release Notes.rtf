@@ -6,7 +6,7 @@
 \margl1440\margr1440\vieww15540\viewh15540\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 3.8.16 mach-o build for Carbon, Sophie, Exupery, (Safari & Firefox browsers) and Croquet. Scratch VM from MIT uses subset of this VM (less plugins). \
+\f0\fs24 \cf0 Mac VM 3.8.17 mach-o build for Carbon, Sophie, Exupery, (Safari & Firefox browsers) and Croquet. Scratch VM from MIT uses subset of this VM (less plugins). \
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, MacIntel Machines, mappable mouse buttons, Safari and Firefox browser support and finally Exupery interfaces.\
 \
@@ -36,7 +36,7 @@ Mar 21st, 2007 (3.8.16b3) \
 Mar 22nd, 2007 (3.8.16b4) \
 Mar 30th, 2007 (3.8.16b5) \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
-\cf0 Apr 17th, 2007 (3.8.17b1)  \
+\cf0 Apr 25th, 2007 (3.8.17b1)  \
 \
 3.8.17b1\
 \
@@ -46,14 +46,24 @@ Mar 30th, 2007 (3.8.16b5) \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.8.17b1		Logic to enable startup without window, and let Ffenstri later add a window, or let Ffenstri close the main window.\
+			Also put back the os-x 10.2.8 support by coding around missing routines in 10.2\
+\
 			sqMacOpenGL.c\
 			sqMacWindowUniversal.c	In ioShowDisplayOnWindow only force open the window if we are not explicit about the open based on the info.plist flag\
+									For os-x 10.2.8 fallback to old logic in ioSetDisplayMode\
 			sqMacUIEventsUniversal.c	Check for window in record mouse logic, also clean up some warning msgs\
+									For os-x 10.2.8 beware of   kEventParamWindowPartCode, 10.3 feature\
+									Use amIOSX102X call to consider if 10.2 and execute old code instead\
 			sqMacHostWIndow.c		Set window tracking only if window exists\
 			sqMacDragDrop.c			Beware of setting drop handler, but no main window\
 			sqMacOpenGL.c			Watch out for no main window\
 			sqMacMain.c				Add new parm 
-\f1\fs20 \CocoaLigature0 SqueakExplicitWindowOpenNeeded, true if we need to explicit open main window
+\f1\fs20 \CocoaLigature0 SqueakExplicitWindowOpenNeeded, true if we need to explicit open main window\
+
+\f0\fs24 \CocoaLigature1 			sqMacUnixExternalPrims.c	For os-x 10.2.8 fallback to old logic dl() routines\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1\fs20 \cf0 \CocoaLigature0 			
 \f0\fs24 \CocoaLigature1 \
 \
 3.8.16b5		Squeak3d logic did not swap bytes corrrectly for macintel. Add parm to config.h and compiler.\
@@ -354,8 +364,9 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 3.8.13.b2\
 		
 \f2 Exupery support, via plugin and changes in the VM for Mac Intel, use merged VMMaker-Exupery change set\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0 \
+\f0 \cf0 \
 3.8.13.b1\
 		
 \f2 Exupery support, via plugin and changes in the VM for Mac Intel. \

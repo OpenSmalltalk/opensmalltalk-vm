@@ -103,7 +103,7 @@ extern pthread_mutex_t gEventQueueLock,gSleepLock;
 extern pthread_cond_t  gSleepLockCondition;
 
 OSErr			gSqueakFileLastError; 
-Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false,gSqueakQuitOnQuitAppleEvent=false;
+Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false,gSqueakQuitOnQuitAppleEvent=false,gSqueakExplicitWindowOpenNeeded=false;
 long			gSqueakMouseMappings[4][4] = {{0},{0}};
 long			gSqueakBrowserMouseMappings[4][4] = {{0},{0}};
 UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
@@ -228,8 +228,8 @@ int main(int argc, char **argv, char **envp) {
 		info.processAppSpec = NULL;
 		info.processInfoLength = sizeof(ProcessInfoRec);
 		GetProcessInformation(&psn,&info);
-		if (info.processMode & modeOnlyBackground) {
-			OSStatus returnCode = TransformProcessType(& psn,kProcessTransformToForegroundApplication);
+		if ((info.processMode & modeOnlyBackground) && TransformProcessType != NULL) {
+			OSStatus returnCode = TransformProcessType(& psn, kProcessTransformToForegroundApplication);
 #pragma unused(returnCode)
 			SetFrontProcess(&psn);
 		}
@@ -406,7 +406,9 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.16b5 29-Mar-07 >4ACC5390-27F6-40D4-A85A-886C7DF0A591<";
+ 		return "Mac Carbon 3.8.17b1 25-Apr-07 >9FEB946B-22B5-478C-82DD-776FD6D4E3D6<";
+ 		return "Mac Carbon 3.8.16b6 17-Apr-07 >D12C988F-2395-413F-9BA2-FC4F27858E06<";
+// 		return "Mac Carbon 3.8.16b5 29-Mar-07 >4ACC5390-27F6-40D4-A85A-886C7DF0A591<";
 // 		return "Mac Carbon 3.8.16b4 22-Mar-07 >A74B40BA-9CB2-4E3E-A9DA-FB0002315FE6<";
 // 		return "Mac Carbon 3.8.16b3 20-Mar-07 >3ABB8EA0-DA9D-47FD-BD1B-6B0A2CB05EE6<";
 //		return "Mac Carbon 3.8.16b2 19-Mar-07 >3F52787C-BDE4-42E2-B72D-3CC68F8EE9C1<";
@@ -470,7 +472,7 @@ void fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,SqueakDebug;
-    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly,SqueakQuitOnQuitAppleEvent;
+    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly,SqueakQuitOnQuitAppleEvent,SqueakExplicitWindowOpenNeeded;
 	CFNumberRef SqueakMouseMappings[4][4] = {{0},{0}};
 	CFNumberRef SqueakBrowserMouseMappings[4][4] = {{0},{0}};
     CFDataRef 	SqueakWindowAttributeType;    
@@ -493,6 +495,7 @@ void fetchPrefrences() {
     SqueakUnTrustedDirectoryTypeRef  = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUnTrustedDirectory"));
     SqueakTrustedDirectoryTypeRef  = CFDictionaryGetValue(myDictionary, CFSTR("SqueakTrustedDirectory"));
 	SqueakPluginsBuiltInOrLocalOnly = CFDictionaryGetValue(myDictionary, CFSTR("SqueakPluginsBuiltInOrLocalOnly"));
+	SqueakExplicitWindowOpenNeeded = CFDictionaryGetValue(myDictionary, CFSTR("SqueakExplicitWindowOpenNeeded"));
     gSqueakImageNameStringRef = CFDictionaryGetValue(myDictionary, CFSTR("SqueakImageName"));
     SqueakUIFlushUseHighPercisionClock = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushUseHighPercisionClock"));
     SqueakUIFlushPrimaryDeferNMilliseconds = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUIFlushPrimaryDeferNMilliseconds"));
@@ -566,6 +569,11 @@ void fetchPrefrences() {
         gSqueakPluginsBuiltInOrLocalOnly = CFBooleanGetValue(SqueakPluginsBuiltInOrLocalOnly);
     else 
         gSqueakPluginsBuiltInOrLocalOnly = false;
+        
+    if (SqueakExplicitWindowOpenNeeded) 
+        gSqueakExplicitWindowOpenNeeded = CFBooleanGetValue(SqueakExplicitWindowOpenNeeded);
+    else 
+        gSqueakExplicitWindowOpenNeeded = false;
         
     if (SqueakFloatingWindowGetsFocusType) 
         gSqueakFloatingWindowGetsFocus = CFBooleanGetValue(SqueakFloatingWindowGetsFocusType);

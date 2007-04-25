@@ -40,6 +40,7 @@
 	
  * Altered by John M McIntosh johnmci@smalltalkconsulting.com Feb 24th, 2006 for os-x carbon support
  3.8.11b2 load from resource location first, avoid plugins external directory because of intel migration effort issues.
+ 3.8.17b1 April 25, 2007, JMM rework for 10.2.8 backwards support using Ian's dl* logic. 
  
  */
  
@@ -53,14 +54,15 @@ extern int gSqueakDebug;
  
 #if defined(HAVE_LIBDL)	/* non-starter without this! */
 
-#ifdef HAVE_DLFCN_H
 # include <dlfcn.h>
-#else
-   static void *dlopen (const char *filename, int flag);
-   static const char *dlerror(void);
-   static void *dlsym(void *handle, const char *symbol);
-   static int dlclose (void *handle);
-#endif
+    void *dlopen(const char *filename, int flag) __attribute__((weak_import));
+	char *dlerror(void) __attribute__((weak_import));
+    void *dlsym(void *handle, const char *symbol) __attribute__((weak_import));
+    int dlclose(void *handle) __attribute__((weak_import));
+   static void *dlopenSqueak (const char *filename, int flag);
+   static const char *dlerrorSqueak(void);
+   static void *dlsymSqueak(void *handle, const char *symbol);
+   static int dlcloseSqueak (void *handle);
  
 #include <sys/param.h>
 #include <sys/stat.h>
@@ -132,12 +134,19 @@ static void *tryLoadingInternals(char *libName)
 	else
 	  {
 	    dprintf((stderr, "tryLoading %s\n", libName));
-	    handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+		if (dlopen == NULL)
+			handle= dlopenSqueak(libName, RTLD_NOW | RTLD_GLOBAL);
+		else
+			handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
 	    if (handle == 0)
 	      {
-			char* why = dlerror();
+			char* why;
+			if (dlerror == NULL)
+				why = dlerrorSqueak();
+			else
+				why = dlerror();
 			if ((!err) && (gSqueakDebug))
-			fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
+				fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, why);
 	      }
 	    else
 	      {
@@ -220,9 +229,18 @@ void *ioLoadModule(char *pluginName)
 
   if ((pluginName == 0) || (pluginName[0] == '\0'))
     {
-      handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
-      if (handle == 0)
-	fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", dlerror());
+      if (dlopen == NULL)
+		handle= dlopenSqueak(0, RTLD_NOW | RTLD_GLOBAL);
+	  else
+		handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
+      if (handle == 0) {
+		char *why; 
+			if (dlerror == NULL)
+				why = dlerrorSqueak();
+			else
+				why = dlerror();
+		fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", why);
+	  }
       else
 	{
 	  dprintf((stderr, "loaded: <intrinsic>\n"));
@@ -394,7 +412,10 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
   sprintf(buf, "%s", lookupName);
 #endif
 
-  fn= dlsym(moduleHandle, buf);
+  if (dlsym == NULL)
+	fn= dlsymSqueak(moduleHandle, buf);
+  else
+	fn= dlsym(moduleHandle, buf);
 
   dprintf((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
 	   lookupName, moduleHandle));
@@ -403,9 +424,15 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
       && strcmp(lookupName, "initialiseModule")
       && strcmp(lookupName, "shutdownModule")
       && strcmp(lookupName, "setInterpreter")
-      && strcmp(lookupName, "getModuleName"))
+      && strcmp(lookupName, "getModuleName")) {
+		char *why;
+	  if (dlerror == NULL)
+				why = dlerrorSqueak();
+			else
+				why = dlerror();
     fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
-	    lookupName, moduleHandle, dlerror());
+	    lookupName, moduleHandle, why);
+	}
 
   return fn;
 }
@@ -417,9 +444,20 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 */
 sqInt ioFreeModule(void *moduleHandle)
 {
-  if (dlclose(moduleHandle))
+  int results;
+  if (dlclose == NULL)
+	results = dlcloseSqueak(moduleHandle);
+  else
+	results = dlclose(moduleHandle);
+	
+  if (results)
     {
-      dprintf((stderr, "ioFreeModule(%d): %s\n", moduleHandle, dlerror()));
+	char* why;
+	if (dlerror == NULL)
+		why = dlerrorSqueak();
+	else
+		why = dlerror();
+      dprintf((stderr, "ioFreeModule(%d): %s\n", moduleHandle, why));
       return 0;
     }
   return 1;
@@ -448,8 +486,6 @@ sqInt ioFreeModule(void *moduleHandle)
 
 #endif /* !HAVE_LIBDL */
 
-#if HAVE_DLFCN_H
-#else
 /* dlfcn-dyld.c -- provides dlopen() and friends as wrappers around Mach dyld
  * 
  * Author: Ian.Piumarta@INRIA.Fr
@@ -514,7 +550,7 @@ static void dlSetError(const char *fmt, ...)
 }
 
 
-static const char *dlerror(void)
+static const char *dlerrorSqueak(void)
 {
   if (dlErrorSet)
     {
@@ -532,7 +568,7 @@ static void dlUndefined(const char *symbol)
 
 static NSModule dlMultiple(NSSymbol s, NSModule oldModule, NSModule newModule)
 {
-  dprintf((stderr, "dyld: %s: %s previously defined in %s, new definition in %s\n",
+  dprintf((stderr, "dyld: %s: %s previously defined in %s\n",
 	   NSNameOfSymbol(s), NSNameOfModule(oldModule), NSNameOfModule(newModule)));
   return newModule;
 }
@@ -559,7 +595,7 @@ static void dlinit(void)
 static int dlInitialised= 0;
 
 
-static void *dlopen(const char *path, int mode)
+static void *dlopenSqueak(const char *path, int mode)
 {
   void			*handle= 0;
   NSObjectFileImage	 ofi= 0;
@@ -596,7 +632,7 @@ static void *dlopen(const char *path, int mode)
 }
 
 
-static void *dlsym(void *handle, const char *symbol)
+static void *dlsymSqueak(void *handle, const char *symbol)
 {
   char		_symbol[256];
   NSSymbol	*nsSymbol= 0;
@@ -651,7 +687,7 @@ static void *dlsym(void *handle, const char *symbol)
 }
 
 
-static int dlclose(void *handle)
+int dlcloseSqueak(void *handle)
 {
   if ((  (MH_MAGIC == ((struct mach_header *)handle)->magic))	/* ppc */
       || (MH_CIGAM == ((struct mach_header *)handle)->magic))	/* 386 */
@@ -667,13 +703,7 @@ static int dlclose(void *handle)
 }
 
 
-/* autoconf has bugs */
-
-#ifdef HAVE_DLFCN_H
-# undef HAVE_DLFCN_H
-#endif
 
 #ifndef HAVE_LIBDL
 # define HAVE_LIBDL
-#endif
 #endif  

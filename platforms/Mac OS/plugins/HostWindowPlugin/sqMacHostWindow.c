@@ -51,6 +51,9 @@ void setWindowTrackingRgn(int windowIndex) {
 	MouseTrackingRegionID id;
 	windowDescriptorBlock *windowBlock = windowBlockFromIndex(windowIndex);
 	
+	if (!windowBlock) 
+		return;
+		
 	if (windowBlock->windowTrackingRef) {
 		GetWindowBounds(windowBlock->handle, kWindowContentRgn, &rgnRect);	
 		SetRectRgn( rgn, rgnRect.left, rgnRect.top, rgnRect.right, rgnRect.bottom );

@@ -28,6 +28,7 @@
  3.8.13b4 Oct 16th, 2006 JMM headless
  3.8.14b1 Oct	,2006 JMM browser rewrite
  3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+ 3.8.17b1  Apr 25th, 2007 JMM explict window open, add back ioSetDisplayModeOLD for 10.2.8
 
 *****************************************************************************/
 
@@ -384,12 +385,11 @@ int ioShowDisplayOnWindow(
 	}
 
 	if (targetWindowBlock == NULL) {
-		if (windowIndex == 1) {
-				makeMainWindow();
-				targetWindowBlock = windowBlockFromIndex(windowIndex);
-		}
-		else
+		extern Boolean gSqueakExplicitWindowOpenNeeded;
+		if (gSqueakExplicitWindowOpenNeeded || (windowIndex != 1))
 			return 0;
+		makeMainWindow();
+		targetWindowBlock = windowBlockFromIndex(windowIndex);
 	}
 
 		
@@ -776,7 +776,8 @@ int ioScreenDepth(void) {
 int ioScreenSize(void) {
 	int w, h;
     Rect portRect;
-    
+    extern Boolean gSqueakExplicitWindowOpenNeeded;
+	
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return ((16 << 16) | 16);
 	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		return browserGetWindowSize();
@@ -784,7 +785,7 @@ int ioScreenSize(void) {
 	w  = (unsigned) getSavedWindowSize() >> 16;
 	h= getSavedWindowSize() & 0xFFFF;
 
-	if (getSTWindow() == NULL) {
+	if (getSTWindow() == NULL && !gSqueakExplicitWindowOpenNeeded) {
 		makeMainWindow();
 	}
 
@@ -843,7 +844,6 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 	return 0;
 }
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
 // requestFlags bit values in VideoRequestRec (example use: 1<<kAbsoluteRequestBit)
 enum {
 	kBitDepthPriorityBit		= 0,	// Bit depth setting has priority over resolution
@@ -904,7 +904,7 @@ Boolean FindBestMatch (			VideoRequestRecPtr requestRecPtr,
 								unsigned long vertical);
 
 
-int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
+int ioSetDisplayModeOLD(int width, int height, int depth, int fullscreenFlag) {
 	/* Set the window to the given width, height, and color depth. Put the window
 	   into the full screen mode specified by fullscreenFlag. */
 	
@@ -1185,7 +1185,6 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 	return (false);
 }
   
-  #else
 int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	/* Set the window to the given width, height, and color depth. Put the window
 	   into the full screen mode specified by fullscreenFlag. */
@@ -1196,13 +1195,18 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	CGDisplayErr err;
 	boolean_t exactMatch;
 	
-		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 
+	if (QDGetCGDirectDisplayID == NULL)
+		return ioSetDisplayMode( width,  height,  depth,  fullscreenFlag);
+		
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
        if (dominantGDevice == null) {
             success(false);
             return 0;
         }
+		
+		
 	mainDominateWindow = QDGetCGDirectDisplayID(dominantGDevice);
 	
 	mode = CGDisplayBestModeForParameters(mainDominateWindow, depth,  width, height,  &exactMatch);
@@ -1215,10 +1219,12 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	
     return 1;
 }
-#endif
 
 GDHandle	getThatDominateGDevice(WindowPtr window) {
 	GDHandle		dominantGDevice=NULL;
+	
+	if (!window) return NULL;
+	
 	GetWindowGreatestAreaDevice((WindowRef) window,kWindowContentRgn,&dominantGDevice,NULL); 	
 	return dominantGDevice;
 }

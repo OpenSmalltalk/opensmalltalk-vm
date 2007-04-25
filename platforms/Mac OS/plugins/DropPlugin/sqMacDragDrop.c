@@ -128,6 +128,9 @@ int dropInit(void)
 
 		/* install the drag handlers, don't forget to dispose of them later */
 		
+	if (!gWindowPtr) 
+		goto bail;
+		
 	err = InstallTrackingHandler(gMainTrackingHandler, gWindowPtr, NULL);
 	if (err != noErr) { 
 	    err = memFullErr; 

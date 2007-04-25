@@ -137,8 +137,7 @@ Step Five: Shove and Tweak some files around the buildspace
 	D.	Drag 'SqueakVMUNIXPATHS.xcodeproj' to the folder containing
 		the 'platforms' and 'src' folders.
 
-	E.	Ensure a copy of the files (again found in the Developer directory):
-			Info-NPSqueak__Upgraded_.plist
+	E.	Ensure a copy of the file (again found in the Developer directory):
 			Squeak VM Universal-Info.plist
 		can be found in the folder containing the 'platforms' and 'src' folders.
 

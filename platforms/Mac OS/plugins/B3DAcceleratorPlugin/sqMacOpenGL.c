@@ -251,6 +251,8 @@ int glDestroyRenderer(int handle)
 	renderer->gWorld = NULL;
 
 #ifdef INTERNAL
+		if (!getSTWindow()) 
+			return 0;
         GetWindowGreatestAreaDevice(getSTWindow(),kWindowContentRgn,&tempGDH,&ignore); 
         if (tempGDH == nil) 
             return -1;

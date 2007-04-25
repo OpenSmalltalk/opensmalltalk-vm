@@ -85,7 +85,7 @@ static int findRepeatInKeyMap(int keyCode);
 static void setRepeatInKeyMap(int keyCode);
 
 static void doPendingFlush(void);
-void ignoreLastEvent();
+void ignoreLastEvent(void);
 
 /*** Variables -- Event Recording ***/
 #define MAX_EVENT_BUFFER 1024
@@ -384,6 +384,7 @@ static void recordMenuEventCarbon(MenuRef menu, UInt32 menuItem);
 static void recordWindowEventCarbon(int windowType,int left, int top, int right, int bottom,int windowIndex);
 static int doPreMessageHook(EventRef event); 
 static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection,long wheelMouseDelta);
+void SetUpCarbonEvent(void);
             
 void SetUpCarbonEvent() {
 	
@@ -614,6 +615,21 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
     return result;
 }
 
+static int amIOSX102X(void);
+
+static int amIOSX102X() {
+	static int amI102=-1;
+	if (amI102 == -1) {
+		long major,minor;
+		Gestalt(gestaltSystemVersionMajor, &major);
+		Gestalt(gestaltSystemVersionMinor, &minor);
+		if (major == 10 && minor == 2) 
+			amI102 = 1;
+		else
+			amI102 = 0;
+	}
+	return amI102;
+}
 
 static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
@@ -624,10 +640,8 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
  	static Boolean mouseDownActivate=false;
     extern Boolean gSqueakWindowIsFloating,gSqueakFloatingWindowGetsFocus;
     WindowPartCode windowPartCode;
-#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
     Point  mouseLocation;
 	static RgnHandle	ioWinRgn=null;
-#endif	
     whatHappened	= GetEventKind(event);
 	
 
@@ -664,32 +678,32 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
         break;
     }
 
-#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
-    if (ioWinRgn == null) 
-        ioWinRgn = NewRgn();
-        
-    GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGlobalPortRgn,ioWinRgn);
-    GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
-    
-    if (!PtInRgn(mouseLocation,ioWinRgn)) {
-		if (mouseDownActivate && whatHappened == kEventMouseUp) {
-			mouseDownActivate = false;
-			return result;
+	if (amIOSX102X()) {
+		if (ioWinRgn == null) 
+			ioWinRgn = NewRgn();
+			
+		GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGlobalPortRgn,ioWinRgn);
+		GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,sizeof(Point), NULL, &mouseLocation);
+		
+		if (!PtInRgn(mouseLocation,ioWinRgn)) {
+			if (mouseDownActivate && whatHappened == kEventMouseUp) {
+				mouseDownActivate = false;
+				return result;
+			}
+			if (!gButtonIsDown) 
+				return result;
 		}
-		if (!gButtonIsDown) 
-			return result;
-    }
-#else
-	crosscheckForErrors = GetEventParameter (event, kEventParamWindowPartCode, typeWindowPartCode,NULL,sizeof(WindowPartCode), NULL, &windowPartCode);
-    if (windowPartCode < 3) {
-		if (mouseDownActivate && whatHappened == kEventMouseUp) {
-			mouseDownActivate = false;
-			return result;
+	} else {
+		crosscheckForErrors = GetEventParameter (event, kEventParamWindowPartCode, typeWindowPartCode,NULL,sizeof(WindowPartCode), NULL, &windowPartCode);
+		if (windowPartCode < 3) {
+			if (mouseDownActivate && whatHappened == kEventMouseUp) {
+				mouseDownActivate = false;
+				return result;
+			}
+			if (!gButtonIsDown) 
+				return result;
 		}
-		if (!gButtonIsDown) 
-			return result;
-    }
-#endif
+	}
 
     if(messageHook && ((result = doPreMessageHook(event)) != eventNotHandledErr))
         return result;
@@ -705,14 +719,14 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             result = noErr;
             return result; //Return early not an event we deal with for post event logic
         case kEventMouseDown:
-#if MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_3
-			GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGrowRgn,ioWinRgn);
-            if (PtInRgn(mouseLocation,ioWinRgn))
-                return result;
-#else
-            if (windowPartCode != inContent)
-                return result;
-#endif
+			if (amIOSX102X()) {
+				GetWindowRegion(windowHandleFromIndex(windowActive),kWindowGrowRgn,ioWinRgn);
+				if (PtInRgn(mouseLocation,ioWinRgn))
+					return result;
+			} else {
+				if (windowPartCode != inContent)
+					return result;
+			}
 			if (mouseDownActivate) 
 				return result;
             if (gSqueakFloatingWindowGetsFocus && gSqueakWindowIsFloating) {
@@ -875,7 +889,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened,Boolean noPointCo
 	err = GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
 				sizeof(Point), NULL, &where);
                     
- 	if (err == noErr && !noPointConversion)
+ 	if (err == noErr && !noPointConversion && windowHandleFromIndex(windowActive))
 		QDGlobalToLocalPoint(GetWindowPort(windowHandleFromIndex(windowActive)),&where);
 	// on error use last known mouse location. 
 	carbonMousePosition = where;
@@ -1012,8 +1026,8 @@ static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection
 }
 
 static void recordKeyboardEventCarbon(EventRef event) {
-    int				modifierBits, keyIndex, i, ISawRawKeyRepeat;
-    UniCharCount	uniCharCount;
+    int				modifierBits, keyIndex,ISawRawKeyRepeat;
+    UniCharCount	uniCharCount,i;
     UniChar			modifiedUniChar, *uniCharBufPtr, *uniCharBuf;
     OSErr			err;
     UInt32			actualSize,macKeyCode,textEntryServices; 
