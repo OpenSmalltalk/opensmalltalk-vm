@@ -620,10 +620,9 @@ static int amIOSX102X(void);
 static int amIOSX102X() {
 	static int amI102=-1;
 	if (amI102 == -1) {
-		long major,minor;
-		Gestalt(gestaltSystemVersionMajor, &major);
-		Gestalt(gestaltSystemVersionMinor, &minor);
-		if (major == 10 && minor == 2) 
+		long version;
+		Gestalt(gestaltSystemVersion, &version);
+		if (version < 0x1030)
 			amI102 = 1;
 		else
 			amI102 = 0;
