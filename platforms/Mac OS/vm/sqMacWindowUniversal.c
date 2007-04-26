@@ -817,8 +817,10 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 			 0		  1		invert the underlying pixel
 	*/
 	int i;
+	extern Boolean biggerCursorActive;
 	
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
+	biggerCursorActive = false;
 	
 	if (cursorMaskIndex == nil) {
 		for (i = 0; i < 16; i++) {

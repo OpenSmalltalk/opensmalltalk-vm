@@ -37,14 +37,22 @@ Mar 22nd, 2007 (3.8.16b4) \
 Mar 30th, 2007 (3.8.16b5) \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
 \cf0 Apr 25th, 2007 (3.8.17b1)  \
+Apr 26th, 2007 (3.8.17b2)\
 \
-3.8.17b1\
+3.8.17b2\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 \cf0 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
+3.8.17b2		bug fix cursor tracking was not correct, used local coordinates, needed global. \
+			Add large cursor support via unix code for OLPC image\
+			\
+			sqMacUIEventsUniversal.c	large cursor support, switch cursors back on window entry and app activation.\
+			sqMacHostWindow.c		Fix cursor tracking\
+			sqMacWIndowUniversal.c	small cursor logic has to set flag that it's not large cursor so reset cursor knows which\
+					 				cursor to use\
 3.8.17b1		Logic to enable startup without window, and let Ffenstri later add a window, or let Ffenstri close the main window.\
 			Also put back the os-x 10.2.8 support by coding around missing routines in 10.2\
 \

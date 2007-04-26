@@ -68,7 +68,7 @@ void setWindowTrackingRgn(int windowIndex) {
 	id.signature = 'FAST';
 	id.id = windowIndex;
 		
-	OSStatus err = CreateMouseTrackingRegion(windowBlock->handle, rgn, NULL, kMouseTrackingOptionsLocalClip,
+	OSStatus err = CreateMouseTrackingRegion(windowBlock->handle, rgn, NULL, kMouseTrackingOptionsGlobalClip,
 						id, NULL, NULL, &windowBlock->windowTrackingRef);
 	if ( noErr == err ) {
 		RetainMouseTrackingRegion( windowBlock->windowTrackingRef);

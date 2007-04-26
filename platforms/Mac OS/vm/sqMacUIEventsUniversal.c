@@ -96,10 +96,13 @@ extern int setInterruptCheckCounter(int value);
 extern int getFullScreenFlag();
 extern struct VirtualMachine* interpreterProxy;
 extern Boolean gSqueakHeadless;
+extern void SetCursorBackToSomething(void);
+
 
 static KeyMapping keyMap[KeyMapSize];
 static int keyMapSize=	   0;
 Boolean gQuitNowRightNow=false;
+Boolean NeedToSetCursorBackOnApplicationActivate = false;
 
 extern MenuHandle editMenu;
 extern MenuHandle appleMenu;
@@ -467,9 +470,8 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
     switch (whatHappened)
     {
         case kEventAppActivated: {
-			extern Cursor macCursor;
 			if ((!gSqueakHeadless || browserActiveAndDrawingContextOkAndInFullScreenMode()) && NeedToSetCursorBack) {
-				SetCursor(&macCursor);
+				NeedToSetCursorBackOnApplicationActivate = true;
 				NeedToSetCursorBack = false;
 				gSqueakHasCursor = true;
 			}
@@ -656,10 +658,9 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
     switch (whatHappened)
     {
 			case kEventMouseEntered: {
-				extern Cursor macCursor;
 				extern Boolean gSqueakHasCursor;
 				if ((!gSqueakHeadless  || browserActiveAndDrawingContextOkAndInFullScreenMode()) && gSqueakHasCursor && NeedToSetCursorBack) {
-					SetCursor(&macCursor);
+					SetCursorBackToSomething();
 					NeedToSetCursorBack = false;
 				}
 			}
@@ -1266,7 +1267,12 @@ static void doPendingFlush(void) {
 		}
 		if (browserActiveAndDrawingContextOk())
 			checkBrowserForHeartBeat();
-			
+		
+		if (NeedToSetCursorBackOnApplicationActivate) {  // special case of setting large cursor on app activate
+			NeedToSetCursorBackOnApplicationActivate = false;
+			SetCursorBackToSomething();
+		}
+		
 		nextPollTick = ioLowResMSecs();
 	}
 

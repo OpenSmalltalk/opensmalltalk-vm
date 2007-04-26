@@ -70,7 +70,7 @@
  3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
  3.8.15b5  Mar 7th, 2007 JMM Add SqueakDebug, SqueakQuitOnQuitAppleEvent 
  3.8.16b3  Mar 21th, 2007 JMM trusted/untrusted directory cleanup, warning msg cleanup
-
+ 3.8.17b2  April 26th, 2007 JMM large cursors
 */
 
 
@@ -233,7 +233,7 @@ int main(int argc, char **argv, char **envp) {
 #pragma unused(returnCode)
 			SetFrontProcess(&psn);
 		}
-		InitCursor();	
+//		InitCursor();	large cursor support
 	}
 	
 	getShortImageNameWithEncoding(shortImageName,gCurrentVMEncoding);
@@ -299,6 +299,7 @@ int main(int argc, char **argv, char **envp) {
 		while (SharedBrowserBitMapContextRef == NULL)
 			aioSleep(100*1000);
 	}
+	NSApplicationLoad();	//	Needed for Carbon based applications which call into Cocoa
 	RunApplicationEventLoopWithSqueak();
     return 0;
 }
@@ -406,8 +407,9 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.17b1 25-Apr-07 >9FEB946B-22B5-478C-82DD-776FD6D4E3D6<";
- 		return "Mac Carbon 3.8.16b6 17-Apr-07 >D12C988F-2395-413F-9BA2-FC4F27858E06<";
+ 		return "Mac Carbon 3.8.17b2 26-Apr-07 >C4425002-5C1A-4801-A7EC-EBB15025290E<";
+// 		return "Mac Carbon 3.8.17b1 25-Apr-07 >9FEB946B-22B5-478C-82DD-776FD6D4E3D6<";
+//		return "Mac Carbon 3.8.16b6 17-Apr-07 >D12C988F-2395-413F-9BA2-FC4F27858E06<";
 // 		return "Mac Carbon 3.8.16b5 29-Mar-07 >4ACC5390-27F6-40D4-A85A-886C7DF0A591<";
 // 		return "Mac Carbon 3.8.16b4 22-Mar-07 >A74B40BA-9CB2-4E3E-A9DA-FB0002315FE6<";
 // 		return "Mac Carbon 3.8.16b3 20-Mar-07 >3ABB8EA0-DA9D-47FD-BD1B-6B0A2CB05EE6<";
