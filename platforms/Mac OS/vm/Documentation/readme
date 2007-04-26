@@ -23,6 +23,8 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes John McIntosh, Feb 6th, 2007 3.8.15b3U, clarify, cross check
 	-- Changes John McIntosh, Mar 4th, 2007 3.8.15b4u, extra changeset added 
 	-- Changes John McIntosh, Apr 17th, 2007 3.8.16b5u, browser build notes 
+	-- Changes John McIntosh, Apr 25th, 2007 3.8.17b2, build notes (large cursor support)
+	
 
 (Note to readers, it is possible a step was missed, so beware)
 
@@ -82,8 +84,9 @@ Step Three: Build an interpeter
 	load VMM38-gc-instrument-image.1.cs 
 	load VMM38-64bit-imageUpdates.1.cs
 	load JMM-fixBiasToGrow.1.cs.zip  (may be in VMMaker some day, please ensure it is there)
+	load bigCursor-bf.1.cs  (larger cursor support, may be in VMMaker some day)
 
-	That should provide a version of VMMaker that is sufficient to build 3.8.15b3U (or later)
+	That should provide a version of VMMaker that is sufficient to build 3.8.17b2 (or later)
 
 	OPTIONAL Expury if you want Expury support.
 
