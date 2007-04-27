@@ -97,8 +97,9 @@ extern Boolean gSqueakHasCursor;
 	unsigned* src= (unsigned*)cursorBitsIndex;
 	unsigned* dst= planes[0];
 	int i;
-	for (i= 0; i < extentX * extentY; ++i, ++dst, ++src)
-		*dst= (*src & 0xFF00FF00) | ((*src & 0x000000FF) << 16) | ((*src & 0x00FF0000) >> 16);
+	for (i= 0; i < extentX * extentY; ++i, ++dst, ++src) {
+		*dst = CFSwapInt32LittleToHost(*src);
+	}
       }
       image= [[NSImage alloc] init];
       [image addRepresentation: bitmap];
