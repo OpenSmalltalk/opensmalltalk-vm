@@ -54,6 +54,9 @@
  * 
 
  3.8.15b3  Feb 19th, 2007 JMM fix bug with crash on bogus file path.
+ 3.8.17b4  Apr 27th, 2007 JMM note from Tetsuya HAYASHI, tetha@st.rim.or.jp, tetha@mac.com
+						I've found the latest mac vm (or recent version) fails to normalize UTF file name.
+						It seems to be the function convertChars() of sqMacUnixFileInterface.c, which normalizes only decompose when converting squeak string to unix, but I think it needs pre-combined when unix string to squeak, and I noticed normalization form should be canonical (exactly should be kCFStringNormalizationFormC) for pre-combined.
 
  */
 
@@ -388,7 +391,7 @@ int getLastPathComponentInCurrentEncoding(char *pathString,char * lastPathPart,C
 	CFRelease(tmpStrRef);
 	// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
 	if (gCurrentVMEncoding == kCFStringEncodingUTF8) 
-		CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
+		CFStringNormalize(mutableStr, kCFStringNormalizationFormC); // pre-combined
   
 	CFStringGetCString (mutableStr, lastPathPart,256, gCurrentVMEncoding);
 	CFRelease(mutableStr);
@@ -416,7 +419,7 @@ void PathToFileViaFSRef(char *pathName, int pathNameMax, FSRef *theFSRef,CFStrin
   
   		// HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
   		if (encoding == kCFStringEncodingUTF8) 
-  			CFStringNormalize(mutableStr, kCFStringNormalizationFormKC); // pre-combined
+  			CFStringNormalize(mutableStr, kCFStringNormalizationFormC); // pre-combined
   
           CFStringGetCString (mutableStr, pathName,pathNameMax, encoding);
 			CFRelease(mutableStr);
@@ -701,6 +704,8 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
   CFRelease(cfs);
   if (norm) // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
     CFStringNormalize(str, kCFStringNormalizationFormD); // canonical decomposition
+  else
+    CFStringNormalize(str, kCFStringNormalizationFormC); // pre-combined
   {
     CFRange rng= CFRangeMake(0, CFStringGetLength(str));
     CFIndex len= 0;

@@ -66,7 +66,8 @@ extern Boolean gSqueakHasCursor;
 	if (gSqueakHeadless) return 0;
 	if (browserActiveAndDrawingContextOk() && !browserActiveAndDrawingContextOkAndInFullScreenMode()) 
 		return 0;
-
+	if (amIOSX102X()) 
+		return 0;
 // ? and what does the browser plugin do? We do not have code to manage big cursors.
 
       NSAutoreleasePool *pool= [[NSAutoreleasePool alloc] init];
@@ -98,7 +99,11 @@ extern Boolean gSqueakHasCursor;
 	unsigned* dst= planes[0];
 	int i;
 	for (i= 0; i < extentX * extentY; ++i, ++dst, ++src) {
-		*dst = CFSwapInt32LittleToHost(*src);
+#if VMENDIANNESS
+		*dst=  ((*src & 0xFF000000) >> 24) | ((*src & 0x00FFFFFF) << 8) ; // ARGB to RGBA
+#else
+		*dst= (*src & 0xFF00FF00) | ((*src & 0x000000FF) << 16) | ((*src & 0x00FF0000) >> 16); // BGRA to RGBA
+#endif
 	}
       }
       image= [[NSImage alloc] init];

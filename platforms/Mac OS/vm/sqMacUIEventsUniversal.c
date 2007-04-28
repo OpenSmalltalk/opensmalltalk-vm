@@ -617,9 +617,9 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
     return result;
 }
 
-static int amIOSX102X(void);
+int amIOSX102X(void);
 
-static int amIOSX102X() {
+int amIOSX102X() {
 	static int amI102=-1;
 	if (amI102 == -1) {
 		long version;
