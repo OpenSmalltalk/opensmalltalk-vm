@@ -37,7 +37,9 @@
  3.8.14b4 Nov 17th, 2006 JMM fix issue with mouse location and pre 3.0 (input semaphore driven) squeak images
  3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
  3.8.15b5	Mar 10th, 2007 JMM check on menu item quit
-notes: IsUserCancelEventRef
+ 3.8.17b5	May 1st, 2007 JMM set tracking on bounds changed, not resize complete (which doesn't see the use of maximum button)
+ 
+ notes: IsUserCancelEventRef
 
 *****************************************************************************/
 #define MillisecondClockMask 536870911
@@ -583,12 +585,10 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
 			}
             break;
        case kEventWindowResizeCompleted:
-			{ 
-				extern void setWindowTrackingRgn(int index);
-				setWindowTrackingRgn(windowIndexFromHandle((wHandleType)window));
-			}
             break;
 		case kEventWindowBoundsChanged: {
+			extern void setWindowTrackingRgn(int index);
+			setWindowTrackingRgn(windowIndexFromHandle((wHandleType)window));
 			GetWindowBounds(window,kWindowContentRgn,&globalBounds);
 			recordWindowEventCarbon(WindowEventMetricChange,globalBounds.left, globalBounds.top, 
 					globalBounds.right, globalBounds.bottom,windowIndexFromHandle((wHandleType)window));
