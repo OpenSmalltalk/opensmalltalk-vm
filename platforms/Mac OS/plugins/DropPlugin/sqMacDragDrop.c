@@ -55,10 +55,10 @@ Some of this code comes from
 
 #include "sq.h"
 
-#include <drag.h>
-#include <macwindows.h>
-#include <gestalt.h>
-#include <quickdraw.h>
+#include <Drag.h>
+#include <MacWindows.h>
+#include <Gestalt.h>
+#include <Quickdraw.h>
 
 
 #include "sqVirtualMachine.h"

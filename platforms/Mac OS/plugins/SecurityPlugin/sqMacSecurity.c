@@ -11,7 +11,7 @@
 #include "sqMacUIConstants.h"
 #include "FilePlugin.h"
 
-#include <files.h> 
+#include <Files.h> 
 extern struct VirtualMachine * interpreterProxy;
 
 #define fromSqueak(string,length) string

@@ -24,8 +24,8 @@
 
         #include <Carbon/Carbon.h>
 	#include <unistd.h>
-	#include <agl/agl.h>
-	#include <agl/gl.h>
+	#include <AGL/agl.h>
+	#include <AGL/gl.h>
 /* Do not include the entire sq.h file but just those parts needed. */
 /*  The virtual machine proxy definition */
 #include "sqVirtualMachine.h"

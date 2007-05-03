@@ -14,8 +14,8 @@
 #include <stdio.h>
 #include <stdlib.h>
 	#include <Carbon/Carbon.h>
-	#include <agl/gl.h>
-	#include <agl/agl.h>
+	#include <AGL/gl.h>
+	#include <AGL/agl.h>
 
 #include "sq.h"
 #include "sqVirtualMachine.h"

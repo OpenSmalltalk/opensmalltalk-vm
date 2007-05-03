@@ -3,13 +3,9 @@
 
 #define MAX_RENDERER 16
 	
-#if defined(__MWERKS__) 
-#include <agl.h>
-#include <gl.h>
-#else
-#include <agl/agl.h>
-#include <agl/gl.h>
-#endif
+#include <AGL/agl.h>
+#include <AGL/gl.h>
+
 typedef struct glRenderer {
 	GLint bufferRect[4];
 	GLint viewport[4];

@@ -29,7 +29,7 @@
 */
 
 #ifdef macintoshSqueak
-#include <types.h>
+#include <Types.h>
 //#define SQUEAK_BUILTIN_PLUGIN
 #define ENABLE_URL_FETCH
 /* replace the image file manipulation macros with functions */
@@ -97,7 +97,7 @@ usqInt	    sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize);
 #define ReturnFromInterpret() return
 
 /* prototypes missing from CW11 headers */
-#include <textutils.h>
+#include <TextUtils.h>
 void CopyPascalStringToC(ConstStr255Param src, char* dst);
 void CopyCStringToPascal(const char* src, Str255 dst);
 

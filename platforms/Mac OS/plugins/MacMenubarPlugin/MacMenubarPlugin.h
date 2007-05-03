@@ -1,4 +1,4 @@
-#include <menus.h>
+#include <Menus.h>
 
 Boolean ioCheckMenuHandle(MenuHandle menuHandle);
 

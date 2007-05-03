@@ -55,7 +55,7 @@
 
 #include <pthread.h>
 #include "sqaio.h"
-#include <quickdraw.h>
+#include <Quickdraw.h>
 #include <unistd.h>
 
 enum { KeyMapSize= 32 };
