@@ -108,6 +108,8 @@ static int ioSetFullScreenActual(int fullScreen) {
     GDHandle            dominantGDevice;
 	windowDescriptorBlock *	targetWindowBlock  = windowBlockFromIndex(1);
 	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
+	extern Boolean gSqueakBrowserSubProcess;
+
 	
 	if (browserActiveAndDrawingContextOk()) {
 		if (!gSqueakBrowserWasHeadlessButMadeFullScreen) {
@@ -141,13 +143,7 @@ static int ioSetFullScreenActual(int fullScreen) {
 			rememberOldLocation.left = 8;
 		}
 		QDLocalToGlobalRect(GetWindowPort(targetWindowBlock->handle),&rememberOldLocation);
-		MenuBarHide();
-		width  = screen.right - screen.left; 
-		height = (screen.bottom - screen.top);
-		MoveWindow(targetWindowBlock->handle, screen.left, screen.top, true);
-		SizeWindow(targetWindowBlock->handle, width, height, true);
-		setFullScreenFlag(true);
-		if (browserActiveAndDrawingContextOk()) {
+		if (gSqueakBrowserSubProcess) {
 			ProcessSerialNumber psn = { 0, kCurrentProcess };
 			ProcessInfoRec info;
 			info.processName = NULL;
@@ -156,9 +152,15 @@ static int ioSetFullScreenActual(int fullScreen) {
 			GetProcessInformation(&psn,&info);
 			SetFrontProcess(&psn);
 		}
+		MenuBarHide();
+		width  = screen.right - screen.left; 
+		height = (screen.bottom - screen.top);
+		MoveWindow(targetWindowBlock->handle, screen.left, screen.top, true);
+		SizeWindow(targetWindowBlock->handle, width, height, true);
+		setFullScreenFlag(true);
 	} else {
 		MenuBarRestore();
-
+	
 		if (gSqueakBrowserWasHeadlessButMadeFullScreen) {
 			HideWindow(targetWindowBlock->handle);
 			{
