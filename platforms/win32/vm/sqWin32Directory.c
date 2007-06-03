@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Directory.c,v 1.4 2003/06/21 18:16:24 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
@@ -17,7 +17,7 @@
 extern struct VirtualMachine *interpreterProxy;
 
 #ifndef NO_RCSID
-  static char RCSID[]="$Id: sqWin32Directory.c,v 1.4 2003/06/21 18:16:24 andreasraab Exp $";
+  static char RCSID[]="$Id$";
 #endif
 
 /***
@@ -33,27 +33,20 @@ extern struct VirtualMachine *interpreterProxy;
 #define NO_MORE_ENTRIES 1
 #define BAD_PATH        2
 
-static TCHAR DELIMITER[] = TEXT("\\");
-static TCHAR DOT[] = TEXT(".");
-
 /* figure out if a case sensitive duplicate of the given path exists.
    useful for trying to stay in sync with case-sensitive platforms. */
 int caseSensitiveFileMode = 0;
 
-int hasCaseSensitiveDuplicate(TCHAR *path) {
-  TCHAR *src, *dst, *prev;
-  TCHAR findPath[MAX_PATH];
-  WIN32_FIND_DATA findData; /* cached find data */
+int hasCaseSensitiveDuplicate(WCHAR *path) {
+  WCHAR *src, *dst, *prev;
+  WCHAR findPath[MAX_PATH];
+  WIN32_FIND_DATAW findData; /* cached find data */
   HANDLE findHandle = 0; /* cached find handle */
 
   if(!caseSensitiveFileMode) return 0;
 
   if(!path) return 0;
   if(*path == 0) return 0;
-
-#ifdef DEBUG
-  printf("hasCaseSensitiveDuplicate: Checking %s\n", path);
-#endif
 
   /* figure out the root of the path (we can't test it) */
   dst = findPath;
@@ -65,52 +58,32 @@ int hasCaseSensitiveDuplicate(TCHAR *path) {
     while(*src != 0 && *src != '\\') *dst++ = *src++;
   } else if(path[1] != ':' || path[2] != '\\') {
     /* Oops??? What is this??? */
-    printf("hasCaseSensitiveDuplicate: Unrecognized path root in %s\n", path);
+    printf("hasCaseSensitiveDuplicate: Unrecognized path root\n");
     return 0;
   }
   *dst = 0;
-#ifdef DEBUG
-  printf("%s\n", findPath);
-#endif
-  /* from the root, enumerate all the path components and find potential mismatches */
+
+  /* from the root, enumerate all the path components and find 
+     potential mismatches */
   while(true) {
     /* skip backslashes */
     while(*src != 0 && *src == '\\') src++;
-    if(!*src) {
-      /* we're done */
-#ifdef DEBUG
-      printf("Okay\n");
-#endif
-      return 0;
-    }
+    if(!*src) return 0; /* we're done */
     /* copy next path component into findPath */
     *dst++ = '\\';
     prev = dst;
     while(*src != 0 && *src != '\\') *dst++ = *src++;
     *dst = 0;
-#ifdef DEBUG
-    printf("%s", findPath);
-#endif
     /* now let's go find it */
-    findHandle = FindFirstFile(findPath, &findData);
-    if(findHandle == INVALID_HANDLE_VALUE) {
-      /* not finding a path means there is no duplicate */
-#ifdef DEBUG
-      printf(" not found (errCode: %x)\n", GetLastError());
-#endif
-      return 0;
-    }
+    findHandle = FindFirstFileW(findPath, &findData);
+    /* not finding a path means there is no duplicate */
+    if(findHandle == INVALID_HANDLE_VALUE) return 0;
     FindClose(findHandle);
-    if(lstrcmp(findData.cFileName, prev) != 0) {
-      /* duplicate! */
-#ifdef DEBUG
-      printf("duplicate: %s\n", findData.cFileName);
-#endif
-      return 1;
+    {
+      WCHAR *tmp = findData.cFileName;
+      while(*tmp) if(*tmp++ != *prev++) break;
+      if(*tmp == *prev) return 1; /* duplicate */
     }
-#ifdef DEBUG
-    printf(" ok \n");
-#endif
   }
 }
 
@@ -142,20 +115,24 @@ DWORD convertToSqueakTime(SYSTEMTIME st)
   return secs;
 }
 
-int dir_Create(char *pathString, int pathStringLength)
+int dir_Create(char *pathString, int pathLength)
 {
-  /* Create a new directory with the given path. By default, this
-     directory is created relative to the cwd. */
-  TCHAR *win32Path = fromSqueak(pathString, pathStringLength);
+  WCHAR win32Path[MAX_PATH];
+  int sz;
+  /* convert the file name into a null-terminated C string */
+  sz = MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, NULL, 0);
+  if(sz > MAX_PATH) return 0;
+  MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
+  win32Path[sz] = 0;
   return CreateDirectory(win32Path,NULL);
 }
 
 int dir_Delimitor(void)
 {
-  return DELIMITER[0];
+  return '\\';
 }
 
-int dir_Lookup(char *pathString, int pathStringLength, int index,
+int dir_Lookup(char *pathString, int pathLength, int index,
 /* outputs: */ char *name, int *nameLength, int *creationDate, int *modificationDate,
 	       int *isDirectory, squeakFileOffsetType *sizeIfFile)
 {
@@ -167,15 +144,15 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 		1	if the directory has fewer than index entries
 		2	if the given path has bad syntax or does not reach a directory
   */
-  static WIN32_FIND_DATA findData; /* cached find data */
+  static WIN32_FIND_DATAW findData; /* cached find data */
   static HANDLE findHandle = 0; /* cached find handle */
   static int lastIndex = 0; /* cached last index */
-  static char lastString[MAX_PATH+1]; /* cached last path */
+  static WCHAR lastString[MAX_PATH+1]; /* cached last path */
   static int lastStringLength = 0; /* cached length of last path */
-  TCHAR *win32Path;
+  WCHAR win32Path[MAX_PATH];
   FILETIME fileTime;
   SYSTEMTIME sysTime;
-  int i;
+  int i, sz;
 
   /* default return values */
   *name             = 0;
@@ -186,14 +163,14 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   *sizeIfFile       = 0;
 
   /* check for a dir cache hit (but NEVER on the top level) */
-  if(pathStringLength && 
-     lastStringLength == pathStringLength && 
+  if(pathLength && 
+     lastStringLength == pathLength && 
      lastIndex + 1 == index) {
-    for(i=0;i<pathStringLength; i++) {
+    for(i=0;i<pathLength; i++) {
       if(lastString[i] != pathString[i])
 	break;
     }
-    if(i == pathStringLength) {
+    if(i == pathLength) {
       lastIndex = index;
       index = 2;
       goto dirCacheHit;
@@ -208,7 +185,7 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 
 #if !defined(_WIN32_WCE)
   /* Like Unix, Windows CE does not have drive letters */
-  if(pathStringLength == 0) { 
+  if(pathLength == 0) { 
     /* we're at the top of the file system --- return possible drives */
     int mask;
 
@@ -231,23 +208,29 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
 #endif /* !defined(_WIN32_WCE) */
 
   /* cache the path */
-  for(i=0; i < pathStringLength;i++)
+  for(i=0; i < pathLength;i++)
     lastString[i] = pathString[i];
-  lastString[pathStringLength] = 0;
-  lastStringLength = pathStringLength;
+  lastString[pathLength] = 0;
+  lastStringLength = pathLength;
 
   /* convert the path to a win32 string */
-  win32Path = fromSqueak(pathString, pathStringLength);
+  sz = MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, NULL, 0);
+  if(sz > MAX_PATH) return BAD_PATH;
+  MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
+  win32Path[sz] = 0;
+
   if(hasCaseSensitiveDuplicate(win32Path)) {
     lastStringLength = 0;
     return BAD_PATH;
   }
-  if(win32Path[pathStringLength-1] != DELIMITER[0])
-    lstrcat(win32Path,DELIMITER);
-  lstrcat(win32Path,TEXT("*"));
+  if(win32Path[sz-1] != '\\') {
+    win32Path[sz++] = '\\';
+  }
+  win32Path[sz++] = '*';
+  win32Path[sz] = 0;
 
   /* and go looking for entries */
-  findHandle = FindFirstFile(win32Path,&findData);
+  findHandle = FindFirstFileW(win32Path,&findData);
   if(findHandle == INVALID_HANDLE_VALUE) {
     /* Directory could be empty, so we must check for that */
     DWORD dwErr = GetLastError();
@@ -255,14 +238,14 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
   }
   while(1) {
     /* check for '.' or '..' directories */
-    if(findData.cFileName[0] == DOT[0])
+    if(findData.cFileName[0] == '.')
       if(findData.cFileName[1] == 0 ||
-	 (findData.cFileName[1] == DOT[0] &&
+	 (findData.cFileName[1] == '.' &&
 	  findData.cFileName[2] == 0))
 	index = index + 1; /* hack us back to the last index */
     if(index <= 1) break;
   dirCacheHit: /* If we come to this label we've got a hit in the dir cache */
-    if (!FindNextFile(findHandle,&findData)) {
+    if (!FindNextFileW(findHandle,&findData)) {
       FindClose(findHandle);
       findHandle = NULL;
       return NO_MORE_ENTRIES;
@@ -270,9 +253,9 @@ int dir_Lookup(char *pathString, int pathStringLength, int index,
     index = index - 1;
   }
 
-  *nameLength = lstrlen(findData.cFileName);
-  for (i=0;i<=*nameLength;i++)
-    name[i] = (char)findData.cFileName[i];
+  /* convert to UTF-8 */
+  sz = WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, name, MAX_PATH, NULL, NULL);
+  *nameLength = sz-1;
 
   FileTimeToLocalFileTime(&findData.ftCreationTime, &fileTime);
   FileTimeToSystemTime(&fileTime, &sysTime);
@@ -306,11 +289,15 @@ dir_GetMacFileTypeAndCreator(char *filename, int filenameSize,
   return interpreterProxy->primitiveFail();
 }
 
-int dir_Delete(char *pathString, int pathStringLength) {
-	/* Delete the existing directory with the given path. */
-	TCHAR *win32Path;
-
-	win32Path = fromSqueak(pathString, pathStringLength);
-	if(hasCaseSensitiveDuplicate(win32Path)) return false;
-	return RemoveDirectory(win32Path) == 0 ? false : true;
+int dir_Delete(char *pathString, int pathLength) {
+  /* Delete the existing directory with the given path. */
+  WCHAR win32Path[MAX_PATH];
+  int sz;
+  /* convert the file name into a null-terminated C string */
+  sz = MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, NULL, 0);
+  if(sz > MAX_PATH) return 0;
+  MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
+  win32Path[sz] = 0;
+  if(hasCaseSensitiveDuplicate(win32Path)) return false;
+  return RemoveDirectoryW(win32Path) == 0 ? false : true;
 }
