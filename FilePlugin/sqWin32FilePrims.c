@@ -58,7 +58,7 @@ static HandleTable *win32Files = NULL;
 int thisSession = 0;
 
 /* answers if the file name in question has a case-sensitive duplicate */
-int hasCaseSensitiveDuplicate(TCHAR *path);
+int hasCaseSensitiveDuplicate(WCHAR *path);
 
 typedef union {
   struct {
@@ -94,14 +94,16 @@ sqInt sqFileClose(SQFile *f) {
   return 1;
 }
 
-sqInt sqFileDeleteNameSize(char* sqFileNameIndex, sqInt sqFileNameSize) {
-
-  TCHAR *win32Path;
-  if (sqFileNameSize >= MAX_PATH) FAIL();
-  /* copy the file name into a null-terminated C string */
-  win32Path = fromSqueak((char*)sqFileNameIndex, sqFileNameSize);
+sqInt sqFileDeleteNameSize(char* fileNameIndex, sqInt fileNameSize) {
+  WCHAR win32Path[MAX_PATH+1];
+  int sz;
+  /* convert the file name into a null-terminated C string */
+  sz = MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, NULL, 0);
+  if(sz > MAX_PATH) FAIL();
+  MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, win32Path, sz);
+  win32Path[sz] = 0;
   if(hasCaseSensitiveDuplicate(win32Path)) FAIL();
-  if(!DeleteFile(win32Path)) FAIL();
+  if(!DeleteFileW(win32Path)) FAIL();
   return 1;
 }
 
@@ -134,25 +136,33 @@ sqInt sqFileShutdown(void) {
   return 1;
 }
 
-sqInt sqFileOpen(SQFile *f, char* sqFileNameIndex, sqInt sqFileNameSize, sqInt writeFlag) {
+sqInt sqFileOpen(SQFile *f, char* fileNameIndex, sqInt fileNameSize, sqInt writeFlag) {
   /* Opens the given file using the supplied sqFile structure
      to record its state. Fails with no side effects if f is
      already open. Files are always opened in binary mode;
      Squeak must take care of any line-end character mapping.
   */
   HANDLE h;
-  TCHAR *win32Path = fromSqueak((char*)sqFileNameIndex, sqFileNameSize);
+  WCHAR win32Path[MAX_PATH+1];
+  int sz;
+
+  /* convert the file name into a null-terminated C string */
+  sz = MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, NULL, 0);
+  if(sz > MAX_PATH) FAIL();
+  MultiByteToWideChar(CP_UTF8, 0, fileNameIndex, fileNameSize, win32Path, sz);
+  win32Path[sz] = 0;
+
   if(hasCaseSensitiveDuplicate(win32Path)) {
     f->sessionID = 0;
     FAIL();
   }
-  h = CreateFile(win32Path,
-                 writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
-                 writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
-                 NULL, /* No security descriptor */
-                 writeFlag ? OPEN_ALWAYS : OPEN_EXISTING,
-                 FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
-                 NULL /* No template */);
+  h = CreateFileW(win32Path,
+		  writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
+		  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
+		  NULL, /* No security descriptor */
+		  writeFlag ? OPEN_ALWAYS : OPEN_EXISTING,
+		  FILE_ATTRIBUTE_NORMAL | FILE_FLAG_SEQUENTIAL_SCAN,
+		  NULL /* No template */);
   if(h == INVALID_HANDLE_VALUE) {
     f->sessionID = 0;
     FAIL();
@@ -186,10 +196,24 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
 
 sqInt sqFileRenameOldSizeNewSize(char* oldNameIndex, sqInt oldNameSize, char* newNameIndex, sqInt newNameSize)
 {
-  TCHAR *oldPath = fromSqueak((char*)oldNameIndex, oldNameSize);
-  TCHAR *newPath = fromSqueak2((char*)newNameIndex,newNameSize);
+  WCHAR oldPath[MAX_PATH];
+  WCHAR newPath[MAX_PATH];
+  int sz;
+
+  /* convert the file name into a null-terminated C string */
+  sz = MultiByteToWideChar(CP_UTF8, 0, oldNameIndex, oldNameSize, NULL,0);
+  if(sz > MAX_PATH) FAIL();
+  MultiByteToWideChar(CP_UTF8, 0, oldNameIndex, oldNameSize, oldPath, sz);
+  oldPath[sz] = 0;
+
+  /* convert the file name into a null-terminated C string */
+  sz = MultiByteToWideChar(CP_UTF8, 0, newNameIndex, newNameSize, NULL,0);
+  if(sz > MAX_PATH) FAIL();
+  MultiByteToWideChar(CP_UTF8, 0, newNameIndex, newNameSize, newPath, sz);
+  newPath[sz] = 0;
+
   if(hasCaseSensitiveDuplicate(oldPath)) FAIL();
-  if(!MoveFile(oldPath, newPath)) FAIL();
+  if(!MoveFileW(oldPath, newPath)) FAIL();
   return 1;
 }
 
@@ -264,8 +288,8 @@ sqInt sqImageFileClose(sqImageFile h)
 
 sqImageFile sqImageFileOpen(char *fileName, char *mode)
 { char *modePtr;
-  int writeFlag = 0;
-  TCHAR *win32Path;
+  int sz, writeFlag = 0;
+  WCHAR win32Path[MAX_PATH];
   HANDLE h;
 
   if(!mode) return 0;
@@ -277,15 +301,20 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode)
 	  if(*modePtr == 'a') return 0;
       modePtr++;
     }
-  win32Path = fromSqueak(fileName, strlen(fileName));
+  /* convert the file name into a null-terminated C string */
+  sz = MultiByteToWideChar(CP_UTF8, 0, fileName, -1, NULL,0);
+  if(sz > MAX_PATH) FAIL();
+  MultiByteToWideChar(CP_UTF8, 0, fileName, -1, win32Path, sz);
+  win32Path[sz] = 0;
+
   if(hasCaseSensitiveDuplicate(win32Path)) return 0;
-  h = CreateFile(win32Path,
-                 writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
-                 writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
-                 NULL, /* No security descriptor */
-                 writeFlag ? CREATE_ALWAYS : OPEN_EXISTING,
-                 FILE_ATTRIBUTE_NORMAL,
-                 NULL /* No template */);
+  h = CreateFileW(win32Path,
+		  writeFlag ? (GENERIC_READ | GENERIC_WRITE) : GENERIC_READ,
+		  writeFlag ? FILE_SHARE_READ : (FILE_SHARE_READ | FILE_SHARE_WRITE),
+		  NULL, /* No security descriptor */
+		  writeFlag ? CREATE_ALWAYS : OPEN_EXISTING,
+		  FILE_ATTRIBUTE_NORMAL,
+		  NULL /* No template */);
   if(h == INVALID_HANDLE_VALUE) return 0;
   return (DWORD)h+1;
 }
