@@ -124,7 +124,7 @@ int dir_Create(char *pathString, int pathLength)
   if(sz > MAX_PATH) return 0;
   MultiByteToWideChar(CP_UTF8, 0, pathString, pathLength, win32Path, sz);
   win32Path[sz] = 0;
-  return CreateDirectory(win32Path,NULL);
+  return CreateDirectoryW(win32Path,NULL);
 }
 
 int dir_Delimitor(void)
