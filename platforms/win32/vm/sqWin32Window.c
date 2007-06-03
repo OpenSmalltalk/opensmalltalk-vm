@@ -799,6 +799,12 @@ void SetupWindows()
   CreatePrefsMenu();
   SetWindowTitle();
   SetForegroundWindow(stWindow);
+
+  /* Force Unicode WM_CHAR */
+  SetWindowLongW(stWindow,GWL_WNDPROC,GetWindowLong(stWindow,GWL_WNDPROC));
+  SetWindowLongW(consoleWindow,GWL_WNDPROC,GetWindowLong(consoleWindow,GWL_WNDPROC));
+
+
 #ifndef NO_DROP
   /* drag and drop needs to be set up on per-window basis */
   SetupDragAndDrop();
@@ -1069,7 +1075,7 @@ int recordKeyboardEvent(MSG *msg) {
   ctrl = GetKeyState(VK_CONTROL) & 0x8000;
   /* now the key code */
   virtCode = mapVirtualKey(msg->wParam);
-  keyCode = keymap[msg->wParam];
+  keyCode = msg->wParam;
   /* press code must differentiate */
   switch(msg->message) {
     case WM_KEYDOWN:
@@ -1110,14 +1116,14 @@ int recordKeyboardEvent(MSG *msg) {
   evt = (sqKeyboardEvent*) sqNextEventPut();
   evt->type = EventTypeKeyboard;
   evt->timeStamp = msg->time;
-  evt->charCode = keyCode;
+  evt->charCode = keymap[keyCode & 0xff];
   evt->pressCode = pressCode;
   evt->modifiers = 0;
   evt->modifiers |= alt ? CommandKeyBit : 0;
   evt->modifiers |= shift ? ShiftKeyBit : 0;
   evt->modifiers |= ctrl ? CtrlKeyBit : 0;
   evt->windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
-  evt->utf32Code = 0;
+  evt->utf32Code = keyCode;
   /* clean up reserved */
   evt->reserved1 = 0;
   /* note: several keys are not reported as character events;
@@ -2248,64 +2254,91 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
 /*                      Clipboard                                           */
 /****************************************************************************/
 
-int clipboardSize(void)
-{ HANDLE h;
-  unsigned char *src;
-  int len,tel;
+int clipboardSize(void) { 
+  HANDLE h;
+  WCHAR *src;
+  unsigned char *tmp;
+  int i, count, bytesNeeded;
 
-  if(!IsClipboardFormatAvailable(CF_TEXT)) /* check for format CF_TEXT */
+  /* Do we have text in the clipboard? */
+  if(!IsClipboardFormatAvailable(CF_UNICODETEXT))
     return 0;
+
   if(!OpenClipboard(stWindow))
     return 0;
-  h = GetClipboardData(CF_TEXT);
+
+  /* Get it in unicode format. */
+  h = GetClipboardData(CF_UNICODETEXT);
   src = GlobalLock(h);
-  len = src ? strlen(src) : 0;
-  /* RvL 17-04-1998
-     Look for CrLf sequences */
-  tel = len;
-  while(tel--)
-    if((*src++ == 0x0d) && (*src == 0x0a))
-      len--;
+
+  /* How many bytes do we need to store those unicode chars in UTF8 format? */
+  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
+				    NULL, 0, NULL, NULL );
+  tmp = malloc(bytesNeeded+1);
+
+  /* Convert Unicode text to UTF8. */
+  WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded , NULL, NULL);
+
+  /* Count CrLfs for which we remove the extra Lf */
+  count = bytesNeeded; /* ex. terminating zero */
+  for(i=0; i<count; i++) {
+    if((tmp[i] == 13) && (tmp[i+1] == 10)) bytesNeeded--;
+  }
+  bytesNeeded--; /* discount terminating zero */
+  free(tmp); /* no longer needed */
+
   GlobalUnlock(h);
   CloseClipboard();
-  return len;
+
+  return bytesNeeded;
 }
 
 /* send the given string to the clipboard */
-int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
-{ HANDLE h;
-  unsigned char *dst,*src;
-  int adjCount, tel;
+int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
+  HANDLE h;
+  unsigned char *src, *tmp, *cvt;
+  int i, wcharsNeeded, utf8Count;
+  WCHAR *out;
 
   if(!OpenClipboard(stWindow))
     return 0;
 
-  /* RvL 17-04-1998
-     adjust count for inserting 0A into clipboard string */
+  /* Get the pointer to the byte array. */
   src = (unsigned char *)byteArrayIndex + startIndex;
-  tel = count;
-  adjCount = 0;
-  while(tel--)
-    if ((*src++ == 0x0D) && (*src != 0x0A))
-      adjCount++;
 
-  h = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, count+1+adjCount);
-  dst = GlobalLock(h);
-  src = (unsigned char *)byteArrayIndex + startIndex;
-  /* Remap from Mac Roman to Ansi Latin */
-  while(count--)
-    if((*src == 0x0D) && (src[1] != 0x0A))
-      { /* special case: crlf translation */
-        *dst++ = *src++;
-        *dst++ = 0x0A;
-      }
-    else
-      { /* regular case: lookup translation */
-        *dst++ = iKeymap[*src++];
-      }
-  *dst = 0;
+  /* Count lone CRs for which we want to add an extra Lf */
+  for(i=0, utf8Count=count; i<count; i++) {
+    if((src[i] == 13) && (src[i+1] != 10)) utf8Count++;
+  }
+
+  /* allocate temporary storage and copy string (inserting Lfs) */
+  cvt = tmp = malloc(utf8Count+1);
+  for(i=0;i<count;i++,tmp++,src++) {
+    *tmp = *src;
+    if(src[0] == 13 && src[1] != 10) {
+      tmp++;
+      *tmp = 10;
+    }
+  }
+  *tmp = 0; /* terminating zero */
+
+  /* Note: At this point we have a valid UTF-8, CrLf-containing,
+     zero-terminated C-string. Phew. Now just make it UTF-16 and be done */
+
+  /* How many WCHARs do we need to store the UTF8 bytes from Squeak? */
+  wcharsNeeded = MultiByteToWideChar(CP_UTF8, 0, cvt, -1, NULL, 0);
+
+  /* Allocate needed memory for wcharsNeeded WCHARs. */
+  h = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, wcharsNeeded * sizeof(WCHAR));
+  out = GlobalLock(h);
+
+  /* Convert data to Unicode UTF16. */
+  MultiByteToWideChar( CP_UTF8, 0, cvt, -1, out, wcharsNeeded );
+
+  /* Send the Unicode text to the clipboard. */
   EmptyClipboard();
-  SetClipboardData(CF_TEXT, h);
+  SetClipboardData(CF_UNICODETEXT, h);
+
   /* Note: After setting clipboard data,
      the memory block previously allocated belongs to
      the clipboard - not to the app. */
@@ -2315,39 +2348,43 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex)
 
 
 /* transfer the clipboard data into the given byte array */
-int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex)
-{ HANDLE h;
-  unsigned char *src,*dst;
-  int len;
+int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
+  HANDLE h;
+  unsigned char *dst, *tmp;
+  WCHAR *src;
+  int i, bytesNeeded;
 
-  if(!IsClipboardFormatAvailable(CF_TEXT)) /* check for format CF_TEXT */
+
+  /* Check if we have Unicode text available */
+  if(!IsClipboardFormatAvailable(CF_UNICODETEXT))
     return 0;
+
   if(!OpenClipboard(stWindow))
     return 0;
-  dst= (unsigned char *)byteArrayIndex + startIndex;
-  h = GetClipboardData(CF_TEXT);
+
+  /* Get clipboard data in Unicode format */
+  h = GetClipboardData(CF_UNICODETEXT);
   src = GlobalLock(h);
-  len = src ? strlen(src) : 0;
-  if(len > count) len = count;
-  /* Remap from Ansi Latin to Mac Roman */
-  while(len--)
-    if((*src == 0x0D) && (src[1] == 0x0A))
-      { /* RvL 17-04-1998
-           drop the line feed after a carriage return
-           but leave lone line feeds alone
-           may transfer less than 'len' bytes but who cares
-           i.e. if they use the clipboardSize there should
-           be no problem.*/
-        *dst++ = *src++;
-        src++;
-      }
-    else
-      { /* regular case: lookup translation */
-        *dst++ = keymap[*src++];
-      }
+
+  /* How many bytes do we need to store the UTF8 representation? */
+  bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
+				    NULL, 0, NULL, NULL );
+
+  /* Convert Unicode text to UTF8. */
+  tmp = malloc(bytesNeeded);
+  WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded, NULL, NULL);
+
+  /* Copy data, skipping Lfs as needed */
+  dst = (unsigned char *)byteArrayIndex + startIndex;
+  for(i=0;i<count;i++,dst++,tmp++) {
+    *dst = *tmp;
+    if(((tmp[0] == 13) && (tmp[1] == 10))) tmp++;
+  }  
+  free(tmp);
+
   GlobalUnlock(h);
   CloseClipboard();
-  return len;
+  return count;
 }
 
 
