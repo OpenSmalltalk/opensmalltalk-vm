@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: Walt Disney Imagineering, Glendale, CA
 *   EMAIL:   Andreas.Raab@disney.com
-*   RCSID:   $Id: sqWin32Drop.c,v 1.2 2002/05/05 17:34:38 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *****************************************************************************/
@@ -503,9 +503,15 @@ STDMETHODIMP DropTarget_Drop(DropTarget *dt,
     numDropFiles = DragQueryFile(hDrop, -1, NULL, 0);
     dropFiles = calloc(numDropFiles, sizeof(char*));
     for(i=0; i<numDropFiles; i++) {
-      int len = DragQueryFile(hDrop, i, NULL, 0);
-      dropFiles[i] = malloc(len+1);
-      DragQueryFile(hDrop, i, dropFiles[i], len+1);
+      WCHAR *tmpPath;
+      int len;
+      len = DragQueryFileW(hDrop, i, NULL, 0);
+      tmpPath = calloc(len+1, sizeof(WCHAR));
+      DragQueryFileW(hDrop, i, tmpPath, len+1);
+      len = WideCharToMultiByte(CP_UTF8, 0, tmpPath, -1, NULL, 0,NULL,NULL);
+      dropFiles[i] = malloc(len);
+      WideCharToMultiByte(CP_UTF8,0,tmpPath,-1,dropFiles[i],len,NULL,NULL);
+      free(tmpPath);
       DPRINTF(("File: %s\n", dropFiles[i]));
     }
     DragFinish(hDrop);
