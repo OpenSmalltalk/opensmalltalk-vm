@@ -118,7 +118,7 @@ BOOL  fBrowserMode = 0;        /* Are we running in a web browser? */
 /* Misc preferences */
 BOOL  fEnableAltF4Quit = 1; /* can we quit using Alt-F4? */
 BOOL  fEnableF2Menu = 1;    /* can we get prefs menu via F2? */
-
+BOOL  fEnablePrefsMenu = 1; /* can we get a prefs menu at all? */
 
 HANDLE vmSemaphoreMutex = 0; /* the mutex for synchronization */
 HANDLE vmWakeUpEvent = 0;      /* wake up interpret() from sleep */
@@ -204,8 +204,15 @@ messageHook firstMessageHook = 0;
    about certain messages before they are processed. */
 messageHook preMessageHook = 0;
 
-/* main window procedure */
-LRESULT CALLBACK MainWndProc (HWND hwnd,
+/* main window procedure(s) */
+LRESULT CALLBACK MainWndProcA(HWND hwnd,
+                              UINT message,
+                              WPARAM wParam,
+                              LPARAM lParam) {
+  return DefWindowProc(hwnd, message, wParam, lParam);
+}
+
+LRESULT CALLBACK MainWndProcW(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
                               LPARAM lParam)
@@ -255,7 +262,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
 #if !defined(_WIN32_WCE)
     if(cmd == SC_MINIMIZE) {
       if(fHeadlessImage) ShowWindow(stWindow, SW_HIDE);
-      else return DefWindowProc(hwnd, message, wParam, lParam);
+      else return DefWindowProcW(hwnd, message, wParam, lParam);
       break;
     }
 #endif /* defined(_WIN32_WCE) */
@@ -274,7 +281,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       }
       break;
     }
-    return DefWindowProc(hwnd,message,wParam,lParam);
+    return DefWindowProcW(hwnd,message,wParam,lParam);
     break;
   }
   /*  mousing */
@@ -328,26 +335,26 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
   case WM_KEYDOWN:
   case WM_SYSKEYDOWN:
     if(GetFocus() == consoleWindow)
-      return DefWindowProc(hwnd, message, wParam, lParam);
+      return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
       if(wParam == VK_F2 && fEnableF2Menu) {
 	TrackPrefsMenu();
       }
       if(wParam == VK_F4 && fEnableAltF4Quit) {
-	return DefWindowProc(hwnd, message, wParam, lParam);
+	return DefWindowProcW(hwnd, message, wParam, lParam);
       }
       break;
     }
     /* state based stuff */
     recordModifierButtons();
     if(!recordVirtualKey(message,wParam,lParam))
-      return DefWindowProc(hwnd,message,wParam,lParam);
+      return DefWindowProcW(hwnd,message,wParam,lParam);
     break;
   case WM_KEYUP:
   case WM_SYSKEYUP:
     if(GetFocus() == consoleWindow)
-      return DefWindowProc(hwnd, message, wParam, lParam);
+      return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
       break;
@@ -359,7 +366,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
   case WM_CHAR:
   case WM_SYSCHAR:
     if(GetFocus() == consoleWindow)
-      return DefWindowProc(hwnd, message, wParam, lParam);
+      return DefWindowProcW(hwnd, message, wParam, lParam);
     if(inputSemaphoreIndex) {
       recordKeyboardEvent(lastMessage);
       break;
@@ -395,7 +402,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       /* Record the global stWindowRect for DirectX */
       MapWindowPoints(stWindow, NULL, (LPPOINT)&stWindowRect, 2);
     }
-    else return DefWindowProc(hwnd,message,wParam,lParam);
+    else return DefWindowProcW(hwnd,message,wParam,lParam);
 
   case WM_MOVE:
     if(hwnd == stWindow) {
@@ -403,7 +410,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       GetClientRect(stWindow,&stWindowRect);
       MapWindowPoints(stWindow, NULL, (LPPOINT) &stWindowRect, 2);
     }
-    else return DefWindowProc(hwnd,message,wParam,lParam);
+    else return DefWindowProcW(hwnd,message,wParam,lParam);
     /* Erasing the background leads to flashing so avoid it */
   case WM_ERASEBKGND:
     return TRUE;
@@ -424,7 +431,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
       SetCursor(currentCursor);
       break;
     }
-    else return DefWindowProc(hwnd,message,wParam,lParam);
+    else return DefWindowProcW(hwnd,message,wParam,lParam);
   case WM_USER+42:
     /* system tray notification */
     if(wParam != (UINT)hInstance) return 0;
@@ -442,10 +449,10 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     /* Focus handling */
   case WM_SETFOCUS:
     fHasFocus = 1;
-    return DefWindowProc(hwnd,message,wParam,lParam);
+    return DefWindowProcW(hwnd,message,wParam,lParam);
   case WM_KILLFOCUS:
     fHasFocus = 0;
-    return DefWindowProc(hwnd,message,wParam,lParam);
+    return DefWindowProcW(hwnd,message,wParam,lParam);
   default:
     /* Unprocessed messages may be processed outside the current
        module. If firstMessageHook is non-NULL and returns a non
@@ -453,7 +460,7 @@ LRESULT CALLBACK MainWndProc (HWND hwnd,
     if(firstMessageHook)
       if((*firstMessageHook)(hwnd, message, wParam, lParam))
 	return 1;
-    return DefWindowProc(hwnd,message,wParam,lParam);
+    return DefWindowProcW(hwnd,message,wParam,lParam);
   }
   return 1;
 }
@@ -695,17 +702,16 @@ void SetupPixmaps(void)
 /****************************************************************************/
 
 /* SetWindowTitle(): Set the main window title */
-void SetWindowTitle()
-{
-  TCHAR titleString[MAX_PATH+20];
+void SetWindowTitle() {
+  char titleString[MAX_PATH+20];
+  WCHAR wideTitle[MAX_PATH+20];
 
   if(!IsWindow(stWindow)) return;
-  if(*windowTitle) {
-	  lstrcpy(titleString, windowTitle);
-  } else {
-      wsprintf(titleString,TEXT(VM_NAME"! (%s)"), toUnicode(imageName));
-  }
-  SetWindowText(stWindow,titleString);
+  if(*windowTitle) sprintf(titleString, "%s", windowTitle);
+  else sprintf(titleString,"%s! (%s)", VM_NAME, imageName);
+
+  MultiByteToWideChar(CP_UTF8, 0, titleString, -1, wideTitle, MAX_PATH+20);
+  SetWindowTextW(stWindow, wideTitle);
 }
 
 void SetupWindows()
@@ -718,7 +724,7 @@ void SetupWindows()
   if(fRunService && !fWindows95) return;
 
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
-  wc.lpfnWndProc = (WNDPROC)MainWndProc;
+  wc.lpfnWndProc = (WNDPROC)MainWndProcA;
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
   wc.hInstance = hInstance;
@@ -727,12 +733,6 @@ void SetupWindows()
   wc.hbrBackground = GetStockObject (WHITE_BRUSH);
   wc.lpszMenuName = NULL;
   wc.lpszClassName = TEXT("SqueakWindowClass");
-
-  /* Due to Win95 bug we have to ignore the return value
-     of RegisterClass(). Win95 returns several strange
-     error messages (such as ERR_FUNCTION_NOT_SUPPORTED)
-     when the class is already registered (which should
-     result in an ERR_CLASS_ALREADY_EXISTS) */
   RegisterClass(&wc);
 
   if(!browserWindow)
@@ -801,14 +801,13 @@ void SetupWindows()
   SetForegroundWindow(stWindow);
 
   /* Force Unicode WM_CHAR */
-  SetWindowLongW(stWindow,GWL_WNDPROC,GetWindowLong(stWindow,GWL_WNDPROC));
-  SetWindowLongW(consoleWindow,GWL_WNDPROC,GetWindowLong(consoleWindow,GWL_WNDPROC));
-
+  SetWindowLongW(stWindow,GWL_WNDPROC,(DWORD)MainWndProcW);
 
 #ifndef NO_DROP
   /* drag and drop needs to be set up on per-window basis */
   SetupDragAndDrop();
 #endif
+
 #ifndef NO_DIRECTINPUT
   /* direct input needs to be set up on per-window basis */
   SetupDirectInput();
