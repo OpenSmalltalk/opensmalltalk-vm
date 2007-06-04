@@ -2349,7 +2349,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 /* transfer the clipboard data into the given byte array */
 int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
   HANDLE h;
-  unsigned char *dst, *tmp;
+  unsigned char *dst, *tmp, *cvt;
   WCHAR *src;
   int i, bytesNeeded;
 
@@ -2370,7 +2370,7 @@ int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
 				    NULL, 0, NULL, NULL );
 
   /* Convert Unicode text to UTF8. */
-  tmp = malloc(bytesNeeded);
+  cvt = tmp = malloc(bytesNeeded);
   WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded, NULL, NULL);
 
   /* Copy data, skipping Lfs as needed */
@@ -2379,7 +2379,7 @@ int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
     *dst = *tmp;
     if(((tmp[0] == 13) && (tmp[1] == 10))) tmp++;
   }  
-  free(tmp);
+  free(cvt);
 
   GlobalUnlock(h);
   CloseClipboard();
