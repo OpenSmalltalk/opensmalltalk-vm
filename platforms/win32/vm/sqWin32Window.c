@@ -714,6 +714,17 @@ void SetWindowTitle() {
   SetWindowTextW(stWindow, wideTitle);
 }
 
+char *ioGetWindowLabel(void) {
+  return windowTitle;
+}
+
+sqInt ioSetWindowLabelOfSize(void* lblIndex, sqInt sz) {
+  if(sz > MAX_PATH) sz = MAX_PATH;
+  memcpy(windowTitle, (void*)lblIndex, sz);
+  windowTitle[sz] = 0;
+  SetWindowTitle();
+}
+
 void SetupWindows()
 { WNDCLASS wc;
 
@@ -764,6 +775,8 @@ void SetupWindows()
 			      hInstance,
 			      NULL);
   }
+  /* Force Unicode WM_CHAR */
+  SetWindowLongW(stWindow,GWL_WNDPROC,(DWORD)MainWndProcW);
 
 #ifndef NO_WHEEL_MOUSE
   g_WM_MOUSEWHEEL = RegisterWindowMessage( TEXT("MSWHEEL_ROLLMSG") ); /* RvL 1999-04-19 00:23 */
@@ -799,9 +812,6 @@ void SetupWindows()
   CreatePrefsMenu();
   SetWindowTitle();
   SetForegroundWindow(stWindow);
-
-  /* Force Unicode WM_CHAR */
-  SetWindowLongW(stWindow,GWL_WNDPROC,(DWORD)MainWndProcW);
 
 #ifndef NO_DROP
   /* drag and drop needs to be set up on per-window basis */
@@ -2349,7 +2359,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
 /* transfer the clipboard data into the given byte array */
 int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
   HANDLE h;
-  unsigned char *dst, *tmp, *cvt;
+  unsigned char *dst, *cvt, *tmp;
   WCHAR *src;
   int i, bytesNeeded;
 
@@ -2570,11 +2580,10 @@ int isLocalFileName(TCHAR *fileName)
 	   either requiring the image name to be fully pathed, or
 	   if not, popping up a file open dialog */
 
-void SetupFilesAndPath()
-{ TCHAR *tmp;
-
-  lstrcpy(imagePath, toUnicode(imageName));
-  tmp = lstrrchr(imagePath,U_BACKSLASH[0]);
+void SetupFilesAndPath(){ 
+  char *tmp;
+  lstrcpy(imagePath, imageName);
+  tmp = lstrrchr(imagePath,'\\');
   if(tmp) tmp[1] = 0;
 }
 
@@ -2633,27 +2642,22 @@ recurseDown:
   SetCurrentDirectory(oldDir);
 }
 
-void
-SetupFilesAndPath()
-{ TCHAR *tmp;
-  TCHAR tmpName[MAX_PATH+1];
-  TCHAR imageNameW[MAX_PATH+1];
+void SetupFilesAndPath() {
+  char *tmp;
+  WCHAR tmpName[MAX_PATH];
+  WCHAR imageNameW[MAX_PATH];
 
   /* get the full path for the image */
-  lstrcpy(tmpName, toUnicode(imageName));
-  GetFullPathName(tmpName,MAX_PATH,imageNameW,&tmp);
-  /* check if it is a short name and if so convert
-     it to the full name */
-  LongFileNameFromPossiblyShortName(imageNameW);
+  MultiByteToWideChar(CP_UTF8, 0, imageName, -1, tmpName, MAX_PATH);
+  GetFullPathNameW(tmpName, MAX_PATH, imageNameW, NULL);
 
-  /* and copy back to a C string */
-  strcpy(imageName, fromUnicode(imageNameW));
+  /* and copy back to a UTF-8 string */
+  WideCharToMultiByte(CP_UTF8, 0, imageNameW,-1,imageName,MAX_PATH,NULL,NULL);
 
   /* get the VM directory */
   lstrcpy(vmPath, vmName);
   tmp = lstrrchr(vmPath,U_BACKSLASH[0]);
   if(tmp) *tmp = 0;
-  else GetCurrentDirectory(MAX_PATH,vmPath);
   lstrcat(vmPath,U_BACKSLASH);
 
   lstrcpy(imagePath, imageName);
@@ -2686,13 +2690,15 @@ DWORD SqueakImageLengthFromHandle(HANDLE hFile) {
   return 0;
 }
 
-DWORD SqueakImageLength(TCHAR *fileName) {
+DWORD SqueakImageLength(char *fileName) {
   DWORD dwSize;
+  WCHAR wideName[MAX_PATH];
   HANDLE hFile;
 
   /* open image file */
-  hFile = CreateFile(fileName, GENERIC_READ, FILE_SHARE_READ,
-                     NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+  MultiByteToWideChar(CP_UTF8, 0, fileName, -1, wideName, MAX_PATH);
+  hFile = CreateFileW(wideName, GENERIC_READ, FILE_SHARE_READ,
+		      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
   if(hFile == INVALID_HANDLE_VALUE) return 0;
   dwSize = SqueakImageLengthFromHandle(hFile);
   CloseHandle(hFile);
@@ -2707,19 +2713,18 @@ DWORD SqueakImageLength(TCHAR *fileName) {
    Search the current directory for exactly one image file.
    If it is found, copy the name into imageName and return true.
 */
-int findImageFile(void)
-{
-  WIN32_FIND_DATA findData;
+int findImageFile(void) {
+  WIN32_FIND_DATAW findData;
   HANDLE findHandle;
   int nextFound;
 
-  findHandle = FindFirstFile(TEXT("*.image"),&findData);
-  if(findHandle == INVALID_HANDLE_VALUE)
-	  return 0; /* Not found */
-  nextFound = FindNextFile(findHandle,&findData);
+  findHandle = FindFirstFileW(L"*.image",&findData);
+  if(findHandle == INVALID_HANDLE_VALUE) return 0; /* Not found */
+  nextFound = FindNextFileW(findHandle,&findData);
   FindClose(findHandle);
   if(nextFound) return 0; /* more than one entry */
-  strcpy(imageName, fromUnicode(findData.cFileName));
+  WideCharToMultiByte(CP_UTF8, 0, findData.cFileName, -1, 
+		      imageName, MAX_PATH, NULL, NULL);
   return 1;
 }
 
@@ -2727,20 +2732,22 @@ int findImageFile(void)
    Pop up a file open dialog for image files.
    Copy the selection into imageName and return true.
 */
-int openImageFile(void)
-{
-  OPENFILENAME ofn;
+int openImageFile(void) {
+  OPENFILENAMEW ofn;
+  WCHAR path[MAX_PATH];
+
   memset(&ofn, 0, sizeof(ofn));
+  path[0] = 0;
   ofn.lStructSize = sizeof(ofn);
-  ofn.lpstrFilter = TEXT("Image Files (*.image)\0*.image\0All Files (*.*)\0*.*\0");
-  ofn.lpstrFile = vmPath;
+  ofn.lpstrFilter = L"Image Files (*.image)\0*.image\0All Files (*.*)\0*.*\0";
+  ofn.lpstrFile = path;
   ofn.nMaxFile = MAX_PATH;
-  ofn.lpstrTitle = TEXT(VM_NAME": Please select an image file...");
+  ofn.lpstrTitle = L""VM_NAME": Please select an image file...";
   ofn.Flags = OFN_EXPLORER | OFN_FILEMUSTEXIST | OFN_HIDEREADONLY;
-  ofn.lpstrDefExt = TEXT("image");
-  MessageBeep(MB_ICONSTOP);
-  if (!GetOpenFileName(&ofn)) return 0;
-  strcpy(imageName, fromUnicode(vmPath));
+  ofn.lpstrDefExt = L"image";
+  if (!GetOpenFileNameW(&ofn)) return 0;
+  WideCharToMultiByte(CP_UTF8, 0, path, -1, 
+		      imageName, MAX_PATH, NULL, NULL);
   return 1;
 }
 

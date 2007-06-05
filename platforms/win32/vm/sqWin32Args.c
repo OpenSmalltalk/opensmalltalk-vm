@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32Args.c,v 1.4 2002/05/26 18:52:10 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
@@ -18,35 +18,29 @@
 #include "sq.h"
 #include "sqWin32Args.h"
 
-static int IsImage(char *name)
-{ FILE *fp;
+static int IsImage(char *name) { 
   int magic;
   int byteSwapped(int);
+  sqImageFile fp;
 
-  fp = fopen(name,"rb");
+  fp = sqImageFileOpen(name,"rb");
   if(!fp) return 0; /* not an image */
-  if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
-    fclose(fp);
+  if(sqImageFileRead(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+    sqImageFileClose(fp);
     return 0;
   }
   if(readableFormat(magic) || readableFormat(byteSwapped(magic))) {
-    fclose(fp);
+    sqImageFileClose(fp);
     return true;
   }
    
   /* no luck at beginning of file, seek to 512 and try again */
-  if(fseek( fp, 512, SEEK_SET)) {
-    /* seek failed, which implies file is too small */
-    fclose(fp);
-    return false;
-  };
-
-  if(fread(&magic, 1, sizeof(magic), fp) != sizeof(magic))
-    {
-      fclose(fp);
-      return 0;
-    }
-  fclose(fp);
+  sqImageFileSeek( fp, 512);
+  if(sqImageFileRead(&magic, 1, sizeof(magic), fp) != sizeof(magic)) {
+    sqImageFileClose(fp);
+    return 0;
+  }
+  sqImageFileClose(fp);
   return readableFormat(magic) || readableFormat(byteSwapped(magic));
 }
 

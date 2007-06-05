@@ -632,8 +632,19 @@ int sqMain(char *lpCmdLine, int nCmdShow)
   LoadPreferences();
 
   /* parse command line args */
-  if(!parseArguments(strdup(GetCommandLine()), args))
-    return printUsage(1);
+  {
+    WCHAR *cmdLineW;
+    char *cmdLineA;
+    int sz;
+
+    cmdLineW = GetCommandLineW();
+    sz = WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, NULL, 0, NULL, NULL);
+    cmdLineA = calloc(sz, sizeof(char));
+    WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, cmdLineA, sz, NULL, NULL);
+
+    if(!parseArguments(cmdLineA, args))
+      return printUsage(1);
+  }
 
   /* a quick check if we have any argument at all */
   if(!fRunService && (*imageName == 0)) {
@@ -801,8 +812,11 @@ int WINAPI WinMain (HINSTANCE hInst,
   initialCmdLine = strdup(lpCmdLine);
 
   /* fetch us the name of the executable */
-  GetModuleFileName(hInst, vmName, MAX_PATH);
-
+  {
+    WCHAR vmNameW[MAX_PATH];
+    GetModuleFileNameW(hInst, vmNameW, MAX_PATH);
+    WideCharToMultiByte(CP_UTF8, 0, vmNameW, -1, vmName, MAX_PATH, NULL, NULL);
+  }
   /* open all streams in binary mode */
   _fmode  = _O_BINARY;
 
