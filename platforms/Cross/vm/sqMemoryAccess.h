@@ -82,7 +82,7 @@
   static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
   static inline sqInt oopAtPointer(char *ptr)			{ return (sqInt)(*((sqInt *)ptr)); }
   static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
-  static inline char *pointerForOop(sqInt oop)			{ return sqMemoryBase + oop; }
+  static inline char *pointerForOop(usqInt oop)			{ return sqMemoryBase + oop; }
   static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)(ptr - sqMemoryBase); }
   static inline sqInt byteAt(sqInt oop)				{ return byteAtPointer(pointerForOop(oop)); }
   static inline sqInt byteAtput(sqInt oop, int val)		{ return byteAtPointerput(pointerForOop(oop), val); }
@@ -106,8 +106,8 @@
 # define longAtPointerput(ptr, val)	((sqInt)(*((sqInt *)(ptr))= (sqInt)(val)))
 # define oopAtPointer(ptr)		(sqInt)(*((sqInt *)ptr))
 # define oopAtPointerput(ptr, val)	(sqInt)(*((sqInt *)ptr)= (sqInt)val)
-# define pointerForOop(oop)		((char *)(sqMemoryBase + (oop)))
-# define oopForPointer(ptr)		((sqInt)(ptr))
+# define pointerForOop(oop)		((char *)(sqMemoryBase + ((usqInt)(oop))))
+# define oopForPointer(ptr)		((sqInt)(((char *)(ptr)) - (sqMemoryBase)))
 # define byteAt(oop)			byteAtPointer(pointerForOop(oop))
 # define byteAtput(oop, val)		byteAtPointerput(pointerForOop(oop), (val))
 # define shortAt(oop)			shortAtPointer(pointerForOop(oop))
@@ -163,7 +163,9 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the image. */
 
-static void inline flag(char *ignored) {}
+static void inline flag(char *ignored) {
+#pragma unused(ignored)
+}
 
 
 #endif /* __sqMemoryAccess_h */
