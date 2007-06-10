@@ -16,7 +16,7 @@
 
 /* sqUnixFile.c -- directory operations for Unix
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributorsf
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -293,13 +293,14 @@ int wanderDownPath(char *src,int bytes,char *possiblePath, Boolean resolveLastAl
 
 sqInt sqGetFilenameFromString(char * aCharBuffer, char * aFilenameString, sqInt filenameLength, sqInt aBoolean){
 	ioFilenamefromStringofLengthresolveAliasesRetry(aCharBuffer,(char *) aFilenameString, filenameLength, aBoolean, true);
+	return 0;
 }
 
-void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength) {
+void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength) {
 	ioFilenamefromStringofLengthresolveAliasesRetry(buffer,(char *) fileIndex, fileLength, true, true);
 }
 
-void		sqFilenameFromString(char *buffer,long fileIndex, long fileLength) {
+void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength) {
 	ioFilenamefromStringofLengthresolveAliasesRetry(buffer,(char *) fileIndex, fileLength, false, true);
 }
 
@@ -449,7 +450,7 @@ OSErr getFInfoViaFSRef(FSRef *theFSRef,	FInfo *finderInfo) {
 	return err;
 	
 }
-int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
+int dir_SetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
 	/* Set the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 
@@ -478,7 +479,7 @@ int dir_SetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, 
     return true;
 }
 
-int dir_GetMacFileTypeAndCreator(char *filename, int filenameSize, char *fType, char *fCreator) {
+int dir_GetMacFileTypeAndCreator(char *filename, sqInt filenameSize, char *fType, char *fCreator) {
 	/* Get the Macintosh type and creator of the given file. */
 	/* Note: On other platforms, this is just a noop. */
 

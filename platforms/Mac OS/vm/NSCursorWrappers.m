@@ -45,6 +45,7 @@
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
 void SetCursorBackToSomething(void);
+int amIOSX102X(void);
 
 NSCursor         *cursor= 0;
 Boolean			biggerCursorActive=false;

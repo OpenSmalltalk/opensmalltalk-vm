@@ -93,7 +93,7 @@ pthread_cond_t  gSleepLockCondition;
 
 int ioRelinquishProcessorForMicroseconds(int microSeconds) {
 	/* This operation is platform dependent. 	 */
-	#pragma unused(disableIfNonZero)
+	#pragma unused(microSeconds)
 
     static Boolean doInitialization=true;
     int	   realTimeToWait,now;

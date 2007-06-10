@@ -106,7 +106,8 @@ OSErr			gSqueakFileLastError;
 Boolean			gSqueakWindowIsFloating,gSqueakWindowHasTitle=true,gSqueakFloatingWindowGetsFocus=false,gSqueakUIFlushUseHighPercisionClock=false,gSqueakPluginsBuiltInOrLocalOnly=false,gSqueakHeadless=false,gSqueakQuitOnQuitAppleEvent=false,gSqueakExplicitWindowOpenNeeded=false;
 long			gSqueakMouseMappings[4][4] = {{0},{0}};
 long			gSqueakBrowserMouseMappings[4][4] = {{0},{0}};
-UInt32          gMaxHeapSize=512*1024*1024,gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
+usqInt          gMaxHeapSize=512*1024*1024;
+UInt32			gSqueakWindowType=zoomDocProc,gSqueakWindowAttributes=0;
 long			gSqueakUIFlushPrimaryDeferNMilliseconds=20,gSqueakUIFlushSecondaryCleanupDelayMilliseconds=20,gSqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds=16,gSqueakDebug=0;
 char            gSqueakImageName[PATH_MAX] = "Squeak.image";
 char            gSqueakUntrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSqueak/bogus/";
@@ -125,6 +126,7 @@ char **argVec= 0;
 char **envVec= 0;
 
 sqInt printAllStacks(void);
+extern BOOL NSApplicationLoad(void);
 
 static void sigsegv(int ignore)
 {
@@ -206,7 +208,7 @@ int main(int argc, char **argv, char **envp) {
 		
 		char target[4097],temp[4097];
 		getVMPathWithEncoding(target,gCurrentVMEncoding);
-		sqFilenameFromStringOpen(temp,(long) target, strlen(target));
+		sqFilenameFromStringOpen(temp,(sqInt) target, strlen(target));
 		chdir(temp);
 	}
 
@@ -407,7 +409,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.17b5 16-May-07 >BBAC71BE-EF68-4994-8E57-D641A936733F<";
+ 		return "Mac Carbon 3.8.18b1 9-Jun-07 >4C61BDDD-B2AA-4C71-B20D-5758597201EF<";
+// 		return "Mac Carbon 3.8.17b5 16-May-07 >BBAC71BE-EF68-4994-8E57-D641A936733F<";
 // 		return "Mac Carbon 3.8.17b5 1-May-07 >B389476B-E7F3-4E6A-A8B6-EAE7B39B0EEA<";
 // 		return "Mac Carbon 3.8.17b4 27-Apr-07 >3636308B-25D4-4CBB-A515-F3ECC3CEEA5E<";
 // 		return "Mac Carbon 3.8.17b3 26-Apr-07 >BBB5CDFC-E9BA-48AC-881E-464EE9718935<";
@@ -606,8 +609,13 @@ void fetchPrefrences() {
 				if (gSqueakBrowserMouseMappings[i][j] < 0 || gSqueakBrowserMouseMappings[i][j] > 3)
 					gSqueakBrowserMouseMappings[i][j] = 0;
 				}
-    if (SqueakMaxHeapSizeType) 
-        CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(long *) &gMaxHeapSize);
+    if (SqueakMaxHeapSizeType) {
+#if SQ_IMAGE64
+        CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongLongType,(sqInt *) &gMaxHeapSize);
+#else
+        CFNumberGetValue(SqueakMaxHeapSizeType,kCFNumberLongType,(sqInt *) &gMaxHeapSize);
+#endif
+		}
 		
 	if (SqueakUIFlushUseHighPercisionClock)
         gSqueakUIFlushUseHighPercisionClock = CFBooleanGetValue(SqueakUIFlushUseHighPercisionClock);

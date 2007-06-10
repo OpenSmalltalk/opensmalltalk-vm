@@ -135,6 +135,7 @@ int sqMIDIParameterGet(int whichParameter) {
 }
 
 int setMidiClockRate(int portNum, int interfaceClockRate) {
+#pragma unused(portNum, interfaceClockRate)
 /* Put the given port into MIDI mode, which uses a clock supplied
    by an external MIDI interface adaptor to determine the baud rate.
    Possible external clock rates: 31.25 KHz, 0.5 MHz, 1 MHz, or 2 MHz. */

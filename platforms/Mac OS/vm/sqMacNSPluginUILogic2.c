@@ -25,6 +25,7 @@
 #include "sqVirtualMachine.h"
 #include "sqUnixCharConv.h"
 #include "sqMacWindow.h"
+#include "sqVirtualMachine.h"
 
 static void browserReceiveData();
 static void browserSend(const void *buf, size_t count);
@@ -91,6 +92,16 @@ struct VirtualMachine* interpreterProxy;
 #define sizeOfSTArrayFromCPrimitive(cPtr) (interpreterProxy->sizeOfSTArrayFromCPrimitive(cPtr))
 #define storeIntegerofObjectwithValue(idx,oop,value) (interpreterProxy->storeIntegerofObjectwithValue(idx,oop,value))
 #define primitiveFail() interpreterProxy->primitiveFail()
+#define pushBool(n) (interpreterProxy->pushBool(n))
+#define failed() (interpreterProxy->failed())
+#define isBytes(n) (interpreterProxy->isBytes(n))
+#define byteSizeOf(n) (interpreterProxy->byteSizeOf(n))
+#define stackObjectValue(n) (interpreterProxy->stackObjectValue(n))
+#define firstIndexableField(n) (interpreterProxy->firstIndexableField(n))
+#define push(n) (interpreterProxy->push(n))
+#define positive32BitIntegerFor(n) (interpreterProxy->positive32BitIntegerFor(n))
+#define methodArgumentCount(n) (interpreterProxy->methodArgumentCount(n))
+#define nilObject(n) (interpreterProxy->nilObject(n))
 
 
 int primitivePluginBrowserReady(void) {
@@ -139,10 +150,12 @@ Boolean inline browserActiveAndDrawingContextOk() {
 
 Boolean inline browserActiveAndDrawingContextOkAndInFullScreenMode() {
 	extern Boolean gSqueakBrowserWasHeadlessButMadeFullScreen;
+	extern sqInt getFullScreenFlag(void);
 	return browserActiveAndDrawingContextOk() && gSqueakBrowserWasHeadlessButMadeFullScreen && getFullScreenFlag();
 }
 
 Boolean inline browserActiveAndDrawingContextOkAndNOTInFullScreenMode() {
+	extern sqInt getFullScreenFlag(void);
 	return browserActiveAndDrawingContextOk() && !getFullScreenFlag();
 }
 
@@ -160,7 +173,7 @@ void setupPipes() {
 void browserProcessCommand(void)
 {
   static Boolean firstTime= true;
-  int cmd, n, browserWindow;
+  int cmd, n;
   
   if (firstTime)
     {
@@ -217,7 +230,7 @@ static void handle_CMD_SHARED_MEMORY() {
 	height = tempHeight;
 	
 	if (SharedMemoryBlock) {
-		dprintf((stderr,"VM: munmap %i \n",SharedMemoryBlock));
+		dprintf((stderr,"VM: munmap %i \n",(int) SharedMemoryBlock));
 		munmap(SharedMemoryBlock,SharedBrowserBitMapLength);
 	}
 			
@@ -229,11 +242,11 @@ static void handle_CMD_SHARED_MEMORY() {
 	}
 	SharedMemoryBlock->written = 0;
 	
-	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i at %i)\n", width, height, rowBytes,SharedMemoryfd,SharedMemoryBlock));
+	dprintf((stderr,"VM: browserProcessCommand(width %i height %i rowbytes %i SharedMemoryBlock %i at %i)\n", width, height, rowBytes,SharedMemoryfd,(int) SharedMemoryBlock));
 
-	if (TempSharedBrowserBitMapContextRef = SharedBrowserBitMapContextRef) {
+	if ((TempSharedBrowserBitMapContextRef = SharedBrowserBitMapContextRef)) {
 		SharedBrowserBitMapContextRef = NULL;
-		dprintf((stderr,"VM: free bitmap context %i \n",TempSharedBrowserBitMapContextRef));
+		dprintf((stderr,"VM: free bitmap context %i \n",(int) TempSharedBrowserBitMapContextRef));
 		CFRelease(TempSharedBrowserBitMapContextRef);
 	}
 	
@@ -256,7 +269,7 @@ static void handle_CMD_SHARED_MEMORY() {
 		dprintf((stderr,"VM: Size Window to %i @ %i \n",width,height));
 	}
 	SharedBrowserBitMapContextRef = CGBitmapContextCreate (SharedMemoryBlock->screenBits,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
-	dprintf((stderr,"VM: made bitmap context ref %i\n", SharedBrowserBitMapContextRef));
+	dprintf((stderr,"VM: made bitmap context ref %i\n", (int) SharedBrowserBitMapContextRef));
 }
 
 static void handle_CMD_EVENT() {
@@ -316,6 +329,7 @@ static void handle_CMD_EVENT() {
 
 static void npHandler(int fd, void *data, int flags)
 {
+#pragma unused(fd,data,flags)
   browserProcessCommand();
   aioHandle(gSqueakBrowserPipes[0], npHandler, AIO_RX);
 }
@@ -499,14 +513,14 @@ void recordMouseEvent(EventRecord *theEvent)  {
 	carbonModifiers = theEvent->modifiers;
 
 	if (!(theEvent->what == 5))
-		dprintf((stderr,"VM: recordMouseEvent() carbonModifers %i mouseButton %i v %i h %i\n",carbonModifiers,mouseButton,theEvent->where.v,theEvent->where.h));
+		dprintf((stderr,"VM: recordMouseEvent() carbonModifers %i mouseButton %i v %i h %i\n",(int) carbonModifiers,mouseButton,theEvent->where.v,theEvent->where.h));
 	if (theEvent->what == kEventMouseMoved && mouseButton) 
 		theEvent->what = kEventMouseDragged;
 	if (theEvent->what == kEventMouseDown)
-		dprintf((stderr,"VM: recordMouseEvent() cmd %i option %i control %i shift %i\n",carbonModifiers & cmdKey,
-		carbonModifiers & optionKey,
-		carbonModifiers & controlKey,
-		carbonModifiers & shiftKey));
+		dprintf((stderr,"VM: recordMouseEvent() cmd %i option %i control %i shift %i\n",(int) carbonModifiers & cmdKey,
+		(int) carbonModifiers & optionKey,
+		(int) carbonModifiers & controlKey,
+		(int) carbonModifiers & shiftKey));
 	
 	MacCreateEvent(kCFAllocatorDefault, kEventClassMouse, theEvent->what, 0, kEventAttributeUserEvent, &tmpEvent);
 	SetEventParameter(tmpEvent,kEventParamMouseLocation,typeQDPoint,sizeof(Point),&theEvent->where);
@@ -595,7 +609,8 @@ int recordKeyboardEvent(EventRecord *theEvent, int keyType) {
 int primitivePluginRequestURLStream()
 {
   sqStreamRequest *req;
-  int id, url, length, semaIndex;
+  int id, length, semaIndex;
+  sqInt url;
 
   if (!gSqueakBrowserSubProcess) return primitiveFail();
 
@@ -620,7 +635,7 @@ int primitivePluginRequestURLStream()
   requests[id]= req;
 
   length= byteSizeOf(url);
-  browserGetURLRequest(id, firstIndexableField(url), length, NULL, 0);
+  browserGetURLRequest(id, (char *) firstIndexableField(url), length, NULL, 0);
   pop(3);
   push(positive32BitIntegerFor(id));
   dprintf((stderr,"VM:   request id: %i\n", id));
@@ -635,8 +650,9 @@ int primitivePluginRequestURLStream()
 int primitivePluginRequestURL()
 {
   sqStreamRequest *req;
-  int url, urlLength;
-  int target, targetLength;
+  int urlLength;
+  int targetLength;
+  sqInt target,url;
   int id, semaIndex;
 
   if (!gSqueakBrowserSubProcess) return primitiveFail();
@@ -665,7 +681,7 @@ int primitivePluginRequestURL()
   req->state= -1;
   requests[id]= req;
 
-  browserGetURLRequest(id, firstIndexableField(url), urlLength, firstIndexableField(target), targetLength);
+  browserGetURLRequest(id,  (char *)  firstIndexableField(url), urlLength, (char *)  firstIndexableField(target), targetLength);
   pop(4);
   push(positive32BitIntegerFor(id));
   return 1;
@@ -675,7 +691,7 @@ static int isFileURL(int urlOop) {
   int urlLen;
   char *urlPtr;
   urlLen = byteSizeOf(urlOop);
-  urlPtr = firstIndexableField(urlOop);
+  urlPtr =  (char *) firstIndexableField(urlOop);
   while(*urlPtr == ' ' && urlLen) {
     urlPtr++;
     urlLen--;
@@ -694,9 +710,9 @@ static int isFileURL(int urlOop) {
 EXPORT(int) primitivePluginPostURL(void)
 {
   sqStreamRequest *req;
-  int url, urlLength;
-  int target, targetLength;
-  int data, dataLength;
+  int urlLength;
+  int dataLength;
+  sqInt data,target,url,targetLength;
   int id, semaIndex;
 
   if (!gSqueakBrowserSubProcess) return primitiveFail();
@@ -735,9 +751,9 @@ EXPORT(int) primitivePluginPostURL(void)
   requests[id] = req;
 
   browserPostURLRequest(id, 
-		firstIndexableField(url), urlLength, 
-		target ? (firstIndexableField(target)) : NULL, targetLength,
-		firstIndexableField(data), dataLength); 
+		 (char *) firstIndexableField(url), urlLength, 
+		target ? ( (char *) firstIndexableField(target)) : NULL, targetLength,
+		 (char *) firstIndexableField(data), dataLength); 
   pop(4);
   push(positive32BitIntegerFor(id));
   return 1;

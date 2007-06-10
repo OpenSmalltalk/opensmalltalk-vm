@@ -15,5 +15,5 @@
 
     #include <Carbon/Carbon.h>
 
-UInt32	sqGetAvailableMemory(void);
-void sqMacMemoryFree();
+usqInt	sqGetAvailableMemory(void);
+void sqMacMemoryFree(void);

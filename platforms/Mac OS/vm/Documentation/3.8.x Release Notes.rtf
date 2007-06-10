@@ -41,7 +41,8 @@ Apr 26th, 2007 (3.8.17b2)\
 Apr 26th, 2007 (3.8.17b3)\
 Apr 27th, 2007 (3.8.17b4)\
 May 1st, 2007 (3.8.17b5)\
-May 1st, 2007 (3.8.17b6)\
+May 16st, 2007 (3.8.17b6)\
+Jun 9th, 2007 (3.8.18b1)\
 \
 3.8.17b6\
 \
@@ -49,6 +50,48 @@ May 1st, 2007 (3.8.17b6)\
 \cf0 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+\
+3.8.18b1		Thanks to work by David T Lewis we have an interp.c which is more rational when dealing with  oops addresses \
+			As part of this work I changed a large number of support files to use sqInt/usqInt versus integer, and did warning \
+			msg cleanup work, plus dropped Exupery support until Exupery is more stable and someone wants to work on macintel \
+			port. \
+\
+			SecurityPlugin.h			prototype statements coded wrong.\
+\
+			sqMemoryAccess.h		David T Lewis changes for 32/64 bit clean address values\
+\
+			sqMacOpenGL.c			warning msg cleanup, casting\
+			sqMacOpenGLInfo.c		warning msg cleanup, casting\
+			sqMacDragDrop.c			warning msg cleanup, use if sqInt for oops, casting\
+			sqMacUnixFileInterface.c	warning msg cleanup, casting\
+			sqMacHostWindow.c		use sqInt\
+			sqMacHostWindow.h		warning msg cleanup\
+			sqMacInternetConfiguration.c warning msg cleanup\
+			HID_Queue_Utilities.c		warning msg cleanup\
+			HID_Utilities.c				warning msg cleanup\
+			HID_Utilities.h				warning msg cleanup\
+			sqMacMIDI.c				warning msg cleanup\
+			sqMacSecurity.c			warning msg cleanup\
+			sqMacSerialPort.c			warning msg cleanup\
+			sqUnixSoundDebug.h		warning msg cleanup\
+			sqUnixSoundMacOSXJMM.c	warning msg cleanup\
+			sqMacUUID.c				warning msg cleanup\
+			NSCursorWrappers.m		warning msg cleanup\
+			sqMacEncoding.h			warning msg cleanup\
+			sqMacImageIO.c			use sqInt\
+			sqMacMain.c				warning msg cleanup, use sqInt for oops\
+			sqMacMemory.c			use sqInt/usqInt\
+			sqMacMemory.h			use sqInt/usqInt\
+			sqMacNSPluginUILogic2.c	warning msg cleanup\
+			sqMacNSPluginUILogic2.h	warning msg cleanup\
+			sqMacTime.c				warning msg cleanup\
+			sqMacUIClipBoard.c		use sqInt\
+			sqMacUIEvents.h			use sqInt\
+			sqMacUIEventsUniversal.c	warning msg cleanup\
+			sqMacUnixExternalPrims.c	warning msg cleanup\
+			sqMacWindowUniversal.c	use sqInt, warning msg cleanup\
+			sqNamedPrims.h			remove ExuperyPlugin_exports\
+			sqPlatformSpecific.h		use sqInt, warning msg cleanup\
 \
 3.8.17b6		sqMacWindowUniversal.c	Bug fix, If the browser image is full screen it needs to open in the foreground, not the\
 									background\

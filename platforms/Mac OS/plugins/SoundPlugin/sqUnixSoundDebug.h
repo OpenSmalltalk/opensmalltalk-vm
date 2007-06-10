@@ -13,6 +13,8 @@
 
 #include <pthread.h>
 
+void rect(int h, int c, float l, float r);
+
 void rect(int h, int c, float l, float r)
 {
   extern long *dpyPixels;
@@ -37,6 +39,7 @@ void rect(int h, int c, float l, float r)
     }
 }
 
+void fill(int h, int c, float l, float r);
 void fill(int h, int c, float l, float r)
 {
   if (r > 1.0)
@@ -78,6 +81,7 @@ void update(void)
 
 #else
 
+void update(void);
 void update(void)
 {
 }
@@ -90,6 +94,7 @@ static pthread_t spyThread;
 
 static void *spy(void *ignored)
 {
+#pragma unused(ignored)
   struct sched_param params;
   int                policy;
   if (pthread_getschedparam(pthread_self(), &policy, &params))
@@ -104,6 +109,7 @@ static void *spy(void *ignored)
     }
 }
 
+void startSpy(void);
 void startSpy(void)
 {
   if (!pthread_create(&spyThread, 0, spy, 0))
@@ -112,6 +118,7 @@ void startSpy(void)
     perror("pthread_create(spy)");
 }
 
+void stopSpy(void);
 void stopSpy(void)
 {
   if (running)

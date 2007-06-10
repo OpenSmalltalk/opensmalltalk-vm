@@ -23,8 +23,8 @@ int primitivePluginPostURL(void);
 int primitivePluginRequestURLStream(void);
 int primitivePluginRequestURL(void);
 int browserGetWindowSize(void);
-Boolean inline browserActiveAndDrawingContextOkAndNOTInFullScreenMode();
-Boolean inline browserActiveAndDrawingContextOkAndInFullScreenMode();
+Boolean inline browserActiveAndDrawingContextOkAndNOTInFullScreenMode(void);
+Boolean inline browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 
 typedef struct SqueakSharedMemoryBlock {
 	int		written;

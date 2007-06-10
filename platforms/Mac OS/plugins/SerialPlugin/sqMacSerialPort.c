@@ -52,12 +52,14 @@ int serialPortIsOpen(int portNum) {
 }
 
 int serialPortSetControl(int portNum,int control, char *data) {
+#pragma unused(portNum,control,data)
     return -1;
 }
 
 int serialPortNames(int portNum, char *portName, char *inName, char *outName) {
 /* Fill in the user name and input and output port names for the given
    port number. Note that ports are numbered starting with zero. */
+#pragma unused(portNum,portName,inName,outName)
 
     return false;
  }
@@ -65,13 +67,14 @@ int serialPortNames(int portNum, char *portName, char *inName, char *outName) {
 int setHandshakeOptions(
   int portNum, int inFlowCtrl, int outFlowCtrl, int xOnChar, int xOffChar) {
 /* Set the given port's handshaking parameters. */
+#pragma unused(portNum,inFlowCtrl,outFlowCtrl,xOnChar,xOffChar)
     return false;
 }
 /*** Serial Port Functions ***/
 
 EXPORT (int) serialPortClose(int portNum) {
+#pragma unused(portNum)
     return false;
-	return 0;
 }
 
 EXPORT (int) serialPortOpen(
@@ -80,6 +83,7 @@ EXPORT (int) serialPortOpen(
 /* Open the given serial port using the given settings. The baud rate can be
    any number between about 224 and 57600; the driver will pick a clock
    divisor that will generate the closest available baud rate. */
+#pragma unused(portNum,baudRate,stopBitsType,parityType,dataBits,inFlowCtrl,outFlowCtrl,xOnChar,xOffChar)
     return false;
 }
 
@@ -88,6 +92,7 @@ EXPORT (int) serialPortReadInto(int portNum, int count, int bufferPtr) {
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
+#pragma unused(portNum,count,bufferPtr)
     return false;
 }
 

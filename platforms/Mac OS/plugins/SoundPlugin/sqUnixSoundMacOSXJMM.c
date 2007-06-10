@@ -75,7 +75,9 @@
 
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 #define DeviceFrameSize	8	// ditto (<CoreAudio/AudioHardware.h>, para 9)
-
+int min(int i, int j);
+int max(int i, int j);
+ 
  inline int min(int i, int j) { return (i < j) ? i : j; }
  inline int max(int i, int j) { return (i > j) ? i : j; }
 
@@ -106,13 +108,16 @@ char empty[256] = { 0 };
 }
 
 #else // !DEBUG
-
- inline void dumpFormat(AudioStreamBasicDescription *fmt) {}
+ void dumpFormat(AudioStreamBasicDescription *fmt);
+ inline void dumpFormat(AudioStreamBasicDescription *fmt) {
+ #pragma unused(fmt)
+ }
  #define  dprintf(ARGS, ...)
  // inline void dprintf(const char *fmt, ...) {}
 
 #endif // !DEBUG
-
+ void eprintf(const char *fmt, ...);
+ 
  void eprintf(const char *fmt, ...)
 {
   va_list ap;
@@ -125,6 +130,7 @@ char empty[256] = { 0 };
 // Apple error codes are really (rather contrived) 4-byte chars with
 // (almost) meaningful content.
 // 
+ char *str4(UInt32 chars);
  char *str4(UInt32 chars)
 {
   static char str[5];
@@ -132,6 +138,8 @@ char empty[256] = { 0 };
   str[4]= '\0';
   return str;
 }
+
+int checkError(OSStatus err, char *op, char *param);
 
  inline int checkError(OSStatus err, char *op, char *param)
 {
@@ -161,6 +169,8 @@ typedef struct
 
 // allocate a new, empty buffer
 // 
+Buffer *Buffer_new(int size);
+
 Buffer *Buffer_new(int size)
 {
   Buffer *b= (Buffer *)malloc(sizeof(Buffer));
@@ -180,6 +190,8 @@ Buffer *Buffer_new(int size)
 
 // deallocate a buffer
 // 
+void Buffer_delete(Buffer *b);
+
 void Buffer_delete(Buffer *b)
 {
   assert(b && b->data);
@@ -190,6 +202,8 @@ void Buffer_delete(Buffer *b)
 
 // answer how many bytes are available for reading
 // 
+inline int Buffer_avail(Buffer *b);
+
 inline int Buffer_avail(Buffer *b)
 {
   return b->avail;
@@ -197,6 +211,8 @@ inline int Buffer_avail(Buffer *b)
 
 // answer how many bytes can be written
 // 
+inline int Buffer_free(Buffer *b);
+
 inline int Buffer_free(Buffer *b)
 {
   return b->size - Buffer_avail(b);
@@ -205,6 +221,8 @@ inline int Buffer_free(Buffer *b)
 // set outputs to address and size of zero (empty), one (contiguous) or two
 // (wrapped, fragmented) populated regions in the buffer
 // 
+inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, int *n2);
+
 inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, int *n2)
 {
   int optr=     b->optr;
@@ -233,6 +251,8 @@ inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, in
 // set the output to the current read position and answer the amount of
 // data at that location
 // 
+inline int Buffer_getOutputPointer(Buffer *b, char **ptr);
+
 inline int Buffer_getOutputPointer(Buffer *b, char **ptr)
 {
   int optr=     b->optr;
@@ -247,6 +267,8 @@ inline int Buffer_getOutputPointer(Buffer *b, char **ptr)
 // set the output to the current write location and answer the number of
 // bytes that can be written to that location
 // 
+inline int Buffer_getInputPointer(Buffer *b, char **ptr);
+
 inline int Buffer_getInputPointer(Buffer *b, char **ptr)
 {
   int iptr=     b->iptr;
@@ -260,6 +282,8 @@ inline int Buffer_getInputPointer(Buffer *b, char **ptr)
 
 // increment the output pointer over a contiguous section of buffer
 // 
+inline void Buffer_advanceOutputPointer(Buffer *b, int size);
+
 inline void Buffer_advanceOutputPointer(Buffer *b, int size)
 {
   int optr=  b->optr;
@@ -275,6 +299,8 @@ inline void Buffer_advanceOutputPointer(Buffer *b, int size)
 
 // advance the input pointer over a contiguous section of buffer
 // 
+inline void Buffer_advanceInputPointer(Buffer *b, int size);
+
 inline void Buffer_advanceInputPointer(Buffer *b, int size)
 {
   int iptr= b->iptr;
@@ -291,6 +317,8 @@ inline void Buffer_advanceInputPointer(Buffer *b, int size)
 // clear the given number of bytes at the input position and advance the
 // input pointer past them
 // 
+inline void Buffer_prefill(Buffer *b, int bytes);
+
 inline void Buffer_prefill(Buffer *b, int bytes)
 {
   char *ptr;
@@ -303,6 +331,8 @@ inline void Buffer_prefill(Buffer *b, int bytes)
 // write at most nbytes from buf into the buffer, wrapping in the middle if
 // necessary.  answer the actual number of bytes written.
 // 
+inline int Buffer_write(Buffer *b, char *buf, int nbytes);
+
 inline int Buffer_write(Buffer *b, char *buf, int nbytes)
 {
   int iptr= b->iptr;
@@ -328,6 +358,8 @@ inline int Buffer_write(Buffer *b, char *buf, int nbytes)
   assert(b->avail <= b->size);
   return bytesCopied;
 }
+
+inline int Buffer_writeRecheck(Buffer *b, char *buf, int nbytes);
 
 inline int Buffer_writeRecheck(Buffer *b, char *buf, int nbytes)
 {
@@ -361,6 +393,8 @@ inline int Buffer_writeRecheck(Buffer *b, char *buf, int nbytes)
 // read at most nbytes from the buffer into buf, wrapping in the middle if
 // necessary.  answer the actual number of bytes read.
 // 
+inline int Buffer_read(Buffer *b, char *buf, int nbytes);
+
 inline int Buffer_read(Buffer *b, char *buf, int nbytes)
 {
   int optr= b->optr;
@@ -418,22 +452,21 @@ typedef struct Stream
  Stream *input=  0;
 
 
-#if (!TESTING)
-# include "sqUnixSoundDebug.h"
-#endif
-
-
 // tell the SoundPlayer that output can be written.
 //
- void ioProcSignal(int semaphore)
+ void ioProcSignal(int semaphore);
+  void ioProcSignal(int semaphore)
 {
   if (semaphore)
     signalSemaphoreWithIndex(semaphore);
 }
 
 
- OSStatus bufferDataProc(AudioConverterRef inAudioConverter, UInt32 *ioDataSize, void  **outData, void  *context)
+ OSStatus bufferDataProc(AudioConverterRef inAudioConverter, UInt32 *ioDataSize, void  **outData, void  *context);
+  OSStatus bufferDataProc(AudioConverterRef inAudioConverter, UInt32 *ioDataSize, void  **outData, void  *context)
 {
+#pragma unused(inAudioConverter)
+
   Stream *s= (Stream *)context;
   Buffer *b= s->buffer;
   char *p1, *p2;
@@ -460,6 +493,14 @@ typedef struct Stream
 }
 
 
+ OSStatus ioProcOutput(AudioDeviceID	    device,
+			     const AudioTimeStamp  *currentTime,
+			     const AudioBufferList *inputData,
+			     const AudioTimeStamp  *inputTime,
+			     AudioBufferList	   *outputData,	// io param
+			     const AudioTimeStamp  *outputTime,
+			     void		   *context);
+				 
 // shipout to device (usually 512 frames at 44k1 for builtin audio and
 // USB).  this is asynchronous and runs (implicitly) in its own thread.
 // 
@@ -471,6 +512,7 @@ typedef struct Stream
 			     const AudioTimeStamp  *outputTime,
 			     void		   *context)
 {
+#pragma unused(device,currentTime,inputData,inputTime,outputTime)
   Stream *s= (Stream *)context;
   Buffer *b= s->buffer;
   if (Buffer_free(b) >= s->imgBufSize)
@@ -490,12 +532,22 @@ typedef struct Stream
 			    const AudioTimeStamp  *inputTime,
 			    AudioBufferList	   *outputData,	// io param
 			    const AudioTimeStamp  *outputTime,
+			    void		   *context);
+				
+OSStatus ioProcInput(AudioDeviceID	    device,
+			    const AudioTimeStamp  *currentTime,
+			    const AudioBufferList *inputData,
+			    const AudioTimeStamp  *inputTime,
+			    AudioBufferList	   *outputData,	// io param
+			    const AudioTimeStamp  *outputTime,
 			    void		   *context)
 {
+#pragma unused(device,currentTime,inputTime,outputData,outputTime)
+
   Stream *s= (Stream *)context;
   Buffer *b= s->buffer;
   int     n= Buffer_free(b);
-  if (n >= inputData->mBuffers[0].mDataByteSize)
+  if ((UInt32) n >= inputData->mBuffers[0].mDataByteSize)
     Buffer_writeRecheck(b, inputData->mBuffers[0].mData, inputData->mBuffers[0].mDataByteSize);
   if (Buffer_avail(b) >= s->imgBufSize)
     ioProcSignal(s->semaphore);		// restart SoundRecorder
@@ -503,7 +555,8 @@ typedef struct Stream
 }
 
 
- int getDefaultDevice(AudioDeviceID *id, int direction)
+ int getDefaultDevice(AudioDeviceID *id, int direction);
+int getDefaultDevice(AudioDeviceID *id, int direction)
 {
   UInt32 sz= sizeof(*id);
   return (!checkError(AudioHardwareGetProperty((direction
@@ -516,7 +569,8 @@ typedef struct Stream
 
 // allocate and a Stream and associate it with a suitable device.
 //
- Stream *Stream_new(int dir)
+ Stream *Stream_new(int dir);
+Stream *Stream_new(int dir)
 {
   AudioDeviceID id= 0;
   Stream       *s=  0;
@@ -539,7 +593,8 @@ typedef struct Stream
 
 // deallocate a Stream.
 //
- void Stream_delete(Stream *s)
+ void Stream_delete(Stream *s);
+void Stream_delete(Stream *s)
 {
   assert(s && s->buffer);
   Buffer_delete(s->buffer);
@@ -551,7 +606,8 @@ typedef struct Stream
 // setup conversion from Squeak to device frame format, or vice-versa.
 // requires: stereo for output, stereo or mono for input.
 //
- int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
+ int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo);
+int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
 {
   int nChannels=	1 + stereo;
   AudioStreamBasicDescription imgFmt, devFmt;
@@ -611,7 +667,8 @@ typedef struct Stream
 
 // start the device attached to the stream.
 // 
- int Stream_startSema(Stream *s, int semaIndex)
+ int Stream_startSema(Stream *s, int semaIndex);
+  int Stream_startSema(Stream *s, int semaIndex)
 {
   AudioDeviceIOProc ioProc= s->direction ? ioProcInput : ioProcOutput;
 
@@ -634,7 +691,8 @@ typedef struct Stream
 
 // stop the device attached to a stream.
 // 
- int Stream_stop(Stream *s)
+ int Stream_stop(Stream *s);
+int Stream_stop(Stream *s)
 {
   AudioDeviceIOProc ioProc= s->direction ? ioProcInput : ioProcOutput;
   checkError(AudioDeviceStop(s->id, ioProc),
@@ -650,7 +708,8 @@ typedef struct Stream
 /// sound output primitives
 /// 
 
-
+ int sound_AvailableSpace(void);
+ 
  int sound_AvailableSpace(void)
 {
   if (output)
@@ -662,6 +721,8 @@ typedef struct Stream
 
 // mix nFrames of samples into an output buffer.
 // 
+ void mixFrames(short *out, short *in, int nFrames);
+ 
  void mixFrames(short *out, short *in, int nFrames)
 {
   while (nFrames--)
@@ -684,8 +745,11 @@ typedef struct Stream
 // enabled in the image.
 // 
  int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
+				  int framesOfLeadTime);
+ int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 				  int framesOfLeadTime)
 {
+#pragma unused(framesOfLeadTime)
   Stream *s= output;
 
   dprintf("snd_InsertSamples %d From %p LeadTime %d\n", frameCount, srcBufPtr, framesOfLeadTime);
@@ -771,7 +835,8 @@ typedef struct Stream
 // play (exactly) frameCount of samples (and no less, since the result is
 // ignored).
 // 
- int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+ int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex);
+  int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
 {
   if (output)
     {
@@ -792,6 +857,7 @@ typedef struct Stream
 
 // play a buffer's worth of silence (as quietly as possible).
 // 
+ int sound_PlaySilence(void);
  int sound_PlaySilence(void)
 {
   success(false);
@@ -801,6 +867,7 @@ typedef struct Stream
 
 // shut down sound output.
 // 
+ int sound_Stop(void);
  int sound_Stop(void)
 {
   dprintf("snd_Stop\n");
@@ -817,6 +884,7 @@ typedef struct Stream
 
 // start up sound output.
 // 
+ int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex);
  int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
 {
   Stream *s= 0;
@@ -849,6 +917,7 @@ typedef struct Stream
 // answer the input sample rate.  (this is guaranteed to be the same
 // as the sample rate that was requested.)
 // 
+ double sound_GetRecordingSampleRate(void);
  double sound_GetRecordingSampleRate(void)
 {
   if (input)
@@ -859,7 +928,8 @@ typedef struct Stream
 }
 
 
- int sound_StopRecording(void)
+ int sound_StopRecording(void);
+  int sound_StopRecording(void)
 {
   dprintf("snd_StopRecording\n");
 
@@ -875,6 +945,7 @@ typedef struct Stream
 
 // start up sound input.
 // 
+ int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex);
  int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex)
 {
   Stream *s= 0;
@@ -901,6 +972,7 @@ typedef struct Stream
 }
 
 
+ int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes);
  int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
 {
   if (input)
@@ -925,6 +997,7 @@ typedef struct Stream
 /// 
 
 
+ int getVolume(int dir, double *left, double *right);
  int getVolume(int dir, double *left, double *right)
 {
   UInt32	sz;
@@ -954,6 +1027,7 @@ typedef struct Stream
 }
 
 
+ int setVolume(int dir, double dleft, double dright);
  int setVolume(int dir, double dleft, double dright)
 {
   Float32 left=  (Float32)dleft;
@@ -984,6 +1058,7 @@ typedef struct Stream
 
 // get output gain, 0.0 <= { left, right } <= 1.0
 // 
+ void sound_Volume(double *left, double *right);
  void sound_Volume(double *left, double *right)
 {
   getVolume(0, left, right);
@@ -992,6 +1067,7 @@ typedef struct Stream
 
 // set output gain, 0.0 <= { left, right } <= 1.0
 // 
+ void sound_SetVolume(double left, double right);
  void sound_SetVolume(double left, double right)
 {
   extern int noSoundMixer;	//xxx FIXME: this should not be a global option
@@ -1005,6 +1081,7 @@ typedef struct Stream
 
 // set recording gain, 0 <= level <= 1000
 // 
+ int sound_SetRecordLevel(int level);
  int sound_SetRecordLevel(int level)
 {
   extern int noSoundMixer;
@@ -1064,8 +1141,17 @@ typedef struct Stream
 
 # include "SqModule.h"
 
-   void  sound_parseEnvironment(void) {}
-   int   sound_parseArgument(int argc, char **argv) { return 0; }
+  void  sound_parseEnvironment(void);
+   int   sound_parseArgument(int argc, char **argv);
+   void  sound_printUsage(void);
+   void  sound_printUsageNotes(void);
+   void *sound_makeInterface(void);
+   void *np_sound_makeInterface(void);
+
+	void  sound_parseEnvironment(void) {}
+   int   sound_parseArgument(int argc, char **argv) {
+	#pragma unused(argc,argv)
+	return 0; }
    void  sound_printUsage(void) {}
    void  sound_printUsageNotes(void) {}
    void *sound_makeInterface(void) { return &sound_MacOSX_itf; }

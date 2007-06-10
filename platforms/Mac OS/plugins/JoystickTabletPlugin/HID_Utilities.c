@@ -628,6 +628,7 @@ static void hid_DeviceNotification( void *refCon,
 									natural_t messageType,
 									void *messageArgument )
 {
+#pragma unused(messageArgument)
     pRecDevice pDevice = (pRecDevice) refCon;
 
     if (messageType == kIOMessageServiceIsTerminated)
@@ -671,7 +672,7 @@ static void hid_AddDevices (void *refCon, io_iterator_t iterator)
     IOReturn result = kIOReturnSuccess;
     io_object_t ioHIDDeviceObject = 0;
 
-    while (ioHIDDeviceObject = IOIteratorNext (iterator))
+    while ((ioHIDDeviceObject = IOIteratorNext (iterator)))
     {
 		pRecDevice* pNewDeviceAt = NULL;
 		pRecDevice pNewDevice = hid_BuildDevice (ioHIDDeviceObject);

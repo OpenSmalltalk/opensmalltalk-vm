@@ -24,7 +24,8 @@ Building the Squeak Virtual Machine (Aug 6th, 2002)
 	-- Changes John McIntosh, Mar 4th, 2007 3.8.15b4u, extra changeset added 
 	-- Changes John McIntosh, Apr 17th, 2007 3.8.16b5u, browser build notes 
 	-- Changes John McIntosh, Apr 25th, 2007 3.8.17b2, build notes (large cursor support)
-	
+	-- Changes John McIntosh, Jun 9th, 2007 3.8.18b1, 32bit clean work
+
 
 (Note to readers, it is possible a step was missed, so beware)
 
@@ -88,7 +89,12 @@ Step Three: Build an interpeter
 
 	That should provide a version of VMMaker that is sufficient to build 3.8.17b2 (or later)
 
-	OPTIONAL Expury if you want Expury support.
+	For a 3.8.18 VM or later that includes David T Lewis's 32bit clean VM (4GB address space work) 
+	load the VmUpdates-dtl and ensure you use the proper sqMemoryAccess.h. I've stuck vmUpdates-dtl into the specialChangeSets folder until 
+	they are integrated into VMMaker, also the JMM-VmUpdates32bitclean.2.cs should be loaded which is additional 32bit clean work.
+
+	OPTIONAL Expury if you want Expury support. As of 3.8.18 we removed Expury from the general build until a remerging 
+	takes place
 
 	File in Exupery-wbk.195 from Exupery site and VMMaker-wbk.40.8.cs or higher change set from the specialChangeSets Folder 
 	(VMMaker-wbk.40.8.cs is the differences between VMMaker-wbk.40 and VMMaker 3.8b6). Please note these changes might be folded
@@ -101,7 +107,7 @@ Step Three: Build an interpeter
 		so do a "remove linefeeds" first. 
 		
 		Gnuifier.8.cs - A smalltalk version of the AWK example. 	
-		ArraysToGlobalStruct-JMM.1.cs  - Put arrays in the structure, this fixes some issues with 'global code elimination' in the compiler.
+		ArraysToGlobalStruct-JMM.1.cs  - Put arrays in the structure, this fixes some issues with 'global code elimination' in the compiler. This may be in the current VMMaker logic, check first. 
 		
 	B.	DoIt: VMMakerTool openInWorld  (Ensure you have the latest VMMaker, do an SqueakMap update if unsure, see Step 3 above)
 	C.	Enter the Path to platforms code: (enter path to platforms in step two).
@@ -110,7 +116,9 @@ Step Three: Build an interpeter
 	E2. 	Note mac carbon VM only supports a 32 bit VM since the entire carbon/osx api set is 32bit, not 64. 
 	F.	Select plugins. (Suggest selecting menu item "make all internal",
 		then drag back the following back to Plugins not built:
+			CroquetPlugin
 			FFIPlugin
+			FloatMathPlugin
 			FileCopyPlugin
 			Mpeg3Plugin
 			TestOSAPlugin

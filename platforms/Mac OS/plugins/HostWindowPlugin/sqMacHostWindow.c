@@ -120,16 +120,16 @@ int ioPositionOfWindowSetxy(wIndexType windowIndex, int x, int y)
 
 	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
 	if (giLocker != 0) {
-		long *foo;
-		foo = malloc(sizeof(long)*7);
+		sqInt *foo;
+		foo = malloc(sizeof(sqInt)*7);
 		foo[0] = 4;
-		foo[1] = (int) MoveWindow;
-		foo[2] = (long) windowHandleFromIndex(windowIndex);
+		foo[1] = (sqInt) MoveWindow;
+		foo[2] = (sqInt) windowHandleFromIndex(windowIndex);
 		foo[3] = x;
 		foo[4] = y;
 		foo[5] = true;
 		foo[6] = 0;
-		((int (*) (void *)) giLocker)(foo);
+		((sqInt (*) (void *)) giLocker)(foo);
 		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
 		free(foo);
 	}
@@ -159,16 +159,16 @@ int ioSizeOfWindowSetxy(wIndexType windowIndex, int x, int y)
 		return -1;
 	giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
 	if (giLocker != 0) {
-		long *foo;
-		foo = malloc(sizeof(long)*7);
+		sqInt *foo;
+		foo = malloc(sizeof(sqInt)*7);
 		foo[0] = 4;
-		foo[1] = (int) SizeWindow;
-		foo[2] = (long) windowHandleFromIndex(windowIndex);
+		foo[1] = (sqInt) SizeWindow;
+		foo[2] = (sqInt) windowHandleFromIndex(windowIndex);
 		foo[3] = x;
 		foo[4] = y;
 		foo[5] = true;
 		foo[6] = 0;
-		((int (*) (void *)) giLocker)(foo);
+		((sqInt (*) (void *)) giLocker)(foo);
 		return_value = interpreterProxy->positive32BitIntegerFor(foo[6]);
 		free(foo);
 	}

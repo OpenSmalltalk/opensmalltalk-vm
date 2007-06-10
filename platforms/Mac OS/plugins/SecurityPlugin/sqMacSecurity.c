@@ -31,7 +31,7 @@ static Boolean gInitialized = false;
 static int allowFileAccess = 1;  /* full access to files */
 
 static int isAccessiblePathName(char *pathName) {
-  int i;
+  unsigned int i;
   /* Check if the path/file name is subdirectory of the image path */
   for(i=0; i<strlen(untrustedUserDirectory)-1; i++)
     if(untrustedUserDirectory[i] != pathName[i]) return 0;
@@ -44,7 +44,7 @@ return 1;
 }
 
 static int isAccessibleFileName(char *fileName) {
-  int i;
+  unsigned int i;
   /* Check if the path/file name is subdirectory of the image path */
   for(i=0; i<strlen(untrustedUserDirectory); i++)
     if(untrustedUserDirectory[i] != fileName[i]) return 0;
@@ -53,22 +53,26 @@ static int isAccessibleFileName(char *fileName) {
 
 /* directory access */
 int ioCanCreatePathOfSize(char* pathString, int pathStringLength) {
+#pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 int ioCanListPathOfSize(char* pathString, int pathStringLength) {
+#pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 int ioCanDeletePathOfSize(char* pathString, int pathStringLength) {
+#pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
 }
 
 /* file access */
 int ioCanOpenFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
+#pragma unused(pathStringLength,writeFlag)
   if(allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
@@ -77,11 +81,13 @@ int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int
   return ioCanOpenFileOfSizeWritable(pathString,pathStringLength,writeFlag);
 }
 int ioCanDeleteFileOfSize(char* pathString, int pathStringLength) {
+#pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
 
 int ioCanRenameFileOfSize(char* pathString, int pathStringLength) {
+#pragma unused(pathStringLength)
   if(allowFileAccess) return 1;
   return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
 }
@@ -194,17 +200,23 @@ int ioInitSecurity(void) {
 /***************************************************************************/
 /***************************************************************************/
 /* private entries for restoring rights */
+int _ioSetImageWrite(int enable);
+
 int _ioSetImageWrite(int enable) {
   if(enable == allowImageWrite) return 1;
   allowImageWrite = enable;
   return 1;
 }
 
+int _ioSetFileAccess(int enable);
+
 int _ioSetFileAccess(int enable) {
   if(enable == allowFileAccess) return 1;
   allowFileAccess = enable;
   return 1;
 }
+
+int _ioSetSocketAccess(int enable);
 
 int _ioSetSocketAccess(int enable) {
   if(enable == allowSocketAccess) return 1;

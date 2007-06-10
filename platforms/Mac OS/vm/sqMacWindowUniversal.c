@@ -87,13 +87,13 @@ int ioSetFullScreen(int fullScreen) {
 		if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;	
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
-            long *foo;
-            foo = malloc(sizeof(long)*4);
+            sqInt *foo;
+            foo = malloc(sizeof(sqInt)*4);
             foo[0] = 1;
-            foo[1] = (int) ioSetFullScreenActual;
+            foo[1] = (sqInt) ioSetFullScreenActual;
             foo[2] = fullScreen;
             foo[3] = 0;
-            ((int (*) (void *)) giLocker)(foo);
+            ((sqInt (*) (void *)) giLocker)(foo);
             return_value = interpreterProxy->positive32BitIntegerFor(foo[3]);
             free(foo);
         }
@@ -314,13 +314,13 @@ void sqShowWindow(int windowIndex) {
 		if (gSqueakHeadless && browserActiveAndDrawingContextOkAndNOTInFullScreenMode()) return;
         giLocker = interpreterProxy->ioLoadFunctionFrom("getUIToLock", "");
         if (giLocker != 0) {
-            long *foo;
-            foo = malloc(sizeof(long)*4);
+            sqInt *foo;
+            foo = malloc(sizeof(sqInt)*4);
             foo[0] = 1;
-            foo[1] = (int) sqShowWindowActual;
+            foo[1] = (sqInt) sqShowWindowActual;
             foo[2] = windowIndex;
             foo[3] = 0;
-            ((int (*) (void *)) giLocker)(foo);
+            ((sqInt (*) (void *)) giLocker)(foo);
             free(foo);
         }
 }
@@ -333,7 +333,7 @@ static void sqShowWindowActual(int windowIndex){
 }
 
 int ioShowDisplay(
-	int dispBitsIndex, int width, int height, int depth,
+	sqInt dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB) {
 	
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 1;
@@ -800,7 +800,7 @@ int ioScreenSize(void) {
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
 }
 
-int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
+int ioSetCursor(sqInt cursorBitsIndex, int offsetX, int offsetY) {
 	/* Old version; forward to new version. */
 	ioSetCursorWithMask(cursorBitsIndex, nil, offsetX, offsetY);
 	return 0;
@@ -808,7 +808,7 @@ int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY) {
 
 Cursor macCursor;
 
-int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, int offsetY) {
+int ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, int offsetX, int offsetY) {
 	/* Set the 16x16 cursor bitmap. If cursorMaskIndex is nil, then make the mask the same as
 	   the cursor bitmap. If not, then mask and cursor bits combined determine how cursor is
 	   displayed:
@@ -907,6 +907,7 @@ Boolean FindBestMatch (			VideoRequestRecPtr requestRecPtr,
 								unsigned long horizontal,
 								unsigned long vertical);
 
+int ioSetDisplayModeOLD(int width, int height, int depth, int fullscreenFlag);
 
 int ioSetDisplayModeOLD(int width, int height, int depth, int fullscreenFlag) {
 	/* Set the window to the given width, height, and color depth. Put the window
@@ -988,8 +989,9 @@ int ioSetDisplayModeOLD(int width, int height, int depth, int fullscreenFlag) {
 
 pascal void ModeListIterator(void *userData, DMListIndexType itemIndex, DMDisplayModeListEntryPtr displaymodeInfo)
 {
+#pragma unused(itemIndex)
 	unsigned long			depthCount;
-	short					iCount;
+	unsigned long			iCount;
 	ListIteratorDataRec		*myIterateData		= (ListIteratorDataRec*) userData;
 	DepthInfo				*myDepthInfo;
 	
@@ -1020,8 +1022,8 @@ void GetRequestTheDM2Way (	VideoRequestRecPtr requestRecPtr,
 							DMListIndexType theDisplayModeCount,
 							DMListType *theDisplayModeList)
 {
-	short					jCount;
-	short					kCount;
+	DMListIndexType			jCount;
+	DMListIndexType			kCount;
 	ListIteratorDataRec		searchData;
 
 	searchData.depthBlocks = nil;

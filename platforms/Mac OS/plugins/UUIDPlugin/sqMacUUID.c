@@ -18,8 +18,8 @@
 extern struct VirtualMachine *interpreterProxy;
 
 #include <CFUUID.h>
-int sqUUIDInit();
-int sqUUIDShutdown();
+int sqUUIDInit(void);
+int sqUUIDShutdown(void);
 
 int MakeUUID(sqUUID location) {
     CFUUIDRef theUUID;

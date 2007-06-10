@@ -25,17 +25,17 @@
 #include <sys/mman.h>
 #include <unistd.h>
 
-extern UInt32  gMaxHeapSize;
-static UInt32	gHeapSize;
+extern usqInt  gMaxHeapSize;
+static usqInt	gHeapSize;
 void *mmapWasAt;
 
 /* compute the desired memory allocation */
 
 extern unsigned char *memory;
 
-UInt32	sqGetAvailableMemory() {
+usqInt	sqGetAvailableMemory() {
 
-	long 	availableMemory;
+	sqInt 	availableMemory;
 	
 	availableMemory = gMaxHeapSize;
 
@@ -48,7 +48,7 @@ UInt32	sqGetAvailableMemory() {
 	return availableMemory;
 }
 
-usqInt sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
+usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize) {
     void * debug, *actually;
 	int	    pageSize = 0;
 	unsigned int pageMask = 0;
@@ -58,29 +58,31 @@ usqInt sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize) {
 	pageMask= ~(pageSize - 1);
     gHeapSize = gMaxHeapSize;
     debug = mmap( NULL, gMaxHeapSize+pageSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
+    //debug = mmap( /*2147483648U-512*1024*1024*/
+	//			3221225472U, gMaxHeapSize+pageSize , PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
 	
-    if((debug == MAP_FAILED) || (((long) debug) < 0))
+    if(debug == MAP_FAILED)
         return 0;
 	mmapWasAt = debug;
 	actually = debug+pageSize-1;
-	actually = (void*) (((unsigned int) actually) & pageMask);
+	actually = (void*) (((usqInt) actually) & pageMask);
 	
     return (usqInt) actually;
 }
 
-int sqGrowMemoryBy(int memoryLimit, int delta) {
-    if ((unsigned int) memoryLimit + (unsigned int) delta - (unsigned int) memory > gMaxHeapSize)
+sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta) {
+    if ((usqInt) memoryLimit + (usqInt) delta - (usqInt) memory > gMaxHeapSize)
         return memoryLimit;
    
     gHeapSize += delta;
     return memoryLimit + delta;
 }
 
-int sqShrinkMemoryBy(int memoryLimit, int delta) {
+sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta) {
     return sqGrowMemoryBy(memoryLimit,0-delta);
 }
 
-int sqMemoryExtraBytesLeft(Boolean flag) {
+sqInt sqMemoryExtraBytesLeft(Boolean flag) {
     if (flag) 
         return gMaxHeapSize - gHeapSize;
     else

@@ -25,7 +25,7 @@ void SetUpClipboard(void) {
 void FreeClipboard(void) {
 }
 
-int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
+sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 	long clipSize, charsToMove;
 	ScrapRef scrap;
 	OSStatus err;
@@ -42,7 +42,7 @@ int clipboardReadIntoAt(int count, int byteArrayIndex, int startIndex) {
 	return charsToMove;
 }
 
-int clipboardSize(void) {
+sqInt clipboardSize(void) {
 	long count;
 	ScrapRef scrap;
 	OSStatus err;
@@ -57,7 +57,7 @@ int clipboardSize(void) {
 	}
 }
 
-int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
+sqInt clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex) {
 	ScrapRef scrap;
 	OSErr err;
 	err = ClearCurrentScrap();

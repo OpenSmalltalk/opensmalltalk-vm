@@ -69,17 +69,17 @@
 
     #undef sqFilenameFromStringOpen
     #undef sqFilenameFromString
-void		sqFilenameFromStringOpen(char *buffer,long fileIndex, long fileLength);
-void		sqFilenameFromString(char *buffer,long fileIndex, long fileLength);
+void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
+void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 void        sqImageFileClose(sqImageFile f);
 sqImageFile sqImageFileOpen(char *fileName, char *mode);
 squeakFileOffsetType       sqImageFilePosition(sqImageFile f);
 size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
-int         sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
-squeakFileOffsetType       sqImageFileStartLocation(int fileRef, char *filename,squeakFileOffsetType imageSize);
+sqInt       sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
+squeakFileOffsetType       sqImageFileStartLocation(sqInt fileRef, char *filename,squeakFileOffsetType imageSize);
 
-usqInt	    sqAllocateMemoryMac(int minHeapSize, int *desiredHeapSize);
+usqInt	    sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize);
 
 #define sqAllocateMemory(x,y) sqAllocateMemoryMac(x,&y);
 
@@ -106,9 +106,9 @@ void CopyCStringToPascal(const char* src, Str255 dst);
 #undef sqShrinkMemoryBy
 #undef sqMemoryExtraBytesLeft
 
-int sqGrowMemoryBy(int memoryLimit, int delta);
-int sqShrinkMemoryBy(int memoryLimit, int delta);
-int sqMemoryExtraBytesLeft(Boolean flag);
+sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
+sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
+sqInt sqMemoryExtraBytesLeft(Boolean flag);
 
     #undef insufficientMemorySpecifiedError
     #undef insufficientMemoryAvailableError

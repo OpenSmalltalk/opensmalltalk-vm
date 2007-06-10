@@ -418,7 +418,7 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 	fn= dlsym(moduleHandle, buf);
 
   dprintf((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
-	   lookupName, moduleHandle));
+	   lookupName, (int) moduleHandle));
 
   if ((fn == 0) && (gSqueakDebug)
       && strcmp(lookupName, "initialiseModule")
@@ -457,7 +457,7 @@ sqInt ioFreeModule(void *moduleHandle)
 		why = dlerrorSqueak();
 	else
 		why = dlerror();
-      dprintf((stderr, "ioFreeModule(%d): %s\n", moduleHandle, why));
+      dprintf((stderr, "ioFreeModule(%d): %s\n", (int) moduleHandle, why));
       return 0;
     }
   return 1;
@@ -577,6 +577,7 @@ static void dlLinkEdit(NSLinkEditErrors errorClass, int errorNumber,
 		       const char *fileName, const char *errorString)
 
 {
+#pragma unused(errorClass,errorNumber,mode)
   fprintf(stderr, "dyld: %s: %s\n", fileName, errorString);
 }
 
@@ -597,6 +598,7 @@ static int dlInitialised= 0;
 
 static void *dlopenSqueak(const char *path, int mode)
 {
+#pragma unused(mode)
   void			*handle= 0;
   NSObjectFileImage	 ofi= 0;
 

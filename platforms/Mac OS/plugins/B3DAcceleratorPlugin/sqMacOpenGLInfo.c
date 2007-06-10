@@ -44,7 +44,7 @@ int verboseLevel = 3;
 #undef DPRINTF
 # define DPRINTF(vLevel, args) if(vLevel <= verboseLevel) {\
 	char fileName[DOCUMENT_NAME_SIZE+1]; \
-	sqFilenameFromStringOpen(fileName,(long) &"Squeak3D.log", strlen("Squeak3D.log")); \
+	sqFilenameFromStringOpen(fileName,(sqInt) &"Squeak3D.log", strlen("Squeak3D.log")); \
 	FILE *fp = fopen(fileName, "at");\
 	if(fp) { fprintf args; if(forceFlush) fflush(fp); fclose(fp); }}
 

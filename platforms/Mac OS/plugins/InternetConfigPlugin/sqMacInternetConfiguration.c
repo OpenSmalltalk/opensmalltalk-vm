@@ -16,7 +16,7 @@
 #include "sqMacFileLogic.h"
 #include "sqMacUIConstants.h"
 
-static OSType GetApplicationSignature();
+static OSType GetApplicationSignature(void);
 void convertPassword(unsigned char *buffer);
 							   
 static ICInstance gICInstance;
@@ -61,7 +61,7 @@ int sqInternetConfigurationGetStringKeyedBykeySizeinto(char *aKey,int keyLength,
     
     if (!gInitializedOk) 
         return 0;
-   if (keyLength+1 > sizeof(convertedKey))
+   if (keyLength+1 > (int) sizeof(convertedKey))
         return 0;
    
     strncpy(convertedKey,aKey,keyLength);
@@ -126,7 +126,7 @@ void sqInternetGetMacintoshFileTypeAndCreatorFromkeySizeinto(char * aFileName, i
     if (!gInitializedOk)
         goto abort;
 
-    if (keyLength+1 > sizeof(convertedKey))
+    if (keyLength+1 > (int) sizeof(convertedKey))
         goto abort;
    
     strncpy(convertedKey,aFileName,keyLength);

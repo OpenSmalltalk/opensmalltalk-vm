@@ -413,6 +413,7 @@ void SetUpCarbonEventForWindowIndex(int index) {
 }
 
 static int   doPreMessageHook(EventRef event) {
+#pragma unused(event)
    /* jmm rethink, breaks not thread safe
     if (messageHook) {
         EventRecord theOldEventType;
@@ -458,6 +459,7 @@ static void   postFullScreenUpdate() {
 static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
     EventRef event, void* userData)
 {
+#pragma unused(myHandlerChain,userData)
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
     extern Boolean gSqueakWindowIsFloating;
@@ -500,6 +502,7 @@ static pascal OSStatus MyAppEventHandler (EventHandlerCallRef myHandlerChain,
 static pascal OSStatus MyAppEventCmdHandler (EventHandlerCallRef myHandlerChain,
 EventRef event, void* userData)
 {
+#pragma unused(myHandlerChain,userData)
     UInt32 whatHappened;
     HICommand commandStruct;    
     OSStatus result = eventNotHandledErr; /* report failure by default */
@@ -543,6 +546,7 @@ EventRef event, void* userData)
 static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
+#pragma unused(myHandler,userData)
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
     extern Boolean gSqueakWindowIsFloating;
@@ -569,7 +573,6 @@ static pascal OSStatus MyWindowEventHandler(EventHandlerCallRef myHandler,
             GetEventParameter (event, kEventParamMouseLocation, typeQDPoint,NULL,
                     sizeof(Point), NULL, &savedMousePosition);
 			if (windowIndexFromHandle((wHandleType)window)) {
-#warning foocheck
 				QDGlobalToLocalPoint(GetWindowPort((wHandleType)window),&savedMousePosition);
 			}
             windowActive = 0;
@@ -635,6 +638,7 @@ int amIOSX102X() {
 static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
+#pragma unused(myHandler,userData)
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
 	OSStatus crosscheckForErrors;
@@ -760,6 +764,7 @@ static pascal OSStatus MyWindowEventMouseHandler(EventHandlerCallRef myHandler,
 static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
+#pragma unused(myHandler,userData)
     UInt32 whatHappened,keyCode;
 	SInt32 key;
     OSStatus result = eventNotHandledErr; /* report failure by default */
@@ -811,12 +816,14 @@ static pascal OSStatus MyWindowEventKBHandler(EventHandlerCallRef myHandler,
 static pascal OSStatus MyAppleEventEventHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
+#pragma unused(myHandler,userData,event)
     return eventNotHandledErr;
 }
 
 static pascal OSStatus MyTextInputEventHandler(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
+#pragma unused(myHandler,userData)
     UInt32 whatHappened;
     OSStatus result = eventNotHandledErr; /* report failure by default */
     
@@ -1163,7 +1170,7 @@ But mapping assumes 1,2,3  red, yellow, blue
                                 NULL,
                                 &mouseButton); 
 							
-	dprintf((stderr,"VM: MouseModifierStateCarbon buttonStateBits %i modifiers %ui\n ",mouseButton,keyBoardModifiers));
+	dprintf((stderr,"VM: MouseModifierStateCarbon buttonStateBits %i modifiers %ui\n ",mouseButton,(unsigned int) keyBoardModifiers));
  
 		         if (mouseButton > 0 && mouseButton < 4) {
           /* OLD original carbon code 
@@ -1290,7 +1297,7 @@ int ioProcessEvents(void) {
 	return 0;
 }
 
-int getUIToLock(long *data) {
+int getUIToLock(sqInt *data) {
 	customHandleForUILocks(NULL,NULL,(void*) data);
 	return 0;
 }
@@ -1298,7 +1305,8 @@ int getUIToLock(long *data) {
 static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
             EventRef event, void* userData)
 {
-    long *data;
+#pragma unused(myHandler,event)
+    sqInt *data;
     long numberOfParms;
         
          
@@ -1307,19 +1315,19 @@ static pascal OSStatus customHandleForUILocks(EventHandlerCallRef myHandler,
     numberOfParms = data[0];
     
     if (0 == numberOfParms)
-        data[2] = ((int (*) (void)) data[1]) ();
+        data[2] = ((sqInt (*) (void)) data[1]) ();
     if (1 == numberOfParms)
-        data[3] = ((int (*) (long)) data[1]) (data[2]);
+        data[3] = ((sqInt (*) (sqInt)) data[1]) (data[2]);
     if (2 == numberOfParms)
-        data[4] = ((int (*) (long,long)) data[1]) (data[2],data[3]);
+        data[4] = ((sqInt (*) (sqInt,sqInt)) data[1]) (data[2],data[3]);
     if (3 == numberOfParms)
-        data[5] = ((int (*) (long,long,long)) data[1]) (data[2],data[3],data[4]);
+        data[5] = ((sqInt (*) (sqInt,sqInt,sqInt)) data[1]) (data[2],data[3],data[4]);
     if (4 == numberOfParms)
-        data[6] = ((int (*) (long,long,long,long)) data[1]) (data[2],data[3],data[4],data[5]);
+        data[6] = ((sqInt (*) (sqInt,sqInt,sqInt,sqInt)) data[1]) (data[2],data[3],data[4],data[5]);
     if (5 == numberOfParms)
-        data[7] = ((int (*) (long,long,long,long,long)) data[1]) (data[2],data[3],data[4],data[5],data[6]);
+        data[7] = ((sqInt (*) (sqInt,sqInt,sqInt,sqInt,sqInt)) data[1]) (data[2],data[3],data[4],data[5],data[6]);
     if (6 == numberOfParms)
-        data[8] = ((int (*) (long,long,long,long,long,long)) data[1]) (data[2],data[3],data[4],data[5],data[6], data[7]);
+        data[8] = ((sqInt (*) (sqInt,sqInt,sqInt,sqInt,sqInt,sqInt)) data[1]) (data[2],data[3],data[4],data[5],data[6], data[7]);
 
     return noErr;
 }
@@ -1337,6 +1345,7 @@ static pascal OSStatus EventLoopEventHandler(EventHandlerCallRef inHandlerCallRe
     // as per "Inside Macintosh: Handling Carbon Events", Listing 3-10,
 {
         // Run our event loop until quitNow is set.
+#pragma unused(inHandlerCallRef,inEvent,inUserData)
 	SetUpCarbonEvent();
 	interpret(); //Note the application under carbon event mgr starts running here
 	return 0;

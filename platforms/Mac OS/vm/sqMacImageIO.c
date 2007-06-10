@@ -32,7 +32,7 @@ int vmPathSize(void) {
 	return strlen(path);
 }
 
-int vmPathGetLength(int sqVMPathIndex, int length) {
+int vmPathGetLength(sqInt sqVMPathIndex, int length) {
 	char *stVMPath = (char *) sqVMPathIndex;
 	int count, i;
         char path[VMPATH_SIZE + 1];
@@ -57,7 +57,7 @@ int imageNameSize(void) {
     return strlen(path);
 }
 
-int imageNameGetLength(int sqImageNameIndex, int length) {
+int imageNameGetLength(sqInt sqImageNameIndex, int length) {
 	char *sqImageName = (char *) sqImageNameIndex;
 	int count, i;
         char path[IMAGE_NAME_SIZE+1];
@@ -73,7 +73,7 @@ int imageNameGetLength(int sqImageNameIndex, int length) {
 	return count;
 }
 
-int imageNamePutLength(int sqImageNameIndex, int length) {
+int imageNamePutLength(sqInt sqImageNameIndex, int length) {
 	char *sqImageName = (char *) sqImageNameIndex;
 	int count, i, ch, j;
 	int lastColonIndex = -1;
@@ -125,7 +125,7 @@ sqImageFile sqImageFileOpen(char *fileName, char *mode) {
     char cFileName[DOCUMENT_NAME_SIZE+1];
     sqImageFile remember;
     
-    sqFilenameFromStringOpen(cFileName,(long) fileName, strlen(fileName));
+    sqFilenameFromStringOpen(cFileName,(sqInt) fileName, strlen(fileName));
     remember = fopen(cFileName, mode);
     if (remember == null) 
         return null;
@@ -150,13 +150,14 @@ void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos) {
       fseeko(f, pos, SEEK_SET);
 }
 
-int sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
+sqInt sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f) {
     if (f != 0)
       return fwrite(ptr,elementSize,count,f);
 	return 0;
 }
 
-squeakFileOffsetType sqImageFileStartLocation(int fileRef, char *filename, squeakFileOffsetType imageSize){
+squeakFileOffsetType sqImageFileStartLocation(sqInt fileRef, char *filename, squeakFileOffsetType imageSize){
+#pragma unused(fileRef,filename,imageSize)
     return 0;
 }
 

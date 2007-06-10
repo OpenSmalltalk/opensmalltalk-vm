@@ -196,7 +196,7 @@ char *dropRequestFileName(int dropIndex) {
 //Primitive to get file stream handle.
 
 int dropRequestFileHandle(int dropIndex) {
-    int  fileOop;
+    sqInt  fileOop;
 	void *fn;
     char *dropName = dropRequestFileName(dropIndex);
 
@@ -209,7 +209,7 @@ int dropRequestFileHandle(int dropIndex) {
         interpreterProxy->success(false);
 		return null;
 	}
-	fileOop = ((int (*) (int, int, int, int)) fn)((int)dropName, strlen(dropName), 0,0);
+	fileOop = ((sqInt (*) (int, int, int, int)) fn)((int)dropName, strlen(dropName), 0,0);
     
   return fileOop;
 }
@@ -427,7 +427,7 @@ pascal OSErr MyDragReceiveHandler(WindowPtr theWindow, void *refcon, DragReferen
 	if (gNumDropFiles !=0 ) 
 	    DisposePtr((char *) dropFiles);
 	    
-	if ((err = CountDragItems(theDragRef, &gNumDropFiles)) != noErr) 
+	if ((err = CountDragItems(theDragRef, (UInt16 *) &gNumDropFiles)) != noErr) 
 	    return paramErr;
 	
 	dropFiles = (HFSFlavorSqueak *) NewPtr(sizeof(HFSFlavorSqueak)*gNumDropFiles);

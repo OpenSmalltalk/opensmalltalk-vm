@@ -586,6 +586,7 @@ long HIDSetQueueCallback (pRecDevice pDevice, IOHIDCallbackFunction callback)
 #if 1
 // ---------------------------------
 // Get a report from a device
+long HIDGetReport (pRecDevice pDevice,const IOHIDReportType reportType, const UInt32 reportID, void* reportBuffer, UInt32* reportBufferSize);
 long HIDGetReport (pRecDevice pDevice,const IOHIDReportType reportType, const UInt32 reportID, void* reportBuffer, UInt32* reportBufferSize)
 {
     IOReturn result = kIOReturnError;	// assume failure (pessimist!)
@@ -609,6 +610,7 @@ long HIDGetReport (pRecDevice pDevice,const IOHIDReportType reportType, const UI
 
 // ---------------------------------
 // Send a report to a device
+long HIDSetReport (pRecDevice pDevice,const IOHIDReportType reportType, const UInt32 reportID, void* reportBuffer, const UInt32 reportBufferSize);
 long HIDSetReport (pRecDevice pDevice,const IOHIDReportType reportType, const UInt32 reportID, void* reportBuffer, const UInt32 reportBufferSize)
 {
     IOReturn result = kIOReturnError;	// assume failure (pessimist!)

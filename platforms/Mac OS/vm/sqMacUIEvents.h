@@ -34,7 +34,7 @@ int checkForModifierKeys();
 void ignoreLastEvent();
 void DoZoomWindow (EventRecord* theEvent, WindowPtr theWindow, short zoomDir, short hMax, short vMax);
 void SetupKeyboard(void);    
-int getUIToLock(long *);
+int getUIToLock(sqInt *);
 void SetUpCarbonEvent();
 void SetUpCarbonEventForWindowIndex(int index);
 void RunApplicationEventLoopWithSqueak(void);
