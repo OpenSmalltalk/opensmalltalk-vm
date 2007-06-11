@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-04-06 09:47:39 by piumarta on emilia.local
+ * Last edited: 2007-06-10 19:16:03 by piumarta on vps2.piumarta.com
  */
 
 /* Systematic use of the macros defined in this file within the
@@ -163,8 +163,9 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _swapper;
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the image. */
 
-static void inline flag(char *ignored) {
-#pragma unused(ignored)
+static void inline flag(char *ignored)
+{
+  (void)ignored;
 }
 
 
