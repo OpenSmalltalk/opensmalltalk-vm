@@ -1,3 +1,8 @@
+2007-06-07  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/SocketPlugin/sqUnixSocket.c: Implemented IPv6
+	primitives.
+
 2007-03-25  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/MIDIPlugin/Makefile.inc (XLDFLAGS): MIDIPlugin.so

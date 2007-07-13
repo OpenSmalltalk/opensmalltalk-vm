@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-10-18 10:05:29 by piumarta on emilia.local
+ * Last edited: 2007-05-07 14:29:20 by piumarta on emilia
  */
 
 #include "sq.h"
@@ -1222,6 +1222,7 @@ void imgInit(void)
 	  dpy->winImageNotFound();
 	  imageNotFound(shortImageName);
 	}
+#    if 0
       {
 	int fd= open(imageName, O_RDONLY);
 	if (fd < 0) abort();
@@ -1229,6 +1230,7 @@ void imgInit(void)
 	printf("fstat(%d) => %d\n", fd, fstat(fd, &sb));
 #      endif
       }
+#    endif
       recordFullPathForImageName(shortImageName); /* full image path */
       if (extraMemory)
 	useMmap= 0;
