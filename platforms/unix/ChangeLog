@@ -1,4 +1,13 @@
+2007-07-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/configure.ac: Version is 3.9-12.
+
+	* src: Negative oop comparison patches from Dave Lewis
+	incorporated.
+
 2007-06-07  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/configure.ac: Version is 3.9-11.
 
 	* plugins/SocketPlugin/sqUnixSocket.c: Implemented IPv6
 	primitives.
