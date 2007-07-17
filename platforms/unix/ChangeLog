@@ -1,3 +1,7 @@
+2007-07-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/LocalePlugin/sqUnixLocale.c: Added.
+
 2007-07-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/configure.ac: Version is 3.9-12.
