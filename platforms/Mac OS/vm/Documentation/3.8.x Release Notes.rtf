@@ -1,6 +1,6 @@
 {\rtf1\mac\ansicpg10000\cocoartf824\cocoasubrtf420
-{\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fnil\fcharset77 LucidaGrande;\f2\fnil\fcharset77 Monaco;
-\f3\fswiss\fcharset77 Helvetica;}
+{\fonttbl\f0\fnil\fcharset77 Geneva;\f1\fswiss\fcharset77 Helvetica;\f2\fnil\fcharset77 Monaco;
+\f3\fnil\fcharset77 LucidaGrande;}
 {\colortbl;\red255\green255\blue255;\red35\green110\blue37;\red137\green19\blue21;\red0\green0\blue255;
 \red26\green26\blue255;}
 \margl1440\margr1440\vieww15540\viewh15540\viewkind0
@@ -43,13 +43,25 @@ Apr 27th, 2007 (3.8.17b4)\
 May 1st, 2007 (3.8.17b5)\
 May 16st, 2007 (3.8.17b6)\
 Jun 9th, 2007 (3.8.18b1)\
+Aug 17th, 2007 (3.8.18b2)\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 \cf0 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
-3.8.18b1		Thanks to work by David T Lewis we have an interp.c which is more rational when dealing with  oops addresses \
+3.8.18b2		The Sophie team noticed that\
+			 
+\f1 InternetConfiguration getMacintoshFileTypeAndCreatorFrom: 'test.jpg'\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+\cf0 			This returns byte reversed data on macintel #('GEPJ' 'elgo')\
+\
+			sqMacInternetConfiguration.c  use 
+\f2\fs20 \CocoaLigature0 CFSwapInt32BigToHost 
+\f0\fs24 \CocoaLigature1 swap OSType\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 3.8.18b1		Thanks to work by David T Lewis we have an interp.c which is more rational when dealing with  oops addresses \
 			As part of this work I changed a large number of support files to use sqInt/usqInt versus integer, and did warning \
 			msg cleanup work, plus dropped Exupery support until Exupery is more stable and someone wants to work on macintel \
 			port. \
@@ -98,7 +110,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 									get updated. \
 \
 3.8.17b4 	
-\f1 NSCursorWrappers.m  		Ensure color works on powerpc, and macintel. Also then for 10.2 signal failure and 									code then uses small cursor logic\
+\f3 NSCursorWrappers.m  		Ensure color works on powerpc, and macintel. Also then for 10.2 signal failure and 									code then uses small cursor logic\
 			
 \f0 sqMacUnixFileInterface.c	
 \f2\fs20 \cf2 \CocoaLigature0 Tetsuya HAYASHI, {\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt \ul \ulc2 tetha@st.rim.or.jp}}, {\field{\*\fldinst{HYPERLINK "mailto:tetha@mac.com"}}{\fldrslt \ul \ulc2 tetha@mac.com}}\
@@ -109,7 +121,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \f0\fs24 \cf0 \CocoaLigature1 \
 3.8.17b3		Oops no-one check large cursors on powerpc. \
 			
-\f1 NSCursorWrappers.m		Ensure works on powerpc, also confirm does not work on 10.2.x (not supported)
+\f3 NSCursorWrappers.m		Ensure works on powerpc, also confirm does not work on 10.2.x (not supported)
 \f0 \
 \
 3.8.17b2		bug fix cursor tracking was not correct, used local coordinates, needed global. \
@@ -120,7 +132,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 			sqMacWIndowUniversal.c	small cursor logic has to set flag that it's not large cursor so reset cursor knows which\
 					 				cursor to use\
 			
-\f1 NSCursorWrappers.m		new\
+\f3 NSCursorWrappers.m		new\
 			NSCursorWrappers.h		new\
 
 \f0 \
@@ -362,7 +374,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 				doing the get/setPort and GetMousePoint() 1984 logic.  Add the checkBrowserForHeartBeat \
 				logic which checks every 6.66 seconds if the parent process (the browser) is running, if not then \
 				we ask the VM to quit. This suggestion by 
-\f3 Juergen Gmeiner ensures the VM does not become an\
+\f1 Juergen Gmeiner ensures the VM does not become an\
 				orphaned process if the browser crashes.
 \f0 \
 \
@@ -442,13 +454,13 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 		cause a read failure. \
 3.8.13.b2\
 		
-\f3 Exupery support, via plugin and changes in the VM for Mac Intel, use merged VMMaker-Exupery change set\
+\f1 Exupery support, via plugin and changes in the VM for Mac Intel, use merged VMMaker-Exupery change set\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
 \f0 \cf0 \
 3.8.13.b1\
 		
-\f3 Exupery support, via plugin and changes in the VM for Mac Intel. \
+\f1 Exupery support, via plugin and changes in the VM for Mac Intel. \
 		http://minnow.cc.gatech.edu/squeak/5672
 \f0 \
 \
@@ -860,7 +872,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 \pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
 
-\f3 \cf0 		sqMacEventUniversal.c\
+\f1 \cf0 		sqMacEventUniversal.c\
 			removal of power managment\
 			removal of USB logic which was originally for Jeff Raskin\
 			removal of 1984 event loop\
@@ -884,7 +896,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
 
-\f1 \cf0 		sqMacUIMenuBarUniversal.c\
+\f3 \cf0 		sqMacUIMenuBarUniversal.c\
 			remove hide/show menu bar logic\
 		\
 		sqMacOpenGL.c\
@@ -1026,10 +1038,10 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 									which could be:  (partial, tilda based, or full)\
 									foobar.toobar\
 									
-\f3 ~/Documents/Squeak/foobar.thing\
+\f1 ~/Documents/Squeak/foobar.thing\
 
 \f0 									
-\f3 /HardDisk/User/Foo/Documents/Squeak/foobar.thing\
+\f1 /HardDisk/User/Foo/Documents/Squeak/foobar.thing\
 \
 
 \f0 				sqMacTime.c			use #define for MillisecondClockMask\
@@ -1146,7 +1158,7 @@ d\
 \
 3.8.8b2			Revisions to the 32/64bit memory access to improve VM performance\
 				
-\f1 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
+\f3 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
 				
 \f0 sqMacJoystickAndTablet.c	More rewrites by Bert.\
 				sqPlatformSpecific.h		Add undefs for dispatchFunctionPointer, dispatchFunctionPointerOnin\
@@ -1195,7 +1207,7 @@ d\
 3.8.7b1			sqUIEvents.c changed keyUp/keyDown logic to match Windows pattern, key repeat becomes keyDown/keyDown/keyUp\
 \
 3.8.6b6			
-\f1 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
+\f3 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
 				sqMacEncoding.c, sqMacEncoding.h  Minor changes so I can compile user code warrior os-9 again\
 				sqMacUnixInterfaceSound.c  Fix problem with empty buffer being full of junk under certain conditions, that causes a sharp sound  bite. \
 
@@ -1206,7 +1218,7 @@ d\
 3.8.6b4			Ensure VMMaker 3.8b2 - the VM code classes and tools for building a working vm for Squeak version  > 3.8-6461. is incorporated.\
 				Add Andreas's GC improvement changes for \
 				
-\f3 * primitiveIsYoung: This answers the question whether an object currently lives in young or in old space.\
+\f1 * primitiveIsYoung: This answers the question whether an object currently lives in young or in old space.\
 \
 				* primitiveIsRoot: Answers the question whether any given object is currently a root for young space.\
 \
@@ -1350,17 +1362,17 @@ interp.c			New VMMaker code update, major change is to use dispatchFunctionPoint
 \
 sqMacDirectory.c	Change dir_Lookup  // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements\
 				Per request from 
-\f3 Tetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}>\
+\f1 Tetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}>\
 \
 sqMacEncoding.c	Alter SetVMPath() 
 \f0 per request from 
-\f3 Tetsuya HAYASHI , \
+\f1 Tetsuya HAYASHI , \
 				add support for 
 \f2\fs20 \CocoaLigature0       \
 				\cf3 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f3\fs24 \cf0 \CocoaLigature1 \
+\f1\fs24 \cf0 \CocoaLigature1 \
 sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 				Alter PathToFile(), get kCFStringNormalizationFormKC path name\
 				Alter QuicklyMakePath() get kCFStringNormalizationFormKC path name\
@@ -1369,7 +1381,7 @@ sqMacFileLogic.c	Alter makeFSSpec(), get  kCFStringNormalizationFormD path name\
 \f0 \
 				Alter resolveLongName, get kCFStringNormalizationFormKC path name\
 				Alter FSMakeFSSpecCompat(), call 
-\f3 unicode2NativePascalString to normalize path name
+\f1 unicode2NativePascalString to normalize path name
 \f0 \
 \
 sqMacMemory.c	Allow browser plugin to allocate 512MB of VM space for image under os-x. \
@@ -1399,7 +1411,7 @@ JPEG READER WRITER\
 3.7.1b1\
 				Use of "-fast" apple gcc 3.3 compiler option, improves sends by significant %\
 				
-\f3 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
+\f1 On EventKeyUp/EventKeyDown you get the UniCode On EventKeyChar you get the UniCode->MacRoman translated character.\
 				Broke high bit ascii macroman in 3.7.0bx.\
 				For multi-byte character input you get EventKeyDown/EventKeyChar/EventKeyUp for each unicode character coming from the input sequence.\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
@@ -1408,7 +1420,7 @@ JPEG READER WRITER\
 3.7.0b2		\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f3 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
+\f1 \cf0 				a) You can alter the application's Info.plist by setting the SqueakEncodingType using the ICANA readable names\
 \
 				macintosh	- >macRoman	\
 				UTF-8		-> UTF-8\
@@ -1422,7 +1434,7 @@ JPEG READER WRITER\
 3.7.0b1 			\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f3 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
+\f1 \cf0 				 Changes for the "m17n" package fromTetsuya HAYASHI <{\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt tetha@st.rim.or.jp}}> so one can type Kanji characters.\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
@@ -1507,7 +1519,7 @@ sqMacWindows.c			- watch out for memory leak when we free the color table. \
 a)Added options SqueakWindowType & SqueakWIndowAttributes to info.plist. The SqueakWindowType of 6 is the standard document window, a type of 8 is the floating utility window. The attributes control with window attributes and behavior according to\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f3 \cf5 \ul \ulc5 http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_2.html#//apple_ref/c/tdef/WindowAttributes\
+\f1 \cf5 \ul \ulc5 http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_2.html#//apple_ref/c/tdef/WindowAttributes\
 &\cf0 \ulnone \
 \cf5 \ul http://developer.apple.com/techpubs/macosx/Carbon/HumanInterfaceToolbox/WindowManager/Window_Manager/wind_mgr_ref/constant_1.html#//apple_ref/doc/c_ref/WindowClass\cf0 \ulnone \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
@@ -1599,11 +1611,11 @@ a) recompiled os-x version, 3.2.8b8 seem to have a bad compiler option and gave 
  \
 3.2.8b8\
 a) exposed 
-\f3 vmParameter
+\f1 vmParameter
 \f0  24 & 25 which control how memory is allocated/freed \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f3 \cf0 Smalltalk vmParameterAt: 24 put: 48*1024*1024.\
+\f1 \cf0 Smalltalk vmParameterAt: 24 put: 48*1024*1024.\
 Smalltalk vmParameterAt: 25 put: 24*1024*1024.\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
@@ -1659,7 +1671,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f1 mpeg3Plugin.bundle.\
+\f3 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
@@ -1703,7 +1715,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f1 mpeg3Plugin.bundle.\
+\f3 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
@@ -1714,7 +1726,7 @@ Beware this version of the VM is significantly different inside! \
 \
 \pard\tx1440\tx2880\tx4320\tx5760\tx7200\ql\qnatural
 
-\f3 \cf0 a) Broke sqMacWindow.c into 10 different files by function type.\
+\f1 \cf0 a) Broke sqMacWindow.c into 10 different files by function type.\
 \
 b) Moved most of the memory allocation logic out of sqMacMain.c into sqMacMemory.c. and ensure memory is freed when Squeak is terminated. \
 The major change in this code is support for OS 9.x virtual memory mapping. This only applies to Mac OS 9.2.0 or higher, excluding os-x. It appears  Mac OS 9.1 has a bug that prevents this feature from working.\
