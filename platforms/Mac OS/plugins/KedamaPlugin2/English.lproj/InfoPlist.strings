@@ -1,0 +1,6 @@
+/* Localized versions of Info.plist keys */
+
+CFBundleName = "KedamaPlugin2";
+CFBundleShortVersionString = "KedamaPlugin2 version 1.0.0";
+CFBundleGetInfoString = "KedamaPlugin2 version 1.0.0";
+NSHumanReadableCopyright = "http://www.squeak.org";
