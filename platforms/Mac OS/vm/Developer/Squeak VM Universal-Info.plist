@@ -348,7 +348,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak VM Opt</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 3.8.18b1 http://www.squeak.org </string>
+	<string>Squeak VM 3.8.18b2 http://www.squeak.org </string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -360,11 +360,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak VM 3.8.18b1</string>
+	<string>Squeak VM 3.8.18b2</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>3.8.18b1</string>
+	<string>3.8.18b2</string>
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>LSBackgroundOnly</key>

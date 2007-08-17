@@ -7,6 +7,7 @@
     Nov 24th 2001 JMM fixed broken tempSpec code, was causing memory exception under os-x
     3.7.0bx Nov 24th, 2003 JMM gCurrentVMEncoding
     
+	3.8.18b2  fix broken endian code in sqInternetGetMacintoshFileTypeAndCreatorFromkeySizeinto
     */
 
 
@@ -137,8 +138,9 @@ void sqInternetGetMacintoshFileTypeAndCreatorFromkeySizeinto(char * aFileName, i
     if (error != noErr)             
         goto abort;
 
-    strncpy(creator,(char *) &mapEntry.fileType,4);
-    strncpy(creator+4,(char *) &mapEntry.fileCreator,4);
+	*((int *) creator) = CFSwapInt32BigToHost(mapEntry.fileType);
+	*((int *) (creator+4)) = CFSwapInt32BigToHost(mapEntry.fileCreator);
+
     return;
 
     abort:
