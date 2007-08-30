@@ -107,16 +107,37 @@ In addition to the above the ini file can contain the following entries in the [
     with .image. In addition, the name can be either given in relative 
     or absolute form. If the name is relative (e.g., does not start with 
     a drive letter) then it is assumed to be relative to the VM directory.
+</ul>
+
+Custom short cuts:
+<ul>
     <li> <b>EnableF2Menu</b>: This entry allows you to determine whether 
     the preference menu should be shown when pressing F2. The default 
     is 1 (true).
     <li> <b>EnableAltF4Quit</b>: This entry allows you to specify whether 
     Alt-F4 (and the windows close button) should be honored or not. 
     The default is 1 (true).
+</ul>
+
+Quit menu:
+<ul>
     <li> <b>QuitDialogMessage</b>: This entry allows you to specify what 
     message to display upon the Alt-F4 quit dialog.
     <li> <b>QuitDialogLabel</b>: This entry allows you to specify what 
     label to display upon the Alt-F4 quit dialog. 
+</ul>
+
+Splash screen settings:
+<ul>
+    <li> <b>SplashScreen</b>: The file name for the initial splash screen
+    (the default is to use splash.bmp).
+    <li> <b>SplashTitle</b>: The title to use for the splash screen window
+    (this is the title you see in the Windows task bar). Should usually be
+    the same that is provided via WindowTitle.
+    <li> <b>SplashTime</b>: The minimum amount of time to display the splash
+    screen. If the system starts faster than the amount provided here,
+    it will wait until at least the minimum amount of time has passed.
+    The value is provided in milliseconds.
 </ul>
 
 
@@ -167,6 +188,15 @@ And this is an example to customize the Alt-F4 quit dialog accordingly:<p>
      QuitDialogLabel="The Towers of Hanoi"
 </pre>
 
+The following shows the use of a custom splash screen for the towers of hanoi
+for at least two seconds:<p>
+
+<pre>
+     [Global]
+     SplashScreen="towers.bmp"
+     SplashTitle="The Towers of Hanoi"
+     SplashTime=2000
+</pre>
 
 </body>
 </html>
