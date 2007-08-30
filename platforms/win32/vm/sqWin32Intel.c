@@ -21,14 +21,13 @@
 #include "sq.h"
 #include "sqWin32Args.h"
 
-/*** Variables -- Imported from Virtual Machine ***/
-extern int fullScreenFlag;
-
 /*** Crash debug -- Imported from Virtual Machine ***/
+int getFullScreenFlag(void);
 int methodPrimitiveIndex(void);
 int getCurrentBytecode(void);
 int printCallStack(void);
 
+extern TCHAR squeakIniName[];
 
 /* Import from sqWin32Alloc.c */
 LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
@@ -315,6 +314,345 @@ char *GetImageOption(int id)
     return NULL;
 }
 
+typedef struct _OSVERSIONINFOEX {
+  DWORD dwOSVersionInfoSize;
+  DWORD dwMajorVersion;
+  DWORD dwMinorVersion;
+  DWORD dwBuildNumber;
+  DWORD dwPlatformId;
+  TCHAR szCSDVersion[128];
+  WORD wServicePackMajor;
+  WORD wServicePackMinor;
+  WORD wSuiteMask;
+  BYTE wProductType;
+  BYTE wReserved;
+} OSVERSIONINFOEX;
+
+typedef struct _DISPLAY_DEVICE {
+  DWORD cb;
+  TCHAR DeviceName[32];
+  TCHAR DeviceString[128];
+  DWORD StateFlags;
+  TCHAR DeviceID[128];
+  TCHAR DeviceKey[128];
+} DISPLAY_DEVICE, *PDISPLAY_DEVICE;
+
+typedef BOOL (CALLBACK *pfnEnumDisplayDevices)(
+  LPCTSTR lpDevice,                // device name
+  DWORD iDevNum,                   // display device
+  PDISPLAY_DEVICE lpDisplayDevice, // device information
+  DWORD dwFlags                    // reserved
+);
+char *osInfoString = "";
+char *hwInfoString = "";
+char *gdInfoString = "";
+
+void gatherSystemInfo(void) {
+  OSVERSIONINFOEX osInfo;
+  MEMORYSTATUS memStat;
+  SYSTEM_INFO sysInfo;
+  DISPLAY_DEVICE gDev;
+  int proc, screenX, screenY;
+  char tmpString[2048];
+
+  char keyName[256];
+  DWORD ok, dwSize;
+  HKEY hk;
+
+  /* Retrieve version info for crash logs */
+  ZeroMemory(&osInfo, sizeof(osInfo));
+  osInfo.dwOSVersionInfoSize = sizeof(osInfo);
+  GetVersionEx((OSVERSIONINFO*)&osInfo);
+  GetSystemInfo(&sysInfo);
+
+  ZeroMemory(&memStat, sizeof(memStat));
+  memStat.dwLength = sizeof(memStat);
+  GlobalMemoryStatus(&memStat);
+
+  screenX = GetSystemMetrics(SM_CXSCREEN);
+  screenY = GetSystemMetrics(SM_CYSCREEN);
+
+
+  {
+    HANDLE hUser = LoadLibrary( "user32.dll" );
+    pfnEnumDisplayDevices pEnumDisplayDevices = (pfnEnumDisplayDevices)
+      GetProcAddress(hUser, "EnumDisplayDevicesA");
+    ZeroMemory(&gDev, sizeof(gDev));
+    gDev.cb = sizeof(gDev);
+    if(pEnumDisplayDevices) pEnumDisplayDevices(NULL, 0, &gDev, 0);
+  }
+
+  { /* Figure out make and model from OEMINFO.ini */
+    char iniName[256];
+    char manufacturer[256];
+    char model[256];
+
+    GetSystemDirectory(iniName, 256);
+    strcat(iniName,"\\OEMINFO.INI");
+
+    GetPrivateProfileString("General", "Manufacturer", "Unknown", 
+			    manufacturer, 256, iniName);
+
+    GetPrivateProfileString("General", "Model", "Unknown", 
+			    model, 256, iniName);
+
+    sprintf(tmpString, 
+	    "Hardware information: \n"
+	    "\tManufacturer: %s\n"
+	    "\tModel: %s\n"
+	    "\tNumber of processors: %d\n"
+	    "\tPage size: %d\n"
+	    "\nMemory Information (upon launch):\n"
+	    "\tPhysical Memory Size: %d kbytes\n"
+	    "\tPhysical Memory Free: %d kbytes\n"
+	    "\tPage File Size: %d kbytes\n"
+	    "\tPage File Free: %d kbytes\n"
+	    "\tVirtual Memory Size: %d kbytes\n"
+	    "\tVirtual Memory Free: %d kbytes\n"
+	    "\tMemory Load: %d percent\n",
+	    manufacturer, model,
+	    sysInfo.dwNumberOfProcessors,
+	    sysInfo.dwPageSize,
+	    memStat.dwTotalPhys / 1024,
+	    memStat.dwAvailPhys / 1024,
+	    memStat.dwTotalPageFile / 1024,
+	    memStat.dwAvailPageFile / 1024,
+	    memStat.dwTotalVirtual / 1024,
+	    memStat.dwAvailVirtual / 1024,
+	    memStat.dwMemoryLoad,
+	    0);
+  }
+
+  /* find more information about each processor */
+  for(proc=0; proc < sysInfo.dwNumberOfProcessors; proc++) {
+
+    char *tmp = tmpString + strlen(tmpString);
+
+    strcpy(keyName, "HARDWARE\\DESCRIPTION\\System\\CentralProcessor\\0");
+    keyName[strlen(keyName)-1] = 48+proc; /* 0, 1, 2 etc. */
+
+    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if(ok == 0) {
+      char nameString[256];
+      char identifier[256];
+      DWORD mhz;
+
+      dwSize = 256;
+      ok = RegQueryValueEx(hk, "ProcessorNameString", NULL, NULL, 
+			   (LPBYTE)nameString, &dwSize);
+      if(ok != 0) strcpy(nameString, "???");
+
+      dwSize = 256;
+      ok = RegQueryValueEx(hk, "Identifier", NULL, NULL, 
+			   (LPBYTE)identifier, &dwSize);
+      if(ok != 0) strcpy(identifier, "???");
+
+      dwSize = sizeof(DWORD);
+      ok = RegQueryValueEx(hk, "~MHz", NULL, NULL, 
+			   (LPBYTE)&mhz, &dwSize);
+      if(ok != 0) mhz = -1;
+      sprintf(tmp,
+	      "\nProcessor %d: %s\n"
+	      "\tIdentifier: %s\n"
+	      "\t~MHZ: %d\n",
+	      proc, nameString, identifier, mhz);
+      RegCloseKey(hk);
+    }
+  }
+
+  hwInfoString = strdup(tmpString);
+
+  {
+    char owner[256];
+    char company[256];
+    char product[256];
+    char productid[256];
+
+    if(osInfo.dwPlatformId == VER_PLATFORM_WIN32_NT) {
+      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows NT\\CurrentVersion");
+    } else {
+      strcpy(keyName, "SOFTWARE\\Microsoft\\Windows\\CurrentVersion");
+    }
+    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if(ok == 0) {
+      dwSize = 256;
+      if(RegQueryValueEx(hk, "RegisteredOwner", NULL, NULL, 
+			  (LPBYTE)owner, &dwSize)) strcpy(owner, "???");
+      dwSize = 256;
+      if(RegQueryValueEx(hk, "RegisteredOrganization", NULL, NULL, 
+			  (LPBYTE)company, &dwSize)) strcpy(company, "???");
+      dwSize = 256;
+      if(RegQueryValueEx(hk, "ProductName", NULL, NULL, 
+			  (LPBYTE)product, &dwSize)) strcpy(product, "???");
+      RegCloseKey(hk);
+    }
+
+    sprintf(tmpString,
+	    "Operating System: %s (Build %d %s)\n"
+	    "\tRegistered Owner: %s\n"
+	    "\tRegistered Company: %s\n"
+	    "\tSP major version: %d\n"
+	    "\tSP minor version: %d\n"
+	    "\tSuite mask: %lx\n"
+	    "\tProduct type: %lx\n",
+	    product, 
+	    osInfo.dwBuildNumber, osInfo.szCSDVersion,
+	    owner, company,
+	    osInfo.wServicePackMajor, osInfo.wServicePackMinor,
+	    osInfo.wSuiteMask, osInfo.wProductType);
+    osInfoString = strdup(tmpString);
+  }
+
+  sprintf(tmpString,
+	  "Display Information: \n"
+	  "\tGraphics adapter name: %s\n"
+	  "\tPrimary monitor resolution: %d x %d\n",
+	  gDev.DeviceString,
+	  screenX, screenY);
+
+  /* Find the driver key in the registry */
+  keyName[0] = 0;
+  ok = RegOpenKey(HKEY_LOCAL_MACHINE, 
+		  "HARDWARE\\DEVICEMAP\\VIDEO", 
+		  &hk);
+  if(ok == 0) {
+    dwSize = 256;
+    RegQueryValueEx(hk,"\\Device\\Video0", NULL, NULL, 
+		    (LPBYTE)keyName, &dwSize);
+    RegCloseKey(hk);
+  }
+  if(*keyName) {
+    /* Got the key name; open it and get the info out of there */
+    char *tmp = tmpString + strlen(tmpString);
+    char deviceDesc[256];
+    char adapterString[256];
+    char biosString[256];
+    char chipType[256];
+    char dacType[256];
+    char version[256];
+    char *drivers, *drv;
+    WCHAR buffer[256];
+    DWORD memSize;
+
+    /* Argh. It seems that the registry key regularly starts
+       with \Registry\Machine\ which doesn't work with RegOpenKey below.
+       I have no idea why but for now I'll just truncate that part if
+       we recognize it... */
+    if(strnicmp(keyName, "\\registry\\machine\\", 18) == 0) {
+      memcpy(keyName, keyName+18, strlen(keyName)-17);
+    }
+
+    ok = RegOpenKey(HKEY_LOCAL_MACHINE, keyName, &hk);
+    if(ok != 0) MessageBox(0, keyName, "Cannot open:", MB_OK);
+    if(ok == 0) {
+      dwSize = 256;
+      ok = RegQueryValueEx(hk,"Device Description", NULL, NULL, 
+		      (LPBYTE)deviceDesc, &dwSize);
+      if(ok != 0) strcpy(deviceDesc, "???");
+
+      dwSize = 256*sizeof(WCHAR);
+      ok = RegQueryValueEx(hk,"HardwareInformation.AdapterString", NULL, NULL, 
+		      (LPBYTE)buffer, &dwSize);
+      if(ok == 0) {
+	WideCharToMultiByte(CP_UTF8,0,buffer,-1,adapterString,256,NULL,NULL);
+      } else strcpy(adapterString, "???");
+
+      dwSize = 256*sizeof(WCHAR);
+      ok = RegQueryValueEx(hk,"HardwareInformation.BiosString", NULL, NULL, 
+		      (LPBYTE)buffer, &dwSize);
+      if(ok == 0) {
+	WideCharToMultiByte(CP_UTF8,0,buffer,-1,biosString,256,NULL,NULL);
+      } else strcpy(biosString, "???");
+
+      dwSize = 256*sizeof(WCHAR);
+      ok = RegQueryValueEx(hk,"HardwareInformation.ChipType", NULL, NULL, 
+		      (LPBYTE)buffer, &dwSize);
+      if(ok == 0) {
+	WideCharToMultiByte(CP_UTF8,0,buffer,-1,chipType,256,NULL,NULL);
+      } else strcpy(chipType, "???");
+
+      dwSize = 256*sizeof(WCHAR);
+      ok = RegQueryValueEx(hk,"HardwareInformation.DacType", NULL, NULL, 
+		      (LPBYTE)buffer, &dwSize);
+      if(ok == 0) {
+	WideCharToMultiByte(CP_UTF8,0,buffer,-1,dacType,256,NULL,NULL);
+      } else strcpy(dacType, "???");
+
+      dwSize = sizeof(DWORD);
+      ok = RegQueryValueEx(hk,"HardwareInformation.MemorySize", NULL, NULL, 
+		      (LPBYTE)&memSize, &dwSize);
+      if(ok != 0) memSize = -1;
+
+      sprintf(tmp,
+	      "\nDevice: %s\n"
+	      "\tAdapter String: %s\n"
+	      "\tBios String: %s\n"
+	      "\tChip Type: %s\n"
+	      "\tDAC Type: %s\n"
+	      "\tMemory Size: 0x%.8X\n",
+	      deviceDesc,
+	      adapterString,
+	      biosString,
+	      chipType,
+	      dacType,
+	      memSize);
+
+      /* Now process the installed drivers */
+      ok = RegQueryValueEx(hk,"InstalledDisplayDrivers", 
+			   NULL, NULL, NULL, &dwSize);
+      if(ok == 0) {
+	drivers = malloc(dwSize);
+	ok = RegQueryValueEx(hk,"InstalledDisplayDrivers",
+			     NULL, NULL, drivers, &dwSize);
+      }
+      if(ok == 0) {
+	strcat(tmpString,"\nDriver Versions:");
+	/* InstalledDrivers is REG_MULTI_SZ (extra terminating zero) */
+	for(drv = drivers; drv[0]; drv +=strlen(drv)) {
+	  DWORD verSize, hh;
+	  UINT vLen;
+	  LPVOID verInfo = NULL, vInfo;
+
+	  /* Concat driver name */
+	  strcat(tmpString,"\n\t"); 
+	  strcat(tmpString, drv);
+	  strcat(tmpString,": ");
+
+	  verSize = GetFileVersionInfoSize(drv, &hh);
+	  if(!verSize) goto done;
+
+	  verInfo = malloc(verSize);
+	  if(!GetFileVersionInfo(drv, 0, verSize, verInfo)) goto done;
+
+	  /* Try Unicode first */
+	  if(VerQueryValue(verInfo,"\\StringFileInfo\\040904B0\\FileVersion", 
+			   &vInfo, &vLen)) {
+	    strcat(tmpString, vInfo);
+	    goto done;
+	  }
+
+	  /* Try US/English next */
+	  if(VerQueryValue(verInfo,"\\StringFileInfo\\040904E4\\FileVersion", 
+			   &vInfo, &vLen)) {
+	    strcat(tmpString, vInfo);
+	    goto done;
+	  }
+
+	  strcat(tmpString, "???");
+
+	done:
+	  if(verInfo) {
+	    free(verInfo);
+	    verInfo = NULL;
+	  }
+	}
+	strcat(tmpString,"\n");
+      }
+      RegCloseKey(hk);
+    }
+  }
+  gdInfoString = strdup(tmpString);
+}
 
 /****************************************************************************/
 /*                      Error handling                                      */
@@ -343,6 +681,7 @@ void SetupStderr()
 /****************************************************************************/
 /*                      Release                                             */
 /****************************************************************************/
+
 void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 { TCHAR crashInfo[1024];
   FILE *f;
@@ -414,8 +753,13 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.ControlWord,
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
-    /* print version information */
-    fprintf(f,"VM Version: %s\n", VM_VERSION);
+
+    fprintf(f,"\n%s", hwInfoString);
+    fprintf(f,"\n%s", osInfoString);
+    fprintf(f,"\n%s", gdInfoString);
+
+    /* print VM version information */
+    fprintf(f,"\nVM Version: %s\n", VM_VERSION);
     fflush(f);
     fprintf(f,"\n"
 	    "Current byte code: %d\n"
@@ -759,6 +1103,14 @@ int sqMain(char *lpCmdLine, int nCmdShow)
       }
     }
 
+    /* display the splash screen */
+    ShowSplashScreen();
+
+    /* if headless running is requested, try to to create an icon
+       in the Win95/NT system tray */
+    if(fHeadlessImage && (!fRunService || fWindows95))
+      SetSystemTrayIcon(1);
+    
     /* read the image file */
     if(!imageFile) {
       imageFile = sqImageFileOpen(imageName,"rb");
@@ -767,19 +1119,10 @@ int sqMain(char *lpCmdLine, int nCmdShow)
       readImageFromFileHeapSizeStartingAt(imageFile, virtualMemory, sqImageFilePosition(imageFile));
     }
     sqImageFileClose(imageFile);
-    
-    /* display the main window */
+
+    if(fHeadlessImage) HideSplashScreen(); /* need to do it manually */
     SetWindowSize();
-    if(!fHeadlessImage) {
-      ShowWindow(stWindow,nCmdShow);
-      SetFocus(stWindow);
-    }
-    /* if headless running is requested, try to to create an icon
-       in the Win95/NT system tray */
-    else if(!fRunService || fWindows95)
-      SetSystemTrayIcon(1);
-    
-    ioSetFullScreen(fullScreenFlag);
+    ioSetFullScreen(getFullScreenFlag());
 
     /* run Squeak */
     ioInitSecurity();
@@ -804,6 +1147,7 @@ int WINAPI WinMain (HINSTANCE hInst,
                     int    nCmdShow)
 {
   /* a few things which need to be done first */
+  gatherSystemInfo();
 
   /* check if we're running NT or 95 */
   fWindows95 = (GetVersion() & 0x80000000) != 0;

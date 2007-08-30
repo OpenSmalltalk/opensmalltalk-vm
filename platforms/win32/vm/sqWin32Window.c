@@ -36,12 +36,11 @@ static TCHAR RCSID[]= TEXT("$Id$");
 /* General Squeak declarations and definitions                              */
 /****************************************************************************/
 
-/*** Variables -- Imported from Virtual Machine ***/
-extern int interruptPending;
-extern int interruptCheckCounter;
-extern int interruptKeycode;
-extern int fullScreenFlag;
-extern int deferDisplayUpdates; /* Is the Interpreter doing defered updates for us?! */
+int setInterruptPending(int);
+int setInterruptCheckCounter(int);
+int getInterruptKeycode(void);
+int setFullScreenFlag(int);
+extern int deferDisplayUpdates;
 
 
 /*** Variables -- image and path names ***/
@@ -480,7 +479,7 @@ int _lowResMSecs = 0;
 
 void CALLBACK timerCallback(UINT uTimerID, UINT uMsg, DWORD dwUser, DWORD dw1, DWORD dw2) {
   _lowResMSecs++;
-  interruptCheckCounter = 0;
+  setInterruptCheckCounter(0);
 }
 
 #include <mmsystem.h>
@@ -511,6 +510,14 @@ void ReleaseTimer()
   timeEndPeriod(dwTimerPeriod);
 #endif /* !defined(_WIN32_WCE) */
 }
+
+
+sqLong ioHighResClock(void) {
+  sqLong value = 0;
+  __asm__ __volatile__ ("rdtsc" : "=A" (value));
+  return value;
+}
+
 
 /****************************************************************************/
 /*                     Printer Setup                                        */
@@ -1212,8 +1219,8 @@ int recordVirtualKey(UINT message, WPARAM wParam, LPARAM lParam)
     return 1;
   }
   if(wParam == VK_CANCEL) {
-    interruptPending= true;
-    interruptCheckCounter= 0;
+    setInterruptPending(true);
+    setInterruptCheckCounter(0);
     return 1;
   }
   keystate = mapVirtualKey(wParam);
@@ -1235,11 +1242,11 @@ int recordKeystroke(UINT msg, WPARAM wParam, LPARAM lParam)
   /* add the modifiers */
   keystate = keystate | ((buttonState >> 3) << 8);
   /* check for interrupt key */
-  if(keystate == interruptKeycode)
+  if(keystate == getInterruptKeycode())
     {
       /* NOTE: Interrupt key is meta, not recorded as key stroke */
-      interruptPending= true;
-      interruptCheckCounter= 0;
+      setInterruptPending(true);
+      setInterruptCheckCounter(0);
 	  return 1;
     }
   recordKey(keystate);
@@ -1599,7 +1606,7 @@ int ioSetFullScreen(int fullScreen)
 #else /* !defined(_WIN32_WCE) */
       ShowWindow(stWindow,SW_SHOWNORMAL);
 #endif /* !defined(_WIN32_WCE) */
-      fullScreenFlag = 1;
+      setFullScreenFlag(1);
     }
   else
     {
@@ -1616,7 +1623,7 @@ int ioSetFullScreen(int fullScreen)
       }
 #endif /* !defined(_WIN32_WCE) */
       ShowWindow(stWindow,SW_SHOWNORMAL);
-      fullScreenFlag = 0;
+      setFullScreenFlag(0);
     }
   /* get us back in the foreground */
   SetForegroundWindow(stWindow);
@@ -1858,6 +1865,12 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
 
 /* force an update of the squeak window if using deferred updates */
 int ioForceDisplayUpdate(void) {
+  /* Show the main window if it's been hidden so far */
+  if(IsWindow(stWindow) && !IsWindowVisible(stWindow)) {
+    HideSplashScreen();
+    ShowWindow(stWindow, SW_SHOW);
+    UpdateWindow(stWindow);
+  }
   /* Check if
      a) We should do deferred updates at all
      b) The window is valid
@@ -2499,6 +2512,10 @@ int sqGetFilenameFromString(char *buf, char *fileName, int length, int alias) {
 /****************************************************************************/
 /*                      System Attributes                                   */
 /****************************************************************************/
+extern char *hwInfoString;
+extern char *osInfoString;
+extern char *gdInfoString;
+
 char * GetAttributeString(int id) {
 	/* This is a hook for getting various status strings back from
 	   the OS. In particular, it allows Squeak to be passed arguments
@@ -2527,6 +2544,14 @@ char * GetAttributeString(int id) {
       return "Win32";
     case 1006: /* VM build ID */
       return vmBuildString;
+
+    /* Windows internals */
+    case 10001: /* addl. hardware info */
+      return hwInfoString;
+    case 10002: /* addl. hardware info */
+      return osInfoString;
+    case 10003: /* addl. hardware info */
+      return gdInfoString;
   }
   return NULL;
 }
@@ -2749,6 +2774,130 @@ int openImageFile(void) {
   WideCharToMultiByte(CP_UTF8, 0, path, -1, 
 		      imageName, MAX_PATH, NULL, NULL);
   return 1;
+}
+
+/****************************************************************************/
+/*                       Splash screen functions                            */
+/****************************************************************************/
+
+static HBITMAP hSplashDIB = NULL;
+static HWND hSplashWnd = NULL;
+static DWORD startTime;
+static DWORD splashTime;
+
+/* splash window procedure */
+static LRESULT CALLBACK SplashWndProcA(HWND hwnd,
+				UINT message,
+				WPARAM wParam,
+				LPARAM lParam) {
+  PAINTSTRUCT ps;
+  HDC mdc;
+  HANDLE hOld;
+
+  switch(message) {
+  case WM_PAINT:
+    BeginPaint(hwnd,&ps);
+    mdc = CreateCompatibleDC(ps.hdc);
+    hOld = SelectObject(mdc, hSplashDIB);
+    BitBlt(ps.hdc, ps.rcPaint.left, ps.rcPaint.top,
+	   ps.rcPaint.right-ps.rcPaint.left,
+	   ps.rcPaint.bottom-ps.rcPaint.top,
+	   mdc,
+	   ps.rcPaint.left,
+	   ps.rcPaint.top,
+	   SRCCOPY);
+    SelectObject(mdc, hOld);
+    DeleteDC(mdc);
+    EndPaint(hwnd,&ps);
+    break;
+  default:
+    return DefWindowProc(hwnd, message, wParam, lParam);
+  }
+  return 1;
+}
+
+void ShowSplashScreen(void) {
+  WNDCLASS wc;
+  char splashFile[1024];
+  char splashTitle[1024];
+  BITMAP bm;
+  RECT wa, rSplash;
+
+  /* Look if we have a splash file somewhere */
+  GetPrivateProfileString("Global", "SplashScreen", "Splash.bmp", 
+			  splashFile, 1024, squeakIniName);
+
+  /* Also get the title for the splash window */
+  GetPrivateProfileString("Global", "SplashTitle", VM_NAME"!",
+			  splashTitle, 1024, squeakIniName);
+
+  /* Look for the mimimum splash time to use */
+  splashTime = GetPrivateProfileInt("Global", "SplashTime", 
+				    1000, squeakIniName);
+
+  if(!splashFile[0]) return; /* no splash file */
+
+  /* Load the splash screen picture */
+  hSplashDIB = LoadImage(NULL, splashFile, IMAGE_BITMAP,0,0,
+			 LR_CREATEDIBSECTION | LR_LOADFROMFILE);
+  if(!hSplashDIB) {
+    /* ignore the common case but print failures for the others */
+    if(GetLastError() != ERROR_FILE_NOT_FOUND)
+      printLastError("LoadImage failed");
+    return;
+  }
+  GetObject(hSplashDIB, sizeof(bm), &bm);
+
+  /* position the splash screen rectangle */
+  SystemParametersInfo( SPI_GETWORKAREA, 0, &wa, 0);
+  rSplash.left = (wa.right - bm.bmWidth) / 2;
+  rSplash.top = (wa.bottom - bm.bmHeight) / 2;
+  rSplash.right = rSplash.left + bm.bmWidth;
+  rSplash.bottom = rSplash.top + bm.bmHeight;
+
+  /* create the splash window */
+  wc.style = 0;
+  wc.lpfnWndProc = (WNDPROC)SplashWndProcA;
+  wc.cbClsExtra = 0;
+  wc.cbWndExtra = 0;
+  wc.hInstance = hInstance;
+  wc.hIcon = LoadIcon(hInstance, MAKEINTRESOURCE(2));
+  wc.hCursor = NULL;
+  wc.hbrBackground = GetStockObject (WHITE_BRUSH);
+  wc.lpszMenuName = NULL;
+  wc.lpszClassName = TEXT("SqueakSplashWindow");
+  RegisterClass(&wc);
+  
+  hSplashWnd = CreateWindowEx(0,
+			      TEXT("SqueakSplashWindow"),
+			      splashTitle,
+			      WS_POPUP,
+			      rSplash.left,rSplash.top,
+			      rSplash.right-rSplash.left,
+			      rSplash.bottom-rSplash.top,
+			      NULL, NULL, hInstance, NULL);
+
+  /* put it up */
+  ShowWindow(hSplashWnd, SW_SHOW);
+  UpdateWindow(hSplashWnd);
+  startTime = GetTickCount();
+}
+
+void HideSplashScreen(void) {
+  if(hSplashWnd) {
+    /* hide splash window after minimal time */
+    while(GetTickCount() - startTime < splashTime) {
+      Sleep(100);
+    }
+    ShowWindow(hSplashWnd, SW_HIDE);
+    DestroyWindow(hSplashWnd);
+    hSplashWnd = NULL;
+  }
+  /* destroy splash bitmap */
+  if(hSplashDIB) {
+    DeleteObject(hSplashDIB);
+    hSplashDIB = NULL;
+  }
 }
 
 /****************************************************************************/
