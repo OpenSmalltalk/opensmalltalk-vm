@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2006-10-18 10:05:48 by piumarta on emilia.local
+ * Last edited: 2007-08-31 16:31:05 by piumarta on emilia
  *
  * NOTE: this file is included by the window support files that need it.
  */
@@ -104,6 +104,10 @@ static sqInputEvent *allocateInputEvent(int eventType)
 
 #define allocateDragEvent() ( \
   (sqDragDropFilesEvent *)allocateInputEvent(EventTypeDragDropFiles) \
+)
+
+#define allocateWindowEvent() ( \
+  (sqWindowEvent *)allocateInputEvent(EventTypeWindow) \
 )
 
 
@@ -206,6 +210,17 @@ static void recordDragEvent(int dragType, int numFiles)
   printModifiers(state >> 3);
   printButtons(state & 7);
   printf("\n");
+#endif
+}
+
+
+static void recordWindowEvent(int action)
+{
+  sqWindowEvent *evt= allocateWindowEvent();
+  evt->action= action;
+  signalInputEvent();
+#ifdef DEBUG_EVENTS
+  printf("EVENT: window (close)\n");
 #endif
 }
 

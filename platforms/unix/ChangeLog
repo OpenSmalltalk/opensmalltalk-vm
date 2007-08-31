@@ -1,3 +1,13 @@
+2007-08-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c (initWindow): Add WM_DELETE_WINDOW to
+	main window WM_PROTOCOLS.
+	(handleEvent): ClientMessage with WM_DELETE_WINDOW sends
+	WindowEvent(action=Close) to image.
+
+	* vm/sqUnixEvent.c (allocateWindowEvent): Added.
+	(recordWindowEvent): Added.
+
 2007-07-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/LocalePlugin/sqUnixLocale.c: Added.
