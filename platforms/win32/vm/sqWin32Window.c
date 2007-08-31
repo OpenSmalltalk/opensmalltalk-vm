@@ -1866,7 +1866,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag)
 /* force an update of the squeak window if using deferred updates */
 int ioForceDisplayUpdate(void) {
   /* Show the main window if it's been hidden so far */
-  if(IsWindow(stWindow) && !IsWindowVisible(stWindow)) {
+  if(!fHeadlessImage && IsWindow(stWindow) && !IsWindowVisible(stWindow)) {
     HideSplashScreen();
     ShowWindow(stWindow, SW_SHOW);
     UpdateWindow(stWindow);
