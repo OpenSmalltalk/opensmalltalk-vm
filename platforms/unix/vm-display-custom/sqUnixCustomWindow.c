@@ -1,6 +1,6 @@
 /* sqUnixCustomWindow.c -- support for display via your custom window system.
  * 
- * Last edited: 2006-04-17 16:57:12 by piumarta on margaux.local
+ * Last edited: 2007-09-07 13:47:46 by piumarta on emilia
  * 
  * This is a template for creating your own window drivers for Squeak:
  * 
@@ -53,6 +53,29 @@ static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqIn
 }
 
 
+static char ** display_clipboardGetTypeNames(void)
+{
+  trace();
+  return 0;
+}
+
+static sqInt display_clipboardSizeWithType(char *typeName, int ntypeName)
+{
+  trace();
+  return 0;
+}
+
+static void display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t ntypeName, int isDnd, int isClaiming)
+{
+  trace();
+}
+
+static sqInt display_dndOutStart(char *data, int dataLength, char *aFormat, int formatLength)
+{
+  trace();
+  return 0;
+}
+
 static sqInt display_ioFormPrint(sqInt bitsIndex, sqInt width, sqInt height, sqInt depth, double hScale, double vScale, sqInt landscapeFlag)
 {
   trace();
@@ -91,6 +114,12 @@ static sqInt display_ioScreenSize(void)
 }
 
 static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
+{
+  trace();
+  return 0;
+}
+
+static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
 {
   trace();
   return 0;

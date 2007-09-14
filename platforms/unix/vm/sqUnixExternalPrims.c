@@ -1,6 +1,6 @@
 /* sqUnixExternalPrims.c -- Unix named primitives and loadable modules
  * 
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2006-10-18 10:05:41 by piumarta on emilia.local
+ * Last edited: 2007-09-07 13:54:02 by piumarta on emilia
  */
 
 #define DEBUG 0

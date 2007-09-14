@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2006-10-18 10:09:58 by piumarta on emilia.local
+ * Last edited: 2007-09-07 14:36:23 by piumarta on emilia
  */
 
 /* Why on earth does this plugin exist at all?  Brain death strikes
@@ -76,6 +76,11 @@ int dropRequestFileHandle(int dropIndex)
       return handle;
     }  
   return interpreterProxy->nilObject();
+}
+
+void sqDndOutStart(char * data, int dataLength, char * aFormat, int formatLength)
+{
+  dndOutStart(data, dataLength, aFormat, formatLength);
 }
 
 int  sqSecFileAccessCallback(void *callback)		 { return 0; }

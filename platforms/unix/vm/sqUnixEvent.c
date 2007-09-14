@@ -1,6 +1,6 @@
 /* sqUnixEvent.c -- support for window system events.
  * 
- *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2007-08-31 16:31:05 by piumarta on emilia
+ * Last edited: 2007-09-14 12:11:03 by piumarta on emilia.local
  *
  * NOTE: this file is included by the window support files that need it.
  */
@@ -169,12 +169,13 @@ static void recordMouseEvent(void)
 }
 
 
-static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers)
+static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers, int ucs4)
 {
   sqKeyboardEvent *evt= allocateKeyboardEvent();
   evt->charCode= keyCode;
   evt->pressCode= pressCode;
   evt->modifiers= modifiers;
+  evt->utf32Code= ucs4;
   evt->reserved1=
     evt->windowIndex= 0;
   signalInputEvent();
@@ -189,7 +190,7 @@ static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers)
     }
   printModifiers(modifiers);
   printKey(keyCode);
-  printf("\n");
+  printf(" ucs4 %d\n", ucs4);
 #endif
 }
 
@@ -214,13 +215,28 @@ static void recordDragEvent(int dragType, int numFiles)
 }
 
 
-static void recordWindowEvent(int action)
+static void recordWindowEvent(int action, int v1, int v2, int v3, int v4)
 {
   sqWindowEvent *evt= allocateWindowEvent();
   evt->action= action;
+  evt->value1= v1;
+  evt->value2= v2;
+  evt->value3= v3;
+  evt->value4= v4;
+  evt->windowIndex= 0;
   signalInputEvent();
 #ifdef DEBUG_EVENTS
-  printf("EVENT: window (close)\n");
+  printf("EVENT: window (%d %d %d %d %d %d) ", action, v1, v2, v3, v4, 0);
+  switch (action)
+    {
+    case WindowEventMetricChange: printf("metric change");  break;
+    case WindowEventClose:        printf("close");	    break;
+    case WindowEventIconise:      printf("iconise");	    break;
+    case WindowEventActivated:    printf("activated");	    break;
+    case WindowEventPaint:        printf("paint");	    break;
+    default:                      printf("***UNKNOWN***");  break;
+    }
+  printf("\n");
 #endif
 }
 

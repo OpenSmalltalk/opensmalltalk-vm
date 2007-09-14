@@ -2,7 +2,7 @@
  *
  * Author: Bert Freudenberg <bert@isg.cs.uni-magdeburg.de>
  * 
- * Last edited: 2005-03-17 21:37:05 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2007-09-07 13:53:35 by piumarta on emilia
  *
  * Originally based on Andreas Raab's sqWin32PluginSupport
  * 
@@ -87,11 +87,9 @@ static void browserSendInt(int value);
 static void browserReceiveData();
 static void browserGetURLRequest(int id, char* url, int urlSize,
 				char* target, int targetSize);
-#ifdef NOT_USED
 static void browserPostURLRequest(int id, char* url, int urlSize, 
 				 char* target, int targetSize, 
 				 char* postData, int postDataSize);
-#endif
 
 typedef struct sqStreamRequest {
   char *localName;
@@ -226,12 +224,50 @@ int display_primitivePluginRequestURL()
 
 
 /*
-  primitivePluginPostURL
+  primitivePluginPostURL: url target: target data: data semaIndex: semaIndex
+  Post data to a URL into the given target.
 */
 int display_primitivePluginPostURL()
 {
-  fprintf(stderr, "primitivePluginPostURL() not yet implemented\n");
-  return primitiveFail(); 
+  sqStreamRequest *req;
+  int url, urlLength;
+  int target, targetLength;
+  int data, dataLength;
+  int id, semaIndex;
+
+  if (!browserWindow) return primitiveFail();
+  for (id=0; id<MAX_REQUESTS; id++) {
+    if (!requests[id]) break;
+  }
+
+  if (id >= MAX_REQUESTS) return primitiveFail();
+
+  semaIndex= stackIntegerValue(0);
+  data= stackObjectValue(1);
+  target= stackObjectValue(2);
+  url= stackObjectValue(3);
+
+  if (failed()) return 0;
+  if (target == nilObject()) target= 0;
+  if (!isBytes(url) || !isBytes(data) || !(!target || isBytes(target))) return primitiveFail();
+
+  urlLength= byteSizeOf(url);
+  targetLength= target ? byteSizeOf(target) : 0;
+  dataLength= byteSizeOf(data);
+
+  req= calloc(1, sizeof(sqStreamRequest));
+  if(!req) return primitiveFail();
+  req->localName= NULL;
+  req->semaIndex= semaIndex;
+  req->state= -1;
+  requests[id]= req;
+
+  browserPostURLRequest(id, firstIndexableField(url), urlLength, 
+			target ? firstIndexableField(target) : NULL, targetLength,
+			firstIndexableField(data), dataLength);
+  pop(4);
+  push(positive32BitIntegerFor(id));
+  return 1;
 }
 
 /* 
@@ -432,7 +468,6 @@ static void browserGetURLRequest(int id, char* url, int urlSize,
   browserPostURLRequest:
   Notify plugin to post data to the specified url and get result into target
 */
-#ifdef NOT_USED
 static void browserPostURLRequest(int id, char* url, int urlSize, 
 				 char* target, int targetSize, 
 				 char* postData, int postDataSize)
@@ -458,7 +493,6 @@ static void browserPostURLRequest(int id, char* url, int urlSize,
   if (postDataSize > 0)
     browserSend(postData, postDataSize);
 }
-#endif
 
 
 /***************************************************************

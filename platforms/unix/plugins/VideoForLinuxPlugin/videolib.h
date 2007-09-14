@@ -1,12 +1,13 @@
 #ifndef _VIDEOLIB_H
 #define _VIDEOLIB_H
 
+#include "palettes.h"
+
 #include <linux/videodev.h>
 
 typedef int BOOLEAN;
 #define TRUE  1
 #define FALSE 0
-
 
 struct dev {
    char* deviceName;
@@ -14,8 +15,7 @@ struct dev {
    unsigned int desiredWidth;
    unsigned int desiredHeight;
 
-   //int desiredDepth;
-   int desiredPalette;
+   char desiredPalette;
 
    int fd;
 
@@ -25,52 +25,52 @@ struct dev {
 
    char *buffer;
 
-   struct video_mbuf memoryBuffer;
-   char* memoryMap;
+   struct video_mbuf  memoryBuffer;
+   char*              memoryMap;
    struct video_mmap* mmaps;
-   int imageSize;
-   int bufferIndex;
+   int  imageSize;
+   int  bufferIndex;
+
    char *buffer24;
 
    BOOLEAN forceRead;
    BOOLEAN usingMMap;
 
-   /* --------------------------------------- */
-   /* tuner */
-   BOOLEAN haveTuner;
-   BOOLEAN isBttv;
-   int currentChannel;
+   // Bitmap conversor
+   Converter converterFunction;
 
-   struct video_channel vchannel;
-   struct video_tuner   vtuner;
-   /* --------------------------------------- */
+   // V4L2 stuff
+   BOOLEAN isV4L2;
+   struct v4l2_capability v4l2Capability;
 };
 
 typedef struct dev* Device;
 
 #define SIZE_OF_DEVICE     sizeof(struct dev)
 
-void describeDevice(int deviceID, char* deviceName);
+void    describeDevice(int deviceID, char* deviceName);
 
-/* Device createDevice(int deviceID, */
-/*                     int width, int height, */
-/*                     int depth, int palette); */
-Device createDevice(int deviceID,
-                    int width, int height,
-                    int palette);
+Device  createDevice(int deviceID,
+		     int width, int height,
+		     int palette);
 
-BOOLEAN nextFrameFromDevice(Device device);
+BOOLEAN convertBufferTo24     (Device device);
+BOOLEAN captureFrameFromDevice(Device device);
+BOOLEAN nextFrameFromDevice   (Device device);
 
-int getBrightness(Device device);
-int getContrast(Device device);
-int getSaturation(Device device);
-int getHue(Device device);
+int getPalette(Device device);
 
-void setBrightness(Device device, int brightness);
-void setContrast(Device device, int contrast);
-void setSaturation(Device device, int saturation);
-void setHue(Device device, int hue);
+/*
+int     getBrightness(Device device);
+int     getContrast  (Device device);
+int     getSaturation(Device device);
+int     getHue       (Device device);
 
+void    setBrightness(Device device, int brightness);
+void    setContrast  (Device device, int contrast);
+void    setSaturation(Device device, int saturation);
+void    setHue       (Device device, int hue);
+*/
 BOOLEAN updatePicture(Device device);
 
 void    closeDevice(Device device);

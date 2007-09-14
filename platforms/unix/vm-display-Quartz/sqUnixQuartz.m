@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -24,7 +24,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2006-10-18 10:01:37 by piumarta on emilia.local
+ * Last edited: 2007-09-07 13:53:00 by piumarta on emilia
  */
 
 
@@ -720,6 +720,47 @@ static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMask
   return 1;
 }
 
+static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
+{
+  if (headless)
+    return 0;
+
+  if ([view lockFocusIfCanDraw])
+    {
+      NSAutoreleasePool *pool= [[NSAutoreleasePool alloc] init];
+      NSBitmapImageRep  *bitmap= 0;
+      NSImage           *image=  0;
+      NSCursor          *cursor= 0;
+
+      bitmap= [[NSBitmapImageRep alloc]
+		initWithBitmapDataPlanes: 0 pixelsWide: extentX pixelsHigh: extentY
+		bitsPerSample: 8 samplesPerPixel: 4
+		hasAlpha: YES isPlanar: NO
+		colorSpaceName: NSCalibratedRGBColorSpace
+		bytesPerRow: extentX * 4
+		bitsPerPixel: 0];
+      {
+	unsigned *planes[5];
+	[bitmap getBitmapDataPlanes: planes];
+	unsigned* src= (unsigned*)cursorBitsIndex;
+	unsigned* dst= planes[0];
+	int i;
+	for (i= 0;  i < extentX * extentY;  ++i, ++dst, ++src)
+	  *dst= (*src & 0xFF00FF00) | ((*src & 0x000000FF) << 16) | ((*src & 0x00FF0000) >> 16);
+      }
+      image= [[NSImage alloc] init];
+      [image addRepresentation: bitmap];
+      {
+	NSPoint hotSpot= { -offsetX, -offsetY };
+	cursor= [[NSCursor alloc] initWithImage: image hotSpot: hotSpot];
+      }
+      [cursor set];
+      [pool release];
+      [view unlockFocus];
+    }
+  return 1;
+}
+
 #if 0
 static sqInt display_ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
@@ -1006,6 +1047,25 @@ static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqIn
   return 0;
 }
 
+static char **display_clipboardGetTypeNames(void)
+{
+  return 0;
+};
+
+static sqInt display_clipboardSizeWithType(char *typeName, int ntypeName)
+{
+  return 0;
+}
+
+static void display_clipboardWriteWithType(char *data, size_t nData, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
+{
+  return;
+}
+
+static sqInt display_dndOutStart(char *data, int dataLength, char *aFormat, int formatLength)
+{
+  return 0;
+}
 
 static void display_winExit(void)
 {

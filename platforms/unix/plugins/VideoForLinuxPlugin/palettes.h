@@ -1,15 +1,15 @@
-
 #ifndef _PALETTES_H
 #define _PALETTES_H
 
-char* paletteName(int palette);
+typedef void (*Converter)(int width, int height, const void *src, void *dst);
 
-float paletteBytesPerPixel(int palette);
 
-int paletteDepth(int palette);
-
-int paletteConvert(int palette,
-                   int width, int height,
-                   const void *src, void *dst);
+inline char*     paletteName         (int palette);
+inline float     paletteBytesPerPixel(int palette);
+inline int       paletteDepth        (int palette);
+inline Converter converterFunction   (const int palette);
+inline int       paletteConvert24    (int palette,
+                                      int width, int height,
+                                      const void *src, void *dst);
 
 #endif

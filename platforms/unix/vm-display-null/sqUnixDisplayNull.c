@@ -48,6 +48,11 @@ static sqInt display_ioSetCursorWithMask(sqInt bits, sqInt mask, sqInt x, sqInt 
   return 0;
 }
 
+static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
+{
+  return 0;
+}
+
 static sqInt display_ioSetFullScreen(sqInt fullScreen)
 {
   return 0;
@@ -84,6 +89,26 @@ static sqInt display_clipboardWriteFromAt(sqInt count, sqInt byteArrayIndex, sqI
 }
 
 static sqInt display_clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
+{
+  return 0;
+}
+
+static char **display_clipboardGetTypeNames(void)
+{
+  return 0;
+}
+
+static sqInt display_clipboardSizeWithType(char *typeName, int nTypeName)
+{
+  return 0;
+}
+
+static void display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t nTypeName, int isDnd, int isClaiming)
+{
+  return;
+}
+
+static sqInt display_dndOutStart(char *data, int ndata, char *typeName, int nTypeName)
 {
   return 0;
 }

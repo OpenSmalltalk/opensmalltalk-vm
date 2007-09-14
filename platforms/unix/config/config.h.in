@@ -1,6 +1,6 @@
 /* config.h.in -- template for config.h			-*- C -*-
  *
- *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2007-03-11 13:27:16 by piumarta on emilia.local
+ * Last edited: 2007-09-07 14:10:23 by piumarta on emilia
  */
 
 #ifndef __sq_config_h
@@ -49,6 +49,7 @@
 
 #undef	HAVE_LIBX11
 #undef	HAVE_LIBXEXT
+#undef	HAVE_LIBXRENDER
 #undef	HAVE_LIBDL
 #undef	HAVE_DYLD
 #undef	HAVE_LIBFFI
@@ -167,13 +168,5 @@
 #undef VM_MODULE_PREFIX
 #undef VM_DLSYM_PREFIX
 #undef VM_X11DIR
-
-/* avoid dependencies on glibc2.3 */
-
-#undef HAVE_FEATURES_H
-
-#if defined(HAVE_FEATURES_H)
-# include "glibc.h"
-#endif
 
 #endif /* __sq_config_h */

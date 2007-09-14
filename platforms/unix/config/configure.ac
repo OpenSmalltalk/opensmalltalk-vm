@@ -2,7 +2,7 @@
 # 
 # Process this file with autoconf to produce a configure script
 
-#   Copyright (C) 1996-2006 by Ian Piumarta and other authors/contributors
+#   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
 #                              listed elsewhere in this file.
 #   All rights reserved.
 #   
@@ -28,7 +28,7 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2007-07-13 11:58:25 by piumarta on emilia.lax04.mtt
+# Last edited: 2007-09-07 13:37:14 by piumarta on emilia
 
 AC_INIT([config.h.in])
 

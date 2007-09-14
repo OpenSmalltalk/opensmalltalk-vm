@@ -62,7 +62,7 @@ do
         dirs=`ls -d ${bdir}/${browser}* 2>/dev/null`
         for dir in $dirs
         do
-            pdirs=`find $dir -name plugins -print`
+            pdirs=`find -H $dir -name plugins -print`
             for pdir in $pdirs
             do
 	        $ACTION ${pdir}/npsqueak.so

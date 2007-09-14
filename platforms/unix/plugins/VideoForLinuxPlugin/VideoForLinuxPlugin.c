@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on #(20 August 2006 10:45:45 am) */
+/* Automatically generated from Squeak on #(7 March 2007 2:25:53 pm) */
 
 #include <math.h>
 #include <stdio.h>
@@ -34,6 +34,33 @@
 #define longAtput(i, val) (*((int *) (i)) = val)
 
 
+/*** Constants ***/
+
+/*** Function Prototypes ***/
+static int clipPixel(int pixel);
+static int copyFrominto16destSizebrightnesscontrast(unsigned char* src2, unsigned char* dest2, int destSize, double brightness, double contrast);
+static int copyFrominto32destSizebrightnesscontrast(unsigned char* src2, unsigned char* dest2, int destSize, double brightness, double contrast);
+#pragma export on
+EXPORT(const char*) getModuleName(void);
+#pragma export off
+static int halt(void);
+static int height(Device device);
+static int msg(char *s);
+static int pixelbrightness256contrastFactor2(int pixel, int brightness, int contrastFactor);
+#pragma export on
+EXPORT(int) primitiveDeviceClose(void);
+EXPORT(int) primitiveDeviceCreate(void);
+EXPORT(int) primitiveDeviceDescribe(void);
+EXPORT(int) primitiveDeviceGetHeight(void);
+EXPORT(int) primitiveDeviceGetWidth(void);
+EXPORT(int) primitiveDeviceNextFrameIntoBrightnessContrastFormDepth(void);
+EXPORT(int) setInterpreter(struct VirtualMachine* anInterpreter);
+#pragma export off
+static int storeRedgreenbluebrightness256contrastFactor2into16Bits(int red, int green, int blue, int brig256, int contInteger, unsigned char* dest);
+static int storeRedgreenbluebrightness256contrastFactor2into32Bits(int red, int green, int blue, int brig256, int contInteger, unsigned char* dest);
+static int storeRedgreenblueinto16Bits(int red, int green, int blue, unsigned char* dest);
+static int storeRedgreenblueinto32Bits(int red, int green, int blue, unsigned char* dest);
+static int width(Device device);
 /*** Variables ***/
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
@@ -42,30 +69,77 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"VideoForLinuxPlugin 20 August 2006 (i)"
+	"VideoForLinuxPlugin 7 March 2007 (i)"
 #else
-	"VideoForLinuxPlugin 20 August 2006 (e)"
+	"VideoForLinuxPlugin 7 March 2007 (e)"
 #endif
 ;
 
-/*** Function Prototypes ***/
-#pragma export on
-EXPORT(const char*) getModuleName(void);
-#pragma export off
-static int halt(void);
-static int height(Device device);
-static int msg(char *s);
-static int pixelbrightnesscontrast(int pixel, double brightness, double contrast);
-#pragma export on
-EXPORT(int) primitiveDeviceClose(void);
-EXPORT(int) primitiveDeviceCreate(void);
-EXPORT(int) primitiveDeviceDescribe(void);
-EXPORT(int) primitiveDeviceGetHeight(void);
-EXPORT(int) primitiveDeviceGetWidth(void);
-EXPORT(int) primitiveDeviceNextFrameIntoBrightnessAndContrast(void);
-EXPORT(int) setInterpreter(struct VirtualMachine* anInterpreter);
-#pragma export off
-static int width(Device device);
+
+static int clipPixel(int pixel) {
+    int result;
+
+	result = ((pixel < 0) ? 0 : pixel);
+	return ((result < 255) ? result : 255);
+}
+
+static int copyFrominto16destSizebrightnesscontrast(unsigned char* src2, unsigned char* dest2, int destSize, double brightness, double contrast) {
+    unsigned char* dest;
+    unsigned char* final;
+    int brig256;
+    unsigned char* src;
+    int contInteger;
+    double cont;
+
+	dest = dest2;
+	src = src2;
+	final = dest + (destSize * 2);
+	if ((contrast == 0.0) && (brightness == 0.0)) {
+		while (dest < final) {
+			storeRedgreenblueinto16Bits(src[0], src[1], src[2], dest);
+			dest += 2;
+			src += 3;
+		}
+	} else {
+		brig256 = ((int) (brightness * 256) );
+		cont = 1.0 + contrast;
+		contInteger = ((int) ((cont * cont) * 32767) );
+		while (dest < final) {
+			storeRedgreenbluebrightness256contrastFactor2into16Bits(src[0], src[1], src[2], brig256, contInteger, dest);
+			dest += 2;
+			src += 3;
+		}
+	}
+}
+
+static int copyFrominto32destSizebrightnesscontrast(unsigned char* src2, unsigned char* dest2, int destSize, double brightness, double contrast) {
+    unsigned char* dest;
+    unsigned char* final;
+    int brig256;
+    unsigned char* src;
+    int contInteger;
+    double cont;
+
+	dest = dest2;
+	src = src2;
+	final = dest + (destSize * 4);
+	if ((contrast == 0.0) && (brightness == 0.0)) {
+		while (dest < final) {
+			storeRedgreenblueinto32Bits(src[0], src[1], src[2], dest);
+			dest += 4;
+			src += 3;
+		}
+	} else {
+		brig256 = ((int) (brightness * 256) );
+		cont = 1.0 + contrast;
+		contInteger = ((int) ((cont * cont) * 32767) );
+		while (dest < final) {
+			storeRedgreenbluebrightness256contrastFactor2into32Bits(src[0], src[1], src[2], brig256, contInteger, dest);
+			dest += 4;
+			src += 3;
+		}
+	}
+}
 
 
 /*	Note: This is hardcoded so it can be run from Squeak.
@@ -89,27 +163,11 @@ static int msg(char *s) {
 	fprintf(stderr, "\n%s: %s", moduleName, s);
 }
 
-static int pixelbrightnesscontrast(int pixel, double brightness, double contrast) {
-    double c;
+static int pixelbrightness256contrastFactor2(int pixel, int brightness, int contrastFactor) {
     int result;
 
-	c = 1.0 + contrast;
-	c = c * c;
-
-	/* brightness */
-
-	result = ((pixel - 0.5) * c) + 0.5;
-
-	/* bound checking */
-
-	result += ((int) (brightness * 256) );
-	if (result < 0) {
-		result = 0;
-	}
-	if (result > 255) {
-		result = 255;
-	}
-	return ((int) result );
+	result = ((((int) ((pixel - 128) * (contrastFactor / 32767.0)) )) + 128) + brightness;
+	return result;
 }
 
 EXPORT(int) primitiveDeviceClose(void) {
@@ -121,11 +179,11 @@ EXPORT(int) primitiveDeviceClose(void) {
 }
 
 EXPORT(int) primitiveDeviceCreate(void) {
-    int height;
-    int width;
-    int palette;
     int devicePointer;
     int deviceID;
+    int palette;
+    int height;
+    int width;
 
 	palette = interpreterProxy->stackIntegerValue(0);
 	height = interpreterProxy->stackIntegerValue(1);
@@ -142,10 +200,10 @@ EXPORT(int) primitiveDeviceCreate(void) {
 }
 
 EXPORT(int) primitiveDeviceDescribe(void) {
-    int deviceName;
-    void* deviceNamePointer;
-    int deviceNameSize;
     int deviceID;
+    int deviceNameSize;
+    int deviceName;
+    char* deviceNamePointer;
 
 	deviceName = interpreterProxy->stackValue(0);
 	if (!(interpreterProxy->isBytes(deviceName))) {
@@ -156,9 +214,6 @@ EXPORT(int) primitiveDeviceDescribe(void) {
 	if (!(deviceNameSize == 32)) {
 		return interpreterProxy->primitiveFail();
 	}
-
-	/*  */
-
 	deviceID = interpreterProxy->stackIntegerValue(1);
 	describeDevice(deviceID, deviceNamePointer);
 	interpreterProxy->pop(2);
@@ -182,72 +237,46 @@ EXPORT(int) primitiveDeviceGetWidth(void) {
 	interpreterProxy->popthenPush(2, ((result << 1) | 1));
 }
 
-
-/*	set the capture extent and pixel format to use */
-
-EXPORT(int) primitiveDeviceNextFrameIntoBrightnessAndContrast(void) {
+EXPORT(int) primitiveDeviceNextFrameIntoBrightnessContrastFormDepth(void) {
+    int formDepth;
     double brightness;
-    double contrast;
-    unsigned char* src;
-    int imageSize;
-    int bitsArraySize;
-    int result;
-    int red;
-    unsigned char* dest;
-    int bitsArrayPointer;
-    unsigned char* final;
-    int blue;
     Device device;
-    int green;
+    unsigned char* src;
+    int bitsArrayPointer;
+    double contrast;
 
-	contrast = interpreterProxy->stackFloatValue(0);
-	brightness = interpreterProxy->stackFloatValue(1);
+	formDepth = interpreterProxy->stackIntegerValue(0);
+	contrast = interpreterProxy->stackFloatValue(1);
+	contrast = ((contrast < 1.0) ? contrast : 1.0);
+	contrast = ((contrast < -1.0) ? -1.0 : contrast);
+	brightness = interpreterProxy->stackFloatValue(2);
 	brightness = ((brightness < 1.0) ? brightness : 1.0);
 	brightness = ((brightness < -1.0) ? -1.0 : brightness);
-	contrast = ((contrast < 1.0) ? contrast : 1.0);
-
-	/*  */
-
-	contrast = ((contrast < -1.0) ? -1.0 : contrast);
-	bitsArrayPointer = interpreterProxy->stackValue(2);
+	bitsArrayPointer = interpreterProxy->stackValue(3);
 	interpreterProxy->success(!(interpreterProxy->isPointers(bitsArrayPointer)));
 	if (interpreterProxy->failed()) {
 		return null;
 	}
 
-	/*  */
+	/* Capture */
 
-	bitsArraySize = interpreterProxy->byteSizeOf(bitsArrayPointer);
-
-	/*  */
-
-	device = ((Device) (interpreterProxy->stackIntegerValue(3)));
-	result = nextFrameFromDevice(device);
-	if (!(result)) {
+	device = ((Device) (interpreterProxy->stackIntegerValue(4)));
+	if (!(captureFrameFromDevice(device))) {
 		return interpreterProxy->primitiveFail();
 	}
-	dest = ((unsigned char*) (interpreterProxy->firstIndexableField(bitsArrayPointer)));
+	if (!(convertBufferTo24(device))) {
+		return interpreterProxy->primitiveFail();
+	}
 
-	/*  */
+	/* Convert */
 
 	src = device->buffer24;
-	imageSize = ((width(device)) * (height(device))) * 4;
-
-	/*  */
-
-	final = dest + (((imageSize < bitsArraySize) ? imageSize : bitsArraySize));
-	while (dest < final) {
-		blue = pixelbrightnesscontrast(src[2], brightness, contrast);
-		dest[0] = blue;
-		green = pixelbrightnesscontrast(src[1], brightness, contrast);
-		dest[1] = green;
-		red = pixelbrightnesscontrast(src[0], brightness, contrast);
-		dest[2] = red;
-		dest[3] = 255;
-		dest += 4;
-		src += 3;
+	if (formDepth == 16) {
+		copyFrominto16destSizebrightnesscontrast(src, ((unsigned char*) (interpreterProxy->firstIndexableField(bitsArrayPointer))), (width(device)) * (height(device)), brightness, contrast);
+	} else {
+		copyFrominto32destSizebrightnesscontrast(src, ((unsigned char*) (interpreterProxy->firstIndexableField(bitsArrayPointer))), (width(device)) * (height(device)), brightness, contrast);
 	}
-	interpreterProxy->pop(4);
+	interpreterProxy->pop(5);
 }
 
 
@@ -265,6 +294,99 @@ EXPORT(int) setInterpreter(struct VirtualMachine* anInterpreter) {
 	return ok;
 }
 
+static int storeRedgreenbluebrightness256contrastFactor2into16Bits(int red, int green, int blue, int brig256, int contInteger, unsigned char* dest) {
+    int sr;
+    int sg;
+    int sb;
+    int r;
+    int g;
+    int b;
+    int result;
+    int result1;
+    int result2;
+    int result3;
+    int result4;
+    int result5;
+
+	/* begin pixel:brightness256:contrastFactor2: */
+	result = ((((int) ((red - 128) * (contInteger / 32767.0)) )) + 128) + brig256;
+	r = result;
+	/* begin clipPixel: */
+	result1 = ((r < 0) ? 0 : r);
+	r = ((result1 < 255) ? result1 : 255);
+	/* begin pixel:brightness256:contrastFactor2: */
+	result2 = ((((int) ((green - 128) * (contInteger / 32767.0)) )) + 128) + brig256;
+	g = result2;
+	/* begin clipPixel: */
+	result3 = ((g < 0) ? 0 : g);
+	g = ((result3 < 255) ? result3 : 255);
+	/* begin pixel:brightness256:contrastFactor2: */
+	result4 = ((((int) ((blue - 128) * (contInteger / 32767.0)) )) + 128) + brig256;
+	b = result4;
+	/* begin clipPixel: */
+	result5 = ((b < 0) ? 0 : b);
+	b = ((result5 < 255) ? result5 : 255);
+	sr = ((unsigned) r >> 3);
+	sg = ((unsigned) g >> 3);
+	sb = ((unsigned) b >> 3);
+	dest[0] = ((((unsigned) sg << 5)) | sb);
+	dest[1] = (((((unsigned) sr << 2)) | (((unsigned) sg >> 3))) | 128);
+}
+
+static int storeRedgreenbluebrightness256contrastFactor2into32Bits(int red, int green, int blue, int brig256, int contInteger, unsigned char* dest) {
+    int r;
+    int g;
+    int b;
+    int result;
+    int result1;
+    int result2;
+    int result3;
+    int result4;
+    int result5;
+
+	/* begin pixel:brightness256:contrastFactor2: */
+	result3 = ((((int) ((red - 128) * (contInteger / 32767.0)) )) + 128) + brig256;
+	r = result3;
+	/* begin clipPixel: */
+	result = ((r < 0) ? 0 : r);
+	r = ((result < 255) ? result : 255);
+	/* begin pixel:brightness256:contrastFactor2: */
+	result4 = ((((int) ((green - 128) * (contInteger / 32767.0)) )) + 128) + brig256;
+	g = result4;
+	/* begin clipPixel: */
+	result1 = ((g < 0) ? 0 : g);
+	g = ((result1 < 255) ? result1 : 255);
+	/* begin pixel:brightness256:contrastFactor2: */
+	result5 = ((((int) ((blue - 128) * (contInteger / 32767.0)) )) + 128) + brig256;
+	b = result5;
+	/* begin clipPixel: */
+	result2 = ((b < 0) ? 0 : b);
+	b = ((result2 < 255) ? result2 : 255);
+	dest[0] = b;
+	dest[1] = g;
+	dest[2] = r;
+	dest[3] = 255;
+}
+
+static int storeRedgreenblueinto16Bits(int red, int green, int blue, unsigned char* dest) {
+    int sr;
+    int sg;
+    int sb;
+
+	sr = ((unsigned) red >> 3);
+	sg = ((unsigned) green >> 3);
+	sb = ((unsigned) blue >> 3);
+	dest[0] = ((((unsigned) sg << 5)) | sb);
+	dest[1] = (((((unsigned) sr << 2)) | (((unsigned) sg >> 3))) | 128);
+}
+
+static int storeRedgreenblueinto32Bits(int red, int green, int blue, unsigned char* dest) {
+	dest[0] = blue;
+	dest[1] = green;
+	dest[2] = red;
+	dest[3] = 255;
+}
+
 static int width(Device device) {
 	return device->vwindow.width;
 }
@@ -276,9 +398,9 @@ static int width(Device device) {
 void* VideoForLinuxPlugin_exports[][3] = {
 	{"VideoForLinuxPlugin", "primitiveDeviceClose", (void*)primitiveDeviceClose},
 	{"VideoForLinuxPlugin", "primitiveDeviceGetHeight", (void*)primitiveDeviceGetHeight},
+	{"VideoForLinuxPlugin", "primitiveDeviceNextFrameIntoBrightnessContrastFormDepth", (void*)primitiveDeviceNextFrameIntoBrightnessContrastFormDepth},
 	{"VideoForLinuxPlugin", "primitiveDeviceDescribe", (void*)primitiveDeviceDescribe},
 	{"VideoForLinuxPlugin", "primitiveDeviceCreate", (void*)primitiveDeviceCreate},
-	{"VideoForLinuxPlugin", "primitiveDeviceNextFrameIntoBrightnessAndContrast", (void*)primitiveDeviceNextFrameIntoBrightnessAndContrast},
 	{"VideoForLinuxPlugin", "getModuleName", (void*)getModuleName},
 	{"VideoForLinuxPlugin", "primitiveDeviceGetWidth", (void*)primitiveDeviceGetWidth},
 	{"VideoForLinuxPlugin", "setInterpreter", (void*)setInterpreter},

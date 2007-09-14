@@ -13,6 +13,7 @@
 #include "palettes.h"
 #include "videolib.h"
 
+
 #define DEVICE_NAME_SIZE 12
 static const char* videoDeviceBaseName = "/dev/video0";
 
@@ -38,44 +39,84 @@ static const char* videoDeviceBaseName = "/dev/video0";
       })                                                                          \
    )
 
+static int xioctl(int fd, int request, void *arg) {
+   int r;
+
+   do
+     r = ioctl(fd, request, arg);
+   while (-1 == r && EINTR == errno);
+
+   return r;
+}
+
+int getBrightness(Device device) {
+   return device->vpicture.brightness;
+}
+
+int getContrast(Device device) {
+   return device->vpicture.contrast;
+}
+
+int getSaturation(Device device) {
+   return device->vpicture.colour;
+}
+
+int getHue(Device device) {
+   return device->vpicture.hue;
+}
 
 void showDeviceInformation(Device device) {
-   fprintf(stderr, "    - Device Information:\n");
-   fprintf(stderr, "      ================================================================\n");
-   fprintf(stderr, "       Name: %s\n", device->vcapability.name);
-   fprintf(stderr, "       Type: %d\n", device->vcapability.type);
+   fprintf(stdout, "    - Device Information:\n");
+   fprintf(stdout, "      ================================================================\n");
+   fprintf(stdout, "       V4L1 Capabilities\n");
+   fprintf(stdout, "       -----------------\n");
+   fprintf(stdout, "       Name: %s\n", device->vcapability.name);
+   fprintf(stdout, "       Type: %d\n", device->vcapability.type);
 
    if (device->vcapability.type & VID_TYPE_CAPTURE) {
-      fprintf(stderr, "             Can capture to memory\n");
+      fprintf(stdout, "             Can capture to memory\n");
    }
    if (device->vcapability.type & VID_TYPE_TUNER) {
-      fprintf(stderr, "             Has a tuner of some form\n");
+      fprintf(stdout, "             Has a tuner of some form\n");
    }
    if (device->vcapability.type & VID_TYPE_TELETEXT) {
-      fprintf(stderr, "             Has teletext capability\n");
+      fprintf(stdout, "             Has teletext capability\n");
    }
    if (device->vcapability.type & VID_TYPE_OVERLAY) {
-      fprintf(stderr, "             Can overlay its image onto the frame buffer\n");
+      fprintf(stdout, "             Can overlay its image onto the frame buffer\n");
    }
    if (device->vcapability.type & VID_TYPE_CHROMAKEY) {
-      fprintf(stderr, "             Overlay is Chromakeyed\n");
+      fprintf(stdout, "             Overlay is Chromakeyed\n");
    }
    if (device->vcapability.type & VID_TYPE_CLIPPING) {
-      fprintf(stderr, "             Overlay clipping is supported\n");
+      fprintf(stdout, "             Overlay clipping is supported\n");
    }
    if (device->vcapability.type & VID_TYPE_FRAMERAM) {
-      fprintf(stderr, "             Overlay overwrites frame buffer memory\n");
+      fprintf(stdout, "             Overlay overwrites frame buffer memory\n");
    }
    if (device->vcapability.type & VID_TYPE_SCALES) {
-      fprintf(stderr, "             The hardware supports image scaling\n");
+      fprintf(stdout, "             The hardware supports image scaling\n");
    }
    if (device->vcapability.type & VID_TYPE_MONOCHROME) {
-      fprintf(stderr, "             Image capture is grey scale only\n");
+      fprintf(stdout, "             Image capture is grey scale only\n");
    }
    if (device->vcapability.type & VID_TYPE_SUBCAPTURE) {
-      fprintf(stderr, "             Capture can be of only part of the image\n");
+      fprintf(stdout, "             Capture can be of only part of the image\n");
    }
-   fprintf(stderr,
+   if (device->vcapability.type & VID_TYPE_MPEG_ENCODER) {
+      fprintf(stdout, "             Can encode MPEG streams");
+   }
+   if (device->vcapability.type & VID_TYPE_MJPEG_DECODER) {
+      fprintf(stdout, "             Can decode MJPEG streams");
+   }
+   if (device->vcapability.type & VID_TYPE_MJPEG_ENCODER) {
+      fprintf(stdout, "             Can encode MJPEG streams");
+   }
+   if (device->vcapability.type & VID_TYPE_MPEG_DECODER) {
+      fprintf(stdout, "             Can decode MPEG streams\n");
+   }
+
+   fprintf(stdout,
            "       Channels: %d  Audios: %d  MinExtent: %d@%d  MaxExtent: %d@%d\n",
            device->vcapability.channels,
            device->vcapability.audios,
@@ -83,8 +124,55 @@ void showDeviceInformation(Device device) {
            device->vcapability.minheight,
            device->vcapability.maxwidth,
            device->vcapability.maxheight);
-   fprintf(stderr, "      ================================================================\n");
 
+   if (device->isV4L2) {
+      fprintf(stdout, "      ----------------------------------------------------------------\n");
+      fprintf(stdout, "       V4L2 Capabilities\n");
+      fprintf(stdout, "       -----------------\n");
+
+
+      printf("       Driver: %s\n",                 device->v4l2Capability.driver);
+      printf("       Card: %s\n",                   device->v4l2Capability.card);
+      printf("       BusInfo: %s\n",                device->v4l2Capability.bus_info);
+
+      fprintf(stdout, "       Capabilities: %d\n", device->v4l2Capability.capabilities);
+
+      if (device->v4l2Capability.capabilities & V4L2_CAP_VIDEO_CAPTURE ) {
+        fprintf(stdout, "             Video Capture\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_VIDEO_OUTPUT ) {
+        fprintf(stdout, "             Video Output\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_VIDEO_OVERLAY ) {
+        fprintf(stdout, "             Video Overlay\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_VBI_CAPTURE ) {
+        fprintf(stdout, "             VBI Capture\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_VBI_OUTPUT ) {
+        fprintf(stdout, "             VBI Output\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_RDS_CAPTURE ) {
+        fprintf(stdout, "             RDS Capture\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_TUNER ) {
+        fprintf(stdout, "             Tuner\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_AUDIO ) {
+        fprintf(stdout, "             Audio\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_READWRITE ) {
+        fprintf(stdout, "             Read/Write\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_ASYNCIO ) {
+        fprintf(stdout, "             Async IO\n");
+      }
+      if (device->v4l2Capability.capabilities & V4L2_CAP_STREAMING ) {
+        fprintf(stdout, "             Streaming\n");
+      }
+   }
+
+   fprintf(stdout, "      ================================================================\n");
 }
 
 
@@ -114,11 +202,11 @@ void initDevice(Device device,
    device->forceRead = FALSE;
    device->usingMMap = FALSE;
 
-   device->haveTuner = FALSE;
-   device->isBttv    = FALSE;
+   device->isV4L2    = FALSE;
 
-   device->currentChannel = 0;
+   device->converterFunction = 0;
 }
+
 
 
 void setupMMap(Device device) {
@@ -126,15 +214,15 @@ void setupMMap(Device device) {
    int mmapsSize;
    device->usingMMap = FALSE;
 
-   fprintf(stderr, "    - Seting up MMAP for device %p\n", device);
+   fprintf(stdout, "    - Seting up MMAP for device %p\n", device);
 
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCGMBUF, &device->memoryBuffer)) < 0) {
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOCGMBUF, &device->memoryBuffer)) < 0) {
       /* failed to retrieve information about capture memory space */
       perror("VIDIOCGMBUF");
       return;
    }
 
-   fprintf(stderr, "        - The device has %d buffers\n", device->memoryBuffer.frames);
+   fprintf(stdout, "        - The device has %d buffers\n", device->memoryBuffer.frames);
 
    /* obtain memory mapped area */
    device->memoryMap = (char*) mmap(0,
@@ -142,23 +230,23 @@ void setupMMap(Device device) {
                                     PROT_READ /*| PROT_WRITE*/,
                                     MAP_SHARED, device->fd, 0);
    if (device->memoryMap < (char*)0) {
-      fprintf(stderr, "        * Failed to retrieve pointer to memory mapped area\n");
+      fprintf(stdout, "        * Failed to retrieve pointer to memory mapped area\n");
       return;
    }
 
    /* allocate structures */
    mmapsSize = device->memoryBuffer.frames * 32 * 4 /* sizeof(struct video_mmap)*/;
-   fprintf(stderr, "        - Allocing %d bytes\n", mmapsSize);
+   fprintf(stdout, "        - Allocing %d bytes\n", mmapsSize);
    device->mmaps = (struct video_mmap*) malloc(mmapsSize);
 
    if (device->mmaps == 0) {
-      fprintf(stderr, "        * Not enough memory\n");
+      fprintf(stdout, "        * Not enough memory\n");
       return;
    }
 
    /* fill out the fields */
    for (i = 0; i < device->memoryBuffer.frames; i++) {
-      fprintf(stderr, "        - Creating the mmap #%d\n", i);
+      fprintf(stdout, "        - Creating the mmap #%d\n", i);
 
       device->mmaps[i].frame  = i;
       device->mmaps[i].width  = device->vwindow.width;
@@ -167,16 +255,15 @@ void setupMMap(Device device) {
    }
 
    device->usingMMap = TRUE;
-   /*device->usingMMap = FALSE; */
 }
 
 
 BOOLEAN startCaptureInBuffers(Device device) {
    int i;
    for (i = 0; i < (device->memoryBuffer.frames - 1); i++) {
-      fprintf(stderr, "- Capturing buffer #%d (1st pass)\n", i);
-      if (EINTR_RETRY(ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[i])) < 0) {
-      //if (ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[i]) < 0) {
+      fprintf(stdout, "- Capturing buffer #%d (1st pass)\n", i);
+      if (EINTR_RETRY(xioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[i])) < 0) {
+      //if (xioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[i]) < 0) {
          perror("VIDIOCMCAPTURE1");
          return FALSE;
       }
@@ -191,7 +278,7 @@ BOOLEAN switchToRead(Device device) {
    device->usingMMap = FALSE;
    device->buffer    = (char*) malloc(device->imageSize);
    if (!device->buffer) {
-      fprintf(stderr, "* Out of memory.\n");
+      fprintf(stdout, "* Out of memory.\n");
       return FALSE;
    }
 
@@ -199,275 +286,10 @@ BOOLEAN switchToRead(Device device) {
 }
 
 
-BOOLEAN deviceFindAndSetTuner(Device device) {
-   int tunerNumber = -1;
-   BOOLEAN found = FALSE;
-   int i;
+BOOLEAN rawSetupPalette(Device device) {
 
-   for (i = 0; i < device->vchannel.tuners; i++ ) {
-      device->vtuner.tuner = i;
-
-      if (EINTR_RETRY(ioctl(device->fd, VIDIOCGTUNER, &device->vtuner)) >= 0 ) {
-        if (device->vtuner.flags & VIDEO_TUNER_PAL) {
-           found = TRUE;
-           tunerNumber = i;
-           break;
-        }
-      }
-   }
-
-   if (found) {
-      BOOLEAN mustChange = FALSE;
-
-      device->vtuner.tuner = tunerNumber;
-
-      if (device->vtuner.mode != VIDEO_MODE_PAL) {
-         mustChange = TRUE;
-         device->vtuner.mode = VIDEO_MODE_PAL;
-      }
-
-      if (mustChange) {
-         if (EINTR_RETRY(ioctl(device->fd, VIDIOCSTUNER, &device->vtuner)) < 0 ) {
-            perror("VIDIOCSTUNER");
-            return FALSE;
-         }
-
-
-         device->vchannel.channel = device->currentChannel;
-         device->vchannel.norm    = VIDEO_MODE_PAL;
-
-         if (EINTR_RETRY(ioctl(device->fd, VIDIOCSCHAN, &device->vchannel )) < 0 ) {
-            perror("VIDIOCSCHAN");
-            return FALSE;
-         }
-
-         /* vidin->numtuners = device->vchannel.tuners */;
-      }
-   }
-
-   if (device->vchannel.tuners > 0) {
-      device->vtuner.tuner = tunerNumber;
-
-      if (EINTR_RETRY(ioctl(device->fd, VIDIOCGTUNER, &device->vtuner)) < 0 ) {
-         perror("VIDIOCGTUNER");
-         return FALSE;
-      }
-
-      fprintf(stderr, "    - Using tuner \"%s\"\n", device->vtuner.name);
-      fprintf(stderr, "        - Range %ld %ld \n", device->vtuner.rangelow, device->vtuner.rangehigh);
-      fprintf(stderr, "        - Signal=%d\n", device->vtuner.signal);
-
-      if (device->vtuner.mode == VIDEO_MODE_PAL) {
-         fprintf(stderr, "        - The tuner is in PAL mode\n");
-      }
-      else if (device->vtuner.mode == VIDEO_MODE_NTSC) {
-         fprintf(stderr, "        - The tuner is in NTSC mode\n");
-      }
-      else if (device->vtuner.mode == VIDEO_MODE_SECAM) {
-         fprintf(stderr, "        - The tuner is in SECAM mode\n");
-      }
-      else if (device->vtuner.mode == VIDEO_MODE_AUTO) {
-         fprintf(stderr, "        - The tuner auto switches, or mode does not apply\n");
-      }
-      else {
-         fprintf(stderr, "        * The tuner is in UNDEFINED mode!\n");
-      }
-
-      if (device->vtuner.flags & VIDEO_TUNER_PAL) {
-         fprintf(stderr, "        - PAL tuning is supported\n");
-      }
-      if (device->vtuner.flags & VIDEO_TUNER_NTSC) {
-         fprintf(stderr, "        - NTSC tuning is supported\n");
-      }
-      if (device->vtuner.flags & VIDEO_TUNER_SECAM) {
-         fprintf(stderr, "        - SECAM tuning is supported\n");
-      }
-      if (device->vtuner.flags & VIDEO_TUNER_LOW) {
-         fprintf(stderr, "        - Frequency is in a lower range\n");
-      }
-      if (device->vtuner.flags & VIDEO_TUNER_NORM) {
-         fprintf(stderr, "        - The norm for this tuner is settable\n");
-      }
-      if (device->vtuner.flags & VIDEO_TUNER_STEREO_ON) {
-         fprintf(stderr, "        - The tuner is seeing stereo audio\n");
-      }
-      if (device->vtuner.flags & VIDEO_TUNER_RDS_ON) {
-         fprintf(stderr, "        - The tuner is seeing a RDS datastream\n");
-      }
-      if (device->vtuner.flags & VIDEO_TUNER_MBS_ON) {
-         fprintf(stderr, "        - The tuner is seeing a MBS datastream\n");
-      }
-   }
-
-   /* device->tunerlow = (device->vtuner.flags & VIDEO_TUNER_LOW) ? 1 : 0; */
-   /* vidin->hastuner = 1; */
-
-   return TRUE;
-}
-
-
-BOOLEAN deviceSetChannel(Device device, int channel) {
-   if (channel >= device->vcapability.channels) {
-      fprintf(stderr,
-              "videoinput: Requested input number %d not valid, max is %d.\n",
-              channel,
-              device->vcapability.channels );
-      return FALSE;
-   }
-
-   device->vchannel.channel = channel;
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCGCHAN, &device->vchannel)) < 0 ) {
-      perror("VIDIOCGCHAN");
-      return FALSE;
-   }
-   
-   device->vchannel.channel = channel;
-   device->vchannel.norm    = VIDEO_MODE_PAL;
-
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCSCHAN, &device->vchannel)) < 0 ) {
-      perror("VIDIOCSCHAN");
-      return FALSE;
-   }
-
-   device->currentChannel = channel;
-   if(EINTR_RETRY(ioctl(device->fd, VIDIOCGCHAN, &device->vchannel)) < 0 ) {
-      perror("VIDIOCGCHAN");
-      return FALSE;
-   }
-
-   /* Once we've set the input, go look for a tuner. */
-   if (!deviceFindAndSetTuner(device)) {
-      return FALSE;
-   }
-
-   return TRUE;
-}
-
-
-BOOLEAN setupTuner(Device device) {
-   int i;
-   /* Check if this is a bttv-based card.  Code taken from xawtv. */
-#define BTTV_VERSION            _IOR('v' , BASE_VIDIOCPRIVATE+6, int)
-   /* dirty hack time / v4l design flaw -- works with bttv only
-    * this adds support for a few less common PAL versions */
-   if (!(EINTR_RETRY(ioctl(device->fd, BTTV_VERSION, &i)) < 0) ) {
-      device->isBttv = TRUE;
-      fprintf(stderr, "    - The device is is a BTTV\n");
-   }
-#undef BTTV_VERSION
-
-   /* on initialization set to channel 0 */
-   if (!deviceSetChannel(device, 0)) {
-      return FALSE;
-   }
-
-
-   /* test for audio. see: ~/Video4Linux/tvtime-0.9.12/src/videoinput.c line 581 */
-
-   return TRUE;
-}
-
-
-
-BOOLEAN setupDevice(Device device) {
-   BOOLEAN change;
-   fprintf(stderr, "- Seting up device %p\n", device);
-
-
-   /* check (again) for a valid device */
-   if (!(device->vcapability.type & VID_TYPE_CAPTURE)) {
-      fprintf(stderr, "    * The device can't capture video\n");
-      return FALSE;
-   }
-
-   if (device->vcapability.channels == 0) {
-      fprintf(stderr, "    * The device hasn't inputs\n");
-      return FALSE;
-   }
-
-   if (device->vcapability.type & VID_TYPE_TUNER) {
-      device->haveTuner = TRUE;
-   }
-
-   /* ---------------------------------------------------------------------- */
-   /* tuner setup */
-   if (device->haveTuner) {
-      if (!setupTuner(device)) {
-         return FALSE;
-      }
-   }
-   /* ---------------------------------------------------------------------- */
-
-
-   /* ---------------------------------------------------------------------- */
-   /* let's try to change the capture width & height */
-   change = FALSE;
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCGWIN, &device->vwindow)) < 0) {
-      perror("VIDIOCGWIN1");
-      return FALSE;
-   }
-
-   if (device->desiredWidth && (device->vwindow.width != device->desiredWidth)) {
-     fprintf(stderr, "    - Changing the width from %d to %d\n", device->vwindow.width, device->desiredWidth);
-
-     device->vwindow.width = device->desiredWidth;
-     change = TRUE;
-   }
-   if (device->desiredHeight && (device->vwindow.height != device->desiredHeight)) {
-     fprintf(stderr, "    - Changing the height from %d to %d\n", device->vwindow.height, device->desiredHeight);
-
-     device->vwindow.height = device->desiredHeight;
-     change = TRUE;
-   }
-
-   if (change) {
-      if (EINTR_RETRY(ioctl(device->fd, VIDIOCSWIN, &device->vwindow)) < 0) {
-         perror("VIDIOCGWIN2");
-         return FALSE;
-      }
-
-      if (EINTR_RETRY(ioctl(device->fd, VIDIOCGWIN, &device->vwindow)) < 0) {
-         perror("VIDIOCGWIN3");
-         return FALSE;
-      }
-      if (device->desiredWidth != device->vwindow.width) {
-         fprintf(stderr,
-                 "    * The device can't change the capture width (now=%d)\n",
-                 device->vwindow.width);
-         return FALSE;
-      }
-      if (device->desiredHeight != device->vwindow.height) {
-         fprintf(stderr,
-                 "    * The device can't change the capture height (now=%d)\n",
-                 device->vwindow.height);
-         return FALSE;
-      }
-
-   }
-
-   fprintf(stderr,
-           "    - Extent=%d@%d\n",
-           device->vwindow.width,
-           device->vwindow.height);
-
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCGPICT, &device->vpicture)) < 0) {
-      perror("VIDIOCGPICT");
-      return FALSE;
-   }
-
-   fprintf(stderr,
-           "    - Brightness=%d, Contrast=%d, Saturation=%d, Hue=%d\n",
-           getBrightness(device),
-           getContrast(device),
-           getSaturation(device),
-           getHue(device));
-   /* ---------------------------------------------------------------------- */
-
-
-   /* ---------------------------------------------------------------------- */
-   /* let's try to change the bit depth and palette */
    if (device->desiredPalette && (device->vpicture.palette != device->desiredPalette)) {
-      fprintf(stderr,
+      fprintf(stdout,
               "    - Changing the palette from %d (%s) to %d (%s) and depth from %d to %d\n",
               device->vpicture.palette,
               paletteName(device->vpicture.palette),
@@ -479,32 +301,146 @@ BOOLEAN setupDevice(Device device) {
       device->vpicture.palette = device->desiredPalette;
       device->vpicture.depth   = paletteDepth(device->desiredPalette);
 
-      if (EINTR_RETRY(ioctl(device->fd, VIDIOCSPICT, &device->vpicture)) < 0) {
+      if (EINTR_RETRY(xioctl(device->fd, VIDIOCSPICT, &device->vpicture)) < 0) {
          perror("VIDIOCSPICT");
          return FALSE;
       }
       if (paletteDepth(device->desiredPalette) != device->vpicture.depth) {
-         fprintf(stderr, "    * The device can't change the depth\n");
+         fprintf(stdout, "    * The device can't change the depth\n");
          return FALSE;
       }
       if (device->desiredPalette != device->vpicture.palette) {
-         fprintf(stderr, "    * The device can't change the palette\n");
+         fprintf(stdout, "    * The device can't change the palette\n");
          return FALSE;
       }
    }
 
-   fprintf(stderr,
+   fprintf(stdout,
            "    - Depth=%d Palette=%d (%s)\n",
            device->vpicture.depth,
            device->vpicture.palette,
            paletteName(device->vpicture.palette));
+
+   return TRUE;
+}
+
+/* let's try to change the bit depth and palette */
+BOOLEAN setupPalette(Device device) {
+
+   // The OLPC webcam supports palette 3 and 8, but 8 has better
+   // quality.  Let's try to use palette 8 and let's fallback in a
+   // good way.
+   if (device->desiredPalette == 0) {
+      if (device->vpicture.palette == 3) {
+         device->desiredPalette = 8;
+         fprintf(stdout, "    - Trying palette 8 instead of 3 (for better quality)\n");
+         if (rawSetupPalette(device)) {
+            fprintf(stdout, "    - Palette 8 set!\n");
+            return TRUE;
+         }
+         fprintf(stdout, "    * Palette 8 can't be set!\n");
+         device->desiredPalette = 0;
+      }
+   }
+
+   return rawSetupPalette(device);
+}
+
+
+BOOLEAN setupDevice(Device device) {
+   BOOLEAN change;
+   fprintf(stdout, "- Seting up device %p\n", device);
+
+
+   /* check (again) for a valid device */
+   if (!(device->vcapability.type & VID_TYPE_CAPTURE)) {
+      fprintf(stdout, "    * The device can't capture video\n");
+      return FALSE;
+   }
+
+   if (device->vcapability.channels == 0) {
+      fprintf(stdout, "    * The device hasn't inputs\n");
+      return FALSE;
+   }
+
+
    /* ---------------------------------------------------------------------- */
+   /* let's try to change the capture width & height */
+   change = FALSE;
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOCGWIN, &device->vwindow)) < 0) {
+      perror("VIDIOCGWIN1");
+      return FALSE;
+   }
+
+   if (device->desiredWidth && (device->vwindow.width != device->desiredWidth)) {
+     fprintf(stdout, "    - Changing the width from %d to %d\n", device->vwindow.width, device->desiredWidth);
+
+     device->vwindow.width = device->desiredWidth;
+     change = TRUE;
+   }
+   if (device->desiredHeight && (device->vwindow.height != device->desiredHeight)) {
+     fprintf(stdout, "    - Changing the height from %d to %d\n", device->vwindow.height, device->desiredHeight);
+
+     device->vwindow.height = device->desiredHeight;
+     change = TRUE;
+   }
+
+   if (change) {
+      if (EINTR_RETRY(xioctl(device->fd, VIDIOCSWIN, &device->vwindow)) < 0) {
+         perror("VIDIOCGWIN2");
+         return FALSE;
+      }
+
+      if (EINTR_RETRY(xioctl(device->fd, VIDIOCGWIN, &device->vwindow)) < 0) {
+         perror("VIDIOCGWIN3");
+         return FALSE;
+      }
+      if (device->desiredWidth != device->vwindow.width) {
+         fprintf(stdout,
+                 "    * The device can't change the capture width (now=%d)\n",
+                 device->vwindow.width);
+         return FALSE;
+      }
+      if (device->desiredHeight != device->vwindow.height) {
+         fprintf(stdout,
+                 "    * The device can't change the capture height (now=%d)\n",
+                 device->vwindow.height);
+         return FALSE;
+      }
+
+   }
+
+   fprintf(stdout,
+           "    - Extent=%d@%d\n",
+           device->vwindow.width,
+           device->vwindow.height);
+
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOCGPICT, &device->vpicture)) < 0) {
+      perror("VIDIOCGPICT");
+      return FALSE;
+   }
+
+   fprintf(stdout,
+           "    - Brightness=%d, Contrast=%d, Saturation=%d, Hue=%d\n",
+           getBrightness(device),
+           getContrast(device),
+           getSaturation(device),
+           getHue(device));
+   /* ---------------------------------------------------------------------- */
+
+
+   /* ---------------------------------------------------------------------- */
+   if (!setupPalette(device)) {
+      return FALSE;
+   }
+   /* ---------------------------------------------------------------------- */
+
 
    device->imageSize = (int) device->vwindow.width * device->vwindow.height * (paletteBytesPerPixel(device->vpicture.palette));
    device->buffer24  = (char*) malloc(device->vwindow.width * device->vwindow.height * 3);
 
    if (device->forceRead) {
-      fprintf(stderr, "    - Capturing using (forced) read()\n");
+      fprintf(stdout, "    - Capturing using (forced) read()\n");
       if (!switchToRead(device)) {
          return FALSE;
       }
@@ -513,16 +449,16 @@ BOOLEAN setupDevice(Device device) {
       setupMMap(device);
 
       if (device->usingMMap) {
-         fprintf(stderr, "    - Capturing using mmap()\n");
+         fprintf(stdout, "    - Capturing using mmap()\n");
          if (!startCaptureInBuffers(device)) {
-            fprintf(stderr, "    * Falling back to read()\n");
+            fprintf(stdout, "    * Falling back to read()\n");
             if (!switchToRead(device)) {
                return FALSE;
             }
          }
       }
       else {
-         fprintf(stderr, "    - Capturing using read()\n");
+         fprintf(stdout, "    - Capturing using read()\n");
          if (!switchToRead(device)) {
             return FALSE;
          }
@@ -532,9 +468,22 @@ BOOLEAN setupDevice(Device device) {
    return TRUE;
 }
 
+void initializeDevice(Device device) {
+   device->isV4L2 = FALSE;
+
+   //if (EINTR_RETRY(xioctl(device->fd, VIDIOC_QUERYCAP, &cap)) < 0) {
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOC_QUERYCAP, &device->v4l2Capability)) < 0) {
+      perror("VIDIOC_QUERYCAP");
+      fprintf(stderr, "    - It doesn't appear to be a v4l2 device\n");
+   }
+   else {
+      device->isV4L2 = TRUE;
+   }
+}
+
 
 BOOLEAN openDevice(Device device) {
-   fprintf(stderr, "- Opening device in %p\n", device);
+   fprintf(stdout, "- Opening device in %p\n", device);
 
    /* open the video device */
    device->fd = EINTR_RETRY(open(device->deviceName, O_RDWR));
@@ -542,20 +491,23 @@ BOOLEAN openDevice(Device device) {
       perror(device->deviceName);
       return FALSE;
    }
-   fprintf(stderr, "    - Opened %s with fd=%d\n", device->deviceName, device->fd);
+   fprintf(stdout, "    - Opened %s with fd=%d\n", device->deviceName, device->fd);
+
 
    /* try to lock the device */
    if (EINTR_RETRY(flock(device->fd, LOCK_EX | LOCK_NB)) < 0) {
       perror("FLOCK");
-      fprintf(stderr, "    * Can't lock device\n");
+      fprintf(stdout, "    * Can't lock device\n");
       return FALSE;
    }
 
    /* check for a valid device */
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCGCAP, &device->vcapability)) < 0) {
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOCGCAP, &device->vcapability)) < 0) {
       perror("VIDIOCGCAP");
       return FALSE;
    }
+
+   initializeDevice(device);
 
    showDeviceInformation(device);
 
@@ -573,7 +525,7 @@ Device createDevice(int deviceID,
    deviceName[DEVICE_NAME_SIZE - 2] = deviceID + '0';
 
    Device device;
-   fprintf(stderr,
+   fprintf(stdout,
            "- Creating Device: id=%d, deviceName=%s, extent=%d@%d, palette=%d-%s\n",
            deviceID,
            deviceName,
@@ -582,10 +534,10 @@ Device createDevice(int deviceID,
 
    device = (Device) malloc(SIZE_OF_DEVICE);
    if (device == 0) {
-      fprintf(stderr, "    * Not enough memory\n");
+      fprintf(stdout, "    * Not enough memory\n");
       return 0;
    }
-   fprintf(stderr, "    - Structure created in %p\n", device);
+   fprintf(stdout, "    - Structure created in %p\n", device);
 
    initDevice(device,
               deviceName,
@@ -603,11 +555,11 @@ Device createDevice(int deviceID,
 
 
 BOOLEAN nextFrameMMap(Device device) {
-   /* fprintf(stderr, "- capturing buffer #%d\n", device->bufferIndex); */
+  //fprintf(stdout, "- capturing buffer #%d\n", device->bufferIndex);
 
    /* send a request to begin capturing to the currently indexed buffer */
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex])) < 0) {
-   //if (ioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex]) < 0) {
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex])) < 0) {
+   //if (xioctl(device->fd, VIDIOCMCAPTURE, &device->mmaps[device->bufferIndex]) < 0) {
       perror("VIDIOCMCAPTURE2");
       return FALSE;
    }
@@ -617,17 +569,17 @@ BOOLEAN nextFrameMMap(Device device) {
    /* if bufferIndex is indexing beyond the last buffer set it to the first buffer */
    device->bufferIndex %= device->memoryBuffer.frames;
 
-   /* fprintf(stderr, "- syncing buffer #%d\n", device->bufferIndex); */
+   //fprintf(stdout, "- syncing buffer #%d\n", device->bufferIndex);
 
    /* wait for the currently indexed frame to complete capture */
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCSYNC, &(device->mmaps[device->bufferIndex]))) < 0) {
-   //if (ioctl(device->fd, VIDIOCSYNC, &(device->mmaps[device->bufferIndex])) < 0) {
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOCSYNC, &(device->mmaps[device->bufferIndex]))) < 0) {
+   //if (xioctl(device->fd, VIDIOCSYNC, &(device->mmaps[device->bufferIndex])) < 0) {
       /* sync request failed */
       perror("VIDIOCSYNC");
       return FALSE;
    }
 
-   /* fprintf(stderr, "- processing buffer #%d\n", device->bufferIndex); */
+   //fprintf(stdout, "- processing buffer #%d\n", device->bufferIndex);
    /* return the address of the frame data for the current buffer index */
    device->buffer = device->memoryMap + device->memoryBuffer.offsets[device->bufferIndex];
 
@@ -637,7 +589,7 @@ BOOLEAN nextFrameMMap(Device device) {
 
 
 void closeDevice(Device device) {
-   fprintf(stderr, "- Closing device in %p\n", device);
+   fprintf(stdout, "- Closing device in %p\n", device);
 
    if (device->deviceName) {
       free(device->deviceName);
@@ -666,20 +618,35 @@ void closeDevice(Device device) {
    if (device->fd > 0) {
       if (EINTR_RETRY(flock(device->fd, LOCK_UN)) < 0) {
          perror("FLOCK");
-         fprintf(stderr, "    * Can't unlock device\n");
+         fprintf(stdout, "    * Can't unlock device\n");
       }
 
       close(device->fd);
       device->fd = 0;
    }
 
-   fprintf(stderr, "- Destroying device in %p\n", device);
+   fprintf(stdout, "- Destroying device in %p\n", device);
    free(device);
 }
 
+BOOLEAN convertBufferTo24(Device device) {
+   if (device->converterFunction == 0) {
+      device->converterFunction = converterFunction(device->vpicture.palette);
+      if (device->converterFunction == 0) {
+         return FALSE;
+      }
+   }
 
-BOOLEAN nextFrameFromDevice(Device device) {
-   /* fprintf(stderr, "- Capturing from device in %p\n", device); */
+   device->converterFunction(device->vwindow.width,
+                             device->vwindow.height,
+                             device->buffer,
+                             device->buffer24);
+
+   return TRUE;
+}
+
+BOOLEAN captureFrameFromDevice(Device device) {
+   /* fprintf(stdout, "- Capturing from device in %p\n", device); */
 
    if (device->usingMMap) {
       if (!nextFrameMMap(device)) {
@@ -687,24 +654,24 @@ BOOLEAN nextFrameFromDevice(Device device) {
       }
    }
    else {
-      /* fprintf(stderr, "- reading...\n"); */
+      /* fprintf(stdout, "- reading...\n"); */
 
       if (read(device->fd, device->buffer, device->imageSize) != device->imageSize) {
-         fprintf(stderr, "\nThe device didn't answered the correct bytes.\n");
+         fprintf(stdout, "\nThe device didn't answered the correct bytes.\n");
          return FALSE;
       }
    }
 
-   if (paletteConvert(device->vpicture.palette,
-                      device->vwindow.width,
-                      device->vwindow.height,
-                      device->buffer,
-                      device->buffer24)) {
-      return TRUE;
-   }
-   else {
+   return TRUE;
+}
+
+BOOLEAN nextFrameFromDevice(Device device) {
+   if (!captureFrameFromDevice(device)) {
       return FALSE;
    }
+
+   return convertBufferTo24(device);
+   //return TRUE;
 }
 
 
@@ -735,24 +702,8 @@ int getPalette(Device device) {
    return device->vpicture.palette;
 }
 
-int getBrightness(Device device) {
-   return device->vpicture.brightness;
-}
 
-int getContrast(Device device) {
-   return device->vpicture.contrast;
-}
-
-int getSaturation(Device device) {
-   return device->vpicture.colour;
-}
-
-int getHue(Device device) {
-   return device->vpicture.hue;
-}
-
-
-
+/*
 void setBrightness(Device device, int brightness) {
    device->vpicture.brightness = brightness;
 }
@@ -768,10 +719,10 @@ void setSaturation(Device device, int saturation) {
 void setHue(Device device, int hue) {
    device->vpicture.hue = hue;
 }
-
+*/
 
 BOOLEAN updatePicture(Device device) {
-   if (EINTR_RETRY(ioctl(device->fd, VIDIOCSPICT, &device->vpicture)) < 0) {
+   if (EINTR_RETRY(xioctl(device->fd, VIDIOCSPICT, &device->vpicture)) < 0) {
       perror("VIDIOCSPICT");
       return FALSE;
    }
@@ -789,13 +740,13 @@ void describeDevice(int deviceID, char* deviceName) {
    strcpy(device, videoDeviceBaseName);
    device[DEVICE_NAME_SIZE - 2] = deviceID + '0';
 
-   //fprintf(stderr, "** trying to open: %d...\n", deviceID);
+   //fprintf(stdout, "** trying to open: %d...\n", deviceID);
    fd = EINTR_RETRY(open(device, O_RDWR));
    if (fd < 0) {
       return;
    }
 
-   //fprintf(stderr, "** trying to lock: %d...\n", deviceID);
+   //fprintf(stdout, "** trying to lock: %d...\n", deviceID);
    /* try to lock the device */
    if (EINTR_RETRY(flock(fd, LOCK_EX | LOCK_NB)) < 0) {
       close(fd);
@@ -804,14 +755,14 @@ void describeDevice(int deviceID, char* deviceName) {
 
    struct video_capability vcapability;
 
-   //fprintf(stderr, "** trying to see if it's a video device: %d...\n", deviceID);
-   if (EINTR_RETRY(ioctl(fd, VIDIOCGCAP, &vcapability)) < 0) {
+   //fprintf(stdout, "** trying to see if it's a video device: %d...\n", deviceID);
+   if (EINTR_RETRY(xioctl(fd, VIDIOCGCAP, &vcapability)) < 0) {
       close(fd);
       return;
    }
 
    memcpy(deviceName, vcapability.name, 32);
-   fprintf(stderr, "- Detected Device: id=%d name=%s\n", deviceID, deviceName);
+   fprintf(stdout, "- Detected Device: id=%d name=%s\n", deviceID, deviceName);
 
    close(fd);
 }

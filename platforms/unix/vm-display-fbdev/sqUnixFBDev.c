@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2006-10-18 10:04:04 by piumarta on emilia.local
+ * Last edited: 2007-09-14 11:26:20 by piumarta on emilia.local
  */
 
 
@@ -12,7 +12,7 @@
  *	13271 Skislope Way, Truckee, CA 96161
  *	http://www.weatherdimensions.com
  *
- * Copyright (C) 2003-2005 Ian Piumarta
+ * Copyright (C) 2003-2007 Ian Piumarta
  * All Rights Reserved.
  * 
  * This file is part of Unix Squeak.
@@ -156,12 +156,12 @@ static void enqueueKeyboardEvent(int key, int up, int modifiers)
   modifierState= modifiers;
   if (up)
     {
-      recordKeyboardEvent(key, EventKeyUp, modifiers);
+      recordKeyboardEvent(key, EventKeyUp, modifiers, key);
     }
   else
     {
-      recordKeyboardEvent(key, EventKeyDown, modifiers);
-      recordKeyboardEvent(key, EventKeyChar, modifiers);
+      recordKeyboardEvent(key, EventKeyDown, modifiers, key);
+      recordKeyboardEvent(key, EventKeyChar, modifiers, key);
     }
 }
 
@@ -254,6 +254,12 @@ static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMask
 {
   fb_setCursor(fb, pointerForOop(cursorBitsIndex), pointerForOop(cursorMaskIndex), offsetX, offsetY);
   return 1;
+}
+
+
+static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
+{
+  return 0;
 }
 
 
@@ -389,17 +395,24 @@ static int display_parseArgument(int argc, char **argv)
 }
 
 
-static sqInt display_clipboardSize(void)									{ return 0; }
-static sqInt display_clipboardWriteFromAt(sqInt n, sqInt ptr, sqInt off)					{ return 0; }
-static sqInt display_clipboardReadIntoAt(sqInt n, sqInt ptr, sqInt off)					{ return 0; }
+static sqInt  display_clipboardSize(void)									{ return 0; }
+static sqInt  display_clipboardWriteFromAt(sqInt n, sqInt ptr, sqInt off)					{ return 0; }
+static sqInt  display_clipboardReadIntoAt(sqInt n, sqInt ptr, sqInt off)					{ return 0; }
+static char **display_clipboardGetTypeNames(void)								{ return 0; }
+static sqInt  display_clipboardSizeWithType(char *typeName, int ntypeName)					{ return 0; }
+
+static void  display_clipboardWriteWithType(char *data, size_t ndata, char *typeName, size_t ntypeName, int isDnd, int isClaiming) {}
+
+static sqInt display_dndOutStart(char *data, int dataLength, char *aFormat, int formatLength)		{ return 0; }
+
 static sqInt display_ioFormPrint(sqInt bits, sqInt w, sqInt h, sqInt d, double hs, double vs, sqInt l)	{ return 0; }
 static sqInt display_ioSetFullScreen(sqInt fullScreen)							{ return 0; }
 static sqInt display_ioForceDisplayUpdate(void)								{ return 0; }
-static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)		{ return 0; }
-static void display_winSetName(char *imageName)								{ return  ; }
-static void display_winExit(void)									{ return  ; }
-static int  display_winImageFind(char *buf, int len)							{ return 0; }
-static void display_winImageNotFound(void)								{ return  ; }
+static sqInt display_ioSetDisplayMode(sqInt width, sqInt height, sqInt depth, sqInt fullscreenFlag)	{ return 0; }
+static void  display_winSetName(char *imageName)							{ return  ; }
+static void  display_winExit(void)									{ return  ; }
+static int   display_winImageFind(char *buf, int len)							{ return 0; }
+static void  display_winImageNotFound(void)								{ return  ; }
 
 
 //----------------------------------------------------------------

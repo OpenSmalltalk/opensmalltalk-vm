@@ -1,3 +1,51 @@
+2007-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c (xkeysym2ucs4): Added.
+	(handleEvent): Mouse wheel pseudokeys pass ASCII value as ucs4 to
+	recordKeyboardEvent().  Keyboard events send UCS4 code to
+	recordKeyboardEvent().
+
+	* vm-display-fbdev/sqUnixFBDev.c (enqueueKeyboardEvent): Pass
+	ASCII value ucs4 to recordKeyboardEvent().
+
+	* vm/sqUnixEvent.c (recordKeyboardEvent): Initialise utf32code
+	from ucs4 argument.
+
+2007-09-07  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/config.h.in: Remove include of "glibc.h".
+
+	* vm/sqUnixEvent.c (recordWindowEvent): Accept arguments for
+	WindowEvent members.
+
+	* npsqueak/npsqueakregister.in: Pass '-H' (follow links) to 'find'.
+
+	* vm-display-X11/sqUnixMozilla.c (display_primitivePluginPostURL):
+	Restored for OLPC.
+
+	* vm-display-X11/sqUnixX11.c: Add support for dragging out of
+	Sqeuak.
+
+	* vm-display-X11/acinclude.m4: Test for GLX before enabling GL.
+	Test for XRender extension.
+
+	* vm-display-X11/sqUnixXdnd.c: Added support for dragging out of
+	Squeak.
+
+	* config/config.h.in: HAVE_LIBXRENDER added.
+
+	* vm/SqDisplay.h:
+	* vm-display-X11/sqUnixX11.c:
+	* vm-display-Quartz/sqUnixQuartz.m:
+	* vm-display-null/sqUnixDisplayNull.c:
+	* vm-display-custom/sqUnixCustomWindow.c:
+	* vm/sqUnixMain.c: Added: clipboardGetTypeNames,
+	clipboardSizeWithType, clipboardWriteWithType, dndOutStart,
+	setCursorARGB.
+	
+	* vm/sqUnixMain.c (sqGetFilenameFromString): Translate path name
+	from sq to ux.
+
 2007-08-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/sqUnixX11.c (initWindow): Add WM_DELETE_WINDOW to

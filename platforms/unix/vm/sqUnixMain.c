@@ -1,6 +1,6 @@
 /* sqUnixMain.c -- support for Unix.
  * 
- *   Copyright (C) 1996-2006 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2007-05-07 14:29:20 by piumarta on emilia
+ * Last edited: 2007-09-07 13:53:52 by piumarta on emilia
  */
 
 #include "sq.h"
@@ -530,6 +530,11 @@ sqInt ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt of
   return dpy->ioSetCursorWithMask(cursorBitsIndex, cursorMaskIndex, offsetX, offsetY);
 }
 
+sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY)
+{
+  return dpy->ioSetCursorARGB(cursorBitsIndex, extentX, extentY, offsetX, offsetY);
+}
+
 sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
@@ -565,12 +570,33 @@ sqInt clipboardReadIntoAt(sqInt count, sqInt byteArrayIndex, sqInt startIndex)
   return dpy->clipboardReadIntoAt(count, byteArrayIndex, startIndex);
 }
 
+char **clipboardGetTypeNames(void)
+{
+  return dpy->clipboardGetTypeNames();
+}
+
+sqInt clipboardSizeWithType(char *typeName, int ntypeName)
+{
+  return dpy->clipboardSizeWithType(typeName, ntypeName);
+}
+
+void clipboardWriteWithType(char *data, size_t nData, char *typeName, size_t nTypeNames, int isDnd, int isClaiming)
+{
+  dpy->clipboardWriteWithType(data, nData, typeName, nTypeNames, isDnd, isClaiming);
+}
+
 sqInt ioGetButtonState(void)		{ return dpy->ioGetButtonState(); }
 sqInt ioPeekKeystroke(void)		{ return dpy->ioPeekKeystroke(); }
 sqInt ioGetKeystroke(void)		{ return dpy->ioGetKeystroke(); }
 sqInt ioGetNextEvent(sqInputEvent *evt)	{ return dpy->ioGetNextEvent(evt); }
 sqInt ioMousePoint(void)		{ return dpy->ioMousePoint(); }
 
+/*** Drag and Drop ***/
+
+sqInt dndOutStart(char * data, int ndata, char * typeName, int ntypeName)
+{
+  return dpy->dndOutStart(data, ndata, typeName, ntypeName);
+}
 
 /*** OpenGL ***/
 
@@ -1411,8 +1437,7 @@ sqInt sqGetFilenameFromString(char *aCharBuffer, char *aFilenameString, sqInt fi
   int numLinks= 0;
   struct stat st;
 
-  memcpy(aCharBuffer, aFilenameString, filenameLength);
-  aCharBuffer[filenameLength]= 0;
+  sq2uxPath(aFilenameString, filenameLength, aCharBuffer, MAXPATHLEN, 1);
 
   if (resolveAlias)
     for (;;)	/* aCharBuffer might refer to link or alias */
