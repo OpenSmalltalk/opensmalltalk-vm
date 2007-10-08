@@ -241,9 +241,13 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define VM_VERSION TEXT("Squeak 3.10.6 (release) from ") TEXT(__DATE__) \
+/*#define VM_VERSION TEXT("Squeak 3.10.6 (release) from ") TEXT(__DATE__) \
 	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
+*/
+#define VM_VERSION TEXT(VM_NAME) TEXT(" ") TEXT(VM_VERSIONINFO) TEXT(" from ") TEXT(__DATE__) \
+	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
+	
 /********************************************************/
 /* image reversal functions                             */
 /********************************************************/

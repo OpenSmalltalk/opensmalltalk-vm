@@ -10,6 +10,7 @@ PLATDIR =../..
 
 # What is the name of the VM to build?
 VM = Squeak
+VMVERSIONINFO= "3.10.6 (release)"
 
 # Is this a Croquet VM (defaults to OGL instead of D3D)?
 # CROQUET=-DCROQUET
@@ -82,7 +83,7 @@ OFLAGS= -O2
 CFLAGS=	-g -mpentium -mwindows \
 	-fomit-frame-pointer -funroll-loops -fschedule-insns2 $(OFLAGS)
 DEFS=	-DWIN32_FILE_SUPPORT -DNO_SERVICE -DNO_STD_FILE_SUPPORT -DNDEBUG \
-	-DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
+	-DLSB_FIRST -DVM_NAME=\"$(VM)\" -DVM_VERSIONINFO=\"$(VMVERSIONINFO)\" -DX86 $(XDEFS) $(CROQUET)
 XDEFS=	-DSQUEAK_BUILTIN_PLUGIN
 INCLUDES= -I. -I$(VMDIR) -I$(WIN32DIR) -I$(CROSSDIR) -I$(DXDIR) $(XINC)
 MD=	mkdir
