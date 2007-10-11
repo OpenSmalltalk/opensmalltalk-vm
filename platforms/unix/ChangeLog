@@ -1,3 +1,8 @@
+2007-10-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c (handleEvent): Record key events when
+	ucs4 is valid even if keyCode is not.
+
 2007-09-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/sqUnixX11.c (xkeysym2ucs4): Added.

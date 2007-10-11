@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2007-09-14 12:12:09 by piumarta on emilia.local
+ * Last edited: 2007-10-11 12:45:31 by piumarta on emilia.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -1870,7 +1870,7 @@ static void handleEvent(XEvent *evt)
 	KeySym symbolic;
 	int keyCode= x2sqKey(&evt->xkey, &symbolic);
 	int ucs4= xkeysym2ucs4(symbolic);
-	if (keyCode >= 0)
+	if ((keyCode >= 0) || (ucs4 > 0))
 	  {
 	    recordKeyboardEvent(keyCode, EventKeyDown, modifierState, ucs4);
 	    recordKeyboardEvent(keyCode, EventKeyChar, modifierState, ucs4);
