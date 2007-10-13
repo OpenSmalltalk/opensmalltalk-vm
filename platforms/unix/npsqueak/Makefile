@@ -1,6 +1,6 @@
 # Netscape Plugin for Squeak on Unix platforms
 # Author: Bert Freudenberg
-# Last edited: 2007-09-09 11:24:34 by piumarta on emilia
+# Last edited: 2007-10-12 20:03:33 by piumarta on emilia
 
 ############ Customize flags here #######################
 
@@ -8,7 +8,7 @@ INC	= -I./include -I/usr/X11R6/include
 CC	= gcc
 CFLAGS	= $(INC) -O2 -fPIC -Wall
 LD	= gcc
-LDFLAGS = LDFLAGS = -lXt
+LDFLAGS = -lXt
 
 # usually overridden from top level makefile
 VM_VERSION=  3.9-12
