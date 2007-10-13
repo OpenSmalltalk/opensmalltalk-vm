@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2007-09-14 11:26:20 by piumarta on emilia.local
+ * Last edited: 2007-10-12 20:11:25 by piumarta on emilia
  */
 
 
@@ -319,6 +319,7 @@ static void display_winInit(void)
   (void)recordKeyboardEvent;
   (void)recordKeystroke;
   (void)recordDragEvent;
+  (void)recordWindowEvent;
 }
 
 

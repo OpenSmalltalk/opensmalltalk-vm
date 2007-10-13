@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2007-09-14 12:11:03 by piumarta on emilia.local
+ * Last edited: 2007-10-12 20:10:44 by piumarta on emilia
  *
  * NOTE: this file is included by the window support files that need it.
  */

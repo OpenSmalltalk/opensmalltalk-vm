@@ -24,7 +24,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2007-09-07 13:53:00 by piumarta on emilia
+ * Last edited: 2007-10-12 20:12:55 by piumarta on emilia
  */
 
 
@@ -1741,6 +1741,7 @@ static void *runInterpreter(void *arg)
   (void)recordMouseEvent;
   (void)recordKeyboardEvent;
   (void)recordDragEvent;
+  (void)recordWindowEvent;
 }
 
 
