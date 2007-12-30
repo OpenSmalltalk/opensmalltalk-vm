@@ -1,10 +1,13 @@
 #include <windows.h>
+#include <shlobj.h> /* CSIDL_XXX */
 #include "sq.h"
 
 #ifndef HKEY_SQUEAK_ROOT
 /* the default place in the registry to look for */
 #define HKEY_SQUEAK_ROOT "SOFTWARE\\Squeak"
 #endif
+
+static HRESULT __stdcall (*shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
 static TCHAR untrustedUserDirectory[MAX_PATH];
 static TCHAR secureUserDirectory[MAX_PATH];
@@ -186,6 +189,25 @@ int ioInitSecurity(void) {
   /* establish untrusted user directory */
   lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
   dirLen = lstrlen(untrustedUserDirectory);
+
+  /* Look up shGetFolderPathW */
+  shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
+					  "SHGetFolderPathW");
+
+  if(shGetFolderPath) {
+    /* If we have shGetFolderPath use My Documents/My Squeak */
+    WCHAR widepath[MAX_PATH];
+    int sz;
+    if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, widepath) == S_OK) {
+      WideCharToMultiByte(CP_UTF8,0,widepath,-1,untrustedUserDirectory,
+			  MAX_PATH,NULL,NULL);
+      sz = strlen(untrustedUserDirectory);
+      if(untrustedUserDirectory[sz-1] != '\\') 
+	strcat(untrustedUserDirectory, "\\");
+      strcat(untrustedUserDirectory, "My Squeak");
+    }
+  }
+
 
   /* Query Squeak.ini for network installations */
   GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
