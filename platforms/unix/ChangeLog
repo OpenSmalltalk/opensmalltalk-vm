@@ -1,3 +1,9 @@
+2008-01-22  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-sound-ALSA/sqUnixSoundALSA.c (sound_parseEnvironment):
+	SQUEAK_PLAYBACK and SQUEAK_CAPTURE set sound_playback and
+	sound_capture.
+
 2007-10-12  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-Quartz/sqUnixQuartz.m ([Squeak -interpret:]): Squash unused
