@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-12-11 11:34:44 by piumarta on emilia.local
+ * Last edited: 2008-01-22 09:53:19 by piumarta on emilia.local
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -493,10 +493,10 @@ SqSoundDefine(ALSA);
 static void sound_parseEnvironment(void)
 {
   char *ev= 0;
-  if (     getenv("SQUEAK_NOMIXER"   ))	sound_nomixer= 1;
-  if ((ev= getenv("SQUEAK_SOUNDCARD")))	sound_device= strdup(ev);
-  if ((ev= getenv("SQUEAK_PLAYBACK" )))	sound_device= strdup(ev);
-  if ((ev= getenv("SQUEAK_CAPTURE"  )))	sound_device= strdup(ev);
+  if (     getenv("SQUEAK_NOMIXER"   ))	sound_nomixer=  1;
+  if ((ev= getenv("SQUEAK_SOUNDCARD")))	sound_device=   strdup(ev);
+  if ((ev= getenv("SQUEAK_PLAYBACK" )))	sound_playback= strdup(ev);
+  if ((ev= getenv("SQUEAK_CAPTURE"  )))	sound_capture=  strdup(ev);
 }
 
 static int  sound_parseArgument(int argc, char **argv)
