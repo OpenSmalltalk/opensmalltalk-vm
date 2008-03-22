@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2006-10-18 10:06:05 by piumarta on emilia.local
+ * Last edited: 2008-03-20 11:46:06 by piumarta on emilia
  */
 
 #if !defined(__MACH__)
@@ -86,11 +86,16 @@ static alias encodings[]=
 
 // defaults
 
+void *localeEncoding=   0;
 void *sqTextEncoding=	((void *)kCFStringEncodingMacRoman);	// xxxFIXME -> kCFStringEncodingISOLatin9
 void *uxTextEncoding=	((void *)kCFStringEncodingISOLatin9);
 void *uxPathEncoding=	((void *)kCFStringEncodingUTF8);
 void *uxUTF8Encoding=	((void *)kCFStringEncodingUTF8);
 void *uxXWinEncoding=	((void *)kCFStringEncodingISOLatin1);
+
+void setLocaleEncoding(char *locale) { }
+
+void freeEncoding(void *encoding) { }
 
 void setEncoding(void **encoding, char *rawName)
 {
@@ -116,7 +121,7 @@ void setEncoding(void **encoding, char *rawName)
 
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
 {
-  CFStringRef	     cfs= CFStringCreateWithBytes(NULL, from, fromLen, (CFStringEncoding)fromCode, 0);
+  CFStringRef	     cfs= CFStringCreateWithBytes(NULL, (unsigned char *)from, fromLen, (CFStringEncoding)fromCode, 0);
   CFMutableStringRef str= CFStringCreateMutableCopy(NULL, 0, cfs);
   CFRelease(cfs);
   if (norm) // HFS+ imposes Unicode2.1 decomposed UTF-8 encoding on all path elements
@@ -142,33 +147,98 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 
 typedef char ichar_t;
 
-#ifdef __sun__
-void *sqTextEncoding=	(void *)"mac";		/* xxxFIXME -> "ISO-8859-15" */ 
-void *uxPathEncoding=	(void *)"iso5";
-void *uxTextEncoding=	(void *)"iso5";
-void *uxXWinEncoding=	(void *)"iso5";
-void *uxUTF8Encoding=	(void *)"UTF-8";
-#else
-void *sqTextEncoding=	(void *)"MACINTOSH";	/* xxxFIXME -> "ISO-8859-15" */ 
-void *uxPathEncoding=	(void *)"UTF-8";
-void *uxTextEncoding=	(void *)"ISO-8859-15";
-void *uxXWinEncoding=	(void *)"ISO-8859-1";
-void *uxUTF8Encoding=	(void *)"UTF-8";
-#endif
+static char macEncoding[]=     "MACINTOSH";
+static char utf8Encoding[]=    "UTF-8";
+static char iso1Encoding[]=    "ISO-8859-1";
+static char iso15Encoding[]=   "ISO-8859-15";
+
+static char *preDefinedEncodings[]=
+  {
+    macEncoding,
+    utf8Encoding,
+    iso1Encoding,
+    iso15Encoding
+  };
+
+void *localeEncoding=   0;
+void *sqTextEncoding=   (void *)macEncoding;
+void *uxTextEncoding=   (void *)iso15Encoding;
+void *uxPathEncoding=   (void *)utf8Encoding;
+void *uxUTF8Encoding=   (void *)utf8Encoding;
+void *uxXWinEncoding=   (void *)iso1Encoding;
+
+void freeEncoding(void *encoding)
+{
+  int i;
+  for (i= 0;  i < sizeof(preDefinedEncodings) / sizeof(char *);  ++i)
+    if (encoding == preDefinedEncodings[i])
+      return;
+  free(encoding);
+}
+
+typedef struct
+{
+  char *name;
+  char *encoding;
+} alias;
+
+void setNEncoding(void **encoding, char *rawName, int n)
+{
+  char *name= malloc((size_t)((n + 1) * sizeof(char)));
+  int   i;
+
+  static alias aliases[]=
+    {
+      {"UTF8",      utf8Encoding},
+      {"MACROMAN",  macEncoding},
+      {"MAC-ROMAN", macEncoding},
+    };
+
+  for (i= 0;  i < n;  ++i)
+    name[i]= toupper(rawName[i]);
+  name[n]= '\0';
+  if ((*encoding) && (*encoding != localeEncoding))
+    freeEncoding(*encoding);
+  if (localeEncoding && !strcmp(name, localeEncoding))
+    {
+      *encoding= localeEncoding;
+      free(name);
+      return;
+    }
+  for(i= 0;  i < sizeof(preDefinedEncodings) / sizeof(char *);  ++i)
+    if (!strcmp(name, preDefinedEncodings[i]))
+      {
+	*encoding= preDefinedEncodings[i];
+	free(name);
+	return;
+      }
+  for (i= 0;  i < sizeof(aliases) / sizeof(alias);  ++i)
+    if(!strcmp(name, aliases[i].name))
+      {
+	*encoding= aliases[i].encoding;
+	free(name);
+	return;
+      }
+  *encoding= name;
+}
+
+void setLocaleEncoding(char *locale)
+{
+  while (*locale)
+    if (*locale++ == '.')
+      {
+	int len= 0;
+	while (locale[len] && (locale[len] != '@'))
+	  ++len;
+	setNEncoding(&localeEncoding, locale, len);
+	sqTextEncoding= uxTextEncoding= uxPathEncoding= uxXWinEncoding= localeEncoding;
+	return;
+      }
+}
 
 void setEncoding(void **encoding, char *rawName)
 {
-  char *name= strdup(rawName);	// teeny memory leak, but we don't care
-  int   len= strlen(name);
-  int   i;
-#ifndef __sparc
-  for (i= 0;  i < len;  ++i)
-    name[i]= toupper(name[i]);
-#endif
-  if      (!strcmp(name, "MACROMAN"))  *encoding= "MACINTOSH";
-  else if (!strcmp(name, "MAC-ROMAN")) *encoding= "MACINTOSH";
-  else
-    *encoding= (void *)name;
+  setNEncoding(encoding, rawName, strlen(rawName));
 }
 
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
@@ -266,14 +336,18 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
   return convertCopy(from, fromLen, to, toLen, term);
 }
 
-
 #else /* !__MACH__ && !HAVE_LIBICONV */
 
+void *localeEncoding= 0;
 void *sqTextEncoding= 0;
 void *uxTextEncoding= 0;
 void *uxPathEncoding= 0;
 void *uxUTF8Encoding= 0;
 void *uxXWinEncoding= 0;
+
+void setLocaleEncoding(char *locale) { }
+
+void freeEncoding(void *encoding) { }
 
 void setEncoding(void **encoding, char *name) { }
 
@@ -322,6 +396,7 @@ Convert(sq,ux, Path, sqTextEncoding, uxPathEncoding, 0, 0);	// composed paths fo
 Convert(ux,sq, Path, uxPathEncoding, sqTextEncoding, 0, 0);
 Convert(sq,ux, UTF8, sqTextEncoding, uxUTF8Encoding, 0, 1);
 Convert(ux,sq, UTF8, uxUTF8Encoding, sqTextEncoding, 0, 1);
+Convert(ux,sq, XWin, uxXWinEncoding, sqTextEncoding, 0, 1);
 
 #undef Convert
 

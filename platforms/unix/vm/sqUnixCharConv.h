@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2006-10-18 10:05:57 by piumarta on emilia.local
+ * Last edited: 2008-03-19 14:43:16 by piumarta on emilia.local
  */
 
 #ifndef __sqUnixCharConv_h
@@ -37,6 +37,7 @@ extern void *uxTextEncoding;
 extern void *uxPathEncoding;
 extern void *uxUTF8Encoding;
 extern void *uxXWinEncoding;
+extern void *localeEncoding;
 
 extern void setEncoding(void **encoding, char *name);
 
@@ -50,5 +51,10 @@ extern int sq2uxPath(char *from, int fromLen, char *to, int toLen, int term);
 extern int ux2sqPath(char *from, int fromLen, char *to, int toLen, int term);
 extern int sq2uxUTF8(char *from, int fromLen, char *to, int toLen, int term);
 extern int ux2sqUTF8(char *from, int fromLen, char *to, int toLen, int term);
+extern int ux2sqXWin(char *from, int fromLen, char *to, int toLen, int term);
+
+extern void freeEncoding(void *encoding);
+extern void setNEncoding(void **encoding, char *rawName, int n);
+extern void setLocaleEncoding(char *locale);
 
 #endif /* __sqUnixCharConv_h */
