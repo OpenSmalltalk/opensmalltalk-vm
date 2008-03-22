@@ -930,9 +930,14 @@ static int jitArgs(char *str)
 }
 
 
+# include <locale.h>
 static void vm_parseEnvironment(void)
 {
-  char *ev= 0;
+  char *ev= setlocale(LC_CTYPE, "");
+  if (ev)
+    setLocaleEncoding(ev);
+  else
+    fprintf(stderr, "setlocale() failed (check values of LC_CTYPE, LANG and LC_ALL)\n");
 
   if (documentName)
     strcpy(shortImageName, documentName);
