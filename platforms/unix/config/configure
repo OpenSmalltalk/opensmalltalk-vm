@@ -1943,7 +1943,7 @@ ac_compiler_gnu=$ac_cv_c_compiler_gnu
 
   VM_MAJOR=3
   VM_MINOR=9
-  VM_RELEASE=12
+  VM_RELEASE=14
   SQ_MAJOR=3
   SQ_MINOR=9x
   SQ_UPDATE=7024

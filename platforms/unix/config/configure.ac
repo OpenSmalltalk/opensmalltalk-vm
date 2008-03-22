@@ -28,11 +28,11 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2007-09-07 13:37:14 by piumarta on emilia
+# Last edited: 2008-03-20 11:32:13 by piumarta on emilia
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,9,12, 3,9x,7024)
+AC_VM_VERSION(3,9,14, 3,9x,7024)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`
