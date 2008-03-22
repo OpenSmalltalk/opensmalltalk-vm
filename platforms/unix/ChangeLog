@@ -1,3 +1,13 @@
+2008-03-20  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixCharConv.c, vm/sqUnixCharConv.h: Support locale
+	encoding.
+
+	* vm/sqUnixMain.c: Set locale encoding from LC_CTYPE.
+
+	* vm-display-X11/sqUnixX11.c: Support locale, dead keys, multikey
+	characters and input context overlay window.  Add -xicfont option.
+
 2008-01-22  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-sound-ALSA/sqUnixSoundALSA.c (sound_parseEnvironment):
