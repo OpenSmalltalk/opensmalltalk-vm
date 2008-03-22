@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2006-10-18 10:05:15 by piumarta on emilia.local
+ * Last edited: 2008-03-20 11:39:14 by piumarta on emilia
  */
 
 /* Note:
@@ -61,6 +61,7 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 #include <fcntl.h>
+#include <assert.h>
 
 #if !defined(MAP_ANON)
 # if defined(MAP_ANONYMOUS)
