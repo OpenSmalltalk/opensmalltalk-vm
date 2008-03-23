@@ -24,7 +24,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2007-10-12 20:12:55 by piumarta on emilia
+ * Last edited: 2008-03-22 18:51:35 by piumarta on emilia.local
  */
 
 
@@ -1316,6 +1316,7 @@ static void setUpWindow(int fs)
       NSRect contentRect;
       if (fs)
 	{
+	  setUpDisplay();
 	  w= dpyWidth;
 	  h= dpyHeight;
 	}

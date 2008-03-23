@@ -1,3 +1,9 @@
+2008-03-22  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-Quartz/sqUnixQuartz.m (setUpWindow): call
+	setUpDisplay() early if fullscreen, to keep window on correct
+	screen of multi-head machines.
+
 2008-03-20  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/sqUnixCharConv.c, vm/sqUnixCharConv.h: Support locale
