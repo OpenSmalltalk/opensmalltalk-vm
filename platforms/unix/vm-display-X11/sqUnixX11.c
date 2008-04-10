@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2008-03-21 10:14:59 by piumarta on ubuntu
+ * Last edited: 2008-04-10 14:25:44 by piumarta on emilia.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -245,11 +245,13 @@ typedef int (*x2sqKey_t)(XKeyEvent *xevt, KeySym *symbolic);
 
 static int x2sqKeyPlain(XKeyEvent *xevt, KeySym *symbolic);
 static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic);
+static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic);
 
 static x2sqKey_t x2sqKey= x2sqKeyPlain;
 
 static int multi_key_pressed = 0;
 static KeySym multi_key_buffer = 0;
+static int composition_input = 0;
 
 /* #define INIT_INPUT_WHEN_KEY_PRESSED */
 /* #define INIT_INPUT_WHEN_FOCUSED_IN */
@@ -1526,6 +1528,10 @@ static void initInputI18n(void)
 # if !defined(INIT_INPUT_WHEN_KEY_PRESSED)
   initInput= initInputNone;
 # endif
+
+  if (!composition_input)
+    return;
+
   x2sqKey= x2sqKeyPlain;
   if (XSupportsLocale() != True)
     fprintf(stderr, "XSupportsLocale() failed.\n");
@@ -1635,7 +1641,7 @@ static void initInputI18n(void)
 # if defined(INIT_INPUT_WHEN_KEY_PRESSED)
 	  setInputContextArea();
 # endif
-	  x2sqKey= x2sqKeyInput;
+	  x2sqKey= x2sqKeyCompositionInput;
 	}
       else
 	fprintf(stderr, "XCreateIC() failed\n");
@@ -1703,6 +1709,110 @@ static int xkeysym2ucs4(KeySym keysym);
 
 static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 {
+  static int initialised= 0;
+  static XIM im= 0;
+  static XIC ic= 0;
+  static int lastKey= -1;
+
+  if (!initialised)
+    {
+      initialised= 1;
+      if (!setlocale(LC_CTYPE, ""))
+	{
+	  fprintf(stderr, "setlocale() failed (check values of LC_CTYPE, LANG and LC_ALL)\n");
+	  goto revertInput;
+	}
+      if (!(im= XOpenIM(stDisplay, 0, 0, 0)))
+	{
+	  fprintf(stderr, "XOpenIM() failed\n");
+	  goto revertInput;
+	}
+      else
+	{
+	  if (!(ic= XCreateIC(im, XNInputStyle, XIMPreeditNothing | XIMStatusNothing, XNClientWindow, stWindow, NULL)))
+	    {
+	      fprintf(stderr, "XCreateIC() failed\n");
+	      goto revertInput;
+	    }
+	  else
+	    {
+	      unsigned int mask;
+	      XWindowAttributes xwa;
+	      XGetWindowAttributes(stDisplay, stWindow, &xwa);
+	      XGetICValues(ic, XNFilterEvents, &mask, NULL);
+	      mask |= xwa.your_event_mask;
+	      XSelectInput(stDisplay, stWindow, mask);
+	    }
+	}
+    }
+
+  if (KeyPress != xevt->type)
+    {
+      int key= lastKey;
+      lastKey= -1;
+      return key;
+    }
+
+#if defined(DEBUG_CONV)
+  printf("keycode %u\n", xevt->keycode);
+#endif
+
+  {
+    char string[128];	/* way too much */
+    Status status;
+    int count= XmbLookupString(ic, (XKeyPressedEvent *)xevt, string, sizeof(string), symbolic, &status);
+    switch (status)
+      {
+      case XLookupNone:		/* still composing */
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupNone\n");
+#	 endif
+	return -1;
+
+      case XLookupChars:
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupChars count %d\n", count);
+#	 endif
+      case XLookupBoth:
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupBoth count %d\n", count);
+#	 endif
+	lastKey= (count ? recode(string[0]) : -1);
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey == %d\n", lastKey);
+#	 endif
+	return lastKey;
+
+      case XLookupKeySym:
+#	 if defined(DEBUG_CONV)
+	fprintf(stderr, "x2sqKey XLookupKeySym\n");
+#	 endif
+	{
+	  int charCode= translateCode(*symbolic);
+#	   if defined(DEBUG_CONV)
+	  printf("SYM %d -> %d\n", symbolic, charCode);
+#	   endif
+	  if (charCode < 0)
+	    return -1;	/* unknown key */
+	  if ((charCode == 127) && mapDelBs)
+	    charCode= 8;
+	  return lastKey= charCode;
+	}
+
+      default:
+	fprintf(stderr, "this cannot happen\n");
+	return lastKey= -1;
+      }
+    return lastKey= -1;
+  }
+
+ revertInput:
+  x2sqKey= x2sqKeyPlain;
+  return x2sqKey(xevt, symbolic);
+}
+
+static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
+{
   static int lastKey= -1;
 
 # if defined(INIT_INPUT_WHEN_KEY_PRESSED)
@@ -1729,8 +1839,10 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
     Status status;
     int i;
     if (localeEncoding == sqTextEncoding)
-      if (!(inputBuf= lookupKeys(XmbLookupString, xevt, inputString, sizeof(inputString), &inputCount, symbolic, &status)))
-	return lastKey= -1;
+      {
+	if (!(inputBuf= lookupKeys(XmbLookupString, xevt, inputString, sizeof(inputString), &inputCount, symbolic, &status)))
+	  return lastKey= -1;
+      }
 # if defined(X_HAVE_UTF8_STRING)
     else if (uxUTF8Encoding == sqTextEncoding)
       {
@@ -1751,7 +1863,7 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	    inputBuf= (unsigned char *) malloc((size_t) (inputCount * sizeof(unsigned char)));
 	    if (!inputBuf)
 	      {
-		 fprintf(stderr, "x2sqKeyPlain: out of memory\n");
+		 fprintf(stderr, "x2sqKeyInput: out of memory\n");
 		 if (aStr != aBuf)
 		   free(aBuf);
 		 return lastKey= -1;
@@ -1816,7 +1928,7 @@ static int x2sqKeyInput(XKeyEvent *xevt, KeySym *symbolic)
 	  if (*symbolic == XK_Multi_key)
 	    {
 	      multi_key_pressed= 1;
-	      multi_key_buffer = 0;
+	      multi_key_buffer= 0;
 #            ifdef DEBUG_CONV
 	      fprintf(stderr, "multi_key was pressed\n");
 #            endif
@@ -2134,12 +2246,20 @@ static int xkeysym2ucs4(KeySym keysym)
   /* 24-bit UCS */
   if ((keysym & 0xff000000) == 0x01000000) return keysym & 0x00ffffff;
 
+  static unsigned short const sqSpecialKey[] = {1, 28, 30, 29, 31, 5, 11, 12, 4};
   /* control keys with ASCII equivalents */
   if (keysym > 0xff00 && keysym < 0xff10) return keysym & 0x001f;
-  if (keysym > 0xff4f && keysym < 0xff5f) return keysym & 0x001f;
+  if (keysym > 0xff4f && keysym < 0xff59)
+    {
+      return sqSpecialKey[keysym - 0xff50];
+    }
+  if (keysym > 0xff58 && keysym < 0xff5f) return keysym & 0x007f; /* could be return 0; */
+  if (keysym > 0xff94 && keysym < 0xff9d)
+    {
+      return sqSpecialKey[keysym - 0xff95];
+    }
   if (keysym          ==          0xff1b) return keysym & 0x001f;
   if (keysym          ==          0xffff) return keysym & 0x007f;
-  if (keysym > 0xff4f && keysym < 0xff5f) return keysym & 0x001f;
 
   /* explicitly mapped */
 #define map(lo, hi) if (keysym >= 0x##lo && keysym <= 0x##hi) return ucs4_##lo##_##hi[keysym - 0x##lo];
@@ -2448,7 +2568,7 @@ static void handleEvent(XEvent *evt)
 	int keyCode= x2sqKey(&evt->xkey, &symbolic);
 	int ucs4= xkeysym2ucs4(symbolic);
 #      ifdef DEBUG_CONV
-	fprintf(stderr, "keyCode, ucs4: %d, %d\n", keyCode, ucs4);
+	fprintf(stderr, "symbolic, keyCode, ucs4: %x, %d, %d\n", symbolic, keyCode, ucs4);
 	fprintf(stderr, "pressed, buffer: %d, %x\n", multi_key_pressed, multi_key_buffer);
 #      endif
 	if (multi_key_pressed && multi_key_buffer == 0)
@@ -2478,9 +2598,9 @@ static void handleEvent(XEvent *evt)
 	      case sym:					\
 	        if (multi_key_buffer == code)		\
 		  {					\
-		    multi_key_buffer = 0;		\
-		    keyCode = orig;			\
-		    ucs4 = orig;			\
+		    multi_key_buffer= 0;		\
+		    keyCode= orig;			\
+		    ucs4= orig;				\
 		  }					\
 		else					\
 		  {					\
@@ -2534,7 +2654,7 @@ static void handleEvent(XEvent *evt)
 	      {
 		recordKeyboardEvent(multi_key_buffer, EventKeyDown, modifierState, multi_key_buffer);
 		recordKeyboardEvent(multi_key_buffer, EventKeyChar, modifierState, multi_key_buffer);
-		multi_key_buffer = 0;
+		multi_key_buffer= 0;
 	      }
 	  }
       }
@@ -5565,6 +5685,7 @@ static void display_printUsage(void)
   printf("  -browserWindow <wid>  run in window <wid>\n");
   printf("  -browserPipes <r> <w> run as Browser plugin using descriptors <r> <w>\n");
   printf("  -cmdmod <n>           map Mod<n> to the Command key\n");
+  printf("  -compositioninput     enable overlay window for composed characters\n");
   printf("  -display <dpy>        display on <dpy> (default: $DISPLAY)\n");
   printf("  -fullscreen           occupy the entire screen\n");
 #if (USE_X11_GLX)
@@ -5601,18 +5722,18 @@ static void display_parseEnvironment(void)
 {
   char *ev= 0;
 
-  if (localeEncoding)
-#  if defined (INIT_INPUT_WHEN_KEY_PRESSED)
-    x2sqKey= x2sqKeyInput;
-#  else
-    initInput= initInputI18n;
-#  endif
   if (getenv("LC_CTYPE") || getenv("LC_ALL"))
-#  if !defined (INIT_INPUT_WHEN_KEY_PRESSED)
-    initInput= initInputI18n;
-#  else
     x2sqKey= x2sqKeyInput;
-#  endif
+
+  if (localeEncoding) 
+    {
+      if (getenv("SQUEAK_COMPOSITIONINPUT"))
+	{
+	  composition_input= 1;
+	  initInput= initInputI18n;
+	  x2sqKey= x2sqKeyCompositionInput;
+	}
+    }
 
   if (getenv("SQUEAK_LAZY"))		sleepWhenUnmapped= 1;
   if (getenv("SQUEAK_SPY"))		withSpy= 1;
@@ -5658,6 +5779,12 @@ static int display_parseArgument(int argc, char **argv)
 #else
   else if (!strcmp(arg, "-nointl"))	x2sqKey= x2sqKeyPlain;
 #endif
+  else if (!strcmp(arg, "-compositioninput"))
+    {
+      composition_input= 1;
+      x2sqKey= x2sqKeyCompositionInput;
+      initInput= initInputI18n;
+    }
   else if (!strcmp(arg, "-noxdnd"))	useXdnd= 0;
   else if (argv[1])	/* option requires an argument */
     {
