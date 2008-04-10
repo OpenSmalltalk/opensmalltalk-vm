@@ -1,3 +1,8 @@
+2008-04-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/Makefile.in: Convert CR to LF in interp.c before
+	gnuification.
+
 2008-03-22  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-Quartz/sqUnixQuartz.m (setUpWindow): call

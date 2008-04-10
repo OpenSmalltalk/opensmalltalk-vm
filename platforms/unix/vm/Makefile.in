@@ -26,7 +26,7 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2006-10-18 10:06:45 by piumarta on emilia.local
+# Last edited: 2008-04-10 13:51:39 by piumarta on emilia.local
 
 [make_cfg]
 [make_plg]
@@ -58,7 +58,8 @@ gnu-interp$o : gnu-interp.c
 	$(COMPILE) $@ gnu-interp.c
 
 gnu-interp.c : $(srcdir)/vm/interp.c
-	$(AWK) -f $(topdir)/platforms/unix/config/gnuify $(srcdir)/vm/interp.c > $@.out
+	tr '\015' '\012' < $(srcdir)/vm/interp.c > interp.c
+	$(AWK) -f $(topdir)/platforms/unix/config/gnuify interp.c > $@.out
 	mv $@.out $@
 
 [make_targets]
