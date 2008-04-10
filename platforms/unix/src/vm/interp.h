@@ -1,0 +1,1 @@
+/* Automatically generated from Squeak on an Array(10 April 2008 1:42:16 pm)by VMMaker 3.8b6 */#define SQ_VI_BYTES_PER_WORD 4
