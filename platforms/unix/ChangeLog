@@ -1,5 +1,14 @@
 2008-04-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* config/configure.ac: Version is 3.10-1 generated from 3.10-7159.
+
+	* doc/squeak.1: Update with current options and environment
+	variables.
+
+	* vm-display-X11/sqUnixX11.c: Repair cursor keys.  Add
+	-compositioninput and SQUEAK_COMPOSITIONINPUT option to enable
+	overlay window for composed characters.
+
 	* vm/Makefile.in: Convert CR to LF in interp.c before
 	gnuification.
 
