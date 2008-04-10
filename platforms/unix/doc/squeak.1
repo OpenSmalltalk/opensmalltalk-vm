@@ -24,7 +24,7 @@
 .\"   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 .\"   SOFTWARE.
 .\" 
-.\" Last edited: 2006-10-18 10:11:02 by piumarta on emilia.local
+.\" Last edited: 2008-04-10 14:41:06 by piumarta on emilia.local
 .\" 
 .if @@\*(lq@ \{\
 .	ds lq "
@@ -412,6 +412,26 @@ instead of looking in the environment variable
 DISPLAY
 (the default behaviour) to find the name of the server to use.
 .TP
+.BI "\-cmdmod " "N"
+tells the VM to map modifier key
+.I N
+on the keyboard to the modifier code that the image expects for the Command key.
+.TP
+.BI "\-optmod " "N"
+tells the VM to map modifier key
+.I N
+on the keyboard to the modifier code that the image expects for the Option key.
+.TP
+.B \-compositioninput
+enables support for an overlay window in which individual characters
+(e.g., Japanese hiragana) are composed before being interpreted as a
+single character (e.g., Japanese kanji) by the image.
+.TP
+.BI "\-xicfont " "font"
+tells the VM to use the named
+.I font
+within the composition overlay window.
+.TP
 .B \-fullscreen
 causes the Squeak window to occupy as much of the screen area as possible.
 Implies '\c
@@ -439,6 +459,9 @@ maps the Delete key onto Backspace.  Backspace deletes the character to the left
 of the cursor and Delete normally deletes the character
 to the right of the cursor.  With this option, Deletes will behave like
 Backspace.  The behaviour of Backspace is not changed.
+.TP
+.B \-noxdnd
+disables support for the X drag-and-drop protocol.
 .TP
 .B \-nointl
 disables the handling of dead keys on international keyboards.
@@ -586,6 +609,11 @@ if set in the environment then equivalent to the '\c
 .B \-xasync\c
 \&' flag.  (The value is ignored.)
 .TP
+.B SQUEAK_COMPOSITIONINPUT
+if set in the environment then equivalent to the '\c
+.B \-compositioninput\c
+\&' flag.  (The value is ignored.)
+.TP
 .B SQUEAK_ENCODING
 the name of the internal character encoding used by Squeak.  Equivalent to giving the '\c
 .B \-encoding\c
@@ -704,6 +732,11 @@ contains the names of one or more drivers to be loaded during initialisation.
 See the '\c
 .B \-vm\c
 \&' option for details.
+.TP
+.B SQUEAK_XICFONT
+if set in the environment then it provides a default name for the composition overlay font; see the '\c
+.B \-xicfont\c
+\&' flag.
 .TP
 .B SQUEAK_XSHM
 equivalent to '\c
