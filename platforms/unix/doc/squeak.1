@@ -24,7 +24,7 @@
 .\"   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
 .\"   SOFTWARE.
 .\" 
-.\" Last edited: 2008-04-10 14:41:06 by piumarta on emilia.local
+.\" Last edited: 2008-04-11 11:03:47 by piumarta on emilia.local
 .\" 
 .if @@\*(lq@ \{\
 .	ds lq "
@@ -580,6 +580,18 @@ prefer that Squeak leave these alone (they are, after all, really the
 reponsibility of whichever mixer program or sound control panel you
 use) then this option is for you.
 .PP
+Options specific to the ALSA sound driver are as follows:
+.TP
+.BI "\-capture " "device"
+Uses the named input
+.I device
+for sound capture.
+.TP
+.BI "\-playback " "device"
+Uses the named output
+.I device
+for sound playback.
+.PP
 Several common options are deprecated and are provided only for
 backward compatibility.  These options should not be used and will be
 removed in a future release:
@@ -608,6 +620,11 @@ also be set from environment variables.
 if set in the environment then equivalent to the '\c
 .B \-xasync\c
 \&' flag.  (The value is ignored.)
+.TP
+.B SQUEAK_CAPTURE
+see '\c
+.B \-capture\c
+\&'.
 .TP
 .B SQUEAK_COMPOSITIONINPUT
 if set in the environment then equivalent to the '\c
@@ -710,6 +727,11 @@ the name of the character encoding used to construct file and directory names.
 Equivalent to giving the '\c
 .B \-pathenc\c
 \&' command-line option if set.
+.TP
+.B SQUEAK_PLAYBACK
+see '\c
+.B \-playback\c
+\&'.
 .TP
 .B SQUEAK_PLUGINS
 see '\c
