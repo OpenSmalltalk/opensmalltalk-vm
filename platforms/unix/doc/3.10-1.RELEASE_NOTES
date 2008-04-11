@@ -4,6 +4,8 @@ VM generated from 3.10-7159 with latest plugins from package universe
 where available; OSProcess and XDisplay from Dave Lewis's download
 page.
 
+Network support for IPv6 added.
+
 Quartz display driver tries to keep the fullscreen window on the
 correct screen on multi-head machines.
 
