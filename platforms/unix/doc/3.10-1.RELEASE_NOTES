@@ -1,0 +1,47 @@
+Changes since 3.9-12:
+
+VM generated from 3.10-7159 with latest plugins from package universe
+where available; OSProcess and XDisplay from Dave Lewis's download
+page.
+
+Quartz display driver tries to keep the fullscreen window on the
+correct screen on multi-head machines.
+
+The image should now receive key events for all input has valid UCS4
+code.  Keyboard and mouse wheel events record UCS4 code in the input
+buffer for older images that still poll for input.
+
+Window event generated for window close to give the image chance to
+cancel or save before the implied quit.
+
+Various small changes for OLPC compatibility.
+
+Xdnd supports dragging items out of the image.
+
+Support for locale plugin added.
+
+Platform support added for locales, dead keys, compose key and
+multikey characters.  VM tries to do 'the right thing' according to
+locale environment variables.
+
+Manual page updated to reflect new options and environment variables:
+
+  SQUEAK_COMPOSITIONINPUT
+  -compositioninput
+    enables the overlay window for composed character input.  Needs
+    the XImm plugin (not yet bundled) to work.
+  
+  SQUEAK_XICFONT
+  -xicfont <fontName>
+    specifies the font name to use in the overlay window.
+
+  SQUEAK_PLAYBACK, SQUEAK_CAPTURE
+  -playback <name>
+  -capture <name>
+    specify the devices to use for sound playback and capture in ALSA.
+
+Build environment:
+
+  Latest VMM running in 3.10 emits CR instead of LF on Unix.
+  vm/Makefile.in now deals with this by converting CR to LF before
+  gnuification.
