@@ -249,6 +249,11 @@ int ioInitSecurity(void) {
   dwSize = ExpandEnvironmentStrings(untrustedUserDirectory, tmp, MAX_PATH-1);
   if(dwSize > 0 && dwSize < MAX_PATH)
     strcpy(untrustedUserDirectory, tmp);
+  
+  /* same for the secure directory*/  
+  dwSize = ExpandEnvironmentStrings(secureUserDirectory, tmp, MAX_PATH-1);
+  if(dwSize > 0 && dwSize < MAX_PATH)
+    strcpy(secureUserDirectory, tmp);    
 
   return 1;
 }
