@@ -985,6 +985,7 @@ static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
 	evt->pressCode = EventKeyDown;
+	evt->utf32Code = 0;
 	evt->modifiers = modifierMap[(controlKey >> 8)];
 	evt->windowIndex = windowActive;
 	/* generate extra character event */
@@ -1025,6 +1026,7 @@ static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection
 	/* press code must differentiate */
 	evt->charCode = macKeyCode;
 	evt->pressCode = EventKeyUp;
+	evt->utf32Code = 0;
 	evt->modifiers = modifierMap[(controlKey >> 8)];
 	evt->windowIndex = windowActive;
     }

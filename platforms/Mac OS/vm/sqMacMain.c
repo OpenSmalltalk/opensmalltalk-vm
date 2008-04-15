@@ -409,7 +409,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.18b2 17-Aug-07 >F439DEFF-4327-403D-969B-78695EE835DB<";
+ 		return "Mac Carbon 3.8.18b3 10-Apr-08 >DC0EAF5D-C46C-479D-B2A3-DBD4A2DF95A8<";
+//		return "Mac Carbon 3.8.18b2 17-Aug-07 >F439DEFF-4327-403D-969B-78695EE835DB<";
 // 		return "Mac Carbon 3.8.18b1 9-Jun-07 >4C61BDDD-B2AA-4C71-B20D-5758597201EF<";
 // 		return "Mac Carbon 3.8.17b5 16-May-07 >BBAC71BE-EF68-4994-8E57-D641A936733F<";
 // 		return "Mac Carbon 3.8.17b5 1-May-07 >B389476B-E7F3-4E6A-A8B6-EAE7B39B0EEA<";

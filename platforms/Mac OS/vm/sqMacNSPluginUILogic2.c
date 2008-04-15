@@ -236,8 +236,9 @@ static void handle_CMD_SHARED_MEMORY() {
 			
 	SharedBrowserBitMapLength = rowBytes*height+20;
 	SharedMemoryBlock= mmap(0, SharedBrowserBitMapLength, PROT_READ | PROT_WRITE, MAP_SHARED, SharedMemoryfd,0);
-	if (SharedMemoryBlock == MAP_FAILED)	{
-		dprintf((stderr,"VM: handle_CMD_SHARED_MEMORY failed mmap \n"));
+	if (SharedMemoryBlock == MAP_FAILED)	{ 
+		perror("mmap returns error");
+		dprintf((stderr,"VM: handle_CMD_SHARED_MEMORY failed mmap length was %i fd was %i \n",SharedBrowserBitMapLength,SharedMemoryfd));
 		return;
 	}
 	SharedMemoryBlock->written = 0;
