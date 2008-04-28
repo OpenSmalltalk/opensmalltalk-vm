@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2006-10-18 10:08:49 by piumarta on emilia.local
+ * Last edited: 2008-04-21 11:43:42 by piumarta on emilia
  *
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -146,6 +146,9 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 
 /* mixer */
 
-void snd_Volume(double *left, double *right)	{ snd->snd_Volume(left, right); }
-void snd_SetVolume(double left, double right)	{ snd->snd_SetVolume(left, right); }
-int  snd_SetRecordLevel(int level)		{ return snd->snd_SetRecordLevel(level); }
+void snd_Volume(double *left, double *right)			{	 snd->snd_Volume(left, right); }
+void snd_SetVolume(double left, double right)			{	 snd->snd_SetVolume(left, right); }
+int  snd_SetRecordLevel(int level)				{ return snd->snd_SetRecordLevel(level); }
+int  snd_GetSwitch(int id, int captureFlag, int channel)	{ return snd->snd_GetSwitch(id, captureFlag, channel); }
+int  snd_SetSwitch(int id, int captureFlag, int parameter)	{ return snd->snd_SetSwitch(id, captureFlag, parameter); }
+int  snd_SetDevice(int id, char *name)				{ return snd->snd_SetDevice(id, name); }

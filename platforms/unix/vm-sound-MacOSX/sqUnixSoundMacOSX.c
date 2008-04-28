@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2006-10-18 09:58:55 by piumarta on emilia.local
+ * Last edited: 2008-04-21 14:53:42 by piumarta on emilia
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -971,6 +971,20 @@ static sqInt sound_SetRecordLevel(sqInt level)
   return setVolume(1, (double)level / 1000.0L, (double)level / 1000.0L);
 }
 
+static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)
+{
+  return -1;
+}
+
+static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)
+{
+  return -1;
+}
+
+static sqInt sound_SetDevice(sqInt id, char *arg)
+{
+  return -1;
+}
 
 /// 
 /// debugging

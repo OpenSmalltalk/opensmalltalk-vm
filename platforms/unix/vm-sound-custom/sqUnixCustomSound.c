@@ -1,6 +1,6 @@
 /* sqUnixCustomSound.c -- sound module for custom sound system
  *
- * Last edited: 2005-04-06 05:44:40 by piumarta on pauillac.hpl.hp.com
+ * Last edited: 2008-04-21 14:49:27 by piumarta on emilia
  *
  * This is a template for creating your own sound drivers for Squeak:
  * 
@@ -106,6 +106,23 @@ static sqInt sound_SetRecordLevel(sqInt level)
   return level;
 }
 
+static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)
+{
+  trace();
+  return -1;
+}
+
+static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)
+{
+  trace();
+  return -1
+}
+
+static sqInt sound_SetDevice(sqInt id, char *arg)
+{
+  trace();
+  return -1;
+}
 
 #include "SqSound.h"
 

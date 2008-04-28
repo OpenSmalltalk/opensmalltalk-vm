@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2005-03-17 20:34:26 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2008-04-21 14:51:23 by piumarta on emilia
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -58,6 +58,11 @@ static sqInt  sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, 
 static void   sound_Volume(double *left, double *right)								{ return; }
 static void   sound_SetVolume(double left, double right)							{ return; }
 static sqInt  sound_SetRecordLevel(sqInt level)									{ return level; }
+
+static sqInt  sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)					FAIL(-1)
+static sqInt  sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)					FAIL(-1)
+static sqInt  sound_SetDevice(sqInt id, char *arg)								FAIL(-1)
+
 
 #include "SqSound.h"
 

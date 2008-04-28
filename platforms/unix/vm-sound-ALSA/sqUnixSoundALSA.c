@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2008-01-22 09:53:19 by piumarta on emilia.local
+ * Last edited: 2008-04-21 14:48:26 by piumarta on emilia
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -34,9 +34,11 @@
 #include <signal.h>
 
 
-static char *sound_device	= "default";
-static char *sound_playback	= "Master";
-static char *sound_capture	= "Capture";
+#define DEVICE_NAME_LEN 128
+
+static char sound_device[DEVICE_NAME_LEN];	/* = "default"; */
+static char sound_playback[DEVICE_NAME_LEN];	/* = "Master"; */
+static char sound_capture[DEVICE_NAME_LEN];	/* = "Capture"; */
 
 
 #define FAIL(X)		\
@@ -183,7 +185,7 @@ static sqInt sound_AvailableSpace(void)
 #else
   if (output_handle)
     {
-      int count = snd_pcm_avail_update(output_handle);
+      int count= snd_pcm_avail_update(output_handle);
       if (count >= 0)
 	return count;
       fprintf(stderr, "sound_AvailableSpace: snd_pcm_avail_update: %s\n", snd_strerror(count));
@@ -435,7 +437,66 @@ static inline void mixer_setVolume(char *name, int captureFlag, double leftLevel
   mixer_close();
 }
 
+static int mixer_setSwitch(char *name, int captureFlag, int parameter)
+{
+  int chn;
+  if (mixer_open(name))
+    {
+      mixer_close();
+      return 0;
+    }
 
+  if (!(captureFlag ? snd_mixer_selem_has_capture_switch : snd_mixer_selem_has_playback_switch)(mixer_element))
+    {
+      mixer_close();
+      return 0;
+    }
+
+  for (chn= 0;  chn <= SND_MIXER_SCHN_LAST;  ++chn)
+    {
+      if (!(captureFlag ? snd_mixer_selem_has_capture_channel : snd_mixer_selem_has_playback_channel)(mixer_element, chn))
+	continue;
+
+      if ((captureFlag ? snd_mixer_selem_set_capture_switch : snd_mixer_selem_set_playback_switch)(mixer_element, chn, parameter) < 0)
+	continue;
+    }
+
+  mixer_close();
+  return 1;
+}
+
+static int mixer_getSwitch(char *name, int captureFlag, int channel)
+{
+  int ival;
+  if (channel < 0 || channel > SND_MIXER_SCHN_LAST)
+    {
+      return -1;
+    }
+      
+  if (mixer_open(name))
+    {
+      mixer_close();
+      return -1;
+    }
+
+  if (!(captureFlag ? snd_mixer_selem_has_capture_switch : snd_mixer_selem_has_playback_switch)(mixer_element))
+    {
+      mixer_close();
+      return -1;
+    }
+
+  if (!(captureFlag ? snd_mixer_selem_has_capture_channel : snd_mixer_selem_has_playback_channel)(mixer_element, channel))
+    {
+      mixer_close();
+      return -1;
+    }
+
+  if ((captureFlag ? snd_mixer_selem_get_capture_switch : snd_mixer_selem_get_playback_switch)(mixer_element, channel, &ival) < 0)
+    ival= -1;
+
+  mixer_close();
+  return ival;
+}
 
 static void sound_Volume(double *left, double *right)
 {
@@ -457,6 +518,68 @@ static sqInt sound_SetRecordLevel(sqInt level)
 {
   mixer_setVolume(sound_capture, 1, (double)level / 100.0, (double)level / 100.0);
   return 1;
+}
+
+static sqInt sound_SetDevice(sqInt id, char *arg)
+{
+  char *dest= NULL; 
+  if (id == 0)
+    {
+      if (arg == NULL)
+	{
+	  arg= "default";
+	}
+      dest= sound_device;
+    }
+  else if (id == 1)
+    {
+      if (arg == NULL)
+	{
+	  arg= "Master";
+	}
+      dest= sound_playback;
+    }
+  else if (id == 2)
+    {
+      if (arg == NULL)
+	{
+	  arg= "Capture";
+	}
+      dest= sound_capture;
+    }
+  
+  if (dest)
+    {
+      strncpy(dest, arg, DEVICE_NAME_LEN-1);
+      return 1;
+    }
+  return -1;
+}
+
+static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)
+{
+  if (id == 1)
+    {
+    return mixer_getSwitch(sound_playback, captureFlag, channel);
+    }
+  else if (id == 2)
+    {
+      return mixer_getSwitch(sound_capture, captureFlag, channel);
+    }
+  return -1;
+}
+
+static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)
+{
+  if (id == 1)
+    {
+      return mixer_setSwitch(sound_playback, captureFlag, parameter);
+  }
+  else if (id == 2)
+    {
+      return mixer_setSwitch(sound_capture, captureFlag, parameter);
+    }
+  return -1;
 }
 
 
@@ -493,10 +616,15 @@ SqSoundDefine(ALSA);
 static void sound_parseEnvironment(void)
 {
   char *ev= 0;
-  if (     getenv("SQUEAK_NOMIXER"   ))	sound_nomixer=  1;
-  if ((ev= getenv("SQUEAK_SOUNDCARD")))	sound_device=   strdup(ev);
-  if ((ev= getenv("SQUEAK_PLAYBACK" )))	sound_playback= strdup(ev);
-  if ((ev= getenv("SQUEAK_CAPTURE"  )))	sound_capture=  strdup(ev);
+
+  sound_SetDevice(0, NULL);
+  sound_SetDevice(1, NULL);
+  sound_SetDevice(2, NULL);
+
+  if (     getenv("SQUEAK_NOMIXER"   ))	sound_nomixer= 1;
+  if ((ev= getenv("SQUEAK_SOUNDCARD")))	sound_SetDevice(0, ev);
+  if ((ev= getenv("SQUEAK_PLAYBACK" )))	sound_SetDevice(1, ev);
+  if ((ev= getenv("SQUEAK_CAPTURE"  )))	sound_SetDevice(2, ev);
 }
 
 static int  sound_parseArgument(int argc, char **argv)
@@ -504,9 +632,9 @@ static int  sound_parseArgument(int argc, char **argv)
   if     (!strcmp(argv[0], "-nomixer"  )) { sound_nomixer= 1;		return 1; }
   else if (argv[1])
     {
-      if (!strcmp(argv[0], "-soundcard")) { sound_device=   argv[1];	return 2; }
-      if (!strcmp(argv[0], "-playback" )) { sound_playback= argv[1];	return 2; }
-      if (!strcmp(argv[0], "-capture"  )) { sound_capture=  argv[1];	return 2; }
+      if (!strcmp(argv[0], "-soundcard")) { sound_SetDevice(0, argv[1]);	return 2; }
+      if (!strcmp(argv[0], "-playback" )) { sound_SetDevice(1, argv[1]);	return 2; }
+      if (!strcmp(argv[0], "-capture"  )) { sound_SetDevice(2, argv[1]);	return 2; }
     }
   return 0;
 }
