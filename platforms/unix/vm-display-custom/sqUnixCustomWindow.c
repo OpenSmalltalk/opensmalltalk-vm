@@ -1,6 +1,6 @@
 /* sqUnixCustomWindow.c -- support for display via your custom window system.
  * 
- * Last edited: 2007-09-07 13:47:46 by piumarta on emilia
+ * Last edited: 2008-04-21 14:06:20 by piumarta on emilia
  * 
  * This is a template for creating your own window drivers for Squeak:
  * 
@@ -70,7 +70,18 @@ static void display_clipboardWriteWithType(char *data, size_t ndata, char *typeN
   trace();
 }
 
-static sqInt display_dndOutStart(char *data, int dataLength, char *aFormat, int formatLength)
+static sqInt display_dndOutStart(char *types, int ntypes)
+{
+  trace();
+  return 0;
+}
+
+static void display_dndOutSend (char *bytes, int nbytes)
+{
+  trace();
+}
+
+static sqInt display_dndOutAcceptedType(char * buf, int nbuf)
 {
   trace();
   return 0;

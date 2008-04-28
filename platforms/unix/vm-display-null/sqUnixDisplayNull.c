@@ -108,10 +108,9 @@ static void display_clipboardWriteWithType(char *data, size_t ndata, char *typeN
   return;
 }
 
-static sqInt display_dndOutStart(char *data, int ndata, char *typeName, int nTypeName)
-{
-  return 0;
-}
+static sqInt display_dndOutStart(char *types, int ntypes)	{ return 0; }
+static void  display_dndOutSend (char *bytes, int nbytes)	{ return  ; }
+static sqInt display_dndOutAcceptedType(char *buf, int nbuf)	{ return 0; }
 
 static sqInt display_ioGetButtonState(void)		{ return 0; }
 static sqInt display_ioPeekKeystroke(void)		{ return 0; }

@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2007-09-07 14:36:23 by piumarta on emilia
+ * Last edited: 2008-04-21 11:40:05 by piumarta on emilia
  */
 
 /* Why on earth does this plugin exist at all?  Brain death strikes
@@ -78,9 +78,34 @@ int dropRequestFileHandle(int dropIndex)
   return interpreterProxy->nilObject();
 }
 
-void sqDndOutStart(char * data, int dataLength, char * aFormat, int formatLength)
+void sqDndOutStart(char *types, int ntypes)
 {
-  dndOutStart(data, dataLength, aFormat, formatLength);
+  /* XDnD supports up to 3 types */
+  if (!dndOutStart(types, ntypes))
+    interpreterProxy->success(false);
+}
+
+int sqDndOutAcceptedType(void)
+{
+  int outData;
+  char *dest;
+  size_t nbuf;
+  char buf[256];
+
+  int result= dndOutAcceptedType(buf, 256);
+  if (result == 0) return interpreterProxy->nilObject();
+
+  nbuf= strlen(buf);
+  outData = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classString(), nbuf);
+  dest = ((char *) (interpreterProxy->firstIndexableField(outData)));
+  memcpy(dest, buf, nbuf);
+
+  return outData;
+}
+
+void sqDndOutSend(char *aByteArray, int nbytes)
+{
+  dndOutSend(aByteArray, nbytes);
 }
 
 int  sqSecFileAccessCallback(void *callback)		 { return 0; }

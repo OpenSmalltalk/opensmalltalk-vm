@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2007-09-07 13:53:52 by piumarta on emilia
+ * Last edited: 2008-04-21 14:01:20 by piumarta on emilia
  */
 
 #include "sq.h"
@@ -593,10 +593,9 @@ sqInt ioMousePoint(void)		{ return dpy->ioMousePoint(); }
 
 /*** Drag and Drop ***/
 
-sqInt dndOutStart(char * data, int ndata, char * typeName, int ntypeName)
-{
-  return dpy->dndOutStart(data, ndata, typeName, ntypeName);
-}
+sqInt dndOutStart(char *types, int ntypes)	{ return dpy->dndOutStart(types, ntypes); }
+sqInt dndOutAcceptedType(char *type, int ntype)	{ return dpy->dndOutAcceptedType(type, ntype); }
+void  dndOutSend(char *bytes, int nbytes)	{        dpy->dndOutSend(bytes, nbytes); }
 
 /*** OpenGL ***/
 

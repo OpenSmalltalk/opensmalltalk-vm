@@ -24,7 +24,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2008-03-22 18:51:35 by piumarta on emilia.local
+ * Last edited: 2008-04-21 14:11:11 by piumarta on emilia
  */
 
 
@@ -1062,10 +1062,9 @@ static void display_clipboardWriteWithType(char *data, size_t nData, char *typeN
   return;
 }
 
-static sqInt display_dndOutStart(char *data, int dataLength, char *aFormat, int formatLength)
-{
-  return 0;
-}
+static sqInt display_dndOutStart(char *types, int ntypes)	{ return 0; }
+static void  display_dndOutSend(char *bytes, int nbytes)	{ return  ; }
+static sqInt display_dndOutAcceptedType(char * buf, int nbuf)	{ return 0; }
 
 static void display_winExit(void)
 {

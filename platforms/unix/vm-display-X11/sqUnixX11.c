@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2008-04-10 14:25:44 by piumarta on emilia.local
+ * Last edited: 2008-04-21 14:59:21 by piumarta on emilia
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -113,6 +113,9 @@
 #define XK_MISCELLANY
 #define XK_XKB_KEYS
 #include <X11/keysymdef.h>
+#if defined(SUGAR)
+# include <X11/XF86keysym.h>
+#endif
 #if defined(USE_XSHM)
 #  include <sys/ipc.h>
 #  include <sys/shm.h>
@@ -251,7 +254,7 @@ static x2sqKey_t x2sqKey= x2sqKeyPlain;
 
 static int multi_key_pressed = 0;
 static KeySym multi_key_buffer = 0;
-static int composition_input = 0;
+static int compositionInput = 0;
 
 /* #define INIT_INPUT_WHEN_KEY_PRESSED */
 /* #define INIT_INPUT_WHEN_FOCUSED_IN */
@@ -1529,7 +1532,7 @@ static void initInputI18n(void)
   initInput= initInputNone;
 # endif
 
-  if (!composition_input)
+  if (!compositionInput)
     return;
 
   x2sqKey= x2sqKeyPlain;
@@ -1921,10 +1924,11 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	  }
 
       case XLookupKeySym:
-#	 if defined(DEBUG_CONV)
+#      if defined(DEBUG_CONV)
 	fprintf(stderr, "x2sqKey XLookupKeySym\n");
-#	 endif
+#      endif
 	{
+	  int charCode;
 	  if (*symbolic == XK_Multi_key)
 	    {
 	      multi_key_pressed= 1;
@@ -1935,7 +1939,7 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	      return -1;
 	  }
 	  
-	  int charCode= translateCode(*symbolic);
+	  charCode= translateCode(*symbolic);
 #	   if defined(DEBUG_CONV)
 	  printf("SYM %x -> %d\n", *symbolic, charCode);
 #	   endif
@@ -2239,6 +2243,8 @@ static int xkeysym2ucs4(KeySym keysym)
     0x20a8, 0x20a9, 0x20aa, 0x20ab, 0x20ac                          /* 0x20a8-0x20af */
   };
 
+  static unsigned short const sqSpecialKey[] = {1, 28, 30, 29, 31, 5, 11, 12, 4};
+
   /* Latin-1 */
   if (   (keysym >= 0x0020 && keysym <= 0x007e)
       || (keysym >= 0x00a0 && keysym <= 0x00ff)) return keysym;
@@ -2246,7 +2252,6 @@ static int xkeysym2ucs4(KeySym keysym)
   /* 24-bit UCS */
   if ((keysym & 0xff000000) == 0x01000000) return keysym & 0x00ffffff;
 
-  static unsigned short const sqSpecialKey[] = {1, 28, 30, 29, 31, 5, 11, 12, 4};
   /* control keys with ASCII equivalents */
   if (keysym > 0xff00 && keysym < 0xff10) return keysym & 0x001f;
   if (keysym > 0xff4f && keysym < 0xff59)
@@ -2480,7 +2485,7 @@ static void handleEvent(XEvent *evt)
       break;
 
     case FocusIn:
-      if (evt->xfocus.mode == NotifyNormal)
+      if (evt->xfocus.mode == NotifyNormal || evt->xfocus.mode == NotifyUngrab)
 	{
 	  switch (evt->xfocus.detail)
 	    {
@@ -3274,9 +3279,12 @@ void initWindow(char *displayName)
                           XInternAtom(stDisplay, "_SUGAR_ACTIVITY_ID", 0), XInternAtom(stDisplay, "STRING", 0), 8,
                           PropModeReplace, (unsigned char *)sugarActivityId, strlen(sugarActivityId));
 
-        XChangeProperty(stDisplay, stParent,
-                        XInternAtom(stDisplay, "_NET_WM_PID", 0), XInternAtom(stDisplay, "CARDINAL", 0), 32,
-                        PropModeReplace, (unsigned char *)&pid, 1);
+        {
+	  unsigned long pid= getpid();
+	  XChangeProperty(stDisplay, stParent,
+			  XInternAtom(stDisplay, "_NET_WM_PID", 0), XInternAtom(stDisplay, "CARDINAL", 0), 32,
+			  PropModeReplace, (unsigned char *)&pid, 1);
+	}
 #      endif
       }
 
@@ -3482,6 +3490,10 @@ static int translateCode(KeySym symbolic)
     /* XKB extensions */
 # if defined(XK_ISO_Left_Tab)
     case XK_ISO_Left_Tab: return  9;	/* shift-tab */
+# endif
+
+# if defined(XF86XK_Start)
+    case XF86XK_Start:  return ALT+','; /* OLPC view source */
 # endif
 
     default:		return -1;
@@ -5729,7 +5741,7 @@ static void display_parseEnvironment(void)
     {
       if (getenv("SQUEAK_COMPOSITIONINPUT"))
 	{
-	  composition_input= 1;
+	  compositionInput= 1;
 	  initInput= initInputI18n;
 	  x2sqKey= x2sqKeyCompositionInput;
 	}
@@ -5781,7 +5793,7 @@ static int display_parseArgument(int argc, char **argv)
 #endif
   else if (!strcmp(arg, "-compositioninput"))
     {
-      composition_input= 1;
+      compositionInput= 1;
       x2sqKey= x2sqKeyCompositionInput;
       initInput= initInputI18n;
     }
@@ -5792,6 +5804,10 @@ static int display_parseArgument(int argc, char **argv)
       if      (!strcmp(arg, "-display")) displayName= argv[1];
       else if (!strcmp(arg, "-optmod"))	 optMapIndex= Mod1MapIndex + atoi(argv[1]) - 1;
       else if (!strcmp(arg, "-cmdmod"))  cmdMapIndex= Mod1MapIndex + atoi(argv[1]) - 1;
+#    if defined(SUGAR)
+      else if (!strcmp(arg, "-sugarBundleId"))   sugarBundleId= argv[1];
+      else if (!strcmp(arg, "-sugarActivityId")) sugarActivityId= argv[1];
+#    endif
 #    if defined(USE_XICFONT_OPTION)
       else if (!strcmp(arg, "-xicfont")) inputFontStr= argv[1];  
 #    endif
