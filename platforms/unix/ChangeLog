@@ -1,3 +1,59 @@
+2008-04-21  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/configure.ac: Version is 3.10-2.
+
+	* vm-sound-ALSA/sqUnixSoundALSA.c: Add snd_GetSwitch, snd_SetSwitch,
+	snd_SetDevice.
+
+	* vm-display-X11/sqUnixXdnd.c (display_dndOutAcceptedType): Add
+	support for display_dndOutSend, display_dndOutAcceptedType.
+
+	* vm-display-X11/sqUnixX11.c (display_parseArgument): Add SUGAR
+	support.
+
+	* vm-display-null/sqUnixDisplayNull.c: Add display_dndOutSend,
+	display_dndOutAcceptedType.
+
+	* vm-display-fbdev/sqUnixFBDev.c: Add display_dndOutSend,
+	display_dndOutAcceptedType.
+
+	vm-display-custom/sqUnixCustomWindow.c (display_dndOutAcceptedType):
+	Add display_dndOutSend, display_dndOutAcceptedType.
+
+	* vm/sqUnixMain.c: Add dndOutAcceptedType, dndOutSend.
+
+	* vm/SqSound.h (struct SqSound): Add snd_GetSwitch, snd_SetSwitch,
+	snd_SetDevice.
+
+	* vm/SqDisplay.h (struct SqDisplay): add dndOutAcceptedType,
+	dndOutSend.
+
+	* plugins/SoundPlugin/sqUnixSound.c: Add mixer support.
+
+	* plugins/DropPlugin/sqUnixDragDrop.c (sqDndOutAcceptedType): Add
+	sqDndOutAcceptedType and sqDndOutSend to support drag data request
+	from other app.
+
+	* Cross/vm/sq.h: Define DragRequest to support data request from
+	other app.
+
+	* Cross/plugins/DropPlugin/DropPlugin.h: add sqDragTriggerData to
+	support drag request from external app.
+
+	* Cross/plugins/SoundPlugin/SoundPlugin.h: add mixer interface.
+	Convert C++ comments to C comments.
+
+2008-04-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/configure.ac: Version is 3.10-2 adds Aio, ImmX, Kedama
+	and Kedama2 plugins.
+
+	* vm-display-X11/sqUnixX11.c (xkeysym2ucs4,
+	x2sqKeyCompositionInput): Move declaration from middle of
+	statement to start.
+
+	* plugins/ImmX11Plugin/acinclude.m4: Added.
+
 2008-04-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/configure.ac: Version is 3.10-1 generated from 3.10-7159.

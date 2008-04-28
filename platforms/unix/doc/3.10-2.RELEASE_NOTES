@@ -1,0 +1,15 @@
+Changes since 3.10-1:
+
+SoundPlugin and sound driver support for device selection and mixer control.
+
+DragDropPlugin and display driver support for dragging items out of squeak.
+
+New plugins and platform support (not all are pre-built in binary distributions):
+  AioPlugin
+  ClipboardExtendedPlugin
+  DBusPlugin
+  GStreamerPlugin
+  OggPlugin
+  RomePlugin
+
+OLPC 'Sugar' UI support added.
