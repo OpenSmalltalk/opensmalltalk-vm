@@ -1,3 +1,11 @@
+2008-04-29  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/configure.ac (CFLAGS): Add --hash-style option to
+	configure.
+
+	* vm-display-X11/sqUnixX11.c (xkeysym2ucs4): Translate
+	XF86XK_Start to 'ALT-,'.
+
 2008-04-21  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/configure.ac: Version is 3.10-2.

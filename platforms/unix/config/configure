@@ -26666,6 +26666,30 @@ test "$ac_cv_double_order" = "no" && cat >>confdefs.h <<\_ACEOF
 _ACEOF
 
 
+# Override Fedora Core 6 new hash style to preserve compatibility across distros
+
+{ echo "$as_me:$LINENO: checking for --hash-style option" >&5
+echo $ECHO_N "checking for --hash-style option... $ECHO_C" >&6; }
+if test "${ld_cv_hashstyle+set}" = set; then
+  echo $ECHO_N "(cached) $ECHO_C" >&6
+else
+    if { ac_try='${LD-ld} --hash-style=sysv --version 1>&5'
+  { (eval echo "$as_me:$LINENO: \"$ac_try\"") >&5
+  (eval $ac_try) 2>&5
+  ac_status=$?
+  echo "$as_me:$LINENO: \$? = $ac_status" >&5
+  (exit $ac_status); }; }
+    then
+      ld_cv_hashstyle=yes
+    else
+      ld_cv_hashstyle=no
+  fi
+
+fi
+{ echo "$as_me:$LINENO: result: $ld_cv_hashstyle" >&5
+echo "${ECHO_T}$ld_cv_hashstyle" >&6; }
+test $ld_cv_hashstyle == "yes" && LDFLAGS="$LDFLAGS -Wl,--hash-style=sysv"
+
 case $host_os in
   darwin*)
     cat >>confdefs.h <<\_ACEOF

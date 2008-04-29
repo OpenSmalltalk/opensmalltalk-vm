@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2008-04-21 14:59:21 by piumarta on emilia
+ * Last edited: 2008-04-29 14:18:26 by piumarta on emilia
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -2274,6 +2274,10 @@ static int xkeysym2ucs4(KeySym keysym)
   map(0ea0, 0eff);  map(12a1, 12fe);  map(13bc, 13be);  map(14a1, 14ff);
   map(15d0, 15f6);  map(16a0, 16f6);  map(1e9f, 1eff);  map(20a0, 20ac);
 #undef map
+
+#if defined(XF86XK_Start)
+  if (keysym == XF86XK_Start) return ',';
+#endif
 
   /* convert to chinese char noe-qwan-doo */
   return 0;

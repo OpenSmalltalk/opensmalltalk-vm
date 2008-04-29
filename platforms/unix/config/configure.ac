@@ -28,7 +28,7 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2008-04-21 15:14:04 by piumarta on emilia
+# Last edited: 2008-04-29 14:20:40 by piumarta on emilia
 
 AC_INIT([config.h.in])
 
@@ -250,6 +250,19 @@ CFLAGS="$CFLAGS_32 $CFLAGS"
 AC_C_BYTEORDER
 AC_C_DOUBLE_ALIGNMENT
 AC_C_DOUBLE_ORDER
+
+# Override Fedora Core 6 new hash style to preserve compatibility across distros
+
+AC_CACHE_CHECK(for --hash-style option,
+  ld_cv_hashstyle, [dnl
+  if AC_TRY_COMMAND([${LD-ld} --hash-style=sysv --version 1>&AS_MESSAGE_LOG_FD])
+    then
+      ld_cv_hashstyle=yes
+    else
+      ld_cv_hashstyle=no
+  fi
+])
+test $ld_cv_hashstyle == "yes" && LDFLAGS="$LDFLAGS -Wl,--hash-style=sysv"
 
 case $host_os in
   darwin*)
