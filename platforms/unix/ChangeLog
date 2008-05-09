@@ -1,3 +1,10 @@
+2008-05-09  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/configure.ac: Version is 3.10-3.
+
+	* platforms/unix/src: Regenerate all with 32-/64-bit clean patches
+	from Dave Lewis.
+
 2008-04-29  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/configure.ac (CFLAGS): Add --hash-style option to
