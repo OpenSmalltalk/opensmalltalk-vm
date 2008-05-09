@@ -3,3 +3,5 @@ Changes since 3.10-2:
 Interpreter and vmm patches from Dave Lewis applied to make 32- and
 64-bit clean VM.  Entire generated sources tree (platforms/unix/src)
 rebuilt.
+
+FileCopy and FFI plugins are now external.
