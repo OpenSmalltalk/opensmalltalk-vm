@@ -127,6 +127,8 @@ RECT updateRect;		     /*	the rectangle to update */
 HRGN updateRgn;	     	     /*	the region to update (more accurate) */
 BOOL updateRightNow;	     /*	update flag */
 HWND  consoleWindow;       /* console */
+int wasFullScreen = 0;       /* are in fullscreen mode? */
+int shouldBeFullScreen = 0;  /* or should we be in fullscreen mode? */
 
 /* variables for DirectX support */
 RECT stWindowRect;			/* Client rectangle in screen coordinates */
@@ -1581,7 +1583,10 @@ int ioSetFullScreen(int fullScreen)
   if(wasFullScreen == fullScreen) return 1;
   /* NOTE: No modifications if the window is not currently
            visible, else we'll have a number of strange effects ... */
-  if(!IsWindowVisible(stWindow)) return 1;
+  if(!IsWindowVisible(stWindow)) {
+    shouldBeFullScreen = fullScreen;
+    return 1;
+  }
   if(fullScreen)
     {
 #if !defined(_WIN32_WCE)
@@ -1627,7 +1632,7 @@ int ioSetFullScreen(int fullScreen)
     }
   /* get us back in the foreground */
   SetForegroundWindow(stWindow);
-  wasFullScreen = fullScreen;
+  wasFullScreen = shouldBeFullScreen = fullScreen;
   return 1;
 }
 
@@ -1869,6 +1874,8 @@ int ioForceDisplayUpdate(void) {
   if(!fHeadlessImage && IsWindow(stWindow) && !IsWindowVisible(stWindow)) {
     HideSplashScreen();
     ShowWindow(stWindow, SW_SHOW);
+    if(wasFullScreen != shouldBeFullScreen) 
+      ioSetFullScreen(shouldBeFullScreen);
     UpdateWindow(stWindow);
   }
   /* Check if
