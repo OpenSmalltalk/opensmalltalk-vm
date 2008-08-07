@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2008-04-29 14:18:26 by piumarta on emilia
+ * Last edited: 2008-08-07 10:53:39 by piumarta on emilia.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -2297,7 +2297,7 @@ static int x2sqModifier(int state)
   int mods= 0;
   if (optMapIndex || cmdMapIndex)
     {
-      int shift= 1 & ((state >> ShiftMapIndex) ^ (state >> LockMapIndex));
+      int shift= 1 & (state >> ShiftMapIndex);
       int ctrl=  1 & (state >> ControlMapIndex);
       int cmd=   1 & (state >> cmdMapIndex);
       int opt=   1 & (state >> optMapIndex);
