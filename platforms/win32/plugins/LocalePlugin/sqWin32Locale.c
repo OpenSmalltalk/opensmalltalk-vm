@@ -124,7 +124,7 @@ sqInt	sqLocGetVMOffsetToUTC(void) {
 sqInt	sqLocGetTimezoneOffset(void) {
 	TIME_ZONE_INFORMATION timeZoneInformation;
 	GetTimeZoneInformation(&timeZoneInformation);
-	return (-timeZoneInformation.Bias);
+	return -(timeZoneInformation.Bias+timeZoneInformation.DaylightBias);
 }
 
 /* return true if DST is in use, false otherwise */
