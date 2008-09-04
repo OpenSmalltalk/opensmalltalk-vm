@@ -193,7 +193,6 @@ int recordDragDropEvent(EventRecord *theEvent, int numberOfItems, int dragType) 
 	evt->windowIndex = windowActive;
         pthread_mutex_unlock(&gEventQueueLock);
         signalAnyInterestedParties();
-//	signalSemaphoreWithIndex(inputSemaphoreIndex);
 	return 1;
 }
 

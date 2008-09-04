@@ -366,12 +366,6 @@ char * GetAttributeString(int id) {
             return path;
         }
 
-	if (id == 2) {
-            static char path[DOCUMENT_NAME_SIZE + 1];
-            getDocumentNameWithEncoding(path,gCurrentVMEncoding);
-            return path;
-        }
-
 	if (id == 1001) return "Mac OS";
 	if (id == 1002) {
 		long myattr;
@@ -409,7 +403,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.18b3 10-Apr-08 >DC0EAF5D-C46C-479D-B2A3-DBD4A2DF95A8<";
+ 		return "Mac Carbon 3.8.18b4 29-May-08 >02DA4BFD-4050-4372-8DBB-9582DA7D0218<";
+// 		return "Mac Carbon 3.8.18b3 10-Apr-08 >DC0EAF5D-C46C-479D-B2A3-DBD4A2DF95A8<";
 //		return "Mac Carbon 3.8.18b2 17-Aug-07 >F439DEFF-4327-403D-969B-78695EE835DB<";
 // 		return "Mac Carbon 3.8.18b1 9-Jun-07 >4C61BDDD-B2AA-4C71-B20D-5758597201EF<";
 // 		return "Mac Carbon 3.8.17b5 16-May-07 >BBAC71BE-EF68-4994-8E57-D641A936733F<";
@@ -444,7 +439,7 @@ char * GetAttributeString(int id) {
 		return data;
 	}
 	
-	if (id < 0 || (id > 2 && id <= 1000))  {
+	if (id < 0 || (id >= 2 && id <= 1000))  {
 		char *results;
 		results = unixArgcInterfaceGetParm(id);
 		if (results) 

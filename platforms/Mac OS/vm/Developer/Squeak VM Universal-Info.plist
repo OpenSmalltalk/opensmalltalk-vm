@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<!DOCTYPE plist PUBLIC "-//Apple Computer//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
 	<key>CFBundleDevelopmentRegion</key>
@@ -348,7 +348,7 @@
 	<key>CFBundleExecutable</key>
 	<string>Squeak VM Opt</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 3.8.18b2 http://www.squeak.org </string>
+	<string>Squeak VM 3.8.18b4 http://www.squeak.org </string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -360,11 +360,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak VM 3.8.18b2</string>
+	<string>Squeak VM 3.8.18b4</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>3.8.18b2</string>
+	<string>3.8.18b4</string>
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>LSBackgroundOnly</key>
@@ -468,9 +468,7 @@
 	<key>SqueakUnTrustedDirectory</key>
 	<string>~/Library/Preferences/Squeak/Internet/My Squeak/</string>
 	<key>SqueakWindowAttribute</key>
-	<data>
-	ggAAHg==
-	</data>
+	<data>ggAAHg==</data>
 	<key>SqueakWindowHasTitle</key>
 	<true/>
 	<key>SqueakWindowType</key>

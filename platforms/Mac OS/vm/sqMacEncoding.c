@@ -22,7 +22,6 @@ char imageName[IMAGE_NAME_SIZE+1];
 
 static CFStringRef vmPathString=NULL;
 static CFStringRef imageNameString=NULL;
-static CFStringRef documentNameString=NULL;
 static CFStringRef shortImageNameString=NULL;
 
 void getVMPathWithEncoding(char *target,UInt32 encoding) {
@@ -82,20 +81,6 @@ Boolean ImageNameIsEmpty() {
     if (imageNameString == NULL) 
         return true;
     return getImageName() == 0x00;
-}
-
-void getDocumentNameWithEncoding(char *target,UInt32 encoding) {
-    if (documentNameString == NULL) {
-        *target = 0x00;
-        return;
-    }
-    CFStringGetCString (documentNameString, target, DOCUMENT_NAME_SIZE, encoding);
-}
-
-void SetDocumentNameViaString(char *string,UInt32 encoding) {
-    if (documentNameString != NULL)
-        CFRelease(documentNameString);
-    documentNameString = CFStringCreateWithCString(NULL, string, encoding);
 }
 
 void getShortImageNameWithEncoding(char *target,UInt32 encoding) {
