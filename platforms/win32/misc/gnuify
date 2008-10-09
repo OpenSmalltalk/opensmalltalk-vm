@@ -119,23 +119,23 @@ BEGIN {
   next;
 }
 
-(stage == 4) && /^sqInt primitiveResponse\(/ {
-  print;
-  print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
-  print "    PRIM_TABLE;\n";
-  print "primitiveResponse: rewriting case labels" > "/dev/stderr";
-  stage= 5;
-  FS="[ 	:]+";
-  next;
-}
+#(stage == 4) && /^sqInt primitiveResponse\(/ {
+#  print;
+#  print "primitiveResponse: adding primitive dispatch table" > "/dev/stderr";
+#  print "    PRIM_TABLE;\n";
+#  print "primitiveResponse: rewriting case labels" > "/dev/stderr";
+#  stage= 5;
+#  FS="[ 	:]+";
+#  next;
+#}
 
 
-(stage == 5) && /^	switch \(primitiveIndex\) {/ {
-  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
-  print "	PRIM_DISPATCH;";
-  print;
-  next;
-}
+#(stage == 5) && /^	switch \(primitiveIndex\) {/ {
+#  print "primitiveResponse: adding primitive dispatch" > "/dev/stderr";
+#  print "	PRIM_DISPATCH;";
+#  print;
+#  next;
+#}
 
 #(stage == 5) && /^		startProfiling\(\);/ {
 #  print "#ifdef PROFILE"
@@ -145,24 +145,24 @@ BEGIN {
 #  next;
 #}
 
-(stage == 5) && /^	case / {
-  print "	PRIM_CASE(" $3 ")";
-  next;
-}
+#(stage == 5) && /^	case / {
+#  print "	PRIM_CASE(" $3 ")";
+#  next;
+#}
 
-(stage == 5) && /^		break;/ {
-  print "		PRIM_BREAK;";
-  next;
-}
+#(stage == 5) && /^		break;/ {
+#  print "		PRIM_BREAK;";
+#  next;
+#}
 
 
-(stage == 5) && /^\}/ {
-  print "copying last section of file" > "/dev/stderr";
-  stage= 6;
-  FS=" ";
-  print;
-  next;
-}
+#(stage == 5) && /^\}/ {
+#  print "copying last section of file" > "/dev/stderr";
+#  stage= 6;
+#  FS=" ";
+#  print;
+#  next;
+#}
 
 # default
 {
