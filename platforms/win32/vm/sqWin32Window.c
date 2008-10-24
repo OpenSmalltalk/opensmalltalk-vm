@@ -146,6 +146,7 @@ UINT g_WM_MOUSEWHEEL = 0;	/* RvL: 1999-04-19 The message we receive from wheel m
 /* misc declarations */
 int recordMouseEvent(MSG *msg);
 int recordKeyboardEvent(MSG *msg);
+int recordWindowEvent(int action, RECT *r);
 
 extern int byteSwapped(int);
 extern int convertToSqueakTime(SYSTEMTIME);
@@ -268,7 +269,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
     }
 #endif /* defined(_WIN32_WCE) */
     if(cmd == SC_CLOSE) {
-      if(fEnableAltF4Quit) {
+      if(fEnableAltF4Quit || GetKeyState(VK_SHIFT) < 0) {
 	TCHAR msg[1001], label[1001];
 	GetPrivateProfileString(U_GLOBAL, TEXT("QuitDialogMessage"), 
 				TEXT("Quit " VM_NAME " without saving?"), 
@@ -279,6 +280,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 	if(MessageBox(stWindow, msg, label, MB_YESNO) != IDYES) return 0;
 	DestroyWindow(stWindow);
 	exit(1);
+      } else {
+	recordWindowEvent(WindowEventClose, NULL);
       }
       break;
     }
@@ -342,7 +345,8 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
       if(wParam == VK_F2 && fEnableF2Menu) {
 	TrackPrefsMenu();
       }
-      if(wParam == VK_F4 && fEnableAltF4Quit) {
+      if(wParam == VK_F4) {
+	/* Let F4 through so that Alt-F4 works */
 	return DefWindowProcW(hwnd, message, wParam, lParam);
       }
       break;
@@ -1153,6 +1157,25 @@ int recordKeyboardEvent(MSG *msg) {
     *extra = *evt;
     extra->pressCode = EventKeyChar;
   }
+  return 1;
+}
+
+int recordWindowEvent(int action, RECT *r) {
+  sqWindowEvent *evt;
+  evt = (sqWindowEvent*)sqNextEventPut();
+  evt->type = EventTypeWindow;
+  evt->timeStamp = GetTickCount();
+  evt->action = action;
+  if(r) {
+    evt->value1 = r->left;
+    evt->value2 = r->top;
+    evt->value3 = r->right;
+    evt->value4 = r->bottom;
+  } else {
+    evt->value1 = evt->value2 = evt->value3 = evt->value4 = 0;
+  }
+  /* window index is 1 for main window to be compatible with mac vm */
+  evt->windowIndex = 1;
   return 1;
 }
 
