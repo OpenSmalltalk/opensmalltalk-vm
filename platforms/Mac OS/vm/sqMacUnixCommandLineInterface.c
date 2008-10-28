@@ -142,13 +142,22 @@ void resolveWhatTheImageNameIs(char *guess)
 	OSErr		err;
 	
 	strncpy(possibleImageName, guess,DOCUMENT_NAME_SIZE);
+	// fprintf(stderr,"\nresolveWhatTheImageNameIs %s",guess);
 	err = getFSRef(possibleImageName,&theFSRef,kCFStringEncodingUTF8);
+	if (err && (!(guess[0] == '.' || guess[0] == '/'))) {
+		getVMPathWithEncoding(possibleImageName,kCFStringEncodingUTF8);
+		strncat(possibleImageName, guess, DOCUMENT_NAME_SIZE - strlen(possibleImageName));
+		err = getFSRef(possibleImageName,&theFSRef,kCFStringEncodingUTF8);
+		// fprintf(stderr,"\nresolveWhatTheImageNameIs 2ndTry %s",possibleImageName);
+	}
 	if (err) {
 		SetImageNameViaString("",gCurrentVMEncoding);
 		SetShortImageNameViaString("",gCurrentVMEncoding);
+		//	fprintf(stderr,"\nresolveWhatTheImageNameIs Failure to find file");
 		return;
 	}
 	PathToFileViaFSRef(fullPath,DOCUMENT_NAME_SIZE, &theFSRef,gCurrentVMEncoding);
+	// fprintf(stderr,"\nresolveWhatTheImageNameIs fullPath %s",fullPath);
 	getLastPathComponentInCurrentEncoding(fullPath,lastPath,gCurrentVMEncoding);
 	SetImageNameViaString(fullPath,gCurrentVMEncoding);
 	SetShortImageNameViaString(lastPath,gCurrentVMEncoding);

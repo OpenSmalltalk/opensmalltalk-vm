@@ -1204,7 +1204,7 @@ int ioSetDisplayMode(int width, int height, int depth, int fullscreenFlag) {
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 
 	if (QDGetCGDirectDisplayID == NULL)
-		return ioSetDisplayMode( width,  height,  depth,  fullscreenFlag);
+		return ioSetDisplayModeOLD( width,  height,  depth,  fullscreenFlag);
 		
 	dominantGDevice = getThatDominateGDevice(getSTWindow());
        if (dominantGDevice == null) {

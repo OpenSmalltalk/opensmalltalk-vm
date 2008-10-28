@@ -203,6 +203,8 @@ int main(int argc, char **argv, char **envp) {
 
 	SetVMPathFromApplicationDirectory();
 
+/*	LETS NOT DO THIS, SEE what happens for people wanting to do  ./Squeak.app foobar.image  zingger.st
+	
 	{
 		// Change working directory, this works under os-x, previous logic worked pre os-x 10.4
 		
@@ -210,7 +212,7 @@ int main(int argc, char **argv, char **envp) {
 		getVMPathWithEncoding(target,gCurrentVMEncoding);
 		sqFilenameFromStringOpen(temp,(sqInt) target, strlen(target));
 		chdir(temp);
-	}
+	} */
 
 	/* install apple event handlers and wait for open event */
 	InstallAppleEventHandlers();
@@ -328,12 +330,6 @@ int ioBeep(void) {
 	return 0;
 }
 
-void SqueakTerminate() {
-	UnloadScrap();
-	ioShutdownAllModules();
-	sqMacMemoryFree();
-}
-
 int ioFormPrint(int bitsAddr, int width, int height, int depth, double hScale, double vScale, int landscapeFlag) {
 	/* experimental: print a form with the given bitmap, width, height, and depth at
 	   the given horizontal and vertical scales in the given orientation
@@ -403,7 +399,9 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.18b4 29-May-08 >02DA4BFD-4050-4372-8DBB-9582DA7D0218<";
+ 		return "Mac Carbon 3.8.19b1 28-Oct-08 >36B0938E-7E39-4C53-9E09-F06EAEB9B458<";
+// 		return "Mac Carbon 3.8.18b5 05-Sep-08 >0DEC4F6F-198B-47DC-A52F-85B43B5514C0<";
+// 		return "Mac Carbon 3.8.18b4 29-May-08 >02DA4BFD-4050-4372-8DBB-9582DA7D0218<";
 // 		return "Mac Carbon 3.8.18b3 10-Apr-08 >DC0EAF5D-C46C-479D-B2A3-DBD4A2DF95A8<";
 //		return "Mac Carbon 3.8.18b2 17-Aug-07 >F439DEFF-4327-403D-969B-78695EE835DB<";
 // 		return "Mac Carbon 3.8.18b1 9-Jun-07 >4C61BDDD-B2AA-4C71-B20D-5758597201EF<";

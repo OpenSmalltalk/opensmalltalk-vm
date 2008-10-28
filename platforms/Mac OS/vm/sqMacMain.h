@@ -17,5 +17,4 @@
 
 void fetchPrefrences(void);
 char * GetAttributeString(int id);
-void SqueakTerminate(void);
 void ExitCleanup(void);
