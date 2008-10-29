@@ -73,10 +73,11 @@ usqInt	sqGetAvailableMemory() {
 	 }
 	 
 	 freeSpaceRoundedUpToPageSize = valign(gMaxHeapSize)-fileRoundedUpToPageSize+pageSize;
-	 startOfmmapForANONMemory = mmap(startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,0,0);
+	 startOfmmapForANONMemory = mmap(startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED|MAP_FIXED,-1,0);
  
 	 if (startOfmmapForANONMemory != startOfAnonymousMemory) {
-		 fprintf(stderr, "errno %d\n", errno);
+		 fprintf(stderr, "errno %d\n startOfAnonymousMemory %d freeSpaceRoundedUpToPageSize %d startOfmmapForANONMemory %d", errno,
+				startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, startOfmmapForANONMemory);
 		 perror("startOfmmapForANONMemory failed");
 		 exit(42);
 	 }
