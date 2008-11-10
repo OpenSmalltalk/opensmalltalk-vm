@@ -9,6 +9,7 @@
 *   RCSID:   $Id$
 *
 *   NOTES: See change log below.
+*	2008-08-29 bf  add stdin/stdout/stderr support
 *	2005-03-26 IKP fix unaligned accesses to file[Size] members
 * 	2004-06-10 IKP 64-bit cleanliness
 * 	1/28/02    Tim remove non-ansi stuff
@@ -119,8 +120,11 @@ sqInt sqFileAtEnd(SQFile *f) {
 sqInt sqFileClose(SQFile *f) {
 	/* Close the given file. */
 
+	FILE *file;
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	fclose(getFile(f));
+	file = getFile(f);
+	if (file != stdin && file != stdout && file != stderr)
+	  fclose(file);
 	setFile(f, 0);
 	f->sessionID = 0;
 	f->writable = false;
@@ -174,6 +178,15 @@ sqInt sqFileShutdown(void) {
 	return 1;
 }
 
+static int setStdFilename(char* stdFilename, char *cFileName, char *sqFileName, sqInt sqFileNameSize)
+{
+  if (!strncmp(stdFilename, sqFileName,sqFileNameSize)) {
+    strcpy(cFileName, stdFilename);
+    return 1;
+  } else
+    return 0;
+}
+
 sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeFlag) {
 	/* Opens the given file using the supplied sqFile structure
 	   to record its state. Fails with no side effects if f is
@@ -190,11 +203,20 @@ sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeF
 	if (sqFileNameSize > 1000) {
 		return interpreterProxy->success(false);
 	}
-	interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, true);
+
+	if (setStdFilename("/dev/stdin", cFileName, sqFileName, sqFileNameSize)) 
+	  setFile(f, stdin);
+	else if (setStdFilename("/dev/stdout", cFileName, sqFileName, sqFileNameSize))
+	  setFile(f, stdout);
+	else if (setStdFilename("/dev/stderr", cFileName, sqFileName, sqFileNameSize))
+	  setFile(f, stderr);
+	else
+	  interpreterProxy->ioFilenamefromStringofLengthresolveAliases(cFileName, sqFileName, sqFileNameSize, true);
 
 	if (writeFlag) {
 		/* First try to open an existing file read/write: */
-		setFile(f, fopen(cFileName, "r+b"));
+		if (getFile(f) == NULL)
+			setFile(f, fopen(cFileName, "r+b"));
 		if (getFile(f) == NULL) {
 			/* Previous call fails if file does not exist. In that case,
 			   try opening it in write mode to create a new, empty file.
@@ -209,7 +231,8 @@ sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeF
 		}
 		f->writable = true;
 	} else {
-		setFile(f, fopen(cFileName, "rb"));
+		if (getFile(f) == NULL)
+			setFile(f, fopen(cFileName, "rb"));
 		f->writable = false;
 	}
 
