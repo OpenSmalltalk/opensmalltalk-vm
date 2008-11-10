@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@inria.fr>
  * 
- * Last edited: 2008-04-21 14:43:26 by piumarta on emilia
+ * Last edited: 2008-11-10 13:56:45 by piumarta on ubuntu.piumarta.com
  * 
  * BUGS
  * 
@@ -141,6 +141,8 @@ enum {
 #else
 # define dprintf(ARGS) do { } while (0)
 #endif
+
+static void updateCursor(int state);
 
 void getMousePosition(void);
 
@@ -303,6 +305,7 @@ static void sendEnter(Window target, Window source)
 	    }
 	}
     }
+  dprintf((stderr, "Send XdndEnter (output) source: 0x%lx target: 0x%lx\n", source, target));
   sendClientMessage(data, source, target, XdndEnter);
 }
 
@@ -321,7 +324,8 @@ static void sendDrop(Window target, Window source, Time timestamp)
 {
   long data[5]= { 0, 0, 0, 0, 0 };
   data[2]= timestamp;
-  dprintf((stderr, "Send XdndDrop\n"));
+  dprintf((stderr, "Send XdndDrop (output) source: 0x%lx target: 0x%lx\n", source, target));
+
   sendClientMessage(data, source, target, XdndDrop);
 }
 
@@ -329,6 +333,7 @@ static void sendDrop(Window target, Window source, Time timestamp)
 static void sendLeave(Window target, Window source)
 {
   long data[5]= { 0, 0, 0, 0, 0 };
+  dprintf((stderr, "Send XdndLeave (output) source: 0x%lx target: 0x%lx\n", source, target));
   sendClientMessage(data, source, target, XdndLeave);
 }
 
@@ -338,8 +343,7 @@ static enum XdndState dndOutInitialize(enum XdndState state)
   dprintf((stderr, "Internal signal DndOutStart (output)\n"));
   memset(&xdndOutRequestEvent, 0, sizeof(xdndOutRequestEvent));
   XSetSelectionOwner(stDisplay, XdndSelection, DndWindow, CurrentTime);
-  /* TODO: The cursor should be shown by the image, so it should be removed later. */
-  XDefineCursor(stDisplay, stWindow, None);
+  updateCursor(-1);
   return XdndStateOutTracking;
 }
 
@@ -354,18 +358,24 @@ static enum XdndState dndOutMotion(enum XdndState state, XMotionEvent *evt)
   if ((XdndStateOutTracking != state) && (XdndStateOutAccepted != state)) return state;
 
   currentWindow= dndAwareWindow(evt->root, evt->root, &versionReturn);
-  if ((XdndVersion > versionReturn)
-      || (None == currentWindow)
-      || (DndWindow == currentWindow))
+  if (DndWindow == currentWindow) /* Cursor is on myself */
     {
-      dprintf((stderr, "Receive MotionNotify current 0x%lx\n", currentWindow));
       xdndOutTarget= None;
       return XdndStateOutTracking;
     }
+  
+  updateCursor(XdndStateOutAccepted == state);
 
+  if ((XdndVersion > versionReturn)	/* Target's version is too low. */
+      || (None == currentWindow))	/* I can't find XdndAware window. */
+    {
+      xdndOutTarget= None;
+      return XdndStateOutTracking;
+    }
+  
+  dprintf((stderr, "Receive MotionNotify (output) root: 0x%lx awareWindow: 0x%lx\n", evt->root, currentWindow));
   if (currentWindow != xdndOutTarget)
     {
-      dprintf((stderr, "Receive MotionNotify and enter 0x%lx (output)\n", currentWindow));
       sendLeave(xdndOutTarget, DndWindow);
       sendEnter(currentWindow, DndWindow);
     }
@@ -382,7 +392,7 @@ static enum XdndState dndOutMotion(enum XdndState state, XMotionEvent *evt)
 static enum XdndState dndOutStatus(enum XdndState state, XClientMessageEvent *evt)
 {
   long *ldata= evt->data.l;
-  dprintf((stderr, "Receive XdndStatus (output)\n"));
+  dprintf((stderr, "Receive XdndStatus (output) status: 0x%lx target: 0x%lx\n", ldata[1], ldata[0]));
 
   if ((XdndStateOutTracking != state) && (XdndStateOutAccepted != state))
     {
@@ -405,11 +415,11 @@ static enum XdndState dndOutStatus(enum XdndState state, XClientMessageEvent *ev
 static enum XdndState dndOutRelease(enum XdndState state, XButtonEvent *evt)
 {
   if (XdndStateIdle == state) return XdndStateIdle;
-  dprintf((stderr, "Receive ButtonRelease (output)\n"));
+  dprintf((stderr, "Receive ButtonRelease (output) window: 0x%lx\n", evt->window));
+
   if (XdndStateOutAccepted == state)
     {
       sendDrop(xdndOutTarget, DndWindow, evt->time);
-      sendLeave(xdndOutTarget, DndWindow);
       return XdndStateOutAccepted;
     }
   sendLeave(xdndOutTarget, DndWindow);
@@ -421,7 +431,8 @@ static enum XdndState dndOutRelease(enum XdndState state, XButtonEvent *evt)
 */
 static enum XdndState dndOutSelectionRequest(enum XdndState state, XSelectionRequestEvent *req)
 {
-  dprintf((stderr, "Receive SelectionRequest for %s from 0x%lx(output)\n", XGetAtomName(stDisplay, req->target), req->requestor));
+  dprintf((stderr, "Receive SelectionRequest for %s (output) owner: 0x%lx : requestor: 0x%lx\n",
+           XGetAtomName(stDisplay, req->target), req->owner, req->requestor));
   if (XdndStateOutAccepted != state)
     {
       /*printf("%i is not expected in SelectionRequest\n", state);*/
@@ -437,17 +448,27 @@ static enum XdndState dndOutSelectionRequest(enum XdndState state, XSelectionReq
  */
 static enum XdndState dndOutFinished(enum XdndState state, XClientMessageEvent *evt)
 {
-  dprintf((stderr, "Receive XdndFinished (output)\n"));
+  dprintf((stderr, "Receive XdndFinished (output) source: 0x%lx target: 0x%lx\n",
+           DndWindow, xdndFinished_targetWindow(evt)));
   xdndOutTarget= None;
   return XdndStateIdle;
 }
 
 
-static void updateCursor(int isAccepted)
+/* Change cursor
+ * TODO: The cursor should be controlled by the image, so it should be removed finally.
+ *
+ * state = -1 : Cursor is on Squeak window.
+ * state =  0 : Target window doesn't accept.
+ * state =  1 : Target window accepts.
+ */
+static void updateCursor(int state)
 {
-  static int lastCursor= 0;
-  if (lastCursor == isAccepted) return;
-  if (isAccepted)
+  static int lastCursor= -1;
+
+  if (lastCursor == state) return;
+  dprintf((stderr, "Cursor change (output) previous: %i new: %i\n", lastCursor, state));
+  if (1 == state)
     {
       Cursor cursor;
       cursor= XCreateFontCursor(stDisplay, 90);
@@ -456,7 +477,7 @@ static void updateCursor(int isAccepted)
   else
     XDefineCursor(stDisplay, stWindow, None);
   
-  lastCursor= isAccepted;
+  lastCursor= state;
 }
 
 
@@ -803,7 +824,6 @@ static void dndHandleEvent(int type, XEvent *evt)
     case DndInFinished:	   state= dndInFinished(state);						break;
     case ClientMessage:	   state= dndHandleClientMessage(state, &evt->xclient);			break;
     }
-  updateCursor(XdndStateOutAccepted == state);
 }
 
 
@@ -860,7 +880,8 @@ static void display_dndOutSend (char *bytes, int nbytes)
 		  nbytes);
 
   XSendEvent(stDisplay, res->requestor, False, 0, &notify);
-  dprintf((stderr, "Send data for %s from 0x%lx(output)\n", XGetAtomName(stDisplay, res->target), res->requestor));
+  dprintf((stderr, "Send data for %s (output) requestor: 0x%lx\n",
+           XGetAtomName(stDisplay, res->target), res->requestor));
 }
 
 static sqInt display_dndOutAcceptedType(char * buf, int nbuf)

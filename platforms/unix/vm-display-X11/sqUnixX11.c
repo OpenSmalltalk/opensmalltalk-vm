@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2008-08-07 10:53:39 by piumarta on emilia.local
+ * Last edited: 2008-11-10 13:49:33 by piumarta on ubuntu.piumarta.com
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -81,6 +81,7 @@
 #undef	DEBUG_SELECTIONS
 #undef	DEBUG_BROWSER
 #undef	DEBUG_WINDOW
+#undef  DEBUG_VISUAL
 
 #define	USE_XICFONT_OPTION
 #undef	USE_XICFONT_RESOURCE
@@ -547,7 +548,7 @@ static Time getXTimestamp(void)
 }
 
 
-#if 0
+#if defined(DEBUG_VISUAL)
 static char *debugVisual(int x)
 {
   switch (x)
@@ -652,6 +653,16 @@ static int sendSelection(XSelectionRequestEvent *requestEv, int isMultiple)
   Atom targetProperty= ((None == requestEv->property)
 			? requestEv->target 
 			: requestEv->property);
+
+  /* XSelectionRequestEvent is used for both clipboard and Xdnd.  In
+   * the case of Xdnd, XSelectionEvent is answered asynchronously
+   * after the image prepares data because target (data type) is
+   * informed only when the SelectionRequest is sent.
+   * dndOutSelectionRequest() sends a DragRequest event to the image
+   * for that.  Finally, the image calls
+   * HandMorph>>primitiveDndOutSend: to send the SelectionRequest.
+   */
+  if (xaXdndSelection == requestEv->selection) return 0;
 
   notifyEv.property= targetProperty;
 
@@ -935,6 +946,10 @@ static char *getSelectionFrom(Atom source)
 	    }
 	  if (strList)
 	    XFreeStringList(strList);
+	  /* translate LF -> CR */
+	  for (i= 0;  stPrimarySelection[i] != '\0';  ++i)
+	    if ('\n' == stPrimarySelection[i])
+	      stPrimarySelection[i]= '\r';
 	}
       else
 	bytes= ux2sqText(data, bytes, stPrimarySelection, bytes + 1, 1);
@@ -2243,7 +2258,7 @@ static int xkeysym2ucs4(KeySym keysym)
     0x20a8, 0x20a9, 0x20aa, 0x20ab, 0x20ac                          /* 0x20a8-0x20af */
   };
 
-  static unsigned short const sqSpecialKey[] = {1, 28, 30, 29, 31, 5, 11, 12, 4};
+  static unsigned short const sqSpecialKey[] = {1, 28, 30, 29, 31, 11, 12, 4, 1};
 
   /* Latin-1 */
   if (   (keysym >= 0x0020 && keysym <= 0x007e)
@@ -2276,7 +2291,11 @@ static int xkeysym2ucs4(KeySym keysym)
 #undef map
 
 #if defined(XF86XK_Start)
-  if (keysym == XF86XK_Start) return ',';
+  if (keysym == XF86XK_Start)                       /* OLPC view source */
+    {
+      modifierState |= CommandKeyBit;
+      return ',';
+    }
 #endif
 
   /* convert to chinese char noe-qwan-doo */
@@ -2297,7 +2316,7 @@ static int x2sqModifier(int state)
   int mods= 0;
   if (optMapIndex || cmdMapIndex)
     {
-      int shift= 1 & (state >> ShiftMapIndex);
+      int shift= 1 & ((state >> ShiftMapIndex) ^ (state >> LockMapIndex));
       int ctrl=  1 & (state >> ControlMapIndex);
       int cmd=   1 & (state >> cmdMapIndex);
       int opt=   1 & (state >> optMapIndex);
@@ -3127,10 +3146,6 @@ void initWindow(char *displayName)
   {
     /* preferred visuals in order of decreasing priority */
     static int trialVisuals[][2]= {
-      { 32, TrueColor },
-      { 32, DirectColor },
-      { 32, StaticColor },
-      { 32, PseudoColor },
       { 24, TrueColor },
       { 24, DirectColor },
       { 24, StaticColor },
@@ -3139,6 +3154,10 @@ void initWindow(char *displayName)
       { 16, DirectColor },
       { 16, StaticColor },
       { 16, PseudoColor },
+      { 32, TrueColor },    /* 32 has alpha problems when compositing */
+      { 32, DirectColor },
+      { 32, StaticColor },
+      { 32, PseudoColor },
       {  8, PseudoColor },
       {  8, DirectColor },
       {  8, TrueColor },
@@ -3149,28 +3168,36 @@ void initWindow(char *displayName)
     XVisualInfo viz;
     int i;
 
-    for (i= 0; trialVisuals[i][0] != 0; ++i)
+    stVisual= DefaultVisual(stDisplay, DefaultScreen(stDisplay));
+    stDepth= DefaultDepth(stDisplay, DefaultScreen(stDisplay));
+
+    if ((24 == stDepth) || (16 == stDepth))
       {
-#       if 0
-	fprintf(stderr, "Trying %d bit %s.\n", trialVisuals[i][0],
-		debugVisual(trialVisuals[i][1]));
-#       endif
-	if (XMatchVisualInfo(stDisplay, DefaultScreen(stDisplay),
-			     trialVisuals[i][0], trialVisuals[i][1],
-			     &viz) != 0) break;
-      }
-    if (trialVisuals [i][0] == 0)
-      {
-#	if 0
-	fprintf(stderr, "Using default visual.\n");
-#	endif
-	stVisual= DefaultVisual(stDisplay, DefaultScreen(stDisplay));
-	stDepth= DefaultDepth(stDisplay, DefaultScreen(stDisplay));
+#      if defined(DEBUG_VISUAL)
+	fprintf(stderr, "Using default visual (%d bits).\n", stDepth);
+#      endif
       }
     else
       {
-	stVisual= viz.visual;
-	stDepth= trialVisuals[i][0];
+	for (i= 0; trialVisuals[i][0] != 0; ++i)
+	  {
+#          if defined(DEBUG_VISUAL)
+	    fprintf(stderr, "Trying %d bit %s.\n", trialVisuals[i][0], debugVisual(trialVisuals[i][1]));
+#          endif
+	    if (XMatchVisualInfo(stDisplay, DefaultScreen(stDisplay), trialVisuals[i][0], trialVisuals[i][1], &viz) != 0)
+	      break;
+	  }
+	if (trialVisuals [i][0] == 0)
+	  {
+#	   if defined(DEBUG_VISUAL)
+	    fprintf(stderr, "Using default visual (%d bits).\n", stDepth);
+#	   endif
+	  }
+	else
+	  {
+	    stVisual= viz.visual;
+	    stDepth= trialVisuals[i][0];
+	  }
       }
   }
 
@@ -3760,6 +3787,23 @@ static unsigned char swapBits(unsigned char in)
 }
 
 
+static int fakeBigCursor()
+{
+  static int fake= -1;
+
+  if (-1 == fake)
+    { 
+      char *value= getenv("SQUEAK_FAKEBIGCURSOR");
+      fake= value && (atoi(value) > 0);
+    }
+
+  return fake;
+}
+
+
+static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY);
+
+
 static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
   unsigned int *cursorBits= (unsigned int *)pointerForOop(cursorBitsIndex);
@@ -3771,6 +3815,9 @@ static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMask
 
   if (!isConnectedToXServer)
     return 0;
+
+  if (fakeBigCursor())
+    return display_ioSetCursorWithMaskBig(cursorBitsIndex, cursorMaskIndex, offsetX, offsetY);
 
   if (cursorMaskIndex == null)
     cursorMask= cursorBits;
@@ -3817,6 +3864,54 @@ static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMask
 }
 
 
+static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
+{
+  unsigned int *cursorBits= (unsigned int *)pointerForOop(cursorBitsIndex);
+  unsigned int *cursorMask= (unsigned int *)pointerForOop(cursorMaskIndex);
+  unsigned int data[32], mask[32], d, m;	/* cursors are rescaled from 16x16 to 32x32*/
+  int i, j;
+  Cursor cursor;
+  Pixmap dataPixmap, maskPixmap;
+
+  if (!isConnectedToXServer)
+    return 0;
+
+  if (cursorMaskIndex == null)
+    cursorMask= cursorBits;
+
+  for (i= 0; i < 32; i++)
+    {
+      for (j= 0; j < 32; j++)
+	{
+	  d= (d<<1) | ((cursorBits[i/2] >> (16 + j/2)) & 1);
+	  m= (m<<1) | ((cursorMask[i/2] >> (16 + j/2)) & 1);
+	}
+      data[i]= d;
+      mask[i]= m;
+    }
+ 
+  dataPixmap= XCreateBitmapFromData(stDisplay,
+				    DefaultRootWindow(stDisplay),
+				    (char *)data, 32, 32);
+  maskPixmap= XCreateBitmapFromData(stDisplay,
+				    DefaultRootWindow(stDisplay),
+				    (char *)mask, 32, 32);
+  cursor= XCreatePixmapCursor(stDisplay, dataPixmap, maskPixmap,
+			      &stColorBlack, &stColorWhite,
+			      -offsetX*2, -offsetY*2);
+
+  XFreePixmap(stDisplay, dataPixmap);
+  XFreePixmap(stDisplay, maskPixmap);
+
+  if (cursor != None)
+    XDefineCursor(stDisplay, stWindow, cursor);
+
+  XFreeCursor(stDisplay, cursor);
+
+  return 0;
+}
+
+
 #if 0
 sqInt ioSetCursor(sqInt cursorBitsIndex, sqInt offsetX, sqInt offsetY)
 {
@@ -3838,6 +3933,9 @@ static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt
   XRenderPictFormat *pictformat;
   Picture picture;
   Cursor cursor;
+
+  if (fakeBigCursor())
+    return 0;
 
   if (!XRenderQueryExtension(stDisplay, &eventbase, &errorbase))
     return 0;
