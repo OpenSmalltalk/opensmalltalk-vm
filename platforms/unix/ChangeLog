@@ -1,10 +1,28 @@
-2008-11-10    <piumarta@ubuntu.piumarta.com>
+2008-11-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/configure.ac: Version is 3.10-4
+
+	* vm-display-X11/sqUnixXdnd.c (dndOutMotion, updateCursor): Handle
+	cursor changes during drag and drop.
+
+	* vm-display-X11/sqUnixX11.c (debugVisual): Make conditional on
+	DEBUG_VISUAL.
+	(sendSelection): Ignore request if it came from drag and drop.
+	(getSelectionFrom): Translate LF -> CR in incoming text
+	selections.
+	(xkeysym2ucs4): OLPC 'view source' key generates 'Cmd-,'.
+	(x2sqModifier): LOCK reverses the meaning of SHIFT.
+	(initWindow): Try 24- and 16-bit visuals before 32-bit visuals to
+	avoid compositing problems.  Accept default visual immediately if
+	it is 24- or 16-bit.
+	(display_ioSetCursorWithMaskBig, display_ioSetCursorARGB): Add big
+	cursor support.
 
 	* plugins/LocalePlugin/sqUnixLocale.c: Fix handling of daylight
 	savings time and offset from UTC.
 
 	* plugins/DropPlugin/sqUnixDragDrop.c: Declare prototypes up
-	front, and other Cosmetic changes.
+	front, and other cosmetic changes.
 
 2008-11-03  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
