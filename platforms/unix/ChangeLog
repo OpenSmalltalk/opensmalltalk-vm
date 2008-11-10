@@ -1,3 +1,8 @@
+2008-11-10    <piumarta@ubuntu.piumarta.com>
+
+	* plugins/DropPlugin/sqUnixDragDrop.c: Declare prototypes up
+	front, and other Cosmetic changes.
+
 2008-11-03  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* src/plugins/OggPlugin: added sqOgg.c, OggPlugin.h

@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2008-04-21 11:40:05 by piumarta on emilia
+ * Last edited: 2008-11-10 13:19:29 by piumarta on ubuntu.piumarta.com
  */
 
 /* Why on earth does this plugin exist at all?  Brain death strikes
@@ -51,11 +51,19 @@ extern struct VirtualMachine  *interpreterProxy;
 extern int		       uxDropFileCount;
 extern char		     **uxDropFileNames;
 
+SQFile *fileValueOf(sqInt objectPointer);
+sqInt 	instantiateClassindexableSize(sqInt classPointer, sqInt size);
+sqInt 	classByteArray(void);
+sqInt 	fileRecordSize(void);
+sqInt 	sqFileOpen(SQFile *f, char *sqFileName, sqInt sqFileNameSize, sqInt writeFlag);
+sqInt 	dndOutStart(char *types, int ntypes);
+sqInt 	dndOutAcceptedType(char *type, int ntype);
+void    dndOutSend(char *bytes, int nbytes);
 
 int dropInit(void)	{ return 1; }
 int dropShutdown(void)	{ return 1; }
 
-char *dropRequestFileName(int dropIndex)	// in st coordinates
+char *dropRequestFileName(int dropIndex)	/* in st coordinates */
 {
   if ((dropIndex > 0) && (dropIndex <= uxDropFileCount))
     {
@@ -70,9 +78,9 @@ int dropRequestFileHandle(int dropIndex)
   char *path= dropRequestFileName(dropIndex);
   if (path)
     {
-      // you cannot be serious?
+      /* you cannot be serious? */
       int handle= instantiateClassindexableSize(classByteArray(), fileRecordSize());
-      sqFileOpen((SQFile *)fileValueOf(handle), (int)path, strlen(path), 0);
+      sqFileOpen((SQFile *)fileValueOf(handle), path, strlen(path), 0);
       return handle;
     }  
   return interpreterProxy->nilObject();
