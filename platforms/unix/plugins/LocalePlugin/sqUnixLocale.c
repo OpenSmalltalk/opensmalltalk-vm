@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@inria.fr
  * 
- * Last edited: 2007-07-16 21:33:04 by piumarta on emilia
+ * Last edited: 2008-11-10 13:25:18 by piumarta on ubuntu.piumarta.com
  */
 
 #include "sq.h"
@@ -652,29 +652,39 @@ void sqLocGetDecimalSymbolInto(char *str)
 /* TIME AND DATE */
 
 
-/* Answer the offset to (number of minutes WEST of) UTC.
+/* Answer the offset between local time and VM time.  (Despite the
+ * function name, this is how it is used.)
  */
 sqInt sqLocGetVMOffsetToUTC(void)
 {
-  struct timezone tz;
-  gettimeofday(0, &tz);
-  return tz.tz_minuteswest;
+  return 0;
 }
 
-/* Answer the offset to (number of minutes WEST of) GMT.
+/* Answer the offset to (number of minutes EAST of) GMT.
  */
 sqInt sqLocGetTimezoneOffset(void)
 {
-  return sqLocGetVMOffsetToUTC();
+  /* Match the behaviour of convertToSqueakTime(). */
+#ifdef HAVE_TM_GMTOFF
+  time_t now= time(0);
+  return localtime(&now)->tm_gmtoff / 60;
+#else
+# ifdef HAVE_TIMEZONE
+  extern long timezone;
+  extern int daylight;
+  return daylight * 60 - timezone / 60;
+# else
+#  error: cannot determine timezone correction
+# endif
+#endif
 }
 
 /* Answer true if DST is in use.
  */
 sqInt sqLocDaylightSavings(void)
 {
-  extern int daylight;
-
-  return !!daylight;
+  time_t now= time(0);
+  return localtime(&now)->tm_isdst > 0;
 }
 
 /* Answer the number of characters in the long date format.
