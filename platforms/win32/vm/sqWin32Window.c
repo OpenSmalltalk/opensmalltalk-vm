@@ -1642,7 +1642,7 @@ int ioSetFullScreen(int fullScreen)
       ShowWindow(stWindow, SW_RESTORE);
       ShowWindow(stWindow, SW_HIDE);
       SetWindowLong(stWindow,GWL_STYLE, WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN);
-      SetWindowLong(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW | WS_EX_OVERLAPPEDWINDOW);
+      SetWindowLong(stWindow,GWL_EXSTYLE, WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */ );
       SetWindowPos(stWindow,0,0,0,0,0, SWP_NOMOVE | SWP_NOSIZE | SWP_NOZORDER | SWP_FRAMECHANGED | SWP_NOREDRAW);
       if(browserWindow) {
 	/* Jump back into the browser */
