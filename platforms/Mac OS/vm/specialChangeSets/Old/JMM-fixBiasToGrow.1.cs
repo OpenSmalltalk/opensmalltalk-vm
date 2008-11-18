@@ -1,0 +1,1 @@
+'From Squeak3.8 of ''5 May 2005'' [latest update: #6665] on 24 January 2007 at 6:27:54 pm'!!ObjectMemory methodsFor: 'garbage collection' stamp: 'JMM 1/22/2007 20:35'!biasToGrow	| growSize |	growSize :=  growHeadroom*3/2 - (self sizeOfFree: freeBlock).	self growObjectMemory: growSize! !
