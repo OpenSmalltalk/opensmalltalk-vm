@@ -1,3 +1,8 @@
+2008-11-24  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-fbdev/sqUnixFBDevMousePS2.c (ms_ps2_send,
+	ms_ps2_disable): Explicitly ignore return value from write().
+
 2008-11-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/configure.ac: Version is 3.10-4
