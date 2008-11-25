@@ -79,9 +79,12 @@ void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
 sqInt       sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 squeakFileOffsetType       sqImageFileStartLocation(sqInt fileRef, char *filename,squeakFileOffsetType imageSize);
 
-usqInt	    sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize, FILE * f,usqInt headersize);
+usqInt	    sqAllocateMemoryMac(sqInt desiredHeapSize , sqInt minHeapSize, FILE * f,usqInt headersize);
 
-#define sqAllocateMemory(x,y,f,headersize) sqAllocateMemoryMac(x,&y,f,headersize);
+#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+	sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
+
+#define sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream) length
 
 /* override reserveExtraCHeapBytes() macro to reduce Squeak object heap size on Mac */
 #undef reserveExtraCHeapBytes

@@ -41,7 +41,7 @@ usqInt	sqGetAvailableMemory() {
 	return gMaxHeapSize;
 }
 
-usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize, FILE * f,usqInt headersize) {
+usqInt sqAllocateMemoryMac(sqInt desiredHeapSize , sqInt minHeapSize, FILE * f,usqInt headersize) {
 	void  *possibleLocation,*startOfAnonymousMemory;
 	off_t fileSize;
 	struct stat sb;
