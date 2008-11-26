@@ -1,6 +1,6 @@
 {\rtf1\ansi\ansicpg1252\cocoartf949\cocoasubrtf350
-{\fonttbl\f0\fnil\fcharset0 Geneva;\f1\fswiss\fcharset0 Helvetica;\f2\fnil\fcharset0 Monaco;
-\f3\fnil\fcharset0 LucidaGrande;}
+{\fonttbl\f0\fnil\fcharset0 Geneva;\f1\fswiss\fcharset0 Helvetica;\f2\fnil\fcharset0 Verdana;
+\f3\fnil\fcharset0 Monaco;\f4\fnil\fcharset0 LucidaGrande;}
 {\colortbl;\red255\green255\blue255;\red35\green110\blue37;\red137\green19\blue21;\red0\green0\blue255;
 \red26\green26\blue255;}
 \margl1440\margr1440\vieww15540\viewh15540\viewkind0
@@ -49,12 +49,28 @@ Apr 10th, 2008 (3.8.18b3)\
 \cf0 May 29th, 2008 (3.8.18b4)\
 Sep   5th, 2008 (3.8.18b5)\
 Oct   28th, 2008 (3.8.19b1)\
+Nov  25th, 2008 (3.8.20b1)\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
 \cf0 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 \cf0 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
 \
 Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
+3.8.20b1		Alien FFI support, 32/64 integer fetch/set fixes. \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f1 \cf0 			Andreas Raab's   VM (callback+ variables) changes of Jun 9th 2006\
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+\cf0 			Alien support from  Cadence Design Systems, Inc.\
+			dumpImage primitive for debugging\
+			BMPReadWritePlugin>>primitiveRead24BmpLine\
+					check for width <=0 if true fail primitive\
+\
+SocketPlugin>> 
+\f2\fs22 primitiveSocketSetReusable  remove
+\f0\fs24 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 3.8.19b2		internal testing\
 \
 3.8.19b1		Altered how memory is allocated for the image oops space. \
 			Now we mmap the image file copy on write onto the 500MB boundary, if this fails the vm quits. \
@@ -99,7 +115,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \cf0 			This returns byte reversed data on macintel #('GEPJ' 'elgo')\
 \
 			sqMacInternetConfiguration.c  use 
-\f2\fs20 \CocoaLigature0 CFSwapInt32BigToHost 
+\f3\fs20 \CocoaLigature0 CFSwapInt32BigToHost 
 \f0\fs24 \CocoaLigature1 swap OSType\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
@@ -152,10 +168,10 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 									get updated. \
 \
 3.8.17b4 	
-\f3 NSCursorWrappers.m  		Ensure color works on powerpc, and macintel. Also then for 10.2 signal failure and 									code then uses small cursor logic\
+\f4 NSCursorWrappers.m  		Ensure color works on powerpc, and macintel. Also then for 10.2 signal failure and 									code then uses small cursor logic\
 			
 \f0 sqMacUnixFileInterface.c	
-\f2\fs20 \cf2 \CocoaLigature0 Tetsuya HAYASHI, {\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt \ul \ulc2 tetha@st.rim.or.jp}}, {\field{\*\fldinst{HYPERLINK "mailto:tetha@mac.com"}}{\fldrslt \ul \ulc2 tetha@mac.com}}\
+\f3\fs20 \cf2 \CocoaLigature0 Tetsuya HAYASHI, {\field{\*\fldinst{HYPERLINK "mailto:tetha@st.rim.or.jp"}}{\fldrslt \ul \ulc2 tetha@st.rim.or.jp}}, {\field{\*\fldinst{HYPERLINK "mailto:tetha@mac.com"}}{\fldrslt \ul \ulc2 tetha@mac.com}}\
 \pard\tx480\tx960\tx1440\tx1920\tx2400\tx2880\tx3360\tx3840\tx4320\tx4800\tx5280\tx5760\tx6240\tx6720\tx7200\tx7680\tx8160\tx8640\tx9120\tx9600\tx10080\tx10560\tx11040\tx11520\tx12000\tx12480\tx12960\tx13440\tx13920\tx14400\tx14880\tx15360\tx15840\tx16320\tx16800\tx17280\tx17760\tx18240\tx18720\tx19200\tx19680\tx20160\tx20640\tx21120\tx21600\tx22080\tx22560\tx23040\tx23520\tx24000\tx24480\tx24960\tx25440\tx25920\tx26400\tx26880\tx27360\tx27840\tx28320\tx28800\tx29280\tx29760\tx30240\tx30720\tx31200\tx31680\tx32160\tx32640\tx33120\tx33600\tx34080\tx34560\tx35040\tx35520\tx36000\tx36480\tx36960\tx37440\tx37920\tx38400\tx38880\tx39360\tx39840\tx40320\tx40800\tx41280\tx41760\tx42240\tx42720\tx43200\tx43680\tx44160\tx44640\tx45120\tx45600\tx46080\tx46560\tx47040\tx47520\tx48000\ql\qnatural\pardirnatural
 \cf2 						I've found the latest mac vm (or recent version) fails to normalize UTF file name. It seems to be the function convertChars() of sqMacUnixFileInterface.c, which normalizes only decompose when converting squeak string to unix, but I think it needs pre-combined when unix string to squeak, and I noticed normalization form should be canonical (exactly should be kCFStringNormalizationFormC) for pre-combined.\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
@@ -163,7 +179,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \f0\fs24 \cf0 \CocoaLigature1 \
 3.8.17b3		Oops no-one check large cursors on powerpc. \
 			
-\f3 NSCursorWrappers.m		Ensure works on powerpc, also confirm does not work on 10.2.x (not supported)
+\f4 NSCursorWrappers.m		Ensure works on powerpc, also confirm does not work on 10.2.x (not supported)
 \f0 \
 \
 3.8.17b2		bug fix cursor tracking was not correct, used local coordinates, needed global. \
@@ -174,7 +190,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 			sqMacWIndowUniversal.c	small cursor logic has to set flag that it's not large cursor so reset cursor knows which\
 					 				cursor to use\
 			
-\f3 NSCursorWrappers.m		new\
+\f4 NSCursorWrappers.m		new\
 			NSCursorWrappers.h		new\
 
 \f0 \
@@ -191,12 +207,12 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 			sqMacDragDrop.c			Beware of setting drop handler, but no main window\
 			sqMacOpenGL.c			Watch out for no main window\
 			sqMacMain.c				Add new parm 
-\f2\fs20 \CocoaLigature0 SqueakExplicitWindowOpenNeeded, true if we need to explicit open main window\
+\f3\fs20 \CocoaLigature0 SqueakExplicitWindowOpenNeeded, true if we need to explicit open main window\
 
 \f0\fs24 \CocoaLigature1 			sqMacUnixExternalPrims.c	For os-x 10.2.8 fallback to old logic dl() routines\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f2\fs20 \cf0 \CocoaLigature0 			
+\f3\fs20 \cf0 \CocoaLigature0 			
 \f0\fs24 \CocoaLigature1 \
 \
 3.8.16b5		Squeak3d logic did not swap bytes corrrectly for macintel. Add parm to config.h and compiler.\
@@ -329,7 +345,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 3.8.15b3 		\
 			sqMacUnixFileInterface.c \
 				If you passed in an bad file path, say with incorrect encoding, then in 
-\f2\fs20 \CocoaLigature0 convertChars\
+\f3\fs20 \CocoaLigature0 convertChars\
 				
 \f0\fs24 \CocoaLigature1 we would try to convert to UTF8, that would fail, but no check so code to do the \
 				normalization would crash the VM\
@@ -508,14 +524,14 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 3.8.12.b7 sqMacUIEventsUniversal.c\
 		rewrite 
-\f2\fs20 \CocoaLigature0 MouseModifierStateCarbon() 
+\f3\fs20 \CocoaLigature0 MouseModifierStateCarbon() 
 \f0\fs24 \CocoaLigature1 So that we use information in info.plist to map buttons left to right \
 		1, 2, 3 into red, yellow, blue.   Thus on a scroll mouse the buttons read left to right 1, 3, 2  red,blue,yellow\
 		as the mac classic behavior. SqueakMouseCmd is when cmd key is donwn, Option, for option/alt key, and \
 		Control for control key. This then gives you full control over what the mouse button to red/yellow/blue is.\
 \
 	
-\f2\fs20 \cf3 \CocoaLigature0 <key>\cf0 SqueakMouseNoneButton1\cf3 </key>\cf0 \
+\f3\fs20 \cf3 \CocoaLigature0 <key>\cf0 SqueakMouseNoneButton1\cf3 </key>\cf0 \
 \pard\tx480\tx960\tx1440\tx1920\tx2400\tx2880\tx3360\tx3840\tx4320\tx4800\tx5280\tx5760\tx6240\tx6720\tx7200\tx7680\tx8160\tx8640\tx9120\tx9600\tx10080\tx10560\tx11040\tx11520\tx12000\tx12480\tx12960\tx13440\tx13920\tx14400\tx14880\tx15360\tx15840\tx16320\tx16800\tx17280\tx17760\tx18240\tx18720\tx19200\tx19680\tx20160\tx20640\tx21120\tx21600\tx22080\tx22560\tx23040\tx23520\tx24000\tx24480\tx24960\tx25440\tx25920\tx26400\tx26880\tx27360\tx27840\tx28320\tx28800\tx29280\tx29760\tx30240\tx30720\tx31200\tx31680\tx32160\tx32640\tx33120\tx33600\tx34080\tx34560\tx35040\tx35520\tx36000\tx36480\tx36960\tx37440\tx37920\tx38400\tx38880\tx39360\tx39840\tx40320\tx40800\tx41280\tx41760\tx42240\tx42720\tx43200\tx43680\tx44160\tx44640\tx45120\tx45600\tx46080\tx46560\tx47040\tx47520\tx48000\ql\qnatural\pardirnatural
 \cf0 	\cf3 <integer>\cf4 1\cf3 </integer>\cf0 \
 	\cf3 <key>\cf0 SqueakMouseNoneButton2\cf3 </key>\cf0 \
@@ -846,7 +862,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 			clone of sqUnixExternalPrims.c, \
 				tries to find bundle, then various forms of file as foo, foo.so, foo.dylib, libfoo, libfoo.so (etc) \
 				looks in more places, ./Plugins, ./, Resources/, 
-\f2\fs20 \cf3 \CocoaLigature0 SQUEAK_PLUGIN_PATH, \
+\f3\fs20 \cf3 \CocoaLigature0 SQUEAK_PLUGIN_PATH, \
 				X11 library, /usr/local/lib/squeak/3.8a-2
 \f0\fs24 \cf0 \CocoaLigature1 \
 				various frameworks locations, foo.framework, CoreServices.framework, Applicationservices.framework, Carbon.framework\
@@ -938,7 +954,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
 
-\f3 \cf0 		sqMacUIMenuBarUniversal.c\
+\f4 \cf0 		sqMacUIMenuBarUniversal.c\
 			remove hide/show menu bar logic\
 		\
 		sqMacOpenGL.c\
@@ -1073,7 +1089,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 				sqMacMain.c			Add logic to allow you to specify foobar.toobar as Squeak.image, or anything else you decide\
 									This is done via the plist\
 									
-\f2\fs20 \CocoaLigature0 SqueakImageName = Squeak.image\
+\f3\fs20 \CocoaLigature0 SqueakImageName = Squeak.image\
 	
 \f0\fs24 \CocoaLigature1 \
 									Were we first look in the Resource folder in the app. If not found we then look for it as a path name \
@@ -1089,7 +1105,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 \f0 				sqMacTime.c			use #define for MillisecondClockMask\
 \
 				sqMacUIAppleEvents.c	use plist info (
-\f2\fs20 \CocoaLigature0 SqueakImageName) 
+\f3\fs20 \CocoaLigature0 SqueakImageName) 
 \f0\fs24 \CocoaLigature1 as short image name.\
 \
 				sqMacUIEvents.c		use  #define for MillisecondClockMask\
@@ -1102,7 +1118,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 									Bug was the window would be positioned at 0 & 0 and you could not grab it in order to move it. \
 \
 				
-\f2\fs20 \cf2 \CocoaLigature0 sqMacUIAppleEvents.c	
+\f3\fs20 \cf2 \CocoaLigature0 sqMacUIAppleEvents.c	
 \f0\fs24 \cf0 \CocoaLigature1 Add logic to launch new shell script via apple script to startup same executable with image on an open doc request. \
 									This allows us to double-click on an image when a squeak VM is running. \
 \
@@ -1112,7 +1128,7 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 				sqMacWindow.c		In the info.plist within the application you will find 4 keys which alter this behavior.\
 \
 									
-\f2\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds = 20  \
+\f3\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds = 20  \
 										Attempt to accumulate draw events in a 20 ms window. If a draw occurs and the time is greater than 20 ms from the \
 										last draw we draw and flush. If the draw is in the 20ms window we draw, and do a CGSync (once) and do not do the flush. \
 										The sync should schedule an flush by the carbon event handler within 20ms or so. Setting this value towards 0 will \
@@ -1138,10 +1154,10 @@ Pre OS-X users should read about OS-9 packages in the 3.2.4 change notes.\
 
 \f0\fs24 \CocoaLigature1 									Squeakers are welcome to alter these values to obtain best behaviour which might change based on versions of OS-X.\
 									Altering 
-\f2\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds 
+\f3\fs20 \CocoaLigature0 SqueakUIFlushPrimaryDeferNMilliseconds 
 \f0\fs24 \CocoaLigature1 will affect frame rate.\
 									Altering 
-\f2\fs20 \CocoaLigature0 SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds & SqueakUIFlushSecondaryCleanupDelayMilliseconds 
+\f3\fs20 \CocoaLigature0 SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds & SqueakUIFlushSecondaryCleanupDelayMilliseconds 
 \f0\fs24 \CocoaLigature1 will affect 									menu drawing.\
 									Feedback about these choices is welcome. \
 \
@@ -1200,7 +1216,7 @@ d\
 \
 3.8.8b2			Revisions to the 32/64bit memory access to improve VM performance\
 				
-\f3 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
+\f4 sqMacEncoding.c,			Fix bug reported by Stephan B. Wessels swessels@cox.net, crash on Tiger if squeak.image is in resource folder\
 				
 \f0 sqMacJoystickAndTablet.c	More rewrites by Bert.\
 				sqPlatformSpecific.h		Add undefs for dispatchFunctionPointer, dispatchFunctionPointerOnin\
@@ -1208,11 +1224,11 @@ d\
 				sqMacMain.c				Fix issue with window title not showing long image name on image selection from dialog prompt. \
 				sqMacUnixCommandLineInterface.c	New, enable command line functions and environment variables. \
 			
-\f2\fs20 \CocoaLigature0  		\cf3 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
+\f3\fs20 \CocoaLigature0  		\cf3 -help                 print this help message, then exit					-memory <size>[mk]    use fixed heap size (added to image size)					-pathenc <enc>        set encoding for pathnames (default: UTF-8)\cf0 \
 
 \f0\fs24 \CocoaLigature1 					or as environment variables\
 					
-\f2\fs20 \cf3 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
+\f3\fs20 \cf3 \CocoaLigature0 SQUEAK_IMAGE, SQUEAK_MEMORY, SQUEAK_PATHENC
 \f0\fs24 \cf0 \CocoaLigature1 \
 				\
 \
@@ -1249,7 +1265,7 @@ d\
 3.8.7b1			sqUIEvents.c changed keyUp/keyDown logic to match Windows pattern, key repeat becomes keyDown/keyDown/keyUp\
 \
 3.8.6b6			
-\f3 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
+\f4 sqMacMIDI.c add #def so I can compile under code warrior os-9 again\
 				sqMacEncoding.c, sqMacEncoding.h  Minor changes so I can compile user code warrior os-9 again\
 				sqMacUnixInterfaceSound.c  Fix problem with empty buffer being full of junk under certain conditions, that causes a sharp sound  bite. \
 
@@ -1410,7 +1426,7 @@ sqMacEncoding.c	Alter SetVMPath()
 \f0 per request from 
 \f1 Tetsuya HAYASHI , \
 				add support for 
-\f2\fs20 \CocoaLigature0       \
+\f3\fs20 \CocoaLigature0       \
 				\cf3 "ShiftJIS"\cf0  kCFStringEncodingShiftJIS\
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
@@ -1713,7 +1729,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f3 mpeg3Plugin.bundle.\
+\f4 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
@@ -1757,7 +1773,7 @@ Still yet to do, in future versions.\
 Verify that file delete rename etc works on aliases, not the targets.\
 \
 You will need mach-o os-x bundle plugins to work with this VM. example -> 
-\f3 mpeg3Plugin.bundle.\
+\f4 mpeg3Plugin.bundle.\
 Old carbon non-bundled plugins will not work, but keep reading to understand where classic \
 plugins still are needed.\
 
