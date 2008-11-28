@@ -1,3 +1,11 @@
+/* Windows Vista support 
+ * AUTHOR: Korakurider (kr)
+ * CHANGE NOTES:
+ *   1) untrustedDirectory is determined by "UserDirectoryLow" setting 
+ *      in INI file if command line option "-lowRights" is specified.
+ */
+#define VISTA_SECURITY 1
+
 #include <windows.h>
 #include <shlobj.h> /* CSIDL_XXX */
 #include "sq.h"
@@ -14,6 +22,12 @@ static TCHAR secureUserDirectory[MAX_PATH];
 
 /* imported from sqWin32Prefs.c */
 extern TCHAR squeakIniName[MAX_PATH];
+
+#ifdef VISTA_SECURITY
+/* imported from sqWin32Intel.c */
+extern BOOL fLowRights;  /* started as low integrity process, 
+			need to use alternate untrustedUserDirectory */
+#endif /* VISTA_SECURITY */
 
 /***************************************************************************/
 /***************************************************************************/
@@ -173,12 +187,37 @@ char *ioGetUntrustedUserDirectory(void) {
   return untrustedUserDirectory;
 }
 
+/* helper function to expand %MYDOCUMENTSFOLDER% */
+
+char *expandMyDocuments(char *pathname, char *replacement, char *result)
+{
+  TCHAR search4[MAX_PATH+1];
+  TCHAR *start;
+
+  lstrcpy(search4, TEXT("%MYDOCUMENTS%"));
+
+  if(!(start = strstr(pathname, search4))) return 0;
+
+  strncpy(result, pathname, start-pathname); 
+  result[start-pathname] = '\0';
+  sprintf(result+(start-pathname),"%s%s", replacement, start+strlen(search4));
+  
+    
+
+  return strlen(result);
+}
+
+
+
 /* note: following is called from VM directly, not from plugin */
 int ioInitSecurity(void) {
   DWORD dwType, dwSize, ok;
   TCHAR tmp[MAX_PATH+1];
+  WCHAR wTmp[MAX_PATH+1];
+  WCHAR wDir[MAX_PATH+1];
+  TCHAR myDocumentsFolder[MAX_PATH+1];  
   HKEY hk;
-  int dirLen;
+  int dirLen,i;
 
   /* establish the secure user directory */
   lstrcpy(secureUserDirectory, imagePath);
@@ -198,12 +237,16 @@ int ioInitSecurity(void) {
     /* If we have shGetFolderPath use My Documents/My Squeak */
     WCHAR widepath[MAX_PATH];
     int sz;
+    /*shGetfolderPath does not return utf8*/
     if(shGetFolderPath(NULL, CSIDL_PERSONAL, NULL, 0, widepath) == S_OK) {
-      WideCharToMultiByte(CP_UTF8,0,widepath,-1,untrustedUserDirectory,
-			  MAX_PATH,NULL,NULL);
+ /*    MessageBoxW(0,widepath,0,MB_OK);*/
+       WideCharToMultiByte(CP_ACP,0,widepath,-1,untrustedUserDirectory,
+			  MAX_PATH,NULL,NULL); 
+ /*    MessageBox(0,untrustedUserDirectory,0,MB_OK);				 */ 
       sz = strlen(untrustedUserDirectory);
       if(untrustedUserDirectory[sz-1] != '\\') 
 	strcat(untrustedUserDirectory, "\\");
+	   lstrcpy(myDocumentsFolder,untrustedUserDirectory);
       strcat(untrustedUserDirectory, "My Squeak");
     }
   }
@@ -213,10 +256,20 @@ int ioInitSecurity(void) {
   GetPrivateProfileString(TEXT("Security"), TEXT("SecureDirectory"),
 			  secureUserDirectory, secureUserDirectory,
 			  MAX_PATH, squeakIniName);
-  GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectory"),
+#ifdef VISTA_SECURITY
+  if(fLowRights) {/* use alternate untrustedUserDirectory */
+      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectoryLow"),
 			  untrustedUserDirectory, untrustedUserDirectory,
 			  MAX_PATH, squeakIniName);
+  } else {
+#endif /* VISTA_SECURITY */
+      GetPrivateProfileString(TEXT("Security"), TEXT("UserDirectory"),
+			  untrustedUserDirectory, untrustedUserDirectory,
+			  MAX_PATH, squeakIniName);
+#ifdef VISTA_SECURITY
+  }
 
+#endif /* VISTA_SECURITY */
   /* Attempt to read local user settings from registry */
   ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
 
@@ -244,16 +297,41 @@ int ioInitSecurity(void) {
     strcpy(untrustedUserDirectory, tmp);
   }
   RegCloseKey(hk);
-
-  /* Expand any environment variables in user directory. */
-  dwSize = ExpandEnvironmentStrings(untrustedUserDirectory, tmp, MAX_PATH-1);
-  if(dwSize > 0 && dwSize < MAX_PATH)
-    strcpy(untrustedUserDirectory, tmp);
   
-  /* same for the secure directory*/  
-  dwSize = ExpandEnvironmentStrings(secureUserDirectory, tmp, MAX_PATH-1);
-  if(dwSize > 0 && dwSize < MAX_PATH)
-    strcpy(secureUserDirectory, tmp);    
+  
+  if(shGetFolderPath) {  
+    dwSize = expandMyDocuments(untrustedUserDirectory, myDocumentsFolder, tmp);
+    if(dwSize > 0 && dwSize < MAX_PATH)
+      strcpy(untrustedUserDirectory, tmp);
+
+    dwSize = expandMyDocuments(secureUserDirectory, myDocumentsFolder, tmp);
+    if(dwSize > 0 && dwSize < MAX_PATH)
+      strcpy(secureUserDirectory, tmp);
+    }
+  
+ 
+  /* Expand any environment variables in user directory. */
+
+    MultiByteToWideChar(CP_ACP, 0, untrustedUserDirectory, -1, wDir, MAX_PATH);
+
+
+/*    for (i = 0; i < MAX_PATH; i++) {
+      wDir[i] = untrustedUserDirectory[i];
+    }*/
+/*MessageBoxW(0,wDir,0,MB_OK);	*/     
+    ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
+    WideCharToMultiByte(CP_UTF8,0,wTmp,-1,untrustedUserDirectory,MAX_PATH,NULL,NULL);
+/*MessageBox(0,untrustedUserDirectory,0,MB_OK);*/	 
+  /* same for the secure directory*/
+  
+
+/*    for (i = 0; i < MAX_PATH; i++) {
+      wDir[i] = secureUserDirectory[i];
+    }
+*/
+    MultiByteToWideChar(CP_ACP, 0, secureUserDirectory, -1, wDir, MAX_PATH);
+    ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
+    WideCharToMultiByte(CP_UTF8,0,wTmp,-1,secureUserDirectory,MAX_PATH,NULL,NULL);
 
   return 1;
 }
