@@ -56,7 +56,7 @@ extern int gSqueakDebug;
 
 # include <dlfcn.h>
     void *dlopen(const char *filename, int flag) __attribute__((weak_import));
-	char *dlerror(void) __attribute__((weak_import));
+//	char *dlerror(void) __attribute__((weak_import));
     void *dlsym(void *handle, const char *symbol) __attribute__((weak_import));
     int dlclose(void *handle) __attribute__((weak_import));
    static void *dlopenSqueak (const char *filename, int flag);
