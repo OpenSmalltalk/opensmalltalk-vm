@@ -1,3 +1,5 @@
+#if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
+#else
 /*
  * Copyright 2008 Cadence Design Systems, Inc.
  * 
@@ -38,7 +40,10 @@ void *getbaz() { return baz; }
 # include <malloc.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #endif
-
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <unistd.h>
 #include "sqMemoryAccess.h"
 #include "sqVirtualMachine.h"
 #include "ia32abi.h"
@@ -289,3 +294,4 @@ allocateExecutablePage(long *size)
 #endif
 	return mem;
 }
+#endif
