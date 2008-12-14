@@ -139,6 +139,10 @@ MemoryAccess class >> disable [
 
 	"MemoryAccess disable"
 
+	| copyOfInterpreterPlugin copyOfObjectMemory |
+	copyOfInterpreterPlugin := InterpreterPlugin copy.
+	copyOfObjectMemory := ObjectMemory copy.
+
 	InterpreterPlugin superclass: Object.
 	Object addSubclass: InterpreterPlugin.
 	MemoryAccess removeSubclass: InterpreterPlugin.
@@ -146,6 +150,13 @@ MemoryAccess class >> disable [
 	ObjectMemory superclass: Object.
 	Object addSubclass: ObjectMemory.
 	MemoryAccess removeSubclass: ObjectMemory.
+
+	SystemChangeNotifier uniqueInstance
+		classDefinitionChangedFrom: copyOfInterpreterPlugin
+		to: InterpreterPlugin.
+	SystemChangeNotifier uniqueInstance
+		classDefinitionChangedFrom: copyOfObjectMemory
+		to: ObjectMemory.
 
 	^ ObjectMemory superclass
 
@@ -161,6 +172,10 @@ MemoryAccess class >> enable [
 
 	"MemoryAccess enable"
 
+	| copyOfInterpreterPlugin copyOfObjectMemory |
+	copyOfInterpreterPlugin := InterpreterPlugin copy.
+	copyOfObjectMemory := ObjectMemory copy.
+
 	InterpreterPlugin superclass: MemoryAccess.
 	MemoryAccess addSubclass: InterpreterPlugin.
 	Object removeSubclass: InterpreterPlugin.
@@ -168,6 +183,13 @@ MemoryAccess class >> enable [
 	ObjectMemory superclass: MemoryAccess.
 	MemoryAccess addSubclass: ObjectMemory.
 	Object removeSubclass: ObjectMemory.
+
+	SystemChangeNotifier uniqueInstance
+		classDefinitionChangedFrom: copyOfInterpreterPlugin
+		to: InterpreterPlugin.
+	SystemChangeNotifier uniqueInstance
+		classDefinitionChangedFrom: copyOfObjectMemory
+		to: ObjectMemory.
 
 	^ ObjectMemory superclass
 
