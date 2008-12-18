@@ -81,14 +81,16 @@
 			if (hasTypeArray) {
 				double v;
 				int sizeOfFloat = figureOutFloatSize(typeSignatureArray,i);
-				if (sizeOfFloat == sizeof(float)) {
-					float fv = *(float*)argvec;
-					v = fv;
-				} else {
-					v = *(double*)argvec;
-				}
-				if (fpRegCount < 13) {  /* 13 registers for floating point numbers */
-					floatStorageArea[fpRegCount++] = v;
+				if (sizeOfFloat > 0) {
+					if (sizeOfFloat == sizeof(float)) {
+						float fv = *(float*)argvec;
+						v = fv;
+					} else {
+						v = *(double*)argvec;
+					}
+					if (fpRegCount < 13) {  /* 13 registers for floating point numbers */
+						floatStorageArea[fpRegCount++] = v;
+					}
 				}
 			}
 			argvec += internalSructureSize;

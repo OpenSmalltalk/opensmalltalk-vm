@@ -72,6 +72,17 @@ printf("The two floats are %f and %f\n", f1, f2);
 return (float) (f1 + f2);
 }
 
+/* test passing and returning float & integer */
+EXPORT(float) ffiTestFloatAndInteger(float f1, int c1) {
+	printf("The float  %f and integer %i\n", f1, c1);
+	return (float) (f1 + c1);
+}
+
+EXPORT(float) ffiTestIntegerAndFloat(int c1, float f1) {
+	printf("The integer %i and float  %f\n", c1, f1);
+	return (float) (f1 + c1);
+}
+
 EXPORT(float) ffiTestFloats7(float f1, float f2, float f3, float f4, float f5, float f6, float f7) {
 printf("The 7 floats are %f %f %f %f %f %f %f\n", f1, f2, f3, f4, f5, f6, f7);
 return (float) (f1 + f2 + f3 + f4 + f5 + f6 + f7);
