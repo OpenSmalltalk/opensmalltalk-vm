@@ -29,7 +29,9 @@
 #define SIGNATURE	sqInt *argVector/* call args on stack or in array */, \
 					int numArgs,	/* arg count of function to call   */ \
 					int funcOffset, /* stack offset of func Alien   */ \
-					int resultOffset/* stack offset of result Alien */
+					int resultOffset,/* stack offset of result Alien */ \
+					int hasTypeArray, /* last parm value is type array of sizes to support floating point arguments for powerpc */ \
+					int typeSignatureArray /* type signature array or nil object, or nil */
 
 extern sqInt callIA32IntegralReturn(SIGNATURE);
 extern sqInt callIA32FloatReturn   (SIGNATURE);

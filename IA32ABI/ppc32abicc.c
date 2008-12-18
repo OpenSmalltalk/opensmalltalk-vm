@@ -146,18 +146,28 @@ volatile char *longReturnValueLocation = (char*) &longReturnValue;
 volatile double floatReturnValue;
 volatile double *floatReturnValueLocation = &floatReturnValue;
 
+int figureOutFloatSize(int typeSignatureArray,int index) {
+	int floatSize,objectSize;
+	char *floatSizePointer;
+	sqInt oops = interpreterProxy->stackValue(typeSignatureArray);
+	objectSize = interpreterProxy->stSizeOf(oops);
+	if (index >= objectSize) 
+		return sizeof(double);
+	floatSizePointer = interpreterProxy->firstIndexableField(oops);
+	floatSize = floatSizePointer[index];
+	return floatSize;
+}
+
 /*
  * Call a foreign function that answers an integral result in %eax (and
  * possibly %edx) according to IA32-ish ABI rules.
  */
 sqInt
 callIA32IntegralReturn(SIGNATURE) {
-#ifdef _MSC_VER
-__int64 (*f)(), r;
-#else
 long long (*f)(), r;
-#endif
+
 #include "dabusinessppc.h"
+#include "dabusinessppcPostLogicInteger.h"
 }
 
 /*
@@ -167,6 +177,7 @@ long long (*f)(), r;
 sqInt
 callIA32FloatReturn(SIGNATURE) { float (*f)(), r;
 #include "dabusinessppc.h"
+#include "dabusinessppcPostLogicFloat.h"
 }
 
 /*
@@ -176,6 +187,7 @@ callIA32FloatReturn(SIGNATURE) { float (*f)(), r;
 sqInt
 callIA32DoubleReturn(SIGNATURE) { double (*f)(), r;
 #include "dabusinessppc.h"
+#include "dabusinessppcPostLogicDouble.h"
 }
 
 /*
