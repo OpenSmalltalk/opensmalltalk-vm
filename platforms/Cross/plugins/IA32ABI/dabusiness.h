@@ -7,6 +7,7 @@
  *  dabusiness.h
  *
  *  Written by Eliot Miranda 11/07.
+ *  Parts written by John M McIntosh 12/08
  *
  * Body of the various callIA32XXXReturn functions.
  * Call a foreign function according to IA32-ish ABI rules.
@@ -18,14 +19,23 @@
 	char *argstart;
 #endif
 
+	/* For macintel we can ignore the typearray */ 
+
 	EnsureHaveVMThreadID();
 
 	for (i = numArgs, size = 0; --i >= 0;) {
 		sqInt arg = argVector[i];
 		if (objIsAlien(arg) && sizeField(arg))
 			size += moduloPOT(sizeof(long),abs(sizeField(arg)));
-		else /* assume an integer or pointer.  check below. */
-			size += sizeof(long);
+		else /* assume an integer,double or pointer.  check below. */
+			if (interpreterProxy->isFloatObject(arg)) {
+				if (hasTypeArray) 
+					size += figureOutFloatSize(typeSignatureArray,i);
+				else
+					size += sizeof(double);
+			}
+			else
+				size += sizeof(long);
 	}
 
 #if STACK_ALIGN_BYTES
@@ -71,11 +81,25 @@
 			argvec += sizeof(long);
 		}
 		else {
-			long v = interpreterProxy->signed32BitValueOf(arg);
-			if (interpreterProxy->failed())
-				return PrimErrBadArgument;
-			*(long *)argvec = v;
-			argvec += sizeof(long);
+			if (interpreterProxy->isFloatObject(arg)) {
+				double v = interpreterProxy->floatValueOf(arg);
+				if (interpreterProxy->failed())
+					return PrimErrBadArgument;
+				if (hasTypeArray && figureOutFloatSize(typeSignatureArray,i) == sizeof(float)) {
+					float floatv = v;
+					*(float *)argvec = floatv;
+					argvec += sizeof(float);			
+				} else {
+					*(double *)argvec = v;
+					argvec += sizeof(double);			
+				}
+			} else {
+				long v = interpreterProxy->signed32BitValueOf(arg);
+				if (interpreterProxy->failed())
+					return PrimErrBadArgument;
+				*(long *)argvec = v;
+				argvec += sizeof(long);
+			}
 		}
 	}
 
@@ -86,14 +110,3 @@
 	setsp(argstart);
 #endif
 	r = f();
-	/* post call need to refresh stack pointer in case of call-back and GC. */
-	resultMaybeAlien = interpreterProxy->stackValue(resultOffset);
-	if (objIsAlien(resultMaybeAlien)) {
-		if (!(size = sizeField(resultMaybeAlien)))
-			size = sizeof(void *);
-		memcpy(startOfDataWithSize(resultMaybeAlien,size),
-				&r,
-				min(abs(size), sizeof(r)));
-	}
-
-	return PrimErrNoErr;

@@ -10,6 +10,7 @@
  *
  * Support for Call-outs and Call-backs from the Plugin.
  *  Written by Eliot Miranda 11/07.
+ * Changes by John M McIntosh 12/08.
  *
  */
 
@@ -123,6 +124,17 @@ struct VirtualMachine* interpreterProxy;
 #define isSmallInt(oop) ((oop)&1)
 #define intVal(oop) (((long)(oop))>>1)
 
+int figureOutFloatSize(int typeSignatureArray,int index) {
+	int floatSize,objectSize;
+	char *floatSizePointer;
+	sqInt oops = interpreterProxy->stackValue(typeSignatureArray);
+	objectSize = interpreterProxy->stSizeOf(oops);
+	if (index >= objectSize) 
+		return sizeof(double);
+	floatSizePointer = interpreterProxy->firstIndexableField(oops);
+	floatSize = floatSizePointer[index];
+	return floatSize;
+}
 /*
  * Call a foreign function that answers an integral result in %eax (and
  * possibly %edx) according to IA32-ish ABI rules.
@@ -135,6 +147,7 @@ __int64 (*f)(), r;
 long long (*f)(), r;
 #endif
 #include "dabusiness.h"
+#include "dabusinessPostLogic.h"
 }
 
 /*
@@ -144,6 +157,7 @@ long long (*f)(), r;
 sqInt
 callIA32FloatReturn(SIGNATURE) { float (*f)(), r;
 #include "dabusiness.h"
+#include "dabusinessPostLogic.h"
 }
 
 /*
@@ -153,6 +167,7 @@ callIA32FloatReturn(SIGNATURE) { float (*f)(), r;
 sqInt
 callIA32DoubleReturn(SIGNATURE) { double (*f)(), r;
 #include "dabusiness.h"
+#include "dabusinessPostLogic.h"
 }
 
 /*
