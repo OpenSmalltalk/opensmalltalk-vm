@@ -52,6 +52,8 @@ EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4);
 EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4);
 EXPORT(int) ffiTestInts8(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8);
 EXPORT(float) ffiTestFloats(float f1, float f2);
+EXPORT(float) ffiTestFloatAndInteger(float f1, int c1);
+EXPORT(float) ffiTestIntegerAndFloat(int c1, float f1);
 EXPORT(float) ffiTestFloats7(float f1, float f2, float f3, float f4, float f5, float f6, float f7);
 EXPORT(float) ffiTestFloats13(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13);
 EXPORT(float) ffiTestFloats14(float f1, float f2, float f3, float f4, float f5, float f6, float f7, float f8, float f9, float f10, float f11, float f12, float f13, float f14);
