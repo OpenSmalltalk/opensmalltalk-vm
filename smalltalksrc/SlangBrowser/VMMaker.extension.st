@@ -1,0 +1,147 @@
+Extension { #name : #VMMaker }
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> cCodeGenerator: aClass inCache: cache inlined: doInlining [
+	"Answer a C code generator, or a string explaining why a code generator is not available"
+
+	| cg classes c |
+	[cg := cache
+		at: aClass name asSymbol
+		ifAbsentPut:
+			[ObjectMemory initialize.
+			ObjectMemory initializeWithBytesToWord: self default bytesPerWord.
+			(ObjectMemory withAllSubclasses includes: aClass)
+				ifTrue:
+					[cg := self default createCodeGenerator.
+					classes := OrderedCollection new.
+					c := aClass.
+					[c == Object] whileFalse:
+						[classes add: c.
+						c := c superclass].
+					classes do: [:cls | cg addClass: cls]]
+				ifFalse: 
+					[cg := aClass buildCodeGeneratorUpTo: aClass].
+			cg prepareMethodsInlined: doInlining doAssertions: true.
+			cg]]
+		on: Error
+		do: [:e | "Failure due to overridden class occurs in simulator subclasses"
+			^ cache at: aClass name asSymbol put: e messageText].
+	^ cg
+
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> cacheFor: generatorType [
+
+	^ self codeGeneratorCache at: generatorType ifAbsentPut: [Dictionary new]
+
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> clearCache: cache entriesFor: aClass [ 
+	"Clear the of code generators for aClass and its dependent subclasses"
+
+	aClass withAllSubclasses
+		do: [:cls | cache
+				removeKey: cls name asSymbol
+				ifAbsent: []]
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> clearCacheEntriesFor: aClass [ 
+	"Clear all code generator caches for aClass and its dependent subclasses"
+
+	self codeGeneratorCache
+		do: [:cache | self clearCache: cache entriesFor: aClass]
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> clearCodeGeneratorCache [
+	"Code generators used by browsers display translated C code"
+
+	"VMMaker clearCodeGeneratorCache"
+
+	CodeGeneratorCache := nil
+
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> codeGenerator: generatorType forClass: aClass [
+
+	| cache |
+	generatorType = #cCode
+		ifTrue: [cache := self cacheFor: generatorType.
+				^ self cCodeGenerator: aClass inCache: cache inlined: false].
+	generatorType = #inlinedCCode
+		ifTrue: [cache := self cacheFor: generatorType.
+				^ self cCodeGenerator: aClass inCache: cache inlined: true].
+	self error: generatorType asString, ' not recognized'.
+
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> codeGeneratorCache [
+	"Code generators used by browsers display translated C code"
+
+	^ CodeGeneratorCache ifNil: [CodeGeneratorCache := Dictionary new]
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> event: anEvent [
+	"Hook for SystemChangeNotifier. If a translatable class changes, clear all
+	of its code generators from caches to force retranslation."
+
+	| cls |
+	anEvent itemClass ifNotNilDo:
+		[:itemClass |
+		cls := itemClass isMeta
+			ifTrue: [itemClass soleInstance]
+			ifFalse: [itemClass].
+		cls hasCCodeGenerator
+			ifTrue: [self clearCacheEntriesFor: cls]]
+
+]
+
+{ #category : #'*SlangBrowser-initialisation' }
+VMMaker classSide >> initializeBrowserSupport [
+
+	self clearCodeGeneratorCache.
+	self registerNotification.
+	(CodeHolder respondsTo: #addEditContentsOption:)
+		ifTrue: [CodeHolder addEditContentsOption: #translateToC -> #selectedTranslateToC.
+				CodeHolder addEditContentsOption: #translateInlinedC -> #selectedTranslateInlinedC.
+				CodeHolder removeContentsSymbol: #translateToC.
+				CodeHolder removeContentsSymbol: #translateInlinedC.
+			CodeHolder addContentsSymbolQuint:
+							{#translateToC
+							. #toggleShowingTranslateToC
+							. #showingTranslateToCString
+							. 'C code'
+							. 'translate to C source code, no method inlining' translated}
+						afterEntry: #byteCodes.
+			CodeHolder addContentsSymbolQuint:
+							{#translateInlinedC
+							. #toggleShowingTranslateInlinedC
+							. #showingTranslateInlinedCString
+							. 'inlined C'
+							. 'translate to C source code with method inlining' translated}
+						afterEntry: #translateToC]
+		ifFalse: [self notify: 'package SlangBrowser requires browser support, not yet loaded']
+
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> registerNotification [
+
+	SystemChangeNotifier uniqueInstance notify: self ofAllSystemChangesUsing: #event:
+
+]
+
+{ #category : #'*SlangBrowser-browser support' }
+VMMaker classSide >> unregisterNotification [
+
+	"self unregisterNotification"
+
+	SystemChangeNotifier uniqueInstance noMoreNotificationsFor: self
+
+]
