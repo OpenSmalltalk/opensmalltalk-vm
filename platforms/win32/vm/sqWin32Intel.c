@@ -12,6 +12,14 @@
 *    1) When using this module the virtual machine MUST NOT be compiled
 *       with Unicode support.
 *****************************************************************************/
+/* Windows Vista support 
+ * AUTHOR: Korakurider (kr)
+ * CHANGE NOTES:
+ *   1) new command line option "-lowRights" was introduced
+ *      to support IE7/protected mode.
+ */
+#define VISTA_SECURITY 1 /* IE7/Vista protected mode support */
+
 #include <windows.h>
 #include <stdio.h>
 #include <string.h>
@@ -50,6 +58,11 @@ char stderrName[MAX_PATH+1];
 char stdoutName[MAX_PATH+1];
 
 TCHAR *logName = TEXT("");             /* full path and name to log file */
+
+#ifdef VISTA_SECURITY 
+BOOL fLowRights = 0;  /* started as low integiry process, 
+			need to use alternate untrustedUserDirectory */
+#endif /* VISTA_SECURITY */
 
 /* Service stuff */
 TCHAR  serviceName[MAX_PATH+1];   /* The name of the NT service */
@@ -945,6 +958,10 @@ static vmArg args[] = {
   /* service support on 95 */
   { ARG_FLAG, &fRunService, "-service95" },           /* do we start as service? */
   { ARG_FLAG, &fBroadcastService95, "-broadcast95" }, /* should we notify services of a user logon? */
+#ifdef  VISTA_SECURITY /* IE7/Vista protected mode support */
+  { ARG_FLAG, &fLowRights, "-lowRights" }, /* started with low rights, 
+					use alternate untrustedUserDirectory */
+#endif /* VISTA_SECURITY */
   { ARG_NONE, NULL, NULL }
 };
 
