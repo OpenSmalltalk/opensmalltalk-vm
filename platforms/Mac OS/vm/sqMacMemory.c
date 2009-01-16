@@ -45,6 +45,7 @@ usqInt sqAllocateMemoryMac(sqInt desiredHeapSize , sqInt minHeapSize, FILE * f,u
 	void  *possibleLocation,*startOfAnonymousMemory;
 	off_t fileSize;
 	struct stat sb;
+	extern Boolean gSqueakUseFileMappedMMAP;
 	size_t pageSize= getpagesize();
 	size_t pageMask= ~(pageSize - 1);
 	
@@ -54,35 +55,47 @@ usqInt sqAllocateMemoryMac(sqInt desiredHeapSize , sqInt minHeapSize, FILE * f,u
 	possibleLocation = 500*1024*1024;
     gHeapSize = gMaxHeapSize;
 	
-	/* Lets see about mmap the image file into a chunk of memory at the 100MB boundary rounding up to the page size
-	 Then we on the next page anonymously allocate the required free space for young space*/
+	if (gSqueakUseFileMappedMMAP) {
+		/* Lets see about mmap the image file into a chunk of memory at the 500MB boundary rounding up to the page size
+		 Then we on the next page anonymously allocate the required free space for young space*/
 	
-	/* Thanks to David Pennell for suggesting this */
-	
-	fstat(fileno((FILE *)f), &sb);
-	fileSize = sb.st_size;
-	fileRoundedUpToPageSize = valign(fileSize+pageSize-1);
-	startOfmmapForImageFile = mmap(possibleLocation, fileRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_FILE|MAP_PRIVATE,fileno((FILE *)f), 0);
-	
-	if (startOfmmapForImageFile != possibleLocation) {
-		/* This isn't a failure case, let's continue and see what happens */
-		/* Before we would bail, but on 4GB macs with 27 apps running it might not allow 500MB boundary, so let it suggest one and live with it */
+		/* Thanks to David Pennell for suggesting this */
 		
-		possibleLocation = startOfmmapForImageFile;
+		fstat(fileno((FILE *)f), &sb);
+		fileSize = sb.st_size;
+		fileRoundedUpToPageSize = valign(fileSize+pageSize-1);
+		startOfmmapForImageFile = mmap(possibleLocation, fileRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_FILE|MAP_PRIVATE,fileno((FILE *)f), 0);
+		
+		if (startOfmmapForImageFile != possibleLocation) {
+			/* This isn't a failure case, let's continue and see what happens */
+			/* Before we would bail, but on 4GB macs with 27 apps running it might not allow 500MB boundary, so let it suggest one and live with it */
+			
+			possibleLocation = startOfmmapForImageFile;
+		}
+		
+		startOfAnonymousMemory = (void *) ((size_t) fileRoundedUpToPageSize + (size_t) possibleLocation);
+		freeSpaceRoundedUpToPageSize = valign(gMaxHeapSize)-fileRoundedUpToPageSize+pageSize;
+		startOfmmapForANONMemory = mmap(startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,-1,0);
+		
+		if (startOfmmapForANONMemory != startOfAnonymousMemory) {
+			fprintf(stderr, "errno %d\n startOfAnonymousMemory %d freeSpaceRoundedUpToPageSize %d startOfmmapForANONMemory %d", errno,
+					startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, startOfmmapForANONMemory);
+			perror("startOfmmapForANONMemory failed");
+			exit(42);
+		}
+		
+		return (usqInt) startOfmmapForImageFile+headersize;
+	} else {
+		void * debug, *actually;
+		debug = mmap( possibleLocation, gMaxHeapSize+pageSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
+		
+		if(debug == MAP_FAILED)
+			return 0;
+		actually = debug+pageSize-1;
+		actually = (void*) (((usqInt) actually) & pageMask);
+		
+		return (usqInt) actually;
 	}
-	
-	startOfAnonymousMemory = (void *) ((size_t) fileRoundedUpToPageSize + (size_t) possibleLocation);
-	freeSpaceRoundedUpToPageSize = valign(gMaxHeapSize)-fileRoundedUpToPageSize+pageSize;
-	startOfmmapForANONMemory = mmap(startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, PROT_READ|PROT_WRITE, MAP_ANON|MAP_SHARED,-1,0);
-	
-	if (startOfmmapForANONMemory != startOfAnonymousMemory) {
-		fprintf(stderr, "errno %d\n startOfAnonymousMemory %d freeSpaceRoundedUpToPageSize %d startOfmmapForANONMemory %d", errno,
-				startOfAnonymousMemory, freeSpaceRoundedUpToPageSize, startOfmmapForANONMemory);
-		perror("startOfmmapForANONMemory failed");
-		exit(42);
-	}
-	
-	return (usqInt) startOfmmapForImageFile+headersize;
 }
 
 sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta) {
@@ -103,9 +116,13 @@ sqInt sqMemoryExtraBytesLeft(Boolean flag) {
 }
 
 void sqMacMemoryFree() {
+	extern Boolean gSqueakUseFileMappedMMAP;
+	
 	if (memory == nil) 
 		return;
-	munmap(startOfmmapForImageFile,fileRoundedUpToPageSize);
-	munmap(startOfmmapForANONMemory,freeSpaceRoundedUpToPageSize);
+	if (gSqueakUseFileMappedMMAP) {
+		munmap(startOfmmapForImageFile,fileRoundedUpToPageSize);
+		munmap(startOfmmapForANONMemory,freeSpaceRoundedUpToPageSize);
+	}
 	memory = NULL;
 }

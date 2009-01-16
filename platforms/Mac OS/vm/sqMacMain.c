@@ -71,6 +71,7 @@
  3.8.15b5  Mar 7th, 2007 JMM Add SqueakDebug, SqueakQuitOnQuitAppleEvent 
  3.8.16b3  Mar 21th, 2007 JMM trusted/untrusted directory cleanup, warning msg cleanup
  3.8.17b2  April 26th, 2007 JMM large cursors
+ 3.8.21b1	Jan 14th, 2009 JMM fix issue with mmap allocation, only allow explicitly to avoid mmap problems on nfs
 */
 
 
@@ -115,7 +116,7 @@ char            gSqueakTrustedDirectoryName[PATH_MAX] = "/foobar/tooBar/forSquea
 CFStringRef		gSqueakImageNameStringRef;
 int				gSqueakBrowserPipes[]= {-1, -1}; 
 Boolean			gSqueakBrowserSubProcess = false,gSqueakBrowserWasHeadlessButMadeFullScreen=false;
-Boolean			gSqueakBrowserExitRequested = false;
+Boolean			gSqueakBrowserExitRequested = false, gSqueakUseFileMappedMMAP = false;
 
 void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size);
 /*** Main ***/
@@ -399,7 +400,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 3.8.19b2 11-Nov-08 >59849109-3D90-4803-A514-C93849B8FD40<";
+ 		return "Mac Carbon 3.8.21b1 14-Jan-09 >C116A3FB-EF44-40B3-B957-1A49BF9E2489<";
+// 		return "Mac Carbon 3.8.19b2 11-Nov-08 >59849109-3D90-4803-A514-C93849B8FD40<";
 // 		return "Mac Carbon 3.8.19b1 28-Oct-08 >36B0938E-7E39-4C53-9E09-F06EAEB9B458<";
 // 		return "Mac Carbon 3.8.18b5 05-Sep-08 >0DEC4F6F-198B-47DC-A52F-85B43B5514C0<";
 // 		return "Mac Carbon 3.8.18b4 29-May-08 >02DA4BFD-4050-4372-8DBB-9582DA7D0218<";
@@ -477,7 +479,7 @@ void fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,SqueakDebug;
-    CFBooleanRef SqueakWindowHasTitleType,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly,SqueakQuitOnQuitAppleEvent,SqueakExplicitWindowOpenNeeded;
+    CFBooleanRef SqueakWindowHasTitleType,SqueakUseFileMappedMMAP,SqueakFloatingWindowGetsFocusType,SqueakUIFlushUseHighPercisionClock,SqueakPluginsBuiltInOrLocalOnly,SqueakQuitOnQuitAppleEvent,SqueakExplicitWindowOpenNeeded;
 	CFNumberRef SqueakMouseMappings[4][4] = {{0},{0}};
 	CFNumberRef SqueakBrowserMouseMappings[4][4] = {{0},{0}};
     CFDataRef 	SqueakWindowAttributeType;    
@@ -494,6 +496,7 @@ void fetchPrefrences() {
     SqueakQuitOnQuitAppleEvent = CFDictionaryGetValue(myDictionary, CFSTR("SqueakQuitOnQuitAppleEvent"));
     SqueakWindowAttributeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowAttribute"));
     SqueakWindowHasTitleType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakWindowHasTitle"));
+	SqueakUseFileMappedMMAP = CFDictionaryGetValue(myDictionary, CFSTR("SqueakUseFileMappedMMAP"));
     SqueakFloatingWindowGetsFocusType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakFloatingWindowGetsFocus"));
     SqueakMaxHeapSizeType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakMaxHeapSize"));
     SqueakVMEncodingType = CFDictionaryGetValue(myDictionary, CFSTR("SqueakEncodingType"));
@@ -589,7 +592,13 @@ void fetchPrefrences() {
         gSqueakWindowHasTitle = CFBooleanGetValue(SqueakWindowHasTitleType);
     else 
         gSqueakWindowHasTitle = true;
-        
+
+	if (SqueakUseFileMappedMMAP) 
+        gSqueakUseFileMappedMMAP = CFBooleanGetValue(SqueakUseFileMappedMMAP);
+    else 
+        gSqueakUseFileMappedMMAP = false;
+	
+	
     for(i=0;i<4;i++)
 		for(j=1;j<4;j++)
 			if (SqueakMouseMappings[i][j]) {

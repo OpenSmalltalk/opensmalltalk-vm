@@ -84,7 +84,9 @@ usqInt	    sqAllocateMemoryMac(sqInt desiredHeapSize , sqInt minHeapSize, FILE *
 #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
 	sqAllocateMemoryMac(heapSize, minimumMemory, fileStream, headerSize)
 #undef sqImageFileReadEntireImage
-#define sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream) length
+size_t      sqImageFileReadEntireImage(void *ptr,  size_t elementSize, size_t count, sqImageFile f);
+#define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \
+	sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
 
 /* override reserveExtraCHeapBytes() macro to reduce Squeak object heap size on Mac */
 #undef reserveExtraCHeapBytes
