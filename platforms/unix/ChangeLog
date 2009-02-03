@@ -1,3 +1,8 @@
+2009-02-03  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-fbdev/sqUnixFBDevMousePS2.c (ms_ps2_disable): Check
+	success of write()s to mouse.
+
 2008-11-24  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-fbdev/sqUnixFBDevMousePS2.c (ms_ps2_send,

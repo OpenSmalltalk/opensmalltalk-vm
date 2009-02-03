@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2008-11-24 11:29:41 by piumarta on emilia.vpri.org
+ * Last edited: 2009-02-03 10:11:04 by piumarta on emilia.local
  */
 
 /* The framebuffer display driver was donated to the Squeak community by:
@@ -110,11 +110,15 @@ static int ms_ps2_send(_self, unsigned char *command, int len)
   for (i= 0;  i < len;  ++i)
     {
     resend:
-      (void)write(self->fd, command + i, 1);
+      if (1 != write(self->fd, command + i, 1))
+	{
+	  dprintf("%s: send failed during write\n", self->msName);
+	  return 0;
+	}
       dprintf(">%02x\n", command[i]);
       if (1 != ms_read(self, buf, 1, 1, PS2_SEND_DELAY))
 	{
-	  dprintf("%s: send failed\n", self->msName);
+	  dprintf("%s: send failed during read\n", self->msName);
 	  return 0;
 	}
       switch (buf[0])
@@ -141,7 +145,11 @@ static void ms_ps2_disable(_self)
 {
   unsigned char command[]= { PS2_DISABLE };
   dprintf("%s: disable\n", self->msName);
-  (void)write(self->fd, command, 1);
+  if (1 != write(self->fd, command, 1))
+    {
+      dprintf("%s: disable failed during write\n", self->msName);
+      return;
+    }
   dprintf(">%02x\n", command[0]);
   while (1 == ms_read(self, command, 1, 1, PS2_DISABLE_DELAY))
     if (PS2_OK == command[0])
