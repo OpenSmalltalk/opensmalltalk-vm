@@ -13,9 +13,3 @@ Object class >> asInlinedCString: aSelector [
 
 	^ 'Translation to C not available for #' translated, aSelector asString, ', see implementors of ' translated, '#asCString:.'
 ]
-
-{ #category : #'*SlangBrowser-VMMaker-Translation to C' }
-Object class >> hasCCodeGenerator [
-
-	^ true
-]
