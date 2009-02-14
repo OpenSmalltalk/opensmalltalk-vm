@@ -66,12 +66,6 @@ ObjectMemory classSide >> asInlinedCString: aSelector [
 ]
 
 { #category : #'*SlangBrowser-translation' }
-ObjectMemory classSide >> hasCCodeGenerator [
-
-	^ true
-]
-
-{ #category : #'*SlangBrowser-translation' }
 ObjectMemory classSide >> methodNotTranslatedMessage: aSelector [
 	"For browser support with VMMaker"
 

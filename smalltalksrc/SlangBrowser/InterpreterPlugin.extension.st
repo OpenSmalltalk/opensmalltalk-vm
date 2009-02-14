@@ -56,9 +56,3 @@ InterpreterPlugin classSide >> asInlinedCString: aSelector [
 	^ stream contents
 
 ]
-
-{ #category : #'*SlangBrowser-translation' }
-InterpreterPlugin classSide >> hasCCodeGenerator [
-
-	^ true
-]
