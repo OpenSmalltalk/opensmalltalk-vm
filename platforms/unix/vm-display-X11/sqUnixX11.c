@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2008-11-10 13:49:33 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-02-19 11:56:10 by piumarta on emilia.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -3944,7 +3944,7 @@ static sqInt display_ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt
   if (!(major > 0 || minor >= 5))
     return 0;
 
-  image= XCreateImage(stDisplay, DefaultVisual(stDisplay, DefaultScreen(stDisplay)), 32, ZPixmap, 0, (char *)cursorBitsIndex, extentX, extentY, 32, 0);
+  image= XCreateImage(stDisplay, DefaultVisual(stDisplay, DefaultScreen(stDisplay)), 32, ZPixmap, 0, (char *)pointerForOop(cursorBitsIndex), extentX, extentY, 32, 0);
   pixmap= XCreatePixmap (stDisplay, DefaultRootWindow(stDisplay), extentX, extentY, 32);
   gc= XCreateGC(stDisplay, pixmap, 0, 0);
   XPutImage(stDisplay, pixmap, gc, image, 0, 0, 0, 0, extentX, extentY);

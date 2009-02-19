@@ -1,3 +1,8 @@
+2009-02-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c (display_ioSetCursorARGB): Convert
+	cursorBitsIndex from oop to pointer using pointerForOop.
+
 2009-02-03  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-fbdev/sqUnixFBDevMousePS2.c (ms_ps2_disable): Check
