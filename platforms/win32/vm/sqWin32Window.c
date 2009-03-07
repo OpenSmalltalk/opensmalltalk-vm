@@ -115,7 +115,7 @@ DWORD dwMemorySize = 0;        /* How much memory do we use? */
 BOOL  fBrowserMode = 0;        /* Are we running in a web browser? */
 
 /* Misc preferences */
-BOOL  fEnableAltF4Quit = 0; /* can we quit using Alt-F4? */
+BOOL  fEnableAltF4Quit = 1; /* can we quit using Alt-F4? */
 BOOL  fEnableF2Menu = 1;    /* can we get prefs menu via F2? */
 BOOL  fEnablePrefsMenu = 1; /* can we get a prefs menu at all? */
 
@@ -1596,6 +1596,42 @@ int ioSetCursorWithMask(int cursorBitsIndex, int cursorMaskIndex, int offsetX, i
 int ioSetCursor(int cursorBitsIndex, int offsetX, int offsetY)
 {
   return ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
+}
+
+int ioSetCursorARGB(sqInt bitsIndex, sqInt w, sqInt h, sqInt x, sqInt y) {
+  ICONINFO info;
+  HCURSOR hCursor = NULL;
+  HBITMAP hbmMask = NULL;
+  HBITMAP hbmColor = NULL;
+  HDC mDC;
+  unsigned int *srcBits = (unsigned int*)bitsIndex;
+  unsigned int *dibBits=NULL, *maskBits=NULL;
+
+  mDC = CreateCompatibleDC(NULL);
+
+  /* We can leave the mask bits empty since we have an alpha channel below */
+  bmi1->bmiHeader.biWidth = w;
+  bmi1->bmiHeader.biHeight = -h;
+  hbmMask = CreateDIBSection(mDC, bmi1, DIB_RGB_COLORS, &maskBits, NULL, 0);
+
+  bmi32->bmiHeader.biWidth = w;
+  bmi32->bmiHeader.biHeight = -h;
+  hbmColor = CreateDIBSection(mDC, bmi32, DIB_RGB_COLORS, &dibBits, NULL, 0);
+  memcpy(dibBits, srcBits, w*h*4);
+
+  info.fIcon = 0;
+  info.xHotspot = -x;
+  info.yHotspot = -y;
+  info.hbmMask = hbmMask;
+  info.hbmColor = hbmColor;
+
+  DestroyCursor(currentCursor);
+  currentCursor = CreateIconIndirect(&info);
+  if(hbmColor) DeleteObject(hbmColor);
+  if(hbmMask) DeleteObject(hbmMask);
+  if(mDC) DeleteDC(mDC);
+
+  return 1;
 }
 
 
