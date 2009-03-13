@@ -77,16 +77,21 @@ extern struct VirtualMachine* interpreterProxy;
 	Protocol* protocol;
 	NSInvocation* invocation;
 	NSConditionLock* lock;
-	NSMutableSet *sigs;
+	NSMutableDictionary *sigs;
 	id	target;
+	sqInt	callbackid;
+	BOOL	isCarbonVM;
 }
 - (id) initWithSemaphore: (sqInt) squeakSem protocolNSString: (NSString *) nameString target: (id) aTarget;
 - (void) setReturnValue: (char*) pointer;
+- (BOOL) isDataTypeAware;
+- (void) setIsCarbonVM;
 
 @property (nonatomic,assign) sqInt sem;
 @property (nonatomic,assign) Protocol* protocol;
 @property (nonatomic,assign) NSInvocation* invocation;
 @property (nonatomic,assign) NSConditionLock* lock;
-@property (nonatomic,assign) NSMutableSet *sigs;
-@property (retain) id target;
+@property (nonatomic,assign) NSMutableDictionary *sigs;
+@property (nonatomic,retain) id target;
+@property (nonatomic,assign) sqInt callbackid;
 @end

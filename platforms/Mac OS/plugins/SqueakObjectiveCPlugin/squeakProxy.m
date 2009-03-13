@@ -54,6 +54,7 @@
 @synthesize sigs;
 @synthesize protocol;
 @synthesize target;
+@synthesize callbackid;
 
 - (id) initWithSemaphore: (sqInt) squeakSem protocolNSString: (NSString *) nameString target: aTarget
 {
@@ -72,24 +73,26 @@
 	}
 	
 	lock = [[NSConditionLock alloc] initWithCondition: 0];
-	sigs = [[NSMutableSet alloc] init];
+	sigs = [[NSMutableDictionary alloc] initWithCapacity: 10];
+	isCarbonVM = NO;
+	callbackid = 0;
 	
 	return self;
 }
-
 
 - (void) forwardInvocation: (NSInvocation*) anInvocation
 {
 	NSDate *timeout;
 	//	NSLog(@"forwardInvocation: %@", anInvocation);
 	//	NSLog(@"currentThread: %@", [NSThread currentThread]);
-	
-	if (![sigs containsObject: NSStringFromSelector([anInvocation selector])]) {
-		[target forwardInvocation: anInvocation];
+	SEL selector = [anInvocation selector];
+	NSString *selectorString = NSStringFromSelector(selector);
+	if (![sigs objectForKey: selectorString]) {
+		[anInvocation invokeWithTarget: target];
 		return;
 	}
 	
-	if([lock lockWhenCondition: 0 beforeDate: (timeout = [[NSDate alloc] initWithTimeIntervalSinceNow: 3])])
+	if([lock lockWhenCondition: 0 beforeDate: (timeout = [[NSDate alloc] initWithTimeIntervalSinceNow: 3.0])])
 	{ 
 		// NSLog(@"inside lock 0");
 		[lock unlockWithCondition: 1];
@@ -98,7 +101,11 @@
 		
 		// NSLog(@"signalling squeak");
 		interpreterProxy->signalSemaphoreWithIndex(sem);
-		if([lock lockWhenCondition: 2 beforeDate: (timeout = [[NSDate alloc] initWithTimeIntervalSinceNow: 4])])
+
+		if (isCarbonVM)
+			interpreterProxy->callbackEnter(&callbackid);
+		
+		if([lock lockWhenCondition: 2 beforeDate: (timeout = [[NSDate alloc] initWithTimeIntervalSinceNow: 4.0])])
 		{
 			// NSLog(@"inside lock 2");
 			[timeout release];
@@ -126,18 +133,18 @@
 - (NSMethodSignature *) methodSignatureForSelector: (SEL) selector
 {
 	NSMethodSignature* sig;
+	NSString* sigAsString;
 	sig = [target methodSignatureForSelector: selector];
 	if (sig)
 		return sig;
 	
-	
 	sig = [super methodSignatureForSelector: selector];
 	if(sig) 
 		return sig;
-	
+
 	NSString *selectorString = NSStringFromSelector (selector);
 	
-	if ([sigs containsObject: selectorString]) {
+	if (sigAsString = [sigs objectForKey: selectorString]) {
 		
 		if (protocol) {
 			struct objc_method_description methodDescription;
@@ -151,21 +158,10 @@
 				return foo;
 			}
 		}
-		
-		/* Fake the signature types by sub in object pointers */ 
-		
-		int colonCount = [[selectorString componentsSeparatedByString: @":"] count] - 1;
-		NSMutableString *signatureString = [NSMutableString stringWithString: @"@@:"];
-		int i;
-		
-		for (i = 0; i < colonCount; i++) {
-			[signatureString appendString: @"@"];
-		}
-		
-		NSMethodSignature *result = [NSMethodSignature signatureWithObjCTypes: [signatureString UTF8String]];
-		return result;
-		
+		NSMethodSignature *foo = [NSMethodSignature signatureWithObjCTypes: [sigAsString cStringUsingEncoding: NSASCIIStringEncoding]];
+		return foo;
 	}
+	
 	return nil;
 }	
 
@@ -179,14 +175,22 @@
 	
 	NSString *which = NSStringFromSelector(selector);
 	
-	if ([sigs containsObject: which]) 
+	if ([sigs objectForKey: which]) 
 		return true;
 	
 	return false;
 }
 
 - (void) setReturnValue: (char*) pointer {
-	[invocation setReturnValue: pointer];
+	[invocation setReturnValue: &pointer];
+}
+
+- (BOOL) isDataTypeAware {
+	return YES;
+}
+
+- (void) setIsCarbonVM {
+	isCarbonVM = YES;
 }
 
 - (void) dealloc
