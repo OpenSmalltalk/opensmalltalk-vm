@@ -720,6 +720,18 @@ void ShutdownDragAndDrop(void) {
 /***************************************************************************/
 /***************************************************************************/
 
+/* Pretend this is a drag and drop of the given file */
+int dropLaunchFile(char *fileName) {
+  freeDropFiles();
+
+  numDropFiles = 1;
+  dropFiles = calloc(1, sizeof(void*));
+  dropFiles[0] = _strdup(fileName);
+
+  recordDragDropEvent(stWindow, DragDrop, 0, 0, numDropFiles);
+  return 1;
+}
+
 int dropInit(void) {
   SetupDragAndDrop();
   return 1;
