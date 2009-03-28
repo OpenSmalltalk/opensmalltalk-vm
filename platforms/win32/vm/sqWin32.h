@@ -259,6 +259,9 @@ extern TCHAR vmPath[];		    /* full path to interpreter's directory */
 extern TCHAR vmName[];		    /* name of the interpreter's executable */
 extern TCHAR windowTitle[];             /* window title string */
 extern char vmBuildString[];            /* the vm build string */
+extern TCHAR windowClassName[];    /* class name for the window */
+
+extern UINT SQ_LAUNCH_DROP;
 
 extern const TCHAR U_ON[];
 extern const TCHAR U_OFF[];
@@ -301,6 +304,7 @@ extern BOOL  fShowAllocations; /* Show memory allocations */
 extern BOOL  fPriorityBoost; /* thread priority boost */
 extern BOOL  fEnableAltF4Quit; /* can we quit using Alt-F4? */
 extern BOOL  fEnableF2Menu;    /* can we get prefs menu via F2? */
+extern BOOL  fRunSingleApp;   /* do we only allow one instance? */
 
 extern HANDLE vmSemaphoreMutex;   /* the mutex for synchronization */
 extern HANDLE vmWakeUpEvent;      /* wakeup event for interpret() */

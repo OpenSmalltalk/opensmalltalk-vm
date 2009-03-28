@@ -178,6 +178,13 @@ void LoadPreferences()
   GetPrivateProfileString(U_GLOBAL, TEXT("WindowTitle"), 
 			 TEXT(""), windowTitle, MAX_PATH, squeakIniName);
 
+  /* get the window class name from the ini file */
+  GetPrivateProfileString(U_GLOBAL, TEXT("WindowClassName"), 
+			  TEXT("SqueakWindowClass"), windowClassName, 
+			  MAX_PATH, squeakIniName);
+  fRunSingleApp =
+    GetPrivateProfileInt(U_GLOBAL, TEXT("RunSingleApp"),
+			 fRunSingleApp, squeakIniName);
   fDeferredUpdate = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("DeferUpdate"), 
 			 fDeferredUpdate,squeakIniName);

@@ -52,6 +52,7 @@ TCHAR vmPath[MAX_PATH+1];		    /* full path to interpreter's directory */
 TCHAR vmName[MAX_PATH+1];		    /* name of the interpreter's executable */
 TCHAR windowTitle[MAX_PATH];        /* what should we display in the title? */
 TCHAR squeakIniName[MAX_PATH+1];    /* full path and name to ini file */
+TCHAR windowClassName[MAX_PATH+1];        /* Window class name */
 
 const TCHAR U_ON[]  = TEXT("1");
 const TCHAR U_OFF[] = TEXT("0");
@@ -97,6 +98,8 @@ BOOL fShowAllocations = 0; /* Show allocation activity */
 BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
 BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
 BOOL fUseDirectSound = 1; /* Do we use DirectSound?! */
+BOOL fRunSingleApp = 0;   /* Do we allow only one instance of this VM? */
+
 #ifdef CROQUET
 BOOL fUseOpenGL = 1;      /* Do we use OpenGL vs. D3D?! */
 #else /* Squeak */
@@ -224,6 +227,9 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
   if(preMessageHook)
     if((*preMessageHook)(hwnd, message,wParam, lParam))
        return 1;
+
+  if(message == SQ_LAUNCH_DROP) 
+    return sqLaunchDrop();
 
 #ifndef NO_WHEEL_MOUSE
   /* RvL 1999-04-19 00:23
@@ -756,12 +762,12 @@ void SetupWindows()
   wc.hCursor = NULL;
   wc.hbrBackground = GetStockObject (WHITE_BRUSH);
   wc.lpszMenuName = NULL;
-  wc.lpszClassName = TEXT("SqueakWindowClass");
+  wc.lpszClassName = windowClassName;
   RegisterClass(&wc);
 
   if(!browserWindow)
     stWindow = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
-			      TEXT("SqueakWindowClass"),
+			      windowClassName,
 			      TEXT(VM_NAME"!"),
 			      WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
 			      0,
@@ -776,7 +782,7 @@ void SetupWindows()
     /* Setup a browser window. */
     fBrowserMode = 1;
     stWindow = CreateWindowEx(0,
-			      TEXT("SqueakWindowClass"),
+			      windowClassName,
 			      TEXT(VM_NAME"!"),
 			      WS_CHILD | WS_CLIPCHILDREN,
 			      0,
@@ -2652,6 +2658,44 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 /****************************************************************************/
 /*                      File Startup                                        */
 /****************************************************************************/
+
+int sqLaunchDrop(void) {
+  HANDLE h;
+  WCHAR *src, **argv=NULL;
+  char tmp[MAX_PATH];
+  int argc=0;
+
+#ifdef __MINGW32__
+  /* For some weird reason I cannot link CommandLineToArgvW correctly.
+     Work around it for now. */
+  static LPWSTR* (WINAPI *sqCommandLineToArgvW)(LPCWSTR,int*) = NULL;
+  if(!sqCommandLineToArgvW) {
+    HANDLE hShell32 = LoadLibrary("shell32.dll");
+    sqCommandLineToArgvW=(void*)GetProcAddress(hShell32, "CommandLineToArgvW");
+    if(!sqCommandLineToArgvW) return 0;
+  }
+#else
+#define sqCommandLineToArgvW CommandLineToArgvW
+#endif
+
+  /* Do we have text in the clipboard? */
+  if(!IsClipboardFormatAvailable(CF_UNICODETEXT)) return 0;
+  if(!OpenClipboard(stWindow)) return 0;
+
+  /* Get clipboard data in unicode format. */
+  h = GetClipboardData(CF_UNICODETEXT);
+  src = GlobalLock(h);
+  argv = sqCommandLineToArgvW(src, &argc);
+  GlobalUnlock(h);
+  CloseClipboard();
+  if(argc < 2) return 0;
+
+  /* Convert Unicode text to UTF8. */
+  WideCharToMultiByte(CP_UTF8, 0, argv[argc-1], -1, tmp, MAX_PATH, 
+		      NULL, NULL);
+  dropLaunchFile(tmp);
+  LocalFree(argv);
+}
 
 /* Check if the path/file name is subdirectory of the image path */
 int isLocalFileName(TCHAR *fileName)

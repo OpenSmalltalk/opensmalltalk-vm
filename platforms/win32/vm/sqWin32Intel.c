@@ -71,6 +71,8 @@ BOOL  fBroadcastService95 = 0;   /* Do we need a broadcast when a user has logge
 UINT  WM_BROADCAST_SERVICE = 0;  /* The broadcast message we send */
 TCHAR *msgBroadcastService = TEXT("SQUEAK_SERVICE_BROADCAST_MESSAGE"); /* The name of the broadcast message */
 
+UINT  SQ_LAUNCH_DROP = 0;  /* Message sent when second instance launches */
+
 /* Embedded images */
 static sqImageFile imageFile = 0;
 static int imageSize = 0;
@@ -974,38 +976,56 @@ static vmArg args[] = {
    In other words, even though the logName may have been set before,
    the command line has to include the -log: switch.
 */
-int sqMain(char *lpCmdLine, int nCmdShow)
-{ 
+int sqMain(char *lpCmdLine, int nCmdShow) { 
   int virtualMemory;
-  
-#ifdef NO_MULTIBLE_INSTANCES    
-  HANDLE hMutex;
-  hMutex = CreateMutex(NULL, TRUE, VM_NAME); /*more unique value needed here ?!*/
-  if(GetLastError() == ERROR_ALREADY_EXISTS)
-  {
-    return(0);//Mutex exist, return
-  }
-#endif
+  WCHAR *cmdLineW;
+  char *cmdLineA;
+  int sz;
 
   /* set default fpu control word */
   _control87(FPU_DEFAULT, _MCW_EM | _MCW_RC | _MCW_PC | _MCW_IC);
 
   LoadPreferences();
 
-  /* parse command line args */
-  {
-    WCHAR *cmdLineW;
-    char *cmdLineA;
-    int sz;
+  /* Fetch the command line */
+  cmdLineW = GetCommandLineW();
+  sz = WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, NULL, 0, NULL, NULL);
+  cmdLineA = calloc(sz, sizeof(char));
+  WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, cmdLineA, sz, NULL, NULL);
 
-    cmdLineW = GetCommandLineW();
-    sz = WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, NULL, 0, NULL, NULL);
-    cmdLineA = calloc(sz, sizeof(char));
-    WideCharToMultiByte(CP_UTF8, 0, cmdLineW, -1, cmdLineA, sz, NULL, NULL);
+  /* If running as single app, find the previous instance */
+  if(fRunSingleApp) {
+    HWND win = GetTopWindow(0);
+    while (win != NULL) {
+      char buf[MAX_PATH];
+      GetClassName(win, buf, 80);
+      if(strcmp(windowClassName, buf) == 0) break;
+      win = GetNextWindow(win, GW_HWNDNEXT);
+    }
 
-    if(!parseArguments(cmdLineA, args))
-      return printUsage(1);
+    if(win) {
+      /* An instance is running already. Inform it about the app. */
+      int bytes = (wcslen(cmdLineW)+1) * sizeof(WCHAR);
+      HANDLE h = GlobalAlloc(GMEM_MOVEABLE | GMEM_DDESHARE, bytes);
+      WCHAR *string = GlobalLock(h);
+      memcpy(string, cmdLineW, bytes);
+      GlobalUnlock(h);
+
+      OpenClipboard(NULL);
+      EmptyClipboard();
+      SetClipboardData(CF_UNICODETEXT, h);
+      CloseClipboard();
+
+      if(IsIconic(win)) ShowWindow(win, SW_RESTORE);
+      SetForegroundWindow(win);
+      SetActiveWindow(win);
+      return PostMessage(win, SQ_LAUNCH_DROP, 0, 0);
+    }
   }
+
+
+  if(!parseArguments(cmdLineA, args))
+    return printUsage(1);
 
   /* a quick check if we have any argument at all */
   if(!fRunService && (*imageName == 0)) {
