@@ -241,7 +241,7 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define VM_VERSION TEXT("Squeak 3.11.1 (alpha) from ") TEXT(__DATE__) \
+#define VM_VERSION TEXT("Squeak 3.11.2 (alpha) from ") TEXT(__DATE__) \
 	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
 /********************************************************/
