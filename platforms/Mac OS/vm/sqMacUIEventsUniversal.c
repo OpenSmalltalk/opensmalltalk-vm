@@ -1269,10 +1269,11 @@ static void doPendingFlush(void) {
 		if (target == NULL)
 			target = GetEventDispatcherTarget();
 	  
-		if (ReceiveNextEvent(0, NULL, kEventDurationNoWait, true, &event) == noErr) {
-			SendEventToEventTarget (event, target);
-			ReleaseEvent(event);
-		}
+		if ((interpreterProxy->methodPrimitiveIndex()) && (ReceiveNextEvent(0, NULL, kEventDurationNoWait, true, &event) == noErr)) {
+					SendEventToEventTarget (event, target);
+					ReleaseEvent(event);
+			}
+					
 		if (browserActiveAndDrawingContextOk())
 			checkBrowserForHeartBeat();
 		

@@ -163,6 +163,13 @@ sqInt isInMemory(sqInt address);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
+
+/* Proxy declarations for v1.8 */
+sqInt callbackEnter(sqInt *callbackID);
+sqInt callbackLeave(sqInt  callbackID);
+sqInt addGCRoot(sqInt *varLoc);
+sqInt removeGCRoot(sqInt *varLoc);
+
 struct VirtualMachine *VM = NULL;
 
 static sqInt majorVersion(void) {
@@ -359,5 +366,11 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 #endif
 
+#if VM_PROXY_MINOR > 7
+	VM->callbackEnter = callbackEnter;
+	VM->callbackLeave = callbackLeave;
+	VM->addGCRoot = addGCRoot;
+	VM->removeGCRoot = removeGCRoot;
+#endif
 	return VM;
 }

@@ -72,6 +72,7 @@
  3.8.16b3  Mar 21th, 2007 JMM trusted/untrusted directory cleanup, warning msg cleanup
  3.8.17b2  April 26th, 2007 JMM large cursors
  3.8.21b1	Jan 14th, 2009 JMM fix issue with mmap allocation, only allow explicitly to avoid mmap problems on nfs
+ 4.0.1b1	Apr 9th, 2009 JMM add logic for etoys on a stick
 */
 
 
@@ -118,7 +119,8 @@ int				gSqueakBrowserPipes[]= {-1, -1};
 Boolean			gSqueakBrowserSubProcess = false,gSqueakBrowserWasHeadlessButMadeFullScreen=false;
 Boolean			gSqueakBrowserExitRequested = false, gSqueakUseFileMappedMMAP = false;
 
-void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size);
+void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size,int etoysonaStick);
+CFStringRef fixupNonAbsolutePath(CFStringRef partialPathString);
 /*** Main ***/
 
 /*** Variables -- globals for access from pluggable primitives ***/
@@ -262,8 +264,8 @@ int main(int argc, char **argv, char **envp) {
             } else {
 				extern void resolveWhatTheImageNameIs(char *string);
 				char	afterCheckForTilda[PATH_MAX];
-				
-				cocoInterfaceForTilda(gSqueakImageNameStringRef, afterCheckForTilda,PATH_MAX);
+
+				cocoInterfaceForTilda(gSqueakImageNameStringRef, afterCheckForTilda,PATH_MAX,0);
 				resolveWhatTheImageNameIs(afterCheckForTilda);
 			}
 	}
@@ -400,7 +402,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 4.0.0b1 2-Mar-09 >A1665FE0-5DB6-454C-A1A1-DA7A112BE5C8<";
+ 		return "Mac Carbon 4.0.1b1 9-Apr-09 >4403D574-7352-44D7-BEE9-B23B39405A23<";
+// 		return "Mac Carbon 4.0.0b1 2-Mar-09 >A1665FE0-5DB6-454C-A1A1-DA7A112BE5C8<";
 // 		return "Mac Carbon 3.8.21b1 14-Jan-09 >C116A3FB-EF44-40B3-B957-1A49BF9E2489<";
 // 		return "Mac Carbon 3.8.19b2 11-Nov-08 >59849109-3D90-4803-A514-C93849B8FD40<";
 // 		return "Mac Carbon 3.8.19b1 28-Oct-08 >36B0938E-7E39-4C53-9E09-F06EAEB9B458<";
@@ -546,13 +549,11 @@ void fetchPrefrences() {
         CFStringGetCString (gSqueakImageNameStringRef, gSqueakImageName, IMAGE_NAME_SIZE+1, kCFStringEncodingMacRoman);
 	
 	if (SqueakUnTrustedDirectoryTypeRef) {
-
-		cocoInterfaceForTilda(SqueakUnTrustedDirectoryTypeRef, gSqueakUntrustedDirectoryName,PATH_MAX);
+		cocoInterfaceForTilda(SqueakUnTrustedDirectoryTypeRef, gSqueakUntrustedDirectoryName,PATH_MAX,1);
 	}
 	
 	if (SqueakTrustedDirectoryTypeRef) {
-
-		cocoInterfaceForTilda(SqueakTrustedDirectoryTypeRef, gSqueakTrustedDirectoryName,PATH_MAX);
+		cocoInterfaceForTilda(SqueakTrustedDirectoryTypeRef, gSqueakTrustedDirectoryName,PATH_MAX,1);
 	}
 	
     if (SqueakWindowType) 
@@ -646,26 +647,63 @@ void fetchPrefrences() {
 
 }
 
-void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size) {
+void cocoInterfaceForTilda(CFStringRef aStringRef, char *buffer,int max_size,int isetoysonastick) {
    extern SEL NSSelectorFromString(CFStringRef thing);
    id  autopoolClass = objc_getClass("NSAutoreleasePool");
    id  autopool;
    
-	CFStringRef checkFortilda, selectorRef = CFSTR("stringByExpandingTildeInPath"), 
+	CFStringRef checkFortilda, standardizedString, selectorRef = CFSTR("stringByExpandingTildeInPath"), 
 		releaseRef = CFSTR("release"),
 		allocRef = CFSTR("alloc"), 
-		initRef = CFSTR("init");
+		initRef = CFSTR("init"),
+		isAbsolutePathRef = CFSTR("isAbsolutePath"),
+		stringByStandardizingPathRef = CFSTR("stringByStandardizingPath");
 	SEL selector		=  NSSelectorFromString(selectorRef);
 	SEL selectorRelease =  NSSelectorFromString(releaseRef);
 	SEL selectoralloc	=  NSSelectorFromString(allocRef);
 	SEL selectorInit	=  NSSelectorFromString(initRef);
+	SEL stringByStandardizingPath	=  NSSelectorFromString(stringByStandardizingPathRef);
+	SEL isAbsolutePath	=  NSSelectorFromString(isAbsolutePathRef);
 
 	autopool = objc_msgSend(autopoolClass, selectoralloc);
 	autopool = objc_msgSend(autopool, selectorInit);
 	checkFortilda=(CFStringRef)objc_msgSend((id)aStringRef,selector);
-	CFStringGetCString (checkFortilda, buffer, max_size, gCurrentVMEncoding);
+	if (isetoysonastick) {
+		int isAbsoluteURL = (CFStringRef)objc_msgSend((id)checkFortilda,isAbsolutePath);
+		if (!isAbsoluteURL) {
+			CFStringRef	filePath = fixupNonAbsolutePath(checkFortilda);
+			standardizedString = (CFStringRef)objc_msgSend((id)filePath,stringByStandardizingPath);
+			CFStringGetCString (standardizedString, buffer, max_size, gCurrentVMEncoding);
+			CFRelease(filePath);
+		} else {
+			standardizedString = (CFStringRef)objc_msgSend((id)checkFortilda,stringByStandardizingPath);
+			CFStringGetCString (standardizedString, buffer, max_size, gCurrentVMEncoding);
+		}
+	} else {
+		CFStringGetCString (checkFortilda, buffer, max_size, gCurrentVMEncoding);
+	}
 	autopool = objc_msgSend(autopool, selectorRelease);
 
+}
+
+CFStringRef fixupNonAbsolutePath(CFStringRef partialPathString) {
+	CFBundleRef mainBundle;
+	CFURLRef	bundleURL,bundleURL2,bundleURL3,resourceURL;
+	CFStringRef filePath,resourcePathString;
+	
+	mainBundle = CFBundleGetMainBundle();   
+	bundleURL = CFBundleCopyBundleURL(mainBundle);
+	resourceURL = CFBundleCopyResourcesDirectoryURL(mainBundle);
+	resourcePathString = CFURLCopyPath(resourceURL);
+	CFRelease(resourceURL);
+		
+	bundleURL2 = CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, bundleURL, resourcePathString, false );
+	CFRelease(bundleURL);
+	bundleURL3 = CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, bundleURL2, partialPathString, false );
+	CFRelease(bundleURL2);
+	filePath = CFURLCopyFileSystemPath (bundleURL3, kCFURLPOSIXPathStyle);
+	CFRelease(bundleURL3);
+	return filePath;
 }
 
 
