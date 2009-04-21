@@ -13,6 +13,7 @@
 ****************************************************************************/
 
     #include <Carbon/Carbon.h>
+#include <ApplicationServices/ApplicationServices.h>
 
 void FreeClipboard(void);
 void SetUpClipboard(void);
