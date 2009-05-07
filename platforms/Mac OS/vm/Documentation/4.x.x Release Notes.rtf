@@ -4,15 +4,32 @@
 \margl1440\margr1440\vieww13080\viewh12220\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 4.1.0b1 mach-o build for Carbon with Closures and UTF-8 . 32bit clean.\
+\f0\fs24 \cf0 Mac VM 4.1.1b2 mach-o build for Carbon with Closures and UTF-8 . 32bit clean.\
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, MacIntel Machines, mappable mouse buttons, Safari and Firefox browser support, with Closure support\
 \
 Mar 2nd 2009 (4.0.0b1)\
 Apr 9th, 2009 (4.0.1b1)\
 Apr 21st, 2009 (4.1.0b1)\
+May 7th, 2009 (4.1.1b2)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
+\
+4.1.1b2		Window Title now accepts UTF8 strings\
+			Build with VMMaker-dtl-121\
+			includes fix for closure vm crash http://bugs.squeak.org/view.php?id=7349\
+				primitiveDisableFileAccess\
+				primitiveDisableImageWrite\
+				primitiveDisableSocketAccess\
+				primitiveHasSocketAccess\
+\
+			includes fix for Reference Mantis 6987: signed32BitValueOf:, signed64BitValueOf: etc. broken\
+			a fix for #signed32BitIntegerFor: on 64-bit images. \
+\
+			includes fix fortwo methods with assignment to block temp arguments, reported on vm-dev list\
+  			<http://lists.squeakfoundation.org/pipermail/vm-dev/2009-April/002607.html>\
+\
+4.1.1b2		distributed only for testing to a few people.\
 \
 4.1.0b1		UTF-8 on clipboard primitives via code from qwaq\
 			UTF-8 for file names\

@@ -6,7 +6,7 @@
  *
 	July 15th 2005 add logic to flush QD buffers for os-x 10.4
 	 3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
-
+	4.1.0b2  set window title via cfstring
  */
 
 #include "sqVirtualMachine.h"
@@ -180,10 +180,16 @@ int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle) {
 	char string[256];
 	if (sizeOfTitle > 255) 
 		return -1;
+
 	memcpy(string,newTitle,sizeOfTitle);
 	string[sizeOfTitle] = 0x00;
-	SetWindowTitle(windowIndex,string);
-return 1;
+	
+	CFStringRef windowTitleCFString = CFStringCreateWithCString (nil,string,kCFStringEncodingUTF8);
+
+	SetWindowTitleWithCFString (windowHandleFromIndex(windowIndex),windowTitleCFString);
+	
+	CFRelease(windowTitleCFString);
+	return 1;
 }
 
 int ioCloseAllWindows(void) {
