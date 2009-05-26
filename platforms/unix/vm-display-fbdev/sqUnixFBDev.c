@@ -449,6 +449,23 @@ static sqInt display_primitivePluginRequestFileHandle()	{ return primitiveFail()
 static sqInt display_primitivePluginDestroyRequest()	{ return primitiveFail(); }
 static sqInt display_primitivePluginRequestState()	{ return primitiveFail(); }
 
+// Host Windows
+
+#if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2)
+static int display_hostWindowClose(int index)                                               { return 0; }
+static int display_hostWindowCreate(int w, int h, int x, int y,
+  char *list, int attributeListLength)                                                      { return 0; }
+static int display_hostWindowShowDisplay(unsigned *dispBitsIndex, int width, int height, int depth,
+  int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)              { return 0; }
+static int display_hostWindowGetSize(int windowIndex)                                       { return -1; }
+static int display_hostWindowSetSize(int windowIndex, int w, int h)                         { return -1; }
+static int display_hostWindowGetPosition(int windowIndex)                                   { return -1; }
+static int display_hostWindowSetPosition(int windowIndex, int x, int y)                     { return -1; }
+static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeOfTitle)     { return -1; }
+static int display_hostWindowCloseAll(void)                                                 { return 0; }
+#endif
+
+
 //----------------------------------------------------------------
 
 

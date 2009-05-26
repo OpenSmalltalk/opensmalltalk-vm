@@ -215,7 +215,7 @@ static void recordDragEvent(int dragType, int numFiles)
 }
 
 
-static void recordWindowEvent(int action, int v1, int v2, int v3, int v4)
+static void recordWindowEvent(int action, int v1, int v2, int v3, int v4, int windowIndex)
 {
   sqWindowEvent *evt= allocateWindowEvent();
   evt->action= action;
@@ -223,7 +223,7 @@ static void recordWindowEvent(int action, int v1, int v2, int v3, int v4)
   evt->value2= v2;
   evt->value3= v3;
   evt->value4= v4;
-  evt->windowIndex= 0;
+  evt->windowIndex= windowIndex;
   signalInputEvent();
 #ifdef DEBUG_EVENTS
   printf("EVENT: window (%d %d %d %d %d %d) ", action, v1, v2, v3, v4, 0);

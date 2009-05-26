@@ -1,3 +1,22 @@
+2009-05-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/HostWindowPlugin/sqUnixHostWindowPlugin.c: Added.
+
+	* vm-display-Quartz/sqUnixQuartz.m,
+	vm-display-fbdev/sqUnixFBDev.c,
+	vm-display-custom/sqUnixCustomWindow.c,
+	vm-display-null/sqUnixDisplayNull.c: Add host window stubs.
+
+	* vm-display-X11/sqUnixX11.c (handleEvent): Add windowIndex arg to
+	recWinEvt().  Add host window stubs.  Warn (don't fail) if
+	unconfigured options -xshm/-xasync are used.
+
+	* vm/sqUnixEvent.c: Add windowIndex arg to recWinEvt() and evt
+	struct.
+
+	* vm/SqDisplay.h: Conditionally include sqUxOGL.h.  Add host
+	window members.  Bump minor version number.
+
 2009-02-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/sqUnixX11.c (display_ioSetCursorARGB): Convert

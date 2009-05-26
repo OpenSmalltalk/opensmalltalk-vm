@@ -7,10 +7,14 @@ extern int    uxDropFileCount;
 extern char **uxDropFileNames;
 
 #define SqDisplayVersionMajor	1
-#define SqDisplayVersionMinor	1
+#define SqDisplayVersionMinor	2
 #define SqDisplayVersion	((SqDisplayVersionMajor << 16) | (SqDisplayVersionMinor))
 
-#include "sqUnixOpenGL.h"
+#if (AVOID_OPENGL_H)
+  typedef struct glRenderer glRenderer;
+#else
+# include "sqUnixOpenGL.h"
+#endif
 
 struct SqDisplay
 {
@@ -69,6 +73,16 @@ struct SqDisplay
   sqInt  (*primitivePluginRequestFileHandle)(void);
   sqInt  (*primitivePluginDestroyRequest)(void);
   sqInt  (*primitivePluginRequestState)(void);
+  /* host window support */
+  int    (*hostWindowClose)(int index);
+  int    (*hostWindowCreate)(int w, int h, int x, int y, char * list, int attributeListLength);
+  int    (*hostWindowShowDisplay)(unsigned* dispBitsIndex, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex);
+  int    (*hostWindowGetSize)(int windowIndex);
+  int    (*hostWindowSetSize)(int windowIndex, int w, int h);
+  int    (*hostWindowGetPosition)(int windowIndex);
+  int    (*hostWindowSetPosition)(int windowIndex, int x, int y);
+  int    (*hostWindowSetTitle)(int windowIndex, char * newTitle, int sizeOfTitle);
+  int    (*hostWindowCloseAll)(void);
 };
 
 
@@ -123,7 +137,16 @@ static struct SqDisplay display_##NAME##_itf= {	\
   display_primitivePluginPostURL,		\
   display_primitivePluginRequestFileHandle,	\
   display_primitivePluginDestroyRequest,	\
-  display_primitivePluginRequestState		\
+  display_primitivePluginRequestState,		\
+  display_hostWindowClose,			\
+  display_hostWindowCreate,			\
+  display_hostWindowShowDisplay,		\
+  display_hostWindowGetSize,			\
+  display_hostWindowSetSize,			\
+  display_hostWindowGetPosition,		\
+  display_hostWindowSetPosition,		\
+  display_hostWindowSetTitle,			\
+  display_hostWindowCloseAll			\
 }
 
 

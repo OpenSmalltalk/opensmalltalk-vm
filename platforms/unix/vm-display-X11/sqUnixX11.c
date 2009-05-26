@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-02-19 11:56:10 by piumarta on emilia.local
+ * Last edited: 2009-05-26 14:29:31 by piumarta on emilia.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -946,6 +946,7 @@ static char *getSelectionFrom(Atom source)
 	    }
 	  if (strList)
 	    XFreeStringList(strList);
+
 	  /* translate LF -> CR */
 	  for (i= 0;  stPrimarySelection[i] != '\0';  ++i)
 	    if ('\n' == stPrimarySelection[i])
@@ -2807,7 +2808,7 @@ static void handleEvent(XEvent *evt)
 
     case ClientMessage:
       if (wmProtocolsAtom == evt->xclient.message_type && wmDeleteWindowAtom == evt->xclient.data.l[0])
-	recordWindowEvent(WindowEventClose, 0, 0, 0, 0);
+	recordWindowEvent(WindowEventClose, 0, 0, 0, 0, 1); /* windowIndex 1 is main window */
       break;
 
 #  if defined(USE_XSHM)
@@ -3786,7 +3787,6 @@ static unsigned char swapBits(unsigned char in)
   return out;
 }
 
-
 static int fakeBigCursor()
 {
   static int fake= -1;
@@ -3800,9 +3800,7 @@ static int fakeBigCursor()
   return fake;
 }
 
-
 static sqInt display_ioSetCursorWithMaskBig(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY);
-
 
 static sqInt display_ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, sqInt offsetX, sqInt offsetY)
 {
@@ -5737,6 +5735,39 @@ sqInt display_primitivePluginDestroyRequest(void);
 sqInt display_primitivePluginRequestState(void);
 
 
+/*** host window support ***/
+
+#if (SqDisplayVersionMajor >= 1 && SqDisplayVersionMinor >= 2)
+
+static int display_hostWindowCreate(int w, int h, int x, int y, char *list, int attributeListLength)
+											    { return 0; }
+static int display_hostWindowClose(int index)                                               { return 0; }
+static int display_hostWindowCloseAll(void)                                                 { return 0; }
+static int display_hostWindowShowDisplay(unsigned *dispBitsIndex, int width, int height, int depth,
+					 int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
+											    { return 0; }
+
+static int display_hostWindowGetSize(int windowIndex)                                       { return -1; }
+static int display_hostWindowSetSize(int windowIndex, int w, int h)                         { return -1; }
+static int display_hostWindowGetPosition(int windowIndex)                                   { return -1; }
+static int display_hostWindowSetPosition(int windowIndex, int x, int y)                     { return -1; }
+
+static int display_hostWindowSetTitle(int windowIndex, char *newTitle, int sizeOfTitle)
+{ 
+  if (windowIndex != 1)
+    return -1;
+
+  XChangeProperty(stDisplay, stParent,
+		  XInternAtom(stDisplay, "_NET_WM_NAME", False),
+		  XInternAtom(stDisplay, "UTF8_STRING",  False),
+		  8, PropModeReplace, newTitle, sizeOfTitle);
+
+  return 0;
+}
+
+#endif
+
+
 static char *display_winSystemName(void)
 {
   return "X11";
@@ -5878,10 +5909,13 @@ static int display_parseArgument(int argc, char **argv)
   char *arg= argv[0];
 
   if      (!strcmp(arg, "-headless"))	headless= 1;
-#  if defined(USE_XSHM)
+#if defined(USE_XSHM)
   else if (!strcmp(arg, "-xshm"))	useXshm= 1;
   else if (!strcmp(arg, "-xasync"))	asyncUpdate= 1;
-#  endif
+#else
+  else if (!strcmp(arg, "-xshm") ||
+           !strcmp(arg, "-xasync"))	fprintf(stderr, "ignoring %s (not supported by this VM)\n", arg);
+#endif
   else if (!strcmp(arg, "-lazy"))	sleepWhenUnmapped= 1;
   else if (!strcmp(arg, "-notitle"))	noTitle= 1;
   else if (!strcmp(arg, "-mapdelbs"))	mapDelBs= 1;
