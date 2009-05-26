@@ -1,7 +1,8 @@
 /* Host windows plugin header file
  * tim@sumeru.stanford.edu
  * All sizes are in pixels; convert from OS abstract units as needed
- * windowHandles etc are expected to be SmallInteger valid values */
+ * windowHandles etc are expected to be SmallInteger valid values
+ * windowHandle 1 is the traditional main window */
 
 /* closeWindow: arg is int windowIndex. Fail (return 0) if anything goes wrong
  * - typically the windowIndex invalid or similar */
@@ -35,7 +36,7 @@ extern int ioSizeOfWindowSetxy(int windowIndex, int w, int h);
 
 /* ioPositionOfWindow: arg is int windowIndex. Return the pos of the specified
  * window in (left<<16 || top) format like ioScreenSize.
- * Return -1 (as above) for failure - tpyically invalid windowIndex */
+ * Return -1 (as above) for failure - typically invalid windowIndex */
 extern int ioPositionOfWindow(int windowIndex);
 
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
@@ -45,11 +46,10 @@ extern int ioPositionOfWindowSetxy(int windowIndex, int x, int y);
 
 /* ioSetTitleOfWindow: args are int windowIndex, char* newTitle and
  * int size of new title. Fail with -1 if windowIndex is invalid, string is too
-long for platform etc. Leave previous title in place on failure */
-int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle);
+ * long for platform etc. Leave previous title in place on failure */
+extern int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle);
 
 /* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.
- * No useful return value since we're getting out of Dodge anyway.
- */
+ * No useful return value since we're getting out of Dodge anyway. */
 extern int ioCloseAllWindows(void);
