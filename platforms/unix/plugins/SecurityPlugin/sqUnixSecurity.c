@@ -2,7 +2,7 @@
  * 
  * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
  * 
- * Last edited: 2006-09-19 07:00:06 by piumarta on ubuntu
+ * Last edited: 2009-05-26 14:55:40 by piumarta on emilia.local
  * 
  * Note: According to Ian Piumarta, the Unix VM is inherently insecure since
  *       pluggable primitives can access all of libc! It would need 
@@ -17,9 +17,11 @@
 
 #include <sys/param.h>
 
-static char secureUserDirectory[MAXPATHLEN];     /* imagepath/secure/    */
-static char untrustedUserDirectory[MAXPATHLEN];  /* imagepath/untrusted/ */
-static int  untrustedUserDirectoryLen;
+static char secureUserDirectory[MAXPATHLEN];     /* default: imagepath/secure    */
+static char untrustedUserDirectory[MAXPATHLEN];  /* default: imagepath/My Squeak */
+static int  untrustedUserDirectoryLen;		 
+static char resourceDirectory[MAXPATHLEN];       /* default: imagepath */
+static int  resourceDirectoryLen;
 
 static char* fromSqueak(char* string, int len)
 {
@@ -35,7 +37,7 @@ static char* fromSqueak(char* string, int len)
 static sqInt allowFileAccess= 1;  /* full access to files */
 
 
-static int isAccessiblePathName(char *pathName)
+static int isAccessiblePathName(char *pathName, int writeFlag)
 {
    char realPathName[MAXPATHLEN];
    int  realPathLen;
@@ -43,12 +45,17 @@ static int isAccessiblePathName(char *pathName)
    realpath(pathName, realPathName);
    realPathLen= strlen(realPathName);
 
-   return (realPathLen >= untrustedUserDirectoryLen
-	   && 0 == strncmp(realPathName, untrustedUserDirectory, untrustedUserDirectoryLen));
+   if (realPathLen >= untrustedUserDirectoryLen
+       && 0 == strncmp(realPathName, untrustedUserDirectory, untrustedUserDirectoryLen))
+     return 1;
+   if (writeFlag)
+     return 0;
+   return (realPathLen >= resourceDirectoryLen
+	   && 0 == strncmp(realPathName, resourceDirectory, resourceDirectoryLen));
 }
 
 
-static int isAccessibleFileName(char *fileName)
+static int isAccessibleFileName(char *fileName, int writeFlag)
 {
   char pathName[MAXPATHLEN];
   int pathLen= strrchr(fileName, '/') - fileName;
@@ -56,7 +63,7 @@ static int isAccessibleFileName(char *fileName)
   strncpy(pathName, fileName, pathLen);
   pathName[pathLen]= '\0';
 
-  return isAccessiblePathName(pathName);
+  return isAccessiblePathName(pathName, writeFlag);
 }
 
 
@@ -66,21 +73,21 @@ static int isAccessibleFileName(char *fileName)
 sqInt ioCanCreatePathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
+  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 
 sqInt ioCanListPathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
+  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 0);
 }
 
 
 sqInt ioCanDeletePathOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
+  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 
@@ -90,7 +97,7 @@ sqInt ioCanDeletePathOfSize(char* pathString, sqInt pathStringLength)
 sqInt ioCanOpenFileOfSizeWritable(char* pathString, sqInt pathStringLength, sqInt writeFlag)
 {
   if (allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
+  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), writeFlag);
 }
 
 
@@ -103,13 +110,13 @@ sqInt ioCanOpenAsyncFileOfSizeWritable(char* pathString, sqInt pathStringLength,
 sqInt ioCanDeleteFileOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
+  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 sqInt ioCanRenameFileOfSize(char* pathString, sqInt pathStringLength)
 {
   if (allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
+  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 
@@ -257,6 +264,22 @@ sqInt ioInitSecurity(void)
       strcpy(untrustedUserDirectory, directory);
     }
   untrustedUserDirectoryLen= strlen(untrustedUserDirectory);
+
+  /* establish resource directory */
+  directory= getenv("SQUEAK_RESOURCEDIR");
+  if (0 == directory)
+    {
+      strncpy(resourceDirectory, imageName, imagePathLen);
+    }
+  else
+    {
+      int lastChar= strlen(directory);
+      /*  path is not allowed to end with "/" */
+      if ('/' == directory[lastChar - 1])
+	directory[lastChar - 1]= '\0';
+      strcpy(resourceDirectory, directory);
+    }
+  resourceDirectoryLen= strlen(resourceDirectory);
 
   return 1;
 }

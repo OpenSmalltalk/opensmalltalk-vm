@@ -1,5 +1,11 @@
 2009-05-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* config/configure.ac: Version is 3.10-5
+
+	* plugins/SecurityPlugin/sqUnixSecurity.c: Add support for
+	read-only resource directory.  Add writeFlag to functions
+	associated with resource directories.
+
 	* plugins/HostWindowPlugin/sqUnixHostWindowPlugin.c: Added.
 
 	* vm-display-Quartz/sqUnixQuartz.m,
@@ -7,9 +13,9 @@
 	vm-display-custom/sqUnixCustomWindow.c,
 	vm-display-null/sqUnixDisplayNull.c: Add host window stubs.
 
-	* vm-display-X11/sqUnixX11.c (handleEvent): Add windowIndex arg to
-	recWinEvt().  Add host window stubs.  Warn (don't fail) if
-	unconfigured options -xshm/-xasync are used.
+	* vm-display-X11/sqUnixX11.c: Add windowIndex arg to recWinEvt().
+	Add host window stubs.  Warn (don't fail) if unconfigured options
+	-xshm/-xasync are used.
 
 	* vm/sqUnixEvent.c: Add windowIndex arg to recWinEvt() and evt
 	struct.
