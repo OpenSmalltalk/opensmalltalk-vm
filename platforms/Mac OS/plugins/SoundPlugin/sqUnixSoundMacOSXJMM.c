@@ -1,43 +1,36 @@
 /* sqUnixSoundMacOSX.c -- sound support for CoreAudio on Mac OS 10
  *
- * Author: Ian.Piumarta@inria.fr
+ * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2003-11-23 14:39:18 by piumarta on emilia.local
+ * Last edited: 2008-04-21 14:53:42 by piumarta on emilia
  
- * Altered bu johnmci@smalltalkconsulting.com to remove  static  defs
+  * Altered by johnmci@smalltalkconsulting.com to remove  static  defs, fix bugs, powerpc/intel support.
+ 
+ 
  *
- *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
- *     as listed elsewhere in this file.
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
+ *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
- *     You are NOT ALLOWED to distribute modified versions of this file
- *     under its original name.  If you want to modify it and then make
- *     your modifications available publicly, rename the file first.
- * 
  *   This file is part of Unix Squeak.
  * 
- *   This file is distributed in the hope that it will be useful, but WITHOUT
- *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
- *   FITNESS FOR A PARTICULAR PURPOSE.
- *   
- *   You may use and/or distribute this file ONLY as part of Squeak, under
- *   the terms of the Squeak License as described in `LICENSE' in the base of
- *   this distribution, subject to the following additional restrictions:
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
  * 
- *   1. The origin of this software must not be misrepresented; you must not
- *      claim that you wrote the original software.  If you use this software
- *      in a product, an acknowledgment to the original author(s) (and any
- *      other contributors mentioned herein) in the product documentation
- *      would be appreciated but is not required.
+ *   The above copyright notice and this permission notice shall be included in
+ *   all copies or substantial portions of the Software.
  * 
- *   2. You must not distribute (or make publicly available by any
- *      means) a modified copy of this file unless you first rename it.
- * 
- *   3. This notice must not be removed or altered in any source distribution.
- * 
- *   Using (or modifying this file for use) in any context other than Squeak
- *   changes these copyright conditions.  Read the file `COPYING' in the
- *   directory `platforms/unix/doc' before proceeding with any such use.
+ *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+ *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+ *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+ *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
  */
 
 // Notes:
