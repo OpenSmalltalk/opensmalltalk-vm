@@ -1,10 +1,11 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:07 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(29 July 2009 10:59 pm)
+by VMMaker 3.10.7
  */
 
 #define SQ_USE_GLOBAL_STRUCT 1
 
 #include "sq.h"
+#include <setjmp.h>
 
 #include "sqMemoryAccess.h"
 
@@ -66,6 +67,7 @@ void error(char *s) {
 #define CharacterValueIndex 0
 #define ClassArray 7
 #define ClassBitmap 4
+#define ClassBlockClosure 36
 #define ClassBlockContext 11
 #define ClassByteArray 26
 #define ClassCharacter 19
@@ -83,6 +85,11 @@ void error(char *s) {
 #define ClassPoint 12
 #define ClassSemaphore 18
 #define ClassString 6
+#define ClosureFirstCopiedValueIndex 3
+#define ClosureIndex 4
+#define ClosureNumArgsIndex 2
+#define ClosureOuterContextIndex 0
+#define ClosureStartPCIndex 1
 #define CompactClassMask 126976
 #define CompactClasses 28
 #define ConstMinusOne -1
@@ -97,6 +104,7 @@ void error(char *s) {
 #define EndOfRun 257
 #define ExcessSignalsIndex 2
 #define ExternalObjectsArray 38
+#define ExtraRootSize 2048
 #define FalseObject 1
 #define FirstLinkIndex 0
 #define GCTopMarker 3
@@ -119,6 +127,7 @@ void error(char *s) {
 #define LongSizeMask 4294967292U
 #define MarkBit 2147483648U
 #define MaxExternalPrimitiveTableSize 4096
+#define MaxJumpBuf 32
 #define MaxPrimitiveIndex 575
 #define MessageArgumentsIndex 1
 #define MessageDictionaryIndex 1
@@ -188,12 +197,15 @@ void error(char *s) {
 
 /*** Function Prototypes ***/
 sqInt accessibleObjectAfter(sqInt oop);
+sqInt activateNewClosureMethod(sqInt blockClosure);
 sqInt activateNewMethod(void);
+#pragma export on
+EXPORT(sqInt) addGCRoot(sqInt *varLoc);
+#pragma export off
 sqInt addNewMethodToCache(void);
 sqInt addToExternalPrimitiveTable(void *functionAddress);
 sqInt adjustAllOopsBy(sqInt bytesToShift);
 sqInt allYoungand(sqInt array1, sqInt array2);
-sqInt allocateheaderSizeh1h2h3doFillwith(sqInt byteSize, sqInt hdrSize, sqInt baseHeader, sqInt classOop, sqInt extendedSize, sqInt doFill, sqInt fillWord);
 sqInt allocateChunk(sqInt byteSize);
 sqInt allocateOrRecycleContext(sqInt needsLarge);
 sqInt argumentCountOf(sqInt methodPointer);
@@ -208,6 +220,10 @@ sqInt byteSizeOf(sqInt oop);
 sqInt byteSwapByteObjectsFromto(sqInt startOop, sqInt stopAddr);
 sqInt byteSwapped(sqInt w);
 sqInt callExternalPrimitive(void * functionID);
+#pragma export on
+EXPORT(sqInt) callbackEnter(sqInt *callbackID);
+EXPORT(sqInt) callbackLeave(sqInt cbID);
+#pragma export off
 sqInt changeClassOfto(sqInt rcvr, sqInt argClass);
 sqInt characterForAscii(sqInt ascii);
 sqInt characterTable(void);
@@ -261,6 +277,9 @@ sqInt displayObject(void);
 sqInt doPrimitiveDivby(sqInt rcvr, sqInt arg);
 sqInt doPrimitiveModby(sqInt rcvr, sqInt arg);
 sqInt dummyReferToProxy(void);
+#pragma export on
+EXPORT(sqInt) dumpImage(sqInt fileName);
+#pragma export off
 sqInt executeNewMethodFromCache(void);
 sqInt failed(void);
 sqInt falseObject(void);
@@ -279,8 +298,8 @@ sqInt findNewMethodInClass(sqInt class);
 sqInt findObsoleteNamedPrimitivelength(char * functionName, sqInt functionLength);
 sqInt findSelectorOfMethodforReceiver(sqInt meth, sqInt rcvr);
 sqInt firstAccessibleObject(void);
-void * firstFixedField(sqInt oop);
-void * firstIndexableField(sqInt oop);
+char * firstFixedField(sqInt oop);
+char * firstIndexableField(sqInt oop);
 sqInt floatObjectOf(double  aFloat);
 double floatValueOf(sqInt oop);
 sqInt flushExternalPrimitiveOf(sqInt methodPtr);
@@ -299,7 +318,7 @@ sqInt getLongFromFileswap(sqImageFile  aFile, sqInt swapFlag);
 sqInt getNextWakeupTick(void);
 sqInt getSavedWindowSize(void);
 sqInt getThisSessionID(void);
-sqInt imageFormatVersion(void);
+sqInt imageFormatForwardCompatibilityVersion(void);
 sqInt imageSegmentVersion(void);
 sqInt incCompBody(void);
 sqInt incCompMakeFwd(void);
@@ -339,7 +358,6 @@ sqInt lengthOf(sqInt oop);
 sqInt literalofMethod(sqInt offset, sqInt methodPointer);
 sqInt literalCountOf(sqInt methodPointer);
 sqInt loadBitBltFrom(sqInt bb);
-double loadFloatOrIntFrom(sqInt floatOrInt);
 sqInt loadInitialContext(void);
 sqInt lookupMethodInClass(sqInt class);
 sqInt lowestFreeAfter(sqInt chunk);
@@ -402,6 +420,10 @@ EXPORT(sqInt) primitiveChangeClassWithClass(void);
 sqInt primitiveClass(void);
 sqInt primitiveClipboardText(void);
 sqInt primitiveClone(void);
+sqInt primitiveClosureCopyWithCopiedValues(void);
+sqInt primitiveClosureValue(void);
+sqInt primitiveClosureValueNoContextSwitch(void);
+sqInt primitiveClosureValueWithArgs(void);
 sqInt primitiveConstantFill(void);
 sqInt primitiveCopyObject(void);
 sqInt primitiveDeferDisplayUpdates(void);
@@ -410,6 +432,7 @@ EXPORT(sqInt) primitiveDisablePowerManager(void);
 #pragma export off
 sqInt primitiveDiv(void);
 sqInt primitiveDivide(void);
+sqInt primitiveDoNamedPrimitiveWithArgs(void);
 sqInt primitiveDoPrimitiveWithArgs(void);
 sqInt primitiveEqual(void);
 sqInt primitiveEquivalent(void);
@@ -430,9 +453,11 @@ sqInt primitiveFloatEqual(void);
 sqInt primitiveFloatEqualtoArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFloatGreaterthanArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFloatGreaterOrEqual(void);
+sqInt primitiveFloatGreaterOrEqualtoArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFloatGreaterThan(void);
 sqInt primitiveFloatLessthanArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFloatLessOrEqual(void);
+sqInt primitiveFloatLessOrEqualtoArg(sqInt rcvrOop, sqInt argOop);
 sqInt primitiveFloatLessThan(void);
 sqInt primitiveFloatMultiply(void);
 sqInt primitiveFloatMultiplybyArg(sqInt rcvrOop, sqInt argOop);
@@ -457,6 +482,7 @@ sqInt primitiveGreaterThan(void);
 sqInt primitiveImageName(void);
 sqInt primitiveIncrementalGC(void);
 sqInt primitiveIndexOf(sqInt methodPointer);
+sqInt primitiveIndexOfMethodHeader(sqInt methodHeader);
 sqInt primitiveInputSemaphore(void);
 sqInt primitiveInputWord(void);
 sqInt primitiveInstVarAt(void);
@@ -517,6 +543,7 @@ sqInt primitivePushZero(void);
 sqInt primitiveQuit(void);
 sqInt primitiveQuo(void);
 sqInt primitiveRelinquishProcessor(void);
+sqInt primitiveResponse(void);
 sqInt primitiveResume(void);
 #pragma export on
 EXPORT(sqInt) primitiveRootTable(void);
@@ -587,6 +614,9 @@ sqInt readImageFromFileHeapSizeStartingAt(sqImageFile  f, sqInt desiredHeapSize,
 sqInt readableFormat(sqInt imageVersion);
 sqInt remap(sqInt oop);
 sqInt removeFirstLinkOfList(sqInt aList);
+#pragma export on
+EXPORT(sqInt) removeGCRoot(sqInt *varLoc);
+#pragma export off
 sqInt restoreHeadersFromtofromandtofrom(sqInt firstIn, sqInt lastIn, sqInt hdrBaseIn, sqInt firstOut, sqInt lastOut, sqInt hdrBaseOut);
 sqInt resume(sqInt aProcess);
 sqInt reverseDisplayFromto(sqInt startIndex, sqInt endIndex);
@@ -601,8 +631,8 @@ sqInt setNextWakeupTick(sqInt value);
 sqInt setSavedWindowSize(sqInt value);
 sqInt showDisplayBitsLeftTopRightBottom(sqInt aForm, sqInt l, sqInt t, sqInt r, sqInt b);
 sqInt signalSemaphoreWithIndex(sqInt index);
-sqInt signed32BitIntegerFor(sqInt integerValue);
-sqInt signed32BitValueOf(sqInt oop);
+sqInt signed32BitIntegerFor(int integerValue);
+int signed32BitValueOf(sqInt oop);
 sqInt signed64BitIntegerFor(sqLong integerValue);
 sqLong signed64BitValueOf(sqInt oop);
 sqInt sizeBitsOf(sqInt oop);
@@ -642,102 +672,109 @@ sqInt successFlag;
 sqInt specialObjectsOop;
 sqInt nilObj;
 sqInt argumentCount;
-sqInt trueObj;
 sqInt falseObj;
+sqInt trueObj;
 sqInt interruptCheckCounter;
 sqInt nextPollTick;
+sqInt remapBufferCount;
+sqInt primitiveIndex;
+sqInt allocationCount;
 sqInt messageSelector;
 sqInt compilerInitialized;
-sqInt remapBufferCount;
 sqInt rootTableCount;
-sqInt allocationCount;
-sqInt primitiveIndex;
 sqInt allocationsBetweenGCs;
 sqInt lkupClass;
 sqInt receiver;
 sqInt lowSpaceThreshold;
 sqInt signalLowSpace;
 sqInt lastHash;
-sqInt freeLargeContexts;
-sqInt statGrowMemory;
-sqInt freeContexts;
 sqInt pendingFinalizationSignals;
+sqInt jmpDepth;
+sqInt freeLargeContexts;
 sqInt growHeadroom;
+sqInt freeContexts;
+sqInt statGrowMemory;
 sqInt reclaimableContextCount;
 sqInt statMarkCount;
+sqInt extraRootCount;
 sqInt nextWakeupTick;
-sqInt methodClass;
-sqInt statSweepCount;
 sqInt receiverClass;
 sqInt statCompMoveCount;
-sqInt newNativeMethod;
-sqInt statMkFwdCount;
-sqInt semaphoresToSignalCountA;
-sqInt semaphoresToSignalCountB;
+sqInt methodClass;
 sqInt interruptPending;
 sqInt interruptKeycode;
+sqInt statMkFwdCount;
+sqInt semaphoresToSignalCountB;
 sqInt fullScreenFlag;
+sqInt semaphoresToSignalCountA;
 sqInt semaphoresUseBufferA;
-sqInt statpendingFinalizationSignals;
-sqInt statGCTime;
-sqInt statIncrGCs;
+sqInt statSweepCount;
+sqInt newNativeMethod;
 sqInt tenuringThreshold;
-sqInt statTenures;
-sqInt statRootTableOverflows;
 sqInt statIncrGCMSecs;
-sqInt statShrinkMemory;
-sqInt shrinkThreshold;
+sqInt statTenures;
 sqInt gcBiasToGrowGCLimit;
 sqInt statFullGCs;
+sqInt statIncrGCs;
 sqInt gcBiasToGrow;
-sqInt totalObjectCount;
 sqInt statFullGCMSecs;
-sqInt interruptChecksEveryNms;
-sqInt savedWindowSize;
+sqInt statGCTime;
 sqInt forceTenureFlag;
+sqInt savedWindowSize;
+sqInt statShrinkMemory;
+sqInt shrinkThreshold;
 sqInt deferDisplayUpdates;
+sqInt interruptChecksEveryNms;
+sqInt statRootTableOverflows;
+sqInt statpendingFinalizationSignals;
+sqInt totalObjectCount;
+sqInt statAllocationCount;
+sqInt statSurvivorCount;
 sqInt statIGCDeltaTime;
 sqInt statSpecialMarkCount;
-sqInt gcSemaphoreIndex;
-sqInt globalSessionID;
-sqInt weakRootCount;
-sqInt statSurvivorCount;
-sqInt statAllocationCount;
-sqInt interruptCheckCounterFeedBackReset;
-sqInt lastTick;
 sqInt statRootTableCount;
-sqInt semaphoresToSignalA[501];
-usqInt theHomeContext;
-sqInt atCache[65];
-sqInt semaphoresToSignalB[501];
-sqInt processSignalingLowSpace;
-usqInt instructionPointer;
-usqInt stackPointer;
-usqInt newMethod;
-usqInt method;
-void *primitiveFunctionPointer;
-sqInt headerTypeBytes[4];
-long methodCache[4097];
-usqInt youngStart;
-usqInt endOfMemory;
-usqInt freeBlock;
-usqInt compStart;
-sqInt rootTable[2501];
-usqInt memoryLimit;
-usqInt fwdTableNext;
-usqInt compEnd;
-sqInt weakRoots[2625];
-usqInt gcBiasToGrowThreshold;
-usqInt activeContext;
+sqInt weakRootCount;
+sqInt globalSessionID;
+sqInt jmpMax;
+sqInt interruptCheckCounterFeedBackReset;
+sqInt gcSemaphoreIndex;
+sqInt lastTick;
 sqInt remapBuffer[26];
+sqInt headerTypeBytes[4];
+usqInt gcBiasToGrowThreshold;
 usqInt fwdTableLast;
+sqInt processSignalingLowSpace;
+sqInt semaphoresToSignalB[501];
+sqInt semaphoresToSignalA[501];
+sqInt atCache[65];
+usqInt method;
+usqInt theHomeContext;
+usqInt stackPointer;
+usqInt instructionPointer;
+void *primitiveFunctionPointer;
+usqInt newMethod;
+long methodCache[4097];
+usqInt endOfMemory;
+sqInt* extraRoots[2049];
+sqInt rootTable[2501];
+usqInt freeBlock;
+sqInt weakRoots[2625];
+usqInt compEnd;
+usqInt compStart;
+usqInt memoryLimit;
+usqInt activeContext;
+usqInt fwdTableNext;
 void *externalPrimitiveTable[4097];
+sqInt suspendedCallbacks[33];
+jmp_buf jmpBuf[33];
+sqInt suspendedMethods[33];
+usqInt youngStart;
  } fum;
 struct foo * foo = &fum;
 
 sqInt extraVMMemory;
+const char *interpreterVersion = "Squeak3.10beta of 22 July 2007 [latest update: #7159]";
 sqInt (*compilerHooks[16])();
-usqInt memory;
 char* obsoleteIndexedPrimitiveTable[][3] = {
 { NULL, NULL, NULL },
 { NULL, NULL, NULL },
@@ -1316,7 +1353,7 @@ char* obsoleteIndexedPrimitiveTable[][3] = {
 { NULL, NULL, NULL },
 { NULL, NULL, NULL }
 };
-struct VirtualMachine* interpreterProxy;
+sqInt imageFormatVersionNumber = 6502;
 const char* obsoleteNamedPrimitiveTable[][3] = {
 { "gePrimitiveMergeFillFrom", "B2DPlugin", "primitiveMergeFillFrom" },
 { "gePrimitiveSetClipRect", "B2DPlugin", "primitiveSetClipRect" },
@@ -1390,7 +1427,7 @@ const char* obsoleteNamedPrimitiveTable[][3] = {
 { "primitiveFFTPermuteData", "FFTPlugin", "primitiveFFTPermuteData" },
 { NULL, NULL, NULL }
 };
-void* showSurfaceFn;
+struct VirtualMachine* interpreterProxy;
 void *primitiveTable[577] = {
 	/* 0*/ (void *)primitiveFail,
 	/* 1*/ (void *)primitiveAdd,
@@ -1592,32 +1629,32 @@ void *primitiveTable[577] = {
 	/* 197*/ (void *)primitiveFindHandlerContext,
 	/* 198*/ (void *)primitiveMarkUnwindMethod,
 	/* 199*/ (void *)primitiveMarkHandlerMethod,
-	/* 200*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 201*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 202*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 203*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 204*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 205*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 206*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 207*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 208*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 209*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 210*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 211*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 212*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 213*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 214*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 215*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 216*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 217*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 218*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 219*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 220*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 221*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 222*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 223*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 224*/ (void *)primitiveObsoleteIndexedPrimitive,
-	/* 225*/ (void *)primitiveObsoleteIndexedPrimitive,
+	/* 200*/ (void *)primitiveClosureCopyWithCopiedValues,
+	/* 201*/ (void *)primitiveClosureValue,
+	/* 202*/ (void *)primitiveClosureValue,
+	/* 203*/ (void *)primitiveClosureValue,
+	/* 204*/ (void *)primitiveClosureValue,
+	/* 205*/ (void *)primitiveClosureValue,
+	/* 206*/ (void *)primitiveClosureValueWithArgs,
+	/* 207*/ (void *)primitiveFail,
+	/* 208*/ (void *)primitiveFail,
+	/* 209*/ (void *)primitiveFail,
+	/* 210*/ (void *)primitiveAt,
+	/* 211*/ (void *)primitiveAtPut,
+	/* 212*/ (void *)primitiveSize,
+	/* 213*/ (void *)primitiveFail,
+	/* 214*/ (void *)primitiveFail,
+	/* 215*/ (void *)primitiveFail,
+	/* 216*/ (void *)primitiveFail,
+	/* 217*/ (void *)primitiveFail,
+	/* 218*/ (void *)primitiveDoNamedPrimitiveWithArgs,
+	/* 219*/ (void *)primitiveFail,
+	/* 220*/ (void *)primitiveFail,
+	/* 221*/ (void *)primitiveClosureValueNoContextSwitch,
+	/* 222*/ (void *)primitiveClosureValueNoContextSwitch,
+	/* 223*/ (void *)primitiveFail,
+	/* 224*/ (void *)primitiveFail,
+	/* 225*/ (void *)primitiveFail,
 	/* 226*/ (void *)primitiveFail,
 	/* 227*/ (void *)primitiveFail,
 	/* 228*/ (void *)primitiveFail,
@@ -1969,7 +2006,8 @@ void *primitiveTable[577] = {
 	/* 574*/ (void *)primitiveFail,
 	/* 575*/ (void *)primitiveFail,
  0 };
-const char *interpreterVersion = "Squeak3.10beta of 22 July 2007 [latest update: #7159]";
+usqInt memory;
+void* showSurfaceFn;
 
 
 
@@ -2034,6 +2072,91 @@ register struct foo * foo = &fum;
 	return null;
 }
 
+
+/*	Similar to activateNewMethod but for Closure and newMethod. */
+
+sqInt activateNewClosureMethod(sqInt blockClosure) {
+register struct foo * foo = &fum;
+    sqInt newContext;
+    sqInt where;
+    sqInt methodHeader;
+    sqInt outerContext;
+    sqInt theBlockClosure;
+    sqInt closureMethod;
+    sqInt i;
+    sqInt numCopied;
+    sqInt oop;
+    sqInt tmp;
+
+	if (DoAssertionChecks) {
+		okayOop(blockClosure);
+	}
+	outerContext = longAt((blockClosure + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+	if (DoAssertionChecks) {
+		okayOop(outerContext);
+	}
+	closureMethod = longAt((outerContext + BaseHeaderSize) + (MethodIndex << ShiftForWord));
+	methodHeader = longAt((closureMethod + BaseHeaderSize) + (HeaderIndex << ShiftForWord));
+	/* begin pushRemappableOop: */
+	foo->remapBuffer[foo->remapBufferCount += 1] = blockClosure;
+
+	/* All for one, and one for all! */
+	/* allocateOrRecycleContext: may cause a GC; restore blockClosure and refetch outerContext et al */
+
+	newContext = allocateOrRecycleContext(methodHeader & LargeContextBit);
+	/* begin popRemappableOop */
+	oop = foo->remapBuffer[foo->remapBufferCount];
+	foo->remapBufferCount -= 1;
+	theBlockClosure = oop;
+	outerContext = longAt((theBlockClosure + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+
+	/* Assume: newContext will be recorded as a root if necessary by the
+	 call to newActiveContext: below, so we can use unchecked stores. */
+
+	numCopied = (fetchWordLengthOf(theBlockClosure)) - ClosureFirstCopiedValueIndex;
+	where = newContext + BaseHeaderSize;
+	longAtput(where + (SenderIndex << ShiftForWord), foo->activeContext);
+	longAtput(where + (InstructionPointerIndex << ShiftForWord), longAt((theBlockClosure + BaseHeaderSize) + (ClosureStartPCIndex << ShiftForWord)));
+	longAtput(where + (StackPointerIndex << ShiftForWord), (((foo->argumentCount + numCopied) << 1) | 1));
+	longAtput(where + (MethodIndex << ShiftForWord), longAt((outerContext + BaseHeaderSize) + (MethodIndex << ShiftForWord)));
+	longAtput(where + (ClosureIndex << ShiftForWord), theBlockClosure);
+	longAtput(where + (ReceiverIndex << ShiftForWord), longAt((outerContext + BaseHeaderSize) + (ReceiverIndex << ShiftForWord)));
+	for (i = 1; i <= foo->argumentCount; i += 1) {
+		longAtput(where + ((ReceiverIndex + i) << ShiftForWord), longAt(foo->stackPointer - ((foo->argumentCount - i) * BytesPerWord)));
+	}
+	where = (newContext + BaseHeaderSize) + (((ReceiverIndex + 1) + foo->argumentCount) << ShiftForWord);
+	for (i = 0; i <= (numCopied - 1); i += 1) {
+		longAtput(where + (i << ShiftForWord), longAt((theBlockClosure + BaseHeaderSize) + ((i + ClosureFirstCopiedValueIndex) << ShiftForWord)));
+	}
+	/* begin pop: */
+	foo->stackPointer -= (foo->argumentCount + 1) * BytesPerWord;
+	/* begin newActiveContext: */
+	/* begin storeContextRegisters: */
+	longAtput((foo->activeContext + BaseHeaderSize) + (InstructionPointerIndex << ShiftForWord), ((((foo->instructionPointer - foo->method) - (BaseHeaderSize - 2)) << 1) | 1));
+	longAtput((foo->activeContext + BaseHeaderSize) + (StackPointerIndex << ShiftForWord), (((((((usqInt) ((foo->stackPointer - foo->activeContext) - BaseHeaderSize)) >> ShiftForWord) - TempFrameStart) + 1) << 1) | 1));
+	if ((((usqInt) newContext)) < (((usqInt) foo->youngStart))) {
+		beRootIfOld(newContext);
+	}
+	foo->activeContext = newContext;
+	/* begin fetchContextRegisters: */
+	tmp = longAt((newContext + BaseHeaderSize) + (MethodIndex << ShiftForWord));
+	if ((tmp & 1)) {
+		tmp = longAt((newContext + BaseHeaderSize) + (HomeIndex << ShiftForWord));
+		if ((((usqInt) tmp)) < (((usqInt) foo->youngStart))) {
+			beRootIfOld(tmp);
+		}
+	} else {
+		tmp = newContext;
+	}
+	foo->theHomeContext = tmp;
+	foo->receiver = longAt((tmp + BaseHeaderSize) + (ReceiverIndex << ShiftForWord));
+	foo->method = longAt((tmp + BaseHeaderSize) + (MethodIndex << ShiftForWord));
+	tmp = ((longAt((newContext + BaseHeaderSize) + (InstructionPointerIndex << ShiftForWord))) >> 1);
+	foo->instructionPointer = ((foo->method + tmp) + BaseHeaderSize) - 2;
+	tmp = ((longAt((newContext + BaseHeaderSize) + (StackPointerIndex << ShiftForWord))) >> 1);
+	foo->stackPointer = (newContext + BaseHeaderSize) + (((TempFrameStart + tmp) - 1) * BytesPerWord);
+}
+
 sqInt activateNewMethod(void) {
 register struct foo * foo = &fum;
     sqInt initialIP;
@@ -2058,6 +2181,7 @@ register struct foo * foo = &fum;
 	longAtput(where + (InstructionPointerIndex << ShiftForWord), ((initialIP << 1) | 1));
 	longAtput(where + (StackPointerIndex << ShiftForWord), ((tempCount << 1) | 1));
 	longAtput(where + (MethodIndex << ShiftForWord), foo->newMethod);
+	longAtput(where + (ClosureIndex << ShiftForWord), foo->nilObj);
 	for (i = 0; i <= foo->argumentCount; i += 1) {
 		longAtput(where + ((ReceiverIndex + i) << ShiftForWord), longAt(foo->stackPointer - ((foo->argumentCount - i) * BytesPerWord)));
 	}
@@ -2093,6 +2217,18 @@ register struct foo * foo = &fum;
 	foo->instructionPointer = ((foo->method + tmp) + BaseHeaderSize) - 2;
 	tmp = ((longAt((newContext + BaseHeaderSize) + (StackPointerIndex << ShiftForWord))) >> 1);
 	foo->stackPointer = (newContext + BaseHeaderSize) + (((TempFrameStart + tmp) - 1) * BytesPerWord);
+}
+
+
+/*	Add the given variable location to the extra roots table */
+
+EXPORT(sqInt) addGCRoot(sqInt *varLoc) {
+register struct foo * foo = &fum;
+	if (foo->extraRootCount >= ExtraRootSize) {
+		return 0;
+	}
+	foo->extraRoots[foo->extraRootCount += 1] = varLoc;
+	return 1;
 }
 
 
@@ -2319,114 +2455,6 @@ l4:	/* end lastPointerOf: */;
 }
 
 
-/*	Allocate a new object of the given size and number of header words. (Note: byteSize already includes space for the base header word.) Initialize the header fields of the new object and fill the remainder of the object with the given value.
-	May cause a GC */
-
-sqInt allocateheaderSizeh1h2h3doFillwith(sqInt byteSize, sqInt hdrSize, sqInt baseHeader, sqInt classOop, sqInt extendedSize, sqInt doFill, sqInt fillWord) {
-register struct foo * foo = &fum;
-    sqInt newObj;
-    usqInt end;
-    sqInt remappedClassOop;
-    usqInt i;
-    sqInt oop;
-    sqInt newFreeSize;
-    sqInt newChunk;
-    sqInt enoughSpace;
-    sqInt minFree;
-    sqInt lastSavedProcess;
-    sqInt currentProc;
-    sqInt sched;
-    sqInt oop1;
-
-	if (hdrSize > 1) {
-		/* begin pushRemappableOop: */
-		foo->remapBuffer[foo->remapBufferCount += 1] = classOop;
-	}
-	/* begin allocateChunk: */
-	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
-		incrementalGC();
-	}
-	/* begin sufficientSpaceToAllocate: */
-	minFree = (foo->lowSpaceThreshold + (byteSize + ((hdrSize - 1) * BytesPerWord))) + BaseHeaderSize;
-	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((usqInt) minFree))) {
-		enoughSpace = 1;
-		goto l1;
-	} else {
-		enoughSpace = sufficientSpaceAfterGC(minFree);
-		goto l1;
-	}
-l1:	/* end sufficientSpaceToAllocate: */;
-	if (!(enoughSpace)) {
-		foo->signalLowSpace = 1;
-		foo->lowSpaceThreshold = 0;
-		/* begin saveProcessSignalingLowSpace */
-		lastSavedProcess = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord));
-		if (lastSavedProcess == foo->nilObj) {
-			sched = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SchedulerAssociation << ShiftForWord))) + BaseHeaderSize) + (ValueIndex << ShiftForWord));
-			currentProc = longAt((sched + BaseHeaderSize) + (ActiveProcessIndex << ShiftForWord));
-			/* begin storePointer:ofObject:withValue: */
-			oop1 = foo->specialObjectsOop;
-			if ((((usqInt) oop1)) < (((usqInt) foo->youngStart))) {
-				possibleRootStoreIntovalue(oop1, currentProc);
-			}
-			longAtput((oop1 + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord), currentProc);
-		}
-		/* begin forceInterruptCheck */
-		foo->interruptCheckCounter = -1000;
-		foo->nextPollTick = 0;
-	}
-	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((usqInt) ((byteSize + ((hdrSize - 1) * BytesPerWord)) + BaseHeaderSize)))) {
-		error("out of memory");
-	}
-	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (byteSize + ((hdrSize - 1) * BytesPerWord));
-	newChunk = foo->freeBlock;
-	foo->freeBlock += byteSize + ((hdrSize - 1) * BytesPerWord);
-	/* begin setSizeOfFree:to: */
-	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
-	foo->allocationCount += 1;
-	newObj = newChunk;
-	if (hdrSize > 1) {
-		/* begin popRemappableOop */
-		oop = foo->remapBuffer[foo->remapBufferCount];
-		foo->remapBufferCount -= 1;
-		remappedClassOop = oop;
-	}
-	if (hdrSize == 3) {
-		longAtput(newObj, extendedSize | HeaderTypeSizeAndClass);
-		longAtput(newObj + BytesPerWord, remappedClassOop | HeaderTypeSizeAndClass);
-		longAtput(newObj + (BytesPerWord * 2), baseHeader | HeaderTypeSizeAndClass);
-		newObj += BytesPerWord * 2;
-	}
-	if (hdrSize == 2) {
-		longAtput(newObj, remappedClassOop | HeaderTypeClass);
-		longAtput(newObj + BytesPerWord, baseHeader | HeaderTypeClass);
-		newObj += BytesPerWord;
-	}
-	if (hdrSize == 1) {
-		longAtput(newObj, baseHeader | HeaderTypeShort);
-	}
-	if (doFill) {
-		end = newObj + byteSize;
-		i = newObj + BytesPerWord;
-		while (i < end) {
-			longAtput(i, fillWord);
-			i += BytesPerWord;
-		}
-	}
-	if (DoAssertionChecks) {
-		okayOop(newObj);
-		oopHasOkayClass(newObj);
-		if (!((objectAfter(newObj)) == foo->freeBlock)) {
-			error("allocate bug: did not set header of new oop correctly");
-		}
-		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
-			error("allocate bug: did not set header of freeBlock correctly");
-		}
-	}
-	return newObj;
-}
-
-
 /*	Allocate a chunk of the given size. Sender must be sure that  the requested size includes enough space for the header  word(s).  */
 /*	Details: To limit the time per incremental GC, do one every so many allocations. The number is settable via primitiveVMParameter to tune your memory system */
 
@@ -2531,7 +2559,7 @@ sqInt argumentCountOf(sqInt methodPointer) {
 
 void * arrayValueOf(sqInt arrayOop) {
 	if ((!((arrayOop & 1))) && (((arrayOop & 1) == 0) && (isWordsOrBytesNonInt(arrayOop)))) {
-		return (void *)pointerForOop(arrayOop + BaseHeaderSize);
+		return pointerForOop(arrayOop + BaseHeaderSize);
 	}
 	/* begin primitiveFail */
 	foo->successFlag = 0;
@@ -2941,6 +2969,97 @@ sqInt callExternalPrimitive(void * functionID) {
 }
 
 
+/*	Re-enter the interpreter for executing a callback */
+
+EXPORT(sqInt) callbackEnter(sqInt *callbackID) {
+register struct foo * foo = &fum;
+    sqInt result;
+    sqInt activeProc;
+    sqInt priority;
+    sqInt processList;
+    sqInt processLists;
+    sqInt lastLink;
+
+	if (foo->primitiveIndex == 0) {
+		return 0;
+	}
+	if (foo->jmpDepth >= foo->jmpMax) {
+		return 0;
+	}
+
+	/* Suspend the currently active process */
+
+	foo->jmpDepth += 1;
+	activeProc = longAt(((longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SchedulerAssociation << ShiftForWord))) + BaseHeaderSize) + (ValueIndex << ShiftForWord))) + BaseHeaderSize) + (ActiveProcessIndex << ShiftForWord));
+	foo->suspendedCallbacks[foo->jmpDepth] = activeProc;
+	foo->suspendedMethods[foo->jmpDepth] = foo->newMethod;
+	transferTo(wakeHighestPriority());
+	/* begin forceInterruptCheck */
+	foo->interruptCheckCounter = -1000;
+	foo->nextPollTick = 0;
+	result = setjmp(foo->jmpBuf[foo->jmpDepth]);
+	if (result == 0) {
+		callbackID[0] = foo->jmpDepth;
+		interpret();
+	}
+	activeProc = longAt(((longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SchedulerAssociation << ShiftForWord))) + BaseHeaderSize) + (ValueIndex << ShiftForWord))) + BaseHeaderSize) + (ActiveProcessIndex << ShiftForWord));
+	/* begin putToSleep: */
+	priority = ((longAt((activeProc + BaseHeaderSize) + (PriorityIndex << ShiftForWord))) >> 1);
+	processLists = longAt(((longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SchedulerAssociation << ShiftForWord))) + BaseHeaderSize) + (ValueIndex << ShiftForWord))) + BaseHeaderSize) + (ProcessListsIndex << ShiftForWord));
+	processList = longAt((processLists + BaseHeaderSize) + ((priority - 1) << ShiftForWord));
+	/* begin addLastLink:toList: */
+	if ((longAt((processList + BaseHeaderSize) + (FirstLinkIndex << ShiftForWord))) == foo->nilObj) {
+		/* begin storePointer:ofObject:withValue: */
+		if ((((usqInt) processList)) < (((usqInt) foo->youngStart))) {
+			possibleRootStoreIntovalue(processList, activeProc);
+		}
+		longAtput((processList + BaseHeaderSize) + (FirstLinkIndex << ShiftForWord), activeProc);
+	} else {
+		lastLink = longAt((processList + BaseHeaderSize) + (LastLinkIndex << ShiftForWord));
+		/* begin storePointer:ofObject:withValue: */
+		if ((((usqInt) lastLink)) < (((usqInt) foo->youngStart))) {
+			possibleRootStoreIntovalue(lastLink, activeProc);
+		}
+		longAtput((lastLink + BaseHeaderSize) + (NextLinkIndex << ShiftForWord), activeProc);
+	}
+	/* begin storePointer:ofObject:withValue: */
+	if ((((usqInt) processList)) < (((usqInt) foo->youngStart))) {
+		possibleRootStoreIntovalue(processList, activeProc);
+	}
+	longAtput((processList + BaseHeaderSize) + (LastLinkIndex << ShiftForWord), activeProc);
+	/* begin storePointer:ofObject:withValue: */
+	if ((((usqInt) activeProc)) < (((usqInt) foo->youngStart))) {
+		possibleRootStoreIntovalue(activeProc, processList);
+	}
+	longAtput((activeProc + BaseHeaderSize) + (MyListIndex << ShiftForWord), processList);
+	activeProc = foo->suspendedCallbacks[foo->jmpDepth];
+
+	/* see comment above */
+
+	foo->newMethod = foo->suspendedMethods[foo->jmpDepth];
+	transferTo(activeProc);
+	foo->jmpDepth -= 1;
+	return 1;
+}
+
+
+/*	Leave from a previous callback */
+
+EXPORT(sqInt) callbackLeave(sqInt cbID) {
+register struct foo * foo = &fum;
+	if (foo->primitiveIndex == 0) {
+		return 0;
+	}
+	if (!(cbID == foo->jmpDepth)) {
+		return 0;
+	}
+	if (cbID < 1) {
+		return 0;
+	}
+	longjmp(foo->jmpBuf[foo->jmpDepth], 1);
+}
+
+
 /*	Change the class of the receiver into the class specified by the argument given that the format of the receiver matches the format of the argument. Fail if receiver or argument are SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when the argument's class is compact and the receiver isn't, or when the format of the receiver is different from the format of the argument's class, or when the arguments class is fixed and the receiver's size differs from the size that an instance of the argument's class should have. */
 /*	Check what the format of the class says */
 
@@ -3137,28 +3256,28 @@ sqInt checkImageVersionFromstartingAt(sqImageFile  f, squeakFileOffsetType  imag
 
 	sqImageFileSeek(f, imageOffset);
 	version = firstVersion = getLongFromFileswap(f, 0);
-	if (version == (imageFormatVersion())) {
+	if ((version == imageFormatVersionNumber) || (version == (imageFormatForwardCompatibilityVersion()))) {
 		return 0;
 	}
 	sqImageFileSeek(f, imageOffset);
 	version = getLongFromFileswap(f, 1);
-	if (version == (imageFormatVersion())) {
+	if ((version == imageFormatVersionNumber) || (version == (imageFormatForwardCompatibilityVersion()))) {
 		return 1;
 	}
 	if (imageOffset == 0) {
 		sqImageFileSeek(f, 512);
 		version = getLongFromFileswap(f, 0);
-		if (version == (imageFormatVersion())) {
+		if ((version == imageFormatVersionNumber) || (version == (imageFormatForwardCompatibilityVersion()))) {
 			return 0;
 		}
 		sqImageFileSeek(f, 512);
 		version = getLongFromFileswap(f, 1);
-		if (version == (imageFormatVersion())) {
+		if ((version == imageFormatVersionNumber) || (version == (imageFormatForwardCompatibilityVersion()))) {
 			return 1;
 		}
 	}
 	print("This interpreter (vers. ");
-	printNum(imageFormatVersion());
+	printNum(imageFormatVersionNumber);
 	print(") cannot read image file (vers. ");
 	printNum(firstVersion);
 	print(").");
@@ -3572,7 +3691,7 @@ register struct foo * foo = &fum;
 }
 
 
-/*	This code assumes the reciever has been identified at location atIx in the atCache. */
+/*	This code assumes the receiver has been identified at location atIx in the atCache. */
 
 sqInt commonVariableatcacheIndex(sqInt rcvr, sqInt index, sqInt atIx) {
 register struct foo * foo = &fum;
@@ -3944,8 +4063,8 @@ register struct foo * foo = &fum;
     sqInt surfaceHandle;
     sqInt left;
     sqInt right;
-    sqInt h;
     sqInt w;
+    sqInt h;
     sqInt dispBitsIndex;
     sqInt bottom;
     sqInt d;
@@ -4101,6 +4220,24 @@ sqInt dummyReferToProxy(void) {
 }
 
 
+/*	Dump the entire image out to the given file. Intended for debugging only. */
+
+EXPORT(sqInt) dumpImage(sqInt fileName) {
+    sqImageFile f;
+    sqInt dataSize;
+    sqInt result;
+
+	f = sqImageFileOpen(fileName, "wb");
+	if (f == null) {
+		return -1;
+	}
+	dataSize = foo->endOfMemory - memory;
+	result = sqImageFileWrite(pointerForOop(memory), sizeof(unsigned char), dataSize, f);
+	sqImageFileClose(f);
+	return result;
+}
+
+
 /*	execute a method found in the mCache - which means that 
 	primitiveIndex & primitiveFunctionPointer are already set. Any sender 
 	needs to have previously sent findMethodInClass: or equivalent */
@@ -4149,7 +4286,13 @@ void * fetchArrayofObject(sqInt fieldIndex, sqInt objectPointer) {
     sqInt arrayOop;
 
 	arrayOop = longAt((objectPointer + BaseHeaderSize) + (fieldIndex << ShiftForWord));
-	return arrayValueOf(arrayOop);
+	/* begin arrayValueOf: */
+	if ((!((arrayOop & 1))) && (((arrayOop & 1) == 0) && (isWordsOrBytesNonInt(arrayOop)))) {
+		return pointerForOop(arrayOop + BaseHeaderSize);
+	}
+	/* begin primitiveFail */
+	foo->successFlag = 0;
+	return null;
 }
 
 sqInt fetchClassOf(sqInt oop) {
@@ -4591,14 +4734,14 @@ register struct foo * foo = &fum;
 	error("heap is empty");
 }
 
-void * firstFixedField(sqInt oop) {
+char * firstFixedField(sqInt oop) {
 	return pointerForOop(oop + BaseHeaderSize);
 }
 
 
 /*	NOTE: copied in InterpreterSimulator, so please duplicate any changes */
 
-void * firstIndexableField(sqInt oop) {
+char * firstIndexableField(sqInt oop) {
 register struct foo * foo = &fum;
     sqInt fmt;
     sqInt totalLength;
@@ -4808,8 +4951,8 @@ register struct foo * foo = &fum;
 /*	Repaint the entire smalltalk screen, ignoring the affected rectangle. Used in some platform's code when the Smalltalk window is brought to the front or uncovered. */
 
 sqInt fullDisplayUpdate(void) {
-    sqInt h;
     sqInt w;
+    sqInt h;
     sqInt displayObj;
 
 	displayObj = longAt((foo->specialObjectsOop + BaseHeaderSize) + (TheDisplay << ShiftForWord));
@@ -4996,13 +5139,14 @@ sqInt getThisSessionID(void) {
 }
 
 
-/*	Return a magic constant that changes when the image format changes. Since the image reading code uses this to detect byte ordering, one must avoid version numbers that are invariant under byte reversal. */
+/*	This VM is forwards-compatible with the immediately following closure version, and
+	 will write the new version number in snapshots if the closure creation bytecode is used. */
 
-sqInt imageFormatVersion(void) {
+sqInt imageFormatForwardCompatibilityVersion(void) {
 	if (BytesPerWord == 4) {
-		return 6502;
+		return 6504;
 	} else {
-		return 68000;
+		return 68002;
 	}
 }
 
@@ -5016,7 +5160,7 @@ sqInt imageSegmentVersion(void) {
 	/* first data word, 'does'  */
 
 	wholeWord = longAt((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SelectorDoesNotUnderstand << ShiftForWord))) + BaseHeaderSize);
-	return (imageFormatVersion()) | (wholeWord & 4278190080U);
+	return imageFormatVersionNumber | (wholeWord & 4278190080U);
 }
 
 
@@ -5373,6 +5517,7 @@ register struct foo * foo = &fum;
 		foo->rootTableCount = 0;
 		if (((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((usqInt) foo->growHeadroom))) && (foo->gcBiasToGrow > 0)) {
 			/* begin biasToGrow */
+			growSize = (((sqInt) (foo->growHeadroom * 3) >> 1)) - ((longAt(foo->freeBlock)) & AllButTypeMask);
 			/* begin growObjectMemory: */
 			foo->statGrowMemory += 1;
 			limit = sqGrowMemoryBy(foo->memoryLimit, growSize);
@@ -5509,6 +5654,8 @@ l1:	/* end initialCleanup */;
 	while (foo->globalSessionID == 0) {
 		foo->globalSessionID = time(NULL) + ioMSecs();
 	}
+	foo->jmpDepth = 0;
+	foo->jmpMax = MaxJumpBuf;
 }
 
 
@@ -5609,6 +5756,7 @@ register struct foo * foo = &fum;
 	foo->forceTenureFlag = 0;
 	foo->gcBiasToGrow = 0;
 	foo->gcBiasToGrowGCLimit = 0;
+	foo->extraRootCount = 0;
 }
 
 
@@ -5709,6 +5857,19 @@ register struct foo * foo = &fum;
     sqInt sizeHiBits;
     sqInt header2;
     sqInt format;
+    sqInt newObj1;
+    usqInt end;
+    sqInt remappedClassOop;
+    usqInt i;
+    sqInt oop;
+    sqInt newFreeSize;
+    sqInt newChunk;
+    sqInt enoughSpace;
+    sqInt minFree;
+    sqInt lastSavedProcess;
+    sqInt currentProc;
+    sqInt sched;
+    sqInt oop1;
 
 	if (DoAssertionChecks) {
 		if (size < 0) {
@@ -5795,7 +5956,93 @@ register struct foo * foo = &fum;
 	} else {
 		fillWord = 0;
 	}
-	newObj = allocateheaderSizeh1h2h3doFillwith(byteSize, hdrSize, header1, header2, header3, 1, fillWord);
+	/* begin allocate:headerSize:h1:h2:h3:doFill:with: */
+	if (hdrSize > 1) {
+		/* begin pushRemappableOop: */
+		foo->remapBuffer[foo->remapBufferCount += 1] = header2;
+	}
+	/* begin allocateChunk: */
+	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
+		incrementalGC();
+	}
+	/* begin sufficientSpaceToAllocate: */
+	minFree = (foo->lowSpaceThreshold + (byteSize + ((hdrSize - 1) * BytesPerWord))) + BaseHeaderSize;
+	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((usqInt) minFree))) {
+		enoughSpace = 1;
+		goto l1;
+	} else {
+		enoughSpace = sufficientSpaceAfterGC(minFree);
+		goto l1;
+	}
+l1:	/* end sufficientSpaceToAllocate: */;
+	if (!(enoughSpace)) {
+		foo->signalLowSpace = 1;
+		foo->lowSpaceThreshold = 0;
+		/* begin saveProcessSignalingLowSpace */
+		lastSavedProcess = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord));
+		if (lastSavedProcess == foo->nilObj) {
+			sched = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SchedulerAssociation << ShiftForWord))) + BaseHeaderSize) + (ValueIndex << ShiftForWord));
+			currentProc = longAt((sched + BaseHeaderSize) + (ActiveProcessIndex << ShiftForWord));
+			/* begin storePointer:ofObject:withValue: */
+			oop1 = foo->specialObjectsOop;
+			if ((((usqInt) oop1)) < (((usqInt) foo->youngStart))) {
+				possibleRootStoreIntovalue(oop1, currentProc);
+			}
+			longAtput((oop1 + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord), currentProc);
+		}
+		/* begin forceInterruptCheck */
+		foo->interruptCheckCounter = -1000;
+		foo->nextPollTick = 0;
+	}
+	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((usqInt) ((byteSize + ((hdrSize - 1) * BytesPerWord)) + BaseHeaderSize)))) {
+		error("out of memory");
+	}
+	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (byteSize + ((hdrSize - 1) * BytesPerWord));
+	newChunk = foo->freeBlock;
+	foo->freeBlock += byteSize + ((hdrSize - 1) * BytesPerWord);
+	/* begin setSizeOfFree:to: */
+	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
+	foo->allocationCount += 1;
+	newObj1 = newChunk;
+	if (hdrSize > 1) {
+		/* begin popRemappableOop */
+		oop = foo->remapBuffer[foo->remapBufferCount];
+		foo->remapBufferCount -= 1;
+		remappedClassOop = oop;
+	}
+	if (hdrSize == 3) {
+		longAtput(newObj1, header3 | HeaderTypeSizeAndClass);
+		longAtput(newObj1 + BytesPerWord, remappedClassOop | HeaderTypeSizeAndClass);
+		longAtput(newObj1 + (BytesPerWord * 2), header1 | HeaderTypeSizeAndClass);
+		newObj1 += BytesPerWord * 2;
+	}
+	if (hdrSize == 2) {
+		longAtput(newObj1, remappedClassOop | HeaderTypeClass);
+		longAtput(newObj1 + BytesPerWord, header1 | HeaderTypeClass);
+		newObj1 += BytesPerWord;
+	}
+	if (hdrSize == 1) {
+		longAtput(newObj1, header1 | HeaderTypeShort);
+	}
+	if (1) {
+		end = newObj1 + byteSize;
+		i = newObj1 + BytesPerWord;
+		while (i < end) {
+			longAtput(i, fillWord);
+			i += BytesPerWord;
+		}
+	}
+	if (DoAssertionChecks) {
+		okayOop(newObj1);
+		oopHasOkayClass(newObj1);
+		if (!((objectAfter(newObj1)) == foo->freeBlock)) {
+			error("allocate bug: did not set header of new oop correctly");
+		}
+		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
+			error("allocate bug: did not set header of freeBlock correctly");
+		}
+	}
+	newObj = newObj1;
 	return newObj;
 }
 
@@ -5811,6 +6058,19 @@ register struct foo * foo = &fum;
     sqInt header1;
     sqInt hash;
     sqInt header2;
+    sqInt newObj;
+    usqInt end;
+    sqInt remappedClassOop;
+    usqInt i;
+    sqInt oop;
+    sqInt newFreeSize;
+    sqInt newChunk;
+    sqInt enoughSpace;
+    sqInt minFree;
+    sqInt lastSavedProcess;
+    sqInt currentProc;
+    sqInt sched;
+    sqInt oop1;
 
 	/* begin newObjectHash */
 	foo->lastHash = (13849 + (27181 * foo->lastHash)) & 65535;
@@ -5832,7 +6092,93 @@ register struct foo * foo = &fum;
 		header1 -= header1 & SizeMask;
 	}
 	flag("Dan");
-	return allocateheaderSizeh1h2h3doFillwith(sizeInBytes, hdrSize, header1, header2, LargeContextSize, 0, 0);
+	/* begin allocate:headerSize:h1:h2:h3:doFill:with: */
+	if (hdrSize > 1) {
+		/* begin pushRemappableOop: */
+		foo->remapBuffer[foo->remapBufferCount += 1] = header2;
+	}
+	/* begin allocateChunk: */
+	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
+		incrementalGC();
+	}
+	/* begin sufficientSpaceToAllocate: */
+	minFree = (foo->lowSpaceThreshold + (sizeInBytes + ((hdrSize - 1) * BytesPerWord))) + BaseHeaderSize;
+	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((usqInt) minFree))) {
+		enoughSpace = 1;
+		goto l1;
+	} else {
+		enoughSpace = sufficientSpaceAfterGC(minFree);
+		goto l1;
+	}
+l1:	/* end sufficientSpaceToAllocate: */;
+	if (!(enoughSpace)) {
+		foo->signalLowSpace = 1;
+		foo->lowSpaceThreshold = 0;
+		/* begin saveProcessSignalingLowSpace */
+		lastSavedProcess = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord));
+		if (lastSavedProcess == foo->nilObj) {
+			sched = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SchedulerAssociation << ShiftForWord))) + BaseHeaderSize) + (ValueIndex << ShiftForWord));
+			currentProc = longAt((sched + BaseHeaderSize) + (ActiveProcessIndex << ShiftForWord));
+			/* begin storePointer:ofObject:withValue: */
+			oop1 = foo->specialObjectsOop;
+			if ((((usqInt) oop1)) < (((usqInt) foo->youngStart))) {
+				possibleRootStoreIntovalue(oop1, currentProc);
+			}
+			longAtput((oop1 + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord), currentProc);
+		}
+		/* begin forceInterruptCheck */
+		foo->interruptCheckCounter = -1000;
+		foo->nextPollTick = 0;
+	}
+	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((usqInt) ((sizeInBytes + ((hdrSize - 1) * BytesPerWord)) + BaseHeaderSize)))) {
+		error("out of memory");
+	}
+	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (sizeInBytes + ((hdrSize - 1) * BytesPerWord));
+	newChunk = foo->freeBlock;
+	foo->freeBlock += sizeInBytes + ((hdrSize - 1) * BytesPerWord);
+	/* begin setSizeOfFree:to: */
+	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
+	foo->allocationCount += 1;
+	newObj = newChunk;
+	if (hdrSize > 1) {
+		/* begin popRemappableOop */
+		oop = foo->remapBuffer[foo->remapBufferCount];
+		foo->remapBufferCount -= 1;
+		remappedClassOop = oop;
+	}
+	if (hdrSize == 3) {
+		longAtput(newObj, LargeContextSize | HeaderTypeSizeAndClass);
+		longAtput(newObj + BytesPerWord, remappedClassOop | HeaderTypeSizeAndClass);
+		longAtput(newObj + (BytesPerWord * 2), header1 | HeaderTypeSizeAndClass);
+		newObj += BytesPerWord * 2;
+	}
+	if (hdrSize == 2) {
+		longAtput(newObj, remappedClassOop | HeaderTypeClass);
+		longAtput(newObj + BytesPerWord, header1 | HeaderTypeClass);
+		newObj += BytesPerWord;
+	}
+	if (hdrSize == 1) {
+		longAtput(newObj, header1 | HeaderTypeShort);
+	}
+	if (0) {
+		end = newObj + sizeInBytes;
+		i = newObj + BytesPerWord;
+		while (i < end) {
+			longAtput(i, 0);
+			i += BytesPerWord;
+		}
+	}
+	if (DoAssertionChecks) {
+		okayOop(newObj);
+		oopHasOkayClass(newObj);
+		if (!((objectAfter(newObj)) == foo->freeBlock)) {
+			error("allocate bug: did not set header of new oop correctly");
+		}
+		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
+			error("allocate bug: did not set header of freeBlock correctly");
+		}
+	}
+	return newObj;
 }
 
 
@@ -5851,6 +6197,19 @@ register struct foo * foo = &fum;
     sqInt header1;
     sqInt hash;
     sqInt header2;
+    sqInt newObj;
+    usqInt end;
+    sqInt remappedClassOop;
+    usqInt i;
+    sqInt oop;
+    sqInt newFreeSize;
+    sqInt newChunk;
+    sqInt enoughSpace;
+    sqInt minFree;
+    sqInt lastSavedProcess;
+    sqInt currentProc;
+    sqInt sched;
+    sqInt oop1;
 
 	if (!((sizeInBytes & (BytesPerWord - 1)) == 0)) {
 		error("size must be integral number of words");
@@ -5866,7 +6225,93 @@ register struct foo * foo = &fum;
 		hdrSize = 2;
 	}
 	header1 += sizeInBytes - (header1 & (SizeMask + Size4Bit));
-	return allocateheaderSizeh1h2h3doFillwith(sizeInBytes, hdrSize, header1, header2, 0, 0, 0);
+	/* begin allocate:headerSize:h1:h2:h3:doFill:with: */
+	if (hdrSize > 1) {
+		/* begin pushRemappableOop: */
+		foo->remapBuffer[foo->remapBufferCount += 1] = header2;
+	}
+	/* begin allocateChunk: */
+	if (foo->allocationCount >= foo->allocationsBetweenGCs) {
+		incrementalGC();
+	}
+	/* begin sufficientSpaceToAllocate: */
+	minFree = (foo->lowSpaceThreshold + (sizeInBytes + ((hdrSize - 1) * BytesPerWord))) + BaseHeaderSize;
+	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) >= (((usqInt) minFree))) {
+		enoughSpace = 1;
+		goto l1;
+	} else {
+		enoughSpace = sufficientSpaceAfterGC(minFree);
+		goto l1;
+	}
+l1:	/* end sufficientSpaceToAllocate: */;
+	if (!(enoughSpace)) {
+		foo->signalLowSpace = 1;
+		foo->lowSpaceThreshold = 0;
+		/* begin saveProcessSignalingLowSpace */
+		lastSavedProcess = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord));
+		if (lastSavedProcess == foo->nilObj) {
+			sched = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SchedulerAssociation << ShiftForWord))) + BaseHeaderSize) + (ValueIndex << ShiftForWord));
+			currentProc = longAt((sched + BaseHeaderSize) + (ActiveProcessIndex << ShiftForWord));
+			/* begin storePointer:ofObject:withValue: */
+			oop1 = foo->specialObjectsOop;
+			if ((((usqInt) oop1)) < (((usqInt) foo->youngStart))) {
+				possibleRootStoreIntovalue(oop1, currentProc);
+			}
+			longAtput((oop1 + BaseHeaderSize) + (ProcessSignalingLowSpace << ShiftForWord), currentProc);
+		}
+		/* begin forceInterruptCheck */
+		foo->interruptCheckCounter = -1000;
+		foo->nextPollTick = 0;
+	}
+	if ((((usqInt) ((longAt(foo->freeBlock)) & AllButTypeMask))) < (((usqInt) ((sizeInBytes + ((hdrSize - 1) * BytesPerWord)) + BaseHeaderSize)))) {
+		error("out of memory");
+	}
+	newFreeSize = ((longAt(foo->freeBlock)) & AllButTypeMask) - (sizeInBytes + ((hdrSize - 1) * BytesPerWord));
+	newChunk = foo->freeBlock;
+	foo->freeBlock += sizeInBytes + ((hdrSize - 1) * BytesPerWord);
+	/* begin setSizeOfFree:to: */
+	longAtput(foo->freeBlock, (newFreeSize & AllButTypeMask) | HeaderTypeFree);
+	foo->allocationCount += 1;
+	newObj = newChunk;
+	if (hdrSize > 1) {
+		/* begin popRemappableOop */
+		oop = foo->remapBuffer[foo->remapBufferCount];
+		foo->remapBufferCount -= 1;
+		remappedClassOop = oop;
+	}
+	if (hdrSize == 3) {
+		longAtput(newObj, 0 | HeaderTypeSizeAndClass);
+		longAtput(newObj + BytesPerWord, remappedClassOop | HeaderTypeSizeAndClass);
+		longAtput(newObj + (BytesPerWord * 2), header1 | HeaderTypeSizeAndClass);
+		newObj += BytesPerWord * 2;
+	}
+	if (hdrSize == 2) {
+		longAtput(newObj, remappedClassOop | HeaderTypeClass);
+		longAtput(newObj + BytesPerWord, header1 | HeaderTypeClass);
+		newObj += BytesPerWord;
+	}
+	if (hdrSize == 1) {
+		longAtput(newObj, header1 | HeaderTypeShort);
+	}
+	if (0) {
+		end = newObj + sizeInBytes;
+		i = newObj + BytesPerWord;
+		while (i < end) {
+			longAtput(i, 0);
+			i += BytesPerWord;
+		}
+	}
+	if (DoAssertionChecks) {
+		okayOop(newObj);
+		oopHasOkayClass(newObj);
+		if (!((objectAfter(newObj)) == foo->freeBlock)) {
+			error("allocate bug: did not set header of new oop correctly");
+		}
+		if (!((objectAfter(foo->freeBlock)) == foo->endOfMemory)) {
+			error("allocate bug: did not set header of freeBlock correctly");
+		}
+	}
+	return newObj;
 }
 
 sqInt integerObjectOf(sqInt value) {
@@ -5909,6 +6354,7 @@ register struct foo * foo = &fum;
 		case 0:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5920,6 +6366,7 @@ register struct foo * foo = &fum;
 		case 1:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5931,6 +6378,7 @@ register struct foo * foo = &fum;
 		case 2:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5942,6 +6390,7 @@ register struct foo * foo = &fum;
 		case 3:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5953,6 +6402,7 @@ register struct foo * foo = &fum;
 		case 4:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5964,6 +6414,7 @@ register struct foo * foo = &fum;
 		case 5:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5975,6 +6426,7 @@ register struct foo * foo = &fum;
 		case 6:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5986,6 +6438,7 @@ register struct foo * foo = &fum;
 		case 7:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -5997,6 +6450,7 @@ register struct foo * foo = &fum;
 		case 8:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6008,6 +6462,7 @@ register struct foo * foo = &fum;
 		case 9:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6019,6 +6474,7 @@ register struct foo * foo = &fum;
 		case 10:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6030,6 +6486,7 @@ register struct foo * foo = &fum;
 		case 11:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6041,6 +6498,7 @@ register struct foo * foo = &fum;
 		case 12:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6052,6 +6510,7 @@ register struct foo * foo = &fum;
 		case 13:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6063,6 +6522,7 @@ register struct foo * foo = &fum;
 		case 14:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6074,6 +6534,7 @@ register struct foo * foo = &fum;
 		case 15:
 			/* pushReceiverVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushReceiverVariable: */
@@ -6085,6 +6546,7 @@ register struct foo * foo = &fum;
 		case 16:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6096,6 +6558,7 @@ register struct foo * foo = &fum;
 		case 17:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6107,6 +6570,7 @@ register struct foo * foo = &fum;
 		case 18:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6118,6 +6582,7 @@ register struct foo * foo = &fum;
 		case 19:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6129,6 +6594,7 @@ register struct foo * foo = &fum;
 		case 20:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6140,6 +6606,7 @@ register struct foo * foo = &fum;
 		case 21:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6151,6 +6618,7 @@ register struct foo * foo = &fum;
 		case 22:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6162,6 +6630,7 @@ register struct foo * foo = &fum;
 		case 23:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6173,6 +6642,7 @@ register struct foo * foo = &fum;
 		case 24:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6184,6 +6654,7 @@ register struct foo * foo = &fum;
 		case 25:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6195,6 +6666,7 @@ register struct foo * foo = &fum;
 		case 26:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6206,6 +6678,7 @@ register struct foo * foo = &fum;
 		case 27:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6217,6 +6690,7 @@ register struct foo * foo = &fum;
 		case 28:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6228,6 +6702,7 @@ register struct foo * foo = &fum;
 		case 29:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6239,6 +6714,7 @@ register struct foo * foo = &fum;
 		case 30:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6250,6 +6726,7 @@ register struct foo * foo = &fum;
 		case 31:
 			/* pushTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushTemporaryVariable: */
@@ -6261,6 +6738,7 @@ register struct foo * foo = &fum;
 		case 32:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6272,6 +6750,7 @@ register struct foo * foo = &fum;
 		case 33:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6283,6 +6762,7 @@ register struct foo * foo = &fum;
 		case 34:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6294,6 +6774,7 @@ register struct foo * foo = &fum;
 		case 35:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6305,6 +6786,7 @@ register struct foo * foo = &fum;
 		case 36:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6316,6 +6798,7 @@ register struct foo * foo = &fum;
 		case 37:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6327,6 +6810,7 @@ register struct foo * foo = &fum;
 		case 38:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6338,6 +6822,7 @@ register struct foo * foo = &fum;
 		case 39:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6349,6 +6834,7 @@ register struct foo * foo = &fum;
 		case 40:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6360,6 +6846,7 @@ register struct foo * foo = &fum;
 		case 41:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6371,6 +6858,7 @@ register struct foo * foo = &fum;
 		case 42:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6382,6 +6870,7 @@ register struct foo * foo = &fum;
 		case 43:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6393,6 +6882,7 @@ register struct foo * foo = &fum;
 		case 44:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6404,6 +6894,7 @@ register struct foo * foo = &fum;
 		case 45:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6415,6 +6906,7 @@ register struct foo * foo = &fum;
 		case 46:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6426,6 +6918,7 @@ register struct foo * foo = &fum;
 		case 47:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6437,6 +6930,7 @@ register struct foo * foo = &fum;
 		case 48:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6448,6 +6942,7 @@ register struct foo * foo = &fum;
 		case 49:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6459,6 +6954,7 @@ register struct foo * foo = &fum;
 		case 50:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6470,6 +6966,7 @@ register struct foo * foo = &fum;
 		case 51:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6481,6 +6978,7 @@ register struct foo * foo = &fum;
 		case 52:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6492,6 +6990,7 @@ register struct foo * foo = &fum;
 		case 53:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6503,6 +7002,7 @@ register struct foo * foo = &fum;
 		case 54:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6514,6 +7014,7 @@ register struct foo * foo = &fum;
 		case 55:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6525,6 +7026,7 @@ register struct foo * foo = &fum;
 		case 56:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6536,6 +7038,7 @@ register struct foo * foo = &fum;
 		case 57:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6547,6 +7050,7 @@ register struct foo * foo = &fum;
 		case 58:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6558,6 +7062,7 @@ register struct foo * foo = &fum;
 		case 59:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6569,6 +7074,7 @@ register struct foo * foo = &fum;
 		case 60:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6580,6 +7086,7 @@ register struct foo * foo = &fum;
 		case 61:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6591,6 +7098,7 @@ register struct foo * foo = &fum;
 		case 62:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6602,6 +7110,7 @@ register struct foo * foo = &fum;
 		case 63:
 			/* pushLiteralConstantBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralConstant: */
@@ -6613,6 +7122,7 @@ register struct foo * foo = &fum;
 		case 64:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6624,6 +7134,7 @@ register struct foo * foo = &fum;
 		case 65:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6635,6 +7146,7 @@ register struct foo * foo = &fum;
 		case 66:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6646,6 +7158,7 @@ register struct foo * foo = &fum;
 		case 67:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6657,6 +7170,7 @@ register struct foo * foo = &fum;
 		case 68:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6668,6 +7182,7 @@ register struct foo * foo = &fum;
 		case 69:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6679,6 +7194,7 @@ register struct foo * foo = &fum;
 		case 70:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6690,6 +7206,7 @@ register struct foo * foo = &fum;
 		case 71:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6701,6 +7218,7 @@ register struct foo * foo = &fum;
 		case 72:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6712,6 +7230,7 @@ register struct foo * foo = &fum;
 		case 73:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6723,6 +7242,7 @@ register struct foo * foo = &fum;
 		case 74:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6734,6 +7254,7 @@ register struct foo * foo = &fum;
 		case 75:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6745,6 +7266,7 @@ register struct foo * foo = &fum;
 		case 76:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6756,6 +7278,7 @@ register struct foo * foo = &fum;
 		case 77:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6767,6 +7290,7 @@ register struct foo * foo = &fum;
 		case 78:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6778,6 +7302,7 @@ register struct foo * foo = &fum;
 		case 79:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6789,6 +7314,7 @@ register struct foo * foo = &fum;
 		case 80:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6800,6 +7326,7 @@ register struct foo * foo = &fum;
 		case 81:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6811,6 +7338,7 @@ register struct foo * foo = &fum;
 		case 82:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6822,6 +7350,7 @@ register struct foo * foo = &fum;
 		case 83:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6833,6 +7362,7 @@ register struct foo * foo = &fum;
 		case 84:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6844,6 +7374,7 @@ register struct foo * foo = &fum;
 		case 85:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6855,6 +7386,7 @@ register struct foo * foo = &fum;
 		case 86:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6866,6 +7398,7 @@ register struct foo * foo = &fum;
 		case 87:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6877,6 +7410,7 @@ register struct foo * foo = &fum;
 		case 88:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6888,6 +7422,7 @@ register struct foo * foo = &fum;
 		case 89:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6899,6 +7434,7 @@ register struct foo * foo = &fum;
 		case 90:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6910,6 +7446,7 @@ register struct foo * foo = &fum;
 		case 91:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6921,6 +7458,7 @@ register struct foo * foo = &fum;
 		case 92:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6932,6 +7470,7 @@ register struct foo * foo = &fum;
 		case 93:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6943,6 +7482,7 @@ register struct foo * foo = &fum;
 		case 94:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6954,6 +7494,7 @@ register struct foo * foo = &fum;
 		case 95:
 			/* pushLiteralVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				/* begin pushLiteralVariable: */
@@ -6967,6 +7508,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -6985,6 +7527,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -7003,6 +7546,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -7021,6 +7565,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -7039,6 +7584,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -7057,6 +7603,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -7075,6 +7622,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -7093,6 +7641,7 @@ register struct foo * foo = &fum;
 			{
 				sqInt rcvr;
 				sqInt top;
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				rcvr = foo->receiver;
@@ -7109,6 +7658,7 @@ register struct foo * foo = &fum;
 		case 104:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((104 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7120,6 +7670,7 @@ register struct foo * foo = &fum;
 		case 105:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((105 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7131,6 +7682,7 @@ register struct foo * foo = &fum;
 		case 106:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((106 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7142,6 +7694,7 @@ register struct foo * foo = &fum;
 		case 107:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((107 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7153,6 +7706,7 @@ register struct foo * foo = &fum;
 		case 108:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((108 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7164,6 +7718,7 @@ register struct foo * foo = &fum;
 		case 109:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((109 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7175,6 +7730,7 @@ register struct foo * foo = &fum;
 		case 110:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((110 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7186,6 +7742,7 @@ register struct foo * foo = &fum;
 		case 111:
 			/* storeAndPopTemporaryVariableBytecode */
 			{
+				flag("requires currentBytecode to be expanded to a constant");
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 				longAtput((localHomeContext + BaseHeaderSize) + (((111 & 7) + TempFrameStart) << ShiftForWord), longAtPointer(localSP));
@@ -7277,7 +7834,14 @@ register struct foo * foo = &fum;
 		case 120:
 			/* returnReceiver */
 			{
-				localReturnContext = longAt((localHomeContext + BaseHeaderSize) + (SenderIndex << ShiftForWord));
+				sqInt closureOrNil;
+				sqInt context;
+				/* begin sender */
+				context = localHomeContext;
+				while ((closureOrNil = longAt((context + BaseHeaderSize) + (ClosureIndex << ShiftForWord))) != foo->nilObj) {
+					context = longAt((closureOrNil + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+				}
+				localReturnContext = longAt((context + BaseHeaderSize) + (SenderIndex << ShiftForWord));
 				localReturnValue = foo->receiver;
 				/* goto commonReturn */
 			}
@@ -7312,7 +7876,7 @@ register struct foo * foo = &fum;
 					foo->messageSelector = longAt((foo->specialObjectsOop + BaseHeaderSize) + (SelectorCannotReturn << ShiftForWord));
 					foo->argumentCount = 1;
 					goto normalSend;
-					goto l43;
+					goto l42;
 				}
 				thisCntx = longAt((foo->activeContext + BaseHeaderSize) + (SenderIndex << ShiftForWord));
 				while (!(thisCntx == localCntx)) {
@@ -7325,20 +7889,20 @@ register struct foo * foo = &fum;
 						foo->messageSelector = longAt((foo->specialObjectsOop + BaseHeaderSize) + (SelectorCannotReturn << ShiftForWord));
 						foo->argumentCount = 1;
 						goto normalSend;
-						goto l43;
+						goto l42;
 					}
 					/* begin isUnwindMarked: */
 					header = longAt(thisCntx);
 					if (!(((((usqInt) header) >> 12) & 31) == 14)) {
 						unwindMarked = 0;
-						goto l44;
+						goto l43;
 					}
 					meth = longAt((thisCntx + BaseHeaderSize) + (MethodIndex << ShiftForWord));
 					/* begin primitiveIndexOf: */
 					primBits = (((usqInt) (longAt((meth + BaseHeaderSize) + (HeaderIndex << ShiftForWord)))) >> 1) & 268435967;
 					pIndex = (primBits & 511) + (((usqInt) primBits) >> 19);
 					unwindMarked = pIndex == 198;
-				l44:	/* end isUnwindMarked: */;
+				l43:	/* end isUnwindMarked: */;
 					if (unwindMarked) {
 						/* begin internalAboutToReturn:through: */
 						/* begin internalPush: */
@@ -7350,7 +7914,7 @@ register struct foo * foo = &fum;
 						foo->messageSelector = longAt((foo->specialObjectsOop + BaseHeaderSize) + (SelectorAboutToReturn << ShiftForWord));
 						foo->argumentCount = 2;
 						goto normalSend;
-						goto l43;
+						goto l42;
 					}
 					thisCntx = longAt((thisCntx + BaseHeaderSize) + (SenderIndex << ShiftForWord));
 				}
@@ -7405,12 +7969,19 @@ register struct foo * foo = &fum;
 				longAtPointerput(localSP += BytesPerWord, localVal);
 			}
 ;
-		l43:	/* end case */;
+		l42:	/* end case */;
 			break;
 		case 121:
 			/* returnTrue */
 			{
-				localReturnContext = longAt((localHomeContext + BaseHeaderSize) + (SenderIndex << ShiftForWord));
+				sqInt closureOrNil;
+				sqInt context;
+				/* begin sender */
+				context = localHomeContext;
+				while ((closureOrNil = longAt((context + BaseHeaderSize) + (ClosureIndex << ShiftForWord))) != foo->nilObj) {
+					context = longAt((closureOrNil + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+				}
+				localReturnContext = longAt((context + BaseHeaderSize) + (SenderIndex << ShiftForWord));
 				localReturnValue = foo->trueObj;
 				goto commonReturn;
 			}
@@ -7419,7 +7990,14 @@ register struct foo * foo = &fum;
 		case 122:
 			/* returnFalse */
 			{
-				localReturnContext = longAt((localHomeContext + BaseHeaderSize) + (SenderIndex << ShiftForWord));
+				sqInt closureOrNil;
+				sqInt context;
+				/* begin sender */
+				context = localHomeContext;
+				while ((closureOrNil = longAt((context + BaseHeaderSize) + (ClosureIndex << ShiftForWord))) != foo->nilObj) {
+					context = longAt((closureOrNil + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+				}
+				localReturnContext = longAt((context + BaseHeaderSize) + (SenderIndex << ShiftForWord));
 				localReturnValue = foo->falseObj;
 				goto commonReturn;
 			}
@@ -7428,7 +8006,14 @@ register struct foo * foo = &fum;
 		case 123:
 			/* returnNil */
 			{
-				localReturnContext = longAt((localHomeContext + BaseHeaderSize) + (SenderIndex << ShiftForWord));
+				sqInt closureOrNil;
+				sqInt context;
+				/* begin sender */
+				context = localHomeContext;
+				while ((closureOrNil = longAt((context + BaseHeaderSize) + (ClosureIndex << ShiftForWord))) != foo->nilObj) {
+					context = longAt((closureOrNil + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+				}
+				localReturnContext = longAt((context + BaseHeaderSize) + (SenderIndex << ShiftForWord));
 				localReturnValue = foo->nilObj;
 				goto commonReturn;
 			}
@@ -7437,7 +8022,14 @@ register struct foo * foo = &fum;
 		case 124:
 			/* returnTopFromMethod */
 			{
-				localReturnContext = longAt((localHomeContext + BaseHeaderSize) + (SenderIndex << ShiftForWord));
+				sqInt closureOrNil;
+				sqInt context;
+				/* begin sender */
+				context = localHomeContext;
+				while ((closureOrNil = longAt((context + BaseHeaderSize) + (ClosureIndex << ShiftForWord))) != foo->nilObj) {
+					context = longAt((closureOrNil + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+				}
+				localReturnContext = longAt((context + BaseHeaderSize) + (SenderIndex << ShiftForWord));
 				localReturnValue = longAtPointer(localSP);
 				goto commonReturn;
 			}
@@ -7615,17 +8207,17 @@ register struct foo * foo = &fum;
 				/* begin fetchClassOf: */
 				if ((rcvr & 1)) {
 					foo->lkupClass = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassInteger << ShiftForWord));
-					goto l45;
+					goto l44;
 				}
 				ccIndex = (((usqInt) (longAt(rcvr))) >> 12) & 31;
 				if (ccIndex == 0) {
 					foo->lkupClass = (longAt(rcvr - BaseHeaderSize)) & AllButTypeMask;
-					goto l45;
+					goto l44;
 				} else {
 					foo->lkupClass = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
-					goto l45;
+					goto l44;
 				}
-			l45:	/* end fetchClassOf: */;
+			l44:	/* end fetchClassOf: */;
 				foo->receiverClass = foo->lkupClass;
 				/* goto commonSend */
 			}
@@ -7662,7 +8254,7 @@ register struct foo * foo = &fum;
 					foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
 					foo->primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
 					ok = 1;
-					goto l46;
+					goto l45;
 				}
 				probe = (((usqInt) hash) >> 1) & MethodCacheMask;
 				if (((foo->methodCache[probe + MethodCacheSelector]) == foo->messageSelector) && ((foo->methodCache[probe + MethodCacheClass]) == foo->lkupClass)) {
@@ -7671,7 +8263,7 @@ register struct foo * foo = &fum;
 					foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
 					foo->primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
 					ok = 1;
-					goto l46;
+					goto l45;
 				}
 				probe = (((usqInt) hash) >> 2) & MethodCacheMask;
 				if (((foo->methodCache[probe + MethodCacheSelector]) == foo->messageSelector) && ((foo->methodCache[probe + MethodCacheClass]) == foo->lkupClass)) {
@@ -7680,10 +8272,10 @@ register struct foo * foo = &fum;
 					foo->newNativeMethod = foo->methodCache[probe + MethodCacheNative];
 					foo->primitiveFunctionPointer = ((void *) (foo->methodCache[probe + MethodCachePrimFunction]));
 					ok = 1;
-					goto l46;
+					goto l45;
 				}
 				ok = 0;
-			l46:	/* end lookupInMethodCacheSel:class: */;
+			l45:	/* end lookupInMethodCacheSel:class: */;
 				if (!(ok)) {
 					/* begin externalizeIPandSP */
 					foo->instructionPointer = oopForPointer(localIP);
@@ -7704,29 +8296,29 @@ register struct foo * foo = &fum;
 							/* begin internalPop:thenPush: */
 							oop = longAt(((longAtPointer(localSP)) + BaseHeaderSize) + ((localPrimIndex - 264) << ShiftForWord));
 							longAtPointerput(localSP -= (1 - 1) * BytesPerWord, oop);
-							goto l47;
+							goto l46;
 						} else {
 							if (localPrimIndex == 256) {
-								goto l47;
+								goto l46;
 							}
 							if (localPrimIndex == 257) {
 								/* begin internalPop:thenPush: */
 								longAtPointerput(localSP -= (1 - 1) * BytesPerWord, foo->trueObj);
-								goto l47;
+								goto l46;
 							}
 							if (localPrimIndex == 258) {
 								/* begin internalPop:thenPush: */
 								longAtPointerput(localSP -= (1 - 1) * BytesPerWord, foo->falseObj);
-								goto l47;
+								goto l46;
 							}
 							if (localPrimIndex == 259) {
 								/* begin internalPop:thenPush: */
 								longAtPointerput(localSP -= (1 - 1) * BytesPerWord, foo->nilObj);
-								goto l47;
+								goto l46;
 							}
 							/* begin internalPop:thenPush: */
 							longAtPointerput(localSP -= (1 - 1) * BytesPerWord, (((localPrimIndex - 261) << 1) | 1));
-							goto l47;
+							goto l46;
 						}
 					} else {
 						/* begin externalizeIPandSP */
@@ -7750,7 +8342,7 @@ register struct foo * foo = &fum;
 						localHomeContext = foo->theHomeContext;
 						if (foo->successFlag) {
 							browserPluginReturnIfNeeded();
-							goto l47;
+							goto l46;
 						}
 					}
 				}
@@ -7777,6 +8369,7 @@ register struct foo * foo = &fum;
 				longAtput(where + (InstructionPointerIndex << ShiftForWord), (((((LiteralStart + ((((usqInt) methodHeader) >> 10) & 255)) * BytesPerWord) + 1) << 1) | 1));
 				longAtput(where + (StackPointerIndex << ShiftForWord), ((tempCount << 1) | 1));
 				longAtput(where + (MethodIndex << ShiftForWord), foo->newMethod);
+				longAtput(where + (ClosureIndex << ShiftForWord), foo->nilObj);
 				argCount2 = foo->argumentCount;
 				for (i = 0; i <= argCount2; i += 1) {
 					longAtput(where + ((ReceiverIndex + i) << ShiftForWord), longAtPointer(localSP - ((argCount2 - i) * BytesPerWord)));
@@ -7831,7 +8424,7 @@ register struct foo * foo = &fum;
 					localSP = pointerForOop(foo->stackPointer);
 					localHomeContext = foo->theHomeContext;
 				}
-			l47:	/* end internalExecuteNewMethod */;
+			l46:	/* end internalExecuteNewMethod */;
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 			}
@@ -7943,17 +8536,17 @@ register struct foo * foo = &fum;
 				/* begin fetchClassOf: */
 				if ((rcvr & 1)) {
 					foo->receiverClass = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassInteger << ShiftForWord));
-					goto l48;
+					goto l47;
 				}
 				ccIndex = (((usqInt) (longAt(rcvr))) >> 12) & 31;
 				if (ccIndex == 0) {
 					foo->receiverClass = (longAt(rcvr - BaseHeaderSize)) & AllButTypeMask;
-					goto l48;
+					goto l47;
 				} else {
 					foo->receiverClass = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
-					goto l48;
+					goto l47;
 				}
-			l48:	/* end fetchClassOf: */;
+			l47:	/* end fetchClassOf: */;
 				goto commonSend;
 			}
 ;
@@ -8003,92 +8596,160 @@ register struct foo * foo = &fum;
 ;
 			break;
 		case 138:
-		case 139:
-		case 140:
-		case 141:
-		case 142:
-		case 143:
-			/* experimentalBytecode */
+			/* pushNewArrayBytecode */
 			{
-				sqInt byte2;
-				sqInt byte4;
-				sqInt offset;
-				sqInt arg2Val;
-				sqInt result;
-				sqInt byte3;
-				sqInt arg1;
-				sqInt arg1Val;
-				arg1 = longAt((localHomeContext + BaseHeaderSize) + (((currentBytecode - 138) + TempFrameStart) << ShiftForWord));
-				byte2 = byteAtPointer(localIP + 1);
-				byte3 = byteAtPointer(localIP + 2);
-				byte4 = byteAtPointer(localIP + 3);
-				if ((arg1 & 1)) {
-					arg1Val = (arg1 >> 1);
-				} else {
-					/* begin fetchNextBytecode */
-					currentBytecode = byteAtPointer(++localIP);
-					/* begin internalPush: */
-					longAtPointerput(localSP += BytesPerWord, arg1);
-					goto l5;
+				sqInt popValues;
+				sqInt array;
+				sqInt i;
+				sqInt size;
+				size = byteAtPointer(++localIP);
+				popValues = size > 127;
+				size = size & 127;
+				/* begin fetchNextBytecode */
+				currentBytecode = byteAtPointer(++localIP);
+				/* begin externalizeIPandSP */
+				foo->instructionPointer = oopForPointer(localIP);
+				foo->stackPointer = oopForPointer(localSP);
+				foo->theHomeContext = localHomeContext;
+				array = instantiateClassindexableSize(longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassArray << ShiftForWord)), size);
+				/* begin internalizeIPandSP */
+				localIP = pointerForOop(foo->instructionPointer);
+				localSP = pointerForOop(foo->stackPointer);
+				localHomeContext = foo->theHomeContext;
+				if (popValues) {
+					for (i = 0; i <= (size - 1); i += 1) {
+						longAtput((array + BaseHeaderSize) + (i << ShiftForWord), longAtPointer(localSP - (((size - i) - 1) * BytesPerWord)));
+					}
+					/* begin internalPop: */
+					localSP -= size * BytesPerWord;
 				}
-				if (byte2 < 32) {
-					arg2Val = longAt((localHomeContext + BaseHeaderSize) + (((byte2 & 15) + TempFrameStart) << ShiftForWord));
-					if ((arg2Val & 1)) {
-						arg2Val = (arg2Val >> 1);
-					} else {
-						/* begin fetchNextBytecode */
-						currentBytecode = byteAtPointer(++localIP);
-						/* begin internalPush: */
-						longAtPointerput(localSP += BytesPerWord, arg1);
-						goto l5;
-					}
-				} else {
-					if (byte2 > 64) {
-						arg2Val = 1;
-					} else {
-						arg2Val = longAt((foo->method + BaseHeaderSize) + (((byte2 & 31) + LiteralStart) << ShiftForWord));
-						if ((arg2Val & 1)) {
-							arg2Val = (arg2Val >> 1);
-						} else {
-							/* begin fetchNextBytecode */
-							currentBytecode = byteAtPointer(++localIP);
-							/* begin internalPush: */
-							longAtPointerput(localSP += BytesPerWord, arg1);
-							goto l5;
-						}
-					}
-				}
-				if (byte3 < 178) {
-					result = arg1Val + arg2Val;
-					if ((result ^ (result << 1)) >= 0) {
-						if ((byte4 > 103) && (byte4 < 112)) {
-							localIP += 3;
-							longAtput((localHomeContext + BaseHeaderSize) + (((byte4 & 7) + TempFrameStart) << ShiftForWord), ((result << 1) | 1));
-						} else {
-							localIP += 2;
-							/* begin internalPush: */
-							longAtPointerput(localSP += BytesPerWord, ((result << 1) | 1));
-						}
-					} else {
-						/* begin fetchNextBytecode */
-						currentBytecode = byteAtPointer(++localIP);
-						/* begin internalPush: */
-						longAtPointerput(localSP += BytesPerWord, arg1);
-						goto l5;
-					}
-				} else {
-					offset = byteAtPointer(localIP + 4);
-					if (arg1Val <= arg2Val) {
-						localIP = (localIP + 3) + 1;
-					} else {
-						localIP = ((localIP + 3) + 1) + offset;
-					}
-					/* begin fetchNextBytecode */
-					currentBytecode = byteAtPointer(++localIP);
-				}
+				/* begin internalPush: */
+				longAtPointerput(localSP += BytesPerWord, array);
 			}
 ;
-		l5:	/* end case */;
+			break;
+		case 139:
+			/* unknownBytecode */
+			{
+				error("Unknown bytecode");
+			}
+;
+			break;
+		case 140:
+			/* pushRemoteTempLongBytecode */
+			{
+				sqInt tempVectorIndex;
+				sqInt remoteTempIndex;
+				sqInt tempVector;
+				remoteTempIndex = byteAtPointer(++localIP);
+				tempVectorIndex = byteAtPointer(++localIP);
+				/* begin fetchNextBytecode */
+				currentBytecode = byteAtPointer(++localIP);
+				/* begin pushRemoteTemp:inVectorAt: */
+				tempVector = longAt((localHomeContext + BaseHeaderSize) + ((tempVectorIndex + TempFrameStart) << ShiftForWord));
+				/* begin internalPush: */
+				longAtPointerput(localSP += BytesPerWord, longAt((tempVector + BaseHeaderSize) + (remoteTempIndex << ShiftForWord)));
+			}
+;
+			break;
+		case 141:
+			/* storeRemoteTempLongBytecode */
+			{
+				sqInt tempVectorIndex;
+				sqInt remoteTempIndex;
+				sqInt tempVector;
+				sqInt valuePointer;
+				remoteTempIndex = byteAtPointer(++localIP);
+				tempVectorIndex = byteAtPointer(++localIP);
+				/* begin fetchNextBytecode */
+				currentBytecode = byteAtPointer(++localIP);
+				/* begin storeRemoteTemp:inVectorAt: */
+				tempVector = longAt((localHomeContext + BaseHeaderSize) + ((tempVectorIndex + TempFrameStart) << ShiftForWord));
+				/* begin storePointer:ofObject:withValue: */
+				valuePointer = longAtPointer(localSP);
+				if ((((usqInt) tempVector)) < (((usqInt) foo->youngStart))) {
+					possibleRootStoreIntovalue(tempVector, valuePointer);
+				}
+				longAtput((tempVector + BaseHeaderSize) + (remoteTempIndex << ShiftForWord), valuePointer);
+			}
+;
+			break;
+		case 142:
+			/* storeAndPopRemoteTempLongBytecode */
+			{
+				sqInt tempVectorIndex;
+				sqInt remoteTempIndex;
+				sqInt tempVector;
+				sqInt valuePointer;
+				/* begin storeRemoteTempLongBytecode */
+				remoteTempIndex = byteAtPointer(++localIP);
+				tempVectorIndex = byteAtPointer(++localIP);
+				/* begin fetchNextBytecode */
+				currentBytecode = byteAtPointer(++localIP);
+				/* begin storeRemoteTemp:inVectorAt: */
+				tempVector = longAt((localHomeContext + BaseHeaderSize) + ((tempVectorIndex + TempFrameStart) << ShiftForWord));
+				/* begin storePointer:ofObject:withValue: */
+				valuePointer = longAtPointer(localSP);
+				if ((((usqInt) tempVector)) < (((usqInt) foo->youngStart))) {
+					possibleRootStoreIntovalue(tempVector, valuePointer);
+				}
+				longAtput((tempVector + BaseHeaderSize) + (remoteTempIndex << ShiftForWord), valuePointer);
+				/* begin internalPop: */
+				localSP -= 1 * BytesPerWord;
+			}
+;
+			break;
+		case 143:
+			/* pushClosureCopyCopiedValuesBytecode */
+			{
+				sqInt numArgs;
+				sqInt numArgsNumCopied;
+				sqInt newClosure;
+				sqInt blockSize;
+				sqInt i;
+				sqInt numCopied;
+				sqInt initialIP;
+				sqInt newClosure1;
+				if (BytesPerWord == 4) {
+					imageFormatVersionNumber = 6504;
+				} else {
+					imageFormatVersionNumber = 68002;
+				}
+				numArgsNumCopied = byteAtPointer(++localIP);
+				numArgs = numArgsNumCopied & 15;
+				numCopied = ((usqInt) numArgsNumCopied >> 4);
+				blockSize = (byteAtPointer(++localIP)) << 8;
+				blockSize += byteAtPointer(++localIP);
+				/* begin externalizeIPandSP */
+				foo->instructionPointer = oopForPointer(localIP);
+				foo->stackPointer = oopForPointer(localSP);
+				foo->theHomeContext = localHomeContext;
+				/* begin closureNumArgs:instructionPointer:numCopiedValues: */
+				initialIP = ((oopForPointer(localIP)) + 2) - (foo->method + BaseHeaderSize);
+				newClosure1 = instantiateSmallClasssizeInBytes(longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockClosure << ShiftForWord)), (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize);
+				longAtput((newClosure1 + BaseHeaderSize) + (ClosureStartPCIndex << ShiftForWord), ((initialIP << 1) | 1));
+				longAtput((newClosure1 + BaseHeaderSize) + (ClosureNumArgsIndex << ShiftForWord), ((numArgs << 1) | 1));
+				newClosure = newClosure1;
+				/* begin internalizeIPandSP */
+				localIP = pointerForOop(foo->instructionPointer);
+				localSP = pointerForOop(foo->stackPointer);
+				localHomeContext = foo->theHomeContext;
+				longAtput((newClosure + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord), foo->activeContext);
+				foo->reclaimableContextCount = 0;
+				if (numCopied > 0) {
+					for (i = 0; i <= (numCopied - 1); i += 1) {
+						longAtput((newClosure + BaseHeaderSize) + ((i + ClosureFirstCopiedValueIndex) << ShiftForWord), longAtPointer(localSP - (((numCopied - i) - 1) * BytesPerWord)));
+					}
+					/* begin internalPop: */
+					localSP -= numCopied * BytesPerWord;
+				}
+				localIP += blockSize;
+				/* begin fetchNextBytecode */
+				currentBytecode = byteAtPointer(++localIP);
+				/* begin internalPush: */
+				longAtPointerput(localSP += BytesPerWord, newClosure);
+			}
+;
 			break;
 		case 144:
 			/* shortUnconditionalJump */
@@ -8202,14 +8863,14 @@ register struct foo * foo = &fum;
 						foo->messageSelector = longAt((foo->specialObjectsOop + BaseHeaderSize) + (SelectorMustBeBoolean << ShiftForWord));
 						foo->argumentCount = 0;
 						goto normalSend;
-						goto l6;
+						goto l5;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
 				}
 				/* begin internalPop: */
 				localSP -= 1 * BytesPerWord;
-			l6:	/* end jumplfFalseBy: */;
+			l5:	/* end jumplfFalseBy: */;
 			}
 ;
 			break;
@@ -8266,14 +8927,14 @@ register struct foo * foo = &fum;
 						foo->messageSelector = longAt((foo->specialObjectsOop + BaseHeaderSize) + (SelectorMustBeBoolean << ShiftForWord));
 						foo->argumentCount = 0;
 						goto normalSend;
-						goto l7;
+						goto l6;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
 				}
 				/* begin internalPop: */
 				localSP -= 1 * BytesPerWord;
-			l7:	/* end jumplfTrueBy: */;
+			l6:	/* end jumplfTrueBy: */;
 			}
 ;
 			break;
@@ -8297,14 +8958,14 @@ register struct foo * foo = &fum;
 						foo->messageSelector = longAt((foo->specialObjectsOop + BaseHeaderSize) + (SelectorMustBeBoolean << ShiftForWord));
 						foo->argumentCount = 0;
 						goto normalSend;
-						goto l8;
+						goto l7;
 					}
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
 				}
 				/* begin internalPop: */
 				localSP -= 1 * BytesPerWord;
-			l8:	/* end jumplfFalseBy: */;
+			l7:	/* end jumplfFalseBy: */;
 			}
 ;
 			break;
@@ -8323,7 +8984,7 @@ register struct foo * foo = &fum;
 						longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l9;
+						goto l8;
 					}
 				} else {
 					foo->successFlag = 1;
@@ -8339,7 +9000,7 @@ register struct foo * foo = &fum;
 					if (foo->successFlag) {
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l9;
+						goto l8;
 					}
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((0 * 2) << ShiftForWord));
@@ -8347,7 +9008,7 @@ register struct foo * foo = &fum;
 				goto normalSend;
 			}
 ;
-		l9:	/* end case */;
+		l8:	/* end case */;
 			break;
 		case 177:
 			/* bytecodePrimSubtract */
@@ -8364,7 +9025,7 @@ register struct foo * foo = &fum;
 						longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l10;
+						goto l9;
 					}
 				} else {
 					foo->successFlag = 1;
@@ -8380,7 +9041,7 @@ register struct foo * foo = &fum;
 					if (foo->successFlag) {
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l10;
+						goto l9;
 					}
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((1 * 2) << ShiftForWord));
@@ -8388,7 +9049,7 @@ register struct foo * foo = &fum;
 				goto normalSend;
 			}
 ;
-		l10:	/* end case */;
+		l9:	/* end case */;
 			break;
 		case 178:
 			/* bytecodePrimLessThan */
@@ -8414,12 +9075,12 @@ register struct foo * foo = &fum;
 						if (rcvr < arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l11;
+							goto l10;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode1 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l11;
+							goto l10;
 						}
 					}
 					if (bytecode1 == 172) {
@@ -8427,12 +9088,12 @@ register struct foo * foo = &fum;
 						if (rcvr < arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l11;
+							goto l10;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset1) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l11;
+							goto l10;
 						}
 					}
 					localIP -= 1;
@@ -8445,7 +9106,7 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l11;
+					goto l10;
 				}
 				foo->successFlag = 1;
 				aBool = primitiveFloatLessthanArg(rcvr, arg);
@@ -8458,12 +9119,12 @@ register struct foo * foo = &fum;
 						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l11;
+							goto l10;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode2 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l11;
+							goto l10;
 						}
 					}
 					if (bytecode2 == 172) {
@@ -8471,12 +9132,12 @@ register struct foo * foo = &fum;
 						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l11;
+							goto l10;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset2) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l11;
+							goto l10;
 						}
 					}
 					localIP -= 1;
@@ -8489,14 +9150,14 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l11;
+					goto l10;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((2 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l11:	/* end case */;
+		l10:	/* end case */;
 			break;
 		case 179:
 			/* bytecodePrimGreaterThan */
@@ -8522,12 +9183,12 @@ register struct foo * foo = &fum;
 						if (rcvr > arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l12;
+							goto l11;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode1 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l12;
+							goto l11;
 						}
 					}
 					if (bytecode1 == 172) {
@@ -8535,12 +9196,12 @@ register struct foo * foo = &fum;
 						if (rcvr > arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l12;
+							goto l11;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset1) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l12;
+							goto l11;
 						}
 					}
 					localIP -= 1;
@@ -8553,7 +9214,7 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l12;
+					goto l11;
 				}
 				foo->successFlag = 1;
 				aBool = primitiveFloatGreaterthanArg(rcvr, arg);
@@ -8566,12 +9227,12 @@ register struct foo * foo = &fum;
 						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l12;
+							goto l11;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode2 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l12;
+							goto l11;
 						}
 					}
 					if (bytecode2 == 172) {
@@ -8579,12 +9240,12 @@ register struct foo * foo = &fum;
 						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l12;
+							goto l11;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset2) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l12;
+							goto l11;
 						}
 					}
 					localIP -= 1;
@@ -8597,14 +9258,14 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l12;
+					goto l11;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((3 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l12:	/* end case */;
+		l11:	/* end case */;
 			break;
 		case 180:
 			/* bytecodePrimLessOrEqual */
@@ -8630,12 +9291,12 @@ register struct foo * foo = &fum;
 						if (rcvr <= arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l13;
+							goto l12;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode1 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l13;
+							goto l12;
 						}
 					}
 					if (bytecode1 == 172) {
@@ -8643,12 +9304,12 @@ register struct foo * foo = &fum;
 						if (rcvr <= arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l13;
+							goto l12;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset1) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l13;
+							goto l12;
 						}
 					}
 					localIP -= 1;
@@ -8661,58 +9322,58 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l13;
+					goto l12;
 				}
 				foo->successFlag = 1;
-				aBool = primitiveFloatGreaterthanArg(rcvr, arg);
+				aBool = primitiveFloatLessOrEqualtoArg(rcvr, arg);
 				if (foo->successFlag) {
 					/* begin booleanCheat: */
 					bytecode2 = byteAtPointer(++localIP);
 					/* begin internalPop: */
 					localSP -= 2 * BytesPerWord;
 					if ((bytecode2 < 160) && (bytecode2 > 151)) {
-						if (!aBool) {
+						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l13;
+							goto l12;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode2 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l13;
+							goto l12;
 						}
 					}
 					if (bytecode2 == 172) {
 						offset2 = byteAtPointer(++localIP);
-						if (!aBool) {
+						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l13;
+							goto l12;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset2) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l13;
+							goto l12;
 						}
 					}
 					localIP -= 1;
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					if (!aBool) {
+					if (aBool) {
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->trueObj);
 					} else {
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l13;
+					goto l12;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((4 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l13:	/* end case */;
+		l12:	/* end case */;
 			break;
 		case 181:
 			/* bytecodePrimGreaterOrEqual */
@@ -8738,12 +9399,12 @@ register struct foo * foo = &fum;
 						if (rcvr >= arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l14;
+							goto l13;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode1 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l14;
+							goto l13;
 						}
 					}
 					if (bytecode1 == 172) {
@@ -8751,12 +9412,12 @@ register struct foo * foo = &fum;
 						if (rcvr >= arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l14;
+							goto l13;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset1) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l14;
+							goto l13;
 						}
 					}
 					localIP -= 1;
@@ -8769,58 +9430,58 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l14;
+					goto l13;
 				}
 				foo->successFlag = 1;
-				aBool = primitiveFloatLessthanArg(rcvr, arg);
+				aBool = primitiveFloatGreaterOrEqualtoArg(rcvr, arg);
 				if (foo->successFlag) {
 					/* begin booleanCheat: */
 					bytecode2 = byteAtPointer(++localIP);
 					/* begin internalPop: */
 					localSP -= 2 * BytesPerWord;
 					if ((bytecode2 < 160) && (bytecode2 > 151)) {
-						if (!aBool) {
+						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l14;
+							goto l13;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode2 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l14;
+							goto l13;
 						}
 					}
 					if (bytecode2 == 172) {
 						offset2 = byteAtPointer(++localIP);
-						if (!aBool) {
+						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l14;
+							goto l13;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset2) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l14;
+							goto l13;
 						}
 					}
 					localIP -= 1;
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					if (!aBool) {
+					if (aBool) {
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->trueObj);
 					} else {
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l14;
+					goto l13;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((5 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l14:	/* end case */;
+		l13:	/* end case */;
 			break;
 		case 182:
 			/* bytecodePrimEqual */
@@ -8843,12 +9504,12 @@ register struct foo * foo = &fum;
 						if (rcvr == arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l15;
+							goto l14;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l15;
+							goto l14;
 						}
 					}
 					if (bytecode == 172) {
@@ -8856,12 +9517,12 @@ register struct foo * foo = &fum;
 						if (rcvr == arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l15;
+							goto l14;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l15;
+							goto l14;
 						}
 					}
 					localIP -= 1;
@@ -8874,7 +9535,7 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l15;
+					goto l14;
 				}
 				foo->successFlag = 1;
 				aBool = primitiveFloatEqualtoArg(rcvr, arg);
@@ -8887,12 +9548,12 @@ register struct foo * foo = &fum;
 						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l15;
+							goto l14;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode1 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l15;
+							goto l14;
 						}
 					}
 					if (bytecode1 == 172) {
@@ -8900,12 +9561,12 @@ register struct foo * foo = &fum;
 						if (aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l15;
+							goto l14;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset1) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l15;
+							goto l14;
 						}
 					}
 					localIP -= 1;
@@ -8918,14 +9579,14 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l15;
+					goto l14;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((6 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l15:	/* end case */;
+		l14:	/* end case */;
 			break;
 		case 183:
 			/* bytecodePrimNotEqual */
@@ -8948,12 +9609,12 @@ register struct foo * foo = &fum;
 						if (rcvr != arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l16;
+							goto l15;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l16;
+							goto l15;
 						}
 					}
 					if (bytecode == 172) {
@@ -8961,12 +9622,12 @@ register struct foo * foo = &fum;
 						if (rcvr != arg) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l16;
+							goto l15;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l16;
+							goto l15;
 						}
 					}
 					localIP -= 1;
@@ -8979,7 +9640,7 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l16;
+					goto l15;
 				}
 				foo->successFlag = 1;
 				aBool = primitiveFloatEqualtoArg(rcvr, arg);
@@ -8992,12 +9653,12 @@ register struct foo * foo = &fum;
 						if (!aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l16;
+							goto l15;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + (bytecode1 - 151)) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l16;
+							goto l15;
 						}
 					}
 					if (bytecode1 == 172) {
@@ -9005,12 +9666,12 @@ register struct foo * foo = &fum;
 						if (!aBool) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l16;
+							goto l15;
 						} else {
 							/* begin jump: */
 							localIP = (localIP + offset1) + 1;
 							currentBytecode = byteAtPointer(localIP);
-							goto l16;
+							goto l15;
 						}
 					}
 					localIP -= 1;
@@ -9023,14 +9684,14 @@ register struct foo * foo = &fum;
 						/* begin internalPush: */
 						longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 					}
-					goto l16;
+					goto l15;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((7 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l16:	/* end case */;
+		l15:	/* end case */;
 			break;
 		case 184:
 			/* bytecodePrimMultiply */
@@ -9049,7 +9710,7 @@ register struct foo * foo = &fum;
 						longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l17;
+						goto l16;
 					}
 				} else {
 					foo->successFlag = 1;
@@ -9065,7 +9726,7 @@ register struct foo * foo = &fum;
 					if (foo->successFlag) {
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l17;
+						goto l16;
 					}
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((8 * 2) << ShiftForWord));
@@ -9073,7 +9734,7 @@ register struct foo * foo = &fum;
 				goto normalSend;
 			}
 ;
-		l17:	/* end case */;
+		l16:	/* end case */;
 			break;
 		case 185:
 			/* bytecodePrimDivide */
@@ -9093,7 +9754,7 @@ register struct foo * foo = &fum;
 							longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
-							goto l18;
+							goto l17;
 						}
 					}
 				} else {
@@ -9110,7 +9771,7 @@ register struct foo * foo = &fum;
 					if (foo->successFlag) {
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l18;
+						goto l17;
 					}
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((9 * 2) << ShiftForWord));
@@ -9118,7 +9779,7 @@ register struct foo * foo = &fum;
 				goto normalSend;
 			}
 ;
-		l18:	/* end case */;
+		l17:	/* end case */;
 			break;
 		case 186:
 			/* bytecodePrimMod */
@@ -9131,14 +9792,14 @@ register struct foo * foo = &fum;
 					longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((mod << 1) | 1));
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l19;
+					goto l18;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((10 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l19:	/* end case */;
+		l18:	/* end case */;
 			break;
 		case 187:
 			/* bytecodePrimMakePoint */
@@ -9185,7 +9846,7 @@ register struct foo * foo = &fum;
 					if (!((fetchClassOf(rcvr)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord))))) {
 						/* begin success: */
 						foo->successFlag = 0 && foo->successFlag;
-						goto l21;
+						goto l20;
 					}
 					/* begin makePointwithxValue:yValue: */
 					pointResult2 = instantiateSmallClasssizeInBytes(longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassPoint << ShiftForWord)), 3 * BytesPerWord);
@@ -9208,7 +9869,7 @@ register struct foo * foo = &fum;
 				/* begin pop:thenPush: */
 				longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), pt);
 				foo->stackPointer = sp;
-			l21:	/* end primitiveMakePoint */;
+			l20:	/* end primitiveMakePoint */;
 				/* begin internalizeIPandSP */
 				localIP = pointerForOop(foo->instructionPointer);
 				localSP = pointerForOop(foo->stackPointer);
@@ -9216,14 +9877,14 @@ register struct foo * foo = &fum;
 				if (foo->successFlag) {
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l20;
+					goto l19;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((11 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l20:	/* end case */;
+		l19:	/* end case */;
 			break;
 		case 188:
 			/* bytecodePrimBitShift */
@@ -9251,14 +9912,14 @@ register struct foo * foo = &fum;
 				/* begin checkedIntegerValueOf: */
 				if ((integerPointer & 1)) {
 					integerArgument = (integerPointer >> 1);
-					goto l23;
+					goto l22;
 				} else {
 					/* begin primitiveFail */
 					foo->successFlag = 0;
 					integerArgument = 0;
-					goto l23;
+					goto l22;
 				}
-			l23:	/* end checkedIntegerValueOf: */;
+			l22:	/* end checkedIntegerValueOf: */;
 				/* begin popPos32BitInteger */
 				/* begin popStack */
 				top1 = longAt(foo->stackPointer);
@@ -9294,14 +9955,14 @@ register struct foo * foo = &fum;
 				if (foo->successFlag) {
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l22;
+					goto l21;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((12 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l22:	/* end case */;
+		l21:	/* end case */;
 			break;
 		case 189:
 			/* bytecodePrimDiv */
@@ -9314,14 +9975,14 @@ register struct foo * foo = &fum;
 					longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((quotient << 1) | 1));
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l24;
+					goto l23;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((13 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l24:	/* end case */;
+		l23:	/* end case */;
 			break;
 		case 190:
 			/* bytecodePrimBitAnd */
@@ -9368,14 +10029,14 @@ register struct foo * foo = &fum;
 				if (foo->successFlag) {
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l25;
+					goto l24;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((14 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l25:	/* end case */;
+		l24:	/* end case */;
 			break;
 		case 191:
 			/* bytecodePrimBitOr */
@@ -9422,14 +10083,14 @@ register struct foo * foo = &fum;
 				if (foo->successFlag) {
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l26;
+					goto l25;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((15 * 2) << ShiftForWord));
 				foo->argumentCount = 1;
 				goto normalSend;
 			}
 ;
-		l26:	/* end case */;
+		l25:	/* end case */;
 			break;
 		case 192:
 			/* bytecodePrimAt */
@@ -9455,7 +10116,7 @@ register struct foo * foo = &fum;
 							if (fmt <= 4) {
 								fixedFields = foo->atCache[atIx + AtCacheFixedFields];
 								result = longAt((rcvr + BaseHeaderSize) + (((((index >> 1)) + fixedFields) - 1) << ShiftForWord));
-								goto l28;
+								goto l27;
 							}
 							if (fmt < 8) {
 								result1 = long32At((rcvr + BaseHeaderSize) + ((((index >> 1)) - 1) << 2));
@@ -9469,25 +10130,25 @@ register struct foo * foo = &fum;
 								localSP = pointerForOop(foo->stackPointer);
 								localHomeContext = foo->theHomeContext;
 								result = result1;
-								goto l28;
+								goto l27;
 							}
 							if (fmt >= 16) {
 								result = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CharacterTable << ShiftForWord))) + BaseHeaderSize) + ((byteAt((rcvr + BaseHeaderSize) + (((index >> 1)) - 1))) << ShiftForWord));
-								goto l28;
+								goto l27;
 							} else {
 								result = (((byteAt((rcvr + BaseHeaderSize) + (((index >> 1)) - 1))) << 1) | 1);
-								goto l28;
+								goto l27;
 							}
 						}
 						/* begin primitiveFail */
 						foo->successFlag = 0;
-					l28:	/* end commonVariableInternal:at:cacheIndex: */;
+					l27:	/* end commonVariableInternal:at:cacheIndex: */;
 						if (foo->successFlag) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
 							/* begin internalPop:thenPush: */
 							longAtPointerput(localSP -= (2 - 1) * BytesPerWord, result);
-							goto l27;
+							goto l26;
 						}
 					}
 				}
@@ -9496,7 +10157,7 @@ register struct foo * foo = &fum;
 				goto normalSend;
 			}
 ;
-		l27:	/* end case */;
+		l26:	/* end case */;
 			break;
 		case 193:
 			/* bytecodePrimAtPut */
@@ -9527,19 +10188,19 @@ register struct foo * foo = &fum;
 									possibleRootStoreIntovalue(rcvr, value);
 								}
 								longAtput((rcvr + BaseHeaderSize) + (((((index >> 1)) + fixedFields) - 1) << ShiftForWord), value);
-								goto l30;
+								goto l29;
 							}
 							if (fmt < 8) {
 								valToPut = positive32BitValueOf(value);
 								if (foo->successFlag) {
 									long32Atput((rcvr + BaseHeaderSize) + ((((index >> 1)) - 1) << 2), valToPut);
 								}
-								goto l30;
+								goto l29;
 							}
 							if (fmt >= 16) {
 								valToPut = asciiOfCharacter(value);
 								if (!(foo->successFlag)) {
-									goto l30;
+									goto l29;
 								}
 							} else {
 								valToPut = value;
@@ -9549,21 +10210,21 @@ register struct foo * foo = &fum;
 								if (!((valToPut >= 0) && (valToPut <= 255))) {
 									/* begin primitiveFail */
 									foo->successFlag = 0;
-									goto l30;
+									goto l29;
 								}
 								byteAtput((rcvr + BaseHeaderSize) + (((index >> 1)) - 1), valToPut);
-								goto l30;
+								goto l29;
 							}
 						}
 						/* begin primitiveFail */
 						foo->successFlag = 0;
-					l30:	/* end commonVariable:at:put:cacheIndex: */;
+					l29:	/* end commonVariable:at:put:cacheIndex: */;
 						if (foo->successFlag) {
 							/* begin fetchNextBytecode */
 							currentBytecode = byteAtPointer(++localIP);
 							/* begin internalPop:thenPush: */
 							longAtPointerput(localSP -= (3 - 1) * BytesPerWord, value);
-							goto l29;
+							goto l28;
 						}
 					}
 				}
@@ -9572,7 +10233,7 @@ register struct foo * foo = &fum;
 				goto normalSend;
 			}
 ;
-		l29:	/* end case */;
+		l28:	/* end case */;
 			break;
 		case 194:
 			/* bytecodePrimSize */
@@ -9627,12 +10288,12 @@ register struct foo * foo = &fum;
 					if (rcvr == arg) {
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l31;
+						goto l30;
 					} else {
 						/* begin jump: */
 						localIP = (localIP + (bytecode - 151)) + 1;
 						currentBytecode = byteAtPointer(localIP);
-						goto l31;
+						goto l30;
 					}
 				}
 				if (bytecode == 172) {
@@ -9640,12 +10301,12 @@ register struct foo * foo = &fum;
 					if (rcvr == arg) {
 						/* begin fetchNextBytecode */
 						currentBytecode = byteAtPointer(++localIP);
-						goto l31;
+						goto l30;
 					} else {
 						/* begin jump: */
 						localIP = (localIP + offset) + 1;
 						currentBytecode = byteAtPointer(localIP);
-						goto l31;
+						goto l30;
 					}
 				}
 				localIP -= 1;
@@ -9658,7 +10319,7 @@ register struct foo * foo = &fum;
 					/* begin internalPush: */
 					longAtPointerput(localSP += BytesPerWord, foo->falseObj);
 				}
-			l31:	/* end booleanCheat: */;
+			l30:	/* end booleanCheat: */;
 			}
 ;
 			break;
@@ -9673,17 +10334,17 @@ register struct foo * foo = &fum;
 				/* begin fetchClassOf: */
 				if ((rcvr & 1)) {
 					oop = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassInteger << ShiftForWord));
-					goto l32;
+					goto l31;
 				}
 				ccIndex = (((usqInt) (longAt(rcvr))) >> 12) & 31;
 				if (ccIndex == 0) {
 					oop = (longAt(rcvr - BaseHeaderSize)) & AllButTypeMask;
-					goto l32;
+					goto l31;
 				} else {
 					oop = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
-					goto l32;
+					goto l31;
 				}
-			l32:	/* end fetchClassOf: */;
+			l31:	/* end fetchClassOf: */;
 				longAtPointerput(localSP -= (1 - 1) * BytesPerWord, oop);
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
@@ -9726,12 +10387,12 @@ register struct foo * foo = &fum;
 					header = longAt(methodContext);
 					if ((header & TypeMask) == HeaderTypeSizeAndClass) {
 						contextSize = (longAt(methodContext - (BytesPerWord * 2))) & LongSizeMask;
-						goto l34;
+						goto l33;
 					} else {
 						contextSize = header & SizeMask;
-						goto l34;
+						goto l33;
 					}
-				l34:	/* end sizeBitsOf: */;
+				l33:	/* end sizeBitsOf: */;
 					context = null;
 					/* begin pushRemappableOop: */
 					foo->remapBuffer[foo->remapBufferCount += 1] = methodContext;
@@ -9760,105 +10421,127 @@ register struct foo * foo = &fum;
 					foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((24 * 2) << ShiftForWord));
 					foo->argumentCount = 1;
 					goto normalSend;
-					goto l33;
+					goto l32;
 				}
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 			}
 ;
-		l33:	/* end case */;
+		l32:	/* end case */;
 			break;
 		case 201:
 			/* bytecodePrimValue */
 			{
-				sqInt block;
+				sqInt maybeBlock;
+				sqInt rcvrClass;
 				sqInt ccIndex;
-				sqInt cl;
-				block = longAtPointer(localSP);
-				foo->successFlag = 1;
+				maybeBlock = longAtPointer(localSP);
 				foo->argumentCount = 0;
-				/* begin assertClassOf:is: */
-				if ((block & 1)) {
-					foo->successFlag = 0;
-					goto l36;
-				}
-				ccIndex = (((usqInt) (longAt(block))) >> 12) & 31;
-				if (ccIndex == 0) {
-					cl = (longAt(block - BaseHeaderSize)) & AllButTypeMask;
-				} else {
-					cl = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
-				}
-				/* begin success: */
-				foo->successFlag = (cl == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockContext << ShiftForWord)))) && foo->successFlag;
-			l36:	/* end assertClassOf:is: */;
-				if (foo->successFlag) {
-					/* begin externalizeIPandSP */
-					foo->instructionPointer = oopForPointer(localIP);
-					foo->stackPointer = oopForPointer(localSP);
-					foo->theHomeContext = localHomeContext;
-					primitiveValue();
-					/* begin internalizeIPandSP */
-					localIP = pointerForOop(foo->instructionPointer);
-					localSP = pointerForOop(foo->stackPointer);
-					localHomeContext = foo->theHomeContext;
+				foo->successFlag = 1;
+				if ((maybeBlock & 1) == 0) {
+					/* begin fetchClassOfNonInt: */
+					ccIndex = (((usqInt) (longAt(maybeBlock))) >> 12) & 31;
+					if (ccIndex == 0) {
+						rcvrClass = (longAt(maybeBlock - BaseHeaderSize)) & AllButTypeMask;
+						goto l35;
+					} else {
+						rcvrClass = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
+						goto l35;
+					}
+				l35:	/* end fetchClassOfNonInt: */;
+					if (rcvrClass == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockClosure << ShiftForWord)))) {
+						/* begin externalizeIPandSP */
+						foo->instructionPointer = oopForPointer(localIP);
+						foo->stackPointer = oopForPointer(localSP);
+						foo->theHomeContext = localHomeContext;
+						primitiveClosureValue();
+						/* begin internalizeIPandSP */
+						localIP = pointerForOop(foo->instructionPointer);
+						localSP = pointerForOop(foo->stackPointer);
+						localHomeContext = foo->theHomeContext;
+					} else {
+						if (rcvrClass == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockContext << ShiftForWord)))) {
+							/* begin externalizeIPandSP */
+							foo->instructionPointer = oopForPointer(localIP);
+							foo->stackPointer = oopForPointer(localSP);
+							foo->theHomeContext = localHomeContext;
+							primitiveValue();
+							/* begin internalizeIPandSP */
+							localIP = pointerForOop(foo->instructionPointer);
+							localSP = pointerForOop(foo->stackPointer);
+							localHomeContext = foo->theHomeContext;
+						} else {
+							foo->successFlag = 0;
+						}
+					}
 				}
 				if (!(foo->successFlag)) {
 					foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((25 * 2) << ShiftForWord));
-					foo->argumentCount = 0;
 					goto normalSend;
-					goto l35;
+					goto l34;
 				}
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 			}
 ;
-		l35:	/* end case */;
+		l34:	/* end case */;
 			break;
 		case 202:
 			/* bytecodePrimValueWithArg */
 			{
-				sqInt block;
+				sqInt maybeBlock;
+				sqInt rcvrClass;
 				sqInt ccIndex;
-				sqInt cl;
-				block = longAtPointer(localSP - (1 * BytesPerWord));
-				foo->successFlag = 1;
+				maybeBlock = longAtPointer(localSP - (1 * BytesPerWord));
 				foo->argumentCount = 1;
-				/* begin assertClassOf:is: */
-				if ((block & 1)) {
-					foo->successFlag = 0;
-					goto l38;
-				}
-				ccIndex = (((usqInt) (longAt(block))) >> 12) & 31;
-				if (ccIndex == 0) {
-					cl = (longAt(block - BaseHeaderSize)) & AllButTypeMask;
-				} else {
-					cl = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
-				}
-				/* begin success: */
-				foo->successFlag = (cl == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockContext << ShiftForWord)))) && foo->successFlag;
-			l38:	/* end assertClassOf:is: */;
-				if (foo->successFlag) {
-					/* begin externalizeIPandSP */
-					foo->instructionPointer = oopForPointer(localIP);
-					foo->stackPointer = oopForPointer(localSP);
-					foo->theHomeContext = localHomeContext;
-					primitiveValue();
-					/* begin internalizeIPandSP */
-					localIP = pointerForOop(foo->instructionPointer);
-					localSP = pointerForOop(foo->stackPointer);
-					localHomeContext = foo->theHomeContext;
+				foo->successFlag = 1;
+				if ((maybeBlock & 1) == 0) {
+					/* begin fetchClassOfNonInt: */
+					ccIndex = (((usqInt) (longAt(maybeBlock))) >> 12) & 31;
+					if (ccIndex == 0) {
+						rcvrClass = (longAt(maybeBlock - BaseHeaderSize)) & AllButTypeMask;
+						goto l37;
+					} else {
+						rcvrClass = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
+						goto l37;
+					}
+				l37:	/* end fetchClassOfNonInt: */;
+					if (rcvrClass == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockClosure << ShiftForWord)))) {
+						/* begin externalizeIPandSP */
+						foo->instructionPointer = oopForPointer(localIP);
+						foo->stackPointer = oopForPointer(localSP);
+						foo->theHomeContext = localHomeContext;
+						primitiveClosureValue();
+						/* begin internalizeIPandSP */
+						localIP = pointerForOop(foo->instructionPointer);
+						localSP = pointerForOop(foo->stackPointer);
+						localHomeContext = foo->theHomeContext;
+					} else {
+						if (rcvrClass == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockContext << ShiftForWord)))) {
+							/* begin externalizeIPandSP */
+							foo->instructionPointer = oopForPointer(localIP);
+							foo->stackPointer = oopForPointer(localSP);
+							foo->theHomeContext = localHomeContext;
+							primitiveValue();
+							/* begin internalizeIPandSP */
+							localIP = pointerForOop(foo->instructionPointer);
+							localSP = pointerForOop(foo->stackPointer);
+							localHomeContext = foo->theHomeContext;
+						} else {
+							foo->successFlag = 0;
+						}
+					}
 				}
 				if (!(foo->successFlag)) {
 					foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((26 * 2) << ShiftForWord));
-					foo->argumentCount = 1;
 					goto normalSend;
-					goto l37;
+					goto l36;
 				}
 				/* begin fetchNextBytecode */
 				currentBytecode = byteAtPointer(++localIP);
 			}
 ;
-		l37:	/* end case */;
+		l36:	/* end case */;
 			break;
 		case 203:
 			/* bytecodePrimDo */
@@ -9898,7 +10581,7 @@ register struct foo * foo = &fum;
 				/* begin assertClassOf:is: */
 				if ((rcvr & 1)) {
 					foo->successFlag = 0;
-					goto l40;
+					goto l39;
 				}
 				ccIndex = (((usqInt) (longAt(rcvr))) >> 12) & 31;
 				if (ccIndex == 0) {
@@ -9908,20 +10591,20 @@ register struct foo * foo = &fum;
 				}
 				/* begin success: */
 				foo->successFlag = (cl == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassPoint << ShiftForWord)))) && foo->successFlag;
-			l40:	/* end assertClassOf:is: */;
+			l39:	/* end assertClassOf:is: */;
 				if (foo->successFlag) {
 					/* begin internalPop:thenPush: */
 					longAtPointerput(localSP -= (1 - 1) * BytesPerWord, longAt((rcvr + BaseHeaderSize) + (XIndex << ShiftForWord)));
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l39;
+					goto l38;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((30 * 2) << ShiftForWord));
 				foo->argumentCount = 0;
 				goto normalSend;
 			}
 ;
-		l39:	/* end case */;
+		l38:	/* end case */;
 			break;
 		case 207:
 			/* bytecodePrimPointY */
@@ -9934,7 +10617,7 @@ register struct foo * foo = &fum;
 				/* begin assertClassOf:is: */
 				if ((rcvr & 1)) {
 					foo->successFlag = 0;
-					goto l42;
+					goto l41;
 				}
 				ccIndex = (((usqInt) (longAt(rcvr))) >> 12) & 31;
 				if (ccIndex == 0) {
@@ -9944,20 +10627,20 @@ register struct foo * foo = &fum;
 				}
 				/* begin success: */
 				foo->successFlag = (cl == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassPoint << ShiftForWord)))) && foo->successFlag;
-			l42:	/* end assertClassOf:is: */;
+			l41:	/* end assertClassOf:is: */;
 				if (foo->successFlag) {
 					/* begin internalPop:thenPush: */
 					longAtPointerput(localSP -= (1 - 1) * BytesPerWord, longAt((rcvr + BaseHeaderSize) + (YIndex << ShiftForWord)));
 					/* begin fetchNextBytecode */
 					currentBytecode = byteAtPointer(++localIP);
-					goto l41;
+					goto l40;
 				}
 				foo->messageSelector = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (SpecialSelectors << ShiftForWord))) + BaseHeaderSize) + ((31 * 2) << ShiftForWord));
 				foo->argumentCount = 0;
 				goto normalSend;
 			}
 ;
-		l41:	/* end case */;
+		l40:	/* end case */;
 			break;
 		case 208:
 			/* sendLiteralSelectorBytecode */
@@ -10710,22 +11393,6 @@ sqInt loadBitBltFrom(sqInt bb) {
 	return ((sqInt (*)(sqInt))fn)(bb);
 }
 
-
-/*	If floatOrInt is an integer, then convert it to a C double float and return it.
-	If it is a Float, then load its value and return it.
-	Otherwise fail -- ie return with successFlag set to false. */
-
-double loadFloatOrIntFrom(sqInt floatOrInt) {
-register struct foo * foo = &fum;
-	if ((floatOrInt & 1)) {
-		return ((double) (floatOrInt >> 1));
-	}
-	if ((fetchClassOfNonInt(floatOrInt)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
-		return floatValueOf(floatOrInt);
-	}
-	foo->successFlag = 0;
-}
-
 sqInt loadInitialContext(void) {
 register struct foo * foo = &fum;
     sqInt sched;
@@ -10912,8 +11579,10 @@ sqInt mapPointersInObjectsFromto(sqInt memStart, sqInt memEnd) {
 register struct foo * foo = &fum;
     sqInt oop;
     sqInt i;
-    sqInt probe;
+    sqInt oop1;
     sqInt i1;
+    sqInt probe;
+    sqInt i2;
 
 	/* begin compilerMapHookFrom:to: */
 	if (foo->compilerInitialized) {
@@ -10939,15 +11608,31 @@ register struct foo * foo = &fum;
 	foo->methodClass = remap(foo->methodClass);
 	foo->lkupClass = remap(foo->lkupClass);
 	foo->receiverClass = remap(foo->receiverClass);
-	for (i = 1; i <= foo->remapBufferCount; i += 1) {
-		oop = foo->remapBuffer[i];
+	for (i1 = 1; i1 <= foo->remapBufferCount; i1 += 1) {
+		oop1 = foo->remapBuffer[i1];
+		if (!((oop1 & 1))) {
+			foo->remapBuffer[i1] = (remap(oop1));
+		}
+	}
+	for (i1 = 1; i1 <= foo->jmpDepth; i1 += 1) {
+		oop1 = foo->suspendedCallbacks[i1];
+		if (!((oop1 & 1))) {
+			foo->suspendedCallbacks[i1] = (remap(oop1));
+		}
+		oop1 = foo->suspendedMethods[i1];
+		if (!((oop1 & 1))) {
+			foo->suspendedMethods[i1] = (remap(oop1));
+		}
+	}
+	for (i = 1; i <= foo->extraRootCount; i += 1) {
+		oop = (foo->extraRoots[i])[0];
 		if (!((oop & 1))) {
-			foo->remapBuffer[i] = (remap(oop));
+			(foo->extraRoots[i])[0] = (remap(oop));
 		}
 	}
 	/* begin flushMethodCacheFrom:to: */
 	probe = 0;
-	for (i1 = 1; i1 <= MethodCacheEntries; i1 += 1) {
+	for (i2 = 1; i2 <= MethodCacheEntries; i2 += 1) {
 		if (!((foo->methodCache[probe + MethodCacheSelector]) == 0)) {
 			if ((((((((usqInt) (foo->methodCache[probe + MethodCacheSelector]))) >= (((usqInt) memStart))) && ((((usqInt) (foo->methodCache[probe + MethodCacheSelector]))) < (((usqInt) memEnd)))) || (((((usqInt) (foo->methodCache[probe + MethodCacheClass]))) >= (((usqInt) memStart))) && ((((usqInt) (foo->methodCache[probe + MethodCacheClass]))) < (((usqInt) memEnd))))) || (((((usqInt) (foo->methodCache[probe + MethodCacheMethod]))) >= (((usqInt) memStart))) && ((((usqInt) (foo->methodCache[probe + MethodCacheMethod]))) < (((usqInt) memEnd))))) || (((((usqInt) (foo->methodCache[probe + MethodCacheNative]))) >= (((usqInt) memStart))) && ((((usqInt) (foo->methodCache[probe + MethodCacheNative]))) < (((usqInt) memEnd))))) {
 				foo->methodCache[probe + MethodCacheSelector] = 0;
@@ -10955,8 +11640,8 @@ register struct foo * foo = &fum;
 		}
 		probe += MethodCacheEntrySize;
 	}
-	for (i1 = 1; i1 <= AtCacheTotalSize; i1 += 1) {
-		foo->atCache[i1] = 0;
+	for (i2 = 1; i2 <= AtCacheTotalSize; i2 += 1) {
+		foo->atCache[i2] = 0;
 	}
 	updatePointersInRootObjectsFromto(memStart, memEnd);
 	updatePointersInRangeFromto(memStart, memEnd);
@@ -11302,6 +11987,16 @@ register struct foo * foo = &fum;
 			markAndTrace(oop);
 		}
 	}
+	for (i = 1; i <= foo->jmpDepth; i += 1) {
+		oop = foo->suspendedCallbacks[i];
+		if (!((oop & 1))) {
+			markAndTrace(oop);
+		}
+		oop = foo->suspendedMethods[i];
+		if (!((oop & 1))) {
+			markAndTrace(oop);
+		}
+	}
 }
 
 
@@ -11331,6 +12026,12 @@ register struct foo * foo = &fum;
 	for (i = 1; i <= foo->rootTableCount; i += 1) {
 		oop = foo->rootTable[i];
 		markAndTrace(oop);
+	}
+	for (i = 1; i <= foo->extraRootCount; i += 1) {
+		oop = (foo->extraRoots[i])[0];
+		if (!((oop & 1))) {
+			markAndTrace(oop);
+		}
 	}
 }
 
@@ -11857,19 +12558,33 @@ l2:	/* end assertClassOf:is: */;
 sqInt positive64BitIntegerFor(sqLong integerValue) {
     sqInt value;
     sqInt newLargeInteger;
-    sqInt check;
+    sqInt highWord;
+    sqInt sz;
     sqInt i;
 
 	if ((sizeof(integerValue)) == 4) {
 		return positive32BitIntegerFor(integerValue);
 	}
-	check = integerValue >> 32;
-	if (check == 0) {
+
+	/* shift is coerced to usqInt otherwise */
+
+	highWord = integerValue >> 32;
+	if (highWord == 0) {
 		return positive32BitIntegerFor(integerValue);
 	}
-	newLargeInteger = instantiateSmallClasssizeInBytes(longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassLargePositiveInteger << ShiftForWord)), BaseHeaderSize + 8);
-	for (i = 0; i <= 7; i += 1) {
-		value = ( integerValue >> (i * 8)) & 255;
+	sz = 5;
+	if (!((highWord = ((usqInt) highWord) >> 8) == 0)) {
+		sz += 1;
+	}
+	if (!((highWord = ((usqInt) highWord) >> 8) == 0)) {
+		sz += 1;
+	}
+	if (!((highWord = ((usqInt) highWord) >> 8) == 0)) {
+		sz += 1;
+	}
+	newLargeInteger = instantiateClassindexableSize(longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassLargePositiveInteger << ShiftForWord)), sz);
+	for (i = 0; i <= (sz - 1); i += 1) {
+		value = (integerValue >> (i * 8)) & 255;
 		byteAtput((newLargeInteger + BaseHeaderSize) + i, value);
 	}
 	return newLargeInteger;
@@ -12436,6 +13151,12 @@ register struct foo * foo = &fum;
     sqInt successValue11;
     sqInt successValue12;
 
+	flag("Dan");
+	if (BytesPerWord == 8) {
+		/* begin pop: */
+		foo->stackPointer -= foo->argumentCount * BytesPerWord;
+		return null;
+	}
 	if (foo->argumentCount == 0) {
 		cursorObj = longAt(foo->stackPointer);
 		maskBitsIndex = null;
@@ -13035,6 +13756,237 @@ register struct foo * foo = &fum;
 	foo->stackPointer = sp;
 }
 
+sqInt primitiveClosureCopyWithCopiedValues(void) {
+register struct foo * foo = &fum;
+    sqInt numCopiedValues;
+    sqInt numArgs;
+    sqInt copiedValues;
+    sqInt newClosure;
+    sqInt i;
+    sqInt integerPointer;
+    sqInt successValue;
+    sqInt sz;
+    sqInt initialIP;
+    sqInt newClosure1;
+    sqInt sp;
+    sqInt header;
+
+	/* begin stackIntegerValue: */
+	integerPointer = longAt(foo->stackPointer - (1 * BytesPerWord));
+	/* begin checkedIntegerValueOf: */
+	if ((integerPointer & 1)) {
+		numArgs = (integerPointer >> 1);
+		goto l1;
+	} else {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		numArgs = 0;
+		goto l1;
+	}
+l1:	/* end checkedIntegerValueOf: */;
+	copiedValues = longAt(foo->stackPointer);
+	/* begin success: */
+	successValue = (fetchClassOf(copiedValues)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassArray << ShiftForWord)));
+	foo->successFlag = successValue && foo->successFlag;
+	if (!(foo->successFlag)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	/* begin fetchWordLengthOf: */
+	/* begin sizeBitsOf: */
+	header = longAt(copiedValues);
+	if ((header & TypeMask) == HeaderTypeSizeAndClass) {
+		sz = (longAt(copiedValues - (BytesPerWord * 2))) & LongSizeMask;
+		goto l2;
+	} else {
+		sz = header & SizeMask;
+		goto l2;
+	}
+l2:	/* end sizeBitsOf: */;
+	numCopiedValues = ((usqInt) (sz - BaseHeaderSize)) >> ShiftForWord;
+	/* begin closureNumArgs:instructionPointer:numCopiedValues: */
+	initialIP = (foo->instructionPointer + 2) - (foo->method + BaseHeaderSize);
+	newClosure1 = instantiateSmallClasssizeInBytes(longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassBlockClosure << ShiftForWord)), (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopiedValues)) + BaseHeaderSize);
+	longAtput((newClosure1 + BaseHeaderSize) + (ClosureStartPCIndex << ShiftForWord), ((initialIP << 1) | 1));
+	longAtput((newClosure1 + BaseHeaderSize) + (ClosureNumArgsIndex << ShiftForWord), ((numArgs << 1) | 1));
+	newClosure = newClosure1;
+	longAtput((newClosure + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord), longAt(foo->stackPointer - (2 * BytesPerWord)));
+	if (numCopiedValues > 0) {
+		copiedValues = longAt(foo->stackPointer);
+		for (i = 0; i <= (numCopiedValues - 1); i += 1) {
+			longAtput((newClosure + BaseHeaderSize) + ((i + ClosureFirstCopiedValueIndex) << ShiftForWord), longAt((copiedValues + BaseHeaderSize) + (i << ShiftForWord)));
+		}
+	}
+	/* begin pop:thenPush: */
+	longAtput(sp = foo->stackPointer - ((3 - 1) * BytesPerWord), newClosure);
+	foo->stackPointer = sp;
+}
+
+sqInt primitiveClosureValue(void) {
+register struct foo * foo = &fum;
+    sqInt blockClosure;
+    sqInt outerContext;
+    sqInt closureMethod;
+    sqInt blockArgumentCount;
+
+	blockClosure = longAt(foo->stackPointer - (foo->argumentCount * BytesPerWord));
+	blockArgumentCount = ((longAt((blockClosure + BaseHeaderSize) + (ClosureNumArgsIndex << ShiftForWord))) >> 1);
+	if (!(foo->argumentCount == blockArgumentCount)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	outerContext = longAt((blockClosure + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+	if (!(((outerContext & 1) == 0) && ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 13) || ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 14) || (((((usqInt) (longAt(outerContext))) >> 12) & 31) == 4))))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+
+	/* Check if the closure's method is actually a CompiledMethod. */
+
+	closureMethod = longAt((outerContext + BaseHeaderSize) + (MethodIndex << ShiftForWord));
+	if (!(((closureMethod & 1) == 0) && (((((usqInt) (longAt(closureMethod))) >> 8) & 15) >= 12))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	activateNewClosureMethod(blockClosure);
+	/* begin quickCheckForInterrupts */
+	if ((foo->interruptCheckCounter -= 1) <= 0) {
+		checkForInterrupts();
+	}
+}
+
+
+/*	An exact clone of primitiveClosureValue except that this version will not
+	 check for interrupts on stack overflow. */
+
+sqInt primitiveClosureValueNoContextSwitch(void) {
+register struct foo * foo = &fum;
+    sqInt blockClosure;
+    sqInt outerContext;
+    sqInt closureMethod;
+    sqInt blockArgumentCount;
+
+	blockClosure = longAt(foo->stackPointer - (foo->argumentCount * BytesPerWord));
+	blockArgumentCount = ((longAt((blockClosure + BaseHeaderSize) + (ClosureNumArgsIndex << ShiftForWord))) >> 1);
+	if (!(foo->argumentCount == blockArgumentCount)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	outerContext = longAt((blockClosure + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+	if (!(((outerContext & 1) == 0) && ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 13) || ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 14) || (((((usqInt) (longAt(outerContext))) >> 12) & 31) == 4))))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+
+	/* Check if the closure's method is actually a CompiledMethod. */
+
+	closureMethod = longAt((outerContext + BaseHeaderSize) + (MethodIndex << ShiftForWord));
+	if (!(((closureMethod & 1) == 0) && (((((usqInt) (longAt(closureMethod))) >> 8) & 15) >= 12))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	activateNewClosureMethod(blockClosure);
+}
+
+sqInt primitiveClosureValueWithArgs(void) {
+register struct foo * foo = &fum;
+    sqInt cntxSize;
+    sqInt blockClosure;
+    sqInt outerContext;
+    sqInt arraySize;
+    sqInt closureMethod;
+    sqInt argumentArray;
+    sqInt blockArgumentCount;
+    sqInt index;
+    sqInt sp;
+    sqInt sz;
+    sqInt header;
+    sqInt sz1;
+    sqInt header1;
+    sqInt top;
+
+	argumentArray = longAt(foo->stackPointer);
+	if (!(((argumentArray & 1) == 0) && (((((usqInt) (longAt(argumentArray))) >> 8) & 15) == 2))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	/* begin fetchWordLengthOf: */
+	/* begin sizeBitsOf: */
+	header = longAt(argumentArray);
+	if ((header & TypeMask) == HeaderTypeSizeAndClass) {
+		sz = (longAt(argumentArray - (BytesPerWord * 2))) & LongSizeMask;
+		goto l1;
+	} else {
+		sz = header & SizeMask;
+		goto l1;
+	}
+l1:	/* end sizeBitsOf: */;
+	arraySize = ((usqInt) (sz - BaseHeaderSize)) >> ShiftForWord;
+	/* begin fetchWordLengthOf: */
+	/* begin sizeBitsOf: */
+	header1 = longAt(foo->activeContext);
+	if ((header1 & TypeMask) == HeaderTypeSizeAndClass) {
+		sz1 = (longAt(foo->activeContext - (BytesPerWord * 2))) & LongSizeMask;
+		goto l2;
+	} else {
+		sz1 = header1 & SizeMask;
+		goto l2;
+	}
+l2:	/* end sizeBitsOf: */;
+	cntxSize = ((usqInt) (sz1 - BaseHeaderSize)) >> ShiftForWord;
+	if (!(((((usqInt) ((foo->stackPointer - foo->activeContext) - BaseHeaderSize)) >> ShiftForWord) + arraySize) < cntxSize)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	blockClosure = longAt(foo->stackPointer - (foo->argumentCount * BytesPerWord));
+	blockArgumentCount = ((longAt((blockClosure + BaseHeaderSize) + (ClosureNumArgsIndex << ShiftForWord))) >> 1);
+	if (!(arraySize == blockArgumentCount)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	outerContext = longAt((blockClosure + BaseHeaderSize) + (ClosureOuterContextIndex << ShiftForWord));
+	if (!(((outerContext & 1) == 0) && ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 13) || ((((((usqInt) (longAt(outerContext))) >> 12) & 31) == 14) || (((((usqInt) (longAt(outerContext))) >> 12) & 31) == 4))))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+
+	/* Check if the closure's method is actually a CompiledMethod. */
+
+	closureMethod = longAt((outerContext + BaseHeaderSize) + (MethodIndex << ShiftForWord));
+	if (!(((closureMethod & 1) == 0) && (((((usqInt) (longAt(closureMethod))) >> 8) & 15) >= 12))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	/* begin popStack */
+	top = longAt(foo->stackPointer);
+	foo->stackPointer -= BytesPerWord;
+	index = 1;
+	while (index <= arraySize) {
+		/* begin push: */
+		longAtput(sp = foo->stackPointer + BytesPerWord, longAt((argumentArray + BaseHeaderSize) + ((index - 1) << ShiftForWord)));
+		foo->stackPointer = sp;
+		index += 1;
+	}
+	foo->argumentCount = arraySize;
+	activateNewClosureMethod(blockClosure);
+	/* begin quickCheckForInterrupts */
+	if ((foo->interruptCheckCounter -= 1) <= 0) {
+		checkForInterrupts();
+	}
+}
+
 
 /*	Fill the receiver, which must be an indexable bytes or words 
 	objects, with the given integer value. */
@@ -13296,6 +14248,213 @@ l2:	/* end checkedIntegerValueOf: */;
 	}
 }
 
+
+/*	Simulate an primitiveExternalCall invocation (e.g. for the Debugger).  Do not cache anything.
+	 e.g. ContextPart>>tryNamedPrimitiveIn: aCompiledMethod for: aReceiver withArgs: arguments */
+
+sqInt primitiveDoNamedPrimitiveWithArgs(void) {
+register struct foo * foo = &fum;
+    sqInt functionLength;
+    void (*addr)();
+    sqInt methodHeader;
+    sqInt moduleLength;
+    sqInt moduleName;
+    sqInt methodArg;
+    sqInt functionName;
+    sqInt arraySize;
+    sqInt spec;
+    sqInt argumentArray;
+    sqInt index;
+    sqInt successValue;
+    sqInt header;
+    sqInt sz;
+    sqInt sp;
+    sqInt sp1;
+    sqInt sz1;
+    sqInt header1;
+    sqInt successValue1;
+    sqInt oop;
+    sqInt oop1;
+    sqInt ccIndex;
+    sqInt cl;
+    sqInt successValue2;
+    sqInt header2;
+    sqInt sz2;
+    sqInt oop2;
+    sqInt cntxSize;
+
+	argumentArray = longAt(foo->stackPointer);
+	if (!(((argumentArray & 1) == 0) && (((((usqInt) (longAt(argumentArray))) >> 8) & 15) == 2))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	/* begin fetchWordLengthOf: */
+	/* begin sizeBitsOf: */
+	header1 = longAt(argumentArray);
+	if ((header1 & TypeMask) == HeaderTypeSizeAndClass) {
+		sz1 = (longAt(argumentArray - (BytesPerWord * 2))) & LongSizeMask;
+		goto l2;
+	} else {
+		sz1 = header1 & SizeMask;
+		goto l2;
+	}
+l2:	/* end sizeBitsOf: */;
+	arraySize = ((usqInt) (sz1 - BaseHeaderSize)) >> ShiftForWord;
+	/* begin success: */
+	/* begin roomToPushNArgs: */
+	if (((longAt((foo->method + BaseHeaderSize) + (HeaderIndex << ShiftForWord))) & LargeContextBit) != 0) {
+		cntxSize = (((sqInt) LargeContextSize >> 2)) - ReceiverIndex;
+	} else {
+		cntxSize = (((sqInt) SmallContextSize >> 2)) - ReceiverIndex;
+	}
+	successValue1 = ((((usqInt) ((foo->stackPointer - foo->activeContext) - BaseHeaderSize)) >> ShiftForWord) + arraySize) <= cntxSize;
+	foo->successFlag = successValue1 && foo->successFlag;
+	/* begin stackObjectValue: */
+	oop = longAt(foo->stackPointer - (2 * BytesPerWord));
+	if ((oop & 1)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		methodArg = null;
+		goto l3;
+	}
+	methodArg = oop;
+l3:	/* end stackObjectValue: */;
+	if (!(foo->successFlag)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	if (!(((((usqInt) (longAt(methodArg))) >> 8) & 15) >= 12)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	methodHeader = longAt((methodArg + BaseHeaderSize) + (HeaderIndex << ShiftForWord));
+	if (!(((((usqInt) methodHeader) >> 10) & 255) > 2)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	/* begin assertClassOf:is: */
+	oop1 = spec = longAt((methodArg + BaseHeaderSize) + (1 << ShiftForWord));
+	if ((oop1 & 1)) {
+		foo->successFlag = 0;
+		goto l4;
+	}
+	ccIndex = (((usqInt) (longAt(oop1))) >> 12) & 31;
+	if (ccIndex == 0) {
+		cl = (longAt(oop1 - BaseHeaderSize)) & AllButTypeMask;
+	} else {
+		cl = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
+	}
+	/* begin success: */
+	foo->successFlag = (cl == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassArray << ShiftForWord)))) && foo->successFlag;
+l4:	/* end assertClassOf:is: */;
+	if (!(foo->successFlag && (((lengthOf(spec)) == 4) && ((primitiveIndexOfMethodHeader(methodHeader)) == 117)))) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	if (!(((((usqInt) methodHeader) >> 25) & 15) == arraySize)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	moduleName = longAt((spec + BaseHeaderSize) + (0 << ShiftForWord));
+	if (moduleName == foo->nilObj) {
+		moduleLength = 0;
+	} else {
+		/* begin success: */
+		successValue = ((moduleName & 1) == 0) && (((((usqInt) (longAt(moduleName))) >> 8) & 15) >= 8);
+		foo->successFlag = successValue && foo->successFlag;
+		/* begin lengthOf: */
+		header = longAt(moduleName);
+		/* begin lengthOf:baseHeader:format: */
+		if ((header & TypeMask) == HeaderTypeSizeAndClass) {
+			sz = (longAt(moduleName - (BytesPerWord * 2))) & LongSizeMask;
+		} else {
+			sz = header & SizeMask;
+		}
+		sz -= header & Size4Bit;
+		if (((((usqInt) header) >> 8) & 15) <= 4) {
+			moduleLength = ((usqInt) (sz - BaseHeaderSize)) >> ShiftForWord;
+			goto l1;
+		}
+		if (((((usqInt) header) >> 8) & 15) < 8) {
+			moduleLength = ((usqInt) (sz - BaseHeaderSize)) >> 2;
+			goto l1;
+		} else {
+			moduleLength = (sz - BaseHeaderSize) - (((((usqInt) header) >> 8) & 15) & 3);
+			goto l1;
+		}
+		moduleLength = null;
+	l1:	/* end lengthOf: */;
+		;
+	}
+	functionName = longAt((spec + BaseHeaderSize) + (1 << ShiftForWord));
+	/* begin success: */
+	successValue2 = ((functionName & 1) == 0) && (((((usqInt) (longAt(functionName))) >> 8) & 15) >= 8);
+	foo->successFlag = successValue2 && foo->successFlag;
+	/* begin lengthOf: */
+	header2 = longAt(functionName);
+	/* begin lengthOf:baseHeader:format: */
+	if ((header2 & TypeMask) == HeaderTypeSizeAndClass) {
+		sz2 = (longAt(functionName - (BytesPerWord * 2))) & LongSizeMask;
+	} else {
+		sz2 = header2 & SizeMask;
+	}
+	sz2 -= header2 & Size4Bit;
+	if (((((usqInt) header2) >> 8) & 15) <= 4) {
+		functionLength = ((usqInt) (sz2 - BaseHeaderSize)) >> ShiftForWord;
+		goto l5;
+	}
+	if (((((usqInt) header2) >> 8) & 15) < 8) {
+		functionLength = ((usqInt) (sz2 - BaseHeaderSize)) >> 2;
+		goto l5;
+	} else {
+		functionLength = (sz2 - BaseHeaderSize) - (((((usqInt) header2) >> 8) & 15) & 3);
+		goto l5;
+	}
+	functionLength = null;
+l5:	/* end lengthOf: */;
+	if (!(foo->successFlag)) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	addr = ioLoadExternalFunctionOfLengthFromModuleOfLength(functionName + BaseHeaderSize, functionLength, moduleName + BaseHeaderSize, moduleLength);
+	if (addr == 0) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
+	/* begin pop: */
+	foo->stackPointer -= 1 * BytesPerWord;
+	foo->argumentCount = arraySize;
+	index = 1;
+	while (index <= arraySize) {
+		/* begin push: */
+		longAtput(sp = foo->stackPointer + BytesPerWord, longAt((argumentArray + BaseHeaderSize) + ((index - 1) << ShiftForWord)));
+		foo->stackPointer = sp;
+		index += 1;
+	}
+	/* begin pushRemappableOop: */
+	foo->remapBuffer[foo->remapBufferCount += 1] = argumentArray;
+	foo->lkupClass = foo->nilObj;
+	callExternalPrimitive(addr);
+	/* begin popRemappableOop */
+	oop2 = foo->remapBuffer[foo->remapBufferCount];
+	foo->remapBufferCount -= 1;
+	argumentArray = oop2;
+	if (!(foo->successFlag)) {
+		/* begin pop:thenPush: */
+		longAtput(sp1 = foo->stackPointer - ((arraySize - 1) * BytesPerWord), argumentArray);
+		foo->stackPointer = sp1;
+		foo->argumentCount = 3;
+	}
+}
+
 sqInt primitiveDoPrimitiveWithArgs(void) {
 register struct foo * foo = &fum;
     sqInt cntxSize;
@@ -13310,9 +14469,6 @@ register struct foo * foo = &fum;
     sqInt objectPointer;
     sqInt sz1;
     sqInt integerPointer;
-    sqInt primIdx1;
-    sqInt nArgs;
-    sqInt delta;
     sqInt oop;
     sqInt header;
     sqInt header1;
@@ -13383,19 +14539,7 @@ l1:	/* end stackIntegerValue: */;
 	/* begin pushRemappableOop: */
 	foo->remapBuffer[foo->remapBufferCount += 1] = argumentArray;
 	foo->lkupClass = foo->nilObj;
-	/* begin primitiveResponse */
-	if (DoBalanceChecks) {
-		nArgs = foo->argumentCount;
-		delta = foo->stackPointer - foo->activeContext;
-	}
-	primIdx1 = foo->primitiveIndex;
-	foo->successFlag = 1;
-	dispatchFunctionPointerOnin(primIdx1, primitiveTable);
-	if (DoBalanceChecks) {
-		if (!(balancedStackafterPrimitivewithArgs(delta, primIdx1, nArgs))) {
-			printUnbalancedStack(primIdx1);
-		}
-	}
+	primitiveResponse();
 	/* begin popRemappableOop */
 	oop = foo->remapBuffer[foo->remapBufferCount];
 	foo->remapBufferCount -= 1;
@@ -13496,9 +14640,6 @@ sqInt primitiveExecuteMethod(void) {
 register struct foo * foo = &fum;
     sqInt top;
     sqInt successValue;
-    sqInt primIdx;
-    sqInt nArgs;
-    sqInt delta;
     sqInt primBits;
 
 	/* begin popStack */
@@ -13515,19 +14656,7 @@ register struct foo * foo = &fum;
 		foo->argumentCount -= 1;
 		/* begin executeNewMethod */
 		if (foo->primitiveIndex > 0) {
-			/* begin primitiveResponse */
-			if (DoBalanceChecks) {
-				nArgs = foo->argumentCount;
-				delta = foo->stackPointer - foo->activeContext;
-			}
-			primIdx = foo->primitiveIndex;
-			foo->successFlag = 1;
-			dispatchFunctionPointerOnin(primIdx, primitiveTable);
-			if (DoBalanceChecks) {
-				if (!(balancedStackafterPrimitivewithArgs(delta, primIdx, nArgs))) {
-					printUnbalancedStack(primIdx);
-				}
-			}
+			primitiveResponse();
 			if (foo->successFlag) {
 				goto l1;
 			}
@@ -13551,84 +14680,68 @@ sqInt primitiveExecuteMethodArgsArray(void) {
 register struct foo * foo = &fum;
     sqInt argCnt;
     sqInt argumentArray;
-    sqInt successValue;
+    sqInt methodArgument;
+    sqInt top;
+    sqInt top1;
     sqInt dst;
     sqInt lastIn;
     sqInt out;
     sqInt in;
-    sqInt primIdx;
-    sqInt nArgs;
-    sqInt delta;
-    sqInt top;
     sqInt primBits;
-    sqInt top1;
 
 	/* begin popStack */
 	top = longAt(foo->stackPointer);
 	foo->stackPointer -= BytesPerWord;
-	foo->newMethod = top;
-	/* begin primitiveIndexOf: */
-	primBits = (((usqInt) (longAt((foo->newMethod + BaseHeaderSize) + (HeaderIndex << ShiftForWord)))) >> 1) & 268435967;
-	foo->primitiveIndex = (primBits & 511) + (((usqInt) primBits) >> 19);
-	argCnt = (((usqInt) (longAt((foo->newMethod + BaseHeaderSize) + (HeaderIndex << ShiftForWord)))) >> 25) & 15;
+	methodArgument = top;
 	/* begin popStack */
 	top1 = longAt(foo->stackPointer);
 	foo->stackPointer -= BytesPerWord;
 	argumentArray = top1;
-	if (!(((argumentArray & 1) == 0) && (((((usqInt) (longAt(argumentArray))) >> 8) & 15) == 2))) {
+	if (!(((methodArgument & 1) == 0) && ((((((usqInt) (longAt(foo->newMethod))) >> 8) & 15) >= 12) && (((argumentArray & 1) == 0) && (((((usqInt) (longAt(argumentArray))) >> 8) & 15) == 2))))) {
 		/* begin unPop: */
 		foo->stackPointer += 2 * BytesPerWord;
 		/* begin primitiveFail */
 		foo->successFlag = 0;
 		return null;
 	}
-	if (foo->successFlag) {
-		/* begin success: */
-		successValue = argCnt == (fetchWordLengthOf(argumentArray));
-		foo->successFlag = successValue && foo->successFlag;
-	}
-	if (foo->successFlag) {
-		/* begin transfer:from:to: */
-		dst = foo->stackPointer + BytesPerWord;
-		flag("Dan");
-		in = (argumentArray + BaseHeaderSize) - BytesPerWord;
-		lastIn = in + (argCnt * BytesPerWord);
-		out = dst - BytesPerWord;
-		while ((((usqInt) in)) < (((usqInt) lastIn))) {
-			longAtput(out += BytesPerWord, longAt(in += BytesPerWord));
-		}
-		/* begin unPop: */
-		foo->stackPointer += argCnt * BytesPerWord;
-		foo->argumentCount = argCnt;
-		/* begin executeNewMethod */
-		if (foo->primitiveIndex > 0) {
-			/* begin primitiveResponse */
-			if (DoBalanceChecks) {
-				nArgs = foo->argumentCount;
-				delta = foo->stackPointer - foo->activeContext;
-			}
-			primIdx = foo->primitiveIndex;
-			foo->successFlag = 1;
-			dispatchFunctionPointerOnin(primIdx, primitiveTable);
-			if (DoBalanceChecks) {
-				if (!(balancedStackafterPrimitivewithArgs(delta, primIdx, nArgs))) {
-					printUnbalancedStack(primIdx);
-				}
-			}
-			if (foo->successFlag) {
-				goto l1;
-			}
-		}
-		activateNewMethod();
-		/* begin quickCheckForInterrupts */
-		if ((foo->interruptCheckCounter -= 1) <= 0) {
-			checkForInterrupts();
-		}
-	l1:	/* end executeNewMethod */;
-	} else {
+	argCnt = (((usqInt) (longAt((methodArgument + BaseHeaderSize) + (HeaderIndex << ShiftForWord)))) >> 25) & 15;
+	if (!(argCnt == (fetchWordLengthOf(argumentArray)))) {
 		/* begin unPop: */
 		foo->stackPointer += 2 * BytesPerWord;
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
 	}
+	/* begin transfer:from:to: */
+	dst = foo->stackPointer + BytesPerWord;
+	flag("Dan");
+	in = (argumentArray + BaseHeaderSize) - BytesPerWord;
+	lastIn = in + (argCnt * BytesPerWord);
+	out = dst - BytesPerWord;
+	while ((((usqInt) in)) < (((usqInt) lastIn))) {
+		longAtput(out += BytesPerWord, longAt(in += BytesPerWord));
+	}
+	/* begin unPop: */
+	foo->stackPointer += argCnt * BytesPerWord;
+	foo->newMethod = methodArgument;
+	/* begin primitiveIndexOf: */
+	primBits = (((usqInt) (longAt((foo->newMethod + BaseHeaderSize) + (HeaderIndex << ShiftForWord)))) >> 1) & 268435967;
+	foo->primitiveIndex = (primBits & 511) + (((usqInt) primBits) >> 19);
+	foo->argumentCount = argCnt;
+	/* begin executeNewMethod */
+	if (foo->primitiveIndex > 0) {
+		primitiveResponse();
+		if (foo->successFlag) {
+			goto l1;
+		}
+	}
+	activateNewMethod();
+	/* begin quickCheckForInterrupts */
+	if ((foo->interruptCheckCounter -= 1) <= 0) {
+		checkForInterrupts();
+	}
+l1:	/* end executeNewMethod */;
+	foo->successFlag = 1;
 }
 
 sqInt primitiveExitToDebugger(void) {
@@ -13962,11 +15075,31 @@ register struct foo * foo = &fum;
 
 sqInt primitiveFloatAddtoArg(sqInt rcvrOop, sqInt argOop) {
 register struct foo * foo = &fum;
-    double  rcvr;
-    double  arg;
+    double rcvr;
+    double arg;
 
-	rcvr = loadFloatOrIntFrom(rcvrOop);
-	arg = loadFloatOrIntFrom(argOop);
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
 	if (foo->successFlag) {
 		/* begin pop: */
 		foo->stackPointer -= 2 * BytesPerWord;
@@ -13981,11 +15114,31 @@ register struct foo * foo = &fum;
 
 sqInt primitiveFloatDividebyArg(sqInt rcvrOop, sqInt argOop) {
 register struct foo * foo = &fum;
-    double  rcvr;
-    double  arg;
+    double rcvr;
+    double arg;
 
-	rcvr = loadFloatOrIntFrom(rcvrOop);
-	arg = loadFloatOrIntFrom(argOop);
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
 	if (foo->successFlag) {
 		/* begin success: */
 		foo->successFlag = (arg != 0.0) && foo->successFlag;
@@ -14021,22 +15174,64 @@ register struct foo * foo = &fum;
 }
 
 sqInt primitiveFloatEqualtoArg(sqInt rcvrOop, sqInt argOop) {
-    double  rcvr;
-    double  arg;
+register struct foo * foo = &fum;
+    double rcvr;
+    double arg;
 
-	rcvr = loadFloatOrIntFrom(rcvrOop);
-	arg = loadFloatOrIntFrom(argOop);
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
 	if (foo->successFlag) {
 		return rcvr == arg;
 	}
 }
 
 sqInt primitiveFloatGreaterthanArg(sqInt rcvrOop, sqInt argOop) {
-    double  rcvr;
-    double  arg;
+register struct foo * foo = &fum;
+    double rcvr;
+    double arg;
 
-	rcvr = loadFloatOrIntFrom(rcvrOop);
-	arg = loadFloatOrIntFrom(argOop);
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
 	if (foo->successFlag) {
 		return rcvr > arg;
 	}
@@ -14048,12 +15243,12 @@ register struct foo * foo = &fum;
     sqInt sp;
     sqInt sp1;
 
-	aBool = primitiveFloatLessthanArg(longAt(foo->stackPointer - (1 * BytesPerWord)), longAt(foo->stackPointer));
+	aBool = primitiveFloatGreaterOrEqualtoArg(longAt(foo->stackPointer - (1 * BytesPerWord)), longAt(foo->stackPointer));
 	if (foo->successFlag) {
 		/* begin pop: */
 		foo->stackPointer -= 2 * BytesPerWord;
 		/* begin pushBool: */
-		if (!aBool) {
+		if (aBool) {
 			/* begin push: */
 			longAtput(sp = foo->stackPointer + BytesPerWord, foo->trueObj);
 			foo->stackPointer = sp;
@@ -14062,6 +15257,38 @@ register struct foo * foo = &fum;
 			longAtput(sp1 = foo->stackPointer + BytesPerWord, foo->falseObj);
 			foo->stackPointer = sp1;
 		}
+	}
+}
+
+sqInt primitiveFloatGreaterOrEqualtoArg(sqInt rcvrOop, sqInt argOop) {
+register struct foo * foo = &fum;
+    double rcvr;
+    double arg;
+
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
+	if (foo->successFlag) {
+		return rcvr >= arg;
 	}
 }
 
@@ -14089,11 +15316,32 @@ register struct foo * foo = &fum;
 }
 
 sqInt primitiveFloatLessthanArg(sqInt rcvrOop, sqInt argOop) {
-    double  rcvr;
-    double  arg;
+register struct foo * foo = &fum;
+    double rcvr;
+    double arg;
 
-	rcvr = loadFloatOrIntFrom(rcvrOop);
-	arg = loadFloatOrIntFrom(argOop);
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
 	if (foo->successFlag) {
 		return rcvr < arg;
 	}
@@ -14105,12 +15353,12 @@ register struct foo * foo = &fum;
     sqInt sp;
     sqInt sp1;
 
-	aBool = primitiveFloatGreaterthanArg(longAt(foo->stackPointer - (1 * BytesPerWord)), longAt(foo->stackPointer));
+	aBool = primitiveFloatLessOrEqualtoArg(longAt(foo->stackPointer - (1 * BytesPerWord)), longAt(foo->stackPointer));
 	if (foo->successFlag) {
 		/* begin pop: */
 		foo->stackPointer -= 2 * BytesPerWord;
 		/* begin pushBool: */
-		if (!aBool) {
+		if (aBool) {
 			/* begin push: */
 			longAtput(sp = foo->stackPointer + BytesPerWord, foo->trueObj);
 			foo->stackPointer = sp;
@@ -14119,6 +15367,38 @@ register struct foo * foo = &fum;
 			longAtput(sp1 = foo->stackPointer + BytesPerWord, foo->falseObj);
 			foo->stackPointer = sp1;
 		}
+	}
+}
+
+sqInt primitiveFloatLessOrEqualtoArg(sqInt rcvrOop, sqInt argOop) {
+register struct foo * foo = &fum;
+    double rcvr;
+    double arg;
+
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
+	if (foo->successFlag) {
+		return rcvr <= arg;
 	}
 }
 
@@ -14152,11 +15432,31 @@ register struct foo * foo = &fum;
 
 sqInt primitiveFloatMultiplybyArg(sqInt rcvrOop, sqInt argOop) {
 register struct foo * foo = &fum;
-    double  rcvr;
-    double  arg;
+    double rcvr;
+    double arg;
 
-	rcvr = loadFloatOrIntFrom(rcvrOop);
-	arg = loadFloatOrIntFrom(argOop);
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
 	if (foo->successFlag) {
 		/* begin pop: */
 		foo->stackPointer -= 2 * BytesPerWord;
@@ -14194,11 +15494,31 @@ register struct foo * foo = &fum;
 
 sqInt primitiveFloatSubtractfromArg(sqInt rcvrOop, sqInt argOop) {
 register struct foo * foo = &fum;
-    double  rcvr;
-    double  arg;
+    double rcvr;
+    double arg;
 
-	rcvr = loadFloatOrIntFrom(rcvrOop);
-	arg = loadFloatOrIntFrom(argOop);
+	/* begin loadFloatOrIntFrom: */
+	if ((rcvrOop & 1)) {
+		rcvr = ((double) ((rcvrOop >> 1)) );
+		goto l1;
+	}
+	if ((fetchClassOfNonInt(rcvrOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		rcvr = floatValueOf(rcvrOop);
+		goto l1;
+	}
+	foo->successFlag = 0;
+l1:	/* end loadFloatOrIntFrom: */;
+	/* begin loadFloatOrIntFrom: */
+	if ((argOop & 1)) {
+		arg = ((double) ((argOop >> 1)) );
+		goto l2;
+	}
+	if ((fetchClassOfNonInt(argOop)) == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassFloat << ShiftForWord)))) {
+		arg = floatValueOf(argOop);
+		goto l2;
+	}
+	foo->successFlag = 0;
+l2:	/* end loadFloatOrIntFrom: */;
 	if (foo->successFlag) {
 		/* begin pop: */
 		foo->stackPointer -= 2 * BytesPerWord;
@@ -14743,6 +16063,18 @@ sqInt primitiveIndexOf(sqInt methodPointer) {
 }
 
 
+/*	Note: We now have 10 bits of primitive index, but they are in two places
+	for temporary backward compatibility.  The time to unpack is negligible,
+	 since the derived primitive function pointer is stored in the method cache. */
+
+sqInt primitiveIndexOfMethodHeader(sqInt methodHeader) {
+    sqInt primBits;
+
+	primBits = ((usqInt) methodHeader) >> 1;
+	return (primBits & 511) + ((((usqInt) primBits) >> 19) & 512);
+}
+
+
 /*	Register the input semaphore. The argument is an index into the ExternalObjectsArray part of the specialObjectsArray and must have been allocated via 'Smalltalk registerExternalObject: the Semaphore'  */
 
 sqInt primitiveInputSemaphore(void) {
@@ -15031,6 +16363,7 @@ register struct foo * foo = &fum;
     sqInt rcvr;
     sqInt addr;
     sqInt sz;
+    int intValue;
     sqInt index;
     sqInt sp;
     sqInt object;
@@ -15104,8 +16437,12 @@ l2:	/* end lengthOf: */;
 			longAtput(sp = foo->stackPointer + BytesPerWord, ((value << 1) | 1));
 			foo->stackPointer = sp;
 		} else {
+
+			/* 32 bit int may have been stored in 32 or 64 bit sqInt */
+
+			intValue = value;
 			/* begin push: */
-			object = signed32BitIntegerFor(value);
+			object = signed32BitIntegerFor(intValue);
 			longAtput(sp1 = foo->stackPointer + BytesPerWord, object);
 			foo->stackPointer = sp1;
 		}
@@ -15718,7 +17055,7 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	data = longAt(segmentWordArray + BaseHeaderSize);
-	if (!((data & 65535) == (imageFormatVersion()))) {
+	if (!(((data & 65535) == imageFormatVersionNumber) || ((data & 65535) == (imageFormatForwardCompatibilityVersion())))) {
 		/* begin reverseBytesFrom:to: */
 		flag("Dan");
 		addr1 = segmentWordArray + BaseHeaderSize;
@@ -15727,7 +17064,7 @@ register struct foo * foo = &fum;
 			addr1 += BytesPerWord;
 		}
 		data = longAt(segmentWordArray + BaseHeaderSize);
-		if (!((data & 65535) == (imageFormatVersion()))) {
+		if (!(((data & 65535) == imageFormatVersionNumber) || ((data & 65535) == (imageFormatForwardCompatibilityVersion())))) {
 			/* begin reverseBytesFrom:to: */
 			flag("Dan");
 			addr = segmentWordArray + BaseHeaderSize;
@@ -16290,6 +17627,7 @@ l1:	/* end checkedIntegerValueOf: */;
 	if (!(foo->successFlag)) {
 		/* begin unPop: */
 		foo->stackPointer += 2 * BytesPerWord;
+		return null;
 	}
 	/* begin popStack */
 	top2 = longAt(foo->stackPointer);
@@ -16297,10 +17635,6 @@ l1:	/* end checkedIntegerValueOf: */;
 	class = top2;
 	size = ((((((usqInt) header) >> 10) & 255) + 1) * BytesPerWord) + bytecodeCount;
 	theMethod = instantiateClassindexableSize(class, size);
-	/* begin storePointer:ofObject:withValue: */
-	if ((((usqInt) theMethod)) < (((usqInt) foo->youngStart))) {
-		possibleRootStoreIntovalue(theMethod, header);
-	}
 	longAtput((theMethod + BaseHeaderSize) + (HeaderIndex << ShiftForWord), header);
 	literalCount = (((usqInt) header) >> 10) & 255;
 	for (i = 1; i <= literalCount; i += 1) {
@@ -17365,6 +18699,38 @@ l1:	/* end checkedIntegerValueOf: */;
 		/* begin pop: */
 		foo->stackPointer -= 1 * BytesPerWord;
 	}
+}
+
+
+/*	NB: tpr removed the timer checks here and moved them to the primitiveExternalCall method.
+	We make the possibly unwarranted assumption that numbered prims are quick and external prims are slow. */
+
+sqInt primitiveResponse(void) {
+register struct foo * foo = &fum;
+    sqInt primIdx;
+    sqInt nArgs;
+    sqInt delta;
+
+	if (DoBalanceChecks) {
+		nArgs = foo->argumentCount;
+		delta = foo->stackPointer - foo->activeContext;
+	}
+	primIdx = foo->primitiveIndex;
+
+	/* self dispatchOn: primitiveIndex in: primitiveTable. */
+
+	foo->successFlag = 1;
+	dispatchFunctionPointerOnin(primIdx, primitiveTable);
+	if (DoBalanceChecks) {
+		if (!(balancedStackafterPrimitivewithArgs(delta, primIdx, nArgs))) {
+			printUnbalancedStack(primIdx);
+		}
+	}
+
+	/* clear out primIndex so VM knows we're no longer in primitive */
+
+	foo->primitiveIndex = 0;
+	return foo->successFlag;
 }
 
 
@@ -20556,12 +21922,13 @@ register struct foo * foo = &fum;
     sqInt bytesToShift;
     sqInt headerSize;
     size_t  dataSize;
-    sqInt bytesRead;
+    size_t bytesRead;
     sqInt oldBaseAddr;
     sqInt swapBytes;
     squeakFileOffsetType  headerStart;
     sqInt memStart;
     sqInt minimumMemory;
+    char * memoryAddress;
     sqInt startAddr;
     sqInt stopAddr;
     sqInt addr;
@@ -20590,7 +21957,7 @@ register struct foo * foo = &fum;
 	if (heapSize < minimumMemory) {
 		insufficientMemorySpecifiedError();
 	}
-	memory = sqAllocateMemory(minimumMemory, heapSize);
+	memory = allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, f, headerSize);
 	if (memory == null) {
 		insufficientMemoryAvailableError();
 	}
@@ -20604,7 +21971,9 @@ register struct foo * foo = &fum;
 
 	foo->endOfMemory = memStart + dataSize;
 	sqImageFileSeek(f, headerStart + headerSize);
-	bytesRead = sqImageFileRead(pointerForOop(memory), sizeof(unsigned char), dataSize, f);
+	/* begin sqImage:read:size:length: */
+	memoryAddress = pointerForOop(memory);
+	bytesRead = sqImageFileReadEntireImage(memoryAddress, sizeof(unsigned char), dataSize, f);
 	if (bytesRead != dataSize) {
 		unableToReadImageError();
 	}
@@ -20633,10 +22002,10 @@ register struct foo * foo = &fum;
 }
 
 
-/*	Anwer true if images of the given format are readable by this interpreter. Allows a virtual machine to accept selected older image formats. */
+/*	Anwer true if images of the given format are readable by this interpreter. Allows a virtual machine to accept selected older image formats.  In our case we can select a newer (closure) image format as well as the existing format. */
 
 sqInt readableFormat(sqInt imageVersion) {
-	return imageVersion == (imageFormatVersion());
+	return (imageVersion == imageFormatVersionNumber) || (imageVersion == (imageFormatForwardCompatibilityVersion()));
 }
 
 
@@ -20703,6 +22072,25 @@ register struct foo * foo = &fum;
 	}
 	longAtput((first + BaseHeaderSize) + (NextLinkIndex << ShiftForWord), valuePointer2);
 	return first;
+}
+
+
+/*	Remove the given variable location to the extra roots table */
+
+EXPORT(sqInt) removeGCRoot(sqInt *varLoc) {
+register struct foo * foo = &fum;
+    sqInt *root;
+    sqInt i;
+
+	for (i = 1; i <= foo->extraRootCount; i += 1) {
+		root = foo->extraRoots[i];
+		if (root == varLoc) {
+			foo->extraRoots[i] = (foo->extraRoots[foo->extraRootCount]);
+			foo->extraRootCount -= 1;
+			return 1;
+		}
+	}
+	return 0;
 }
 
 
@@ -20979,7 +22367,7 @@ register struct foo * foo = &fum;
 
 /*	Return a full 32 bit integer object for the given integer value */
 
-sqInt signed32BitIntegerFor(sqInt integerValue) {
+sqInt signed32BitIntegerFor(int integerValue) {
 register struct foo * foo = &fum;
     sqInt value;
     sqInt newLargeInteger;
@@ -21007,9 +22395,9 @@ register struct foo * foo = &fum;
 /*	Convert the given object into an integer value.
 	The object may be either a positive ST integer or a four-byte LargeInteger. */
 
-sqInt signed32BitValueOf(sqInt oop) {
+int signed32BitValueOf(sqInt oop) {
 register struct foo * foo = &fum;
-    sqInt value;
+    int value;
     sqInt largeClass;
     sqInt sz;
     sqInt negative;
@@ -21019,6 +22407,11 @@ register struct foo * foo = &fum;
 
 	if ((oop & 1)) {
 		return (oop >> 1);
+	}
+	if ((lengthOf(oop)) > 4) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
 	}
 	/* begin fetchClassOf: */
 	if ((oop & 1)) {
@@ -21072,12 +22465,25 @@ l2:	/* end lengthOf: */;
 		foo->successFlag = 0;
 		return null;
 	}
+
+	/* Fail if value exceeds range of a 32-bit two's-complement signed integer. */
+
 	value = (((byteAt((oop + BaseHeaderSize) + 0)) + ((byteAt((oop + BaseHeaderSize) + 1)) << 8)) + ((byteAt((oop + BaseHeaderSize) + 2)) << 16)) + ((byteAt((oop + BaseHeaderSize) + 3)) << 24);
 	if (negative) {
-		return 0 - value;
+		value = 0 - value;
+		if (value >= 0) {
+			/* begin primitiveFail */
+			foo->successFlag = 0;
+			return null;
+		}
 	} else {
-		return value;
+		if (value < 0) {
+			/* begin primitiveFail */
+			foo->successFlag = 0;
+			return null;
+		}
 	}
+	return value;
 }
 
 
@@ -21085,30 +22491,45 @@ l2:	/* end lengthOf: */;
 
 sqInt signed64BitIntegerFor(sqLong integerValue) {
 register struct foo * foo = &fum;
-    sqLong value;
+    unsigned sqLong magnitude;
     sqInt newLargeInteger;
+    usqInt highWord;
     sqInt largeClass;
-    sqInt check;
+    sqInt sz;
     sqInt intValue;
     sqInt i;
 
 	if (integerValue < 0) {
 		largeClass = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassLargeNegativeInteger << ShiftForWord));
-		value = 0 - integerValue;
+		magnitude = 0 - integerValue;
 	} else {
 		largeClass = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassLargePositiveInteger << ShiftForWord));
-		value = integerValue;
+		magnitude = integerValue;
 	}
-	if ((sizeof(value)) == 4) {
+	if (magnitude <= 2147483647U) {
 		return signed32BitIntegerFor(integerValue);
 	}
-	check = value >> 32;
-	if (check == 0) {
-		return signed32BitIntegerFor(integerValue);
+
+	/* shift is coerced to usqInt otherwise */
+
+	highWord = magnitude >> 32;
+	if (highWord == 0) {
+		sz = 4;
+	} else {
+		sz = 5;
+		if (!((highWord = ((usqInt) highWord) >> 8) == 0)) {
+			sz += 1;
+		}
+		if (!((highWord = ((usqInt) highWord) >> 8) == 0)) {
+			sz += 1;
+		}
+		if (!((highWord = ((usqInt) highWord) >> 8) == 0)) {
+			sz += 1;
+		}
 	}
-	newLargeInteger = instantiateSmallClasssizeInBytes(largeClass, BaseHeaderSize + 8);
-	for (i = 0; i <= 7; i += 1) {
-		intValue = ( value >> (i * 8)) & 255;
+	newLargeInteger = instantiateClassindexableSize(largeClass, sz);
+	for (i = 0; i <= (sz - 1); i += 1) {
+		intValue = (magnitude >> (i * 8)) & 255;
 		byteAtput((newLargeInteger + BaseHeaderSize) + i, intValue);
 	}
 	return newLargeInteger;
@@ -21126,27 +22547,54 @@ register struct foo * foo = &fum;
     sqInt sz;
     sqInt i;
     sqInt negative;
-    sqInt ccIndex;
     sqInt header;
     sqInt sz1;
+    sqInt ccIndex;
 
 	if ((oop & 1)) {
 		return ((sqLong) ((oop >> 1)));
 	}
+	/* begin lengthOf: */
+	header = longAt(oop);
+	/* begin lengthOf:baseHeader:format: */
+	if ((header & TypeMask) == HeaderTypeSizeAndClass) {
+		sz1 = (longAt(oop - (BytesPerWord * 2))) & LongSizeMask;
+	} else {
+		sz1 = header & SizeMask;
+	}
+	sz1 -= header & Size4Bit;
+	if (((((usqInt) header) >> 8) & 15) <= 4) {
+		sz = ((usqInt) (sz1 - BaseHeaderSize)) >> ShiftForWord;
+		goto l1;
+	}
+	if (((((usqInt) header) >> 8) & 15) < 8) {
+		sz = ((usqInt) (sz1 - BaseHeaderSize)) >> 2;
+		goto l1;
+	} else {
+		sz = (sz1 - BaseHeaderSize) - (((((usqInt) header) >> 8) & 15) & 3);
+		goto l1;
+	}
+	sz = null;
+l1:	/* end lengthOf: */;
+	if (sz > 8) {
+		/* begin primitiveFail */
+		foo->successFlag = 0;
+		return null;
+	}
 	/* begin fetchClassOf: */
 	if ((oop & 1)) {
 		largeClass = longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassInteger << ShiftForWord));
-		goto l1;
+		goto l2;
 	}
 	ccIndex = (((usqInt) (longAt(oop))) >> 12) & 31;
 	if (ccIndex == 0) {
 		largeClass = (longAt(oop - BaseHeaderSize)) & AllButTypeMask;
-		goto l1;
+		goto l2;
 	} else {
 		largeClass = longAt(((longAt((foo->specialObjectsOop + BaseHeaderSize) + (CompactClasses << ShiftForWord))) + BaseHeaderSize) + ((ccIndex - 1) << ShiftForWord));
-		goto l1;
+		goto l2;
 	}
-l1:	/* end fetchClassOf: */;
+l2:	/* end fetchClassOf: */;
 	if (largeClass == (longAt((foo->specialObjectsOop + BaseHeaderSize) + (ClassLargePositiveInteger << ShiftForWord)))) {
 		negative = 0;
 	} else {
@@ -21159,28 +22607,6 @@ l1:	/* end fetchClassOf: */;
 		}
 	}
 	szsqLong = sizeof(sqLong);
-	/* begin lengthOf: */
-	header = longAt(oop);
-	/* begin lengthOf:baseHeader:format: */
-	if ((header & TypeMask) == HeaderTypeSizeAndClass) {
-		sz1 = (longAt(oop - (BytesPerWord * 2))) & LongSizeMask;
-	} else {
-		sz1 = header & SizeMask;
-	}
-	sz1 -= header & Size4Bit;
-	if (((((usqInt) header) >> 8) & 15) <= 4) {
-		sz = ((usqInt) (sz1 - BaseHeaderSize)) >> ShiftForWord;
-		goto l2;
-	}
-	if (((((usqInt) header) >> 8) & 15) < 8) {
-		sz = ((usqInt) (sz1 - BaseHeaderSize)) >> 2;
-		goto l2;
-	} else {
-		sz = (sz1 - BaseHeaderSize) - (((((usqInt) header) >> 8) & 15) & 3);
-		goto l2;
-	}
-	sz = null;
-l2:	/* end lengthOf: */;
 	if (sz > szsqLong) {
 		/* begin primitiveFail */
 		foo->successFlag = 0;
@@ -21191,10 +22617,20 @@ l2:	/* end lengthOf: */;
 		value += (((sqLong) (byteAt((oop + BaseHeaderSize) + i)))) << (i * 8);
 	}
 	if (negative) {
-		return 0 - value;
+		value = 0 - value;
+		if (value >= 0) {
+			/* begin primitiveFail */
+			foo->successFlag = 0;
+			return null;
+		}
 	} else {
-		return value;
+		if (value < 0) {
+			/* begin primitiveFail */
+			foo->successFlag = 0;
+			return null;
+		}
 	}
+	return value;
 }
 
 
@@ -21221,7 +22657,7 @@ sqInt sizeOfSTArrayFromCPrimitive(void * cPtr) {
     sqInt header;
     sqInt sz;
 
-	oop = (oopForPointer(cPtr)) - BaseHeaderSize;
+	oop = (oopForPointer(((char *) cPtr))) - BaseHeaderSize;
 	if (!(((oop & 1) == 0) && (isWordsOrBytesNonInt(oop)))) {
 		/* begin primitiveFail */
 		foo->successFlag = 0;
@@ -22669,10 +24105,11 @@ register struct foo * foo = &fum;
     sqImageFile f;
     sqInt okToWrite;
     sqInt headerSize;
-    sqInt bytesWritten;
+    size_t bytesWritten;
     void * sCWIfn;
     sqInt i;
     squeakFileOffsetType  headerStart;
+    char * memoryAddress;
 
 	sCWIfn = ioLoadFunctionFrom("secCanWriteImage", "SecurityPlugin");
 	if (sCWIfn != 0) {
@@ -22697,7 +24134,7 @@ register struct foo * foo = &fum;
 	headerStart = sqImageFileStartLocation(f,imageName,headerSize+imageBytes);
 	/* Note: on Unix systems one could put an exec command here, padded to 512 bytes */;
 	sqImageFileSeek(f, headerStart);
-	putLongtoFile(imageFormatVersion(), f);
+	putLongtoFile(imageFormatVersionNumber, f);
 	putLongtoFile(headerSize, f);
 	putLongtoFile(imageBytes, f);
 	putLongtoFile(memory, f);
@@ -22714,7 +24151,9 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	sqImageFileSeek(f, headerStart + headerSize);
-	bytesWritten = sqImageFileWrite(pointerForOop(memory), sizeof(unsigned char), imageBytes, f);
+	/* begin sqImage:write:size:length: */
+	memoryAddress = pointerForOop(memory);
+	bytesWritten = sqImageFileWrite(memoryAddress, sizeof(unsigned char), imageBytes, f);
 	/* begin success: */
 	foo->successFlag = (bytesWritten == imageBytes) && foo->successFlag;
 	sqImageFileClose(f);
@@ -22722,15 +24161,20 @@ register struct foo * foo = &fum;
 
 
 void* vm_exports[][3] = {
-	{"", "primitiveForceTenure", (void*)primitiveForceTenure},
-	{"", "moduleUnloaded", (void*)moduleUnloaded},
-	{"", "primitiveSetGCSemaphore", (void*)primitiveSetGCSemaphore},
+	{"", "dumpImage", (void*)dumpImage},
+	{"", "addGCRoot", (void*)addGCRoot},
+	{"", "callbackLeave", (void*)callbackLeave},
+	{"", "callbackEnter", (void*)callbackEnter},
 	{"", "primitiveRootTableAt", (void*)primitiveRootTableAt},
 	{"", "primitiveIsRoot", (void*)primitiveIsRoot},
-	{"", "primitiveDisablePowerManager", (void*)primitiveDisablePowerManager},
-	{"", "primitiveScreenDepth", (void*)primitiveScreenDepth},
-	{"", "primitiveIsYoung", (void*)primitiveIsYoung},
 	{"", "primitiveChangeClassWithClass", (void*)primitiveChangeClassWithClass},
+	{"", "primitiveIsYoung", (void*)primitiveIsYoung},
+	{"", "primitiveForceTenure", (void*)primitiveForceTenure},
+	{"", "moduleUnloaded", (void*)moduleUnloaded},
+	{"", "primitiveDisablePowerManager", (void*)primitiveDisablePowerManager},
+	{"", "primitiveSetGCSemaphore", (void*)primitiveSetGCSemaphore},
+	{"", "primitiveScreenDepth", (void*)primitiveScreenDepth},
+	{"", "removeGCRoot", (void*)removeGCRoot},
 	{"", "primitiveSetGCBiasToGrowGCLimit", (void*)primitiveSetGCBiasToGrowGCLimit},
 	{"", "primitiveRootTable", (void*)primitiveRootTable},
 	{"", "primitiveSetGCBiasToGrow", (void*)primitiveSetGCBiasToGrow},
