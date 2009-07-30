@@ -28,11 +28,11 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2009-05-26 14:58:02 by piumarta on emilia.local
+# Last edited: 2009-07-29 23:16:27 by piumarta on ubuntu.piumarta.com
 
 AC_INIT([config.h.in])
 
-AC_VM_VERSION(3,10,5, 3,10,7159)
+AC_VM_VERSION(3,10,6, 3,10,7159)
 
 topdir=`cd ${srcdir}/../../..; pwd`
 cfgdir=`cd ${srcdir}; pwd`

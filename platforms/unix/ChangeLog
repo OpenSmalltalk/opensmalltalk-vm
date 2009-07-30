@@ -1,3 +1,12 @@
+2009-07-29    <piumarta@ubuntu.piumarta.com>
+
+	* config/configure.ac: Version is 3.10-6.
+
+	* src/vm/interp.c: Regenerate from VMM-126.
+
+	* vm-display-X11/sqUnixX11.c (x2sqModifier): Differentiate between
+	shift pressed and caps lock engaged.
+
 2009-05-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/configure.ac: Version is 3.10-5
