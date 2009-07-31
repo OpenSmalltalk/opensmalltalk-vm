@@ -26,7 +26,7 @@
 # 
 # Author: Ian.Piumarta@squeakland.org
 # 
-# Last edited: 2006-10-18 10:15:38 by piumarta on emilia.local
+# Last edited: 2009-07-30 17:28:01 by piumarta on ubuntu.piumarta.com
 
 AC_DEFUN([AC_CHECK_VMM_DIR],[
   AC_MSG_CHECKING([sanity of generated src directory])
@@ -231,8 +231,10 @@ fi])
 
 AC_DEFUN([AC_C_DOUBLE_ALIGNMENT],
 [AC_CACHE_CHECK([whether unaligned access to doubles is ok], ac_cv_double_align,
-  AC_TRY_RUN([f(int i){*(double *)i=*(double *)(i+4);}
-              int main(){char b[[12]];f(b);return 0;}],
+  AC_TRY_RUN([int f(void* i) { *(double *)i=*(double *)(i+4); return *(char*)i; }
+              int main() { char b[[12]]; b[[0]]=1; b[[1]]=2; b[[2]]=3; b[[3]]=4; b[[4]]=0;
+                           b[[5]]=0; b[[6]]=0; b[[7]]=0; b[[8]]=0; b[[9]]=0; b[[10]]=0; b[[11]]=0;
+			   return f(b); }],
     ac_cv_double_align="yes", ac_cv_double_align="no"))
 test "$ac_cv_double_align" = "no" && AC_DEFINE(DOUBLE_WORD_ALIGNMENT)])
 
