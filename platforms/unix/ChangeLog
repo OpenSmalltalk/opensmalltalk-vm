@@ -1,3 +1,11 @@
+2009-08-01  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/make.cfg.in (datarootdir): Substitute datarootdir to
+	avoid autoconf warning about ignoring it.
+
+	* config/configure.ac (ext_plugins): Ensure each excluded plugin
+	appears only once in plugins.exc.
+
 2009-08-01  Ian Piumarta  <piumarta@freebsd.piumarta.com>
 
 	* npsqueak/Makefile: Replace occurrences of $< and $@ with
