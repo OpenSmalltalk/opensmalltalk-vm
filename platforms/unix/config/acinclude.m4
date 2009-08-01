@@ -26,7 +26,7 @@
 # 
 # Author: Ian.Piumarta@squeakland.org
 # 
-# Last edited: 2009-07-30 17:28:01 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-08-01 03:48:48 by piumarta on margaux.piumarta.com
 
 AC_DEFUN([AC_CHECK_VMM_DIR],[
   AC_MSG_CHECKING([sanity of generated src directory])
@@ -300,3 +300,6 @@ AC_DEFUN([AC_PLUGIN_CHECK_LIB],[
     plibs="${plibs} $1",
     AC_MSG_RESULT([******** disabling ${plugin} due to missing libraries])
     disabled_plugins="${disabled_plugins} ${plugin}")])
+
+m4_ifndef([PKG_CHECK_MODULES],[
+  AC_DEFUN([PKG_CHECK_MODULES],[$4])])
