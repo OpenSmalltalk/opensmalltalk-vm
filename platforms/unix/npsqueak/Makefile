@@ -8,7 +8,7 @@ INC	= -I./include -I/usr/X11R6/include
 CC	= gcc
 CFLAGS	= $(INC) -O2 -fPIC -Wall
 LD	= gcc
-LDFLAGS = -lXt
+LDFLAGS = -L/usr/X11R6/lib -lXt
 
 # usually overridden from top level makefile
 VM_VERSION=  3.9-12
@@ -25,31 +25,31 @@ npsqueakrun=	npsqueakrun
 all: npsqueak.so npsqueakrun
 
 npsqueak.so : npsqueak.la 
-	-@rm -f $@ 
-	ln .libs/npsqueak $@ 
+	-@rm -f npsqueak.so
+	ln .libs/npsqueak npsqueak.so
 
 npsqueak.la : npsqueak.lo npunix.lo 
-	../libtool --mode=link $(LD) $(LDFLAGS) npsqueak.lo npunix.lo -avoid-version -module -rpath $(plgdir) -o $@
+	../libtool --mode=link $(LD) $(LDFLAGS) npsqueak.lo npunix.lo -avoid-version -module -rpath $(plgdir) -o npsqueak.la
 
 npsqueak.lo: npsqueak.c ../config.h
 	../libtool --mode=compile $(CC) -c $(CFLAGS) \
 		-DSYSTEM_BIN_DIR=\"$(scriptdir)\" \
 		-DSYSTEM_IMG_DIR=\"$(imgdir)\" \
-		-DNPSQUEAKRUN=\"$(npsqueakrun)\" $<
+		-DNPSQUEAKRUN=\"$(npsqueakrun)\" npsqueak.c
 
 npunix.lo: npunix.c
-	../libtool --mode=compile $(CC) -c $(CFLAGS) $<
+	../libtool --mode=compile $(CC) -c $(CFLAGS) npunix.c
 
 npsqueakrun: npsqueakrun.in 
 	sed "s|@imgdir@|$(imgdir)|; \
 	     s|@VM_VERSION@|$(VM_VERSION)|" \
-		npsqueakrun.in > $@
-	chmod +x $@
+		npsqueakrun.in > npsqueakrun
+	chmod +x npsqueakrun
 
 npsqueakregister: npsqueakregister.in 
 	sed "s|@NPSQUEAK_SO@|$(plgdir)/npsqueak.so|" \
-		npsqueakregister.in > $@
-	chmod +x $@
+		npsqueakregister.in > npsqueakregister
+	chmod +x npsqueakregister
 
 
 clean:
@@ -59,21 +59,21 @@ clean:
 ############ install ####################################
 
 $(ROOT)$(scriptdir):
-	install -d $@
+	install -d $(ROOT)$(scriptdir)
 
 $(ROOT)$(plgdir): 
-	install -d $@
+	install -d $(ROOT)$(plgdir)
 
 $(ROOT)$(plgdir)/npsqueak.so: npsqueak.so $(ROOT)$(plgdir)
-	cp npsqueak.so $@
-	strip $@
+	cp npsqueak.so $(ROOT)$(plgdir)/npsqueak.so
+	strip $(ROOT)$(plgdir)/npsqueak.so
 
 $(ROOT)$(scriptdir)/npsqueakrun: npsqueakrun $(ROOT)$(scriptdir)
-	cp npsqueakrun $@
+	cp npsqueakrun $(ROOT)$(scriptdir)/npsqueakrun
 
 
 $(ROOT)$(imgdir)/npsqueakregister: npsqueakregister $(ROOT)$(scriptdir)
-	cp npsqueakregister $@
+	cp npsqueakregister $(ROOT)$(imgdir)/npsqueakregister
 
 ### Go! ###
 
