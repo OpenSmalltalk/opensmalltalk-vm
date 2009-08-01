@@ -26,7 +26,7 @@
 
 # Author: Ian.Piumarta@inria.fr
 # 
-# Last edited: 2006-10-18 10:13:59 by piumarta on emilia.local
+# Last edited: 2009-08-01 15:18:41 by piumarta on margaux.piumarta.com
 
 MAKEFLAGS=	--no-print-directory
 
@@ -61,6 +61,7 @@ exec_prefix=	@exec_prefix@
 
 bindir=		@bindir@
 libdir=		@libdir@
+datarootdir=	@datarootdir@
 datadir=	@datadir@
 mandir=		@mandir@
 imgdir=		@imgdir@
