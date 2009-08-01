@@ -28,7 +28,7 @@
 # 
 # Author: Ian.Piumarta@SqueakLand.org
 # 
-# Last edited: 2009-07-29 23:16:27 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-08-01 15:16:26 by piumarta on margaux.piumarta.com
 
 AC_INIT([config.h.in])
 
@@ -358,7 +358,7 @@ AC_SUBST(ext_plugins)
 #fi
 
 if test "${disabled_plugins}" != ""; then
-  echo ${disabled_plugins} | tr ' ' '\012' > plugins.exc
+  echo ${disabled_plugins} | tr ' ' '\012' | sort | uniq > plugins.exc
 fi
 
 # for some reason configure leaves an empty a.out lying around
