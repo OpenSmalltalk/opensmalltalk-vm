@@ -149,7 +149,7 @@ static u_long localHostAddress;	/* GROSS IPv4 ASSUMPTION! */
 union sockaddr_any
 {
   struct sockaddr	sa;
-  struct sockaddr_un	sun;
+  struct sockaddr_un	saun;
   struct sockaddr_in	sin;
   struct sockaddr_in6	sin6;
 };
@@ -533,7 +533,7 @@ void sqSocketCreateNetTypeSocketTypeRecvBytesSendBytesSemaIDReadSemaIDWriteSemaI
   switch (domain)
     {
     case 0:	domain= AF_INET;	break;	/* SQ_SOCKET_DOMAIN_UNSPECIFIED */
-    case 1:	domain= AF_LOCAL;	break;	/* SQ_SOCKET_DOMAIN_LOCAL */
+    case 1:	domain= AF_UNIX;	break;	/* SQ_SOCKET_DOMAIN_LOCAL */
     case 2:	domain= AF_INET;	break;	/* SQ_SOCKET_DOMAIN_INET4 */
     case 3:	domain= AF_INET6;	break;	/* SQ_SOCKET_DOMAIN_INET6 */
     }
@@ -1563,16 +1563,16 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
       struct stat st;
       if ((0 == stat(servName, &st)) && (st.st_mode & S_IFSOCK))
 	{
-	  struct sockaddr_un *sun= calloc(1, sizeof(struct sockaddr_un));
+	  struct sockaddr_un *saun= calloc(1, sizeof(struct sockaddr_un));
 	  localInfo= (struct addrinfo *)calloc(1, sizeof(struct addrinfo));
-	  localInfo->ai_family= AF_LOCAL;
+	  localInfo->ai_family= AF_UNIX;
 	  localInfo->ai_socktype= SOCK_STREAM;
 	  localInfo->ai_addrlen= sizeof(struct sockaddr_un);
-	  localInfo->ai_addr= (struct sockaddr *)sun;
-	  /*sun->sun_len= sizeof(struct sockaddr_un);*/
-	  sun->sun_family= AF_LOCAL;
-	  memcpy(sun->sun_path, servName, servSize);
-	  sun->sun_path[servSize]= '\0';
+	  localInfo->ai_addr= (struct sockaddr *)saun;
+	  /*saun->sun_len= sizeof(struct sockaddr_un);*/
+	  saun->sun_family= AF_UNIX;
+	  memcpy(saun->sun_path, servName, servSize);
+	  saun->sun_path[servSize]= '\0';
 	  addrInfo= localInfo;
 	  interpreterProxy->signalSemaphoreWithIndex(resolverSema);
 	  return;
@@ -1586,7 +1586,7 @@ void sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *ho
 
   switch (family)
     {
-    case SQ_SOCKET_FAMILY_LOCAL:	request.ai_family= AF_LOCAL;		break;
+    case SQ_SOCKET_FAMILY_LOCAL:	request.ai_family= AF_UNIX;		break;
     case SQ_SOCKET_FAMILY_INET4:	request.ai_family= AF_INET;		break;
     case SQ_SOCKET_FAMILY_INET6:	request.ai_family= AF_INET6;		break;
     }
@@ -1657,7 +1657,7 @@ static void dumpAddr(struct sockaddr *addr, int addrSize)
   fprintf(stderr, " ");
   switch (addr->sa_family)
     {
-    case AF_LOCAL:	fprintf(stderr, "local\n"); break;
+    case AF_UNIX:	fprintf(stderr, "local\n"); break;
     case AF_INET:	fprintf(stderr, "inet\n"); break;
     case AF_INET6:	fprintf(stderr, "inet6\n"); break;
     default:		fprintf(stderr, "?\n"); break;
@@ -1698,7 +1698,7 @@ sqInt sqResolverGetAddressInfoFamily(void)
 
   switch (addrInfo->ai_family)
     {
-    case AF_LOCAL:	return SQ_SOCKET_FAMILY_LOCAL;
+    case AF_UNIX:	return SQ_SOCKET_FAMILY_LOCAL;
     case AF_INET:	return SQ_SOCKET_FAMILY_INET4;
     case AF_INET6:	return SQ_SOCKET_FAMILY_INET6;
     }

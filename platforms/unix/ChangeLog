@@ -1,18 +1,8 @@
-2009-08-01  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+2009-08-02    <piumarta@solaris>
 
-	* config/make.cfg.in (datarootdir): Substitute datarootdir to
-	avoid autoconf warning about ignoring it.
-
-	* config/configure.ac (ext_plugins): Ensure each excluded plugin
-	appears only once in plugins.exc.
-
-2009-08-01  Ian Piumarta  <piumarta@freebsd.piumarta.com>
-
-	* npsqueak/Makefile: Replace occurrences of $< and $@ with
-	BSD-friendly equivalents.
-
-	* plugins/ClipboardExtendedPlugin/Makefile.inc (XINCLUDES): Use
-	configured X11 include path.
+	* plugins/SocketPlugin/sqUnixSocket.c (union sockaddr_any): Rename
+	sun to saun to avoid conflict with preprocessor symbol on Solaris.
+	Rename AF_LOCAL to AF_UNIX for portability.
 
 2009-07-30    <piumarta@ubuntu.piumarta.com>
 
