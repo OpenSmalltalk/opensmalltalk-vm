@@ -3,19 +3,19 @@
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
- *   
+ *
  *   This file is part of Unix Squeak.
- * 
+ *
  *   Permission is hereby granted, free of charge, to any person obtaining a copy
  *   of this software and associated documentation files (the "Software"), to deal
  *   in the Software without restriction, including without limitation the rights
  *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
  *   copies of the Software, and to permit persons to whom the Software is
  *   furnished to do so, subject to the following conditions:
- * 
+ *
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
- * 
+ *
  *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
@@ -24,15 +24,16 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  *
- * Authors: Ian.Piumarta@inria.fr and Lex Spoon <lex@cc.gatech.edu>
+ * Authors: Ian.Piumarta@inria.fr, Lex Spoon <lex@cc.gatech.edu>, and
+ * 	    Andrew Gaylard <ag@computer.org>
+ *
+ * This driver is playback-only;  recording sound is not supported at this time.
  * 
- * This support is rudimentary and is implemented largely by reading
- * header files and guessing what to do.
  */
 
 #include "sq.h"
 
-#undef	DEBUG
+#define DEBUG 0
 
 #include "sqaio.h"
 
@@ -46,31 +47,56 @@
 # include <sun/audioio.h>
 #endif
 #include <errno.h>
+#include <stropts.h>
+#include <signal.h>
+#include <sys/types.h>
+#include <unistd.h>
+#include <fcntl.h>
 
-#ifdef DEBUG
-# define PRINTF(ARGS) printf ARGS
-# define TRACE 1
-#elsen
+#if DEBUG
+#if __STDC_VERSION__ < 199901L
+     # if __GNUC__ >= 2
+     #  define __func__ __FUNCTION__
+     # else
+     #  define __func__ "<unknown>"
+     # endif
+#endif
+# define PRINTF(ARGS) 	printf("%s:%d %s ", strrchr(__FILE__, '/') ? 	\
+					    strrchr(__FILE__, '/') + 1: \
+					    __FILE__,			\
+					    __LINE__, __func__); 	\
+			printf ARGS ; 					\
+			printf("\n")
+#else
 # define PRINTF(ARGS)
 #endif
 
 static int sound_Stop(void);
+static int sound_AvailableSpace(void);
 
-static int auFd=	       -1;   /* open on /dev/dsp */
+static int auFd=	       -1;   /* open on /dev/audio */
+static int auCtlFd=	       -1;   /* open on /dev/audioctl */
 static int fmtStereo=		0;   /* whether we are playing in stereo or not */
 static int auPlaySemaIndex=	0;   /* an index to signal when new data may be played */
 static int auBufBytes=		0;   /*  buffer size to use for playback.
 					 unfortunately, this bears no relationship to
 					 whatever the kernel and soundcard are using  */
 static int auBuffersPlayed=	0;
+static struct sigaction action, oldAction;
 
-
-static void auHandle(int fd, void *data, int flags)
+/* The Solaris STREAMS audio driver sends a SIGIO
+ * each time it reads the EOF sent by sound_PlaySamplesFromAtLength */
+static void auHandle(int sig)
 {
+  PRINTF(("(sig=%d)", sig));
   if (auFd < 0) return;
+
+  /* Not all SIGIOs are for us */
   if (sound_AvailableSpace() > 0)
-    signalSemaphoreWithIndex(auPlaySemaIndex);
-  aioHandle(fd, auHandle, flags);
+    {
+      PRINTF(("Signalling semaphore %d", auPlaySemaIndex));
+      signalSemaphoreWithIndex(auPlaySemaIndex);
+    }
 }
 
 
@@ -79,11 +105,18 @@ static void auHandle(int fd, void *data, int flags)
 
 static int sound_Stop(void)
 {
-  if (auFd == -1) return;
+  PRINTF();
+  if (auFd == -1) return 0;
 
-  aioDisable(auFd);
-  close(auFd);
-  auFd= -1;
+  ioctl(auCtlFd, I_SETSIG, 0);
+
+  /* clear any queued sound for immediate silence */
+  ioctl(auFd, I_FLUSH, FLUSHW);
+
+  sigaction(SIGIO, &oldAction, NULL);
+
+  close(auFd);    auFd= -1;
+  close(auCtlFd); auCtlFd= -1;
 
   return 0;
 }
@@ -91,28 +124,38 @@ static int sound_Stop(void)
 
 static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
 {
-  int bytesPerFrame=	(stereo ? 4 : 2);
-  int bufferBytes=	((frameCount * bytesPerFrame) / 8) * 8;
+  PRINTF(("(frameCount=%d, samplesPerSec=%d, stereo=%d, semaIndex=%d)",
+		frameCount, samplesPerSec, stereo, semaIndex));
+  int bytesPerFrame= (stereo ? 4 : 2);
   struct audio_info info;
   int err;
-     
+
   if (auFd != -1) sound_Stop();
   auPlaySemaIndex= semaIndex;
   fmtStereo= stereo;
   auBufBytes= bytesPerFrame * frameCount;
 
-  if ((auFd= open("/dev/audio", O_WRONLY)) == -1)
+  if ((auFd= open("/dev/audio", O_WRONLY|O_NONBLOCK)) == -1)
     {
       perror("/dev/audio");
       return false;
     }
+  PRINTF(("auFd=%d", auFd));
+
+  if ((auCtlFd= open("/dev/audioctl", O_WRONLY|O_NONBLOCK)) == -1)
+    {
+      perror("/dev/audioctl");
+      return false;
+    }
+  PRINTF(("auCtlFd=%d", auCtlFd));
+
   /* set up device */
   if (ioctl(auFd, AUDIO_GETINFO, &info))
     {
       perror("AUDIO_GETINFO");
       goto closeAndFail;
     }
-  info.play.gain= 100;
+  info.play.gain= 255;
   info.play.precision= 16;
   info.play.encoding= AUDIO_ENCODING_LINEAR;
   info.play.channels= fmtStereo ? 2 : 1;
@@ -127,20 +170,35 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIn
       perror("AUDIO_SETINFO");
       goto closeAndFail;
     }
-  aioEnable(auFd, 0, 0);
-  aioHandle(auFd, auHandle, AIO_RX);
+
+  action.sa_handler= auHandle;
+  sigemptyset(&action.sa_mask);
+  action.sa_flags= 0;
+  action.sa_flags|= SA_RESTART;
+
+  if (sigaction(SIGIO, &action, &oldAction) < 0) /* On Solaris, SIGIO == SIGPOLL */
+    {
+      perror("sigaction(SIGIO, auHandle)");
+    }
+  if (ioctl(auCtlFd, I_SETSIG, S_MSG))	/* send SIGIO whenever EOF arrives */
+    {
+      perror("ioctl(auFd, I_SETSIG, S_MSG)");
+    }
+
   return true;
-  
- closeAndFail:
-  close(auFd);
-  auFd= -1;
+
+closeAndFail:
+  close(auFd);    auFd= -1;
+  close(auCtlFd); auCtlFd= -1;
   return false;
 }
 
 
 static int sound_AvailableSpace(void)
 {
+  PRINTF();
   struct audio_info info;
+  int avail;
 
   if (auFd < 0) return 0;
 
@@ -149,16 +207,24 @@ static int sound_AvailableSpace(void)
       perror("AUDIO_GETINFO");
       sound_Stop();
     }
-  return (auBufBytes * (info.play.eof - auBuffersPlayed + 2));
+
+  avail= auBufBytes * (info.play.eof - auBuffersPlayed + 2);
+  PRINTF(("auBufBytes=%d, info.play.eof=%d, auBuffersPlayed=%d, avail=%d",
+		auBufBytes, info.play.eof, auBuffersPlayed, avail));
+
+  return avail;
 }
 
 
 static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
 {
+  PRINTF(("(frameCount=%d, arrayIndex=%d, startIndex=%d)",
+		frameCount, arrayIndex, startIndex));
   short *src= (short *) (arrayIndex + 4*startIndex);
   short buf[2*frameCount];
   int i;
   int bytes;
+  PRINTF(("src=%p", src));
 
   if (auFd < 0) return -1;
 
@@ -179,7 +245,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
     {
       int len;
       char *pos= (char *) buf;
-	  
+
       len= write(auFd, pos, bytes);
       if (len < 0)
 	{
@@ -189,10 +255,10 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
       bytes -= len;
       pos += len;
     }
-  /* add an eof marker */
+  /* add an EOF marker */
   write(auFd, buf, 0);
   auBuffersPlayed += 1;
-  
+
   return frameCount;
 }
 
@@ -200,39 +266,47 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 				  int samplesOfLeadTime)
 {
+  PRINTF(("(frameCount=%d, srcBufPtr=%d, samplesOfLeadTime=%d)",
+		frameCount, srcBufPtr, samplesOfLeadTime));
   return 0;
 }
 
 
 static int sound_PlaySilence(void)
 {
-     return 0;
+  PRINTF();
+  success(false);
+  return 0;
 }
 
 
 /** recording not supported **/
 static int sound_SetRecordLevel(int level)
 {
+  PRINTF();
   success(false);
-  return;
+  return 0;
 }
 
 
 static int sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex)
 {
+  PRINTF();
   success(false);
-  return;
+  return 0;
 }
 
 
 static int sound_StopRecording(void)
 {
-  return;
+  PRINTF();
+  return 0;
 }
 
 
 static double sound_GetRecordingSampleRate(void)
 {
+  PRINTF();
   success(false);
   return 0.0;
 }
@@ -240,6 +314,7 @@ static double sound_GetRecordingSampleRate(void)
 
 static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
 {
+  PRINTF();
   success(false);
   return 0;
 }
@@ -248,6 +323,7 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int buf
 
 static void sound_Volume(double *left, double *right)
 {
+  PRINTF();
   success(false);
   return;
 }
@@ -255,6 +331,7 @@ static void sound_Volume(double *left, double *right)
 
 static void sound_SetVolume(double left, double right)
 {
+  PRINTF();
   success(false);
   return;
 }
@@ -281,10 +358,11 @@ SqSoundDefine(Sun);
 
 #include "SqModule.h"
 
-static void  sound_parseEnvironment(void) {}
-static int   sound_parseArgument(int argc, char **argv) { return 0; }
-static void  sound_printUsage(void) {}
-static void  sound_printUsageNotes(void) {}
-static void *sound_makeInterface(void) { return &sound_Sun_itf; }
+static void  sound_parseEnvironment(void) { PRINTF(); }
+static int   sound_parseArgument(int argc, char **argv) { PRINTF(("(argc=%d)", argc)); return 0; }
+static void  sound_printUsage(void) { PRINTF(); }
+static void  sound_printUsageNotes(void) { PRINTF(); }
+static void *sound_makeInterface(void) { PRINTF(); return &sound_Sun_itf; }
 
 SqModuleDefine(sound, Sun);
+

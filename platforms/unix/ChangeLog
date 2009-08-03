@@ -1,5 +1,7 @@
 2009-08-02    <piumarta@solaris>
 
+	* vm-sound-Sun/sqUnixSoundSun.c: Use asynchronous i/o.
+
 	* plugins/SocketPlugin/sqUnixSocket.c (union sockaddr_any): Rename
 	sun to saun to avoid conflict with preprocessor symbol on Solaris.
 	Rename AF_LOCAL to AF_UNIX for portability.
