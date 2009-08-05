@@ -26,7 +26,7 @@
 # 
 # Author: Ian.Piumarta@squeakland.org
 # 
-# Last edited: 2009-08-01 03:48:48 by piumarta on margaux.piumarta.com
+# Last edited: 2009-08-04 18:25:22 by piumarta on emilia-2.local
 
 AC_DEFUN([AC_CHECK_VMM_DIR],[
   AC_MSG_CHECKING([sanity of generated src directory])
@@ -260,7 +260,7 @@ test "$ac_cv_module_prefix" = lib && mkfrags_lib_prefix=lib])
 AC_DEFUN([AC_64BIT_ARCH],
 [AC_MSG_CHECKING(for compiler flags to force 32-bit addresses)
 case $host in
-  alpha*)
+  alpha*-*-osf*)
     CFLAGS_32="-taso"
     test "$GCC" = "yes" && CC="\$(utldir)/decgcc"
     ;;
