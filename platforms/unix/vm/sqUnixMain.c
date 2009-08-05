@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-08-04 18:22:05 by piumarta on emilia-2.local
+ * Last edited: 2009-08-04 19:46:55 by piumarta on ubuntu.piumarta.com
  */
 
 #include "sq.h"
@@ -152,7 +152,7 @@ static void initTimers(void)
 #      else
 	sa.sa_flags= 0;	/* assume we already have BSD behaviour */
 #      endif
-#      if defined(__linux__) && !defined(__ia64)
+#      if defined(__linux__) && !defined(__ia64) !defined(__alpha__)
 	sa.sa_restorer= 0;
 #      endif
 	sigaction(SIGALRM, &sa, 0);

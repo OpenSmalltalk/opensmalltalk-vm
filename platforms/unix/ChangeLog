@@ -1,3 +1,9 @@
+2009-08-04    <piumarta@ubuntu.piumarta.com>
+
+	* vm/sqUnixMain.c (initTimers): 
+	* vm-display-fbdev/sqUnixFBDevKeyboard.c (kb_initGraphics): Do not
+	set sa_restorer on Alpha.
+
 2009-08-04  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/acinclude.m4, config/aclocal.m4 (AC_64BIT_ARCH): Check
