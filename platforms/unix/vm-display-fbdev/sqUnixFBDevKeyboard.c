@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2009-08-04 19:47:15 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-08-04 19:49:01 by piumarta on ubuntu.piumarta.com
  */
 
 
@@ -258,7 +258,7 @@ static void kb_initGraphics(_self)
       sa.sa_handler= sigusr1;
       sigemptyset(&sa.sa_mask);
       sa.sa_flags= 0;
-#    if !defined(__ia64) !defined(__alpha__)
+#    if !defined(__ia64) && !defined(__alpha__)
       sa.sa_restorer= 0;
 #    endif
       sigaction(SIGUSR1, &sa, 0);
