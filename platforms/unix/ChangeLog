@@ -1,3 +1,11 @@
+2009-08-04  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* config/acinclude.m4, config/aclocal.m4 (AC_64BIT_ARCH): Check
+	for DEC Alpha by looking for a host matching alpha*-*-osf*.
+
+	* vm/sqUnixMain.c: Check for __alpha__ and __osf__ before trying
+	to turn off unaligned access warnings on Digital Unix.
+
 2009-08-02    <piumarta@solaris>
 
 	* vm-sound-Sun/sqUnixSoundSun.c: Use asynchronous i/o.
