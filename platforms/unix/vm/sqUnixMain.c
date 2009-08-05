@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2008-04-21 14:01:20 by piumarta on emilia
+ * Last edited: 2009-08-04 18:22:05 by piumarta on emilia-2.local
  */
 
 #include "sq.h"
@@ -54,7 +54,7 @@
 #include <signal.h>
 #include <fcntl.h>
 
-#if defined(__alpha__)
+#if defined(__alpha__) && defined(__osf__)
 # include <sys/sysinfo.h>
 # include <sys/proc.h>
 #endif
@@ -1329,7 +1329,7 @@ int main(int argc, char **argv, char **envp)
 
   signal(SIGSEGV, sigsegv);
 
-#if defined(__alpha__)
+#if defined(__alpha__) && defined(__osf__)
   /* disable printing of unaligned access exceptions */
   {
     int buf[2]= { SSIN_UACPROC, UAC_NOPRINT };
