@@ -5,8 +5,8 @@
 
                          <ian.piumarta@squeakland.org>
 
-      Last edited: 2005-03-17 12:43:23 by piumarta on squeak.hpl.hp.com
-               Translated to .ps/.pdf/.html/.txt: March 17, 2005
+         Last edited: 2009-08-12 11:17:55 by piumarta on emilia.local
+              Translated to .ps/.pdf/.html/.txt: August 12, 2009
 
 ***** Contents *****
 
@@ -38,7 +38,7 @@ If you extract a tarball then you will have a top-level directory named Squeak-
 X.Y-Z (for some values of X, Y, and Z). If you are checking out from a
 repository, you can call the direcory anything you like; for example:
 
-  $ svn co http://squeak.hpl.hp.com/svn/squeak/trunk squeak
+  $ svn co http://squeakvm.org/svn/squeak/trunk squeak
 
 will leave you with a directory called squeak. (We'll assume from now on that
 the directory is called squeak.)
@@ -681,4 +681,4 @@ then send me mail and I'll be happy to help you with the various platdep files.
             2
 
 ===============================================================================
-     2005-03-17
+     2009-08-12
