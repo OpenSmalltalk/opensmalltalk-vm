@@ -59,8 +59,8 @@ while [ $# -gt 0 ]; do
     case $1 in
 	--help)			help; exit 0;;
 	--debug-configure)	dump;;
-	--*=*)			args="${args} -DOPT_${1#--}";;
-	--*)			args="${args} -DOPT_${1#--}=1";;
+	--*=*)			args="${args} -DOPT${1}";;
+	--*)			args="${args} -DOPT${1}=1";;
 	*)			error "unknown option: $1";;
     esac
     shift
