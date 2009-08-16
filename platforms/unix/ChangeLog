@@ -1,3 +1,33 @@
+2009-08-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixExternalPrims.c (tryLoading): ignore directories
+	silently but always report the error when dlopen cannot open an
+	existing file.
+
+	* vm/sqUnixEvent.c (recordKeyboardEvent): ensure keycode is
+	non-negative.
+
+	* vm/sqUnixCharConv.c (setNEncoding): Add setNEncoding function
+	on MacOSX to allow XImmPlugin to load without errors.
+
+	* vm/sqUnixMain.c (moduleDescriptions): reorder driver table
+	entries to restore correct default sound driver.
+
+	* doc/squeak.1: Update documentation URLs.
+
+	* plugins/B3DAcceleratorPlugin/sqUnixOpenGL.h (GL_RENDERER_DEFINED):
+	Define GL_RENDERER_DEFINED at point of structure definition.
+
+	* plugins/SqueakFFIPrims/any-libffi.c: Include ffi.h or ffi/ffi.h
+	according to HAVE_FFI[_FFI]_H.
+
+	* config/config.h.in: Configure HAVE_FFI_H and HAVE_FFI_FFI_H.
+
+	* vm-sound-MacOSX/sqUnixSoundMacOSX.c (Stream_setFormat): Don't
+	set big-endian flag in sound format on little-endian machines.
+
+	* vm-sound-MacOSX/sqUnixSoundDebug.h: Turn off debugging.
+
 2009-08-04    <piumarta@ubuntu.piumarta.com>
 
 	* vm/sqUnixMain.c (initTimers): 
