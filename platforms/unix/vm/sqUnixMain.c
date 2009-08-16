@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-08-04 19:48:43 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-08-16 09:22:27 by piumarta on emilia-2.local
  */
 
 #include "sq.h"
@@ -696,10 +696,10 @@ static struct moduleDescription moduleDescriptions[]=
   { &displayModule, "display", "null"   },	/*** NO DEFAULT ***/
   { &displayModule, "display", "custom" },	/*** NO DEFAULT ***/
   { &soundModule,   "sound",   "NAS"    },	/*** NO DEFAULT ***/
-  { &soundModule,   "sound",   "OSS"    },
   { &soundModule,   "sound",   "custom" },	/*** NO DEFAULT ***/
-  /* defaults */
-  { &displayModule, "display", "Quartz" },
+  /* when adding an entry above be sure to change the defaultModules offset below */
+  { &displayModule, "display", "Quartz" },	/* defaults... */
+  { &soundModule,   "sound",   "OSS"    },
   { &soundModule,   "sound",   "MacOSX" },
   { &soundModule,   "sound",   "Sun"    },
   { &soundModule,   "sound",   "ALSA"   },
