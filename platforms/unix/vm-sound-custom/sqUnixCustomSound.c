@@ -1,6 +1,6 @@
 /* sqUnixCustomSound.c -- sound module for custom sound system
  *
- * Last edited: 2008-04-21 14:49:27 by piumarta on emilia
+ * Last edited: 2009-08-14 12:44:58 by piumarta on emilia-2.local
  *
  * This is a template for creating your own sound drivers for Squeak:
  * 
@@ -115,7 +115,7 @@ static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)
 static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)
 {
   trace();
-  return -1
+  return -1;
 }
 
 static sqInt sound_SetDevice(sqInt id, char *arg)
