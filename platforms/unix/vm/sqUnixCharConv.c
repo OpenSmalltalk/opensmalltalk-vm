@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2008-03-20 11:46:06 by piumarta on emilia
+ * Last edited: 2009-08-15 12:59:49 by piumarta on emilia-2.local
  */
 
 #if !defined(__MACH__)
@@ -117,6 +117,11 @@ void setEncoding(void **encoding, char *rawName)
   fprintf(stderr, "setEncoding: could not set encoding '%s'\n", name);
  done:
   free(name);
+}
+
+void setNEncoding(void **encoding, char *rawName, int n)
+{
+  setEncoding(encoding, rawName);
 }
 
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
