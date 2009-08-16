@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-16 10:35:29 by piumarta on emilia-2.local
+# Last edited: 2009-08-16 11:02:00 by piumarta on emilia-2.local
 
 PROJECT (squeak)
 
@@ -16,6 +16,15 @@ ENDIF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION OR NOT DEFINED SQ_VERSION)
 SET (bld    ${CMAKE_BINARY_DIR})
 SET (unix   ${CMAKE_SOURCE_DIR})
 SET (config ${unix}/cmake)
+
+GET_CMAKE_PROPERTY (vars VARIABLES)
+FOREACH (opt ${vars})
+  IF (opt MATCHES "OPT_.*")
+    STRING (REGEX REPLACE "OPT_(.*)" "\\1" var ${opt})
+    #MESSAGE (STATUS "Setting ${var}=${${opt}}")
+    SET (${var} ${${opt}})
+  ENDIF ()
+ENDFOREACH (opt)
 
 GET_FILENAME_COMPONENT (cross ${unix}/../Cross REALPATH)
 

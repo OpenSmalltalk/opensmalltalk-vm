@@ -1,5 +1,7 @@
 2009-08-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* CMakeLists.txt: CMake variables can be set via 'configure'.
+
 	* vm/sqUnixExternalPrims.c (tryLoading): ignore directories
 	silently but always report the error when dlopen cannot open an
 	existing file.
