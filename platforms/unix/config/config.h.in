@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2007-09-07 14:10:23 by piumarta on emilia
+ * Last edited: 2009-08-16 09:10:54 by piumarta on emilia-2.local
  */
 
 #ifndef __sq_config_h
@@ -93,6 +93,9 @@
 #undef	HAVE_OPENGL_GL_H
 
 #undef	NEED_SUNOS_H
+
+#undef	HAVE_FFI_H
+#undef	HAVE_FFI_FFI_H
 
 /* system calls/library functions */
 
