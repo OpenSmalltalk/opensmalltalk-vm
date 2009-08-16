@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2008-04-21 14:53:42 by piumarta on emilia
+ * Last edited: 2009-08-15 15:50:19 by piumarta on emilia-2.local
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -45,7 +45,7 @@
 // by the image) when mixing frames into the buffer, or do we reduce
 // the lead time to to an absolute (safe) minimum?
 //
-#define OBEY_LEAD_TIME	0
+#define OBEY_LEAD_TIME	1
 
 /// 
 /// No more user-serviceable parts in this file.  Stop Tweaking Now!
@@ -526,7 +526,11 @@ static int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stere
 
   imgFmt.mSampleRate	   = sampleRate;
   imgFmt.mFormatID	   = kAudioFormatLinearPCM;
-  imgFmt.mFormatFlags	   = kLinearPCMFormatFlagIsBigEndian | kLinearPCMFormatFlagIsSignedInteger;
+#if defined(WORDS_BIGENDIAN)
+  imgFmt.mFormatFlags	   = kLinearPCMFormatFlagIsSignedInteger | kLinearPCMFormatFlagIsBigEndian;
+#else
+  imgFmt.mFormatFlags	   = kLinearPCMFormatFlagIsSignedInteger;
+#endif
   imgFmt.mBytesPerPacket   = SqueakFrameSize / (3 - nChannels);
   imgFmt.mFramesPerPacket  = 1;
   imgFmt.mBytesPerFrame    = SqueakFrameSize / (3 - nChannels);
