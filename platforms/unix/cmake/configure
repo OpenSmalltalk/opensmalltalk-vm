@@ -1,0 +1,79 @@
+#!/bin/sh
+
+# Last edited: 2009-08-16 10:33:59 by piumarta on emilia-2.local
+
+VM_VERSION=3.10-7
+SQ_VERSION=3.10-7159
+
+help() {
+    cat <<EOF
+Usage: $0 [options...]
+Options include:
+  --help                print this message and then exit
+  --src=<directory>     look for generated interpreter sources in <directory>
+  --prefix=<directory>  install into <prefix>/{bin,lib,man}
+  --CFLAGS=<flags>      override default compiler flags
+  --without-<plugin>    do not build the named plugin
+Notes:
+1. By default the CFLAGS will be set to create optimised binaries.  If you are
+   debugging the VM you probably want to use '--CFLAGS=-g' when invoking this
+   script.
+2. --CFLAGS and -without-* settings will be preserved in subsequent invocations
+   of CMake, including those driven implicitly by changed dependencies.  If you
+   need to turn off a seting (to re-enable a plugin or restore the default
+   CFLAGS) just give the relevant options with empty arguments, like this:
+     $0 --CFLAGS= --without-UUIDPlugin=
+3. Wizards can set any CMake variable from the command line with the option:
+     --<CMakeVariableName>=<value>
+4. In case it isn't already obvious, this is NOT the autotools 'configure'
+   script.  It is named so that 'configure; make' works in the expected way.
+5. Bug reports, bug fixes and suggestions for improvement should be sent to the
+   author (Ian Piumarta) at: <firstName> (at) <lastName> (dot) com
+EOF
+    stop=true
+}
+
+config=`dirname $0`
+unix=`dirname ${config}`
+guess=`${config}/config.guess`
+host=`${config}/config.sub ${guess}`
+
+stop=false
+debug_configure=false
+
+error () {
+    echo "$*" >&2
+}
+
+dump () {
+    echo "VM_VERSION = ${VM_VERSION}"
+    echo "SQ_VERSION = ${SQ_VERSION}"
+    echo "unix       = ${unix}"
+    echo "config     = ${config}"
+    echo "host       = ${host}"
+    echo "args       = ${args}"
+    stop=true
+}
+
+while [ $# -gt 0 ]; do
+    case $1 in
+	--help)			help; exit 0;;
+	--debug-configure)	dump;;
+	--*=*)			args="${args} -DOPT_${1#--}";;
+	--*)			args="${args} -DOPT_${1#--}=1";;
+	*)			error "unknown option: $1";;
+    esac
+    shift
+done
+
+if ${stop}; then
+    exit 1
+fi
+
+echo "-- Configuring squeak $VM_VERSION ($SQ_VERSION) for $host"
+
+cmake ${unix} \
+  -DVM_HOST="$host" \
+  -DVM_VERSION="${VM_VERSION}" \
+  -DSQ_VERSION="${SQ_VERSION}" \
+  $args "$@"

@@ -1,0 +1,2 @@
+INCLUDE_DIRECTORIES (${cross}/plugins/B3DAcceleratorPlugin)
+EXPECT_UNDEFINED_SYMBOLS ()
