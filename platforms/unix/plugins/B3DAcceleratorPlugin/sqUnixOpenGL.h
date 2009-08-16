@@ -12,9 +12,10 @@ typedef struct glRenderer
   void	 *context;
 } glRenderer;
 
+#define GL_RENDERER_DEFINED 1
+
 #if defined(USE_X11_GLX) || defined (USE_QUARTZ_CGL)
 
-# define GL_RENDERER_DEFINED	 1
 # define MAX_RENDERER		16
 
 # if defined(HAVE_GL_GL_H)
