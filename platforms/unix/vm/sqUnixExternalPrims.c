@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2007-09-07 13:54:02 by piumarta on emilia
+ * Last edited: 2009-08-14 20:29:53 by piumarta on emilia-2.local
  */
 
 #define DEBUG 0
@@ -133,23 +133,28 @@ static void *tryLoading(char *dirName, char *moduleName)
 	struct stat buf;
 	int         err;
 	sprintf(libName, "%s%s%s%s", dirName, *prefix, moduleName, *suffix);
-	if ((!(err= stat(libName, &buf))) && S_ISDIR(buf.st_mode))
-	  dprintf((stderr, "ignoring directory: %s\n", libName));
+	if ((err= stat(libName, &buf)))
+	  dprintf((stderr, "cannot read: %s\n", libName));
 	else
 	  {
-	    dprintf((stderr, "tryLoading %s\n", libName));
-	    handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
-	    if (handle == 0)
-	      {
-		if ((!err) && !(sqIgnorePluginErrors))
-		  fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
-	      }
+	    if (S_ISDIR(buf.st_mode))
+	      dprintf((stderr, "ignoring directory: %s\n", libName));
 	    else
 	      {
-#	       if DEBUG
-		printf("squeak: loaded plugin `%s'\n", libName);
-#	       endif
-		return handle;
+		dprintf((stderr, "tryLoading %s\n", libName));
+		handle= dlopen(libName, RTLD_NOW | RTLD_GLOBAL);
+		if (handle == 0)
+		  {
+		    /*if ((!err) && !(sqIgnorePluginErrors))*/
+		      fprintf(stderr, "ioLoadModule(%s):\n  %s\n", libName, dlerror());
+		  }
+		else
+		  {
+#	           if DEBUG
+		    printf("squeak: loaded plugin `%s'\n", libName);
+#	           endif
+		    return handle;
+		  }
 	      }
 	  }
       }
@@ -278,6 +283,13 @@ void *ioLoadModule(char *pluginName)
   /* finally (for VM hackers) try the pre-install build location */
   {
     char pluginDir[MAXPATHLEN];
+#  ifdef HAVE_SNPRINTF
+    snprintf(pluginDir, sizeof(pluginDir), "%s%s/", vmPath, pluginName);
+#  else
+    sprintf(pluginDir, "%s%s/", vmPath, pluginName);
+#  endif
+    if ((handle= tryLoading(pluginDir, pluginName)))
+      return handle;
 #  ifdef HAVE_SNPRINTF
     snprintf(pluginDir, sizeof(pluginDir), "%s%s/.libs/", vmPath, pluginName);
 #  else
