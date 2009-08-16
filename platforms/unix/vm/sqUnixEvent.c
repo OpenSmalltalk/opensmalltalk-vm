@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2007-10-12 20:10:44 by piumarta on emilia
+ * Last edited: 2009-08-15 15:39:46 by piumarta on emilia-2.local
  *
  * NOTE: this file is included by the window support files that need it.
  */
@@ -172,6 +172,7 @@ static void recordMouseEvent(void)
 static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers, int ucs4)
 {
   sqKeyboardEvent *evt= allocateKeyboardEvent();
+  if (keyCode < 0) keyCode= 0;
   evt->charCode= keyCode;
   evt->pressCode= pressCode;
   evt->modifiers= modifiers;
