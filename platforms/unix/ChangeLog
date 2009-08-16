@@ -1,3 +1,7 @@
+2009-08-16    <piumarta@solaris.piumarta.com>
+
+	* plugins/SocketPlugin/config.cmake: Check for -lsocket and -lnsl.
+
 2009-08-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/config.cmake: Check for -liconv on Solaris.
