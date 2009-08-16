@@ -1,5 +1,10 @@
 2009-08-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* vm/config.cmake: Check for -liconv on Solaris.
+
+	* plugins/SocketPlugin/config.cmake: Check for -lsocket on
+	Solaris.
+
 	* CMakeLists.txt: CMake variables can be set via 'configure'.
 
 	* vm/sqUnixExternalPrims.c (tryLoading): ignore directories
