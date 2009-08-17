@@ -147,8 +147,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 
 #elif defined(HAVE_ICONV_H)
 
-
-#include <iconv.h>
+# include <iconv.h>
 
 typedef char ichar_t;
 
