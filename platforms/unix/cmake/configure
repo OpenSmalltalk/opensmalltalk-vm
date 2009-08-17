@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2009-08-16 10:33:59 by piumarta on emilia-2.local
+# Last edited: 2009-08-17 03:28:34 by piumarta on emilia-2.local
 
 VM_VERSION=3.10-7
 SQ_VERSION=3.10-7159
@@ -61,6 +61,7 @@ while [ $# -gt 0 ]; do
 	--debug-configure)	dump;;
 	--*=*)			args="${args} -DOPT${1}";;
 	--*)			args="${args} -DOPT${1}=1";;
+	-*)			args="${args} ${1}";;
 	*)			error "unknown option: $1";;
     esac
     shift
