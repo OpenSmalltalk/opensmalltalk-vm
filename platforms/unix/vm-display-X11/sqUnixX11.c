@@ -1862,13 +1862,13 @@ static int x2sqKeyCompositionInput(XKeyEvent *xevt, KeySym *symbolic)
 	if (!(inputBuf= lookupKeys(XmbLookupString, xevt, inputString, sizeof(inputString), &inputCount, symbolic, &status)))
 	  return lastKey= -1;
       }
-# if defined(X_HAVE_UTF8_STRING)
+#  if defined(X_HAVE_UTF8_STRING)
     else if (uxUTF8Encoding == sqTextEncoding)
       {
 	if (!(inputBuf= lookupKeys(Xutf8LookupString, xevt, inputString, sizeof(inputString), &inputCount, symbolic, &status)))
 	  return lastKey= -1;
       }
-# endif
+#  endif
     else
       {
 	unsigned char  aStr[128], *aBuf;
