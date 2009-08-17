@@ -13,10 +13,6 @@ ADD_EXECUTABLE (squeak
   ${bld}/disabledPlugins.c
 )
 
-# IF (CMAKE_COMPILER_IS_GNUCC)
-#   SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -export-dynamic")
-# ENDIF (CMAKE_COMPILER_IS_GNUCC)
-
 ADD_CUSTOM_COMMAND (
   OUTPUT  version.c
   COMMAND ${config}/verstamp ${bld}/version.c ${CMAKE_C_COMPILER}
@@ -28,6 +24,10 @@ INCLUDE_DIRECTORIES (
   ${unix}/vm
   ${cross}/vm
   ${unix}/plugins/B3DAcceleratorPlugin	# for sqUnixOpenGL.h
+  ${X11_INCLUDE_DIR}
+  ${OPENGL_INCLUDE_DIR}
 )
+
+SET_TARGET_PROPERTIES (squeak PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
 
 TARGET_LINK_LIBRARIES (squeak m ${squeak_libs})
