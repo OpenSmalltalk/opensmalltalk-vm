@@ -1,1 +1,2 @@
+INCLUDE_DIRECTORIES (${unix}/plugins/AsynchFilePlugin)
 EXPECT_UNDEFINED_SYMBOLS ()

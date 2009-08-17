@@ -50,14 +50,10 @@
  *   SOFTWARE.
  */
 
+#include "config.h"
 #include "sq.h"
 #include "PseudoTTYPlugin.h"
-
-/* Ian says: never EVER #include things in the Unix Squeak sources
-   using relative paths.  Never.  Ever.  Period.  Write a Makefile.inc
-   with the right XCPPFLAGS instead.  Having said that... */
-
-#include "../AsynchFilePlugin/sqUnixAsynchFile.h"
+#include "sqUnixAsynchFile.h"
 
 #include <sys/types.h>
 #include <sys/wait.h>
