@@ -1,3 +1,3 @@
-INCLUDE_DIRECTORIES (${cross}/plugins/B3DAcceleratorPlugin ${cross}/plugins/FilePlugin ${OPENGL_INCLUDE_DIR})
+INCLUDE_DIRECTORIES (${cross}/plugins/B3DAcceleratorPlugin ${cross}/plugins/FilePlugin ${X11_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
 TARGET_LINK_LIBRARIES (@plugin@ ${X11_LIBRARIES} ${OPENGL_LIBRARIES})
 EXPECT_UNDEFINED_SYMBOLS ()

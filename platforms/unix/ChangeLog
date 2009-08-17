@@ -1,5 +1,10 @@
 2009-08-17  Ian Piumarta  <piumarta@freebsd.piumarta.com>
 
+	* vm-display-X11/config.cmake: Search X11_INCLUDE_DIR when looking
+	for X11/extentions/Xrender.h.
+
+	* vm-display-X11/build.cmake: Search X11_INCLUDE_DIR.
+
 	* plugins/B3DAcceleratorPlugin/build.cmake: Search
 	OPENGL_INCLUDE_DIR for headers.
 
