@@ -3,6 +3,11 @@ CHECK_INCLUDE_FILE (libutil.h	HAVE_LIBUTIL_H)
 CHECK_INCLUDE_FILE (pty.h	HAVE_PTY_H)
 CHECK_INCLUDE_FILE (stropts.h	HAVE_STROPTS_H)
 
+# can't include libutil.h by itself on FreeBSD because of missing defns
+IF (NOT HAVE_LIBUTIL_H AND EXISTS /usr/include/libutil.h)
+  SET (HAVE_LIBUTIL_H 1)
+ENDIF ()
+
 CHECK_LIBRARY_EXISTS (util openpty "" HAVE_OPENPTY)
 IF (NOT HAVE_OPENPTY)
     IF (EXISTS /dev/ptmx)
