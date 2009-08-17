@@ -2,4 +2,5 @@
 # (vm-display-Quartz) as a dependency.  This lets 3D work in both X11 and Quartz
 # on MacOS.
 
+INCLUDE_DIRECTORIES (${OPENGL_INCLUDE_DIR})
 EXPECT_UNDEFINED_SYMBOLS ()
