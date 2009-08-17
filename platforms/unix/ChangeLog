@@ -1,3 +1,8 @@
+2009-08-17    <piumarta@solaris.piumarta.com>
+
+	* vm/sqUnixCharConv.c: Print a useful error message from
+	iconv_open once, then disable further noise.
+
 2009-08-17  Ian Piumarta  <piumarta@freebsd.piumarta.com>
 
 	* vm-display-X11/config.cmake: Search X11_INCLUDE_DIR when looking

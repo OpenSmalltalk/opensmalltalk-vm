@@ -245,6 +245,17 @@ void setEncoding(void **encoding, char *rawName)
   setNEncoding(encoding, rawName, strlen(rawName));
 }
 
+static void iconvFail(char *toCode, char *fromCode)
+{
+  static int warned= 0;
+  if (!warned++)
+    {
+      char buf[256];
+      sprintf(buf, "iconv_open(%s, %s)", toCode, fromCode);
+      perror(buf);
+    }
+}
+
 int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, void *toCode, int norm, int term)
 {
   ichar_t     *inbuf= from;
@@ -266,26 +277,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 	  ptc= toCode;
 	}
     }
-#if 0 /* unsupported on OSF1 and Solaris */
-  else
-    iconv(cd, 0, 0, 0, 0);	/* reset cd state */
-#endif
 
-#if 0 /* original */
-  if ((iconv_t)-1 != cd)
-    {
-      int n= iconv(cd, &inbuf, &inbytes, &outbuf, &outbytes);
-      if ((size_t)-1 != n)
-	{
-	  if (term) *outbuf= '\0';
-	  return outbuf - to;
-	}
-      else
-	perror("iconv");
-    }
-  else
-    perror("iconv_open");
-#else /* Ned's changes -- to be verified on OSX and Solaris */
   if ((iconv_t)-1 != cd)
     {
       while (inbytes > 0)
@@ -325,7 +317,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
 		  /* fall through */
 
 		default:
-		  perror("iconv");
+		  iconvFail(toCode, fromCode);
 		  break;
 		}
 	    }
@@ -334,8 +326,7 @@ int convertChars(char *from, int fromLen, void *fromCode, char *to, int toLen, v
       return outbuf - to;
     }
   else
-    perror("iconv_open");
-#endif
+    iconvFail(toCode, fromCode);
 
   return convertCopy(from, fromLen, to, toLen, term);
 }
