@@ -1,0 +1,15 @@
+#!/bin/sh
+
+echo "Configuring `basename $1` -> `basename $2`" >&2
+
+sed "
+s%\[version\]%@version@%g
+s%\[major\]%@major@%g
+s%\[minor\]%@minor@%g
+s%\[patch\]%@patch@%g
+s%\[bindir\]%@prefix@/@bindir@%g
+s%\[imgdir\]%@prefix@/@imgdir@%g
+s%\[plgdir\]%@prefix@/@plgdir@%g
+s%\[mandir\]%@prefix@/@mandir@%g
+s%\[docdir\]%@prefix@/@docdir@%g
+" < $1 > $2

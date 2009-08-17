@@ -1,0 +1,10 @@
+#!/bin/sh
+
+vm="[plgdir]/squeakvm"
+
+if test ! -x "${vm}"; then
+  echo "$0: cannot find ${vm}"
+  exit 1
+fi
+
+exec "${vm}" "$@"
