@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-16 11:25:34 by piumarta on emilia-2.local
+# Last edited: 2009-08-17 03:27:46 by piumarta on emilia-2.local
 
 PROJECT (squeak)
 
@@ -13,9 +13,15 @@ IF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION OR NOT DEFINED SQ_VERSION)
   )
 ENDIF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION OR NOT DEFINED SQ_VERSION)
 
-SET (bld    ${CMAKE_BINARY_DIR})
-SET (unix   ${CMAKE_SOURCE_DIR})
-SET (config ${unix}/cmake)
+SET (prefix  ${CMAKE_INSTALL_PREFIX})
+
+SET (version ${VM_VERSION})
+
+SET (bindir bin)
+SET (imgdir lib/squeak)
+SET (plgdir lib/squeak/${version})
+SET (mandir man/man1)
+SET (docdir share/doc/squeak-${version})
 
 GET_CMAKE_PROPERTY (vars VARIABLES)
 FOREACH (opt ${vars})
@@ -26,13 +32,17 @@ FOREACH (opt ${vars})
   ENDIF ()
 ENDFOREACH (opt)
 
+SET (bld    ${CMAKE_BINARY_DIR})
+SET (unix   ${CMAKE_SOURCE_DIR})
+SET (config ${unix}/cmake)
+
 GET_FILENAME_COMPONENT (cross ${unix}/../Cross REALPATH)
 
-IF (OPT_src)
-  GET_FILENAME_COMPONENT (src ${OPT_src} ABSOLUTE)
+IF (OPT--src)
+  GET_FILENAME_COMPONENT (src ${OPT--src} ABSOLUTE)
 ELSE (SRC)
   SET (src  ${unix}/src)
-ENDIF (OPT_src)
+ENDIF (OPT--src)
 
 IF (NOT EXISTS ${src})
   MESSAGE (FATAL_ERROR "

@@ -31,3 +31,18 @@ INCLUDE_DIRECTORIES (
 SET_TARGET_PROPERTIES (squeak PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
 
 TARGET_LINK_LIBRARIES (squeak m ${squeak_libs})
+
+INSTALL (PROGRAMS ${bld}/squeak DESTINATION ${plgdir})
+
+ADD_DEPENDENCIES (squeak manpage)
+
+ADD_CUSTOM_TARGET (manpage
+  COMMAND ${config}/mkman ${major} ${version} ${bindir} ${imgdir} ${plgdir} ${mandir} ${docdir} ${unix}/doc/squeak.1 ${bld}/squeak.1
+)
+
+INSTALL (FILES ${bld}/squeak.1 DESTINATION share/man/man1)
+
+FILE (WRITE  ${bld}/mksymlink "EXEC_PROGRAM (\"${CMAKE_COMMAND}\" ARGS -E make_directory ${prefix}/${bindir})\n")
+FILE (APPEND ${bld}/mksymlink "EXEC_PROGRAM (\"${CMAKE_COMMAND}\" ARGS -E create_symlink ${prefix}/${plgdir}/squeak ${prefix}/${bindir}/squeak)\n")
+
+INSTALL (SCRIPT ${bld}/mksymlink)

@@ -10,3 +10,4 @@ INCLUDE_DIRECTORIES (
     ${unix}/@plugin@
     ${cross}/plugins/@plugin@
 )
+INSTALL (TARGETS @plugin@ LIBRARY DESTINATION @plgdir@)

@@ -2,6 +2,10 @@ SET (OS_TYPE \"unix\")
 
 CONFIG_DEFINE (OS_TYPE)
 
+STRING (REGEX REPLACE "(.*)-(.*)\\.(.*)" "\\1" major ${version})
+STRING (REGEX REPLACE "(.*)-(.*)\\.(.*)" "\\1" minor ${version})
+STRING (REGEX REPLACE "(.*)-(.*)\\.(.*)" "\\1" patch ${version})
+
 IF (APPLE)
   SET (DARWIN 1)
   STRING_APPEND (CMAKE_C_FLAGS -DMACOSX)		# ffi.h
@@ -166,7 +170,7 @@ SET (VM_BUILD_STRING "\"Unix built on \"__DATE__ \" \"__TIME__\" Compiler: \"__V
 
 CONFIG_DEFINE (VM_BUILD_STRING)
 
-SET (VM_LIBDIR "\"/usr/local/lib/squeak/${VM_VERSION}\"")
+SET (VM_LIBDIR "\"${prefix}/${plgdir}\"")
 
 CONFIG_DEFINE (VM_LIBDIR)
 
