@@ -1,10 +1,10 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-17 03:27:46 by piumarta on emilia-2.local
+# Last edited: 2009-08-17 11:08:22 by piumarta on emilia-2.local
 
 PROJECT (squeak)
 
-CMAKE_MINIMUM_REQUIRED (VERSION 2.6)
+CMAKE_MINIMUM_REQUIRED (VERSION 2.6.4)
 
 IF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION OR NOT DEFINED SQ_VERSION)
   MESSAGE (FATAL_ERROR "
