@@ -1,5 +1,8 @@
 2009-08-17  Ian Piumarta  <piumarta@freebsd.piumarta.com>
 
+	* plugins/UUIDPlugin/sqUnixUUID.c: Look for both uuid.h and
+	uuid/uuid.h.
+
 	* plugins/PseudoTTYPlugin/build.cmake: Add
 	unix/plugins/AsynchFilePlugin to include search path.
 
