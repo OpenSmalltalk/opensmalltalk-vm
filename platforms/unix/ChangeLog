@@ -1,3 +1,16 @@
+2009-08-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/config.cmake: Always set OPENGL_* to X11 values; on MacOSX
+	set AGL_FOUND, AGL_INCLUDE_DIR and AGL_LIBRARIES to Quartz values.
+
+	* plugins/B3DAcceleratorPlugin/config.cmake: Set USE_X11_GLX, and
+	USE_QUARTZ_CGL based on OPENGL_FOUND and AGL_FOUND.
+
+	* vm-display-Quartz/build.cmake: Link against -framework Cocoa.
+
+	* vm-display-X11/build.cmake: Link against X11_LIBS and
+	OPENGL_LIBS.
+
 2009-08-16    <piumarta@solaris.piumarta.com>
 
 	* plugins/SocketPlugin/config.cmake: Check for -lsocket and -lnsl.

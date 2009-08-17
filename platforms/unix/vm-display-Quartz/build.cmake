@@ -1,2 +1,3 @@
-INCLUDE_DIRECTORIES (${cross}/plugins/B3DAcceleratorPlugin)
+INCLUDE_DIRECTORIES (${cross}/plugins/B3DAcceleratorPlugin ${AGL_INCLUDE_DIR})
+TARGET_LINK_LIBRARIES (@plugin@ ${AGL_LIBRARIES} "-framework Cocoa")
 EXPECT_UNDEFINED_SYMBOLS ()
