@@ -1,6 +1,6 @@
 #!/bin/sh
 
-echo "Configuring `basename $1` -> `basename $2`" >&2
+# echo "Configuring `basename $1` -> `basename $2`" >&2
 
 sed "
 s%\[version\]%@version@%g
