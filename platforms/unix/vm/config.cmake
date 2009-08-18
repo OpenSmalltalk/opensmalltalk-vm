@@ -2,9 +2,9 @@ SET (OS_TYPE \"unix\")
 
 CONFIG_DEFINE (OS_TYPE)
 
-STRING (REGEX REPLACE "(.*)-(.*)\\.(.*)" "\\1" major ${version})
-STRING (REGEX REPLACE "(.*)-(.*)\\.(.*)" "\\1" minor ${version})
-STRING (REGEX REPLACE "(.*)-(.*)\\.(.*)" "\\1" patch ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)-(.*)" "\\1" major ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)-(.*)" "\\2" minor ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)-(.*)" "\\3" patch ${version})
 
 IF (APPLE)
   SET (DARWIN 1)
@@ -200,7 +200,6 @@ CONFIG_DEFINE (HAVE_TIMEZONE)
 CONFIG_DEFINE (HAVE_TM_GMTOFF)
 
 CONFIG_DEFINE (IMAGE_DUMP)
-CONFIG_DEFINE (USE_XSHM)
 
 # sqUnixMemory.c
 
