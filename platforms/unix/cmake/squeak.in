@@ -1,10 +1,69 @@
 #!/bin/sh
+#
+# Last edited: 2009-08-17 21:09:19 by piumarta on ubuntu.piumarta.com
 
-vm="[plgdir]/squeakvm"
+PATH=/usr/bin:/bin
+
+myname=`basename $0`
+bindir=`dirname $0`
+bindir=`cd ${bindir}; pwd`
+prefix=`dirname ${bindir}`
+libdir="${prefix}/lib/squeak"
+plgdir="${libdir}/[version]"
+vm="${plgdir}/squeakvm"
+options="-plugins ${plgdir}"
+
+error () {
+    if test -n "$DISPLAY" -a -x "`which zenity 2>/dev/null`"; then
+        zenity --error --text "${myname}: $1"
+    else
+	echo "${myname}: $1" >&2
+    fi
+}
+
+run () {
+    exec "${vm}" ${options} "$@"
+}
 
 if test ! -x "${vm}"; then
-  echo "$0: cannot find ${vm}"
-  exit 1
+    error "cannot find ${vm}"
+    exit 1
 fi
 
-exec "${vm}" "$@"
+if test $# -gt 0 -o -f squeak.image; then
+    run "$@"
+fi
+
+# deal with being launched from a menu
+
+if test -z "$DISPLAY" -o ! -x "`which zenity 2>/dev/null`"; then
+    error "no image filename specified"
+    exit 1
+fi
+
+image=`zenity --title "Choose a saved image to resume or cancel to install a new one" --file-selection`
+
+if test -z "${image}"; then
+    images=`cd ${libdir}; ls *.image 2>/dev/null`
+    if test -z "${images}"; then
+	error "no installable images in ${libdir}"
+	exit 1
+    fi
+    image=`zenity --title "Choose an image to install" --list --column Images $images`
+    if test -z "${image}"; then
+	exit 0
+    fi
+    changes=`basename ${image} .image`.changes
+    location=`zenity --title "Choose a destination directory" --file-selection --directory`
+    if test -z "${location}"; then
+	exit 0
+    fi
+    cp -p ${libdir}/${image}   ${location}/.
+    cp -p ${libdir}/${changes} ${location}/.
+    ln -s ${libdir}/*.sources  ${location}/.
+    options="${options}"
+    image="${location}/${image}"
+fi
+
+cd `dirname ${image}`
+run `basename ${image}` "$@"
