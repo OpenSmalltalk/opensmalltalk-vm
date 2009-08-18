@@ -1,5 +1,7 @@
 2009-08-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* config/config.h.in: Add HAVE_UUID_H, HAVE_UUID_UUID_H.
+
 	* plugins/OggPlugin/config.cmake: Fix typo.
 	* plugins/RomePlugin/build.cmake: Fix typo.
 

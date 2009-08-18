@@ -27,7 +27,7 @@
 
 /* Author: Ian.Piumarta@squeakland.org
  *
- * Last edited: 2009-08-16 09:10:54 by piumarta on emilia-2.local
+ * Last edited: 2009-08-18 14:54:35 by piumarta on emilia-2.local
  */
 
 #ifndef __sq_config_h
@@ -96,6 +96,9 @@
 
 #undef	HAVE_FFI_H
 #undef	HAVE_FFI_FFI_H
+
+#undef	HAVE_UUID_H
+#undef	HAVE_UUID_UUID_H
 
 /* system calls/library functions */
 
