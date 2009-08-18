@@ -1,4 +1,4 @@
-ADD_EXECUTABLE (squeak
+ADD_EXECUTABLE (squeakvm
   ${src}/vm/interp.c
   ${unix}/vm/aio.c
   ${unix}/vm/debug.c
@@ -28,21 +28,28 @@ INCLUDE_DIRECTORIES (
   ${OPENGL_INCLUDE_DIR}
 )
 
-SET_TARGET_PROPERTIES (squeak PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
+SET_TARGET_PROPERTIES (squeakvm PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
 
-TARGET_LINK_LIBRARIES (squeak m ${squeak_libs})
+TARGET_LINK_LIBRARIES (squeakvm m ${squeak_libs})
 
-INSTALL (PROGRAMS ${bld}/squeak DESTINATION ${plgdir})
+INSTALL (PROGRAMS ${bld}/squeakvm DESTINATION ${plgdir})
 
-ADD_DEPENDENCIES (squeak manpage)
+CONFIGURE_FILE (${config}/config.in ${bld}/config @ONLY)
 
-ADD_CUSTOM_TARGET (manpage
-  COMMAND ${config}/mkman ${major} ${version} ${bindir} ${imgdir} ${plgdir} ${mandir} ${docdir} ${unix}/doc/squeak.1 ${bld}/squeak.1
+# launcher script
+
+ADD_CUSTOM_TARGET (squeak
+  DEPENDS ${config}/squeak.in
+  COMMAND sh ${bld}/config ${config}/squeak.in ${bld}/squeak
 )
+ADD_DEPENDENCIES (squeakvm squeak)
+INSTALL (PROGRAMS ${bld}/squeak DESTINATION bin)
 
+# manual page
+
+ADD_CUSTOM_TARGET (squeak.1
+  DEPENDS ${unix}/doc/squeak.1
+  COMMAND sh ${bld}/config ${unix}/doc/squeak.1 ${bld}/squeak.1
+)
+ADD_DEPENDENCIES (squeakvm squeak.1)
 INSTALL (FILES ${bld}/squeak.1 DESTINATION share/man/man1)
-
-FILE (WRITE  ${bld}/mksymlink "EXEC_PROGRAM (\"${CMAKE_COMMAND}\" ARGS -E make_directory ${prefix}/${bindir})\n")
-FILE (APPEND ${bld}/mksymlink "EXEC_PROGRAM (\"${CMAKE_COMMAND}\" ARGS -E create_symlink ${prefix}/${plgdir}/squeak ${prefix}/${bindir}/squeak)\n")
-
-INSTALL (SCRIPT ${bld}/mksymlink)
