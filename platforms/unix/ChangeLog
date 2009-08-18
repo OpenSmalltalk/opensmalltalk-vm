@@ -1,3 +1,10 @@
+2009-08-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/OggPlugin/config.cmake: Fix typo.
+	* plugins/RomePlugin/build.cmake: Fix typo.
+
+	* plugins/RomePlugin/config.cmake: Properly detect pangocairo and freetype2.
+
 2009-08-17    <piumarta@solaris.piumarta.com>
 
 	* vm/sqUnixCharConv.c: Print a useful error message from
