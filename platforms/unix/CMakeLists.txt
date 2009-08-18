@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-17 11:08:22 by piumarta on emilia-2.local
+# Last edited: 2009-08-17 17:00:26 by piumarta on ubuntu.piumarta.com
 
 PROJECT (squeak)
 
@@ -32,6 +32,8 @@ FOREACH (opt ${vars})
   ENDIF ()
 ENDFOREACH (opt)
 
+SET (CMAKE_INSTALL_PREFIX ${prefix})
+
 SET (bld    ${CMAKE_BINARY_DIR})
 SET (unix   ${CMAKE_SOURCE_DIR})
 SET (config ${unix}/cmake)
@@ -53,9 +55,13 @@ ENDIF (NOT EXISTS ${src})
 INCLUDE (${config}/Utils.cmake)
 INCLUDE (${config}/Plugins.cmake)
 
-STRING (REGEX REPLACE "(.*)-(.*)-(.*)" "\\1" VM_HOST_CPU    ${VM_HOST})
-STRING (REGEX REPLACE "(.*)-(.*)-(.*)" "\\2" VM_HOST_VENDOR ${VM_HOST})
-STRING (REGEX REPLACE "(.*)-(.*)-(.*)" "\\3" VM_HOST_OS     ${VM_HOST})
+STRING (REGEX REPLACE "([^-]*)-([^-]*)-([^-]*).*" "\\1" VM_HOST_CPU    ${VM_HOST})
+STRING (REGEX REPLACE "([^-]*)-([^-]*)-([^-]*).*" "\\2" VM_HOST_VENDOR ${VM_HOST})
+STRING (REGEX REPLACE "([^-]*)-([^-]*)-([^-]*).*" "\\3" VM_HOST_OS     ${VM_HOST})
+
+SET (vm-host     "${VM_HOST}")
+SET (vm-host-os  "${VM_HOST_OS}")
+SET (vm-host-cpu "${VM_HOST_CPU}")
 
 IF (OPT_CFLAGS)
   SET (CMAKE_C_FLAGS "${OPT_CFLAGS}")
@@ -105,6 +111,12 @@ CONFIGURE_FILE (${bld}/config.h.in ${bld}/config.h)
 INCLUDE (${unix}/vm/build.cmake)
 
 BUILD_PLUGINS ()
+
+SET (cmake ${unix}/../../cmake)
+
+IF (EXISTS ${cmake}/Packages.cmake)
+  INCLUDE (${cmake}/Packages.cmake)
+ENDIF ()
 
 GET_CMAKE_PROPERTY (tmp VARIABLES)
 LIST (REMOVE_ITEM tmp tmp)
