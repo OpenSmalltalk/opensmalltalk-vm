@@ -1,3 +1,8 @@
+2009-08-19    <piumarta@ubuntu.piumarta.com>
+
+	* plugins/RomePlugin/build.cmake: Add cross/plugins/SurfacePlugin
+	to include search path.
+
 2009-08-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/sqUnixXdnd.c: dprintf -> fdebugf.
