@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2006-10-18 10:03:16 by piumarta on emilia.local
+ * Last edited: 2009-08-19 04:35:40 by piumarta on emilia-2.local
  */
 
 
@@ -92,7 +92,7 @@ static int ms_read(_self, unsigned char *out, int limit, int quant, int usecs)
 	int i= 0;
 	while (i < count)
 	  {
-	    dprintf("<%02x\n", out[i]);
+	    debugf("<%02x\n", out[i]);
 	    ++i;
 	  }
       }
@@ -200,7 +200,7 @@ static int ms_open(_self, char *msDev, char *msProto)
 	}
     }
 
-  dprintf("using: %s (%d), %s\n", self->msName, self->fd, msProto);
+  debugf("using: %s (%d), %s\n", self->msName, self->fd, msProto);
 
   self->init= init;
   self->handleEvents= handler;
@@ -214,7 +214,7 @@ static void ms_close(_self)
   if (self->fd >= 0)
     {
       close(self->fd);
-      dprintf("%s (%d) closed\n", self->msName, self->fd);
+      debugf("%s (%d) closed\n", self->msName, self->fd);
       self->fd= -1;
     }
 }

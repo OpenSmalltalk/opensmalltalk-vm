@@ -1,8 +1,8 @@
-/* ppc-sysv.c -- FFI support for PowerPC SVr4 ABI
+/* x86-sysv.c -- FFI support for i386 SVr4 ABI
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2006-10-18 10:07:15 by piumarta on emilia.local
+ * Last edited: 2009-08-19 04:22:59 by piumarta on emilia-2.local
  * 
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -45,9 +45,9 @@
 #endif
 
 #if 0
-# define dprintf(ARGS)printf ARGS
+# define debugf(ARGS)printf ARGS
 #else
-# define dprintf(ARGS)
+# define debugf(ARGS)
 #endif
 
 #if defined(FFI_TEST)
@@ -132,63 +132,63 @@ int ffiCanReturn(int *structSpec, int specSize)
 
 int ffiPushSignedChar(int value)
 { 
-  dprintf(("ffiPushSignedChar %d\n", value));
+  debugf(("ffiPushSignedChar %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedChar(int value)
 { 
-  dprintf(("ffiPushUnsignedChar %d\n", value));
+  debugf(("ffiPushUnsignedChar %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedByte(int value)
 { 
-  dprintf(("ffiPushSignedByte %d\n", value));
+  debugf(("ffiPushSignedByte %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedByte(int value)
 { 
-  dprintf(("ffiPushUnsignedByte %d\n", value));
+  debugf(("ffiPushUnsignedByte %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedShort(int value)
 { 
-  dprintf(("ffiPushSignedShort %d\n", value));
+  debugf(("ffiPushSignedShort %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedShort(int value)
 { 
-  dprintf(("ffiPushUnsignedShort %d\n", value));
+  debugf(("ffiPushUnsignedShort %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedInt(int value)
 { 
-  dprintf(("ffiPushSignedInt %d\n", value));
+  debugf(("ffiPushSignedInt %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushUnsignedInt(int value)
 { 
-  dprintf(("ffiPushUnsignedInt %d\n", value));
+  debugf(("ffiPushUnsignedInt %d\n", value));
   pushInt(value);
   return 1; 
 }
 
 int ffiPushSignedLongLong(int low, int high)
 { 
-  dprintf(("ffiPushSignedLongLong %d %d\n", low, high));
+  debugf(("ffiPushSignedLongLong %d %d\n", low, high));
   pushInt(low);
   pushInt(high);
   return 1; 
@@ -196,7 +196,7 @@ int ffiPushSignedLongLong(int low, int high)
 
 int ffiPushUnsignedLongLong(int low, int high)
 { 
-  dprintf(("ffiPushUnsignedLongLong %d %d\n", low, high));
+  debugf(("ffiPushUnsignedLongLong %d %d\n", low, high));
   pushInt(low);
   pushInt(high);
   return 1; 
@@ -204,7 +204,7 @@ int ffiPushUnsignedLongLong(int low, int high)
 
 int ffiPushPointer(int pointer)
 { 
-  dprintf(("ffiPushPointer %d\n", pointer));
+  debugf(("ffiPushPointer %d\n", pointer));
   pushInt(pointer);
   return 1; 
 }
@@ -212,14 +212,14 @@ int ffiPushPointer(int pointer)
 int ffiPushSingleFloat(double value)
 { 
   float f= (float)value;
-  dprintf(("ffiPushSingleFloat %f\n", value));
+  debugf(("ffiPushSingleFloat %f\n", value));
   pushInt(*(int *)&f);
   return 1; 
 }
 
 int ffiPushDoubleFloat(double value)
 { 
-  dprintf(("ffiPushDoubleFloat %f\n", value));
+  debugf(("ffiPushDoubleFloat %f\n", value));
   pushInt(((int *)&value)[0]);
   pushInt(((int *)&value)[1]);
   return 1; 
@@ -228,12 +228,12 @@ int ffiPushDoubleFloat(double value)
 int ffiPushStringOfLength(int srcIndex, int length)
 {
   char *ptr;
-  dprintf(("ffiPushStringOfLength %d\n", length));
+  debugf(("ffiPushStringOfLength %d\n", length));
   checkStack();
   ptr= (char *)malloc(length + 1);
   if (!ptr)
     return primitiveFail();
-  dprintf(("  ++ alloc string\n"));
+  debugf(("  ++ alloc string\n"));
   memcpy(ptr, (void *)srcIndex, length);
   ptr[length]= '\0';
   ffiTempStrings[ffiTempStringCount++]= ptr;
@@ -245,7 +245,7 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 {
   int lbs= *structSpec & FFIStructSizeMask;
   int size= (lbs + sizeof(int) - 1) / sizeof(int);
-  dprintf(("ffiPushStructureOfLength %d (%db %dw)\n", specSize, lbs, size));
+  debugf(("ffiPushStructureOfLength %d (%db %dw)\n", specSize, lbs, size));
   if (ffiStackIndex + size > FFI_MAX_STACK)
     return primitiveFail();
   memcpy((void *)(ffiStack + ffiStackIndex), (void *)pointer, lbs);
@@ -261,7 +261,7 @@ int	ffiLongLongResultHigh(void)	{ return ffiLongReturnValue; }
 
 int ffiStoreStructure(int address, int structSize)
 {
-  dprintf(("ffiStoreStructure %d %d\n", address, structSize));
+  debugf(("ffiStoreStructure %d %d\n", address, structSize));
   memcpy((void *)address, (ffiStructReturnValue
 			   ? (void *)ffiStructReturnValue
 			   : (void *)&ffiIntReturnValue),
@@ -273,16 +273,16 @@ int ffiStoreStructure(int address, int structSize)
 int ffiCleanup(void)
 {
   int i;
-  dprintf(("ffiCleanup\n"));
+  debugf(("ffiCleanup\n"));
   for (i= 0;  i < ffiTempStringCount;  ++i)
     {
-      dprintf(("  ++ free string\n"));
+      debugf(("  ++ free string\n"));
       free(ffiTempStrings[i]);
     }
   ffiTempStringCount= 0;
   if (ffiStructReturnValue)
     {
-      dprintf(("  ++ free struct\n"));
+      debugf(("  ++ free struct\n"));
       free(ffiStructReturnValue);
       ffiStructReturnValue= 0;
     }

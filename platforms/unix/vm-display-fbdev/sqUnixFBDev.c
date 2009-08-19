@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2008-04-21 14:08:24 by piumarta on emilia
+ * Last edited: 2009-08-19 04:36:59 by piumarta on emilia-2.local
  */
 
 
@@ -68,7 +68,7 @@
 #endif
 
 
-static void dprintf(const char *fmt, ...)
+static void debugf(const char *fmt, ...)
 {
 #if (DEBUG)
   va_list ap;
@@ -149,9 +149,9 @@ static void closeFramebuffer(void)
 
 static void enqueueKeyboardEvent(int key, int up, int modifiers)
 {
-  dprintf("KEY %3d %02x %c %s mod %02x\n",
-	  key, key, ((key > 32) && (key < 127)) ? key : ' ',
-	  up ? "UP" : "DOWN", modifiers);
+  debugf("KEY %3d %02x %c %s mod %02x\n",
+	 key, key, ((key > 32) && (key < 127)) ? key : ' ',
+	 up ? "UP" : "DOWN", modifiers);
 
   modifierState= modifiers;
   if (up)
@@ -190,8 +190,8 @@ static void enqueueMouseEvent(int b, int dx, int dy)
   buttonState= b;
   mousePosition= fb->cursorPosition;
   if (b)
-    dprintf("mouse %02x at %4d,%4d mod %02x\n",
-	    b, mousePosition.x, mousePosition.y, modifierState);
+    debugf("mouse %02x at %4d,%4d mod %02x\n",
+	   b, mousePosition.x, mousePosition.y, modifierState);
   recordMouseEvent();
 }
 
@@ -275,14 +275,14 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt heigh
 
 static sqInt display_ioHasDisplayDepth(sqInt i)
 {
-  dprintf("hasDisplayDepth %d (%d) => %d\n", i, fb_depth(fb), (i == fb_depth(fb)));
+  debugf("hasDisplayDepth %d (%d) => %d\n", i, fb_depth(fb), (i == fb_depth(fb)));
   return (i == fb_depth(fb));
 }
 
 
 static void openDisplay(void)
 {
-  dprintf("openDisplay\n");
+  debugf("openDisplay\n");
   openMouse();
   openKeyboard();
   openFramebuffer();
@@ -294,7 +294,7 @@ static void openDisplay(void)
 
 static void closeDisplay(void)
 {
-  dprintf("closeDisplay\n");
+  debugf("closeDisplay\n");
   closeFramebuffer();
   closeKeyboard();
   closeMouse();

@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2006-10-18 10:07:52 by piumarta on emilia.local
+ * Last edited: 2009-08-19 04:23:48 by piumarta on emilia-2.local
  * 
  *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -56,9 +56,9 @@
 #endif
 
 #if 0
-# define dprintf(ARGS)	printf ARGS; fflush(stdout)
+# define debugf(ARGS)	printf ARGS; fflush(stdout)
 #else
-# define dprintf(ARGS)
+# define debugf(ARGS)
 #endif
 
 extern struct VirtualMachine *interpreterProxy;
@@ -112,7 +112,7 @@ extern int ffiCallAddressOf(void *addr, void *globals);
 
 int ffiInitialize(void)
 {
-  dprintf(("ffiInitialize\n"));
+  debugf(("ffiInitialize\n"));
   stackIndex= gprCount= fprCount= 0;
 #if 0
   structCount= 0;
@@ -132,14 +132,14 @@ int ffiSupportsCallingConvention(int callType)
 int ffiAlloc(int byteSize)
 {
   int ptr= (int)malloc(byteSize);
-  dprintf(("ffiAlloc(%d) => %08x\n", byteSize, ptr));
+  debugf(("ffiAlloc(%d) => %08x\n", byteSize, ptr));
   return ptr;
 }
 
 
 int ffiFree(int ptr)
 {
-  dprintf(("ffiFree(%08x)\n", ptr));
+  debugf(("ffiFree(%08x)\n", ptr));
   if (ptr) free((void *)ptr);
   return 1;
 }
@@ -166,7 +166,7 @@ int ffiFree(int ptr)
 
 int ffiPushSignedChar(int value)
 { 
-  dprintf(("ffiPushSignedChar %d\n", value));
+  debugf(("ffiPushSignedChar %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -174,7 +174,7 @@ int ffiPushSignedChar(int value)
 
 int ffiPushUnsignedChar(int value) 
 { 
-  dprintf(("ffiPushUnsignedChar %d\n", value));
+  debugf(("ffiPushUnsignedChar %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -182,7 +182,7 @@ int ffiPushUnsignedChar(int value)
 
 int ffiPushSignedByte(int value) 
 { 
-  dprintf(("ffiPushSignedByte %d\n", value));
+  debugf(("ffiPushSignedByte %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -190,7 +190,7 @@ int ffiPushSignedByte(int value)
 
 int ffiPushUnsignedByte(int value)
 { 
-  dprintf(("ffiPushUnsignedByte %d\n", value));
+  debugf(("ffiPushUnsignedByte %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -198,7 +198,7 @@ int ffiPushUnsignedByte(int value)
 
 int ffiPushSignedShort(int value)
 { 
-  dprintf(("ffiPushSignedShort %d\n", value));
+  debugf(("ffiPushSignedShort %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -206,7 +206,7 @@ int ffiPushSignedShort(int value)
 
 int ffiPushUnsignedShort(int value) 
 { 
-  dprintf(("ffiPushUnsignedShort %d\n", value));
+  debugf(("ffiPushUnsignedShort %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -214,7 +214,7 @@ int ffiPushUnsignedShort(int value)
 
 int ffiPushSignedInt(int value) 
 { 
-  dprintf(("ffiPushSignedInt %d\n", value));
+  debugf(("ffiPushSignedInt %d\n", value));
   pushGPR(value); 
   return 1; 
 }
@@ -222,7 +222,7 @@ int ffiPushSignedInt(int value)
 
 int ffiPushUnsignedInt(int value) 
 { 
-  dprintf(("ffiPushUnsignedInt %d\n", value));
+  debugf(("ffiPushUnsignedInt %d\n", value));
   pushGPR(value);
   return 1;
 }
@@ -230,7 +230,7 @@ int ffiPushUnsignedInt(int value)
 
 int ffiPushSignedLongLong(int low, int high)
 {
-  dprintf(("ffiPushSignedLongLong %d %d\n", low, high));
+  debugf(("ffiPushSignedLongLong %d %d\n", low, high));
   qalignGPR();
   qalignStack();
   pushGPR(high);
@@ -241,7 +241,7 @@ int ffiPushSignedLongLong(int low, int high)
 
 int ffiPushUnsignedLongLong(int low, int high)
 { 
-  dprintf(("ffiPushUnsignedLongLong %d %d\n", low, high));
+  debugf(("ffiPushUnsignedLongLong %d %d\n", low, high));
   qalignGPR();
   qalignStack();
   pushGPR(high);
@@ -252,7 +252,7 @@ int ffiPushUnsignedLongLong(int low, int high)
 
 int ffiPushPointer(int pointer)
 {
-  dprintf(("ffiPushPointer %08x\n", pointer));
+  debugf(("ffiPushPointer %08x\n", pointer));
   pushGPR(pointer);
   return 1;
 }
@@ -260,7 +260,7 @@ int ffiPushPointer(int pointer)
 
 int ffiPushSingleFloat(double value)
 {
-  dprintf(("ffiPushSingleFloat %f\n", (float)value));
+  debugf(("ffiPushSingleFloat %f\n", (float)value));
   if (fprCount < FPR_MAX)
     fprs[fprCount++]= value;
   {
@@ -273,7 +273,7 @@ int ffiPushSingleFloat(double value)
 
 int ffiPushDoubleFloat(double value)
 {
-  dprintf(("ffiPushDoubleFloat %f\n", (float)value));
+  debugf(("ffiPushDoubleFloat %f\n", (float)value));
   if (fprCount < FPR_MAX)
     fprs[fprCount++]= value;
   pushGPR(((int *)&value)[0]);
@@ -285,7 +285,7 @@ int ffiPushDoubleFloat(double value)
 int ffiPushStringOfLength(int srcIndex, int length)
 {
   char *ptr;
-  dprintf(("ffiPushStringOfLength %d\n", length));
+  debugf(("ffiPushStringOfLength %d\n", length));
   checkGPR();
   ptr= (char *)malloc(length + 1);
   if (!ptr)
@@ -312,7 +312,7 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 #define gprl	  (char *)&gprs[GPR_MAX]
   int   gprSize	= min(argSize, gprl - gprp);
 
-  dprintf(("ffiPush %08x Structure %p OfLength %d\n", pointer, structSpec, specSize));
+  debugf(("ffiPush %08x Structure %p OfLength %d\n", pointer, structSpec, specSize));
 
   if (gprSize < 4) gprp += (4 - gprSize);
   if (argSize < 4) argp += (4 - gprSize);
@@ -360,7 +360,7 @@ int ffiPushStructureOfLength(int pointer, int *structSpec, int specSize)
 int ffiCanReturn(int *structSpec, int specSize)
 {
   int header= *structSpec;
-  dprintf(("ffiCanReturn %p %d\n", structSpec, specSize));
+  debugf(("ffiCanReturn %p %d\n", structSpec, specSize));
   if (header & FFIFlagPointer)
     return 1;
   if (header & FFIFlagStructure)
@@ -383,7 +383,7 @@ int    ffiLongLongResultHigh(void)	{ return ((int *)&longReturnValue)[0]; }
 
 int ffiStoreStructure(int address, int structSize)
 {
-  dprintf(("ffiStoreStructure %08x %d\n", address, structSize));
+  debugf(("ffiStoreStructure %08x %d\n", address, structSize));
   memcpy((void *)address,
 	 structReturnValue ? (void *)structReturnValue : (void *)&longReturnValue,
 	 structSize);
@@ -394,7 +394,7 @@ int ffiStoreStructure(int address, int structSize)
 int ffiCleanup(void)
 {
   int i;
-  dprintf(("ffiCleanup\n"));
+  debugf(("ffiCleanup\n"));
   for (i= 0;  i < stringCount;  ++i)
     free(strings[i]);
   stringCount= 0;
@@ -409,14 +409,14 @@ int ffiCleanup(void)
 
 int ffiCallAddressOfWithPointerReturn(int fn, int callType)
 {
-  dprintf(("ffiCallAddressOfWithPointerReturn %08x %d\n", fn, callType));
+  debugf(("ffiCallAddressOfWithPointerReturn %08x %d\n", fn, callType));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 
 
 int ffiCallAddressOfWithStructReturn(int fn, int callType, int* structSpec, int specSize)
 {
-  dprintf(("ffiCallAddressOfWithStructReturn %08x %d %p %d\n",
+  debugf(("ffiCallAddressOfWithStructReturn %08x %d %p %d\n",
 	   fn, callType, structSpec, specSize));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
@@ -424,7 +424,7 @@ int ffiCallAddressOfWithStructReturn(int fn, int callType, int* structSpec, int 
 
 int ffiCallAddressOfWithReturnType(int fn, int callType, int typeSpec)
 {
-  dprintf(("ffiCallAddressOfWithReturnType %08x %d %d\n", fn, callType, typeSpec));
+  debugf(("ffiCallAddressOfWithReturnType %08x %d %d\n", fn, callType, typeSpec));
   return ffiCallAddressOf((void *)fn, (void *)&global);
 }
 

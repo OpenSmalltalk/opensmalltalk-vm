@@ -2,7 +2,7 @@
  * 
  * Author: Ian Piumarta <ian.piumarta@squeakland.org>
  * 
- * Last edited: 2009-08-04 19:49:01 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-08-19 04:36:13 by piumarta on emilia-2.local
  */
 
 
@@ -74,7 +74,7 @@ static void updateModifiers(int kstate)
   if (kstate & (1 << KG_CTRL))	modifierState |= CtrlKeyBit;
   if (kstate & (1 << KG_ALT))	modifierState |= CommandKeyBit;
   if (kstate & (1 << KG_ALTGR))	modifierState |= OptionKeyBit;
-  dprintf("state %02x mod %02x\n", kstate, modifierState);
+  debugf("state %02x mod %02x\n", kstate, modifierState);
 }
 
 
@@ -110,19 +110,19 @@ static void kb_translate(_self, int code, int up)
   int rep= (!up) && (prev == code);
   prev= up ? 0 : code;
 
-  dprintf("+++ code %d up %d prev %d rep %d map %p\n", code, up, prev, rep, keyMap);
+  debugf("+++ code %d up %d prev %d rep %d map %p\n", code, up, prev, rep, keyMap);
 
   if (keyMap)
     {
       int sym=  keyMap[code];
       int type= KTYP(sym);
-      dprintf("+++ sym %x (%02x) type %d\n", sym, sym & 255, type);
+      debugf("+++ sym %x (%02x) type %d\n", sym, sym & 255, type);
       sym &= 255;
       if (type >= 0xf0)		// shiftable
 	type -= 0xf0;
       if (KT_LETTER == type)	// lockable
 	type= KT_LATIN;
-      dprintf("+++ type %d\n", type);
+      debugf("+++ type %d\n", type);
       switch (type)
 	{
 	case KT_LATIN:
@@ -165,7 +165,7 @@ static void kb_translate(_self, int code, int up)
 
 	default:
 	  if (type > KT_SLOCK)
-	    dprintf("ignoring unknown scancode %d.%d\n", type, sym);
+	    debugf("ignoring unknown scancode %d.%d\n", type, sym);
 	  break;
 	}
     }
@@ -177,13 +177,13 @@ static void kb_noCallback(int k, int u, int s) {}
 
 static int kb_handleEvents(_self)
 {
-  dprintf("+++ kb_handleEvents\n");
+  debugf("+++ kb_handleEvents\n");
   while (fdReadable(self->fd, 0))
     {
       unsigned char buf;
       if (1 == read(self->fd, &buf, 1))
 	{
-	  dprintf("+++ kb_translate %3d %02x + %d\n", buf & 127, buf & 127, (buf >> 7) & 1);
+	  debugf("+++ kb_translate %3d %02x + %d\n", buf & 127, buf & 127, (buf >> 7) & 1);
 	  kb_translate(self, buf & 127, (buf >> 7) & 1);
 	}
     }
@@ -334,7 +334,7 @@ void kb_close(_self)
       ioctl(self->fd, KDSKBMODE, self->kbMode);
       tcsetattr(self->fd, TCSANOW, &self->tcAttr);
       close(self->fd);
-      dprintf("%s (%d) closed\n", self->kbName, self->fd);
+      debugf("%s (%d) closed\n", self->kbName, self->fd);
       self->fd= -1;
     }
 }

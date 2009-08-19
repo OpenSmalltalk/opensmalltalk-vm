@@ -30,7 +30,7 @@
  * Reformatted for and integrated into Squeak build by: ian at
  * squeakland dot oh are gee
  * 
- * Last edited: 2007-03-11 14:17:34 by piumarta on emilia.local
+ * Last edited: 2009-08-19 04:39:12 by piumarta on emilia-2.local
  */
 
 /*** MIDI Parameters (used with sqMIDIParameter function) ***/
@@ -184,7 +184,7 @@ int sqMIDIClosePort(int portNum)
 */
 int sqMIDIGetClock(void)
 {
-  dprintf("sqMIDIGetClock\n");
+  debugf("sqMIDIGetClock\n");
   success(false);
   return 0;
 }
@@ -196,7 +196,7 @@ int sqMIDIGetClock(void)
 */
 int sqMIDIGetPortCount(void)
 {
-  dprintf("sqMIDIGetPortCount\n");
+  debugf("sqMIDIGetPortCount\n");
   success(true);
   return 1;
 }
@@ -244,7 +244,7 @@ int sqMIDIGetPortName(int portNum, int namePtr, int length)
 */
 int sqMIDIOpenPort(int portNum, int readSemaIndex, int interfaceClockRate)
 {
-  dprintf("sqMIDIOpenPort(%d, %d, %d)\n", portNum, readSemaIndex, interfaceClockRate);
+  debugf("sqMIDIOpenPort(%d, %d, %d)\n", portNum, readSemaIndex, interfaceClockRate);
   int type= SND_SEQ_PORT_TYPE_APPLICATION;
 
   switch (portNum)
@@ -406,7 +406,7 @@ int sqMIDIParameter(int whichParameter, int modify, int newValue)
 */
 int sqMIDIPortReadInto(int portNum, int count, int bufferPtr)
 {
-  dprintf("sqMIDIPortRead\n");
+  debugf("sqMIDIPortRead\n");
   success(false);
   return 0;
 }
@@ -426,9 +426,9 @@ int sqMIDIPortWriteFromAt(int portNum, int count, int bufferPtr, int time)
       snd_seq_event_t ev;
       unsigned char *bytePtr= (unsigned char *)bufferPtr;
 
-      dprintf("Port %d Write:", portNum);
-      for (i= 0;  i < count;  ++i) dprintf(" %d", (int)bytePtr[i]);
-      dprintf(" at %d\n", time);
+      debugf("Port %d Write:", portNum);
+      for (i= 0;  i < count;  ++i) debugf(" %d", (int)bytePtr[i]);
+      debugf(" at %d\n", time);
       
       snd_seq_ev_clear(&ev);
       snd_seq_ev_set_source(&ev, out_port);
@@ -483,7 +483,7 @@ int sqMIDIParameterGet(int whichParameter)
 
 int midiShutdown(void)
 {
-  dprintf("midiShutdown\n");
+  debugf("midiShutdown\n");
   success(false);
   return 0;
 }
@@ -496,12 +496,12 @@ static void performMIDICmd(snd_seq_event_t *ev, int cmdByte, int arg1, int arg2)
   switch (cmd)
     {
     case 128:	/* note off */
-      dprintf("Note off %d, %d\n", ch, arg1);
+      debugf("Note off %d, %d\n", ch, arg1);
       snd_seq_ev_set_noteoff(ev, ch, arg1, 0);
       break;
 
     case 144:	/* note on */
-      dprintf("Note on %d, %d, %d\n", ch, arg1, arg2);
+      debugf("Note on %d, %d, %d\n", ch, arg1, arg2);
       snd_seq_ev_set_noteon(ev, ch, arg1, arg2);
       break;
 

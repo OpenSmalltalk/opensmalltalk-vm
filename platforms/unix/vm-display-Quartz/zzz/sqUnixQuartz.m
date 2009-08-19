@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2006-10-18 10:01:10 by piumarta on emilia.local
+ * Last edited: 2009-08-19 04:37:34 by piumarta on emilia-2.local
  */
 
 
@@ -299,7 +299,7 @@ static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
   int opp=     depth / 8;
   int success= 1;
 
-  dprintf(("ioFormPrint %f %f\n", hScale, vScale));
+  debugf(("ioFormPrint %f %f\n", hScale, vScale));
   {
     unsigned char    *planes[1]= { (char *)bitsAddr };
     NSBitmapImageRep *bitmap= 	 0;
@@ -317,23 +317,23 @@ static int display_ioFormPrint(int bitsAddr, int width, int height, int depth,
 	      colorSpaceName:		NSCalibratedBlackColorSpace
 	      bytesPerRow:		width * opp
 	      bitsPerPixel:		depth];
-    if (!bitmap) { dprintf(("bitmap fail\n")); success= 0; goto done; }
+    if (!bitmap) { debugf(("bitmap fail\n")); success= 0; goto done; }
     image= [NSImage alloc];
     //[image setSize: NSMakeSize(width, height)];
     [image addRepresentation: bitmap];
-    if (!image) { dprintf(("image fail\n")); success= 0; goto done; }
+    if (!image) { debugf(("image fail\n")); success= 0; goto done; }
     view= [[NSImageView alloc] initWithFrame: NSMakeRect(0, 0, width, height)];
     [view setImage: image];
     {
       NSPrintOperation *op=  [NSPrintOperation printOperationWithView: view];
       [op setShowPanels: YES];
-      dprintf(("launch print operation\n"));
+      debugf(("launch print operation\n"));
       [op runOperation];
     }
   }
 
  done:
-  dprintf(("ioFormPrint done.\n"));
+  debugf(("ioFormPrint done.\n"));
   [pool release];
   return success;
 }
@@ -377,7 +377,7 @@ static unsigned int qz2sqButton(unsigned int button)
     case 1: return (swapBtn ? YellowButtonBit : BlueButtonBit);
     case 2: return (swapBtn ? BlueButtonBit   : YellowButtonBit);
     }
-  dprintf(("unknown mouse button %d\n", button));
+  debugf(("unknown mouse button %d\n", button));
 #endif
   return RedButtonBit;
 }
@@ -796,7 +796,7 @@ static int display_ioForceDisplayUpdate(void)
 
 static void setRects(int w, int h)
 {
-  dprintf(("setRects %d %d\n", w, h));
+  debugf(("setRects %d %d\n", w, h));
   topRect= NSMakeRect(0,0, w,h);
   if (fullscreen)
     {
@@ -839,7 +839,7 @@ static char *updatePix(void)
       NSRect winRect= [win frame];
       winRect.origin= NSMakePoint(0, 0);	// window coordinates
       topRect= [NSWindow contentRectForFrameRect: winRect styleMask: styleMask];
-      dprintf(("updatePix w=%d h=%d\n", (int)NSWidth(topRect), (int)NSHeight(topRect)));
+      debugf(("updatePix w=%d h=%d\n", (int)NSWidth(topRect), (int)NSHeight(topRect)));
       w= NSWidth(topRect);
       h= NSHeight(topRect);
       setSavedWindowSize((w << 16) | h);			// assume this is atomic
@@ -870,10 +870,10 @@ static char *updatePix(void)
     }
   else
     {
-      dprintf(("updatePix: NO PORT!\n"));
+      debugf(("updatePix: NO PORT!\n"));
       pixBase= 0;
     }
-  dprintf(("pixBase %p, width %d, height %d, pitch %d\n", pixBase, pixWidth, pixHeight, pixPitch));
+  debugf(("pixBase %p, width %d, height %d, pitch %d\n", pixBase, pixWidth, pixHeight, pixPitch));
   return pixBase;
 }
 
@@ -982,7 +982,7 @@ static void *display_ioGetDisplay(void)
   if (headless)
     return 0;
 
-  dprintf(("ioGetDisplay: WARNING: check the client to see it knows what it's doing\n"));
+  debugf(("ioGetDisplay: WARNING: check the client to see it knows what it's doing\n"));
   return dpy;
 }
 
@@ -1242,8 +1242,7 @@ static void setUpDisplay(void)
 
   pixRegion  = NewRgn();
 
-  dprintf(("display is %dx%dx%d at %p pitch %d\n",
-	   dpyWidth, dpyHeight, dpyDepth, dpyPixels, dpyPitch));
+  debugf(("display is %dx%dx%d at %p pitch %d\n", dpyWidth, dpyHeight, dpyDepth, dpyPixels, dpyPitch));
 }
 
 
@@ -1264,7 +1263,7 @@ static void setUpWindow(int fs)
 	  w= winSize >> 16;
 	  h= winSize & 0xffff;
 	}
-      dprintf(("initial winSize %d %d\n", w, h));
+      debugf(("initial winSize %d %d\n", w, h));
       styleMask= (fs
 		  ? (NSBorderlessWindowMask)
 		  : (  NSTitledWindowMask
@@ -1470,7 +1469,7 @@ static int display_ioSetFullScreen(int flag)
       fadeOut(FULLSCREEN_FADE);
 #    endif
       if (CGDisplayNoErr != CGDisplayCapture(dpy))
-	dprintf(("failed to capture display\n"));
+	debugf(("failed to capture display\n"));
       else
 	{
 #        ifdef FULLSCREEN_FADE
@@ -1658,7 +1657,7 @@ static int display_ioSetFullScreen(int flag)
 	  // info (we'd far rather be informed that the current screen's
 	  // depth has changed)
 	}
-      //dprintf(("AppKitDefinedEvent subtype %d\n", [event subtype]));
+      //debugf(("AppKitDefinedEvent subtype %d\n", [event subtype]));
       [super sendEvent: event];
       break;
 
@@ -1668,7 +1667,7 @@ static int display_ioSetFullScreen(int flag)
       // case NSCursorUpdate: break;
 
     default: // almost always NSSystemDefined
-      //dprintf(("Event type %d subtype %d\n", [event type], [event subtype]));
+      //debugf(("Event type %d subtype %d\n", [event type], [event subtype]));
       [super sendEvent: event];
     }
 }

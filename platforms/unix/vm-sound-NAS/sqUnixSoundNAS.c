@@ -34,9 +34,9 @@
 #include <assert.h>
 
 #ifdef DEBUG
-# define dprintf printf
+# define debugf printf
 #else
-  static void dprintf(char *fmt, ...) {}
+  static void debugf(char *fmt, ...) {}
 #endif
 
 
@@ -148,8 +148,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
   char *buf;   /* buffer to play from; it may not be arrayIndex if a
                   conversion is necessary */
 
-  dprintf("PlaySamples(frameCount=%d, arrayIndex=%d, startIndex=%d\n",
-	  frameCount, arrayIndex, startIndex);
+  debugf("PlaySamples(frameCount=%d, arrayIndex=%d, startIndex=%d\n", frameCount, arrayIndex, startIndex);
   
   /* figure out how much to play */
   bytesToPlay = frameCount * bytesPerPlayFrame();
@@ -170,7 +169,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
       int i;
       short *sbuf;  /* the buffer, as short's instead of char's */
 
-      dprintf("converting\n");
+      debugf("converting\n");
       
       buf= malloc(2 * frameCount);
       if(buf == NULL)
@@ -188,7 +187,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
     }
       
 	
-  dprintf("writing %d bytes (%d frames)\n", bytesToPlay, framesToPlay);
+  debugf("writing %d bytes (%d frames)\n", bytesToPlay, framesToPlay);
   AuWriteElement(server, flow, 0,
 		 bytesToPlay,
 		 buf,
@@ -213,7 +212,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 static void handleAudioEvents(int fd, void *data, int flags)
 {
   if(!server) {
-    dprintf( "handleAudioEvents called while unconnected!\n");
+    debugf( "handleAudioEvents called while unconnected!\n");
     return;
   }
 
@@ -224,7 +223,7 @@ static void handleAudioEvents(int fd, void *data, int flags)
   while(AuEventsQueued(server, AuEventsQueuedAlready)) {
     AuEvent event;
     AuNextEvent(server, AuTrue, &event);
-    dprintf("event of type %d\n", event.type);
+    debugf("event of type %d\n", event.type);
     
     switch(event.type) {
     case 0:
@@ -246,23 +245,21 @@ static void handleAudioEvents(int fd, void *data, int flags)
 
 	switch(enEvent->kind) {
 	case AuElementNotifyKindLowWater:
-	  dprintf("low water event\n");
+	  debugf("low water event\n");
 	  bytesAvail += enEvent->num_bytes;
 	  break;
 	case AuElementNotifyKindHighWater:
-	  dprintf("high water event\n");
+	  debugf("high water event\n");
 	  bytesAvail += enEvent->num_bytes;
 	  break;
 	case AuElementNotifyKindState:
-	  dprintf("state change (%d->%d)\n",
-		  enEvent->prev_state,
-		  enEvent->cur_state);
+	  debugf("state change (%d->%d)\n", enEvent->prev_state, enEvent->cur_state);
 	  bytesAvail += enEvent->num_bytes;
 	  if(enEvent->cur_state == AuStatePause) {
 	       /* if the flow has stopped, then arrange for it to get started again */
 	       /* XXX there is probably a more intelligent place to do
                   this, in case there is a real reason it has paused */
-	       dprintf("unpausing\n");
+	       debugf("unpausing\n");
 	       AuStartFlow(server, flow, NULL);
 	       AuFlush(server);
 	  }
@@ -274,7 +271,7 @@ static void handleAudioEvents(int fd, void *data, int flags)
   }
 
   if(bytesAvail > 0) {
-    dprintf("bytesAvail: %d\n", bytesAvail);
+    debugf("bytesAvail: %d\n", bytesAvail);
     signalSemaphoreWithIndex(semaIndex);
   }
 
@@ -327,10 +324,10 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaI
   
 
   /* open the server */
-  dprintf("opening server\n");
+  debugf("opening server\n");
   server = AuOpenServer(NULL, 0, NULL, 0, NULL, NULL);
   if(server == NULL) {
-    dprintf("failed to open audio server\n");
+    debugf("failed to open audio server\n");
     return false;
   }
 
@@ -344,7 +341,7 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaI
   /* pick a device to play to */ 
   device = choose_nas_device(server, samplesPerSec, stereo, 0);
   if(device == AuNone) {
-    dprintf("no available device on the server!\n");
+    debugf("no available device on the server!\n");
     AuCloseServer(server);
     server = NULL;
     return false;
@@ -360,13 +357,12 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaI
 
 
   /* create a flow to write on */
-  dprintf("creating flow\n");
+  debugf("creating flow\n");
   flow = AuCreateFlow(server, NULL);
 
 
   /* create client and device elements to play with */
-  dprintf("creating elements(%d,%d)\n",
-	 frameCount, frameCount / 4);
+  debugf("creating elements(%d,%d)\n", frameCount, frameCount / 4);
   AuMakeElementImportClient(&elements[0],
 			    samplesPerSec,
 			    AuFormatLinearSigned16LSB,  /* XXX this should be chosen based on the platform */
@@ -390,7 +386,7 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaI
 		NULL);
 
   /* start her up */
-  dprintf("starting flow\n");
+  debugf("starting flow\n");
   AuStartFlow(server, flow, NULL);
   AuFlush(server);
   
@@ -422,14 +418,14 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaI
 			        element 1 = client export */
   AuDeviceID device;      /* physical device ID to use */
   
-  dprintf("StartRecording\n");
+  debugf("StartRecording\n");
   
   sound_Stop();
 
-  dprintf("opening server\n");
+  debugf("opening server\n");
   server = AuOpenServer(NULL, 0, NULL, 0, NULL, NULL);
   if(server == NULL) {
-    dprintf("failed to open audio server\n");
+    debugf("failed to open audio server\n");
     return false;
   }
 
@@ -441,7 +437,7 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaI
 
   device= choose_nas_device(server, desiredSamplesPerSec, stereo, 1);
   if(device == AuNone) {
-    dprintf("no available device on the server!\n");
+    debugf("no available device on the server!\n");
     AuCloseServer(server);
     server = NULL;
     return false;
@@ -458,12 +454,12 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaI
   
 
   /* create a flow to read from */
-  dprintf("creating flow\n");
+  debugf("creating flow\n");
   flow = AuCreateFlow(server, NULL);
 
 
   /* create client and device elements to record with */
-  dprintf("creating elements\n");
+  debugf("creating elements\n");
 
   
   AuMakeElementImportDevice(&elements[0],
@@ -491,7 +487,7 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaI
 		NULL);
 
   /* start her up */
-  dprintf("starting flow\n");
+  debugf("starting flow\n");
   AuStartFlow(server, flow, NULL);
   AuFlush(server);
   
@@ -528,9 +524,8 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
   int sliceSize= (stereo ? 4 : 2);   /* a "slice" seems to be a "frame": one sample from each channel */
   
 
-  dprintf("RecordSamplesIntoAtLength(buf=%d, startSliceIndex=%d, bufferSizeInBytes=%d\n",
-	  buf, startSliceIndex, bufferSizeInBytes);
-  
+  debugf("RecordSamplesIntoAtLength(buf=%d, startSliceIndex=%d, bufferSizeInBytes=%d\n",
+	 buf, startSliceIndex, bufferSizeInBytes);
   
   /* sanity checks */
   if(server==NULL || !recording) {
@@ -546,8 +541,7 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
   if(bytesToRead > bytesAvail)
     bytesToRead= bytesAvail;
 
-  dprintf("reading %d bytes\n", bytesToRead);
-  
+  debugf("reading %d bytes\n", bytesToRead);
 
   /* read it */
   AuReadElement(server,

@@ -24,7 +24,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2008-04-21 14:11:11 by piumarta on emilia
+ * Last edited: 2009-08-19 04:38:45 by piumarta on emilia-2.local
  */
 
 
@@ -356,7 +356,7 @@ static sqInt display_ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqIn
   int opp=     depth / 8;
   int success= 1;
 
-  dprintf(("ioFormPrint %f %f\n", hScale, vScale));
+  debugf(("ioFormPrint %f %f\n", hScale, vScale));
   {
     unsigned char    *planes[1]= { (unsigned char *)pointerForOop(bitsAddr) };
     NSBitmapImageRep *bitmap= 	 0;
@@ -374,23 +374,23 @@ static sqInt display_ioFormPrint(sqInt bitsAddr, sqInt width, sqInt height, sqIn
 	      colorSpaceName:		NSCalibratedBlackColorSpace
 	      bytesPerRow:		width * opp
 	      bitsPerPixel:		depth];
-    if (!bitmap) { dprintf(("bitmap fail\n")); success= 0; goto done; }
+    if (!bitmap) { debugf(("bitmap fail\n")); success= 0; goto done; }
     image= [NSImage alloc];
     //[image setSize: NSMakeSize(width, height)];
     [image addRepresentation: bitmap];
-    if (!image) { dprintf(("image fail\n")); success= 0; goto done; }
+    if (!image) { debugf(("image fail\n")); success= 0; goto done; }
     view= [[NSImageView alloc] initWithFrame: NSMakeRect(0, 0, width, height)];
     [view setImage: image];
     {
       NSPrintOperation *op=  [NSPrintOperation printOperationWithView: view];
       [op setShowPanels: YES];
-      dprintf(("launch print operation\n"));
+      debugf(("launch print operation\n"));
       [op runOperation];
     }
   }
 
  done:
-  dprintf(("ioFormPrint done.\n"));
+  debugf(("ioFormPrint done.\n"));
   [pool release];
   return success;
 }
@@ -434,7 +434,7 @@ static unsigned int qz2sqButton(unsigned int button)
     case 1: return (swapBtn ? YellowButtonBit : BlueButtonBit);
     case 2: return (swapBtn ? BlueButtonBit   : YellowButtonBit);
     }
-  dprintf(("unknown mouse button %d\n", button));
+  debugf(("unknown mouse button %d\n", button));
   return RedButtonBit;
 }
 
@@ -779,7 +779,7 @@ static sqInt display_ioForceDisplayUpdate(void)
 
 static void setRects(int w, int h)
 {
-  dprintf(("setRects %d %d\n", w, h));
+  debugf(("setRects %d %d\n", w, h));
   topRect= NSMakeRect(0,0, w,h);
   if (fullscreen)
     {
@@ -824,7 +824,7 @@ static char *updatePix(void)
       topRect= [NSWindow contentRectForFrameRect: winRect styleMask: styleMask];
       w= NSWidth(topRect);
       h= NSHeight(topRect);
-      dprintf(("updatePix w=%d h=%d\n", w, h));
+      debugf(("updatePix w=%d h=%d\n", w, h));
       setSavedWindowSize((w << 16) | h);			// assume this is atomic
       if (fullscreen)
 	{
@@ -854,11 +854,10 @@ static char *updatePix(void)
     }
   else
     {
-      dprintf(("updatePix: NO PORT!\n"));
+      debugf(("updatePix: NO PORT!\n"));
       pixBase= 0;
     }
-  dprintf(("pixBase %p, width %d, height %d, depth %d, pitch %d\n",
-	   pixBase, pixWidth, pixHeight, pixDepth, pixPitch));
+  debugf(("pixBase %p, width %d, height %d, depth %d, pitch %d\n", pixBase, pixWidth, pixHeight, pixDepth, pixPitch));
   return pixBase;
 }
 
@@ -877,15 +876,15 @@ static sqInt display_ioShowDisplay(sqInt dispBitsIndex, sqInt width, sqInt heigh
       || (displayChanged)
       || (![view lockFocusIfCanDraw]))
     {
-      dprintf(("ioShowDisplay squashed: dpy %dx%dx%d pix %dx%dx%d\n",
-	       (int)width, (int)height, (int)depth,
-	       (int)pixWidth, (int)pixHeight, (int)pixDepth));
+      debugf(("ioShowDisplay squashed: dpy %dx%dx%d pix %dx%dx%d\n",
+	      (int)width, (int)height, (int)depth,
+	      (int)pixWidth, (int)pixHeight, (int)pixDepth));
       return 0;
     }
 
-  dprintf(("ioShowDisplay %p %ldx%ldx%ld %ld,%ld-%ld,%ld\n",
-	   (void *)dispBitsIndex, width, height, depth,
-	   affectedL, affectedR, affectedT, affectedB));
+  debugf(("ioShowDisplay %p %ldx%ldx%ld %ld,%ld-%ld,%ld\n",
+	  (void *)dispBitsIndex, width, height, depth,
+	  affectedL, affectedR, affectedT, affectedB));
 
   lock(display);
   affectedR= min(affectedR, min(width,  pixWidth ));
@@ -977,7 +976,7 @@ static void *display_ioGetDisplay(void)
   if (headless)
     return 0;
 
-  dprintf(("ioGetDisplay: WARNING: check the client to see it knows what it's doing\n"));
+  debugf(("ioGetDisplay: WARNING: check the client to see it knows what it's doing\n"));
   return dpy;
 }
 
@@ -1303,7 +1302,7 @@ static void setUpDisplay(void)
   dpyPixels  = CGDisplayBaseAddress(dpy);
   dpyPitch   = CGDisplayBytesPerRow(dpy);
 
-  dprintf(("display is %dx%dx%d at %p pitch %d\n", dpyWidth, dpyHeight, dpyDepth, dpyPixels, dpyPitch));
+  debugf(("display is %dx%dx%d at %p pitch %d\n", dpyWidth, dpyHeight, dpyDepth, dpyPixels, dpyPitch));
 }
 
 
@@ -1333,7 +1332,7 @@ static void setUpWindow(int fs)
 	      h= 480;
 	    }
 	}
-      dprintf(("initial winSize %d %d\n", w, h));
+      debugf(("initial winSize %d %d\n", w, h));
       styleMask= (fs
 		  ? (NSBorderlessWindowMask)
 		  : (  NSTitledWindowMask
@@ -1349,7 +1348,7 @@ static void setUpWindow(int fs)
       contentRect= [[win contentView] frame];
       w= NSWidth(contentRect);
       h= NSHeight(contentRect);
-      dprintf(("alloc winSize %d %d\n", w, h));
+      debugf(("alloc winSize %d %d\n", w, h));
       setSavedWindowSize((w << 16) | h);
 
       view= [[SqueakView alloc] initWithFrame: contentRect];
@@ -1518,7 +1517,7 @@ static sqInt display_ioSetFullScreen(sqInt flag)
   static sqInt originalWindowSize= 0;
   SqueakWindow *old;
 
-  dprintf(("ioSetFullScreen(%d)\n", flag));
+  debugf(("ioSetFullScreen(%d)\n", flag));
 
   if (headless || (fullscreen == flag))
     return 0;	// nothing to do
@@ -1541,7 +1540,7 @@ static sqInt display_ioSetFullScreen(sqInt flag)
 {
   static sqInt originalWindowSize= (800 << 16) | 600;
 
-  dprintf(("ioSetFullScreen(%d)\n", flag));
+  debugf(("ioSetFullScreen(%d)\n", flag));
 
   if (headless || (fullscreen == flag) || glActive)
     return 0;	// nothing to do
@@ -1554,7 +1553,7 @@ static sqInt display_ioSetFullScreen(sqInt flag)
       fadeOut(FULLSCREEN_FADE);
 #    endif
       if (CGDisplayNoErr != CGDisplayCapture(dpy))
-	dprintf(("failed to capture display\n"));
+	debugf(("failed to capture display\n"));
       else
 	{
 #        ifdef FULLSCREEN_FADE
@@ -1984,7 +1983,7 @@ static void *runInterpreter(void *arg)
 	  // info (we'd far rather be informed that the current screen's
 	  // depth has changed)
 	}
-      //dprintf(("AppKitDefinedEvent subtype %d\n", [event subtype]));
+      //debugf(("AppKitDefinedEvent subtype %d\n", [event subtype]));
       [super sendEvent: event];
       break;
 
@@ -1994,7 +1993,7 @@ static void *runInterpreter(void *arg)
       // case NSCursorUpdate: break;
 
     default: // almost always NSSystemDefined
-      //dprintf(("Event type %d subtype %d\n", [event type], [event subtype]));
+      //debugf(("Event type %d subtype %d\n", [event type], [event subtype]));
       [super sendEvent: event];
     }
 }

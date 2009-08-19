@@ -1,3 +1,30 @@
+2009-08-19  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixXdnd.c: dprintf -> fdebugf.
+	* vm/dlfcn-dyld.c: dprintf -> fdebugf.
+	* vm/sqUnixExternalPrims.c: dprintf -> fdebugf.
+
+	* vm-sound-NAS/sqUnixSoundNAS.c: dprintf -> debugf.
+	* plugins/SqueakFFIPrims/x86-sysv.c: dprintf -> debugf.
+	* plugins/SqueakFFIPrims/ppc-sysv.c: dprintf -> debugf.
+	* plugins/SqueakFFIPrims/ppc-darwin.c: dprintf -> debugf.
+	* plugins/SqueakFFIPrims/ffi-test.c: dprintf -> debugf.
+	* plugins/SqueakFFIPrims/ffi-test-main.c: dprintf -> debugf.
+	* plugins/PseudoTTYPlugin/sqUnixPseudoTTYPlugin.c: dprintf -> debugf.
+
+	* vm/debug.c: __sq_dprintf -> __sq_debugf.  Include stdlib.h for abort().
+	* vm/debug.h: dprintf -> debugf.
+	* plugins/MIDIPlugin/sqUnixMIDIALSA.inc: dprintf -> debugf.
+	* vm-display-Quartz/sqUnixQuartz.m: dprintf -> debugf.
+	* vm-display-fbdev/sqUnixFBDevFramebuffer.c: dprintf -> debugf.
+	* vm-display-fbdev/sqUnixFBDevKeyboard.c: dprintf -> debugf.
+	* vm-display-fbdev/sqUnixFBDevKeymap.c: dprintf -> debugf.
+	* vm-display-fbdev/sqUnixFBDevMouse.c: dprintf -> debugf.
+	* vm-display-fbdev/sqUnixFBDevMouseADB.c: dprintf -> debugf.
+	* vm-display-fbdev/sqUnixFBDevMousePS2.c: dprintf -> debugf.
+	* vm-sound-MacOSX/sqUnixSoundMacOSX.c: dprintf -> debugf.
+	* vm/sqUnixMemory.c: dprintf -> debugf.
+
 2009-08-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* config/config.h.in: Add HAVE_UUID_H, HAVE_UUID_UUID_H.

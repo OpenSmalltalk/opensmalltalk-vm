@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2008-03-20 11:39:14 by piumarta on emilia
+ * Last edited: 2009-08-19 04:34:09 by piumarta on emilia-2.local
  */
 
 /* Note:
@@ -117,7 +117,7 @@ void *uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
   pageSize= getpagesize();
   pageMask= ~(pageSize - 1);
 
-  dprintf(("uxAllocateMemory: pageSize 0x%x (%d), mask 0x%x\n", pageSize, pageSize, pageMask));
+  debugf(("uxAllocateMemory: pageSize 0x%x (%d), mask 0x%x\n", pageSize, pageSize, pageMask));
 
 #if (!MAP_ANON)
   if ((devZero= open("/dev/zero", O_RDWR)) < 0)
@@ -127,14 +127,14 @@ void *uxAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize)
     }
 #endif
 
-  dprintf(("uxAllocateMemory: /dev/zero descriptor %d\n", devZero));
-  dprintf(("uxAllocateMemory: min heap %d, desired %d\n", minHeapSize, desiredHeapSize));
+  debugf(("uxAllocateMemory: /dev/zero descriptor %d\n", devZero));
+  debugf(("uxAllocateMemory: min heap %d, desired %d\n", minHeapSize, desiredHeapSize));
 
   heapLimit= valign(max(desiredHeapSize, useMmap));
 
   while ((!heap) && (heapLimit >= minHeapSize))
     {
-      dprintf(("uxAllocateMemory: mapping 0x%08x bytes (%d Mbytes)\n", heapLimit, heapLimit >> 20));
+      debugf(("uxAllocateMemory: mapping 0x%08x bytes (%d Mbytes)\n", heapLimit, heapLimit >> 20));
       if (MAP_FAILED == (heap= mmap(0, heapLimit, MAP_PROT, MAP_FLAGS, devZero, 0)))
 	{
 	  heap= 0;
@@ -166,17 +166,17 @@ char *uxGrowMemoryBy(char *oldLimit, sqInt delta)
     {
       int newSize=  min(valign(oldLimit - heap + delta), heapLimit);
       int newDelta= newSize - heapSize;
-      dprintf(("uxGrowMemory: %p By: %d(%d) (%d -> %d)\n", oldLimit, newDelta, delta, heapSize, newSize));
+      debugf(("uxGrowMemory: %p By: %d(%d) (%d -> %d)\n", oldLimit, newDelta, delta, heapSize, newSize));
       assert(0 == (newDelta & ~pageMask));
       assert(0 == (newSize  & ~pageMask));
       assert(newDelta >= 0);
       if (newDelta)
 	{
-	  dprintf(("was: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
+	  debugf(("was: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
 	  if (overallocateMemory)
 	    {
 	      char *base= heap + heapSize;
-	      dprintf(("remap: %p + 0x%x (%d)\n", base, newDelta, newDelta));
+	      debugf(("remap: %p + 0x%x (%d)\n", base, newDelta, newDelta));
 	      if (MAP_FAILED == mmap(base, newDelta, MAP_PROT, MAP_FLAGS | MAP_FIXED, devZero, heapSize))
 		{
 		  perror("mmap");
@@ -184,7 +184,7 @@ char *uxGrowMemoryBy(char *oldLimit, sqInt delta)
 		}
 	    }
 	  heapSize += newDelta;
-	  dprintf(("now: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
+	  debugf(("now: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
 	  assert(0 == (heapSize  & ~pageMask));
 	}
       return heap + heapSize;
@@ -201,17 +201,17 @@ char *uxShrinkMemoryBy(char *oldLimit, sqInt delta)
     {
       int newSize=  max(0, valign((char *)oldLimit - heap - delta));
       int newDelta= heapSize - newSize;
-      dprintf(("uxGrowMemory: %p By: %d(%d) (%d -> %d)\n", oldLimit, newDelta, delta, heapSize, newSize));
+      debugf(("uxGrowMemory: %p By: %d(%d) (%d -> %d)\n", oldLimit, newDelta, delta, heapSize, newSize));
       assert(0 == (newDelta & ~pageMask));
       assert(0 == (newSize  & ~pageMask));
       assert(newDelta >= 0);
       if (newDelta)
 	{
-	  dprintf(("was: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
+	  debugf(("was: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
 	  if (overallocateMemory)
 	    {
 	      char *base= heap + heapSize - newDelta;
-	      dprintf(("unmap: %p + 0x%x (%d)\n", base, newDelta, newDelta));
+	      debugf(("unmap: %p + 0x%x (%d)\n", base, newDelta, newDelta));
 	      if (munmap(base, newDelta) < 0)
 		{
 		  perror("unmap");
@@ -219,7 +219,7 @@ char *uxShrinkMemoryBy(char *oldLimit, sqInt delta)
 		}
 	    }
 	  heapSize -= newDelta;
-	  dprintf(("now: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
+	  debugf(("now: %p %p %p = 0x%x (%d) bytes\n", heap, heap + heapSize, heap + heapLimit, heapSize, heapSize));
 	  assert(0 == (heapSize  & ~pageMask));
 	}
       return heap + heapSize;

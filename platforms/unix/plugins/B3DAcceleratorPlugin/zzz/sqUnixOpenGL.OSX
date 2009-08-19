@@ -30,7 +30,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2006-10-18 10:10:06 by piumarta on emilia.local
+ * Last edited: 2009-08-19 04:40:14 by piumarta on emilia-2.local
  */
 
 #include <sys/types.h>
@@ -82,7 +82,7 @@ int glMakeCurrentRenderer(glRenderer *renderer)
   GLboolean ok;
   GLint err;
 
-  //dprintf("glMakeCurrentRenderer(%p)\n", renderer);
+  //debugf("glMakeCurrentRenderer(%p)\n", renderer);
 
   if (current == renderer)
     return 1;
@@ -142,12 +142,12 @@ int glCreateRendererFlags(int x, int y, int w, int h, int flags)
   renderer->bufferRect[2] = w;
   renderer->bufferRect[3] = h;
   glMakeCurrentRenderer(renderer);
-  //dprintf("    vendor:     %s\n", glGetString(GL_VENDOR));
-  //dprintf("    renderer:   %s\n", glGetString(GL_RENDERER));
-  //dprintf("    version:    %s\n", glGetString(GL_VERSION));
-  //dprintf("    extensions: %s\n", glGetString(GL_EXTENSIONS));
+  //debugf("    vendor:     %s\n", glGetString(GL_VENDOR));
+  //debugf("    renderer:   %s\n", glGetString(GL_RENDERER));
+  //debugf("    version:    %s\n", glGetString(GL_VERSION));
+  //debugf("    extensions: %s\n", glGetString(GL_EXTENSIONS));
   ERROR_CHECK;
-  //dprintf("   renderer created, handle = %d\n", i);
+  //debugf("   renderer created, handle = %d\n", i);
   /* setup user context */
   glDisable(GL_LIGHTING);
   glDisable(GL_COLOR_MATERIAL);

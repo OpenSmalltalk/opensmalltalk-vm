@@ -2,7 +2,7 @@
  * 
  * Author: Ian.Piumarta@INRIA.Fr
  * 
- * Last edited: 2006-10-18 10:03:07 by piumarta on emilia.local
+ * Last edited: 2009-08-19 04:35:20 by piumarta on emilia-2.local
  */
 
 
@@ -37,7 +37,7 @@
  */
 
 
-static void ms_adb_init(_self) { dprintf("ADB init\n"); }
+static void ms_adb_init(_self) { debugf("ADB init\n"); }
 
 
 static void ms_adb_handleEvents(_self)

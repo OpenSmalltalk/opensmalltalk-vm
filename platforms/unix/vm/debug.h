@@ -12,10 +12,10 @@
   ** them when running in precomp mode.  did they _really_ have to break
   ** the preprocessor just to implement precomp?  good _grief_.
   */
-  extern void __sq_dprintf(const char *fmt, ...);
-# define dprintf(ARGS) __sq_dprintf ARGS
+  extern void __sq_debugf(const char *fmt, ...);
+# define debugf(ARGS) __sq_debugf ARGS
 #else
-# define dprintf(ARGS)	((void)0)
+# define debugf(ARGS)	((void)0)
 #endif
 
 
