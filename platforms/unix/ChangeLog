@@ -1,5 +1,7 @@
 2009-08-19    <piumarta@ubuntu.piumarta.com>
 
+	* plugins/SerialPlugin/sqUnixSerial.c: Add support for named ports.
+
 	* plugins/RomePlugin/build.cmake: Add cross/plugins/SurfacePlugin
 	to include search path.
 
