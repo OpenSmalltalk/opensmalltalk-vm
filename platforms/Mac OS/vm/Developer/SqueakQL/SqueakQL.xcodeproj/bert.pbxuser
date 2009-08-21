@@ -1,0 +1,145 @@
+// !$*UTF8*$!
+{
+	089C1669FE841209C02AAC07 /* Project object */ = {
+		activeBuildConfigurationName = Debug;
+		activeSDKPreference = macosx10.5;
+		activeTarget = 8D57630D048677EA00EA77CD /* SqueakQL */;
+		codeSenseManager = 4C42C428103B1B040059C21A /* Code sense */;
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					341,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 272369929;
+			PBXWorkspaceStateSaveDate = 272369929;
+		};
+		perUserProjectItems = {
+			4C6ADC2E103C092B004659EE /* PBXTextBookmark */ = 4C6ADC2E103C092B004659EE /* PBXTextBookmark */;
+			4CCA1982103B72E400C2C8C6 /* PBXTextBookmark */ = 4CCA1982103B72E400C2C8C6 /* PBXTextBookmark */;
+			4CCA1984103B72E400C2C8C6 /* PBXTextBookmark */ = 4CCA1984103B72E400C2C8C6 /* PBXTextBookmark */;
+			4CCA1985103B72E400C2C8C6 /* PBXTextBookmark */ = 4CCA1985103B72E400C2C8C6 /* PBXTextBookmark */;
+			4CCA1987103B72E400C2C8C6 /* PBXTextBookmark */ = 4CCA1987103B72E400C2C8C6 /* PBXTextBookmark */;
+		};
+		sourceControlManager = 4C42C427103B1B040059C21A /* Source Control */;
+		userBuildSettings = {
+		};
+	};
+	089C167EFE841241C02AAC07 /* English */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1197, 649}}";
+			sepNavSelRange = "{194, 0}";
+			sepNavVisRange = "{0, 198}";
+			sepNavWindowFrame = "{{268, 165}, {1256, 777}}";
+		};
+	};
+	08FB77B6FE84183AC02AAC07 /* main.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {775, 3796}}";
+			sepNavSelRange = "{3122, 54}";
+			sepNavVisRange = "{2713, 594}";
+		};
+	};
+	2C05A19B06CAA52B00D84F6F /* GeneratePreviewForURL.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1041, 253}}";
+			sepNavSelRange = "{131, 0}";
+			sepNavVisRange = "{0, 387}";
+			sepNavWindowFrame = "{{275, 255}, {1256, 777}}";
+		};
+	};
+	4C42C427103B1B040059C21A /* Source Control */ = {
+		isa = PBXSourceControlManager;
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		scmConfiguration = {
+		};
+	};
+	4C42C428103B1B040059C21A /* Code sense */ = {
+		isa = PBXCodeSenseManager;
+		indexTemplatePath = "";
+	};
+	4C6ADC2E103C092B004659EE /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 2C05A19B06CAA52B00D84F6F /* GeneratePreviewForURL.c */;
+		name = "GeneratePreviewForURL.c: 5";
+		rLen = 0;
+		rLoc = 131;
+		rType = 0;
+		vrLen = 387;
+		vrLoc = 0;
+	};
+	4CCA1982103B72E400C2C8C6 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 61E3BCFA0870B4F2002186A0 /* GenerateThumbnailForURL.c */;
+		name = "GenerateThumbnailForURL.c: 7";
+		rLen = 0;
+		rLoc = 3836;
+		rType = 0;
+		vrLen = 398;
+		vrLoc = 0;
+	};
+	4CCA1984103B72E400C2C8C6 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 61E3BCFA0870B4F2002186A0 /* GenerateThumbnailForURL.c */;
+		name = "GenerateThumbnailForURL.c: 98";
+		rLen = 0;
+		rLoc = 3836;
+		rType = 0;
+		vrLen = 439;
+		vrLoc = 3376;
+	};
+	4CCA1985103B72E400C2C8C6 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 2C05A19B06CAA52B00D84F6F /* GeneratePreviewForURL.c */;
+		name = "GeneratePreviewForURL.c: 5";
+		rLen = 0;
+		rLoc = 131;
+		rType = 0;
+		vrLen = 387;
+		vrLoc = 0;
+	};
+	4CCA1987103B72E400C2C8C6 /* PBXTextBookmark */ = {
+		isa = PBXTextBookmark;
+		fRef = 2C05A19B06CAA52B00D84F6F /* GeneratePreviewForURL.c */;
+		name = "GeneratePreviewForURL.c: 5";
+		rLen = 0;
+		rLoc = 131;
+		rType = 0;
+		vrLen = 387;
+		vrLoc = 0;
+	};
+	61E3BCFA0870B4F2002186A0 /* GenerateThumbnailForURL.c */ = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1197, 1776}}";
+			sepNavSelRange = "{3254, 0}";
+			sepNavVisRange = "{2748, 1198}";
+			sepNavWindowFrame = "{{618, 121}, {1256, 777}}";
+		};
+	};
+	8D57630D048677EA00EA77CD /* SqueakQL */ = {
+		activeExec = 0;
+	};
+	8D576317048677EA00EA77CD /* Info.plist */ = {
+		uiCtxt = {
+			sepNavWindowFrame = "{{291, 144}, {1256, 777}}";
+		};
+	};
+}

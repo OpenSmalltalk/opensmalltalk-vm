@@ -347,10 +347,118 @@
 			<string>Viewer</string>
 		</dict>
 	</array>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.image</string>
+			<key>UTTypeDescription</key>
+			<string>Squeak Image File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STim</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>image</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-image</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.sources</string>
+			<key>UTTypeDescription</key>
+			<string>Squeak Sources File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STso</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sources</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-sources</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.changes</string>
+			<key>UTTypeDescription</key>
+			<string>Squeak Changes File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STch</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>changes</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-changes</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.script</string>
+			<key>UTTypeDescription</key>
+			<string>Squeak Script File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>SOBJ</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sobj</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-script</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.project</string>
+			<key>UTTypeDescription</key>
+			<string>Squeak Project File</string>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STpr</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>pr</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-project</string>
+			</dict>
+		</dict>
+	</array>
 	<key>CFBundleExecutable</key>
 	<string>Squeak VM Opt</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 4.1.0b1 http://www.squeak.org</string>
+	<string>Squeak VM 4.2.1b1 http://www.squeak.org</string>
 	<key>CFBundleIconFile</key>
 	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
@@ -362,11 +470,11 @@
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Squeak VM 4.1.0b1</string>
+	<string>Squeak VM 4.2.1b1</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>4.1.0b1</string>
+	<string>4.2.1b1</string>
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>LSBackgroundOnly</key>
@@ -459,6 +567,8 @@
 	<false/>
 	<key>SqueakTrustedDirectory</key>
 	<string>/foobar/tooBar/forSqueak/bogus/</string>
+	<key>SqueakResourceDirectory</key>
+	<string>./</string>
 	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
 	<integer>20</integer>
 	<key>SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds</key>
