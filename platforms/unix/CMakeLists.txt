@@ -1,10 +1,10 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-17 17:00:26 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-08-21 10:38:21 by piumarta on ubuntu.piumarta.com
 
 PROJECT (squeak)
 
-CMAKE_MINIMUM_REQUIRED (VERSION 2.6.4)
+CMAKE_MINIMUM_REQUIRED (VERSION 2.6.2)
 
 IF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION OR NOT DEFINED SQ_VERSION)
   MESSAGE (FATAL_ERROR "
@@ -38,7 +38,7 @@ SET (bld    ${CMAKE_BINARY_DIR})
 SET (unix   ${CMAKE_SOURCE_DIR})
 SET (config ${unix}/cmake)
 
-GET_FILENAME_COMPONENT (cross ${unix}/../Cross REALPATH)
+GET_FILENAME_COMPONENT (cross ${unix}/../Cross ABSOLUTE)
 
 IF (OPT--src)
   GET_FILENAME_COMPONENT (src ${OPT--src} ABSOLUTE)

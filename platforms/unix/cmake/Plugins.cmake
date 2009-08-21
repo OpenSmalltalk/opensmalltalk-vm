@@ -1,6 +1,6 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2009-08-16 10:01:08 by piumarta on emilia-2.local
+# Last edited: 2009-08-21 10:35:56 by piumarta on ubuntu.piumarta.com
 
 FILE (STRINGS ${src}/plugins.int plugins_int)
 STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_int ${plugins_int})
@@ -19,7 +19,7 @@ MACRO (DISABLED_PLUGIN plugin)
 ENDMACRO (DISABLED_PLUGIN)
 
 MACRO (INTERNAL_PLUGIN plugin)
-  UNSET (plugin_sources)
+  SET (plugin_sources "")
   IF (DEFINED ${plugin}_sources)
     SET (plugin_sources ${${plugin}_sources})
   ELSE (DEFINED ${plugin}_sources)
@@ -38,7 +38,7 @@ MACRO (INTERNAL_PLUGIN plugin)
 ENDMACRO (INTERNAL_PLUGIN)
 
 MACRO (EXTERNAL_PLUGIN plugin)
-  UNSET (plugin_sources)
+  SET (plugin_sources)
   IF (DEFINED ${plugin}_sources)
     SET (plugin_sources ${${plugin}_sources})
   ELSE (DEFINED ${plugin}_sources)
@@ -69,7 +69,7 @@ MACRO (CONFIGURE_PLUGIN_LIST plugins_list)
       FILE_APPEND (${bld}/${plugin}/config.cmake ${dir}/${plugin}/config.cmake)
     ENDFOREACH (dir)
     #MESSAGE ("-- plugin ${plugin}")
-    UNSET (plugin_disabled)
+    SET (plugin_disabled)
     INCLUDE (${bld}/${plugin}/config.cmake)
     IF (OPT_without-${plugin})
       SET (plugin_disabled 1)

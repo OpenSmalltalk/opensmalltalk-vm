@@ -1,3 +1,9 @@
+2009-08-21    <piumarta@ubuntu.piumarta.com>
+
+	* CMakeLists.txt, cmake/Plugins.cmake,
+	plugins/SqueakFFIPrims/config.cmake, vm/config.cmake: Remove uses
+	of UNSET and REALPATH; reduce CMake required version to 2.6.2.
+	
 2009-08-19    <piumarta@ubuntu.piumarta.com>
 
 	* plugins/SerialPlugin/sqUnixSerial.c: Add support for named ports.

@@ -1,4 +1,4 @@
-UNSET (USE_LIBFFI)
+SET (USE_LIBFFI)
 
 IF (OPT_without-ffi)
   DISABLE_PLUGIN ()
