@@ -1,6 +1,6 @@
 /* sqUnixSerial.c -- Unix serial support
  * 
- * Last edited: 2009-08-19 22:46:48 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-08-22 14:13:41 by piumarta on ubuntu.piumarta.com
  */
 
 #include "sq.h"
@@ -333,7 +333,7 @@ int serialPortOpenByName(char *portName, int dataRate, int stopBitsType, int par
    wait for additional data to arrive.  Return zero if no data is
    available, else number of bytes read */
 
-int serialPortReadInto(int portNum, int count, int startPtr)
+int serialPortReadInto(int portNum, int count, void *startPtr)
 {
   char serialPortName[PORT_NAME_SIZE];
 	
@@ -348,12 +348,10 @@ int serialPortReadInto(int portNum, int count, int startPtr)
   return serialPortReadIntoByName(serialPortName, count, startPtr);
 }
 
-int serialPortReadIntoByName(const char *portName, int count, int startPtr)
+int serialPortReadIntoByName(const char *portName, int count, void *startPtr)
 {
   serial_port_type *sp= find_stored_serialport(portName);
-	
   ssize_t bytesRead;
-  void *buffer= (void *)startPtr;
 
   /* If the serialport doesn't exist or if it is already closed. */
   if ((sp == NULL) || (sp->spDescriptor < 0))
@@ -363,7 +361,7 @@ int serialPortReadIntoByName(const char *portName, int count, int startPtr)
       return 0;
     }
 
-  bytesRead= read(sp->spDescriptor, buffer, (size_t)count);
+  bytesRead= read(sp->spDescriptor, startPtr, (size_t)count);
 
   if ((ssize_t)-1 == bytesRead)
     {
@@ -386,7 +384,7 @@ int serialPortReadIntoByName(const char *portName, int count, int startPtr)
    been sent. However, other implementations may return before
    transmission is complete. */
 
-int serialPortWriteFrom(int portNum, int count, int startPtr)
+int serialPortWriteFrom(int portNum, int count, void *startPtr)
 {
   char serialPortName[PORT_NAME_SIZE];
 	
@@ -401,12 +399,10 @@ int serialPortWriteFrom(int portNum, int count, int startPtr)
   return serialPortWriteFromByName(serialPortName, count, startPtr);
 }
 
-int serialPortWriteFromByName(const char *portName, int count, int startPtr)
+int serialPortWriteFromByName(const char *portName, int count, void *startPtr)
 {
   serial_port_type *sp= find_stored_serialport(portName);
-	
   int bytesWritten;
-  char *buffer= (void *)startPtr;
 
   /* If the serialport doesn't exist or if it is already closed. */
   if ((sp == NULL) || (sp->spDescriptor < 0))
@@ -416,7 +412,7 @@ int serialPortWriteFromByName(const char *portName, int count, int startPtr)
       return 0;
     }
 
-  bytesWritten= write(sp->spDescriptor, buffer, (size_t)count);
+  bytesWritten= write(sp->spDescriptor, startPtr, (size_t)count);
         
   if ((ssize_t)-1 == bytesWritten)
     {

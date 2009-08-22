@@ -1,3 +1,8 @@
+2009-08-22    <piumarta@ubuntu.piumarta.com>
+
+	* plugins/SerialPlugin/sqUnixSerial.c: Pointers are passed as 'void *'
+	conforming to new SerialPlugin.h.  Remove redundant casts.
+
 2009-08-21    <piumarta@ubuntu.piumarta.com>
 
 	* CMakeLists.txt, cmake/Plugins.cmake,
