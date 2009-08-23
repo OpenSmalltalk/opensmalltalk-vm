@@ -6,7 +6,7 @@
 *   AUTHOR:  Andreas Raab (ar)
 *   ADDRESS: University of Magdeburg, Germany
 *   EMAIL:   raab@isg.cs.uni-magdeburg.de
-*   RCSID:   $Id: sqWin32SerialPort.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $
+*   RCSID:   $Id$
 *
 *   NOTES:
 *
@@ -17,7 +17,7 @@
 #ifndef NO_SERIAL_PORT
 
 #ifndef NO_RCSID
-  static char RCSID[] = "$Id: sqWin32SerialPort.c,v 1.2 2002/05/04 23:20:28 andreasraab Exp $";
+  static char RCSID[] = "$Id$";
 #endif
 
 /* Maximum number of serial ports supported */
@@ -39,6 +39,20 @@ static int isValidComm(int portNum)
        }
   return 1;
 }  
+
+/* port number derived from "COMn" name */
+int portNumberForName(char *portName)
+{
+  if ((strlen(portName) < 4)
+        || (strncmp(portName, "COM", 3)
+              && strncmp(portName, "com", 3)))
+  {
+    return -1;
+  } else {
+    char *p = portName + 3;
+    return atoi(p);
+  }
+}
   
 /*****************************************************************************
  Squeak Serial Port functions
@@ -59,6 +73,16 @@ int serialPortClose(int portNum)
       serialPorts[portNum-1] = INVALID_HANDLE_VALUE;
     }
   return 1;
+}
+
+int serialPortCloseByName(const char *portName)
+{
+  int portNum = portNumberForName(portName);
+  if (portNum < 0)
+  { success(false);
+    return 0;
+  }
+  return serialPortClose(portNum);
 }
 
 int serialPortMidiClockRate(int portNum, int interfaceClockRate)
@@ -162,17 +186,29 @@ errExit:
   return 0;
 }
 
+int serialPortOpenByName(char *portName, int dataRate, int stopBitsType,
+                   int parityType, int dataBits, int inFlowCtrl,
+                   int outFlowCtrl, int xOnChar, int xOffChar)
+{
+  int portNum = portNumberForName(portName);
+  if (portNum < 0)
+  { success(false);
+    return 0;
+  }
+  return serialPortOpen(portNum, baudRate, stopBitsType, parityType,
+                   dataBits, inFlowCtrl, outFlowCtrl, xOnChar, xOffChar)
+}
 
 /* Read up to count bytes from the given serial port into the given byte array.
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
-int serialPortReadInto(int portNum, int count, int startPtr)
+int serialPortReadInto(int portNum, int count, void *startPtr);
 { DWORD cbReallyRead;
 
   if(!isValidComm(portNum)) return 0;
 
-  if(!ReadFile(serialPorts[portNum-1],(void*)startPtr,count,&cbReallyRead,NULL))
+  if(!ReadFile(serialPorts[portNum-1],startPtr,count,&cbReallyRead,NULL))
     {
       printLastError(TEXT("ReadComm failed"));
       success(false);
@@ -181,20 +217,47 @@ int serialPortReadInto(int portNum, int count, int startPtr)
   return cbReallyRead;
 }
 
+/* Read up to count bytes from the named serial port into the given byte array.
+   Read only up to the number of bytes in the port's input buffer; if fewer bytes
+   than count have been received, do not wait for additional data to arrive.
+   Return zero if no data is available. */
+int serialPortReadIntoByName(const char *portName, int count, void *startPtr)
+{
+  int portNum = portNumberForName(portName);
+  if (portNum < 0)
+  { success(false);
+    return 0;
+  }
+  return serialPortReadInto(portNum, count, startPtr);
+}
+
 /* Write count bytes from the given byte array to the given serial port's
    output buffer. Return the number of bytes written. This implementation is
    asynchronous: it may return before the entire packet has been sent. */
-int serialPortWriteFrom(int portNum, int count, int startPtr)
+int serialPortWriteFrom(int portNum, int count, void *startPtr)
 { DWORD cbReallyWritten;
 
   if(!isValidComm(portNum)) return 0;
-  if(!WriteFile(serialPorts[portNum-1],(void*)startPtr,count,&cbReallyWritten,NULL))
+  if(!WriteFile(serialPorts[portNum-1],startPtr,count,&cbReallyWritten,NULL))
     {
       printLastError(TEXT("WriteComm failed"));
       success(false);
       return 0;
     }
   return cbReallyWritten;
+}
+
+/* Write count bytes from the named byte array to the given serial port's
+   output buffer. Return the number of bytes written. This implementation is
+   asynchronous: it may return before the entire packet has been sent. */
+int serialPortWriteFromByName(const char *portName, int count, void *startPtr)
+{
+  int portNum = portNumberForName(portName);
+  if (portNum < 0)
+  { success(false);
+    return 0;
+  }
+  return serialPortWriteFrom(portNum, count, startPtr)
 }
 
 int serialPortInit(void)
@@ -214,3 +277,4 @@ int serialPortShutdown(void)
 }
 
 #endif /* NO_SERIAL_PORT */
+
