@@ -211,6 +211,6 @@ static int dlclose(void *handle)
 # undef HAVE_DLFCN_H
 #endif
 
-#ifndef HAVE_LIBDL
-# define HAVE_LIBDL
+#ifndef HAVE_DLOPEN
+# define HAVE_DLOPEN 1
 #endif

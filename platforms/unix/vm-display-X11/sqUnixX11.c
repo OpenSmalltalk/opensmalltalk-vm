@@ -129,7 +129,7 @@
 #  include "squeakIcon.bitmap"
 #endif
 
-#if defined(HAVE_LIBDL)
+#if defined(HAVE_DLFCN_H)
 # include <dlfcn.h>
 #endif
 

@@ -40,11 +40,11 @@
 # define fdebugf(ARGS)
 #endif
  
-#if !defined(HAVE_LIBDL) && defined(HAVE_DYLD)
+#if !defined(HAVE_DLOPEN) && defined(HAVE_DYLD)
 # include "dlfcn-dyld.c"
 #endif
 
-#if defined(HAVE_LIBDL)	/* non-starter without this! */
+#if defined(HAVE_DLOPEN)	/* non-starter without this! */
 
 #ifdef HAVE_DLFCN_H
 # include <dlfcn.h>
@@ -352,7 +352,7 @@ sqInt ioFreeModule(void *moduleHandle)
 }
 
 
-#else /* !HAVE_LIBDL */
+#else /* !HAVE_DLOPEN */
 
 
 
@@ -373,4 +373,4 @@ sqInt ioFreeModule(void *moduleHandle)
 
 
 
-#endif /* !HAVE_LIBDL */
+#endif /* !HAVE_DLOPEN */

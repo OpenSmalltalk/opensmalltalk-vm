@@ -1376,7 +1376,7 @@ int main(int argc, char **argv, char **envp)
   imgInit();
   dpy->winOpen();
 
-#if defined(HAVE_LIBDL)
+#if defined(HAVE_DLOPEN)
   if (useJit)
     {
       /* first try to find an internal dynamic compiler... */

@@ -1,3 +1,13 @@
+2009-08-24    <piumarta@netbsd.piumarta.com>
+
+	* vm/config.cmake: Configure HAVE_DLOPEN instead of HAVE_LIBDL.
+
+	* vm/sqUnixMain.c, vm/dlfcn-dyld.c, vm/sqUnixExternalPrims.c: Test
+	HAVE_DLOPEN for dlopen() instead of HAVE_LIBDL.
+
+	* vm-display-X11/sqUnixX11.c: Test HAVE_DLFCN_H instead of
+	HAVE_LIBDL for presence of dlfcn.h.
+
 2009-08-22    <piumarta@ubuntu.piumarta.com>
 
 	* plugins/SerialPlugin/sqUnixSerial.c: Pointers are passed as 'void *'
