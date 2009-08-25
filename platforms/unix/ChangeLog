@@ -1,3 +1,45 @@
+2009-08-25    <piumarta@ubuntu.piumarta.com>
+
+	* cmake/Plugins.cmake: Add macros PLUGIN_DISABLE, PLUGIN_SOURCES,
+	PLUGIN_DEFINITIONS, PLUGIN_INCLUDE_DIRECTORIES,
+	PLUGIN_LINK_DIRECTORIES, PLUGIN_LINK_LIBRARIES.
+
+	* cmake/PluginExternal.cmake, cmake/PluginInternal.cmake: Set
+	definitions, include dirs and link dirs from configured values.
+	Add link directories before defining target.
+
+	* cmake/PluginExternal.cmake, cmake/Plugins.cmake,
+	cmake/PluginInternal.cmake, plugins/PseudoTTYPlugin/config.cmake,
+	plugins/PseudoTTYPlugin/build.cmake,
+	plugins/RomePlugin/config.cmake,
+	plugins/HostWindowPlugin/config.cmake,
+	plugins/UUIDPlugin/config.cmake, plugins/AioPlugin/build.cmake,
+	plugins/SqueakFFIPrims/config.cmake,
+	plugins/SqueakFFIPrims/build.cmake,
+	plugins/ImmX11Plugin/config.cmake, plugins/OggPlugin/config.cmake,
+	plugins/B3DAcceleratorPlugin/config.cmake,
+	plugins/B3DAcceleratorPlugin/build.cmake,
+	plugins/UnixOSProcessPlugin/config.cmake,
+	plugins/UnixOSProcessPlugin/build.cmake,
+	plugins/GStreamerPlugin/config.cmake,
+	plugins/DBusPlugin/config.cmake,
+	plugins/XDisplayControlPlugin/config.cmake,
+	plugins/XDisplayControlPlugin/build.cmake,
+	vm-sound-ALSA/config.cmake, vm-sound-NAS/config.cmake,
+	vm-display-X11/config.cmake, vm-display-X11/build.cmake,
+	vm-sound-MacOSX/config.cmake, vm-display-fbdev/config.cmake,
+	vm-display-Quartz/config.cmake, vm-display-Quartz/build.cmake,
+	vm-sound-OSS/config.cmake, vm-sound-Sun/config.cmake: Configure
+	build variables using new macros.
+
+	* plugins/DropPlugin/config.cmake, plugins/AioPlugin/config.cmake,
+	plugins/FloatMathPlugin/config.cmake: Configure build variables.
+
+	* plugins/RomePlugin/build.cmake, plugins/DropPlugin/build.cmake,
+	plugins/UUIDPlugin/build.cmake,
+	plugins/FloatMathPlugin/build.cmake, vm-display-fbdev/build.cmake:
+	Remove redundant build scripts.
+
 2009-08-24    <piumarta@netbsd.piumarta.com>
 
 	* CMakeLists.txt: Set RPATH options appropriately for build and install.

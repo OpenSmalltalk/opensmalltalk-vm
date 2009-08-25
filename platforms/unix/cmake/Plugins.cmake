@@ -1,6 +1,6 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2009-08-21 10:35:56 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-08-25 13:46:02 by piumarta on ubuntu.piumarta.com
 
 FILE (STRINGS ${src}/plugins.int plugins_int)
 STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_int ${plugins_int})
@@ -29,10 +29,11 @@ MACRO (INTERNAL_PLUGIN plugin)
       STRING_APPEND (plugin_sources "${tmp}")
     ENDFOREACH (dir)
   ENDIF (DEFINED ${plugin}_sources)
-  FILE_COPY (${bld}/${plugin}/CMakeLists.in ${config}/PluginInternal.cmake)
+  FILE (WRITE ${bld}/${plugin}/CMakeLists.in "")
   FOREACH (dir ${unix}/plugins ${unix})
     FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${dir}/${plugin}/build.cmake)
   ENDFOREACH (dir)
+  FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${config}/PluginInternal.cmake)
   CONFIGURE_FILE (${bld}/${plugin}/CMakeLists.in ${bld}/${plugin}/CMakeLists.txt @ONLY)
   ADD_SUBDIRECTORY (${bld}/${plugin} ${bld}/${plugin})
 ENDMACRO (INTERNAL_PLUGIN)
@@ -48,17 +49,38 @@ MACRO (EXTERNAL_PLUGIN plugin)
       STRING_APPEND (plugin_sources "${tmp}")
     ENDFOREACH (dir)
   ENDIF (DEFINED ${plugin}_sources)
-  FILE_COPY (${bld}/${plugin}/CMakeLists.in ${config}/PluginExternal.cmake)
+  FILE (WRITE ${bld}/${plugin}/CMakeLists.in "")
   FOREACH (dir ${unix}/plugins ${unix})
     FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${dir}/${plugin}/build.cmake)
   ENDFOREACH (dir)
+  FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${config}/PluginExternal.cmake)
   CONFIGURE_FILE (${bld}/${plugin}/CMakeLists.in ${bld}/${plugin}/CMakeLists.txt @ONLY)
   ADD_SUBDIRECTORY (${bld}/${plugin} ${bld}/${plugin})
 ENDMACRO (EXTERNAL_PLUGIN)
 
-MACRO (DISABLE_PLUGIN)
+MACRO (PLUGIN_DISABLE)
   SET (plugin_disabled 1)
-ENDMACRO (DISABLE_PLUGIN)
+ENDMACRO (PLUGIN_DISABLE)
+
+MACRO (PLUGIN_SOURCES)
+  SET (${plugin}_sources ${ARGV})
+ENDMACRO (PLUGIN_SOURCES)
+
+MACRO (PLUGIN_DEFINITIONS)
+  SET (${plugin}_definitions ${${plugin}_definitions} ${ARGV})
+ENDMACRO (PLUGIN_DEFINITIONS)
+
+MACRO (PLUGIN_INCLUDE_DIRECTORIES)
+  SET (${plugin}_include_directories ${${plugin}_include_directories} ${ARGV})
+ENDMACRO (PLUGIN_INCLUDE_DIRECTORIES)
+
+MACRO (PLUGIN_LINK_DIRECTORIES)
+  SET (${plugin}_link_directories ${${plugin}_link_directories} ${ARGV})
+ENDMACRO (PLUGIN_LINK_DIRECTORIES)
+
+MACRO (PLUGIN_LINK_LIBRARIES)
+  SET (${plugin}_link_libraries ${${plugin}_link_libraries} ${ARGV})
+ENDMACRO (PLUGIN_LINK_LIBRARIES)
 
 MACRO (CONFIGURE_PLUGIN_LIST plugins_list)
   SET (plugins ${${plugins_list}})

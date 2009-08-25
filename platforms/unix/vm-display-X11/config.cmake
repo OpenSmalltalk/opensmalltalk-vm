@@ -1,7 +1,7 @@
 SET (${plugin}_sources ${unix}/${plugin}/sqUnixX11.c ${unix}/${plugin}/sqUnixMozilla.c)
 
 IF (NOT X11_FOUND)
-  DISABLE_PLUGIN ()
+  PLUGIN_DISABLE ()
 ELSE ()
   SET (USE_X11 1)
   IF (X11_Xext_FOUND)
@@ -19,6 +19,9 @@ ELSE ()
       SET (USE_X11_GLX 1)
     ENDIF (HAVE_GL_GL_H AND HAVE_GL_GLX_H)
   ENDIF (OPENGL_FOUND)
+  PLUGIN_INCLUDE_DIRECTORIES (${cross}/plugins/B3DAcceleratorPlugin ${cross}/plugins/FilePlugin)
+  PLUGIN_INCLUDE_DIRECTORIES (${X11_INCLUDE_DIR} ${OPENGL_INCLUDE_DIR})
+  PLUGIN_LINK_LIBRARIES (${X11_LIBRARIES} ${OPENGL_LIBRARIES})
 ENDIF ()
 
 CONFIG_DEFINE (USE_X11)

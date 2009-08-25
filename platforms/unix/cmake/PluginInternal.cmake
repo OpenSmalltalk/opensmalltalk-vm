@@ -1,6 +1,6 @@
-ADD_LIBRARY (@plugin@ STATIC @plugin_sources@)
-ADD_DEFINITIONS (-DSQUEAK_BUILTIN_PLUGIN=1)
-INCLUDE_DIRECTORIES (
+ADD_DEFINITIONS (-DSQUEAK_BUILTIN_PLUGIN=1 ${@plugin@_definitions})
+LINK_DIRECTORIES (${@plugin@_link_directories})
+INCLUDE_DIRECTORIES (${@plugin@_include_directories}
     ${bld}
     ${src}/vm
     ${cross}/vm
@@ -11,3 +11,5 @@ INCLUDE_DIRECTORIES (
     ${unix}/@plugin@
     ${cross}/plugins/@plugin@
 )
+
+ADD_LIBRARY (@plugin@ STATIC @plugin_sources@)

@@ -1,3 +1,5 @@
 IF (NOT X11_FOUND)
-    DISABLE_PLUGIN ()
+    PLUGIN_DISABLE ()
+ELSE ()
+    PLUGIN_INCLUDE_DIRECTORIES (${cross}/plugins/FilePlugin ${cross}/plugins/SocketPlugin)
 ENDIF ()
