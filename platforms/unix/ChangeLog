@@ -1,5 +1,7 @@
 2009-08-24    <piumarta@netbsd.piumarta.com>
 
+	* CMakeLists.txt: Set RPATH options appropriately for build and install.
+
 	* vm/config.cmake: Configure HAVE_DLOPEN instead of HAVE_LIBDL.
 
 	* vm/sqUnixMain.c, vm/dlfcn-dyld.c, vm/sqUnixExternalPrims.c: Test
