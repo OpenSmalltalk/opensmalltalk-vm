@@ -15,6 +15,14 @@ ENDIF (APPLE)
 
 CONFIG_DEFINE (DARWIN)
 
+IF (EXISTS /usr/pkg/include)
+  LIST (APPEND CMAKE_REQUIRED_INCLUDES /usr/pkg/include)
+ENDIF (EXISTS /usr/pkg/include)
+
+IF (EXISTS /usr/pkg/lib)
+  LIST (APPEND CMAKE_REQUIRED_LIBRARIES -L/usr/pkg/lib)
+ENDIF (EXISTS /usr/pkg/lib)
+
 SET (interp interp)
 
 INCLUDE (TestBigEndian)

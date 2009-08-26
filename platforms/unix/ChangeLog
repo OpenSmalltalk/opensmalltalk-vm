@@ -1,5 +1,7 @@
 2009-08-25    <piumarta@netbsd.piumarta.com>
 
+	* vm/config.cmake: Add includes and libraries from /usr/pkg if present.
+
 	* cmake/PluginInternal.cmake, cmake/PluginExternal.cmake: Add
 	CMAKE_REQUIRED_INCLUDES to plugin INCLUDE_DIRECTORIES.
 
