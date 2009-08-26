@@ -1,3 +1,8 @@
+2009-08-26    <piumarta@ubuntu.piumarta.com>
+
+	* cmake/Plugins.cmake: Add PLUGIN_FIND and PLUGIN_REQUIRE macros.
+	* cmake/Utils.cmake: Add macro LIST_APPEND.
+
 2009-08-25    <piumarta@netbsd.piumarta.com>
 
 	* plugins/SqueakFFIPrims/config.cmake: Check for libffi via
