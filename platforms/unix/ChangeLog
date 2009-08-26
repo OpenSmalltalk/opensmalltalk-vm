@@ -1,5 +1,8 @@
 2009-08-26    <piumarta@ubuntu.piumarta.com>
 
+	* plugins/SqueakFFIPrims/any-libffi.c: Include ffi.h unless
+	HAVE_FFI_FFI_H is defined.
+
 	* plugins/RomePlugin/config.cmake, plugins/UUIDPlugin/config.cmake,
 	plugins/SqueakFFIPrims/config.cmake, plugins/OggPlugin/config.cmake,
 	plugins/UnixOSProcessPlugin/config.cmake,

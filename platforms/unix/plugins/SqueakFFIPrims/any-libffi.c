@@ -17,10 +17,10 @@
 
 #ifndef NO_FFI_SUPPORT
 
-#if defined(HAVE_FFI_H)
-# include <ffi.h>
-#elif defined(HAVE_FFI_FFI_H)
+#if defined(HAVE_FFI_FFI_H)
 # include <ffi/ffi.h>
+#else 
+# include <ffi.h>
 #endif
 
 #ifndef  FFI_TYPE_STRUCT	/* this is private in libffi-2 */
