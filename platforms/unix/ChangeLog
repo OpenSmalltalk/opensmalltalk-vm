@@ -1,5 +1,8 @@
 2009-08-26    <piumarta@ubuntu.piumarta.com>
 
+	* cmake/PluginInternal.cmake, cmake/PluginExternal.cmake: Remove
+	CMAKE_REQUIRE_INCLUDES from include paths.
+
 	* cmake/Plugins.cmake: Add PLUGIN_FIND and PLUGIN_REQUIRE macros.
 	* cmake/Utils.cmake: Add macro LIST_APPEND.
 
