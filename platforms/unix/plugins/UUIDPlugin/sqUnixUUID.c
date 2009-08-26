@@ -1,9 +1,5 @@
 #include "config.h"
-#if defined(HAVE_UUID_H)
-# include <uuid.h>
-#elif defined(HAVE_UUID_UUID_H)
-# include <uuid/uuid.h>
-#endif
+#include <uuid.h>
 #include "sq.h"
 
 int sqUUIDInit(void)

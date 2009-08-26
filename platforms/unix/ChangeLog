@@ -1,5 +1,18 @@
 2009-08-26    <piumarta@ubuntu.piumarta.com>
 
+	* plugins/RomePlugin/config.cmake, plugins/UUIDPlugin/config.cmake,
+	plugins/SqueakFFIPrims/config.cmake, plugins/OggPlugin/config.cmake,
+	plugins/UnixOSProcessPlugin/config.cmake,
+	plugins/GStreamerPlugin/config.cmake, plugins/DBusPlugin/config.cmake,
+	plugins/SocketPlugin/config.cmake, vm-sound-ALSA/config.cmake,
+	vm-sound-NAS/config.cmake, vm-display-fbdev/config.cmake,
+	vm-sound-OSS/config.cmake: Use PLUGIN_FIND and PLUGIN_REQUIRE macros
+	wheverver possible.  Remove explicit manipulation of include and library
+	lists.
+
+	* plugins/UUIDPlugin/sqUnixUUID.c: Assume include path set in
+	config.cmake as required.
+
 	* vm/config.cmake: Remove explicit test for /usr/pkg.
 	* vm/build.cmake: Search vm_include_directories and
 	vm_link_directories.  Link against vm_link_libraries.

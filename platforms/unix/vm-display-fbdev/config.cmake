@@ -1,7 +1,2 @@
-CHECK_INCLUDE_FILE (linux/fb.h HAVE_LINUX_FB_H)
-
-IF (NOT HAVE_LINUX_FB_H)
-  PLUGIN_DISABLE ()
-ELSE ()
-  PLUGIN_SOURCES (${unix}/${plugin}/sqUnixFBDev.c)
-ENDIF ()
+PLUGIN_REQUIRE_INCLUDE (LINUX_FB linux/fb.h)
+PLUGIN_SOURCES (${unix}/${plugin}/sqUnixFBDev.c)

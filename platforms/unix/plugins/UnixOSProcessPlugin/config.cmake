@@ -1,11 +1,7 @@
-CHECK_FUNCTION_EXISTS (unsetenv HAVE_UNSETENV)
-CHECK_LIBRARY_EXISTS (pthread pthread_kill "" HAVE_LIB_PTHREAD)
+PLUGIN_REQUIRE_LIBRARY (PTHREAD pthread)
+PLUGIN_INCLUDE_DIRECTORIES (${cross}/plugins/FilePlugin ${cross}/plugins/SocketPlugin)
+PLUGIN_DEFINITIONS (-DSQAIO_H=\"sqaio.h\")
 
-IF (NOT HAVE_LIB_PTHREAD)
-    PLUGIN_DISABLE ()
-ELSE ()
-    PLUGIN_INCLUDE_DIRECTORIES (${cross}/plugins/FilePlugin ${cross}/plugins/SocketPlugin)
-    PLUGIN_DEFINITIONS (-DSQAIO_H=\"sqaio.h\")
-ENDIF ()
+CHECK_FUNCTION_EXISTS (unsetenv HAVE_UNSETENV)
 
 CONFIG_DEFINE (HAVE_UNSETENV)
