@@ -10,6 +10,7 @@ INCLUDE_DIRECTORIES (${@plugin@_include_directories}
     ${unix}/plugins/@plugin@
     ${unix}/@plugin@
     ${cross}/plugins/@plugin@
+    ${CMAKE_REQUIRED_INCLUDES}
 )
 
 ADD_LIBRARY (@plugin@ STATIC @plugin_sources@)

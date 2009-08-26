@@ -1,4 +1,7 @@
-2009-08-25    <piumarta@ubuntu.piumarta.com>
+2009-08-25    <piumarta@netbsd.piumarta.com>
+
+	* cmake/PluginInternal.cmake, cmake/PluginExternal.cmake: Add
+	CMAKE_REQUIRED_INCLUDES to plugin INCLUDE_DIRECTORIES.
 
 	* cmake/Plugins.cmake: Add macros PLUGIN_DISABLE, PLUGIN_SOURCES,
 	PLUGIN_DEFINITIONS, PLUGIN_INCLUDE_DIRECTORIES,
