@@ -246,7 +246,10 @@ int ioInitSecurity(void) {
   lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
 
   /* establish untrusted user directory */
-  lstrcpy(resourceDirectory, TEXT("C:\\My Squeak"));
+  lstrcpy(resourceDirectory, imagePath);
+  if (resourceDirectory[lstrlen(resourceDirectory)-1] == '\\') {
+    resourceDirectory[lstrlen(resourceDirectory)-1] = 0;
+  }
 
   /* Look up shGetFolderPathW */
   shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
