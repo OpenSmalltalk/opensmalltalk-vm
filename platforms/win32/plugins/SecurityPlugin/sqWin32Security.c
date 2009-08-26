@@ -17,7 +17,11 @@
 static HRESULT __stdcall (*shGetFolderPath)(HWND, int, HANDLE, DWORD, WCHAR*);
 
 static TCHAR untrustedUserDirectory[MAX_PATH];
+static int untrustedUserDirectoryLen;
 static TCHAR secureUserDirectory[MAX_PATH];
+static int secureUserDirectoryLen;
+static TCHAR resourceDirectory[MAX_PATH];
+static int resourceDirectoryLen;
 
 /* imported from sqWin32Prefs.c */
 extern TCHAR squeakIniName[MAX_PATH];
@@ -33,65 +37,83 @@ extern BOOL fLowRights;  /* started as low integrity process,
 /* file security */
 static int allowFileAccess = 1;  /* full access to files */
 static const TCHAR U_DOT[] = TEXT(".");
+static const TCHAR U_BACKSLASH[] = TEXT("\\");
 
-static int isAccessiblePathName(TCHAR *pathName) {
-  int i;
-  /* Check if the path/file name is subdirectory of the image path */
-  for(i=0; i<lstrlen(untrustedUserDirectory)-1; i++)
-    if(untrustedUserDirectory[i] != pathName[i]) return 0;
-  /* special check for the trusted directory */
-  if(pathName[i] == 0) return 1; /* allow access to trusted directory */
-  /* check last character in image path (e.g., backslash) */
-  if(untrustedUserDirectory[i] != pathName[i]) return 0;
-  /* check if somebody wants to trick us into using relative
-     paths ala c:\My Squeak\allowed\..\..\" */
-  while(pathName[i]) {
-    if(pathName[i] == U_DOT[0]) {
-      if(pathName[i+1] == U_DOT[0])
-	return 0; /* Gotcha! */
+static int testDotDot(TCHAR *pathName, int index) {
+  while(pathName[index]) {
+    if(pathName[index] == U_DOT[0]) {
+      if(pathName[index-1] == U_DOT[0]) {
+	if (pathName[index-2] == U_BACKSLASH[0]) {
+	  return 0; /* Gotcha! */
+	}
+      }
     }
-    i++;
+    index++;
   }
   return 1;
 }
 
-static int isAccessibleFileName(TCHAR *fileName) {
+static int lstrncmp(TCHAR *s1, TCHAR *s2, int len) {
+  int s1Len = lstrlen(s1);
+  int s2Len = lstrlen(s2);
+  int max = min(s1Len, (s2Len, len));
   int i;
-  /* Check if the path/file name is subdirectory of the image path */
-  for(i=0; i<lstrlen(untrustedUserDirectory); i++)
-    if(untrustedUserDirectory[i] != fileName[i]) return 0;
-  /* check if somebody wants to trick us into using relative
-     paths ala c:\My Squeak\allowed\..\..\" */
-  while(fileName[i]) {
-    if(fileName[i] == U_DOT[0]) {
-      if(fileName[i+1] == U_DOT[0])
-	return 0; /* Gotcha! */
+  for (i = 0; i < max; i++) {
+    if (s1[i] > s2[i]) {
+      return 1;
+    } else if (s1[i] < s2[i]) {
+      return -1;
     }
-    i++;
   }
-  return 1;
+  return 0;
+}
+
+static int isAccessiblePathName(TCHAR *pathName, int writeFlag) {
+  int pathLen = lstrlen(pathName);
+  if (pathLen > (MAX_PATH - 1)) return 0;
+
+  if (pathLen >= untrustedUserDirectoryLen
+      && 0 == lstrncmp(pathName, untrustedUserDirectory, untrustedUserDirectoryLen)) {
+    if (pathLen > untrustedUserDirectoryLen + 2)
+      return testDotDot(pathName, untrustedUserDirectoryLen+2);
+    return 1;
+  }
+  if (writeFlag)
+    return 0;
+
+  if (pathLen >= resourceDirectoryLen
+      &&  0 == lstrncmp(pathName, resourceDirectory, resourceDirectoryLen)) {
+    if (pathLen > resourceDirectoryLen + 2)
+      return testDotDot(pathName, resourceDirectoryLen+2);
+    return 1;
+  }
+  return 0;
+}
+
+static int isAccessibleFileName(TCHAR *fileName, int writeFlag) {
+  return isAccessiblePathName(fileName, writeFlag);
 }
 
 /* directory access */
 int ioCanCreatePathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
+  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 int ioCanListPathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
+  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 0);
 }
 
 int ioCanDeletePathOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessiblePathName(fromSqueak(pathString, pathStringLength));
+  return isAccessiblePathName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 /* file access */
 int ioCanOpenFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
+  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), writeFlag);
 }
 
 int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int writeFlag) {
@@ -99,12 +121,12 @@ int ioCanOpenAsyncFileOfSizeWritable(char* pathString, int pathStringLength, int
 }
 int ioCanDeleteFileOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
+  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 int ioCanRenameFileOfSize(char* pathString, int pathStringLength) {
   if(allowFileAccess) return 1;
-  return isAccessibleFileName(fromSqueak(pathString, pathStringLength));
+  return isAccessibleFileName(fromSqueak(pathString, pathStringLength), 1);
 }
 
 
@@ -186,7 +208,7 @@ char *ioGetUntrustedUserDirectory(void) {
 
 /* helper function to expand %MYDOCUMENTSFOLDER% */
 
-char *expandMyDocuments(char *pathname, char *replacement, char *result)
+int expandMyDocuments(char *pathname, char *replacement, char *result)
 {
   TCHAR search4[MAX_PATH+1];
   TCHAR *start;
@@ -199,8 +221,6 @@ char *expandMyDocuments(char *pathname, char *replacement, char *result)
   result[start-pathname] = '\0';
   sprintf(result+(start-pathname),"%s%s", replacement, start+strlen(search4));
   
-    
-
   return strlen(result);
 }
 
@@ -224,7 +244,9 @@ int ioInitSecurity(void) {
 
   /* establish untrusted user directory */
   lstrcpy(untrustedUserDirectory, TEXT("C:\\My Squeak\\%USERNAME%"));
-  dirLen = lstrlen(untrustedUserDirectory);
+
+  /* establish untrusted user directory */
+  lstrcpy(resourceDirectory, TEXT("C:\\My Squeak"));
 
   /* Look up shGetFolderPathW */
   shGetFolderPath = (void*)GetProcAddress(LoadLibrary("SHFolder.dll"), 
@@ -261,6 +283,10 @@ int ioInitSecurity(void) {
 			  MAX_PATH, squeakIniName);
   }
 
+  GetPrivateProfileString(TEXT("Security"), TEXT("ResourceDirectory"),
+			  resourceDirectory, resourceDirectory,
+			  MAX_PATH, squeakIniName);
+
   /* Attempt to read local user settings from registry */
   ok = RegOpenKey(HKEY_CURRENT_USER, HKEY_SQUEAK_ROOT, &hk);
 
@@ -287,8 +313,20 @@ int ioInitSecurity(void) {
     }
     strcpy(untrustedUserDirectory, tmp);
   }
+
+  /* Read the resource directory from the subkey. */
+  dwSize = MAX_PATH;
+  ok = RegQueryValueEx(hk,"ResourceDirectory",NULL, &dwType, 
+		       (LPBYTE) tmp, &dwSize);
+  if(ok == ERROR_SUCCESS) {
+    if(tmp[dwSize-2] != '\\') {
+      tmp[dwSize-1] = '\\';
+      tmp[dwSize] = 0;
+    }
+    strcpy(resourceDirectory, tmp);
+  }
+
   RegCloseKey(hk);
-  
   
   if(shGetFolderPath) {  
     dwSize = expandMyDocuments(untrustedUserDirectory, myDocumentsFolder, tmp);
@@ -298,6 +336,10 @@ int ioInitSecurity(void) {
     dwSize = expandMyDocuments(secureUserDirectory, myDocumentsFolder, tmp);
     if(dwSize > 0 && dwSize < MAX_PATH)
       strcpy(secureUserDirectory, tmp);
+
+    dwSize = expandMyDocuments(resourceDirectory, myDocumentsFolder, tmp);
+    if(dwSize > 0 && dwSize < MAX_PATH)
+      strcpy(resourceDirectory, tmp);
   }
 
   /* Expand any environment variables in user directory. */
@@ -313,6 +355,18 @@ int ioInitSecurity(void) {
   /* Expand relative paths to absolute paths */
   GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
   WideCharToMultiByte(CP_UTF8,0,wDir,-1,secureUserDirectory,MAX_PATH,NULL,NULL);
+
+  /* and for the resource directory*/
+  MultiByteToWideChar(CP_ACP, 0, resourceDirectory, -1, wDir, MAX_PATH);
+  ExpandEnvironmentStringsW(wDir, wTmp, MAX_PATH-1);
+  /* Expand relative paths to absolute paths */
+  GetFullPathNameW(wTmp, MAX_PATH, wDir, NULL);
+  WideCharToMultiByte(CP_UTF8,0,wDir,-1,resourceDirectory,MAX_PATH,NULL,NULL);
+
+  secureUserDirectoryLen = lstrlen(secureUserDirectory);
+  untrustedUserDirectoryLen = lstrlen(untrustedUserDirectory);
+  resourceDirectoryLen = lstrlen(resourceDirectory);
+
   return 1;
 }
 
