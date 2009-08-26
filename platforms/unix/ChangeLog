@@ -1,5 +1,9 @@
 2009-08-26    <piumarta@ubuntu.piumarta.com>
 
+	* vm/config.cmake: Remove explicit test for /usr/pkg.
+	* vm/build.cmake: Search vm_include_directories and
+	vm_link_directories.  Link against vm_link_libraries.
+
 	* cmake/PluginInternal.cmake, cmake/PluginExternal.cmake: Remove
 	CMAKE_REQUIRE_INCLUDES from include paths.
 

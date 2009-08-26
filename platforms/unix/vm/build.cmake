@@ -1,3 +1,5 @@
+LINK_DIRECTORIES (${vm_link_directories})
+
 ADD_EXECUTABLE (squeakvm
   ${src}/vm/interp.c
   ${unix}/vm/aio.c
@@ -26,11 +28,12 @@ INCLUDE_DIRECTORIES (
   ${unix}/plugins/B3DAcceleratorPlugin	# for sqUnixOpenGL.h
   ${X11_INCLUDE_DIR}
   ${OPENGL_INCLUDE_DIR}
+  ${vm_include_directories}
 )
 
 SET_TARGET_PROPERTIES (squeakvm PROPERTIES LINK_FLAGS "${CMAKE_EXE_EXPORTS_C_FLAG}")
 
-TARGET_LINK_LIBRARIES (squeakvm m ${squeak_libs})
+TARGET_LINK_LIBRARIES (squeakvm m ${squeak_libs} ${vm_link_libraries})
 
 INSTALL (PROGRAMS ${bld}/squeakvm DESTINATION ${plgdir})
 
