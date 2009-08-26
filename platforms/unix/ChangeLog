@@ -1,3 +1,8 @@
+2009-08-26  Ian Piumarta  <piumarta@freebsd.piumarta.com>
+
+	* plugins/PseudoTTYPlugin/config.cmake: Disambiguate whether openpty found
+	in libc and in libutil.
+
 2009-08-26    <piumarta@ubuntu.piumarta.com>
 
 	* plugins/SqueakFFIPrims/any-libffi.c: Include ffi.h unless
