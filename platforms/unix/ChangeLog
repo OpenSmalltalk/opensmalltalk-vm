@@ -1,5 +1,8 @@
 2009-08-25    <piumarta@netbsd.piumarta.com>
 
+	* plugins/SqueakFFIPrims/config.cmake: Check for libffi via
+	pkf-config before eplicit search.
+
 	* vm/config.cmake: Add includes and libraries from /usr/pkg if present.
 
 	* cmake/PluginInternal.cmake, cmake/PluginExternal.cmake: Add
