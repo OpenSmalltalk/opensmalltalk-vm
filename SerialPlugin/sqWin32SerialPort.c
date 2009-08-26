@@ -41,7 +41,7 @@ static int isValidComm(int portNum)
 }  
 
 /* port number derived from "COMn" name */
-int portNumberForName(char *portName)
+int portNumberForName(const char *portName)
 {
   if ((strlen(portName) < 4)
         || (strncmp(portName, "COM", 3)
@@ -49,7 +49,7 @@ int portNumberForName(char *portName)
   {
     return -1;
   } else {
-    char *p = portName + 3;
+    const char *p = portName + 3;
     return atoi(p);
   }
 }
@@ -186,24 +186,24 @@ errExit:
   return 0;
 }
 
-int serialPortOpenByName(char *portName, int dataRate, int stopBitsType,
+int serialPortOpenByName(char *portName, int baudRate, int stopBitsType,
                    int parityType, int dataBits, int inFlowCtrl,
                    int outFlowCtrl, int xOnChar, int xOffChar)
 {
   int portNum = portNumberForName(portName);
-  if (portNum < 0)
-  { success(false);
+  if (portNum < 0) {
+    success(false);
     return 0;
   }
   return serialPortOpen(portNum, baudRate, stopBitsType, parityType,
-                   dataBits, inFlowCtrl, outFlowCtrl, xOnChar, xOffChar)
+			dataBits, inFlowCtrl, outFlowCtrl, xOnChar, xOffChar);
 }
 
 /* Read up to count bytes from the given serial port into the given byte array.
    Read only up to the number of bytes in the port's input buffer; if fewer bytes
    than count have been received, do not wait for additional data to arrive.
    Return zero if no data is available. */
-int serialPortReadInto(int portNum, int count, void *startPtr);
+int serialPortReadInto(int portNum, int count, void *startPtr)
 { DWORD cbReallyRead;
 
   if(!isValidComm(portNum)) return 0;
@@ -257,7 +257,7 @@ int serialPortWriteFromByName(const char *portName, int count, void *startPtr)
   { success(false);
     return 0;
   }
-  return serialPortWriteFrom(portNum, count, startPtr)
+  return serialPortWriteFrom(portNum, count, startPtr);
 }
 
 int serialPortInit(void)
