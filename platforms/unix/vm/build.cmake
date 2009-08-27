@@ -45,12 +45,16 @@ ADD_CUSTOM_TARGET (squeak
   DEPENDS ${config}/squeak.in
   COMMAND sh ${bld}/config ${config}/squeak.in ${bld}/squeak
 )
+
 ADD_CUSTOM_TARGET (squeak.sh
   DEPENDS ${config}/squeak.sh.in
   COMMAND sh ${bld}/config ${config}/squeak.sh.in ${bld}/squeak.sh
 )
+
 ADD_DEPENDENCIES (squeakvm squeak squeak.sh)
+
 INSTALL (PROGRAMS ${bld}/squeak DESTINATION bin)
+INSTALL (PROGRAMS ${bld}/squeak.sh DESTINATION bin)
 
 # manual page
 

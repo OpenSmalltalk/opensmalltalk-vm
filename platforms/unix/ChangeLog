@@ -1,5 +1,7 @@
 2009-08-27    <piumarta@ubuntu.piumarta.com>
 
+	* vm/build.cmake: Install squeak.sh.
+
 	* cmake/squeak.in: Deal with plugin path and pulseaudio; move menu
 	cruft elsewhere.
 
