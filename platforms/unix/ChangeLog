@@ -1,3 +1,11 @@
+2009-08-26    <piumarta@solaris.piumarta.com>
+
+	* plugins/PseudoTTYPlugin/config.cmake: Check for libutil and
+	unix98 ptys independently.
+
+	* vm-sound-Sun/config.cmake: Fail if head missing in both
+	potential locations.
+
 2009-08-27  Ian Piumarta  <piumarta@freebsd.piumarta.com>
 
 	* plugins/GStreamerPlugin/config.cmake: Configure gstreamer via pkg-config.
