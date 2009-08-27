@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:25 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:11 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -58,9 +58,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"GeniePlugin v2.0 10 November 2008 (i)"
+	"GeniePlugin v2.0 26 August 2009 (i)"
 #else
-	"GeniePlugin v2.0 10 November 2008 (e)"
+	"GeniePlugin v2.0 26 August 2009 (e)"
 #endif
 ;
 
@@ -138,9 +138,7 @@ EXPORT(sqInt) primSameClassAbsoluteStrokeDistanceMyPoints_otherPoints_myVectors_
 	int *   rowBase;
 	sqInt otherPointsSize;
 	int *   otherPoints;
-	sqInt mySquaredLengthsSize;
 	sqInt jM1T2;
-	sqInt myPointsSize;
 	int *   rowInsertRemoveCount;
 	sqInt otherSquaredLengthsSize;
 	int *   otherVectors;
@@ -221,17 +219,19 @@ EXPORT(sqInt) primSameClassAbsoluteStrokeDistanceMyPoints_otherPoints_myVectors_
 	rowBase = interpreterProxy->firstIndexableField(rowBaseOop);
 	rowInsertRemove = interpreterProxy->firstIndexableField(rowInsertRemoveOop);
 
+	/* Note: myPointsSize and mySquaredLengthsSize variables eliminated to reduce
+	method temporary variable count for closure-enabled images */
 	/* PointArrays */
+	/* myPointsSize := (interpreterProxy stSizeOf: myPointsOop) bitShift: -1. */
 
 	rowInsertRemoveCount = interpreterProxy->firstIndexableField(rowInsertRemoveCountOop);
-	myPointsSize = ((usqInt) (interpreterProxy->stSizeOf(myPointsOop)) >> 1);
 	otherPointsSize = ((usqInt) (interpreterProxy->stSizeOf(otherPointsOop)) >> 1);
 	myVectorsSize = ((usqInt) (interpreterProxy->stSizeOf(myVectorsOop)) >> 1);
 
 	/* IntegerArrays */
+	/* mySquaredLengthsSize := interpreterProxy stSizeOf: mySquaredLengthsOop. */
 
 	otherVectorsSize = ((usqInt) (interpreterProxy->stSizeOf(otherVectorsOop)) >> 1);
-	mySquaredLengthsSize = interpreterProxy->stSizeOf(mySquaredLengthsOop);
 	otherSquaredLengthsSize = interpreterProxy->stSizeOf(otherSquaredLengthsOop);
 	rowBaseSize = interpreterProxy->stSizeOf(rowBaseOop);
 	interpreterProxy->success(((rowBaseSize == (interpreterProxy->stSizeOf(rowInsertRemoveOop))) && (rowBaseSize == (interpreterProxy->stSizeOf(rowInsertRemoveCountOop)))) && (rowBaseSize > otherVectorsSize));
@@ -239,7 +239,7 @@ EXPORT(sqInt) primSameClassAbsoluteStrokeDistanceMyPoints_otherPoints_myVectors_
 		msg("failed 4");
 		return null;
 	}
-	interpreterProxy->success((((((mySquaredLengthsSize >= (myVectorsSize - 1)) && (myPointsSize >= myVectorsSize)) && (otherSquaredLengthsSize >= (otherVectorsSize - 1))) && (otherPointsSize >= otherVectorsSize)) && ((interpreterProxy->stSizeOf(myAnglesOop)) >= (myVectorsSize - 1))) && ((interpreterProxy->stSizeOf(otherAnglesOop)) >= (otherVectorsSize - 1)));
+	interpreterProxy->success(((((((interpreterProxy->stSizeOf(mySquaredLengthsOop)) >= (myVectorsSize - 1)) && ((((usqInt) (interpreterProxy->stSizeOf(myPointsOop)) >> 1)) >= myVectorsSize)) && (otherSquaredLengthsSize >= (otherVectorsSize - 1))) && (otherPointsSize >= otherVectorsSize)) && ((interpreterProxy->stSizeOf(myAnglesOop)) >= (myVectorsSize - 1))) && ((interpreterProxy->stSizeOf(otherAnglesOop)) >= (otherVectorsSize - 1)));
 	if (interpreterProxy->failed()) {
 		msg("failed 5");
 		return null;

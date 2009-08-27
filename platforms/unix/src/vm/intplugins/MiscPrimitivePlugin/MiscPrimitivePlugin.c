@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:29 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:23 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -62,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"MiscPrimitivePlugin 10 November 2008 (i)"
+	"MiscPrimitivePlugin 26 August 2009 (i)"
 #else
-	"MiscPrimitivePlugin 10 November 2008 (e)"
+	"MiscPrimitivePlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -110,6 +110,8 @@ static sqInt encodeBytesOfinat(sqInt anInt, unsigned char *ba, sqInt i) {
 		255		next 4 bytes */
 
 static sqInt encodeIntinat(sqInt anInt, unsigned char *ba, sqInt i) {
+    sqInt j;
+
 	if (anInt <= 223) {
 		ba[i] = anInt;
 		return i + 1;
@@ -120,7 +122,11 @@ static sqInt encodeIntinat(sqInt anInt, unsigned char *ba, sqInt i) {
 		return i + 2;
 	}
 	ba[i] = 255;
-	return encodeBytesOfinat(anInt, ba, i + 1);
+	/* begin encodeBytesOf:in:at: */
+	for (j = 0; j <= 3; j += 1) {
+		ba[(i + 1) + j] = ((((usqInt) anInt) >> ((3 - j) * 8)) & 255);
+	}
+	return (i + 1) + 4;
 }
 
 
@@ -253,6 +259,13 @@ EXPORT(sqInt) primitiveCompressToByteArray(void) {
     sqInt i;
     sqInt lowByte;
     sqInt m;
+    sqInt j1;
+    sqInt j2;
+    sqInt j3;
+    sqInt j4;
+    sqInt j5;
+    sqInt j6;
+    sqInt j7;
 
 	rcvr = stackValue(2);
 	bm = arrayValueOf(stackValue(1));
@@ -263,7 +276,25 @@ EXPORT(sqInt) primitiveCompressToByteArray(void) {
 		return null;
 	}
 	size = sizeOfSTArrayFromCPrimitive(bm + 1);
-	i = encodeIntinat(size, ba, 1);
+	/* begin encodeInt:in:at: */
+	if (size <= 223) {
+		ba[1] = size;
+		i = 1 + 1;
+		goto l5;
+	}
+	if (size <= 7935) {
+		ba[1] = ((((sqInt) size >> 8)) + 224);
+		ba[1 + 1] = (size % 256);
+		i = 1 + 2;
+		goto l5;
+	}
+	ba[1] = 255;
+	/* begin encodeBytesOf:in:at: */
+	for (j7 = 0; j7 <= 3; j7 += 1) {
+		ba[(1 + 1) + j7] = ((((usqInt) size) >> ((3 - j7) * 8)) & 255);
+	}
+	i = (1 + 1) + 4;
+l5:	/* end encodeInt:in:at: */;
 	k = 1;
 	while (k <= size) {
 		word = bm[k];
@@ -275,17 +306,75 @@ EXPORT(sqInt) primitiveCompressToByteArray(void) {
 		}
 		if (j > k) {
 			if (eqBytes) {
-				i = encodeIntinat((((j - k) + 1) * 4) + 1, ba, i);
+				/* begin encodeInt:in:at: */
+				if (((((j - k) + 1) * 4) + 1) <= 223) {
+					ba[i] = ((((j - k) + 1) * 4) + 1);
+					i += 1;
+					goto l1;
+				}
+				if (((((j - k) + 1) * 4) + 1) <= 7935) {
+					ba[i] = ((((sqInt) ((((j - k) + 1) * 4) + 1) >> 8)) + 224);
+					ba[i + 1] = (((((j - k) + 1) * 4) + 1) % 256);
+					i += 2;
+					goto l1;
+				}
+				ba[i] = 255;
+				/* begin encodeBytesOf:in:at: */
+				for (j3 = 0; j3 <= 3; j3 += 1) {
+					ba[(i + 1) + j3] = ((((usqInt) ((((j - k) + 1) * 4) + 1)) >> ((3 - j3) * 8)) & 255);
+				}
+				i = (i + 1) + 4;
+			l1:	/* end encodeInt:in:at: */;
 				ba[i] = lowByte;
 				i += 1;
 			} else {
-				i = encodeIntinat((((j - k) + 1) * 4) + 2, ba, i);
-				i = encodeBytesOfinat(word, ba, i);
+				/* begin encodeInt:in:at: */
+				if (((((j - k) + 1) * 4) + 2) <= 223) {
+					ba[i] = ((((j - k) + 1) * 4) + 2);
+					i += 1;
+					goto l2;
+				}
+				if (((((j - k) + 1) * 4) + 2) <= 7935) {
+					ba[i] = ((((sqInt) ((((j - k) + 1) * 4) + 2) >> 8)) + 224);
+					ba[i + 1] = (((((j - k) + 1) * 4) + 2) % 256);
+					i += 2;
+					goto l2;
+				}
+				ba[i] = 255;
+				/* begin encodeBytesOf:in:at: */
+				for (j4 = 0; j4 <= 3; j4 += 1) {
+					ba[(i + 1) + j4] = ((((usqInt) ((((j - k) + 1) * 4) + 2)) >> ((3 - j4) * 8)) & 255);
+				}
+				i = (i + 1) + 4;
+			l2:	/* end encodeInt:in:at: */;
+				/* begin encodeBytesOf:in:at: */
+				for (j1 = 0; j1 <= 3; j1 += 1) {
+					ba[i + j1] = ((((usqInt) word) >> ((3 - j1) * 8)) & 255);
+				}
+				i += 4;
 			}
 			k = j + 1;
 		} else {
 			if (eqBytes) {
-				i = encodeIntinat((1 * 4) + 1, ba, i);
+				/* begin encodeInt:in:at: */
+				if (((1 * 4) + 1) <= 223) {
+					ba[i] = ((1 * 4) + 1);
+					i += 1;
+					goto l3;
+				}
+				if (((1 * 4) + 1) <= 7935) {
+					ba[i] = ((((sqInt) ((1 * 4) + 1) >> 8)) + 224);
+					ba[i + 1] = (((1 * 4) + 1) % 256);
+					i += 2;
+					goto l3;
+				}
+				ba[i] = 255;
+				/* begin encodeBytesOf:in:at: */
+				for (j5 = 0; j5 <= 3; j5 += 1) {
+					ba[(i + 1) + j5] = ((((usqInt) ((1 * 4) + 1)) >> ((3 - j5) * 8)) & 255);
+				}
+				i = (i + 1) + 4;
+			l3:	/* end encodeInt:in:at: */;
 				ba[i] = lowByte;
 				i += 1;
 				k += 1;
@@ -296,9 +385,31 @@ EXPORT(sqInt) primitiveCompressToByteArray(void) {
 				if (j == size) {
 					j += 1;
 				}
-				i = encodeIntinat(((j - k) * 4) + 3, ba, i);
+				/* begin encodeInt:in:at: */
+				if ((((j - k) * 4) + 3) <= 223) {
+					ba[i] = (((j - k) * 4) + 3);
+					i += 1;
+					goto l4;
+				}
+				if ((((j - k) * 4) + 3) <= 7935) {
+					ba[i] = ((((sqInt) (((j - k) * 4) + 3) >> 8)) + 224);
+					ba[i + 1] = ((((j - k) * 4) + 3) % 256);
+					i += 2;
+					goto l4;
+				}
+				ba[i] = 255;
+				/* begin encodeBytesOf:in:at: */
+				for (j6 = 0; j6 <= 3; j6 += 1) {
+					ba[(i + 1) + j6] = ((((usqInt) (((j - k) * 4) + 3)) >> ((3 - j6) * 8)) & 255);
+				}
+				i = (i + 1) + 4;
+			l4:	/* end encodeInt:in:at: */;
 				for (m = k; m <= (j - 1); m += 1) {
-					i = encodeBytesOfinat(bm[m], ba, i);
+					/* begin encodeBytesOf:in:at: */
+					for (j2 = 0; j2 <= 3; j2 += 1) {
+						ba[i + j2] = ((((usqInt) (bm[m])) >> ((3 - j2) * 8)) & 255);
+					}
+					i += 4;
 				}
 				k = j;
 			}

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:44 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:12 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -68,9 +68,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"MIDIPlugin 10 November 2008 (i)"
+	"MIDIPlugin 26 August 2009 (i)"
 #else
-	"MIDIPlugin 10 November 2008 (e)"
+	"MIDIPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -338,19 +338,19 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* MIDIPlugin_exports[][3] = {
-	{"MIDIPlugin", "primitiveMIDIClosePort", (void*)primitiveMIDIClosePort},
-	{"MIDIPlugin", "primitiveMIDIWrite", (void*)primitiveMIDIWrite},
-	{"MIDIPlugin", "primitiveMIDIParameterGet", (void*)primitiveMIDIParameterGet},
 	{"MIDIPlugin", "shutdownModule", (void*)shutdownModule},
-	{"MIDIPlugin", "primitiveMIDIOpenPort", (void*)primitiveMIDIOpenPort},
-	{"MIDIPlugin", "initialiseModule", (void*)initialiseModule},
-	{"MIDIPlugin", "setInterpreter", (void*)setInterpreter},
-	{"MIDIPlugin", "primitiveMIDIGetPortCount", (void*)primitiveMIDIGetPortCount},
-	{"MIDIPlugin", "getModuleName", (void*)getModuleName},
-	{"MIDIPlugin", "primitiveMIDIRead", (void*)primitiveMIDIRead},
-	{"MIDIPlugin", "primitiveMIDIGetPortDirectionality", (void*)primitiveMIDIGetPortDirectionality},
 	{"MIDIPlugin", "primitiveMIDIParameterSet", (void*)primitiveMIDIParameterSet},
 	{"MIDIPlugin", "primitiveMIDIGetPortName", (void*)primitiveMIDIGetPortName},
+	{"MIDIPlugin", "primitiveMIDIParameterGet", (void*)primitiveMIDIParameterGet},
+	{"MIDIPlugin", "setInterpreter", (void*)setInterpreter},
+	{"MIDIPlugin", "primitiveMIDIGetPortDirectionality", (void*)primitiveMIDIGetPortDirectionality},
+	{"MIDIPlugin", "initialiseModule", (void*)initialiseModule},
+	{"MIDIPlugin", "primitiveMIDIGetPortCount", (void*)primitiveMIDIGetPortCount},
+	{"MIDIPlugin", "primitiveMIDIRead", (void*)primitiveMIDIRead},
+	{"MIDIPlugin", "getModuleName", (void*)getModuleName},
+	{"MIDIPlugin", "primitiveMIDIOpenPort", (void*)primitiveMIDIOpenPort},
+	{"MIDIPlugin", "primitiveMIDIClosePort", (void*)primitiveMIDIClosePort},
+	{"MIDIPlugin", "primitiveMIDIWrite", (void*)primitiveMIDIWrite},
 	{"MIDIPlugin", "primitiveMIDIGetClock", (void*)primitiveMIDIGetClock},
 	{"MIDIPlugin", "primitiveMIDIParameterGetOrSet", (void*)primitiveMIDIParameterGetOrSet},
 	{NULL, NULL, NULL}

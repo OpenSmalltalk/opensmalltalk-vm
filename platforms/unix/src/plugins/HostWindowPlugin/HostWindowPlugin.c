@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(21 April 2009 5:17:38 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:57 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -62,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"HostWindowPlugin 21 April 2009 (i)"
+	"HostWindowPlugin 26 August 2009 (i)"
 #else
-	"HostWindowPlugin 21 April 2009 (e)"
+	"HostWindowPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -369,17 +369,17 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* HostWindowPlugin_exports[][3] = {
-	{"HostWindowPlugin", "primitiveCreateHostWindow", (void*)primitiveCreateHostWindow},
-	{"HostWindowPlugin", "primitiveHostWindowPosition", (void*)primitiveHostWindowPosition},
-	{"HostWindowPlugin", "primitiveCloseHostWindow", (void*)primitiveCloseHostWindow},
-	{"HostWindowPlugin", "shutdownModule", (void*)shutdownModule},
-	{"HostWindowPlugin", "setInterpreter", (void*)setInterpreter},
 	{"HostWindowPlugin", "primitiveHostWindowPositionSet", (void*)primitiveHostWindowPositionSet},
+	{"HostWindowPlugin", "primitiveHostWindowSize", (void*)primitiveHostWindowSize},
+	{"HostWindowPlugin", "primitiveHostWindowPosition", (void*)primitiveHostWindowPosition},
+	{"HostWindowPlugin", "shutdownModule", (void*)shutdownModule},
 	{"HostWindowPlugin", "primitiveHostWindowTitle", (void*)primitiveHostWindowTitle},
 	{"HostWindowPlugin", "primitiveShowHostWindowRect", (void*)primitiveShowHostWindowRect},
+	{"HostWindowPlugin", "setInterpreter", (void*)setInterpreter},
 	{"HostWindowPlugin", "getModuleName", (void*)getModuleName},
+	{"HostWindowPlugin", "primitiveCloseHostWindow", (void*)primitiveCloseHostWindow},
 	{"HostWindowPlugin", "primitiveHostWindowSizeSet", (void*)primitiveHostWindowSizeSet},
-	{"HostWindowPlugin", "primitiveHostWindowSize", (void*)primitiveHostWindowSize},
+	{"HostWindowPlugin", "primitiveCreateHostWindow", (void*)primitiveCreateHostWindow},
 	{NULL, NULL, NULL}
 };
 

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(29 July 2009 10:58:55 pm)
-by VMMaker 3.10.7
+/* Automatically generated from Squeak on an Array(26 August 2009 9:59:45 pm)
+by VMMaker 3.11.3
  */
 
 #define SQ_VI_BYTES_PER_WORD 4

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:30 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:26 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -77,9 +77,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SecurityPlugin 10 November 2008 (i)"
+	"SecurityPlugin 26 August 2009 (i)"
 #else
-	"SecurityPlugin 10 November 2008 (e)"
+	"SecurityPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -120,9 +120,6 @@ EXPORT(sqInt) primitiveCanWriteImage(void) {
 
 EXPORT(sqInt) primitiveDisableImageWrite(void) {
 	ioDisableImageWrite();
-	if (!(interpreterProxy->failed())) {
-		interpreterProxy->pop(1);
-	}
 }
 
 

@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:33 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:37 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -33,10 +33,6 @@ by VMMaker 3.8b6
 
 
 /*** Constants ***/
-#define MaterialSize 17
-#define PrimLightSize 32
-#define PrimTypeMax 6
-#define PrimVertexSize 16
 
 /*** Function Prototypes ***/
 static void* fetchLightSourceofObject(sqInt index, sqInt anArray);
@@ -100,9 +96,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"B3DAcceleratorPlugin 10 November 2008 (i)"
+	"B3DAcceleratorPlugin 26 August 2009 (i)"
 #else
-	"B3DAcceleratorPlugin 10 November 2008 (e)"
+	"B3DAcceleratorPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -543,7 +539,7 @@ EXPORT(sqInt) primitiveRenderVertexBuffer(void) {
 	}
 	vtxArray = stackPrimitiveVertexArrayofSize(3, vtxCount);
 	idxArray = stackPrimitiveIndexArrayofSizevalidateforVertexSize(1, idxCount, 1, vtxCount);
-	if ((vtxArray == null) || ((idxArray == null) || ((primType < 1) || ((primType > PrimTypeMax) || (interpreterProxy->failed()))))) {
+	if ((vtxArray == null) || ((idxArray == null) || ((primType < 1) || ((primType > 6) || (interpreterProxy->failed()))))) {
 		return interpreterProxy->primitiveFail();
 	}
 	result = b3dxRenderVertexBuffer(handle, primType, flags, texHandle, vtxArray, vtxCount, idxArray, idxCount);
@@ -956,7 +952,7 @@ static sqInt stackLightArrayValue(sqInt stackIndex) {
 		if ((oop & 1)) {
 			return interpreterProxy->primitiveFail();
 		}
-		if (!((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == PrimLightSize))) {
+		if (!((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == 32))) {
 			return interpreterProxy->primitiveFail();
 		}
 	}
@@ -976,7 +972,7 @@ static void * stackMaterialValue(sqInt stackIndex) {
 	if (oop == (interpreterProxy->nilObject())) {
 		return null;
 	}
-	if ((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == MaterialSize)) {
+	if ((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == 17)) {
 		return interpreterProxy->firstIndexableField(oop);
 	}
 	return null;
@@ -1048,7 +1044,7 @@ static void* stackPrimitiveVertex(sqInt index) {
 	if (oop == null) {
 		return null;
 	}
-	if ((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == PrimVertexSize)) {
+	if ((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == 16)) {
 		return interpreterProxy->firstIndexableField(oop);
 	}
 	return null;
@@ -1068,7 +1064,7 @@ static void* stackPrimitiveVertexArrayofSize(sqInt index, sqInt nItems) {
 	}
 	if (interpreterProxy->isWords(oop)) {
 		oopSize = interpreterProxy->slotSizeOf(oop);
-		if (((oopSize >= nItems) * PrimVertexSize) && ((oopSize % PrimVertexSize) == 0)) {
+		if (((oopSize >= nItems) * 16) && ((oopSize % 16) == 0)) {
 			return interpreterProxy->firstIndexableField(oop);
 		}
 	}

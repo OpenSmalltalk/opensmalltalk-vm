@@ -1,3 +1,13 @@
+2009-08-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* src: Regenerate from Balloon3D-Plugins-ar.4.mcz
+	DBus-Plugin-bf.32.mcz GStreamer-Plugins-JMM.16.mcz
+	Kedama-Plugins-yo.1.mcz Rome-Plugin-yo.39.mcz
+	OSProcessPlugin-dtl.16.mcz
+	VMConstruction-Plugins-AioPlugin-dtl.9.mcz
+	VMConstruction-Plugins-XDisplayControlPlugin-dtl.7.mcz
+	VMMaker-dtl.137.mcz
+
 2009-08-26    <piumarta@ubuntu.piumarta.com>
 
 	* vm-display-X11/sqUnixX11.c (x2sqModifier): Do not map Caps Lock

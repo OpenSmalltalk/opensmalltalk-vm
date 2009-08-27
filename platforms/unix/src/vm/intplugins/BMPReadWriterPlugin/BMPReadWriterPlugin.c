@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:13 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:00:24 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -53,9 +53,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BMPReadWriterPlugin 10 November 2008 (i)"
+	"BMPReadWriterPlugin 26 August 2009 (i)"
 #else
-	"BMPReadWriterPlugin 10 November 2008 (e)"
+	"BMPReadWriterPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -99,6 +99,9 @@ EXPORT(sqInt) primitiveRead24BmpLine(void) {
 		return interpreterProxy->primitiveFail();
 	}
 	width = interpreterProxy->stackIntegerValue(0);
+	if (width <= 0) {
+		return interpreterProxy->primitiveFail();
+	}
 	formBitsIndex = interpreterProxy->stackIntegerValue(1);
 	formBitsOop = interpreterProxy->stackObjectValue(2);
 	pixelLineOop = interpreterProxy->stackObjectValue(3);
@@ -146,6 +149,9 @@ EXPORT(sqInt) primitiveWrite24BmpLine(void) {
 		return interpreterProxy->primitiveFail();
 	}
 	width = interpreterProxy->stackIntegerValue(0);
+	if (width <= 0) {
+		return interpreterProxy->primitiveFail();
+	}
 	formBitsIndex = interpreterProxy->stackIntegerValue(1);
 	formBitsOop = interpreterProxy->stackObjectValue(2);
 	pixelLineOop = interpreterProxy->stackObjectValue(3);

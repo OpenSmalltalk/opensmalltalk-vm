@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:39 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:52 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -56,8 +56,9 @@ EXPORT(sqInt) primitiveSqueakSinkGetHeight(void);
 EXPORT(sqInt) primitiveSqueakSinkGetWidth(void);
 EXPORT(sqInt) primitiveSqueakSinkVideo(void);
 EXPORT(sqInt) primitiveSqueakSrc(void);
-EXPORT(sqInt) primitiveSqueakSrcAllocate(void);
 EXPORT(sqInt) primitiveSqueakSrcWithTime(void);
+EXPORT(sqInt) primitiveSqueakSrcAllocate(void);
+EXPORT(sqInt) primitivecallbacksignalseenfor(void);
 EXPORT(sqInt) primitivegetinterpreterproxy(void);
 EXPORT(sqInt) primitivegetoop(void);
 EXPORT(sqInt) primitivegobjectclasslistproperties(void);
@@ -142,6 +143,7 @@ EXPORT(sqInt) primitivegstmessageunref(void);
 EXPORT(sqInt) primitivegstobjectunref(void);
 EXPORT(sqInt) primitivegstpadacceptcaps(void);
 EXPORT(sqInt) primitivegstpadgetcaps(void);
+EXPORT(sqInt) primitivegstpadgetparentelement(void);
 EXPORT(sqInt) primitivegstpadlink(void);
 EXPORT(sqInt) primitivegstpadsetactive(void);
 EXPORT(sqInt) primitivegstpadsetcaps(void);
@@ -170,6 +172,7 @@ static sqLong signed64BitValueOfOverride(sqInt oop);
 static sqInt sqAssert(sqInt aBool);
 static sqInt stringFromCString(const char * aCString);
 /*** Variables ***/
+static gboolean callbackForPadHookupElement[128];
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 extern
@@ -177,9 +180,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"GStreamerPlugin 10 November 2008 (i)"
+	"GStreamerPlugin 26 August 2009 (i)"
 #else
-	"GStreamerPlugin 10 November 2008 (e)"
+	"GStreamerPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -207,6 +210,9 @@ static sqInt cbnewpad(sqInt element, sqInt newPad, sqInt  *data) {
 		gstCapsValue = gst_pad_get_caps (newPad);
 		result =  gst_pad_accept_caps (gstPadValue, gstCapsValue);
 		if (result) {
+			if (i < 128) {
+				callbackForPadHookupElement[i] = 1;
+			}
 			gst_pad_link (newPad, gstPadValue);
 			return null;
 		}
@@ -553,45 +559,11 @@ EXPORT(sqInt) primitiveSqueakSrc(void) {
 	return null;
 }
 
-EXPORT(sqInt) primitiveSqueakSrcAllocate(void) {
-	SqueakAudioVideoSinkPtr squeaker;
-	GstElement*  gstElement;
-	sqInt numberOfBytes;
-	sqInt semaphoreIndex;
-	sqInt gstElementOoop;
-	sqInt _return_value;
-
-	numberOfBytes = interpreterProxy->stackIntegerValue(2);
-	semaphoreIndex = interpreterProxy->stackIntegerValue(1);
-	gstElementOoop = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	gstElement = ((GstElement*) (interpreterProxy->positive32BitValueOf(gstElementOoop)));
-	squeaker = 0;
-	
-		squeaker = g_malloc0(sizeof(SqueakAudioVideoSink));
-		squeaker->handler = squeakSrcHandOff;
-		squeaker->owner = gstElement;
-		squeaker->semaphoreIndexForSink = semaphoreIndex;
-		squeaker->copyToSendToSqueakVideo = g_malloc(numberOfBytes);
-		squeaker->allocbytes = numberOfBytes;
-		squeaker->interpreterProxy = interpreterProxy;
-	;
-	;
-	_return_value = interpreterProxy->positive32BitIntegerFor(squeaker);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(4, _return_value);
-	return null;
-}
-
 EXPORT(sqInt) primitiveSqueakSrcWithTime(void) {
+	GstClockTime  startTimeValue;
 	GstClockTime  durationValue;
 	SqueakAudioVideoSinkPtr  sink;
 	sqInt doesFrameExist;
-	GstClockTime  startTimeValue;
 	sqInt aSqueakSinkObject;
 	sqInt data;
 	sqInt startTime;
@@ -637,6 +609,63 @@ EXPORT(sqInt) primitiveSqueakSrcWithTime(void) {
 		return null;
 	}
 	interpreterProxy->popthenPush(5, _return_value);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSqueakSrcAllocate(void) {
+	SqueakAudioVideoSinkPtr squeaker;
+	GstElement*  gstElement;
+	sqInt numberOfBytes;
+	sqInt semaphoreIndex;
+	sqInt gstElementOoop;
+	sqInt _return_value;
+
+	numberOfBytes = interpreterProxy->stackIntegerValue(2);
+	semaphoreIndex = interpreterProxy->stackIntegerValue(1);
+	gstElementOoop = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	gstElement = ((GstElement*) (interpreterProxy->positive32BitValueOf(gstElementOoop)));
+	squeaker = 0;
+	
+		squeaker = g_malloc0(sizeof(SqueakAudioVideoSink));
+		squeaker->handler = squeakSrcHandOff;
+		squeaker->owner = gstElement;
+		squeaker->semaphoreIndexForSink = semaphoreIndex;
+		squeaker->copyToSendToSqueakVideo = g_malloc(numberOfBytes);
+		squeaker->allocbytes = numberOfBytes;
+		squeaker->interpreterProxy = interpreterProxy;
+	;
+	;
+	_return_value = interpreterProxy->positive32BitIntegerFor(squeaker);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(4, _return_value);
+	return null;
+}
+
+EXPORT(sqInt) primitivecallbacksignalseenfor(void) {
+	gboolean  value;
+	sqInt aIndex;
+	sqInt _return_value;
+
+	aIndex = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	value = 0;
+	if ((aIndex < 1) || (aIndex > 127)) {
+		interpreterProxy->primitiveFail();
+		return null;
+	}
+	value = callbackForPadHookupElement[aIndex];
+	_return_value = (value) ? interpreterProxy->trueObject(): interpreterProxy->falseObject();
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(2, _return_value);
 	return null;
 }
 
@@ -1485,9 +1514,9 @@ EXPORT(sqInt) primitivegobjectclasslistpropertyulonglongatIndex(void) {
 	 GParamSpec **  propertyspecs;
 	unsigned long long defaultValue;
 	GParamSpecUInt64 * pstring;
-	unsigned long long minimumValue;
 	unsigned long long ulonglongValue;
 	sqInt defaultValueOop;
+	unsigned long long minimumValue;
 	sqInt ulonglongValueOop;
 	sqInt arrayOop;
 	sqInt minimumValueOop;
@@ -2677,6 +2706,9 @@ EXPORT(sqInt) primitivegstelementgsignalconnect(void) {
 	for (i = 0; i <= (listLength - 1); i += 1) {
 		dataPad = ((sqInt) (data[i]));
 		callBackData[i + 1] = dataPad;
+		if (i < 128) {
+			callbackForPadHookupElement[i + 1] = 0;
+		}
 	}
 	;
 	;
@@ -3489,6 +3521,28 @@ EXPORT(sqInt) primitivegstpadgetcaps(void) {
 	return null;
 }
 
+EXPORT(sqInt) primitivegstpadgetparentelement(void) {
+	GstPad*  gstPadValue;
+	GstElement*  gstEvementValue;
+	sqInt gstPadOop;
+	sqInt _return_value;
+
+	gstPadOop = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	gstEvementValue = 0;
+	gstPadValue = ((GstPad*) (interpreterProxy->positive32BitValueOf(gstPadOop)));
+	;
+	gstEvementValue = gst_pad_get_parent_element (gstPadValue);
+	_return_value = interpreterProxy->positive32BitIntegerFor(gstEvementValue);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(2, _return_value);
+	return null;
+}
+
 EXPORT(sqInt) primitivegstpadlink(void) {
 	GstPad*  dest;
 	GstPad*  src;
@@ -3987,11 +4041,11 @@ static sqInt shutdownModule(void) {
 	The object may be either a positive ST integer or a four-byte LargeInteger. */
 
 static sqInt signed32BitValueOfOverride(sqInt oop) {
-	sqInt negative;
 	sqInt value;
-	sqInt sz;
 	sqInt largeClass;
 	unsigned char * where;
+	sqInt negative;
+	sqInt sz;
 
 	if ((oop & 1)) {
 		return (oop >> 1);
@@ -4018,6 +4072,9 @@ static sqInt signed32BitValueOfOverride(sqInt oop) {
 	high bit of the magnitude is not set which is a simple test here. */
 
 	value = (((where[0]) + ((where[1]) << 8)) + ((where[2]) << 16)) + ((where[3]) << 24);
+	if (negative && (value == (1 << 31))) {
+		return value;
+	}
 	if (value < 0) {
 		return interpreterProxy->primitiveFail();
 	}
@@ -4033,6 +4090,7 @@ static sqInt signed32BitValueOfOverride(sqInt oop) {
 
 static sqInt signed64BitIntegerForOverride(sqLong integerValue) {
 	usqInt highWord;
+	sqLong lowestIntegerValue;
 	sqInt largeClass;
 	unsigned char* where;
 	sqInt i;
@@ -4041,6 +4099,18 @@ static sqInt signed64BitIntegerForOverride(sqLong integerValue) {
 	sqInt sz;
 	sqInt intValue;
 
+	lowestIntegerValue = 1;
+	lowestIntegerValue = lowestIntegerValue << 63;
+	if (integerValue == lowestIntegerValue) {
+
+		/* newLargeInteger := self instantiateClass: largeClass indexableSize:  8. */
+
+		largeClass = interpreterProxy->classLargeNegativeInteger();
+		newLargeInteger = interpreterProxy->instantiateClassindexableSize(largeClass, 8);
+		where = interpreterProxy->firstIndexableField(newLargeInteger);
+		where[7] = 128;
+		return newLargeInteger;
+	}
 	if (integerValue < 0) {
 		largeClass = interpreterProxy->classLargeNegativeInteger();
 		magnitude = 0 - integerValue;
@@ -4086,6 +4156,7 @@ static sqInt signed64BitIntegerForOverride(sqLong integerValue) {
 	The object may be either a positive ST integer or a eight-byte LargeInteger. */
 
 static sqLong signed64BitValueOfOverride(sqInt oop) {
+	sqLong lowestIntegerValue;
 	sqLong value;
 	sqInt largeClass;
 	unsigned char * where;
@@ -4116,6 +4187,11 @@ static sqLong signed64BitValueOfOverride(sqInt oop) {
 	where = interpreterProxy->firstIndexableField(oop);
 	for (i = 0; i <= (sz - 1); i += 1) {
 		value += (((sqLong) (where[i]))) << (i * 8);
+	}
+	lowestIntegerValue = 1;
+	lowestIntegerValue = lowestIntegerValue << 63;
+	if (negative && (value == lowestIntegerValue)) {
+		return value;
 	}
 	if (value < 0) {
 		return interpreterProxy->primitiveFail();
@@ -4153,122 +4229,124 @@ static sqInt stringFromCString(const char * aCString) {
 
 
 void* GStreamerPlugin_exports[][3] = {
-	{"GStreamerPlugin", "primitiveSqueakSinkGetFrameRateDenominator", (void*)primitiveSqueakSinkGetFrameRateDenominator},
-	{"GStreamerPlugin", "primitivegsignalconnect", (void*)primitivegsignalconnect},
-	{"GStreamerPlugin", "primitivegstelementgetcompatiblepad", (void*)primitivegstelementgetcompatiblepad},
-	{"GStreamerPlugin", "primitivegstpipelinesetnewstreamtime", (void*)primitivegstpipelinesetnewstreamtime},
-	{"GStreamerPlugin", "primitivegstpipelinegetbus", (void*)primitivegstpipelinegetbus},
-	{"GStreamerPlugin", "setInterpreter", (void*)setInterpreter},
-	{"GStreamerPlugin", "primitiveSqueakSinkGetWidth", (void*)primitiveSqueakSinkGetWidth},
-	{"GStreamerPlugin", "primitivegobjectclasslistproperties", (void*)primitivegobjectclasslistproperties},
-	{"GStreamerPlugin", "primitivegstmessagetypestring", (void*)primitivegstmessagetypestring},
-	{"GStreamerPlugin", "primitiveSqueakSinkFree", (void*)primitiveSqueakSinkFree},
-	{"GStreamerPlugin", "primitivegobjectsetstringon", (void*)primitivegobjectsetstringon},
-	{"GStreamerPlugin", "primitiveSqueakSinkAudioGetData", (void*)primitiveSqueakSinkAudioGetData},
-	{"GStreamerPlugin", "primitivegstpadsetactive", (void*)primitivegstpadsetactive},
-	{"GStreamerPlugin", "primitivegstpadlink", (void*)primitivegstpadlink},
-	{"GStreamerPlugin", "primitiveSqueakSrcWithTime", (void*)primitiveSqueakSrcWithTime},
-	{"GStreamerPlugin", "primitivegstpipelineautoclock", (void*)primitivegstpipelineautoclock},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertylongatIndex", (void*)primitivegobjectclasslistpropertylongatIndex},
-	{"GStreamerPlugin", "primitivegstbuspeek", (void*)primitivegstbuspeek},
-	{"GStreamerPlugin", "primitivegstmessagesrc", (void*)primitivegstmessagesrc},
-	{"GStreamerPlugin", "primitivegobjectgetulongfrom", (void*)primitivegobjectgetulongfrom},
-	{"GStreamerPlugin", "primitivegstmessageparsesegmentstart", (void*)primitivegstmessageparsesegmentstart},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertyfloatatIndex", (void*)primitivegobjectclasslistpropertyfloatatIndex},
-	{"GStreamerPlugin", "primitivegstelementfactorygetlongname", (void*)primitivegstelementfactorygetlongname},
-	{"GStreamerPlugin", "primitivegstpipelinegetautoflushbus", (void*)primitivegstpipelinegetautoflushbus},
-	{"GStreamerPlugin", "primitivegstpadacceptcaps", (void*)primitivegstpadacceptcaps},
-	{"GStreamerPlugin", "primitiveSqueakSrcAllocate", (void*)primitiveSqueakSrcAllocate},
-	{"GStreamerPlugin", "primitivegstbushavepending", (void*)primitivegstbushavepending},
-	{"GStreamerPlugin", "primitivegstelementqueryconvert", (void*)primitivegstelementqueryconvert},
-	{"GStreamerPlugin", "primitivegobjectgetulonglongfrom", (void*)primitivegobjectgetulonglongfrom},
-	{"GStreamerPlugin", "primitivegobjectgetdoublefrom", (void*)primitivegobjectgetdoublefrom},
-	{"GStreamerPlugin", "primitivegstmessageparsebuffering", (void*)primitivegstmessageparsebuffering},
-	{"GStreamerPlugin", "primitivegstpipelinegetdelay", (void*)primitivegstpipelinegetdelay},
-	{"GStreamerPlugin", "primitivegobjectgetpointerfrom", (void*)primitivegobjectgetpointerfrom},
-	{"GStreamerPlugin", "primitiveSqueakSrc", (void*)primitiveSqueakSrc},
-	{"GStreamerPlugin", "primitivegstelementfactorymake", (void*)primitivegstelementfactorymake},
-	{"GStreamerPlugin", "primitivegobjectsetlongon", (void*)primitivegobjectsetlongon},
-	{"GStreamerPlugin", "primitivegobjectfree", (void*)primitivegobjectfree},
-	{"GStreamerPlugin", "primitivegobjectsetboolon", (void*)primitivegobjectsetboolon},
-	{"GStreamerPlugin", "primitivegstelementlink", (void*)primitivegstelementlink},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertyboolatIndex", (void*)primitivegobjectclasslistpropertyboolatIndex},
-	{"GStreamerPlugin", "primitivegstsegtrapsetenabled", (void*)primitivegstsegtrapsetenabled},
-	{"GStreamerPlugin", "primitivegstelementgetstate", (void*)primitivegstelementgetstate},
-	{"GStreamerPlugin", "primitivegstpipelinesetdelay", (void*)primitivegstpipelinesetdelay},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertyulongatIndex", (void*)primitivegobjectclasslistpropertyulongatIndex},
-	{"GStreamerPlugin", "primitivegobjectsetulonglongon", (void*)primitivegobjectsetulonglongon},
-	{"GStreamerPlugin", "primitivegstelementgsignalconnect", (void*)primitivegstelementgsignalconnect},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertylonglongatIndex", (void*)primitivegobjectclasslistpropertylonglongatIndex},
-	{"GStreamerPlugin", "primitivegstelementsetstate", (void*)primitivegstelementsetstate},
-	{"GStreamerPlugin", "primitivegstversionstring", (void*)primitivegstversionstring},
-	{"GStreamerPlugin", "primitiveSqueakSinkAllocate", (void*)primitiveSqueakSinkAllocate},
-	{"GStreamerPlugin", "primitivegobjectgetfloatfrom", (void*)primitivegobjectgetfloatfrom},
-	{"GStreamerPlugin", "primitivegobjectsetulongon", (void*)primitivegobjectsetulongon},
-	{"GStreamerPlugin", "primitivegstmessageunref", (void*)primitivegstmessageunref},
-	{"GStreamerPlugin", "primitivegstmessageparsesegmentdone", (void*)primitivegstmessageparsesegmentdone},
-	{"GStreamerPlugin", "primitivegstelementfactoryfind", (void*)primitivegstelementfactoryfind},
-	{"GStreamerPlugin", "primitivegstsegtrapisenabled", (void*)primitivegstsegtrapisenabled},
-	{"GStreamerPlugin", "primitivegstbinadd", (void*)primitivegstbinadd},
-	{"GStreamerPlugin", "primitivegstelementqueryposition", (void*)primitivegstelementqueryposition},
-	{"GStreamerPlugin", "primitivegstcapstostring", (void*)primitivegstcapstostring},
-	{"GStreamerPlugin", "primitiveSqueakSinkGetFrameRateNumerator", (void*)primitiveSqueakSinkGetFrameRateNumerator},
-	{"GStreamerPlugin", "primitivegstinitcheck", (void*)primitivegstinitcheck},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertyenumatIndex", (void*)primitivegobjectclasslistpropertyenumatIndex},
-	{"GStreamerPlugin", "primitivegstelementreleaserequestpad", (void*)primitivegstelementreleaserequestpad},
-	{"GStreamerPlugin", "primitivegstregistryforksetenabled", (void*)primitivegstregistryforksetenabled},
-	{"GStreamerPlugin", "primitivegstobjectunref", (void*)primitivegstobjectunref},
-	{"GStreamerPlugin", "primitivegobjectsetdoubleon", (void*)primitivegobjectsetdoubleon},
-	{"GStreamerPlugin", "primitivegstbuspop", (void*)primitivegstbuspop},
-	{"GStreamerPlugin", "primitivegstelementfactorygetauthor", (void*)primitivegstelementfactorygetauthor},
-	{"GStreamerPlugin", "primitivegobjectgetstringfrom", (void*)primitivegobjectgetstringfrom},
-	{"GStreamerPlugin", "primitivegstcapsfromstring", (void*)primitivegstcapsfromstring},
-	{"GStreamerPlugin", "primitivegstelementfactorygeturitype", (void*)primitivegstelementfactorygeturitype},
-	{"GStreamerPlugin", "primitivegstelementqueryduration", (void*)primitivegstelementqueryduration},
-	{"GStreamerPlugin", "primitivegstelementadd", (void*)primitivegstelementadd},
-	{"GStreamerPlugin", "primitivegstbinnew", (void*)primitivegstbinnew},
-	{"GStreamerPlugin", "primitivegstpipelinegetclock", (void*)primitivegstpipelinegetclock},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertyuintatIndex", (void*)primitivegobjectclasslistpropertyuintatIndex},
-	{"GStreamerPlugin", "primitivegobjectgetboolfrom", (void*)primitivegobjectgetboolfrom},
-	{"GStreamerPlugin", "primitivegobjectgetlonglongfrom", (void*)primitivegobjectgetlonglongfrom},
-	{"GStreamerPlugin", "primitivegstmessageparsewarning", (void*)primitivegstmessageparsewarning},
-	{"GStreamerPlugin", "primitivegobjectgetsmalltalkobject", (void*)primitivegobjectgetsmalltalkobject},
-	{"GStreamerPlugin", "primitivegstelementgetrequestpad", (void*)primitivegstelementgetrequestpad},
-	{"GStreamerPlugin", "primitivegstpipelinesetclock", (void*)primitivegstpipelinesetclock},
-	{"GStreamerPlugin", "primitivegstpadsetcaps", (void*)primitivegstpadsetcaps},
-	{"GStreamerPlugin", "primitivegobjectsetfloaton", (void*)primitivegobjectsetfloaton},
-	{"GStreamerPlugin", "primitivegstpadgetcaps", (void*)primitivegstpadgetcaps},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertymetaDataatIndex", (void*)primitivegobjectclasslistpropertymetaDataatIndex},
-	{"GStreamerPlugin", "primitivegstpipelinegetlaststreamtime", (void*)primitivegstpipelinegetlaststreamtime},
-	{"GStreamerPlugin", "primitivegstbuspopfilter", (void*)primitivegstbuspopfilter},
-	{"GStreamerPlugin", "primitivegstpipelinenew", (void*)primitivegstpipelinenew},
-	{"GStreamerPlugin", "primitivegobjectsetpointeron", (void*)primitivegobjectsetpointeron},
-	{"GStreamerPlugin", "primitivegstmessageparsestatechanged", (void*)primitivegstmessageparsestatechanged},
-	{"GStreamerPlugin", "primitivegstmessageparseerror", (void*)primitivegstmessageparseerror},
-	{"GStreamerPlugin", "getModuleName", (void*)getModuleName},
-	{"GStreamerPlugin", "primitivegstghostpadnew", (void*)primitivegstghostpadnew},
-	{"GStreamerPlugin", "primitivegstelementseek", (void*)primitivegstelementseek},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertydoubleatIndex", (void*)primitivegobjectclasslistpropertydoubleatIndex},
-	{"GStreamerPlugin", "primitivegstmessageparseinfo", (void*)primitivegstmessageparseinfo},
-	{"GStreamerPlugin", "primitivegobjectgetlongfrom", (void*)primitivegobjectgetlongfrom},
-	{"GStreamerPlugin", "primitivegstelementlinkfiltered", (void*)primitivegstelementlinkfiltered},
-	{"GStreamerPlugin", "primitivegstmessageparseduration", (void*)primitivegstmessageparseduration},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertystringatIndex", (void*)primitivegobjectclasslistpropertystringatIndex},
-	{"GStreamerPlugin", "primitivegetinterpreterproxy", (void*)primitivegetinterpreterproxy},
-	{"GStreamerPlugin", "primitiveSqueakSinkVideo", (void*)primitiveSqueakSinkVideo},
-	{"GStreamerPlugin", "primitivegstelementseeksimple", (void*)primitivegstelementseeksimple},
-	{"GStreamerPlugin", "primitivegobjectsetlonglongon", (void*)primitivegobjectsetlonglongon},
-	{"GStreamerPlugin", "primitiveSqueakSinkGetHeight", (void*)primitiveSqueakSinkGetHeight},
-	{"GStreamerPlugin", "primitivegstelementfactorygetklass", (void*)primitivegstelementfactorygetklass},
-	{"GStreamerPlugin", "primitivegstelementfactorygetdescription", (void*)primitivegstelementfactorygetdescription},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertypointeratIndex", (void*)primitivegobjectclasslistpropertypointeratIndex},
-	{"GStreamerPlugin", "primitivegobjectclasslistpropertyintatIndex", (void*)primitivegobjectclasslistpropertyintatIndex},
 	{"GStreamerPlugin", "primitivegobjectclasslistpropertyulonglongatIndex", (void*)primitivegobjectclasslistpropertyulonglongatIndex},
-	{"GStreamerPlugin", "primitivegstpipelinesetautoflushbus", (void*)primitivegstpipelinesetautoflushbus},
-	{"GStreamerPlugin", "primitivegstelementgetstaticpad", (void*)primitivegstelementgetstaticpad},
-	{"GStreamerPlugin", "primitivegetoop", (void*)primitivegetoop},
+	{"GStreamerPlugin", "primitivegstelementfactorygetdescription", (void*)primitivegstelementfactorygetdescription},
+	{"GStreamerPlugin", "primitivegstelementreleaserequestpad", (void*)primitivegstelementreleaserequestpad},
+	{"GStreamerPlugin", "primitivegstbuspopfilter", (void*)primitivegstbuspopfilter},
+	{"GStreamerPlugin", "primitivegstpadlink", (void*)primitivegstpadlink},
+	{"GStreamerPlugin", "primitivegstelementfactorygetlongname", (void*)primitivegstelementfactorygetlongname},
+	{"GStreamerPlugin", "primitiveSqueakSinkGetFrameRateNumerator", (void*)primitiveSqueakSinkGetFrameRateNumerator},
+	{"GStreamerPlugin", "setInterpreter", (void*)setInterpreter},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertymetaDataatIndex", (void*)primitivegobjectclasslistpropertymetaDataatIndex},
+	{"GStreamerPlugin", "primitivegstpipelinesetdelay", (void*)primitivegstpipelinesetdelay},
+	{"GStreamerPlugin", "primitivegstelementsetstate", (void*)primitivegstelementsetstate},
+	{"GStreamerPlugin", "primitivegobjectsetulongon", (void*)primitivegobjectsetulongon},
+	{"GStreamerPlugin", "primitivegstelementqueryposition", (void*)primitivegstelementqueryposition},
+	{"GStreamerPlugin", "primitivegstbushavepending", (void*)primitivegstbushavepending},
+	{"GStreamerPlugin", "primitivegstmessageparseinfo", (void*)primitivegstmessageparseinfo},
+	{"GStreamerPlugin", "primitivegstpadgetparentelement", (void*)primitivegstpadgetparentelement},
+	{"GStreamerPlugin", "primitivegobjectsetstringon", (void*)primitivegobjectsetstringon},
+	{"GStreamerPlugin", "primitivegstelementgetcompatiblepad", (void*)primitivegstelementgetcompatiblepad},
+	{"GStreamerPlugin", "primitivegstpipelinesetclock", (void*)primitivegstpipelinesetclock},
+	{"GStreamerPlugin", "primitiveSqueakSrc", (void*)primitiveSqueakSrc},
+	{"GStreamerPlugin", "primitivegobjectgetdoublefrom", (void*)primitivegobjectgetdoublefrom},
+	{"GStreamerPlugin", "primitivecallbacksignalseenfor", (void*)primitivecallbacksignalseenfor},
+	{"GStreamerPlugin", "primitivegstmessageparsewarning", (void*)primitivegstmessageparsewarning},
+	{"GStreamerPlugin", "primitivegstmessagesrc", (void*)primitivegstmessagesrc},
+	{"GStreamerPlugin", "primitivegstmessageparseerror", (void*)primitivegstmessageparseerror},
+	{"GStreamerPlugin", "primitiveSqueakSinkFree", (void*)primitiveSqueakSinkFree},
+	{"GStreamerPlugin", "primitivegobjectsetulonglongon", (void*)primitivegobjectsetulonglongon},
+	{"GStreamerPlugin", "primitivegstpipelinegetdelay", (void*)primitivegstpipelinegetdelay},
+	{"GStreamerPlugin", "primitivegstmessageparsebuffering", (void*)primitivegstmessageparsebuffering},
+	{"GStreamerPlugin", "primitivegstmessagetypestring", (void*)primitivegstmessagetypestring},
+	{"GStreamerPlugin", "primitiveSqueakSinkAudioGetData", (void*)primitiveSqueakSinkAudioGetData},
+	{"GStreamerPlugin", "primitivegstelementseeksimple", (void*)primitivegstelementseeksimple},
+	{"GStreamerPlugin", "primitivegobjectclasslistproperties", (void*)primitivegobjectclasslistproperties},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertyintatIndex", (void*)primitivegobjectclasslistpropertyintatIndex},
+	{"GStreamerPlugin", "primitivegstpipelinegetlaststreamtime", (void*)primitivegstpipelinegetlaststreamtime},
+	{"GStreamerPlugin", "primitivegstregistryforksetenabled", (void*)primitivegstregistryforksetenabled},
+	{"GStreamerPlugin", "primitivegobjectgetulonglongfrom", (void*)primitivegobjectgetulonglongfrom},
+	{"GStreamerPlugin", "primitivegobjectgetpointerfrom", (void*)primitivegobjectgetpointerfrom},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertystringatIndex", (void*)primitivegobjectclasslistpropertystringatIndex},
+	{"GStreamerPlugin", "primitivegstelementfactorygetklass", (void*)primitivegstelementfactorygetklass},
+	{"GStreamerPlugin", "primitivegstpipelineautoclock", (void*)primitivegstpipelineautoclock},
+	{"GStreamerPlugin", "primitivegstpadsetactive", (void*)primitivegstpadsetactive},
+	{"GStreamerPlugin", "primitivegstcapstostring", (void*)primitivegstcapstostring},
+	{"GStreamerPlugin", "primitivegstpipelinegetautoflushbus", (void*)primitivegstpipelinegetautoflushbus},
+	{"GStreamerPlugin", "primitivegstelementgetrequestpad", (void*)primitivegstelementgetrequestpad},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertyfloatatIndex", (void*)primitivegobjectclasslistpropertyfloatatIndex},
+	{"GStreamerPlugin", "primitivegsignalconnect", (void*)primitivegsignalconnect},
 	{"GStreamerPlugin", "primitivegstelementfactorycreate", (void*)primitivegstelementfactorycreate},
+	{"GStreamerPlugin", "primitivegstpipelinegetclock", (void*)primitivegstpipelinegetclock},
+	{"GStreamerPlugin", "primitivegstelementlinkfiltered", (void*)primitivegstelementlinkfiltered},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertylongatIndex", (void*)primitivegobjectclasslistpropertylongatIndex},
+	{"GStreamerPlugin", "primitivegstcapsfromstring", (void*)primitivegstcapsfromstring},
+	{"GStreamerPlugin", "primitivegstbinnew", (void*)primitivegstbinnew},
+	{"GStreamerPlugin", "primitiveSqueakSinkGetHeight", (void*)primitiveSqueakSinkGetHeight},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertyulongatIndex", (void*)primitivegobjectclasslistpropertyulongatIndex},
+	{"GStreamerPlugin", "primitivegstpipelinenew", (void*)primitivegstpipelinenew},
+	{"GStreamerPlugin", "primitivegstmessageparsestatechanged", (void*)primitivegstmessageparsestatechanged},
+	{"GStreamerPlugin", "primitivegobjectgetstringfrom", (void*)primitivegobjectgetstringfrom},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertypointeratIndex", (void*)primitivegobjectclasslistpropertypointeratIndex},
+	{"GStreamerPlugin", "primitivegstversionstring", (void*)primitivegstversionstring},
+	{"GStreamerPlugin", "primitivegstpipelinesetnewstreamtime", (void*)primitivegstpipelinesetnewstreamtime},
+	{"GStreamerPlugin", "primitivegstsegtrapsetenabled", (void*)primitivegstsegtrapsetenabled},
+	{"GStreamerPlugin", "primitivegstpipelinesetautoflushbus", (void*)primitivegstpipelinesetautoflushbus},
+	{"GStreamerPlugin", "primitivegstsegtrapisenabled", (void*)primitivegstsegtrapisenabled},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertydoubleatIndex", (void*)primitivegobjectclasslistpropertydoubleatIndex},
+	{"GStreamerPlugin", "primitivegstelementqueryduration", (void*)primitivegstelementqueryduration},
+	{"GStreamerPlugin", "primitivegstmessageparseduration", (void*)primitivegstmessageparseduration},
+	{"GStreamerPlugin", "primitivegstelementfactorymake", (void*)primitivegstelementfactorymake},
+	{"GStreamerPlugin", "primitivegstinitcheck", (void*)primitivegstinitcheck},
+	{"GStreamerPlugin", "primitivegstmessageparsesegmentstart", (void*)primitivegstmessageparsesegmentstart},
+	{"GStreamerPlugin", "primitivegstpadsetcaps", (void*)primitivegstpadsetcaps},
+	{"GStreamerPlugin", "primitivegstelementfactoryfind", (void*)primitivegstelementfactoryfind},
+	{"GStreamerPlugin", "primitiveSqueakSinkGetFrameRateDenominator", (void*)primitiveSqueakSinkGetFrameRateDenominator},
+	{"GStreamerPlugin", "primitivegobjectgetfloatfrom", (void*)primitivegobjectgetfloatfrom},
+	{"GStreamerPlugin", "primitivegstmessageunref", (void*)primitivegstmessageunref},
+	{"GStreamerPlugin", "primitivegobjectsetdoubleon", (void*)primitivegobjectsetdoubleon},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertyboolatIndex", (void*)primitivegobjectclasslistpropertyboolatIndex},
+	{"GStreamerPlugin", "primitivegetoop", (void*)primitivegetoop},
+	{"GStreamerPlugin", "primitivegobjectsetlongon", (void*)primitivegobjectsetlongon},
+	{"GStreamerPlugin", "primitivegobjectsetfloaton", (void*)primitivegobjectsetfloaton},
+	{"GStreamerPlugin", "primitivegstelementseek", (void*)primitivegstelementseek},
+	{"GStreamerPlugin", "primitivegstghostpadnew", (void*)primitivegstghostpadnew},
+	{"GStreamerPlugin", "primitivegstelementgetstaticpad", (void*)primitivegstelementgetstaticpad},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertylonglongatIndex", (void*)primitivegobjectclasslistpropertylonglongatIndex},
 	{"GStreamerPlugin", "primitivegstpipelineuseclock", (void*)primitivegstpipelineuseclock},
+	{"GStreamerPlugin", "primitivegobjectgetsmalltalkobject", (void*)primitivegobjectgetsmalltalkobject},
+	{"GStreamerPlugin", "primitivegobjectgetboolfrom", (void*)primitivegobjectgetboolfrom},
+	{"GStreamerPlugin", "primitivegstbuspeek", (void*)primitivegstbuspeek},
+	{"GStreamerPlugin", "primitivegstelementfactorygetauthor", (void*)primitivegstelementfactorygetauthor},
+	{"GStreamerPlugin", "primitiveSqueakSinkVideo", (void*)primitiveSqueakSinkVideo},
+	{"GStreamerPlugin", "primitivegobjectgetlonglongfrom", (void*)primitivegobjectgetlonglongfrom},
+	{"GStreamerPlugin", "primitivegstobjectunref", (void*)primitivegstobjectunref},
+	{"GStreamerPlugin", "primitivegobjectgetulongfrom", (void*)primitivegobjectgetulongfrom},
+	{"GStreamerPlugin", "primitivegstelementgetstate", (void*)primitivegstelementgetstate},
+	{"GStreamerPlugin", "primitivegstpadgetcaps", (void*)primitivegstpadgetcaps},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertyuintatIndex", (void*)primitivegobjectclasslistpropertyuintatIndex},
+	{"GStreamerPlugin", "primitivegobjectsetlonglongon", (void*)primitivegobjectsetlonglongon},
+	{"GStreamerPlugin", "primitivegobjectsetboolon", (void*)primitivegobjectsetboolon},
+	{"GStreamerPlugin", "primitivegstpadacceptcaps", (void*)primitivegstpadacceptcaps},
+	{"GStreamerPlugin", "getModuleName", (void*)getModuleName},
+	{"GStreamerPlugin", "primitivegetinterpreterproxy", (void*)primitivegetinterpreterproxy},
+	{"GStreamerPlugin", "primitivegstelementadd", (void*)primitivegstelementadd},
+	{"GStreamerPlugin", "primitiveSqueakSinkGetWidth", (void*)primitiveSqueakSinkGetWidth},
+	{"GStreamerPlugin", "primitivegobjectclasslistpropertyenumatIndex", (void*)primitivegobjectclasslistpropertyenumatIndex},
+	{"GStreamerPlugin", "primitivegobjectgetlongfrom", (void*)primitivegobjectgetlongfrom},
+	{"GStreamerPlugin", "primitivegstelementgsignalconnect", (void*)primitivegstelementgsignalconnect},
+	{"GStreamerPlugin", "primitivegstbuspop", (void*)primitivegstbuspop},
+	{"GStreamerPlugin", "primitiveSqueakSrcWithTime", (void*)primitiveSqueakSrcWithTime},
+	{"GStreamerPlugin", "primitivegstelementfactorygeturitype", (void*)primitivegstelementfactorygeturitype},
+	{"GStreamerPlugin", "primitivegstbinadd", (void*)primitivegstbinadd},
+	{"GStreamerPlugin", "primitiveSqueakSinkAllocate", (void*)primitiveSqueakSinkAllocate},
+	{"GStreamerPlugin", "primitivegstelementqueryconvert", (void*)primitivegstelementqueryconvert},
+	{"GStreamerPlugin", "primitivegstpipelinegetbus", (void*)primitivegstpipelinegetbus},
+	{"GStreamerPlugin", "primitivegstmessageparsesegmentdone", (void*)primitivegstmessageparsesegmentdone},
+	{"GStreamerPlugin", "primitiveSqueakSrcAllocate", (void*)primitiveSqueakSrcAllocate},
+	{"GStreamerPlugin", "primitivegobjectfree", (void*)primitivegobjectfree},
+	{"GStreamerPlugin", "primitivegstelementlink", (void*)primitivegstelementlink},
+	{"GStreamerPlugin", "primitivegobjectsetpointeron", (void*)primitivegobjectsetpointeron},
 	{NULL, NULL, NULL}
 };
 

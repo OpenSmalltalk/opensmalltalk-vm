@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:21 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:00:53 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -51,9 +51,11 @@ EXPORT(sqInt) primitiveTransformDirection(void);
 EXPORT(sqInt) primitiveTransformMatrixWithInto(void);
 EXPORT(sqInt) primitiveTransformVector3(void);
 EXPORT(sqInt) primitiveTransposeMatrix(void);
+EXPORT(sqInt) primitiveTriBoxIntersects(void);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine* anInterpreter);
 #pragma export off
 static void* stackMatrix(sqInt index);
+static void* stackVector3(sqInt index);
 static sqInt transformMatrixwithinto(float *src, float *arg, float *dst);
 /*** Variables ***/
 
@@ -63,9 +65,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"CroquetPlugin 10 November 2008 (i)"
+	"CroquetPlugin 26 August 2009 (i)"
 #else
-	"CroquetPlugin 10 November 2008 (e)"
+	"CroquetPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -521,6 +523,33 @@ EXPORT(sqInt) primitiveTransposeMatrix(void) {
 }
 
 
+/*	Primitive. Answer whether an AABB intersects with a given triangle */
+
+EXPORT(sqInt) primitiveTriBoxIntersects(void) {
+    float* maxCorner;
+    float* v0;
+    float* v2;
+    float* v1;
+    float* minCorner;
+    sqInt result;
+
+	if (!((interpreterProxy->methodArgumentCount()) == 5)) {
+		return interpreterProxy->primitiveFail();
+	}
+	v2 = stackVector3(0);
+	v1 = stackVector3(1);
+	v0 = stackVector3(2);
+	maxCorner = stackVector3(3);
+	minCorner = stackVector3(4);
+	result = triBoxOverlap(minCorner, maxCorner, v0, v1, v2);
+	if (result < 0) {
+		return interpreterProxy->primitiveFail();
+	}
+	interpreterProxy->pop(6);
+	interpreterProxy->pushBool(result);
+}
+
+
 /*	Note: This is coded so that is can be run from Squeak. */
 
 EXPORT(sqInt) setInterpreter(struct VirtualMachine* anInterpreter) {
@@ -547,6 +576,23 @@ static void* stackMatrix(sqInt index) {
 		return null;
 	}
 	if ((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == 16)) {
+		return interpreterProxy->firstIndexableField(oop);
+	}
+	return null;
+}
+
+
+/*	Load a Vector3 from the interpreter stack.
+	Return a pointer to the float data if successful, nil otherwise. */
+
+static void* stackVector3(sqInt index) {
+    sqInt oop;
+
+	oop = interpreterProxy->stackObjectValue(index);
+	if (oop == null) {
+		return null;
+	}
+	if ((interpreterProxy->isWords(oop)) && ((interpreterProxy->slotSizeOf(oop)) == 3)) {
 		return interpreterProxy->firstIndexableField(oop);
 	}
 	return null;
@@ -602,6 +648,7 @@ void* CroquetPlugin_exports[][3] = {
 	{"CroquetPlugin", "primitiveTransformDirection", (void*)primitiveTransformDirection},
 	{"CroquetPlugin", "getModuleName", (void*)getModuleName},
 	{"CroquetPlugin", "primitiveTransformMatrixWithInto", (void*)primitiveTransformMatrixWithInto},
+	{"CroquetPlugin", "primitiveTriBoxIntersects", (void*)primitiveTriBoxIntersects},
 	{NULL, NULL, NULL}
 };
 

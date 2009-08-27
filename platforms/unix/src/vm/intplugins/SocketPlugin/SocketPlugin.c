@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:30 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:29 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -56,8 +56,8 @@ EXPORT(sqInt) primitiveInitializeNetwork(void);
 EXPORT(sqInt) primitiveResolverAbortLookup(void);
 EXPORT(sqInt) primitiveResolverAddressLookupResult(void);
 EXPORT(sqInt) primitiveResolverError(void);
-EXPORT(sqInt) primitiveResolverGetAddressInfo(void);
 EXPORT(sqInt) primitiveResolverGetAddressInfoFamily(void);
+EXPORT(sqInt) primitiveResolverGetAddressInfo(void);
 EXPORT(sqInt) primitiveResolverGetAddressInfoNext(void);
 EXPORT(sqInt) primitiveResolverGetAddressInfoProtocol(void);
 EXPORT(sqInt) primitiveResolverGetAddressInfoResult(void);
@@ -75,42 +75,42 @@ EXPORT(sqInt) primitiveResolverNameLookupResult(void);
 EXPORT(sqInt) primitiveResolverStartAddressLookup(void);
 EXPORT(sqInt) primitiveResolverStartNameLookup(void);
 EXPORT(sqInt) primitiveResolverStatus(void);
-EXPORT(sqInt) primitiveSocketAbortConnection(void);
-EXPORT(sqInt) primitiveSocketAccept(void);
-EXPORT(sqInt) primitiveSocketAccept3Semaphores(void);
-EXPORT(sqInt) primitiveSocketAddressGetPort(void);
-EXPORT(sqInt) primitiveSocketAddressSetPort(void);
 EXPORT(sqInt) primitiveSocketBindTo(void);
 EXPORT(sqInt) primitiveSocketBindToPort(void);
-EXPORT(sqInt) primitiveSocketCloseConnection(void);
 EXPORT(sqInt) primitiveSocketConnectTo(void);
 EXPORT(sqInt) primitiveSocketConnectToPort(void);
-EXPORT(sqInt) primitiveSocketConnectionStatus(void);
-EXPORT(sqInt) primitiveSocketCreate(void);
-EXPORT(sqInt) primitiveSocketCreate3Semaphores(void);
-EXPORT(sqInt) primitiveSocketDestroy(void);
-EXPORT(sqInt) primitiveSocketError(void);
 EXPORT(sqInt) primitiveSocketGetOptions(void);
 EXPORT(sqInt) primitiveSocketListenOnPort(void);
 EXPORT(sqInt) primitiveSocketListenOnPortBacklog(void);
 EXPORT(sqInt) primitiveSocketListenOnPortBacklogInterface(void);
 EXPORT(sqInt) primitiveSocketListenWithBacklog(void);
+EXPORT(sqInt) primitiveSocketLocalAddressResult(void);
+EXPORT(sqInt) primitiveSocketReceiveDataBufCount(void);
+EXPORT(sqInt) primitiveSocketReceiveUDPDataBufCount(void);
+EXPORT(sqInt) primitiveSocketRemoteAddressResult(void);
+EXPORT(sqInt) primitiveSocketSendDataBufCount(void);
+EXPORT(sqInt) primitiveSocketSendUDPDataBufCount(void);
+EXPORT(sqInt) primitiveSocketSetOptions(void);
+EXPORT(sqInt) primitiveSocketAbortConnection(void);
+EXPORT(sqInt) primitiveSocketAccept(void);
+EXPORT(sqInt) primitiveSocketAccept3Semaphores(void);
+EXPORT(sqInt) primitiveSocketAddressGetPort(void);
+EXPORT(sqInt) primitiveSocketAddressSetPort(void);
+EXPORT(sqInt) primitiveSocketCloseConnection(void);
+EXPORT(sqInt) primitiveSocketConnectionStatus(void);
+EXPORT(sqInt) primitiveSocketCreate(void);
+EXPORT(sqInt) primitiveSocketCreate3Semaphores(void);
+EXPORT(sqInt) primitiveSocketDestroy(void);
+EXPORT(sqInt) primitiveSocketError(void);
 EXPORT(sqInt) primitiveSocketListenWithOrWithoutBacklog(void);
 EXPORT(sqInt) primitiveSocketLocalAddress(void);
-EXPORT(sqInt) primitiveSocketLocalAddressResult(void);
 EXPORT(sqInt) primitiveSocketLocalAddressSize(void);
 EXPORT(sqInt) primitiveSocketLocalPort(void);
 EXPORT(sqInt) primitiveSocketReceiveDataAvailable(void);
-EXPORT(sqInt) primitiveSocketReceiveDataBufCount(void);
-EXPORT(sqInt) primitiveSocketReceiveUDPDataBufCount(void);
 EXPORT(sqInt) primitiveSocketRemoteAddress(void);
-EXPORT(sqInt) primitiveSocketRemoteAddressResult(void);
 EXPORT(sqInt) primitiveSocketRemoteAddressSize(void);
 EXPORT(sqInt) primitiveSocketRemotePort(void);
-EXPORT(sqInt) primitiveSocketSendDataBufCount(void);
 EXPORT(sqInt) primitiveSocketSendDone(void);
-EXPORT(sqInt) primitiveSocketSendUDPDataBufCount(void);
-EXPORT(sqInt) primitiveSocketSetOptions(void);
 EXPORT(sqInt) primitiveSocketSetReusable(void);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine* anInterpreter);
 EXPORT(sqInt) shutdownModule(void);
@@ -126,9 +126,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SocketPlugin 10 November 2008 (i)"
+	"SocketPlugin 26 August 2009 (i)"
 #else
-	"SocketPlugin 10 November 2008 (e)"
+	"SocketPlugin 26 August 2009 (e)"
 #endif
 ;
 static void * sCCLOPfn;
@@ -215,15 +215,11 @@ EXPORT(sqInt) primitiveDisableSocketAccess(void) {
 	if (sDSAfn != 0) {
 		 ((int (*) (void)) sDSAfn)();
 	}
-	if (!(interpreterProxy->failed())) {
-		interpreterProxy->pop(1);
-	}
 }
 
 EXPORT(sqInt) primitiveHasSocketAccess(void) {
 	sqInt hasAccess;
 
-	interpreterProxy->pop(1);
 	if (sHSAfn != 0) {
 		hasAccess =  ((int (*) (void)) sHSAfn)();
 	} else {
@@ -285,6 +281,25 @@ EXPORT(sqInt) primitiveResolverError(void) {
 	return null;
 }
 
+EXPORT(sqInt) primitiveResolverGetAddressInfoFamily(void) {
+	sqInt family;
+	sqInt _return_value;
+
+	if (!(interpreterProxy->failed())) {
+		family = sqResolverGetAddressInfoFamily();
+		_return_value = interpreterProxy->integerObjectOf(family);
+		if (interpreterProxy->failed()) {
+			return null;
+		}
+		interpreterProxy->popthenPush(1, _return_value);
+		return null;
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	return null;
+}
+
 EXPORT(sqInt) primitiveResolverGetAddressInfo(void) {
 	sqInt hostSize;
 	sqInt servSize;
@@ -315,25 +330,6 @@ EXPORT(sqInt) primitiveResolverGetAddressInfo(void) {
 		return null;
 	}
 	interpreterProxy->pop(6);
-	return null;
-}
-
-EXPORT(sqInt) primitiveResolverGetAddressInfoFamily(void) {
-	sqInt family;
-	sqInt _return_value;
-
-	if (!(interpreterProxy->failed())) {
-		family = sqResolverGetAddressInfoFamily();
-		_return_value = interpreterProxy->integerObjectOf(family);
-		if (interpreterProxy->failed()) {
-			return null;
-		}
-		interpreterProxy->popthenPush(1, _return_value);
-		return null;
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
 	return null;
 }
 
@@ -651,6 +647,590 @@ EXPORT(sqInt) primitiveResolverStatus(void) {
 	return null;
 }
 
+EXPORT(sqInt) primitiveSocketBindTo(void) {
+	sqInt addrSize;
+	SocketPtr s;
+	char * addrBase;
+	sqInt socket;
+	sqInt socketAddress;
+
+	socket = interpreterProxy->stackValue(1);
+	socketAddress = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	s = socketValueOf(socket);
+	addrSize = interpreterProxy->byteSizeOf(socketAddress);
+	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
+	if (!(interpreterProxy->failed())) {
+		sqSocketBindToAddressSize(s, addrBase, addrSize);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(2);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketBindToPort(void) {
+	sqInt addr;
+	SocketPtr s;
+	sqInt socket;
+	char *address;
+	sqInt port;
+
+	socket = interpreterProxy->stackValue(2);
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(1)));
+	address = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(1))));
+	port = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	addr = netAddressToInt(((unsigned char *) address));
+	s = socketValueOf(socket);
+	if (!(interpreterProxy->failed())) {
+		sqSocketBindToPort(s, addr, port);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(3);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketConnectTo(void) {
+	sqInt addrSize;
+	SocketPtr s;
+	char * addrBase;
+	sqInt socket;
+	sqInt socketAddress;
+
+	socket = interpreterProxy->stackValue(1);
+	socketAddress = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	s = socketValueOf(socket);
+	addrSize = interpreterProxy->byteSizeOf(socketAddress);
+	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
+	if (!(interpreterProxy->failed())) {
+		sqSocketConnectToAddressSize(s, addrBase, addrSize);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(2);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketConnectToPort(void) {
+	sqInt addr;
+	sqInt okToConnect;
+	SocketPtr s;
+	sqInt socket;
+	char *address;
+	sqInt port;
+
+	socket = interpreterProxy->stackValue(2);
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(1)));
+	address = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(1))));
+	port = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* If the security plugin can be loaded, use it to check for permission.
+	If not, assume it's ok */
+
+	addr = netAddressToInt(((unsigned char *) address));
+	if (sCCTPfn != 0) {
+		okToConnect =  ((int (*) (int, int)) sCCTPfn)(addr, port);
+		if (!(okToConnect)) {
+			interpreterProxy->primitiveFail();
+			return null;
+		}
+	}
+	s = socketValueOf(socket);
+	if (!(interpreterProxy->failed())) {
+		sqSocketConnectToPort(s, addr, port);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(3);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketGetOptions(void) {
+	sqInt returnedValue;
+	char * optionNameStart;
+	SocketPtr s;
+	sqInt optionNameSize;
+	sqInt errorCode;
+	sqInt results;
+	sqInt socket;
+	sqInt optionName;
+
+	socket = interpreterProxy->stackValue(1);
+	optionName = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	s = socketValueOf(socket);
+	interpreterProxy->success(interpreterProxy->isBytes(optionName));
+	optionNameStart = ((char *) (interpreterProxy->firstIndexableField(optionName)));
+	optionNameSize = interpreterProxy->slotSizeOf(optionName);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	returnedValue = 0;
+	errorCode = sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(s, optionNameStart, optionNameSize, &returnedValue);
+	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(returnedValue));
+	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(errorCode));
+	interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2));
+	results = interpreterProxy->popRemappableOop();
+	interpreterProxy->storePointerofObjectwithValue(0, results, interpreterProxy->popRemappableOop());
+	interpreterProxy->storePointerofObjectwithValue(1, results, interpreterProxy->popRemappableOop());
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(3, results);
+	return null;
+}
+
+
+/*	one part of the wierdass dual prim primitiveSocketListenOnPort which 
+	was warped by some demented evil person determined to twist the very 
+	nature of reality */
+
+EXPORT(sqInt) primitiveSocketListenOnPort(void) {
+	sqInt okToListen;
+	SocketPtr  s;
+	sqInt socket;
+	sqInt port;
+
+	socket = interpreterProxy->stackValue(1);
+	port = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* If the security plugin can be loaded, use it to check for permission.
+	If  not, assume it's ok */
+
+	s = socketValueOf(socket);
+	if (sCCLOPfn != 0) {
+		okToListen =  ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port);
+		if (!(okToListen)) {
+			interpreterProxy->primitiveFail();
+			return null;
+		}
+	}
+	if (!(interpreterProxy->failed())) {
+		sqSocketListenOnPort(s, port);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(2);
+	return null;
+}
+
+
+/*	second part of the wierdass dual prim primitiveSocketListenOnPort 
+	which was warped by some demented evil person determined to twist the 
+	very nature of reality */
+
+EXPORT(sqInt) primitiveSocketListenOnPortBacklog(void) {
+	sqInt okToListen;
+	SocketPtr s;
+	sqInt socket;
+	sqInt port;
+	sqInt backlog;
+
+	socket = interpreterProxy->stackValue(2);
+	port = interpreterProxy->stackIntegerValue(1);
+	backlog = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* If the security plugin can be loaded, use it to check for permission.
+	If not, assume it's ok */
+
+	s = socketValueOf(socket);
+	if (sCCLOPfn != 0) {
+		okToListen =  ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port);
+		if (!(okToListen)) {
+			interpreterProxy->primitiveFail();
+			return null;
+		}
+	}
+	sqSocketListenOnPortBacklogSize(s, port, backlog);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(3);
+	return null;
+}
+
+
+/*	Bind a socket to the given port and interface address with no more than backlog pending connections.  The socket can be UDP, in which case the backlog should be specified as zero. */
+
+EXPORT(sqInt) primitiveSocketListenOnPortBacklogInterface(void) {
+	sqInt addr;
+	sqInt okToListen;
+	SocketPtr s;
+	sqInt socket;
+	sqInt port;
+	sqInt backlog;
+	char *ifAddr;
+
+	socket = interpreterProxy->stackValue(3);
+	port = interpreterProxy->stackIntegerValue(2);
+	backlog = interpreterProxy->stackIntegerValue(1);
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
+	ifAddr = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* If the security plugin can be loaded, use it to check for permission.
+	If  not, assume it's ok */
+
+	s = socketValueOf(socket);
+	if (sCCLOPfn != 0) {
+		okToListen =  ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port);
+		if (!(okToListen)) {
+			interpreterProxy->primitiveFail();
+			return null;
+		}
+	}
+	addr = netAddressToInt(((unsigned char *) ifAddr));
+	sqSocketListenOnPortBacklogSizeInterface(s, port, backlog, addr);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(4);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketListenWithBacklog(void) {
+	SocketPtr s;
+	sqInt socket;
+	sqInt backlogSize;
+
+	socket = interpreterProxy->stackValue(1);
+	backlogSize = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	s = socketValueOf(socket);
+	if (!(interpreterProxy->failed())) {
+		sqSocketListenBacklog(s, backlogSize);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(2);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketLocalAddressResult(void) {
+	sqInt addrSize;
+	SocketPtr s;
+	char * addrBase;
+	sqInt socket;
+	sqInt socketAddress;
+
+	socket = interpreterProxy->stackValue(1);
+	socketAddress = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	s = socketValueOf(socket);
+	addrSize = interpreterProxy->byteSizeOf(socketAddress);
+	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
+	if (!(interpreterProxy->failed())) {
+		sqSocketLocalAddressResultSize(s, addrBase, addrSize);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(2);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketReceiveDataBufCount(void) {
+	sqInt bytesReceived;
+	char * arrayBase;
+	sqInt byteSize;
+	SocketPtr s;
+	char * bufStart;
+	sqInt socket;
+	sqInt array;
+	sqInt startIndex;
+	sqInt count;
+	sqInt _return_value;
+
+	socket = interpreterProxy->stackValue(3);
+	array = interpreterProxy->stackValue(2);
+	startIndex = interpreterProxy->stackIntegerValue(1);
+	count = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* buffer can be any indexable words or bytes object */
+
+	s = socketValueOf(socket);
+	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
+	if (interpreterProxy->isWords(array)) {
+		byteSize = 4;
+	} else {
+		byteSize = 1;
+	}
+	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
+	if (!(interpreterProxy->failed())) {
+		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
+		bufStart = arrayBase + ((startIndex - 1) * byteSize);
+		bytesReceived = sqSocketReceiveDataBufCount(s, bufStart, count * byteSize);
+	}
+	_return_value = interpreterProxy->integerObjectOf((bytesReceived / byteSize));
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(5, _return_value);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketReceiveUDPDataBufCount(void) {
+	sqInt bytesReceived;
+	char * arrayBase;
+	sqInt address;
+	sqInt byteSize;
+	sqInt moreFlag;
+	SocketPtr s;
+	char * bufStart;
+	sqInt port;
+	sqInt results;
+	sqInt socket;
+	sqInt array;
+	sqInt startIndex;
+	sqInt count;
+
+	socket = interpreterProxy->stackValue(3);
+	array = interpreterProxy->stackValue(2);
+	startIndex = interpreterProxy->stackIntegerValue(1);
+	count = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* buffer can be any indexable words or bytes object */
+
+	s = socketValueOf(socket);
+	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
+	if (interpreterProxy->isWords(array)) {
+		byteSize = 4;
+	} else {
+		byteSize = 1;
+	}
+	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
+	if (!(interpreterProxy->failed())) {
+		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
+
+		/* allocate storage for results, remapping newly allocated
+			 oops in case GC happens during allocation */
+
+		bufStart = arrayBase + ((startIndex - 1) * byteSize);
+		address = 0;
+		port = 0;
+		moreFlag = 0;
+		bytesReceived = sqSocketReceiveUDPDataBufCountaddressportmoreFlag(s, bufStart, count * byteSize, &address, &port, &moreFlag);
+		interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(port));
+		interpreterProxy->pushRemappableOop(intToNetAddress(address));
+		interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf((bytesReceived / byteSize)));
+		interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 4));
+		results = interpreterProxy->popRemappableOop();
+		interpreterProxy->storePointerofObjectwithValue(0, results, interpreterProxy->popRemappableOop());
+		interpreterProxy->storePointerofObjectwithValue(1, results, interpreterProxy->popRemappableOop());
+		interpreterProxy->storePointerofObjectwithValue(2, results, interpreterProxy->popRemappableOop());
+		if (moreFlag) {
+			interpreterProxy->storePointerofObjectwithValue(3, results, interpreterProxy->trueObject());
+		} else {
+			interpreterProxy->storePointerofObjectwithValue(3, results, interpreterProxy->falseObject());
+		}
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(5, results);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketRemoteAddressResult(void) {
+	sqInt addrSize;
+	SocketPtr s;
+	char * addrBase;
+	sqInt socket;
+	sqInt socketAddress;
+
+	socket = interpreterProxy->stackValue(1);
+	socketAddress = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	s = socketValueOf(socket);
+	addrSize = interpreterProxy->byteSizeOf(socketAddress);
+	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
+	if (!(interpreterProxy->failed())) {
+		sqSocketRemoteAddressResultSize(s, addrBase, addrSize);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(2);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketSendDataBufCount(void) {
+	char * arrayBase;
+	sqInt bytesSent;
+	sqInt byteSize;
+	SocketPtr s;
+	char * bufStart;
+	sqInt socket;
+	sqInt array;
+	sqInt startIndex;
+	sqInt count;
+	sqInt _return_value;
+
+	socket = interpreterProxy->stackValue(3);
+	array = interpreterProxy->stackValue(2);
+	startIndex = interpreterProxy->stackIntegerValue(1);
+	count = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* buffer can be any indexable words or bytes object except CompiledMethod  */
+
+	s = socketValueOf(socket);
+	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
+	if (interpreterProxy->isWords(array)) {
+		byteSize = 4;
+	} else {
+		byteSize = 1;
+	}
+	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
+	if (!(interpreterProxy->failed())) {
+		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
+		bufStart = arrayBase + ((startIndex - 1) * byteSize);
+		bytesSent = sqSocketSendDataBufCount(s, bufStart, count * byteSize);
+	}
+	_return_value = interpreterProxy->integerObjectOf((bytesSent / byteSize));
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(5, _return_value);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketSendUDPDataBufCount(void) {
+	char * arrayBase;
+	sqInt bytesSent;
+	sqInt address;
+	sqInt byteSize;
+	SocketPtr s;
+	char * bufStart;
+	sqInt socket;
+	sqInt array;
+	char *hostAddress;
+	sqInt portNumber;
+	sqInt startIndex;
+	sqInt count;
+	sqInt _return_value;
+
+	socket = interpreterProxy->stackValue(5);
+	array = interpreterProxy->stackValue(4);
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(3)));
+	hostAddress = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(3))));
+	portNumber = interpreterProxy->stackIntegerValue(2);
+	startIndex = interpreterProxy->stackIntegerValue(1);
+	count = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+
+	/* buffer can be any indexable words or bytes object except CompiledMethod  */
+
+	s = socketValueOf(socket);
+	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
+	if (interpreterProxy->isWords(array)) {
+		byteSize = 4;
+	} else {
+		byteSize = 1;
+	}
+	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
+	if (!(interpreterProxy->failed())) {
+		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
+		bufStart = arrayBase + ((startIndex - 1) * byteSize);
+		address = netAddressToInt(((unsigned char *) hostAddress));
+		bytesSent = sqSockettoHostportSendDataBufCount(s, address, portNumber, bufStart, count * byteSize);
+	}
+	_return_value = interpreterProxy->integerObjectOf((bytesSent / byteSize));
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(7, _return_value);
+	return null;
+}
+
+EXPORT(sqInt) primitiveSocketSetOptions(void) {
+	sqInt returnedValue;
+	char * optionNameStart;
+	sqInt optionValueSize;
+	SocketPtr s;
+	char * optionValueStart;
+	sqInt optionNameSize;
+	sqInt errorCode;
+	sqInt results;
+	sqInt socket;
+	sqInt optionName;
+	sqInt optionValue;
+
+	socket = interpreterProxy->stackValue(2);
+	optionName = interpreterProxy->stackValue(1);
+	optionValue = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	s = socketValueOf(socket);
+	interpreterProxy->success(interpreterProxy->isBytes(optionName));
+	optionNameStart = ((char *) (interpreterProxy->firstIndexableField(optionName)));
+	optionNameSize = interpreterProxy->slotSizeOf(optionName);
+	interpreterProxy->success(interpreterProxy->isBytes(optionValue));
+	optionValueStart = ((char *) (interpreterProxy->firstIndexableField(optionValue)));
+	optionValueSize = interpreterProxy->slotSizeOf(optionValue);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	returnedValue = 0;
+	errorCode = sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(s, optionNameStart, optionNameSize, optionValueStart, optionValueSize, &returnedValue);
+	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(returnedValue));
+	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(errorCode));
+	interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2));
+	results = interpreterProxy->popRemappableOop();
+	interpreterProxy->storePointerofObjectwithValue(0, results, interpreterProxy->popRemappableOop());
+	interpreterProxy->storePointerofObjectwithValue(1, results, interpreterProxy->popRemappableOop());
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(4, results);
+	return null;
+}
+
 EXPORT(sqInt) primitiveSocketAbortConnection(void) {
 	SocketPtr  s;
 	sqInt socket;
@@ -785,57 +1365,6 @@ EXPORT(sqInt) primitiveSocketAddressSetPort(void) {
 	return null;
 }
 
-EXPORT(sqInt) primitiveSocketBindTo(void) {
-	sqInt addrSize;
-	SocketPtr s;
-	char * addrBase;
-	sqInt socket;
-	sqInt socketAddress;
-
-	socket = interpreterProxy->stackValue(1);
-	socketAddress = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	s = socketValueOf(socket);
-	addrSize = interpreterProxy->byteSizeOf(socketAddress);
-	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
-	if (!(interpreterProxy->failed())) {
-		sqSocketBindToAddressSize(s, addrBase, addrSize);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(2);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketBindToPort(void) {
-	sqInt addr;
-	SocketPtr s;
-	sqInt socket;
-	char *address;
-	sqInt port;
-
-	socket = interpreterProxy->stackValue(2);
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(1)));
-	address = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(1))));
-	port = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	addr = netAddressToInt(((unsigned char *) address));
-	s = socketValueOf(socket);
-	if (!(interpreterProxy->failed())) {
-		sqSocketBindToPort(s, addr, port);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(3);
-	return null;
-}
-
 EXPORT(sqInt) primitiveSocketCloseConnection(void) {
 	SocketPtr  s;
 	sqInt socket;
@@ -852,69 +1381,6 @@ EXPORT(sqInt) primitiveSocketCloseConnection(void) {
 		return null;
 	}
 	interpreterProxy->pop(1);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketConnectTo(void) {
-	sqInt addrSize;
-	SocketPtr s;
-	char * addrBase;
-	sqInt socket;
-	sqInt socketAddress;
-
-	socket = interpreterProxy->stackValue(1);
-	socketAddress = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	s = socketValueOf(socket);
-	addrSize = interpreterProxy->byteSizeOf(socketAddress);
-	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
-	if (!(interpreterProxy->failed())) {
-		sqSocketConnectToAddressSize(s, addrBase, addrSize);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(2);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketConnectToPort(void) {
-	sqInt addr;
-	sqInt okToConnect;
-	SocketPtr s;
-	sqInt socket;
-	char *address;
-	sqInt port;
-
-	socket = interpreterProxy->stackValue(2);
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(1)));
-	address = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(1))));
-	port = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* If the security plugin can be loaded, use it to check for permission.
-	If not, assume it's ok */
-
-	addr = netAddressToInt(((unsigned char *) address));
-	if (sCCTPfn != 0) {
-		okToConnect =  ((int (*) (int, int)) sCCTPfn)(addr, port);
-		if (!(okToConnect)) {
-			interpreterProxy->primitiveFail();
-			return null;
-		}
-	}
-	s = socketValueOf(socket);
-	if (!(interpreterProxy->failed())) {
-		sqSocketConnectToPort(s, addr, port);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(3);
 	return null;
 }
 
@@ -1055,179 +1521,6 @@ EXPORT(sqInt) primitiveSocketError(void) {
 	return null;
 }
 
-EXPORT(sqInt) primitiveSocketGetOptions(void) {
-	sqInt returnedValue;
-	char * optionNameStart;
-	SocketPtr s;
-	sqInt optionNameSize;
-	sqInt errorCode;
-	sqInt results;
-	sqInt socket;
-	sqInt optionName;
-
-	socket = interpreterProxy->stackValue(1);
-	optionName = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	s = socketValueOf(socket);
-	interpreterProxy->success(interpreterProxy->isBytes(optionName));
-	optionNameStart = ((char *) (interpreterProxy->firstIndexableField(optionName)));
-	optionNameSize = interpreterProxy->slotSizeOf(optionName);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	returnedValue = 0;
-	errorCode = sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(s, optionNameStart, optionNameSize, &returnedValue);
-	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(returnedValue));
-	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(errorCode));
-	interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2));
-	results = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(0, results, interpreterProxy->popRemappableOop());
-	interpreterProxy->storePointerofObjectwithValue(1, results, interpreterProxy->popRemappableOop());
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(3, results);
-	return null;
-}
-
-
-/*	one part of the wierdass dual prim primitiveSocketListenOnPort which 
-	was warped by some demented evil person determined to twist the very 
-	nature of reality */
-
-EXPORT(sqInt) primitiveSocketListenOnPort(void) {
-	sqInt okToListen;
-	SocketPtr  s;
-	sqInt socket;
-	sqInt port;
-
-	socket = interpreterProxy->stackValue(1);
-	port = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* If the security plugin can be loaded, use it to check for permission.
-	If  not, assume it's ok */
-
-	s = socketValueOf(socket);
-	if (sCCLOPfn != 0) {
-		okToListen =  ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port);
-		if (!(okToListen)) {
-			interpreterProxy->primitiveFail();
-			return null;
-		}
-	}
-	sqSocketListenOnPort(s, port);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(2);
-	return null;
-}
-
-
-/*	second part of the wierdass dual prim primitiveSocketListenOnPort 
-	which was warped by some demented evil person determined to twist the 
-	very nature of reality */
-
-EXPORT(sqInt) primitiveSocketListenOnPortBacklog(void) {
-	sqInt okToListen;
-	SocketPtr s;
-	sqInt socket;
-	sqInt port;
-	sqInt backlog;
-
-	socket = interpreterProxy->stackValue(2);
-	port = interpreterProxy->stackIntegerValue(1);
-	backlog = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* If the security plugin can be loaded, use it to check for permission.
-	If not, assume it's ok */
-
-	s = socketValueOf(socket);
-	if (sCCLOPfn != 0) {
-		okToListen =  ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port);
-		if (!(okToListen)) {
-			interpreterProxy->primitiveFail();
-			return null;
-		}
-	}
-	sqSocketListenOnPortBacklogSize(s, port, backlog);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(3);
-	return null;
-}
-
-
-/*	Bind a socket to the given port and interface address with no more than backlog pending connections.  The socket can be UDP, in which case the backlog should be specified as zero. */
-
-EXPORT(sqInt) primitiveSocketListenOnPortBacklogInterface(void) {
-	sqInt addr;
-	sqInt okToListen;
-	SocketPtr s;
-	sqInt socket;
-	sqInt port;
-	sqInt backlog;
-	char *ifAddr;
-
-	socket = interpreterProxy->stackValue(3);
-	port = interpreterProxy->stackIntegerValue(2);
-	backlog = interpreterProxy->stackIntegerValue(1);
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
-	ifAddr = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* If the security plugin can be loaded, use it to check for permission.
-	If  not, assume it's ok */
-
-	s = socketValueOf(socket);
-	if (sCCLOPfn != 0) {
-		okToListen =  ((int (*) (SocketPtr, int)) sCCLOPfn)(s, port);
-		if (!(okToListen)) {
-			interpreterProxy->primitiveFail();
-			return null;
-		}
-	}
-	addr = netAddressToInt(((unsigned char *) ifAddr));
-	sqSocketListenOnPortBacklogSizeInterface(s, port, backlog, addr);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(4);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketListenWithBacklog(void) {
-	SocketPtr s;
-	sqInt socket;
-	sqInt backlogSize;
-
-	socket = interpreterProxy->stackValue(1);
-	backlogSize = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	s = socketValueOf(socket);
-	if (!(interpreterProxy->failed())) {
-		sqSocketListenBacklog(s, backlogSize);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(2);
-	return null;
-}
-
 
 /*	Backward compatibility */
 
@@ -1256,31 +1549,6 @@ EXPORT(sqInt) primitiveSocketLocalAddress(void) {
 		return null;
 	}
 	interpreterProxy->popthenPush(2, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketLocalAddressResult(void) {
-	sqInt addrSize;
-	SocketPtr s;
-	char * addrBase;
-	sqInt socket;
-	sqInt socketAddress;
-
-	socket = interpreterProxy->stackValue(1);
-	socketAddress = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	s = socketValueOf(socket);
-	addrSize = interpreterProxy->byteSizeOf(socketAddress);
-	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
-	if (!(interpreterProxy->failed())) {
-		sqSocketLocalAddressResultSize(s, addrBase, addrSize);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(2);
 	return null;
 }
 
@@ -1350,114 +1618,6 @@ EXPORT(sqInt) primitiveSocketReceiveDataAvailable(void) {
 	return null;
 }
 
-EXPORT(sqInt) primitiveSocketReceiveDataBufCount(void) {
-	sqInt bytesReceived;
-	char * arrayBase;
-	sqInt byteSize;
-	SocketPtr s;
-	char * bufStart;
-	sqInt socket;
-	sqInt array;
-	sqInt startIndex;
-	sqInt count;
-	sqInt _return_value;
-
-	socket = interpreterProxy->stackValue(3);
-	array = interpreterProxy->stackValue(2);
-	startIndex = interpreterProxy->stackIntegerValue(1);
-	count = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* buffer can be any indexable words or bytes object */
-
-	s = socketValueOf(socket);
-	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
-	if (interpreterProxy->isWords(array)) {
-		byteSize = 4;
-	} else {
-		byteSize = 1;
-	}
-	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
-	if (!(interpreterProxy->failed())) {
-		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
-		bufStart = arrayBase + ((startIndex - 1) * byteSize);
-		bytesReceived = sqSocketReceiveDataBufCount(s, bufStart, count * byteSize);
-	}
-	_return_value = interpreterProxy->integerObjectOf((bytesReceived / byteSize));
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(5, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketReceiveUDPDataBufCount(void) {
-	sqInt bytesReceived;
-	char * arrayBase;
-	sqInt address;
-	sqInt byteSize;
-	sqInt moreFlag;
-	SocketPtr s;
-	char * bufStart;
-	sqInt port;
-	sqInt results;
-	sqInt socket;
-	sqInt array;
-	sqInt startIndex;
-	sqInt count;
-
-	socket = interpreterProxy->stackValue(3);
-	array = interpreterProxy->stackValue(2);
-	startIndex = interpreterProxy->stackIntegerValue(1);
-	count = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* buffer can be any indexable words or bytes object */
-
-	s = socketValueOf(socket);
-	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
-	if (interpreterProxy->isWords(array)) {
-		byteSize = 4;
-	} else {
-		byteSize = 1;
-	}
-	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
-	if (!(interpreterProxy->failed())) {
-		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
-
-		/* allocate storage for results, remapping newly allocated
-			 oops in case GC happens during allocation */
-
-		bufStart = arrayBase + ((startIndex - 1) * byteSize);
-		address = 0;
-		port = 0;
-		moreFlag = 0;
-		bytesReceived = sqSocketReceiveUDPDataBufCountaddressportmoreFlag(s, bufStart, count * byteSize, &address, &port, &moreFlag);
-		interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(port));
-		interpreterProxy->pushRemappableOop(intToNetAddress(address));
-		interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf((bytesReceived / byteSize)));
-		interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 4));
-		results = interpreterProxy->popRemappableOop();
-		interpreterProxy->storePointerofObjectwithValue(0, results, interpreterProxy->popRemappableOop());
-		interpreterProxy->storePointerofObjectwithValue(1, results, interpreterProxy->popRemappableOop());
-		interpreterProxy->storePointerofObjectwithValue(2, results, interpreterProxy->popRemappableOop());
-		if (moreFlag) {
-			interpreterProxy->storePointerofObjectwithValue(3, results, interpreterProxy->trueObject());
-		} else {
-			interpreterProxy->storePointerofObjectwithValue(3, results, interpreterProxy->falseObject());
-		}
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(5, results);
-	return null;
-}
-
 EXPORT(sqInt) primitiveSocketRemoteAddress(void) {
 	sqInt addr;
 	SocketPtr s;
@@ -1475,31 +1635,6 @@ EXPORT(sqInt) primitiveSocketRemoteAddress(void) {
 		return null;
 	}
 	interpreterProxy->popthenPush(2, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketRemoteAddressResult(void) {
-	sqInt addrSize;
-	SocketPtr s;
-	char * addrBase;
-	sqInt socket;
-	sqInt socketAddress;
-
-	socket = interpreterProxy->stackValue(1);
-	socketAddress = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	s = socketValueOf(socket);
-	addrSize = interpreterProxy->byteSizeOf(socketAddress);
-	addrBase = ((char *) (interpreterProxy->firstIndexableField(socketAddress)));
-	if (!(interpreterProxy->failed())) {
-		sqSocketRemoteAddressResultSize(s, addrBase, addrSize);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(2);
 	return null;
 }
 
@@ -1549,49 +1684,6 @@ EXPORT(sqInt) primitiveSocketRemotePort(void) {
 	return null;
 }
 
-EXPORT(sqInt) primitiveSocketSendDataBufCount(void) {
-	char * arrayBase;
-	sqInt bytesSent;
-	sqInt byteSize;
-	SocketPtr s;
-	char * bufStart;
-	sqInt socket;
-	sqInt array;
-	sqInt startIndex;
-	sqInt count;
-	sqInt _return_value;
-
-	socket = interpreterProxy->stackValue(3);
-	array = interpreterProxy->stackValue(2);
-	startIndex = interpreterProxy->stackIntegerValue(1);
-	count = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* buffer can be any indexable words or bytes object except CompiledMethod  */
-
-	s = socketValueOf(socket);
-	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
-	if (interpreterProxy->isWords(array)) {
-		byteSize = 4;
-	} else {
-		byteSize = 1;
-	}
-	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
-	if (!(interpreterProxy->failed())) {
-		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
-		bufStart = arrayBase + ((startIndex - 1) * byteSize);
-		bytesSent = sqSocketSendDataBufCount(s, bufStart, count * byteSize);
-	}
-	_return_value = interpreterProxy->integerObjectOf((bytesSent / byteSize));
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(5, _return_value);
-	return null;
-}
-
 EXPORT(sqInt) primitiveSocketSendDone(void) {
 	SocketPtr s;
 	sqInt done;
@@ -1609,100 +1701,6 @@ EXPORT(sqInt) primitiveSocketSendDone(void) {
 		return null;
 	}
 	interpreterProxy->popthenPush(2, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketSendUDPDataBufCount(void) {
-	char * arrayBase;
-	sqInt bytesSent;
-	sqInt address;
-	sqInt byteSize;
-	SocketPtr s;
-	char * bufStart;
-	sqInt socket;
-	sqInt array;
-	char *hostAddress;
-	sqInt portNumber;
-	sqInt startIndex;
-	sqInt count;
-	sqInt _return_value;
-
-	socket = interpreterProxy->stackValue(5);
-	array = interpreterProxy->stackValue(4);
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(3)));
-	hostAddress = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(3))));
-	portNumber = interpreterProxy->stackIntegerValue(2);
-	startIndex = interpreterProxy->stackIntegerValue(1);
-	count = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-
-	/* buffer can be any indexable words or bytes object except CompiledMethod  */
-
-	s = socketValueOf(socket);
-	interpreterProxy->success(interpreterProxy->isWordsOrBytes(array));
-	if (interpreterProxy->isWords(array)) {
-		byteSize = 4;
-	} else {
-		byteSize = 1;
-	}
-	interpreterProxy->success((startIndex >= 1) && ((count >= 0) && (((startIndex + count) - 1) <= (interpreterProxy->slotSizeOf(array)))));
-	if (!(interpreterProxy->failed())) {
-		arrayBase = ((char *) (interpreterProxy->firstIndexableField(array)));
-		bufStart = arrayBase + ((startIndex - 1) * byteSize);
-		address = netAddressToInt(((unsigned char *) hostAddress));
-		bytesSent = sqSockettoHostportSendDataBufCount(s, address, portNumber, bufStart, count * byteSize);
-	}
-	_return_value = interpreterProxy->integerObjectOf((bytesSent / byteSize));
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(7, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitiveSocketSetOptions(void) {
-	sqInt returnedValue;
-	char * optionNameStart;
-	sqInt optionValueSize;
-	SocketPtr s;
-	char * optionValueStart;
-	sqInt optionNameSize;
-	sqInt errorCode;
-	sqInt results;
-	sqInt socket;
-	sqInt optionName;
-	sqInt optionValue;
-
-	socket = interpreterProxy->stackValue(2);
-	optionName = interpreterProxy->stackValue(1);
-	optionValue = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	s = socketValueOf(socket);
-	interpreterProxy->success(interpreterProxy->isBytes(optionName));
-	optionNameStart = ((char *) (interpreterProxy->firstIndexableField(optionName)));
-	optionNameSize = interpreterProxy->slotSizeOf(optionName);
-	interpreterProxy->success(interpreterProxy->isBytes(optionValue));
-	optionValueStart = ((char *) (interpreterProxy->firstIndexableField(optionValue)));
-	optionValueSize = interpreterProxy->slotSizeOf(optionValue);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	returnedValue = 0;
-	errorCode = sqSocketSetOptionsoptionNameStartoptionNameSizeoptionValueStartoptionValueSizereturnedValue(s, optionNameStart, optionNameSize, optionValueStart, optionValueSize, &returnedValue);
-	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(returnedValue));
-	interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(errorCode));
-	interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2));
-	results = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(0, results, interpreterProxy->popRemappableOop());
-	interpreterProxy->storePointerofObjectwithValue(1, results, interpreterProxy->popRemappableOop());
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(4, results);
 	return null;
 }
 
@@ -1779,73 +1777,73 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* SocketPlugin_exports[][3] = {
-	{"SocketPlugin", "primitiveSocketError", (void*)primitiveSocketError},
 	{"SocketPlugin", "primitiveDisableSocketAccess", (void*)primitiveDisableSocketAccess},
 	{"SocketPlugin", "setInterpreter", (void*)setInterpreter},
-	{"SocketPlugin", "primitiveSocketRemoteAddressSize", (void*)primitiveSocketRemoteAddressSize},
 	{"SocketPlugin", "primitiveResolverGetAddressInfoNext", (void*)primitiveResolverGetAddressInfoNext},
-	{"SocketPlugin", "primitiveResolverAddressLookupResult", (void*)primitiveResolverAddressLookupResult},
-	{"SocketPlugin", "primitiveSocketConnectionStatus", (void*)primitiveSocketConnectionStatus},
-	{"SocketPlugin", "primitiveSocketConnectToPort", (void*)primitiveSocketConnectToPort},
-	{"SocketPlugin", "primitiveSocketListenWithBacklog", (void*)primitiveSocketListenWithBacklog},
-	{"SocketPlugin", "primitiveSocketSetOptions", (void*)primitiveSocketSetOptions},
-	{"SocketPlugin", "primitiveResolverGetNameInfoServiceResult", (void*)primitiveResolverGetNameInfoServiceResult},
-	{"SocketPlugin", "primitiveSocketRemoteAddress", (void*)primitiveSocketRemoteAddress},
-	{"SocketPlugin", "primitiveResolverHostNameSize", (void*)primitiveResolverHostNameSize},
-	{"SocketPlugin", "primitiveResolverStartNameLookup", (void*)primitiveResolverStartNameLookup},
-	{"SocketPlugin", "moduleUnloaded", (void*)moduleUnloaded},
-	{"SocketPlugin", "initialiseModule", (void*)initialiseModule},
-	{"SocketPlugin", "primitiveSocketConnectTo", (void*)primitiveSocketConnectTo},
-	{"SocketPlugin", "primitiveSocketDestroy", (void*)primitiveSocketDestroy},
-	{"SocketPlugin", "primitiveResolverGetAddressInfoSize", (void*)primitiveResolverGetAddressInfoSize},
-	{"SocketPlugin", "primitiveResolverHostNameResult", (void*)primitiveResolverHostNameResult},
-	{"SocketPlugin", "primitiveSocketReceiveUDPDataBufCount", (void*)primitiveSocketReceiveUDPDataBufCount},
-	{"SocketPlugin", "primitiveSocketAccept3Semaphores", (void*)primitiveSocketAccept3Semaphores},
-	{"SocketPlugin", "primitiveResolverGetAddressInfoType", (void*)primitiveResolverGetAddressInfoType},
-	{"SocketPlugin", "primitiveSocketCreate3Semaphores", (void*)primitiveSocketCreate3Semaphores},
-	{"SocketPlugin", "primitiveSocketBindToPort", (void*)primitiveSocketBindToPort},
-	{"SocketPlugin", "primitiveResolverStartAddressLookup", (void*)primitiveResolverStartAddressLookup},
-	{"SocketPlugin", "primitiveSocketLocalAddressResult", (void*)primitiveSocketLocalAddressResult},
-	{"SocketPlugin", "primitiveResolverGetNameInfo", (void*)primitiveResolverGetNameInfo},
-	{"SocketPlugin", "primitiveSocketAccept", (void*)primitiveSocketAccept},
-	{"SocketPlugin", "primitiveResolverNameLookupResult", (void*)primitiveResolverNameLookupResult},
-	{"SocketPlugin", "primitiveSocketReceiveDataBufCount", (void*)primitiveSocketReceiveDataBufCount},
-	{"SocketPlugin", "primitiveSocketSetReusable", (void*)primitiveSocketSetReusable},
-	{"SocketPlugin", "primitiveInitializeNetwork", (void*)primitiveInitializeNetwork},
-	{"SocketPlugin", "primitiveSocketReceiveDataAvailable", (void*)primitiveSocketReceiveDataAvailable},
-	{"SocketPlugin", "primitiveSocketSendDone", (void*)primitiveSocketSendDone},
-	{"SocketPlugin", "shutdownModule", (void*)shutdownModule},
-	{"SocketPlugin", "primitiveSocketListenOnPortBacklog", (void*)primitiveSocketListenOnPortBacklog},
-	{"SocketPlugin", "primitiveResolverGetAddressInfo", (void*)primitiveResolverGetAddressInfo},
 	{"SocketPlugin", "primitiveSocketRemotePort", (void*)primitiveSocketRemotePort},
-	{"SocketPlugin", "primitiveSocketSendDataBufCount", (void*)primitiveSocketSendDataBufCount},
-	{"SocketPlugin", "primitiveResolverError", (void*)primitiveResolverError},
-	{"SocketPlugin", "primitiveSocketAbortConnection", (void*)primitiveSocketAbortConnection},
-	{"SocketPlugin", "primitiveSocketLocalAddressSize", (void*)primitiveSocketLocalAddressSize},
-	{"SocketPlugin", "primitiveSocketListenOnPort", (void*)primitiveSocketListenOnPort},
-	{"SocketPlugin", "primitiveSocketGetOptions", (void*)primitiveSocketGetOptions},
-	{"SocketPlugin", "primitiveSocketRemoteAddressResult", (void*)primitiveSocketRemoteAddressResult},
+	{"SocketPlugin", "primitiveResolverAddressLookupResult", (void*)primitiveResolverAddressLookupResult},
 	{"SocketPlugin", "primitiveResolverGetAddressInfoResult", (void*)primitiveResolverGetAddressInfoResult},
+	{"SocketPlugin", "primitiveSocketConnectTo", (void*)primitiveSocketConnectTo},
+	{"SocketPlugin", "primitiveSocketAddressSetPort", (void*)primitiveSocketAddressSetPort},
+	{"SocketPlugin", "primitiveResolverHostNameSize", (void*)primitiveResolverHostNameSize},
+	{"SocketPlugin", "primitiveSocketGetOptions", (void*)primitiveSocketGetOptions},
+	{"SocketPlugin", "primitiveSocketAccept3Semaphores", (void*)primitiveSocketAccept3Semaphores},
+	{"SocketPlugin", "moduleUnloaded", (void*)moduleUnloaded},
+	{"SocketPlugin", "primitiveSocketLocalPort", (void*)primitiveSocketLocalPort},
+	{"SocketPlugin", "primitiveSocketRemoteAddress", (void*)primitiveSocketRemoteAddress},
+	{"SocketPlugin", "primitiveResolverStartAddressLookup", (void*)primitiveResolverStartAddressLookup},
+	{"SocketPlugin", "initialiseModule", (void*)initialiseModule},
+	{"SocketPlugin", "primitiveResolverGetNameInfo", (void*)primitiveResolverGetNameInfo},
+	{"SocketPlugin", "primitiveResolverGetAddressInfoSize", (void*)primitiveResolverGetAddressInfoSize},
+	{"SocketPlugin", "primitiveSocketSendDone", (void*)primitiveSocketSendDone},
+	{"SocketPlugin", "primitiveSocketAbortConnection", (void*)primitiveSocketAbortConnection},
+	{"SocketPlugin", "primitiveSocketLocalAddressResult", (void*)primitiveSocketLocalAddressResult},
+	{"SocketPlugin", "primitiveResolverGetAddressInfoType", (void*)primitiveResolverGetAddressInfoType},
+	{"SocketPlugin", "primitiveSocketSendDataBufCount", (void*)primitiveSocketSendDataBufCount},
+	{"SocketPlugin", "primitiveSocketBindTo", (void*)primitiveSocketBindTo},
+	{"SocketPlugin", "primitiveResolverHostNameResult", (void*)primitiveResolverHostNameResult},
+	{"SocketPlugin", "primitiveResolverGetAddressInfo", (void*)primitiveResolverGetAddressInfo},
+	{"SocketPlugin", "primitiveSocketListenWithBacklog", (void*)primitiveSocketListenWithBacklog},
+	{"SocketPlugin", "primitiveSocketCreate", (void*)primitiveSocketCreate},
+	{"SocketPlugin", "primitiveSocketLocalAddress", (void*)primitiveSocketLocalAddress},
+	{"SocketPlugin", "primitiveResolverNameLookupResult", (void*)primitiveResolverNameLookupResult},
+	{"SocketPlugin", "primitiveSocketRemoteAddressSize", (void*)primitiveSocketRemoteAddressSize},
+	{"SocketPlugin", "primitiveInitializeNetwork", (void*)primitiveInitializeNetwork},
+	{"SocketPlugin", "primitiveSocketConnectionStatus", (void*)primitiveSocketConnectionStatus},
+	{"SocketPlugin", "primitiveSocketReceiveDataAvailable", (void*)primitiveSocketReceiveDataAvailable},
+	{"SocketPlugin", "primitiveSocketListenOnPortBacklog", (void*)primitiveSocketListenOnPortBacklog},
+	{"SocketPlugin", "shutdownModule", (void*)shutdownModule},
+	{"SocketPlugin", "primitiveSocketConnectToPort", (void*)primitiveSocketConnectToPort},
+	{"SocketPlugin", "primitiveSocketAccept", (void*)primitiveSocketAccept},
+	{"SocketPlugin", "primitiveSocketCreate3Semaphores", (void*)primitiveSocketCreate3Semaphores},
+	{"SocketPlugin", "primitiveResolverGetNameInfoServiceResult", (void*)primitiveResolverGetNameInfoServiceResult},
+	{"SocketPlugin", "primitiveResolverError", (void*)primitiveResolverError},
+	{"SocketPlugin", "primitiveSocketError", (void*)primitiveSocketError},
+	{"SocketPlugin", "primitiveSocketSetOptions", (void*)primitiveSocketSetOptions},
 	{"SocketPlugin", "primitiveHasSocketAccess", (void*)primitiveHasSocketAccess},
 	{"SocketPlugin", "primitiveResolverGetNameInfoServiceSize", (void*)primitiveResolverGetNameInfoServiceSize},
-	{"SocketPlugin", "primitiveSocketAddressSetPort", (void*)primitiveSocketAddressSetPort},
+	{"SocketPlugin", "primitiveSocketSetReusable", (void*)primitiveSocketSetReusable},
 	{"SocketPlugin", "primitiveSocketAddressGetPort", (void*)primitiveSocketAddressGetPort},
-	{"SocketPlugin", "primitiveSocketLocalAddress", (void*)primitiveSocketLocalAddress},
+	{"SocketPlugin", "primitiveSocketCloseConnection", (void*)primitiveSocketCloseConnection},
+	{"SocketPlugin", "primitiveResolverGetNameInfoHostResult", (void*)primitiveResolverGetNameInfoHostResult},
+	{"SocketPlugin", "primitiveSocketReceiveUDPDataBufCount", (void*)primitiveSocketReceiveUDPDataBufCount},
 	{"SocketPlugin", "primitiveSocketListenWithOrWithoutBacklog", (void*)primitiveSocketListenWithOrWithoutBacklog},
 	{"SocketPlugin", "primitiveResolverGetAddressInfoProtocol", (void*)primitiveResolverGetAddressInfoProtocol},
-	{"SocketPlugin", "primitiveSocketListenOnPortBacklogInterface", (void*)primitiveSocketListenOnPortBacklogInterface},
+	{"SocketPlugin", "primitiveSocketListenOnPort", (void*)primitiveSocketListenOnPort},
 	{"SocketPlugin", "primitiveResolverAbortLookup", (void*)primitiveResolverAbortLookup},
-	{"SocketPlugin", "primitiveSocketLocalPort", (void*)primitiveSocketLocalPort},
 	{"SocketPlugin", "primitiveResolverGetAddressInfoFamily", (void*)primitiveResolverGetAddressInfoFamily},
+	{"SocketPlugin", "primitiveSocketLocalAddressSize", (void*)primitiveSocketLocalAddressSize},
 	{"SocketPlugin", "getModuleName", (void*)getModuleName},
 	{"SocketPlugin", "primitiveResolverLocalAddress", (void*)primitiveResolverLocalAddress},
-	{"SocketPlugin", "primitiveSocketBindTo", (void*)primitiveSocketBindTo},
-	{"SocketPlugin", "primitiveSocketCreate", (void*)primitiveSocketCreate},
-	{"SocketPlugin", "primitiveResolverGetNameInfoHostSize", (void*)primitiveResolverGetNameInfoHostSize},
-	{"SocketPlugin", "primitiveResolverStatus", (void*)primitiveResolverStatus},
-	{"SocketPlugin", "primitiveSocketCloseConnection", (void*)primitiveSocketCloseConnection},
 	{"SocketPlugin", "primitiveSocketSendUDPDataBufCount", (void*)primitiveSocketSendUDPDataBufCount},
-	{"SocketPlugin", "primitiveResolverGetNameInfoHostResult", (void*)primitiveResolverGetNameInfoHostResult},
+	{"SocketPlugin", "primitiveSocketDestroy", (void*)primitiveSocketDestroy},
+	{"SocketPlugin", "primitiveSocketRemoteAddressResult", (void*)primitiveSocketRemoteAddressResult},
+	{"SocketPlugin", "primitiveSocketBindToPort", (void*)primitiveSocketBindToPort},
+	{"SocketPlugin", "primitiveResolverGetNameInfoHostSize", (void*)primitiveResolverGetNameInfoHostSize},
+	{"SocketPlugin", "primitiveResolverStartNameLookup", (void*)primitiveResolverStartNameLookup},
+	{"SocketPlugin", "primitiveResolverStatus", (void*)primitiveResolverStatus},
+	{"SocketPlugin", "primitiveSocketListenOnPortBacklogInterface", (void*)primitiveSocketListenOnPortBacklogInterface},
+	{"SocketPlugin", "primitiveSocketReceiveDataBufCount", (void*)primitiveSocketReceiveDataBufCount},
 	{NULL, NULL, NULL}
 };
 

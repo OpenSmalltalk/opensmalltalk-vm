@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:26 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:17 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -175,9 +175,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Klatt 10 November 2008 (i)"
+	"Klatt 26 August 2009 (i)"
 #else
-	"Klatt 10 November 2008 (e)"
+	"Klatt 26 August 2009 (e)"
 #endif
 ;
 static float nlast;
@@ -284,9 +284,12 @@ static void antiResonatorfrequencybandwidth(sqInt index, float  freq, float  bw)
 	a = 1.0 / a;
 	b = (0.0 - b) * a;
 	c = (0.0 - c) * a;
-	resonatorAput(index, a);
-	resonatorBput(index, b);
-	resonatorCput(index, c);
+	/* begin resonatorA:put: */
+	resonators[(index * 5) - 5] = a;
+	/* begin resonatorB:put: */
+	resonators[(index * 5) - 4] = b;
+	/* begin resonatorC:put: */
+	resonators[(index * 5) - 3] = c;
 }
 
 static float antiResonatorvalue(sqInt index, double  aFloat) {
@@ -294,8 +297,10 @@ static float antiResonatorvalue(sqInt index, double  aFloat) {
     double  p1;
 
 	answer = (((resonators[(index * 5) - 5]) * aFloat) + ((resonators[(index * 5) - 4]) * (p1 = resonators[(index * 5) - 2]))) + ((resonators[(index * 5) - 3]) * (resonators[(index * 5) - 1]));
-	resonatorP2put(index, p1);
-	resonatorP1put(index, aFloat);
+	/* begin resonatorP2:put: */
+	resonators[(index * 5) - 1] = p1;
+	/* begin resonatorP1:put: */
+	resonators[(index * 5) - 2] = aFloat;
 	return answer;
 }
 
@@ -305,41 +310,134 @@ static float antiResonatorvalue(sqInt index, double  aFloat) {
 	tracheal resonator, then formants F8, F7, F6, F5, F4, F3, F2, F1. */
 
 static float cascadeBranch(float  source) {
-    float  out;
+    float out;
+    float  answer;
+    float  p1;
+    float  answer1;
+    float  p11;
+    float  answer2;
+    float  p12;
+    float  answer3;
+    float  p13;
+    float  answer4;
+    float  p14;
+    float  answer5;
+    float  p15;
+    float  answer6;
+    float  p16;
+    float  answer7;
+    float  p17;
+    double  answer8;
+    double  p18;
+    float  answer9;
+    float  p19;
+    double  answer10;
+    double  p110;
+    float  answer11;
+    float  p111;
 
 	if (!(cascade > 0)) {
 		return 0.0;
 	}
-	out = antiResonatorvalue(Rnz, source);
-	out = resonatorvalue(Rnpc, out);
-	out = antiResonatorvalue(Rtz, out);
-
-	/* Do not use unless sample rate >= 16000 */
-
-	out = resonatorvalue(Rtpc, out);
+	/* begin antiResonator:value: */
+	answer8 = (((resonators[(Rnz * 5) - 5]) * source) + ((resonators[(Rnz * 5) - 4]) * (p18 = resonators[(Rnz * 5) - 2]))) + ((resonators[(Rnz * 5) - 3]) * (resonators[(Rnz * 5) - 1]));
+	/* begin resonatorP2:put: */
+	resonators[(Rnz * 5) - 1] = p18;
+	/* begin resonatorP1:put: */
+	resonators[(Rnz * 5) - 2] = source;
+	out = answer8;
+	/* begin resonator:value: */
+	answer9 = (((resonators[(Rnpc * 5) - 5]) * out) + ((resonators[(Rnpc * 5) - 4]) * (p19 = resonators[(Rnpc * 5) - 2]))) + ((resonators[(Rnpc * 5) - 3]) * (resonators[(Rnpc * 5) - 1]));
+	/* begin resonatorP2:put: */
+	resonators[(Rnpc * 5) - 1] = p19;
+	/* begin resonatorP1:put: */
+	resonators[(Rnpc * 5) - 2] = answer9;
+	out = answer9;
+	/* begin antiResonator:value: */
+	answer10 = (((resonators[(Rtz * 5) - 5]) * out) + ((resonators[(Rtz * 5) - 4]) * (p110 = resonators[(Rtz * 5) - 2]))) + ((resonators[(Rtz * 5) - 3]) * (resonators[(Rtz * 5) - 1]));
+	/* begin resonatorP2:put: */
+	resonators[(Rtz * 5) - 1] = p110;
+	/* begin resonatorP1:put: */
+	resonators[(Rtz * 5) - 2] = out;
+	out = answer10;
+	/* begin resonator:value: */
+	answer11 = (((resonators[(Rtpc * 5) - 5]) * out) + ((resonators[(Rtpc * 5) - 4]) * (p111 = resonators[(Rtpc * 5) - 2]))) + ((resonators[(Rtpc * 5) - 3]) * (resonators[(Rtpc * 5) - 1]));
+	/* begin resonatorP2:put: */
+	resonators[(Rtpc * 5) - 1] = p111;
+	/* begin resonatorP1:put: */
+	resonators[(Rtpc * 5) - 2] = answer11;
+	out = answer11;
 	if (cascade >= 8) {
-		out = resonatorvalue(R8c, out);
+		/* begin resonator:value: */
+		answer = (((resonators[(R8c * 5) - 5]) * out) + ((resonators[(R8c * 5) - 4]) * (p1 = resonators[(R8c * 5) - 2]))) + ((resonators[(R8c * 5) - 3]) * (resonators[(R8c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R8c * 5) - 1] = p1;
+		/* begin resonatorP1:put: */
+		resonators[(R8c * 5) - 2] = answer;
+		out = answer;
 	}
 	if (cascade >= 7) {
-		out = resonatorvalue(R7c, out);
+		/* begin resonator:value: */
+		answer1 = (((resonators[(R7c * 5) - 5]) * out) + ((resonators[(R7c * 5) - 4]) * (p11 = resonators[(R7c * 5) - 2]))) + ((resonators[(R7c * 5) - 3]) * (resonators[(R7c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R7c * 5) - 1] = p11;
+		/* begin resonatorP1:put: */
+		resonators[(R7c * 5) - 2] = answer1;
+		out = answer1;
 	}
 	if (cascade >= 6) {
-		out = resonatorvalue(R6c, out);
+		/* begin resonator:value: */
+		answer2 = (((resonators[(R6c * 5) - 5]) * out) + ((resonators[(R6c * 5) - 4]) * (p12 = resonators[(R6c * 5) - 2]))) + ((resonators[(R6c * 5) - 3]) * (resonators[(R6c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R6c * 5) - 1] = p12;
+		/* begin resonatorP1:put: */
+		resonators[(R6c * 5) - 2] = answer2;
+		out = answer2;
 	}
 	if (cascade >= 5) {
-		out = resonatorvalue(R5c, out);
+		/* begin resonator:value: */
+		answer3 = (((resonators[(R5c * 5) - 5]) * out) + ((resonators[(R5c * 5) - 4]) * (p13 = resonators[(R5c * 5) - 2]))) + ((resonators[(R5c * 5) - 3]) * (resonators[(R5c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R5c * 5) - 1] = p13;
+		/* begin resonatorP1:put: */
+		resonators[(R5c * 5) - 2] = answer3;
+		out = answer3;
 	}
 	if (cascade >= 4) {
-		out = resonatorvalue(R4c, out);
+		/* begin resonator:value: */
+		answer4 = (((resonators[(R4c * 5) - 5]) * out) + ((resonators[(R4c * 5) - 4]) * (p14 = resonators[(R4c * 5) - 2]))) + ((resonators[(R4c * 5) - 3]) * (resonators[(R4c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R4c * 5) - 1] = p14;
+		/* begin resonatorP1:put: */
+		resonators[(R4c * 5) - 2] = answer4;
+		out = answer4;
 	}
 	if (cascade >= 3) {
-		out = resonatorvalue(R3c, out);
+		/* begin resonator:value: */
+		answer5 = (((resonators[(R3c * 5) - 5]) * out) + ((resonators[(R3c * 5) - 4]) * (p15 = resonators[(R3c * 5) - 2]))) + ((resonators[(R3c * 5) - 3]) * (resonators[(R3c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R3c * 5) - 1] = p15;
+		/* begin resonatorP1:put: */
+		resonators[(R3c * 5) - 2] = answer5;
+		out = answer5;
 	}
 	if (cascade >= 2) {
-		out = resonatorvalue(R2c, out);
+		/* begin resonator:value: */
+		answer6 = (((resonators[(R2c * 5) - 5]) * out) + ((resonators[(R2c * 5) - 4]) * (p16 = resonators[(R2c * 5) - 2]))) + ((resonators[(R2c * 5) - 3]) * (resonators[(R2c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R2c * 5) - 1] = p16;
+		/* begin resonatorP1:put: */
+		resonators[(R2c * 5) - 2] = answer6;
+		out = answer6;
 	}
 	if (cascade >= 1) {
-		out = resonatorvalue(R1c, out);
+		/* begin resonator:value: */
+		answer7 = (((resonators[(R1c * 5) - 5]) * out) + ((resonators[(R1c * 5) - 4]) * (p17 = resonators[(R1c * 5) - 2]))) + ((resonators[(R1c * 5) - 3]) * (resonators[(R1c * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(R1c * 5) - 1] = p17;
+		/* begin resonatorP1:put: */
+		resonators[(R1c * 5) - 2] = answer7;
+		out = answer7;
 	}
 	return out;
 }
@@ -651,9 +749,12 @@ static void resonatorfrequencybandwidth(sqInt index, float  freq, float  bw) {
 	arg = ((PI * 2.0) / samplingRate) * freq;
 	b = (r * (cos(arg))) * 2.0;
 	a = (1.0 - b) - c;
-	resonatorAput(index, a);
-	resonatorBput(index, b);
-	resonatorCput(index, c);
+	/* begin resonatorA:put: */
+	resonators[(index * 5) - 5] = a;
+	/* begin resonatorB:put: */
+	resonators[(index * 5) - 4] = b;
+	/* begin resonatorC:put: */
+	resonators[(index * 5) - 3] = c;
 }
 
 
@@ -662,7 +763,8 @@ static void resonatorfrequencybandwidth(sqInt index, float  freq, float  bw) {
 
 static void resonatorfrequencybandwidthgain(sqInt index, float  freq, float  bw, float  gain) {
 	resonatorfrequencybandwidth(index, freq, bw);
-	resonatorAput(index, (resonators[(index * 5) - 5]) * gain);
+	/* begin resonatorA:put: */
+	resonators[(index * 5) - 5] = ((resonators[(index * 5) - 5]) * gain);
 }
 
 static float resonatorvalue(sqInt index, float  aFloat) {
@@ -674,8 +776,10 @@ static float resonatorvalue(sqInt index, float  aFloat) {
 	(answer between: -100000 and: 100000) ifFalse: [self halt]. */
 
 	answer = (((resonators[(index * 5) - 5]) * aFloat) + ((resonators[(index * 5) - 4]) * (p1 = resonators[(index * 5) - 2]))) + ((resonators[(index * 5) - 3]) * (resonators[(index * 5) - 1]));
-	resonatorP2put(index, p1);
-	resonatorP1put(index, answer);
+	/* begin resonatorP2:put: */
+	resonators[(index * 5) - 1] = p1;
+	/* begin resonatorP1:put: */
+	resonators[(index * 5) - 2] = answer;
 	return answer;
 }
 
@@ -735,6 +839,10 @@ static void rorark(float  roNumber, float  raNumber, float  rkNumber) {
     float  gamma;
     float  gammapwr;
     float  r;
+    float  s1;
+    sqInt ingore;
+    float  s2;
+    float  s0;
 
 	te = ((sqInt) (t0 * roNumber) );
 	ro = (((double) te )) / (((double) t0 ));
@@ -761,7 +869,18 @@ static void rorark(float  roNumber, float  raNumber, float  rkNumber) {
 	gammapwr = pow(gamma,(t0 - te));
 	b1 = gamma;
 	c1 = ((1.0 - gamma) * gammapwr) / (1.0 - gammapwr);
-	normalizeGlottalPulse();
+	/* begin normalizeGlottalPulse */
+	s0 = 0.0;
+	s1 = x1;
+	s2 = x2;
+	for (ingore = 1; ingore <= nopen; ingore += 1) {
+		s0 = (a1 * s1) + (a2 * s2);
+		s2 = s1;
+		s1 = s0;
+	}
+	if (!(s0 == 0.0)) {
+		x1 = (x1 / s0) * 10000.0;
+	}
 }
 
 static sqInt saveTo(sqInt origKlattOop) {
@@ -841,48 +960,48 @@ static void setCurrentFrame(float * aKlattFrame) {
 
 	/* -4.44 dB */
 
-	ampFNV = (linearFromdB(frame[Anv])) * 0.6;
+	ampFNV = ((pow(2.0,(((frame[Anv]) - 87.0) / 6.0))) * 32.767) * 0.6;
 
 	/* -4.44 dB */
 
-	ampFTV = (linearFromdB(frame[Atv])) * 0.6;
+	ampFTV = ((pow(2.0,(((frame[Atv]) - 87.0) / 6.0))) * 32.767) * 0.6;
 
 	/* -7.96 dB */
 
-	ampF1V = (linearFromdB(frame[A1v])) * 0.4;
+	ampF1V = ((pow(2.0,(((frame[A1v]) - 87.0) / 6.0))) * 32.767) * 0.4;
 
 	/* -16.5 dB */
 
-	ampF2V = (linearFromdB(frame[A2v])) * 0.15;
+	ampF2V = ((pow(2.0,(((frame[A2v]) - 87.0) / 6.0))) * 32.767) * 0.15;
 
 	/* -24.4 dB */
 
-	ampF3V = (linearFromdB(frame[A3v])) * 0.06;
+	ampF3V = ((pow(2.0,(((frame[A3v]) - 87.0) / 6.0))) * 32.767) * 0.06;
 
 	/* -28.0 dB */
 
-	ampF4V = (linearFromdB(frame[A4v])) * 0.04;
+	ampF4V = ((pow(2.0,(((frame[A4v]) - 87.0) / 6.0))) * 32.767) * 0.04;
 
 	/* -16.5 dB */
 
-	ampF2F = (linearFromdB(frame[A2f])) * 0.15;
+	ampF2F = ((pow(2.0,(((frame[A2f]) - 87.0) / 6.0))) * 32.767) * 0.15;
 
 	/* -24.4 dB */
 
-	ampF3F = (linearFromdB(frame[A3f])) * 0.06;
+	ampF3F = ((pow(2.0,(((frame[A3f]) - 87.0) / 6.0))) * 32.767) * 0.06;
 
 	/* -28.0 dB */
 
-	ampF4F = (linearFromdB(frame[A4f])) * 0.04;
+	ampF4F = ((pow(2.0,(((frame[A4f]) - 87.0) / 6.0))) * 32.767) * 0.04;
 
 	/* -33.2 dB */
 
-	ampF5F = (linearFromdB(frame[A5f])) * 0.022;
+	ampF5F = ((pow(2.0,(((frame[A5f]) - 87.0) / 6.0))) * 32.767) * 0.022;
 
 	/* -30.5 dB */
 	/* Set coefficients of variable cascade resonators */
 
-	ampF6F = (linearFromdB(frame[A6f])) * 0.03;
+	ampF6F = ((pow(2.0,(((frame[A6f]) - 87.0) / 6.0))) * 32.767) * 0.03;
 	if (cascade >= 8) {
 		if (samplingRate >= 16000) {
 			resonatorfrequencybandwidth(R8c, 7500, 600);
@@ -951,35 +1070,63 @@ static void synthesizeFrameintostartingAt(float * aKlattFrame, short * buffer, s
     float  frictionNoise;
     float  turbulence;
     float  gain;
-    float  voice;
+    float voice;
     float  aspirationNoise;
     float  glotout;
-    float  out;
+    float out;
     sqInt top;
     float  parVoicing;
     sqInt temp;
     float  friction;
+    float  x0;
+    float out1;
+    float  answer;
+    float  p1;
+    float  answer1;
+    float  p11;
+    float  answer2;
+    float  p12;
+    float  answer3;
+    float  p13;
+    float  answer4;
+    float  p14;
+    float  answer5;
+    float  p15;
+    float  answer6;
+    float  p16;
+    float  answer7;
+    float  p17;
+    double  answer8;
+    double  p18;
+    float  answer9;
+    float  p19;
+    double  answer10;
+    double  p110;
+    float  answer11;
+    float  p111;
+    float  answer12;
+    float  p112;
 
 	setCurrentFrame(aKlattFrame);
 	if (pitch > 0) {
-		voicing = linearFromdB((frame[Voicing]) - 7);
-		parVoicing = linearFromdB(frame[Voicing]);
-		turbulence = (linearFromdB(frame[Turbulence])) * 0.1;
+		voicing = (pow(2.0,((((frame[Voicing]) - 7) - 87.0) / 6.0))) * 32.767;
+		parVoicing = (pow(2.0,(((frame[Voicing]) - 87.0) / 6.0))) * 32.767;
+		turbulence = ((pow(2.0,(((frame[Turbulence]) - 87.0) / 6.0))) * 32.767) * 0.1;
 	} else {
 		voicing = parVoicing = turbulence = 0.0;
 	}
-	friction = (linearFromdB(frame[Friction])) * 0.25;
-	aspiration = (linearFromdB(frame[Aspiration])) * 0.05;
+	friction = ((pow(2.0,(((frame[Friction]) - 87.0) / 6.0))) * 32.767) * 0.25;
+	aspiration = ((pow(2.0,(((frame[Aspiration]) - 87.0) / 6.0))) * 32.767) * 0.05;
 
 	/* -26.0 dB */
 	/* Flod overall gain into output resonator (low-pass filter) */
 
-	bypass = (linearFromdB(frame[Bypass])) * 0.05;
+	bypass = ((pow(2.0,(((frame[Bypass]) - 87.0) / 6.0))) * 32.767) * 0.05;
 	gain = (frame[Gain]) - 3;
 	if (gain <= 0) {
 		gain = 57;
 	}
-	ampGain = linearFromdB(gain);
+	ampGain = (pow(2.0,((gain - 87.0) / 6.0))) * 32.767;
 	resonatorfrequencybandwidthgain(Rout, 0, samplingRate, ampGain);
 	noise = nlast;
 	index = startIndex;
@@ -1004,7 +1151,65 @@ static void synthesizeFrameintostartingAt(float * aKlattFrame, short * buffer, s
 		/* Compute voicing waveform. */
 
 		frictionNoise = friction * noise;
-		voice = glottalSource();
+		/* begin glottalSource */
+		if (t0 == 0) {
+			voice = 0;
+			goto l1;
+		}
+		if (nper < nopen) {
+			x0 = (a1 * x1) + (a2 * x2);
+			x2 = x1;
+			x1 = x0;
+		} else {
+			x0 = (b1 * x1) - c1;
+			x1 = x0;
+		}
+		if (nper >= t0) {
+			nper = 0;
+			/* begin pitchSynchronousReset */
+			if ((frame[F0]) > 0) {
+				/* begin voicedPitchSynchronousReset */
+				pitch = frame[F0];
+				addFlutter();
+				/* begin addJitter */
+				pitch += ((((nextRandom()) - 32767) * (frame[Jitter])) / 32768.0) * (frame[F0]);
+				/* begin addFrequencyDiplophonia */
+				if ((periodCount % 2) == 0) {
+					pitch += ((frame[Diplophonia]) * (frame[F0])) * (1.0 - (frame[Ro]));
+				} else {
+					pitch -= ((frame[Diplophonia]) * (frame[F0])) * (1.0 - (frame[Ro]));
+				}
+				if (pitch < 0) {
+					pitch = 0;
+				}
+				t0 = ((sqInt) (samplingRate / pitch) );
+				nmod = t0;
+				if ((frame[Voicing]) > 0) {
+					nmod = ((sqInt) nmod >> 1);
+				}
+				nopen = ((sqInt) (t0 * (frame[Ro])) );
+				rorark(frame[Ro], frame[Ra], frame[Rk]);
+				/* begin addShimmer */
+				x1 += ((((nextRandom()) - 32767) * (frame[Shimmer])) / 32768.0) * x1;
+				if (x1 > 0) {
+					x1 = 0;
+				}
+				/* begin addAmplitudeDiplophonia */
+				if (!((periodCount % 2) == 0)) {
+					x1 = x1 * (1.0 - (frame[Diplophonia]));
+					if (x1 > 0) {
+						x1 = 0;
+					}
+				}
+				periodCount = (periodCount + 1) % 65535;
+			} else {
+				t0 = 1;
+				nmod = t0;
+			}
+		}
+		nper += 1;
+		voice = x0;
+	l1:	/* end glottalSource */;
 
 		/* Add turbulence during glottal open phase.
 		 Use random rather than noise because noise is low-passed. */
@@ -1026,10 +1231,113 @@ static void synthesizeFrameintostartingAt(float * aKlattFrame, short * buffer, s
 		 tracheal resonator, then formants F8, F7, F6, F5, F4, F3, F2, F1. */
 
 		parGlotout += aspirationNoise;
-
-		/* Voice-excited parallel vocal tract F1, F2, F3, F4, FNP and FTP. */
-
-		out = cascadeBranch(glotout);
+		/* begin cascadeBranch: */
+		if (!(cascade > 0)) {
+			out = 0.0;
+			goto l2;
+		}
+		/* begin antiResonator:value: */
+		answer8 = (((resonators[(Rnz * 5) - 5]) * glotout) + ((resonators[(Rnz * 5) - 4]) * (p18 = resonators[(Rnz * 5) - 2]))) + ((resonators[(Rnz * 5) - 3]) * (resonators[(Rnz * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(Rnz * 5) - 1] = p18;
+		/* begin resonatorP1:put: */
+		resonators[(Rnz * 5) - 2] = glotout;
+		out1 = answer8;
+		/* begin resonator:value: */
+		answer9 = (((resonators[(Rnpc * 5) - 5]) * out1) + ((resonators[(Rnpc * 5) - 4]) * (p19 = resonators[(Rnpc * 5) - 2]))) + ((resonators[(Rnpc * 5) - 3]) * (resonators[(Rnpc * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(Rnpc * 5) - 1] = p19;
+		/* begin resonatorP1:put: */
+		resonators[(Rnpc * 5) - 2] = answer9;
+		out1 = answer9;
+		/* begin antiResonator:value: */
+		answer10 = (((resonators[(Rtz * 5) - 5]) * out1) + ((resonators[(Rtz * 5) - 4]) * (p110 = resonators[(Rtz * 5) - 2]))) + ((resonators[(Rtz * 5) - 3]) * (resonators[(Rtz * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(Rtz * 5) - 1] = p110;
+		/* begin resonatorP1:put: */
+		resonators[(Rtz * 5) - 2] = out1;
+		out1 = answer10;
+		/* begin resonator:value: */
+		answer11 = (((resonators[(Rtpc * 5) - 5]) * out1) + ((resonators[(Rtpc * 5) - 4]) * (p111 = resonators[(Rtpc * 5) - 2]))) + ((resonators[(Rtpc * 5) - 3]) * (resonators[(Rtpc * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(Rtpc * 5) - 1] = p111;
+		/* begin resonatorP1:put: */
+		resonators[(Rtpc * 5) - 2] = answer11;
+		out1 = answer11;
+		if (cascade >= 8) {
+			/* begin resonator:value: */
+			answer = (((resonators[(R8c * 5) - 5]) * out1) + ((resonators[(R8c * 5) - 4]) * (p1 = resonators[(R8c * 5) - 2]))) + ((resonators[(R8c * 5) - 3]) * (resonators[(R8c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R8c * 5) - 1] = p1;
+			/* begin resonatorP1:put: */
+			resonators[(R8c * 5) - 2] = answer;
+			out1 = answer;
+		}
+		if (cascade >= 7) {
+			/* begin resonator:value: */
+			answer1 = (((resonators[(R7c * 5) - 5]) * out1) + ((resonators[(R7c * 5) - 4]) * (p11 = resonators[(R7c * 5) - 2]))) + ((resonators[(R7c * 5) - 3]) * (resonators[(R7c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R7c * 5) - 1] = p11;
+			/* begin resonatorP1:put: */
+			resonators[(R7c * 5) - 2] = answer1;
+			out1 = answer1;
+		}
+		if (cascade >= 6) {
+			/* begin resonator:value: */
+			answer2 = (((resonators[(R6c * 5) - 5]) * out1) + ((resonators[(R6c * 5) - 4]) * (p12 = resonators[(R6c * 5) - 2]))) + ((resonators[(R6c * 5) - 3]) * (resonators[(R6c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R6c * 5) - 1] = p12;
+			/* begin resonatorP1:put: */
+			resonators[(R6c * 5) - 2] = answer2;
+			out1 = answer2;
+		}
+		if (cascade >= 5) {
+			/* begin resonator:value: */
+			answer3 = (((resonators[(R5c * 5) - 5]) * out1) + ((resonators[(R5c * 5) - 4]) * (p13 = resonators[(R5c * 5) - 2]))) + ((resonators[(R5c * 5) - 3]) * (resonators[(R5c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R5c * 5) - 1] = p13;
+			/* begin resonatorP1:put: */
+			resonators[(R5c * 5) - 2] = answer3;
+			out1 = answer3;
+		}
+		if (cascade >= 4) {
+			/* begin resonator:value: */
+			answer4 = (((resonators[(R4c * 5) - 5]) * out1) + ((resonators[(R4c * 5) - 4]) * (p14 = resonators[(R4c * 5) - 2]))) + ((resonators[(R4c * 5) - 3]) * (resonators[(R4c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R4c * 5) - 1] = p14;
+			/* begin resonatorP1:put: */
+			resonators[(R4c * 5) - 2] = answer4;
+			out1 = answer4;
+		}
+		if (cascade >= 3) {
+			/* begin resonator:value: */
+			answer5 = (((resonators[(R3c * 5) - 5]) * out1) + ((resonators[(R3c * 5) - 4]) * (p15 = resonators[(R3c * 5) - 2]))) + ((resonators[(R3c * 5) - 3]) * (resonators[(R3c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R3c * 5) - 1] = p15;
+			/* begin resonatorP1:put: */
+			resonators[(R3c * 5) - 2] = answer5;
+			out1 = answer5;
+		}
+		if (cascade >= 2) {
+			/* begin resonator:value: */
+			answer6 = (((resonators[(R2c * 5) - 5]) * out1) + ((resonators[(R2c * 5) - 4]) * (p16 = resonators[(R2c * 5) - 2]))) + ((resonators[(R2c * 5) - 3]) * (resonators[(R2c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R2c * 5) - 1] = p16;
+			/* begin resonatorP1:put: */
+			resonators[(R2c * 5) - 2] = answer6;
+			out1 = answer6;
+		}
+		if (cascade >= 1) {
+			/* begin resonator:value: */
+			answer7 = (((resonators[(R1c * 5) - 5]) * out1) + ((resonators[(R1c * 5) - 4]) * (p17 = resonators[(R1c * 5) - 2]))) + ((resonators[(R1c * 5) - 3]) * (resonators[(R1c * 5) - 1]));
+			/* begin resonatorP2:put: */
+			resonators[(R1c * 5) - 1] = p17;
+			/* begin resonatorP1:put: */
+			resonators[(R1c * 5) - 2] = answer7;
+			out1 = answer7;
+		}
+		out = out1;
+	l2:	/* end cascadeBranch: */;
 
 		/* Source is voicing plus aspiration. */
 
@@ -1040,15 +1348,21 @@ static void synthesizeFrameintostartingAt(float * aKlattFrame, short * buffer, s
 		 parallel resonators is friction plus first difference of
 		 voicing waveform. */
 
-		out += parallelVoicedBranch(source);
+		out += (((((resonatorvalue(R1vp, source)) + (resonatorvalue(R2vp, source))) + (resonatorvalue(R3vp, source))) + (resonatorvalue(R4vp, source))) + (resonatorvalue(Rnpp, source))) + (resonatorvalue(Rtpp, source));
 		source = (frictionNoise + parGlotout) - glast;
 		glast = parGlotout;
 
 		/* Apply bypas and output low-pass filter */
 
-		out = (parallelFrictionBranch(source)) - out;
+		out = (((((resonatorvalue(R2fp, source)) - (resonatorvalue(R3fp, source))) + (resonatorvalue(R4fp, source))) - (resonatorvalue(R5fp, source))) + (resonatorvalue(R6fp, source))) - out;
 		out = (bypass * source) - out;
-		out = resonatorvalue(Rout, out);
+		/* begin resonator:value: */
+		answer12 = (((resonators[(Rout * 5) - 5]) * out) + ((resonators[(Rout * 5) - 4]) * (p112 = resonators[(Rout * 5) - 2]))) + ((resonators[(Rout * 5) - 3]) * (resonators[(Rout * 5) - 1]));
+		/* begin resonatorP2:put: */
+		resonators[(Rout * 5) - 1] = p112;
+		/* begin resonatorP1:put: */
+		resonators[(Rout * 5) - 2] = answer12;
+		out = answer12;
 		temp = ((sqInt) (out * ampGain) );
 		if (temp < -32768) {
 			temp = -32768;

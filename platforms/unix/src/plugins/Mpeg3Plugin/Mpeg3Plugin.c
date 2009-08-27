@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:53:01 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:14 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -67,8 +67,8 @@ EXPORT(sqInt) primitiveMPEG3OpenABuffer(void);
 EXPORT(sqInt) primitiveMPEG3PreviousFrame(void);
 EXPORT(sqInt) primitiveMPEG3ReReadAudio(void);
 EXPORT(sqInt) primitiveMPEG3ReadAudio(void);
-EXPORT(sqInt) primitiveMPEG3ReadFrame(void);
 EXPORT(sqInt) primitiveMPEG3ReadFrameBufferOffset(void);
+EXPORT(sqInt) primitiveMPEG3ReadFrame(void);
 EXPORT(sqInt) primitiveMPEG3SampleRate(void);
 EXPORT(sqInt) primitiveMPEG3SeekPercentage(void);
 EXPORT(sqInt) primitiveMPEG3SetCpus(void);
@@ -97,9 +97,9 @@ struct VirtualMachine* interpreterProxy;
 static sqInt maximumNumberOfFilesToWatch;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Mpeg3Plugin 10 November 2008 (i)"
+	"Mpeg3Plugin 26 August 2009 (i)"
 #else
-	"Mpeg3Plugin 10 November 2008 (e)"
+	"Mpeg3Plugin 26 August 2009 (e)"
 #endif
 ;
 static mpeg3_t *mpegFiles[1024+1];
@@ -927,87 +927,6 @@ EXPORT(sqInt) primitiveMPEG3ReadAudio(void) {
 		int color_model,
 		int stream) */
 
-EXPORT(sqInt) primitiveMPEG3ReadFrame(void) {
-	unsigned char * bufferBaseAddr;
-	sqInt result;
-	sqInt i;
-	unsigned char  **  outputRowsPtr;
-	mpeg3_t *  file;
-	sqInt fileHandle;
-	usqInt *aBuffer;
-	sqInt xNumber;
-	sqInt yNumber;
-	sqInt width;
-	sqInt height;
-	sqInt outWidth;
-	sqInt outHeight;
-	sqInt model;
-	sqInt aNumber;
-	sqInt aByteNumber;
-	sqInt _return_value;
-
-	fileHandle = interpreterProxy->stackValue(10);
-	interpreterProxy->success(interpreterProxy->isWords(interpreterProxy->stackValue(9)));
-	aBuffer = ((unsigned *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(9))));
-	xNumber = interpreterProxy->stackIntegerValue(8);
-	yNumber = interpreterProxy->stackIntegerValue(7);
-	width = interpreterProxy->stackIntegerValue(6);
-	height = interpreterProxy->stackIntegerValue(5);
-	outWidth = interpreterProxy->stackIntegerValue(4);
-	outHeight = interpreterProxy->stackIntegerValue(3);
-	model = interpreterProxy->stackIntegerValue(2);
-	aNumber = interpreterProxy->stackIntegerValue(1);
-	aByteNumber = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	file = mpeg3tValueOf(fileHandle);
-	if (file == null) {
-		if (interpreterProxy->failed()) {
-			return null;
-		}
-		interpreterProxy->popthenPush(12, 0);
-		return null;
-	}
-	if (aNumber < 0) {
-		interpreterProxy->success(0);
-		return null;
-	}
-	if (aNumber >= (result = mpeg3_total_vstreams(file))) {
-		interpreterProxy->success(0);
-		if (interpreterProxy->failed()) {
-			return null;
-		}
-		interpreterProxy->popthenPush(12, 0);
-		return null;
-	}
-	bufferBaseAddr = ((unsigned char *) aBuffer);
-	outputRowsPtr = (unsigned char **) memoryAllocate(1,sizeof(unsigned char*) * outHeight);
-	for (i = 0; i <= (outHeight - 1); i += 1) {
-		outputRowsPtr[i] = (bufferBaseAddr + (aByteNumber * i));
-	}
-	result = mpeg3_read_frame(file,outputRowsPtr,xNumber,yNumber,width,height,outWidth,outHeight,model,aNumber);
-	memoryFree(outputRowsPtr);
-	_return_value = interpreterProxy->integerObjectOf(result);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(12, _return_value);
-	return null;
-}
-
-
-/*	int mpeg3_read_frame(mpeg3_t *file, 
-		unsigned char **output_rows, 
-		int in_x, 
-		int in_y, 
-		int in_w, 
-		int in_h, 
-		int out_w, 
-		int out_h, 
-		int color_model,
-		int stream) */
-
 EXPORT(sqInt) primitiveMPEG3ReadFrameBufferOffset(void) {
 	unsigned char *bufferBaseAddr;
 	sqInt result;
@@ -1076,6 +995,87 @@ EXPORT(sqInt) primitiveMPEG3ReadFrameBufferOffset(void) {
 		return null;
 	}
 	interpreterProxy->popthenPush(13, _return_value);
+	return null;
+}
+
+
+/*	int mpeg3_read_frame(mpeg3_t *file, 
+		unsigned char **output_rows, 
+		int in_x, 
+		int in_y, 
+		int in_w, 
+		int in_h, 
+		int out_w, 
+		int out_h, 
+		int color_model,
+		int stream) */
+
+EXPORT(sqInt) primitiveMPEG3ReadFrame(void) {
+	unsigned char * bufferBaseAddr;
+	sqInt result;
+	sqInt i;
+	unsigned char  **  outputRowsPtr;
+	mpeg3_t *  file;
+	sqInt fileHandle;
+	usqInt *aBuffer;
+	sqInt xNumber;
+	sqInt yNumber;
+	sqInt width;
+	sqInt height;
+	sqInt outWidth;
+	sqInt outHeight;
+	sqInt model;
+	sqInt aNumber;
+	sqInt aByteNumber;
+	sqInt _return_value;
+
+	fileHandle = interpreterProxy->stackValue(10);
+	interpreterProxy->success(interpreterProxy->isWords(interpreterProxy->stackValue(9)));
+	aBuffer = ((unsigned *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(9))));
+	xNumber = interpreterProxy->stackIntegerValue(8);
+	yNumber = interpreterProxy->stackIntegerValue(7);
+	width = interpreterProxy->stackIntegerValue(6);
+	height = interpreterProxy->stackIntegerValue(5);
+	outWidth = interpreterProxy->stackIntegerValue(4);
+	outHeight = interpreterProxy->stackIntegerValue(3);
+	model = interpreterProxy->stackIntegerValue(2);
+	aNumber = interpreterProxy->stackIntegerValue(1);
+	aByteNumber = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	file = mpeg3tValueOf(fileHandle);
+	if (file == null) {
+		if (interpreterProxy->failed()) {
+			return null;
+		}
+		interpreterProxy->popthenPush(12, 0);
+		return null;
+	}
+	if (aNumber < 0) {
+		interpreterProxy->success(0);
+		return null;
+	}
+	if (aNumber >= (result = mpeg3_total_vstreams(file))) {
+		interpreterProxy->success(0);
+		if (interpreterProxy->failed()) {
+			return null;
+		}
+		interpreterProxy->popthenPush(12, 0);
+		return null;
+	}
+	bufferBaseAddr = ((unsigned char *) aBuffer);
+	outputRowsPtr = (unsigned char **) memoryAllocate(1,sizeof(unsigned char*) * outHeight);
+	for (i = 0; i <= (outHeight - 1); i += 1) {
+		outputRowsPtr[i] = (bufferBaseAddr + (aByteNumber * i));
+	}
+	result = mpeg3_read_frame(file,outputRowsPtr,xNumber,yNumber,width,height,outWidth,outHeight,model,aNumber);
+	memoryFree(outputRowsPtr);
+	_return_value = interpreterProxy->integerObjectOf(result);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(12, _return_value);
 	return null;
 }
 
@@ -1571,43 +1571,43 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* Mpeg3Plugin_exports[][3] = {
-	{"Mpeg3Plugin", "primitiveMPEG3ReadAudio", (void*)primitiveMPEG3ReadAudio},
-	{"Mpeg3Plugin", "primitiveMPEG3PreviousFrame", (void*)primitiveMPEG3PreviousFrame},
-	{"Mpeg3Plugin", "shutdownModule", (void*)shutdownModule},
-	{"Mpeg3Plugin", "primitiveMPEG3GetFrame", (void*)primitiveMPEG3GetFrame},
-	{"Mpeg3Plugin", "primitiveMPEG3ReReadAudio", (void*)primitiveMPEG3ReReadAudio},
-	{"Mpeg3Plugin", "setInterpreter", (void*)setInterpreter},
-	{"Mpeg3Plugin", "primitiveMPEG3DropFrames", (void*)primitiveMPEG3DropFrames},
-	{"Mpeg3Plugin", "primitiveMPEG3CheckSig", (void*)primitiveMPEG3CheckSig},
-	{"Mpeg3Plugin", "primitiveMPEG3ReadFrame", (void*)primitiveMPEG3ReadFrame},
-	{"Mpeg3Plugin", "primitiveMPEG3TotalVStreams", (void*)primitiveMPEG3TotalVStreams},
-	{"Mpeg3Plugin", "primitiveMPEG3VideoFrames", (void*)primitiveMPEG3VideoFrames},
-	{"Mpeg3Plugin", "primitiveMPEG3HasAudio", (void*)primitiveMPEG3HasAudio},
+	{"Mpeg3Plugin", "primitiveMPEG3EndOfAudio", (void*)primitiveMPEG3EndOfAudio},
 	{"Mpeg3Plugin", "primitiveMPEG3EndOfVideo", (void*)primitiveMPEG3EndOfVideo},
-	{"Mpeg3Plugin", "primitiveMPEG3VideoWidth", (void*)primitiveMPEG3VideoWidth},
+	{"Mpeg3Plugin", "primitiveMPEG3GenerateToc", (void*)primitiveMPEG3GenerateToc},
+	{"Mpeg3Plugin", "shutdownModule", (void*)shutdownModule},
+	{"Mpeg3Plugin", "setInterpreter", (void*)setInterpreter},
+	{"Mpeg3Plugin", "primitiveMPEG3TotalAStreams", (void*)primitiveMPEG3TotalAStreams},
+	{"Mpeg3Plugin", "primitiveMPEG3SetMmx", (void*)primitiveMPEG3SetMmx},
+	{"Mpeg3Plugin", "primitiveMPEG3ReadFrame", (void*)primitiveMPEG3ReadFrame},
+	{"Mpeg3Plugin", "primitiveMPEG3SeekPercentage", (void*)primitiveMPEG3SeekPercentage},
+	{"Mpeg3Plugin", "primitiveMPEG3ReReadAudio", (void*)primitiveMPEG3ReReadAudio},
+	{"Mpeg3Plugin", "primitiveMPEG3SetCpus", (void*)primitiveMPEG3SetCpus},
 	{"Mpeg3Plugin", "initialiseModule", (void*)initialiseModule},
 	{"Mpeg3Plugin", "primitiveMPEG3AudioChannels", (void*)primitiveMPEG3AudioChannels},
-	{"Mpeg3Plugin", "primitiveMPEG3SetSample", (void*)primitiveMPEG3SetSample},
-	{"Mpeg3Plugin", "primitiveMPEG3SetFrame", (void*)primitiveMPEG3SetFrame},
-	{"Mpeg3Plugin", "primitiveMPEG3VideoHeight", (void*)primitiveMPEG3VideoHeight},
-	{"Mpeg3Plugin", "primitiveMPEG3SetMmx", (void*)primitiveMPEG3SetMmx},
-	{"Mpeg3Plugin", "primitiveMPEG3FrameRate", (void*)primitiveMPEG3FrameRate},
-	{"Mpeg3Plugin", "primitiveMPEG3Open", (void*)primitiveMPEG3Open},
-	{"Mpeg3Plugin", "getModuleName", (void*)getModuleName},
-	{"Mpeg3Plugin", "primitiveMPEG3SampleRate", (void*)primitiveMPEG3SampleRate},
-	{"Mpeg3Plugin", "primitiveMPEG3SetCpus", (void*)primitiveMPEG3SetCpus},
-	{"Mpeg3Plugin", "primitiveMPEG3Close", (void*)primitiveMPEG3Close},
 	{"Mpeg3Plugin", "primitiveMPEG3HasVideo", (void*)primitiveMPEG3HasVideo},
-	{"Mpeg3Plugin", "primitiveMPEG3ReadFrameBufferOffset", (void*)primitiveMPEG3ReadFrameBufferOffset},
-	{"Mpeg3Plugin", "primitiveMPEG3OpenABuffer", (void*)primitiveMPEG3OpenABuffer},
+	{"Mpeg3Plugin", "primitiveMPEG3VideoHeight", (void*)primitiveMPEG3VideoHeight},
+	{"Mpeg3Plugin", "primitiveMPEG3HasAudio", (void*)primitiveMPEG3HasAudio},
+	{"Mpeg3Plugin", "primitiveMPEG3SampleRate", (void*)primitiveMPEG3SampleRate},
+	{"Mpeg3Plugin", "primitiveMPEG3DropFrames", (void*)primitiveMPEG3DropFrames},
 	{"Mpeg3Plugin", "primitiveMPEG3AudioSamples", (void*)primitiveMPEG3AudioSamples},
+	{"Mpeg3Plugin", "primitiveMPEG3VideoWidth", (void*)primitiveMPEG3VideoWidth},
+	{"Mpeg3Plugin", "getModuleName", (void*)getModuleName},
+	{"Mpeg3Plugin", "primitiveMPEG3ReadFrameBufferOffset", (void*)primitiveMPEG3ReadFrameBufferOffset},
+	{"Mpeg3Plugin", "primitiveMPEG3Close", (void*)primitiveMPEG3Close},
+	{"Mpeg3Plugin", "primitiveMPEG3GetFrame", (void*)primitiveMPEG3GetFrame},
+	{"Mpeg3Plugin", "primitiveMPEG3OpenABuffer", (void*)primitiveMPEG3OpenABuffer},
 	{"Mpeg3Plugin", "primitiveMPEG3TellPercentage", (void*)primitiveMPEG3TellPercentage},
-	{"Mpeg3Plugin", "primitiveMPEG3GetSample", (void*)primitiveMPEG3GetSample},
-	{"Mpeg3Plugin", "primitiveMPEG3GenerateToc", (void*)primitiveMPEG3GenerateToc},
-	{"Mpeg3Plugin", "primitiveMPEG3EndOfAudio", (void*)primitiveMPEG3EndOfAudio},
+	{"Mpeg3Plugin", "primitiveMPEG3VideoFrames", (void*)primitiveMPEG3VideoFrames},
+	{"Mpeg3Plugin", "primitiveMPEG3CheckSig", (void*)primitiveMPEG3CheckSig},
+	{"Mpeg3Plugin", "primitiveMPEG3SetFrame", (void*)primitiveMPEG3SetFrame},
 	{"Mpeg3Plugin", "primitiveMPEG3GetTime", (void*)primitiveMPEG3GetTime},
-	{"Mpeg3Plugin", "primitiveMPEG3SeekPercentage", (void*)primitiveMPEG3SeekPercentage},
-	{"Mpeg3Plugin", "primitiveMPEG3TotalAStreams", (void*)primitiveMPEG3TotalAStreams},
+	{"Mpeg3Plugin", "primitiveMPEG3ReadAudio", (void*)primitiveMPEG3ReadAudio},
+	{"Mpeg3Plugin", "primitiveMPEG3TotalVStreams", (void*)primitiveMPEG3TotalVStreams},
+	{"Mpeg3Plugin", "primitiveMPEG3PreviousFrame", (void*)primitiveMPEG3PreviousFrame},
+	{"Mpeg3Plugin", "primitiveMPEG3Open", (void*)primitiveMPEG3Open},
+	{"Mpeg3Plugin", "primitiveMPEG3GetSample", (void*)primitiveMPEG3GetSample},
+	{"Mpeg3Plugin", "primitiveMPEG3FrameRate", (void*)primitiveMPEG3FrameRate},
+	{"Mpeg3Plugin", "primitiveMPEG3SetSample", (void*)primitiveMPEG3SetSample},
 	{NULL, NULL, NULL}
 };
 

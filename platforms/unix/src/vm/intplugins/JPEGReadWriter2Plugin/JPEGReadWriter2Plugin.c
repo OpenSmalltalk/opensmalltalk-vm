@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:25 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:13 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -66,9 +66,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"JPEGReadWriter2Plugin 10 November 2008 (i)"
+	"JPEGReadWriter2Plugin 26 August 2009 (i)"
 #else
-	"JPEGReadWriter2Plugin 10 November 2008 (e)"
+	"JPEGReadWriter2Plugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -671,18 +671,18 @@ static sqInt sqAssert(sqInt aBool) {
 
 void* JPEGReadWriter2Plugin_exports[][3] = {
 	{"JPEGReadWriter2Plugin", "primJPEGDecompressStructSize", (void*)primJPEGDecompressStructSize},
+	{"JPEGReadWriter2Plugin", "primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgr", (void*)primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgr},
+	{"JPEGReadWriter2Plugin", "primJPEGReadHeaderfromByteArrayerrorMgr", (void*)primJPEGReadHeaderfromByteArrayerrorMgr},
 	{"JPEGReadWriter2Plugin", "shutdownModule", (void*)shutdownModule},
 	{"JPEGReadWriter2Plugin", "primJPEGPluginIsPresent", (void*)primJPEGPluginIsPresent},
-	{"JPEGReadWriter2Plugin", "primImageHeight", (void*)primImageHeight},
-	{"JPEGReadWriter2Plugin", "initialiseModule", (void*)initialiseModule},
-	{"JPEGReadWriter2Plugin", "primJPEGReadHeaderfromByteArrayerrorMgr", (void*)primJPEGReadHeaderfromByteArrayerrorMgr},
-	{"JPEGReadWriter2Plugin", "setInterpreter", (void*)setInterpreter},
 	{"JPEGReadWriter2Plugin", "primJPEGErrorMgr2StructSize", (void*)primJPEGErrorMgr2StructSize},
+	{"JPEGReadWriter2Plugin", "initialiseModule", (void*)initialiseModule},
+	{"JPEGReadWriter2Plugin", "setInterpreter", (void*)setInterpreter},
 	{"JPEGReadWriter2Plugin", "primJPEGCompressStructSize", (void*)primJPEGCompressStructSize},
 	{"JPEGReadWriter2Plugin", "getModuleName", (void*)getModuleName},
-	{"JPEGReadWriter2Plugin", "primImageWidth", (void*)primImageWidth},
-	{"JPEGReadWriter2Plugin", "primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgr", (void*)primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgr},
 	{"JPEGReadWriter2Plugin", "primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgr", (void*)primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgr},
+	{"JPEGReadWriter2Plugin", "primImageHeight", (void*)primImageHeight},
+	{"JPEGReadWriter2Plugin", "primImageWidth", (void*)primImageWidth},
 	{NULL, NULL, NULL}
 };
 

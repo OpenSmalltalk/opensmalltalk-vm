@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:35 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:39 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -59,9 +59,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ClipboardExtendedPlugin 10 November 2008 (i)"
+	"ClipboardExtendedPlugin 26 August 2009 (i)"
 #else
-	"ClipboardExtendedPlugin 10 November 2008 (e)"
+	"ClipboardExtendedPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -223,13 +223,13 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* ClipboardExtendedPlugin_exports[][3] = {
-	{"ClipboardExtendedPlugin", "ioAddClipboardData", (void*)ioAddClipboardData},
-	{"ClipboardExtendedPlugin", "ioGetClipboardFormat", (void*)ioGetClipboardFormat},
-	{"ClipboardExtendedPlugin", "getModuleName", (void*)getModuleName},
-	{"ClipboardExtendedPlugin", "ioCreateClipboard", (void*)ioCreateClipboard},
-	{"ClipboardExtendedPlugin", "setInterpreter", (void*)setInterpreter},
-	{"ClipboardExtendedPlugin", "ioClearClipboard", (void*)ioClearClipboard},
 	{"ClipboardExtendedPlugin", "ioReadClipboardData", (void*)ioReadClipboardData},
+	{"ClipboardExtendedPlugin", "ioCreateClipboard", (void*)ioCreateClipboard},
+	{"ClipboardExtendedPlugin", "ioAddClipboardData", (void*)ioAddClipboardData},
+	{"ClipboardExtendedPlugin", "getModuleName", (void*)getModuleName},
+	{"ClipboardExtendedPlugin", "setInterpreter", (void*)setInterpreter},
+	{"ClipboardExtendedPlugin", "ioGetClipboardFormat", (void*)ioGetClipboardFormat},
+	{"ClipboardExtendedPlugin", "ioClearClipboard", (void*)ioClearClipboard},
 	{NULL, NULL, NULL}
 };
 

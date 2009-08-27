@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:44 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:18 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -61,9 +61,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"PseudoTTYPlugin 10 November 2008 (i)"
+	"PseudoTTYPlugin 26 August 2009 (i)"
 #else
-	"PseudoTTYPlugin 10 November 2008 (e)"
+	"PseudoTTYPlugin 26 August 2009 (e)"
 #endif
 ;
 static sqInt sCOAFfn;
@@ -224,13 +224,13 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* PseudoTTYPlugin_exports[][3] = {
-	{"PseudoTTYPlugin", "primPtyWindowSize", (void*)primPtyWindowSize},
 	{"PseudoTTYPlugin", "getModuleName", (void*)getModuleName},
 	{"PseudoTTYPlugin", "shutdownModule", (void*)shutdownModule},
-	{"PseudoTTYPlugin", "initialiseModule", (void*)initialiseModule},
-	{"PseudoTTYPlugin", "setInterpreter", (void*)setInterpreter},
 	{"PseudoTTYPlugin", "primPtyClose", (void*)primPtyClose},
+	{"PseudoTTYPlugin", "initialiseModule", (void*)initialiseModule},
 	{"PseudoTTYPlugin", "primPtyForkAndExec", (void*)primPtyForkAndExec},
+	{"PseudoTTYPlugin", "setInterpreter", (void*)setInterpreter},
+	{"PseudoTTYPlugin", "primPtyWindowSize", (void*)primPtyWindowSize},
 	{NULL, NULL, NULL}
 };
 

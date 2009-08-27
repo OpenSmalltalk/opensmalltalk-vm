@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:29 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:25 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -87,9 +87,9 @@ static int lastAlloc = 0;
 static sqInt matchFlags;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"RePlugin 10 November 2008 (i)"
+	"RePlugin 26 August 2009 (i)"
 #else
-	"RePlugin 10 November 2008 (e)"
+	"RePlugin 26 August 2009 (e)"
 #endif
 ;
 static int netMemory = 0;
@@ -259,6 +259,7 @@ EXPORT(sqInt) primPCREExec(void) {
 	sqInt result;
 	char * searchBuffer;
 	sqInt matchSpaceSize;
+	sqInt extraObj;
 
 	searchObject = interpreterProxy->stackObjectValue(0);
 	searchBuffer = interpreterProxy->arrayValueOf(searchObject);
@@ -266,7 +267,14 @@ EXPORT(sqInt) primPCREExec(void) {
 	/* begin loadRcvrFromStackAt: */
 	rcvr = interpreterProxy->stackObjectValue(1);
 	pcrePtr = ((int) (interpreterProxy->fetchArrayofObject(2, rcvr)));
-	extraPtr = rcvrExtraPtr();
+	/* begin rcvrExtraPtr */
+	extraObj = interpreterProxy->fetchPointerofObject(3, rcvr);
+	if (extraObj == (interpreterProxy->nilObject())) {
+		extraPtr = (int) NULL;
+		goto l1;
+	}
+	extraPtr = ((int) (interpreterProxy->arrayValueOf(extraObj)));
+l1:	/* end rcvrExtraPtr */;
 	matchFlags = interpreterProxy->fetchIntegerofObject(6, rcvr);
 	matchSpacePtr = ((int *) (interpreterProxy->fetchArrayofObject(7, rcvr)));
 	matchSpaceSize = ((sqInt) (interpreterProxy->byteSizeOf(interpreterProxy->fetchPointerofObject(7, rcvr))) >> 2);
@@ -299,6 +307,7 @@ EXPORT(sqInt) primPCREExecfromto(void) {
 	char * searchBuffer;
 	sqInt matchSpaceSize;
 	sqInt fromInteger;
+	sqInt extraObj;
 
 	toInteger = interpreterProxy->stackIntegerValue(0);
 	fromInteger = interpreterProxy->stackIntegerValue(1);
@@ -320,7 +329,14 @@ EXPORT(sqInt) primPCREExecfromto(void) {
 
 	searchBuffer += fromInteger;
 	pcrePtr = ((int) (interpreterProxy->fetchArrayofObject(2, rcvr)));
-	extraPtr = rcvrExtraPtr();
+	/* begin rcvrExtraPtr */
+	extraObj = interpreterProxy->fetchPointerofObject(3, rcvr);
+	if (extraObj == (interpreterProxy->nilObject())) {
+		extraPtr = (int) NULL;
+		goto l1;
+	}
+	extraPtr = ((int) (interpreterProxy->arrayValueOf(extraObj)));
+l1:	/* end rcvrExtraPtr */;
 	matchFlags = interpreterProxy->fetchIntegerofObject(6, rcvr);
 	matchSpacePtr = ((int *) (interpreterProxy->fetchArrayofObject(7, rcvr)));
 	matchSpaceSize = ((sqInt) (interpreterProxy->byteSizeOf(interpreterProxy->fetchPointerofObject(7, rcvr))) >> 2);

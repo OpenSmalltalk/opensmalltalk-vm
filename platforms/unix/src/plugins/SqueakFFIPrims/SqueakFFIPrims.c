@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:37 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:45 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -141,9 +141,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SqueakFFIPrims 10 November 2008 (i)"
+	"SqueakFFIPrims 26 August 2009 (i)"
 #else
-	"SqueakFFIPrims 10 November 2008 (e)"
+	"SqueakFFIPrims 26 August 2009 (e)"
 #endif
 ;
 
@@ -239,6 +239,10 @@ static sqInt ffiArgByValue(sqInt oop) {
 			}
 			if (oopClass == (interpreterProxy->classCharacter())) {
 				intValue = interpreterProxy->fetchIntegerofObject(0, oop);
+				goto l1;
+			}
+			if (oopClass == (interpreterProxy->classLargePositiveInteger())) {
+				intValue = interpreterProxy->positive32BitValueOf(oop);
 				goto l1;
 			}
 			intValue = interpreterProxy->signed32BitValueOf(oop);
@@ -622,6 +626,10 @@ static sqInt ffiArgumentSpecClass(sqInt oop, sqInt argSpec, sqInt argClass) {
 				}
 				if (oopClass2 == (interpreterProxy->classCharacter())) {
 					intValue = interpreterProxy->fetchIntegerofObject(0, valueOop);
+					goto l3;
+				}
+				if (oopClass2 == (interpreterProxy->classLargePositiveInteger())) {
+					intValue = interpreterProxy->positive32BitValueOf(valueOop);
 					goto l3;
 				}
 				intValue = interpreterProxy->signed32BitValueOf(valueOop);
@@ -1525,6 +1533,9 @@ static sqInt ffiIntegerValueOf(sqInt oop) {
 	}
 	if (oopClass == (interpreterProxy->classCharacter())) {
 		return interpreterProxy->fetchIntegerofObject(0, oop);
+	}
+	if (oopClass == (interpreterProxy->classLargePositiveInteger())) {
+		return interpreterProxy->positive32BitValueOf(oop);
 	}
 	return interpreterProxy->signed32BitValueOf(oop);
 }

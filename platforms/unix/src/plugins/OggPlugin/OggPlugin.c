@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:44 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:17 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -72,9 +72,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"OggPlugin 10 November 2008 (i)"
+	"OggPlugin 26 August 2009 (i)"
 #else
-	"OggPlugin 10 November 2008 (e)"
+	"OggPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -501,26 +501,26 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* OggPlugin_exports[][3] = {
-	{"OggPlugin", "primitiveWriteEOS", (void*)primitiveWriteEOS},
+	{"OggPlugin", "primitiveSetChannels", (void*)primitiveSetChannels},
+	{"OggPlugin", "setInterpreter", (void*)setInterpreter},
+	{"OggPlugin", "primitiveVersion", (void*)primitiveVersion},
+	{"OggPlugin", "primitiveGetComment", (void*)primitiveGetComment},
+	{"OggPlugin", "primitiveClose", (void*)primitiveClose},
+	{"OggPlugin", "getModuleName", (void*)getModuleName},
 	{"OggPlugin", "primitiveGetCommentSize", (void*)primitiveGetCommentSize},
 	{"OggPlugin", "primitivePacketFlush", (void*)primitivePacketFlush},
-	{"OggPlugin", "setInterpreter", (void*)setInterpreter},
-	{"OggPlugin", "primitiveClose", (void*)primitiveClose},
-	{"OggPlugin", "primitiveVersion", (void*)primitiveVersion},
-	{"OggPlugin", "getModuleName", (void*)getModuleName},
-	{"OggPlugin", "primitiveGetVendor", (void*)primitiveGetVendor},
-	{"OggPlugin", "primitiveSetQuality", (void*)primitiveSetQuality},
-	{"OggPlugin", "primitiveReadSize", (void*)primitiveReadSize},
-	{"OggPlugin", "primitiveExtractMono", (void*)primitiveExtractMono},
 	{"OggPlugin", "primitiveGetChannels", (void*)primitiveGetChannels},
+	{"OggPlugin", "primitiveExtractMono", (void*)primitiveExtractMono},
+	{"OggPlugin", "primitiveSetQuality", (void*)primitiveSetQuality},
+	{"OggPlugin", "primitiveGetState", (void*)primitiveGetState},
+	{"OggPlugin", "primitiveReadSize", (void*)primitiveReadSize},
 	{"OggPlugin", "primitiveOpen", (void*)primitiveOpen},
-	{"OggPlugin", "primitiveSetChannels", (void*)primitiveSetChannels},
+	{"OggPlugin", "primitiveWriteEOS", (void*)primitiveWriteEOS},
 	{"OggPlugin", "primitiveWrite", (void*)primitiveWrite},
 	{"OggPlugin", "primitiveRead", (void*)primitiveRead},
-	{"OggPlugin", "primitiveGetComment", (void*)primitiveGetComment},
-	{"OggPlugin", "primitiveSetRate", (void*)primitiveSetRate},
+	{"OggPlugin", "primitiveGetVendor", (void*)primitiveGetVendor},
 	{"OggPlugin", "primitiveGetRate", (void*)primitiveGetRate},
-	{"OggPlugin", "primitiveGetState", (void*)primitiveGetState},
+	{"OggPlugin", "primitiveSetRate", (void*)primitiveSetRate},
 	{NULL, NULL, NULL}
 };
 

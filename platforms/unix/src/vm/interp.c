@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(29 July 2009 10:59 pm)
-by VMMaker 3.10.7
+/* Automatically generated from Squeak on an Array(26 August 2009 9:59:59 pm)
+by VMMaker 3.11.3
  */
 
 #define SQ_USE_GLOBAL_STRUCT 1
@@ -773,7 +773,7 @@ usqInt youngStart;
 struct foo * foo = &fum;
 
 sqInt extraVMMemory;
-const char *interpreterVersion = "Squeak3.10beta of 22 July 2007 [latest update: #7159]";
+const char *interpreterVersion = "Squeak3.10.2 of '5 June 2008' [latest update: #7179]";
 sqInt (*compilerHooks[16])();
 char* obsoleteIndexedPrimitiveTable[][3] = {
 { NULL, NULL, NULL },
@@ -4145,6 +4145,7 @@ register struct foo * foo = &fum;
     sqInt result;
     sqInt posRcvr;
     sqInt posArg;
+    sqInt successValue;
 
 	if (((rcvr & arg) & 1) != 0) {
 		integerRcvr = (rcvr >> 1);
@@ -4175,7 +4176,14 @@ register struct foo * foo = &fum;
 		}
 	}
 	/* begin success: */
-	foo->successFlag = ((result ^ (result << 1)) >= 0) && foo->successFlag;
+	successValue = 
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) result)) ^ ((((int) result)) << 1)) >= 0)
+# else
+		((result >= -1073741824) && (result <= 1073741823))
+# endif  // SQ_HOST32
+	;
+	foo->successFlag = successValue && foo->successFlag;
 	return result;
 }
 
@@ -4184,6 +4192,7 @@ register struct foo * foo = &fum;
     sqInt integerRcvr;
     sqInt integerResult;
     sqInt integerArg;
+    sqInt successValue;
 
 	if (((rcvr & arg) & 1) != 0) {
 		integerRcvr = (rcvr >> 1);
@@ -4211,7 +4220,14 @@ register struct foo * foo = &fum;
 		}
 	}
 	/* begin success: */
-	foo->successFlag = ((integerResult ^ (integerResult << 1)) >= 0) && foo->successFlag;
+	successValue = 
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) integerResult)) ^ ((((int) integerResult)) << 1)) >= 0)
+# else
+		((integerResult >= -1073741824) && (integerResult <= 1073741823))
+# endif  // SQ_HOST32
+	;
+	foo->successFlag = successValue && foo->successFlag;
 	return integerResult;
 }
 
@@ -8979,7 +8995,13 @@ register struct foo * foo = &fum;
 				arg = longAtPointer(localSP - (0 * BytesPerWord));
 				if (((rcvr & arg) & 1) != 0) {
 					result = ((rcvr >> 1)) + ((arg >> 1));
-					if ((result ^ (result << 1)) >= 0) {
+					if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+						(((((int) result)) ^ ((((int) result)) << 1)) >= 0)
+# else
+						((result >= -1073741824) && (result <= 1073741823))
+# endif  // SQ_HOST32
+					) {
 						/* begin internalPop:thenPush: */
 						longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 						/* begin fetchNextBytecode */
@@ -9020,7 +9042,13 @@ register struct foo * foo = &fum;
 				arg = longAtPointer(localSP - (0 * BytesPerWord));
 				if (((rcvr & arg) & 1) != 0) {
 					result = ((rcvr >> 1)) - ((arg >> 1));
-					if ((result ^ (result << 1)) >= 0) {
+					if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+						(((((int) result)) ^ ((((int) result)) << 1)) >= 0)
+# else
+						((result >= -1073741824) && (result <= 1073741823))
+# endif  // SQ_HOST32
+					) {
 						/* begin internalPop:thenPush: */
 						longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 						/* begin fetchNextBytecode */
@@ -9705,7 +9733,13 @@ register struct foo * foo = &fum;
 					rcvr = (rcvr >> 1);
 					arg = (arg >> 1);
 					result = rcvr * arg;
-					if (((arg == 0) || ((result / arg) == rcvr)) && ((result ^ (result << 1)) >= 0)) {
+					if (((arg == 0) || ((result / arg) == rcvr)) && (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+	(((((int) result)) ^ ((((int) result)) << 1)) >= 0)
+# else
+	((result >= -1073741824) && (result <= 1073741823))
+# endif  // SQ_HOST32
+)) {
 						/* begin internalPop:thenPush: */
 						longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 						/* begin fetchNextBytecode */
@@ -9749,7 +9783,13 @@ register struct foo * foo = &fum;
 					arg = (arg >> 1);
 					if ((arg != 0) && ((rcvr % arg) == 0)) {
 						result = rcvr / arg;
-						if ((result ^ (result << 1)) >= 0) {
+						if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+							(((((int) result)) ^ ((((int) result)) << 1)) >= 0)
+# else
+							((result >= -1073741824) && (result <= 1073741823))
+# endif  // SQ_HOST32
+						) {
 							/* begin internalPop:thenPush: */
 							longAtPointerput(localSP -= (2 - 1) * BytesPerWord, ((result << 1) | 1));
 							/* begin fetchNextBytecode */
@@ -11232,10 +11272,28 @@ sqInt isIntegerObject(sqInt objectPointer) {
 
 
 /*	Return true if the given value can be represented as a Smalltalk integer value. */
-/*	Use a shift and XOR to set the sign bit if and only if the top two bits of the given value are the same, then test the sign bit. Note that the top two bits are equal for exactly those integers in the range that can be represented in 31-bits or 63-bits. */
+/*	Use a shift and XOR to set the sign bit if and only if the top two bits of the given
+	value are the same, then test the sign bit. Note that the top two bits are equal for
+	exactly those integers in the range that can be represented in 31-bits or 63-bits.
+
+	Operands are coerced to machine integer size so the test will work with 64 bit
+	images on 32 bit hosts. When running on a 32 bit host, the cast to int has little
+	or no performance impact for either 32 bit or 64 bit images.
+
+	On a 64 bit host, the shift and XOR test is replaced by an explicit range check,
+	which provides the best performance for both 32 bit and 64 bit images.
+
+	If the range of small integers is enlarged for 64 bit images, this method must
+	be updated accordingly. */
 
 sqInt isIntegerValue(sqInt intValue) {
-	return (intValue ^ (intValue << 1)) >= 0;
+	return 
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) intValue)) ^ ((((int) intValue)) << 1)) >= 0)
+# else
+		((intValue >= -1073741824) && (intValue <= 1073741823))
+# endif  // SQ_HOST32
+	;
 }
 
 
@@ -12465,7 +12523,13 @@ register struct foo * foo = &fum;
     sqInt newLargeInteger;
 
 	if (integerValue >= 0) {
-		if ((integerValue ^ (integerValue << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) integerValue)) ^ ((((int) integerValue)) << 1)) >= 0)
+# else
+			((integerValue >= -1073741824) && (integerValue <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			return ((integerValue << 1) | 1);
 		}
 	}
@@ -12932,7 +12996,13 @@ register struct foo * foo = &fum;
 	/* begin pop2AndPushIntegerIfOK: */
 	integerResult = (stackIntegerValue(1)) + (stackIntegerValue(0));
 	if (foo->successFlag) {
-		if ((integerResult ^ (integerResult << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) integerResult)) ^ ((((int) integerResult)) << 1)) >= 0)
+# else
+			((integerResult >= -1073741824) && (integerResult <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			/* begin pop:thenPush: */
 			longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), ((integerResult << 1) | 1));
 			foo->stackPointer = sp;
@@ -14187,7 +14257,13 @@ register struct foo * foo = &fum;
 	quotient = doPrimitiveDivby(longAt(foo->stackPointer - (1 * BytesPerWord)), longAt(foo->stackPointer));
 	/* begin pop2AndPushIntegerIfOK: */
 	if (foo->successFlag) {
-		if ((quotient ^ (quotient << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) quotient)) ^ ((((int) quotient)) << 1)) >= 0)
+# else
+			((quotient >= -1073741824) && (quotient <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			/* begin pop:thenPush: */
 			longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), ((quotient << 1) | 1));
 			foo->stackPointer = sp;
@@ -14234,7 +14310,13 @@ l2:	/* end checkedIntegerValueOf: */;
 	if ((integerArgument != 0) && ((integerReceiver % integerArgument) == 0)) {
 		/* begin pop2AndPushIntegerIfOK: */
 		if (foo->successFlag) {
-			if (((integerReceiver / integerArgument) ^ ((integerReceiver / integerArgument) << 1)) >= 0) {
+			if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) (integerReceiver / integerArgument))) ^ ((((int) (integerReceiver / integerArgument))) << 1)) >= 0)
+# else
+				(((integerReceiver / integerArgument) >= -1073741824) && ((integerReceiver / integerArgument) <= 1073741823))
+# endif  // SQ_HOST32
+			) {
 				/* begin pop:thenPush: */
 				longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), (((integerReceiver / integerArgument) << 1) | 1));
 				foo->stackPointer = sp;
@@ -15803,7 +15885,13 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	/* begin storeInteger:ofObject:withValue: */
-	if (((evtBuf[0]) ^ ((evtBuf[0]) << 1)) >= 0) {
+	if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) (evtBuf[0]))) ^ ((((int) (evtBuf[0]))) << 1)) >= 0)
+# else
+		(((evtBuf[0]) >= -1073741824) && ((evtBuf[0]) <= 1073741823))
+# endif  // SQ_HOST32
+	) {
 		longAtput((arg + BaseHeaderSize) + (0 << ShiftForWord), (((evtBuf[0]) << 1) | 1));
 	} else {
 		/* begin primitiveFail */
@@ -15813,7 +15901,13 @@ register struct foo * foo = &fum;
 		return null;
 	}
 	/* begin storeInteger:ofObject:withValue: */
-	if ((((evtBuf[1]) & MillisecondClockMask) ^ (((evtBuf[1]) & MillisecondClockMask) << 1)) >= 0) {
+	if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) ((evtBuf[1]) & MillisecondClockMask))) ^ ((((int) ((evtBuf[1]) & MillisecondClockMask))) << 1)) >= 0)
+# else
+		((((evtBuf[1]) & MillisecondClockMask) >= -1073741824) && (((evtBuf[1]) & MillisecondClockMask) <= 1073741823))
+# endif  // SQ_HOST32
+	) {
 		longAtput((arg + BaseHeaderSize) + (1 << ShiftForWord), ((((evtBuf[1]) & MillisecondClockMask) << 1) | 1));
 	} else {
 		/* begin primitiveFail */
@@ -15824,9 +15918,21 @@ register struct foo * foo = &fum;
 	}
 	for (i = 2; i <= 7; i += 1) {
 		value = evtBuf[i];
-		if ((value ^ (value << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) value)) ^ ((((int) value)) << 1)) >= 0)
+# else
+			((value >= -1073741824) && (value <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			/* begin storeInteger:ofObject:withValue: */
-			if ((value ^ (value << 1)) >= 0) {
+			if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) value)) ^ ((((int) value)) << 1)) >= 0)
+# else
+				((value >= -1073741824) && (value <= 1073741823))
+# endif  // SQ_HOST32
+			) {
 				longAtput((arg + BaseHeaderSize) + (i << ShiftForWord), ((value << 1) | 1));
 			} else {
 				/* begin primitiveFail */
@@ -16431,7 +16537,13 @@ l2:	/* end lengthOf: */;
 		value = intAt(addr);
 		/* begin pop: */
 		foo->stackPointer -= 2 * BytesPerWord;
-		if ((value ^ (value << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) value)) ^ ((((int) value)) << 1)) >= 0)
+# else
+			((value >= -1073741824) && (value <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			/* begin pushInteger: */
 			/* begin push: */
 			longAtput(sp = foo->stackPointer + BytesPerWord, ((value << 1) | 1));
@@ -17407,7 +17519,13 @@ register struct foo * foo = &fum;
 	mod = doPrimitiveModby(longAt(foo->stackPointer - (1 * BytesPerWord)), longAt(foo->stackPointer));
 	/* begin pop2AndPushIntegerIfOK: */
 	if (foo->successFlag) {
-		if ((mod ^ (mod << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) mod)) ^ ((((int) mod)) << 1)) >= 0)
+# else
+			((mod >= -1073741824) && (mod <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			/* begin pop:thenPush: */
 			longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), ((mod << 1) | 1));
 			foo->stackPointer = sp;
@@ -17522,7 +17640,13 @@ l2:	/* end checkedIntegerValueOf: */;
 		if ((integerArg == 0) || ((integerResult / integerArg) == integerRcvr)) {
 			/* begin pop2AndPushIntegerIfOK: */
 			if (foo->successFlag) {
-				if ((integerResult ^ (integerResult << 1)) >= 0) {
+				if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+					(((((int) integerResult)) ^ ((((int) integerResult)) << 1)) >= 0)
+# else
+					((integerResult >= -1073741824) && (integerResult <= 1073741823))
+# endif  // SQ_HOST32
+				) {
 					/* begin pop:thenPush: */
 					longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), ((integerResult << 1) | 1));
 					foo->stackPointer = sp;
@@ -17741,7 +17865,13 @@ register struct foo * foo = &fum;
 	if (foo->successFlag) {
 		stream = longAt(foo->stackPointer);
 		/* begin storeInteger:ofObject:withValue: */
-		if ((index ^ (index << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) index)) ^ ((((int) index)) << 1)) >= 0)
+# else
+			((index >= -1073741824) && (index <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			longAtput((stream + BaseHeaderSize) + (StreamIndexIndex << ShiftForWord), ((index << 1) | 1));
 		} else {
 			/* begin primitiveFail */
@@ -17918,7 +18048,13 @@ register struct foo * foo = &fum;
 l1:	/* end commonVariable:at:put:cacheIndex: */;
 	if (foo->successFlag) {
 		/* begin storeInteger:ofObject:withValue: */
-		if ((index ^ (index << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) index)) ^ ((((int) index)) << 1)) >= 0)
+# else
+			((index >= -1073741824) && (index <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			longAtput((stream + BaseHeaderSize) + (StreamIndexIndex << ShiftForWord), ((index << 1) | 1));
 		} else {
 			/* begin primitiveFail */
@@ -18663,7 +18799,13 @@ l2:	/* end checkedIntegerValueOf: */;
 	}
 	/* begin pop2AndPushIntegerIfOK: */
 	if (foo->successFlag) {
-		if ((integerResult ^ (integerResult << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) integerResult)) ^ ((((int) integerResult)) << 1)) >= 0)
+# else
+			((integerResult >= -1073741824) && (integerResult <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			/* begin pop:thenPush: */
 			longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), ((integerResult << 1) | 1));
 			foo->stackPointer = sp;
@@ -19009,20 +19151,38 @@ l7:	/* end stackObjectValue: */;
 
 		ascii = byteAt((sourceString + BaseHeaderSize) + (scanLastIndex - 1));
 		if (!((stopReason = longAt((stops + BaseHeaderSize) + (ascii << ShiftForWord))) == nilOop)) {
-			if (!((scanDestX ^ (scanDestX << 1)) >= 0)) {
+			if (!(
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
+# else
+				((scanDestX >= -1073741824) && (scanDestX <= 1073741823))
+# endif  // SQ_HOST32
+			)) {
 				/* begin primitiveFail */
 				foo->successFlag = 0;
 				return null;
 			}
 			/* begin storeInteger:ofObject:withValue: */
-			if ((scanDestX ^ (scanDestX << 1)) >= 0) {
+			if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
+# else
+				((scanDestX >= -1073741824) && (scanDestX <= 1073741823))
+# endif  // SQ_HOST32
+			) {
 				longAtput((rcvr + BaseHeaderSize) + (0 << ShiftForWord), ((scanDestX << 1) | 1));
 			} else {
 				/* begin primitiveFail */
 				foo->successFlag = 0;
 			}
 			/* begin storeInteger:ofObject:withValue: */
-			if ((scanLastIndex ^ (scanLastIndex << 1)) >= 0) {
+			if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) scanLastIndex)) ^ ((((int) scanLastIndex)) << 1)) >= 0)
+# else
+				((scanLastIndex >= -1073741824) && (scanLastIndex <= 1073741823))
+# endif  // SQ_HOST32
+			) {
 				longAtput((rcvr + BaseHeaderSize) + (1 << ShiftForWord), ((scanLastIndex << 1) | 1));
 			} else {
 				/* begin primitiveFail */
@@ -19054,20 +19214,38 @@ l7:	/* end stackObjectValue: */;
 		}
 		nextDestX = (scanDestX + sourceX2) - sourceX;
 		if (nextDestX > scanRightX) {
-			if (!((scanDestX ^ (scanDestX << 1)) >= 0)) {
+			if (!(
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
+# else
+				((scanDestX >= -1073741824) && (scanDestX <= 1073741823))
+# endif  // SQ_HOST32
+			)) {
 				/* begin primitiveFail */
 				foo->successFlag = 0;
 				return null;
 			}
 			/* begin storeInteger:ofObject:withValue: */
-			if ((scanDestX ^ (scanDestX << 1)) >= 0) {
+			if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
+# else
+				((scanDestX >= -1073741824) && (scanDestX <= 1073741823))
+# endif  // SQ_HOST32
+			) {
 				longAtput((rcvr + BaseHeaderSize) + (0 << ShiftForWord), ((scanDestX << 1) | 1));
 			} else {
 				/* begin primitiveFail */
 				foo->successFlag = 0;
 			}
 			/* begin storeInteger:ofObject:withValue: */
-			if ((scanLastIndex ^ (scanLastIndex << 1)) >= 0) {
+			if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) scanLastIndex)) ^ ((((int) scanLastIndex)) << 1)) >= 0)
+# else
+				((scanLastIndex >= -1073741824) && (scanLastIndex <= 1073741823))
+# endif  // SQ_HOST32
+			) {
 				longAtput((rcvr + BaseHeaderSize) + (1 << ShiftForWord), ((scanLastIndex << 1) | 1));
 			} else {
 				/* begin primitiveFail */
@@ -19083,20 +19261,38 @@ l7:	/* end stackObjectValue: */;
 		scanDestX = nextDestX + kernDelta;
 		scanLastIndex += 1;
 	}
-	if (!((scanDestX ^ (scanDestX << 1)) >= 0)) {
+	if (!(
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
+# else
+		((scanDestX >= -1073741824) && (scanDestX <= 1073741823))
+# endif  // SQ_HOST32
+	)) {
 		/* begin primitiveFail */
 		foo->successFlag = 0;
 		return null;
 	}
 	/* begin storeInteger:ofObject:withValue: */
-	if ((scanDestX ^ (scanDestX << 1)) >= 0) {
+	if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) scanDestX)) ^ ((((int) scanDestX)) << 1)) >= 0)
+# else
+		((scanDestX >= -1073741824) && (scanDestX <= 1073741823))
+# endif  // SQ_HOST32
+	) {
 		longAtput((rcvr + BaseHeaderSize) + (0 << ShiftForWord), ((scanDestX << 1) | 1));
 	} else {
 		/* begin primitiveFail */
 		foo->successFlag = 0;
 	}
 	/* begin storeInteger:ofObject:withValue: */
-	if ((scanStopIndex ^ (scanStopIndex << 1)) >= 0) {
+	if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) scanStopIndex)) ^ ((((int) scanStopIndex)) << 1)) >= 0)
+# else
+		((scanStopIndex >= -1073741824) && (scanStopIndex <= 1073741823))
+# endif  // SQ_HOST32
+	) {
 		longAtput((rcvr + BaseHeaderSize) + (1 << ShiftForWord), ((scanStopIndex << 1) | 1));
 	} else {
 		/* begin primitiveFail */
@@ -20557,7 +20753,13 @@ register struct foo * foo = &fum;
 	/* begin pop2AndPushIntegerIfOK: */
 	integerResult = (stackIntegerValue(1)) - (stackIntegerValue(0));
 	if (foo->successFlag) {
-		if ((integerResult ^ (integerResult << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) integerResult)) ^ ((((int) integerResult)) << 1)) >= 0)
+# else
+			((integerResult >= -1073741824) && (integerResult <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			/* begin pop:thenPush: */
 			longAtput(sp = foo->stackPointer - ((2 - 1) * BytesPerWord), ((integerResult << 1) | 1));
 			foo->stackPointer = sp;
@@ -21480,7 +21682,13 @@ l1:	/* end assertClassOf:is: */;
 		excessSignals = fetchIntegerofObject(ExcessSignalsIndex, sema);
 		if (excessSignals > 0) {
 			/* begin storeInteger:ofObject:withValue: */
-			if (((excessSignals - 1) ^ ((excessSignals - 1) << 1)) >= 0) {
+			if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+				(((((int) (excessSignals - 1))) ^ ((((int) (excessSignals - 1))) << 1)) >= 0)
+# else
+				(((excessSignals - 1) >= -1073741824) && ((excessSignals - 1) <= 1073741823))
+# endif  // SQ_HOST32
+			) {
 				longAtput((sema + BaseHeaderSize) + (ExcessSignalsIndex << ShiftForWord), (((excessSignals - 1) << 1) | 1));
 			} else {
 				/* begin primitiveFail */
@@ -22373,7 +22581,13 @@ register struct foo * foo = &fum;
     sqInt newLargeInteger;
     sqInt largeClass;
 
-	if ((integerValue ^ (integerValue << 1)) >= 0) {
+	if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) integerValue)) ^ ((((int) integerValue)) << 1)) >= 0)
+# else
+		((integerValue >= -1073741824) && (integerValue <= 1073741823))
+# endif  // SQ_HOST32
+	) {
 		return ((integerValue << 1) | 1);
 	}
 	if (integerValue < 0) {
@@ -23190,7 +23404,13 @@ sqInt stackValue(sqInt offset) {
 /*	Note: May be called by translated primitive code. */
 
 sqInt storeIntegerofObjectwithValue(sqInt fieldIndex, sqInt objectPointer, sqInt integerValue) {
-	if ((integerValue ^ (integerValue << 1)) >= 0) {
+	if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+		(((((int) integerValue)) ^ ((((int) integerValue)) << 1)) >= 0)
+# else
+		((integerValue >= -1073741824) && (integerValue <= 1073741823))
+# endif  // SQ_HOST32
+	) {
 		longAtput((objectPointer + BaseHeaderSize) + (fieldIndex << ShiftForWord), ((integerValue << 1) | 1));
 	} else {
 		/* begin primitiveFail */
@@ -23382,7 +23602,13 @@ register struct foo * foo = &fum;
 	if ((longAt((aSemaphore + BaseHeaderSize) + (FirstLinkIndex << ShiftForWord))) == foo->nilObj) {
 		excessSignals = fetchIntegerofObject(ExcessSignalsIndex, aSemaphore);
 		/* begin storeInteger:ofObject:withValue: */
-		if (((excessSignals + 1) ^ ((excessSignals + 1) << 1)) >= 0) {
+		if (
+# ifdef SQ_HOST32  // cast to int for 64 bit image on 32 bit host
+			(((((int) (excessSignals + 1))) ^ ((((int) (excessSignals + 1))) << 1)) >= 0)
+# else
+			(((excessSignals + 1) >= -1073741824) && ((excessSignals + 1) <= 1073741823))
+# endif  // SQ_HOST32
+		) {
 			longAtput((aSemaphore + BaseHeaderSize) + (ExcessSignalsIndex << ShiftForWord), (((excessSignals + 1) << 1) | 1));
 		} else {
 			/* begin primitiveFail */
@@ -24165,15 +24391,15 @@ void* vm_exports[][3] = {
 	{"", "addGCRoot", (void*)addGCRoot},
 	{"", "callbackLeave", (void*)callbackLeave},
 	{"", "callbackEnter", (void*)callbackEnter},
-	{"", "primitiveRootTableAt", (void*)primitiveRootTableAt},
 	{"", "primitiveIsRoot", (void*)primitiveIsRoot},
+	{"", "primitiveRootTableAt", (void*)primitiveRootTableAt},
 	{"", "primitiveChangeClassWithClass", (void*)primitiveChangeClassWithClass},
 	{"", "primitiveIsYoung", (void*)primitiveIsYoung},
 	{"", "primitiveForceTenure", (void*)primitiveForceTenure},
 	{"", "moduleUnloaded", (void*)moduleUnloaded},
 	{"", "primitiveDisablePowerManager", (void*)primitiveDisablePowerManager},
-	{"", "primitiveSetGCSemaphore", (void*)primitiveSetGCSemaphore},
 	{"", "primitiveScreenDepth", (void*)primitiveScreenDepth},
+	{"", "primitiveSetGCSemaphore", (void*)primitiveSetGCSemaphore},
 	{"", "removeGCRoot", (void*)removeGCRoot},
 	{"", "primitiveSetGCBiasToGrowGCLimit", (void*)primitiveSetGCBiasToGrowGCLimit},
 	{"", "primitiveRootTable", (void*)primitiveRootTable},

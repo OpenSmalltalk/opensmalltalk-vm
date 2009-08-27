@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:40 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:58 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -82,9 +82,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ImmX11Plugin 10 November 2008 (i)"
+	"ImmX11Plugin 26 August 2009 (i)"
 #else
-	"ImmX11Plugin 10 November 2008 (e)"
+	"ImmX11Plugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -521,7 +521,7 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* ImmX11Plugin_exports[][3] = {
-	{"ImmX11Plugin", "primSetLocaleEncoding", (void*)primSetLocaleEncoding},
+	{"ImmX11Plugin", "primSetTextEnc", (void*)primSetTextEnc},
 	{"ImmX11Plugin", "primSetTextEncToLocale", (void*)primSetTextEncToLocale},
 	{"ImmX11Plugin", "shutdownModule", (void*)shutdownModule},
 	{"ImmX11Plugin", "primGetLocaleEncoding", (void*)primGetLocaleEncoding},
@@ -529,22 +529,22 @@ void* ImmX11Plugin_exports[][3] = {
 	{"ImmX11Plugin", "setInterpreter", (void*)setInterpreter},
 	{"ImmX11Plugin", "primGetEncoding", (void*)primGetEncoding},
 	{"ImmX11Plugin", "primGetLocale", (void*)primGetLocale},
-	{"ImmX11Plugin", "getModuleName", (void*)getModuleName},
-	{"ImmX11Plugin", "primSetXWinEnc", (void*)primSetXWinEnc},
-	{"ImmX11Plugin", "primGetXWinEnc", (void*)primGetXWinEnc},
-	{"ImmX11Plugin", "primSetPathEnc", (void*)primSetPathEnc},
-	{"ImmX11Plugin", "primSetXWinEncToLocale", (void*)primSetXWinEncToLocale},
-	{"ImmX11Plugin", "primSetCompositionFocus", (void*)primSetCompositionFocus},
-	{"ImmX11Plugin", "primSetPathEncToLocale", (void*)primSetPathEncToLocale},
-	{"ImmX11Plugin", "primGetPathEnc", (void*)primGetPathEnc},
 	{"ImmX11Plugin", "primSetLocale", (void*)primSetLocale},
-	{"ImmX11Plugin", "primIsTextEncUTF8", (void*)primIsTextEncUTF8},
+	{"ImmX11Plugin", "primSetXWinEnc", (void*)primSetXWinEnc},
+	{"ImmX11Plugin", "getModuleName", (void*)getModuleName},
+	{"ImmX11Plugin", "primGetXWinEnc", (void*)primGetXWinEnc},
 	{"ImmX11Plugin", "primSetEncoding", (void*)primSetEncoding},
+	{"ImmX11Plugin", "primSetCompositionFocus", (void*)primSetCompositionFocus},
+	{"ImmX11Plugin", "primSetXWinEncToLocale", (void*)primSetXWinEncToLocale},
 	{"ImmX11Plugin", "initialiseModule", (void*)initialiseModule},
-	{"ImmX11Plugin", "primSetCompositionWindowPosition", (void*)primSetCompositionWindowPosition},
-	{"ImmX11Plugin", "primSetTextEnc", (void*)primSetTextEnc},
-	{"ImmX11Plugin", "primGetTextEnc", (void*)primGetTextEnc},
+	{"ImmX11Plugin", "primSetPathEncToLocale", (void*)primSetPathEncToLocale},
+	{"ImmX11Plugin", "primIsTextEncUTF8", (void*)primIsTextEncUTF8},
 	{"ImmX11Plugin", "primSetTextEncUTF8", (void*)primSetTextEncUTF8},
+	{"ImmX11Plugin", "primGetPathEnc", (void*)primGetPathEnc},
+	{"ImmX11Plugin", "primSetCompositionWindowPosition", (void*)primSetCompositionWindowPosition},
+	{"ImmX11Plugin", "primSetLocaleEncoding", (void*)primSetLocaleEncoding},
+	{"ImmX11Plugin", "primSetPathEnc", (void*)primSetPathEnc},
+	{"ImmX11Plugin", "primGetTextEnc", (void*)primGetTextEnc},
 	{NULL, NULL, NULL}
 };
 

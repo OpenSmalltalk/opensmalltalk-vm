@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:12 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:00:23 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -36,6 +36,7 @@ by VMMaker 3.8b6
 
 /*** Function Prototypes ***/
 static AsyncFile * asyncFileValueOf(sqInt oop);
+static char * bufferPointerstartIndex(sqInt buffer, sqInt startIndex);
 static VirtualMachine * getInterpreter(void);
 #pragma export on
 EXPORT(const char*) getModuleName(void);
@@ -65,9 +66,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"AsynchFilePlugin 10 November 2008 (i)"
+	"AsynchFilePlugin 26 August 2009 (i)"
 #else
-	"AsynchFilePlugin 10 November 2008 (e)"
+	"AsynchFilePlugin 26 August 2009 (e)"
 #endif
 ;
 static void * sCOAFfn;
@@ -82,6 +83,14 @@ static AsyncFile * asyncFileValueOf(sqInt oop) {
 		return null;
 	}
 	return (AsyncFile *) (oop + 4);
+}
+
+
+/*	Adjust for zero-origin indexing. This is implemented as a separate method in order
+	to encourage inlining. */
+
+static char * bufferPointerstartIndex(sqInt buffer, sqInt startIndex) {
+	return (((pointerForOop(buffer)) + ( 4)) + startIndex) - 1;
 }
 
 
@@ -190,7 +199,7 @@ EXPORT(sqInt) primitiveAsyncFileReadResult(void) {
 	sqInt startIndex;
 	sqInt bufferSize;
 	sqInt r;
-	sqInt bufferPtr;
+	char * bufferPtr;
 	sqInt fhandle;
 	sqInt buffer;
 	sqInt start;
@@ -217,10 +226,7 @@ EXPORT(sqInt) primitiveAsyncFileReadResult(void) {
 		bufferSize = bufferSize * 4;
 	}
 	interpreterProxy->success((startIndex >= 1) && (((startIndex + count) - 1) <= bufferSize));
-
-	/* adjust for zero-origin indexing */
-
-	bufferPtr = ((oopForPointer(interpreterProxy->firstIndexableField(buffer))) + startIndex) - 1;
+	bufferPtr = (((pointerForOop(buffer)) + ( 4)) + startIndex) - 1;
 	if (!(interpreterProxy->failed())) {
 		r = asyncFileReadResult(f, bufferPtr, count);
 	}
@@ -278,7 +284,7 @@ EXPORT(sqInt) primitiveAsyncFileWriteStart(void) {
 	sqInt count;
 	sqInt startIndex;
 	sqInt bufferSize;
-	sqInt bufferPtr;
+	char * bufferPtr;
 	sqInt fHandle;
 	sqInt fPosition;
 	sqInt buffer;
@@ -304,15 +310,12 @@ EXPORT(sqInt) primitiveAsyncFileWriteStart(void) {
 
 	bufferSize = interpreterProxy->slotSizeOf(buffer);
 	if (interpreterProxy->isWords(buffer)) {
-		count = count * 4;
-		startIndex = ((startIndex - 1) * 4) + 1;
-		bufferSize = bufferSize * 4;
+		count = count * ( 4);
+		startIndex = ((startIndex - 1) * ( 4)) + 1;
+		bufferSize = bufferSize * ( 4);
 	}
 	interpreterProxy->success((startIndex >= 1) && (((startIndex + count) - 1) <= bufferSize));
-
-	/* adjust for zero-origin indexing */
-
-	bufferPtr = ((oopForPointer(interpreterProxy->firstIndexableField(buffer))) + startIndex) - 1;
+	bufferPtr = (((pointerForOop(buffer)) + ( 4)) + startIndex) - 1;
 	if (!(interpreterProxy->failed())) {
 		asyncFileWriteStart(f, fPosition, bufferPtr, count);
 	}
@@ -354,17 +357,17 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* AsynchFilePlugin_exports[][3] = {
-	{"AsynchFilePlugin", "primitiveAsyncFileReadStart", (void*)primitiveAsyncFileReadStart},
-	{"AsynchFilePlugin", "primitiveAsyncFileClose", (void*)primitiveAsyncFileClose},
+	{"AsynchFilePlugin", "primitiveAsyncFileOpen", (void*)primitiveAsyncFileOpen},
 	{"AsynchFilePlugin", "shutdownModule", (void*)shutdownModule},
 	{"AsynchFilePlugin", "primitiveAsyncFileReadResult", (void*)primitiveAsyncFileReadResult},
 	{"AsynchFilePlugin", "moduleUnloaded", (void*)moduleUnloaded},
 	{"AsynchFilePlugin", "setInterpreter", (void*)setInterpreter},
+	{"AsynchFilePlugin", "primitiveAsyncFileReadStart", (void*)primitiveAsyncFileReadStart},
 	{"AsynchFilePlugin", "initialiseModule", (void*)initialiseModule},
-	{"AsynchFilePlugin", "getModuleName", (void*)getModuleName},
 	{"AsynchFilePlugin", "primitiveAsyncFileWriteStart", (void*)primitiveAsyncFileWriteStart},
+	{"AsynchFilePlugin", "getModuleName", (void*)getModuleName},
 	{"AsynchFilePlugin", "primitiveAsyncFileWriteResult", (void*)primitiveAsyncFileWriteResult},
-	{"AsynchFilePlugin", "primitiveAsyncFileOpen", (void*)primitiveAsyncFileOpen},
+	{"AsynchFilePlugin", "primitiveAsyncFileClose", (void*)primitiveAsyncFileClose},
 	{NULL, NULL, NULL}
 };
 

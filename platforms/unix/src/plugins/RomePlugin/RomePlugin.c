@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:46 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:22 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -66,7 +66,7 @@ by VMMaker 3.8b6
 #define FormHeightIndex 2
 #define FormInstSize 5
 #define FormWidthIndex 1
-#define PluginVersion 37
+#define PluginVersion 38
 #define TextLineBottomIndex 3
 #define TextLineEndIndex 5
 #define TextLineInternalSpaceIndex 6
@@ -111,9 +111,12 @@ EXPORT(sqInt) moduleUnloaded(char * aModuleName);
 static sqInt msg(char * s);
 static void polyPathfrom(cairo_t* context, sqInt pointsOop);
 #pragma export on
+EXPORT(sqInt) primitivePangoBlockAtIndex(void);
 EXPORT(sqInt) primitiveClear(void);
 EXPORT(sqInt) primitiveClipRectangleLeftRightTopBottom(void);
 EXPORT(sqInt) primitiveClose(void);
+EXPORT(sqInt) primitivePangoComposeString(void);
+EXPORT(sqInt) primitivePangoComposeString2(void);
 EXPORT(sqInt) primitiveCreateFormHandle(void);
 EXPORT(sqInt) primitiveDestroyFormHandle(void);
 EXPORT(sqInt) primitiveDrawArcRadiusXYFromTo(void);
@@ -135,16 +138,12 @@ EXPORT(sqInt) primitiveFillRadialOriginXYdirectionXYnormalXYcolorStops(void);
 EXPORT(sqInt) primitiveFontFace(void);
 EXPORT(sqInt) primitiveFontSize(void);
 EXPORT(sqInt) primitiveGetLineWidth(void);
+EXPORT(sqInt) primitivePangoFontDescriptionIndex(void);
 EXPORT(sqInt) primitiveGetTransform(void);
+EXPORT(sqInt) primitivePangoIndexAtPoint(void);
 EXPORT(sqInt) primitiveLanguageAttributes(void);
 EXPORT(sqInt) primitiveOpen(void);
-EXPORT(sqInt) primitivePangoBlockAtIndex(void);
-EXPORT(sqInt) primitivePangoComposeString(void);
-EXPORT(sqInt) primitivePangoComposeString2(void);
-EXPORT(sqInt) primitivePangoFontDescriptionIndex(void);
-EXPORT(sqInt) primitivePangoIndexAtPoint(void);
 EXPORT(sqInt) primitivePangoIsAvailable(void);
-EXPORT(sqInt) primitivePangoShowString(void);
 EXPORT(sqInt) primitivePluginVersion(void);
 EXPORT(sqInt) primitiveRestoreState(void);
 EXPORT(sqInt) primitiveRotateBy(void);
@@ -152,6 +151,7 @@ EXPORT(sqInt) primitiveSaveState(void);
 EXPORT(sqInt) primitiveScaleBy(void);
 EXPORT(sqInt) primitiveSetLineWidth(void);
 EXPORT(sqInt) primitiveSetTransform(void);
+EXPORT(sqInt) primitivePangoShowString(void);
 EXPORT(sqInt) primitiveShowZeroTerminatedUtf8StringXY(void);
 EXPORT(sqInt) primitiveStencilImageSrcLRTBDestLRTB(void);
 EXPORT(sqInt) primitiveTransformBy(void);
@@ -192,9 +192,9 @@ struct VirtualMachine* interpreterProxy;
 static sqInt maxSurfaceID;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"RomePlugin pango_yo.37 10 November 2008 (i)"
+	"RomePlugin pango_yo.38 26 August 2009 (i)"
 #else
-	"RomePlugin pango_yo.37 10 November 2008 (e)"
+	"RomePlugin pango_yo.38 26 August 2009 (e)"
 #endif
 ;
 static fn_ioRegisterSurface registerSurfaceFn;
@@ -826,6 +826,105 @@ static void polyPathfrom(cairo_t* context, sqInt pointsOop) {
 	}
 }
 
+EXPORT(sqInt) primitivePangoBlockAtIndex(void) {
+	sqInt atEnd;
+	sqInt index;
+	PangoRectangle pos;
+	unsigned char* aString;
+	sqInt aStringOop;
+	sqInt trailing;
+	sqInt origin;
+	sqInt corner;
+	sqInt canvasOop;
+	cairo_t* context;
+	PangoAttrList* attrList;
+	sqInt charData;
+	sqInt stringLength;
+	PangoLayout* layout;
+	sqInt inStringOop;
+	sqInt utf8Index;
+	sqInt x;
+	sqInt y;
+	sqInt sqAttrArray;
+	sqInt w;
+	sqInt h;
+	sqInt withWrap;
+	sqInt cData;
+	sqInt _return_value;
+
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(8), "Object"));
+	inStringOop = interpreterProxy->stackValue(8);
+	utf8Index = interpreterProxy->stackIntegerValue(7);
+	x = interpreterProxy->stackIntegerValue(6);
+	y = interpreterProxy->stackIntegerValue(5);
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(4), "Object"));
+	sqAttrArray = interpreterProxy->stackValue(4);
+	w = interpreterProxy->stackIntegerValue(3);
+	h = interpreterProxy->stackIntegerValue(2);
+	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
+	cData = interpreterProxy->stackValue(0);
+	;
+	canvasOop = interpreterProxy->stackValue(9);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	context = contextFrom(canvasOop);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	aStringOop = inStringOop;
+	aString = interpreterProxy->firstIndexableField(aStringOop);
+	layout = pango_cairo_create_layout(context);
+	attrList = pango_attr_list_new();
+	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
+	pango_layout_set_text(layout, aString, strlen(aString));
+	pango_layout_set_attributes(layout, attrList);
+	pango_layout_set_width(layout, w * (PANGO_SCALE));
+	if (withWrap) {
+		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+	}
+	cairo_translate(context, x, y);
+	pango_cairo_update_layout(context, layout);
+	stringLength = strlen(aString);
+	if (utf8Index == (stringLength + 1)) {
+		atEnd = 1;
+		pango_layout_index_to_pos(layout, ((((((utf8Index - 1) < 0) ? 0 : (utf8Index - 1))) < stringLength) ? ((((utf8Index - 1) < 0) ? 0 : (utf8Index - 1))) : stringLength), &pos);
+		pos.x = pos.x + pos.width;
+	} else {
+		atEnd = 0;
+		pango_layout_index_to_pos(layout, (((((utf8Index < 0) ? 0 : utf8Index)) < stringLength) ? (((utf8Index < 0) ? 0 : utf8Index)) : stringLength), &pos);
+	}
+	pango_attr_list_unref(attrList);
+	g_object_unref(layout);
+	if (cairo_status(context)) {
+		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
+		return null;
+	}
+	interpreterProxy->pushRemappableOop(aStringOop);
+	interpreterProxy->pushRemappableOop(cData);
+	origin = interpreterProxy->makePointwithxValueyValue((PANGO_PIXELS(pos.x)) + x, (PANGO_PIXELS(pos.y)) + y);
+	interpreterProxy->pushRemappableOop(origin);
+	corner = interpreterProxy->makePointwithxValueyValue((PANGO_PIXELS(pos.x+pos.width)) + x, (PANGO_PIXELS(pos.y+pos.height)) + y);
+	origin = interpreterProxy->popRemappableOop();
+	charData = interpreterProxy->popRemappableOop();
+	aStringOop = interpreterProxy->popRemappableOop();
+	aString = interpreterProxy->firstIndexableField(aStringOop);
+	interpreterProxy->storePointerofObjectwithValue(0, charData, origin);
+	interpreterProxy->storePointerofObjectwithValue(1, charData, corner);
+	index = sqCharCountInfromto(aString, 0, utf8Index);
+	if (!(atEnd)) {
+		index += 1;
+	}
+	interpreterProxy->storePointerofObjectwithValue(2, charData, ((index << 1) | 1));
+	_return_value = interpreterProxy->integerObjectOf(index);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(10, _return_value);
+	return null;
+}
+
 EXPORT(sqInt) primitiveClear(void) {
 	sqInt canvasOop;
 	cairo_t* context;
@@ -912,6 +1011,269 @@ EXPORT(sqInt) primitiveClose(void) {
 	if (interpreterProxy->failed()) {
 		return null;
 	}
+	return null;
+}
+
+EXPORT(sqInt) primitivePangoComposeString(void) {
+	sqInt linesSize;
+	sqInt lineIndex;
+	sqInt baseline;
+	sqInt next;
+	PangoRectangle ink;
+	PangoRectangle logical;
+	sqInt lastLine;
+	sqInt lineCount;
+	sqInt sqStart;
+	sqInt prevBaseline;
+	PangoLayoutLine* line;
+	sqInt newW;
+	sqInt sqEnd;
+	sqInt start;
+	sqInt canvasOop;
+	cairo_t* context;
+	PangoLayoutIter* lineIter;
+	sqInt totalY;
+	PangoAttrList* attrList;
+	sqInt addition;
+	PangoLayout* layout;
+	char *aString;
+	sqInt x;
+	sqInt y;
+	sqInt sqAttrArray;
+	sqInt w;
+	sqInt h;
+	sqInt withWrap;
+	sqInt lines;
+	sqInt _return_value;
+
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(7)));
+	aString = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(7))));
+	x = interpreterProxy->stackIntegerValue(6);
+	y = interpreterProxy->stackIntegerValue(5);
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(4), "Object"));
+	sqAttrArray = interpreterProxy->stackValue(4);
+	w = interpreterProxy->stackIntegerValue(3);
+	h = interpreterProxy->stackIntegerValue(2);
+	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
+	lines = interpreterProxy->stackValue(0);
+	;
+	canvasOop = interpreterProxy->stackValue(8);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	context = contextFrom(canvasOop);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	layout = pango_cairo_create_layout(context);
+	attrList = pango_attr_list_new();
+	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
+	pango_layout_set_text(layout, aString, strlen(aString));
+	pango_layout_set_attributes(layout, attrList);
+	pango_layout_set_width(layout, w * (PANGO_SCALE));
+	if (withWrap) {
+		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+	}
+	cairo_translate(context, x, y);
+	pango_cairo_update_layout(context, layout);
+	lineCount = pango_layout_get_line_count(layout);
+	lineIter = pango_layout_get_iter(layout);
+	baseline = pango_layout_iter_get_baseline(lineIter);
+	prevBaseline = 0;
+	cairo_translate(context, 0, PANGO_PIXELS(baseline));
+	sqEnd = 0;
+	totalY = 0;
+	linesSize = interpreterProxy->stSizeOf(lines);
+	lastLine = (((lineCount < linesSize) ? lineCount : linesSize)) - 1;
+	for (lineIndex = 0; lineIndex <= lastLine; lineIndex += 1) {
+		line = pango_layout_iter_get_line_readonly(lineIter);
+		pango_layout_line_get_extents(line, &ink, &logical);
+		sqStart = sqEnd + 1;
+		start = line->start_index;
+
+		/* self log: 'sqStart, sqEnd: %d %d' with: sqStart with: sqEnd. */
+
+		sqEnd = (sqStart + (sqCharCountInfromto(aString, start, start + (line->length)))) - 1;
+		if (((start + (line->length)) < (interpreterProxy->stSizeOf(((int) aString)))) && ((aString[start + (line->length)]) == 13)) {
+			sqEnd += 1;
+		}
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineStartIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), sqStart);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineEndIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), sqEnd);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineLeftIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), (PANGO_PIXELS(logical.x)) + x);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineRightIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), (PANGO_PIXELS(logical.x+logical.width)) + x);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineTopIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), totalY + y);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineInternalSpaceIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), ((0 << 1) | 1));
+		interpreterProxy->storeIntegerofObjectwithValue(TextLinePaddingWidthIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), ((0 << 1) | 1));
+		next = pango_layout_iter_next_line(lineIter);
+		if (next) {
+			addition = (logical.height) + (pango_layout_get_spacing(layout));
+		} else {
+			addition = logical.height;
+		}
+		totalY += PANGO_PIXELS(addition);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineBottomIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), totalY + y);
+	}
+	pango_layout_get_extents(layout, &ink, &logical);
+	newW = PANGO_PIXELS(logical.width);
+	pango_layout_iter_free(lineIter);
+	pango_attr_list_unref(attrList);
+	g_object_unref(layout);
+	if (cairo_status(context)) {
+		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
+		return null;
+	}
+	_return_value = interpreterProxy->integerObjectOf(newW);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(9, _return_value);
+	return null;
+}
+
+EXPORT(sqInt) primitivePangoComposeString2(void) {
+	sqInt baseline;
+	sqInt lastLine;
+	sqInt prevBaseline;
+	unsigned char* aString;
+	PangoLayoutLine* line;
+	sqInt sqEnd;
+	sqInt start;
+	cairo_t* context;
+	sqInt totalY;
+	PangoLayoutIter* lineIter;
+	sqInt inStringSize;
+	sqInt textLineClass;
+	sqInt retArrayOop;
+	sqInt addition;
+	sqInt lineIndex;
+	sqInt textLine;
+	sqInt next;
+	PangoRectangle ink;
+	PangoRectangle logical;
+	sqInt i;
+	sqInt sqStart;
+	sqInt lineCount;
+	sqInt newW;
+	sqInt canvasOop;
+	sqInt arrayOop;
+	unsigned char* inString;
+	PangoAttrList* attrList;
+	PangoLayout* layout;
+	sqInt inStringOop;
+	sqInt x;
+	sqInt y;
+	sqInt sqAttrArray;
+	sqInt w;
+	sqInt h;
+	sqInt withWrap;
+	sqInt inTextLineClass;
+
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(7), "Object"));
+	inStringOop = interpreterProxy->stackValue(7);
+	x = interpreterProxy->stackIntegerValue(6);
+	y = interpreterProxy->stackIntegerValue(5);
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(4), "Object"));
+	sqAttrArray = interpreterProxy->stackValue(4);
+	w = interpreterProxy->stackIntegerValue(3);
+	h = interpreterProxy->stackIntegerValue(2);
+	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
+	inTextLineClass = interpreterProxy->stackValue(0);
+	;
+	canvasOop = interpreterProxy->stackValue(8);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	context = contextFrom(canvasOop);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	inStringSize = interpreterProxy->stSizeOf(inStringOop);
+	if (inStringSize == 0) {
+		primitiveFail();
+		return null;
+	}
+	aString = alloca(inStringSize);
+	inString = interpreterProxy->firstIndexableField(inStringOop);
+	strncpy(aString, inString, inStringSize);
+	textLineClass = inTextLineClass;
+	layout = pango_cairo_create_layout(context);
+	attrList = pango_attr_list_new();
+	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
+	pango_layout_set_text(layout, aString, strlen(aString));
+	pango_layout_set_attributes(layout, attrList);
+	pango_layout_set_width(layout, w * (PANGO_SCALE));
+	if (withWrap) {
+		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+	}
+	cairo_translate(context, x, y);
+	pango_cairo_update_layout(context, layout);
+	lineCount = pango_layout_get_line_count(layout);
+	lineIter = pango_layout_get_iter(layout);
+	baseline = pango_layout_iter_get_baseline(lineIter);
+	prevBaseline = 0;
+	cairo_translate(context, 0, PANGO_PIXELS(baseline));
+	sqEnd = 0;
+	totalY = 0;
+	interpreterProxy->pushRemappableOop(textLineClass);
+	arrayOop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), lineCount);
+	textLineClass = interpreterProxy->popRemappableOop();
+	for (i = 0; i <= (lineCount - 1); i += 1) {
+		interpreterProxy->pushRemappableOop(textLineClass);
+		interpreterProxy->pushRemappableOop(arrayOop);
+		textLine = interpreterProxy->instantiateClassindexableSize(textLineClass, 0);
+		arrayOop = interpreterProxy->popRemappableOop();
+		textLineClass = interpreterProxy->popRemappableOop();
+		interpreterProxy->storePointerofObjectwithValue(i, arrayOop, textLine);
+	}
+	lastLine = lineCount - 1;
+	for (lineIndex = 0; lineIndex <= lastLine; lineIndex += 1) {
+		line = pango_layout_iter_get_line_readonly(lineIter);
+		pango_layout_line_get_extents(line, &ink, &logical);
+		sqStart = sqEnd + 1;
+		start = line->start_index;
+
+		/* self log: 'sqStart, sqEnd: %d %d' with: sqStart with: sqEnd. */
+
+		sqEnd = (sqStart + (sqCharCountInfromto(aString, start, start + (line->length)))) - 1;
+		if (((start + (line->length)) < (interpreterProxy->stSizeOf(((int) aString)))) && ((aString[start + (line->length)]) == 13)) {
+			sqEnd += 1;
+		}
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineStartIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), sqStart);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineEndIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), sqEnd);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineLeftIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), (PANGO_PIXELS(logical.x)) + x);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineRightIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), (PANGO_PIXELS(logical.x+logical.width)) + x);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineTopIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), totalY + y);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineInternalSpaceIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), ((0 << 1) | 1));
+		interpreterProxy->storeIntegerofObjectwithValue(TextLinePaddingWidthIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), ((0 << 1) | 1));
+		next = pango_layout_iter_next_line(lineIter);
+		if (next) {
+			addition = (logical.height) + (pango_layout_get_spacing(layout));
+		} else {
+			addition = logical.height;
+		}
+		totalY += PANGO_PIXELS(addition);
+		interpreterProxy->storeIntegerofObjectwithValue(TextLineBottomIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), totalY + y);
+	}
+	pango_layout_get_extents(layout, &ink, &logical);
+	newW = PANGO_PIXELS(logical.width);
+	pango_layout_iter_free(lineIter);
+	pango_attr_list_unref(attrList);
+	g_object_unref(layout);
+	if (cairo_status(context)) {
+		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
+		return null;
+	}
+	interpreterProxy->pushRemappableOop(arrayOop);
+	retArrayOop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2);
+	arrayOop = interpreterProxy->popRemappableOop();
+	interpreterProxy->storeIntegerofObjectwithValue(0, retArrayOop, newW);
+	interpreterProxy->storePointerofObjectwithValue(1, retArrayOop, arrayOop);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(9, retArrayOop);
 	return null;
 }
 
@@ -1778,542 +2140,6 @@ EXPORT(sqInt) primitiveGetLineWidth(void) {
 	return null;
 }
 
-EXPORT(sqInt) primitiveGetTransform(void) {
-	sqInt canvasOop;
-	cairo_t* context;
-	cairo_matrix_t m;
-	float *aTransform;
-
-	aTransform = ((float *) (interpreterProxy->arrayValueOf(interpreterProxy->stackValue(0))));
-	canvasOop = interpreterProxy->stackValue(1);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	context = contextFrom(canvasOop);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	cairo_get_matrix(context, &m);
-	aTransform[0] = (m.xx);
-	aTransform[1] = (m.xy);
-	aTransform[2] = (m.x0);
-	aTransform[3] = (m.yx);
-	aTransform[4] = (m.yy);
-	aTransform[5] = (m.y0);
-	if (cairo_status(context)) {
-		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
-		return null;
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(1);
-	return null;
-}
-
-EXPORT(sqInt) primitiveLanguageAttributes(void) {
-	int * array4;
-	sqInt currentTag;
-	sqInt arrayIndex;
-	sqInt i;
-	sqInt currentStart;
-	sqInt array4Oop;
-	unsigned int * string;
-	sqInt ws;
-	sqInt stringOop;
-	sqInt currentEnd;
-	int * array;
-	sqInt arrayOop;
-	sqInt arraySize;
-	sqInt stringSize;
-	sqInt lOop;
-	sqInt leadingChar;
-	sqInt oStringOop;
-	sqInt oLOop;
-	sqInt oArrayOop;
-	sqInt _return_value;
-
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "Object"));
-	oStringOop = interpreterProxy->stackValue(2);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "Object"));
-	oLOop = interpreterProxy->stackValue(1);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
-	oArrayOop = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	lOop = oLOop;
-	arrayOop = oArrayOop;
-	stringOop = oStringOop;
-	if (interpreterProxy->isBytes(stringOop)) {
-		_return_value = interpreterProxy->integerObjectOf(0);
-		if (interpreterProxy->failed()) {
-			return null;
-		}
-		interpreterProxy->popthenPush(4, _return_value);
-		return null;
-	}
-	if (!(interpreterProxy->isWords(stringOop))) {
-		primitiveFail();
-		return null;
-	}
-	arraySize = interpreterProxy->stSizeOf(arrayOop);
-	if (arraySize <= 0) {
-		primitiveFail();
-		return null;
-	}
-	stringSize = interpreterProxy->stSizeOf(stringOop);
-	if (stringSize == 0) {
-		_return_value = interpreterProxy->integerObjectOf(0);
-		if (interpreterProxy->failed()) {
-			return null;
-		}
-		interpreterProxy->popthenPush(4, _return_value);
-		return null;
-	}
-	string = interpreterProxy->firstIndexableField(stringOop);
-	array = interpreterProxy->firstIndexableField(arrayOop);
-	ws = string[0];
-	currentTag = leadingCharOf(ws);
-	leadingChar = -1;
-	currentStart = 0;
-	currentEnd = utf8CountFor(ws);
-	arrayIndex = 0;
-	for (i = 1; i <= (stringSize - 1); i += 1) {
-		ws = string[i];
-		leadingChar = leadingCharOf(ws);
-		if (leadingChar != currentTag) {
-			interpreterProxy->pushRemappableOop(stringOop);
-			interpreterProxy->pushRemappableOop(arrayOop);
-			interpreterProxy->pushRemappableOop(lOop);
-			array4Oop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 4);
-			lOop = interpreterProxy->popRemappableOop();
-			arrayOop = interpreterProxy->popRemappableOop();
-			stringOop = interpreterProxy->popRemappableOop();
-			array = interpreterProxy->firstIndexableField(arrayOop);
-			string = interpreterProxy->firstIndexableField(stringOop);
-			array4 = interpreterProxy->firstIndexableField(array4Oop);
-			array4[0] = lOop;
-			array4[1] = (((currentStart << 1) | 1));
-			array4[2] = (((currentEnd << 1) | 1));
-			array4[3] = (((currentTag << 1) | 1));
-			array[arrayIndex] = array4Oop;
-			arrayIndex += 1;
-			if (arrayIndex >= arraySize) {
-				primitiveFail();
-				return null;
-			}
-			currentTag = leadingChar;
-			currentStart = currentEnd;
-		}
-		currentEnd += utf8CountFor(ws);
-	}
-	interpreterProxy->pushRemappableOop(stringOop);
-	interpreterProxy->pushRemappableOop(arrayOop);
-	interpreterProxy->pushRemappableOop(lOop);
-	array4Oop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 4);
-	lOop = interpreterProxy->popRemappableOop();
-	arrayOop = interpreterProxy->popRemappableOop();
-	stringOop = interpreterProxy->popRemappableOop();
-	interpreterProxy->storePointerofObjectwithValue(0, array4Oop, lOop);
-	interpreterProxy->storeIntegerofObjectwithValue(1, array4Oop, currentStart);
-	interpreterProxy->storeIntegerofObjectwithValue(2, array4Oop, currentEnd);
-	interpreterProxy->storeIntegerofObjectwithValue(3, array4Oop, currentTag);
-	interpreterProxy->storePointerofObjectwithValue(arrayIndex, arrayOop, array4Oop);
-	arrayIndex += 1;
-	_return_value = interpreterProxy->integerObjectOf(arrayIndex);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(4, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitiveOpen(void) {
-	sqInt handleOop;
-	sqInt contextIndex;
-	sqInt canvasOop;
-
-	canvasOop = interpreterProxy->stackValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	contextIndex = createContextFor(canvasOop);
-	if (!(interpreterProxy->failed())) {
-		handleOop = interpreterProxy->integerObjectOf(contextIndex);
-		interpreterProxy->storePointerofObjectwithValue(CanvasHandleIndex, canvasOop, handleOop);
-	}
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	return null;
-}
-
-EXPORT(sqInt) primitivePangoBlockAtIndex(void) {
-	sqInt atEnd;
-	sqInt index;
-	PangoRectangle pos;
-	unsigned char* aString;
-	sqInt aStringOop;
-	sqInt trailing;
-	sqInt origin;
-	sqInt corner;
-	sqInt canvasOop;
-	cairo_t* context;
-	PangoAttrList* attrList;
-	sqInt charData;
-	sqInt stringLength;
-	PangoLayout* layout;
-	sqInt inStringOop;
-	sqInt utf8Index;
-	sqInt x;
-	sqInt y;
-	sqInt sqAttrArray;
-	sqInt w;
-	sqInt h;
-	sqInt withWrap;
-	sqInt cData;
-	sqInt _return_value;
-
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(8), "Object"));
-	inStringOop = interpreterProxy->stackValue(8);
-	utf8Index = interpreterProxy->stackIntegerValue(7);
-	x = interpreterProxy->stackIntegerValue(6);
-	y = interpreterProxy->stackIntegerValue(5);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(4), "Object"));
-	sqAttrArray = interpreterProxy->stackValue(4);
-	w = interpreterProxy->stackIntegerValue(3);
-	h = interpreterProxy->stackIntegerValue(2);
-	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
-	cData = interpreterProxy->stackValue(0);
-	;
-	canvasOop = interpreterProxy->stackValue(9);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	context = contextFrom(canvasOop);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	aStringOop = inStringOop;
-	aString = interpreterProxy->firstIndexableField(aStringOop);
-	layout = pango_cairo_create_layout(context);
-	attrList = pango_attr_list_new();
-	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
-	pango_layout_set_text(layout, aString, strlen(aString));
-	pango_layout_set_attributes(layout, attrList);
-	pango_layout_set_width(layout, w * (PANGO_SCALE));
-	if (withWrap) {
-		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
-	}
-	cairo_translate(context, x, y);
-	pango_cairo_update_layout(context, layout);
-	stringLength = strlen(aString);
-	if (utf8Index == (stringLength + 1)) {
-		atEnd = 1;
-		pango_layout_index_to_pos(layout, ((((((utf8Index - 1) < 0) ? 0 : (utf8Index - 1))) < stringLength) ? ((((utf8Index - 1) < 0) ? 0 : (utf8Index - 1))) : stringLength), &pos);
-		pos.x = pos.x + pos.width;
-	} else {
-		atEnd = 0;
-		pango_layout_index_to_pos(layout, (((((utf8Index < 0) ? 0 : utf8Index)) < stringLength) ? (((utf8Index < 0) ? 0 : utf8Index)) : stringLength), &pos);
-	}
-	pango_attr_list_unref(attrList);
-	g_object_unref(layout);
-	if (cairo_status(context)) {
-		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
-		return null;
-	}
-	interpreterProxy->pushRemappableOop(aStringOop);
-	interpreterProxy->pushRemappableOop(cData);
-	origin = interpreterProxy->makePointwithxValueyValue((PANGO_PIXELS(pos.x)) + x, (PANGO_PIXELS(pos.y)) + y);
-	interpreterProxy->pushRemappableOop(origin);
-	corner = interpreterProxy->makePointwithxValueyValue((PANGO_PIXELS(pos.x+pos.width)) + x, (PANGO_PIXELS(pos.y+pos.height)) + y);
-	origin = interpreterProxy->popRemappableOop();
-	charData = interpreterProxy->popRemappableOop();
-	aStringOop = interpreterProxy->popRemappableOop();
-	aString = interpreterProxy->firstIndexableField(aStringOop);
-	interpreterProxy->storePointerofObjectwithValue(0, charData, origin);
-	interpreterProxy->storePointerofObjectwithValue(1, charData, corner);
-	index = sqCharCountInfromto(aString, 0, utf8Index);
-	if (!(atEnd)) {
-		index += 1;
-	}
-	interpreterProxy->storePointerofObjectwithValue(2, charData, ((index << 1) | 1));
-	_return_value = interpreterProxy->integerObjectOf(index);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(10, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitivePangoComposeString(void) {
-	sqInt linesSize;
-	sqInt lineIndex;
-	sqInt baseline;
-	sqInt next;
-	PangoRectangle ink;
-	PangoRectangle logical;
-	sqInt lastLine;
-	sqInt lineCount;
-	sqInt sqStart;
-	sqInt prevBaseline;
-	PangoLayoutLine* line;
-	sqInt newW;
-	sqInt sqEnd;
-	sqInt start;
-	sqInt canvasOop;
-	cairo_t* context;
-	PangoLayoutIter* lineIter;
-	sqInt totalY;
-	PangoAttrList* attrList;
-	sqInt addition;
-	PangoLayout* layout;
-	char *aString;
-	sqInt x;
-	sqInt y;
-	sqInt sqAttrArray;
-	sqInt w;
-	sqInt h;
-	sqInt withWrap;
-	sqInt lines;
-	sqInt _return_value;
-
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(7)));
-	aString = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(7))));
-	x = interpreterProxy->stackIntegerValue(6);
-	y = interpreterProxy->stackIntegerValue(5);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(4), "Object"));
-	sqAttrArray = interpreterProxy->stackValue(4);
-	w = interpreterProxy->stackIntegerValue(3);
-	h = interpreterProxy->stackIntegerValue(2);
-	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
-	lines = interpreterProxy->stackValue(0);
-	;
-	canvasOop = interpreterProxy->stackValue(8);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	context = contextFrom(canvasOop);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	layout = pango_cairo_create_layout(context);
-	attrList = pango_attr_list_new();
-	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
-	pango_layout_set_text(layout, aString, strlen(aString));
-	pango_layout_set_attributes(layout, attrList);
-	pango_layout_set_width(layout, w * (PANGO_SCALE));
-	if (withWrap) {
-		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
-	}
-	cairo_translate(context, x, y);
-	pango_cairo_update_layout(context, layout);
-	lineCount = pango_layout_get_line_count(layout);
-	lineIter = pango_layout_get_iter(layout);
-	baseline = pango_layout_iter_get_baseline(lineIter);
-	prevBaseline = 0;
-	cairo_translate(context, 0, PANGO_PIXELS(baseline));
-	sqEnd = 0;
-	totalY = 0;
-	linesSize = interpreterProxy->stSizeOf(lines);
-	lastLine = (((lineCount < linesSize) ? lineCount : linesSize)) - 1;
-	for (lineIndex = 0; lineIndex <= lastLine; lineIndex += 1) {
-		line = pango_layout_iter_get_line_readonly(lineIter);
-		pango_layout_line_get_extents(line, &ink, &logical);
-		sqStart = sqEnd + 1;
-		start = line->start_index;
-
-		/* self log: 'sqStart, sqEnd: %d %d' with: sqStart with: sqEnd. */
-
-		sqEnd = (sqStart + (sqCharCountInfromto(aString, start, start + (line->length)))) - 1;
-		if (((start + (line->length)) < (interpreterProxy->stSizeOf(((int) aString)))) && ((aString[start + (line->length)]) == 13)) {
-			sqEnd += 1;
-		}
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineStartIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), sqStart);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineEndIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), sqEnd);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineLeftIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), (PANGO_PIXELS(logical.x)) + x);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineRightIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), (PANGO_PIXELS(logical.x+logical.width)) + x);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineTopIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), totalY + y);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineInternalSpaceIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), ((0 << 1) | 1));
-		interpreterProxy->storeIntegerofObjectwithValue(TextLinePaddingWidthIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), ((0 << 1) | 1));
-		next = pango_layout_iter_next_line(lineIter);
-		if (next) {
-			addition = (logical.height) + (pango_layout_get_spacing(layout));
-		} else {
-			addition = logical.height;
-		}
-		totalY += PANGO_PIXELS(addition);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineBottomIndex, interpreterProxy->fetchPointerofObject(lineIndex, lines), totalY + y);
-	}
-	pango_layout_get_extents(layout, &ink, &logical);
-	newW = PANGO_PIXELS(logical.width);
-	pango_layout_iter_free(lineIter);
-	pango_attr_list_unref(attrList);
-	g_object_unref(layout);
-	if (cairo_status(context)) {
-		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
-		return null;
-	}
-	_return_value = interpreterProxy->integerObjectOf(newW);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(9, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitivePangoComposeString2(void) {
-	sqInt baseline;
-	sqInt lastLine;
-	sqInt prevBaseline;
-	unsigned char* aString;
-	PangoLayoutLine* line;
-	sqInt sqEnd;
-	sqInt start;
-	cairo_t* context;
-	sqInt totalY;
-	PangoLayoutIter* lineIter;
-	sqInt inStringSize;
-	sqInt textLineClass;
-	sqInt retArrayOop;
-	sqInt addition;
-	sqInt lineIndex;
-	sqInt textLine;
-	sqInt next;
-	PangoRectangle ink;
-	PangoRectangle logical;
-	sqInt i;
-	sqInt sqStart;
-	sqInt lineCount;
-	sqInt newW;
-	sqInt canvasOop;
-	sqInt arrayOop;
-	unsigned char* inString;
-	PangoAttrList* attrList;
-	PangoLayout* layout;
-	sqInt inStringOop;
-	sqInt x;
-	sqInt y;
-	sqInt sqAttrArray;
-	sqInt w;
-	sqInt h;
-	sqInt withWrap;
-	sqInt inTextLineClass;
-
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(7), "Object"));
-	inStringOop = interpreterProxy->stackValue(7);
-	x = interpreterProxy->stackIntegerValue(6);
-	y = interpreterProxy->stackIntegerValue(5);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(4), "Object"));
-	sqAttrArray = interpreterProxy->stackValue(4);
-	w = interpreterProxy->stackIntegerValue(3);
-	h = interpreterProxy->stackIntegerValue(2);
-	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
-	inTextLineClass = interpreterProxy->stackValue(0);
-	;
-	canvasOop = interpreterProxy->stackValue(8);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	context = contextFrom(canvasOop);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	inStringSize = interpreterProxy->stSizeOf(inStringOop);
-	if (inStringSize == 0) {
-		primitiveFail();
-		return null;
-	}
-	aString = alloca(inStringSize);
-	inString = interpreterProxy->firstIndexableField(inStringOop);
-	strncpy(aString, inString, inStringSize);
-	textLineClass = inTextLineClass;
-	layout = pango_cairo_create_layout(context);
-	attrList = pango_attr_list_new();
-	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
-	pango_layout_set_text(layout, aString, strlen(aString));
-	pango_layout_set_attributes(layout, attrList);
-	pango_layout_set_width(layout, w * (PANGO_SCALE));
-	if (withWrap) {
-		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
-	}
-	cairo_translate(context, x, y);
-	pango_cairo_update_layout(context, layout);
-	lineCount = pango_layout_get_line_count(layout);
-	lineIter = pango_layout_get_iter(layout);
-	baseline = pango_layout_iter_get_baseline(lineIter);
-	prevBaseline = 0;
-	cairo_translate(context, 0, PANGO_PIXELS(baseline));
-	sqEnd = 0;
-	totalY = 0;
-	interpreterProxy->pushRemappableOop(textLineClass);
-	arrayOop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), lineCount);
-	textLineClass = interpreterProxy->popRemappableOop();
-	for (i = 0; i <= (lineCount - 1); i += 1) {
-		interpreterProxy->pushRemappableOop(textLineClass);
-		interpreterProxy->pushRemappableOop(arrayOop);
-		textLine = interpreterProxy->instantiateClassindexableSize(textLineClass, 0);
-		arrayOop = interpreterProxy->popRemappableOop();
-		textLineClass = interpreterProxy->popRemappableOop();
-		interpreterProxy->storePointerofObjectwithValue(i, arrayOop, textLine);
-	}
-	lastLine = lineCount - 1;
-	for (lineIndex = 0; lineIndex <= lastLine; lineIndex += 1) {
-		line = pango_layout_iter_get_line_readonly(lineIter);
-		pango_layout_line_get_extents(line, &ink, &logical);
-		sqStart = sqEnd + 1;
-		start = line->start_index;
-
-		/* self log: 'sqStart, sqEnd: %d %d' with: sqStart with: sqEnd. */
-
-		sqEnd = (sqStart + (sqCharCountInfromto(aString, start, start + (line->length)))) - 1;
-		if (((start + (line->length)) < (interpreterProxy->stSizeOf(((int) aString)))) && ((aString[start + (line->length)]) == 13)) {
-			sqEnd += 1;
-		}
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineStartIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), sqStart);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineEndIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), sqEnd);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineLeftIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), (PANGO_PIXELS(logical.x)) + x);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineRightIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), (PANGO_PIXELS(logical.x+logical.width)) + x);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineTopIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), totalY + y);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineInternalSpaceIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), ((0 << 1) | 1));
-		interpreterProxy->storeIntegerofObjectwithValue(TextLinePaddingWidthIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), ((0 << 1) | 1));
-		next = pango_layout_iter_next_line(lineIter);
-		if (next) {
-			addition = (logical.height) + (pango_layout_get_spacing(layout));
-		} else {
-			addition = logical.height;
-		}
-		totalY += PANGO_PIXELS(addition);
-		interpreterProxy->storeIntegerofObjectwithValue(TextLineBottomIndex, interpreterProxy->fetchPointerofObject(lineIndex, arrayOop), totalY + y);
-	}
-	pango_layout_get_extents(layout, &ink, &logical);
-	newW = PANGO_PIXELS(logical.width);
-	pango_layout_iter_free(lineIter);
-	pango_attr_list_unref(attrList);
-	g_object_unref(layout);
-	if (cairo_status(context)) {
-		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
-		return null;
-	}
-	interpreterProxy->pushRemappableOop(arrayOop);
-	retArrayOop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 2);
-	arrayOop = interpreterProxy->popRemappableOop();
-	interpreterProxy->storeIntegerofObjectwithValue(0, retArrayOop, newW);
-	interpreterProxy->storePointerofObjectwithValue(1, retArrayOop, arrayOop);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(9, retArrayOop);
-	return null;
-}
-
 EXPORT(sqInt) primitivePangoFontDescriptionIndex(void) {
 	sqInt newInd;
 	char *familyName;
@@ -2410,6 +2236,39 @@ EXPORT(sqInt) primitivePangoFontDescriptionIndex(void) {
 	return null;
 }
 
+EXPORT(sqInt) primitiveGetTransform(void) {
+	sqInt canvasOop;
+	cairo_t* context;
+	cairo_matrix_t m;
+	float *aTransform;
+
+	aTransform = ((float *) (interpreterProxy->arrayValueOf(interpreterProxy->stackValue(0))));
+	canvasOop = interpreterProxy->stackValue(1);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	context = contextFrom(canvasOop);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	cairo_get_matrix(context, &m);
+	aTransform[0] = (m.xx);
+	aTransform[1] = (m.xy);
+	aTransform[2] = (m.x0);
+	aTransform[3] = (m.yx);
+	aTransform[4] = (m.yy);
+	aTransform[5] = (m.y0);
+	if (cairo_status(context)) {
+		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
+		return null;
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(1);
+	return null;
+}
+
 EXPORT(sqInt) primitivePangoIndexAtPoint(void) {
 	sqInt lineIndex;
 	sqInt index;
@@ -2475,18 +2334,21 @@ EXPORT(sqInt) primitivePangoIndexAtPoint(void) {
 	line = null;
 	if (!(inside)) {
 		pango_layout_index_to_line_x(layout, index, trailing, &lineIndex, &xPos);
-		line = pango_layout_get_line_readonly(layout, (((lineIndex - 1) < 0) ? 0 : (lineIndex - 1)));
+
+		/* self log: 'lineIndex %x' with: line. */
+
+		line = pango_layout_get_line_readonly(layout, ((lineIndex < 0) ? 0 : lineIndex));
 		if (line == null) {
 			index = strlen(aString);
 		} else {
 			pango_layout_line_ref(line);
-			if (xPos > 0) {
-				index = line->start_index + line->length;
-				if (trailing > 0) {
-					trailing = 1;
-				}
-			} else {
-				index = line->start_index;
+
+			/* self log: 'line->length %d' with: (self cCode: 'line->length'). */
+
+			index = line->start_index;
+			index += line->length;
+			if (trailing > 0) {
+				trailing = 1;
 			}
 		}
 	}
@@ -2523,6 +2385,171 @@ EXPORT(sqInt) primitivePangoIndexAtPoint(void) {
 	return null;
 }
 
+EXPORT(sqInt) primitiveLanguageAttributes(void) {
+	int * array4;
+	sqInt currentTag;
+	sqInt arrayIndex;
+	sqInt i;
+	sqInt currentStart;
+	sqInt array4Oop;
+	unsigned int * string;
+	sqInt ws;
+	sqInt stringOop;
+	sqInt currentEnd;
+	int * array;
+	sqInt arrayOop;
+	sqInt arraySize;
+	sqInt stringSize;
+	sqInt lOop;
+	sqInt leadingChar;
+	sqInt oStringOop;
+	sqInt oLOop;
+	sqInt oArrayOop;
+	sqInt _return_value;
+	sqInt v;
+
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(2), "Object"));
+	oStringOop = interpreterProxy->stackValue(2);
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(1), "Object"));
+	oLOop = interpreterProxy->stackValue(1);
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
+	oArrayOop = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	lOop = oLOop;
+	arrayOop = oArrayOop;
+	stringOop = oStringOop;
+	if (interpreterProxy->isBytes(stringOop)) {
+		_return_value = interpreterProxy->integerObjectOf(0);
+		if (interpreterProxy->failed()) {
+			return null;
+		}
+		interpreterProxy->popthenPush(4, _return_value);
+		return null;
+	}
+	if (!(interpreterProxy->isWords(stringOop))) {
+		primitiveFail();
+		return null;
+	}
+	arraySize = interpreterProxy->stSizeOf(arrayOop);
+	if (arraySize <= 0) {
+		primitiveFail();
+		return null;
+	}
+	stringSize = interpreterProxy->stSizeOf(stringOop);
+	if (stringSize == 0) {
+		_return_value = interpreterProxy->integerObjectOf(0);
+		if (interpreterProxy->failed()) {
+			return null;
+		}
+		interpreterProxy->popthenPush(4, _return_value);
+		return null;
+	}
+	string = interpreterProxy->firstIndexableField(stringOop);
+	array = interpreterProxy->firstIndexableField(arrayOop);
+	ws = string[0];
+	currentTag = ((usqInt) (ws & 1069547520) >> 22);
+	leadingChar = -1;
+	currentStart = 0;
+	/* begin utf8CountFor: */
+	v = ws & 2097151;
+	if ((0 <= v) && (v <= 127)) {
+		currentEnd = 1;
+		goto l1;
+	}
+	if ((128 <= v) && (v <= 2047)) {
+		currentEnd = 2;
+		goto l1;
+	}
+	if ((2048 <= v) && (v <= 55295)) {
+		currentEnd = 3;
+		goto l1;
+	}
+	if ((57344 <= v) && (v <= 65535)) {
+		currentEnd = 3;
+		goto l1;
+	}
+	if ((65536 <= v) && (v <= 1114111)) {
+		currentEnd = 4;
+		goto l1;
+	}
+	currentEnd = 0;
+l1:	/* end utf8CountFor: */;
+	arrayIndex = 0;
+	for (i = 1; i <= (stringSize - 1); i += 1) {
+		ws = string[i];
+		leadingChar = ((usqInt) (ws & 1069547520) >> 22);
+		if (leadingChar != currentTag) {
+			interpreterProxy->pushRemappableOop(stringOop);
+			interpreterProxy->pushRemappableOop(arrayOop);
+			interpreterProxy->pushRemappableOop(lOop);
+			array4Oop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 4);
+			lOop = interpreterProxy->popRemappableOop();
+			arrayOop = interpreterProxy->popRemappableOop();
+			stringOop = interpreterProxy->popRemappableOop();
+			array = interpreterProxy->firstIndexableField(arrayOop);
+			string = interpreterProxy->firstIndexableField(stringOop);
+			array4 = interpreterProxy->firstIndexableField(array4Oop);
+			array4[0] = lOop;
+			array4[1] = (((currentStart << 1) | 1));
+			array4[2] = (((currentEnd << 1) | 1));
+			array4[3] = (((currentTag << 1) | 1));
+			array[arrayIndex] = array4Oop;
+			arrayIndex += 1;
+			if (arrayIndex >= arraySize) {
+				primitiveFail();
+				return null;
+			}
+			currentTag = leadingChar;
+			currentStart = currentEnd;
+		}
+		currentEnd += utf8CountFor(ws);
+	}
+	interpreterProxy->pushRemappableOop(stringOop);
+	interpreterProxy->pushRemappableOop(arrayOop);
+	interpreterProxy->pushRemappableOop(lOop);
+	array4Oop = interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 4);
+	lOop = interpreterProxy->popRemappableOop();
+	arrayOop = interpreterProxy->popRemappableOop();
+	stringOop = interpreterProxy->popRemappableOop();
+	interpreterProxy->storePointerofObjectwithValue(0, array4Oop, lOop);
+	interpreterProxy->storeIntegerofObjectwithValue(1, array4Oop, currentStart);
+	interpreterProxy->storeIntegerofObjectwithValue(2, array4Oop, currentEnd);
+	interpreterProxy->storeIntegerofObjectwithValue(3, array4Oop, currentTag);
+	interpreterProxy->storePointerofObjectwithValue(arrayIndex, arrayOop, array4Oop);
+	arrayIndex += 1;
+	_return_value = interpreterProxy->integerObjectOf(arrayIndex);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(4, _return_value);
+	return null;
+}
+
+EXPORT(sqInt) primitiveOpen(void) {
+	sqInt handleOop;
+	sqInt contextIndex;
+	sqInt canvasOop;
+
+	canvasOop = interpreterProxy->stackValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	contextIndex = createContextFor(canvasOop);
+	if (!(interpreterProxy->failed())) {
+		handleOop = interpreterProxy->integerObjectOf(contextIndex);
+		interpreterProxy->storePointerofObjectwithValue(CanvasHandleIndex, canvasOop, handleOop);
+	}
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	return null;
+}
+
 EXPORT(sqInt) primitivePangoIsAvailable(void) {
 	sqInt canvasOop;
 	cairo_t* context;
@@ -2552,109 +2579,6 @@ EXPORT(sqInt) primitivePangoIsAvailable(void) {
 		return null;
 	}
 	interpreterProxy->popthenPush(1, _return_value);
-	return null;
-}
-
-EXPORT(sqInt) primitivePangoShowString(void) {
-	PangoRectangle ink;
-	PangoRectangle logical;
-	unsigned int cursorColor;
-	sqInt lineCount;
-	sqInt prevBaseline;
-	PangoLayoutLine* line;
-	sqInt indexToX;
-	sqInt newW;
-	PangoRectangle startRect;
-	sqInt canvasOop;
-	cairo_t* context;
-	PangoLayoutIter* lineIter;
-	PangoAttrList* attrList;
-	PangoLayout* layout;
-	char *aString;
-	sqInt x;
-	sqInt y;
-	sqInt sqAttrArray;
-	sqInt w;
-	sqInt h;
-	sqInt withWrap;
-	sqInt selStart;
-	sqInt selEnd;
-	sqInt cPixel;
-	sqInt _return_value;
-
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(9)));
-	aString = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(9))));
-	x = interpreterProxy->stackIntegerValue(8);
-	y = interpreterProxy->stackIntegerValue(7);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(6), "Object"));
-	sqAttrArray = interpreterProxy->stackValue(6);
-	w = interpreterProxy->stackIntegerValue(5);
-	h = interpreterProxy->stackIntegerValue(4);
-	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(3));
-	selStart = interpreterProxy->stackIntegerValue(2);
-	selEnd = interpreterProxy->stackIntegerValue(1);
-	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
-	cPixel = interpreterProxy->stackValue(0);
-	;
-	canvasOop = interpreterProxy->stackValue(10);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	context = contextFrom(canvasOop);
-	cursorColor = interpreterProxy->positive32BitValueOf(cPixel);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	layout = pango_cairo_create_layout(context);
-	attrList = pango_attr_list_new();
-	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
-	if (!(selStart == selEnd)) {
-		if ((selStart >= 0) && (selEnd >= 0)) {
-			addSelectionFromtopixelinto(selStart, selEnd, cursorColor, attrList);
-		}
-	}
-	pango_layout_set_text(layout, aString, strlen(aString));
-	pango_layout_set_attributes(layout, attrList);
-	pango_layout_set_width(layout, w * (PANGO_SCALE));
-	if (withWrap) {
-		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
-	}
-	cairo_translate(context, x, y);
-	pango_cairo_update_layout(context, layout);
-
-	/* 	lineIter := self pangoLayoutGetIter: layout.
-	baseline := self pangoLayoutIterGetBaseline: lineIter.
-	prevBaseline := 0.
- */
-
-	lineCount = pango_layout_get_line_count(layout);
-	if (1) {
-		pango_cairo_show_layout(context, layout);
-	} else {
-		null;
-	}
-	if (selStart == selEnd) {
-		if ((selStart >= 0) && (selEnd >= 0)) {
-			pango_layout_index_to_pos(layout, selStart, &startRect);
-			addSelectionAtpixelwith(&startRect, cursorColor, context);
-		}
-	}
-	pango_layout_get_extents(layout, &ink, &logical);
-
-	/* self pangoLayoutIterFree: lineIter. */
-
-	newW = PANGO_PIXELS(logical.width);
-	pango_attr_list_unref(attrList);
-	g_object_unref(layout);
-	if (cairo_status(context)) {
-		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
-		return null;
-	}
-	_return_value = interpreterProxy->integerObjectOf(newW);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(11, _return_value);
 	return null;
 }
 
@@ -2820,6 +2744,109 @@ EXPORT(sqInt) primitiveSetTransform(void) {
 		return null;
 	}
 	interpreterProxy->pop(1);
+	return null;
+}
+
+EXPORT(sqInt) primitivePangoShowString(void) {
+	PangoRectangle ink;
+	PangoRectangle logical;
+	unsigned int cursorColor;
+	sqInt lineCount;
+	sqInt prevBaseline;
+	PangoLayoutLine* line;
+	sqInt indexToX;
+	sqInt newW;
+	PangoRectangle startRect;
+	sqInt canvasOop;
+	cairo_t* context;
+	PangoLayoutIter* lineIter;
+	PangoAttrList* attrList;
+	PangoLayout* layout;
+	char *aString;
+	sqInt x;
+	sqInt y;
+	sqInt sqAttrArray;
+	sqInt w;
+	sqInt h;
+	sqInt withWrap;
+	sqInt selStart;
+	sqInt selEnd;
+	sqInt cPixel;
+	sqInt _return_value;
+
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(9)));
+	aString = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(9))));
+	x = interpreterProxy->stackIntegerValue(8);
+	y = interpreterProxy->stackIntegerValue(7);
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(6), "Object"));
+	sqAttrArray = interpreterProxy->stackValue(6);
+	w = interpreterProxy->stackIntegerValue(5);
+	h = interpreterProxy->stackIntegerValue(4);
+	withWrap = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(3));
+	selStart = interpreterProxy->stackIntegerValue(2);
+	selEnd = interpreterProxy->stackIntegerValue(1);
+	interpreterProxy->success(interpreterProxy->isKindOf(interpreterProxy->stackValue(0), "Object"));
+	cPixel = interpreterProxy->stackValue(0);
+	;
+	canvasOop = interpreterProxy->stackValue(10);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	context = contextFrom(canvasOop);
+	cursorColor = interpreterProxy->positive32BitValueOf(cPixel);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	layout = pango_cairo_create_layout(context);
+	attrList = pango_attr_list_new();
+	translateSqAttrsToPangoAttrsinto(sqAttrArray, attrList);
+	if (!(selStart == selEnd)) {
+		if ((selStart >= 0) && (selEnd >= 0)) {
+			addSelectionFromtopixelinto(selStart, selEnd, cursorColor, attrList);
+		}
+	}
+	pango_layout_set_text(layout, aString, strlen(aString));
+	pango_layout_set_attributes(layout, attrList);
+	pango_layout_set_width(layout, w * (PANGO_SCALE));
+	if (withWrap) {
+		pango_layout_set_wrap(layout, PANGO_WRAP_WORD_CHAR);
+	}
+	cairo_translate(context, x, y);
+	pango_cairo_update_layout(context, layout);
+
+	/* 	lineIter := self pangoLayoutGetIter: layout.
+	baseline := self pangoLayoutIterGetBaseline: lineIter.
+	prevBaseline := 0.
+ */
+
+	lineCount = pango_layout_get_line_count(layout);
+	if (1) {
+		pango_cairo_show_layout(context, layout);
+	} else {
+		null;
+	}
+	if (selStart == selEnd) {
+		if ((selStart >= 0) && (selEnd >= 0)) {
+			pango_layout_index_to_pos(layout, selStart, &startRect);
+			addSelectionAtpixelwith(&startRect, cursorColor, context);
+		}
+	}
+	pango_layout_get_extents(layout, &ink, &logical);
+
+	/* self pangoLayoutIterFree: lineIter. */
+
+	newW = PANGO_PIXELS(logical.width);
+	pango_attr_list_unref(attrList);
+	g_object_unref(layout);
+	if (cairo_status(context)) {
+		failwith("cairo error: %s", cairo_status_to_string(cairo_status(context)));
+		return null;
+	}
+	_return_value = interpreterProxy->integerObjectOf(newW);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(11, _return_value);
 	return null;
 }
 
@@ -3212,6 +3239,7 @@ static sqInt putCharintoat(sqInt c, unsigned char* utf8String, sqInt utf8Index) 
 	sqInt index;
 	sqInt mask;
 	sqInt shift;
+	sqInt v;
 
 	val = c & 2097151;
 	index = utf8Index;
@@ -3219,7 +3247,30 @@ static sqInt putCharintoat(sqInt c, unsigned char* utf8String, sqInt utf8Index) 
 		utf8String[index] = val;
 		return utf8Index + 1;
 	}
-	nBytes = utf8CountFor(c);
+	/* begin utf8CountFor: */
+	v = c & 2097151;
+	if ((0 <= v) && (v <= 127)) {
+		nBytes = 1;
+		goto l1;
+	}
+	if ((128 <= v) && (v <= 2047)) {
+		nBytes = 2;
+		goto l1;
+	}
+	if ((2048 <= v) && (v <= 55295)) {
+		nBytes = 3;
+		goto l1;
+	}
+	if ((57344 <= v) && (v <= 65535)) {
+		nBytes = 3;
+		goto l1;
+	}
+	if ((65536 <= v) && (v <= 1114111)) {
+		nBytes = 4;
+		goto l1;
+	}
+	nBytes = 0;
+l1:	/* end utf8CountFor: */;
 	mask = utf8Headers[nBytes - 1];
 	shift = (nBytes - 1) * -6;
 	utf8String[index] = ((((shift < 0) ? ((usqInt) val >> -shift) : ((usqInt) val << shift))) | mask);
@@ -3490,58 +3541,58 @@ static sqInt utf8CountFor(unsigned int value) {
 
 
 void* RomePlugin_exports[][3] = {
-	{"RomePlugin", "primitiveDestroyFormHandle", (void*)primitiveDestroyFormHandle},
-	{"RomePlugin", "primitiveTransformBy", (void*)primitiveTransformBy},
-	{"RomePlugin", "primitivePangoBlockAtIndex", (void*)primitivePangoBlockAtIndex},
+	{"RomePlugin", "primitiveUTF8StringWith2Indexes", (void*)primitiveUTF8StringWith2Indexes},
 	{"RomePlugin", "shutdownModule", (void*)shutdownModule},
+	{"RomePlugin", "primitiveShowZeroTerminatedUtf8StringXY", (void*)primitiveShowZeroTerminatedUtf8StringXY},
 	{"RomePlugin", "primitiveSaveState", (void*)primitiveSaveState},
 	{"RomePlugin", "primitivePluginVersion", (void*)primitivePluginVersion},
+	{"RomePlugin", "primitiveDrawRoundRectLeftRightTopBottomRadiusCorner", (void*)primitiveDrawRoundRectLeftRightTopBottomRadiusCorner},
 	{"RomePlugin", "primitiveClose", (void*)primitiveClose},
-	{"RomePlugin", "setInterpreter", (void*)setInterpreter},
-	{"RomePlugin", "primitivePangoFontDescriptionIndex", (void*)primitivePangoFontDescriptionIndex},
-	{"RomePlugin", "primitiveClear", (void*)primitiveClear},
 	{"RomePlugin", "primitiveDrawRectangleLeftRightTopBottom", (void*)primitiveDrawRectangleLeftRightTopBottom},
-	{"RomePlugin", "primitiveScaleBy", (void*)primitiveScaleBy},
+	{"RomePlugin", "primitiveLanguageAttributes", (void*)primitiveLanguageAttributes},
 	{"RomePlugin", "primitiveFillRadialOriginXYdirectionXYnormalXYcolorStops", (void*)primitiveFillRadialOriginXYdirectionXYnormalXYcolorStops},
-	{"RomePlugin", "primitiveDrawCurveFromXYviaXYandXYtoXY", (void*)primitiveDrawCurveFromXYviaXYandXYtoXY},
+	{"RomePlugin", "primitiveClear", (void*)primitiveClear},
+	{"RomePlugin", "setInterpreter", (void*)setInterpreter},
+	{"RomePlugin", "primitivePangoShowString", (void*)primitivePangoShowString},
+	{"RomePlugin", "primitiveClipRectangleLeftRightTopBottom", (void*)primitiveClipRectangleLeftRightTopBottom},
+	{"RomePlugin", "primitivePangoFontDescriptionIndex", (void*)primitivePangoFontDescriptionIndex},
+	{"RomePlugin", "primitivePangoComposeString", (void*)primitivePangoComposeString},
+	{"RomePlugin", "primitivePangoIndexAtPoint", (void*)primitivePangoIndexAtPoint},
+	{"RomePlugin", "primitivePangoBlockAtIndex", (void*)primitivePangoBlockAtIndex},
+	{"RomePlugin", "primitiveDrawZeroTerminatedUtf8StringXY", (void*)primitiveDrawZeroTerminatedUtf8StringXY},
+	{"RomePlugin", "primitiveFillBitmapOriginXYdirectionXYnormalXYRepeatImage", (void*)primitiveFillBitmapOriginXYdirectionXYnormalXYRepeatImage},
 	{"RomePlugin", "primitivePangoIsAvailable", (void*)primitivePangoIsAvailable},
 	{"RomePlugin", "moduleUnloaded", (void*)moduleUnloaded},
-	{"RomePlugin", "primitivePangoIndexAtPoint", (void*)primitivePangoIndexAtPoint},
-	{"RomePlugin", "primitiveCreateFormHandle", (void*)primitiveCreateFormHandle},
-	{"RomePlugin", "primitiveDrawGeneralBezierShape", (void*)primitiveDrawGeneralBezierShape},
-	{"RomePlugin", "primitiveStencilImageSrcLRTBDestLRTB", (void*)primitiveStencilImageSrcLRTBDestLRTB},
-	{"RomePlugin", "primitiveUTF8StringWith2Indexes", (void*)primitiveUTF8StringWith2Indexes},
-	{"RomePlugin", "primitiveFillBitmapOriginXYdirectionXYnormalXYRepeatImage", (void*)primitiveFillBitmapOriginXYdirectionXYnormalXYRepeatImage},
-	{"RomePlugin", "primitiveDrawImageSrcLRTBDestLRTB", (void*)primitiveDrawImageSrcLRTBDestLRTB},
-	{"RomePlugin", "primitiveRotateBy", (void*)primitiveRotateBy},
-	{"RomePlugin", "primitiveSetTransform", (void*)primitiveSetTransform},
-	{"RomePlugin", "primitiveSetLineWidth", (void*)primitiveSetLineWidth},
-	{"RomePlugin", "primitivePangoComposeString2", (void*)primitivePangoComposeString2},
-	{"RomePlugin", "primitiveFillLinearOriginXYdirectionXYcolorStops", (void*)primitiveFillLinearOriginXYdirectionXYcolorStops},
-	{"RomePlugin", "initialiseModule", (void*)initialiseModule},
 	{"RomePlugin", "primitiveFillColorAlpha", (void*)primitiveFillColorAlpha},
-	{"RomePlugin", "primitivePangoComposeString", (void*)primitivePangoComposeString},
-	{"RomePlugin", "primitiveDrawRoundRectLeftRightTopBottomRadiusCorner", (void*)primitiveDrawRoundRectLeftRightTopBottomRadiusCorner},
-	{"RomePlugin", "primitiveDrawZeroTerminatedUtf8StringXY", (void*)primitiveDrawZeroTerminatedUtf8StringXY},
-	{"RomePlugin", "primitiveRestoreState", (void*)primitiveRestoreState},
-	{"RomePlugin", "primitiveTranslateBy", (void*)primitiveTranslateBy},
-	{"RomePlugin", "primitiveOpen", (void*)primitiveOpen},
-	{"RomePlugin", "primitiveFontFace", (void*)primitiveFontFace},
-	{"RomePlugin", "getModuleName", (void*)getModuleName},
-	{"RomePlugin", "primitiveGetTransform", (void*)primitiveGetTransform},
-	{"RomePlugin", "primitiveDrawCurveFromXYviaXYtoXY", (void*)primitiveDrawCurveFromXYviaXYtoXY},
-	{"RomePlugin", "primitiveDrawArcRadiusXYFromTo", (void*)primitiveDrawArcRadiusXYFromTo},
-	{"RomePlugin", "primitivePangoShowString", (void*)primitivePangoShowString},
+	{"RomePlugin", "primitiveCreateFormHandle", (void*)primitiveCreateFormHandle},
+	{"RomePlugin", "primitiveSetTransform", (void*)primitiveSetTransform},
+	{"RomePlugin", "initialiseModule", (void*)initialiseModule},
 	{"RomePlugin", "primitiveDrawPolyline", (void*)primitiveDrawPolyline},
-	{"RomePlugin", "primitiveShowZeroTerminatedUtf8StringXY", (void*)primitiveShowZeroTerminatedUtf8StringXY},
-	{"RomePlugin", "primitiveLanguageAttributes", (void*)primitiveLanguageAttributes},
+	{"RomePlugin", "primitiveDrawCurveFromXYviaXYandXYtoXY", (void*)primitiveDrawCurveFromXYviaXYandXYtoXY},
+	{"RomePlugin", "primitiveOpen", (void*)primitiveOpen},
+	{"RomePlugin", "primitiveDrawArcRadiusXYFromTo", (void*)primitiveDrawArcRadiusXYFromTo},
 	{"RomePlugin", "primitiveFontSize", (void*)primitiveFontSize},
-	{"RomePlugin", "primitiveDrawPolygon", (void*)primitiveDrawPolygon},
-	{"RomePlugin", "primitiveGetLineWidth", (void*)primitiveGetLineWidth},
-	{"RomePlugin", "primitiveClipRectangleLeftRightTopBottom", (void*)primitiveClipRectangleLeftRightTopBottom},
-	{"RomePlugin", "primitiveUTF8StringWithIndex", (void*)primitiveUTF8StringWithIndex},
-	{"RomePlugin", "primitiveDrawLineFromXYtoXY", (void*)primitiveDrawLineFromXYtoXY},
 	{"RomePlugin", "primitiveDrawOvalLeftRightTopBottom", (void*)primitiveDrawOvalLeftRightTopBottom},
+	{"RomePlugin", "primitiveStencilImageSrcLRTBDestLRTB", (void*)primitiveStencilImageSrcLRTBDestLRTB},
+	{"RomePlugin", "primitiveRestoreState", (void*)primitiveRestoreState},
+	{"RomePlugin", "primitiveFillLinearOriginXYdirectionXYcolorStops", (void*)primitiveFillLinearOriginXYdirectionXYcolorStops},
+	{"RomePlugin", "primitiveScaleBy", (void*)primitiveScaleBy},
+	{"RomePlugin", "primitiveTransformBy", (void*)primitiveTransformBy},
+	{"RomePlugin", "primitiveGetTransform", (void*)primitiveGetTransform},
+	{"RomePlugin", "primitiveDrawImageSrcLRTBDestLRTB", (void*)primitiveDrawImageSrcLRTBDestLRTB},
+	{"RomePlugin", "getModuleName", (void*)getModuleName},
+	{"RomePlugin", "primitiveTranslateBy", (void*)primitiveTranslateBy},
+	{"RomePlugin", "primitiveRotateBy", (void*)primitiveRotateBy},
+	{"RomePlugin", "primitiveSetLineWidth", (void*)primitiveSetLineWidth},
+	{"RomePlugin", "primitiveFontFace", (void*)primitiveFontFace},
+	{"RomePlugin", "primitiveDestroyFormHandle", (void*)primitiveDestroyFormHandle},
+	{"RomePlugin", "primitiveGetLineWidth", (void*)primitiveGetLineWidth},
+	{"RomePlugin", "primitivePangoComposeString2", (void*)primitivePangoComposeString2},
+	{"RomePlugin", "primitiveDrawPolygon", (void*)primitiveDrawPolygon},
+	{"RomePlugin", "primitiveDrawLineFromXYtoXY", (void*)primitiveDrawLineFromXYtoXY},
+	{"RomePlugin", "primitiveUTF8StringWithIndex", (void*)primitiveUTF8StringWithIndex},
+	{"RomePlugin", "primitiveDrawGeneralBezierShape", (void*)primitiveDrawGeneralBezierShape},
+	{"RomePlugin", "primitiveDrawCurveFromXYviaXYtoXY", (void*)primitiveDrawCurveFromXYviaXYtoXY},
 	{NULL, NULL, NULL}
 };
 

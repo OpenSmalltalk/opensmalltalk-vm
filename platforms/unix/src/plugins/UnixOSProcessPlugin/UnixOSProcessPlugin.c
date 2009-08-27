@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:48 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:31 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -28,8 +28,8 @@ by VMMaker 3.8b6
 #define EXPORT(returnType) static returnType
 #endif
 #include <sys/types.h>
-/* D T Lewis 2005 - UnixOSProcessPlugin.c translated from class
-   UnixOSProcessPluginInterpreterGetThisSession of OSProcessPlugin version 4.2.6 */
+/* D T Lewis - UnixOSProcessPlugin.c translated from class
+   UnixOSProcessPlugin of OSProcessPlugin version 4.3.1 */
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -96,6 +96,9 @@ static sqInt isVmThread(void);
 static sqInt makePipeForReaderwriter(FILEHANDLETYPE * readerIOStreamPtr, FILEHANDLETYPE * writerIOStreamPtr);
 static sqInt maskForThisThreadAndResend(int sigNum);
 static sqInt maskSignalForThisThread(int sigNum);
+#pragma export on
+EXPORT(sqInt) moduleUnloaded(char * aModuleName);
+#pragma export off
 static sqInt msg(char * s);
 static sqInt newPthreadTypeByteArray(sqInt aPthreadType);
 static sqInt newSQFileByteArray(void);
@@ -255,9 +258,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UnixOSProcessPlugin 10 November 2008 (i)"
+	"UnixOSProcessPlugin 26 August 2009 (i)"
 #else
-	"UnixOSProcessPlugin 10 November 2008 (e)"
+	"UnixOSProcessPlugin 26 August 2009 (e)"
 #endif
 ;
 static void *originalSigHandlers[NSIG];
@@ -914,6 +917,13 @@ static sqInt maskSignalForThisThread(int sigNum) {
 	sigemptyset(&sigset);
 	sigaddset(&sigset, sigNum);
 	pthread_sigmask(SIG_BLOCK, &sigset, NULL);
+}
+
+
+/*	The module with the given name was just unloaded.
+	Make sure we have no dangling references. */
+
+EXPORT(sqInt) moduleUnloaded(char * aModuleName) {
 }
 
 static sqInt msg(char * s) {
@@ -3665,7 +3675,7 @@ static int unixFileNumber(FILEHANDLETYPE fileHandle) {
 /*	4.0 supports 64bit code base */
 
 static char * versionString(void) {
-    static char version[]= "4.2.6";
+    static char version[]= "4.3.1";
 
 	return version;
 }
@@ -3700,8 +3710,9 @@ void* UnixOSProcessPlugin_exports[][3] = {
 	{"UnixOSProcessPlugin", "primitiveSigQuitNumber", (void*)primitiveSigQuitNumber},
 	{"UnixOSProcessPlugin", "primitiveGetPGrp", (void*)primitiveGetPGrp},
 	{"UnixOSProcessPlugin", "primitiveSendSigcontTo", (void*)primitiveSendSigcontTo},
-	{"UnixOSProcessPlugin", "primitiveFixPointersInArrayOfStrings", (void*)primitiveFixPointersInArrayOfStrings},
+	{"UnixOSProcessPlugin", "moduleUnloaded", (void*)moduleUnloaded},
 	{"UnixOSProcessPlugin", "initialiseModule", (void*)initialiseModule},
+	{"UnixOSProcessPlugin", "primitiveFixPointersInArrayOfStrings", (void*)primitiveFixPointersInArrayOfStrings},
 	{"UnixOSProcessPlugin", "primitiveSendSigstopTo", (void*)primitiveSendSigstopTo},
 	{"UnixOSProcessPlugin", "primitiveGetGid", (void*)primitiveGetGid},
 	{"UnixOSProcessPlugin", "primitiveSizeOfInt", (void*)primitiveSizeOfInt},

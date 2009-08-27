@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:32 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:34 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -58,8 +58,8 @@ EXPORT(sqInt) primitiveSoundSetLeftVolume(void);
 EXPORT(sqInt) primitiveSoundSetRecordLevel(void);
 EXPORT(sqInt) primitiveSoundSetSwitch(void);
 EXPORT(sqInt) primitiveSoundStart(void);
-EXPORT(sqInt) primitiveSoundStartRecording(void);
 EXPORT(sqInt) primitiveSoundStartWithSemaphore(void);
+EXPORT(sqInt) primitiveSoundStartRecording(void);
 EXPORT(sqInt) primitiveSoundStop(void);
 EXPORT(sqInt) primitiveSoundStopRecording(void);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine* anInterpreter);
@@ -74,9 +74,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"SoundPlugin 10 November 2008 (i)"
+	"SoundPlugin 26 August 2009 (i)"
 #else
-	"SoundPlugin 10 November 2008 (e)"
+	"SoundPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -471,28 +471,6 @@ EXPORT(sqInt) primitiveSoundStart(void) {
 }
 
 
-/*	Start recording sound with the given parameters. */
-
-EXPORT(sqInt) primitiveSoundStartRecording(void) {
-	sqInt desiredSamplesPerSec;
-	sqInt stereoFlag;
-	sqInt semaIndex;
-
-	desiredSamplesPerSec = interpreterProxy->stackIntegerValue(2);
-	stereoFlag = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
-	semaIndex = interpreterProxy->stackIntegerValue(0);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	snd_StartRecording(desiredSamplesPerSec, stereoFlag, semaIndex);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(3);
-	return null;
-}
-
-
 /*	Start the double-buffered sound output with the given buffer size, sample rate, stereo flag, and semaphore index. */
 
 EXPORT(sqInt) primitiveSoundStartWithSemaphore(void) {
@@ -513,6 +491,28 @@ EXPORT(sqInt) primitiveSoundStartWithSemaphore(void) {
 		return null;
 	}
 	interpreterProxy->pop(4);
+	return null;
+}
+
+
+/*	Start recording sound with the given parameters. */
+
+EXPORT(sqInt) primitiveSoundStartRecording(void) {
+	sqInt desiredSamplesPerSec;
+	sqInt stereoFlag;
+	sqInt semaIndex;
+
+	desiredSamplesPerSec = interpreterProxy->stackIntegerValue(2);
+	stereoFlag = interpreterProxy->booleanValueOf(interpreterProxy->stackValue(1));
+	semaIndex = interpreterProxy->stackIntegerValue(0);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	snd_StartRecording(desiredSamplesPerSec, stereoFlag, semaIndex);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(3);
 	return null;
 }
 
@@ -567,26 +567,26 @@ static sqInt sqAssert(sqInt aBool) {
 
 void* SoundPlugin_exports[][3] = {
 	{"SoundPlugin", "primitiveSoundStart", (void*)primitiveSoundStart},
-	{"SoundPlugin", "primitiveSoundInsertSamples", (void*)primitiveSoundInsertSamples},
 	{"SoundPlugin", "shutdownModule", (void*)shutdownModule},
-	{"SoundPlugin", "primitiveSoundSetLeftVolume", (void*)primitiveSoundSetLeftVolume},
-	{"SoundPlugin", "setInterpreter", (void*)setInterpreter},
-	{"SoundPlugin", "primitiveSoundStopRecording", (void*)primitiveSoundStopRecording},
-	{"SoundPlugin", "getModuleName", (void*)getModuleName},
+	{"SoundPlugin", "primitiveSoundSetSwitch", (void*)primitiveSoundSetSwitch},
 	{"SoundPlugin", "primitiveSoundGetSwitch", (void*)primitiveSoundGetSwitch},
+	{"SoundPlugin", "primitiveSoundStartRecording", (void*)primitiveSoundStartRecording},
+	{"SoundPlugin", "setInterpreter", (void*)setInterpreter},
+	{"SoundPlugin", "primitiveSoundSetDevice", (void*)primitiveSoundSetDevice},
+	{"SoundPlugin", "primitiveSoundPlaySamples", (void*)primitiveSoundPlaySamples},
+	{"SoundPlugin", "primitiveSoundStopRecording", (void*)primitiveSoundStopRecording},
+	{"SoundPlugin", "primitiveSoundSetRecordLevel", (void*)primitiveSoundSetRecordLevel},
+	{"SoundPlugin", "getModuleName", (void*)getModuleName},
 	{"SoundPlugin", "primitiveSoundRecordSamples", (void*)primitiveSoundRecordSamples},
 	{"SoundPlugin", "primitiveSoundAvailableSpace", (void*)primitiveSoundAvailableSpace},
-	{"SoundPlugin", "primitiveSoundSetSwitch", (void*)primitiveSoundSetSwitch},
 	{"SoundPlugin", "primitiveSoundStartWithSemaphore", (void*)primitiveSoundStartWithSemaphore},
 	{"SoundPlugin", "initialiseModule", (void*)initialiseModule},
-	{"SoundPlugin", "primitiveSoundSetRecordLevel", (void*)primitiveSoundSetRecordLevel},
-	{"SoundPlugin", "primitiveSoundPlaySamples", (void*)primitiveSoundPlaySamples},
-	{"SoundPlugin", "primitiveSoundStartRecording", (void*)primitiveSoundStartRecording},
+	{"SoundPlugin", "primitiveSoundSetLeftVolume", (void*)primitiveSoundSetLeftVolume},
 	{"SoundPlugin", "primitiveSoundPlaySilence", (void*)primitiveSoundPlaySilence},
 	{"SoundPlugin", "primitiveSoundGetRecordingSampleRate", (void*)primitiveSoundGetRecordingSampleRate},
+	{"SoundPlugin", "primitiveSoundInsertSamples", (void*)primitiveSoundInsertSamples},
 	{"SoundPlugin", "primitiveSoundGetVolume", (void*)primitiveSoundGetVolume},
 	{"SoundPlugin", "primitiveSoundStop", (void*)primitiveSoundStop},
-	{"SoundPlugin", "primitiveSoundSetDevice", (void*)primitiveSoundSetDevice},
 	{NULL, NULL, NULL}
 };
 

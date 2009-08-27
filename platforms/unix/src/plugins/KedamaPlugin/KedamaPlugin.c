@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:41 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:01 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -107,9 +107,9 @@ struct VirtualMachine* interpreterProxy;
 static unsigned int kedamaRandomSeed;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"KedamaPlugin 10 November 2008 (i)"
+	"KedamaPlugin 26 August 2009 (i)"
 #else
-	"KedamaPlugin 10 November 2008 (e)"
+	"KedamaPlugin 26 August 2009 (e)"
 #endif
 ;
 static unsigned int randA;
@@ -313,6 +313,8 @@ EXPORT(sqInt) getScalarHeading(void) {
     sqInt headingOop;
     sqInt index;
     float *headingArray;
+    double deg;
+    double degrees;
 
 	headingOop = interpreterProxy->stackValue(0);
 	index = interpreterProxy->stackIntegerValue(1);
@@ -329,7 +331,13 @@ EXPORT(sqInt) getScalarHeading(void) {
 	}
 	headingArray = interpreterProxy->firstIndexableField(headingOop);
 	heading = headingArray[index - 1];
-	heading = radiansToDegrees(heading);
+	/* begin radiansToDegrees: */
+	degrees = heading / 0.0174532925199433;
+	deg = 90.0 - degrees;
+	if (!(deg > 0.0)) {
+		deg += 360.0;
+	}
+	heading = deg;
 	if (interpreterProxy->failed()) {
 		return null;
 	}
@@ -780,6 +788,9 @@ EXPORT(sqInt) primScalarForward(void) {
     double newX;
     float *headingArray;
     sqInt bottomEdgeMode;
+    double newX1;
+    double headingRadians;
+    double newY1;
 
 	bottomEdgeMode = interpreterProxy->stackIntegerValue(0);
 	topEdgeMode = interpreterProxy->stackIntegerValue(1);
@@ -823,8 +834,70 @@ EXPORT(sqInt) primScalarForward(void) {
 	i = index - 1;
 	newX = (xArray[i]) + (dist * (cos(headingArray[i])));
 	newY = (yArray[i]) - (dist * (sin(headingArray[i])));
-	scalarXAtxArrayheadingArrayvaluedestWidthleftEdgeModerightEdgeMode(i, xArray, headingArray, newX, destWidth, leftEdgeMode, rightEdgeMode);
-	scalarYAtyArrayheadingArrayvaluedestHeighttopEdgeModebottomEdgeMode(i, yArray, headingArray, newY, destHeight, topEdgeMode, bottomEdgeMode);
+	/* begin scalarXAt:xArray:headingArray:value:destWidth:leftEdgeMode:rightEdgeMode: */
+	newX1 = newX;
+	if (newX1 < 0.0) {
+		if (leftEdgeMode == 1) {
+			newX1 += destWidth;
+		}
+		if (leftEdgeMode == 2) {
+			newX1 = 0.0;
+		}
+		if (leftEdgeMode == 3) {
+			newX1 = 0.0 - newX1;
+			headingRadians = headingArray[i];
+			if (headingRadians < 3.141592653589793) {
+				headingArray[i] = (3.141592653589793 - headingRadians);
+			} else {
+				headingArray[i] = (9.42477796076938 - headingRadians);
+			}
+		}
+	}
+	if (newX1 >= destWidth) {
+		if (rightEdgeMode == 1) {
+			newX1 -= destWidth;
+		}
+		if (rightEdgeMode == 2) {
+			newX1 = destWidth - 1.0e-6;
+		}
+		if (rightEdgeMode == 3) {
+			newX1 = (destWidth - 1.0e-6) - (newX1 - destWidth);
+			headingRadians = headingArray[i];
+			if (headingRadians < 3.141592653589793) {
+				headingArray[i] = (3.141592653589793 - headingRadians);
+			} else {
+				headingArray[i] = (9.42477796076938 - headingRadians);
+			}
+		}
+	}
+	xArray[i] = newX1;
+	/* begin scalarYAt:yArray:headingArray:value:destHeight:topEdgeMode:bottomEdgeMode: */
+	newY1 = newY;
+	if (newY1 < 0.0) {
+		if (topEdgeMode == 1) {
+			newY1 += destHeight;
+		}
+		if (topEdgeMode == 2) {
+			newY1 = 0.0;
+		}
+		if (topEdgeMode == 3) {
+			newY1 = 0.0 - newY1;
+			headingArray[i] = (6.283185307179586 - (headingArray[i]));
+		}
+	}
+	if (newY1 >= destHeight) {
+		if (bottomEdgeMode == 1) {
+			newY1 -= destHeight;
+		}
+		if (bottomEdgeMode == 2) {
+			newY1 = destHeight - 1.0e-6;
+		}
+		if (bottomEdgeMode == 3) {
+			newY1 = (destHeight - 1.0e-6) - (newY1 - destHeight);
+			headingArray[i] = (6.283185307179586 - (headingArray[i]));
+		}
+	}
+	yArray[i] = newY1;
 	if (interpreterProxy->failed()) {
 		return null;
 	}
@@ -945,6 +1018,9 @@ EXPORT(sqInt) primTurtlesForward(void) {
     double dist;
     float *headingArray;
     sqInt bottomEdgeMode;
+    double newX1;
+    double headingRadians;
+    double newY1;
 
 	bottomEdgeMode = interpreterProxy->stackIntegerValue(0);
 	topEdgeMode = interpreterProxy->stackIntegerValue(1);
@@ -1012,8 +1088,70 @@ EXPORT(sqInt) primTurtlesForward(void) {
 		}
 		newX = (xArray[i]) + (dist * (cos(headingArray[i])));
 		newY = (yArray[i]) - (dist * (sin(headingArray[i])));
-		scalarXAtxArrayheadingArrayvaluedestWidthleftEdgeModerightEdgeMode(i, xArray, headingArray, newX, destWidth, leftEdgeMode, rightEdgeMode);
-		scalarYAtyArrayheadingArrayvaluedestHeighttopEdgeModebottomEdgeMode(i, yArray, headingArray, newY, destHeight, topEdgeMode, bottomEdgeMode);
+		/* begin scalarXAt:xArray:headingArray:value:destWidth:leftEdgeMode:rightEdgeMode: */
+		newX1 = newX;
+		if (newX1 < 0.0) {
+			if (leftEdgeMode == 1) {
+				newX1 += destWidth;
+			}
+			if (leftEdgeMode == 2) {
+				newX1 = 0.0;
+			}
+			if (leftEdgeMode == 3) {
+				newX1 = 0.0 - newX1;
+				headingRadians = headingArray[i];
+				if (headingRadians < 3.141592653589793) {
+					headingArray[i] = (3.141592653589793 - headingRadians);
+				} else {
+					headingArray[i] = (9.42477796076938 - headingRadians);
+				}
+			}
+		}
+		if (newX1 >= destWidth) {
+			if (rightEdgeMode == 1) {
+				newX1 -= destWidth;
+			}
+			if (rightEdgeMode == 2) {
+				newX1 = destWidth - 1.0e-6;
+			}
+			if (rightEdgeMode == 3) {
+				newX1 = (destWidth - 1.0e-6) - (newX1 - destWidth);
+				headingRadians = headingArray[i];
+				if (headingRadians < 3.141592653589793) {
+					headingArray[i] = (3.141592653589793 - headingRadians);
+				} else {
+					headingArray[i] = (9.42477796076938 - headingRadians);
+				}
+			}
+		}
+		xArray[i] = newX1;
+		/* begin scalarYAt:yArray:headingArray:value:destHeight:topEdgeMode:bottomEdgeMode: */
+		newY1 = newY;
+		if (newY1 < 0.0) {
+			if (topEdgeMode == 1) {
+				newY1 += destHeight;
+			}
+			if (topEdgeMode == 2) {
+				newY1 = 0.0;
+			}
+			if (topEdgeMode == 3) {
+				newY1 = 0.0 - newY1;
+				headingArray[i] = (6.283185307179586 - (headingArray[i]));
+			}
+		}
+		if (newY1 >= destHeight) {
+			if (bottomEdgeMode == 1) {
+				newY1 -= destHeight;
+			}
+			if (bottomEdgeMode == 2) {
+				newY1 = destHeight - 1.0e-6;
+			}
+			if (bottomEdgeMode == 3) {
+				newY1 = (destHeight - 1.0e-6) - (newY1 - destHeight);
+				headingArray[i] = (6.283185307179586 - (headingArray[i]));
+			}
+		}
+		yArray[i] = newY1;
 	}
 	if (interpreterProxy->failed()) {
 		return null;
@@ -1034,7 +1172,7 @@ EXPORT(sqInt) primUpHill(void) {
     sqInt startX;
     sqInt width;
     sqInt height;
-    sqInt ret;
+    double ret;
     sqInt endY;
     sqInt y;
     sqInt turtleX;
@@ -1044,6 +1182,8 @@ EXPORT(sqInt) primUpHill(void) {
     double tX;
     sqInt sniffRange;
     sqInt maxValX;
+    double deg;
+    double degrees;
 
 	sniffRange = interpreterProxy->stackIntegerValue(0);
 	height = interpreterProxy->stackIntegerValue(1);
@@ -1088,7 +1228,13 @@ EXPORT(sqInt) primUpHill(void) {
 		}
 	}
 	if (-1 == maxValX) {
-		ret = radiansToDegrees(tH);
+		/* begin radiansToDegrees: */
+		degrees = tH / 0.0174532925199433;
+		deg = 90.0 - degrees;
+		if (!(deg > 0.0)) {
+			deg += 360.0;
+		}
+		ret = deg;
 	} else {
 		ret = (degreesFromXy(((double) (maxValX - turtleX)), ((double) (maxValY - turtleY)))) + 90.0;
 	}
@@ -1888,6 +2034,8 @@ EXPORT(sqInt) scalarGetAngleTo(void) {
     double x;
     double r;
     double fromX;
+    double theta;
+    double tanVal;
 
 	fromY = interpreterProxy->stackFloatValue(0);
 	fromX = interpreterProxy->stackFloatValue(1);
@@ -1898,7 +2046,33 @@ EXPORT(sqInt) scalarGetAngleTo(void) {
 	}
 	x = toX - fromX;
 	y = toY - fromY;
-	r = degreesFromXy(x, y);
+	/* begin degreesFromX:y: */
+	if (x == 0.0) {
+		if (y >= 0.0) {
+			r = 90.0;
+			goto l1;
+		} else {
+			r = 270.0;
+			goto l1;
+		}
+	} else {
+		tanVal = y / x;
+		theta = atan(tanVal);
+		if (x >= 0.0) {
+			if (y >= 0.0) {
+				r = theta / 0.0174532925199433;
+				goto l1;
+			} else {
+				r = 360.0 + (theta / 0.0174532925199433);
+				goto l1;
+			}
+		} else {
+			r = 180.0 + (theta / 0.0174532925199433);
+			goto l1;
+		}
+	}
+	r = 0.0;
+l1:	/* end degreesFromX:y: */;
 	r += 90.0;
 	if (r > 360.0) {
 		r -= 360.0;
@@ -2018,6 +2192,12 @@ EXPORT(sqInt) setHeadingArrayFrom(void) {
     sqInt i;
     sqInt isValVector;
     float *headingArray;
+    double deg;
+    double headingRadians;
+    int q;
+    double deg1;
+    double headingRadians1;
+    int q1;
 
 	resultOop = interpreterProxy->stackValue(0);
 	headingOop = interpreterProxy->stackValue(1);
@@ -2048,12 +2228,26 @@ EXPORT(sqInt) setHeadingArrayFrom(void) {
 		resultArray = interpreterProxy->firstIndexableField(resultOop);
 	} else {
 		heading = interpreterProxy->floatValueOf(resultOop);
-		heading = degreesToRadians(heading);
+		/* begin degreesToRadians: */
+		deg = 90.0 - heading;
+		q = deg / 360.0;
+		if (deg < 0.0) {
+			q -= 1;
+		}
+		headingRadians = (deg - (q * 360.0)) * 0.0174532925199433;
+		heading = headingRadians;
 	}
 	for (i = 0; i <= (size - 1); i += 1) {
 		if (isValVector) {
 			heading = resultArray[i];
-			heading = degreesToRadians(heading);
+			/* begin degreesToRadians: */
+			deg1 = 90.0 - heading;
+			q1 = deg1 / 360.0;
+			if (deg1 < 0.0) {
+				q1 -= 1;
+			}
+			headingRadians1 = (deg1 - (q1 * 360.0)) * 0.0174532925199433;
+			heading = headingRadians1;
 		}
 		headingArray[i] = heading;
 	}
@@ -2121,6 +2315,8 @@ EXPORT(sqInt) turtleScalarSetX(void) {
     sqInt xIndex;
     float *xArray;
     float *headingArray;
+    double newX;
+    double headingRadians;
 
 	rightEdgeMode = interpreterProxy->stackIntegerValue(0);
 	leftEdgeMode = interpreterProxy->stackIntegerValue(1);
@@ -2147,7 +2343,43 @@ EXPORT(sqInt) turtleScalarSetX(void) {
 	}
 	xArray = interpreterProxy->firstIndexableField(xOop);
 	headingArray = interpreterProxy->firstIndexableField(headingOop);
-	scalarXAtxArrayheadingArrayvaluedestWidthleftEdgeModerightEdgeMode(xIndex - 1, xArray, headingArray, val, destWidth, leftEdgeMode, rightEdgeMode);
+	/* begin scalarXAt:xArray:headingArray:value:destWidth:leftEdgeMode:rightEdgeMode: */
+	newX = val;
+	if (newX < 0.0) {
+		if (leftEdgeMode == 1) {
+			newX += destWidth;
+		}
+		if (leftEdgeMode == 2) {
+			newX = 0.0;
+		}
+		if (leftEdgeMode == 3) {
+			newX = 0.0 - newX;
+			headingRadians = headingArray[xIndex - 1];
+			if (headingRadians < 3.141592653589793) {
+				headingArray[xIndex - 1] = (3.141592653589793 - headingRadians);
+			} else {
+				headingArray[xIndex - 1] = (9.42477796076938 - headingRadians);
+			}
+		}
+	}
+	if (newX >= destWidth) {
+		if (rightEdgeMode == 1) {
+			newX -= destWidth;
+		}
+		if (rightEdgeMode == 2) {
+			newX = destWidth - 1.0e-6;
+		}
+		if (rightEdgeMode == 3) {
+			newX = (destWidth - 1.0e-6) - (newX - destWidth);
+			headingRadians = headingArray[xIndex - 1];
+			if (headingRadians < 3.141592653589793) {
+				headingArray[xIndex - 1] = (3.141592653589793 - headingRadians);
+			} else {
+				headingArray[xIndex - 1] = (9.42477796076938 - headingRadians);
+			}
+		}
+	}
+	xArray[xIndex - 1] = newX;
 	if (interpreterProxy->failed()) {
 		return null;
 	}
@@ -2165,6 +2397,7 @@ EXPORT(sqInt) turtleScalarSetY(void) {
     double destHeight;
     sqInt topEdgeMode;
     float *headingArray;
+    double newY;
 
 	bottomEdgeMode = interpreterProxy->stackIntegerValue(0);
 	topEdgeMode = interpreterProxy->stackIntegerValue(1);
@@ -2191,7 +2424,33 @@ EXPORT(sqInt) turtleScalarSetY(void) {
 	}
 	yArray = interpreterProxy->firstIndexableField(yOop);
 	headingArray = interpreterProxy->firstIndexableField(headingOop);
-	scalarYAtyArrayheadingArrayvaluedestHeighttopEdgeModebottomEdgeMode(yIndex - 1, yArray, headingArray, val, destHeight, topEdgeMode, bottomEdgeMode);
+	/* begin scalarYAt:yArray:headingArray:value:destHeight:topEdgeMode:bottomEdgeMode: */
+	newY = val;
+	if (newY < 0.0) {
+		if (topEdgeMode == 1) {
+			newY += destHeight;
+		}
+		if (topEdgeMode == 2) {
+			newY = 0.0;
+		}
+		if (topEdgeMode == 3) {
+			newY = 0.0 - newY;
+			headingArray[yIndex - 1] = (6.283185307179586 - (headingArray[yIndex - 1]));
+		}
+	}
+	if (newY >= destHeight) {
+		if (bottomEdgeMode == 1) {
+			newY -= destHeight;
+		}
+		if (bottomEdgeMode == 2) {
+			newY = destHeight - 1.0e-6;
+		}
+		if (bottomEdgeMode == 3) {
+			newY = (destHeight - 1.0e-6) - (newY - destHeight);
+			headingArray[yIndex - 1] = (6.283185307179586 - (headingArray[yIndex - 1]));
+		}
+	}
+	yArray[yIndex - 1] = newY;
 	if (interpreterProxy->failed()) {
 		return null;
 	}
@@ -2213,6 +2472,8 @@ EXPORT(sqInt) turtlesSetX(void) {
     double newX;
     sqInt valOop;
     float *headingArray;
+    double newX1;
+    double headingRadians;
 
 	rightEdgeMode = interpreterProxy->stackIntegerValue(0);
 	leftEdgeMode = interpreterProxy->stackIntegerValue(1);
@@ -2265,7 +2526,43 @@ EXPORT(sqInt) turtlesSetX(void) {
 		} else {
 			newX = val;
 		}
-		scalarXAtxArrayheadingArrayvaluedestWidthleftEdgeModerightEdgeMode(i, xArray, headingArray, newX, destWidth, leftEdgeMode, rightEdgeMode);
+		/* begin scalarXAt:xArray:headingArray:value:destWidth:leftEdgeMode:rightEdgeMode: */
+		newX1 = newX;
+		if (newX1 < 0.0) {
+			if (leftEdgeMode == 1) {
+				newX1 += destWidth;
+			}
+			if (leftEdgeMode == 2) {
+				newX1 = 0.0;
+			}
+			if (leftEdgeMode == 3) {
+				newX1 = 0.0 - newX1;
+				headingRadians = headingArray[i];
+				if (headingRadians < 3.141592653589793) {
+					headingArray[i] = (3.141592653589793 - headingRadians);
+				} else {
+					headingArray[i] = (9.42477796076938 - headingRadians);
+				}
+			}
+		}
+		if (newX1 >= destWidth) {
+			if (rightEdgeMode == 1) {
+				newX1 -= destWidth;
+			}
+			if (rightEdgeMode == 2) {
+				newX1 = destWidth - 1.0e-6;
+			}
+			if (rightEdgeMode == 3) {
+				newX1 = (destWidth - 1.0e-6) - (newX1 - destWidth);
+				headingRadians = headingArray[i];
+				if (headingRadians < 3.141592653589793) {
+					headingArray[i] = (3.141592653589793 - headingRadians);
+				} else {
+					headingArray[i] = (9.42477796076938 - headingRadians);
+				}
+			}
+		}
+		xArray[i] = newX1;
 	}
 	if (interpreterProxy->failed()) {
 		return null;
@@ -2288,6 +2585,7 @@ EXPORT(sqInt) turtlesSetY(void) {
     sqInt valOop;
     sqInt bottomEdgeMode;
     float *headingArray;
+    double newY1;
 
 	bottomEdgeMode = interpreterProxy->stackIntegerValue(0);
 	topEdgeMode = interpreterProxy->stackIntegerValue(1);
@@ -2340,7 +2638,33 @@ EXPORT(sqInt) turtlesSetY(void) {
 		} else {
 			newY = val;
 		}
-		scalarYAtyArrayheadingArrayvaluedestHeighttopEdgeModebottomEdgeMode(i, yArray, headingArray, newY, destHeight, topEdgeMode, bottomEdgeMode);
+		/* begin scalarYAt:yArray:headingArray:value:destHeight:topEdgeMode:bottomEdgeMode: */
+		newY1 = newY;
+		if (newY1 < 0.0) {
+			if (topEdgeMode == 1) {
+				newY1 += destHeight;
+			}
+			if (topEdgeMode == 2) {
+				newY1 = 0.0;
+			}
+			if (topEdgeMode == 3) {
+				newY1 = 0.0 - newY1;
+				headingArray[i] = (6.283185307179586 - (headingArray[i]));
+			}
+		}
+		if (newY1 >= destHeight) {
+			if (bottomEdgeMode == 1) {
+				newY1 -= destHeight;
+			}
+			if (bottomEdgeMode == 2) {
+				newY1 = destHeight - 1.0e-6;
+			}
+			if (bottomEdgeMode == 3) {
+				newY1 = (destHeight - 1.0e-6) - (newY1 - destHeight);
+				headingArray[i] = (6.283185307179586 - (headingArray[i]));
+			}
+		}
+		yArray[i] = newY1;
 	}
 	if (interpreterProxy->failed()) {
 		return null;
@@ -2366,7 +2690,9 @@ EXPORT(sqInt) vectorGetAngleTo(void) {
     double y;
     float *pX;
     double ppy;
-    sqInt r;
+    double r;
+    double theta;
+    double tanVal;
 
 	resultOop = interpreterProxy->stackValue(0);
 	yArrayOop = interpreterProxy->stackValue(1);
@@ -2444,7 +2770,33 @@ EXPORT(sqInt) vectorGetAngleTo(void) {
 		}
 		x = ppx - (xArray[index]);
 		y = ppy - (yArray[index]);
-		r = degreesFromXy(x, y);
+		/* begin degreesFromX:y: */
+		if (x == 0.0) {
+			if (y >= 0.0) {
+				r = 90.0;
+				goto l1;
+			} else {
+				r = 270.0;
+				goto l1;
+			}
+		} else {
+			tanVal = y / x;
+			theta = atan(tanVal);
+			if (x >= 0.0) {
+				if (y >= 0.0) {
+					r = theta / 0.0174532925199433;
+					goto l1;
+				} else {
+					r = 360.0 + (theta / 0.0174532925199433);
+					goto l1;
+				}
+			} else {
+				r = 180.0 + (theta / 0.0174532925199433);
+				goto l1;
+			}
+		}
+		r = 0.0;
+	l1:	/* end degreesFromX:y: */;
 		r += 90.0;
 		if (r > 360.0) {
 			r -= 360.0;

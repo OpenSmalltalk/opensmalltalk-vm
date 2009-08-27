@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:22 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:00:57 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -87,9 +87,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"ZipPlugin 10 November 2008 (i)"
+	"ZipPlugin 26 August 2009 (i)"
 #else
-	"ZipPlugin 10 November 2008 (e)"
+	"ZipPlugin 26 August 2009 (e)"
 #endif
 ;
 static unsigned int zipBaseDistance[] = {

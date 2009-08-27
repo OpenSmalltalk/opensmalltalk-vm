@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:23 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:07 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -90,9 +90,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FilePlugin 10 November 2008 (i)"
+	"FilePlugin 26 August 2009 (i)"
 #else
-	"FilePlugin 10 November 2008 (e)"
+	"FilePlugin 26 August 2009 (e)"
 #endif
 ;
 static void * sCCPfn;
@@ -460,9 +460,6 @@ EXPORT(sqInt) primitiveDirectorySetMacTypeAndCreator(void) {
 EXPORT(sqInt) primitiveDisableFileAccess(void) {
 	if (sDFAfn != 0) {
 		 ((sqInt (*)(void))sDFAfn)();
-	}
-	if (!(interpreterProxy->failed())) {
-		interpreterProxy->pop(1);
 	}
 }
 

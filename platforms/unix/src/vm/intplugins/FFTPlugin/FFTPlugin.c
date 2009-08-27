@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:23 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:06 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -66,9 +66,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FFTPlugin 10 November 2008 (i)"
+	"FFTPlugin 26 August 2009 (i)"
 #else
-	"FFTPlugin 10 November 2008 (e)"
+	"FFTPlugin 26 August 2009 (e)"
 #endif
 ;
 static sqInt nu;

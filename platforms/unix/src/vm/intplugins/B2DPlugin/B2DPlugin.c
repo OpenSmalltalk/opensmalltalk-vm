@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:16 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:00:35 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -728,9 +728,9 @@ struct VirtualMachine* interpreterProxy;
 static void * loadBBFn;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"B2DPlugin 10 November 2008 (i)"
+	"B2DPlugin 26 August 2009 (i)"
 #else
-	"B2DPlugin 10 November 2008 (e)"
+	"B2DPlugin 26 August 2009 (e)"
 #endif
 ;
 static int* objBuffer;
@@ -9644,9 +9644,18 @@ static sqInt transformColor(sqInt fillIndex) {
 /*	Transform the given point. If haveMatrix is true then use the current transformation. */
 
 static sqInt transformPoint(int * point) {
+    sqInt x;
+    float * transform;
+    sqInt y;
+
 	if ((workBuffer[GWHasEdgeTransform]) != 0) {
 		/* begin transformPoint:into: */
-		transformPointXyinto(((double) ((((int *) point))[0]) ), ((double) ((((int *) point))[1]) ), ((int *) point));
+		/* begin transformPointX:y:into: */
+		transform = ((float *) (workBuffer + GWEdgeTransform));
+		x = ((sqInt) (((((transform[0]) * (((double) ((((int *) point))[0]) ))) + ((transform[1]) * (((double) ((((int *) point))[1]) )))) + (transform[2])) * (((double) (workBuffer[GWAALevel]) ))) );
+		y = ((sqInt) (((((transform[3]) * (((double) ((((int *) point))[0]) ))) + ((transform[4]) * (((double) ((((int *) point))[1]) )))) + (transform[5])) * (((double) (workBuffer[GWAALevel]) ))) );
+		(((int *) point))[0] = x;
+		(((int *) point))[1] = y;
 	} else {
 		point[0] = (((point[0]) + (workBuffer[GWDestOffsetX])) * (workBuffer[GWAALevel]));
 		point[1] = (((point[1]) + (workBuffer[GWDestOffsetY])) * (workBuffer[GWAALevel]));
@@ -9659,7 +9668,16 @@ static sqInt transformPoint(int * point) {
 	the declarations and adding argument coercions at the appropriate points) */
 
 static sqInt transformPointinto(sqInt srcPoint, sqInt dstPoint) {
-	transformPointXyinto(((double) ((((int *) srcPoint))[0]) ), ((double) ((((int *) srcPoint))[1]) ), ((int *) dstPoint));
+    sqInt x;
+    float * transform;
+    sqInt y;
+
+	/* begin transformPointX:y:into: */
+	transform = ((float *) (workBuffer + GWEdgeTransform));
+	x = ((sqInt) (((((transform[0]) * (((double) ((((int *) srcPoint))[0]) ))) + ((transform[1]) * (((double) ((((int *) srcPoint))[1]) )))) + (transform[2])) * (((double) (workBuffer[GWAALevel]) ))) );
+	y = ((sqInt) (((((transform[3]) * (((double) ((((int *) srcPoint))[0]) ))) + ((transform[4]) * (((double) ((((int *) srcPoint))[1]) )))) + (transform[5])) * (((double) (workBuffer[GWAALevel]) ))) );
+	(((int *) dstPoint))[0] = x;
+	(((int *) dstPoint))[1] = y;
 }
 
 

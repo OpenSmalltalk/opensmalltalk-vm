@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:19 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:00:48 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -270,9 +270,9 @@ static int maskTable[33] = {
 };
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"BitBltPlugin 10 November 2008 (i)"
+	"BitBltPlugin 26 August 2009 (i)"
 #else
-	"BitBltPlugin 10 November 2008 (e)"
+	"BitBltPlugin 26 August 2009 (e)"
 #endif
 ;
 static sqInt nWords;
@@ -3400,10 +3400,21 @@ static sqInt partitionedMulwithnBitsnPartitions(sqInt word1, sqInt word2, sqInt 
 	/* optimized first step */
 
 	result = ((usqInt) (((((word1 & sMask) + 1) * ((word2 & sMask) + 1)) - 1) & dMask)) >> nBits;
+	if (nParts == 1) {
+		return result;
+	}
 	product = (((((((usqInt) word1) >> nBits) & sMask) + 1) * (((((usqInt) word2) >> nBits) & sMask) + 1)) - 1) & dMask;
 	result = result | (product & dMask);
+	if (nParts == 2) {
+		return result;
+	}
 	product = (((((((usqInt) word1) >> (2 * nBits)) & sMask) + 1) * (((((usqInt) word2) >> (2 * nBits)) & sMask) + 1)) - 1) & dMask;
 	result = result | ((product & dMask) << nBits);
+	if (nParts == 3) {
+		return result;
+	}
+	product = (((((((usqInt) word1) >> (3 * nBits)) & sMask) + 1) * (((((usqInt) word2) >> (3 * nBits)) & sMask) + 1)) - 1) & dMask;
+	result = result | ((product & dMask) << (2 * nBits));
 	return result;
 }
 
@@ -4034,6 +4045,13 @@ EXPORT(sqInt) primitiveDrawLoop(void) {
 EXPORT(sqInt) primitiveWarpBits(void) {
     sqInt rcvr;
     sqInt ns;
+    sqInt sourceHandle;
+    sqInt l;
+    sqInt b;
+    sqInt destHandle;
+    sqInt r;
+    sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt);
+    sqInt t;
     sqInt endBits;
     sqInt pixPerM1;
     sqInt startBits;
@@ -4049,9 +4067,57 @@ EXPORT(sqInt) primitiveWarpBits(void) {
 	noSource = ns;
 	if (noSource || ((bbW <= 0) || (bbH <= 0))) {
 		affectedL = affectedR = affectedT = affectedB = 0;
-		goto l1;
+		goto l2;
 	}
-	lockSurfaces();
+	/* begin lockSurfaces */
+	hasSurfaceLock = 0;
+	if (destBits == 0) {
+		if (lockSurfaceFn == 0) {
+			if (!(loadSurfacePlugin())) {
+				goto l1;
+			}
+		}
+		fn = ((sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)) lockSurfaceFn);
+		destHandle = interpreterProxy->fetchIntegerofObject(FormBitsIndex, destForm);
+		if ((sourceBits == 0) && (!noSource)) {
+			sourceHandle = interpreterProxy->fetchIntegerofObject(FormBitsIndex, sourceForm);
+			if (sourceHandle == destHandle) {
+				if (isWarping) {
+					l = ((sx < dx) ? sx : dx);
+					r = (((sx < dx) ? dx : sx)) + bbW;
+					t = ((sy < dy) ? sy : dy);
+					b = (((sy < sy) ? sy : sy)) + bbH;
+					sourceBits = fn(sourceHandle, &sourcePitch, l, t, r-l, b-t);
+				} else {
+					sourceBits = fn(sourceHandle, &sourcePitch, 0,0, sourceWidth, sourceHeight);
+				}
+				destBits = sourceBits;
+				destPitch = sourcePitch;
+				hasSurfaceLock = 1;
+				destBits != 0;
+				goto l1;
+			}
+		}
+		destBits = fn(destHandle, &destPitch, dx, dy, bbW, bbH);
+		hasSurfaceLock = 1;
+	}
+	if ((sourceBits == 0) && (!noSource)) {
+		sourceHandle = interpreterProxy->fetchIntegerofObject(FormBitsIndex, sourceForm);
+		if (lockSurfaceFn == 0) {
+			if (!(loadSurfacePlugin())) {
+				goto l1;
+			}
+		}
+		fn = ((sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)) lockSurfaceFn);
+		if (isWarping) {
+			sourceBits = fn(sourceHandle, &sourcePitch, 0, 0, sourceWidth, sourceHeight);
+		} else {
+			sourceBits = fn(sourceHandle, &sourcePitch, sx, sy, bbW, bbH);
+		}
+		hasSurfaceLock = 1;
+	}
+	(destBits != 0) && ((sourceBits != 0) || (noSource));
+l1:	/* end lockSurfaces */;
 	/* begin destMaskAndPointerInit */
 	pixPerM1 = destPPW - 1;
 	startBits = destPPW - (dx & pixPerM1);
@@ -4092,7 +4158,7 @@ EXPORT(sqInt) primitiveWarpBits(void) {
 		affectedB = dy + 1;
 	}
 	unlockSurfaces();
-l1:	/* end warpBits */;
+l2:	/* end warpBits */;
 	if (interpreterProxy->failed()) {
 		return null;
 	}
@@ -4147,7 +4213,7 @@ static sqInt rgbAddwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth == 16) {
 		return (partitionedAddtonBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedAddtonBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
-		return partitionedAddtonBitsnPartitions(sourceWord, destinationWord, 8, 3);
+		return partitionedAddtonBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
 
@@ -4304,7 +4370,7 @@ static sqInt rgbMaxwith(sqInt sourceWord, sqInt destinationWord) {
 		/* begin partitionedMax:with:nBits:nPartitions: */
 		mask3 = maskTable[8];
 		result1 = 0;
-		for (i1 = 1; i1 <= 3; i1 += 1) {
+		for (i1 = 1; i1 <= 4; i1 += 1) {
 			result1 = result1 | ((((destinationWord & mask3) < (sourceWord & mask3)) ? (sourceWord & mask3) : (destinationWord & mask3)));
 			mask3 = mask3 << 8;
 		}
@@ -4336,7 +4402,7 @@ static sqInt rgbMinwith(sqInt sourceWord, sqInt destinationWord) {
 		/* begin partitionedMin:with:nBits:nPartitions: */
 		mask3 = maskTable[8];
 		result1 = 0;
-		for (i1 = 1; i1 <= 3; i1 += 1) {
+		for (i1 = 1; i1 <= 4; i1 += 1) {
 			result1 = result1 | ((((destinationWord & mask3) < (sourceWord & mask3)) ? (destinationWord & mask3) : (sourceWord & mask3)));
 			mask3 = mask3 << 8;
 		}
@@ -4370,7 +4436,7 @@ static sqInt rgbMinInvertwith(sqInt wordToInvert, sqInt destinationWord) {
 		/* begin partitionedMin:with:nBits:nPartitions: */
 		mask3 = maskTable[8];
 		result1 = 0;
-		for (i1 = 1; i1 <= 3; i1 += 1) {
+		for (i1 = 1; i1 <= 4; i1 += 1) {
 			result1 = result1 | ((((destinationWord & mask3) < (sourceWord & mask3)) ? (destinationWord & mask3) : (sourceWord & mask3)));
 			mask3 = mask3 << 8;
 		}
@@ -4385,7 +4451,7 @@ static sqInt rgbMulwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth == 16) {
 		return (partitionedMulwithnBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedMulwithnBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
-		return partitionedMulwithnBitsnPartitions(sourceWord, destinationWord, 8, 3);
+		return partitionedMulwithnBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
 
@@ -4396,7 +4462,7 @@ static sqInt rgbSubwith(sqInt sourceWord, sqInt destinationWord) {
 	if (destDepth == 16) {
 		return (partitionedSubfromnBitsnPartitions(sourceWord, destinationWord, 5, 3)) + ((partitionedSubfromnBitsnPartitions(((usqInt) sourceWord) >> 16, ((usqInt) destinationWord) >> 16, 5, 3)) << 16);
 	} else {
-		return partitionedSubfromnBitsnPartitions(sourceWord, destinationWord, 8, 3);
+		return partitionedSubfromnBitsnPartitions(sourceWord, destinationWord, 8, 4);
 	}
 }
 
@@ -4792,6 +4858,13 @@ static sqInt unlockSurfaces(void) {
 
 static sqInt warpBits(void) {
     sqInt ns;
+    sqInt sourceHandle;
+    sqInt l;
+    sqInt b;
+    sqInt destHandle;
+    sqInt r;
+    sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt);
+    sqInt t;
     sqInt endBits;
     sqInt pixPerM1;
     sqInt startBits;
@@ -4804,7 +4877,55 @@ static sqInt warpBits(void) {
 		affectedL = affectedR = affectedT = affectedB = 0;
 		return null;
 	}
-	lockSurfaces();
+	/* begin lockSurfaces */
+	hasSurfaceLock = 0;
+	if (destBits == 0) {
+		if (lockSurfaceFn == 0) {
+			if (!(loadSurfacePlugin())) {
+				goto l1;
+			}
+		}
+		fn = ((sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)) lockSurfaceFn);
+		destHandle = interpreterProxy->fetchIntegerofObject(FormBitsIndex, destForm);
+		if ((sourceBits == 0) && (!noSource)) {
+			sourceHandle = interpreterProxy->fetchIntegerofObject(FormBitsIndex, sourceForm);
+			if (sourceHandle == destHandle) {
+				if (isWarping) {
+					l = ((sx < dx) ? sx : dx);
+					r = (((sx < dx) ? dx : sx)) + bbW;
+					t = ((sy < dy) ? sy : dy);
+					b = (((sy < sy) ? sy : sy)) + bbH;
+					sourceBits = fn(sourceHandle, &sourcePitch, l, t, r-l, b-t);
+				} else {
+					sourceBits = fn(sourceHandle, &sourcePitch, 0,0, sourceWidth, sourceHeight);
+				}
+				destBits = sourceBits;
+				destPitch = sourcePitch;
+				hasSurfaceLock = 1;
+				destBits != 0;
+				goto l1;
+			}
+		}
+		destBits = fn(destHandle, &destPitch, dx, dy, bbW, bbH);
+		hasSurfaceLock = 1;
+	}
+	if ((sourceBits == 0) && (!noSource)) {
+		sourceHandle = interpreterProxy->fetchIntegerofObject(FormBitsIndex, sourceForm);
+		if (lockSurfaceFn == 0) {
+			if (!(loadSurfacePlugin())) {
+				goto l1;
+			}
+		}
+		fn = ((sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)) lockSurfaceFn);
+		if (isWarping) {
+			sourceBits = fn(sourceHandle, &sourcePitch, 0, 0, sourceWidth, sourceHeight);
+		} else {
+			sourceBits = fn(sourceHandle, &sourcePitch, sx, sy, bbW, bbH);
+		}
+		hasSurfaceLock = 1;
+	}
+	(destBits != 0) && ((sourceBits != 0) || (noSource));
+l1:	/* end lockSurfaces */;
 	/* begin destMaskAndPointerInit */
 	pixPerM1 = destPPW - 1;
 	startBits = destPPW - (dx & pixPerM1);

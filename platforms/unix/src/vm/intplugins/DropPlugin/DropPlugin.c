@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:22 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:00:59 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -44,17 +44,16 @@ static sqInt halt(void);
 EXPORT(sqInt) initialiseModule(void);
 #pragma export off
 static sqInt msg(char * s);
+static sqInt primitiveDndOutAcceptedType(void);
+static sqInt primitiveDndOutSend(sqInt bytes);
+static sqInt primitiveDndOutStart(sqInt types);
 #pragma export on
-EXPORT(sqInt) primitiveDndOutAcceptedType(void);
-EXPORT(sqInt) primitiveDndOutSend(void);
-EXPORT(sqInt) primitiveDndOutStart(void);
 EXPORT(sqInt) primitiveDropRequestFileHandle(void);
 EXPORT(sqInt) primitiveDropRequestFileName(void);
 EXPORT(sqInt) setFileAccessCallback(int address);
 EXPORT(sqInt) setInterpreter(struct VirtualMachine* anInterpreter);
 EXPORT(sqInt) shutdownModule(void);
 #pragma export off
-static sqInt sqAssert(sqInt aBool);
 /*** Variables ***/
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
@@ -63,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"DropPlugin 10 November 2008 (i)"
+	"DropPlugin 26 August 2009 (i)"
 #else
-	"DropPlugin 10 November 2008 (e)"
+	"DropPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -99,62 +98,36 @@ static sqInt msg(char * s) {
 	fprintf(stderr, "\n%s: %s", moduleName, s);
 }
 
-EXPORT(sqInt) primitiveDndOutAcceptedType(void) {
-	sqInt _return_value;
-
-	_return_value = sqDndOutAcceptedType();
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->popthenPush(1, _return_value);
-	return null;
+static sqInt primitiveDndOutAcceptedType(void) {
+	primitiveparameters("primitiveDndOutAcceptedType", "XXX UNTRANSLATABLE CONSTANT XXX");
+	return sqDndOutAcceptedType();
 }
 
-EXPORT(sqInt) primitiveDndOutSend(void) {
-	sqInt nbytes;
-	char *bytes;
+static sqInt primitiveDndOutSend(sqInt bytes) {
+    sqInt nbytes;
 
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
-	bytes = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	nbytes = interpreterProxy->slotSizeOf((oopForPointer( bytes ) - 4));
+	primitiveparameters("primitiveDndOutSend", "XXX UNTRANSLATABLE CONSTANT XXX");
+	nbytes = interpreterProxy->slotSizeOf(cPtrAsOop(bytes));
 	sqDndOutSend(bytes, nbytes);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(1);
-	return null;
 }
 
 
 /*	Start drag out session. Formats are types for the data separated with NULL. */
 
-EXPORT(sqInt) primitiveDndOutStart(void) {
-	sqInt ntypes;
-	char *types;
+static sqInt primitiveDndOutStart(sqInt types) {
+    sqInt ntypes;
 
-	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
-	types = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	ntypes = interpreterProxy->slotSizeOf((oopForPointer( types ) - 4));
+	primitiveparameters("primitiveDndOutStart", "XXX UNTRANSLATABLE CONSTANT XXX");
+	ntypes = interpreterProxy->slotSizeOf(cPtrAsOop(types));
 	sqDndOutStart(types, ntypes);
-	if (interpreterProxy->failed()) {
-		return null;
-	}
-	interpreterProxy->pop(1);
-	return null;
 }
 
 
 /*	Note: File handle creation needs to be handled by specific support code explicitly bypassing the plugin file sand box. */
 
 EXPORT(sqInt) primitiveDropRequestFileHandle(void) {
-	sqInt handleOop;
-	sqInt dropIndex;
+    sqInt handleOop;
+    sqInt dropIndex;
 
 	if (!((interpreterProxy->methodArgumentCount()) == 1)) {
 		return interpreterProxy->primitiveFail();
@@ -174,12 +147,12 @@ EXPORT(sqInt) primitiveDropRequestFileHandle(void) {
 /*	Note: File handle creation needs to be handled by specific support code explicitly bypassing the plugin file sand box. */
 
 EXPORT(sqInt) primitiveDropRequestFileName(void) {
-	sqInt nameOop;
-	sqInt i;
-	char * dropName;
-	sqInt nameLength;
-	sqInt dropIndex;
-	char * namePtr;
+    sqInt nameOop;
+    sqInt i;
+    char * dropName;
+    sqInt nameLength;
+    sqInt dropIndex;
+    char * namePtr;
 
 	if (!((interpreterProxy->methodArgumentCount()) == 1)) {
 		return interpreterProxy->primitiveFail();
@@ -210,7 +183,7 @@ EXPORT(sqInt) setFileAccessCallback(int address) {
 /*	Note: This is coded so that is can be run from Squeak. */
 
 EXPORT(sqInt) setInterpreter(struct VirtualMachine* anInterpreter) {
-	sqInt ok;
+    sqInt ok;
 
 	interpreterProxy = anInterpreter;
 	ok = interpreterProxy->majorVersion() == VM_PROXY_MAJOR;
@@ -225,25 +198,18 @@ EXPORT(sqInt) shutdownModule(void) {
 	return dropShutdown();
 }
 
-static sqInt sqAssert(sqInt aBool) {
-	/* missing DebugCode */;
-}
-
 
 #ifdef SQUEAK_BUILTIN_PLUGIN
 
 
 void* DropPlugin_exports[][3] = {
-	{"DropPlugin", "shutdownModule", (void*)shutdownModule},
-	{"DropPlugin", "primitiveDndOutAcceptedType", (void*)primitiveDndOutAcceptedType},
-	{"DropPlugin", "primitiveDropRequestFileName", (void*)primitiveDropRequestFileName},
-	{"DropPlugin", "primitiveDndOutStart", (void*)primitiveDndOutStart},
-	{"DropPlugin", "setInterpreter", (void*)setInterpreter},
-	{"DropPlugin", "primitiveDndOutSend", (void*)primitiveDndOutSend},
-	{"DropPlugin", "initialiseModule", (void*)initialiseModule},
-	{"DropPlugin", "primitiveDropRequestFileHandle", (void*)primitiveDropRequestFileHandle},
 	{"DropPlugin", "getModuleName", (void*)getModuleName},
+	{"DropPlugin", "shutdownModule", (void*)shutdownModule},
 	{"DropPlugin", "setFileAccessCallback", (void*)setFileAccessCallback},
+	{"DropPlugin", "primitiveDropRequestFileName", (void*)primitiveDropRequestFileName},
+	{"DropPlugin", "primitiveDropRequestFileHandle", (void*)primitiveDropRequestFileHandle},
+	{"DropPlugin", "setInterpreter", (void*)setInterpreter},
+	{"DropPlugin", "initialiseModule", (void*)initialiseModule},
 	{NULL, NULL, NULL}
 };
 

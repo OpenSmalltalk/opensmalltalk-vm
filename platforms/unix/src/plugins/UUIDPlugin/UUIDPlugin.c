@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:47 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:26 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -58,9 +58,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UUIDPlugin 10 November 2008 (i)"
+	"UUIDPlugin 26 August 2009 (i)"
 #else
-	"UUIDPlugin 10 November 2008 (e)"
+	"UUIDPlugin 26 August 2009 (e)"
 #endif
 ;
 

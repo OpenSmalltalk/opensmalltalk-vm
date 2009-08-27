@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:38 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:01:47 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -53,9 +53,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"FileCopyPlugin 10 November 2008 (i)"
+	"FileCopyPlugin 26 August 2009 (i)"
 #else
-	"FileCopyPlugin 10 November 2008 (e)"
+	"FileCopyPlugin 26 August 2009 (e)"
 #endif
 ;
 
@@ -136,9 +136,9 @@ static sqInt sqAssert(sqInt aBool) {
 
 
 void* FileCopyPlugin_exports[][3] = {
-	{"FileCopyPlugin", "primitiveFileCopyNamedTo", (void*)primitiveFileCopyNamedTo},
 	{"FileCopyPlugin", "setInterpreter", (void*)setInterpreter},
 	{"FileCopyPlugin", "getModuleName", (void*)getModuleName},
+	{"FileCopyPlugin", "primitiveFileCopyNamedTo", (void*)primitiveFileCopyNamedTo},
 	{NULL, NULL, NULL}
 };
 

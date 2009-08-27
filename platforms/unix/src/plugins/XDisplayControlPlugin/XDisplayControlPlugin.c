@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:49 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:02:35 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -42,6 +42,7 @@ EXPORT(const char*) getModuleName(void);
 static sqInt halt(void);
 #pragma export on
 EXPORT(sqInt) initialiseModule(void);
+EXPORT(sqInt) moduleUnloaded(char * aModuleName);
 #pragma export off
 static sqInt msg(char * s);
 #pragma export on
@@ -73,9 +74,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"XDisplayControlPlugin 10 November 2008 (i)"
+	"XDisplayControlPlugin 26 August 2009 (i)"
 #else
-	"XDisplayControlPlugin 10 November 2008 (e)"
+	"XDisplayControlPlugin 26 August 2009 (e)"
 #endif
 ;
 static int osprocessSandboxSecurity;
@@ -105,6 +106,13 @@ static sqInt halt(void) {
 EXPORT(sqInt) initialiseModule(void) {
 	osprocessSandboxSecurity = -1;
 	return 1;
+}
+
+
+/*	The module with the given name was just unloaded.
+	Make sure we have no dangling references. */
+
+EXPORT(sqInt) moduleUnloaded(char * aModuleName) {
 }
 
 static sqInt msg(char * s) {
@@ -382,7 +390,7 @@ static char * transientCStringFromString(sqInt aString) {
 /*	2.0 supports 64bit code base */
 
 static char * versionString(void) {
-    static char version[]= "2.1.3";
+    static char version[]= "2.1.4";
 
 	return version;
 }
@@ -394,14 +402,15 @@ static char * versionString(void) {
 void* XDisplayControlPlugin_exports[][3] = {
 	{"XDisplayControlPlugin", "primitiveGetDisplayName", (void*)primitiveGetDisplayName},
 	{"XDisplayControlPlugin", "shutdownModule", (void*)shutdownModule},
+	{"XDisplayControlPlugin", "moduleUnloaded", (void*)moduleUnloaded},
 	{"XDisplayControlPlugin", "primitiveSetDisplayName", (void*)primitiveSetDisplayName},
 	{"XDisplayControlPlugin", "primitiveDisconnectDisplay", (void*)primitiveDisconnectDisplay},
 	{"XDisplayControlPlugin", "primitiveFlushDisplay", (void*)primitiveFlushDisplay},
 	{"XDisplayControlPlugin", "setInterpreter", (void*)setInterpreter},
-	{"XDisplayControlPlugin", "initialiseModule", (void*)initialiseModule},
 	{"XDisplayControlPlugin", "primitiveOpenDisplay", (void*)primitiveOpenDisplay},
 	{"XDisplayControlPlugin", "primitiveCanConnectToDisplay", (void*)primitiveCanConnectToDisplay},
 	{"XDisplayControlPlugin", "getModuleName", (void*)getModuleName},
+	{"XDisplayControlPlugin", "initialiseModule", (void*)initialiseModule},
 	{"XDisplayControlPlugin", "primitiveKillDisplay", (void*)primitiveKillDisplay},
 	{"XDisplayControlPlugin", "primitiveModuleName", (void*)primitiveModuleName},
 	{"XDisplayControlPlugin", "primitiveIsConnectedToDisplay", (void*)primitiveIsConnectedToDisplay},

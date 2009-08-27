@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(10 November 2008 3:51:34 pm)
-by VMMaker 3.8b6
+/* Automatically generated from Squeak on an Array(26 August 2009 10:05:48 pm)
+by VMMaker 3.11.3
  */
 
 #include <math.h>
@@ -229,9 +229,9 @@ static float* litVertex;
 static sqInt loadBBFn;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"Squeak3D 10 November 2008 (i)"
+	"Squeak3D 26 August 2009 (i)"
 #else
-	"Squeak3D 10 November 2008 (e)"
+	"Squeak3D 26 August 2009 (e)"
 #endif
 ;
 static float* primLight;
@@ -2407,8 +2407,40 @@ EXPORT(sqInt) setInterpreter(struct VirtualMachine* anInterpreter) {
 static sqInt shadeVertex(void) {
     double specularFactor;
     double cosAngle;
+    double gPart;
+    double aPart;
+    double rPart;
+    double bPart;
+    double gPart1;
+    double aPart1;
+    double rPart1;
+    double bPart1;
+    double gPart2;
+    double aPart2;
+    double rPart2;
+    double bPart2;
+    double scale;
 
-	computeDirection();
+	/* begin computeDirection */
+	if (lightFlags & FlagPositional) {
+		l2vDirection[0] = ((litVertex[PrimVtxPositionX]) - (primLight[PrimLightPositionX]));
+		l2vDirection[1] = ((litVertex[PrimVtxPositionY]) - (primLight[PrimLightPositionY]));
+		l2vDirection[2] = ((litVertex[PrimVtxPositionZ]) - (primLight[PrimLightPositionZ]));
+		l2vDistance = (((l2vDirection[0]) * (l2vDirection[0])) + ((l2vDirection[1]) * (l2vDirection[1]))) + ((l2vDirection[2]) * (l2vDirection[2]));
+		if (!((l2vDistance == 0.0) || (l2vDistance == 1.0))) {
+			l2vDistance = sqrt(l2vDistance);
+			scale = -1.0 / l2vDistance;
+		}
+		l2vDirection[0] = ((l2vDirection[0]) * scale);
+		l2vDirection[1] = ((l2vDirection[1]) * scale);
+		l2vDirection[2] = ((l2vDirection[2]) * scale);
+	} else {
+		if (lightFlags & FlagDirectional) {
+			l2vDirection[0] = (primLight[PrimLightDirectionX]);
+			l2vDirection[1] = (primLight[PrimLightDirectionY]);
+			l2vDirection[2] = (primLight[PrimLightDirectionZ]);
+		}
+	}
 	/* begin computeAttenuation */
 	lightScale = 1.0;
 	if (lightFlags & FlagAttenuated) {
@@ -2419,7 +2451,22 @@ static sqInt shadeVertex(void) {
 	}
 	if (lightScale > 0.001) {
 		if (lightFlags & FlagAmbientPart) {
-			addPartfromtrackFlagscale(primLight + AmbientPart, primMaterial + AmbientPart, VBTrackAmbient, lightScale);
+			/* begin addPart:from:trackFlag:scale: */
+			if (vbFlags & VBTrackAmbient) {
+				rPart = ((vtxInColor[0]) * ((primLight + AmbientPart)[0])) * lightScale;
+				gPart = ((vtxInColor[1]) * ((primLight + AmbientPart)[1])) * lightScale;
+				bPart = ((vtxInColor[2]) * ((primLight + AmbientPart)[2])) * lightScale;
+				aPart = ((vtxInColor[3]) * ((primLight + AmbientPart)[3])) * lightScale;
+			} else {
+				rPart = (((primMaterial + AmbientPart)[0]) * ((primLight + AmbientPart)[0])) * lightScale;
+				gPart = (((primMaterial + AmbientPart)[1]) * ((primLight + AmbientPart)[1])) * lightScale;
+				bPart = (((primMaterial + AmbientPart)[2]) * ((primLight + AmbientPart)[2])) * lightScale;
+				aPart = (((primMaterial + AmbientPart)[3]) * ((primLight + AmbientPart)[3])) * lightScale;
+			}
+			vtxOutColor[0] = ((vtxOutColor[0]) + rPart);
+			vtxOutColor[1] = ((vtxOutColor[1]) + gPart);
+			vtxOutColor[2] = ((vtxOutColor[2]) + bPart);
+			vtxOutColor[3] = ((vtxOutColor[3]) + aPart);
 		}
 		if (lightFlags & FlagDiffusePart) {
 
@@ -2430,7 +2477,22 @@ static sqInt shadeVertex(void) {
 				cosAngle = 0.0 - cosAngle;
 			}
 			if (cosAngle > 0.0) {
-				addPartfromtrackFlagscale(primLight + DiffusePart, primMaterial + DiffusePart, VBTrackDiffuse, lightScale * cosAngle);
+				/* begin addPart:from:trackFlag:scale: */
+				if (vbFlags & VBTrackDiffuse) {
+					rPart1 = ((vtxInColor[0]) * ((primLight + DiffusePart)[0])) * (lightScale * cosAngle);
+					gPart1 = ((vtxInColor[1]) * ((primLight + DiffusePart)[1])) * (lightScale * cosAngle);
+					bPart1 = ((vtxInColor[2]) * ((primLight + DiffusePart)[2])) * (lightScale * cosAngle);
+					aPart1 = ((vtxInColor[3]) * ((primLight + DiffusePart)[3])) * (lightScale * cosAngle);
+				} else {
+					rPart1 = (((primMaterial + DiffusePart)[0]) * ((primLight + DiffusePart)[0])) * (lightScale * cosAngle);
+					gPart1 = (((primMaterial + DiffusePart)[1]) * ((primLight + DiffusePart)[1])) * (lightScale * cosAngle);
+					bPart1 = (((primMaterial + DiffusePart)[2]) * ((primLight + DiffusePart)[2])) * (lightScale * cosAngle);
+					aPart1 = (((primMaterial + DiffusePart)[3]) * ((primLight + DiffusePart)[3])) * (lightScale * cosAngle);
+				}
+				vtxOutColor[0] = ((vtxOutColor[0]) + rPart1);
+				vtxOutColor[1] = ((vtxOutColor[1]) + gPart1);
+				vtxOutColor[2] = ((vtxOutColor[2]) + bPart1);
+				vtxOutColor[3] = ((vtxOutColor[3]) + aPart1);
 			}
 		}
 	}
@@ -2459,7 +2521,22 @@ static sqInt shadeVertex(void) {
 					specularFactor = pow(cosAngle,(primMaterial[MaterialShininess]));
 				}
 			}
-			addPartfromtrackFlagscale(primLight + SpecularPart, primMaterial + SpecularPart, VBTrackSpecular, specularFactor);
+			/* begin addPart:from:trackFlag:scale: */
+			if (vbFlags & VBTrackSpecular) {
+				rPart2 = ((vtxInColor[0]) * ((primLight + SpecularPart)[0])) * specularFactor;
+				gPart2 = ((vtxInColor[1]) * ((primLight + SpecularPart)[1])) * specularFactor;
+				bPart2 = ((vtxInColor[2]) * ((primLight + SpecularPart)[2])) * specularFactor;
+				aPart2 = ((vtxInColor[3]) * ((primLight + SpecularPart)[3])) * specularFactor;
+			} else {
+				rPart2 = (((primMaterial + SpecularPart)[0]) * ((primLight + SpecularPart)[0])) * specularFactor;
+				gPart2 = (((primMaterial + SpecularPart)[1]) * ((primLight + SpecularPart)[1])) * specularFactor;
+				bPart2 = (((primMaterial + SpecularPart)[2]) * ((primLight + SpecularPart)[2])) * specularFactor;
+				aPart2 = (((primMaterial + SpecularPart)[3]) * ((primLight + SpecularPart)[3])) * specularFactor;
+			}
+			vtxOutColor[0] = ((vtxOutColor[0]) + rPart2);
+			vtxOutColor[1] = ((vtxOutColor[1]) + gPart2);
+			vtxOutColor[2] = ((vtxOutColor[2]) + bPart2);
+			vtxOutColor[3] = ((vtxOutColor[3]) + aPart2);
 		}
 	}
 }
