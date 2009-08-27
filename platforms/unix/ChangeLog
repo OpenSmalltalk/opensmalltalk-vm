@@ -1,3 +1,8 @@
+2009-08-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/SqueakFFIPrims/config.cmake: Add missing argument when
+	requiring libffi.
+
 2009-08-26    <piumarta@netbsd.piumarta.com>
 
 	* vm-sound-Sun/config.cmake: Require stropts.h and Solaris OS.
