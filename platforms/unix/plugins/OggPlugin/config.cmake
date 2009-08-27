@@ -5,3 +5,7 @@ PLUGIN_REQUIRE_INCLUDE (SPEEX_SPEEX      speex/speex.h)
 PLUGIN_REQUIRE_LIBRARY (OGG    ogg)
 PLUGIN_REQUIRE_LIBRARY (VORBIS vorbis)
 PLUGIN_REQUIRE_LIBRARY (SPEEX  speex)
+
+IF (APPLE)
+  PLUGIN_DISABLE ()	# ogg framework headers are broken on 10.5.7
+ENDIF ()

@@ -1,5 +1,8 @@
 2009-08-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* plugins/OggPlugin/config.cmake: Do not build OggPlugin on MacOS
+	X due to broken headers in the framework.
+
 	* plugins/SqueakFFIPrims/config.cmake: Add missing argument when
 	requiring libffi.
 
