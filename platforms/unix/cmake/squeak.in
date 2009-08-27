@@ -1,69 +1,68 @@
 #!/bin/sh
-#
-# Last edited: 2009-08-17 21:09:19 by piumarta on ubuntu.piumarta.com
+# 
+# Launch squeakvm from the command line or a menu script, with a good
+# plugin path and pulseaudio kludge
+# 
+# Last edited: 2009-08-27 02:00:45 by piumarta on ubuntu.piumarta.com
 
 PATH=/usr/bin:/bin
 
-myname=`basename $0`
+me=`basename $0`
 bindir=`dirname $0`
 bindir=`cd ${bindir}; pwd`
 prefix=`dirname ${bindir}`
 libdir="${prefix}/lib/squeak"
 plgdir="${libdir}/[version]"
-vm="${plgdir}/squeakvm"
-options="-plugins ${plgdir}"
+wrapper=""
+vm="squeakvm"
+plugins=""
+sound=""
 
-error () {
-    if test -n "$DISPLAY" -a -x "`which zenity 2>/dev/null`"; then
-        zenity --error --text "${myname}: $1"
-    else
-	echo "${myname}: $1" >&2
-    fi
-}
+# find the vm and set the plugin path
 
-run () {
-    exec "${vm}" ${options} "$@"
-}
-
-if test ! -x "${vm}"; then
+if test -x "${plgdir}/${vm}"; then	# bin/squeak -> lib/squeak/x.y-z/squeakvm
+    vm="${plgdir}/${vm}"
+    plugins="${plgdir}"
+elif test -x "${bindir}/${vm}"; then	# bld/squeak -> bld/squeakvm
+    vm="${bindir}/${vm}"
+    plugins="${bindir}/%n"
+elif test -x "`which ${vm}`"; then
+    vm="`which ${vm}`"
+    plugins=""
+else    
     error "cannot find ${vm}"
     exit 1
 fi
 
-if test $# -gt 0 -o -f squeak.image; then
-    run "$@"
+# deal with pulseaudio if it is running
+
+if pulseaudio --check 2>/dev/null; then
+    sound="-vm-sound-oss"
+    if padsp true 2>/dev/null; then
+        wrapper=padsp
+    fi
 fi
 
-# deal with being launched from a menu
+# we should not interfere with the user's -plugins or -vm-sound options
 
-if test -z "$DISPLAY" -o ! -x "`which zenity 2>/dev/null`"; then
-    error "no image filename specified"
-    exit 1
+for opt in $*; do
+    case ${opt} in
+	-plugins)	plugins="";;
+	-vm-sound*)	sound=""; wrapper="";;
+	-vm)		case "$2" in sound*) sound=""; wrapper=""; esac;;
+    esac
+done
+
+# we should not interfere with the user's environment variables
+
+if test -n "${SQUEAK_PLUGINS}"; then
+    plugins=""
 fi
 
-image=`zenity --title "Choose a saved image to resume or cancel to install a new one" --file-selection`
-
-if test -z "${image}"; then
-    images=`cd ${libdir}; ls *.image 2>/dev/null`
-    if test -z "${images}"; then
-	error "no installable images in ${libdir}"
-	exit 1
-    fi
-    image=`zenity --title "Choose an image to install" --list --column Images $images`
-    if test -z "${image}"; then
-	exit 0
-    fi
-    changes=`basename ${image} .image`.changes
-    location=`zenity --title "Choose a destination directory" --file-selection --directory`
-    if test -z "${location}"; then
-	exit 0
-    fi
-    cp -p ${libdir}/${image}   ${location}/.
-    cp -p ${libdir}/${changes} ${location}/.
-    ln -s ${libdir}/*.sources  ${location}/.
-    options="${options}"
-    image="${location}/${image}"
+if test -z "${plugins}"; then
+    set -x
+    exec ${wrapper} "${vm}" ${sound} "$@"
+else
+    set -x
+    exec ${wrapper} "${vm}" -plugins "${plugins}" ${sound} "$@"
 fi
-
-cd `dirname ${image}`
-run `basename ${image}` "$@"

@@ -1,3 +1,11 @@
+2009-08-27    <piumarta@ubuntu.piumarta.com>
+
+	* cmake/squeak.in: Deal with plugin path and pulseaudio; move menu
+	cruft elsewhere.
+
+	* cmake/squeak.sh.in: Added for launching from somewhere that
+	doesn't have a prompt.
+
 2009-08-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/Mpeg3Plugin/config.cmake: Added.
