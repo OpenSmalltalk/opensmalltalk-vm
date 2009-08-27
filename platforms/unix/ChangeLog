@@ -1,5 +1,7 @@
 2009-08-26    <piumarta@netbsd.piumarta.com>
 
+	* vm-sound-Sun/config.cmake: Require stropts.h and Solaris OS.
+
 	* plugins/UUIDPlugin/config.cmake: Find libuuid but don't require it.
 
 2009-08-26    <piumarta@solaris.piumarta.com>
