@@ -1,3 +1,7 @@
+2009-08-27  Ian Piumarta  <piumarta@freebsd.piumarta.com>
+
+	* plugins/GStreamerPlugin/config.cmake: Configure gstreamer via pkg-config.
+
 2009-08-26  Ian Piumarta  <piumarta@freebsd.piumarta.com>
 
 	* plugins/PseudoTTYPlugin/config.cmake: Disambiguate whether openpty found
