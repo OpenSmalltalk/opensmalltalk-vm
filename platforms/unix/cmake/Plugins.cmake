@@ -1,6 +1,6 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2009-08-26 11:58:56 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-08-26 21:00:32 by piumarta on emilia-2.local
 
 FILE (STRINGS ${src}/plugins.int plugins_int)
 STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_int ${plugins_int})
@@ -98,7 +98,7 @@ MACRO (CONFIGURE_PLUGIN_LIST plugins_list)
     ENDIF (${plugins_list} STREQUAL "plugins_int")
     SET (plugin_disabled)
     INCLUDE (${bld}/${plugin}/config.cmake)
-    IF (OPT_without-${plugin})
+    IF (without-${plugin})
       SET (plugin_disabled 1)
     ENDIF ()
     IF (DEFINED plugin_disabled)

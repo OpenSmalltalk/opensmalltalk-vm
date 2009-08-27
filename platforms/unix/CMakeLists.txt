@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-21 10:38:21 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-08-26 22:47:15 by piumarta on emilia-2.local
 
 PROJECT (squeak)
 
@@ -63,23 +63,27 @@ SET (vm-host     "${VM_HOST}")
 SET (vm-host-os  "${VM_HOST_OS}")
 SET (vm-host-cpu "${VM_HOST_CPU}")
 
-IF (OPT_CFLAGS)
-  SET (CMAKE_C_FLAGS "${OPT_CFLAGS}")
-ENDIF (OPT_CFLAGS)
+IF (OPT--CFLAGS)
+  SET (CMAKE_C_FLAGS "${OPT--CFLAGS}")
+ENDIF ()
 
 IF (NOT CMAKE_C_FLAGS)
   IF (CMAKE_COMPILER_IS_GNUCC)
-    IF     (${VM_HOST_CPU} MATCHES "i.86")
+    IF     (VM_HOST_CPU MATCHES "i.86")
       SET (CMAKE_C_FLAGS "-g -O2 -fomit-frame-pointer")
-    ELSEIF (${VM_HOST_CPU} STREQUAL "ppc" OR ${VM_HOST_CPU} STREQUAL "powerpc")
+    ELSEIF (VM_HOST_CPU STREQUAL "ppc" OR VM_HOST_CPU STREQUAL "powerpc")
       SET (CMAKE_C_FLAGS "-g -O3 -funroll-loops -mcpu=750 -mno-fused-madd")
     ENDIF ()
+  ELSE ()
+    SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE}")
   ENDIF (CMAKE_COMPILER_IS_GNUCC)
 ENDIF (NOT CMAKE_C_FLAGS)
 
 IF (NOT CMAKE_C_FLAGS)
   SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE}")
 ENDIF (NOT CMAKE_C_FLAGS)
+
+MESSAGE (STATUS "Using CFLAGS ${CMAKE_C_FLAGS}")
 
 MACRO (USE_LIBRARY lib)
   LIST (APPEND squeak_libs "${lib}")
