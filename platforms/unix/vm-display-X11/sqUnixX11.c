@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-07-29 23:14:20 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-08-26 19:22:15 by piumarta on ubuntu.piumarta.com
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -2334,16 +2334,16 @@ static int x2sqModifier(int state)
     {
       enum { _= 0, S= ShiftKeyBit, C= CtrlKeyBit, O= OptionKeyBit, M= CommandKeyBit };
       static char midofiers[32]= {	/* ALT=Cmd, META=ignored, C-ALT=Opt, META=ignored */
-	/*              - -       - S       L -       L S */
-	/* - - - - */ _|_|_|_,  _|_|_|S,  _|_|_|S,  _|_|_|_,
-	/* - - - C */ _|_|C|_,  _|_|C|S,  _|_|C|S,  _|_|C|_,
-	/* - - A - */ _|M|_|_,  _|M|_|S,  _|M|_|S,  _|M|_|_,
-	/* - - A C */ O|_|_|_,  O|_|_|S,  O|_|_|S,  O|_|_|_,
-	/*              - -       - S       L -       L S */
-	/* M - - - */ _|M|_|_,  _|M|_|S,  _|M|_|S,  _|M|_|_,
-	/* M - - C */ _|M|C|_,  _|M|C|S,  _|M|C|S,  _|M|C|_,
-	/* M - A - */ _|M|_|_,  _|M|_|S,  _|M|_|S,  _|M|_|_,
-	/* M - A C */ O|_|_|_,  O|M|_|S,  O|M|_|S,  O|M|_|_,
+       	/*                - -       - S       L -       L S */
+       	/* - - - - */ _|_|_|_,  _|_|_|S,  _|_|_|_,  _|_|_|S,
+       	/* - - - C */ _|_|C|_,  _|_|C|S,  _|_|C|_,  _|_|C|S,
+       	/* - - A - */ _|M|_|_,  _|M|_|S,  _|M|_|_,  _|M|_|S,
+       	/* - - A C */ O|_|_|_,  O|_|_|S,  O|_|_|_,  O|_|_|S,
+       	/*                - -       - S       L -       L S */
+       	/* M - - - */ _|M|_|_,  _|M|_|S,  _|M|_|_,  _|M|_|S,
+       	/* M - - C */ _|M|C|_,  _|M|C|S,  _|M|C|_,  _|M|C|S,
+       	/* M - A - */ _|M|_|_,  _|M|_|S,  _|M|_|_,  _|M|_|S,
+       	/* M - A C */ O|_|_|_,  O|M|_|S,  O|M|_|_,  O|M|_|S,
       };
 #    if defined(__POWERPC__) || defined(__ppc__)
       mods= midofiers[state & 0x1f];

@@ -1,3 +1,8 @@
+2009-08-26    <piumarta@ubuntu.piumarta.com>
+
+	* vm-display-X11/sqUnixX11.c (x2sqModifier): Do not map Caps Lock
+	to shift modifier.
+
 2009-08-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/OggPlugin/config.cmake: Do not build OggPlugin on MacOS
