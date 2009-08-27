@@ -1,5 +1,12 @@
 2009-08-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* plugins/Mpeg3Plugin/config.cmake: Added.
+
+	* CMakeLists.txt: Print C flags while configuring.
+
+	* cmake/Plugins.cmake: Recognise --without-PluginName for all
+	plugins.
+
 	* src: Regenerate from Balloon3D-Plugins-ar.4.mcz
 	DBus-Plugin-bf.32.mcz GStreamer-Plugins-JMM.16.mcz
 	Kedama-Plugins-yo.1.mcz Rome-Plugin-yo.39.mcz
