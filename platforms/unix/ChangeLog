@@ -1,5 +1,8 @@
 2009-08-27  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* cmake/squeak.in: Path and text encodings are UTF-8 unless
+	overridden by command-line options.
+
 	* cmake/configure (VM_VERSION): Generate automatically from
 	VMMaker version and SVN revision.  Remove SQ_VERSION.
 

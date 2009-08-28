@@ -1,9 +1,9 @@
 #!/bin/sh
 # 
 # Launch squeakvm from the command line or a menu script, with a good
-# plugin path and pulseaudio kludge
+# plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2009-08-27 02:00:45 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-08-27 22:25:34 by piumarta on emilia-2.local
 
 PATH=/usr/bin:/bin
 
@@ -17,6 +17,8 @@ wrapper=""
 vm="squeakvm"
 plugins=""
 sound=""
+pathenc="-pathenc UTF-8"
+encoding="-encoding UTF-8"
 
 # find the vm and set the plugin path
 
@@ -43,11 +45,13 @@ if pulseaudio --check 2>/dev/null; then
     fi
 fi
 
-# we should not interfere with the user's -plugins or -vm-sound options
+# we should not interfere with the user's command-line options
 
 for opt in $*; do
     case ${opt} in
 	-plugins)	plugins="";;
+	-pathenc)	pathenc="";;
+	-encoding)	encoding="";;
 	-vm-sound*)	sound=""; wrapper="";;
 	-vm)		case "$2" in sound*) sound=""; wrapper=""; esac;;
     esac
@@ -59,10 +63,18 @@ if test -n "${SQUEAK_PLUGINS}"; then
     plugins=""
 fi
 
+if test -n "${SQUEAK_PATHENC}"; then
+    pathenc=""
+fi
+
+if test -n "${SQUEAK_ENCODING}"; then
+    encoding=""
+fi
+
 if test -z "${plugins}"; then
     set -x
-    exec ${wrapper} "${vm}" ${sound} "$@"
+    exec ${wrapper} "${vm}" ${pathenc} ${encoding} ${sound} "$@"
 else
     set -x
-    exec ${wrapper} "${vm}" -plugins "${plugins}" ${sound} "$@"
+    exec ${wrapper} "${vm}" ${pathenc} ${encoding} -plugins "${plugins}" ${sound} "$@"
 fi
