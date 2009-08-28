@@ -45,8 +45,8 @@ EXPORT(sqInt) initialiseModule(void);
 #pragma export off
 static sqInt msg(char * s);
 static sqInt primitiveDndOutAcceptedType(void);
-static sqInt primitiveDndOutSend(sqInt bytes);
-static sqInt primitiveDndOutStart(sqInt types);
+static sqInt primitiveDndOutSend(void);
+static sqInt primitiveDndOutStart(void);
 #pragma export on
 EXPORT(sqInt) primitiveDropRequestFileHandle(void);
 EXPORT(sqInt) primitiveDropRequestFileName(void);
@@ -98,28 +98,54 @@ static sqInt msg(char * s) {
 	fprintf(stderr, "\n%s: %s", moduleName, s);
 }
 
-static sqInt primitiveDndOutAcceptedType(void) {
-	primitiveparameters("primitiveDndOutAcceptedType", "XXX UNTRANSLATABLE CONSTANT XXX");
-	return sqDndOutAcceptedType();
+EXPORT(sqInt) primitiveDndOutAcceptedType(void) {
+	sqInt _return_value;
+
+	_return_value = sqDndOutAcceptedType();
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->popthenPush(1, _return_value);
+	return null;
 }
 
-static sqInt primitiveDndOutSend(sqInt bytes) {
-    sqInt nbytes;
+EXPORT(sqInt) primitiveDndOutSend(void) {
+	sqInt nbytes;
+	char *bytes;
 
-	primitiveparameters("primitiveDndOutSend", "XXX UNTRANSLATABLE CONSTANT XXX");
-	nbytes = interpreterProxy->slotSizeOf(cPtrAsOop(bytes));
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
+	bytes = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	nbytes = interpreterProxy->slotSizeOf((oopForPointer( bytes ) - 4));
 	sqDndOutSend(bytes, nbytes);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(1);
+	return null;
 }
 
 
 /*	Start drag out session. Formats are types for the data separated with NULL. */
 
-static sqInt primitiveDndOutStart(sqInt types) {
-    sqInt ntypes;
+EXPORT(sqInt) primitiveDndOutStart(void) {
+	sqInt ntypes;
+	char *types;
 
-	primitiveparameters("primitiveDndOutStart", "XXX UNTRANSLATABLE CONSTANT XXX");
-	ntypes = interpreterProxy->slotSizeOf(cPtrAsOop(types));
+	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
+	types = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	ntypes = interpreterProxy->slotSizeOf((oopForPointer( types ) - 4));
 	sqDndOutStart(types, ntypes);
+	if (interpreterProxy->failed()) {
+		return null;
+	}
+	interpreterProxy->pop(1);
+	return null;
 }
 
 
