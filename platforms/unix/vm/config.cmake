@@ -2,9 +2,10 @@ SET (OS_TYPE \"unix\")
 
 CONFIG_DEFINE (OS_TYPE)
 
-STRING (REGEX REPLACE "(.*)\\.(.*)-(.*)" "\\1" major ${version})
-STRING (REGEX REPLACE "(.*)\\.(.*)-(.*)" "\\2" minor ${version})
-STRING (REGEX REPLACE "(.*)\\.(.*)-(.*)" "\\3" patch ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\1" major   ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\2" minor   ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\3" patch   ${version})
+STRING (REGEX REPLACE "(.*)\\.(.*)\\.(.*)-(.*)" "\\4" release ${version})
 
 IF (APPLE)
   SET (DARWIN 1)
@@ -188,7 +189,6 @@ CONFIG_DEFINE (VM_HOST_VENDOR)
 CONFIG_DEFINE (VM_HOST_OS)
 
 SET (VM_VERSION \"${VM_VERSION}\")
-SET (SQ_VERSION \"${SQ_VERSION}\")
 
 CONFIG_DEFINE (VM_VERSION)
 CONFIG_DEFINE (SQ_VERSION)

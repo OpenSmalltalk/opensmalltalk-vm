@@ -1,17 +1,17 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-26 22:47:15 by piumarta on emilia-2.local
+# Last edited: 2009-08-27 19:30:47 by piumarta on emilia-2.local
 
 PROJECT (squeak)
 
 CMAKE_MINIMUM_REQUIRED (VERSION 2.6.2)
 
-IF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION OR NOT DEFINED SQ_VERSION)
+IF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION)
   MESSAGE (FATAL_ERROR "
     You MUST NOT run CMake directly the first time you configure a build.
     Run 'platforms/unix/cmake/configure' from within your build directory."
   )
-ENDIF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION OR NOT DEFINED SQ_VERSION)
+ENDIF (NOT DEFINED VM_HOST OR NOT DEFINED VM_VERSION)
 
 SET (prefix  ${CMAKE_INSTALL_PREFIX})
 

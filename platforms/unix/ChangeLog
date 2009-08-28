@@ -1,3 +1,13 @@
+2009-08-27  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/configure (VM_VERSION): Generate automatically from
+	VMMaker version and SVN revision.  Remove SQ_VERSION.
+
+	* vm/config.cmake: Extract major.minor.patch-release from
+	version.
+
+	* CMakeLists.txt: Remove references to SQ_VERSION.
+
 2009-08-27    <piumarta@ubuntu.piumarta.com>
 
 	* vm/build.cmake: Install squeak.sh.
