@@ -1,7 +1,6 @@
 /* sqUnixExternalPrims.c -- Unix named primitives and loadable modules
  * 
- *   Copyright (C) 1996-2007 by Ian Piumarta and other authors/contributors
- *                              listed elsewhere in this file.
+ *   Copyright (C) 1996-2009 by Ian Piumarta
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
@@ -25,9 +24,7 @@
  *   SOFTWARE.
  */
 
-/* Author: Ian.Piumarta@INRIA.Fr
- *
- * Last edited: 2009-08-19 04:16:18 by piumarta on emilia-2.local
+/* Last edited: 2009-08-30 16:40:06 by piumarta on ubuntu.piumarta.com
  */
 
 #define DEBUG 0
@@ -114,6 +111,88 @@ extern char vmPath[];
 
 /*** local functions ***/
 
+#if 1 /* simplified plugin logic */
+
+
+static void *tryLoadModule(char *in, char *name)
+{
+  char path[PATH_MAX], *out= path;
+  void *handle= 0;
+  int c;
+  while ((c= *in++) && ':' != c) {	/* copy next plugin path to path[] */
+    switch (c) {
+    case '%':
+      if ('n' == *in || 'N' == *in) {	/* replace %n with name of plugin */
+	++in;
+	strcpy(out, name);
+	out += strlen(name);
+	continue;
+      }
+      if ('%' == *in) {
+	++in;
+	*out++= '%';
+	continue;
+      }
+      /* fall through... */
+    default:
+      *out++= c;
+      continue;
+    }
+  }
+  sprintf(out, "/" MODULE_PREFIX "%s" MODULE_SUFFIX, name);
+  handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
+  fdebugf((stderr, "tryLoading(%s) = %p\n", path, handle));
+  if (!handle) {
+    struct stat buf;
+    if ((0 == stat(path, &buf)) && ! S_ISDIR(buf.st_mode))
+      fprintf(stderr, "%s\n", dlerror());
+  }
+  return handle;
+}
+
+
+void *ioLoadModule(char *pluginName)
+{
+  char  path[PATH_MAX];
+  char *dir= squeakPlugins;
+  void *handle= 0;
+
+  if ((0 == pluginName) || ('\0' == pluginName[0])) {	/* find module in main program */
+    handle= dlopen(0, RTLD_NOW | RTLD_GLOBAL);
+    if (handle == 0) {
+      fprintf(stderr, "ioLoadModule(<intrinsic>): %s\n", dlerror());
+    }
+    else {
+      fdebugf((stderr, "loaded: <intrinsic>\n"));
+    }
+    return handle;
+  }
+
+  /* try loading {pluginPaths}/MODULE_PREFIX<name>MODULE_SUFFIX */
+
+  while (*dir) {
+    if ((handle= tryLoadModule(dir, pluginName)))
+      return handle;
+    while (*dir && ':' != *dir++)
+      ;
+  }
+
+  /* try dlopen()ing LIBRARY_PREFIX<name>LIBRARY_SUFFIX searching only the default locations modulo LD_LIBRARY_PATH et al */
+
+# if defined(HAVE_SNPRINTF)
+  snprintf(path, sizeof(path), "%s%s%s", LIBRARY_PREFIX, pluginName, LIBRARY_SUFFIX);
+# else
+  sprintf(path, "%s%s%s", LIBRARY_PREFIX, pluginName, LIBRARY_SUFFIX);
+# endif
+
+  handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
+  fdebugf((stderr, "ioLoadModule(%s) = %p\n", path, handle));
+
+  return handle;
+}
+
+
+#else /* obsolete plugin logic */
 
 /*  Attempt to load the shared library named by the concatenation of prefix,
  *  moduleName and suffix.  Answer the new module entry, or 0 if the shared
@@ -278,7 +357,7 @@ void *ioLoadModule(char *pluginName)
 	  return handle;
       }
   }
-#endif
+#endif /* DARWIN */
 
   /* finally (for VM hackers) try the pre-install build location */
   {
@@ -305,38 +384,25 @@ void *ioLoadModule(char *pluginName)
   return 0;
 }
 
+#endif /* obsolete plugin logic */
 
 /*  Find a function in a loaded module.  Answer 0 if not found (do NOT
  *  fail the primitive!).
  */
 void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
 {
-  char buf[256];
-  void *fn;
-
-#ifdef HAVE_SNPRINTF
-  snprintf(buf, sizeof(buf), "%s", lookupName);
-#else
-  sprintf(buf, "%s", lookupName);
-#endif
-
-  fn= dlsym(moduleHandle, buf);
-
-  fdebugf((stderr, "ioFindExternalFunctionIn(%s, %d)\n",
-	   lookupName, moduleHandle));
+  void *fn= dlsym(moduleHandle, lookupName);
+  fdebugf((stderr, "ioFindExternalFunctionIn(%s, %p) = %p\n", lookupName, moduleHandle, fn));
 
   if ((fn == 0) && (!sqIgnorePluginErrors)
       && strcmp(lookupName, "initialiseModule")
       && strcmp(lookupName, "shutdownModule")
       && strcmp(lookupName, "setInterpreter")
       && strcmp(lookupName, "getModuleName"))
-    fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n",
-	    lookupName, moduleHandle, dlerror());
+    fprintf(stderr, "ioFindExternalFunctionIn(%s, %p):\n  %s\n", lookupName, moduleHandle, dlerror());
 
   return fn;
 }
-
-
 
 /*  Free the module with the associated handle.  Answer 0 on error (do
  *  NOT fail the primitive!).

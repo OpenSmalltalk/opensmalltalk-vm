@@ -1,3 +1,22 @@
+2009-08-30    <piumarta@ubuntu.piumarta.com>
+
+	* vm/sqUnixMain.c (main): squeakPlugin path defaults to VM
+	executable directory.
+
+	* plugins/SqueakFFIPrims/config.cmake: Explicitly include
+	generated source in plugin_sources.
+
+	* vm/sqUnixExternalPrims.c (ioLoadModule): squeakPlugins can
+	contain ':'-separated paths.  Distinguish module and library
+	prefix and suffix.  Try to load a module from each squeakPlugins
+	path with module prefix/suffix, then try dlopen() with no explicit
+	path and platoform's library prefix/suffix.
+
+	* vm/config.cmake: Configure {MODULE,LIBRARY}_{PREFIX,SUFFIX}.
+	Change default module prefix to "so.", suffix to "".
+
+	* vm/sqUnixMain.c (main): Default plugin location is VM directory.
+
 2009-08-27  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/squeak.in: Path and text encodings are UTF-8 unless

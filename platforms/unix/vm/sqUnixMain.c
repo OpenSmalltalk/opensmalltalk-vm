@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-08-16 09:22:27 by piumarta on emilia-2.local
+ * Last edited: 2009-08-30 15:24:00 by piumarta on ubuntu.piumarta.com
  */
 
 #include "sq.h"
@@ -1148,13 +1148,15 @@ char *getVersionInfo(int verbose)
   sprintf(info+strlen(info), " XShm");
 #endif
   sprintf(info+strlen(info), " %s %s\n", vm_date, cc_version);
+#if 0
   if (verbose)
     sprintf(info+strlen(info), "Built from: ");
   sprintf(info+strlen(info), "%s\n", interpreterVersion);
+#endif
   if (verbose)
     sprintf(info+strlen(info), "Build host: ");
   sprintf(info+strlen(info), "%s\n", ux_version);
-  sprintf(info+strlen(info), "default plugin location: %s/*.so\n", vmLibDir);
+  sprintf(info+strlen(info), "plugin path: %s [default: %s]\n", squeakPlugins, vmPath);
   return info;
 }
 
@@ -1344,7 +1346,8 @@ int main(int argc, char **argv, char **envp)
   tzset();	/* should _not_ be necessary! */
 #endif
 
-  recordFullPathForVmName(argv[0]); /* full vm path */
+  recordFullPathForVmName(argv[0]);	/* full vm path */
+  squeakPlugins= vmPath;		/* default plugin location is VM directory */
 
   sqIgnorePluginErrors= 1;
   if (!modules)
