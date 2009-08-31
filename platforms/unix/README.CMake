@@ -44,8 +44,8 @@ Detailed instructions
   (assuming your terminal supports them).  This should leave you with
   an executable called 'squeak' in your build directory.
 
-7 You can test the binary in-place by running 'squeakvm' with a path
-  to an image file as argument; e.g: ./squeakvm ../../squeak.image
+7 You can test the binary in-place by running 'squeak' with a path to
+  an image file as argument; e.g: ./squeak ../../squeak.image
 
 8 If it works, install it by typing 'make install' in your build
   directory.
@@ -59,4 +59,4 @@ Detailed instructions
   step 3.
 
 ----
-Last edited: 2009-08-19 04:47:22 by piumarta on emilia-2.local
+Last edited: 2009-08-30 23:56:00 by piumarta on ubuntu.piumarta.com
