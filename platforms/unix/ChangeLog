@@ -1,3 +1,8 @@
+2009-08-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixExternalPrims.c: Include limits.h instead of
+	sys/param.h to get PATH_MAX.
+
 2009-08-31    <piumarta@ubuntu.piumarta.com>
 
 	* vm/config.cmake: Disable OpenGL and AGL if --without-gl.

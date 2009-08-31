@@ -24,7 +24,7 @@
  *   SOFTWARE.
  */
 
-/* Last edited: 2009-08-30 16:40:06 by piumarta on ubuntu.piumarta.com
+/* Last edited: 2009-08-31 13:57:04 by piumarta on emilia-3.local
  */
 
 #define DEBUG 0
@@ -52,7 +52,7 @@
   extern int dlclose (void *handle);
 #endif
  
-#include <sys/param.h>
+#include <limits.h>
 #include <sys/stat.h>
 
 /* get a value for RTLD_NOW, with increasing levels of desperation... */
