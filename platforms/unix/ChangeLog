@@ -1,3 +1,8 @@
+2009-08-31    <piumarta@ubuntu.piumarta.com>
+
+	* plugins/SqueakFFIPrims/config.cmake: Correctly detect arch and
+	abi.  Enable ASM language.
+
 2009-08-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* src/plugins/UnixOSProcessPlugin: Updated to version 20.
