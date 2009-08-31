@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2009-08-27 19:57:45 by piumarta on emilia-2.local
+# Last edited: 2009-08-31 13:23:58 by piumarta on ubuntu.piumarta.com
 
 help() {
     cat <<EOF
@@ -11,6 +11,8 @@ Options include:
   --prefix=<directory>  install into <prefix>/{bin,lib,man}
   --CFLAGS=<flags>      override default compiler flags
   --without-<plugin>    do not build the named plugin
+  --without-gl          disable everything that depends on OpenGL
+  --without-SUGAR       disable support for SUGAR environment
 Notes:
 1. By default the CFLAGS will be set to create optimised binaries.  If you are
    debugging the VM you probably want to use '--CFLAGS=-g' when invoking this

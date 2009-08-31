@@ -1,5 +1,13 @@
 2009-08-31    <piumarta@ubuntu.piumarta.com>
 
+	* vm/config.cmake: Disable OpenGL and AGL if --without-gl.
+
+	* plugins/B3DAcceleratorPlugin/config.cmake: Disable plugin if
+	neither OPENGL nor AGL are available.
+
+	* cmake/configure (Usage): Document --without-gl and
+	--without-SUGAR in help message.
+
 	* vm/config.cmake: Configure SUGAR as 1 unless --without-SUGAR.
 
 	* plugins/SqueakFFIPrims/config.cmake: Correctly detect arch and
