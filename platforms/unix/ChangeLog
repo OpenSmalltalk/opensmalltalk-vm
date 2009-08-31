@@ -1,3 +1,7 @@
+2009-08-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* src/plugins/UnixOSProcessPlugin: Updated to version 20.
+
 2009-08-30    <piumarta@ubuntu.piumarta.com>
 
 	* vm/sqUnixMain.c (main): squeakPlugin path defaults to VM

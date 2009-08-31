@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on an Array(26 August 2009 10:02:31 pm)
+/* Automatically generated from Squeak on an Array(31 August 2009 11:16:19 am)
 by VMMaker 3.11.3
  */
 
@@ -29,7 +29,7 @@ by VMMaker 3.11.3
 #endif
 #include <sys/types.h>
 /* D T Lewis - UnixOSProcessPlugin.c translated from class
-   UnixOSProcessPlugin of OSProcessPlugin version 4.3.1 */
+   UnixOSProcessPlugin of OSProcessPlugin version 4.3.3 */
 #include <sys/time.h>
 #include <sys/wait.h>
 #include <signal.h>
@@ -115,6 +115,7 @@ EXPORT(sqInt) primitiveCanReceiveSignals(sqInt anIntegerPid);
 EXPORT(sqInt) primitiveChdir(void);
 EXPORT(sqInt) primitiveCreatePipe(void);
 EXPORT(sqInt) primitiveCreatePipeWithSessionIdentifier(void);
+EXPORT(sqInt) primitiveDupTo(sqInt oldFileDescriptor, sqInt newFileDescriptor);
 EXPORT(sqInt) primitiveEnvironmentAt(void);
 EXPORT(sqInt) primitiveEnvironmentAtSymbol(void);
 EXPORT(sqInt) primitiveErrorMessageAt(void);
@@ -258,9 +259,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UnixOSProcessPlugin 26 August 2009 (i)"
+	"UnixOSProcessPlugin 31 August 2009 (i)"
 #else
-	"UnixOSProcessPlugin 26 August 2009 (e)"
+	"UnixOSProcessPlugin 31 August 2009 (e)"
 #endif
 ;
 static void *originalSigHandlers[NSIG];
@@ -1330,6 +1331,22 @@ EXPORT(sqInt) primitiveCreatePipeWithSessionIdentifier(void) {
 }
 
 
+/*	Call dup2() to duplicate a file descriptor. Answer the duplicated file descriptor
+	or -1 on failure. */
+
+EXPORT(sqInt) primitiveDupTo(sqInt oldFileDescriptor, sqInt newFileDescriptor) {
+    int oldfd;
+    int newfd;
+    int result;
+
+	newfd = interpreterProxy->stackIntegerValue(0);
+	oldfd = interpreterProxy->stackIntegerValue(1);
+	result = dup2(oldfd, newfd);
+	interpreterProxy->pop(3);
+	interpreterProxy->pushInteger(result);
+}
+
+
 /*	Answer a string containing the OS process environment string at index (an Integer)
 	in the environment list. */
 
@@ -2356,7 +2373,7 @@ EXPORT(sqInt) primitiveSQFileSetBlockingWithSessionIdentifier(void) {
 EXPORT(sqInt) primitiveSQFileSetNonBlocking(void) {
     sqInt sqFileOop;
     sqInt descriptor;
-    sqInt flags;
+    int flags;
     sqInt retVal;
 
 	sqFileOop = interpreterProxy->stackValue(0);
@@ -2480,7 +2497,7 @@ EXPORT(sqInt) primitiveSemaIndexFor(void) {
 
 	sigNum = interpreterProxy->stackIntegerValue(0);
 	index = semaIndices[sigNum];
-	interpreterProxy->pop(1);
+	interpreterProxy->pop(2);
 	interpreterProxy->pushInteger(index);
 }
 
@@ -3100,8 +3117,13 @@ EXPORT(sqInt) primitiveTestLockableFileRegion(void) {
 	#primitiveUnixFileNumber. */
 
 EXPORT(sqInt) primitiveUnixFileClose(sqInt anIntegerFileNumber) {
+    int result;
+    int handle;
+
+	handle = interpreterProxy->stackIntegerValue(0);
+	result = close(handle);
 	interpreterProxy->pop(2);
-	interpreterProxy->pushInteger(close(interpreterProxy->stackIntegerValue(0)));
+	interpreterProxy->pushInteger(result);
 }
 
 
@@ -3675,7 +3697,7 @@ static int unixFileNumber(FILEHANDLETYPE fileHandle) {
 /*	4.0 supports 64bit code base */
 
 static char * versionString(void) {
-    static char version[]= "4.3.1";
+    static char version[]= "4.3.3";
 
 	return version;
 }
@@ -3733,6 +3755,7 @@ void* UnixOSProcessPlugin_exports[][3] = {
 	{"UnixOSProcessPlugin", "primitiveForkExec", (void*)primitiveForkExec},
 	{"UnixOSProcessPlugin", "primitiveErrorMessageAt", (void*)primitiveErrorMessageAt},
 	{"UnixOSProcessPlugin", "primitiveGetPid", (void*)primitiveGetPid},
+	{"UnixOSProcessPlugin", "primitiveDupTo", (void*)primitiveDupTo},
 	{"UnixOSProcessPlugin", "primitiveRealpath", (void*)primitiveRealpath},
 	{"UnixOSProcessPlugin", "primitiveSendSigusr2To", (void*)primitiveSendSigusr2To},
 	{"UnixOSProcessPlugin", "primitiveReapChildProcess", (void*)primitiveReapChildProcess},
