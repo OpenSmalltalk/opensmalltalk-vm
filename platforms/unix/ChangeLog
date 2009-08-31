@@ -1,5 +1,7 @@
 2009-08-31    <piumarta@ubuntu.piumarta.com>
 
+	* vm/config.cmake: Configure SUGAR as 1 unless --without-SUGAR.
+
 	* plugins/SqueakFFIPrims/config.cmake: Correctly detect arch and
 	abi.  Enable ASM language.
 
