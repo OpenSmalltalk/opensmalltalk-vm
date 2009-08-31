@@ -1,5 +1,8 @@
 2009-08-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* plugins/SqueakFFIPrims/config.cmake: Compile .S using gcc if
+	possible.
+
 	* vm/sqUnixExternalPrims.c: Include limits.h instead of
 	sys/param.h to get PATH_MAX.
 
