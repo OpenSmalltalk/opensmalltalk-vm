@@ -1,3 +1,8 @@
+2009-08-31    <piumarta@ubuntu.piumarta.com>
+
+	* plugins/B3DAcceleratorPlugin/config.cmake: Don't look for gl.h
+	unless some kind of GL was already found.
+
 2009-08-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/SqueakFFIPrims/config.cmake: Compile .S using gcc if
