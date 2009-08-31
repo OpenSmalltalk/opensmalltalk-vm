@@ -44,11 +44,13 @@ CONFIGURE_FILE (${config}/config.in ${bld}/config @ONLY)
 ADD_CUSTOM_TARGET (squeak
   DEPENDS ${config}/squeak.in
   COMMAND sh ${bld}/config ${config}/squeak.in ${bld}/squeak
+  COMMAND chmod +x ${bld}/squeak
 )
 
 ADD_CUSTOM_TARGET (squeak.sh
   DEPENDS ${config}/squeak.sh.in
   COMMAND sh ${bld}/config ${config}/squeak.sh.in ${bld}/squeak.sh
+  COMMAND chmod +x ${bld}/squeak.sh
 )
 
 ADD_DEPENDENCIES (squeakvm squeak squeak.sh)
