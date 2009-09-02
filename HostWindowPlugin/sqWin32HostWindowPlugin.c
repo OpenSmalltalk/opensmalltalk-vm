@@ -16,14 +16,21 @@ BITMAPINFO *BmiForDepth(int depth);
 extern HINSTANCE hInstance;
 extern MSG *lastMessage;
 
-LRESULT CALLBACK HostWndProc (HWND hwnd,
+/* main window procedure(s) */
+LRESULT CALLBACK HostWndProcA(HWND hwnd,
                               UINT message,
                               WPARAM wParam,
-                              LPARAM lParam)
-{
-RECT boundingRect;
+                              LPARAM lParam) {
+  return DefWindowProc(hwnd, message, wParam, lParam);
+}
 
-switch(message){
+LRESULT CALLBACK HostWndProcW (HWND hwnd,
+                              UINT message,
+                              WPARAM wParam,
+                              LPARAM lParam) {
+  RECT boundingRect;
+
+ switch(message){
   /*  mousing */
 
   case WM_MOUSEMOVE:
@@ -61,7 +68,7 @@ switch(message){
   /*window events*/
   case WM_MOVE:
   case WM_SIZE:
-  if ((GetWindowRect(hwnd, &boundingRect)) != 0){
+    if ((GetWindowRect(hwnd, &boundingRect)) != 0){
 
 	sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
 	windowevent->type = EventTypeWindow;
@@ -72,11 +79,11 @@ switch(message){
 	windowevent->value3 = boundingRect.right;
 	windowevent->value4 = boundingRect.bottom;
 	windowevent->windowIndex =(int) hwnd;
-	}
-	break;
+    }
+    break;
 	
   case WM_PAINT:	
-  if ((GetWindowRect(hwnd, &boundingRect)) != 0){
+    if ((GetWindowRect(hwnd, &boundingRect)) != 0){
 
 	sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
 	windowevent->type = EventTypeWindow;
@@ -87,19 +94,19 @@ switch(message){
 	windowevent->value3 = boundingRect.right;
 	windowevent->value4 = boundingRect.bottom;
 	windowevent->windowIndex =(int) hwnd;
-	}
+    }
     break;
 
 
   case WM_CLOSE:
-	{
+    {
 	sqWindowEvent *windowevent = (sqWindowEvent*) sqNextEventPut();
 	windowevent->type = EventTypeWindow;
 	windowevent->timeStamp = lastMessage ? lastMessage->time : GetTickCount();
 	windowevent->action = WindowEventClose;
 	windowevent->windowIndex =(int) hwnd;
-	}
-	break;
+    }
+    break;
 	
   case WM_ACTIVATE:
     {
@@ -109,8 +116,8 @@ switch(message){
         if (wParam == WA_INACTIVE) windowevent->action = WindowEventIconise;
         else windowevent->action = WindowEventActivated;
        	windowevent->windowIndex =(int) hwnd;      
-     }
-	break; 
+    }
+    break; 
     	
   case WM_GETMINMAXINFO:
     {
@@ -120,20 +127,19 @@ switch(message){
         if (IsIconic(hwnd) != 0)windowevent->action = WindowEventIconise;
         else windowevent->action = WindowEventActivated;
        	windowevent->windowIndex =(int) hwnd;      
-     }
-	break;   
+    }
+    break;   
  }
-return DefWindowProc(hwnd,message,wParam,lParam);
+ return DefWindowProcW(hwnd,message,wParam,lParam);
 }
 
 /* closeWindow: arg is int windowIndex. Fail (return 0) if anything goes wrong
  * - typically the windowIndex invalid or similar */
-int closeWindow(int index)
-{
-	HWND hwnd = (HWND)index;
-	if (!IsWindow(hwnd)) return 0;
-	DestroyWindow(hwnd);
-	return 1;
+int closeWindow(int windowIndex) {
+  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  if (!IsWindow(hwnd)) return 0;
+  DestroyWindow(hwnd);
+  return 1;
 }
 
 /* createWindow: takes int width, height and origin x/y plus a char* list of
@@ -141,14 +147,13 @@ int closeWindow(int index)
  * Failure may occur because of an inability to add the window, too many
  * windows already extant (platform dependant), the specified size being
  * unreasonable etc. */
-int createWindowWidthheightoriginXyattrlength(int w, int h, int x, int y, char * list, int attributeListLength)
-{
+int createWindowWidthheightoriginXyattrlength(int w, int h, int x, int y, char * list, int attributeListLength) {
   HWND hwnd;
 
   WNDCLASS wc;
 
   wc.style = CS_OWNDC; /* don't waste resources ;-) */
-  wc.lpfnWndProc = (WNDPROC)HostWndProc;
+  wc.lpfnWndProc = (WNDPROC)HostWndProcA;
   wc.cbClsExtra = 0;
   wc.cbWndExtra = 0;
   wc.hInstance = hInstance;
@@ -165,32 +170,35 @@ int createWindowWidthheightoriginXyattrlength(int w, int h, int x, int y, char *
      result in an ERR_CLASS_ALREADY_EXISTS) */
   RegisterClass(&wc);
 
-  hwnd = CreateWindowEx(WS_EX_APPWINDOW | WS_EX_OVERLAPPEDWINDOW,
-			      TEXT("SqueakHostWindowClass"),
-			      TEXT("Squeak!"),
-			      WS_VISIBLE | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
-			      x,
-			      y,
-			      w,
-			      h,
-			      NULL,
-			      NULL,
-			      hInstance,
-			      NULL);
-	return (int)hwnd;
+  hwnd = CreateWindowEx(WS_EX_APPWINDOW /* | WS_EX_OVERLAPPEDWINDOW */,
+			TEXT("SqueakHostWindowClass"),
+			TEXT("Squeak!"),
+			WS_VISIBLE | WS_OVERLAPPEDWINDOW | WS_CLIPCHILDREN,
+			x,
+			y,
+			w,
+			h,
+			NULL,
+			NULL,
+			hInstance,
+			NULL);
+
+  /* Force Unicode WM_CHAR */
+  SetWindowLongW(hwnd,GWL_WNDPROC,(DWORD)HostWndProcW);
+
+  return (int)hwnd;
 }
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
  * Return true if ok, false if not, but not currently checked */
-int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
-{
-  HWND wnd = (HWND)windowIndex;
+int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
+  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   HDC dc;
   BITMAPINFO *bmi;
   int lines;
   int lsbDisplay;
 
-  if(!IsWindow(wnd))
+  if(!IsWindow(hwnd))
     return 0;
 
   if(affectedR < affectedL || affectedT > affectedB)
@@ -236,7 +244,7 @@ int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth,
   bmi->bmiHeader.biHeight = -height;
   bmi->bmiHeader.biSizeImage = 0;
 
-  dc = GetDC(wnd);
+  dc = GetDC(hwnd);
   if(!dc) {
     printLastError(TEXT("ioShowDisplayBits: GetDC() failed"));
     return 0;
@@ -286,7 +294,7 @@ int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth,
     }
   }
 
-  ReleaseDC(wnd,dc);
+  ReleaseDC(hwnd,dc);
 
   if(lines == 0) {
     printLastError(TEXT("SetDIBitsToDevice failed"));
@@ -313,103 +321,92 @@ int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth,
  * Return -1 for failure - typically invalid windowIndex
  * -1 is chosen since itwould correspond to a window size of 64k@64k which
  * I hope is unlikely for some time to come */
-int ioSizeOfWindow(int windowIndex)
-{
- HWND hwnd = (HWND)windowIndex;
- RECT boundingRect;
- int wsize;
+int ioSizeOfWindow(int windowIndex) {
+  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  RECT boundingRect;
+  int wsize;
 
- if ((GetWindowRect(hwnd, &boundingRect)) != 0){
+  if ((GetWindowRect(hwnd, &boundingRect)) != 0){
 
-	wsize = ((boundingRect.right - boundingRect.left) << 16)| (boundingRect.bottom - boundingRect.top);
-	return (wsize);
-	}
-	return -1;
+    wsize = ((boundingRect.right - boundingRect.left) << 16)| (boundingRect.bottom - boundingRect.top);
+    return wsize;
+  }
+  return -1;
 }
 
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 | height) format or -1 for failure as above. */
-int ioSizeOfWindowSetxy(int windowIndex, int w, int h)
-{
- HWND hwnd = (HWND)windowIndex;
- RECT boundingRect;
- int wsize;
+int ioSizeOfWindowSetxy(int windowIndex, int w, int h) {
+  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  RECT boundingRect;
+  int wsize;
  
- if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
+  if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
 
- if (MoveWindow(hwnd,
-            boundingRect.left,
-            boundingRect.top,
-            w,
-            h,
-            TRUE)==0) return -1;
- wsize = ioSizeOfWindow(windowIndex);
- return (wsize);
- 
+  if (MoveWindow(hwnd,
+		 boundingRect.left,
+		 boundingRect.top,
+		 w,
+		 h,
+		 TRUE)==0) return -1;
+  wsize = ioSizeOfWindow(windowIndex);
+  return wsize;
 }
 
 /* ioPositionOfWindow: arg is int windowIndex. Return the pos of the specified
  * window in (left<<16 | top) format like ioScreenSize.
  * Return -1 (as above) for failure - tpyically invalid windowIndex */
-int ioPositionOfWindow(int windowIndex)
-{
- HWND hwnd = (HWND)windowIndex;
- RECT boundingRect;
- int wpos;
+int ioPositionOfWindow(int windowIndex) {
+  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  RECT boundingRect;
+  int wpos;
 
- if ((GetWindowRect(hwnd, &boundingRect)) != 0){
-
-	wpos = ((boundingRect.left) << 16)| (boundingRect.top);
-	return (wpos);
-	}
-	return -1;
+  if ((GetWindowRect(hwnd, &boundingRect)) != 0){
+    wpos = ((boundingRect.left) << 16)| (boundingRect.top);
+    return wpos;
+  }
+  return -1;
 }
 
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
  * origin x/y for the window. Return the actual origin the OS
  * produced in (left<<16 | top) format or -1 for failure, as above */
-int ioPositionOfWindowSetxy(int windowIndex, int x, int y)
-{
- HWND hwnd = (HWND)windowIndex;
- RECT boundingRect;
- int wpos;
+int ioPositionOfWindowSetxy(int windowIndex, int x, int y) {
+  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  RECT boundingRect;
+  int wpos;
 
-if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
+  if ((GetWindowRect(hwnd, &boundingRect)) == 0)return -1;
 
- if (MoveWindow(hwnd,
-            x,
-            y,
-            (boundingRect.right - boundingRect.left),
-	        (boundingRect.bottom - boundingRect.top),
-            TRUE)==0) return -1;
- wpos = ioPositionOfWindow(windowIndex);
- return (wpos);
+  if (MoveWindow(hwnd, x, y,
+		 (boundingRect.right - boundingRect.left),
+		 (boundingRect.bottom - boundingRect.top),
+		 TRUE)==0) return -1;
+  wpos = ioPositionOfWindow(windowIndex);
+  return wpos;
 }
 
 /* ioSetTitleOfWindow: args are int windowIndex, char* newTitle and
  * int size of new title. Fail with -1 if windowIndex is invalid, string is too long for platform etc. Leave previous title in place on failure */
-int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle)
-{
- HWND hwnd = (HWND)windowIndex;
- char *title;
- if (sizeOfTitle > 1023) sizeOfTitle = 1024; /*to avoid allocating a really huge array, shouln't be possible displaying this in titlebar, also in the near future*/
- title = malloc(sizeOfTitle+1);
- if (title == NULL) return -1;
- strncpy(title, newTitle, sizeOfTitle);
- title[sizeOfTitle]='\0';
- if(SetWindowText(hwnd, (LPSTR) title) == 0){
-       free (title);
-       return -1;
-       }
- free (title);   
+int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle) {
+  HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
+  char titleString[1024];
+  WCHAR wideTitle[1024];
 
- return sizeOfTitle;
+  if(!IsWindow(hwnd)) return 0;
+  if (sizeOfTitle > 1023) sizeOfTitle = 1023;
+  strncpy(titleString, newTitle, sizeOfTitle);
+  titleString[sizeOfTitle] = 0;
+  MultiByteToWideChar(CP_UTF8, 0, titleString, -1, wideTitle, 1024);
+  if(SetWindowTextW(stWindow, wideTitle) == 0) return -1;
+  return sizeOfTitle;
 }
 
 /* ioCloseAllWindows: intended for VM shutdown.
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.
  */
-int ioCloseAllWindows(void){}
+int ioCloseAllWindows(void){
+}
 
