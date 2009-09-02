@@ -1047,7 +1047,8 @@ int recordMouseEvent(MSG *msg) {
   proto.modifiers |= alt ? CommandKeyBit : 0;
   /* clean up reserved */
   proto.reserved1 = 0;
-  proto.windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
+  /* window index is 1 for main window to be compatible with mac vm */
+  proto.windowIndex = msg->hwnd == stWindow ? 1 : (int) msg->hwnd;
 #ifndef NO_DIRECTINPUT
   /* get buffered input */
   if(msg->message == WM_MOUSEMOVE) {
@@ -1086,8 +1087,8 @@ int recordDragDropEvent(HWND wnd, int dragType, int x, int y, int numFiles)
   evt->modifiers = modifiers;
   evt->numFiles = numFiles;
 
-  /* clean up reserved */
-  evt->windowIndex = wnd == stWindow ? 0 : (int) wnd;
+  /* window index is 1 for main window to be compatible with mac vm */
+  evt->windowIndex = wnd == stWindow ? 1 : (int) wnd;
   return 1;
 }
 
@@ -1150,7 +1151,8 @@ int recordKeyboardEvent(MSG *msg) {
   evt->modifiers |= alt ? CommandKeyBit : 0;
   evt->modifiers |= shift ? ShiftKeyBit : 0;
   evt->modifiers |= ctrl ? CtrlKeyBit : 0;
-  evt->windowIndex = msg->hwnd == stWindow ? 0 : (int) msg->hwnd;
+  /* window index is 1 for main window to be compatible with mac vm */
+  evt->windowIndex = msg->hwnd == stWindow ? 1 : (int) msg->hwnd;
   evt->utf32Code = keyCode;
   /* clean up reserved */
   evt->reserved1 = 0;
