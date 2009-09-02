@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-08-26 19:22:15 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-09-02 15:10:16 by piumarta on ubuntu.piumarta.com
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -3110,13 +3110,13 @@ static int xError(Display *dpy, XErrorEvent *evt)
   XGetErrorText(dpy, evt->error_code, buf, sizeof(buf));
   fprintf(stderr,
 	  "X Error: %s\n"
-	  "  Major opcode of failed request:  %lu\n"
-	  "  Minor opcode of failed request:  %lu\n"
-	  "  Serial number of failed request: %d\n",
+	  "  Major opcode of failed request:  %ld\n"
+	  "  Minor opcode of failed request:  %ld\n"
+	  "  Serial number of failed request: %ld\n",
 	  buf,
-	  evt->request_code,
-	  evt->minor_code,
-	  evt->serial);
+	  (long)evt->request_code,
+	  (long)evt->minor_code,
+	  (long)evt->serial);
   return 0;
 }
 
@@ -5423,7 +5423,7 @@ int openXDisplay(void)
 #        if defined(DEBUG_BROWSER)
 	  fprintf(stderr, "browser: sending squeak window = 0x%x\n", stWindow);
 #        endif
-	  write(browserPipes[1], &stWindow, 4);
+	  4 == write(browserPipes[1], &stWindow, 4);
 #        if defined(DEBUG_BROWSER)
 	  fprintf(stderr, "browser: squeak window sent\n");
 #        endif

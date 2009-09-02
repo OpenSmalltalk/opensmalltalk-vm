@@ -26,7 +26,7 @@
  * 
  * Author: ian.piumarta@inria.fr
  * 
- * Last edited: 2006-10-18 10:09:50 by piumarta on emilia.local
+ * Last edited: 2009-09-02 15:09:53 by piumarta on ubuntu.piumarta.com
  * 
  * NOTE:
  *   This plugin is kind of ridiculous.  Nevertheless, after seeing what
@@ -61,6 +61,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <errno.h>
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <fcntl.h>
@@ -90,14 +91,26 @@ static int copy(char *from, char *to)
       if ((zero= open(_dev_zero, O_RDWR)) >= 0)
 	{
 	  void *mem;
-	  if (MAP_FAILED != (mem= mmap(0, stat.st_size, PROT_READ | PROT_WRITE,
-				       MAP_PRIVATE, zero, 0)))
+	  if (MAP_FAILED != (mem= mmap(0, stat.st_size, PROT_READ | PROT_WRITE, MAP_PRIVATE, zero, 0)))
 	    {
-	      if ((  (read(in, mem, stat.st_size) != stat.st_size) >= 0)
-		  && (write(out, mem, stat.st_size) != stat.st_size) >= 0)
-		{
+	      ssize_t count, n;
+	      count= n= 0;
+	      while (count < stat.st_size) {
+		while ((n= read(in, mem + count, stat.st_size)) < 0 && EINTR == errno);
+		if (n < 0) break;
+		count += n;
+	      }
+	      if (n >= 0) {
+		count= n= 0;
+		while (count < stat.st_size) {
+		  while ((n= write(out, mem + count, stat.st_size)) < 0 && EINTR == errno);
+		  if (n < 0) break;
+		  count += n;
+		}
+		if (n >= 0) {
 		  status= 0;      /* success */
 		}
+	      }
 	      munmap(mem, stat.st_size);
 	    }
 	  close(zero);

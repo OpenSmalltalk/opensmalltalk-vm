@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-08-30 15:24:00 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-09-02 15:08:53 by piumarta on ubuntu.piumarta.com
  */
 
 #include "sq.h"
@@ -228,7 +228,7 @@ static void pathCopyAbs(char *target, const char *src, size_t targetSize)
     strcpy(target, src);
   else
     {
-      getcwd(target, targetSize);
+      0 == getcwd(target, targetSize);
       strcat(target, "/");
       strcat(target, src);
     }

@@ -2,7 +2,7 @@
  * 
  * Author: Bert Freudenberg (heavily based on Andreas Raab's sqWin32Security.c)
  * 
- * Last edited: 2009-05-26 14:55:40 by piumarta on emilia.local
+ * Last edited: 2009-09-02 15:11:46 by piumarta on ubuntu.piumarta.com
  * 
  * Note: According to Ian Piumarta, the Unix VM is inherently insecure since
  *       pluggable primitives can access all of libc! It would need 
@@ -42,7 +42,7 @@ static int isAccessiblePathName(char *pathName, int writeFlag)
    char realPathName[MAXPATHLEN];
    int  realPathLen;
                                                    
-   realpath(pathName, realPathName);
+   realPathName == realpath(pathName, realPathName);
    realPathLen= strlen(realPathName);
 
    if (realPathLen >= untrustedUserDirectoryLen

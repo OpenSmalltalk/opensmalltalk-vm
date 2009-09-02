@@ -1,3 +1,20 @@
+2009-09-02    <piumarta@ubuntu.piumarta.com>
+
+	* plugins/FileCopyPlugin/sqUnixFileCopyPlugin.c (copy): Repeat
+	read()/write() as required by EINTR or partial transfer.
+
+	* plugins/SecurityPlugin/sqUnixSecurity.c (isAccessiblePathName):
+	Explicitly ignore the result of realpath();
+
+	* vm-display-X11/sqUnixX11.c (xError): Reconile format conversions
+	and argument types in printf().
+
+	* vm-display-X11/sqUnixX11.c (openXDisplay): Explicitly ignore the
+	result of write().
+
+	* vm/sqUnixMain.c (pathCopyAbs): Explicitly ignore the result of
+	getcwd().
+
 2009-08-31    <piumarta@ubuntu.piumarta.com>
 
 	* plugins/B3DAcceleratorPlugin/config.cmake: Don't look for gl.h
