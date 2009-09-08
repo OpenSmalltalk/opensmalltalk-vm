@@ -1,3 +1,8 @@
+2009-09-08  <piumarta@ubuntu.piumarta.com>
+
+	* plugins/ClipboardExtendedPlugin/config.cmake: Added: disable
+	plugin if X11 not found.
+
 2009-09-02    <piumarta@ubuntu.piumarta.com>
 
 	* plugins/FileCopyPlugin/sqUnixFileCopyPlugin.c (copy): Repeat
