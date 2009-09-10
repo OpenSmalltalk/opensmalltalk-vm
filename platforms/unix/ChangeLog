@@ -1,3 +1,9 @@
+2009-09-10    <piumarta@ubuntu.piumarta.com>
+
+	* plugins/SqueakFFIPrims/x86-sysv-asm.S (ffiCallAddressOf): Pop a
+	float return value off the FPU stack, even though we don't know
+	there's anything there to pop nor whether we own it if there is.
+
 2009-09-08  <piumarta@ubuntu.piumarta.com>
 
 	* plugins/ClipboardExtendedPlugin/config.cmake: Added: disable

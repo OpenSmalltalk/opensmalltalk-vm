@@ -2,9 +2,9 @@
  *
  * Author: Ian.Piumarta@INRIA.Fr
  *
- * Last edited: 2006-10-18 10:07:25 by piumarta on emilia.local
+ * Last edited: 2009-09-10 12:55:54 by piumarta on emilia-2.local
  *
- *   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+ *   Copyright (C) 1996-2009 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
@@ -48,7 +48,7 @@ ffiCallAddressOf:	/* 8=addr, 12=stack, 16=stackSize */
 2:	call	*8(%ebp)
 	movl	%eax, ffiIntReturnValue
 	movl	%edx, ffiLongReturnValue
-	fstl	ffiFloatReturnValue
+	fstpl	ffiFloatReturnValue
 	movl	%ebp, %esp
 	popl	%ebp
 	ret
