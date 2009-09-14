@@ -3,6 +3,15 @@
 	* vm-sound-pulse: Pulse Audio driver added, thanks to Derek
 	O'Connell.
 
+	* vm-sound-pulse/sqUnixSoundPulseAudio.c: Driver interface
+	structure is called "pulse".
+
+	* vm-sound-pulse/config.cmake: Require libpulse-simple rather than
+	libpulse.
+
+	* vm/sqUnixMain.c (moduleDescriptions): Add vm-sound-pulse to list
+	of auto-loaded sound drivers.
+
 2009-09-10    <piumarta@ubuntu.piumarta.com>
 
 	* plugins/SqueakFFIPrims/x86-sysv-asm.S (ffiCallAddressOf): Pop a

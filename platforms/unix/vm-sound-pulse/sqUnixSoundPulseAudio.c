@@ -25,7 +25,7 @@
  *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  *   DEALINGS IN THE SOFTWARE.
  *
- * Last edited: 2009-09-14 13:59:33 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-09-14 14:15:05 by piumarta on ubuntu.piumarta.com
  */
 
 /* ========== */
@@ -1189,7 +1189,7 @@ static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter) {
 
 #include "SqSound.h"
 
-SqSoundDefine(PA);
+SqSoundDefine(pulse);
 
 #include "SqModule.h"
 
@@ -1248,8 +1248,7 @@ printf("USE_RESOURCE_MANAGER\n");
 	
 	ioInit();
 	
-  return &sound_PA_itf;
+  return &sound_pulse_itf;
 }
 
-SqModuleDefine(sound, PA);
-
+SqModuleDefine(sound, pulse);

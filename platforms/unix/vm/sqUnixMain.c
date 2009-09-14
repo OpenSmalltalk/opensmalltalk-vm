@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-09-02 15:08:53 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-09-14 14:03:15 by piumarta on ubuntu.piumarta.com
  */
 
 #include "sq.h"
@@ -702,6 +702,7 @@ static struct moduleDescription moduleDescriptions[]=
   { &soundModule,   "sound",   "OSS"    },
   { &soundModule,   "sound",   "MacOSX" },
   { &soundModule,   "sound",   "Sun"    },
+  { &soundModule,   "sound",   "pulse"  },
   { &soundModule,   "sound",   "ALSA"   },
   { &soundModule,   "sound",   "null"   },
   { 0,              0,         0	}
