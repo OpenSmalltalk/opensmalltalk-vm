@@ -1,3 +1,8 @@
+2009-09-14    <piumarta@ubuntu.piumarta.com>
+
+	* vm-sound-pulse: Pulse Audio driver added, thanks to Derek
+	O'Connell.
+
 2009-09-10    <piumarta@ubuntu.piumarta.com>
 
 	* plugins/SqueakFFIPrims/x86-sysv-asm.S (ffiCallAddressOf): Pop a
