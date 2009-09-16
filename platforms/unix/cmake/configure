@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2009-09-16 14:06:55 by piumarta on emilia-2.local
+# Last edited: 2009-09-16 14:37:45 by piumarta on ubuntu.piumarta.com
 
 RELEASE_TAG=""
 
@@ -88,7 +88,13 @@ if test ! -f "${interp_h}"; then
 fi
 
 vmmversion="`tr '\015 ' '\012\012' < \"${interp_h}\" | sed '1,/VMMaker/d;q'`"
-svnversion=`svn info "${unix}/ChangeLog" | fgrep Revision: | awk '{print $2}'`
+
+if test -d ${unix}/.svn; then
+    svnversion=`svn info "${unix}/ChangeLog" | fgrep Revision: | awk '{print $2}'`
+    echo "${svnversion}" > "${unix}/svnversion"
+else
+    svnversion=`cat "${unix}/svnversion"`
+fi
 
 VM_VERSION="${vmmversion}-${svnversion}${RELEASE_TAG}"
 
