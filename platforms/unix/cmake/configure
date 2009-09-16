@@ -1,6 +1,8 @@
 #!/bin/sh
 
-# Last edited: 2009-08-31 13:23:58 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-09-16 14:06:55 by piumarta on emilia-2.local
+
+RELEASE_TAG=""
 
 help() {
     cat <<EOF
@@ -36,14 +38,10 @@ config="`dirname \"$0\"`"
 unix="`dirname \"${config}\"`"
 guess=`"${config}"/config.guess`
 host=`"${config}"/config.sub ${guess}`
-
-vmmversion="`tr '\015 ' '\012\012' < \"${unix}/src/vm/interp.h\" | sed '1,/VMMaker/d;q'`"
-svnversion=`svn info "${unix}/ChangeLog" | fgrep Revision: | awk '{print $2}'`
-
-VM_VERSION="${vmmversion}-${svnversion}"alpha
+src="${unix}/src"
 
 stop=false
-debug_configure=false
+cflags=""
 
 error () {
     echo "$*" >&2
@@ -54,14 +52,24 @@ dump () {
     echo "unix       = ${unix}"
     echo "config     = ${config}"
     echo "host       = ${host}"
+    echo "src        = ${src}"
     echo "args       = ${args}"
     stop=true
 }
 
 while [ $# -gt 0 ]; do
-    case $1 in
+    case "$1" in
 	--help)			help; exit 0;;
 	--debug-configure)	dump;;
+	--src=*)		rel="`echo \"$1\" | sed 's/\-\-src=//'`"
+				if test -d "${rel}"; then
+				    src="`(cd \"${rel}\";  pwd)`"
+				else
+				    src="${rel}"
+				fi
+				args="${args} --DOPT--src=${src}";;
+	--CFLAGS=*)		cflags="`echo \"$1\" | sed 's/\-\-CFLAGS=//'`";;
+	-CFLAGS=*)		cflags="`echo \"$1\" | sed 's/\-CFLAGS=//'`";;
 	--*=*)			args="${args} -DOPT${1}";;
 	--*)			args="${args} -DOPT${1}=1";;
 	-*)			args="${args} ${1}";;
@@ -70,13 +78,29 @@ while [ $# -gt 0 ]; do
     shift
 done
 
+interp_h="${src}/vm/interp.h"
+
+if test ! -f "${interp_h}"; then
+    echo "problem locating generated source file: ${interp_h}"
+    echo "use --src=<directory> to locate sources relative to ${unix}"
+    echo "current value is: --src=\"${src}\""
+    exit 1
+fi
+
+vmmversion="`tr '\015 ' '\012\012' < \"${interp_h}\" | sed '1,/VMMaker/d;q'`"
+svnversion=`svn info "${unix}/ChangeLog" | fgrep Revision: | awk '{print $2}'`
+
+VM_VERSION="${vmmversion}-${svnversion}${RELEASE_TAG}"
+
 if ${stop}; then
     exit 1
 fi
 
 echo "-- Configuring squeak ${VM_VERSION} for ${host}"
+echo "-- Using source directory ${src}"
 
-cmake ${unix} \
-  -DVM_HOST="${host}" \
-  -DVM_VERSION="${VM_VERSION}" \
-  $args "$@"
+if test -n "${cflags}"; then
+    cmake "${unix}" -DVM_HOST="${host}" -DVM_VERSION="${VM_VERSION}" -DOPT--CFLAGS="${cflags}" ${args}
+else
+    cmake "${unix}" -DVM_HOST="${host}" -DVM_VERSION="${VM_VERSION}"                           ${args}
+fi

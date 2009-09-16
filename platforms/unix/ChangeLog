@@ -1,3 +1,7 @@
+2009-09-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/configure: Properly convey --src --CFLAGS values to cmake.
+
 2009-09-14    <piumarta@ubuntu.piumarta.com>
 
 	* vm-sound-pulse: Pulse Audio driver added, thanks to Derek
