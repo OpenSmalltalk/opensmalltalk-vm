@@ -1,0 +1,87 @@
+Changes since 3.10-6:
+
+Numbering scheme changed to X.Y.Z.R where X.Y.Z = VMMaker version used
+to generate the Interpreter and R is the subversion revision of the
+platform support code.
+
+VMMaker and plugins updated to most recent versions; generated source
+regenerated:
+
+  Balloon3D-Plugins-ar.4.mcz
+  DBus-Plugin-bf.32.mcz
+  GStreamer-Plugins-JMM.16.mcz
+  Kedama-Plugins-yo.1.mcz
+  Rome-Plugin-yo.39.mcz
+  OSProcessPlugin-dtl.16.mcz
+  VMConstruction-Plugins-AioPlugin-dtl.9.mcz
+  VMConstruction-Plugins-XDisplayControlPlugin-dtl.7.mcz
+  VMMaker-dtl.138.mcz
+
+Build system rewritten using CMake instead of autotools.  Big
+THANK-YOU to Bert, Subbu and Dave Lewis for providing invaluable
+feedback.
+
+Any plugin can now be turned off in configure with the option
+'--without-<pluginName>'.
+
+Experimental PulseAudio driver (vm-sound-pulse) added, thanks to Derek
+O'Connell.  Default is still OSS on Linux; if you want pulse you have
+to ask for it in one of the usual ways.
+
+FFI tweaked on Linux to avoid a potential FPU stack overflow.
+
+ClipboardExtendedPlugin will no longer try to build if you don't have
+X11 development headers and libs.
+
+FileCopyPlugin made resilient to EINTR.
+
+VM renamed to 'squeakvm'.  'squeak' is now a script that looks for
+'squeakvm', figures out if you need any obscure command-line options,
+and then launches 'squeakvm' for you.  This in turn allows...
+
+Plugin search stretegy rationalised and simplified.  Default location
+is now the executable directory (where 'squeakvm' is installed).  The
+-plugins argument can be a colon-separated list of locations to
+search, just like PATH.  Plugins are named 'so.plugin' to make
+interference with FFI libraries less likely.
+
+  NOTE: FFI libraries are no longer searched for in every single nook
+  and cranny, which means you might have to set LD_LIBRARY_PATH (or
+  your local equivalent) for FFI-based programs to work properly.
+
+Failure to load a plugin because of unresolved symbols is now always
+reported on the terminal.
+
+Another script 'squeak.sh' is provided for launching squeak from a
+menu.  This isn't finished and suggestions are welcome.
+
+Default path and text encoding is now UTF-8.
+
+X11 driver no longer reports SHIFT pressed when CAPS LOCK engaged.
+
+SerialPlugin now supports named ports.
+
+All occurences of dprintf() renamed to avoid a name conflict with a
+less-than-stellar decision by POSIX to introduce a standard function
+of the same name.
+
+RomePlugin is no longer built if cairo was built without Pango
+support.
+
+iconv_open() no longer spams you with thousands of error messages if
+you are missing conversion tables.
+
+Valid unicode characters that have no corresponding keycode are
+reported with keycode zero to avoid an invalid index error in the
+image.
+
+XImmPlugin should now work on MacOS X/Darwin too.
+
+Sound driver on MacOS X now works on Intel as well as PowerPC.
+
+Various changes to make the VM compile and run on GNU/Linux running on
+DEC Alpha.
+
+vm-sound-Sun now uses asynchronous i/o.
+
+Various changes to fix compilation on Solaris.

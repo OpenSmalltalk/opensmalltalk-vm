@@ -1,3 +1,7 @@
+2009-09-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* doc/RELEASE_NOTES_3.11.3.2135: Release 3.11.3.2135.
+
 2009-09-16    <piumarta@ubuntu.piumarta.com>
 
 	* cmake/configure: Read svnversion from unix/svnversion if not
