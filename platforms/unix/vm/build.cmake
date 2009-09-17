@@ -1,7 +1,7 @@
 LINK_DIRECTORIES (${vm_link_directories})
 
 ADD_EXECUTABLE (squeakvm
-  ${src}/vm/interp.c
+  ${bld}/${interp}.c
   ${unix}/vm/aio.c
   ${unix}/vm/debug.c
   ${unix}/vm/osExports.c
@@ -18,6 +18,16 @@ ADD_EXECUTABLE (squeakvm
 ADD_CUSTOM_COMMAND (
   OUTPUT  version.c
   COMMAND ${config}/verstamp ${bld}/version.c ${CMAKE_C_COMPILER}
+)
+
+ADD_CUSTOM_COMMAND (
+  OUTPUT  ${bld}/interp.c
+  COMMAND ${CMAKE_COMMAND} -E copy ${src}/vm/interp.c ${bld}/interp.c}
+)
+
+ADD_CUSTOM_COMMAND (
+  OUTPUT  ${bld}/gnu-interp.c
+  COMMAND ${config}/gnuify ${config}/gnuify.awk ${src}/vm/interp.c ${bld}/gnu-interp.c
 )
 
 INCLUDE_DIRECTORIES (

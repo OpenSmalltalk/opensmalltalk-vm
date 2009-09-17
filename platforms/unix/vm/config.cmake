@@ -16,7 +16,12 @@ ENDIF (APPLE)
 
 CONFIG_DEFINE (DARWIN)
 
-SET (interp interp)
+IF (CMAKE_COMPILER_IS_GNUCC)
+  SET (interp gnu-interp)
+ELSE ()
+  SET (interp interp)
+  MESSAGE ("!! Cannot optimise interpreter performance for GCC")
+ENDIF (CMAKE_COMPILER_IS_GNUCC)
 
 INCLUDE (TestBigEndian)
 INCLUDE (CheckIncludeFile)

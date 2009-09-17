@@ -1,0 +1,18 @@
+#!/bin/sh
+# 
+# Last edited: 2009-09-17 08:47:30 by piumarta on ubuntu.piumarta.com
+
+gfy="$1"
+src="$2"
+dst="$3"
+log="${dst}.log"
+
+rm -f "${dst}" "${log}"
+
+exec >> "${log}" 2>&1
+
+set -x
+
+try () { "$1" -f "${gfy}" "${src}" > "${dst}" 2>> "${log}"; }
+
+try gawk || try awk || cp -p "${src}" "${dst}"

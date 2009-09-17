@@ -1,3 +1,19 @@
+2009-09-17    <piumarta@ubuntu.piumarta.com>
+
+	* vm/config.cmake: Configure interp as "gnu-interp" if compiler is
+	GCC, otherwise "interp".
+
+	* vm/build.cmake: squeakvm depends on bld/${interp}.c.  Implicitly
+	build bld/gnu-interp.c from src/vm/interp.c using gnuify.
+	Implicitly build bld/interp.c by copying src/vm/interp.c.
+
+	* cmake/gnuify: Try gnuify.awk with gawk then awk then cp.
+
+	* cmake/gnuify.awk: Copied from old config/gnuify.
+
+	* cmake/configure (svnversion): Quote unix/.svn to permit spaces
+	in pathnames.
+
 2009-09-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* doc/RELEASE_NOTES_3.11.3.2135: Release 3.11.3.2135.
