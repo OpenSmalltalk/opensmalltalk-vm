@@ -1,6 +1,6 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2009-08-26 21:00:32 by piumarta on emilia-2.local
+# Last edited: 2009-09-17 09:34:24 by piumarta on ubuntu.piumarta.com
 
 FILE (STRINGS ${src}/plugins.int plugins_int)
 STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_int ${plugins_int})
@@ -107,10 +107,12 @@ MACRO (CONFIGURE_PLUGIN_LIST plugins_list)
         LIST (APPEND plugins_dis ${plugin})
       ENDIF (${plugins_list} STREQUAL "plugins_int")
       MESSAGE ("!! ${plugin} disabled")
+      SET (${plugin}_disabled 1)
     ELSE (DEFINED plugin_disabled)
       IF (${plugins_list} STREQUAL "plugins_int")
         USE_LIBRARY (${plugin})
       ENDIF (${plugins_list} STREQUAL "plugins_int")
+      SET (${plugin}_disabled)
     ENDIF (DEFINED plugin_disabled)
   ENDFOREACH (plugin)
 ENDMACRO (CONFIGURE_PLUGIN_LIST)

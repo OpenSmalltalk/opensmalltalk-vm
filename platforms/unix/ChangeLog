@@ -1,5 +1,15 @@
 2009-09-17    <piumarta@ubuntu.piumarta.com>
 
+	* cmake/Plugins.cmake: Set ${plugin}_disabled for each plugin,
+	recording whether the plugin is to be built.
+
+	* vm/build.cmake: Set useoss according to vm-sound-OSS_disabled.
+
+	* cmake/config.in: Substitute [useoss] when configuring.
+
+	* cmake/squeak.in: Communicate with the VM via environment.  Don't
+	attempt to user padsp wrapper unless vm-sound-OSS was built.
+
 	* vm/config.cmake: Configure interp as "gnu-interp" if compiler is
 	GCC, otherwise "interp".
 

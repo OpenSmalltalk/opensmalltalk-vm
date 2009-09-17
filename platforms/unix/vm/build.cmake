@@ -47,6 +47,12 @@ TARGET_LINK_LIBRARIES (squeakvm m ${squeak_libs} ${vm_link_libraries})
 
 INSTALL (PROGRAMS ${bld}/squeakvm DESTINATION ${plgdir})
 
+IF (vm-sound-OSS_disabled)
+  SET (useoss "false")
+ELSE ()
+  SET (useoss "true")
+ENDIF ()
+
 CONFIGURE_FILE (${config}/config.in ${bld}/config @ONLY)
 
 # launcher scripts

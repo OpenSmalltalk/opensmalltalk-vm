@@ -12,4 +12,5 @@ s%\[imgdir\]%@prefix@/@imgdir@%g
 s%\[plgdir\]%@prefix@/@plgdir@%g
 s%\[mandir\]%@prefix@/@mandir@%g
 s%\[docdir\]%@prefix@/@docdir@%g
+s%\[useoss\]%@useoss@%g
 " < $1 > $2

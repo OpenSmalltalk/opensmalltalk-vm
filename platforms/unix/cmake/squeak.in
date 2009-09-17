@@ -3,22 +3,26 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2009-08-27 22:25:34 by piumarta on emilia-2.local
+# Last edited: 2009-09-17 10:05:45 by piumarta on ubuntu.piumarta.com
 
 PATH=/usr/bin:/bin
 
-me=`basename $0`
 bindir=`dirname $0`
 bindir=`cd ${bindir}; pwd`
 prefix=`dirname ${bindir}`
 libdir="${prefix}/lib/squeak"
 plgdir="${libdir}/[version]"
-wrapper=""
+useoss="[useoss]"
 vm="squeakvm"
 plugins=""
-sound=""
-pathenc="-pathenc UTF-8"
-encoding="-encoding UTF-8"
+wrapper=""
+
+for opt in $*; do
+    case ${opt} in
+	-vm-sound*)     useoss="false";;
+	-vm)            case "$2" in sound*) useoss="false"; esac;;
+    esac
+done
 
 # find the vm and set the plugin path
 
@@ -36,45 +40,34 @@ else
     exit 1
 fi
 
-# deal with pulseaudio if it is running
+# command-line overrides environment, so communicate anything we decide here via the environment
 
-if pulseaudio --check 2>/dev/null; then
-    sound="-vm-sound-oss"
-    if padsp true 2>/dev/null; then
-        wrapper=padsp
+if test -z "${SQUEAK_PATHENC}";  then SQUEAK_PATHENC="UTF-8";  export SQUEAK_PATHENC;  fi
+if test -z "${SQUEAK_ENCODING}"; then SQUEAK_ENCODING="UTF-8"; export SQUEAK_ENCODING; fi
+
+if test -z "${SQUEAK_PLUGINS}"; then
+    if test -n "${plugins}"; then
+	SQUEAK_PLUGINS="${plugins}"
+	export SQUEAK_PLUGINS
     fi
 fi
 
-# we should not interfere with the user's command-line options
+# deal with pulseaudio if it is running
 
-for opt in $*; do
-    case ${opt} in
-	-plugins)	plugins="";;
-	-pathenc)	pathenc="";;
-	-encoding)	encoding="";;
-	-vm-sound*)	sound=""; wrapper="";;
-	-vm)		case "$2" in sound*) sound=""; wrapper=""; esac;;
-    esac
-done
-
-# we should not interfere with the user's environment variables
-
-if test -n "${SQUEAK_PLUGINS}"; then
-    plugins=""
+if test -z "${SQUEAK_VM}"; then
+    if ${useoss}; then
+	if pulseaudio --check 2>/dev/null; then
+	    if padsp true 2>/dev/null; then
+		wrapper="padsp"
+		SQUEAK_VM="sound-OSS"
+		export SQUEAK_VM
+	    fi
+	fi
+    fi
 fi
 
-if test -n "${SQUEAK_PATHENC}"; then
-    pathenc=""
-fi
+# run the vm
 
-if test -n "${SQUEAK_ENCODING}"; then
-    encoding=""
-fi
-
-if test -z "${plugins}"; then
-    set -x
-    exec ${wrapper} "${vm}" ${pathenc} ${encoding} ${sound} "$@"
-else
-    set -x
-    exec ${wrapper} "${vm}" ${pathenc} ${encoding} -plugins "${plugins}" ${sound} "$@"
-fi
+set | fgrep SQUEAK_
+set -x
+exec ${wrapper} "${vm}" "$@"
