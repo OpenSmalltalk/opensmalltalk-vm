@@ -1,3 +1,8 @@
+2009-09-18    <piumarta@ubuntu.piumarta.com>
+
+	* cmake/squeak.in: Resolve symlinks in bindir.  Fix missing
+	'error' function.
+
 2009-09-17    <piumarta@ubuntu.piumarta.com>
 
 	* cmake/Plugins.cmake: Set ${plugin}_disabled for each plugin,

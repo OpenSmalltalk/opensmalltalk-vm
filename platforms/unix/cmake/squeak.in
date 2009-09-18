@@ -3,13 +3,29 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2009-09-17 10:05:45 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-09-18 13:14:40 by piumarta on ubuntu.piumarta.com
 
 PATH=/usr/bin:/bin
 
-bindir=`dirname $0`
-bindir=`cd ${bindir}; pwd`
-prefix=`dirname ${bindir}`
+realpath () {
+    path="$1"
+    while test -L "${path}"; do
+	dir=`dirname "${path}"`
+	dir=`cd "${dir}" && pwd -P`
+	path=`basename "${path}"`
+	path=`ls -l "${dir}/${path}" | sed 's,.* -> ,,'`
+	path="${dir}/${path}"
+    done
+    if test -d "${path}"; then
+	(cd "${path}" && pwd -P)
+    else
+	(cd `dirname "${path}"` && echo "`pwd -P`/`basename "${path}"`")
+    fi
+}
+
+bindir=`realpath "${0}"`
+bindir=`dirname  "${bindir}"`
+prefix=`dirname  "${bindir}"`
 libdir="${prefix}/lib/squeak"
 plgdir="${libdir}/[version]"
 useoss="[useoss]"
@@ -32,11 +48,11 @@ if test -x "${plgdir}/${vm}"; then	# bin/squeak -> lib/squeak/x.y-z/squeakvm
 elif test -x "${bindir}/${vm}"; then	# bld/squeak -> bld/squeakvm
     vm="${bindir}/${vm}"
     plugins="${bindir}/%n"
-elif test -x "`which ${vm}`"; then
-    vm="`which ${vm}`"
+elif test -x `which ${vm}`; then
+    vm=`which ${vm}`
     plugins=""
 else    
-    error "cannot find ${vm}"
+    echo "cannot find ${vm}" >&2
     exit 1
 fi
 
