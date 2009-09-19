@@ -1,3 +1,8 @@
+2009-09-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/SerialPlugin/sqUnixSerial.c (serialPortCloseByName):
+	Invalidate serial port name after closing.
+
 2009-09-18    <piumarta@ubuntu.piumarta.com>
 
 	* cmake/squeak.in: Resolve symlinks in bindir.  Fix missing

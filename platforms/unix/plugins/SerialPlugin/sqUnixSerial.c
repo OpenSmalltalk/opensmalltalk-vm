@@ -1,6 +1,6 @@
 /* sqUnixSerial.c -- Unix serial support
  * 
- * Last edited: 2009-08-22 14:13:41 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2009-09-18 18:32:58 by piumarta on emilia-2.local
  */
 
 #include "sq.h"
@@ -196,6 +196,8 @@ int serialPortCloseByName(const char *portName)
       success(false);
       return -1;
     }
+
+  sp->spName[0]= '\0';
 
   success(true);
   return 0;
