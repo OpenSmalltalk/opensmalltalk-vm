@@ -1,3 +1,7 @@
+2009-09-27  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/configure (cflags): Change '--DOPT--src=' to '-DOPT--src='.
+
 2009-09-18  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/SerialPlugin/sqUnixSerial.c (serialPortCloseByName):

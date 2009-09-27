@@ -1,6 +1,6 @@
 #!/bin/sh
 
-# Last edited: 2009-09-16 14:48:48 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-09-27 11:15:36 by piumarta on emilia-2.local
 
 RELEASE_TAG=""
 
@@ -67,7 +67,7 @@ while [ $# -gt 0 ]; do
 				else
 				    src="${rel}"
 				fi
-				args="${args} --DOPT--src=${src}";;
+				args="${args} -DOPT--src=${src}";;
 	--CFLAGS=*)		cflags="`echo \"$1\" | sed 's/\-\-CFLAGS=//'`";;
 	-CFLAGS=*)		cflags="`echo \"$1\" | sed 's/\-CFLAGS=//'`";;
 	--*=*)			args="${args} -DOPT${1}";;
