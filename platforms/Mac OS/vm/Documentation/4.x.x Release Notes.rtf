@@ -1,10 +1,10 @@
-{\rtf1\ansi\ansicpg1252\cocoartf949\cocoasubrtf540
+{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf110
 {\fonttbl\f0\fnil\fcharset0 Geneva;\f1\fswiss\fcharset0 Helvetica;}
-{\colortbl;\red255\green255\blue255;}
+{\colortbl;\red255\green255\blue255;\red0\green116\blue0;}
 \margl1440\margr1440\vieww13080\viewh12220\viewkind0
 \pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
 
-\f0\fs24 \cf0 Mac VM 4.2.1b1 mach-o build for Carbon with Closures and UTF-8 plus 32bit clean.\
+\f0\fs24 \cf0 Mac VM 4.2.2b1 mach-o build for Carbon with Closures and UTF-8 plus 32bit clean.\
 \
 Support for Croquet, support for Safari, support for TK4/Sophie, support for Multiple Windows/Ffenestri, full GC instrumentation, configurable quartz flush drawing, MacIntel Machines, mappable mouse buttons, Safari and Firefox browser support, with Closure support\
 \
@@ -13,8 +13,44 @@ Apr 9th, 2009 (4.0.1b1)\
 Apr 21st, 2009 (4.1.0b1)\
 May 7th, 2009 (4.1.1b2)\
 Aug 20th, 2009 (4.2.1b1)\
+Sept 17th, 2009 (4.2.2b1)\
 \
 Still yet to do, in future versions -> Verify that file delete rename etc works on aliases, not the targets. (Yawn, someday)\
+\
+4.2.2b1		We update system to 10.6.1 and newest xCode \
+			Build powerpc VM with gcc 4.0\
+			Run Static Analyser \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+
+\f1 \cf0 			FilePlugin.c\
+			SetVMPathFromApplicationDirectory\
+			memory leak from vmPathString\
+\
+			\CocoaLigature0 NSCursorWrappers.m\
+\CocoaLigature1 			\CocoaLigature0 fix memory leak, bitmap, image\
+\pard\tx560\pardeftab560\ql\qnatural\pardirnatural
+\cf0 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+\cf0 \CocoaLigature1 			\CocoaLigature0 sqMacMain.c\
+\CocoaLigature1 			\CocoaLigature0 fixupNonAbsolutePath\
+\CocoaLigature1 			\CocoaLigature0 memory leak from resourcePathString\
+\pard\tx560\pardeftab560\ql\qnatural\pardirnatural
+\cf0 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+\cf0 \CocoaLigature1 			\CocoaLigature0 sqMacNSPluginUILogic2.c\
+\CocoaLigature1 			\CocoaLigature0 handle_CMD_SHARED_MEMORY\
+\CocoaLigature1 			\CocoaLigature0 memory leak from colorspace\
+\pard\tx560\pardeftab560\ql\qnatural\pardirnatural
+\cf0 \
+\pard\tx566\tx1133\tx1700\tx2267\tx2834\tx3401\tx3968\tx4535\tx5102\tx5669\tx6236\tx6803\ql\qnatural\pardirnatural
+\cf0 \CocoaLigature1 			\CocoaLigature0 sqmacUIEventsUniversal.c\
+\CocoaLigature1 			\CocoaLigature0 Bert reported scroll wheel movement was wrong. \
+\CocoaLigature1 			\CocoaLigature0 We did not get kEventParamMouseWheelAxis correctly\
+\CocoaLigature1 			\CocoaLigature0 This problem oddly has existed for years. \cf2 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+
+\f0 \cf0 \CocoaLigature1 \
+\
 4.2.1b1		We update our VM to VMMaker-dtl.135\
 			Fixes\
 			Reference Mantis 7260: some Float comparison primitives don't handle Nan correctly\

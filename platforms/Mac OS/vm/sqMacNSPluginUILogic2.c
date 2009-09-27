@@ -270,6 +270,7 @@ static void handle_CMD_SHARED_MEMORY() {
 		dprintf((stderr,"VM: Size Window to %i @ %i \n",width,height));
 	}
 	SharedBrowserBitMapContextRef = CGBitmapContextCreate (SharedMemoryBlock->screenBits,width,height,8,rowBytes,colorspace,kCGImageAlphaNoneSkipFirst);
+	CGColorSpaceRelease(colorspace);
 	dprintf((stderr,"VM: made bitmap context ref %i\n", (int) SharedBrowserBitMapContextRef));
 }
 

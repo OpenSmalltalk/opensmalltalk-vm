@@ -518,6 +518,7 @@ OSStatus SetVMPathFromApplicationDirectory() {
 	CFStringAppendCString(vmPathString, "/", kCFStringEncodingMacRoman);
 	SetVMPathFromCFString(vmPathString);
 	CFRelease(filePath);
+	CFRelease(vmPathString);
 	
 	return 0;		
 }

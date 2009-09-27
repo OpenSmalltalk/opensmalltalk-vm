@@ -117,7 +117,10 @@ extern Boolean gSqueakHasCursor;
       }
       [cursor set];
 	   // [NSCursor unhide];
-      [pool release];
+
+  CFRelease(bitmap);
+  CFRelease(image);
+  [pool release];
 
   return 1;
 }

@@ -906,7 +906,7 @@ void recordMouseEventCarbon(EventRef event,UInt32 whatHappened,Boolean noPointCo
       
         if (whatHappened == kEventMouseWheelMoved) {
             GetEventParameter( event,
-                                kEventParamKeyModifiers,
+                                kEventParamMouseWheelAxis,
                                 typeMouseWheelAxis,
                                 NULL,
                                 sizeof(EventMouseWheelAxis),
@@ -957,9 +957,12 @@ static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection
     sqKeyboardEvent *evt,*extra;
     UInt32	macKeyCode=0;
     
+	if (wheelMouseDelta == 0) 
+		return;
+	
     pthread_mutex_lock(&gEventQueueLock);
     for(i=0;i<abs(wheelMouseDelta);i++) {
-        if (wheelMouseDirection == kEventMouseWheelAxisX) 
+        if (wheelMouseDirection == kEventMouseWheelAxisY) 
             if (wheelMouseDelta > 0) {//up/down
                 macKeyCode = 126;
                 asciiChar = kUpArrowCharCode;
@@ -968,7 +971,7 @@ static void fakeMouseWheelKeyboardEvents(EventMouseWheelAxis wheelMouseDirection
                 asciiChar = kDownArrowCharCode;
             }
         else
-            if (wheelMouseDelta > 0) {//left/right
+            if (wheelMouseDelta < 0) {//left/right
                 macKeyCode = 124;
                 asciiChar = kRightArrowCharCode;
             } else {

@@ -404,7 +404,8 @@ char * GetAttributeString(int id) {
 	/* vm build string */
 
     if (id == 1006) {
- 		return "Mac Carbon 4.2.1b1 19-Aug-09 >4897EDBA-66BA-413A-9117-AC98701639F8<";
+ 		return "Mac Carbon 4.2.2b1 17-Sep-09 >6F0202CF-180C-420A-9CE8-411B696D3467<";
+// 		return "Mac Carbon 4.2.1b1 19-Aug-09 >4897EDBA-66BA-413A-9117-AC98701639F8<";
 // 		return "Mac Carbon 4.1.1b2 7-May-09 >028D94A1-439E-4D2D-9894-AF0DE7F057E8<";
 // 		return "Mac Carbon 4.1.1b1 1-May-09 >56D42F58-DC56-4B75-9C58-6CF5D03605CC<";
 // 		return "Mac Carbon 4.1.0b1 21-Apr-09 >6A843063-B019-4516-8EBE-67566B766023<";
@@ -710,6 +711,7 @@ CFStringRef fixupNonAbsolutePath(CFStringRef partialPathString) {
 		
 	bundleURL2 = CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, bundleURL, resourcePathString, false );
 	CFRelease(bundleURL);
+	CFRelease(resourcePathString);
 	bundleURL3 = CFURLCreateCopyAppendingPathComponent( kCFAllocatorSystemDefault, bundleURL2, partialPathString, false );
 	CFRelease(bundleURL2);
 	filePath = CFURLCopyFileSystemPath (bundleURL3, kCFURLPOSIXPathStyle);
