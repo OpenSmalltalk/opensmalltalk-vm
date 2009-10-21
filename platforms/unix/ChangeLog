@@ -1,3 +1,8 @@
+2009-10-20  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixMemory.c (uxGrowMemoryBy): Reject request to increase
+	memory by ludicrous amounts.
+
 2009-09-27  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/configure (cflags): Change '--DOPT--src=' to '-DOPT--src='.

@@ -26,7 +26,7 @@
  *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
  *   SOFTWARE.
  * 
- * Last edited: 2009-08-19 04:34:09 by piumarta on emilia-2.local
+ * Last edited: 2009-10-20 19:42:22 by piumarta on emilia-2.local
  */
 
 /* Note:
@@ -166,6 +166,11 @@ char *uxGrowMemoryBy(char *oldLimit, sqInt delta)
     {
       int newSize=  min(valign(oldLimit - heap + delta), heapLimit);
       int newDelta= newSize - heapSize;
+      if (newSize < 0)
+	{
+	  /* requested size too large */
+	  return oldLimit;
+	}
       debugf(("uxGrowMemory: %p By: %d(%d) (%d -> %d)\n", oldLimit, newDelta, delta, heapSize, newSize));
       assert(0 == (newDelta & ~pageMask));
       assert(0 == (newSize  & ~pageMask));
