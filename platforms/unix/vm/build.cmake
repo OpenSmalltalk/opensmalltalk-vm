@@ -21,11 +21,13 @@ ADD_CUSTOM_COMMAND (
 )
 
 ADD_CUSTOM_COMMAND (
+  DEPENDS ${src}/vm/interp.c
   OUTPUT  ${bld}/interp.c
   COMMAND ${CMAKE_COMMAND} -E copy ${src}/vm/interp.c ${bld}/interp.c}
 )
 
 ADD_CUSTOM_COMMAND (
+  DEPENDS ${src}/vm/interp.c
   OUTPUT  ${bld}/gnu-interp.c
   COMMAND ${config}/gnuify ${config}/gnuify.awk ${src}/vm/interp.c ${bld}/gnu-interp.c
 )

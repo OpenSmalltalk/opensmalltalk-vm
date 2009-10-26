@@ -1,3 +1,7 @@
+2009-10-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/build.cmake: gnu-interp.c depends on generated interp.c.
+
 2009-10-20  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/sqUnixMemory.c (uxGrowMemoryBy): Reject request to increase
