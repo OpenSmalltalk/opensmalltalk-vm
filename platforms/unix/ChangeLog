@@ -1,3 +1,10 @@
+2009-12-17  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-sound-ALSA/sqUnixSoundALSA.c (sound_AvailableSpace): Update
+	available space info before reading state.
+
+	* cmake/squeak.sh.in (vm): Fix typo: xkdialog -> kdialog.
+
 2009-10-26  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/build.cmake: gnu-interp.c depends on generated interp.c.

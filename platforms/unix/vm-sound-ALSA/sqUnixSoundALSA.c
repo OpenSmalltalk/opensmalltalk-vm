@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2008-04-21 14:48:26 by piumarta on emilia
+ * Last edited: 2009-12-17 10:26:20 by piumarta on ubuntu
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -168,7 +168,8 @@ static sqInt sound_AvailableSpace(void)
   if (!output_handle) return 0;
 
   snd_pcm_delay(output_handle, &delay);
-  state= snd_pcm_state (output_handle);
+  snd_pcm_avail_update(output_handle);
+  state= snd_pcm_state(output_handle);
 
   /* if underrun causes, max delay is loosened */
   if (state == SND_PCM_STATE_XRUN)

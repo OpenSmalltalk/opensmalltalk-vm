@@ -2,7 +2,7 @@
 # 
 # Launch squeak from a menu, prompting for and/or installing an image
 # 
-# Last edited: 2009-08-27 02:06:21 by piumarta on ubuntu.piumarta.com
+# Last edited: 2009-12-17 10:21:38 by piumarta on ubuntu
 
 PATH=/usr/bin:/bin
 
@@ -15,7 +15,7 @@ vm="squeak"
 
 # find a way to display dialogues
 
-if test -n "$DISPLAY" -a -x "`which xkdialog 2>/dev/null`"; then
+if test -n "$DISPLAY" -a -x "`which kdialog 2>/dev/null`"; then
     error ()		{ kdialog --error "${me}: $*"; exit 1; }
     confirm ()		{ if kdialog --yesno "${1} ${2}?"; then result="${2}"; else result=""; fi; }
     chooseItem ()	{ title="$1"; shift; result=`kdialog --combobox "${title}" $*`; }
