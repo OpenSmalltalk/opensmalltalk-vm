@@ -116,7 +116,9 @@ Custom short cuts:
     is 1 (true).
     <li> <b>EnableAltF4Quit</b>: This entry allows you to specify whether 
     Alt-F4 (and the windows close button) should be honored or not. 
-    The default is 1 (true).
+    The default is 1 (true).<br>
+    <b>New for 3.10.8:</b>When this setting is disabled (0), the VM generates 
+    a window close event instead which can be handled by the image.
 </ul>
 
 Quit menu:
@@ -140,6 +142,11 @@ Splash screen settings:
     The value is provided in milliseconds.
 </ul>
 
+Single Instance Settings:
+<ul>
+<li> <b>RunSingleApp</b>: When non-zero, only one instance of the VM will be run. A second attempt to launch the app will cause the first instance to be activated. When double-clicking on a file associated with the VM, the document file will be delivered as drop event to the running instance. This is consistent with the Mac behavior when trying to launch multiple documents with the same VM.
+<li> <b>WindowClassName</b>: The name for the window class to be used by the VM (something like "MyAppMainWindowClass"). The VM will only consider windows with this class name when determining whether the app already runs or not. This allows the VM to disambiguate different applications using the Squeak VM.
+</ul>
 
 <p><table bgcolor="#bdd3bd" width="100%">
   <tr><td cellvalign="center" align="center">

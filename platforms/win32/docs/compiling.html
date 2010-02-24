@@ -96,19 +96,6 @@ To regenerate the entire VM you will have to get aquainted to
 <a href="http://wiki.squeak.org/squeak/2105">VMMaker</a> and 
 <a href="http://wiki.squeak.org/squeak/2444">VMMakerTool</a>.<p>
 
-First, check that you have a VMMaker version that is applicable for the build 
-structure. The best way to check this is to open a browser and see whether
-Win32VMMaker is a subclass of VMMakerWithFileCopying or just plain old
-VMMaker. If the latter (i.e., VMMaker subclass: #Win32VMMaker) leave
-everything is as is. If the former (i.e., VMMakerWithFileCopying subclass: 
-#Win32VMMaker) do the following:<p>
-<ul>
-<li> <b>REMOVE</b> Win32VMMaker completely. Yes, <b>NUKE IT</b>.
-<li> Load Win32VMMaker from the build directory of the C support code:
-  platforms/win32/build/Win32VMMaker.st
-</ul>
-<p>
-
 If you just want to rebuild the VM use the build location provided by the
 file release you are using. If you do your own development you need to decide
 where to put the build files. You have two choices:<p>
