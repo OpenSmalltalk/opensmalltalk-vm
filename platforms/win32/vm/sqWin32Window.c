@@ -2353,7 +2353,6 @@ int ioShowDisplay(int dispBits, int width, int height, int depth,
 int clipboardSize(void) { 
   HANDLE h;
   WCHAR *src;
-  unsigned char *tmp;
   int i, count, bytesNeeded;
 
   /* Do we have text in the clipboard? */
@@ -2370,18 +2369,20 @@ int clipboardSize(void) {
   /* How many bytes do we need to store those unicode chars in UTF8 format? */
   bytesNeeded = WideCharToMultiByte(CP_UTF8, 0, src, -1,
 				    NULL, 0, NULL, NULL );
-  tmp = malloc(bytesNeeded+1);
+  if (bytesNeeded > 0) {
+    unsigned char *tmp = malloc(bytesNeeded+1);
 
-  /* Convert Unicode text to UTF8. */
-  WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded , NULL, NULL);
+    /* Convert Unicode text to UTF8. */
+    WideCharToMultiByte(CP_UTF8, 0, src, -1, tmp, bytesNeeded , NULL, NULL);
 
-  /* Count CrLfs for which we remove the extra Lf */
-  count = bytesNeeded; /* ex. terminating zero */
-  for(i=0; i<count; i++) {
-    if((tmp[i] == 13) && (tmp[i+1] == 10)) bytesNeeded--;
+    /* Count CrLfs for which we remove the extra Lf */
+    count = bytesNeeded; /* ex. terminating zero */
+    for(i=0; i<count; i++) {
+      if((tmp[i] == 13) && (tmp[i+1] == 10)) bytesNeeded--;
+    }
+    bytesNeeded--; /* discount terminating zero */
+    free(tmp); /* no longer needed */
   }
-  bytesNeeded--; /* discount terminating zero */
-  free(tmp); /* no longer needed */
 
   GlobalUnlock(h);
   CloseClipboard();
