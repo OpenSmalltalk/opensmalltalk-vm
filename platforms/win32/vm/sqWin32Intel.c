@@ -697,6 +697,86 @@ void SetupStderr()
 /*                      Release                                             */
 /****************************************************************************/
 
+void
+printCommonCrashDumpInfo(FILE *f) {
+
+    fprintf(f,"\n\n%s", hwInfoString);
+    fprintf(f,"\n%s", osInfoString);
+    fprintf(f,"\n%s", gdInfoString);
+
+    /* print VM version information */
+    fprintf(f,"\nVM Version: %s\n", VM_VERSION_INFO);
+    fflush(f);
+    fprintf(f,"\n"
+	    "Current byte code: %d\n"
+	    "Primitive index: %d\n",
+	    getCurrentBytecode(),
+	    methodPrimitiveIndex());
+    fflush(f);
+    /* print loaded plugins */
+    fprintf(f,"\nLoaded plugins:\n");
+    {
+      int index = 1;
+      char *pluginName;
+      while( (pluginName = ioListLoadedModule(index)) != NULL) {
+	fprintf(f,"\t%s\n", pluginName);
+	fflush(f);
+	index++;
+      }
+    }
+	/* print the caller's stack to "crash.dmp" */
+    fprintf(f,"\nThe Smalltalk Stack:\n");
+    {
+	  FILE tmpStdout;
+	  tmpStdout = *stdout;
+	  *stdout = *f;
+	  printCallStack();
+	  *f = *stdout;
+	  *stdout = tmpStdout;
+	  fprintf(f,"\n");
+    }
+}
+
+void
+error(char *msg) {
+  FILE *f;
+  TCHAR crashInfo[1024];
+
+    wsprintf(crashInfo,
+	   TEXT("Sorry but the VM has crashed.\n\n")
+	   TEXT("Reason: %s\n\n")
+	   TEXT("Current byte code: %d\n")
+	   TEXT("Primitive index: %d\n\n")
+	   TEXT("This information will be stored in the file\n")
+	   TEXT("%s\\%s\n")
+	   TEXT("with a complete stack dump"),
+	   msg,
+	   getCurrentBytecode(),
+	   methodPrimitiveIndex(),
+	   vmPath,
+	   TEXT("crash.dmp"));
+  if(!fHeadlessImage)
+    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
+                 MB_OK | MB_APPLMODAL | MB_ICONSTOP);
+
+  SetCurrentDirectory(vmPath);
+  /* print the above information */
+  f = fopen("crash.dmp","a");
+  if(f){  
+    time_t crashTime = time(NULL);
+    fprintf(f,"---------------------------------------------------------------------\n");
+    fprintf(f,"%s\n\n", ctime(&crashTime));
+
+	fprintf(f,"Reason: %s\n", msg);
+	printCommonCrashDumpInfo(f);
+	fclose(f);
+  }
+  /* print the caller's stack to stdout */
+  printCallStack();
+  exit(-1);
+}
+
+
 void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 { TCHAR crashInfo[1024];
   FILE *f;
@@ -731,7 +811,7 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
                      vmPath,
                      TEXT("crash.dmp"));
   if(!fHeadlessImage)
-    MessageBox(0,crashInfo,TEXT("Fatal VM error"),
+    MessageBox(stWindow,crashInfo,TEXT("Fatal VM error"),
                  MB_OK | MB_APPLMODAL | MB_ICONSTOP);
 
   SetCurrentDirectory(vmPath);
@@ -769,46 +849,12 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
 
-    fprintf(f,"\n%s", hwInfoString);
-    fprintf(f,"\n%s", osInfoString);
-    fprintf(f,"\n%s", gdInfoString);
+	printCommonCrashDumpInfo(f);
+	fclose(f);
 
-    /* print VM version information */
-    fprintf(f,"\nVM Version: %s\n", VM_VERSION);
-    fflush(f);
-    fprintf(f,"\n"
-	    "Current byte code: %d\n"
-	    "Primitive index: %d\n",
-	    byteCode,
-	    methodPrimitiveIndex());
-    fflush(f);
-    /* print loaded plugins */
-    fprintf(f,"\nLoaded plugins:\n");
-    {
-      int index = 1;
-      char *pluginName;
-      while( (pluginName = ioListLoadedModule(index)) != NULL) {
-	fprintf(f,"\t%s\n", pluginName);
-	fflush(f);
-	index++;
-      }
-    }
-    fprintf(f, "\n\nStack dump:\n\n");
+    /* print the caller's stack twice (to stdout and "crash.dmp")*/
+	printCallStack();
   }
-  fflush(f);
-
-  /* print the caller's stack twice (to stdout and "crash.dmp")*/
-  {
-	  FILE tmpStdout;
-	  tmpStdout = *stdout;
-	  *stdout = *f;
-	  printCallStack();
-	  *f = *stdout;
-	  *stdout = tmpStdout;
-	  fprintf(f,"\n");
-	  fclose(f);
-  }
-
   } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
     /* that's to bad ... */
     if(!fHeadlessImage)
@@ -819,42 +865,11 @@ void printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
   }
 }
 
-void printErrors()
-{ TCHAR *errorMsg;
-  fpos_t stdoutSize,stderrSize;
-
-  if(*stdoutName)
-    {
-      fgetpos(stdout,&stdoutSize);
-      fseek(stdout,0,SEEK_SET);
-    }
-  else stdoutSize = 0;
-
-  if(*stderrName)
-    {
-      fgetpos(stderr,&stderrSize);
-      fseek(stderr,0,SEEK_SET);
-    }
-  else stderrSize = 0;
-
-  if(stdoutSize <= 0 && stderrSize <= 0) return;
-  errorMsg = (char*) calloc((int)(stdoutSize+stderrSize+2),1);
-  fread(errorMsg,(int)stdoutSize,1,stdout);
-  errorMsg[stdoutSize] = '\n';
-  fread(&errorMsg[(int)(stdoutSize+1)],(int)stderrSize,1,stderr);
-  if(!fHeadlessImage)
-    MessageBox(0,errorMsg,TEXT("Error:"),MB_OK);
-  free(errorMsg);
-}
-
 extern int inCleanExit;
 
 void __cdecl Cleanup(void)
 { /* not all of these are essential, but they're polite... */
 
-  if(!inCleanExit) {
-    printCallStack();
-  }
   ioShutdownAllModules();
 #ifndef NO_PLUGIN_SUPPORT
   pluginExit();
@@ -868,8 +883,6 @@ void __cdecl Cleanup(void)
   PROFILE_SHOW(ticksForReversal);
   PROFILE_SHOW(ticksForBlitting);
   /* Show errors only if not in a browser */
-  if(!browserWindow)
-	  printErrors();
   if(*stderrName)
     {
       fclose(stderr);

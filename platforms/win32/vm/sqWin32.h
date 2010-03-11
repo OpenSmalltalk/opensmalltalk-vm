@@ -241,8 +241,15 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define VM_VERSION TEXT("Squeak 3.11.5 (beta) from ") TEXT(__DATE__) \
-	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
+/* Ensure that VM_VERSION (3.11.5 etc) is defined */
+#ifndef VM_VERSION
+#error "VM_VERSION is undefined"
+#endif
+#ifndef VM_NAME
+#error "VM_NAME is undefined"
+#endif
+
+#define VM_VERSION_INFO TEXT(VM_NAME) TEXT(VM_VERSION) TEXT(" from ") TEXT(__DATE__) \
 
 /********************************************************/
 /* image reversal functions                             */

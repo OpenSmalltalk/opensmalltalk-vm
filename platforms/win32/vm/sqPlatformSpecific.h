@@ -21,6 +21,9 @@
 #define squeakFileOffsetType unsigned long long
 #endif
 
+#undef error
+#define error(str) ioFatalError(str)
+
 #ifdef WIN32_FILE_SUPPORT
 
 #undef sqImageFile
