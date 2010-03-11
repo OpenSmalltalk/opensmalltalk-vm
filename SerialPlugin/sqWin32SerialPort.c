@@ -21,7 +21,7 @@
 #endif
 
 /* Maximum number of serial ports supported */
-#define MAX_SERIAL_PORTS 16
+#define MAX_SERIAL_PORTS 256
 
 /* Size of the queues used by the driver */
 #define  IN_QUEUE_SIZE 4096
@@ -108,7 +108,7 @@ int serialPortOpen(int portNum, int baudRate, int stopBitsType,
       success(false);
       return 0;
     }
-  wsprintf(name,TEXT("COM%d"),portNum);
+  wsprintf(name,TEXT("\\\\.\\COM%d"),portNum);
   port = CreateFile(name,
       GENERIC_READ | GENERIC_WRITE,
       0,             /* comm devices must be opened with exclusive access */
