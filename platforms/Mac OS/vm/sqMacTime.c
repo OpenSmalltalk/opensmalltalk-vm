@@ -66,6 +66,23 @@ int ioLowResMSecs(void)
   return lowResMSecs;
 }
 
+sqLong ioMicroSeconds(void)
+{
+	//API Documented
+	struct timeval now;
+	sqLong theTimeIs;
+	
+	gettimeofday(&now, 0);
+	if ((now.tv_usec-= startUpTime.tv_usec) < 0) {
+		now.tv_usec+= 1000000;
+		now.tv_sec-= 1;
+	}
+	now.tv_sec-= startUpTime.tv_sec;
+	theTimeIs = now.tv_usec;
+	theTimeIs = theTimeIs + now.tv_sec * 1000000;
+	return theTimeIs;
+}
+
 int ioMicroMSecs(void)
 {
   struct timeval now;

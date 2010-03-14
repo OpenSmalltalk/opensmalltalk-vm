@@ -95,7 +95,7 @@ extern Boolean gSqueakHasCursor;
 		bitsPerPixel: 0];
       {
 	unsigned *planes[5];
-	[bitmap getBitmapDataPlanes: planes];
+	[bitmap getBitmapDataPlanes:(unsigned char **) planes];
 	unsigned* src= (unsigned*)cursorBitsIndex;
 	unsigned* dst= planes[0];
 	int i;

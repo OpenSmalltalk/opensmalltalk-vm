@@ -802,7 +802,7 @@ int ioScreenSize(void) {
 
 int ioSetCursor(sqInt cursorBitsIndex, int offsetX, int offsetY) {
 	/* Old version; forward to new version. */
-	ioSetCursorWithMask(cursorBitsIndex, nil, offsetX, offsetY);
+	ioSetCursorWithMask(cursorBitsIndex, 0, offsetX, offsetY);
 	return 0;
 }
 
@@ -824,7 +824,7 @@ int ioSetCursorWithMask(sqInt cursorBitsIndex, sqInt cursorMaskIndex, int offset
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 0;
 	biggerCursorActive = false;
 	
-	if (cursorMaskIndex == nil) {
+	if (cursorMaskIndex == 0) {
 		for (i = 0; i < 16; i++) {
 			macCursor.data[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
 			macCursor.mask[i] = CFSwapInt16BigToHost((short)(checkedLongAt(cursorBitsIndex + (4 * i)) >> 16)) & 0xFFFF;
@@ -1080,7 +1080,7 @@ Boolean FindBestMatch (VideoRequestRecPtr requestRecPtr, short bitDepth, unsigne
 	//						(bounds are greater/equal or kMaximizeRes not set) and
 	//						(depth is less/equal or kShallowDepth not set) and
 	//						(request match or kAbsoluteRequest not set)
-	if	(	nil == requestRecPtr->displayMode
+	if	(	0 == requestRecPtr->displayMode
 			&&
 			(	(horizontal >= requestRecPtr->reqHorizontal &&
 				vertical >= requestRecPtr->reqVertical)
