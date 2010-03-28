@@ -118,7 +118,7 @@ DWORD dwMemorySize = 0;        /* How much memory do we use? */
 BOOL  fBrowserMode = 0;        /* Are we running in a web browser? */
 
 /* Misc preferences */
-BOOL  fEnableAltF4Quit = 1; /* can we quit using Alt-F4? */
+BOOL  fEnableAltF4Quit = 0; /* can we quit using Alt-F4? */
 BOOL  fEnableF2Menu = 1;    /* can we get prefs menu via F2? */
 BOOL  fEnablePrefsMenu = 1; /* can we get a prefs menu at all? */
 
