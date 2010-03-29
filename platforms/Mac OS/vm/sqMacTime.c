@@ -95,6 +95,18 @@ int ioMicroMSecs(void)
   return (now.tv_usec / 1000 + now.tv_sec * 1000);
 }
 
+sqInt ioUtcWithOffset(sqLong *microSeconds, int *offset)
+{
+	struct timeval timeval;
+	if (gettimeofday(&timeval, NULL) == -1) return -1;
+	long long seconds = timeval.tv_sec;
+	suseconds_t usec = timeval.tv_usec;
+	*microSeconds = seconds * 1000000 + usec;
+	*offset = localtime(&seconds)->tm_gmtoff;
+	return 0;
+}
+
+
 int ioSeconds(void) {
     time_t unixTime;
     

@@ -33,7 +33,7 @@ typedef struct {
 typedef struct ModuleEntry {
 	struct ModuleEntry *next;
 	void *handle;
-	int ffiLoaded;
+	sqInt ffiLoaded;
 	char name[1];
 } ModuleEntry;
 
@@ -54,7 +54,7 @@ static void *findLoadedModule(char *pluginName)
 	return NULL;
 }
 
-static ModuleEntry *addToModuleList(char *pluginName, void* handle, int ffiFlag)
+static ModuleEntry *addToModuleList(char *pluginName, void* handle, sqInt ffiFlag)
 {
 	ModuleEntry *module;
 
@@ -72,7 +72,7 @@ static ModuleEntry *addToModuleList(char *pluginName, void* handle, int ffiFlag)
 	Remove the given entry from the list of loaded modules.
 	Do NOT free it yet.
 */
-static int removeFromList(ModuleEntry *entry)
+static sqInt removeFromList(ModuleEntry *entry)
 {
 	ModuleEntry *prevModule;
 
@@ -116,7 +116,7 @@ static void *findExternalFunctionIn(char *functionName, ModuleEntry *module)
 static void *findInternalFunctionIn(char *functionName, char *pluginName)
 {
   char *function, *plugin;
-  int listIndex, index;
+  sqInt listIndex, index;
   sqExport *exports;
 
   dprintf(("Looking (internally) for %s in %s ... ", functionName, (pluginName ? pluginName : "<intrinsic>")));
@@ -168,7 +168,7 @@ static void *findFunctionIn(char *functionName, ModuleEntry *module)
 	b) initialiseModule (if defined) and check it's return
 	as well.
 */
-static int callInitializersIn(ModuleEntry *module)
+static sqInt callInitializersIn(ModuleEntry *module)
 {
 	void *init0;
 	void *init1;
@@ -226,7 +226,7 @@ static int callInitializersIn(ModuleEntry *module)
 	If anything goes wrong make sure the module is unloaded
 	(WITHOUT calling shutdownModule()) and return NULL.
 */
-static ModuleEntry *findAndLoadModule(char *pluginName, int ffiLoad)
+static ModuleEntry *findAndLoadModule(char *pluginName, sqInt ffiLoad)
 {
 	void *handle;
 	ModuleEntry *module;
@@ -265,7 +265,7 @@ static ModuleEntry *findAndLoadModule(char *pluginName, int ffiLoad)
 	Look if the given module is already loaded. 
 	If so, return it's handle, otherwise try to load it.
 */
-static ModuleEntry *findOrLoadModule(char *pluginName, int ffiLoad)
+static ModuleEntry *findOrLoadModule(char *pluginName, sqInt ffiLoad)
 {
 	ModuleEntry *module;
 
@@ -313,11 +313,11 @@ void *ioLoadFunctionFrom(char *functionName, char *pluginName)
 void *ioLoadExternalFunctionOfLengthFromModuleOfLength(sqInt functionNameIndex, sqInt functionNameLength,
 						       sqInt moduleNameIndex,   sqInt moduleNameLength)
 {
-	char *functionNamePointer= pointerForOop(functionNameIndex);
-	char *moduleNamePointer= pointerForOop(moduleNameIndex);
+	char *functionNamePointer= pointerForOop((usqInt)functionNameIndex);
+	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
 	char functionName[256];
 	char moduleName[256];
-	int i;
+	sqInt i;
 
 	if(functionNameLength > 255 || moduleNameLength > 255)
 		return 0; /* can't cope with those */
@@ -335,9 +335,9 @@ void *ioLoadExternalFunctionOfLengthFromModuleOfLength(sqInt functionNameIndex, 
 */
 void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionNameLength, void *moduleHandle)
 {
-	char *functionNamePointer= pointerForOop(functionNameIndex);
+	char *functionNamePointer= pointerForOop((usqInt)functionNameIndex);
 	char functionName[256];
-	int i;
+	sqInt i;
 
 	if(functionNameLength > 255)
 		return 0; /* can't cope with those */
@@ -358,9 +358,9 @@ void *ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionName
 void *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
 	ModuleEntry *module;
-	char *moduleNamePointer= pointerForOop(moduleNameIndex);
+	char *moduleNamePointer= pointerForOop((usqInt)moduleNameIndex);
 	char moduleName[256];
-	int i;
+	sqInt i;
 
 	if(moduleNameLength > 255) return 0; /* can't cope with those */
 	for(i=0; i< moduleNameLength; i++)
@@ -376,7 +376,7 @@ void *ioLoadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 /* shutdownModule:
 	Call the shutdown mechanism from the specified module.
 */
-static int shutdownModule(ModuleEntry *module)
+static sqInt shutdownModule(ModuleEntry *module)
 {
 	void* fn;
 
@@ -384,7 +384,7 @@ static int shutdownModule(ModuleEntry *module)
 
 	/* load the actual function */
 	fn = findFunctionIn("shutdownModule", module);
-	if(fn) return ((int (*) (void)) fn) ();
+	if(fn) return ((sqInt (*) (void)) fn) ();
 	return 1;
 }
 
@@ -428,7 +428,7 @@ sqInt ioUnloadModule(char *moduleName)
 			void *fn = findFunctionIn("moduleUnloaded", temp);
 			if(fn) {
 				/* call it */
-				((int (*) (char *))fn)(entry->name);
+				((sqInt (*) (char *))fn)(entry->name);
 			}
 		}
 		temp = temp->next;
@@ -446,9 +446,9 @@ sqInt ioUnloadModule(char *moduleName)
 */
 sqInt ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 {
-	char *moduleNamePointer= pointerForOop(moduleNameIndex);
+	char *moduleNamePointer= pointerForOop((usqInt) moduleNameIndex);
 	char moduleName[256];
-	int i;
+	sqInt i;
 
 	if(moduleNameLength > 255) return 0; /* can't cope with those */
 	for(i=0; i< moduleNameLength; i++)
@@ -463,7 +463,7 @@ sqInt ioUnloadModuleOfLength(sqInt moduleNameIndex, sqInt moduleNameLength)
 
 char *ioListBuiltinModule(sqInt moduleIndex)
 {
-  int index, listIndex;
+  sqInt index, listIndex;
   char *function;
   char *plugin;
   sqExport *exports;
@@ -495,7 +495,7 @@ char *ioListBuiltinModule(sqInt moduleIndex)
 }
 
 char *ioListLoadedModule(sqInt moduleIndex) {
-	int index = 1;
+	sqInt index = 1;
 
 	ModuleEntry *entry;
 	entry = firstModule;

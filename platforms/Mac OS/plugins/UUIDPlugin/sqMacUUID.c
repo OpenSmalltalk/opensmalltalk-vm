@@ -12,8 +12,8 @@
 *
 */
 
-#include "UUIDPlugin.h"
 #include "sq.h"
+#include "UUIDPlugin.h"
 
 extern struct VirtualMachine *interpreterProxy;
 

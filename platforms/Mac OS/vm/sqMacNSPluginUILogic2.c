@@ -18,9 +18,9 @@
 #include <sys/types.h>
 #include <sys/mman.h>
 
+#include "sq.h"
 #include "sqMacNSPluginUILogic2.h"
 #include "sqMacHostWindow.h"
-#include "sq.h"
 #include "sqaio.h"
 #include "sqVirtualMachine.h"
 #include "sqUnixCharConv.h"

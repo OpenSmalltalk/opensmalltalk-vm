@@ -112,6 +112,8 @@
 sqInt ioMSecs(void);
 /* deprecated out ofexistence sqInt ioLowResMSecs(void); */
 sqInt ioMicroMSecs(void);
+sqLong ioMicroSeconds(void);		/* primitiveMicrosecondClock */
+sqInt ioUtcWithOffset(sqLong*, int*);	/* primitiveUtcWithOffset */
 
 #define ioMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
 
@@ -214,6 +216,7 @@ sqInt ioProcessEvents(void);
 #define EventTypeDragDropFiles	3
 #define EventTypeMenu		4
 #define EventTypeWindow		5
+#define	EventTypeComplex	6
 
 /* Keypress state for keyboard events. */
 #define EventKeyChar	0
@@ -325,6 +328,29 @@ typedef struct sqWindowEvent
 #define WindowEventPaint	5 /* window area (in value1-4) needs updating. Some platforms do not need to send this, do not rely on it in image */
 #define WindowEventStinks	6 /* this window stinks (just to see if people read this stuff) */
 
+typedef struct sqComplexEvent
+	{
+		int type;			/* type of event;  EventTypeComplex */
+		unsigned int timeStamp;	/* time stamp */
+		/* the interpretation of the following fields depend on the type  of the event */
+		int action;		        /* one of ComplexEventXXX (see below) */
+		usqInt objectPointer;	/* used to point to object */
+		int unused1;			/*  */
+		int unused2;			/*  */
+		int unused3;			/*  */
+		int windowIndex;	/* host window structure */
+	} sqComplexEvent;
+
+#define ComplexEventTypeTouchsDown	1 /*  */
+#define ComplexEventTypeTouchsUp	2 /*  */
+#define ComplexEventTypeTouchsMoved	3 /*  */
+#define ComplexEventTypeTouchsStationary 4 /*  */
+#define ComplexEventTypeTouchsCancelled	5 /*  */
+#define ComplexEventTypeAccelerationData	6 /*  */
+#define ComplexEventTypeLocationData	7 /*  */
+#define ComplexEventTypeApplicationData	8 /*  */
+
+
 /* Set an asynchronous input semaphore index for events. */
 sqInt ioSetInputSemaphore(sqInt semaIndex);
 /* Retrieve the next input event from the OS. */
@@ -346,7 +372,7 @@ sqInt ioDisableImageWrite(void);
 
 /* Save/restore. */
 /* Read the image from the given file starting at the given image offset */
-sqInt readImageFromFileHeapSizeStartingAt(sqImageFile f, sqInt desiredHeapSize, squeakFileOffsetType imageOffset);
+sqInt readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
 /* NOTE: The following is obsolete - it is only provided for compatibility */
 #define readImageFromFileHeapSize(f, s) readImageFromFileHeapSizeStartingAt(f,s,0)
 
@@ -375,8 +401,8 @@ sqInt startProfiling(void);
 sqInt stopProfiling(void);
 
 /* System attributes. */
-sqInt attributeSize(sqInt id);
-sqInt getAttributeIntoLength(sqInt id, sqInt byteArrayIndex, sqInt length);
+sqInt attributeSize(sqInt indexNumber);
+sqInt getAttributeIntoLength(sqInt indexNumber, sqInt byteArrayIndex, sqInt length);
 
 /*** Pluggable primitive support. ***/
 

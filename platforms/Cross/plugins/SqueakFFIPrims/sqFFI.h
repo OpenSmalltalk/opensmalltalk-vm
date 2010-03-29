@@ -85,6 +85,7 @@ int ffiPushSignedShort(int value);
 int ffiPushUnsignedShort(int value);
 int ffiPushSignedInt(int value);
 int ffiPushUnsignedInt(int value);
+int ffiPushBool(int value);
 
 /* 64bit integer loads */
 int ffiPushSignedLongLong(int lowWord, int highWord);

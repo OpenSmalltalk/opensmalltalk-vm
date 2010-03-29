@@ -52,3 +52,34 @@ sqInt sqSocketGetOptionsoptionNameStartoptionNameSizereturnedValue(SocketPtr s, 
 /* tpr 4/12/06 add declarations for two new socket routines */
 void sqSocketBindToPort(SocketPtr s, int addr, int port);
 void sqSocketSetReusable(SocketPtr s);
+
+void  sqResolverGetAddressInfoHostSizeServiceSizeFlagsFamilyTypeProtocol(char *hostName, sqInt hostSize, char *servName, sqInt servSize,
+																		 sqInt flags, sqInt family, sqInt type, sqInt protocol);
+sqInt sqResolverGetAddressInfoSize(void);
+void  sqResolverGetAddressInfoResultSize(char *addr, sqInt addrSize);
+sqInt sqResolverGetAddressInfoFamily(void);
+sqInt sqResolverGetAddressInfoType(void);
+sqInt sqResolverGetAddressInfoProtocol(void);
+sqInt sqResolverGetAddressInfoNext(void);
+
+sqInt sqSocketAddressSizeGetPort(char *addr, sqInt addrSize);
+void  sqSocketAddressSizeSetPort(char *addr, sqInt addrSize, sqInt port);
+
+void  sqResolverGetNameInfoSizeFlags(char *addr, sqInt addrSize, sqInt flags);
+sqInt sqResolverGetNameInfoHostSize(void);
+void  sqResolverGetNameInfoHostResultSize(char *name, sqInt nameSize);
+sqInt sqResolverGetNameInfoServiceSize(void);
+void  sqResolverGetNameInfoServiceResultSize(char *name, sqInt nameSize);
+
+sqInt sqResolverHostNameSize(void);
+void  sqResolverHostNameResultSize(char *name, sqInt nameSize);
+
+void  sqSocketBindToAddressSize(SocketPtr s, char *addr, sqInt addrSize);
+void  sqSocketListenBacklog(SocketPtr s, sqInt backlogSize);
+void  sqSocketConnectToAddressSize(SocketPtr s, char *addr, sqInt addrSize);
+
+sqInt sqSocketLocalAddressSize(SocketPtr s);
+void  sqSocketLocalAddressResultSize(SocketPtr s, char *addr, int addrSize);
+sqInt sqSocketRemoteAddressSize(SocketPtr s);
+void  sqSocketRemoteAddressResultSize(SocketPtr s, char *addr, int addrSize);
+

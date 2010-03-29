@@ -97,6 +97,9 @@ size_t      sqImageFileReadEntireImage(void *ptr,  size_t elementSize, size_t co
 #undef ioMicroMSecs
 #undef ioMSecs
 #define ioMSecs ioMicroMSecs
+#undef ioMicroSecondClock
+#define ioMicroSecondClock ioMicroSeconds
+#define ioUtcWithOffset(clock, offset) setMicroSecondsandOffset(clock, offset)
 
 /* macro to return from interpret() loop in browser plugin VM */
 #define ReturnFromInterpret() return

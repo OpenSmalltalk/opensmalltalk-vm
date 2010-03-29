@@ -2,6 +2,6 @@
 
 typedef char sqUUID[16];
 
-int MakeUUID(sqUUID location);
-int sqUUIDInit();
-int sqUUIDShutdown();
+sqInt MakeUUID(sqUUID location);
+sqInt sqUUIDInit(void);
+sqInt sqUUIDShutdown(void);
