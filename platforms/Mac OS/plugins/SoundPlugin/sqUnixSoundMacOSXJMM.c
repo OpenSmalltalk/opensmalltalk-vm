@@ -66,6 +66,7 @@
 #include <string.h>
 #include <assert.h>
 
+
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 #define DeviceFrameSize	8	// ditto (<CoreAudio/AudioHardware.h>, para 9)
 
@@ -77,11 +78,16 @@ char empty[256] = { 0 };
 #if (!TESTING)
 # include "sq.h"
 #else
-   sqInt noSoundMixer= 0;
    inline sqInt signalSemaphoreWithIndex(sqInt sema) { return 0; }
    inline sqInt success(sqInt flag) { return 0; }
    inline sqInt primitiveFail(void) { return -1; }
 #endif
+
+#include "sqMacUnixInterfaceSound.h"
+
+char		*dpyPixels  = 0;
+sqInt		 dpyPitch   = 0;
+sqInt		noSoundMixer = 0;
 
 #if (DEBUG)
 
@@ -737,9 +743,7 @@ sqInt Stream_stop(Stream *s)
 // Note: this is only used when the "sound quick start" preference is
 // enabled in the image.
 // 
- sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, usqInt* srcBufPtr,
-				  sqInt framesOfLeadTime);
- sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, usqInt* srcBufPtr,
+ sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void* srcBufPtr,
 				  sqInt framesOfLeadTime)
 {
 #pragma unused(framesOfLeadTime)
@@ -828,8 +832,8 @@ sqInt Stream_stop(Stream *s)
 // play (exactly) frameCount of samples (and no less, since the result is
 // ignored).
 // 
- sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, usqInt* arrayIndex, sqInt startIndex);
-  sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, usqInt* arrayIndex, sqInt startIndex)
+
+  sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void* arrayIndex, sqInt startIndex)
 {
   if (output)
     {
@@ -965,15 +969,18 @@ sqInt Stream_stop(Stream *s)
 }
 
 
- sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes);
- sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+ sqInt sound_RecordSamplesIntoAtLength(void * buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   if (input)
     {
       if (Buffer_avail(input->buffer) >= (512 * DeviceFrameSize))
 	{
 	  sqInt    start= startSliceIndex * SqueakFrameSize / 2;
-	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
+	  sqInt count= min(input->cvtBufSize, bufferSizeInBytes);
+		if (count <= 0) {
+			success(false);
+			return 0;
+		}
 	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
 								&count, (char *)buf + start))
 	    return count / (SqueakFrameSize / 2) / input->channels;

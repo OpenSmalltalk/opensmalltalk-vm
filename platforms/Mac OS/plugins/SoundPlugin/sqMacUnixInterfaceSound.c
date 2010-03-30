@@ -7,9 +7,9 @@
  *
  */
 
-#include "sqMacUnixInterfaceSound.h"
 
 #include "sq.h"
+#include "sqMacUnixInterfaceSound.h"
 #include "SoundPlugin.h"
 #include "SqModule.h"
 #include "SqSound.h"
@@ -36,14 +36,14 @@ sqInt snd_AvailableSpace(void)
   return sound_AvailableSpace();
 }
 
-sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, usqInt* srcBufPtr, sqInt samplesOfLeadTime)
+sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void* srcBufPtr, sqInt samplesOfLeadTime)
 {
   return sound_InsertSamplesFromLeadTime(frameCount, srcBufPtr, samplesOfLeadTime);
 }
 
-sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, usqInt* arrayIndex, sqInt startIndex)
+sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
-  return sound_PlaySamplesFromAtLength(frameCount, arrayIndex, startIndex);
+  return sound_PlaySamplesFromAtLength(frameCount, srcBufPtr, startIndex);
 }
 
 sqInt snd_PlaySilence(void)
@@ -78,7 +78,7 @@ double snd_GetRecordingSampleRate(void)
   return sound_GetRecordingSampleRate();
 }
 
-sqInt snd_RecordSamplesIntoAtLength(usqInt *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+sqInt snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   return sound_RecordSamplesIntoAtLength(buf, startSliceIndex, bufferSizeInBytes);
 }
