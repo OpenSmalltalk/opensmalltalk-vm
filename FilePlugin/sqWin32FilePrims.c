@@ -79,7 +79,7 @@ sqInt sqFileAtEnd(SQFile *f) {
   if (!sqFileValid(f)) FAIL();
   ofs.offset = 0;
   ofs.dwLow = SetFilePointer(FILE_HANDLE(f), 0, &ofs.dwHigh, FILE_CURRENT);
-  return ofs.offset == sqFileSize(f);
+  return ofs.offset >= sqFileSize(f);
 }
 
 sqInt sqFileClose(SQFile *f) {
