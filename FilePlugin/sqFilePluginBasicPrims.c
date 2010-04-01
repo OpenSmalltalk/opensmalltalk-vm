@@ -114,7 +114,7 @@ sqInt sqFileAtEnd(SQFile *f) {
 	/* Return true if the file's read/write head is at the end of the file. */
 
 	if (!sqFileValid(f)) return interpreterProxy->success(false);
-	return ftell(getFile(f)) == getSize(f);
+	return ftell(getFile(f)) >= getSize(f);
 }
 
 sqInt sqFileClose(SQFile *f) {
