@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2009-08-27 19:30:47 by piumarta on emilia-2.local
+# Last edited: 2010-04-01 19:47:10 by piumarta on ubuntu
 
 PROJECT (squeak)
 
@@ -83,6 +83,10 @@ IF (NOT CMAKE_C_FLAGS)
   SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS_RELEASE}")
 ENDIF (NOT CMAKE_C_FLAGS)
 
+IF (CMAKE_ARCH_FLAGS)
+  SET (CMAKE_C_FLAGS "${CMAKE_ARCH_FLAGS} ${CMAKE_C_FLAGS}")
+ENDIF (CMAKE_ARCH_FLAGS)
+
 MESSAGE (STATUS "Using CFLAGS ${CMAKE_C_FLAGS}")
 
 MACRO (USE_LIBRARY lib)
@@ -99,6 +103,12 @@ ENDMACRO (CONFIG_DEFINE var)
 
 SET (UNIX 1)
 CONFIG_DEFINE (UNIX)
+
+SET (ioMicroSecondClock ioMicroSeconds)
+CONFIG_DEFINE (ioMicroSecondClock)
+
+SET (ioUtcWithOffset sqUnixUtcWithOffset)
+CONFIG_DEFINE (ioUtcWithOffset)
 
 SET (CMAKE_SKIP_BUILD_RPATH TRUE)
 SET (CMAKE_BUILD_WITH_INSTALL_RPATH TRUE) 
