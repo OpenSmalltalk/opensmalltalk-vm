@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2009-08-19 04:34:40 by piumarta on emilia-2.local
+ * Last edited: 2010-04-01 13:54:58 by piumarta on emilia-2.local
  *
  *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
  *                              listed elsewhere in this file.
@@ -644,7 +644,7 @@ static void mixFrames(short *out, short *in, int nFrames)
 // Note: this is only used when the "sound quick start" preference is
 // enabled in the image.
 // 
-static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt framesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt framesOfLeadTime)
 {
   Stream *s= output;
 
@@ -715,9 +715,9 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, 
 
       if ((frontFrames + backFrames) >= (frameCount / 2))
 	{
-	  mixFrames((short *)frontData, (short *)pointerForOop(srcBufPtr), frontFrames);
+	  mixFrames((short *)frontData, (short *)srcBufPtr, frontFrames);	// mixFrames((short *)frontData, (short *)pointerForOop(srcBufPtr), frontFrames);
 	  srcBufPtr += frontFrames * SqueakFrameSize;
-	  mixFrames((short *)backData,  (short *)pointerForOop(srcBufPtr), backFrames);
+	  mixFrames((short *)backData,  (short *)srcBufPtr, backFrames);	// mixFrames((short *)backData,  (short *)pointerForOop(srcBufPtr), backFrames);
 	  framesDone= frontFrames + backFrames;
 	}
       return framesDone;
@@ -731,7 +731,7 @@ static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, 
 // play (exactly) frameCount of samples (and no less, since the result is
 // ignored).
 // 
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
   if (output)
     {
@@ -739,7 +739,7 @@ static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, s
       if (Buffer_free(output->buffer) >= byteCount)
 	{
 	  Buffer_write(output->buffer,
-		       pointerForOop(arrayIndex) + (startIndex * SqueakFrameSize),
+		       srcBufPtr + (startIndex * SqueakFrameSize),	// pointerForOop(arrayIndex) + (startIndex * SqueakFrameSize),
 		       byteCount);
 	  return frameCount;
 	}
@@ -861,7 +861,7 @@ static sqInt sound_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaI
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   if (input)
     {
@@ -869,8 +869,9 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
 	{
 	  int    start= startSliceIndex * SqueakFrameSize / 2;
 	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
-	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
-								&count, pointerForOop(buf) + start))
+	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter,
+								bufferDataProc, input, &count,
+								buf + start))	// pointerForOop(buf) + start))
 	    return count / (SqueakFrameSize / 2) / input->channels;
 	}
       return 0;

@@ -2,7 +2,7 @@
  *
  * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2009-12-17 10:26:20 by piumarta on ubuntu
+ * Last edited: 2010-04-01 13:48:37 by piumarta on emilia-2.local
  *
  *   Copyright (C) 2006 by Ian Piumarta
  *   All rights reserved.
@@ -196,13 +196,13 @@ static sqInt sound_AvailableSpace(void)
 #endif
 }
 
-static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
+static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
 
-static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
   if (output_handle)
     {
-      void *samples= (void *)arrayIndex + startIndex * output_channels * 2;
+      void *samples= srcBufPtr + startIndex * output_channels * 2;
       int   count=   snd_pcm_writei(output_handle, samples, frameCount);
       if (count < frameCount / 2)
 	{
@@ -299,11 +299,11 @@ static double sound_GetRecordingSampleRate(void)
   return (double)input_rate;
 }
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   if (input_handle)
     {
-      void *samples=    (void *)buf + (startSliceIndex * 2);
+      void *samples=    buf + (startSliceIndex * 2);
       int   frameCount= ((bufferSizeInBytes / 2) - startSliceIndex) / input_channels;
       int   count=      snd_pcm_readi(input_handle, samples, frameCount);
       if (count < 0)
@@ -515,10 +515,9 @@ static void sound_SetVolume(double left, double right)
     }
 }
 
-static sqInt sound_SetRecordLevel(sqInt level)
+static void sound_SetRecordLevel(sqInt level)
 {
   mixer_setVolume(sound_capture, 1, (double)level / 100.0, (double)level / 100.0);
-  return 1;
 }
 
 static sqInt sound_SetDevice(sqInt id, char *arg)

@@ -43,7 +43,7 @@
 #include "SqModule.h"
 #include "SqSound.h"
 
-extern int snd_Stop(void);
+extern sqInt snd_Stop(void);
 
 /*** module initialisation/shutdown ***/
 
@@ -52,7 +52,7 @@ extern struct SqModule *loadModule(char *type, char *name);
 
 static struct SqSound *snd= 0;
 
-int soundInit(void)
+sqInt soundInit(void)
 {
   if (!soundModule
 #    if 0
@@ -83,7 +83,7 @@ int soundInit(void)
 }
 
 
-int soundShutdown(void)
+sqInt soundShutdown(void)
 {
   if (snd) snd->snd_Stop();
   return 1;
@@ -92,44 +92,44 @@ int soundShutdown(void)
 
 /* output */
 
-int snd_AvailableSpace(void)
+sqInt snd_AvailableSpace(void)
 {
   return snd->snd_AvailableSpace();
 }
 
-int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime)
+sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
 {
   return snd->snd_InsertSamplesFromLeadTime(frameCount, srcBufPtr, samplesOfLeadTime);
 }
 
-int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
-  return snd->snd_PlaySamplesFromAtLength(frameCount, arrayIndex, startIndex);
+  return snd->snd_PlaySamplesFromAtLength(frameCount, srcBufPtr, startIndex);
 }
 
-int snd_PlaySilence(void)
+sqInt snd_PlaySilence(void)
 {
   return snd->snd_PlaySilence();
 }
 
-int snd_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
+sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   return snd->snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
 }
 
-int snd_Stop(void)
+sqInt snd_Stop(void)
 {
   return snd->snd_Stop();
 }
 
 /* input */
 
-int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex)
+sqInt snd_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   return snd->snd_StartRecording(desiredSamplesPerSec, stereo, semaIndex);
 }
 
-int snd_StopRecording(void)
+sqInt snd_StopRecording(void)
 {
   return snd->snd_StopRecording();
 }
@@ -139,16 +139,16 @@ double snd_GetRecordingSampleRate(void)
   return snd->snd_GetRecordingSampleRate();
 }
 
-int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+sqInt snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   return snd->snd_RecordSamplesIntoAtLength(buf, startSliceIndex, bufferSizeInBytes);
 }
 
 /* mixer */
 
-void snd_Volume(double *left, double *right)			{	 snd->snd_Volume(left, right); }
-void snd_SetVolume(double left, double right)			{	 snd->snd_SetVolume(left, right); }
-int  snd_SetRecordLevel(int level)				{ return snd->snd_SetRecordLevel(level); }
-int  snd_GetSwitch(int id, int captureFlag, int channel)	{ return snd->snd_GetSwitch(id, captureFlag, channel); }
-int  snd_SetSwitch(int id, int captureFlag, int parameter)	{ return snd->snd_SetSwitch(id, captureFlag, parameter); }
-int  snd_SetDevice(int id, char *name)				{ return snd->snd_SetDevice(id, name); }
+void snd_Volume(double *left, double *right)			  { snd->snd_Volume(left, right); }
+void snd_SetVolume(double left, double right)			  { snd->snd_SetVolume(left, right); }
+void snd_SetRecordLevel(sqInt level)				  { snd->snd_SetRecordLevel(level); }
+sqInt snd_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)	  { return snd->snd_GetSwitch(id, captureFlag, channel); }
+sqInt snd_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter) { return snd->snd_SetSwitch(id, captureFlag, parameter); }
+sqInt snd_SetDevice(sqInt id, char *name)			  { return snd->snd_SetDevice(id, name); }

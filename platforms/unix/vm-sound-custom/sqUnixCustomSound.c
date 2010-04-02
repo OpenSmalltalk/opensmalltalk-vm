@@ -28,13 +28,13 @@ static sqInt sound_AvailableSpace(void)
   return 8192;
 }
 
-static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
 {
   trace();
   return frameCount;
 }
 
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
   trace();
   return frameCount;
@@ -80,7 +80,7 @@ static double sound_GetRecordingSampleRate(void)
   return 8192;
 }
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   trace();
   return 8192;
@@ -100,10 +100,9 @@ static void sound_SetVolume(double left, double right)
   trace();
 }
 
-static sqInt sound_SetRecordLevel(sqInt level)
+static void sound_SetRecordLevel(sqInt level)
 {
   trace();
-  return level;
 }
 
 static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)

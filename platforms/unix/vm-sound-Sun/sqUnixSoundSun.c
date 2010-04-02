@@ -71,14 +71,14 @@
 # define PRINTF(ARGS)
 #endif
 
-static int sound_Stop(void);
+static sqInt sound_Stop(void);
 static int sound_AvailableSpace(void);
 
 static int auFd=	       -1;   /* open on /dev/audio */
 static int auCtlFd=	       -1;   /* open on /dev/audioctl */
-static int fmtStereo=		0;   /* whether we are playing in stereo or not */
-static int auPlaySemaIndex=	0;   /* an index to signal when new data may be played */
-static int auBufBytes=		0;   /*  buffer size to use for playback.
+static sqInt fmtStereo=		0;   /* whether we are playing in stereo or not */
+static sqInt auPlaySemaIndex=	0;   /* an index to signal when new data may be played */
+static sqInt auBufBytes=	0;   /*  buffer size to use for playback.
 					 unfortunately, this bears no relationship to
 					 whatever the kernel and soundcard are using  */
 static int auBuffersPlayed=	0;
@@ -103,7 +103,7 @@ static void auHandle(int sig)
 /*** exported sound output functions ***/
 
 
-static int sound_Stop(void)
+static sqInt sound_Stop(void)
 {
   PRINTF();
   if (auFd == -1) return 0;
@@ -122,7 +122,7 @@ static int sound_Stop(void)
 }
 
 
-static int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   PRINTF(("(frameCount=%d, samplesPerSec=%d, stereo=%d, semaIndex=%d)",
 		frameCount, samplesPerSec, stereo, semaIndex));
@@ -194,7 +194,7 @@ closeAndFail:
 }
 
 
-static int sound_AvailableSpace(void)
+static sqInt sound_AvailableSpace(void)
 {
   PRINTF();
   struct audio_info info;
@@ -216,11 +216,11 @@ static int sound_AvailableSpace(void)
 }
 
 
-static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
   PRINTF(("(frameCount=%d, arrayIndex=%d, startIndex=%d)",
 		frameCount, arrayIndex, startIndex));
-  short *src= (short *) (arrayIndex + 4*startIndex);
+  short *src= (short *) (srcBufPtr + 4*startIndex);
   short buf[2*frameCount];
   int i;
   int bytes;
@@ -263,8 +263,8 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 }
 
 
-static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqint frameCount, void *srcBufPtr,
+				  sqInt samplesOfLeadTime)
 {
   PRINTF(("(frameCount=%d, srcBufPtr=%d, samplesOfLeadTime=%d)",
 		frameCount, srcBufPtr, samplesOfLeadTime));
@@ -272,7 +272,7 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 }
 
 
-static int sound_PlaySilence(void)
+static sqInt sound_PlaySilence(void)
 {
   PRINTF();
   success(false);
@@ -281,7 +281,7 @@ static int sound_PlaySilence(void)
 
 
 /** recording not supported **/
-static int sound_SetRecordLevel(int level)
+static sqInt sound_SetRecordLevel(sqInt level)
 {
   PRINTF();
   success(false);
@@ -289,7 +289,7 @@ static int sound_SetRecordLevel(int level)
 }
 
 
-static int sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex)
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   PRINTF();
   success(false);
@@ -297,7 +297,7 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIn
 }
 
 
-static int sound_StopRecording(void)
+static sqInt sound_StopRecording(void)
 {
   PRINTF();
   return 0;
@@ -312,7 +312,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   PRINTF();
   success(false);

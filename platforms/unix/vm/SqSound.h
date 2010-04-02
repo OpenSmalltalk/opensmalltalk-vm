@@ -12,8 +12,8 @@ struct SqSound
   int    version;
   /* output */
   sqInt  (*snd_AvailableSpace)(void);
-  sqInt  (*snd_InsertSamplesFromLeadTime)(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime);
-  sqInt  (*snd_PlaySamplesFromAtLength)(sqInt frameCount, sqInt arrayIndex, sqInt startIndex);
+  sqInt  (*snd_InsertSamplesFromLeadTime)(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime);
+  sqInt  (*snd_PlaySamplesFromAtLength)(sqInt frameCount, void *arrayIndex, sqInt startIndex);
   sqInt  (*snd_PlaySilence)(void);
   sqInt  (*snd_Start)(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
   sqInt  (*snd_Stop)(void);
@@ -21,14 +21,14 @@ struct SqSound
   sqInt  (*snd_StartRecording)(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex);
   sqInt  (*snd_StopRecording)(void);
   double (*snd_GetRecordingSampleRate)(void);
-  sqInt  (*snd_RecordSamplesIntoAtLength)(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes);
+  sqInt  (*snd_RecordSamplesIntoAtLength)(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes);
   /* mixer */
   void   (*snd_Volume)(double *left, double *right);
   void   (*snd_SetVolume)(double left, double right);
-  sqInt  (*snd_SetRecordLevel)(sqInt level);
-  int    (*snd_GetSwitch)(int id, int captureFlag, int channel);
-  int    (*snd_SetSwitch)(int id, int captureFlag, int parameter);
-  int    (*snd_SetDevice)(int id, char *name);
+  void   (*snd_SetRecordLevel)(sqInt level);
+  sqInt  (*snd_GetSwitch)(int id, int captureFlag, int channel);
+  sqInt  (*snd_SetSwitch)(int id, int captureFlag, int parameter);
+  sqInt  (*snd_SetDevice)(int id, char *name);
 };
 
 

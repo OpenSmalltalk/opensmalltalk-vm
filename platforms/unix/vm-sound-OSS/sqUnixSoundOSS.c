@@ -744,16 +744,16 @@ static sqInt sound_AvailableSpace(void)
 }
 
 
-static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
 {
   return success(false);
 }
 
 
-static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
   assert(out->write != 0);
-  return out->write(out, pointerForOop(arrayIndex) + startIndex * out->sq.bpf, frameCount);
+  return out->write(out, srcBufPtr + startIndex * out->sq.bpf, frameCount);
 }
 
 
@@ -822,7 +822,7 @@ static double sound_GetRecordingSampleRate(void)
 }
 
 
-static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   /*PRINTF(("record %d %d %d\n", buf, startSliceIndex, bufferSizeInBytes));*/
 
@@ -848,7 +848,7 @@ static sqInt sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, s
       frameCount= min(frameCount, framesAvail);
       /*PRINTF(("<%d", frameCount * in->hw.bpf));*/
       return in->read(in,
-		      pointerForOop(buf) + startSliceIndex * 2,
+		      buf + startSliceIndex * 2,
 		      frameCount)
 	* in->sq.channels;
     }
@@ -1020,9 +1020,9 @@ static int sound_RecordLevel(int *level)
 #endif
 
 
-static sqInt sound_SetRecordLevel(sqInt level)
+static void sound_SetRecordLevel(sqInt level)
 {
-  if (noSoundMixer) return 1;
+  if (noSoundMixer) return;
   if (mixer || (mixer= mixerOpen(&dev_mixer)))
     {
       level= level * LEVEL_MAX / 1000;
@@ -1031,10 +1031,9 @@ static sqInt sound_SetRecordLevel(sqInt level)
       else if (level > 255)
 	level= 255;
 
-      if (mixerSetLevel(mixer, SOUND_MIXER_RECLEV, level, level)) return 1;
-      if (mixerSetLevel(mixer, SOUND_MIXER_IGAIN,  level, level)) return 1;
+      if (mixerSetLevel(mixer, SOUND_MIXER_RECLEV, level, level)) return;
+      if (mixerSetLevel(mixer, SOUND_MIXER_IGAIN,  level, level)) return;
     }
-  return 0;
 }
 
 static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)

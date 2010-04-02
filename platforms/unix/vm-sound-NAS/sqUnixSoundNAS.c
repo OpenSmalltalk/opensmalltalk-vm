@@ -102,22 +102,22 @@ static int recording=0;        /* whether this module is recording
 static AuFlowID flow;          /* the NAS flow being used */
 static int semaIndex;          /* the semaphore to signal Squeak with */
 static int stereo;             /* whether Squeak sees stereo or not */
-static int bytesAvail;         /* current number of bytes that may be written
+static sqInt bytesAvail;       /* current number of bytes that may be written
 				  or read from the server */
 static int sampleRate;         /* the sample rate of the device.
 				  Currently not accurate. */
 
 
-static int sound_AvailableSpace(void) 
+static sqInt sound_AvailableSpace(void) 
 {
-  if(server == NULL)
+  if (server == NULL)
     return 0;
 
   return bytesAvail;
 }
 
-static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int samplesOfLeadTime)
+static sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr,
+				  sqInt samplesOfLeadTime)
 {
   /* not possible, I don't think using NAS */
   success(false);
@@ -125,9 +125,9 @@ static int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
 }
 
 
-static int sound_Stop(void)
+static sqInt sound_Stop(void)
 {
-  if(server != NULL) {
+  if (server != NULL) {
     aioDisable(AuServerConnectionNumber(server));
 		    
     AuCloseServer(server);
@@ -141,14 +141,14 @@ static int sound_Stop(void)
      
 
      
-static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+static sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)
 {
   int bytesToPlay;
   int framesToPlay;
-  char *buf;   /* buffer to play from; it may not be arrayIndex if a
+  char *buf;   /* buffer to play from; it may not be srcBufPtr if a
                   conversion is necessary */
 
-  debugf("PlaySamples(frameCount=%d, arrayIndex=%d, startIndex=%d\n", frameCount, arrayIndex, startIndex);
+  debugf("PlaySamples(frameCount=%d, srcBufPtr=%d, startIndex=%d\n", frameCount, srcBufPtr, startIndex);
   
   /* figure out how much to play */
   bytesToPlay = frameCount * bytesPerPlayFrame();
@@ -160,9 +160,9 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
   /* convert the buffer when not in stereo; when playing back, Squeak
      will send mono data as stereo, where the right channel is to be
      ignored */
-  if(stereo)
+  if (stereo)
     {
-      buf= (char *) (arrayIndex + 4*startIndex);
+      buf= (char *) (srcBufPtr+ 4*startIndex);
     }
   else
     {
@@ -172,7 +172,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
       debugf("converting\n");
       
       buf= malloc(2 * frameCount);
-      if(buf == NULL)
+      if (buf == NULL)
 	{
 	  fprintf(stderr, "out of memory\n");
 	  return 0;
@@ -182,7 +182,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 
       for(i=0; i<frameCount; i++)
 	{
-	  sbuf[i]= ((short *) (arrayIndex + 4*startIndex)) [2*i];
+	  sbuf[i]= ((short *) (srcBufPtr + 4*startIndex)) [2*i];
 	}
     }
       
@@ -198,7 +198,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
 
   bytesAvail -= bytesToPlay;
 
-  if(!stereo)
+  if (!stereo)
     {
       free(buf);
     }
@@ -211,7 +211,7 @@ static int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int sta
    whether we are recording or playing back */
 static void handleAudioEvents(int fd, void *data, int flags)
 {
-  if(!server) {
+  if (!server) {
     debugf( "handleAudioEvents called while unconnected!\n");
     return;
   }
@@ -255,7 +255,7 @@ static void handleAudioEvents(int fd, void *data, int flags)
 	case AuElementNotifyKindState:
 	  debugf("state change (%d->%d)\n", enEvent->prev_state, enEvent->cur_state);
 	  bytesAvail += enEvent->num_bytes;
-	  if(enEvent->cur_state == AuStatePause) {
+	  if (enEvent->cur_state == AuStatePause) {
 	       /* if the flow has stopped, then arrange for it to get started again */
 	       /* XXX there is probably a more intelligent place to do
                   this, in case there is a real reason it has paused */
@@ -270,7 +270,7 @@ static void handleAudioEvents(int fd, void *data, int flags)
     }
   }
 
-  if(bytesAvail > 0) {
+  if (bytesAvail > 0) {
     debugf("bytesAvail: %d\n", bytesAvail);
     signalSemaphoreWithIndex(semaIndex);
   }
@@ -278,7 +278,7 @@ static void handleAudioEvents(int fd, void *data, int flags)
   aioHandle(fd, handleAudioEvents, flags & AIO_RW);
 }
 
-static int sound_PlaySilence(void) 
+static sqInt sound_PlaySilence(void) 
 {
      return 0;
 }
@@ -295,7 +295,7 @@ static AuDeviceID choose_nas_device(AuServer *server, int samplesPerSec, int ste
   
   /* look for a physical device of the proper kind, with the proper number of channels */
   for (i = 0; i < AuServerNumDevices(server); i++) {
-    if((AuDeviceKind(AuServerDevice(server, i))
+    if ((AuDeviceKind(AuServerDevice(server, i))
 	==  desiredDeviceKind)
        && (AuDeviceNumTracks(AuServerDevice(server, i))
 	   ==  desired_channels))
@@ -306,7 +306,7 @@ static AuDeviceID choose_nas_device(AuServer *server, int samplesPerSec, int ste
 
   /* look for a physical device of the proper kind; ignore number of channels */
   for (i = 0; i < AuServerNumDevices(server); i++) {
-    if(AuDeviceKind(AuServerDevice(server, i))
+    if (AuDeviceKind(AuServerDevice(server, i))
        ==  desiredDeviceKind)
 	 return AuDeviceIdentifier(AuServerDevice(server, i));
   }
@@ -316,7 +316,7 @@ static AuDeviceID choose_nas_device(AuServer *server, int samplesPerSec, int ste
   return AuNone;
 }
 
-static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaIndex0)
+static sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo0, sqInt semaIndex0)
 {
   AuElement elements[2];  /* first is a client element, second is
 			     a device output element */
@@ -326,7 +326,7 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaI
   /* open the server */
   debugf("opening server\n");
   server = AuOpenServer(NULL, 0, NULL, 0, NULL, NULL);
-  if(server == NULL) {
+  if (server == NULL) {
     debugf("failed to open audio server\n");
     return false;
   }
@@ -340,7 +340,7 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaI
   
   /* pick a device to play to */ 
   device = choose_nas_device(server, samplesPerSec, stereo, 0);
-  if(device == AuNone) {
+  if (device == AuNone) {
     debugf("no available device on the server!\n");
     AuCloseServer(server);
     server = NULL;
@@ -411,7 +411,7 @@ static int sound_Start(int frameCount, int samplesPerSec, int stereo0, int semaI
    XXX this routine is almost identical to snd_Start().  The two should
    be factored into a single function!
 */
-static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaIndex0)
+static sqInt sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo0, sqInt semaIndex0)
 {
   AuElement elements[2];  /* elements for the NAS flow to assemble:
    			        element 0 = physical input
@@ -424,7 +424,7 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaI
 
   debugf("opening server\n");
   server = AuOpenServer(NULL, 0, NULL, 0, NULL, NULL);
-  if(server == NULL) {
+  if (server == NULL) {
     debugf("failed to open audio server\n");
     return false;
   }
@@ -436,7 +436,7 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaI
   sampleRate= desiredSamplesPerSec;
 
   device= choose_nas_device(server, desiredSamplesPerSec, stereo, 1);
-  if(device == AuNone) {
+  if (device == AuNone) {
     debugf("no available device on the server!\n");
     AuCloseServer(server);
     server = NULL;
@@ -504,7 +504,7 @@ static int sound_StartRecording(int desiredSamplesPerSec, int stereo0, int semaI
 }
 
 
-static int sound_StopRecording(void) 
+static sqInt sound_StopRecording(void) 
 {
      return sound_Stop();
 }
@@ -517,8 +517,8 @@ static double sound_GetRecordingSampleRate(void)
 }
 
      
-static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
-				  int bufferSizeInBytes)
+static sqInt sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex,
+				  sqInt bufferSizeInBytes)
 {
   int bytesToRead;
   int sliceSize= (stereo ? 4 : 2);   /* a "slice" seems to be a "frame": one sample from each channel */
@@ -528,17 +528,17 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
 	 buf, startSliceIndex, bufferSizeInBytes);
   
   /* sanity checks */
-  if(server==NULL || !recording) {
+  if (server==NULL || !recording) {
     success(false);
     return 0;
   }
 
-  if(bytesAvail <= 0)
+  if (bytesAvail <= 0)
     return 0;
 
   /* figure out how much to read */
   bytesToRead= bufferSizeInBytes - (startSliceIndex * sliceSize);
-  if(bytesToRead > bytesAvail)
+  if (bytesToRead > bytesAvail)
     bytesToRead= bytesAvail;
 
   debugf("reading %d bytes\n", bytesToRead);
@@ -560,7 +560,7 @@ static int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex,
 
 
 /* mixer settings */
-static int sound_SetRecordLevel(int level) 
+static sqInt sound_SetRecordLevel(sqInt level) 
 {
   return level;
 }

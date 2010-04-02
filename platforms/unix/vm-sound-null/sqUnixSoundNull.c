@@ -44,8 +44,8 @@
 
 /* output */
 static sqInt  sound_AvailableSpace(void)									FAIL(8192)
-static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, sqInt srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
-static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, sqInt arrayIndex, sqInt startIndex)		FAIL(8192)
+static sqInt  sound_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)	FAIL(frameCount)
+static sqInt  sound_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex)		FAIL(8192)
 static sqInt  sound_PlaySilence(void)										FAIL(8192)
 static sqInt  sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)			FAIL(1)
 static sqInt  sound_Stop(void)											FAIL(0)
@@ -53,11 +53,11 @@ static sqInt  sound_Stop(void)											FAIL(0)
 static sqInt  sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex)			FAIL(0)
 static sqInt  sound_StopRecording(void)										FAIL(0)
 static double sound_GetRecordingSampleRate(void)								FAIL(0)
-static sqInt  sound_RecordSamplesIntoAtLength(sqInt buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)	FAIL(0)
+static sqInt  sound_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)	FAIL(0)
 /* mixer */
 static void   sound_Volume(double *left, double *right)								{ return; }
 static void   sound_SetVolume(double left, double right)							{ return; }
-static sqInt  sound_SetRecordLevel(sqInt level)									{ return level; }
+static void   sound_SetRecordLevel(sqInt level)									{ return; }
 
 static sqInt  sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)					FAIL(-1)
 static sqInt  sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)					FAIL(-1)
