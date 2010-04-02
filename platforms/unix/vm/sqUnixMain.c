@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-09-14 14:03:15 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2010-04-01 13:43:17 by piumarta on emilia-2.local
  */
 
 #include "sq.h"
@@ -193,6 +193,35 @@ sqInt ioMicroMSecs(void)
   return ioMSecs();	/* this already to the nearest millisecond */
 }
 
+sqLong ioMicroSeconds(void)
+{
+  struct timeval now;
+  sqLong microSecs;
+  gettimeofday(&now, 0);
+  if ((now.tv_usec -= startUpTime.tv_usec) < 0) {
+    now.tv_usec += 1000000;
+    now.tv_sec -= 1;
+  }
+  now.tv_sec -= startUpTime.tv_sec;
+  microSecs= now.tv_usec;
+  microSecs= microSecs + now.tv_sec * 1000000;
+  return microSecs;
+}
+
+/* implementation of ioUtcWithOffset(), defined in config.h to
+/* override default definition in src/vm/interp.h
+ */
+sqInt sqUnixUtcWithOffset(sqLong *microSeconds, int *offset)
+{
+  struct timeval timeval;
+  if (gettimeofday(&timeval, NULL) == -1) return -1;
+  time_t seconds= timeval.tv_sec;
+  suseconds_t usec= timeval.tv_usec;
+  *microSeconds= seconds * 1000000 + usec;
+  *offset= localtime(&seconds)->tm_gmtoff;
+  return 0;
+}
+
 time_t convertToSqueakTime(time_t unixTime)
 {
 #ifdef HAVE_TM_GMTOFF
@@ -221,7 +250,7 @@ sqInt ioSeconds(void)
 
 /* copy src filename to target, if src is not an absolute filename,
  * prepend the cwd to make target absolute
-  */
+ */
 static void pathCopyAbs(char *target, const char *src, size_t targetSize)
 {
   if (src[0] == '/')
