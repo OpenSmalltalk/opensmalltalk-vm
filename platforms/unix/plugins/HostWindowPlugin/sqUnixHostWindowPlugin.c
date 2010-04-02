@@ -68,11 +68,11 @@ int createWindowWidthheightoriginXyattrlength(
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
  * Return true if ok, false if not, but not currently checked
  */
-int ioShowDisplayOnWindow(
-	unsigned* dispBitsIndex, 
-	int width, int height, int depth, 
-	int affectedL, int affectedR, int affectedT, int affectedB,
-	int windowIndex)
+sqInt ioShowDisplayOnWindow(
+	unsigned char *dispBitsIndex, 
+	sqInt width, sqInt height, sqInt depth, 
+	sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB,
+	sqInt windowIndex)
 {
   if (noDisplay)
     return 0;
