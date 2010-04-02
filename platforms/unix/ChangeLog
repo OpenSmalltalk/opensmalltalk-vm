@@ -1,3 +1,30 @@
+2010-04-01  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/build.cmake: Always generate local interp.c with CR
+	translated to LF.  Gnuify from local interp.c.
+
+	* plugins/SqueakFFIPrims/config.cmake: Copy CMAKE_C_COMPILER and
+	CMAKE_C_FLAGS to CMAKE_ASM_COMPILER and CMAKE_ASM_FLAGS when using
+	gcc.
+
+	* plugins/HostWindowPlugin/sqUnixHostWindowPlugin.c (ioShowDisplayOnWindow): Updated
+	to new HostWindowPlugin.h for 64-bit cleanliness.
+
+	* vm/SqSound.h (struct SqSound): Updated to new sqSound.h for 64-bit cleanliness.
+	* plugins/SoundPlugin/sqUnixSound.c: idem.
+	* vm-sound-Sun/sqUnixSoundSun.c: idem.
+	* vm-sound-OSS/sqUnixSoundOSS.c: idem.
+	* vm-sound-MacOSX/sqUnixSoundMacOSX.c: idem.
+	* vm-sound-NAS/sqUnixSoundNAS.c: idem.
+	* vm-sound-ALSA/sqUnixSoundALSA.c: idem.
+	* vm-sound-null/sqUnixSoundNull.c: idem.
+	* vm-sound-custom/sqUnixCustomSound.c: idem.
+
+	* vm/sqUnixMain.c (ioMicroSeconds, sqUnixUtcWithOffset): Added.
+
+	* CMakeLists.txt: Prepend CMAKE_ARCH_FLAGS to CMAKE_C_FLAGS if defined.
+	Define ioMicroSecondClock and ioUtcWithOffset.
+
 2009-12-17  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-sound-ALSA/sqUnixSoundALSA.c (sound_AvailableSpace): Update
