@@ -47,7 +47,7 @@ ELSE ()
   PLUGIN_SOURCES ("${SQFFIC} ${unix}/plugins/${plugin}/${cpu}-${abi}.c ${unix}/plugins/${plugin}/${cpu}-${abi}-asm.S")
   IF (CMAKE_COMPILER_IS_GNUCC)
     SET (CMAKE_ASM_COMPILER "${CMAKE_C_COMPILER}")
-    SET (CMAKE_ASM_COMPILER_ARG1 "-c")
+    SET (CMAKE_ASM_FLAGS "${CMAKE_C_FLAGS} -c")
   ENDIF (CMAKE_COMPILER_IS_GNUCC)
 ENDIF ()
 
