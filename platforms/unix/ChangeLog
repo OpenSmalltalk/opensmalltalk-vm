@@ -1,3 +1,9 @@
+2010-04-02  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/FT2Plugin/config.cmake: Look for package freetype2
+	headers & libs, or for [freetype2]/freetype.h and libs freetype &
+	z.
+
 2010-04-01  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/build.cmake: Always generate local interp.c with CR
