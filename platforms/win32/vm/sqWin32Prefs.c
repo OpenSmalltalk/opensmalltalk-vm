@@ -85,13 +85,6 @@ void Set1ButtonMouse() {
 			    f1ButtonMouse ? U_ON : U_OFF,squeakIniName);
 }
 
-void SetUseDirectSound() {
-  CheckMenuItem(vmPrefsMenu, ID_DIRECTSOUND, MF_BYCOMMAND | 
-		(fUseDirectSound ? MF_CHECKED : MF_UNCHECKED));
-  WritePrivateProfileString(U_GLOBAL,TEXT("UseDirectSound"),
-			    fUseDirectSound ? U_ON : U_OFF,squeakIniName);
-}
-
 void SetAllowFileAccess() {
   CheckMenuItem(vmPrefsMenu, ID_FILEACCESS, MF_BYCOMMAND | 
 		(ioHasFileAccess() ? MF_CHECKED : MF_UNCHECKED));
@@ -211,9 +204,6 @@ void LoadPreferences()
     GetPrivateProfileInt(U_GLOBAL,TEXT("PriorityBoost"),
 			 fPriorityBoost,squeakIniName);
 
-  fUseDirectSound   = 
-    GetPrivateProfileInt(U_GLOBAL,TEXT("UseDirectSound"),
-			 fUseDirectSound,squeakIniName);
   fUseOpenGL   = 
     GetPrivateProfileInt(U_GLOBAL,TEXT("B3DXUsesOpenGL"),
 			 fUseOpenGL,squeakIniName);
@@ -239,7 +229,6 @@ void SetAllPreferences() {
   SetReduceCPUInBackground();
   Set3ButtonMouse();
   Set1ButtonMouse();
-  SetUseDirectSound();
   SetAllowFileAccess();
   SetAllowImageWrite();
   SetAllowSocketAccess();
@@ -277,8 +266,6 @@ void CreatePrefsMenu(void) {
   }
   { /* Create media related menu */
     hMenu = CreatePopupMenu();
-    AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_DIRECTSOUND, 
-	       TEXT("Use DirectSound"));
     AppendMenu(hMenu, MF_STRING | MF_UNCHECKED, ID_USEOPENGL,
 	       TEXT("Use OpenGL (instead of D3D)"));
     AppendMenu(hMenu,MF_STRING | MF_UNCHECKED, ID_DEFERUPDATES, 
@@ -381,10 +368,6 @@ void HandlePrefsMenu(int cmd) {
   case ID_1BUTTONMOUSE:
     f1ButtonMouse = !f1ButtonMouse;
     Set1ButtonMouse();
-    break;
-  case ID_DIRECTSOUND:
-    fUseDirectSound = !fUseDirectSound;
-    SetUseDirectSound();
     break;
   case ID_FILEACCESS:
     _ioSetFileAccess(!ioHasFileAccess());

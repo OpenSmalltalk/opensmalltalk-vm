@@ -97,7 +97,6 @@ BOOL fDynamicConsole = 1; /* Should we show the console if any errors occur? */
 BOOL fShowAllocations = 0; /* Show allocation activity */
 BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
 BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
-BOOL fUseDirectSound = 1; /* Do we use DirectSound?! */
 BOOL fRunSingleApp = 0;   /* Do we allow only one instance of this VM? */
 
 #ifdef CROQUET
