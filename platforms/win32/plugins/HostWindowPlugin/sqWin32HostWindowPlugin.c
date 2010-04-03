@@ -135,7 +135,7 @@ LRESULT CALLBACK HostWndProcW (HWND hwnd,
 
 /* closeWindow: arg is int windowIndex. Fail (return 0) if anything goes wrong
  * - typically the windowIndex invalid or similar */
-int closeWindow(int windowIndex) {
+sqInt closeWindow(sqInt windowIndex) {
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   if (!IsWindow(hwnd)) return 0;
   DestroyWindow(hwnd);
@@ -147,7 +147,7 @@ int closeWindow(int windowIndex) {
  * Failure may occur because of an inability to add the window, too many
  * windows already extant (platform dependant), the specified size being
  * unreasonable etc. */
-int createWindowWidthheightoriginXyattrlength(int w, int h, int x, int y, char * list, int attributeListLength) {
+sqInt createWindowWidthheightoriginXyattrlength(sqInt w, sqInt h, sqInt x, sqInt y, char * list, sqInt attributeListLength) {
   HWND hwnd;
 
   WNDCLASS wc;
@@ -191,7 +191,10 @@ int createWindowWidthheightoriginXyattrlength(int w, int h, int x, int y, char *
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
  * Return true if ok, false if not, but not currently checked */
-int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
+sqInt ioShowDisplayOnWindow(unsigned char* dispBits, sqInt width, 
+			    sqInt height, sqInt depth, sqInt affectedL, 
+			    sqInt affectedR, sqInt affectedT, sqInt affectedB, 
+			    sqInt windowIndex) {
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   HDC dc;
   BITMAPINFO *bmi;
@@ -321,7 +324,7 @@ int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth,
  * Return -1 for failure - typically invalid windowIndex
  * -1 is chosen since itwould correspond to a window size of 64k@64k which
  * I hope is unlikely for some time to come */
-int ioSizeOfWindow(int windowIndex) {
+sqInt ioSizeOfWindow(sqInt windowIndex) {
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
   int wsize;
@@ -337,7 +340,7 @@ int ioSizeOfWindow(int windowIndex) {
 /* ioSizeOfWindowSetxy: args are int windowIndex, int w & h for the
  * width / height to make the window. Return the actual size the OS
  * produced in (width<<16 | height) format or -1 for failure as above. */
-int ioSizeOfWindowSetxy(int windowIndex, int w, int h) {
+sqInt ioSizeOfWindowSetxy(sqInt windowIndex, sqInt w, sqInt h) {
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
   int wsize;
@@ -357,7 +360,7 @@ int ioSizeOfWindowSetxy(int windowIndex, int w, int h) {
 /* ioPositionOfWindow: arg is int windowIndex. Return the pos of the specified
  * window in (left<<16 | top) format like ioScreenSize.
  * Return -1 (as above) for failure - tpyically invalid windowIndex */
-int ioPositionOfWindow(int windowIndex) {
+sqInt ioPositionOfWindow(sqInt windowIndex) {
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
   int wpos;
@@ -372,7 +375,7 @@ int ioPositionOfWindow(int windowIndex) {
 /* ioPositionOfWindowSetxy: args are int windowIndex, int x & y for the
  * origin x/y for the window. Return the actual origin the OS
  * produced in (left<<16 | top) format or -1 for failure, as above */
-int ioPositionOfWindowSetxy(int windowIndex, int x, int y) {
+sqInt ioPositionOfWindowSetxy(sqInt windowIndex, sqInt x, sqInt y) {
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   RECT boundingRect;
   int wpos;
@@ -389,7 +392,7 @@ int ioPositionOfWindowSetxy(int windowIndex, int x, int y) {
 
 /* ioSetTitleOfWindow: args are int windowIndex, char* newTitle and
  * int size of new title. Fail with -1 if windowIndex is invalid, string is too long for platform etc. Leave previous title in place on failure */
-int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle) {
+sqInt ioSetTitleOfWindow(sqInt windowIndex, char * newTitle, sqInt sizeOfTitle) {
   HWND hwnd = (windowIndex == 1 ? stWindow : ((HWND)windowIndex));
   char titleString[1024];
   WCHAR wideTitle[1024];
@@ -407,6 +410,6 @@ int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle) {
  * Close all the windows that appear to be open.
  * No useful return value since we're getting out of Dodge anyway.
  */
-int ioCloseAllWindows(void){
+sqInt ioCloseAllWindows(void){
 }
 
