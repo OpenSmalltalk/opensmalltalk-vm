@@ -234,13 +234,8 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
 			    &IID_IDirectSound,
 			    (void**)&lpdSound);
     if(FAILED(hRes)) {
-      /* Well, well. If we can't create a DSound then we're
-	 very likely to be on a non-DSound system (like NT3). */
       DPRINTF(("sndStart: CoCreateInstance() failed (errCode: %x)\n", hRes));
-      DPRINTF(("Turning off DirectSound\n"));
-      fUseDirectSound = 0;
-      /* and try again */
-      return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
+      return 0;
     }
     DPRINTF(("# Initializing lpdSound\n"));
     hRes = IDirectSound_Initialize(lpdSound, NULL);
@@ -248,10 +243,7 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
       DPRINTF(("sndStart: IDirectSound_Initialize() failed (errCode: %x)\n", hRes));
       IDirectSound_Release(lpdSound);
       lpdSound = NULL;
-      DPRINTF(("Turning off DirectSound\n"));
-      fUseDirectSound = 0;
-      /* and try again */
-      return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
+      return 0;
     }
     /* set the cooperative level (DSSCL_PRIORITY is recommended) */
     hRes = IDirectSound_SetCooperativeLevel(lpdSound, stWindow, DSSCL_PRIORITY);
@@ -267,6 +259,8 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
     hRes = IDirectSound_CreateSoundBuffer(lpdSound, &dsbd, &lpdPrimaryBuffer, NULL);
     if(FAILED(hRes)) {
       DPRINTF(("sndStart: Failed to create primary buffer (errCode: %x)\n", hRes));
+      snd_StopPlaying();
+      return 0;
     }
   }
 
@@ -279,10 +273,7 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
     if(hPlayThread == 0) {
       printLastError("sndStart: CreateThread failed");
       snd_StopPlaying();
-      DPRINTF(("Turning off DirectSound\n"));
-      fUseDirectSound = 0;
-      /* and try again */
-      return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
+      return 0;
     }
     if(!SetThreadPriority(hPlayThread, THREAD_PRIORITY_HIGHEST))
       printLastError(TEXT("SetThreadPriority() failed"));
@@ -325,10 +316,8 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
   if(FAILED(hRes)) {
     DPRINTF(("sndStart: IDirectSound_CreateSoundBuffer() failed (errCode: %x)\n", hRes));
     snd_StopPlaying();
-    DPRINTF(("Turning off DirectSound\n"));
-    fUseDirectSound = 0;
     /* and try again */
-    return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
+    return 0;
   }
 
   /* setup notifications */
@@ -338,10 +327,7 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
   if(FAILED(hRes)) {
     DPRINTF(("sndStart: QueryInterface(IDirectSoundNotify) failed (errCode: %x)\n"));
     snd_StopPlaying();
-    DPRINTF(("Turning off DirectSound\n"));
-    fUseDirectSound = 0;
-    /* and try again */
-    return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
+    return 0;
   }
   posNotify[0].dwOffset = 1 * playBufferSize - 1;
   posNotify[1].dwOffset = 2 * playBufferSize - 1;
@@ -353,10 +339,7 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
   if(FAILED(hRes)) {
     DPRINTF(("sndStart: IDirectSoundNotify_SetNotificationPositions() failed (errCode: %x)\n", hRes));
     snd_StopPlaying();
-    DPRINTF(("Turning off DirectSound\n"));
-    fUseDirectSound = 0;
-    /* and try again */
-    return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
+    return 0;
   }
 
   DPRINTF(("# Starting to play buffer\n"));
@@ -364,10 +347,7 @@ sqInt snd_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo,
   if(FAILED(hRes)) {
     DPRINTF(("sndStart: IDirectSoundBuffer_Play() failed (errCode: %x)\n", hRes));
     snd_StopPlaying();
-    DPRINTF(("Turning off DirectSound\n"));
-    fUseDirectSound = 0;
-    /* and try again */
-    return snd_Start(frameCount, samplesPerSec, stereo, semaIndex);
+    return 0;
   }
   return 1;
 }
