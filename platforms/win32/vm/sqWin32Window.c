@@ -99,11 +99,7 @@ BOOL fReduceCPUUsage = 1; /* Should we reduce CPU usage? */
 BOOL fReduceCPUInBackground = 0; /* Should we reduce CPU usage when not active? */
 BOOL fRunSingleApp = 0;   /* Do we allow only one instance of this VM? */
 
-#ifdef CROQUET
 BOOL fUseOpenGL = 1;      /* Do we use OpenGL vs. D3D?! */
-#else /* Squeak */
-BOOL fUseOpenGL = 0;      /* Do we use OpenGL vs. D3D?! */
-#endif
 
 BOOL fPriorityBoost = 1;
 
