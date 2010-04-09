@@ -1,3 +1,9 @@
+2010-04-09  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixExternalPrims.c (ioLoadModule): Try loading a plugin
+	from the name without additional prefix/suffix to permit
+	fully-specified names or paths.
+
 2010-04-06  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/SqueakFFIPrims/config.cmake: Use correct asm for -m32 on x86_64.
