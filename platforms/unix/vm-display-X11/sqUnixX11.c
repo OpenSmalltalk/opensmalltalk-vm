@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2009-09-02 15:10:16 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2010-04-09 15:04:50 by piumarta on ubuntu
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -1175,8 +1175,7 @@ static void getSelectionChunk(SelectionChunk *chunk, Atom selection, Atom target
 #    if defined(DEBUG_SELECTIONS)
       fprintf(stderr, "getSelection: xselection.property == None\n");
 #    endif
-      if (isConnectedToXServer)
-	XBell(stDisplay, 0);
+      /* if (isConnectedToXServer) XBell(stDisplay, 0); */
       return;
     }
 
