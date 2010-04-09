@@ -24,7 +24,7 @@
  *   SOFTWARE.
  */
 
-/* Last edited: 2009-08-31 13:57:04 by piumarta on emilia-3.local
+/* Last edited: 2010-04-09 00:37:36 by piumarta on ubuntu
  */
 
 #define DEBUG 0
@@ -168,6 +168,11 @@ void *ioLoadModule(char *pluginName)
     return handle;
   }
 
+  /* try loading the name unmodified */
+
+  if ((handle= dlopen(pluginName, RTLD_NOW | RTLD_GLOBAL)))
+    return handle;
+
   /* try loading {pluginPaths}/MODULE_PREFIX<name>MODULE_SUFFIX */
 
   while (*dir) {
@@ -185,7 +190,9 @@ void *ioLoadModule(char *pluginName)
   sprintf(path, "%s%s%s", LIBRARY_PREFIX, pluginName, LIBRARY_SUFFIX);
 # endif
 
-  handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL);
+  if ((handle= dlopen(path, RTLD_NOW | RTLD_GLOBAL)))
+    return handle;
+
   fdebugf((stderr, "ioLoadModule(%s) = %p\n", path, handle));
 
   return handle;
