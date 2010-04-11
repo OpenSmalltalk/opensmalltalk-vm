@@ -1,5 +1,5 @@
-/* Automatically generated from Squeak on an Array(26 August 2009 10:00:59 pm)
-by VMMaker 3.11.3
+/* Automatically generated from Squeak on 10 April 2010 7:46:32 pm 
+   by VMMaker 4.0.3
  */
 
 #include <math.h>
@@ -62,9 +62,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"DropPlugin 26 August 2009 (i)"
+	"DropPlugin 10 April 2010 (i)"
 #else
-	"DropPlugin 26 August 2009 (e)"
+	"DropPlugin 10 April 2010 (e)"
 #endif
 ;
 
@@ -112,7 +112,7 @@ EXPORT(sqInt) primitiveDndOutAcceptedType(void) {
 EXPORT(sqInt) primitiveDndOutSend(void) {
 	sqInt nbytes;
 	char *bytes;
-
+ 
 	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
 	bytes = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
 	if (interpreterProxy->failed()) {
@@ -127,13 +127,12 @@ EXPORT(sqInt) primitiveDndOutSend(void) {
 	return null;
 }
 
-
 /*	Start drag out session. Formats are types for the data separated with NULL. */
 
 EXPORT(sqInt) primitiveDndOutStart(void) {
 	sqInt ntypes;
 	char *types;
-
+ 
 	interpreterProxy->success(interpreterProxy->isBytes(interpreterProxy->stackValue(0)));
 	types = ((char *) (interpreterProxy->firstIndexableField(interpreterProxy->stackValue(0))));
 	if (interpreterProxy->failed()) {
@@ -147,7 +146,6 @@ EXPORT(sqInt) primitiveDndOutStart(void) {
 	interpreterProxy->pop(1);
 	return null;
 }
-
 
 /*	Note: File handle creation needs to be handled by specific support code explicitly bypassing the plugin file sand box. */
 

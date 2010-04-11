@@ -1,1 +1,7 @@
-/* Automatically generated from Squeak on 1 April 2010 6:11:18 pm    by VMMaker 4.0.2 */#define VMMAKER_VERSION "4.0.2"#define SQ_VI_BYTES_PER_WORD 4#ifndef allocateMemoryMinimumImageFileHeaderSize /* Called by Interpreter>>allocateMemory:minimum:imageFile:headerSize: */ /* Default definition if not previously defined in config.h */ #define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \    sqAllocateMemory(minimumMemory, heapSize)#endif#ifndef sqImageFileReadEntireImage /* Called by Interpreter>>sqImage:read:size:length: */ /* Default definition if not previously defined in config.h */ #define sqImageFileReadEntireImage(memoryAddress, elementSize,  length, fileStream) \    sqImageFileRead(memoryAddress, elementSize,  length, fileStream)#endif#ifndef error /* error() function called from Interpreter */ /* Default definition if not previously defined in config.h */ #define error(str) defaultErrorProc(str)#endif#ifndef ioMicroSecondClock /* Called by Interpreter>>primitiveMicrosecondClock and GC methods */ /* Default definition if not previously defined in config.h */ #define ioMicroSecondClock ioMSecs#endif#ifndef ioUtcWithOffset /* Called by Interpreter>>primitiveUtcWithOffset */ /* Default definition if not previously defined in config.h */ #define ioUtcWithOffset(clock, offset) setMicroSecondsandOffset(clock, offset)#endif
+/* Automatically generated from Squeak on 10 April 2010 7:46:16 pm 
+   by VMMaker 4.0.3
+ */
+
+#define VMMAKER_VERSION "4.0.3"
+#define SQ_VI_BYTES_PER_WORD 4
+
