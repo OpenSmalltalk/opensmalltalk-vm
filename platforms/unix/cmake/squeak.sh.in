@@ -2,13 +2,15 @@
 # 
 # Launch squeak from a menu, prompting for and/or installing an image
 # 
-# Last edited: 2009-12-17 10:21:38 by piumarta on ubuntu
+# Last edited: 2010-04-09 04:35:35 by piumarta on ubuntu
 
 PATH=/usr/bin:/bin
 
+if pwd -P 2>/dev/null 1>&2; then pwd="pwd -P"; else pwd="pwd"; fi
+
 me=`basename $0`
 bindir=`dirname $0`
-bindir=`cd ${bindir}; pwd`
+bindir=`cd ${bindir}; ${pwd}`
 prefix=`dirname ${bindir}`
 libdir="${prefix}/lib/squeak"
 vm="squeak"
