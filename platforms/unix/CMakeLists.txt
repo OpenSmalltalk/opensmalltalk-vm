@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2010-04-01 19:47:10 by piumarta on ubuntu
+# Last edited: 2010-04-09 04:23:35 by piumarta on ubuntu
 
 PROJECT (squeak)
 
@@ -65,6 +65,12 @@ SET (vm-host-cpu "${VM_HOST_CPU}")
 
 IF (OPT--CFLAGS)
   SET (CMAKE_C_FLAGS "${OPT--CFLAGS}")
+ENDIF ()
+
+IF (CMAKE_ARCH_FLAGS STREQUAL "-m32")
+  IF (VM_HOST_CPU STREQUAL "x86_64")
+    SET (VM_HOST_CPU "i386")
+  ENDIF ()
 ENDIF ()
 
 IF (NOT CMAKE_C_FLAGS)
