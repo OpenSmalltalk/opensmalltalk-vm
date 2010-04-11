@@ -1,5 +1,7 @@
 2010-04-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* doc/RELEASE_NOTES_4.0.3.2196: Release 4.0.3.2196.
+
 	* plugins/MIDIPlugin/config.cmake: Enable ALSA MIDI support if
 	alsa/asoundlib.h and linasound are available.
 

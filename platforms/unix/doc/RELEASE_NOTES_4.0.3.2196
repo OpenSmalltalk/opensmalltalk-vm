@@ -1,0 +1,29 @@
+Changes since 3.11.3.2135:
+
+Generated sources rebuilt from VMMaker-dtl.169.
+
+Re-enabled MIDI support via ALSA on Linux.
+
+Broken locales should no longer cause line ends to go missing during
+copy and paste.
+
+Add support for "platform source version" primitive.
+
+Remove debugging beep on first clipboard copy under X11.
+
+Allow fully-qualified pathnames when loading modules.
+
+Bundle FreetypePlugin with source and binary releases.
+
+Various fixes for 64-bit cleanliness (many thanks to Dave Lewis).
+
+Add microsecond clock support.
+
+Fix launching from a menu under KDE.
+
+Fix --CFLAGS option in configure script.
+
+Serial plugin invalidates cached port names on close.
+
+Better handling of symlinks when looking for absolute path to VM
+binary.
