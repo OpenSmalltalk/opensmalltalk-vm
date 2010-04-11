@@ -1,5 +1,5 @@
 #include "config.h"
-#include <uuid/uuid.h>
+#include <uuid.h>
 #include "sq.h"
 
 int sqUUIDInit(void)
