@@ -1,4 +1,23 @@
+2010-04-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* CMakeLists.txt: Change VM_HOST_CPU from x86_64 to i386 if
+	CMAKE_ARCH_FLAGS is -m32.
+
+	* cmake/squeak.sh.in (PATH): Find path to binary using pwd -p if
+	it appears to be available.
+
+	* cmake/squeak.in: Attempt to fix broken locales by copying LANG
+	to LC_ALL if the latter is unset.
+
+	* cmake/configure: Pass SVN revision of ChangeLog to cmake as
+	PLATFORM_SOURCE_VERSION.
+
+	* vm/config.cmake: Define PLATFORM_SOURCE_VERSION in config.h.
+
 2010-04-09  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c (getSelectionChunk): Don't beep when
+	the selection owner refuses to transfer data.
 
 	* vm/sqUnixExternalPrims.c (ioLoadModule): Try loading a plugin
 	from the name without additional prefix/suffix to permit
