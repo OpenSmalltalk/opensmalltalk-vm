@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2009-09-18 13:14:40 by piumarta on ubuntu.piumarta.com
+# Last edited: 2010-04-10 20:04:32 by piumarta on ubuntu
 
 PATH=/usr/bin:/bin
 
@@ -80,6 +80,13 @@ if test -z "${SQUEAK_VM}"; then
 	    fi
 	fi
     fi
+fi
+
+# fix broken locales
+
+if test -z "$LC_ALL"; then
+    LC_ALL="$LANG"
+    export LC_ALL
 fi
 
 # run the vm
