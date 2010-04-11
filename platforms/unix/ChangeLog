@@ -1,3 +1,16 @@
+2010-04-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/MIDIPlugin/config.cmake: Enable ALSA MIDI support if
+	alsa/asoundlib.h and linasound are available.
+
+	* plugins/MIDIPlugin/sqUnixMIDI.c: Include "debug.h".
+
+	* plugins/MIDIPlugin/sqUnixMIDIALSA.inc: Change invocations of
+	debugf(x) to pass a single argument.
+
+	* plugins/SqueakFFIPrims/config.cmake: Add sqManualSurface.c to
+	plugin sources list.
+
 2010-04-10  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* CMakeLists.txt: Change VM_HOST_CPU from x86_64 to i386 if
