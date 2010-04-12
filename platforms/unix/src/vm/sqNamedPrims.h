@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on 10 April 2010 7:46:52 pm 
+/* Automatically generated from Squeak on 12 April 2010 4:44:37 pm 
    by VMMaker 4.0.3
  */
 /* This is an automatically generated table of all builtin modules in the VM */
@@ -36,6 +36,7 @@ extern sqExport SoundGenerationPlugin_exports[];
 extern sqExport SoundPlugin_exports[];
 extern sqExport StarSqueakPlugin_exports[];
 extern sqExport SurfacePlugin_exports[];
+extern sqExport UUIDPlugin_exports[];
 
 sqExport *pluginExports[] = {
 	vm_exports,
@@ -71,5 +72,6 @@ sqExport *pluginExports[] = {
 	SoundPlugin_exports,
 	StarSqueakPlugin_exports,
 	SurfacePlugin_exports,
+	UUIDPlugin_exports,
 	NULL
 };

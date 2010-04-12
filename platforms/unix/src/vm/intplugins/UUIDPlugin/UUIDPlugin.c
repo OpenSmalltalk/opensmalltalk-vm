@@ -1,4 +1,4 @@
-/* Automatically generated from Squeak on 10 April 2010 7:47:06 pm 
+/* Automatically generated from Squeak on 12 April 2010 4:44:37 pm 
    by VMMaker 4.0.3
  */
 
@@ -58,9 +58,9 @@ extern
 struct VirtualMachine* interpreterProxy;
 static const char *moduleName =
 #ifdef SQUEAK_BUILTIN_PLUGIN
-	"UUIDPlugin 10 April 2010 (i)"
+	"UUIDPlugin 12 April 2010 (i)"
 #else
-	"UUIDPlugin 10 April 2010 (e)"
+	"UUIDPlugin 12 April 2010 (e)"
 #endif
 ;
 
