@@ -1,8 +1,8 @@
-# Last edited: 2005-03-16 22:47:32 by piumarta on squeak.hpl.hp.com
+# Last edited: 2010-04-12 07:43:29 by piumarta on ubuntu
 
 all : .force
 	[ -d bld ] || mkdir bld
-	[ -f bld/Makefile ] || ( cd bld; ../config/configure; )
+	[ -f bld/Makefile ] || ( cd bld; ../cmake/configure; )
 	( cd bld; $(MAKE) $(MFLAGS); )
 
 install : all
