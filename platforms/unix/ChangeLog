@@ -1,5 +1,7 @@
 2010-04-12  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* src: UUIDPlugin is now internal.
+
 	* Makefile: Use cmake/configure.
 
 2010-04-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
