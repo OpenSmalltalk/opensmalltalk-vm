@@ -1,3 +1,10 @@
+2010-04-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* doc/RELEASE_NOTES_4.0.3.2202: Release 4.0.3.2202.
+
+	* vm-sound-pulse/sqUnixSoundPulseAudio.c: New version from Derek
+	O'Connell as used in Scratch.  Fixes bad behaviour on Karmic.
+
 2010-04-12  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* src: UUIDPlugin is now internal.

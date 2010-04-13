@@ -1,0 +1,9 @@
+Changes since 4.0.3.2196:
+
+Changes to pulseaudio driver from Derek O'Connell, as used in Scratch.
+(Fixes bad behaviour on Karmic.)
+
+UUIDPlugin is now internal.
+
+Top-level Makefile in source archive uses cmake/configure and no
+longer fails because of bogus dependency bld/squeakvm.
