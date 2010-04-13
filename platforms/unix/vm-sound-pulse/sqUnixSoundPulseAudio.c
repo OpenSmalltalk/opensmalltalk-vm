@@ -2,7 +2,7 @@
  *
  * Author: Derek O'Connell <doc@doconnel.f9.co.uk>
  * 
- *   Copyright (C) 2009 by Derek O'Connel
+ *   Copyright (C) 2009--2010 by Derek O'Connell
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
@@ -25,7 +25,7 @@
  *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
  *   DEALINGS IN THE SOFTWARE.
  *
- * Last edited: 2009-09-14 14:15:05 by piumarta on ubuntu.piumarta.com
+ * Last edited: 2010-04-13 07:45:37 by piumarta on ubuntu
  */
 
 /* ========== */
@@ -150,8 +150,6 @@ typedef struct {
 	int bytesPerFrame;
 	
 	/* PULSE, Simple API parameters */
-	pa_stream_direction_t dir;
-	const char *stream_name;
 	pa_simple *pa_conn;
   pa_sample_spec pa_spec;
  } audioIO_t;
@@ -327,13 +325,6 @@ static void printPALatency() {
 		fprintf(stderr, "%0.0f usec    \r", (float)latency);
 }
 
-/*
-static int bytesPerChannel(audioIO_t *audioIO) {
-	if ( PA_SAMPLE_S16LE == audioIO->rate) return SAMPLE_RATE_8KHZ;
-	PA_SAMPLE_S16LE
-}
-*/
-
 /* ================================== Signal Ops */
 
 static void sigWait(gen_sig_t *sig) {
@@ -446,20 +437,12 @@ static int ioFreeBytes(audioIO_t *audioIO) {
 }
 
 static int ioAllocBuffers(audioIO_t *audioIO, int frameCount) {
-	int maxBytes;
 	int i;
 	
-	/* NTS: should take audioIO->bytesPerFrame into account... 
-			and that depends on stereo or not. Revisit at later date.
-	maxBytes = frameCount * audioIO->bytesPerFrame;
-	*/
+	/* Not preserving buffers when play/record stopped */
+	/* Choosing memory conservation over speed of starting play/record */
 	
-	if (audioIO->buffersAllocated)
-		if (audioOut.maxSamples == frameCount)
-			return true;
-		else
-			ioFreeBuffers(audioIO);
-	
+	ioFreeBuffers(audioIO);
 	audioIO->maxSamples = frameCount;
 	audioIO->maxBytes   = audioIO->maxSamples * audioIO->bytesPerFrame;
 	audioIO->maxWords   = audioIO->maxBytes >> 1;
@@ -468,8 +451,6 @@ static int ioAllocBuffers(audioIO_t *audioIO, int frameCount) {
 		audioIO->buffer[i].isFree = true;
 	}
 	audioIO->buffersAllocated = true;
-	
-	return true;
 }
 
 static int ioIsFull(audioIO_t *audioIO) {
@@ -583,10 +564,6 @@ static void *writerThread(void *ptr) {
 				if (!audioOut.open || audioOut.stall || audioOut.exit) break;
 /*				if ((rc = snd_pcm_writei(audioOut.alsaHandle, buffer, frames)) < frames) {
 */
-        
-        /* Experiment to see if draining removes delay, result: undecided, seems slightly better */
-       	pa_simple_drain(audioOut.pa_conn, &rc);
-
         
         /* PA: Have to assume for now that all frames were written */
         if (pa_simple_write(audioOut.pa_conn, buffer, (size_t) (frames * audioOut.bytesPerFrame), &rc) < 0) {
@@ -702,7 +679,7 @@ static void *readerThread(void *ptr) {
 			}
 */
 				
-			/* PA: Endian swap is N810 left-over... */
+			/* PA: Endian swap may not be needed... */
 
 			/* Endian Swap (rc = frames = Word Count in this case) */
 /*			
@@ -735,93 +712,20 @@ DBGMSG("[readerThread: stopped]");
 }
 
 
-/* ================================== OPEN/CLOSE PA */
-
-static int closePulseAudio(audioIO_t *audioIO) {
-	int rc;
-	
-  if (!audioIO->pa_conn)
-  	return true;
-	
-  if (PA_STREAM_PLAYBACK == audioIO->dir)
-		if (pa_simple_drain(audioIO->pa_conn, &rc) < 0)
-			fprintf(stderr, __FILE__": pa_simple_drain() failed: %s\n", pa_strerror(rc));
-
-  pa_simple_free(audioIO->pa_conn);
-  audioIO->pa_conn = NULL;
-  
-	printf("closePulseAudio((): %s\n", audioIO->dbgName);
-  
- 	return true;
-}
-
-static int openPulseAudio(audioIO_t *audioIO, int samplesPerSec, int stereo) {
-	int rc;
-	int channels;
-
-/*
-DBGMSG(">pa_Open()");
-#ifdef DBG
-printf("\tframeCount: %d, samplesPerSec: %d, stereo: %d\n", frameCount, samplesPerSec, stereo, semaIndex);
-#endif
-*/
-
-	/* DMOC 090912: 
-				Connection for playback stream should already have been opened when module loaded so 
-				now only open if that failed or parameters have changed. Could also avoid buffer
-				creation if default frameCount known/agreed.
-	*/
-	
-	channels = stereo ? 2 : 1;
-	
-	/* If already connected then check if same spec */
-	if (audioIO->pa_conn)
-		if ((audioIO->pa_spec.rate == samplesPerSec) && (audioIO->pa_spec.channels == channels))
-			return true;
-	
-	if (audioIO->pa_conn)
-		closePulseAudio(audioIO);
-
-  audioIO->pa_spec.rate = samplesPerSec;
-  audioIO->pa_spec.channels = channels;
-  
-	if (!(audioIO->pa_conn = pa_simple_new(NULL, "Scratch", audioIO->dir, NULL, audioIO->stream_name, &audioIO->pa_spec, NULL, NULL, &rc))) {
-			fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n", pa_strerror(rc));
-			return false;
-	}
-
-/*	
-  if (PA_STREAM_PLAYBACK == audioIO->dir)
-	  pa_simple_drain(audioIO->pa_conn, &rc);
-*/	
-	printf("openPulseAudio() %s, rate: %i, chans: %i\n", audioIO->dbgName, samplesPerSec, channels);
-  
-	return true;
-}
-
 /* ================================== IO INIT */
 
-/* ioInit() called when module loaded...
-		N810: Threads pre-started and held on semaphore
-		  PA: Connection opened for audio-out with default settings
-*/
-
 static int ioInit() {
-	int rc;
-	
 	if (initDone) return true;
 	initDone = true; 
 	
-	/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-	/* >>>>>>>>>>>>> AUDIO OUT >>>>>>>>>>>> */
-	/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+	/* AUDIO OUT */
 	
 /* NOT USED >>> */
 	audioOut.dbgName = "play";
 	audioOut.device = "pa-simple"; 
 /* <<< */
 
-	audioOut.open = false; /* Squeak state */
+	audioOut.open = false;
 	
 	audioOut.maxSamples	= 0;
 	audioOut.maxWords		= 0;
@@ -856,35 +760,19 @@ static int ioInit() {
 	audioOut.rateID = 0;
 	audioOut.bytesPerFrame = 4; /* Stereo S16LE */
 
-	/* PA Specific (defaults for Scratch/Squeak) */
-	audioOut.dir = PA_STREAM_PLAYBACK;
-  audioOut.stream_name = "playback";
-  audioOut.pa_spec.format 	= PA_SAMPLE_S16LE; /* Squeak default */
-  audioOut.pa_spec.rate 		= 0;
-  audioOut.pa_spec.channels = 0;
-	audioOut.pa_conn = NULL;
+	audioOut.pa_conn = null;
 	
-	/* Open PA connection here to avoid delays later on */
-	openPulseAudio(&audioOut, 22050, true);
-	
-	/* Allocate buffers here to avoid delays later on */
-	/* Hmmm, tricky because varies... so not doing it atm */
-/*	ioAllocBuffers(&audioOut, frameCount);
-*/
-
 	ioThreadStart(&audioOut);
 	
+	/* AUDIO IN */
 	
-	/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
-	/* >>>>>>>>>>>>> AUDIO IN >>>>>>>>>>>>> */
-	/* >>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>>> */
+	audioIn.dbgName = "rec";
 	
 /* NOT USED >>> */
-	audioIn.dbgName = "rec";
 	audioIn.device = "pa-simple"; 
 /* <<< */
 	
-	audioIn.open = false; /* Squeak state */
+	audioIn.open = false;
 	
 	audioIn.maxSamples	= 0;
 	audioIn.maxWords		= 0;
@@ -919,15 +807,7 @@ static int ioInit() {
 	audioIn.rateID = 0;
 	audioIn.bytesPerFrame = 2; /* Mono S16LE */
 	
-	/* PA Specific */
-	audioIn.dir = PA_STREAM_RECORD;
-  audioIn.stream_name = "record";
-  audioIn.pa_spec.format 		= PA_SAMPLE_S16LE; /* Squeak default */
-  audioIn.pa_spec.rate 			= 0;
-  audioIn.pa_spec.channels 	= 0;
-	audioIn.pa_conn = NULL;
-	
-	/* DMOC 090912: Not attempting to open default PA connection for recording */
+	audioIn.pa_conn = null;
 	
 	ioThreadStart(&audioIn);
 }
@@ -950,6 +830,7 @@ DBGMSG(">sound_InsertSamplesFromLeadTime()");
 	return 0; /* or maxBytes? */
 }
 
+
 static sqInt sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) {
 	unsigned int bufferNext, samples, sampleBytes;
 
@@ -971,10 +852,9 @@ DBGMSG(">sound_PlaySilence()");
 	return 0; /* or maxBytes? */
 }
 
+
 static sqInt sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex) {
 	int rc;
-	int channels;
-	int reopen;
 	
 DBGMSG(">sound_Start()");
 
@@ -984,22 +864,32 @@ printf("\tframeCount: %d, samplesPerSec: %d, stereo: %d, semaIndex: %d\n", frame
 
 	if (audioOut.open) return true;
 	
-	if (!openPulseAudio(&audioOut, samplesPerSec, stereo)) {
-		success(false);
-		return false;
+  audioOut.pa_spec.format = PA_SAMPLE_S16LE;
+  audioOut.pa_spec.rate = samplesPerSec; /* rate(SAMPLE_RATE_22_05KHZ) for Squeak */
+  audioOut.pa_spec.channels = stereo ? 2 : 1;
+  audioOut.pa_conn = NULL;
+
+	/* Create a new playback stream */
+	if (!(audioOut.pa_conn = pa_simple_new(NULL, "Scratch", PA_STREAM_PLAYBACK, NULL, "playback", &audioOut.pa_spec, NULL, NULL, &rc))) {
+			fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n", pa_strerror(rc));
+			success(false);
+			return false;
 	}
-	
-	printf("sound_Start() frameCount >> 1: %i\n", frameCount >> 1);
   
-	ioAllocBuffers(&audioOut, frameCount >> 1);
-	
-	/* EVERY TIME: Initialise buffer count, ie, Squeak-ready buffers (max for audio-out) */
-	audioOut.bufferCount = audioOut.maxBuffers;
+	ioAllocBuffers(&audioOut, frameCount);
+	audioOut.bufferCount = audioOut.maxBuffers; /* Has to be reset everytime */
 	
 	audioOut.sqSemaphore = semaIndex;
+
 	audioOut.open = true;
 	
 	sigSignal(&audioOut.sigRun);
+	
+	/* error possibly left over from dsp-protocol.c code */
+	/* dsp-protocol.c in current ALSA not capturing EINTR/EAGAIN */
+	/* EINTR/EAGAIN from dsp-protocol.c not raised up to ALSA so not caught by ALSA */
+	/* Clearing errno here to see if Squeak can continue regardless */
+	errno = 0; 
 	
 DBGMSG("<sound_Start()");
 	return true;
@@ -1018,10 +908,16 @@ DBGMSG(">sound_Stop()");
 	
 	ioThreadStall(&audioOut);
 
-	closePulseAudio(&audioOut);
+	if (pa_simple_drain(audioOut.pa_conn, &rc) < 0) {
+		fprintf(stderr, __FILE__": pa_simple_drain() failed: %s\n", pa_strerror(rc));
+	}
+
+  if (NULL != audioOut.pa_conn)
+     pa_simple_free(audioOut.pa_conn);
 	
 	ioFreeBuffers(&audioOut);
 
+	audioOut.pa_conn = NULL;
 	audioOut.sqSemaphore = 0;
 
 DBGMSG("<sound_Stop()");
@@ -1034,29 +930,56 @@ DBGMSG("<sound_Stop()");
 
 static sqInt sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
 	int rc;
+	pa_buffer_attr pa_buffer_metrics; /* For recording */
 
 DBGMSG(">sound_StartRecording()");
 
 	if (audioIn.open) return true;
 	
-  /* Only rate supported on the N810 (atm) is 8000 */
-/*  
-  desiredSamplesPerSec = 8000; 
-*/
-  
-	if (!openPulseAudio(&audioIn, desiredSamplesPerSec, stereo)) {
-		success(false);
-		return false;
+	audioIn.pa_spec.format = PA_SAMPLE_S16LE;
+	audioIn.pa_spec.rate = desiredSamplesPerSec;
+	audioIn.pa_spec.channels = stereo ? 2 : 1;
+	audioIn.pa_conn = NULL;
+    
+	pa_buffer_metrics.maxlength	= (uint32_t) -1;
+	pa_buffer_metrics.tlength	= (uint32_t) -1; /* playback only */
+	pa_buffer_metrics.prebuf	= (uint32_t) -1; /* playback only */ 
+	pa_buffer_metrics.minreq	= (uint32_t) -1; /* playback only */
+	pa_buffer_metrics.fragsize	= pa_usec_to_bytes(20*1000, &audioIn.pa_spec); 
+
+	/* Create the recording stream */
+	if (!(audioIn.pa_conn = pa_simple_new(	NULL, 
+											"Scratch", 
+											PA_STREAM_RECORD, 
+											NULL, 
+											"record", 
+											&audioIn.pa_spec, 
+											NULL, 
+											&pa_buffer_metrics, 
+											&rc)))
+	{
+			fprintf(stderr, __FILE__": pa_simple_new() failed: %s\n", pa_strerror(rc));
+			success(false);
+			return false;
 	}
 
-	/* Buffers will be filled before signalling Squeak. So rate & buffer size determined signalling freq... */
+  /* Only rate supported on the N810 (atm) is 8000 */
+/*  
+  audioIn.alsaRate = 8000; 
+*/
+  
   /* 20Hz update freq for Squeak sounds reasonable, so... */
   audioIn.maxSamples = audioIn.pa_spec.rate / 20;
 	
-	ioAllocBuffers(&audioIn, audioIn.maxSamples);
-	
-	/* EVERY TIME: Initialise buffer count, ie, Squeak-ready buffers (ZERO for audio-in) */
-	audioIn.bufferCount	= 0;
+  /* Use a buffer large enough to hold one period (assuming 2 bytes/sample) */
+/*  
+  audioIn.alsaBufferSize = audioIn.maxSamples * 2 * audioIn.pa_spec.channels; 
+  audioIn.alsaBuffer = (char *) malloc(audioIn.alsaBufferSize);
+*/
+
+	/* Buffers will be filled before signalling Squeak. So rate & buffer size determined signalling freq... */
+	ioAllocBuffers(&audioIn, audioIn.pa_spec.rate / 20 ); /* for Sq signalling rate of 20Hz */
+	audioIn.bufferCount	= 0; /* Has to be reset everytime */
 
 	audioIn.sqSemaphore = semaIndex;
 	
@@ -1078,7 +1001,7 @@ DBGMSG(">sound_StopRecording()");
 	
 	ioThreadStall(&audioIn);
 
-	closePulseAudio(&audioIn);  
+  pa_simple_free(audioIn.pa_conn);
   
 	ioFreeBuffers(&audioIn);
 	
@@ -1189,7 +1112,7 @@ static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter) {
 
 #include "SqSound.h"
 
-SqSoundDefine(pulse);
+SqSoundDefine(PA);
 
 #include "SqModule.h"
 
@@ -1235,12 +1158,13 @@ static void  sound_printUsageNotes(void) {
 }
 
 static void *sound_makeInterface(void) {
-//#ifdef NEWSIG
+/*#ifdef NEWSIG
 //  sigalrm_save(); // DMOC: Being here assumes old handler same for run duration! Same for sigio handler.
 //#else
 // DMOC: Rethink: Signal captured once, preserved and restored when/where necessary?
 //  sigio_save();
 //#endif
+*/
 	
 #ifdef USE_RESOURCE_MANAGER
 printf("USE_RESOURCE_MANAGER\n");
@@ -1248,7 +1172,7 @@ printf("USE_RESOURCE_MANAGER\n");
 	
 	ioInit();
 	
-  return &sound_pulse_itf;
+  return &sound_PA_itf;
 }
 
 SqModuleDefine(sound, pulse);
