@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2010-04-10 20:04:32 by piumarta on ubuntu
+# Last edited: 2010-04-29 02:52:25 by piumarta on margaux1
 
 PATH=/usr/bin:/bin
 
@@ -19,7 +19,9 @@ realpath () {
     if test -d "${path}"; then
 	(cd "${path}" && pwd -P)
     else
-	(cd `dirname "${path}"` && echo "`pwd -P`/`basename "${path}"`")
+	dir=`dirname "${path}"`
+	base=`basename "${path}"`
+	(cd "${dir}" && echo "`pwd -P`/${base}")
     fi
 }
 
