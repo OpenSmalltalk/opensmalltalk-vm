@@ -27,7 +27,7 @@
 
 /* Author: Ian Piumarta <ian.piumarta@squeakland.org>
  *
- * Last edited: 2010-04-09 15:04:50 by piumarta on ubuntu
+ * Last edited: 2010-05-11 16:58:09 by piumarta on emilia-2.local
  *
  * Support for more intelligent CLIPBOARD selection handling contributed by:
  *	Ned Konz <ned@bike-nomad.com>
@@ -327,6 +327,7 @@ int sleepWhenUnmapped=	0;
 int noTitle=		0;
 int fullScreen=		0;
 int iconified=		0;
+int closeQuit=		0;
 int withSpy=		0;
 
 
@@ -3383,8 +3384,8 @@ void initWindow(char *displayName)
     XFree((void *)wmHints);
   }
 
-  /* tell the WM that we do not want to be destroyed from the title bar close button */
-  {
+  if (!closeQuit) {
+    /* tell the WM that we do not want to be destroyed from the title bar close button */
     wmProtocolsAtom=    XInternAtom(stDisplay, "WM_PROTOCOLS", False);
     wmDeleteWindowAtom= XInternAtom(stDisplay, "WM_DELETE_WINDOW", False);
     XSetWMProtocols(stDisplay, stParent, &wmDeleteWindowAtom, 1);
@@ -5828,6 +5829,7 @@ static void display_printUsage(void)
   printf("\nX11 <option>s:\n");
   printf("  -browserWindow <wid>  run in window <wid>\n");
   printf("  -browserPipes <r> <w> run as Browser plugin using descriptors <r> <w>\n");
+  printf("  -closequit            quit immediately when the main window is closed\n");
   printf("  -cmdmod <n>           map Mod<n> to the Command key\n");
   printf("  -compositioninput     enable overlay window for composed characters\n");
   printf("  -display <dpy>        display on <dpy> (default: $DISPLAY)\n");
@@ -5890,6 +5892,7 @@ static void display_parseEnvironment(void)
   if (getenv("SQUEAK_NOXDND"))		useXdnd= 0;
   if (getenv("SQUEAK_FULLSCREEN"))	fullScreen= 1;
   if (getenv("SQUEAK_ICONIC"))		iconified= 1;
+  if (getenv("SQUEAK_CLOSEQUIT"))	closeQuit= 1;
   if (getenv("SQUEAK_MAPDELBS"))	mapDelBs= 1;
   if (getenv("SQUEAK_SWAPBTN"))		swapBtn= 1;
   if ((ev= getenv("SQUEAK_OPTMOD")))	optMapIndex= Mod1MapIndex + atoi(ev) - 1;
@@ -5921,6 +5924,7 @@ static int display_parseArgument(int argc, char **argv)
   else if (!strcmp(arg, "-swapbtn"))	swapBtn= 1;
   else if (!strcmp(arg, "-fullscreen"))	fullScreen= 1;
   else if (!strcmp(arg, "-iconic"))	iconified= 1;
+  else if (!strcmp(arg, "-closequit"))	closeQuit= 1;
 #if !defined (INIT_INPUT_WHEN_KEY_PRESSED)
   else if (!strcmp(arg, "-nointl"))	initInput= initInputNone;
 #else

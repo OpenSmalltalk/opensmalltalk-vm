@@ -1,3 +1,8 @@
+2010-05-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/sqUnixX11.c: Add option -closequit and
+	environment variable SQUEAK_CLOSEQUIT.
+
 2010-04-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* doc/RELEASE_NOTES_4.0.3.2202: Release 4.0.3.2202.
