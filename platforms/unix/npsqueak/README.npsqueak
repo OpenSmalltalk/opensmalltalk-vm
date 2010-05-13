@@ -4,13 +4,12 @@ Netscape Plugin for Squeak on Unix platforms
 
 
 Author:	     Bert Freudenberg 
-Version:     @VM_VERSION@
-Last edited: 2005-02-28 15:50:31 by jens on impara.de
+Last edited: 2010-05-11 17:30:59 by bert
 
 ================================================================
 
 Files:
-	Makefile
+	CMakeLists.txt
 	README.npsqueak
 	npsqueak.c
 	npunix.c	(modified copy from Netscape Plugin SDK)
@@ -23,15 +22,15 @@ Files:
 	The Squeak plugin should be automatically compiled and installed with 
 	the normal squeak build process. This installs squeak into (probably) 
 	
-		imgdir=/usr/local/lib/squeak
+		squeakdir=/usr/local/lib/squeak
 
-	You will need an image. Copy it to
+	You will need an image. Copy it (or symlink) to
 
-		${imgdir}/SqueakPlugin.image
+		${squeakdir}/SqueakPlugin.image
 
 	A good place to look for an image suited as plugin is
 
-	http://squeakland.org/plugin/installers/files.html		
+	http://squeakland.org/download		
 
 	To register the plugin run ${imgdir}/npsqueakregister. 
 	It looks for various browsers
@@ -39,9 +38,8 @@ Files:
 	your browser is not found, hack the npsqueakregister script or
 	symlink the plugin manually:
 
-		ln -s ${imgdir}/@VM_VERSION@/npsqueak.so \
+		ln -s ${squeakdir}/@VM_VERSION@/npsqueak.so \
 			/usr/lib/mybrowser/plugins/
-
 
   	Exit and restart the browser. Check if the Squeak plugin 
 	was recognized by selecting the Help>>About Plugins menu item.
@@ -49,7 +47,7 @@ Files:
   	Open the html file in the test/ directory. This should
 	activate the Squeak plugin. Since this is the first time the
 	plugin is executed, a .npsqueak folder will be created in your 
-	home directory and the plugin image is installed into it.
+	home directory.
 
 =================================================================
 
@@ -63,24 +61,27 @@ with subdirectories and files like shown below. Also create a
 
 DOCUMENTATION
 
-* On the first run for each user, the npsqueakrun will create a directory
-  structure like this:
+* How the plugin works:
+
+    - npsqueak.so needs to be symlinked where the browser expects plugins
+    - when the browser wants to display a page with an embedded Etoys
+      project, it launches the plugin
+    - the plugin executes the "npsqueakrun" script, passing some parameters
+      to establish a communication channel between the plugin and squeak
+    - that script runs the Squeak VM with an image, instructing the VM to
+      redirect the output into the plugin's window
+    - the image then loads the project
+
+* On the first run for each user, npsqueakrun will create a directory
+  structure like this (unless overridden by variables, see below):
 
     $(HOME)/
     |
     +--- .npsqueak/
-         |
-         +--- SqueakPlugin.image
-         |
-         |--- *.image         
-         |
-         +--- secure/
-         |
-         +--- My Squeak/
-
-   $(imgdir)/
-   |
-   +--- SqueakPlugin.image
+    |    |
+    |    +--- secure/
+    |
+    +--- Squeak/
 
 
 * Environment Variables:
@@ -89,14 +90,20 @@ DOCUMENTATION
 	Identifies the sandbox directory, e.g., a place which can be
 	accessed from any (potentially unsafe) Squeaklet.  
 
-        * path must be absolute  
+	* Default: "$(HOME)/Squeak"
 
-	* Default: "~/.npsqueak/My Squeak"
-	
+    SQUEAK_SECUREDIR
+	Identifies the directory to store private information
+	like signing keys.
+
+	* should not be accessible by other users
+
+	* Default: "$(HOME)/.npsqueak/secure"
 
     NPSQUEAK_DEBUG
-        logs debug info to /tmp/npsqueak.log
-        Default: don't log
+	If set, logs debug info to /tmp/npsqueak.log
+
+	* Default: unset
 
 * Mimetypes:
 
@@ -121,11 +128,24 @@ TODO
 
 * loop on read() and write() until all data is sent and received.
 * make plugin not wait for browser when the url is loaded into a target.
-* use autoconf
 
 =================================================================
 
 Change log
+
+May 2010:
+	* use CMake
+	* default to ~/Squeak
+	* do not copy image to ~/.npsqueak anymore
+
+Aug 2009:
+	* (ikp) BSD-friendly Makefile
+
+Sep 2007:
+	* (bf) use "find -H" in npsqueakregister
+
+Sep 2006:
+	* (ikp) use libtool to build
 
 Jan 2005:
 	* npsqueak checks for image file in system and home dir

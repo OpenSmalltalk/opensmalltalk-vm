@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2010-04-29 02:52:25 by piumarta on margaux1
+# Last edited: 2010-05-13 13:27:12 by piumarta on emilia-2.local
 
 PATH=/usr/bin:/bin
 
@@ -14,7 +14,9 @@ realpath () {
 	dir=`cd "${dir}" && pwd -P`
 	path=`basename "${path}"`
 	path=`ls -l "${dir}/${path}" | sed 's,.* -> ,,'`
-	path="${dir}/${path}"
+	if test `expr "${path}" : "/"` -eq 0; then
+	    path="${dir}/${path}"
+	fi
     done
     if test -d "${path}"; then
 	(cd "${path}" && pwd -P)
@@ -89,6 +91,13 @@ fi
 if test -z "$LC_ALL"; then
     LC_ALL="$LANG"
     export LC_ALL
+fi
+
+# debug output
+
+if test "0$SQUEAK_DEBUG" -gt "0"; then
+    set | fgrep SQUEAK_
+    set -x
 fi
 
 # run the vm

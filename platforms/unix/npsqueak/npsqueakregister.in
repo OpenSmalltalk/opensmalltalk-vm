@@ -7,7 +7,7 @@
 #              Rerun after you installed a new browser!
 # Parameters:  -u unregister
 
-NPSQUEAK_SO=@NPSQUEAK_SO@
+NPSQUEAK_SO=@prefix@/@plgdir@/npsqueak.so
 BROWSERS="netscape mozilla mozilla-firefox opera MozillaFirefox/lib"
 BROWSER_DIRS="/usr/local/lib /usr/lib /opt"
 SYSTEM_BROWSER_DIR="/usr/lib/browser-plugins"
@@ -19,7 +19,7 @@ usage() {
     echo "Registers the Squeak browser plugin for known browsers"
     echo "  -u         unregister plugin"
     echo "  PLUGIN     absolute path to npsqueak.so"
-    echo "             (default is @NPSQUEAK_SO@)"
+    echo "             (default is $NPSQUEAK_SO)"
     exit
 }
 

@@ -2,18 +2,38 @@
 
 # File:        npsqueakrun
 # Author:      Bert Freudenberg
-# Last edited: 2005-02-28 18:42:20 by jens on impara.de
 # Description: Script to start the Squeak VM binary 
 #              from the Browser Plugin (npsqueak.so)
-#              If necessary, sets up $HOME/.npsqueak/* first.
+#              If necessary, sets up $HOME/.npsqueak first.
+# Arguments:
+#              $0    = @prefix@/@imgdir@/npsqueakrun
+#              $1,$2 = -display :0.0
+#              $3-$5 = -browserPipes 9 12
+#              $6    = /path/to/some.image
+#              $7    = ''
+#              $8,$9 = key1 value1    (tags as given in the html page)
+#              etc.  = key2 value2
 
-VM_VERSION=@VM_VERSION@
-imgdir=@imgdir@
-
-IMAGE=${imgdir}/SqueakPlugin.image
-VM=squeak
-VMOPTIONS=" -mmap 1024 -vm-display-x11 -swapbtn "
+VM=@prefix@/@bindir@/squeak
+VMOPTIONS=
 LOGFILE=/tmp/npsqueak.log
+
+realpath () {
+    path="$1"
+    while test -L "${path}"; do
+	dir=`dirname "${path}"`
+	dir=`cd "${dir}" && pwd -P`
+	path=`basename "${path}"`
+	path=`ls -l "${dir}/${path}" | sed 's,.* -> ,,'`
+    done
+    if test -d "${path}"; then
+	(cd "${path}" && pwd -P)
+    else
+	dir=`dirname "${path}"`
+	base=`basename "${path}"`
+	(cd "${dir}" && echo "`pwd -P`/${base}")
+    fi
+}
 
 pdebug()
 {
@@ -31,18 +51,6 @@ perror()
     fi
 }
 
-# is there a clever way to determine if you are local?
-if [ $DISPLAY = ":0.0" ]; then
-    VMOPTIONS=$VMOPTIONS" -xshm "
-    pdebug "using x shared memory"
-else
-    pdebug "disabling x shared memory, because we are not local"
-fi
-
-if [ -e /usr/bin/squeakvm ]; then
-    VM=squeakvm
-fi
-
 ensuredir()
 {
     if [ ! -d "${1}" ] ; then
@@ -57,49 +65,8 @@ ensuredir()
     fi
 }
 
-ensurefile()
+parameter_to_array()
 {
-    if [ ! -e "${1}" ] ; then
-	if cp "${2}" "${1}" ; then
-	    pdebug "Created ${1}"
-	else
-	    perror "Could not create ${1}"
-	    if [ ! -r "${2}" ] ; then
-		perror "because ${2} is missing"
-	    fi
-	fi
-    fi
-}
-
-ensureimage()
-{
-    if [ `dirname "${1}"` = "${HOME}/.npsqueak" ] ; then
-	IMAGE=$1
-    else
-	IMAGE="${HOME}/.npsqueak/"`basename "$1"`
-	ensurefile "$IMAGE" "$1" 
-    fi 
-}
-
-ensure()
-{
-    if [ `dirname "${1}"` = "${HOME}/.npsqueak" ] ; then
-	IMAGE=$1
-    else
-	IMAGE="${HOME}/.npsqueak/"`basename "$1"`
-	ensurefile "$IMAGE" "$1" 
-    fi 
-}
-
-if [ -e  "${HOME}/.npsqueak" ] ; then
-    pdebug "don't create MySqueak link on desktop," 
-    pdebug "because ${HOME}/.npsqueak exists"
-else
-    pdebug "create MySqueak link on desktop"
-    ln -s "${HOME}/.npsqueak/My Squeak" "${HOME}/Desktop/My Squeak"
-fi 
-
-parameter_to_array(){
     i=0
     for p in "$@"; do
 	i=$(( $i + 1 ))
@@ -107,27 +74,17 @@ parameter_to_array(){
     done
 }
 
-ensuredir "${HOME}/.npsqueak" 
-ensuredir "${HOME}/.npsqueak/secure" 700
 
-if [ ! -z "$SQUEAK_USERDIR" ]; then
-    pdebug "using SQUEAK_USERDIR"
-    pdebug "My Squeak -> $SQUEAK_USERDIR"  
-else
-    pdebug "My Squeak -> ${HOME}/.npsqueak/My Squeak"
-    ensuredir "${HOME}/.npsqueak/My Squeak"
-fi
+[ -z "$SQUEAK_USERDIR" ] && export SQUEAK_USERDIR="$HOME/Squeak"
+[ -z "$SQUEAK_SECUREDIR" ] && export SQUEAK_SECUREDIR="$HOME/.npsqueak/secure"
 
-if [ -z "$1" ]; then
-    pdebug "start squeak direct"
-    ensureimage $IMAGE
-    $VM $VMOPTIONS $IMAGE
-else
-    pdebug "start squeak from plugin"
-    IMAGE="${6}"
-    ensureimage $IMAGE
-    parameter_to_array "$@"
-    parameter[6]=$IMAGE
-    $VM $VMOPTIONS "${parameter[@]}"
-fi
+ensuredir "$SQUEAK_USERDIR" 
+ensuredir "$SQUEAK_SECUREDIR" 700
+
+# resolve image symlink so Smalltalk imagePath is correct
+IMAGE="${6}"
+parameter_to_array "$@"
+parameter[6]=`realpath "$IMAGE"`
+
+$VM $VMOPTIONS "${parameter[@]}"
 

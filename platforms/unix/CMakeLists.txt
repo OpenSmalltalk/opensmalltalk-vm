@@ -1,6 +1,6 @@
 # Yes, it's true: you can write makefiles in COBOL.
 # 
-# Last edited: 2010-04-09 04:23:35 by piumarta on ubuntu
+# Last edited: 2010-05-13 12:54:20 by piumarta on emilia-2.local
 
 PROJECT (squeak)
 
@@ -136,6 +136,8 @@ CONFIGURE_FILE (${bld}/config.h.in ${bld}/config.h)
 INCLUDE (${unix}/vm/build.cmake)
 
 BUILD_PLUGINS ()
+
+ADD_SUBDIRECTORY (${unix}/npsqueak)
 
 SET (cmake ${unix}/../../cmake)
 

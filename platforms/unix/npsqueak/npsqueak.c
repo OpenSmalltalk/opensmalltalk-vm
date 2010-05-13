@@ -4,7 +4,7 @@
  * 
  * Author:  Bert Freudenberg
  *
- * Last edited: 2005-03-17 12:15:48 by piumarta on squeak.hpl.hp.com
+ * Last edited: 2010-05-11 20:31:45 by bert
  *
  * History:
  *          Jan 2005 - looking for image and npsqueakrun in system and home dir
@@ -283,7 +283,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 	char* bin_dir_v[PATH_MAX]= {user_bin_dir,
 				    SYSTEM_BIN_DIR"/"};
 	if (findFileInPaths(plugin->vmName, NPSQUEAKRUN, 2 , bin_dir_v) == 0){
-	  fprintf(stderr, "Squeak Plugin: npsqueakrun not found!\n");
+	  fprintf(stderr, "Squeak Plugin: "NPSQUEAKRUN" not found!\n");
 	  return NPERR_GENERIC_ERROR;
 	}
       }
@@ -298,7 +298,7 @@ NPP_New(NPMIMEType pluginType, NPP instance, uint16 mode, int16 argc,
 		    failureUrl);
 	    plugin->failureUrl= NPN_StrDup(failureUrl);
 	  }else {
-	    fprintf(stderr, "Squeak Plugin: no failure URL: \n");
+	    fprintf(stderr, "Squeak Plugin: no failure URL.\n");
 	    return NPERR_GENERIC_ERROR;
 	  }
 	}

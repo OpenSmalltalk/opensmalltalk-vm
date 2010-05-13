@@ -1,3 +1,20 @@
+2010-05-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* CMakeLists.txt: Add subdir npsqueak.
+
+	* npsqueak.c: Cosmetic improvements to error messages.
+
+	* npsqueak/README.npsqueak: Updated for CMake.
+
+	* npsqueak/npsqueakrun.in: New version from Bert.
+
+	* npsqueak/npsqueakregister.in (NPSQUEAK_SO): Construct from
+	substituted cmake variables.
+
+	* cmake/squeak.in (PATH): realpath() prepends dir to link target
+	iff target is relative.  Only echo environment if SQUEAK_DEBUG is
+	nonzero.
+
 2010-05-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/sqUnixX11.c: Add option -closequit and
