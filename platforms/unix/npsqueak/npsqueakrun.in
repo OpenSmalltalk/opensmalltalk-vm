@@ -25,6 +25,9 @@ realpath () {
 	dir=`cd "${dir}" && pwd -P`
 	path=`basename "${path}"`
 	path=`ls -l "${dir}/${path}" | sed 's,.* -> ,,'`
+	if test `expr "${path}" : "/"` -eq 0; then
+	    path="${dir}/${path}"
+	fi
     done
     if test -d "${path}"; then
 	(cd "${path}" && pwd -P)

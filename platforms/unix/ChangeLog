@@ -1,5 +1,8 @@
 2010-05-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* npsqueak/npsqueakrun.in (realpath): prepend dir to link target
+	iff target is relative.
+
 	* cmake/squeak.in (wrapper): Don't echo the environment.
 
 	* CMakeLists.txt: Add subdir npsqueak.
@@ -13,8 +16,8 @@
 	* npsqueak/npsqueakregister.in (NPSQUEAK_SO): Construct from
 	substituted cmake variables.
 
-	* cmake/squeak.in (PATH): realpath() prepends dir to link target
-	iff target is relative.  Only echo environment if SQUEAK_DEBUG is
+	* cmake/squeak.in (realpath): prepend dir to link target iff
+	target is relative.  Only echo environment if SQUEAK_DEBUG is
 	nonzero.
 
 2010-05-11  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
