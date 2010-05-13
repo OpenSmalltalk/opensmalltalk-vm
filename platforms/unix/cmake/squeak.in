@@ -3,7 +3,7 @@
 # Launch squeakvm from the command line or a menu script, with a good
 # plugin path, text encodings and pulseaudio kludge
 # 
-# Last edited: 2010-05-13 13:27:12 by piumarta on emilia-2.local
+# Last edited: 2010-05-13 14:15:38 by piumarta on emilia-2.local
 
 PATH=/usr/bin:/bin
 
@@ -102,6 +102,4 @@ fi
 
 # run the vm
 
-set | fgrep SQUEAK_
-set -x
 exec ${wrapper} "${vm}" "$@"

@@ -1,5 +1,7 @@
 2010-05-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* cmake/squeak.in (wrapper): Don't echo the environment.
+
 	* CMakeLists.txt: Add subdir npsqueak.
 
 	* npsqueak.c: Cosmetic improvements to error messages.
