@@ -1,5 +1,7 @@
 2010-05-13  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* plugins/CameraPlugin/sqCamera.c: Added.
+
 	* npsqueak/npsqueakrun.in (realpath): prepend dir to link target
 	iff target is relative.
 
