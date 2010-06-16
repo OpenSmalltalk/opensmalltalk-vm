@@ -66,28 +66,35 @@ After so much mumbo-jumbo, your Squeak folder should have a directory entitled p
 
 Step Three: Build an interpeter
 
-	0.  Grab your Squeak3.10.gamma.7159.image
+	0.  Grab your Pharo or squeak imge
 
-	Install Balloon 3D via the SqueakMap package Loader,
+	Install Balloon 3D via MC
+
+	Install the Ballon3D-Constants & Ballon3D-Plugins
+	MCHttpRepository		location: 'http://www.squeaksource.com/Balloon3D'		user: ''		password: ''
+	
+
 	Install FFI  & Klatt via MC
-	
 	MCHttpRepository
-	    location: 'http://www.squeaksource.com/Ladrillos'
-	   user: ''
- 	   password: ''
-	
-	install FFI via  FFI-Kernel-ar.7
-	and install KLATT via Speech-Klatt-edc.1
-
-	Install VMMaker-dtl.120 or higher from
-	MCHttpRepository    		location: 'http://www.squeaksource.com/VMMaker'    		user: ''    		password: ''
-
-	Install Alien-VMMaker-Support-John M McIntosh.6 or higher from
-
-	MCHttpRepository
-    		location: 'http://www.squeaksource.com/Alien'
+   		 location: 'http://www.squeaksource.com/Speech'
    		 user: ''
    		 password: ''
+
+	SharedPool-Speech, Speech
+
+	MCHttpRepository
+  	  	location: 'http://source.squeak.org/FFI'
+  	  	user: ''
+  	 	password: ''
+		
+	FFI-Pools,FFI-Kernel
+
+
+	Install Name: VMMaker-jcg.182 or higher from
+	MCHttpRepository    		location: 'http://www.squeaksource.com/VMMaker'    		user: ''    		password: ''
+
+	Install Alien Plugin
+
 
 	A.  Install additional change sets from the specialChangeSets Folder. 
 		Gnuifier.st - A smalltalk version of the AWK example. 	
