@@ -5,18 +5,11 @@ Class {
 	#name : #VMPluginCodeGenerator,
 	#superclass : #CCodeGenerator,
 	#instVars : [
+		'pluginClass',
 		'pluginName'
 	],
 	#category : #'VMMaker-Translation to C'
 }
-
-{ #category : #public }
-VMPluginCodeGenerator >> codeStringForPrimitives: classAndSelectorList [ 
-"TPR - appears to be obsolete now"
-	self addClass: InterpreterPlugin.
-	InterpreterPlugin declareCVarsIn: self.
-	^super codeStringForPrimitives: classAndSelectorList 
-]
 
 { #category : #inlining }
 VMPluginCodeGenerator >> doInlining: inlineFlag [
@@ -57,9 +50,8 @@ VMPluginCodeGenerator >> emitCHeaderForPrimitivesOn: aStream [
 VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 	"Write a C file header onto the given stream."
 
-	aStream nextPutAll: '/* Automatically generated from Squeak on '.
-	aStream nextPutAll: Time dateAndTimeNow printString.
-	aStream nextPutAll: ' */';cr.
+	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: pluginClass).
+	aStream cr; cr.
 
 	aStream nextPutAll:'
 #include <math.h>
@@ -95,11 +87,7 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 
 
 	aStream nextPutAll: '
-/* memory access macros */
-#define byteAt(i) (*((unsigned char *) (i)))
-#define byteAtput(i, val) (*((unsigned char *) (i)) = val)
-#define longAt(i) (*((int *) (i)))
-#define longAtput(i, val) (*((int *) (i)) = val)
+#include "sqMemoryAccess.h"
 
 '.
 	aStream cr.
@@ -111,13 +99,11 @@ VMPluginCodeGenerator >> emitExportsOn: aStream [
 	| prefix |
 	aStream nextPutAll:'
 
-#ifdef SQUEAK_BUILTIN_PLUGIN';cr.
-
-	aStream nextPutAll:'
+#ifdef SQUEAK_BUILTIN_PLUGIN
 
 void* ', pluginName,'_exports[][3] = {'.
 	prefix := '"', pluginName,'"'.
-	self exportedPrimitiveNames do:[:primName|
+	(self sortStrings: self exportedPrimitiveNames) do:[:primName|
 		aStream cr;
 			nextPutAll:'	{'; 
 			nextPutAll: prefix; 
@@ -130,20 +116,17 @@ void* ', pluginName,'_exports[][3] = {'.
 	aStream nextPutAll:'
 	{NULL, NULL, NULL}
 };
-'.
-	aStream nextPutAll:'
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
-
-'.
+'
 ]
 
 { #category : #public }
 VMPluginCodeGenerator >> generateCodeStringForPrimitives [
 "TPR - moved down from CCodeGenerator"
 	| s methodList |
-	s _ ReadWriteStream on: (String new: 1000).
-	methodList _ methods asSortedCollection: [:m1 :m2 | m1 selector < m2 selector].
+	s := ReadWriteStream on: (String new: 1000).
+	methodList := methods asSortedCollection: [:m1 :m2 | m1 selector < m2 selector].
 	self emitCHeaderForPrimitivesOn: s.
 	self emitCConstantsOn: s.
 	self emitCVariablesOn: s.
@@ -165,17 +148,31 @@ VMPluginCodeGenerator >> localizeGlobalVariables [
 ]
 
 { #category : #public }
+VMPluginCodeGenerator >> pluginClass: aPluginClass [
+	"Set the plugin class and name when generating plugins."
+	| packageId |
+	pluginClass := aPluginClass.
+	pluginName := pluginClass moduleName.
+	packageId := self shortMonticelloDescriptionForClass: pluginClass.
+	(packageId beginsWith: pluginClass name) ifTrue:
+		[packageId := packageId allButFirst: pluginClass name size].
+	(packageId beginsWith: pluginName) ifTrue:
+		[packageId := packageId allButFirst: pluginName size].
+	self declareModuleName: pluginClass moduleNameAndVersion, packageId
+]
+
+{ #category : #public }
 VMPluginCodeGenerator >> pluginName: aString [
 "TPR - moved from CCodeGenerator"
 	"Set the plugin name when generating plugins."
-	pluginName _ aString.
+	pluginName := aString.
 ]
 
 { #category : #private }
 VMPluginCodeGenerator >> storeVirtualMachineProxyHeader: categoryList on: fileName [
 	"Store the interpreter definitions on the given file"
 	| stream |
-	stream _ FileStream newFileNamed: fileName.
+	stream := FileStream newFileNamed: fileName.
 	stream nextPutAll:
 '#ifndef _SqueakVM_H
 #define _SqueakVM_H
@@ -194,7 +191,7 @@ typedef struct VirtualMachine {
 
 	categoryList do:[:assoc|
 		stream cr; crtab; nextPutAll:'/* InterpreterProxy methodsFor: ''',assoc key, ''' */'; cr; crtab.
-		assoc value asSortedCollection do:[:sel|
+		(self sortStrings: assoc value) do:[:sel|
 			(methods at: sel) emitProxyFunctionPrototype: stream generator: self.
 			stream nextPutAll: ';'; crtab]].
 
@@ -210,7 +207,7 @@ typedef struct VirtualMachine {
 VMPluginCodeGenerator >> storeVirtualMachineProxyImplementation: categoryList on: fileName [
 	"Store the interpreter definitions on the given file"
 	| stream |
-	stream _ FileStream newFileNamed: fileName.
+	stream := FileStream newFileNamed: fileName.
 	stream nextPutAll:'
 #include <math.h>
 #include <stdio.h>
@@ -222,9 +219,9 @@ VMPluginCodeGenerator >> storeVirtualMachineProxyImplementation: categoryList on
 
 	categoryList do:[:assoc|
 		stream cr; cr; nextPutAll:'/* InterpreterProxy methodsFor: ''',assoc key, ''' */'; cr.
-		assoc value asSortedCollection do:[:sel|
+		(self sortStrings: assoc value) do:[:sel|
 			(methods at: sel) emitCFunctionPrototype: stream generator: self.
-			stream nextPutAll: ';'; cr]].
+			stream nextPut: $;; cr]].
 
 	stream cr; nextPutAll:'struct VirtualMachine *VM = NULL;'; cr.
 	stream cr; nextPutAll:

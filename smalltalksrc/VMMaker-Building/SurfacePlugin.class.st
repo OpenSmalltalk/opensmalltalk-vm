@@ -25,7 +25,7 @@ SurfacePlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 	| cg |
 	self initialize.
 
-	cg _ self buildCodeGeneratorUpTo: self.
+	cg := self buildCodeGeneratorUpTo: self.
 
 	"We rely on the fake entry points implemented on the instance side to allow the export list to be accurate. Please update them if you change the code"
 	^cg exportedPrimitiveNames asArray
@@ -34,53 +34,53 @@ SurfacePlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 { #category : #'fake entry points' }
 SurfacePlugin >> initialiseModule [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> ioFindSurface [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> ioGetSurfaceFormat [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> ioLockSurface [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> ioRegisterSurface [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> ioShowSurface [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> ioUnlockSurface [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> ioUnregisterSurface [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]
 
 { #category : #'fake entry points' }
 SurfacePlugin >> shutdownModule [
 	"Fake entry point"
-	self export: true
+	<export: true>
 ]

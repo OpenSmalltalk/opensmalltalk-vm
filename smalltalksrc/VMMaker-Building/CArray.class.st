@@ -28,7 +28,7 @@ CArray >> + n [
 { #category : #'pointer arithmetic' }
 CArray >> += increment [
 
-	ptrOffset _ ptrOffset + increment
+	ptrOffset := ptrOffset + increment
 ]
 
 { #category : #'int arithmetic' }
@@ -40,7 +40,7 @@ CArray >> - n [
 { #category : #'pointer arithmetic' }
 CArray >> -= decrement [
 
-	ptrOffset _ ptrOffset - decrement
+	ptrOffset := ptrOffset - decrement
 ]
 
 { #category : #'int arithmetic' }
@@ -68,6 +68,13 @@ CArray >> adaptToNumber: rcvr andSend: selector [
 ]
 
 { #category : #converting }
+CArray >> asCArrayAccessor [
+
+	^ (CArrayAccessor on: self)
+			+= -1   "Defeat the +1 offset in the accessor"
+]
+
+{ #category : #converting }
 CArray >> asInteger [
 
 	^ self ptrAddress
@@ -78,7 +85,7 @@ CArray >> at: offset [
 
 	ptrOffset = 0 ifFalse: [self error: 'only expect base address to receive at: message'].
 	unitSize = 1 ifTrue: [^ interpreter byteAt: arrayBaseAddress + offset].
-	unitSize = 4 ifTrue: [^ interpreter longAt: arrayBaseAddress + (offset * 4)].
+	unitSize = 4 ifTrue: [^ interpreter long32At: arrayBaseAddress + (offset * 4)].
 	self halt: 'Can''t handle unitSize ', unitSize printString
 
 ]
@@ -88,7 +95,7 @@ CArray >> at: offset put: val [
 
 	ptrOffset = 0 ifFalse: [self error: 'only expect base address to receive at:put: message'].
 	unitSize = 1 ifTrue: [^ interpreter byteAt: arrayBaseAddress + offset put: val].
-	unitSize = 4 ifTrue: [^ interpreter longAt: arrayBaseAddress + (offset * 4) put: val].
+	unitSize = 4 ifTrue: [^ interpreter long32At: arrayBaseAddress + (offset * 4) put: val].
 	self halt: 'Can''t handle unitSize ', unitSize printString
 
 ]
@@ -115,6 +122,9 @@ CArray >> bitShift: n [
 CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 
 	cTypeString = 'int' ifTrue: [^ self ptrAddress].
+	cTypeString = 'float *' ifTrue: [^ self asCArrayAccessor asFloatAccessor].
+	cTypeString = 'int *' ifTrue: [^ self asCArrayAccessor asIntAccessor].
+	cTypeString = 'unsigned' ifTrue: [^ self ptrAddress].
 	^ self
 ]
 
@@ -124,13 +134,33 @@ CArray >> doesNotUnderstand: message [
 	^ self asInteger perform: message selector withArguments: message arguments
 ]
 
+{ #category : #accessing }
+CArray >> floatAt: index [
+	^ Float fromIEEE32Bit: (self at: index)
+]
+
+{ #category : #accessing }
+CArray >> floatAt: index put: value [
+	^ self at: index put: value asIEEE32BitWord
+]
+
+{ #category : #accessing }
+CArray >> intAt: index [
+	^ (self at: index) signedIntFromLong
+]
+
+{ #category : #accessing }
+CArray >> intAt: index put: signedInt [
+	^ self at: index put: signedInt signedIntToLong
+]
+
 { #category : #private }
 CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numBytes [
 
-	interpreter _ interpreterSimulator.
-	arrayBaseAddress _ arrayAddress.
-	unitSize _ numBytes.
-	ptrOffset _ 0.
+	interpreter := interpreterSimulator.
+	arrayBaseAddress := arrayAddress.
+	unitSize := numBytes.
+	ptrOffset := 0.
 
 ]
 
@@ -138,4 +168,10 @@ CArray >> interpreter: interpreterSimulator address: arrayAddress unitSize: numB
 CArray >> ptrAddress [
 
 	^ arrayBaseAddress + ptrOffset
+]
+
+{ #category : #'int arithmetic' }
+CArray >> signedBitShift: n [
+
+	^ self bitShift: n
 ]

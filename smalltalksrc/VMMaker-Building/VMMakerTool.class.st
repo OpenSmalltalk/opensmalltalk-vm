@@ -65,11 +65,6 @@ VMMakerTool class >> initialize [
 ]
 
 { #category : #'instance creation' }
-VMMakerTool class >> new [
-	^super new initialize
-]
-
-{ #category : #'instance creation' }
 VMMakerTool class >> openInWorld [
 	"Build a VMMakerTool and open it"
 	"VMMakerTool openInWorld"
@@ -88,20 +83,91 @@ VMMakerTool >> acceptDroppingMorph: transferMorph event: evt inMorph: aMorph [
 	"Here we are fetching information from the dropped transferMorph and performing the correct action for this drop.
 	As long as the source is part of this tool, move the dragged item from the source list to the destination list"
 
-	transferMorph source model = self ifFalse:[^false].
-
 	^self moveItem: transferMorph passenger from: transferMorph source to: aMorph
+]
+
+{ #category : #'window construction' }
+VMMakerTool >> addSecondButtonRowToWindow: sysWin startingAt: initialVerticalOffset [ 
+	| verticalOffset box |
+	verticalOffset := initialVerticalOffset.
+	"add a row of buttons to start up various actions"
+	box := AlignmentMorph new vResizing: #shrinkWrap;  layoutInset: 6@3; cellInset: 6@0; wrapCentering: #center.
+	box addMorph: (TextMorph new contents: 'Generate:' translated asText allBold) lock.
+	box addMorphBack: (SimpleButtonMorph new target: self;
+			 label: 'Entire';
+			 actionSelector: #generateAll;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Generate the sources for the core VM and all chosen internal and external plugins').
+	box addMorphBack: (SimpleButtonMorph new target: self;
+			 label: 'Core+Internal';
+			 actionSelector: #generateCore;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Generate the sources for the core vm and any internal plugins').
+
+	box addMorphBack: (SimpleButtonMorph new target: self;
+			 label: 'External Plugins';
+			 actionSelector: #generateExternal;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Generate the sources for all external plugins').
+	box addMorphBack: ((AlignmentMorph inARow: {StringMorph new contents: '64 bit VM?'. UpdatingThreePhaseButtonMorph checkBox target: self;
+				 actionSelector: #toggle64BitVM;
+				 getSelector: #isFor64BitVM}) layoutInset: 3;
+			 cellInset: 5;
+			 color: Color blue veryMuchLighter;
+			 setBalloonText: 'Set to build a 64 bit VM or a 32bit VM' yourself).
+	sysWin
+		addMorph: box
+		fullFrame: (LayoutFrame
+				fractions: (0 @ 0 corner: 1 @ 0)
+				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset := verticalOffset + box height - 1))).
+
+	^verticalOffset.
+]
+
+{ #category : #'window construction' }
+VMMakerTool >> addTopButtonRowToWindow: sysWin [
+	| verticalOffset box |
+	verticalOffset := 0.
+
+	"add a row of buttons to start up various actions"
+	box := AlignmentMorph new vResizing: #shrinkWrap;
+				 layoutInset: 6 @ 3;
+				 cellInset: 6 @ 0;
+				 wrapCentering: #center.
+	box addMorphBack: (SimpleButtonMorph new target: self;
+			 label: 'Help';
+			 actionSelector: #helpText;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Open the help window').
+	box addMorphBack: (TextMorph new contents: 'Configuration File:' translated asText allBold) lock.	
+	box addMorphBack: (SimpleButtonMorph new target: self;
+			 label: 'Load';
+			 actionSelector: #loadConfig;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Load a previously saved configuration').
+	box addMorphBack: (SimpleButtonMorph new target: self;
+			 label: 'Save';
+			 actionSelector: #saveConfig;
+			 hResizing: #spaceFill;
+			 setBalloonText: 'Save the current configuration').
+	sysWin
+		addMorph: box
+		fullFrame: (LayoutFrame
+				fractions: (0 @ 0 corner: 1 @ 0)
+				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset := verticalOffset + box height - 1))).
+	^ verticalOffset
 ]
 
 { #category : #menus }
 VMMakerTool >> availableListMenu: aMenu [
 
-	aMenu addList:#(
+	aMenu addTranslatedList: #(
 			('make all external'						makeAllPluginsExternal)
 			('make all internal'						makeAllPluginsInternal)
 			('make all available'					makeAllPluginsAvailable)
 			-
-			('browse plugin' 						browseSelectedAvailablePlugin)).
+			('browse plugin' 						browseSelectedAvailablePlugin)
+			('refresh list' 							refreshAvailablePluginsList)).
 	^ aMenu
 ]
 
@@ -146,183 +212,88 @@ VMMakerTool >> browseSelectedInternalPlugin [
 	(Smalltalk classNamed: plugin) browseHierarchy
 ]
 
-{ #category : #initialisation }
+{ #category : #'window construction' }
+VMMakerTool >> buildCenterRows [
+	| rows color1 color2 |
+	color1 := Color blue veryMuchLighter.
+	color2 := Color green veryMuchLighter.
+	rows := Morph new color: Color transparent;
+				 layoutPolicy: TableLayout new;
+				 vResizing: #spaceFill;
+				 extent: 550 @ (TextStyle defaultFont height * 8);
+				 hResizing: #spaceFill;
+				 listDirection: #topToBottom;
+				borderStyle: (BorderStyle complexAltRaised width: 2);
+				 wrapDirection: #none;
+				 wrapCentering: #center;
+				 yourself.
+	rows
+		addMorphBack: ((self
+				entryRowWithLabel: 'Interpreter class name:'
+				balloonText: 'The name of the Interpreter class'
+				getFieldText: #interpreterClassName
+				setFieldText: #interpreterClassName:
+				buttonLabel: nil
+				buttonAction: nil
+				buttonBalloonText: nil)
+				color: color1).
+	interpreterClassMorph := rows submorphs last submorphs first.
+
+	rows
+		addMorphBack: ((self
+				entryRowWithLabel: 'Path to platforms code:'
+				balloonText: 'The directory where the platform source tree is found; can be edited in text field to the right. Default of {working directory}/src is strongly recommended'
+				getFieldText: #platformsPathText
+				setFieldText: #platformsPathText:
+				buttonLabel: 'Find Path'
+				buttonAction: #findPlatformsPath
+				buttonBalloonText: 'Choose the directory where you keep the platform specific code from a file dialogue')
+				color: color2).
+	platformPathMorph := rows submorphs last submorphs second.
+
+	rows
+		addMorphBack: ((self
+				entryRowWithLabel: 'Platform name:'
+				balloonText: 'The platform name (as returned by Smalltalk platformName - unix, Mac OS, RISCOS, win32 etc); can be edited (in text field to the right) to cross generate'
+				getFieldText: #platformNameText
+				setFieldText: #platformNameText:
+				buttonLabel: 'Find platform'
+				buttonAction: #platformsListMenu
+				buttonBalloonText: 'Choose from a list of known platforms. The default is this current platform.')
+				color: color1).
+	platformNameMorph := rows submorphs last submorphs second.
+
+	rows
+		addMorphBack: ((self
+				entryRowWithLabel: 'Path to generated sources'
+				balloonText: 'The directory where the built sources will be placed; can be edited in text field to the right. The default is strongly recommended; makefile alterations may be needed if you use a different path.'
+				getFieldText: #sourcePathText
+				setFieldText: #sourcePathText:
+				buttonLabel: 'Clean out'
+				buttonAction: #cleanoutSrcDir
+				buttonBalloonText: 'Clean out all the files in the target directory, ready for a clean build')
+				color: color2).
+	generatedPathMorph := rows submorphs last submorphs second.
+
+	^ rows
+]
+
+{ #category : #'window construction' }
 VMMakerTool >> buildWindow [
-"VMMakerTool openInWorld"
+	"VMMakerTool openInWorld"
 	| sysWin box verticalOffset |
-	sysWin _ (SystemWindow labelled: 'VMMaker')
+	sysWin := (SystemWindow labelled: 'VMMaker')
 				model: self.
-
-	verticalOffset _ 0.
-	"add a row of buttons to start up various actions"
-	box _ AlignmentMorph new vResizing: #shrinkWrap.
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Generate All';
-			 actionSelector: #generateAll;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Generate the sources for the core VM and all chosen plugins').
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Generate Core VM';
-			 actionSelector: #generateCore;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Generate the sources for the core vm and any internal plugins').
-
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Generate External Plugins';
-			 actionSelector: #generateExternal;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Generate the sources for all external plugins').
+	verticalOffset := self addTopButtonRowToWindow: sysWin.
+	verticalOffset := self addSecondButtonRowToWindow: sysWin startingAt: verticalOffset.
+	box := self buildCenterRows.
 	sysWin
 		addMorph: box
 		fullFrame: (LayoutFrame
 				fractions: (0 @ 0 corner: 1 @ 0)
-				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset _ verticalOffset + box height - 1))).
-
-	"add a row of buttons to start up various actions"
-	box _ AlignmentMorph new vResizing: #shrinkWrap.
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Load Configuration';
-			 actionSelector: #loadConfig;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Load a previously saved configuration').
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Save Configuration';
-			 actionSelector: #saveConfig;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Save the current configuration').
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Help';
-			 actionSelector: #helpText;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Open the help window').
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (0 @ 0 corner: 1 @ 0)
-				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset _ verticalOffset + box height - 1))).
-
-	"add the labelled text field for the interpreter class name - 
-	typically Interpreter"
-	box _ AlignmentMorph new.
-	box addMorph: (TextMorph new contents: 'Interpreter class name:' asText allBold) lock;
-		 setBalloonText: 'The name of the Interpreter class'.
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (0 @ 0 corner: 0.3 @ 0)
-				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	box _ AlignmentMorph new.
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (1 @ 0 corner: 1 @ 0)
-				offsets: (-100 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	sysWin
-		addMorph: ((interpreterClassMorph _ PluggableTextMorph
-				on: self
-				text: #interpreterClassName
-				accept: #interpreterClassName:)
-				acceptOnCR: true)
-		fullFrame: (LayoutFrame
-				fractions: (0.3 @ 0 corner: 1 @ 0)
-				offsets: (0 @ verticalOffset corner: -100 @ (verticalOffset _ verticalOffset + box height - 1))).
-
-	"add the labelled text field for the path to the platform sources - 
-	typically {current dir}/platforms"
-	box _ AlignmentMorph new.
-	box addMorph: (TextMorph new contents: 'Path to platforms code:' asText allBold) lock;
-		 setBalloonText: 'The directory where the platform source tree is found; can be edited in text field to the right. Default of {working directory}/src is strongly recommended'.
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (0 @ 0 corner: 0.3 @ 0)
-				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	box _ AlignmentMorph new.
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Find Path';
-			 actionSelector: #findPlatformsPath;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Choose the directory where you keep the platform specific code from a file dialogue').
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (1 @ 0 corner: 1 @ 0)
-				offsets: (-100 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	sysWin
-		addMorph: ((platformPathMorph _ PluggableTextMorph
-				on: self
-				text: #platformsPathText
-				accept: #platformsPathText:)
-				acceptOnCR: true)
-		fullFrame: (LayoutFrame
-				fractions: (0.3 @ 0 corner: 1 @ 0)
-				offsets: (0 @ verticalOffset corner: -100 @ (verticalOffset _ verticalOffset + box height - 1))).
-
-	"add the labelled text field for the name of the platform - typically the 
-	current platform"
-	box _ AlignmentMorph new.
-	box addMorph: (TextMorph new contents: 'Platform name:' asText allBold) lock;
-		 setBalloonText: 'The platform name (as returned by Smalltalk platformName - unix, Mac OS, RISCOS, win32 etc); can be edited (in text field to the right) to cross generate'.
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (0 @ 0 corner: 0.3 @ 0)
-				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	box _ AlignmentMorph new.
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Find platform';
-			 actionSelector: #platformsListMenu;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Choose from a list of known platforms. The default is this current platform.').
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (1 @ 0 corner: 1 @ 0)
-				offsets: (-100 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	sysWin
-		addMorph: ((platformNameMorph _ PluggableTextMorph
-				on: self
-				text: #platformNameText
-				accept: #platformNameText:)
-				acceptOnCR: true)
-		fullFrame: (LayoutFrame
-				fractions: (0.3 @ 0 corner: 1 @ 0)
-				offsets: (0 @ verticalOffset corner: -100 @ (verticalOffset _ verticalOffset + box height - 1))).
-
-	"Add the labelled text field to specify where the generated code should 
-	go; typically {current dir}/sources"
-	box _ AlignmentMorph new.
-	box addMorph: (TextMorph new contents: 'Path to generated sources' asText allBold;
-			 lock);
-		 setBalloonText: 'The directory where the built sources will be placed; can be edited in text field to the right. The default is strongly recommended; makefile alterations may be needed if you use a different path.'.
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (0 @ 0 corner: 0.3 @ 0)
-				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	box _ AlignmentMorph new.
-	box addMorphBack: (SimpleButtonMorph new target: self;
-			 label: 'Clean out';
-			 actionSelector: #cleanoutSrcDir;
-			 hResizing: #spaceFill;
-			 setBalloonText: 'Clean out all the files in the target directory, ready for a clean build').
-	sysWin
-		addMorph: box
-		fullFrame: (LayoutFrame
-				fractions: (1 @ 0 corner: 1 @ 0)
-				offsets: (-100 @ verticalOffset corner: 0 @ (verticalOffset + box height - 1))).
-	sysWin
-		addMorph: ((generatedPathMorph _ PluggableTextMorph
-				on: self
-				text: #sourcePathText
-				accept: #sourcePathText:)
-				acceptOnCR: true)
-		fullFrame: (LayoutFrame
-				fractions: (0.3 @ 0 corner: 1 @ 0)
-				offsets: (0 @ verticalOffset corner: -100 @ (verticalOffset _ verticalOffset + box height - 1))).
-
+				offsets: (0 @ verticalOffset corner: 0 @ (verticalOffset := verticalOffset + box height - 1))).
 	"Add the list of plugins that are available to build"
-	allPluginsList _ (PluggableListMorph
+	allPluginsList := (PluggableListMorph
 				on: self
 				list: #availableModules
 				selected: #currentAvailableModuleIndex
@@ -332,7 +303,7 @@ VMMakerTool >> buildWindow [
 	allPluginsList hResizing: #spaceFill;
 		 vResizing: #spaceFill;
 		 borderWidth: 0.
-	box _ AlignmentMorph newColumn.
+	box := AlignmentMorph newColumn.
 	box addMorphBack: (TextMorph new contents: 'Plugins not built' asText allBold;
 			 lock);
 		 setBalloonText: 'List of plugins that are available to build but not yet chosen. Drag to either other list or use menu option to move in bulk'.
@@ -343,7 +314,7 @@ VMMakerTool >> buildWindow [
 				fractions: (0 @ 0 corner: 1 / 3 @ 1)
 				offsets: (0 @ verticalOffset corner: 0 @ -100)).
 	"make the list for plugins that will be built for internal linking"
-	internalPluginsList _ (PluggableListMorph
+	internalPluginsList := (PluggableListMorph
 				on: self
 				list: #internalModules
 				selected: #currentInternalModuleIndex
@@ -353,7 +324,7 @@ VMMakerTool >> buildWindow [
 	internalPluginsList hResizing: #spaceFill;
 		 vResizing: #spaceFill;
 		 borderWidth: 0.
-	box _ AlignmentMorph newColumn.
+	box := AlignmentMorph newColumn.
 	box addMorphBack: (TextMorph new contents: 'Internal Plugins' asText allBold;
 			 lock);
 		 setBalloonText: 'List of plugins chosen to be built internally'.
@@ -363,10 +334,10 @@ VMMakerTool >> buildWindow [
 		fullFrame: (LayoutFrame
 				fractions: (1 / 3 @ 0 corner: 2 / 3 @ 1)
 				offsets: (0 @ verticalOffset corner: 0 @ -100)).
-
-	"make the list for plugins to be built externally (ie as DLLs, SO or 
+	"make the list for plugins to be built externally (ie as DLLs, SO
+	or 
 	whatever suits the platform"
-	externalPluginsList _ (PluggableListMorph
+	externalPluginsList := (PluggableListMorph
 				on: self
 				list: #externalModules
 				selected: #currentExternalModuleIndex
@@ -376,7 +347,7 @@ VMMakerTool >> buildWindow [
 	externalPluginsList hResizing: #spaceFill;
 		 vResizing: #spaceFill;
 		 borderWidth: 0.
-	box _ AlignmentMorph newColumn.
+	box := AlignmentMorph newColumn.
 	box addMorphBack: (TextMorph new contents: 'External Plugins' asText allBold;
 			 lock);
 		 setBalloonText: 'List of plugins chosen to be built externally'.
@@ -387,17 +358,22 @@ VMMakerTool >> buildWindow [
 				fractions: (2 / 3 @ 0 corner: 1 @ 1)
 				offsets: (0 @ verticalOffset corner: 0 @ -100)).
 	sysWin
-		addMorph: (PluggableTextMorph on: logger text: nil accept: nil
-			readSelection: nil menu: nil)
+		addMorph: (PluggableTextMorph
+				on: logger
+				text: nil
+				accept: nil
+				readSelection: nil
+				menu: nil)
 		fullFrame: (LayoutFrame
 				fractions: (0 @ 1 corner: 1 @ 1)
 				offsets: (0 @ -100 corner: 0 @ 0)).
 	^ sysWin
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #settings }
 VMMakerTool >> checkOK [
 	"check as many settings as we can and report true if all seems ok"
+	(interpreterClassMorph accept; hasUnacceptedEdits) ifTrue:[^false].
 	(platformPathMorph accept; hasUnacceptedEdits) ifTrue:[^false].
 	(platformNameMorph accept; hasUnacceptedEdits) ifTrue:[^false].
 	(generatedPathMorph accept; hasUnacceptedEdits) ifTrue:[^false].
@@ -423,7 +399,7 @@ VMMakerTool >> currentAvailableModuleIndex [
 
 { #category : #'list access' }
 VMMakerTool >> currentAvailableModuleIndex: anInteger [
-	allPluginsSelection _ anInteger.
+	allPluginsSelection := anInteger.
 	self changed: #currentAvailableModuleIndex
 ]
 
@@ -435,7 +411,7 @@ VMMakerTool >> currentExternalModuleIndex [
 
 { #category : #'list access' }
 VMMakerTool >> currentExternalModuleIndex: anInteger [
-	externalPluginsSelection _ anInteger.
+	externalPluginsSelection := anInteger.
 	self changed: #currentExternalModuleIndex
 ]
 
@@ -447,7 +423,7 @@ VMMakerTool >> currentInternalModuleIndex [
 
 { #category : #'list access' }
 VMMakerTool >> currentInternalModuleIndex: anInteger [
-	internalPluginsSelection _ anInteger.
+	internalPluginsSelection := anInteger.
 	self changed: #currentInternalModuleIndex
 ]
 
@@ -464,10 +440,49 @@ VMMakerTool >> dragTransferTypeForMorph: dragSource [
 		ifTrue: [dragSource getListSelector]
 ]
 
+{ #category : #'window construction' }
+VMMakerTool >> entryRowWithLabel: label balloonText: balloonText getFieldText: getTextSelector setFieldText: setTextSelector buttonLabel: buttonLabel buttonAction: buttonAction buttonBalloonText: buttonBalloonText [ 
+	| row lWidth |
+	lWidth := TextStyle defaultFont pixelSize * 11.
+	row := Morph new color: Color transparent;
+				 hResizing: #spaceFill;
+				 vResizing: #spaceFill;
+				 extent: 550 @ 40;
+				 layoutPolicy: ProportionalLayout new;
+				 borderWidth: 2;
+				 setBalloonText: balloonText translated;
+				 yourself.
+	row
+		addMorph: (TextMorph new contents: label translated asText allBold) lock
+		fullFrame: (LayoutFrame
+				fractions: (0 @ 0 corner: 0 @ 1)
+				offsets: (3 @ 3 corner: lWidth @ -3)).
+	row
+		addMorph: ((PluggableTextMorph
+				on: self
+				text: getTextSelector
+				accept: setTextSelector) hideVScrollBarIndefinitely: true;
+				 acceptOnCR: true)
+		fullFrame: (LayoutFrame
+				fractions: (0 @ 0 corner: 1 @ 1)
+				offsets: (lWidth + 10 @ 0 corner: (lWidth / 1.8 + 10) negated @ 0)).
+	buttonAction
+		ifNotNil: [row
+				addMorph: (SimpleButtonMorph new target: self;
+						 label: buttonLabel translated;
+						 actionSelector: buttonAction;
+						 hResizing: #spaceFill;
+						 setBalloonText: buttonBalloonText translated)
+				fullFrame: (LayoutFrame
+						fractions: (1 @ 0 corner: 1 @ 1)
+						offsets: ((lWidth / 1.8 + 5) negated @ 3 corner: -5 @ -3))].
+	^ row
+]
+
 { #category : #menus }
 VMMakerTool >> externalListMenu: aMenu [
 
-	aMenu addList:#(
+	aMenu addTranslatedList:#(
 			('make all external'						makeAllPluginsExternal)
 			('make all internal'						makeAllPluginsInternal)
 			('make all available'					makeAllPluginsAvailable)
@@ -498,7 +513,7 @@ VMMakerTool >> externalModules [
 { #category : #'path access' }
 VMMakerTool >> findPlatformsPath [
 	| dir |
-	dir _ FileList2 modalFolderSelector.
+	dir := FileList2 modalFolderSelector.
 	dir ifNil: [^nil].
 	self platformsPathText: dir pathName
 ]
@@ -563,7 +578,7 @@ VMMakerTool >> generateSelectedExternalPlugin [
 	| plugin |
 	plugin := self externalModules at: self currentExternalModuleIndex ifAbsent: [^self].
 	self checkOK
-		ifTrue: [[vmMaker generateExternalPlugin: plugin]
+		ifTrue: [[vmMaker generateExternalPlugin: plugin; logDateAndTime]
 		on: VMMakerException
 		do: [:ex| self inform: ex messageText]]
 
@@ -601,18 +616,18 @@ VMMakerTool >> initialModules [
 { #category : #initialisation }
 VMMakerTool >> initialize [
 	logger := TranscriptStream new.
-	vmMaker _ VMMaker default.
+	vmMaker := VMMaker default.
 	vmMaker logger: logger.
 	vmMaker addDependent: self.
-	allPluginsSelectionsArray _ Array new: self availableModules size withAll: false.
-	internalPluginsSelectionsArray _ Array new.
-	externalPluginsSelectionsArray _ Array new.
+	allPluginsSelectionsArray := Array new: self availableModules size withAll: false.
+	internalPluginsSelectionsArray := Array new.
+	externalPluginsSelectionsArray := Array new.
 ]
 
 { #category : #menus }
 VMMakerTool >> internalListMenu: aMenu [
 
-	aMenu addList:#(
+	aMenu addTranslatedList:#(
 			('make all external'						makeAllPluginsExternal)
 			('make all internal'						makeAllPluginsInternal)
 			('make all available'					makeAllPluginsAvailable)
@@ -659,6 +674,12 @@ VMMakerTool >> interpreterClassName: aText [
 	^true
 ]
 
+{ #category : #'generate sources' }
+VMMakerTool >> isFor64BitVM [
+"do I build a 64bit VM or not?"
+	^vmMaker isFor64BitVM
+]
+
 { #category : #'list access' }
 VMMakerTool >> listForMorph: aMorph [
 	"work out which list is the one associated with this morph"
@@ -676,11 +697,11 @@ VMMakerTool >> listMorphs [
 { #category : #configurations }
 VMMakerTool >> loadConfig [
 	| fileResult file |
-	fileResult _ (StandardFileMenu oldFileMenu: FileDirectory default withPattern: '*.config')
+	fileResult := (StandardFileMenu oldFileMenu: FileDirectory default withPattern: '*.config')
 				startUpWithCaption: 'Select VMMaker configuration...'.
 	fileResult
-		ifNotNil: [file _ fileResult directory fullNameFor: fileResult name.
-			[vmMaker _ VMMaker forConfigurationFile: file.
+		ifNotNil: [file := fileResult directory fullNameFor: fileResult name.
+			[vmMaker := VMMaker forConfigurationFile: file.
 			vmMaker logger: logger.
 			vmMaker platformDirectory]
 				on: Error
@@ -720,9 +741,9 @@ VMMakerTool >> moveItem: transferedMorph from: sourceListMorph to: destListMorph
 	sourceListMorph = destListMorph
 		ifTrue: [^ false].
 
-	(destlist _ self listForMorph: destListMorph)
+	(destlist := self listForMorph: destListMorph)
 		ifNil: [^ false].
-	(srclist _ self listForMorph: sourceListMorph)
+	(srclist := self listForMorph: sourceListMorph)
 		ifNil: [^ false].
 	vmMaker
 		movePlugin: transferedMorph contents
@@ -754,42 +775,62 @@ VMMakerTool >> platformNameText [
 VMMakerTool >> platformNameText: aText [ 
 	"set the platform name - this will almost certainly mean replacing the  
 	vmMaker with one suited to the platform so we do it anyway."
-	| prevVMMaker |
-	prevVMMaker _ vmMaker.
+	| prevVMMaker newVMMaker |
+	prevVMMaker := vmMaker.
 	"make a new vmmaker and ensure I depend on it correctly"
-	vmMaker _ VMMaker forPlatform: aText string.
-	vmMaker logger: logger.
-	vmMaker addDependent: self.
-	prevVMMaker removeDependent: self.
+	newVMMaker := VMMaker forPlatform: aText string.
+	newVMMaker logger: logger.
 	"configure the new vmmaker to match the old one"
-	[vmMaker loadConfiguration: prevVMMaker configurationInfo.
-	vmMaker platformDirectory]
+	[newVMMaker loadConfiguration: prevVMMaker configurationInfo.
+	 newVMMaker platformDirectory]
 		on: VMMakerException
 		do: [self inform: 'Possible problem with path settings or platform name? Check path, permissions or spellings'.
-			^ false].
-	^ true
+			^false].
+	newVMMaker addDependent: self.
+	prevVMMaker removeDependent: self.
+	vmMaker := newVMMaker.
+	^true
 ]
 
 { #category : #menus }
 VMMakerTool >> platformsListMenu [
 	"create a menu of all known platforms"
-	|choice  platnames|
-	platnames _ vmMaker platformRootDirectory directoryNames copyWithoutAll: #('Cross' 'CVS').
-	choice  _ (PopUpMenu labelArray: platnames lines: #()) startUp.
-	choice = 0 ifTrue:[^self].
-	self platformNameText: (platnames at: choice) asText
+
+	| choice platnames |
+	platnames := vmMaker platformRootDirectory directoryNames reject:
+					[:dirName|
+					dirName first = $. ".svn .git et al"
+					or: [dirName ='CVS']].
+	choice := (PopUpMenu labelArray: platnames lines: #()) startUp.
+	choice ~= 0 ifTrue:
+		[self platformNameText: (platnames at: choice) asText]
 ]
 
 { #category : #'path access' }
 VMMakerTool >> platformsPathText [
 	"return a Text for the path to the platform sources"
-	[^vmMaker platformRootDirectory fullName asText] on: VMMakerException do:[^'Problem with directory name for platform code: enter correct path or consult help text' asText]
+	^(vmMaker platformRootDirectoryName ifNil: ['']),
+	  ([vmMaker platformRootDirectory. ''] 
+		on: VMMakerException 
+		do:[:ex| ex return: '<path not valid>']) asText
 ]
 
 { #category : #'path access' }
 VMMakerTool >> platformsPathText: aText [
 	"set the path to the platform sources"
 	[^vmMaker platformRootDirectoryName: aText asString] on: VMMakerException do:[:ex| self inform:'problem with this directory name; check the path settings, permissions or spelling?'. ex return: false]
+]
+
+{ #category : #menus }
+VMMakerTool >> refreshAvailablePluginsList [
+	vmMaker recomputeProvidedPlugins.
+	self changed: #availableModules
+]
+
+{ #category : #menus }
+VMMakerTool >> release [
+	vmMaker ifNotNil: [ vmMaker removeDependent: self ].
+	super release.
 ]
 
 { #category : #configurations }
@@ -807,18 +848,31 @@ VMMakerTool >> saveConfig [
 
 ]
 
+{ #category : #'generate sources' }
+VMMakerTool >> set64BitVM: boolean [
+"do I build a 64bit VM or not?"
+	boolean ifTrue:[vmMaker for64BitVM] ifFalse:[vmMaker for32BitVM].
+	self changed: #sourcePathText
+]
+
 { #category : #'path access' }
 VMMakerTool >> sourcePathText [
 	"return a Text for the path to the generated sources"
-	^[vmMaker sourceDirectory fullName asText] 
+	^(vmMaker sourceDirectoryName ifNil: ['']),
+	  ([vmMaker sourceDirectory. ''] 
 		on: VMMakerException 
-		do:[:ex| ex return:'<path not valid>'].
+		do:[:ex| ex return: '<path not valid>']) asText
 ]
 
 { #category : #'path access' }
 VMMakerTool >> sourcePathText: aText [
 	"set the path to the generated sources"
 	^vmMaker sourceDirectoryName: aText asString
+]
+
+{ #category : #settings }
+VMMakerTool >> toggle64BitVM [
+	self set64BitVM: self isFor64BitVM not
 ]
 
 { #category : #initialisation }
@@ -829,12 +883,14 @@ VMMakerTool >> update: anObject [
 
 { #category : #initialisation }
 VMMakerTool >> updateAllViews [
-	self changed: #platformsPathText;
-				 changed: #platformNameText;
-				 changed: #sourcePathText;
-				 changed: #availableModules;
-				 changed: #internalModules;
-				 changed: #externalModules
+	self changed: #interpreterClassName;
+		changed: #platformsPathText;
+		changed: #platformsPathText;
+		changed: #platformNameText;
+		changed: #sourcePathText;
+		changed: #availableModules;
+		changed: #internalModules;
+		changed: #externalModules
 ]
 
 { #category : #'drag and drop' }
@@ -844,5 +900,12 @@ VMMakerTool >> wantsDroppedMorph: transferMorph event: anEvent inMorph: destinat
 	determined later in >>acceptDroppingMorph:event:."
 
 	"only want drops on the lists"
+
+	(transferMorph isKindOf: HandleMorph) ifTrue: [ ^false ].
+
+	(transferMorph isKindOf: TransferMorph) ifFalse: [ ^false ].
+
+	transferMorph source model = self ifFalse:[^false].
+
 	^self listMorphs includes: destinationLM
 ]

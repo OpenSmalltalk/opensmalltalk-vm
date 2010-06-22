@@ -5,15 +5,12 @@ Class {
 	#name : #BalloonEngineSimulation,
 	#superclass : #BalloonEnginePlugin,
 	#instVars : [
-		'bbObj'
+		'bbObj',
+		'savedBBObj',
+		'workBufferArray'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
-
-{ #category : #'instance creation' }
-BalloonEngineSimulation class >> new [
-	^super new initialize
-]
 
 { #category : #simulation }
 BalloonEngineSimulation >> assert: bool [
@@ -42,17 +39,36 @@ BalloonEngineSimulation >> colorTransform [
 
 { #category : #simulation }
 BalloonEngineSimulation >> copyBitsFrom: x0 to: x1 at: y [
+	"Simulate the copyBits primitive"
+
+	| bb |
+	bbObj isInteger ifTrue:
+		["Create a proxy object to handle BitBlt calls"
+		bb := savedBBObj
+				ifNil: [BitBltSimulator new
+						initialiseModule;
+						setInterpreter: interpreterProxy;
+						yourself]
+				ifNotNil: [savedBBObj].
+		(bb loadBitBltFrom: bbObj)
+			ifTrue: [bbObj := bb]
+			ifFalse: [^ self]].
 	bbObj copyBitsFrom: x0 to: x1 at: y.
+"
+	interpreterProxy showDisplayBits: bbObj destForm
+		Left: bb affectedLeft Top: bb affectedTop
+		Right: bb affectedRight Bottom: bb affectedBottom.
+"
 ]
 
 { #category : #'debug support' }
 BalloonEngineSimulation >> debugDrawBezier: line [
 	| canvas p1 p2 p3 |
 	self assert:(self isBezier: line).
-	p1 _ (self edgeXValueOf: line) @ (self edgeYValueOf: line) // self aaLevelGet.
-	p2 _ (self bezierViaXOf: line) @ (self bezierViaYOf: line) // self aaLevelGet.
-	p3 _ (self bezierEndXOf: line) @ (self bezierEndYOf: line) // self aaLevelGet.
-	canvas _ Display getCanvas.
+	p1 := (self edgeXValueOf: line) @ (self edgeYValueOf: line) // self aaLevelGet.
+	p2 := (self bezierViaXOf: line) @ (self bezierViaYOf: line) // self aaLevelGet.
+	p3 := (self bezierEndXOf: line) @ (self bezierEndYOf: line) // self aaLevelGet.
+	canvas := Display getCanvas.
 	canvas
 		line: p1 to: p2 width: 2 color: Color blue;
 		line: p2 to: p3 width: 2 color: Color blue.
@@ -69,7 +85,7 @@ BalloonEngineSimulation >> debugDrawEdge: edge [
 { #category : #'debug support' }
 BalloonEngineSimulation >> debugDrawHLine: yValue [
 	| canvas |
-	canvas _ Display getCanvas.
+	canvas := Display getCanvas.
 	canvas
 		line: 0 @ (yValue // self aaLevelGet)
 		to: Display extent x @ (yValue // self aaLevelGet)
@@ -81,7 +97,7 @@ BalloonEngineSimulation >> debugDrawHLine: yValue [
 BalloonEngineSimulation >> debugDrawLine: line [
 	| canvas |
 	self assert: (self isLine: line).
-	canvas _ Display getCanvas.
+	canvas := Display getCanvas.
 	canvas
 		line: (self edgeXValueOf: line) @ (self edgeYValueOf: line) // self aaLevelGet
 		to: (self lineEndXOf: line) @ (self lineEndYOf: line) // self aaLevelGet
@@ -92,7 +108,7 @@ BalloonEngineSimulation >> debugDrawLine: line [
 { #category : #'debug support' }
 BalloonEngineSimulation >> debugDrawLineFrom: pt1 to: pt2 [
 	| canvas |
-	canvas _ Display getCanvas.
+	canvas := Display getCanvas.
 	canvas
 		line: (pt1 at: 0) @ (pt1 at: 1) // self aaLevelGet
 		to: (pt2 at: 0) @ (pt2 at: 1) // self aaLevelGet
@@ -103,7 +119,7 @@ BalloonEngineSimulation >> debugDrawLineFrom: pt1 to: pt2 [
 { #category : #'debug support' }
 BalloonEngineSimulation >> debugDrawPt: pt [
 	| canvas |
-	canvas _ Display getCanvas.
+	canvas := Display getCanvas.
 	canvas
 		fillRectangle:((pt-2) corner: pt+2) color: Color red
 ]
@@ -111,7 +127,7 @@ BalloonEngineSimulation >> debugDrawPt: pt [
 { #category : #'debug support' }
 BalloonEngineSimulation >> debugDrawPtLineFrom: pt1 to: pt2 [
 	| canvas |
-	canvas _ Display getCanvas.
+	canvas := Display getCanvas.
 	canvas
 		line: pt1
 		to: pt2
@@ -122,9 +138,9 @@ BalloonEngineSimulation >> debugDrawPtLineFrom: pt1 to: pt2 [
 { #category : #'debug support' }
 BalloonEngineSimulation >> debugPrintObjects [
 	| object end |
-	self inline: false.
-	object _ 0.
-	end _ objUsed.
+	<inline: false>
+	object := 0.
+	end := objUsed.
 	[object < end] whileTrue:[
 		Transcript cr; 
 			nextPut:$#; print: object; space;
@@ -135,7 +151,7 @@ BalloonEngineSimulation >> debugPrintObjects [
 			ifTrue:[Transcript nextPutAll:'(fill) '].
 		Transcript print: (self objectLengthOf: object); space.
 		Transcript endEntry.
-		object _ object + (self objectLengthOf: object).
+		object := object + (self objectLengthOf: object).
 	].
 ]
 
@@ -174,9 +190,15 @@ BalloonEngineSimulation >> edgeTransform [
 ]
 
 { #category : #initialize }
+BalloonEngineSimulation >> initialiseModule [
+	super initialiseModule.
+	^ true
+]
+
+{ #category : #initialize }
 BalloonEngineSimulation >> initialize [
-	doProfileStats _ false.
-	bbPluginName _ 'BitBltPlugin'
+	doProfileStats := false.
+	bbPluginName := 'BitBltPlugin'
 ]
 
 { #category : #simulation }
@@ -186,7 +208,9 @@ BalloonEngineSimulation >> ioMicroMSecs [
 
 { #category : #simulation }
 BalloonEngineSimulation >> loadBitBltFrom: oop [
-	bbObj _ oop.
+	(bbObj isInteger or: [bbObj isNil]) ifFalse:
+		[savedBBObj := bbObj].
+	bbObj := oop.
 	^true
 ]
 
@@ -200,10 +224,29 @@ BalloonEngineSimulation >> loadPointIntAt: index from: intArray [
 
 { #category : #simulation }
 BalloonEngineSimulation >> loadPointShortAt: index from: intArray [
-	"Load the int value from the given index in intArray"
-	^(index bitAnd: 1) = 0
-		ifTrue:[(intArray getObject at: (index // 2) + 1) x]
-		ifFalse:[(intArray getObject at: (index // 2) + 1) y]
+	"Load the short value from the given index in intArray"
+
+	| long |
+	long := intArray at: index // 2.
+	^ ((index bitAnd: 1) = 0
+		ifTrue:[interpreterProxy halfWordHighInLong32: long]
+		ifFalse:[interpreterProxy halfWordLowInLong32: long])
+		signedIntFromShort
+
+]
+
+{ #category : #initialize }
+BalloonEngineSimulation >> loadWordTransformFrom: transformOop into: destPtr length: n [
+	"Load a float array transformation from the given oop"
+
+	| srcPtr wordDestPtr |
+
+	false ifTrue:
+		[^super loadWordTransformFrom: transformOop into: destPtr length: n].
+
+	srcPtr := interpreterProxy firstIndexableField: transformOop.
+	wordDestPtr := destPtr as: CArrayAccessor.  "Remove float conversion shell"
+	0 to: n-1 do: [:i | wordDestPtr at: i put: (srcPtr floatAt: i)]
 ]
 
 { #category : #simulation }
@@ -213,13 +256,34 @@ BalloonEngineSimulation >> makeUnsignedFrom: integer [
 		ifFalse:[^integer]
 ]
 
+{ #category : #initialize }
+BalloonEngineSimulation >> primitiveInitializeBuffer [
+
+	"Fix an uninitialized variable (should probably go into the real engine too)"
+	super primitiveInitializeBuffer.
+	self spanEndAAPut: 0.
+]
+
+{ #category : #initialize }
+BalloonEngineSimulation >> primitiveSetBitBltPlugin [
+	"Primitive. Set the BitBlt plugin to use."
+	| pluginName |
+	pluginName := interpreterProxy stackValue: 0.
+	"Must be string to work"
+	(interpreterProxy isBytes: pluginName) 
+		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy stringOf: pluginName) = bbPluginName
+		ifTrue: [interpreterProxy pop: 1. "Return receiver"]
+		ifFalse: [^interpreterProxy primitiveFail]
+]
+
 { #category : #'debug support' }
 BalloonEngineSimulation >> printAET [
 
 	| edge |
 	Transcript cr; show:'************* ActiveEdgeTable **************'.
 	0 to: self aetUsedGet - 1 do:[:i|
-		edge _ aetBuffer at: i.
+		edge := aetBuffer at: i.
 		Transcript cr;
 			print: i; space;
 			nextPutAll:'edge #';print: edge; space;
@@ -240,7 +304,7 @@ BalloonEngineSimulation >> printGET [
 	| edge |
 	Transcript cr; show:'************* GlobalEdgeTable **************'.
 	0 to: self getUsedGet - 1 do:[:i|
-		edge _ getBuffer at: i.
+		edge := getBuffer at: i.
 		Transcript cr;
 			print: i; space;
 			nextPutAll:'edge #';print: edge; space;
@@ -298,13 +362,17 @@ BalloonEngineSimulation >> rShiftTable [
 ]
 
 { #category : #simulation }
-BalloonEngineSimulation >> shortRunLengthAt: i from: runArray [
-	^runArray getObject lengthAtRun: i+1
+BalloonEngineSimulation >> shortRunLengthAt: index from: runArray [
+	"Load the short value from the given index in intArray"
+
+	^ interpreterProxy halfWordHighInLong32: (runArray at: index)
 ]
 
 { #category : #simulation }
-BalloonEngineSimulation >> shortRunValueAt: i from: runArray [
-	^runArray getObject valueAtRun: i+1
+BalloonEngineSimulation >> shortRunValueAt: index from: runArray [
+	"Load the short value from the given index in intArray"
+
+	^ (interpreterProxy halfWordLowInLong32: (runArray at: index)) signedIntFromShort 
 ]
 
 { #category : #simulation }
@@ -324,4 +392,14 @@ BalloonEngineSimulation >> stopBecauseOf: stopReason [
 	stopReason = GErrorNeedFlush ifFalse:[
 		^super stopBecauseOf: stopReason.
 	].
+]
+
+{ #category : #simulation }
+BalloonEngineSimulation >> workBufferPut: wbOop [
+	interpreterProxy isInterpreterProxy 
+		ifTrue:[^super workBufferPut: wbOop].
+	workBuffer := ((interpreterProxy firstIndexableField: wbOop) as: BalloonArray) asCArrayAccessor.
+	workBufferArray ifNil:
+		[workBufferArray := Array new: (interpreterProxy slotSizeOf: wbOop)].
+	workBuffer getObject setSimArray: workBufferArray
 ]

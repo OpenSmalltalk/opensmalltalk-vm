@@ -54,9 +54,23 @@ CArrayAccessor >> cPtrAsOop [
 ]
 
 { #category : #accessing }
+CArrayAccessor >> long32At: index [
+	| idx |
+	idx := (offset + index) // 4 + 1.
+	"Note: This is a special hack for BitBlt."
+	(idx = (object basicSize + 1)) ifTrue:[^0].
+	^object basicAt: idx
+]
+
+{ #category : #accessing }
+CArrayAccessor >> long32At: index put: value [
+	^object basicAt: (offset + index) // 4 + 1 put: value
+]
+
+{ #category : #accessing }
 CArrayAccessor >> longAt: index [
 	| idx |
-	idx _ (offset + index) // 4 + 1.
+	idx := (offset + index) // 4 + 1.
 	"Note: This is a special hack for BitBlt."
 	(idx = (object basicSize + 1)) ifTrue:[^0].
 	^object basicAt: idx
@@ -71,8 +85,8 @@ CArrayAccessor >> longAt: index put: value [
 CArrayAccessor >> next [
 
 	|val|
-	val _ self at: 0.
-	offset _ offset + 1.
+	val := self at: 0.
+	offset := offset + 1.
 	^val
 ]
 

@@ -1,10 +1,10 @@
 Extension { #name : #AssignmentNode }
 
 { #category : #'*VMMaker-C translation' }
-AssignmentNode >> asTranslatorNode [
-"make a CCodeGenerator equivalent of me"
+AssignmentNode >> asTranslatorNodeIn: aTMethod [
+	"make a CCodeGenerator equivalent of me"
 	^TAssignmentNode new
-		setVariable: variable asTranslatorNode
-		expression: value asTranslatorNode;
+		setVariable: (variable asTranslatorNodeIn: aTMethod)
+		expression: (value asTranslatorNodeIn: aTMethod);
 		comment: comment
 ]

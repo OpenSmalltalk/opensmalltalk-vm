@@ -11,6 +11,13 @@ Class {
 }
 
 { #category : #translation }
+AsynchFilePlugin class >> declareCVarsIn: cg [
+	super declareCVarsIn: cg.
+	cg var: #sCOAFfn type: #'void *'.
+
+]
+
+{ #category : #translation }
 AsynchFilePlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^true
@@ -26,7 +33,7 @@ AsynchFilePlugin class >> requiresPlatformFiles [
 AsynchFilePlugin >> asyncFileValueOf: oop [
 	"Return a pointer to the first byte of the async file record within the given Smalltalk bytes object, or nil if oop is not an async file record."
 
-	self returnTypeC: 'AsyncFile *'.
+	<returnTypeC: 'AsyncFile *'>
 	interpreterProxy success:
 		((interpreterProxy isIntegerObject: oop) not and:
 		 [(interpreterProxy isBytes: oop) and:
@@ -39,8 +46,8 @@ AsynchFilePlugin >> asyncFileValueOf: oop [
 { #category : #'initialize-release' }
 AsynchFilePlugin >> initialiseModule [
 	"Initialise the module"
-	self export: true.
-	sCOAFfn _ interpreterProxy ioLoadFunction: 'secCanOpenAsyncFileOfSizeWritable' From: 'SecurityPlugin'.
+	<export: true>
+	sCOAFfn := interpreterProxy ioLoadFunction: 'secCanOpenAsyncFileOfSizeWritable' From: 'SecurityPlugin'.
 	^self cCode: 'asyncFileInit()' inSmalltalk:[true]
 ]
 
@@ -48,35 +55,35 @@ AsynchFilePlugin >> initialiseModule [
 AsynchFilePlugin >> moduleUnloaded: aModuleName [ 
 	"The module with the given name was just unloaded. 
 	Make sure we have no dangling references."
-	self export: true.
-	self var: #aModuleName type: 'char *'.
+	<export: true>
+	<var: #aModuleName type: 'char *'>
 	(aModuleName strcmp: 'SecurityPlugin') = 0
 		ifTrue: ["The security plugin just shut down. How odd. Zero the function pointer we have into it"
-			sCOAFfn _ 0]
+			sCOAFfn := 0]
 ]
 
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileClose: fh [ 
 	| f |
-	self var: #f declareC: 'AsyncFile *f'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileClose' parameters: #(Oop ).
-	f _ self asyncFileValueOf: fh.
+	f := self asyncFileValueOf: fh.
 	self asyncFileClose: f
 ]
 
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaIndex: semaIndex [ 
 	| fileNameSize fOop f okToOpen |
-	self var: #f declareC: 'AsyncFile *f'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileOpen' parameters: #(#String #Boolean #SmallInteger ).
-	fileNameSize _ interpreterProxy slotSizeOf: (fileName asOop: String).
+	fileNameSize := interpreterProxy slotSizeOf: (fileName asOop: String).
 	"If the security plugin can be loaded, use it to check for permission.
 	If not, assume it's ok"
 	sCOAFfn ~= 0
-		ifTrue: [okToOpen _ self cCode: ' ((int (*) (char *, int, int)) sCOAFfn)(fileName, fileNameSize, writeFlag)'.
+		ifTrue: [okToOpen := self cCode: ' ((sqInt (*) (char *, sqInt, sqInt)) sCOAFfn)(fileName, fileNameSize, writeFlag)'.
 			okToOpen ifFalse: [^ interpreterProxy primitiveFail]].
-	fOop _ interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: (self cCode: 'sizeof(AsyncFile)').
-	f _ self asyncFileValueOf: fOop.
+	fOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: (self cCode: 'sizeof(AsyncFile)').
+	f := self asyncFileValueOf: fOop.
 	interpreterProxy failed ifFalse: [self cCode: 'asyncFileOpen(f, (int)fileName, fileNameSize, writeFlag, semaIndex)'].
 	^ fOop
 ]
@@ -84,31 +91,31 @@ AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaInd
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at: start count: num [ 
 	| bufferSize bufferPtr r f count startIndex |
-	self var: #f declareC: 'AsyncFile *f'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileReadResult' parameters: #(Oop Oop SmallInteger SmallInteger ).
 
-	f _ self asyncFileValueOf: fhandle.
-	count _ num.
-	startIndex _ start.
-	bufferSize _ interpreterProxy slotSizeOf: buffer. "in bytes or words"
+	f := self asyncFileValueOf: fhandle.
+	count := num.
+	startIndex := start.
+	bufferSize := interpreterProxy slotSizeOf: buffer. "in bytes or words"
 	(interpreterProxy isWords: buffer)
 		ifTrue: ["covert word counts to byte counts"
-			count _ count * 4.
-			startIndex _ startIndex - 1 * 4 + 1.
-			bufferSize _ bufferSize * 4].
+			count := count * 4.
+			startIndex := startIndex - 1 * 4 + 1.
+			bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
 
-	bufferPtr _ (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: 'int') + startIndex - 1. 	"adjust for zero-origin indexing"
-	interpreterProxy failed ifFalse: [r _ self cCode: 'asyncFileReadResult(f, bufferPtr, count)'].
+	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: 'int') + startIndex - 1. 	"adjust for zero-origin indexing"
+	interpreterProxy failed ifFalse: [r := self cCode: 'asyncFileReadResult(f, bufferPtr, count)'].
 	^ r asOop: SmallInteger
 ]
 
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition count: count [
 	| f |
-	self var: #f declareC: 'AsyncFile *f'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileReadStart' parameters: #(Oop SmallInteger SmallInteger).
-	f _ self asyncFileValueOf: fHandle.
+	f := self asyncFileValueOf: fHandle.
 	self cCode: 'asyncFileReadStart(f, fPosition, count)'
 
 ]
@@ -117,38 +124,38 @@ AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition co
 AsynchFilePlugin >> primitiveAsyncFileWriteResult: fHandle [
 
 	| f r |
-	self var: #f declareC: 'AsyncFile *f'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileWriteResult' parameters:#(Oop).
 
-	f _ self asyncFileValueOf: fHandle.
-	r _ self cCode:' asyncFileWriteResult(f)'.
+	f := self asyncFileValueOf: fHandle.
+	r := self cCode:' asyncFileWriteResult(f)'.
 	^r asOop: SmallInteger
 ]
 
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileWriteStart: fHandle fPosition: fPosition fromBuffer: buffer at: start count: num [ 
 	| f bufferSize bufferPtr count startIndex |
-	self var: #f declareC: 'AsyncFile *f'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileWriteStart' parameters: #(Oop SmallInteger Oop SmallInteger SmallInteger ).
-	f _ self asyncFileValueOf: fHandle.
+	f := self asyncFileValueOf: fHandle.
 	interpreterProxy failed ifTrue: [^ nil].
 
-	count _ num.
-	startIndex _ start.
-	bufferSize _ interpreterProxy slotSizeOf: buffer.	"in bytes or words"
+	count := num.
+	startIndex := start.
+	bufferSize := interpreterProxy slotSizeOf: buffer.	"in bytes or words"
 	(interpreterProxy isWords: buffer)
 		ifTrue: ["covert word counts to byte counts"
-			count _ count * 4.
-			startIndex _ startIndex - 1 * 4 + 1.
-			bufferSize _ bufferSize * 4].
+			count := count * 4.
+			startIndex := startIndex - 1 * 4 + 1.
+			bufferSize := bufferSize * 4].
 	interpreterProxy success: (startIndex >= 1 and: [startIndex + count - 1 <= bufferSize]).
-	bufferPtr _ (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: 'int') + startIndex - 1.	"adjust for zero-origin indexing"
+	bufferPtr := (self cCoerce: (interpreterProxy firstIndexableField: buffer) to: 'int') + startIndex - 1.	"adjust for zero-origin indexing"
 	interpreterProxy failed ifFalse: [self cCode: 'asyncFileWriteStart(f, fPosition, bufferPtr, count)']
 ]
 
 { #category : #'initialize-release' }
 AsynchFilePlugin >> shutdownModule [
 	"Initialise the module"
-	self export: true.
+	<export: true>
 	^self cCode: 'asyncFileShutdown()' inSmalltalk:[true]
 ]
