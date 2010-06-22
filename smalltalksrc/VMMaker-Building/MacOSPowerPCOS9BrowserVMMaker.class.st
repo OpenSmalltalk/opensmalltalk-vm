@@ -15,5 +15,5 @@ MacOSPowerPCOS9BrowserVMMaker class >> isActiveVMMakerClassFor: platformName [
 { #category : #initialize }
 MacOSPowerPCOS9BrowserVMMaker >> initialize [
 	super initialize.
-	forBrowser _ true
+	forBrowser := true
 ]

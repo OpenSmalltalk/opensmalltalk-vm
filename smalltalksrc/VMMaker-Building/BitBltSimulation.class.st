@@ -168,9 +168,9 @@ Class {
 BitBltSimulation class >> copyBitsFrom: aBitBlt [
 	"Simulate the copyBits primitive"
 	| proxy bb |
-	proxy _ InterpreterProxy new.
+	proxy := InterpreterProxy new.
 	proxy loadStackFrom: thisContext sender home.
-	bb _ self simulatorClass new.
+	bb := self simulatorClass new.
 	bb initialiseModule.
 	bb setInterpreter: proxy.
 	proxy success: (bb loadBitBltFrom: aBitBlt).
@@ -183,7 +183,7 @@ BitBltSimulation class >> copyBitsFrom: aBitBlt [
 { #category : #translation }
 BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator var: 'opTable'
-		declareC: 'int opTable[' , OpTableSize printString , ']'.
+		declareC: 'void *opTable[' , OpTableSize printString , ']'.
 	aCCodeGenerator var: 'maskTable'
 		declareC:'int maskTable[33] = {
 0, 1, 3, 0, 15, 31, 0, 0, 255, 0, 0, 0, 0, 0, 0, 0, 65535,
@@ -208,15 +208,18 @@ BitBltSimulation class >> declareCVarsIn: aCCodeGenerator [
 		declareC:'int warpBitShiftTable[32]'.
 
 	aCCodeGenerator var:'cmShiftTable' 
-		declareC:'int *cmShiftTable'.
+		type:'int *'.
 	aCCodeGenerator var:'cmMaskTable' 
-		declareC:'unsigned int *cmMaskTable'.
+		type:'unsigned int *'.
 	aCCodeGenerator var:'cmLookupTable' 
-		declareC:'unsigned int *cmLookupTable'.
+		type:'unsigned int *'.
 
 	aCCodeGenerator var: 'dither8Lookup'
 		declareC:' unsigned char dither8Lookup[4096]'.
 
+	aCCodeGenerator var: 'querySurfaceFn' type: 'void *'.
+	aCCodeGenerator var: 'lockSurfaceFn' type: 'void *'.
+	aCCodeGenerator var: 'unlockSurfaceFn' type: 'void *'
 ]
 
 { #category : #initialization }
@@ -226,58 +229,58 @@ BitBltSimulation class >> initialize [
 	self initializeRuleTable.
 
 	"Mask constants"
-	AllOnes _ 16rFFFFFFFF.
-	BinaryPoint _ 14.
-	FixedPt1 _ 1 << BinaryPoint.  "Value of 1.0 in Warp's fixed-point representation"
+	AllOnes := 16rFFFFFFFF.
+	BinaryPoint := 14.
+	FixedPt1 := 1 << BinaryPoint.  "Value of 1.0 in Warp's fixed-point representation"
  
 	"Indices into stopConditions for scanning"
-	EndOfRun _ 257.
-	CrossedX _ 258.
+	EndOfRun := 257.
+	CrossedX := 258.
  
 	"Form fields"
-	FormBitsIndex _ 0.
-	FormWidthIndex _ 1.
-	FormHeightIndex _ 2.
-	FormDepthIndex _ 3.
+	FormBitsIndex := 0.
+	FormWidthIndex := 1.
+	FormHeightIndex := 2.
+	FormDepthIndex := 3.
  
 	"BitBlt fields"
-	BBDestFormIndex _ 0.
-	BBSourceFormIndex _ 1.
-	BBHalftoneFormIndex _ 2.
-	BBRuleIndex _ 3.
-	BBDestXIndex _ 4.
-	BBDestYIndex _ 5.
-	BBWidthIndex _ 6.
-	BBHeightIndex _ 7.
-	BBSourceXIndex _ 8.
-	BBSourceYIndex _ 9.
-	BBClipXIndex _ 10.
-	BBClipYIndex _ 11.
-	BBClipWidthIndex _ 12.
-	BBClipHeightIndex _ 13.
-	BBColorMapIndex _ 14.
-	BBWarpBase _ 15.
-	BBLastIndex _ 15.
-	BBXTableIndex _ 16.
+	BBDestFormIndex := 0.
+	BBSourceFormIndex := 1.
+	BBHalftoneFormIndex := 2.
+	BBRuleIndex := 3.
+	BBDestXIndex := 4.
+	BBDestYIndex := 5.
+	BBWidthIndex := 6.
+	BBHeightIndex := 7.
+	BBSourceXIndex := 8.
+	BBSourceYIndex := 9.
+	BBClipXIndex := 10.
+	BBClipYIndex := 11.
+	BBClipWidthIndex := 12.
+	BBClipHeightIndex := 13.
+	BBColorMapIndex := 14.
+	BBWarpBase := 15.
+	BBLastIndex := 15.
+	BBXTableIndex := 16.
 
 	"RGBA indexes"
-	RedIndex _ 0.
-	GreenIndex _ 1.
-	BlueIndex _ 2.
-	AlphaIndex _ 3.
+	RedIndex := 0.
+	GreenIndex := 1.
+	BlueIndex := 2.
+	AlphaIndex := 3.
 
 	"Color map flags"
-	ColorMapPresent _ 1.		"do we have one?"
-	ColorMapFixedPart _ 2.		"does it have a fixed part?"
-	ColorMapIndexedPart _ 4.	"does it have an indexed part?"
-	ColorMapNewStyle _ 8.		"new style color map"
+	ColorMapPresent := 1.		"do we have one?"
+	ColorMapFixedPart := 2.		"does it have a fixed part?"
+	ColorMapIndexedPart := 4.	"does it have an indexed part?"
+	ColorMapNewStyle := 8.		"new style color map"
 ]
 
 { #category : #initialization }
 BitBltSimulation class >> initializeRuleTable [
 	"BitBltSimulation initializeRuleTable"
 	"**WARNING** You MUST change initBBOpTable if you change this"
-	OpTable _ #(
+	OpTable := #(
 		"0" clearWord:with:
 		"1" bitAnd:with:
 		"2" bitAndInvert:with:
@@ -321,7 +324,7 @@ BitBltSimulation class >> initializeRuleTable [
 		"39" pixClear:with:
 		"40" fixAlpha:with:
 	).
-	OpTableSize _ OpTable size + 1.  "0-origin indexing"
+	OpTableSize := OpTable size + 1.  "0-origin indexing"
 
 ]
 
@@ -353,7 +356,7 @@ BitBltSimulation class >> test2 [
 	| f |
 	Display fillWhite: (0 @ 0 extent: 300 @ 140).
 	1 to: 12 do: [:i | 
-			f _ (Form extent: i @ 5) fillBlack.
+			f := (Form extent: i @ 5) fillBlack.
 			0 to: 20 do: [:x | f displayOn: Display at: x * 13 @ (i * 10)]]
 ]
 
@@ -361,9 +364,9 @@ BitBltSimulation class >> test2 [
 BitBltSimulation class >> timingTest: extent [ 
 	"BitBltSimulation timingTest: 640@480"
 	| f f2 map |
-	f _ Form extent: extent depth: 8.
-	f2 _ Form extent: extent depth: 8.
-	map _ Bitmap new: 1 << f2 depth.
+	f := Form extent: extent depth: 8.
+	f2 := Form extent: extent depth: 8.
+	map := Bitmap new: 1 << f2 depth.
 	^ Array
 		with: (Time millisecondsToRun: [100 timesRepeat: [f fillWithColor: Color white]])
 		with: (Time millisecondsToRun: [100 timesRepeat: [f copy: f boundingBox from: 0 @ 0 in: f2 rule: Form over]])
@@ -374,9 +377,9 @@ BitBltSimulation class >> timingTest: extent [
 BitBltSimulation class >> warpBitsFrom: aBitBlt [
 	"Simulate the warpBits primitive"
 	| proxy bb |
-	proxy _ InterpreterProxy new.
+	proxy := InterpreterProxy new.
 	proxy loadStackFrom: thisContext sender home.
-	bb _ self simulatorClass new.
+	bb := self simulatorClass new.
 	bb initialiseModule.
 	bb setInterpreter: proxy.
 	proxy success: (bb loadWarpBltFrom: aBitBlt).
@@ -396,31 +399,31 @@ BitBltSimulation >> OLDrgbDiff: sourceWord with: destinationWord [
 	pre-merge masking.  For accurate results, you must subtract the
 	values obtained from the left and right fringes."
 	| diff pixMask |
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Just xor and count differing bits if not RGB"
-		diff _ sourceWord bitXor: destinationWord.
-		pixMask _ maskTable at: destDepth.
+		diff := sourceWord bitXor: destinationWord.
+		pixMask := maskTable at: destDepth.
 		[diff = 0] whileFalse:
-			[(diff bitAnd: pixMask) ~= 0 ifTrue: [bitCount _ bitCount + 1].
-			diff _ diff >> destDepth].
+			[(diff bitAnd: pixMask) ~= 0 ifTrue: [bitCount := bitCount + 1].
+			diff := diff >> destDepth].
 		^ destinationWord "for no effect"].
  	destDepth = 16
 		ifTrue:
-		[diff _ (self partitionedSub: sourceWord from: destinationWord
+		[diff := (self partitionedSub: sourceWord from: destinationWord
 						nBits: 5 nPartitions: 3).
-		bitCount _ bitCount + (diff bitAnd: 16r1F)
+		bitCount := bitCount + (diff bitAnd: 16r1F)
 							+ (diff>>5 bitAnd: 16r1F)
 							+ (diff>>10 bitAnd: 16r1F).
-		diff _ (self partitionedSub: sourceWord>>16 from: destinationWord>>16
+		diff := (self partitionedSub: sourceWord>>16 from: destinationWord>>16
 						nBits: 5 nPartitions: 3).
-		bitCount _ bitCount + (diff bitAnd: 16r1F)
+		bitCount := bitCount + (diff bitAnd: 16r1F)
 							+ (diff>>5 bitAnd: 16r1F)
 							+ (diff>>10 bitAnd: 16r1F)]
 		ifFalse:
-		[diff _ (self partitionedSub: sourceWord from: destinationWord
+		[diff := (self partitionedSub: sourceWord from: destinationWord
 						nBits: 8 nPartitions: 3).
-		bitCount _ bitCount + (diff bitAnd: 16rFF)
+		bitCount := bitCount + (diff bitAnd: 16rFF)
 							+ (diff>>8 bitAnd: 16rFF)
 							+ (diff>>16 bitAnd: 16rFF)].
 	^ destinationWord  "For no effect on dest"
@@ -441,24 +444,24 @@ BitBltSimulation >> OLDtallyIntoMap: sourceWord with: destinationWord [
 			ifFalse: [^ destinationWord "no op"].
 	destDepth < 16 ifTrue:
 		["loop through all packed pixels."
-		pixMask _ (maskTable at: destDepth) bitAnd: cmMask.
-		shiftWord _ destinationWord.
+		pixMask := (maskTable at: destDepth) bitAnd: cmMask.
+		shiftWord := destinationWord.
 		1 to: destPPW do:
 			[:i |
-			mapIndex _ shiftWord bitAnd: pixMask.
+			mapIndex := shiftWord bitAnd: pixMask.
 			self tallyMapAt: mapIndex put: (self tallyMapAt: mapIndex) + 1.
-			shiftWord _ shiftWord >> destDepth].
+			shiftWord := shiftWord >> destDepth].
 		^ destinationWord].
 	destDepth = 16 ifTrue:
 		["Two pixels  Tally the right half..."
-		mapIndex _ self rgbMap: (destinationWord bitAnd: 16rFFFF) from: 5 to: cmBitsPerColor.
+		mapIndex := self rgbMap: (destinationWord bitAnd: 16rFFFF) from: 5 to: cmBitsPerColor.
 		self tallyMapAt: mapIndex put: (self tallyMapAt: mapIndex) + 1.
 		"... and then left half"
-		mapIndex _ self rgbMap: destinationWord>>16 from: 5 to: cmBitsPerColor.
+		mapIndex := self rgbMap: destinationWord>>16 from: 5 to: cmBitsPerColor.
 		self tallyMapAt: mapIndex put: (self tallyMapAt: mapIndex) + 1]
 	ifFalse:
 		["Just one pixel."
-		mapIndex _ self rgbMap: destinationWord from: 8 to: cmBitsPerColor.
+		mapIndex := self rgbMap: destinationWord from: 8 to: cmBitsPerColor.
 		self tallyMapAt: mapIndex put: (self tallyMapAt: mapIndex) + 1].
 	^ destinationWord  "For no effect on dest"
 ]
@@ -501,38 +504,38 @@ BitBltSimulation >> alphaBlend: sourceWord with: destinationWord [
 	the computation being performed independently on each color
 	component.  The high byte of the result will be 0."
 	| alpha unAlpha colorMask result blend shift |
-	self inline: false.
-	alpha _ sourceWord >> 24.  "High 8 bits of source pixel"
+	<inline: false>
+	alpha := sourceWord >> 24.  "High 8 bits of source pixel"
 	alpha = 0 ifTrue: [ ^ destinationWord ].
 	alpha = 255 ifTrue: [ ^ sourceWord ].
-	unAlpha _ 255 - alpha.
-	colorMask _ 16rFF.
-	result _ 0.
+	unAlpha := 255 - alpha.
+	colorMask := 16rFF.
+	result := 0.
 
 	"red"
 	shift := 0.
 	blend := ((sourceWord >> shift bitAnd: colorMask) * alpha) +
 				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
 			 	+ 254 // 255 bitAnd: colorMask.
-	result _ result bitOr: blend << shift.
+	result := result bitOr: blend << shift.
 	"green"
 	shift := 8.
 	blend := ((sourceWord >> shift bitAnd: colorMask) * alpha) +
 				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
 			 	+ 254 // 255 bitAnd: colorMask.
-	result _ result bitOr: blend << shift.
+	result := result bitOr: blend << shift.
 	"blue"
 	shift := 16.
 	blend := ((sourceWord >> shift bitAnd: colorMask) * alpha) +
 				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
 			 	+ 254 // 255 bitAnd: colorMask.
-	result _ result bitOr: blend << shift.
+	result := result bitOr: blend << shift.
 	"alpha (pre-multiplied)"
 	shift := 24.
 	blend := (alpha * 255) +
 				((destinationWord>>shift bitAnd: colorMask) * unAlpha)
 			 	+ 254 // 255 bitAnd: colorMask.
-	result _ result bitOr: blend << shift.
+	result := result bitOr: blend << shift.
 	^ result
 
 ]
@@ -560,49 +563,49 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 	colormaps, as is the case with WarpBlt."
 
 	| pixMask destShifted sourceShifted destPixVal rgbMask sourcePixVal unAlpha result pixBlend shift blend maskShifted bitsPerColor |
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue: [^ destinationWord "no-op"].
-	unAlpha _ 255 - sourceAlpha.
-	pixMask _ maskTable at: destDepth.
+	unAlpha := 255 - sourceAlpha.
+	pixMask := maskTable at: destDepth.
 	destDepth = 16 
-		ifTrue: [bitsPerColor _ 5]
-		ifFalse:[bitsPerColor _ 8].
-	rgbMask _ (1<<bitsPerColor) - 1.
-	maskShifted _ destMask.
-	destShifted _ destinationWord.
-	sourceShifted _ sourceWord.
-	result _ destinationWord.
+		ifTrue: [bitsPerColor := 5]
+		ifFalse:[bitsPerColor := 8].
+	rgbMask := (1<<bitsPerColor) - 1.
+	maskShifted := destMask.
+	destShifted := destinationWord.
+	sourceShifted := sourceWord.
+	result := destinationWord.
 	destPPW = 1 ifTrue:["32bpp blends include alpha"
 		paintMode & (sourceWord = 0)  "painting a transparent pixel" ifFalse:[
-			result _ 0.
+			result := 0.
 			1 to: 4 do:[:i|
-				shift _ (i-1)*8.
-				blend _ (((sourceWord>>shift bitAnd: rgbMask) * sourceAlpha)
+				shift := (i-1)*8.
+				blend := (((sourceWord>>shift bitAnd: rgbMask) * sourceAlpha)
 							+ ((destinationWord>>shift bitAnd: rgbMask) * unAlpha))
 					 	+ 254 // 255 bitAnd: rgbMask.
-				result _ result bitOr: blend<<shift].
+				result := result bitOr: blend<<shift].
 		].
 	] ifFalse:[
 		1 to: destPPW do:[:j |
-			sourcePixVal _ sourceShifted bitAnd: pixMask.
+			sourcePixVal := sourceShifted bitAnd: pixMask.
 			((maskShifted bitAnd: pixMask) = 0  "no effect if outside of dest rectangle"
 				or: [paintMode & (sourcePixVal = 0)  "or painting a transparent pixel"])
 			ifFalse:
-				[destPixVal _ destShifted bitAnd: pixMask.
-				pixBlend _ 0.
+				[destPixVal := destShifted bitAnd: pixMask.
+				pixBlend := 0.
 				1 to: 3 do:
-					[:i | shift _ (i-1)*bitsPerColor.
-					blend _ (((sourcePixVal>>shift bitAnd: rgbMask) * sourceAlpha)
+					[:i | shift := (i-1)*bitsPerColor.
+					blend := (((sourcePixVal>>shift bitAnd: rgbMask) * sourceAlpha)
 								+ ((destPixVal>>shift bitAnd: rgbMask) * unAlpha))
 						 	+ 254 // 255 bitAnd: rgbMask.
-					pixBlend _ pixBlend bitOr: blend<<shift].
+					pixBlend := pixBlend bitOr: blend<<shift].
 				destDepth = 16
-					ifTrue: [result _ (result bitAnd: (pixMask << (j-1*16)) bitInvert32)
+					ifTrue: [result := (result bitAnd: (pixMask << (j-1*16)) bitInvert32)
 										bitOr: pixBlend << (j-1*16)]
-					ifFalse: [result _ pixBlend]].
-			maskShifted _ maskShifted >> destDepth.
-			sourceShifted _ sourceShifted >> destDepth.
-			destShifted _ destShifted >> destDepth].
+					ifFalse: [result := pixBlend]].
+			maskShifted := maskShifted >> destDepth.
+			sourceShifted := sourceShifted >> destDepth.
+			destShifted := destShifted >> destDepth].
 	].
 	^ result
 
@@ -618,24 +621,24 @@ BitBltSimulation >> alphaBlendScaled: sourceWord with: destinationWord [
 
 	e.g., it is assumed that the source color is already scaled."
 	| unAlpha dstMask srcMask b g r a |
-	self inline: false.	"Do NOT inline this into optimized loops"
-	unAlpha _ 255 - (sourceWord >> 24).  "High 8 bits of source pixel"
-	dstMask _ destinationWord.
-	srcMask _ sourceWord.
-	b _ (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	b > 255 ifTrue:[b _ 255].
-	dstMask _ dstMask >> 8.
-	srcMask _ srcMask >> 8.
-	g _ (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	g > 255 ifTrue:[g _ 255].
-	dstMask _ dstMask >> 8.
-	srcMask _ srcMask >> 8.
-	r _ (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	r > 255 ifTrue:[r _ 255].
-	dstMask _ dstMask >> 8.
-	srcMask _ srcMask >> 8.
-	a _ (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
-	a > 255 ifTrue:[a _ 255].
+	<inline: false>	"Do NOT inline this into optimized loops"
+	unAlpha := 255 - (sourceWord >> 24).  "High 8 bits of source pixel"
+	dstMask := destinationWord.
+	srcMask := sourceWord.
+	b := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
+	b > 255 ifTrue:[b := 255].
+	dstMask := dstMask >> 8.
+	srcMask := srcMask >> 8.
+	g := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
+	g > 255 ifTrue:[g := 255].
+	dstMask := dstMask >> 8.
+	srcMask := srcMask >> 8.
+	r := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
+	r > 255 ifTrue:[r := 255].
+	dstMask := dstMask >> 8.
+	srcMask := srcMask >> 8.
+	a := (dstMask bitAnd: 255) * unAlpha >> 8 + (srcMask bitAnd: 255).
+	a > 255 ifTrue:[a := 255].
 	^(((((a << 8) + r) << 8) + g) << 8) + b
 ]
 
@@ -656,67 +659,67 @@ BitBltSimulation >> alphaSourceBlendBits16 [
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift ditherBase ditherIndex ditherThreshold |
-	self inline: false. "This particular method should be optimized in itself"
-	deltaY _ bbH + 1. "So we can pre-decrement"
-	srcY _ sy.
-	dstY _ dy.
-	srcShift _ (dx bitAnd: 1) * 16.
-	destMSB ifTrue:[srcShift _ 16 - srcShift].
-	mask1 _ 16rFFFF << (16 - srcShift).
+	<inline: false> "This particular method should be optimized in itself"
+	deltaY := bbH + 1. "So we can pre-decrement"
+	srcY := sy.
+	dstY := dy.
+	srcShift := (dx bitAnd: 1) * 16.
+	destMSB ifTrue:[srcShift := 16 - srcShift].
+	mask1 := 16rFFFF << (16 - srcShift).
 	"This is the outer loop"
-	[(deltaY _ deltaY - 1) ~= 0] whileTrue:[
-		srcIndex _ sourceBits + (srcY * sourcePitch) + (sx * 4).
-		dstIndex _ destBits + (dstY * destPitch) + (dx // 2 * 4).
-		ditherBase _ (dstY bitAnd: 3) * 4.
-		ditherIndex _ (sx bitAnd: 3) - 1. "For pre-increment"
-		deltaX _ bbW + 1. "So we can pre-decrement"
-		dstMask _ mask1.
-		dstMask = 16rFFFF ifTrue:[srcShift _ 16] ifFalse:[srcShift _ 0].
+	[(deltaY := deltaY - 1) ~= 0] whileTrue:[
+		srcIndex := sourceBits + (srcY * sourcePitch) + (sx * 4).
+		dstIndex := destBits + (dstY * destPitch) + (dx // 2 * 4).
+		ditherBase := (dstY bitAnd: 3) * 4.
+		ditherIndex := (sx bitAnd: 3) - 1. "For pre-increment"
+		deltaX := bbW + 1. "So we can pre-decrement"
+		dstMask := mask1.
+		dstMask = 16rFFFF ifTrue:[srcShift := 16] ifFalse:[srcShift := 0].
 
 		"This is the inner loop"
-		[(deltaX _ deltaX - 1) ~= 0] whileTrue:[
-			ditherThreshold _ ditherMatrix4x4 at: ditherBase + (ditherIndex _ ditherIndex + 1 bitAnd: 3).
-			sourceWord _ self srcLongAt: srcIndex.
-			srcAlpha _ sourceWord >> 24.
+		[(deltaX := deltaX - 1) ~= 0] whileTrue:[
+			ditherThreshold := ditherMatrix4x4 at: ditherBase + (ditherIndex := ditherIndex + 1 bitAnd: 3).
+			sourceWord := self srcLongAt: srcIndex.
+			srcAlpha := sourceWord >> 24.
 			srcAlpha = 255 ifTrue:[
 				"Dither from 32 to 16 bit"
-				sourceWord _ self dither32To16: sourceWord threshold: ditherThreshold.
+				sourceWord := self dither32To16: sourceWord threshold: ditherThreshold.
 				sourceWord = 0 
-					ifTrue:[sourceWord _ 1 << srcShift]
-					ifFalse: [sourceWord _ sourceWord << srcShift].
+					ifTrue:[sourceWord := 1 << srcShift]
+					ifFalse: [sourceWord := sourceWord << srcShift].
 				"Store masked value"
 				self dstLongAt: dstIndex put: sourceWord mask: dstMask.
 			] ifFalse:[ "srcAlpha ~= 255"
 				srcAlpha = 0 ifFalse:[ "0 < srcAlpha < 255"
 					"If we have to mix colors then just copy a single word"
-					destWord _ self dstLongAt: dstIndex.
-					destWord _ destWord bitAnd: dstMask bitInvert32.
-					destWord _ destWord >> srcShift.
+					destWord := self dstLongAt: dstIndex.
+					destWord := destWord bitAnd: dstMask bitInvert32.
+					destWord := destWord >> srcShift.
 					"Expand from 16 to 32 bit by adding zero bits"
-					destWord _ (((destWord bitAnd: 16r7C00) bitShift: 9) bitOr:
+					destWord := (((destWord bitAnd: 16r7C00) bitShift: 9) bitOr:
 									((destWord bitAnd: 16r3E0) bitShift: 6)) bitOr:
 								(((destWord bitAnd: 16r1F) bitShift: 3) bitOr:
 									16rFF000000).
 					"Mix colors"
-					sourceWord _ self alphaBlendScaled: sourceWord with: destWord.
+					sourceWord := self alphaBlendScaled: sourceWord with: destWord.
 					"And dither"
-					sourceWord _ self dither32To16: sourceWord threshold: ditherThreshold.
+					sourceWord := self dither32To16: sourceWord threshold: ditherThreshold.
 					sourceWord = 0 
-						ifTrue:[sourceWord _ 1 << srcShift]
-						ifFalse:[sourceWord _ sourceWord << srcShift].
+						ifTrue:[sourceWord := 1 << srcShift]
+						ifFalse:[sourceWord := sourceWord << srcShift].
 					"Store back"
 					self dstLongAt: dstIndex put: sourceWord mask: dstMask.
 				].
 			].
-			srcIndex _ srcIndex + 4.
+			srcIndex := srcIndex + 4.
 			destMSB
-				ifTrue:[srcShift = 0 ifTrue:[dstIndex _ dstIndex + 4]]
-				ifFalse:[srcShift = 0 ifFalse:[dstIndex _ dstIndex + 4]].
-			srcShift _ srcShift bitXor: 16. "Toggle between 0 and 16"
-			dstMask _ dstMask bitInvert32. "Mask other half word"
+				ifTrue:[srcShift = 0 ifTrue:[dstIndex := dstIndex + 4]]
+				ifFalse:[srcShift = 0 ifFalse:[dstIndex := dstIndex + 4]].
+			srcShift := srcShift bitXor: 16. "Toggle between 0 and 16"
+			dstMask := dstMask bitInvert32. "Mask other half word"
 		].
-		srcY _ srcY + 1.
-		dstY _ dstY + 1.
+		srcY := srcY + 1.
+		dstY := dstY + 1.
 	].
 ]
 
@@ -730,73 +733,69 @@ BitBltSimulation >> alphaSourceBlendBits32 [
 		with the special cases of srcAlpha = 0.0 and srcAlpha = 1.0 
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY srcY dstY |
-	self inline: false. "This particular method should be optimized in itself"
+	<inline: false> "This particular method should be optimized in itself"
 
 	"Give the compile a couple of hints"
-	self var: #sourceWord declareC:'register int sourceWord'.
-	self var: #deltaX declareC:'register int deltaX'.
 
 	"The following should be declared as pointers so the compiler will
 	notice that they're used for accessing memory locations 
 	(good to know on an Intel architecture) but then the increments
 	would be different between ST code and C code so must hope the
 	compiler notices what happens (MS Visual C does)"
-	self var: #srcIndex declareC:'register int srcIndex'.
-	self var: #dstIndex declareC:'register int dstIndex'.
 
-	deltaY _ bbH + 1. "So we can pre-decrement"
-	srcY _ sy.
-	dstY _ dy.
+	deltaY := bbH + 1. "So we can pre-decrement"
+	srcY := sy.
+	dstY := dy.
 
 	"This is the outer loop"
-	[(deltaY _ deltaY - 1) ~= 0] whileTrue:[
-		srcIndex _ sourceBits + (srcY * sourcePitch) + (sx * 4).
-		dstIndex _ destBits + (dstY * destPitch) + (dx * 4).
-		deltaX _ bbW + 1. "So we can pre-decrement"
+	[(deltaY := deltaY - 1) ~= 0] whileTrue:[
+		srcIndex := sourceBits + (srcY * sourcePitch) + (sx * 4).
+		dstIndex := destBits + (dstY * destPitch) + (dx * 4).
+		deltaX := bbW + 1. "So we can pre-decrement"
 
 		"This is the inner loop"
-		[(deltaX _ deltaX - 1) ~= 0] whileTrue:[
-			sourceWord _ self srcLongAt: srcIndex.
-			srcAlpha _ sourceWord >> 24.
+		[(deltaX := deltaX - 1) ~= 0] whileTrue:[
+			sourceWord := self srcLongAt: srcIndex.
+			srcAlpha := sourceWord >> 24.
 			srcAlpha = 255 ifTrue:[
 				self dstLongAt: dstIndex put: sourceWord.
-				srcIndex _ srcIndex + 4.
-				dstIndex _ dstIndex + 4.
+				srcIndex := srcIndex + 4.
+				dstIndex := dstIndex + 4.
 				"Now copy as many words as possible with alpha = 255"
-				[(deltaX _ deltaX - 1) ~= 0 and:[
-					(sourceWord _ self srcLongAt: srcIndex) >> 24 = 255]]
+				[(deltaX := deltaX - 1) ~= 0 and:[
+					(sourceWord := self srcLongAt: srcIndex) >> 24 = 255]]
 						whileTrue:[
 							self dstLongAt: dstIndex put: sourceWord.
-							srcIndex _ srcIndex + 4.
-							dstIndex _ dstIndex + 4.
+							srcIndex := srcIndex + 4.
+							dstIndex := dstIndex + 4.
 						].
 				"Adjust deltaX"
-				deltaX _ deltaX + 1.
+				deltaX := deltaX + 1.
 			] ifFalse:[ "srcAlpha ~= 255"
 				srcAlpha = 0 ifTrue:[
-					srcIndex _ srcIndex + 4.
-					dstIndex _ dstIndex + 4.
+					srcIndex := srcIndex + 4.
+					dstIndex := dstIndex + 4.
 					"Now skip as many words as possible,"
-					[(deltaX _ deltaX - 1) ~= 0 and:[
-						(sourceWord _ self srcLongAt: srcIndex) >> 24 = 0]]
+					[(deltaX := deltaX - 1) ~= 0 and:[
+						(sourceWord := self srcLongAt: srcIndex) >> 24 = 0]]
 						whileTrue:[
-							srcIndex _ srcIndex + 4.
-							dstIndex _ dstIndex + 4.
+							srcIndex := srcIndex + 4.
+							dstIndex := dstIndex + 4.
 						].
 					"Adjust deltaX"
-					deltaX _ deltaX + 1.
+					deltaX := deltaX + 1.
 				] ifFalse:[ "0 < srcAlpha < 255"
 					"If we have to mix colors then just copy a single word"
-					destWord _ self dstLongAt: dstIndex.
-					destWord _ self alphaBlendScaled: sourceWord with: destWord.
+					destWord := self dstLongAt: dstIndex.
+					destWord := self alphaBlendScaled: sourceWord with: destWord.
 					self dstLongAt: dstIndex put: destWord.
-					srcIndex _ srcIndex + 4.
-					dstIndex _ dstIndex + 4.
+					srcIndex := srcIndex + 4.
+					dstIndex := dstIndex + 4.
 				].
 			].
 		].
-		srcY _ srcY + 1.
-		dstY _ dstY + 1.
+		srcY := srcY + 1.
+		dstY := dstY + 1.
 	].
 ]
 
@@ -811,67 +810,67 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
-	self inline: false. "This particular method should be optimized in itself"
-	self var: #mappingTable declareC:'unsigned int *mappingTable'.
-	mappingTable _ self default8To32Table.
-	mapperFlags _ cmFlags bitAnd: ColorMapNewStyle bitInvert32.
-	deltaY _ bbH + 1. "So we can pre-decrement"
-	srcY _ sy.
-	dstY _ dy.
-	mask1 _ ((dx bitAnd: 3) * 8).
-	destMSB ifTrue:[mask1 _ 24 - mask1].
-	mask2 _ AllOnes bitXor:(16rFF << mask1).
+	<inline: false>
+	<var: #mappingTable type:'unsigned int *'>
+	mappingTable := self default8To32Table.
+	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
+	deltaY := bbH + 1. "So we can pre-decrement"
+	srcY := sy.
+	dstY := dy.
+	mask1 := ((dx bitAnd: 3) * 8).
+	destMSB ifTrue:[mask1 := 24 - mask1].
+	mask2 := AllOnes bitXor:(16rFF << mask1).
 	(dx bitAnd: 1) = 0 
-		ifTrue:[adjust _ 0]
-		ifFalse:[adjust _ 16r1F1F1F1F].
+		ifTrue:[adjust := 0]
+		ifFalse:[adjust := 16r1F1F1F1F].
 	(dy bitAnd: 1) = 0
-		ifTrue:[adjust _ adjust bitXor: 16r1F1F1F1F].
+		ifTrue:[adjust := adjust bitXor: 16r1F1F1F1F].
 	"This is the outer loop"
-	[(deltaY _ deltaY - 1) ~= 0] whileTrue:[
-		adjust _ adjust bitXor: 16r1F1F1F1F.
-		srcIndex _ sourceBits + (srcY * sourcePitch) + (sx * 4).
-		dstIndex _ destBits + (dstY * destPitch) + (dx // 4 * 4).
-		deltaX _ bbW + 1. "So we can pre-decrement"
-		srcShift _ mask1.
-		dstMask _ mask2.
+	[(deltaY := deltaY - 1) ~= 0] whileTrue:[
+		adjust := adjust bitXor: 16r1F1F1F1F.
+		srcIndex := sourceBits + (srcY * sourcePitch) + (sx * 4).
+		dstIndex := destBits + (dstY * destPitch) + (dx // 4 * 4).
+		deltaX := bbW + 1. "So we can pre-decrement"
+		srcShift := mask1.
+		dstMask := mask2.
 
 		"This is the inner loop"
-		[(deltaX _ deltaX - 1) ~= 0] whileTrue:[
-			sourceWord _ ((self srcLongAt: srcIndex) bitAnd: (adjust bitInvert32)) + adjust.
-			srcAlpha _ sourceWord >> 24.
+		[(deltaX := deltaX - 1) ~= 0] whileTrue:[
+			sourceWord := ((self srcLongAt: srcIndex) bitAnd: (adjust bitInvert32)) + adjust.
+			srcAlpha := sourceWord >> 24.
 			srcAlpha > 31 ifTrue:["Everything below 31 is transparent"
 				srcAlpha < 224 ifTrue:["Everything above 224 is opaque"
-					destWord _ self dstLongAt: dstIndex.
-					destWord _ destWord bitAnd: dstMask bitInvert32.
-					destWord _ destWord >> srcShift.
-					destWord _ mappingTable at: destWord.
-					sourceWord _ self alphaBlendScaled: sourceWord with: destWord.
+					destWord := self dstLongAt: dstIndex.
+					destWord := destWord bitAnd: dstMask bitInvert32.
+					destWord := destWord >> srcShift.
+					destWord := mappingTable at: destWord.
+					sourceWord := self alphaBlendScaled: sourceWord with: destWord.
 				].
-				sourceWord _ self mapPixel: sourceWord flags: mapperFlags.
-				sourceWord _ sourceWord << srcShift.
+				sourceWord := self mapPixel: sourceWord flags: mapperFlags.
+				sourceWord := sourceWord << srcShift.
 				"Store back"
 				self dstLongAt: dstIndex put: sourceWord mask: dstMask.
 			].
-			srcIndex _ srcIndex + 4.
+			srcIndex := srcIndex + 4.
 			destMSB ifTrue:[
 				srcShift = 0 
-					ifTrue:[dstIndex _ dstIndex + 4.
-							srcShift _ 24.
-							dstMask _ 16r00FFFFFF]
-					ifFalse:[srcShift _ srcShift - 8.
-							dstMask _ (dstMask >> 8) bitOr: 16rFF000000].
+					ifTrue:[dstIndex := dstIndex + 4.
+							srcShift := 24.
+							dstMask := 16r00FFFFFF]
+					ifFalse:[srcShift := srcShift - 8.
+							dstMask := (dstMask >> 8) bitOr: 16rFF000000].
 			] ifFalse:[
 				srcShift = 32
-					ifTrue:[dstIndex _ dstIndex + 4.
-							srcShift _ 0.
-							dstMask _ 16rFFFFFF00]
-					ifFalse:[srcShift _ srcShift + 8.
-							dstMask _ dstMask << 8 bitOr: 255].
+					ifTrue:[dstIndex := dstIndex + 4.
+							srcShift := 0.
+							dstMask := 16rFFFFFF00]
+					ifFalse:[srcShift := srcShift + 8.
+							dstMask := dstMask << 8 bitOr: 255].
 			].
-			adjust _ adjust bitXor: 16r1F1F1F1F.
+			adjust := adjust bitXor: 16r1F1F1F1F.
 		].
-		srcY _ srcY + 1.
-		dstY _ dstY + 1.
+		srcY := srcY + 1.
+		dstY := dstY + 1.
 	].
 ]
 
@@ -940,28 +939,28 @@ BitBltSimulation >> checkSourceOverlap [
 	"check for possible overlap of source and destination"
 	"ar 10/19/1999: This method requires surfaces to be locked."
 	| t |
-	self inline: true.
+	<inline: true>
 	(sourceForm = destForm and: [dy >= sy]) ifTrue:
 		[dy > sy ifTrue:
 			["have to start at bottom"
-			vDir _ -1.
-			sy _ sy + bbH - 1.
-			dy _ dy + bbH - 1]
+			vDir := -1.
+			sy := sy + bbH - 1.
+			dy := dy + bbH - 1]
 		ifFalse:
 			[(dy = sy) & (dx > sx) ifTrue:
 				["y's are equal, but x's are backward"
-				hDir _ -1.
-				sx _ sx + bbW - 1.
+				hDir := -1.
+				sx := sx + bbW - 1.
 				"start at right"
-				dx _ dx + bbW - 1.
+				dx := dx + bbW - 1.
 				"and fix up masks"
 				nWords > 1 ifTrue: 
-					[t _ mask1.
-					mask1 _ mask2.
-					mask2 _ t]]].
+					[t := mask1.
+					mask1 := mask2.
+					mask2 := t]]].
 		"Dest inits may be affected by this change"
-		destIndex _ destBits + (dy * destPitch) + ((dx // destPPW) *4).
-		destDelta _ (destPitch * vDir) - (4 * (nWords * hDir))]
+		destIndex := destBits + (dy * destPitch) + ((dx // destPPW) *4).
+		destDelta := (destPitch * vDir) - (4 * (nWords * hDir))]
 ]
 
 { #category : #'combination rules' }
@@ -974,48 +973,48 @@ BitBltSimulation >> clipRange [
 	"clip and adjust source origin and extent appropriately"
 	"first in x"
 	destX >= clipX
-		ifTrue: [sx _ sourceX.
-				dx _ destX.
-				bbW _ width]
-		ifFalse: [sx _ sourceX + (clipX - destX).
-				bbW _ width - (clipX - destX).
-				dx _ clipX].
+		ifTrue: [sx := sourceX.
+				dx := destX.
+				bbW := width]
+		ifFalse: [sx := sourceX + (clipX - destX).
+				bbW := width - (clipX - destX).
+				dx := clipX].
 	(dx + bbW) > (clipX + clipWidth)
-		ifTrue: [bbW _ bbW - ((dx + bbW) - (clipX + clipWidth))].
+		ifTrue: [bbW := bbW - ((dx + bbW) - (clipX + clipWidth))].
 	"then in y"
 	destY >= clipY
-		ifTrue: [sy _ sourceY.
-				dy _ destY.
-				bbH _ height]
-		ifFalse: [sy _ sourceY + clipY - destY.
-				bbH _ height - (clipY - destY).
-				dy _ clipY].
+		ifTrue: [sy := sourceY.
+				dy := destY.
+				bbH := height]
+		ifFalse: [sy := sourceY + clipY - destY.
+				bbH := height - (clipY - destY).
+				dy := clipY].
 	(dy + bbH) > (clipY + clipHeight)
-		ifTrue: [bbH _ bbH - ((dy + bbH) - (clipY + clipHeight))].
+		ifTrue: [bbH := bbH - ((dy + bbH) - (clipY + clipHeight))].
 	noSource ifTrue: [^ nil].
 	sx < 0
-		ifTrue: [dx _ dx - sx.
-				bbW _ bbW + sx.
-				sx _ 0].
+		ifTrue: [dx := dx - sx.
+				bbW := bbW + sx.
+				sx := 0].
 	sx + bbW > sourceWidth
-		ifTrue: [bbW _ bbW - (sx + bbW - sourceWidth)].
+		ifTrue: [bbW := bbW - (sx + bbW - sourceWidth)].
 	sy < 0
-		ifTrue: [dy _ dy - sy.
-				bbH _ bbH + sy.
-				sy _ 0].
+		ifTrue: [dy := dy - sy.
+				bbH := bbH + sy.
+				sy := 0].
 	sy + bbH > sourceHeight
-		ifTrue: [bbH _ bbH - (sy + bbH - sourceHeight)]
+		ifTrue: [bbH := bbH - (sy + bbH - sourceHeight)]
 ]
 
 { #category : #setup }
 BitBltSimulation >> copyBits [
 	"This function is exported for the Balloon engine"
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
 	self clipRange.
 	(bbW <= 0 or: [bbH <= 0]) ifTrue:
 		["zero width or height; noop"
-		affectedL _ affectedR _ affectedT _ affectedB _ 0.
+		affectedL := affectedR := affectedT := affectedB := 0.
 		^ nil].
 	"Lock the surfaces"
 	self lockSurfaces ifFalse:[^interpreterProxy primitiveFail].
@@ -1026,11 +1025,11 @@ BitBltSimulation >> copyBits [
 { #category : #setup }
 BitBltSimulation >> copyBitsFrom: startX to: stopX at: yValue [
 	"Support for the balloon engine."
-	self export: true.
-	destX _ startX.
-	destY _ yValue.
-	sourceX _ startX.
-	width _ (stopX - startX).
+	<export: true>
+	destX := startX.
+	destY := yValue.
+	sourceX := startX.
+	width := (stopX - startX).
 	self copyBits.
 	self showDisplayBits.
 ]
@@ -1040,365 +1039,316 @@ BitBltSimulation >> copyBitsLockedAndClipped [
 	"Perform the actual copyBits operation.
 	Assume: Surfaces have been locked and clipping was performed."
 	| done |
-	self inline: true.
+	<inline: true>
 	"Try a shortcut for stuff that should be run as quickly as possible"
- 	done _ self tryCopyingBitsQuickly.
+ 	done := self tryCopyingBitsQuickly.
 	done ifTrue:[^nil].
 
 	(combinationRule = 30) | (combinationRule = 31) ifTrue:
 		["Check and fetch source alpha parameter for alpha blend"
 		interpreterProxy methodArgumentCount = 1
-			ifTrue: [sourceAlpha _ interpreterProxy stackIntegerValue: 0.
+			ifTrue: [sourceAlpha := interpreterProxy stackIntegerValue: 0.
 					(interpreterProxy failed not and: [(sourceAlpha >= 0) & (sourceAlpha <= 255)])
 						ifFalse: [^ interpreterProxy primitiveFail]]
 			ifFalse: [^ interpreterProxy primitiveFail]].
 
-	bitCount _ 0.
+	bitCount := 0.
 	"Choose and perform the actual copy loop."
 	self performCopyLoop.
 
 	(combinationRule = 22) | (combinationRule = 32) ifTrue:
 		["zero width and height; return the count"
-		affectedL _ affectedR _ affectedT _ affectedB _ 0]. 
+		affectedL := affectedR := affectedT := affectedB := 0]. 
 	hDir > 0
-		ifTrue: [affectedL _ dx.
-				affectedR _ dx + bbW]
-		ifFalse: [affectedL _ dx - bbW + 1.
-				affectedR _ dx + 1].
+		ifTrue: [affectedL := dx.
+				affectedR := dx + bbW]
+		ifFalse: [affectedL := dx - bbW + 1.
+				affectedR := dx + 1].
 	vDir > 0
-		ifTrue: [affectedT _ dy.
-				affectedB _ dy + bbH]
-		ifFalse: [affectedT _ dy - bbH + 1.
-				affectedB _ dy + 1]
+		ifTrue: [affectedT := dy.
+				affectedB := dy + bbH]
+		ifFalse: [affectedT := dy - bbH + 1.
+				affectedB := dy + 1]
 ]
 
 { #category : #'inner loop' }
 BitBltSimulation >> copyLoop [
+	| prevWord thisWord skewWord halftoneWord mergeWord hInc y unskew skewMask notSkewMask mergeFnwith destWord |
 	"This version of the inner loop assumes noSource = false."
-	| prevWord thisWord skewWord halftoneWord mergeWord hInc y unskew skewMask notSkewMask mergeFnwith destWord skewLocal sourceIndexLocal destIndexLocal vDirLocal hDirLocal nWordsMinusOne |
-	self inline: false.
-	self var: #mergeFnwith declareC: 'int (*mergeFnwith)(int, int)'.
-	mergeFnwith _ self
-				cCoerce: (opTable at: combinationRule + 1)
-				to: 'int (*)(int, int)'.
-	mergeFnwith.
-	"null ref for compiler"
-	hInc _ hDir * 4.
-	skewLocal _ skew.
-	sourceIndexLocal _ sourceIndex.
-	destIndexLocal _ destIndex.
-	vDirLocal _ vDir.
-	hDirLocal _ hDir.
-	nWordsMinusOne _ nWords - 1.
-	"Byte delta"
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	mergeFnwith.  "null ref for compiler"
+
+	hInc := hDir*4.  "Byte delta"
 	"degenerate skew fixed for Sparc. 10/20/96 ikp"
-	skewLocal == -32
-		ifTrue: [skewLocal _ unskew _ skewMask _ 0]
-		ifFalse: [skewLocal < 0
-				ifTrue: [unskew _ skewLocal + 32.
-					skewMask _ AllOnes << (0 - skewLocal)]
-				ifFalse: [skewLocal = 0
-						ifTrue: [unskew _ 0.
-							skewMask _ AllOnes]
-						ifFalse: [unskew _ skewLocal - 32.
-							skewMask _ AllOnes >> skewLocal]]].
-	notSkewMask _ skewMask bitInvert32.
+	skew == -32
+		ifTrue: [skew := unskew := skewMask := 0]
+		ifFalse: [skew < 0
+			ifTrue:
+				[unskew := skew+32.
+				skewMask := AllOnes << (0-skew)]
+			ifFalse:
+				[skew = 0
+					ifTrue:
+						[unskew := 0.
+						skewMask := AllOnes]
+					ifFalse:
+						[unskew := skew-32.
+						skewMask := AllOnes >> skew]]].
+	notSkewMask := skewMask bitInvert32.
 	noHalftone
-		ifTrue: [halftoneWord _ AllOnes.
-			halftoneHeight _ 0]
-		ifFalse: [halftoneWord _ self halftoneAt: 0].
-	y _ dy.
-	1
-		to: bbH
-		do: [:i | 
-			"here is the vertical loop"
-			halftoneHeight > 1
-				ifTrue: ["Otherwise, its always the same"
-					halftoneWord _ self halftoneAt: y.
-					y _ y + vDirLocal].
-			preload
-				ifTrue: ["load the 64-bit shifter"
-					prevWord _ self srcLongAt: sourceIndexLocal.
-					sourceIndexLocal _ sourceIndexLocal + hInc]
-				ifFalse: [prevWord _ 0].
-			"Note: the horizontal loop has been expanded into three parts for 
-			speed:"
+		ifTrue: [halftoneWord := AllOnes.  halftoneHeight := 0]
+		ifFalse: [halftoneWord := self halftoneAt: 0].
+
+	y := dy.
+	1 to: bbH do: "here is the vertical loop"
+		[ :i |
+		halftoneHeight > 1 ifTrue:  "Otherwise, its always the same"
+			[halftoneWord := self halftoneAt: y.
+			y := y + vDir].
+		preload ifTrue:
+			["load the 64-bit shifter"
+			prevWord := self srcLongAt: sourceIndex.
+			sourceIndex := sourceIndex + hInc]
+			ifFalse:
+			[prevWord := 0].
+
+	"Note: the horizontal loop has been expanded into three parts for speed:"
+
 			"This first section requires masking of the destination store..."
-			destMask _ mask1.
-			thisWord _ self srcLongAt: sourceIndexLocal.
-			"pick up next word"
-			sourceIndexLocal _ sourceIndexLocal + hInc.
-			skewWord _ ((prevWord bitAnd: notSkewMask)
-						bitShift: unskew)
-						bitOr: ((thisWord bitAnd: skewMask)
-								bitShift: skewLocal).
-			"32-bit rotate"
-			prevWord _ thisWord.
-			destWord _ self dstLongAt: destIndexLocal.
-			mergeWord _ self
-						mergeFn: (skewWord bitAnd: halftoneWord)
-						with: destWord.
-			destWord _ (destMask bitAnd: mergeWord)
-						bitOr: (destWord bitAnd: destMask bitInvert32).
-			self dstLongAt: destIndexLocal put: destWord.
-			destIndexLocal _ destIndexLocal + hInc.
-			"This central horizontal loop requires no store masking"
-			destMask _ AllOnes.
-			combinationRule = 3
-				ifTrue: [skewLocal = 0 & (halftoneWord = AllOnes)
-						ifTrue: ["Very special inner loop for STORE mode with no 
-							skew -- just move words"
-							hDirLocal = -1
-								ifTrue: ["Woeful patch: revert to older code for  
-									hDir = -1"
-									2
-										to: nWordsMinusOne
-										do: [:word | 
-											thisWord _ self srcLongAt: sourceIndexLocal.
-											sourceIndexLocal _ sourceIndexLocal + hInc.
-											self dstLongAt: destIndexLocal put: thisWord.
-											destIndexLocal _ destIndexLocal + hInc]]
-								ifFalse: [2
-										to: nWordsMinusOne
-										do: [:word | 
-											"Note loop starts with prevWord  
-											loaded (due to preload)"
-											self dstLongAt: destIndexLocal put: prevWord.
-											destIndexLocal _ destIndexLocal + hInc.
-											prevWord _ self srcLongAt: sourceIndexLocal.
-											sourceIndexLocal _ sourceIndexLocal + hInc]]]
-						ifFalse: ["Special inner loop for STORE mode -- no need to 
-							call merge"
-							2
-								to: nWordsMinusOne
-								do: [:word | 
-									thisWord _ self srcLongAt: sourceIndexLocal.
-									sourceIndexLocal _ sourceIndexLocal + hInc.
-									skewWord _ ((prevWord bitAnd: notSkewMask)
-												bitShift: unskew)
-												bitOr: ((thisWord bitAnd: skewMask)
-														bitShift: skewLocal).
-									"32-bit rotate"
-									prevWord _ thisWord.
-									self
-										dstLongAt: destIndexLocal
-										put: (skewWord bitAnd: halftoneWord).
-									destIndexLocal _ destIndexLocal + hInc]]]
-				ifFalse: [2
-						to: nWordsMinusOne
-						do: [:word | 
-							"Normal inner loop does merge:"
-							thisWord _ self srcLongAt: sourceIndexLocal.
-							"pick up next word"
-							sourceIndexLocal _ sourceIndexLocal + hInc.
-							skewWord _ ((prevWord bitAnd: notSkewMask)
-										bitShift: unskew)
-										bitOr: ((thisWord bitAnd: skewMask)
-												bitShift: skewLocal).
-							"32-bit rotate"
-							prevWord _ thisWord.
-							mergeWord _ self
-										mergeFn: (skewWord bitAnd: halftoneWord)
-										with: (self dstLongAt: destIndexLocal).
-							self dstLongAt: destIndexLocal put: mergeWord.
-							destIndexLocal _ destIndexLocal + hInc]].
-			"This last section, if used, requires masking of the destination  
-			store..."
-			nWords > 1
-				ifTrue: [destMask _ mask2.
-					thisWord _ self srcLongAt: sourceIndexLocal.
-					"pick up next word"
-					sourceIndexLocal _ sourceIndexLocal + hInc.
-					skewWord _ ((prevWord bitAnd: notSkewMask)
-								bitShift: unskew)
-								bitOr: ((thisWord bitAnd: skewMask)
-										bitShift: skewLocal).
-					"32-bit rotate"
-					destWord _ self dstLongAt: destIndexLocal.
-					mergeWord _ self
-								mergeFn: (skewWord bitAnd: halftoneWord)
-								with: destWord.
-					destWord _ (destMask bitAnd: mergeWord)
-								bitOr: (destWord bitAnd: destMask bitInvert32).
-					self dstLongAt: destIndexLocal put: destWord.
-					destIndexLocal _ destIndexLocal + hInc].
-			sourceIndexLocal _ sourceIndexLocal + sourceDelta.
-			destIndexLocal _ destIndexLocal + destDelta]
+			destMask := mask1.
+			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+			sourceIndex := sourceIndex + hInc.
+			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+							bitOr:  "32-bit rotate"
+						((thisWord bitAnd: skewMask) bitShift: skew).
+			prevWord := thisWord.
+			destWord := self dstLongAt: destIndex.
+			mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord) with: destWord.
+			destWord := (destMask bitAnd: mergeWord) bitOr:
+							(destWord bitAnd: destMask bitInvert32).
+			self dstLongAt: destIndex put: destWord.
+			destIndex := destIndex + hInc.
+
+		"This central horizontal loop requires no store masking"
+		destMask := AllOnes.
+combinationRule = 3
+ifTrue: [(skew = 0) & (halftoneWord = AllOnes)
+		ifTrue: 
+		["Very special inner loop for STORE mode with no skew -- just move words"
+		hDir = -1
+		ifTrue: ["Woeful patch: revert to older code for hDir = -1"
+				2 to: nWords-1 do: 
+					[ :word |
+					thisWord := self srcLongAt: sourceIndex.
+					sourceIndex := sourceIndex + hInc.
+					self dstLongAt: destIndex put: thisWord.
+					destIndex := destIndex + hInc]]
+		ifFalse: [2 to: nWords-1 do: 
+					[ :word |  "Note loop starts with prevWord loaded (due to preload)"
+					self dstLongAt: destIndex put: prevWord.
+					destIndex := destIndex + hInc.
+					prevWord := self srcLongAt: sourceIndex.
+					sourceIndex := sourceIndex + hInc]]]
+		ifFalse:
+		["Special inner loop for STORE mode -- no need to call merge"
+		2 to: nWords-1 do: 
+			[ :word |
+			thisWord := self srcLongAt: sourceIndex.
+			sourceIndex := sourceIndex + hInc.
+			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+							bitOr:  "32-bit rotate"
+						((thisWord bitAnd: skewMask) bitShift: skew).
+			prevWord := thisWord.
+			self dstLongAt: destIndex put: (skewWord bitAnd: halftoneWord).
+			destIndex := destIndex + hInc]]
+] ifFalse: [2 to: nWords-1 do: "Normal inner loop does merge:"
+			[ :word |
+			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+			sourceIndex := sourceIndex + hInc.
+			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+							bitOr:  "32-bit rotate"
+						((thisWord bitAnd: skewMask) bitShift: skew).
+			prevWord := thisWord.
+			mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
+							with: (self dstLongAt: destIndex).
+			self dstLongAt: destIndex put: mergeWord.
+			destIndex := destIndex + hInc]
+].
+
+		"This last section, if used, requires masking of the destination store..."
+		nWords > 1 ifTrue:
+			[destMask := mask2.
+			thisWord := self srcLongAt: sourceIndex.  "pick up next word"
+			sourceIndex := sourceIndex + hInc.
+			skewWord := ((prevWord bitAnd: notSkewMask) bitShift: unskew)
+							bitOr:  "32-bit rotate"
+						((thisWord bitAnd: skewMask) bitShift: skew).
+			destWord := self dstLongAt: destIndex.
+			mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord) with: destWord.
+			destWord := (destMask bitAnd: mergeWord) bitOr:
+							(destWord bitAnd: destMask bitInvert32).
+			self dstLongAt: destIndex put: destWord.
+			destIndex := destIndex + hInc].
+
+	sourceIndex := sourceIndex + sourceDelta.
+	destIndex := destIndex + destDelta]
 ]
 
 { #category : #'inner loop' }
 BitBltSimulation >> copyLoopNoSource [
-	"Faster copyLoop when source not used. hDir and vDir are both  
+	"Faster copyLoop when source not used.  hDir and vDir are both
 	positive, and perload and skew are unused"
-	| halftoneWord mergeWord mergeFnwith destWord destIndexLocal nWordsMinusOne |
-	self inline: false.
-	self var: #mergeFnwith declareC: 'int (*mergeFnwith)(int, int)'.
-	mergeFnwith _ self
-				cCoerce: (opTable at: combinationRule + 1)
-				to: 'int (*)(int, int)'.
-	mergeFnwith.
-	"null ref for compiler"
-	destIndexLocal _ destIndex.
-	nWordsMinusOne _ nWords - 1.
-	1
-		to: bbH
-		do: [:i | 
-			"here is the vertical loop"
-			noHalftone
-				ifTrue: [halftoneWord _ AllOnes]
-				ifFalse: [halftoneWord _ self halftoneAt: dy + i - 1].
-			"Note: the horizontal loop has been expanded into three parts for 
-			speed:"
+	| halftoneWord mergeWord mergeFnwith destWord |
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	mergeFnwith.  "null ref for compiler"
+
+	1 to: bbH do: "here is the vertical loop"
+		[ :i |
+		noHalftone
+			ifTrue: [halftoneWord := AllOnes]
+			ifFalse: [halftoneWord := self halftoneAt: dy+i-1].
+
+	"Note: the horizontal loop has been expanded into three parts for speed:"
+
 			"This first section requires masking of the destination store..."
-			destMask _ mask1.
-			destWord _ self dstLongAt: destIndexLocal.
-			mergeWord _ self mergeFn: halftoneWord with: destWord.
-			destWord _ (destMask bitAnd: mergeWord)
-						bitOr: (destWord bitAnd: destMask bitInvert32).
-			self dstLongAt: destIndexLocal put: destWord.
-			destIndexLocal _ destIndexLocal + 4.
-			"This central horizontal loop requires no store masking"
-			destMask _ AllOnes.
-			combinationRule = 3
-				ifTrue: ["Special inner loop for STORE"
-					destWord _ halftoneWord.
-					2
-						to: nWordsMinusOne
-						do: [:word | 
-							self dstLongAt: destIndexLocal put: destWord.
-							destIndexLocal _ destIndexLocal + 4]]
-				ifFalse: ["Normal inner loop does merge"
-					2
-						to: nWordsMinusOne
-						do: [:word | 
-							"Normal inner loop does merge"
-							destWord _ self dstLongAt: destIndexLocal.
-							mergeWord _ self mergeFn: halftoneWord with: destWord.
-							self dstLongAt: destIndexLocal put: mergeWord.
-							destIndexLocal _ destIndexLocal + 4]].
-			"This last section, if used, requires masking of the destination  
-			store..."
-			nWords > 1
-				ifTrue: [destMask _ mask2.
-					destWord _ self dstLongAt: destIndexLocal.
-					mergeWord _ self mergeFn: halftoneWord with: destWord.
-					destWord _ (destMask bitAnd: mergeWord)
-								bitOr: (destWord bitAnd: destMask bitInvert32).
-					self dstLongAt: destIndexLocal put: destWord.
-					destIndexLocal _ destIndexLocal + 4].
-			destIndexLocal _ destIndexLocal + destDelta]
+			destMask := mask1.
+			destWord := self dstLongAt: destIndex.
+			mergeWord := self mergeFn: halftoneWord
+							with: destWord.
+			destWord := (destMask bitAnd: mergeWord) bitOr: 
+							(destWord bitAnd: destMask bitInvert32).
+			self dstLongAt: destIndex put: destWord.
+			destIndex := destIndex + 4.
+
+		"This central horizontal loop requires no store masking"
+			destMask := AllOnes.
+			combinationRule = 3 ifTrue: ["Special inner loop for STORE"
+				destWord := halftoneWord.
+				2 to: nWords-1 do:[ :word |
+					self dstLongAt: destIndex put: destWord.
+					destIndex := destIndex + 4].
+			] ifFalse:[ "Normal inner loop does merge"
+				2 to: nWords-1 do:[ :word | "Normal inner loop does merge"
+					destWord := self dstLongAt: destIndex.
+					mergeWord := self mergeFn: halftoneWord with: destWord.
+					self dstLongAt: destIndex put: mergeWord.
+					destIndex := destIndex + 4].
+			].
+
+		"This last section, if used, requires masking of the destination store..."
+		nWords > 1 ifTrue:
+			[destMask := mask2.
+			destWord := self dstLongAt: destIndex.
+			mergeWord := self mergeFn: halftoneWord with: destWord.
+			destWord := (destMask bitAnd: mergeWord) bitOr:
+							(destWord bitAnd: destMask bitInvert32).
+			self dstLongAt: destIndex put: destWord.
+			destIndex := destIndex + 4].
+
+	destIndex := destIndex + destDelta]
 ]
 
 { #category : #'inner loop' }
 BitBltSimulation >> copyLoopPixMap [
-	"This version of the inner loop maps source pixels  
-	to a destination form with different depth. Because it is already  
-	unweildy, the loop is not unrolled as in the other versions.  
-	Preload, skew and skewMask are all overlooked, since pickSourcePixels  
-	delivers its destination word already properly aligned.  
-	Note that pickSourcePixels could be copied in-line at the top of  
+	"This version of the inner loop maps source pixels
+	to a destination form with different depth.  Because it is already
+	unweildy, the loop is not unrolled as in the other versions.
+	Preload, skew and skewMask are all overlooked, since pickSourcePixels
+	delivers its destination word already properly aligned.
+	Note that pickSourcePixels could be copied in-line at the top of
 	the horizontal loop, and some of its inits moved out of the loop."
-	"ar 12/7/1999:  
-	The loop has been rewritten to use only one pickSourcePixels call.  
-	The idea is that the call itself could be inlined. If we decide not  
+	"ar 12/7/1999:
+	The loop has been rewritten to use only one pickSourcePixels call.
+	The idea is that the call itself could be inlined. If we decide not
 	to inline pickSourcePixels we could optimize the loop instead."
-	| skewWord halftoneWord mergeWord scrStartBits nSourceIncs startBits endBits sourcePixMask destPixMask mergeFnwith nPix srcShift dstShift destWord words srcShiftInc dstShiftInc dstShiftLeft mapperFlags destIndexLocal |
-	self inline: false.
-	self var: #mergeFnwith declareC: 'int (*mergeFnwith)(int, int)'.
-	mergeFnwith _ self
-				cCoerce: (opTable at: combinationRule + 1)
-				to: 'int (*)(int, int)'.
-	mergeFnwith.
-	"null ref for compiler"
-	destIndexLocal _ destIndex.
+	| skewWord halftoneWord mergeWord scrStartBits nSourceIncs startBits endBits sourcePixMask destPixMask mergeFnwith nPix srcShift dstShift destWord words srcShiftInc dstShiftInc dstShiftLeft mapperFlags |
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
+	mergeFnwith.  "null ref for compiler"
+
 	"Additional inits peculiar to unequal source and dest pix size..."
-	sourcePPW _ 32 // sourceDepth.
-	sourcePixMask _ maskTable at: sourceDepth.
-	destPixMask _ maskTable at: destDepth.
-	mapperFlags _ cmFlags bitAnd: ColorMapNewStyle bitInvert32.
-	sourceIndex _ sourceBits + (sy * sourcePitch) + (sx // sourcePPW * 4).
-	scrStartBits _ sourcePPW
-				- (sx bitAnd: sourcePPW - 1).
+	sourcePPW := 32//sourceDepth.
+	sourcePixMask := maskTable at: sourceDepth.
+	destPixMask := maskTable at: destDepth.
+	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
+	sourceIndex := sourceBits +
+					(sy * sourcePitch) + ((sx // sourcePPW) *4).
+	scrStartBits := sourcePPW - (sx bitAnd: sourcePPW-1).
 	bbW < scrStartBits
-		ifTrue: [nSourceIncs _ 0]
-		ifFalse: [nSourceIncs _ bbW - scrStartBits // sourcePPW + 1].
-	sourceDelta _ sourcePitch - (nSourceIncs * 4).
+		ifTrue: [nSourceIncs := 0]
+		ifFalse: [nSourceIncs := (bbW - scrStartBits)//sourcePPW + 1].
+	sourceDelta := sourcePitch - (nSourceIncs * 4).
+
 	"Note following two items were already calculated in destmask setup!"
-	startBits _ destPPW
-				- (dx bitAnd: destPPW - 1).
-	endBits _ (dx + bbW - 1 bitAnd: destPPW - 1)
-				+ 1.
-	bbW < startBits
-		ifTrue: [startBits _ bbW].
+	startBits := destPPW - (dx bitAnd: destPPW-1).
+	endBits := ((dx + bbW - 1) bitAnd: destPPW-1) + 1.
+
+	bbW < startBits ifTrue:[startBits := bbW].
+
 	"Precomputed shifts for pickSourcePixels"
-	srcShift _ (sx bitAnd: sourcePPW - 1)
-				* sourceDepth.
-	dstShift _ (dx bitAnd: destPPW - 1)
-				* destDepth.
-	srcShiftInc _ sourceDepth.
-	dstShiftInc _ destDepth.
-	dstShiftLeft _ 0.
-	sourceMSB
-		ifTrue: [srcShift _ 32 - sourceDepth - srcShift.
-			srcShiftInc _ 0 - srcShiftInc].
-	destMSB
-		ifTrue: [dstShift _ 32 - destDepth - dstShift.
-			dstShiftInc _ 0 - dstShiftInc.
-			dstShiftLeft _ 32 - destDepth].
-	1
-		to: bbH
-		do: [:i | 
-			"here is the vertical loop"
-			"*** is it possible at all that noHalftone == false? ***"
-			noHalftone
-				ifTrue: [halftoneWord _ AllOnes]
-				ifFalse: [halftoneWord _ self halftoneAt: dy + i - 1].
-			"setup first load"
-			srcBitShift _ srcShift.
-			dstBitShift _ dstShift.
-			destMask _ mask1.
-			nPix _ startBits.
-			"Here is the horizontal loop..."
-			words _ nWords.
+	srcShift := ((sx bitAnd: sourcePPW - 1) * sourceDepth).
+	dstShift := ((dx bitAnd: destPPW - 1) * destDepth).
+	srcShiftInc := sourceDepth.
+	dstShiftInc := destDepth.
+	dstShiftLeft := 0.
+	sourceMSB ifTrue:[
+		srcShift := 32 - sourceDepth - srcShift.
+		srcShiftInc := 0 - srcShiftInc].
+	destMSB ifTrue:[
+		dstShift := 32 - destDepth - dstShift.
+		dstShiftInc := 0 - dstShiftInc.
+		dstShiftLeft := 32 - destDepth].
+
+	1 to: bbH do: "here is the vertical loop"
+		[ :i |
+		"*** is it possible at all that noHalftone == false? ***"
+		noHalftone
+			ifTrue:[halftoneWord := AllOnes]
+			ifFalse: [halftoneWord := self halftoneAt: dy+i-1].
+		"setup first load"
+		srcBitShift := srcShift.
+		dstBitShift := dstShift.
+		destMask := mask1.
+		nPix := startBits.
+		"Here is the horizontal loop..."
+		words := nWords.
 			["pick up the word"
-			skewWord _ self
-						pickSourcePixels: nPix
-						flags: mapperFlags
-						srcMask: sourcePixMask
-						destMask: destPixMask
-						srcShiftInc: srcShiftInc
-						dstShiftInc: dstShiftInc.
+			skewWord := self pickSourcePixels: nPix flags: mapperFlags 
+								srcMask: sourcePixMask destMask: destPixMask
+								srcShiftInc: srcShiftInc dstShiftInc: dstShiftInc.
 			"align next word to leftmost pixel"
-			dstBitShift _ dstShiftLeft.
-			destMask = AllOnes
-				ifTrue: ["avoid read-modify-write"
-					mergeWord _ self
-								mergeFn: (skewWord bitAnd: halftoneWord)
-								with: (self dstLongAt: destIndexLocal).
-					self
-						dstLongAt: destIndexLocal
-						put: (destMask bitAnd: mergeWord)]
-				ifFalse: ["General version using dest masking"
-					destWord _ self dstLongAt: destIndexLocal.
-					mergeWord _ self
-								mergeFn: (skewWord bitAnd: halftoneWord)
+			dstBitShift := dstShiftLeft.
+
+			destMask = AllOnes ifTrue:["avoid read-modify-write"
+				mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
+								with: (self dstLongAt: destIndex).
+				self dstLongAt: destIndex put: (destMask bitAnd: mergeWord).
+			] ifFalse:[ "General version using dest masking"
+				destWord := self dstLongAt: destIndex.
+				mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
 								with: (destWord bitAnd: destMask).
-					destWord _ (destMask bitAnd: mergeWord)
-								bitOr: (destWord bitAnd: destMask bitInvert32).
-					self dstLongAt: destIndexLocal put: destWord].
-			destIndexLocal _ destIndexLocal + 4.
-			words = 2
-				ifTrue: ["e.g., is the next word the last word?"
-					"set mask for last word in this row"
-					destMask _ mask2.
-					nPix _ endBits]
-				ifFalse: ["use fullword mask for inner loop"
-					destMask _ AllOnes.
-					nPix _ destPPW].
-			(words _ words - 1) = 0] whileFalse.
-			"--- end of inner loop ---"
-			sourceIndex _ sourceIndex + sourceDelta.
-			destIndexLocal _ destIndexLocal + destDelta]
+				destWord := (destMask bitAnd: mergeWord) bitOr:
+								(destWord bitAnd: destMask bitInvert32).
+				self dstLongAt: destIndex put: destWord.
+			].
+			destIndex := destIndex + 4.
+			words = 2 "e.g., is the next word the last word?"
+				ifTrue:["set mask for last word in this row"
+						destMask := mask2.
+						nPix := endBits]
+				ifFalse:["use fullword mask for inner loop"
+						destMask := AllOnes.
+						nPix := destPPW].
+			(words := words - 1) = 0] whileFalse.
+		"--- end of inner loop ---"
+		sourceIndex := sourceIndex + sourceDelta.
+		destIndex := destIndex + destDelta]
+
 ]
 
 { #category : #'pixel mapping' }
@@ -1408,19 +1358,19 @@ BitBltSimulation >> default8To32Table [
 	"| pvs hex |
 	String streamContents:[:s|
 		s nextPutAll:'static unsigned int theTable[256] = { '.
-		pvs _ (Color colorMapIfNeededFrom: 8 to: 32) asArray.
+		pvs := (Color colorMapIfNeededFrom: 8 to: 32) asArray.
 		1 to: pvs size do:[:i|
 			i > 1 ifTrue:[s nextPutAll:', '].
 			(i-1 \\ 8) = 0 ifTrue:[s cr].
 			s nextPutAll:'0x'.
-			hex _ (pvs at: i) printStringBase: 16.
+			hex := (pvs at: i) printStringBase: 16.
 			s nextPutAll: (hex copyFrom: 4 to: hex size).
 		].
 		s nextPutAll:'};'.
 	]."
 	| theTable |
-	self returnTypeC:'unsigned int *'.
-	self var: #theTable declareC:'static unsigned int theTable[256] = { 
+	<returnTypeC:'unsigned int *'>
+	<var: #theTable declareC:'static unsigned int theTable[256] = { 
 0x0, 0xFF000001, 0xFFFFFFFF, 0xFF808080, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFF00FFFF, 
 0xFFFFFF00, 0xFFFF00FF, 0xFF202020, 0xFF404040, 0xFF606060, 0xFF9F9F9F, 0xFFBFBFBF, 0xFFDFDFDF, 
 0xFF080808, 0xFF101010, 0xFF181818, 0xFF282828, 0xFF303030, 0xFF383838, 0xFF484848, 0xFF505050, 
@@ -1452,14 +1402,14 @@ BitBltSimulation >> default8To32Table [
 0xFFFFCC00, 0xFFFFFF00, 0xFFFF0033, 0xFFFF3333, 0xFFFF6633, 0xFFFF9933, 0xFFFFCC33, 0xFFFFFF33, 
 0xFFFF0066, 0xFFFF3366, 0xFFFF6666, 0xFFFF9966, 0xFFFFCC66, 0xFFFFFF66, 0xFFFF0099, 0xFFFF3399, 
 0xFFFF6699, 0xFFFF9999, 0xFFFFCC99, 0xFFFFFF99, 0xFFFF00CC, 0xFFFF33CC, 0xFFFF66CC, 0xFFFF99CC, 
-0xFFFFCCCC, 0xFFFFFFCC, 0xFFFF00FF, 0xFFFF33FF, 0xFFFF66FF, 0xFFFF99FF, 0xFFFFCCFF, 0xFFFFFFFF};'.
+0xFFFFCCCC, 0xFFFFFFCC, 0xFFFF00FF, 0xFFFF33FF, 0xFFFF66FF, 0xFFFF99FF, 0xFFFFCCFF, 0xFFFFFFFF};'>
 	^theTable
 ]
 
 { #category : #'pixel mapping' }
 BitBltSimulation >> deltaFrom: x1 to: x2 nSteps: n [
 	"Utility routine for computing Warp increments."
-	self inline: true.
+	<inline: true>
 	x2 > x1
 		ifTrue: [^ x2 - x1 + FixedPt1 // (n+1) + 1]
 		ifFalse: [x2 = x1 ifTrue: [^ 0].
@@ -1470,30 +1420,30 @@ BitBltSimulation >> deltaFrom: x1 to: x2 nSteps: n [
 BitBltSimulation >> destMaskAndPointerInit [
 	"Compute masks for left and right destination words"
 	| startBits pixPerM1 endBits |
-	self inline: true.
-	pixPerM1 _ destPPW - 1.  "A mask, assuming power of two"
+	<inline: true>
+	pixPerM1 := destPPW - 1.  "A mask, assuming power of two"
 	"how many pixels in first word"
-	startBits _ destPPW - (dx bitAnd: pixPerM1).
+	startBits := destPPW - (dx bitAnd: pixPerM1).
 	destMSB
-		ifTrue:[ mask1 _ AllOnes >> (32 - (startBits*destDepth))] 
-		ifFalse:[ mask1 _ AllOnes << (32 - (startBits*destDepth))].
+		ifTrue:[ mask1 := AllOnes >> (32 - (startBits*destDepth))] 
+		ifFalse:[ mask1 := AllOnes << (32 - (startBits*destDepth))].
 	"how many pixels in last word"
-	endBits _ ((dx + bbW - 1) bitAnd: pixPerM1) + 1.
+	endBits := ((dx + bbW - 1) bitAnd: pixPerM1) + 1.
 	destMSB 
-		ifTrue:[mask2 _ AllOnes << (32 - (endBits*destDepth))] 
-		ifFalse:[mask2 _ AllOnes >> (32 - (endBits*destDepth))].
+		ifTrue:[mask2 := AllOnes << (32 - (endBits*destDepth))] 
+		ifFalse:[mask2 := AllOnes >> (32 - (endBits*destDepth))].
 	"determine number of words stored per line; merge masks if only 1"
 	bbW < startBits
-		ifTrue: [mask1 _ mask1 bitAnd: mask2.
-				mask2 _ 0.
-				nWords _ 1]
-		ifFalse: [nWords _ (bbW - startBits) + pixPerM1 // destPPW + 1].
-	hDir _ vDir _ 1. "defaults for no overlap with source"
+		ifTrue: [mask1 := mask1 bitAnd: mask2.
+				mask2 := 0.
+				nWords := 1]
+		ifFalse: [nWords := (bbW - startBits) + pixPerM1 // destPPW + 1].
+	hDir := vDir := 1. "defaults for no overlap with source"
 
 	"calculate byte addr and delta, based on first word of data"
 	"Note pitch is bytes and nWords is longs, not bytes"
-	destIndex _ destBits + (dy * destPitch) + ((dx // destPPW) *4).
-	destDelta _ destPitch * vDir - (4 * (nWords * hDir)).  "byte addr delta"
+	destIndex := destBits + (dy * destPitch) + ((dx // destPPW) *4).
+	destDelta := destPitch * vDir - (4 * (nWords * hDir)).  "byte addr delta"
 
 ]
 
@@ -1506,8 +1456,8 @@ BitBltSimulation >> destinationWord: sourceWord with: destinationWord [
 BitBltSimulation >> dither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| addThreshold  |
-	self inline: true. "You bet"
-	addThreshold _ ditherValue bitShift: 8.
+	<inline: true> "You bet"
+	addThreshold := ditherValue bitShift: 8.
 	^((dither8Lookup at: (addThreshold+((srcWord bitShift: -16) bitAnd: 255))) bitShift: 10) + 
 		((dither8Lookup at: (addThreshold+((srcWord bitShift: -8) bitAnd: 255))) bitShift: 5) + 
 		(dither8Lookup at: (addThreshold+(srcWord bitAnd: 255))).
@@ -1520,78 +1470,78 @@ BitBltSimulation >> drawLoopX: xDelta Y: yDelta [
 	See the comments in BitBlt>>drawLoopX:Y:"
 	| dx1 dy1 px py P affL affR affT affB |
 	xDelta > 0
-		ifTrue: [dx1 _ 1]
+		ifTrue: [dx1 := 1]
 		ifFalse: [xDelta = 0
-				ifTrue: [dx1 _ 0]
-				ifFalse: [dx1 _ -1]].
+				ifTrue: [dx1 := 0]
+				ifFalse: [dx1 := -1]].
 	yDelta > 0
-		ifTrue: [dy1 _ 1]
+		ifTrue: [dy1 := 1]
 		ifFalse: [yDelta = 0
-				ifTrue: [dy1 _ 0]
-				ifFalse: [dy1 _ -1]].
-	px _ yDelta abs.
-	py _ xDelta abs.
-	affL _ affT _ 9999.  "init null rectangle"
-	affR _ affB _ -9999.
+				ifTrue: [dy1 := 0]
+				ifFalse: [dy1 := -1]].
+	px := yDelta abs.
+	py := xDelta abs.
+	affL := affT := 9999.  "init null rectangle"
+	affR := affB := -9999.
 	py > px
 		ifTrue: 
 			["more horizontal"
-			P _ py // 2.
+			P := py // 2.
 			1 to: py do: 
 				[:i |
-				destX _ destX + dx1.
-				(P _ P - px) < 0 ifTrue: 
-					[destY _ destY + dy1.
-					P _ P + py].
+				destX := destX + dx1.
+				(P := P - px) < 0 ifTrue: 
+					[destY := destY + dy1.
+					P := P + py].
 				i < py ifTrue:
 					[self copyBits.
 					interpreterProxy failed ifTrue:
 						[^ nil "bail out now on failure -- avoid storing x,y"].
 					(affectedL < affectedR and: [affectedT < affectedB]) ifTrue:
 						["Affected rectangle grows along the line"
-						affL _ affL min: affectedL.
-						affR _ affR max: affectedR.
-						affT _ affT min: affectedT.
-						affB _ affB max: affectedB.
+						affL := affL min: affectedL.
+						affR := affR max: affectedR.
+						affT := affT min: affectedT.
+						affB := affB max: affectedB.
 						(affR - affL) * (affB - affT) > 4000 ifTrue:
 							["If affected rectangle gets large, update it in chunks"
-							affectedL _ affL.  affectedR _ affR.
-							affectedT _ affT.  affectedB _ affB.
+							affectedL := affL.  affectedR := affR.
+							affectedT := affT.  affectedB := affB.
 							self showDisplayBits.
-							affL _ affT _ 9999.  "init null rectangle"
-							affR _ affB _ -9999]].
+							affL := affT := 9999.  "init null rectangle"
+							affR := affB := -9999]].
 					]]]
 		ifFalse: 
 			["more vertical"
-			P _ px // 2.
+			P := px // 2.
 			1 to: px do:
 				[:i |
-				destY _ destY + dy1.
-				(P _ P - py) < 0 ifTrue: 
-					[destX _ destX + dx1.
-					P _ P + px].
+				destY := destY + dy1.
+				(P := P - py) < 0 ifTrue: 
+					[destX := destX + dx1.
+					P := P + px].
 				i < px ifTrue:
 					[self copyBits.
 					interpreterProxy failed ifTrue:
 						[^ nil "bail out now on failure -- avoid storing x,y"].
 					(affectedL < affectedR and: [affectedT < affectedB]) ifTrue:
 						["Affected rectangle grows along the line"
-						affL _ affL min: affectedL.
-						affR _ affR max: affectedR.
-						affT _ affT min: affectedT.
-						affB _ affB max: affectedB.
+						affL := affL min: affectedL.
+						affR := affR max: affectedR.
+						affT := affT min: affectedT.
+						affB := affB max: affectedB.
 						(affR - affL) * (affB - affT) > 4000 ifTrue:
 							["If affected rectangle gets large, update it in chunks"
-							affectedL _ affL.  affectedR _ affR.
-							affectedT _ affT.  affectedB _ affB.
+							affectedL := affL.  affectedR := affR.
+							affectedT := affT.  affectedB := affB.
 							self showDisplayBits.
-							affL _ affT _ 9999.  "init null rectangle"
-							affR _ affB _ -9999]].
+							affL := affT := 9999.  "init null rectangle"
+							affR := affB := -9999]].
 					]]].
 
 	"Remaining affected rect"
-	affectedL _ affL.  affectedR _ affR.
-	affectedT _ affT.  affectedB _ affB.
+	affectedL := affL.  affectedR := affR.
+	affectedT := affT.  affectedB := affB.
 
 	"store destX, Y back"	
 	interpreterProxy storeInteger: BBDestXIndex ofObject: bitBltOop withValue: destX.
@@ -1600,12 +1550,14 @@ BitBltSimulation >> drawLoopX: xDelta Y: yDelta [
 
 { #category : #'memory access' }
 BitBltSimulation >> dstLongAt: idx [
-	^interpreterProxy longAt: idx
+
+	^self long32At: idx
 ]
 
 { #category : #'memory access' }
 BitBltSimulation >> dstLongAt: idx put: value [
-	^interpreterProxy longAt: idx put: value
+
+	^self long32At: idx put: value
 ]
 
 { #category : #'memory access' }
@@ -1614,10 +1566,10 @@ BitBltSimulation >> dstLongAt: idx put: srcValue mask: dstMask [
 	to mask out the bits to be modified. This is an essiantial
 	read-modify-write operation on the destination form."
 	| dstValue |
-	self inline: true.
-	dstValue _ self dstLongAt: idx.
-	dstValue _ dstValue bitAnd: dstMask.
-	dstValue _ dstValue bitOr: srcValue.
+	<inline: true>
+	dstValue := self dstLongAt: idx.
+	dstValue := dstValue bitAnd: dstMask.
+	dstValue := dstValue bitOr: srcValue.
 	self dstLongAt: idx put: dstValue.
 ]
 
@@ -1625,25 +1577,25 @@ BitBltSimulation >> dstLongAt: idx put: srcValue mask: dstMask [
 BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| pv threshold value out |
-	self inline: true. "You bet"
-	pv _ srcWord bitAnd: 255.
-	threshold _ ditherThresholds16 at: (pv bitAnd: 7).
-	value _ ditherValues16 at: (pv bitShift: -3).
+	<inline: true> "You bet"
+	pv := srcWord bitAnd: 255.
+	threshold := ditherThresholds16 at: (pv bitAnd: 7).
+	value := ditherValues16 at: (pv bitShift: -3).
 	ditherValue < threshold
-		ifTrue:[out _ value + 1]
-		ifFalse:[out _ value].
-	pv _ (srcWord bitShift: -8) bitAnd: 255.
-	threshold _ ditherThresholds16 at: (pv bitAnd: 7).
-	value _ ditherValues16 at: (pv bitShift: -3).
+		ifTrue:[out := value + 1]
+		ifFalse:[out := value].
+	pv := (srcWord bitShift: -8) bitAnd: 255.
+	threshold := ditherThresholds16 at: (pv bitAnd: 7).
+	value := ditherValues16 at: (pv bitShift: -3).
 	ditherValue < threshold
-		ifTrue:[out _ out bitOr: (value+1 bitShift:5)]
-		ifFalse:[out _ out bitOr: (value bitShift: 5)].
-	pv _ (srcWord bitShift: -16) bitAnd: 255.
-	threshold _ ditherThresholds16 at: (pv bitAnd: 7).
-	value _ ditherValues16 at: (pv bitShift: -3).
+		ifTrue:[out := out bitOr: (value+1 bitShift:5)]
+		ifFalse:[out := out bitOr: (value bitShift: 5)].
+	pv := (srcWord bitShift: -16) bitAnd: 255.
+	threshold := ditherThresholds16 at: (pv bitAnd: 7).
+	value := ditherValues16 at: (pv bitShift: -3).
 	ditherValue < threshold
-		ifTrue:[out _ out bitOr: (value+1 bitShift:10)]
-		ifFalse:[out _ out bitOr: (value bitShift: 10)].
+		ifTrue:[out := out bitOr: (value+1 bitShift:10)]
+		ifFalse:[out := out bitOr: (value bitShift: 10)].
 	^out
 ]
 
@@ -1651,11 +1603,11 @@ BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	self var: #floatValue declareC:'double floatValue'.
-	fieldOop _ interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
+	<var: #floatValue type:'double '>
+	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
-	floatValue _ interpreterProxy floatValueOf: fieldOop.
+	floatValue := interpreterProxy floatValueOf: fieldOop.
 	(-2147483648.0 <= floatValue and:[floatValue <= 2147483647.0])
 		ifFalse:[interpreterProxy primitiveFail. ^0].
 	^floatValue asInteger
@@ -1665,12 +1617,12 @@ BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer ifNil: defaultValue [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	self var: #floatValue declareC:'double floatValue'.
-	fieldOop _ interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
+	<var: #floatValue type:'double '>
+	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
 	(fieldOop = interpreterProxy nilObject) ifTrue:[^defaultValue].
-	floatValue _ interpreterProxy floatValueOf: fieldOop.
+	floatValue := interpreterProxy floatValueOf: fieldOop.
 	(-2147483648.0 <= floatValue and:[floatValue <= 2147483647.0])
 		ifFalse:[interpreterProxy primitiveFail. ^0].
 	^floatValue asInteger
@@ -1689,7 +1641,8 @@ BitBltSimulation >> fixAlpha: sourceWord with: destinationWord [
 { #category : #'memory access' }
 BitBltSimulation >> halftoneAt: idx [
 	"Return a value from the halftone pattern."
-	^interpreterProxy longAt: halftoneBase + (idx \\ halftoneHeight * 4)
+
+	^self long32At: halftoneBase + (idx \\ halftoneHeight * 4)
 ]
 
 { #category : #setup }
@@ -1705,62 +1658,62 @@ BitBltSimulation >> ignoreSourceOrHalftone: formPointer [
 
 { #category : #'initialize-release' }
 BitBltSimulation >> initBBOpTable [
-	self cCode: 'opTable[0+1] = (int)clearWordwith'.
-	self cCode: 'opTable[1+1] = (int)bitAndwith'.
-	self cCode: 'opTable[2+1] = (int)bitAndInvertwith'.
-	self cCode: 'opTable[3+1] = (int)sourceWordwith'.
-	self cCode: 'opTable[4+1] = (int)bitInvertAndwith'.
-	self cCode: 'opTable[5+1] = (int)destinationWordwith'.
-	self cCode: 'opTable[6+1] = (int)bitXorwith'.
-	self cCode: 'opTable[7+1] = (int)bitOrwith'.
-	self cCode: 'opTable[8+1] = (int)bitInvertAndInvertwith'.
-	self cCode: 'opTable[9+1] = (int)bitInvertXorwith'.
-	self cCode: 'opTable[10+1] = (int)bitInvertDestinationwith'.
-	self cCode: 'opTable[11+1] = (int)bitOrInvertwith'.
-	self cCode: 'opTable[12+1] = (int)bitInvertSourcewith'.
-	self cCode: 'opTable[13+1] = (int)bitInvertOrwith'.
-	self cCode: 'opTable[14+1] = (int)bitInvertOrInvertwith'.
-	self cCode: 'opTable[15+1] = (int)destinationWordwith'.
-	self cCode: 'opTable[16+1] = (int)destinationWordwith'.
-	self cCode: 'opTable[17+1] = (int)destinationWordwith'.
-	self cCode: 'opTable[18+1] = (int)addWordwith'.
-	self cCode: 'opTable[19+1] = (int)subWordwith'.
-	self cCode: 'opTable[20+1] = (int)rgbAddwith'.
-	self cCode: 'opTable[21+1] = (int)rgbSubwith'.
-	self cCode: 'opTable[22+1] = (int)OLDrgbDiffwith'.
-	self cCode: 'opTable[23+1] = (int)OLDtallyIntoMapwith'.
-	self cCode: 'opTable[24+1] = (int)alphaBlendwith'.
-	self cCode: 'opTable[25+1] = (int)pixPaintwith'.
-	self cCode: 'opTable[26+1] = (int)pixMaskwith'.
-	self cCode: 'opTable[27+1] = (int)rgbMaxwith'.
-	self cCode: 'opTable[28+1] = (int)rgbMinwith'.
-	self cCode: 'opTable[29+1] = (int)rgbMinInvertwith'.
-	self cCode: 'opTable[30+1] = (int)alphaBlendConstwith'.
-	self cCode: 'opTable[31+1] = (int)alphaPaintConstwith'.
-	self cCode: 'opTable[32+1] = (int)rgbDiffwith'.
-	self cCode: 'opTable[33+1] = (int)tallyIntoMapwith'.
-	self cCode: 'opTable[34+1] = (int)alphaBlendScaledwith'.
-	self cCode: 'opTable[35+1] = (int)alphaBlendScaledwith'.
-	self cCode: 'opTable[36+1] = (int)alphaBlendScaledwith'.	
-	self cCode: 'opTable[37+1] = (int)rgbMulwith'.
-	self cCode: 'opTable[38+1] = (int)pixSwapwith'.
-	self cCode: 'opTable[39+1] = (int)pixClearwith'.
-	self cCode: 'opTable[40+1] = (int)fixAlphawith'.
+	self cCode: 'opTable[0+1] = (void *)clearWordwith'.
+	self cCode: 'opTable[1+1] = (void *)bitAndwith'.
+	self cCode: 'opTable[2+1] = (void *)bitAndInvertwith'.
+	self cCode: 'opTable[3+1] = (void *)sourceWordwith'.
+	self cCode: 'opTable[4+1] = (void *)bitInvertAndwith'.
+	self cCode: 'opTable[5+1] = (void *)destinationWordwith'.
+	self cCode: 'opTable[6+1] = (void *)bitXorwith'.
+	self cCode: 'opTable[7+1] = (void *)bitOrwith'.
+	self cCode: 'opTable[8+1] = (void *)bitInvertAndInvertwith'.
+	self cCode: 'opTable[9+1] = (void *)bitInvertXorwith'.
+	self cCode: 'opTable[10+1] = (void *)bitInvertDestinationwith'.
+	self cCode: 'opTable[11+1] = (void *)bitOrInvertwith'.
+	self cCode: 'opTable[12+1] = (void *)bitInvertSourcewith'.
+	self cCode: 'opTable[13+1] = (void *)bitInvertOrwith'.
+	self cCode: 'opTable[14+1] = (void *)bitInvertOrInvertwith'.
+	self cCode: 'opTable[15+1] = (void *)destinationWordwith'.
+	self cCode: 'opTable[16+1] = (void *)destinationWordwith'.
+	self cCode: 'opTable[17+1] = (void *)destinationWordwith'.
+	self cCode: 'opTable[18+1] = (void *)addWordwith'.
+	self cCode: 'opTable[19+1] = (void *)subWordwith'.
+	self cCode: 'opTable[20+1] = (void *)rgbAddwith'.
+	self cCode: 'opTable[21+1] = (void *)rgbSubwith'.
+	self cCode: 'opTable[22+1] = (void *)OLDrgbDiffwith'.
+	self cCode: 'opTable[23+1] = (void *)OLDtallyIntoMapwith'.
+	self cCode: 'opTable[24+1] = (void *)alphaBlendwith'.
+	self cCode: 'opTable[25+1] = (void *)pixPaintwith'.
+	self cCode: 'opTable[26+1] = (void *)pixMaskwith'.
+	self cCode: 'opTable[27+1] = (void *)rgbMaxwith'.
+	self cCode: 'opTable[28+1] = (void *)rgbMinwith'.
+	self cCode: 'opTable[29+1] = (void *)rgbMinInvertwith'.
+	self cCode: 'opTable[30+1] = (void *)alphaBlendConstwith'.
+	self cCode: 'opTable[31+1] = (void *)alphaPaintConstwith'.
+	self cCode: 'opTable[32+1] = (void *)rgbDiffwith'.
+	self cCode: 'opTable[33+1] = (void *)tallyIntoMapwith'.
+	self cCode: 'opTable[34+1] = (void *)alphaBlendScaledwith'.
+	self cCode: 'opTable[35+1] = (void *)alphaBlendScaledwith'.
+	self cCode: 'opTable[36+1] = (void *)alphaBlendScaledwith'.	
+	self cCode: 'opTable[37+1] = (void *)rgbMulwith'.
+	self cCode: 'opTable[38+1] = (void *)pixSwapwith'.
+	self cCode: 'opTable[39+1] = (void *)pixClearwith'.
+	self cCode: 'opTable[40+1] = (void *)fixAlphawith'.
 ]
 
 { #category : #'initialize-release' }
 BitBltSimulation >> initDither8Lookup [	
-	self inline: false. 
+	<inline: false> 
 	0 to: 255 do: [:b | 
 		0 to: 15 do: [:t | | value |
-			value _ self expensiveDither32To16: b threshold: t.
+			value := self expensiveDither32To16: b threshold: t.
 			dither8Lookup at: ((t << 8)+b)put: value]].
 	
 ]
 
 { #category : #'initialize-release' }
 BitBltSimulation >> initialiseModule [
-	self export: true.
+	<export: true>
 	self initBBOpTable.
 	self initDither8Lookup.
 	^true
@@ -1769,8 +1722,8 @@ BitBltSimulation >> initialiseModule [
 { #category : #'interpreter interface' }
 BitBltSimulation >> isIdentityMap: shifts with: masks [
 	"Return true if shiftTable/maskTable define an identity mapping."
-	self var: #shifts declareC:'int *shifts'.
-	self var: #masks declareC:'unsigned int *masks'.
+	<var: #shifts type:'int *'>
+	<var: #masks type:'unsigned int *'>
 	(shifts == nil or:[masks == nil]) ifTrue:[^true].
 	((shifts at: RedIndex) = 0 
 		and:[(shifts at: GreenIndex) = 0
@@ -1787,33 +1740,34 @@ BitBltSimulation >> isIdentityMap: shifts with: masks [
 { #category : #'interpreter interface' }
 BitBltSimulation >> loadBitBltDestForm [
 	"Load the dest form for BitBlt. Return false if anything is wrong, true otherwise."
+
 	| destBitsSize |
-	self inline: true.
-	destBits _ interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
-	destWidth _ interpreterProxy fetchInteger: FormWidthIndex ofObject: destForm.
-	destHeight _ interpreterProxy fetchInteger: FormHeightIndex ofObject: destForm.
+	<inline: true>
+	destBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
+	destWidth := interpreterProxy fetchInteger: FormWidthIndex ofObject: destForm.
+	destHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: destForm.
 	(destWidth >= 0 and: [destHeight >= 0])
 		ifFalse: [^ false].
-	destDepth _ interpreterProxy fetchInteger: FormDepthIndex ofObject: destForm.
-	destMSB _ destDepth > 0.
-	destDepth < 0 ifTrue:[destDepth _ 0 - destDepth].
+	destDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: destForm.
+	destMSB := destDepth > 0.
+	destDepth < 0 ifTrue:[destDepth := 0 - destDepth].
 	"Ignore an integer bits handle for Display in which case 
 	the appropriate values will be obtained by calling ioLockSurfaceBits()."
 	(interpreterProxy isIntegerObject: destBits) ifTrue:[
 		"Query for actual surface dimensions"
 		(self queryDestSurface: (interpreterProxy integerValueOf: destBits))
 			ifFalse:[^false].
-		destPPW _ 32 // destDepth.
-		destBits _ destPitch _ 0.
+		destPPW := 32 // destDepth.
+		destBits := destPitch := 0.
 	] ifFalse:[
-		destPPW _ 32 // destDepth.
-		destPitch _ destWidth + (destPPW-1) // destPPW * 4.
-		destBitsSize _ interpreterProxy byteSizeOf: destBits.
+		destPPW := 32 // destDepth.
+		destPitch := destWidth + (destPPW-1) // destPPW * 4.
+		destBitsSize := interpreterProxy byteSizeOf: destBits.
 		((interpreterProxy isWordsOrBytes: destBits)
 			and: [destBitsSize = (destPitch * destHeight)])
 			ifFalse: [^ false].
 		"Skip header since external bits don't have one"
-		destBits _ self cCoerce: (interpreterProxy firstIndexableField: destBits) to:'int'.
+		destBits := self oopForPointer: (interpreterProxy firstIndexableField: destBits).
 	].
 	^true
 ]
@@ -1822,7 +1776,7 @@ BitBltSimulation >> loadBitBltDestForm [
 BitBltSimulation >> loadBitBltFrom: bbObj [
 	"Load BitBlt from the oop.
 	This function is exported for the Balloon engine."
-	self export: true.
+	<export: true>
 	^self loadBitBltFrom: bbObj warping: false.
 ]
 
@@ -1832,57 +1786,57 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	"NOTE this should all be changed to minX/maxX coordinates for simpler clipping
 		-- once it works!"
 	| ok |
-	self inline: false.
-	bitBltOop _ bbObj.
-	isWarping _ aBool.
-	combinationRule _ interpreterProxy fetchInteger: BBRuleIndex ofObject: bitBltOop.
+	<inline: false>
+	bitBltOop := bbObj.
+	isWarping := aBool.
+	combinationRule := interpreterProxy fetchInteger: BBRuleIndex ofObject: bitBltOop.
 	(interpreterProxy failed
 		or: [combinationRule < 0 or: [combinationRule > (OpTableSize - 2)]])
 		 ifTrue: [^ false  "operation out of range"].
 	(combinationRule >= 16 and: [combinationRule <= 17])
 		 ifTrue: [^ false  "fail for old simulated paint, erase modes"].
-	sourceForm _ interpreterProxy fetchPointer: BBSourceFormIndex ofObject: bitBltOop.
-	noSource _ self ignoreSourceOrHalftone: sourceForm.
-	halftoneForm _ interpreterProxy fetchPointer: BBHalftoneFormIndex ofObject: bitBltOop.
-	noHalftone _ self ignoreSourceOrHalftone: halftoneForm.
+	sourceForm := interpreterProxy fetchPointer: BBSourceFormIndex ofObject: bitBltOop.
+	noSource := self ignoreSourceOrHalftone: sourceForm.
+	halftoneForm := interpreterProxy fetchPointer: BBHalftoneFormIndex ofObject: bitBltOop.
+	noHalftone := self ignoreSourceOrHalftone: halftoneForm.
 
-	destForm _ interpreterProxy fetchPointer: BBDestFormIndex ofObject: bbObj.
+	destForm := interpreterProxy fetchPointer: BBDestFormIndex ofObject: bbObj.
 	((interpreterProxy isPointers: destForm) and: [(interpreterProxy slotSizeOf: destForm) >= 4])
 		ifFalse: [^ false].
-	ok _ self loadBitBltDestForm.
+	ok := self loadBitBltDestForm.
 	ok ifFalse:[^false].
 
-	destX _ self fetchIntOrFloat: BBDestXIndex ofObject: bitBltOop ifNil: 0.
-	destY _ self fetchIntOrFloat: BBDestYIndex ofObject: bitBltOop ifNil: 0.
-	width _ self fetchIntOrFloat: BBWidthIndex ofObject: bitBltOop ifNil: destWidth.
-	height _ self fetchIntOrFloat: BBHeightIndex ofObject: bitBltOop ifNil: destHeight.
+	destX := self fetchIntOrFloat: BBDestXIndex ofObject: bitBltOop ifNil: 0.
+	destY := self fetchIntOrFloat: BBDestYIndex ofObject: bitBltOop ifNil: 0.
+	width := self fetchIntOrFloat: BBWidthIndex ofObject: bitBltOop ifNil: destWidth.
+	height := self fetchIntOrFloat: BBHeightIndex ofObject: bitBltOop ifNil: destHeight.
 		interpreterProxy failed ifTrue: [^ false  "non-integer value"].
 
 	noSource ifTrue:
-		[sourceX _ sourceY _ 0]
+		[sourceX := sourceY := 0]
 		ifFalse: 
 		[((interpreterProxy isPointers: sourceForm) and: [(interpreterProxy slotSizeOf: sourceForm) >= 4])
 			ifFalse: [^ false].
-		ok _ self loadBitBltSourceForm.
+		ok := self loadBitBltSourceForm.
 		ok ifFalse:[^false].
-		ok _ self loadColorMap.
+		ok := self loadColorMap.
 		ok ifFalse:[^false].
 		"Need the implicit setup here in case of 16<->32 bit conversions"
 		(cmFlags bitAnd: ColorMapNewStyle) = 0 ifTrue:[self setupColorMasks].
-		sourceX _ self fetchIntOrFloat: BBSourceXIndex ofObject: bitBltOop ifNil: 0.
-		sourceY _ self fetchIntOrFloat: BBSourceYIndex ofObject: bitBltOop ifNil: 0].
+		sourceX := self fetchIntOrFloat: BBSourceXIndex ofObject: bitBltOop ifNil: 0.
+		sourceY := self fetchIntOrFloat: BBSourceYIndex ofObject: bitBltOop ifNil: 0].
 
-	ok _ self loadHalftoneForm.
+	ok := self loadHalftoneForm.
 	ok ifFalse:[^false].
-	clipX _ self fetchIntOrFloat: BBClipXIndex ofObject: bitBltOop ifNil: 0.
-	clipY _ self fetchIntOrFloat: BBClipYIndex ofObject: bitBltOop ifNil: 0.
-	clipWidth _ self fetchIntOrFloat: BBClipWidthIndex ofObject: bitBltOop ifNil: destWidth.
-	clipHeight _ self fetchIntOrFloat: BBClipHeightIndex ofObject: bitBltOop ifNil: destHeight.
+	clipX := self fetchIntOrFloat: BBClipXIndex ofObject: bitBltOop ifNil: 0.
+	clipY := self fetchIntOrFloat: BBClipYIndex ofObject: bitBltOop ifNil: 0.
+	clipWidth := self fetchIntOrFloat: BBClipWidthIndex ofObject: bitBltOop ifNil: destWidth.
+	clipHeight := self fetchIntOrFloat: BBClipHeightIndex ofObject: bitBltOop ifNil: destHeight.
 		interpreterProxy failed ifTrue: [^ false  "non-integer value"].
-	clipX < 0 ifTrue: [clipWidth _ clipWidth + clipX.  clipX _ 0].
-	clipY < 0 ifTrue: [clipHeight _ clipHeight + clipY.  clipY _ 0].
-	clipX+clipWidth > destWidth ifTrue: [clipWidth _ destWidth - clipX].
-	clipY+clipHeight > destHeight ifTrue: [clipHeight _ destHeight - clipY].
+	clipX < 0 ifTrue: [clipWidth := clipWidth + clipX.  clipX := 0].
+	clipY < 0 ifTrue: [clipHeight := clipHeight + clipY.  clipY := 0].
+	clipX+clipWidth > destWidth ifTrue: [clipWidth := destWidth - clipX].
+	clipY+clipHeight > destHeight ifTrue: [clipHeight := destHeight - clipY].
 	^ true
 ]
 
@@ -1890,32 +1844,32 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 BitBltSimulation >> loadBitBltSourceForm [
 	"Load the source form for BitBlt. Return false if anything is wrong, true otherwise."
 	| sourceBitsSize |
-	self inline: true.
-	sourceBits _ interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
-	sourceWidth _ self fetchIntOrFloat: FormWidthIndex ofObject: sourceForm.
-	sourceHeight _ self fetchIntOrFloat: FormHeightIndex ofObject: sourceForm.
+	<inline: true>
+	sourceBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
+	sourceWidth := self fetchIntOrFloat: FormWidthIndex ofObject: sourceForm.
+	sourceHeight := self fetchIntOrFloat: FormHeightIndex ofObject: sourceForm.
 	(sourceWidth >= 0 and: [sourceHeight >= 0])
 		ifFalse: [^ false].
-	sourceDepth _ interpreterProxy fetchInteger: FormDepthIndex ofObject: sourceForm.
-	sourceMSB _ sourceDepth > 0.
-	sourceDepth < 0 ifTrue:[sourceDepth _ 0 - sourceDepth].
+	sourceDepth := interpreterProxy fetchInteger: FormDepthIndex ofObject: sourceForm.
+	sourceMSB := sourceDepth > 0.
+	sourceDepth < 0 ifTrue:[sourceDepth := 0 - sourceDepth].
 	"Ignore an integer bits handle for Display in which case 
 	the appropriate values will be obtained by calling ioLockSurfaceBits()."
 	(interpreterProxy isIntegerObject: sourceBits) ifTrue:[
 		"Query for actual surface dimensions"
 		(self querySourceSurface: (interpreterProxy integerValueOf: sourceBits))
 			ifFalse:[^false].
-		sourcePPW _ 32 // sourceDepth.
-		sourceBits _ sourcePitch _ 0.
+		sourcePPW := 32 // sourceDepth.
+		sourceBits := sourcePitch := 0.
 	] ifFalse:[
-		sourcePPW _ 32 // sourceDepth.
-		sourcePitch _ sourceWidth + (sourcePPW-1) // sourcePPW * 4.
-		sourceBitsSize _ interpreterProxy byteSizeOf: sourceBits.
+		sourcePPW := 32 // sourceDepth.
+		sourcePitch := sourceWidth + (sourcePPW-1) // sourcePPW * 4.
+		sourceBitsSize := interpreterProxy byteSizeOf: sourceBits.
 		((interpreterProxy isWordsOrBytes: sourceBits)
 			and: [sourceBitsSize = (sourcePitch * sourceHeight)])
 			ifFalse: [^ false].
 		"Skip header since external bits don't have one"
-		sourceBits _ self cCoerce: (interpreterProxy firstIndexableField: sourceBits) to:'int'.
+		sourceBits := self oopForPointer: (interpreterProxy firstIndexableField: sourceBits).
 	].
 	^true
 ]
@@ -1926,57 +1880,57 @@ BitBltSimulation >> loadColorMap [
 	2^N long, where N = sourceDepth for 1, 2, 4, 8 bits, 
 	or N = 9, 12, or 15 (3, 4, 5 bits per color) for 16 or 32 bits."
 	| cmSize oldStyle oop cmOop |
-	self inline: true.
-	cmFlags _ cmMask _ cmBitsPerColor _ 0.
-	cmShiftTable _ nil.
-	cmMaskTable _ nil.
-	cmLookupTable _ nil.
-	cmOop _ interpreterProxy fetchPointer: BBColorMapIndex ofObject: bitBltOop.
+	<inline: true>
+	cmFlags := cmMask := cmBitsPerColor := 0.
+	cmShiftTable := nil.
+	cmMaskTable := nil.
+	cmLookupTable := nil.
+	cmOop := interpreterProxy fetchPointer: BBColorMapIndex ofObject: bitBltOop.
 	cmOop = interpreterProxy nilObject ifTrue:[^true].
-	cmFlags _ ColorMapPresent. "even if identity or somesuch - may be cleared later"
-	oldStyle _ false.
+	cmFlags := ColorMapPresent. "even if identity or somesuch - may be cleared later"
+	oldStyle := false.
 	(interpreterProxy isWords: cmOop) ifTrue:[
 		"This is an old-style color map (indexed only, with implicit RGBA conversion)"
-		cmSize _ interpreterProxy slotSizeOf: cmOop.
-		cmLookupTable _ interpreterProxy firstIndexableField: cmOop.
-		oldStyle _ true.
+		cmSize := interpreterProxy slotSizeOf: cmOop.
+		cmLookupTable := interpreterProxy firstIndexableField: cmOop.
+		oldStyle := true.
 	] ifFalse: [
 		"A new-style color map (fully qualified)"
 		((interpreterProxy isPointers: cmOop) 
 			and:[(interpreterProxy slotSizeOf: cmOop) >= 3]) ifFalse:[^false].
-		cmShiftTable _ self loadColorMapShiftOrMaskFrom:
+		cmShiftTable := self loadColorMapShiftOrMaskFrom:
 			(interpreterProxy fetchPointer: 0 ofObject: cmOop).
-		cmMaskTable _ self loadColorMapShiftOrMaskFrom:
+		cmMaskTable := self loadColorMapShiftOrMaskFrom:
 			(interpreterProxy fetchPointer: 1 ofObject: cmOop).
-		oop _ interpreterProxy fetchPointer: 2 ofObject: cmOop.
+		oop := interpreterProxy fetchPointer: 2 ofObject: cmOop.
 		oop = interpreterProxy nilObject 
-			ifTrue:[cmSize _ 0]
+			ifTrue:[cmSize := 0]
 			ifFalse:[(interpreterProxy isWords: oop) ifFalse:[^false].
-					cmSize _ (interpreterProxy slotSizeOf: oop).
-					cmLookupTable _ interpreterProxy firstIndexableField: oop].
-		cmFlags _ cmFlags bitOr: ColorMapNewStyle.
+					cmSize := (interpreterProxy slotSizeOf: oop).
+					cmLookupTable := interpreterProxy firstIndexableField: oop].
+		cmFlags := cmFlags bitOr: ColorMapNewStyle.
 	].
 	(cmSize bitAnd: cmSize - 1) = 0 ifFalse:[^false].
-	cmMask _ cmSize - 1.
-	cmBitsPerColor _ 0.
-	cmSize = 512 ifTrue: [cmBitsPerColor _ 3].
-	cmSize = 4096 ifTrue: [cmBitsPerColor _ 4].
-	cmSize = 32768 ifTrue: [cmBitsPerColor _ 5].
+	cmMask := cmSize - 1.
+	cmBitsPerColor := 0.
+	cmSize = 512 ifTrue: [cmBitsPerColor := 3].
+	cmSize = 4096 ifTrue: [cmBitsPerColor := 4].
+	cmSize = 32768 ifTrue: [cmBitsPerColor := 5].
 	cmSize = 0
-		ifTrue:[cmLookupTable _ nil. cmMask _ 0]
-		ifFalse:[cmFlags _ cmFlags bitOr: ColorMapIndexedPart].
+		ifTrue:[cmLookupTable := nil. cmMask := 0]
+		ifFalse:[cmFlags := cmFlags bitOr: ColorMapIndexedPart].
 	oldStyle "needs implicit conversion"
 		ifTrue:[	self setupColorMasks].
 	"Check if colorMap is just identity mapping for RGBA parts"
 	(self isIdentityMap: cmShiftTable with: cmMaskTable)
-		ifTrue:[ cmMaskTable _ nil. cmShiftTable _ nil ]
-		ifFalse:[ cmFlags _ cmFlags bitOr: ColorMapFixedPart].
+		ifTrue:[ cmMaskTable := nil. cmShiftTable := nil ]
+		ifFalse:[ cmFlags := cmFlags bitOr: ColorMapFixedPart].
 	^true
 ]
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> loadColorMapShiftOrMaskFrom: mapOop [
-	self returnTypeC:'void *'.
+	<returnTypeC:'void *'>
 	mapOop = interpreterProxy nilObject ifTrue:[^nil].
 	(interpreterProxy isIntegerObject: mapOop) 
 		ifTrue:[interpreterProxy primitiveFail. ^nil].
@@ -1990,34 +1944,34 @@ BitBltSimulation >> loadColorMapShiftOrMaskFrom: mapOop [
 BitBltSimulation >> loadHalftoneForm [
 	"Load the halftone form"
 	| halftoneBits |
-	self inline: true.
+	<inline: true>
 	noHalftone ifTrue:[
-		halftoneBase _ nil.
+		halftoneBase := nil.
 		^true].
 	((interpreterProxy isPointers: halftoneForm) and: [(interpreterProxy slotSizeOf: halftoneForm) >= 4])
 		ifTrue:
 		["Old-style 32xN monochrome halftone Forms"
-		halftoneBits _ interpreterProxy fetchPointer: FormBitsIndex ofObject: halftoneForm.
-		halftoneHeight _ interpreterProxy fetchInteger: FormHeightIndex ofObject: halftoneForm.
+		halftoneBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: halftoneForm.
+		halftoneHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: halftoneForm.
 		(interpreterProxy isWords: halftoneBits)
-			ifFalse: [noHalftone _ true]]
+			ifFalse: [noHalftone := true]]
 		ifFalse:
 		["New spec accepts, basically, a word array"
 		((interpreterProxy isPointers: halftoneForm) not
 			and: [interpreterProxy isWords: halftoneForm])
 			ifFalse: [^ false].
-		halftoneBits _ halftoneForm.
-		halftoneHeight _ interpreterProxy slotSizeOf: halftoneBits].
-	halftoneBase _ self cCoerce: (interpreterProxy firstIndexableField: halftoneBits) to:'int'.
+		halftoneBits := halftoneForm.
+		halftoneHeight := interpreterProxy slotSizeOf: halftoneBits].
+	halftoneBase := self oopForPointer: (interpreterProxy firstIndexableField: halftoneBits).
 	^true
 ]
 
 { #category : #'surface support' }
 BitBltSimulation >> loadSurfacePlugin [
 	"Load the surface support plugin"
-	querySurfaceFn _ interpreterProxy ioLoadFunction:'ioGetSurfaceFormat' From:'SurfacePlugin'.
-	lockSurfaceFn _ interpreterProxy ioLoadFunction:'ioLockSurface' From:'SurfacePlugin'.
-	unlockSurfaceFn _ interpreterProxy ioLoadFunction:'ioUnlockSurface' From:'SurfacePlugin'.
+	querySurfaceFn := interpreterProxy ioLoadFunction:'ioGetSurfaceFormat' From:'SurfacePlugin'.
+	lockSurfaceFn := interpreterProxy ioLoadFunction:'ioLockSurface' From:'SurfacePlugin'.
+	unlockSurfaceFn := interpreterProxy ioLoadFunction:'ioUnlockSurface' From:'SurfacePlugin'.
 	^querySurfaceFn ~= 0 and:[lockSurfaceFn ~= 0 and:[unlockSurfaceFn ~= 0]]
 ]
 
@@ -2060,49 +2014,49 @@ BitBltSimulation >> lockSurfaces [
 
 	"
 	| sourceHandle destHandle l r t b fn |
-	self inline: true. "If the CCodeGen learns how to inline #cCode: methods"
-	self var: #fn declareC:'int (*fn)(int, int*, int, int, int, int)'.
-	hasSurfaceLock _ false.
+	<inline: true>
+	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
+	hasSurfaceLock := false.
 	destBits = 0 ifTrue:["Blitting *to* OS surface"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn _ self cCoerce: lockSurfaceFn to: 'int (*)(int, int*, int, int, int, int)'.
-		destHandle _ interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
+		fn := self cCoerce: lockSurfaceFn to: 'sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
+		destHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: destForm.
 		(sourceBits = 0 and:[noSource not]) ifTrue:[
-			sourceHandle _ interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
+			sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
 			"Handle the special case of equal source and dest handles"
 			(sourceHandle = destHandle) ifTrue:[
 				"If we have overlapping source/dest we lock the entire area
 				so that there is only one area transmitted"
 				isWarping ifFalse:[
 					"When warping we always need the entire surface for the source"
-					sourceBits _ self cCode:'fn(sourceHandle, &sourcePitch, 0,0, sourceWidth, sourceHeight)'.
+					sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, 0,0, sourceWidth, sourceHeight)'.
 				] ifTrue:[
 					"Otherwise use overlapping area"
-					l _ sx min: dx. r _ (sx max: dx) + bbW.
-					t _ sy min: dy. b _ (sy max: sy) + bbH.
-					sourceBits _ self cCode:'fn(sourceHandle, &sourcePitch, l, t, r-l, b-t)'.
+					l := sx min: dx. r := (sx max: dx) + bbW.
+					t := sy min: dy. b := (sy max: sy) + bbH.
+					sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, l, t, r-l, b-t)'.
 				].
-				destBits _ sourceBits.
-				destPitch _ sourcePitch.
-				hasSurfaceLock _ true.
+				destBits := sourceBits.
+				destPitch := sourcePitch.
+				hasSurfaceLock := true.
 				^destBits ~~ 0
 			].
 			"Fall through - if not equal it'll be handled below"
 		].
-		destBits _ self cCode:'fn(destHandle, &destPitch, dx, dy, bbW, bbH)'.
-		hasSurfaceLock _ true.
+		destBits := self cCode:'fn(destHandle, &destPitch, dx, dy, bbW, bbH)'.
+		hasSurfaceLock := true.
 	].
 	(sourceBits == 0 and:[noSource not]) ifTrue:["Blitting *from* OS surface"
-		sourceHandle _ interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
+		sourceHandle := interpreterProxy fetchInteger: FormBitsIndex ofObject: sourceForm.
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn _ self cCoerce: lockSurfaceFn to: 'int (*)(int, int*, int, int, int, int)'.
+		fn := self cCoerce: lockSurfaceFn to: 'sqInt (*)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
 		"Warping requiring the entire surface"
 		isWarping ifTrue:[
-			sourceBits _ self cCode:'fn(sourceHandle, &sourcePitch, 0, 0, sourceWidth, sourceHeight)'.
+			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, 0, 0, sourceWidth, sourceHeight)'.
 		] ifFalse:[
-			sourceBits _ self cCode:'fn(sourceHandle, &sourcePitch, sx, sy, bbW, bbH)'.
+			sourceBits := self cCode:'fn(sourceHandle, &sourcePitch, sx, sy, bbW, bbH)'.
 		].
-		hasSurfaceLock _ true.
+		hasSurfaceLock := true.
 	].
 	^destBits ~~ 0 and:[sourceBits ~~ 0 or:[noSource]].
 ]
@@ -2111,15 +2065,15 @@ BitBltSimulation >> lockSurfaces [
 BitBltSimulation >> mapPixel: sourcePixel flags: mapperFlags [
 	"Color map the given source pixel."
 	| pv |
-	self inline: true.
-	pv _ sourcePixel.
+	<inline: true>
+	pv := sourcePixel.
 	(mapperFlags bitAnd: ColorMapPresent) ~= 0 ifTrue:[
 		(mapperFlags bitAnd: ColorMapFixedPart) ~= 0 ifTrue:[
-			pv _ self rgbMapPixel: sourcePixel flags: mapperFlags.
+			pv := self rgbMapPixel: sourcePixel flags: mapperFlags.
 			"avoid introducing transparency by color reduction"
-			(pv = 0 and:[sourcePixel ~= 0]) ifTrue:[pv _ 1]].
+			(pv = 0 and:[sourcePixel ~= 0]) ifTrue:[pv := 1]].
 		(mapperFlags bitAnd: ColorMapIndexedPart) ~= 0
-			ifTrue:[pv _ cmLookupTable at: (pv bitAnd: cmMask)].
+			ifTrue:[pv := cmLookupTable at: (pv bitAnd: cmMask)].
 	].
 	^pv
 ]
@@ -2128,8 +2082,8 @@ BitBltSimulation >> mapPixel: sourcePixel flags: mapperFlags [
 BitBltSimulation >> merge: sourceWord with: destinationWord [
 	| mergeFnwith |
 	"Sender warpLoop is too big to include this in-line"
-	self var: #mergeFnwith declareC: 'int (*mergeFnwith)(int, int)'.
-	mergeFnwith _ self cCoerce: (opTable at: combinationRule+1) to: 'int (*)(int, int)'.
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
 	mergeFnwith.  "null ref for compiler"
 
 	^ self mergeFn: sourceWord with: destinationWord
@@ -2139,11 +2093,11 @@ BitBltSimulation >> merge: sourceWord with: destinationWord [
 BitBltSimulation >> moduleUnloaded: aModuleName [
 	"The module with the given name was just unloaded.
 	Make sure we have no dangling references."
-	self export: true.
-	self var: #aModuleName type: 'char *'.
+	<export: true>
+	<var: #aModuleName type: 'char *'>
 	(aModuleName strcmp: 'SurfacePlugin') = 0 ifTrue:[
 		"The surface plugin just shut down. How nasty."
-		querySurfaceFn _ lockSurfaceFn _ unlockSurfaceFn _ 0.
+		querySurfaceFn := lockSurfaceFn := unlockSurfaceFn := 0.
 	].
 ]
 
@@ -2153,13 +2107,13 @@ BitBltSimulation >> partitionedAND: word1 to: word2 nBits: nBits nPartitions: nP
 	Any field of word1 not all-ones is treated as all-zeroes.
 	Used for erasing, eg, brush shapes prior to ORing in a color"
 	| mask result |
-	mask _ maskTable at: nBits.  "partition mask starts at the right"
-	result _ 0.
+	mask := maskTable at: nBits.  "partition mask starts at the right"
+	result := 0.
 	1 to: nParts do:
 		[:i |
 		(word1 bitAnd: mask) = mask
-			ifTrue: [result _ result bitOr: (word2 bitAnd: mask)].
-		mask _ mask << nBits  "slide left to next partition"].
+			ifTrue: [result := result bitOr: (word2 bitAnd: mask)].
+		mask := mask << nBits  "slide left to next partition"].
 	^ result
 
 ]
@@ -2169,15 +2123,15 @@ BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits nPartitions: nP
 	"Add word1 to word2 as nParts partitions of nBits each.
 	This is useful for packed pixels, or packed colors"
 	| mask sum result |
-	mask _ maskTable at: nBits.  "partition mask starts at the right"
-	result _ 0.
+	mask := maskTable at: nBits.  "partition mask starts at the right"
+	result := 0.
 	1 to: nParts do:
 		[:i |
-		sum _ (word1 bitAnd: mask) + (word2 bitAnd: mask).
+		sum := (word1 bitAnd: mask) + (word2 bitAnd: mask).
 		sum <= mask  "result must not carry out of partition"
-			ifTrue: [result _ result bitOr: sum]
-			ifFalse: [result _ result bitOr: mask].
-		mask _ mask << nBits  "slide left to next partition"].
+			ifTrue: [result := result bitOr: sum]
+			ifFalse: [result := result bitOr: mask].
+		mask := mask << nBits  "slide left to next partition"].
 	^ result
 
 ]
@@ -2186,12 +2140,12 @@ BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits nPartitions: nP
 BitBltSimulation >> partitionedMax: word1 with: word2 nBits: nBits nPartitions: nParts [
 	"Max word1 to word2 as nParts partitions of nBits each"
 	| mask result |
-	mask _ maskTable at: nBits.  "partition mask starts at the right"
-	result _ 0.
+	mask := maskTable at: nBits.  "partition mask starts at the right"
+	result := 0.
 	1 to: nParts do:
 		[:i |
-		result _ result bitOr: ((word2 bitAnd: mask) max: (word1 bitAnd: mask)).
-		mask _ mask << nBits  "slide left to next partition"].
+		result := result bitOr: ((word2 bitAnd: mask) max: (word1 bitAnd: mask)).
+		mask := mask << nBits  "slide left to next partition"].
 	^ result
 
 ]
@@ -2200,12 +2154,12 @@ BitBltSimulation >> partitionedMax: word1 with: word2 nBits: nBits nPartitions: 
 BitBltSimulation >> partitionedMin: word1 with: word2 nBits: nBits nPartitions: nParts [
 	"Min word1 to word2 as nParts partitions of nBits each"
 	| mask result |
-	mask _ maskTable at: nBits.  "partition mask starts at the right"
-	result _ 0.
+	mask := maskTable at: nBits.  "partition mask starts at the right"
+	result := 0.
 	1 to: nParts do:
 		[:i |
-		result _ result bitOr: ((word2 bitAnd: mask) min: (word1 bitAnd: mask)).
-		mask _ mask << nBits  "slide left to next partition"].
+		result := result bitOr: ((word2 bitAnd: mask) min: (word1 bitAnd: mask)).
+		mask := mask << nBits  "slide left to next partition"].
 	^ result
 
 ]
@@ -2217,25 +2171,25 @@ BitBltSimulation >> partitionedMul: word1 with: word2 nBits: nBits nPartitions: 
 	Bug in loop version when non-white background"
 
 	| sMask product result dMask |
-	sMask _ maskTable at: nBits.  "partition mask starts at the right"
-	dMask _  sMask << nBits.
-	result _ (((word1 bitAnd: sMask)+1) * ((word2 bitAnd: sMask)+1) - 1 
+	sMask := maskTable at: nBits.  "partition mask starts at the right"
+	dMask :=  sMask << nBits.
+	result := (((word1 bitAnd: sMask)+1) * ((word2 bitAnd: sMask)+1) - 1 
 				bitAnd: dMask) >> nBits.	"optimized first step"
-	product _ (((word1>>nBits bitAnd: sMask)+1) * ((word2>>nBits bitAnd: sMask)+1) - 1 bitAnd: dMask).
-	result _ result bitOr: (product bitAnd: dMask).
-	product _ (((word1>>(2*nBits) bitAnd: sMask)+1) * ((word2>>(2*nBits) bitAnd: sMask)+1) - 1 bitAnd: dMask).
-	result _ result bitOr: (product bitAnd: dMask) << nBits.
+	product := (((word1>>nBits bitAnd: sMask)+1) * ((word2>>nBits bitAnd: sMask)+1) - 1 bitAnd: dMask).
+	result := result bitOr: (product bitAnd: dMask).
+	product := (((word1>>(2*nBits) bitAnd: sMask)+1) * ((word2>>(2*nBits) bitAnd: sMask)+1) - 1 bitAnd: dMask).
+	result := result bitOr: (product bitAnd: dMask) << nBits.
 	^ result
 
 
 "	| sMask product result dMask |
-	sMask _ maskTable at: nBits.  'partition mask starts at the right'
-	dMask _  sMask << nBits.
-	result _ (((word1 bitAnd: sMask)+1) * ((word2 bitAnd: sMask)+1) - 1 
+	sMask := maskTable at: nBits.  'partition mask starts at the right'
+	dMask :=  sMask << nBits.
+	result := (((word1 bitAnd: sMask)+1) * ((word2 bitAnd: sMask)+1) - 1 
 				bitAnd: dMask) >> nBits.	'optimized first step'
 	nBits to: nBits * (nParts-1) by: nBits do: [:ofs |
-		product _ (((word1>>ofs bitAnd: sMask)+1) * ((word2>>ofs bitAnd: sMask)+1) - 1 bitAnd: dMask).
-		result _ result bitOr: (product bitAnd: dMask) << (ofs-nBits)].
+		product := (((word1>>ofs bitAnd: sMask)+1) * ((word2>>ofs bitAnd: sMask)+1) - 1 bitAnd: dMask).
+		result := result bitOr: (product bitAnd: dMask) << (ofs-nBits)].
 	^ result"
 ]
 
@@ -2244,16 +2198,16 @@ BitBltSimulation >> partitionedSub: word1 from: word2 nBits: nBits nPartitions: 
 	"Subtract word1 from word2 as nParts partitions of nBits each.
 	This is useful for packed pixels, or packed colors"
 	| mask result p1 p2 |
-	mask _ maskTable at: nBits.  "partition mask starts at the right"
-	result _ 0.
+	mask := maskTable at: nBits.  "partition mask starts at the right"
+	result := 0.
 	1 to: nParts do:
 		[:i |
-		p1 _ word1 bitAnd: mask.
-		p2 _ word2 bitAnd: mask.
+		p1 := word1 bitAnd: mask.
+		p2 := word2 bitAnd: mask.
 		p1 < p2  "result is really abs value of thedifference"
-			ifTrue: [result _ result bitOr: p2 - p1]
-			ifFalse: [result _ result bitOr: p1 - p2].
-		mask _ mask << nBits  "slide left to next partition"].
+			ifTrue: [result := result bitOr: p2 - p1]
+			ifFalse: [result := result bitOr: p1 - p2].
+		mask := mask << nBits  "slide left to next partition"].
 	^ result
 
 ]
@@ -2262,7 +2216,7 @@ BitBltSimulation >> partitionedSub: word1 from: word2 nBits: nBits nPartitions: 
 BitBltSimulation >> performCopyLoop [
 	"Based on the values provided during setup choose and
 	perform the appropriate inner loop function."
-	self inline: true. "Should be inlined into caller for speed"
+	<inline: true> "Should be inlined into caller for speed"
 	self destMaskAndPointerInit.
 	noSource ifTrue: ["Simple fill loop"
 		self copyLoopNoSource.
@@ -2285,39 +2239,39 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 	"Pick nPix pixels starting at srcBitIndex from the source, map by the
 	color map, and justify them according to dstBitIndex in the resulting destWord."
 	| sourceWord destWord sourcePix destPix srcShift dstShift nPix |
-	self inline: true. "oh please"
-	sourceWord _ self srcLongAt: sourceIndex.
-	destWord _ 0.
-	srcShift _ srcBitShift. "Hint: Keep in register"
-	dstShift _ dstBitShift. "Hint: Keep in register"
-	nPix _ nPixels. "always > 0 so we can use do { } while(--nPix);"
+	<inline: true> "oh please"
+	sourceWord := self srcLongAt: sourceIndex.
+	destWord := 0.
+	srcShift := srcBitShift. "Hint: Keep in register"
+	dstShift := dstBitShift. "Hint: Keep in register"
+	nPix := nPixels. "always > 0 so we can use do { } while(--nPix);"
 	(mapperFlags = (ColorMapPresent bitOr: ColorMapIndexedPart)) ifTrue:[
 		"a little optimization for (pretty crucial) blits using indexed lookups only"
 		[	"grab, colormap and mix in pixel"
-			sourcePix _ sourceWord >> srcShift bitAnd: srcMask.
-			destPix _ self tableLookup: cmLookupTable at: (sourcePix bitAnd: cmMask).
-			destWord _ destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
+			sourcePix := sourceWord >> srcShift bitAnd: srcMask.
+			destPix := self tableLookup: cmLookupTable at: (sourcePix bitAnd: cmMask).
+			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
 			"adjust dest pix index"
-			dstShift _ dstShift + dstShiftInc.
+			dstShift := dstShift + dstShiftInc.
 			"adjust source pix index"
-			((srcShift _ srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
-				sourceMSB ifTrue:[srcShift _ srcShift + 32] ifFalse:[srcShift _ srcShift - 32].
-				sourceWord _ self srcLongAt: (sourceIndex _ sourceIndex + 4)].
-		(nPix _ nPix - 1) = 0] whileFalse.
+			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
+				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
+				sourceWord := self srcLongAt: (sourceIndex := sourceIndex + 4)].
+		(nPix := nPix - 1) = 0] whileFalse.
 	] ifFalse:[
 		[	"grab, colormap and mix in pixel"
-			sourcePix _ sourceWord >> srcShift bitAnd: srcMask.
-			destPix _ self mapPixel: sourcePix flags: mapperFlags.
-			destWord _ destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
+			sourcePix := sourceWord >> srcShift bitAnd: srcMask.
+			destPix := self mapPixel: sourcePix flags: mapperFlags.
+			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
 			"adjust dest pix index"
-			dstShift _ dstShift + dstShiftInc.
+			dstShift := dstShift + dstShiftInc.
 			"adjust source pix index"
-			((srcShift _ srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
-				sourceMSB ifTrue:[srcShift _ srcShift + 32] ifFalse:[srcShift _ srcShift - 32].
-				sourceWord _ self srcLongAt: (sourceIndex _ sourceIndex + 4)].
-		(nPix _ nPix - 1) = 0] whileFalse.
+			((srcShift := srcShift + srcShiftInc) bitAnd: 16rFFFFFFE0) = 0 ifFalse:[
+				sourceMSB ifTrue:[srcShift := srcShift + 32] ifFalse:[srcShift := srcShift - 32].
+				sourceWord := self srcLongAt: (sourceIndex := sourceIndex + 4)].
+		(nPix := nPix - 1) = 0] whileFalse.
 	].
-	srcBitShift _ srcShift. "Store back"
+	srcBitShift := srcShift. "Store back"
 	^destWord
 
 ]
@@ -2328,24 +2282,24 @@ BitBltSimulation >> pickWarpPixelAtX: xx y: yy [
 	Note: This method is crucial for WarpBlt speed w/o smoothing
 	and still relatively important when smoothing is used."
 	| x y srcIndex sourceWord sourcePix |
-	self inline: true. "*please*"
+	<inline: true> "*please*"
 
 	"note: it would be much faster if we could just
 	avoid these stupid tests for being inside sourceForm."
 	(xx < 0 or:[yy < 0 or:[
-		(x _ xx >> BinaryPoint) >= sourceWidth or:[
-			(y _ yy >> BinaryPoint) >= sourceHeight]]]) ifTrue:[^0]. "out of bounds"
+		(x := xx >> BinaryPoint) >= sourceWidth or:[
+			(y := yy >> BinaryPoint) >= sourceHeight]]]) ifTrue:[^0]. "out of bounds"
 
 	"Fetch source word.
 	Note: We should really update srcIndex with sx and sy so that
 	we don't have to do the computation below. We might even be
 	able to simplify the out of bounds test from above."
-	srcIndex _ sourceBits + (y * sourcePitch) + (x >> warpAlignShift * 4).
-	sourceWord _ self srcLongAt: srcIndex.
+	srcIndex := sourceBits + (y * sourcePitch) + (x >> warpAlignShift * 4).
+	sourceWord := self srcLongAt: srcIndex.
 
 	"Extract pixel from word"
-	srcBitShift _ warpBitShiftTable at: (x bitAnd: warpAlignMask).
-	sourcePix _ sourceWord >> srcBitShift bitAnd: warpSrcMask.
+	srcBitShift := warpBitShiftTable at: (x bitAnd: warpAlignMask).
+	sourcePix := sourceWord >> srcBitShift bitAnd: warpSrcMask.
 	^sourcePix
 ]
 
@@ -2353,13 +2307,13 @@ BitBltSimulation >> pickWarpPixelAtX: xx y: yy [
 BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 	"Clear all pixels in destinationWord for which the pixels of sourceWord have the same values. Used to clear areas of some constant color to zero."
 	| mask result nBits pv |
-	self inline: false.
+	<inline: false>
 	destDepth = 32 ifTrue:[
 		sourceWord = destinationWord ifTrue:[^0] ifFalse:[^destinationWord].
 	].
 	nBits := destDepth.
-	mask _ maskTable at: nBits.  "partition mask starts at the right"
-	result _ 0.
+	mask := maskTable at: nBits.  "partition mask starts at the right"
+	result := 0.
 	1 to: destPPW do:[:i |
 		pv := destinationWord bitAnd: mask.
 		(sourceWord bitAnd: mask) = pv ifTrue:[pv := 0].
@@ -2370,14 +2324,14 @@ BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> pixMask: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	^ self partitionedAND: sourceWord bitInvert32 to: destinationWord
 					nBits: destDepth nPartitions: destPPW
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> pixPaint: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	sourceWord = 0 ifTrue: [^ destinationWord].
 	^ sourceWord bitOr:
 		(self partitionedAND: sourceWord bitInvert32 to: destinationWord
@@ -2388,21 +2342,21 @@ BitBltSimulation >> pixPaint: sourceWord with: destinationWord [
 BitBltSimulation >> pixSwap: sourceWord with: destWord [
 	"Swap the pixels in destWord"
 	| result shift lowMask highMask |
-	self inline: false.
+	<inline: false>
 	destPPW = 1 ifTrue:[^destWord]. "a single pixel per word"
-	result _ 0.
-	lowMask _ (1 << destDepth) - 1. "mask low pixel"
-	highMask _ lowMask << (destPPW-1 * destDepth). "mask high pixel"
-	shift _ 32 - destDepth.
-	result _ result bitOr: (
+	result := 0.
+	lowMask := (1 << destDepth) - 1. "mask low pixel"
+	highMask := lowMask << (destPPW-1 * destDepth). "mask high pixel"
+	shift := 32 - destDepth.
+	result := result bitOr: (
 				(destWord bitAnd: lowMask) << shift bitOr:
 					(destWord bitAnd: highMask) >> shift).
 	destPPW <= 2 ifTrue:[^result].
 	2 to: destPPW // 2 do:[:i|
-		lowMask _ lowMask << destDepth.
-		highMask _ highMask >> destDepth.
-		shift _ shift - (destDepth * 2).
-		result _ result bitOr: (
+		lowMask := lowMask << destDepth.
+		highMask := highMask >> destDepth.
+		shift := shift - (destDepth * 2).
+		result := result bitOr: (
 					(destWord bitAnd: lowMask) << shift bitOr:
 						(destWord bitAnd: highMask) >> shift)].
 	^result
@@ -2412,8 +2366,8 @@ BitBltSimulation >> pixSwap: sourceWord with: destWord [
 BitBltSimulation >> primitiveCopyBits [
 	"Invoke the copyBits primitive. If the destination is the display, then copy it to the screen."
 	| rcvr |
-	self export: true.
-	rcvr _ interpreterProxy stackValue: interpreterProxy methodArgumentCount.
+	<export: true>
+	rcvr := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
 	(self loadBitBltFrom: rcvr)  ifFalse:[^interpreterProxy primitiveFail].
 	self copyBits.
 	interpreterProxy failed ifTrue:[^nil].
@@ -2427,78 +2381,80 @@ BitBltSimulation >> primitiveCopyBits [
 
 { #category : #primitives }
 BitBltSimulation >> primitiveDisplayString [
+
 	| kernDelta xTable glyphMap stopIndex startIndex sourceString bbObj maxGlyph ascii glyphIndex sourcePtr left quickBlt |
-	self export: true.
-	self var: #sourcePtr type: 'unsigned char *'.
-	interpreterProxy methodArgumentCount = 6 ifFalse: [^ interpreterProxy primitiveFail].
+	<export: true>
+	<var: #sourcePtr type: 'char *'>
+	interpreterProxy methodArgumentCount = 6 
+		ifFalse:[^interpreterProxy primitiveFail].
+	kernDelta := interpreterProxy stackIntegerValue: 0.
+	xTable := interpreterProxy stackObjectValue: 1.
+	glyphMap := interpreterProxy stackObjectValue: 2.
+	((interpreterProxy fetchClassOf: xTable) = interpreterProxy classArray and:[
+		(interpreterProxy fetchClassOf: glyphMap) = interpreterProxy classArray])
+			ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy slotSizeOf: glyphMap) = 256 ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy failed ifTrue:[^nil].
+	maxGlyph := (interpreterProxy slotSizeOf: xTable) - 2.
 
-	kernDelta _ interpreterProxy stackIntegerValue: 0.
-	xTable _ interpreterProxy stackObjectValue: 1.
-	glyphMap _ interpreterProxy stackObjectValue: 2.
+	stopIndex := interpreterProxy stackIntegerValue: 3.
+	startIndex := interpreterProxy stackIntegerValue: 4.
+	sourceString := interpreterProxy stackObjectValue: 5.
+	(interpreterProxy isBytes: sourceString) ifFalse:[^interpreterProxy primitiveFail].
+	(startIndex > 0 and:[stopIndex > 0 and:[
+		stopIndex <= (interpreterProxy byteSizeOf: sourceString)]])
+			ifFalse:[^interpreterProxy primitiveFail].
 
-	((interpreterProxy isArray: xTable) and: [interpreterProxy isArray: glyphMap]) ifFalse: [^ interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: glyphMap) = 256 ifFalse: [^ interpreterProxy primitiveFail].
-	interpreterProxy failed ifTrue: [^ nil].
-
-	maxGlyph _ (interpreterProxy slotSizeOf: xTable) - 2.
-	stopIndex _ interpreterProxy stackIntegerValue: 3.
-	startIndex _ interpreterProxy stackIntegerValue: 4.
-	sourceString _ interpreterProxy stackObjectValue: 5.
-
-	(interpreterProxy isBytes: sourceString) ifFalse: [^ interpreterProxy primitiveFail].
-	(startIndex > 0 and: [stopIndex > 0 and: [stopIndex <= (interpreterProxy byteSizeOf: sourceString)]])
-		ifFalse: [^ interpreterProxy primitiveFail].
-	bbObj _ interpreterProxy stackObjectValue: 6.
-	(self loadBitBltFrom: bbObj) ifFalse: [^ interpreterProxy primitiveFail].
-	(combinationRule = 30 or: [combinationRule = 31])
-		ifTrue: ["needs extra source alpha" ^ interpreterProxy primitiveFail].
-
+	bbObj := interpreterProxy stackObjectValue: 6.
+	(self loadBitBltFrom: bbObj) ifFalse:[^interpreterProxy primitiveFail].
+	(combinationRule = 30 or:[combinationRule = 31]) "needs extra source alpha"
+		ifTrue:[^interpreterProxy primitiveFail].
 	"See if we can go directly into copyLoopPixMap (usually we can)"
-	quickBlt _ destBits ~= 0 "no OS surfaces please"
+	quickBlt := destBits ~= 0 "no OS surfaces please"
 				and:[sourceBits ~= 0 "and again"
 				and:[noSource = false "needs a source"
 				and:[sourceForm ~= destForm "no blits onto self"
 				and:[(cmFlags ~= 0 
 						or:[sourceMSB ~= destMSB 
-						or:[sourceDepth ~= destDepth]]) "no point using slower version" ]]]].
-	left _ destX.
-	sourcePtr _ interpreterProxy firstIndexableField: sourceString.
-	startIndex to: stopIndex do: [:charIndex | 
-			ascii _ interpreterProxy byteAt: sourcePtr + charIndex - 1.
-			glyphIndex _ interpreterProxy fetchInteger: ascii ofObject: glyphMap.
-			(glyphIndex < 0 or: [glyphIndex > maxGlyph]) ifTrue: [^ interpreterProxy primitiveFail].
-
-			sourceX _ interpreterProxy fetchInteger: glyphIndex ofObject: xTable.
-			width _ (interpreterProxy fetchInteger: glyphIndex + 1 ofObject: xTable) - sourceX.
-			interpreterProxy failed ifTrue: [^ nil].
-
-			self clipRange. "Must clip here"
-			(bbW > 0 and: [bbH > 0])
-				ifTrue: [quickBlt
-						ifTrue: [self destMaskAndPointerInit.
-							self copyLoopPixMap.
-							"both, hDir and vDir are known to be > 0"
-							affectedL _ dx.
-							affectedR _ dx + bbW.
-							affectedT _ dy.
-							affectedB _ dy + bbH]
-						ifFalse: [self copyBits]].
-			interpreterProxy failed ifTrue: [^ nil].
-			destX _ destX + width + kernDelta].
-	affectedL _ left.
-
+						or:[sourceDepth ~= destDepth]]) "no point using slower version"
+				]]]].
+	left := destX.
+	sourcePtr := interpreterProxy firstIndexableField: sourceString.
+	startIndex to: stopIndex do:[:charIndex|
+		ascii := interpreterProxy byteAtPointer: sourcePtr + charIndex - 1.
+		glyphIndex := interpreterProxy fetchInteger: ascii ofObject: glyphMap.
+		(glyphIndex < 0 or:[glyphIndex > maxGlyph]) 
+			ifTrue:[^interpreterProxy primitiveFail].
+		sourceX := interpreterProxy fetchInteger: glyphIndex ofObject: xTable.
+		width := (interpreterProxy fetchInteger: glyphIndex+1 ofObject: xTable) - sourceX.
+		interpreterProxy failed ifTrue:[^nil].
+		self clipRange.	"Must clip here"
+		(bbW > 0 and:[bbH > 0]) ifTrue: [
+			quickBlt ifTrue:[
+				self destMaskAndPointerInit.
+				self copyLoopPixMap.
+				"both, hDir and vDir are known to be > 0"
+				affectedL := dx.
+				affectedR := dx + bbW.
+				affectedT := dy.
+				affectedB := dy + bbH.
+			] ifFalse:[self copyBits]].
+		interpreterProxy failed ifTrue:[^nil].
+		destX := destX + width + kernDelta.
+	 ].
+	affectedL := left.
 	self showDisplayBits.
-	interpreterProxy pop: 6
+	interpreterProxy pop: 6. "pop args, return rcvr"
 ]
 
 { #category : #primitives }
 BitBltSimulation >> primitiveDrawLoop [
 	"Invoke the line drawing primitive."
 	| rcvr xDelta yDelta |
-	self export: true.
-	rcvr _ interpreterProxy stackValue: 2.
-	xDelta _ interpreterProxy stackIntegerValue: 1.
-	yDelta _ interpreterProxy stackIntegerValue: 0.
+	<export: true>
+	rcvr := interpreterProxy stackValue: 2.
+	xDelta := interpreterProxy stackIntegerValue: 1.
+	yDelta := interpreterProxy stackIntegerValue: 0.
 	(self loadBitBltFrom: rcvr) ifFalse:[^interpreterProxy primitiveFail].
 	interpreterProxy failed ifFalse:[
 		self drawLoopX: xDelta Y: yDelta.
@@ -2510,8 +2466,8 @@ BitBltSimulation >> primitiveDrawLoop [
 BitBltSimulation >> primitiveWarpBits [
 	"Invoke the warpBits primitive. If the destination is the display, then copy it to the screen."
 	| rcvr |
-	self export: true.
-	rcvr _ interpreterProxy stackValue: interpreterProxy methodArgumentCount.
+	<export: true>
+	rcvr := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
 	(self loadWarpBltFrom: rcvr) 
 		ifFalse:[^interpreterProxy primitiveFail].
 	self warpBits.
@@ -2530,7 +2486,7 @@ BitBltSimulation >> queryDestSurface: handle [
 	resizes the main window.
 	Note: Moved to a separate function for better inlining of the caller."
 	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((int (*) (int, int*, int*, int*, int*))querySurfaceFn)
+	^(self cCode:' ((sqInt (*) (sqInt, sqInt*, sqInt*, sqInt*, sqInt*))querySurfaceFn)
 		(handle, &destWidth, &destHeight, &destDepth, &destMSB)'
 			 inSmalltalk:[false])
 ]
@@ -2544,14 +2500,14 @@ BitBltSimulation >> querySourceSurface: handle [
 	resizes the main window.
 	Note: Moved to a separate function for better inlining of the caller."
 	querySurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^false]].
-	^(self cCode:' ((int (*) (int, int*, int*, int*, int*))querySurfaceFn)
+	^(self cCode:' ((sqInt (*) (sqInt, sqInt*, sqInt*, sqInt*, sqInt*))querySurfaceFn)
 		(handle, &sourceWidth, &sourceHeight, &sourceDepth, &sourceMSB)'
 			inSmalltalk:[false])
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbAdd: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Add each pixel separately"
 		^ self partitionedAdd: sourceWord to: destinationWord
@@ -2574,33 +2530,33 @@ BitBltSimulation >> rgbDiff: sourceWord with: destinationWord [
 	and return the sum of the absolute value of all the differences.
 	For non-rgb, return the number of differing pixels."
 	| pixMask destShifted sourceShifted destPixVal bitsPerColor rgbMask sourcePixVal diff maskShifted |
-	self inline: false.
-	pixMask _ maskTable at: destDepth.
+	<inline: false>
+	pixMask := maskTable at: destDepth.
 	destDepth = 16
-		ifTrue: [bitsPerColor _ 5.  rgbMask _ 16r1F]
-		ifFalse: [bitsPerColor _ 8.  rgbMask _ 16rFF].
-	maskShifted _ destMask.
-	destShifted _ destinationWord.
-	sourceShifted _ sourceWord.
+		ifTrue: [bitsPerColor := 5.  rgbMask := 16r1F]
+		ifFalse: [bitsPerColor := 8.  rgbMask := 16rFF].
+	maskShifted := destMask.
+	destShifted := destinationWord.
+	sourceShifted := sourceWord.
 	1 to: destPPW do:
 		[:i |
 		(maskShifted bitAnd: pixMask) > 0 ifTrue:
 			["Only tally pixels within the destination rectangle"
-			destPixVal _ destShifted bitAnd: pixMask.
-			sourcePixVal _ sourceShifted bitAnd: pixMask.
+			destPixVal := destShifted bitAnd: pixMask.
+			sourcePixVal := sourceShifted bitAnd: pixMask.
 			destDepth < 16
 				ifTrue: [sourcePixVal = destPixVal
-							ifTrue: [diff _ 0]
-							ifFalse: [diff _ 1]]
-				ifFalse: [diff _ (self partitionedSub: sourcePixVal from: destPixVal
+							ifTrue: [diff := 0]
+							ifFalse: [diff := 1]]
+				ifFalse: [diff := (self partitionedSub: sourcePixVal from: destPixVal
 								nBits: bitsPerColor nPartitions: 3).
-						diff _ (diff bitAnd: rgbMask)
+						diff := (diff bitAnd: rgbMask)
 							+ (diff>>bitsPerColor bitAnd: rgbMask)
 							+ ((diff>>bitsPerColor)>>bitsPerColor bitAnd: rgbMask)].
-			bitCount _ bitCount + diff].
-		maskShifted _ maskShifted >> destDepth.
-		sourceShifted _ sourceShifted >> destDepth.
-		destShifted _ destShifted >> destDepth].
+			bitCount := bitCount + diff].
+		maskShifted := maskShifted >> destDepth.
+		sourceShifted := sourceShifted >> destDepth.
+		destShifted := destShifted >> destDepth].
 	^ destinationWord  "For no effect on dest"
 
 ]
@@ -2625,16 +2581,16 @@ BitBltSimulation >> rgbMap32To32: sourcePixel [
 BitBltSimulation >> rgbMap: sourcePixel from: nBitsIn to: nBitsOut [
 	"Convert the given pixel value with nBitsIn bits for each color component to a pixel value with nBitsOut bits for each color component. Typical values for nBitsIn/nBitsOut are 3, 5, or 8."
 	| mask d srcPix destPix |
-	self inline: true.
-	(d _ nBitsOut - nBitsIn) > 0
+	<inline: true>
+	(d := nBitsOut - nBitsIn) > 0
 		ifTrue:
 			["Expand to more bits by zero-fill"
-			mask _ (1 << nBitsIn) - 1.  "Transfer mask"
-			srcPix _ sourcePixel << d.
-			mask _ mask << d.
-			destPix _ srcPix bitAnd: mask.
-			mask _ mask << nBitsOut.
-			srcPix _ srcPix << d.
+			mask := (1 << nBitsIn) - 1.  "Transfer mask"
+			srcPix := sourcePixel << d.
+			mask := mask << d.
+			destPix := srcPix bitAnd: mask.
+			mask := mask << nBitsOut.
+			srcPix := srcPix << d.
 			^ destPix + (srcPix bitAnd: mask)
 				 	+ (srcPix << d bitAnd: mask << nBitsOut)]
 		ifFalse:
@@ -2650,13 +2606,13 @@ BitBltSimulation >> rgbMap: sourcePixel from: nBitsIn to: nBitsOut [
 					^ sourcePixel bitAnd: 16rFFFFFF].
 				^ sourcePixel].  "no compression"
 			sourcePixel = 0 ifTrue: [^ sourcePixel].  "always map 0 (transparent) to 0"
-			d _ nBitsIn - nBitsOut.
-			mask _ (1 << nBitsOut) - 1.  "Transfer mask"
-			srcPix _ sourcePixel >> d.
-			destPix _ srcPix bitAnd: mask.
-			mask _ mask << nBitsOut.
-			srcPix _ srcPix >> d.
-			destPix _ destPix + (srcPix bitAnd: mask)
+			d := nBitsIn - nBitsOut.
+			mask := (1 << nBitsOut) - 1.  "Transfer mask"
+			srcPix := sourcePixel >> d.
+			destPix := srcPix bitAnd: mask.
+			mask := mask << nBitsOut.
+			srcPix := srcPix >> d.
+			destPix := destPix + (srcPix bitAnd: mask)
 					+ (srcPix >> d bitAnd: mask << nBitsOut).
 			destPix = 0 ifTrue: [^ 1].  "Dont fall into transparent by truncation"
 			^ destPix]
@@ -2666,17 +2622,17 @@ BitBltSimulation >> rgbMap: sourcePixel from: nBitsIn to: nBitsOut [
 BitBltSimulation >> rgbMapPixel: sourcePixel flags: mapperFlags [
 	"Perform the RGBA conversion for the given source pixel"
 	| val |
-	self inline: true.
-	val _ 			((sourcePixel bitAnd: (cmMaskTable at: 0)) bitShift: (cmShiftTable at: 0)).
-	val _ val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 1)) bitShift: (cmShiftTable at: 1)).
-	val _ val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 2)) bitShift: (cmShiftTable at: 2)).
+	<inline: true>
+	val := 			((sourcePixel bitAnd: (cmMaskTable at: 0)) bitShift: (cmShiftTable at: 0)).
+	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 1)) bitShift: (cmShiftTable at: 1)).
+	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 2)) bitShift: (cmShiftTable at: 2)).
 		  ^val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 3)) bitShift: (cmShiftTable at: 3)).
 
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Max each pixel separately"
 		^ self partitionedMax: sourceWord with: destinationWord
@@ -2695,7 +2651,7 @@ BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
 		^ self partitionedMin: sourceWord with: destinationWord
@@ -2715,8 +2671,8 @@ BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 	| sourceWord |
-	self inline: false.
-	sourceWord _ wordToInvert bitInvert32.
+	<inline: false>
+	sourceWord := wordToInvert bitInvert32.
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
 		^ self partitionedMin: sourceWord with: destinationWord
@@ -2735,7 +2691,7 @@ BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Mul each pixel separately"
 		^ self partitionedMul: sourceWord with: destinationWord
@@ -2753,13 +2709,13 @@ BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 
 "	| scanner |
 	Display repaintMorphicDisplay.
-	scanner _ DisplayScanner quickPrintOn: Display.
+	scanner := DisplayScanner quickPrintOn: Display.
 	MessageTally time: [0 to: 760 by: 4 do:  [:y |scanner drawString: 'qwrepoiuasfd=)(/&()=#!¡lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,Mqwrepoiuasfd=)(/&()=#!¡lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,M1234124356785678' at: 0@y]]. "
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbSub: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Sub each pixel separately"
 		^ self partitionedSub: sourceWord from: destinationWord
@@ -2780,17 +2736,17 @@ BitBltSimulation >> rgbSub: sourceWord with: destinationWord [
 BitBltSimulation >> setupColorMasks [
 	"WARNING: For WarpBlt w/ smoothing the source depth is wrong here!"
 	| bits targetBits |
-	bits _ targetBits _ 0.
+	bits := targetBits := 0.
 	sourceDepth <= 8 ifTrue:[^nil].
-	sourceDepth = 16 ifTrue:[bits _ 5].
-	sourceDepth = 32 ifTrue:[bits _ 8].
+	sourceDepth = 16 ifTrue:[bits := 5].
+	sourceDepth = 32 ifTrue:[bits := 8].
 
 	cmBitsPerColor = 0
 		ifTrue:["Convert to destDepth"
 				destDepth <= 8 ifTrue:[^nil].
-				destDepth = 16 ifTrue:[targetBits _ 5].
-				destDepth = 32 ifTrue:[targetBits _ 8]]
-		ifFalse:[targetBits _ cmBitsPerColor].
+				destDepth = 16 ifTrue:[targetBits := 5].
+				destDepth = 32 ifTrue:[targetBits := 8]]
+		ifFalse:[targetBits := cmBitsPerColor].
 
 	self setupColorMasksFrom: bits to: targetBits
 ]
@@ -2799,22 +2755,22 @@ BitBltSimulation >> setupColorMasks [
 BitBltSimulation >> setupColorMasksFrom: srcBits to: targetBits [
 	"Setup color masks for converting an incoming RGB pixel value from srcBits to targetBits."
 	| mask shifts masks deltaBits |
-	self var: #shifts declareC:'static int shifts[4] = {0, 0, 0, 0}'.
-	self var: #masks declareC:'static unsigned int masks[4] = {0, 0, 0, 0}'.
+	<var: #shifts declareC:'static int shifts[4] = {0, 0, 0, 0}'>
+	<var: #masks declareC:'static unsigned int masks[4] = {0, 0, 0, 0}'>
 	self cCode:'' inSmalltalk:[
-		shifts _ CArrayAccessor on: (IntegerArray new: 4).
-		masks _ CArrayAccessor on: (WordArray new: 4).
+		shifts := CArrayAccessor on: (IntegerArray new: 4).
+		masks := CArrayAccessor on: (WordArray new: 4).
 	].
-	deltaBits _ targetBits - srcBits.
+	deltaBits := targetBits - srcBits.
 	deltaBits = 0 ifTrue:[^0].
 	deltaBits <= 0
-		ifTrue:[	mask _ 1 << targetBits - 1.
+		ifTrue:[	mask := 1 << targetBits - 1.
 				"Mask for extracting a color part of the source"
 				masks at: RedIndex put: mask << (srcBits*2 - deltaBits).
 				masks at: GreenIndex put: mask << (srcBits - deltaBits).
 				masks at: BlueIndex put: mask << (0 - deltaBits).
 				masks at: AlphaIndex put: 0]
-		ifFalse:[	mask _ 1 << srcBits - 1.
+		ifFalse:[	mask := 1 << srcBits - 1.
 				"Mask for extracting a color part of the source"
 				masks at: RedIndex put: mask << (srcBits*2).
 				masks at: GreenIndex put: mask << srcBits.
@@ -2826,9 +2782,9 @@ BitBltSimulation >> setupColorMasksFrom: srcBits to: targetBits [
 	shifts at: BlueIndex put: deltaBits.
 	shifts at: AlphaIndex put: 0.
 
-	cmShiftTable _ shifts.
-	cmMaskTable _ masks.
-	cmFlags _ cmFlags bitOr: (ColorMapPresent bitOr: ColorMapFixedPart).
+	cmShiftTable := shifts.
+	cmMaskTable := masks.
+	cmFlags := cmFlags bitOr: (ColorMapPresent bitOr: ColorMapFixedPart).
 
 ]
 
@@ -2847,37 +2803,37 @@ BitBltSimulation >> sourceSkewAndPointerInit [
 	"This is only used when source and dest are same depth,
 	ie, when the barrel-shift copy loop is used."
 	| dWid sxLowBits dxLowBits pixPerM1 |
-	self inline: true.
-	pixPerM1 _ destPPW - 1.  "A mask, assuming power of two"
-	sxLowBits _ sx bitAnd: pixPerM1.
-	dxLowBits _ dx bitAnd: pixPerM1.
+	<inline: true>
+	pixPerM1 := destPPW - 1.  "A mask, assuming power of two"
+	sxLowBits := sx bitAnd: pixPerM1.
+	dxLowBits := dx bitAnd: pixPerM1.
 	"check if need to preload buffer
 	(i.e., two words of source needed for first word of destination)"
 	hDir > 0 ifTrue:
 		["n Bits stored in 1st word of dest"
-		dWid _ bbW min: destPPW - dxLowBits.
-		preload _ (sxLowBits + dWid) > pixPerM1]
+		dWid := bbW min: destPPW - dxLowBits.
+		preload := (sxLowBits + dWid) > pixPerM1]
 	ifFalse:
-		[dWid _ bbW min: dxLowBits + 1.
-		preload _ (sxLowBits - dWid + 1) < 0].
+		[dWid := bbW min: dxLowBits + 1.
+		preload := (sxLowBits - dWid + 1) < 0].
 
 	"calculate right-shift skew from source to dest"
 	sourceMSB
-		ifTrue:[skew _ (sxLowBits - dxLowBits) * destDepth] 
-		ifFalse:[skew _ (dxLowBits - sxLowBits) * destDepth].  " -32..32 "
+		ifTrue:[skew := (sxLowBits - dxLowBits) * destDepth] 
+		ifFalse:[skew := (dxLowBits - sxLowBits) * destDepth].  " -32..32 "
 	preload ifTrue: 
 		[skew < 0
-			ifTrue: [skew _ skew+32]
-			ifFalse: [skew _ skew-32]].
+			ifTrue: [skew := skew+32]
+			ifFalse: [skew := skew-32]].
 
 	"Calc byte addr and delta from longWord info"
-	sourceIndex _ sourceBits + (sy * sourcePitch) + ((sx // (32//sourceDepth)) *4).
+	sourceIndex := sourceBits + (sy * sourcePitch) + ((sx // (32//sourceDepth)) *4).
 	"calculate increments from end of 1 line to start of next"
-	sourceDelta _ (sourcePitch * vDir) - (4 * (nWords * hDir)).
+	sourceDelta := (sourcePitch * vDir) - (4 * (nWords * hDir)).
 
 	preload ifTrue:
 		["Compensate for extra source word fetched"
-		sourceDelta _ sourceDelta - (4*hDir)].
+		sourceDelta := sourceDelta - (4*hDir)].
 ]
 
 { #category : #'combination rules' }
@@ -2887,7 +2843,8 @@ BitBltSimulation >> sourceWord: sourceWord with: destinationWord [
 
 { #category : #'memory access' }
 BitBltSimulation >> srcLongAt: idx [
-	^interpreterProxy longAt: idx
+
+	^self long32At: idx
 ]
 
 { #category : #'combination rules' }
@@ -2898,7 +2855,7 @@ BitBltSimulation >> subWord: sourceWord with: destinationWord [
 { #category : #'memory access' }
 BitBltSimulation >> tableLookup: table at: index [
 	"Note: Nasty coercion only necessary for the non-inlined version of this method in C. Duh? Oh well, here's the full story. The code below will definitely be inlined so everything that calls this method is fine. But... the translator doesn't quite prune this method so it generates a C function that tries to attempt an array access on an int - and most compilers don't like this. If you don't know what I'm talking about try to remove the C coercion and you'll see what happens when you try to compile a new VM..."
-	self var: #table type: 'unsigned int *'.
+	<var: #table type: 'unsigned int *'>
 	^table at: index
 
 ]
@@ -2910,26 +2867,26 @@ BitBltSimulation >> tallyIntoMap: sourceWord with: destinationWord [
 	specified == destination, in order for the proper color map checks 
 	to be performed at setup."
 	| mapIndex pixMask destShifted maskShifted pixVal |
-	self inline: false.
+	<inline: false>
 	(cmFlags bitAnd: (ColorMapPresent bitOr: ColorMapIndexedPart)) = 
 		(ColorMapPresent bitOr: ColorMapIndexedPart)
 			ifFalse: [^ destinationWord "no op"].
-	pixMask _ maskTable at: destDepth.
-	destShifted _ destinationWord.
-	maskShifted _ destMask.
+	pixMask := maskTable at: destDepth.
+	destShifted := destinationWord.
+	maskShifted := destMask.
 	1 to: destPPW do:
 		[:i |
 		(maskShifted bitAnd: pixMask) = 0 ifFalse:
 			["Only tally pixels within the destination rectangle"
-			pixVal _ destShifted bitAnd: pixMask.
+			pixVal := destShifted bitAnd: pixMask.
 			destDepth < 16
-				ifTrue: [mapIndex _ pixVal]
+				ifTrue: [mapIndex := pixVal]
 				ifFalse: [destDepth = 16
-					ifTrue: [mapIndex _ self rgbMap: pixVal from: 5 to: cmBitsPerColor]
-					ifFalse: [mapIndex _ self rgbMap: pixVal from: 8 to: cmBitsPerColor]].
+					ifTrue: [mapIndex := self rgbMap: pixVal from: 5 to: cmBitsPerColor]
+					ifFalse: [mapIndex := self rgbMap: pixVal from: 8 to: cmBitsPerColor]].
 			self tallyMapAt: mapIndex put: (self tallyMapAt: mapIndex) + 1].
-		maskShifted _ maskShifted >> destDepth.
-		destShifted _ destShifted >> destDepth].
+		maskShifted := maskShifted >> destDepth.
+		destShifted := destShifted >> destDepth].
 	^ destinationWord  "For no effect on dest"
 ]
 
@@ -2950,7 +2907,7 @@ BitBltSimulation >> tryCopyingBitsQuickly [
 	"Shortcut for stuff that's being run from the balloon engine.
 	Since we do this at each scan line we should avoid the expensive 
 	setup for source and destination."
-	self inline: true.
+	<inline: true>
 	"We need a source."
 	noSource ifTrue:[^false].
 	"We handle only combinationRule 34"
@@ -2969,10 +2926,10 @@ BitBltSimulation >> tryCopyingBitsQuickly [
 		ifTrue:[self alphaSourceBlendBits16].
 	destDepth = 8
 		ifTrue:[self alphaSourceBlendBits8].
-	affectedL _ dx.
-	affectedR _ dx + bbW.
-	affectedT _ dy.
-	affectedB _ dy + bbH.
+	affectedL := dx.
+	affectedR := dx + bbW.
+	affectedT := dy.
+	affectedB := dy + bbH.
 	^true
 ]
 
@@ -2981,59 +2938,59 @@ BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
 	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
 	| sourceHandle destHandle destLocked fn |
-	self var: #fn declareC:'int (*fn)(int, int, int, int, int)'.
+	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
 	hasSurfaceLock ifTrue:[
 		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
-		fn _ self cCoerce: unlockSurfaceFn to: 'int (*)(int, int, int, int, int)'.
-		destLocked _ false.
-		destHandle _ interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
+		fn := self cCoerce: unlockSurfaceFn to: 'sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt)'.
+		destLocked := false.
+		destHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 		(interpreterProxy isIntegerObject: destHandle) ifTrue:[
-			destHandle _ interpreterProxy integerValueOf: destHandle.
+			destHandle := interpreterProxy integerValueOf: destHandle.
 			"The destBits are always assumed to be dirty"
 			self cCode:'fn(destHandle, affectedL, affectedT, affectedR-affectedL, affectedB-affectedT)'.
-			destBits _ destPitch _ 0.
-			destLocked _ true.
+			destBits := destPitch := 0.
+			destLocked := true.
 		].
 		noSource ifFalse:[
-			sourceHandle _ interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
+			sourceHandle := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
 			(interpreterProxy isIntegerObject: sourceHandle) ifTrue:[
-				sourceHandle _ interpreterProxy integerValueOf: sourceHandle.
+				sourceHandle := interpreterProxy integerValueOf: sourceHandle.
 				"Only unlock sourceHandle if different from destHandle"
 				(destLocked and:[sourceHandle = destHandle]) 
 					ifFalse:[self cCode: 'fn(sourceHandle, 0, 0, 0, 0)'].
-				sourceBits _ sourcePitch _ 0.
+				sourceBits := sourcePitch := 0.
 			].
 		].
-		hasSurfaceLock _ false.
+		hasSurfaceLock := false.
 	].
 ]
 
 { #category : #setup }
 BitBltSimulation >> warpBits [
 	| ns |
-	self inline: true.
-	ns _ noSource.  noSource _ true.
+	<inline: true>
+	ns := noSource.  noSource := true.
 		self clipRange.  "noSource suppresses sourceRect clipping"
-		noSource _ ns.
+		noSource := ns.
 	(noSource or: [bbW <= 0 or: [bbH <= 0]]) ifTrue:
 		["zero width or height; noop"
-		affectedL _ affectedR _ affectedT _ affectedB _ 0.
+		affectedL := affectedR := affectedT := affectedB := 0.
 		^ nil].
 
- 	self lockSurfaces.
+	self lockSurfaces ifFalse:[^interpreterProxy primitiveFail].
 	self destMaskAndPointerInit.
 	self warpLoop.
  
 	hDir > 0
-		ifTrue: [affectedL _ dx.
-				affectedR _ dx + bbW]
-		ifFalse: [affectedL _ dx - bbW + 1.
-				affectedR _ dx + 1].
+		ifTrue: [affectedL := dx.
+				affectedR := dx + bbW]
+		ifFalse: [affectedL := dx - bbW + 1.
+				affectedR := dx + 1].
 	vDir > 0
-		ifTrue: [affectedT _ dy.
-				affectedB _ dy + bbH]
-		ifFalse: [affectedT _ dy - bbH + 1.
-				affectedB _ dy + 1].
+		ifTrue: [affectedT := dy.
+				affectedB := dy + bbH]
+		ifFalse: [affectedT := dy - bbH + 1.
+				affectedB := dy + 1].
 	self unlockSurfaces.
 ]
 
@@ -3045,39 +3002,39 @@ BitBltSimulation >> warpLoop [
 	  deltaP12x deltaP12y deltaP43x deltaP43y pAx pAy pBx pBy
 	  xDelta yDelta smoothingCount sourceMapOop
 	  nSteps nPix words destWord endBits mergeFnwith dstShiftInc dstShiftLeft mapperFlags |
-	self inline: false.
-	self var: #mergeFnwith declareC: 'int (*mergeFnwith)(int, int)'.
-	mergeFnwith _ self cCoerce: (opTable at: combinationRule+1) to: 'int (*)(int, int)'.
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
+	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
 	mergeFnwith.  "null ref for compiler"
 
 	(interpreterProxy slotSizeOf: bitBltOop) >= (BBWarpBase+12)
 		ifFalse: [^ interpreterProxy primitiveFail].
-	nSteps _ height-1.  nSteps <= 0 ifTrue: [nSteps _ 1].
+	nSteps := height-1.  nSteps <= 0 ifTrue: [nSteps := 1].
 
-	pAx _ self fetchIntOrFloat: BBWarpBase ofObject: bitBltOop.
-	words _ self fetchIntOrFloat: BBWarpBase+3 ofObject: bitBltOop.
-	deltaP12x _ self deltaFrom: pAx to: words nSteps: nSteps.
-	deltaP12x < 0 ifTrue: [pAx _ words - (nSteps*deltaP12x)].
+	pAx := self fetchIntOrFloat: BBWarpBase ofObject: bitBltOop.
+	words := self fetchIntOrFloat: BBWarpBase+3 ofObject: bitBltOop.
+	deltaP12x := self deltaFrom: pAx to: words nSteps: nSteps.
+	deltaP12x < 0 ifTrue: [pAx := words - (nSteps*deltaP12x)].
 
-	pAy _ self fetchIntOrFloat: BBWarpBase+1 ofObject: bitBltOop.
-	words _ self fetchIntOrFloat: BBWarpBase+4 ofObject: bitBltOop.
-	deltaP12y _ self deltaFrom: pAy to: words nSteps: nSteps.
-	deltaP12y < 0 ifTrue: [pAy _ words - (nSteps*deltaP12y)].
+	pAy := self fetchIntOrFloat: BBWarpBase+1 ofObject: bitBltOop.
+	words := self fetchIntOrFloat: BBWarpBase+4 ofObject: bitBltOop.
+	deltaP12y := self deltaFrom: pAy to: words nSteps: nSteps.
+	deltaP12y < 0 ifTrue: [pAy := words - (nSteps*deltaP12y)].
 
-	pBx _ self fetchIntOrFloat: BBWarpBase+9 ofObject: bitBltOop.
-	words _ self fetchIntOrFloat: BBWarpBase+6 ofObject: bitBltOop.
-	deltaP43x _ self deltaFrom: pBx to: words nSteps: nSteps.
-	deltaP43x < 0 ifTrue: [pBx _ words - (nSteps*deltaP43x)].
+	pBx := self fetchIntOrFloat: BBWarpBase+9 ofObject: bitBltOop.
+	words := self fetchIntOrFloat: BBWarpBase+6 ofObject: bitBltOop.
+	deltaP43x := self deltaFrom: pBx to: words nSteps: nSteps.
+	deltaP43x < 0 ifTrue: [pBx := words - (nSteps*deltaP43x)].
 
-	pBy _ self fetchIntOrFloat: BBWarpBase+10 ofObject: bitBltOop.
-	words _ self fetchIntOrFloat: BBWarpBase+7 ofObject: bitBltOop.
-	deltaP43y _ self deltaFrom: pBy to: words nSteps: nSteps.
-	deltaP43y < 0 ifTrue: [pBy _ words - (nSteps*deltaP43y)].
+	pBy := self fetchIntOrFloat: BBWarpBase+10 ofObject: bitBltOop.
+	words := self fetchIntOrFloat: BBWarpBase+7 ofObject: bitBltOop.
+	deltaP43y := self deltaFrom: pBy to: words nSteps: nSteps.
+	deltaP43y < 0 ifTrue: [pBy := words - (nSteps*deltaP43y)].
 
 	interpreterProxy failed ifTrue: [^ false].  "ie if non-integers above"
 	interpreterProxy methodArgumentCount = 2
-		ifTrue: [smoothingCount _ interpreterProxy stackIntegerValue: 1.
-				sourceMapOop _ interpreterProxy stackValue: 0.
+		ifTrue: [smoothingCount := interpreterProxy stackIntegerValue: 1.
+				sourceMapOop := interpreterProxy stackValue: 0.
 				sourceMapOop = interpreterProxy nilObject
 				ifTrue: [sourceDepth < 16 ifTrue:
 					["color map is required to smooth non-RGB dest"
@@ -3086,20 +3043,20 @@ BitBltSimulation >> warpLoop [
 							< (1 << sourceDepth) ifTrue:
 					["sourceMap must be long enough for sourceDepth"
 					^ interpreterProxy primitiveFail].
-					sourceMapOop _ self cCoerce: (interpreterProxy firstIndexableField: sourceMapOop) to:'int']]
-		ifFalse: [smoothingCount _ 1.
-				sourceMapOop _ interpreterProxy nilObject].
-	nSteps _ width-1.  nSteps <= 0 ifTrue: [nSteps _ 1].
-	startBits _ destPPW - (dx bitAnd: destPPW-1).
-	endBits _ ((dx + bbW - 1) bitAnd: destPPW-1) + 1.
- 	bbW < startBits ifTrue:[startBits _ bbW].
+					sourceMapOop := self oopForPointer: (interpreterProxy firstIndexableField: sourceMapOop)]]
+		ifFalse: [smoothingCount := 1.
+				sourceMapOop := interpreterProxy nilObject].
+	nSteps := width-1.  nSteps <= 0 ifTrue: [nSteps := 1].
+	startBits := destPPW - (dx bitAnd: destPPW-1).
+	endBits := ((dx + bbW - 1) bitAnd: destPPW-1) + 1.
+ 	bbW < startBits ifTrue:[startBits := bbW].
 
 	destY < clipY ifTrue:[
 		"Advance increments if there was clipping in y"
-		pAx _ pAx + (clipY - destY * deltaP12x).
-		pAy _ pAy + (clipY - destY * deltaP12y).
-		pBx _ pBx + (clipY - destY * deltaP43x).
-		pBy _ pBy + (clipY - destY * deltaP43y)].
+		pAx := pAx + (clipY - destY * deltaP12x).
+		pAy := pAy + (clipY - destY * deltaP12y).
+		pBx := pBx + (clipY - destY * deltaP43x).
+		pBy := pBy + (clipY - destY * deltaP43y)].
 
 	"Setup values for faster pixel fetching."
 	self warpLoopSetup.
@@ -3111,45 +3068,45 @@ BitBltSimulation >> warpLoop [
 			self setupColorMasksFrom: 8 to: cmBitsPerColor.
 		].
 	].
-	mapperFlags _ cmFlags bitAnd: ColorMapNewStyle bitInvert32.
+	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 
 	destMSB
-		ifTrue:[	dstShiftInc _ 0 - destDepth.
-				dstShiftLeft _ 32 - destDepth]
-		ifFalse:[	dstShiftInc _ destDepth.
-				dstShiftLeft _ 0].
+		ifTrue:[	dstShiftInc := 0 - destDepth.
+				dstShiftLeft := 32 - destDepth]
+		ifFalse:[	dstShiftInc := destDepth.
+				dstShiftLeft := 0].
 	1 to: bbH do:
 		[ :i | "here is the vertical loop..."
-		xDelta _ self deltaFrom: pAx to: pBx nSteps: nSteps.
- 		xDelta >= 0 ifTrue: [sx _ pAx] ifFalse: [sx _ pBx - (nSteps*xDelta)].
-		yDelta _ self deltaFrom: pAy to: pBy nSteps: nSteps.
- 		yDelta >= 0 ifTrue: [sy _ pAy] ifFalse: [sy _ pBy - (nSteps*yDelta)].
+		xDelta := self deltaFrom: pAx to: pBx nSteps: nSteps.
+ 		xDelta >= 0 ifTrue: [sx := pAx] ifFalse: [sx := pBx - (nSteps*xDelta)].
+		yDelta := self deltaFrom: pAy to: pBy nSteps: nSteps.
+ 		yDelta >= 0 ifTrue: [sy := pAy] ifFalse: [sy := pBy - (nSteps*yDelta)].
 
 		destMSB
-			ifTrue:[dstBitShift _ 32 - ((dx bitAnd: destPPW - 1) + 1 * destDepth)]
-			ifFalse:[dstBitShift _ (dx bitAnd: destPPW - 1) * destDepth].
+			ifTrue:[dstBitShift := 32 - ((dx bitAnd: destPPW - 1) + 1 * destDepth)]
+			ifFalse:[dstBitShift := (dx bitAnd: destPPW - 1) * destDepth].
 
 		(destX < clipX) ifTrue:[
 			"Advance increments if there was clipping in x"
-			sx _ sx + (clipX - destX * xDelta).
-			sy _ sy + (clipX - destX * yDelta).
+			sx := sx + (clipX - destX * xDelta).
+			sy := sy + (clipX - destX * yDelta).
 		].
 
 		noHalftone
-			ifTrue: [halftoneWord _ AllOnes]
-			ifFalse: [halftoneWord _ self halftoneAt: dy+i-1].
-		destMask _ mask1.
-		nPix _ startBits.
+			ifTrue: [halftoneWord := AllOnes]
+			ifFalse: [halftoneWord := self halftoneAt: dy+i-1].
+		destMask := mask1.
+		nPix := startBits.
 		"Here is the inner loop..."
-		words _ nWords.
+		words := nWords.
 			["pick up word"
 			smoothingCount = 1 ifTrue:["Faster if not smoothing"
-				skewWord _ self warpPickSourcePixels: nPix
+				skewWord := self warpPickSourcePixels: nPix
 								xDeltah: xDelta yDeltah: yDelta
 								xDeltav: deltaP12x yDeltav: deltaP12y
 								dstShiftInc: dstShiftInc flags: mapperFlags.
 			] ifFalse:["more difficult with smoothing"
-				skewWord _ self warpPickSmoothPixels: nPix
+				skewWord := self warpPickSmoothPixels: nPix
 						xDeltah: xDelta yDeltah: yDelta
 						xDeltav: deltaP12x yDeltav: deltaP12y
 						sourceMap: sourceMapOop
@@ -3157,57 +3114,57 @@ BitBltSimulation >> warpLoop [
 						dstShiftInc: dstShiftInc.
 			].
 			"align next word access to left most pixel"
-			dstBitShift _ dstShiftLeft.
+			dstBitShift := dstShiftLeft.
 			destMask = AllOnes ifTrue:["avoid read-modify-write"
-				mergeWord _ self mergeFn: (skewWord bitAnd: halftoneWord)
+				mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
 								with: (self dstLongAt: destIndex).
 				self dstLongAt: destIndex put: (destMask bitAnd: mergeWord).
 			] ifFalse:[ "General version using dest masking"
-				destWord _ self dstLongAt: destIndex.
-				mergeWord _ self mergeFn: (skewWord bitAnd: halftoneWord)
+				destWord := self dstLongAt: destIndex.
+				mergeWord := self mergeFn: (skewWord bitAnd: halftoneWord)
 								with: (destWord bitAnd: destMask).
-				destWord _ (destMask bitAnd: mergeWord) bitOr:
+				destWord := (destMask bitAnd: mergeWord) bitOr:
 								(destWord bitAnd: destMask bitInvert32).
 				self dstLongAt: destIndex put: destWord.
 			].
-			destIndex _ destIndex + 4.
+			destIndex := destIndex + 4.
 			words = 2 "e.g., is the next word the last word?"
 				ifTrue:["set mask for last word in this row"
-						destMask _ mask2.
-						nPix _ endBits]
+						destMask := mask2.
+						nPix := endBits]
 				ifFalse:["use fullword mask for inner loop"
-						destMask _ AllOnes.
-						nPix _ destPPW].
-			(words _ words - 1) = 0] whileFalse.
+						destMask := AllOnes.
+						nPix := destPPW].
+			(words := words - 1) = 0] whileFalse.
 		"--- end of inner loop ---"
-		pAx _ pAx + deltaP12x.
-		pAy _ pAy + deltaP12y.
-		pBx _ pBx + deltaP43x.
-		pBy _ pBy + deltaP43y.
-		destIndex _ destIndex + destDelta]
+		pAx := pAx + deltaP12x.
+		pAy := pAy + deltaP12y.
+		pBx := pBx + deltaP43x.
+		pBy := pBy + deltaP43y.
+		destIndex := destIndex + destDelta]
 ]
 
 { #category : #'pixel mapping' }
 BitBltSimulation >> warpLoopSetup [
 	"Setup values for faster pixel fetching."
 	| words |
-	self inline: true.
+	<inline: true>
 
 	"warpSrcShift = log2(sourceDepth)"
-	warpSrcShift _ 0.
-	words _ sourceDepth. "recycle temp"
+	warpSrcShift := 0.
+	words := sourceDepth. "recycle temp"
 	[words = 1] whileFalse:[
-		warpSrcShift _ warpSrcShift + 1.
-		words _ words >> 1].
+		warpSrcShift := warpSrcShift + 1.
+		words := words >> 1].
 
 	"warpSrcMask = mask for extracting one pixel from source word"
-	warpSrcMask _ maskTable at: sourceDepth.
+	warpSrcMask := maskTable at: sourceDepth.
 
 	"warpAlignShift: Shift for aligning x position to word boundary"
-	warpAlignShift _ 5 - warpSrcShift.
+	warpAlignShift := 5 - warpSrcShift.
 
 	"warpAlignMask: Mask for extracting the pixel position from an x position"
-	warpAlignMask _ 1 << warpAlignShift - 1.
+	warpAlignMask := 1 << warpAlignShift - 1.
 
 	"Setup the lookup table for source bit shifts"
 	"warpBitShiftTable: given an sub-word x value what's the bit shift?"
@@ -3229,69 +3186,69 @@ BitBltSimulation >> warpPickSmoothPixels: nPixels
 	average the RGB values, map by colorMap and return the new word.
 	This version is only called from WarpBlt with smoothingCount > 1"
 	| rgb x y a r g b xx yy xdh ydh xdv ydv dstMask destWord i j k nPix |
-	self inline: false. "nope - too much stuff in here"
-	dstMask _ maskTable at: destDepth.
-	destWord _ 0.
+	<inline: false> "nope - too much stuff in here"
+	dstMask := maskTable at: destDepth.
+	destWord := 0.
 	n = 2 "Try avoiding divides for most common n (divide by 2 is generated as shift)"
-		ifTrue:[xdh _ xDeltah // 2. ydh _ yDeltah // 2. 
-				xdv _ xDeltav // 2. ydv _ yDeltav // 2]
-		ifFalse:[xdh _ xDeltah // n. ydh _ yDeltah // n. 
-				xdv _ xDeltav // n. ydv _ yDeltav // n].
-	i _ nPixels.
+		ifTrue:[xdh := xDeltah // 2. ydh := yDeltah // 2. 
+				xdv := xDeltav // 2. ydv := yDeltav // 2]
+		ifFalse:[xdh := xDeltah // n. ydh := yDeltah // n. 
+				xdv := xDeltav // n. ydv := yDeltav // n].
+	i := nPixels.
 	[
-		x _ sx. y _ sy.
-		a _ r _ g _ b _ 0.
+		x := sx. y := sy.
+		a := r := g := b := 0.
 		"Pick and average n*n subpixels"
-		nPix _ 0.  "actual number of pixels (not clipped and not transparent)"
-		j _ n.
+		nPix := 0.  "actual number of pixels (not clipped and not transparent)"
+		j := n.
 		[
-			xx _ x. yy _ y.
-			k _ n.
+			xx := x. yy := y.
+			k := n.
 			[
 				"get a single subpixel"
-				rgb _ self pickWarpPixelAtX: xx y: yy.
+				rgb := self pickWarpPixelAtX: xx y: yy.
 				(combinationRule=25 "PAINT" and: [rgb = 0]) ifFalse:[
 					"If not clipped and not transparent, then tally rgb values"
-					nPix _ nPix + 1.
+					nPix := nPix + 1.
 					sourceDepth < 16 ifTrue:[
 						"Get RGBA values from sourcemap table"
-						rgb _ interpreterProxy longAt: sourceMap + (rgb << 2).
+						rgb := self long32At: sourceMap + (rgb << 2).
 					] ifFalse:["Already in RGB format"
 						sourceDepth = 16 
-								ifTrue:[rgb _ self rgbMap16To32: rgb]
-								ifFalse:[rgb _ self rgbMap32To32: rgb]].
-					b _ b + (rgb bitAnd: 255).
-					g _ g + (rgb >> 8 bitAnd: 255).
-					r _ r + (rgb >> 16 bitAnd: 255).
-					a _ a + (rgb >> 24)].
-				xx _ xx + xdh.
-				yy _ yy + ydh.
-			(k _ k - 1) = 0] whileFalse.
-			x _ x + xdv.
-			y _ y + ydv.
-		(j _ j - 1) = 0] whileFalse.
+								ifTrue:[rgb := self rgbMap16To32: rgb]
+								ifFalse:[rgb := self rgbMap32To32: rgb]].
+					b := b + (rgb bitAnd: 255).
+					g := g + (rgb >> 8 bitAnd: 255).
+					r := r + (rgb >> 16 bitAnd: 255).
+					a := a + (rgb >> 24)].
+				xx := xx + xdh.
+				yy := yy + ydh.
+			(k := k - 1) = 0] whileFalse.
+			x := x + xdv.
+			y := y + ydv.
+		(j := j - 1) = 0] whileFalse.
 
 		(nPix = 0 or: [combinationRule=25 "PAINT" and: [nPix < (n * n // 2)]]) ifTrue:[
-			rgb _ 0  "All pixels were 0, or most were transparent"
+			rgb := 0  "All pixels were 0, or most were transparent"
 		] ifFalse:[
 			"normalize rgba sums"
 			nPix = 4 "Try to avoid divides for most common n"
-				ifTrue:[r _ r >> 2.	g _ g >> 2.	b _ b >> 2.	a _ a >> 2]
-				ifFalse:[	r _ r // nPix.	g _ g // nPix.	b _ b // nPix.	a _ a // nPix].
-			rgb _ (a << 24) + (r << 16) + (g << 8) + b.
+				ifTrue:[r := r >> 2.	g := g >> 2.	b := b >> 2.	a := a >> 2]
+				ifFalse:[	r := r // nPix.	g := g // nPix.	b := b // nPix.	a := a // nPix].
+			rgb := (a << 24) + (r << 16) + (g << 8) + b.
 
 			"map the pixel"
 			rgb = 0 ifTrue: [
 				"only generate zero if pixel is really transparent"
-				(r + g + b + a) > 0 ifTrue: [rgb _ 1]].
-			rgb _ self mapPixel: rgb flags: cmFlags.
+				(r + g + b + a) > 0 ifTrue: [rgb := 1]].
+			rgb := self mapPixel: rgb flags: cmFlags.
 		].
 		"Mix it in"
-		destWord _ destWord bitOr: (rgb bitAnd: dstMask) << dstBitShift.
-		dstBitShift _ dstBitShift + dstShiftInc.
-		sx _ sx + xDeltah.
-		sy _ sy + yDeltah.
-	(i _ i - 1) = 0] whileFalse.
+		destWord := destWord bitOr: (rgb bitAnd: dstMask) << dstBitShift.
+		dstBitShift := dstBitShift + dstShiftInc.
+		sx := sx + xDeltah.
+		sy := sy + yDeltah.
+	(i := i - 1) = 0] whileFalse.
 
 	^destWord
 
@@ -3307,29 +3264,29 @@ BitBltSimulation >> warpPickSourcePixels: nPixels
 	map by colorMap and return aligned by dstBitShift.
 	This version is only called from WarpBlt with smoothingCount = 1"
 	| dstMask destWord nPix sourcePix destPix |
-	self inline: true. "Yepp - this should go into warpLoop"
-	dstMask _ maskTable at: destDepth.
-	destWord _ 0.
-	nPix _ nPixels.
+	<inline: true> "Yepp - this should go into warpLoop"
+	dstMask := maskTable at: destDepth.
+	destWord := 0.
+	nPix := nPixels.
 	(mapperFlags = (ColorMapPresent bitOr: ColorMapIndexedPart)) ifTrue:[
 		"a little optimization for (pretty crucial) blits using indexed lookups only"
 		[	"grab, colormap and mix in pixel"
-			sourcePix _ self pickWarpPixelAtX: sx y: sy.
-			destPix _ cmLookupTable at: (sourcePix bitAnd: cmMask).
-			destWord _ destWord bitOr: (destPix bitAnd: dstMask) << dstBitShift.
-			dstBitShift _ dstBitShift + dstShiftInc.
-			sx _ sx + xDeltah.
-			sy _ sy + yDeltah.
-		(nPix _ nPix - 1) = 0] whileFalse.
+			sourcePix := self pickWarpPixelAtX: sx y: sy.
+			destPix := cmLookupTable at: (sourcePix bitAnd: cmMask).
+			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstBitShift.
+			dstBitShift := dstBitShift + dstShiftInc.
+			sx := sx + xDeltah.
+			sy := sy + yDeltah.
+		(nPix := nPix - 1) = 0] whileFalse.
 	] ifFalse:[
 		[	"grab, colormap and mix in pixel"
-			sourcePix _ self pickWarpPixelAtX: sx y: sy.
-			destPix _ self mapPixel: sourcePix flags: mapperFlags.
-			destWord _ destWord bitOr: (destPix bitAnd: dstMask) << dstBitShift.
-			dstBitShift _ dstBitShift + dstShiftInc.
-			sx _ sx + xDeltah.
-			sy _ sy + yDeltah.
-		(nPix _ nPix - 1) = 0] whileFalse.
+			sourcePix := self pickWarpPixelAtX: sx y: sy.
+			destPix := self mapPixel: sourcePix flags: mapperFlags.
+			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstBitShift.
+			dstBitShift := dstBitShift + dstShiftInc.
+			sx := sx + xDeltah.
+			sy := sy + yDeltah.
+		(nPix := nPix - 1) = 0] whileFalse.
 	].
 	^destWord
 

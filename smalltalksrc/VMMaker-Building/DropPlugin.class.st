@@ -41,7 +41,7 @@ DropPlugin class >> requiresPlatformFiles [
 
 { #category : #initialize }
 DropPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'dropInit()' inSmalltalk:[true]
 ]
 
@@ -49,12 +49,12 @@ DropPlugin >> initialiseModule [
 DropPlugin >> primitiveDropRequestFileHandle [
 	"Note: File handle creation needs to be handled by specific support code explicitly bypassing the plugin file sand box."
 	| dropIndex handleOop |
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
-	dropIndex _ interpreterProxy stackIntegerValue: 0.
-	handleOop _ self dropRequestFileHandle: dropIndex.
+	dropIndex := interpreterProxy stackIntegerValue: 0.
+	handleOop := self dropRequestFileHandle: dropIndex.
 	"dropRequestFileHandle needs to return the actual oop returned"
 	interpreterProxy failed ifFalse:[
 		interpreterProxy pop: 2.
@@ -66,20 +66,20 @@ DropPlugin >> primitiveDropRequestFileHandle [
 DropPlugin >> primitiveDropRequestFileName [
 	"Note: File handle creation needs to be handled by specific support code explicitly bypassing the plugin file sand box."
 	| dropIndex dropName nameLength nameOop namePtr |
-	self export: true.
-	self inline: false.
-	self var: #dropName type: 'char *'.
-	self var: #namePtr type: 'char *'.
+	<export: true>
+	<inline: false>
+	<var: #dropName type: 'char *'>
+	<var: #namePtr type: 'char *'>
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
-	dropIndex _ interpreterProxy stackIntegerValue: 0.
-	dropName _ self dropRequestFileName: dropIndex.
+	dropIndex := interpreterProxy stackIntegerValue: 0.
+	dropName := self dropRequestFileName: dropIndex.
 	"dropRequestFileName returns name or NULL on error"
 	dropName == nil 
 		ifTrue:[^interpreterProxy primitiveFail].
-	nameLength _ self strlen: dropName.
-	nameOop _ interpreterProxy instantiateClass: interpreterProxy classString indexableSize: nameLength.
-	namePtr _ interpreterProxy firstIndexableField: nameOop.
+	nameLength := self strlen: dropName.
+	nameOop := interpreterProxy instantiateClass: interpreterProxy classString indexableSize: nameLength.
+	namePtr := interpreterProxy firstIndexableField: nameOop.
 	0 to: nameLength-1 do:[:i| namePtr at: i put: (dropName at: i)].
 	interpreterProxy pop: 2.
 	interpreterProxy push: nameOop.
@@ -88,13 +88,13 @@ DropPlugin >> primitiveDropRequestFileName [
 
 { #category : #primitives }
 DropPlugin >> setFileAccessCallback: address [
-	self export: true. 
-	self var: #address type: 'int'.
+	<export: true>
+	<var: #address type: 'int'>
 	^self cCode: 'sqSecFileAccessCallback((void *) address)'.
 ]
 
 { #category : #initialize }
 DropPlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'dropShutdown()' inSmalltalk:[true]
 ]

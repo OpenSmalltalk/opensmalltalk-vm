@@ -22,7 +22,7 @@ CPluggableAccessor >> at: index put: value [
 ]
 
 { #category : #initialize }
-CPluggableAccessor >> readBlock: rBlock writeBlock: wBlock [
-	readBlock _ rBlock.
-	writeBlock _ wBlock
+CPluggableAccessor >> atBlock: rBlock atPutBlock: wBlock [
+	readBlock := rBlock.
+	writeBlock := wBlock
 ]

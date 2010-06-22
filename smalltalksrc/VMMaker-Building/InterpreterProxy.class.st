@@ -1,34 +1,29 @@
 "
-This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the Sourceforge tree.
+This class should provide the definition of what interpreter support plugins need and can have access to. Note that the proxy related files platforms - Cross - vm - sqVirtualMachine.[ch] are kept under the SVN tree at www.squeakvm.org .
 The main use of the class is to support the vm simulator
 "
 Class {
 	#name : #InterpreterProxy,
 	#superclass : #Object,
 	#instVars : [
-		'successFlag',
+		'primFailCode',
 		'remapBuffer',
 		'stack',
 		'method',
 		'argumentCount',
-		'bb'
+		'bb',
+		'thisSessionID'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
 
-{ #category : #'instance creation' }
-InterpreterProxy class >> new [
-	^super new initialize
-]
-
 { #category : #private }
 InterpreterProxy class >> validateProxyImplementation: anInterpreter [ 
 	"InterpreterProxy validateProxyImplementation: Interpreter"
-	"InterpreterProxy validateProxyImplementation: DynamicInterpreter"
 
 	| proxyClass catList |
-	proxyClass _ InterpreterProxy.
-	catList _ proxyClass organization categories copy asOrderedCollection.
+	proxyClass := InterpreterProxy.
+	catList := proxyClass organization categories copy asOrderedCollection.
 	catList remove: 'initialize' ifAbsent:[].
 	catList remove: 'private' ifAbsent:[].
 	catList do:[:categ|
@@ -45,7 +40,7 @@ InterpreterProxy >> argumentCountOf: methodPointer [
 
 { #category : #'object access' }
 InterpreterProxy >> arrayValueOf: oop [
-	self returnTypeC: 'void *'.
+	<returnTypeC: 'void *'>
 	self success: (self isWordsOrBytes: oop).
 	^CArrayAccessor on: oop.
 ]
@@ -102,6 +97,11 @@ InterpreterProxy >> checkedIntegerValueOf: intOop [
 	(self isIntegerObject: intOop)
 		ifTrue:[^self integerValueOf: intOop]
 		ifFalse:[self primitiveFail. ^0].
+]
+
+{ #category : #'FFI support' }
+InterpreterProxy >> classAlien [
+        ^Smalltalk at: #Alien ifAbsent: [nil]
 ]
 
 { #category : #'special classes' }
@@ -184,6 +184,11 @@ InterpreterProxy >> classString [
 	^String
 ]
 
+{ #category : #'FFI support' }
+InterpreterProxy >> classUnsafeAlien [
+        ^Smalltalk at: #UnsafeAlien ifAbsent: [nil]
+]
+
 { #category : #'instance creation' }
 InterpreterProxy >> clone: oop [
 	^oop clone
@@ -206,7 +211,8 @@ InterpreterProxy >> displayObject [
 
 { #category : #other }
 InterpreterProxy >> failed [
-	^successFlag not
+
+	^primFailCode ~= 0
 ]
 
 { #category : #'special objects' }
@@ -220,8 +226,8 @@ InterpreterProxy >> fetchArray: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| arrayOop |
-	self returnTypeC: 'void *'.
-	arrayOop _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	<returnTypeC: 'void *'>
+	arrayOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^ self arrayValueOf: arrayOop
 
 ]
@@ -237,8 +243,8 @@ InterpreterProxy >> fetchFloat: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| floatOop |
-	self returnTypeC: 'double'.
-	floatOop _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	<returnTypeC: 'double'>
+	floatOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^ self floatValueOf: floatOop
 ]
 
@@ -247,8 +253,8 @@ InterpreterProxy >> fetchInteger: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| intOop |
-	self inline: false.
-	intOop _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	<inline: false>
+	intOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^self checkedIntegerValueOf: intOop
 ]
 
@@ -256,10 +262,16 @@ InterpreterProxy >> fetchInteger: fieldIndex ofObject: objectPointer [
 InterpreterProxy >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPointer [
 	"Support for BitBlt simulation only"
 	| intOrFloat |
-	intOrFloat _ self fetchPointer: fieldIndex ofObject: objectPointer.
+	intOrFloat := self fetchPointer: fieldIndex ofObject: objectPointer.
 	(self isIntegerObject: intOrFloat) ifTrue: [^ self integerValueOf: intOrFloat].
 	intOrFloat isFloat ifTrue:[^intOrFloat truncated].
 	^self primitiveFail.
+]
+
+{ #category : #'object access' }
+InterpreterProxy >> fetchLong32: fieldIndex ofObject: oop [
+"fetchWord:ofObject: is rescinded as of VMMaker 3.8 64bit VM. This is the same code as used therein and may need revision for 64 bit cleanliness"
+	^oop instVarAt: fieldIndex+1
 ]
 
 { #category : #'object access' }
@@ -268,32 +280,37 @@ InterpreterProxy >> fetchPointer: index ofObject: oop [
 ]
 
 { #category : #'object access' }
-InterpreterProxy >> fetchWord: fieldIndex ofObject: oop [
-	^oop instVarAt: fieldIndex+1
-]
-
-{ #category : #'object access' }
 InterpreterProxy >> firstFixedField: oop [
-	self returnTypeC:'void *'.
+	<returnTypeC:'void *'>
 	^CObjectAccessor on: oop
 ]
 
 { #category : #'object access' }
 InterpreterProxy >> firstIndexableField: oop [
-	self returnTypeC:'void *'.
+	<returnTypeC:'void *'>
 	^CArrayAccessor on: oop
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> floatArg: offset [
+	"Like #stackFloatValue: but access method arguments left-to-right"
+	| oop |
+	<returnTypeC: 'double'>
+	oop := self methodArg: offset.
+	(self isFloatObject: oop) ifFalse: [self primitiveFail. ^0.0].
+	^oop
 ]
 
 { #category : #converting }
 InterpreterProxy >> floatObjectOf: aFloat [
-	self var: #aFloat declareC: 'double aFloat'.
+	<var: #aFloat type: 'double '>
 	aFloat class == Float ifFalse:[self error:'Not a float object'].
 	^aFloat
 ]
 
 { #category : #converting }
 InterpreterProxy >> floatValueOf: oop [
-	self returnTypeC:'double'.
+	<returnTypeC:'double'>
 	oop class == Float
 		ifTrue:[^oop]
 		ifFalse:[self primitiveFail. ^0.0].
@@ -309,6 +326,24 @@ InterpreterProxy >> fullGC [
 	Smalltalk garbageCollect.
 ]
 
+{ #category : #other }
+InterpreterProxy >> getStackPointer [
+	self error: 'not yet implemented in Smalltalk'
+]
+
+{ #category : #other }
+InterpreterProxy >> getThisSessionID [
+	"Answer a session identifier which represents the current instance of Squeak.
+	The identifier is expected to be unique among all instances of Squeak on a
+	network at any point in time."
+
+	[thisSessionID = 0]
+		whileTrue:
+			[thisSessionID := (Random new next * SmallInteger maxVal) asInteger].
+	^ thisSessionID
+
+]
+
 { #category : #testing }
 InterpreterProxy >> includesBehavior: aClass ThatOf: aSuperclass [
 	^aClass includesBehavior: aSuperclass
@@ -321,9 +356,9 @@ InterpreterProxy >> incrementalGC [
 
 { #category : #initialize }
 InterpreterProxy >> initialize [
-	successFlag _ true.
-	remapBuffer _ OrderedCollection new.
-	stack _ OrderedCollection new.
+	primFailCode := 0.
+	remapBuffer := OrderedCollection new.
+	stack := OrderedCollection new.
 ]
 
 { #category : #'instance creation' }
@@ -331,6 +366,15 @@ InterpreterProxy >> instantiateClass: classPointer indexableSize: size [
 	^size = 0 
 		ifTrue:[classPointer basicNew]
 		ifFalse:[classPointer basicNew: size]
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> integerArg: offset [
+	"Like #stackIntegerValue: but access method arguments left-to-right"
+	| oop |
+	oop := self methodArg: offset.
+	(self isIntegerObject: oop) ifFalse: [self primitiveFail. ^0].
+	^oop
 ]
 
 { #category : #converting }
@@ -343,6 +387,13 @@ InterpreterProxy >> integerObjectOf: value [
 InterpreterProxy >> integerValueOf: oop [
 	oop class == SmallInteger ifFalse:[self error:'Not a SmallInteger'].
 	^oop
+]
+
+{ #category : #converting }
+InterpreterProxy >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength resolveAliases: aBoolean [
+	"the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer. This doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can.
+Note the resolveAliases flag - this is an awful artefact of OSX and Apples demented alias handling. When opening a file, the flag must be  true, when closing or renaming it must be false. Sigh."
+	aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString
 ]
 
 { #category : #'FFI support' }
@@ -372,8 +423,8 @@ InterpreterProxy >> ioMicroMSecs [
 InterpreterProxy >> is: oop KindOf: aString [
 	"InterpreterProxy new is: 42 KindOf: 'Number'"
 	| theClass |
-	self var: #aString declareC:'char *aString'.
-	theClass _ Smalltalk at: aString asSymbol ifAbsent:[nil].
+	<var: #aString type:'char *'>
+	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
 		ifFalse:[^oop isKindOf: theClass]
@@ -383,8 +434,8 @@ InterpreterProxy >> is: oop KindOf: aString [
 InterpreterProxy >> is: oop MemberOf: aString [
 	"InterpreterProxy new is: 42 MemberOf:'SmallInteger'"
 	| theClass |
-	self var: #aString declareC:'char *aString'.
-	theClass _ Smalltalk at: aString asSymbol ifAbsent:[nil].
+	<var: #aString type:'char *'>
+	theClass := Smalltalk at: aString asSymbol ifAbsent:[nil].
 	^theClass isNil
 		ifTrue:[false]
 		ifFalse:[^oop isMemberOf: theClass]
@@ -465,14 +516,14 @@ InterpreterProxy >> literalCountOf: methodPointer [
 
 { #category : #'BitBlt support' }
 InterpreterProxy >> loadBitBltFrom: bbOop [
-	bb _ bbOop.
+	bb := bbOop.
 ]
 
 { #category : #initialize }
 InterpreterProxy >> loadStackFrom: aContext [
 	self push: aContext receiver.
-	method _ aContext method.
-	argumentCount _ method numArgs.
+	method := aContext method.
+	argumentCount := method numArgs.
 	1 to: argumentCount do:[:i| self push: (aContext at: i) ].
 ]
 
@@ -493,6 +544,13 @@ InterpreterProxy >> makePointwithxValue: xValue yValue: yValue [
 	^xValue@yValue
 ]
 
+{ #category : #'stack access' }
+InterpreterProxy >> methodArg: offset [
+	"Like #stackValue: but access method arguments left-to-right"
+	offset > argumentCount + 1 ifTrue:[^self primitiveFail].
+	^self stackValue: argumentCount - offset
+]
+
 { #category : #'object access' }
 InterpreterProxy >> methodArgumentCount [
 	^argumentCount
@@ -503,9 +561,31 @@ InterpreterProxy >> methodPrimitiveIndex [
 	^method primitive
 ]
 
+{ #category : #'stack access' }
+InterpreterProxy >> methodReturnValue: oop [
+	"Sets the return value for a method"
+	self pop: argumentCount+1 thenPush: oop.
+	^0
+]
+
 { #category : #'special objects' }
 InterpreterProxy >> nilObject [
 	^nil
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> objectArg: offset [
+	"Like #stackObjectValue: but access method arguments left-to-right"
+	| oop |
+	oop := self methodArg: offset.
+	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
+	^oop
+]
+
+{ #category : #'object access' }
+InterpreterProxy >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
+"fetchWord:ofObject: is rescinded as of VMMaker 3.8 64bit VM. This is a placeholder to sit in the sqVirtualMachine structure to support older plugins for a while"
+	self halt: 'deprecated method'
 ]
 
 { #category : #'stack access' }
@@ -558,8 +638,16 @@ InterpreterProxy >> positive64BitValueOf: oop [
 
 { #category : #other }
 InterpreterProxy >> primitiveFail [
+	"Set general (unspecified) primitive failure."
+	self primitiveFailFor: 1
+]
+
+{ #category : #other }
+InterpreterProxy >> primitiveFailFor: reasonCode [
+	"Set specific primitive failure.
+	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
 	(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt].
-	successFlag _ false.
+	^primFailCode := reasonCode
 ]
 
 { #category : #'object access' }
@@ -586,7 +674,7 @@ InterpreterProxy >> pushBool: trueOrFalse [
 
 { #category : #'stack access' }
 InterpreterProxy >> pushFloat: f [
-	self var: #f declareC: 'double f'.
+	<var: #f type: 'double '>
 	f class == Float ifFalse:[^self error:'Not a Float'].
 	self push: f.
 ]
@@ -599,6 +687,26 @@ InterpreterProxy >> pushInteger: integerValue [
 { #category : #'instance creation' }
 InterpreterProxy >> pushRemappableOop: oop [
 	remapBuffer addLast: oop
+]
+
+{ #category : #'callback support' }
+InterpreterProxy >> reestablishContextPriorToCallback: callbackContext [
+	"callbackContext is an activation of invokeCallback:stack:registers:jmpbuf:.  Its sender
+	is the interpreter's state prior to the callback.  Reestablish that state."
+	self notYetImplemented
+]
+
+{ #category : #'callback support' }
+InterpreterProxy >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr Jmpbuf: jmpBufPtr [
+	"Send the 4 argument callback message invokeCallback:stack:registers:jmpbuf:
+	 to Alien class with the supplied args.  The arguments are raw C addresses
+	 and are converted to integer objects on the way."
+	self notYetImplemented
+]
+
+{ #category : #other }
+InterpreterProxy >> setInterruptCheckChain: aFunction [
+	self error: 'not yet implemented in Smalltalk'
 ]
 
 { #category : #other }
@@ -639,7 +747,7 @@ InterpreterProxy >> signed64BitValueOf: oop [
 { #category : #'object access' }
 InterpreterProxy >> sizeOfSTArrayFromCPrimitive: cPtr [
 	"Note: Only called by translated primitive code."
-	self var: #cPtr declareC: 'void *cPtr'.
+	<var: #cPtr type: 'void *'>
 	^self shouldNotImplement
 ]
 
@@ -670,8 +778,8 @@ InterpreterProxy >> stSizeOf: oop [
 { #category : #'stack access' }
 InterpreterProxy >> stackFloatValue: offset [
 	| oop |
-	self returnTypeC: 'double'.
-	oop _ self stackValue: offset.
+	<returnTypeC: 'double'>
+	oop := self stackValue: offset.
 	(self isFloatObject: oop) ifFalse: [self primitiveFail. ^0.0].
 	^oop
 ]
@@ -679,7 +787,7 @@ InterpreterProxy >> stackFloatValue: offset [
 { #category : #'stack access' }
 InterpreterProxy >> stackIntegerValue: offset [
 	| oop |
-	oop _ self stackValue: offset.
+	oop := self stackValue: offset.
 	(self isIntegerObject: oop) ifFalse: [self primitiveFail. ^0].
 	^oop
 ]
@@ -687,7 +795,7 @@ InterpreterProxy >> stackIntegerValue: offset [
 { #category : #'stack access' }
 InterpreterProxy >> stackObjectValue: offset [
 	| oop |
-	oop _ self stackValue: offset.
+	oop := self stackValue: offset.
 	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
 	^oop
 ]
@@ -711,10 +819,8 @@ InterpreterProxy >> storePointer: index ofObject: oop withValue: valuePointer [
 
 { #category : #other }
 InterpreterProxy >> success: aBoolean [
-	successFlag not ifTrue:[^self].
-	successFlag _ successFlag and:[aBoolean].
-	successFlag not ifTrue:[
-		(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt]].
+	aBoolean ifTrue: [^self].
+	primFailCode = 0 ifTrue: [self primitiveFailFor: 1]
 ]
 
 { #category : #other }
@@ -722,7 +828,19 @@ InterpreterProxy >> superclassOf: classPointer [
 	^classPointer superclass
 ]
 
+{ #category : #'instance creation' }
+InterpreterProxy >> topRemappableOop [
+	"Returns the top of the remappable oop. Useful when writing loops."
+	^remapBuffer last
+]
+
 { #category : #'special objects' }
 InterpreterProxy >> trueObject [
 	^true
+]
+
+{ #category : #other }
+InterpreterProxy >> vmEndianness [
+	"return 0 for little endian, 1 for big endian"
+	^SmalltalkImage current endianness =#big ifTrue:[1] ifFalse:[0]
 ]

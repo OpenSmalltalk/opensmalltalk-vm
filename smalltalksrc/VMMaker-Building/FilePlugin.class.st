@@ -25,6 +25,22 @@ Class {
 }
 
 { #category : #translation }
+FilePlugin class >> declareCVarsIn: aCCodeGenerator [
+
+	aCCodeGenerator var: 'sCCPfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCDPfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCGFTfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCLPfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCSFTfn'	type: 'void *'.
+	aCCodeGenerator var: 'sDFAfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCDFfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCOFfn'	type: 'void *'.
+	aCCodeGenerator var: 'sCRFfn'	type: 'void *'.
+	aCCodeGenerator var: 'sHFAfn'	type: 'void *'.
+	aCCodeGenerator addHeaderFile: '"FilePlugin.h"'
+]
+
+{ #category : #translation }
 FilePlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^true
@@ -33,9 +49,9 @@ FilePlugin class >> hasHeaderFile [
 { #category : #'class initialization' }
 FilePlugin class >> initialize [
 	"FilePlugin initialize"
-	DirEntryFound _ 0.
-	DirNoMoreEntries _ 1.
-	DirBadPath _ 2.
+	DirEntryFound := 0.
+	DirNoMoreEntries := 1.
+	DirBadPath := 2.
 ]
 
 { #category : #translation }
@@ -64,36 +80,36 @@ FilePlugin >> asciiDirectoryDelimiter [
 FilePlugin >> fileOpenName: nameIndex size: nameSize write: writeFlag secure: secureFlag [
 	"Open the named file, possibly checking security. Answer the file oop."
 	| file fileOop okToOpen |
-	self var: #file type: 'SQFile *'.
-	self var: 'nameIndex' type: 'char *'.
-	self export: true.
-	fileOop _ interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
-	file _ self fileValueOf: fileOop.
+	<var: #file type: 'SQFile *'>
+	<var: 'nameIndex' type: 'char *'>
+	<export: true>
+	fileOop := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
+	file := self fileValueOf: fileOop.
 	interpreterProxy failed
 		ifFalse: [ secureFlag ifTrue: [
 				"If the security plugin can be loaded, use it to check for permission.
 				If not, assume it's ok"
 				sCOFfn ~= 0 
-					ifTrue: [okToOpen _ self cCode: '((int (*) (char *, int, int)) sCOFfn)(nameIndex, nameSize, writeFlag)' inSmalltalk:[true].
+					ifTrue: [okToOpen := self cCode: '((sqInt (*) (char *, sqInt, sqInt)) sCOFfn)(nameIndex, nameSize, writeFlag)' inSmalltalk:[true].
 						okToOpen
 							ifFalse: [interpreterProxy primitiveFail]]]].
 	interpreterProxy failed
-		ifFalse: [self cCode: 'sqFileOpen(file, (int)nameIndex, nameSize, writeFlag)' inSmalltalk: [file]].
+		ifFalse: [self cCode: 'sqFileOpen(file, nameIndex, nameSize, writeFlag)' inSmalltalk: [file]].
 	^ fileOop
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> fileRecordSize [
 	"Return the size of a Smalltalk file record in bytes."
-	self static: false.
+	<static: false>
 	^ self cCode: 'sizeof(SQFile)'.
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> fileValueOf: objectPointer [
 	"Return a pointer to the first byte of of the file record within the given Smalltalk object, or nil if objectPointer is not a file record."
-	self returnTypeC: 'SQFile *'.
-	self static: false.
+	<returnTypeC: 'SQFile *'>
+	<static: false>
 	(((interpreterProxy isBytes: objectPointer) and:
 		 [(interpreterProxy byteSizeOf: objectPointer) = self fileRecordSize]))
 			ifFalse:[interpreterProxy primitiveFail. ^nil].
@@ -102,24 +118,24 @@ FilePlugin >> fileValueOf: objectPointer [
 
 { #category : #'file primitives' }
 FilePlugin >> getThisSession [
-	"Exported entry point for the VM."
-	self export: true. 
+	"Exported entry point for the VM. Only used by AsynchFilePlugin and needs to be reowrked now we have a VM global session Id capability"
+	<export: true> 
 	^self cCode: 'sqFileThisSession()'.
 ]
 
 { #category : #'initialize-release' }
 FilePlugin >> initialiseModule [
-	self export: true.
-	sCCPfn _ interpreterProxy ioLoadFunction: 'secCanCreatePathOfSize' From: 'SecurityPlugin'.
-	sCDPfn _ interpreterProxy ioLoadFunction: 'secCanDeletePathOfSize' From: 'SecurityPlugin'.
-	sCGFTfn _ interpreterProxy ioLoadFunction: 'secCanGetFileTypeOfSize' From: 'SecurityPlugin'.
-	sCLPfn _ interpreterProxy ioLoadFunction: 'secCanListPathOfSize' From: 'SecurityPlugin'.
-	sCSFTfn _ interpreterProxy ioLoadFunction: 'secCanSetFileTypeOfSize' From: 'SecurityPlugin'.
-	sDFAfn _ interpreterProxy ioLoadFunction: 'secDisableFileAccess' From: 'SecurityPlugin'.
-	sCDFfn _ interpreterProxy ioLoadFunction: 'secCanDeleteFileOfSize' From: 'SecurityPlugin'.
-	sCOFfn _ interpreterProxy ioLoadFunction: 'secCanOpenFileOfSizeWritable' From: 'SecurityPlugin'.
-	sCRFfn _ interpreterProxy ioLoadFunction: 'secCanRenameFileOfSize' From: 'SecurityPlugin'.
-	sHFAfn _ interpreterProxy ioLoadFunction: 'secHasFileAccess' From: 'SecurityPlugin'.
+	<export: true>
+	sCCPfn := interpreterProxy ioLoadFunction: 'secCanCreatePathOfSize' From: 'SecurityPlugin'.
+	sCDPfn := interpreterProxy ioLoadFunction: 'secCanDeletePathOfSize' From: 'SecurityPlugin'.
+	sCGFTfn := interpreterProxy ioLoadFunction: 'secCanGetFileTypeOfSize' From: 'SecurityPlugin'.
+	sCLPfn := interpreterProxy ioLoadFunction: 'secCanListPathOfSize' From: 'SecurityPlugin'.
+	sCSFTfn := interpreterProxy ioLoadFunction: 'secCanSetFileTypeOfSize' From: 'SecurityPlugin'.
+	sDFAfn := interpreterProxy ioLoadFunction: 'secDisableFileAccess' From: 'SecurityPlugin'.
+	sCDFfn := interpreterProxy ioLoadFunction: 'secCanDeleteFileOfSize' From: 'SecurityPlugin'.
+	sCOFfn := interpreterProxy ioLoadFunction: 'secCanOpenFileOfSizeWritable' From: 'SecurityPlugin'.
+	sCRFfn := interpreterProxy ioLoadFunction: 'secCanRenameFileOfSize' From: 'SecurityPlugin'.
+	sHFAfn := interpreterProxy ioLoadFunction: 'secHasFileAccess' From: 'SecurityPlugin'.
 	^self cCode: 'sqFileInit()' inSmalltalk:[true]
 ]
 
@@ -129,9 +145,9 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 	isDir: dirFlag fileSize: fileSize [
 
 	| modDateOop createDateOop nameString results stringPtr fileSizeOop |
-	self var: 'entryName' declareC: 'char *entryName'.
-	self var: 'stringPtr' declareC:'char *stringPtr'.
-	self var: 'fileSize' declareC:'squeakFileOffsetType fileSize'.
+	<var: 'entryName' type: 'char *'>
+	<var: 'stringPtr' type:'char *'>
+	<var: 'fileSize' type:'squeakFileOffsetType '>
 
 	"allocate storage for results, remapping newly allocated
 	 oops in case GC happens during allocation"
@@ -146,14 +162,14 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 	interpreterProxy pushRemappableOop:
 		(interpreterProxy positive64BitIntegerFor: fileSize).
 
-	fileSizeOop   _ interpreterProxy popRemappableOop.
-	modDateOop   _ interpreterProxy popRemappableOop.
-	createDateOop _ interpreterProxy popRemappableOop.
-	nameString    _ interpreterProxy popRemappableOop.
-	results         _ interpreterProxy popRemappableOop.
+	fileSizeOop   := interpreterProxy popRemappableOop.
+	modDateOop   := interpreterProxy popRemappableOop.
+	createDateOop := interpreterProxy popRemappableOop.
+	nameString    := interpreterProxy popRemappableOop.
+	results         := interpreterProxy popRemappableOop.
 
 	"copy name into Smalltalk string"
-	stringPtr _ interpreterProxy firstIndexableField: nameString.
+	stringPtr := interpreterProxy firstIndexableField: nameString.
 	0 to: entryNameSize - 1 do: [ :i |
 		stringPtr at: i put: (entryName at: i).
 	].
@@ -172,153 +188,209 @@ FilePlugin >> makeDirEntryName: entryName size: entryNameSize
 FilePlugin >> moduleUnloaded: aModuleName [
 	"The module with the given name was just unloaded.
 	Make sure we have no dangling references."
-	self export: true.
-	self var: #aModuleName type: 'char *'.
+	<export: true>
+	<var: #aModuleName type: 'char *'>
 	(aModuleName strcmp: 'SecurityPlugin') = 0 ifTrue:[
 		"The security plugin just shut down. How odd."
-		sCCPfn _ sCDPfn _ sCGFTfn _ sCLPfn _ sCSFTfn _ sDFAfn _ sCDFfn _ sCOFfn _ sCRFfn _ sHFAfn _ 0.
+		sCCPfn := sCDPfn := sCGFTfn := sCLPfn := sCSFTfn := sDFAfn := sCDFfn := sCOFfn := sCRFfn := sHFAfn := 0.
 	].
 ]
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryCreate [
+
 	| dirName dirNameIndex dirNameSize okToCreate |
-	self var: #dirNameIndex type: 'char *'.
-	self export: true.
-	dirName _ interpreterProxy stackValue: 0.
+	<var: #dirNameIndex type: 'char *'>
+	<export: true>
+
+	dirName := interpreterProxy stackValue: 0.
 	(interpreterProxy isBytes: dirName)
-		ifFalse: [^ interpreterProxy primitiveFail].
-	dirNameIndex _ interpreterProxy firstIndexableField: dirName.
-	dirNameSize _ interpreterProxy byteSizeOf: dirName.
+		ifFalse: [^interpreterProxy primitiveFail].
+	dirNameIndex := interpreterProxy firstIndexableField: dirName.
+	dirNameSize := interpreterProxy byteSizeOf: dirName.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCCPfn ~= 0
-		ifTrue: [okToCreate _ self cCode: ' ((int (*) (char *, int)) sCCPfn)(dirNameIndex, dirNameSize)'.
+		ifTrue: [okToCreate := self cCode: ' ((sqInt (*)(char *, sqInt))sCCPfn)(dirNameIndex, dirNameSize)'.
 			okToCreate
-				ifFalse: [^ interpreterProxy primitiveFail]].
+				ifFalse: [^interpreterProxy primitiveFail]].
 	(self
-			cCode: 'dir_Create((char *) dirNameIndex, dirNameSize)'
+			cCode: 'dir_Create(dirNameIndex, dirNameSize)'
 			inSmalltalk: [false])
-		ifFalse: [^ interpreterProxy primitiveFail].
+		ifFalse: [^interpreterProxy primitiveFail].
 	interpreterProxy pop: 1
 ]
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryDelete [
+
 	| dirName dirNameIndex dirNameSize okToDelete |
-	self var: #dirNameIndex type: 'char *'.
-	self export: true.
-	dirName _ interpreterProxy stackValue: 0.
+	<var: #dirNameIndex type: 'char *'>
+	<export: true>
+
+	dirName := interpreterProxy stackValue: 0.
 	(interpreterProxy isBytes: dirName)
-		ifFalse: [^ interpreterProxy primitiveFail].
-	dirNameIndex _ interpreterProxy firstIndexableField: dirName.
-	dirNameSize _ interpreterProxy byteSizeOf: dirName.
+		ifFalse: [^interpreterProxy primitiveFail].
+	dirNameIndex := interpreterProxy firstIndexableField: dirName.
+	dirNameSize := interpreterProxy byteSizeOf: dirName.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCDPfn ~= 0
-		ifTrue: [okToDelete _ self cCode: ' ((int (*) (char *, int)) sCDPfn)(dirNameIndex, dirNameSize)'.
+		ifTrue: [okToDelete := self cCode: ' ((sqInt (*)(char *, sqInt))sCDPfn)(dirNameIndex, dirNameSize)'.
 			okToDelete
-				ifFalse: [^ interpreterProxy primitiveFail]].
+				ifFalse: [^interpreterProxy primitiveFail]].
 	(self
-			cCode: 'dir_Delete((char *) dirNameIndex, dirNameSize)'
+			cCode: 'dir_Delete(dirNameIndex, dirNameSize)'
 			inSmalltalk: [false])
-		ifFalse: [^ interpreterProxy primitiveFail].
+		ifFalse: [^interpreterProxy primitiveFail].
 	interpreterProxy pop: 1
 ]
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryDelimitor [
-
 	| ascii |
-	self export: true.
-	ascii _ self asciiDirectoryDelimiter.
-	((ascii >= 0) and: [ascii <= 255])
-		ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy pop: 1.  "pop rcvr"
-	interpreterProxy push: (interpreterProxy fetchPointer: ascii ofObject: (interpreterProxy characterTable)).
+	<export: true>
+	ascii := self asciiDirectoryDelimiter.
+	((ascii >= 0) and: [ascii <= 255]) ifFalse:
+		[^interpreterProxy primitiveFail].
+	interpreterProxy
+		pop: 1
+		thenPush: (interpreterProxy fetchPointer: ascii ofObject: (interpreterProxy characterTable))
+]
+
+{ #category : #'directory primitives' }
+FilePlugin >> primitiveDirectoryEntry [
+
+	"Two arguments - directory path, and simple file name;
+ 	 returns an array (see primitiveDirectoryLookup) describing the file or directory,
+ 	 or nil if it does not exist.  
+	 Primitive fails if the outer path does not identify a readable directory.
+	 (This is a lookup-by-name variant of primitiveDirectoryLookup.)"
+
+	| requestedName pathName pathNameIndex pathNameSize status entryName entryNameSize createDate modifiedDate dirFlag fileSize okToList reqNameIndex reqNameSize |
+	<var: 'entryName' declareC: 'char entryName[256]'>
+	<var: 'pathNameIndex' type: 'char *'>
+	<var: 'reqNameIndex' type: 'char *'>
+	<var: 'fileSize' type: 'squeakFileOffsetType'>
+	<export: true>
+
+	requestedName := interpreterProxy stackValue: 0.
+	pathName := interpreterProxy stackValue: 1.
+	(interpreterProxy isBytes: pathName)
+		ifFalse: [^interpreterProxy primitiveFail].
+
+	"Outbound string parameters"
+	pathNameIndex := interpreterProxy firstIndexableField: pathName.
+	pathNameSize := interpreterProxy byteSizeOf: pathName.
+
+	reqNameIndex := interpreterProxy firstIndexableField: requestedName.
+	reqNameSize := interpreterProxy byteSizeOf: requestedName.
+
+	"If the security plugin can be loaded, use it to check for permission. 
+	If not, assume it's ok"
+	sCLPfn ~= 0
+		ifTrue: [okToList := self cCode: '((sqInt (*)(char *, sqInt))sCLPfn)(pathNameIndex, pathNameSize)']
+		ifFalse: [okToList := true].
+	okToList
+		ifTrue: [status := self cCode: 'dir_EntryLookup(pathNameIndex, pathNameSize, reqNameIndex, reqNameSize,
+													  entryName, &entryNameSize, &createDate,
+													  &modifiedDate, &dirFlag, &fileSize)']
+		ifFalse: [status := DirNoMoreEntries].
+
+	interpreterProxy failed
+		ifTrue: [^nil].
+	status = DirNoMoreEntries
+		ifTrue: ["no entry; return nil"
+			interpreterProxy pop: 3 "pop pathName, index, rcvr"
+				thenPush: interpreterProxy nilObject.
+			^nil].
+	status = DirBadPath
+		ifTrue: [^interpreterProxy primitiveFail]."bad path"
+
+	interpreterProxy pop: 3	"pop pathName, fName, rcvr" 
+		thenPush: (self
+				makeDirEntryName: entryName
+				size: entryNameSize
+				createDate: createDate
+				modDate: modifiedDate
+				isDir: dirFlag
+				fileSize: fileSize)
 ]
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryGetMacTypeAndCreator [
+
 	| creatorString typeString fileName creatorStringIndex typeStringIndex fileNameIndex fileNameSize okToGet |
-	self var: 'creatorStringIndex' type: 'char *'.
-	self var: 'typeStringIndex' type: 'char *'.
-	self var: 'fileNameIndex' type: 'char *'.
-	self export: true.
-	creatorString _ interpreterProxy stackValue: 0.
-	typeString _ interpreterProxy stackValue: 1.
-	fileName _ interpreterProxy stackValue: 2.
+	<var: 'creatorStringIndex' type: 'char *'>
+	<var: 'typeStringIndex' type: 'char *'>
+	<var: 'fileNameIndex' type: 'char *'>
+	<export: true>
+
+	creatorString := interpreterProxy stackValue: 0.
+	typeString := interpreterProxy stackValue: 1.
+	fileName := interpreterProxy stackValue: 2.
 	((interpreterProxy isBytes: creatorString)
-			and: [(interpreterProxy byteSizeOf: creatorString)
-					= 4])
-		ifFalse: [^ interpreterProxy primitiveFail].
+			and: [(interpreterProxy byteSizeOf: creatorString) = 4])
+		ifFalse: [^interpreterProxy primitiveFail].
 	((interpreterProxy isBytes: typeString)
-			and: [(interpreterProxy byteSizeOf: typeString)
-					= 4])
-		ifFalse: [^ interpreterProxy primitiveFail].
+			and: [(interpreterProxy byteSizeOf: typeString) = 4])
+		ifFalse: [^interpreterProxy primitiveFail].
 	(interpreterProxy isBytes: fileName)
-		ifFalse: [^ interpreterProxy primitiveFail].
-	creatorStringIndex _ interpreterProxy firstIndexableField: creatorString.
-	typeStringIndex _ interpreterProxy firstIndexableField: typeString.
-	fileNameIndex _ interpreterProxy firstIndexableField: fileName.
-	fileNameSize _ interpreterProxy byteSizeOf: fileName.
+		ifFalse: [^interpreterProxy primitiveFail].
+	creatorStringIndex := interpreterProxy firstIndexableField: creatorString.
+	typeStringIndex := interpreterProxy firstIndexableField: typeString.
+	fileNameIndex := interpreterProxy firstIndexableField: fileName.
+	fileNameSize := interpreterProxy byteSizeOf: fileName.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCGFTfn ~= 0
-		ifTrue: [okToGet _ self cCode: ' ((int (*) (char *, int)) sCGFTfn)(fileNameIndex, fileNameSize)'.
+		ifTrue: [okToGet := self cCode: ' ((sqInt (*)(char *, sqInt))sCGFTfn)(fileNameIndex, fileNameSize)'.
 			okToGet
-				ifFalse: [^ interpreterProxy primitiveFail]].
+				ifFalse: [^interpreterProxy primitiveFail]].
 	(self
-			cCode: 'dir_GetMacFileTypeAndCreator(
-			(char *) fileNameIndex, fileNameSize,
-			(char *) typeStringIndex, (char *) creatorStringIndex)'
+			cCode: 'dir_GetMacFileTypeAndCreator(fileNameIndex, fileNameSize, typeStringIndex, creatorStringIndex)'
 			inSmalltalk: [true])
-		ifFalse: [^ interpreterProxy primitiveFail].
+		ifFalse: [^interpreterProxy primitiveFail].
 	interpreterProxy pop: 3
 ]
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectoryLookup [
+
 	| index pathName pathNameIndex pathNameSize status entryName entryNameSize createDate modifiedDate dirFlag fileSize okToList |
-	self var: 'entryName' declareC: 'char entryName[256]'.
-	self var: 'pathNameIndex' type: 'char *'.
-	self var: 'fileSize' type: 'squeakFileOffsetType'.
-	self export: true.
-	index _ interpreterProxy stackIntegerValue: 0.
-	pathName _ interpreterProxy stackValue: 1.
+	<var: 'entryName' declareC: 'char entryName[256]'>
+	<var: 'pathNameIndex' type: 'char *'>
+	<var: 'fileSize' type: 'squeakFileOffsetType'>
+	<export: true>
+
+	index := interpreterProxy stackIntegerValue: 0.
+	pathName := interpreterProxy stackValue: 1.
 	(interpreterProxy isBytes: pathName)
-		ifFalse: [^ interpreterProxy primitiveFail].
-	pathNameIndex _ interpreterProxy firstIndexableField: pathName.
-	pathNameSize _ interpreterProxy byteSizeOf: pathName.
+		ifFalse: [^interpreterProxy primitiveFail].
+	pathNameIndex := interpreterProxy firstIndexableField: pathName.
+	pathNameSize := interpreterProxy byteSizeOf: pathName.
 	"If the security plugin can be loaded, use it to check for permission. 
 	If not, assume it's ok"
 	sCLPfn ~= 0
-		ifTrue: [okToList _ self cCode: ' ((int (*) (char *, int)) sCLPfn)(pathNameIndex, pathNameSize)']
-		ifFalse: [okToList _ true].
+		ifTrue: [okToList := self cCode: '((sqInt (*)(char *, sqInt))sCLPfn)(pathNameIndex, pathNameSize)']
+		ifFalse: [okToList := true].
 	okToList
-		ifTrue: [status _ self cCode: 'dir_Lookup(
-				(char *) pathNameIndex, pathNameSize, index,
-				entryName, &entryNameSize, &createDate, &modifiedDate,
-				&dirFlag, &fileSize)']
-		ifFalse: [status _ DirNoMoreEntries].
+		ifTrue: [status := self cCode: 'dir_Lookup(pathNameIndex, pathNameSize, index,
+												entryName, &entryNameSize, &createDate,
+												&modifiedDate, &dirFlag, &fileSize)']
+		ifFalse: [status := DirNoMoreEntries].
 	interpreterProxy failed
-		ifTrue: [^ nil].
+		ifTrue: [^nil].
 	status = DirNoMoreEntries
 		ifTrue: ["no more entries; return nil"
-			interpreterProxy pop: 3.
-			"pop pathName, index, rcvr"
-			interpreterProxy push: interpreterProxy nilObject.
-			^ nil].
+			interpreterProxy pop: 3 "pop pathName, index, rcvr"
+				thenPush: interpreterProxy nilObject.
+			^nil].
 	status = DirBadPath
-		ifTrue: [^ interpreterProxy primitiveFail].
-	"bad path"
-	interpreterProxy pop: 3.
-	"pop pathName, index, rcvr"
-	interpreterProxy
-		push: (self
+		ifTrue: [^interpreterProxy primitiveFail]."bad path"
+
+	interpreterProxy pop: 3	"pop pathName, index, rcvr" 
+		thenPush: (self
 				makeDirEntryName: entryName
 				size: entryNameSize
 				createDate: createDate
@@ -329,101 +401,96 @@ FilePlugin >> primitiveDirectoryLookup [
 
 { #category : #'directory primitives' }
 FilePlugin >> primitiveDirectorySetMacTypeAndCreator [
+
 	| creatorString typeString fileName creatorStringIndex typeStringIndex fileNameIndex fileNameSize  okToSet |
-	self var: 'creatorStringIndex' type: 'char *'.
-	self var: 'typeStringIndex' type: 'char *'.
-	self var: 'fileNameIndex' type: 'char *'.
-	self export: true.
-	creatorString _ interpreterProxy stackValue: 0.
-	typeString _ interpreterProxy stackValue: 1.
-	fileName _ interpreterProxy stackValue: 2.
+	<var: 'creatorStringIndex' type: 'char *'>
+	<var: 'typeStringIndex' type: 'char *'>
+	<var: 'fileNameIndex' type: 'char *'>
+	<export: true>
+
+	creatorString := interpreterProxy stackValue: 0.
+	typeString := interpreterProxy stackValue: 1.
+	fileName := interpreterProxy stackValue: 2.
 	((interpreterProxy isBytes: creatorString)
 			and: [(interpreterProxy byteSizeOf: creatorString)
 					= 4])
-		ifFalse: [^ interpreterProxy primitiveFail].
+		ifFalse: [^interpreterProxy primitiveFail].
 	((interpreterProxy isBytes: typeString)
 			and: [(interpreterProxy byteSizeOf: typeString)
 					= 4])
-		ifFalse: [^ interpreterProxy primitiveFail].
+		ifFalse: [^interpreterProxy primitiveFail].
 	(interpreterProxy isBytes: fileName)
-		ifFalse: [^ interpreterProxy primitiveFail].
-	creatorStringIndex _ interpreterProxy firstIndexableField: creatorString.
-	typeStringIndex _ interpreterProxy firstIndexableField: typeString.
-	fileNameIndex _ interpreterProxy firstIndexableField: fileName.
-	fileNameSize _ interpreterProxy byteSizeOf: fileName.
+		ifFalse: [^interpreterProxy primitiveFail].
+	creatorStringIndex := interpreterProxy firstIndexableField: creatorString.
+	typeStringIndex := interpreterProxy firstIndexableField: typeString.
+	fileNameIndex := interpreterProxy firstIndexableField: fileName.
+	fileNameSize := interpreterProxy byteSizeOf: fileName.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCSFTfn ~= 0
-		ifTrue: [okToSet _ self cCode: ' ((int (*) (char *, int)) sCSFTfn)(fileNameIndex, fileNameSize)'.
+		ifTrue: [okToSet := self cCode: ' ((sqInt (*)(char *, sqInt))sCSFTfn)(fileNameIndex, fileNameSize)'.
 			okToSet
-				ifFalse: [^ interpreterProxy primitiveFail]].
+				ifFalse: [^interpreterProxy primitiveFail]].
 	(self
-			cCode: 'dir_SetMacFileTypeAndCreator(
-			(char *) fileNameIndex, fileNameSize,
-			(char *) typeStringIndex, (char *) creatorStringIndex)'
+			cCode: 'dir_SetMacFileTypeAndCreator(fileNameIndex, fileNameSize,typeStringIndex, creatorStringIndex)'
 			inSmalltalk: [true])
-		ifFalse: [^ interpreterProxy primitiveFail].
+		ifFalse: [^interpreterProxy primitiveFail].
 	interpreterProxy pop: 3
 ]
 
 { #category : #'security primitives' }
 FilePlugin >> primitiveDisableFileAccess [
-
-	self export: true.
+	<export: true>
 	"If the security plugin can be loaded, use it to turn off file access
-	If 
-	not, assume it's ok"
-	sDFAfn ~= 0
-		ifTrue: [self cCode: ' ((int (*) (void)) sDFAfn)()'].
-	interpreterProxy failed
-		ifFalse: [interpreterProxy pop: 1]
+	 If not, assume it's ok"
+	sDFAfn ~= 0 ifTrue:
+		[self cCode: '((sqInt (*)(void))sDFAfn)()']
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileAtEnd [
-
 	| file atEnd |
-	self export: true.
-	self var: 'file' declareC: 'SQFile *file'.
-	file _ self fileValueOf: (interpreterProxy stackValue: 0).
-	interpreterProxy failed ifFalse:[atEnd _ self sqFileAtEnd: file ].
-	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 2.  "rcvr, file"
-		interpreterProxy pushBool: atEnd.
-	].
+	<export: true>
+	<var: 'file' type: 'SQFile *'>
+	file := self fileValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed
+		ifFalse: [atEnd := self sqFileAtEnd: file].
+	interpreterProxy failed
+		ifFalse: [interpreterProxy pop: 2. "rcvr, file"
+			interpreterProxy pushBool: atEnd]
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileClose [
 
 	| file |
-	self export: true.
-	self var: 'file' declareC: 'SQFile *file'.
-	file _ self fileValueOf: (interpreterProxy stackValue: 0).
+	<export: true>
+	<var: 'file' type: 'SQFile *'>
+	file := self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse: [ self sqFileClose: file ].
 	interpreterProxy failed ifFalse: [ interpreterProxy pop: 1  "pop file; leave rcvr on stack" ].
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileDelete [
+
 	| namePointer nameIndex nameSize  okToDelete |
-	self var: 'nameIndex' type: 'char *'.
-	self export: true.
-	namePointer _ interpreterProxy stackValue: 0.
+	<var: 'nameIndex' type: 'char *'>
+	<export: true>
+
+	namePointer := interpreterProxy stackValue: 0.
 	(interpreterProxy isBytes: namePointer)
 		ifFalse: [^ interpreterProxy primitiveFail].
-	nameIndex _ interpreterProxy firstIndexableField: namePointer.
-	nameSize _ interpreterProxy byteSizeOf: namePointer.
+	nameIndex := interpreterProxy firstIndexableField: namePointer.
+	nameSize := interpreterProxy byteSizeOf: namePointer.
 	"If the security plugin can be loaded, use it to check for permission.
-	If 
-	not, assume it's ok"
+	If not, assume it's ok"
 	sCDFfn ~= 0
-		ifTrue: [okToDelete _ self cCode: ' ((int (*) (char *, int)) sCDFfn)(nameIndex, nameSize)'.
+		ifTrue: [okToDelete := self cCode: ' ((sqInt (*)(char *, sqInt))sCDFfn)(nameIndex, nameSize)'.
 			okToDelete
 				ifFalse: [^ interpreterProxy primitiveFail]].
 	self
-		sqFileDeleteName: (self cCoerce: nameIndex to: 'int')
+		sqFileDeleteName: nameIndex
 		Size: nameSize.
 	interpreterProxy failed
 		ifFalse: [interpreterProxy pop: 1]
@@ -432,9 +499,9 @@ FilePlugin >> primitiveFileDelete [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileFlush [
 	| file |
-	self var: 'file' declareC: 'SQFile *file'.
-	self export: true.
-	file _ self fileValueOf: (interpreterProxy stackValue: 0).
+	<var: 'file' type: 'SQFile *'>
+	<export: true>
+	file := self fileValueOf: (interpreterProxy stackValue: 0).
 	interpreterProxy failed ifFalse:[self sqFileFlush: file].
 	interpreterProxy failed ifFalse: [interpreterProxy pop: 1].
 ]
@@ -442,33 +509,31 @@ FilePlugin >> primitiveFileFlush [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileGetPosition [
 	| file position |
-	self var: 'file' declareC: 'SQFile *file'.
-	self var: 'position' type: 'squeakFileOffsetType'.
-	self export: true.
-	file _ self fileValueOf: (interpreterProxy stackValue: 0).
-	interpreterProxy failed ifFalse: [position _ self sqFileGetPosition: file].
+	<var: 'file' type: 'SQFile *'>
+	<var: 'position' type: 'squeakFileOffsetType'>
+	<export: true>
+	file := self fileValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifFalse: [position := self sqFileGetPosition: file].
 	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 2.
-		interpreterProxy push: (interpreterProxy positive64BitIntegerFor: position)].
+		interpreterProxy pop: 2 thenPush: (interpreterProxy positive64BitIntegerFor: position)].
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileOpen [
 	| writeFlag namePointer filePointer nameIndex nameSize |
-	self var: 'nameIndex' type: 'char *'.
-	self export: true.
-	writeFlag _ interpreterProxy
+	<var: 'nameIndex' type: 'char *'>
+	<export: true>
+	writeFlag := interpreterProxy
 				booleanValueOf: (interpreterProxy stackValue: 0).
-	namePointer _ interpreterProxy stackValue: 1.
+	namePointer := interpreterProxy stackValue: 1.
 	(interpreterProxy isBytes: namePointer)
 		ifFalse: [^ interpreterProxy primitiveFail].
-	nameIndex _ interpreterProxy firstIndexableField: namePointer.
-	nameSize _ interpreterProxy byteSizeOf: namePointer.
-	filePointer _ self fileOpenName: nameIndex size: nameSize write: writeFlag secure: true.
+	nameIndex := interpreterProxy firstIndexableField: namePointer.
+	nameSize := interpreterProxy byteSizeOf: namePointer.
+	filePointer := self fileOpenName: nameIndex size: nameSize write: writeFlag secure: true.
 	interpreterProxy failed
-		ifFalse: [interpreterProxy pop: 3.
-			"rcvr, name, writeFlag"
-			interpreterProxy push: filePointer]
+		ifFalse: [interpreterProxy pop: 3 "rcvr, name, writeFlag"
+			thenPush: filePointer]
 
 ]
 
@@ -476,66 +541,66 @@ FilePlugin >> primitiveFileOpen [
 FilePlugin >> primitiveFileRead [
 
 	| count startIndex array file byteSize arrayIndex bytesRead |
-	self var: 'file' declareC: 'SQFile *file'.
-	self var: 'arrayIndex' type:'char *'.
-	self var: 'count' type:'size_t'.
-	self var: 'startIndex' type:'size_t'.
-	self var: 'byteSize' type:'size_t'.
-	self export: true.
-	count		_ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	startIndex	_ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
-	array		_ interpreterProxy stackValue: 2.
-	file			_ self fileValueOf: (interpreterProxy stackValue: 3).
+	<var: 'file' type: 'SQFile *'>
+	<var: 'arrayIndex' type: 'char *'>
+	<var: 'count' type: 'size_t'>
+	<var: 'startIndex' type: 'size_t'>
+	<var: 'byteSize' type: 'size_t'>
+	<export: true>
+
+	count		:= interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	startIndex	:= interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
+	array		:= interpreterProxy stackValue: 2.
+	file			:= self fileValueOf: (interpreterProxy stackValue: 3).
 
 	"buffer can be any indexable words or bytes object except CompiledMethod"
 	(interpreterProxy isWordsOrBytes: array) 
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse: [^interpreterProxy primitiveFail].
 
 	(interpreterProxy isWords: array)
-		ifTrue: [ byteSize _ 4 ]
-		ifFalse: [ byteSize _ 1 ].
+		ifTrue: [byteSize := 4]
+		ifFalse: [byteSize := 1].
 	((startIndex >= 1) and:
 		[(startIndex + count - 1) <= (interpreterProxy slotSizeOf: array)])
-			ifFalse:[^interpreterProxy primitiveFail].
+			ifFalse: [^interpreterProxy primitiveFail].
 
-	arrayIndex _ interpreterProxy firstIndexableField: array.
+	arrayIndex := interpreterProxy firstIndexableField: array.
 	"Note: adjust startIndex for zero-origin indexing"
-	bytesRead _ self sqFile: file Read: (count * byteSize)
-					 Into: (self cCoerce: arrayIndex to: 'int')
-					   At: ((startIndex - 1) * byteSize).
-	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 5.  "pop rcvr, file, array, startIndex, count"
-		interpreterProxy pushInteger: bytesRead // byteSize.  "push # of elements read"
-	].
+	bytesRead := self
+		sqFile: file Read: (count * byteSize)
+		Into: arrayIndex
+		At: ((startIndex - 1) * byteSize).
+	interpreterProxy failed ifFalse: [
+		interpreterProxy pop: 5 "pop rcvr, file, array, startIndex, count"
+			thenPush:(interpreterProxy integerObjectOf: bytesRead // byteSize).  "push # of elements read"].
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileRename [
+
 	| oldNamePointer newNamePointer oldNameIndex oldNameSize newNameIndex newNameSize  okToRename |
-	self var: 'oldNameIndex' type: 'char *'.
-	self var: 'newNameIndex' type: 'char *'.
-	self export: true.
-	newNamePointer _ interpreterProxy stackValue: 0.
-	oldNamePointer _ interpreterProxy stackValue: 1.
+	<var: 'oldNameIndex' type: 'char *'>
+	<var: 'newNameIndex' type: 'char *'>
+	<export: true>
+
+	newNamePointer := interpreterProxy stackValue: 0.
+	oldNamePointer := interpreterProxy stackValue: 1.
 	((interpreterProxy isBytes: newNamePointer)
 			and: [interpreterProxy isBytes: oldNamePointer])
-		ifFalse: [^ interpreterProxy primitiveFail].
-	newNameIndex _ interpreterProxy firstIndexableField: newNamePointer.
-	newNameSize _ interpreterProxy byteSizeOf: newNamePointer.
-	oldNameIndex _ interpreterProxy firstIndexableField: oldNamePointer.
-	oldNameSize _ interpreterProxy byteSizeOf: oldNamePointer.
-	"If the security plugin can be loaded, use it to check for rename 
-	permission.
+		ifFalse: [^interpreterProxy primitiveFail].
+	newNameIndex := interpreterProxy firstIndexableField: newNamePointer.
+	newNameSize := interpreterProxy byteSizeOf: newNamePointer.
+	oldNameIndex := interpreterProxy firstIndexableField: oldNamePointer.
+	oldNameSize := interpreterProxy byteSizeOf: oldNamePointer.
+	"If the security plugin can be loaded, use it to check for rename permission.
 	If not, assume it's ok"
 	sCRFfn ~= 0
-		ifTrue: [okToRename _ self cCode: ' ((int (*) (char *, int)) sCRFfn)(oldNameIndex, oldNameSize)'.
+		ifTrue: [okToRename := self cCode: ' ((sqInt (*)(char *, sqInt))sCRFfn)(oldNameIndex, oldNameSize)'.
 			okToRename
-				ifFalse: [^ interpreterProxy primitiveFail]].
+				ifFalse: [^interpreterProxy primitiveFail]].
 	self
-		sqFileRenameOld: (self cCoerce: oldNameIndex to: 'int')
-		Size: oldNameSize
-		New: (self cCoerce: newNameIndex to: 'int')
-		Size: newNameSize.
+		sqFileRenameOld: oldNameIndex Size: oldNameSize
+		New: newNameIndex Size: newNameSize.
 	interpreterProxy failed
 		ifFalse: [interpreterProxy pop: 2]
 ]
@@ -543,15 +608,15 @@ FilePlugin >> primitiveFileRename [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileSetPosition [
 	| newPosition file sz |
-	self var: 'file' declareC: 'SQFile *file'.
-	self var: 'newPosition' type: 'squeakFileOffsetType'.
-	self export: true.
+	<var: 'file' type: 'SQFile *'>
+	<var: 'newPosition' type: 'squeakFileOffsetType'>
+	<export: true>
 	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0)) ifFalse:
-		[sz _ self cCode: 'sizeof(squeakFileOffsetType)'.
+		[sz := self cCode: 'sizeof(squeakFileOffsetType)'.
 		(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) > sz 
 			ifTrue: [^interpreterProxy primitiveFail]].
-	newPosition _ interpreterProxy positive64BitValueOf: (interpreterProxy stackValue: 0).
-	file _ self fileValueOf: (interpreterProxy stackValue: 1).
+	newPosition := interpreterProxy positive64BitValueOf: (interpreterProxy stackValue: 0).
+	file := self fileValueOf: (interpreterProxy stackValue: 1).
 	interpreterProxy failed ifFalse:[
 		self sqFile: file SetPosition: newPosition ].
 	interpreterProxy failed ifFalse:[
@@ -561,84 +626,120 @@ FilePlugin >> primitiveFileSetPosition [
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileSize [
 	| file size |
-	self var: 'file' declareC: 'SQFile *file'.
-	self var: 'size' type: 'squeakFileOffsetType'.
-	self export: true.
-	file _ self fileValueOf: (interpreterProxy stackValue: 0).
-	interpreterProxy failed ifFalse:[size _ self sqFileSize: file].
+	<var: 'file' type: 'SQFile *'>
+	<var: 'size' type: 'squeakFileOffsetType'>
+	<export: true>
+	file := self fileValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifFalse:[size := self sqFileSize: file].
 	interpreterProxy failed ifFalse: [
-		interpreterProxy pop: 2.
-		interpreterProxy push: (interpreterProxy positive64BitIntegerFor: size)].
+		interpreterProxy pop: 2 thenPush: (interpreterProxy positive64BitIntegerFor: size)].
+]
+
+{ #category : #'file primitives' }
+FilePlugin >> primitiveFileStdioHandles [
+	"Answer an Array of file handles for standard in, standard out and standard error,
+	 with nil in entries that are unvailable, e.g. because the platform does not provide
+	 standard error, etc.  Fail if there are no standard i/o facilities on the platform or
+	 if the security plugin denies access or if memory runs out."
+	| fileRecords result validMask |
+	<export: true>
+	<var: 'fileRecords' declareC: 'SQFile fileRecords[3]'>
+	sHFAfn ~= 0 ifTrue:
+		[(self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]) ifFalse:
+			[^interpreterProxy primitiveFailFor: PrimErrUnsupported]].
+	validMask := self sqFileStdioHandlesInto: (self addressOf: fileRecords).
+	validMask = 0 ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrUnsupported].
+	result := interpreterProxy instantiateClass: interpreterProxy classArray indexableSize: 3.
+	result = nil ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrNoMemory].
+	interpreterProxy pushRemappableOop: result.
+	0 to: 2 do:
+		[:index|
+		(validMask bitAnd: (1 << index)) ~= 0 ifTrue:
+			[result := interpreterProxy instantiateClass: interpreterProxy classByteArray indexableSize: self fileRecordSize.
+			 result = nil ifTrue:
+				[interpreterProxy popRemappableOop.
+				^interpreterProxy primitiveFailFor: PrimErrNoMemory].
+			 interpreterProxy storePointer: index ofObject: interpreterProxy topRemappableOop withValue: result.
+			 self mem: (interpreterProxy firstIndexableField: result)
+				cp: (self addressOf: (fileRecords at: index))
+				y: self fileRecordSize]].
+	 "In the threaded VM ensure the handles are old, so that sqFileReadIntoAt is unaffected
+	  by incremental GCs.  See platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c."
+	self cCode:
+			[self cPreprocessorDirective: '#if COGMTVM'.
+			 interpreterProxy fullGC.
+			 self cPreprocessorDirective: '#endif /* COGMTVM */']
+		inSmalltalk:
+			[interpreterProxy isThreadedVM ifTrue:
+				[interpreterProxy fullGC]].
+	result := interpreterProxy popRemappableOop.
+	interpreterProxy pop: 1 thenPush: result
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileTruncate [
+"ftruncate is not an ansi function so we have a macro to point to a suitable platform implementation" 
 	| truncatePosition file sz |
-	self var: 'file' declareC: 'SQFile *file'.
-	self var: 'truncatePosition' type: 'squeakFileOffsetType'.
-	self export: true.
-	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0)) ifFalse:
-		[sz _ self cCode: 'sizeof(squeakFileOffsetType)'.
-		(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) > sz 
-			ifTrue: [^interpreterProxy primitiveFail]].
-	truncatePosition _ interpreterProxy positive64BitValueOf: (interpreterProxy stackValue: 0).
-	file _ self fileValueOf: (interpreterProxy stackValue: 1).
-	interpreterProxy failed ifFalse:[
-		self sqFile: file Truncate: truncatePosition ].
-	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 2 "pop position, file; leave rcvr on stack" ].
+	<var: 'file' type: 'SQFile *'>
+	<var: 'truncatePosition' type: 'squeakFileOffsetType'>
+	<export: true>
+	(interpreterProxy isIntegerObject: (interpreterProxy stackValue: 0))
+		ifFalse: [sz := self cCode: 'sizeof(squeakFileOffsetType)'.
+			(interpreterProxy byteSizeOf: (interpreterProxy stackValue: 0)) > sz
+				ifTrue: [^ interpreterProxy primitiveFail]].
+	truncatePosition := interpreterProxy
+				positive64BitValueOf: (interpreterProxy stackValue: 0).
+	file := self fileValueOf: (interpreterProxy stackValue: 1).
+	interpreterProxy failed
+		ifFalse: [self sqFile: file Truncate: truncatePosition].
+	interpreterProxy failed
+		ifFalse: [interpreterProxy pop: 2 "pop position, file; leave rcvr on stack"]
 ]
 
 { #category : #'file primitives' }
 FilePlugin >> primitiveFileWrite [
-
 	| count startIndex array file byteSize arrayIndex bytesWritten |
-	self var: 'file' declareC: 'SQFile *file'.
-	self var: 'arrayIndex' type: 'char *'.
-	self var: 'count' type: 'size_t'.
-	self var: 'startIndex' type: 'size_t'.
-	self var: 'byteSize' type: 'size_t'.
-	self export: true.
-	count		_ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	startIndex	_ interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
-	array		_ interpreterProxy stackValue: 2.
-	file			_ self fileValueOf: (interpreterProxy stackValue: 3).
-
-	"buffer can be any indexable words or bytes object except CompiledMethod"
-	(interpreterProxy isWordsOrBytes: array) 
-		ifFalse:[^interpreterProxy primitiveFail].
-
+	<var: 'file' type: 'SQFile *'>
+	<var: 'arrayIndex' type: 'char *'>
+	<var: 'count' type: 'size_t'>
+	<var: 'startIndex' type: 'size_t'>
+	<var: 'byteSize' type: 'size_t'>
+	<export: true>
+	count := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	startIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
+	array := interpreterProxy stackValue: 2.
+	file := self fileValueOf: (interpreterProxy stackValue: 3).
+	"buffer can be any indexable words or bytes object except CompiledMethod "
+	(interpreterProxy isWordsOrBytes: array)
+		ifFalse: [^ interpreterProxy primitiveFail].
 	(interpreterProxy isWords: array)
-		ifTrue: [ byteSize _ 4 ]
-		ifFalse: [ byteSize _ 1 ].
-	((startIndex >= 1) and:
-		[(startIndex + count - 1) <= (interpreterProxy slotSizeOf: array)])
-			ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy failed ifFalse:[
-		arrayIndex _ interpreterProxy firstIndexableField: array.
-		"Note: adjust startIndex for zero-origin indexing"
-		bytesWritten _
-			self sqFile: file
-				Write: (count * byteSize)
-				From: (self cCoerce: arrayIndex to: 'int')
-				At: ((startIndex - 1) * byteSize).
-	].
-	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 5.  "pop rcvr, file, array, startIndex, count"
-		interpreterProxy pushInteger: bytesWritten // byteSize.  "push # of elements written"
-	].
+		ifTrue: [byteSize := 4]
+		ifFalse: [byteSize := 1].
+	(startIndex >= 1 and: [startIndex + count - 1 <= (interpreterProxy slotSizeOf: array)])
+		ifFalse: [^ interpreterProxy primitiveFail].
+	interpreterProxy failed
+		ifFalse: [arrayIndex := interpreterProxy firstIndexableField: array.
+			"Note: adjust startIndex for zero-origin indexing"
+			bytesWritten := self
+						sqFile: file
+						Write: count * byteSize
+						From: arrayIndex
+						At: startIndex - 1 * byteSize].
+	interpreterProxy failed
+		ifFalse: [interpreterProxy pop: 5 thenPush:( interpreterProxy integerObjectOf: bytesWritten // byteSize)]
 ]
 
 { #category : #'security primitives' }
 FilePlugin >> primitiveHasFileAccess [
 	|  hasAccess |
-	self export: true.
+	<export: true>
 	"If the security plugin can be loaded, use it to check . 
-	If not, assume 
-	it's ok"
+	If not, assume it's ok"
 	sHFAfn ~= 0
-		ifTrue: [hasAccess _ self cCode: ' ((int (*) (void)) sHFAfn)()' inSmalltalk: [true]]
-		ifFalse: [hasAccess _ true].
+		ifTrue: [hasAccess := self cCode: ' ((sqInt (*)(void))sHFAfn)()' inSmalltalk: [true]]
+		ifFalse: [hasAccess := true].
 	interpreterProxy pop: 1.
 	interpreterProxy pushBool: hasAccess
 ]
@@ -646,15 +747,15 @@ FilePlugin >> primitiveHasFileAccess [
 { #category : #'file primitives' }
 FilePlugin >> setMacFile: fileName Type: typeString AndCreator: creatorString [
 	"Exported entry point for the VM. Needed for image saving only and no-op on anything but Macs."
-	self export: true. "Must be exported for image file write"
-	self var: #fileName type: 'char *'.
-	self var: #typeString type: 'char *'.
-	self var: #creatorString type: 'char *'.
+	<export: true>
+	<var: #fileName type: 'char *'>
+	<var: #typeString type: 'char *'>
+	<var: #creatorString type: 'char *'>
 	^self cCode: 'dir_SetMacFileTypeAndCreator(fileName, strlen(fileName), typeString, creatorString)'.
 ]
 
 { #category : #'initialize-release' }
 FilePlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'sqFileShutdown()' inSmalltalk:[true]
 ]

@@ -59,27 +59,15 @@ RePlugin class >> declareCVarsIn: cg [
 
 	cg addHeaderFile:'"rePlugin.h"'.
 
-	"Memory Managament Error Checking"
+	"Memory Management Error Checking"
 	cg var: 'netMemory' 	declareC: 'int netMemory = 0'.
 	cg var: 'numAllocs' 	declareC: 'int numAllocs = 0'.
 	cg var: 'numFrees' 		declareC: 'int numFrees = 0'.
 	cg var: 'lastAlloc'		declareC: 'int lastAlloc = 0'.
 
-	"The receiver Object Pointer"
-	cg var: 'rcvr'			declareC: 'int rcvr'.
-
-	"Instance Variables of Receiver Object"
-	cg var: 'patternStr'		declareC: 'int patternStr'.
-	cg var: 'compileFlags'	declareC: 'int compileFlags'.
-	cg var: 'pcrePtr'		declareC: 'int pcrePtr'.
-	cg var: 'extraPtr'		declareC: 'int extraPtr'.
-	cg var: 'errorStr'		declareC: 'int errorStr'.
-	cg var: 'errorOffset'	declareC: 'int errorOffset'.
-	cg var: 'matchFlags'	declareC: 'int matchFlags'.
-
 	"Support Variables for Access to Receiver Instance Variables"
-	cg var: 'patternStrPtr' declareC: 'const char * patternStrPtr'.
-	cg var: 'errorStrBuffer'	declareC: 'const char * errorStrBuffer'.
+	cg var: 'patternStrPtr' type: 'const char * '.
+	cg var: 'errorStrBuffer'	type: 'const char * '.
 ]
 
 { #category : #'plugin code generation' }
@@ -104,19 +92,19 @@ RePlugin class >> requiresCrossPlatformFiles [
 RePlugin >> allocateByteArrayAndSetRcvrExtraPtrFrom: anExtraPtr [
 
 	| extraObject extraByteArrayPtr |
-	self var: #extraByteArrayPtr declareC: 'void *extraByteArrayPtr'.
+	<var: #extraByteArrayPtr type: 'void *'>
 
 	anExtraPtr
-		ifFalse: [extraObject _ interpreterProxy nilObject]
+		ifFalse: [extraObject := interpreterProxy nilObject]
 		ifTrue: [
 			"Allocate a Smalltalk ByteArray -- lastAlloc contains the length"
-			extraObject _ interpreterProxy
+			extraObject := interpreterProxy
 						instantiateClass: (interpreterProxy classByteArray) 
 						indexableSize: (self cCode: 'sizeof(real_pcre_extra)').
 			self loadRcvrFromStackAt: 0. "Assume garbage collection after instantiation"
 
 			"Copy from the C bytecode buffer to the Smalltalk ByteArray"
-			extraByteArrayPtr _ interpreterProxy arrayValueOf: extraObject.	
+			extraByteArrayPtr := interpreterProxy arrayValueOf: extraObject.	
 			self cCode:'memcpy(extraByteArrayPtr, (void *) anExtraPtr, sizeof(real_pcre_extra))'].
  
 	"Set rcvrErrorStr from errorStr and Return"
@@ -130,16 +118,16 @@ RePlugin >> allocateByteArrayAndSetRcvrExtraPtrFrom: anExtraPtr [
 RePlugin >> allocateByteArrayAndSetRcvrPCREPtrFromPCRE: aPCREPtr [
 
 	| patObject patByteArrayPtr |
-	self var: #patByteArrayPtr declareC: 'void *patByteArrayPtr'.
+	<var: #patByteArrayPtr type: 'void *'>
 
 	"Allocate a Smalltalk ByteArray -- lastAlloc contains the length"
-	patObject _ interpreterProxy
+	patObject := interpreterProxy
 				instantiateClass: (interpreterProxy classByteArray) 
 				indexableSize: lastAlloc.
 	self loadRcvrFromStackAt: 0. "Assume garbage collection after instantiation"
 
 	"Copy from the C bytecode buffer to the Smalltalk ByteArray"
-	patByteArrayPtr _ interpreterProxy arrayValueOf: patObject.	
+	patByteArrayPtr := interpreterProxy arrayValueOf: patObject.	
 	self cCode:'memcpy(patByteArrayPtr, (void *) aPCREPtr, lastAlloc)'.
  
 	"Set rcvrErrorStr from errorStr and Return"
@@ -153,17 +141,17 @@ RePlugin >> allocateByteArrayAndSetRcvrPCREPtrFromPCRE: aPCREPtr [
 RePlugin >> allocateStringAndSetRcvrErrorStrFromCStr: aCStrBuffer [
 
 	|length errorStrObj errorStrObjPtr |
-	self var: #aCStrBuffer declareC: 'const char *aCStrBuffer'.
-	self var: #errorStrObjPtr declareC: 'void *errorStrObjPtr'.
+	<var: #aCStrBuffer type: 'const char *'>
+	<var: #errorStrObjPtr type: 'void *'>
 	"Allocate errorStrObj"
-	length _ self cCode: 'strlen(aCStrBuffer)'.
-	errorStrObj _ interpreterProxy
+	length := self cCode: 'strlen(aCStrBuffer)'.
+	errorStrObj := interpreterProxy
 				instantiateClass: (interpreterProxy classString) 
 				indexableSize: length.
 	self loadRcvrFromStackAt: 0. "Assume garbage collection after instantiation"
 
 	"Copy aCStrBuffer to errorStrObj's buffer"
-	errorStrObjPtr _ interpreterProxy arrayValueOf: errorStrObj.	
+	errorStrObjPtr := interpreterProxy arrayValueOf: errorStrObj.	
 	self cCode:'memcpy(errorStrObjPtr,aCStrBuffer,length)'.
 	self touch: errorStrObjPtr; touch: errorStrObj.
 	"Set rcvrErrorStr from errorStrObj and Return"
@@ -174,15 +162,15 @@ RePlugin >> allocateStringAndSetRcvrErrorStrFromCStr: aCStrBuffer [
 { #category : #'rcvr linkage' }
 RePlugin >> loadRcvrFromStackAt: stackInteger [
 
-	self inline:true.
-	rcvr _ interpreterProxy stackObjectValue: stackInteger.
+	<inline:true>
+	rcvr := interpreterProxy stackObjectValue: stackInteger.
 
 ]
 
 { #category : #'memory management' }
 RePlugin >> primLastAlloc [
 	
-	self export: true.
+	<export: true>
 	interpreterProxy pop:1; pushInteger: lastAlloc
 
 ]
@@ -190,7 +178,7 @@ RePlugin >> primLastAlloc [
 { #category : #'memory management' }
 RePlugin >> primNetMemory [ 
 	
-	self export: true.
+	<export: true>
 	interpreterProxy pop:1; pushInteger: netMemory
 
 ]
@@ -198,7 +186,7 @@ RePlugin >> primNetMemory [
 { #category : #'memory management' }
 RePlugin >> primNumAllocs [
 
-	self export: true.
+	<export: true>
 	interpreterProxy pop:1; pushInteger: numAllocs
 
 ]
@@ -206,7 +194,7 @@ RePlugin >> primNumAllocs [
 { #category : #'memory management' }
 RePlugin >> primNumFrees [ 
 	
-	self export: true.
+	<export: true>
 	interpreterProxy pop:1; pushInteger: numFrees
 
 ]
@@ -221,25 +209,25 @@ RePlugin >> primPCRECompile [
 Compile the regular expression in patternStr, and if the compilation is successful, attempt to optimize the compiled expression.  Store the results in <pcrePtr> and <extratr>, or fill errorStr with a meaningful errorString and errorOffset with an indicator where the error was found, applying compileFlags throughout.  Answer nil with a clean compile (regardless of whether an optimization is possible, and answer with the string otherwise."
 
 
-	self export: true.
+	<export: true>
 	self loadRcvrFromStackAt: 0.
-	patternStrPtr _ self rcvrPatternStrPtr.
-	compileFlags _ self rcvrCompileFlags.
+	patternStrPtr := self rcvrPatternStrPtr.
+	compileFlags := self rcvrCompileFlags.
 	interpreterProxy failed ifTrue:[^ nil].
 
-	pcrePtr _ self cCode: '(int) pcre_compile(patternStrPtr, compileFlags, 
+	pcrePtr := self cCode: '(int) pcre_compile(patternStrPtr, compileFlags, 
 					&errorStrBuffer, &errorOffset, NULL)'.
 	pcrePtr
 		ifTrue: [
 			self allocateByteArrayAndSetRcvrPCREPtrFromPCRE: pcrePtr.
-			extraPtr _ self cCode: '(int) pcre_study((pcre *)pcrePtr, compileFlags, &errorStrBuffer)'.
+			extraPtr := self cCode: '(int) pcre_study((pcre *)pcrePtr, compileFlags, &errorStrBuffer)'.
 			self allocateByteArrayAndSetRcvrExtraPtrFrom: extraPtr.
 			self rePluginFree: (self cCoerce: pcrePtr to: 'void *').
 			extraPtr ifTrue: [self rePluginFree: (self cCoerce: extraPtr to: 'void *')].
 			interpreterProxy failed ifTrue:[^ nil].
 			interpreterProxy pop: 1 thenPush: interpreterProxy nilObject]
 		ifFalse: [
-			errorStr _ self allocateStringAndSetRcvrErrorStrFromCStr: errorStrBuffer.
+			errorStr := self allocateStringAndSetRcvrErrorStrFromCStr: errorStrBuffer.
 			self rcvrErrorOffsetFrom: errorOffset.
 			interpreterProxy failed ifTrue:[^ nil].
 			interpreterProxy pop: 1 thenPush: errorStr].
@@ -255,26 +243,25 @@ RePlugin >> primPCREExec [
 Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from calls to primPCRECompile), to smalltalk String searchObject using <matchOptions>.  If there is no match, answer nil.  Otherwise answer a ByteArray of offsets representing the results of the match."
 
 	| searchObject searchBuffer length  result matchSpacePtr matchSpaceSize |
-	self export: true.
-	self var:#searchBuffer	declareC: 'char *searchBuffer'.
-	self var:#matchSpacePtr	declareC: 'int *matchSpacePtr'.
-	self var:#result			declareC: 'int result'.
+	<export: true>
+	<var:#searchBuffer	type: 'char *'>
+	<var:#matchSpacePtr	type: 'int *'>
 	
 	"Load Parameters"
-	searchObject _ interpreterProxy stackObjectValue: 0.	
-	searchBuffer _ interpreterProxy arrayValueOf: searchObject.
-	length _ interpreterProxy byteSizeOf: searchObject.
+	searchObject := interpreterProxy stackObjectValue: 0.	
+	searchBuffer := interpreterProxy arrayValueOf: searchObject.
+	length := interpreterProxy byteSizeOf: searchObject.
 	self loadRcvrFromStackAt: 1.
 	"Load Instance Variables"
-	pcrePtr _ self rcvrPCREBufferPtr.
-	extraPtr _ self rcvrExtraPtr.
-	matchFlags _ self rcvrMatchFlags.
-	matchSpacePtr _ self rcvrMatchSpacePtr.
-	matchSpaceSize _ self rcvrMatchSpaceSize.
+	pcrePtr := self rcvrPCREBufferPtr.
+	extraPtr := self rcvrExtraPtr.
+	matchFlags := self rcvrMatchFlags.
+	matchSpacePtr := self rcvrMatchSpacePtr.
+	matchSpaceSize := self rcvrMatchSpaceSize.
 
 	interpreterProxy failed ifTrue:[^ nil].
 	
-	result _ self 
+	result := self 
 		cCode: 'pcre_exec((pcre *)pcrePtr, (pcre_extra *)extraPtr, 
 				searchBuffer, length, 0, matchFlags, matchSpacePtr, matchSpaceSize)'.
 
@@ -295,40 +282,37 @@ RePlugin >> primPCREExecfromto [
 Apply the regular expression (stored in <pcrePtr> and <extratr>, generated from calls to primPCRECompile), to smalltalk String searchObject using <matchOptions>, beginning at offset <fromInteger> and continuing until offset <toInteger>.  If there is no match, answer nil.  Otherwise answer a ByteArray of offsets representing the results of the match."
 
 	| searchObject searchBuffer length  result matchSpacePtr matchSpaceSize fromInteger toInteger |
-	self export: true.
-	self var:#searchBuffer	declareC: 'char *searchBuffer'.
-	self var:#fromInteger declareC: 'int fromInteger'.
-	self var:#toInteger declareC: 'int toInteger'.
-	self var:#matchSpacePtr	declareC: 'int *matchSpacePtr'.
-	self var:#result			declareC: 'int result'.
+	<export: true>
+	<var:#searchBuffer	type: 'char *'>
+	<var:#matchSpacePtr	type: 'int *'>
 	
 	"Load Parameters"
-	toInteger _ interpreterProxy stackIntegerValue: 0.
-	fromInteger _ interpreterProxy stackIntegerValue: 1.
-	searchObject _ interpreterProxy stackObjectValue: 2.	
-	searchBuffer _ interpreterProxy arrayValueOf: searchObject.
-	length _ interpreterProxy byteSizeOf: searchObject.
+	toInteger := interpreterProxy stackIntegerValue: 0.
+	fromInteger := interpreterProxy stackIntegerValue: 1.
+	searchObject := interpreterProxy stackObjectValue: 2.	
+	searchBuffer := interpreterProxy arrayValueOf: searchObject.
+	length := interpreterProxy byteSizeOf: searchObject.
 	self loadRcvrFromStackAt: 3.
 
 	"Validate parameters"
 	interpreterProxy success: (1 <= fromInteger).
 	interpreterProxy success: (toInteger<=length).
-	fromInteger _ fromInteger - 1. "Smalltalk offsets are 1-based"
+	fromInteger := fromInteger - 1. "Smalltalk offsets are 1-based"
 	interpreterProxy success: (fromInteger<=toInteger).
 
 	"adjust length, searchBuffer"
-	length _ toInteger - fromInteger.
-	searchBuffer _ searchBuffer + fromInteger.
+	length := toInteger - fromInteger.
+	searchBuffer := searchBuffer + fromInteger.
 
 	"Load Instance Variables"
-	pcrePtr _ self rcvrPCREBufferPtr.
-	extraPtr _ self rcvrExtraPtr.
-	matchFlags _ self rcvrMatchFlags.
-	matchSpacePtr _ self rcvrMatchSpacePtr.
-	matchSpaceSize _ self rcvrMatchSpaceSize.
+	pcrePtr := self rcvrPCREBufferPtr.
+	extraPtr := self rcvrExtraPtr.
+	matchFlags := self rcvrMatchFlags.
+	matchSpacePtr := self rcvrMatchSpacePtr.
+	matchSpaceSize := self rcvrMatchSpaceSize.
 	interpreterProxy failed ifTrue:[^ nil].
 	
-	result _ self 
+	result := self 
 		cCode: 'pcre_exec((pcre *)pcrePtr, (pcre_extra *)extraPtr, 
 				searchBuffer, length, 0, matchFlags, matchSpacePtr, matchSpaceSize)'.
 	interpreterProxy pop: 2; pushInteger: result.
@@ -347,12 +331,12 @@ RePlugin >> primPCRENumSubPatterns [
 
 Return the number of subpatterns captured by the compiled pattern."
 
-	self export: true.
+	<export: true>
 	
 	"Load Parameters"
 	self loadRcvrFromStackAt: 0.
 	"Load Instance Variables"
-	pcrePtr _ self rcvrPCREBufferPtr.
+	pcrePtr := self rcvrPCREBufferPtr.
 	interpreterProxy pop: 1; pushInteger: (self cCode: 'pcre_info((pcre *)pcrePtr, NULL, NULL)').
 
 ]
@@ -360,7 +344,7 @@ Return the number of subpatterns captured by the compiled pattern."
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrCompileFlags [
 
-	self inline:true.
+	<inline:true>
 	^interpreterProxy fetchInteger: 1 ofObject: rcvr.
 
 ]
@@ -368,7 +352,7 @@ RePlugin >> rcvrCompileFlags [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrErrorOffsetFrom: anInteger [
 
-	self inline: true.
+	<inline: true>
 	interpreterProxy storeInteger: 5 ofObject: rcvr withValue: anInteger.
 
 ]
@@ -376,7 +360,7 @@ RePlugin >> rcvrErrorOffsetFrom: anInteger [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrErrorStrFrom: aString [
 
-	self inline: true.
+	<inline: true>
 	interpreterProxy 
 		storePointer: 4
 		ofObject: rcvr 
@@ -388,8 +372,8 @@ RePlugin >> rcvrErrorStrFrom: aString [
 RePlugin >> rcvrExtraPtr [
 
 	|extraObj|
-	self inline: true.
-	extraObj _ interpreterProxy fetchPointer: 3 ofObject: rcvr.
+	<inline: true>
+	extraObj := interpreterProxy fetchPointer: 3 ofObject: rcvr.
 	(extraObj = (interpreterProxy nilObject))
 		ifTrue: [^ self cCode: '(int) NULL'].
 	^self 
@@ -400,7 +384,7 @@ RePlugin >> rcvrExtraPtr [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrExtraPtrFrom: aByteArrayOrNilObject [
 
-	self inline: true.
+	<inline: true>
 	interpreterProxy 
 		storePointer: 3 
 		ofObject: rcvr 
@@ -410,7 +394,7 @@ RePlugin >> rcvrExtraPtrFrom: aByteArrayOrNilObject [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrMatchFlags [
 
-	self inline: true.
+	<inline: true>
 	^interpreterProxy fetchInteger: 6 ofObject: rcvr.
 
 ]
@@ -418,8 +402,8 @@ RePlugin >> rcvrMatchFlags [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrMatchSpacePtr [
 
-	self inline: true.
-	self returnTypeC: 'int *'.
+	<inline: true>
+	<returnTypeC: 'int *'>
 	^self
 		cCoerce: (interpreterProxy fetchArray: 7 ofObject: rcvr)
 		to: 'int *'.
@@ -428,14 +412,14 @@ RePlugin >> rcvrMatchSpacePtr [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrMatchSpaceSize [
 
-	self inline: true.
+	<inline: true>
 	^(interpreterProxy byteSizeOf: (interpreterProxy fetchPointer: 7 ofObject: rcvr))//4.
 ]
 
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrPCREBufferFrom: aByteArray [
 
-	self inline: true.
+	<inline: true>
 	interpreterProxy 
 		storePointer: 2 
 		ofObject: rcvr 
@@ -445,7 +429,7 @@ RePlugin >> rcvrPCREBufferFrom: aByteArray [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrPCREBufferPtr [
 
-	self inline: true.
+	<inline: true>
 	^self
 		cCoerce: (interpreterProxy fetchArray: 2 ofObject: rcvr)
 		to: 'int'.
@@ -454,8 +438,8 @@ RePlugin >> rcvrPCREBufferPtr [
 { #category : #'rcvr linkage' }
 RePlugin >> rcvrPatternStrPtr [
 
-	self inline: true.
-	self returnTypeC: 'char *'.
+	<inline: true>
+	<returnTypeC: 'char *'>
 	^self 
 		cCoerce: (interpreterProxy fetchArray: 0 ofObject: rcvr) 
 		to: 'char *'.
@@ -465,11 +449,11 @@ RePlugin >> rcvrPatternStrPtr [
 RePlugin >> rePluginFree: aPointer [
 	"Free a block of fixed memory allocated with rePluginMalloc.  Instrumented version of C free() to facilitate leak analysis from Smalltalk.   OS-specific variations on malloc/free, such as with MacOS, are handled by adding a C macro to the header file redefining malloc/free -- see the class comment"
 
-	self inline: true.
-	self var: #aPointer declareC: 'void * aPointer'.
-	self returnTypeC: 'void'.
+	<inline: true>
+	<var: #aPointer type: 'void * '>
+	<returnTypeC: 'void'>
 
-	numFrees _ numFrees + 1.
+	numFrees := numFrees + 1.
 	(aPointer)
 		ifTrue: [self cCode: 'free(aPointer)']	
 ]
@@ -479,13 +463,13 @@ RePlugin >> rePluginMalloc: anInteger [
 	"Allocate a block of fixed memory using C calls to malloc().  Instrumented to facilitate leak analysis from Smalltalk.  Set global lastAlloc to anInteger.  OS-specific variations on malloc/free, such as with MacOS, are handled by adding a C macro to the header file redefining malloc/free -- see the class comment"
 
 	| aPointer |
-	self inline: true.
-	self var: #anInteger declareC: 'size_t anInteger'.
-	self var: #aPointer declareC: 'void *aPointer'.
-	self returnTypeC: 'void *'.
-	numAllocs _ numAllocs + 1.
-	(aPointer _ self cCode: 'malloc(anInteger)')
-		ifTrue: [lastAlloc _ anInteger].
+	<inline: true>
+	<var: #anInteger type: 'size_t '>
+	<var: #aPointer type: 'void *'>
+	<returnTypeC: 'void *'>
+	numAllocs := numAllocs + 1.
+	(aPointer := self cCode: 'malloc(anInteger)')
+		ifTrue: [lastAlloc := anInteger].
 	^aPointer
 
 ]

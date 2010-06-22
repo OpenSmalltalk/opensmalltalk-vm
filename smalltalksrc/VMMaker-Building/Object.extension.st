@@ -4,7 +4,7 @@ Extension { #name : #Object }
 Object >> asIf: aClass var: aString [
 
 	|index|
-	index _ aClass allInstVarNames 
+	index := aClass allInstVarNames 
 		indexOf: aString
 		ifAbsent: [self error: 'must use instVar name'].
 	^self instVarAt: index
@@ -22,7 +22,7 @@ Object >> asIf: aClass var: aString asValue: someClass [
 Object >> asIf: aClass var: aString put: aValue [
 
 	|index|
-	index _ aClass allInstVarNames 
+	index := aClass allInstVarNames 
 		indexOf: aString
 		ifAbsent: [self error: 'must use instVar name'].
 	^self instVarAt: index put: aValue
@@ -52,15 +52,22 @@ Object >> asValue: aClass [
 ]
 
 { #category : #'*VMMaker-translation support' }
+Object >> asmLabel: aBoolean [
+	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
 Object >> cCode: codeString [
 	"For translation only; noop when running in Smalltalk."
 ]
 
 { #category : #'*VMMaker-translation support' }
-Object >> cCode: codeString inSmalltalk: aBlock [
-	"Support for Smalltalk-to-C translation. The given string is output literally when generating C code. If this code is being simulated in Smalltalk, answer the result of evaluating the given block."
+Object >> cCode: codeStringOrBlock inSmalltalk: aBlock [
+	"Support for Smalltalk-to-C translation. The first argument is output when generating C code.
+	 But if this code is being simulated in Smalltalk, answer the result of evaluating the given block.
+	 If the first argument is a string it is output literally, and if it is a block it is translated."
 
-	^ aBlock value
+	^aBlock value
 
 ]
 
@@ -69,6 +76,47 @@ Object >> cCoerce: value to: cType [
 	"Type coercion for translation only; just return the value when running in Smalltalk."
 
 	^ value
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> cPreprocessorDirective: codeString [
+	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
+
+	cg emitLoad: aString asNakedOopFrom: anInteger on: aStream
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
+
+	cg emitCExpression: aNode on: aStream
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
+
+	cg emitCExpression: aNode on: aStream
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
+
+	^cg ccgLoad: aBlock expr: aString asKindOf: self from: anInteger
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccgCanConvertFrom: anObject [
+
+	^anObject isKindOf: self
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+Object class >> ccgDeclareCForVar: aSymbolOrString [
+
+	^'sqInt ', aSymbolOrString
 ]
 
 { #category : #'*VMMaker-translation support' }
@@ -91,10 +139,31 @@ Object >> inline: inlineFlag [
 ]
 
 { #category : #'*VMMaker-translation support' }
+Object >> isCObjectAccessor [
+
+	^ false
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> isTParseNode [
+	^false
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> primitive: primName [
+	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> primitive: primName parameters: parms [
+	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
 Object >> primitive: primID parameters: parmSpecs receiver: rcvrSpec [
 "belongs in CCG package"
 	| tMethod |
-	tMethod _ SmartSyntaxPluginTMethod new 
+	tMethod := SmartSyntaxPluginTMethod new 
 		fromContext: thisContext sender 
 		primitive: primID 
 		parameters: parmSpecs 
@@ -144,6 +213,11 @@ Object >> static: aBoolean [
 { #category : #'*VMMaker-translation support' }
 Object >> suppressFailureGuards: failureGuardFlag [
 	"For translation only; noop when running in Smalltalk."
+]
+
+{ #category : #'*VMMaker-translation support' }
+Object >> touch: something [
+	"For translation only; eliminated by CCodeGenerator"
 ]
 
 { #category : #'*VMMaker-translation support' }

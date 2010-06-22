@@ -23,7 +23,7 @@ CObjectAccessor >> + increment [
 
 { #category : #'pointer arithmetic' }
 CObjectAccessor >> += increment [
-	offset _ offset + increment
+	offset := offset + increment
 ]
 
 { #category : #'pointer arithmetic' }
@@ -33,7 +33,23 @@ CObjectAccessor >> - decrement [
 
 { #category : #'pointer arithmetic' }
 CObjectAccessor >> -= decrement [
-	offset _ offset - decrement
+	offset := offset - decrement
+]
+
+{ #category : #converting }
+CObjectAccessor >> asFloatAccessor [
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj floatAt: index]
+		atPutBlock: [:obj :index :value | obj floatAt: index put: value]
+]
+
+{ #category : #converting }
+CObjectAccessor >> asIntAccessor [
+
+	^ self asPluggableAccessor
+		atBlock: [:obj :index | obj intAt: index]
+		atPutBlock: [:obj :index :value | obj intAt: index put: value]
 ]
 
 { #category : #converting }
@@ -45,10 +61,15 @@ CObjectAccessor >> asOop: aClass [
 ]
 
 { #category : #converting }
+CObjectAccessor >> asPluggableAccessor [
+	^ (CPluggableAccessor on: object) += offset
+]
+
+{ #category : #converting }
 CObjectAccessor >> asPluggableAccessor: accessorArray [
 	^((CPluggableAccessor on: object) += offset)
-		readBlock: accessorArray first
-		writeBlock: accessorArray last
+		atBlock: accessorArray first
+		atPutBlock: accessorArray last
 ]
 
 { #category : #accessing }
@@ -64,12 +85,26 @@ CObjectAccessor >> at: index put: value [
 { #category : #converting }
 CObjectAccessor >> coerceTo: cTypeString sim: interpreterSimulator [
 
+	cTypeString = 'float *' ifTrue: [^ self asFloatAccessor].
+	cTypeString = 'int *' ifTrue: [^ self asIntAccessor].
 	^ self
 ]
 
 { #category : #private }
 CObjectAccessor >> getObject [
 	^object
+]
+
+{ #category : #accessing }
+CObjectAccessor >> isCObjectAccessor [
+
+	^ true
+]
+
+{ #category : #'initialize-release' }
+CObjectAccessor >> memory: anObject offset: baseIndex [
+	object := anObject.
+	offset := baseIndex
 ]
 
 { #category : #accessing }
@@ -103,6 +138,6 @@ CObjectAccessor >> printOnStream: aStream [
 
 { #category : #private }
 CObjectAccessor >> setObject: anObject [
-	object _ anObject.
-	offset _ 0.
+	object := anObject.
+	offset := 0.
 ]

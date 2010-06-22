@@ -17,11 +17,17 @@ SmartSyntaxInterpreterPlugin class >> codeGeneratorClass [
 { #category : #'instance creation' }
 SmartSyntaxInterpreterPlugin class >> doPrimitive: primitiveName withArguments: argArray [
 	| proxy plugin |
-	proxy _ InterpreterProxy new.
+	proxy := InterpreterProxy new.
 	proxy loadStackFrom: thisContext sender.
-	plugin _ (self simulatorClass ifNil: [self]) new.
+	plugin := (self simulatorClass ifNil: [self]) new.
 	plugin setInterpreter: proxy.
 	^plugin perform: primitiveName asSymbol withArguments: argArray
+]
+
+{ #category : #translation }
+SmartSyntaxInterpreterPlugin class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
 ]
 
 { #category : #translation }

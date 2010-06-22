@@ -3,13 +3,13 @@ This class provides the basic framework for creating VM plugins. Most of the use
 "
 Class {
 	#name : #InterpreterPlugin,
-	#superclass : #Object,
+	#superclass : #VMClass,
 	#instVars : [
 		'interpreterProxy',
 		'moduleName'
 	],
-	#classInstVars : [
-		'timeStamp'
+	#pools : [
+		'VMBasicConstants'
 	],
 	#category : #'VMMaker-Plugins'
 }
@@ -32,16 +32,14 @@ InterpreterPlugin class >> baseDirectoryName [
 { #category : #translation }
 InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
 	"Build a CCodeGenerator for the plugin"
-	 | cg theClass |
-	cg _ self codeGeneratorClass new initialize.
-	cg pluginName: self moduleName.
-	"Add an extra declaration for module name"
-	cg declareModuleName: self moduleNameAndVersion.
-
-	theClass _ aPluginClass.
-	[theClass == Object] whileFalse:[
-		cg addClass: theClass.
-		theClass _ theClass superclass].
+	| cg pluginClasses |
+	cg := self codeGeneratorClass new initialize.
+	cg pluginClass: self.
+	(pluginClasses := self pluginClassesUpTo: aPluginClass) do:
+		[:aClass| cg addClass: aClass].
+	(cg structClassesForTranslationClasses: pluginClasses) do:
+		[:structClasss| cg addStructClass: structClasss].
+	cg removeUnneededBuiltins.
 	^cg
 ]
 
@@ -71,9 +69,9 @@ InterpreterPlugin class >> declareHeaderFilesIn: aCCodeGenerator [
 { #category : #'instance creation' }
 InterpreterPlugin class >> doPrimitive: primitiveName [ 
 	| proxy plugin |
-	proxy _ InterpreterProxy new.
+	proxy := InterpreterProxy new.
 	proxy loadStackFrom: thisContext sender.
-	plugin _ self simulatorClass new.
+	plugin := self simulatorClass new.
 	plugin setInterpreter: proxy.
 	(plugin respondsTo: #initialiseModule) ifTrue:[plugin initialiseModule].
 	plugin perform: primitiveName asSymbol.
@@ -84,11 +82,6 @@ InterpreterPlugin class >> doPrimitive: primitiveName [
 InterpreterPlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^false
-]
-
-{ #category : #'class initialization' }
-InterpreterPlugin class >> initialize [
-	"Nothing to do ..."
 ]
 
 { #category : #accessing }
@@ -112,14 +105,36 @@ InterpreterPlugin class >> moduleName [
 InterpreterPlugin class >> moduleNameAndVersion [
 	"Answer the receiver's module name and version info that is used for the plugin's C code. The default is to append the code generation date, but any useful text is ok (keep it short)"
 
-	^ self moduleName, Character space asString, Date today asString
+	^ self moduleName
 ]
 
-{ #category : #compiling }
-InterpreterPlugin class >> noteCompilationOf: aSelector meta: isMeta [
-	"note the recompiliation by resetting the timeStamp "
-	self touch.
-	^super noteCompilationOf: aSelector meta: isMeta
+{ #category : #translation }
+InterpreterPlugin class >> pluginClassesUpTo: aPluginClass [
+	"Answer the classes to include for translation of aPluginClass, superclasses first, aPluginClass last."
+	| theClass classes |
+
+	classes := OrderedCollection new.
+	theClass := aPluginClass.
+	[theClass == Object
+	 or: [theClass == InterpreterSimulationObject
+	 or: [theClass == VMClass]]] whileFalse:
+		[classes addLast: theClass.
+		theClass := theClass superclass].
+	^classes reverse
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> preambleCCode [
+	"Defining this method to answer a string dumps that string in VMPluginCodeGenerator>>emitCHeaderOn:"
+	^nil
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"Hook to allow subclasses to interact with the code generation
+	 immediately before having their code assimilated.  e.g. a class
+	 might wish to remove methods it is about to override."
+	^self
 ]
 
 { #category : #translation }
@@ -163,35 +178,36 @@ InterpreterPlugin class >> storeString: s onFileNamed: fileName [
 	"Store the given string in a file of the given name."
 
 	| f |
-	f _ CrLfFileStream forceNewFileNamed: fileName.
+	f := CrLfFileStream forceNewFileNamed: fileName.
 	f nextPutAll: s.
 	f close.
-]
-
-{ #category : #accessing }
-InterpreterPlugin class >> timeStamp [
-	^timeStamp ifNil:[0]
-]
-
-{ #category : #accessing }
-InterpreterPlugin class >> touch [
-	timeStamp _ Time totalSeconds
 ]
 
 { #category : #translation }
 InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 "This is the default method for writing out sources for a plugin. Several classes need special handling, so look at all implementors of this message"
 	| cg fname fstat |
-	 fname _ self moduleName, '.c'.
+	 fname := self moduleName, '.c'.
 
 	"don't translate if the file is newer than my timeStamp"
-	fstat _ directory entryAt: fname ifAbsent:[nil].
-	fstat ifNotNil:[self timeStamp < fstat modificationTime ifTrue:[^nil]].
+	fstat := directory entryAt: fname ifAbsent:[nil].
+	fstat ifNotNil:
+		[((self pluginClassesUpTo: self) allSatisfy:
+				[:aPluginClass| aPluginClass timeStamp < fstat modificationTime]) ifTrue:
+			[^nil]].
 
 	self initialize.
-	cg _ self buildCodeGeneratorUpTo: self.
+	cg := self buildCodeGeneratorUpTo: self.
 	cg storeCodeOnFile:  (directory fullNameFor: fname) doInlining: inlineFlag.
 	^cg exportedPrimitiveNames asArray
+]
+
+{ #category : #initialize }
+InterpreterPlugin >> getInterpreter [
+	"Note: This is coded so that plugins can be run from Squeak."
+
+	<returnTypeC: 'VirtualMachine *'>
+	^interpreterProxy
 ]
 
 { #category : #initialize }
@@ -200,20 +216,22 @@ InterpreterPlugin >> getModuleName [
 	The module name is used for validating a module *after*
 	it is loaded to check if it does really contain the module
 	we're thinking it contains. This is important!"
-	self returnTypeC:'const char*'.
-	self export: true.
+	<returnTypeC:'const char*'>
+	<export: true>
 	^moduleName
 ]
 
 { #category : #debugging }
 InterpreterPlugin >> halt [
 	self cCode: '' inSmalltalk: [nil halt].
+	^0
 ]
 
 { #category : #debugging }
 InterpreterPlugin >> msg: s [ 
-	self var: #s declareC: 'char *s'.
-	self cCode: 'fprintf(stderr, "\n%s: %s", moduleName, s)' inSmalltalk: [Transcript cr; show: self class moduleName , ': ' , s; endEntry]
+	<var: #s type: 'char *'>
+	self cCode: 'fprintf(stderr, "\n%s: %s", moduleName, s)' inSmalltalk: [Transcript cr; show: self class moduleName , ': ' , s; endEntry].
+	^0
 ]
 
 { #category : #initialize }
@@ -221,11 +239,11 @@ InterpreterPlugin >> setInterpreter: anInterpreter [
 	"Note: This is coded so that is can be run from Squeak."
 
 	| ok |
-	self export: true.
-	self var: #anInterpreter type: #'struct VirtualMachine*'.
-	interpreterProxy _ anInterpreter.
-	ok _ self cCode: 'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'.
+	<export: true>
+	<var: #anInterpreter type: #'struct VirtualMachine*'>
+	interpreterProxy := anInterpreter.
+	ok := self cCode: 'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'.
 	ok == false ifTrue: [^ false].
-	ok _ self cCode: 'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'.
+	ok := self cCode: 'interpreterProxy->minorVersion() >= VM_PROXY_MINOR'.
 	^ ok
 ]

@@ -84,7 +84,8 @@ Class {
 		'platformRootDirName',
 		'logger',
 		'allFilesList',
-		'interpreterClassName'
+		'interpreterClassName',
+		'is64BitVM'
 	],
 	#classVars : [
 		'DirNames'
@@ -112,16 +113,20 @@ VMMaker class >> coreVMDirName [
 { #category : #initialisation }
 VMMaker class >> default [
 	"return a VMMaker initialised to build a default no-internal-plugins, no-external-plugins vm codebase"
-	^self forPlatform: Smalltalk platformName
+	^self forPlatform: (true
+						ifTrue: ['Cross'] 
+						ifFalse: [SmalltalkImage current platformName])
 ]
 
 { #category : #initialisation }
 VMMaker class >> forConfigurationFile: aFileName [
-	| config  fileStream vmMaker |
+	| config fileStream vmMaker |
 
-	fileStream _ FileStream oldFileNamed: aFileName.
-	config _ fileStream fileInObjectAndCode.
-	vmMaker _ self forPlatform: (config at: 5).
+	fileStream := FileStream oldFileNamed: aFileName.
+	config := ('#(' includes: fileStream peek) "for storeOn: format"
+				ifTrue: [Object readFrom: fileStream]
+				ifFalse: [fileStream fileInObjectAndCode].
+	vmMaker := self forPlatform: (config at: 5).
 	vmMaker loadConfiguration: config.
 	^vmMaker
 ]
@@ -132,10 +137,62 @@ VMMaker class >> forPlatform: platformName [
 	^(self activeVMMakerClassFor: platformName) new initialize setPlatName: platformName
 ]
 
+{ #category : #utilities }
+VMMaker class >> generate: interpreterClass to: srcDirName excluding: exclusions [
+	"Generate the VM to the given target directory. Exclude plugins in pluginList.
+	Example:
+		VMMaker
+			generate: CoInterpreter
+			to: (FileDirectory default pathFromURI: '../src')
+			excluding:#(
+				BrokenPlugin DShowVideoDecoderPlugin IA32ABIPluginSimulator
+				NewsqueakIABIPlugin NewsqueakIABIPluginAttic
+				QuicktimePlugin QVideoCodecPlugin QwaqMediaPlugin
+				SlangTestPlugin TestOSAPlugin ThreadedFFIPlugin 
+				Win32OSProcessPlugin
+			).
+	"
+	| maker |
+	maker := self forPlatform: 'Cross'.
+	maker sourceDirectoryName: srcDirName.
+	maker interpreterClassName: interpreterClass name.
+	maker externalModules addAll: 
+		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
+	maker generateEntire.
+
+]
+
+{ #category : #utilities }
+VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirName excluding: exclusions [
+	"Generate the VM to the given target directory. Exclude plugins in pluginList.
+	Example:
+		VMMaker
+			generate: CoInterpreter
+			to: (FileDirectory default pathFromURI: '../src')
+			platformDir: (FileDirectory default pathFromURI: '../platforms')
+			excluding:#(
+				BrokenPlugin DShowVideoDecoderPlugin IA32ABIPluginSimulator
+				NewsqueakIABIPlugin NewsqueakIABIPluginAttic
+				QuicktimePlugin QVideoCodecPlugin QwaqMediaPlugin
+				SlangTestPlugin TestOSAPlugin ThreadedFFIPlugin 
+				Win32OSProcessPlugin
+			).
+	"
+	| maker |
+	maker := self forPlatform: 'Cross'.
+	maker sourceDirectoryName: srcDirName.
+	maker platformRootDirectoryName: platDirName.
+	maker interpreterClassName: interpreterClass name.
+	maker externalModules addAll: 
+		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
+	maker generateEntire.
+
+]
+
 { #category : #initialisation }
 VMMaker class >> initialize [
 	"VMMaker initialize"
-	DirNames _ Dictionary new.
+	DirNames := Dictionary new.
 	DirNames at: #coreVMDir put: 'vm';
 		at: #platformsDir put: 'platforms';
 		at: #pluginsDir put: 'plugins';
@@ -151,7 +208,7 @@ VMMaker class >> isActiveVMMakerClassFor: platformName [
 
 { #category : #accessing }
 VMMaker class >> machinesDirName [
-	^DirNames at: #machineType ifAbsent:[Smalltalk platformName]
+	^DirNames at: #machineType ifAbsent:[SmalltalkImage current platformName]
 ]
 
 { #category : #accessing }
@@ -167,6 +224,14 @@ VMMaker class >> pluginsDirName [
 { #category : #accessing }
 VMMaker class >> sourceDirName [
 	^DirNames at: #sourceDir
+]
+
+{ #category : #'version testing' }
+VMMaker class >> versionString [
+
+	"VMMaker versionString"
+
+	^'3.8b5-64.2'
 ]
 
 { #category : #'plugin lists' }
@@ -188,6 +253,12 @@ VMMaker >> availablePlugins [
 	^allPlugins
 ]
 
+{ #category : #initialize }
+VMMaker >> bytesPerWord [
+	"Return the bytes in a word for the chosen 32bit/64bit pointer setup chosen"
+	^is64BitVM ifTrue:[8] ifFalse:[4]
+]
+
 { #category : #'plugin lists' }
 VMMaker >> canSupportPlugin: pluginClassName [ 
 	"see if this plugin needs any external files and if so, check to see if 
@@ -201,16 +272,32 @@ VMMaker >> canSupportPlugin: pluginClassName [
 { #category : #'objects from disk' }
 VMMaker >> configurationInfo [
 	"build a simple Array of the configuration information that would be 
-	usefully saved for later reloading:- 
-	the list of internal & external plugins, the flags, the platform name, and the two major directory names"
-	^ Array new writeStream nextPut: internalPlugins;
-		 nextPut: externalPlugins;
-		 nextPut: inline;
-		 nextPut: forBrowser;
-		 nextPut: platformName;
-		 nextPut: self sourceDirectory pathName;
-		 nextPut: self platformRootDirectory pathName;
-	contents
+	 usefully saved for later reloading:- 
+		the list of internal & external plugins,
+		the flags,
+		the platform name,
+		the two major directory names,
+		bytePerWord
+		two flags indicating whether each directory is relative to the current directory or not.
+		the interpreter class name"
+	| isRelative makeRelative |
+	isRelative := [:pn| pn beginsWith: FileDirectory default pathName].
+	makeRelative := [:pn|
+					(isRelative value: pn)
+						ifTrue: [pn allButFirst: FileDirectory default pathName size + 1]
+						ifFalse: [pn]].
+	^{ internalPlugins asArray.
+		externalPlugins asArray.
+		inline.
+		forBrowser.
+		platformName.
+		makeRelative value: self sourceDirectory pathName.
+		makeRelative value: self platformRootDirectory pathName.
+		self bytesPerWord.
+		isRelative value: self sourceDirectory pathName.
+		isRelative value: self platformRootDirectory pathName.
+		self interpreterClassName
+	  }
 ]
 
 { #category : #'copying files' }
@@ -221,26 +308,26 @@ VMMaker >> copyAssortedFiles [
 	| srcDir |
 	"Is there a crossPlatformDirectory subdirectory called 'misc'?"
 	(self crossPlatformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir _ self crossPlatformDirectory directoryNamed: 'misc'.
+		ifTrue: [srcDir := self crossPlatformDirectory directoryNamed: 'misc'.
 			"Is there a subdirectory called 'ToCopy' ?"
 			(srcDir directoryExists: 'ToCopy') ifTrue:[
-				srcDir _ srcDir directoryNamed: 'ToCopy'.
+				srcDir := srcDir directoryNamed: 'ToCopy'.
 				self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory]].
 	"Is there a platformDirectory subdirectory called 'misc'?"
 	(self platformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir _ self platformDirectory directoryNamed: 'misc'.
+		ifTrue: [srcDir := self platformDirectory directoryNamed: 'misc'.
 			"Is there a subdirectory called 'ToCopy' ?"
 			(srcDir directoryExists: 'ToCopy') ifTrue:[
-				srcDir _ srcDir directoryNamed: 'ToCopy'.
+				srcDir := srcDir directoryNamed: 'ToCopy'.
 				self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory]]
 ]
 
 { #category : #'private - copying files' }
 VMMaker >> copyFileNamed: srcName to: dstName [ 
 	| dstEntry srcEntry |
-	dstEntry _ FileDirectory directoryEntryFor: dstName.
+	dstEntry := FileDirectory directoryEntryFor: dstName.
 	dstEntry ifNotNil:[
-		srcEntry _ FileDirectory directoryEntryFor: srcName.
+		srcEntry := FileDirectory directoryEntryFor: srcName.
 		srcEntry ifNil:[^self couldNotOpenFile: srcName].
 		dstEntry modificationTime >= srcEntry modificationTime ifTrue:[^self].
 	].
@@ -275,13 +362,15 @@ VMMaker >> copyFilesFromSourceDirectory: srcDir toTargetDirectory: dstDir recurs
 	"copy all the files"
 	| dirList  |
 	srcDir localName = 'CVS' ifTrue:[logger show: 'CVS files NOT copied by VMMaker'; cr. ^self].
+	srcDir localName = '.svn' ifTrue:[logger show: 'SVN files NOT copied by VMMaker'; cr. ^self].
 
 	self copyFilesFrom: srcDir to: dstDir.
 
 	recurseBoolean ifFalse:[^self].
 	"If we are recursing create the subdirectories of srcDir in dstDir, and then copy that 
 	subtree "
-	dirList _ srcDir directoryNames copyWithout: 'CVS'.
+	dirList := srcDir directoryNames copyWithout: 'CVS'.
+	dirList := srcDir directoryNames copyWithout: '.svn'.
 	dirList do: 
 		[:newDstDir | 
 		(dstDir directoryExists: newDstDir)
@@ -295,7 +384,7 @@ VMMaker >> copyFilesFromSourceDirectory: srcDir toTargetDirectory: dstDir recurs
 VMMaker >> coreVMDirectory [
 	"return the target directory for the main VM sources, interp.c etc"
 	| fd |
-	fd _ self sourceDirectory directoryNamed: self class coreVMDirName.
+	fd := self sourceDirectory directoryNamed: self class coreVMDirName.
 	fd assureExistence.
 	^ fd
 ]
@@ -303,7 +392,7 @@ VMMaker >> coreVMDirectory [
 { #category : #'private - errors' }
 VMMaker >> couldNotFindDirectory: dirName [
 	"This should raise a nice exception to a UI"
-	(VMMakerException new messageText: self class name, ' could not find directory ', dirName) signal
+	^(VMMakerException new messageText: self class name, ' could not find directory ', dirName) signal
 ]
 
 { #category : #'private - errors' }
@@ -334,6 +423,15 @@ VMMaker >> couldNotOpenFile: fileName [
 VMMaker >> createCodeGenerator [
 "set up a CCodeGenerator for this VMMaker"
 	^CCodeGenerator new initialize
+		logger: logger;
+		yourself
+]
+
+{ #category : #initialize }
+VMMaker >> createCogitCodeGenerator [
+	^CCodeGenerator new initialize
+		logger: logger;
+		yourself
 ]
 
 { #category : #'source directories' }
@@ -341,8 +439,8 @@ VMMaker >> crossPlatformDirectory [
 	"return the directory where we should find the cross-platform literal 
 	sources - <sq.h> etc"
 	| fd machDirNm |
-	fd _ self platformRootDirectory.
-	(fd directoryExists: (machDirNm _ 'Cross'))
+	fd := self platformRootDirectory.
+	(fd directoryExists: (machDirNm := 'Cross'))
 		ifFalse: ["The supposed directory for the actual cross-platform code  
 			does not exist."
 			^ self couldNotFindPlatformDirectoryFor: 'cross-platform '].
@@ -369,22 +467,12 @@ VMMaker >> deleteEntireGeneratedTree [
 
 { #category : #'target directories' }
 VMMaker >> deleteUnwantedExternalPluginDirectories [
-	"delete directories in the external plugins tree with names not in the list  
-	of external plugins. This will make sure that only wanted plugins are  
-	left after generating external plugins - no previous ones will get left  
-	there like unwanted porridge"
-	(self externalPluginsDirectory directoryNames copyWithoutAll: self externalModuleNames)
-		do: [:nm | (self externalPluginsDirectory directoryNamed: nm) recursiveDelete]
+	"don't. in real life people back plugin directories with source code controls and simply deleting them really doesn't help."
 ]
 
 { #category : #'target directories' }
 VMMaker >> deleteUnwantedInternalPluginDirectories [
-	"delete directories in the internal plugins tree with names not in the list  
-	of internal plugins. This will make sure that only wanted plugins are  
-	left after generating internal plugins - no previous ones will get left  
-	there like unwanted porridge"
-	(self internalPluginsDirectory directoryNames copyWithoutAll: self internalModuleNames)
-		do: [:nm | (self internalPluginsDirectory directoryNamed: nm) recursiveDelete]
+	"don't. in real life people back plugin directories with source code controls and simply deleting them really doesn't help."
 ]
 
 { #category : #'generate sources' }
@@ -415,10 +503,17 @@ VMMaker >> externalModules [
 ]
 
 { #category : #'target directories' }
+VMMaker >> externalPluginListName [
+	"Answer the filename for the list of external plugins"
+
+	^'plugins.ext'
+]
+
+{ #category : #'target directories' }
 VMMaker >> externalPluginsDirectory [
 	"return the target directory for the external plugins sources"
 	| fd |
-	fd _ self sourceDirectory directoryNamed: self class pluginsDirName.
+	fd := self sourceDirectory directoryNamed: self class pluginsDirName.
 	fd assureExistence.
 	^fd
 ]
@@ -427,7 +522,7 @@ VMMaker >> externalPluginsDirectory [
 VMMaker >> externalPluginsDirectoryFor: plugin [
 	"return the directory for the external plugin sources"
 	|fd|
-	fd _ self externalPluginsDirectory directoryNamed: plugin moduleName.
+	fd := self externalPluginsDirectory directoryNamed: plugin moduleName.
 	fd assureExistence.
 	^fd
 ]
@@ -436,6 +531,57 @@ VMMaker >> externalPluginsDirectoryFor: plugin [
 VMMaker >> externalPluginsDo: aBlock [ 
 	"for each class that should be an external plugin, evaluate aBlock"
 	self plugins: externalPlugins do: aBlock
+]
+
+{ #category : #initialize }
+VMMaker >> for32BitVM [
+"set my flag to make a 32bit pointer model VM"
+	is64BitVM := false.
+	self changed: #sourcePathText.
+]
+
+{ #category : #initialize }
+VMMaker >> for64BitVM [
+"set my flag to make a 64bit pointer model VM"
+	is64BitVM := true.
+	self changed: #sourceDirectory.
+]
+
+{ #category : #'generate sources' }
+VMMaker >> generateCogitFile [
+	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
+
+	| cg cogitClass cogitClasses structClasses |
+	self interpreterClass needsCogit ifFalse: [^nil].
+	self needsToRegenerateCogitFile ifFalse: [^nil].
+	cg := self createCogitCodeGenerator.
+
+	cg vmClass: (cogitClass := self interpreterClass cogitClass).
+	cogitClasses := OrderedCollection new.
+	[cogitClasses addFirst: cogitClass.
+	 cogitClass ~~ Cogit
+	 and: [cogitClass inheritsFrom: Cogit]] whileTrue:
+		[cogitClass := cogitClass superclass].
+	
+	cogitClasses addAllLast: self interpreterClass cogitClass ancilliaryClasses.
+	cogitClasses, { self interpreterClass }  do: [:cgc| cgc initialize].
+	cogitClasses do: [:cgc| cg addClass: cgc].
+	structClasses := Set new.
+	cogitClasses do: [:class| structClasses addAll: class ancilliaryStructClasses].
+	(ChangeSet superclassOrder: structClasses asArray) do:
+		[:structClasss| cg addStructClass: structClasss].
+
+	cg removeUnneededBuiltins.
+	cg vmClass preGenerationHook: cg.
+	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass sourceFileName) doInlining: cogitClass doInlining.
+	cg vmClass additionalHeadersDo:
+		[:headerName :headerContents| | filePath |
+		 filePath := self coreVMDirectory fullNameFor: headerName.
+		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
+			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+	cogitClass apiExportHeaderName ifNotNil:
+		[cg storeAPIExportHeader: cogitClass apiExportHeaderName
+			OnFile: (self sourceFilePathFor: cogitClass apiExportHeaderName)]
 ]
 
 { #category : #'generate sources' }
@@ -449,8 +595,41 @@ VMMaker >> generateEntire [
 
 { #category : #exports }
 VMMaker >> generateExportsFile [
-	^self storeExportsOn: self interpreterExportsFilePath
+	"Store the exports on the given file"
+	| cg contents filePath fileStream |
+	cg := self createCodeGenerator.
+	cg vmClass: self interpreterClass.
+	contents := String streamContents:
+		[:s|
+		s
+			nextPutAll:'/* This is an automatically generated table of all builtin modules in the VM';
+			cr;
+			next: 3 put: Character space;
+			nextPutAll: (cg shortMonticelloDescriptionForClass: cg vmClass);
+			cr;
+			nextPutAll:' */';
+			cr.
+		s cr; nextPutAll:'extern sqExport vm_exports[];'.
+		s cr; nextPutAll: 'extern sqExport os_exports[];'.
+		self internalPluginsDo:[:cls|
+			s cr; nextPutAll: 'extern sqExport '; nextPutAll: cls moduleName; nextPutAll:'_exports[];'.
+		].
+		s cr.
 
+		s cr; nextPutAll:'sqExport *pluginExports[] = {'.
+		s crtab; nextPutAll:'vm_exports,'.
+		s crtab; nextPutAll: 'os_exports,'.
+		self internalPluginsDo:[:cls|
+			s crtab; nextPutAll: cls moduleName; nextPutAll:'_exports,'
+		].
+		s crtab; nextPutAll:'NULL'.
+		s cr; nextPutAll:'};'; cr].
+	filePath := self interpreterExportsFilePath.
+	(cg needToGenerateHeader: (FileDirectory baseNameFor: filePath) file: filePath contents: contents) ifTrue:
+		[[fileStream := CrLfFileStream forceNewFileNamed: filePath] 
+			on: FileDoesNotExistException 
+			do:[^self couldNotOpenFile: filePath].
+		 fileStream nextPutAll: contents; close]
 ]
 
 { #category : #'generate sources' }
@@ -459,11 +638,16 @@ VMMaker >> generateExternalPlugin: pluginName [
 	| exports plugin |
 
 	"Refuse to translate this plugin if it requires platform specific files and they are not present."
-	[plugin _ self validateExternalPlugin: pluginName] on: VMMakerException do:[^self].
+	[plugin := self validateExternalPlugin: pluginName] on: VMMakerException do:[^self].
 
-	exports _ plugin
+	[exports := plugin
 				translateInDirectory: (self externalPluginsDirectoryFor: plugin)
-				doInlining: inline.
+				doInlining: inline]
+		on:  ProvideAnswerNotification
+		do: [:ex|
+			ex tag == #logger
+				ifTrue: [ex resume: logger]
+				ifFalse: [ex pass]].
 	logger show: 'external plugin ' , plugin name , ' generated as ' , plugin moduleName; cr.
 	exports ifNotNil: ["if exp is nil we skip this since the plugin was already up to date"
 			self export: exports forExternalPlugin: plugin].
@@ -475,9 +659,11 @@ VMMaker >> generateExternalPlugins [
 	"generate the external plugins"
 
 	self deleteUnwantedExternalPluginDirectories.
+	InterpreterPlugin initialize.
 	self externalPluginsDo: [:plugin | 
 		self generateExternalPlugin: plugin].
 	self storeExternalPluginList.
+	self logDateAndTime
 ]
 
 { #category : #'generate sources' }
@@ -486,7 +672,8 @@ VMMaker >> generateInternalPlugin: pluginName [
 	correct and write it out"
 	self deleteUnwantedInternalPluginDirectories.
 	self privateGenerateInternalPlugin: pluginName.
-	self generateExportsFile
+	self generateExportsFile.
+	self logDateAndTime
 ]
 
 { #category : #'generate sources' }
@@ -494,33 +681,68 @@ VMMaker >> generateInternalPlugins [
 	"generate the internal plugins and add their exports to the main list. te exports list is NOT written to file by this method"
 
 	self deleteUnwantedInternalPluginDirectories.
+	InterpreterPlugin initialize.
 	self internalPluginsDo: [:plugin | 
 		self privateGenerateInternalPlugin: plugin].
+	self logDateAndTime.
 	self storeInternalPluginList.
 ]
 
 { #category : #'generate sources' }
 VMMaker >> generateInterpreterFile [
-	"Translate the Smalltalk description of the virtual machine into C. If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead. On the PPC, this results in a factor of three speedup with only 30% increase in code size. "
-"Subclasses can use specialised versions of CCodeGenerator and interpreterClass"
+	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
 
-	|  cg |
-	self needsToRegenerateInterpreterFile ifFalse:[^nil].
+	| cg interpreterClass interpreterClasses vmHeaderContents structClasses |
+	self needsToRegenerateInterpreterFile ifFalse: [^nil].
+	cg := self createCodeGenerator.
 
-	self interpreterClass initialize.
-	ObjectMemory initialize.
-	cg _ self createCodeGenerator.
-	cg addClass: self interpreterClass.
-	cg addClass: ObjectMemory.
+	cg vmClass: (interpreterClass := self interpreterClass).
+	interpreterClasses := OrderedCollection new.
+	[interpreterClasses addFirst: interpreterClass.
+	 interpreterClass ~~ ObjectMemory
+	 and: [interpreterClass inheritsFrom: ObjectMemory]] whileTrue:
+		[interpreterClass := interpreterClass superclass].
 
-	cg storeCodeOnFile: self interpreterFilePath doInlining: self doInlining
+	interpreterClasses addAllLast: self interpreterClass ancilliaryClasses.
+	structClasses := Set new.
+	interpreterClasses do: [:class| structClasses addAll: class ancilliaryStructClasses].
+	(ChangeSet superclassOrder: structClasses asArray) do:
+		[:structClass|
+		structClass initialize.
+		cg addStructClass: structClass].
+
+	interpreterClasses
+		do: [:ic| ic == ObjectMemory
+				ifTrue: [ic initializeWithBytesToWord: self bytesPerWord]
+				ifFalse: [ic initialize]].
+
+	interpreterClasses do: [:ic| cg addClass: ic].
+	cg removeUnneededBuiltins.
+	self interpreterClass preGenerationHook: cg.
+
+	vmHeaderContents := cg vmHeaderContentsWithBytesPerWord: self bytesPerWord.
+	(cg needToGenerateHeader: self interpreterHeaderName file: self interpreterHeaderPath contents: vmHeaderContents) ifTrue:
+		[cg storeHeaderOnFile: self interpreterHeaderPath contents: vmHeaderContents].
+	cg storeCodeOnFile: (self sourceFilePathFor: self interpreterClass sourceFileName) doInlining: self doInlining.
+	self interpreterClass additionalHeadersDo:
+		[:headerName :headerContents| | filePath |
+		 filePath := self coreVMDirectory fullNameFor: headerName.
+		 (self needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
+			 [cg storeHeaderOnFile: filePath contents: headerContents]].
+	self interpreterClass apiExportHeaderName ifNotNil:
+		[cg storeAPIExportHeader: self interpreterClass apiExportHeaderName
+			OnFile: (self sourceFilePathFor: self interpreterClass apiExportHeaderName)].
+	(Gnuifier on: self coreVMDirectory)
+		interpreterFilename: self interpreterFilename;
+		gnuify.
 ]
 
 { #category : #'generate sources' }
 VMMaker >> generateMainVM [
-"generate the interp, internal plugins and exports"
+"generate the interp (and optionally the cogit), internal plugins and exports"
 
-	self generateInterpreterFile;
+	self generateCogitFile;
+		generateInterpreterFile;
 		processFilesForCoreVM;
 		processAssortedFiles;
 		generateInternalPlugins;
@@ -530,13 +752,13 @@ VMMaker >> generateMainVM [
 { #category : #initialize }
 VMMaker >> initialize [
 	logger := Transcript.
-	inline _ true.
-	forBrowser _ false.
-	internalPlugins _ SortedCollection new.
-	externalPlugins _ SortedCollection new.
-	platformName _ self class machinesDirName.
-	allFilesList _ Dictionary new.
-	interpreterClassName _ 'Interpreter'.
+	inline := true.
+	forBrowser := false.
+	internalPlugins := SortedCollection new.
+	externalPlugins := SortedCollection new.
+	platformName := self class machinesDirName.
+	is64BitVM := Smalltalk wordSize == 8.
+	interpreterClassName := Interpreter name
 ]
 
 { #category : #initialize }
@@ -569,7 +791,7 @@ VMMaker >> initializeAllInternalBut: arrayOfExternalPluginNames [
 
 { #category : #initialize }
 VMMaker >> initializeAllPlugins [
-	allPlugins _ self providedPlugins
+	allPlugins := self providedPlugins
 ]
 
 { #category : #initialize }
@@ -586,10 +808,10 @@ VMMaker >> internal: arrayOfInternalPluginNames external: arrayOfExternalPluginN
 	"try to set up with the listed internal and external plugins. Check that they are supportable plugins, reject those that are not - remember that this depends on the platform etc "
 
 	"since we went to some trouble to drop plugins we cannot handle, don't add them now"
-	internalPlugins _ (self availablePlugins intersection: arrayOfInternalPluginNames) select: [:pl | self canSupportPlugin: pl].
-	allPlugins _ allPlugins copyWithoutAll: internalPlugins.
-	externalPlugins _ (allPlugins intersection: arrayOfExternalPluginNames) select: [:pl | self canSupportPlugin: pl ].
-	allPlugins _ allPlugins copyWithoutAll: externalPlugins.
+	internalPlugins := (self availablePlugins intersection: arrayOfInternalPluginNames) select: [:pl | self canSupportPlugin: pl].
+	allPlugins := allPlugins copyWithoutAll: internalPlugins.
+	externalPlugins := (allPlugins intersection: arrayOfExternalPluginNames) select: [:pl | self canSupportPlugin: pl ].
+	allPlugins := allPlugins copyWithoutAll: externalPlugins.
 	
 ]
 
@@ -605,10 +827,17 @@ VMMaker >> internalModules [
 ]
 
 { #category : #'target directories' }
+VMMaker >> internalPluginListName [
+	"Answer the filename for the list of internal plugins"
+
+	^'plugins.int'
+]
+
+{ #category : #'target directories' }
 VMMaker >> internalPluginsDirectory [
 	"return the directory for the internal plugins sources"
 	|fd|
-	fd _ self coreVMDirectory directoryNamed: 'intplugins'.
+	fd := self coreVMDirectory directoryNamed: 'intplugins'.
 	fd assureExistence.
 	^fd
 ]
@@ -617,7 +846,7 @@ VMMaker >> internalPluginsDirectory [
 VMMaker >> internalPluginsDirectoryFor: plugin [
 	"return the directory for the internal plugin sources"
 	|fd|
-	fd _ self internalPluginsDirectory directoryNamed: plugin moduleName.
+	fd := self internalPluginsDirectory directoryNamed: plugin moduleName.
 	fd assureExistence.
 	^fd
 ]
@@ -637,7 +866,7 @@ VMMaker >> interpreterClass [
 { #category : #'generate sources' }
 VMMaker >> interpreterClass: aClass [
 
-	interpreterClassName _ aClass name asString
+	interpreterClassName := aClass name asString
 ]
 
 { #category : #'generate sources' }
@@ -650,8 +879,8 @@ VMMaker >> interpreterClassName [
 VMMaker >> interpreterClassName: aString [
 
 	| tmp |
-	interpreterClassName _ aString.
-	tmp _ Smalltalk at: aString asSymbol ifAbsent: [nil].
+	interpreterClassName := aString.
+	tmp := Smalltalk at: aString asSymbol ifAbsent: [nil].
 	(tmp isNil or: [tmp isBehavior not]) ifTrue:
 		[self invalidClassName].
 ]
@@ -662,22 +891,43 @@ VMMaker >> interpreterExportsFilePath [
 	^self coreVMDirectory fullNameFor: 'sqNamedPrims.h'
 ]
 
-{ #category : #'generate sources' }
-VMMaker >> interpreterFilePath [
-	"return the full path for the interpreter file"
-	^self coreVMDirectory fullNameFor: self interpreterFilename
+{ #category : #'target directories' }
+VMMaker >> interpreterFilename [
+	"Answer the filename for the core interpreter.  Default is 'interp.c'."
+
+	^self interpreterClass sourceFileName
 ]
 
 { #category : #'target directories' }
-VMMaker >> interpreterFilename [
-	"what is the filename for the core interpreter. Default is interp.c"
-	^'interp.c'
+VMMaker >> interpreterHeaderName [
+	"Answer the filename for the core interpreter header.  Default is 'interp.h'."
+
+	^'interp.h'
+]
+
+{ #category : #'generate sources' }
+VMMaker >> interpreterHeaderPath [
+	"Answer the fully-qualified path for the generated interpreter header file."
+
+	^self coreVMDirectory fullNameFor: self interpreterHeaderName
 ]
 
 { #category : #'private - errors' }
 VMMaker >> invalidClassName [
 	"This should raise a nice exception to a UI"
 	(VMMakerException new messageText: self class name, ' invalid interpreter class name: ', interpreterClassName) signal
+]
+
+{ #category : #initialize }
+VMMaker >> isFor32BitVM [
+"is my flag to make a 32bit pointer model VM?"
+	^is64BitVM not
+]
+
+{ #category : #initialize }
+VMMaker >> isFor64BitVM [
+"is my flag to make a 64bit pointer model VM?"
+	^is64BitVM
 ]
 
 { #category : #'UI access' }
@@ -693,14 +943,29 @@ VMMaker >> listOfName: aSymbol [
 VMMaker >> loadConfiguration: aConfigArray [
 	"load the configuration but ignore the platformName - the platform name must have been handled during the creation of this vmmaker in order for it to work correctly"
 
-	inline _ aConfigArray at:3.
-	forBrowser _ aConfigArray at: 4.
+	inline := aConfigArray at: 3.
+	forBrowser := aConfigArray at: 4.
 	"This part must be ignored --> self setPlatName: (aConfigArray at: 5)."
-	self sourceDirectoryName: (aConfigArray at: 6).
-	self platformRootDirectoryName: ( aConfigArray at:7).
+	"Don't go through the setters sourceDirectoryName: & platformRootDirectoryName:.
+	 They do validation which only works on certain platforms and create bogus directories, etc.
+	 They're broken for non-interactive use."
+	sourceDirName := aConfigArray at: 6.
+	platformRootDirName := aConfigArray at: 7.
 	self initializeAllPlugins.
-	self internal: (aConfigArray at:1) external:(aConfigArray at:2).
-	self changed: #reinitialize 
+	self internal: (aConfigArray at: 1) asSortedCollection
+		external:(aConfigArray at: 2) asSortedCollection.
+	aConfigArray size >= 9 ifTrue: "new enough to have 64bitness flag"
+		[(aConfigArray at: 8) = 8 ifTrue: [self for64BitVM].
+		 (aConfigArray at: 8) = 4 ifTrue: [self for32BitVM]].
+	aConfigArray size >= 11 ifTrue: "new enough to include the interpreter name"
+		[self interpreterClassName: (aConfigArray at: 11)].
+	self changed: #sourceDirectory;
+		 changed: #reinitialize
+]
+
+{ #category : #'UI access' }
+VMMaker >> logDateAndTime [
+	logger print: Date today; space; print: Time now; cr; flush.
 ]
 
 { #category : #'UI access' }
@@ -715,7 +980,7 @@ VMMaker >> logger: aStream [
 
 { #category : #'UI access' }
 VMMaker >> makeAllModulesAvailable [
-	self internal: #() external: #().
+	self internal: #() external: #().
 	self reinitializePluginsLists
 ]
 
@@ -749,8 +1014,8 @@ VMMaker >> movePlugin: pluginName from: srcListName to: dstListName [
 	is the destination list one where we must check the plugin for 
 	acceptability? return true if all is ok, false otherwise"
 	| dstList srcList |
-	dstList _ self listOfName: dstListName.
-	srcList _ self listOfName: srcListName.
+	dstList := self listOfName: dstListName.
+	srcList := self listOfName: srcListName.
 	dstList == allPlugins
 		ifTrue: [dstList
 				add: (srcList remove: pluginName)]
@@ -761,27 +1026,65 @@ VMMaker >> movePlugin: pluginName from: srcListName to: dstListName [
 						add: (srcList remove: pluginName)]]
 ]
 
+{ #category : #'generate sources' }
+VMMaker >> needsToRegenerateCogitFile [
+"check the timestamp for the relevant classes and then the timestamp for the interp.c file if it already exists. Return true if the file needs regenerating, false if not"
+
+	| cogitClass cogitClasses tStamp fstat |
+	cogitClass := self interpreterClass cogitClass.
+	cogitClasses := cogitClass withAllSuperclasses copyUpThrough: Cogit.
+	cogitClasses
+		addAllLast: self interpreterClass ancilliaryClasses;
+		addAllLast: cogitClass ancilliaryClasses.
+	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
+	cogitClasses do:
+		[:c|
+		tStamp := c ancilliaryStructClasses inject: tStamp into: [:tS :cl| tS max: cl timeStamp]].
+
+	"don't translate if the file is newer than my timeStamp"
+	fstat := self coreVMDirectory entryAt: cogitClass sourceFileName ifAbsent:[nil].
+	fstat ifNotNil:[tStamp < fstat modificationTime ifTrue:
+		[^self confirm: 'The ', cogitClass printString, ' classes have not been modified since\ the source file was last generated.\Do you still want to regenerate it?' withCRs]].
+	^true
+
+]
+
 { #category : #initialize }
 VMMaker >> needsToRegenerateInterpreterFile [
 "check the timestamp for the relevant classes and then the timestamp for the interp.c file if it already exists. Return true if the file needs regenerating, false if not"
 
-	| tStamp fstat |
-	tStamp _ { self interpreterClass. ObjectMemory} inject: 0 into: [:tS :cl|
-		tS _ tS max: cl timeStamp].
+	| classes tStamp fstat |
+	classes := self interpreterClass withAllSuperclasses copyUpTo: ObjectMemory superclass.
+	classes addAllLast: self interpreterClass ancilliaryClasses.
+	classes copy do:
+		[:class| classes addAllLast: class ancilliaryStructClasses].
+	tStamp := classes inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 
 	"don't translate if the file is newer than my timeStamp"
-	fstat _ self coreVMDirectory entryAt: self interpreterFilename ifAbsent:[nil].
-	fstat ifNotNil:[tStamp < fstat modificationTime ifTrue:[^false]].
+	fstat := self coreVMDirectory entryAt: self interpreterFilename ifAbsent:[nil].
+	fstat ifNotNil:[tStamp < fstat modificationTime ifTrue:
+		[^self confirm: 'The interpreter classes have not been modified since\ the interpreter file was last generated.\Do you still want to regenerate their source file?' withCRs]].
 	^true
 
+]
+
+{ #category : #'target directories' }
+VMMaker >> platformDirectories [
+	| root |
+	^((root := self platformRootDirectory) directoryNames
+		reject: [:dirName|
+				dirName first = $. ".svn .git et al"
+				or: [dirName ='CVS']])
+		collect: [:dirName|
+				root directoryNamed: dirName]
 ]
 
 { #category : #'source directories' }
 VMMaker >> platformDirectory [
 	"return the directory where we should find the platform specific sources"
 	| fd platNm |
-	fd _ self platformRootDirectory.
-	(fd directoryExists: (platNm _ self platformName))
+	fd := self platformRootDirectory.
+	(fd directoryExists: (platNm := self platformName))
 		ifFalse: ["The supposed directory for the actual platform code  
 			does not exist."
 			^ self couldNotFindPlatformDirectoryFor: platNm].
@@ -791,6 +1094,14 @@ VMMaker >> platformDirectory [
 { #category : #'UI access' }
 VMMaker >> platformName [
 	^platformName
+]
+
+{ #category : #'target directories' }
+VMMaker >> platformPluginsDirectories [
+
+	^self platformDirectories
+		select: [:dir| dir directoryExists: self class pluginsDirName]
+		thenCollect: [:dir| dir directoryNamed: self class pluginsDirName]
 ]
 
 { #category : #'source directories' }
@@ -820,10 +1131,16 @@ VMMaker >> platformRootDirectory [
 ]
 
 { #category : #'source directories' }
+VMMaker >> platformRootDirectoryName [
+	"Answer the name of the directory where we should find all platform's sources"
+	^platformRootDirName
+]
+
+{ #category : #'source directories' }
 VMMaker >> platformRootDirectoryName: aString [
 	"set the directory where we should find all platform's sources
 	There really ought to be plausible sanity checks done here"
-	platformRootDirName _ aString.
+	platformRootDirName := aString.
 	(FileDirectory default directoryExists: aString) ifFalse:[self couldNotFindDirectory: aString. ^false].
 	self reinitializePluginsLists.
 	^true
@@ -848,13 +1165,15 @@ VMMaker >> primitiveCopyFileNamed: srcName to: dstName [
 	"If the plugin doesn't do it, go the slow way and lose the filetype info"
 	"This method may signal FileDoesNotExistException if either the source or 
 	dest files cannnot be opened; possibly permissions or bad name problems"
-	[[src _ FileStream readOnlyFileNamed: srcName]
+	[[src := FileStream readOnlyFileNamed: srcName]
 		on: FileDoesNotExistException
 		do: [^ self couldNotOpenFile: srcName].
-	[dst _ FileStream forceNewFileNamed: dstName]
+	src binary.
+	[dst := FileStream forceNewFileNamed: dstName]
 		on: FileDoesNotExistException
 		do: [^ self couldNotOpenFile: dstName].
-	buffer _ String new: 50000.
+	dst binary.
+	buffer := ByteArray new: 50000.
 	[src atEnd]
 		whileFalse: [dst
 				nextPutAll: (src nextInto: buffer)]]
@@ -870,79 +1189,42 @@ VMMaker >> privateGenerateInternalPlugin: pluginName [
 	| plugin |
 	"Refuse translate this plugin if it requires platform specific files and  
 	they are not present."
-	plugin _ self validateInternalPlugin: pluginName.
+	plugin := self validateInternalPlugin: pluginName.
 
-	plugin
-		ifNil: [^ self couldNotFindPluginClass: pluginName].
-	plugin
-		translateInDirectory: (self internalPluginsDirectoryFor: plugin)
-		doInlining: inline.
+	plugin ifNil:
+		[^self couldNotFindPluginClass: pluginName].
+	[plugin
+			translateInDirectory: (self internalPluginsDirectoryFor: plugin)
+			doInlining: inline]
+		on:  ProvideAnswerNotification
+		do: [:ex|
+			ex tag == #logger
+				ifTrue: [ex resume: logger]
+				ifFalse: [ex pass]].
 	logger show: 'internal plugin ' , plugin name , ' generated as ' , plugin moduleName; cr.
-	self processFilesForInternalPlugin: plugin.
-
+	self processFilesForInternalPlugin: plugin
 ]
 
 { #category : #'processing external files' }
 VMMaker >> processAssortedFiles [
 	"Here is where we get a chance to process any files needed as part of the make process; instructions, makefile fragments, resources etc.
 	The default is to copy any miscellaneous files/dirs from the cross-platformDirectory/misc/ToCopy, then from the platform specific directory/misc/ToCopy. You can put any tree structure you like under misc/ToCopy, should that be important to you."
-	| srcDir |
-	"Is there a crossPlatformDirectory subdirectory called 'misc'?"
-	(self crossPlatformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir _ self crossPlatformDirectory directoryNamed: 'misc'.
-			"Is there a subdirectory called 'ToCopy' ?"
-			(srcDir directoryExists: 'ToCopy') ifTrue:[
-				srcDir _ srcDir directoryNamed: 'ToCopy'.
-				self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory]].
-	"Is there a platformDirectory subdirectory called 'misc'?"
-	(self platformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir _ self platformDirectory directoryNamed: 'misc'.
-			"Is there a subdirectory called 'ToCopy' ?"
-			(srcDir directoryExists: 'ToCopy') ifTrue:[
-				srcDir _ srcDir directoryNamed: 'ToCopy'.
-				self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory]]
+
 ]
 
 { #category : #'processing external files' }
 VMMaker >> processFilesForCoreVM [
-	"process any cross-platform files from the crossPlatformDir and then any files relating to the core vm from the platformDirectory's vm subdirectory."
-	"This is a stub ready for collecting all the filenames etc that might be needed to write a makefile. No details are yet certain."
-
-	| vmDirName fList |
-	vmDirName _ self class coreVMDirName.
-	fList _ OrderedCollection new.
-	{self crossPlatformDirectory directoryNamed: vmDirName.
-	self platformDirectory directoryNamed: vmDirName.
-	self coreVMDirectory}
-		do:[:dir| fList addAll: (dir fullNamesOfAllFilesInSubtree reject:[:el| (el findString: 'CVS' startingAt: 1) ~= 0])].
-	allFilesList at: 'vm' put: fList
 
 ]
 
 { #category : #'processing external files' }
 VMMaker >> processFilesForExternalPlugin: plugin [ 
-	"process any files relating to the external plugin.
-	This also provides a  stub ready for collecting all the filenames etc that might be needed to write a makefile, carefully weeding out any CVS related files. No details are yet certain."
-	|fList|
-	fList _ OrderedCollection new.
-	{self crossPlatformPluginsDirectory directoryNamed:  plugin moduleName.
-	self platformPluginsDirectory directoryNamed:  plugin moduleName.
-	self externalPluginsDirectoryFor: plugin}
-		do:[:dir| fList addAll: (dir fullNamesOfAllFilesInSubtree reject:[:el| (el findString: 'CVS' startingAt: 1) ~= 0])].
-	allFilesList at: plugin moduleName put: fList
+
 ]
 
 { #category : #'processing external files' }
 VMMaker >> processFilesForInternalPlugin: plugin [ 
-	"process any files relating to the internal plugin.
-	This also provides a  stub ready for collecting all the filenames etc that might be needed to write a makefile, carefully weeding out any CVS related files. No details are yet certain."
-	|fList|
-	fList _ OrderedCollection new.
-	{self crossPlatformPluginsDirectory directoryNamed:  plugin moduleName.
-	self platformPluginsDirectory directoryNamed:  plugin moduleName.
-	self internalPluginsDirectoryFor: plugin}
-		do:[:dir| fList addAll: (dir fullNamesOfAllFilesInSubtree reject:[:el| (el findString: 'CVS' startingAt: 1) ~= 0])].
-	allFilesList at: plugin moduleName put: fList
+
 ]
 
 { #category : #initialize }
@@ -958,8 +1240,13 @@ VMMaker >> readConfigurationFrom: aFileName [
 	"read info about the current configuration from a file. Return the array that would have been made by #configurationInfo"
 	|  fileStream |
 
-	fileStream _ FileStream oldFileNamed: aFileName.
+	fileStream := FileStream oldFileNamed: aFileName.
 	^fileStream fileInObjectAndCode
+]
+
+{ #category : #'UI access' }
+VMMaker >> recomputeProvidedPlugins [
+	allPlugins := self providedPlugins reject: [:p| (internalPlugins includes: p) or: [externalPlugins includes: p]]
 ]
 
 { #category : #'UI access' }
@@ -972,90 +1259,98 @@ VMMaker >> reinitializePluginsLists [
 
 { #category : #'objects from disk' }
 VMMaker >> saveConfigurationTo: aFile [
-	"write info about the current configuration to a file."
-	| fileStream |
-	fileStream _ FileStream newFileNamed: aFile.
-	fileStream fileOutClass: nil andObject: self configurationInfo
+	"Write info about the current configuration to a file.
+	 Use a hack CrForSpaceWriteStream so that things
+	 appear on separate lines to be friendly to configuration
+	 management systems diffing facilities."
+	| stream |
+	stream := CrForSpaceWriteStream on: String new.
+	self configurationInfo storeOn: stream.
+	(CrLfFileStream newFileNamed: aFile)
+		nextPutAll: stream contents;
+		close
 ]
 
 { #category : #initialize }
 VMMaker >> setPlatName: aString [
 	"private - just set the platform name string, nothing else. Go away...."
-	platformName _ aString
+	platformName := aString
 ]
 
 { #category : #'target directories' }
 VMMaker >> sourceDirectory [
 	| fd |
-	fd _ FileDirectory default directoryNamed: (sourceDirName
-		ifNil: [self class sourceDirName]).
+	fd := FileDirectory default directoryNamed: (sourceDirName
+		ifNil: [self class sourceDirName, self vmBitnessString]).
 	fd assureExistence.
 	^ fd
 ]
 
 { #category : #'target directories' }
+VMMaker >> sourceDirectoryName [
+	^sourceDirName
+]
+
+{ #category : #'target directories' }
 VMMaker >> sourceDirectoryName: aString [
 	"Sanity check really ought to be added, This is the root directory for where the sources will be WRITTEN"
-	sourceDirName _ aString.
-	(FileDirectory on: aString) assureExistence.
+	sourceDirName := aString.
+	(aString first == $.
+		ifTrue: [FileDirectory default directoryNamed: aString]
+		ifFalse: [FileDirectory on: aString]) assureExistence.
 	self changed: #sourceDirectory.
 	^true
 ]
 
-{ #category : #exports }
-VMMaker >> storeExportsOn: aFilename [ 
-	"Store the exports on the given file"
-	| s |
-	[s _ CrLfFileStream forceNewFileNamed: aFilename] 
-		on: FileDoesNotExistException 
-		do:[^self couldNotOpenFile: aFilename].
-	s nextPutAll:'/* This is an automatically generated table of all builtin modules in the VM */'; cr.
-	s cr; nextPutAll:'extern sqExport vm_exports[];'.
-	s cr; nextPutAll: 'extern sqExport os_exports[];'.
-	self internalPluginsDo:[:cls|
-		s cr; nextPutAll: 'extern sqExport '; nextPutAll: cls moduleName; nextPutAll:'_exports[];'.
-	].
-	s cr.
+{ #category : #'target directories' }
+VMMaker >> sourceFileNameFor: aVMClass [
+	"Answer the source file name for a VM class."
 
-	s cr; nextPutAll:'sqExport *pluginExports[] = {'.
-	s crtab; nextPutAll:'vm_exports,'.
-	s crtab; nextPutAll: 'os_exports,'.
-	self internalPluginsDo:[:cls|
-		s crtab; nextPutAll: cls moduleName; nextPutAll:'_exports,'
-	].
-	s crtab; nextPutAll:'NULL'.
-	s cr; nextPutAll:'};'; cr.
-	s close
+	^aVMClass sourceFileName
+]
+
+{ #category : #'generate sources' }
+VMMaker >> sourceFilePathFor: sourceFileName [
+	"Answer the fully-qualified path for the generated source file."
+	^self coreVMDirectory fullNameFor: sourceFileName
 ]
 
 { #category : #exports }
 VMMaker >> storeExternalPluginList [
-	| s fileName |
-	fileName _ self makefileDirectory fullNameFor: 'plugins.ext'.
-	[s _ CrLfFileStream forceNewFileNamed: fileName] 
-		on: FileDoesNotExistException 
-		do:[^self couldNotOpenFile: fileName].
-	s nextPutAll:'# Automatically generated makefile include for external plugins'.
-	s cr; nextPutAll:'EXTERNAL_PLUGINS ='.
-	self externalPluginsDo:[:cls|
-		s space; nextPutAll: cls moduleName.
-	].
-	s cr; close
+	| contents filePath fileStream |
+	contents := String streamContents:
+		[:s|
+		s nextPutAll:'# Automatically generated makefile include for external plugins'.
+		s cr; nextPutAll:'EXTERNAL_PLUGINS ='.
+		self externalPluginsDo:
+			[:cls|
+			s space; nextPut: $\; cr; nextPutAll: cls moduleName].
+		s cr].
+	filePath := self makefileDirectory fullNameFor: self externalPluginListName.
+	(CCodeGenerator basicNew needToGenerateHeader: filePath file: filePath contents: contents) ifTrue:
+		[[fileStream := CrLfFileStream forceNewFileNamed: filePath] 
+			on: FileDoesNotExistException 
+			do:[^self couldNotOpenFile: filePath].
+		 fileStream nextPutAll: contents; close]
 ]
 
 { #category : #exports }
 VMMaker >> storeInternalPluginList [
-	| s fileName |
-	fileName _ self makefileDirectory fullNameFor: 'plugins.int'.
-	[s _ CrLfFileStream forceNewFileNamed: fileName] 
-		on: FileDoesNotExistException 
-		do:[^self couldNotOpenFile: fileName].
-	s nextPutAll:'# Automatically generated makefile include for internal plugins'.
-	s cr; nextPutAll:'INTERNAL_PLUGINS ='.
-	self internalPluginsDo:[:cls|
-		s space; nextPutAll: cls moduleName.
-	].
-	s cr; close
+	| contents filePath fileStream |
+	contents := String streamContents:
+		[:s|
+		s nextPutAll:'# Automatically generated makefile include for internal plugins'.
+		s cr; nextPutAll:'INTERNAL_PLUGINS ='.
+		self internalPluginsDo:
+			[:cls|
+			s space; nextPut: $\; cr; nextPutAll: cls moduleName].
+		s cr].
+	filePath := self makefileDirectory fullNameFor: self internalPluginListName.
+	(CCodeGenerator basicNew needToGenerateHeader: filePath file: filePath contents: contents) ifTrue:
+		[[fileStream := CrLfFileStream forceNewFileNamed: filePath] 
+			on: FileDoesNotExistException 
+			do:[^self couldNotOpenFile: filePath].
+		 fileStream nextPutAll: contents; close]
 ]
 
 { #category : #'generate sources' }
@@ -1076,11 +1371,11 @@ VMMaker >> validatePlugin:	plName in: listOfPlugins [
 	| plugin |
 	plName isString
 		ifTrue: [(listOfPlugins includes: plName)
-				ifTrue: [plugin _ Smalltalk classNamed: plName]]
+				ifTrue: [plugin := Smalltalk classNamed: plName]]
 		ifFalse: [((plName isBehavior
 						and: [plName inheritsFrom: InterpreterPlugin])
 					and: [listOfPlugins includes: plName name])
-				ifTrue: [plugin _ plName]].
+				ifTrue: [plugin := plName]].
 	plugin ifNil: [^ self couldNotFindPluginClass: plName].
 
 	"Is there a cross-platform or platform files directory of the same name as this plugin?"
@@ -1094,4 +1389,10 @@ VMMaker >> validatePlugin:	plName in: listOfPlugins [
 					^ self couldNotFindPlatformFilesFor: plugin]].
 
 	^plugin
+]
+
+{ #category : #'target directories' }
+VMMaker >> vmBitnessString [
+	"Return a string of 32 or 64 depending on the is64BitVM valuse"
+	^is64BitVM ifTrue:['64'] ifFalse:['32']
 ]

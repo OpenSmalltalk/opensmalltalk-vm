@@ -262,7 +262,7 @@ SmartSyntaxPluginCodeGenerator >> ccgLoad: aBlock expr: aString asWBIntPtrFrom: 
 { #category : #coercing }
 SmartSyntaxPluginCodeGenerator >> ccgSetBlock: aString [
 
-	^[:expr | aString, ' _ ', expr]
+	^[:expr | aString, ' := ', expr]
 ]
 
 { #category : #coercing }
@@ -437,8 +437,9 @@ SmartSyntaxPluginCodeGenerator >> generateAsCDouble: aNode on: aStream indent: a
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsCInt: aNode on: aStream indent: anInteger [
 
+	aStream nextPut: $(.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ' >> 1'.
+	aStream nextPutAll: ' >> 1)'.
 ]
 
 { #category : #'translating builtins' }
@@ -469,15 +470,15 @@ SmartSyntaxPluginCodeGenerator >> generateAsFloatObj: aNode on: aStream indent: 
 SmartSyntaxPluginCodeGenerator >> generateAsIfVar: aNode on: aStream indent: anInteger [
 
 	| cName fName class index |
-	cName _ String streamContents: 
+	cName := String streamContents: 
 		[:scStr | self emitCExpression: aNode args first on: scStr].
-	class _ Smalltalk 
+	class := Smalltalk 
 		at: (cName asSymbol) 
 		ifAbsent: [nil].
 	(class isNil not and: [class isBehavior]) ifFalse: 
 		[^self error: 'first arg must identify class'].
-	fName _ aNode args second value.
-	index _ class allInstVarNames
+	fName := aNode args second value.
+	index := class allInstVarNames
 		indexOf: fName
 		ifAbsent: [^self error: 'second arg must be instVar'].
 	aStream 
@@ -492,25 +493,25 @@ SmartSyntaxPluginCodeGenerator >> generateAsIfVar: aNode on: aStream indent: anI
 SmartSyntaxPluginCodeGenerator >> generateAsIfVarAsValue: aNode on: aStream indent: anInteger [
 
 	| cName fName class index fetchNode |
-	cName _ String streamContents: 
+	cName := String streamContents: 
 		[:scStr | self emitCExpression: aNode args first on: scStr].
-	class _ Smalltalk 
+	class := Smalltalk 
 		at: (cName asSymbol) 
 		ifAbsent: [nil].
 	(class isNil not and: [class isBehavior]) ifFalse: 
 		[^self error: 'first arg must identify class'].
-	fName _ aNode args second value.
-	index _ class allInstVarNames
+	fName := aNode args second value.
+	index := class allInstVarNames
 		indexOf: fName
 		ifAbsent: [^self error: 'second arg must be instVar'].
-	fetchNode _ TSendNode new
+	fetchNode := TSendNode new
 		setSelector: #fetchPointer:ofObject:
 		receiver: (TVariableNode new setName: 'interpreterProxy')
 		arguments: (Array
 			with: (TConstantNode new setValue: index - 1)
 			with: aNode receiver).
-	cName _ aNode args third nameOrValue.
-	class _ Smalltalk 
+	cName := aNode args third nameOrValue.
+	class := Smalltalk 
 		at: (cName asSymbol) 
 		ifAbsent: [nil].
 	(class isNil not and: [class isBehavior]) ifFalse: 
@@ -523,15 +524,15 @@ SmartSyntaxPluginCodeGenerator >> generateAsIfVarAsValue: aNode on: aStream inde
 SmartSyntaxPluginCodeGenerator >> generateAsIfVarPut: aNode on: aStream indent: anInteger [
 
 	| cName fName class index |
-	cName _ String streamContents: 
+	cName := String streamContents: 
 		[:scStr | self emitCExpression: aNode args first on: scStr].
-	class _ Smalltalk 
+	class := Smalltalk 
 		at: (cName asSymbol) 
 		ifAbsent: [nil].
 	(class isNil not and: [class isBehavior]) ifFalse: 
 		[^self error: 'first arg must identify class'].
-	fName _ aNode args second value.
-	index _ class allInstVarNames
+	fName := aNode args second value.
+	index := class allInstVarNames
 		indexOf: fName
 		ifAbsent: [^self error: 'second arg must be instVar'].
 	aStream 
@@ -556,8 +557,8 @@ SmartSyntaxPluginCodeGenerator >> generateAsIntPtr: aNode on: aStream indent: an
 SmartSyntaxPluginCodeGenerator >> generateAsOop: aNode on: aStream indent: anInteger [
 
 	| cName class |
-	cName _ aNode args first nameOrValue.
-	class _ Smalltalk 
+	cName := aNode args first nameOrValue.
+	class := Smalltalk 
 		at: (cName asSymbol) 
 		ifAbsent: [nil].
 	(class isNil not and: [class isBehavior]) ifFalse: 
@@ -585,8 +586,8 @@ SmartSyntaxPluginCodeGenerator >> generateAsSmallIntegerObj: aNode on: aStream i
 SmartSyntaxPluginCodeGenerator >> generateAsValue: aNode on: aStream indent: anInteger [
 
 	| cName class |
-	cName _ aNode args first nameOrValue.
-	class _ Smalltalk 
+	cName := aNode args first nameOrValue.
+	class := Smalltalk 
 		at: (cName asSymbol) 
 		ifAbsent: [nil].
 	(class isNil not and: [class isBehavior]) ifFalse: 
@@ -597,9 +598,11 @@ SmartSyntaxPluginCodeGenerator >> generateAsValue: aNode on: aStream indent: anI
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateCPtrAsOop: aNode on: aStream indent: anInteger [
 
-	aStream nextPutAll: '((int) ('.
+	aStream nextPutAll: '((sqInt)(long)('.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ') -4)'.
+	aStream nextPutAll: ') - ';
+		nextPutAll: ObjectMemory baseHeaderSize printString;
+		nextPut: $).
 ]
 
 { #category : #'translating builtins' }
@@ -702,7 +705,7 @@ SmartSyntaxPluginCodeGenerator >> generateDebugCode [
 
 { #category : #'debug code' }
 SmartSyntaxPluginCodeGenerator >> generateDebugCode: aBool [ 
-	debugFlag _ aBool
+	debugFlag := aBool
 ]
 
 { #category : #'translating builtins' }
@@ -749,7 +752,7 @@ SmartSyntaxPluginCodeGenerator >> generateFromStack: aNode on: aStream indent: a
 
 	| idList |
 	aNode args first isConstant ifFalse: [^self error: 'arg must be constant'].
-	idList _ aNode args first value.
+	idList := aNode args first value.
 	(1 to: idList size)
 		do: [:i | 
 			aStream 
@@ -858,7 +861,7 @@ SmartSyntaxPluginCodeGenerator >> generateNext: msgNode on: aStream indent: leve
 	"Generate the C code for this message onto the given stream."
 
 	| varNode |
-	varNode _ msgNode receiver.
+	varNode := msgNode receiver.
 	varNode isVariable
 		ifFalse: [ self error: 'next can only be applied to variables' ].
 	aStream nextPutAll: '*'.
@@ -872,8 +875,8 @@ SmartSyntaxPluginCodeGenerator >> generateRemapOopIn: aNode on: aStream indent: 
 	"Generate the C code for this message onto the given stream."
 
 	| idList |
-	idList _ aNode args first nameOrValue.
-	idList class == Array ifFalse: [idList _ Array with: idList].
+	idList := aNode args first nameOrValue.
+	idList class == Array ifFalse: [idList := Array with: idList].
 	idList do:
 		[:each | 
 		 aStream 
@@ -927,7 +930,7 @@ SmartSyntaxPluginCodeGenerator >> generateStSize: aNode on: aStream indent: anIn
 { #category : #initialize }
 SmartSyntaxPluginCodeGenerator >> initialize [
 	super initialize.
-	debugFlag _ false
+	debugFlag := false
 ]
 
 { #category : #'translating builtins' }
@@ -936,11 +939,11 @@ SmartSyntaxPluginCodeGenerator >> initializeCTranslationDictionary [
 
 	| pairs |
 	super initializeCTranslationDictionary.
-	pairs _ #(
+	pairs := #(
 		#asCInt						#generateAsCInt:on:indent:
 		#asCUnsigned				#generateAsCUnsigned:on:indent:
 		#asCBoolean					#generateAsCBoolean:on:indent:
-		#asCDouble					#generateAsCDouble
+		#asCDouble					#generateAsCDouble:on:indent:
 
 		#asSmallIntegerObj			#generateAsSmallIntegerObj:on:indent:
 		#asPositiveIntegerObj		#generateAsPositiveIntegerObj:on:indent:
