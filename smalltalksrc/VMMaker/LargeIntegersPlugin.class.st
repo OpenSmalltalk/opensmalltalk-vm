@@ -102,7 +102,7 @@ LargeIntegersPlugin class >> moduleName [
 LargeIntegersPlugin class >> moduleNameAndVersion [
 	"Answer the receiver's module name and version info that is used for the plugin's C code. The default is to append the code generation date, but any useful text is ok (keep it short)"
 
-	^ self moduleName, Character space asString, self version, Character space asString, Date today asString
+	^ self moduleName, ' ', self version
 ]
 
 { #category : #translation }
@@ -264,9 +264,9 @@ LargeIntegersPlugin >> bytesOrInt: oop growTo: len [
 LargeIntegersPlugin >> cByteOp: opIndex short: pByteShort len: shortLen long: pByteLong len: longLen into: pByteRes [ 
 	"pByteRes len = longLen."
 	| limit |
-	self var: #pByteShort type: 'unsigned char * '.
-	self var: #pByteLong type: 'unsigned char * '.
-	self var: #pByteRes type: 'unsigned char * '.
+	<var: #pByteShort type: 'unsigned char * '>
+	<var: #pByteLong type: 'unsigned char * '>
+	<var: #pByteRes type: 'unsigned char * '>
 	limit := shortLen - 1.
 	opIndex = andOpIndex
 		ifTrue: 
@@ -295,9 +295,9 @@ LargeIntegersPlugin >> cByteOp: opIndex short: pByteShort len: shortLen long: pB
 { #category : #'C core util' }
 LargeIntegersPlugin >> cBytesCopyFrom: pFrom to: pTo len: len [ 
 	| limit |
-	self returnTypeC: 'int'.
-	self var: #pFrom type: 'unsigned char * '.
-	self var: #pTo type: 'unsigned char * '.
+	<returnTypeC: 'int'>
+	<var: #pFrom type: 'unsigned char * '>
+	<var: #pTo type: 'unsigned char * '>
 
 	self cCode: '' inSmalltalk: [
 		(interpreterProxy isKindOf: InterpreterSimulator) ifTrue: [
@@ -322,7 +322,7 @@ LargeIntegersPlugin >> cBytesHighBit: pByte len: len [
 	LargeNegativeIntegers as well, since Squeak's LargeIntegers are     
 	sign/magnitude."
 	| realLength lastDigit |
-	self var: #pByte type: 'unsigned char *  '.
+	<var: #pByte type: 'unsigned char *  '>
 	realLength := len.
 	[(lastDigit := pByte at: realLength - 1) = 0]
 		whileTrue: [(realLength := realLength - 1) = 0 ifTrue: [^ 0]].
@@ -333,9 +333,9 @@ LargeIntegersPlugin >> cBytesHighBit: pByte len: len [
 LargeIntegersPlugin >> cBytesLshift: shiftCount from: pFrom len: lenFrom to: pTo len: lenTo [ 
 	"C indexed!"
 	| byteShift bitShift carry rShift mask limit digit lastIx |
-	self returnTypeC: 'int'.
-	self var: #pTo type: 'unsigned char * '.
-	self var: #pFrom type: 'unsigned char * '.
+	<returnTypeC: 'int'>
+	<var: #pTo type: 'unsigned char * '>
+	<var: #pFrom type: 'unsigned char * '>
 	byteShift := shiftCount // 8.
 	bitShift := shiftCount \\ 8.
 	bitShift = 0 ifTrue: ["Fast version for byte-aligned shifts"
@@ -374,9 +374,9 @@ LargeIntegersPlugin >> cBytesLshift: shiftCount from: pFrom len: lenFrom to: pTo
 { #category : #'C core util' }
 LargeIntegersPlugin >> cBytesReplace: pTo from: start to: stop with: pFrom startingAt: repStart [ 
 	"C indexed!"
-	self returnTypeC: 'int'.
-	self var: #pTo type: 'unsigned char * '.
-	self var: #pFrom type: 'unsigned char * '.
+	<returnTypeC: 'int'>
+	<var: #pTo type: 'unsigned char * '>
+	<var: #pFrom type: 'unsigned char * '>
 	^ self
 		cBytesCopyFrom: pFrom + repStart
 		to: pTo + start
@@ -386,7 +386,7 @@ LargeIntegersPlugin >> cBytesReplace: pTo from: start to: stop with: pFrom start
 { #category : #'C core util' }
 LargeIntegersPlugin >> cCopyIntVal: val toBytes: bytes [ 
 	| pByte |
-	self var: #pByte type: 'unsigned char *  '.
+	<var: #pByte type: 'unsigned char *  '>
 	pByte := interpreterProxy firstIndexableField: bytes.
 	1 to: (self cDigitLengthOfCSI: val)
 		do: [:ix | pByte at: ix - 1 put: (self cDigitOfCSI: val at: ix)]
@@ -395,8 +395,8 @@ LargeIntegersPlugin >> cCopyIntVal: val toBytes: bytes [
 { #category : #'C core' }
 LargeIntegersPlugin >> cCoreBytesRshiftCount: count n: n m: m f: f bytes: b from: pFrom len: fromLen to: pTo len: toLen [ 
 	| x digit |
-	self var: #pTo type: 'unsigned char * '.
-	self var: #pFrom type: 'unsigned char * '.
+	<var: #pTo type: 'unsigned char * '>
+	<var: #pFrom type: 'unsigned char * '>
 	self sqAssert: b < fromLen.
 	x := (pFrom at: b)
 				bitShift: n.
@@ -420,9 +420,9 @@ LargeIntegersPlugin >> cCoreBytesRshiftCount: count n: n m: m f: f bytes: b from
 { #category : #'C core' }
 LargeIntegersPlugin >> cCoreDigitDivDiv: pDiv len: divLen rem: pRem len: remLen quo: pQuo len: quoLen [ 
 	| dl ql dh dnh j t hi lo r3 l a cond q r1r2 mul |
-	self var: #pDiv type: 'unsigned char * '.
-	self var: #pRem type: 'unsigned char * '.
-	self var: #pQuo type: 'unsigned char * '.
+	<var: #pDiv type: 'unsigned char * '>
+	<var: #pRem type: 'unsigned char * '>
+	<var: #pQuo type: 'unsigned char * '>
 	dl := divLen - 1.
 	"Last actual byte of data (ST ix)"
 	ql := quoLen.
@@ -511,10 +511,10 @@ LargeIntegersPlugin >> cCoreDigitDivDiv: pDiv len: divLen rem: pRem len: remLen 
 LargeIntegersPlugin >> cDigitAdd: pByteShort len: shortLen with: pByteLong len: longLen into: pByteRes [ 
 	"pByteRes len = longLen; returns over.."
 	| accum limit |
-	self returnTypeC: 'unsigned char'.
-	self var: #pByteShort type: 'unsigned char * '.
-	self var: #pByteLong type: 'unsigned char * '.
-	self var: #pByteRes type: 'unsigned char * '.
+	<returnTypeC: 'unsigned char'>
+	<var: #pByteShort type: 'unsigned char * '>
+	<var: #pByteLong type: 'unsigned char * '>
+	<var: #pByteRes type: 'unsigned char * '>
 	accum := 0.
 	limit := shortLen - 1.
 	0 to: limit do: 
@@ -535,8 +535,8 @@ LargeIntegersPlugin >> cDigitAdd: pByteShort len: shortLen with: pByteLong len: 
 LargeIntegersPlugin >> cDigitCompare: pFirst with: pSecond len: len [ 
 	"Precondition: pFirst len = pSecond len."
 	| secondDigit ix firstDigit |
-	self var: #pFirst type: 'unsigned char * '.
-	self var: #pSecond type: 'unsigned char * '.
+	<var: #pFirst type: 'unsigned char * '>
+	<var: #pSecond type: 'unsigned char * '>
 	ix := len - 1.
 	[ix >= 0]
 		whileTrue: 
@@ -564,10 +564,10 @@ LargeIntegersPlugin >> cDigitLengthOfCSI: csi [
 { #category : #'C core' }
 LargeIntegersPlugin >> cDigitMultiply: pByteShort len: shortLen with: pByteLong len: longLen into: pByteRes [ 
 	| limitLong digit k carry limitShort ab |
-	self returnTypeC: 'unsigned char'.
-	self var: #pByteShort type: 'unsigned char * '.
-	self var: #pByteLong type: 'unsigned char * '.
-	self var: #pByteRes type: 'unsigned char * '.
+	<returnTypeC: 'unsigned char'>
+	<var: #pByteShort type: 'unsigned char * '>
+	<var: #pByteLong type: 'unsigned char * '>
+	<var: #pByteRes type: 'unsigned char * '>
 	(shortLen = 1 and: [(pByteShort at: 0)
 			= 0])
 		ifTrue: [^ 0].
@@ -621,9 +621,9 @@ LargeIntegersPlugin >> cDigitSub: pByteSmall
 		len: largeLen
 		into: pByteRes [
 	| z limit |
-	self var: #pByteSmall type: 'unsigned char * '.
-	self var: #pByteLarge type: 'unsigned char * '.
-	self var: #pByteRes type: 'unsigned char * '.
+	<var: #pByteSmall type: 'unsigned char * '>
+	<var: #pByteLarge type: 'unsigned char * '>
+	<var: #pByteRes type: 'unsigned char * '>
 
 	z := 0.
 	"Loop invariant is -1<=z<=1"
@@ -651,7 +651,7 @@ LargeIntegersPlugin >> cHighBit: uint [
 	"For 64 bit uints there could be added a 32-shift."
 	| shifted bitNo |
 
-	self var: #shifted type: 'unsigned int  '.
+	<var: #shifted type: 'unsigned int  '>
 	shifted := uint.
 	bitNo := 0.
 	shifted < (1 << 16)
@@ -677,7 +677,7 @@ LargeIntegersPlugin >> cHighBit: uint [
 LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [ 
 	"anOop has to be a SmallInteger!"
 	| val class size res pByte |
-	self var: #pByte type: 'unsigned char *  '.
+	<var: #pByte type: 'unsigned char *  '>
 	val := interpreterProxy integerValueOf: anOop.
 	val < 0
 		ifTrue: [class := interpreterProxy classLargeNegativeInteger]
@@ -693,7 +693,7 @@ LargeIntegersPlugin >> createLargeFromSmallInteger: anOop [
 LargeIntegersPlugin >> digitAddLarge: firstInteger with: secondInteger [ 
 	"Does not need to normalize!"
 	| over firstLen secondLen shortInt shortLen longInt longLen sum newSum resClass |
-	self var: #over type: 'unsigned char  '.
+	<var: #over type: 'unsigned char  '>
 	firstLen := self byteSizeOfBytes: firstInteger.
 	secondLen := self byteSizeOfBytes: secondInteger.
 	resClass := interpreterProxy fetchClassOf: firstInteger.
@@ -959,7 +959,7 @@ LargeIntegersPlugin >> highBitOfBytes: aBytesOop [
 { #category : #'ST initialize' }
 LargeIntegersPlugin >> initialize [
 	"Initializes ST constants; C's are set by class>>declareCVarsIn:."
-	self returnTypeC: 'void'.
+	<returnTypeC: 'void'>
 	self cCode: '"nothing to do here"'
 		inSmalltalk: 
 			[andOpIndex := 0.
@@ -1536,8 +1536,8 @@ LargeIntegersPlugin >> primDigitSubtract: firstInteger with: secondInteger [
 LargeIntegersPlugin >> primGetModuleName [
 	"If calling this primitive fails, then C module does not exist."
 	| strLen strOop strPtr |
-	self var: #cString type: 'char *'.
-	self var: #strPtr type: 'char *'.
+	<var: #cString type: 'char *'>
+	<var: #strPtr type: 'char *'>
 	self debugCode: [self msg: 'primGetModuleName'].
 	self
 		primitive: 'primGetModuleName'

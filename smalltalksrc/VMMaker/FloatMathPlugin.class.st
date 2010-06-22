@@ -4,25 +4,30 @@ Class {
 	#category : #'VMMaker-Plugins'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #translation }
 FloatMathPlugin class >> hasHeaderFile [
 	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #translation }
 FloatMathPlugin class >> requiresCrossPlatformFiles [
 	"default is ok for most, any plugin needing platform specific files must say so"
 	^true
+]
+
+{ #category : #'instance creation' }
+FloatMathPlugin class >> simulatorClass [
+	^FloatMathPluginSimulator
 ]
 
 { #category : #'float primitives' }
 FloatMathPlugin >> primitiveArcCos [
 	"Computes acos(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_acos(rcvr)' inSmalltalk: [rcvr arcCos].
@@ -35,9 +40,9 @@ FloatMathPlugin >> primitiveArcCos [
 FloatMathPlugin >> primitiveArcCosH [
 	"Computes acosh(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_acosh(rcvr)' inSmalltalk: [rcvr arcCosH].
@@ -50,9 +55,9 @@ FloatMathPlugin >> primitiveArcCosH [
 FloatMathPlugin >> primitiveArcSin [
 	"Computes asin(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_asin(rcvr)' inSmalltalk: [rcvr arcSin].
@@ -65,9 +70,9 @@ FloatMathPlugin >> primitiveArcSin [
 FloatMathPlugin >> primitiveArcSinH [
 	"Computes asinh(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_asinh(rcvr)' inSmalltalk: [rcvr arcSinH].
@@ -80,9 +85,9 @@ FloatMathPlugin >> primitiveArcSinH [
 FloatMathPlugin >> primitiveArcTan [
 	"Computes atan(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_atan(rcvr)' inSmalltalk: [rcvr arcTan].
@@ -95,10 +100,10 @@ FloatMathPlugin >> primitiveArcTan [
 FloatMathPlugin >> primitiveArcTan2 [
 	"Computes atan2(receiver, arg)"
 	| rcvr arg result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #arg type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #arg type: 'double'>
+	<var: #result type: 'double'>
 	arg := interpreterProxy stackFloatValue: 0.
 	rcvr := interpreterProxy stackFloatValue: 1.
 	(interpreterProxy failed) ifTrue:[^nil].
@@ -112,9 +117,9 @@ FloatMathPlugin >> primitiveArcTan2 [
 FloatMathPlugin >> primitiveArcTanH [
 	"Computes atanh(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_atanh(rcvr)' inSmalltalk: [rcvr arcTanH].
@@ -127,9 +132,9 @@ FloatMathPlugin >> primitiveArcTanH [
 FloatMathPlugin >> primitiveCos [
 	"Computes cos(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_cos(rcvr)' inSmalltalk: [rcvr cos].
@@ -142,9 +147,9 @@ FloatMathPlugin >> primitiveCos [
 FloatMathPlugin >> primitiveCosH [
 	"Computes cosh(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_cosh(rcvr)' inSmalltalk: [rcvr cosH].
@@ -157,9 +162,9 @@ FloatMathPlugin >> primitiveCosH [
 FloatMathPlugin >> primitiveExp [
 	"Computes E raised to the receiver power."
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := (self cCode: '__ieee754_exp(rcvr)' inSmalltalk: [rcvr exp]).
@@ -172,10 +177,10 @@ FloatMathPlugin >> primitiveExp [
 FloatMathPlugin >> primitiveFMod [
 	"Computes receiver \\ arg"
 	| rcvr arg result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #arg type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #arg type: 'double'>
+	<var: #result type: 'double'>
 	arg := interpreterProxy stackFloatValue: 0.
 	rcvr := interpreterProxy stackFloatValue: 1.
 	(interpreterProxy failed) ifTrue:[^nil].
@@ -189,10 +194,10 @@ FloatMathPlugin >> primitiveFMod [
 FloatMathPlugin >> primitiveFractionalPart [
 	"Computes receiver \\ 1.0"
 	| rcvr result trunc |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
-	self var: #trunc type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
+	<var: #trunc type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_modf(rcvr, &trunc)' inSmalltalk: [rcvr fractionPart].
@@ -205,10 +210,10 @@ FloatMathPlugin >> primitiveFractionalPart [
 FloatMathPlugin >> primitiveHypot [
 	"hypot(x,y) returns sqrt(x^2+y^2) with error less  than 1 ulps"
 	| rcvr arg result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #arg type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #arg type: 'double'>
+	<var: #result type: 'double'>
 	arg := interpreterProxy stackFloatValue: 0.
 	rcvr := interpreterProxy stackFloatValue: 1.
 	(interpreterProxy failed) ifTrue:[^nil].
@@ -222,9 +227,9 @@ FloatMathPlugin >> primitiveHypot [
 FloatMathPlugin >> primitiveLog10 [
 	"Computes log10(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	rcvr < 0.0 ifTrue:[^interpreterProxy primitiveFail].
@@ -238,9 +243,9 @@ FloatMathPlugin >> primitiveLog10 [
 FloatMathPlugin >> primitiveLogN [
 	"Computes log(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	rcvr < 0.0 ifTrue:[^interpreterProxy primitiveFail].
@@ -254,10 +259,10 @@ FloatMathPlugin >> primitiveLogN [
 FloatMathPlugin >> primitiveRaisedToPower [
 	"Computes receiver**arg"
 	| rcvr arg result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #arg type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #arg type: 'double'>
+	<var: #result type: 'double'>
 	arg := interpreterProxy stackFloatValue: 0.
 	rcvr := interpreterProxy stackFloatValue: 1.
 	(interpreterProxy failed) ifTrue:[^nil].
@@ -271,9 +276,9 @@ FloatMathPlugin >> primitiveRaisedToPower [
 FloatMathPlugin >> primitiveSin [
 	"Computes sin(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_sin(rcvr)' inSmalltalk: [rcvr sin].
@@ -286,9 +291,9 @@ FloatMathPlugin >> primitiveSin [
 FloatMathPlugin >> primitiveSinH [
 	"Computes sinh(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_sinh(rcvr)' inSmalltalk: [rcvr sinH].
@@ -301,9 +306,9 @@ FloatMathPlugin >> primitiveSinH [
 FloatMathPlugin >> primitiveSqrt [
 	"Computes sqrt(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	rcvr < 0.0 ifTrue:[^interpreterProxy primitiveFail].
@@ -317,9 +322,9 @@ FloatMathPlugin >> primitiveSqrt [
 FloatMathPlugin >> primitiveTan [
 	"Computes tan(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_tan(rcvr)' inSmalltalk: [rcvr tan].
@@ -332,9 +337,9 @@ FloatMathPlugin >> primitiveTan [
 FloatMathPlugin >> primitiveTanH [
 	"Computes tanh(receiver)"
 	| rcvr result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	rcvr := interpreterProxy stackFloatValue: 0.
 	(interpreterProxy failed) ifTrue:[^nil].
 	result := self cCode: '__ieee754_tanh(rcvr)' inSmalltalk: [rcvr tanH].
@@ -347,9 +352,9 @@ FloatMathPlugin >> primitiveTanH [
 FloatMathPlugin >> primitiveTimesTwoPower [
 	"Computes E raised to the receiver power."
 	| rcvr arg result |
-	self export: true.
-	self var: #rcvr type: 'double'.
-	self var: #result type: 'double'.
+	<export: true>
+	<var: #rcvr type: 'double'>
+	<var: #result type: 'double'>
 	arg := interpreterProxy stackIntegerValue: 0.
 	rcvr := interpreterProxy stackFloatValue: 1.
 	(interpreterProxy failed) ifTrue:[^nil].

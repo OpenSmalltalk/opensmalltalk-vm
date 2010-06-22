@@ -7,19 +7,23 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #utilities }
 TParseNode >> allCalls [
 	"Answer a collection of selectors for the messages sent in this parse tree."
 
 	| calls |
 	calls := Set new: 100.
-	self nodesDo: [ :node |
-		node isSend ifTrue: [ calls add: node selector ].
-	].
+	self nodesDo:
+		[ :node |
+		node isSend ifTrue:
+			[((calls add: node selector) = #asSymbol
+			  and: [node receiver isConstant
+			  and: [node receiver value isSymbol]]) ifTrue:
+				[calls add: node receiver value]]].
 	^calls
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TParseNode >> bindVariableUsesIn: aDictionary [
 	"Bind uses of all variables in the given dictionary, but do not change variables that appear on the left-hand-side of an assignment statement."
 
@@ -27,29 +31,41 @@ TParseNode >> bindVariableUsesIn: aDictionary [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TParseNode >> bindVariablesIn: aDictionary [
 
 	^self
 ]
 
-{ #category : #'emit comments' }
+{ #category : #accessing }
 TParseNode >> comment: aComment [
 
 	comment := aComment 
 ]
 
-{ #category : #'as yet unclassified' }
-TParseNode >> copyTree [
-	self subclassResponsibility.
+{ #category : #'C code generation' }
+TParseNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
+	^self emitCCodeOn: aStream level: level generator: aCodeGen
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
+TParseNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
+	^self emitCCodeOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'C code generation' }
 TParseNode >> emitCCodeOn: aStream level: lev generator: gen [
 	self subclassResponsibility.
 ]
 
-{ #category : #'emit comments' }
+{ #category : #'C code generation' }
+TParseNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: lev generator: gen [
+	aNodeOrNil ifNotNil:
+		[aNodeOrNil prependCCodeOn: aStream level: lev generator: gen].
+	self emitCCodeOn: aStream level: lev generator: gen
+]
+
+{ #category : #'C code generation' }
 TParseNode >> emitCCommentOn: aStream level: level [
 	"Emit the transferred Smalltalk comments as C comments."
 
@@ -66,7 +82,13 @@ TParseNode >> emitCCommentOn: aStream level: level [
 		aStream cr]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TParseNode >> endsWithReturn [
+
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> hasExplicitReturn [
 
 	self nodesDo: [ :node |
@@ -75,91 +97,117 @@ TParseNode >> hasExplicitReturn [
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
-TParseNode >> inlineMethodsUsing: aDictionary [
-
-	self
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isAssertion [
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isAssignment [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isCaseStmt [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isComment [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isConstant [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isGoTo [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TParseNode >> isInline [
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isLabel [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isLeaf [
 	"Answer true if the receiver is a variable or a constant node."
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TParseNode >> isPreprocessorDirective [
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isReturn [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TParseNode >> isReturningIf [
+	^false
+]
+
+{ #category : #testing }
 TParseNode >> isSend [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TParseNode >> isStmtList [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TParseNode >> isStructTarget: aCodeGen [
+	"Answer if the recever evaluates to a struct pointer
+	 and hence can be dereferenced using ->"
+	^false
+]
+
+{ #category : #testing }
+TParseNode >> isSwitch [
+	^false
+]
+
+{ #category : #testing }
+TParseNode >> isTParseNode [
+	^true
+]
+
+{ #category : #testing }
 TParseNode >> isVariable [
 
 	^false
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TParseNode >> nameOrValue [
 
 	self error: 'object is neither variable nor constant'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #utilities }
 TParseNode >> nodeCount [
 	"Answer the number of nodes in this parseTree (a rough measure of its size)."
 
@@ -169,38 +217,39 @@ TParseNode >> nodeCount [
 	^cnt
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #enumerating }
 TParseNode >> nodesDo: aBlock [
 
 	aBlock value: self.
 ]
 
-{ #category : #'as yet unclassified' }
-TParseNode >> nodesVarCheckDo: aBlock [
+{ #category : #enumerating }
+TParseNode >> nodesDo: aBlock unless: cautionaryBlock [
 
-	aBlock value: self.
+	(cautionaryBlock value: self) ifTrue: [^self].
+	aBlock value: self
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 TParseNode >> printOn: aStream [ 
 	"Append a description of the receiver onto the given stream."
 
 	self printOn: aStream level: 0.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 TParseNode >> printOn: aStream level: anInteger [ 
 	"Typically overridden. If control actually gets here, avoid recursion loop by sending to super."
 
 	super printOn: aStream.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TParseNode >> removeAssertions [
 	"default: do nothing"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TParseNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [self]

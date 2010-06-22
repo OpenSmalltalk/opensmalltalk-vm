@@ -8,47 +8,70 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TStmtListNode >> args [
 
 	^arguments
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TStmtListNode >> bindVariableUsesIn: aDictionary [
 
 	statements := statements collect: [ :s | s bindVariableUsesIn: aDictionary ].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TStmtListNode >> bindVariablesIn: aDictionary [
 
 	statements := statements collect: [ :s | s bindVariablesIn: aDictionary ].
 ]
 
-{ #category : #'as yet unclassified' }
-TStmtListNode >> copyTree [
+{ #category : #'C code generation' }
+TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
 
-	^self class new
-		setArguments: arguments copy
-		statements: (statements collect: [ :s | s copyTree ])
+	| statementWasComment |
+	statementWasComment := false.
+	statements
+		do:
+			[:s |
+			s emitCCommentOn: aStream level: level.
+			s emitCCodeAsArgumentOn: aStream level: 0 generator: aCodeGen.
+			statementWasComment := s isComment]
+		separatedBy:
+			[((self endsWithCloseBracket: aStream)
+			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,]]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
 TStmtListNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
-	statements do: [:s |
+	self emitCCodeOn: aStream prependToEnd: nil level: level generator: aCodeGen
+
+]
+
+{ #category : #'C code generation' }
+TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen [
+
+	statements withIndexDo:
+		[:s :idx|
 		s emitCCommentOn: aStream level: level.
 		aStream tab: level.
-		s emitCCodeOn: aStream level: level generator: aCodeGen.
-		((self endsWithCloseBracket: aStream) or:
-		 [s isComment])
-			ifFalse: [aStream nextPut: $;].
+		(aNodeOrNil notNil
+		 and: [idx = statements size])
+			ifTrue:
+				[aNodeOrNil prependCCodeOn: aStream level: level generator: aCodeGen.
+				 s emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen]
+			ifFalse:
+				[s emitCCodeOn: aStream level: level generator: aCodeGen].
+		((self endsWithCloseBracket: aStream)
+		 or: [s isComment
+		 or: [s isPreprocessorDirective]]) ifFalse:
+			[aStream nextPut: $;].
 		aStream cr].
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TStmtListNode >> endsWithCloseBracket: aStream [
 	"Answer true if the given stream ends in a $} character."
 
@@ -60,13 +83,14 @@ TStmtListNode >> endsWithCloseBracket: aStream [
 
 ]
 
-{ #category : #'as yet unclassified' }
-TStmtListNode >> inlineMethodsUsing: aDictionary [
+{ #category : #testing }
+TStmtListNode >> endsWithReturn [
+	"Answer true if the last statement of this lock is a return."
 
-	statements do: [ :s | s inlineMethodsUsing: aDictionary ].
+	^statements last isReturn or: [statements last isReturningIf]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TStmtListNode >> isNilStmtListNode [
 
 	|stmt|
@@ -75,20 +99,35 @@ TStmtListNode >> isNilStmtListNode [
 	^ stmt isVariable and: [stmt name = 'nil']
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TStmtListNode >> isStmtList [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #enumerating }
 TStmtListNode >> nodesDo: aBlock [
 
 	statements do: [ :s | s nodesDo: aBlock ].	
 	aBlock value: self.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #enumerating }
+TStmtListNode >> nodesDo: aBlock unless: cautionaryBlock [
+
+	(cautionaryBlock value: self) ifTrue: [^self].
+	statements do: [ :s | s nodesDo: aBlock unless: cautionaryBlock ].	
+	aBlock value: self
+]
+
+{ #category : #copying }
+TStmtListNode >> postCopy [
+
+	arguments := arguments copy.
+	statements := statements collect: [ :s | s copy ]
+]
+
+{ #category : #printing }
 TStmtListNode >> printOn: aStream level: level [
 
 	aStream nextPut: $[.
@@ -100,7 +139,7 @@ TStmtListNode >> printOn: aStream level: level [
 	aStream nextPut: $].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 TStmtListNode >> printStatementsOn: aStream level: level [
 
 	statements size > 1 ifTrue: [ aStream crtab: level + 1 ].
@@ -116,7 +155,7 @@ TStmtListNode >> printStatementsOn: aStream level: level [
 	].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TStmtListNode >> removeAssertions [
 	| newStatements |
 	newStatements := OrderedCollection new: statements size.
@@ -128,7 +167,7 @@ TStmtListNode >> removeAssertions [
 	self setStatements: newStatements asArray
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TStmtListNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [
@@ -136,13 +175,13 @@ TStmtListNode >> replaceNodesIn: aDictionary [
 		self]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TStmtListNode >> setArguments: argList [
 
 	arguments := argList.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TStmtListNode >> setArguments: argList statements: statementList [
 	"Initialize this method using the given information."
 
@@ -150,13 +189,18 @@ TStmtListNode >> setArguments: argList statements: statementList [
 	statements := statementList.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TStmtListNode >> setStatements: stmtList [
 
 	statements := stmtList asOrderedCollection.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #inlining }
+TStmtListNode >> shouldExpand [
+	^(statements detect: [:stmt| stmt isInline]) shouldExpand
+]
+
+{ #category : #accessing }
 TStmtListNode >> statements [
 
 	^statements

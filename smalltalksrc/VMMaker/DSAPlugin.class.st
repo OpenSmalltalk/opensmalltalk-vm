@@ -95,7 +95,7 @@ DSAPlugin >> bigDivideLoop [
 DSAPlugin >> leftRotate: anInteger by: bits [
 	"Rotate the given 32-bit integer left by the given number of bits and answer the result."
 
-	self var: #anInteger type: 'unsigned int '.
+	<var: #anInteger type: 'unsigned int '>
 	^ (anInteger << bits) bitOr: (anInteger >> (32 - bits))
 
 ]
@@ -106,7 +106,7 @@ DSAPlugin >> primitiveBigDivide [
 	"Assume: quo starts out filled with zeros."
 
 	| rem div quo |
-	self export: true.
+	<export: true>
 	quo := interpreterProxy stackObjectValue: 0.
 	div := interpreterProxy stackObjectValue: 1.
 	rem := interpreterProxy stackObjectValue: 2.
@@ -142,10 +142,10 @@ DSAPlugin >> primitiveBigMultiply [
 	"Assume: prod starts out filled with zeros"
 
 	| prod f2 f1 prodLen f1Len f2Len prodPtr f2Ptr f1Ptr digit carry k sum |
-	self export: true.
-	self var: #prodPtr type: 'unsigned char *'.
-	self var: #f2Ptr type: 'unsigned char *'.
-	self var: #f1Ptr type: 'unsigned char *'.
+	<export: true>
+	<var: #prodPtr type: 'unsigned char *'>
+	<var: #f2Ptr type: 'unsigned char *'>
+	<var: #f1Ptr type: 'unsigned char *'>
 
 	prod := interpreterProxy stackObjectValue: 0.
 	f2 := interpreterProxy stackObjectValue: 1.
@@ -192,9 +192,9 @@ DSAPlugin >> primitiveExpandBlock [
 	"Expand a 64 byte ByteArray (the first argument) into and an Bitmap of 80 32-bit words (the second argument). When reading a 32-bit integer from the ByteArray, consider the first byte to contain the most significant bits of the word (i.e., use big-endian byte ordering)."
 
 	| expanded buf wordPtr bytePtr src v |
-	self export: true.
-	self var: #wordPtr type: 'unsigned int *'.
-	self var: #bytePtr type: 'unsigned char *'.
+	<export: true>
+	<var: #wordPtr type: 'unsigned int *'>
+	<var: #bytePtr type: 'unsigned char *'>
 
 	expanded := interpreterProxy stackObjectValue: 0.
 	buf := interpreterProxy stackObjectValue: 1.
@@ -234,7 +234,7 @@ DSAPlugin >> primitiveExpandBlock [
 DSAPlugin >> primitiveHasSecureHashPrimitive [
 	"Answer true if the secure hash primitive is implemented."
 
-	self export: true.
+	<export: true>
 	interpreterProxy pop: 1.
 	interpreterProxy pushBool: true.
 
@@ -245,9 +245,9 @@ DSAPlugin >> primitiveHashBlock [
 	"Hash a Bitmap of 80 32-bit words (the first argument), using the given state (the second argument)."
 
 	| state buf statePtr bufPtr a b c d e tmp |
-	self export: true.
-	self var: #statePtr type: 'unsigned int *'.
-	self var: #bufPtr type: 'unsigned int *'.
+	<export: true>
+	<var: #statePtr type: 'unsigned int *'>
+	<var: #bufPtr type: 'unsigned int *'>
 
 	state := interpreterProxy stackObjectValue: 0.
 	buf := interpreterProxy stackObjectValue: 1.
@@ -303,8 +303,8 @@ DSAPlugin >> primitiveHighestNonZeroDigitIndex [
 	"Called with one LargePositiveInteger argument. Answer the index of the top-most non-zero digit."
 
 	| arg bigIntPtr i |
-	self export: true.
-	self var: #bigIntPtr type: 'unsigned char *'.
+	<export: true>
+	<var: #bigIntPtr type: 'unsigned char *'>
 
 	arg := interpreterProxy stackObjectValue: 0.
 	interpreterProxy success:

@@ -5,6 +5,7 @@ Class {
 	#name : #VMPluginCodeGenerator,
 	#superclass : #CCodeGenerator,
 	#instVars : [
+		'pluginClass',
 		'pluginName'
 	],
 	#category : #'VMMaker-Translation to C'
@@ -49,9 +50,8 @@ VMPluginCodeGenerator >> emitCHeaderForPrimitivesOn: aStream [
 VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 	"Write a C file header onto the given stream."
 
-	aStream nextPutAll: '/* Automatically generated from Squeak on '.
-	aStream nextPutAll: Time dateAndTimeNow printString.
-	aStream nextPutAll: ' */';cr.
+	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: pluginClass).
+	aStream cr; cr.
 
 	aStream nextPutAll:'
 #include <math.h>
@@ -99,13 +99,11 @@ VMPluginCodeGenerator >> emitExportsOn: aStream [
 	| prefix |
 	aStream nextPutAll:'
 
-#ifdef SQUEAK_BUILTIN_PLUGIN';cr.
-
-	aStream nextPutAll:'
+#ifdef SQUEAK_BUILTIN_PLUGIN
 
 void* ', pluginName,'_exports[][3] = {'.
 	prefix := '"', pluginName,'"'.
-	self exportedPrimitiveNames do:[:primName|
+	(self sortStrings: self exportedPrimitiveNames) do:[:primName|
 		aStream cr;
 			nextPutAll:'	{'; 
 			nextPutAll: prefix; 
@@ -118,12 +116,9 @@ void* ', pluginName,'_exports[][3] = {'.
 	aStream nextPutAll:'
 	{NULL, NULL, NULL}
 };
-'.
-	aStream nextPutAll:'
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
-
-'.
+'
 ]
 
 { #category : #public }
@@ -150,6 +145,20 @@ VMPluginCodeGenerator >> isGeneratingPluginCode [
 { #category : #public }
 VMPluginCodeGenerator >> localizeGlobalVariables [
 "TPR - we don't do this for plugins"
+]
+
+{ #category : #public }
+VMPluginCodeGenerator >> pluginClass: aPluginClass [
+	"Set the plugin class and name when generating plugins."
+	| packageId |
+	pluginClass := aPluginClass.
+	pluginName := pluginClass moduleName.
+	packageId := self shortMonticelloDescriptionForClass: pluginClass.
+	(packageId beginsWith: pluginClass name) ifTrue:
+		[packageId := packageId allButFirst: pluginClass name size].
+	(packageId beginsWith: pluginName) ifTrue:
+		[packageId := packageId allButFirst: pluginName size].
+	self declareModuleName: pluginClass moduleNameAndVersion, packageId
 ]
 
 { #category : #public }
@@ -182,7 +191,7 @@ typedef struct VirtualMachine {
 
 	categoryList do:[:assoc|
 		stream cr; crtab; nextPutAll:'/* InterpreterProxy methodsFor: ''',assoc key, ''' */'; cr; crtab.
-		assoc value asSortedCollection do:[:sel|
+		(self sortStrings: assoc value) do:[:sel|
 			(methods at: sel) emitProxyFunctionPrototype: stream generator: self.
 			stream nextPutAll: ';'; crtab]].
 
@@ -210,9 +219,9 @@ VMPluginCodeGenerator >> storeVirtualMachineProxyImplementation: categoryList on
 
 	categoryList do:[:assoc|
 		stream cr; cr; nextPutAll:'/* InterpreterProxy methodsFor: ''',assoc key, ''' */'; cr.
-		assoc value asSortedCollection do:[:sel|
+		(self sortStrings: assoc value) do:[:sel|
 			(methods at: sel) emitCFunctionPrototype: stream generator: self.
-			stream nextPutAll: ';'; cr]].
+			stream nextPut: $;; cr]].
 
 	stream cr; nextPutAll:'struct VirtualMachine *VM = NULL;'; cr.
 	stream cr; nextPutAll:

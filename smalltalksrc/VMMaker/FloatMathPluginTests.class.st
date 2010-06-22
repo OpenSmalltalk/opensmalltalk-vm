@@ -299,7 +299,10 @@ FloatMathPluginTests >> runTest: aBlock [
 		float basicAt: 1 put: (bytes unsignedLongAt: 1 bigEndian: true).
 		float basicAt: 2 put: (bytes unsignedLongAt: 5 bigEndian: true).
 		float isNaN] whileTrue.
-		result := aBlock value: float.
+		result := [aBlock value: float] on: Error do:[:ex|
+			"we convert all errors into NaNs to have a value for testing"
+			ex return: Float nan.
+		].
 		out nextNumber: 4 put: (result basicAt: 1).
 		out nextNumber: 4 put: (result basicAt: 2).
 	].
@@ -385,7 +388,7 @@ FloatMathPluginTests >> tanH: value [
 FloatMathPluginTests >> testArcCos [
 	| hash |
 	hash := self runTest:[:f| self arcCos: f].
-	self assert: hash = 175366936335278026567589867783483480383
+	self assert: hash = 320603091210691421897131240956682310429
 ]
 
 { #category : #tests }
@@ -561,7 +564,7 @@ FloatMathPluginTests >> testSqrtData [
 FloatMathPluginTests >> testTan [
 	| hash |
 	hash := self runTest:[:f| self tan: f].
-	self assert: hash = 169918898922109300293069449425089094780
+	self assert: hash = 207143885112027702205238433494882679660
 ]
 
 { #category : #tests }

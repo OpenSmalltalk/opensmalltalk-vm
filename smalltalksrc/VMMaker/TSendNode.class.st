@@ -10,99 +10,183 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TSendNode >> args [
 
 	^arguments
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'inlining support' }
+TSendNode >> argumentsForInliningCodeGenerator: aCodeGen [
+	^(self shouldIncludeReceiverAsFirstArgument: aCodeGen)
+		ifTrue: [{receiver}, arguments]
+		ifFalse: [arguments]
+]
+
+{ #category : #transformations }
 TSendNode >> bindVariableUsesIn: aDictionary [
 
 	receiver := receiver bindVariableUsesIn: aDictionary.
 	arguments := arguments collect: [ :a | a bindVariableUsesIn: aDictionary ].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TSendNode >> bindVariablesIn: aDictionary [
 
 	receiver := receiver bindVariablesIn: aDictionary.
 	arguments := arguments collect: [ :a | a bindVariablesIn: aDictionary ].
 ]
 
-{ #category : #'as yet unclassified' }
-TSendNode >> copyTree [
-
-	^self class new
-		setSelector: selector
-		receiver: receiver copyTree
-		arguments: (arguments collect: [ :arg | arg copyTree ])
-		isBuiltInOp: isBuiltinOperator
-]
-
-{ #category : #'as yet unclassified' }
-TSendNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
+{ #category : #'C code generation' }
+TSendNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen [
+	"Emit the receiver in a form that can be passed as an argument."
 
 	"If the selector is a built-in construct, translate it and return"
-	(aCodeGen emitBuiltinConstructFor: self on: aStream level: level) ifTrue: [ ^self ].
+	(aCodeGen emitBuiltinConstructAsArgumentFor: self on: aStream level: level) ifFalse:
+		["If it is a pointer dereference generate it"
+		(self emitCCodeAsPointerDereferenceOn: aStream level: level generator: aCodeGen) ifFalse:
+			["Otherwise generate the vanilla C function call."
+			 self emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen]]
+]
 
+{ #category : #'C code generation' }
+TSendNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
+	^self emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
+]
+
+{ #category : #'C code generation' }
+TSendNode >> emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen [
+
+	"Translate this message send into a C function call"
 	"Special case for pluggable modules. Replace messages to interpreterProxy
-	by interpreterProxy->message(..) if the message is not builtin"
-	(aCodeGen isGeneratingPluginCode and:[
-		receiver isVariable and:[
-			'interpreterProxy' = receiver name and:[
-				self isBuiltinOperator not]]]) 
-		ifTrue:[aStream nextPutAll:'interpreterProxy->'].
+	 by interpreterProxy->message(..) if the message is not builtin"
+	(aCodeGen isGeneratingPluginCode
+	 and: [receiver isVariable
+	 and: ['interpreterProxy' = receiver name
+	 and: [self isBuiltinOperator not]]]) ifTrue:
+		[aStream nextPutAll:'interpreterProxy->'].
 	"Translate this message send into a C function call."
-	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector), '('.
-	(receiver isVariable and:
-	 [('self' = receiver name) or: ['interpreterProxy' = receiver name]]) ifFalse: [
-		"self is omitted from the arguments list of the generated call"
-		"Note: special case for translated BitBltSimulator--also omit
-		 the receiver if this is a send to the variable 'interpreterProxy'"
-		receiver emitCCodeOn: aStream level: level generator: aCodeGen.
-		arguments isEmpty ifFalse: [ aStream nextPutAll: ', ' ].
-	].
-	1 to: arguments size do: [ :i |
-		(arguments at: i) emitCCodeOn: aStream level: level generator: aCodeGen.
-		i < arguments size ifTrue: [ aStream nextPutAll: ', ' ].
-	].
-	aStream nextPutAll: ')'.
+	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector); nextPut: $(.
+	"Only include the receiver as the first argument in certain cases.
+	 The receiver is always included if it is an expression.
+	 If it is a variable:
+		 If the vmClass says it is an implicit variable, don't include it.
+		 If the variable is 'self' and the method being called is not in
+		 the method set (i.e. it is some external code), don't include it."
+	(self shouldIncludeReceiverAsFirstArgument: aCodeGen) ifTrue:
+		[receiver emitCCodeOn: aStream level: level generator: aCodeGen.
+		arguments isEmpty ifFalse:
+			[aStream nextPutAll: ', ']].
+	arguments do:
+		[ :arg| arg emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen]
+		separatedBy: [aStream nextPut: $,; space].
+	aStream nextPut: $)
 ]
 
-{ #category : #'as yet unclassified' }
-TSendNode >> inlineMethodsUsing: aDictionary [
+{ #category : #'C code generation' }
+TSendNode >> emitCCodeAsPointerDereferenceOn: aStream level: level generator: aCodeGen [
+	"If appropriate, translate this message send as a pointer dereference"
 
-	arguments := arguments collect: [ :arg |
-		arg inlineMethodsUsing: aDictionary.
-	].
-	"xxx inline this message if it is in the dictionary xxx"
+	(self isStructSend: aCodeGen) ifFalse:
+		[^false].
+
+	aStream nextPut: $(.
+	receiver  emitCCodeAsExpressionOn: aStream level: 0 generator: aCodeGen.
+	aStream nextPut: $-; nextPut: $>.
+	aStream nextPutAll: (aCodeGen cFunctionNameFor: selector).
+	arguments isEmpty ifFalse:
+		[self assert: arguments size = 1.
+		 aStream nextPutAll: ' = '.
+		 arguments first emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen].
+	aStream nextPut: $).
+	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
+TSendNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
+	"Emit the receiver as a statement."
+
+	"If the selector is a built-in construct, translate it and return"
+	(aCodeGen emitBuiltinConstructFor: self on: aStream level: level) ifFalse:
+		["If it is a pointer dereference generate it"
+		(self emitCCodeAsPointerDereferenceOn: aStream level: level generator: aCodeGen) ifFalse:
+			["Otherwise generate the vanilla C function call."
+			 self emitCCodeAsFunctionCallOn: aStream level: level generator: aCodeGen]]
+]
+
+{ #category : #testing }
+TSendNode >> endsWithReturn [
+	^self isReturningIf
+]
+
+{ #category : #testing }
 TSendNode >> isAssertion [
 	^(selector beginsWith: 'assert') or: [selector beginsWith: 'verify']
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TSendNode >> isBuiltinOperator [
 
 	^ isBuiltinOperator
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TSendNode >> isBuiltinOperator: builtinFlag [
 
 	isBuiltinOperator := builtinFlag.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TSendNode >> isNonNullCCode [
+	^(#(cCode: cCode:inSmalltalk:) includes: selector)
+	   and: [arguments first isConstant
+	   and: [arguments first value notEmpty]]
+]
+
+{ #category : #testing }
+TSendNode >> isPreprocessorDirective [
+	^selector = #cPreprocessorDirective:
+]
+
+{ #category : #testing }
+TSendNode >> isReturningIf [
+	^(#(ifTrue:ifFalse: ifFalse:ifTrue:) includes: selector)
+	   and: [arguments allSatisfy: [:arg| arg endsWithReturn]]
+]
+
+{ #category : #testing }
 TSendNode >> isSend [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TSendNode >> isStructSend: aCodeGen [
+	"Answer if the recever is a send of a structure accessor.
+	 This is tricky.  We want
+		foo bar => foo->bar
+		foo bar: expr => foo->bar = expr
+	 but only if both foo is a struct type and bar is a field accessor.
+	 The tricky cases are self-sends within struct class methods.  Here we need to
+	 distinguish between self-sends of ordinary methods from self sends of accessors."
+	^arguments size <= 1
+	   and: [(receiver isStructTarget: aCodeGen)
+	   and: [(aCodeGen methodNamed: selector)
+				ifNil: [false]
+				ifNotNil: [:method| method isStructAccessor]]]
+]
+
+{ #category : #testing }
+TSendNode >> isStructTarget: aCodeGen [
+	"Answer if the recever evaluates to a struct pointer
+	 and hence can be dereferenced using ->"
+	selector == #cCoerceSimple:to: ifTrue:
+		[^aCodeGen isTypePointerToStruct: arguments last value].
+
+	^aCodeGen selectorReturnsPointerToStruct: selector
+]
+
+{ #category : #enumerating }
 TSendNode >> nodesDo: aBlock [
 
 	receiver nodesDo: aBlock.
@@ -110,7 +194,23 @@ TSendNode >> nodesDo: aBlock [
 	aBlock value: self.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #enumerating }
+TSendNode >> nodesDo: aBlock unless: cautionaryBlock [
+
+	(cautionaryBlock value: self) ifTrue: [^self].
+	receiver nodesDo: aBlock unless: cautionaryBlock.
+	arguments do: [ :arg | arg nodesDo: aBlock unless: cautionaryBlock].
+	aBlock value: self.
+]
+
+{ #category : #copying }
+TSendNode >> postCopy [
+
+	receiver := receiver copy.
+	arguments := (arguments collect: [ :arg | arg copy ])
+]
+
+{ #category : #printing }
 TSendNode >> printOn: aStream level: level [
 
 	| keywords |
@@ -127,25 +227,25 @@ TSendNode >> printOn: aStream level: level [
 	].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TSendNode >> receiver [
 
 	^receiver
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TSendNode >> receiver: aNode [
 
 	receiver := aNode.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TSendNode >> removeAssertions [
 	receiver removeAssertions.
 	arguments do: [:arg | arg removeAssertions].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TSendNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [
@@ -154,13 +254,13 @@ TSendNode >> replaceNodesIn: aDictionary [
 		self]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TSendNode >> selector [
 
 	^selector
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TSendNode >> setSelector: aSymbol receiver: rcvrNode arguments: argList [
 
 	selector := aSymbol.
@@ -169,11 +269,40 @@ TSendNode >> setSelector: aSymbol receiver: rcvrNode arguments: argList [
 	isBuiltinOperator := false.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TSendNode >> setSelector: aSymbol receiver: rcvrNode arguments: argList isBuiltInOp: builtinFlag [
 
 	selector := aSymbol.
 	receiver := rcvrNode.
 	arguments := argList asArray.
 	isBuiltinOperator := builtinFlag.
+]
+
+{ #category : #'C code generation' }
+TSendNode >> shouldExcludeReceiverAsFirstArgument: aCodeGen [
+	"Only include the receiver as the first argument in certain cases.
+	 The receiver is always included if it is an expression.
+	 If it is a variable:
+		 If the vmClass says it is an implicit variable, don't include it.
+		 If the method's definingClass says it is an implicit variable, don't include it.
+		 If the variable is 'self' and the method being called is not in
+		 the method set (i.e. it is some external code), don't include it."
+	| m |
+	^receiver isVariable
+	    and: [(aCodeGen isNonArgumentImplicitReceiverVariableName: receiver name)
+		    or: [(receiver name beginsWith: 'self')
+			    and: [(receiver name = 'self' or: [receiver name beginsWith: 'self_in_'])
+			    and: [(m := aCodeGen methodNamed: selector) isNil
+					or: [m typeForSelf == #implicit]]]]]
+]
+
+{ #category : #'C code generation' }
+TSendNode >> shouldIncludeReceiverAsFirstArgument: aCodeGen [
+	"Only include the receiver as the first argument in certain cases.
+	 The receiver is always included if it is an expression.
+	 If it is a variable:
+		 If the vmClass says it is an implicit variable, don't include it.
+		 If the variable is 'self' and the method being called is not in
+		 the method set (i.e. it is some external code), don't include it."
+	^(self shouldExcludeReceiverAsFirstArgument: aCodeGen) not
 ]

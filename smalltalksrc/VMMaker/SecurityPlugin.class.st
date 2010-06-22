@@ -41,31 +41,30 @@ SecurityPlugin class >> requiresPlatformFiles [
 
 { #category : #initialize }
 SecurityPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioInitSecurity()' inSmalltalk:[true]
 ]
 
 { #category : #primitives }
 SecurityPlugin >> primitiveCanWriteImage [
-	self export: true.
+	<export: true>
 	interpreterProxy pop: 1.
 	interpreterProxy pushBool: (self cCode:'ioCanWriteImage()' inSmalltalk:[true])
 ]
 
 { #category : #primitives }
 SecurityPlugin >> primitiveDisableImageWrite [
-	self export: true.
-	self cCode:'ioDisableImageWrite()'.
-	interpreterProxy failed ifFalse:[interpreterProxy pop: 1].
+	<export: true>
+	self cCode: 'ioDisableImageWrite()'
 ]
 
 { #category : #primitives }
 SecurityPlugin >> primitiveGetSecureUserDirectory [
 	"Primitive. Return the secure directory for the current user."
 	| dirName dirLen dirOop dirPtr |
-	self export: true.
-	self var: #dirName type: 'char *'.
-	self var: #dirPtr type: 'char *'.
+	<export: true>
+	<var: #dirName type: 'char *'>
+	<var: #dirPtr type: 'char *'>
 	dirName := self cCode: 'ioGetSecureUserDirectory()' inSmalltalk: [nil].
 	(dirName == nil or:[interpreterProxy failed]) 
 		ifTrue:[^interpreterProxy primitiveFail].
@@ -82,9 +81,9 @@ SecurityPlugin >> primitiveGetSecureUserDirectory [
 SecurityPlugin >> primitiveGetUntrustedUserDirectory [
 	"Primitive. Return the untrusted user directory name."
 	| dirName dirLen dirOop dirPtr |
-	self export: true.
-	self var: #dirName type: 'char *'.
-	self var: #dirPtr type: 'char *'.
+	<export: true>
+	<var: #dirName type: 'char *'>
+	<var: #dirPtr type: 'char *'>
 	dirName := self cCode:'ioGetUntrustedUserDirectory()' inSmalltalk:[nil].
 	(dirName == nil or:[interpreterProxy failed]) 
 		ifTrue:[^interpreterProxy primitiveFail].
@@ -99,117 +98,117 @@ SecurityPlugin >> primitiveGetUntrustedUserDirectory [
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCan: socket ListenOnPort: port [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioCanListenOnPort(socket, port)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanConnect: addr ToPort: port [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioCanConnectToPort(addr, port)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanCreate: netType SocketOfType: socketType [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioCanCreateSocketOfType(netType, socketType)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanCreatePath: dirName OfSize: dirNameSize [
-	self export: true.
-	self var: #dirName type: 'char *'.
+	<export: true>
+	<var: #dirName type: 'char *'>
 	^self cCode: 'ioCanCreatePathOfSize(dirName, dirNameSize)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanDeleteFile: fileName OfSize: fileNameSize [
-	self export: true.
-	self var: #fileName type: 'char *'.
+	<export: true>
+	<var: #fileName type: 'char *'>
 	^self cCode: 'ioCanDeleteFileOfSize(fileName, fileNameSize)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanDeletePath: dirName OfSize: dirNameSize [
-	self export: true.
-	self var: #dirName type: 'char *'.
+	<export: true>
+	<var: #dirName type: 'char *'>
 	^self cCode: 'ioCanDeletePathOfSize(dirName, dirNameSize)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanGetFileType: fileName OfSize: fileNameSize [
-	self export: true.
-	self var: #fileName type: 'char *'.
+	<export: true>
+	<var: #fileName type: 'char *'>
 	^self cCode: 'ioCanGetFileTypeOfSize(fileName, fileNameSize)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanListPath: pathName OfSize: pathNameSize [
-	self export: true.
-	self var: #pathName type: 'char *'.
+	<export: true>
+	<var: #pathName type: 'char *'>
 	^self cCode: 'ioCanListPathOfSize(pathName, pathNameSize)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanOpenAsyncFile: fileName OfSize: fileNameSize Writable: writeFlag [
-	self export: true.
-	self var: #fileName type: 'char *'.
+	<export: true>
+	<var: #fileName type: 'char *'>
 	^self cCode: 'ioCanOpenAsyncFileOfSizeWritable(fileName, fileNameSize, writeFlag)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanOpenFile: fileName OfSize: fileNameSize Writable: writeFlag [
-	self export: true.
-	self var: #fileName type: 'char *'.
+	<export: true>
+	<var: #fileName type: 'char *'>
 	^self cCode: 'ioCanOpenFileOfSizeWritable(fileName, fileNameSize, writeFlag)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanRenameFile: fileName OfSize: fileNameSize [
-	self export: true.
-	self var: #fileName type: 'char *'.
+	<export: true>
+	<var: #fileName type: 'char *'>
 	^self cCode: 'ioCanRenameFileOfSize(fileName, fileNameSize)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanRenameImage [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioCanRenameImage()'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanSetFileType: fileName OfSize: fileNameSize [
-	self export: true.
-	self var: #fileName type: 'char *'.
+	<export: true>
+	<var: #fileName type: 'char *'>
 	^self cCode: 'ioCanSetFileTypeOfSize(fileName, fileNameSize)'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secCanWriteImage [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioCanWriteImage()'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secDisableFileAccess [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioDisableFileAccess()'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secDisableSocketAccess [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioDisableSocketAccess()'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secHasFileAccess [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioHasFileAccess()'
 ]
 
 { #category : #'exported functions' }
 SecurityPlugin >> secHasSocketAccess [
-	self export: true.
+	<export: true>
 	^self cCode: 'ioHasSocketAccess()'
 ]

@@ -25,16 +25,16 @@ Class {
 
 { #category : #'translation to C' }
 FFTPlugin class >> declareCVarsIn: cg [
-	cg var: #sinTable type: #'float*'.
-	cg var: #realData type:  #'float*'.
-	cg var: #imagData type: #'float*'.
-	cg var: #permTable type: #'unsigned int*'
+	cg var: #sinTable type: #'float *'.
+	cg var: #realData type:  #'float *'.
+	cg var: #imagData type: #'float *'.
+	cg var: #permTable type: #'unsigned int *'
 ]
 
 { #category : #private }
 FFTPlugin >> checkedFloatPtrOf: oop [
 	"Return the first indexable word of oop which is assumed to be variableWordSubclass"
-	self returnTypeC:'float *'.
+	<returnTypeC:'float *'>
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	interpreterProxy failed ifTrue:[^0].
 	^self cCoerce: (interpreterProxy firstIndexableField: oop) to:'float *'
@@ -43,7 +43,7 @@ FFTPlugin >> checkedFloatPtrOf: oop [
 { #category : #private }
 FFTPlugin >> checkedWordPtrOf: oop [
 	"Return the first indexable word of oop which is assumed to be variableWordSubclass"
-	self returnTypeC:'unsigned int *'.
+	<returnTypeC:'unsigned int *'>
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	^self cCoerce: (interpreterProxy firstIndexableField: oop) to: 'unsigned int *'
 ]
@@ -86,7 +86,7 @@ FFTPlugin >> loadFFTFrom: fftOop [
 { #category : #transforming }
 FFTPlugin >> permuteData [
 	| i end a b tmp |
-	self var: #tmp type: 'float '.
+	<var: #tmp type: 'float '>
 	i := 0.
 	end := permTableSize.
 	[i < end] whileTrue:
@@ -109,7 +109,7 @@ FFTPlugin >> permuteData [
 { #category : #primitives }
 FFTPlugin >> primitiveFFTPermuteData [
 	| rcvr |
-	self export: true.
+	<export: true>
 	rcvr := interpreterProxy stackObjectValue: 0.
 	(self loadFFTFrom: rcvr) ifFalse:[^nil].
 	self permuteData.
@@ -121,7 +121,7 @@ FFTPlugin >> primitiveFFTPermuteData [
 { #category : #primitives }
 FFTPlugin >> primitiveFFTScaleData [
 	| rcvr |
-	self export: true.
+	<export: true>
 	rcvr := interpreterProxy stackObjectValue: 0.
 	(self loadFFTFrom: rcvr) ifFalse:[^nil].
 	self scaleData.
@@ -130,7 +130,7 @@ FFTPlugin >> primitiveFFTScaleData [
 { #category : #primitives }
 FFTPlugin >> primitiveFFTTransformData [
 	| rcvr forward |
-	self export: true.
+	<export: true>
 	forward := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
 	rcvr := interpreterProxy stackObjectValue: 1.
 	(self loadFFTFrom: rcvr) ifFalse:[^nil].
@@ -144,7 +144,7 @@ FFTPlugin >> primitiveFFTTransformData [
 FFTPlugin >> scaleData [
 	"Scale all elements by 1/n when doing inverse"
 	| realN |
-	self var: #realN type: 'float '.
+	<var: #realN type: 'float '>
 	fftSize <= 1 ifTrue:[^nil].
 	realN := self cCoerce: (1.0 / (self cCoerce: fftSize to: 'double')) to: 'float'.
 	0 to: fftSize-1 do:
@@ -167,10 +167,10 @@ FFTPlugin >> transformData: forward [
 { #category : #transforming }
 FFTPlugin >> transformForward: forward [
 	| lev lev1 ip theta realU imagU realT imagT i fftSize2 fftSize4 fftScale ii |
-	self var: #realU type:'float '.
-	self var: #realT type:'float '.
-	self var: #imagU type:'float '.
-	self var: #imagT type:'float '.
+	<var: #realU type:'float '>
+	<var: #realT type:'float '>
+	<var: #imagU type:'float '>
+	<var: #imagT type:'float '>
 	fftSize2 := fftSize // 2.
 	fftSize4 := fftSize // 4.
 	1 to: nu do:

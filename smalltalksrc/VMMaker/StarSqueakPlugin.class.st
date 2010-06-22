@@ -12,7 +12,7 @@ Class {
 StarSqueakPlugin >> checkedUnsignedIntPtrOf: oop [
 	"Return an unsigned int pointer to the first indexable word of oop, which must be a words object."
 
-	self returnTypeC: 'unsigned int *'.
+	<returnTypeC: 'unsigned int *'>
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	interpreterProxy failed ifTrue: [^ 0].
 	^ self cCoerce: (interpreterProxy firstIndexableField: oop) to: 'unsigned int *'
@@ -24,9 +24,9 @@ StarSqueakPlugin >> primitiveDiffuseFromToWidthHeightDelta [
 	"Diffuse the integer values of the source patch variable Bitmap into the output Bitmap. Each cell of the output is the average of the NxN area around it in the source, where N = (2 * delta) + 1."
 
 	| srcOop dstOop height width delta src dst area startY endY startX endX sum rowStart |
-	self export: true.
-	self var: 'src' type: 'unsigned int *'.
-	self var: 'dst' type: 'unsigned int *'.
+	<export: true>
+	<var: 'src' type: 'unsigned int *'>
+	<var: 'dst' type: 'unsigned int *'>
 
 	srcOop := interpreterProxy stackValue: 4.
 	dstOop := interpreterProxy stackValue: 3.
@@ -70,8 +70,8 @@ StarSqueakPlugin >> primitiveEvaporateRate [
 	"Evaporate the integer values of the source Bitmap at the given rate. The rate is an integer between 0 and 1024, where 1024 is a scale factor of 1.0 (i.e., no evaporation)."
 
 	| patchVarOop rate patchVar sz |
-	self export: true.
-	self var: 'patchVar' type: 'unsigned int *'.
+	<export: true>
+	<var: 'patchVar' type: 'unsigned int *'>
 
 	patchVarOop := interpreterProxy stackValue: 1.
 	rate := interpreterProxy stackIntegerValue: 0.
@@ -90,9 +90,9 @@ StarSqueakPlugin >> primitiveEvaporateRate [
 StarSqueakPlugin >> primitiveMapFromToWidthHeightPatchSizeRgbFlagsShift [
 
 	| srcOop dstOop w h patchSize rgbFlags shiftAmount src dst rgbMult srcIndex level pixel offset |
-	self export: true.
-	self var: 'src' type: 'unsigned int *'.
-	self var: 'dst' type: 'unsigned int *'.
+	<export: true>
+	<var: 'src' type: 'unsigned int *'>
+	<var: 'dst' type: 'unsigned int *'>
 
 	srcOop := interpreterProxy stackValue: 6.
 	dstOop := interpreterProxy stackValue: 5.

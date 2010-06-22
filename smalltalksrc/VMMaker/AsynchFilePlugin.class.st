@@ -33,7 +33,7 @@ AsynchFilePlugin class >> requiresPlatformFiles [
 AsynchFilePlugin >> asyncFileValueOf: oop [
 	"Return a pointer to the first byte of the async file record within the given Smalltalk bytes object, or nil if oop is not an async file record."
 
-	self returnTypeC: 'AsyncFile *'.
+	<returnTypeC: 'AsyncFile *'>
 	interpreterProxy success:
 		((interpreterProxy isIntegerObject: oop) not and:
 		 [(interpreterProxy isBytes: oop) and:
@@ -46,7 +46,7 @@ AsynchFilePlugin >> asyncFileValueOf: oop [
 { #category : #'initialize-release' }
 AsynchFilePlugin >> initialiseModule [
 	"Initialise the module"
-	self export: true.
+	<export: true>
 	sCOAFfn := interpreterProxy ioLoadFunction: 'secCanOpenAsyncFileOfSizeWritable' From: 'SecurityPlugin'.
 	^self cCode: 'asyncFileInit()' inSmalltalk:[true]
 ]
@@ -55,8 +55,8 @@ AsynchFilePlugin >> initialiseModule [
 AsynchFilePlugin >> moduleUnloaded: aModuleName [ 
 	"The module with the given name was just unloaded. 
 	Make sure we have no dangling references."
-	self export: true.
-	self var: #aModuleName type: 'char *'.
+	<export: true>
+	<var: #aModuleName type: 'char *'>
 	(aModuleName strcmp: 'SecurityPlugin') = 0
 		ifTrue: ["The security plugin just shut down. How odd. Zero the function pointer we have into it"
 			sCOAFfn := 0]
@@ -65,7 +65,7 @@ AsynchFilePlugin >> moduleUnloaded: aModuleName [
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileClose: fh [ 
 	| f |
-	self var: #f type: 'AsyncFile *'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileClose' parameters: #(Oop ).
 	f := self asyncFileValueOf: fh.
 	self asyncFileClose: f
@@ -74,7 +74,7 @@ AsynchFilePlugin >> primitiveAsyncFileClose: fh [
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaIndex: semaIndex [ 
 	| fileNameSize fOop f okToOpen |
-	self var: #f type: 'AsyncFile *'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileOpen' parameters: #(#String #Boolean #SmallInteger ).
 	fileNameSize := interpreterProxy slotSizeOf: (fileName asOop: String).
 	"If the security plugin can be loaded, use it to check for permission.
@@ -91,7 +91,7 @@ AsynchFilePlugin >> primitiveAsyncFileOpen: fileName forWrite: writeFlag semaInd
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at: start count: num [ 
 	| bufferSize bufferPtr r f count startIndex |
-	self var: #f type: 'AsyncFile *'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileReadResult' parameters: #(Oop Oop SmallInteger SmallInteger ).
 
 	f := self asyncFileValueOf: fhandle.
@@ -113,7 +113,7 @@ AsynchFilePlugin >> primitiveAsyncFileReadResult: fhandle intoBuffer: buffer at:
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition count: count [
 	| f |
-	self var: #f type: 'AsyncFile *'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileReadStart' parameters: #(Oop SmallInteger SmallInteger).
 	f := self asyncFileValueOf: fHandle.
 	self cCode: 'asyncFileReadStart(f, fPosition, count)'
@@ -124,7 +124,7 @@ AsynchFilePlugin >> primitiveAsyncFileReadStart: fHandle fPosition: fPosition co
 AsynchFilePlugin >> primitiveAsyncFileWriteResult: fHandle [
 
 	| f r |
-	self var: #f type: 'AsyncFile *'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileWriteResult' parameters:#(Oop).
 
 	f := self asyncFileValueOf: fHandle.
@@ -135,7 +135,7 @@ AsynchFilePlugin >> primitiveAsyncFileWriteResult: fHandle [
 { #category : #primitives }
 AsynchFilePlugin >> primitiveAsyncFileWriteStart: fHandle fPosition: fPosition fromBuffer: buffer at: start count: num [ 
 	| f bufferSize bufferPtr count startIndex |
-	self var: #f type: 'AsyncFile *'.
+	<var: #f type: 'AsyncFile *'>
 	self primitive: 'primitiveAsyncFileWriteStart' parameters: #(Oop SmallInteger Oop SmallInteger SmallInteger ).
 	f := self asyncFileValueOf: fHandle.
 	interpreterProxy failed ifTrue: [^ nil].
@@ -156,6 +156,6 @@ AsynchFilePlugin >> primitiveAsyncFileWriteStart: fHandle fPosition: fPosition f
 { #category : #'initialize-release' }
 AsynchFilePlugin >> shutdownModule [
 	"Initialise the module"
-	self export: true.
+	<export: true>
 	^self cCode: 'asyncFileShutdown()' inSmalltalk:[true]
 ]

@@ -21,7 +21,7 @@ JoystickTabletPlugin class >> requiresPlatformFiles [
 
 { #category : #'initialize-release' }
 JoystickTabletPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'joystickInit()' inSmalltalk:[true]
 ]
 
@@ -30,7 +30,7 @@ JoystickTabletPlugin >> primitiveGetTabletParameters: cursorIndex [
 	"Get information on the pen tablet attached to this machine. Fail if there is no tablet. If successful, the result is an array of integers; see the Smalltalk call on this primitive for its interpretation."
 
 	| resultSize result resultPtr |
-	self var: #resultPtr type: 'int * '.
+	<var: #resultPtr type: 'int * '>
 	self primitive: 'primitiveGetTabletParameters'
 		parameters: #(SmallInteger).
 	resultSize := self tabletResultSize.
@@ -54,7 +54,7 @@ JoystickTabletPlugin >> primitiveReadTablet: cursorIndex [
 	"Get the current state of the cursor of the pen tablet specified by my argument. Fail if there is no tablet. If successful, the result is an array of integers; see the Smalltalk call on this primitive for its interpretation."
 
 	| resultSize result resultPtr|
-	self var: #resultPtr type: 'int * '.
+	<var: #resultPtr type: 'int * '>
 	self primitive: 'primitiveReadTablet'
 		parameters: #(SmallInteger).
 	resultSize := self tabletResultSize.
@@ -66,6 +66,6 @@ JoystickTabletPlugin >> primitiveReadTablet: cursorIndex [
 
 { #category : #'initialize-release' }
 JoystickTabletPlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'joystickShutdown()' inSmalltalk:[true]
 ]

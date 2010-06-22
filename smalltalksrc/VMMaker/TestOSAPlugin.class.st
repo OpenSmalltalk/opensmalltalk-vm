@@ -80,7 +80,7 @@ TestOSAPlugin >> primAEDisposeDesc [
 TestOSAPlugin >> primAEGetKeyPtr: key type: type actual: ignoreDesc to: bytes [
 
 	| rcvr size ignoreSize |
-	self var: #ignoreSize type: 'Size '.
+	<var: #ignoreSize type: 'Size '>
 	rcvr := self	primitive: 	'primAEGetKeyPtr'
 				parameters: #(DescType DescType DescType ByteArray)
 				receiver: #AEDesc.

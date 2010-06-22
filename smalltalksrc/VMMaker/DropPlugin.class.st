@@ -41,7 +41,7 @@ DropPlugin class >> requiresPlatformFiles [
 
 { #category : #initialize }
 DropPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'dropInit()' inSmalltalk:[true]
 ]
 
@@ -49,8 +49,8 @@ DropPlugin >> initialiseModule [
 DropPlugin >> primitiveDropRequestFileHandle [
 	"Note: File handle creation needs to be handled by specific support code explicitly bypassing the plugin file sand box."
 	| dropIndex handleOop |
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
 	dropIndex := interpreterProxy stackIntegerValue: 0.
@@ -66,10 +66,10 @@ DropPlugin >> primitiveDropRequestFileHandle [
 DropPlugin >> primitiveDropRequestFileName [
 	"Note: File handle creation needs to be handled by specific support code explicitly bypassing the plugin file sand box."
 	| dropIndex dropName nameLength nameOop namePtr |
-	self export: true.
-	self inline: false.
-	self var: #dropName type: 'char *'.
-	self var: #namePtr type: 'char *'.
+	<export: true>
+	<inline: false>
+	<var: #dropName type: 'char *'>
+	<var: #namePtr type: 'char *'>
 	interpreterProxy methodArgumentCount = 1 
 		ifFalse:[^interpreterProxy primitiveFail].
 	dropIndex := interpreterProxy stackIntegerValue: 0.
@@ -88,13 +88,13 @@ DropPlugin >> primitiveDropRequestFileName [
 
 { #category : #primitives }
 DropPlugin >> setFileAccessCallback: address [
-	self export: true. 
-	self var: #address type: 'int'.
+	<export: true>
+	<var: #address type: 'int'>
 	^self cCode: 'sqSecFileAccessCallback((void *) address)'.
 ]
 
 { #category : #initialize }
 DropPlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'dropShutdown()' inSmalltalk:[true]
 ]

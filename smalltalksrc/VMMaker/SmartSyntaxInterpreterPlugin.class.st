@@ -25,6 +25,12 @@ SmartSyntaxInterpreterPlugin class >> doPrimitive: primitiveName withArguments: 
 ]
 
 { #category : #translation }
+SmartSyntaxInterpreterPlugin class >> implicitReturnTypeFor: aSelector [
+	"Answer the return type for methods that don't have an explicit return."
+	^#void
+]
+
+{ #category : #translation }
 SmartSyntaxInterpreterPlugin class >> shouldBeTranslated [
 "SmartSyntaxInterpreterPlugin should not be translated but its subclasses should"
 	^self ~= SmartSyntaxInterpreterPlugin

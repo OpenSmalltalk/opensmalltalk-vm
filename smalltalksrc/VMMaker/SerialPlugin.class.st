@@ -21,7 +21,7 @@ SerialPlugin class >> requiresPlatformFiles [
 
 { #category : #'initialize-release' }
 SerialPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'serialPortInit()' inSmalltalk:[true]
 ]
 
@@ -75,6 +75,6 @@ SerialPlugin >> primitiveSerialPortWrite: portNum from: array startingAt: startI
 
 { #category : #'initialize-release' }
 SerialPlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'serialPortShutdown()' inSmalltalk:[true]
 ]

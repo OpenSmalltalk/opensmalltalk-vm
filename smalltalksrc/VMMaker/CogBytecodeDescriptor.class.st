@@ -1,0 +1,231 @@
+"
+I am an entry in the Cogit's dispatch table for bytecodes.  I hold the routine to call to generate codee for the partcular bytecode I represent and the number of bytes the bytecode has.
+"
+Class {
+	#name : #CogBytecodeDescriptor,
+	#superclass : #VMStructType,
+	#instVars : [
+		'generator',
+		'spanFunction',
+		'numBytes',
+		'needsFrame',
+		'needsFrameInBlock',
+		'isBranch',
+		'isBackwardBranch',
+		'isReturn',
+		'isBlockCreation',
+		'isMapped'
+	],
+	#category : #'VMMaker-JIT'
+}
+
+{ #category : #translation }
+CogBytecodeDescriptor class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
+	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a BytecodeDescriptor struct."
+
+	self instVarNames do:
+		[:ivn|
+		aBinaryBlock
+			value: ivn
+			value: (ivn caseOf: {
+							['generator']	->	[#('sqInt (*' ')(void)')].
+							['spanFunction']	->	[#('sqInt (*' ')(unsigned char,...)')].
+							['numBytes']	->	['unsigned char'].
+							['stackDelta']	->	['signed char'] }
+						otherwise: [#('unsigned' ' : 1')])]
+]
+
+{ #category : #translation }
+CogBytecodeDescriptor class >> structTypeName [
+	^self name allButFirst: 3 "Drop initial Cog"
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> generator [
+	"Answer the value of generator"
+
+	^ generator
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> generator: anObject [
+	"Set the value of generator"
+
+	^generator := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBackwardBranch [
+	"Answer the value of isBackwardBranch"
+
+	^ isBackwardBranch
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBackwardBranch: anObject [
+	"Set the value of isBackwardBranch"
+
+	^isBackwardBranch := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBlockCreation [
+	"Answer the value of isBlockCreation"
+
+	^isBlockCreation
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBlockCreation: anObject [
+	"Set the value of isBlockCreation"
+
+	^isBlockCreation := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBranch [
+	"Answer the value of isBranch"
+
+	^isBranch
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBranch: anObject [
+	"Set the value of isBranch"
+
+	^isBranch := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isMapped [
+	"Answer the value of isMapped"
+
+	^isMapped
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isMapped: anObject [
+	"Set the value of isMapped"
+
+	^isMapped := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isReturn [
+	"Answer the value of isReturn"
+
+	^ isReturn
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isReturn: anObject [
+	"Set the value of isReturn"
+
+	^isReturn := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> needsFrame [
+	"Answer the value of needsFrame"
+
+	^ needsFrame
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> needsFrame: anObject [
+	"Set the value of needsFrame"
+
+	^needsFrame := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> needsFrameInBlock [
+	"Answer the value of needsFrameInBlock"
+
+	^needsFrameInBlock
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> needsFrameInBlock: anObject [
+	"Set the value of needsFrameInBlock"
+
+	^needsFrameInBlock := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> numBytes [
+	"Answer the value of numBytes"
+
+	^ numBytes
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> numBytes: anObject [
+	"Set the value of numBytes"
+
+	^numBytes := anObject
+]
+
+{ #category : #translation }
+CogBytecodeDescriptor >> printCInitializerOn: aStream in: aCCodeGenerator [
+	<doNotGenerate>
+	| first |
+	first := true.
+	aStream nextPut: ${; space.
+	self class instVarNamesAndTypesForTranslationDo:
+		[:ivn :type| | value |
+		first ifTrue: [first := false] ifFalse: [aStream nextPut: $,; space].
+		value := self instVarNamed: ivn.
+		(#(#'unsigned char' #'signed char' #('unsigned' ' : 1')) includes: type)
+			ifTrue: [value isInteger
+						ifTrue: [aStream print: value]
+						ifFalse: [aStream nextPut: ((value notNil and: [value]) ifTrue: [$1] ifFalse: [$0])]]
+			ifFalse: [ivn =  'spanFunction' ifTrue:
+						[aStream nextPut: $(; nextPutAll: type first; nextPutAll: type last; nextPut: $)].
+					aStream nextPutAll: (value
+											ifNotNil: [aCCodeGenerator cFunctionNameFor: value]
+											ifNil: ['0'])]].
+	aStream space; nextPut: $}
+]
+
+{ #category : #'debug printing' }
+CogBytecodeDescriptor >> printOn: aStream [
+	<doNotGenerate> "Smalltalk-size only"
+	super printOn: aStream.
+	generator isNil ifTrue:
+		[^self].
+	aStream space; nextPut: $(; nextPutAll: generator; space; print: numBytes.
+	needsFrame ifTrue: [aStream nextPutAll: ' needsFrame'].
+	isBackwardBranch ifTrue: [aStream nextPutAll: ' isBackwardBranch'].
+	isReturn ifTrue: [aStream nextPutAll: ' isReturn'].
+	aStream nextPut: $)
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> spanFunction [
+	"Answer the value of spanFunction"
+	<returnTypeC: 'int (*)(unsigned char,...)'>
+	^spanFunction
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> spanFunction: functionPointer [
+	"Set the value of spanFunction"
+	<returnTypeC: 'int (*)(unsigned char,...)'>
+	<var: #functionPointer declareC: 'int (*functionPointer)(unsigned char,...)'>
+	^spanFunction := functionPointer
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> stackDelta [
+	"Answer the value of stackDelta"
+
+	^stackDelta
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> stackDelta: anObject [
+	"Set the value of  stackDelta"
+
+	^ stackDelta := anObject
+]

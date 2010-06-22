@@ -36,7 +36,7 @@ LocalePlugin class >> requiresPlatformFiles [
 
 { #category : #initialize }
 LocalePlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self sqLocInitialize
 ]
 

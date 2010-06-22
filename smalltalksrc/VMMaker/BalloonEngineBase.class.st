@@ -285,6 +285,11 @@ BalloonEngineBase class >> initialize [
 	WideLineWidthTable := self initializeWideLineWidthTable.
 	WideLineFillTable := self initializeWideLineFillTable.
 	FillTable := self initializeFillTable.
+
+	(Smalltalk classNamed: #BalloonEngineConstants) ifNotNil:
+		[:balloonEngineConstants|
+		(balloonEngineConstants classPool anySatisfy: [:classVarValue| classVarValue isNil]) ifTrue:
+			[balloonEngineConstants initialize]]
 ]
 
 { #category : #'class initialization' }
@@ -396,7 +401,7 @@ BalloonEngineBase >> aaColorShiftPut: value [
 BalloonEngineBase >> aaFirstPixelFrom: leftX to: rightX [
 	"Common function to compute the first full pixel for AA drawing"
 	| firstPixel |
-	self inline: true.
+	<inline: true>
 	firstPixel := (leftX + self aaLevelGet - 1) bitAnd: (self aaLevelGet - 1) bitInvert32.
 	firstPixel > rightX 
 		ifTrue:[^rightX]
@@ -416,7 +421,7 @@ BalloonEngineBase >> aaHalfPixelPut: value [
 { #category : #displaying }
 BalloonEngineBase >> aaLastPixelFrom: leftX to: rightX [
 	"Common function to compute the last full pixel for AA drawing"
-	self inline: true.
+	<inline: true>
 	^(rightX - 1) bitAnd: (self aaLevelGet - 1) bitInvert32.
 ]
 
@@ -462,7 +467,7 @@ BalloonEngineBase >> accurateLengthOf: deltaX with: deltaY [
 
 { #category : #'GET processing' }
 BalloonEngineBase >> addEdgeToGET: edge [
-	self inline: false.
+	<inline: false>
 	(self allocateGETEntry: 1) ifFalse:[^0].
 	"Install edge in the GET"
 	getBuffer at: self getUsedGet put: edge.
@@ -478,7 +483,7 @@ BalloonEngineBase >> adjustAALevel [
 	"Adjust the span buffers values by the appropriate color offset for anti-aliasing.
 	We do this by replicating the top bits of each color in the lower bits. The idea is that we can scale each color value uniquely from 0 to 255 and thus fill the entire range of colors."
 	| adjustShift adjustMask x0 x1 pixelValue |
-	self inline: false.
+	<inline: false>
 	adjustShift := 8 - self aaColorShiftGet.
 	adjustMask := self aaColorMaskGet bitInvert32.
 	x0 := self spanStartGet >> self aaShiftGet.
@@ -519,7 +524,7 @@ BalloonEngineBase >> allocateAETEntry: nSlots [
 BalloonEngineBase >> allocateGETEntry: nSlots [
 	"Allocate n slots in the global edge table"
 	| srcIndex dstIndex |
-	self inline: false.
+	<inline: false>
 	"First allocate nSlots in the AET"
 	(self allocateAETEntry: nSlots) ifFalse:[^false].
 	self aetUsedGet = 0 ifFalse:["Then move the AET upwards"
@@ -536,7 +541,7 @@ BalloonEngineBase >> allocateGETEntry: nSlots [
 BalloonEngineBase >> allocateObjEntry: nSlots [
 	"Allocate n slots in the object buffer"
 	| srcIndex dstIndex |
-	self inline: false.
+	<inline: false>
 	"First allocate nSlots in the GET"
 	(self allocateGETEntry: nSlots) ifFalse:[^false].
 	self getUsedGet = 0 ifFalse:["Then move the GET upwards"
@@ -571,7 +576,7 @@ BalloonEngineBase >> clearSpanBuffer [
 	"Clear the current span buffer.
 	The span buffer is only cleared in the area that has been used by the previous scan line."
 	| x0 x1 |
-	self inline: false.
+	<inline: false>
 	x0 := self spanStartGet >> self aaShiftGet.
 	x1 := self spanEndGet >> self aaShiftGet + 1.
 	x0 < 0 ifTrue:[x0 := 0].
@@ -635,7 +640,7 @@ BalloonEngineBase >> clipMinYPut: value [
 
 { #category : #'accessing state' }
 BalloonEngineBase >> colorTransform [
-	self returnTypeC:'float *'.
+	<returnTypeC:'float *'>
 	^self cCoerce: workBuffer + GWColorTransform to:'float *'
 ]
 
@@ -660,7 +665,7 @@ BalloonEngineBase >> copyBitsFrom: x0 to: x1 at: yValue [
 BalloonEngineBase >> createGlobalEdgeTable [
 	"Create the global edge table"
 	| object end |
-	self inline: false.
+	<inline: false>
 	object := 0.
 	end := objUsed.
 	[object < end] whileTrue:[
@@ -719,7 +724,7 @@ BalloonEngineBase >> destOffsetYPut: value [
 BalloonEngineBase >> displaySpanBufferAt: y [
 	"Display the span buffer at the current scan line."
 	| targetX0 targetX1 targetY |
-	self inline: false.
+	<inline: false>
 	"self aaLevelGet > 1 ifTrue:[self adjustAALevel]."
 	targetX0 := self spanStartGet >> self aaShiftGet.
 	targetX0 < self clipMinXGet ifTrue:[targetX0 := self clipMinXGet].
@@ -736,7 +741,7 @@ BalloonEngineBase >> drawWideEdge: edge from: leftX [
 	"Draw the given edge starting from leftX with the edge's fill.
 	Return the end value of the drawing operation."
 	| rightX fill type lineWidth |
-	self inline: false. "Not for the moment"
+	<inline: false> "Not for the moment"
 	type := self edgeTypeOf: edge.
 	dispatchedValue := edge.
 	self dispatchOn: type in: WideLineWidthTable.
@@ -803,7 +808,7 @@ BalloonEngineBase >> edgeRightFillOf: edge put: value [
 
 { #category : #'accessing state' }
 BalloonEngineBase >> edgeTransform [
-	self returnTypeC:'float *'.
+	<returnTypeC:'float *'>
 	^self cCoerce: workBuffer + GWEdgeTransform to:'float *'
 ]
 
@@ -877,7 +882,7 @@ BalloonEngineBase >> estimatedLengthOf: deltaX with: deltaY [
 BalloonEngineBase >> fillAllFrom: leftX to: rightX [
 	"Fill the span buffer from leftX to rightX with the given fill."
 	| fill startX stopX |
-	self inline: true.
+	<inline: true>
 	fill := self topFill.
 	startX := leftX.
 	stopX := self topRightX.
@@ -898,8 +903,8 @@ BalloonEngineBase >> fillBitmapSpan: bits from: leftX to: rightX [
 	"Fill the span buffer between leftEdge and rightEdge using the given bits.
 	Note: We always start from zero - this avoids using huge bitmap buffers if the bitmap is to be displayed at the very far right hand side and also gives us a chance of using certain bitmaps (e.g., those with depth 32) directly."
 	| x0 x1 x bitX colorMask colorShift baseShift fillValue |
-	self inline: false.
-	self var: #bits type:'int *'.
+	<inline: false>
+	<var: #bits type:'int *'>
 
 	x0 := leftX.
 	x1 := rightX.
@@ -930,7 +935,7 @@ BalloonEngineBase >> fillBitmapSpan: bits from: leftX to: rightX [
 BalloonEngineBase >> fillColorSpan: pixelValue32 from: leftX to: rightX [
 	"Fill the span buffer between leftEdge and rightEdge with the given pixel value."
 	| x0 x1 |
-	self inline: true.
+	<inline: true>
 	"Use a unrolled version for anti-aliased fills..."
 	self aaLevelGet = 1
 		ifFalse:[^self fillColorSpanAA: pixelValue32 x0: leftX x1: rightX].
@@ -958,7 +963,7 @@ BalloonEngineBase >> fillColorSpanAA: pixelValue32 x0: leftX x1: rightX [
 		b) copy aaLevel pixels between the first and the last full pixel
 		c) copy all pixels that fall in the last full pixel"
 	| colorMask baseShift x idx firstPixel lastPixel aaLevel pv32 |
-	self inline: false. "Not now -- maybe later"
+	<inline: false> "Not now -- maybe later"
 	"Compute the pixel boundaries."
 	firstPixel := self aaFirstPixelFrom: leftX to: rightX.
 	lastPixel := self aaLastPixelFrom: leftX to: rightX.
@@ -1062,7 +1067,7 @@ BalloonEngineBase >> fillOffsetYPut: value [
 BalloonEngineBase >> fillSorts: fillEntry1 before: fillEntry2 [
 	"Return true if fillEntry1 should be drawn before fillEntry2"
 	| diff |
-	self inline: false.
+	<inline: false>
 	"First check the depth value"
 	diff := (self stackFillDepth: fillEntry1) - (self stackFillDepth: fillEntry2).
 	diff = 0 ifFalse:[^diff > 0].
@@ -1077,8 +1082,8 @@ BalloonEngineBase >> fillSpan: fill from: leftX to: rightX [
 	Clip before performing any operations. Return true if the fill must
 	be handled by some Smalltalk code."
 	| x0 x1 type |
-	self var: #fill type: 'unsigned int'.
-	self inline: false.
+	<var: #fill type: 'unsigned int'>
+	<inline: false>
 	fill = 0 ifTrue:[^false]. "Nothing to do"
 	"Start from spEnd - we must not paint pixels twice at a scan line"
 	leftX < self spanEndAAGet 
@@ -1165,7 +1170,7 @@ self printAET.
 self halt.
 ]."
 
-	self inline: false.
+	<inline: false>
 	leftX := rightX := self fillMaxXGet.
 	[self aetStartGet < self aetUsedGet] whileTrue:[
 		leftEdge := rightEdge := aetBuffer at: self aetStartGet.
@@ -1211,7 +1216,7 @@ BalloonEngineBase >> findNextExternalUpdateFromAET [
 	"Check the active edge table for any entries that cannot be handled by the engine itself.
 	If there are any, return true. Otherwise, step the the edge to the next y value."
 	| edge count type |
-	self inline: false.
+	<inline: false>
 	[self aetStartGet < self aetUsedGet] whileTrue:[
 		edge := aetBuffer at: self aetStartGet.
 		count := (self edgeNumLinesOf: edge) - 1.
@@ -1271,7 +1276,7 @@ BalloonEngineBase >> freeStackFillEntry [
 BalloonEngineBase >> getSorts: edge1 before: edge2 [
 	"Return true if the edge at index i should sort before the edge at index j."
 	| diff |
-	self inline: false.
+	<inline: false>
 	edge1 = edge2 ifTrue:[^true].
 	"First, sort by Y"
 	diff := (self edgeYValueOf: edge1) - (self edgeYValueOf: edge2).
@@ -1335,7 +1340,7 @@ BalloonEngineBase >> hasEdgeTransformPut: value [
 BalloonEngineBase >> hideFill: fillIndex depth: depth [
 	"Make the fill style with the given index invisible"
 	| index newTopIndex newTop newDepth newRightX |
-	self inline: false.
+	<inline: false>
 	index := self findStackFill: fillIndex depth: depth.
 	index = -1 ifTrue:[^false].
 
@@ -1374,7 +1379,7 @@ BalloonEngineBase >> hideFill: fillIndex depth: depth [
 
 { #category : #transforming }
 BalloonEngineBase >> incrementPoint: point by: delta [
-	self var: #point type:'int *'.
+	<var: #point type:'int *'>
 	point at: 0 put: (point at: 0) + delta.
 	point at: 1 put: (point at: 1) + delta.
 ]
@@ -1389,7 +1394,7 @@ BalloonEngineBase >> incrementStat: statIndex by: value [
 BalloonEngineBase >> indexForInsertingIntoAET: edge [
 	"Find insertion point for the given edge in the AET"
 	| initialX index |
-	self inline: false.
+	<inline: false>
 	initialX := self edgeXValueOf: edge.
 	index := 0.
 	[index < self aetUsedGet and:[
@@ -1405,8 +1410,8 @@ BalloonEngineBase >> indexForInsertingIntoAET: edge [
 { #category : #other }
 BalloonEngineBase >> initColorTransform [
 	| transform |
-	self inline: false.
-	self var: #transform type:'float *'.
+	<inline: false>
+	<var: #transform type:'float *'>
 	transform := self colorTransform.
 	transform at: 0 put: (self cCoerce: 1.0 to: 'float').
 	transform at: 1 put: (self cCoerce: 0.0 to: 'float').
@@ -1422,8 +1427,8 @@ BalloonEngineBase >> initColorTransform [
 { #category : #other }
 BalloonEngineBase >> initEdgeTransform [
 	| transform |
-	self inline: false.
-	self var: #transform type:'float *'.
+	<inline: false>
+	<var: #transform type:'float *'>
 	transform := self edgeTransform.
 	transform at: 0 put: (self cCoerce: 1.0 to: 'float').
 	transform at: 1 put: (self cCoerce: 0.0 to: 'float').
@@ -1436,7 +1441,7 @@ BalloonEngineBase >> initEdgeTransform [
 
 { #category : #'initialize-release' }
 BalloonEngineBase >> initialiseModule [
-	self export: true.
+	<export: true>
 
 	loadBBFn := interpreterProxy ioLoadFunction: 'loadBitBltFrom' From: bbPluginName.
 	copyBitsFn := interpreterProxy ioLoadFunction: 'copyBitsFromtoat' From: bbPluginName.
@@ -1446,7 +1451,7 @@ BalloonEngineBase >> initialiseModule [
 { #category : #'GET processing' }
 BalloonEngineBase >> initializeGETProcessing [
 	"Initialization stuff that needs to be done before any processing can take place."
-	self inline: false.
+	<inline: false>
 
 	"Make sure aaLevel is initialized"
 	self setAALevel: self aaLevelGet.
@@ -1493,7 +1498,7 @@ BalloonEngineBase >> insertEdgeIntoAET: edge [
 	The edge has already been stepped to the initial yValue -- thus remainingLines and rasterX
 	are both set."
 	| index |
-	self inline: false.
+	<inline: false>
 
 	"Check for the number of lines remaining"
 	(self edgeNumLinesOf: edge) <= 0 ifTrue:[^nil]. "Nothing to do"
@@ -1509,7 +1514,7 @@ BalloonEngineBase >> insertEdgeIntoAET: edge [
 BalloonEngineBase >> insertToAET: edge beforeIndex: index [
 	"Insert the given edge into the AET."
 	| i |
-	self inline: false.
+	<inline: false>
 	"Make sure we have space in the AET"
 	(self allocateAETEntry: 1) ifFalse:[^nil]. "Insufficient space in AET"
 
@@ -1610,8 +1615,8 @@ BalloonEngineBase >> lastExportedRightXPut: value [
 BalloonEngineBase >> loadArrayTransformFrom: transformOop into: destPtr length: n [
 	"Load a transformation from the given array."
 	| value |
-	self inline: false.
-	self var: #destPtr type:'float *'.
+	<inline: false>
+	<var: #destPtr type:'float *'>
 	0 to: n-1 do:[:i|
 		value := interpreterProxy fetchPointer: i ofObject: transformOop.
 		((interpreterProxy isIntegerObject: value) or:[interpreterProxy isFloatObject: value])
@@ -1639,7 +1644,7 @@ BalloonEngineBase >> loadColorTransformFrom: transformOop [
 	"Load a 2x3 transformation matrix from the given oop.
 	Return true if the matrix is not nil, false otherwise"
 	| okay transform |
-	self var: #transform type:'float *'.
+	<var: #transform type:'float *'>
 	transform := self colorTransform.
 	self hasColorTransformPut: 0.
 	okay := self loadTransformFrom: transformOop into: transform length: 8.
@@ -1656,10 +1661,10 @@ BalloonEngineBase >> loadColorTransformFrom: transformOop [
 { #category : #'loading state' }
 BalloonEngineBase >> loadEdgeStateFrom: edgeOop [
 	| edge |
-	self inline: false.
+	<inline: false>
 	edge := self lastExportedEdgeGet.
 	(interpreterProxy slotSizeOf: edgeOop) < ETBalloonEdgeDataSize 
-		ifTrue:[^interpreterProxy primitiveFail].
+		ifTrue:[^nil].
 	self edgeXValueOf: edge 
 		put: (interpreterProxy fetchInteger: ETXValueIndex ofObject: edgeOop).
 	self edgeYValueOf: edge 
@@ -1676,8 +1681,8 @@ BalloonEngineBase >> loadEdgeTransformFrom: transformOop [
 	"Load a 2x3 transformation matrix from the given oop.
 	Return true if the matrix is not nil, false otherwise"
 	| transform okay |
-	self inline: false.
-	self var: #transform type:'float *'.
+	<inline: false>
+	<var: #transform type:'float *'>
 	self hasEdgeTransformPut: 0.
 	transform := self edgeTransform.
 	okay := self loadTransformFrom: transformOop into: transform length: 6.
@@ -1724,8 +1729,8 @@ BalloonEngineBase >> loadFormsFrom: arrayOop [
 BalloonEngineBase >> loadPoint: pointArray from: pointOop [
 	"Load the contents of pointOop into pointArray"
 	| value |
-	self inline: false.
-	self var: #pointArray type:'int *'.
+	<inline: false>
+	<var: #pointArray type:'int *'>
 	(interpreterProxy fetchClassOf: pointOop) = interpreterProxy classPoint 
 		ifFalse:[^interpreterProxy primitiveFail].
 	value := interpreterProxy fetchPointer: 0 ofObject: pointOop.
@@ -1745,53 +1750,56 @@ BalloonEngineBase >> loadPoint: pointArray from: pointOop [
 
 { #category : #'primitives-rendering' }
 BalloonEngineBase >> loadRenderingState [
-	"Load the entire state from the interpreter for the rendering primitives"
-	| edgeOop fillOop state |
-	self inline: false.
+	"Load the entire state from the interpreter for the rendering primitives.
+	 Answer 0 on success or a non-zero failure code on failure."
+	| failCode edgeOop fillOop state |
+	<inline: false>
 	interpreterProxy methodArgumentCount = 2
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^PrimErrBadNumArgs].
+
+	(failCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 2)) ~= 0 ifTrue:
+		[^failCode].
+
 	fillOop := interpreterProxy stackObjectValue: 0.
 	edgeOop := interpreterProxy stackObjectValue: 1.
-	engine := interpreterProxy stackObjectValue: 2.
-	interpreterProxy failed ifTrue:[^false].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^false].
+	interpreterProxy failed ifTrue: [^PrimErrBadArgument].
 
 	"Load span buffer and bitBlt"
-	(self loadSpanBufferFrom:
-		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine))
-			ifFalse:[^false].
+	(failCode := self loadSpanBufferFrom:
+		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine)) = 0 ifFalse:
+		[^failCode].
 	(self loadBitBltFrom: 
-		(interpreterProxy fetchPointer: BEBitBltIndex ofObject: engine))
-			ifFalse:[^false].
+		(interpreterProxy fetchPointer: BEBitBltIndex ofObject: engine)) ifFalse:
+		[^GEFBitBltLoadFailed].
 	(self loadFormsFrom:
-		(interpreterProxy fetchPointer: BEFormsIndex ofObject: engine))
-			ifFalse:[^false].
+		(interpreterProxy fetchPointer: BEFormsIndex ofObject: engine)) ifFalse:
+		[^GEFFormLoadFailed].
 	"Check edgeOop and fillOop"
 	(interpreterProxy slotSizeOf: edgeOop) < ETBalloonEdgeDataSize 
-		ifTrue:[^false].
+		ifTrue:[^GEFEdgeDataTooSmall].
 	(interpreterProxy slotSizeOf: fillOop) < FTBalloonFillDataSize 
-		ifTrue:[^false].
+		ifTrue:[^GEFFillDataTooSmall].
 
 	"Note: Rendering can only take place if we're not in one of the intermediate
 	(e.g., external) states."
 	state := self stateGet.
 	(state = GEStateWaitingForEdge or:[
 		state = GEStateWaitingForFill or:[
-			state = GEStateWaitingChange]]) ifTrue:[^false].
+			state = GEStateWaitingChange]]) ifTrue:[^GEFWrongState].
 
-	^true
+	^0
 ]
 
 { #category : #'loading state' }
 BalloonEngineBase >> loadSpanBufferFrom: spanOop [
-	"Load the span buffer from the given oop."
-	self inline: false.
-	(interpreterProxy fetchClassOf: spanOop) = (interpreterProxy classBitmap) ifFalse:[^false].
+	"Load the span buffer from the given oop.
+	 Answer 0 on success or a non-zero failure code on failure."
+	<inline: false>
+	(interpreterProxy fetchClassOf: spanOop) = (interpreterProxy classBitmap) ifFalse:[^GEFClassMismatch].
 	spanBuffer := interpreterProxy firstIndexableField: spanOop.
 	"Leave last entry unused to avoid complications"
 	self spanSizePut: (interpreterProxy slotSizeOf: spanOop) - 1.
-	^true
+	^0
 ]
 
 { #category : #'loading state' }
@@ -1799,8 +1807,8 @@ BalloonEngineBase >> loadTransformFrom: transformOop into: destPtr length: n [
 	"Load a transformation from transformOop into the float array
 	defined by destPtr. The transformation is assumed to be either
 	an array or a FloatArray of length n."
-	self inline: false.
-	self var: #destPtr type:'float *'.
+	<inline: false>
+	<var: #destPtr type:'float *'>
 	transformOop = interpreterProxy nilObject ifTrue:[^false].
 	(interpreterProxy isIntegerObject: transformOop)
 		ifTrue:[^interpreterProxy primitiveFail].
@@ -1816,9 +1824,9 @@ BalloonEngineBase >> loadTransformFrom: transformOop into: destPtr length: n [
 BalloonEngineBase >> loadWordTransformFrom: transformOop into: destPtr length: n [
 	"Load a float array transformation from the given oop"
 	| srcPtr |
-	self inline: false.
-	self var: #srcPtr type:'float *'.
-	self var: #destPtr type:'float *'.
+	<inline: false>
+	<var: #srcPtr type:'float *'>
+	<var: #destPtr type:'float *'>
 	srcPtr := self cCoerce: (interpreterProxy firstIndexableField: transformOop) to: 'float *'.
 	0 to: n-1 do:[:i| destPtr at: i put: (srcPtr at: i)].
 ]
@@ -1826,15 +1834,15 @@ BalloonEngineBase >> loadWordTransformFrom: transformOop into: destPtr length: n
 { #category : #'loading state' }
 BalloonEngineBase >> loadWorkBufferFrom: wbOop [
 	"Load the working buffer from the given oop"
-	self inline: false.
-	(interpreterProxy isIntegerObject: wbOop) ifTrue:[^false].
-	(interpreterProxy isWords: wbOop) ifFalse:[^false].
-	(interpreterProxy slotSizeOf: wbOop) < GWMinimalSize ifTrue:[^false].
+	<inline: false>
+	(interpreterProxy isIntegerObject: wbOop) ifTrue:[^GEFWorkBufferIsInteger].
+	(interpreterProxy isWords: wbOop) ifFalse:[^GEFWorkBufferIsPointers].
+	(interpreterProxy slotSizeOf: wbOop) < GWMinimalSize ifTrue:[^GEFWorkBufferTooSmall].
 	self workBufferPut: wbOop.
-	self magicNumberGet = GWMagicNumber ifFalse:[^false].
+	self magicNumberGet = GWMagicNumber ifFalse:[^GEFWorkBufferBadMagic].
 	"Sanity checks"
-	(self wbSizeGet = (interpreterProxy slotSizeOf: wbOop)) ifFalse:[^false].
-	self objStartGet = GWHeaderSize ifFalse:[^false].
+	(self wbSizeGet = (interpreterProxy slotSizeOf: wbOop)) ifFalse:[^GEFWorkBufferWrongSize].
+	self objStartGet = GWHeaderSize ifFalse:[^GEFWorkBufferStartWrong].
 
 	"Load buffers"
 	objBuffer := workBuffer + self objStartGet.
@@ -1842,9 +1850,10 @@ BalloonEngineBase >> loadWorkBufferFrom: wbOop [
 	aetBuffer := getBuffer + self getUsedGet.
 
 	"Make sure we don't exceed the work buffer"
-	GWHeaderSize + self objUsedGet + self getUsedGet + self aetUsedGet > self wbSizeGet ifTrue:[^false].
+	GWHeaderSize + self objUsedGet + self getUsedGet + self aetUsedGet
+	> self wbSizeGet ifTrue:[^GEFWorkTooBig].
 
-	^true
+	^0
 ]
 
 { #category : #'accessing state' }
@@ -1866,8 +1875,8 @@ BalloonEngineBase >> makeUnsignedFrom: someIntegerValue [
 BalloonEngineBase >> moduleUnloaded: aModuleName [
 	"The module with the given name was just unloaded.
 	Make sure we have no dangling references."
-	self export: true.
-	self var: #aModuleName type: 'char *'.
+	<export: true>
+	<var: #aModuleName type: 'char *'>
 	(aModuleName strcmp: bbPluginName) = 0 ifTrue:[
 		"BitBlt just shut down. How nasty."
 		loadBBFn := 0.
@@ -1880,7 +1889,7 @@ BalloonEngineBase >> moveAETEntryFrom: index edge: edge x: xValue [
 	"The entry at index is not in the right position of the AET. 
 	Move it to the left until the position is okay."
 	| newIndex |
-	self inline: false.
+	<inline: false>
 	newIndex := index.
 	[newIndex > 0 and:[(self edgeXValueOf: (aetBuffer at: newIndex-1)) > xValue]]
 		whileTrue:[	aetBuffer at: newIndex put: (aetBuffer at: newIndex-1).
@@ -1987,25 +1996,25 @@ BalloonEngineBase >> objectTypeOf: obj put: value [
 
 { #category : #'accessing state' }
 BalloonEngineBase >> point1Get [
-	self returnTypeC:'int *'.
+	<returnTypeC:'int *'>
 	^self cCoerce: workBuffer + GWPoint1 to:'int *'
 ]
 
 { #category : #'accessing state' }
 BalloonEngineBase >> point2Get [
-	self returnTypeC:'int *'.
+	<returnTypeC:'int *'>
 	^self cCoerce: workBuffer + GWPoint2 to:'int *'
 ]
 
 { #category : #'accessing state' }
 BalloonEngineBase >> point3Get [
-	self returnTypeC:'int *'.
+	<returnTypeC:'int *'>
 	^self cCoerce: workBuffer + GWPoint3 to:'int *'
 ]
 
 { #category : #'accessing state' }
 BalloonEngineBase >> point4Get [
-	self returnTypeC:'int *'.
+	<returnTypeC:'int *'>
 	^self cCoerce: workBuffer + GWPoint4 to:'int *'
 ]
 
@@ -2015,7 +2024,7 @@ BalloonEngineBase >> postDisplayAction [
 	Do whatever seems to be a good idea here."
 	"Note: In the future we may check the time needed for this scan line and interrupt processing to give the Smalltalk code a chance to run at a certain time."
 
-	self inline: false.
+	<inline: false>
 
 	"Check if there is any more work to do."
 	(self getStartGet >= self getUsedGet and:[self aetUsedGet = 0]) ifTrue:[
@@ -2030,14 +2039,13 @@ BalloonEngineBase >> postDisplayAction [
 
 { #category : #'primitives-other' }
 BalloonEngineBase >> primitiveAbortProcessing [
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
+	| failureCode |
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	self statePut: GEStateCompleted.
 	self storeEngineStateInto: engine.
 ]
@@ -2045,29 +2053,29 @@ BalloonEngineBase >> primitiveAbortProcessing [
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveAddActiveEdgeEntry [
 	"Note: No need to load either bitBlt or spanBuffer"
-	| edgeOop edge |
-	self export: true.
-	self inline: false.
+	| failureCode edgeOop edge |
+	<export: true>
+	<inline: false>
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
-	edgeOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateWaitingForEdge)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateWaitingForEdge) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
+	edgeOop := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	edge := self loadEdgeStateFrom: edgeOop.
-	interpreterProxy failed ifTrue:[^nil].
+	edge = nil ifTrue:[^interpreterProxy primitiveFailFor: GEFEdgeDataTooSmall].
 
 	(self needAvailableSpace: 1) 
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: GEFWorkTooBig].
 
 	(self edgeNumLinesOf: edge) > 0 ifTrue:[
 		self insertEdgeIntoAET: edge.
 	].
 
-	engineStopped ifTrue:[^interpreterProxy primitiveFail].
+	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
 
 	self statePut: GEStateAddingFromGET. "Back to adding edges from GET"
 	self storeEngineStateInto: engine.
@@ -2081,20 +2089,21 @@ BalloonEngineBase >> primitiveAddActiveEdgeEntry [
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveChangedActiveEdgeEntry [
 	"Note: No need to load either bitBlt or spanBuffer"
-	| edgeOop edge |
-	self export: true.
-	self inline: false.
+	| failureCode edgeOop edge |
+	<export: true>
+	<inline: false>
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
-	edgeOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateWaitingChange)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
 
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateWaitingChange) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+
+	edgeOop := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	edge := self loadEdgeStateFrom: edgeOop.
-	interpreterProxy failed ifTrue:[^nil].
+	edge = nil ifTrue:[^interpreterProxy primitiveFailFor: GEFEdgeDataTooSmall].
 
 	(self edgeNumLinesOf: edge) = 0 
 		ifTrue:[	self removeFirstAETEntry]
@@ -2112,28 +2121,26 @@ BalloonEngineBase >> primitiveChangedActiveEdgeEntry [
 
 { #category : #'primitives-other' }
 BalloonEngineBase >> primitiveCopyBuffer [
-	| buf1 buf2 diff src dst |
-	self export: true.
-	self inline: false.
-
-	self var: #src type:'int * '.
-	self var: #dst type:'int * '.
+	| failCode buf1 buf2 diff src dst |
+	<export: true>
+	<inline: false>
+	<var: #src type:'int * '>
+	<var: #dst type:'int * '>
 
 	interpreterProxy methodArgumentCount = 2
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
 
-	buf2 := interpreterProxy stackObjectValue: 0.
-	buf1 := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
+	buf2 := interpreterProxy stackValue: 0.
+	buf1 := interpreterProxy stackValue: 1.
 	"Make sure the old buffer is properly initialized"
-	(self loadWorkBufferFrom: buf1) 
-		ifFalse:[^interpreterProxy primitiveFail].
+	(failCode := self loadWorkBufferFrom: buf1) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failCode].
 	"Make sure the buffers are of the same type"
 	(interpreterProxy fetchClassOf: buf1) = (interpreterProxy fetchClassOf: buf2)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: GEFClassMismatch].
 	"Make sure buf2 is at least of the size of buf1"
 	diff := (interpreterProxy slotSizeOf: buf2) - (interpreterProxy slotSizeOf: buf1).
-	diff < 0 ifTrue:[^interpreterProxy primitiveFail].
+	diff < 0 ifTrue:[^interpreterProxy primitiveFailFor: GEFSizeMismatch].
 
 	"Okay - ready for copying. First of all just copy the contents up to wbTop"
 	src := workBuffer.
@@ -2151,8 +2158,8 @@ BalloonEngineBase >> primitiveCopyBuffer [
 		dst at: i put: (src at: i).
 	].
 	"Okay, done. Check the new buffer by loading the state from it"
-	(self loadWorkBufferFrom: buf2) 
-		ifFalse:[^interpreterProxy primitiveFail].
+	(failCode := self loadWorkBufferFrom: buf2) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failCode].
 	interpreterProxy pop: 2. "Leave rcvr on stack"
 
 ]
@@ -2160,22 +2167,22 @@ BalloonEngineBase >> primitiveCopyBuffer [
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveDisplaySpanBuffer [
 	"Note: Must load bitBlt and spanBuffer"
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
+	| failureCode |
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateBlitBuffer)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)
+						requiredState: GEStateBlitBuffer) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	"Load span buffer and bitBlt"
-	(self loadSpanBufferFrom:
-		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine))
-			ifFalse:[^interpreterProxy primitiveFail].
+	(failureCode := self loadSpanBufferFrom:
+		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine)) = 0
+			ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	(self loadBitBltFrom: 
 		(interpreterProxy fetchPointer: BEBitBltIndex ofObject: engine))
-			ifFalse:[^interpreterProxy primitiveFail].
+			ifFalse:[^interpreterProxy primitiveFailFor: GEFBitBltLoadFailed].
 	(self currentYGet bitAnd: self aaScanMaskGet) = self aaScanMaskGet ifTrue:[
 		self displaySpanBufferAt: self currentYGet.
 		self postDisplayAction.
@@ -2195,8 +2202,8 @@ BalloonEngineBase >> primitiveDisplaySpanBuffer [
 BalloonEngineBase >> primitiveDoProfileStats [
 	"Turn on/off profiling. Return the old value of the flag."
 	| oldValue newValue |
-	self inline: false.
-	self export: true.
+	<inline: false>
+	<export: true>
 	oldValue := doProfileStats.
 	newValue := interpreterProxy stackObjectValue: 0.
 	newValue := interpreterProxy booleanValueOf: newValue.
@@ -2209,16 +2216,14 @@ BalloonEngineBase >> primitiveDoProfileStats [
 
 { #category : #'primitives-other' }
 BalloonEngineBase >> primitiveFinishedProcessing [
-	| finished |
-	self export: true.
-	self inline: false.
+	| finished failureCode |
+	<export: true>
+	<inline: false>
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	finished := self finishedProcessing.
 	self storeEngineStateInto: engine.
 	interpreterProxy pop: 1.
@@ -2231,71 +2236,64 @@ BalloonEngineBase >> primitiveFinishedProcessing [
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveGetAALevel [
-	self export: true.	
-	self inline: false.
+	<export: true>
+	<inline: false>
+	| failureCode |
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	interpreterProxy pop: 1.
 	interpreterProxy pushInteger: self aaLevelGet.
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveGetClipRect [
-	| rectOop pointOop |
-	self export: true.	
-	self inline: false.
+	| failureCode rectOop pointOop |
+	<export: true>
+	<inline: false>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
 	rectOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
-
-	(interpreterProxy isPointers: rectOop)
-		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: rectOop) < 2
-		ifTrue:[^interpreterProxy primitiveFail].
+	(interpreterProxy failed not
+	and: [(interpreterProxy isPointers: rectOop)
+	and: [(interpreterProxy slotSizeOf: rectOop) >= 2]])
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 
 	interpreterProxy pushRemappableOop: rectOop.
 	pointOop := interpreterProxy makePointwithxValue: self clipMinXGet yValue: self clipMinYGet.
-	rectOop := interpreterProxy popRemappableOop.
-	interpreterProxy storePointer: 0 ofObject: rectOop withValue: pointOop.
-	interpreterProxy pushRemappableOop: rectOop.
+	interpreterProxy storePointer: 0 ofObject: interpreterProxy topRemappableOop withValue: pointOop.
 	pointOop := interpreterProxy makePointwithxValue: self clipMaxXGet yValue: self clipMaxYGet.
 	rectOop := interpreterProxy popRemappableOop.
 	interpreterProxy storePointer: 1 ofObject: rectOop withValue: pointOop.
 
-	interpreterProxy pop: 2.
-	interpreterProxy push: rectOop.
+	interpreterProxy pop: 2 thenPush: rectOop.
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveGetCounts [
-	| statOop stats |
-	self export: true.
-	self inline: false.
-	self var: #stats type:'int *'.
+	| failureCode statOop stats |
+	<export: true>
+	<inline: false>
+	<var: #stats type:'int *'>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
 	statOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy failed not
+	and: [(interpreterProxy isWords: statOop)
+	and: [(interpreterProxy slotSizeOf: statOop) >= 9]])
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 
-	(interpreterProxy isWords: statOop)
-		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: statOop) < 9
-		ifTrue:[^interpreterProxy primitiveFail].
 	stats := interpreterProxy firstIndexableField: statOop.
 	stats at: 0 put: (stats at: 0) + (workBuffer at: GWCountInitializing).
 	stats at: 1 put: (stats at: 1) + (workBuffer at: GWCountFinishTest).
@@ -2312,14 +2310,13 @@ BalloonEngineBase >> primitiveGetCounts [
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveGetDepth [
-	self export: true.	
-	self inline: false.
+	<export: true>
+	<inline: false>
+	| failureCode |
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	interpreterProxy pop: 1.
 	interpreterProxy pushInteger: self currentZGet.
 ]
@@ -2327,61 +2324,57 @@ BalloonEngineBase >> primitiveGetDepth [
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveGetFailureReason [
 	"Return the reason why the last operation failed."
-	self export: true.	
-	self inline: false.
+	<export: true>
+	<inline: false>
+	| failCode |
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	engine := interpreterProxy stackValue: 0.
 	"Note -- don't call loadEngineFrom here because this will override the stopReason with Zero"
-	(interpreterProxy isIntegerObject: engine) ifTrue:[^false].
-	(interpreterProxy isPointers: engine) ifFalse:[^false].
-	(interpreterProxy slotSizeOf: engine) < BEBalloonEngineSize ifTrue:[^false].
-	(self loadWorkBufferFrom: 
-		(interpreterProxy fetchPointer: BEWorkBufferIndex ofObject: engine))
-			ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy isIntegerObject: engine) ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineIsInteger].
+	(interpreterProxy isPointers: engine) ifFalse:[^interpreterProxy primitiveFailFor: GEFEngineIsWords].
+	(interpreterProxy slotSizeOf: engine) < BEBalloonEngineSize ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineTooSmall].
+	(failCode := self loadWorkBufferFrom: 
+		(interpreterProxy fetchPointer: BEWorkBufferIndex ofObject: engine)) = 0
+			ifFalse:[^interpreterProxy primitiveFailFor: failCode].
 	interpreterProxy pop: 1.
 	interpreterProxy pushInteger: self stopReasonGet.
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveGetOffset [
-	| pointOop |
-	self export: true.	
-	self inline: false.
+	| failureCode pointOop |
+	<export: true>
+	<inline: false>
 
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
 
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	pointOop := interpreterProxy makePointwithxValue: self destOffsetXGet yValue: self destOffsetYGet.
-	interpreterProxy pop: 1.
-	interpreterProxy push: pointOop.
+	interpreterProxy pop: 1 thenPush: pointOop.
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveGetTimes [
-	| statOop stats |
-	self export: true.
-	self inline: false.
-	self var: #stats type:'int *'.
+	| failureCode statOop stats |
+	<export: true>
+	<inline: false>
+	<var: #stats type:'int *'>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
 	statOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy failed not
+	and: [(interpreterProxy isWords: statOop)
+	and: [(interpreterProxy slotSizeOf: statOop) >= 9]])
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 
-	(interpreterProxy isWords: statOop)
-		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: statOop) < 9
-		ifTrue:[^interpreterProxy primitiveFail].
 	stats := interpreterProxy firstIndexableField: statOop.
 	stats at: 0 put: (stats at: 0) + (workBuffer at: GWTimeInitializing).
 	stats at: 1 put: (stats at: 1) + (workBuffer at: GWTimeFinishTest).
@@ -2399,8 +2392,8 @@ BalloonEngineBase >> primitiveGetTimes [
 { #category : #'primitives-other' }
 BalloonEngineBase >> primitiveInitializeBuffer [
 	| wbOop size |
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 1
 		ifFalse:[^interpreterProxy primitiveFail].
 	wbOop := interpreterProxy stackObjectValue: 0.
@@ -2441,21 +2434,21 @@ BalloonEngineBase >> primitiveInitializeBuffer [
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveInitializeProcessing [
 	"Note: No need to load bitBlt but must load spanBuffer"
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
+	| failureCode |
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked) 
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	"Load span buffer for clear operation"
-	(self loadSpanBufferFrom:
-		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine))
-			ifFalse:[^interpreterProxy primitiveFail].
+	(failureCode := self loadSpanBufferFrom:
+		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine)) = 0
+			ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	self initializeGETProcessing.
-	engineStopped ifTrue:[^interpreterProxy primitiveFail].
+	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
 	self statePut: GEStateAddingFromGET. "Initialized"
 	interpreterProxy failed ifFalse:[self storeEngineStateInto: engine].
 	doProfileStats ifTrue:[
@@ -2467,41 +2460,42 @@ BalloonEngineBase >> primitiveInitializeProcessing [
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveMergeFillFrom [
 	"Note: No need to load bitBlt but must load spanBuffer"
-	| fillOop bitsOop value |
-	self export: true.
-	self inline: false.
+	| failureCode fillOop bitsOop value |
+	<export: true>
+	<inline: false>
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 2
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 2)
+						requiredState: GEStateWaitingForFill) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+	"Load span buffer for merging the fill"
+	(failureCode := self loadSpanBufferFrom:
+		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine)) = 0
+			ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+
 	fillOop := interpreterProxy stackObjectValue: 0.
 	bitsOop := interpreterProxy stackObjectValue: 1.
-	engine := interpreterProxy stackObjectValue: 2.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateWaitingForFill)
-		ifFalse:[^interpreterProxy primitiveFail].
-	"Load span buffer for merging the fill"
-	(self loadSpanBufferFrom:
-		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine))
-			ifFalse:[^interpreterProxy primitiveFail].
 	"Check bitmap"
-	(interpreterProxy fetchClassOf: bitsOop) = interpreterProxy classBitmap
-		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy failed not
+	and: [(interpreterProxy fetchClassOf: bitsOop) = interpreterProxy classBitmap])
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	"Check fillOop"
 	(interpreterProxy slotSizeOf: fillOop) < FTBalloonFillDataSize
-		ifTrue:[^interpreterProxy primitiveFail].
+		ifTrue:[^interpreterProxy primitiveFailFor: GEFFillDataTooSmall].
 	"Check if this was the fill we have exported"
 	value := interpreterProxy fetchInteger: FTIndexIndex ofObject: fillOop.
 	(self objectIndexOf: self lastExportedFillGet) = value
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
 	value := interpreterProxy fetchInteger: FTMinXIndex ofObject: fillOop.
 	self lastExportedLeftXGet = value
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
 	value := interpreterProxy fetchInteger: FTMaxXIndex ofObject: fillOop.
 	self lastExportedRightXGet = value
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
 
 	(interpreterProxy slotSizeOf: bitsOop) < (self lastExportedRightXGet - self lastExportedLeftXGet)
-		ifTrue:[^interpreterProxy primitiveFail].
+		ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 
 	interpreterProxy failed ifTrue:[^nil].
 
@@ -2520,37 +2514,32 @@ BalloonEngineBase >> primitiveMergeFillFrom [
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveNeedsFlush [
-	| needFlush |
-	self export: true.
-	self inline: false.
+	| failureCode needFlush |
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 0
-		ifFalse:[^interpreterProxy primitiveFail].
-	engine := interpreterProxy stackObjectValue: 0.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 0)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	needFlush := self needsFlush.
 	self storeEngineStateInto: engine.
 	interpreterProxy pop: 1.
 	interpreterProxy pushBool: needFlush.
-
-
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveNeedsFlushPut [
-	| needFlush |
-	self export: true.
-	self inline: false.
+	| failureCode needFlush |
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
-	needFlush := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	needFlush := interpreterProxy booleanValueOf: needFlush.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+
+	needFlush := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	needFlush == true 
 		ifTrue:[self needsFlushPut: 1]
 		ifFalse:[self needsFlushPut: 0].
@@ -2562,18 +2551,18 @@ BalloonEngineBase >> primitiveNeedsFlushPut [
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveNextActiveEdgeEntry [
 	"Note: No need to load either bitBlt or spanBuffer"
-	| edgeOop hasEdge edge |
-	self export: true.
-	self inline: false.
+	| failureCode edgeOop hasEdge edge |
+	<export: true>
+	<inline: false>
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
-	edgeOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUpdateEdges or: GEStateCompleted)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUpdateEdges or: GEStateCompleted) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
+	edgeOop := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	hasEdge := false.
 	self stateGet = GEStateCompleted ifFalse:[
 		hasEdge := self findNextExternalUpdateFromAET.
@@ -2600,24 +2589,22 @@ BalloonEngineBase >> primitiveNextActiveEdgeEntry [
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveNextFillEntry [
 	"Note: No need to load bitBlt but must load spanBuffer"
-	| fillOop hasFill |
-	self export: true.
-	self inline: false.
+	| failureCode fillOop hasFill |
+	<export: true>
+	<inline: false>
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
-	fillOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateScanningAET)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateScanningAET) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	"Load span buffer for internal handling of fills"
-	(self loadSpanBufferFrom:
-		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine))
-			ifFalse:[^interpreterProxy primitiveFail].
+	(failureCode := self loadSpanBufferFrom:
+		(interpreterProxy fetchPointer: BESpanIndex ofObject: engine)) = 0
+			ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	(self loadFormsFrom:
 		(interpreterProxy fetchPointer: BEFormsIndex ofObject: engine))
-			ifFalse:[^interpreterProxy primitiveFail].
+			ifFalse:[^interpreterProxy primitiveFailFor: GEFFormLoadFailed].
 
 	"Check if we have to clear the span buffer before proceeding"
 	(self clearSpanBufferGet = 0) ifFalse:[
@@ -2625,46 +2612,45 @@ BalloonEngineBase >> primitiveNextFillEntry [
 			ifTrue:[self clearSpanBuffer].
 		self clearSpanBufferPut: 0].
 
+	fillOop := interpreterProxy stackObjectValue: 0.
 	hasFill := self findNextExternalFillFromAET.
-	engineStopped ifTrue:[^interpreterProxy primitiveFail].
+	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
 	hasFill ifTrue:[self storeFillStateInto: fillOop].
-	interpreterProxy failed ifFalse:[
-		hasFill
-			ifTrue:[	self statePut: GEStateWaitingForFill]
-			ifFalse:[	self wbStackClear.
-					self spanEndAAPut: 0.
-					self statePut: GEStateBlitBuffer].
-		self storeEngineStateInto: engine.
-		interpreterProxy pop: 2.
-		interpreterProxy pushBool: hasFill not.
-		doProfileStats ifTrue:[
-			self incrementStat: GWCountNextFillEntry by: 1.
-			self incrementStat: GWTimeNextFillEntry by: (interpreterProxy ioMicroMSecs - geProfileTime)].
-	].
+	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFWrongFill].
+	hasFill
+		ifTrue:[	self statePut: GEStateWaitingForFill]
+		ifFalse:[	self wbStackClear.
+				self spanEndAAPut: 0.
+				self statePut: GEStateBlitBuffer].
+	self storeEngineStateInto: engine.
+	interpreterProxy pop: 2.
+	interpreterProxy pushBool: hasFill not.
+	doProfileStats ifTrue:[
+		self incrementStat: GWCountNextFillEntry by: 1.
+		self incrementStat: GWTimeNextFillEntry by: (interpreterProxy ioMicroMSecs - geProfileTime)]
 ]
 
 { #category : #'primitives-incremental' }
 BalloonEngineBase >> primitiveNextGlobalEdgeEntry [
 	"Note: No need to load either bitBlt or spanBuffer"
-	| edgeOop hasEdge edge |
-	self export: true.
-	self inline: false.
+	| failureCode edgeOop hasEdge edge |
+	<export: true>
+	<inline: false>
 	doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
-	edgeOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateAddingFromGET)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateAddingFromGET) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
+	edgeOop := interpreterProxy stackObjectValue: 0.
 	hasEdge := self findNextExternalEntryFromGET.
 	hasEdge ifTrue:[
 		edge := getBuffer at: self getStartGet.
 		self storeEdgeStateFrom: edge into: edgeOop.
 		self getStartPut: self getStartGet + 1].
 
-	interpreterProxy failed ifTrue:[^nil].
+	interpreterProxy failed ifTrue:[^interpreterProxy primitiveFailFor: GEFWrongEdge].
 
 	hasEdge
 		ifTrue:[	self statePut: GEStateWaitingForEdge] "Wait for adding edges"
@@ -2685,30 +2671,31 @@ BalloonEngineBase >> primitiveNextGlobalEdgeEntry [
 
 { #category : #'primitives-other' }
 BalloonEngineBase >> primitiveRegisterExternalEdge [
-	| rightFillIndex leftFillIndex initialZ initialY initialX index  edge |
-	self export: true.
-	self inline: false.
+	| failureCode rightFillIndex leftFillIndex initialZ initialY initialX index  edge |
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 6 
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 6)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+
 	rightFillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
 	leftFillIndex := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 1).
 	initialZ := interpreterProxy stackIntegerValue: 2.
 	initialY := interpreterProxy stackIntegerValue: 3.
 	initialX := interpreterProxy stackIntegerValue: 4.
 	index := interpreterProxy stackIntegerValue: 5.
-	engine := interpreterProxy stackObjectValue: 6.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy failed
+		ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 
 	(self allocateObjEntry: GEBaseEdgeSize) 
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: GEFWorkTooBig].
 
 	"Make sure the fills are okay"
-	(self isFillOkay: leftFillIndex)
-		ifFalse:[^interpreterProxy primitiveFail].
-	(self isFillOkay: rightFillIndex)
-		ifFalse:[^interpreterProxy primitiveFail].
+	((self isFillOkay: leftFillIndex)
+	and: [self isFillOkay: rightFillIndex])
+		ifFalse:[^interpreterProxy primitiveFailFor: GEFWrongFill].
 
 	edge := objUsed.
 	objUsed := edge + GEBaseEdgeSize.
@@ -2722,7 +2709,7 @@ BalloonEngineBase >> primitiveRegisterExternalEdge [
 	self edgeZValueOf: edge put: initialZ.
 	self edgeLeftFillOf: edge put: (self transformColor: leftFillIndex).
 	self edgeRightFillOf: edge put: (self transformColor: rightFillIndex).
-	engineStopped ifTrue:[^interpreterProxy primitiveFail].
+	engineStopped ifTrue:[^interpreterProxy primitiveFailFor: GEFEngineStopped].
 
 	interpreterProxy failed ifFalse:[
 		self storeEngineStateInto: engine.
@@ -2732,22 +2719,24 @@ BalloonEngineBase >> primitiveRegisterExternalEdge [
 
 { #category : #'primitives-other' }
 BalloonEngineBase >> primitiveRegisterExternalFill [
-	| index  fill |
-	self export: true.
-	self inline: false.
+	| failureCode index  fill |
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 1 
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+
 	index := interpreterProxy stackIntegerValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 
 	"Note: We *must* not allocate any fill with index 0"
 	fill := 0.
 	[fill = 0] whileTrue:[
 		(self allocateObjEntry: GEBaseEdgeSize) 
-			ifFalse:[^interpreterProxy primitiveFail].
+			ifFalse:[^interpreterProxy primitiveFailFor: GEFWorkTooBig].
 		fill := objUsed.
 		objUsed := fill + GEBaseFillSize.
 		"Install type and length"
@@ -2766,10 +2755,11 @@ BalloonEngineBase >> primitiveRegisterExternalFill [
 { #category : #'primitives-rendering' }
 BalloonEngineBase >> primitiveRenderImage [
 	"Start/Proceed rendering the entire image"
-	self export: true.
-	self inline: false.
-
-	self loadRenderingState ifFalse:[^interpreterProxy primitiveFail].
+	<export: true>
+	<inline: false>
+	| failCode |
+	(failCode := self loadRenderingState) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failCode].
 
 	self proceedRenderingScanline. "Finish this scan line"
 	engineStopped ifTrue:[^self storeRenderingState].
@@ -2781,10 +2771,11 @@ BalloonEngineBase >> primitiveRenderImage [
 { #category : #'primitives-rendering' }
 BalloonEngineBase >> primitiveRenderScanline [
 	"Start rendering the entire image"
-	self export: true.
-	self inline: false.
-
-	self loadRenderingState ifFalse:[^interpreterProxy primitiveFail].
+	<export: true>
+	<inline: false>
+	| failCode |
+	(failCode := self loadRenderingState) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failCode].
 
 	self proceedRenderingScanline. "Finish the current scan line"
 
@@ -2793,27 +2784,28 @@ BalloonEngineBase >> primitiveRenderScanline [
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveSetAALevel [
-	| level |
-	self export: true.
-	self inline: false.
+	| failureCode level |
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 	level := interpreterProxy stackIntegerValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
+	interpreterProxy failed
+		ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self setAALevel: level.
 	self storeEngineStateInto: engine.
-	interpreterProxy pop: 1. "Leace rcvr on stack"
+	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveSetBitBltPlugin [
 	"Primitive. Set the BitBlt plugin to use."
 	| pluginName length ptr needReload |
-	self export: true.
-	self var: #ptr type:'char *'.
+	<export: true>
+	<var: #ptr type:'char *'>
 	pluginName := interpreterProxy stackValue: 0.
 	"Must be string to work"
 	(interpreterProxy isBytes: pluginName) 
@@ -2839,132 +2831,133 @@ BalloonEngineBase >> primitiveSetBitBltPlugin [
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveSetClipRect [
-	| rectOop |
-	self export: true.	
-	self inline: false.
+	| failureCode rectOop |
+	<export: true>
+	<inline: false>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
 	rectOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
-
-	(interpreterProxy isPointers: rectOop)
-		ifFalse:[^interpreterProxy primitiveFail].
-	(interpreterProxy slotSizeOf: rectOop) < 2
-		ifTrue:[^interpreterProxy primitiveFail].
+	(interpreterProxy failed not
+	and: [(interpreterProxy isPointers: rectOop)
+	and: [(interpreterProxy slotSizeOf: rectOop) >= 2]])
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self loadPoint: self point1Get from: (interpreterProxy fetchPointer: 0 ofObject: rectOop).
 	self loadPoint: self point2Get from: (interpreterProxy fetchPointer: 1 ofObject: rectOop).
-	interpreterProxy failed ifFalse:[
-		self clipMinXPut: (self point1Get at: 0).
-		self clipMinYPut: (self point1Get at: 1).
-		self clipMaxXPut: (self point2Get at: 0).
-		self clipMaxYPut: (self point2Get at: 1).
-		self storeEngineStateInto: engine.
-		interpreterProxy pop: 1. "Leave rcvr on stack"
-	].
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	self clipMinXPut: (self point1Get at: 0).
+	self clipMinYPut: (self point1Get at: 1).
+	self clipMaxXPut: (self point2Get at: 0).
+	self clipMaxYPut: (self point2Get at: 1).
+	self storeEngineStateInto: engine.
+	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveSetColorTransform [
-	| transformOop |
-	self export: true.	
-	self inline: false.
+	| failureCode transformOop |
+	<export: true>
+	<inline: false>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
 	transformOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
-
+	interpreterProxy failed
+		ifTrue: [^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self loadColorTransformFrom: transformOop.
-	interpreterProxy failed ifFalse:[
-		self storeEngineStateInto: engine.
-		interpreterProxy pop: 1. "Leave rcvr on stack"
-	].
+	interpreterProxy failed
+		ifTrue: [^interpreterProxy primitiveFailFor: GEFEntityLoadFailed].
+	self storeEngineStateInto: engine.
+	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveSetDepth [
-	| depth |
-	self export: true.	
-	self inline: false.
+	| failureCode depth |
+	<export: true>
+	<inline: false>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
 	depth := interpreterProxy stackIntegerValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
-
+	interpreterProxy failed
+		ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self currentZPut: depth.
 
-	interpreterProxy failed ifFalse:[
-		self storeEngineStateInto: engine.
-		interpreterProxy pop: 1. "Leave rcvr on stack"
-	].
+	self storeEngineStateInto: engine.
+	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveSetEdgeTransform [
-	| transformOop |
-	self export: true.	
-	self inline: false.
+	| failureCode transformOop |
+	<export: true>
+	<inline: false>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
 
 	transformOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
-
+	interpreterProxy failed
+		ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self loadEdgeTransformFrom: transformOop.
-	interpreterProxy failed ifFalse:[
-		self storeEngineStateInto: engine.
-		interpreterProxy pop: 1. "Leave rcvr on stack"
-	].
+	interpreterProxy failed
+		ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	self storeEngineStateInto: engine.
+	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
 { #category : #'primitives-access' }
 BalloonEngineBase >> primitiveSetOffset [
-	| pointOop |
-	self export: true.	
-	self inline: false.
+	| failureCode pointOop |
+	<export: true>
+	<inline: false>
 
 	interpreterProxy methodArgumentCount = 1
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
 
-	pointOop := interpreterProxy stackObjectValue: 0.
-	engine := interpreterProxy stackObjectValue: 1.
-	interpreterProxy failed ifTrue:[^nil].
-	(self quickLoadEngineFrom: engine requiredState: GEStateUnlocked)
-		ifFalse:[^interpreterProxy primitiveFail].
+	(failureCode := self quickLoadEngineFrom: (interpreterProxy stackValue: 1)
+						requiredState: GEStateUnlocked) = 0
+		ifFalse:[^interpreterProxy primitiveFailFor: failureCode].
+
+	pointOop := interpreterProxy stackValue: 0.
 	(interpreterProxy fetchClassOf: pointOop) = interpreterProxy classPoint
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
 	self loadPoint: self point1Get from: pointOop.
-	interpreterProxy failed ifFalse:[
-		self destOffsetXPut: (self point1Get at: 0).
-		self destOffsetYPut: (self point1Get at: 1).
-		self storeEngineStateInto: engine.
-		interpreterProxy pop: 1. "Leave rcvr on stack"
-	].
+	interpreterProxy failed
+		ifTrue:[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+
+	self destOffsetXPut: (self point1Get at: 0).
+	self destOffsetYPut: (self point1Get at: 1).
+	self storeEngineStateInto: engine.
+	interpreterProxy pop: 1. "Leave rcvr on stack"
 ]
 
 { #category : #'primitives-rendering' }
 BalloonEngineBase >> proceedRenderingImage [
 	"This is the main rendering entry"
 	| external |
-	self inline: false.
+	<inline: false>
 	[self finishedProcessing] whileFalse:[
 		doProfileStats ifTrue:[geProfileTime := interpreterProxy ioMicroMSecs].
 		external := self findNextExternalEntryFromGET.
@@ -3028,7 +3021,7 @@ BalloonEngineBase >> proceedRenderingScanline [
 	This method may be called after some Smalltalk code has been executed inbetween."
 	"This is the main rendering entry"
 	| external state |
-	self inline: false.
+	<inline: false>
 	state := self stateGet.
 
 	state = GEStateUnlocked ifTrue:[
@@ -3106,39 +3099,44 @@ BalloonEngineBase >> proceedRenderingScanline [
 
 { #category : #'loading state' }
 BalloonEngineBase >> quickLoadEngineFrom: engineOop [
-	"Load the minimal required state from the engineOop, e.g., just the work buffer."
-	self inline: false.
-	interpreterProxy failed ifTrue:[^false].
-	(interpreterProxy isIntegerObject: engineOop) ifTrue:[^false].
-	(interpreterProxy isPointers: engineOop) ifFalse:[^false].
-	(interpreterProxy slotSizeOf: engineOop) < BEBalloonEngineSize ifTrue:[^false].
+	"Load the minimal required state from the engineOop, e.g., just the work buffer.
+	 Answer 0 on success or non-zero a failure code on failure"
+	<inline: false>
+	| failCode |
+	interpreterProxy failed ifTrue:[^GEFAlreadyFailed].
+	(interpreterProxy isIntegerObject: engineOop) ifTrue:[^GEFEngineIsInteger].
+	(interpreterProxy isPointers: engineOop) ifFalse:[^GEFEngineIsWords].
+	(interpreterProxy slotSizeOf: engineOop) < BEBalloonEngineSize ifTrue:[^GEFEngineTooSmall].
 	engine := engineOop.
-	(self loadWorkBufferFrom: 
-		(interpreterProxy fetchPointer: BEWorkBufferIndex ofObject: engineOop))
-			ifFalse:[^false].
+	(failCode := self loadWorkBufferFrom: (interpreterProxy
+											fetchPointer: BEWorkBufferIndex
+											ofObject: engineOop)) = 0
+		ifFalse: [^failCode].
 	self stopReasonPut: 0.
 	objUsed := self objUsedGet.
 	engineStopped := false.
-	^true
+	^0
 ]
 
 { #category : #'loading state' }
 BalloonEngineBase >> quickLoadEngineFrom: oop requiredState: requiredState [
-	self inline: false.
-	(self quickLoadEngineFrom: oop) ifFalse:[^false].
-	self stateGet = requiredState ifTrue:[^true].
+	<inline: false>
+	| failureCode |
+	(failureCode := self quickLoadEngineFrom: oop) = 0 ifFalse:[^failureCode].
+	self stateGet = requiredState ifTrue:[^0].
 	self stopReasonPut: GErrorBadState.
-	^false
+	^GEFWrongState
 ]
 
 { #category : #'loading state' }
 BalloonEngineBase >> quickLoadEngineFrom: oop requiredState: requiredState or: alternativeState [
-	self inline: false.
-	(self quickLoadEngineFrom: oop) ifFalse:[^false].
-	self stateGet = requiredState ifTrue:[^true].
-	self stateGet = alternativeState ifTrue:[^true].
+	<inline: false>
+	| failureCode |
+	(failureCode := self quickLoadEngineFrom: oop) = 0 ifFalse:[^failureCode].
+	self stateGet = requiredState ifTrue:[^0].
+	self stateGet = alternativeState ifTrue:[^0].
 	self stopReasonPut: GErrorBadState.
-	^false
+	^GEFWrongState
 ]
 
 { #category : #'FILL processing' }
@@ -3157,8 +3155,8 @@ BalloonEngineBase >> quickSortGlobalEdgeTable: array from: i to: j [
 	sortBlock."
 	"Note: The original loop has been heavily re-written for C translation"
 	| di dij dj tt ij k l n tmp again before |
-	self var: #array type:'int *'.
-	self inline: false.
+	<var: #array type:'int *'>
+	<inline: false>
 	"The prefix d means the data at that index."
 	(n := j + 1  - i) <= 1 ifTrue: [^0].	"Nothing to sort." 
 	 "Sort di,dj."
@@ -3227,7 +3225,7 @@ BalloonEngineBase >> quickSortGlobalEdgeTable: array from: i to: j [
 { #category : #'AET processing' }
 BalloonEngineBase >> removeFirstAETEntry [
 	| index |
-	self inline: false.
+	<inline: false>
 	index := self aetStartGet.
 	self aetUsedPut: self aetUsedGet - 1.
 	[index < self aetUsedGet] whileTrue:[
@@ -3238,7 +3236,7 @@ BalloonEngineBase >> removeFirstAETEntry [
 
 { #category : #other }
 BalloonEngineBase >> resetGraphicsEngineStats [
-	self inline: false.
+	<inline: false>
 	workBuffer at: GWTimeInitializing put: 0.
 	workBuffer at: GWTimeFinishTest put: 0.
 	workBuffer at: GWTimeNextGETEntry put: 0.
@@ -3269,7 +3267,7 @@ BalloonEngineBase >> resetGraphicsEngineStats [
 { #category : #'AET processing' }
 BalloonEngineBase >> resortFirstAETEntry [
 	| edge xValue leftEdge |
-	self inline: false.
+	<inline: false>
 	self aetStartGet = 0 ifTrue:[^nil]. "Nothing to resort"
 	edge := aetBuffer at: self aetStartGet.
 	xValue := self edgeXValueOf: edge.
@@ -3286,7 +3284,7 @@ BalloonEngineBase >> setAALevel: level [
 		4 - 4x4 unweighted anti-aliasing.
 	"
 	| aaLevel |
-	self inline: false.
+	<inline: false>
 	level >= 4 ifTrue:[aaLevel := 4].
 	(level >= 2) & (level < 4) ifTrue:[aaLevel := 2].
 	level < 2 ifTrue:[aaLevel := 1].
@@ -3313,7 +3311,7 @@ BalloonEngineBase >> setAALevel: level [
 
 { #category : #'FILL processing' }
 BalloonEngineBase >> showFill: fillIndex depth: depth rightX: rightX [
-	self inline: false.
+	<inline: false>
 	(self allocateStackFillEntry) ifFalse:[^nil]. "Insufficient space"
 	self stackFillValue: 0 put: fillIndex.
 	self stackFillDepth: 0 put: depth.
@@ -3334,10 +3332,10 @@ BalloonEngineBase >> showFill: fillIndex depth: depth rightX: rightX [
 { #category : #other }
 BalloonEngineBase >> smallSqrtTable [
 	| theTable |
-	self inline: false.
-	self returnTypeC:'int *'.
-	self var: #theTable declareC:'static int theTable[32] = 
-	{0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6}'.
+	<inline: false>
+	<returnTypeC:'int *'>
+	<var: #theTable declareC:'static int theTable[32] = 
+	{0, 1, 1, 2, 2, 2, 2, 3, 3, 3, 3, 3, 3, 4, 4, 4, 4, 4, 4, 4, 4, 5, 5, 5, 5, 5, 5, 5, 5, 5, 5, 6}'>
 	^theTable
 ]
 
@@ -3461,7 +3459,7 @@ BalloonEngineBase >> stopReasonPut: value [
 { #category : #'storing state' }
 BalloonEngineBase >> storeEdgeStateFrom: edge into: edgeOop [
 
-	self inline: false.
+	<inline: false>
 	(interpreterProxy slotSizeOf: edgeOop) < ETBalloonEdgeDataSize 
 		ifTrue:[^interpreterProxy primitiveFail].
 	interpreterProxy storeInteger: ETIndexIndex ofObject: edgeOop withValue: 
@@ -3485,7 +3483,7 @@ BalloonEngineBase >> storeEngineStateInto: oop [
 { #category : #'storing state' }
 BalloonEngineBase >> storeFillStateInto: fillOop [
 	| fillIndex leftX rightX |
-	self inline: false.
+	<inline: false>
 	fillIndex := self lastExportedFillGet.
 	leftX := self lastExportedLeftXGet.
 	rightX := self lastExportedRightXGet.
@@ -3501,7 +3499,7 @@ BalloonEngineBase >> storeFillStateInto: fillOop [
 
 { #category : #'primitives-rendering' }
 BalloonEngineBase >> storeRenderingState [
-	self inline: false.
+	<inline: false>
 	interpreterProxy failed ifTrue:[^nil].
 	engineStopped ifTrue:[
 		"Check the stop reason and store the required information"
@@ -3540,7 +3538,7 @@ BalloonEngineBase >> storeStopStateIntoEdge: edgeOop fill: fillOop [
 BalloonEngineBase >> toggleFill: fillIndex depth: depth rightX: rightX [
 	"Make the fill style with the given index either visible or invisible"
 	| hidden |
-	self inline: false.
+	<inline: false>
 
 	self stackFillSize = 0 ifTrue:[
 		(self allocateStackFillEntry) ifTrue:[
@@ -3557,7 +3555,7 @@ BalloonEngineBase >> toggleFill: fillIndex depth: depth rightX: rightX [
 { #category : #'FILL processing' }
 BalloonEngineBase >> toggleFillsOf: edge [
 	| depth fillIndex |
-	self inline: false.
+	<inline: false>
 
 	(self needAvailableSpace: self stackFillEntryLength * 2) 
 		ifFalse:[^nil]. "Make sure we have enough space left"
@@ -3572,7 +3570,7 @@ BalloonEngineBase >> toggleFillsOf: edge [
 { #category : #'FILL processing' }
 BalloonEngineBase >> toggleWideFillOf: edge [
 	| fill type lineWidth depth rightX index |
-	self inline: false.
+	<inline: false>
 	type := self edgeTypeOf: edge.
 	dispatchedValue := edge.
 	self dispatchOn: type in: WideLineWidthTable.
@@ -3650,8 +3648,8 @@ BalloonEngineBase >> topRightX [
 { #category : #transforming }
 BalloonEngineBase >> transformColor: fillIndex [
 	| r g b a transform alphaScale |
-	self var: #transform type:'float *'.
-	self var: #alphaScale type:'double '.
+	<var: #transform type:'float *'>
+	<var: #alphaScale type:'double '>
 	(fillIndex = 0 or:[self isFillColor: fillIndex]) ifFalse:[^fillIndex].
 	b := fillIndex bitAnd: 255.
 	g := (fillIndex >> 8) bitAnd: 255.
@@ -3679,7 +3677,7 @@ BalloonEngineBase >> transformColor: fillIndex [
 { #category : #transforming }
 BalloonEngineBase >> transformPoint: point [
 	"Transform the given point. If haveMatrix is true then use the current transformation."
-	self var:#point type:'int *'.
+	<var:#point type:'int *'>
 	self hasEdgeTransform ifFalse:[
 		"Multiply each component by aaLevel and add a half pixel"
 		point at: 0 put: (point at: 0) + self destOffsetXGet * self aaLevelGet.
@@ -3695,7 +3693,7 @@ BalloonEngineBase >> transformPoint: srcPoint into: dstPoint [
 	"Transform srcPoint into dstPoint by using the currently loaded matrix"
 	"Note: This method has been rewritten so that inlining works (e.g., removing
 	the declarations and adding argument coercions at the appropriate points)"
-	self inline: true.
+	<inline: true>
 	self transformPointX: ((self cCoerce: srcPoint to: 'int *') at: 0) asFloat 
 		y: ((self cCoerce: srcPoint to:'int *') at: 1) asFloat
 		into: (self cCoerce: dstPoint to: 'int *')
@@ -3707,11 +3705,11 @@ BalloonEngineBase >> transformPointX: xValue y: yValue into: dstPoint [
 	"Note: This should be rewritten so that inlining works (e.g., removing
 	the declarations and adding argument coercions at the appropriate points)"
 	| x y transform |
-	self inline: true. "Won't help at the moment ;-("
-	self var: #dstPoint type:'int *'.
-	self var: #xValue type: 'double '.
-	self var: #yValue type: 'double '.
-	self var: #transform type:'float *'.
+	<inline: true>
+	<var: #dstPoint type:'int *'>
+	<var: #xValue type: 'double '>
+	<var: #yValue type: 'double '>
+	<var: #transform type:'float *'>
 	transform := self edgeTransform.
 	x := ((((transform at: 0) * xValue) +
 		((transform at: 1) * yValue) +
@@ -3727,7 +3725,7 @@ BalloonEngineBase >> transformPointX: xValue y: yValue into: dstPoint [
 BalloonEngineBase >> transformPoints: n [
 	"Transform n (n=1,2,3) points.
 	If haveMatrix is true then the matrix contains the actual transformation."
-	self inline: true.
+	<inline: true>
 	n > 0 ifTrue:[self transformPoint: self point1Get].
 	n > 1 ifTrue:[self transformPoint: self point2Get].
 	n > 2 ifTrue:[self transformPoint: self point3Get].
@@ -3738,9 +3736,9 @@ BalloonEngineBase >> transformPoints: n [
 BalloonEngineBase >> transformWidth: w [
 	"Transform the given width"
 	| deltaX deltaY dstWidth dstWidth2 |
-	self inline: false.
-	self var: #deltaX type:'double '.
-	self var: #deltaY type:'double '.
+	<inline: false>
+	<var: #deltaX type:'double '>
+	<var: #deltaY type:'double '>
 	w = 0 ifTrue:[^0].
 	self point1Get at: 0 put: 0.
 	self point1Get at: 1 put: 0.
@@ -3764,7 +3762,7 @@ BalloonEngineBase >> transformWidth: w [
 { #category : #transforming }
 BalloonEngineBase >> uncheckedTransformColor: fillIndex [
 	| r g b a transform |
-	self var: #transform type:'float *'.
+	<var: #transform type:'float *'>
 	(self hasColorTransform) ifFalse:[^fillIndex].
 	b := fillIndex bitAnd: 255.
 	g := (fillIndex >> 8) bitAnd: 255.

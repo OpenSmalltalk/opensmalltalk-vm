@@ -2,20 +2,25 @@ Class {
 	#name : #TLabeledCommentNode,
 	#superclass : #TParseNode,
 	#instVars : [
-		'label'
+		'label',
+		'asmLabel'
 	],
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
-TLabeledCommentNode >> copyTree [
+{ #category : #accessing }
+TLabeledCommentNode >> asmLabel [
 
-	^self class new
-		setLabel: label
-		comment: comment
+	^asmLabel
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
+TLabeledCommentNode >> asmLabel: labelString [
+
+	asmLabel := labelString
+]
+
+{ #category : #'C code generation' }
 TLabeledCommentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C comment with optional label."
 
@@ -23,34 +28,37 @@ TLabeledCommentNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	aStream nextPutAll: '/* '.
 	aStream nextPutAll: comment.
 	aStream nextPutAll: ' */'.
+	asmLabel notNil ifTrue:
+		[aStream crtab: level.
+		 aCodeGen outputAsmLabel: asmLabel on: aStream]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TLabeledCommentNode >> isComment [
 	"Answer true if the receiver is just a comment (i.e., it has no label)."
 
 	^label = nil
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TLabeledCommentNode >> isLabel [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TLabeledCommentNode >> isLeaf [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TLabeledCommentNode >> label [
 
 	^label
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 TLabeledCommentNode >> printOn: aStream level: level [
 
 	self printOptionalLabelOn: aStream.
@@ -59,7 +67,7 @@ TLabeledCommentNode >> printOn: aStream level: level [
 	aStream nextPut: $".
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 TLabeledCommentNode >> printOptionalLabelOn: aStream [
 
 	label ~= nil ifTrue: [
@@ -70,27 +78,27 @@ TLabeledCommentNode >> printOptionalLabelOn: aStream [
 	].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TLabeledCommentNode >> setComment: commentString [
 
 	label := nil.
 	comment := commentString.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TLabeledCommentNode >> setLabel: labelString [
 
 	label := labelString.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TLabeledCommentNode >> setLabel: labelString comment: commentString [
 
 	label := labelString.
 	comment := commentString.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
 TLabeledCommentNode >> unindentOneTab: aStream [
 	"Remove the last tab from the given stream if possible."
 

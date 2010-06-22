@@ -92,14 +92,14 @@ JPEGReadWriter2Plugin class >> requiresPlatformFiles [
 { #category : #'initialize-release' }
 JPEGReadWriter2Plugin >> initialiseModule [
 
-	self export: true.
+	<export: true>
 	^true
 ]
 
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primImageHeight: aJPEGDecompressStruct [
 
-	self export: true.
+	<export: true>
 
 	self
 		primitive: 'primImageHeight'
@@ -119,7 +119,7 @@ JPEGReadWriter2Plugin >> primImageHeight: aJPEGDecompressStruct [
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primImageWidth: aJPEGDecompressStruct [
 
-	self export: true.
+	<export: true>
 
 	self
 		primitive: 'primImageWidth'
@@ -138,7 +138,7 @@ JPEGReadWriter2Plugin >> primImageWidth: aJPEGDecompressStruct [
 
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primJPEGCompressStructSize [
-	self export: true.
+	<export: true>
 
 	self
 		primitive: 'primJPEGCompressStructSize'
@@ -150,7 +150,7 @@ JPEGReadWriter2Plugin >> primJPEGCompressStructSize [
 
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primJPEGDecompressStructSize [
-	self export: true.
+	<export: true>
 
 	self
 		primitive: 'primJPEGDecompressStructSize'
@@ -162,7 +162,7 @@ JPEGReadWriter2Plugin >> primJPEGDecompressStructSize [
 
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primJPEGErrorMgr2StructSize [
-	self export: true.
+	<export: true>
 	self
 		primitive: 'primJPEGErrorMgr2StructSize'
 		parameters: #().
@@ -173,7 +173,7 @@ JPEGReadWriter2Plugin >> primJPEGErrorMgr2StructSize [
 
 { #category : #primitives }
 JPEGReadWriter2Plugin >> primJPEGPluginIsPresent [
-	self export: true.
+	<export: true>
 	self
 		primitive: 'primJPEGPluginIsPresent'
 		parameters: #().
@@ -184,13 +184,13 @@ JPEGReadWriter2Plugin >> primJPEGPluginIsPresent [
 JPEGReadWriter2Plugin >> primJPEGReadHeader: aJPEGDecompressStruct fromByteArray: source errorMgr: aJPEGErrorMgr2Struct [
 
 	| pcinfo pjerr sourceSize |
-	self export: true.
+	<export: true>
+	<var: #pcinfo type: 'j_decompress_ptr '>
+	<var: #pjerr type: 'error_ptr2 '>
 	self
 		primitive: 'primJPEGReadHeaderfromByteArrayerrorMgr'
 		parameters: #(ByteArray ByteArray ByteArray).
- 	self var: #pcinfo type: 'j_decompress_ptr '.
- 	self var: #pjerr type: 'error_ptr2 '.
-
+ 
 
 		pcinfo := nil. pjerr := nil. sourceSize := nil.
 		pcinfo. pjerr. sourceSize.
@@ -228,16 +228,15 @@ JPEGReadWriter2Plugin >> primJPEGReadHeader: aJPEGDecompressStruct fromByteArray
 JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray: source onForm: form doDithering: ditherFlag errorMgr: aJPEGErrorMgr2Struct [
 
 	| pcinfo pjerr buffer rowStride formBits formDepth i j formPix ok rOff gOff bOff rOff2 gOff2 bOff2 formWidth formHeight pixPerWord formPitch formBitsSize sourceSize r1 r2 g1 g2 b1 b2 formBitsAsInt dmv1 dmv2 di dmi dmo |
-	self export: true.
+	<export: true>
+	<var: #pcinfo type: 'j_decompress_ptr '>
+	<var: #pjerr type: 'error_ptr2 '>
+	<var: #buffer type: 'JSAMPARRAY '>
+	<var: #formBits type: 'unsigned * '>
 
 	self
 		primitive: 'primJPEGReadImagefromByteArrayonFormdoDitheringerrorMgr'
 		parameters: #(ByteArray ByteArray Form Boolean ByteArray).
-
- 	self var: #pcinfo type: 'j_decompress_ptr '.
- 	self var: #pjerr type: 'error_ptr2 '.
-	self var: #buffer type: 'JSAMPARRAY '.
-	self var: #formBits type: 'unsigned * '.
 
 	"Avoid warnings when saving method"
 	 pcinfo := nil. pjerr := nil. buffer := nil. rowStride := nil.
@@ -383,21 +382,20 @@ JPEGReadWriter2Plugin >> primJPEGReadImage: aJPEGDecompressStruct fromByteArray:
 JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: destination form: form quality: quality progressiveJPEG: progressiveFlag errorMgr: aJPEGErrorMgr2Struct [
 
 	| pcinfo pjerr buffer rowStride formBits formWidth formHeight formDepth i j formPix destinationSize pixPerWord formPitch formBitsSize formBitsAsInt |
-	self export: true.
+	<export: true>
+	<var: #pcinfo type: 'j_compress_ptr '>
+	<var: #pjerr type: 'error_ptr2 '>
+	<var: #buffer type: 'JSAMPARRAY '>
+	<var: #formBits type: 'unsigned * '>
+	<var: #destinationSize type: 'unsigned int'>
+
 	self
 		primitive: 'primJPEGWriteImageonByteArrayformqualityprogressiveJPEGerrorMgr'
 		parameters: #(ByteArray ByteArray Form SmallInteger Boolean ByteArray).
- 	self var: #pcinfo type: 'j_compress_ptr '.
- 	self var: #pjerr type: 'error_ptr2 '.
-	self var: #buffer type: 'JSAMPARRAY '.
-	self var: #formBits type: 'unsigned * '.
-	self var: #destinationSize type: 'unsigned int'.
 
-	
-		pcinfo := nil. pjerr := nil. buffer :=nil. rowStride := nil. formBits := nil. 
-		formWidth := nil. formHeight := nil. formDepth := nil. i := nil. j := nil. formPix := nil. destinationSize := nil.
-		pcinfo. pjerr. buffer. rowStride. formBits. formWidth. formHeight. formDepth. i. j. formPix. destinationSize.
-	
+	pcinfo := nil. pjerr := nil. buffer :=nil. rowStride := nil. formBits := nil. 
+	formWidth := nil. formHeight := nil. formDepth := nil. i := nil. j := nil. formPix := nil. destinationSize := nil.
+	pcinfo. pjerr. buffer. rowStride. formBits. formWidth. formHeight. formDepth. i. j. formPix. destinationSize.
 
 	formBits :=self cCoerce: (interpreterProxy fetchPointer: 0 ofObject: form)  to: 'unsigned *'.
 	formBitsAsInt := interpreterProxy fetchPointer: 0 ofObject: form.
@@ -489,6 +487,6 @@ JPEGReadWriter2Plugin >> primJPEGWriteImage: aJPEGCompressStruct onByteArray: de
 { #category : #'initialize-release' }
 JPEGReadWriter2Plugin >> shutdownModule [
 
-	self export: true.
+	<export: true>
 	^true
 ]

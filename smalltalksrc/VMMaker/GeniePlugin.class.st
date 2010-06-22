@@ -91,7 +91,7 @@ GeniePlugin >> minorNO [
 
 { #category : #computation }
 GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoints: otherPointsOop myVectors: myVectorsOop otherVectors: otherVectorsOop mySquaredLengths: mySquaredLengthsOop otherSquaredLengths: otherSquaredLengthsOop myAngles: myAnglesOop otherAngles: otherAnglesOop maxSizeAndReferenceFlag: maxSizeAndRefFlag rowBase: rowBaseOop rowInsertRemove: rowInsertRemoveOop rowInsertRemoveCount: rowInsertRemoveCountOop [
-	| base insertRemove jLimiT substBase insert remove subst removeBase insertBase insertRemoveCount additionalMultiInsertRemoveCost myPoints otherPoints myVectors otherVectors rowInsertRemoveCount mySquaredLengths otherSquaredLengths myAngles otherAngles rowBase rowInsertRemove myPointsSize otherPointsSize myVectorsSize otherVectorsSize mySquaredLengthsSize otherSquaredLengthsSize rowBaseSize maxDist maxSize forReference jM1 iM1 iM1T2 jM1T2 |
+	| base insertRemove jLimiT substBase insert remove subst removeBase insertBase insertRemoveCount additionalMultiInsertRemoveCost myPoints otherPoints myVectors otherVectors rowInsertRemoveCount mySquaredLengths otherSquaredLengths myAngles otherAngles rowBase rowInsertRemove otherPointsSize myVectorsSize otherVectorsSize otherSquaredLengthsSize rowBaseSize maxDist maxSize forReference jM1 iM1 iM1T2 jM1T2 |
 	self var: #myPoints type: 'int *  '.
 	self var: #otherPoints type: 'int *  '.
 	self var: #myVectors type: 'int *  '.
@@ -141,13 +141,15 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 	rowBase := interpreterProxy firstIndexableField: rowBaseOop.
 	rowInsertRemove := interpreterProxy firstIndexableField: rowInsertRemoveOop.
 	rowInsertRemoveCount := interpreterProxy firstIndexableField: rowInsertRemoveCountOop.
+	"Note: myPointsSize and mySquaredLengthsSize variables eliminated to reduce
+	method temporary variable count for closure-enabled images"
 	"PointArrays"
-	myPointsSize := (interpreterProxy stSizeOf: myPointsOop) bitShift: -1.
+	"myPointsSize := (interpreterProxy stSizeOf: myPointsOop) bitShift: -1."
 	otherPointsSize := (interpreterProxy stSizeOf: otherPointsOop) bitShift: -1.
 	myVectorsSize := (interpreterProxy stSizeOf: myVectorsOop) bitShift: -1.
 	otherVectorsSize := (interpreterProxy stSizeOf: otherVectorsOop) bitShift: -1.
 	"IntegerArrays"
-	mySquaredLengthsSize := interpreterProxy stSizeOf: mySquaredLengthsOop.
+	"mySquaredLengthsSize := interpreterProxy stSizeOf: mySquaredLengthsOop."
 	otherSquaredLengthsSize := interpreterProxy stSizeOf: otherSquaredLengthsOop.
 	rowBaseSize := interpreterProxy stSizeOf: rowBaseOop.
 
@@ -157,7 +159,10 @@ GeniePlugin >> primSameClassAbsoluteStrokeDistanceMyPoints: myPointsOop otherPoi
 	interpreterProxy failed
 		ifTrue: [self msg: 'failed 4'.
 			^ nil].
-	interpreterProxy success: mySquaredLengthsSize >= (myVectorsSize - 1) & (myPointsSize >= myVectorsSize) & (otherSquaredLengthsSize >= (otherVectorsSize - 1)) & (otherPointsSize >= otherVectorsSize) & ((interpreterProxy stSizeOf: myAnglesOop)
+	interpreterProxy success: (interpreterProxy stSizeOf: mySquaredLengthsOop) >= (myVectorsSize - 1)
+				& (((interpreterProxy stSizeOf: myPointsOop) bitShift: -1) >= myVectorsSize)
+				& (otherSquaredLengthsSize >= (otherVectorsSize - 1))
+				& (otherPointsSize >= otherVectorsSize) & ((interpreterProxy stSizeOf: myAnglesOop)
 				>= (myVectorsSize - 1)) & ((interpreterProxy stSizeOf: otherAnglesOop)
 				>= (otherVectorsSize - 1)).
 	interpreterProxy failed

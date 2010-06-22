@@ -60,18 +60,29 @@ Class {
 		'compilerHooks',
 		'extraVMMemory',
 		'newNativeMethod',
-		'methodClass',
 		'receiverClass',
 		'interpreterVersion',
-		'obsoleteIndexedPrimitiveTable',
-		'obsoleteNamedPrimitiveTable',
 		'interpreterProxy',
 		'showSurfaceFn',
 		'interruptCheckCounterFeedBackReset',
 		'interruptChecksEveryNms',
 		'externalPrimitiveTable',
 		'primitiveTable',
-		'globalSessionID'
+		'globalSessionID',
+		'jmpBuf',
+		'jmpDepth',
+		'jmpMax',
+		'suspendedCallbacks',
+		'suspendedMethods',
+		'profileProcess',
+		'profileMethod',
+		'profileSemaphore',
+		'nextProfileTick',
+		'metaclassSizeBytes',
+		'statIOProcessEvents',
+		'statCheckForEvents',
+		'statQuickCheckForEvents',
+		'statProcessSwitch'
 	],
 	#classVars : [
 		'ActiveProcessIndex',
@@ -89,6 +100,8 @@ Class {
 		'CacheProbeMax',
 		'CallerIndex',
 		'CharacterValueIndex',
+		'ClosureIndex',
+		'ClosureMethodIndex',
 		'CompilerHooksSize',
 		'CrossedX',
 		'DirBadPath',
@@ -97,32 +110,19 @@ Class {
 		'EndOfRun',
 		'ExcessSignalsIndex',
 		'FirstLinkIndex',
-		'HeaderIndex',
 		'HomeIndex',
 		'InitialIPIndex',
-		'InstanceSpecificationIndex',
-		'InstructionPointerIndex',
 		'JitterTable',
 		'LastLinkIndex',
 		'LiteralStart',
 		'MaxExternalPrimitiveTableSize',
+		'MaxJumpBuf',
 		'MaxPrimitiveIndex',
 		'MessageArgumentsIndex',
 		'MessageDictionaryIndex',
 		'MessageLookupClassIndex',
 		'MessageSelectorIndex',
 		'MethodArrayIndex',
-		'MethodCacheClass',
-		'MethodCacheEntries',
-		'MethodCacheEntrySize',
-		'MethodCacheMask',
-		'MethodCacheMethod',
-		'MethodCacheNative',
-		'MethodCachePrim',
-		'MethodCachePrimFunction',
-		'MethodCacheSelector',
-		'MethodCacheSize',
-		'MethodIndex',
 		'MillisecondClockMask',
 		'MyListIndex',
 		'NextLinkIndex',
@@ -130,11 +130,8 @@ Class {
 		'PrimitiveTable',
 		'PriorityIndex',
 		'ProcessListsIndex',
-		'ReceiverIndex',
 		'SelectorStart',
 		'SemaphoresToSignalSize',
-		'SenderIndex',
-		'StackPointerIndex',
 		'StreamArrayIndex',
 		'StreamIndexIndex',
 		'StreamReadLimitIndex',
@@ -142,12 +139,25 @@ Class {
 		'SuperclassIndex',
 		'SuspendedContextIndex',
 		'TempFrameStart',
-		'ValueIndex',
 		'XIndex',
 		'YIndex'
 	],
+	#pools : [
+		'VMMethodCacheConstants',
+		'VMObjectOffsets'
+	],
 	#category : #'VMMaker-Interpreter'
 }
+
+{ #category : #translation }
+Interpreter class >> additionalSelectorTables [
+	^{ self primitiveTable }
+]
+
+{ #category : #translation }
+Interpreter class >> ancilliaryStructClasses [
+	^#()
+]
 
 { #category : #constants }
 Interpreter class >> bytecodeTable [
@@ -157,44 +167,60 @@ Interpreter class >> bytecodeTable [
 
 { #category : #translation }
 Interpreter class >> declareCVarsIn: aCCodeGenerator [
-
+	aCCodeGenerator addHeaderFile:'<setjmp.h>'.
+	aCCodeGenerator
+		var: #interpreterVersion
+		declareC: 'const char *interpreterVersion = "Croquet Closure Context VM [',
+					(aCCodeGenerator shortMonticelloDescriptionForClass: self),']"'.
 	aCCodeGenerator 
 		var: #interpreterProxy 
 		type: #'struct VirtualMachine*'.
 	aCCodeGenerator
 		var: #primitiveTable
-		declareC: 'void *primitiveTable[', (MaxPrimitiveIndex +2) printString, '] = ',	self primitiveTableString.
+		declareC: 'void *primitiveTable[MaxPrimitiveIndex + 2 /* ', (MaxPrimitiveIndex +2) printString, ' */] = ',	self primitiveTableString.
 	aCCodeGenerator
 		var: #primitiveFunctionPointer
-		declareC: 'void *primitiveFunctionPointer'				.		"xxxx FIX THIS STUPIDITY xxxx - ikp. What he means is use a better type than void *, apparently - tpr"
+		declareC: 'void *primitiveFunctionPointer'.	"xxxx FIX THIS STUPIDITY xxxx - ikp. What he means is use a better type than void *, apparently - tpr"
 	aCCodeGenerator
 		var: #methodCache
-		declareC: 'long methodCache[', (MethodCacheSize + 1) printString, ']'.
+		declareC: 'long methodCache[MethodCacheSize + 1 /* ', (MethodCacheSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #atCache
-		declareC: 'sqInt atCache[', (AtCacheTotalSize + 1) printString, ']'.
+		declareC: 'sqInt atCache[AtCacheTotalSize + 1 /* ', (AtCacheTotalSize + 1) printString, ' */]'.
 	aCCodeGenerator var: #localIP type: #'char*'.
 	aCCodeGenerator var: #localSP type: #'char*'.
 	aCCodeGenerator var: #showSurfaceFn type: #'void*'.
 	aCCodeGenerator var: 'semaphoresToSignalA'
-		declareC: 'sqInt semaphoresToSignalA[', (SemaphoresToSignalSize + 1) printString, ']'.
+		declareC: 'sqInt semaphoresToSignalA[SemaphoresToSignalSize + 1 /* ', (SemaphoresToSignalSize + 1) printString, ' */]'.
 	aCCodeGenerator var: 'semaphoresToSignalB'
-		declareC: 'sqInt semaphoresToSignalB[', (SemaphoresToSignalSize + 1) printString, ']'.
+		declareC: 'sqInt semaphoresToSignalB[SemaphoresToSignalSize + 1 /* ', (SemaphoresToSignalSize + 1) printString, ' */]'.
 	aCCodeGenerator
 		var: #compilerHooks
-		declareC: 'sqInt (*compilerHooks[', (CompilerHooksSize + 1) printString, '])()'.
-	aCCodeGenerator
-		var: #interpreterVersion
-		declareC: 'const char *interpreterVersion = "', SmalltalkImage current datedVersion, ' [', SmalltalkImage current lastUpdateString,']"'.
-	aCCodeGenerator
-		var: #obsoleteIndexedPrimitiveTable
-		declareC: 'char* obsoleteIndexedPrimitiveTable[][3] = ', self obsoleteIndexedPrimitiveTableString.
-	aCCodeGenerator
-		var: #obsoleteNamedPrimitiveTable
-		declareC: 'const char* obsoleteNamedPrimitiveTable[][3] = ', self obsoleteNamedPrimitiveTableString.
+		declareC: 'sqInt (*compilerHooks[CompilerHooksSize + 1 /* ', (CompilerHooksSize + 1) printString, ' */])()'.
 	aCCodeGenerator
 		var: #externalPrimitiveTable
-		declareC: 'void *externalPrimitiveTable[', (MaxExternalPrimitiveTableSize + 1) printString, ']'.
+		declareC: 'void *externalPrimitiveTable[MaxExternalPrimitiveTableSize + 1 /* ', (MaxExternalPrimitiveTableSize + 1) printString, ' */]'.
+
+	aCCodeGenerator
+		var: #jmpBuf
+		declareC: 'jmp_buf jmpBuf[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]'.
+	aCCodeGenerator
+		var: #suspendedCallbacks
+		declareC: 'usqInt suspendedCallbacks[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]'.
+	aCCodeGenerator
+		var: #suspendedMethods
+		declareC: 'usqInt suspendedMethods[MaxJumpBuf + 1 /* ', (MaxJumpBuf + 1) printString, ' */]'.
+
+	self declareCAsOop: {
+		#instructionPointer. 
+		#method. 
+		#newMethod. 
+		#activeContext. 
+		#theHomeContext. 
+		#stackPointer
+	} in: aCCodeGenerator.
+
+	aCCodeGenerator var: #nextProfileTick type: #sqLong.
 
 ]
 
@@ -202,7 +228,7 @@ Interpreter class >> declareCVarsIn: aCCodeGenerator [
 Interpreter class >> initialize [
 	"Interpreter initialize"
 
-	super initialize.  "initialize ObjectMemory constants"
+	self initializeWithBytesToWord: 4.  "initialize ObjectMemory constants"
 	self initializeAssociationIndex.
 	self initializeBytecodeTable.
 	self initializeCaches.
@@ -226,6 +252,7 @@ Interpreter class >> initialize [
 	"Note: The external primitive table should actually be dynamically sized but for the sake of inferior platforms (e.g., Mac :-) who cannot allocate memory in any reasonable way, we keep it static (and cross our fingers...)"
 	MaxExternalPrimitiveTableSize := 4096. "entries"
 
+	MaxJumpBuf := 32. "max. callback depth"
 ]
 
 { #category : #initialization }
@@ -261,8 +288,9 @@ Interpreter class >> initializeBytecodeTable [
 		(123 returnNil)
 		(124 returnTopFromMethod)
 		(125 returnTopFromBlock)
-		(126 unknownBytecode)
-		(127 unknownBytecode)
+
+		(126 127 unknownBytecode)
+
 		(128 extendedPushBytecode)
 		(129 extendedStoreBytecode)
 		(130 extendedStoreAndPopBytecode)
@@ -272,8 +300,15 @@ Interpreter class >> initializeBytecodeTable [
 		(134 secondExtendedSendBytecode)
 		(135 popStackBytecode)
 		(136 duplicateTopBytecode)
+
 		(137 pushActiveContextBytecode)
-		(138 143 experimentalBytecode)
+		(138 pushNewArrayBytecode)
+		(139 unknownBytecode)
+		(140 pushRemoteTempLongBytecode)
+		(141 storeRemoteTempLongBytecode)
+		(142 storeAndPopRemoteTempLongBytecode)
+		(143 pushClosureCopyCopiedValuesBytecode)
+
 		(144 151 shortUnconditionalJump)
 		(152 159 shortConditionalJump)
 		(160 167 longUnconditionalJump)
@@ -329,8 +364,7 @@ Interpreter class >> initializeCaches [
 	MethodCacheClass := 2.
 	MethodCacheMethod := 3.
 	MethodCachePrim := 4.
-	MethodCacheNative := 5.
-	MethodCachePrimFunction := 6.
+	MethodCachePrimFunction := 5.
 	MethodCacheEntrySize := 8.  "Must be power of two for masking scheme."
 	MethodCacheMask := (MethodCacheEntries - 1) * MethodCacheEntrySize.
 	MethodCacheSize := MethodCacheEntries * MethodCacheEntrySize.
@@ -401,6 +435,7 @@ Interpreter class >> initializeContextIndices [
 	InstructionPointerIndex := 1.
 	StackPointerIndex := 2.
 	MethodIndex := 3.
+	ClosureIndex := 4. "N.B. Called receiverMap in the image."
 	ReceiverIndex := 5.
 	TempFrameStart := 6.  "Note this is in two places!"
 
@@ -411,8 +446,10 @@ Interpreter class >> initializeContextIndices [
 	HomeIndex := 5.
 
 	"Class BlockClosure"
-	BlockMethodIndex := 0.
-
+	ClosureOuterContextIndex := 0.
+	ClosureStartPCIndex := 1.
+	ClosureNumArgsIndex := 2.
+	ClosureFirstCopiedValueIndex := 3
 ]
 
 { #category : #initialization }
@@ -474,8 +511,26 @@ Interpreter class >> initializePrimitiveTable [
 		(19 primitiveFail)					"Guard primitive for simulation -- *must* fail"
 
 		"LargeInteger Primitives (20-39)"
-		"32-bit logic is aliased to Integer prims above"
-		(20 39 primitiveFail)
+		(20 primitiveFail)
+		(21 primitiveAddLargeIntegers)
+		(22 primitiveSubtractLargeIntegers)
+		(23 primitiveLessThanLargeIntegers)
+		(24 primitiveGreaterThanLargeIntegers)
+		(25 primitiveLessOrEqualLargeIntegers)
+		(26 primitiveGreaterOrEqualLargeIntegers)
+		(27 primitiveEqualLargeIntegers)
+		(28 primitiveNotEqualLargeIntegers)
+		(29 primitiveMultiplyLargeIntegers)
+		(30 primitiveDivideLargeIntegers)
+		(31 primitiveModLargeIntegers)
+		(32 primitiveDivLargeIntegers)
+		(33 primitiveQuoLargeIntegers)
+		(34 primitiveBitAndLargeIntegers)
+		(35 primitiveBitOrLargeIntegers)
+		(36 primitiveBitXorLargeIntegers)
+		(37 primitiveBitShiftLargeIntegers)
+		(38 primitiveFail)
+		(39 primitiveFail)
 
 		"Float Primitives (40-59)"
 		(40 primitiveAsFloat)
@@ -505,9 +560,9 @@ Interpreter class >> initializePrimitiveTable [
 		(62 primitiveSize)
 		(63 primitiveStringAt)
 		(64 primitiveStringAtPut)
-		(65 primitiveNext)
-		(66 primitiveNextPut)
-		(67 primitiveAtEnd)
+		(65 primitiveFail) "was primitiveNext which no longer pays its way (normal Smalltalk code is faster)"
+		(66 primitiveFail) "was primitiveNextPut which no longer pays its way (normal Smalltalk code is faster)"
+		(67 primitiveFail) "was primitiveAtEnd which no longer pays its way (normal Smalltalk code is faster)"
 
 		"StorageManagement Primitives (68-79)"
 		(68 primitiveObjectAt)
@@ -542,7 +597,7 @@ Interpreter class >> initializePrimitiveTable [
 		(93 primitiveInputSemaphore)
 		(94 primitiveGetNextEvent)				"Blue Book: primitiveSampleInterval"
 		(95 primitiveInputWord)
-		(96 primitiveObsoleteIndexedPrimitive)	"primitiveCopyBits"
+		(96 primitiveFail)	"primitiveCopyBits"
 		(97 primitiveSnapshot)
 		(98 primitiveStoreImageSegment)
 		(99 primitiveLoadImageSegment)
@@ -550,7 +605,7 @@ Interpreter class >> initializePrimitiveTable [
 		(101 primitiveBeCursor)
 		(102 primitiveBeDisplay)
 		(103 primitiveScanCharacters)
-		(104 primitiveObsoleteIndexedPrimitive)	"primitiveDrawLoop"
+		(104 primitiveFail)	"primitiveDrawLoop"
 		(105 primitiveStringReplace)
 		(106 primitiveScreenSize)
 		(107 primitiveMouseButtons)
@@ -604,21 +659,23 @@ Interpreter class >> initializePrimitiveTable [
 		(145 primitiveConstantFill)
 		"NOTE: When removing the obsolete indexed primitives,
 		the following two should go become #primitiveIntegerAt / atPut"
-		(146 primitiveObsoleteIndexedPrimitive)	"primitiveReadJoystick"
-		(147 primitiveObsoleteIndexedPrimitive)	"primitiveWarpBits"
+		(146 primitiveFail)	"primitiveReadJoystick"
+		(147 primitiveFail)	"primitiveWarpBits"
 		(148 primitiveClone)
 		(149 primitiveGetAttribute)
 
 		"File Primitives (150-169) - NO LONGER INDEXED"
-		(150 164 primitiveObsoleteIndexedPrimitive)
+		(150 159 primitiveFail)
+		(160 primitiveAdoptInstance)
+		(161 164 primitiveFail)
 		(165 primitiveIntegerAt)		"hacked in here for now"
 		(166 primitiveIntegerAtPut)
 		(167 primitiveYield)
 		(168 primitiveCopyObject)
-		(169 primitiveObsoleteIndexedPrimitive)
+		(169 primitiveFail)
 
 		"Sound Primitives (170-199) - NO LONGER INDEXED"
-		(170 185 primitiveObsoleteIndexedPrimitive)
+		(170 185 primitiveFail)
 
 		"Old closure primitives"
 		(186 primitiveFail) "was primitiveClosureValue"
@@ -629,7 +686,7 @@ Interpreter class >> initializePrimitiveTable [
 		(189 primitiveExecuteMethod)
 
 		"Sound Primitives (continued) - NO LONGER INDEXED"
-		(190 194 primitiveObsoleteIndexedPrimitive)
+		(190 194 primitiveFail)
 
 		"Unwind primitives"
 		(195 primitiveFindNextUnwindContext)
@@ -638,37 +695,52 @@ Interpreter class >> initializePrimitiveTable [
 		(198 primitiveMarkUnwindMethod)
 		(199 primitiveMarkHandlerMethod)
 
-		"Networking Primitives (200-225) - NO LONGER INDEXED"
-		(200 225 primitiveObsoleteIndexedPrimitive)
+		"new closure primitives (were Networking primitives)"
+		(200 primitiveClosureCopyWithCopiedValues)
+		(201 primitiveClosureValue) "value"
+		(202 primitiveClosureValue) "value:"
+		(203 primitiveClosureValue) "value:value:"
+		(204 primitiveClosureValue) "value:value:value:"
+		(205 primitiveClosureValue) "value:value:value:value:"
+		(206 primitiveClosureValueWithArgs) "valueWithArguments:"
 
-		"Other Primitives (226-249)"
-		(226 primitiveFail)
-		(227 primitiveFail)
-		(228 primitiveFail)	
-		(229 primitiveFail)	
+		(207 209 primitiveFail) "reserved for Cog primitives"
+
+		(210 primitiveAt)		"Compatibility with Cog StackInterpreter Context primitives"
+		(211 primitiveAtPut)	"Compatibility with Cog StackInterpreter Context primitives"
+		(212 primitiveSize)	"Compatibility with Cog StackInterpreter Context primitives"
+		(213 219 primitiveFail) "reserved for Cog primitives"
+
+		(220 primitiveFail)		"reserved for Cog primitives"
+
+		(221 primitiveClosureValueNoContextSwitch) "valueNoContextSwitch"
+		(222 primitiveClosureValueNoContextSwitch) "valueNoContextSwitch:"
+
+		(223 229 primitiveFail)	"reserved for Cog primitives"
+
 		(230 primitiveRelinquishProcessor)
 		(231 primitiveForceDisplayUpdate)
 		(232 primitiveFormPrint)
 		(233 primitiveSetFullScreen)
-		(234 primitiveObsoleteIndexedPrimitive) "primBitmapdecompressfromByteArrayat"
-		(235 primitiveObsoleteIndexedPrimitive) "primStringcomparewithcollated"
-		(236 primitiveObsoleteIndexedPrimitive) "primSampledSoundconvert8bitSignedFromto16Bit"
-		(237 primitiveObsoleteIndexedPrimitive) "primBitmapcompresstoByteArray"
-		(238 241 primitiveObsoleteIndexedPrimitive) "serial port primitives"
+		(234 primitiveFail) "primBitmapdecompressfromByteArrayat"
+		(235 primitiveFail) "primStringcomparewithcollated"
+		(236 primitiveFail) "primSampledSoundconvert8bitSignedFromto16Bit"
+		(237 primitiveFail) "primBitmapcompresstoByteArray"
+		(238 241 primitiveFail) "serial port primitives"
 		(242 primitiveFail)
-		(243 primitiveObsoleteIndexedPrimitive) "primStringtranslatefromtotable"
-		(244 primitiveObsoleteIndexedPrimitive) "primStringfindFirstInStringinSetstartingAt"
-		(245 primitiveObsoleteIndexedPrimitive) "primStringindexOfAsciiinStringstartingAt"
-		(246 primitiveObsoleteIndexedPrimitive) "primStringfindSubstringinstartingAtmatchTable"
+		(243 primitiveFail) "primStringtranslatefromtotable"
+		(244 primitiveFail) "primStringfindFirstInStringinSetstartingAt"
+		(245 primitiveFail) "primStringindexOfAsciiinStringstartingAt"
+		(246 primitiveFail) "primStringfindSubstringinstartingAtmatchTable"
 		(247 primitiveSnapshotEmbedded)
 		(248 primitiveInvokeObjectAsMethod)
 		(249 primitiveArrayBecomeOneWayCopyHash)
 
 		"VM Implementor Primitives (250-255)"
-		(250 clearProfile)
-		(251 dumpProfile)
-		(252 startProfiling)
-		(253 stopProfiling)
+		(250 primitiveClearVMProfile)
+		(251 primitiveControlVMProfiling "primitiveStartVMProfiling")
+		(252 primitiveVMProfileSamplesInto "primitiveStopVMProfiling")
+		(253 primitiveFail "primitiveVMProfileInfoInto")
 		(254 primitiveVMParameter)
 		(255 primitiveInstVarsPutFromStack) "Never used except in Disney tests.  Remove after 2.3 release."
 
@@ -685,22 +757,12 @@ Interpreter class >> initializePrimitiveTable [
 		"Quick Push Const Methods"
 		(264 519 primitiveLoadInstVar)
 
-		(520 primitiveFail)
-		"MIDI Primitives (521-539) - NO LONGER INDEXED"
-		(521 529 primitiveObsoleteIndexedPrimitive)
-		(530 539 primitiveFail)  "reserved for extended MIDI primitives"
-
-		"Experimental Asynchrous File Primitives - NO LONGER INDEXED"
-		(540 545 primitiveObsoleteIndexedPrimitive)
-		(546 547 primitiveFail)
-
-		"Pen Tablet Primitives - NO LONGER INDEXED"
-		(548 primitiveObsoleteIndexedPrimitive)
-		(549 primitiveObsoleteIndexedPrimitive)
-
-		"Sound Codec Primitives - NO LONGER INDEXED"
-		(550 553 primitiveObsoleteIndexedPrimitive)
-		(554 569 primitiveFail)
+		"These ranges used to be used by obsiolete indexed primitives."
+		(520 529 primitiveFail)
+		(530 539 primitiveFail)
+		(540 549 primitiveFail)
+		(550 559 primitiveFail)
+		(560 569 primitiveFail)
 
 		"External primitive support primitives"
 		(570 primitiveFlushExternalPrimitives)
@@ -749,268 +811,57 @@ Interpreter class >> initializeStreamIndices [
 	StreamWriteLimitIndex := 3.
 ]
 
-{ #category : #initialization }
-Interpreter class >> obsoleteIndexedPrimitiveTable [
-	"Interpreter obsoleteIndexedPrimitiveTableString"
-	"Initialize the links from the (now obsolete) indexed primitives to
-	the new named primitives."
-	| table |
-	table := Array new: MaxPrimitiveIndex+1.
-	#(
-		(96	(BitBltPlugin primitiveCopyBits))
-		(104 (BitBltPlugin primitiveDrawLoop))
-		(147 (BitBltPlugin primitiveWarpBits))
-
-		(146 (JoystickTabletPlugin primitiveReadJoystick))
-
-		"File Primitives (150-169)"
-		(150 (FilePlugin primitiveFileAtEnd))
-		(151 (FilePlugin primitiveFileClose))
-		(152 (FilePlugin primitiveFileGetPosition))
-		(153 (FilePlugin primitiveFileOpen))
-		(154 (FilePlugin primitiveFileRead))
-		(155 (FilePlugin primitiveFileSetPosition))
-		(156 (FilePlugin primitiveFileDelete))
-		(157 (FilePlugin primitiveFileSize))
-		(158 (FilePlugin primitiveFileWrite))
-		(159 (FilePlugin primitiveFileRename))
-		(160 (FilePlugin primitiveDirectoryCreate))
-		(161 (FilePlugin primitiveDirectoryDelimitor))
-		(162 (FilePlugin primitiveDirectoryLookup))
-		(163 (FilePlugin primitiveDirectoryDelete))
-		(164 (FilePlugin primitiveDirectoryGetMacTypeAndCreator))
-		(169 (FilePlugin primitiveDirectorySetMacTypeAndCreator))
-
-		"Sound Primitives (170-199)"
-		(170 (SoundPlugin primitiveSoundStart))
-		(171 (SoundPlugin primitiveSoundStartWithSemaphore))
-		(172 (SoundPlugin primitiveSoundStop))
-		(173 (SoundPlugin primitiveSoundAvailableSpace))
-		(174 (SoundPlugin primitiveSoundPlaySamples))
-		(175 (SoundPlugin primitiveSoundPlaySilence))
-
-		(176 (SoundGenerationPlugin primitiveWaveTableSoundMix))
-		(177 (SoundGenerationPlugin primitiveFMSoundMix))
-		(178 (SoundGenerationPlugin primitivePluckedSoundMix))
-		(179 (SoundGenerationPlugin primitiveSampledSoundMix))
-		(180 (SoundGenerationPlugin primitiveMixFMSound))
-		(181 (SoundGenerationPlugin primitiveMixPluckedSound))
-		(182 (SoundGenerationPlugin primitiveOldSampledSoundMix))
-		(183 (SoundGenerationPlugin primitiveApplyReverb))
-		(184 (SoundGenerationPlugin primitiveMixLoopedSampledSound))
-		(185 (SoundGenerationPlugin primitiveMixSampledSound))
-
-		(189 (SoundPlugin primitiveSoundInsertSamples))
-		(190 (SoundPlugin primitiveSoundStartRecording))
-		(191 (SoundPlugin primitiveSoundStopRecording))
-		(192 (SoundPlugin primitiveSoundGetRecordingSampleRate))
-		(193 (SoundPlugin primitiveSoundRecordSamples))
-		(194 (SoundPlugin primitiveSoundSetRecordLevel))
-
-		"Networking Primitives (200-229)"
-		(200 (SocketPlugin primitiveInitializeNetwork))
-		(201 (SocketPlugin primitiveResolverStartNameLookup))
-		(202 (SocketPlugin primitiveResolverNameLookupResult))
-		(203 (SocketPlugin primitiveResolverStartAddressLookup))
-		(204 (SocketPlugin primitiveResolverAddressLookupResult))
-		(205 (SocketPlugin primitiveResolverAbortLookup))
-		(206 (SocketPlugin primitiveResolverLocalAddress))
-		(207 (SocketPlugin primitiveResolverStatus))
-		(208 (SocketPlugin primitiveResolverError))
-		(209 (SocketPlugin primitiveSocketCreate))
-		(210 (SocketPlugin primitiveSocketDestroy))
-		(211 (SocketPlugin primitiveSocketConnectionStatus))
-		(212 (SocketPlugin primitiveSocketError))
-		(213 (SocketPlugin primitiveSocketLocalAddress))
-		(214 (SocketPlugin primitiveSocketLocalPort))
-		(215 (SocketPlugin primitiveSocketRemoteAddress))
-		(216 (SocketPlugin primitiveSocketRemotePort))
-		(217 (SocketPlugin primitiveSocketConnectToPort))
-		(218 (SocketPlugin primitiveSocketListenWithOrWithoutBacklog))
-		(219 (SocketPlugin primitiveSocketCloseConnection))
-		(220 (SocketPlugin primitiveSocketAbortConnection))
-		(221 (SocketPlugin primitiveSocketReceiveDataBufCount))
-		(222 (SocketPlugin primitiveSocketReceiveDataAvailable))
-		(223 (SocketPlugin primitiveSocketSendDataBufCount))
-		(224 (SocketPlugin primitiveSocketSendDone))
-		(225 (SocketPlugin primitiveSocketAccept))
-
-		"Other Primitives (230-249)"
-		(234 (MiscPrimitivePlugin primitiveDecompressFromByteArray))
-		(235 (MiscPrimitivePlugin primitiveCompareString))
-		(236 (MiscPrimitivePlugin primitiveConvert8BitSigned))
-		(237 (MiscPrimitivePlugin primitiveCompressToByteArray))
-		(238 (SerialPlugin primitiveSerialPortOpen))
-		(239 (SerialPlugin primitiveSerialPortClose))
-		(240 (SerialPlugin primitiveSerialPortWrite))
-		(241 (SerialPlugin primitiveSerialPortRead))
-
-		(243 (MiscPrimitivePlugin primitiveTranslateStringWithTable))
-		(244 (MiscPrimitivePlugin primitiveFindFirstInString))
-		(245 (MiscPrimitivePlugin primitiveIndexOfAsciiInString))
-		(246 (MiscPrimitivePlugin primitiveFindSubstring))
-
-		"MIDI Primitives (521-539)"
-		(521 (MIDIPlugin primitiveMIDIClosePort))
-		(522 (MIDIPlugin primitiveMIDIGetClock))
-		(523 (MIDIPlugin primitiveMIDIGetPortCount))
-		(524 (MIDIPlugin primitiveMIDIGetPortDirectionality))
-		(525 (MIDIPlugin primitiveMIDIGetPortName))
-		(526 (MIDIPlugin primitiveMIDIOpenPort))
-		(527 (MIDIPlugin primitiveMIDIParameterGetOrSet))
-		(528 (MIDIPlugin primitiveMIDIRead))
-		(529 (MIDIPlugin primitiveMIDIWrite))
-
-		"Experimental Asynchrous File Primitives"
-		(540 (AsynchFilePlugin primitiveAsyncFileClose))
-		(541 (AsynchFilePlugin primitiveAsyncFileOpen))
-		(542 (AsynchFilePlugin primitiveAsyncFileReadResult))
-		(543 (AsynchFilePlugin primitiveAsyncFileReadStart))
-		(544 (AsynchFilePlugin primitiveAsyncFileWriteResult))
-		(545 (AsynchFilePlugin primitiveAsyncFileWriteStart))
-
-		"Pen Tablet Primitives"
-		(548 (JoystickTabletPlugin primitiveGetTabletParameters))
-		(549 (JoystickTabletPlugin primitiveReadTablet))
-
-		"Sound Codec Primitives"
-
-		(550 (ADPCMCodecPlugin primitiveDecodeMono))
-		(551 (ADPCMCodecPlugin primitiveDecodeStereo))	
-		(552 (ADPCMCodecPlugin primitiveEncodeMono))	
-		(553 (ADPCMCodecPlugin primitiveEncodeStereo))
-
-	) do:[:spec| table at: spec first+1 put: spec second].
-	^table
+{ #category : #translation }
+Interpreter class >> isInterpreterClass [
+	^true
 ]
 
-{ #category : #initialization }
-Interpreter class >> obsoleteIndexedPrimitiveTableString [
-	"Interpreter obsoleteIndexedPrimitiveTableString"
-	"Initialize the links from the (now obsolete) indexed primitives 
-	to the new named primitives."
-	| table |
-	table := self obsoleteIndexedPrimitiveTable.
-	^ String streamContents: [:s | 
-			s nextPutAll: '{';
-				 cr.
-			table doWithIndex: [:primSpec :idx | 
-					primSpec
-						ifNil: [s nextPutAll: '{ NULL, NULL, NULL }']
-						ifNotNil: [s nextPutAll: '{ "';
-								 nextPutAll: primSpec first;
-								 nextPutAll: '", "';
-								 nextPutAll: primSpec last;
-								 nextPutAll: '", NULL }'].
-					idx < table size
-						ifTrue: [s nextPut: $,;
-								 cr]].
-			s cr; nextPutAll: '}']
+{ #category : #translation }
+Interpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
+	aString = 'interpreterProxy' ifTrue: [self halt].
+	^'self' = aString
 ]
 
-{ #category : #initialization }
-Interpreter class >> obsoleteNamedPrimitiveTable [
-	"Interpreter obsoleteNamedPrimitiveTableString"
-	"Initialize the links from the (now obsolete) named primitives to
-	the new named primitives."
-	^#(
-		(gePrimitiveMergeFillFrom B2DPlugin primitiveMergeFillFrom)
-		(gePrimitiveSetClipRect B2DPlugin primitiveSetClipRect)
-		(gePrimitiveDoProfileStats B2DPlugin primitiveDoProfileStats)
-		(gePrimitiveAddCompressedShape B2DPlugin primitiveAddCompressedShape)
-		(gePrimitiveFinishedProcessing B2DPlugin primitiveFinishedProcessing)
-		(gePrimitiveGetBezierStats B2DPlugin primitiveGetBezierStats)
-		(gePrimitiveSetDepth B2DPlugin primitiveSetDepth)
-		(gePrimitiveAbortProcessing B2DPlugin primitiveAbortProcessing)
-		(gePrimitiveGetTimes B2DPlugin primitiveGetTimes)
-		(gePrimitiveNextActiveEdgeEntry B2DPlugin primitiveNextActiveEdgeEntry)
-		(gePrimitiveAddBezier B2DPlugin primitiveAddBezier)
-		(gePrimitiveRenderScanline B2DPlugin primitiveRenderScanline)
-		(gePrimitiveAddBezierShape B2DPlugin primitiveAddBezierShape)
-		(gePrimitiveAddLine B2DPlugin primitiveAddLine)
-		(gePrimitiveRenderImage B2DPlugin primitiveRenderImage)
-		(gePrimitiveGetAALevel B2DPlugin primitiveGetAALevel)
-		(gePrimitiveRegisterExternalEdge B2DPlugin primitiveRegisterExternalEdge)
-		(gePrimitiveInitializeBuffer B2DPlugin primitiveInitializeBuffer)
-		(gePrimitiveAddRect B2DPlugin primitiveAddRect)
-		(gePrimitiveInitializeProcessing B2DPlugin primitiveInitializeProcessing)
-		(gePrimitiveAddBitmapFill B2DPlugin primitiveAddBitmapFill)
-		(gePrimitiveGetClipRect B2DPlugin primitiveGetClipRect)
-		(gePrimitiveGetFailureReason B2DPlugin primitiveGetFailureReason)
-		(gePrimitiveNextGlobalEdgeEntry B2DPlugin primitiveNextGlobalEdgeEntry)
-		(gePrimitiveNextFillEntry B2DPlugin primitiveNextFillEntry)
-		(gePrimitiveSetColorTransform B2DPlugin primitiveSetColorTransform)
-		(gePrimitiveDisplaySpanBuffer B2DPlugin primitiveDisplaySpanBuffer)
-		(gePrimitiveGetOffset B2DPlugin primitiveGetOffset)
-		(gePrimitiveAddPolygon B2DPlugin primitiveAddPolygon)
-		(gePrimitiveNeedsFlush B2DPlugin primitiveNeedsFlush)
-		(gePrimitiveAddOval B2DPlugin primitiveAddOval)
-		(gePrimitiveSetAALevel B2DPlugin primitiveSetAALevel)
-		(gePrimitiveCopyBuffer B2DPlugin primitiveCopyBuffer)
-		(gePrimitiveAddActiveEdgeEntry B2DPlugin primitiveAddActiveEdgeEntry)
-		(gePrimitiveGetCounts B2DPlugin primitiveGetCounts)
-		(gePrimitiveSetOffset B2DPlugin primitiveSetOffset)
-		(gePrimitiveAddGradientFill B2DPlugin primitiveAddGradientFill)
-		(gePrimitiveChangedActiveEdgeEntry B2DPlugin primitiveChangedActiveEdgeEntry)
-		(gePrimitiveRegisterExternalFill B2DPlugin primitiveRegisterExternalFill)
-		(gePrimitiveGetDepth B2DPlugin primitiveGetDepth)
-		(gePrimitiveSetEdgeTransform B2DPlugin primitiveSetEdgeTransform)
-		(gePrimitiveNeedsFlushPut B2DPlugin primitiveNeedsFlushPut)
-
-		(primitiveFloatArrayAt FloatArrayPlugin primitiveAt)
-		(primitiveFloatArrayMulFloatArray FloatArrayPlugin primitiveMulFloatArray)
-		(primitiveFloatArrayAddScalar FloatArrayPlugin primitiveAddScalar)
-		(primitiveFloatArrayDivFloatArray FloatArrayPlugin primitiveDivFloatArray)
-		(primitiveFloatArrayDivScalar FloatArrayPlugin primitiveDivScalar)
-		(primitiveFloatArrayHash FloatArrayPlugin primitiveHashArray)
-		(primitiveFloatArrayAtPut FloatArrayPlugin primitiveAtPut)
-		(primitiveFloatArrayMulScalar FloatArrayPlugin primitiveMulScalar)
-		(primitiveFloatArrayAddFloatArray FloatArrayPlugin primitiveAddFloatArray)
-		(primitiveFloatArraySubScalar FloatArrayPlugin primitiveSubScalar)
-		(primitiveFloatArraySubFloatArray FloatArrayPlugin primitiveSubFloatArray)
-		(primitiveFloatArrayEqual FloatArrayPlugin primitiveEqual)
-		(primitiveFloatArrayDotProduct FloatArrayPlugin primitiveDotProduct)
-
-		(m23PrimitiveInvertRectInto Matrix2x3Plugin primitiveInvertRectInto)
-		(m23PrimitiveTransformPoint Matrix2x3Plugin primitiveTransformPoint)
-		(m23PrimitiveIsPureTranslation Matrix2x3Plugin primitiveIsPureTranslation)
-		(m23PrimitiveComposeMatrix Matrix2x3Plugin primitiveComposeMatrix)
-		(m23PrimitiveTransformRectInto Matrix2x3Plugin primitiveTransformRectInto)
-		(m23PrimitiveIsIdentity Matrix2x3Plugin primitiveIsIdentity)
-		(m23PrimitiveInvertPoint Matrix2x3Plugin primitiveInvertPoint)
-
-		(primitiveDeflateBlock ZipPlugin primitiveDeflateBlock)
-		(primitiveDeflateUpdateHashTable ZipPlugin primitiveDeflateUpdateHashTable)
-		(primitiveUpdateGZipCrc32 ZipPlugin primitiveUpdateGZipCrc32)
-		(primitiveInflateDecompressBlock ZipPlugin primitiveInflateDecompressBlock)
-		(primitiveZipSendBlock ZipPlugin primitiveZipSendBlock)
-
-		(primitiveFFTTransformData FFTPlugin primitiveFFTTransformData)
-		(primitiveFFTScaleData FFTPlugin primitiveFFTScaleData)
-		(primitiveFFTPermuteData FFTPlugin primitiveFFTPermuteData)
-	)
+{ #category : #translation }
+Interpreter class >> isTypePointerToStruct: type [ "<String>"
+	^false
 ]
 
-{ #category : #initialization }
-Interpreter class >> obsoleteNamedPrimitiveTableString [
-	"Interpreter obsoleteNamedPrimitiveTableString"
-	"Initialize the links from the (now obsolete) indexed primitives 
-	to the new named primitives."
-	| table |
-	table := self obsoleteNamedPrimitiveTable.
-	^ String streamContents: [:s | 
-			s nextPutAll: '{';
-				 cr.
-			table do: [:primSpec | s nextPutAll: '{ "';
-						 nextPutAll: primSpec first;
-						 nextPutAll: '", "';
-						 nextPutAll: primSpec second;
-						 nextPutAll: '", "';
-						 nextPutAll: primSpec third;
-						 nextPutAll: '" },';
-						 cr].
-			s nextPutAll: '{ NULL, NULL, NULL }'.
-			s cr; nextPutAll: '}']
+{ #category : #benchmarks }
+Interpreter class >> macroBenchmark [  "Interpreter macroBenchmark"
+	"Copied from Interpreter class>>translate:doInlining:forBrowserPlugin:"
+	| cg fileName |
+	fileName := 'benchmark2.out'.
+	Interpreter initialize.
+	ObjectMemory initialize.
+	cg := CCodeGenerator new initialize.
+	Interpreter initialize.
+	ObjectMemory initializeWithBytesToWord: 4.
+	cg addClass: Interpreter.
+	cg addClass: ObjectMemory.
+	Interpreter declareCVarsIn: cg.
+	ObjectMemory declareCVarsIn: cg.
+	FileDirectory default deleteFileNamed: fileName.
+	cg storeCodeOnFile: fileName doInlining: true.
+	FileDirectory default deleteFileNamed: fileName.
+]
+
+{ #category : #translation }
+Interpreter class >> mustBeGlobal: var [
+	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
+
+	^(super mustBeGlobal: var)
+	   or: [ #('deferDisplayUpdates' 'extraVMMemory' 'interpreterProxy' 'interpreterVersion' 'showSurfaceFn') includes: var]
+]
+
+{ #category : #translation }
+Interpreter class >> namesOfVariablesToLocalize [
+	^#(currentBytecode localIP localSP localHomeContext localReturnContext localReturnValue)
+]
+
+{ #category : #translation }
+Interpreter class >> needsCogit [
+	^false
 ]
 
 { #category : #translation }
@@ -1071,6 +922,45 @@ Interpreter class >> patchInterpGCCPPC: fileName [
 	f close
 ]
 
+{ #category : #translation }
+Interpreter class >> preGenerationHook: aCCodeGenerator [
+	"Perform any last-minute changes to the code generator immediately
+	 before it performs code analysis and generation.  In this case, make
+	 all non-exported methods private."
+	| requiredMethodNames |
+	requiredMethodNames := self requiredMethodNames.
+	aCCodeGenerator selectorsAndMethodsDo:
+		[:s :m|
+		(m export or: [requiredMethodNames includes: s]) ifTrue:
+			[m static: false]]
+]
+
+{ #category : #translation }
+Interpreter class >> preambleCCode [
+	^	
+'void printCallStack(void);
+
+/* Disable Intel compiler inlining of error & warning which are used for breakpoints */
+#pragma auto_inline off
+
+void
+warning(char *s) { /* Print an error message but don''t exit. */
+	static sqInt printingStack = false;
+
+	printf("\n%s\n", s);
+}
+#pragma auto_inline on
+
+void
+invalidCompactClassError(char *s) { /* Print a compact class index error message and exit. */
+	static sqInt printingStack = true; /* not running at this point */
+
+	printf("\nClass %s does not have the required compact class index\n", s);
+	exit(-1);
+}
+'
+]
+
 { #category : #constants }
 Interpreter class >> primitiveTable [
 
@@ -1100,9 +990,9 @@ Interpreter class >> primitiveTableString [
 Interpreter class >> requiredMethodNames [
 	"return the list of method names that should be retained for export or other support reasons"
 	| requiredList |
-	requiredList := Set new:400.
+	requiredList := Set new: 400.
 	"A number of methods required by VM support code, jitter, specific platforms etc"
-	requiredList addAll: #(fullDisplayUpdate interpret printCallStack printAllStacks readImageFromFile:HeapSize:StartingAt: success: readableFormat: getCurrentBytecode characterForAscii: findClassOfMethod:forReceiver: findSelectorOfMethod:forReceiver: loadInitialContext nullCompilerHook primitiveFlushExternalPrimitives setCompilerInitialized: getFullScreenFlag getInterruptCheckCounter getInterruptKeycode getInterruptPending getNextWakeupTick getSavedWindowSize setFullScreenFlag: setInterruptCheckCounter: setInterruptKeycode: setInterruptPending: setNextWakeupTick: setSavedWindowSize: forceInterruptCheck getThisSessionID).
+	requiredList addAll: #(fullDisplayUpdate interpret printCallStack printAllStacks printOop: readImageFromFile:HeapSize:StartingAt: success: readableFormat: getCurrentBytecode characterForAscii: findClassOfMethod:forReceiver: findSelectorOfMethod:forReceiver: loadInitialContext nullCompilerHook primitiveFlushExternalPrimitives setCompilerInitialized: getFullScreenFlag getInterruptCheckCounter getInterruptKeycode getInterruptPending getNextWakeupTick getSavedWindowSize setFullScreenFlag: setInterruptCheckCounter: setInterruptKeycode: setInterruptPending: setNextWakeupTick: setSavedWindowSize: forceInterruptCheck getThisSessionID).
 
 	"Nice to actually have all the primitives available"
 	requiredList addAll: self primitiveTable.
@@ -1113,6 +1003,11 @@ Interpreter class >> requiredMethodNames [
 			requiredList addAll: (InterpreterProxy organization listAtCategoryNamed: cat)]].
 	
 	^requiredList
+]
+
+{ #category : #translation }
+Interpreter class >> sourceFileName [
+	^'interp.c'
 ]
 
 { #category : #initialization }
@@ -1130,6 +1025,77 @@ Interpreter class >> table: anArray from: specArray [
 					contiguous := contiguous + 1]
 				ifFalse: [(spec at: 1) to: (spec at: 2) do: [:i | anArray at: i + 1 put: (spec at: 3)].
 					contiguous := contiguous + ((spec at: 2) - (spec at: 1)) + 1]]
+]
+
+{ #category : #translation }
+Interpreter class >> wantsLabels [
+	"Only label the VM, not plugins (internal or external).  This to cut down the scope
+	 of problems with labels being duplicated by C compiler optimizer inlining and
+	 loop unrolling.  We use the asmLabel: directive to control labelling in the
+	 interpreter proper. But it is too much work doing that for plugins too."
+	^true
+]
+
+{ #category : #translation }
+Interpreter class >> writeVMHeaderTo: aStream bytesPerWord: bytesPerWord [
+	aStream
+		nextPutAll: '#define SQ_VI_BYTES_PER_WORD ';
+		print: bytesPerWord;
+		cr
+]
+
+{ #category : #'control primitives' }
+Interpreter >> activateNewClosureMethod: blockClosure [
+	"Similar to activateNewMethod but for Closure and newMethod."
+	| theBlockClosure closureMethod newContext methodHeader numCopied where outerContext |
+
+	DoAssertionChecks ifTrue:
+		[self okayOop: blockClosure].
+	outerContext := self fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
+	DoAssertionChecks ifTrue:
+		[self okayOop: outerContext].
+	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
+	methodHeader := self headerOf: closureMethod.
+	self pushRemappableOop: blockClosure.
+	newContext := self allocateOrRecycleContext: (methodHeader bitAnd: LargeContextBit). "All for one, and one for all!"
+
+	"allocateOrRecycleContext: may cayse a GC; restore blockClosure and refetch outerContext et al"
+	theBlockClosure := self popRemappableOop.
+	outerContext := self fetchPointer: ClosureOuterContextIndex ofObject: theBlockClosure.
+	numCopied := (self fetchWordLengthOf: theBlockClosure) - ClosureFirstCopiedValueIndex.
+
+	"Assume: newContext will be recorded as a root if necessary by the
+	 call to newActiveContext: below, so we can use unchecked stores."
+	where :=  newContext + BaseHeaderSize.
+	self longAt: where + (SenderIndex << ShiftForWord)
+		put: activeContext.
+	self longAt: where + (InstructionPointerIndex << ShiftForWord)
+		put: (self fetchPointer: ClosureStartPCIndex ofObject: theBlockClosure).
+	self longAt: where + (StackPointerIndex << ShiftForWord)
+		put: (self integerObjectOf: argumentCount + numCopied).
+	self longAt: where + (MethodIndex << ShiftForWord)
+		put: (self fetchPointer: MethodIndex ofObject: outerContext).
+	self longAt: where + (ClosureIndex << ShiftForWord)
+		put: theBlockClosure.
+	self longAt: where + (ReceiverIndex << ShiftForWord)
+		put: (self fetchPointer: ReceiverIndex ofObject: outerContext).
+
+	"Copy the arguments..."
+	1 to: argumentCount do:
+		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord)
+				put: (self stackValue: argumentCount-i)].
+
+	"Copy the copied values..."
+	where := newContext + BaseHeaderSize + ((ReceiverIndex + 1 + argumentCount) << ShiftForWord).
+	0 to: numCopied - 1 do:
+		[:i| self longAt: where + (i << ShiftForWord)
+				put: (self fetchPointer: i + ClosureFirstCopiedValueIndex
+						  ofObject: theBlockClosure)].
+
+	"The initial instructions in the block nil-out remaining temps."
+
+	self pop: argumentCount + 1.
+	self newActiveContext: newContext
 ]
 
 { #category : #'message sending' }
@@ -1150,8 +1116,9 @@ Interpreter >> activateNewMethod [
 	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
 	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
 	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
+	self longAt: where + (ClosureIndex << ShiftForWord) put: nilObj.
 
-	"Copy the reciever and arguments..."
+	"Copy the receiver and arguments..."
 	0 to: argumentCount do:
 		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self stackValue: argumentCount-i)].
 
@@ -1165,7 +1132,7 @@ Interpreter >> activateNewMethod [
 	self newActiveContext: newContext.
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> addLastLink: proc toList: aList [ 
 	"Add the given process to the given linked list and set the 
 	backpointer of process to its new list."
@@ -1191,7 +1158,7 @@ Interpreter >> addNewMethodToCache [
 				or third will likely be free for reentry after ejection.
 			Also, flushing is good when reprobe chains are getting full."
 	| probe hash |
-	self inline: false.
+	<inline: false>
 	self compilerTranslateMethodHook.	"newMethod x lkupClass -> newNativeMethod (may cause GC !)"
 	hash := messageSelector bitXor: lkupClass.  "drop low-order zeros from addresses"
 
@@ -1205,7 +1172,6 @@ Interpreter >> addNewMethodToCache [
 			methodCache at: probe + MethodCacheClass put: lkupClass.
 			methodCache at: probe + MethodCacheMethod put: newMethod.
 			methodCache at: probe + MethodCachePrim put: primitiveIndex.
-			methodCache at: probe + MethodCacheNative put: newNativeMethod.
 			methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: 'long').
 			^ nil]].
 
@@ -1215,7 +1181,6 @@ Interpreter >> addNewMethodToCache [
 	methodCache at: probe + MethodCacheClass put: lkupClass.
 	methodCache at: probe + MethodCacheMethod put: newMethod.
 	methodCache at: probe + MethodCachePrim put: primitiveIndex.
-	methodCache at: probe + MethodCacheNative put: newNativeMethod.
 	methodCache at: probe + MethodCachePrimFunction put: (self cCoerce: primitiveFunctionPointer to: 'long').
 
 	"...and zap the following entries"
@@ -1230,7 +1195,7 @@ Interpreter >> addToExternalPrimitiveTable: functionAddress [
 	"Add the given function address to the external primitive table and return the index where it's stored. This function doesn't need to be fast since it is only called when an external primitive has been looked up (which takes quite a bit of time itself). So there's nothing specifically complicated here.
 	Note: Return index will be one-based (ST convention)"
 
-	self var: #functionAddress declareC: 'void *functionAddress'.
+	<var: #functionAddress declareC: 'void *functionAddress'>
 
 	0 to: MaxExternalPrimitiveTableSize-1 do: [ :i |
 		(externalPrimitiveTable at: i) = 0 ifTrue: [
@@ -1240,18 +1205,12 @@ Interpreter >> addToExternalPrimitiveTable: functionAddress [
 	^0
 ]
 
-{ #category : #utilities }
-Interpreter >> addressOf: rcvr startingAt: byteOffset size: byteSize [
-"Return the int of the address of the (byteSize) slot at btyeOffset in rcvr. Usde for getting byte/word/int/float/double out of Byte/WordArrays"
-	| rcvrSize addr |
-	(self isBytes: rcvr) ifFalse:[^self primitiveFail].
-	(byteOffset > 0) ifFalse:[^self primitiveFail].
-	rcvrSize := self byteSizeOf: rcvr.
-	(byteOffset+byteSize-1 <= rcvrSize)
-			ifFalse:[^self primitiveFail].
-	addr := self cCoerce: (self firstIndexableField: rcvr) to: 'int'.
-	addr := addr + byteOffset - 1.
-	^addr
+{ #category : #'process primitive support' }
+Interpreter >> adjustInterruptCheckCounterFeedback [
+	"Answer true if we should adjust the interrupt counter feedback.
+	Only do this if the current interrupt wasn't forced and we're not
+	profiling execution"
+	^self interruptCheckForced = false and:[nextProfileTick = 0].
 ]
 
 { #category : #'debug support' }
@@ -1264,6 +1223,32 @@ Interpreter >> allAccessibleObjectsOkay [
 		self okayFields: oop.
 		oop := self accessibleObjectAfter: oop.
 	].
+]
+
+{ #category : #contexts }
+Interpreter >> allocateOrRecycleContext: needsLarge [
+	"Return a recycled context or a newly allocated one if none is available for recycling."
+	| cntxt |
+	needsLarge = 0
+	ifTrue: [freeContexts ~= NilContext ifTrue:
+				[cntxt := freeContexts.
+				freeContexts := self fetchPointer: 0 ofObject: cntxt.
+				^ cntxt]]
+	ifFalse: [freeLargeContexts ~= NilContext ifTrue:
+				[cntxt := freeLargeContexts.
+				freeLargeContexts := self fetchPointer: 0 ofObject: cntxt.
+				^ cntxt]].
+	
+	needsLarge = 0
+		ifTrue: [cntxt := self instantiateContext: (self splObj: ClassMethodContext)
+				sizeInBytes: SmallContextSize]
+		ifFalse: [cntxt := self instantiateContext: (self splObj: ClassMethodContext)
+				sizeInBytes: LargeContextSize].
+	"Required init -- above does not fill w/nil.  All others get written."
+	self storePointerUnchecked: 4 "InitialIPIndex" ofObject: cntxt
+					withValue: nilObj.
+	^ cntxt
+
 ]
 
 { #category : #utilities }
@@ -1290,12 +1275,18 @@ Interpreter >> argumentCountOfBlock: blockPointer [
 	^self checkedIntegerValueOf: localArgCount
 ]
 
+{ #category : #contexts }
+Interpreter >> argumentCountOfClosure: closurePointer [
+
+	^self quickFetchInteger: ClosureNumArgsIndex ofObject: closurePointer
+]
+
 { #category : #utilities }
 Interpreter >> arrayValueOf: arrayOop [
 	"Return the address of first indexable field of resulting array object, or fail if the instance variable does not contain an indexable bytes or words object."
 	"Note: May be called by translated primitive code."
 
-	self returnTypeC: 'void *'.
+	<returnTypeC: 'void *'>
 	((self isIntegerObject: arrayOop) not and:
 	 [self isWordsOrBytes: arrayOop])
 		ifTrue: [^ self cCode: '(void *)pointerForOop(arrayOop + BaseHeaderSize)'].
@@ -1303,10 +1294,10 @@ Interpreter >> arrayValueOf: arrayOop [
 
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> asciiOfCharacter: characterObj [  "Returns an integer object"
 
-	self inline: false.
+	<inline: false>
 	self assertClassOf: characterObj is: (self splObj: ClassCharacter).
 	successFlag
 		ifTrue: [^ self fetchPointer: CharacterValueIndex ofObject: characterObj]
@@ -1318,20 +1309,19 @@ Interpreter >> assertClassOf: oop is: classOop [
 	"Succeed if the given (non-integer) object is an instance of the given class. Fail if the object is an integer."
 
 	| ccIndex cl |
-	self inline: true.
+	<inline: true>
+	<asmLabel: false>
 	(self isIntegerObject: oop)
 		ifTrue: [ successFlag := false. ^ nil ].
 
-	ccIndex := ((self baseHeader: oop) >> 12) bitAnd: 16r1F.
-	ccIndex = 0
+	(ccIndex := self compactClassIndexOf: oop) = 0
 		ifTrue: [ cl := ((self classHeader: oop) bitAnd: AllButTypeMask) ]
 		ifFalse: [
 			"look up compact class"
 			cl := (self fetchPointer: (ccIndex - 1)
 					ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop))].
 
-	self success: cl = classOop.
-
+	self success: cl = classOop
 ]
 
 { #category : #'debug support' }
@@ -1352,7 +1342,7 @@ Interpreter >> balancedStack: delta afterPrimitive: primIdx withArgs: nArgs [
 Interpreter >> booleanCheat: cond [
 "cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
 	| bytecode offset |
-	self inline: true.
+	<inline: true>
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
 	self internalPop: 2.
@@ -1385,7 +1375,7 @@ Interpreter >> booleanValueOf: obj [
 	^ nil
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> byteLengthOf: oop [
 	"Return the number of indexable bytes in the given object. This is basically a special copy of lengthOf: for BitBlt."
 	| header sz fmt |
@@ -1426,7 +1416,7 @@ Interpreter >> byteSwapByteObjectsFrom: startOop to: stopAddr [
 	methods, byte-swap only their bytecodes part."
 	| oop fmt wordAddr methodHeader |
 	oop := startOop.
-	[oop < stopAddr]
+	[self oop: oop isLessThan: stopAddr]
 		whileTrue: [(self isFreeObject: oop)
 				ifFalse: [fmt := self formatOf: oop.
 					fmt >= 8
@@ -1686,17 +1676,19 @@ Interpreter >> bytecodePrimGreaterOrEqual [
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
 	(self areIntegers: rcvr and: arg) ifTrue:
-		[self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) >= (self integerValueOf: arg)].
+		["The C code can avoid detagging since tagged integers are still signed.
+		 But this means the simulator must override to do detagging."
+		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) >= (self integerValueOf: arg)].
 		^self booleanCheat: rcvr >= arg].
 
 	successFlag := true.
+	"Invert test so that NaN comparisons work correctly."
 	aBool := self primitiveFloatLess: rcvr thanArg: arg.
 	successFlag ifTrue: [^self booleanCheat: aBool not].
 
 	messageSelector := self specialSelector: 5.
 	argumentCount := 1.
 	self normalSend
-
 ]
 
 { #category : #'common selector sends' }
@@ -1705,7 +1697,9 @@ Interpreter >> bytecodePrimGreaterThan [
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
 	(self areIntegers: rcvr and: arg) ifTrue:
-		[self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) > (self integerValueOf: arg)].
+		["The C code can avoid detagging since tagged integers are still signed.
+		 But this means the simulator must override to do detagging."
+		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) > (self integerValueOf: arg)].
 		^self booleanCheat: rcvr > arg].
 
 	successFlag := true.
@@ -1715,7 +1709,6 @@ Interpreter >> bytecodePrimGreaterThan [
 	messageSelector := self specialSelector: 3.
 	argumentCount := 1.
 	self normalSend
-
 ]
 
 { #category : #'common selector sends' }
@@ -1724,17 +1717,19 @@ Interpreter >> bytecodePrimLessOrEqual [
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
 	(self areIntegers: rcvr and: arg) ifTrue:
-		[self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) <= (self integerValueOf: arg)].
+		["The C code can avoid detagging since tagged integers are still signed.
+		 But this means the simulator must override to do detagging."
+		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) <= (self integerValueOf: arg)].
 		^ self booleanCheat: rcvr <= arg].
 
 	successFlag := true.
+	"Invert test so that NaN comparisons work correctly."
 	aBool := self primitiveFloatGreater: rcvr thanArg: arg.
 	successFlag ifTrue: [^self booleanCheat: aBool not].
 
 	messageSelector := self specialSelector: 4.
 	argumentCount := 1.
 	self normalSend
-
 ]
 
 { #category : #'common selector sends' }
@@ -1743,7 +1738,9 @@ Interpreter >> bytecodePrimLessThan [
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
 	(self areIntegers: rcvr and: arg) ifTrue:
-		[self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) < (self integerValueOf: arg)].
+		["The C code can avoid detagging since tagged integers are still signed.
+		 But this means the simulator must override to do detagging."
+		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) < (self integerValueOf: arg)].
 		^ self booleanCheat: rcvr < arg].
 
 	successFlag := true.
@@ -1753,7 +1750,6 @@ Interpreter >> bytecodePrimLessThan [
 	messageSelector := self specialSelector: 2.
 	argumentCount := 1.
 	self normalSend
-
 ]
 
 { #category : #'common selector sends' }
@@ -1891,6 +1887,14 @@ Interpreter >> bytecodePrimPointY [
 
 { #category : #'common selector sends' }
 Interpreter >> bytecodePrimSize [
+	| rcvr sz |
+	successFlag := true.
+	rcvr := self internalStackTop.
+	self assertClassOf: rcvr is: (self splObj: ClassArray).
+	successFlag ifTrue:[
+		sz := self lengthOf: rcvr.
+		self internalPop: 1 thenPush: (self integerObjectOf: sz).
+		^self fetchNextBytecode].
 	messageSelector := self specialSelector: 18.
 	argumentCount := 0.
 	self normalSend
@@ -1919,54 +1923,134 @@ Interpreter >> bytecodePrimSubtract [
 
 { #category : #'common selector sends' }
 Interpreter >> bytecodePrimValue [
-
-	| block |
-	block := self internalStackTop.
-	successFlag := true.
+	"In-line value for BlockClosure and BlockContext"
+	| maybeBlock rcvrClass |
+	maybeBlock := self internalStackTop.
 	argumentCount := 0.
-	self assertClassOf: block is: (self splObj: ClassBlockContext).
-	successFlag ifTrue: [
-		self externalizeIPandSP.
-		self primitiveValue.
-		self internalizeIPandSP.
-	].
-	successFlag ifFalse: [
-		messageSelector := self specialSelector: 25.
-		argumentCount := 0.
-		^ self normalSend
-	].
-	self fetchNextBytecode.
-
+	successFlag := true.
+	(self isNonIntegerObject: maybeBlock) ifTrue:
+		[rcvrClass := self fetchClassOfNonInt: maybeBlock.
+		 rcvrClass = (self splObj: ClassBlockClosure)
+			ifTrue:
+				[self externalizeIPandSP.
+				 self primitiveClosureValue.
+				 self internalizeIPandSP]
+			ifFalse:
+				[rcvrClass = (self splObj: ClassBlockContext)
+					ifTrue:
+						[self externalizeIPandSP.
+						 self primitiveValue.
+						 self internalizeIPandSP]
+					ifFalse:
+						[successFlag := false]]].
+	successFlag ifFalse:
+		[messageSelector := self specialSelector: 25.
+		 ^self normalSend].
+	self fetchNextBytecode
 ]
 
 { #category : #'common selector sends' }
 Interpreter >> bytecodePrimValueWithArg [
-
-	| block |
-	block := self internalStackValue: 1.
-	successFlag := true.
+	"In-line value: for BlockClosure and BlockContext"
+	| maybeBlock rcvrClass |
+	maybeBlock := self internalStackValue: 1.
 	argumentCount := 1.
-	self assertClassOf: block is: (self splObj: ClassBlockContext).
-	successFlag ifTrue: [
-		self externalizeIPandSP.
-		self primitiveValue.
-		self internalizeIPandSP.
-	].
-	successFlag ifFalse: [
-		messageSelector := self specialSelector: 26.
-		argumentCount := 1.
-		^ self normalSend
-	].
-	self fetchNextBytecode.
-
+	successFlag := true.
+	(self isNonIntegerObject: maybeBlock) ifTrue:
+		[rcvrClass := self fetchClassOfNonInt: maybeBlock.
+		 rcvrClass = (self splObj: ClassBlockClosure)
+			ifTrue:
+				[self externalizeIPandSP.
+				 self primitiveClosureValue.
+				 self internalizeIPandSP]
+			ifFalse:
+				[rcvrClass = (self splObj: ClassBlockContext)
+					ifTrue:
+						[self externalizeIPandSP.
+						 self primitiveValue.
+						 self internalizeIPandSP]
+					ifFalse:
+						[successFlag := false]]].
+	successFlag ifFalse:
+		[messageSelector := self specialSelector: 26.
+		 ^self normalSend].
+	self fetchNextBytecode
 ]
 
 { #category : #'plugin primitive support' }
 Interpreter >> callExternalPrimitive: functionID [
 	"Call the external plugin function identified. In the VM this is an address, see 	InterpreterSimulator for it's version. "
 
-	self var: #functionID type: 'void *'.
+	<var: #functionID type: 'void *'>
 	self dispatchFunctionPointer: functionID
+]
+
+{ #category : #'callback support' }
+Interpreter >> callbackEnter: callbackID [
+	"Re-enter the interpreter for executing a callback"
+	| result activeProc |
+	<export: true>
+	<var: #callbackID declareC: 'sqInt *callbackID'>
+
+	"For now, do not allow a callback unless we're in a primitiveResponse"
+	primitiveIndex = 0 ifTrue:[^false].
+
+	"Check if we've exceeded the callback depth"
+	jmpDepth >= jmpMax ifTrue:[^false].
+	jmpDepth := jmpDepth + 1.
+
+	"Suspend the currently active process"
+	activeProc := self fetchPointer: ActiveProcessIndex
+						 ofObject: self schedulerPointer.
+	suspendedCallbacks at: jmpDepth put: activeProc.
+	"We need to preserve newMethod explicitly since it is not activated yet
+	and therefore no context has been created for it. If the caller primitive
+	for any reason decides to fail we need to make sure we execute the correct
+	method and not the one 'last used' in the call back"
+	suspendedMethods at: jmpDepth put: newMethod.
+	self transferTo: self wakeHighestPriority.
+
+	"Typically, invoking the callback means that some semaphore has been 
+	signaled to indicate the callback. Force an interrupt check right away."
+	self forceInterruptCheck.
+
+	result := self setjmp: (jmpBuf at: jmpDepth).
+	result == 0 ifTrue:["Fill in callbackID"
+		callbackID at: 0 put: jmpDepth.
+		"This is ugly but the inliner treats interpret() in very special and strange ways and calling any kind of 'self interpret' either directly or even via cCode:inSmalltalk: will cause this entire method to vanish."
+		self cCode: 'interpret()'.
+	].
+
+	"Transfer back to the previous process so that caller can push result"
+	activeProc := self fetchPointer: ActiveProcessIndex
+						 ofObject: self schedulerPointer.
+	self putToSleep: activeProc.
+	activeProc := suspendedCallbacks at: jmpDepth.
+	newMethod := suspendedMethods at: jmpDepth.	"see comment above"
+	self transferTo: activeProc.
+	jmpDepth := jmpDepth-1.
+	^true
+]
+
+{ #category : #'callback support' }
+Interpreter >> callbackLeave: cbID [
+	"Leave from a previous callback"
+	<export: true>
+
+	"For now, do not allow a callback unless we're in a primitiveResponse"
+	primitiveIndex = 0 ifTrue:[^false].
+
+	"Check if this is the top-level callback"
+	cbID = jmpDepth ifFalse:[^false].
+	cbID < 1 ifTrue:[^false].
+
+	"Pop the arguments of the return primitive"
+	self pop: argumentCount.
+
+	"This is ugly but necessary, or otherwise the Mac will not build"
+	self long: (jmpBuf at: jmpDepth) jmp: 1.
+	"NOTREACHED"
+	^nil
 ]
 
 { #category : #contexts }
@@ -1976,14 +2060,65 @@ Interpreter >> caller [
 
 { #category : #'debug support' }
 Interpreter >> capturePendingFinalizationSignals [
-	statpendingFinalizationSignals := pendingFinalizationSignals.
+	statPendingFinalizationSignals := pendingFinalizationSignals.
 
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'object access primitives' }
+Interpreter >> changeClassOf: rcvr to: argClass [
+	"Change the class of the receiver into the class specified by the argument given that the format of the receiver matches the format of the argument. Fail if receiver or argument are SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when the argument's class is compact and the receiver isn't, or when the format of the receiver is different from the format of the argument's class, or when the arguments class is fixed and the receiver's size differs from the size that an instance of the argument's class should have."
+	| classHdr sizeHiBits byteSize argFormat rcvrFormat ccIndex |
+	"Check what the format of the class says"
+	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
+
+	"Compute the size of instances of the class (used for fixed field classes only)"
+	sizeHiBits := (classHdr bitAnd: 16r60000) >> 9.
+	classHdr := classHdr bitAnd: 16r1FFFF.
+	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
+
+	"Check the receiver's format against that of the class"
+	argFormat := (classHdr >> 8) bitAnd: 16rF.
+	rcvrFormat := self formatOf: rcvr.
+	"If the receiver is a byte object we need to clear the number of odd bytes from the format."
+	rcvrFormat > 8 ifTrue:
+		[rcvrFormat := rcvrFormat bitAnd: 16rC].
+	argFormat = rcvrFormat ifFalse:[^self primitiveFail]. "no way"
+
+	"For fixed field classes, the sizes must match.
+	Note: byteSize-4 because base header is included in class size."
+	argFormat < 2 ifTrue:
+		[(byteSize - BaseHeaderSize) = (self byteSizeOf: rcvr) ifFalse:
+			[^self primitiveFail]].
+
+	(self headerType: rcvr) = HeaderTypeShort
+		ifTrue:[ "Compact classes. Check if the arg's class is compact and exchange ccIndex"
+			ccIndex := classHdr bitAnd: CompactClassMask.
+			ccIndex = 0 ifTrue:[^self primitiveFail]. "class is not compact"
+			self longAt: rcvr put:
+				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32)
+					bitOr: ccIndex)]
+		ifFalse:["Exchange the class pointer, which could make rcvr a root for argClass"
+			self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
+			(self oop: rcvr isLessThan: youngStart)
+				ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
+
+	"Flush cache because rcvr's class has changed. The at cache is the issue.
+	 The method cache proper doesn't need to be flushed."
+	self flushMethodCache
+]
+
+{ #category : #'array primitive support' }
 Interpreter >> characterForAscii: ascii [  "Arg must lie in range 0-255!"
-	self inline: true.
+	<inline: true>
 	^ self fetchPointer: ascii ofObject: (self splObj: CharacterTable)
+]
+
+{ #category : #initialization }
+Interpreter >> checkAssumedCompactClasses [
+	"Check that the classes the VM assumes are compact have the right indices."
+
+	self checkCompactIndex: ClassBlockContextCompactIndex isClass: ClassBlockContext named: 'BlockContext'.
+	self checkCompactIndex: ClassMethodContextCompactIndex isClass: ClassMethodContext named: 'MethodContext'
 ]
 
 { #category : #'arithmetic primitive support' }
@@ -1993,16 +2128,34 @@ Interpreter >> checkBooleanResult: result [
 		ifFalse: [self unPop: 2]
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> checkForInterrupts [
 	"Check for possible interrupts and handle one if necessary."
 	| sema now |
-	self inline: false.
+	<inline: false>
+
+	statCheckForEvents := statCheckForEvents + 1.
+
+	(nextProfileTick > 0 and:[self ioHighResClock >= nextProfileTick]) ifTrue:[
+		"Take a sample for the profiler if it is active. Note that this must
+		be done before any of the synchronousSignals below or else we will
+		attribute a pause in ioRelinquishProcessor to the newly activated process."
+		profileProcess := self fetchPointer: ActiveProcessIndex 
+									ofObject: self schedulerPointer.
+		"and signal the profiler semaphore if it is present"
+		profileSemaphore == nilObj 
+			ifFalse:[self synchronousSignal: profileSemaphore].
+		nextProfileTick := 0.
+	] ifFalse:[
+		"Reset process and method to avoid creating memory leaks"
+		profileProcess := nilObj.
+		profileMethod := nilObj.
+	].
 
 	"Mask so same wrapping as primitiveMillisecondClock"
 	now := self ioMSecs bitAnd: MillisecondClockMask.
 
-	self interruptCheckForced ifFalse: [
+	self adjustInterruptCheckCounterFeedback ifTrue: [
 		"don't play with the feedback if we forced a check. It only makes life difficult"
 		now - lastTick < interruptChecksEveryNms
 			ifTrue: ["wrapping is not a concern, it'll get caught quickly  
@@ -2026,7 +2179,8 @@ Interpreter >> checkForInterrupts [
 		ifTrue: ["millisecond clock wrapped so correct the nextPollTick"
 			nextPollTick := nextPollTick - MillisecondClockMask - 1].
 	now >= nextPollTick
-		ifTrue: [self ioProcessEvents.
+		ifTrue: [statIOProcessEvents := statIOProcessEvents + 1.
+		 	self ioProcessEvents.
 			"sets interruptPending if interrupt key pressed"
 			nextPollTick := now + 200
 			"msecs to wait before next call to ioProcessEvents.  
@@ -2074,8 +2228,8 @@ Interpreter >> checkImageVersionFrom: f startingAt: imageOffset [
 	"This code is based on C code by Ian Piumarta."
 
 	| version firstVersion |
-	self var: #f type: 'sqImageFile '.
-	self var: #imageOffset type: 'squeakFileOffsetType '.
+	<var: #f type: 'sqImageFile '>
+	<var: #imageOffset type: 'squeakFileOffsetType '>
 
 	"check the version number"
 	self sqImageFile: f Seek: imageOffset.
@@ -2119,6 +2273,50 @@ Interpreter >> checkIntegerResult: integerResult [
 		ifFalse: [self unPop: 2]
 ]
 
+{ #category : #'object memory support' }
+Interpreter >> checkInterpreterIntegrity [
+	"Perform an integrity/leak check using the heapMap.  Assume
+	 clearLeakMapAndMapAccessibleObjects has set a bit at each
+	 object's header.  Check that all oops in the interpreter's state
+	 points to a header.  Answer if all checks pass."
+	| ok |
+	ok := true.
+	(self checkOopIntegrity: specialObjectsOop named: 'specialObjectsOop')ifFalse:
+		[ok := false].
+	compilerInitialized
+		ifTrue:
+			[(self checkOopIntegrity: receiver named: 'receiver')ifFalse:
+				[ok := false].
+			(self checkOopIntegrity: method named: 'method')ifFalse:
+				[ok := false]]
+		ifFalse:
+			[(self checkOopIntegrity: activeContext named: 'activeContext') ifFalse:
+				[ok := false]].
+	(self checkOopIntegrity: messageSelector named: 'messageSelector')ifFalse:
+		[ok := false].
+	(self checkOopIntegrity: newMethod named: 'newMethod')ifFalse:
+		[ok := false].
+	(self checkOopIntegrity: lkupClass named: 'lkupClass')ifFalse:
+		[ok := false].
+	(self checkOopIntegrity: receiverClass named: 'receiverClass')ifFalse:
+		[ok := false].
+	(self checkOopIntegrity: profileProcess named: 'profileProcess')ifFalse:
+		[ok := false].
+	(self checkOopIntegrity: profileMethod named: 'profileMethod')ifFalse:
+		[ok := false].
+	(self checkOopIntegrity: profileSemaphore named: 'profileSemaphore')ifFalse:
+		[ok := false].
+
+	"Callback support - check suspended callback list"
+	1 to: jmpDepth do:
+		[:i|
+		(self checkOopIntegrity: (suspendedCallbacks at: i) named: 'suspendedCallbacks' index: i) ifFalse:
+			[ok := false].
+		(self checkOopIntegrity: (suspendedMethods at: i) named: 'suspendedMethods' index: i) ifFalse:
+			[ok := false]].
+	^ok
+]
+
 { #category : #utilities }
 Interpreter >> checkedIntegerValueOf: intOop [
 	"Note: May be called by translated primitive code."
@@ -2132,8 +2330,8 @@ Interpreter >> checkedIntegerValueOf: intOop [
 Interpreter >> classNameOf: aClass Is: className [ 
 	"Check if aClass's name is className"
 	| srcName name length |
-	self var: #className type: 'char *'.
-	self var: #srcName type: 'char *'.
+	<var: #className type: 'char *'>
+	<var: #srcName type: 'char *'>
 	(self lengthOf: aClass) <= 6 ifTrue: [^ false].
 
 	"Not a class but might be behavior"
@@ -2146,7 +2344,21 @@ Interpreter >> classNameOf: aClass Is: className [
 	^ (className at: length) = 0
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'control primitives' }
+Interpreter >> closureNumArgs: numArgs instructionPointer: initialIP numCopiedValues: numCopied [
+	| newClosure |
+	<inline: true>
+	newClosure := self
+					instantiateSmallClass: (self splObj: ClassBlockClosure)
+					sizeInBytes: (BytesPerWord * (ClosureFirstCopiedValueIndex + numCopied)) + BaseHeaderSize.
+	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
+	self storePointerUnchecked: ClosureStartPCIndex ofObject: newClosure withValue: (self integerObjectOf: initialIP).
+	self storePointerUnchecked: ClosureNumArgsIndex ofObject: newClosure withValue: (self integerObjectOf: numArgs).
+	"It is up to the caller to store the outer context and copiedValues."
+	^newClosure
+]
+
+{ #category : #'array primitive support' }
 Interpreter >> commonAt: stringy [
 	"This code is called if the receiver responds primitively to at:.
 	If this is so, it will be installed in the atCache so that subsequent calls of at:
@@ -2181,7 +2393,7 @@ Interpreter >> commonAt: stringy [
 		^ self pop: argumentCount+1 thenPush: result]
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> commonAtPut: stringy [
 	"This code is called if the receiver responds primitively to at:Put:.
 	If this is so, it will be installed in the atPutCache so that subsequent calls of at:
@@ -2222,8 +2434,7 @@ Interpreter >> commonReturn [
 	"Note: Assumed to be inlined into the dispatch loop."
 
 	| nilOop thisCntx contextOfCaller localCntx localVal unwindMarked |
-	self inline: true.
-	self sharedCodeNamed: 'commonReturn' inCase: 120.
+	<sharedCodeNamed: 'commonReturn' inCase: 120>
 
 	nilOop := nilObj. "keep in a register"
 	thisCntx := activeContext.
@@ -2240,8 +2451,8 @@ Interpreter >> commonReturn [
 	thisCntx := self fetchPointer: SenderIndex ofObject: activeContext.
 
 	"Just possibly a faster test would be to compare the homeContext and activeContext - they are of course different for blocks. Thus we might be able to optimise a touch by having a different returnTo for the blockreteurn (since we know that must return to caller) and then if active ~= home we must be doing a non-local return. I think. Maybe."
-	[thisCntx = localCntx] whileFalse: [
-		thisCntx = nilOop ifTrue:[
+	[thisCntx = localCntx] whileFalse:
+		[thisCntx = nilOop ifTrue:[
 			"error: sender's instruction pointer or context is nil; cannot return"
 			^self internalCannotReturn: localVal].
 		"Climb up stack towards localCntx. Break out to a send of #aboutToReturn:through: if an unwind marked context is found"
@@ -2249,8 +2460,7 @@ Interpreter >> commonReturn [
 		unwindMarked ifTrue:[
 			"context is marked; break out"
 			^self internalAboutToReturn: localVal through: thisCntx].
-		thisCntx := self fetchPointer: SenderIndex ofObject: thisCntx.
- ].
+		thisCntx := self fetchPointer: SenderIndex ofObject: thisCntx].
 
 	"If we get here there is no unwind to worry about. Simply terminate the stack up to the localCntx - often just the sender of the method"
 	thisCntx := activeContext.
@@ -2269,7 +2479,7 @@ Interpreter >> commonReturn [
 		thisCntx := contextOfCaller].
 
 	activeContext := thisCntx.
-	(thisCntx < youngStart) ifTrue: [ self beRootIfOld: thisCntx ].
+	(self oop: thisCntx isLessThan: youngStart) ifTrue: [ self beRootIfOld: thisCntx ].
 
 	self internalFetchContextRegisters: thisCntx.  "updates local IP and SP"
 	self fetchNextBytecode.
@@ -2283,20 +2493,20 @@ Interpreter >> commonSend [
 	"Assume: messageSelector and argumentCount have been set, and that 
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
-	self sharedCodeNamed: 'commonSend' inCase: 131.
+	<sharedCodeNamed: 'commonSend' inCase: 131>
 	self internalFindNewMethod.
 	self internalExecuteNewMethod.
 	self fetchNextBytecode
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> commonVariable: rcvr at: index cacheIndex: atIx [ 
-	"This code assumes the reciever has been identified at location atIx in the atCache."
+	"This code assumes the receiver has been identified at location atIx in the atCache."
 	| stSize fmt fixedFields result |
 
 	stSize := atCache at: atIx+AtCacheSize.
-	((self cCoerce: index to: 'usqInt ') >= 1
-		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
+	((self oop: index isGreaterThanOrEqualTo: 1)
+		and: [self oop: index isLessThanOrEqualTo: stSize])
 	ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
@@ -2315,15 +2525,15 @@ Interpreter >> commonVariable: rcvr at: index cacheIndex: atIx [
 	self primitiveFail
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
-	"This code assumes the reciever has been identified at location atIx in the atCache."
+	"This code assumes the receiver has been identified at location atIx in the atCache."
 	| stSize fmt fixedFields valToPut |
-	self inline: true.
+	<inline: true>
 
 	stSize := atCache at: atIx+AtCacheSize.
-	((self cCoerce: index to: 'usqInt ') >= 1
-		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
+	((self oop: index isGreaterThanOrEqualTo: 1)
+		and: [self oop: index isLessThanOrEqualTo: stSize])
 	ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
@@ -2345,15 +2555,15 @@ Interpreter >> commonVariable: rcvr at: index put: value cacheIndex: atIx [
 	self primitiveFail
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> commonVariableInternal: rcvr at: index cacheIndex: atIx [ 
-	"This code assumes the reciever has been identified at location atIx in the atCache."
+	"This code assumes the receiver has been identified at location atIx in the atCache."
 	| stSize fmt fixedFields result |
-	self inline: true.
+	<inline: true>
 
 	stSize := atCache at: atIx+AtCacheSize.
-	((self cCoerce: index to: 'usqInt ') >= 1
-		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
+	((self oop: index isGreaterThanOrEqualTo: 1)
+		and: [self oop: index isLessThanOrEqualTo: stSize])
 	ifTrue:
 		[fmt := atCache at: atIx+AtCacheFmt.
 		fmt <= 4 ifTrue:
@@ -2399,7 +2609,7 @@ Interpreter >> compilerFlushCache: aCompiledMethod [
 
 { #category : #'compiler support' }
 Interpreter >> compilerFlushCacheHook: aCompiledMethod [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerFlushCache: aCompiledMethod]
 ]
 
@@ -2410,7 +2620,7 @@ Interpreter >> compilerMapFrom: memStart to: memEnd [
 
 { #category : #'compiler support' }
 Interpreter >> compilerMapHookFrom: memStart to: memEnd [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerMapFrom: memStart to: memEnd]
 ]
 
@@ -2421,7 +2631,7 @@ Interpreter >> compilerMark [
 
 { #category : #'compiler support' }
 Interpreter >> compilerMarkHook [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerMark]
 ]
 
@@ -2432,7 +2642,7 @@ Interpreter >> compilerPostGC [
 
 { #category : #'compiler support' }
 Interpreter >> compilerPostGCHook [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerPostGC]
 ]
 
@@ -2443,7 +2653,7 @@ Interpreter >> compilerPostSnapshot [
 
 { #category : #'compiler support' }
 Interpreter >> compilerPostSnapshotHook [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerPostSnapshot]
 ]
 
@@ -2454,7 +2664,7 @@ Interpreter >> compilerPreGC: fullGCFlag [
 
 { #category : #'compiler support' }
 Interpreter >> compilerPreGCHook: fullGCFlag [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerPreGC: fullGCFlag]
 ]
 
@@ -2465,7 +2675,7 @@ Interpreter >> compilerPreSnapshot [
 
 { #category : #'compiler support' }
 Interpreter >> compilerPreSnapshotHook [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerPreSnapshot]
 ]
 
@@ -2481,7 +2691,7 @@ Interpreter >> compilerProcessChange: oldProc to: newProc [
 
 { #category : #'compiler support' }
 Interpreter >> compilerProcessChangeHook [
-	self inline: true.
+	<inline: true>
 	compilerInitialized ifTrue: [self compilerProcessChange]
 ]
 
@@ -2492,7 +2702,7 @@ Interpreter >> compilerTranslateMethod [
 
 { #category : #'compiler support' }
 Interpreter >> compilerTranslateMethodHook [
-	self inline: true.
+	<inline: true>
 	^compilerInitialized and: [self compilerTranslateMethod]
 ]
 
@@ -2500,7 +2710,7 @@ Interpreter >> compilerTranslateMethodHook [
 Interpreter >> context: thisCntx hasSender: aContext [ 
 	"Does thisCntx have aContext in its sender chain?"
 	| s nilOop |
-	self inline: true.
+	<inline: true>
 	thisCntx == aContext ifTrue: [^false].
 	nilOop := nilObj.
 	s := self fetchPointer: SenderIndex ofObject: thisCntx.
@@ -2519,7 +2729,7 @@ Interpreter >> copyBits [
 	compatibility this stub is provided"
 
 	| fn |
-	self var: #fn type: 'void *'.
+	<var: #fn type: 'void *'>
 	fn := self ioLoadFunction: 'copyBits' From: 'BitBltPlugin'.
 	fn = 0 ifTrue: [^self primitiveFail].
 	^self cCode: '((sqInt (*)(void))fn)()'
@@ -2534,7 +2744,7 @@ Interpreter >> copyBitsFrom: x0 to: x1 at: y [
 	compatibility this stub is provided"
 
 	| fn |
-	self var: #fn type: 'void *'.
+	<var: #fn type: 'void *'>
 	fn := self ioLoadFunction: 'copyBitsFromtoat' From: 'BitBltPlugin'.
 	fn = 0 ifTrue: [^self primitiveFail].
 	^self cCode: '((sqInt (*)(sqInt, sqInt, sqInt))fn)(x0, x1, y)'
@@ -2552,7 +2762,7 @@ Interpreter >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stopAt: st
 	successFlag ifFalse: [^ lastSeg].
 	extraSize := self extraHeaderBytes: oop.
 	bodySize := self sizeBitsOf: oop.
-	(lastSeg + extraSize + bodySize) >= stopAddr
+	(self oop: (lastSeg + extraSize + bodySize) isGreaterThanOrEqualTo: stopAddr)
 		ifTrue: [^ self primitiveFail].
 	self transfer: extraSize + bodySize // BytesPerWord  "wordCount"
 		from: oop - extraSize
@@ -2614,7 +2824,7 @@ Interpreter >> disableCompiler [
 { #category : #'message sending' }
 Interpreter >> dispatchFunctionPointer: aFunctionPointer [
 
-	self var: #aFunctionPointer type: 'void *'.
+	<var: #aFunctionPointer type: 'void *'>
 	self cCode: '((void (*)(void))aFunctionPointer)()'
 			inSmalltalk: [self error: 'my simulator should simulate me']
 ]
@@ -2623,7 +2833,7 @@ Interpreter >> dispatchFunctionPointer: aFunctionPointer [
 Interpreter >> dispatchFunctionPointerOn: primIdx in: primTable [
 	"Call the primitive at index primIdx in the primitiveTable."
 
-	self var: #primTable declareC: 'void *primTable[]'.
+	<var: #primTable declareC: 'void *primTable[]'>
 	^self dispatchFunctionPointer: (primTable at: primIdx)
 ]
 
@@ -2746,8 +2956,24 @@ Interpreter >> doubleExtendedDoAnythingBytecode [
 
 { #category : #initialization }
 Interpreter >> dummyReferToProxy [
-	self inline: false.
+	<inline: false>
 	interpreterProxy := interpreterProxy
+]
+
+{ #category : #'image save/restore' }
+Interpreter >> dumpImage: fileName [
+	"Dump the entire image out to the given file. Intended for debugging only."
+	| f dataSize result |
+	<export: true>
+	<var: #f type: 'sqImageFile'>
+
+	f := self cCode: 'sqImageFileOpen(fileName, "wb")'.
+	f = nil ifTrue: [^-1].
+	dataSize := endOfMemory - self startOfMemory.
+	result := self cCode: 'sqImageFileWrite(pointerForOop(memory), sizeof(unsigned char), dataSize, f)'.
+	self cCode: 'sqImageFileClose(f)'.
+	^result
+
 ]
 
 { #category : #'stack bytecodes' }
@@ -2767,8 +2993,9 @@ Interpreter >> enableCompiler [
 
 { #category : #'message sending' }
 Interpreter >> executeNewMethod [
-	"execute a method not found in the mCache - which means that 
-	primitiveIndex must be manually set. Used by primitiveClosureValue & primitiveExecuteMethod, where no lookup is previously done"
+	"Execute newMethod - either primitiveIndex must be set directly
+	 (i.e. from primitiveExecuteMethod et al), or it would have been
+	 set probing the method cache (i.e. primitivePerform et al)."
 	primitiveIndex > 0
 		ifTrue: [self primitiveResponse.
 			successFlag ifTrue: [^ nil]].
@@ -2783,104 +3010,20 @@ Interpreter >> executeNewMethodFromCache [
 	"execute a method found in the mCache - which means that 
 	primitiveIndex & primitiveFunctionPointer are already set. Any sender 
 	needs to have previously sent findMethodInClass: or equivalent"
-	| nArgs delta |
-	primitiveIndex > 0
-		ifTrue: [DoBalanceChecks ifTrue: ["check stack balance"
-					nArgs := argumentCount.
-					delta := stackPointer - activeContext].
-			successFlag := true.
-			self dispatchFunctionPointer: primitiveFunctionPointer.
-			"branch direct to prim function from address stored in mcache"
-			DoBalanceChecks
-				ifTrue: [(self balancedStack: delta afterPrimitive: primitiveIndex withArgs: nArgs)
-						ifFalse: [self printUnbalancedStack: primitiveIndex]].
-			successFlag ifTrue: [^ nil]].
+	primitiveIndex > 0 ifTrue:[
+		self internalPrimitiveResponse.
+		successFlag ifTrue: [^ nil]].
 	"if not primitive, or primitive failed, activate the method"
 	self activateNewMethod.
 	"check for possible interrupts at each real send"
 	self quickCheckForInterrupts
 ]
 
-{ #category : #'stack bytecodes' }
-Interpreter >> experimentalBytecode [
-	"Note: This bytecode is not currently generated by the compiler."
-	"This range of six bytecodes can replace the pushTemporaryVariable[0..5] bytecode at the beginning of a sequence of either the form:
-		pushTemp
-		pushTemp | pushConstantOne | pushLiteralConstant
-		<=
-		longJumpIfFalse
-or the form:
-		pushTemp
-		pushTemp | pushConstantOne | pushLiteralConstant
-		+
-		popIntoTemp (optional)
-
-If two values pushed are not small integers, this bytecode acts like the pushTemp bytecode it replaces. However, if they are small integers, then the given arithmetic or comparison operation is performed. The result of that operation is either pushed onto the stack or, if one of the expected bytecodes follows it, then that bytecode is performed immediately. In such cases, the entire four instruction sequence is performed without doing any stack operations."
-
-	| arg1 byte2 byte3 byte4 arg1Val arg2Val result offset |
-	arg1 := self temporary: currentBytecode - 138.
-	byte2 := self byteAtPointer: localIP + 1.  "fetch ahead"
-	byte3 := self byteAtPointer: localIP + 2.  "fetch ahead"
-	byte4 := self byteAtPointer: localIP + 3.  "fetch ahead"
-
-	"check first arg"
-	(self isIntegerObject: arg1) ifTrue: [
-		arg1Val := self integerValueOf: arg1.
-	] ifFalse: [
-		self fetchNextBytecode.
-		^ self internalPush: arg1.  "abort; first arg is not an integer"
-	].
-
-	"get and check second arg"
-	byte2 < 32 ifTrue: [
-		arg2Val := self temporary: (byte2 bitAnd: 16rF).
-		(self isIntegerObject: arg2Val) ifTrue: [
-			arg2Val := self integerValueOf: arg2Val.
-		] ifFalse: [
-			self fetchNextBytecode.
-			^ self internalPush: arg1.  "abort; second arg is not an integer"
-		].
-	] ifFalse: [
-		byte2 > 64 ifTrue: [
-			arg2Val := 1.
-		] ifFalse: [
-			arg2Val := self literal: (byte2 bitAnd: 16r1F).
-			(self isIntegerObject: arg2Val) ifTrue: [
-				arg2Val := self integerValueOf: arg2Val.
-			] ifFalse: [
-				self fetchNextBytecode.
-				^ self internalPush: arg1.  "abort; second arg is not an integer"
-			].
-		].
-	].
-
-	byte3 < 178 ifTrue: [
-		"do addition, possibly followed by a storeAndPopTemp"
-		result := arg1Val + arg2Val.
-		(self isIntegerValue: result) ifTrue: [
-			((byte4 > 103) and: [byte4 < 112]) ifTrue: [
-				"next instruction is a storeAndPopTemp"
-				localIP := localIP + 3.
-				self storePointerUnchecked: (byte4 bitAnd: 7) + TempFrameStart
-					ofObject: localHomeContext
-					withValue: (self integerObjectOf: result).
-			] ifFalse: [
-				localIP := localIP + 2.
-				self internalPush: (self integerObjectOf: result).
-			].
-		] ifFalse: [
-			self fetchNextBytecode.
-			^ self internalPush: arg1.  "abort; result is not an integer"
-		].
-	] ifFalse: [
-		"do comparison operation, followed by a longJumpIfFalse"
-		offset := self byteAtPointer: localIP + 4.
-		arg1Val <= arg2Val
-			ifTrue: [localIP := localIP + 3 + 1]  "jump not taken; skip extra instruction byte"
-			ifFalse: [localIP := localIP + 3 + 1 + offset].
-			self fetchNextBytecode.
-	].
-
+{ #category : #'translation support' }
+Interpreter >> expandCases [
+	"For translation only; noop when running in Smalltalk.
+	 Must not be inlined otherwise the directive will disappear!"
+	<inline: false>
 ]
 
 { #category : #'stack bytecodes' }
@@ -2909,7 +3052,7 @@ Interpreter >> extendedStoreAndPopBytecode [
 { #category : #'stack bytecodes' }
 Interpreter >> extendedStoreBytecode [
 	| descriptor variableType variableIndex association |
-	self inline: true.
+	<inline: true>
 	descriptor := self fetchByte.
 	self fetchNextBytecode.
 	variableType := descriptor >> 6 bitAnd: 3.
@@ -2947,7 +3090,7 @@ Interpreter >> fetchArray: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| arrayOop |
-	self returnTypeC: 'void *'.
+	<returnTypeC: 'void *'>
 	arrayOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^ self arrayValueOf: arrayOop
 
@@ -2964,12 +3107,12 @@ Interpreter >> fetchByte [
 Interpreter >> fetchContextRegisters: activeCntx [ 
 	"Note: internalFetchContextRegisters: should track changes  to this method."
 	| tmp |
-	self inline: true.
+	<inline: true>
 	tmp := self fetchPointer: MethodIndex ofObject: activeCntx.
 	(self isIntegerObject: tmp)
 		ifTrue: ["if the MethodIndex field is an integer, activeCntx is a block context"
 			tmp := self fetchPointer: HomeIndex ofObject: activeCntx.
-			tmp < youngStart ifTrue: [self beRootIfOld: tmp]]
+			(self oop: tmp isLessThan: youngStart) ifTrue: [self beRootIfOld: tmp]]
 		ifFalse: ["otherwise, it is a method context and is its own home context "
 			tmp := activeCntx].
 	theHomeContext := tmp.
@@ -2994,7 +3137,7 @@ Interpreter >> fetchFloat: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| floatOop |
-	self returnTypeC: 'double'.
+	<returnTypeC: 'double'>
 	floatOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^ self floatValueOf: floatOop
 ]
@@ -3004,7 +3147,7 @@ Interpreter >> fetchInteger: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| intOop |
-	self inline: false.
+	<inline: false>
 	intOop := self fetchPointer: fieldIndex ofObject: objectPointer.
 	^self checkedIntegerValueOf: intOop
 ]
@@ -3015,10 +3158,10 @@ Interpreter >> fetchIntegerOrTruncFloat: fieldIndex ofObject: objectPointer [
 	"Note: May be called by translated primitive code."
 
 	| intOrFloat floatVal frac trunc |
-	self inline: false.
-	self var: #floatVal type: 'double '.
-	self var: #frac type: 'double '.
-	self var: #trunc type: 'double '.
+	<inline: false>
+	<var: #floatVal type: 'double '>
+	<var: #frac type: 'double '>
+	<var: #trunc type: 'double '>
 
 	intOrFloat := self fetchPointer: fieldIndex ofObject: objectPointer.
 	(self isIntegerObject: intOrFloat) ifTrue: [^ self integerValueOf: intOrFloat].
@@ -3048,9 +3191,10 @@ Interpreter >> fetchNextBytecode [
 Interpreter >> fetchStackPointerOf: aContext [
 	"Return the stackPointer of a Context or BlockContext."
 	| sp |
-	self inline: true.
+	<inline: true>
 	sp := self fetchPointer: StackPointerIndex ofObject: aContext.
 	(self isIntegerObject: sp) ifFalse: [^0].
+	self assert: ReceiverIndex + (self integerValueOf: sp) < (self lengthOf: aContext).
 	^self integerValueOf: sp
 ]
 
@@ -3081,38 +3225,13 @@ Interpreter >> findNewMethodInClass: class [
 	messageSelector is sent to the given class, setting the values 
 	of 'newMethod' and 'primitiveIndex'."
 	| ok |
-	self inline: false.
+	<inline: false>
 	ok := self lookupInMethodCacheSel: messageSelector class: class.
 	ok
 		ifFalse: ["entry was not found in the cache; look it up the hard way "
 			self lookupMethodInClass: class.
 			lkupClass := class.
 			self addNewMethodToCache]
-]
-
-{ #category : #'plugin support' }
-Interpreter >> findObsoleteNamedPrimitive: functionName length: functionLength [
-	"Search the obsolete named primitive table for the given function.
-	Return the index if it's found, -1 otherwise."
-	| entry index chIndex |
-	self var: #functionName type:'char *'.
-	self var: #entry type:'const char *'.
-	index := 0.
-	[true] whileTrue:[
-		entry := self
-			cCode: 'obsoleteNamedPrimitiveTable[index][0]'
-			inSmalltalk: [ (CArrayAccessor on: (obsoleteNamedPrimitiveTable at: index)) at: 0 ].
-		entry == nil ifTrue:[^-1]. "at end of table"
-		self cCode: '' inSmalltalk: [ entry := CArrayAccessor on: entry ].
-		"Compare entry with functionName"
-		chIndex := 0.
-		[(entry at: chIndex) = (self cCode: 'functionName[chIndex]'
-								inSmalltalk: [self byteAtPointer: functionName + chIndex]) 
-			and:[chIndex < functionLength]] whileTrue:[chIndex := chIndex + 1].
-		(chIndex = functionLength and:[(entry at: chIndex) = 0]) 
-			ifTrue:[^index]. "match"
-		index := index + 1.
-	].
 ]
 
 { #category : #'debug support' }
@@ -3141,7 +3260,7 @@ Interpreter >> findSelectorOfMethod: meth forReceiver: rcvr [
 { #category : #'plugin support' }
 Interpreter >> firstFixedField: oop [
 
-	self returnTypeC: 'void *'.
+	<returnTypeC: 'void *'>
 	^ self pointerForOop: oop + BaseHeaderSize
 ]
 
@@ -3150,7 +3269,7 @@ Interpreter >> firstIndexableField: oop [
 	"NOTE: copied in InterpreterSimulator, so please duplicate any changes"
 
 	| hdr fmt totalLength fixedFields |
-	self returnTypeC: 'void *'.
+	<returnTypeC: 'void *'>
 	hdr := self baseHeader: oop.
 	fmt := (hdr >> 8) bitAnd: 16rF.
 	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
@@ -3174,12 +3293,12 @@ Interpreter >> fixedFieldsOf: oop format: fmt length: wordLength [
 	^ (classFormat >> 2 bitAnd: 16rFF) - 1
 "
 	| class classFormat |
-	self inline: true.
+	<inline: true>
 	((fmt > 4) or: [fmt = 2]) ifTrue: [^ 0].  "indexable fields only"
 	fmt < 2 ifTrue: [^ wordLength].  "fixed fields only (zero or more)"
 	
 	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
-	class := self fetchClassOf: oop.
+	class := self fetchClassOfNonInt: oop.
 	classFormat := self formatOfClass: class.
 	^ (classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 
@@ -3188,8 +3307,9 @@ Interpreter >> fixedFieldsOf: oop format: fmt length: wordLength [
 { #category : #'object format' }
 Interpreter >> floatObjectOf: aFloat [
 	| newFloatObj |
-self flag: #Dan.
-	self var: #aFloat type: 'double '.
+	<inline: false>
+	<var: #aFloat type: 'double '>
+	self flag: #Dan.
 	newFloatObj := self instantiateSmallClass: (self splObj: ClassFloat) sizeInBytes: 8+BaseHeaderSize.
 	self storeFloatAt: newFloatObj + BaseHeaderSize from: aFloat.
 	^ newFloatObj.
@@ -3200,6 +3320,8 @@ self flag: #Dan.
 Interpreter >> floatValueOf: oop [
 	"Fetch the instance variable at the given index of the given object. Return the C double precision floating point value of that instance variable, or fail if it is not a Float."
 	"Note: May be called by translated primitive code."
+
+	"DO _NOT_ USE THIS IN DEBUG PRINTING!  assertClassOf:is: sets successFlag."
 
 	| result |
 	self flag: #Dan.  "None of the float stuff has been converted for 64 bits"
@@ -3244,7 +3366,7 @@ Interpreter >> flushExternalPrimitives [
 	failed primitives are looked up again."
 	| oop primIdx |
 	oop := self firstObject.
-	[oop < endOfMemory]
+	[self oop: oop isLessThan: endOfMemory]
 		whileTrue: [(self isFreeObject: oop)
 				ifFalse: [(self isCompiledMethod: oop)
 						ifTrue: ["This is a compiled method"
@@ -3254,7 +3376,6 @@ Interpreter >> flushExternalPrimitives [
 									self flushExternalPrimitiveOf: oop]]].
 			oop := self objectAfter: oop].
 	self flushMethodCache.
-	self flushObsoleteIndexedPrimitives.
 	self flushExternalPrimitiveTable
 ]
 
@@ -3276,27 +3397,18 @@ Interpreter >> flushMethodCacheFrom: memStart to: memEnd [
 	probe := 0.
 	1 to: MethodCacheEntries do: [:i | 
 			(methodCache at: probe + MethodCacheSelector) = 0
-				ifFalse: [(((((methodCache at: probe + MethodCacheSelector) >= memStart
-										and: [(methodCache at: probe + MethodCacheSelector) < memEnd])
-									or: [(methodCache at: probe + MethodCacheClass) >= memStart
-											and: [(methodCache at: probe + MethodCacheClass) < memEnd]])
-								or: [(methodCache at: probe + MethodCacheMethod) >= memStart
-										and: [(methodCache at: probe + MethodCacheMethod) < memEnd]])
-							or: [(methodCache at: probe + MethodCacheNative) >= memStart
-									and: [(methodCache at: probe + MethodCacheNative) < memEnd]])
+				ifFalse: [((((self oop: (methodCache at: probe + MethodCacheSelector) isGreaterThanOrEqualTo: memStart)
+										and: [self oop: (methodCache at: probe + MethodCacheSelector) isLessThan: memEnd])
+									or: [(self oop: (methodCache at: probe + MethodCacheClass) isGreaterThanOrEqualTo: memStart)
+											and: [self oop: (methodCache at: probe + MethodCacheClass) isLessThan: memEnd]])
+								or: [(self oop: (methodCache at: probe + MethodCacheMethod) isGreaterThanOrEqualTo: memStart)
+										and: [self oop: (methodCache at: probe + MethodCacheMethod) isLessThan: memEnd]])
 						ifTrue: [methodCache at: probe + MethodCacheSelector put: 0]].
 			probe := probe + MethodCacheEntrySize].
 	1 to: AtCacheTotalSize do: [:i | atCache at: i put: 0]
 ]
 
-{ #category : #'plugin primitive support' }
-Interpreter >> flushObsoleteIndexedPrimitives [
-	"Flush the pointers in the obsolete indexed primitive table"
-	1 to: MaxPrimitiveIndex
-		do: [:i | (obsoleteIndexedPrimitiveTable at: i) at: 2 put: nil]
-]
-
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> forceInterruptCheck [
 	"force an interrupt check ASAP"
 	interruptCheckCounter := -1000.
@@ -3338,7 +3450,7 @@ Interpreter >> fullDisplayUpdate [
 		h := self fetchInteger: 2 ofObject: displayObj.
 		self displayBitsOf: displayObj Left: 0 Top: 0 Right: w Bottom: h.
 		self ioForceDisplayUpdate].
-
+	^nil
 ]
 
 { #category : #'method lookup cache' }
@@ -3347,7 +3459,7 @@ Interpreter >> functionPointerFor: primIdx inClass: theClass [
 	opportunity to specialise the prim for the relevant class (format for
 	example).  Default for now is simply the entry in the base primitiveTable."
 
-	self returnTypeC: 'void *'.
+	<returnTypeC: 'void *'>
 	^primitiveTable at: primIdx
 ]
 
@@ -3383,7 +3495,7 @@ Interpreter >> getLongFromFile: aFile swap: swapFlag [
 	"Answer the next word read from aFile, byte-swapped according to the swapFlag."
 
 	| w |
-	self var: #aFile type: 'sqImageFile '.
+	<var: #aFile type: 'sqImageFile '>
 	w := 0.
 	self cCode: 'sqImageFileRead(&w, sizeof(w), 1, aFile)'.
 	swapFlag
@@ -3405,7 +3517,7 @@ Interpreter >> getSavedWindowSize [
 { #category : #'plugin support' }
 Interpreter >> getThisSessionID [
 	"return the global session ID value"
-	self inline: false.
+	<inline: false>
 	^globalSessionID
 ]
 
@@ -3415,12 +3527,21 @@ Interpreter >> headerOf: methodPointer [
 ]
 
 { #category : #'image save/restore' }
-Interpreter >> imageFormatVersion [
-	"Return a magic constant that changes when the image format changes. Since the image reading code uses this to detect byte ordering, one must avoid version numbers that are invariant under byte reversal."
+Interpreter >> imageFormatCompatibilityVersion [
+	"This VM is backward-compatible with the immediately preceeding non-closure version."
 
 	BytesPerWord == 4
 		ifTrue: [^6502]
 		ifFalse: [^68000]
+]
+
+{ #category : #'image save/restore' }
+Interpreter >> imageFormatVersion [
+	"Return a magic constant that changes when the image format changes. Since the image reading code uses this to detect byte ordering, one must avoid version numbers that are invariant under byte reversal."
+
+	BytesPerWord == 4
+		ifTrue: [^6504]
+		ifFalse: [^68002]
 ]
 
 { #category : #'image segment in/out' }
@@ -3439,7 +3560,7 @@ Interpreter >> includesBehavior: aClass ThatOf: aSuperclass [
 		aClass includesBehavior: aSuperclass.
 	Note: written for efficiency and better inlining (only 1 temp)"
 	| theClass |
-	self inline: true.
+	<inline: true>
 	(((theClass := aClass) = aSuperclass) "aClass == aSuperclass"
 		or:[aSuperclass = nilObj]) "every class inherits from nil"
 			ifTrue:[^true].
@@ -3488,22 +3609,26 @@ Interpreter >> initializeInterpreter: bytesToShift [
 	self dummyReferToProxy.
 	self initializeObjectMemory: bytesToShift.
 	self initCompilerHooks.
+	self checkAssumedCompactClasses.
+	metaclassSizeBytes := self sizeBitsOf: (self fetchClassOfNonInt: (self splObj: ClassArray)).	"determine actual (Metaclass instSize * 4)"
 	activeContext := nilObj.
 	theHomeContext := nilObj.
 	method := nilObj.
 	receiver := nilObj.
 	messageSelector := nilObj.
 	newMethod := nilObj.
-	methodClass := nilObj.
 	lkupClass := nilObj.
 	receiverClass := nilObj.
-	newNativeMethod := nilObj.
 	self flushMethodCache.
 	self loadInitialContext.
 	self initialCleanup.
 	interruptCheckCounter := 0.
 	interruptCheckCounterFeedBackReset := 1000.
 	interruptChecksEveryNms := 1.
+	nextProfileTick := 0.
+	profileSemaphore := nilObj.
+	profileProcess := nilObj.
+	profileMethod := nilObj.
 	nextPollTick := 0.
 	nextWakeupTick := 0.
 	lastTick := 0.
@@ -3518,15 +3643,22 @@ Interpreter >> initializeInterpreter: bytesToShift [
 	[globalSessionID = 0]
 		whileTrue: [globalSessionID := self
 						cCode: 'time(NULL) + ioMSecs()'
-						inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]]
+						inSmalltalk: [(Random new next * SmallInteger maxVal) asInteger]].
+	jmpDepth := 0.
+	jmpMax := MaxJumpBuf. "xxxx: Must match the definition of jmpBuf and suspendedCallbacks"
+	statQuickCheckForEvents := 0.
+	statCheckForEvents := 0.
+	statProcessSwitch := 0.
+	statIOProcessEvents := 0
+
 ]
 
-{ #category : #'array and stream primitives' }
+{ #category : #'array primitives' }
 Interpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 	"Install the oop of this object in the given cache (at or atPut), along with
 	its size, format and fixedSize"
 	| hdr fmt totalLength fixedFields |
-	self var: #cache type: 'sqInt *'.
+	<var: #cache type: 'sqInt *'>
 
 	hdr := self baseHeader: rcvr.
 	fmt := (hdr >> 8) bitAnd: 16rF.
@@ -3546,7 +3678,7 @@ Interpreter >> install: rcvr inAtCache: cache at: atIx string: stringy [
 
 { #category : #'return bytecodes' }
 Interpreter >> internalAboutToReturn: resultObj through: aContext [
-	self inline: true.
+	<inline: true>
 	self internalPush: activeContext.
 	self internalPush: resultObj.
 	self internalPush: aContext.
@@ -3558,7 +3690,7 @@ Interpreter >> internalAboutToReturn: resultObj through: aContext [
 { #category : #'message sending' }
 Interpreter >> internalActivateNewMethod [
 	| methodHeader newContext tempCount argCount2 needsLarge where |
-	self inline: true.
+	<inline: true>
 
 	methodHeader := self headerOf: newMethod.
 	needsLarge := methodHeader bitAnd: LargeContextBit.
@@ -3575,12 +3707,13 @@ Interpreter >> internalActivateNewMethod [
 	 call to newActiveContext: below, so we can use unchecked stores."
 	where :=   newContext + BaseHeaderSize.
 	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
-	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf:
-			(((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1)).
+	self longAt: where + (InstructionPointerIndex << ShiftForWord)
+		put: (self integerObjectOf: (((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1)).
 	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
 	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
+	self longAt: where + (ClosureIndex << ShiftForWord) put: nilObj.
 
-	"Copy the reciever and arguments..."
+	"Copy the receiver and arguments..."
 	argCount2 := argumentCount.
 	0 to: argCount2 do:
 		[:i | self longAt: where + ((ReceiverIndex+i) << ShiftForWord) put: (self internalStackValue: argCount2-i)].
@@ -3598,7 +3731,7 @@ Interpreter >> internalActivateNewMethod [
 
 { #category : #'return bytecodes' }
 Interpreter >> internalCannotReturn: resultObj [
-	self inline: true.
+	<inline: true>
 	self internalPush: activeContext.
 	self internalPush: resultObj.
 	messageSelector := self splObj: SelectorCannotReturn.
@@ -3608,8 +3741,8 @@ Interpreter >> internalCannotReturn: resultObj [
 
 { #category : #'message sending' }
 Interpreter >> internalExecuteNewMethod [
-	| localPrimIndex delta nArgs |
-	self inline: true.
+	| localPrimIndex |
+	<inline: true>
 	localPrimIndex := primitiveIndex.
 	localPrimIndex > 0
 		ifTrue: [(localPrimIndex > 255
@@ -3623,17 +3756,9 @@ Interpreter >> internalExecuteNewMethod [
 							localPrimIndex = 258 ifTrue: [^ self internalPop: 1 thenPush: falseObj].
 							localPrimIndex = 259 ifTrue: [^ self internalPop: 1 thenPush: nilObj].
 							^ self internalPop: 1 thenPush: (self integerObjectOf: localPrimIndex - 261)]]
-				ifFalse: [self externalizeIPandSP.
-					"self primitiveResponse. <-replaced with  manually inlined code"
-					DoBalanceChecks
-						ifTrue: ["check stack balance"
-							nArgs := argumentCount.
-							delta := stackPointer - activeContext].
-					successFlag := true.
-					self dispatchFunctionPointer: primitiveFunctionPointer. "branch direct to prim function from address stored in mcache"
-					DoBalanceChecks
-						ifTrue: [(self balancedStack: delta afterPrimitive: localPrimIndex withArgs: nArgs)
-								ifFalse: [self printUnbalancedStack: localPrimIndex]].
+				ifFalse: [
+					self externalizeIPandSP.
+					self internalPrimitiveResponse.
 					self internalizeIPandSP.
 					successFlag
 						ifTrue: [self browserPluginReturnIfNeeded.
@@ -3649,12 +3774,12 @@ Interpreter >> internalFetchContextRegisters: activeCntx [
 	"Inlined into return bytecodes. The only difference between this method and fetchContextRegisters: is that this method sets the local IP and SP."
 
 	| tmp |
-	self inline: true.
+	<inline: true>
 	tmp := self fetchPointer: MethodIndex ofObject: activeCntx.
 	(self isIntegerObject: tmp) ifTrue: [
 		"if the MethodIndex field is an integer, activeCntx is a block context"
 		tmp := self fetchPointer: HomeIndex ofObject: activeCntx.
-		(tmp < youngStart) ifTrue: [ self beRootIfOld: tmp ].
+		(self oop: tmp isLessThan: youngStart) ifTrue: [ self beRootIfOld: tmp ].
 	] ifFalse: [
 		"otherwise, it is a method context and is its own home context"
 		tmp := activeCntx.
@@ -3679,7 +3804,7 @@ Interpreter >> internalFetchContextRegisters: activeCntx [
 Interpreter >> internalFindNewMethod [
 	"Find the compiled method to be run when the current messageSelector is sent to the class 'lkupClass', setting the values of 'newMethod' and 'primitiveIndex'."
 	| ok | 
-	self inline: true.
+	<inline: true>
 	ok := self lookupInMethodCacheSel: messageSelector class: lkupClass.
 	ok ifFalse: [
 		"entry was not found in the cache; look it up the hard way"
@@ -3693,10 +3818,10 @@ Interpreter >> internalFindNewMethod [
 { #category : #contexts }
 Interpreter >> internalNewActiveContext: aContext [
 	"The only difference between this method and newActiveContext: is that this method uses internal context registers."
-	self inline: true.
+	<inline: true>
 
 	self internalStoreContextRegisters: activeContext.
-	(aContext < youngStart) ifTrue: [ self beRootIfOld: aContext ].
+	(self oop: aContext isLessThan: youngStart) ifTrue: [ self beRootIfOld: aContext ].
 	activeContext := aContext.
 	self internalFetchContextRegisters: aContext.
 ]
@@ -3714,11 +3839,44 @@ Interpreter >> internalPop: nItems thenPush: oop [
 
 ]
 
+{ #category : #'primitive support' }
+Interpreter >> internalPrimitiveResponse [
+	"Called under the assumption that primFunctionPtr has been preloaded"
+	| delta nArgs |
+	<inline: true>
+	DoBalanceChecks ifTrue:["check stack balance"
+		nArgs := argumentCount.
+		delta := stackPointer - activeContext.
+	].
+	successFlag := true.
+	self dispatchFunctionPointer: primitiveFunctionPointer.
+	DoBalanceChecks ifTrue:[
+		(self balancedStack: delta afterPrimitive: primitiveIndex withArgs: nArgs) 
+			ifFalse:[self printUnbalancedStack: primitiveIndex].
+	].
+	"If we are profiling, take accurate primitive measures"
+	nextProfileTick > 0 ifTrue:[
+		self ioHighResClock >= nextProfileTick ifTrue:[
+			"Take a profiler sample. Note that we sample the primitive method
+			here because we don't want to attribute a failed primitive improperly."
+			successFlag
+				ifTrue: ["process the interrupt now"
+						profileMethod := newMethod.
+						self checkForInterrupts]
+				ifFalse: ["process the interrupt in primtive failure code"
+						profileMethod := nilObj.
+						interruptCheckCounter := 0].
+		].
+	].
+	primitiveIndex := 0. "clear out primIndex so VM knows we're no longer in primitive"
+	^ successFlag
+
+]
+
 { #category : #'control primitives' }
 Interpreter >> internalPrimitiveValue [
 	| newContext blockArgumentCount initialIP |
-	self inline: true.
-	self sharedCodeNamed: 'commonPrimitiveValue' inCase: 201.
+	<sharedCodeNamed: 'commonPrimitiveValue' inCase: 201>
 	successFlag := true.
 	newContext := self internalStackValue: argumentCount.
 	self assertClassOf: newContext is: (self splObj: ClassBlockContext).
@@ -3747,11 +3905,13 @@ Interpreter >> internalPush: object [
 	self longAtPointer: (localSP := localSP + BytesPerWord) put: object.
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> internalQuickCheckForInterrupts [
 	"Internal version of quickCheckForInterrupts for use within jumps."
 
-	self inline: true.
+	<inline: true>
+	<asmLabel: true> 
+	statQuickCheckForEvents := statQuickCheckForEvents + 1.
 	((interruptCheckCounter := interruptCheckCounter - 1) <= 0) ifTrue: [
 		self externalizeIPandSP.
 		self checkForInterrupts.
@@ -3783,7 +3943,7 @@ Interpreter >> internalStoreContextRegisters: activeCntx [
 		-1 for 0-based addressing of fetchByte
 		-1 because it gets incremented BEFORE fetching currentByte"
 
-	self inline: true.
+	<inline: true>
 	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: 
 			((self oopForPointer: localIP) + 2 - (method + BaseHeaderSize))).
@@ -3805,8 +3965,14 @@ Interpreter >> internalizeIPandSP [
 
 { #category : #'interpreter shell' }
 Interpreter >> interpret [
-	"This is the main interpreter loop. It normally loops forever, fetching and executing bytecodes. When running in the context of a browser plugin VM, however, it must return control to the browser periodically. This should done only when the state of the currently running Squeak thread is safely stored in the object heap. Since this is the case at the moment that a check for interrupts is performed, that is when we return to the browser if it is time to do so. Interrupt checks happen quite frequently."
+	"This is the main interpreter loop. It normally loops forever, fetching and executing
+	 bytecodes.  When running in the context of a browser plugin VM, however, it must
+	 return control to the browser periodically.  This should done only when the state of
+	 the currently running Squeak thread is safely stored in the object heap.  Since this
+	 is the case at the moment that a check for interrupts is performed, that is when we
+	 return to the browser if it is time to do so.  Interrupt checks happen quite frequently."
 
+	<inline: false> "should *not* be inlined into sendInvokeCallback:Stack:Registers:Jmpbuf:"
 	"record entry time when running as a browser plug-in"
 	self browserPluginInitialiseIfNeeded.
 	self internalizeIPandSP.
@@ -3814,10 +3980,11 @@ Interpreter >> interpret [
 	[true] whileTrue: [self dispatchOn: currentBytecode in: BytecodeTable].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
 	self externalizeIPandSP.
+	^nil
 
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> interruptCheckForced [
 	"was this interrupt check forced by outside code?"
 	^interruptCheckCounter < -100
@@ -3827,8 +3994,8 @@ Interpreter >> interruptCheckForced [
 Interpreter >> ioFilename: aCharBuffer fromString: aFilenameString ofLength: filenameLength resolveAliases: aBoolean [
 "the vm has to convert aFilenameString via any canonicalization and char-mapping and put the result in aCharBuffer.
 Note the resolveAliases flag - this is an awful artefact of OSX and Apples demented alias handling. When opening a file, the flag must be  true, when closing or renaming it must be false. Sigh."
-	self var: #aCharBuffer type: 'char *'.
-	self var: #aFilenameString type: 'char *'.
+	<var: #aCharBuffer type: 'char *'>
+	<var: #aFilenameString type: 'char *'>
 	self cCode:'sqGetFilenameFromString(aCharBuffer, aFilenameString, filenameLength, aBoolean)'
 		inSmalltalk:["this doesn't translate well in Smalltalk since we know how long strings are rather than considering them terminated by a 0 char. Do the best we can"
 			aCharBuffer replaceFrom:1 to: filenameLength with: aFilenameString]
@@ -3838,7 +4005,7 @@ Note the resolveAliases flag - this is an awful artefact of OSX and Apples demen
 Interpreter >> is: oop KindOf: className [
 	"Support for external primitives."
 	| oopClass |
-	self var: #className type:'char *'.
+	<var: #className type:'char *'>
 	oopClass := self fetchClassOf: oop.
 	[oopClass == nilObj] whileFalse:[
 		(self classNameOf: oopClass Is: className) ifTrue:[^true].
@@ -3850,7 +4017,7 @@ Interpreter >> is: oop KindOf: className [
 Interpreter >> is: oop MemberOf: className [
 	"Support for external primitives"
 	| oopClass |
-	self var: #className type:'char *'.
+	<var: #className type:'char *'>
 	oopClass := self fetchClassOf: oop.
 	^(self classNameOf: oopClass Is: className)
 ]
@@ -3859,8 +4026,8 @@ Interpreter >> is: oop MemberOf: className [
 Interpreter >> isBigEnder [
 	"Answer true (non-zero) if running on a big endian machine."
 	| endianness anInt cString len i |
-	self var: 'cString' type: 'char *'.
-	self var: 'endianness' declareC: 'static sqInt endianness = -1'.
+	<var: 'cString' type: 'char *'>
+	<var: 'endianness' declareC: 'static sqInt endianness = -1'>
 	(endianness == -1) ifFalse: [^ endianness]. "answer cached value"
 	len := self cCode: 'sizeof(anInt)'
 			inSmalltalk: [^ (Smalltalk endianness == #little) not].
@@ -3875,28 +4042,27 @@ Interpreter >> isBigEnder [
 ]
 
 { #category : #contexts }
-Interpreter >> isContext: oop header: hdr [
-	"NOTE: anOop is assumed not to be an integer"
-	| ccIndex theClass |
-	self inline: true.
-	ccIndex := (hdr >> 12) bitAnd: 16r1F.
-	ccIndex = 0
-		ifTrue: [theClass := (self classHeader: oop) bitAnd: AllButTypeMask]
-		ifFalse: ["look up compact class"
-				theClass := self fetchPointer: ccIndex - 1 ofObject: (self splObj: CompactClasses)].
-	^ theClass = (self splObj: ClassMethodContext) or: [theClass = (self splObj: ClassBlockContext)]
-
+Interpreter >> isContext: oop [
+	<inline: true>
+	^(self isNonIntegerObject: oop) and: [self isContextHeader: (self baseHeader: oop)]
 ]
 
 { #category : #contexts }
 Interpreter >> isContextHeader: aHeader [
-	self inline: true.
-	^ ((aHeader >> 12) bitAnd: 16r1F) = 13			"MethodContext"
-		or: [((aHeader >> 12) bitAnd: 16r1F) = 14		"BlockContext"
+	<inline: true>
+	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> (Smalltalk compactClassesArray indexOf: class)]"
+	^ ((aHeader >> 12) bitAnd: 16r1F) = 13			"BlockContext"
+		or: [((aHeader >> 12) bitAnd: 16r1F) = 14	"MethodContext"
 		or: [((aHeader >> 12) bitAnd: 16r1F) = 4]]	"PseudoContext"
 ]
 
-{ #category : #processes }
+{ #category : #contexts }
+Interpreter >> isContextNonInt: oop [
+	<inline: true>
+	^self isContextHeader: (self baseHeader: oop)
+]
+
+{ #category : #'process primitive support' }
 Interpreter >> isEmptyList: aLinkedList [
 
 	^ (self fetchPointer: FirstLinkIndex ofObject: aLinkedList) = nilObj
@@ -3913,7 +4079,7 @@ Interpreter >> isHandlerMarked: aContext [
 	| header meth pIndex |
 	"NB: the use of a primitive number for marking the method is pretty grungy, but it is simple to use for a test sytem, not too expensive and we don't actually have the two spare method header bits we need. We can probably obtain them when the method format is changed.
 	NB 2: actually, the jitter will probably implement the prim to actually mark the volatile frame by changing the return function pointer."
-	self inline: true.
+	<inline: true>
 	header := self baseHeader: aContext.
 	(self isMethodContextHeader: header) ifFalse: [^false].
 	meth := self fetchPointer: MethodIndex ofObject: aContext.
@@ -3929,7 +4095,7 @@ Interpreter >> isIndexable: oop [
 
 { #category : #contexts }
 Interpreter >> isMethodContextHeader: aHeader [
-	self inline: true.
+	<inline: true>
 	^ ((aHeader >> 12) bitAnd: 16r1F) = 14
 ]
 
@@ -3939,7 +4105,7 @@ Interpreter >> isUnwindMarked: aContext [
 	| header meth pIndex |
 	"NB: the use of a primitive number for marking the method is pretty grungy, but it is simple to use for a test sytem, not too expensive and we don't actually have the two spare method header bits we need. We can probably obtain them when the method format is changed
 	NB 2: actually, the jitter will probably implement the prim to actually mark the volatile frame by changing the return function pointer."
-	self inline: true.
+	<inline: true>
 	header := self baseHeader: aContext.
 	(self isMethodContextHeader: header) ifFalse: [^false].
 	meth := self fetchPointer: MethodIndex ofObject: aContext.
@@ -3984,22 +4150,62 @@ Interpreter >> jumplfTrueBy: offset [
 	self internalPop: 1
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'callback support' }
+Interpreter >> justActivateNewMethod [
+	"Activate the new method but *do not* copy receiver or arguments from activeContext."
+	| methodHeader initialIP newContext tempCount needsLarge where |
+	self inline: true.
+
+	methodHeader := self headerOf: newMethod.
+	needsLarge := methodHeader bitAnd: LargeContextBit.
+	(needsLarge = 0 and: [freeContexts ~= NilContext])
+		ifTrue: [newContext := freeContexts.
+				freeContexts := self fetchPointer: 0 ofObject: newContext]
+		ifFalse: ["Slower call for large contexts or empty free list"
+				newContext := self allocateOrRecycleContext: needsLarge].
+	initialIP := ((LiteralStart + (self literalCountOfHeader: methodHeader)) * BytesPerWord) + 1.
+	tempCount := (methodHeader >> 19) bitAnd: 16r3F.
+
+	"Assume: newContext will be recorded as a root if necessary by the
+	 call to newActiveContext: below, so we can use unchecked stores."
+	where := newContext + BaseHeaderSize.
+	self longAt: where + (SenderIndex << ShiftForWord) put: activeContext.
+	self longAt: where + (InstructionPointerIndex << ShiftForWord) put: (self integerObjectOf: initialIP).
+	self longAt: where + (StackPointerIndex << ShiftForWord) put: (self integerObjectOf: tempCount).
+	self longAt: where + (MethodIndex << ShiftForWord) put: newMethod.
+
+	"Set the receiver..."
+	self longAt: where + (ReceiverIndex << ShiftForWord) put: receiver.
+
+	"clear all args and temps to nil in case it has been recycled"
+	needsLarge := nilObj.  "needsLarge here used just as faster (register?) temp"
+	ReceiverIndex + 1 to: tempCount + ReceiverIndex do:
+		[:i | self longAt: where + (i << ShiftForWord) put: needsLarge].
+	reclaimableContextCount := reclaimableContextCount + 1.
+
+	activeContext := newContext.
+	(self oop: newContext isLessThan: youngStart) ifTrue:
+		[self beRootIfOld: newContext]
+]
+
+{ #category : #'array primitive support' }
 Interpreter >> lengthOf: oop [
 	"Return the number of indexable bytes or words in the given object. Assume the argument is not an integer. For a CompiledMethod, the size of the method header (in bytes) should be subtracted from the result."
 
 	| header |
-	self inline: true.
+	<inline: true>
+	<asmLabel: false> 
 	header := self baseHeader: oop.
 	^ self lengthOf: oop baseHeader: header format: ((header >> 8) bitAnd: 16rF)
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> lengthOf: oop baseHeader: hdr format: fmt [
 	"Return the number of indexable bytes or words in the given object. Assume the given oop is not an integer. For a CompiledMethod, the size of the method header (in bytes) should be subtracted from the result of this method."
 
 	| sz |
-	self inline: true.
+	<inline: true>
+	<asmLabel: false> 
 	(hdr bitAnd: TypeMask) = HeaderTypeSizeAndClass
 		ifTrue: [ sz := (self sizeHeader: oop) bitAnd: LongSizeMask ]
 		ifFalse: [ sz := (hdr bitAnd: SizeMask)].
@@ -4041,7 +4247,7 @@ Interpreter >> loadBitBltFrom: bb [
 	replaced with a dynamic lookup from BitBltPlugin itself but for backward
 	compatibility this stub is provided"
 	| fn |
-	self var: #fn type: 'void *'.
+	<var: #fn type: 'void *'>
 	fn := self ioLoadFunction: 'loadBitBltFrom' From: 'BitBltPlugin'.
 	fn = 0 ifTrue: [^self primitiveFail].
 	^self cCode: '((sqInt (*)(sqInt))fn)(bb)'
@@ -4053,14 +4259,18 @@ Interpreter >> loadFloatOrIntFrom: floatOrInt [
 	If it is a Float, then load its value and return it.
 	Otherwise fail -- ie return with successFlag set to false."
 
-	self inline: true.
-	self returnTypeC: 'double'.
+	| result |
+	<inline: true>
+	<asmLabel: false>
+	<returnTypeC: 'double'>
+	<var: #result type: 'double '>
 
 	(self isIntegerObject: floatOrInt) ifTrue:
-		[^ self cCode: '((double) (floatOrInt >> 1))'
-				inSmalltalk: [(self integerValueOf: floatOrInt) asFloat]].
-	(self fetchClassOfNonInt: floatOrInt) = (self splObj: ClassFloat)
-		ifTrue: [^ self floatValueOf: floatOrInt].
+		[^(self integerValueOf: floatOrInt) asFloat].
+	(self fetchClassOfNonInt: floatOrInt) = (self splObj: ClassFloat) ifTrue:
+		[self cCode: '' inSmalltalk: [result := Float new: 2].
+		 self fetchFloatAt: floatOrInt + BaseHeaderSize into: result.
+		 ^result].
 	successFlag := false
 ]
 
@@ -4071,7 +4281,7 @@ Interpreter >> loadInitialContext [
 	sched := self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation).
 	proc := self fetchPointer: ActiveProcessIndex ofObject: sched.
 	activeContext := self fetchPointer: SuspendedContextIndex ofObject: proc.
-	(activeContext < youngStart) ifTrue: [ self beRootIfOld: activeContext ].
+	(self oop: activeContext isLessThan: youngStart) ifTrue: [ self beRootIfOld: activeContext ].
 	self fetchContextRegisters: activeContext.
 	reclaimableContextCount := 0.
 ]
@@ -4109,7 +4319,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 	"WARNING: Since the hash computation is based on the object addresses of the class and selector, we must rehash or flush when compacting storage. We've chosen to flush, since that also saves the trouble of updating the addresses of the objects in the cache."
 
 	| hash probe |
-	self inline: true.
+	<inline: true>
 	hash := selector bitXor: class.  "shift drops two low-order zeros from addresses"
 
 	probe := hash bitAnd: MethodCacheMask.  "first probe"
@@ -4117,7 +4327,6 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 		 [(methodCache at: probe + MethodCacheClass) = class]) ifTrue:
 			[newMethod := methodCache at: probe + MethodCacheMethod.
 			primitiveIndex := methodCache at: probe + MethodCachePrim.
-			newNativeMethod := methodCache at: probe + MethodCacheNative.
 			primitiveFunctionPointer := self cCoerce: (methodCache at: probe + MethodCachePrimFunction) to: 'void *'.
 			^ true	"found entry in cache; done"].
 
@@ -4126,7 +4335,6 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 		 [(methodCache at: probe + MethodCacheClass) = class]) ifTrue:
 			[newMethod := methodCache at: probe + MethodCacheMethod.
 			primitiveIndex := methodCache at: probe + MethodCachePrim.
-			newNativeMethod := methodCache at: probe + MethodCacheNative.
 			primitiveFunctionPointer := self cCoerce: (methodCache at: probe + MethodCachePrimFunction) to: 'void *'.
 			^ true	"found entry in cache; done"].
 
@@ -4135,7 +4343,6 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 		 [(methodCache at: probe + MethodCacheClass) = class]) ifTrue:
 			[newMethod := methodCache at: probe + MethodCacheMethod.
 			primitiveIndex := methodCache at: probe + MethodCachePrim.
-			newNativeMethod := methodCache at: probe + MethodCacheNative.
 			primitiveFunctionPointer := self cCoerce: (methodCache at: probe + MethodCachePrimFunction) to: 'void *'.
 			^ true	"found entry in cache; done"].
 
@@ -4146,7 +4353,7 @@ Interpreter >> lookupInMethodCacheSel: selector class: class [
 { #category : #'message sending' }
 Interpreter >> lookupMethodInClass: class [
 	| currentClass dictionary found rclass |
-	self inline: false.
+	<inline: false>
 
 	currentClass := class.
 	[currentClass ~= nilObj]
@@ -4161,7 +4368,7 @@ Interpreter >> lookupMethodInClass: class [
 			messageSelector := self splObj: SelectorCannotInterpret.
 			^ self lookupMethodInClass: (self superclassOf: currentClass)].
 		found := self lookupMethodInDictionary: dictionary.
-		found ifTrue: [^ methodClass := currentClass].
+		found ifTrue: [^currentClass].
 		currentClass := self superclassOf: currentClass].
 
 	"Could not find #doesNotUnderstand: -- unrecoverable error."
@@ -4182,7 +4389,7 @@ Interpreter >> lookupMethodInDictionary: dictionary [
 	support execution of images in which Symbols have been 
 	compacted out"
 	| length index mask wrapAround nextSelector methodArray |
-	self inline: true.
+	<inline: true>
 	length := self fetchWordLengthOf: dictionary.
 	mask := length - SelectorStart - 1.
 	(self isIntegerObject: messageSelector)
@@ -4218,6 +4425,23 @@ Interpreter >> lookupMethodInDictionary: dictionary [
 					index := SelectorStart]]
 ]
 
+{ #category : #'callback support' }
+Interpreter >> lookupMethodNoMNUEtcInClass: class [
+	"Lookup.  Answer false on failure father than performing MNU processing etc."
+	| currentClass dictionary |
+	self inline: true.
+
+	currentClass := class.
+	[currentClass ~= nilObj] whileTrue:
+		[dictionary := self fetchPointer: MessageDictionaryIndex ofObject: currentClass.
+		(dictionary ~= nilObj
+		 and: [self lookupMethodInDictionary: dictionary]) ifTrue:
+			[^true].
+		currentClass := self superclassOf: currentClass].
+
+	^false
+]
+
 { #category : #utilities }
 Interpreter >> makePointwithxValue: xValue yValue: yValue [
 "make a Point xValue@yValue.
@@ -4250,13 +4474,26 @@ Interpreter >> mapInterpreterOops [
 	receiver := self remap: receiver.
 	messageSelector := self remap: messageSelector.
 	newMethod := self remap: newMethod.
-	methodClass := self remap: methodClass.
 	lkupClass := self remap: lkupClass.
 	receiverClass := self remap: receiverClass.
+	profileProcess := self remap: profileProcess.
+	profileMethod := self remap: profileMethod.
+	profileSemaphore := self remap: profileSemaphore.
 	1 to: remapBufferCount do: [:i | 
 			oop := remapBuffer at: i.
 			(self isIntegerObject: oop)
-				ifFalse: [remapBuffer at: i put: (self remap: oop)]]
+				ifFalse: [remapBuffer at: i put: (self remap: oop)]].
+
+	"Callback support - trace suspended callback list"
+	1 to: jmpDepth do:[:i|
+		oop := suspendedCallbacks at: i.
+		(self isIntegerObject: oop) 
+			ifFalse:[suspendedCallbacks at: i put: (self remap: oop)].
+		oop := suspendedMethods at: i.
+		(self isIntegerObject: oop) 
+			ifFalse:[suspendedMethods at: i put: (self remap: oop)].
+	].
+
 ]
 
 { #category : #'object memory support' }
@@ -4272,12 +4509,24 @@ Interpreter >> markAndTraceInterpreterOops [
 		ifFalse: [self markAndTrace: activeContext].
 	self markAndTrace: messageSelector.
 	self markAndTrace: newMethod.
-	self markAndTrace: methodClass.
 	self markAndTrace: lkupClass.
 	self markAndTrace: receiverClass.
+	self markAndTrace: profileProcess.
+	self markAndTrace: profileMethod.
+	self markAndTrace: profileSemaphore.
+
 	1 to: remapBufferCount do: [:i | 
 			oop := remapBuffer at: i.
-			(self isIntegerObject: oop) ifFalse: [self markAndTrace: oop]]
+			(self isIntegerObject: oop) ifFalse: [self markAndTrace: oop]].
+
+	"Callback support - trace suspended callback list"
+	1 to: jmpDepth do:[:i|
+		oop := suspendedCallbacks at: i.
+		(self isIntegerObject: oop) ifFalse:[self markAndTrace: oop].
+		oop := suspendedMethods at: i.
+		(self isIntegerObject: oop) ifFalse:[self markAndTrace: oop].
+	].
+
 ]
 
 { #category : #'plugin primitive support' }
@@ -4300,11 +4549,22 @@ Interpreter >> methodPrimitiveIndex [
 Interpreter >> moduleUnloaded: aModuleName [ 
 	"The module with the given name was just unloaded. 
 	Make sure we have no dangling references."
-	self export: true.
-	self var: #aModuleName type: 'char *'.
+	<export: true>
+	<var: #aModuleName type: 'char *'>
 	(aModuleName strcmp: 'SurfacePlugin') = 0
 		ifTrue: ["Surface plugin went away. Should never happen. But  then, who knows"
 			showSurfaceFn := 0]
+]
+
+{ #category : #contexts }
+Interpreter >> nacFetchStackPointerOf: aContext [
+	"A version of fetchStackPointerOf: for use when objects may be forwarded.
+	 Does not do an assert-check of the stack pointer being in bounds."
+	| sp |
+	<inline: true>
+	sp := self fetchPointer: StackPointerIndex ofObject: aContext.
+	(self isIntegerObject: sp) ifFalse: [^0].
+	^self integerValueOf: sp
 ]
 
 { #category : #contexts }
@@ -4312,7 +4572,7 @@ Interpreter >> newActiveContext: aContext [
 	"Note: internalNewActiveContext: should track changes to this method."
 
 	self storeContextRegisters: activeContext.
-	(aContext < youngStart) ifTrue: [ self beRootIfOld: aContext ].
+	(self oop: aContext isLessThan: youngStart) ifTrue: [ self beRootIfOld: aContext ].
 	activeContext := aContext.
 	self fetchContextRegisters: aContext.
 ]
@@ -4323,12 +4583,12 @@ Interpreter >> nonWeakFieldsOf: oop [
 	Note: The following is copied from fixedFieldsOf:format:length: since we do know
 	the format of the oop (e.g. format = 4) and thus don't need the length."
 	| class classFormat |
-	self inline: false. "No need to inline - we won't call this often"
+	<inline: false> "No need to inline - we won't call this often"
 
 	(self isWeakNonInt: oop) ifFalse:[self error:'Called fixedFieldsOfWeak: with a non-weak oop'].
 
 	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
-	class := self fetchClassOf: oop.
+	class := self fetchClassOfNonInt: oop.
 	classFormat := self formatOfClass: class.
 	^ (classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 
@@ -4341,8 +4601,7 @@ Interpreter >> normalSend [
 	the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	| rcvr |
-	self inline: true.
-	self sharedCodeNamed: 'normalSend' inCase: 131.
+	<sharedCodeNamed: 'normalSend' inCase: 131>
 	rcvr := self internalStackValue: argumentCount.
 	lkupClass := self fetchClassOf: rcvr.
 	receiverClass := lkupClass.
@@ -4370,27 +4629,31 @@ Interpreter >> okayActiveProcessStack [
 
 { #category : #'debug support' }
 Interpreter >> okayFields: oop [
-	"If this is a pointers object, check that its fields are all okay oops."
+	"Check if the argument is an ok object.
+	 If this is a pointers object, check that its fields are all okay oops."
 
-	| i fieldOop c |
+	| i fieldOop |
 	(oop = nil or: [oop = 0]) ifTrue: [ ^true ].
 	(self isIntegerObject: oop) ifTrue: [ ^true ].
-	self okayOop: oop.
-	self oopHasOkayClass: oop.
-	(self isPointers: oop) ifFalse: [ ^true ].
-	c := self fetchClassOf: oop.
-	(c = (self splObj: ClassMethodContext)
-		or: [c = (self splObj: ClassBlockContext)])
-		ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
-		ifFalse: [i := (self lengthOf: oop) - 1].
+	(self okayOop: oop) ifFalse: [ ^false ].
+	(self oopHasOkayClass: oop) ifFalse: [ ^false ].
+	((self isPointers: oop) or: [self isCompiledMethod: oop]) ifFalse: [ ^true ].
+	(self isCompiledMethod: oop)
+		ifTrue:
+			[i := (self literalCountOf: oop) - 1]
+		ifFalse:
+			[(self isContext: oop)
+				ifTrue: [i := CtxtTempFrameStart + (self fetchStackPointerOf: oop) - 1]
+				ifFalse: [i := (self lengthOf: oop) - 1]].
 	[i >= 0] whileTrue: [
 		fieldOop := self fetchPointer: i ofObject: oop.
 		(self isIntegerObject: fieldOop) ifFalse: [
-			self okayOop: fieldOop.
-			self oopHasOkayClass: fieldOop.
+			(self okayOop: fieldOop) ifFalse: [ ^false ].
+			(self oopHasOkayClass: fieldOop) ifFalse: [ ^false ].
 		].
 		i := i - 1.
 	].
+	^true
 ]
 
 { #category : #'debug support' }
@@ -4430,42 +4693,42 @@ Interpreter >> okayOop: signedOop [
 	"Verify that the given oop is legitimate. Check address, header, and size but not class."
 
 	| sz type fmt unusedBit oop |
-	self var: #oop type: 'usqInt'.
+	<var: #oop type: 'usqInt'>
 	oop := self cCoerce: signedOop to: 'usqInt'.
 
 	"address and size checks"
 	(self isIntegerObject: oop) ifTrue: [ ^true ].
 	(oop < endOfMemory)
-		ifFalse: [ self error: 'oop is not a valid address' ].
+		ifFalse: [ self error: 'oop is not a valid address'. ^false ].
 	((oop \\ BytesPerWord) = 0)
-		ifFalse: [ self error: 'oop is not a word-aligned address' ].
+		ifFalse: [ self error: 'oop is not a word-aligned address'. ^false ].
 	sz := self sizeBitsOf: oop.
 	(oop + sz) < endOfMemory
-		ifFalse: [ self error: 'oop size would make it extend beyond the end of memory' ].
+		ifFalse: [ self error: 'oop size would make it extend beyond the end of memory'. ^false ].
 
 	"header type checks"
 	type := self headerType: oop.
 	type = HeaderTypeFree
-		ifTrue:  [ self error: 'oop is a free chunk, not an object' ].
+		ifTrue:  [ self error: 'oop is a free chunk, not an object'. ^false ].
 	type = HeaderTypeShort ifTrue: [
-		(((self baseHeader: oop) >> 12) bitAnd: 16r1F) = 0
-			ifTrue:  [ self error: 'cannot have zero compact class field in a short header' ].
+		(self compactClassIndexOf: oop) = 0
+			ifTrue:  [ self error: 'cannot have zero compact class field in a short header'. ^false ].
 	].
 	type = HeaderTypeClass ifTrue: [
 		((oop >= BytesPerWord) and: [(self headerType: oop - BytesPerWord) = type])
-			ifFalse: [ self error: 'class header word has wrong type' ].
+			ifFalse: [ self error: 'class header word has wrong type'. ^false ].
 	].
 	type = HeaderTypeSizeAndClass ifTrue: [
 		((oop >= (BytesPerWord*2)) and:
 		 [(self headerType: oop - (BytesPerWord*2)) = type and:
 		 [(self headerType: oop - BytesPerWord) = type]])
-			ifFalse: [ self error: 'class header word has wrong type' ].
+			ifFalse: [ self error: 'class header word has wrong type'. ^false ].
 	].
 
 	"format check"
 	fmt := self formatOf: oop.
 	((fmt = 5) | (fmt = 7))
-		ifTrue:  [ self error: 'oop has an unknown format type' ].
+		ifTrue:  [ self error: 'oop has an unknown format type'. ^false ].
 
 	"mark and root bit checks"
 	unusedBit := 16r20000000.
@@ -4474,14 +4737,14 @@ Interpreter >> okayOop: signedOop [
 			[unusedBit := unusedBit << 16.
 			 unusedBit := unusedBit << 16].
 	((self longAt: oop) bitAnd: unusedBit) = 0
-		ifFalse: [ self error: 'unused header bit 30 is set; should be zero' ].
+		ifFalse: [ self error: 'unused header bit 30 is set; should be zero'. ^false ].
 "xxx
 	((self longAt: oop) bitAnd: MarkBit) = 0
 		ifFalse: [ self error: 'mark bit should not be set except during GC' ].
 xxx"
 	(((self longAt: oop) bitAnd: RootBit) = 1 and:
 	 [oop >= youngStart])
-		ifTrue: [ self error: 'root bit is set in a young object' ].
+		ifTrue: [ self error: 'root bit is set in a young object'. ^false ].
 	^true
 
 ]
@@ -4523,18 +4786,19 @@ Interpreter >> oopHasOkayClass: signedOop [
 	"Attempt to verify that the given oop has a reasonable behavior. The class must be a valid, non-integer oop and must not be nilObj. It must be a pointers object with three or more fields. Finally, the instance specification field of the behavior must match that of the instance."
 
 	| oop oopClass formatMask behaviorFormatBits oopFormatBits |
-	self var: #oop type: 'usqInt'.
-	self var: #oopClass type: 'usqInt'.
+	<var: #oop type: 'usqInt'>
+	<var: #oopClass type: 'usqInt'>
 
 	oop := self cCoerce: signedOop to: 'usqInt'.
 	self okayOop: oop.
 	oopClass := self cCoerce: (self fetchClassOf: oop) to: 'usqInt'.
 
 	(self isIntegerObject: oopClass)
-		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior' ].
-	self okayOop: oopClass.
+		ifTrue: [ self error: 'a SmallInteger is not a valid class or behavior'. ^false ].
+	(self okayOop: oopClass)
+		ifFalse: [ self error: 'class oop is not ok'. ^false ].
 	((self isPointers: oopClass) and: [(self lengthOf: oopClass) >= 3])
-		ifFalse: [ self error: 'a class (behavior) must be a pointers object of size >= 3' ].
+		ifFalse: [ self error: 'a class (behavior) must be a pointers object of size >= 3'. ^false ].
 	(self isBytes: oop)
 		ifTrue: [ formatMask := 16rC00 ]  "ignore extra bytes size bits"
 		ifFalse: [ formatMask := 16rF00 ].
@@ -4542,7 +4806,7 @@ Interpreter >> oopHasOkayClass: signedOop [
 	behaviorFormatBits := (self formatOfClass: oopClass) bitAnd: formatMask.
 	oopFormatBits := (self baseHeader: oop) bitAnd: formatMask.
 	behaviorFormatBits = oopFormatBits
-		ifFalse: [ self error: 'object and its class (behavior) formats differ' ].
+		ifFalse: [ self error: 'object and its class (behavior) formats differ'. ^false ].
 	^true
 ]
 
@@ -4560,6 +4824,7 @@ Interpreter >> pop: nItems [
 	"Note: May be called by translated primitive code."
 
 	stackPointer := stackPointer - (nItems*BytesPerWord).
+	^nil
 ]
 
 { #category : #contexts }
@@ -4569,6 +4834,15 @@ Interpreter >> pop: nItems thenPush: oop [
 	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord)) put: oop.
 	stackPointer := sp.
 
+]
+
+{ #category : #contexts }
+Interpreter >> pop: nItems thenPushBool: trueOrFalse [
+	"A few places pop a few items off the stack and then push a boolean. Make it convenient"
+	| sp |
+	self longAt: (sp := stackPointer - ((nItems - 1) * BytesPerWord))
+		put:(trueOrFalse ifTrue: [trueObj] ifFalse: [falseObj]).
+	stackPointer := sp
 ]
 
 { #category : #contexts }
@@ -4585,8 +4859,8 @@ Interpreter >> popFloat [
 	"Note: May be called by translated primitive code."
 
 	| top result |
-	self returnTypeC: 'double'.
-	self var: #result type: 'double '.
+	<returnTypeC: 'double'>
+	<var: #result type: 'double '>
 	top := self popStack.
 	self assertClassOf: top is: (self splObj: ClassFloat).
 	successFlag ifTrue:
@@ -4678,22 +4952,26 @@ Interpreter >> positive32BitValueOf: oop [
 { #category : #'primitive support' }
 Interpreter >> positive64BitIntegerFor: integerValue [
 
-	| newLargeInteger value check |
+	| newLargeInteger value highWord sz |
 	"Note - integerValue is interpreted as POSITIVE, eg, as the result of
 		Bitmap>at:, or integer>bitAnd:."
-	self var: 'integerValue' type: 'sqLong'.
+	<var: 'integerValue' type: 'sqLong'>
  
 	(self sizeof: integerValue) = 4 ifTrue: [^self positive32BitIntegerFor: integerValue].
 
-  	self cCode: 'check = integerValue >> 32'.  "Why not run this in sim?"
-	check = 0 ifTrue: [^self positive32BitIntegerFor: integerValue].
-	
-	newLargeInteger :=
-		self instantiateSmallClass: (self splObj: ClassLargePositiveInteger) sizeInBytes: BaseHeaderSize + 8.
-	0 to: 7 do: [:i |
-		self cCode: 'value = ( integerValue >> (i * 8)) & 255'.
+
+	highWord := self cCode: 'integerValue >> 32'. "shift is coerced to usqInt otherwise"
+	highWord = 0 ifTrue:[^self positive32BitIntegerFor: integerValue].
+	sz := 5.
+	(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+	(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+	(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+	newLargeInteger := self instantiateClass: (self splObj: ClassLargePositiveInteger) indexableSize:  sz.
+	0 to: sz-1 do: [:i |
+		value := self cCode: '(integerValue >> (i * 8)) & 255'.
 		self storeByte: i ofObject: newLargeInteger withValue: value].
 	^ newLargeInteger
+
 ]
 
 { #category : #'primitive support' }
@@ -4702,8 +4980,8 @@ Interpreter >> positive64BitValueOf: oop [
 	The object may be either a positive ST integer or a eight-byte LargePositiveInteger."
 
 	| sz szsqLong value  |
-	self returnTypeC: 'sqLong'.
-	self var: 'value' type: 'sqLong'.
+	<returnTypeC: 'sqLong'>
+	<var: 'value' type: 'sqLong'>
 	(self isIntegerObject: oop) ifTrue: [
 		value := self integerValueOf: oop.
 		value < 0 ifTrue: [^ self primitiveFail].
@@ -4729,9 +5007,9 @@ Interpreter >> postGCAction [
 
 	compilerInitialized
 		ifTrue: [self compilerPostGC]
-		ifFalse: [activeContext < youngStart
+		ifFalse: [(self oop: activeContext isLessThan: youngStart)
 				ifTrue: [self beRootIfOld: activeContext].
-			theHomeContext < youngStart
+			(self oop: theHomeContext isLessThan: youngStart)
 				ifTrue: [self beRootIfOld: theHomeContext]].
 	(self sizeOfFree: freeBlock) > shrinkThreshold
 		ifTrue: ["Attempt to shrink memory after successfully 
@@ -4750,22 +5028,66 @@ Interpreter >> preGCAction: fullGCFlag [
 		ifFalse: [self storeContextRegisters: activeContext].
 ]
 
-{ #category : #'primitive support' }
-Interpreter >> primIndex [
-	^ primitiveIndex
-]
-
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveAdd [
 
 	self pop2AndPushIntegerIfOK: (self stackIntegerValue: 1) + (self stackIntegerValue: 0)
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveAddLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| integerRcvr integerArg result oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'result' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	successFlag ifFalse:[^nil].
+
+	"Compute the preliminary result (which may overflow)"
+	result := integerRcvr + integerArg.
+
+	"Now check overflow conditions. First is whether rcvr and arg are of the same sign.
+	If they are we need to check for overflow more carefully."
+	(integerRcvr bitXor: integerArg) < 0 ifFalse:[
+		"Second is whether rcvr and result are of the same sign. If not, we have an overflow."
+		(integerRcvr bitXor: result) < 0 ifTrue:[self primitiveFail]].
+			
+	successFlag ifFalse:[^nil].
+
+	oopResult := self signed64BitIntegerFor: result.
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
+]
+
+{ #category : #'object access primitives' }
+Interpreter >> primitiveAdoptInstance [
+	"Primitive. Change the class of the argument to make it an instance of the receiver
+	 given that the format of the receiver matches the format of the argument's class.
+	 Fail if receiver or argument are SmallIntegers, or the receiver is an instance of a
+	 compact class and the argument isn't, or when the argument's class is compact and
+	 the receiver isn't, or when the format of the receiver is different from the format of
+	 the argument's class, or when the arguments class is fixed and the receiver's size
+	 differs from the size that an instance of the argument's class should have."
+	| rcvr arg |
+
+	arg := self stackObjectValue: 0.
+	rcvr := self stackObjectValue: 1.
+
+	self changeClassOf: arg to: rcvr.
+	self successful ifTrue:
+		[self pop: self methodArgumentCount].
+	^nil
+]
+
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveArctan [
 
 	| rcvr |
-	self var: #rcvr type: 'double '.
+	<var: #rcvr type: 'double '>
 	rcvr := self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'atan(rcvr)' inSmalltalk: [rcvr arcTan])]
@@ -4809,7 +5131,7 @@ Interpreter >> primitiveArrayBecomeOneWayCopyHash [
 	successFlag ifTrue: [ self pop: 2 ].
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveAsFloat [
 	| arg |
 	arg := self popInteger.
@@ -4827,27 +5149,13 @@ Interpreter >> primitiveAsOop [
 		ifTrue: [self pop:1 thenPushInteger: (self hashBitsOf: thisReceiver)]
 ]
 
-{ #category : #'array and stream primitives' }
+{ #category : #'array primitives' }
 Interpreter >> primitiveAt [
 
 	self commonAt: false.
 ]
 
-{ #category : #'array and stream primitives' }
-Interpreter >> primitiveAtEnd [
-	| stream index limit |
-	stream := self popStack.
-	successFlag := ((self isPointers: stream)
-			and: [(self lengthOf: stream) >= (StreamReadLimitIndex+1)]).
- 	successFlag ifTrue: [
-		index := self fetchInteger: StreamIndexIndex ofObject: stream.
-		limit := self fetchInteger: StreamReadLimitIndex ofObject: stream].
- 	successFlag
-		ifTrue: [self pushBool: (index >= limit)]
-		ifFalse: [self unPop: 1].
-]
-
-{ #category : #'array and stream primitives' }
+{ #category : #'array primitives' }
 Interpreter >> primitiveAtPut [
 
 	self commonAtPut: false.
@@ -4860,7 +5168,7 @@ Interpreter >> primitiveBeCursor [
 	| cursorObj maskBitsIndex maskObj bitsObj extentX extentY depth offsetObj offsetX offsetY cursorBitsIndex ourCursor |
 
 self flag: #Dan.  "This is disabled until we convert bitmaps appropriately"
-BytesPerWord = 8 ifTrue: [^ self pop: argumentCount].
+BytesPerWord = 8 ifTrue: [self pop: argumentCount. ^nil].
 
 	argumentCount = 0 ifTrue: [
 		cursorObj := self stackTop.
@@ -4882,17 +5190,34 @@ BytesPerWord = 8 ifTrue: [^ self pop: argumentCount].
 	successFlag ifTrue: [
 		offsetX := self fetchInteger: 0 ofObject: offsetObj.
 		offsetY := self fetchInteger: 1 ofObject: offsetObj.
-		self success: ((extentX = 16) and: [extentY = 16 and: [depth = 1]]).
-		self success: ((offsetX >= -16) and: [offsetX <= 0]).
-		self success: ((offsetY >= -16) and: [offsetY <= 0]).
-		self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = 16]).
-		cursorBitsIndex := bitsObj + BaseHeaderSize.
-		self cCode: '' inSmalltalk:
-			[ourCursor := Cursor
-				extent: extentX @ extentY
-				fromArray: ((1 to: 16) collect: [:i |
-					((self fetchLong32: i-1 ofObject: bitsObj) >> (BytesPerWord*8 - 16)) bitAnd: 16rFFFF])
-				offset: offsetX  @ offsetY]].
+
+		(argumentCount = 0 and: [depth = 32])
+			ifTrue: [
+				"Support arbitrary-sized 32 bit ARGB forms --bf 3/1/2007 23:51"
+				self success: ((extentX > 0) and: [extentY > 0]).
+				self success: ((offsetX >= (extentX * -1)) and: [offsetX <= 0]).
+				self success: ((offsetY >= (extentY * -1)) and: [offsetY <= 0]).
+				cursorBitsIndex := bitsObj + BaseHeaderSize.
+				self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = (extentX * extentY)]).
+				self cCode: '' inSmalltalk:
+					[ourCursor := Cursor
+						extent: extentX @ extentY
+						depth: 32
+						fromArray: ((1 to: extentX * extentY) collect: [:i |
+							self fetchLong32: i-1 ofObject: bitsObj])
+						offset: offsetX  @ offsetY]]
+			ifFalse: [
+				self success: ((extentX = 16) and: [extentY = 16 and: [depth = 1]]).
+				self success: ((offsetX >= -16) and: [offsetX <= 0]).
+				self success: ((offsetY >= -16) and: [offsetY <= 0]).
+				self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = 16]).
+				cursorBitsIndex := bitsObj + BaseHeaderSize.
+				self cCode: '' inSmalltalk:
+					[ourCursor := Cursor
+						extent: extentX @ extentY
+						fromArray: ((1 to: 16) collect: [:i |
+							((self fetchLong32: i-1 ofObject: bitsObj) >> 16) bitAnd: 16rFFFF])
+						offset: offsetX  @ offsetY]]].
 
 	argumentCount = 1 ifTrue: [
 		self success: ((self isPointers: maskObj) and: [(self lengthOf: maskObj) >= 5]).
@@ -4907,14 +5232,20 @@ BytesPerWord = 8 ifTrue: [^ self pop: argumentCount].
 			self success: ((self isWords: bitsObj) and: [(self lengthOf: bitsObj) = 16]).
 			maskBitsIndex := bitsObj + BaseHeaderSize]].
 
+
 	successFlag ifTrue: [
 		argumentCount = 0
-			ifTrue: [self cCode: 'ioSetCursor(cursorBitsIndex, offsetX, offsetY)'
-						inSmalltalk: [ourCursor show]]
+			ifTrue: [
+				depth = 32
+					ifTrue: [(self cCode: 'ioSetCursorARGB(cursorBitsIndex, extentX, extentY, offsetX, offsetY)'
+						inSmalltalk: [ourCursor show. Cursor currentCursor == ourCursor])	
+							ifFalse: [^self success: false. ]]
+					ifFalse: [self cCode: 'ioSetCursor(cursorBitsIndex, offsetX, offsetY)'
+						inSmalltalk: [ourCursor show]]]
 			ifFalse: [self cCode: 'ioSetCursorWithMask(cursorBitsIndex, maskBitsIndex, offsetX, offsetY)'
-						inSmalltalk: [ourCursor show]].
-		self pop: argumentCount].
-
+						inSmalltalk: [cursorBitsIndex == maskBitsIndex. "placate compiler"
+									ourCursor show]].
+		self pop: argumentCount]
 ]
 
 { #category : #'I/O primitives' }
@@ -4932,7 +5263,7 @@ Interpreter >> primitiveBeep [
 	self ioBeep.
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveBitAnd [
 	| integerReceiver integerArgument |
 	integerArgument := self popPos32BitInteger.
@@ -4943,7 +5274,24 @@ Interpreter >> primitiveBitAnd [
 		ifFalse: [self unPop: 2]
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveBitAndLargeIntegers [
+	"Primitive logical operations for large integers in 64 bit range"
+	| integerRcvr integerArg oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self positive64BitValueOf: (self stackValue: 0).
+	integerRcvr := self positive64BitValueOf: (self stackValue: 1).
+	successFlag ifFalse:[^nil].
+
+	oopResult := self positive64BitIntegerFor: (integerRcvr bitAnd: integerArg).
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
+]
+
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveBitOr [
 	| integerReceiver integerArgument |
 	integerArgument := self popPos32BitInteger.
@@ -4954,7 +5302,24 @@ Interpreter >> primitiveBitOr [
 		ifFalse: [self unPop: 2]
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveBitOrLargeIntegers [
+	"Primitive logical operations for large integers in 64 bit range"
+	| integerRcvr integerArg oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self positive64BitValueOf: (self stackValue: 0).
+	integerRcvr := self positive64BitValueOf: (self stackValue: 1).
+	successFlag ifFalse:[^nil].
+
+	oopResult := self positive64BitIntegerFor: (integerRcvr bitOr: integerArg).
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
+]
+
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveBitShift [ 
 	| integerReceiver integerArgument shifted |
 	integerArgument := self popInteger.
@@ -4976,7 +5341,37 @@ Interpreter >> primitiveBitShift [
 		ifFalse: [self unPop: 2]
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveBitShiftLargeIntegers [
+	"Primitive logical operations for large integers in 64 bit range"
+	| shifted integerArg integerRcvr oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'shifted' type: 'sqLong'>
+
+	integerArg := self stackIntegerValue: 0.
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+
+	successFlag ifTrue: [
+		integerArg >= 0 ifTrue: [
+			"Left shift -- must fail if we lose bits beyond 64"
+			self success: integerArg < 64.
+			shifted := integerRcvr << integerArg.
+			self success: (self cCode: 'shifted >> integerArg') = integerRcvr.
+		] ifFalse: [
+			"Right shift -- OK to lose bits"
+			self success: integerArg > -64.
+			shifted := self cCode: 'integerRcvr >> (0 - integerArg)'. "right shift coerces to usqInt"
+		].
+	].
+	successFlag ifFalse:[^nil].
+	oopResult := self signed64BitIntegerFor: shifted.
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
+]
+
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveBitXor [
 	| integerReceiver integerArgument |
 	integerArgument := self popPos32BitInteger.
@@ -4985,6 +5380,23 @@ Interpreter >> primitiveBitXor [
 		ifTrue: [self push: (self positive32BitIntegerFor:
 					(integerReceiver bitXor: integerArgument))]
 		ifFalse: [self unPop: 2]
+]
+
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveBitXorLargeIntegers [
+	"Primitive logical operations for large integers in 64 bit range"
+	| integerRcvr integerArg oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self positive64BitValueOf: (self stackValue: 0).
+	integerRcvr := self positive64BitValueOf: (self stackValue: 1).
+	successFlag ifFalse:[^nil].
+
+	oopResult := self positive64BitIntegerFor: (integerRcvr bitXor: integerArg).
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
 ]
 
 { #category : #'control primitives' }
@@ -5020,161 +5432,6 @@ Interpreter >> primitiveBlockCopy [
 	self pop: 2 thenPush: newContext.
 ]
 
-{ #category : #'array and stream primitive support' }
-Interpreter >> primitiveByteArrayDoubleAt [
-	"Return a double from the given byte offset in a ByteArray."
-	| byteOffset rcvr addr floatValue |
-	self export: true.
-	self inline: false.
-	self var: #floatValue type:'double '.
-	byteOffset := self stackIntegerValue: 0.
-	rcvr := self stackObjectValue: 1.
-	self failed ifTrue:[^0].
-	addr := self addressOf: rcvr startingAt: byteOffset size: 8.
-	self failed ifTrue:[^0].
-	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
-	self cCode:'((int*)(&floatValue))[1] = ((int*)addr)[1]'.
-	self pop: 2.
-	^self pushFloat: floatValue
-
-]
-
-{ #category : #'array and stream primitive support' }
-Interpreter >> primitiveByteArrayDoubleAtPut [
-	"Store a Double at given byte offset in a ByteArray."
-	| byteOffset rcvr addr floatValue floatOop |
-	self export: true.
-	self inline: false.
-	self var: #floatValue type:'double '.
-	floatOop := self stackValue: 0.
-	(self isIntegerObject: floatOop)
-		ifTrue:[floatValue := self cCoerce: (self integerValueOf: floatOop) to:'double']
-		ifFalse:[floatValue := self cCoerce: (self floatValueOf: floatOop) to:'double'].
-	byteOffset := self stackIntegerValue: 1.
-	rcvr := self stackObjectValue: 2.
-	self failed ifTrue:[^0].
-	addr := self addressOf: rcvr startingAt: byteOffset size: 8.
-	self failed ifTrue:[^0].
-	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
-	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
-	self pop: 3.
-	^self push: floatOop
-]
-
-{ #category : #'array and stream primitive support' }
-Interpreter >> primitiveByteArrayFloatAt [
-	"Return a Float from the given byte offset in a ByteArray."
-	| byteOffset rcvr addr floatValue |
-	self export: true.
-	self inline: false.
-	self var: #floatValue type:'float '.
-	byteOffset := self stackIntegerValue: 0.
-	rcvr := self stackObjectValue: 1.
-	self failed ifTrue:[^0].
-	addr := self addressOf: rcvr startingAt: byteOffset size: 4.
-	self failed ifTrue:[^0].
-	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
-	self pop: 2.
-	^self pushFloat: floatValue
-]
-
-{ #category : #'array and stream primitive support' }
-Interpreter >> primitiveByteArrayFloatAtPut [
-	"Store a Float at the given byteOffset in a ByteArray"
-	| byteOffset rcvr addr floatValue floatOop |
-	self export: true.
-	self inline: false.
-	self var: #floatValue type:'float '.
-	floatOop := self stackValue: 0.
-	(self isIntegerObject: floatOop)
-		ifTrue:[floatValue := self cCoerce: (self integerValueOf: floatOop) to:'float']
-		ifFalse:[floatValue := self cCoerce: (self floatValueOf: floatOop) to:'float'].
-	byteOffset := self stackIntegerValue: 1.
-	rcvr := self stackObjectValue: 2.
-	self failed ifTrue:[^0].
-	addr := self addressOf: rcvr startingAt: byteOffset size: 4.
-	self failed ifTrue:[^0].
-	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
-	self pop: 3.
-	^self push: floatOop
-]
-
-{ #category : #'array and stream primitive support' }
-Interpreter >> primitiveByteArrayNByteIIntegerAtPut [
-	"Store a (signed or unsigned) n byte integer at the given byte offset."
-	| isSigned byteSize byteOffset rcvr addr value max valueOop |
-	self export: true.
-	self inline: false.
-	isSigned := self booleanValueOf: (self stackValue: 0).
-	byteSize := self stackIntegerValue: 1.
-	valueOop := self stackValue: 2.
-	byteOffset := self stackIntegerValue: 3.
-	rcvr := self stackObjectValue: 4.
-	self failed ifTrue:[^0].
-	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
-		ifFalse:[^self primitiveFail].
-	addr := self addressOf: rcvr startingAt: byteOffset size: byteSize.
-	self failed ifTrue:[^0].
-	isSigned 
-		ifTrue:[value := self signed32BitValueOf: valueOop]
-		ifFalse:[value := self positive32BitValueOf: valueOop].
-	self failed ifTrue:[^0].
-	byteSize < 4 ifTrue:[
-		isSigned ifTrue:[
-			max := 1 << (8 * byteSize - 1).
-			value >= max ifTrue:[^self primitiveFail].
-			value < (0 - max) ifTrue:[^self primitiveFail].
-		] ifFalse:[
-			value >= (1 << (8*byteSize)) ifTrue:[^self primitiveFail].
-		].
-		"short/byte"
-		byteSize = 1 
-			ifTrue:[self byteAt: addr put: value]
-			ifFalse:[	self cCode: '*((short int *) addr) = value' 
-						inSmalltalk: [self shortAt: addr put: value]].
-	] ifFalse:[self longAt: addr put: value].
-	self pop: 5.
-	^self push: valueOop.
-]
-
-{ #category : #'array and stream primitive support' }
-Interpreter >> primitiveByteArrayNByteIntegerAt [
-	"Return a (signed or unsigned) n byte integer from the given byte offset."
-	| isSigned byteSize byteOffset rcvr addr value mask |
-	self export: true.
-	self inline: false.
-	isSigned := self booleanValueOf: (self stackValue: 0).
-	byteSize := self stackIntegerValue: 1.
-	byteOffset := self stackIntegerValue: 2.
-	rcvr := self stackObjectValue: 3.
-	self failed ifTrue:[^0].
-	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
-		ifFalse:[^self primitiveFail].
-	addr := self addressOf: rcvr startingAt: byteOffset size: byteSize.
-	self failed ifTrue:[^0].
-	byteSize < 4 ifTrue:[
-		"short/byte"
-		byteSize = 1 
-			ifTrue:[value := self byteAt: addr]
-			ifFalse:[	value := self cCode: '*((short int *) addr)' 
-								inSmalltalk: [self shortAt: addr]].
-		isSigned ifTrue:["sign extend value"
-			mask := 1 << (byteSize * 8 - 1).
-			value := (value bitAnd: mask-1) - (value bitAnd: mask)].
-		"note: byte/short never exceed SmallInteger range"
-		value := self integerObjectOf: value.
-	] ifFalse:[
-		"general 32 bit integer"
-		value := self longAt: addr.
-		isSigned
-			ifTrue:[value := self signed32BitIntegerFor: value]
-			ifFalse:[value := self positive32BitIntegerFor: value].
-	].
-	self pop: 4.
-	^self push: value
-
-]
-
 { #category : #'memory space primitives' }
 Interpreter >> primitiveBytesLeft [
 	"Reports bytes available at this moment. For more meaningful 
@@ -5201,9 +5458,9 @@ Interpreter >> primitiveCalloutToFFI [
 	and not an array as used in the pluggable primitive mechanism)."
 
 	| function moduleName functionName |
-	self var: #function declareC: 'static void *function = 0'.
-	self var: #moduleName declareC: 'static char *moduleName = "SqueakFFIPrims"'.
-	self var: #functionName declareC: 'static char *functionName = "primitiveCallout"'.
+	<var: #function declareC: 'static void *function = 0'>
+	<var: #moduleName declareC: 'static char *moduleName = "SqueakFFIPrims"'>
+	<var: #functionName declareC: 'static char *functionName = "primitiveCallout"'>
 	function = 0 ifTrue: [
 		function := self
 			ioLoadExternalFunction: (self oopForPointer: functionName)
@@ -5267,6 +5524,13 @@ Interpreter >> primitiveClass [
 	self pop: argumentCount+1 thenPush: (self fetchClassOf: instance)
 ]
 
+{ #category : #'process primitives' }
+Interpreter >> primitiveClearVMProfile [
+	"Primitive. Void the VM profile histograms."
+	self cCode: 'ioClearProfile()'.
+	self pop: argumentCount
+]
+
 { #category : #'I/O primitives' }
 Interpreter >> primitiveClipboardText [
 	"When called with a single string argument, post the string to 
@@ -5298,11 +5562,151 @@ Interpreter >> primitiveClone [
 	self pop: 1 thenPush: newCopy.
 ]
 
+{ #category : #'control primitives' }
+Interpreter >> primitiveClosureCopyWithCopiedValues [
+	| newClosure copiedValues numCopiedValues numArgs |
+	numArgs := self stackIntegerValue: 1.
+	copiedValues := self stackTop.
+	self success: (self fetchClassOf: copiedValues) = (self splObj: ClassArray).
+	successFlag ifFalse:
+		[^self primitiveFail].
+	numCopiedValues := self fetchWordLengthOf: copiedValues.
+	newClosure := self
+					closureNumArgs: numArgs
+									"greater by 1 due to preIncrement of localIP"
+					instructionPointer: instructionPointer + 2 - (method+BaseHeaderSize)
+					numCopiedValues: numCopiedValues.
+	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
+	self storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: (self stackValue: 2).
+	numCopiedValues > 0 ifTrue:
+		["Allocation may have done a GC and copiedValues may have moved."
+		 copiedValues := self stackTop.
+		 0 to: numCopiedValues - 1 do:
+			[:i|
+			"Assume: have just allocated a new BlockClosure; it must be young.
+			 Thus, can use unchecked stores."
+			 self storePointerUnchecked: i + ClosureFirstCopiedValueIndex
+				ofObject: newClosure
+				withValue: (self fetchPointer: i ofObject: copiedValues)]].
+	self pop: 3 thenPush: newClosure
+]
+
+{ #category : #'control primitives' }
+Interpreter >> primitiveClosureValue [
+	| blockClosure blockArgumentCount closureMethod outerContext |
+	blockClosure := self stackValue: argumentCount.
+	blockArgumentCount := self argumentCountOfClosure: blockClosure.
+	argumentCount = blockArgumentCount ifFalse:
+		[^self primitiveFail].
+
+	"Somewhat paranoiac checks we need while debugging that we may be able to discard
+	 in a robust system."
+	outerContext := self fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
+	(self isContext: outerContext) ifFalse:
+		[^self primitiveFail].
+	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
+	"Check if the closure's method is actually a CompiledMethod."
+	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+		[^self primitiveFail].
+
+	self activateNewClosureMethod: blockClosure.
+	self quickCheckForInterrupts
+]
+
+{ #category : #'control primitives' }
+Interpreter >> primitiveClosureValueNoContextSwitch [
+	"An exact clone of primitiveClosureValue except that this version will not
+	 check for interrupts on stack overflow."
+	| blockClosure blockArgumentCount closureMethod outerContext |
+	blockClosure := self stackValue: argumentCount.
+	blockArgumentCount := self argumentCountOfClosure: blockClosure.
+	argumentCount = blockArgumentCount ifFalse:
+		[^self primitiveFail].
+
+	"Somewhat paranoiac checks we need while debugging that we may be able to discard
+	 in a robust system."
+	outerContext := self fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
+	(self isContext: outerContext) ifFalse:
+		[^self primitiveFail].
+	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
+	"Check if the closure's method is actually a CompiledMethod."
+	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+		[^self primitiveFail].
+
+	self activateNewClosureMethod: blockClosure
+]
+
+{ #category : #'control primitives' }
+Interpreter >> primitiveClosureValueWithArgs [
+	| argumentArray arraySize cntxSize blockClosure blockArgumentCount closureMethod index outerContext |
+	argumentArray := self stackTop.
+	(self isArray: argumentArray) ifFalse:
+		[^self primitiveFail].
+
+	"Check for enough space in thisContext to push all args"
+	arraySize := self fetchWordLengthOf: argumentArray.
+	cntxSize := self fetchWordLengthOf: activeContext.
+	(self stackPointerIndex + arraySize) < cntxSize ifFalse:
+		[^self primitiveFail].
+
+	blockClosure := self stackValue: argumentCount.
+	blockArgumentCount := self argumentCountOfClosure: blockClosure.
+	arraySize = blockArgumentCount ifFalse:
+		[^self primitiveFail].
+
+	"Somewhat paranoiac checks we need while debugging that we may be able to discard
+	 in a robust system."
+	outerContext := self fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
+	(self isContext: outerContext) ifFalse:
+		[^self primitiveFail].
+	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
+	"Check if the closure's method is actually a CompiledMethod."
+	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+		[^self primitiveFail].
+
+	self popStack.
+
+	"Copy the arguments to the stack, and activate"
+	index := 1.
+	[index <= arraySize]
+		whileTrue:
+		[self push: (self fetchPointer: index - 1 ofObject: argumentArray).
+		index := index + 1].
+
+	argumentCount := arraySize.
+	self activateNewClosureMethod: blockClosure.
+	self quickCheckForInterrupts
+]
+
+{ #category : #'array primitives' }
+Interpreter >> primitiveCompareBytes [
+	"Primitive. Compare two byte-indexed objects for equality"
+	| arg1 arg2 len1 len2 |
+	<export: true>
+	argumentCount = 1 ifFalse:[^self primitiveFail].
+	arg1 := self stackValue: 1.
+	arg2 := self stackValue: 0.
+	((self isBytes: arg1) and:[self isBytes: arg2]) 
+		ifFalse:[^self primitiveFail].
+	"Quick identity test"
+	(arg1 == arg2) ifTrue:[^self pop: 2 thenPush: trueObj].
+	len1 := self byteSizeOf: arg1.
+	len2 := self byteSizeOf: arg2.
+	len1 = len2 ifFalse:[^self pop: 2 thenPush: falseObj].
+	0 to: len1-1 do:[:i|
+		(self fetchByte: i ofObject: arg1) = (self fetchByte: i ofObject: arg2) 
+			ifFalse:[^self pop: 2 thenPush: falseObj]].
+	self pop: 2 thenPush: trueObj.
+
+]
+
 { #category : #'sound primitives' }
 Interpreter >> primitiveConstantFill [
 	"Fill the receiver, which must be an indexable bytes or words 
 	objects, with the given integer value."
 	| fillValue rcvr rcvrIsBytes end i |
+	<var: #end type: 'usqInt'>
+	<var: #i type: 'usqInt'>
 	fillValue := self positive32BitValueOf: self stackTop.
 	rcvr := self stackValue: 1.
 	self success: (self isWordsOrBytes: rcvr).
@@ -5319,6 +5723,31 @@ Interpreter >> primitiveConstantFill [
 						whileTrue: [self long32At: i put: fillValue.
 							i := i + 4]].
 			self pop: 1]
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveControlVMProfiling [
+	"Primitive. Start or stop the VM profiler.  The first argument is a boolean
+	 to switch profiling on or off.  The second argument is an integer or nil.
+	 If an integer it determines the maximum number of samples in the VM's
+	 sample buffer. Answer the current number of samples in the buffer."
+	| onOffBar bufferSize numSamples |
+	argumentCount ~= 2 ifTrue:
+		[^self primitiveFail].
+	(onOffBar := self stackValue: 1) = trueObj
+		ifTrue: [onOffBar := 1]
+		ifFalse:
+			[onOffBar = falseObj
+				ifTrue: [onOffBar := 0]
+				ifFalse: [^self primitiveFail]].
+	(bufferSize := self stackTop) = nilObj
+		ifTrue: [bufferSize := 0]
+		ifFalse:
+			[((self isIntegerObject: bufferSize)
+			  and: [(bufferSize := self integerValueOf: bufferSize) > 0]) ifFalse:
+				[^self primitiveFail]].
+	numSamples := self cCode: 'ioControlNewProfile(onOffBar,bufferSize)'.
+	self pop: 3 thenPushInteger: numSamples
 ]
 
 { #category : #'object access primitives' }
@@ -5369,7 +5798,7 @@ Interpreter >> primitiveDisablePowerManager [
 	"Pass in a non-negative value to disable the architectures powermanager if any, zero to enable. This is a named (not numbered) primitive in the null module (ie the VM)"
 
 	| integer |
-	self export: true.
+	<export: true>
 	integer := self stackIntegerValue: 0.
 	successFlag ifTrue: [
 		self ioDisablePowerManager: integer.
@@ -5377,14 +5806,51 @@ Interpreter >> primitiveDisablePowerManager [
 
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveDiv [
 	| quotient |
 	quotient := self doPrimitiveDiv: (self stackValue: 1) by: (self stackTop).
 	self pop2AndPushIntegerIfOK: quotient
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveDivLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| integerRcvr integerArg result posArg posRcvr oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'posRcvr' type: 'sqLong'>
+	<var: 'posArg' type: 'sqLong'>
+	<var: 'result' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	integerArg = 0 ifTrue:[self primitiveFail].
+	successFlag ifFalse:[^nil].
+
+	integerRcvr > 0
+		ifTrue: [integerArg > 0
+					ifTrue: [result := integerRcvr // integerArg]
+					ifFalse: ["round negative result toward negative infinity"
+							posArg := 0 - integerArg.
+							posRcvr := integerRcvr + (posArg - 1). "can overflow!"
+							posRcvr < 0 ifTrue:[self primitiveFail].
+							result := 0 - (posRcvr // posArg)]]
+		ifFalse: [posRcvr := 0 - integerRcvr.
+				integerArg > 0
+					ifTrue: ["round negative result toward negative infinity"
+							posRcvr := posRcvr + (integerArg - 1). "can overflow!"
+							posRcvr < 0 ifTrue:[self primitiveFail].
+							result := 0 - (posRcvr // integerArg)]
+					ifFalse: [posArg := 0 - integerArg.
+							result := posRcvr // posArg]].
+	successFlag ifTrue:[oopResult := self signed64BitIntegerFor: result].
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
+]
+
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveDivide [
 	| integerReceiver integerArgument |
 	integerReceiver := self stackIntegerValue: 1.
@@ -5392,6 +5858,25 @@ Interpreter >> primitiveDivide [
 	(integerArgument ~= 0 and: [integerReceiver \\ integerArgument = 0])
 		ifTrue: [self pop2AndPushIntegerIfOK: integerReceiver // integerArgument]
 		ifFalse: [self primitiveFail]
+]
+
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveDivideLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| integerRcvr integerArg result oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'result' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	(integerArg ~= 0 and:[integerRcvr \\ integerArg = 0]) ifFalse:[self primitiveFail].
+	successFlag ifFalse:[^nil].
+	result := integerRcvr // integerArg.
+	oopResult := self signed64BitIntegerFor: result.
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
 ]
 
 { #category : #'control primitives' }
@@ -5428,7 +5913,7 @@ Interpreter >> primitiveDoPrimitiveWithArgs [
 			argumentCount := 2]
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveEqual [
 	| integerReceiver integerArgument result |
 	integerArgument := self popStack.
@@ -5437,13 +5922,32 @@ Interpreter >> primitiveEqual [
 	self checkBooleanResult: result
 ]
 
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveEqualLargeIntegers [
+	"Primitive comparison operations for large integers in 64 bit range"
+	| integerRcvr integerArg |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+
+	successFlag ifTrue:[
+		self pop: 2.
+		self pushBool: integerRcvr = integerArg
+	].
+
+]
+
 { #category : #'object access primitives' }
 Interpreter >> primitiveEquivalent [
-"is the receiver the same object as the argument?"
+	"is the receiver/first argument the same object as the (last) argument?.
+	 pop argumentCount because this can be used as a mirror primitive."
 	| thisObject otherObject |
-	otherObject := self popStack.
-	thisObject := self popStack.
-	self pushBool: thisObject = otherObject
+	otherObject := self stackValue: 1.
+	thisObject := self stackTop.
+	self pop: argumentCount + 1 thenPushBool: thisObject = otherObject
 ]
 
 { #category : #'control primitives' }
@@ -5454,29 +5958,36 @@ Interpreter >> primitiveExecuteMethod [
 	self success: argumentCount - 1 = (self argumentCountOf: newMethod).
 	successFlag
 		ifTrue: [argumentCount := argumentCount - 1.
-			self executeNewMethod]
+			self executeNewMethod.
+			"Recursive xeq affects successFlag"
+			successFlag := true]
 		ifFalse: [self unPop: 1]
 ]
 
 { #category : #'control primitives' }
 Interpreter >> primitiveExecuteMethodArgsArray [
-	"receiver, argsArray, then method are on top of stack.  Execute method against receiver and args"
+	"receiver, argsArray, then method are on top of stack.  Execute method against receiver and args.
+	 Set primitiveFunctionPointer because no cache lookup has been done for the method, and
+	 hence primitiveFunctionPointer is stale."
 
-	| argCnt argumentArray |
-	newMethod := self popStack.
-	primitiveIndex := self primitiveIndexOf: newMethod.
-	argCnt := self argumentCountOf: newMethod.
+	| methodArgument argCnt argumentArray |
+	methodArgument := self popStack.
 	argumentArray := self popStack.
-	"If the argArray isnt actually an Array we have to unPop both the above"
-	(self isArray: argumentArray) ifFalse:[self unPop: 2. ^self primitiveFail].
-	successFlag ifTrue: [self success: (argCnt = (self fetchWordLengthOf: argumentArray))].
-	successFlag
-		ifTrue: [self transfer: argCnt from: argumentArray + BaseHeaderSize to: stackPointer + BytesPerWord.
-			self unPop: argCnt.
-			argumentCount := argCnt.
-			self executeNewMethod]
-		ifFalse: [self unPop: 2].
-
+	((self isNonIntegerObject: methodArgument)
+	 and: [(self isCompiledMethod: methodArgument)
+	 and: [self isArray: argumentArray]]) ifFalse:
+		[self unPop: 2. ^self primitiveFail].
+	argCnt := self argumentCountOf: methodArgument.
+	argCnt = (self fetchWordLengthOf: argumentArray) ifFalse:
+		[self unPop: 2. ^self primitiveFail].
+	self transfer: argCnt from: argumentArray + BaseHeaderSize to: stackPointer + BytesPerWord.
+	self unPop: argCnt.
+	newMethod := methodArgument.
+	primitiveIndex := self primitiveIndexOf: newMethod.
+	argumentCount := argCnt.
+	self executeNewMethod.
+	"Recursive xeq affects successFlag"
+	successFlag := true
 ]
 
 { #category : #'system control primitives' }
@@ -5485,26 +5996,26 @@ Interpreter >> primitiveExitToDebugger [
 	self error: 'Exit to debugger at user request'.
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveExp [
 	"Computes E raised to the receiver power."
 
 	| rcvr |
-	self var: #rcvr type: 'double '.
+	<var: #rcvr type: 'double '>
 	rcvr := self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'exp(rcvr)' inSmalltalk: [rcvr exp])]
 		ifFalse: [self unPop: 1]
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveExponent [
 	"Exponent part of this float."
 
 	| rcvr frac pwr |
-	self var: #rcvr type: 'double '.
-	self var: #frac type: 'double '.
-	self var: #pwr type: 'int '.
+	<var: #rcvr type: 'double '>
+	<var: #frac type: 'double '>
+	<var: #pwr type: 'int '>
 	rcvr := self popFloat.
 	successFlag
 		ifTrue: [  "rcvr = frac * 2^pwr, where frac is in [0.5..1.0)"
@@ -5545,7 +6056,7 @@ Interpreter >> primitiveExternalCall [
 	always remove the rewrite. 
 	"
 	| lit addr moduleName functionName moduleLength functionLength index |
-	self var: #addr type: 'void *'.
+	<var: #addr type: 'void *'>
 	
 	"Fetch the first literal of the method"
 	self success: (self literalCountOf: newMethod) > 0. "@@: Could this be omitted for speed?!"
@@ -5600,23 +6111,10 @@ Interpreter >> primitiveExternalCall [
 	functionLength := self lengthOf: functionName.
 	successFlag ifFalse: [^ nil].
 
-	"Backward compatibility: 
-	Attempt to map any old-style named primitives into the new 
-	ones. The old ones are exclusively bound into the VM so we 
-	don't need to check if a module is given."
-	addr := 0. "Addr ~= 0 indicates we have a compat match later"
-	moduleLength = 0
-		ifTrue: ["Search the obsolete named primitive table for a match "
-		index := self findObsoleteNamedPrimitive: ((self pointerForOop: functionName) + BaseHeaderSize) length: functionLength.
-			"The returned value is the index into the obsolete primitive table. 
-			If the index is found, use the 'C-style' version of the lookup. "
-			index < 0 ifFalse: [addr := self ioLoadFunction: (self cCoerce: ((obsoleteNamedPrimitiveTable at: index) at: 2) to: 'char*')
-								From: (self cCoerce: ((obsoleteNamedPrimitiveTable at: index) at: 1) to: 'char*')]].
-	addr = 0 ifTrue: ["Only if no compat version was found"
-			addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
-						OfLength: functionLength
-						FromModule: moduleName + BaseHeaderSize
-						OfLength: moduleLength].
+	addr := self ioLoadExternalFunction: functionName + BaseHeaderSize
+				OfLength: functionLength
+				FromModule: moduleName + BaseHeaderSize
+				OfLength: moduleLength.
 	addr = 0
 		ifTrue: [index := -1]
 		ifFalse: ["add the function to the external primitive table"
@@ -5691,16 +6189,16 @@ Interpreter >> primitiveFindNextUnwindContext [
 	^self push: nilOop
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatAdd [
 	^ self primitiveFloatAdd: (self stackValue: 1) toArg: self stackTop
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatAdd: rcvrOop toArg: argOop [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
-	self var: #arg type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #arg type: 'double '>
 
 	rcvr := self loadFloatOrIntFrom: rcvrOop.
 	arg := self loadFloatOrIntFrom: argOop.
@@ -5709,16 +6207,16 @@ Interpreter >> primitiveFloatAdd: rcvrOop toArg: argOop [
 		self pushFloat: rcvr + arg].
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatDivide [
 	^ self primitiveFloatDivide: (self stackValue: 1) byArg: self stackTop
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatDivide: rcvrOop byArg: argOop [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
-	self var: #arg type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #arg type: 'double '>
 
 	rcvr := self loadFloatOrIntFrom: rcvrOop.
 	arg := self loadFloatOrIntFrom: argOop.
@@ -5729,7 +6227,7 @@ Interpreter >> primitiveFloatDivide: rcvrOop byArg: argOop [
 			self pushFloat: (self cCode: 'rcvr / arg' inSmalltalk: [rcvr / arg])]].
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatEqual [
 	| aBool |
 	aBool := self primitiveFloatEqual: (self stackValue: 1) toArg: self stackTop.
@@ -5737,22 +6235,22 @@ Interpreter >> primitiveFloatEqual [
 
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatEqual: rcvrOop toArg: argOop [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
-	self var: #arg type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #arg type: 'double '>
 
 	rcvr := self loadFloatOrIntFrom: rcvrOop.
 	arg := self loadFloatOrIntFrom: argOop.
 	successFlag ifTrue: [^ rcvr = arg]
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatGreater: rcvrOop thanArg: argOop [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
-	self var: #arg type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #arg type: 'double '>
 
 	rcvr := self loadFloatOrIntFrom: rcvrOop.
 	arg := self loadFloatOrIntFrom: argOop.
@@ -5763,12 +6261,22 @@ Interpreter >> primitiveFloatGreater: rcvrOop thanArg: argOop [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatGreaterOrEqual [
 	| aBool |
-	aBool := self primitiveFloatLess: (self stackValue: 1) thanArg: self stackTop.
-	successFlag ifTrue: [self pop: 2. self pushBool: aBool not].
-
+	aBool := self primitiveFloatGreaterOrEqual: (self stackValue: 1) toArg: self stackTop.
+	successFlag ifTrue: [self pop: 2. self pushBool: aBool].
 ]
 
 { #category : #'float primitives' }
+Interpreter >> primitiveFloatGreaterOrEqual: rcvrOop toArg: argOop [
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := self loadFloatOrIntFrom: rcvrOop.
+	arg := self loadFloatOrIntFrom: argOop.
+	successFlag ifTrue: [^ rcvr >= arg].
+]
+
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatGreaterThan [
 	| aBool |
 	aBool := self primitiveFloatGreater: (self stackValue: 1) thanArg: self stackTop.
@@ -5776,11 +6284,11 @@ Interpreter >> primitiveFloatGreaterThan [
 
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatLess: rcvrOop thanArg: argOop [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
-	self var: #arg type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #arg type: 'double '>
 
 	rcvr := self loadFloatOrIntFrom: rcvrOop.
 	arg := self loadFloatOrIntFrom: argOop.
@@ -5791,12 +6299,23 @@ Interpreter >> primitiveFloatLess: rcvrOop thanArg: argOop [
 { #category : #'float primitives' }
 Interpreter >> primitiveFloatLessOrEqual [
 	| aBool |
-	aBool := self primitiveFloatGreater: (self stackValue: 1) thanArg: self stackTop.
-	successFlag ifTrue: [self pop: 2. self pushBool: aBool not].
-
+	aBool := self primitiveFloatLessOrEqual: (self stackValue: 1) toArg: self stackTop.
+	successFlag ifTrue: [self pop: 2. self pushBool: aBool].
 ]
 
 { #category : #'float primitives' }
+Interpreter >> primitiveFloatLessOrEqual: rcvrOop toArg: argOop [
+	| rcvr arg |
+	<var: #rcvr type: #double>
+	<var: #arg type: #double>
+
+	rcvr := self loadFloatOrIntFrom: rcvrOop.
+	arg := self loadFloatOrIntFrom: argOop.
+	successFlag ifTrue: [^ rcvr <= arg].
+
+]
+
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatLessThan [
 	| aBool |
 	aBool := self primitiveFloatLess: (self stackValue: 1) thanArg: self stackTop.
@@ -5804,16 +6323,16 @@ Interpreter >> primitiveFloatLessThan [
 
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatMultiply [
 	^ self primitiveFloatMultiply: (self stackValue: 1) byArg: self stackTop
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatMultiply: rcvrOop byArg: argOop [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
-	self var: #arg type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #arg type: 'double '>
 
 	rcvr := self loadFloatOrIntFrom: rcvrOop.
 	arg := self loadFloatOrIntFrom: argOop.
@@ -5822,7 +6341,7 @@ Interpreter >> primitiveFloatMultiply: rcvrOop byArg: argOop [
 		self pushFloat: rcvr * arg].
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatNotEqual [
 	| aBool |
 	aBool := self primitiveFloatEqual: (self stackValue: 1) toArg: self stackTop.
@@ -5830,16 +6349,16 @@ Interpreter >> primitiveFloatNotEqual [
 
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatSubtract [
 	^ self primitiveFloatSubtract: (self stackValue: 1) fromArg: self stackTop
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFloatSubtract: rcvrOop fromArg: argOop [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
-	self var: #arg type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #arg type: 'double '>
 
 	rcvr := self loadFloatOrIntFrom: rcvrOop.
 	arg := self loadFloatOrIntFrom: argOop.
@@ -5900,7 +6419,7 @@ Interpreter >> primitiveForceDisplayUpdate [
 Interpreter >> primitiveForceTenure [
 	"Set force tenure flag to true, this forces a tenure operation on the next incremental GC"
 
-	self export: true.
+	<export: true>
 	forceTenureFlag := 1
 ]
 
@@ -5911,8 +6430,8 @@ Interpreter >> primitiveFormPrint [
 	| landscapeFlag vScale hScale rcvr bitsArray w h
 	 depth pixelsPerWord wordsPerLine bitsArraySize ok |
 
-	self var: #vScale type: 'double '.
-	self var: #hScale type: 'double '.
+	<var: #vScale type: 'double '>
+	<var: #hScale type: 'double '>
 	landscapeFlag := self booleanValueOf: self stackTop.
 	vScale := self floatValueOf: (self stackValue: 1).
 	hScale := self floatValueOf: (self stackValue: 2).
@@ -5944,12 +6463,12 @@ Interpreter >> primitiveFormPrint [
 
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveFractionalPart [
 	| rcvr frac trunc |
-	self var: #rcvr type: 'double '.
-	self var: #frac type: 'double '.
-	self var: #trunc type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #frac type: 'double '>
+	<var: #trunc type: 'double '>
 	rcvr := self popFloat.
 	successFlag
 		ifTrue: [self cCode: 'frac = modf(rcvr, &trunc)' inSmalltalk: [frac := rcvr fractionPart].
@@ -5988,10 +6507,25 @@ Interpreter >> primitiveGetAttribute [
 ]
 
 { #category : #'I/O primitives' }
+Interpreter >> primitiveGetLogDirectory [
+	"Primitive. Answer the VM's current log directory"
+	| ptr sz stringOop |
+	<var: 'ptr' type: 'char*'>
+	<export: true>
+	ptr := self ioGetLogDirectory.
+	ptr == nil ifTrue:[^self success: false].
+	sz := self strlen: ptr.
+	stringOop := self instantiateClass: self classString indexableSize: sz.
+	0 to: sz-1 do:[:i| self storeByte: i ofObject: stringOop withValue: (ptr at: i)].
+	self pop: self methodArgumentCount+1.
+	self push: stringOop.
+]
+
+{ #category : #'I/O primitives' }
 Interpreter >> primitiveGetNextEvent [
 	"Primitive. Return the next input event from the VM event queue."
 	| evtBuf arg value |
-	self var: #evtBuf declareC:'int evtBuf[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }'.
+	<var: #evtBuf declareC:'int evtBuf[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }'>
 	self cCode:'' inSmalltalk:[evtBuf := CArrayAccessor on: (IntegerArray new: 8)].
 	arg := self stackTop.
 	((self isArray: arg) and:[(self slotSizeOf: arg) = 8])  ifFalse:[^self primitiveFail].
@@ -6022,7 +6556,33 @@ Interpreter >> primitiveGetNextEvent [
 	self pop: 1.
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'I/O primitives' }
+Interpreter >> primitiveGetWindowLabel [
+	"Primitive. Answer the OS window's label"
+	| ptr sz labelOop |
+	<var: 'ptr' type: 'char*'>
+	<export: true>
+	ptr := self ioGetWindowLabel.
+	ptr == nil ifTrue:[^self success: false].
+	sz := self strlen: ptr.
+	labelOop := self instantiateClass: self classString indexableSize: sz.
+	0 to: sz-1 do:[:i| self storeByte: i ofObject: labelOop withValue: (ptr at: i)].
+	self pop: self methodArgumentCount+1.
+	self push: labelOop.
+]
+
+{ #category : #'I/O primitives' }
+Interpreter >> primitiveGetWindowSize [
+	"Primitive. Answer the OS window's size (extent)"
+	| w h |
+	<export: true>
+	w := self ioGetWindowWidth.
+	h := self ioGetWindowHeight.
+	self pop: self methodArgumentCount+1.
+	self push: (self makePointwithxValue: w yValue: h).
+]
+
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveGreaterOrEqual [
 	| integerReceiver integerArgument |
 	integerArgument := self popInteger.
@@ -6030,7 +6590,25 @@ Interpreter >> primitiveGreaterOrEqual [
 	self checkBooleanResult: integerReceiver >= integerArgument
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveGreaterOrEqualLargeIntegers [
+	"Primitive comparison operations for large integers in 64 bit range"
+	| integerRcvr integerArg |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+
+	successFlag ifTrue:[
+		self pop: 2.
+		self pushBool: integerRcvr >= integerArg
+	].
+
+]
+
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveGreaterThan [
 	| integerReceiver integerArgument |
 	integerArgument := self popInteger.
@@ -6038,12 +6616,90 @@ Interpreter >> primitiveGreaterThan [
 	self checkBooleanResult: integerReceiver > integerArgument
 ]
 
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveGreaterThanLargeIntegers [
+	"Primitive comparison operations for large integers in 64 bit range"
+	| integerRcvr integerArg |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+
+	successFlag ifTrue:[
+		self pop: 2.
+		self pushBool: integerRcvr > integerArg
+	].
+
+]
+
+{ #category : #'system control primitives' }
+Interpreter >> primitiveHighResClock [
+	"Return the value of the high resolution clock if this system has any. The exact frequency of the high res clock is undefined specifically so that we can use processor dependent instructions (like RDTSC). The only use for the high res clock is for profiling where we can allocate time based on sub-msec resolution of the high res clock. If no high-resolution counter is available, the platform should return zero."
+	<export: true>
+	self pop: 1.
+	self push: (self positive64BitIntegerFor: self ioHighResClock).
+]
+
+{ #category : #'other primitives' }
+Interpreter >> primitiveIdentityDictionaryLookup [
+	"Primitive. Speed up IdentityDictionary>>scanFor:.
+	XXXX: DO NOT USE THIS YET. I have a suspicion that the code below might be flawed since the speedup is much less than what I would have expected to see. Perhaps my expectations are wrong but perhaps that code is just completely broken... YMMV."
+	| obj dict array finish hash start assoc key |
+	<export: true>
+	obj := self stackValue: 0.
+	dict := self stackValue: 1.
+	((self isIntegerObject: dict) or:[(self slotSizeOf: dict) < 2]) 
+		ifTrue:[^self primitiveFail].
+
+	array := self fetchPointer: 1 ofObject: dict.
+	(self fetchClassOf: array) == (self splObj: ClassArray) 
+		ifFalse:[^self primitiveFail].
+
+	finish := self lengthOf: array.
+	(self isIntegerObject: obj)
+		ifTrue: [hash := self integerValueOf: obj]
+		ifFalse: [hash := self hashBitsOf: obj].
+	"Scale hash if the receiver is a large dictionary"
+	finish > 4096 ifTrue: [hash := hash * (finish // 4096)].
+
+	"First pass is from start to finish.
+     Dodge undefined remainder in C for negative arguments."
+	hash < 0 ifTrue: [
+		start := (((0 - hash) \\ finish) + 1)
+	] ifFalse: [
+		start := (hash \\ finish) + 1.
+	].
+
+	1 to: 2 do:[:pass|
+		start to: finish do:[:index|
+			assoc := self fetchPointer: index-1 ofObject: array.
+			assoc == self nilObject ifTrue:[
+				^self pop: 2 thenPush: (self integerObjectOf: index).
+			].
+			((self isPointers: assoc) and:[(self lengthOf: assoc) > 1])
+				ifFalse:[^self primitiveFail].
+			key := self fetchPointer: 0 ofObject: assoc.
+			key == obj ifTrue:[
+				^self pop: 2 thenPush: (self integerObjectOf: index).
+			].
+		].
+		"Second pass is from 1 to start-1"
+		finish := start-1.
+		start := 1.
+	].
+	"No match and no empty slot"
+	self pop: 2 thenPush: (self integerObjectOf: 0).
+
+]
+
 { #category : #'other primitives' }
 Interpreter >> primitiveImageName [
 	"When called with a single string argument, record the string as the current image file name. When called with zero arguments, return a string containing the current image file name."
 
 	| s sz sCRIfn okToRename |
-	self var: #sCRIfn type: 'void *'.
+	<var: #sCRIfn type: 'void *'>
 	argumentCount = 1 ifTrue: [
 		"If the security plugin can be loaded, use it to check for rename permission.
 		If not, assume it's ok"
@@ -6161,7 +6817,7 @@ Interpreter >> primitiveInstVarsPutFromStack [
 	| rcvr offsetBits |
 	rcvr := self stackValue: argumentCount.
 	"Mark dirty so stores below can be unchecked"
-	(rcvr < youngStart) ifTrue: [ self beRootIfOld: rcvr ].
+	(self oop: rcvr isLessThan: youngStart) ifTrue: [ self beRootIfOld: rcvr ].
 	0 to: argumentCount-1 do:
 		[:i | (i bitAnd: 3) = 0 ifTrue:
 			[offsetBits := self positive32BitValueOf: (self literal: i//4 ofMethod: newMethod)].
@@ -6175,7 +6831,8 @@ Interpreter >> primitiveInstVarsPutFromStack [
 Interpreter >> primitiveIntegerAt [
 	"Return the 32bit signed integer contents of a words receiver"
 
-	| index rcvr sz addr value |
+	| index rcvr sz addr value intValue |
+	<var: #intValue type: 'int'>
 	index := self stackIntegerValue: 0.
 	rcvr := self stackValue: 1.
 	(self isIntegerObject: rcvr) ifTrue: [^self success: false].
@@ -6183,13 +6840,15 @@ Interpreter >> primitiveIntegerAt [
 	sz := self lengthOf: rcvr.  "number of fields"
 	self success: ((index >= 1) and: [index <= sz]).
 	successFlag ifTrue: [
-		addr := rcvr + BaseHeaderSize - 4 "for zero indexing" + (index * 4).
+		addr := rcvr + BaseHeaderSize + (index - 1 * BytesPerWord). "for zero indexing"
 		value := self intAt: addr.
 		self pop: 2.  "pop rcvr, index"
 		"push element value"
 		(self isIntegerValue: value)
 			ifTrue: [self pushInteger: value]
-			ifFalse: [self push: (self signed32BitIntegerFor: value)].
+			ifFalse: [
+				intValue := value. "32 bit int may have been stored in 32 or 64 bit sqInt"
+				self push: (self signed32BitIntegerFor: intValue)]. "intValue may be sign extended to 64 bit sqInt"
 	].
 ]
 
@@ -6204,15 +6863,23 @@ Interpreter >> primitiveIntegerAtPut [
 	(self isWords: rcvr) ifFalse:[^self success: false].
 	sz := self lengthOf: rcvr.  "number of fields"
 	((index >= 1) and: [index <= sz]) ifFalse:[^self success: false].
-	(self isIntegerObject: valueOop)
-		ifTrue:[value := self integerValueOf: valueOop]
-		ifFalse:[value := self signed32BitValueOf: valueOop].
+	value := self signed32BitValueOf: valueOop.
 	successFlag ifTrue:[
-		addr := rcvr + BaseHeaderSize - 4 "for zero indexing" + (index * 4).
+		addr := rcvr + BaseHeaderSize + (index - 1 * BytesPerWord). "for zero indexing"
 		value := self intAt: addr put: value.
 		self pop: 3 thenPush: valueOop. "pop all; return value"
 	].
 
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveInterruptChecksPerMSec [
+	"Primitive. Answer the number of interrupt checks per milliseconds that we execute
+	on this machine. This can be used to adjust the sub-msecs profiler to check (roughly) 
+	n times per millisecond."
+	<export: true>
+	self methodArgumentCount = 0 ifFalse:[^self success: false].
+	self pop: 1 thenPush: (self integerObjectOf: interruptCheckCounterFeedBackReset).
 ]
 
 { #category : #'I/O primitives' }
@@ -6263,7 +6930,7 @@ Interpreter >> primitiveInvokeObjectAsMethod [
 Interpreter >> primitiveIsRoot [
 	"Primitive. Answer whether the argument to the primitive is a root for young space"
 	| oop |
-	self export: true.
+	<export: true>
 	oop := self stackObjectValue: 0.
 	successFlag ifTrue:[
 		self pop: argumentCount + 1.
@@ -6271,15 +6938,24 @@ Interpreter >> primitiveIsRoot [
 	].
 ]
 
+{ #category : #'I/O primitives' }
+Interpreter >> primitiveIsWindowObscured [
+	"Primitive. Answer whether the OS window is currently partially or fully obscured."
+	<export: true>
+	self pop: self methodArgumentCount+1.
+	self pushBool: self ioIsWindowObscured.
+
+]
+
 { #category : #'memory space primitives' }
 Interpreter >> primitiveIsYoung [
 	"Primitive. Answer whether the argument to the primitive resides in young space."
 	| oop |
-	self export: true.
+	<export: true>
 	oop := self stackObjectValue: 0.
 	successFlag ifTrue:[
 		self pop: argumentCount + 1.
-		self pushBool: oop >= youngStart.
+		self pushBool: (self oop: oop isGreaterThanOrEqualTo: youngStart).
 	].
 ]
 
@@ -6309,7 +6985,7 @@ Interpreter >> primitiveKbdPeek [
 		ifFalse: [self push: nilObj].
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveLessOrEqual [
 	| integerReceiver integerArgument |
 	integerArgument := self popInteger.
@@ -6317,7 +6993,25 @@ Interpreter >> primitiveLessOrEqual [
 	self checkBooleanResult: integerReceiver <= integerArgument
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveLessOrEqualLargeIntegers [
+	"Primitive comparison operations for large integers in 64 bit range"
+	| integerRcvr integerArg |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+
+	successFlag ifTrue:[
+		self pop: 2.
+		self pushBool: integerRcvr <= integerArg
+	].
+
+]
+
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveLessThan [
 	| integerReceiver integerArgument |
 	integerArgument := self popInteger.
@@ -6325,11 +7019,29 @@ Interpreter >> primitiveLessThan [
 	self checkBooleanResult: integerReceiver < integerArgument
 ]
 
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveLessThanLargeIntegers [
+	"Primitive comparison operations for large integers in 64 bit range"
+	| integerRcvr integerArg |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+
+	successFlag ifTrue:[
+		self pop: 2.
+		self pushBool: integerRcvr < integerArg
+	].
+
+]
+
 { #category : #'plugin primitives' }
 Interpreter >> primitiveListBuiltinModule [
 	"Primitive. Return the n-th builtin module name."
 	| moduleName index length nameOop |
-	self var: #moduleName type: 'char *'.
+	<var: #moduleName type: 'char *'>
 	self methodArgumentCount = 1 ifFalse:[^self primitiveFail].
 	index := self stackIntegerValue: 0.
 	index <= 0 ifTrue:[^self primitiveFail].
@@ -6349,7 +7061,7 @@ Interpreter >> primitiveListBuiltinModule [
 Interpreter >> primitiveListExternalModule [
 	"Primitive. Return the n-th loaded external module name."
 	| moduleName index length nameOop |
-	self var: #moduleName type: 'char *'.
+	<var: #moduleName type: 'char *'>
 	self methodArgumentCount = 1 ifFalse:[^self primitiveFail].
 	index := self stackIntegerValue: 0.
 	index <= 0 ifTrue:[^self primitiveFail].
@@ -6374,6 +7086,13 @@ Interpreter >> primitiveLoadImageSegment [
 
 	| outPointerArray segmentWordArray endSeg segOop fieldPtr fieldOop doingClass lastPtr extraSize mapOop lastOut outPtr hdrTypeBits header data |
 
+	<var: #endSeg type: 'usqInt'>
+	<var: #segOop type: 'usqInt'>
+	<var: #fieldPtr type: 'usqInt'>
+	<var: #lastOut type: 'usqInt'>
+	<var: #outPtr type: 'usqInt'>
+	<var: #lastPtr type: 'usqInt'>
+
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 	outPointerArray := self stackTop.
 	lastOut := outPointerArray + (self lastPointerOf: outPointerArray).
@@ -6396,9 +7115,9 @@ Interpreter >> primitiveLoadImageSegment [
 			self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
 			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
 			^ self primitiveFail]].
-	"Reverse the Byte type objects if the data from opposite endian machine"
-	"Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal"
-	data = self imageSegmentVersion ifFalse: [
+	"Reverse the Byte type objects if the is data from opposite endian machine."
+	"Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal."
+	(data >> 16) = (self imageSegmentVersion >> 16) ifFalse: [
 		"Reverse the byte-type objects once"
 		segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
 			 "Oop of first embedded object"
@@ -6483,12 +7202,12 @@ Interpreter >> primitiveLoadInstVar [
 	self push: (self fetchPointer: primitiveIndex-264 ofObject: thisReceiver)
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveLogN [
 	"Natural log."
 
 	| rcvr |
-	self var: #rcvr type: 'double '.
+	<var: #rcvr type: 'double '>
 	rcvr := self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'log(rcvr)' inSmalltalk: [rcvr ln])]
@@ -6506,7 +7225,7 @@ Interpreter >> primitiveLowSpaceSemaphore [
 		ifFalse: [self storePointer: TheLowSpaceSemaphore ofObject: specialObjectsOop withValue: nilObj]
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveMakePoint [
 	| rcvr argument pt |
 	argument := self stackTop.
@@ -6530,14 +7249,14 @@ Interpreter >> primitiveMakePoint [
 { #category : #'process primitives' }
 Interpreter >> primitiveMarkHandlerMethod [
 	"Primitive. Mark the method for exception handling. The primitive must fail after marking the context so that the regular code is run."
-	self inline: false.
+	<inline: false>
 	^self primitiveFail
 ]
 
 { #category : #'process primitives' }
 Interpreter >> primitiveMarkUnwindMethod [
 	"Primitive. Mark the method for exception unwinding. The primitive must fail after marking the context so that the regular code is run."
-	self inline: false.
+	<inline: false>
 	^self primitiveFail
 ]
 
@@ -6555,11 +7274,39 @@ Interpreter >> primitiveMillisecondClock [
 
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveMod [
 	| mod |
 	mod := self doPrimitiveMod: (self stackValue: 1) by: (self stackTop).
 	self pop2AndPushIntegerIfOK: mod
+]
+
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveModLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| integerRcvr integerArg result oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'result' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	integerArg = 0 ifTrue:[self primitiveFail].
+	successFlag ifFalse:[^nil].
+
+	result := integerRcvr \\ integerArg.
+
+	"ensure that the result has the same sign as the integerArg"
+	integerArg < 0
+		ifTrue: [result > 0
+			ifTrue: [result := result + integerArg]]
+		ifFalse: [result < 0
+			ifTrue: [result := result + integerArg]].
+
+	oopResult := self signed64BitIntegerFor: result.
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
 ]
 
 { #category : #'I/O primitives' }
@@ -6586,7 +7333,7 @@ Interpreter >> primitiveMousePoint [
 	self push: (self makePointwithxValue: x  yValue: y).
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveMultiply [
 	| integerRcvr integerArg integerResult |
 	integerRcvr := self stackIntegerValue: 1.
@@ -6597,6 +7344,29 @@ Interpreter >> primitiveMultiply [
 		((integerArg = 0) or: [(integerResult // integerArg) = integerRcvr])
 			ifTrue: [self pop2AndPushIntegerIfOK: integerResult]
 			ifFalse: [self primitiveFail]]
+]
+
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveMultiplyLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| integerRcvr integerArg result oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'result' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	successFlag ifFalse:[^nil].
+
+	result := integerRcvr * integerArg.
+	"check for C overflow by seeing if computation is reversible"
+	((integerArg = 0) or: [(result // integerArg) = integerRcvr])
+		ifTrue:[oopResult := self signed64BitIntegerFor: result]
+		ifFalse: [self primitiveFail].
+
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
 ]
 
 { #category : #'object access primitives' }
@@ -6617,11 +7387,12 @@ Interpreter >> primitiveNewMethod [
 	header := self popStack.
 	bytecodeCount := self popInteger.
 	self success: (self isIntegerObject: header).
-	successFlag ifFalse: [self unPop: 2].
+	successFlag ifFalse:
+		[self unPop: 2. ^nil].
 	class := self popStack.
 	size := (self literalCountOfHeader: header) + 1 * BytesPerWord + bytecodeCount.
 	theMethod := self instantiateClass: class indexableSize: size.
-	self storePointer: HeaderIndex ofObject: theMethod withValue: header.
+	self storePointerUnchecked: HeaderIndex ofObject: theMethod withValue: header.
 	literalCount := self literalCountOfHeader: header.
 	1 to: literalCount do:
 		[:i | self storePointer: i ofObject: theMethod withValue: nilObj].
@@ -6643,43 +7414,16 @@ Interpreter >> primitiveNewWithArg [
 	successFlag ifTrue: [self pop: 2 thenPush: (self instantiateClass: class indexableSize: size)]
 ]
 
-{ #category : #'array and stream primitives' }
-Interpreter >> primitiveNext [
-	"PrimitiveNext will succeed only if the stream's array is in the atCache.
-	Otherwise failure will lead to proper message lookup of at: and
-	subsequent installation in the cache if appropriate."
-	| stream array index limit result atIx |
-	stream := self stackTop.
-	((self isPointers: stream)
-		and: [(self lengthOf: stream) >= (StreamReadLimitIndex + 1)])
-		ifFalse: [^ self primitiveFail].
-
-	array := self fetchPointer: StreamArrayIndex ofObject: stream.
-	index := self fetchInteger: StreamIndexIndex ofObject: stream.
-	limit := self fetchInteger: StreamReadLimitIndex ofObject: stream.
-	atIx := array bitAnd: AtCacheMask.
-	(index < limit and: [(atCache at: atIx+AtCacheOop) = array])
-		ifFalse: [^ self primitiveFail].
-
-	"OK -- its not at end, and the array is in the cache"
-	index := index + 1.
-	result := self commonVariable: array at: index cacheIndex: atIx.
-	"Above may cause GC, so can't use stream, array etc. below it"
-	successFlag ifTrue:
-		[stream := self stackTop.
-		self storeInteger: StreamIndexIndex ofObject: stream withValue: index.
-		^ self pop: 1 thenPush: result].
-
-]
-
 { #category : #'object access primitives' }
 Interpreter >> primitiveNextInstance [
 	| object instance |
 	object := self stackTop.
+	(self isIntegerObject: object) ifTrue:
+		[^self primitiveFail].
 	instance := self instanceAfter: object.
-	instance = nilObj
-		ifTrue: [self primitiveFail]
-		ifFalse: [self pop: argumentCount+1 thenPush: instance]
+	instance = nilObj ifTrue:
+		[^self primitiveFail].
+	self pop: argumentCount+1 thenPush: instance
 ]
 
 { #category : #'object access primitives' }
@@ -6694,34 +7438,6 @@ Interpreter >> primitiveNextObject [
 		ifFalse: [ self pop: argumentCount+1 thenPush: instance ].
 ]
 
-{ #category : #'array and stream primitives' }
-Interpreter >> primitiveNextPut [
-	"PrimitiveNextPut will succeed only if the stream's array is in the atPutCache.
-	Otherwise failure will lead to proper message lookup of at:put: and
-	subsequent installation in the cache if appropriate."
-	| value stream index limit array atIx |
-	value := self stackTop.
-	stream := self stackValue: 1.
-	((self isPointers: stream)
-		and: [(self lengthOf: stream) >= (StreamReadLimitIndex + 1)])
-		ifFalse: [^ self primitiveFail].
-
-	array := self fetchPointer: StreamArrayIndex ofObject: stream.
-	index := self fetchInteger: StreamIndexIndex ofObject: stream.
-	limit := self fetchInteger: StreamReadLimitIndex ofObject: stream.
-	atIx := (array bitAnd: AtCacheMask) + AtPutBase.
-	(index < limit and: [(atCache at: atIx+AtCacheOop) = array])
-		ifFalse: [^ self primitiveFail].
-
-	"OK -- its not at end, and the array is in the cache"
-	index := index + 1.
-	self commonVariable: array at: index put: value cacheIndex: atIx.
-	successFlag ifTrue:
-		[self storeInteger: StreamIndexIndex ofObject: stream withValue: index.
-		^ self pop: 2 thenPush: value].
-
-]
-
 { #category : #'system control primitives' }
 Interpreter >> primitiveNoop [
 	"A placeholder for primitives that haven't been implemented or are being withdrawn gradually. Just absorbs any arguments and returns the receiver."
@@ -6729,13 +7445,31 @@ Interpreter >> primitiveNoop [
 	self pop: argumentCount.  "pop args, leave rcvr on stack"
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveNotEqual [
 	| integerReceiver integerArgument result |
 	integerArgument := self popStack.
 	integerReceiver := self popStack.
 	result := (self compare31or32Bits: integerReceiver equal: integerArgument) not.
 	self checkBooleanResult: result
+]
+
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveNotEqualLargeIntegers [
+	"Primitive comparison operations for large integers in 64 bit range"
+	| integerRcvr integerArg |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+
+	successFlag ifTrue:[
+		self pop: 2.
+		self pushBool: integerRcvr ~= integerArg
+	].
+
 ]
 
 { #category : #'object access primitives' }
@@ -6778,31 +7512,6 @@ Interpreter >> primitiveObjectPointsTo [
 		[:i | (self longAt: rcvr + i) = thang
 			ifTrue: [^ self pushBool: true]].
 	self pushBool: false.
-]
-
-{ #category : #'other primitives' }
-Interpreter >> primitiveObsoleteIndexedPrimitive [
-	"Primitive. Invoke an obsolete indexed primitive."
-
-	| pluginName functionName functionAddress |
-	self var: #pluginName type: 'char *'.
-	self var: #functionName type: 'char *'.
-	self var: #functionAddress type: 'void *'.
-	functionAddress := self cCoerce: ((obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 2) to: 'void *'.
-	functionAddress = nil 
-		ifFalse: [^self cCode: '((sqInt (*)(void))functionAddress)()'
-					inSmalltalk: [self callExternalPrimitive: functionAddress]].
-	pluginName := (obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 0.
-	functionName := (obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 1.
-	(pluginName = nil and: [functionName = nil]) 
-		ifTrue: [^self primitiveFail].
-	functionAddress := self ioLoadFunction: functionName From: pluginName.
-	functionAddress = 0 ifFalse: ["Cache for future use"
-		(obsoleteIndexedPrimitiveTable at: primitiveIndex) at: 2 put: 
-			(self cCoerce: functionAddress to: 'char*').
-		^self cCode: '((sqInt (*)(void))functionAddress)()'
-				inSmalltalk: [self callExternalPrimitive: functionAddress]].
-	^self primitiveFail
 ]
 
 { #category : #'control primitives' }
@@ -6933,7 +7642,7 @@ Interpreter >> primitivePerformWithArgs [
 { #category : #'object access primitives' }
 Interpreter >> primitivePointX [
 	| rcvr | 
-	self inline: false.
+	<inline: false>
 	rcvr := self popStack.
 	self assertClassOf: rcvr is: (self splObj: ClassPoint).
 	successFlag
@@ -6944,12 +7653,61 @@ Interpreter >> primitivePointX [
 { #category : #'object access primitives' }
 Interpreter >> primitivePointY [
 	| rcvr | 
-	self inline: false.
+	<inline: false>
 	rcvr := self popStack.
 	self assertClassOf: rcvr is: (self splObj: ClassPoint).
 	successFlag
 		ifTrue: [self push: (self fetchPointer: YIndex ofObject: rcvr)]
 		ifFalse: [self unPop: 1]
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveProfilePrimitive [
+	"Primitive. Answer the last primitive method sampled by the profiler."
+	<export: true>
+	self methodArgumentCount = 0 ifFalse:[^self success: false].
+	self pop: 1.
+	self push: profileMethod.
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveProfileSample [
+	"Primitive. Answer the last sample taken by the profiler, or nil if the profiler isn't active.
+	See also primitiveProfileStart."
+	<export: true>
+	self methodArgumentCount = 0 ifFalse:[^self success: false].
+	self pop: 1 thenPush: profileProcess.
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveProfileSemaphore [
+	"Primitive. Install the semaphore to be used for profiling, 
+	or nil if no semaphore should be used.
+	See also primitiveProfileStart."
+	| sema |
+	<export: true>
+	self methodArgumentCount = 1 ifFalse:[^self success: false].
+	sema := self stackValue: 0.
+	sema == nilObj ifFalse:[
+		(self fetchClassOf: sema) == (self splObj: ClassSemaphore) 
+			ifFalse:[^self success: false]].
+	profileSemaphore := sema.
+	self pop: 1.
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveProfileStart [
+	"Primitive. Begin profiling execution every by using the interrupt check-counter instead of a time-based process (which is limited to timing resolution and triggers off the same signal that many of the processes being profiled trigger off leading to consistently wrong results).
+	The argument is the number of interrupt checks (method activations) to let go by before taking a sample. The sample is being stored in the profileSample iVar which can be retrieved by executing primitiveProfileSample. When a sample is taken, it signals the semaphore specified in primitiveProfileSemaphore.
+	If the argument is less or equal to zero, it disables profiling."
+	| deltaTicks |
+	<export: true>
+	self methodArgumentCount = 1 ifFalse:[^self success: false].
+	deltaTicks := self stackIntegerValue: 0.
+	successFlag ifTrue:[
+		nextProfileTick := self ioHighResClock + deltaTicks.
+		self pop: 1.
+	].
 ]
 
 { #category : #'quick primitives' }
@@ -7009,7 +7767,7 @@ Interpreter >> primitiveQuit [
 
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveQuo [
 	"Rounds negative results towards zero."
 	| integerRcvr integerArg integerResult |
@@ -7033,6 +7791,35 @@ Interpreter >> primitiveQuo [
 	self pop2AndPushIntegerIfOK: integerResult
 ]
 
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveQuoLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| integerRcvr integerArg result oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'result' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	integerArg = 0 ifTrue:[self primitiveFail].
+	successFlag ifFalse:[^nil].
+
+	integerRcvr > 0 ifTrue: [
+		integerArg > 0 
+			ifTrue: [result := integerRcvr // integerArg]
+			ifFalse: [result := 0 - (integerRcvr // (0 - integerArg))].
+	] ifFalse: [
+		integerArg > 0 
+			ifTrue: [result := 0 - ((0 - integerRcvr) // integerArg)]
+			ifFalse: [result := (0 - integerRcvr) // (0 - integerArg)].
+	].
+
+	oopResult := self signed64BitIntegerFor: result.
+	successFlag ifTrue:[self pop: 2 thenPush: oopResult].
+
+]
+
 { #category : #'I/O primitives' }
 Interpreter >> primitiveRelinquishProcessor [
 	"Relinquish the processor for up to the given number of microseconds. The exact behavior of this primitive is platform dependent."
@@ -7040,32 +7827,20 @@ Interpreter >> primitiveRelinquishProcessor [
 	| microSecs |
 	microSecs := self stackIntegerValue: 0.
 	successFlag ifTrue: [
-		self ioRelinquishProcessorForMicroseconds: microSecs.
-		self pop: 1]  "microSecs; leave rcvr on stack"
-
+		"DO NOT allow relinquishing the processor while we are profiling since this
+		may skew the time base for our measures (it may reduce processor speed etc).
+		Instead we go full speed, therefore measuring the precise time we spend in the
+		inner idle loop as a busy loop."
+		nextProfileTick = 0 ifTrue:[self ioRelinquishProcessorForMicroseconds: microSecs].
+		self pop: 1.  "microSecs; leave rcvr on stack"
+	].
 ]
 
 { #category : #'primitive support' }
 Interpreter >> primitiveResponse [
-	"NB: tpr removed the timer checks here and moved them to the primitiveExternalCall method.
-	We make the possibly unwarranted assumption that numbered prims are quick and external prims are slow."
-
-	| delta primIdx nArgs |
-	DoBalanceChecks ifTrue:["check stack balance"
-		nArgs := argumentCount.
-		delta := stackPointer - activeContext.
-	].
-	primIdx := primitiveIndex.
-	successFlag := true.
-	"self dispatchOn: primitiveIndex in: primitiveTable."
-	self dispatchFunctionPointerOn: primIdx in: primitiveTable.
-	"replace with fetch entry primitiveIndex from table and branch there"
-	DoBalanceChecks ifTrue:[
-		(self balancedStack: delta afterPrimitive: primIdx withArgs: nArgs) 
-			ifFalse:[self printUnbalancedStack: primIdx].
-	].
-	^ successFlag
-
+	"Called under the assumption that primitiveFunctionPointer is not preloaded"
+	primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: nil.
+	^self internalPrimitiveResponse
 ]
 
 { #category : #'process primitives' }
@@ -7084,7 +7859,7 @@ Interpreter >> primitiveRootTable [
 	be inaccurate - in this case one should guard the read operation
 	by looking at the gc counter statistics."
 	| oop sz |
-	self export: true.
+	<export: true>
 	sz := rootTableCount.
 	oop := self instantiateClass: self classArray indexableSize: sz. "can cause GC"
 	sz > rootTableCount ifTrue:[sz := rootTableCount].
@@ -7105,7 +7880,7 @@ Interpreter >> primitiveRootTableAt [
 		root == nil] whileFalse:[index := index + 1].
 	"
 	| index |
-	self export: true.
+	<export: true>
 	index := self stackIntegerValue: 0.
 	self success: (index > 0 and:[index <= rootTableCount]).
 	successFlag ifTrue:[
@@ -7192,7 +7967,7 @@ Interpreter >> primitiveScanCharacters [
 Interpreter >> primitiveScreenDepth [
 	"Return a SmallInteger indicating the current depth of the OS screen. Negative values are used to imply LSB type pixel format an there is some support in the VM for handling either MSB or LSB"
 	| depth |
-	self export: true.
+	<export: true>
 	depth := self ioScreenDepth.
 	self failed ifTrue:[^self primitiveFail].
 	self pop: 1 thenPushInteger: depth.
@@ -7248,7 +8023,7 @@ Interpreter >> primitiveSetFullScreen [
 Interpreter >> primitiveSetGCBiasToGrow [
 	"Primitive. Indicate if the GC logic should have bias to grow"
 	| flag |
-	self export: true.
+	<export: true>
 	flag := self stackIntegerValue: 0.
 	successFlag ifTrue:[
 		gcBiasToGrow := flag.
@@ -7260,7 +8035,7 @@ Interpreter >> primitiveSetGCBiasToGrow [
 Interpreter >> primitiveSetGCBiasToGrowGCLimit [
 	"Primitive. If the GC logic has  bias to grow, set growth limit"
 	| value |
-	self export: true.
+	<export: true>
 	value := self stackIntegerValue: 0.
 	successFlag ifTrue:[
 		gcBiasToGrowGCLimit := value.
@@ -7273,7 +8048,7 @@ Interpreter >> primitiveSetGCBiasToGrowGCLimit [
 Interpreter >> primitiveSetGCSemaphore [
 	"Primitive. Indicate the semaphore to be signalled for upon garbage collection"
 	| index |
-	self export: true.
+	<export: true>
 	index := self stackIntegerValue: 0.
 	successFlag ifTrue:[
 		gcSemaphoreIndex := index.
@@ -7290,6 +8065,43 @@ Interpreter >> primitiveSetInterruptKey [
 	successFlag
 		ifTrue: [ interruptKeycode := keycode ]
 		ifFalse: [ self unPop: 1 ].
+]
+
+{ #category : #'I/O primitives' }
+Interpreter >> primitiveSetLogDirectory [
+	"Primitive. Set the VM's log directory"
+	| stringOop sz |
+	<export: true>
+	stringOop := self stackTop.
+	(self isBytes: stringOop) ifFalse:[^self success: false].
+	sz := self byteSizeOf: stringOop.
+	self ioSetLogDirectory: (self firstIndexableField: stringOop) OfSize: sz.
+	successFlag ifTrue:[self pop: self methodArgumentCount]
+]
+
+{ #category : #'I/O primitives' }
+Interpreter >> primitiveSetWindowLabel [
+	"Primitive. Set the OS window's label"
+	| labelOop sz |
+	<export: true>
+	labelOop := self stackTop.
+	(self isBytes: labelOop) ifFalse:[^self success: false].
+	sz := self byteSizeOf: labelOop.
+	self ioSetWindowLabel: (self firstIndexableField: labelOop) OfSize: sz.
+	successFlag ifTrue:[self pop: self methodArgumentCount]
+]
+
+{ #category : #'I/O primitives' }
+Interpreter >> primitiveSetWindowSize [
+	"Primitive. Answer the OS window's size (extent)"
+	| w h |
+	<export: true>
+	h := self stackIntegerValue: 0.
+	w := self self stackIntegerValue: 1.
+	successFlag ifTrue:[
+		self ioSetWindowWidth: w Height: h.
+		self pop: self methodArgumentCount.
+	].
 ]
 
 { #category : #'sound primitives' }
@@ -7393,18 +8205,18 @@ Interpreter >> primitiveSignalAtMilliseconds [
 		ifFalse: [self unPop: 2]
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveSine [
 
 	| rcvr |
-	self var: #rcvr type: 'double '.
+	<var: #rcvr type: 'double '>
 	rcvr := self popFloat.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'sin(rcvr)' inSmalltalk: [rcvr sin])]
 		ifFalse: [self unPop: 1]
 ]
 
-{ #category : #'array and stream primitives' }
+{ #category : #'array primitives' }
 Interpreter >> primitiveSize [
 	| rcvr sz |
 	rcvr := self stackTop.
@@ -7419,7 +8231,7 @@ Interpreter >> primitiveSize [
 { #category : #'system control primitives' }
 Interpreter >> primitiveSnapshot [
 "save a normal snapshot under the same name as it was loaded unless it has been renamed by the last primitiveImageName"
-	self inline: false.
+	<inline: false>
 	^self snapshot: false
 
 ]
@@ -7427,7 +8239,7 @@ Interpreter >> primitiveSnapshot [
 { #category : #'system control primitives' }
 Interpreter >> primitiveSnapshotEmbedded [
 "save an embedded snapshot"
-	self inline: false.
+	<inline: false>
 	^self snapshot: true
 ]
 
@@ -7456,15 +8268,59 @@ Interpreter >> primitiveSpecialObjectsOop [
 	self pop: 1 thenPush: specialObjectsOop.
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveSquareRoot [
 	| rcvr |
-	self var: #rcvr type: 'double '.
+	<var: #rcvr type: 'double '>
 	rcvr := self popFloat.
 	self success: rcvr >= 0.0.
 	successFlag
 		ifTrue: [self pushFloat: (self cCode: 'sqrt(rcvr)' inSmalltalk: [rcvr sqrt])]
 		ifFalse: [self unPop: 1]
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveStartVMProfiling [
+	"Primitive. Start the VM profiler."
+	self cCode: 'ioControlProfile(1,0,0,0,0)'.
+	self pop: argumentCount
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveStopVMProfiling [
+	"Primitive. Stop the VM profiler and either copy the histogram data into the
+	 supplied arguments, if they're non-nil.  Fail if the arguments are not of the right type or size."
+	| vmHistArrayOrNil vmHist vmBins easHistArrayOrNil easHist easBins |
+	<var: #vmHist type: #'long *'>
+	<var: #vmBins type: #long>
+	<var: #easHist type: #'long *'>
+	<var: #easBins type: #long>
+	self success: argumentCount = 2.
+	vmHistArrayOrNil := self stackObjectValue: 1.
+	easHistArrayOrNil := self stackObjectValue: 0.
+	successFlag ifFalse:
+		[^nil].
+	"Both args must be either nil or arrays.  If they're arrays and the wrong size we incorrectly stop profiling."
+	((vmHistArrayOrNil = nilObj or: [(self fetchClassOfNonInt: vmHistArrayOrNil) = (self splObj: ClassArray)])
+	 and: [(self fetchClassOfNonInt: vmHistArrayOrNil) = (self fetchClassOfNonInt: easHistArrayOrNil)]) ifFalse:
+		[^self primitiveFail].
+	self cCode: 'ioControlProfile(0,&vmHist,&vmBins,&easHist,&easBins)'
+		inSmalltalk: [vmHist := vmBins := easHist := easBins := 0].
+	vmHistArrayOrNil ~= nilObj ifTrue:
+		[((self fetchWordLengthOf: vmHistArrayOrNil) = vmBins
+		  and: [(self fetchWordLengthOf: easHistArrayOrNil) = easBins]) ifFalse:
+			[^self primitiveFail].
+		0 to: vmBins - 1 do:
+			[:i|
+			self storePointerUnchecked: i
+				ofObject: vmHistArrayOrNil
+				withValue: (self integerObjectOf: (vmHist at: i))].
+		0 to: easBins - 1 do:
+			[:i|
+			self storePointerUnchecked: i
+				ofObject: easHistArrayOrNil
+				withValue: (self integerObjectOf: (easHist at: i))]].
+	self pop: argumentCount
 ]
 
 { #category : #'image segment in/out' }
@@ -7483,6 +8339,19 @@ To be specific, there are two similar two-part tables, the outpointer array, and
 In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outpointers must also be nilled out (since the garbage in the high half will not have been discarded."
 
 	| outPointerArray segmentWordArray savedYoungStart lastOut lastIn firstIn lastSeg endSeg segOop fieldPtr fieldOop mapOop doingClass lastPtr extraSize hdrTypeBits arrayOfRoots hdrBaseIn hdrBaseOut header firstOut versionOffset |
+
+	<var: #firstIn type: 'usqInt'>
+	<var: #lastIn type: 'usqInt'>
+	<var: #firstOut type: 'usqInt'>
+	<var: #lastOut type: 'usqInt'>
+	<var: #hdrBaseIn type: 'usqInt'>
+	<var: #hdrBaseOut type: 'usqInt'>
+	<var: #lastSeg type: 'usqInt'>
+	<var: #endSeg type: 'usqInt'>
+	<var: #fieldPtr type: 'usqInt'>
+	<var: #lastPtr type: 'usqInt'>
+	<var: #segOop type: 'usqInt'>
+	<var: #savedYoungStart type: 'usqInt'>
 
 	outPointerArray := self stackTop.
 	segmentWordArray := self stackValue: 1.
@@ -7651,7 +8520,7 @@ In case of either success or failure, the headers must be restored.  In the even
 		put: endSeg - lastSeg - extraSize + hdrTypeBits.
 
 	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
-	self pop: 3.  "...leaving the reciever on the stack as return value"
+	self pop: 3.  "...leaving the receiver on the stack as return value"
 
 ]
 
@@ -7662,29 +8531,29 @@ Interpreter >> primitiveStoreStackp [
 	| ctxt newStackp stackp |
 	ctxt := self stackValue: 1.
 	newStackp := self stackIntegerValue: 0.
-	self success: newStackp >= 0.
-	self success: newStackp <= (LargeContextSize - BaseHeaderSize // BytesPerWord - CtxtTempFrameStart).
+	self success: (self oop: newStackp isGreaterThanOrEqualTo: 0).
+	self success: (self oop: newStackp isLessThanOrEqualTo: (LargeContextSize - BaseHeaderSize // BytesPerWord - CtxtTempFrameStart)).
 	successFlag ifFalse: [^ self primitiveFail].
 	stackp := self fetchStackPointerOf: ctxt.
-	newStackp > stackp ifTrue: ["Nil any newly accessible cells"
+	(self oop: newStackp isGreaterThan: stackp) ifTrue: ["Nil any newly accessible cells"
 			stackp + 1 to: newStackp do: [:i | self storePointer: i + CtxtTempFrameStart - 1 ofObject: ctxt withValue: nilObj]].
 	self storeStackPointerValue: newStackp inContext: ctxt.
 	self pop: 1
 ]
 
-{ #category : #'array and stream primitives' }
+{ #category : #'array primitives' }
 Interpreter >> primitiveStringAt [
 
 	self commonAt: true.
 ]
 
-{ #category : #'array and stream primitives' }
+{ #category : #'array primitives' }
 Interpreter >> primitiveStringAtPut [
 
 	self commonAtPut: true.
 ]
 
-{ #category : #'array and stream primitives' }
+{ #category : #'array primitives' }
 Interpreter >> primitiveStringReplace [
 	" 
 	<array> primReplaceFrom: start to: stop with: replacement 
@@ -7745,23 +8614,78 @@ Interpreter >> primitiveStringReplace [
 	self pop: argumentCount "leave rcvr on stack"
 ]
 
-{ #category : #'arithmetic primitives' }
+{ #category : #'arithmetic integer primitives' }
 Interpreter >> primitiveSubtract [
 
 	self pop2AndPushIntegerIfOK: (self stackIntegerValue: 1) - (self stackIntegerValue: 0)
 ]
 
+{ #category : #'arithmetic largeint primitives' }
+Interpreter >> primitiveSubtractLargeIntegers [
+	"Primitive arithmetic operations for large integers in 64 bit range"
+	| integerRcvr integerArg integerArgNegated result oopResult |
+	<export: true>
+	<var: 'integerRcvr' type: 'sqLong'>
+	<var: 'integerArg' type: 'sqLong'>
+	<var: 'integerArgNegated' type: 'sqLong'>
+	<var: 'result' type: 'sqLong'>
+
+	integerArg := self signed64BitValueOf: (self stackValue: 0).
+	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
+	successFlag ifFalse:
+		[^nil].
+
+	"In the test for the argument being most -ve we would
+	 have to check for zero if we don't do so here.
+	 So do so here and short-circuit the whole subtraction."
+	integerArg = 0
+		ifTrue: [result := integerRcvr]
+		ifFalse:
+			["Reverse the argument so that we can recycle the overflow code from addition.
+			 But the most -ve 64-bit value can overflow, so check; 0 - most -ve = most -ve"
+			integerArgNegated := 0 - integerArg.
+			integerArgNegated = integerArg ifTrue:
+				[^self primitiveFail].
+
+			"Compute the preliminary result (which may overflow)"
+			result := integerRcvr + integerArgNegated.
+
+			"Now check overflow conditions. First is whether rcvr and arg are of the same sign.
+			 If they are we need to check for overflow more carefully."
+			(integerRcvr bitXor: integerArgNegated) < 0 ifFalse:
+				"Second is whether rcvr and result are of the same sign. If not, we have an overflow."
+				[(integerRcvr bitXor: result) < 0 ifTrue:
+					[^self primitiveFail]]].
+
+	oopResult := self signed64BitIntegerFor: result.
+	successFlag ifTrue:
+		[self pop: 2 thenPush: oopResult]
+]
+
 { #category : #'process primitives' }
 Interpreter >> primitiveSuspend [
-
-	| activeProc |
+	"Primitive. Suspend the receiver, aProcess such that it can be executed again
+	by sending #resume. If the given process is not currently running, take it off
+	its corresponding list. The primitive returns the list the receiver was previously on."
+	| process activeProc myList |
+	process := self stackTop.
 	activeProc := self fetchPointer: ActiveProcessIndex
 						 ofObject: self schedulerPointer.
-	self success: self stackTop = activeProc.
-	successFlag ifTrue: [
+	process == activeProc ifTrue:[
 		self pop: 1.
 		self push: nilObj.
 		self transferTo: self wakeHighestPriority.
+	] ifFalse:[
+		myList := self fetchPointer: MyListIndex ofObject: process.
+		"XXXX Fixme. We should really check whether myList is a kind of LinkedList or not
+		but we can't easily so just do a quick check for nil which is the most common case."
+		myList == self nilObject ifTrue:[^self primitiveFail].
+		self removeProcess: process fromList: myList.
+		successFlag ifTrue:[
+			self storePointer: MyListIndex ofObject: process withValue: self nilObject.
+			self pop: 1.
+			self push: myList.
+		].
 	].
 ]
 
@@ -7797,10 +8721,10 @@ Interpreter >> primitiveTestDisplayDepth [
 		self pushBool: okay].
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveTimesTwoPower [
 	| rcvr arg |
-	self var: #rcvr type: 'double '.
+	<var: #rcvr type: 'double '>
 	arg := self popInteger.
 	rcvr := self popFloat.
 	successFlag
@@ -7808,12 +8732,12 @@ Interpreter >> primitiveTimesTwoPower [
 		ifFalse: [ self unPop: 2 ].
 ]
 
-{ #category : #'float primitives' }
+{ #category : #'arithmetic float primitives' }
 Interpreter >> primitiveTruncated [ 
 	| rcvr frac trunc |
-	self var: #rcvr type: 'double '.
-	self var: #frac type: 'double '.
-	self var: #trunc type: 'double '.
+	<var: #rcvr type: 'double '>
+	<var: #frac type: 'double '>
+	<var: #trunc type: 'double '>
 	rcvr := self popFloat.
 	successFlag ifTrue:
 		[self cCode: 'frac = modf(rcvr, &trunc)'
@@ -7877,52 +8801,70 @@ Interpreter >> primitiveVMParameter [
 		33	number of root table entries used for current IGC/FGC (read-only)
 		34	number of allocations done before current IGC/FGC (read-only)
 		35	number of survivor objects after current IGC/FGC (read-only)
-		36  millisecond clock when current IGC/FGC completed (read-only)
-		37  number of marked objects for Roots of the world, not including Root Table entries for current IGC/FGC (read-only)
+		36	millisecond clock when current IGC/FGC completed (read-only)
+		37	number of marked objects for Roots of the world, not including Root Table entries for current IGC/FGC (read-only)
 		38  milliseconds taken by current IGC  (read-only)
 		39  Number of finalization signals for Weak Objects pending when current IGC/FGC completed (read-only)
-		40 BytesPerWord for this image
+		40	BytesPerWord for this image
+		41  imageFormatVersion for the VM
+		42	nil (number of stack pages in use in Stack VM)
+		43	nil (desired number of stack pages in Stack VM)
+		44	nil (size of eden, in bytes in Stack VM)
+		45	nil (desired size of eden in Stack VM)
+		46-55 nil; reserved for VM parameters that persist in the image (such as eden above)
+		56	number of process switches since startup (read-only)
+		57	number of ioProcessEvents calls since startup (read-only)
+		58	number of ForceInterruptCheck calls since startup (read-only)
+		59	number of check event calls since startup (read-only)
 		
 	Note: Thanks to Ian Piumarta for this primitive."
 
 	| mem paramsArraySize result arg index |
+	<var: #mem type: #usqInt>
 	mem := self startOfMemory.
-	paramsArraySize := 40.
+	paramsArraySize := 59.
 	argumentCount = 0 ifTrue: [
 		result := self instantiateClass: (self splObj: ClassArray) indexableSize: paramsArraySize.
-		0 to: paramsArraySize - 1 do:
-			[:i | self storePointer: i ofObject: result withValue: ConstZero].
-		self storePointer: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
-		self storePointer: 1		ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
-		self storePointer: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
-		self storePointer: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
-		self storePointer: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
-		self storePointer: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
-		self storePointer: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
-		self storePointer: 7	ofObject: result withValue: (self integerObjectOf: statFullGCMSecs).
-		self storePointer: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
-		self storePointer: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCMSecs).
-		self storePointer: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
-		self storePointer: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
-		self storePointer: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
-		self storePointer: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
-		self storePointer: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
-		self storePointer: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
-		self storePointer: 25	ofObject: result withValue: (self integerObjectOf: interruptChecksEveryNms).
-		self storePointer: 26	ofObject: result withValue: (self integerObjectOf: statMarkCount).
-		self storePointer: 27	ofObject: result withValue: (self integerObjectOf: statSweepCount).
-		self storePointer: 28	ofObject: result withValue: (self integerObjectOf: statMkFwdCount).
-		self storePointer: 29	ofObject: result withValue: (self integerObjectOf: statCompMoveCount).
-		self storePointer: 30	ofObject: result withValue: (self integerObjectOf: statGrowMemory).
-		self storePointer: 31	ofObject: result withValue: (self integerObjectOf: statShrinkMemory).
-		self storePointer: 32	ofObject: result withValue: (self integerObjectOf: statRootTableCount).
-		self storePointer: 33	ofObject: result withValue: (self integerObjectOf: statAllocationCount).
-		self storePointer: 34	ofObject: result withValue: (self integerObjectOf: statSurvivorCount).
-		self storePointer: 35	ofObject: result withValue: (self integerObjectOf: statGCTime).
-		self storePointer: 36	ofObject: result withValue: (self integerObjectOf: statSpecialMarkCount).
-		self storePointer: 37	ofObject: result withValue: (self integerObjectOf: statIGCDeltaTime).
-		self storePointer: 38	ofObject: result withValue: (self integerObjectOf: statpendingFinalizationSignals).
-		self storePointer: 39	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
+		self storePointerUnchecked: 0	ofObject: result withValue: (self integerObjectOf: youngStart - mem).
+		self storePointerUnchecked: 1	ofObject: result withValue: (self integerObjectOf: freeBlock - mem).
+		self storePointerUnchecked: 2	ofObject: result withValue: (self integerObjectOf: endOfMemory - mem).
+		self storePointerUnchecked: 3	ofObject: result withValue: (self integerObjectOf: allocationCount).
+		self storePointerUnchecked: 4	ofObject: result withValue: (self integerObjectOf: allocationsBetweenGCs).
+		self storePointerUnchecked: 5	ofObject: result withValue: (self integerObjectOf: tenuringThreshold).
+		self storePointerUnchecked: 6	ofObject: result withValue: (self integerObjectOf: statFullGCs).
+		self storePointerUnchecked: 7	ofObject: result withValue: (self integerObjectOf: statFullGCUsecs + 500 // 1000).
+		self storePointerUnchecked: 8	ofObject: result withValue: (self integerObjectOf: statIncrGCs).
+		self storePointerUnchecked: 9	ofObject: result withValue: (self integerObjectOf: statIncrGCUsecs + 500 // 1000).
+		self storePointerUnchecked: 10	ofObject: result withValue: (self integerObjectOf: statTenures).
+		11 to: 19 do:
+			[:i | self storePointerUnchecked: i ofObject: result withValue: ConstZero].
+		self storePointerUnchecked: 20	ofObject: result withValue: (self integerObjectOf: rootTableCount).
+		self storePointerUnchecked: 21	ofObject: result withValue: (self integerObjectOf: statRootTableOverflows).
+		self storePointerUnchecked: 22	ofObject: result withValue: (self integerObjectOf: extraVMMemory).
+		self storePointerUnchecked: 23	ofObject: result withValue: (self integerObjectOf: shrinkThreshold).
+		self storePointerUnchecked: 24	ofObject: result withValue: (self integerObjectOf: growHeadroom).
+		self storePointerUnchecked: 25	ofObject: result withValue: (self integerObjectOf: interruptChecksEveryNms).
+		self storePointerUnchecked: 26	ofObject: result withValue: (self integerObjectOf: statMarkCount).
+		self storePointerUnchecked: 27	ofObject: result withValue: (self integerObjectOf: statSweepCount).
+		self storePointerUnchecked: 28	ofObject: result withValue: (self integerObjectOf: statMkFwdCount).
+		self storePointerUnchecked: 29	ofObject: result withValue: (self integerObjectOf: statCompMoveCount).
+		self storePointerUnchecked: 30	ofObject: result withValue: (self integerObjectOf: statGrowMemory).
+		self storePointerUnchecked: 31	ofObject: result withValue: (self integerObjectOf: statShrinkMemory).
+		self storePointerUnchecked: 32	ofObject: result withValue: (self integerObjectOf: statRootTableCount).
+		self storePointerUnchecked: 33	ofObject: result withValue: (self integerObjectOf: statAllocationCount).
+		self storePointerUnchecked: 34	ofObject: result withValue: (self integerObjectOf: statSurvivorCount).
+		self storePointerUnchecked: 35	ofObject: result withValue: (self integerObjectOf: statGCEndTime).
+		self storePointerUnchecked: 36	ofObject: result withValue: (self integerObjectOf: statSpecialMarkCount).
+		self storePointerUnchecked: 37	ofObject: result withValue: (self integerObjectOf: statIGCDeltaUsecs + 500 // 1000).
+		self storePointerUnchecked: 38	ofObject: result withValue: (self integerObjectOf: statPendingFinalizationSignals).
+		self storePointerUnchecked: 39	ofObject: result withValue: (self integerObjectOf: BytesPerWord).
+		self storePointerUnchecked: 40	ofObject: result withValue: (self integerObjectOf: self imageFormatVersion).
+		41 to: 54 do:
+			[:i | self storePointerUnchecked: i ofObject: result withValue: nilObj].
+		self storePointerUnchecked: 55	ofObject: result withValue: (self integerObjectOf: statProcessSwitch).
+		self storePointerUnchecked: 56	ofObject: result withValue: (self integerObjectOf: statIOProcessEvents).
+		self storePointerUnchecked: 57	ofObject: result withValue: (self integerObjectOf: statQuickCheckForEvents).
+		self storePointerUnchecked: 58	ofObject: result withValue: (self integerObjectOf: statCheckForEvents).
 		self pop: 1 thenPush: result.
 		^nil].
 
@@ -7938,31 +8880,39 @@ Interpreter >> primitiveVMParameter [
 		arg = 5		ifTrue: [result := allocationsBetweenGCs].
 		arg = 6		ifTrue: [result := tenuringThreshold].
 		arg = 7		ifTrue: [result := statFullGCs].
-		arg = 8		ifTrue: [result := statFullGCMSecs].
+		arg = 8		ifTrue: [result := statFullGCUsecs + 500 // 1000].
 		arg = 9		ifTrue: [result := statIncrGCs].
-		arg = 10		ifTrue: [result := statIncrGCMSecs].
-		arg = 11		ifTrue: [result := statTenures].
-		((arg >= 12) and: [arg <= 20]) ifTrue: [result := 0].
-		arg = 21		ifTrue: [result := rootTableCount].
-		arg = 22		ifTrue: [result := statRootTableOverflows].
-		arg = 23		ifTrue: [result := extraVMMemory].
-		arg = 24		ifTrue: [result := shrinkThreshold].
-		arg = 25		ifTrue: [result := growHeadroom].
-		arg = 26		ifTrue: [result := interruptChecksEveryNms]. 
-		arg = 27		ifTrue: [result := statMarkCount]. 
-		arg = 28		ifTrue: [result := statSweepCount]. 
-		arg = 29		ifTrue: [result := statMkFwdCount]. 
-		arg = 30		ifTrue: [result := statCompMoveCount]. 
-		arg = 31		ifTrue: [result := statGrowMemory]. 
-		arg = 32		ifTrue: [result := statShrinkMemory]. 
-		arg = 33		ifTrue: [result := statRootTableCount]. 
-		arg = 34		ifTrue: [result := statAllocationCount]. 
-		arg = 35		ifTrue: [result := statSurvivorCount]. 
-		arg = 36  	ifTrue: [result := statGCTime]. 
+		arg = 10	ifTrue: [result := statIncrGCUsecs + 500 // 1000].
+		arg = 11	ifTrue: [result := statTenures].
+		(arg >= 12
+		 and: [arg <= 20]) ifTrue: [result := 0].
+		arg = 21	ifTrue: [result := rootTableCount].
+		arg = 22	ifTrue: [result := statRootTableOverflows].
+		arg = 23	ifTrue: [result := extraVMMemory].
+		arg = 24	ifTrue: [result := shrinkThreshold].
+		arg = 25	ifTrue: [result := growHeadroom].
+		arg = 26	ifTrue: [result := interruptChecksEveryNms]. 
+		arg = 27	ifTrue: [result := statMarkCount]. 
+		arg = 28	ifTrue: [result := statSweepCount]. 
+		arg = 29	ifTrue: [result := statMkFwdCount]. 
+		arg = 30	ifTrue: [result := statCompMoveCount]. 
+		arg = 31	ifTrue: [result := statGrowMemory]. 
+		arg = 32	ifTrue: [result := statShrinkMemory]. 
+		arg = 33	ifTrue: [result := statRootTableCount]. 
+		arg = 34	ifTrue: [result := statAllocationCount]. 
+		arg = 35	ifTrue: [result := statSurvivorCount]. 
+		arg = 36  	ifTrue: [result := statGCEndTime]. 
 		arg = 37  	ifTrue: [result := statSpecialMarkCount]. 
-		arg = 38  	ifTrue: [result := statIGCDeltaTime]. 
-		arg = 39  	ifTrue: [result := statpendingFinalizationSignals]. 
-		arg = 40  	ifTrue: [result := BytesPerWord]. 
+		arg = 38  	ifTrue: [result := statIGCDeltaUsecs + 500 // 1000]. 
+		arg = 39  	ifTrue: [result := statPendingFinalizationSignals]. 
+		arg = 40  	ifTrue: [result := BytesPerWord].
+		arg = 41  	ifTrue: [result := self imageFormatVersion].
+		(arg >= 42
+		 and: [arg <= 55]) ifTrue: [result := nilObj].
+		arg = 56  	ifTrue: [result := statProcessSwitch].
+		arg = 57  	ifTrue: [result := statIOProcessEvents].
+		arg = 58  	ifTrue: [result := statQuickCheckForEvents].
+		arg = 59  	ifTrue: [result := statCheckForEvents].
 		self pop: 2 thenPush: (self integerObjectOf: result).
 		^nil].
 
@@ -8024,6 +8974,72 @@ Interpreter >> primitiveVMPath [
 
 ]
 
+{ #category : #'process primitives' }
+Interpreter >> primitiveVMProfileInfoInto [
+	"Primitive. Answer whether the profiler is running or not.
+	 If the argument is an Array of suitable size fill it with the following information:
+		1. the addresses of the first element of the VM histogram (the first address in the executable)
+		2. the address following the last element (the last address in the executable, excluding dynamically linked libraries)
+		3. the size of the VM histogram in bins (each bin is a 4 byte unsigned long)
+		4. the size of the VM histogram in bins (each bin is a 4 byte unsigned long)"
+	| info running exeStart exeLimit vmBins easBins |
+	<var: #exeStart type: #'char *'>
+	<var: #exeLimit type: #'char *'>
+	<var: #vmBins type: #long>
+	<var: #easBins type: #long>
+	self success: argumentCount = 1.
+	successFlag ifTrue:
+		[info := self stackObjectValue: 0.
+		 info ~= nilObj ifTrue:
+			[self assertClassOf: info is: (self splObj: ClassArray).
+			 self success: (self fetchWordLengthOf: info) >= 4]].
+	successFlag ifFalse:
+		[^nil].
+	
+	self cCode: 'ioProfileStatus(&running,&exeStart,&exeLimit,0,&vmBins,0,&easBins)'
+		inSmalltalk: [running := exeStart := exeLimit := vmBins := easBins := 0].
+	info ~= nilObj ifTrue:
+		[self storePointerUnchecked: 0
+			ofObject: info
+			withValue: (self integerObjectOf: (self oopForPointer: exeStart)).
+		self storePointerUnchecked: 1
+			ofObject: info
+			withValue: (self integerObjectOf: (self oopForPointer: exeLimit)).
+		self storePointerUnchecked: 2
+			ofObject: info
+			withValue: (self integerObjectOf: vmBins).
+		self storePointerUnchecked: 3
+			ofObject: info
+			withValue: (self integerObjectOf: easBins)].
+	self pop: 2 thenPushBool: running
+]
+
+{ #category : #'process primitives' }
+Interpreter >> primitiveVMProfileSamplesInto [
+	"Primitive.
+	 0 args: Answer whether the VM Profiler is running or not.
+	 1 arg:	Copy the sample data into the supplied argument, which must be a Bitmap
+			of suitable size. Answer the number of samples copied into the buffer."
+	| sampleBuffer sampleBufferAddress running bufferSize numSamples |
+	<var: #bufferSize type: #long>
+	<var: #sampleBufferAddress type: #'unsigned long *'>
+	self cCode: 'ioNewProfileStatus(&running,&bufferSize)'
+		inSmalltalk: [running := false. bufferSize := 0].
+	argumentCount = 0 ifTrue:
+		[^self pop: 1 thenPushBool: running].
+	self success: argumentCount = 1.
+	successFlag ifTrue:
+		[sampleBuffer := self stackObjectValue: 0.
+		 self assertClassOf: sampleBuffer is: (self splObj: ClassBitmap).
+		 self success: (self fetchWordLengthOf: sampleBuffer) >= bufferSize].
+	successFlag ifFalse:
+		[^nil].
+	sampleBufferAddress := self firstFixedField: sampleBuffer.
+	numSamples := self cCode: 'ioNewProfileSamplesInto(sampleBufferAddress)'
+						inSmalltalk: [sampleBufferAddress := sampleBufferAddress].
+	self pop: argumentCount + 1 thenPushInteger: numSamples
+]
+
 { #category : #'control primitives' }
 Interpreter >> primitiveValue [
 	| blockContext blockArgumentCount initialIP |
@@ -8051,7 +9067,7 @@ Interpreter >> primitiveValue [
 { #category : #'control primitives' }
 Interpreter >> primitiveValueUninterruptably [
 	"The only purpose of this primitive is to indicate that the new EH mechanisms are supported."
-	self inline: false.
+	<inline: false>
 	^self primitiveValue
 ]
 
@@ -8130,7 +9146,7 @@ Interpreter >> primitiveYield [
 Interpreter >> print: s [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 
-	self var: #s type: 'char *'.
+	<var: #s type: 'char *'>
 	self cCode: 'printf("%s", s)'.
 ]
 
@@ -8143,11 +9159,11 @@ Interpreter >> printAllStacks [
 	self cr.
 	self printCallStackOf: activeContext. "first the active context"
 	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:[
+	[self oop: oop isLessThan: endOfMemory] whileTrue:[
 		(self fetchClassOf: oop) == self classSemaphore ifTrue:[
-			self cr.
 			proc := self fetchPointer: FirstLinkIndex ofObject: oop.
 			[proc == self nilObject] whileFalse:[
+				self cr.
 				self printNameOfClass: (self fetchClassOf: proc) count: 5.
 				self cr.
 				ctx := self fetchPointer: SuspendedContextIndex ofObject: proc.
@@ -8160,14 +9176,14 @@ Interpreter >> printAllStacks [
 
 { #category : #'debug printing' }
 Interpreter >> printCallStack [
-	^self printCallStackOf: activeContext
+	self printCallStackOf: activeContext
 ]
 
 { #category : #'debug printing' }
 Interpreter >> printCallStackOf: aContext [
 
 	| ctxt home methClass methodSel message |
-	self inline: false.
+	<inline: false>
 	ctxt := aContext.
 	[ctxt = nilObj] whileFalse: [
 		(self fetchClassOf: ctxt) = (self splObj: ClassBlockContext)
@@ -8208,15 +9224,28 @@ Interpreter >> printChar: aByte [
 ]
 
 { #category : #'debug printing' }
+Interpreter >> printHex: n [
+	"Print n in hex,  in the form '    0x1234', padded to a width of 10 characters
+	 in 32-bits ('0x' + 8 nibbles) or 18 characters in 64-bits ('0x' + 16 nibbles)"
+	<api>
+	| len buf |
+	<var: #buf declareC: 'char buf[35]'> "large enough for a 64-bit value in hex plus the null plus 16 spaces"
+	self cCode: 'memset(buf,'' '',34)' inSmalltalk: [buf := 'doh!'].
+	len := self cCode: 'sprintf(buf + 2 + 2 * BytesPerWord, "0x%lx", (unsigned long)(n))'.
+	self cCode: 'printf("%s", buf + len)'.
+	len touch: buf
+]
+
+{ #category : #'debug printing' }
 Interpreter >> printNameOfClass: classOop count: cnt [
 	"Details: The count argument is used to avoid a possible infinite recursion if classOop is a corrupted object."
 
-	cnt <= 0 ifTrue: [ ^ self print: 'bad class' ].
-	(self sizeBitsOf: classOop) = (7 * BytesPerWord)	"(Metaclass instSize+1 * 4)"
-		ifTrue: [self printNameOfClass: (self fetchPointer: 5 "thisClass" ofObject: classOop) 
-					count: cnt - 1.
+	cnt <= 0 ifTrue: [^self print: 'bad class'].
+	((self sizeBitsOf: classOop) = metaclassSizeBytes
+	  and: [metaclassSizeBytes >= (6 * BytesPerWord)])	"(Metaclass instSize * 4)"
+		ifTrue: [self printNameOfClass: (self fetchPointer: 5 "thisClass" ofObject: classOop) count: cnt - 1.
 				self print: ' class']
-	ifFalse: [self printStringOf: (self fetchPointer: 6 "name" ofObject: classOop)]
+		ifFalse: [self printStringOf: (self fetchPointer: 6 "name" ofObject: classOop)]
 ]
 
 { #category : #'debug printing' }
@@ -8224,6 +9253,33 @@ Interpreter >> printNum: n [
 	"For testing in Smalltalk, this method should be overridden in a subclass."
 
 	self cCode: 'printf("%ld", (long) n)'.
+]
+
+{ #category : #'debug printing' }
+Interpreter >> printOop: oop [
+
+	| fmt lastIndex |
+	<inline: false>
+	self printNum: oop.
+	(self isIntegerObject: oop) ifTrue:
+		[^self cCode: 'printf("=%ld\n", integerValueOf(oop))' inSmalltalk: [self shortPrint: oop]].
+	self print: ': a(n) '.
+	self printNameOfClass: (self fetchClassOf: oop) count: 5.
+	self cr.
+	fmt := self formatOf: oop.
+	(fmt > 4 and: [fmt < 12]) ifTrue:
+		[^self printStringOf: oop].
+	lastIndex := 64 min: ((self lastPointerOf: oop) / BytesPerWord).
+	lastIndex > 0 ifTrue:
+		[1 to: lastIndex do:
+			[:index|
+			self cCode: 'printf(" %ld", fetchPointerofObject(index - 1, oop))'
+				inSmalltalk: [self space; print: (self fetchPointer: index - 1 ofObject: oop) printString; space.
+							 self print: (self shortPrint: (self fetchPointer: index - 1 ofObject: oop))].
+			(index \\ 8) = 0 ifTrue:
+				[self cr]].
+		(lastIndex \\ 8) = 0 ifFalse:
+			[self cr]]
 ]
 
 { #category : #'debug printing' }
@@ -8240,32 +9296,17 @@ Interpreter >> printStringOf: oop [
 		self printChar: (self fetchByte: i ofObject: oop).
 		i := i + 1.
 	].
+	self cCode: 'fflush(stdout)' inSmalltalk: []
 ]
 
 { #category : #'debug printing' }
 Interpreter >> printUnbalancedStack: primIdx [
-	self inline: false.
+	<inline: false>
 	self print: 'Stack unbalanced after '.
 	successFlag 
 		ifTrue:[self print:'successful primitive '] 
 		ifFalse:[self print: 'failed primitive '].
 	self printNum: primIdx.
-	self cr.
-		
-]
-
-{ #category : #'debug printing' }
-Interpreter >> printUnbalancedStackFromNamedPrimitive [
-	| lit |
-	self inline: false.
-	self print: 'Stack unbalanced after '.
-	successFlag 
-		ifTrue:[self print:'successful '] 
-		ifFalse:[self print: 'failed '].
-	lit := self literal: 0 ofMethod: newMethod.
-	self printStringOf: (self fetchPointer: 1 ofObject: lit).
-	self print:' in '.
-	self printStringOf: (self fetchPointer: 0 ofObject: lit).
 	self cr.
 		
 ]
@@ -8294,6 +9335,41 @@ Interpreter >> pushBool: trueOrFalse [
 	trueOrFalse
 		ifTrue: [ self push: trueObj ]
 		ifFalse: [ self push: falseObj ].
+]
+
+{ #category : #'stack bytecodes' }
+Interpreter >> pushClosureCopyCopiedValuesBytecode [
+	"The compiler has pushed the values to be copied, if any.  Find numArgs and numCopied in the byte following.
+	 Create a Closure with space for the copiedValues and pop numCopied values off the stack into the closure.
+	 Set numArgs as specified, and set startpc to the pc following the block size and jump over that code."
+	| newClosure numArgsNumCopied numArgs numCopied blockSize |
+	numArgsNumCopied := self fetchByte.
+	numArgs := numArgsNumCopied bitAnd: 16rF.
+	numCopied := numArgsNumCopied bitShift: -4.
+	"Split blockSize := (self fetchByte * 256) + self fetchByte. into two because evaluation order in C is undefined."
+	blockSize := self fetchByte << 8.
+	blockSize := blockSize + self fetchByte.
+	self externalizeIPandSP. "This is a pain."
+	newClosure := self
+					closureNumArgs: numArgs
+					instructionPointer: ((self cCoerce: localIP to: 'sqInt') + 2 - (method+BaseHeaderSize))
+					numCopiedValues: numCopied.
+	self internalizeIPandSP.
+	"Assume: have just allocated a new closure; it must be young. Thus, can use unchecked stores."
+	self storePointerUnchecked: ClosureOuterContextIndex ofObject: newClosure withValue: activeContext.
+	reclaimableContextCount := 0. "The closure refers to thisContext so it can't be reclaimed."
+	numCopied > 0 ifTrue:
+		[0 to: numCopied - 1 do:
+			[:i|
+			"Assume: have just allocated a new BlockClosure; it must be young.
+			 Thus, can use unchecked stores."
+			 self storePointerUnchecked: i + ClosureFirstCopiedValueIndex
+				ofObject: newClosure
+				withValue: (self internalStackValue: numCopied - i - 1)].
+		 self internalPop: numCopied].
+	localIP := localIP + blockSize.
+	self fetchNextBytecode.
+	self internalPush: newClosure
 ]
 
 { #category : #'stack bytecodes' }
@@ -8355,13 +9431,14 @@ Interpreter >> pushConstantZeroBytecode [
 { #category : #'stack bytecodes' }
 Interpreter >> pushFloat: f [
 
-	self var: #f type: 'double '.
+	<var: #f type: 'double '>
 	self push: (self floatObjectOf: f).
 ]
 
 { #category : #contexts }
 Interpreter >> pushInteger: integerValue [
 	self push: (self integerObjectOf: integerValue).
+	^nil
 ]
 
 { #category : #'stack bytecodes' }
@@ -8372,11 +9449,10 @@ Interpreter >> pushLiteralConstant: literalIndex [
 
 { #category : #'stack bytecodes' }
 Interpreter >> pushLiteralConstantBytecode [
-
+	<expandCases>
 	self fetchNextBytecode.
 	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F).
-
+	self pushLiteralConstant: (currentBytecode bitAnd: 16r1F)
 ]
 
 { #category : #'stack bytecodes' }
@@ -8388,11 +9464,29 @@ Interpreter >> pushLiteralVariable: literalIndex [
 
 { #category : #'stack bytecodes' }
 Interpreter >> pushLiteralVariableBytecode [
-
+	<expandCases>
 	self fetchNextBytecode.
 	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F).
+	self pushLiteralVariable: (currentBytecode bitAnd: 16r1F)
+]
 
+{ #category : #'stack bytecodes' }
+Interpreter >> pushNewArrayBytecode [
+	| size popValues array |
+	size := self fetchByte.
+	popValues := size > 127.
+	size := size bitAnd: 127.
+	self fetchNextBytecode.
+	self externalizeIPandSP.
+	array := self instantiateClass: (self splObj: ClassArray) indexableSize: size.
+	self internalizeIPandSP.
+	popValues ifTrue:
+		[0 to: size - 1 do:
+			[:i|
+			"Assume: have just allocated a new Array; it must be young. Thus, can use unchecked stores."
+			self storePointerUnchecked: i ofObject: array withValue: (self internalStackValue: size - i - 1)].
+		 self internalPop: size].
+	self internalPush: array
 ]
 
 { #category : #'stack bytecodes' }
@@ -8412,11 +9506,26 @@ Interpreter >> pushReceiverVariable: fieldIndex [
 
 { #category : #'stack bytecodes' }
 Interpreter >> pushReceiverVariableBytecode [
-
+	<expandCases>
 	self fetchNextBytecode.
 	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushReceiverVariable: (currentBytecode bitAnd: 16rF).
+	self pushReceiverVariable: (currentBytecode bitAnd: 16rF)
+]
 
+{ #category : #'stack bytecodes' }
+Interpreter >> pushRemoteTemp: index inVectorAt: tempVectorIndex [
+	| tempVector |
+	tempVector := self temporary: tempVectorIndex.
+	self internalPush: (self fetchPointer: index ofObject: tempVector)
+]
+
+{ #category : #'stack bytecodes' }
+Interpreter >> pushRemoteTempLongBytecode [
+	| remoteTempIndex tempVectorIndex |
+	remoteTempIndex := self fetchByte.
+	tempVectorIndex := self fetchByte.
+	self fetchNextBytecode.
+	self pushRemoteTemp: remoteTempIndex inVectorAt: tempVectorIndex
 ]
 
 { #category : #'stack bytecodes' }
@@ -8427,11 +9536,10 @@ Interpreter >> pushTemporaryVariable: temporaryIndex [
 
 { #category : #'stack bytecodes' }
 Interpreter >> pushTemporaryVariableBytecode [
-
+	<expandCases>
 	self fetchNextBytecode.
 	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
-	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF).
-
+	self pushTemporaryVariable: (currentBytecode bitAnd: 16rF)
 ]
 
 { #category : #'image save/restore' }
@@ -8441,14 +9549,14 @@ Interpreter >> putLong: aWord toFile: aFile [
 	the write fails."
 
 	| objectsWritten |
-	self var: #aFile type: 'sqImageFile '.
+	<var: #aFile type: 'sqImageFile '>
 
 	objectsWritten := self cCode: 'sqImageFileWrite(&aWord, sizeof(aWord), 1, aFile)'.
 	self success: objectsWritten = 1.
 
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> putToSleep: aProcess [
 	"Save the given process on the scheduler process list for its priority."
 
@@ -8459,12 +9567,13 @@ Interpreter >> putToSleep: aProcess [
 	self addLastLink: aProcess toList: processList.
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> quickCheckForInterrupts [
 	"Quick check for possible user or timer interrupts. Decrement a counter and only do a real check when counter reaches zero or when a low space or user interrupt is pending."
 	"Note: Clients that trigger interrupts should set use forceInterruptCheck to set interruptCheckCounter to zero and get immediate results."
 	"Note: Requires that instructionPointer and stackPointer be external."
 
+	statQuickCheckForEvents := statQuickCheckForEvents + 1.
 	((interruptCheckCounter := interruptCheckCounter - 1) <= 0)
 		ifTrue: [self checkForInterrupts].
 
@@ -8484,11 +9593,12 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	"This code is based on C code by Ian Piumarta and Smalltalk code by Tim Rowledge. Many thanks to both of you!!"
 
 	| swapBytes headerStart headerSize dataSize oldBaseAddr minimumMemory memStart bytesRead bytesToShift heapSize |
-	self var: #f type: 'sqImageFile '.
-	self var: #headerStart type: 'squeakFileOffsetType '.
-	self var: #dataSize type: 'size_t '.
-	self var: #imageOffset type: 'squeakFileOffsetType '.
+	<var: #f type: 'sqImageFile '>
+	<var: #headerStart type: 'squeakFileOffsetType '>
+	<var: #dataSize type: 'size_t '>
+	<var: #imageOffset type: 'squeakFileOffsetType '>
 
+	metaclassSizeBytes := 6 * BytesPerWord.	"guess (Metaclass instSize * BPW)"
 	swapBytes := self checkImageVersionFrom: f startingAt: imageOffset.
 	headerStart := (self sqImageFilePosition: f) - BytesPerWord.  "record header start position"
 
@@ -8518,8 +9628,8 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	memory = nil ifTrue: [self insufficientMemoryAvailableError].
 
 	memStart := self startOfMemory.
-	memoryLimit := (memStart + heapSize) - 24.  "decrease memoryLimit a tad for safety"
-	endOfMemory := memStart + dataSize.
+	self setMemoryLimit: (memStart + heapSize) - 24.  "decrease memoryLimit a tad for safety"
+	self setEndOfMemory: memStart + dataSize.
 
 	"position file after the header"
 	self sqImageFile: f Seek: headerStart + headerSize.
@@ -8527,11 +9637,6 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 	"read in the image in bulk, then swap the bytes if necessary"
 	bytesRead := self cCode: 'sqImageFileRead(pointerForOop(memory), sizeof(unsigned char), dataSize, f)'.
 	bytesRead ~= dataSize ifTrue: [self unableToReadImageError].
-
-	headerTypeBytes at: 0 put: BytesPerWord * 2.		"3-word header (type 0)"	
-	headerTypeBytes at: 1 put: BytesPerWord.		"2-word header (type 1)"
-	headerTypeBytes at: 2 put: 0.					"free chunk (type 2)"	
-	headerTypeBytes at: 3 put: 0.					"1-word header (type 3)"
 
 	swapBytes ifTrue: [self reverseBytesInImage].
 
@@ -8547,13 +9652,51 @@ Interpreter >> readableFormat: imageVersion [
 	"Anwer true if images of the given format are readable by this interpreter. Allows a virtual machine to accept selected older image formats."
 
 	^ imageVersion = self imageFormatVersion
+	or: [imageVersion = self imageFormatCompatibilityVersion]
 "
 	Example of multiple formats:
 	^ (imageVersion = self imageFormatVersion) or: [imageVersion = 6504]
 "
 ]
 
-{ #category : #processes }
+{ #category : #contexts }
+Interpreter >> recycleContextIfPossible: cntxOop [ 
+	"If possible, save the given context on a list of free contexts to 
+	be recycled."
+	"Note: The context is not marked free, so it can be reused 
+	with minimal fuss. The recycled context lists are cleared at 
+	every garbage collect."
+	| header |
+	<inline: true>
+	"only recycle young contexts (which should be most of them)"
+	(self oop: cntxOop isGreaterThanOrEqualTo: youngStart)
+		ifTrue: [header := self baseHeader: cntxOop.
+			(self isMethodContextHeader: header)
+				ifTrue: ["It's a young context, alright."
+					(header bitAnd: SizeMask) = SmallContextSize
+						ifTrue: ["Recycle small contexts"
+							self storePointerUnchecked: 0 ofObject: cntxOop withValue: freeContexts.
+							freeContexts := cntxOop].
+					(header bitAnd: SizeMask) = LargeContextSize
+						ifTrue: ["Recycle large contexts"
+							self storePointerUnchecked: 0 ofObject: cntxOop withValue: freeLargeContexts.
+							freeLargeContexts := cntxOop]]]
+]
+
+{ #category : #'callback support' }
+Interpreter >> reestablishContextPriorToCallback: callbackContext [
+	"callbackContext is an activation of invokeCallback:stack:registers:jmpbuf:.  Its sender
+	 is the interpreter's state prior to the callback.  Reestablish that state."
+	| calloutContext |
+	self export: true.
+	(self fetchClassOf: callbackContext) ~~ (self splObj: ClassMethodContext) ifTrue:
+		[^false].
+	calloutContext := self fetchPointer: SenderIndex ofObject: callbackContext.
+	self newActiveContext: calloutContext.
+	^true
+]
+
+{ #category : #'process primitive support' }
 Interpreter >> removeFirstLinkOfList: aList [ 
 	"Remove the first process from the given linked list."
 	| first last next |
@@ -8568,19 +9711,48 @@ Interpreter >> removeFirstLinkOfList: aList [
 	^ first
 ]
 
+{ #category : #'process primitive support' }
+Interpreter >> removeProcess: aProcess fromList: aList [ 
+	"Remove a given process from a linked list. May fail if aProcess is not on the list."
+	| firstLink lastLink nextLink tempLink |
+	firstLink := self fetchPointer: FirstLinkIndex ofObject: aList.
+	lastLink := self fetchPointer: LastLinkIndex ofObject: aList.
+	aProcess  == firstLink ifTrue:[
+		nextLink := self fetchPointer: NextLinkIndex ofObject: aProcess .
+		self storePointer: FirstLinkIndex ofObject: aList withValue: nextLink.
+		aProcess  == lastLink ifTrue:[
+			self storePointer: LastLinkIndex ofObject: aList withValue: self nilObject.
+		].
+	] ifFalse:[
+		tempLink := firstLink.
+		[tempLink == self nilObject ifTrue:[^self success: false]. "fail"
+		nextLink := self fetchPointer: NextLinkIndex ofObject: tempLink.
+		nextLink == aProcess] whileFalse:[
+			tempLink := self fetchPointer: NextLinkIndex ofObject: tempLink.
+		].
+		nextLink := self fetchPointer: NextLinkIndex ofObject: aProcess.
+		self storePointer: NextLinkIndex ofObject: tempLink withValue: nextLink.
+		aProcess  == lastLink ifTrue:[
+			self storePointer: LastLinkIndex ofObject: aList withValue: tempLink.
+		].
+	].
+	self storePointer: NextLinkIndex ofObject: aProcess withValue: self nilObject.
+
+]
+
 { #category : #'image segment in/out' }
 Interpreter >> restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut [
 
 	"Restore headers smashed by forwarding links"
 	| tablePtr oop header |
 	tablePtr := firstIn.
-	[tablePtr <= lastIn] whileTrue:
+	[self oop: tablePtr isLessThanOrEqualTo: lastIn] whileTrue:
 		[oop := self longAt: tablePtr.
 		header := self longAt: hdrBaseIn + (tablePtr-firstIn).
 		self longAt: oop put: header.
 		tablePtr := tablePtr + BytesPerWord].
 	tablePtr := firstOut.
-	[tablePtr <= lastOut] whileTrue:
+	[self oop: tablePtr isLessThanOrEqualTo: lastOut] whileTrue:
 		[oop := self longAt: tablePtr.
 		header := self longAt: hdrBaseOut + (tablePtr-firstOut).
 		self longAt: oop put: header.
@@ -8588,17 +9760,17 @@ Interpreter >> restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: first
 	
 	"Clear all mark bits"
 	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:
+	[self oop: oop isLessThan: endOfMemory] whileTrue:
 		[(self isFreeObject: oop) ifFalse:
 			[self longAt: oop put: ((self longAt: oop) bitAnd: AllButMarkBit)].
 		oop := self objectAfter: oop].
 
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> resume: aProcess [ 
 	| activeProc activePriority newPriority |
-	self inline: false.
+	<inline: false>
 	activeProc := self fetchPointer: ActiveProcessIndex ofObject: self schedulerPointer.
 	activePriority := self quickFetchInteger: PriorityIndex ofObject: activeProc.
 	newPriority := self quickFetchInteger: PriorityIndex ofObject: aProcess.
@@ -8658,7 +9830,7 @@ Interpreter >> reverseBytesFrom: startAddr to: stopAddr [
 	| addr |
 	self flag: #Dan.
 	addr := startAddr.
-	[addr < stopAddr] whileTrue:
+	[self oop: addr isLessThan: stopAddr] whileTrue:
 		[self longAt: addr put: (self byteSwapped: (self longAt: addr)).
 		addr := addr + BytesPerWord].
 ]
@@ -8703,7 +9875,7 @@ Interpreter >> reverseWordsFrom: startAddr to: stopAddr [
 
 	| addr |
 	addr := startAddr.
-	[addr < stopAddr] whileTrue:
+	[self oop: addr isLessThan: stopAddr] whileTrue:
 		[self longAt: addr put: (self wordSwapped: (self longAt: addr)).
 		addr := addr + BytesPerWord].
 ]
@@ -8713,8 +9885,8 @@ Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrim
 
 	"Rewrite the cache entry with the given primitive index and matching function pointer"
 	| primPtr |
-	self var: #primPtr type: 'void *'.
-	self inline: false.
+	<var: #primPtr type: 'void *'>
+	<inline: false>
 	localPrimIndex = 0
 		ifTrue: [primPtr := 0]
 		ifFalse: [primPtr := primitiveTable at: localPrimIndex].
@@ -8728,8 +9900,8 @@ Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrim
 	"Rewrite an existing entry in the method cache with a new primitive 
 	index & function address. Used by primExternalCall to make direct jumps to found external prims"
 	| probe hash |
-	self inline: false.
-	self var: #localPrimAddress type: 'void *'.
+	<inline: false>
+	<var: #localPrimAddress type: 'void *'>
 	hash := selector bitXor: class.
 	0 to: CacheProbeMax - 1 do: [:p | 
 			probe := hash >> p bitAnd: MethodCacheMask.
@@ -8740,7 +9912,7 @@ Interpreter >> rewriteMethodCacheSel: selector class: class primIndex: localPrim
 					^ nil]]
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> saveProcessSignalingLowSpace [
 	"The low space semaphore is about to be signaled. Save the currently active
 	process in the special objects array so that the low space handler will be able
@@ -8756,7 +9928,7 @@ Interpreter >> saveProcessSignalingLowSpace [
 		self storePointer: ProcessSignalingLowSpace ofObject: specialObjectsOop withValue: currentProc]
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> schedulerPointer [
 
 	^ self fetchPointer: ValueIndex ofObject: (self splObj: SchedulerAssociation)
@@ -8777,10 +9949,42 @@ Interpreter >> secondExtendedSendBytecode [
 
 ]
 
+{ #category : #'callback support' }
+Interpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr Jmpbuf: jmpBufPtr [
+	"Send the 4 argument callback message invokeCallback:stack:registers:jmpbuf:
+	 to Alien class with the supplied args.  The arguments are raw C addresses
+	 and are converted to integer objects on the way."
+	| where |
+	self export: true.
+	self pushRemappableOop: (self positive32BitIntegerFor: jmpBufPtr).
+	self pushRemappableOop: (self positive32BitIntegerFor: regsPtr).
+	self pushRemappableOop: (self positive32BitIntegerFor: stackPtr).
+	self pushRemappableOop: (self positive32BitIntegerFor: thunkPtr).
+	receiver := self splObj: ClassAlien.
+	lkupClass := self fetchClassOfNonInt: receiver.
+	messageSelector := self splObj: InvokeCallbackSelector.
+	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
+	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ifFalse:
+			[^false]].
+	primitiveIndex ~= 0 ifTrue:
+		[^false].
+	self storeContextRegisters: activeContext.
+	self justActivateNewMethod.
+	where := activeContext + BaseHeaderSize + (ReceiverIndex << ShiftForWord).
+	self longAt: where + (1 << ShiftForWord) put: self popRemappableOop.
+	self longAt: where + (2 << ShiftForWord) put: self popRemappableOop.
+	self longAt: where + (3 << ShiftForWord) put: self popRemappableOop.
+	self longAt: where + (4 << ShiftForWord) put: self popRemappableOop.
+	self fetchContextRegisters: activeContext.
+	self interpret.
+	"not reached"
+	^true
+]
+
 { #category : #'send bytecodes' }
 Interpreter >> sendLiteralSelectorBytecode [
 	"Can use any of the first 16 literals for the selector and pass up to 2 arguments."
-
+	<expandCases>
 	messageSelector := self literal: (currentBytecode bitAnd: 16rF).
 	argumentCount := ((currentBytecode >> 4) bitAnd: 3) - 1.
 	self normalSend
@@ -8789,7 +9993,11 @@ Interpreter >> sendLiteralSelectorBytecode [
 { #category : #contexts }
 Interpreter >> sender [
 
-	^ self fetchPointer: SenderIndex ofObject: localHomeContext
+	| context closureOrNil |
+	context := localHomeContext.
+	[(closureOrNil := self fetchPointer: ClosureIndex ofObject: context) ~~ nilObj] whileTrue:
+		[context := self fetchPointer: ClosureOuterContextIndex ofObject: closureOrNil].
+	^self fetchPointer: SenderIndex ofObject: context
 ]
 
 { #category : #'compiler support' }
@@ -8838,7 +10046,7 @@ Interpreter >> shortConditionalJump [
 
 { #category : #'jump bytecodes' }
 Interpreter >> shortUnconditionalJump [
-
+	<expandCases>
 	self jump: (currentBytecode bitAnd: 7) + 1.
 ]
 
@@ -8858,7 +10066,7 @@ Interpreter >> signExtend16: int16 [
 		ifFalse: [ ^ int16 - 16r10000 ].
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> signalExternalSemaphores [
 	"Signal all requested semaphores"
 	| xArray xSize index sema |
@@ -8885,7 +10093,7 @@ Interpreter >> signalExternalSemaphores [
 			semaphoresToSignalCountA := 0]
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> signalFinalization: weakReferenceOop [
 	"If it is not there already, record the given semaphore index in the list of semaphores to be signaled at the next convenient moment. Force a real interrupt check as soon as possible."
 
@@ -8893,7 +10101,7 @@ Interpreter >> signalFinalization: weakReferenceOop [
 	pendingFinalizationSignals := pendingFinalizationSignals + 1.
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> signalSemaphoreWithIndex: index [
 	"Record the given semaphore index in the double buffer semaphores array to be signaled at the next convenient moment. Force a real interrupt check as soon as possible."
 
@@ -8914,7 +10122,7 @@ Interpreter >> signalSemaphoreWithIndex: index [
 Interpreter >> signed32BitIntegerFor: integerValue [
 	"Return a full 32 bit integer object for the given integer value"
 	| newLargeInteger value largeClass |
-	self inline: false.
+	<inline: false>
 	(self isIntegerValue: integerValue)
 		ifTrue: [^ self integerObjectOf: integerValue].
 	integerValue < 0
@@ -8935,7 +10143,7 @@ Interpreter >> signed32BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive ST integer or a four-byte LargeInteger."
 	| sz value largeClass negative |
-	self inline: false.
+	<inline: false>
 	(self isIntegerObject: oop) ifTrue: [^self integerValueOf: oop].
 	largeClass := self fetchClassOf: oop.
 	largeClass = self classLargePositiveInteger
@@ -8946,35 +10154,57 @@ Interpreter >> signed32BitValueOf: oop [
 	sz := self lengthOf: oop.
 	sz = 4 ifFalse: [^ self primitiveFail].
 	value := (self fetchByte: 0 ofObject: oop) +
-		  ((self fetchByte: 1 ofObject: oop) <<  8) +
-		  ((self fetchByte: 2 ofObject: oop) << 16) +
-		  ((self fetchByte: 3 ofObject: oop) << 24).
-	negative
-		ifTrue:[^0 - value]
-		ifFalse:[^value]
+			  ((self fetchByte: 1 ofObject: oop) <<  8) +
+			  ((self fetchByte: 2 ofObject: oop) << 16) +
+			  ((self fetchByte: 3 ofObject: oop) << 24).
+	"Filter out values out of range for the signed interpretation such as
+	 16rFFFFFFFF (positive w/ bit 32 set) and -16rFFFFFFFF (negative w/ bit
+	 32 set). Since the sign is implicit in the class we require that the high
+	 bit of the magnitude is not set which is a simple test here.  Note that
+	 we have to handle the most negative 32-bit value -2147483648 specially."
+	value < 0 ifTrue:
+		[self assert: (self cCode: 'sizeof(value) == 4').
+		(negative and: [value - 1 > 0]) ifTrue: "Don't fail for -2147483648 /-16r80000000"
+			[^value].
+		 ^self primitiveFail].
+	^negative
+		ifTrue: [0 - value]
+		ifFalse: [value]
 ]
 
 { #category : #'primitive support' }
 Interpreter >> signed64BitIntegerFor: integerValue [
 	"Return a Large Integer object for the given integer value"
-	| newLargeInteger value largeClass intValue check |
-	self inline: false.
-	self var: 'integerValue' type: 'sqLong'.
-	self var: 'value' type: 'sqLong'.
+	| newLargeInteger magnitude largeClass intValue highWord sz |
+	<inline: false>
+	<var: 'integerValue' type: 'sqLong'>
+	<var: 'magnitude' type: 'sqLong'>
+	<var: 'highWord' type: 'usqInt'>
+
 	integerValue < 0
 		ifTrue:[	largeClass := self classLargeNegativeInteger.
-				value := 0 - integerValue]
+				magnitude := 0 - integerValue]
 		ifFalse:[	largeClass := self classLargePositiveInteger.
-				value := integerValue].
+				magnitude := integerValue].
 
-	(self sizeof: value) = 4 ifTrue: [^self signed32BitIntegerFor: integerValue].
+	"Make sure to handle the most -ve value correctly.
+	 0 - most -ve = most -ve and most -ve - 1 is +ve"
+	(magnitude <= 16r7FFFFFFF
+	 and: [integerValue >= 0 or: [integerValue - 1 < 0]]) ifTrue:
+			[^self signed32BitIntegerFor: integerValue].
 
-	self cCode: 'check = value >> 32'.
-	check = 0 ifTrue: [^self signed32BitIntegerFor: integerValue].
-
-	newLargeInteger := self instantiateSmallClass: largeClass sizeInBytes:  BaseHeaderSize + 8.
-	0 to: 7 do: [:i |
-		self cCode: 'intValue = ( value >> (i * 8)) & 255'.
+	highWord := self cCode: 'magnitude >> 32'. "shift is coerced to usqInt otherwise"
+	highWord = 0 
+		ifTrue:[sz := 4] 
+		ifFalse:[
+			sz := 5.
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+			(highWord := highWord >> 8) = 0 ifFalse:[sz := sz + 1].
+		].
+	newLargeInteger := self instantiateClass: largeClass indexableSize:  sz.
+	0 to: sz-1 do: [:i |
+		intValue := self cCode: '(magnitude >> (i * 8)) & 255'.
 		self storeByte: i ofObject: newLargeInteger withValue: intValue].
 	^ newLargeInteger
 ]
@@ -8984,9 +10214,9 @@ Interpreter >> signed64BitValueOf: oop [
 	"Convert the given object into an integer value.
 	The object may be either a positive ST integer or a eight-byte LargeInteger."
 	| sz value largeClass negative szsqLong |
-	self inline: false.
-	self returnTypeC: 'sqLong'.
-	self var: 'value' type: 'sqLong'.
+	<inline: false>
+	<returnTypeC: 'sqLong'>
+	<var: 'value' type: 'sqLong'>
 	(self isIntegerObject: oop) ifTrue: [^self cCoerce: (self integerValueOf: oop) to: 'sqLong'].
 	largeClass := self fetchClassOf: oop.
 	largeClass = self classLargePositiveInteger
@@ -8994,13 +10224,23 @@ Interpreter >> signed64BitValueOf: oop [
 		ifFalse:[largeClass = self classLargeNegativeInteger
 					ifTrue:[negative := true]
 					ifFalse:[^self primitiveFail]].
-	szsqLong := self cCode: 'sizeof(sqLong)'.
+	szsqLong := self cCode: 'sizeof(sqLong)' inSmalltalk: [self bytesPerWord].
 	sz := self lengthOf: oop.
 	sz > szsqLong 
 		ifTrue: [^ self primitiveFail].
 	value := 0.
 	0 to: sz - 1 do: [:i |
 		value := value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: 'sqLong') <<  (i*8))].
+	"Filter out values out of range for the signed interpretation such as
+	16rFFFFFFFF... (positive w/ bit 64 set) and -16rFFFFFFFF... (negative w/ bit
+	64 set). Since the sign is implicit in the class we require that the high bit of
+	the magnitude is not set which is a simple test here.  Note that we have to
+	handle the most negative 64-bit value -9223372036854775808 specially."
+	value < 0 ifTrue:
+		[self assert: (self cCode: 'sizeof(value) == 8').
+		(negative and: [value - 1 > 0]) ifTrue: "Don't fail for -9223372036854775808/-16r8000000000000000"
+			[^value].
+		 ^self primitiveFail].
 	negative
 		ifTrue:[^0 - value]
 		ifFalse:[^value]
@@ -9035,7 +10275,7 @@ Interpreter >> sizeOfSTArrayFromCPrimitive: cPtr [
 	"Note: Only called by translated primitive code."
 
 	| oop |
-	self var: #cPtr type: 'void *'.
+	<var: #cPtr type: 'void *'>
 	oop := (self oopForPointer: cPtr) - BaseHeaderSize.
 	(self isWordsOrBytes: oop) ifFalse: [
 		self primitiveFail.
@@ -9057,7 +10297,7 @@ Interpreter >> slotSizeOf: oop [
 Interpreter >> snapshot: embedded [ 
 	"update state of active context"
 	| activeProc dataSize rcvr setMacType |
-	self var: #setMacType type: 'void *'.
+	<var: #setMacType type: 'void *'>
 	compilerInitialized
 		ifTrue: [self compilerPreSnapshot]
 		ifFalse: [self storeContextRegisters: activeContext].
@@ -9106,7 +10346,7 @@ Interpreter >> snapshotCleanUp [
 	* clearing the root bit of any object in the root table "
 	| oop header fmt sz |
 	oop := self firstObject.
-	[oop < endOfMemory]
+	[self oop: oop isLessThan: endOfMemory]
 		whileTrue: [(self isFreeObject: oop)
 				ifFalse: [header := self longAt: oop.
 					fmt := header >> 8 bitAnd: 15.
@@ -9132,12 +10372,12 @@ Interpreter >> specialSelector: index [
 	^ self fetchPointer: (index * 2) ofObject: (self splObj: SpecialSelectors)
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> stObject: array at: index [
 	"Return what ST would return for <obj> at: index."
 
 	| hdr fmt totalLength fixedFields stSize |
-	self inline: false.
+	<inline: false>
 	hdr := self baseHeader: array.
 	fmt := (hdr >> 8) bitAnd: 16rF.
 	totalLength := self lengthOf: array baseHeader: hdr format: fmt.
@@ -9145,17 +10385,17 @@ Interpreter >> stObject: array at: index [
 	(fmt = 3 and: [self isContextHeader: hdr])
 		ifTrue: [stSize := self fetchStackPointerOf: array]
 		ifFalse: [stSize := totalLength - fixedFields].
-	((self cCoerce: index to: 'usqInt ') >= 1
-		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
+	((self oop: index isGreaterThanOrEqualTo: 1)
+			and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [^ self subscript: array with: (index + fixedFields) format: fmt]
 		ifFalse: [successFlag := false.  ^ 0].
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> stObject: array at: index put: value [
 	"Do what ST would return for <obj> at: index put: value."
 	| hdr fmt totalLength fixedFields stSize |
-	self inline: false.
+	<inline: false>
 	hdr := self baseHeader: array.
 	fmt := (hdr >> 8) bitAnd: 16rF.
 	totalLength := self lengthOf: array baseHeader: hdr format: fmt.
@@ -9163,19 +10403,19 @@ Interpreter >> stObject: array at: index put: value [
 	(fmt = 3 and: [self isContextHeader: hdr])
 		ifTrue: [stSize := self fetchStackPointerOf: array]
 		ifFalse: [stSize := totalLength - fixedFields].
-	((self cCoerce: index to: 'usqInt ') >= 1
-		and: [(self cCoerce: index to: 'usqInt ') <= (self cCoerce: stSize to: 'usqInt ')])
+	((self oop: index isGreaterThanOrEqualTo: 1)
+			and: [self oop: index isLessThanOrEqualTo: stSize])
 		ifTrue: [self subscript: array with: (index + fixedFields) storing: value format: fmt]
 		ifFalse: [successFlag := false]
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> stSizeOf: oop [
 	"Return the number of indexable fields in the given object. (i.e., what Smalltalk would return for <obj> size)."
 	"Note: Assume oop is not a SmallInteger!"
 
 	| hdr fmt totalLength fixedFields |
-	self inline: false.
+	<inline: false>
 	hdr := self baseHeader: oop.
 	fmt := (hdr >> 8) bitAnd: 16rF.
 	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
@@ -9189,8 +10429,8 @@ Interpreter >> stSizeOf: oop [
 Interpreter >> stackFloatValue: offset [
 	"Note: May be called by translated primitive code."
 	| result floatPointer |
-	self returnTypeC: 'double'.
-	self var: #result type: 'double '.
+	<returnTypeC: 'double'>
+	<var: #result type: 'double '>
 	floatPointer := self longAt: stackPointer - (offset*BytesPerWord).
 	(self fetchClassOf: floatPointer) = (self splObj: ClassFloat) 
 		ifFalse:[self primitiveFail. ^0.0].
@@ -9241,27 +10481,33 @@ Interpreter >> storeAndPopReceiverVariableBytecode [
 	store check explicitely in order to help the translator 
 	produce better code."
 	| rcvr top |
+	<expandCases>
 	self fetchNextBytecode.
 	"this bytecode will be expanded so that refs to 
 	currentBytecode below will be constant"
 	rcvr := receiver.
 	top := self internalStackTop.
-	rcvr < youngStart
+	(self oop: rcvr isLessThan: youngStart)
 		ifTrue: [self possibleRootStoreInto: rcvr value: top].
 	self storePointerUnchecked: (currentBytecode bitAnd: 7) ofObject: rcvr withValue: top.
 	self internalPop: 1
 ]
 
 { #category : #'stack bytecodes' }
-Interpreter >> storeAndPopTemporaryVariableBytecode [
+Interpreter >> storeAndPopRemoteTempLongBytecode [
+	self storeRemoteTempLongBytecode.
+	self internalPop: 1
+]
 
+{ #category : #'stack bytecodes' }
+Interpreter >> storeAndPopTemporaryVariableBytecode [
+	<expandCases>
 	self fetchNextBytecode.
 	"this bytecode will be expanded so that refs to currentBytecode below will be constant"
 	self storePointerUnchecked: (currentBytecode bitAnd: 7) + TempFrameStart
 		ofObject: localHomeContext
 		withValue: self internalStackTop.
-	self internalPop: 1.
-
+	self internalPop: 1
 ]
 
 { #category : #contexts }
@@ -9273,19 +10519,12 @@ Interpreter >> storeContextRegisters: activeCntx [
 		-1 for 0-based addressing of fetchByte
 		-1 because it gets incremented BEFORE fetching currentByte"
 
-	self inline: true.
+	<inline: true>
 	self storePointerUnchecked: InstructionPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (instructionPointer - method - (BaseHeaderSize - 2))).
 	self storePointerUnchecked: StackPointerIndex ofObject: activeCntx
 		withValue: (self integerObjectOf: (self stackPointerIndex - TempFrameStart + 1)).
 
-]
-
-{ #category : #contexts }
-Interpreter >> storeInstructionPointerValue: value inContext: contextPointer [
-	"Assume: value is an integerValue"
-
-	self storePointerUnchecked: InstructionPointerIndex ofObject: contextPointer withValue: (self integerObjectOf: value).
 ]
 
 { #category : #utilities }
@@ -9297,6 +10536,32 @@ Interpreter >> storeInteger: fieldIndex ofObject: objectPointer withValue: integ
 		ifFalse: [self primitiveFail]
 ]
 
+{ #category : #'object memory support' }
+Interpreter >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
+	"Like storePointer:ofObject:withValue:, but the caller guarantees that the
+	 object being stored into is a young object or is already marked as a root."
+
+	^self
+		longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
+		put: valuePointer
+]
+
+{ #category : #'stack bytecodes' }
+Interpreter >> storeRemoteTemp: index inVectorAt: tempVectorIndex [
+	| tempVector |
+	tempVector := self temporary: tempVectorIndex.
+	self storePointer: index ofObject: tempVector withValue: self internalStackTop.
+]
+
+{ #category : #'stack bytecodes' }
+Interpreter >> storeRemoteTempLongBytecode [
+	| remoteTempIndex tempVectorIndex |
+	remoteTempIndex := self fetchByte.
+	tempVectorIndex := self fetchByte.
+	self fetchNextBytecode.
+	self storeRemoteTemp: remoteTempIndex inVectorAt: tempVectorIndex
+]
+
 { #category : #contexts }
 Interpreter >> storeStackPointerValue: value inContext: contextPointer [
 	"Assume: value is an integerValue"
@@ -9305,11 +10570,11 @@ Interpreter >> storeStackPointerValue: value inContext: contextPointer [
 		withValue: (self integerObjectOf: value).
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> subscript: array with: index format: fmt [
 	"Note: This method assumes that the index is within bounds!"
 
-	self inline: true.
+	<inline: true>
 	fmt <= 4 ifTrue: [  "pointer type objects"
 		^ self fetchPointer: index - 1 ofObject: array].
 	fmt < 8 ifTrue: [  "long-word type objects"
@@ -9321,11 +10586,11 @@ Interpreter >> subscript: array with: index format: fmt [
 	].
 ]
 
-{ #category : #'array and stream primitive support' }
+{ #category : #'array primitive support' }
 Interpreter >> subscript: array with: index storing: oopToStore format: fmt [ 
 	"Note: This method assumes that the index is within bounds!"
 	| valueToStore |
-	self inline: true.
+	<inline: true>
 	fmt <= 4
 		ifTrue: ["pointer type objects"
 			self storePointer: index - 1 ofObject: array
@@ -9361,7 +10626,7 @@ Interpreter >> sufficientSpaceToInstantiate: classOop indexableSize: size [
 	"Return the number of bytes required to allocate an instance of the given class with the given number of indexable fields."
 	"Details: For speed, over-estimate space needed for fixed fields or literals; the low space threshold is a blurry line."
 	| format atomSize|
-	self inline: true.
+	<inline: true>
 	format := (self formatOfClass: classOop) >> 8 bitAnd: 15.
 
 	"fail if attempting to call new: on non-indexable class"
@@ -9386,19 +10651,18 @@ Interpreter >> superclassSend [
 	"Assume: messageSelector and argumentCount have been set, and that the receiver and arguments have been pushed onto the stack,"
 	"Note: This method is inlined into the interpreter dispatch loop."
 	| rcvr |
-	self inline: true.
-	self sharedCodeNamed: 'commonSupersend' inCase: 133.
+	<sharedCodeNamed: 'commonSupersend' inCase: 133>
 	lkupClass := self superclassOf: (self methodClassOf: method).
 	rcvr := self internalStackValue: argumentCount.
 	receiverClass := self fetchClassOf: rcvr.
-	self commonSend.
+	self commonSend
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> synchronousSignal: aSemaphore [ 
 	"Signal the given semaphore from within the interpreter."
 	| excessSignals |
-	self inline: false.
+	<inline: false>
 	(self isEmptyList: aSemaphore)
 		ifTrue: ["no process is waiting on this semaphore"
 			excessSignals := self fetchInteger: ExcessSignalsIndex ofObject: aSemaphore.
@@ -9425,7 +10689,7 @@ Interpreter >> transfer: count from: src to: dst [
 	in := src - BytesPerWord.
 	lastIn := in + (count * BytesPerWord).
 	out := dst - BytesPerWord.
-	[in < lastIn]
+	[self oop: in isLessThan: lastIn]
 		whileTrue: [self
 				longAt: (out := out + BytesPerWord)
 				put: (self longAt: (in := in + BytesPerWord))]
@@ -9442,7 +10706,7 @@ Interpreter >> transfer: count fromIndex: firstFrom ofObject: fromOop toIndex: f
 	fromIndex := fromOop + (firstFrom * BytesPerWord).
 	toIndex := toOop + (firstTo * BytesPerWord).
 	lastFrom := fromIndex + (count * BytesPerWord).
-	[fromIndex < lastFrom]
+	[self oop: fromIndex isLessThan: lastFrom]
 		whileTrue: [fromIndex := fromIndex + BytesPerWord.
 			toIndex := toIndex + BytesPerWord.
 			self
@@ -9450,16 +10714,18 @@ Interpreter >> transfer: count fromIndex: firstFrom ofObject: fromOop toIndex: f
 				put: (self longAt: fromIndex)]
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> transferTo: aProc [ 
 	"Record a process to be awoken on the next interpreter cycle. 
-	ikp 11/24/1999 06:07 -- added hook for external runtime 
-	compiler "
+	ikp 11/24/1999 06:07 -- added hook for external runtime compiler.
+	eem 8/17/2009 16:37 -- stored nil into myList of new activeProcess"
 	| sched oldProc newProc |
+	statProcessSwitch := statProcessSwitch + 1.
 	newProc := aProc.
 	sched := self schedulerPointer.
 	oldProc := self fetchPointer: ActiveProcessIndex ofObject: sched.
 	self storePointer: ActiveProcessIndex ofObject: sched withValue: newProc.
+	self storePointerUnchecked: MyListIndex ofObject: newProc withValue: nilObj.
 	compilerInitialized
 		ifTrue: [self compilerProcessChange: oldProc to: newProc]
 		ifFalse: [self storePointer: SuspendedContextIndex ofObject: oldProc withValue: activeContext.
@@ -9484,13 +10750,13 @@ Interpreter >> unknownBytecode [
 Interpreter >> verifyCleanHeaders [
 	| oop |
 	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:
+	[self oop: oop isLessThan: endOfMemory] whileTrue:
 		[(self isFreeObject: oop)
 			ifTrue: ["There should only be one free block at end of memory."
 					(self objectAfter: oop) = endOfMemory
 						ifFalse: [self error: 'Invalid obj with HeaderTypeBits = Free.']]
-			ifFalse: [((self longAt: oop) bitAnd: MarkBit) = 0
-						ifFalse: [self error: 'Invalid obj with MarkBit set.']].
+			ifFalse: [(self isMarked: oop) ifTrue:
+						[self error: 'Invalid obj with MarkBit set.']].
 		oop := self objectAfter: oop]
 ]
 
@@ -9502,7 +10768,7 @@ Interpreter >> vmEndianness [
 
 ]
 
-{ #category : #processes }
+{ #category : #'process primitive support' }
 Interpreter >> wakeHighestPriority [
 	"Return the highest priority process that is ready to run."
 	"Note: It is a fatal VM error if there is no runnable process."
@@ -9533,7 +10799,7 @@ Interpreter >> wordSwapped: w [
 Interpreter >> writeImageFile: imageBytes [
 
 	| fn |
-	self var: #fn type: 'void *'.
+	<var: #fn type: 'void *'>
 	self writeImageFileIO: imageBytes.
 	"set Mac file type and creator; this is a noop on other platforms"
 	fn := self ioLoadFunction: 'setMacFileTypeAndCreator' From: 'FilePlugin'.
@@ -9547,9 +10813,9 @@ Interpreter >> writeImageFile: imageBytes [
 Interpreter >> writeImageFileIO: imageBytes [
 
 	| headerStart headerSize f bytesWritten sCWIfn okToWrite |
-	self var: #f type: 'sqImageFile'.
-	self var: #headerStart type: 'squeakFileOffsetType '.
-	self var: #sCWIfn type: 'void *'.
+	<var: #f type: 'sqImageFile'>
+	<var: #headerStart type: 'squeakFileOffsetType '>
+	<var: #sCWIfn type: 'void *'>
 
 	"If the security plugin can be loaded, use it to check for write permission.
 	If not, assume it's ok"

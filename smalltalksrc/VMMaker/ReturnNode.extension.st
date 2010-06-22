@@ -1,9 +1,9 @@
 Extension { #name : #ReturnNode }
 
 { #category : #'*VMMaker-C translation' }
-ReturnNode >> asTranslatorNode [
-"make a CCodeGenerator equivalent of me"
+ReturnNode >> asTranslatorNodeIn: aTMethod [
+	"make a CCodeGenerator equivalent of me"
 	^TReturnNode new 
-		setExpression: expr asTranslatorNode;
+		setExpression: (expr asTranslatorNodeIn: aTMethod);
 		comment: comment
 ]

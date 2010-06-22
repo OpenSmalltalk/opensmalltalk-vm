@@ -57,12 +57,12 @@ Class {
 		'HScaleIndex',
 		'LookaheadBitsIndex',
 		'LookaheadSymbolIndex',
-		'MaxBits',
-		'MaxcodeIndex',
-		'MaxMCUBlocks',
-		'MaxSample',
 		'MCUBlockIndex',
 		'MCUWidthIndex',
+		'MaxBits',
+		'MaxMCUBlocks',
+		'MaxSample',
+		'MaxcodeIndex',
 		'MinComponentSize',
 		'Pass1Bits',
 		'Pass1Div',
@@ -173,7 +173,7 @@ JPEGReaderPlugin >> cbColorComponentFrom: oop [
 
 { #category : #decoding }
 JPEGReaderPlugin >> colorComponent: aColorComponent from: oop [
-	self var: #aColorComponent type: 'int *'.
+	<var: #aColorComponent type: 'int *'>
 	(interpreterProxy isIntegerObject: oop) ifTrue:[^false].
 	(interpreterProxy isPointers: oop) ifFalse:[^false].
 	(interpreterProxy slotSizeOf: oop) < MinComponentSize ifTrue:[^false].
@@ -197,7 +197,7 @@ JPEGReaderPlugin >> colorComponent: aColorComponent from: oop [
 { #category : #decoding }
 JPEGReaderPlugin >> colorComponentBlocks: blocks from: oop [
 	| arrayOop max blockOop |
-	self var: #blocks type: 'int **'.
+	<var: #blocks type: 'int **'>
 	(interpreterProxy isIntegerObject: oop) ifTrue:[^false].
 	(interpreterProxy isPointers: oop) ifFalse:[^false].
 	(interpreterProxy slotSizeOf: oop) < MinComponentSize ifTrue:[^false].
@@ -277,8 +277,8 @@ JPEGReaderPlugin >> crColorComponentFrom: oop [
 { #category : #decoding }
 JPEGReaderPlugin >> decodeBlockInto: anArray component: aColorComponent [
 	| byte zeroCount bits index |
-	self var: #anArray type: 'int *'.
-	self var: #aColorComponent type: 'int *'.
+	<var: #anArray type: 'int *'>
+	<var: #aColorComponent type: 'int *'>
 	byte := self jpegDecodeValueFrom: dcTable size: dcTableSize.
 	byte < 0 ifTrue:[^interpreterProxy primitiveFail].
 	byte ~= 0 ifTrue: [
@@ -340,9 +340,9 @@ JPEGReaderPlugin >> getBits: requestedBits [
 { #category : #decoding }
 JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 	| ws anACTerm dcval z2 z3 z1 t2 t3 t0 t1 t10 t13 t11 t12 z4 z5 v |
-	self var: #anArray type:'int *'.
-	self var: #qt type:'int *'.
-	self var: #ws declareC:'int ws[64]'.
+	<var: #anArray type:'int *'>
+	<var: #qt type:'int *'>
+	<var: #ws declareC:'int ws[64]'>
 	self cCode:'' inSmalltalk:[ws := CArrayAccessor on: (IntegerArray new: 64)].
 	"Pass 1: process columns from anArray, store into work array"
 	0 to: DCTSize-1 do:[:i |
@@ -465,7 +465,7 @@ JPEGReaderPlugin >> idctBlockInt: anArray qt: qt [
 JPEGReaderPlugin >> jpegDecodeValueFrom: table size: tableSize [
 	"Decode the next value in the receiver using the given huffman table."
 	| bits bitsNeeded tableIndex value index |
-	self var: #table type:'int *'.
+	<var: #table type:'int *'>
 	bitsNeeded := (table at: 0) >> 24.	"Initial bits needed"
 	bitsNeeded > MaxBits ifTrue:[^-1].
 	tableIndex := 2.							"First real table"
@@ -506,7 +506,7 @@ JPEGReaderPlugin >> loadJPEGStreamFrom: streamOop [
 { #category : #decoding }
 JPEGReaderPlugin >> nextSampleCb [
 	| dx dy blockIndex sampleIndex sample curX sx sy |
-	self inline: true.
+	<inline: true>
 	dx := curX := cbComponent at: CurrentXIndex.
 	dy := cbComponent at: CurrentYIndex.
 	sx := cbComponent at: HScaleIndex.
@@ -531,7 +531,7 @@ JPEGReaderPlugin >> nextSampleCb [
 { #category : #decoding }
 JPEGReaderPlugin >> nextSampleCr [
 	| dx dy blockIndex sampleIndex sample curX sx sy |
-	self inline: true.
+	<inline: true>
 	dx := curX := crComponent at: CurrentXIndex.
 	dy := crComponent at: CurrentYIndex.
 	sx := crComponent at: HScaleIndex.
@@ -556,9 +556,9 @@ JPEGReaderPlugin >> nextSampleCr [
 { #category : #decoding }
 JPEGReaderPlugin >> nextSampleFrom: aComponent blocks: aBlockArray [
 	| dx dy blockIndex sampleIndex sample curX sx sy |
-	self var: #aComponent type: 'int *'.
-	self var: #aBlockArray type: 'int **'.
-	self inline: true.
+	<var: #aComponent type: 'int *'>
+	<var: #aBlockArray type: 'int **'>
+	<inline: true>
 	dx := curX := aComponent at: CurrentXIndex.
 	dy := aComponent at: CurrentYIndex.
 	sx := aComponent at: HScaleIndex.
@@ -583,7 +583,7 @@ JPEGReaderPlugin >> nextSampleFrom: aComponent blocks: aBlockArray [
 { #category : #decoding }
 JPEGReaderPlugin >> nextSampleY [
 	| dx dy blockIndex sampleIndex sample curX sx sy |
-	self inline: true.
+	<inline: true>
 	dx := curX := yComponent at: CurrentXIndex.
 	dy := yComponent at: CurrentYIndex.
 	sx := yComponent at: HScaleIndex.
@@ -614,7 +614,7 @@ JPEGReaderPlugin >> primitiveColorConvertGrayscaleMCU [
 		ditherMask
 	"
 	| arrayOop |
-	self export: true.
+	<export: true>
 	self stInit.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -647,7 +647,7 @@ JPEGReaderPlugin >> primitiveColorConvertMCU [
 		ditherMask
 	"
 	| arrayOop |
-	self export: true.
+	<export: true>
 	self stInit.
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -687,8 +687,8 @@ JPEGReaderPlugin >> primitiveDecodeMCU [
 		stream			JPEGStream
 	"
 	| arrayOop oop anArray |
-	self export: true.
-	self var: #anArray type: 'int *'.
+	<export: true>
+	<var: #anArray type: 'int *'>
 	self cCode:'' inSmalltalk:[self stInit].
 
 	interpreterProxy methodArgumentCount = 5 
@@ -747,9 +747,9 @@ JPEGReaderPlugin >> primitiveIdctInt [
 		qt: IntegerArray new: DCTSize2.
 	"
 	| arrayOop anArray qt |
-	self export: true.
-	self var: #anArray type: 'int *'.
-	self var: #qt type: 'int *'.
+	<export: true>
+	<var: #anArray type: 'int *'>
+	<var: #qt type: 'int *'>
 	self cCode:'' inSmalltalk:[self stInit].
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -769,7 +769,7 @@ JPEGReaderPlugin >> primitiveIdctInt [
 
 { #category : #decoding }
 JPEGReaderPlugin >> scaleAndSignExtend: aNumber inFieldWidth: w [
-	self inline: true.
+	<inline: true>
 	aNumber < (1 bitShift: (w - 1))
 		ifTrue: [^aNumber - (1 bitShift: w) + 1]
 		ifFalse: [^aNumber]

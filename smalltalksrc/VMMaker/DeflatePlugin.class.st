@@ -82,7 +82,7 @@ DeflatePlugin >> compare: here with: matchPos min: minLength [
 	minLength is a lower bound for match lengths that will be accepted.
 	Note: here and matchPos are zero based."
 	| length |
-	self inline: true.
+	<inline: true>
 	"First test if we can actually get longer than minLength"
 	(zipCollection at: here+minLength) = (zipCollection at: matchPos+minLength)
 		ifFalse:[^0].
@@ -106,7 +106,7 @@ DeflatePlugin >> deflateBlock: lastIndex chainLength: chainLength goodMatch: goo
 	"Continue deflating the receiver's collection from blockPosition to lastIndex.
 	Note that lastIndex must be at least MaxMatch away from the end of collection"
 	| here matchResult flushNeeded hereMatch hereLength newMatch newLength hasMatch |
-	self inline: false.
+	<inline: false>
 	zipBlockPos > lastIndex ifTrue:[^false]. "Nothing to deflate"
 	zipLiteralCount >= zipLiteralSize ifTrue:[^true].
 	hasMatch := false.
@@ -167,7 +167,7 @@ DeflatePlugin >> deflateBlock: lastIndex chainLength: chainLength goodMatch: goo
 { #category : #encoding }
 DeflatePlugin >> encodeLiteral: lit [
 	"Encode the given literal"
-	self inline: true.
+	<inline: true>
 	zipLiterals at: zipLiteralCount put: lit.
 	zipDistances at: zipLiteralCount put: 0.
 	zipLiteralFreq at: lit put: (zipLiteralFreq at: lit) + 1.
@@ -181,7 +181,7 @@ DeflatePlugin >> encodeLiteral: lit [
 DeflatePlugin >> encodeMatch: length distance: dist [
 	"Encode the given match of length length starting at dist bytes ahead"
 	| literal distance |
-	self inline: true.
+	<inline: true>
 	zipLiterals at: zipLiteralCount put: length - DeflateMinMatch.
 	zipDistances at: zipLiteralCount put: dist.
 	literal := (zipMatchLengthCodes at: length - DeflateMinMatch).
@@ -204,7 +204,7 @@ DeflatePlugin >> findMatch: here lastLength: lastLength lastMatch: lastMatch cha
 	Traverse at most maxChainLength entries in the hash table.
 	Stop if a match of at least goodMatch size has been found."
 	| matchResult matchPos distance chainLength limit bestLength length |
-	self inline: false.
+	<inline: false>
 	"Compute the default match result"
 	matchResult := (lastLength bitShift: 16) bitOr: lastMatch.
 
@@ -259,7 +259,7 @@ DeflatePlugin >> insertStringAt: here [
 	all strings before have already been inserted into the hash table
 	(and the hash value is updated as well)."
 	| prevEntry |
-	self inline: true.
+	<inline: true>
 	zipHashValue := self updateHashAt: (here + DeflateMinMatch - 1).
 	prevEntry := zipHashHead at: zipHashValue.
 	zipHashHead at: zipHashValue put: here.
@@ -269,14 +269,14 @@ DeflatePlugin >> insertStringAt: here [
 { #category : #'primitive support' }
 DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 	| oop |
-	self inline: false.
+	<inline: false>
 	((interpreterProxy isPointers: rcvr) and:[
 		(interpreterProxy slotSizeOf: rcvr) >= 15]) ifFalse:[^false].
 	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
 	(interpreterProxy isIntegerObject: oop)
-		ifTrue:[^interpreterProxy primitiveFail].
+		ifTrue:[^false].
 	(interpreterProxy isBytes: oop)
-		ifFalse:[^interpreterProxy primitiveFail].
+		ifFalse:[^false].
 	zipCollection := interpreterProxy firstIndexableField: oop.
 	zipCollectionSize := interpreterProxy byteSizeOf: oop.
 
@@ -330,7 +330,7 @@ DeflatePlugin >> loadDeflateStreamFrom: rcvr [
 { #category : #'primitive support' }
 DeflatePlugin >> loadZipEncoderFrom: rcvr [
 	| oop |
-	self inline: false.
+	<inline: false>
 	((interpreterProxy isPointers: rcvr) and:[
 		(interpreterProxy slotSizeOf: rcvr) >= 6]) ifFalse:[^false].
 	oop := interpreterProxy fetchPointer: 0 ofObject: rcvr.
@@ -356,7 +356,7 @@ DeflatePlugin >> nextZipBits: nBits put: value [
 		zipCollection, zipCollectionSize, zipPosition,
 		zipBitBuf, zipBitPos.
 	"
-	self inline: true.
+	<inline: true>
 	(value >= 0 and:[(1 << nBits) > value])
 		ifFalse:[^interpreterProxy primitiveFail].
 	zipBitBuf := zipBitBuf bitOr: (value bitShift: zipBitPos).
@@ -373,8 +373,8 @@ DeflatePlugin >> nextZipBits: nBits put: value [
 DeflatePlugin >> primitiveDeflateBlock [
 	"Primitive. Deflate the current contents of the receiver."
 	| goodMatch chainLength lastIndex rcvr result |
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
 	interpreterProxy methodArgumentCount = 3
 		ifFalse:[^interpreterProxy primitiveFail].
 	goodMatch := interpreterProxy stackIntegerValue: 0.
@@ -404,8 +404,8 @@ DeflatePlugin >> primitiveDeflateBlock [
 DeflatePlugin >> primitiveDeflateUpdateHashTable [
 	"Primitive. Update the hash tables after data has been moved by delta."
 	| delta table tableSize tablePtr entry |
-	self export: true.
-	self var: #tablePtr type:'int *'.
+	<export: true>
+	<var: #tablePtr type:'int *'>
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
 	delta := interpreterProxy stackIntegerValue: 0.
@@ -427,9 +427,9 @@ DeflatePlugin >> primitiveDeflateUpdateHashTable [
 DeflatePlugin >> primitiveUpdateAdler32 [
 	"Primitive. Update a 32bit CRC value."
 	| collection stopIndex startIndex length bytePtr s1 adler32 s2 b |
-	self export: true.
-	self var: #adler32 type:'unsigned int '.
-	self var: #bytePtr type:'unsigned char *'.
+	<export: true>
+	<var: #adler32 type:'unsigned int '>
+	<var: #bytePtr type:'unsigned char *'>
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	collection := interpreterProxy stackObjectValue: 0.
@@ -460,10 +460,10 @@ DeflatePlugin >> primitiveUpdateAdler32 [
 DeflatePlugin >> primitiveUpdateGZipCrc32 [
 	"Primitive. Update a 32bit CRC value."
 	| collection stopIndex startIndex crc length bytePtr |
-	self export: true.
-	self var: #crc type:'unsigned int '.
-	self var: #bytePtr type:'unsigned char *'.
-	self var: #crcTable type:'unsigned int *'.
+	<export: true>
+	<var: #crc type:'unsigned int '>
+	<var: #bytePtr type:'unsigned char *'>
+	<var: #crcTable type:'unsigned int *'>
 	interpreterProxy methodArgumentCount = 4
 		ifFalse:[^interpreterProxy primitiveFail].
 	collection := interpreterProxy stackObjectValue: 0.
@@ -489,7 +489,7 @@ DeflatePlugin >> primitiveUpdateGZipCrc32 [
 { #category : #primitives }
 DeflatePlugin >> primitiveZipSendBlock [
 	| distTree litTree distStream litStream rcvr result |
-	self export: true.
+	<export: true>
 	interpreterProxy methodArgumentCount = 4 
 		ifFalse:[^interpreterProxy primitiveFail].
 	distTree := interpreterProxy stackObjectValue: 0.
@@ -538,12 +538,12 @@ DeflatePlugin >> sendBlock: literalStream with: distanceStream with: litTree wit
 		zipBitBuf, zipBitPos.
 	"
 	| oop litPos litLimit litArray distArray lit dist sum llBitLengths llCodes distBitLengths distCodes code extra litBlCount distBlCount |
-	self var: #litArray type:'unsigned char *'.
-	self var: #distArray type:'unsigned int *'.
-	self var: #llBitLengths type:'unsigned int *'.
-	self var: #llCodes type:'unsigned int *'.
-	self var: #distBitLengths type:'unsigned int *'.
-	self var: #distCodes type:'unsigned int *'.
+	<var: #litArray type:'unsigned char *'>
+	<var: #distArray type:'unsigned int *'>
+	<var: #llBitLengths type:'unsigned int *'>
+	<var: #llCodes type:'unsigned int *'>
+	<var: #distBitLengths type:'unsigned int *'>
+	<var: #distCodes type:'unsigned int *'>
 	oop := interpreterProxy fetchPointer: 0 ofObject: literalStream.
 	litPos := interpreterProxy fetchInteger: 1 ofObject: literalStream.
 	litLimit := interpreterProxy fetchInteger: 2 ofObject: literalStream.
@@ -634,7 +634,7 @@ DeflatePlugin >> shouldFlush [
 	"Check if we should flush the current block.
 	Flushing can be useful if the input characteristics change."
 	| nLits |
-	self inline: false.
+	<inline: false>
 	zipLiteralCount = zipLiteralSize ifTrue:[^true]. "We *must* flush"
 	(zipLiteralCount bitAnd: 16rFFF) = 0 ifFalse:[^false]. "Only check every N kbytes"
 	zipMatchCount * 10 <= zipLiteralCount ifTrue:[

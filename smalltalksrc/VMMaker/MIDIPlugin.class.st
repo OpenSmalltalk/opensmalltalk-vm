@@ -21,7 +21,7 @@ MIDIPlugin class >> requiresPlatformFiles [
 
 { #category : #'initialize-release' }
 MIDIPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'midiInit()' inSmalltalk:[true]
 ]
 
@@ -67,8 +67,8 @@ MIDIPlugin >> primitiveMIDIGetPortDirectionality: portNum [
 MIDIPlugin >> primitiveMIDIGetPortName: portNum [
 
 	| portName sz nameObj namePtr |
-	self var: #portName declareC: 'char portName[256]'.
-	self var: #namePtr type: 'char * '.
+	<var: #portName declareC: 'char portName[256]'>
+	<var: #namePtr type: 'char * '>
 	self primitive: 'primitiveMIDIGetPortName'
 		parameters: #(SmallInteger).
 
@@ -102,7 +102,7 @@ MIDIPlugin >> primitiveMIDIParameterGet: whichParameter [
 { #category : #primitives }
 MIDIPlugin >> primitiveMIDIParameterGetOrSet [
 	"Backward compatibility"
-	self export: true.
+	<export: true>
 	interpreterProxy methodArgumentCount = 1
 		ifTrue:[^self primitiveMIDIParameterGet]
 		ifFalse:[^self primitiveMIDIParameterSet]
@@ -146,6 +146,6 @@ MIDIPlugin >> primitiveMIDIWrite: portNum from: array at: time [
 
 { #category : #'initialize-release' }
 MIDIPlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'midiShutdown()' inSmalltalk:[true]
 ]

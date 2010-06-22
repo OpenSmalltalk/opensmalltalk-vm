@@ -1,5 +1,21 @@
 Extension { #name : #ArrayedCollection }
 
+{ #category : #'*VMMaker-plugin generation' }
+ArrayedCollection class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
+
+	self instSize > 0 ifTrue: 
+		[self error: 'cannot auto-coerce arrays with named instance variables'].
+	cg generateCoerceToObjectFromPtr: aNode on: aStream
+]
+
+{ #category : #'*VMMaker-plugin generation' }
+ArrayedCollection class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
+
+	cg 
+		generateCoerceToPtr: (self ccgDeclareCForVar: '')
+		fromObject: aNode on: aStream
+]
+
 { #category : #'*VMMaker-simulated image growing' }
 ArrayedCollection >> copyGrownBy: n [
 	"Create a new collection containing all the elements from aCollection."

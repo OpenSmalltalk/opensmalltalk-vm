@@ -25,15 +25,15 @@ UUIDPlugin class >> requiresPlatformFiles [
 
 { #category : #initialize }
 UUIDPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'sqUUIDInit()' inSmalltalk:[true]
 ]
 
 { #category : #'system primitives' }
 UUIDPlugin >> primitiveMakeUUID [
 	| oop location |
-	self export: true.
-	self var: #location type: 'char*'.
+	<export: true>
+	<var: #location type: 'char*'>
 	interpreterProxy methodArgumentCount = 0
 		ifFalse:[^interpreterProxy primitiveFail].
 	oop := interpreterProxy stackObjectValue: 0.
@@ -44,13 +44,13 @@ UUIDPlugin >> primitiveMakeUUID [
 		ifFalse:[^interpreterProxy primitiveFail].
 	location := interpreterProxy firstIndexableField: oop.
 
-	self cCode: 'MakeUUID(location)' 
+	^self cCode: 'MakeUUID(location)' 
 		inSmalltalk: [location. interpreterProxy primitiveFail].
 
 ]
 
 { #category : #initialize }
 UUIDPlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'sqUUIDShutdown()' inSmalltalk:[true]
 ]

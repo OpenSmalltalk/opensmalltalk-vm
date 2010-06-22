@@ -169,3 +169,9 @@ CArray >> ptrAddress [
 
 	^ arrayBaseAddress + ptrOffset
 ]
+
+{ #category : #'int arithmetic' }
+CArray >> signedBitShift: n [
+
+	^ self bitShift: n
+]
