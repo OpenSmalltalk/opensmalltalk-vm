@@ -166,7 +166,8 @@ VMMakerTool >> availableListMenu: aMenu [
 			('make all internal'						makeAllPluginsInternal)
 			('make all available'					makeAllPluginsAvailable)
 			-
-			('browse plugin' 						browseSelectedAvailablePlugin)).
+			('browse plugin' 						browseSelectedAvailablePlugin)
+			('refresh list' 							refreshAvailablePluginsList)).
 	^ aMenu
 ]
 
@@ -577,7 +578,7 @@ VMMakerTool >> generateSelectedExternalPlugin [
 	| plugin |
 	plugin := self externalModules at: self currentExternalModuleIndex ifAbsent: [^self].
 	self checkOK
-		ifTrue: [[vmMaker generateExternalPlugin: plugin]
+		ifTrue: [[vmMaker generateExternalPlugin: plugin; logDateAndTime]
 		on: VMMakerException
 		do: [:ex| self inform: ex messageText]]
 
@@ -774,20 +775,21 @@ VMMakerTool >> platformNameText [
 VMMakerTool >> platformNameText: aText [ 
 	"set the platform name - this will almost certainly mean replacing the  
 	vmMaker with one suited to the platform so we do it anyway."
-	| prevVMMaker |
+	| prevVMMaker newVMMaker |
 	prevVMMaker := vmMaker.
 	"make a new vmmaker and ensure I depend on it correctly"
-	vmMaker := VMMaker forPlatform: aText string.
-	vmMaker logger: logger.
-	vmMaker addDependent: self.
-	prevVMMaker removeDependent: self.
+	newVMMaker := VMMaker forPlatform: aText string.
+	newVMMaker logger: logger.
 	"configure the new vmmaker to match the old one"
-	[vmMaker loadConfiguration: prevVMMaker configurationInfo.
-	vmMaker platformDirectory]
+	[newVMMaker loadConfiguration: prevVMMaker configurationInfo.
+	 newVMMaker platformDirectory]
 		on: VMMakerException
 		do: [self inform: 'Possible problem with path settings or platform name? Check path, permissions or spellings'.
-			^ false].
-	^ true
+			^false].
+	newVMMaker addDependent: self.
+	prevVMMaker removeDependent: self.
+	vmMaker := newVMMaker.
+	^true
 ]
 
 { #category : #menus }
@@ -795,24 +797,34 @@ VMMakerTool >> platformsListMenu [
 	"create a menu of all known platforms"
 
 	| choice platnames |
-	platnames := vmMaker platformRootDirectory directoryNames 
-				copyWithoutAll: #('Cross' 'CVS' '.svn').
-	choice := (PopUpMenu labelArray: platnames
-				lines: #()) startUp.
-	choice = 0 ifTrue: [^self].
-	self platformNameText: (platnames at: choice) asText
+	platnames := vmMaker platformRootDirectory directoryNames reject:
+					[:dirName|
+					dirName first = $. ".svn .git et al"
+					or: [dirName ='CVS']].
+	choice := (PopUpMenu labelArray: platnames lines: #()) startUp.
+	choice ~= 0 ifTrue:
+		[self platformNameText: (platnames at: choice) asText]
 ]
 
 { #category : #'path access' }
 VMMakerTool >> platformsPathText [
 	"return a Text for the path to the platform sources"
-	[^vmMaker platformRootDirectory fullName asText] on: VMMakerException do:[^'Problem with directory name for platform code: enter correct path or consult help text' asText]
+	^(vmMaker platformRootDirectoryName ifNil: ['']),
+	  ([vmMaker platformRootDirectory. ''] 
+		on: VMMakerException 
+		do:[:ex| ex return: '<path not valid>']) asText
 ]
 
 { #category : #'path access' }
 VMMakerTool >> platformsPathText: aText [
 	"set the path to the platform sources"
 	[^vmMaker platformRootDirectoryName: aText asString] on: VMMakerException do:[:ex| self inform:'problem with this directory name; check the path settings, permissions or spelling?'. ex return: false]
+]
+
+{ #category : #menus }
+VMMakerTool >> refreshAvailablePluginsList [
+	vmMaker recomputeProvidedPlugins.
+	self changed: #availableModules
 ]
 
 { #category : #menus }
@@ -846,9 +858,10 @@ VMMakerTool >> set64BitVM: boolean [
 { #category : #'path access' }
 VMMakerTool >> sourcePathText [
 	"return a Text for the path to the generated sources"
-	^[vmMaker sourceDirectory fullName asText] 
+	^(vmMaker sourceDirectoryName ifNil: ['']),
+	  ([vmMaker sourceDirectory. ''] 
 		on: VMMakerException 
-		do:[:ex| ex return:'<path not valid>'].
+		do:[:ex| ex return: '<path not valid>']) asText
 ]
 
 { #category : #'path access' }
@@ -870,12 +883,14 @@ VMMakerTool >> update: anObject [
 
 { #category : #initialisation }
 VMMakerTool >> updateAllViews [
-	self changed: #platformsPathText;
-				 changed: #platformNameText;
-				 changed: #sourcePathText;
-				 changed: #availableModules;
-				 changed: #internalModules;
-				 changed: #externalModules
+	self changed: #interpreterClassName;
+		changed: #platformsPathText;
+		changed: #platformsPathText;
+		changed: #platformNameText;
+		changed: #sourcePathText;
+		changed: #availableModules;
+		changed: #internalModules;
+		changed: #externalModules
 ]
 
 { #category : #'drag and drop' }

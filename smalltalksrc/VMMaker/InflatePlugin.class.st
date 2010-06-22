@@ -57,7 +57,7 @@ InflatePlugin class >> shouldBeTranslated [
 InflatePlugin >> primitiveInflateDecompressBlock [
 	"Primitive. Inflate a single block."
 	| oop rcvr |
-	self export: true.
+	<export: true>
 	interpreterProxy methodArgumentCount = 2 ifFalse:[^interpreterProxy primitiveFail].
 	"distance table"
 	oop := interpreterProxy stackObjectValue: 0.
@@ -130,7 +130,7 @@ InflatePlugin >> primitiveInflateDecompressBlock [
 InflatePlugin >> zipDecodeValueFrom: table size: tableSize [
 	"Decode the next value in the receiver using the given huffman table."
 	| bits bitsNeeded tableIndex value index |
-	self var: #table type:'unsigned int *'.
+	<var: #table type:'unsigned int *'>
 	bitsNeeded := (table at: 0) bitShift: -24.	"Initial bits needed"
 	bitsNeeded > MaxBits ifTrue:[interpreterProxy primitiveFail. ^0].
 	tableIndex := 2.							"First real table"
@@ -150,7 +150,7 @@ InflatePlugin >> zipDecodeValueFrom: table size: tableSize [
 { #category : #inflating }
 InflatePlugin >> zipDecompressBlock [
 	| value extra length distance oldPos oldBits oldBitPos dstPos srcPos max |
-	self inline: false.
+	<inline: false>
 	max := zipCollectionSize - 1.
 	[zipReadLimit < max and:[zipSourcePos <= zipSourceLimit]] whileTrue:[
 		"Back up stuff if we're running out of space"
@@ -190,7 +190,7 @@ InflatePlugin >> zipDecompressBlock [
 { #category : #inflating }
 InflatePlugin >> zipNextBits: n [
 	| bits byte |
-	self inline: true.
+	<inline: true>
 	[zipBitPos < n] whileTrue:[
 		byte := zipSource at: (zipSourcePos := zipSourcePos + 1).
 		zipBitBuf := zipBitBuf + (byte << zipBitPos).

@@ -7,62 +7,63 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TVariableNode >> bindVariableUsesIn: aDictionary [
 
-	^ (aDictionary at: name ifAbsent: [^ self]) copyTree
+	^ (aDictionary at: name ifAbsent: [^ self]) copy
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TVariableNode >> bindVariablesIn: aDictionary [ 
-	^ (aDictionary at: name ifAbsent: [^ self]) copyTree
+	^ (aDictionary at: name ifAbsent: [^ self]) copy
 ]
 
-{ #category : #'as yet unclassified' }
-TVariableNode >> copyTree [
-
-	^self class new setName: name
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
 TVariableNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
-	name = 'nil'
-		ifTrue: [ aStream nextPutAll: (aCodeGen cLiteralFor: nil) ]
-		ifFalse: [ aStream nextPutAll: (aCodeGen returnPrefixFromVariable: name) ].
+	aStream nextPutAll: (name = 'nil'
+						ifTrue: [ aCodeGen cLiteralFor: nil ]
+						ifFalse: [ aCodeGen returnPrefixFromVariable: name ])
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TVariableNode >> isLeaf [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
+TVariableNode >> isStructTarget: aCodeGen [
+	"Answer if the recever is a struct pointer
+	 and hence can be dereferenced using ->"
+	^aCodeGen isPointerToStructVariableName: name
+]
+
+{ #category : #testing }
 TVariableNode >> isVariable [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TVariableNode >> name [
 
-	^name
+	^name asString
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TVariableNode >> nameOrValue [
 
 	^name
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 TVariableNode >> printOn: aStream level: level [
 
 	aStream nextPutAll: name.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TVariableNode >> setName: aString [
 
 	name := aString.

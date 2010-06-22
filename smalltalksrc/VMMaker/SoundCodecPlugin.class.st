@@ -30,7 +30,7 @@ SoundCodecPlugin class >> requiresCrossPlatformFiles [
 SoundCodecPlugin >> primitiveGSMDecode [
 
 	| dstIndex dst srcIndex src frameCount state srcSize dstSize result srcDelta dstDelta |
-	self export: true.
+	<export: true>
 	dstIndex := interpreterProxy stackIntegerValue: 0.
 	dst := interpreterProxy stackObjectValue: 1.
 	srcIndex := interpreterProxy stackIntegerValue: 2.
@@ -56,7 +56,7 @@ SoundCodecPlugin >> primitiveGSMDecode [
 SoundCodecPlugin >> primitiveGSMEncode [
 
 	| dstIndex dst srcIndex src frameCount state srcSize dstSize result srcDelta dstDelta |
-	self export: true.
+	<export: true>
 	dstIndex := interpreterProxy stackIntegerValue: 0.
 	dst := interpreterProxy stackObjectValue: 1.
 	srcIndex := interpreterProxy stackIntegerValue: 2.
@@ -82,12 +82,13 @@ SoundCodecPlugin >> primitiveGSMEncode [
 SoundCodecPlugin >> primitiveGSMNewState [
 
 	| stateBytes state |
-	self export: true.
+	<export: true>
 	stateBytes := self cCode: 'gsmStateBytes()'.
 	state := interpreterProxy
 		instantiateClass: interpreterProxy classByteArray
 		indexableSize: stateBytes.
 	self cCode: 'gsmInitState(state + 4)'.
+	interpreterProxy pop: 1.
 	interpreterProxy push: state.
 
 ]

@@ -21,7 +21,7 @@ InternetConfigPlugin class >> requiresPlatformFiles [
 
 { #category : #initialize }
 InternetConfigPlugin >> initialiseModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'sqInternetConfigurationInit()' inSmalltalk:[true]
 ]
 
@@ -66,6 +66,6 @@ InternetConfigPlugin >> primitiveGetStringKeyedBy: aKey [
 
 { #category : #initialize }
 InternetConfigPlugin >> shutdownModule [
-	self export: true.
+	<export: true>
 	^self cCode: 'sqInternetConfigurationShutdown()' inSmalltalk:[true]
 ]

@@ -10,10 +10,10 @@ Class {
 { #category : #primitives }
 BMPReadWriterPlugin >> primitiveRead24BmpLine [
 	| width formBitsIndex formBitsOop pixelLineOop formBitsSize formBits pixelLineSize pixelLine |
-	self export: true.
-	self inline: false.
-	self var: #formBits type: 'unsigned int *'.
-	self var: #pixelLine type: 'unsigned char *'.
+	<export: true>
+	<inline: false>
+	<var: #formBits type: 'unsigned int *'>
+	<var: #pixelLine type: 'unsigned char *'>
 	interpreterProxy methodArgumentCount = 4 
 		ifFalse:[^interpreterProxy primitiveFail].
 	width := interpreterProxy stackIntegerValue: 0.
@@ -52,10 +52,10 @@ BMPReadWriterPlugin >> primitiveRead24BmpLine [
 BMPReadWriterPlugin >> primitiveWrite24BmpLine [
 
 	| width formBitsIndex formBitsOop pixelLineOop formBitsSize formBits pixelLineSize pixelLine |
-	self export: true.
-	self inline: false.
-	self var: #formBits type: 'unsigned int *'.
-	self var: #pixelLine type: 'unsigned char *'.
+	<export: true>
+	<inline: false>
+	<var: #formBits type: 'unsigned int *'>
+	<var: #pixelLine type: 'unsigned char *'>
 	interpreterProxy methodArgumentCount = 4 
 		ifFalse:[^interpreterProxy primitiveFail].
 	width := interpreterProxy stackIntegerValue: 0.

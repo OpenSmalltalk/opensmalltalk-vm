@@ -399,7 +399,7 @@ BitBltSimulation >> OLDrgbDiff: sourceWord with: destinationWord [
 	pre-merge masking.  For accurate results, you must subtract the
 	values obtained from the left and right fringes."
 	| diff pixMask |
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Just xor and count differing bits if not RGB"
 		diff := sourceWord bitXor: destinationWord.
@@ -504,7 +504,7 @@ BitBltSimulation >> alphaBlend: sourceWord with: destinationWord [
 	the computation being performed independently on each color
 	component.  The high byte of the result will be 0."
 	| alpha unAlpha colorMask result blend shift |
-	self inline: false.
+	<inline: false>
 	alpha := sourceWord >> 24.  "High 8 bits of source pixel"
 	alpha = 0 ifTrue: [ ^ destinationWord ].
 	alpha = 255 ifTrue: [ ^ sourceWord ].
@@ -563,7 +563,7 @@ BitBltSimulation >> alphaBlendConst: sourceWord with: destinationWord paintMode:
 	colormaps, as is the case with WarpBlt."
 
 	| pixMask destShifted sourceShifted destPixVal rgbMask sourcePixVal unAlpha result pixBlend shift blend maskShifted bitsPerColor |
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue: [^ destinationWord "no-op"].
 	unAlpha := 255 - sourceAlpha.
 	pixMask := maskTable at: destDepth.
@@ -621,7 +621,7 @@ BitBltSimulation >> alphaBlendScaled: sourceWord with: destinationWord [
 
 	e.g., it is assumed that the source color is already scaled."
 	| unAlpha dstMask srcMask b g r a |
-	self inline: false.	"Do NOT inline this into optimized loops"
+	<inline: false>	"Do NOT inline this into optimized loops"
 	unAlpha := 255 - (sourceWord >> 24).  "High 8 bits of source pixel"
 	dstMask := destinationWord.
 	srcMask := sourceWord.
@@ -659,7 +659,7 @@ BitBltSimulation >> alphaSourceBlendBits16 [
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift ditherBase ditherIndex ditherThreshold |
-	self inline: false. "This particular method should be optimized in itself"
+	<inline: false> "This particular method should be optimized in itself"
 	deltaY := bbH + 1. "So we can pre-decrement"
 	srcY := sy.
 	dstY := dy.
@@ -733,7 +733,7 @@ BitBltSimulation >> alphaSourceBlendBits32 [
 		with the special cases of srcAlpha = 0.0 and srcAlpha = 1.0 
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY srcY dstY |
-	self inline: false. "This particular method should be optimized in itself"
+	<inline: false> "This particular method should be optimized in itself"
 
 	"Give the compile a couple of hints"
 
@@ -810,8 +810,8 @@ BitBltSimulation >> alphaSourceBlendBits8 [
 	"
 	| srcIndex dstIndex sourceWord srcAlpha destWord deltaX deltaY 
 	srcY dstY dstMask srcShift adjust mappingTable mapperFlags |
-	self inline: false. "This particular method should be optimized in itself"
-	self var: #mappingTable type:'unsigned int *'.
+	<inline: false>
+	<var: #mappingTable type:'unsigned int *'>
 	mappingTable := self default8To32Table.
 	mapperFlags := cmFlags bitAnd: ColorMapNewStyle bitInvert32.
 	deltaY := bbH + 1. "So we can pre-decrement"
@@ -939,7 +939,7 @@ BitBltSimulation >> checkSourceOverlap [
 	"check for possible overlap of source and destination"
 	"ar 10/19/1999: This method requires surfaces to be locked."
 	| t |
-	self inline: true.
+	<inline: true>
 	(sourceForm = destForm and: [dy >= sy]) ifTrue:
 		[dy > sy ifTrue:
 			["have to start at bottom"
@@ -1009,8 +1009,8 @@ BitBltSimulation >> clipRange [
 { #category : #setup }
 BitBltSimulation >> copyBits [
 	"This function is exported for the Balloon engine"
-	self export: true.
-	self inline: false.
+	<export: true>
+	<inline: false>
 	self clipRange.
 	(bbW <= 0 or: [bbH <= 0]) ifTrue:
 		["zero width or height; noop"
@@ -1025,7 +1025,7 @@ BitBltSimulation >> copyBits [
 { #category : #setup }
 BitBltSimulation >> copyBitsFrom: startX to: stopX at: yValue [
 	"Support for the balloon engine."
-	self export: true.
+	<export: true>
 	destX := startX.
 	destY := yValue.
 	sourceX := startX.
@@ -1039,7 +1039,7 @@ BitBltSimulation >> copyBitsLockedAndClipped [
 	"Perform the actual copyBits operation.
 	Assume: Surfaces have been locked and clipping was performed."
 	| done |
-	self inline: true.
+	<inline: true>
 	"Try a shortcut for stuff that should be run as quickly as possible"
  	done := self tryCopyingBitsQuickly.
 	done ifTrue:[^nil].
@@ -1075,8 +1075,8 @@ BitBltSimulation >> copyBitsLockedAndClipped [
 BitBltSimulation >> copyLoop [
 	| prevWord thisWord skewWord halftoneWord mergeWord hInc y unskew skewMask notSkewMask mergeFnwith destWord |
 	"This version of the inner loop assumes noSource = false."
-	self inline: false.
-	self var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'.
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
 	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
 	mergeFnwith.  "null ref for compiler"
 
@@ -1201,8 +1201,8 @@ BitBltSimulation >> copyLoopNoSource [
 	"Faster copyLoop when source not used.  hDir and vDir are both
 	positive, and perload and skew are unused"
 	| halftoneWord mergeWord mergeFnwith destWord |
-	self inline: false.
-	self var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'.
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
 	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
 	mergeFnwith.  "null ref for compiler"
 
@@ -1266,8 +1266,8 @@ BitBltSimulation >> copyLoopPixMap [
 	The idea is that the call itself could be inlined. If we decide not
 	to inline pickSourcePixels we could optimize the loop instead."
 	| skewWord halftoneWord mergeWord scrStartBits nSourceIncs startBits endBits sourcePixMask destPixMask mergeFnwith nPix srcShift dstShift destWord words srcShiftInc dstShiftInc dstShiftLeft mapperFlags |
-	self inline: false.
-	self var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'.
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
 	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
 	mergeFnwith.  "null ref for compiler"
 
@@ -1369,8 +1369,8 @@ BitBltSimulation >> default8To32Table [
 		s nextPutAll:'};'.
 	]."
 	| theTable |
-	self returnTypeC:'unsigned int *'.
-	self var: #theTable declareC:'static unsigned int theTable[256] = { 
+	<returnTypeC:'unsigned int *'>
+	<var: #theTable declareC:'static unsigned int theTable[256] = { 
 0x0, 0xFF000001, 0xFFFFFFFF, 0xFF808080, 0xFFFF0000, 0xFF00FF00, 0xFF0000FF, 0xFF00FFFF, 
 0xFFFFFF00, 0xFFFF00FF, 0xFF202020, 0xFF404040, 0xFF606060, 0xFF9F9F9F, 0xFFBFBFBF, 0xFFDFDFDF, 
 0xFF080808, 0xFF101010, 0xFF181818, 0xFF282828, 0xFF303030, 0xFF383838, 0xFF484848, 0xFF505050, 
@@ -1402,14 +1402,14 @@ BitBltSimulation >> default8To32Table [
 0xFFFFCC00, 0xFFFFFF00, 0xFFFF0033, 0xFFFF3333, 0xFFFF6633, 0xFFFF9933, 0xFFFFCC33, 0xFFFFFF33, 
 0xFFFF0066, 0xFFFF3366, 0xFFFF6666, 0xFFFF9966, 0xFFFFCC66, 0xFFFFFF66, 0xFFFF0099, 0xFFFF3399, 
 0xFFFF6699, 0xFFFF9999, 0xFFFFCC99, 0xFFFFFF99, 0xFFFF00CC, 0xFFFF33CC, 0xFFFF66CC, 0xFFFF99CC, 
-0xFFFFCCCC, 0xFFFFFFCC, 0xFFFF00FF, 0xFFFF33FF, 0xFFFF66FF, 0xFFFF99FF, 0xFFFFCCFF, 0xFFFFFFFF};'.
+0xFFFFCCCC, 0xFFFFFFCC, 0xFFFF00FF, 0xFFFF33FF, 0xFFFF66FF, 0xFFFF99FF, 0xFFFFCCFF, 0xFFFFFFFF};'>
 	^theTable
 ]
 
 { #category : #'pixel mapping' }
 BitBltSimulation >> deltaFrom: x1 to: x2 nSteps: n [
 	"Utility routine for computing Warp increments."
-	self inline: true.
+	<inline: true>
 	x2 > x1
 		ifTrue: [^ x2 - x1 + FixedPt1 // (n+1) + 1]
 		ifFalse: [x2 = x1 ifTrue: [^ 0].
@@ -1420,7 +1420,7 @@ BitBltSimulation >> deltaFrom: x1 to: x2 nSteps: n [
 BitBltSimulation >> destMaskAndPointerInit [
 	"Compute masks for left and right destination words"
 	| startBits pixPerM1 endBits |
-	self inline: true.
+	<inline: true>
 	pixPerM1 := destPPW - 1.  "A mask, assuming power of two"
 	"how many pixels in first word"
 	startBits := destPPW - (dx bitAnd: pixPerM1).
@@ -1456,7 +1456,7 @@ BitBltSimulation >> destinationWord: sourceWord with: destinationWord [
 BitBltSimulation >> dither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| addThreshold  |
-	self inline: true. "You bet"
+	<inline: true> "You bet"
 	addThreshold := ditherValue bitShift: 8.
 	^((dither8Lookup at: (addThreshold+((srcWord bitShift: -16) bitAnd: 255))) bitShift: 10) + 
 		((dither8Lookup at: (addThreshold+((srcWord bitShift: -8) bitAnd: 255))) bitShift: 5) + 
@@ -1566,7 +1566,7 @@ BitBltSimulation >> dstLongAt: idx put: srcValue mask: dstMask [
 	to mask out the bits to be modified. This is an essiantial
 	read-modify-write operation on the destination form."
 	| dstValue |
-	self inline: true.
+	<inline: true>
 	dstValue := self dstLongAt: idx.
 	dstValue := dstValue bitAnd: dstMask.
 	dstValue := dstValue bitOr: srcValue.
@@ -1577,7 +1577,7 @@ BitBltSimulation >> dstLongAt: idx put: srcValue mask: dstMask [
 BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 	"Dither the given 32bit word to 16 bit. Ignore alpha."
 	| pv threshold value out |
-	self inline: true. "You bet"
+	<inline: true> "You bet"
 	pv := srcWord bitAnd: 255.
 	threshold := ditherThresholds16 at: (pv bitAnd: 7).
 	value := ditherValues16 at: (pv bitShift: -3).
@@ -1603,7 +1603,7 @@ BitBltSimulation >> expensiveDither32To16: srcWord threshold: ditherValue [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	self var: #floatValue type:'double '.
+	<var: #floatValue type:'double '>
 	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1617,7 +1617,7 @@ BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer [
 BitBltSimulation >> fetchIntOrFloat: fieldIndex ofObject: objectPointer ifNil: defaultValue [
 	"Return the integer value of the given field of the given object. If the field contains a Float, truncate it and return its integral part. Fail if the given field does not contain a small integer or Float, or if the truncated Float is out of the range of small integers."
 	| fieldOop floatValue |
-	self var: #floatValue type:'double '.
+	<var: #floatValue type:'double '>
 	fieldOop := interpreterProxy fetchPointer: fieldIndex ofObject: objectPointer.
 	(interpreterProxy isIntegerObject: fieldOop)
 		ifTrue:[^interpreterProxy integerValueOf: fieldOop].
@@ -1703,7 +1703,7 @@ BitBltSimulation >> initBBOpTable [
 
 { #category : #'initialize-release' }
 BitBltSimulation >> initDither8Lookup [	
-	self inline: false. 
+	<inline: false> 
 	0 to: 255 do: [:b | 
 		0 to: 15 do: [:t | | value |
 			value := self expensiveDither32To16: b threshold: t.
@@ -1713,7 +1713,7 @@ BitBltSimulation >> initDither8Lookup [
 
 { #category : #'initialize-release' }
 BitBltSimulation >> initialiseModule [
-	self export: true.
+	<export: true>
 	self initBBOpTable.
 	self initDither8Lookup.
 	^true
@@ -1722,8 +1722,8 @@ BitBltSimulation >> initialiseModule [
 { #category : #'interpreter interface' }
 BitBltSimulation >> isIdentityMap: shifts with: masks [
 	"Return true if shiftTable/maskTable define an identity mapping."
-	self var: #shifts type:'int *'.
-	self var: #masks type:'unsigned int *'.
+	<var: #shifts type:'int *'>
+	<var: #masks type:'unsigned int *'>
 	(shifts == nil or:[masks == nil]) ifTrue:[^true].
 	((shifts at: RedIndex) = 0 
 		and:[(shifts at: GreenIndex) = 0
@@ -1742,7 +1742,7 @@ BitBltSimulation >> loadBitBltDestForm [
 	"Load the dest form for BitBlt. Return false if anything is wrong, true otherwise."
 
 	| destBitsSize |
-	self inline: true.
+	<inline: true>
 	destBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: destForm.
 	destWidth := interpreterProxy fetchInteger: FormWidthIndex ofObject: destForm.
 	destHeight := interpreterProxy fetchInteger: FormHeightIndex ofObject: destForm.
@@ -1776,7 +1776,7 @@ BitBltSimulation >> loadBitBltDestForm [
 BitBltSimulation >> loadBitBltFrom: bbObj [
 	"Load BitBlt from the oop.
 	This function is exported for the Balloon engine."
-	self export: true.
+	<export: true>
 	^self loadBitBltFrom: bbObj warping: false.
 ]
 
@@ -1786,7 +1786,7 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 	"NOTE this should all be changed to minX/maxX coordinates for simpler clipping
 		-- once it works!"
 	| ok |
-	self inline: false.
+	<inline: false>
 	bitBltOop := bbObj.
 	isWarping := aBool.
 	combinationRule := interpreterProxy fetchInteger: BBRuleIndex ofObject: bitBltOop.
@@ -1844,7 +1844,7 @@ BitBltSimulation >> loadBitBltFrom: bbObj warping: aBool [
 BitBltSimulation >> loadBitBltSourceForm [
 	"Load the source form for BitBlt. Return false if anything is wrong, true otherwise."
 	| sourceBitsSize |
-	self inline: true.
+	<inline: true>
 	sourceBits := interpreterProxy fetchPointer: FormBitsIndex ofObject: sourceForm.
 	sourceWidth := self fetchIntOrFloat: FormWidthIndex ofObject: sourceForm.
 	sourceHeight := self fetchIntOrFloat: FormHeightIndex ofObject: sourceForm.
@@ -1880,7 +1880,7 @@ BitBltSimulation >> loadColorMap [
 	2^N long, where N = sourceDepth for 1, 2, 4, 8 bits, 
 	or N = 9, 12, or 15 (3, 4, 5 bits per color) for 16 or 32 bits."
 	| cmSize oldStyle oop cmOop |
-	self inline: true.
+	<inline: true>
 	cmFlags := cmMask := cmBitsPerColor := 0.
 	cmShiftTable := nil.
 	cmMaskTable := nil.
@@ -1930,7 +1930,7 @@ BitBltSimulation >> loadColorMap [
 
 { #category : #'interpreter interface' }
 BitBltSimulation >> loadColorMapShiftOrMaskFrom: mapOop [
-	self returnTypeC:'void *'.
+	<returnTypeC:'void *'>
 	mapOop = interpreterProxy nilObject ifTrue:[^nil].
 	(interpreterProxy isIntegerObject: mapOop) 
 		ifTrue:[interpreterProxy primitiveFail. ^nil].
@@ -1944,7 +1944,7 @@ BitBltSimulation >> loadColorMapShiftOrMaskFrom: mapOop [
 BitBltSimulation >> loadHalftoneForm [
 	"Load the halftone form"
 	| halftoneBits |
-	self inline: true.
+	<inline: true>
 	noHalftone ifTrue:[
 		halftoneBase := nil.
 		^true].
@@ -2014,8 +2014,8 @@ BitBltSimulation >> lockSurfaces [
 
 	"
 	| sourceHandle destHandle l r t b fn |
-	self inline: true. "If the CCodeGen learns how to inline #cCode: methods"
-	self var: #fn declareC:'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'.
+	<inline: true>
+	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt*, sqInt, sqInt, sqInt, sqInt)'>
 	hasSurfaceLock := false.
 	destBits = 0 ifTrue:["Blitting *to* OS surface"
 		lockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
@@ -2065,7 +2065,7 @@ BitBltSimulation >> lockSurfaces [
 BitBltSimulation >> mapPixel: sourcePixel flags: mapperFlags [
 	"Color map the given source pixel."
 	| pv |
-	self inline: true.
+	<inline: true>
 	pv := sourcePixel.
 	(mapperFlags bitAnd: ColorMapPresent) ~= 0 ifTrue:[
 		(mapperFlags bitAnd: ColorMapFixedPart) ~= 0 ifTrue:[
@@ -2082,7 +2082,7 @@ BitBltSimulation >> mapPixel: sourcePixel flags: mapperFlags [
 BitBltSimulation >> merge: sourceWord with: destinationWord [
 	| mergeFnwith |
 	"Sender warpLoop is too big to include this in-line"
-	self var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'.
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
 	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
 	mergeFnwith.  "null ref for compiler"
 
@@ -2093,8 +2093,8 @@ BitBltSimulation >> merge: sourceWord with: destinationWord [
 BitBltSimulation >> moduleUnloaded: aModuleName [
 	"The module with the given name was just unloaded.
 	Make sure we have no dangling references."
-	self export: true.
-	self var: #aModuleName type: 'char *'.
+	<export: true>
+	<var: #aModuleName type: 'char *'>
 	(aModuleName strcmp: 'SurfacePlugin') = 0 ifTrue:[
 		"The surface plugin just shut down. How nasty."
 		querySurfaceFn := lockSurfaceFn := unlockSurfaceFn := 0.
@@ -2216,7 +2216,7 @@ BitBltSimulation >> partitionedSub: word1 from: word2 nBits: nBits nPartitions: 
 BitBltSimulation >> performCopyLoop [
 	"Based on the values provided during setup choose and
 	perform the appropriate inner loop function."
-	self inline: true. "Should be inlined into caller for speed"
+	<inline: true> "Should be inlined into caller for speed"
 	self destMaskAndPointerInit.
 	noSource ifTrue: ["Simple fill loop"
 		self copyLoopNoSource.
@@ -2239,7 +2239,7 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 	"Pick nPix pixels starting at srcBitIndex from the source, map by the
 	color map, and justify them according to dstBitIndex in the resulting destWord."
 	| sourceWord destWord sourcePix destPix srcShift dstShift nPix |
-	self inline: true. "oh please"
+	<inline: true> "oh please"
 	sourceWord := self srcLongAt: sourceIndex.
 	destWord := 0.
 	srcShift := srcBitShift. "Hint: Keep in register"
@@ -2282,7 +2282,7 @@ BitBltSimulation >> pickWarpPixelAtX: xx y: yy [
 	Note: This method is crucial for WarpBlt speed w/o smoothing
 	and still relatively important when smoothing is used."
 	| x y srcIndex sourceWord sourcePix |
-	self inline: true. "*please*"
+	<inline: true> "*please*"
 
 	"note: it would be much faster if we could just
 	avoid these stupid tests for being inside sourceForm."
@@ -2307,7 +2307,7 @@ BitBltSimulation >> pickWarpPixelAtX: xx y: yy [
 BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 	"Clear all pixels in destinationWord for which the pixels of sourceWord have the same values. Used to clear areas of some constant color to zero."
 	| mask result nBits pv |
-	self inline: false.
+	<inline: false>
 	destDepth = 32 ifTrue:[
 		sourceWord = destinationWord ifTrue:[^0] ifFalse:[^destinationWord].
 	].
@@ -2324,14 +2324,14 @@ BitBltSimulation >> pixClear: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> pixMask: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	^ self partitionedAND: sourceWord bitInvert32 to: destinationWord
 					nBits: destDepth nPartitions: destPPW
 ]
 
 { #category : #'combination rules' }
 BitBltSimulation >> pixPaint: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	sourceWord = 0 ifTrue: [^ destinationWord].
 	^ sourceWord bitOr:
 		(self partitionedAND: sourceWord bitInvert32 to: destinationWord
@@ -2342,7 +2342,7 @@ BitBltSimulation >> pixPaint: sourceWord with: destinationWord [
 BitBltSimulation >> pixSwap: sourceWord with: destWord [
 	"Swap the pixels in destWord"
 	| result shift lowMask highMask |
-	self inline: false.
+	<inline: false>
 	destPPW = 1 ifTrue:[^destWord]. "a single pixel per word"
 	result := 0.
 	lowMask := (1 << destDepth) - 1. "mask low pixel"
@@ -2366,7 +2366,7 @@ BitBltSimulation >> pixSwap: sourceWord with: destWord [
 BitBltSimulation >> primitiveCopyBits [
 	"Invoke the copyBits primitive. If the destination is the display, then copy it to the screen."
 	| rcvr |
-	self export: true.
+	<export: true>
 	rcvr := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
 	(self loadBitBltFrom: rcvr)  ifFalse:[^interpreterProxy primitiveFail].
 	self copyBits.
@@ -2383,8 +2383,8 @@ BitBltSimulation >> primitiveCopyBits [
 BitBltSimulation >> primitiveDisplayString [
 
 	| kernDelta xTable glyphMap stopIndex startIndex sourceString bbObj maxGlyph ascii glyphIndex sourcePtr left quickBlt |
-	self export: true.
-	self var: #sourcePtr type: 'char *'.
+	<export: true>
+	<var: #sourcePtr type: 'char *'>
 	interpreterProxy methodArgumentCount = 6 
 		ifFalse:[^interpreterProxy primitiveFail].
 	kernDelta := interpreterProxy stackIntegerValue: 0.
@@ -2451,7 +2451,7 @@ BitBltSimulation >> primitiveDisplayString [
 BitBltSimulation >> primitiveDrawLoop [
 	"Invoke the line drawing primitive."
 	| rcvr xDelta yDelta |
-	self export: true.
+	<export: true>
 	rcvr := interpreterProxy stackValue: 2.
 	xDelta := interpreterProxy stackIntegerValue: 1.
 	yDelta := interpreterProxy stackIntegerValue: 0.
@@ -2466,7 +2466,7 @@ BitBltSimulation >> primitiveDrawLoop [
 BitBltSimulation >> primitiveWarpBits [
 	"Invoke the warpBits primitive. If the destination is the display, then copy it to the screen."
 	| rcvr |
-	self export: true.
+	<export: true>
 	rcvr := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
 	(self loadWarpBltFrom: rcvr) 
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -2507,7 +2507,7 @@ BitBltSimulation >> querySourceSurface: handle [
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbAdd: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Add each pixel separately"
 		^ self partitionedAdd: sourceWord to: destinationWord
@@ -2530,7 +2530,7 @@ BitBltSimulation >> rgbDiff: sourceWord with: destinationWord [
 	and return the sum of the absolute value of all the differences.
 	For non-rgb, return the number of differing pixels."
 	| pixMask destShifted sourceShifted destPixVal bitsPerColor rgbMask sourcePixVal diff maskShifted |
-	self inline: false.
+	<inline: false>
 	pixMask := maskTable at: destDepth.
 	destDepth = 16
 		ifTrue: [bitsPerColor := 5.  rgbMask := 16r1F]
@@ -2581,7 +2581,7 @@ BitBltSimulation >> rgbMap32To32: sourcePixel [
 BitBltSimulation >> rgbMap: sourcePixel from: nBitsIn to: nBitsOut [
 	"Convert the given pixel value with nBitsIn bits for each color component to a pixel value with nBitsOut bits for each color component. Typical values for nBitsIn/nBitsOut are 3, 5, or 8."
 	| mask d srcPix destPix |
-	self inline: true.
+	<inline: true>
 	(d := nBitsOut - nBitsIn) > 0
 		ifTrue:
 			["Expand to more bits by zero-fill"
@@ -2622,7 +2622,7 @@ BitBltSimulation >> rgbMap: sourcePixel from: nBitsIn to: nBitsOut [
 BitBltSimulation >> rgbMapPixel: sourcePixel flags: mapperFlags [
 	"Perform the RGBA conversion for the given source pixel"
 	| val |
-	self inline: true.
+	<inline: true>
 	val := 			((sourcePixel bitAnd: (cmMaskTable at: 0)) bitShift: (cmShiftTable at: 0)).
 	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 1)) bitShift: (cmShiftTable at: 1)).
 	val := val bitOr: ((sourcePixel bitAnd: (cmMaskTable at: 2)) bitShift: (cmShiftTable at: 2)).
@@ -2632,7 +2632,7 @@ BitBltSimulation >> rgbMapPixel: sourcePixel flags: mapperFlags [
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Max each pixel separately"
 		^ self partitionedMax: sourceWord with: destinationWord
@@ -2651,7 +2651,7 @@ BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
 		^ self partitionedMin: sourceWord with: destinationWord
@@ -2671,7 +2671,7 @@ BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 	| sourceWord |
-	self inline: false.
+	<inline: false>
 	sourceWord := wordToInvert bitInvert32.
 	destDepth < 16 ifTrue:
 		["Min each pixel separately"
@@ -2691,7 +2691,7 @@ BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Mul each pixel separately"
 		^ self partitionedMul: sourceWord with: destinationWord
@@ -2715,7 +2715,7 @@ BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 
 { #category : #'combination rules' }
 BitBltSimulation >> rgbSub: sourceWord with: destinationWord [
-	self inline: false.
+	<inline: false>
 	destDepth < 16 ifTrue:
 		["Sub each pixel separately"
 		^ self partitionedSub: sourceWord from: destinationWord
@@ -2755,8 +2755,8 @@ BitBltSimulation >> setupColorMasks [
 BitBltSimulation >> setupColorMasksFrom: srcBits to: targetBits [
 	"Setup color masks for converting an incoming RGB pixel value from srcBits to targetBits."
 	| mask shifts masks deltaBits |
-	self var: #shifts declareC:'static int shifts[4] = {0, 0, 0, 0}'.
-	self var: #masks declareC:'static unsigned int masks[4] = {0, 0, 0, 0}'.
+	<var: #shifts declareC:'static int shifts[4] = {0, 0, 0, 0}'>
+	<var: #masks declareC:'static unsigned int masks[4] = {0, 0, 0, 0}'>
 	self cCode:'' inSmalltalk:[
 		shifts := CArrayAccessor on: (IntegerArray new: 4).
 		masks := CArrayAccessor on: (WordArray new: 4).
@@ -2803,7 +2803,7 @@ BitBltSimulation >> sourceSkewAndPointerInit [
 	"This is only used when source and dest are same depth,
 	ie, when the barrel-shift copy loop is used."
 	| dWid sxLowBits dxLowBits pixPerM1 |
-	self inline: true.
+	<inline: true>
 	pixPerM1 := destPPW - 1.  "A mask, assuming power of two"
 	sxLowBits := sx bitAnd: pixPerM1.
 	dxLowBits := dx bitAnd: pixPerM1.
@@ -2855,7 +2855,7 @@ BitBltSimulation >> subWord: sourceWord with: destinationWord [
 { #category : #'memory access' }
 BitBltSimulation >> tableLookup: table at: index [
 	"Note: Nasty coercion only necessary for the non-inlined version of this method in C. Duh? Oh well, here's the full story. The code below will definitely be inlined so everything that calls this method is fine. But... the translator doesn't quite prune this method so it generates a C function that tries to attempt an array access on an int - and most compilers don't like this. If you don't know what I'm talking about try to remove the C coercion and you'll see what happens when you try to compile a new VM..."
-	self var: #table type: 'unsigned int *'.
+	<var: #table type: 'unsigned int *'>
 	^table at: index
 
 ]
@@ -2867,7 +2867,7 @@ BitBltSimulation >> tallyIntoMap: sourceWord with: destinationWord [
 	specified == destination, in order for the proper color map checks 
 	to be performed at setup."
 	| mapIndex pixMask destShifted maskShifted pixVal |
-	self inline: false.
+	<inline: false>
 	(cmFlags bitAnd: (ColorMapPresent bitOr: ColorMapIndexedPart)) = 
 		(ColorMapPresent bitOr: ColorMapIndexedPart)
 			ifFalse: [^ destinationWord "no op"].
@@ -2907,7 +2907,7 @@ BitBltSimulation >> tryCopyingBitsQuickly [
 	"Shortcut for stuff that's being run from the balloon engine.
 	Since we do this at each scan line we should avoid the expensive 
 	setup for source and destination."
-	self inline: true.
+	<inline: true>
 	"We need a source."
 	noSource ifTrue:[^false].
 	"We handle only combinationRule 34"
@@ -2938,7 +2938,7 @@ BitBltSimulation >> unlockSurfaces [
 	"Unlock the bits of any OS surfaces."
 	"See the comment in lockSurfaces. Similar rules apply. That is, the area provided in ioUnlockSurface can be used to determine the dirty region after drawing. If a source is unlocked, then the area will be (0,0,0,0) to indicate that no portion is dirty."
 	| sourceHandle destHandle destLocked fn |
-	self var: #fn declareC:'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'.
+	<var: #fn declareC:'sqInt (*fn)(sqInt, sqInt, sqInt, sqInt, sqInt)'>
 	hasSurfaceLock ifTrue:[
 		unlockSurfaceFn = 0 ifTrue:[self loadSurfacePlugin ifFalse:[^nil]].
 		fn := self cCoerce: unlockSurfaceFn to: 'sqInt (*)(sqInt, sqInt, sqInt, sqInt, sqInt)'.
@@ -2968,7 +2968,7 @@ BitBltSimulation >> unlockSurfaces [
 { #category : #setup }
 BitBltSimulation >> warpBits [
 	| ns |
-	self inline: true.
+	<inline: true>
 	ns := noSource.  noSource := true.
 		self clipRange.  "noSource suppresses sourceRect clipping"
 		noSource := ns.
@@ -2977,7 +2977,7 @@ BitBltSimulation >> warpBits [
 		affectedL := affectedR := affectedT := affectedB := 0.
 		^ nil].
 
- 	self lockSurfaces.
+	self lockSurfaces ifFalse:[^interpreterProxy primitiveFail].
 	self destMaskAndPointerInit.
 	self warpLoop.
  
@@ -3002,8 +3002,8 @@ BitBltSimulation >> warpLoop [
 	  deltaP12x deltaP12y deltaP43x deltaP43y pAx pAy pBx pBy
 	  xDelta yDelta smoothingCount sourceMapOop
 	  nSteps nPix words destWord endBits mergeFnwith dstShiftInc dstShiftLeft mapperFlags |
-	self inline: false.
-	self var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'.
+	<inline: false>
+	<var: #mergeFnwith declareC: 'sqInt (*mergeFnwith)(sqInt, sqInt)'>
 	mergeFnwith := self cCoerce: (opTable at: combinationRule+1) to: 'sqInt (*)(sqInt, sqInt)'.
 	mergeFnwith.  "null ref for compiler"
 
@@ -3148,7 +3148,7 @@ BitBltSimulation >> warpLoop [
 BitBltSimulation >> warpLoopSetup [
 	"Setup values for faster pixel fetching."
 	| words |
-	self inline: true.
+	<inline: true>
 
 	"warpSrcShift = log2(sourceDepth)"
 	warpSrcShift := 0.
@@ -3186,7 +3186,7 @@ BitBltSimulation >> warpPickSmoothPixels: nPixels
 	average the RGB values, map by colorMap and return the new word.
 	This version is only called from WarpBlt with smoothingCount > 1"
 	| rgb x y a r g b xx yy xdh ydh xdv ydv dstMask destWord i j k nPix |
-	self inline: false. "nope - too much stuff in here"
+	<inline: false> "nope - too much stuff in here"
 	dstMask := maskTable at: destDepth.
 	destWord := 0.
 	n = 2 "Try avoiding divides for most common n (divide by 2 is generated as shift)"
@@ -3264,7 +3264,7 @@ BitBltSimulation >> warpPickSourcePixels: nPixels
 	map by colorMap and return aligned by dstBitShift.
 	This version is only called from WarpBlt with smoothingCount = 1"
 	| dstMask destWord nPix sourcePix destPix |
-	self inline: true. "Yepp - this should go into warpLoop"
+	<inline: true> "Yepp - this should go into warpLoop"
 	dstMask := maskTable at: destDepth.
 	destWord := 0.
 	nPix := nPixels.

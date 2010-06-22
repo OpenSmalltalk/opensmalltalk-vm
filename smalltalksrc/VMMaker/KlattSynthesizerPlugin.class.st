@@ -92,8 +92,8 @@ Class {
 
 { #category : #translation }
 KlattSynthesizerPlugin class >> declareCVarsIn: cg [ 
-	cg var: #resonators type: #'float*'.
-	cg var: #frame type: #'float*'.
+	cg var: #resonators type: #'float *'.
+	cg var: #frame type: #'float *'.
 	cg var: #pitch type: #float.
 	cg var: #a1 type: #float.
 	cg var: #a2 type: #float.
@@ -111,7 +111,12 @@ KlattSynthesizerPlugin class >> initialize [
 	"
 	KlattSynthesizerPlugin initialize
 	"
-	KlattFrame parameterNames
+	| parameterClass |
+	parameterClass := (Smalltalk hasClassNamed: #KlattFrame)
+		ifTrue: [Smalltalk at: #KlattFrame "original package structure"]
+		ifFalse: [Smalltalk at: #KlattResonatorIndices "repackaged to separate plugin from Speech dependency"].
+	
+	parameterClass parameterNames
 		doWithIndex: [ :each :i | self classPool at: each capitalized asSymbol put: i-1].
 	PI := Float pi	.
 	Epsilon := 1.0e-04
@@ -128,7 +133,7 @@ KlattSynthesizerPlugin class >> moduleName [
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> addAmplitudeDiplophonia [
 	"Add diplophonia (bicyclic voice). Change voicing amplitude."
-	self returnTypeC: 'void'.
+	<returnTypeC: 'void'>
 	periodCount \\ 2 = 0
 		ifFalse: [x1 := x1 * (1.0 - (frame at: Diplophonia)).
 				"x1 must be <= 0"
@@ -143,12 +148,12 @@ KlattSynthesizerPlugin >> addFlutter [
 	Flutter is added by applying a quasi-random element constructed from three
 	slowly varying sine waves."
 	| timeCount asin bsin csin deltaF0 |
-	self returnTypeC: 'void'.
-	self var: 'timeCount' type: 'float '.
-	self var: 'asin' type: 'float '.
-	self var: 'bsin' type: 'float '.
-	self var: 'csin' type: 'float '.
-	self var: 'deltaF0' type: 'double '.
+	<returnTypeC: 'void'>
+	<var: 'timeCount' type: 'float '>
+	<var: 'asin' type: 'float '>
+	<var: 'bsin' type: 'float '>
+	<var: 'csin' type: 'float '>
+	<var: 'deltaF0' type: 'double '>
 	timeCount := (self cCoerce: samplesCount to: 'float') / (self cCoerce: samplingRate to: 'float').
 	asin := (2.0 * PI * 12.7 * timeCount) sin.
 	bsin := (2.0 * PI * 7.1 * timeCount) sin.
@@ -160,7 +165,7 @@ KlattSynthesizerPlugin >> addFlutter [
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> addFrequencyDiplophonia [
 	"Add diplophonia (bicyclic voice). Change F0."
-	self returnTypeC: 'void'.
+	<returnTypeC: 'void'>
 	periodCount \\ 2 = 0
 		ifTrue: [pitch := pitch + ((frame at: Diplophonia) * (frame at: F0) * (1.0 - (frame at: Ro)))]
 		ifFalse: [pitch := pitch - ((frame at: Diplophonia) * (frame at: F0) * (1.0 - (frame at: Ro)))]
@@ -169,14 +174,14 @@ KlattSynthesizerPlugin >> addFrequencyDiplophonia [
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> addJitter [
 	"Add jitter (random F0 perturbation)."
-	self returnTypeC: 'void'.
+	<returnTypeC: 'void'>
 	pitch := pitch + (self nextRandom - 32767 * (frame at: Jitter) / 32768.0 * (frame at: F0))
 ]
 
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> addShimmer [
 	"Add shimmer (random voicing amplitude perturbation)."
-	self returnTypeC: 'void'.
+	<returnTypeC: 'void'>
 	x1 := x1 + (self nextRandom - 32767 * (frame at: Shimmer) / 32768.0 * x1).
 	"x1 must be <= 0"
 	x1 > 0 ifTrue: [x1 := 0]
@@ -186,14 +191,14 @@ KlattSynthesizerPlugin >> addShimmer [
 KlattSynthesizerPlugin >> antiResonator: index frequency: freq bandwidth: bw [
 	"Set up an anti-resonator"
 	| arg r a b c |
-	self returnTypeC: 'void'.
-	self var: 'freq' type: 'float '.
-	self var: 'bw' type: 'float '.
-	self var: 'arg' type: 'double '.
-	self var: 'a' type: 'float '.
-	self var: 'b' type: 'float '.
-	self var: 'c' type: 'float '.
-	self var: 'r' type: 'float '.
+	<returnTypeC: 'void'>
+	<var: 'freq' type: 'float '>
+	<var: 'bw' type: 'float '>
+	<var: 'arg' type: 'double '>
+	<var: 'a' type: 'float '>
+	<var: 'b' type: 'float '>
+	<var: 'c' type: 'float '>
+	<var: 'r' type: 'float '>
 	arg := 0.0 - PI / samplingRate * bw.
 	r := arg exp.
 	c := 0.0 - (r * r).
@@ -211,11 +216,11 @@ KlattSynthesizerPlugin >> antiResonator: index frequency: freq bandwidth: bw [
 { #category : #resonators }
 KlattSynthesizerPlugin >> antiResonator: index value: aFloat [
 	| answer p1 |
-	self inline: true.
-	self returnTypeC: 'float'.
-	self var: 'aFloat' type: 'double '.
-	self var: 'answer' type: 'double '.
-	self var: 'p1' type: 'double '.
+	<inline: true>
+	<returnTypeC: 'float'>
+	<var: 'aFloat' type: 'double '>
+	<var: 'answer' type: 'double '>
+	<var: 'p1' type: 'double '>
 	answer := (self resonatorA: index) * aFloat
 			+ ((self resonatorB: index) * (p1 := self resonatorP1: index))
 			+ ((self resonatorC: index) * (self resonatorP2: index)).
@@ -230,10 +235,10 @@ KlattSynthesizerPlugin >> cascadeBranch: source [
 	Nasal antiresonator, nasal resonator, tracheal antirresonator,
 	tracheal resonator, then formants F8, F7, F6, F5, F4, F3, F2, F1."
 	| out |
-	self inline: true.
-	self returnTypeC: 'float'.
-	self var: 'source' type: 'float '.
-	self var: 'out' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'float'>
+	<var: 'source' type: 'float '>
+	<var: 'out' type: 'float '>
 	cascade > 0 ifFalse: [^ 0.0].
 	out := self antiResonator: Rnz value: source.
 	out := self resonator: Rnpc value: out.
@@ -256,7 +261,7 @@ KlattSynthesizerPlugin >> cascadeBranch: source [
 { #category : #private }
 KlattSynthesizerPlugin >> checkedFloatPtrOf: oop [
 	"Return the first indexable word of oop which is assumed to be variableWordSubclass"
-	self returnTypeC:'float *'.
+	<returnTypeC:'float *'>
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	interpreterProxy failed ifTrue:[^0].
 	^self cCoerce: (interpreterProxy firstIndexableField: oop) to:'float *'
@@ -265,7 +270,7 @@ KlattSynthesizerPlugin >> checkedFloatPtrOf: oop [
 { #category : #private }
 KlattSynthesizerPlugin >> checkedShortPtrOf: oop [
 	"Return the first indexable word of oop which is assumed to be variableWordSubclass"
-	self returnTypeC:'short *'.
+	<returnTypeC:'short *'>
 	interpreterProxy success: (interpreterProxy isWords: oop).
 	interpreterProxy failed ifTrue:[^0].
 	^self cCoerce: (interpreterProxy firstIndexableField: oop) to:'short *'
@@ -274,9 +279,9 @@ KlattSynthesizerPlugin >> checkedShortPtrOf: oop [
 { #category : #'processing-LF' }
 KlattSynthesizerPlugin >> glottalSource [
 	| x0 |
-	self inline: true.
-	self returnTypeC: 'float'.
-	self var: 'x0' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'float'>
+	<var: 'x0' type: 'float '>
 	t0 = 0 ifTrue: [^ 0].
 	nper < nopen
 		ifTrue: [x0 := a1 * x1 + (a2 * x2).
@@ -292,9 +297,9 @@ KlattSynthesizerPlugin >> glottalSource [
 
 { #category : #processing }
 KlattSynthesizerPlugin >> linearFromdB: aNumber [
-	self inline: true.
-	self returnTypeC: 'float'.
-	self var: 'aNumber' type: 'double '.
+	<inline: true>
+	<returnTypeC: 'float'>
+	<var: 'aNumber' type: 'double '>
 	^ (2.0 raisedTo: (aNumber-87.0/6.0)) * 32.767
 ]
 
@@ -334,7 +339,7 @@ KlattSynthesizerPlugin >> loadFrom: klattOop [
 { #category : #processing }
 KlattSynthesizerPlugin >> nextRandom [
 	"Answer a random number between 0 and 65535."
-	self inline: true.
+	<inline: true>
 	seed := (seed * 1309) + 13849 bitAnd: 65535.
 	^ seed
 ]
@@ -342,11 +347,11 @@ KlattSynthesizerPlugin >> nextRandom [
 { #category : #'processing-LF' }
 KlattSynthesizerPlugin >> normalizeGlottalPulse [
 	| s1 s2 s0 |
-	self inline: true.
-	self returnTypeC: 'void'.
-	self var: 's0' type: 'float '.
-	self var: 's1' type: 'float '.
-	self var: 's2' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'void'>
+	<var: 's0' type: 'float '>
+	<var: 's1' type: 'float '>
+	<var: 's2' type: 'float '>
 	s0 := 0.0.
 	s1 := x1.
 	s2 := x2.
@@ -363,24 +368,24 @@ KlattSynthesizerPlugin >> parallelFrictionBranch: source [
 	outputs added with alternating sign. Sound source for other
 	parallel resonators is friction plus first difference of
 	voicing waveform."
-	self inline: true.
-	self returnTypeC: 'float'.
-	self var: 'source' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'float'>
+	<var: 'source' type: 'float '>
 	^ (self resonator: R2fp value: source) - (self resonator: R3fp value: source) + (self resonator: R4fp value: source) - (self resonator: R5fp value: source) + (self resonator: R6fp value: source)
 ]
 
 { #category : #processing }
 KlattSynthesizerPlugin >> parallelVoicedBranch: source [
 	"Voice-excited parallel vocal tract F1, F2, F3, F4, FNP and FTP."
-	self inline: true.
-	self returnTypeC: 'float'.
-	self var: 'source' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'float'>
+	<var: 'source' type: 'float '>
 	^ (self resonator: R1vp value: source) + (self resonator: R2vp value: source) + (self resonator: R3vp value: source) + (self resonator: R4vp value: source) + (self resonator: Rnpp value: source) + (self resonator: Rtpp value: source)
 ]
 
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> pitchSynchronousReset [
-	self returnTypeC: 'void'.
+	<returnTypeC: 'void'>
 	(frame at: F0) > 0
 		ifTrue: [self voicedPitchSynchronousReset.
 				periodCount := periodCount + 1 \\ 65535]
@@ -391,9 +396,9 @@ KlattSynthesizerPlugin >> pitchSynchronousReset [
 { #category : #primitives }
 KlattSynthesizerPlugin >> primitiveSynthesizeFrameIntoStartingAt [
 	| aKlattFrame buffer startIndex rcvr bufferOop |
-	self export: true.
-	self var: 'aKlattFrame' type: 'float *'.
-	self var: 'buffer' type: 'short *'.
+	<export: true>
+	<var: 'aKlattFrame' type: 'float *'>
+	<var: 'buffer' type: 'short *'>
 	aKlattFrame := self checkedFloatPtrOf: (interpreterProxy stackValue: 2).
 	buffer := self checkedShortPtrOf: (bufferOop := interpreterProxy stackValue: 1).
 	startIndex := interpreterProxy stackIntegerValue: 0.
@@ -410,13 +415,13 @@ KlattSynthesizerPlugin >> primitiveSynthesizeFrameIntoStartingAt [
 { #category : #'processing-LF' }
 KlattSynthesizerPlugin >> qu: u phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid [
 	| expuphi |
-	self returnTypeC: 'float'.
-	self var: 'u' type: 'float '.
-	self var: 'phi' type: 'float '.
-	self var: 'cosphi' type: 'float '.
-	self var: 'sinphi' type: 'float '.
-	self var: 'rphid' type: 'float '.
-	self var: 'expuphi' type: 'float '.
+	<returnTypeC: 'float'>
+	<var: 'u' type: 'float '>
+	<var: 'phi' type: 'float '>
+	<var: 'cosphi' type: 'float '>
+	<var: 'sinphi' type: 'float '>
+	<var: 'rphid' type: 'float '>
+	<var: 'expuphi' type: 'float '>
 	expuphi := (u * phi) exp.
 	^ expuphi * ((rphid * (u*u + 1.0) + u) * sinphi - cosphi) + 1.0
 ]
@@ -426,14 +431,14 @@ KlattSynthesizerPlugin >> resonator: index frequency: freq bandwidth: bw [
 	"Convert formant frequencies and bandwidth into
 	resonator difference equation coefficients."
 	| arg r a b c |
-	self returnTypeC: 'void'.
-	self var: 'freq' type: 'float '.
-	self var: 'bw' type: 'float '.
-	self var: 'arg' type: 'double '.
-	self var: 'a' type: 'float '.
-	self var: 'b' type: 'float '.
-	self var: 'c' type: 'float '.
-	self var: 'r' type: 'float '.
+	<returnTypeC: 'void'>
+	<var: 'freq' type: 'float '>
+	<var: 'bw' type: 'float '>
+	<var: 'arg' type: 'double '>
+	<var: 'a' type: 'float '>
+	<var: 'b' type: 'float '>
+	<var: 'c' type: 'float '>
+	<var: 'r' type: 'float '>
 	arg := 0.0 - PI / samplingRate * bw.
 	r := arg exp.
 	c := 0.0 - (r * r).
@@ -449,10 +454,10 @@ KlattSynthesizerPlugin >> resonator: index frequency: freq bandwidth: bw [
 KlattSynthesizerPlugin >> resonator: index frequency: freq bandwidth: bw gain: gain [
 	"Convert formant frequencies and bandwidth into
 	resonator difference equation coefficients."
-	self returnTypeC: 'void'.
-	self var: 'freq' type: 'float '.
-	self var: 'bw' type: 'float '.
-	self var: 'gain' type: 'float '.
+	<returnTypeC: 'void'>
+	<var: 'freq' type: 'float '>
+	<var: 'bw' type: 'float '>
+	<var: 'gain' type: 'float '>
 	self resonator: index frequency: freq bandwidth: bw.
 	self resonatorA: index put: (self resonatorA: index) * gain
 ]
@@ -460,11 +465,11 @@ KlattSynthesizerPlugin >> resonator: index frequency: freq bandwidth: bw gain: g
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonator: index value: aFloat [
 	| answer p1 |
-	self inline: true.
-	self returnTypeC: 'float'.
-	self var: 'aFloat' type: 'float '.
-	self var: 'answer' type: 'float '.
-	self var: 'p1' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'float'>
+	<var: 'aFloat' type: 'float '>
+	<var: 'answer' type: 'float '>
+	<var: 'p1' type: 'float '>
 	answer := (self resonatorA: index) * aFloat
 			+ ((self resonatorB: index) * (p1 := self resonatorP1: index))
 			+ ((self resonatorC: index) * (self resonatorP2: index)).
@@ -477,76 +482,76 @@ KlattSynthesizerPlugin >> resonator: index value: aFloat [
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorA: index [
-	self inline: true.
-	self returnTypeC: 'float'.
+	<inline: true>
+	<returnTypeC: 'float'>
 	^resonators at: index*5-5
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorA: index put: aFloat [
-	self inline: true.
-	self returnTypeC: 'void'.
-	self var: 'aFloat' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'void'>
+	<var: 'aFloat' type: 'float '>
 	resonators at: index*5-5 put: aFloat
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorB: index [
-	self inline: true.
-	self returnTypeC: 'float'.
+	<inline: true>
+	<returnTypeC: 'float'>
 	^resonators at: index*5-4
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorB: index put: aFloat [
-	self inline: true.
-	self returnTypeC: 'void'.
-	self var: 'aFloat' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'void'>
+	<var: 'aFloat' type: 'float '>
 	resonators at: index*5-4 put: aFloat
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorC: index [
-	self inline: true.
-	self returnTypeC: 'float'.
+	<inline: true>
+	<returnTypeC: 'float'>
 	^resonators at: index*5-3
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorC: index put: aFloat [
-	self inline: true.
-	self returnTypeC: 'void'.
-	self var: 'aFloat' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'void'>
+	<var: 'aFloat' type: 'float '>
 	resonators at: index*5-3 put: aFloat
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorP1: index [
-	self inline: true.
-	self returnTypeC: 'float'.
+	<inline: true>
+	<returnTypeC: 'float'>
 	^resonators at: index*5-2
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorP1: index put: aFloat [
-	self inline: true.
-	self returnTypeC: 'void'.
-	self var: 'aFloat' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'void'>
+	<var: 'aFloat' type: 'float '>
 	resonators at: index*5-2 put: aFloat
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorP2: index [
-	self inline: true.
-	self returnTypeC: 'float'.
+	<inline: true>
+	<returnTypeC: 'float'>
 	^resonators at: index*5-1
 ]
 
 { #category : #resonators }
 KlattSynthesizerPlugin >> resonatorP2: index put: aFloat [
-	self inline: true.
-	self returnTypeC: 'void'.
-	self var: 'aFloat' type: 'float '.
+	<inline: true>
+	<returnTypeC: 'void'>
+	<var: 'aFloat' type: 'float '>
 	resonators at: index*5-1 put: aFloat
 ]
 
@@ -554,24 +559,24 @@ KlattSynthesizerPlugin >> resonatorP2: index put: aFloat [
 KlattSynthesizerPlugin >> ro: roNumber ra: raNumber rk: rkNumber [
 	| r d phi cosphi sinphi rphid u theta rho gamma gammapwr te ro ra rk |
 
-	self returnTypeC: 'void'.
-	self var: 'roNumber' type: 'float '.
-	self var: 'raNumber' type: 'float '.
-	self var: 'rkNumber' type: 'float '.
-	self var: 'r' type: 'float '.
-	self var: 'd' type: 'float '.
-	self var: 'phi' type: 'float '.
-	self var: 'cosphi' type: 'float '.
-	self var: 'sinphi' type: 'float '.
-	self var: 'rphid' type: 'float '.
-	self var: 'u' type: 'float '.
-	self var: 'theta' type: 'float '.
-	self var: 'rho' type: 'float '.
-	self var: 'gamma' type: 'float '.
-	self var: 'gammapwr' type: 'float '.
-	self var: 'ro' type: 'float '.
-	self var: 'ra' type: 'float '.
-	self var: 'rk' type: 'float '.
+	<returnTypeC: 'void'>
+	<var: 'roNumber' type: 'float '>
+	<var: 'raNumber' type: 'float '>
+	<var: 'rkNumber' type: 'float '>
+	<var: 'r' type: 'float '>
+	<var: 'd' type: 'float '>
+	<var: 'phi' type: 'float '>
+	<var: 'cosphi' type: 'float '>
+	<var: 'sinphi' type: 'float '>
+	<var: 'rphid' type: 'float '>
+	<var: 'u' type: 'float '>
+	<var: 'theta' type: 'float '>
+	<var: 'rho' type: 'float '>
+	<var: 'gamma' type: 'float '>
+	<var: 'gammapwr' type: 'float '>
+	<var: 'ro' type: 'float '>
+	<var: 'ra' type: 'float '>
+	<var: 'rk' type: 'float '>
 
 	te := (t0 * roNumber) asInteger.
 	ro := te asFloat / t0 asFloat.
@@ -655,19 +660,19 @@ KlattSynthesizerPlugin >> saveTo: origKlattOop [
 { #category : #processing }
 KlattSynthesizerPlugin >> setCurrentFrame: aKlattFrame [
 	| ampFNV ampFTV ampF1V ampF2V ampF3V ampF4V ampF2F ampF3F ampF4F ampF5F ampF6F |
-	self returnTypeC: 'void'.
-	self var: 'aKlattFrame' type: 'float *'.
-	self var: 'ampFNV' type: 'float '.
-	self var: 'ampFTV' type: 'float '.
-	self var: 'ampF1V' type: 'float '.
-	self var: 'ampF2V' type: 'float '.
-	self var: 'ampF3V' type: 'float '.
-	self var: 'ampF4V' type: 'float '.
-	self var: 'ampF2F' type: 'float '.
-	self var: 'ampF3F' type: 'float '.
-	self var: 'ampF4F' type: 'float '.
-	self var: 'ampF5F' type: 'float '.
-	self var: 'ampF6F' type: 'float '.
+	<returnTypeC: 'void'>
+	<var: 'aKlattFrame' type: 'float *'>
+	<var: 'ampFNV' type: 'float '>
+	<var: 'ampFTV' type: 'float '>
+	<var: 'ampF1V' type: 'float '>
+	<var: 'ampF2V' type: 'float '>
+	<var: 'ampF3V' type: 'float '>
+	<var: 'ampF4V' type: 'float '>
+	<var: 'ampF2F' type: 'float '>
+	<var: 'ampF3F' type: 'float '>
+	<var: 'ampF4F' type: 'float '>
+	<var: 'ampF5F' type: 'float '>
+	<var: 'ampF6F' type: 'float '>
 
 	frame := aKlattFrame.
 
@@ -728,25 +733,25 @@ KlattSynthesizerPlugin >> synthesizeFrame: aKlattFrame into: buffer startingAt: 
 	voicing parVoicing turbulence friction aspiration bypass
 	gain ampGain |
 
-	self returnTypeC: 'void'.
-	self var: 'aKlattFrame' type: 'float *'.
-	self var: 'buffer' type: 'short *'.
-	self var: 'noise' type: 'float '.
-	self var: 'voice' type: 'float '.
-	self var: 'frictionNoise' type: 'float '.
-	self var: 'aspirationNoise' type: 'float '.
-	self var: 'voicing' type: 'float '.
-	self var: 'parVoicing' type: 'float '.
-	self var: 'turbulence' type: 'float '.
-	self var: 'friction' type: 'float '.
-	self var: 'aspiration' type: 'float '.
-	self var: 'bypass' type: 'float '.
-	self var: 'glotout' type: 'float '.
-	self var: 'parGlotout' type: 'float '.
-	self var: 'source' type: 'float '.
-	self var: 'gain' type: 'float '.
-	self var: 'ampGain' type: 'float '.
-	self var: 'out' type: 'float '.
+	<returnTypeC: 'void'>
+	<var: 'aKlattFrame' type: 'float *'>
+	<var: 'buffer' type: 'short *'>
+	<var: 'noise' type: 'float '>
+	<var: 'voice' type: 'float '>
+	<var: 'frictionNoise' type: 'float '>
+	<var: 'aspirationNoise' type: 'float '>
+	<var: 'voicing' type: 'float '>
+	<var: 'parVoicing' type: 'float '>
+	<var: 'turbulence' type: 'float '>
+	<var: 'friction' type: 'float '>
+	<var: 'aspiration' type: 'float '>
+	<var: 'bypass' type: 'float '>
+	<var: 'glotout' type: 'float '>
+	<var: 'parGlotout' type: 'float '>
+	<var: 'source' type: 'float '>
+	<var: 'gain' type: 'float '>
+	<var: 'ampGain' type: 'float '>
+	<var: 'out' type: 'float '>
 
 	self setCurrentFrame: aKlattFrame.
 
@@ -832,7 +837,7 @@ KlattSynthesizerPlugin >> synthesizeFrame: aKlattFrame into: buffer startingAt: 
 
 { #category : #'processing-voice' }
 KlattSynthesizerPlugin >> voicedPitchSynchronousReset [
-	self returnTypeC: 'void'.
+	<returnTypeC: 'void'>
 
 	"Set the pitch."
 	pitch := frame at: F0.
@@ -865,18 +870,18 @@ KlattSynthesizerPlugin >> voicedPitchSynchronousReset [
 { #category : #'processing-LF' }
 KlattSynthesizerPlugin >> zeroQphi: phi cosphi: cosphi sinphi: sinphi rphid: rphid [
 	| qzero ua ub qa qb uc qc |
-	self returnTypeC: 'float'.
-	self var: 'qzero' type: 'float '.
-	self var: 'ua' type: 'float '.
-	self var: 'ub' type: 'float '.
-	self var: 'qa' type: 'float '.
-	self var: 'qb' type: 'float '.
-	self var: 'uc' type: 'float '.
-	self var: 'qc' type: 'float '.
-	self var: 'phi' type: 'float '.
-	self var: 'cosphi' type: 'float '.
-	self var: 'sinphi' type: 'float '.
-	self var: 'rphid' type: 'float '.
+	<returnTypeC: 'float'>
+	<var: 'qzero' type: 'float '>
+	<var: 'ua' type: 'float '>
+	<var: 'ub' type: 'float '>
+	<var: 'qa' type: 'float '>
+	<var: 'qb' type: 'float '>
+	<var: 'uc' type: 'float '>
+	<var: 'qc' type: 'float '>
+	<var: 'phi' type: 'float '>
+	<var: 'cosphi' type: 'float '>
+	<var: 'sinphi' type: 'float '>
+	<var: 'rphid' type: 'float '>
 
 	qzero := self qu: 0 phi: phi cosphi: cosphi sinphi: sinphi rphid: rphid.
 

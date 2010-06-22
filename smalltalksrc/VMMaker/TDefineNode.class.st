@@ -7,36 +7,29 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
-TDefineNode >> copyTree [
-
-	^self class new
-		setName: name value: value
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
 TDefineNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C literal."
 
 	aStream nextPutAll: name.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TDefineNode >> name [
-	^name
+	^name asString
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TDefineNode >> name: aName [
 	name := aName
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TDefineNode >> nameOrValue [
 	^name
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TDefineNode >> setName: aName value: aValue [
 	self name: aName.
 	self setValue: aValue.

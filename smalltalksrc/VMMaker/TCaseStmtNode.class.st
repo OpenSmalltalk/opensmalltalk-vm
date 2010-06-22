@@ -1,3 +1,6 @@
+"
+I implement the main dispatch case statements for bytecode and primitive dispatch.  See TMethod classPool associationAt: #CaseStatements
+"
 Class {
 	#name : #TCaseStmtNode,
 	#superclass : #TParseNode,
@@ -10,53 +13,43 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TCaseStmtNode >> bindVariableUsesIn: aDictionary [
 
 	expression := expression bindVariableUsesIn: aDictionary.
 	cases := cases collect: [ :c | c bindVariableUsesIn: aDictionary ].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TCaseStmtNode >> bindVariablesIn: aDictionary [
 
 	expression := expression bindVariablesIn: aDictionary.
 	cases := cases collect: [ :c | c bindVariablesIn: aDictionary ].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TCaseStmtNode >> cases [
 
 	^cases
 ]
 
-{ #category : #'as yet unclassified' }
-TCaseStmtNode >> copyTree [
-
-	^self class new
-		setExpression: expression copyTree
-		firsts: firsts copy
-		lasts: lasts copy
-		cases: (cases collect: [ :case | case copyTree ])
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TCaseStmtNode >> customizeCase: caseParseTree forVar: varName from: firstIndex to: lastIndex in: codeGen method: aTMethod [
 	"Return a collection of copies of the given parse tree, each of which has the value of the case index substituted for the given variable."
 
 	| newCases dict newCase |
 	newCases := OrderedCollection new.
-	firstIndex to: lastIndex do: [ :caseIndex |
+	firstIndex to: lastIndex do:
+		[ :caseIndex |
 		dict := Dictionary new.
 		dict at: varName put: (TConstantNode new setValue: caseIndex).
-		newCase := caseParseTree copyTree bindVariableUsesIn: dict.
+		newCase := caseParseTree copy bindVariableUsesIn: dict.
 		self processSharedCodeBlocks: newCase forCase: caseIndex in: codeGen method: aTMethod.
-		newCases addLast: newCase.
-	].
-	^ newCases
+		newCases addLast: newCase].
+	^newCases
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TCaseStmtNode >> customizeShortCasesForDispatchVar: varName in: codeGen method: aTMethod [
 	"Make customized versions of a short bytecode methods, substituting a constant having the case index value for the given variable. This produces better code for short bytecodes such as instance variable pushes that encode the index of the instance variable in the bytecode."
 
@@ -64,72 +57,96 @@ TCaseStmtNode >> customizeShortCasesForDispatchVar: varName in: codeGen method: 
 	newFirsts := OrderedCollection new.
 	newLasts := OrderedCollection new.
 	newCases := OrderedCollection new.
-	1 to: cases size do: [ :i |
+	1 to: cases size do:
+		[ :i |
 		l := lasts at: i.
 		f := firsts at: i.
 		case := cases at: i.
 		expanded := false.
-		(l - f) > 1 ifTrue: [  "case code covers multiple cases"
-			case nodeCount < 60 ifTrue: [
-				newFirsts addAll: (f to: l) asArray.
-				newLasts addAll: (f to: l) asArray.
-				newCases addAll: (self customizeCase: case forVar: varName from: f to: l in: codeGen method: aTMethod).
-				expanded := true.
-			].
-		].
-		expanded ifFalse: [
-			self processSharedCodeBlocks: case forCase: f in: codeGen method: aTMethod.
-			newFirsts addLast: f.
-			newLasts addLast: l.
-			newCases addLast: case.
-		].
-	].
+		((l - f) > 1  "case code covers multiple cases"
+		 and: [case shouldExpand]) ifTrue:
+				[newFirsts addAll: (f to: l) asArray.
+				 newLasts addAll: (f to: l) asArray.
+				 newCases addAll: (self customizeCase: case forVar: varName from: f to: l in: codeGen method: aTMethod).
+				 expanded := true].
+		expanded ifFalse:
+			[self processSharedCodeBlocks: case forCase: f in: codeGen method: aTMethod.
+			 newFirsts addLast: f.
+			 newLasts addLast: l.
+			 newCases addLast: case]].
 	firsts := newFirsts asArray.
 	lasts := newLasts asArray.
-	cases := newCases asArray.
-
+	cases := newCases asArray
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
+TCaseStmtNode >> emitCCodeOn: aStream addToEndOfCases: aNodeOrNil level: level generator: aCodeGen [
+
+	| indent |
+	indent := String new: level withAll: Character tab.
+	aStream crtab: level.
+	aStream nextPutAll: 'switch ('.
+	expression emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen.
+	aStream nextPutAll: ') {'; cr.
+	cases withIndexDo:
+		[:case :i|
+		(firsts at: i) to: (lasts at: i) do:
+			[ :caseIndex |
+			aStream nextPutAll: indent; nextPutAll: 'case '; print: caseIndex; nextPut: $:; cr].
+		  case emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level + 1 generator: aCodeGen.
+		  (aNodeOrNil notNil and: [aNodeOrNil isReturn]) ifFalse:
+			[aStream crtab: level + 1; nextPutAll: 'break;']].
+	aStream
+		crtab: level;
+		nextPutAll: 'default:';
+		crtab: level + 1;
+		nextPutAll: 'error("Case not found");'.
+	aNodeOrNil ifNotNil:
+		[aStream crtab: level + 1.
+		 (aNodeOrNil copy setExpression: (TConstantNode new setValue: -1))
+			emitCCodeOn: aStream level: level generator: aCodeGen.
+		 aStream nextPut: $;].
+	aStream
+		crtab: level;
+		nextPut: $}
+]
+
+{ #category : #'C code generation' }
 TCaseStmtNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
 	| indent |
-	indent := (String new: level) collect: [ :ch | Character tab ].
+	indent := String new: level withAll: Character tab.
+	(expression isVariable
+	 and: [expression name = 'currentBytecode']) ifTrue:
+		[aStream nextPutAll: 'bytecodeDispatchDebugHook();'; cr; crtab: level.
+		 aCodeGen outputAsmLabel: 'bytecodeDispatch' on: aStream.
+		 aStream crtab: level].
 	aStream nextPutAll: 'switch ('.
 	expression emitCCodeOn: aStream level: level generator: aCodeGen.
 	aStream nextPutAll: ') {'; cr.
 	1 to: cases size do: [ :i |
-		(firsts at: i) to: (lasts at: i) do: [ :caseIndex |
-			aStream nextPutAll: indent, 'case ', caseIndex printString, ':'; cr.
-		].
+		(firsts at: i) to: (lasts at: i) do:
+			[ :caseIndex |
+			aStream nextPutAll: indent; nextPutAll: 'case '; print: caseIndex; nextPut: $:; cr].
 		(cases at: i) emitCCodeOn: aStream level: level + 1 generator: aCodeGen.
 		aStream nextPutAll: indent; tab; nextPutAll: 'break;'.
-		aStream cr.
-	].
-	level timesRepeat: [ aStream tab ].
-	aStream nextPutAll: '}'.
+		aStream cr].
+	aStream tab: level; nextPut: $}
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TCaseStmtNode >> expression [
 
 	^expression
 ]
 
-{ #category : #'as yet unclassified' }
-TCaseStmtNode >> inlineMethodsUsing: aDictionary [
-
-	expression inlineMethodsUsing: aDictionary.
-	cases do: [ :c | c inlineMethodsUsing: aDictionary ].
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TCaseStmtNode >> isCaseStmt [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #enumerating }
 TCaseStmtNode >> nodesDo: aBlock [
 
 	expression nodesDo: aBlock.
@@ -137,7 +154,25 @@ TCaseStmtNode >> nodesDo: aBlock [
 	aBlock value: self.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #enumerating }
+TCaseStmtNode >> nodesDo: aBlock unless: cautionaryBlock [
+
+	(cautionaryBlock value: self) ifTrue: [^self].
+	expression nodesDo: aBlock unless: cautionaryBlock.
+	cases do: [ :c | c nodesDo: aBlock  unless: cautionaryBlock].
+	aBlock value: self
+]
+
+{ #category : #copying }
+TCaseStmtNode >> postCopy [
+
+	expression := expression copy.
+	firsts := firsts copy.
+	lasts := lasts copy.
+	cases := (cases collect: [ :case | case copy ])
+]
+
+{ #category : #printing }
 TCaseStmtNode >> printOn: aStream level: level [
 
 	aStream crtab: level.
@@ -156,7 +191,7 @@ TCaseStmtNode >> printOn: aStream level: level [
 	aStream nextPutAll: 'end select'.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TCaseStmtNode >> processSharedCodeBlocks: caseTree forCase: caseIndex in: codeGen method: aTMethod [
 	"Process any shared code blocks in the case parse tree for the given case, either inlining them or making them a 'goto sharedLabel'."
 	| map meth sharedNode exitLabel |
@@ -198,13 +233,13 @@ TCaseStmtNode >> processSharedCodeBlocks: caseTree forCase: caseIndex in: codeGe
 	].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TCaseStmtNode >> removeAssertions [
 	expression removeAssertions.
 	cases do: [ :case | case removeAssertions ].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #transformations }
 TCaseStmtNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [
@@ -213,16 +248,7 @@ TCaseStmtNode >> replaceNodesIn: aDictionary [
 		self]
 ]
 
-{ #category : #'as yet unclassified' }
-TCaseStmtNode >> setExpression: aNode firsts: firstsList lasts: lastsList cases: caseList [
-
-	expression := aNode.
-	firsts := firstsList.
-	lasts := lastsList.
-	cases := caseList.
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TCaseStmtNode >> setExpression: aNode selectors: selectorList arguments: anArray [
 	"Initialize the node from the given set of selectors."
 	"Note: Each case is a statement list with containing one statement, a send to self of a selector from the given selector list. Having statement list nodes makes inlining easier later."

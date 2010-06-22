@@ -64,9 +64,24 @@ BitBltSimulator >> initializeDitherTables [
 	self initDither8Lookup.
 ]
 
+{ #category : #'memory access' }
+BitBltSimulator >> long32At: byteAddress [
+	^interpreterProxy long32At: byteAddress
+]
+
+{ #category : #'memory access' }
+BitBltSimulator >> long32At: byteAddress put: a32BitValue [
+	^interpreterProxy long32At: byteAddress put: a32BitValue
+]
+
 { #category : #simulation }
 BitBltSimulator >> mergeFn: arg1 with: arg2 [
 	^ self perform: (opTable at: combinationRule+1) with: arg1 with: arg2
+]
+
+{ #category : #simulation }
+BitBltSimulator >> oopForPointer: pointer [
+	^pointer
 ]
 
 { #category : #'debug support' }

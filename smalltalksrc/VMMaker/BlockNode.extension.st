@@ -1,13 +1,13 @@
 Extension { #name : #BlockNode }
 
 { #category : #'*VMMaker-C translation' }
-BlockNode >> asTranslatorNode [
+BlockNode >> asTranslatorNodeIn: aTMethod [
 	"make a CCodeGenerator equivalent of me"
-	| statementList newS |
+	| statementList |
 	statementList := OrderedCollection new.
 	statements
-		do: [:s | 
-			newS := s asTranslatorNode.
+		do: [:s | | newS | 
+			newS := s asTranslatorNodeIn: aTMethod.
 			newS isStmtList
 				ifTrue: ["inline the statement list returned when a CascadeNode is 
 					translated "
@@ -18,4 +18,16 @@ BlockNode >> asTranslatorNode [
 				collect: [:arg | arg key])
 		statements: statementList;
 		 comment: comment
+]
+
+{ #category : #'*VMMaker-C translation' }
+BlockNode >> isPotentialCCaseLabel [
+	| stmt |
+	^statements size = 1
+	  and: [(stmt := statements first) isVariableNode
+		or: [stmt isConstantNumber
+		or: [stmt isMessageNode
+			and: [stmt selector key = #asSymbol
+			and: [stmt receiver isLiteral
+			and: [stmt receiver literalValue isSymbol]]]]]]
 ]

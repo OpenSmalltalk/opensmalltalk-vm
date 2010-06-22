@@ -7,56 +7,49 @@ Class {
 	#category : #'VMMaker-Translation to C'
 }
 
-{ #category : #'as yet unclassified' }
-TConstantNode >> copyTree [
-
-	^self class new
-		setValue: value
-]
-
-{ #category : #'as yet unclassified' }
+{ #category : #'C code generation' }
 TConstantNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	"Emit a C literal."
 
 	aStream nextPutAll: (aCodeGen cLiteralFor: value).
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TConstantNode >> isConstant [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 TConstantNode >> isLeaf [
 
 	^true
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TConstantNode >> name [
 	^''
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TConstantNode >> nameOrValue [
 
 	^value
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #printing }
 TConstantNode >> printOn: aStream level: level [
 
 	value storeOn: aStream.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TConstantNode >> setValue: anObject [
 
 	value := anObject.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 TConstantNode >> value [
 
 	^value

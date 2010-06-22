@@ -3,13 +3,13 @@ This class provides the basic framework for creating VM plugins. Most of the use
 "
 Class {
 	#name : #InterpreterPlugin,
-	#superclass : #Object,
+	#superclass : #VMClass,
 	#instVars : [
 		'interpreterProxy',
 		'moduleName'
 	],
-	#classInstVars : [
-		'timeStamp'
+	#pools : [
+		'VMBasicConstants'
 	],
 	#category : #'VMMaker-Plugins'
 }
@@ -32,16 +32,14 @@ InterpreterPlugin class >> baseDirectoryName [
 { #category : #translation }
 InterpreterPlugin class >> buildCodeGeneratorUpTo: aPluginClass [
 	"Build a CCodeGenerator for the plugin"
-	 | cg theClass |
+	| cg pluginClasses |
 	cg := self codeGeneratorClass new initialize.
-	cg pluginName: self moduleName.
-	"Add an extra declaration for module name"
-	cg declareModuleName: self moduleNameAndVersion.
-
-	theClass := aPluginClass.
-	[theClass == Object | (theClass == InterpreterSimulationObject)] whileFalse:[
-		cg addClass: theClass.
-		theClass := theClass superclass].
+	cg pluginClass: self.
+	(pluginClasses := self pluginClassesUpTo: aPluginClass) do:
+		[:aClass| cg addClass: aClass].
+	(cg structClassesForTranslationClasses: pluginClasses) do:
+		[:structClasss| cg addStructClass: structClasss].
+	cg removeUnneededBuiltins.
 	^cg
 ]
 
@@ -86,11 +84,6 @@ InterpreterPlugin class >> hasHeaderFile [
 	^false
 ]
 
-{ #category : #'class initialization' }
-InterpreterPlugin class >> initialize [
-	"Nothing to do ..."
-]
-
 { #category : #accessing }
 InterpreterPlugin class >> isCPP [
 	^ false
@@ -112,14 +105,36 @@ InterpreterPlugin class >> moduleName [
 InterpreterPlugin class >> moduleNameAndVersion [
 	"Answer the receiver's module name and version info that is used for the plugin's C code. The default is to append the code generation date, but any useful text is ok (keep it short)"
 
-	^ self moduleName, Character space asString, Date today asString
+	^ self moduleName
 ]
 
-{ #category : #compiling }
-InterpreterPlugin class >> noteCompilationOf: aSelector meta: isMeta [
-	"note the recompiliation by resetting the timeStamp "
-	timeStamp := Time totalSeconds.
-	^super noteCompilationOf: aSelector meta: isMeta
+{ #category : #translation }
+InterpreterPlugin class >> pluginClassesUpTo: aPluginClass [
+	"Answer the classes to include for translation of aPluginClass, superclasses first, aPluginClass last."
+	| theClass classes |
+
+	classes := OrderedCollection new.
+	theClass := aPluginClass.
+	[theClass == Object
+	 or: [theClass == InterpreterSimulationObject
+	 or: [theClass == VMClass]]] whileFalse:
+		[classes addLast: theClass.
+		theClass := theClass superclass].
+	^classes reverse
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> preambleCCode [
+	"Defining this method to answer a string dumps that string in VMPluginCodeGenerator>>emitCHeaderOn:"
+	^nil
+]
+
+{ #category : #translation }
+InterpreterPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"Hook to allow subclasses to interact with the code generation
+	 immediately before having their code assimilated.  e.g. a class
+	 might wish to remove methods it is about to override."
+	^self
 ]
 
 { #category : #translation }
@@ -168,11 +183,6 @@ InterpreterPlugin class >> storeString: s onFileNamed: fileName [
 	f close.
 ]
 
-{ #category : #accessing }
-InterpreterPlugin class >> timeStamp [
-	^timeStamp ifNil:[0]
-]
-
 { #category : #translation }
 InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFlag [
 "This is the default method for writing out sources for a plugin. Several classes need special handling, so look at all implementors of this message"
@@ -181,7 +191,10 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 
 	"don't translate if the file is newer than my timeStamp"
 	fstat := directory entryAt: fname ifAbsent:[nil].
-	fstat ifNotNil:[self timeStamp < fstat modificationTime ifTrue:[^nil]].
+	fstat ifNotNil:
+		[((self pluginClassesUpTo: self) allSatisfy:
+				[:aPluginClass| aPluginClass timeStamp < fstat modificationTime]) ifTrue:
+			[^nil]].
 
 	self initialize.
 	cg := self buildCodeGeneratorUpTo: self.
@@ -193,7 +206,7 @@ InterpreterPlugin class >> translateInDirectory: directory doInlining: inlineFla
 InterpreterPlugin >> getInterpreter [
 	"Note: This is coded so that plugins can be run from Squeak."
 
-	self returnTypeC: 'VirtualMachine *'.
+	<returnTypeC: 'VirtualMachine *'>
 	^interpreterProxy
 ]
 
@@ -203,20 +216,22 @@ InterpreterPlugin >> getModuleName [
 	The module name is used for validating a module *after*
 	it is loaded to check if it does really contain the module
 	we're thinking it contains. This is important!"
-	self returnTypeC:'const char*'.
-	self export: true.
+	<returnTypeC:'const char*'>
+	<export: true>
 	^moduleName
 ]
 
 { #category : #debugging }
 InterpreterPlugin >> halt [
 	self cCode: '' inSmalltalk: [nil halt].
+	^0
 ]
 
 { #category : #debugging }
 InterpreterPlugin >> msg: s [ 
-	self var: #s type: 'char *'.
-	self cCode: 'fprintf(stderr, "\n%s: %s", moduleName, s)' inSmalltalk: [Transcript cr; show: self class moduleName , ': ' , s; endEntry]
+	<var: #s type: 'char *'>
+	self cCode: 'fprintf(stderr, "\n%s: %s", moduleName, s)' inSmalltalk: [Transcript cr; show: self class moduleName , ': ' , s; endEntry].
+	^0
 ]
 
 { #category : #initialize }
@@ -224,8 +239,8 @@ InterpreterPlugin >> setInterpreter: anInterpreter [
 	"Note: This is coded so that is can be run from Squeak."
 
 	| ok |
-	self export: true.
-	self var: #anInterpreter type: #'struct VirtualMachine*'.
+	<export: true>
+	<var: #anInterpreter type: #'struct VirtualMachine*'>
 	interpreterProxy := anInterpreter.
 	ok := self cCode: 'interpreterProxy->majorVersion() == VM_PROXY_MAJOR'.
 	ok == false ifTrue: [^ false].

@@ -87,6 +87,11 @@ FilePluginSimulator >> oopForPointer: pointer [
 ]
 
 { #category : #simulation }
+FilePluginSimulator >> primitiveDirectoryEntry [
+	^interpreterProxy primitiveDirectoryEntry
+]
+
+{ #category : #simulation }
 FilePluginSimulator >> primitiveDirectoryLookup [
 	^interpreterProxy primitiveDirectoryLookup
 ]
@@ -104,6 +109,11 @@ FilePluginSimulator >> primitiveFileOpen [
 { #category : #simulation }
 FilePluginSimulator >> primitiveFileRename [
 	^interpreterProxy primitiveFileRename
+]
+
+{ #category : #simulation }
+FilePluginSimulator >> primitiveFileStdioHandles [
+	^interpreterProxy primitiveFileStdioHandles
 ]
 
 { #category : #simulation }
