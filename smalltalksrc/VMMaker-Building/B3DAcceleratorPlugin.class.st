@@ -888,7 +888,6 @@ B3DAcceleratorPlugin >> stackMatrix: index [
 	<returnTypeC:'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
-	oop = interpreterProxy nilObject ifTrue:[^nil].
 	((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 16])
 		ifTrue:[^interpreterProxy firstIndexableField: oop].
 	^nil
