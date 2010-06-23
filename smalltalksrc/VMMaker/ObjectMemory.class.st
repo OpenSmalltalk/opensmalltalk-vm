@@ -544,7 +544,7 @@ ObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 { #category : #translation }
 ObjectMemory class >> requiredMethodNames [
 	"return the list of method names that should be retained for export or other support reasons"
-	^ #(checkedLongAt: firstAccessibleObject noteAsRoot:headerLoc: splObj: printReferencesTo:)
+	^ #(byteSwapped: checkedLongAt: firstAccessibleObject noteAsRoot:headerLoc: splObj: printReferencesTo:)
 ]
 
 { #category : #translation }
