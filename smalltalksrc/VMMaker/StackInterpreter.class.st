@@ -2950,11 +2950,11 @@ StackInterpreter >> commonReturn [
 			["error: home's sender is dead; cannot return"
 			 ^self internalCannotReturn: localReturnValue]].
 
-	"Now we have a frame to return to.  If it is on a different page we must
-	 free intervening pages and nil out intervening contexts.  We must free
-	 intervening stack pages because if we leave the pages to be divorced
-	 then their contexts will be divorced with intact senders and instruction
-	 pointers.  This code is similar to primitiveTerminateTo."
+	"Now we have a frame to return to.  If it is on a different page we must free intervening pages and
+	 nil out intervening contexts.  We must free intervening stack pages because if we leave the pages
+	 to be divorced then their contexts will be divorced with intact senders and instruction pointers.  This
+	 code is similar to primitiveTerminateTo.  We must move any frames on itervening pages above the
+	 frame linked to because these may be in use, e.g. via co-routining (see baseFrameReturn)."
 	self assert: stackPages pageListIsWellFormed.
 	newPage := stackPages stackPageFor: frameToReturnTo.
 	newPage ~~ stackPage ifTrue:
@@ -2967,6 +2967,9 @@ StackInterpreter >> commonReturn [
 			[(self isMarriedOrWidowedContext: currentCtx)
 				ifTrue:
 					[thePage := stackPages stackPageFor: theFP.
+					 theFP ~= thePage headFP ifTrue:
+						["Since we've just deallocated a page we know that newStackPage won't deallocate an existing one."
+						 self moveFramesIn: thePage through: (self findFrameAbove: theFP inPage: thePage) toPage: self newStackPage].
 					 currentCtx := self frameCallerContext: thePage baseFP.
 					 self freeStackPage: thePage]
 				ifFalse:
@@ -2979,10 +2982,9 @@ StackInterpreter >> commonReturn [
 		 localSP := stackPage headSP.
 		 localFP := stackPage headFP].
 
-	"Two cases.  Returning to the top frame or an interior frame.
-	 The top frame has its instruction pointer on top of stack.
-	 An interior frame has its instruction pointer in the caller frame.
-	 We need to peel back any frames on the page until we get to the correct frame."
+	"Two cases.  Returning to the top frame on a new page or an interior frame on the current page.
+	 The top frame has its instruction pointer on top of stack. An interior frame has its instruction pointer
+	 in the caller frame. We need to peel back any frames on the page until we get to the correct frame."
 
 	localFP = frameToReturnTo
 		ifTrue: "pop the saved IP, push the return value and continue."
