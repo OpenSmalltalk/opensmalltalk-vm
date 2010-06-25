@@ -1,0 +1,398 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 42;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		4C2DFB2D093359A8008B95AB /* PkgInfo in CopyFiles */ = {isa = PBXBuildFile; fileRef = 4C2DFB1309335838008B95AB /* PkgInfo */; };
+		4CA7E52D092CC14E0044FE85 /* FT2Plugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 4CA7E52C092CC14E0044FE85 /* FT2Plugin.c */; };
+		4CA7E551092CC6680044FE85 /* ft2build.h in Headers */ = {isa = PBXBuildFile; fileRef = 4CA7E550092CC6680044FE85 /* ft2build.h */; };
+		4CED2BC008EC3935007BDF80 /* sqVirtualMachine.c in Headers */ = {isa = PBXBuildFile; fileRef = 4CED2BBF08EC3935007BDF80 /* sqVirtualMachine.c */; };
+		9407B2FA10DA271000AE2B55 /* sqVirtualMachine.h in Headers */ = {isa = PBXBuildFile; fileRef = 9407B2F910DA271000AE2B55 /* sqVirtualMachine.h */; };
+		940E416F09A448AA004715E5 /* macFileNameBits.c in Sources */ = {isa = PBXBuildFile; fileRef = 940E416E09A448AA004715E5 /* macFileNameBits.c */; };
+		941BF43F0BDEB4B700D361A5 /* tttables.h in Headers */ = {isa = PBXBuildFile; fileRef = 941BF43E0BDEB4B700D361A5 /* tttables.h */; };
+		942103F9084F50DF006A0FD2 /* sqConfig.h in Headers */ = {isa = PBXBuildFile; fileRef = 944E9BEC05E91D17003F0BED /* sqConfig.h */; };
+		942103FB084F50DF006A0FD2 /* sqPlatformSpecific.h in Headers */ = {isa = PBXBuildFile; fileRef = 944E9BEE05E91D17003F0BED /* sqPlatformSpecific.h */; };
+		942103FD084F50DF006A0FD2 /* SqueakPlugin.icns in Resources */ = {isa = PBXBuildFile; fileRef = 66C6C8E501DB1EC300A80109 /* SqueakPlugin.icns */; };
+		949BB00D09327C3300684056 /* config.h in Headers */ = {isa = PBXBuildFile; fileRef = 949BB00C09327C3300684056 /* config.h */; };
+		949BB01809327C9D00684056 /* interp.h in Headers */ = {isa = PBXBuildFile; fileRef = 949BB01709327C9D00684056 /* interp.h */; };
+		949BB01A09327CC500684056 /* sqMemoryAccess.h in Headers */ = {isa = PBXBuildFile; fileRef = 949BB01909327CC500684056 /* sqMemoryAccess.h */; };
+		949BB07B09328C1500684056 /* sq.h in Headers */ = {isa = PBXBuildFile; fileRef = 949BB07A09328C1500684056 /* sq.h */; };
+		949BB07D09328C9D00684056 /* CoreFoundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 949BB07C09328C9D00684056 /* CoreFoundation.framework */; };
+		949BB08209328CD500684056 /* Carbon.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 949BB08109328CD500684056 /* Carbon.framework */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXBuildRule section */
+		94D066A8084F978100D2CF17 /* PBXBuildRule */ = {
+			isa = PBXBuildRule;
+			compilerSpec = com.apple.compilers.gcc.4_2;
+			fileType = sourcecode.c;
+			isEditable = 1;
+			outputFiles = (
+			);
+		};
+/* End PBXBuildRule section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		4C2DFB2B09335970008B95AB /* CopyFiles */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 12;
+			dstPath = ..;
+			dstSubfolderSpec = 7;
+			files = (
+				4C2DFB2D093359A8008B95AB /* PkgInfo in CopyFiles */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		4C2DFB1309335838008B95AB /* PkgInfo */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text; path = PkgInfo; sourceTree = "<group>"; };
+		4CA7E52C092CC14E0044FE85 /* FT2Plugin.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = FT2Plugin.c; path = ../../../../src/plugins/FT2Plugin/FT2Plugin.c; sourceTree = "<group>"; };
+		4CA7E530092CC16B0044FE85 /* Info-FT2Plugin.plist */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = text.plist.xml; path = "Info-FT2Plugin.plist"; sourceTree = "<group>"; };
+		4CA7E550092CC6680044FE85 /* ft2build.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = ft2build.h; path = /usr/X11R6/include/ft2build.h; sourceTree = "<absolute>"; };
+		4CED2BBF08EC3935007BDF80 /* sqVirtualMachine.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqVirtualMachine.c; path = ../../../Cross/vm/sqVirtualMachine.c; sourceTree = "<group>"; };
+		4CF9AFE9092E090000DBD378 /* FT2Plugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = FT2Plugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
+		66C6C8E501DB1EC300A80109 /* SqueakPlugin.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; name = SqueakPlugin.icns; path = ../../vm/OSX/SqueakPlugin.icns; sourceTree = "<group>"; };
+		9407B2F910DA271000AE2B55 /* sqVirtualMachine.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqVirtualMachine.h; path = ../../../Cross/vm/sqVirtualMachine.h; sourceTree = SOURCE_ROOT; };
+		940E416E09A448AA004715E5 /* macFileNameBits.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = macFileNameBits.c; sourceTree = "<group>"; };
+		941BF43E0BDEB4B700D361A5 /* tttables.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = tttables.h; path = /Developer/SDKs/MacOSX10.4u.sdk/usr/X11R6/include/freetype2/freetype/tttables.h; sourceTree = "<absolute>"; };
+		944E9BEC05E91D17003F0BED /* sqConfig.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqConfig.h; path = ../../vm/iPhone/sqConfig.h; sourceTree = "<group>"; };
+		944E9BEE05E91D17003F0BED /* sqPlatformSpecific.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqPlatformSpecific.h; path = ../../vm/iPhone/sqPlatformSpecific.h; sourceTree = "<group>"; };
+		949BB00C09327C3300684056 /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = config.h; path = ../../vm/iPhone/config.h; sourceTree = "<group>"; };
+		949BB01709327C9D00684056 /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../../../src/vm/interp.h; sourceTree = "<group>"; };
+		949BB01909327CC500684056 /* sqMemoryAccess.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sqMemoryAccess.h; path = ../../../Cross/vm/sqMemoryAccess.h; sourceTree = "<group>"; };
+		949BB07A09328C1500684056 /* sq.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sq.h; path = ../../../Cross/vm/sq.h; sourceTree = "<group>"; };
+		949BB07C09328C9D00684056 /* CoreFoundation.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = CoreFoundation.framework; path = /System/Library/Frameworks/CoreFoundation.framework; sourceTree = "<absolute>"; };
+		949BB08109328CD500684056 /* Carbon.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Carbon.framework; path = /System/Library/Frameworks/Carbon.framework; sourceTree = "<absolute>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		94210404084F50DF006A0FD2 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				949BB07D09328C9D00684056 /* CoreFoundation.framework in Frameworks */,
+				949BB08209328CD500684056 /* Carbon.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		4CA7E552092CC66D0044FE85 /* Headers */ = {
+			isa = PBXGroup;
+			children = (
+				9407B2F910DA271000AE2B55 /* sqVirtualMachine.h */,
+				949BB07A09328C1500684056 /* sq.h */,
+				949BB01909327CC500684056 /* sqMemoryAccess.h */,
+				949BB01709327C9D00684056 /* interp.h */,
+				949BB00C09327C3300684056 /* config.h */,
+				4CA7E550092CC6680044FE85 /* ft2build.h */,
+				4CED2BBF08EC3935007BDF80 /* sqVirtualMachine.c */,
+				944E9BEC05E91D17003F0BED /* sqConfig.h */,
+				944E9BEE05E91D17003F0BED /* sqPlatformSpecific.h */,
+			);
+			name = Headers;
+			sourceTree = "<group>";
+		};
+		4CA7E553092CC67E0044FE85 /* Libraries */ = {
+			isa = PBXGroup;
+			children = (
+				949BB08109328CD500684056 /* Carbon.framework */,
+				949BB07C09328C9D00684056 /* CoreFoundation.framework */,
+			);
+			name = Libraries;
+			sourceTree = "<group>";
+		};
+		66DF6BFE01D7DCEA00A80119 = {
+			isa = PBXGroup;
+			children = (
+				4C2DFB1309335838008B95AB /* PkgInfo */,
+				66DF6BFF01D7DCEA00A80119 /* Sources */,
+				4CA7E553092CC67E0044FE85 /* Libraries */,
+				4CA7E552092CC66D0044FE85 /* Headers */,
+				66DF6C3901D7DCEA00A80119 /* resources */,
+				66DF6C4501D7DEEE00A80119 /* Products */,
+				4CA7E530092CC16B0044FE85 /* Info-FT2Plugin.plist */,
+			);
+			sourceTree = "<group>";
+		};
+		66DF6BFF01D7DCEA00A80119 /* Sources */ = {
+			isa = PBXGroup;
+			children = (
+				940E416E09A448AA004715E5 /* macFileNameBits.c */,
+				4CA7E52C092CC14E0044FE85 /* FT2Plugin.c */,
+				941BF43E0BDEB4B700D361A5 /* tttables.h */,
+			);
+			name = Sources;
+			sourceTree = "<group>";
+		};
+		66DF6C3901D7DCEA00A80119 /* resources */ = {
+			isa = PBXGroup;
+			children = (
+				66C6C8E501DB1EC300A80109 /* SqueakPlugin.icns */,
+			);
+			name = resources;
+			sourceTree = "<group>";
+		};
+		66DF6C4501D7DEEE00A80119 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				4CF9AFE9092E090000DBD378 /* FT2Plugin.bundle */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXHeadersBuildPhase section */
+		942103F3084F50DF006A0FD2 /* Headers */ = {
+			isa = PBXHeadersBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				942103F9084F50DF006A0FD2 /* sqConfig.h in Headers */,
+				942103FB084F50DF006A0FD2 /* sqPlatformSpecific.h in Headers */,
+				4CED2BC008EC3935007BDF80 /* sqVirtualMachine.c in Headers */,
+				4CA7E551092CC6680044FE85 /* ft2build.h in Headers */,
+				949BB00D09327C3300684056 /* config.h in Headers */,
+				949BB01809327C9D00684056 /* interp.h in Headers */,
+				949BB01A09327CC500684056 /* sqMemoryAccess.h in Headers */,
+				949BB07B09328C1500684056 /* sq.h in Headers */,
+				941BF43F0BDEB4B700D361A5 /* tttables.h in Headers */,
+				9407B2FA10DA271000AE2B55 /* sqVirtualMachine.h in Headers */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXHeadersBuildPhase section */
+
+/* Begin PBXNativeTarget section */
+		942103F2084F50DF006A0FD2 /* FT2Plugin */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 949BAFDF09326DA600684056 /* Build configuration list for PBXNativeTarget "FT2Plugin" */;
+			buildPhases = (
+				942103F3084F50DF006A0FD2 /* Headers */,
+				942103FC084F50DF006A0FD2 /* Resources */,
+				4C2DFB2B09335970008B95AB /* CopyFiles */,
+				942103FF084F50DF006A0FD2 /* Sources */,
+				94210404084F50DF006A0FD2 /* Frameworks */,
+				94210406084F50DF006A0FD2 /* Rez */,
+			);
+			buildRules = (
+				94D066A8084F978100D2CF17 /* PBXBuildRule */,
+			);
+			dependencies = (
+			);
+			name = FT2Plugin;
+			productName = "PrintJobPlugin Debug";
+			productReference = 4CF9AFE9092E090000DBD378 /* FT2Plugin.bundle */;
+			productType = "com.apple.product-type.bundle";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		66DF6BFD01D7DCEA00A80119 /* Project object */ = {
+			isa = PBXProject;
+			buildConfigurationList = 949BAFE309326DA600684056 /* Build configuration list for PBXProject "FT2Plugin" */;
+			compatibilityVersion = "Xcode 2.4";
+			hasScannedForEncodings = 1;
+			mainGroup = 66DF6BFE01D7DCEA00A80119;
+			productRefGroup = 66DF6C4501D7DEEE00A80119 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				942103F2084F50DF006A0FD2 /* FT2Plugin */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		942103FC084F50DF006A0FD2 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				942103FD084F50DF006A0FD2 /* SqueakPlugin.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXRezBuildPhase section */
+		94210406084F50DF006A0FD2 /* Rez */ = {
+			isa = PBXRezBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXRezBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		942103FF084F50DF006A0FD2 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				4CA7E52D092CC14E0044FE85 /* FT2Plugin.c in Sources */,
+				940E416F09A448AA004715E5 /* macFileNameBits.c in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin XCBuildConfiguration section */
+		949BAFE009326DA600684056 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_64_BIT_PRE_XCODE_3_1 = x86_64;
+				COPY_PHASE_STRIP = NO;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_ENABLE_FIX_AND_CONTINUE = YES;
+				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = "";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/freetype2\"";
+				INFOPLIST_FILE = "Info-FT2Plugin.plist";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-undefined",
+					dynamic_lookup,
+					"-lz",
+					/tmp/libfreetype.a,
+				);
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = FT2Plugin;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = bundle;
+				ZERO_LINK = YES;
+			};
+			name = Development;
+		};
+		949BAFE109326DA600684056 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = "$(ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1)";
+				ARCHS_STANDARD_32_64_BIT_PRE_XCODE_3_1 = "x86_64 i386 ppc";
+				COPY_PHASE_STRIP = YES;
+				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = "";
+				HEADER_SEARCH_PATHS = "\"$(SRCROOT)/freetype2\"";
+				INFOPLIST_FILE = "Info-FT2Plugin.plist";
+				OTHER_CFLAGS = "";
+				OTHER_LDFLAGS = (
+					"-undefined",
+					dynamic_lookup,
+					"-lz",
+					/tmp/libfreetype.a,
+				);
+				PER_ARCH_CFLAGS_i386 = "-O3 -Wall";
+				PER_ARCH_CFLAGS_ppc = "-O3  -fPIC";
+				PRELINK_LIBS = "";
+				PRODUCT_NAME = FT2Plugin;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = bundle;
+				ZERO_LINK = NO;
+			};
+			name = Deployment;
+		};
+		949BAFE209326DA600684056 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+				);
+				GCC_OPTIMIZATION_LEVEL = 2;
+				GCC_PREPROCESSOR_DEFINITIONS = TARGET_API_MAC_CARBON;
+				HEADER_SEARCH_PATHS = (
+					/Developer/Headers/FlatCarbon,
+					/usr/X11R6/include/freetype2,
+				);
+				INFOPLIST_FILE = "Info-FT2Plugin.plist";
+				LIBRARY_SEARCH_PATHS = (
+					"$(SRCROOT)",
+					"$(SYSTEM_DEVELOPER_DIR)/SDKs/MacOSX10.4u.sdk/usr/X11R6/lib",
+					"$(SRCROOT)/../fonts/freetype-2.1.10/objs",
+					"$(SRCROOT)/../fonts/freetype-2.1.10/objs/intel",
+				);
+				OTHER_CFLAGS = "";
+				OTHER_REZFLAGS = "";
+				PRODUCT_NAME = FT2Plugin;
+				SECTORDER_FLAGS = "";
+				WARNING_CFLAGS = (
+					"-Wmost",
+					"-Wno-four-char-constants",
+					"-Wno-unknown-pragmas",
+				);
+				WRAPPER_EXTENSION = bundle;
+			};
+			name = Default;
+		};
+		949BAFE409326DA600684056 /* Development */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_MASTER_OBJECT_FILE = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Development;
+		};
+		949BAFE509326DA600684056 /* Deployment */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_MASTER_OBJECT_FILE = NO;
+				OTHER_LDFLAGS = "";
+				PRELINK_FLAGS = "";
+				PRELINK_LIBS = "";
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Deployment;
+		};
+		949BAFE609326DA600684056 /* Default */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				GENERATE_MASTER_OBJECT_FILE = NO;
+				SDKROOT = /Developer/SDKs/MacOSX10.4u.sdk;
+			};
+			name = Default;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		949BAFDF09326DA600684056 /* Build configuration list for PBXNativeTarget "FT2Plugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				949BAFE009326DA600684056 /* Development */,
+				949BAFE109326DA600684056 /* Deployment */,
+				949BAFE209326DA600684056 /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+		949BAFE309326DA600684056 /* Build configuration list for PBXProject "FT2Plugin" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				949BAFE409326DA600684056 /* Development */,
+				949BAFE509326DA600684056 /* Deployment */,
+				949BAFE609326DA600684056 /* Default */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Default;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 66DF6BFD01D7DCEA00A80119 /* Project object */;
+}
