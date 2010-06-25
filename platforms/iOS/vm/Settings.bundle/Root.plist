@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+	<key>Title</key>
+	<string>Squeak</string>
+	<key>StringsTable</key>
+	<string>Root</string>
+	<key>PreferenceSpecifiers</key>
+	<array>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Startup</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Make Image writeable</string>
+			<key>Key</key>
+			<string>writeable_preference</string>
+			<key>DefaultValue</key>
+			<false/>
+			<key>TrueValue</key>
+			<string>YES</string>
+			<key>FalseValue</key>
+			<string>NO</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSToggleSwitchSpecifier</string>
+			<key>Title</key>
+			<string>Use Scrolling View</string>
+			<key>Key</key>
+			<string>scrollableView_preference</string>
+			<key>DefaultValue</key>
+			<false/>
+			<key>TrueValue</key>
+			<string>YES</string>
+			<key>FalseValue</key>
+			<string>NO</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSGroupSpecifier</string>
+			<key>Title</key>
+			<string>Memory 10 MB to 54 MB</string>
+		</dict>
+		<dict>
+			<key>Type</key>
+			<string>PSSliderSpecifier</string>
+			<key>Title</key>
+			<string>Memory Size</string>
+			<key>Key</key>
+			<string>memorySize_preference</string>
+			<key>DefaultValue</key>
+			<integer>33554432</integer>
+			<key>MinimumValue</key>
+			<integer>10485760</integer>
+			<key>MaximumValue</key>
+			<integer>56623104</integer>
+		</dict>
+	</array>
+</dict>
+</plist>

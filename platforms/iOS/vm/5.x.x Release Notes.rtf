@@ -1,0 +1,1534 @@
+{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf320
+{\fonttbl\f0\fnil\fcharset0 Geneva;\f1\fnil\fcharset0 LucidaGrande;}
+{\colortbl;\red255\green255\blue255;}
+\margl1440\margr1440\vieww20740\viewh15740\viewkind0
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+
+\f0\fs24 \cf0 Mac VM 5.7b1 Cocoa for os-x 10.5 and iPhone 2.x\
+
+\f1\b\fs22 \
+Revision: 
+\b0 199 
+\f0\fs24 5.7b1
+\f1\b\fs22 \
+Date: 
+\b0 Wednesday, June 16, 2010 12:04:22 AM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 Mac Cocoa VM 5.7b1  Move towards June 15th VMMaker source
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SqueakFFIPrims/sqManualSurface.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/AsynchFilePlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/AsynchFilePlugin/AsynchFilePlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/JoystickTabletPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/JoystickTabletPlugin/JoystickTabletPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SerialPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SerialPlugin/SerialPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/plugins.int\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/64interp.h\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ADPCMCodecPlugin/ADPCMCodecPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/AsynchFilePlugin/AsynchFilePlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/B2DPlugin/B2DPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/B3DAcceleratorPlugin/B3DAcceleratorPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/BMPReadWriterPlugin/BMPReadWriterPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/BitBltPlugin/BitBltPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ClipboardExtendedPlugin/ClipboardExtendedPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/DSAPrims/DSAPrims.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/DropPlugin/DropPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FFTPlugin/FFTPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FilePlugin/FilePlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FloatArrayPlugin/FloatArrayPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/GeniePlugin/GeniePlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/HostWindowPlugin/HostWindowPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/InternetConfigPlugin/InternetConfigPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JPEGReadWriter2Plugin/JPEGReadWriter2Plugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JPEGReaderPlugin/JPEGReaderPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JoystickTabletPlugin/JoystickTabletPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Klatt/Klatt.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/LargeIntegers/LargeIntegers.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MIDIPlugin/MIDIPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MacMenubarPlugin/MacMenubarPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Matrix2x3Plugin/Matrix2x3Plugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MiscPrimitivePlugin/MiscPrimitivePlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/RePlugin/RePlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SecurityPlugin/SecurityPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SerialPlugin/SerialPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SocketPlugin/SocketPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundCodecPrims/SoundCodecPrims.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundGenerationPlugin/SoundGenerationPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundPlugin/SoundPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Squeak3D/Squeak3D.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/StarSqueakPlugin/StarSqueakPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/UUIDPlugin/UUIDPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ZipPlugin/ZipPlugin.c\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/sqNamedPrims.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/Info-iPhone.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info 64*64.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/HostWindowPlugin/HostWindowPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SoundPlugin/SoundPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SqueakFFIPrims/sqFFI.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sq.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sqNamedPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sqVirtualMachine.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sqVirtualMachine.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SoundPlugin/sqSqueakSoundCoreAudioAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/plugins/UUIDPlugin/sqUnixUUID.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/SqDisplay.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/SqSound.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/aio.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/debug.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/debug.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/dlfcn-dyld.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/sqUnixCharConv.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/sqUnixCharConv.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/sqUnixEvent.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/sqUnixExternalPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/sqUnixMain.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/sqUnixMemory.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/ADPCMCodecPlugin/ADPCMCodecPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/B2DPlugin/B2DPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/B3DAcceleratorPlugin/B3DAcceleratorPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/BMPReadWriterPlugin/BMPReadWriterPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/BitBltPlugin/BitBltPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/DropPlugin/DropPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/FFTPlugin/FFTPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/FilePlugin/FilePlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/FloatArrayPlugin/FloatArrayPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/GeniePlugin/GeniePlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/HostWindowPlugin/HostWindowPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/InternetConfigPlugin/InternetConfigPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/JPEGReadWriter2Plugin/JPEGReadWriter2Plugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/JPEGReaderPlugin/JPEGReaderPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/Klatt/Klatt.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/LargeIntegers/LargeIntegers.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/MIDIPlugin/MIDIPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/MacMenubarPlugin/MacMenubarPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/Matrix2x3Plugin/Matrix2x3Plugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/MiscPrimitivePlugin/MiscPrimitivePlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/RePlugin/RePlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SecurityPlugin/SecurityPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SocketPlugin/SocketPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SoundCodecPrims/SoundCodecPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SoundGenerationPlugin/SoundGenerationPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SoundPlugin/SoundPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/Squeak3D/Squeak3D.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/SqueakFFIPrims/SqueakFFIPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/StarSqueakPlugin/StarSqueakPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/UUIDPlugin/UUIDPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/ZipPlugin/ZipPlugin.c\
+
+\b \
+\
+5.4b2\
+File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 184
+\b \
+Date: 
+\b0 Monday, January 25, 2010 12:15:10 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 rename interp.h header for 64bit squeak it's breaking things by includes from 32bit squeak \
+sqiPhoneScreenAndWindow.m\
+use rect versus *rect in drawRect\
+\
+sqSqueakScreenAndWindow.m\
+pass rect in versus pointer to rect since we need to\
+pass rect to invalidateRect anyway\
+\
+SqueakOSXAppDelegate.m\
+remove check for 64bit image in getfullscreen\
+update to 5.4b2\
+\
+sqSqueakScreenAndWindow.h\
+pass rect versus *rect\
+\
+sqSqueakOSXApplication+attributes.m\
+version number change\
+\
+sqSqueakOSXScreenAndWindow.m\
+CLANG hates (NSRect) = (CGRect)\
+\
+sqSqueakOSXApplication+cursor.m\
+let's not leak cursors\
+\
+sqSqueakOSXNSView.m\
+change the cursor to arrow when click in resize widget\
+change back when unclick\
+drawRect: is drawRect (NSRect) not (NSRect*)\
+\
+sqSqueakOSXApplication+imageReadWrite.m\
+Open panel has to let you click  only on *.image types, not others. 
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/64interp.h Copied from revision: 183 path: /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.h\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+cursor.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+imageReadWrite.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqiPhoneScreenAndWindow.m\
+\
+\
+
+\f0\fs24 Mac VM 5.4b1 Cocoa for os-x 10.5 and iPhone 2.x\
+
+\f1\fs22 \
+
+\b File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 183
+\b \
+Date: 
+\b0 Friday, January 22, 2010 12:46:14 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 Add microSeconds. \
+Rebuild interp.c for 64bit source\
+\
+Interp.c\
+add ioMicroSeconds\
+\
+sq.h\
+add ioMicroSeconds\
+\
+ChipboardExtendedPlugin.c\
+has to include sqMacExtendedClipboard.h so that 64bit failure does not occur\
+\
+SqueakOSXAppDelegate.m\
+Some funky issue with storage of headers in 64bit images\
+and how it affects full screen flag\
+work around for now.\
+\
+sqMacV2Time\
+add ioMicroSeconds\
+\
+sqSqueakOSXNSView.h\
+remove compiler warning
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info 64*64.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sq.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqMacV2Time.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ClipboardExtendedPlugin/ClipboardExtendedPlugin.c\
+\
+
+\f0\fs24 Mac VM 5.3b1 Cocoa for os-x 10.5 and iPhone 2.x\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 Support for Closures, OS-X, iPhone.\
+\
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+
+\f1\b\fs22 \cf0 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m
+\b \
+Revision: 
+\b0 176
+\b \
+Date: 
+\b0 Sunday, January 10, 2010 11:32:48 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 5.3b1  remove some NSLog, ensure modifier flags get passed onto doCommand: logic properly
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakEventsAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 174
+\b \
+Date: 
+\b0 Sunday, January 10, 2010 10:55:42 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 5.3b1 compile work
+\b \
+\
+Changes:\
+
+\b0 	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakNoOGLIPhone_Prefix.pch\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqiPhoneScreenAndWindow.m\
+
+\f0\fs24 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+
+\f1\b\fs22 \cf0 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m
+\b \
+Revision: 
+\b0 173
+\b \
+Date: 
+\b0 Sunday, January 10, 2010 10:24:54 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 We consolidate the drawing logic between os-x and iphone & fix keyboard logic (partially)\
+\
+In ioForceDisplayUpdate we do \
+lockWhenCondition: 0\
+move the drawing queue to the frame queue\
+unlockWIthCondition: 1\
+schedule postIoForceDisplayUpdateUsingRectangle on the main thread wait until done. \
+This does setNeedsDisplayInRect: on the mainView\
+\
+This ensures we are doing the invalidate rectangle logic on the main view. \
+\
+Later drawRect: will run on the view, this does\
+lockWhenCondition: 1\
+move the data from the frameQueue to the CGContext (aka screen). \
+unlockWithCondition: 0\
+\
+Therefore the ioForceDisplayUpdate will block until the last drawRect: happens. \
+The drawRect: will block until the ioForceDisplayUpdate: has put data into the frameQueue\
+however it does check for data before doing the lock. \
+\
+\
+sqSqueakSoundCoreAudioAPI.m/h\
+fix /* & // to remove compiler warning\
+\
+sqSqueakEventAPI.m/h \
+add optional logging in ioGetNextEvent\
+\
+sqSqueakMainApplication+attributes.m/h\
+add "const" to getAttribute: \
+\
+sqSqueakScreenAndWindow.h/m\
+moving lockForScreenUpdate down\
+\
+sqSqueakScreenAndWindow.h\
+lockForScreenUpdate logic\
+add postIoForceDisplayUpdateUsingRectangle\
+\
+SqueakOSXAppDelegate.m\
+version number change\
+\
+sqSqueakOSXApplication+attributes.m\
+version number change\
+\
+sqSqueakOSXNSView.h\
+sqSqueakOSXNSView.m\
+\
+sqSqueakOSXScreenAndWindow.m\
+override postIoForceDisplayUpdateUsingRectangle\
+\
+ sqSqueakIPhoneApplication+attributes.m\
+version number change\
+\
+sqiPhoneScreenAndWindow.m/h\
+lockForScreenUpdate goes to super class\
+\
+Work work work on keyboard logic.\
+
+\b \
+\
+Changes:\
+
+\b0 	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakNoOGLIPhone.xcodeproj/johnmci.mode1v3\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakNoOGLIPhone.xcodeproj/johnmci.pbxuser\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakNoOGLIPhone.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/Info-iPhone.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SoundPlugin/sqSqueakSoundCoreAudioAPI.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SoundPlugin/sqSqueakSoundCoreAudioAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakEventsAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakMainApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqiPhoneScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqiPhoneScreenAndWindow.m\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 172
+\b \
+Date: 
+\b0 Tuesday, January 5, 2010 6:39:04 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 V5.2b3 mac osx vm  2.1.0 iphone vm\
+for 5.2.b3 we fix option arrow key\
+for 2.1.0 we move to current pharo pharo1.0-10502-rc1dev09.12.2.image\
+this also required changing source file name in _imageReadWrite
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/PharoV10.sources\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/iPhone.10418.changes\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/iPhone.10418.image\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/Info-iPhone.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/iPhone.changes\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/iPhone.image\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneApplication+imageReadWrite.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.c\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 169
+\b \
+Date: 
+\b0 Monday, January 4, 2010 1:12:46 AM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 5.2b2  fix for jpeg read/write bad form bitmap addressing code
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/JPEGReadWriter2Plugin/JPEGReadWriter2Plugin.c\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 167
+\b \
+Date: 
+\b0 Saturday, January 2, 2010 9:01:04 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 os-x 5.2b1 (11)\
+iphone 2.1.0\
+\
+sqMacExtendedClipboard.m/h\
+add cocoa support for extended clipboard logic. \
+\
+MacMenuOS9ToOSX.m/h \
+MacMenubarPlugin.h\
+Add start of mac menu support. In Progress, not usable\
+\
+sqSqueakScreenAndWindow.m\
+Refactor the iphone versus os-x drawing a bit. Needs more adjustment\
+\
+SqueakOSXAppDelegate.m\
+sqSqueakOSXApplication-attributes.m \
+Tweak version to 5.2b1 (11)\
+\
+\
+iphone 2.1.0\
+Fix drawing, yes it was busted. \
+Add clipboard support\
+\
+sqSqueakiPhoneApplication+clipboard.m/h\
+sqSqueakIPhoneClipboardClipboardAPI.m/h \
+clipboard support for squeak\
+\
+sqMacExtendedClipboard.m/h\
+clipboard support for Pharo\
+\
+src\
+Add ClipboardExtendedPlugin\
+Add macMenubarPlugin\
+\
+\
+
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/ClipboardExtended\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/ClipboardExtended/sqMacExtendedClipboard.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/ClipboardExtended/sqMacExtendedClipboard.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/config\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/config/ftconfig.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/config/ftheader.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/config/ftmodule.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/config/ftoption.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/config/ftstdlib.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/freetype.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftadvanc.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftbbox.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftbdf.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftbitmap.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftcache.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftchapters.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftcid.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/fterrdef.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/fterrors.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftgasp.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftglyph.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftgxval.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftgzip.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftimage.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftincrem.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftlcdfil.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftlist.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftlzw.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftmac.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftmm.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftmodapi.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftmoderr.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftotval.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftoutln.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftpfr.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftrender.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftsizes.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftsnames.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftstroke.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftsynth.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftsystem.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/fttrigon.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/fttypes.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftwinfnt.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ftxf86.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/t1tables.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ttnameid.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/tttables.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/tttags.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/freetype2/freetype/ttunpat.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/MacMenubarPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/MacMenubarPlugin/MacMenuOS9ToOSX.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/MacMenubarPlugin/MacMenuOS9ToOSX.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/MacMenubarPlugin/MacMenubarPlugin.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneApplication+clipboard.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneApplication+clipboard.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneClipboardAPI.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneClipboardAPI.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/plugins/ClipboardExtended\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/plugins/ClipboardExtended/sqMacExtendedClipboard.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/plugins/ClipboardExtended/sqMacExtendedClipboard.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/ClipboardExtendedPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/ClipboardExtendedPlugin/ClipboardExtendedPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/MacMenubarPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/MacMenubarPlugin/MacMenubarPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/Info-iPhone.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info 64*64.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/macintoshextra.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/sqNamedPrims.h\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 166
+\b \
+Date: 
+\b0 Friday, January 1, 2010 1:01:54 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 minor changes for 64bit image compile for 32bit powerpc
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/sqNamedPrims.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.h\
+
+\f0\fs24 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural\pardirnatural
+
+\f1\b\fs22 \cf0 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 165
+\b \
+Date: 
+\b0 Friday, December 25, 2009 8:08:07 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 5.1.b1  changes to expose sqBaseMemory address for plugins to link to .
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/.DS_Store\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/.DS_Store\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/bert.mode1\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/bert.pbxuser\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/johnmci.mode1\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/johnmci.mode1v3\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/johnmci.pbxuser\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/FT2Plugin.xcodeproj/project.pbxproj\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/Info-FT2Plugin.plist\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/PkgInfo\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/libfreetype.a\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/FT2Plugin/macFileNameBits.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/plugins/FT2Plugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/plugins/FT2Plugin/.DS_Store\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/plugins/FT2Plugin/FT2Plugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/sqMacV2Memory.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/sqPlatformSpecific.h\
+
+\b File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 163
+\b \
+Date: 
+\b0 Tuesday, December 8, 2009 10:00:41 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 Fix issue with malloc in 1/2/4/8/16 to 32bit translators. \
+We need to allocate storage, then free after the draw. \
+
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqViewClut.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/BitMapConversionLogicFromX11.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqViewBitmapConversion.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqViewBitmapConversion.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/drawingImageAtom.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/drawingImageAtom.m\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 162
+\b \
+Date: 
+\b0 Tuesday, December 8, 2009 1:17:32 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 Add 1,2,4,8,16 bit form support\
+NOT COMPLETED, need to figure out how to dispose of malloc\
+\
+sqSqueakScreenAPI.m\
+\
+ioHasDisplayDepth\
+should have used ioHasDisplayDepth: versus ioDisplayDepth (bug)\
+\
+\
+sqSqueakScreenAndWindow.m\
+sqSqueakScreenAndWindow.h\
+\
+refractor to use \
+CGDataProviderCreateWithData\
+by default\
+and have a method to create the CGImageRef so \
+os-x can use default or calculate bitmap. \
+\
+\
+sqSqueakOSXNSView.h\
+sqSqueakOSXNSView.m\
+\
+refactor to use colormap and support 1,2,4,8,16 bit forms\
+\
+sqSqueakOSXScreenAndWindow.h\
+sqSqueakOSXScreenAndWindow.m\
+\
+ioHasDisplayDepth fix\
+refractor to build 32bit screen using default logic or\
+calculate 1,2,4,8,16 version
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/BitMapConversionLogicFromX11.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/BitMapConversionLogicFromX11.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqViewBitmapConversion.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqViewBitmapConversion.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqViewClut.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqMacUnixExternalPrims.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/.DS_Store\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/.DS_Store\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 161
+\b \
+Date: 
+\b0 Wednesday, December 2, 2009 2:46:02 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 Beta 9\
+as shipped
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info 64*64.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/DropPlugin/DropPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SecurityPlugin/SecurityPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SocketPlugin/SocketPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SoundPlugin/SoundPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/UUIDPlugin/UUIDPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sqNamedPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SecurityPlugin/sqMacSecurity.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SoundPlugin/sqSqueakSoundCoreAudio.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SoundPlugin/sqSqueakSoundCoreAudioAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqMacV2Time.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakEventsAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXDropAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/interp.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/sqDummyaio.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/sqDummyaio.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/plugins/SocketPlugin/sqUnixSocket.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/plugins/UUIDPlugin/sqUnixUUID.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/vm/aio.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.h\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 160
+\b \
+Date: 
+\b0 Wednesday, December 2, 2009 2:16:07 AM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 beta 9\
+Add the 64bit image SRC\
+fix some implicit routine defs \
+
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/.DS_Store\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/plugins\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/plugins.ext\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/plugins.int\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/plugins/IA32ABI\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/.DS_Store\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/interp.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ADPCMCodecPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ADPCMCodecPlugin/ADPCMCodecPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/AsynchFilePlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/AsynchFilePlugin/AsynchFilePlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/B2DPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/B2DPlugin/B2DPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/B3DAcceleratorPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/B3DAcceleratorPlugin/B3DAcceleratorPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/BMPReadWriterPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/BMPReadWriterPlugin/BMPReadWriterPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/BitBltPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/BitBltPlugin/BitBltPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/DSAPrims\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/DSAPrims/DSAPrims.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/DropPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/DropPlugin/DropPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FFTPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FFTPlugin/FFTPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FilePlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FilePlugin/FilePlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FloatArrayPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/FloatArrayPlugin/FloatArrayPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/GeniePlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/GeniePlugin/GeniePlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/HostWindowPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/HostWindowPlugin/HostWindowPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/InternetConfigPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/InternetConfigPlugin/InternetConfigPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JPEGReadWriter2Plugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JPEGReadWriter2Plugin/JPEGReadWriter2Plugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JPEGReaderPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JPEGReaderPlugin/JPEGReaderPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JoystickTabletPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/JoystickTabletPlugin/JoystickTabletPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Klatt\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Klatt/Klatt.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/LargeIntegers\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/LargeIntegers/LargeIntegers.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MIDIPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MIDIPlugin/MIDIPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MacMenubarPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MacMenubarPlugin/MacMenubarPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Matrix2x3Plugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Matrix2x3Plugin/Matrix2x3Plugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MiscPrimitivePlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/MiscPrimitivePlugin/MiscPrimitivePlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/RePlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/RePlugin/RePlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SecurityPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SecurityPlugin/SecurityPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SerialPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SerialPlugin/SerialPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SocketPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SocketPlugin/SocketPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundCodecPrims\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundCodecPrims/SoundCodecPrims.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundGenerationPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundGenerationPlugin/SoundGenerationPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SoundPlugin/SoundPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Squeak3D\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/Squeak3D/Squeak3D.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/StarSqueakPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/StarSqueakPlugin/StarSqueakPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/SurfacePlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/UUIDPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/UUIDPlugin/UUIDPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ZipPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/intplugins/ZipPlugin/ZipPlugin.c\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src64/vm/sqNamedPrims.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sqMemoryAccess.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/interp.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/sqPlatformSpecific.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.h\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 159
+\b \
+Date: 
+\b0 Tuesday, December 1, 2009 11:20:44 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 beta 9 \
+Update to vmmaker 153 plus misc fixes for 64bit
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/DropPlugin/DropPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SerialPlugin/SerialPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sq.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/vm/sqMemoryAccess.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakVmAndImagePathAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/unix/plugins/SecurityPlugin/sqUnixSecurity.c\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 151
+\b \
+Date: 
+\b0 Monday, November 30, 2009 12:17:37 AM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 beta 7\
+fix leak of Queue objects\
+rework flush force update to avoid leaks of timer \
+
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/Queue.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.m\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 150
+\b \
+Date: 
+\b0 Sunday, November 29, 2009 8:44:42 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 Beta 7\
+\
+sqMacUnixExternalPrims.m 	\
+fix some warning msgs\
+\
+Queue.m\
+Queue.h\
+add accessor to get queue array so we can iterate over\
+\
+sqSqueakMainApplication+screen.m\
+sqSqueakMainApplication+screen.h\
+unionScreenArea, pass rect in, versus pointer\
+\
+sqSqueakScreenAndWindow.h\
+sqSqueakScreenAndWindow.m\
+\
+Refactor drawing, before we would draw to a drawing queue\
+then move items to the frame queue, then schedule a update\
+on the view to draw the items from the drawing queue\
+\
+This didn't work well on os-x.  So now we draw to the drawing \
+queue, on a frame boundary (explicit or forced) we put the drawing queue to the frame queue, and force a draw on the main thread. \
+\
+Queues are retain, versus assign\
+\
+SqueakOSXAppDelegate.m\
+update prompt\
+Fix issue with path to file to open at launch\
+\
+sqSqueakOSXApplication+imageReadWrite.m\
+Fix issue with path to file to open at launch\
+\
+\
+sqSqueakOSXApplication.m\
+compiler warning msgs\
+\
+sqSqueakOSXDropAPI.m\
+Oops set dropInit and dropShutdown return values to 1, versus 0\
+\
+\
+sqSqueakOSXFileDirectoryInterface.m\
+Use objective-c 2 iterator\
+\
+sqSqueakOSXNSView.h\
+sqSqueakOSXNSView.m\
+Add draw immediate logic\
+Use objective-c 2 iterator\
+\
+\
+sqSqueakOSXScreenAndWindow.m\
+refactor drawing\
+\
+SqueakUIController.m\
+drop some stale commented out code\
+\
+SqueakUIView.m\
+refactor drawing\
+\
+\
+sqSqueakIPhoneApplication+events.m\
+Use objective-c 2 iterator\
+\
+sqiPhoneScreenAndWindow.m\
+postIoForceDisplayUpdateUsingRectangle\
+
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/sqMacUnixExternalPrims.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/Queue.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/Queue.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakMainApplication+screen.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakMainApplication+screen.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+imageReadWrite.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXDropAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXFileDirectoryInterface.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/SqueakUIController.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/SqueakUIView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqiPhoneScreenAndWindow.m\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 148
+\b \
+Date: 
+\b0 Saturday, November 28, 2009 12:21:54 AM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 pre beta 7 check in\
+we are adding drag and drop\
+resize of os-x window\
+ioLoadModule logic\
+\
+revisions to some funky alloc/release to autorelease patterns. \
+\
+details \
+\
+sqSqueakFileDirectoryAPI.m\
+\
+createFilePathFromString \
+needs to better manage autorelease objects\
+\
+ sqSqueakFileDirectoryInterface.h\
+ sqSqueakFileDirectoryInterface.m\
+rename copyResolvedAliasFiles to resolvedAliasFiles\
+refractor management of autoreleased objects\
+\
+sqSqueakScreenAndWindow.m\
+force first screen update to catch DOA images\
+\
+SqueakOSXAppDelegate.m\
+enable resize again\
+\
+macintoshosxextra.c\
+ioloadmodule to new class\
+\
+sqSqueakOSXApplication+events.h\
+sqSqueakOSXApplication+events.m\
+sqSqueakOSXDropAPI.h\
+sqSqueakOSXDropAPI.m\
+Add lots of code for drag/drop, not working yet. \
+\
+sqSqueakOSXFileDirectoryInterface.m\
+resolvedAliasFiles\
+needs to better manage autorelease objects\
+\
+sqSqueakOSXNSView.m\
+sqSqueakOSXNSView.h\
+\
+lots added for drag/drop\
+\
+sqSqueakIPhoneFileDirectoryInterface.m\
+resolvedAliasFiles.m\
+is always in a auto-release pool, why add another. \
+\
+
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/sqMacUnixExternalPrims.m\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXDropAPI.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXDropAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/English.lproj/MainMenu.xib\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakFileDirectoryAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakFileDirectoryInterface.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakFileDirectoryInterface.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/macintoshosxextra.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXFileDirectoryInterface.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/Classes/sqSqueakIPhoneFileDirectoryInterface.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/sqNamedPrims.h\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 147
+\b \
+Date: 
+\b0 Friday, November 27, 2009 2:15:01 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 beta 6\
+\
+sqSqueakSoundCoreAudio.h\
+sqSqueakSoundCoreAudio.m\
+\
+add stop_force, StopAndDispose\
+use retain on queues, outputRunning is BOOL\
+Buffer number goes from 3 to 4\
+Set zero sound fill to 2644 bytes from 512\
+Don't make new audioqueue if old one can be reused. \
+Don't dispose of audioqueue on regular stop\
+In playSamples use MyAudioQueueOutputCallback() to populate queues if required. \
+\
+sqSqueakOSXSoundCoreAudio.h\
+sqSqueakOSXSoundCoreAudio.m\
+Override class for os-x to ensure we don't \
+restart entire sound system on each squeak stop/start sound\
+\
+sqSUnitTester.m \
+Fix compiler warnings about double constants being returned as float\
+\
+sqSqueakAttributesAPI.m\
+cast strlen to sqInt\
+\
+sqSqueakFileDirectoryInterface.m\
+cast strlen to sqInt\
+fix casting for type/creator which are 32bit things\
+\
+sqSqueakMainApplication\
+inputSemaphoreINdex is a sqInt\
+\
+sqSqueakScreenAPI.m\
+ioShowDisplayOnWindow first pram is a unsigned char *, fix \
+references, also do pointerForOops in proper place\
+\
+\
+sqSqueakScreenAndWindow.h\
+windowIndex is a sqInt \
+\
+sqSqueakVmAndImagePathAPI.m\
+cast strlen to sqInt\
+\
+SqueakOSXAppDelegate.m\
+It's a cocoa squeak 64bit vm, with 32bit image.. \
+\
+\
+sqSqueakOSXSoundCoreAudio.h\
+sqSqueakOSXSoundCoreAudio.m\
+OS-X override to ensure we start sound system only once. \
+\
+sqSqueakOSXApplication+clipboard.m\
+cast strlen to sqInt\
+\
+sqSqueakOSXApplication+events.h\
+sqSqueakOSXApplication+events.m\
+squeak modifier & buttonState is an int\
+\
+sqSqueakOSXApplication.h\
+gMaxHeapSize is a usqInt\
+Also setup sound system\
+\
+\
+sqSqueakOSXInfoPlistInterface.h\
+sqSqueakOSXInfoPlistInterface.m\
+SqueakMaxHeapSize is a usqInt\
+\
+TSK \
+sqMacV2Memory.c\
+extern memory is a usqInt not a char *\
+some casting of void* to (char*)\
+memory is zero if in 64bit mode 32bit image. So fix freeMemory\
+\
+Various fixes to the Objective-C plugin \
+for casting and for long on 64bit is 64bits wide. \
+
+\b \
+\
+Changes:\
+
+\b0 	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/RePlugin/configx.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/plugins\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/plugins/SoundPlugin\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/plugins/SoundPlugin/sqSqueakOSXSoundCoreAudio.h\
+	A /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/plugins/SoundPlugin/sqSqueakOSXSoundCoreAudio.m\
+	D /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/RePlugin/config.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/RePlugin/internal.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SoundPlugin/sqSqueakSoundCoreAudio.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SoundPlugin/sqSqueakSoundCoreAudio.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SqueakObjectiveC/squeakSUnitTester.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakAttributesAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakFileDirectoryInterface.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakMainApplication.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakVmAndImagePathAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+clipboard.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXInfoPlistInterface.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXInfoPlistInterface.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/sqMacV2Memory.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/interp.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/HostWindowPlugin/HostWindowPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/ObjectiveCPlugin/ObjectiveCPlugin.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/Squeak3D/Squeak3D.c\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 146
+\b \
+Date: 
+\b0 Thursday, November 26, 2009 7:29:49 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 HostWindowPlugin.h\
+64bit prep work\
+For all usages of int make those sqInt\
+\
+SecurityPlugin.h\
+SecurityPlugin.c\
+inDisableImageWrite/ioCanWriteImage/ioCanRenameImage are sqInt\
+\
+\
+sqSqueakCursorAPI.m\
+64bit prep work\
+For all usages of int make those sqInt\
+ioSetCursor\
+\
+  sqSqueakScreenAPI.m\
+64bit prep work\
+For all usages of int make those sqInt\
+ioShowDisplayOnWindow\
+\
+SqueakOSXAppDelegate.h\
+For 10.5 build add protocol NSApplicationDelegate def\
+\
+SqueakOSXAppDelegate.m\
+setInitialFirstResponder\
+\
+macintoshosxextra.c\
+For all usages of int make those squint\
+\
+sqSqueakOSXNSView.m\
+10.5 only calls insertText:  (bug)\
+enable option/shift for esc/tab/return/cursor/page\
+\
+sqSqueakOSXScreenAndWindow.h\
+For 10.5 build add protocol NSWndowDelegate def\
+\
+sqMacV2Memory.c\
+sqMemoryBase  set memory base on squeak vmmaker defs, not x64\
+\
+
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/HostWindowPlugin/HostWindowPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Cross/plugins/SecurityPlugin/SecurityPlugin.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/plugins/SecurityPlugin/sqMacSecurity.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakCursorAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAPI.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/macintoshosxextra.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+attributes.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/plugins/HostWindowPlugin/sqMacHostWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/iPhone/sqMacV2Memory.c\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/src/vm/intplugins/ObjectiveCPlugin/ObjectiveCPlugin.c\
+
+\f0\fs24 \
+
+\f1\b\fs22 File: 
+\b0 /Volumes/px2/business/SqueakiPhone/SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhoneOSX/SqueakPureObjc.xcodeproj/project.pbxproj
+\b \
+Revision: 
+\b0 145
+\b \
+Date: 
+\b0 Wednesday, November 25, 2009 11:49:52 PM PT
+\b \
+Author: 
+\b0 jmm
+\b \
+\
+
+\b0 beta 3\
+Update powerpc compiler options. \
+\
+sqSqueakMainApplication+vmAndImagePath.m\
+10.6 URL call backported to 10.5\
+\
+SqueakOSXAppDelegate.m\
+mess with window open code\
+fix window title\
+\
+sqSqueakOSXApplication+events.m\
+sqSqueakOSXApplication+events.h\
+Add wheel mouse logic\
+\
+sqSqueakOSXApplication+imageReadWrite.m\
+Add override for setting window title\
+\
+sqSqueakOSXInfoPlistInterface.m\
+10.6 URL call backported to 10.5\
+\
+sqSqueakOSXNSView.m\
+10.6 cursor call backported to 10.5\
+Add wheel mouse logic\
+\
+sqSqueakOSXScreenAndWindow.h\
+retain timer for forced flush\
+\
+sqSqueakOSXScreenAndWindow.m\
+timer was not reset correctly for 2nd+ flushes\
+This caused drawing problems. 
+\b \
+\
+Changes:\
+
+\b0 	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/English.lproj/MainMenu.xib\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc-Info.plist\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.mode1v3\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/johnmci.pbxuser\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/SqueakPureObjc.xcodeproj/project.pbxproj\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakMainApplication+vmAndImagePath.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/Common/Classes/sqSqueakScreenAndWindow.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/SqueakOSXAppDelegate.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+events.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXApplication+imageReadWrite.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXInfoPlistInterface.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXNSView.m\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.h\
+	M /SqueakObjCBasedForOSXAndIPhone/SqueakNoOGLIPhone/platforms/Mac OSObjC/vm/OSX/sqSqueakOSXScreenAndWindow.m
+\f0\fs24 \
+\pard\tx560\tx1120\tx1680\tx2240\tx2800\tx3360\tx3920\tx4480\tx5040\tx5600\tx6160\tx6720\ql\qnatural
+\cf0 \
+}
