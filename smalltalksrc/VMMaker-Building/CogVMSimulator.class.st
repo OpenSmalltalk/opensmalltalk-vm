@@ -255,15 +255,6 @@ CogVMSimulator >> ceTraceBlockActivation [
 ]
 
 { #category : #'debug support' }
-CogVMSimulator >> ceTraceInterpreterPrim: theReceiver [
-	cogit printOnTrace ifTrue:
-		[transcript print: byteCount; nextPut: $/; print: (sendCount := sendCount + 1); space].
-	cogit assertCStackWellAligned.
-	super ceTraceInterpreterPrim: theReceiver.
-	^#continue
-]
-
-{ #category : #'debug support' }
 CogVMSimulator >> ceTraceLinkedSend: theReceiver [
 	cogit printOnTrace ifTrue:
 		[transcript print: byteCount; nextPut: $/; print: (sendCount := sendCount + 1); space].
@@ -1064,8 +1055,7 @@ CogVMSimulator >> interpret [
 	self fetchNextBytecode.
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
-		 atEachStepBlock ifNotNil:
-			[atEachStepBlock value].
+		 atEachStepBlock value. "N.B. may be nil"
 		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.  "undo the pre-increment of IP before returning"
@@ -3061,6 +3051,12 @@ CogVMSimulator >> tab [
 	traceOn ifTrue: [ transcript tab ].
 ]
 
+{ #category : #'return bytecodes' }
+CogVMSimulator >> tearDownAndRebuildFrameForCannotReturnBaseFrameReturnFrom: contextToReturnFrom to: contextToReturnTo returnValue: returnValue [
+	self halt.
+	^super tearDownAndRebuildFrameForCannotReturnBaseFrameReturnFrom: contextToReturnFrom to: contextToReturnTo returnValue: returnValue
+]
+
 { #category : #'debug support' }
 CogVMSimulator >> tenuringIncrementalGC [
 	transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: byteCount; nextPut: $); flush.
@@ -3124,13 +3120,6 @@ CogVMSimulator >> testBreakCount: breakCount printSends: shouldPrintSends printF
 { #category : #testing }
 CogVMSimulator >> testWithBytecodePrint [
 	self testBreakCount: -1 printSends: true printFrames: false printBytecodes: true
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> traceInterpreterPrim [
-	cogit printOnTrace ifTrue:
-		[transcript print: byteCount; nextPut: $/; print: (sendCount := sendCount + 1); space].
-	super traceInterpreterPrim
 ]
 
 { #category : #'simulation only' }

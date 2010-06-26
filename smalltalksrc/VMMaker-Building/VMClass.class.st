@@ -95,6 +95,12 @@ VMClass class >> noteCompilationOf: aSelector meta: isMeta [
 	^super noteCompilationOf: aSelector meta: isMeta
 ]
 
+{ #category : #'accessing class hierarchy' }
+VMClass class >> objectMemoryClass [
+	"Default for all-in-one VMs where the interpreter inherits from the object memory."
+	^nil
+]
+
 { #category : #translation }
 VMClass class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [ 
 	"Hook for translation.  e.g. allows a subclass to override its
@@ -162,6 +168,16 @@ VMClass >> asserta: aBooleanExpression [
 VMClass >> pointerForOop: oop [
 	"This gets implemented by Macros in C, where its types will also be checked.
 	 oop is the width of a machine word, and pointer is a raw address."
+	<doNotGenerate>
 
 	^oop
+]
+
+{ #category : #arithmetic }
+VMClass >> safe: signedInteger mod: positiveModulus [
+	<inline>
+	| remainder |
+	^(remainder := signedInteger \\ positiveModulus) < 0
+		ifTrue: [remainder + positiveModulus]
+		ifFalse: [remainder]
 ]
