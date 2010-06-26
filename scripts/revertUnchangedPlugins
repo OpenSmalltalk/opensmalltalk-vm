@@ -1,0 +1,13 @@
+#!/bin/sh
+# Revert any and all plugins whose changes comprise only the generation metadata
+# such as date generated, VMMaker version etc.
+
+#IFS=<tab><nl>
+IFS='	
+'
+for d in src/plugins/[A-Z]*
+do
+	test -d "$d" || continue
+	find "$d" -name .svn -prune -o \( -type f -a -name '*.[ch]' \) -exec \
+		scripts/revertIfEssentiallyUnchanged {} \;
+done

@@ -1,0 +1,77 @@
+#! /bin/sh
+
+# File:        npsqueakregister
+# Author:      Bert Freudenberg 
+# Description: Script to register the npsqueak plugin with 
+#              various browsers. 
+#              Rerun after you installed a new browser!
+# Parameters:  -u unregister
+
+NPSQUEAK_SO=@NPSQUEAK_SO@
+BROWSERS="netscape mozilla mozilla-firefox opera MozillaFirefox/lib"
+BROWSER_DIRS="/usr/local/lib /usr/lib /opt"
+SYSTEM_BROWSER_DIR="/usr/lib/browser-plugins"
+
+ACTION=register
+
+usage() {
+    echo "Usage: $0 [-u] [PLUGIN]"
+    echo "Registers the Squeak browser plugin for known browsers"
+    echo "  -u         unregister plugin"
+    echo "  PLUGIN     absolute path to npsqueak.so"
+    echo "             (default is @NPSQUEAK_SO@)"
+    exit
+}
+
+register() {
+    echo Registering ${1}
+    rm -f ${1}
+    ln -sv $NPSQUEAK_SO ${1}
+}
+
+unregister() {
+    echo Unregistering ${1}
+    rm -f ${1}
+}
+
+case "$1" in
+    -u) 
+         ACTION=unregister
+         ;;
+    "")   
+         ACTION=register
+         ;;
+    /*.so)
+	NPSQUEAK_SO="$1"
+	;;
+    *)   usage
+         exit 1
+         ;;
+esac
+
+if [ ! -e "$NPSQUEAK_SO" ] ; then
+    echo File not found: $NPSQUEAK_SO
+    echo Aborting.
+    exit 1 
+fi
+
+for browser in $BROWSERS
+do 
+    for bdir in $BROWSER_DIRS
+    do
+        dirs=`ls -d ${bdir}/${browser}* 2>/dev/null`
+        for dir in $dirs
+        do
+            pdirs=`find $dir -name plugins -print`
+            for pdir in $pdirs
+            do
+	        $ACTION ${pdir}/npsqueak.so
+            done
+        done
+    done
+done
+
+
+if [ -e $SYSTEM_BROWSER_DIR ]; then
+    $ACTION $SYSTEM_BROWSER_DIR/npsqueak.so
+fi

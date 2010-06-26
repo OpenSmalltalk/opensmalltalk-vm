@@ -1,0 +1,44 @@
+# This script tries to turn on nearly every configure option.
+# It is useful for finding compile problems, but it may turn on
+# more things than you actually want.
+
+./configure \
+  --enable-smp \
+  --enable-apic \
+  --enable-x86-64 \
+  --enable-all-optimizations \
+  --enable-ne2000 \
+  --enable-pci \
+  --enable-acpi \
+  --enable-large-pages \
+  --enable-pae \
+  --enable-global-pages \
+  --enable-mtrr \
+  --enable-ignore-bad-msr \
+  --enable-port-e9-hack \
+  --enable-debugger \
+  --enable-disasm \
+  --enable-vbe \
+  --enable-mmx \
+  --enable-fpu \
+  --enable-sse=4 \
+  --enable-sse-extension \
+  --enable-misaligned-sse \
+  --enable-alignment-check \
+  --enable-popcnt \
+  --enable-movbe \
+  --enable-vme \
+  --enable-sep \
+  --enable-3dnow \
+  --enable-monitor-mwait \
+  --enable-xsave \
+  --enable-aes \
+  --enable-x86-debugger \
+  --enable-cdrom \
+  --enable-sb16 \
+  --enable-instrumentation=instrument/example1 \
+  --enable-iodebug \
+  --enable-show-ips \
+  --enable-clgd54xx \
+  --enable-usb \
+  --with-all-libs

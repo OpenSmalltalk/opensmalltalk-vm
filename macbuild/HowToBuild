@@ -1,0 +1,28 @@
+How to Build the Croquet Cog VM on Mac OS X
+--------------------------------
+1. Install the tools (xcode etc);  the CoreVM.xcodeproj is set-up to build
+   using gcc 4.2 but you can optionally install the Intel C++ compiler 11.1
+   and change the compilerSpec in CoreVM.xcodeproj/project.pbxproj to get
+   better performance.
+
+2. Unpack the tarball (you have probably done this because you're reading this
+   file).
+
+3. Open a shell, cd into ROOT/macbuild directory and execute either
+     ./makevm
+  or
+     mvm -A
+  mvm is a convenience wrapper around makevm that will build different versions
+  (DeploymentSymbols, Debug, etc) and collect compiler output to log files.
+
+3a. If you want to get the Cog VM simulator working you'll need to build the
+BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
+need to first build bochs.
+  $ cd ROOT/processors/IA32/bochs
+  $ ./conf.COG
+  $ ./makeem
+  $ cd ROOT/macbuild/BochsIA32Plugin
+  $ xcodebuild
+
+4. At the end of this process you should have a brand new Croquet.app in the
+   macbuild folder (or Fast.app Assert.app and Debug.app if you've used mvm).

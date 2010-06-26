@@ -1,0 +1,315 @@
+#############################################################################
+# Makefile for Win32 Squeak using gcc-2.95.2 and MingW32
+#############################################################################
+ifndef SRCDIR
+include plugins/plugins.ext
+include plugins/plugins.int
+
+INTERNAL_LIBS = $(addsuffix .lib, $(INTERNAL_PLUGINS))
+EXTERNAL_LIBS = $(addsuffix .dll, $(EXTERNAL_PLUGINS))
+endif
+
+
+AR = ar rc
+CP = copy
+RM = del
+
+#############################################################################
+# Default locations
+#
+ifndef SRCDIR
+SRCDIR= .
+endif
+BLDDIR= $(SRCDIR)/release
+
+ifndef OBJDIR
+OBJDIR= $(BLDDIR)
+endif
+
+#############################################################################
+# Default targets
+#
+VM=	Squeak.exe
+
+
+#############################################################################
+# VM definitions
+#
+VMDEF=	Squeak.def
+VMEXP=	Squeak.exp
+VMLIB=	Squeak.lib
+VMRES=	Squeak.res
+VMDEFIN=	Squeak.def.in
+
+#############################################################################
+# Generic VM source file definitions
+#
+VMDIR= $(SRCDIR)/vm
+VMSRC= $(notdir $(wildcard $(VMDIR)/*.c)) gnu-interp.c
+VMOBJ:=	$(VMSRC:.c=.o)
+VMOBJ:=	$(filter-out interp.o sqFilePrims.o, $(VMOBJ))
+
+LIBSRC = $(wildcard *.c)
+LIBOBJ = $(LIBSRC:.c=.o)
+
+.PRECIOUS: gnu-interp.c 
+#BBCopy-i386.cc
+
+#############################################################################
+# DirectX definitions
+#
+DXDIR= c:/dx7sdk/include
+
+#############################################################################
+# Plugin (DLL) file definitions
+#
+
+# DLLDIR is set through makefile invokation
+DLLDIR = $(SRCDIR)/plugins
+DLLOBJ = $(notdir $(subst .c,.o, $(wildcard $(DLLDIR)/*.c))) \
+	  $(notdir $(subst .cc,.o, $(wildcard $(DLLDIR)/*.cc))) \
+	  $(notdir $(subst .ccg,.o, $(wildcard $(DLLDIR)/*.ccg)))
+# DLLOBJ = $(DLLSRC:.c=.o) $(DLLSRC:.cc=.o)
+DLLOBJ := $(filter-out sqMac% sqUnix% %-ppc.o, $(DLLOBJ))
+
+#############################################################################
+# What object files do we need?
+#
+ALLOBJ=		$(VMOBJ)
+
+#############################################################################
+# Where go the intermediate files?
+#
+VMOUTDIR=		$(BLDDIR)
+PLUGINOUTDIR=	$(BLDDIR)
+
+#############################################################################
+# And where to look for files?
+#
+VPATH=		$(SRCDIR) $(VMDIR) $(VMOUTDIR) $(PLUGINOUTDIR)
+
+#############################################################################
+# C compiler settings (for egcs-1.1.2)
+#
+CC=		gcc
+CXX=		g++
+CFLAGS=		-g -mpentium -mwindows -O3 -fomit-frame-pointer -funroll-loops -fschedule-insns2
+CXXFLAGS= $(CFLAGS) -felide-constructors
+WFLAGS=		
+DEFS=		-DWIN32_FILE_SUPPORT -DNO_STD_FILE_SUPPORT -DNDEBUG -DLSB_FIRST -DX86 $(XDEFS)
+#-DUSE_DIB_SECTIONS
+#-DPROFILE
+XDEFS=		-DSQUEAK_BUILTIN_PLUGIN
+INCS=		-I. -I$(SRCDIR) -I$(SRCDIR)/plugins -I$(VMDIR) -I$(DXDIR) -I$(DLLDIR)/FilePlugin -I$(DLLDIR)/SocketPlugin $(XINC)
+MD=			mkdir
+
+#############################################################################
+# Linker settings
+#
+# Note: I had to use 'gcc' instead of 'ld' to prevent unresolved symbols
+#       The switch '-mwindows' gives us a GUI app instead of a console app.
+#
+LD=			gcc
+LDFLAGS=	-mwindows
+STDLIBS=	-lddraw -lopengl32 -lwsock32 -lcomdlg32 -lole32 -lwinmm -luser32 -lgdi32 -lkernel32
+CRTLIB =	-lcrtdll
+LIBS=		$(STDLIBS) $(CRTLIB)
+
+#############################################################################
+# AWK settings
+#
+# Note: AWK is only necessary for building gnu-interp.c
+#
+AWK=		gawk
+
+#############################################################################
+# DLL settings
+#
+# Note: DLLTOOL/DLLWRAP does the work for everything related to plugins
+#
+DLLTOOL=	dlltool
+DLLWRAP=	dllwrap
+
+#############################################################################
+# RC settings
+#
+# Note: RC compiles the .rc files into linkable .o files
+#       !!!WARNING!!! windres can break if you have MacAfee VShield running!!!
+#
+RC=			windres
+RCFLAGS=	--include-dir $(SRCDIR)
+
+.SUFFIXES:
+.SUFFIXES:	.ccg .cc .c .o .s .i .rc .res .cg .hg .ccg
+
+all:	$(VM) $(EXTERNAL_LIBS)
+
+#############################################################################
+# Compiling Squeak itself
+#
+#  Mpeg3Plugin.o sqOpenGLRenderer.o sqWin32FilePrims.o 
+
+$(VM):	$(ALLOBJ) $(INTERNAL_LIBS) $(VMEXP) resource.o
+		$(LD) $(LDFLAGS) -o $(VMOUTDIR)/$(VM) $(addprefix $(VMOUTDIR)/,$(ALLOBJ)) $(VMOUTDIR)/$(VMEXP) $(VMOUTDIR)/resource.o $(addprefix $(VMOUTDIR)/,$(INTERNAL_LIBS)) $(LIBS)
+		strip --strip-all $(VMOUTDIR)/$(VM)
+
+#############################################################################
+# The exports for named primitives from Squeak (required by VM)
+#
+$(VMDEF) $(VMEXP) $(VMLIB):	$(ALLOBJ)
+		$(DLLTOOL) --input-def $(VMDEFIN) --output-def $(VMOUTDIR)/$(VMDEF) --output-exp $(VMOUTDIR)/$(VMEXP) --output-lib $(VMOUTDIR)/$(VMLIB) $(addprefix $(VMOUTDIR)/,$(ALLOBJ))
+
+#############################################################################
+# Building plugins
+
+DLL: $(DLLOBJ)
+
+assureReleaseDir:
+	-$(MD) release
+
+#%.dll:	assureReleaseDir
+#		-$(MD) Release\\$*
+#		$(MAKE) -C ../$* -f ../win32/Makefile.mingw32 DLLDIR=$* DLLNAME=$*.dll DLL XDEFS=-DSTANDALONE
+#		$(DLLTOOL) --output-def $(OUTDIR)/$*/$*.def --output-exp $(OUTDIR)/$*/$*.exp --output-lib $(OUTDIR)/$*/$*.lib $(OUTDIR)/$*/*.o
+#		$(DLLWRAP) -mwindows -def $(OUTDIR)/$*/$*.def -o $(OUTDIR)/$*.dll $(LIBS) $(OUTDIR)/$*/*.o $(OUTDIR)/$*/$*.exp
+#		strip --strip-all $(OUTDIR)/$*.dll
+
+
+makelib: $(LIBOBJ)
+	$(AR) $(LIB) $(LIBOBJ)
+	$(RM) $(LIBOBJ)
+
+makedll: $(LIBOBJ)
+	$(DLLTOOL) \
+		--output-def $(OBJDIR)/$(LIB).def \
+		--output-exp $(OBJDIR)/$(LIB).exp \
+		--output-lib $(OBJDIR)/$(LIB).lib \
+		$(LIBOBJ)
+	$(DLLWRAP) -mwindows \
+		-def $(OBJDIR)/$(LIB).def \
+		-o   $(OBJDIR)/$(LIB).dll \
+		$(LIBS) \
+		$(OBJDIR)/$(LIB).exp \
+		$(LIBOBJ)
+	strip --strip-all $(OBJDIR)/$(LIB).dll
+	$(RM) $(LIBOBJ) $(LIB).lib $(LIB).exp $(LIB).def
+
+%.lib:
+	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$*.lib OBJDIR=. XDEFS=-DSQUEAK_BUILTIN_PLUGIN makelib
+	$(CP) plugins\$*\$*.lib release\$*.lib
+	$(RM) plugins\$*\$*.lib
+
+%.dll:
+	@$(MAKE) -C plugins/$* -f ../../Makefile.mingw32 SRCDIR=../../ LIB=$* OBJDIR=.  XDEFS=-DNIX makedll
+	$(CP) plugins\$*\$*.dll release\$*.dll
+	$(RM) plugins\$*\$*.dll
+
+
+#############################################################################
+# Rules for automated builds
+#
+
+Mpeg%.o:
+		$(CC) -o $(VMOUTDIR)/$@ $(CFLAGS) -I$(VMDIR)/libmpeg -I$(DLLDIR)/Mpeg3Plugin -I$(VMDIR)/libmpeg/audio -I$(VMDIR)/libmpeg/video $(INCS) $(DEFS) -c $<
+
+.c.o:
+		$(CC) -o $(OBJDIR)/$@ $(CFLAGS) $(INCS) $(DEFS) -c $<
+
+.cc.o:
+		$(CXX) -o $(OBJDIR)/$@ $(CXXFLAGS) $(INCS) $(DEFS) -c $<
+
+.c.s:
+		$(CC) -S -o $@ -fverbose-asm -Wa,ah $(CFLAGS) $(INCS) $(DEFS) -c $<
+
+.cc.s:
+		$(CXX) -S -o $@ -fverbose-asm -Wa,ah $(CXXFLAGS) $(INCS) $(DEFS) -c $<
+
+.c.i:
+		$(CC) -E -o $@ $(CFLAGS) $(INCS) $(DEFS) -c $<
+
+gnu-%.c:	%.c
+		$(AWK) -f $(SRCDIR)/gnuify $< > $@
+
+.rc.res:
+		$(RC) $(RCFLAGS) -i $< -o $(OBJDIR)/$@
+
+resource.o:	$(VMRES)
+		$(RC) $(RCFLAGS) -i $(OBJDIR)/$< -o $(OBJDIR)/$@
+
+.cg.c:
+	$(CCG) -n -o $@ $<
+
+.hg.h:
+	$(CCG) -n -o $@ $<
+
+.ccg.cc:
+	$(CCG) -n -o $@ $<
+
+#############################################################################
+# Extra specific dependencies
+#
+
+sqNamedPrims.o:	sqNamedPrims.c sqNamedPrims.h platform.exports
+
+gnu-interp.c: interp.c gnuify
+
+Mpeg3Plugin.o:	Mpeg3Plugin.c
+
+### housekeeping
+clean:
+	@echo ------------------------------------------------------
+	@echo Please delete all files from the "$(OUTDIR)" directory
+	@echo ------------------------------------------------------
+
+
+#############################################################################
+# Generic Win32 support file definitions
+#
+#WINDIR=	$(SRCDIR)/win32
+#WINSRC= $(notdir $(wildcard $(WINDIR)/sqWin32*.c))
+#WINOBJ=	$(WINSRC:.c=.o)
+
+#############################################################################
+# Specific Win32 support file definitions
+#
+#WIN95DIR= $(WINDIR)/Win95
+#WIN95SRC= $(notdir $(wildcard $(WIN95DIR)/sqWin32*.c))
+#WIN95OBJ= $(WIN95SRC:.c=.o)
+
+#############################################################################
+# The Squeak plugin
+#
+#NPDIR= $(WINDIR)/NPSqueak
+#NPSRC= $(notdir $(wildcard $(NPDIR)/*.c))
+#NPOBJ:=		$(NPSRC:.c=.o) NPRes.o
+#NPINC = $(NPDIR)/include
+#############################################################################
+# CCG definitions
+#
+# Note: CCGINCDIR is a phony entry since CCG makes includes based on
+#       include <ccg/asm-i386.h> so we have to make it find that.
+#
+#CCGDIR = $(SRCDIR)/../ccg
+#CCGINCDIR = $(CCGDIR)/..
+#CCG=		$(WINDIR)/utils/ccg.exe
+#############################################################################
+# The Squeak plugin
+#
+#NPSqueak.dll: assureReleaseDir
+#	$(MD) Release\\NPSqueak
+#	$(MAKE) -f Makefile.mingw32 DLLDIR=NPSqueak $(NPOBJ)
+#	$(DLLWRAP) -mwindows -def NPSqueak/NPSqueak.def -o $(OUTDIR)/NPSqueak.dll $(STDLIBS) $(OUTDIR)/NPSqueak/*.o
+#	strip --strip-all $(OUTDIR)/NPSqueak.dll
+#
+#NPRes.o: NPSqueak.rc
+#	$(RC) $(RCFLAGS) -i $< -o $(OUTDIR)/$@
+#
+#NPSqueakLand.dll:
+#	$(MD) Release\\NPSqueak
+#	$(MAKE) -f Makefile.mingw32 DLLDIR=NPSqueak $(NPOBJ) XDEFS=-DSQUEAKLAND
+#	$(DLLWRAP) -mwindows -def NPSqueak/NPSqueak.def -o $(OUTDIR)/NPSqueakLand.dll $(LIBS) $(OUTDIR)/NPSqueak/*.o
+#	strip --strip-all $(OUTDIR)/NPSqueakLand.dll
+
+
+
+

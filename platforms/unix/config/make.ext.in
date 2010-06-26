@@ -1,0 +1,19 @@
+# make.ext.in -- mf fragment for external plugins		-*- makefile -*-
+# 
+# Author: Ian.Piumarta@inria.fr
+# 
+# Last edited: 2003-08-07 09:09:59 by piumarta on emilia.inria.fr
+
+o		= .lo
+a		= .la
+COMPILE		= $(LIBTOOL) --mode=compile \
+		  $(CC) $(CFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) \
+		  $(INCLUDES) $(XINCLUDES) $(CPPFLAGS) $(XCPPFLAGS) -c -o
+CXXFLAGS	= $(CFLAGS) # Hack; can't be bothered to add CXXFLAGS to the configure mess
+COMPILE.cpp	= $(LIBTOOL) --mode=compile \
+		  $(CXX) $(CXXFLAGS) $(XCFLAGS) $(DEFS) $(XDEFS) \
+		  $(INCLUDES) $(XINCLUDES) $(CPPFLAGS) $(XCPPFLAGS) -c -o
+LINK		= $(LIBTOOL) --mode=link \
+		  $(CC) $(CFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) -avoid-version -module -rpath $(plgdir) -o
+RANLIB		= :

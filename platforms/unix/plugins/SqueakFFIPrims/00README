@@ -1,0 +1,87 @@
+This directory contains support code for the Squeak FFI (foreign
+function interface) primitives.  You should not even be here reading
+this unless (i) the configure script refuses to include FFI support in
+your build, or (ii) you want to try to make your FFI calls go lots
+faster by avoiding the use of libffi.
+
+About the FFI primitives
+------------------------
+
+Squeak can dynamically construct callouts to C code at runtime via one
+of two mechanisms, `apicall' and `cdecl'.  The `cdecl' method
+constructs a `call interface description' (a data structure
+representing a function's signature) which is used by libffi [1] to
+construct and invoke a call to the foreign function.  This method is
+portable but horribly slow.  The `apicall' method constructs a stack
+frame on-the-fly which is used to invoke the foreign function
+directly.
+
+The `apicall' method is MUCH faster than `cdecl' (more than FOUR times
+faster) but relies on horribly platform-dependent code.
+
+Support for the `apicall' method is now available for a few platforms
+on Unix:
+
+  - PowerPC and x86 using the SVr4 ABI (found on most GNU/Linux and
+    BSD-like systems, with the notable exception of Darwin/MacOSX)
+
+  - PowerPC using the Darwin ABI (similar to Mach)
+
+Testing your FFI support
+------------------------
+
+First run the script `ffi-test-config' (no arguments) which will look
+to see if your platform has support for the `apicall' method.  If it
+prints `any-libffi' then you must either install libffi [1] before you
+can use the FFI primitives or implement the missing support [2].  If
+it prints anything else then it has found what it thinks is suitable
+support for your platform [3].
+
+To run the test suite, just type `make' [4].  This will build a program
+called `main' that tries quite hard to break the FFI support code.  If
+it fails using the built-in support code then you've found a bug in
+either the support code or the test code [5].  If you want to try
+again with libffi, then type:
+
+	make clean
+	make CPU=any ABI=libffi LIB=-lffi
+	./main
+
+If it fails again you've found a bug either in libffi (send bug
+reports to the relevant mailing list, not me) or in the test code.
+
+To tidy up afterwards, type `make clean'.
+
+Notes
+-----
+
+[1] libffi is now part of gcc.  If you need to install it, download
+    just the contents of the top-level `gcc' directory and the
+    `libffi' subdirectory.  Then `cd' to `libffi' and type:
+
+	./configure
+	make
+	sudo make install
+
+    If it breaks, you get to keep the pieces.
+
+
+[2] Figure out your canonical cpu and abi (os) name.  Write a bunch of
+    C code to create a stack frame in `${cpu}-${abi}.c' and the
+    assembler `trampoline' that pused it and jumps to the destination
+    function in the file `${cpu}-${abi}-asm.S'.  This will allow the
+    configure script to find and use your support.
+    
+[3] If it doesn't find support code for your platform and you think it
+    should (based on the cpu-abi variants available) then add your
+    canonical host/os names to the tests in ffi-test-config.  If the
+    resulting program works, make similar changes in `acinclude.m4' so
+    that the support is included in the Squeak VM.  Then mail the
+    modified files to me [5].
+
+[4] By default the Makefile will try to figure this out for itself
+    using rules similar to those in the configure script.  You must be
+    using GNU make for this to work.
+
+[5] Send bug reports and support code for new platforms to:
+	ian.piumarta@squeakland.org

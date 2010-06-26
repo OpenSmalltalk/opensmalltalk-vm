@@ -1,0 +1,20 @@
+# make.prg.in -- mf fragment for programs		-*- makefile -*-
+# 
+# Author: Ian.Piumarta@inria.fr
+# 
+# Last edited: Thu Jan 21 14:59:38 PST 2010 by eliot (support for .cpp)
+
+o		= .o
+a		= .a
+x		=
+COMPILE		= $(CC) $(CFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -c -o
+COMPILEIFP	= $(CC) $(CFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -fno-omit-frame-pointer -c -o
+CXXFLAGS	= $(CFLAGS) # Hack; can't be bothered to add CXXFLAGS to the configure mess
+COMPILE.cpp	= $(CXX) $(CXXFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -c -o
+LINK		= $(LIBTOOL) --mode=link \
+		  $(CC) $(CFLAGS) $(XCFLAGS) \
+		  $(LDFLAGS) $(XLDFLAGS) -export-dynamic -R$(libdir) -o
+RANLIB		= :

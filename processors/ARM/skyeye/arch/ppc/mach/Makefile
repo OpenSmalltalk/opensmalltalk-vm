@@ -1,0 +1,10 @@
+CROSS_COMPILE ?=
+EXTRA_CFLAGS ?=
+
+CC = $(CROSS_COMPILE)gcc
+CFLAGS := $(CFLAGS) $(EXTRA_CFLAGS)
+
+all:
+
+clean:
+

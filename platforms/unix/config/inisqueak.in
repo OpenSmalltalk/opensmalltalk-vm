@@ -1,0 +1,204 @@
+#!/bin/sh
+# 
+# inisqueak -- setup a directory for use with Squeak
+# 
+#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#                              listed elsewhere in this file.
+#   All rights reserved.
+#   
+#   This file is part of Unix Squeak.
+# 
+#   Permission is hereby granted, free of charge, to any person obtaining a copy
+#   of this software and associated documentation files (the "Software"), to deal
+#   in the Software without restriction, including without limitation the rights
+#   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#   copies of the Software, and to permit persons to whom the Software is
+#   furnished to do so, subject to the following conditions:
+# 
+#   The above copyright notice and this permission notice shall be included in
+#   all copies or substantial portions of the Software.
+# 
+#   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#   SOFTWARE.
+# 
+# Author: Ian.Piumarta@INRIA.Fr
+# 
+# Last edited: 2006-10-18 10:14:20 by piumarta on emilia.local
+
+MAJOR=@SQ_MAJOR@
+VERSION=@SQ_VERSION@
+
+prefix=@prefix@
+exec_prefix=@exec_prefix@
+bindir=@bindir@
+imgdir=@imgdir@
+plgdir=@plgdir@
+
+if test ! -w .; then
+  echo "You don't have write permission in this directory." >&2
+  exit 1
+fi
+
+# Sun's /bin/sh does not understand "test -e", but [/usr]/bin/test does
+test="`which test`"
+
+list=false
+startup=true
+batch=false
+interactive=true
+
+while true; do
+  case "$1" in
+    -l) list=true; shift;;
+    -n) startup=false; shift;;
+    -b) batch=true; interactive=false; shift;;
+    -h|-help|--help)
+        echo "`basename $0` [-option...] [rootdir]"
+        echo '    -b      batch (avoid interaction, exit status reflects success)'
+        echo '    -h      you already know about'
+        echo '    -help   same as -h'
+        echo '    -l      always present a list of alternative images (overrides -b)'
+        echo '    -n      do not run Squeak after installing the files'
+        echo '    --help  same as -help'
+        exit 0;;
+    *)  break;;
+  esac
+done
+
+if test "$1" != ""; then
+  bindir=${1}/${bindir}
+  imgdir=${1}/${imgdir}
+  plgdir=${1}/${plgdir}
+fi
+
+SQUEAK=${bindir}/squeak
+SOURCES=SqueakV${MAJOR}.sources
+IMAGE=squeak.image.gz
+CHANGES=squeak.changes.gz
+
+# local install function
+
+missing()
+{
+  echo "The file ${1} is missing." >&2
+  echo "Please check your Squeak installation." >&2
+  exit 1
+}
+
+if ${test} \( -f squeak.image \) -a \( -f squeak.changes \) -a \( -e ${SOURCES} \)
+then
+  if ${startup}; then
+    if test ! -x ${SQUEAK}; then
+      missing "${SQUEAK}"
+    fi
+    if ${interactive}; then
+      echo "Running ${SQUEAK}";
+    fi
+    exec ${SQUEAK}
+  else
+    if ${interactive}; then
+      echo "Squeak is already installed in this directory" >&2
+    fi
+    exit 1
+  fi
+fi
+
+install()
+{
+  cpy="${1}"
+  src="${2}"
+  red="${3}"
+  dst="${4}"
+  if ${test} ! -e ${dst}; then
+    if ${test} -e ${src}; then
+      if ${interactive}; then
+	echo "+ ${cpy} ${src} ${red} ${dst}";
+      fi
+      eval      ${cpy} ${src} ${red} ${dst}
+    else
+      missing "${src}"
+    fi
+  else
+    echo "${dst} is already present -- leaving it alone"
+#   startup=false
+  fi
+}
+
+# choose an image to install
+
+if ${list}; then :; else
+  if ${test} \( ! -e ${imgdir}/${IMAGE} \) \
+          -o \( ! -e ${imgdir}/${CHANGES} \) ; then
+    if ${batch}; then
+      echo "Could not find default image to install -- giving up." >&2
+      exit 1;
+    fi
+    list=true
+    echo "No default image, looking for alternatives..."
+    echo
+  fi
+fi
+
+if ${list}; then
+  images=`ls -1 ${imgdir}/*.image.gz 2>/dev/null | \
+          sed "s.${imgdir}/..;s/.image.gz//"`
+  if test "$images" = ""; then
+    echo "I could not find an image to install." >&2
+    echo "Please check your Squeak installation." >&2
+    exit 1
+  fi
+  nimg=`echo ${images} | tr ' ' '\012' | wc -l`
+  nimg=`echo ${nimg}`
+  more=true
+  while ${more}; do
+    echo "I found the following images:"
+    echo ${images} | tr ' ' '\012' | cat -n
+    if echo ${images} | fgrep "Squeak${VERSION}" >/dev/null; then
+      echo "(of which I might recommend Squeak${VERSION}, unless you know better)."
+    fi
+    echo -n "Which one should I install [1-${nimg}]? "
+    read reply
+    case ${reply} in
+      [1-9]) ;;
+      [1-9][0-9]) ;;
+      *) echo
+         echo "Let's try that again, with a NUMBER between 1 and ${nimg}."
+         echo
+         continue;;
+    esac
+    if test \( ${reply} -ge 1 \) -a \( ${reply} -le ${nimg} \); then
+      more=false
+    fi
+    if ${more}; then
+      echo
+      echo "Ha ha, very clever.  Now give me a number between 1 and ${nimg}"
+      echo "(or hit your interrupt key [^C or whatever] if you don't like"
+      echo "the look of any of them)."
+      echo
+    fi
+  done
+  IMAGE=`echo ${images} | tr ' ' '\012' | tail +${reply} | head -1`
+  CHANGES=${IMAGE}.changes.gz
+  IMAGE=${IMAGE}.image.gz
+fi
+
+if ${interactive}; then echo "Installing ${IMAGE} in `pwd`"; fi
+
+install "ln -s"      "${imgdir}/${SOURCES}" " " "${SOURCES}"
+install "gunzip -dc" "${imgdir}/${IMAGE}"   ">" "squeak.image"
+install "gunzip -dc" "${imgdir}/${CHANGES}" ">" "squeak.changes"
+
+if ${startup}; then
+  if test ! -x ${SQUEAK}; then
+    missing "${SQUEAK}"
+  fi
+  if ${interactive}; then
+    echo "Running ${SQUEAK}";
+  fi
+  exec ${SQUEAK}
+fi

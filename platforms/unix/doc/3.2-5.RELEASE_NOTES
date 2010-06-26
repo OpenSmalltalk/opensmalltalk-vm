@@ -1,0 +1,98 @@
+3.2-5 released on 2002-10-16.
+
+Major changes since 3.2-4:
+
+VM:
+
+  Option `-fullscreen' should work better.
+
+  New option: `-iconic' which does the obvious thing.
+
+  New option: `-notimer' disables use of itimers and reverts to
+  gettimeofday() for low-res clock.
+
+  Selection handling support for compatibility with latest Qt (based
+  on code from Ned Konz -- thanks!).
+
+  Delicious new browser support code from Bert Freudenberg.  (Tested
+  under Mozilla on GNU/Linux PPC, but YKMV.)
+
+  Minor tweaks to closing the X connection via OSProcPlug.  (Thanks to
+  Dave Lewis for spotting the problem.)
+
+  Minor tweak in sound output to cope with incomplete writes (which
+  shouldn't happen, but some ALSA drivers just don't want to respect
+  the rules).  (Thanks to Lex for this one.)
+
+  Broken versions of Solaris that lack snprintf() should no longer
+  cause compile/link errors.
+
+  As a failsafe, sqGnu.h now defines (empty) all xx_REG symbols on
+  platforms it doesn't recognise.  (Thanks to Tommy Thorn for spotting
+  the problem.)
+
+  aio can now manage fd 0 (stdin).
+
+Plugins:
+
+  RePlugin is now bundled with the VM.
+
+  Minor tweaks to PseudoTTYPlugin to avoid potential SEGV from stale
+  AsyncFile handles.
+
+  PTYPlugin is now external by default, to ease the task of compiling
+  on systems that have broken (or no) pty support.  (There might still
+  be problems on old [pre-2.8] Solaris, Irix and HP/UX.  Not having
+  accounts on such machines I cannot really test it all.)
+
+  SqueakFFIPrims is now enabled and bundled with the VM as an external
+  plugin (and various patches for PPC have been submitted to the
+  libffi folks as a result ;).  Hopefully this will allow Unix
+  Squeakers to drink tea on the croquet lawn along with everyone else.
+
+Build:
+
+  Build process now uses a configure script generated from the VERY
+  LATEST autoconf (2.53) and libtool (1.4.2) that I downloaded
+  _direct_ from gnu.org and lovingly installed by hand (rather than
+  using the broken ones that were in pkgsrc and which created
+  practically unusable configure scripts in 3.2-4).  Many associated
+  diverse changes in the *.{ac,in} files due to incompatibilities in
+  the new autoconf.  (Obviously this only applies to `configure' as
+  shipped from our factory.  If you regenerate `configure' for
+  yourself then everything depends on your autoconf [not mine] and
+  your [fictitious] warranty is immediately void. ;)
+	
+  configure now recognises `--with-gnu-awk[=gawk]' to force gawk even
+  on systems where mawk is the default.  PLEASE use this flag if you
+  have problems rather than complaining to me about gnuify not
+  working.
+
+  configure now recognises `--without-npsqueak' to exclude browser
+  support (npsqueak) in the build.  (Browser support is experimental
+  and not [yet] quite the final thing that Bert and I are aiming for.
+  Use at your own risk.)
+
+  SqueakFFIPrims is enabled conditionally on ffi.h and libffi.so (the
+  latter becomes a library dependency of the plugin).  The header and
+  library must be in your compiler's default search paths.
+
+Support:
+
+  inisqueak now looks first for `squeak.{image,changes}' in the libdir,
+  to let sysadmins link to the preferred VM.  If more than one VM is in
+  libdir then inisqueak presents a list and lets you choose.  It also
+  has some options:
+	-b	avoid all interaction (exit status => success)
+	-l	list available VM versions
+	-n	install but don't start up
+
+  Manual page updated to include the new options, etc.
+
+Prebuilt distributions:
+
+  I can't be bothered rebooting my powerbook to make a NetBSD/macppc
+  distribution.  (In the whole time that I have been making BSD
+  binaries available, only two people ever downloaded them.)  If I'm
+  wrong (maybe hundreds of BSD fans are secretly downloading them from
+  uiuc?) then tell me and I'll get off my rear end and build one.

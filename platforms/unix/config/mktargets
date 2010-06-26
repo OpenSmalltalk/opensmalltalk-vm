@@ -1,0 +1,99 @@
+#!/bin/sh
+
+# mktargets -- configure top-level library targets		-*- sh -*-
+# 
+#   Copyright (C) 1996-2004 by Ian Piumarta and other authors/contributors
+#                              listed elsewhere in this file.
+#   All rights reserved.
+#   
+#   This file is part of Unix Squeak.
+# 
+#    Permission is hereby granted, free of charge, to any person obtaining a copy
+#    of this software and associated documentation files (the "Software"), to deal
+#    in the Software without restriction, including without limitation the rights
+#    to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+#    copies of the Software, and to permit persons to whom the Software is
+#    furnished to do so, subject to the following conditions:
+#  
+#    The above copyright notice and this permission notice shall be included in
+#    all copies or substantial portions of the Software.
+#  
+#    THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
+#    IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
+#    FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
+#    AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
+#    LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+#    OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+#    SOFTWARE.
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: 2006-10-18 10:12:29 by piumarta on emilia.local
+
+
+. ./config.sh
+
+no_exports="disabledPlugins"
+make_targets="make.targets"
+
+la='${la}'
+a='$a'
+o='$o'
+
+plugins=""
+if test "${ext_modules}${ext_plugins}" != ""; then
+  for p in ${ext_modules} ${ext_plugins}; do
+    plugins="${plugins} ${p}${la}"
+  done
+fi
+
+echo "" > ${make_targets}
+
+targets=""
+plibs=""
+
+if test "${int_modules}${int_plugins}" != ""; then
+  for p in ${int_modules} ${int_plugins}; do
+    targets="${targets} ${p}/${p}$a"
+    echo							  >> ${make_targets}
+    echo "${p}/${p}$a : .force"					  >> ${make_targets}
+    echo '	@$(SHELL) -ec '"'cd ${p}; "'$(MAKE) '"${p}$a'"	  >> ${make_targets}
+    test -f ${p}.lib && plibs="${plibs} `cat ${p}.lib`"
+  done
+fi
+
+if test "${ext_modules}${ext_plugins}" != ""; then
+  for p in ${ext_modules} ${ext_plugins}; do
+    echo							  >> ${make_targets}
+    echo "${p}${la} :"						  >> ${make_targets}
+    echo '	@$(SHELL) -ec '"'cd ${p}; "'$(MAKE) '"${p}${la}'" >> ${make_targets}
+  done
+fi
+
+if test "${exc_plugins}" != ""; then
+  targets="${targets} ${no_exports}$o"
+  cat > ${no_exports}.c <<EOF
+/* this should be in a header file, but it isn't.  ho hum. */
+typedef struct {
+  char *pluginName;
+  char *primitiveName;
+  void *primitiveAddress;
+} sqExport;
+`for p in ${exc_plugins}; do echo "sqExport ${p}_exports[] = { 0, 0, 0 };"; done | sed 's/-/_/g'`
+EOF
+  cat >> ${make_targets} <<EOF
+
+${no_exports}$o : ${no_exports}.c
+	\$(COMPILE) ${no_exports}$o ${no_exports}.c
+EOF
+fi
+
+mv Makefile Makefile.tmp
+
+sed "s%\[targets\]%${targets}%g
+s%\[plugins\]%${plugins}%g
+s%\[plibs\]%${plibs}%g
+/\[make_targets\]/r ${make_targets}
+s%\[make_targets\]%%g" < Makefile.tmp > Makefile
+
+rm Makefile.tmp

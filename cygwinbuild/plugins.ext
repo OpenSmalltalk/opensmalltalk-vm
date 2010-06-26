@@ -1,0 +1,5 @@
+# List of external plugins.
+EXTERNAL_PLUGINS = \
+SqueakFFIPrims \
+Win32OSProcessPlugin
+

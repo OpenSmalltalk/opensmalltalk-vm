@@ -1,0 +1,23 @@
+Since 3.2-1:
+
+- RPMs for ppc and i386 binaries, and noarch .image/.changes and
+  .sources, are available (with prefix /usr)
+
+- fixes serious problem in selection handling (many thanks to Ned 
+  Konz for spotting the missing "break" :o)
+
+- sysAttr #0 is now full pathname to VM (as per method comment in the
+  image)
+
+- control key behaviour is inverted as per Ned's insistence: mouse
+  wheel to scroll pane, ctrl+wheel to scroll selection
+
+- images are now in version-independent libdir and are installed
+  compressed to save space.  inisqueak uncompresses them to
+  squeak.{image,changes} in the cwd
+
+- lots of subtle changes to cope with automated builds of tarballs and
+  RPMs from cron jobs
+
+- slight version numbering shuffle to allow tarballs and RPMs to have
+  exactly the same version numbers for corresponding files

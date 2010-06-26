@@ -1,0 +1,7 @@
+#!/bin/sh
+
+IN=$1; shift
+OUT=$1; shift
+BNDL_VERSION="$@"
+
+sed "s%\@BNDL_VERSION@%${BNDL_VERSION}%g" < ${IN} > ${OUT}

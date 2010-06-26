@@ -1,0 +1,10 @@
+#!/bin/sh
+BIN=`/usr/bin/dirname $0`/../@expanded_relative_imgdir@
+# At least on linux LD_LIBRARY_PATH's components must be absolute path names
+case "$BIN" in
+/*) PLUGINS="$BIN";;
+*) PLUGINS="`pwd`/$BIN"
+esac
+# prepending is less flexible but safer because it ensures we find the plugins
+# in the same directory as the VM.
+LD_LIBRARY_PATH=$PLUGINS${LD_LIBRARY_PATH:+:$LD_LIBRARY_PATH} exec "$BIN/squeak" "$@"

@@ -1,0 +1,60 @@
+Changes since 3.6 "final":
+
+VM:
+
+  Netscape plugin understands "imageName" and "failureURL" attributes
+  in <embed ...> tags.
+
+  sqGnu.h asm() statemtnts fixed for gcc-3.1 compatibility.
+
+  Less noise from dlopen() and friends when probing for plugins.
+
+  Problems preventing more than one external plugin from loading in
+  Mac OS X fixed.
+
+  Use of alloca() made more portable.
+
+  Obscure bug fixed that prevented socket options being set on some
+  platforms.
+
+  NPSqueak improvements and bug fixes from Bert Freudenberg and Jens
+  Lincke.  New environment variable SQUEAK_USERDIR used to find plugin
+  image; defaults to 'My Squeak'.  (May break for users of shells
+  other than bash.  Contact Bert if you have problems.)
+
+  Interpreter changes from Ned to avoid image segment loading errors
+  caused by oops >= 2GB.
+
+VM drivers:
+
+  Preliminary drag-and-drop support added to the X11 display driver.
+
+  vm-sound-NAS driver explicitly depends on libaudio.
+
+  New option '-glxdebug <n>' sets OpenGL debug message level for X11 display.
+
+Plugins:
+
+  Additional checks for external data in SocketPlugin.
+
+  New OSProcessPlugin (including XDpyPlg and AioPlg).
+
+Build:
+
+  Optimisation flags default to '-O' if compiler not recognised.
+
+  SVN repository now includes contents of 'src' directory used to
+  build Unix binaries.  No more endless searching for the right
+  combination of obscure VMM version and image updates.
+
+  Build instructions updated for SVN and recent organisational
+  changes.
+
+  'gnuify' inserts a #error into gnu-interp.c if it detects a problem
+  (causing cpp to barf cleanly with a comprehensible error message,
+  rather than leaving the compiler to spew hundreds of obscure error
+  messages).
+
+Documentation:
+
+  URIs updated to reflect recent organisational changes.

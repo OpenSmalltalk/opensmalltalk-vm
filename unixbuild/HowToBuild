@@ -1,0 +1,23 @@
+How to build the Cog Croquet VM on Unix
+-------------------------------
+1. Install the tools (gcc, X11-devel, etc (e.g. libpng, libX11 & libxt source))
+2. Check out the following sources from svn
+     svn co https://dev.qwaq.com/svn/XXX/trunk/platforms
+     svn co https://dev.qwaq.com/svn/XXX/trunk/unixbuild
+3. Open a shell, cd into the unixbuild/bld directory and execute
+     ../../platforms/unix/config/configure CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0" LIBS=-lpthread
+     make install prefix=WhereYouWantTheVmToGo
+5. At the end of it you'll get a new VM in the path provided via -prefix
+
+
+3a. For an assert-enabled VM do
+     ../../platforms/unix/config/configure --without-vm-display-fbdev --without-npsqueak -prefix=/home/qwaq/qwaqvm/ CFLAGS="-g -O1 -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0" LIBS=-lpthread
+
+3b. For a full debug VM do
+     ../../platforms/unix/config/configure --without-vm-display-fbdev --without-npsqueak -prefix=/home/qwaq/qwaqvm/ CFLAGS="-g3 -msse2 -D_GNU_SOURCE -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1" LIBS=-lpthread
+
+N.B.  As of early 2010 the linux pthreads implementation doesn't appear to
+provide a way of setting priorities for the default thread scheduling policy
+SCHED_OTHER (unlike e.g. Mac OS X) and doesn't appear to allow changing the
+policy to one that does (e.g. SCHED_RR).  So for now we use the itimer
+scheme.  See platforms/unix/vm/sqUnixHeartbeat.c

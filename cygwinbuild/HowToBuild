@@ -1,0 +1,21 @@
+Warning: The below is optimistic.  One probably has to build SqueakFFI using
+winbuild for now.
+
+How to Build the Cog VM on Windows
+----------------------------------
+1. Install the tools:
+- Install cygwin from www.cygwin.com.  As of writing the VM is built using
+CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
+2. Check out the following sources from svn
+     svn co https://dev.qwaq.com/svn/XXX/trunk/platforms
+     svn co https://dev.qwaq.com/svn/XXX/trunk/src
+     svn co https://dev.qwaq.com/svn/XXX/trunk/cygwinbuild
+3. Open a shell (cmd), cd into the cygbuild directory and execute
+     make
+4. At the end of this process you should have a brand new Croquet VM in the
+   cygwinbuild/build/vm folder (make sure you transfer Squeak.map along with it)
+
+
+Caution: if you previously used the mingw gnutools approach, you probably have
+a path to that 2.x gcc in your Windows PATH.  Make sure that 'which gcc' in
+cygwin is the cygwin gcc 3.4.x not the MinGW gcc 2.95.x (try gcc -v).

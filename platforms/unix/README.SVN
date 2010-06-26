@@ -1,0 +1,66 @@
+Building Unix Squeak from SVN (SubVersion) Sources
+==================================================
+
+
+Part 0 -- Stuff you have to do, regardless
+------------------------------------------
+
+0.1 Checkout the sources (duh).
+ 
+        $ svn co http://squeakvm.org/squeak/trunk squeak
+ 
+    This will checkout a directory called "squeak".
+
+
+Part 1 -- Building the EASY way
+-------------------------------
+
+1.0 You just completed step 0.1.
+
+1.1 Everything you need is already there.  Just descend
+    into the squeak/platforms/unix directory and type
+    'make', like this:
+
+        $ cd squeak/platforms/unix
+        $ make
+
+    This will create a build directory called 'bld' and, if
+    nothing goes wrong, will build a VM and a set of plugins
+    in it.  Just type 'sudo make install' to install it all
+    in /usr/local/*.
+
+
+Part 2 -- Building the HARD way
+-------------------------------
+
+2.0 You just completed step 0.1.
+
+2.1 If you are generating your own interpreter sources from
+    within the Squeak image, put them in 'squeak/src'.
+
+2.2 You can now go back to step 1.1 and the build will use
+    your new 'squeak/src' instead of the built-in 'src'
+    directory.  Or you can continue to do it the traditional
+    way...
+
+2.3 Create a build directory in 'squeak' and descend into it.
+
+        $ cd squeak
+        $ mkdir bld
+        $ cd bld
+    
+2.4 Configure the build by running the 'configure' script
+    in the 'platforms/unix/config' directory:
+
+        $ ../platforms/unix/config/configure --with-src=srcNN
+
+    where srcNN is src32 or src64, depending on whether you
+    want to build a 32- or 64-bit VM.
+
+2.5 Build the VM and plugins and (if you like) install them.
+
+        $ make
+        $ sudo make install
+
+----
+Last edited: 2006-04-05 10:44:30 by piumarta on emilia.local

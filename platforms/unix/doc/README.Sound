@@ -1,0 +1,286 @@
+0.	Contents
+	--------
+
+  1.	VM options relating to sound
+  2.	Configuring sound support in Squeak
+  3.	Sound system-specific notes
+  3.1.		Open Sound System
+  3.1.1			Possible Problems with OSS
+  3.2.		Network Audio System
+  3.3.		SunOS/Solaris
+  4.	The future of Squeak sound on Unix
+
+
+1.	VM options relating to sound
+	----------------------------
+
+Squeak includes primitives to modify the recording and playback
+levels.  These primitives are sometimes invoked automatically on your
+behalf by "helpful" code in the image.  (E.g., the recording level is
+set to 50% whenever the SoundRecorder is started.)  Many people
+(including myself) find this to be totally unnacceptable behaviour;
+mixer settings are the responsibility of an (external) mixer program
+and Squeak has no business whatsoever fiddling with them.
+
+If the VM is started with the option `-nomixer' (or if the variable
+SQUEAK_NOMIXER is set in the environment) then the primitives which
+write mixer levels are disabled.  (The image will think they succeed
+but in fact they do nothing at all.)
+
+
+2.	Configuring sound support in Squeak
+	-----------------------------------
+
+The `configure' script should figure out which sound support to use
+(if any) all by itself.  It looks for sound support in this order:
+
+	Open Sound System (or Linux native sound)
+	SunOS/Solaris
+	Network Audio System
+
+and chooses the first one it finds.  If it doesn't find any of the
+above then the VM will still compile but sound support will be
+disabled.
+
+If you have more than one kind of sound support on your system (Sparc
+systems might have all three installed) then you can specify which one
+to use explicitly, like this:
+
+	.../configure --with-audio=oss
+or	.../configure --with-audio=sun
+or	.../configure --with-audio=nas
+or	.../configure --with-audio=none
+
+The default (not shown in the above list) is `auto' which means: "use
+the first of the above sound systems that appears to be available".
+Specifying `none' turns off sound support in the VM even if it is
+available.
+
+If you explicitly choose the desired sound support this way but
+`configure' cannot find the necessary header files then sound support
+will be disabled totally (i.e., `configure' isn't about to hassle
+itself with hunting for alternatives when the particular support you
+asked for is unavailable).
+
+
+3.	Sound system-specific notes
+	---------------------------
+
+Below are some notes on the different sound systems supported in
+Unix Squeak.
+
+3.1. Open Sound System
+
+Full support for playback and recording is implemented and should work
+perfectly.  Full-duplex (simultaneous recording and playback) should
+work on devices that support it.  (You'll need to change
+`canRecordWhilePlaying' in the image preferences, and then fix all the
+bugs in the SoundPlayer and SoundRecorder which effectively prevent
+the latter from ever starting up when the former is active.)
+
+Note that OSS is available in three flavours:
+
+  1. Linux native sound drivers (bundled with the kernel).  Many of
+     these are hopelessly broken.  I've had bad experiences on both
+     PowerMac (awacs chip) and stock PC hardware (using the NM256 codec
+     and AC97 mixer chips).  Whether the OSS support works for you
+     largely depends on how well your particular sound drivers are
+     implemented.
+
+  2. Commercial version (http://www.opensound.com).  I've no idea how
+     well these work.  (I refuse to pay for software of any kind.)
+     Experience reports (either good or bad) would be appreciated.
+
+  3. The snd-pcm-oss compatibility module in the ALSA (Advanced Linux
+     Sound Architecture) drivers (http://www.alsa-project.org).  Squeak
+     sound works flawlessly with this driver.  (This isn't surprising:
+     after 10 days of total failure to make the Linux native OSS support
+     work I installed ALSA and finished the work using snd-pcm-oss.)  If
+     you experience any problems at all with either the Linux native
+     sound or commercial OSS then you are strongly encouraged to switch
+     to ALSA instead.
+
+You might also consider turning on `soundStopWhenDone' in the image
+preferences since this will make Squeak much friendlier towards any
+other sound applications or daemons that might want to make noises
+from time to time and which would otherwise find /dev/dsp to be
+unavailable after Squeak has played its first sound.
+
+3.1.1 Possible Problems with OSS
+
+Ned Konz discovered that it's sometimes necessary to tell Linux (using
+ALSA and OSS compatibility modules) that Squeak wants to open the
+sound device in non-blocking mode.  If sound output in Squeak seems to
+be playing things ``on top of themselves'' then you might want to try
+the following (or something similar) as root to see if it cures the
+problem:
+
+	# echo "squeak 0 0 block" > /proc/asound/card0/pcm0p/oss
+
+3.2. Network Audio System
+
+Support for playback and recording is implemented.  Playback should
+work perfectly but I've had some problems making recording work.
+(I've had trouvle with the NAS utility `aurecord' too, so the fault is
+not necessarily with Squeak.)
+
+The latest source for the NAS daemon and utilites can be found at:
+http://www.radscan.com/nas.html.  (You'll have to compile it for
+yourself.)
+
+Note that NAS is broken on big-endian Linux machines.  I've patched
+the daemon to fix this.  If you want the patches, send me email
+(mailto:ian.piumarta@squeakland.org).
+
+3.3. SunOS/Solaris
+
+The support hasn't been tested in ages.  I haven't a clue if it still
+works.
+
+
+4.	The future of Squeak sound on Unix
+	----------------------------------
+
+Direct support for the ALSA drivers is on the TO-DO list.
+
+Plans are afoot to add "modules" to the Unix VM.  This will make many
+configure-time options (such as sound support, window support, etc.)
+irrelevant.  Instead `configure' will figure out what's available,
+compile support for everything into separate modules, and then leave
+you to pick which one(s) you want to use at run time.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+The remainder of this file isn't for reading.  It's here in case you
+have problems with OSS support.  Turn on `#define DEBUG' near the top
+of `sqUnixSoundOSS.c' and recompile.  In the "more about music"
+project you can record and then playback a sound and the OSS code will
+tell you what it's doing, which should be something like the
+following.
+
+[piumarta@emilia current]$ date
+Mon May 27 20:34:52 CEST 2002
+[piumarta@emilia current]$ bld/squeak Squeak3.1c-4478
+sound: stop
+sound: start recording
+sound: /dev/dsp: opened with mode 0
+sound: /dev/dsp: driver formats (1f9): MU_LAW U8 S16_LE S16_BE S8 U16_LE U16_BE
+sound: /dev/dsp: driver capabilities (3201): REALTIME TRIGGER MMAP
+sound: /dev/dsp: trying format 20: S16_BE
+sound: /dev/dsp: selected driver format 20: S16_BE
+sound: /dev/dsp: requesting 1 channels
+sound: /dev/dsp: using 1 channels
+sound: /dev/dsp: driver: 2 bytes/frame
+sound: /dev/dsp: squeak: 2 bytes/frame
+sound: /dev/dsp: 11025 samples/sec
+sound: /dev/dsp: fragment size set to 2048 (1102 frames requested in 1 channels)
+sound: input conversion: none (0x10016af4)
+sound: output conversion: none (0x10015cb0)
+sound: /dev/dsp: aio enabled, semaphore 2
+sound: /dev/mixer: opened with mode 2
+sound: /dev/mixer: available devices: vol speaker line mic cd igain
+sound: /dev/mixer: rec: device not available
+sound: /dev/mixer: igain: level set to 50% + 50%
+sound: stop recording
+sound: /dev/dsp: aio disabled
+sound: /dev/dsp: device closed
+sound: stop recording
+sound: stop recording
+sound: stop
+sound: start
+sound: /dev/dsp1: No such file or directory
+sound: /dev/dsp: opened with mode 1
+sound: /dev/dsp: driver formats (1f9): MU_LAW U8 S16_LE S16_BE S8 U16_LE U16_BE
+sound: /dev/dsp: driver capabilities (3201): REALTIME TRIGGER MMAP
+sound: /dev/dsp: trying format 20: S16_BE
+sound: /dev/dsp: selected driver format 20: S16_BE
+sound: /dev/dsp: requesting 2 channels
+sound: /dev/dsp: using 2 channels
+sound: /dev/dsp: driver: 4 bytes/frame
+sound: /dev/dsp: squeak: 4 bytes/frame
+sound: /dev/dsp: 22050 samples/sec
+sound: /dev/dsp: fragment size set to 8192 (2644 frames requested in 2 channels)
+sound: input conversion: none (0x10016af4)
+sound: output conversion: none (0x10015cb0)
+sound: /dev/dsp: aio enabled, semaphore 2
+sound: stop
+sound: /dev/dsp: aio disabled
+sound: /dev/dsp: device closed
+sound: stop
+[piumarta@emilia current]$ 

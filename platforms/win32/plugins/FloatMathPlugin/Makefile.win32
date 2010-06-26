@@ -1,0 +1,11 @@
+include ../../Makefile.mingw32
+
+# Special OFLAGS for some files
+k_tan.o: k_tan.c
+	$(MAKE) -f ../../Makefile.mingw32 OFLAGS="-O0" $*.o
+
+acos.o: acos.c
+	$(MAKE) -f ../../Makefile.mingw32 OFLAGS="-O0" $*.o
+
+tanh.o: tanh.c
+	$(MAKE) -f ../../Makefile.mingw32 OFLAGS="-O0" $*.o

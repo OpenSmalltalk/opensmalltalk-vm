@@ -1,0 +1,8 @@
+#!/bin/sh
+# List any files with an un-checked-in package version comment "* VMMaker-..."
+
+#IFS=<tab><nl>
+IFS='	
+'
+find src -name .svn -prune -o \( -type f -a -name '*.[ch]' \) \
+		-exec fgrep -l '* VMMaker-' {} \;

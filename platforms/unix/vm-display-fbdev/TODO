@@ -1,0 +1,14 @@
+option: fb mode switch at startup
+option: mapdelbs for 127 -> 8
+option: find and run on a free VT rather than taking over the active one
+option: mouse acceleration
+
+attempt auto mode switch for 16-bit (565 -> 555 to eliminate pixel repack)
+
+ImPS/2 and USB mouse protocols
+
+keyboard maps from /usr/share/keymaps or /lib/kbd/keymaps
+
+printing
+
+make it play nice when launched from within X11

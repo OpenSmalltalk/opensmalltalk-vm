@@ -1,0 +1,1705 @@
+// !$*UTF8*$!
+{
+	66B8BC5A0381F63A00A8011A = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {1064, 2142}}";
+			sepNavSelRange = "{1454, 21}";
+			sepNavVisRect = "{{0, 0}, {659, 490}}";
+		};
+	};
+	66B8BC5C0381F66500A8011A = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {740, 6117}}";
+			sepNavSelRange = "{16850, 24}";
+			sepNavVisRect = "{{0, 5935}, {740, 73}}";
+		};
+	};
+	66B8BC5E0381F69100A8011A = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {673, 2968}}";
+			sepNavSelRange = "{1486, 20}";
+			sepNavVisRect = "{{0, 9}, {673, 397}}";
+			sepNavWindowFrame = "{{84, 252}, {750, 558}}";
+		};
+	};
+	66DF6BFD01D7DCEA00A80119 = {
+		activeBuildStyle = 66DF6C4401D7DCEA00A80119;
+		activeExecutable = 94ABA91E0858D35E00079BE1;
+		activeTarget = 94AF34E00846F91100FA5ACB;
+		addToTargets = (
+			94AF34E00846F91100FA5ACB,
+		);
+		breakpoints = (
+			94E4F52F08D0B2D800B9E724,
+			94E4F55308D0CE0000B9E724,
+			94859C3B08D0E2FB0084EF9E,
+			94859C3E08D0E3370084EF9E,
+		);
+		codeSenseManager = 9444E60E06E7B8740063F6CC;
+		executables = (
+			94ABA91E0858D35E00079BE1,
+		);
+		expressions = (
+			buffer,
+		);
+		perUserDictionary = {
+			PBXConfiguration.PBXFileTableDataSource3.PBXErrorsWarningsDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXErrorsWarningsDataSource_LocationID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					300,
+					200,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXErrorsWarningsDataSource_TypeID,
+					PBXErrorsWarningsDataSource_MessageID,
+					PBXErrorsWarningsDataSource_LocationID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXExecutablesDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXExecutablesDataSource_NameID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					22,
+					300,
+					348.5835,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXExecutablesDataSource_ActiveFlagID,
+					PBXExecutablesDataSource_NameID,
+					PBXExecutablesDataSource_CommentsID,
+				);
+			};
+			PBXConfiguration.PBXFileTableDataSource3.PBXFileTableDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					461,
+					20,
+					48,
+					43,
+					43,
+					20,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+					PBXFileDataSource_Target_ColumnID,
+				);
+			};
+			PBXConfiguration.PBXTargetDataSource.PBXTargetDataSource = {
+				PBXFileTableDataSourceColumnSortingDirectionKey = "-1";
+				PBXFileTableDataSourceColumnSortingKey = PBXFileDataSource_Filename_ColumnID;
+				PBXFileTableDataSourceColumnWidthsKey = (
+					20,
+					200,
+					63,
+					20,
+					48,
+					43,
+					43,
+				);
+				PBXFileTableDataSourceColumnsKey = (
+					PBXFileDataSource_FiletypeID,
+					PBXFileDataSource_Filename_ColumnID,
+					PBXTargetDataSource_PrimaryAttribute,
+					PBXFileDataSource_Built_ColumnID,
+					PBXFileDataSource_ObjectSize_ColumnID,
+					PBXFileDataSource_Errors_ColumnID,
+					PBXFileDataSource_Warnings_ColumnID,
+				);
+			};
+			PBXPerProjectTemplateStateSaveDate = 147906161;
+			PBXPrepackagedSmartGroups_v2 = (
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					activationKey = OldTargetSmartGroup;
+					clz = PBXTargetSmartGroup;
+					description = "Displays all targets of the project.";
+					globalID = 1C37FABC04509CD000000102;
+					name = Targets;
+					preferences = {
+						image = Targets;
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = PBXTargetSmartGroup2;
+					description = "Displays all targets of the project as well as nested build phases.";
+					globalID = 1C37FBAC04509CD000000102;
+					name = Targets;
+					preferences = {
+						image = Targets;
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = PBXExecutablesSmartGroup;
+					description = "Displays all executables of the project.";
+					globalID = 1C37FAAC04509CD000000102;
+					name = Executables;
+					preferences = {
+						image = Executable;
+					};
+				},
+				{
+					" PBXTransientLocationAtTop " = bottom;
+					absolutePathToBundle = "";
+					clz = PBXErrorsWarningsSmartGroup;
+					description = "Displays files with errors or warnings.";
+					globalID = 1C08E77C0454961000C914BD;
+					name = "Errors and Warnings";
+					preferences = {
+						fnmatch = "";
+						image = WarningsErrors;
+						recursive = 1;
+						regex = "";
+						root = "<PROJECT>";
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = PBXFilenameSmartGroup;
+					description = "Filters items in a given group (potentially recursively) based on matching the name with the regular expression of the filter.";
+					globalID = 1CC0EA4004350EF90044410B;
+					name = "Implementation Files";
+					preferences = {
+						canSave = 1;
+						fnmatch = "";
+						image = SmartFolder;
+						isLeaf = 0;
+						recursive = 1;
+						regex = "?*\\.[mcMC]";
+						root = "<PROJECT>";
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = PBXFilenameSmartGroup;
+					description = "This group displays Interface Builder NIB Files.";
+					globalID = 1CC0EA4004350EF90041110B;
+					name = "NIB Files";
+					preferences = {
+						canSave = 1;
+						fnmatch = "*.nib";
+						image = SmartFolder;
+						isLeaf = 0;
+						recursive = 1;
+						regex = "";
+						root = "<PROJECT>";
+					};
+				},
+				{
+					PBXTransientLocationAtTop = no;
+					absolutePathToBundle = "";
+					clz = PBXFindSmartGroup;
+					description = "Displays Find Results.";
+					globalID = 1C37FABC05509CD000000102;
+					name = "Find Results";
+					preferences = {
+						image = spyglass;
+					};
+				},
+				{
+					PBXTransientLocationAtTop = no;
+					absolutePathToBundle = "";
+					clz = PBXBookmarksSmartGroup;
+					description = "Displays Project Bookmarks.";
+					globalID = 1C37FABC05539CD112110102;
+					name = Bookmarks;
+					preferences = {
+						image = Bookmarks;
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = XCSCMSmartGroup;
+					description = "Displays files with interesting SCM status.";
+					globalID = E2644B35053B69B200211256;
+					name = SCM;
+					preferences = {
+						image = PBXRepository;
+						isLeaf = 0;
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = PBXSymbolsSmartGroup;
+					description = "Displays all symbols for the project.";
+					globalID = 1C37FABC04509CD000100104;
+					name = "Project Symbols";
+					preferences = {
+						image = ProjectSymbols;
+						isLeaf = 1;
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = PBXFilenameSmartGroup;
+					description = "Filters items in a given group (potentially recursively) based on matching the name with the regular expression of the filter.";
+					globalID = PBXTemplateMarker;
+					name = "Simple Filter SmartGroup";
+					preferences = {
+						canSave = 1;
+						fnmatch = "*.nib";
+						image = SmartFolder;
+						isLeaf = 0;
+						recursive = 1;
+						regex = "";
+						root = "<PROJECT>";
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					absolutePathToBundle = "";
+					clz = PBXFilenameSmartGroup;
+					description = "Filters items in a given group (potentially recursively) based on matching the name with the regular expression of the filter.";
+					globalID = PBXTemplateMarker;
+					name = "Simple Regular Expression SmartGroup";
+					preferences = {
+						canSave = 1;
+						fnmatch = "";
+						image = SmartFolder;
+						isLeaf = 0;
+						recursive = 1;
+						regex = "?*\\.[mcMC]";
+						root = "<PROJECT>";
+					};
+				},
+				{
+					PBXTransientLocationAtTop = bottom;
+					clz = XDDesignSmartGroup;
+					description = "Displays Xdesign models";
+					globalID = 2E4A936305E6979E00701470;
+					name = Design;
+					preferences = {
+						image = Design;
+						isLeaf = 0;
+					};
+				},
+			);
+			PBXWorkspaceContents = (
+				{
+					PBXProjectWorkspaceModule_StateKey_Rev39 = {
+						PBXProjectWorkspaceModule_DataSourceSelectionKey_Rev6 = {
+							BoundsStr = "{{0, 0}, {469, 441}}";
+							Rows = (
+								9,
+							);
+							VisibleRectStr = "{{0, 0}, {469, 441}}";
+						};
+						PBXProjectWorkspaceModule_EditorOpen = false;
+						PBXProjectWorkspaceModule_EmbeddedNavigatorGroup = {
+							PBXSplitModuleInNavigatorKey = {
+								SplitCount = 1;
+							};
+						};
+						PBXProjectWorkspaceModule_GeometryKey_Rev15 = {
+							PBXProjectWorkspaceModule_SGTM_Geometry = {
+								_collapsingFrameDimension = 0;
+								_indexOfCollapsedView = 0;
+								_percentageOfCollapsedView = 0;
+								sizes = (
+									"{{0, 0}, {182, 458}}",
+									"{{182, 0}, {484, 458}}",
+								);
+							};
+						};
+						PBXProjectWorkspaceModule_OldDetailFrame = "{{0, 0}, {484, 458}}";
+						PBXProjectWorkspaceModule_OldEditorFrame = "{{0, 0}, {750, 480}}";
+						PBXProjectWorkspaceModule_OldSuperviewFrame = "{{182, 0}, {484, 458}}";
+						PBXProjectWorkspaceModule_SGTM = {
+							PBXBottomSmartGroupGIDs = (
+								1C37FBAC04509CD000000102,
+								1C37FAAC04509CD000000102,
+								1C08E77C0454961000C914BD,
+								1CC0EA4004350EF90044410B,
+								1CC0EA4004350EF90041110B,
+								1C37FABC05509CD000000102,
+								1C37FABC05539CD112110102,
+								E2644B35053B69B200211256,
+								1C37FABC04509CD000100104,
+							);
+							PBXSmartGroupTreeModuleColumnData = {
+								PBXSmartGroupTreeModuleColumnWidthsKey = (
+									165,
+								);
+								PBXSmartGroupTreeModuleColumnsKey_v4 = (
+									MainColumn,
+								);
+							};
+							PBXSmartGroupTreeModuleOutlineStateKey_v7 = {
+								PBXSmartGroupTreeModuleOutlineStateExpansionKey = (
+									66DF6BFE01D7DCEA00A80119,
+									66B8BC570381F53800A8011A,
+									66DF6BFF01D7DCEA00A80119,
+								);
+								PBXSmartGroupTreeModuleOutlineStateSelectionKey = (
+									(
+										0,
+									),
+								);
+								PBXSmartGroupTreeModuleOutlineStateVisibleRectKey = "{{0, 0}, {165, 440}}";
+							};
+							PBXTopSmartGroupGIDs = (
+							);
+						};
+					};
+				},
+			);
+			"PBXWorkspaceContents:PBXConfiguration.PBXModule.PBXBuildResultsModule" = {
+			};
+			"PBXWorkspaceContents:PBXConfiguration.PBXModule.PBXDebugCLIModule" = {
+			};
+			"PBXWorkspaceContents:PBXConfiguration.PBXModule.PBXNavigatorGroup" = {
+				PBXSplitModuleInNavigatorKey = {
+					SplitCount = 1;
+				};
+			};
+			"PBXWorkspaceContents:PBXConfiguration.PBXModule.PBXProjectWorkspaceModule" = {
+				PBXProjectWorkspaceModule_StateKey_Rev39 = {
+					PBXProjectWorkspaceModule_DataSourceSelectionKey_Rev6 = {
+						BoundsStr = "{{0, 0}, {469, 441}}";
+						Rows = (
+							0,
+						);
+						VisibleRectStr = "{{0, 0}, {469, 441}}";
+					};
+					PBXProjectWorkspaceModule_EditorOpen = false;
+					PBXProjectWorkspaceModule_EmbeddedNavigatorGroup = {
+						PBXSplitModuleInNavigatorKey = {
+							SplitCount = 1;
+						};
+					};
+					PBXProjectWorkspaceModule_GeometryKey_Rev15 = {
+						PBXProjectWorkspaceModule_SGTM_Geometry = {
+							_collapsingFrameDimension = 0;
+							_indexOfCollapsedView = 0;
+							_percentageOfCollapsedView = 0;
+							sizes = (
+								"{{0, 0}, {182, 458}}",
+								"{{182, 0}, {484, 458}}",
+							);
+						};
+					};
+					PBXProjectWorkspaceModule_OldDetailFrame = "{{0, 0}, {484, 458}}";
+					PBXProjectWorkspaceModule_OldEditorFrame = "{{0, 0}, {750, 480}}";
+					PBXProjectWorkspaceModule_OldSuperviewFrame = "{{182, 0}, {484, 458}}";
+					PBXProjectWorkspaceModule_SGTM = {
+						PBXBottomSmartGroupGIDs = (
+							1C37FBAC04509CD000000102,
+							1C37FAAC04509CD000000102,
+							1C08E77C0454961000C914BD,
+							1CC0EA4004350EF90044410B,
+							1CC0EA4004350EF90041110B,
+							1C37FABC05509CD000000102,
+							1C37FABC05539CD112110102,
+							E2644B35053B69B200211256,
+							1C37FABC04509CD000100104,
+						);
+						PBXSmartGroupTreeModuleColumnData = {
+							PBXSmartGroupTreeModuleColumnWidthsKey = (
+								165,
+							);
+							PBXSmartGroupTreeModuleColumnsKey_v4 = (
+								MainColumn,
+							);
+						};
+						PBXSmartGroupTreeModuleOutlineStateKey_v7 = {
+							PBXSmartGroupTreeModuleOutlineStateExpansionKey = (
+							);
+							PBXSmartGroupTreeModuleOutlineStateSelectionKey = (
+								(
+									0,
+								),
+							);
+							PBXSmartGroupTreeModuleOutlineStateVisibleRectKey = "{{0, 0}, {165, 440}}";
+						};
+						PBXTopSmartGroupGIDs = (
+						);
+					};
+				};
+			};
+			PBXWorkspaceGeometries = (
+				{
+					Frame = "{{0, 0}, {666, 458}}";
+					PBXProjectWorkspaceModule_GeometryKey_Rev15 = {
+					};
+					RubberWindowFrame = "212 190 666 500 0 0 1024 746 ";
+				},
+			);
+			"PBXWorkspaceGeometries:PBXConfiguration.PBXModule.PBXBuildResultsModule" = {
+				Frame = "{{0, 0}, {480, 217}}";
+				PBXModuleWindowStatusBarHidden = YES;
+				RubberWindowFrame = "272 407 480 238 0 0 1024 746 ";
+			};
+			"PBXWorkspaceGeometries:PBXConfiguration.PBXModule.PBXDebugCLIModule" = {
+				Frame = "{{0, 0}, {400, 201}}";
+				PBXModuleWindowStatusBarHidden = YES;
+				RubberWindowFrame = "50 718 400 222 0 0 1024 746 ";
+			};
+			"PBXWorkspaceGeometries:PBXConfiguration.PBXModule.PBXNavigatorGroup" = {
+				Frame = "{{0, 0}, {750, 481}}";
+				PBXModuleWindowStatusBarHidden = YES;
+				RubberWindowFrame = "61 197 750 502 0 0 1024 746 ";
+			};
+			"PBXWorkspaceGeometries:PBXConfiguration.PBXModule.PBXProjectWorkspaceModule" = {
+				Frame = "{{0, 0}, {666, 458}}";
+				PBXProjectWorkspaceModule_GeometryKey_Rev15 = {
+				};
+				RubberWindowFrame = "212 190 666 500 0 0 1024 746 ";
+			};
+			PBXWorkspaceStateSaveDate = 147906161;
+		};
+		perUserProjectItems = {
+			941022CE0867E11B00AEB432 = 941022CE0867E11B00AEB432;
+			944D621E085F45A500600D6E = 944D621E085F45A500600D6E;
+			944D6240085F473000600D6E = 944D6240085F473000600D6E;
+			94859C4308D0E67B0084EF9E = 94859C4308D0E67B0084EF9E;
+			949CD574085CBE0300EB8605 = 949CD574085CBE0300EB8605;
+			949CD576085CBE0300EB8605 = 949CD576085CBE0300EB8605;
+			949CD577085CBE0300EB8605 = 949CD577085CBE0300EB8605;
+			949CD5C0085CC32700EB8605 = 949CD5C0085CC32700EB8605;
+			949CD5C5085CC32700EB8605 = 949CD5C5085CC32700EB8605;
+			949CD5C6085CC32700EB8605 = 949CD5C6085CC32700EB8605;
+			94E0B9F008D0DA420031D5D3 = 94E0B9F008D0DA420031D5D3;
+			94E0BA3008D0DDBE0031D5D3 = 94E0BA3008D0DDBE0031D5D3;
+			94E4F4B608D0987B00B9E724 = 94E4F4B608D0987B00B9E724;
+			94E4F4DC08D0A2D300B9E724 = 94E4F4DC08D0A2D300B9E724;
+			94E4F51908D0A7C500B9E724 = 94E4F51908D0A7C500B9E724;
+			94E4F51B08D0A7C500B9E724 = 94E4F51B08D0A7C500B9E724;
+			94E4F51E08D0A7C500B9E724 = 94E4F51E08D0A7C500B9E724;
+		};
+		sourceControlManager = 9444E60D06E7B8740063F6CC;
+		userBuildSettings = {
+		};
+	};
+	941022CE0867E11B00AEB432 = {
+		fRef = 944D6214085F458100600D6E;
+		isa = PBXTextBookmark;
+		name = "English: 7";
+		rLen = 0;
+		rLoc = 251;
+		rType = 0;
+		vrLen = 251;
+		vrLoc = 0;
+	};
+	9444E60D06E7B8740063F6CC = {
+		fallbackIsa = XCSourceControlManager;
+		isSCMEnabled = 0;
+		isa = PBXSourceControlManager;
+		scmConfiguration = {
+		};
+		scmType = scm.cvs;
+	};
+	9444E60E06E7B8740063F6CC = {
+		indexTemplatePath = "";
+		isa = PBXCodeSenseManager;
+	};
+	944D6214085F458100600D6E = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {659, 490}}";
+			sepNavSelRange = "{0, 251}";
+			sepNavVisRect = "{{0, 0}, {659, 490}}";
+			sepNavWindowFrame = "{{176, 7}, {962, 719}}";
+		};
+	};
+	944D621E085F45A500600D6E = {
+		fRef = 944D6214085F458100600D6E;
+		isa = PBXTextBookmark;
+		name = "English: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 251;
+		vrLoc = 0;
+	};
+	944D6240085F473000600D6E = {
+		fRef = 949CD57E085CBE5900EB8605;
+		isa = PBXTextBookmark;
+		name = "InfoPlist.strings: 1";
+		rLen = 215;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 215;
+		vrLoc = 0;
+	};
+	94859C3B08D0E2FB0084EF9E = {
+		fileReference = 949CD547085CBD4100EB8605;
+		functionName = "sqServicesSetByteslengthosType()";
+		isa = PBXFileBreakpoint;
+		lineNumber = 116;
+		state = 1;
+	};
+	94859C3E08D0E3370084EF9E = {
+		fileReference = 949CD547085CBD4100EB8605;
+		functionName = "sqServicesGetTextStringInto()";
+		isa = PBXFileBreakpoint;
+		lineNumber = 142;
+		state = 1;
+	};
+	94859C4308D0E67B0084EF9E = {
+		fRef = 949CD547085CBD4100EB8605;
+		isa = PBXTextBookmark;
+		name = kEventServicePerform;
+		rLen = 20;
+		rLoc = 6667;
+		rType = 0;
+		vrLen = 1266;
+		vrLoc = 5829;
+	};
+	949CD541085CBD1900EB8605 = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {728, 5236}}";
+			sepNavSelRange = "{3298, 0}";
+			sepNavVisRect = "{{0, 1407}, {728, 672}}";
+			sepNavWindowFrame = "{{60, 112}, {962, 719}}";
+		};
+	};
+	949CD546085CBD4100EB8605 = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {750, 384}}";
+			sepNavSelRange = "{123, 0}";
+			sepNavVisRect = "{{0, 0}, {750, 384}}";
+		};
+	};
+	949CD547085CBD4100EB8605 = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {974, 5222}}";
+			sepNavSelRange = "{6667, 20}";
+			sepNavVisRect = "{{0, 2911}, {659, 617}}";
+			sepNavWindowFrame = "{{176, 7}, {962, 719}}";
+		};
+	};
+	949CD574085CBE0300EB8605 = {
+		fRef = 949CD546085CBD4100EB8605;
+		isa = PBXTextBookmark;
+		name = "sqMacServices.h: 6";
+		rLen = 0;
+		rLoc = 89;
+		rType = 0;
+		vrLen = 125;
+		vrLoc = 0;
+	};
+	949CD576085CBE0300EB8605 = {
+		fRef = 94AF34F10846F91100FA5ACB;
+		isa = PBXTextBookmark;
+		name = "Info-SqueakServicesPlugin__Upgraded_.plist: 18";
+		rLen = 0;
+		rLoc = 632;
+		rType = 0;
+		vrLen = 903;
+		vrLoc = 0;
+	};
+	949CD577085CBE0300EB8605 = {
+		fRef = 949CD541085CBD1900EB8605;
+		isa = PBXTextBookmark;
+		name = "ServicesPlugin.c: 1";
+		rLen = 0;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 824;
+		vrLoc = 0;
+	};
+	949CD57E085CBE5900EB8605 = {
+		isa = PBXFileReference;
+		lastKnownFileType = text.plist.strings;
+		name = InfoPlist.strings;
+		path = /Users/johnmci/Documents/SqueakSerialPortExtendedUnixPlugin/resources/English.lproj/InfoPlist.strings;
+		refType = 0;
+		sourceTree = "<absolute>";
+	};
+	949CD5C0085CC32700EB8605 = {
+		fRef = 66C6C8E501DB1EC300A80109;
+		isa = PBXBookmark;
+	};
+	949CD5C5085CC32700EB8605 = {
+		fRef = 949CD57E085CBE5900EB8605;
+		isa = PBXTextBookmark;
+		name = "InfoPlist.strings: 1";
+		rLen = 215;
+		rLoc = 0;
+		rType = 0;
+		vrLen = 215;
+		vrLoc = 0;
+	};
+	949CD5C6085CC32700EB8605 = {
+		fRef = 66C6C8E501DB1EC300A80109;
+		isa = PBXBookmark;
+	};
+	94ABA91E0858D35E00079BE1 = {
+		activeArgIndex = 2147483647;
+		activeArgIndices = (
+		);
+		argumentStrings = (
+		);
+		configStateDict = {
+			"PBXLSLaunchAction-0" = {
+				PBXLSLaunchAction = 0;
+				PBXLSLaunchStartAction = 1;
+				PBXLSLaunchStdioStyle = 2;
+				PBXLSLaunchStyle = 0;
+				class = PBXLSRunLaunchConfig;
+				displayName = "Executable Runner";
+				identifier = com.apple.Xcode.launch.runConfig;
+				remoteHostInfo = "";
+				startActionInfo = "";
+			};
+		};
+		cppStopOnCatchEnabled = 0;
+		cppStopOnThrowEnabled = 0;
+		customDataFormattersEnabled = 1;
+		debuggerPlugin = GDBDebugging;
+		disassemblyDisplayState = 0;
+		dylibVariantSuffix = "";
+		enableDebugStr = 1;
+		environmentEntries = (
+		);
+		executableSystemSymbolLevel = 0;
+		executableUserSymbolLevel = 0;
+		isa = PBXExecutable;
+		launchableReference = 94E4F56108D0D68A00B9E724;
+		libgmallocEnabled = 0;
+		name = Squeak;
+		savedGlobals = {
+			/Users/johnmci/Documents/Squeak3.8.0/build/Plugins/ServicesPlugin.bundle/Contents/MacOS/ServicesPlugin = (
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0xa24e0c0, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=MyAppsDataTypes, value=[256]\n";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = MyAppsDataTypes;
+					type = "char [256]";
+					value = "[256]";
+					varobj = var108;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x627dc00, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=MyAppsDataTypes, value=[64]
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = MyAppsDataTypes;
+					type = "OSType [64]";
+					value = "[64]";
+					varobj = var7;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x621fe20, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=myEventServicePasteOSType, value=utxt
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = myEventServicePasteOSType;
+					type = OSType;
+					value = 1413830740;
+					varobj = var8;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x5c68510, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=myEventServicePerformOSType, value=utxt
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = myEventServicePerformOSType;
+					type = OSType;
+					value = 1413830740;
+					varobj = var9;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x5c8aab0, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=1, childValidityStatus=Valid, numViewController=0, name=myTextStringIn, value=0x3637d0
+    PBXGDB_VarObjDataValue2=0x62ca470, rtnCnt=1, parent=0x5c8aab0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=*myTextStringIn, value=0 '\\0'
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = myTextStringIn;
+					type = "char *";
+					value = "0x3c87e0 \"1000 factorial\\r\\001CFRLCFRL\"";
+					varobj = var10;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x5ce75e0, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=MyAppsDataTypesSize, value=4
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = MyAppsDataTypesSize;
+					type = "long int";
+					value = 4;
+					varobj = var12;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x133fed0, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=myTextStringInLength, value=30
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = myTextStringInLength;
+					type = "long int";
+					value = 15;
+					varobj = var13;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x62f6370, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=myEventServiceCopyOSType, value=utxt
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = myEventServiceCopyOSType;
+					type = OSType;
+					value = 1413830740;
+					varobj = var15;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x5cd1790, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=myTextStringOut, value=0x0
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = myTextStringOut;
+					type = "char *";
+					value = 0x0;
+					varobj = var16;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x13f62d0, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=specificScrap, value=0x28000000
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = specificScrap;
+					type = ScrapRef;
+					value = 0x8000000;
+					varobj = var17;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x5c8a860, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=myTextStringOutLength, value=0
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = myTextStringOutLength;
+					type = "long int";
+					value = 0;
+					varobj = var21;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x5ca4ee0, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=gWaiting, value=1 '\\001'
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = gWaiting;
+					type = Boolean;
+					value = "1 '\\001'";
+					varobj = var23;
+				},
+				{
+					dataValue = "  PBXGDB_VarObjDataValue2=0x5c550d0, rtnCnt=1, parent=0x0, validityStatus=Valid, numChildren=0, childValidityStatus=Invalid, numViewController=0, name=ghideStupidApplicationNow, value=0 '\\0'
+";
+					display = YES;
+					filename = /Users/johnmci/Documents/SqueakServicesPlugin/sqMacServices.c;
+					name = ghideStupidApplicationNow;
+					type = Boolean;
+					value = "0 '\\0'";
+					varobj = var24;
+				},
+			);
+		};
+		shlibInfoDictList_v2 = (
+			{
+				level = 0;
+				path = /usr/lib/system/libmathCommon.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libSystem.B.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libicucore.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libauto.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libobjc.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreFoundation.framework/Versions/A/CoreFoundation;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libz.1.2.2.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/SystemConfiguration.framework/Versions/A/SystemConfiguration;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/IOKit.framework/Versions/A/IOKit;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Security.framework/Versions/A/Security;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/DiskArbitration.framework/Versions/A/DiskArbitration;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/CarbonCore.framework/Versions/A/CarbonCore;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/OSServices.framework/Versions/A/OSServices;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/CFNetwork.framework/Versions/A/CFNetwork;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/WebServicesCore.framework/Versions/A/WebServicesCore;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/SearchKit.framework/Versions/A/SearchKit;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreServices.framework/Versions/A/Frameworks/Metadata.framework/Versions/A/Metadata;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreServices.framework/Versions/A/CoreServices;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/CoreAudio.framework/Versions/A/CoreAudio;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/CarbonSound.framework/Versions/A/CarbonSound;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libbsm.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/CoreGraphics.framework/Versions/A/CoreGraphics;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/AE.framework/Versions/A/AE;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ATS.framework/Versions/A/ATS;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libcrypto.0.9.7.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/LaunchServices.framework/Versions/A/LaunchServices;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ColorSync.framework/Versions/A/ColorSync;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/CoreText.framework/Versions/A/CoreText;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/QD.framework/Versions/A/QD;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libcups.2.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/PrintCore.framework/Versions/A/PrintCore;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/HIServices.framework/Versions/A/HIServices;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/LangAnalysis.framework/Versions/A/LangAnalysis;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/FindByContent.framework/Versions/A/FindByContent;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/SpeechSynthesis.framework/Versions/A/SpeechSynthesis;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/Resources/libJPEG.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/Resources/libJP2.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/Resources/libGIF.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/Resources/libRaw.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/Resources/libTIFF.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/Resources/libPng.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/Resources/libRadiance.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libmx.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vImage.framework/Versions/A/vImage;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvMisc.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libvDSP.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libBLAS.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/libLAPACK.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Accelerate.framework/Versions/A/Frameworks/vecLib.framework/Versions/A/vecLib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Accelerate.framework/Versions/A/Accelerate;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/ImageIO.framework/Versions/A/ImageIO;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/ApplicationServices;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libiconv.2.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libxml2.2.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Foundation.framework/Versions/C/Foundation;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/PrivateFrameworks/DesktopServicesPriv.framework/Versions/A/DesktopServicesPriv;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HIToolbox.framework/Versions/A/HIToolbox;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/ImageCapture.framework/Versions/A/ImageCapture;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/SpeechRecognition.framework/Versions/A/SpeechRecognition;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/SecurityHI.framework/Versions/A/SecurityHI;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/Ink.framework/Versions/A/Ink;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/Help.framework/Versions/A/Help;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/OpenScripting.framework/Versions/A/OpenScripting;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/Print.framework/Versions/A/Print;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/HTMLRendering.framework/Versions/A/HTMLRendering;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/NavigationServices.framework/Versions/A/NavigationServices;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Frameworks/CommonPanels.framework/Versions/A/CommonPanels;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/Carbon.framework/Versions/A/Carbon;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGL.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/OpenGL.framework/Versions/A/Libraries/libGLU.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/OpenGL.framework/Versions/A/OpenGL;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/AGL.framework/Versions/A/AGL;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/AudioUnit.framework/Versions/A/AudioUnit;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/AudioToolbox.framework/Versions/A/AudioToolbox;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/vecLib.framework/Versions/A/vecLib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/QuickTime.framework/Versions/A/QuickTime;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/PrivateFrameworks/ZeroLink.framework/Versions/A/ZeroLink;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /Users/johnmci/Documents/Squeak3.8.0/build/Squeak.app/Contents/MacOS/Squeak;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacEncoding.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/interp.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacUIMenuBar.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacUIEvents.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacMain.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/CoreGraphics.framework/Versions/A/Resources/libCGATS.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/CoreGraphics.framework/Versions/A/Resources/libRIP.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Frameworks/ApplicationServices.framework/Versions/A/Frameworks/CoreGraphics.framework/Versions/A/Resources/libCSync.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacUIClipBoard.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacWindow.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacUnixCommandLineInterface.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacUIAppleEvents.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacFileLogic.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacImageIO.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/Components/DictionaryService.component/Contents/MacOS/DictionaryService;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacMemory.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacTime.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/UUIDPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/SurfacePlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/StarSqueakPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/SoundPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/SoundGenerationPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/SoundCodecPrims.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/SocketPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/SerialPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/SecurityPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/MiscPrimitivePlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/Matrix2x3Plugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/MIDIPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/MacMenubarPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/LargeIntegers.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/Klatt.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/JoystickTabletPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/JPEGReaderPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/Error.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/JPEGReadWriter2Plugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/InternetConfigPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/HostWindowPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/GeniePlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/FloatArrayPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/FilePlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/FFTPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/DropPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/ZipPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/DSAPrims.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/BitBltPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/B2DPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/BMPReadWriterPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/Squeak3D.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/B3DAcceleratorPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/AsynchFilePlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/ADPCMCodecPlugin.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacSerialPort.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/osExports.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqNamedPrims.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqVirtualMachine.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/aio.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacExternalPrims.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacHostWindow.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacSecurity.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqFilePluginBasicPrims.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacDirectory.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacDragDrop.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqMacUnixInterfaceSound.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqUnixSoundMacOSXJMM.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /Users/johnmci/Documents/Squeak3.8.0/build/Plugins/LocalePlugin.bundle/Contents/MacOS/LocalePlugin;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /Developer/Applications/Xcode.app/Contents/PlugIns/GDBMIDebugging.xcplugin/Contents/Resources/PBGDBIntrospectionSupport.A.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Library/Application Support/Apple/Developer Tools/CustomDataViews/CFDataFormatters.bundle/Contents/MacOS/CFDataFormatters";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Users/johnmci/Documents/Squeak3.8.0/build/SqueakVMForCarbon.build/Squeak VM Debug (Upgraded).build/Objects-normal/ppc/sqUnixSocket.ob";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /Users/johnmci/Documents/Squeak3.8.0/build/Plugins/ServicesPlugin.bundle/Contents/MacOS/ServicesPlugin;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libgcc_s.1.0.dylib;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/usr/lib/libstdc++.6.0.3.dylib";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = "/Library/Application Support/Apple/Developer Tools/CustomDataViews/CarbonDataFormatters.bundle/Contents/MacOS/CarbonDataFormatters";
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/dyld;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /System/Library/PrivateFrameworks/URLMount.framework/Versions/A/URLMount;
+				whenToLoad = 0;
+			},
+			{
+				level = 0;
+				path = /usr/lib/libz.1.2.3.dylib;
+				whenToLoad = 0;
+			},
+		);
+		sourceDirectories = (
+		);
+	};
+	94AF34E00846F91100FA5ACB = {
+		activeExec = 0;
+	};
+	94AF34F10846F91100FA5ACB = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {923, 590}}";
+			sepNavSelRange = "{284, 6}";
+			sepNavVisRect = "{{0, 0}, {923, 590}}";
+			sepNavWindowFrame = "{{84, 91}, {962, 719}}";
+		};
+	};
+	94AF35000846F98600FA5ACB = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {673, 2590}}";
+			sepNavSelRange = "{0, 0}";
+			sepNavVisRect = "{{0, 0}, {673, 397}}";
+		};
+	};
+	94E0B9F008D0DA420031D5D3 = {
+		fRef = 949CD541085CBD1900EB8605;
+		isa = PBXTextBookmark;
+		name = SetReturnB;
+		rLen = 10;
+		rLoc = 6585;
+		rType = 0;
+		vrLen = 1653;
+		vrLoc = 8597;
+	};
+	94E0BA3008D0DDBE0031D5D3 = {
+		fRef = 949CD547085CBD4100EB8605;
+		isa = PBXTextBookmark;
+		name = kEventServicePerform;
+		rLen = 20;
+		rLoc = 6667;
+		rType = 0;
+		vrLen = 1266;
+		vrLoc = 5829;
+	};
+	94E4F4B608D0987B00B9E724 = {
+		fRef = 949CD546085CBD4100EB8605;
+		isa = PBXTextBookmark;
+		name = "sqMacServices.h: 6";
+		rLen = 0;
+		rLoc = 89;
+		rType = 0;
+		vrLen = 125;
+		vrLoc = 0;
+	};
+	94E4F4DC08D0A2D300B9E724 = {
+		fRef = 949CD547085CBD4100EB8605;
+		isa = PBXTextBookmark;
+		name = sqServicesGetText;
+		rLen = 17;
+		rLoc = 3868;
+		rType = 0;
+		vrLen = 580;
+		vrLoc = 2903;
+	};
+	94E4F4E808D0A44600B9E724 = {
+		uiCtxt = {
+			sepNavIntBoundsRect = "{{0, 0}, {659, 280}}";
+			sepNavSelRange = "{7, 16}";
+			sepNavVisRect = "{{0, 3}, {659, 277}}";
+			sepNavWindowFrame = "{{84, 99}, {1310, 711}}";
+		};
+	};
+	94E4F51908D0A7C500B9E724 = {
+		fRef = 94E4F4E808D0A44600B9E724;
+		isa = PBXTextBookmark;
+		name = ServicesPlugin.h;
+		rLen = 16;
+		rLoc = 7;
+		rType = 0;
+		vrLen = 786;
+		vrLoc = 0;
+	};
+	94E4F51B08D0A7C500B9E724 = {
+		fRef = 94AF34F10846F91100FA5ACB;
+		isa = PBXTextBookmark;
+		name = "Info.plist: 29";
+		rLen = 0;
+		rLoc = 903;
+		rType = 0;
+		vrLen = 903;
+		vrLoc = 0;
+	};
+	94E4F51E08D0A7C500B9E724 = {
+		fRef = 94E4F4E808D0A44600B9E724;
+		isa = PBXTextBookmark;
+		name = ServicesPlugin.h;
+		rLen = 16;
+		rLoc = 7;
+		rType = 0;
+		vrLen = 786;
+		vrLoc = 0;
+	};
+	94E4F52F08D0B2D800B9E724 = {
+		fileReference = 949CD547085CBD4100EB8605;
+		functionName = "MyServicesEventHandler()";
+		isa = PBXFileBreakpoint;
+		lineNumber = 194;
+		state = 1;
+	};
+	94E4F55308D0CE0000B9E724 = {
+		fileReference = 949CD547085CBD4100EB8605;
+		functionName = "MyServicesEventHandler()";
+		isa = PBXFileBreakpoint;
+		lineNumber = 217;
+		state = 1;
+	};
+	94E4F56108D0D68A00B9E724 = {
+		isa = PBXFileReference;
+		lastKnownFileType = wrapper.application;
+		name = Squeak.app;
+		path = /Users/johnmci/Documents/Squeak3.8.0/build/Squeak.app;
+		refType = 0;
+		sourceTree = "<absolute>";
+	};
+}
