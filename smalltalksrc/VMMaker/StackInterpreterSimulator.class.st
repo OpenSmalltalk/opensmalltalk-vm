@@ -26,13 +26,13 @@ Class {
 		'quitBlock',
 		'transcript',
 		'displayView',
-		'logging',
 		'printFrameAtEachStep',
 		'printBytecodeAtEachStep',
 		'startMicroseconds',
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
-		'extSemTabSize'
+		'extSemTabSize',
+		'atEachStepBlock'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -1948,6 +1948,7 @@ StackInterpreterSimulator >> run [
 	self fetchNextBytecode.
 	[true] whileTrue:
 		[self assertValidExecutionPointers.
+		 atEachStepBlock value. "N.B. may be nil"
 		 self dispatchOn: currentBytecode in: BytecodeTable.
 		 self incrementByteCount].
 	localIP := localIP - 1.

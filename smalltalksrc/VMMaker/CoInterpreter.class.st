@@ -1587,24 +1587,6 @@ CoInterpreter >> ceTraceBlockActivation [
 ]
 
 { #category : #'debug support' }
-CoInterpreter >> ceTraceInterpreterPrim: theReceiver [
-	| cogMethod |
-	<api>
-	<var: #cogMethod type: #'CogMethod *'>
-	cogMethod := self cogMethodOf: newMethod.
-	self recordTrace: (self fetchClassOf: theReceiver) thing: cogMethod selector source: TraceIsFromMachineCode.
-	cogit printOnTrace ifTrue:
-		[self printActivationNameFor: cogMethod methodObject
-			receiver: theReceiver
-			isBlock: false
-			firstTemporary: nil;
-			cr].
-	self sendBreak: cogMethod selector + BaseHeaderSize
-		point: (self lengthOf: cogMethod selector)
-		receiver: (self stackValue: cogMethod cmNumArgs + 2) "+1 for return pc, + 1 for ceSendTrace call ret pc"
-]
-
-{ #category : #'debug support' }
 CoInterpreter >> ceTraceLinkedSend: theReceiver [
 	| cogMethod |
 	<api>
@@ -1661,10 +1643,10 @@ CoInterpreter >> checkLogIntegrity [
 	 If there is an entry at traceLogIndex - 3 \\ TraceBufferSize it has entries.  If
 	 there is something at traceLogIndex it has wrapped."
 	| limit ok |
-	(traceLog at: traceLogIndex - 3 \\ TraceBufferSize) = 0 ifTrue: [^true].
-	limit := (traceLog at: traceLogIndex) = 0
-				ifTrue: [traceLogIndex - 3 \\ TraceBufferSize]
-				ifFalse: [TraceBufferSize - 3].
+	limit := self safe: traceLogIndex - 3 mod: TraceBufferSize.
+	(traceLog at: limit) = 0 ifTrue: [^nil].
+	(traceLog at: traceLogIndex) ~= 0 ifTrue:
+		[limit := TraceBufferSize - 3].
 	ok := true.
 	0 to: limit by: 3 do:
 		[:i| | oop |
@@ -1790,7 +1772,6 @@ CoInterpreter >> clearLeakMapAndMapAccessibleObjects [
 CoInterpreter >> clearTraceLog [
 	<api>
 	traceLogIndex := 0.
-	(traceLog at: traceLogIndex - 3 \\ TraceBufferSize) = 0 ifTrue: [^nil].
 	0 to: TraceBufferSize - 1 do:
 		[:i|
 		traceLog at: i put: 0]
@@ -1812,7 +1793,7 @@ CoInterpreter >> commenceCogCompiledCodeCompaction [
 	| startTime |
 	<var: #startTime type: #usqLong>
 	cogCompiledCodeCompactionCalledFor := false.
-	cogit recordTrace ifTrue:
+	cogit recordEventTrace ifTrue:
 		[self recordTrace: TraceCodeCompaction thing: TraceCodeCompaction source: 0].
 	startTime := self ioUTCMicrosecondsNow.
 
@@ -2170,7 +2151,7 @@ CoInterpreter >> dumpPrimTraceLog [
 	 an entry at primTraceLogIndex \\ PrimTraceLogSize it has entries.
 	 If there is something at primTraceLogIndex it has wrapped."
 	<inline: false>
-	(primTraceLog at: primTraceLogIndex - 1 \\ PrimTraceLogSize) = 0 ifTrue: [^nil].
+	(primTraceLog at: (self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize)) = 0 ifTrue: [^nil].
 	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
 		[primTraceLogIndex to: PrimTraceLogSize - 1 do:
 			[:i| self safePrintStringOf: (primTraceLog at: i); cr]].
@@ -2186,11 +2167,10 @@ CoInterpreter >> dumpTraceLog [
 	 an entry at traceLogIndex - 3 \\ TraceBufferSize it has entries.
 	 If there is something at traceLogIndex it has wrapped."
 	<inline: false>
-	(traceLog at: traceLogIndex - 3 \\ TraceBufferSize) = 0 ifTrue: [^nil].
+	(traceLog at: (self safe: traceLogIndex - 3 mod: TraceBufferSize)) = 0 ifTrue: [^nil].
 	(traceLog at: traceLogIndex) ~= 0 ifTrue:
 		[traceLogIndex to: TraceBufferSize - 3 by: 3 do:
-			[:i|
-			self printLogEntryAt: i]].
+			[:i| self printLogEntryAt: i]].
 
 	0 to: traceLogIndex - 3 by: 3 do:
 		[:i| self printLogEntryAt: i]
@@ -3671,10 +3651,10 @@ CoInterpreter >> mapPrimTraceLog [
 	 If there is something at primTraceLogIndex it has wrapped."
 	<inline: false>
 	| limit |
-	(primTraceLog at: primTraceLogIndex - 1 \\ PrimTraceLogSize) = 0 ifTrue: [^nil].
-	limit := (primTraceLog at: primTraceLogIndex) = 0
-				ifTrue: [primTraceLogIndex - 1 \\ PrimTraceLogSize]
-				ifFalse: [PrimTraceLogSize - 1].
+	limit := self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize.
+	(primTraceLog at: limit) = 0 ifTrue: [^nil].
+	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
+		[limit := PrimTraceLogSize - 1].
 	0 to: limit do:
 		[:i| | selector |
 		selector := primTraceLog at: i.
@@ -3756,10 +3736,10 @@ CoInterpreter >> mapTraceLog [
 	 If there is something at traceLogIndex it has wrapped."
 	<inline: false>
 	| limit |
-	(traceLog at: traceLogIndex - 3 \\ TraceBufferSize) = 0 ifTrue: [^nil].
-	limit := (traceLog at: traceLogIndex) = 0
-				ifTrue: [traceLogIndex - 3 \\ TraceBufferSize]
-				ifFalse: [TraceBufferSize - 3].
+	limit := self safe: traceLogIndex - 3 mod: TraceBufferSize.
+	(traceLog at: limit) = 0 ifTrue: [^nil].
+	(traceLog at: traceLogIndex) ~= 0 ifTrue:
+		[limit := TraceBufferSize - 3].
 	0 to: limit by: 3 do:
 		[:i| | intOrClass selectorOrMethod |
 		intOrClass := traceLog at: i.
@@ -3823,6 +3803,24 @@ CoInterpreter >> markAndTraceOrFreeMachineCode: fullGCFlag [
 	cogit markAndTraceObjectsOrFreeMachineCode: fullGCFlag
 ]
 
+{ #category : #'debug support' }
+CoInterpreter >> markAndTracePrimTraceLog [
+	"The prim trace log is a circular buffer of selectors. If there is
+	 an entry at primTraceLogIndex - 1 \\ PrimTraceBufferSize it has entries.
+	 If there is something at primTraceLogIndex it has wrapped."
+	<inline: false>
+	| limit |
+	limit := self safe: primTraceLogIndex - 1 mod: PrimTraceLogSize.
+	(primTraceLog at: limit) = 0 ifTrue: [^nil].
+	(primTraceLog at: primTraceLogIndex) ~= 0 ifTrue:
+		[limit := PrimTraceLogSize - 1].
+	0 to: limit do:
+		[:i| | selector |
+		selector := primTraceLog at: i.
+		(self isIntegerObject: selector) ifFalse:
+			[self markAndTrace: selector]]
+]
+
 { #category : #'object memory support' }
 CoInterpreter >> markAndTraceStackPage: thePage [
 	| theSP theFP frameRcvrOffset callerFP oop |
@@ -3870,10 +3868,10 @@ CoInterpreter >> markAndTraceTraceLog [
 	 traceLogIndex it has wrapped."
 	<inline: false>
 	| limit |
-	(traceLog at: traceLogIndex - 3 \\ TraceBufferSize) = 0 ifTrue: [^nil].
-	limit := (traceLog at: traceLogIndex) = 0
-				ifTrue: [traceLogIndex - 3 \\ TraceBufferSize]
-				ifFalse: [TraceBufferSize - 3].
+	limit := self safe: traceLogIndex - 3 mod: TraceBufferSize.
+	(traceLog at: limit) = 0 ifTrue: [^nil].
+	(traceLog at: traceLogIndex) ~= 0 ifTrue:
+		[limit := TraceBufferSize - 3].
 	0 to: limit by: 3 do:
 		[:i| | oop |
 		oop := traceLog at: i.
@@ -4355,7 +4353,7 @@ CoInterpreter >> preGCAction: fullGCFlag [
 
 	inFullGC := fullGCFlag.
 
-	cogit recordTrace ifTrue:
+	cogit recordEventTrace ifTrue:
 		[| traceType |
 		traceType := fullGCFlag ifTrue: [TraceFullGC] ifFalse: [TraceIncrementalGC].
 		self recordTrace: traceType thing: traceType source: 0]
@@ -5355,7 +5353,7 @@ CoInterpreter >> printLogEntryAt: i [
 			 intOrClass = TraceCodeCompaction ifTrue:
 				[self print: 'compactCode']]
 		ifFalse:
-			[self space; printNameOfClass: intOrClass count: 5; print: '>>'; printStringOf: selectorOrMethod].
+			[self space; printNameOfClass: intOrClass count: 5; print: '>>'; safePrintStringOf: selectorOrMethod].
 	source > TraceIsFromInterpreter ifTrue:
 		[self space; print: (traceSources at: source)].
 	self cr
@@ -5570,7 +5568,7 @@ CoInterpreter >> receiver [
 
 { #category : #'debug support' }
 CoInterpreter >> recordContextSwitchFrom: sourceCode [
-	cogit recordTrace ifTrue:
+	cogit recordEventTrace ifTrue:
 		[self recordTrace: TraceContextSwitch thing: TraceContextSwitch source: sourceCode]
 ]
 
@@ -5843,8 +5841,7 @@ CoInterpreter >> slowPrimitiveResponse [
 	<var: #savedFramePointer type: #'char *'>
 	<var: #savedStackPointer type: #'char *'>
 	cogit recordPrimTrace ifTrue:
-		[self fastLogPrim: messageSelector.
-		 self traceInterpreterPrim].
+		[self fastLogPrim: messageSelector].
 	FailImbalancedPrimitives ifTrue:
 		[nArgs := argumentCount.
 		 savedStackPointer := stackPointer.
@@ -6126,21 +6123,6 @@ CoInterpreter >> threadManager [
 { #category : #'process primitive support' }
 CoInterpreter >> threadSwitchIfNecessary: newProc from: sourceCode [
 	"This is a no-op in the non-threaded VM"
-]
-
-{ #category : #'debug support' }
-CoInterpreter >> traceInterpreterPrim [
-	<inline: false>
-	self recordTrace: (self fetchClassOf: (self stackValue: argumentCount)) thing: messageSelector source: TraceIsFromInterpreter.
-	cogit printOnTrace ifTrue:
-		[self printActivationNameFor: newMethod
-			receiver: (self stackValue: argumentCount)
-			isBlock: false
-			firstTemporary: nil;
-			cr].
-	self sendBreak: messageSelector + BaseHeaderSize
-		point: (self lengthOf: messageSelector)
-		receiver: (self stackValue: argumentCount)
 ]
 
 { #category : #simulation }
