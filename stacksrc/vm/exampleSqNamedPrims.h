@@ -1,5 +1,5 @@
 /* This is an automatically generated table of all builtin modules in the VM
-   StackInterpreter VMMaker-oscog.9
+   StackInterpreter VMMaker-oscog.17
  */
 
 extern sqExport vm_exports[];
