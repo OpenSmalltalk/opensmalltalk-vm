@@ -198,7 +198,6 @@ Class {
 		'ceTraceLinkedSendTrampoline',
 		'ceTraceBlockActivationTrampoline',
 		'ceTraceStoreTrampoline',
-		'ceTraceInterpreterPrimTrampoline',
 		'ceGetSP',
 		'sendTrampolines',
 		'superSendTrampolines',
@@ -4484,9 +4483,6 @@ Cogit >> generateTrampolines [
 										arg: ReceiverResultReg.
 	ceTraceBlockActivationTrampoline := self genTrampolineFor: #ceTraceBlockActivation asSymbol
 											called: 'ceTraceBlockActivationTrampoline'.
-	ceTraceInterpreterPrimTrampoline := self genTrampolineFor: #ceTraceInterpreterPrim: asSymbol
-											called: 'ceTraceInterpreterPrimTrampoline'
-											arg: ReceiverResultReg.
 	self genTraceStoreTrampoline.
 
 	"finish up"
@@ -5723,6 +5719,13 @@ Cogit >> processorHasMultiply: ignoredPrimIndex [
 	^backEnd canMulRR
 ]
 
+{ #category : #debugging }
+Cogit >> recordEventTrace [
+	<api>
+	<cmacro: '() (traceLinkedSends & 4)'>
+	^(traceLinkedSends bitAnd: 4) ~= 0
+]
+
 { #category : #initialization }
 Cogit >> recordGeneratedRunTime: aString address: address [
 	<var: #aString type: #'char *'>
@@ -5774,15 +5777,6 @@ Cogit >> recordSendTrace [
 	<api>
 	<cmacro: '() (traceLinkedSends & 1)'>
 	^(traceLinkedSends bitAnd: 1) ~= 0
-]
-
-{ #category : #debugging }
-Cogit >> recordTrace [
-	<api>
-	<cmacro: '() (traceLinkedSends & 3)'>
-	"Answer if either tracing all sends & block activations or tracing interpreter primitives.
-	 If so the interpreter wil trace code compactions & process switches."
-	^(traceLinkedSends bitAnd: 3) ~= 0
 ]
 
 { #category : #compaction }

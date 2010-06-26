@@ -253,6 +253,68 @@ VMMaker >> availablePlugins [
 	^allPlugins
 ]
 
+{ #category : #'generate sources' }
+VMMaker >> buildCodeGeneratorForCogit [
+	"Answer the code generator for translating the cogit."
+
+	| cg cogitClass cogitClasses |
+	cg := self createCogitCodeGenerator.
+
+	cg vmClass: (cogitClass := self interpreterClass cogitClass).
+	cogitClasses := OrderedCollection new.
+	[cogitClasses addFirst: cogitClass.
+	 cogitClass ~~ Cogit
+	 and: [cogitClass inheritsFrom: Cogit]] whileTrue:
+		[cogitClass := cogitClass superclass].
+	cogitClasses addFirst: VMClass.
+	cogitClasses addAllLast: self interpreterClass cogitClass ancilliaryClasses.
+	cogitClasses, { self interpreterClass }  do: [:cgc| cgc initialize].
+	cogitClasses do: [:cgc| cg addClass: cgc].
+	(cg structClassesForTranslationClasses: cogitClasses) do:
+		[:structClasss| cg addStructClass: structClasss].
+
+	^cg
+]
+
+{ #category : #'generate sources' }
+VMMaker >> buildCodeGeneratorForInterpreter [
+	"Answer the code generator for translating the interpreter."
+
+	| cg interpreterClass interpreterClasses structClasses |
+	interpreterClasses := OrderedCollection new.
+
+	(cg := self createCodeGenerator) vmClass: (interpreterClass := self interpreterClass).
+
+	[interpreterClass ~~ VMClass] whileTrue:
+		[interpreterClasses addFirst: interpreterClass.
+		 interpreterClass := interpreterClass superclass].
+	
+	cg vmClass objectMemoryClass ifNotNil:
+		[:objectMemoryClass|
+		interpreterClass := objectMemoryClass.
+		[interpreterClass ~~ VMClass] whileTrue:
+			[interpreterClasses addFirst: interpreterClass.
+			 interpreterClass := interpreterClass superclass]].
+
+	interpreterClasses addFirst: VMClass.
+	interpreterClasses addAllLast: (self interpreterClass ancilliaryClasses copyWithout: cg vmClass objectMemoryClass).
+	structClasses := Set new.
+	interpreterClasses do: [:class| structClasses addAll: class ancilliaryStructClasses].
+	(ChangeSet superclassOrder: structClasses asArray) do:
+		[:structClass|
+		structClass initialize.
+		cg addStructClass: structClass].
+
+	interpreterClasses do:
+		[:ic|
+		(ic class includesSelector: #initializeWithBytesToWord:)
+			ifTrue: [ic initializeWithBytesToWord: self bytesPerWord]
+			ifFalse: [ic initialize]].
+
+	interpreterClasses do: [:ic| cg addClass: ic].
+	^cg
+]
+
 { #category : #initialize }
 VMMaker >> bytesPerWord [
 	"Return the bytes in a word for the chosen 32bit/64bit pointer setup chosen"
@@ -300,28 +362,6 @@ VMMaker >> configurationInfo [
 	  }
 ]
 
-{ #category : #'copying files' }
-VMMaker >> copyAssortedFiles [
-	"copy any miscellaneous files/dirs from the cross-platformDirectory/misc/ToCopy -  
-	general readme files etc, then from the platform specific directory/misc/ToCopy - makefiles, 
-	utils etc that have to be copied."
-	| srcDir |
-	"Is there a crossPlatformDirectory subdirectory called 'misc'?"
-	(self crossPlatformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir := self crossPlatformDirectory directoryNamed: 'misc'.
-			"Is there a subdirectory called 'ToCopy' ?"
-			(srcDir directoryExists: 'ToCopy') ifTrue:[
-				srcDir := srcDir directoryNamed: 'ToCopy'.
-				self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory]].
-	"Is there a platformDirectory subdirectory called 'misc'?"
-	(self platformDirectory directoryExists: 'misc')
-		ifTrue: [srcDir := self platformDirectory directoryNamed: 'misc'.
-			"Is there a subdirectory called 'ToCopy' ?"
-			(srcDir directoryExists: 'ToCopy') ifTrue:[
-				srcDir := srcDir directoryNamed: 'ToCopy'.
-				self copyFilesFromSourceDirectory: srcDir toTargetDirectory: self sourceDirectory]]
-]
-
 { #category : #'private - copying files' }
 VMMaker >> copyFileNamed: srcName to: dstName [ 
 	| dstEntry srcEntry |
@@ -333,51 +373,6 @@ VMMaker >> copyFileNamed: srcName to: dstName [
 	].
 	logger show:'==> ', dstName; cr.
 	^self primitiveCopyFileNamed: srcName to: dstName 
-]
-
-{ #category : #'private - copying files' }
-VMMaker >> copyFilesFrom: srcDir to: dstDir [
-"This really ought to be a facility in file system. The major annoyance here is that file types and permissions are not handled by current Squeak code"
-	[srcDir fileNames do: [:filenm | 
-		self copyFileNamed: (srcDir fullNameFor: filenm) to: (dstDir fullNameFor: filenm)]] on: InvalidDirectoryError do:["do nothing if the directory is invalid"]
-
-]
-
-{ #category : #'private - copying files' }
-VMMaker >> copyFilesFromSourceDirectory: srcDir toTargetDirectory: dstDir [ 
-	"copy all the files and directories from srcDir to dstDir, recursively"	
-	self copyFilesFromSourceDirectory: srcDir
-			toTargetDirectory: dstDir
-			recursively: true
-]
-
-{ #category : #'private - copying files' }
-VMMaker >> copyFilesFromSourceDirectory: srcDir toTargetDirectory: dstDir recursively: recurseBoolean [
-	"copy all files and subdirectories from srcDir to dstDir, optionally recursing down the tree.
-	It is assumed that both directories already exist and have appropriate 
-	permissions - proper error handling ought to be provided sometime. 
-	Note how nice it would be if the file system classes already did this; 
-	why, they could even defer to an improved file plugin for some of 
-	these things."
-	"copy all the files"
-	| dirList  |
-	srcDir localName = 'CVS' ifTrue:[logger show: 'CVS files NOT copied by VMMaker'; cr. ^self].
-	srcDir localName = '.svn' ifTrue:[logger show: 'SVN files NOT copied by VMMaker'; cr. ^self].
-
-	self copyFilesFrom: srcDir to: dstDir.
-
-	recurseBoolean ifFalse:[^self].
-	"If we are recursing create the subdirectories of srcDir in dstDir, and then copy that 
-	subtree "
-	dirList := srcDir directoryNames copyWithout: 'CVS'.
-	dirList := srcDir directoryNames copyWithout: '.svn'.
-	dirList do: 
-		[:newDstDir | 
-		(dstDir directoryExists: newDstDir)
-			ifFalse: [dstDir createDirectory: newDstDir].
-		self copyFilesFromSourceDirectory: (srcDir directoryNamed: newDstDir)
-			toTargetDirectory: (dstDir directoryNamed: newDstDir)
-			recursively: true]
 ]
 
 { #category : #'target directories' }
@@ -551,26 +546,11 @@ VMMaker >> for64BitVM [
 VMMaker >> generateCogitFile [
 	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
 
-	| cg cogitClass cogitClasses structClasses |
+	| cg cogitClass |
 	self interpreterClass needsCogit ifFalse: [^nil].
 	self needsToRegenerateCogitFile ifFalse: [^nil].
-	cg := self createCogitCodeGenerator.
-
-	cg vmClass: (cogitClass := self interpreterClass cogitClass).
-	cogitClasses := OrderedCollection new.
-	[cogitClasses addFirst: cogitClass.
-	 cogitClass ~~ Cogit
-	 and: [cogitClass inheritsFrom: Cogit]] whileTrue:
-		[cogitClass := cogitClass superclass].
-	
-	cogitClasses addAllLast: self interpreterClass cogitClass ancilliaryClasses.
-	cogitClasses, { self interpreterClass }  do: [:cgc| cgc initialize].
-	cogitClasses do: [:cgc| cg addClass: cgc].
-	structClasses := Set new.
-	cogitClasses do: [:class| structClasses addAll: class ancilliaryStructClasses].
-	(ChangeSet superclassOrder: structClasses asArray) do:
-		[:structClasss| cg addStructClass: structClasss].
-
+	cg := self buildCodeGeneratorForCogit.
+	cogitClass := self interpreterClass cogitClass.
 	cg removeUnneededBuiltins.
 	cg vmClass preGenerationHook: cg.
 	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass sourceFileName) doInlining: cogitClass doInlining.
@@ -692,31 +672,9 @@ VMMaker >> generateInternalPlugins [
 VMMaker >> generateInterpreterFile [
 	"Translate the Smalltalk description of the virtual machine into C.  If 'self doInlining' is true, small method bodies are inlined to reduce procedure call overhead.  On the PPC, this results in a factor of three speedup with only 30% increase in code size.  Subclasses can use specialised versions of CCodeGenerator and interpreterClass."
 
-	| cg interpreterClass interpreterClasses vmHeaderContents structClasses |
+	| cg vmHeaderContents |
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
-	cg := self createCodeGenerator.
-
-	cg vmClass: (interpreterClass := self interpreterClass).
-	interpreterClasses := OrderedCollection new.
-	[interpreterClasses addFirst: interpreterClass.
-	 interpreterClass ~~ ObjectMemory
-	 and: [interpreterClass inheritsFrom: ObjectMemory]] whileTrue:
-		[interpreterClass := interpreterClass superclass].
-
-	interpreterClasses addAllLast: self interpreterClass ancilliaryClasses.
-	structClasses := Set new.
-	interpreterClasses do: [:class| structClasses addAll: class ancilliaryStructClasses].
-	(ChangeSet superclassOrder: structClasses asArray) do:
-		[:structClass|
-		structClass initialize.
-		cg addStructClass: structClass].
-
-	interpreterClasses
-		do: [:ic| ic == ObjectMemory
-				ifTrue: [ic initializeWithBytesToWord: self bytesPerWord]
-				ifFalse: [ic initialize]].
-
-	interpreterClasses do: [:ic| cg addClass: ic].
+	cg := self buildCodeGeneratorForInterpreter.
 	cg removeUnneededBuiltins.
 	self interpreterClass preGenerationHook: cg.
 

@@ -24,8 +24,10 @@ CogMethodSurrogate >> <= aCogMethodOrAddress [
 ]
 
 { #category : #comparing }
-CogMethodSurrogate >> = aCogMethodOrAddress [
-	^address = aCogMethodOrAddress asInteger
+CogMethodSurrogate >> = aCogMethodOrAddressOrNil [
+	^address = (aCogMethodOrAddressOrNil
+					ifNil: [0]
+					ifNotNil: [aCogMethodOrAddressOrNil asInteger])
 ]
 
 { #category : #comparing }

@@ -245,6 +245,8 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 	Returns PrimNoErr if the primitive succeeds."
 	"Implementation: Uses forwarding blocks to update references as done in compaction."
 	| start |
+	self leakCheckBecome ifTrue:
+		[self runLeakCheckerForFullGC: true].
 	(self isArray: array1) ifFalse:
 		[^PrimErrBadReceiver].
 	((self isArray: array2)
@@ -266,7 +268,8 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 		ifFalse: [self restoreHeadersAfterForwardBecome: copyHashFlag].
 
 	self initializeMemoryFirstFree: freeStart. "re-initialize memory used for forwarding table"
-	
+	self leakCheckBecome ifTrue:
+		[self runLeakCheckerForFullGC: true].
 	self forceInterruptCheck. "pretty much guaranteed to take a long time, so check for timers etc ASAP"
 
 	^PrimNoErr "success"
@@ -1102,6 +1105,12 @@ NewObjectMemory >> lastPointerOf: oop recordWeakRoot: recordWeakRoot [ "<Boolean
 ]
 
 { #category : #'debug support' }
+NewObjectMemory >> leakCheckBecome [
+	<api>
+	^(checkForLeaks bitAnd: 4) ~= 0
+]
+
+{ #category : #'debug support' }
 NewObjectMemory >> leakCheckFullGC [
 	<api>
 	^(checkForLeaks bitAnd: 1) ~= 0
@@ -1359,7 +1368,8 @@ NewObjectMemory >> safePrintStringOf: oop [
 	[i < cnt] whileTrue:
 		[self printChar: (self fetchByte: i ofObject: oop).
 		 i := i + 1].
-	self flush
+	self flush.
+	^oop
 ]
 
 { #category : #'garbage collection' }
@@ -1374,7 +1384,8 @@ NewObjectMemory >> setCheckForLeaks: anInteger [
 	"0 = do nothing.
 	 1 = check for leaks on fullGC.
 	 2 = check for leaks on incrementalGC.
-	 3 = check for leaks on both."
+	 4 = check for leaks on become
+	 7 = check for leaks on all three."
 	checkForLeaks := anInteger
 ]
 

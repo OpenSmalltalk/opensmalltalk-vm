@@ -2890,7 +2890,8 @@ ObjectMemory >> safePrintStringOf: oop [
 	[i < cnt] whileTrue:
 		[self printChar: (self fetchByte: i ofObject: oop).
 		 i := i + 1].
-	self flush
+	self flush.
+	^oop
 ]
 
 { #category : #initialization }

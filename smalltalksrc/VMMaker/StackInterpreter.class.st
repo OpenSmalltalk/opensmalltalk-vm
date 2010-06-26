@@ -6203,6 +6203,8 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 	"Must mark stack pages first to initialize the per-page trace
 	 flags for full garbage collect before any subsequent tracing."
 	self markAndTraceStackPages: fullGCFlag.
+	self markAndTraceTraceLog.
+	self markAndTracePrimTraceLog.
 	self markAndTrace: specialObjectsOop. "also covers nilObj, trueObj, falseObj, and compact classes"
 	(self isIntegerObject: messageSelector) ifFalse:
 		[self markAndTrace: messageSelector].
@@ -6221,12 +6223,16 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 		(self isIntegerObject: oop) ifFalse:[self markAndTrace: oop].
 		oop := suspendedMethods at: i.
 		(self isIntegerObject: oop) ifFalse:[self markAndTrace: oop].
-	].
-	self markAndTraceTraceLog
+	]
 ]
 
 { #category : #'object memory support' }
 StackInterpreter >> markAndTraceOrFreeMachineCode: fullGCFlag [
+	"This is a no-op in the StackVM"
+]
+
+{ #category : #'object memory support' }
+StackInterpreter >> markAndTracePrimTraceLog [
 	"This is a no-op in the StackVM"
 ]
 
@@ -9324,7 +9330,7 @@ StackInterpreter >> primitiveInstVarAtPut [
 	(fmt = 3
 	 and: [(self isContextHeader: hdr)
 	 and: [self isMarriedOrWidowedContext: rcvr]])
-		ifTrue: [self externalInstVar: index ofContext: rcvr put: newValue]
+		ifTrue: [self externalInstVar: index - 1 ofContext: rcvr put: newValue]
 		ifFalse: [self subscript: rcvr with: index storing: newValue format: fmt].
 	self pop: argumentCount + 1 thenPush: newValue
 ]
@@ -11998,6 +12004,24 @@ StackInterpreter >> printCallStackOf: aContext currentFP: currFP [
 ]
 
 { #category : #'debug printing' }
+StackInterpreter >> printCallStackOfContext: aContext [
+	<api>
+	| context |
+	<inline: false>
+	<var: #theFP type: #'char *'>
+	context := aContext.
+	[context = nilObj] whileFalse:
+		[(self isMarriedOrWidowedContext: context)
+			ifTrue:
+				[(self checkIsStillMarriedContext: context currentFP: framePointer) ifFalse:
+					[self shortPrintContext: context.
+					 ^nil].
+				 context := self shortReversePrintFrameAndCallers: (self frameOfMarriedContext: context)]
+			ifFalse:
+				[context := self printContextCallStackOf: context]]
+]
+
+{ #category : #'debug printing' }
 StackInterpreter >> printChar: aByte [
 	<api>
 	"For testing in Smalltalk, this method should be overridden in a subclass."
@@ -13399,6 +13423,9 @@ StackInterpreter >> shortConditionalJump [
 StackInterpreter >> shortPrintContext: aContext [
 	| home |
 	<inline: false>
+	(self isContext: aContext) ifFalse:
+		[self printHex: aContext; print: ' is not a context'; cr.
+		^nil].
 	home := self findHomeForContext: aContext.
 	self printNum: aContext.
 	(self isMarriedOrWidowedContext: aContext)
@@ -13410,7 +13437,7 @@ StackInterpreter >> shortPrintContext: aContext [
 	self printActivationNameFor: (self fetchPointer: MethodIndex ofObject: home)
 		receiver: (self fetchPointer: ReceiverIndex ofObject: home)
 		isBlock: home ~= aContext
-		firstTemporary: (self fetchPointer: 0 + TempFrameStart ofObject: home).
+		firstTemporary: (self fetchPointer: 0 + CtxtTempFrameStart ofObject: home).
 	self cr
 ]
 
