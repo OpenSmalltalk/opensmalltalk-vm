@@ -1,0 +1,1 @@
+This libs and headers are from the Direct X 9.0 SDK from Summer 2004 (dxsdk_sum2004.exe).  A few modifications have been made to fix bugs in the header files, and one work-around in dsound.h that isn't clearly Microsoft's bug.
