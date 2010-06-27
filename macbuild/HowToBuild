@@ -5,8 +5,11 @@ How to Build the Croquet Cog VM on Mac OS X
    and change the compilerSpec in CoreVM.xcodeproj/project.pbxproj to get
    better performance.
 
-2. Unpack the tarball (you have probably done this because you're reading this
-   file).
+2. Check out the following sources from svn (if you haven't already - if you're
+   reading this in macbuild its likely you've already got the sources)
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/macbuild
 
 3. Open a shell, cd into ROOT/macbuild directory and execute either
      ./makevm

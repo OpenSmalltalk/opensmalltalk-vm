@@ -6,11 +6,12 @@ How to Build the Cog VM on Windows
 1. Install the tools:
 - Install cygwin from www.cygwin.com.  As of writing the VM is built using
 CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
-2. Check out the following sources from svn
-     svn co https://dev.qwaq.com/svn/XXX/trunk/platforms
-     svn co https://dev.qwaq.com/svn/XXX/trunk/src
-     svn co https://dev.qwaq.com/svn/XXX/trunk/cygwinbuild
-3. Open a shell (cmd), cd into the cygbuild directory and execute
+2. Check out the following sources from svn (if you haven't already - if you're
+   reading this in cygwinbuild its likely you've already got the sources)
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/src
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/cygwinbuild
+3. Open a cygwin bash shell, cd into the cygbuild directory and execute
      make
 4. At the end of this process you should have a brand new Croquet VM in the
    cygwinbuild/build/vm folder (make sure you transfer Squeak.map along with it)
