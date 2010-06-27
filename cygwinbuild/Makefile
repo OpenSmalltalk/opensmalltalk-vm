@@ -23,7 +23,7 @@ SRCDIR:= ../src
 BLDDIR:= $(BASEDIR)/build
 OBJDIR:= $(BLDDIR)/vm
 
-# N.B. PLATDIR *must* be a relative path, see -f../../$(shell eitheror ... below
+# N.B. PLATDIR *must* be a relative path, see -f../../$(shell ./eitheror ... below
 PLATDIR:=../platforms
 CROSSDIR:=$(PLATDIR)/Cross/vm
 WIN32DIR:=$(PLATDIR)/win32/vm
@@ -228,7 +228,7 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 $(OBJDIR)/%.lib:	FORCE
 	@-mkdir $(BLDDIR)/$(*F)
 	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) \
-		-f../../$(shell eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
+		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) SRCDIR=../../$(SRCDIR) BASEDIR=../../$(BASEDIR) \
 		LIBNAME=$(*F) XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
 		../../$(OBJDIR)/$(*F).lib
@@ -238,7 +238,7 @@ $(OBJDIR)/%.lib:	FORCE
 $(OBJDIR)/%.dll:	FORCE
 	@-mkdir $(BLDDIR)/$(*F)
 	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) \
-		-f../../$(shell eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
+		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) SRCDIR=../../$(SRCDIR) BASEDIR=../../$(BASEDIR) \
 		LIBNAME=$(*F) ../../$(OBJDIR)/$(*F).dll
 
