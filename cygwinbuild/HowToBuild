@@ -6,6 +6,7 @@ How to Build the Cog VM on Windows
 1. Install the tools:
 - Install cygwin from www.cygwin.com.  As of writing the VM is built using
 CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
+- Install the dx7sdk from e.g. www.brothersoft.com/games/directx-7.html
 2. Check out the following sources from svn (if you haven't already - if you're
    reading this in cygwinbuild its likely you've already got the sources)
      svn co http://www.squeakvm.org/svn/squeak/branches/Cog/platforms
