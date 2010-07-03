@@ -1941,7 +1941,11 @@ StackInterpreterSimulator >> rewriteMethodCacheEntryForExternalPrimitiveToFuncti
 { #category : #testing }
 StackInterpreterSimulator >> run [
 	"Just run"
-	quitBlock := [^self].
+	quitBlock := [([transcript dependents anyOne outermostMorphThat: [:m| m isSystemWindow]]
+					on: Error
+					do: [:ex| nil])
+						ifNotNil: [:window| (UIManager default confirm: 'close?') ifTrue: [window delete]].
+				  ^self].
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
