@@ -2508,7 +2508,11 @@ CogVMSimulator >> rumpCStackSize [
 { #category : #testing }
 CogVMSimulator >> run [
 	"Just run"
-	quitBlock := [^self].
+	quitBlock := [([transcript dependents anyOne outermostMorphThat: [:m| m isSystemWindow]]
+					on: Error
+					do: [:ex| nil])
+						ifNotNil: [:window| (UIManager default confirm: 'close?') ifTrue: [window delete]].
+				  ^self].
 	self initStackPages.
 	self loadInitialContext.
 	self initialEnterSmalltalkExecutive
@@ -2517,7 +2521,11 @@ CogVMSimulator >> run [
 { #category : #testing }
 CogVMSimulator >> runWithBreakCount: theBreakCount [
 	"Just run, halting when byteCount is reached"
-	quitBlock := [^self].
+	quitBlock := [([transcript dependents anyOne outermostMorphThat: [:m| m isSystemWindow]]
+					on: Error
+					do: [:ex| nil])
+						ifNotNil: [:window| (UIManager default confirm: 'close?') ifTrue: [window delete]].
+				  ^self].
 	breakCount := theBreakCount.
 	self initStackPages.
 	self loadInitialContext.
@@ -3008,8 +3016,8 @@ CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 { #category : #'debug printing' }
 CogVMSimulator >> symbolicMethod: aMethod [
 	| pc end latestContinuation |
-	pc := self startPCOfMethod: aMethod.
-	end := latestContinuation := self byteSizeOf: aMethod.
+	pc := latestContinuation := self startPCOfMethod: aMethod.
+	end := self byteSizeOf: aMethod.
 	[pc <= end] whileTrue:
 		[| byte byte2 byte3 byte4 type offset jumpTarget |
 		 byte := self fetchByte: pc ofObject: aMethod.
