@@ -82,6 +82,11 @@ CogMethodSurrogate >> cPICNumCases: n [
 	^self stackCheckOffset: n
 ]
 
+{ #category : #comparing }
+CogMethodSurrogate >> isZero [
+	^address = 0
+]
+
 { #category : #accessing }
 CogMethodSurrogate >> nextOpenPIC [
 	| address |
