@@ -2122,13 +2122,24 @@ BitBltSimulation >> partitionedAND: word1 to: word2 nBits: nBits nPartitions: nP
 BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits nPartitions: nParts [
 	"Add word1 to word2 as nParts partitions of nBits each.
 	This is useful for packed pixels, or packed colors"
-	| mask sum result |
+	| mask sum result maskedWord1 |
+	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
+	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
+	words as unsigned int in those cases where comparisions are done (jmv)"
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #sum type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
+	<var: #maskedWord1 type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
 		[:i |
-		sum := (word1 bitAnd: mask) + (word2 bitAnd: mask).
-		sum <= mask  "result must not carry out of partition"
+		maskedWord1 := word1 bitAnd: mask.
+		sum := maskedWord1 + (word2 bitAnd: mask).
+		(sum <= mask "result must not carry out of partition"
+				and: [ sum >= maskedWord1 ])	"This is needed because in C, integer arithmetic overflows silently! (jmv)"
 			ifTrue: [result := result bitOr: sum]
 			ifFalse: [result := result bitOr: mask].
 		mask := mask << nBits  "slide left to next partition"].
@@ -2140,6 +2151,13 @@ BitBltSimulation >> partitionedAdd: word1 to: word2 nBits: nBits nPartitions: nP
 BitBltSimulation >> partitionedMax: word1 with: word2 nBits: nBits nPartitions: nParts [
 	"Max word1 to word2 as nParts partitions of nBits each"
 	| mask result |
+	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
+	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
+	words as unsigned int in those cases where comparisions are done (jmv)"
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
@@ -2154,6 +2172,13 @@ BitBltSimulation >> partitionedMax: word1 with: word2 nBits: nBits nPartitions: 
 BitBltSimulation >> partitionedMin: word1 with: word2 nBits: nBits nPartitions: nParts [
 	"Min word1 to word2 as nParts partitions of nBits each"
 	| mask result |
+	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
+	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
+	words as unsigned int in those cases where comparisions are done (jmv)"
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
@@ -2171,16 +2196,26 @@ BitBltSimulation >> partitionedMul: word1 with: word2 nBits: nBits nPartitions: 
 	Bug in loop version when non-white background"
 
 	| sMask product result dMask |
+	"In C, integer multiplication might answer a wrong value if the unsigned values are declared as signed.
+	This problem does not affect this method, because the most significant bit (i.e. the sign bit) will
+	always be zero (jmv)"
 	sMask := maskTable at: nBits.  "partition mask starts at the right"
 	dMask :=  sMask << nBits.
 	result := (((word1 bitAnd: sMask)+1) * ((word2 bitAnd: sMask)+1) - 1 
 				bitAnd: dMask) >> nBits.	"optimized first step"
+	nParts = 1
+		ifTrue: [ ^result ].
 	product := (((word1>>nBits bitAnd: sMask)+1) * ((word2>>nBits bitAnd: sMask)+1) - 1 bitAnd: dMask).
-	result := result bitOr: (product bitAnd: dMask).
+	result := result bitOr: product.
+	nParts = 2
+		ifTrue: [ ^result ].
 	product := (((word1>>(2*nBits) bitAnd: sMask)+1) * ((word2>>(2*nBits) bitAnd: sMask)+1) - 1 bitAnd: dMask).
-	result := result bitOr: (product bitAnd: dMask) << nBits.
+	result := result bitOr: product << nBits.
+	nParts = 3
+		ifTrue: [ ^result ].
+	product := (((word1>>(3*nBits) bitAnd: sMask)+1) * ((word2>>(3*nBits) bitAnd: sMask)+1) - 1 bitAnd: dMask).
+	result := result bitOr: product << (2*nBits).
 	^ result
-
 
 "	| sMask product result dMask |
 	sMask := maskTable at: nBits.  'partition mask starts at the right'
@@ -2198,6 +2233,15 @@ BitBltSimulation >> partitionedSub: word1 from: word2 nBits: nBits nPartitions: 
 	"Subtract word1 from word2 as nParts partitions of nBits each.
 	This is useful for packed pixels, or packed colors"
 	| mask result p1 p2 |
+	"In C, most arithmetic operations answer the same bit pattern regardless of the operands being signed or unsigned ints
+	(this is due to the way 2's complement numbers work). However, comparisions might fail. Add the proper declaration of
+	words as unsigned int in those cases where comparisions are done (jmv)"
+	<var: #word1 type: 'unsigned int'>
+	<var: #word2 type: 'unsigned int'>
+	<var: #p1 type: 'unsigned int'>
+	<var: #p2 type: 'unsigned int'>
+	<var: #mask type: 'unsigned int'>
+	<var: #result type: 'unsigned int'>
 	mask := maskTable at: nBits.  "partition mask starts at the right"
 	result := 0.
 	1 to: nParts do:
@@ -2519,9 +2563,9 @@ BitBltSimulation >> rgbAdd: sourceWord with: destinationWord [
 		+ ((self partitionedAdd: sourceWord>>16 to: destinationWord>>16
 						nBits: 5 nPartitions: 3) << 16)]
 	ifFalse:
-		["Add RGB components of the pixel separately"
+		["Add RGBA components of the pixel separately"
 		^ self partitionedAdd: sourceWord to: destinationWord
-						nBits: 8 nPartitions: 3]
+						nBits: 8 nPartitions: 4]
 ]
 
 { #category : #'combination rules' }
@@ -2644,9 +2688,9 @@ BitBltSimulation >> rgbMax: sourceWord with: destinationWord [
 		+ ((self partitionedMax: sourceWord>>16 with: destinationWord>>16
 						nBits: 5 nPartitions: 3) << 16)]
 	ifFalse:
-		["Max RGB components of the pixel separately"
+		["Max RGBA components of the pixel separately"
 		^ self partitionedMax: sourceWord with: destinationWord
-						nBits: 8 nPartitions: 3]
+						nBits: 8 nPartitions: 4]
 ]
 
 { #category : #'combination rules' }
@@ -2663,9 +2707,9 @@ BitBltSimulation >> rgbMin: sourceWord with: destinationWord [
 		+ ((self partitionedMin: sourceWord>>16 with: destinationWord>>16
 						nBits: 5 nPartitions: 3) << 16)]
 	ifFalse:
-		["Min RGB components of the pixel separately"
+		["Min RGBA components of the pixel separately"
 		^ self partitionedMin: sourceWord with: destinationWord
-						nBits: 8 nPartitions: 3]
+						nBits: 8 nPartitions: 4]
 ]
 
 { #category : #'combination rules' }
@@ -2684,9 +2728,9 @@ BitBltSimulation >> rgbMinInvert: wordToInvert with: destinationWord [
 		+ ((self partitionedMin: sourceWord>>16 with: destinationWord>>16
 						nBits: 5 nPartitions: 3) << 16)]
 	ifFalse:
-		["Min RGB components of the pixel separately"
+		["Min RGBA components of the pixel separately"
 		^ self partitionedMin: sourceWord with: destinationWord
-						nBits: 8 nPartitions: 3]
+						nBits: 8 nPartitions: 4]
 ]
 
 { #category : #'combination rules' }
@@ -2703,14 +2747,14 @@ BitBltSimulation >> rgbMul: sourceWord with: destinationWord [
 		+ ((self partitionedMul: sourceWord>>16 with: destinationWord>>16
 						nBits: 5 nPartitions: 3) << 16)]
 	ifFalse:
-		["Mul RGB components of the pixel separately"
+		["Mul RGBA components of the pixel separately"
 		^ self partitionedMul: sourceWord with: destinationWord
-						nBits: 8 nPartitions: 3]
+						nBits: 8 nPartitions: 4]
 
 "	| scanner |
 	Display repaintMorphicDisplay.
 	scanner := DisplayScanner quickPrintOn: Display.
-	MessageTally time: [0 to: 760 by: 4 do:  [:y |scanner drawString: 'qwrepoiuasfd=)(/&()=#!¡lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,Mqwrepoiuasfd=)(/&()=#!¡lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,M1234124356785678' at: 0@y]]. "
+	MessageTally time: [0 to: 760 by: 4 do:  [:y |scanner drawString: 'qwrepoiuasfd=)(/&()=#!lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,Mqwrepoiuasfd=)(/&()=#!lkjzxv.,mn124+09857907QROIYTOAFDJZXNBNB,M-.,M1234124356785678' at: 0@y]]. "
 ]
 
 { #category : #'combination rules' }
@@ -2727,9 +2771,9 @@ BitBltSimulation >> rgbSub: sourceWord with: destinationWord [
 		+ ((self partitionedSub: sourceWord>>16 from: destinationWord>>16
 						nBits: 5 nPartitions: 3) << 16)]
 	ifFalse:
-		["Sub RGB components of the pixel separately"
+		["Sub RGBA components of the pixel separately"
 		^ self partitionedSub: sourceWord from: destinationWord
-						nBits: 8 nPartitions: 3]
+						nBits: 8 nPartitions: 4]
 ]
 
 { #category : #'interpreter interface' }
