@@ -1884,7 +1884,7 @@
 /* Begin PBXProject section */
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
-			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCogVM" */;
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCOGVM" */;
 			compatibilityVersion = "Xcode 3.1";
 			hasScannedForEncodings = 1;
 			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
@@ -2419,6 +2419,7 @@
 				GCC_PREPROCESSOR_DEFINITIONS = SQUEAK_BUILTIN_PLUGIN;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				HEADER_SEARCH_PATHS = /usr/include/uuid;
 				PREBINDING = NO;
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "4D1323CE-3998-4FF8-AB83-49838083E965";
 				SDKROOT = iphoneos2.0;
@@ -2489,7 +2490,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCogVM" */ = {
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCOGVM" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				947E5F3610A9FD0400D3B69E /* Debug */,

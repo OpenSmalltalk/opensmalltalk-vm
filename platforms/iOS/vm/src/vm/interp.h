@@ -1,8 +1,8 @@
-/* Automatically generated from Squeak on 15 June 2010 5:05:57 pm 
-   by VMMaker 4.2.4
+/* Automatically generated from Squeak on 8 July 2010 12:32:31 pm 
+   by VMMaker 4.2.6
  */
 
-#define VMMAKER_VERSION "4.2.4"
+#define VMMAKER_VERSION "4.2.6"
 
 /*
  * define SQ_VI_BYTES_PER_WORD 8 for a 64-bit word size VM
