@@ -121,3 +121,31 @@ sqInt ioShowDisplayOnWindow(unsigned char* dispBitsIndex, sqInt width,
 	 affectedB: (int) affectedB
 	 windowIndex:  (int) windowIndex];
 }
+
+
+char *ioGetWindowLabel(void) {
+	return nil;
+}
+
+sqInt ioSetWindowLabelOfSize(void *lblIndex, sqInt sz) {
+	return 0;
+}
+
+
+sqInt ioGetWindowWidth(void) {
+	return 0;
+}
+
+sqInt ioGetWindowHeight(void) {
+	return 0;
+}
+
+sqInt ioSetWindowWidthHeight(sqInt w, sqInt h) {
+	return 0;
+}
+
+sqInt ioIsWindowObscured(void) {
+	return 0;
+}
+
+

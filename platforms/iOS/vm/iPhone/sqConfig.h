@@ -1,7 +1,7 @@
 /* sqConfig.h -- platform identification and configuration */
 
   /* For Apple's OS X */
-#define macintoshSqueak
+#define macintoshSqueak 1
 
 # if defined(SQ_CONFIG_DONE)
 #   error configuration conflict

@@ -215,7 +215,11 @@ static int buttonState=0;
 	int buttonAndModifiers = [self mapMouseAndModifierStateToSqueakBits: theEvent];
 	evt.buttons = buttonAndModifiers & 0x07;
 	evt.modifiers = buttonAndModifiers >> 3;
+#if COGVM
+	evt.nrClicks = 0;
+#else
 	evt.reserved1 = 0;
+#endif 
 	evt.windowIndex = (int) aView.windowLogic.windowIndex;
 	
 	[self pushEventToQueue:(sqInputEvent *) &evt];

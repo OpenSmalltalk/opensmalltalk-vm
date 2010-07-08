@@ -46,6 +46,17 @@ such third-party acknowledgments.
 	NSArray * directoryContentsForDirLookup;	
 }
 - (BOOL) setWorkingDirectory;
+- (sqInt) dir_EntryLookup: (const char *) pathString 
+			  length: (sqInt) pathStringLength 
+		  returnName: (char *) nameString
+	returnNameLength: (sqInt) nameStringLength	
+				name: (char *) name
+			  length: (sqInt *) nameLength 
+		creationDate: (sqInt *) creationDate 
+	modificationDate: (sqInt *) modificationDate
+		 isDirectory: (sqInt *) isDirectory 
+		  sizeIfFile: (squeakFileOffsetType *) sizeIfFile;
+
 - (sqInt) dir_Lookup: (const char *) pathString 
 			  length: (sqInt) pathStringLength 
 			   index: (sqInt) index 

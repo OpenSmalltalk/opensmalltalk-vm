@@ -51,8 +51,12 @@
 	NSTimeInterval	SqueakUIFlushPrimaryDeferNMilliseconds;
 	NSInteger	SqueakMouseMappings[4][4];
 	NSInteger	SqueakBrowserMouseMappings[4][4];
+	NSInteger		SqueakNumStackPages;
+	NSInteger		SqueakEdenBytes;
 }
 @property (nonatomic,assign) NSInteger	SqueakDebug;
+@property (nonatomic,assign) NSInteger	SqueakNumStackPages;
+@property (nonatomic,assign) NSInteger	SqueakEdenBytes;
 @property (nonatomic,assign) BOOL	SqueakQuitOnQuitAppleEvent;
 @property (nonatomic,assign) BOOL	SqueakPluginsBuiltInOrLocalOnly;
 @property (nonatomic,assign) BOOL	SqueakExplicitWindowOpenNeeded;

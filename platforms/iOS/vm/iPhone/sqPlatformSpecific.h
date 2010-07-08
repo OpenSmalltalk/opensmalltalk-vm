@@ -117,6 +117,53 @@ int plugInNotifyUser(char *msg);
 	#define browserPluginReturnIfNeeded() if (plugInTimeToReturn()) {ReturnFromInterpret();}
 
 sqInt ioSetCursorARGB(sqInt cursorBitsIndex, sqInt extentX, sqInt extentY, sqInt offsetX, sqInt offsetY);
+
+#if COGVM
+extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
+extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
+
+extern int isCFramePointerInUse(void);
+#endif
+
+/* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
+#if STACKVM
+# define sqLowLevelYield() sched_yield()
+# include <pthread.h>
+# define sqOSThread pthread_t
+/* these are used both in the STACKVM & the COGMTVM */
+# define ioOSThreadsEqual(a,b) pthread_equal(a,b)
+# define ioCurrentOSThread() pthread_self()
+# if COGMTVM
+/* Please read the comment for CogThreadManager in the VMMaker package for
+ * documentation of this API.
+ */
+typedef struct {
+	pthread_cond_t	cond;
+	pthread_mutex_t mutex;
+	int				locked;
+} sqOSSemaphore;
+#  if !ForCOGMTVMImplementation /* this is a read-only export */
+extern const pthread_key_t tltiIndex;
+#  endif
+#  define ioGetThreadLocalThreadIndex() ((long)pthread_getspecific(tltiIndex))
+#  define ioSetThreadLocalThreadIndex(v) (pthread_setspecific(tltiIndex,(void*)(v)))
+#  define ioOSThreadIsAlive(thread) (pthread_kill(thread,0) == 0)
+#  define ioTransferTimeslice() sched_yield()
+# endif /* COGMTVM */
+#endif /* STACKVM */
+
+// From Joshua Gargus, for XCode 3.1
+#ifdef __GNUC__
+# undef EXPORT
+# define EXPORT(returnType) __attribute__((visibility("default"))) returnType
+# define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+#endif
+
+#if !defined(VM_LABEL) || COGVM
+# undef VM_LABEL
+# define VM_LABEL(foo) 0
+#endif
+
 #endif /* macintoshSqueak */
 
 

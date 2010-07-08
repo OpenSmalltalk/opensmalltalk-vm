@@ -73,10 +73,16 @@ extern struct VirtualMachine* interpreterProxy;
 			return "unknown";
 		}
 			
-		case 1006: /* vm build string also info.plist */
+		case 1005: {
+			return "Aqua";
+		}
+			
+			
+		case 1006:  {/* vm build string also info.plist */
 #if (SQ_VI_BYTES_PER_WORD == 4)
 			
-			return "Mac Cocoa 5.7b1 15-Jun-10 >34286DE5-3BD3-40D8-9700-4C41C772B16B<";
+			return "Mac Cocoa Cog 5.8b1 07-Jul-10 >529F6B5A-DC81-4C1F-81B6-3D99741B954A<";
+//			return "Mac Cocoa 5.7b1 15-Jun-10 >34286DE5-3BD3-40D8-9700-4C41C772B16B<";
 //			return "Mac Cocoa 5.6b1 02-Mar-10 >9E99B1C2-0B6B-4944-8B6F-74030D14F3C6<";
 //			return "Mac Cocoa 5.5b1 16-Feb-10 >2EE2964B-462A-4F66-92AF-C810216EF798<";
 //			return "Mac Cocoa 5.4b2 24-Jan-10 >2EE2964B-462A-4F66-92AF-C810216EF798<";
@@ -106,10 +112,24 @@ extern struct VirtualMachine* interpreterProxy;
 //			return "Mac Cocoa 5.0b4 26-Nov-09 >DA33132E-D7E6-48C4-8363-EB7408E3124B<";
 //			return "Mac Cocoa 5.0.0b1 11-Nov-09 >40BF8061-CC65-4E5E-9841-6BB5E809A688<";
 #endif
-			default: 
+		}
+		case 1007: { /* vm build string also info.plist */
+#if STACKVM
+			extern char *__interpBuildInfo;
+			return __interpBuildInfo;
+#endif
+			break;
+		}
+		case 1008: { /* vm build string also info.plist */
+# if COGVM
+			extern char *__cogitBuildInfo;
+			return __cogitBuildInfo;
+#endif
+			break;
+		}
+		default: 
 			break;
 	}
-	
 	return (char *) [super getAttribute: indexNumber];
 }
 @end

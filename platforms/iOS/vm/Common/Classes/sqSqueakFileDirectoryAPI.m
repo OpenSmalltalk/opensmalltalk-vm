@@ -118,6 +118,27 @@ sqInt dir_Lookup(char *pathString, sqInt pathStringLength, sqInt index,
 	return status;
 }
 
+sqInt dir_EntryLookup(char *pathString, sqInt pathStringLength, char* nameString, sqInt nameStringLength,
+/* outputs: */  char *name, sqInt *nameLength, sqInt *creationDate, sqInt *modificationDate,
+					  sqInt *isDirectory, squeakFileOffsetType *sizeIfFile)
+{
+	NSAutoreleasePool * pool = [NSAutoreleasePool new];
+	
+	sqInt status =
+	[gDelegateApp.squeakApplication.fileDirectoryLogic dir_EntryLookup: pathString 
+														   length: pathStringLength 
+															returnName: nameString
+													  returnNameLength: nameStringLength	
+															 name:  name
+														   length: nameLength 
+													 creationDate: creationDate 
+												 modificationDate: modificationDate
+													  isDirectory: isDirectory 
+													   sizeIfFile: sizeIfFile];
+	[pool drain];
+	return status;
+}
+
 sqInt dir_Create(char *pathString, sqInt pathStringLength){
 	//API Documented
 	NSAutoreleasePool * pool = [NSAutoreleasePool new];

@@ -127,6 +127,9 @@ SqueakOSXAppDelegate *gDelegateApp;
 			return self.window;
 	}
 #else
+#if COGVM
+#error bad
+#endif
 	NSPanel *panel;
 	if (sizeof(long) == 8) {
 		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b1 (19)",
@@ -135,7 +138,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 									nil,
 									nil);
 	} else {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.67b1 (19)",
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.7b1 (19)",
 							   @"Only use this VM for testing, it lacks mac menu integration.",
 							   @"Dismiss",
 							   nil,

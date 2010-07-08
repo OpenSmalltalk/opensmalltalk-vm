@@ -63,22 +63,60 @@ char            gSqueakUntrustedDirectoryName[PATH_MAX];
 char            gSqueakTrustedDirectoryName[PATH_MAX];
 
 sqInt printAllStacks(void);
+sqInt printCallStack(void);
+extern void dumpPrimTraceLog(void);
+extern BOOL NSApplicationLoad(void);
+
+#if COGVM || STACKVM 
+/* Print an error message, possibly a stack trace, and exit. */
+/* Disable Intel compiler inlining of error which is used for breakpoints */
+#pragma auto_inline off
+void
+error(char *msg)
+{
+	/* flag prevents recursive error when trying to print a broken stack */
+	static sqInt printingStack = false;
+	
+	printf("\n%s\n\n", msg);
+	
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMThread())) {
+		if (!printingStack) {
+			printingStack = true;
+			printf("\n\nSmalltalk stack dump:\n");
+			printCallStack();
+		}
+	}
+	else
+		printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
+	printf("\nMost recent primitives\n");
+	dumpPrimTraceLog();
+	abort();
+}
+#pragma auto_inline on
 
 void sigsegv(int ignore)
 {
 #pragma unused(ignore)
-
+	
+	error("Segmentation fault");
+}
+#else
+void sigsegv(int ignore)
+{
+#pragma unused(ignore)
+	
 	/* error("Segmentation fault"); */
 	static int printingStack= 0;
-
-	printf("\nSegmentation fault\n\n");
+	
+	printf("\nSegmentation fault\n\ns");
 	if (!printingStack)
-		{
-			printingStack= 1;
-			printAllStacks();
-		}
+	{
+		printingStack= 1;
+		printAllStacks();
+	}
 	abort();
 }
+#endif
 
 sqInt ioExit(void) {
 	//API Documented
@@ -90,3 +128,38 @@ sqInt ioDisablePowerManager(sqInt disableIfNonZero) {
 	//API Documented
 	return 0;
 }	
+
+#if COGVM
+/*
+ * Support code for Cog.
+ * a) Answer whether the C frame pointer is in use, for capture of the C stack
+ *    pointers.
+ */
+# if defined(i386) || defined(__i386) || defined(__i386__)
+/*
+ * Cog has already captured CStackPointer  before calling this routine.  Record
+ * the original value, capture the pointers again and determine if CFramePointer
+ * lies between the two stack pointers and hence is likely in use.  This is
+ * necessary since optimizing C compilers for x86 may use %ebp as a general-
+ * purpose register, in which case it must not be captured.
+ */
+int
+isCFramePointerInUse()
+{
+	extern unsigned long CStackPointer, CFramePointer;
+	extern void (*ceCaptureCStackPointers)(void);
+	unsigned long currentCSP = CStackPointer;
+	
+	currentCSP = CStackPointer;
+	ceCaptureCStackPointers();
+	assert(CStackPointer < currentCSP);
+	return CFramePointer >= CStackPointer && CFramePointer <= currentCSP;
+}
+# endif /* defined(i386) || defined(__i386) || defined(__i386__) */
+
+
+/* Andreas' stubs */
+char* ioGetLogDirectory(void) { return ""; };
+sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz){ return 1; }
+
+#endif /* COGVM */

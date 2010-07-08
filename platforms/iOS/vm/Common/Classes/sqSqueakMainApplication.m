@@ -105,6 +105,9 @@ extern sqInt interpret(void);  //This is a VM Callback
 - (void) setupAIO {
 	void aioInit(void);
 	aioInit();
+	#if STACKVM || COGVM
+	ioInitThreads();
+	#endif
 }
 
 - (void) setupEventQueue {

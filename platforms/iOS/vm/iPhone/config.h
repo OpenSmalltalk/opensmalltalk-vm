@@ -153,14 +153,19 @@
 #if defined(__BIG_ENDIAN__)
 #define	WORDS_BIGENDIAN 1
 #define VMENDIANNESS 1
+#define VMBIGENDIAN 1
 #define	VM_HOST "powerpc-apple-darwin8.5.0"
 #define	VM_HOST_CPU "powerpc"
 #else
 #undef	WORDS_BIGENDIAN 
 #define VMENDIANNESS 0
+#define VMBIGENDIAN 0
 #define	VM_HOST "intel-apple-darwin8.5.0"
 #define	VM_HOST_CPU "intel"
+#if COGVM
+#else
 #define	DOUBLE_WORD_ORDER 1
+#endif
 #define LSB_FIRST 1
 #endif
 

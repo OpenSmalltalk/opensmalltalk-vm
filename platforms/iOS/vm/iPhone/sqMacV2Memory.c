@@ -63,8 +63,12 @@ __attribute__ ((visibility("default"))) char * sqMemoryBase=0;
 
  /* compute the desired memory allocation */
  
- extern usqInt memory;
- 
+#if !COGVM
+extern usqInt memory;
+#else
+usqInt	memory;
+#endif 
+
  usqInt	sqGetAvailableMemory() {
 	 return gMaxHeapSize;
  }
@@ -130,7 +134,7 @@ __attribute__ ((visibility("default"))) char * sqMemoryBase=0;
 		sqMemoryBase= actually;
 		return 0;
 #else
-		return (usqInt) actually;
+		return memory = (usqInt) actually;
 #endif
 	}
  }
@@ -165,3 +169,23 @@ size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, s
 	return sqImageFileRead(ptr, elementSize, count, f); 
 }
 #endif
+
+#if COGVM
+void
+sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+{
+	if (mprotect((void*)startAddr,
+				 endAddr - startAddr + 1,
+				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
+		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
+}
+
+void
+sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
+{
+	if (mprotect((void*)startAddr,
+				 endAddr - startAddr + 1,
+				 PROT_READ | PROT_WRITE) < 0)
+		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
+}
+#endif /* COGVM */

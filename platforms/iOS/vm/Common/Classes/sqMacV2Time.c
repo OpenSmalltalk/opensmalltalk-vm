@@ -53,9 +53,34 @@ such third-party acknowledgments.
 static struct timeval	 startUpTime;
 #define MillisecondClockMask 536870911
 
-
+#if STACKVM
 /* all three methods have their roots in the original unix port from the late 90's */
-
+/*
+ * In the Cog VMs time management is in platforms/unix/vm/sqUnixHeartbeat.c.
+ */
+/*
+ * Compute the time via the old method for sanity checking purposes.
+ */
+int ioOldMSecs() {
+	struct timeval now;
+	gettimeofday(&now, 0);
+	if ((now.tv_usec-= startUpTime.tv_usec) < 0) {
+		now.tv_usec+= 1000000;
+		now.tv_sec-= 1;
+	}
+	now.tv_sec-= startUpTime.tv_sec;
+	return (now.tv_usec / 1000 + now.tv_sec * 1000);
+}
+void SetUpTimers(void)
+{
+	extern void ioInitTime(void);
+	
+	/* set up the backwardcompatibility micro/millisecond clock */
+    gettimeofday(&startUpTime, 0);
+	/* setup the spiffy new 64-bit microsecond clock. */
+	ioInitTime();
+}
+#else /* STACKVM */
 void SetUpTimers(void)
 {
 	/* set up the micro/millisecond clock */
@@ -113,8 +138,6 @@ sqInt ioSeconds(void) {
 	return theSecondsAre;
 }
 
-
-
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 	//API Documented
 	/* This operation is platform dependent. 	 */
@@ -142,3 +165,5 @@ sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 	aioSleep((int) realTimeToWait*1000);
 	return 0;
 }
+#endif /* STACKVM */
+

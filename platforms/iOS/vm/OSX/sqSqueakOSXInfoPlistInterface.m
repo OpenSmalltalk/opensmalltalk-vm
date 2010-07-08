@@ -43,7 +43,15 @@ extern int gSqueakUseFileMappedMMAP;
 @implementation sqSqueakOSXInfoPlistInterface
 @synthesize SqueakDebug,SqueakQuitOnQuitAppleEvent,
 	SqueakMaxHeapSize,SqueakUnTrustedDirectory,SqueakTrustedDirectory,SqueakResourceDirectory,
-	SqueakPluginsBuiltInOrLocalOnly,SqueakExplicitWindowOpenNeeded,SqueakUIFlushPrimaryDeferNMilliseconds;
+	SqueakPluginsBuiltInOrLocalOnly,SqueakExplicitWindowOpenNeeded,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakNumStackPages,SqueakEdenBytes;
+
+- (void) setOverrideSqueakNumStackPages: (NSNumber *) v {
+	self.SqueakNumStackPages = [v integerValue];
+}
+
+- (void) setOverrideSqueakEdenBytes: (NSNumber *) v {
+	self.SqueakEdenBytes = [v integerValue];
+}
 
 - (void) setOverrideSqueakDebug: (NSNumber *) v {
 	self.SqueakDebug = [v integerValue];
@@ -171,6 +179,10 @@ extern int gSqueakUseFileMappedMMAP;
 	
 	NSBundle *mainBundle = [NSBundle mainBundle];
 	NSDictionary *dict = [mainBundle infoDictionary]; 
+	
+	[self setInfoPlistNumberValueFrom: dict key: @"SqueakNumStackPages" default: 0 using: @selector(setOverrideSqueakNumStackPages:)];
+	[self setInfoPlistNumberValueFrom: dict key: @"SqueakEdenBytes" default: 0 using: @selector(setOverrideSqueakEdenBytes:)];
+
 	[self setInfoPlistNumberValueFrom: dict key: @"SqueakDebug" default: 0 using: @selector(setOverrideSqueakDebug:)];
 	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakQuitOnQuitAppleEvent" default: NO using: @selector(setOverrideSqueakQuitOnQuitAppleEvent:)];
 	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakUseFileMappedMMAP" default: NO using: @selector(setOverrideSqueakUseFileMappedMMAP:)];

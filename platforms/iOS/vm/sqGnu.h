@@ -1,35 +1,43 @@
 /* Definitions for "gnuified" interp.c
  * 
- *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
- *                              listed elsewhere in this file.
+ *   Copyright (C) 1996 1997 1998 1999 2000 2001 Ian Piumarta and individual
+ *      authors/contributors listed elsewhere in this file.
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
  * 
- *   Permission is hereby granted, free of charge, to any person obtaining a copy
- *   of this software and associated documentation files (the "Software"), to deal
- *   in the Software without restriction, including without limitation the rights
- *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
- *   copies of the Software, and to permit persons to whom the Software is
- *   furnished to do so, subject to the following conditions:
+ *   This file is distributed in the hope that it will be useful, but WITHOUT
+ *   ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or
+ *   FITNESS FOR A PARTICULAR PURPOSE.
+ *   
+ *   You may use and/or distribute this file ONLY as part of Squeak, under
+ *   the terms of the Squeak License as described in `LICENSE' in the base of
+ *   this distribution, subject to the following restrictions:
  * 
- *   The above copyright notice and this permission notice shall be included in
- *   all copies or substantial portions of the Software.
+ *   1. The origin of this software must not be misrepresented; you must not
+ *      claim that you wrote the original software.  If you use this software
+ *      in a product, an acknowledgment to the original author(s) (and any
+ *      other contributors mentioned herein) in the product documentation
+ *      would be appreciated but is not required.
  * 
- *   THE SOFTWARE IS PROVIDED "AS IS", WITHOUT WARRANTY OF ANY KIND, EXPRESS OR
- *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
- *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
- *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
- *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
- *   SOFTWARE.
-*/
+ *   2. This notice may not be removed or altered in any source distribution.
+ * 
+ *   Using or modifying this file for use in any context other than Squeak
+ *   changes these copyright conditions.  Read the file `COPYING' in the base
+ *   of the distribution before proceeding with any such use.
+ * 
+ *   You are STRONGLY DISCOURAGED from distributing a modified version of
+ *   this file under its original name without permission.  If you must
+ *   change it, rename it first.
+ */
 
 /* Author: Ian.Piumarta@inria.fr
  *
  * Last edited: Fri Aug 11 08:20:28 2000 by piumarta (Ian Piumarta) on emilia
  * April 17th, 2002, John M McIntosh use jumptable register logic for PPC
  * Feb 23rd, 2006, John M McIntosh watch usage of __Apple__ also Ian's changes for GCC i386
+ * December 10th 2008, Eliot Miranda, updated with FP_REG and use of GIV() for
+ *      the global struct.
  *
  * NOTES:
  *	this file is #included IN PLACE OF sq.h
@@ -45,7 +53,7 @@
     #define BREAK		goto *jumpTable[currentBytecode]
     #define PPC_REG_JUMP	
 #endif
-#define PRIM_DISPATCH	goto *jumpTable[foo->primitiveIndex]
+#define PRIM_DISPATCH	goto *jumpTable[GIV(primitiveIndex)]
 #define JUMP_TABLE \
    void *jumpTable[256]= { \
       &&_0,   &&_1,   &&_2,   &&_3,   &&_4,   &&_5,   &&_6,   &&_7,   &&_8,   &&_9, \
@@ -149,9 +157,9 @@
     &&_690, &&_691, &&_692, &&_693, &&_694, &&_695, &&_696, &&_697, &&_698, &&_699, \
   }
 
-  /*
-     IP_REG, SP_REG, CB_REG
-        the machine registers in which to place localIP, localSP and
+ /*
+     IP_REG, FP_REG, SP_REG, CB_REG
+        the machine registers in which to place localIP, localFP, localSP and
         currentBytecode.  Wins big on register-deficient architectures --
         especially Intel.
   */
@@ -173,11 +181,7 @@
 #if defined(__i386__)
 # define IP_REG asm("%esi")
 # define SP_REG asm("%edi")
-//# if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
-#   define CB_REG asm("%ebx")
-//# else
-//#   define CB_REG /* avoid undue register pressure */
-//# endif
+# define CB_REG asm("%ebx")
 #endif
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
 # define FOO_REG asm("13")
@@ -197,3 +201,9 @@
 # define CB_REG asm("d7")
 #endif
 
+#if !defined(FOO_REG)
+# define FOO_REG /* nada */
+#endif
+#if !defined(FP_REG)
+# define FP_REG /* nada */
+#endif
