@@ -223,8 +223,6 @@
 		94883B410E0C2B9C005A4738 /* sqUnixSocket.c in Sources */ = {isa = PBXBuildFile; fileRef = 94883B400E0C2B9C005A4738 /* sqUnixSocket.c */; };
 		948EC3901155312600B08A4F /* MainWindow-iPad.xib in Resources */ = {isa = PBXBuildFile; fileRef = 948EC38F1155312600B08A4F /* MainWindow-iPad.xib */; };
 		9492453110BA43AA00E726F5 /* SqueakOSXApplication.m in Sources */ = {isa = PBXBuildFile; fileRef = 9492453010BA43AA00E726F5 /* SqueakOSXApplication.m */; };
-		9494928211E5178D0019BC29 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494927D11E5178D0019BC29 /* cogit.c */; };
-		9494928311E5178D0019BC29 /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494928011E5178D0019BC29 /* gcc3x-cointerp.c */; };
 		9494928411E5178D0019BC29 /* cogit.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494927D11E5178D0019BC29 /* cogit.c */; };
 		9494928511E5178D0019BC29 /* gcc3x-cointerp.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494928011E5178D0019BC29 /* gcc3x-cointerp.c */; };
 		949492C711E51C6B0019BC29 /* sqExternalSemaphores.c in Sources */ = {isa = PBXBuildFile; fileRef = 949492C311E51C6B0019BC29 /* sqExternalSemaphores.c */; };
@@ -235,7 +233,6 @@
 		949492CC11E51C6B0019BC29 /* sqTicker.c in Sources */ = {isa = PBXBuildFile; fileRef = 949492C611E51C6B0019BC29 /* sqTicker.c */; };
 		9494932F11E527180019BC29 /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494932C11E527180019BC29 /* sqUnixHeartbeat.c */; };
 		9494933011E527180019BC29 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494932D11E527180019BC29 /* sqUnixThreads.c */; };
-		9494933111E527180019BC29 /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494932E11E527180019BC29 /* sqUnixVMProfile.c */; };
 		9494933211E527180019BC29 /* sqUnixHeartbeat.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494932C11E527180019BC29 /* sqUnixHeartbeat.c */; };
 		9494933311E527180019BC29 /* sqUnixThreads.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494932D11E527180019BC29 /* sqUnixThreads.c */; };
 		9494933411E527180019BC29 /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494932E11E527180019BC29 /* sqUnixVMProfile.c */; };
@@ -358,6 +355,7 @@
 		94E65AEF0DDD053900358328 /* get.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A2B0DDD053900358328 /* get.c */; };
 		94E65AF00DDD053900358328 /* pcre.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A2E0DDD053900358328 /* pcre.c */; };
 		94E65AF40DDD053900358328 /* study.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E65A340DDD053900358328 /* study.c */; };
+		94EF6CC311E55947003BA64D /* gcc3x-interp.c in Sources */ = {isa = PBXBuildFile; fileRef = 94EF6CBE11E55947003BA64D /* gcc3x-interp.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXBuildRule section */
@@ -714,6 +712,9 @@
 		94E65A2F0DDD053900358328 /* pcre.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = pcre.h; sourceTree = "<group>"; };
 		94E65A300DDD053900358328 /* rePlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rePlugin.h; sourceTree = "<group>"; };
 		94E65A340DDD053900358328 /* study.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = study.c; sourceTree = "<group>"; };
+		94EF6CBE11E55947003BA64D /* gcc3x-interp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "gcc3x-interp.c"; path = "/Volumes/330GB Photos/Cog/stacksrc/vm/gcc3x-interp.c"; sourceTree = "<absolute>"; };
+		94EF6CBF11E55947003BA64D /* interp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = interp.c; path = "/Volumes/330GB Photos/Cog/stacksrc/vm/interp.c"; sourceTree = "<absolute>"; };
+		94EF6CC011E55947003BA64D /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = "/Volumes/330GB Photos/Cog/stacksrc/vm/interp.h"; sourceTree = "<absolute>"; };
 		94F3A9690E6BFA7C00E0B12A /* Squeak.png */ = {isa = PBXFileReference; explicitFileType = image.png; path = Squeak.png; sourceTree = "<group>"; };
 		94F8798F0E6C0C7E00662DEA /* sqSqueakIPhoneInfoPlistInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneInfoPlistInterface.h; sourceTree = "<group>"; };
 		94F879900E6C0C7E00662DEA /* sqSqueakIPhoneInfoPlistInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqSqueakIPhoneInfoPlistInterface.m; sourceTree = "<group>"; };
@@ -820,6 +821,7 @@
 			children = (
 				9424FF570DDCB17F009912BF /* platforms */,
 				94E658DC0DDD03FE00358328 /* src */,
+				94EF6CB911E55947003BA64D /* stacksrc */,
 				947E5F9310A9FF4A00D3B69E /* SqueakPureObjc_Prefix.pch */,
 			);
 			name = "Other Sources";
@@ -1198,8 +1200,9 @@
 				94883B400E0C2B9C005A4738 /* sqUnixSocket.c */,
 				949493BF11E52ADE0019BC29 /* aio.c */,
 			);
-			path = SocketPlugin;
-			sourceTree = "<group>";
+			name = SocketPlugin;
+			path = /Users/johnmci/Documents/Squeak3.8.0/platforms/unix/plugins/SocketPlugin;
+			sourceTree = "<absolute>";
 		};
 		948EC38E1155311D00B08A4F /* Resources-iPad */ = {
 			isa = PBXGroup;
@@ -1315,8 +1318,9 @@
 			children = (
 				94BCE7870DDDF61200F38F31 /* sqUnixUUID.c */,
 			);
-			path = UUIDPlugin;
-			sourceTree = "<group>";
+			name = UUIDPlugin;
+			path = /Users/johnmci/Documents/Squeak3.8.0/platforms/unix/plugins/UUIDPlugin;
+			sourceTree = "<absolute>";
 		};
 		94BCEAF10DDE16B400F38F31 /* SecurityPlugin */ = {
 			isa = PBXGroup;
@@ -1817,6 +1821,26 @@
 			path = RePlugin;
 			sourceTree = "<group>";
 		};
+		94EF6CB911E55947003BA64D /* stacksrc */ = {
+			isa = PBXGroup;
+			children = (
+				94EF6CBC11E55947003BA64D /* vm */,
+			);
+			name = stacksrc;
+			path = "/Volumes/330GB Photos/Cog/stacksrc";
+			sourceTree = "<absolute>";
+		};
+		94EF6CBC11E55947003BA64D /* vm */ = {
+			isa = PBXGroup;
+			children = (
+				94EF6CBE11E55947003BA64D /* gcc3x-interp.c */,
+				94EF6CBF11E55947003BA64D /* interp.c */,
+				94EF6CC011E55947003BA64D /* interp.h */,
+			);
+			name = vm;
+			path = "/Volumes/330GB Photos/Cog/stacksrc/vm";
+			sourceTree = "<absolute>";
+		};
 /* End PBXGroup section */
 
 /* Begin PBXNativeTarget section */
@@ -2060,15 +2084,13 @@
 				9458525610F04339001401E7 /* sqSqueakIPhoneClipboardAPI.m in Sources */,
 				9458525C10F043EB001401E7 /* sqSqueakIPhoneApplication+clipboard.m in Sources */,
 				94BD817011C8A58D00556751 /* sqManualSurface.c in Sources */,
-				9494928211E5178D0019BC29 /* cogit.c in Sources */,
-				9494928311E5178D0019BC29 /* gcc3x-cointerp.c in Sources */,
 				949492C711E51C6B0019BC29 /* sqExternalSemaphores.c in Sources */,
 				949492C811E51C6B0019BC29 /* sqHeapMap.c in Sources */,
 				949492C911E51C6B0019BC29 /* sqTicker.c in Sources */,
 				9494932F11E527180019BC29 /* sqUnixHeartbeat.c in Sources */,
 				9494933011E527180019BC29 /* sqUnixThreads.c in Sources */,
-				9494933111E527180019BC29 /* sqUnixVMProfile.c in Sources */,
 				949493C011E52ADE0019BC29 /* aio.c in Sources */,
+				94EF6CC311E55947003BA64D /* gcc3x-interp.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2292,6 +2314,11 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = SqueakNOOGLIPhone_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"STACKVM=1",
+					"COGMTVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					NO_ISNAN,
+					"BASE_HEADER_SIZE=4",
 					TARGET_OS_IS_IPHONE,
 					USE_INLINE_MEMORY_ACCESSORS,
 					HAVE_SYS_TIME_H,
@@ -2410,6 +2437,11 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = SqueakNoOGLIPhone_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					"STACKVM=1",
+					"NDEBUG=1",
+					"COGMTVM=0",
+					"USE_GLOBAL_STRUCT=0",
+					"BASE_HEADER_SIZE=4",
 					TARGET_OS_IS_IPHONE,
 					USE_INLINE_MEMORY_ACCESSORS,
 					HAVE_SYS_TIME_H,

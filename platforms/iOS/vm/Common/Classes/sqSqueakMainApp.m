@@ -158,8 +158,14 @@ isCFramePointerInUse()
 # endif /* defined(i386) || defined(__i386) || defined(__i386__) */
 
 
+#endif /* COGVM */
+
+#if !COGVM && STACKVM 
+void
+dumpPrimTraceLog(void) {};
+#endif
+
 /* Andreas' stubs */
 char* ioGetLogDirectory(void) { return ""; };
 sqInt ioSetLogDirectoryOfSize(void* lblIndex, sqInt sz){ return 1; }
 
-#endif /* COGVM */

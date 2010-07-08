@@ -156,7 +156,8 @@ extern const pthread_key_t tltiIndex;
 #ifdef __GNUC__
 # undef EXPORT
 # define EXPORT(returnType) __attribute__((visibility("default"))) returnType
-# define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")
+//# define VM_LABEL(foo) asmXXX("\n.globl L" #foo "\nL" #foo ":")
+# define VM_LABEL(foo)  
 #endif
 
 #if !defined(VM_LABEL) || COGVM

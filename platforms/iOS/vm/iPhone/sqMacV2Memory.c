@@ -63,7 +63,7 @@ __attribute__ ((visibility("default"))) char * sqMemoryBase=0;
 
  /* compute the desired memory allocation */
  
-#if !COGVM
+#if !STACKVM
 extern usqInt memory;
 #else
 usqInt	memory;
