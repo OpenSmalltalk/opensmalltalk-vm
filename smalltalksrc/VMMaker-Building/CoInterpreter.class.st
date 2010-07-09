@@ -4685,53 +4685,6 @@ CoInterpreter >> primitiveObjectAtPut [
 	self pop: 3 thenPush: newValue
 ]
 
-{ #category : #'object access primitives' }
-CoInterpreter >> primitiveObjectPointsTo [
-	"This primitive is assumed to be fast (see e.g. MethodDictionary>>includesKey:) so make it so.
-	 Override to handle Cogged methods where the method header is in the CogMethod."
-	| rcvr thang header fmt lastField methodHeader |
-	thang := self stackTop.
-	rcvr := self stackValue: 1.
-	(self isIntegerObject: rcvr) ifTrue:
-		[^self pop: 2 thenPushBool: false].
-
-	"Inlined version of lastPointerOf: for speed in determining if rcvr is a context or a compiled method."
-	header := self baseHeader: rcvr.
-	fmt := self formatOfHeader: header.
-	fmt <= 4
-		ifTrue:
-			[(fmt = 3
-			  and: [self isContextHeader: header]) 
-				ifTrue:
-	 				[(self isMarriedOrWidowedContext: rcvr) ifTrue:
-						[self externalWriteBackHeadFramePointers.
-						 (self isStillMarriedContext: rcvr) ifTrue:
-							[^self pop: 2
-									thenPushBool: (self marriedContext: rcvr
-														pointsTo: thang
-														stackDeltaForCurrentFrame: 2)]].
-					"contexts end at the stack pointer"
-					lastField := CtxtTempFrameStart + (self fetchStackPointerOf: rcvr) * BytesPerWord]
-				ifFalse:
-					[lastField := (self sizeBitsOfSafe: rcvr) - BaseHeaderSize]]
-		ifFalse:
-			[fmt <= 12 "no pointers" ifTrue:
-				[^self pop: 2 thenPushBool: false].
-			"CompiledMethod: contains both pointers and bytes; may have an associated CogMethod"
-			methodHeader := self longAt: rcvr + BaseHeaderSize.
-			(self isCogMethodReference: methodHeader) ifTrue:
-				[methodHeader := (self cCoerceSimple: methodHeader to: #'CogMethod *') methodHeader.
-				 methodHeader = thang ifTrue:
-					[^self pop: 2 thenPushBool: true]].
-			lastField := (self literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize].
-
-	BaseHeaderSize to: lastField by: BytesPerWord do:
-		[:i |
-		(self longAt: rcvr + i) = thang ifTrue:
-			[^self pop: 2 thenPushBool: true]].
-	self pop: 2 thenPushBool: false
-]
-
 { #category : #'process primitives' }
 CoInterpreter >> primitiveProfileSemaphore [
 	"Primitive. Install the semaphore to be used for profiling, 

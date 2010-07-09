@@ -1,0 +1,1561 @@
+Class {
+	#name : #ReentrantFFIPlugin,
+	#superclass : #InterpreterPlugin,
+	#instVars : [
+		'ffiLogEnabled',
+		'externalFunctionInstSize'
+	],
+	#classVars : [
+		'DefaultMaxStackSize',
+		'ExternalFunctionAddressIndex',
+		'ExternalFunctionArgTypesIndex',
+		'ExternalFunctionFlagsIndex',
+		'ExternalFunctionStackSizeIndex',
+		'MaxNumArgs'
+	],
+	#pools : [
+		'FFIConstants'
+	],
+	#category : #'VMMaker-Plugins'
+}
+
+{ #category : #translation }
+ReentrantFFIPlugin class >> ancilliaryStructClasses [
+	^{ self calloutStateClass }
+]
+
+{ #category : #translation }
+ReentrantFFIPlugin class >> calloutStateClass [
+	^ReentrantFFICalloutState
+]
+
+{ #category : #'C support code' }
+ReentrantFFIPlugin class >> hasHeaderFile [
+	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
+	^false
+]
+
+{ #category : #'class initialization' }
+ReentrantFFIPlugin class >> initialize [
+	"c.f. ExternalFunction allInstVarNames
+		old: #('handle' 'flags' 'argTypes')
+		new: #('handle' 'flags' 'argTypes' 'stackSize')"
+	ExternalFunctionAddressIndex := 0.
+	ExternalFunctionFlagsIndex := 1.
+	ExternalFunctionArgTypesIndex := 2.
+	ExternalFunctionStackSizeIndex := 3.
+
+	"c.f. e.g. CoInterpreter class initializeMiscConstants"
+	MaxNumArgs := 15.
+
+	DefaultMaxStackSize := 1024 * 16
+]
+
+{ #category : #translation }
+ReentrantFFIPlugin class >> isTypePointerToStruct: type [ "<String>"
+	^type isString and: [type beginsWith: 'CalloutState *']
+]
+
+{ #category : #accessing }
+ReentrantFFIPlugin class >> maxNumArgs [
+	^MaxNumArgs
+]
+
+{ #category : #accessing }
+ReentrantFFIPlugin class >> moduleName [
+	"IMPORTANT: IF YOU CHANGE THE NAME OF THIS PLUGIN YOU MUST CHANGE
+		Interpreter>>primitiveCalloutToFFI
+	TO REFLECT THE CHANGE."
+	^#('SqueakFFIPrims' 'FFIPlugin') first
+]
+
+{ #category : #translation }
+ReentrantFFIPlugin class >> preambleCCode [
+	"For a source of builtin defines grep for builtin_define in a gcc release config directory."
+	^'
+#include "sqAssert.h" /* for assert */
+#undef halt /* sqAssert.h provides a halt used in the interpreter */
+
+#ifdef _MSC_VER
+# define alloca _alloca
+#endif
+#if defined(__GNUC__) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
+# define setsp(sp) asm volatile ("movl %0,%%esp" : : "m"(sp))
+# define getsp() ({ void *esp; asm volatile ("movl %%esp,%0" : "=r"(esp) : ); esp;})
+#endif
+#if !defined(getsp)
+# define getsp() 0
+#endif 
+#if !defined(setsp)
+# define setsp(ignored) 0
+#endif 
+
+#if __APPLE__ && __MACH__ && __i386__
+# define STACK_ALIGN_BYTES 16
+#elif __linux__ && __i386__
+# define STACK_ALIGN_BYTES 16
+#elif defined(__amd64__) || defined(__x86_64__) ||  defined(__amd64) || defined(__x86_64)
+# define STACK_ALIGN_BYTES 16
+#elif defined(powerpc) || defined(__powerpc__) || defined(_POWER) || defined(__POWERPC__) || defined(__PPC__)
+# define STACK_ALIGN_BYTES 16
+#elif defined(__sparc64__) || defined(__sparcv9__) || defined(__sparc_v9__) /* must preceed 32-bit sparc defs */
+# define STACK_ALIGN_BYTES 16
+#elif defined(sparc) || defined(__sparc__) || defined(__sparclite__)
+# define STACK_ALIGN_BYTES 8
+#else
+# define STACK_ALIGN_BYTES 0
+#endif
+
+#if defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__)
+/* Both Mac OS X x86 and Win32 x86 return structs of a power of two in size
+ * less than or equal to eight bytes in length in registers. Linux never does so.
+ */
+# if __linux__
+#	define WIN32_X86_STRUCT_RETURN 0
+# else
+#	define WIN32_X86_STRUCT_RETURN 1
+# endif
+# if WIN32
+#	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 1
+# else
+#	define PLATFORM_API_USES_CALLEE_POPS_CONVENTION 0
+# endif
+# if defined(__MINGW32__) && (__GNUC__ >= 3)
+    /*
+     * cygwin -mno-cygwin (MinGW) gcc 3.4.x''s alloca is a library routine that answers
+     * %esp + 4, so the outgoing stack is offset by one word if uncorrected.
+     * Grab the actual stack pointer to correct.
+     */
+#	define ALLOCA_LIES_SO_USE_GETSP 1
+# endif
+#endif /* defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__) */
+
+#if !defined(ALLOCA_LIES_SO_USE_GETSP)
+# define ALLOCA_LIES_SO_USE_GETSP 0
+#endif
+
+/* The dispatchOn:in:with:with: generates an unwanted call on error.  Just squash it. */
+#define error(foo) 0
+
+/* but print assert failures. */
+void
+warning(char *s) { /* Print an error message but don''t exit. */
+	printf("\n%s\n", s);
+}
+'
+]
+
+{ #category : #translation }
+ReentrantFFIPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	"Remove the methods of ReentrantFFIPlugin any concrete subclass overrides."
+	self class ~~ thisContext methodClass ifTrue:
+		[self selectors do:
+			[:sel|
+			 (superclass includesSelector: sel) ifTrue:
+				[aCodeGen removeMethodForSelector: sel]]]
+]
+
+{ #category : #simulation }
+ReentrantFFIPlugin >> alloca: size [
+	<doNotGenerate>
+	^ByteArray new: size
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> allocaLiesSoUseGetsp [
+	"At least one alloca implementation does not answer the actual top of stack.
+	 If so we need to get the actual stack pointer.  Answer whether this is necessary."
+	<cmacro: '() ALLOCA_LIES_SO_USE_GETSP'>
+	^false
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> atomicTypeOf: typeSpec [
+	^(typeSpec bitAnd: FFIAtomicTypeMask) >> FFIAtomicTypeShift
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> cStackAlignment [
+	"Many ABIs mandate a particular stack alignment greater than the natural word size.
+	 If so, this macro will answer that alignment.  If not, this macro will answer 0.  See
+	 class-side preambleCCode."
+	<cmacro: '() STACK_ALIGN_BYTES'>
+	^0
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> cleanupCalloutState: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<returnTypeC: #void>
+	"Free any temporary arg strings."
+	<inline: true>
+	[calloutState stringArgIndex > 0] whileTrue:
+		[self free: (calloutState stringArgs at: (calloutState stringArgIndex: calloutState stringArgIndex - 1))]
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> dispatchFunctionPointer: aFunctionPointer [
+	"In C aFunctionPointer is void (*aFunctionPointer)()"
+	<cmacro: '(aFunctionPointer) (aFunctionPointer)()'>
+	^self perform: aFunctionPointer
+]
+
+{ #category : #'symbol loading' }
+ReentrantFFIPlugin >> externalFunctionHasStackSizeSlot [
+	<inline: true>
+	^externalFunctionInstSize > ExternalFunctionStackSizeIndex
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> ffiAddressOf: rcvr startingAt: byteOffset size: byteSize [
+"return an int of the address of the byteSize slot (byte, short, int, whatever) at byteOffset in rcvr. Nominally intended for use with ExternalAddress objects, this code will work (for obscure historical reasons) with plain Byte or Word Arrays as well. "
+	| rcvrClass rcvrSize addr |
+	(interpreterProxy isBytes: rcvr) ifFalse:[^interpreterProxy primitiveFail].
+	(byteOffset > 0) ifFalse:[^interpreterProxy primitiveFail].
+	rcvrClass := interpreterProxy fetchClassOf: rcvr.
+	rcvrSize := interpreterProxy byteSizeOf: rcvr.
+	rcvrClass == interpreterProxy classExternalAddress ifTrue:[
+		(rcvrSize = 4) ifFalse:[^interpreterProxy primitiveFail].
+		addr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
+		"don't you dare to read from object memory!"
+		(addr == 0 or:[interpreterProxy isInMemory: addr])
+			ifTrue:[^interpreterProxy primitiveFail].
+	] ifFalse:[
+		(byteOffset+byteSize-1 <= rcvrSize)
+			ifFalse:[^interpreterProxy primitiveFail].
+		addr := self cCoerce: (interpreterProxy firstIndexableField: rcvr) to: 'int'.
+	].
+	addr := addr + byteOffset - 1.
+	^addr
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> ffiAlloc: bytes [
+	"Default to malloc/free.  If a platform needs a different allocator define
+	 something in the preamble and redefine this to take account of that."
+	<cmacro: '(bytes) (usqInt)malloc(bytes)'>
+	^ByteArray new: bytes
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiArgByValue: oop in: calloutState [
+	"Support for generic callout. Prepare an argument by value for a callout."
+	<var: #calloutState type: #'CalloutState *'>
+	| atomicType intValue floatValue |
+	<inline: true>
+	<var: #floatValue type: #double>
+	atomicType := self atomicTypeOf: calloutState ffiArgHeader.
+	"check if the range is valid"
+	(atomicType < 0 or:[atomicType > FFITypeDoubleFloat])
+		ifTrue:[^FFIErrorBadAtomicType].
+	atomicType < FFITypeSingleFloat ifTrue:["integer types"
+		(atomicType >> 1) = (FFITypeSignedLongLong >> 1)
+			ifTrue:[intValue := oop] "ffi support code must coerce longlong"
+			ifFalse:[intValue := self ffiIntegerValueOf: oop]. "does all the coercions"
+		interpreterProxy failed ifTrue:[^FFIErrorCoercionFailed].
+		^self dispatchOn: atomicType
+			in: #(
+				ffiPushVoid:in:
+				ffiPushUnsignedInt:in:
+				ffiPushUnsignedByte:in:
+				ffiPushSignedByte:in:
+				ffiPushUnsignedShort:in:
+				ffiPushSignedShort:in:
+				ffiPushUnsignedInt:in:
+				ffiPushSignedInt:in:
+				ffiPushUnsignedLongLongOop:in:
+				ffiPushSignedLongLongOop:in:
+				ffiPushUnsignedChar:in:
+				ffiPushSignedChar:in:)
+			with: intValue
+			with: calloutState].
+	"either float or double"
+	floatValue := self ffiFloatValueOf: oop.
+	interpreterProxy failed ifTrue:
+		[^FFIErrorCoercionFailed].
+	atomicType = FFITypeSingleFloat
+		ifTrue: [^self ffiPushSingleFloat: floatValue in: calloutState]
+		ifFalse:[^self ffiPushDoubleFloat: floatValue in: calloutState]
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: calloutState [
+	"Callout support. Prepare the given oop as argument.
+	argSpec defines the compiled spec for the argument.
+	argClass (if non-nil) defines the required (super)class for the argument."
+	<var: #calloutState type: #'CalloutState *'>
+	| valueOop oopClass isStruct nilOop |
+	<inline: false>
+	oopClass := interpreterProxy fetchClassOf: oop. "Prefetch class (we'll need it)"
+	nilOop :=  interpreterProxy nilObject.
+	"Do the necessary type checks"
+	argClass == nilOop ifFalse:[
+		"Type check 1: 
+		Is the required class of the argument a subclass of ExternalStructure?"
+		(interpreterProxy includesBehavior: argClass 
+						ThatOf: interpreterProxy classExternalStructure)
+			ifFalse:[^FFIErrorWrongType]. "Nope. Fail."
+		"Type check 2:
+		Is the class of the argument a subclass of required class?"
+		((nilOop == oop) or:[interpreterProxy includesBehavior: oopClass ThatOf: argClass])
+				ifFalse:[^FFIErrorCoercionFailed]. "Nope. Fail."
+		"Okay, we've passed the type check (so far)"
+	].
+
+	"Check if oopClass is a subclass of ExternalStructure.
+	If this is the case we'll work on it's handle and not the actual oop."
+	isStruct := false.
+	((interpreterProxy isIntegerObject: oop) or:[oop == nilOop]) ifFalse:[
+		"#isPointers: will fail if oop is SmallInteger so don't even attempt to use it"
+		(interpreterProxy isPointers: oop) 
+			ifTrue:[isStruct := interpreterProxy includesBehavior: oopClass 
+								ThatOf: interpreterProxy classExternalStructure.
+					(argClass == nilOop or:[isStruct]) 
+						ifFalse:[^FFIErrorCoercionFailed]].
+		"note: the test for #isPointers: above should speed up execution since no pointer type ST objects are allowed in external calls and thus if #isPointers: is true then the arg must be ExternalStructure to work. If it isn't then the code fails anyways so speed isn't an issue"
+	].
+
+	"Determine valueOop (e.g., the actual oop to pass as argument)"
+	isStruct
+		ifTrue:[valueOop := interpreterProxy fetchPointer: 0 ofObject: oop]
+		ifFalse:[valueOop := oop].
+
+	"Fetch and check the contents of the compiled spec"
+	(interpreterProxy isIntegerObject: argSpec)
+		ifTrue:[^FFIErrorWrongType].
+	(interpreterProxy isWords: argSpec)
+		ifFalse:[^FFIErrorWrongType].
+	calloutState ffiArgSpecSize: (interpreterProxy slotSizeOf: argSpec).
+	calloutState ffiArgSpecSize = 0 ifTrue:[^FFIErrorWrongType].
+	calloutState ffiArgSpec: (interpreterProxy firstIndexableField: argSpec).
+	calloutState ffiArgHeader: (interpreterProxy longAt: calloutState ffiArgSpec).
+
+	"Do the actual preparation of the argument"
+	"Note: Order is important since FFIFlagStructure + FFIFlagPointer is used to represent 'typedef void* VoidPointer' and VoidPointer really is *struct* not pointer."
+
+	(calloutState ffiArgHeader anyMask: FFIFlagStructure) ifTrue:[
+		"argument must be ExternalStructure"
+		isStruct ifFalse:[^FFIErrorCoercionFailed].
+		(calloutState ffiArgHeader anyMask: FFIFlagAtomic) 
+			ifTrue:[^FFIErrorWrongType]. "bad combination"
+		^self ffiPushStructureContentsOf: valueOop in: calloutState].
+
+	(calloutState ffiArgHeader anyMask: FFIFlagPointer) ifTrue:[
+		"no integers for pointers please"
+		(interpreterProxy isIntegerObject: oop) 
+			ifTrue:[^FFIErrorIntAsPointer].
+
+		"but allow passing nil pointer for any pointer type"
+		oop == interpreterProxy nilObject ifTrue:[^self ffiPushPointer: nil in: calloutState].
+
+		"argument is reference to either atomic or structure type"
+		(calloutState ffiArgHeader anyMask: FFIFlagAtomic) ifTrue:[
+			isStruct "e.g., ExternalData"
+				ifTrue:[^self ffiAtomicStructByReference: oop Class: oopClass in: calloutState]
+				ifFalse:[^self ffiAtomicArgByReference: oop Class: oopClass in: calloutState].
+			"********* NOTE: The above uses 'oop' not 'valueOop' (for ExternalData) ******"
+		].
+
+		"Needs to be external structure here"
+		isStruct ifFalse:[^FFIErrorCoercionFailed].
+		^self ffiPushPointerContentsOf: valueOop in: calloutState].
+
+	(calloutState ffiArgHeader anyMask: FFIFlagAtomic) ifTrue:[
+		"argument is atomic value"
+		^self ffiArgByValue: valueOop in: calloutState].
+	"None of the above - bad spec"
+	^FFIErrorWrongType
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiAtomicArgByReference: oop Class: oopClass in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"Support for generic callout. Prepare a pointer reference to an atomic type for callout. Note: for type 'void*' we allow either one of ByteArray/String/Symbol or wordVariableSubclass."
+	| atomicType isString |
+	<inline: true>
+	atomicType := self atomicTypeOf: calloutState ffiArgHeader.
+	(atomicType = FFITypeBool) "No bools on input"
+		ifTrue:[^FFIErrorCoercionFailed].
+	((atomicType >> 1) = (FFITypeSignedChar >> 1)) ifTrue:["string value (char*)"
+		"note: the only types allowed for passing into char* types are
+		ByteArray, String, Symbol and *no* other byte indexed objects
+		(e.g., CompiledMethod, LargeInteger). We only check for strings
+		here and fall through to the byte* check otherwise."
+		isString := interpreterProxy 
+					includesBehavior: oopClass 
+					ThatOf: interpreterProxy classString.
+		isString ifTrue:["String/Symbol"
+			"Strings must be allocated by the ffi support code"
+			^self ffiPushString: (interpreterProxy firstIndexableField: oop)
+				OfLength: (interpreterProxy byteSizeOf: oop)
+				in: calloutState].
+		"Fall through to byte* test"
+		atomicType := FFITypeUnsignedByte].
+
+	(atomicType = FFITypeVoid or:[(atomicType >> 1) = (FFITypeSignedByte >> 1)]) ifTrue:[
+		"byte* -- see comment on string above"
+		oopClass = interpreterProxy classByteArray ifTrue:["ByteArray"
+			^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
+		isString := interpreterProxy includesBehavior: oopClass 
+					ThatOf: interpreterProxy classString.
+		isString ifTrue:["String/Symbol"
+			^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
+		atomicType = FFITypeVoid ifFalse:[^FFIErrorCoercionFailed].
+		"note: type void falls through"
+	].
+
+	(atomicType <= FFITypeSignedInt "void/short/int"
+		or:[atomicType = FFITypeSingleFloat]) ifTrue:[
+			"require a word subclass to work"
+			(interpreterProxy isWords: oop) ifTrue:[
+				^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState]].
+
+	^FFIErrorCoercionFailed
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiAtomicStructByReference: oop Class: oopClass in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"Support for generic callout. Prepare an external pointer reference to an atomic type for callout."
+	| atomicType err valueOop |
+	<inline: true>
+	"must be external data to pass pointers to atomic type"
+	oopClass == interpreterProxy classExternalData 
+		ifFalse:[^FFIErrorCoercionFailed].
+	atomicType := self atomicTypeOf: calloutState ffiArgHeader.
+	"no type checks for void pointers"
+	atomicType ~= FFITypeVoid ifTrue:[
+		err := self ffiValidateExternalData: oop AtomicType: atomicType.
+		err ~= 0 ifTrue:[^err].
+	].
+	"and push pointer contents"
+	valueOop := interpreterProxy fetchPointer: 0 ofObject: oop.
+	^self ffiPushPointerContentsOf: valueOop in: calloutState
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil NumArgs: nArgs [
+	"Generic callout. Does the actual work.  If argArrayOrNil is nil it takes args from the stack
+	 and the spec from the method.  If argArrayOrNil is not nil takes args from argArrayOrNil
+	 and the spec from the receiver."
+	| flags argTypeArray address argType oop argSpec argClass err theCalloutState calloutState requiredStackSize stackSize allocation result |
+	<inline: true>
+	<var: #theCalloutState type: #'CalloutState'>
+	<var: #calloutState type: #'CalloutState *'>
+	<var: #allocation type: #'char *'>
+
+	(interpreterProxy is: externalFunction KindOfClass: interpreterProxy classExternalFunction) ifFalse:
+		[^self ffiFail: FFIErrorNotFunction].
+	"Load and check the values in the externalFunction before we call out"
+	flags := interpreterProxy fetchInteger: ExternalFunctionFlagsIndex ofObject: externalFunction.
+	interpreterProxy failed ifTrue:
+		[^self ffiFail: FFIErrorBadArgs].
+	argTypeArray := interpreterProxy fetchPointer: ExternalFunctionArgTypesIndex ofObject: externalFunction.
+	"must be array of arg types"
+	((interpreterProxy isArray: argTypeArray)
+	and: [(interpreterProxy slotSizeOf: argTypeArray) = (nArgs + 1)]) ifFalse:
+		[^self ffiFail: FFIErrorBadArgs].
+	"check if the calling convention is supported"
+	(self ffiSupportsCallingConvention: flags) ifFalse:
+		[^self ffiFail: FFIErrorCallType].
+
+	address := self ffiLoadCalloutAddress: externalFunction.
+	interpreterProxy failed ifTrue:
+		[^0 "error code already set by ffiLoadCalloutAddress:"].
+	requiredStackSize := self externalFunctionHasStackSizeSlot
+							ifTrue: [interpreterProxy fetchInteger: ExternalFunctionStackSizeIndex ofObject: externalFunction]
+							ifFalse: [-1].
+	interpreterProxy failed ifTrue:
+		[^interpreterProxy primitiveFailFor: (argArrayOrNil isNil
+												ifTrue: [PrimErrBadMethod]
+												ifFalse: [PrimErrBadReceiver])].
+	stackSize := requiredStackSize < 0 ifTrue: [DefaultMaxStackSize] ifFalse: [requiredStackSize].
+	self cCode: [] inSmalltalk: [theCalloutState := self class calloutStateClass new].
+	calloutState := self addressOf: theCalloutState.
+	self cCode: [self me: calloutState ms: 0 et: (self sizeof: #CalloutState asSymbol)].
+	calloutState callFlags: flags.
+	"Fetch return type and args"
+	argType := interpreterProxy fetchPointer: 0 ofObject: argTypeArray.
+	argSpec := interpreterProxy fetchPointer: 0 ofObject: argType.
+	argClass := interpreterProxy fetchPointer: 1 ofObject: argType.
+	(err := self ffiCheckReturn: argSpec With: argClass in: calloutState) ~= 0 ifTrue:
+		[^self ffiFail: err]. "cannot return"
+	"alloca the outgoing stack frame, leaving room for register args while marshalling, and including space for the return struct, if any."
+	allocation := self alloca: stackSize + calloutState structReturnSize + self registerArgsSlop + self cStackAlignment.
+	self allocaLiesSoUseGetsp ifTrue:
+		[allocation := self getsp].
+	self cStackAlignment ~= 0 ifTrue:
+		[allocation := self cCoerce: (allocation asUnsignedInteger bitAnd: (self cStackAlignment - 1) bitInvert32)
+						to: #'char *'].
+	calloutState
+		argVector: allocation;
+		currentArg: allocation + self registerArgsSlop;
+		limit: allocation + stackSize + self registerArgsSlop.
+	(calloutState structReturnSize > 0
+	 and: [self nonRegisterStructReturnIsViaImplicitFirstArgument]) ifTrue:
+		[self ffiPushPointer: calloutState limit in: calloutState].
+	1 to: nArgs do:
+		[:i|
+		argType := interpreterProxy fetchPointer: i ofObject: argTypeArray.
+		argSpec := interpreterProxy fetchPointer: 0 ofObject: argType.
+		argClass := interpreterProxy fetchPointer: 1 ofObject: argType.
+		oop := argArrayOrNil isNil
+				ifTrue: [interpreterProxy stackValue: nArgs - i]
+				ifFalse: [interpreterProxy fetchPointer: i - 1 ofObject: argArrayOrNil].
+		err := self ffiArgument: oop Spec: argSpec Class: argClass in: calloutState.
+		err ~= 0 ifTrue:
+			[self cleanupCalloutState: calloutState.
+			 ^self ffiFail: err]]. "coercion failed or out of stack space"
+	"Failures must be reported back from ffiArgument:Spec:Class:in:.
+	 Should not fail form here on in."
+	self assert: interpreterProxy failed not.
+	self ffiLogCallout: externalFunction.
+	(requiredStackSize < 0
+	 and: [self externalFunctionHasStackSizeSlot]) ifTrue:
+		[stackSize := calloutState currentArg - calloutState argVector.
+		 interpreterProxy storeInteger: ExternalFunctionStackSizeIndex ofObject: externalFunction withValue: stackSize].
+	"Go out and call this guy"
+	result := self ffiCalloutTo: address SpecOnStack: argArrayOrNil notNil in: calloutState.
+	self cleanupCalloutState: calloutState.
+	^result
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiCalloutTo: procAddr SpecOnStack: specOnStack in: calloutState [
+	<var: #procAddr type: #'void *'>
+	<arg: #calloutState type: #'CalloutState *'>
+	"Perform the callout, collect the result and and create the return value.  If
+	 there are floating-point arguments that are passed in registers then call a
+	 dummy function to load them.  This *must* be inlined because of the alloca of
+	 the outgoing stack frame in ffiCall:SpecOnStack:Flags:NumArgs:Args:AndTypes:"
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiCheckReturn: retSpec With: retClass in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"Make sure we can return an object of the given type"
+	<inline: true>
+	| ffiRetSpec returnStructSize |
+	retClass == interpreterProxy nilObject ifFalse:[
+		(interpreterProxy includesBehavior: retClass 
+						ThatOf: interpreterProxy classExternalStructure)
+			ifFalse:[^FFIErrorBadReturn]].
+
+	(interpreterProxy isWords: retSpec)
+		ifFalse:[^FFIErrorWrongType].
+	(interpreterProxy slotSizeOf: retSpec) = 0 ifTrue:[^FFIErrorWrongType].
+	ffiRetSpec := self cCoerce: (interpreterProxy firstIndexableField: retSpec) to: #int.
+	calloutState ffiRetHeader: (interpreterProxy longAt: ffiRetSpec).
+	(self isAtomicType: calloutState ffiRetHeader) ifFalse:[
+		(retClass == interpreterProxy nilObject)
+			ifTrue:[^FFIErrorBadReturn]].
+	(calloutState ffiRetHeader bitAnd: (FFIFlagPointer | FFIFlagStructure)) = FFIFlagStructure ifTrue:
+		[returnStructSize := calloutState ffiRetHeader bitAnd: FFIStructSizeMask.
+		 (self returnStructInRegisters: returnStructSize) ifFalse:
+			[calloutState structReturnSize: returnStructSize]].
+	^0
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
+	"Make sure that the given oop is a valid external handle"
+	<inline: true>
+	(interpreterProxy isIntegerObject: oop)
+		ifTrue:[^self ffiFail: errCode].
+	(interpreterProxy isBytes: oop)
+		ifFalse:[^self ffiFail: errCode].
+	((interpreterProxy byteSizeOf: oop) == 4)
+		ifFalse:[^self ffiFail: errCode].
+	^interpreterProxy fetchPointer: 0 ofObject: oop
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiCreateIntegralResultOop: retVal ofAtomicType: atomicType in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<var: #retVal type: #usqLong>
+	"Callout support. Return the appropriate oop for the given atomic type"
+	| shift value mask byteSize |
+	self assert: atomicType < FFITypeSingleFloat.
+
+	atomicType = FFITypeBool ifTrue:[
+			"Make sure bool honors the byte size requested"
+			byteSize := calloutState ffiRetHeader bitAnd: FFIStructSizeMask.
+			value := byteSize = 4
+						ifTrue:[retVal]
+						ifFalse:[retVal bitAnd: 1 << (byteSize * 8) - 1].
+			^value = 0
+				ifTrue:[interpreterProxy falseObject]
+				ifFalse:[interpreterProxy trueObject]].
+	atomicType <= FFITypeSignedInt ifTrue:[
+		"these are all generall integer returns"
+		atomicType <= FFITypeSignedShort ifTrue:[
+			"byte/short. first extract partial word, then sign extend"
+			shift := (atomicType >> 1) * 8. "# of significant bits"
+			value := retVal bitAnd: (1 << shift - 1). 
+			(atomicType anyMask: 1) ifTrue:[
+				"make the guy signed"
+				mask := 1 << (shift-1).
+				value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+			^interpreterProxy integerObjectOf: value].
+		"32bit integer return"
+		^(atomicType anyMask: 1)
+			ifTrue:[interpreterProxy signed32BitIntegerFor: retVal] "signed return"
+			ifFalse:[interpreterProxy positive32BitIntegerFor: retVal]]. "unsigned return"
+
+	"longlong, char"
+	(atomicType >> 1) = (FFITypeSignedLongLong >> 1) 
+		ifTrue:[^(atomicType anyMask: 1)
+				ifTrue:[interpreterProxy signed64BitIntegerFor: retVal] "signed return"
+				ifFalse:[interpreterProxy positive64BitIntegerFor: retVal]]
+		ifFalse:[^interpreterProxy 
+					fetchPointer: (retVal bitAnd: 255)
+					ofObject: interpreterProxy characterTable]
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiFail: reason [
+	<inline: false>
+	"Map the FFI error code into a primitive error code.  If reason is negative it encodes one of the
+	 standard PrimErr... codes, negated to distinguish it from the FFIError codes.  If it is an FFIError...
+	 code then add the size of the primitive error table + 2 to disambiguate it from the PrimErr... codes.
+	 For historic reasons the FFIError codes range from -1 on up hence adding size + 2 maps them to
+	 size of table + 1 on up.  This OFFSET IS undone by ExternalFunction class>>externalCallFailedWith:.
+	 Thus we can communicate back both PrimErr.. and FFIError codes.  Complex but necessary.
+	 Do not record the error code because as yet there is no per-process mechanism to do this, and since
+	 the error is accessible through the primitive errror code there is no need."
+	^interpreterProxy primitiveFailFor:
+		(reason >= FFINoCalloutAvailable
+			ifTrue: [reason + 2 + (interpreterProxy slotSizeOf: interpreterProxy primitiveErrorTable)]
+			ifFalse: [reason negated])
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiFloatValueOf: oop [
+	"Support for generic callout. Return a float value that is coerced as C would do."
+	| oopClass |
+	<returnTypeC:'double'>
+	oopClass := interpreterProxy fetchClassOf: oop.
+	oopClass == interpreterProxy classFloat
+		ifTrue:[^interpreterProxy floatValueOf: oop].
+	"otherwise try the integer coercions and return its float value"
+	^(self ffiIntegerValueOf: oop) asFloat
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> ffiFree: pointer [
+	"Default to malloc/free.  If a platform needs a different allocator define
+	 something in the preamble and redefine this to take account of that."
+	<cmacro: '(pointer) free((void *)(pointer))'>
+	^self
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiIntegerValueOf: oop [
+	"Support for generic callout. Return an integer value that is coerced as C would do."
+	| oopClass |
+	<inline: true>
+	(interpreterProxy isIntegerObject: oop) ifTrue:[^interpreterProxy integerValueOf: oop].
+	oop == interpreterProxy nilObject ifTrue:[^0]. "@@: should we really allow this????"
+	oop == interpreterProxy falseObject ifTrue:[^0].
+	oop == interpreterProxy trueObject ifTrue:[^1].
+	oopClass := interpreterProxy fetchClassOf: oop.
+	oopClass == interpreterProxy classFloat
+		ifTrue:[^(interpreterProxy floatValueOf: oop) asInteger].
+	oopClass == interpreterProxy classCharacter
+		ifTrue:[^interpreterProxy fetchInteger: 0 ofObject: oop].
+	oopClass == interpreterProxy classLargePositiveInteger
+		ifTrue:[^interpreterProxy positive32BitValueOf: oop].
+	^interpreterProxy signed32BitValueOf: oop "<- will fail if not integer"
+]
+
+{ #category : #'symbol loading' }
+ReentrantFFIPlugin >> ffiLoadCalloutAddress: lit [
+	"Load the address of the foreign function from the given object"
+	| addressPtr address ptr |
+	<var: #ptr type: #'int *'>
+	"Lookup the address"
+	addressPtr := interpreterProxy fetchPointer: 0 ofObject: lit.
+	"Make sure it's an external handle"
+	address := self ffiContentsOfHandle: addressPtr errCode: FFIErrorBadAddress.
+	interpreterProxy failed ifTrue:
+		[^0].
+	address = 0 ifTrue:"Go look it up in the module"
+		[self externalFunctionHasStackSizeSlot ifTrue:
+			[interpreterProxy
+				storePointer: ExternalFunctionStackSizeIndex
+				ofObject: lit
+				withValue: (interpreterProxy integerObjectOf: -1)].
+		(interpreterProxy slotSizeOf: lit) < 5 ifTrue:
+			[^self ffiFail: FFIErrorNoModule].
+		address := self ffiLoadCalloutAddressFrom: lit.
+		interpreterProxy failed ifTrue:
+			[^0].
+		"Store back the address"
+		ptr := interpreterProxy firstIndexableField: addressPtr.
+		ptr at: 0 put: address].
+	^address
+]
+
+{ #category : #'symbol loading' }
+ReentrantFFIPlugin >> ffiLoadCalloutAddressFrom: oop [
+	"Load the function address for a call out to an external function"
+	| module moduleHandle functionName functionLength address |
+	<inline: false>
+	"First find and load the module"
+	module := interpreterProxy fetchPointer: externalFunctionInstSize + 1 ofObject: oop.
+	moduleHandle := self ffiLoadCalloutModule: module.
+	interpreterProxy failed ifTrue:
+		[^0]. "failed"
+	"fetch the function name"
+	functionName := interpreterProxy fetchPointer: externalFunctionInstSize ofObject: oop.
+	(interpreterProxy isBytes: functionName) ifFalse:
+		[^self ffiFail: FFIErrorBadExternalFunction].
+	functionLength := interpreterProxy byteSizeOf: functionName.
+	address := interpreterProxy
+					ioLoadSymbol: (self cCoerce: (interpreterProxy firstIndexableField: functionName) to: #int)
+					OfLength: functionLength 
+					FromModule: moduleHandle.
+	(interpreterProxy failed or: [address = 0]) ifTrue:
+		[^self ffiFail: FFIErrorAddressNotFound].
+	^address
+]
+
+{ #category : #'symbol loading' }
+ReentrantFFIPlugin >> ffiLoadCalloutModule: module [
+	"Load the given module and return its handle"
+	| moduleHandlePtr moduleHandle ffiModuleName moduleLength rcvr ptr |
+	<var: #ptr type:'int *'>
+	(interpreterProxy isBytes: module) ifTrue:[
+		"plain module name"
+		ffiModuleName := module.
+		moduleLength := interpreterProxy byteSizeOf: ffiModuleName.
+		moduleHandle := interpreterProxy ioLoadModule: (self cCoerce: (interpreterProxy firstIndexableField: ffiModuleName) to:'int') OfLength: moduleLength.
+		(interpreterProxy failed
+		 or: [moduleHandle = 0]) ifTrue:
+			[^self ffiFail: FFIErrorModuleNotFound]. "failed"
+		^moduleHandle].
+	"Check if the external method is defined in an external library"
+	rcvr := interpreterProxy stackValue: interpreterProxy methodArgumentCount.
+	(interpreterProxy is: rcvr KindOfClass: interpreterProxy classExternalLibrary) ifFalse:
+		[^self ffiFail: FFIErrorNoModule].
+	"external library"
+	moduleHandlePtr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
+	moduleHandle := self ffiContentsOfHandle: moduleHandlePtr errCode: FFIErrorBadExternalLibrary.
+	interpreterProxy failed ifTrue:[^0].
+	moduleHandle = 0 ifTrue:["need to reload module"
+		ffiModuleName := interpreterProxy fetchPointer: 1 ofObject: rcvr.
+		(interpreterProxy isBytes: ffiModuleName) ifFalse:[^self ffiFail: FFIErrorBadExternalLibrary].
+		moduleLength := interpreterProxy byteSizeOf: ffiModuleName.
+		moduleHandle := interpreterProxy ioLoadModule: (self cCoerce: (interpreterProxy firstIndexableField: ffiModuleName) to:'int') OfLength: moduleLength.
+		(interpreterProxy failed
+		 or: [moduleHandle = 0]) ifTrue:
+			[^self ffiFail: FFIErrorModuleNotFound]. "failed"
+		"and store back"
+		ptr := interpreterProxy firstIndexableField: moduleHandlePtr.
+		ptr at: 0 put: moduleHandle].
+	^moduleHandle
+]
+
+{ #category : #'symbol loading' }
+ReentrantFFIPlugin >> ffiLogCallout: lit [
+	<returnTypeC: #void>
+	"fetch the function name"
+	| functionName |
+	ffiLogEnabled ifTrue:[
+		functionName := interpreterProxy fetchPointer: externalFunctionInstSize ofObject: lit.
+		(interpreterProxy isBytes: functionName) ifFalse:[^nil].
+		self ffiLogCall: (interpreterProxy firstIndexableField: functionName)
+			OfLength: (interpreterProxy byteSizeOf: functionName).
+	].
+]
+
+{ #category : #initialize }
+ReentrantFFIPlugin >> ffiLogCallsTo: fileName [
+	"This is a special entry point exposed such that client code can 
+	enable and disable logging of FFI calls."
+	| ok |
+	<export: true>
+	<var: #fileName type: 'char*'>
+	fileName == nil ifTrue:[ "disable logging"
+		ok := self ffiLogFileName: nil OfLength: 0.
+		ok ifFalse:[^false].
+		ffiLogEnabled := false.
+	] ifFalse:[ "enable logging"
+		ok := self ffiLogFileName: fileName OfLength: (self strlen: fileName).
+		ok ifFalse:[^false].
+		ffiLogEnabled := true.
+	].
+	^true
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushDoubleFloat: value in: calloutState [
+	<var: #calloutState type: #double>
+	<var: #calloutState type: #'CalloutState *'>
+	^self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushPointer: pointer in: calloutState [
+	<var: #pointer type: #'void *'>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushPointerContentsOf: oop in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"Push the contents of the given external structure"
+	| ptrClass ptrAddress |
+	<inline: false>
+	ptrClass := interpreterProxy fetchClassOf: oop.
+	ptrClass == interpreterProxy classExternalAddress ifTrue:[
+		ptrAddress := interpreterProxy fetchPointer: 0 ofObject: oop.
+		"Don't you dare to pass pointers into object memory"
+		(interpreterProxy isInMemory: ptrAddress) ifTrue:
+			[^FFIErrorInvalidPointer].
+		^self ffiPushPointer: ptrAddress in: calloutState].
+
+	ptrClass == interpreterProxy classByteArray ifTrue:
+		[ptrAddress := self cCoerce: (interpreterProxy firstIndexableField: oop) to: #int.
+		^self ffiPushPointer: ptrAddress in: calloutState].
+	^FFIErrorBadArg
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushSignedByte: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushSignedChar: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushSignedInt: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushSignedLongLong: value in: calloutState [
+	<var: #value type: #sqLong>
+	<var: #calloutState type: #'CalloutState *'>
+	^self subclassResponsibility
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiPushSignedLongLongOop: oop in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"Push a longlong type (e.g., a 64bit integer).
+	Note: Coercions from float are *not* supported."
+	| value |
+	<var: #value type: #sqLong>
+	(oop == interpreterProxy nilObject
+	 or: [oop == interpreterProxy falseObject])
+		ifTrue:[value := 0] ifFalse:
+	[oop == interpreterProxy trueObject
+		ifTrue:[value := 1] ifFalse:
+	[value := interpreterProxy signed64BitValueOf: oop.
+	 interpreterProxy failed ifTrue:
+		[^FFIErrorCoercionFailed]]].
+	^self ffiPushSignedLongLong: value in: calloutState
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushSignedShort: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushSingleFloat: value in: calloutState [
+	<var: #value type: #float>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushString: pointer OfLength: length in: calloutState [
+	<var: #pointer type: #'char *'>
+	<var: #calloutState type: #'CalloutState *'>
+	| copy |
+	<var: #copy type: #'char *'>
+	<inline: true>
+	calloutState stringArgIndex >= MaxNumArgs ifTrue:
+		[^PrimErrBadNumArgs negated].
+	copy := self malloc: length + 1.
+	copy isNil ifTrue:
+		[^PrimErrNoCMemory negated].
+	self mem: copy cp: pointer y: length.
+	copy at: length put: 0.
+	calloutState stringArgs at: calloutState stringArgIndex put: copy.
+	calloutState stringArgIndex: calloutState stringArgIndex + 1.
+	^self ffiPushPointer: copy in: calloutState
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushStructure: pointer ofSize: structSize typeSpec: argSpec ofLength: argSpecSize in: calloutState [
+	<var: #pointer type: #'void *'>
+	<var: #argSpec type: #'sqInt *'>
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiPushStructureContentsOf: oop in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"Push the contents of the given external structure"
+	| ptrClass ptrAddress |
+	<inline: true>
+	ptrClass := interpreterProxy fetchClassOf: oop.
+	ptrClass == interpreterProxy classExternalAddress ifTrue:["ExternalAddress is bytes"
+		ptrAddress :=interpreterProxy fetchPointer: 0 ofObject: oop.
+		"There is no way we can make sure the structure is valid.
+		But we can at least check for attempts to pass pointers to ST memory."
+		(interpreterProxy isInMemory: ptrAddress)
+			ifTrue:[^FFIErrorInvalidPointer].
+		^self ffiPushStructure:  (self cCoerceSimple: ptrAddress to: #'void *')
+			ofSize: (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
+			typeSpec: calloutState ffiArgSpec
+			ofLength: calloutState ffiArgSpecSize
+			in: calloutState].
+	ptrClass == interpreterProxy classByteArray ifTrue:[
+		"The following is a somewhat pessimistic test but I like being sure..."
+		(interpreterProxy byteSizeOf: oop) = (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
+			ifFalse:[^FFIErrorStructSize].
+		ptrAddress := self cCoerceSimple: (interpreterProxy firstIndexableField: oop) to: #int.
+		(calloutState ffiArgHeader anyMask: FFIFlagPointer) ifFalse:[
+			^self ffiPushStructure: (self cCoerceSimple: ptrAddress to: #'void *') 
+				ofSize: (calloutState ffiArgHeader bitAnd: FFIStructSizeMask)
+				typeSpec: calloutState ffiArgSpec
+				ofLength: calloutState ffiArgSpecSize
+				in: calloutState].
+		"If FFIFlagPointer + FFIFlagStructure is set use ffiPushPointer on the contents"
+		(calloutState ffiArgHeader bitAnd: FFIStructSizeMask) = 4
+			ifFalse:[^FFIErrorStructSize].
+		ptrAddress := interpreterProxy fetchPointer: 0 ofObject: oop.
+		(interpreterProxy isInMemory: ptrAddress)
+			ifTrue:[^FFIErrorInvalidPointer].
+		^self ffiPushPointer: ptrAddress in: calloutState].
+	^FFIErrorBadArg
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushUnsignedByte: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushUnsignedChar: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushUnsignedInt: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushUnsignedLongLong: value in: calloutState [
+	<var: #value type: #usqLong>
+	^self subclassResponsibility
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiPushUnsignedLongLongOop: oop in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"Push an unsigned longlong type (e.g., a 64bit integer).
+	Note: Coercions from float are *not* supported."
+	| value |
+	<var: #value type: #usqLong>
+	(oop == interpreterProxy nilObject
+	 or: [oop == interpreterProxy falseObject])
+		ifTrue:[value := 0] ifFalse:
+	[oop == interpreterProxy trueObject
+		ifTrue:[value := 1] ifFalse:
+	[value := interpreterProxy positive64BitValueOf: oop.
+	 interpreterProxy failed ifTrue:
+		[^FFIErrorCoercionFailed]]].
+	^self ffiPushUnsignedLongLong: value in: calloutState
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiPushVoid: ignored in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	"This is a fallback in case somebody tries to pass a 'void' value.
+	We could simply ignore the argument but I think it's better to let
+	the caller know what he did"
+	^FFIErrorAttemptToPassVoid
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiReturnCStringFrom: cPointer [
+	"Create a Smalltalk string from a zero terminated C string"
+	| strLen strOop cString strPtr |
+	<var: #cString type: #'char *'>
+	<var: #strPtr type: #'char *'>
+	cPointer = nil ifTrue:[
+		^interpreterProxy methodReturnValue: interpreterProxy nilObject]. "nil always returns as nil"
+	cString := self cCoerce: cPointer to:'char *'.
+	strLen := 0.
+	[(cString at: strLen) = 0] whileFalse:[strLen := strLen+1].
+	strOop := interpreterProxy 
+				instantiateClass: interpreterProxy classString 
+				indexableSize: strLen.
+	strPtr := interpreterProxy firstIndexableField: strOop.
+	0 to: strLen-1 do:[:i| strPtr at: i put: (cString at: i)].
+	^interpreterProxy methodReturnValue: strOop
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiReturnPointer: retVal ofType: retType in: calloutState [
+	<var: #calloutState type: #'CalloutState *'>
+	<var: #retVal type: #usqLong>
+	"Generic callout support. Create a pointer return value from an external function call"
+	| retClass atomicType retOop oop ptr classOop |
+	<var: #ptr type: #'sqInt *'>
+	retClass := interpreterProxy fetchPointer: 1 ofObject: retType.
+	retClass == interpreterProxy nilObject ifTrue:[
+		"Create ExternalData upon return"
+		atomicType := self atomicTypeOf: calloutState ffiRetHeader.
+		(atomicType >> 1) = (FFITypeSignedChar >> 1) ifTrue:["String return"
+			^self ffiReturnCStringFrom: (self cCoerceSimple: retVal to: #usqInt)].
+		"generate external data"
+		interpreterProxy pushRemappableOop: retType.
+		oop := interpreterProxy 
+				instantiateClass: interpreterProxy classExternalAddress 
+				indexableSize: 4.
+		ptr := interpreterProxy firstIndexableField: oop.
+		ptr at: 0 put: (self cCoerceSimple: retVal to: #sqInt).
+		interpreterProxy pushRemappableOop: oop. "preserve for gc"
+		retOop := interpreterProxy 
+				instantiateClass: interpreterProxy classExternalData 
+				indexableSize: 0.
+		oop := interpreterProxy popRemappableOop. "external address"
+		interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
+		oop := interpreterProxy popRemappableOop. "return type"
+		interpreterProxy storePointer: 1 ofObject: retOop withValue: oop.
+		^interpreterProxy methodReturnValue: retOop.
+	].
+	"non-atomic pointer return"
+	interpreterProxy pushRemappableOop: retClass. "preserve for gc"
+	(calloutState ffiRetHeader anyMask: FFIFlagStructure)
+		ifTrue:[classOop := interpreterProxy classByteArray]
+		ifFalse:[classOop := interpreterProxy classExternalAddress].
+	oop := interpreterProxy 
+			instantiateClass: classOop
+			indexableSize: 4.
+	ptr := interpreterProxy firstIndexableField: oop.
+	ptr at: 0 put: (self cCoerceSimple: retVal to: #sqInt).
+	retClass := interpreterProxy popRemappableOop. "return class"
+	interpreterProxy pushRemappableOop: oop. "preserve for gc"
+	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
+	oop := interpreterProxy popRemappableOop. "external address"
+	interpreterProxy storePointer: 0 ofObject: retOop withValue: oop.
+	^interpreterProxy methodReturnValue: retOop
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetClass in: calloutState [
+	<var: #longLongRet type: #usqLong>
+	<var: #calloutState type: #'CalloutState *'>
+	"Create a structure return value from an external function call.  The value as been stored in
+	 alloca'ed space pointed to by the calloutState."
+	<inline: true>
+	self subclassResponsibility
+]
+
+{ #category : #'symbol loading' }
+ReentrantFFIPlugin >> ffiReturnType: specOnStack [
+	"Answer the return type object for the current invocation"
+	| specLiteral argTypes |
+	specLiteral := specOnStack
+					ifTrue: [interpreterProxy stackValue: 1]
+					ifFalse: [interpreterProxy literal: 0 ofMethod: interpreterProxy primitiveMethod].
+	argTypes := interpreterProxy fetchPointer: ExternalFunctionArgTypesIndex ofObject: specLiteral.
+	^interpreterProxy fetchPointer: 0 ofObject: argTypes
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiSupportsCallingConvention: aCallingConvention [
+	"Currently all target platforms (Mac OS X ppc or x86, linux x86, Win32) answer true
+	 for the two calling conventions, FFICallTypeCDecl FFICallTypeApi, so let's not waste
+	 time by testing for these.  The only issue is whether the FFICallTypeApi is callee pops
+	 or not (which itself is of little importance to an alloca-based implementation, but does
+	 save a few instructions if not).  Subclasses can still override if necessary."
+
+	^true "or: [aCallingConvention = FFICallTypeCDecl or: [callType == FFICallTypeApi]]"
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> ffiValidateExternalData: oop AtomicType: atomicType [
+	"Validate if the given oop (an instance of ExternalData) can be passed as a pointer to the given atomic type."
+	| ptrType specOop spec specType |
+	<inline: true>
+	ptrType := interpreterProxy fetchPointer: 1 ofObject: oop.
+	(interpreterProxy isIntegerObject: ptrType)
+		ifTrue:[^FFIErrorWrongType].
+	(interpreterProxy isPointers: ptrType)
+		ifFalse:[^FFIErrorWrongType].
+	(interpreterProxy slotSizeOf: ptrType) < 2
+		ifTrue:[^FFIErrorWrongType].
+	specOop := interpreterProxy fetchPointer: 0 ofObject: ptrType.
+	(interpreterProxy isIntegerObject: specOop)
+		ifTrue:[^FFIErrorWrongType].
+	(interpreterProxy isWords: specOop)
+		ifFalse:[^FFIErrorWrongType].
+	(interpreterProxy slotSizeOf: specOop) = 0
+		ifTrue:[^FFIErrorWrongType].
+	spec := interpreterProxy fetchPointer: 0 ofObject: specOop.
+	(self isAtomicType: spec)
+		ifFalse:[^FFIErrorWrongType].
+	specType := self atomicTypeOf: spec.
+	specType ~= atomicType ifTrue:[
+		"allow for signed/unsigned conversion but nothing else"
+		(atomicType > FFITypeBool and:[atomicType < FFITypeSingleFloat])
+			ifFalse:[^FFIErrorCoercionFailed].
+		((atomicType >> 1) = (specType >> 1))
+			ifFalse:[^FFIErrorCoercionFailed]].
+	^0
+]
+
+{ #category : #initialize }
+ReentrantFFIPlugin >> initialiseModule [
+	<export: true>
+	"By default, disable logging"
+	ffiLogEnabled := false.
+	"Get the instSize of ExternalFunction to know whether it contains a cache of the stackSize,
+	 and what the offset of ExternalLibraryFunction's functionName and moduleName slots are."
+	externalFunctionInstSize := interpreterProxy instanceSizeOf: interpreterProxy classExternalFunction.
+	self initSurfacePluginFunctionPointers.
+	^1
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> isAtomicType: typeSpec [
+	^typeSpec anyMask: FFIFlagAtomic
+]
+
+{ #category : #'callout support' }
+ReentrantFFIPlugin >> isCalleePopsConvention: callType [
+	<cmacro: '(callType) (PLATFORM_API_USES_CALLEE_POPS_CONVENTION && (callType) == FFICallTypeApi)'>
+	^callType == FFICallTypeApi
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> nonRegisterStructReturnIsViaImplicitFirstArgument [
+	"Answer if a struct returned in memory is returned to the
+	 referent of a pointer passed as an implciit first argument.
+	 It almost always is.  Subclasses can override if not."
+	^true
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveCallout [
+	"IMPORTANT: IF YOU CHANGE THE NAME OF THIS METHOD YOU MUST CHANGE
+		Interpreter>>primitiveCalloutToFFI
+	TO REFLECT THE CHANGE."
+
+	"Perform a function call to a foreign function.
+	Only invoked from method containing explicit external call spec."
+ 
+	<returnTypeC: #void>
+	<export: true>
+	| meth externalFunction |
+	meth := interpreterProxy primitiveMethod.
+	(interpreterProxy literalCountOf: meth) > 0 ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadMethod].
+	externalFunction := interpreterProxy literal: 0 ofMethod: meth.
+	self ffiCall: externalFunction ArgArrayOrNil: nil NumArgs: interpreterProxy methodArgumentCount.
+	^0
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveCalloutWithArgs [
+	"Perform a function call to a foreign function.
+	 Only invoked from ExternalFunction>>invokeWithArguments:"
+
+	<returnTypeC: #void>
+	<export: true>
+	| externalFunction argArray nArgs |
+	interpreterProxy methodArgumentCount = 1 ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadNumArgs].
+	externalFunction := interpreterProxy stackValue: 1.
+	 argArray := interpreterProxy stackValue: 0.
+	 (interpreterProxy isArray: argArray) ifFalse:
+		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	 nArgs := interpreterProxy slotSizeOf: argArray.
+	 self ffiCall: externalFunction ArgArrayOrNil: argArray NumArgs: nArgs.
+	^0
+]
+
+{ #category : #'primitives - surfaces' }
+ReentrantFFIPlugin >> primitiveCreateManualSurface [
+	"arguments: name(type, stack offset)
+		width(Integer, 4)
+		height(Integer, 3)
+		rowPitch(Integer, 2)
+		depth(Integer, 1)
+		isMSB(Boolean, 0)"
+	| width height rowPitch depth isMSB result |
+	<export: true>
+	
+	interpreterProxy methodArgumentCount == 5 ifFalse: [^interpreterProxy primitiveFail].
+	width := interpreterProxy stackIntegerValue: 4.
+	height := interpreterProxy stackIntegerValue: 3.
+	rowPitch := interpreterProxy stackIntegerValue: 2.
+	depth := interpreterProxy stackIntegerValue: 1.
+	isMSB := interpreterProxy stackObjectValue: 0.
+	isMSB := interpreterProxy booleanValueOf: isMSB. 
+	interpreterProxy failed ifTrue: [^nil].
+	
+	self touch: width; touch: height; touch: rowPitch; touch: depth; touch: isMSB.
+	
+	result := self cCode: 'createManualSurface(width, height, rowPitch, depth, isMSB)'.
+	result < 0 ifTrue: [^interpreterProxy primitiveFail].
+	result := interpreterProxy signed32BitIntegerFor: result.
+	^interpreterProxy pop: 6 thenPush: result
+	
+]
+
+{ #category : #'primitives - surfaces' }
+ReentrantFFIPlugin >> primitiveDestroyManualSurface [
+	"arguments: name(type, stack offset)
+		surfaceID(Integer, 0)"
+	| surfaceID result |
+	<export: true>
+	
+	interpreterProxy methodArgumentCount == 1 ifFalse: [^interpreterProxy primitiveFail].
+	surfaceID := interpreterProxy stackIntegerValue: 0.
+	interpreterProxy failed ifTrue: [^nil].
+	result := self destroyManualSurface: surfaceID.
+	result = 0 ifTrue: [^interpreterProxy primitiveFail].
+	^interpreterProxy pop: 1
+	
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIAllocate [
+	"Primitive. Allocate an object on the external heap."
+	| byteSize addr oop ptr |
+	<export: true>
+	<inline: false>
+	<var: #ptr type:'int *'>
+	byteSize := interpreterProxy stackIntegerValue: 0.
+	interpreterProxy failed ifTrue:[^nil].
+	addr := self ffiAlloc: byteSize.
+	addr = 0 ifTrue:[^interpreterProxy primitiveFail].
+	oop := interpreterProxy 
+			instantiateClass: interpreterProxy classExternalAddress 
+			indexableSize: 4.
+	ptr := interpreterProxy firstIndexableField: oop.
+	ptr at: 0 put: addr.
+	interpreterProxy pop: 2.
+	^interpreterProxy push: oop.
+
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIDoubleAt [
+	"Return a (signed or unsigned) n byte integer from the given byte offset."
+	| byteOffset rcvr addr floatValue |
+	<export: true>
+	<inline: false>
+	<var: #floatValue type:'double '>
+	byteOffset := interpreterProxy stackIntegerValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
+	interpreterProxy failed ifTrue:[^0].
+	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
+	interpreterProxy failed ifTrue:[^0].
+	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
+	self cCode:'((int*)(&floatValue))[1] = ((int*)addr)[1]'.
+	interpreterProxy pop: 2.
+	^interpreterProxy pushFloat: floatValue
+
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIDoubleAtPut [
+	"Return a (signed or unsigned) n byte integer from the given byte offset."
+	| byteOffset rcvr addr floatValue floatOop |
+	<export: true>
+	<inline: false>
+	<var: #floatValue type:'double '>
+	floatOop := interpreterProxy stackValue: 0.
+	(interpreterProxy isIntegerObject: floatOop)
+		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: floatOop) to:'double']
+		ifFalse:[floatValue := self cCoerce: (interpreterProxy floatValueOf: floatOop) to:'double'].
+	byteOffset := interpreterProxy stackIntegerValue: 1.
+	rcvr := interpreterProxy stackObjectValue: 2.
+	interpreterProxy failed ifTrue:[^0].
+	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 8.
+	interpreterProxy failed ifTrue:[^0].
+	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
+	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
+	interpreterProxy pop: 3.
+	^interpreterProxy push: floatOop
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIFloatAt [
+	"Return a (signed or unsigned) n byte integer from the given byte offset."
+	| byteOffset rcvr addr floatValue |
+	<export: true>
+	<inline: false>
+	<var: #floatValue type:'float '>
+	byteOffset := interpreterProxy stackIntegerValue: 0.
+	rcvr := interpreterProxy stackObjectValue: 1.
+	interpreterProxy failed ifTrue:[^0].
+	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
+	interpreterProxy failed ifTrue:[^0].
+	self cCode:'((int*)(&floatValue))[0] = ((int*)addr)[0]'.
+	interpreterProxy pop: 2.
+	^interpreterProxy pushFloat: floatValue
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIFloatAtPut [
+	"Return a (signed or unsigned) n byte integer from the given byte offset."
+	| byteOffset rcvr addr floatValue floatOop |
+	<export: true>
+	<inline: false>
+	<var: #floatValue type:'float '>
+	floatOop := interpreterProxy stackValue: 0.
+	(interpreterProxy isIntegerObject: floatOop)
+		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: floatOop) to:'float']
+		ifFalse:[floatValue := self cCoerce: (interpreterProxy floatValueOf: floatOop) to:'float'].
+	byteOffset := interpreterProxy stackIntegerValue: 1.
+	rcvr := interpreterProxy stackObjectValue: 2.
+	interpreterProxy failed ifTrue:[^0].
+	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
+	interpreterProxy failed ifTrue:[^0].
+	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
+	interpreterProxy pop: 3.
+	^interpreterProxy push: floatOop
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIFree [
+	"Primitive. Free the object pointed to on the external heap."
+	| addr oop ptr |
+	<export: true>
+	<inline: false>
+	<var: #ptr type:'int *'>
+	oop := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue:[^nil].
+	(interpreterProxy fetchClassOf: oop) = (interpreterProxy classExternalAddress)
+		ifFalse:[^interpreterProxy primitiveFail].
+	(interpreterProxy byteSizeOf: oop) = 4
+		ifFalse:[^interpreterProxy primitiveFail].
+	ptr := interpreterProxy firstIndexableField: oop.
+	addr := ptr at: 0.
+	"Don't you dare to free Squeak's memory!"
+	(addr = 0 or:[interpreterProxy isInMemory: addr])
+		ifTrue:[^interpreterProxy primitiveFail].
+	self ffiFree: addr.
+	^ptr at: 0 put: 0. "cleanup"
+
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIGetLastError [
+	"Primitive. Return the error code from a failed call to the foreign function interface.
+	 Always fail.  In the thread-enabled FFI access errors via the primitive error code."
+	<export: true>
+	<inline: false>
+	^interpreterProxy primitiveFailFor: PrimErrUnsupported
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIIntegerAt [
+	"Return a (signed or unsigned) n byte integer from the given byte offset."
+	| isSigned byteSize byteOffset rcvr addr value mask |
+	<export: true>
+	<inline: false>
+	isSigned := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
+	byteSize := interpreterProxy stackIntegerValue: 1.
+	byteOffset := interpreterProxy stackIntegerValue: 2.
+	rcvr := interpreterProxy stackObjectValue: 3.
+	interpreterProxy failed ifTrue:[^0].
+	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
+		ifFalse:[^interpreterProxy primitiveFail].
+	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
+	interpreterProxy failed ifTrue:[^0].
+	byteSize < 4 ifTrue:[
+		"short/byte"
+		byteSize = 1 
+			ifTrue:[value := interpreterProxy byteAt: addr]
+			ifFalse:[	value := self cCode: '*((short int *) addr)' 
+								inSmalltalk: [interpreterProxy shortAt: addr]].
+		isSigned ifTrue:["sign extend value"
+			mask := 1 << (byteSize * 8 - 1).
+			value := (value bitAnd: mask-1) - (value bitAnd: mask)].
+		"note: byte/short never exceed SmallInteger range"
+		value := interpreterProxy integerObjectOf: value.
+	] ifFalse:[
+		"general 32 bit integer"
+		value := interpreterProxy longAt: addr.
+		isSigned
+			ifTrue:[value := interpreterProxy signed32BitIntegerFor: value]
+			ifFalse:[value := interpreterProxy positive32BitIntegerFor: value].
+	].
+	interpreterProxy pop: 4.
+	^interpreterProxy push: value
+
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveFFIIntegerAtPut [
+	"Store a (signed or unsigned) n byte integer at the given byte offset."
+	| isSigned byteSize byteOffset rcvr addr value max valueOop |
+	<export: true>
+	<inline: false>
+	isSigned := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
+	byteSize := interpreterProxy stackIntegerValue: 1.
+	valueOop := interpreterProxy stackValue: 2.
+	byteOffset := interpreterProxy stackIntegerValue: 3.
+	rcvr := interpreterProxy stackObjectValue: 4.
+	interpreterProxy failed ifTrue:[^0].
+	(byteOffset > 0 and:[byteSize = 1 or:[byteSize = 2 or:[byteSize = 4]]])
+		ifFalse:[^interpreterProxy primitiveFail].
+	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: byteSize.
+	interpreterProxy failed ifTrue:[^0].
+	isSigned 
+		ifTrue:[value := interpreterProxy signed32BitValueOf: valueOop]
+		ifFalse:[value := interpreterProxy positive32BitValueOf: valueOop].
+	interpreterProxy failed ifTrue:[^0].
+	byteSize < 4 ifTrue:[
+		isSigned ifTrue:[
+			max := 1 << (8 * byteSize - 1).
+			value >= max ifTrue:[^interpreterProxy primitiveFail].
+			value < (0 - max) ifTrue:[^interpreterProxy primitiveFail].
+		] ifFalse:[
+			value >= (1 << (8*byteSize)) ifTrue:[^interpreterProxy primitiveFail].
+		].
+		"short/byte"
+		byteSize = 1 
+			ifTrue:[interpreterProxy byteAt: addr put: value]
+			ifFalse:[	self cCode: '*((short int *) addr) = value' 
+						inSmalltalk: [interpreterProxy shortAt: addr put: value]].
+	] ifFalse:[interpreterProxy longAt: addr put: value].
+	interpreterProxy pop: 5.
+	^interpreterProxy push: valueOop.
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveForceLoad [
+	"Primitive. Force loading the receiver (an instance of ExternalLibrary)."
+	| rcvr moduleHandlePtr moduleHandle ffiModuleName ptr |
+	<export: true>
+	<inline: false>
+	<var: #ptr type: #'int *'>
+	interpreterProxy methodArgumentCount = 0 ifFalse:
+		[^interpreterProxy primitiveFail].
+	rcvr := interpreterProxy stackValue: 0.
+	(interpreterProxy is: rcvr KindOfClass: interpreterProxy classExternalLibrary) ifFalse:
+		[^self ffiFail: FFIErrorBadExternalLibrary].
+	moduleHandlePtr := interpreterProxy fetchPointer: 0 ofObject: rcvr.
+	moduleHandle := self ffiContentsOfHandle: moduleHandlePtr errCode: FFIErrorBadExternalLibrary.
+	interpreterProxy failed ifTrue:
+		[^0].
+	ffiModuleName := interpreterProxy fetchPointer: 1 ofObject: rcvr.
+	(interpreterProxy isBytes: ffiModuleName) ifFalse:
+		[^self ffiFail: FFIErrorBadExternalLibrary].
+	moduleHandle := interpreterProxy
+						ioLoadModule: (self cCoerce: (interpreterProxy firstIndexableField: ffiModuleName) to: #int)
+						OfLength: (interpreterProxy byteSizeOf: ffiModuleName).
+	interpreterProxy failed ifTrue:[^self ffiFail: FFIErrorModuleNotFound]. "failed"
+	"and store back"
+	ptr := interpreterProxy firstIndexableField: moduleHandlePtr.
+	ptr at: 0 put: moduleHandle.
+	^0 "done"
+]
+
+{ #category : #primitives }
+ReentrantFFIPlugin >> primitiveLogCallsTo [
+	"Enable logging of FFI calls by providing it with a log file name."
+	| logFile ok |
+	<export: true>
+	interpreterProxy methodArgumentCount = 1 
+		ifFalse:[^interpreterProxy primitiveFail].
+	logFile := interpreterProxy stackObjectValue: 0.
+	logFile == interpreterProxy nilObject ifTrue:[ "disable logging"
+		ok := self ffiLogFileName: nil OfLength: 0.
+		ok ifFalse:[^interpreterProxy primitiveFail].
+		ffiLogEnabled := false.
+	] ifFalse:[ "enable logging"
+		(interpreterProxy isBytes: logFile) ifFalse:[^interpreterProxy primitiveFail].
+		ok := self ffiLogFileName: (interpreterProxy firstIndexableField: logFile)
+					OfLength: (interpreterProxy byteSizeOf: logFile).
+		ok ifFalse:[^interpreterProxy primitiveFail].
+		ffiLogEnabled := true.
+	].
+	^interpreterProxy pop: 1. "pop arg; return rcvr"
+
+]
+
+{ #category : #'primitives - surfaces' }
+ReentrantFFIPlugin >> primitiveSetManualSurfacePointer [
+	"Create a 'manual surface' data-structure.  See the ExternalForm class in the FFI package for example usage."
+	"arguments: name(type, stack offset)
+		surfaceID(Integer, 1)
+		ptr(uint32, 0)"
+	| surfaceID ptr result |
+	<export: true>
+	<var: #ptr type: #'unsigned int'>
+	
+	interpreterProxy methodArgumentCount == 2 ifFalse: [^interpreterProxy primitiveFail].
+	surfaceID := interpreterProxy stackIntegerValue: 1.
+	ptr := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifTrue: [^nil].
+
+	self touch: surfaceID; touch: ptr.
+	
+	result := self cCode: 'setManualSurfacePointer(surfaceID, (void*)ptr)'.
+	result = 0 ifTrue: [^interpreterProxy primitiveFail].
+	^interpreterProxy pop: 2
+	
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> registerArgsSlop [
+	"Answer any space needed to prevent the alloca'ed outgoing arguments marshalling area from
+	 being overwritten by any register arguments during calls during marshalling.  For example, on
+	 PowerPC, which has 8 register arguments in the calling convention, register arguments are also
+	 written to the stack.  So unless space is left for them, calls during marshalling prior to the actual
+	 callout (e.g. to interpreterProxy object manipulation routines) can end up overwriting the
+	 marshalling stack as register arguments are written to the stack during calls."
+	self subclassResponsibility
+]
+
+{ #category : #marshalling }
+ReentrantFFIPlugin >> returnStructInRegisters: returnStructSize [
+	"Answer if a struct result of a given size is returned in memory or not."
+	^self subclassResponsibility
+]
