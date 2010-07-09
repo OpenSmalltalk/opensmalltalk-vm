@@ -118,7 +118,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 #if (SQ_VI_BYTES_PER_WORD == 4)
 	NSPanel *panel;
 	if (sizeof(void*) == 8) {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/32 bits 5.7b1 (19)",
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/32 bits 5.7b2 (20)",
 												 @"Only use this VM for testing, it lacks mac menu integration.",
 												 @"Dismiss",
 												 nil,
@@ -132,13 +132,13 @@ SqueakOSXAppDelegate *gDelegateApp;
 #endif
 	NSPanel *panel;
 	if (sizeof(long) == 8) {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b1 (19)",
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b2 (20)",
 									@"Only use this VM for testing, it lacks mac menu integration.",
 									@"Dismiss",
 									nil,
 									nil);
 	} else {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.7b1 (19)",
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.7b2 (20)",
 							   @"Only use this VM for testing, it lacks mac menu integration.",
 							   @"Dismiss",
 							   nil,

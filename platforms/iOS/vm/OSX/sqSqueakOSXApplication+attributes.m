@@ -81,7 +81,13 @@ extern struct VirtualMachine* interpreterProxy;
 		case 1006:  {/* vm build string also info.plist */
 #if (SQ_VI_BYTES_PER_WORD == 4)
 			
-			return "Mac Cocoa Cog 5.8b1 07-Jul-10 >529F6B5A-DC81-4C1F-81B6-3D99741B954A<";
+#if STACKVM
+			return "Mac Cocoa Cog 5.8b2 08-Jul-10 >7BCAB029-A835-4D12-946D-4AB7083D2955<";
+//			return "Mac Cocoa Cog 5.8b1 07-Jul-10 >529F6B5A-DC81-4C1F-81B6-3D99741B954A<";
+#else
+			return "Mac Cocoa 5.7b2 08-Jul-10 >7BCAB029-A835-4D12-946D-4AB7083D2955<";
+//			return "Mac Cocoa 5.7b1 15-Jun-10 >34286DE5-3BD3-40D8-9700-4C41C772B16B<";
+#endif
 //			return "Mac Cocoa 5.7b1 15-Jun-10 >34286DE5-3BD3-40D8-9700-4C41C772B16B<";
 //			return "Mac Cocoa 5.6b1 02-Mar-10 >9E99B1C2-0B6B-4944-8B6F-74030D14F3C6<";
 //			return "Mac Cocoa 5.5b1 16-Feb-10 >2EE2964B-462A-4F66-92AF-C810216EF798<";
@@ -94,7 +100,8 @@ extern struct VirtualMachine* interpreterProxy;
 //			return "Mac Cocoa 5.1b1 25-Dec-09 >C0908D0B-4D97-47CA-9FAB-479AFC6BA978<";
 //			return "Mac Cocoa 5.0b9 02-Dec-09 >C8598ABA-DA73-4A71-836C-62C4369D5A0F<";
 #else
-			return "Mac Cocoa 5.7b1 64/64 bits 15-Jun-10 >34286DE5-3BD3-40D8-9700-4C41C772B16B<";
+			return "Mac Cocoa 5.7b2 64/64 bits 08-Jul-10 >7BCAB029-A835-4D12-946D-4AB7083D2955<";
+//			return "Mac Cocoa 5.7b1 64/64 bits 15-Jun-10 >34286DE5-3BD3-40D8-9700-4C41C772B16B<";
 //			return "Mac Cocoa 5.6b1 64/64 bits 02-Mar-10 >9E99B1C2-0B6B-4944-8B6F-74030D14F3C6<";
 //			return "Mac Cocoa 5.5b1 64/64 bits 16-Feb-10 >70984CDA-9482-4E7F-BCF0-08C635E0A7BF<";
 //			return "Mac Cocoa 5.4b2 64/64 bits 24-Jan-10 >70984CDA-9482-4E7F-BCF0-08C635E0A7BF<";
