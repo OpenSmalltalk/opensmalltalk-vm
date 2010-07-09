@@ -10093,7 +10093,9 @@ StackInterpreter >> primitiveObjectAtPut [
 
 { #category : #'object access primitives' }
 StackInterpreter >> primitiveObjectPointsTo [
-	"This primitive is assumed to be fast (see e.g. MethodDictionary>>includesKey:) so make it so"
+	"This primitive is assumed to be fast (see e.g. MethodDictionary>>includesKey:) so make it so.
+	 N.B.  Written to use literalHeaderOf: so that in Cog subclasses cogged methods (whose headers
+	 point to the machine code method) are still correctly scanned, for the header as well as literals."
 	| rcvr thang header fmt lastField methodHeader |
 	thang := self stackTop.
 	rcvr := self stackValue: 1.
@@ -10120,11 +10122,12 @@ StackInterpreter >> primitiveObjectPointsTo [
 				ifFalse:
 					[lastField := (self sizeBitsOfSafe: rcvr) - BaseHeaderSize]]
 		ifFalse:
-			[fmt <= 12 "no pointers" ifTrue:
+			[fmt < 12 "no pointers" ifTrue:
 				[^self pop: 2 thenPushBool: false].
 			"CompiledMethod: contains both pointers and bytes:"
-			methodHeader := self longAt: rcvr + BaseHeaderSize.
-			lastField := (self literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize].
+			methodHeader := self headerOf: rcvr.
+			methodHeader = thang ifTrue: [^self pop: 2 thenPushBool: true].
+			lastField := ((self literalCountOfHeader: methodHeader) + 1) * BytesPerWord].
 
 	BaseHeaderSize to: lastField by: BytesPerWord do:
 		[:i |
