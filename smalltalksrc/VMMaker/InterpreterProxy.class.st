@@ -361,6 +361,11 @@ InterpreterProxy >> initialize [
 	stack := OrderedCollection new.
 ]
 
+{ #category : #'object access' }
+InterpreterProxy >> instanceSizeOf: classObj [
+	^classObj instSize
+]
+
 { #category : #'instance creation' }
 InterpreterProxy >> instantiateClass: classPointer indexableSize: size [
 	^size = 0 
@@ -428,6 +433,12 @@ InterpreterProxy >> is: oop KindOf: aString [
 	^theClass isNil
 		ifTrue:[false]
 		ifFalse:[^oop isKindOf: theClass]
+]
+
+{ #category : #testing }
+InterpreterProxy >> is: oop KindOfClass: aClass [
+	"InterpreterProxy new is: 42 KindOfClass: Number"
+	^oop isKindOf: aClass
 ]
 
 { #category : #testing }
@@ -636,6 +647,11 @@ InterpreterProxy >> positive64BitValueOf: oop [
 		ifFalse:[^oop]
 ]
 
+{ #category : #'special objects' }
+InterpreterProxy >> primitiveErrorTable [
+	^Smalltalk primitiveErrorTable
+]
+
 { #category : #other }
 InterpreterProxy >> primitiveFail [
 	"Set general (unspecified) primitive failure."
@@ -648,6 +664,11 @@ InterpreterProxy >> primitiveFailFor: reasonCode [
 	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
 	(self confirm:'A primitive is failing -- Stop simulation?') ifTrue:[self halt].
 	^primFailCode := reasonCode
+]
+
+{ #category : #other }
+InterpreterProxy >> primitiveFailureCode [
+	^primFailCode
 ]
 
 { #category : #'object access' }
@@ -826,6 +847,11 @@ InterpreterProxy >> success: aBoolean [
 { #category : #other }
 InterpreterProxy >> superclassOf: classPointer [
 	^classPointer superclass
+]
+
+{ #category : #other }
+InterpreterProxy >> tenuringIncrementalGC [
+	Smalltalk forceTenuring; garbageCollectMost
 ]
 
 { #category : #'instance creation' }
