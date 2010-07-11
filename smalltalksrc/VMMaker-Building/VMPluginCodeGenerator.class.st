@@ -85,12 +85,24 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 	headerFiles do:[:hdr|
 		aStream nextPutAll:'#include '; nextPutAll: hdr; cr].
 
-
-	aStream nextPutAll: '
-#include "sqMemoryAccess.h"
-
-'.
+	aStream cr; nextPutAll: '#include "sqMemoryAccess.h"'; cr.
+	pluginClass preambleCCode ifNotNil:
+		[:preamble|
+		aStream cr; nextPutAll: preamble].
 	aStream cr.
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> emitCTypesOn: aStream [ 
+	"Store local type declarations on the given stream."
+	([pluginClass ancilliaryStructClasses]
+		on: MessageNotUnderstood
+		do: [:ex| ex message selector == #ancilliaryStructClasses ifTrue: [^self].
+				ex pass]) do:
+			[:structClass|
+			(pluginClass shouldGenerateTypedefFor: structClass) ifTrue:
+				[structClass printTypedefOn: aStream.
+				 aStream cr; cr]]
 ]
 
 { #category : #'C code generator' }
@@ -140,6 +152,15 @@ VMPluginCodeGenerator >> generateCodeStringForPrimitives [
 { #category : #testing }
 VMPluginCodeGenerator >> isGeneratingPluginCode [
 	^true
+]
+
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> isTypePointerToStruct: type [ "<String>"
+	^pluginClass notNil
+	  and: [[pluginClass isTypePointerToStruct: type]
+			on: MessageNotUnderstood
+			do: [:ex| ex message selector == #isTypePointerToStruct: ifTrue: [^false].
+					ex pass]]
 ]
 
 { #category : #public }

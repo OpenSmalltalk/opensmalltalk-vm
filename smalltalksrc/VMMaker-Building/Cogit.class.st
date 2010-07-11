@@ -396,9 +396,8 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		var: #traceLinkedSends
 			declareC: 'int traceLinkedSends = 2 /* prim trace log on by default */';
 		var: #cStackAlignment
-			declareC: 'int cStackAlignment = STACK_ALIGN_BYTES'.
+			declareC: 'const int cStackAlignment = STACK_ALIGN_BYTES'.
 	aCCodeGenerator
-		var: #cStackAlignment declareC: 'int cStackAlignment = STACK_ALIGN_BYTES';
 		declareVar: #CFramePointer type: #'void *';
 		declareVar: #CStackPointer type: #'void *';
 		declareVar: #EnilopmartCFP type: #'void *';
