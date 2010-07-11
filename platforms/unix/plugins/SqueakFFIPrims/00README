@@ -1,3 +1,12 @@
+WARNING: This code is obsolete.  The new ThreadedFFIPlugin code requires little
+or no support code (see platforms/Cross/plugins/SqueakFFIPlugin).  But it is
+complete only on x86 and so some of these files may be useful for reference on
+PPC.
+
+eem. 2009-11-30
+===============
+
+
 This directory contains support code for the Squeak FFI (foreign
 function interface) primitives.  You should not even be here reading
 this unless (i) the configure script refuses to include FFI support in

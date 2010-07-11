@@ -268,7 +268,7 @@ ioRelinquishProcessorForMicroseconds(int microSeconds)
 
     if (nextWakeupUsecs <= utcNow) {
 		/* if nextWakeupUsecs is non-zero the next wakeup time has already
-		 * passed and we shopuld not wait.
+		 * passed and we should not wait.
 		 */
         if (nextWakeupUsecs != 0)
 			return 0;

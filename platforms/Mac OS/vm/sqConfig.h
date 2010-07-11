@@ -1,7 +1,9 @@
 /* sqConfig.h -- platform identification and configuration */
 
-  /* For Apple's OS X, ppc version of darwin */
-#include <MacTypes.h>
+#if defined(TARGET_API_MAC_CARBON)
+  /* For Apple's OS X versions of darwin */
+# include <MacTypes.h>
+#endif
 #define macintoshSqueak 1
 
 # if defined(SQ_CONFIG_DONE)

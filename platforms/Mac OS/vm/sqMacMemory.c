@@ -82,7 +82,7 @@ sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta) {
     return sqGrowMemoryBy(memoryLimit,0-delta);
 }
 
-sqInt sqMemoryExtraBytesLeft(Boolean flag) {
+sqInt sqMemoryExtraBytesLeft(int flag) {
     if (flag) 
         return gMaxHeapSize - gHeapSize;
     else

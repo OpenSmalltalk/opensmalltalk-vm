@@ -84,6 +84,13 @@ sqInt isWeak(sqInt oop);
 sqInt isWords(sqInt oop);
 sqInt isWordsOrBytes(sqInt oop);
 sqInt includesBehaviorThatOf(sqInt aClass, sqInt aSuperClass);
+#if VM_PROXY_MINOR > 10
+sqInt isKindOfClass(sqInt oop, sqInt aClass);
+sqInt primitiveErrorTable(void);
+sqInt primitiveFailureCode(void);
+sqInt instanceSizeOf(sqInt aClass);
+sqInt tenuringIncrementalGC(void);
+#endif
 sqInt isArray(sqInt oop);
 #if IMMUTABILITY
 sqInt internalIsMutable(sqInt oop);
@@ -198,7 +205,7 @@ sqInt methodArg(sqInt index);
 sqInt objectArg(sqInt index);
 sqInt integerArg(sqInt index);
 double floatArg(sqInt index);
-void  methodReturnValue(sqInt oop);
+sqInt methodReturnValue(sqInt oop);
 sqInt topRemappableOop(void);
 
 struct VirtualMachine *VM = NULL;
@@ -225,12 +232,13 @@ void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 #endif
 
 #if COGMTVM
-sqInt disownVM(void);
-void  ownVM(sqInt disownVMResult);
+sqInt disownVM(sqInt flags);
+void  ownVM(sqInt threadIdAndFlags);
 #else
-sqInt disownVM(void) { return 1; }
-void  ownVM(sqInt disownVMResult) {}
+sqInt disownVM(sqInt flags) { return 1; }
+void  ownVM(sqInt threadIdAndFlags) {}
 #endif
+extern sqInt isYoung(sqInt);
 
 /* High-priority and synchronous ticker function support. */
 void addHighPriorityTickee(void (*ticker)(void), unsigned periodms);
@@ -268,7 +276,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->stackObjectValue = pluginStackObjectValue;
 	VM->stackValue = pluginStackValue;
 #endif
-	
+
 	/* InterpreterProxy methodsFor: 'object access' */
 	VM->argumentCountOf = argumentCountOf;
 	VM->arrayValueOf = arrayValueOf;
@@ -294,7 +302,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->stSizeOf = stSizeOf;
 	VM->storeIntegerofObjectwithValue = storeIntegerofObjectwithValue;
 	VM->storePointerofObjectwithValue = storePointerofObjectwithValue;
-	
+
 	/* InterpreterProxy methodsFor: 'testing' */
 	VM->isKindOf = isKindOf;
 	VM->isMemberOf = isMemberOf;
@@ -336,7 +344,7 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->classSemaphore = classSemaphore;
 	VM->classSmallInteger = classSmallInteger;
 	VM->classString = classString;
-	
+
 	/* InterpreterProxy methodsFor: 'instance creation' */
 	VM->clone = clone;
 	VM->instantiateClassindexableSize = instantiateClassindexableSize;
@@ -460,6 +468,12 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->addHighPriorityTickee = addHighPriorityTickee;
 	VM->addSynchronousTickee = addSynchronousTickee;
 	VM->utcMicroseconds = ioUTCMicroseconds;
+	VM->tenuringIncrementalGC = tenuringIncrementalGC;
+	VM->isYoung = isYoung;
+	VM->isKindOfClass = isKindOfClass;
+	VM->primitiveErrorTable = primitiveErrorTable;
+	VM->primitiveFailureCode = primitiveFailureCode;
+	VM->instanceSizeOf = instanceSizeOf;
 #endif
 
 	return VM;

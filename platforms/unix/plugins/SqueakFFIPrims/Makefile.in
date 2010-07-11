@@ -2,16 +2,16 @@
 # 
 # Author: ian.piumarta@inria.fr
 # 
-# Last edited: 2003-01-28 10:59:01 by piumarta on emilia.inria.fr
+# Last edited: Dec  1 2009 by eliot miranda
 
 [make_cfg]
 [make_plg]
 
-TARGET	= SqueakFFIPrims$a
+TARGET= SqueakFFIPrims$a
 
-OBJS	= SqueakFFIPrims$o ffi-test$o $(FFI_O)
+OBJS= SqueakFFIPrims$o sqFFIPlugin$o sqManualSurface$o
 
-XINCLUDES	= [includes]
+XINCLUDES= [includes]
 
 $(TARGET) : $(OBJS) Makefile
 	$(LINK) $(TARGET) $(OBJS)

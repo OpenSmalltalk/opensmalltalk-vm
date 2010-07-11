@@ -259,7 +259,7 @@ typedef struct VirtualMachine {
 #endif
 
 #if VM_PROXY_MINOR > 8
-	/* See interp.h for standard error codes. */
+	/* See interp.h and above for standard error codes. */
 	sqInt  (*primitiveFailFor)(sqInt code);
 	void (*(*setInterruptCheckChain)(void (*aFunction)(void)))();
 	sqInt  (*classAlien)(void);
@@ -276,16 +276,22 @@ typedef struct VirtualMachine {
   sqInt  (*objectArg)  (sqInt index);
   sqInt  (*integerArg) (sqInt index);
   double (*floatArg)   (sqInt index);
-  void   (*methodReturnValue) (sqInt oop);
+  sqInt  (*methodReturnValue) (sqInt oop);
   sqInt  (*topRemappableOop)  (void);
 #endif
 
 #if VM_PROXY_MINOR > 10
-  sqInt	(*disownVM)(void);
-  void	(*ownVM)   (sqInt disownVMResult);
+  sqInt	(*disownVM)(sqInt flags);
+  void	(*ownVM)   (sqInt threadIdAndFlags);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
   usqLong (*utcMicroseconds)(void);
+  sqInt (*tenuringIncrementalGC)(void);
+  sqInt (*isYoung) (sqInt anOop);
+  sqInt (*isKindOfClass)(sqInt oop, sqInt aClass);
+  sqInt (*primitiveErrorTable)(void);
+  sqInt (*primitiveFailureCode)(void);
+  sqInt (*instanceSizeOf)(sqInt aClass);
 #endif
 } VirtualMachine;
 

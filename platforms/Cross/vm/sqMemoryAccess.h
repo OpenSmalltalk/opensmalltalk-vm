@@ -145,6 +145,10 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)
+# define storeSingleFloatAtPointerfrom(i, floatVar) (*((float *) (i)) = (floatVar))
+# define fetchSingleFloatAtPointerinto(i, floatVar) ((floatVar) = *((float *) (i)))
+#define storeSingleFloatAtfrom(i, floatVar)	storeSingleFloatAtPointerfrom(pointerForOop(i), floatVar)
+#define fetchSingleFloatAtinto(i, floatVar)	fetchSingleFloatAtPointerinto(pointerForOop(i), floatVar)
 
 
 /* This doesn't belong here, but neither do 'self flag: ...'s belong in the image. */

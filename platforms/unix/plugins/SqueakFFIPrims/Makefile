@@ -1,30 +1,22 @@
-### This Makefile is NOT used to build Squeak.
-### 
-### See the file `00README' for instructions.
-### 
-### Last edited: 2003-01-30 00:02:00 by piumarta on emilia.inria.fr
+# Makefile.in for FFIPlugin on Unix
+# 
+# Author: ian.piumarta@inria.fr
+# 
+# Last edited: 16 Jun 2010 by eliot miranda
 
-CPU=	$(shell ./ffi-config -cpu)
-ABI=	$(shell ./ffi-config -abi)
-LIB=	$(shell ./ffi-config -lib)
+[make_cfg]
+[make_plg]
 
-INC=	-I../../../Cross/plugins/SqueakFFIPrims
-DEF=	-DFFI_TEST
+TARGET= SqueakFFIPrims$a
 
-CFLAGS=	-g -Wall -Wno-unused -O2 $(DEF) $(INC)
+OBJS= SqueakFFIPrims$o sqFFIPlugin$o sqManualSurface$o
 
-OBJ=	ffi-test-main.o ffi-test.o $(CPU)-$(ABI).o $(CPU)-$(ABI)-asm.o
+XINCLUDES= [includes]
 
-main : sq.h $(OBJ)
-	gcc -g -o $@ $(OBJ) $(LIB)
+$(TARGET) : $(OBJS) Makefile
+	$(LINK) $(TARGET) $(OBJS)
+	$(RANLIB) $(TARGET)
 
-libffi :
-	$(MAKE) CPU=any ABI=libffi LIB=-lffi
+[make_targets]
 
-sq.h :
-	ln -s ffi-test-sq.h sq.h
-
-%.o : Makefile
-
-clean :
-	/bin/rm -f *~ *.o main sq.h
+.force :

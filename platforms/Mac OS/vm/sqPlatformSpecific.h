@@ -29,8 +29,9 @@
 */
 
 #ifdef macintoshSqueak
-#include <Types.h>
-//#define SQUEAK_BUILTIN_PLUGIN
+#if defined(TARGET_API_MAC_CARBON)
+# include <Types.h>
+#endif
 #define ENABLE_URL_FETCH
 /* replace the image file manipulation macros with functions */
 #undef sqImageFile
@@ -58,18 +59,16 @@
 
 // CARBON
 
-    #ifdef TARGET_API_MAC_CARBON  
-        #undef TARGET_API_MAC_CARBON
-        #define TARGET_API_MAC_CARBON 1
-    #else
-      #define TARGET_API_MAC_CARBON 1
-    #endif 
-    #define ftell ftello
-    #define fseek fseeko
-    typedef FILE *sqImageFile;
+#ifdef TARGET_API_MAC_CARBON  
+# undef TARGET_API_MAC_CARBON
+# define TARGET_API_MAC_CARBON 1
+#endif 
+#define ftell ftello
+#define fseek fseeko
+typedef FILE *sqImageFile;
 
-    #undef sqFilenameFromStringOpen
-    #undef sqFilenameFromString
+#undef sqFilenameFromStringOpen
+#undef sqFilenameFromString
 void		sqFilenameFromStringOpen(char *buffer,sqInt fileIndex, long fileLength);
 void		sqFilenameFromString(char *buffer,sqInt fileIndex, long fileLength);
 void        sqImageFileClose(sqImageFile f);
@@ -100,10 +99,12 @@ usqInt	    sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize);
 /* macro to return from interpret() loop in browser plugin VM */
 #define ReturnFromInterpret() return
 
+#if defined(TARGET_API_MAC_CARBON)
 /* prototypes missing from CW11 headers */
 #include <TextUtils.h>
 void CopyPascalStringToC(ConstStr255Param src, char* dst);
 void CopyCStringToPascal(const char* src, Str255 dst);
+#endif
 
 /* undef the memory routines for our logic */
 #undef sqGrowMemoryBy
@@ -112,7 +113,7 @@ void CopyCStringToPascal(const char* src, Str255 dst);
 
 sqInt sqGrowMemoryBy(sqInt memoryLimit, sqInt delta);
 sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta);
-sqInt sqMemoryExtraBytesLeft(Boolean flag);
+sqInt sqMemoryExtraBytesLeft(int flag);
 #if COGVM
 extern void sqMakeMemoryExecutableFromTo(unsigned long, unsigned long);
 extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
