@@ -5456,6 +5456,18 @@ StackInterpreter >> is: oop KindOf: className [
 ]
 
 { #category : #'plugin primitive support' }
+StackInterpreter >> is: oop KindOfClass: aClass [
+	"Support for external primitives."
+	<api>
+	| oopClass |
+	oopClass := self fetchClassOf: oop.
+	[oopClass = self nilObject] whileFalse:
+		[oopClass == aClass ifTrue: [^true].
+		 oopClass := self superclassOf: oopClass].
+	^false
+]
+
+{ #category : #'plugin primitive support' }
 StackInterpreter >> is: oop MemberOf: className [
 	"Support for external primitives"
 	| oopClass |
@@ -8566,6 +8578,12 @@ StackInterpreter >> primitiveFailFor: reasonCode [
 	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
 	<api>
 	^primFailCode := reasonCode
+]
+
+{ #category : #'primitive support' }
+StackInterpreter >> primitiveFailureCode [
+	<api>
+	^primFailCode
 ]
 
 { #category : #'control primitives' }
