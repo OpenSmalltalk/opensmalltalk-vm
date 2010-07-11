@@ -1979,6 +1979,22 @@ ObjectMemory >> instanceAfter: objectPointer [
 ]
 
 { #category : #'interpreter access' }
+ObjectMemory >> instanceSizeOf: classObj [
+	<api>
+	"Answer the number of slots in a class.  For example the instanceSizeOf: 
+	 ClassPoint is 2, for the x & y slots. The instance size of non-pointer classes is 0."
+	| classHdr sizeHiBits byteSize |
+	self assert: (self addressCouldBeObj: classObj).
+
+	classHdr := self formatOfClass: classObj. "Low 2 bits are 0"
+
+	"Compute the size of instances of the class (used for fixed field classes only)"
+	sizeHiBits := classHdr >> 9 bitAnd: 16r300.
+	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
+	^byteSize - BaseHeaderSize / BytesPerWord
+]
+
+{ #category : #'interpreter access' }
 ObjectMemory >> instantiateClass: classPointer indexableSize: size [ 
 	"NOTE: This method supports the backward-compatible split instSize field of the 
 	class format word. The sizeHiBits will go away and other shifts change by 2 
@@ -2656,6 +2672,12 @@ ObjectMemory >> prepareForwardingTableForBecoming: array1 with: array2 twoWay: t
 	^ true
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> primitiveErrorTable [
+	<api>
+	^self splObj: PrimErrTableIndex
+]
+
 { #category : #'memory access' }
 ObjectMemory >> printMethodReferencesTo: anOop [
 	"Scan the heap printing the oops of any and all objects that refer to anOop"
@@ -3189,6 +3211,14 @@ ObjectMemory >> sweepPhase [
 		ifFalse: [compStart := firstFree].
 
 	^ survivors
+]
+
+{ #category : #'garbage collection' }
+ObjectMemory >> tenuringIncrementalGC [
+	"Do an incremental GC that tenures all surviving young objects to old space."
+	<api>
+	forceTenureFlag := true.
+	self incrementalGC
 ]
 
 { #category : #'interpreter access' }
