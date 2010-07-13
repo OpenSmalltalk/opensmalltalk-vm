@@ -713,7 +713,6 @@
 		94E65A300DDD053900358328 /* rePlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = rePlugin.h; sourceTree = "<group>"; };
 		94E65A340DDD053900358328 /* study.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = study.c; sourceTree = "<group>"; };
 		94EF6CBE11E55947003BA64D /* gcc3x-interp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = "gcc3x-interp.c"; path = "/Volumes/330GB Photos/Cog/stacksrc/vm/gcc3x-interp.c"; sourceTree = "<absolute>"; };
-		94EF6CBF11E55947003BA64D /* interp.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = interp.c; path = "/Volumes/330GB Photos/Cog/stacksrc/vm/interp.c"; sourceTree = "<absolute>"; };
 		94EF6CC011E55947003BA64D /* interp.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = interp.h; path = "/Volumes/330GB Photos/Cog/stacksrc/vm/interp.h"; sourceTree = "<absolute>"; };
 		94F3A9690E6BFA7C00E0B12A /* Squeak.png */ = {isa = PBXFileReference; explicitFileType = image.png; path = Squeak.png; sourceTree = "<group>"; };
 		94F8798F0E6C0C7E00662DEA /* sqSqueakIPhoneInfoPlistInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneInfoPlistInterface.h; sourceTree = "<group>"; };
@@ -1834,7 +1833,6 @@
 			isa = PBXGroup;
 			children = (
 				94EF6CBE11E55947003BA64D /* gcc3x-interp.c */,
-				94EF6CBF11E55947003BA64D /* interp.c */,
 				94EF6CC011E55947003BA64D /* interp.h */,
 			);
 			name = vm;
@@ -1884,7 +1882,7 @@
 /* Begin PBXProject section */
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
-			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCOGVM" */;
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCogVM" */;
 			compatibilityVersion = "Xcode 3.1";
 			hasScannedForEncodings = 1;
 			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
@@ -2315,13 +2313,14 @@
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = SqueakNOOGLIPhone_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					USE_INLINE_MEMORY_ACCESSORS,
+					"NDEBUG=1",
 					"STACKVM=1",
 					"COGMTVM=0",
 					"USE_GLOBAL_STRUCT=0",
 					NO_ISNAN,
 					"BASE_HEADER_SIZE=4",
 					TARGET_OS_IS_IPHONE,
-					USE_INLINE_MEMORY_ACCESSORS,
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
@@ -2376,6 +2375,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = i386;
+				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: John McIntosh (ET3XJAMU3R)";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_OPTIMIZATION_LEVEL = 3;
@@ -2444,7 +2444,7 @@
 					"USE_GLOBAL_STRUCT=0",
 					"BASE_HEADER_SIZE=4",
 					TARGET_OS_IS_IPHONE,
-					USE_INLINE_MEMORY_ACCESSORS,
+					XXXUSE_INLINE_MEMORY_ACCESSORS,
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
@@ -2489,7 +2489,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCOGVM" */ = {
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCogVM" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				947E5F3610A9FD0400D3B69E /* Debug */,
