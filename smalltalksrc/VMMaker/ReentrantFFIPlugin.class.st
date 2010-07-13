@@ -3,7 +3,8 @@ Class {
 	#superclass : #InterpreterPlugin,
 	#instVars : [
 		'ffiLogEnabled',
-		'externalFunctionInstSize'
+		'externalFunctionInstSize',
+		'ffiLastError'
 	],
 	#classVars : [
 		'DefaultMaxStackSize',
@@ -492,7 +493,8 @@ ReentrantFFIPlugin >> ffiCall: externalFunction ArgArrayOrNil: argArrayOrNil Num
 		currentArg: allocation + self registerArgsSlop;
 		limit: allocation + stackSize + self registerArgsSlop.
 	(calloutState structReturnSize > 0
-	 and: [self nonRegisterStructReturnIsViaImplicitFirstArgument]) ifTrue:
+	 and: [self nonRegisterStructReturnIsViaImplicitFirstArgument
+	 and: [(self returnStructInRegisters: calloutState structReturnSize) not]]) ifTrue:
 		[self ffiPushPointer: calloutState limit in: calloutState].
 	1 to: nArgs do:
 		[:i|
@@ -537,7 +539,7 @@ ReentrantFFIPlugin >> ffiCheckReturn: retSpec With: retClass in: calloutState [
 	<var: #calloutState type: #'CalloutState *'>
 	"Make sure we can return an object of the given type"
 	<inline: true>
-	| ffiRetSpec returnStructSize |
+	| ffiRetSpec |
 	retClass == interpreterProxy nilObject ifFalse:[
 		(interpreterProxy includesBehavior: retClass 
 						ThatOf: interpreterProxy classExternalStructure)
@@ -551,10 +553,8 @@ ReentrantFFIPlugin >> ffiCheckReturn: retSpec With: retClass in: calloutState [
 	(self isAtomicType: calloutState ffiRetHeader) ifFalse:[
 		(retClass == interpreterProxy nilObject)
 			ifTrue:[^FFIErrorBadReturn]].
-	(calloutState ffiRetHeader bitAnd: (FFIFlagPointer | FFIFlagStructure)) = FFIFlagStructure ifTrue:
-		[returnStructSize := calloutState ffiRetHeader bitAnd: FFIStructSizeMask.
-		 (self returnStructInRegisters: returnStructSize) ifFalse:
-			[calloutState structReturnSize: returnStructSize]].
+	(calloutState ffiRetHeader bitAnd: (FFIFlagPointer bitOr: FFIFlagStructure)) = FFIFlagStructure ifTrue:
+		[calloutState structReturnSize: (calloutState ffiRetHeader bitAnd: FFIStructSizeMask)].
 	^0
 ]
 
@@ -622,9 +622,8 @@ ReentrantFFIPlugin >> ffiFail: reason [
 	 code then add the size of the primitive error table + 2 to disambiguate it from the PrimErr... codes.
 	 For historic reasons the FFIError codes range from -1 on up hence adding size + 2 maps them to
 	 size of table + 1 on up.  This OFFSET IS undone by ExternalFunction class>>externalCallFailedWith:.
-	 Thus we can communicate back both PrimErr.. and FFIError codes.  Complex but necessary.
-	 Do not record the error code because as yet there is no per-process mechanism to do this, and since
-	 the error is accessible through the primitive errror code there is no need."
+	 Thus we can communicate back both PrimErr.. and FFIError codes.  Complex but necessary."
+	ffiLastError := reason.
 	^interpreterProxy primitiveFailFor:
 		(reason >= FFINoCalloutAvailable
 			ifTrue: [reason + 2 + (interpreterProxy slotSizeOf: interpreterProxy primitiveErrorTable)]
@@ -1276,9 +1275,7 @@ ReentrantFFIPlugin >> primitiveFFIAllocate [
 			indexableSize: 4.
 	ptr := interpreterProxy firstIndexableField: oop.
 	ptr at: 0 put: addr.
-	interpreterProxy pop: 2.
-	^interpreterProxy push: oop.
-
+	interpreterProxy pop: 2 thenPush: oop
 ]
 
 { #category : #primitives }
@@ -1318,8 +1315,7 @@ ReentrantFFIPlugin >> primitiveFFIDoubleAtPut [
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
-	interpreterProxy pop: 3.
-	^interpreterProxy push: floatOop
+	interpreterProxy pop: 3 thenPush: floatOop
 ]
 
 { #category : #primitives }
@@ -1356,8 +1352,7 @@ ReentrantFFIPlugin >> primitiveFFIFloatAtPut [
 	addr := self ffiAddressOf: rcvr startingAt: byteOffset size: 4.
 	interpreterProxy failed ifTrue:[^0].
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
-	interpreterProxy pop: 3.
-	^interpreterProxy push: floatOop
+	interpreterProxy pop: 3 thenPush: floatOop
 ]
 
 { #category : #primitives }
@@ -1386,10 +1381,12 @@ ReentrantFFIPlugin >> primitiveFFIFree [
 { #category : #primitives }
 ReentrantFFIPlugin >> primitiveFFIGetLastError [
 	"Primitive. Return the error code from a failed call to the foreign function interface.
-	 Always fail.  In the thread-enabled FFI access errors via the primitive error code."
+	 This is for backwards-compatibility.  Thread-safe access to the error code is via the
+	 primitive error code."
 	<export: true>
 	<inline: false>
-	^interpreterProxy primitiveFailFor: PrimErrUnsupported
+	interpreterProxy pop: 1.
+	^interpreterProxy pushInteger: ffiLastError
 ]
 
 { #category : #primitives }
@@ -1421,13 +1418,11 @@ ReentrantFFIPlugin >> primitiveFFIIntegerAt [
 	] ifFalse:[
 		"general 32 bit integer"
 		value := interpreterProxy longAt: addr.
-		isSigned
-			ifTrue:[value := interpreterProxy signed32BitIntegerFor: value]
-			ifFalse:[value := interpreterProxy positive32BitIntegerFor: value].
+		value := isSigned
+					ifTrue:[interpreterProxy signed32BitIntegerFor: value]
+					ifFalse:[interpreterProxy positive32BitIntegerFor: value].
 	].
-	interpreterProxy pop: 4.
-	^interpreterProxy push: value
-
+	interpreterProxy pop: 4 thenPush: value
 ]
 
 { #category : #primitives }
@@ -1464,8 +1459,7 @@ ReentrantFFIPlugin >> primitiveFFIIntegerAtPut [
 			ifFalse:[	self cCode: '*((short int *) addr) = value' 
 						inSmalltalk: [interpreterProxy shortAt: addr put: value]].
 	] ifFalse:[interpreterProxy longAt: addr put: value].
-	interpreterProxy pop: 5.
-	^interpreterProxy push: valueOop.
+	interpreterProxy pop: 5 thenPush: valueOop
 ]
 
 { #category : #primitives }
