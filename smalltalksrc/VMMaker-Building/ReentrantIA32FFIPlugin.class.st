@@ -214,14 +214,15 @@ ReentrantIA32FFIPlugin >> ffiPushUnsignedShort: value in: calloutState [
 ]
 
 { #category : #'callout support' }
-ReentrantIA32FFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetClass in: calloutState [
+ReentrantIA32FFIPlugin >> ffiReturnStruct: longLongRet ofType: ffiRetType in: calloutState [
 	<var: #longLongRet type: #usqLong>
 	<var: #calloutState type: #'CalloutState *'>
 	"Create a structure return value from an external function call.  The value as been stored in
 	 alloca'ed space pointed to by the calloutState."
-	| retOop oop |
+	| retOop retClass oop |
 	<inline: true>
-	retOop := interpreterProxy instantiateClass: ffiRetClass indexableSize: 0.
+	retClass := interpreterProxy fetchPointer: 1 ofObject: ffiRetType.
+	retOop := interpreterProxy instantiateClass: retClass indexableSize: 0.
 	interpreterProxy pushRemappableOop: retOop.
 	oop := interpreterProxy 
 			instantiateClass: interpreterProxy classByteArray 
