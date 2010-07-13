@@ -139,8 +139,7 @@ Matrix2x3Plugin >> primitiveComposeMatrix [
 	m1 := self loadArgumentMatrix: (interpreterProxy stackObjectValue: 2).
 	interpreterProxy failed ifTrue:[^nil].
 	self matrix2x3ComposeMatrix: m1 with: m2 into: m3.
-	interpreterProxy pop: 3.
-	interpreterProxy push: result.
+	interpreterProxy pop: 3 thenPush: result
 ]
 
 { #category : #primitives }
@@ -224,9 +223,8 @@ Matrix2x3Plugin >> primitiveInvertRectInto [
 	interpreterProxy failed ifFalse:[
 		dstOop := self roundAndStoreResultRect: dstOop x0: minX y0: minY x1: maxX y1: maxY].
 	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 3.
-		interpreterProxy push: dstOop.
-	].
+		interpreterProxy pop: 3 thenPush: dstOop
+	]
 ]
 
 { #category : #primitives }
@@ -343,9 +341,8 @@ Matrix2x3Plugin >> primitiveTransformRectInto [
 
 	dstOop := self roundAndStoreResultRect: dstOop x0: minX y0: minY x1: maxX y1: maxY.
 	interpreterProxy failed ifFalse:[
-		interpreterProxy pop: 3.
-		interpreterProxy push: dstOop.
-	].
+		interpreterProxy pop: 3 thenPush: dstOop
+	]
 ]
 
 { #category : #private }
@@ -356,10 +353,9 @@ Matrix2x3Plugin >> roundAndStoreResultPoint: nItemsToPop [
 	m23ResultY := m23ResultY + 0.5.
 	(self okayIntValue: m23ResultX) ifFalse:[^interpreterProxy primitiveFail].
 	(self okayIntValue: m23ResultY) ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy pop: nItemsToPop.
-	interpreterProxy push:
-		(interpreterProxy makePointwithxValue: m23ResultX asInteger 
-							yValue: m23ResultY asInteger).
+	interpreterProxy pop: nItemsToPop thenPush:
+		(interpreterProxy makePointwithxValue: m23ResultX asInteger
+							yValue: m23ResultY asInteger)
 ]
 
 { #category : #private }
