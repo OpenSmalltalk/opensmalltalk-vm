@@ -6,6 +6,10 @@
 /*****************************************************************************/
 /*****************************************************************************/
 #ifndef NO_FFI_TEST
+# include "sq.h"
+
+# define LONGLONG sqLong /* should be 64 bits */
+
 typedef struct ffiTestPoint2 {
 	int x;
 	int y;
@@ -45,19 +49,19 @@ EXPORT(LONGLONG) ffiTestLongLonga2(char c1, char c2, LONGLONG i1, LONGLONG i2);
 /* test passing characters */
 EXPORT(char) ffiTestChars(char c1, char c2, char c3, char c4) {
 	printf("4 characters came in as\nc1 = %c (%x)\nc2 = %c (%x)\nc3 = %c (%x)\nc4 = %c (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4);
-	return 'C';
+	return c1+c2;
 }
 
 /* test passing shorts */
 EXPORT(short) ffiTestShorts(short c1, short c2, short c3, short c4) {
 	printf("4 shorts came in as\ns1 = %d (%x)\ns2 = %d (%x)\ns3 = %d (%x)\ns4 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4);
-	return -42;
+	return c1+c2;
 }
 
 /* test passing ints */
 EXPORT(int) ffiTestInts(int c1, int c2, int c3, int c4) {
 	printf("4 ints came in as\ni1 = %d (%x)\ni2 = %d (%x)\ni3 = %d (%x)\ni4 = %d (%x)\n", c1, c1, c2, c2, c3, c3, c4, c4);
-	return 42;
+	return c1+c2;
 }
 
 EXPORT(int) ffiTestInts8(int c1, int c2, int c3, int c4, int c5, int c6, int c7, int c8) {

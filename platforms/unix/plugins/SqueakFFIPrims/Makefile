@@ -9,7 +9,7 @@
 
 TARGET= SqueakFFIPrims$a
 
-OBJS= SqueakFFIPrims$o sqFFIPlugin$o sqManualSurface$o
+OBJS= SqueakFFIPrims$o sqFFIPlugin$o sqManualSurface$o sqFFITestFuncs$o
 
 XINCLUDES= [includes]
 
