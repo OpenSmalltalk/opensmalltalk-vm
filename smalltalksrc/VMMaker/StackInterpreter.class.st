@@ -190,7 +190,7 @@ StackInterpreter class >> bytecodeTable [
 { #category : #translation }
 StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
-		addHeaderFile:'#if defined(WIN32)\# include <malloc.h> /* for alloca under MSVC */\#endif' withCRs;
+		addHeaderFile:'<stddef.h> /* for e.g. alloca */';
 		addHeaderFile:'<setjmp.h>';
 		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"'.
