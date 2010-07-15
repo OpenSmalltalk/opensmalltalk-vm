@@ -181,3 +181,9 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 		ifTrue: [remainder + positiveModulus]
 		ifFalse: [remainder]
 ]
+
+{ #category : #'simulation support' }
+VMClass >> sqLowLevelMFence [
+	<doNotGenerate>
+	"A no-op in the simulator"
+]
