@@ -190,8 +190,9 @@ StackInterpreter class >> bytecodeTable [
 { #category : #translation }
 StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
-		addHeaderFile:'<malloc.h> /* for alloca under MSVC */';
+		addHeaderFile:'#if defined(WIN32)\# include <malloc.h> /* for alloca under MSVC */\#endif' withCRs;
 		addHeaderFile:'<setjmp.h>';
+		addHeaderFile:'"sqMemoryFence.h"';
 		addHeaderFile:'"dispdbg.h"'.
 	aCCodeGenerator
 		var: #interpreterVersion
@@ -2511,10 +2512,12 @@ StackInterpreter >> checkForLongRunningPrimitive [
 		[longRunningPrimitiveStopUsecs := self ioUTCMicroseconds.
 		self assert: longRunningPrimitiveStopUsecs > longRunningPrimitiveStartUsecs.
 		^nil].
+	"See traceProfileState & mapProfileState."
 	longRunningPrimitiveStopUsecs = 0 ifTrue:
-		[longRunningPrimitiveCheckMethod := newMethod.
+		[longRunningPrimitiveCheckSequenceNumber := statCheckForEvents.
+		 longRunningPrimitiveCheckMethod := newMethod.
 		 longRunningPrimitiveStartUsecs := self ioUTCMicroseconds.
-		 longRunningPrimitiveCheckSequenceNumber := statCheckForEvents]
+		 self sqLowLevelMFence]
 ]
 
 { #category : #'image save/restore' }
@@ -6080,23 +6083,21 @@ StackInterpreter >> mapMachineCode [
 
 { #category : #'object memory support' }
 StackInterpreter >> mapProfileState [
-	| fwdBlock targetObj |
 	profileProcess := self remap: profileProcess.
 	profileMethod := self remap: profileMethod.
 	profileSemaphore := self remap: profileSemaphore.
-	"Since the longRunningPrimitiveCheckMethod is sampled at interrupt time it may be invalid.
-	 Be very careful with it."
-	(longRunningPrimitiveCheckMethod ~= nil
-	 and: [self isObjectForwarded: longRunningPrimitiveCheckMethod]) ifTrue:
-		["If it is invalid at this point we'd better nil it."
-		 fwdBlock := self forwardingPointerOf: longRunningPrimitiveCheckMethod.
-		 (self fwdBlockValid: fwdBlock)
-			ifTrue:
-				[targetObj := self longAt: fwdBlock.
-				 (self addressCouldBeObjWhileForwarding: targetObj)
-					ifTrue: [longRunningPrimitiveCheckMethod := targetObj]
-					ifFalse: [self voidLongRunningPrimitive: 'bad *fwd']]
-			ifFalse: [self voidLongRunningPrimitive: 'bad fwd->']].
+	"The longRunningPrimitiveCheckMethod (LRPCM) is sampled in an interrupt.  Be very careful with it.
+	  If longRunningPrimitiveCheckSequenceNumber (LRPCSN) = statCheckForEvents then LRPCM has
+	  been recenty sampled and could be mapped or not, but it must be newMethod and we can simply
+	  copy newMethod.  If LRPCSN ~= statCheckForEvents then LRPCM must be some extant object and
+	  needs to be remapped."
+	self sqLowLevelMFence.
+	longRunningPrimitiveCheckMethod ~= nil ifTrue:
+		[longRunningPrimitiveCheckMethod :=
+			longRunningPrimitiveCheckSequenceNumber = statCheckForEvents
+				ifTrue: [newMethod]
+				ifFalse: [self remap: longRunningPrimitiveCheckMethod].
+		 self sqLowLevelMFence].
 	longRunningPrimitiveCheckSemaphore ~= nil ifTrue:
 		[longRunningPrimitiveCheckSemaphore := self remap: longRunningPrimitiveCheckSemaphore]
 ]
@@ -9723,19 +9724,20 @@ StackInterpreter >> primitiveLongRunningPrimitive [
 	 of GC activity there-in, or nil if none.  Since the longRunningPrimitiveCheckMethod is
 	 sampled at interrupt time be careful to validate it before returning it."
 	<export: true>
-	| result primms gcms |
+	| lrpcm result primms gcms |
 	self methodArgumentCount = 0 ifFalse:
 		[^self primitiveFail].
+	self sqLowLevelMFence.
 	(longRunningPrimitiveStopUsecs > longRunningPrimitiveStartUsecs "a hit"
-	 and: [longRunningPrimitiveCheckMethod ~= nil					"method looks valid"
-	 and: [(self addressCouldBeObj: longRunningPrimitiveCheckMethod)
-	 and: [(self isFreeObject: longRunningPrimitiveCheckMethod) not
-	 and: [(self isCompiledMethod: longRunningPrimitiveCheckMethod)]]]])
+	 and: [(lrpcm := longRunningPrimitiveCheckMethod) ~= nil			"there is a method"
+	 and: [(self addressCouldBeObj: lrpcm)								"method looks valid"
+	 and: [(self isFreeObject: lrpcm) not
+	 and: [(self isCompiledMethod: lrpcm)]]]])
 		ifTrue: [result := self instantiateClass: (self splObj: ClassArray) indexableSize: 3.
 				primms := (longRunningPrimitiveStopUsecs - longRunningPrimitiveStartUsecs) + 500 // 1000.
 				
 				gcms := longRunningPrimitiveGCUsecs + 500 // 1000.
-				self storePointer: 0 ofObject: result withValue: longRunningPrimitiveCheckMethod.
+				self storePointer: 0 ofObject: result withValue: lrpcm.
 				self storePointerUnchecked: 1 ofObject: result withValue: (self integerObjectOf: primms).
 				self storePointerUnchecked: 2 ofObject: result withValue: (self integerObjectOf: gcms)]
 		ifFalse: [result := nilObj].
@@ -14446,11 +14448,13 @@ StackInterpreter >> traceProfileState [
 	self markAndTrace: profileMethod.
 	self markAndTrace: profileSemaphore.
 
-	"Since the longRunningPrimitiveCheckMethod is sampled at interrupt time it may be invalid.
-	 Be very careful with it."
+	"The longRunningPrimitiveCheckMethod (LRPCM) is sampled in an interrupt.  Be very careful with it.
+	  If longRunningPrimitiveCheckSequenceNumber (LRPCSN) = statCheckForEvents then LRPCM has
+	  been recenty sampled, but it must be newMethod and we don't need to trace it twice.  If LRPCSN
+	  ~= statCheckForEvents then LRPCM must be some extant object and needs to be traced."
+	self sqLowLevelMFence.
 	(longRunningPrimitiveCheckMethod ~= nil
-	 and: [(self isFreeObject: longRunningPrimitiveCheckMethod) not
-	 and: [self isCompiledMethod: longRunningPrimitiveCheckMethod]]) ifTrue:
+	 and: [longRunningPrimitiveCheckSequenceNumber ~= statCheckForEvents]) ifTrue:
 		[self markAndTrace: longRunningPrimitiveCheckMethod].
 	longRunningPrimitiveCheckSemaphore ~= nil ifTrue:
 		[self markAndTrace: longRunningPrimitiveCheckSemaphore]
@@ -14642,7 +14646,8 @@ StackInterpreter >> voidLongRunningPrimitive: reason [
 	longRunningPrimitiveCheckSequenceNumber = 0. "not strictly necessary but prevents this being inlined into checkForLongRunningPrimitive"
 	longRunningPrimitiveStartUsecs :=
 	longRunningPrimitiveStopUsecs := 0.
-	longRunningPrimitiveSignalUndelivered := true
+	longRunningPrimitiveSignalUndelivered := true.
+	self sqLowLevelMFence
 ]
 
 { #category : #'frame access' }
