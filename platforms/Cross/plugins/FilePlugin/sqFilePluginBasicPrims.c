@@ -111,7 +111,7 @@ static FILE *getFile(SQFile *f)
   return file;
 }
 #else
-# define getFile(f) ((f)->file)
+# define getFile(f) ((FILE *)((f)->file))
 #endif
 
 #if DOUBLE_WORD_ALIGNMENT
