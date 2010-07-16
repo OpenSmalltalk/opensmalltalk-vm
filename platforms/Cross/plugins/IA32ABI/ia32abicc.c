@@ -31,7 +31,7 @@ void setbaz(void *p) { baz = p; }
 void *getbaz() { return baz; }
 # endif
 #else
-# include <malloc.h> /* for valloc */
+# include <stdlib.h> /* for valloc */
 # include <sys/mman.h> /* for mprotect */
 #endif
 
