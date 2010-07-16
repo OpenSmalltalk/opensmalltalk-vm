@@ -20,3 +20,17 @@ CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
 Caution: if you previously used the mingw gnutools approach, you probably have
 a path to that 2.x gcc in your Windows PATH.  Make sure that 'which gcc' in
 cygwin is the cygwin gcc 3.4.x not the MinGW gcc 2.95.x (try gcc -v).
+
+
+3a. If you want to get the Cog VM simulator working you'll need to build the
+BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
+need to first build bochs.  WARNING: No one has tried to build the plugin on
+Win32.  You are on your own but your efforts will be warmly welcomed.
+First check-out the processor simulator source tree containing Bochs:
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
+Then build (on the Mac the following works)
+  $ cd ROOT/processors/IA32/bochs
+  $ ./conf.COG
+  $ ./makeem
+  $ cd ROOT/macbuild/BochsIA32Plugin
+  $ xcodebuild

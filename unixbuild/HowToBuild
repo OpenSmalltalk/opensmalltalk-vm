@@ -23,3 +23,17 @@ provide a way of setting priorities for the default thread scheduling policy
 SCHED_OTHER (unlike e.g. Mac OS X) and doesn't appear to allow changing the
 policy to one that does (e.g. SCHED_RR).  So for now we use the itimer
 scheme.  See platforms/unix/vm/sqUnixHeartbeat.c
+
+3c. If you want to get the Cog VM simulator working you'll need to build the
+BochsIA32Plugin/BochsIA32Plugin.xcodeproj project and to build that you'll
+need to first build bochs.  First check-out the processor simulator source tree
+containing Bochs:
+     svn co http://www.squeakvm.org/svn/squeak/branches/Cog/processors
+Then build using the following, which works on Mac OS and is hence likely to
+work on linux:
+  $ cd ROOT/processors/IA32/bochs
+  $ ./conf.COG
+  $ ./makeem
+  $ cd ROOT/macbuild/BochsIA32Plugin
+  $ xcodebuild
+
