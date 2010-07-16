@@ -375,13 +375,18 @@ tickerSleepCycle(void *ignored)
 		(void)nanosleep(&naptime, 0);
 }
 
-/* N.B. This is laziness.  If needed on other than linux one would have to
- * initializea mutexattr with PTHREAD_ERRORCHECK_MUTEX type.  We require
- * the errr check because we're lazy in preventing multiple attempts at
- * locking yield_mutex in yieldToHighPriorityTickerThread.
+/* We require the error check because we're lazy in preventing multiple
+ * attempts at locking yield_mutex in yieldToHighPriorityTickerThread.
  */
-static pthread_mutex_t yield_sync = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
-static pthread_mutex_t yield_mutex = PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP;
+#if defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP)
+# define THE_MUTEX_INITIALIZER PTHREAD_ERRORCHECK_MUTEX_INITIALIZER_NP
+#elif defined(PTHREAD_ERRORCHECK_MUTEX_INITIALIZER)
+# define THE_MUTEX_INITIALIZER PTHREAD_ERRORCHECK_MUTEX_INITIALIZER
+#else
+# define THE_MUTEX_INITIALIZER PTHREAD_MUTEX_INITIALIZER
+#endif
+static pthread_mutex_t yield_sync = THE_MUTEX_INITIALIZER;
+static pthread_mutex_t yield_mutex = THE_MUTEX_INITIALIZER;
 static pthread_cond_t yield_cond = PTHREAD_COND_INITIALIZER;
 
 /* Private to sqTicker.c ioSynchronousCheckForEvents */
