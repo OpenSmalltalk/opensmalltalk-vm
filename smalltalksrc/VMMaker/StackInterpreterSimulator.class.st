@@ -2603,6 +2603,11 @@ StackInterpreterSimulator >> testWithFramePrint [
 	self test
 ]
 
+{ #category : #'simulation only' }
+StackInterpreterSimulator >> transcript: aTranscript [
+	transcript := aTranscript
+]
+
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> transferTo: aProc [
 	"self halt."
