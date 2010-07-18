@@ -3135,6 +3135,11 @@ CogVMSimulator >> transcript [
 	^transcript
 ]
 
+{ #category : #'simulation only' }
+CogVMSimulator >> transcript: aTranscript [
+	transcript := aTranscript
+]
+
 { #category : #'interpreter shell' }
 CogVMSimulator >> unableToReadImageError [
 	self error:  'Read failed or premature end of image file'
