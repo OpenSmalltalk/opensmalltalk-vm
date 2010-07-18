@@ -3266,6 +3266,14 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	cogMethod cmType = CMMethod ifTrue:
 		[mapEntries at: cogMethod asInteger + cmNoCheckEntryOffset put: 'noCheckEntry'].
 
+	cogMethod cmType = CMClosedPIC ifTrue:
+		[mapEntries at: cogMethod asInteger + firstCPICCaseOffset put: 'ClosedPICCase0'.
+		 1 to: numPICCases - 1 do:
+			[:i|
+			mapEntries
+				at: cogMethod asInteger + firstCPICCaseOffset + (i * cPICCaseSize)
+				put: 'ClosedPICCase', i printString]].
+
 	self mapFor: cogMethod
 		performUntil: #collectMapEntry:address:into: asSymbol
 		arg: mapEntries.
