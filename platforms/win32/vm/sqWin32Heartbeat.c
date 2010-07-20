@@ -140,9 +140,9 @@ static DWORD vmThreadBaseTick;
 # define LOGSIZE 1024
 static unsigned __int64 useclog[LOGSIZE];
 static unsigned long mseclog[LOGSIZE];
-static int logClock = 1;
-static int ulogidx = -1;
-static int mlogidx = -1;
+static int logClock = 0;
+static unsigned int ulogidx = (unsigned int)-1;
+static unsigned int mlogidx = (unsigned int)-1;
 # define logusecs(usecs) do { sqLowLevelMFence(); \
 							if (logClock) useclog[++ulogidx % LOGSIZE] = (usecs); \
 						} while (0)
