@@ -193,6 +193,18 @@ addHighPriorityTickee(void (*tickee)(void), unsigned periodms)
 	sqLowLevelMFence();
 }
 
+/* If the heartbeat fails to invoke checkHighPriorityTickees in a timely manner
+ * for wahtever reason (e.g. the user has put the machine to sleep) we need to
+ * readjust the deadline, moving it forward to a delta from the current time.
+ * If we don't then the heartbeat will spin calling checkHighPriorityTickees as
+ * it inches forward at tickeePeriodUsecs.  But if we always base the deadline
+ * on the current time and for whatever reason there is a slight hiccup then all
+ * subsequent deadlines will be pushed into the future.  The HiccupThreshold of
+ * 10 seconds distinguishes between the two cases; longer than 10 seconds and we
+ * assume the system has slept.
+ */
+#define HiccupThreshold 10000000ULL /* 10 seconds */
+
 void
 checkHighPriorityTickees(usqLong utcMicrosecondClock)
 {
@@ -217,7 +229,13 @@ checkHighPriorityTickees(usqLong utcMicrosecondClock)
 			sqCompareAndSwapRes(async[i].inProgress,0,1,previousInProgress);
 			if (previousInProgress == 0) {
 				assert(async[i].inProgress);
-				async[i].tickeeDeadlineUsecs += async[i].tickeePeriodUsecs;
+				if (async[i].tickeeDeadlineUsecs + HiccupThreshold
+					< utcMicrosecondClock)
+					async[i].tickeeDeadlineUsecs
+						= utcMicrosecondClock + async[i].tickeePeriodUsecs;
+				else
+					async[i].tickeeDeadlineUsecs
+						+= async[i].tickeePeriodUsecs;
 				async[i].tickee();
 				async[i].inProgress = 0;
 			}
