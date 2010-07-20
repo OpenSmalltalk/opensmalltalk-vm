@@ -1,5 +1,4 @@
 /* sqWin32SSL.c: SqueakSSL implementation for Windows */
-
 #include <windows.h>
 #include <errno.h>
 #include <malloc.h>
@@ -141,7 +140,7 @@ static sqInt sqSetupCert(sqSSL *ssl, char *certName, int server) {
 
 	sc_cred.dwVersion = SCHANNEL_CRED_VERSION;
 	sc_cred.dwFlags = SCH_CRED_NO_DEFAULT_CREDS | SCH_CRED_MANUAL_CRED_VALIDATION;
-	sc_cred.grbitEnabledProtocols = server ? SP_PROT_TLS1_SERVER | SP_PROT_SSL3_SERVER | SP_PROT_SSL2_SERVER : 0;
+	sc_cred.grbitEnabledProtocols = server ? SP_PROT_TLS1_SERVER | SP_PROT_SSL3_SERVER : 0;
 	sc_cred.dwMinimumCipherStrength = 0;
 	sc_cred.dwMaximumCipherStrength = 0;
 
@@ -219,6 +218,8 @@ static int sqExtractPeerName(sqSSL *ssl) {
 	ssl->peerName = _strdup(tmpBuf);
 	if(ssl->loglevel) printf("sqExtractPeerName: Peer name is %s\n", ssl->peerName);
 
+	CertFreeCertificateContext(certHandle);
+
 	return 1;
 }
 
@@ -261,7 +262,7 @@ static int sqVerifyCert(sqSSL *ssl, int isServer) {
 	if(!CertGetCertificateChain(NULL, certHandle, NULL,
                                 certHandle->hCertStore,
 								&chainPara, 0, NULL, &chainContext)) {
-		/* XXXX: Does this mean the other end did not provide a cert? */
+		CertFreeCertificateContext(certHandle);
 		ssl->certFlags = SQSSL_OTHER_ISSUE;
 		goto done;
 	}
@@ -319,6 +320,8 @@ static int sqVerifyCert(sqSSL *ssl, int isServer) {
 		}
 	}
 done:
+	CertFreeCertificateChain(chainContext);
+	CertFreeCertificateContext(certHandle);
 	return 1;
 }
 
