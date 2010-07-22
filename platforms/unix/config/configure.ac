@@ -378,7 +378,7 @@ AC_SUBST(ext_plugins)
 #fi
 
 if test "${disabled_plugins}" != ""; then
-  echo ${disabled_plugins} | tr ' ' '\012' > plugins.exc
+  echo ${disabled_plugins} | tr ' ' '\012' | sort -u > plugins.exc
 fi
 
 # for some reason configure leaves an empty a.out lying around
