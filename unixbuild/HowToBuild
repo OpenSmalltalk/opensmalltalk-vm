@@ -37,3 +37,12 @@ work on linux:
   $ cd ROOT/macbuild/BochsIA32Plugin
   $ xcodebuild
 
+3d. If you're building the VM on a 64-bit OS, you'll need a compiler which can
+compile and link to 32-bit binaries. On most Linuxes the gcc-multilib package
+provides the 32-bit compiler and the ia32-libs provides the 32-bit libraries.
+You'll also have to add the -m32 switch to all gcc & g++ invocations.  The
+easiest way to do this is to add CC="gcc -m32" & CXX="g++ -m32" to the configure
+script:
+     ../../platforms/unix/config/configure CC="gcc -m32" CXX="g++ -m32" CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0" LIBS=-lpthread
+To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
+provided by the ia32-libs package.
