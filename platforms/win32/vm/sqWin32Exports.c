@@ -11,6 +11,7 @@ int primitivePluginPostURL(void);
 int primitivePluginRequestFileHandle(void);
 int primitivePluginDestroyRequest(void);
 int primitivePluginRequestState(void);
+int primitiveDnsInfo(void);
 
 extern void* stWindow;
 extern void* firstMessageHook;
@@ -29,6 +30,7 @@ void *os_exports[][3] = {
   {"","primitivePluginRequestFileHandle", primitivePluginRequestFileHandle},
   {"","primitivePluginDestroyRequest", primitivePluginDestroyRequest},
   {"","primitivePluginRequestState", primitivePluginRequestState},
+  {"","primitiveDnsInfo", primitiveDnsInfo},
   {"", "printf", printf},
   {"","stWindow", &stWindow},
   {"","firstMessageHook", &firstMessageHook},
