@@ -8230,7 +8230,7 @@ StackInterpreter >> primitiveDoNamedPrimitiveWithArgs [
 				FromModule: moduleName + BaseHeaderSize
 				OfLength: moduleLength.
 	addr = 0 ifTrue:
-		[^self primitiveFailFor: -4]. "could not find function"
+		[^self primitiveFailFor: -1]. "could not find function; answer generic failure (see below)"
 
 	"Cannot fail this primitive from now on.  Can only fail the external primitive."
 	self pushRemappableOop: (argumentArray := self popStack).
@@ -13644,10 +13644,13 @@ StackInterpreter >> signed64BitIntegerFor: integerValue [
 		ifFalse:[	largeClass := self classLargePositiveInteger.
 				magnitude := integerValue].
 
-	"Make sure to handle the most -ve value correctly.
-	 0 - most -ve = most -ve and most -ve - 1 is +ve"
+	"Make sure to handle the most -ve value correctly. 0 - most -ve = most -ve and most -ve - 1
+	 is +ve.  Alas the simple (negative or: [integerValue - 1 < 0]) fails with contemporary gcc and icc
+	 versions with optimization and sometimes without.  The shift works on all, touch wood."
 	(magnitude <= 16r7FFFFFFF
-	 and: [integerValue >= 0 or: [integerValue - 1 < 0]]) ifTrue:
+	 and: [integerValue >= 0
+		  or: [0 ~= (self cCode: [integerValue << 1]
+						inSmalltalk: [integerValue << 1 bitAnd: (1 << 64) - 1])]]) ifTrue:
 			[^self signed32BitIntegerFor: integerValue].
 
 	highWord := self cCode: 'magnitude >> 32' inSmalltalk: [magnitude >> 32]. "shift is coerced to usqInt otherwise"
@@ -13695,7 +13698,12 @@ StackInterpreter >> signed64BitValueOf: oop [
 	handle the most negative 64-bit value -9223372036854775808 specially."
 	value < 0 ifTrue:
 		[self assert: (self cCode: 'sizeof(value) == 8').
-		(negative and: [value - 1 > 0]) ifTrue: "Don't fail for -9223372036854775808/-16r8000000000000000"
+		 self assert: (self cCode: 'sizeof(value << 1) == 8').
+		"Don't fail for -9223372036854775808/-16r8000000000000000.
+		 Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
+		 with optimization and sometimes without.  The shift works on all, touch wood."
+		 (negative and: [0 = (self cCode: [value << 1]
+									inSmalltalk: [value << 1 bitAnd: (1 << 64) - 1])]) ifTrue: 
 			[^value].
 		 ^self primitiveFail].
 	^negative
