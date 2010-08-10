@@ -329,7 +329,7 @@ size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t st
 	if (f->isStdioStream)
 		interpreterProxy->ownVM(myThreadIndex);
 #endif
-	/* support for skippng back 1 chacater for stdio streams */
+	/* support for skipping back 1 character for stdio streams */
 	f->lastChar = bytesRead > 0 ? dst[bytesRead-1] : EOF;
 	f->lastOp = READ_OP;
 	return bytesRead;
