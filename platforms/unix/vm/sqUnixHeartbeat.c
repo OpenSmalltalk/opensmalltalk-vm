@@ -607,6 +607,8 @@ beatStateMachine(void *careLess)
 		struct timespec naptime = beatperiod;
 
 		while (nanosleep(&naptime, &naptime) == -1
+			/* oversleeps can return tv_sec = -1 tv_nsec approx 999999999 */
+			&& naptime.tv_sec >= 0 /* avoid undoc'ed oversleep behaviour */
 			&& (naptime.tv_sec > 0 || naptime.tv_nsec > MINSLEEPNS)) /*repeat*/
 			if (errno != EINTR) {
 				perror("nanosleep");
