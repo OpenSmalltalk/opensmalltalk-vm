@@ -50,7 +50,7 @@ ioClearProfile(void)
 # endif
 # define __USE_GNU /* to get register defines in sys/ucontext.h */
 #endif
-#include <ucontext.h>
+#include <sys/ucontext.h>
 #if  __linux__ && UNDEF__USE_GNU
 # undef __USE_GNU
 #endif
