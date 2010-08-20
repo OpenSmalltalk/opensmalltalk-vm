@@ -137,7 +137,10 @@ ioSynchronousCheckForEvents()
 		}
 }
 
-static int numAsyncTickees = 0;
+#if !ITIMER_HEARTBEAT	/* Hack; allow heartbeat to avoid */
+static					/* prodHighPriorityThread unless necessary */
+# endif					/* see platforms/unix/vm/sqUnixHeartbeat.c */
+int numAsyncTickees = 0;
 static Tickee async[NUM_ASYNCHRONOUS_TICKEES];
 
 /* Add or remove an asynchronous tickee.  If periodms is non zero add the

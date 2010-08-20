@@ -309,7 +309,17 @@ heartbeat()
 	else
 		heartbeats += 1;
 #if ITIMER_HEARTBEAT
-	{ void prodHighPriorityThread(void); prodHighPriorityThread(); }
+	/* While we use SA_RESTART to ensure system calls are restarted, this is
+	 * not universally effective.  In particular, connect calls can abort if
+	 * a system call is made in the signal handler, i.e. the pthread_kill in
+	 * prodHighPriorityThread.  So we avoid this if possible by not prodding
+	 * the high-priority thread unless there are high-priority tickees as
+	 * indicated by numAsyncTickees > 0.
+	 */
+	if (numAsyncTickees > 0) {
+		void prodHighPriorityThread(void);
+		prodHighPriorityThread();
+	}
 #else
 	checkHighPriorityTickees(utcMicrosecondClock);
 #endif

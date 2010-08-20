@@ -138,6 +138,9 @@ usqLong ioLocalMicroseconds();
 void	ioUpdateVMTimezone();
 void	ioSynchronousCheckForEvents();
 void	checkHighPriorityTickees(usqLong);
+# if ITIMER_HEARTBEAT		/* Hack; allow heartbeat to avoid */
+extern int numAsyncTickees; /* prodHighPriorityThread unless necessary */
+# endif						/* see platforms/unix/vm/sqUnixHeartbeat.c */
 void	ioGetClockLogSizeUsecsIdxMsecsIdx(sqInt*,void**,sqInt*,void**,sqInt*);
 #endif
 
