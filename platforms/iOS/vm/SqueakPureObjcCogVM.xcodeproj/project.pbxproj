@@ -1882,7 +1882,7 @@
 /* Begin PBXProject section */
 		29B97313FDCFA39411CA2CEA /* Project object */ = {
 			isa = PBXProject;
-			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCogVM" */;
+			buildConfigurationList = C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCOGVM" */;
 			compatibilityVersion = "Xcode 3.1";
 			hasScannedForEncodings = 1;
 			mainGroup = 29B97314FDCFA39411CA2CEA /* CustomTemplate */;
@@ -2290,6 +2290,7 @@
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
 				GCC_C_LANGUAGE_STANDARD = c99;
 				GCC_PREPROCESSOR_DEFINITIONS = "-DSQUEAK_BUILTIN_PLUGIN";
+				GCC_THUMB_SUPPORT = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = /usr/include/uuid;
@@ -2308,16 +2309,15 @@
 				CODE_SIGN_IDENTITY = "iPhone Developer";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer";
 				COPY_PHASE_STRIP = NO;
-				GCC_DYNAMIC_NO_PIC = NO;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
 				GCC_PREFIX_HEADER = SqueakNOOGLIPhone_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					USE_INLINE_MEMORY_ACCESSORS,
 					"NDEBUG=1",
+					xxxUSE_INLINE_MEMORY_ACCESSORS,
 					"STACKVM=1",
 					"COGMTVM=0",
-					"USE_GLOBAL_STRUCT=0",
+					"USE_GLOBAL_STRUCT=1",
 					NO_ISNAN,
 					"BASE_HEADER_SIZE=4",
 					TARGET_OS_IS_IPHONE,
@@ -2326,8 +2326,9 @@
 					SQUEAK_BUILTIN_PLUGIN,
 				);
 				GCC_THUMB_SUPPORT = NO;
+				GCC_VERSION = 4.2;
 				INFOPLIST_FILE = "Info-iPhone.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 3.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 3.1.3;
 				PRODUCT_NAME = Squeak;
 				PROVISIONING_PROFILE = "";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
@@ -2452,7 +2453,7 @@
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = 4.2;
 				INFOPLIST_FILE = "Info-iPhone.plist";
-				IPHONEOS_DEPLOYMENT_TARGET = 3.0;
+				IPHONEOS_DEPLOYMENT_TARGET = 3.1.3;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = (
 					"-fno-cse-follow-jumps",
@@ -2489,7 +2490,7 @@
 			defaultConfigurationIsVisible = 0;
 			defaultConfigurationName = Debug;
 		};
-		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCogVM" */ = {
+		C01FCF4E08A954540054247B /* Build configuration list for PBXProject "SqueakPureObjcCOGVM" */ = {
 			isa = XCConfigurationList;
 			buildConfigurations = (
 				947E5F3610A9FD0400D3B69E /* Debug */,
