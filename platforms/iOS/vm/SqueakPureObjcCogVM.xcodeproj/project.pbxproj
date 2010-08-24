@@ -238,7 +238,6 @@
 		9494933411E527180019BC29 /* sqUnixVMProfile.c in Sources */ = {isa = PBXBuildFile; fileRef = 9494932E11E527180019BC29 /* sqUnixVMProfile.c */; };
 		949493C011E52ADE0019BC29 /* aio.c in Sources */ = {isa = PBXBuildFile; fileRef = 949493BF11E52ADE0019BC29 /* aio.c */; };
 		949493C111E52ADE0019BC29 /* aio.c in Sources */ = {isa = PBXBuildFile; fileRef = 949493BF11E52ADE0019BC29 /* aio.c */; };
-		949AD14A11E542E8006D6BF4 /* SqueakPureObjc-InfoCOG.plist in Resources */ = {isa = PBXBuildFile; fileRef = 949AD14911E542E8006D6BF4 /* SqueakPureObjc-InfoCOG.plist */; };
 		94A0E8850DE5EF430071C8B9 /* sqSqueakMainApplication+imageReadWrite.m in Sources */ = {isa = PBXBuildFile; fileRef = 94A0E8840DE5EF430071C8B9 /* sqSqueakMainApplication+imageReadWrite.m */; };
 		94A0E9840DE5F1FE0071C8B9 /* sqSqueakMainApplication+screen.m in Sources */ = {isa = PBXBuildFile; fileRef = 94A0E9830DE5F1FE0071C8B9 /* sqSqueakMainApplication+screen.m */; };
 		94A1B0070E0DBE2400EB5EFC /* sqSqueakMainApplication+events.m in Sources */ = {isa = PBXBuildFile; fileRef = 94A1B0060E0DBE2400EB5EFC /* sqSqueakMainApplication+events.m */; };
@@ -1928,7 +1927,6 @@
 				9414422C10BC89440088F8AC /* SqueakScript.icns in Resources */,
 				9414422D10BC89440088F8AC /* SqueakSources.icns in Resources */,
 				94D16CB010BCF96B00A69A89 /* Credits.rtf in Resources */,
-				949AD14A11E542E8006D6BF4 /* SqueakPureObjc-InfoCOG.plist in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2379,8 +2377,7 @@
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Developer: John McIntosh (ET3XJAMU3R)";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
-				GCC_OPTIMIZATION_LEVEL = 3;
-				"GCC_OPTIMIZATION_LEVEL[arch=i386]" = s;
+				GCC_OPTIMIZATION_LEVEL = s;
 				GCC_PREFIX_HEADER = SqueakPureObjc_Prefix.pch;
 				GCC_PREPROCESSOR_DEFINITIONS = (
 					"NDEBUG=1",
@@ -2394,19 +2391,10 @@
 					SQUEAK_BUILTIN_PLUGIN,
 				);
 				GCC_VERSION = "";
-				"GCC_VERSION[arch=i386]" = 4.2;
-				ICC_DEBUG = NO;
-				ICC_OPTLEVEL = speedHLO;
-				ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION = YES;
-				ICC_OPT_PARALLEL = NO;
-				ICC_OPT_PREFETCH_INSERTION = YES;
-				ICC_OPT_PROVIDE_FRAME_PTR = NO;
-				ICC_OPT_USE_ARCH_IA32 = SSE41;
 				INFOPLIST_FILE = "SqueakPureObjc-InfoCOG.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				ONLY_ACTIVE_ARCH = NO;
-				PER_ARCH_CFLAGS_i386 = "-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS";
-				PER_ARCH_CFLAGS_ppc = "-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int";
+				PER_ARCH_CFLAGS_i386 = " -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS";
 				PRODUCT_NAME = Squeak;
 				SDKROOT = macosx10.5;
 			};

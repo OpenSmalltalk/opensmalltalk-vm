@@ -70,7 +70,11 @@ usqInt	memory;
 #endif 
 
  usqInt	sqGetAvailableMemory() {
+#if STACKVM
+	 return gMaxHeapSize - 25*1024*1024;
+#else
 	 return gMaxHeapSize;
+#endif
  }
  
  usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize, FILE * f,usqInt headersize) {
@@ -85,6 +89,8 @@ usqInt	memory;
 	 
 	 possibleLocation = (void*) (500*1024*1024);
 	 gHeapSize = gMaxHeapSize;
+	 if (desiredHeapSize > gHeapSize) 
+		 return 0;
 
 	if (gSqueakUseFileMappedMMAP) {
 		/* Lets see about mmap the image file into a chunk of memory at the 500MB boundary rounding up to the page size
@@ -122,7 +128,6 @@ usqInt	memory;
 	} else {
 		void * debug, *actually;
 		debug = mmap( possibleLocation, gMaxHeapSize+pageSize, PROT_READ | PROT_WRITE, MAP_ANON | MAP_SHARED,-1,0);
-		
 		if(debug == MAP_FAILED) {
 			fprintf(stderr, "errno %d\n", errno);
 			perror("mmap failed");
