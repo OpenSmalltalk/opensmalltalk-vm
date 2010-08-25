@@ -1778,8 +1778,8 @@ int ioSetFullScreen(int fullScreen) {
 # if defined(__GNUC__) && (defined(_X86_) || defined(i386) || defined(__i386) || defined(__i386__))
    /* GCC generates *optimal* code with a little help */
 #  if __GNUC__ >= 3
-#   define BYTE_SWAP(w) __asm__("bswap %%eax" : "=r" (w) : "r" (w))
-#   define WORD_SWAP(w) __asm__("roll $16, %%eax" : "=r" (w) : "r" (w))
+#   define BYTE_SWAP(w) __asm__("bswap %0" : "=r" (w) : "r" (w))
+#   define WORD_SWAP(w) __asm__("roll $16, %0" : "=r" (w) : "r" (w))
 #  else
 #   define BYTE_SWAP(w) __asm__("bswap %%eax" : "=eax" (w) : "eax" (w))
 #   define WORD_SWAP(w) __asm__("roll $16, %%eax" : "=eax" (w) : "eax" (w))
