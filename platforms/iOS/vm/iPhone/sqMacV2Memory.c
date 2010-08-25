@@ -77,12 +77,15 @@ usqInt	memory;
 #endif
  }
  
+static size_t pageSize;
+static size_t pageMask;
+
  usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize, FILE * f,usqInt headersize) {
 	 void  *possibleLocation,*startOfAnonymousMemory;
 	 off_t fileSize;
 	 struct stat sb;
-	 size_t pageSize= getpagesize();
-	 size_t pageMask= ~(pageSize - 1);
+	 pageSize= getpagesize();
+	 pageMask= ~(pageSize - 1);
 	 
 	#define valign(x)	((x) & pageMask)
 	#pragma unused(minHeapSize,desiredHeapSize)
@@ -176,11 +179,14 @@ size_t sqImageFileReadEntireImage(void *ptr, size_t elementSize, size_t count, s
 #endif
 
 #if COGVM
+# define roundDownToPageBoundary(v) ((v)&pageMask)
+# define roundUpToPageBoundary(v) (((v)+pageSize-1)&pageMask)
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	if (mprotect((void*)startAddr,
-				 endAddr - startAddr + 1,
+	unsigned long firstPage = roundDownToPageBoundary(startAddr);
+	if (mprotect((void *)firstPage,
+				 roundUpToPageBoundary(endAddr - firstPage),
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 }
@@ -188,8 +194,9 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	if (mprotect((void*)startAddr,
-				 endAddr - startAddr + 1,
+	unsigned long firstPage = roundDownToPageBoundary(startAddr);
+	if (mprotect((void *)firstPage,
+				 roundUpToPageBoundary(endAddr - firstPage),
 				 PROT_READ | PROT_WRITE) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
 }
