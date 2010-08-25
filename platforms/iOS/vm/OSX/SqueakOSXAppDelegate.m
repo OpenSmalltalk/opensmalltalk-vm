@@ -71,9 +71,14 @@ SqueakOSXAppDelegate *gDelegateApp;
 
 	// Run the squeak process in a worker thread
 	
-	[NSThread detachNewThreadSelector: @selector(runSqueak)
-							 toTarget:	self.squeakApplication
-						   withObject:	NULL]; 
+	NSThread* myThread = [[NSThread alloc] initWithTarget: self.squeakApplication
+												 selector: @selector(runSqueak)
+												   object:nil];
+#if COGVM
+	[myThread setStackSize: [myThread stackSize]*4];
+#endif
+	
+	[myThread start];
 
 	/* This the carbon logic model 
 	 described by http://developer.apple.com/qa/qa2001/qa1061.html */
