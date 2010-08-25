@@ -21,7 +21,7 @@ SRCDIR:=	../../../src
 CROSSDIR:=	$(PLATDIR)/Cross/plugins/$(LIBNAME)
 WIN32DIR:=	$(PLATDIR)/win32/plugins/$(LIBNAME)
 MAKERDIR:=	$(SRCDIR)/plugins/$(LIBNAME)
-BUILDDIR:=	$(BASEDIR)/build/$(LIBNAME)
+BUILDDIR:=	$(BASEDIR)/$(BUILD)/$(LIBNAME)
 
 # Support directory locations
 CROSSVMDIR:=$(PLATDIR)/Cross/vm
@@ -75,8 +75,8 @@ OPTSTRIP:=	echo not doing strip
 #############################################################################
 # Plugin settings
 #
-OBJDIR:=    $(BASEDIR)/build/$(LIBNAME)
-VMDIR:=     $(BASEDIR)/build/vm
+OBJDIR:=    $(BASEDIR)/$(BUILD)/$(LIBNAME)
+VMDIR:=     $(BASEDIR)/$(BUILD)/vm
 PLUGINLIB:= $(VMDIR)/$(LIBNAME).lib
 PLUGINDLL:= $(VMDIR)/$(LIBNAME).dll
 LIBOBJ:= 	$(patsubst %.c,%.o,$(patsubst %.cpp,%.o,$(LIBSRC)))		 

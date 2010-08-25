@@ -1,10 +1,12 @@
 #############################################################################
-# Makefile for Win32 Squeak using gcc-3.4.x and cygwin
+# Makefile for Win32 Cog Squeak VM using gcc-3.4.x and cygwin
 # Do make init to allow make -n to function.
 #############################################################################
 
 #############################################################################
 # Base definitions:
+# default configuration from product, assert & debug
+CONFIGURATION=product
 
 # The name of the VM to build
 VM:=Croquet
@@ -19,8 +21,15 @@ ifndef BASEDIR
 BASEDIR:=.
 endif
 
+ifeq ("$(CONFIGURATION)","product")
+BUILD:=build
+else ifeq ("$(CONFIGURATION)","assert")
+BUILD:=buildast
+else
+BUILD:=builddbg
+endif
 SRCDIR:= ../src
-BLDDIR:= $(BASEDIR)/build
+BLDDIR:= $(BASEDIR)/$(BUILD)
 OBJDIR:= $(BLDDIR)/vm
 
 # N.B. PLATDIR *must* be a relative path, see -f../../$(shell ./eitheror ... below
@@ -61,10 +70,17 @@ VMOBJ:= $(addprefix $(OBJDIR)/,$(VMOBJ))
 #############################################################################
 # SqueakVM definitions
 #
+ifeq ("$(CONFIGURATION)","product")
 VMEXE:=  $(OBJDIR)/$(VM)Unstripped.exe
 CONSOLEVMEXE:=  $(OBJDIR)/$(VM)ConsoleUnstripped.exe
 STRIPEXE:=  $(OBJDIR)/$(VM).exe
 STRIPCONSOLEEXE:=  $(OBJDIR)/$(VM)Console.exe
+else
+VMEXE:=  $(OBJDIR)/$(VM).exe
+CONSOLEVMEXE:=  $(OBJDIR)/$(VM)Console.exe
+STRIPEXE:=
+STRIPCONSOLEEXE:=
+endif
 VMDEF:=	$(VM).def
 VMEXP:=	$(OBJDIR)/$(VM).exp
 VMMAP:=	$(OBJDIR)/$(VM).map
@@ -86,17 +102,26 @@ DXDIR:=     $(PLATDIR)/win32/third-party/dx9sdk/Include
 #############################################################################
 # C compiler settings (gcc-3.4.4 cygwin 19.24)
 #
-# Define NDEBUG for production so that asserts will be excluded.
-NDEBUG:=-DNDEBUG
+CC:=gcc
+
+# VM config flags.
+ifeq ("$(CONFIGURATION)","product")
+OFLAGS:= -D_MT -O2 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops
+NDEBUG:=-DNDEBUG # Define NDEBUG for production to exclude asserts
+else ifeq ("$(CONFIGURATION)","assert")
+OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
+else
+OFLAGS:= -D_MT -march=pentium4
+endif
+
 # Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
 WINVER:=-D_WIN32_WINNT=0x0501 -DWINVER=0x0501
-CC:=	gcc
-# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
-OFLAGS:= -D_MT -O2 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops \
-		-fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+
 INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
-CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mno-cygwin -mwin32 \
-	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS)
+# define _MT to eliminate the inline versions of printf et al in mingw/stdio.h
+NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
+CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
+	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
 DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
@@ -149,13 +174,32 @@ RCFLAGS:= --include-dir $(PLATDIR)/win32/misc -D_WIN32
 #############################################################################
 # Common build rules
 #
-default: print-settings init eitheror.exe mkNamedPrims.exe $(OBJDIR) $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE)
+default: print-settings init $(VMEXE) $(CONSOLEVMEXE) $(DLLS) $(STRIPEXE) $(STRIPCONSOLEEXE)
+
+product:;
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=product $(@,product=) default
+
+assert:
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=assert $(@,assert=) default
+
+debug:
+	$(MAKE) -f $(MAKEFILE_LIST) CONFIGURATION=debug $(@,debug=) default
 
 # Do make init to allow make -n to function.
 init:	$(OBJDIR) eitheror.exe mkNamedPrims.exe
 
+clean:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe build
+
+cleanast:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe buildast
+
+cleandbg:
+	rm -rf sqNamedPrims.h eitheror.exe mkNamedPrims.exe builddbg
+
 print-settings:
 	@echo ---------------- Makefile settings ------------------
+	@echo CONFIGURATION=$(CONFIGURATION)
 	@echo VPATH=$(VPATH)
 	@echo INCLUDES=$(INCLUDES)
 	@echo CFLAGS=$(CFLAGS)
@@ -196,6 +240,7 @@ $(CONSOLEVMEXE): $(VMOBJ) $(LIBS) $(VMEXP) resource.o $(BTOBJ) $(ETOBJ)
 			$(BTOBJ) $(VMOBJ) $(VMEXP) $(OBJDIR)/resource.o $(LIBS) $(STDLIBS) $(ETOBJ)
 	nm --numeric-sort --defined-only -f bsd $(CONSOLEVMEXE) >$(CONSOLEVMMAP)
 
+ifneq ($STRIPEXE,)
 $(STRIPEXE): $(VMEXE)
 	$(STRIP) --strip-unneeded -o $(STRIPEXE) $(VMEXE)
 	$(OBJCOPY) --add-gnu-debuglink=$(VMEXE) $(STRIPEXE)
@@ -203,6 +248,7 @@ $(STRIPEXE): $(VMEXE)
 $(STRIPCONSOLEEXE): $(CONSOLEVMEXE)
 	$(STRIP) --strip-unneeded -o $(STRIPCONSOLEEXE) $(CONSOLEVMEXE)
 	$(OBJCOPY) --add-gnu-debuglink=$(CONSOLEVMEXE) $(STRIPCONSOLEEXE)
+endif
 
 $(OBJDIR):
 	@-mkdir $(BLDDIR)
@@ -227,7 +273,7 @@ $(VMDEF) $(VMEXP) $(VMLIB): $(VMOBJ)
 # N.B.  PLATDIR *must* be a relative path for this to work
 $(OBJDIR)/%.lib:	FORCE
 	@-mkdir $(BLDDIR)/$(*F)
-	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) \
+	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) BUILD=$(BUILD) \
 		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) SRCDIR=../../$(SRCDIR) BASEDIR=../../$(BASEDIR) \
 		LIBNAME=$(*F) XDEFS=-DSQUEAK_BUILTIN_PLUGIN \
@@ -237,7 +283,7 @@ $(OBJDIR)/%.lib:	FORCE
 # Check for Makefile in win32 plugins directory otherwise use default Makefile
 $(OBJDIR)/%.dll:	FORCE
 	@-mkdir $(BLDDIR)/$(*F)
-	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) \
+	$(MAKE) $(MFLAGS) -C $(BLDDIR)/$(*F) BUILD=$(BUILD) \
 		-f../../$(shell ./eitheror.exe $(PLATDIR)/win32/plugins/$(*F)/Makefile Makefile.plugin) \
 		PLATDIR=../../$(PLATDIR) SRCDIR=../../$(SRCDIR) BASEDIR=../../$(BASEDIR) \
 		LIBNAME=$(*F) ../../$(OBJDIR)/$(*F).dll
