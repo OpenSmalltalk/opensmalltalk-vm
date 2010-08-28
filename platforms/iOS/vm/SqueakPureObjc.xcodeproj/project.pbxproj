@@ -39,6 +39,7 @@
 		942ABE6F10AA23E20086D908 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 942ABE6E10AA23E20086D908 /* ApplicationServices.framework */; };
 		942F75D30E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F75D20E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m */; };
 		942F76320E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F76310E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m */; };
+		94329ECB12275FFA0090298B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94329ECA12275FFA0090298B /* OpenGL.framework */; };
 		944069CE10E6B63200353B27 /* MacMenubarPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 944069CD10E6B63200353B27 /* MacMenubarPlugin.c */; };
 		944069CF10E6B63200353B27 /* MacMenubarPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 944069CD10E6B63200353B27 /* MacMenubarPlugin.c */; };
 		944895AE10F4081300FB3EC8 /* PharoV10.sources in Resources */ = {isa = PBXBuildFile; fileRef = 944895AD10F4081300FB3EC8 /* PharoV10.sources */; };
@@ -570,6 +571,7 @@
 		943001270E0D5D670040BB27 /* sqSqueakIPhoneApplication+imageReadWrite.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "sqSqueakIPhoneApplication+imageReadWrite.m"; sourceTree = "<group>"; };
 		943001A30E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneFileDirectoryInterface.h; sourceTree = "<group>"; };
 		943001A40E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqSqueakIPhoneFileDirectoryInterface.m; sourceTree = "<group>"; };
+		94329ECA12275FFA0090298B /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		944069CD10E6B63200353B27 /* MacMenubarPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = MacMenubarPlugin.c; sourceTree = "<group>"; };
 		944895AD10F4081300FB3EC8 /* PharoV10.sources */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PharoV10.sources; path = iPhone/PharoV10.sources; sourceTree = "<group>"; };
 		9452BDC10F4095DE006410DE /* sqSqueakIPhoneApplication+Network.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "sqSqueakIPhoneApplication+Network.h"; sourceTree = "<group>"; };
@@ -869,6 +871,7 @@
 				947E62F710AA098300D3B69E /* SystemConfiguration.framework in Frameworks */,
 				942ABE6F10AA23E20086D908 /* ApplicationServices.framework in Frameworks */,
 				94C208F910AF7262002F4160 /* QuartzCore.framework in Frameworks */,
+				94329ECB12275FFA0090298B /* OpenGL.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -1001,6 +1004,7 @@
 				94577FC410684D7E0020840A /* SystemConfiguration.framework */,
 				942ABE6E10AA23E20086D908 /* ApplicationServices.framework */,
 				94C208F810AF7262002F4160 /* QuartzCore.framework */,
+				94329ECA12275FFA0090298B /* OpenGL.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
