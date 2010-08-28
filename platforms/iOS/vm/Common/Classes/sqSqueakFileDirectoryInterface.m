@@ -62,6 +62,7 @@ such third-party acknowledgments.
 		 isDirectory: (sqInt *) isDirectory 
 		  sizeIfFile: (squeakFileOffsetType *) sizeIfFile {
 #warning this is not implementation
+	return 0;
 }
 
 

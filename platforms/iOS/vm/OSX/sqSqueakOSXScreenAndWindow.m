@@ -57,12 +57,6 @@ wHandleType windowHandleFromIndex(sqInt windowIndex);
 	[super dealloc];
 }
 
-- (void) postIoForceDisplayUpdateUsingRectangle: (CGRect) retanglePending {
-	NSRect r;
-	memcpy(&r,&retanglePending,sizeof(NSRect));
-	[[self getMainView] setNeedsDisplayInRect: r];
-}
-
 - (void)  ioSetFullScreen: (sqInt) fullScreen {
 	[[self getMainView] ioSetFullScreen: fullScreen];
 }
@@ -73,5 +67,9 @@ wHandleType windowHandleFromIndex(sqInt windowIndex);
 	return false;
 }
 
+- (void) ioForceDisplayUpdateActual {
+	self.forceUpdateFlush = NO;
+	[[self getMainView] drawThelayers];
+}
 
 @end

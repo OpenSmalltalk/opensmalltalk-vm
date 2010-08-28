@@ -108,8 +108,6 @@ void MyProviderReleaseData (
 }
 
 - (void) ioForceDisplayUpdateActual {
-	self.forceUpdateFlush = NO;
-	[[self getMainView] performSelectorOnMainThread: @selector(drawThelayers) withObject: nil waitUntilDone: YES];
 }
 
 - (void) ioForceDisplayUpdate {

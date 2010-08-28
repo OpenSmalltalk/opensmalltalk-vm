@@ -49,79 +49,38 @@
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
 
-@implementation sqSqueakOSXNSView
-@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
-lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
-
 static NSString *stringWithCharacter(unichar character) {
 	return [NSString stringWithCharacters: &character length: 1];
 }
 
+@implementation sqSqueakOSXNSView
+@synthesize squeakTrackingRectForCursor,lastSeenKeyBoardStrokeDetails,
+lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,savedScreenBoundsAtTimeOfFullScreen;
 
-static void MyProviderReleaseData (
-								   void *info,
-								   const void *data,
-								   size_t size
-								   ) {
-	free((void*)data);
++ (NSOpenGLPixelFormat *)defaultPixelFormat {
+	NSOpenGLPixelFormatAttribute attrs[] =
+    {
+		NSOpenGLPFAAccelerated,
+		NSOpenGLPFANoRecovery,
+		0
+    };
+    return[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
 }
 
-- (void) initializeVariables {
+- (void)awakeFromNib {
+	self = [self initWithFrame: self.frame pixelFormat: [[self class] defaultPixelFormat] ];
 	inputMark = NSMakeRange(NSNotFound, 0);
 	inputSelection = NSMakeRange(0, 0);
     [self registerForDraggedTypes: [NSArray arrayWithObjects: NSFilenamesPboardType, nil]];
-//	NSLog(@"registerForDraggedTypes");
+	//	NSLog(@"registerForDraggedTypes");
 	dragInProgress = NO;
 	dragCount = 0;
 	dragItems = NULL;
 	colorspace = CGColorSpaceCreateDeviceRGB();
-	[self setWantsLayer:YES];
 	[self initializeSqueakColorMap];
 }
 
-- (void)setFrameSize:(NSSize)newSize {
-	[super setFrameSize: newSize];
-	
-	int dividedWidthInteger = dividedWidth = (newSize.width/4.0);
-	int dividedHeightInteger= dividedHeight = (newSize.height/4.0);
-	
-	int lastTileWidth = newSize.width - dividedWidthInteger*3;
-	int lastTileHeight = newSize.height - dividedHeightInteger*3;
-	
-	CALayer *setupLayer = [CALayer layer];
-	[setupLayer setOpaque: YES];
-	setupLayer.frame = CGRectMake(0.0f,0.0f, newSize.width, newSize.height);
-	[self setLayer: setupLayer];
-
-	int h,v;
-	for (v=0;v<4;v++) {
-		for (h=0;h<4;h++) {
-			setupLayer = [CALayer layer];
-			[setupLayer setOpaque: YES];
-			
-			CGFloat usableWidth = dividedWidthInteger;
-			CGFloat usableHeight = dividedHeightInteger;
-			if (v == 0) 
-				usableHeight = lastTileHeight;
-			if (h == 3) 
-				usableWidth = lastTileWidth;
-			
-			setupLayer.frame = frameForQuartz[v][h] = CGRectMake(dividedWidthInteger*h,dividedHeightInteger*(3-v), usableWidth, usableHeight);
-//			NSLog(@" vhxywh %i %i %f %f %f %f",v,h,setupLayer.frame.origin.x,setupLayer.frame.origin.y,setupLayer.frame.size.width,setupLayer.frame.size.height);
-			[self.layer addSublayer: setupLayer];
-			myLayer[v][h] = setupLayer;
-			dirty[v][h] = NO;
-		}
-	}
-}
-
-- (id)initWithFrame:(NSRect)frame {
-    self = [super initWithFrame:frame];
-    if (self) {
-        // Initialization code here.
-		[self initializeVariables];
-	}
-    return self;
+- (void) initializeVariables {
 }
 
 - (void) dealloc {
@@ -165,105 +124,149 @@ static void MyProviderReleaseData (
 	[((sqSqueakOSXApplication*) gDelegateApp.squeakApplication).squeakCursor performSelectorOnMainThread: @selector(set) withObject: nil waitUntilDone: NO];	
 }
 
-/* 
- if (depth == 32) {
- return [super createImageFrom: dispBitsIndex 
- depth: depth 
- colorspace: colorspace 
- pitch: pitch 
- affectedT: affectedT 
- affectedB: affectedB 
- affectedL: affectedL 
- affectedR: affectedR 
- height: height 
- width: width];
- } else {
- return [[self getMainView] computeBitmapFromBitsIndex: dispBitsIndex
- width:width
- height:height
- depth:depth
- left:affectedL
- right:affectedR
- top:affectedT
- bottom:affectedB];
- }
-
- */
-
-
-- (CGImageRef) createImageFrom: (void *) dispBitsIndex affectedT: (int) affectedT affectedB: (int) affectedB affectedL: (int) affectedL 
-					 affectedR: (int) affectedR height: (int) height width: (int) width {
-	const size_t depth = 32;
-	void *tempMemory;
-	
-	size_t 	pitch = ((((width)*(depth) + 31) >> 5) << 2);
-	
-	size_t totalSize = pitch * (affectedB-affectedT)-affectedL*4;
-	tempMemory = malloc(totalSize);
-	memcpy(tempMemory,(void*)dispBitsIndex+ pitch*affectedT + affectedL*4,totalSize);
-	CGDataProviderRef provider =  CGDataProviderCreateWithData (NULL,tempMemory,(size_t) totalSize,MyProviderReleaseData);
-	
-	CGImageRef image = CGImageCreate((size_t) affectedR-affectedL,(size_t) affectedB-affectedT, (size_t) 8 /* bitsPerComponent */,
-									 (size_t) depth /* bitsPerPixel */, 
-									 (size_t) pitch, colorspace, 
-									 (CGBitmapInfo) kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host , 
-									 provider, NULL, (bool) 0, kCGRenderingIntentDefault);
-	
-	CGDataProviderRelease(provider);
-//	NSLog(@"cif pitch %i T %i L %i B %i R %i h %i w %i",pitch,affectedT,affectedL,affectedB,affectedR,height,width);
-	return image;
-}
-
-
 - (void) drawImageUsingClip: (CGRect) clip {
-		int h,v;
-	for (v=0;v<4;v++) {
-		for (h=0;h<4;h++) {
-			dirty[v][h] = dirty[v][h] || CGRectIntersectsRect(myLayer[v][h].frame,clip);
-		}
-	}
+	NSRect what = *(NSRect *) &clip;
+	[self setNeedsDisplayInRect: what];
 }
 
-
-- (void) drawThelayers {	
-	sqInt formObj = interpreterProxy->displayObject();
-	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
-	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-	CGRect rect;
-	[CATransaction begin];
-	[CATransaction setValue: (id)kCFBooleanTrue forKey: kCATransactionDisableActions];
-	int h,v;
-	for (v=0;v<4;v++) {
-		for (h=0;h<4;h++) {
-			if (dirty[v][h]) {
-				CGRect ff = myLayer[v][h].frame;
-				
-				rect.origin.x = myLayer[v][h].frame.origin.x;
-				rect.origin.y = self.frame.size.height-myLayer[v][h].frame.origin.y-myLayer[v][h].frame.size.height;
-				rect.size.height = myLayer[v][h].frame.size.height;
-				rect.size.width = myLayer[v][h].frame.size.width;
-				
-//				NSLog(@" dtl vhxywh %i %i %f %f %f %f",v,h,rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
-				CGImageRef x= [self createImageFrom: dispBitsIndex 
-										  affectedT: rect.origin.y 
-										  affectedB: rect.origin.y+rect.size.height 
-										  affectedL: rect.origin.x 
-										  affectedR: rect.origin.x+rect.size.width 
-											 height: (int) self.frame.size.height
-											  width: (int) self.frame.size.width];
-				myLayer[v][h].contents = (id)x; 
-				CGImageRelease(x);
-				dirty[v][h] = NO;
-			}
-		}
+- (void) drawThelayers { 	
+	if([[self window] viewsNeedDisplay]) {
+		[self displayIfNeeded];
+//		NSLog(@"drawTheLayers flushHappened");
+		glFinish();
 	}
-	[CATransaction commit];
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
 		if (getFullScreenFlag() == 0)
 			[self.window makeKeyAndOrderFront: self];
 	}
+}
+
+-(void)setupOpenGL {	
+	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
+	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
+	glClearColor(1.0, 1.0, 1.0, 1.0);
+	glColor4f(1.0, 1.0, 1.0, 1.0);
+	glDisable(GL_TEXTURE_2D);
 	
+	glDisable(GL_DITHER);
+	glDisable(GL_ALPHA_TEST);
+	glDisable(GL_BLEND);
+	glDisable(GL_STENCIL_TEST);
+	glDisable(GL_FOG);
+	glDisable(GL_TEXTURE_2D);
+	glDisable(GL_DEPTH_TEST);
+	glPixelZoom(1.0,1.0);
+	
+	glEnable(GL_TEXTURE_RECTANGLE_ARB);
+	glEnable(GL_UNPACK_CLIENT_STORAGE_APPLE);
+	glEnable(GL_APPLE_texture_range);
+	glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_PRIORITY, 0.0);
+	glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
+	glTexParameteri(GL_APPLE_texture_range, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_CACHED_APPLE);
+	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
+	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+}
+
+- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect {
+	static int first=YES;
+ 
+	NSRect r=[self frame];
+	[[self openGLContext] makeCurrentContext];
+	[[self openGLContext] update];
+	if(!first) {
+		GLuint dt = 1;
+		glDeleteTextures(1, &dt);
+	}
+			
+	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 1);
+
+	glViewport( subRect.origin.x,subRect.origin.y, subRect.size.width,subRect.size.height );
+	glMatrixMode(GL_PROJECTION);
+	glLoadIdentity();
+	glMatrixMode(GL_MODELVIEW);
+	glLoadIdentity(); 
+	
+	glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
+	char *subimg = ((char*)lastBitsIndex) + (unsigned int)(subRect.origin.x + (r.size.height-subRect.origin.y-subRect.size.height)*r.size.width)*4;
+	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg );
+	glPixelStorei( GL_UNPACK_ROW_LENGTH, 0 );
+//	NSLog(@" draw %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);
+	
+}
+
+-(void)defineQuad:(NSRect)r
+{
+	 glBegin(GL_QUADS);
+	 glTexCoord2f(0.0f, 0.0f);					glVertex2f(-1.0f, 1.0f);
+	 glTexCoord2f(0.0f, r.size.height);			glVertex2f(-1.0f, -1.0f);
+	 glTexCoord2f(r.size.width, r.size.height);  glVertex2f(1.0f, -1.0f);
+	 glTexCoord2f(r.size.width, 0.0f);			glVertex2f(1.0f, 1.0f);
+	 glEnd();
+}
+
+- (void)update  // moved or resized
+{
+	NSRect rect;
+	
+	[super update];
+	
+	[[self openGLContext] makeCurrentContext];
+	[[self openGLContext] update];
+	
+	rect = [self bounds];
+	
+    glViewport(0, 0, (int) rect.size.width, (int) rect.size.height);
+	
+	glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+	
+	glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity(); 
+	
+	[self setNeedsDisplay:true];
+}
+
+- (void)reshape	// scrolled, moved or resized
+{
+	NSRect rect;
+	
+	[super reshape];
+	
+	[[self openGLContext] makeCurrentContext];
+	[[self openGLContext] update];
+	
+	rect = [self bounds];
+	
+	glViewport(0, 0, (int) rect.size.width, (int) rect.size.height);
+	
+	glMatrixMode(GL_PROJECTION);
+    glLoadIdentity();
+	
+	glMatrixMode(GL_MODELVIEW);
+    glLoadIdentity();
+	
+	[self setNeedsDisplay:true];
+}
+
+-(void)drawRect:(NSRect)rect
+{
+//	NSLog(@" draw %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
+	sqInt formObj = interpreterProxy->displayObject();
+	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
+	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+    static int inited=NO;
+    if ( dispBitsIndex ) {
+		[[self openGLContext] makeCurrentContext];
+		if (!inited) {
+			[self setupOpenGL];
+			inited=YES;
+		}
+		[self loadTexturesFrom:dispBitsIndex subRectangle: rect];
+		[self defineQuad:rect];
+  }
 }
 
 - (void)mouseEntered:(NSEvent *)theEvent {
@@ -476,7 +479,10 @@ static void MyProviderReleaseData (
 																
 																																		else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLine:)
 																																			else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLine:)
-
+																																				
+																																				else encode(  (isFunctionKey ? 1 : 28), (isFunctionKey ? 115 : 123), moveToLeftEndOfLineAndModifySelection:)
+																																					else encode(  (isFunctionKey ? 4 : 29), (isFunctionKey ? 119 : 124), moveToRightEndOfLineAndModifySelection:)
+																																						
 																																				else encode(  1, 115, scrollToBeginningOfDocument:)
 																																					else encode(  4, 119, scrollToEndOfDocument:)
 																
@@ -627,6 +633,7 @@ static void MyProviderReleaseData (
 				launchSpec.asyncRefCon = NULL;
 				
 				OSErr err = LSOpenFromURLSpec(&launchSpec, NULL);
+#pragma unused(err)
 			}
 		}
 		
@@ -711,3 +718,71 @@ static void MyProviderReleaseData (
 }
 
 @end
+
+
+/*GL_TEXTURE_RECTANGLE_ARB
+ glPixelStorei(GL_UNPACK_ROW_LENGTH, 0);
+ glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, (int)r.size.width,(int)r.size.height,
+ 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, (void*)lastBitsIndex);
+ */
+
+/*			glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
+ glPixelStorei( GL_UNPACK_SKIP_PIXELS, subRect.origin.x );
+ glPixelStorei( GL_UNPACK_SKIP_ROWS, subRect.origin.y );
+ glTexImage2D(GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, (int)subRect.size.width,(int)subRect.size.height,0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, (void*)lastBitsIndex );
+ 
+ NSLog(@" draw %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);
+ 
+ glPixelStorei( GL_UNPACK_ROW_LENGTH, 0 );
+ glPixelStorei( GL_UNPACK_SKIP_PIXELS, 0 );
+ glPixelStorei( GL_UNPACK_SKIP_ROWS, 0 );
+ */
+/*			void glTexImage2D( GLenum target,
+ GLint level,
+ GLint internalformat,
+ GLsizei width,
+ GLsizei height,
+ GLint border,
+ GLenum format,
+ GLenum type,
+ const GLvoid *pixels );
+ 
+ void glTexSubImage2D( GLenum target,
+ GLint level,
+ GLint xoffset,
+ GLint yoffset,
+ GLsizei width,
+ GLsizei height,
+ GLenum format,
+ GLenum type,
+ const GLvoid *pixels )
+ 
+ 
+ glPixelStorei(GL_UNPACK_ROW_LENGTH, r.size.width);
+ glTexSubImage2D(GL_TEXTURE_RECTANGLE_ARB,
+ 0,
+ (int) subRect.origin.x,
+ (int) subRect.origin.y,
+ (int) subRect.size.width,
+ (int) subRect.size.height,
+ GL_BGRA,
+ GL_UNSIGNED_INT_8_8_8_8_REV,
+ (void*)lastBitsIndex);
+ 
+ glPixelStorei( GL_UNPACK_ROW_LENGTH, img_width );
+ char *subimg = (char*)m_data + (sub_x + sub_y*img_width)*4;
+ glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, sub_width, sub_height, 0, GL_RGBA, GL_UNSIGNED_BYTE, subimg );
+ glPixelStorei( GL_UNPACK_ROW_LENGTH, 0 );
+ 
+ GLES for iphone 
+ no GL_UNPACK_ROW_LENGTH. In which case, you could either (a) extract the subimage into a new buffer yourself, or (b)...
+ 
+ glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, sub_width, sub_height, 0, GL_RGBA, GL_UNSIGNED_BYTES, NULL );
+ 
+ for( int y = 0; y < sub_height; y++ )
+ {
+ char *row = m_data + ((y + sub_y)*img_width + sub_x) * 4;
+ glTexSubImage2D( GL_TEXTURE_2D, 0, 0, y, sub_width, 1, GL_RGBA, GL_UNSIGNED_BYTE, row );
+ }
+ 
+ */

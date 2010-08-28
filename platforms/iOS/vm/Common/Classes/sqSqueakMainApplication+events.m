@@ -40,6 +40,21 @@
 
 @implementation sqSqueakMainApplication  (events) 
 
+- (void) pumpRunLoop {
+	
+	/* This the carbon logic model 
+	 described by http://developer.apple.com/qa/qa2001/qa1061.html
+	 but fails on device, bug tracking number  5971848 */
+	
+	NSRunLoop *theRL = [NSRunLoop mainRunLoop];
+	BOOL result = [theRL runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
+	
+	//		while(CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, TRUE) == kCFRunLoopRunHandledSource);
+	
+	// TEST WHICH IS BETTER? 		SInt32 what = CFRunLoopRunInMode(kCFRunLoopDefaultMode, 0, true);
+#pragma unused(result)
+}
+
 - (void) ioGetNextEvent: (sqInputEvent *) evt {
 	
 	ioProcessEvents();

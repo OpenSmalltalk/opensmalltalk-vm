@@ -205,6 +205,7 @@ void *ioLoadModuleRaw(char *pluginName)
 		if (!systemFolder) {
 			struct FSRef frameworksFolderRef;
 			OSErr err = FSFindFolder(kSystemDomain, kFrameworksFolderType, false, &frameworksFolderRef);
+#pragma unused(err)
 			NSURL *myURLRef = (NSURL *) CFURLCreateFromFSRef(kCFAllocatorDefault, &frameworksFolderRef);
 			systemFolder = [[myURLRef path] retain];
 			CFRelease(myURLRef);

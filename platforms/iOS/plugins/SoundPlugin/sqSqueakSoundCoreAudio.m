@@ -272,6 +272,7 @@ void MyAudioQueueInputCallback (
 		return;
 	//NSLog(@"%i sound stop force",ioMSecs());
 	OSStatus result = AudioQueueStop (self.outputAudioQueue,true);  //This implicitly invokes AudioQueueReset
+#pragma unused(result)
 }
 
 
@@ -282,6 +283,7 @@ void MyAudioQueueInputCallback (
 	
 	[self snd_Stop];
 	OSStatus result  = AudioQueueDispose (self.outputAudioQueue,true);
+#pragma unused(result)
 	self.outputAudioQueue = nil;
 	self.soundOutQueue = [Queue new];
 	return 1;

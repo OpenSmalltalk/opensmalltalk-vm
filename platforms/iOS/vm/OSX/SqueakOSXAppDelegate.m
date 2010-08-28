@@ -56,6 +56,29 @@ SqueakOSXAppDelegate *gDelegateApp;
 	self.checkForFileNameOnFirstParm = YES;
 }
 
+- (void) workerThreadStart {
+	// Run the squeak process in a worker thread
+	NSThread* myThread = [[NSThread alloc] initWithTarget: self.squeakApplication
+												 selector: @selector(runSqueak)
+												   object:nil];
+#if COGVM
+	[myThread setStackSize: [myThread stackSize]*4];
+#endif
+	
+	[myThread start];
+}
+
+- (void) singleThreadStart {
+	/* This the carbon logic model 
+	 described by http://developer.apple.com/qa/qa2001/qa1061.html */
+	
+	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
+	 target: self.squeakApplication
+	 argument: nil 
+	 order: 1 
+	 modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];		
+}
+
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
 	NSAutoreleasePool * pool = [NSAutoreleasePool new];
 	gDelegateApp = self;	
@@ -68,30 +91,9 @@ SqueakOSXAppDelegate *gDelegateApp;
 	self.window.delegate =  windowHandler;
 
 	[self.squeakApplication setupEventQueue];
-
-	// Run the squeak process in a worker thread
 	
-	NSThread* myThread = [[NSThread alloc] initWithTarget: self.squeakApplication
-												 selector: @selector(runSqueak)
-												   object:nil];
-#if COGVM
-	[myThread setStackSize: [myThread stackSize]*4];
-#endif
-	
-	[myThread start];
-
-	/* This the carbon logic model 
-	 described by http://developer.apple.com/qa/qa2001/qa1061.html */
-	
-	
-/*
-	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
-									  target: self.squeakApplication
-									argument: nil 
-									   order: 1 
-									   modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];
-*/	
-	
+	[self singleThreadStart];
+//	[self workerThreadStart];
 	
 	[pool drain];
 	
@@ -113,17 +115,16 @@ SqueakOSXAppDelegate *gDelegateApp;
 	resetFrame.size.width = width;
 	resetFrame.size.height = height;
 	[gDelegateApp.window setAcceptsMouseMovedEvents: YES];
-	[gDelegateApp.window useOptimizedDrawing: YES];
+	[gDelegateApp.window useOptimizedDrawing: NO];
 	[gDelegateApp.window setTitle: [[self.squeakApplication.imageNameURL path] lastPathComponent]];
 	[gDelegateApp.window setRepresentedURL: self.squeakApplication.imageNameURL];
 	[gDelegateApp.window setInitialFirstResponder: gDelegateApp.mainView];
 	[gDelegateApp.window setShowsResizeIndicator: NO];
 	extern sqInt getFullScreenFlag(void);
-
 #if (SQ_VI_BYTES_PER_WORD == 4)
 	NSPanel *panel;
 	if (sizeof(void*) == 8) {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/32 bits 5.7b2 (20)",
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/32 bits 5.7b3 (21)",
 												 @"Only use this VM for testing, it lacks mac menu integration.",
 												 @"Dismiss",
 												 nil,
@@ -137,13 +138,13 @@ SqueakOSXAppDelegate *gDelegateApp;
 #endif
 	NSPanel *panel;
 	if (sizeof(long) == 8) {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b2 (20)",
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 64/64 bits 5.7b3 (21)",
 									@"Only use this VM for testing, it lacks mac menu integration.",
 									@"Dismiss",
 									nil,
 									nil);
 	} else {
-		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.7b2 (20)",
+		panel= NSGetAlertPanel(@"About this Alpha Version of Cocoa Squeak 32/64 bits 5.7b3 (21)",
 							   @"Only use this VM for testing, it lacks mac menu integration.",
 							   @"Dismiss",
 							   nil,
@@ -180,6 +181,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 		
 			OSErr err = LSOpenFromURLSpec(&launchSpec, NULL);
 //			NSLog(@"error %i",err);
+#pragma unused(err)
 		}
 	}
 		

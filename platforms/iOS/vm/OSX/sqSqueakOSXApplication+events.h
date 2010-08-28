@@ -36,6 +36,7 @@
  */
 //
 #import "sqSqueakOSXApplication.h"
+#import "sqSqueakMainApplication+events.h"
 #import "sqSqueakOSXNSView.h"
 
 @interface sqSqueakOSXApplication (events) 

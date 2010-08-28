@@ -106,6 +106,34 @@ static int buttonState=0;
 
 @implementation sqSqueakOSXApplication (events) 
 
+- (void) pumpRunLoop {
+	[super pumpRunLoop];
+	
+	 NSEvent *event;
+	 while (event = [NSApp nextEventMatchingMask: NSAnyEventMask untilDate: nil inMode: NSEventTrackingRunLoopMode dequeue: YES])
+		 [NSApp sendEvent: event];
+	
+	
+	/* 
+	 http://www.cocoabuilder.com/archive/cocoa/228473-receiving-user-events-from-within-an-nstimer-callback.html
+	 The reason you have to do this and can't just run the runloop is
+	 because the event loop is actually a separate concept from the
+	 runloop. It's a bit confusing because the event loop is implemented
+	 using the runloop, but if you just run the runloop on the main thread,
+	 events won't get processed. You have to explicitly run this in order
+	 to get them to be processed.
+	 
+	 Note that using the default runloop mode with this is generally a bad
+	 idea. By running in the default mode you allow *everything* else to
+	 run, which means that some other code might decide that *it* wants an
+	 inner event loop as well. If you then want to quit before that other
+	 code has finished, tough cookies. Much better to control things more
+	 tightly by using a different runloop mode.
+	 
+	 */
+	
+}
+
 - (void ) processAsOldEventOrComplexEvent: (id) event placeIn: (sqInputEvent *) evt {
 	if ([[event objectAtIndex: 0] intValue] == 1) {
 		[(NSData *)[event objectAtIndex: 1] getBytes: evt length: sizeof(sqInputEvent)];

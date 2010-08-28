@@ -52,7 +52,6 @@
 		return NO;
 	}
 	f = sqImageFileOpen(characterPathForImage, "rb");
-	#warning sqGetAvailableMemory returns unsigned but readImageFromFileHeapSizeStartingAt is wrong
 	readImageFromFileHeapSizeStartingAt(f, sqGetAvailableMemory(), (squeakFileOffsetType) 0);  //This is a VM Callback
 	sqImageFileClose(f);
 	[pool drain];

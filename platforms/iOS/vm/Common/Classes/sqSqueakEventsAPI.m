@@ -56,24 +56,10 @@ sqInt ioProcessEvents(void) {
 	if ([getMainWindowDelegate() forceUpdateFlush]) {
 		[getMainWindowDelegate() ioForceDisplayUpdate];
 	}
-	/* This the carbon logic model 
-	 described by http://developer.apple.com/qa/qa2001/qa1061.html
-	 but fails on device, bug tracking number  5971848 */
-	
-/*	extern struct VirtualMachine* interpreterProxy;
+
 	if (interpreterProxy->methodPrimitiveIndex() != 0) {
-		//	limitDateForMode:
-		
-		BOOL processedEvent;
-		// NSDate *now = [[NSDate alloc] init];
-		NSDate *now = [[NSDate alloc] initWithTimeIntervalSinceNow: 0.500];
-		//processedEvent = [[NSRunLoop mainRunLoop] runMode: NSDefaultRunLoopMode  beforeDate: now];
-		
-		//[now release];
-		[[NSRunLoop mainRunLoop] runUntilDate: now];
-		[now release];
-	} */
-	
+		[gDelegateApp.squeakApplication pumpRunLoop];
+	}
 	
 	if (gQuitNowRightNow) {
 		ioExit();  //This might not return, might call exittoshell

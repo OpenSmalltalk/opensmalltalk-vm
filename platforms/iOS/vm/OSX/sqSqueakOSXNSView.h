@@ -43,7 +43,7 @@
 @class sqSqueakOSXScreenAndWindow;
 #import "sq.h"
 
-@interface sqSqueakOSXNSView : NSView <NSTextInputClient> {
+@interface sqSqueakOSXNSView : NSOpenGLView <NSTextInputClient> {
 	sqSqueakOSXScreenAndWindow *windowLogic;
 	NSTrackingRectTag squeakTrackingRectForCursor;
 	NSRange inputMark;
@@ -56,11 +56,6 @@
 	NSMutableArray*  dragItems;
 	CGDisplayFadeReservationToken    fadeToken;
 	NSRect	savedScreenBoundsAtTimeOfFullScreen;
-	CALayer *myLayer[4][4];
-	BOOL	dirty[4][4];
-	CGRect	frameForQuartz[4][4];
-	CGFloat dividedWidth;
-	CGFloat dividedHeight;
 	CGColorSpaceRef colorspace;	
 	unsigned int*      colorMap32;
 }
@@ -83,6 +78,8 @@
 - (NSUInteger) countNumberOfNoneSqueakImageFilesInDraggedFiles: (id<NSDraggingInfo>)info;
 - (NSMutableArray *) filterOutSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
 - (NSMutableArray *) filterSqueakImageFilesFromDraggedFiles: (id<NSDraggingInfo>)info;
+-(void)setupOpenGL;
+- (void) drawThelayers;
 @end
 
 #import	"SqViewClut.h"

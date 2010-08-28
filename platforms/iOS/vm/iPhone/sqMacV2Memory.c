@@ -80,7 +80,7 @@ usqInt	memory;
 static size_t pageSize;
 static size_t pageMask;
 
- usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize, FILE * f,usqInt headersize) {
+ usqInt sqAllocateMemoryMac(usqInt desiredHeapSize, sqInt minHeapSize, FILE * f,usqInt headersize) {
 	 void  *possibleLocation,*startOfAnonymousMemory;
 	 off_t fileSize;
 	 struct stat sb;
