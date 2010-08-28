@@ -133,7 +133,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	if([[self window] viewsNeedDisplay]) {
 		[self displayIfNeeded];
 //		NSLog(@"drawTheLayers flushHappened");
-		glFinish();
+		glFlush();
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -143,6 +143,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 -(void)setupOpenGL {	
+	CGLContextObj ctx = CGLGetCurrentContext();
+	
+	// Enable the multithreading
+	CGLEnable( ctx, kCGLCEMPEngine);
+	
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glClearColor(1.0, 1.0, 1.0, 1.0);
@@ -159,42 +164,25 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	glPixelZoom(1.0,1.0);
 	
 	glEnable(GL_TEXTURE_RECTANGLE_ARB);
-	glEnable(GL_UNPACK_CLIENT_STORAGE_APPLE);
-	glEnable(GL_APPLE_texture_range);
-	glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_PRIORITY, 0.0);
+ 	glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_PRIORITY, 0.0);
 	glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
-	glTexParameteri(GL_APPLE_texture_range, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_CACHED_APPLE);
+ 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_CACHED_APPLE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);
+	glPixelStorei( GL_UNPACK_ROW_LENGTH, self.frame.size.width );
+	GLuint dt = 1;
+	glDeleteTextures(1, &dt);
+	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 1);
 }
 
-- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect {
-	static int first=YES;
- 
+- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
 	NSRect r=[self frame];
-	[[self openGLContext] makeCurrentContext];
-	[[self openGLContext] update];
-	if(!first) {
-		GLuint dt = 1;
-		glDeleteTextures(1, &dt);
-	}
-			
-	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 1);
-
 	glViewport( subRect.origin.x,subRect.origin.y, subRect.size.width,subRect.size.height );
-	glMatrixMode(GL_PROJECTION);
-	glLoadIdentity();
-	glMatrixMode(GL_MODELVIEW);
-	glLoadIdentity(); 
-	
-	glPixelStorei( GL_UNPACK_ROW_LENGTH, r.size.width );
 	char *subimg = ((char*)lastBitsIndex) + (unsigned int)(subRect.origin.x + (r.size.height-subRect.origin.y-subRect.size.height)*r.size.width)*4;
 	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg );
-	glPixelStorei( GL_UNPACK_ROW_LENGTH, 0 );
-//	NSLog(@" draw %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);
-	
+	//	NSLog(@" draw %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);	
 }
 
 -(void)defineQuad:(NSRect)r
@@ -219,6 +207,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	rect = [self bounds];
 	
     glViewport(0, 0, (int) rect.size.width, (int) rect.size.height);
+	glPixelStorei( GL_UNPACK_ROW_LENGTH, rect.size.width );
 	
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
@@ -241,7 +230,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	rect = [self bounds];
 	
 	glViewport(0, 0, (int) rect.size.width, (int) rect.size.height);
-	
+	glPixelStorei( GL_UNPACK_ROW_LENGTH, rect.size.width );
 	glMatrixMode(GL_PROJECTION);
     glLoadIdentity();
 	
