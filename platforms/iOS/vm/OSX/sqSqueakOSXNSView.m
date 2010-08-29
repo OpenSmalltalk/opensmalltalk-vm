@@ -134,6 +134,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		[self displayIfNeeded];
 //		NSLog(@"drawTheLayers flushHappened");
 		glFlush();
+		syncNeeded = NO;
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -166,7 +167,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	glEnable(GL_TEXTURE_RECTANGLE_ARB);
  	glTexParameterf(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_PRIORITY, 0.0);
 	glPixelStorei(GL_UNPACK_CLIENT_STORAGE_APPLE, GL_TRUE);
- 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_CACHED_APPLE);
+ 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_STORAGE_HINT_APPLE, GL_STORAGE_SHARED_APPLE);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameteri(GL_TEXTURE_RECTANGLE_ARB, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);
@@ -175,6 +176,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	GLuint dt = 1;
 	glDeleteTextures(1, &dt);
 	glBindTexture(GL_TEXTURE_RECTANGLE_ARB, 1);
+	syncNeeded = NO;
 }
 
 - (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
@@ -253,8 +255,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 			[self setupOpenGL];
 			inited=YES;
 		}
+		if (syncNeeded) 
+			glFlush();
 		[self loadTexturesFrom:dispBitsIndex subRectangle: rect];
 		[self defineQuad:rect];
+		syncNeeded = YES;
   }
 }
 
