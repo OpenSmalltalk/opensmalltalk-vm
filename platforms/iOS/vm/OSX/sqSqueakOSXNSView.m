@@ -62,6 +62,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
     {
 		NSOpenGLPFAAccelerated,
 		NSOpenGLPFANoRecovery,
+		NSOpenGLPFABackingStore,
 		0
     };
     return[[NSOpenGLPixelFormat alloc] initWithAttributes:attrs];
@@ -129,11 +130,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	[self setNeedsDisplayInRect: what];
 }
 
-- (void) drawThelayers { 	
-	if([[self window] viewsNeedDisplay]) {
-		[self displayIfNeeded];
-//		NSLog(@"drawTheLayers flushHappened");
+- (void) drawThelayers {
+	if (syncNeeded) { 
+		[[self openGLContext] makeCurrentContext];
 		glFlush();
+		[[NSOpenGLContext currentContext] flushBuffer];
 		syncNeeded = NO;
 	}
 	if (!firstDrawCompleted) {
@@ -144,11 +145,12 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 -(void)setupOpenGL {	
-	CGLContextObj ctx = CGLGetCurrentContext();
-	
+	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
 	// Enable the multithreading
 	CGLEnable( ctx, kCGLCEMPEngine);
-	
+	GLenum err = glGetError();
+//	GLint newSwapInterval = 1;
+//	CGLSetParameter(ctx, kCGLCPSwapInterval, &newSwapInterval);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glClearColor(1.0, 1.0, 1.0, 1.0);
@@ -180,7 +182,13 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
+	static void *previousLastBitsIndex=null;
 	NSRect r=[self frame];
+	if (!(previousLastBitsIndex == lastBitsIndex)) {
+		previousLastBitsIndex = lastBitsIndex;
+		glTextureRangeAPPLE(GL_TEXTURE_RECTANGLE_ARB, r.size.width*r.size.height*4,lastBitsIndex);		
+	}
+		
 	glViewport( subRect.origin.x,subRect.origin.y, subRect.size.width,subRect.size.height );
 	char *subimg = ((char*)lastBitsIndex) + (unsigned int)(subRect.origin.x + (r.size.height-subRect.origin.y-subRect.size.height)*r.size.width)*4;
 	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg );
@@ -255,8 +263,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 			[self setupOpenGL];
 			inited=YES;
 		}
-		if (syncNeeded) 
-			glFlush();
 		[self loadTexturesFrom:dispBitsIndex subRectangle: rect];
 		[self defineQuad:rect];
 		syncNeeded = YES;

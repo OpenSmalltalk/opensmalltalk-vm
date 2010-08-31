@@ -41,11 +41,18 @@
 @implementation sqSqueakMainApplication  (events) 
 
 - (void) pumpRunLoop {
+	static NSTimeInterval old = 0.0;
+	
+	NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+	if ((now - old) < 1.0/30.0)
+		return;
+	
+	old = now;
 	
 	/* This the carbon logic model 
 	 described by http://developer.apple.com/qa/qa2001/qa1061.html
 	 but fails on device, bug tracking number  5971848 */
-	
+
 	NSRunLoop *theRL = [NSRunLoop mainRunLoop];
 	BOOL result = [theRL runMode:NSDefaultRunLoopMode beforeDate:[NSDate distantPast]];
 	

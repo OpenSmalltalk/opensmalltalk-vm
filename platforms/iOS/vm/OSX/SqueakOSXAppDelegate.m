@@ -115,11 +115,12 @@ SqueakOSXAppDelegate *gDelegateApp;
 	resetFrame.size.width = width;
 	resetFrame.size.height = height;
 	[gDelegateApp.window setAcceptsMouseMovedEvents: YES];
-	[gDelegateApp.window useOptimizedDrawing: NO];
+	[gDelegateApp.window useOptimizedDrawing: YES];
 	[gDelegateApp.window setTitle: [[self.squeakApplication.imageNameURL path] lastPathComponent]];
 	[gDelegateApp.window setRepresentedURL: self.squeakApplication.imageNameURL];
 	[gDelegateApp.window setInitialFirstResponder: gDelegateApp.mainView];
 	[gDelegateApp.window setShowsResizeIndicator: NO];
+
 	extern sqInt getFullScreenFlag(void);
 #if (SQ_VI_BYTES_PER_WORD == 4)
 	NSPanel *panel;
