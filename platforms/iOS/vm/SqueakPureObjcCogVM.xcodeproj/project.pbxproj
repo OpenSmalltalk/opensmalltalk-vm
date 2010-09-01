@@ -10,7 +10,6 @@
 		1D60589B0D05DD56006BFB54 /* main.m in Sources */ = {isa = PBXBuildFile; fileRef = 29B97316FDCFA39411CA2CEA /* main.m */; };
 		1D60589F0D05DD5A006BFB54 /* Foundation.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 1D30AB110D05D00D00671497 /* Foundation.framework */; };
 		28AD733F0D9D9553002E5188 /* MainWindow.xib in Resources */ = {isa = PBXBuildFile; fileRef = 28AD733E0D9D9553002E5188 /* MainWindow.xib */; };
-		9402DD6110CE0C16005C2102 /* SqViewBitmapConversion.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD5F10CE0C16005C2102 /* SqViewBitmapConversion.m */; };
 		9402DD7110CE0E91005C2102 /* SqViewClut.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD6F10CE0E91005C2102 /* SqViewClut.m */; };
 		9402F2B00F3F9BB900F3D637 /* PDColoredProgressView.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402F2AF0F3F9BB900F3D637 /* PDColoredProgressView.m */; };
 		9402F2C60F3F9C5600F3D637 /* drawing.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402F2C50F3F9C5600F3D637 /* drawing.m */; };
@@ -268,7 +267,6 @@
 		94C88BDF10AF3C52007CB39E /* sqSqueakOSXScreenAndWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 94C88BDE10AF3C52007CB39E /* sqSqueakOSXScreenAndWindow.m */; };
 		94D16CB010BCF96B00A69A89 /* Credits.rtf in Resources */ = {isa = PBXBuildFile; fileRef = 94D16CAF10BCF96B00A69A89 /* Credits.rtf */; };
 		94D2A24C112B8ED000B6E459 /* QuartzCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94C208F810AF7262002F4160 /* QuartzCore.framework */; };
-		94D3655010CEC86C00805023 /* BitMapConversionLogicFromX11.c in Sources */ = {isa = PBXBuildFile; fileRef = 94D3654E10CEC86C00805023 /* BitMapConversionLogicFromX11.c */; };
 		94E659230DDD03FE00358328 /* ADPCMCodecPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658E40DDD03FE00358328 /* ADPCMCodecPlugin.c */; };
 		94E659240DDD03FE00358328 /* B2DPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658E60DDD03FE00358328 /* B2DPlugin.c */; };
 		94E659260DDD03FE00358328 /* BitBltPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 94E658EA0DDD03FE00358328 /* BitBltPlugin.c */; };
@@ -2243,9 +2241,7 @@
 				946DA8D310C0C30D00F26F56 /* DropPlugin.c in Sources */,
 				946DA91510C0C71100F26F56 /* sqSqueakOSXDropAPI.m in Sources */,
 				946DAA0010C0D35500F26F56 /* sqMacUnixExternalPrims.m in Sources */,
-				9402DD6110CE0C16005C2102 /* SqViewBitmapConversion.m in Sources */,
 				9402DD7110CE0E91005C2102 /* SqViewClut.m in Sources */,
-				94D3655010CEC86C00805023 /* BitMapConversionLogicFromX11.c in Sources */,
 				944069CF10E6B63200353B27 /* MacMenubarPlugin.c in Sources */,
 				94B9533610E6BD7100DC476A /* MacMenuOS9ToOSX.m in Sources */,
 				94584F6310F020BD001401E7 /* ClipboardExtendedPlugin.c in Sources */,
