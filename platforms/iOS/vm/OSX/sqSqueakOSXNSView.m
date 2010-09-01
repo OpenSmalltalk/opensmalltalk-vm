@@ -46,6 +46,8 @@
 #import "sq.h"
 #import "sqVirtualMachine.h"
 
+#import <OpenGL/CGLMacro.h>
+
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
 
@@ -77,6 +79,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	dragInProgress = NO;
 	dragCount = 0;
 	dragItems = NULL;
+	clippyIsEmpty = YES;
 	colorspace = CGColorSpaceCreateDeviceRGB();
 	[self initializeSqueakColorMap];
 }
@@ -126,16 +129,24 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void) drawImageUsingClip: (CGRect) clip {
-	NSRect what = *(NSRect *) &clip;
-	[self setNeedsDisplayInRect: what];
+	
+	if (clippyIsEmpty){
+		clippy = clip;
+		clippyIsEmpty = NO;
+	} else {
+		clippy = CGRectUnion(clippy, clip);
+	}
+	syncNeeded = YES;
 }
 
 - (void) drawThelayers {
 	if (syncNeeded) { 
-		[[self openGLContext] makeCurrentContext];
-		glFlush();
-		[[NSOpenGLContext currentContext] flushBuffer];
+		[self drawRect: NSRectFromCGRect(clippy)];
 		syncNeeded = NO;
+		clippyIsEmpty = YES;
+		CGL_MACRO_DECLARE_VARIABLES();
+		glFlush();
+		[[self openGLContext] flushBuffer];  //Not sure if double buffering works, need more testing.
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -145,12 +156,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 -(void)setupOpenGL {	
-	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
+	CGL_MACRO_DECLARE_VARIABLES();
 	// Enable the multithreading
-	CGLEnable( ctx, kCGLCEMPEngine);
-	GLenum err = glGetError();
+	CGLEnable( cgl_ctx, kCGLCEMPEngine);
 //	GLint newSwapInterval = 1;
-//	CGLSetParameter(ctx, kCGLCPSwapInterval, &newSwapInterval);
+//	CGLSetParameter(cgl_ctx, kCGLCPSwapInterval, &newSwapInterval);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glClearColor(1.0, 1.0, 1.0, 1.0);
@@ -182,6 +192,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
+	CGL_MACRO_DECLARE_VARIABLES();
 	static void *previousLastBitsIndex=null;
 	NSRect r=[self frame];
 	if (!(previousLastBitsIndex == lastBitsIndex)) {
@@ -197,6 +208,8 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 
 -(void)defineQuad:(NSRect)r
 {
+
+	CGL_MACRO_DECLARE_VARIABLES();
 	 glBegin(GL_QUADS);
 	 glTexCoord2f(0.0f, 0.0f);					glVertex2f(-1.0f, 1.0f);
 	 glTexCoord2f(0.0f, r.size.height);			glVertex2f(-1.0f, -1.0f);
@@ -212,6 +225,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	[super update];
 	
 	[[self openGLContext] makeCurrentContext];
+	CGL_MACRO_DECLARE_VARIABLES();
 	[[self openGLContext] update];
 	
 	rect = [self bounds];
@@ -235,6 +249,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	[super reshape];
 	
 	[[self openGLContext] makeCurrentContext];
+	CGL_MACRO_DECLARE_VARIABLES();
 	[[self openGLContext] update];
 	
 	rect = [self bounds];
@@ -265,7 +280,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		}
 		[self loadTexturesFrom:dispBitsIndex subRectangle: rect];
 		[self defineQuad:rect];
-		syncNeeded = YES;
   }
 }
 

@@ -89,7 +89,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 	windowHandler.windowIndex = 1;
 	[windowHandler.mainViewOnWindow initializeVariables];
 	self.window.delegate =  windowHandler;
-
+	self.window.contentResizeIncrements = NSMakeSize(8.0f,8.0f);
 	[self.squeakApplication setupEventQueue];
 	
 	[self singleThreadStart];
@@ -104,6 +104,7 @@ SqueakOSXAppDelegate *gDelegateApp;
 	extern sqInt getSavedWindowSize(void); //This is VM Callback
 	width  = ((unsigned) getSavedWindowSize()) >> 16;
 	height = getSavedWindowSize() & 0xFFFF;
+	width = (sqInt) ((width*4)/32.0f+0.5)*8.0;  //JMM OPEN/GL THOUGHTS FOR PERFORMANCE
 	NSSize sizeOfWindowContent;
 	sizeOfWindowContent.width = width;
 	sizeOfWindowContent.height = height;

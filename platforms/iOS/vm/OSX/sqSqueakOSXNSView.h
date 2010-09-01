@@ -59,6 +59,8 @@
 	NSRect	savedScreenBoundsAtTimeOfFullScreen;
 	CGColorSpaceRef colorspace;	
 	unsigned int*      colorMap32;
+	BOOL clippyIsEmpty;
+	CGRect clippy;
 }
 @property (nonatomic,assign) NSTrackingRectTag squeakTrackingRectForCursor;
 @property (nonatomic,retain) keyBoardStrokeDetails* lastSeenKeyBoardStrokeDetails;
