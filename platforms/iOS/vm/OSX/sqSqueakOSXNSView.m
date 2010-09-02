@@ -146,7 +146,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		clippyIsEmpty = YES;
 		CGL_MACRO_DECLARE_VARIABLES();
 		glFlush();
-		[[self openGLContext] flushBuffer];  //Not sure if double buffering works, need more testing.
+		[[self openGLContext] flushBuffer];  
 	}
 	if (!firstDrawCompleted) {
 		firstDrawCompleted = YES;
@@ -165,7 +165,6 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	glTexEnvi(GL_TEXTURE_ENV, GL_TEXTURE_ENV_MODE, GL_REPLACE);
 	glClearColor(1.0, 1.0, 1.0, 1.0);
 	glColor4f(1.0, 1.0, 1.0, 1.0);
-	glDisable(GL_TEXTURE_2D);
 	
 	glDisable(GL_DITHER);
 	glDisable(GL_ALPHA_TEST);
@@ -174,6 +173,9 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	glDisable(GL_FOG);
 	glDisable(GL_TEXTURE_2D);
 	glDisable(GL_DEPTH_TEST);
+	glDisable (GL_SCISSOR_TEST);
+    glDisable (GL_CULL_FACE);
+	glStencilMask(0);
 	glPixelZoom(1.0,1.0);
 	
 	glEnable(GL_TEXTURE_RECTANGLE_ARB);
