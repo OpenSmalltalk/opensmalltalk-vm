@@ -781,7 +781,12 @@ int ioScreenSize(void) {
     Rect portRect;
     extern Boolean gSqueakExplicitWindowOpenNeeded;
 	
-	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return ((16 << 16) | 16);
+	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) {
+		w  = (unsigned) getSavedWindowSize() >> 16;
+		h= getSavedWindowSize() & 0xFFFF;
+		return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
+	}
+	
 	if (browserActiveAndDrawingContextOkAndNOTInFullScreenMode())
 		return browserGetWindowSize();
 	
