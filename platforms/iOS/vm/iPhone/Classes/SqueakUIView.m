@@ -123,7 +123,12 @@ static void MyProviderReleaseData (
 	}
 }
 
-- (void) drawThelayers {	
+- (void) drawThelayers {
+	sqInt formObj = interpreterProxy->displayObject();
+	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
+	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
+	squeakTheDisplayBits = (void*) dispBitsIndex;	
+	
 	[CATransaction begin];
 	[CATransaction setValue: [NSNumber numberWithBool:YES] forKey: kCATransactionDisableActions];
 	for (int v=0;v<4;v++) {

@@ -67,9 +67,4 @@ wHandleType windowHandleFromIndex(sqInt windowIndex);
 	return false;
 }
 
-- (void) ioForceDisplayUpdateActual {
-	self.forceUpdateFlush = NO;
-	[[self getMainView] drawThelayers];
-}
-
 @end

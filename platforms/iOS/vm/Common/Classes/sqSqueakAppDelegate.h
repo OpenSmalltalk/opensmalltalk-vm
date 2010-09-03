@@ -52,5 +52,7 @@ such third-party acknowledgments.
 - (id) createPossibleWindow;
 - (NSTimeInterval) squeakUIFlushPrimaryDeferNMilliseconds;
 - (sqSqueakMainApplication *) makeApplicationInstance;
+- (void) workerThreadStart;
+- (void) singleThreadStart;
 
 @end

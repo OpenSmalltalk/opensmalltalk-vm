@@ -67,27 +67,9 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	squeakApplication = [self makeApplicationInstance];
 	screenAndWindow =  [sqiPhoneScreenAndWindow new];
 	[self.squeakApplication setupEventQueue];
-	
-	//[self.squeakApplication performSelectorInBackground: @selector(runSqueak) withObject: NULL];
+	[self singleThreadStart];
+	//[self workerThreadStart];
 
-	 // Run the squeak process in a worker thread
-	
-	[NSThread detachNewThreadSelector: @selector(runSqueak)
-							 toTarget:	self.squeakApplication
-						   withObject:	NULL]; 
-	
-
-	/* This the carbon logic model 
-	 described by http://developer.apple.com/qa/qa2001/qa1061.html
-	 but fails on device, bug tracking number  5971848
- 
-	 [[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
-									  target: self.squeakApplication
-									argument: nil 
-									   order: 1 
-									   modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];
-    */
-	
 }
 
 - (UIView *)viewForZoomingInScrollView:(UIScrollView *)scrollView

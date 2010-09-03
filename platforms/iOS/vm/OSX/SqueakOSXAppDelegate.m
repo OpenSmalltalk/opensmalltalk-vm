@@ -56,29 +56,6 @@ SqueakOSXAppDelegate *gDelegateApp;
 	self.checkForFileNameOnFirstParm = YES;
 }
 
-- (void) workerThreadStart {
-	// Run the squeak process in a worker thread
-	NSThread* myThread = [[NSThread alloc] initWithTarget: self.squeakApplication
-												 selector: @selector(runSqueak)
-												   object:nil];
-#if COGVM
-	[myThread setStackSize: [myThread stackSize]*4];
-#endif
-	
-	[myThread start];
-}
-
-- (void) singleThreadStart {
-	/* This the carbon logic model 
-	 described by http://developer.apple.com/qa/qa2001/qa1061.html */
-	
-	[[NSRunLoop mainRunLoop] performSelector: @selector(runSqueak) 
-	 target: self.squeakApplication
-	 argument: nil 
-	 order: 1 
-	 modes: [NSArray arrayWithObject: NSDefaultRunLoopMode]];		
-}
-
 - (void)applicationDidFinishLaunching:(NSNotification *)aNotification {
 	NSAutoreleasePool * pool = [NSAutoreleasePool new];
 	gDelegateApp = self;	

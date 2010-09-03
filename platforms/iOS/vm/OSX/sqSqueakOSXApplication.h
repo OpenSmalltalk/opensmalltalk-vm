@@ -55,5 +55,4 @@
 - (void) printUsage;
 - (void) printUsageNotes;
 - (BOOL)isImageFile:(NSString *)filePath;
-- (void) pumpRunLoop;
 @end

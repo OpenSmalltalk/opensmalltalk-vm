@@ -60,16 +60,6 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	return gDelegateApp.mainView;
 }
 
-- (void) ioForceDisplayUpdateActual {
-	self.forceUpdateFlush = NO;
-	sqInt formObj = interpreterProxy->displayObject();
-	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
-	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-	((SqueakUIView *)[self getMainView]).squeakTheDisplayBits = (void*) dispBitsIndex;	
-	[[self getMainView] performSelectorOnMainThread: @selector(drawThelayers) withObject: nil waitUntilDone: NO];
-}
-
-
 - (void)dealloc {
 	[super dealloc];
 }

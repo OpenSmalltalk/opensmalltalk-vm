@@ -43,8 +43,10 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 @interface sqSqueakScreenAndWindow : NSObject {
 	sqInt windowIndex;
 	NSTimeInterval squeakUIFlushPrimaryDeferNMilliseconds;
+	NSTimeInterval lastFlushTime;
 	NSTimer *blip;
 	BOOL forceUpdateFlush;
+	BOOL displayIsDirty;
 }
 
 - (sqInt) ioScreenSize;
@@ -66,5 +68,8 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 @property (nonatomic,assign) sqInt windowIndex;
 @property (nonatomic,retain) NSTimer *blip;
 @property (nonatomic,assign) NSTimeInterval	squeakUIFlushPrimaryDeferNMilliseconds;
+@property (nonatomic,assign) NSTimeInterval	lastFlushTime;
 @property (nonatomic,assign) BOOL forceUpdateFlush;
+@property (nonatomic,assign) BOOL displayIsDirty;
+
 @end

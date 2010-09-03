@@ -62,7 +62,7 @@ void MyProviderReleaseData (
 
 @implementation sqSqueakScreenAndWindow
 @synthesize windowIndex;
-@synthesize blip,squeakUIFlushPrimaryDeferNMilliseconds,forceUpdateFlush;
+@synthesize blip,squeakUIFlushPrimaryDeferNMilliseconds,forceUpdateFlush,lastFlushTime,displayIsDirty;
 
 - (id)init {
     self = [super init];
@@ -70,6 +70,7 @@ void MyProviderReleaseData (
         // Initialization code here.
 		squeakUIFlushPrimaryDeferNMilliseconds = 0.0f;
 		forceUpdateFlush = NO;
+		displayIsDirty = NO;
 	}
     return self;
 }
@@ -108,16 +109,17 @@ void MyProviderReleaseData (
 }
 
 - (void) ioForceDisplayUpdateActual {
+	lastFlushTime = [NSDate timeIntervalSinceReferenceDate];
+	self.displayIsDirty = NO;
+	self.forceUpdateFlush = NO;
+	if ([NSThread isMainThread]) 
+		[[self getMainView] drawThelayers];
+	else {
+		[[self getMainView] performSelectorOnMainThread: @selector(drawThelayers) withObject: nil waitUntilDone: NO];
+	}
 }
 
 - (void) ioForceDisplayUpdate {
-	@synchronized(self) {
-		if (self.blip) {
-			//NSLog(@"Timmer deleted");
-			[self.blip invalidate];
-			self.blip = NULL;
-		}
-	}
 	[self ioForceDisplayUpdateActual];
 }
 
@@ -152,10 +154,13 @@ void MyProviderReleaseData (
 		return 0;
 	}
 	
+	
 	pitch = ((((width)*(depth) + 31) >> 5) << 2);
 		
 	CGRect clip = CGRectMake((CGFloat)affectedL,(CGFloat)(height-affectedB), (CGFloat)(affectedR-affectedL), (CGFloat)(affectedB-affectedT));
 	[gDelegateApp.mainView drawImageUsingClip: clip];
+
+	self.displayIsDirty = YES;
 	
 	if ((targetWindowBlock->width != width || targetWindowBlock->height  != height)) {
 		targetWindowBlock->width = width;
@@ -166,11 +171,11 @@ void MyProviderReleaseData (
 }
 
 - (void) ioForceDisplayUpdateFlush: (NSTimer*)theTimer {
-	//NSLog(@"ioForceDisplayUpdateFlush");
-	@synchronized(self) {
-		self.blip = NULL;
+	NSTimeInterval now = [NSDate timeIntervalSinceReferenceDate];
+	if (self.displayIsDirty && ((now - self.lastFlushTime) > squeakUIFlushPrimaryDeferNMilliseconds)) {
+		self.lastFlushTime = now;
+		self.forceUpdateFlush = YES;
 	}
-	self.forceUpdateFlush = YES;
 }
 
 - (int)   ioShowDisplayOnWindow: (unsigned char*) dispBitsIndex
@@ -184,16 +189,12 @@ void MyProviderReleaseData (
 					windowIndex: (int) passedWindowIndex {
 	int value;
 	value = [self ioShowDisplayOnWindowActual:dispBitsIndex width: width height: height depth:depth affectedL:affectedL affectedR:affectedR affectedT:affectedT affectedB:affectedB windowIndex: passedWindowIndex];
-	@synchronized(self) {
-		if (!self.blip) {
+	if (!self.blip) {
 			if (squeakUIFlushPrimaryDeferNMilliseconds == 0.0f) 
 				squeakUIFlushPrimaryDeferNMilliseconds =  [gDelegateApp squeakUIFlushPrimaryDeferNMilliseconds];
 			
-			NSAutoreleasePool * pool = [NSAutoreleasePool new];
-			self.blip = [NSTimer timerWithTimeInterval: squeakUIFlushPrimaryDeferNMilliseconds target:self selector:@selector(ioForceDisplayUpdateFlush:) userInfo:nil repeats:NO];
+			self.blip = [NSTimer timerWithTimeInterval: squeakUIFlushPrimaryDeferNMilliseconds target:self selector:@selector(ioForceDisplayUpdateFlush:) userInfo:nil repeats: YES];
 			[[NSRunLoop mainRunLoop] addTimer: self.blip forMode: NSDefaultRunLoopMode];
-			[pool drain];
-		}
 	}
 	return value;
 }
