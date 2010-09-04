@@ -438,7 +438,7 @@
 	<key>SqueakDebug</key>
 	<integer>0</integer>
 	<key>SqueakEncodingType</key>
-	<string>macintosh</string>
+	<string>UTF-8</string>
 	<key>SqueakExplicitWindowOpenNeeded</key>
 	<false/>
 	<key>SqueakFloatingWindowGetsFocus</key>
