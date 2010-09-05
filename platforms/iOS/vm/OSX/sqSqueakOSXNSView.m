@@ -46,7 +46,7 @@
 #import "sq.h"
 #import "sqVirtualMachine.h"
 
-#import <OpenGL/CGLMacro.h>
+//#import <OpenGL/CGLMacro.h>
 
 extern SqueakOSXAppDelegate *gDelegateApp;
 extern struct	VirtualMachine* interpreterProxy;
@@ -144,7 +144,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 		[self drawRect: NSRectFromCGRect(clippy)];
 		syncNeeded = NO;
 		clippyIsEmpty = YES;
-		CGL_MACRO_DECLARE_VARIABLES();
+//		CGL_MACRO_DECLARE_VARIABLES();
 		glFlush();
 		[[self openGLContext] flushBuffer];  
 	}
@@ -156,9 +156,11 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 -(void)setupOpenGL {	
-	CGL_MACRO_DECLARE_VARIABLES();
-	// Enable the multithreading
-	CGLEnable( cgl_ctx, kCGLCEMPEngine);
+//	CGL_MACRO_DECLARE_VARIABLES();
+// Enable the multithreading
+	CGLContextObj ctx = [[self openGLContext] CGLContextObj];
+	CGLEnable( ctx, kCGLCEMPEngine);
+
 //	GLint newSwapInterval = 1;
 //	CGLSetParameter(cgl_ctx, kCGLCPSwapInterval, &newSwapInterval);
 	glPixelStorei(GL_UNPACK_ALIGNMENT, 1);
@@ -194,7 +196,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 }
 
 - (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (NSRect) subRect { 
-	CGL_MACRO_DECLARE_VARIABLES();
+//	CGL_MACRO_DECLARE_VARIABLES();
 	static void *previousLastBitsIndex=null;
 	NSRect r=[self frame];
 	if (!(previousLastBitsIndex == lastBitsIndex)) {
@@ -211,7 +213,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 -(void)defineQuad:(NSRect)r
 {
 
-	CGL_MACRO_DECLARE_VARIABLES();
+//	CGL_MACRO_DECLARE_VARIABLES();
 	 glBegin(GL_QUADS);
 	 glTexCoord2f(0.0f, 0.0f);					glVertex2f(-1.0f, 1.0f);
 	 glTexCoord2f(0.0f, r.size.height);			glVertex2f(-1.0f, -1.0f);
@@ -227,7 +229,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	[super update];
 	
 	[[self openGLContext] makeCurrentContext];
-	CGL_MACRO_DECLARE_VARIABLES();
+//	CGL_MACRO_DECLARE_VARIABLES();
 	[[self openGLContext] update];
 	
 	rect = [self bounds];
@@ -251,7 +253,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	[super reshape];
 	
 	[[self openGLContext] makeCurrentContext];
-	CGL_MACRO_DECLARE_VARIABLES();
+//	CGL_MACRO_DECLARE_VARIABLES();
 	[[self openGLContext] update];
 	
 	rect = [self bounds];

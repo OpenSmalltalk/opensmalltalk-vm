@@ -166,22 +166,31 @@ static int buttonState=0;
 	picker.length = 1;
 	totaLength = [unicodeString length];
 	for (i=0;i < totaLength;i++) {
-
+		
 		
 		unicode = [unicodeString characterAtIndex: i];
+		
+		if (mainView.lastSeenKeyBoardStrokeDetails) {
+			evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
+			evt.charCode = mainView.lastSeenKeyBoardStrokeDetails.keyCode;
+		} else {
+			evt.modifiers = 0;
+			evt.charCode = 0;
+		}
+		
+		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
+            if ((unicode >= 97) && (unicode <= 122)) {
+				/* convert ascii code of command-shift-letter to upper case */
+				unicode = unicode - 32;
+            }
+		}
+		
 		NSString *lookupString = [[NSString alloc] initWithCharacters: &unicode length: 1];
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
-			  options: 0 range: picker remainingRange: NULL];
+					   options: 0 range: picker remainingRange: NULL];
 		[lookupString release];
-
+		
 		evt.pressCode = EventKeyDown;
-			if (mainView.lastSeenKeyBoardStrokeDetails) {
-				evt.modifiers = [self translateCocoaModifiersToSqueakModifiers: mainView.lastSeenKeyBoardStrokeDetails.modifierFlags];
-				evt.charCode = mainView.lastSeenKeyBoardStrokeDetails.keyCode;
-			} else {
-				evt.modifiers = 0;
-				evt.charCode = 0;
-			}
 		unsigned short keyCodeRemembered = evt.charCode;
 		evt.utf32Code = 0;
 		evt.reserved1 = 0;
@@ -190,17 +199,11 @@ static int buttonState=0;
 		
 		evt.charCode =	macRomanCharacter;
 		evt.pressCode = EventKeyChar;
-		evt.modifiers = evt.modifiers;
-		if ((evt.modifiers & CommandKeyBit) && (evt.modifiers & ShiftKeyBit)) {  /* command and shift */
-            if ((unicode >= 97) && (unicode <= 122)) {
-				/* convert ascii code of command-shift-letter to upper case */
-				unicode = unicode - 32;
-            }
-		}
-		
+		evt.modifiers = evt.modifiers;		
 		evt.utf32Code = unicode;
 		
 		[self pushEventToQueue: (sqInputEvent *) &evt];
+		
 		if (i > 1 || !mainView.lastSeenKeyBoardStrokeDetails) {
 			evt.pressCode = EventKeyUp;
 			evt.charCode = keyCodeRemembered;
