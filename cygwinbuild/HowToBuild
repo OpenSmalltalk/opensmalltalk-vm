@@ -21,6 +21,10 @@ CYGWIN_NT-5.1 mcstalkerxp 1.5.24(0.156/4/2) 2007-01-31 10:57 i686 Cygwin
    have a path to that 2.x gcc in your Windows PATH.  Make sure that 'which gcc'
    evalautes to the cygwin gcc 3.4.x not the MinGW gcc 2.95.x (try gcc -v).
 
+   Caution: if your default gcc is too recent (gcc-4), compilation may fail.
+   In this case, you should rather use the following commmand
+     make  CC=gcc-3 LD=gcc-3 DLLWRAP='dllwrap -mno-cygwin --driver-name gcc-3'
+   
 4. At the end of this process you should have a brand new Croquet VM in the
    cygwinbuild/build/vm folder (make sure you copy Croquet.map along with it)
 
