@@ -1,0 +1,256 @@
+"
+Verify and document the values of ImageFormat. The image format is an integer value that identifies the format of an image snapshot and the capabilities that the image expects of the virtual machine.
+"
+Class {
+	#name : #ImageFormatTest,
+	#superclass : #TestCase,
+	#category : #ImageFormat
+}
+
+{ #category : #testing }
+ImageFormatTest >> testAsInteger [
+
+	self assert: (ImageFormat fromInteger: 6502) asInteger = 6502.
+	self assert: (ImageFormat fromInteger: 6504) asInteger = 6504.
+	self assert: (ImageFormat fromInteger: 68000) asInteger = 68000.
+	self assert: (ImageFormat fromInteger: 68002) asInteger = 68002.
+	
+]
+
+{ #category : #testing }
+ImageFormatTest >> testBaseVersionBits [
+
+	self assert: ImageFormat baseVersionMask = 16r119EE.
+	self assert: (ImageFormat wordSize: 4) baseVersionBits = 6502.
+	self assert: (ImageFormat new fromInteger: 6504) baseVersionBits = 6504.
+	self assert: (ImageFormat wordSize: 8) baseVersionBits = 68000.
+	self assert: (ImageFormat new fromInteger: 68002) baseVersionBits = 68002.
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testBitsInUse [
+	"Ensure that the list of known version numbers is kept up to date with the bit allocation"
+
+	| allocatedBitsInUse calculatedBitsInUse |
+	calculatedBitsInUse := ImageFormat knownVersionNumbers
+		inject: 0
+		into: [ :e :a | a bitOr: e] .
+	allocatedBitsInUse := ImageFormat baseVersionMask bitOr: ImageFormat capabilitiesBitsMask.
+	self assert: calculatedBitsInUse = allocatedBitsInUse
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testDefaultImageFormats [
+	"Original 32-bit image format, and the original 64-bit image format, prior to
+	introduction of block closure support."
+
+	self assert: (6502 = (ImageFormat wordSize: 4) asInteger).
+	self assert: (68000 = (ImageFormat wordSize: 8) asInteger).
+	self should: [ImageFormat wordSize: 0] raise: Error.
+	self should: [ImageFormat wordSize: 12] raise: Error
+]
+
+{ #category : #testing }
+ImageFormatTest >> testFormat6502 [
+
+	self assert: ImageFormat default asInteger = 6502.
+	self assert: (ImageFormat wordSize: 4) asInteger = 6502.
+	self assert: (ImageFormat wordSize: 4 closures: false) asInteger = 6502.
+	self assert: (ImageFormat fromInteger: 6502) asInteger = 6502.
+	self assert: ImageFormat default wordSize = 4.
+	self deny: ImageFormat default requiresClosureSupport.
+	self deny: ImageFormat default requiresPlatformByteOrder.
+	self assert: ImageFormat default is32Bit.
+	self deny: ImageFormat default is64Bit.
+	self assert: (ImageFormat fromInteger: 6502) asInteger = 6502
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testFormat6504 [
+
+	| defaultWithClosures |
+	defaultWithClosures := ImageFormat default setClosureSupportRequirement: true.
+	self assert: defaultWithClosures asInteger = 6504.
+	self assert: (ImageFormat wordSize: 4 closures: true) asInteger = 6504.
+	self assert: (ImageFormat fromInteger: 6504) asInteger = 6504.
+	self assert: defaultWithClosures wordSize = 4.
+	self assert: defaultWithClosures requiresClosureSupport.
+	self deny: defaultWithClosures requiresPlatformByteOrder.
+	self assert: defaultWithClosures is32Bit.
+	self deny: defaultWithClosures is64Bit.
+	self assert: (ImageFormat fromInteger: 6504) asInteger = 6504
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testFormat6505 [
+
+	| cog32 |
+	cog32 := ImageFormat default
+				setCogSupportRequirement: true;
+				setClosureSupportRequirement: true.
+	self assert: cog32 asInteger = 6505.
+	self assert: (ImageFormat wordSize: 4 cog: true) asInteger = 6505.
+	self assert: (ImageFormat fromInteger: 6505) asInteger = 6505.
+	self assert: cog32 wordSize = 4.
+	self assert: cog32 requiresClosureSupport.
+	self assert: cog32 requiresPlatformByteOrder.
+	self assert: cog32 is32Bit.
+	self deny: cog32 is64Bit.
+	self assert: (ImageFormat fromInteger: 6505) asInteger = 6505
+]
+
+{ #category : #testing }
+ImageFormatTest >> testFormat68000 [
+
+	| closures64 |
+	closures64 := ImageFormat wordSize: 8.
+	self assert: closures64 asInteger = 68000.
+	self assert: (ImageFormat wordSize: 8 closures: false) asInteger = 68000.
+	self assert: (ImageFormat fromInteger: 68000) asInteger = 68000.
+	self assert: closures64 wordSize = 8.
+	self deny: closures64 requiresClosureSupport.
+	self deny: closures64 requiresPlatformByteOrder.
+	self deny: closures64 is32Bit.
+	self assert: closures64 is64Bit.
+	self assert: (ImageFormat fromInteger: 68000) asInteger = 68000
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testFormat68002 [
+
+	| closures64 |
+	closures64 := (ImageFormat wordSize: 8) setClosureSupportRequirement: true.
+	self assert: closures64 asInteger = 68002.
+	self assert: (ImageFormat wordSize: 8 closures: true) asInteger = 68002.
+	self assert: (ImageFormat fromInteger: 68002) asInteger = 68002.
+	self assert: closures64 wordSize = 8.
+	self assert: closures64 requiresClosureSupport.
+	self deny: closures64 requiresPlatformByteOrder.
+	self deny: closures64 is32Bit.
+	self assert: closures64 is64Bit.
+	self assert: (ImageFormat fromInteger: 68002) asInteger = 68002
+]
+
+{ #category : #testing }
+ImageFormatTest >> testFormat68003 [
+
+	| cog64 |
+	cog64 := (ImageFormat wordSize: 8) setCogSupportRequirement: true.
+	self assert: cog64 asInteger = 68003.
+	self assert: (ImageFormat wordSize: 8 cog: true) asInteger = 68003.
+	self assert: (ImageFormat fromInteger: 68003) asInteger = 68003.
+	self assert: cog64 wordSize = 8.
+	self assert: cog64 requiresClosureSupport.
+	self assert: cog64 requiresPlatformByteOrder.
+	self deny: cog64 is32Bit.
+	self assert: cog64 is64Bit.
+	self assert: (ImageFormat fromInteger: 68003) asInteger = 68003
+]
+
+{ #category : #testing }
+ImageFormatTest >> testIs32Bit [
+
+	self assert: (ImageFormat wordSize: 4) is32Bit.
+	self assert: (ImageFormat new fromInteger: 6504) is32Bit.
+	self deny: (ImageFormat wordSize: 8) is32Bit.
+	self deny: (ImageFormat new fromInteger: 68002) is32Bit.
+]
+
+{ #category : #testing }
+ImageFormatTest >> testIs64Bit [
+
+	self deny: (ImageFormat wordSize: 4) is64Bit.
+	self deny: (ImageFormat new fromInteger: 6504) is64Bit.
+	self assert: (ImageFormat wordSize: 8) is64Bit.
+	self assert: (ImageFormat new fromInteger: 68002) is64Bit.
+]
+
+{ #category : #testing }
+ImageFormatTest >> testIsValidVersionNumber [
+
+	self should: [ImageFormat fromInteger: 0] raise: Error.
+	self should: [ImageFormat fromInteger: (6502 bitAnd: 16r80000000)] raise: Error.
+	self should: [ImageFormat fromInteger: (6502 bitAt: 31 put: 1)] raise: Error.
+	self should: [ImageFormat fromInteger: 6500] raise: Error.
+	self should: [ImageFormat fromInteger: 6501] raise: Error.
+	self should: [ImageFormat fromInteger: 6503] raise: Error. "Cog requires both capabilities"
+	self should: [ImageFormat fromInteger: 68001] raise: Error. "Cog requires both capabilities"
+
+	self assert: ImageFormat default isValidVersionNumber.
+	self assert: (ImageFormat wordSize: 4 closures: false) isValidVersionNumber.
+	self assert: (ImageFormat wordSize: 4 closures: true) isValidVersionNumber.
+	self assert: (ImageFormat wordSize: 8 closures: false) isValidVersionNumber.
+	self assert: (ImageFormat wordSize: 8 closures: true) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger: 6502) isValidVersionNumber.
+	self assert: (ImageFormat fromInteger: (6502 bitAt: 31 put: 0)) isValidVersionNumber.
+
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testRequiresClosureSupport [
+
+	| v |
+	v := ImageFormat wordSize: 4.
+	self deny: v requiresClosureSupport.
+	v setClosureSupportRequirement: false.
+	self assert: v asInteger = 6502.
+	self deny: v requiresClosureSupport.
+	v setClosureSupportRequirement: true.
+	self assert: v asInteger = 6504.
+	self assert: v requiresClosureSupport.
+
+	v := ImageFormat wordSize: 8.
+	self deny: v requiresClosureSupport.
+	v setClosureSupportRequirement: false.
+	self assert: v asInteger = 68000.
+	self deny: v requiresClosureSupport.
+	v setClosureSupportRequirement: true.
+	self assert: v asInteger = 68002.
+	self assert: v requiresClosureSupport.
+	
+	self deny: (ImageFormat wordSize: 4 closures: false) requiresClosureSupport.
+	self assert: (ImageFormat wordSize: 4 closures: true) requiresClosureSupport.
+	self deny: (ImageFormat wordSize: 8 closures: false) requiresClosureSupport.
+	self assert: (ImageFormat wordSize: 8 closures: true) requiresClosureSupport.
+
+]
+
+{ #category : #testing }
+ImageFormatTest >> testRequiresPlatformByteOrder [
+	"Required for Cog and StackInterpreter"
+
+	| v |
+	v := ImageFormat wordSize: 4.
+	self deny: v requiresPlatformByteOrder.
+	v setCogSupportRequirement: false.
+	self assert: v asInteger = 6502.
+	self deny: v requiresPlatformByteOrder.
+	v setCogSupportRequirement: true.
+	self assert: v asInteger = 6505.
+	self assert: v requiresPlatformByteOrder.
+
+	v := ImageFormat wordSize: 8.
+	self deny: v requiresPlatformByteOrder.
+	v setCogSupportRequirement: false.
+	self assert: v asInteger = 68000.
+	self deny: v requiresPlatformByteOrder.
+	v setCogSupportRequirement: true.
+	self assert: v asInteger = 68003.
+	self assert: v requiresPlatformByteOrder.
+	
+	self deny: (ImageFormat wordSize: 4 cog: false) requiresPlatformByteOrder.
+	self deny: (ImageFormat wordSize: 4 cog: false) requiresClosureSupport.
+	self deny: (ImageFormat wordSize: 8 cog: false) requiresPlatformByteOrder.
+	self deny: (ImageFormat wordSize: 8 cog: false) requiresClosureSupport.
+	self assert: (ImageFormat wordSize: 4 cog: true) requiresPlatformByteOrder.
+	self assert: (ImageFormat wordSize: 4 cog: true) requiresClosureSupport.
+	self assert: (ImageFormat wordSize: 8 cog: true) requiresPlatformByteOrder.
+	self assert: (ImageFormat wordSize: 8 cog: true) requiresClosureSupport.
+
+]
