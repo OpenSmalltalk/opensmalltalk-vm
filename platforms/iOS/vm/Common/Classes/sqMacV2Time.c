@@ -138,6 +138,18 @@ sqInt ioSeconds(void) {
 	return theSecondsAre;
 }
 
+sqInt ioUtcWithOffset(sqLong *microSeconds, int *offset)
+{
+	struct timeval timeval;
+	if (gettimeofday(&timeval, NULL) == -1) return -1;
+	time_t seconds = timeval.tv_sec;
+	suseconds_t usec = timeval.tv_usec;
+	*microSeconds = seconds * 1000000 + usec;
+	*offset = localtime(&seconds)->tm_gmtoff;
+	return 0;
+}
+
+
 sqInt ioRelinquishProcessorForMicroseconds(sqInt microSeconds) {
 	//API Documented
 	/* This operation is platform dependent. 	 */

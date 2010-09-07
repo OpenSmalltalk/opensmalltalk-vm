@@ -394,7 +394,7 @@ static int buttonState=0;
 - (void) recordWindowEvent: (int) windowType window: (NSWIndow *) window {
 	sqWindowEvent evt;
 	
-	evt.type= WindowEventClose;
+	evt.type= EventTypeWindow;
 	evt.timeStamp= (int) ioMSecs();
 	evt.action= windowType;
 	evt.value1 =  0;
