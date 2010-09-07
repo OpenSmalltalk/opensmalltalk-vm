@@ -1,3 +1,16 @@
+
+
+
+
+
+#error Hi, you are building an obsolete version of the macintosh VM. 
+#error Instead use the xCode projects found in the iOS folder 
+#error Remove these error defines if you really need to build this obsolete 4.x VM
+
+
+
+
+
 /****************************************************************************
 *   PROJECT: Mac initialization, misc utility routines
 *   FILE:    sqMacMain.c
