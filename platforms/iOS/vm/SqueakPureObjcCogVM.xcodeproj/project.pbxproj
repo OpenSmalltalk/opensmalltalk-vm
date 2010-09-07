@@ -32,11 +32,11 @@
 		9424FF760DDCB271009912BF /* osExports.c in Sources */ = {isa = PBXBuildFile; fileRef = 9424FF750DDCB271009912BF /* osExports.c */; };
 		9428BA9710BB440800DAD287 /* sqSqueakOSXClipboardAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 9428BA9610BB440800DAD287 /* sqSqueakOSXClipboardAPI.m */; };
 		9428BB0610BB478600DAD287 /* sqSqueakOSXApplication+clipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 9428BB0510BB478600DAD287 /* sqSqueakOSXApplication+clipboard.m */; };
-		942ABE2310AA21F70086D908 /* sqMacHostWindow.c in Sources */ = {isa = PBXBuildFile; fileRef = 94BCEA2B0DDE0C1600F38F31 /* sqMacHostWindow.c */; };
 		942ABE6F10AA23E20086D908 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 942ABE6E10AA23E20086D908 /* ApplicationServices.framework */; };
 		942F75D30E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F75D20E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m */; };
 		942F76320E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F76310E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m */; };
 		9432A3831227937C0090298B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9432A3821227937C0090298B /* OpenGL.framework */; };
+		943B9B2A1235BDD20056205E /* sqMacHostWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 943B9B281235BDD20056205E /* sqMacHostWindow.m */; };
 		944069CF10E6B63200353B27 /* MacMenubarPlugin.c in Sources */ = {isa = PBXBuildFile; fileRef = 944069CD10E6B63200353B27 /* MacMenubarPlugin.c */; };
 		944895AE10F4081300FB3EC8 /* PharoV10.sources in Resources */ = {isa = PBXBuildFile; fileRef = 944895AD10F4081300FB3EC8 /* PharoV10.sources */; };
 		9452D5E50E044A9D000AD792 /* Queue.m in Sources */ = {isa = PBXBuildFile; fileRef = 9452D5D80E044A9D000AD792 /* Queue.m */; };
@@ -431,6 +431,8 @@
 		943001A30E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneFileDirectoryInterface.h; sourceTree = "<group>"; };
 		943001A40E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqSqueakIPhoneFileDirectoryInterface.m; sourceTree = "<group>"; };
 		9432A3821227937C0090298B /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
+		943B9B281235BDD20056205E /* sqMacHostWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqMacHostWindow.m; sourceTree = "<group>"; };
+		943B9B291235BDD20056205E /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacHostWindow.h; sourceTree = "<group>"; };
 		944069CD10E6B63200353B27 /* MacMenubarPlugin.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = MacMenubarPlugin.c; sourceTree = "<group>"; };
 		944895AD10F4081300FB3EC8 /* PharoV10.sources */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; name = PharoV10.sources; path = iPhone/PharoV10.sources; sourceTree = "<group>"; };
 		9452BDC10F4095DE006410DE /* sqSqueakIPhoneApplication+Network.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = "sqSqueakIPhoneApplication+Network.h"; sourceTree = "<group>"; };
@@ -942,6 +944,16 @@
 			path = vm/iPhone;
 			sourceTree = "<group>";
 		};
+		943B9B271235BD960056205E /* HostWindowPlugin */ = {
+			isa = PBXGroup;
+			children = (
+				943B9B281235BDD20056205E /* sqMacHostWindow.m */,
+				943B9B291235BDD20056205E /* sqMacHostWindow.h */,
+			);
+			name = HostWindowPlugin;
+			path = vm/OSX/plugins/HostWindowPlugin;
+			sourceTree = "<group>";
+		};
 		944069CC10E6B63200353B27 /* MacMenubarPlugin */ = {
 			isa = PBXGroup;
 			children = (
@@ -1333,6 +1345,7 @@
 		94C4B82C10C06F0D00CD4F90 /* plugins */ = {
 			isa = PBXGroup;
 			children = (
+				943B9B271235BD960056205E /* HostWindowPlugin */,
 				94584FD810F02378001401E7 /* ClipboardExtended */,
 				94B9528410E6B79E00DC476A /* MacMenubarPlugin */,
 				94C4B82D10C06F1800CD4F90 /* SoundPlugin */,
@@ -2228,7 +2241,6 @@
 				947E647B10AA100900D3B69E /* SqueakOSXAppDelegate.m in Sources */,
 				947E64AB10AA149F00D3B69E /* sqMacSecurity.c in Sources */,
 				947E64CC10AA16FE00D3B69E /* sqSqueakOSXApplication.m in Sources */,
-				942ABE2310AA21F70086D908 /* sqMacHostWindow.c in Sources */,
 				94BCABC110AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.m in Sources */,
 				94BCAD1D10AB942300F87527 /* sqSqueakOSXApplication+attributes.m in Sources */,
 				94BCAE6910ACA10100F87527 /* sqSqueakOSXInfoPlistInterface.m in Sources */,
@@ -2263,6 +2275,7 @@
 				9494933311E527180019BC29 /* sqUnixThreads.c in Sources */,
 				9494933411E527180019BC29 /* sqUnixVMProfile.c in Sources */,
 				949493C111E52ADE0019BC29 /* aio.c in Sources */,
+				943B9B2A1235BDD20056205E /* sqMacHostWindow.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
