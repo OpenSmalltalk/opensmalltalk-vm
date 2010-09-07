@@ -1,11 +1,16 @@
-//
-//  sqSqueakOSXScreenAndWindow.m
-//  SqueakPureObjc
-//
-//  Created by John M McIntosh on 09-11-14.
 /*
- Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
- Copyright 2009 Corporate Smalltalk Consulting Ltd. All rights reserved.
+ *  sqMacHostWindow.h
+ *  SqueakVMForCarbon
+ *
+ *  Created by John M McIntosh on Tue Jul 20 2004.
+ *
+ 
+   3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
+   Altered for IPhone
+
+ */
+/*
+ Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
  MIT License
  Permission is hereby granted, free of charge, to any person
  obtaining a copy of this software and associated documentation
@@ -36,38 +41,31 @@
  */
 //
 
-#import "sqSqueakOSXScreenAndWindow.h"
-#import "SqueakOSXAppDelegate.h"
-#import "sqMacHostWindow.h"
-#import "sqSqueakOSXInfoPlistInterface.h"
-#import "SqViewBitmapConversion.h"
+#include "HostWindowPlugin.h"
+#ifdef BUILD_FOR_OSX
+#include <ApplicationServices/ApplicationServices.h>
+#else
+#include <CoreGraphics/CoreGraphics.h>
+#endif
+/* window handle type */
+#define wHandleType void *
+#define wIndexType sqInt 
 
-extern SqueakOSXAppDelegate *gDelegateApp;
+typedef struct windowDescriptorBlock {
+	struct windowDescriptorBlock * next;
+	wHandleType		handle;
+	wIndexType		windowIndex;
+	/* extra fields to support your platform needs */
+	void * context;
+	CGRect	updateArea;
+	sqInt	width;
+	sqInt	height;
+} windowDescriptorBlock;
 
-@implementation sqSqueakOSXScreenAndWindow
-@synthesize mainViewOnWindow;
-
--(id) getMainView {
-	return (sqSqueakOSXNSView*) self.mainViewOnWindow;
-}
-
-- (void) dealloc {
-	[mainViewOnWindow release];
-	[super dealloc];
-}
-
-- (void)  ioSetFullScreen: (sqInt) fullScreen {
-	[[self getMainView] ioSetFullScreen: fullScreen];
-}
-
-- (sqInt) ioHasDisplayDepth: (sqInt) depth {
-	if (depth == 1 || depth == 2 || depth == 4 || depth == 8 || depth==16 || depth==32 ) 
-		return true;
-	return false;
-}
-
-- (BOOL)windowShouldClose:(id)window {
-	[gDelegateApp.squeakApplication recordWindowEvent: WindowEventClose window: window];
-	return NO;
-}
-@end
+windowDescriptorBlock *windowBlockFromHandle(wHandleType windowHandle);
+sqInt windowIndexFromBlock( windowDescriptorBlock * thisWindow);
+sqInt windowIndexFromHandle(wHandleType windowHandle);
+wHandleType windowHandleFromIndex(wIndexType windowIndex);
+windowDescriptorBlock *AddWindowBlock(void);
+windowDescriptorBlock *windowBlockFromIndex(sqInt windowIndex);
+sqInt getCurrentIndexInUse(void);

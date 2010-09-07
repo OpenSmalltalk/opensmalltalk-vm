@@ -76,6 +76,15 @@ SqueakOSXAppDelegate *gDelegateApp;
 	
 }
 
+- (BOOL)applicationShouldTerminateAfterLastWindowClosed:(NSApplication *)sender {
+	return NO;
+}
+
+- (NSApplicationTerminateReply)applicationShouldTerminate:(NSApplication *)sender {
+	[self.window performClose: self.window];
+	return NSTerminateCancel;
+}
+
 - (id) createPossibleWindow {
 	sqInt width,height;
 	extern sqInt getSavedWindowSize(void); //This is VM Callback

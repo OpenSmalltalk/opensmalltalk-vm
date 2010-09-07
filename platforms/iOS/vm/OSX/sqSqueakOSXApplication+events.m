@@ -43,6 +43,7 @@
 #import "sqSqueakOSXInfoPlistInterface.h"
 #import "keyBoardStrokeDetails.h"
 #import "sqSqueakOSXNSView.h"
+#import "sqMacHostWindow.h"
 
 extern struct	VirtualMachine* interpreterProxy;
 extern SqueakOSXAppDelegate *gDelegateApp;
@@ -385,6 +386,22 @@ static int buttonState=0;
 	evt.modifiers= (buttonState >> 3);
 	evt.numFiles= numFiles;
 	evt.windowIndex = (int) windowIndex;
+	[self pushEventToQueue: (sqInputEvent *) &evt];
+	
+	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
+}
+
+- (void) recordWindowEvent: (int) windowType window: (NSWIndow *) window {
+	sqWindowEvent evt;
+	
+	evt.type= WindowEventClose;
+	evt.timeStamp= (int) ioMSecs();
+	evt.action= windowType;
+	evt.value1 =  0;
+	evt.value2 =  0;
+	evt.value3 =  0;
+	evt.value4 =  0;
+	evt.windowIndex = windowIndexFromHandle((wHandleType)window);
 	[self pushEventToQueue: (sqInputEvent *) &evt];
 	
 	interpreterProxy->signalSemaphoreWithIndex(gDelegateApp.squeakApplication.inputSemaphoreIndex);
