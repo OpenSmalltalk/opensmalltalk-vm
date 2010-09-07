@@ -92,6 +92,7 @@ sqImageFileReadEntireImage(memoryAddress, elementSize, length, fileStream)
 #endif
 
 #undef ioMSecs
+#define ioUtcWithOffset ioUtcWithOffset
 
 /* macro to return from interpret() loop in browser plugin VM */
 #define ReturnFromInterpret() return
