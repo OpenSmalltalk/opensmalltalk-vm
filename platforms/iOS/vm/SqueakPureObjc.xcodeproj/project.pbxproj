@@ -2636,6 +2636,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Distribution: Corporate Smalltalk Consulting Ltd";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_OPTIMIZATION_LEVEL = 3;
@@ -2665,6 +2666,7 @@
 				PER_ARCH_CFLAGS_i386 = "-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS";
 				PER_ARCH_CFLAGS_ppc = "-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int";
 				PRODUCT_NAME = Squeak;
+				"PROVISIONING_PROFILE[sdk=macosx*]" = "4D1323CE-3998-4FF8-AB83-49838083E965";
 				SDKROOT = macosx10.5;
 			};
 			name = Distribution;
@@ -2755,6 +2757,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_64_BIT)";
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Distribution: Corporate Smalltalk Consulting Ltd";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_ENABLE_SSE3_EXTENSIONS = YES;
@@ -2788,6 +2791,7 @@
 				PER_ARCH_CFLAGS_i386 = "-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16    -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS";
 				PER_ARCH_CFLAGS_ppc = "-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int";
 				PRODUCT_NAME = Squeak;
+				"PROVISIONING_PROFILE[sdk=macosx*]" = "4D1323CE-3998-4FF8-AB83-49838083E965";
 				SDKROOT = macosx10.5;
 			};
 			name = Distribution;

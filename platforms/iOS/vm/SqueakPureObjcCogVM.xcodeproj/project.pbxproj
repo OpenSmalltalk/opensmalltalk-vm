@@ -2394,6 +2394,7 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = i386;
+				"CODE_SIGN_IDENTITY[sdk=macosx*]" = "iPhone Distribution: Corporate Smalltalk Consulting Ltd";
 				COPY_PHASE_STRIP = YES;
 				GCC_C_LANGUAGE_STANDARD = "compiler-default";
 				GCC_ENABLE_SSE3_EXTENSIONS = YES;
@@ -2417,6 +2418,7 @@
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				PER_ARCH_CFLAGS_i386 = "-DLSB_FIRST -mfpmath=sse -finline-functions  -fomit-frame-pointer -fno-cse-follow-jumps -fno-gcse -mtune=prescott -march=pentium-m -falign-functions=16";
 				PRODUCT_NAME = Squeak;
+				"PROVISIONING_PROFILE[sdk=macosx*]" = "4D1323CE-3998-4FF8-AB83-49838083E965";
 				SDKROOT = macosx10.6;
 			};
 			name = Distribution;
