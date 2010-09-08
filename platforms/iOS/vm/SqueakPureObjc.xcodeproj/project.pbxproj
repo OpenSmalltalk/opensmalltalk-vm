@@ -652,7 +652,7 @@
 		947E64CB10AA16FE00D3B69E /* sqSqueakOSXApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXApplication.m; path = vm/OSX/sqSqueakOSXApplication.m; sourceTree = "<group>"; };
 		947E64DD10AA18FE00D3B69E /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
 		948774A810C64DD800E4AEC5 /* Squeak.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = Squeak.app; sourceTree = BUILT_PRODUCTS_DIR; };
-		948774B110C64DD800E4AEC5 /* SqueakPureObjc-Info 64*64.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SqueakPureObjc-Info 64*64.plist"; sourceTree = "<group>"; };
+		948774B110C64DD800E4AEC5 /* SqueakPureObjc-Info 64x64.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SqueakPureObjc-Info 64x64.plist"; sourceTree = "<group>"; };
 		94883B2A0E0C2A5E005A4738 /* aio.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = aio.c; path = ../iOS/vm/Common/aio.c; sourceTree = "<group>"; };
 		94883B400E0C2B9C005A4738 /* sqUnixSocket.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqUnixSocket.c; sourceTree = "<group>"; };
 		948EC38F1155312600B08A4F /* MainWindow-iPad.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = "MainWindow-iPad.xib"; path = "Resources-iPad/MainWindow-iPad.xib"; sourceTree = "<group>"; };
@@ -952,7 +952,7 @@
 				941D1C9A0E696FC7005B77B3 /* Entitlements.plist */,
 				94C36C9710B0CF290041953A /* Info-iPhone.plist */,
 				947E5F9F10A9FFA000D3B69E /* SqueakPureObjc-Info.plist */,
-				948774B110C64DD800E4AEC5 /* SqueakPureObjc-Info 64*64.plist */,
+				948774B110C64DD800E4AEC5 /* SqueakPureObjc-Info 64x64.plist */,
 			);
 			name = CustomTemplate;
 			sourceTree = "<group>";
@@ -2744,7 +2744,7 @@
 				);
 				GCC_VERSION = 4.2;
 				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
-				INFOPLIST_FILE = "SqueakPureObjc-Info 64*64.plist";
+				INFOPLIST_FILE = "SqueakPureObjc-Info 64x64.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = Squeak;
@@ -2784,7 +2784,7 @@
 				ICC_OPT_PREFETCH_INSERTION = YES;
 				ICC_OPT_PROVIDE_FRAME_PTR = NO;
 				ICC_OPT_USE_ARCH_IA32 = SSE41;
-				INFOPLIST_FILE = "SqueakPureObjc-Info 64*64.plist";
+				INFOPLIST_FILE = "SqueakPureObjc-Info 64x64.plist";
 				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				ONLY_ACTIVE_ARCH = NO;
 				OTHER_CFLAGS = "";
