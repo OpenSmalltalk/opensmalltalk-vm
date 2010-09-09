@@ -45,7 +45,7 @@
 		94AF34F10846F91100FA5ACB /* Info-SqueakLocalePlugin__Upgraded_.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "Info-SqueakLocalePlugin__Upgraded_.plist"; sourceTree = "<group>"; };
 		94AF34F20846F91100FA5ACB /* LocalePlugin.bundle */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = LocalePlugin.bundle; sourceTree = BUILT_PRODUCTS_DIR; };
 		94AF35000846F98600FA5ACB /* config.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = config.h; sourceTree = "<group>"; };
-		94AF35040846F9AB00FA5ACB /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../src/vm/interp.h; sourceTree = "<group>"; };
+		94AF35040846F9AB00FA5ACB /* interp.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = interp.h; path = ../../vm/interp.h; sourceTree = "<group>"; };
 		94E7F6C5123740F900A03A11 /* sqMacLocaleCocoa.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacLocaleCocoa.h; sourceTree = "<group>"; };
 		94E7F6C6123740F900A03A11 /* sqMacLocaleCocoa.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqMacLocaleCocoa.m; sourceTree = "<group>"; };
 		94E7F9041237550300A03A11 /* Cocoa.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Cocoa.framework; path = System/Library/Frameworks/Cocoa.framework; sourceTree = SDKROOT; };
@@ -66,7 +66,6 @@
 		66B8BC570381F53800A8011A /* iPhone */ = {
 			isa = PBXGroup;
 			children = (
-				94AF35040846F9AB00FA5ACB /* interp.h */,
 				94AF35000846F98600FA5ACB /* config.h */,
 				66B8BC580381F61C00A8011A /* sqConfig.h */,
 				66B8BC5A0381F63A00A8011A /* sqPlatformSpecific.h */,
@@ -119,6 +118,7 @@
 			children = (
 				94ABA8900858C3F900079BE1 /* LocalePlugin.h */,
 				94ABA8870858C2CB00079BE1 /* LocalePlugin.c */,
+				94AF35040846F9AB00FA5ACB /* interp.h */,
 			);
 			name = LocalePlugin;
 			path = ../../vm/src/plugins/LocalePlugin;
