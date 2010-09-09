@@ -83,7 +83,12 @@ BOOL browserActiveAndDrawingContextOkAndInFullScreenMode(void);
 		unsigned int word= ((unsigned int *)pointerForOop(cursorBitsIndex))[i];
 		data[i*2 + 0]= (word >> 24) & 0xFF;
 		data[i*2 + 1]= (word >> 16) & 0xFF;
-		word= ((unsigned int *)pointerForOop(cursorMaskIndex))[i];
+		
+		if (cursorMaskIndex)
+			word= ((unsigned int *)pointerForOop(cursorMaskIndex))[i];
+		else 
+			word = 0xFFFFFFFF;
+		
 		mask[i*2 + 0]= (word >> 24) & 0xFF;
 		mask[i*2 + 1]= (word >> 16) & 0xFF;
 	}

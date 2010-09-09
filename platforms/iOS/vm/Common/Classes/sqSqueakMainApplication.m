@@ -211,33 +211,19 @@ int plugInTimeToReturn(void) {
 
 sqInt convertToSqueakTime(NSDate *givenDate)
 {
-	//IM
-	NSTimeInterval dateDifference;
-	static NSDate *squeakEpoch=NULL;
 	
-	if (!givenDate) 
-		return 0;
+	time_t unixTime = [givenDate timeIntervalSince1970];
 	
-	if (squeakEpoch == NULL) {
-		NSDateComponents *comps = [NSDateComponents new];
-		NSCalendar *calenderEnglishUSA = [[NSCalendar alloc] initWithCalendarIdentifier: NSGregorianCalendar]; //Use USA english calender versus user choosen china calender
-		//NSTimeZone* zone =[NSTimeZone timeZoneForSecondsFromGMT: 0];
-		//[calenderEnglishUSA setTimeZone: zone];  THIS appears not to be needed?
-		[comps setYear: 1901];
-		[comps setMonth: 1];
-		[comps setDay: 1];
-		[comps setHour: 0];
-		[comps setMinute: 0];
-		[comps setSecond: 0];
-		 
-		squeakEpoch = [calenderEnglishUSA  dateFromComponents: comps];
-		[squeakEpoch retain];
-		[comps release];
-		[calenderEnglishUSA release];
-	}
-
-	/* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970 */
-	dateDifference = [givenDate timeIntervalSinceDate: squeakEpoch];
-	return (sqInt) (usqInt) dateDifference;
+#ifdef HAVE_TM_GMTOFF
+	unixTime+= localtime(&unixTime)->tm_gmtoff;
+#else
+# ifdef HAVE_TIMEZONE
+	unixTime+= ((daylight) * 60*60) - timezone;
+# else
+#  error: cannot determine timezone correction
+# endif
+#endif
+	/* Squeak epoch is Jan 1, 1901.  Unix epoch is Jan 1, 1970: 17 leap years
+     and 52 non-leap years later than Squeak. */
+	return unixTime + ((52*365UL + 17*366UL) * 24*60*60UL);
 }
-
