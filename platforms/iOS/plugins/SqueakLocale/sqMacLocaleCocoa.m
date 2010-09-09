@@ -104,7 +104,7 @@ void	sqLocGetCurrencySymbolInto(char * str) {
 	[currencySymbol getBytes: str 
 				 maxLength: sqLocCurrencySymbolSize()
 				usedLength: &usedByteCount 
-				  encoding: NSMacOSRomanStringEncoding 
+				  encoding: NSUTF8StringEncoding 
 				   options:NSStringEncodingConversionExternalRepresentation 
 					 range:NSMakeRange(0,[currencySymbol length]) 
 			remainingRange: NULL];
