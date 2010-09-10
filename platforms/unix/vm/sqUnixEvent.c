@@ -34,6 +34,22 @@
  * NOTE: this file is included by the window support files that need it.
  */
 
+#if defined(DEBUG_EVENTS)
+# undef DEBUG_EVENTS
+# define DEBUG_EVENTS 1
+# define DEBUG_KEYBOARD_EVENTS 1
+# define DEBUG_MOUSE_EVENTS 1
+#else
+# if defined(DEBUG_KEYBOARD_EVENTS)
+#	undef DEBUG_KEYBOARD_EVENTS
+#	define DEBUG_KEYBOARD_EVENTS 1
+# endif
+# if defined(DEBUG_MOUSE_EVENTS)
+#	undef DEBUG_MOUSE_EVENTS
+#	define DEBUG_MOUSE_EVENTS 1
+# endif
+#endif
+
 #define IEB_SIZE	 64	/* must be power of 2 */
 
 typedef struct
@@ -55,7 +71,7 @@ int iebOut= 0;	/* next IEB location to read  */
 int buttonState= 0;		/* mouse button state or 0 if not pressed */
 int modifierState= 0;		/* modifier key state or 0 if none pressed */
 
-#if defined(DEBUG_EVENTS) || defined(DEBUG_KEYBOARD_EVENTS)
+#if DEBUG_EVENTS || DEBUG_KEYBOARD_EVENTS || DEBUG_MOUSE_EVENTS
 
 #include <ctype.h>
 
@@ -79,7 +95,7 @@ static void printModifiers(int midofiers)
   if (midofiers & OptionKeyBit)  printf(" Option");
 }
 
-#endif
+#endif /* DEBUG_KEYBOARD_EVENTS || DEBUG_MOUSE_EVENTS */
 
 
 static sqInputEvent *allocateInputEvent(int eventType)
@@ -131,7 +147,7 @@ static sqInt getButtonState(void)
 	case CommandKeyBit: buttons= blue;   modifiers &= ~CommandKeyBit; break;
 	}
     }
-#ifdef DEBUG_EVENTS
+#if DEBUG_MOUSE_EVENTS
   printf("BUTTONS");
   printModifiers(modifiers);
   printButtons(buttons);
@@ -143,7 +159,7 @@ static sqInt getButtonState(void)
 
 static void signalInputEvent(void)
 {
-#ifdef DEBUG_EVENTS
+#if DEBUG_EVENTS
   printf("signalInputEvent\n");
 #endif
   if (inputEventSemaIndex > 0)
@@ -162,7 +178,7 @@ static void recordMouseEvent(void)
   evt->nrClicks=
     evt->windowIndex= 0;
   signalInputEvent();
-#ifdef DEBUG_EVENTS
+#if DEBUG_MOUSE_EVENTS
   printf("EVENT: mouse (%d,%d)", mousePosition.x, mousePosition.y);
   printModifiers(state >> 3);
   printButtons(state & 7);
@@ -182,7 +198,7 @@ static void recordKeyboardEvent(int keyCode, int pressCode, int modifiers, int u
   evt->reserved1=
     evt->windowIndex= 0;
   signalInputEvent();
-#if defined(DEBUG_EVENTS) || defined(DEBUG_KEYBOARD_EVENTS)
+#if DEBUG_KEYBOARD_EVENTS
   printf("EVENT: key");
   switch (pressCode)
     {
@@ -209,7 +225,7 @@ static void recordDragEvent(int dragType, int numFiles)
   evt->numFiles= numFiles;
   evt->windowIndex= 0;
   signalInputEvent();
-#ifdef DEBUG_EVENTS
+#if DEBUG_EVENTS
   printf("EVENT: drag (%d,%d)", mousePosition.x, mousePosition.y);
   printModifiers(state >> 3);
   printButtons(state & 7);
@@ -228,7 +244,7 @@ static void recordWindowEvent(int action, int v1, int v2, int v3, int v4, int wi
   evt->value4= v4;
   evt->windowIndex= windowIndex;
   signalInputEvent();
-#ifdef DEBUG_EVENTS
+#if DEBUG_EVENTS
   printf("EVENT: window (%d %d %d %d %d %d) ", action, v1, v2, v3, v4, 0);
   switch (action)
     {
@@ -275,7 +291,7 @@ static void recordKeystroke(int keyCode)			/* DEPRECATED */
   if (inputEventSemaIndex == 0)
     {
       int keystate= keyCode | (modifierState << 8);
-#    ifdef DEBUG_EVENTS
+#    if DEBUG_KEYBOARD_EVENTS
       printf("RECORD keystroke");
       printModifiers(modifierState);
       printKey(keyCode);
