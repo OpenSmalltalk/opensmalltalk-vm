@@ -41,6 +41,8 @@ such third-party acknowledgments.
 #import "sqSqueakIPhoneApplication.h"
 #import "sqiPhoneScreenAndWindow.h"
 #import "sqSqueakIPhoneInfoPlistInterface.h"
+#import "SqueakUIViewCALayer.h"
+#import "SqueakUIViewOpenGL.h"
 
 extern struct	VirtualMachine* interpreterProxy;
 SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
@@ -114,7 +116,8 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		fakeScreenSize.origin.y = 0;
 		fakeScreenSize.size.width *= 2.0; 
 		fakeScreenSize.size.height *= 2.0;
-		mainView = [[SqueakUIView alloc] initWithFrame: fakeScreenSize];
+#error use 	SqueakUIViewCALayer
+		mainView = [[SqueakUIViewOpenGL alloc] initWithFrame: fakeScreenSize];
 		self.mainView.clearsContextBeforeDrawing = NO;
 		
 		//Setup the scroll view which wraps the mainView
@@ -138,7 +141,8 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	} else {
 		
 		CGRect fakeScreenSize = mainScreenSize	;
-		mainView = [[SqueakUIView alloc] initWithFrame: fakeScreenSize];
+#error use 	SqueakUIViewCALayer
+		mainView = [[SqueakUIViewOpenGL alloc] initWithFrame: fakeScreenSize];
 		self.mainView.clearsContextBeforeDrawing = NO;
 		self.viewController = [SqueakUIController new];
 		self.viewController.view = self.mainView;

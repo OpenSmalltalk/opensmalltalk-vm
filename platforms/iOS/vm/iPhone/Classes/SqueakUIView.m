@@ -36,8 +36,6 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  */
 
 //
-#import <QuartzCore/QuartzCore.h>
-
 #import "SqueakUIView.h"
 #import "sqSqueakMainApplication.h"
 #import "SqueakNoOGLIPhoneAppDelegate.h"
@@ -47,14 +45,6 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 
 extern struct	VirtualMachine* interpreterProxy;
 extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
-
-static void MyProviderReleaseData (
-							void *info,
-							const void *data,
-							size_t size
-							) {
-}
-
 
 @implementation SqueakUIView : UIView ;
 @synthesize squeakTheDisplayBits;
@@ -67,88 +57,16 @@ static void MyProviderReleaseData (
 	return self;
 }
 
-- (void)layoutSubviews {
-	CGRect ff = self.frame;
-	CGRect aFrame = self.bounds;
-	dividedWidth = aFrame.size.width/4.0;
-	dividedHeight = aFrame.size.height/4.0;
-	for (int v=0;v<4;v++) {
-		for (int h=0;h<4;h++) {
-			CALayer *setupLayer = [CALayer layer];
-			[setupLayer setOpaque: YES];
-			setupLayer.frame = CGRectMake(dividedWidth*h, dividedHeight*v, dividedWidth, dividedHeight);
-			if (myLayer[v][h]) {
-				[self.layer replaceSublayer: myLayer[v][h] with: setupLayer];
-				myLayer[v][h] = setupLayer;
-			} else {
-				myLayer[v][h] = setupLayer;
-				[self.layer addSublayer: setupLayer];
-			}
-			frameForQuartz[v][h] = CGRectMake(dividedWidth*h,dividedHeight*(3-v), dividedWidth, dividedHeight);
-			dirty[v][h] = NO;
-		}
-	}
-}
-
-
 - (void) dealloc {
     [super dealloc];
 //	if (colorspace)
 //		CGColorSpaceRelease(colorspace);	
 }
 
-- (CGImageRef) createImageFrom: (void *) dispBitsIndex affectedT: (int) affectedT affectedB: (int) affectedB affectedL: (int) affectedL affectedR: (int) affectedR height: (int) height width: (int) width {
-	const size_t depth = 32;
-	size_t 	pitch = ((((width)*(depth) + 31) >> 5) << 2);
-
-	size_t totalSize = pitch * (affectedB-affectedT)-affectedL*4;
-	CGDataProviderRef provider =  CGDataProviderCreateWithData (NULL,(void*)dispBitsIndex+ pitch*affectedT + affectedL*4,(size_t) totalSize,MyProviderReleaseData);
-	
-	CGImageRef image = CGImageCreate((size_t) affectedR-affectedL,(size_t) affectedB-affectedT, (size_t) 8 /* bitsPerComponent */,
-						  (size_t) depth /* bitsPerPixel */, 
-						  (size_t) pitch, colorspace, 
-						  (CGBitmapInfo) kCGImageAlphaNoneSkipFirst | kCGBitmapByteOrder32Host , 
-						  provider, NULL, (bool) 0, kCGRenderingIntentDefault);
-	
-	CGDataProviderRelease(provider);
-	return image;
+- (void) drawThelayers {
 }
-
 
 - (void) drawImageUsingClip: (CGRect) clip {
-	for (int v=0;v<4;v++) {
-		for (int h=0;h<4;h++) {
-			dirty[v][h] = dirty[v][h] || CGRectIntersectsRect(frameForQuartz[v][h],clip);
-		}
-	}
-}
-
-- (void) drawThelayers {
-	sqInt formObj = interpreterProxy->displayObject();
-	sqInt formPtrOop = interpreterProxy->fetchPointerofObject(0, formObj);	
-	void* dispBitsIndex = interpreterProxy->firstIndexableField(formPtrOop);
-	squeakTheDisplayBits = (void*) dispBitsIndex;	
-	
-	[CATransaction begin];
-	[CATransaction setValue: [NSNumber numberWithBool:YES] forKey: kCATransactionDisableActions];
-	for (int v=0;v<4;v++) {
-		for (int h=0;h<4;h++) {
-			if (dirty[v][h]) {
-				CGRect rect = myLayer[v][h].frame;
-				CGImageRef x= [self createImageFrom: squeakTheDisplayBits 
-							affectedT: rect.origin.y 
-							affectedB: rect.origin.y+rect.size.height 
-							affectedL: rect.origin.x 
-							affectedR: rect.origin.x+rect.size.width 
-							   height: (int) dividedHeight*4 
-								width: (int) dividedWidth*4];
-				myLayer[v][h].contents = (id)x; 
-				CGImageRelease(x);
-				dirty[v][h] = NO;
-			}
-		}
-	}
-	[CATransaction commit];
 }
 
 // Handles the start of a touch

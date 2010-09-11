@@ -1,10 +1,10 @@
 //
-//  SqueakUIView.h
-//  SqueakNoOGLIPhone
+//  SqueakUIViewCALayer.h
+//  SqueakPureObjc
 //
-//  Created by John M McIntosh on 5/20/08.
+//  Created by John M McIntosh on 10-09-09.
+//  Copyright 2010 Corporate Smalltalk Consulting Ltd. All rights reserved.
 /*
-Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
  MIT License
  Permission is hereby granted, free of charge, to any person
@@ -34,23 +34,17 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
  such third-party acknowledgments.
  */
-
 //
 
-#import <Foundation/Foundation.h>
-#include <AvailabilityInternal.h>
+#import <UIKit/UIKit.h>
+#import "SqueakUIView.h"
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED < __IPHONE_3_1
-@interface SqueakUIView : UIView  <UIKeyInput> {
-#else
-@interface SqueakUIView : UIView  {
-#endif
-	CGColorSpaceRef colorspace;
-	void	*squeakTheDisplayBits;
-	}
-	
-	- (void) recordCharEvent:(NSString *) unicodeString;
-	- (void) drawThelayers;
-	- (void) drawImageUsingClip: (CGRect) clip;
-	@property (nonatomic,assign) void *squeakTheDisplayBits;
+@interface SqueakUIViewCALayer : SqueakUIView {
+	CALayer *myLayer[4][4];
+	BOOL	dirty[4][4];
+	CGRect	frameForQuartz[4][4];
+	CGFloat dividedWidth;
+	CGFloat dividedHeight;	
+}
+
 @end

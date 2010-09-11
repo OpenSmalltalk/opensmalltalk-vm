@@ -1,10 +1,10 @@
 //
-//  SqueakUIView.h
-//  SqueakNoOGLIPhone
+//  SqueakUIViewOpenGL.h
+//  SqueakPureObjc
 //
-//  Created by John M McIntosh on 5/20/08.
+//  Created by John M McIntosh on 10-09-09.
+//  Copyright 2010 Corporate Smalltalk Consulting Ltd. All rights reserved.
 /*
-Some of this code was funded via a grant from the European Smalltalk User Group (ESUG)
  Copyright (c) 2008 Corporate Smalltalk Consulting Ltd. All rights reserved.
  MIT License
  Permission is hereby granted, free of charge, to any person
@@ -34,23 +34,52 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
  Alternately, this acknowledgment may appear in the software itself, in the same form and location as other 
  such third-party acknowledgments.
  */
-
 //
 
-#import <Foundation/Foundation.h>
-#include <AvailabilityInternal.h>
+#import <UIKit/UIKit.h>
+#import "SqueakUIView.h"
+#import <OpenGLES/EAGL.h>
+#import <OpenGLES/ES1/gl.h>
+#import <OpenGLES/ES1/glext.h>
+#import <OpenGLES/EAGLDrawable.h>
+#import <QuartzCore/QuartzCore.h>
+extern struct	VirtualMachine* interpreterProxy;
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED < __IPHONE_3_1
-@interface SqueakUIView : UIView  <UIKeyInput> {
+// Run-time assertion
+#if 1
+#define rt_assert(expression) assert(expression)
 #else
-@interface SqueakUIView : UIView  {
+#define rt_assert(expression)
 #endif
-	CGColorSpaceRef colorspace;
-	void	*squeakTheDisplayBits;
-	}
-	
-	- (void) recordCharEvent:(NSString *) unicodeString;
-	- (void) drawThelayers;
-	- (void) drawImageUsingClip: (CGRect) clip;
-	@property (nonatomic,assign) void *squeakTheDisplayBits;
+
+// Catch run-time GL errors
+#if 0
+#define glCheckError() { \
+GLenum err = glGetError(); \
+if (err != GL_NO_ERROR) { \
+fprintf(stderr, "glCheckError: %04x caught at %s:%u\n", err, __FILE__, __LINE__); \
+rt_assert(0); \
+} \
+}
+#else
+#define glCheckError()
+#endif
+
+
+@interface SqueakUIViewOpenGL : SqueakUIView {
+	// The pixel dimensions of the backbuffer
+    GLint backingWidth;
+    GLint backingHeight;
+	GLuint textureId;
+	BOOL clippyIsEmpty;
+	BOOL	syncNeeded;
+	CGRect clippy;
+	// OpenGL names for the renderbuffer and framebuffer used to render to this view
+    EAGLContext *context;
+    GLuint viewRenderbuffer, viewFramebuffer;   
+}
+-(void)setupOpenGL;
+
 @end
+
+
