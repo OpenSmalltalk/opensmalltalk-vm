@@ -61,9 +61,19 @@ static	sqWindowEvent evt;
 	[data release];	
 }
 
+
+- (void)willRotateToInterfaceOrientation:(UIInterfaceOrientation)toInterfaceOrientation duration:(NSTimeInterval)duration {
+	[gDelegateApp zoomToOrientation: toInterfaceOrientation animated: YES];
+}
+
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
-	CGRect mainScreenSize = [[UIScreen mainScreen] applicationFrame];
 	UIInterfaceOrientation o = [[UIApplication sharedApplication] statusBarOrientation];
+	if (UIInterfaceOrientationIsPortrait(o))
+		[gDelegateApp.mainView becomeFirstResponder];
+	else
+		[gDelegateApp.mainView resignFirstResponder];
+	
+	CGRect mainScreenSize = [[UIScreen mainScreen] applicationFrame];
 	CGRect f;
 
 	f.origin.x = 0.0f;
@@ -85,7 +95,8 @@ static	sqWindowEvent evt;
 //	gDelegateApp.mainView.frame = f;
 //	[gDelegateApp.scrollView sizeToFit];
 
-	[self performSelector: @selector(pushEventToQueue) withObject: nil afterDelay: 1.0];  
+	[self performSelector: @selector(pushEventToQueue) withObject: nil afterDelay: 1.0]; 
+
 }
 
 @end

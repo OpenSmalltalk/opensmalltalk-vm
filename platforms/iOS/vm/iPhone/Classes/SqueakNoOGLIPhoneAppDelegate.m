@@ -92,6 +92,19 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	return self.window;
 }
 
+- (void) zoomToOrientation:(UIInterfaceOrientation)o animated:(BOOL)animated {
+    CGRect zoomRect;
+    zoomRect.origin.x = 0;
+    zoomRect.origin.y = 0;
+	if (UIInterfaceOrientationIsPortrait(o)) {
+		zoomRect.size.width  = 1200 * 4 / 3;
+	} else {
+		zoomRect.size.width  = 1200 * 3 / 4;
+	}
+	zoomRect.size.height = zoomRect.size.width * 3 / 4;
+	[self.scrollView zoomToRect: zoomRect animated: animated];
+}
+
 - (void) makeMainWindowOnMainThread
 
 //This is fired via a cross thread message send from logic that checks to see if the window exists in the squeak thread.
@@ -108,26 +121,28 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	
 	if (useScrollingView) {
 		scrollView = [[UIScrollView alloc ] initWithFrame: mainScreenSize];
-		
+
 		//Now setup the true view size as the width/height * 2.0  so we can have a larger squeak window and zoom in/out. 
-		
-		CGRect fakeScreenSize = mainScreenSize	;
+		CGRect fakeScreenSize ;
 		fakeScreenSize.origin.x = 0;
 		fakeScreenSize.origin.y = 0;
-		fakeScreenSize.size.width *= 2.0; 
-		fakeScreenSize.size.height *= 2.0;
-#error use 	SqueakUIViewCALayer
-		mainView = [[SqueakUIViewOpenGL alloc] initWithFrame: fakeScreenSize];
+		fakeScreenSize.size.width = 1200; 
+		fakeScreenSize.size.height = 900;
+//#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
+		mainView = [[SqueakUIViewCALayer alloc] initWithFrame: fakeScreenSize];
+		mainView.backgroundColor = [UIColor blackColor];
+		mainView.multipleTouchEnabled = YES;
+		mainView.autoresizingMask = UIViewAutoresizingNone;
 		self.mainView.clearsContextBeforeDrawing = NO;
 		
 		//Setup the scroll view which wraps the mainView
-		
+		self.scrollView.scrollEnabled = useScrollingView;
 		self.scrollView.clearsContextBeforeDrawing = NO;
 		self.scrollView.canCancelContentTouches = NO;
-		self.scrollView.contentSize = [self.mainView bounds].size; 
-		self.scrollView.minimumZoomScale = 0.5; 
+		self.scrollView.minimumZoomScale = 0.35555; 
 		self.scrollView.maximumZoomScale = 4.0;
 		self.scrollView.delegate = self;
+		self.scrollView.backgroundColor = [UIColor blackColor];
 		self.viewController = [SqueakUIController new];
 		self.viewController.view = self.scrollView;
 		
@@ -135,15 +150,16 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		//	self.scrollView.autoresizesSubviews=YES;
 		//	self.scrollView.autoresizingMask=(UIViewAutoresizingFlexibleHeight | UIViewAutoresizingFlexibleWidth);	
 		
+		[self zoomToOrientation: UIInterfaceOrientationPortrait animated: NO];
 		[self.scrollView addSubview: self.mainView];
 		[window addSubview: self.scrollView];
 		
 	} else {
-		
-		CGRect fakeScreenSize = mainScreenSize	;
-#error use 	SqueakUIViewCALayer
-		mainView = [[SqueakUIViewOpenGL alloc] initWithFrame: fakeScreenSize];
+		CGRect fakeScreenSize = mainScreenSize;
+//#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
+		mainView = [[SqueakUIViewCALayer alloc] initWithFrame: fakeScreenSize];
 		self.mainView.clearsContextBeforeDrawing = NO;
+		[self.mainView setMultipleTouchEnabled: YES];
 		self.viewController = [SqueakUIController new];
 		self.viewController.view = self.mainView;
 		[window addSubview: self.mainView];

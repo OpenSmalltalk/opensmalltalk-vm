@@ -113,10 +113,10 @@ sqInt	windowActive=1;
 	
 	sqInt count = [touches count],arrayIndex=0,squeakMSTimeNow = ioMSecs(),action;
 	UITouch *touch;
-	sqInt  previousLocationInViewY,previousLocationInViewX,locationInViewX,locationInViewY,squeakMSTime, view, window, tapCount, phase,timeStamp,storageArea,containerArray;
+	sqInt  previousLocationInViewY,previousLocationInViewX,locationInViewX,locationInViewY,squeakMSTime, view, window, tapCount, phase,timeStamp,storageArea,containerArray,touchId;
 	interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), count));
 		for (touch in touches) {
-			interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 10));
+			interpreterProxy->pushRemappableOop(interpreterProxy->instantiateClassindexableSize(interpreterProxy->classArray(), 11));
 			interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf(squeakMSTimeNow));
 			interpreterProxy->pushRemappableOop(interpreterProxy->floatObjectOf([touch timestamp]));
 			interpreterProxy->pushRemappableOop(interpreterProxy->integerObjectOf((signed)[touch phase]));
@@ -127,6 +127,8 @@ sqInt	windowActive=1;
 			interpreterProxy->pushRemappableOop(interpreterProxy->floatObjectOf([touch locationInView:[gDelegateApp mainView]].y));
 			interpreterProxy->pushRemappableOop(interpreterProxy->floatObjectOf([touch previousLocationInView:[gDelegateApp mainView]].x));
 			interpreterProxy->pushRemappableOop(interpreterProxy->floatObjectOf([touch previousLocationInView:[gDelegateApp mainView]].y));
+			interpreterProxy->pushRemappableOop(interpreterProxy->positive64BitIntegerFor((sqLong)touch));
+			touchId = interpreterProxy->popRemappableOop();
 			previousLocationInViewY = interpreterProxy->popRemappableOop();
 			previousLocationInViewX = interpreterProxy->popRemappableOop();
 			locationInViewY = interpreterProxy->popRemappableOop();
@@ -149,6 +151,7 @@ sqInt	windowActive=1;
 			interpreterProxy->storePointerofObjectwithValue(7, storageArea, locationInViewY);
 			interpreterProxy->storePointerofObjectwithValue(8, storageArea, previousLocationInViewX);
 			interpreterProxy->storePointerofObjectwithValue(9, storageArea, previousLocationInViewY);
+			interpreterProxy->storePointerofObjectwithValue(10, storageArea, touchId);
 			interpreterProxy->storePointerofObjectwithValue(arrayIndex++, containerArray, storageArea);
 			interpreterProxy->pushRemappableOop(containerArray);
 		}

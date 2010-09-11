@@ -53,7 +53,6 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	self = [super initWithFrame: aFrame];
 	self.autoresizingMask = UIViewAutoresizingFlexibleRightMargin|UIViewAutoresizingFlexibleBottomMargin|UIViewAutoresizingFlexibleHeight|UIViewAutoresizingFlexibleWidth;
 	colorspace = CGColorSpaceCreateDeviceRGB();
-	self.multipleTouchEnabled = YES;
 	return self;
 }
 
@@ -92,6 +91,8 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 }
 
 - (void) touchesCancelled: (NSSet *) touches withEvent: (UIEvent *) event {
+	//Called by Main Thread, beware of calling Squeak routines in Squeak Thread
+	[(sqSqueakIPhoneApplication *) gDelegateApp.squeakApplication recordTouchEvent: touches type: UITouchPhaseCancelled];
 }
 
 - (BOOL)canBecomeFirstResponder {
@@ -154,6 +155,10 @@ extern SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		[lookupString getBytes: &macRomanCharacter maxLength: 1 usedLength: NULL encoding: NSMacOSRomanStringEncoding
 					   options: 0 range: picker remainingRange: NULL];
 		[lookupString release];
+		
+		// LF -> CR
+		if (macRomanCharacter == 10)
+			macRomanCharacter = 13;
 		
 		evt.pressCode = EventKeyDown;
 		BOOL isUppercase = [[NSCharacterSet uppercaseLetterCharacterSet] characterIsMember: unicode];

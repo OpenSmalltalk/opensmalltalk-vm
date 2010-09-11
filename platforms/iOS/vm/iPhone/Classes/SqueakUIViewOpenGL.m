@@ -140,7 +140,7 @@
 		[self drawRect: clippy];
 		syncNeeded = NO;
 		clippyIsEmpty = YES;
-		glFlush();
+//		glFlush();
 		glBindRenderbufferOES(GL_RENDERBUFFER_OES, viewRenderbuffer);glCheckError();
 		[context presentRenderbuffer:GL_RENDERBUFFER_OES];
 	}

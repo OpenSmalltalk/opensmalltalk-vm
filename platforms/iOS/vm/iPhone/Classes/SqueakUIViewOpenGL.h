@@ -46,7 +46,7 @@
 extern struct	VirtualMachine* interpreterProxy;
 
 // Run-time assertion
-#if 1
+#if 0
 #define rt_assert(expression) assert(expression)
 #else
 #define rt_assert(expression)

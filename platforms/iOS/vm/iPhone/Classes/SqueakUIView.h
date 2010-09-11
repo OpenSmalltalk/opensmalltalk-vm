@@ -40,7 +40,7 @@ Some of this code was funded via a grant from the European Smalltalk User Group 
 #import <Foundation/Foundation.h>
 #include <AvailabilityInternal.h>
 
-#if __IPHONE_OS_VERSION_MAX_ALLOWED < __IPHONE_3_1
+#if __IPHONE_OS_VERSION_MAX_ALLOWED >= __IPHONE_3_2
 @interface SqueakUIView : UIView  <UIKeyInput> {
 #else
 @interface SqueakUIView : UIView  {

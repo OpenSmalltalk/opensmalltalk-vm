@@ -41,15 +41,29 @@
 #import "sqMacV2Memory.h"
 #import "sqSqueakIPhoneInfoPlistInterface.h"
 
+#define QUOTEME_(x) #x
+#define QUOTEME(x) QUOTEME_(x)
+
+#ifndef ISQUEAK_IMAGE
+#error ISQUEAK_IMAGE is undefined (add ISQUEAK_IMAGE="iPhone" to your preprocessor macros)
+#else
+#define QUOTEDIMAGE QUOTEME(ISQUEAK_IMAGE)
+#endif
+
+#ifndef ISQUEAK_SOURCES
+#error ISQUEAK_SOURCES is undefined (add ISQUEAK_SOURCES="PharoV10" to your preprocessor macros)
+#else
+#define QUOTEDSOURCES QUOTEME(ISQUEAK_SOURCES)
+#endif
+
 @implementation sqSqueakIPhoneApplication (imageReadWrite) 
 
 - (void) findImageViaBundleOrPreferences {
 	NSAutoreleasePool * pool = [NSAutoreleasePool new];
 	NSFileManager *dfm = [NSFileManager defaultManager];
 	NSString* documentsPath = [dfm currentDirectoryPath];  //This should point to the Documents folder via a previous setup
-	NSString* documentsImagePath = [documentsPath stringByAppendingPathComponent: @"iPhone.image"];
-//	NSString* documentsSourcesPath = [documentsPath stringByAppendingPathComponent: @"SqueakV39.sources"];
-	NSString* documentsSourcesPath = [documentsPath stringByAppendingPathComponent: @"PharoV10.sources"];
+	NSString* documentsImagePath = [documentsPath stringByAppendingPathComponent: [@QUOTEDIMAGE stringByAppendingString: @".image"]];
+	NSString* documentsSourcesPath = [documentsPath stringByAppendingPathComponent: [@QUOTEDSOURCES stringByAppendingString: @".sources"]];
 
 	BOOL fileExists = [dfm fileExistsAtPath: documentsImagePath], sourcesFileIsReadable,sourcesFileExists,copyOk,removeOK;
 	NSError* error;
@@ -79,8 +93,7 @@
 	}
 	
 	if (!sourcesFileExists) {
-//		NSString* bundleSourcesPath = [[NSBundle mainBundle] pathForResource:@"SqueakV39" ofType:@"sources"]; 
-		NSString* bundleSourcesPath = [[NSBundle mainBundle] pathForResource:@"PharoV10" ofType:@"sources"]; 
+		NSString* bundleSourcesPath = [[NSBundle mainBundle] pathForResource:@QUOTEDSOURCES ofType:@"sources"]; 
 		if (bundleSourcesPath) 
 			copyOk = [dfm createSymbolicLinkAtPath: documentsSourcesPath withDestinationPath: bundleSourcesPath error: &error];
 	}
@@ -90,12 +103,12 @@
 		return;
 	} else {
 
-		NSString* bundleImagePath = [[NSBundle mainBundle] pathForResource:@"iPhone" ofType:@"image"]; 
+		NSString* bundleImagePath = [[NSBundle mainBundle] pathForResource:@QUOTEDIMAGE ofType:@"image"]; 
 		BOOL writeable = [(sqSqueakIPhoneInfoPlistInterface*)[self infoPlistInterfaceLogic] imageIsWriteable];
 		
 		if (writeable) {
-			NSString* documentsChangesPath = [documentsPath stringByAppendingPathComponent: @"iPhone.changes"];
-			NSString* bundleChangesPath = [[NSBundle mainBundle] pathForResource:@"iPhone" ofType:@"changes"]; 
+			NSString* documentsChangesPath = [documentsPath stringByAppendingPathComponent: [@QUOTEDIMAGE stringByAppendingString: @".changes"]];
+			NSString* bundleChangesPath = [[NSBundle mainBundle] pathForResource:@QUOTEDIMAGE ofType:@"changes"]; 
 			
 			copyOk = [dfm copyItemAtPath: bundleImagePath toPath: documentsImagePath error: &error];
 			if (!copyOk) {
@@ -111,3 +124,9 @@
 	[pool drain];
 }
 @end
+
+#undef QUOTEDIMAGE
+#undef QUOTEDSOURCES
+#undef QUOTEME
+#undef QUOTEME_
+											  
