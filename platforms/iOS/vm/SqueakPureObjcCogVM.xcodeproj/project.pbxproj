@@ -509,7 +509,6 @@
 		947E64CA10AA16FE00D3B69E /* sqSqueakOSXApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXApplication.h; path = vm/OSX/sqSqueakOSXApplication.h; sourceTree = "<group>"; };
 		947E64CB10AA16FE00D3B69E /* sqSqueakOSXApplication.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXApplication.m; path = vm/OSX/sqSqueakOSXApplication.m; sourceTree = "<group>"; };
 		947E64DD10AA18FE00D3B69E /* English */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = English; path = English.lproj/MainMenu.xib; sourceTree = "<group>"; };
-		948774B110C64DD800E4AEC5 /* SqueakPureObjc-Info 64*64.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = "SqueakPureObjc-Info 64*64.plist"; sourceTree = "<group>"; };
 		94883B400E0C2B9C005A4738 /* sqUnixSocket.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqUnixSocket.c; sourceTree = "<group>"; };
 		948EC38F1155312600B08A4F /* MainWindow-iPad.xib */ = {isa = PBXFileReference; lastKnownFileType = file.xib; name = "MainWindow-iPad.xib"; path = "Resources-iPad/MainWindow-iPad.xib"; sourceTree = "<group>"; };
 		9492452F10BA43AA00E726F5 /* SqueakOSXApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = SqueakOSXApplication.h; path = vm/OSX/SqueakOSXApplication.h; sourceTree = "<group>"; };
@@ -812,7 +811,6 @@
 				94C36C9710B0CF290041953A /* Info-iPhone.plist */,
 				947E5F9F10A9FFA000D3B69E /* SqueakPureObjc-Info.plist */,
 				949AD14911E542E8006D6BF4 /* SqueakPureObjc-InfoCOG.plist */,
-				948774B110C64DD800E4AEC5 /* SqueakPureObjc-Info 64*64.plist */,
 			);
 			name = CustomTemplate;
 			sourceTree = "<group>";

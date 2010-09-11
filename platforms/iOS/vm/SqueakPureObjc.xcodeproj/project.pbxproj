@@ -16,6 +16,9 @@
 		9402DD7110CE0E91005C2102 /* SqViewClut.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402DD6F10CE0E91005C2102 /* SqViewClut.m */; };
 		9402F2B00F3F9BB900F3D637 /* PDColoredProgressView.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402F2AF0F3F9BB900F3D637 /* PDColoredProgressView.m */; };
 		9402F2C60F3F9C5600F3D637 /* drawing.m in Sources */ = {isa = PBXBuildFile; fileRef = 9402F2C50F3F9C5600F3D637 /* drawing.m */; };
+		940BE57B1239F10000674A11 /* SqueakUIViewCALayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 940BE57A1239F10000674A11 /* SqueakUIViewCALayer.m */; };
+		940BE5E91239F50100674A11 /* SqueakUIViewOpenGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 940BE5E81239F50100674A11 /* SqueakUIViewOpenGL.m */; };
+		940BE5F91239F70D00674A11 /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 940BE5F81239F70D00674A11 /* OpenGLES.framework */; };
 		9412CAB30E6C037B00DB8625 /* Settings.bundle in Resources */ = {isa = PBXBuildFile; fileRef = 9412CAB20E6C037B00DB8625 /* Settings.bundle */; };
 		9412CAE60E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m in Sources */ = {isa = PBXBuildFile; fileRef = 9412CAE50E6C05EC00DB8625 /* sqSqueakInfoPlistInterface.m */; };
 		9414422610BC89440088F8AC /* Squeak.icns in Resources */ = {isa = PBXBuildFile; fileRef = 9414421E10BC89440088F8AC /* Squeak.icns */; };
@@ -38,6 +41,7 @@
 		942ABE6F10AA23E20086D908 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 942ABE6E10AA23E20086D908 /* ApplicationServices.framework */; };
 		942F75D30E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F75D20E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m */; };
 		942F76320E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F76310E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m */; };
+		9431CBB3123B5E0400C97383 /* SqueakV41.sources in Resources */ = {isa = PBXBuildFile; fileRef = 9431CBB2123B5E0400C97383 /* SqueakV41.sources */; };
 		94329ECB12275FFA0090298B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 94329ECA12275FFA0090298B /* OpenGL.framework */; };
 		943B9CA01235C5120056205E /* sqMacHostWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 943B9C9E1235C5120056205E /* sqMacHostWindow.m */; };
 		943B9CA11235C5120056205E /* sqMacHostWindow.m in Sources */ = {isa = PBXBuildFile; fileRef = 943B9C9E1235C5120056205E /* sqMacHostWindow.m */; };
@@ -526,6 +530,11 @@
 		9402F2AE0F3F9BB900F3D637 /* PDColoredProgressView.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = PDColoredProgressView.h; sourceTree = "<group>"; };
 		9402F2AF0F3F9BB900F3D637 /* PDColoredProgressView.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = PDColoredProgressView.m; sourceTree = "<group>"; };
 		9402F2C50F3F9C5600F3D637 /* drawing.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = drawing.m; sourceTree = "<group>"; };
+		940BE5791239F10000674A11 /* SqueakUIViewCALayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SqueakUIViewCALayer.h; sourceTree = "<group>"; };
+		940BE57A1239F10000674A11 /* SqueakUIViewCALayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakUIViewCALayer.m; sourceTree = "<group>"; };
+		940BE5E71239F50100674A11 /* SqueakUIViewOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SqueakUIViewOpenGL.h; sourceTree = "<group>"; };
+		940BE5E81239F50100674A11 /* SqueakUIViewOpenGL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakUIViewOpenGL.m; sourceTree = "<group>"; };
+		940BE5F81239F70D00674A11 /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		940CE8540DFCE2D200EBA91B /* SqueakUIController.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SqueakUIController.h; sourceTree = "<group>"; };
 		940CE8550DFCE2D200EBA91B /* SqueakUIController.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakUIController.m; sourceTree = "<group>"; };
 		9412CAB20E6C037B00DB8625 /* Settings.bundle */ = {isa = PBXFileReference; lastKnownFileType = "wrapper.plug-in"; path = Settings.bundle; sourceTree = "<group>"; };
@@ -572,6 +581,7 @@
 		943001270E0D5D670040BB27 /* sqSqueakIPhoneApplication+imageReadWrite.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = "sqSqueakIPhoneApplication+imageReadWrite.m"; sourceTree = "<group>"; };
 		943001A30E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneFileDirectoryInterface.h; sourceTree = "<group>"; };
 		943001A40E0D600C0040BB27 /* sqSqueakIPhoneFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqSqueakIPhoneFileDirectoryInterface.m; sourceTree = "<group>"; };
+		9431CBB2123B5E0400C97383 /* SqueakV41.sources */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text; path = SqueakV41.sources; sourceTree = "<group>"; };
 		94329ECA12275FFA0090298B /* OpenGL.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGL.framework; path = System/Library/Frameworks/OpenGL.framework; sourceTree = SDKROOT; };
 		943B9C9E1235C5120056205E /* sqMacHostWindow.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = sqMacHostWindow.m; sourceTree = "<group>"; };
 		943B9C9F1235C5120056205E /* sqMacHostWindow.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqMacHostWindow.h; sourceTree = "<group>"; };
@@ -860,6 +870,7 @@
 				94577FBF10684D5E0020840A /* CoreLocation.framework in Frameworks */,
 				94577FC510684D7E0020840A /* SystemConfiguration.framework in Frameworks */,
 				9484F8E810B0E1050038BDC0 /* UIKit.framework in Frameworks */,
+				940BE5F91239F70D00674A11 /* OpenGLES.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -922,6 +933,10 @@
 				9452D7640E0452D3000AD792 /* sqiPhoneScreenAndWindow.m */,
 				949E5DB50DE3AB6A007388E0 /* SqueakUIView.h */,
 				949E5DB60DE3AB6A007388E0 /* SqueakUIView.m */,
+				940BE5791239F10000674A11 /* SqueakUIViewCALayer.h */,
+				940BE57A1239F10000674A11 /* SqueakUIViewCALayer.m */,
+				940BE5E71239F50100674A11 /* SqueakUIViewOpenGL.h */,
+				940BE5E81239F50100674A11 /* SqueakUIViewOpenGL.m */,
 				940CE8540DFCE2D200EBA91B /* SqueakUIController.h */,
 				940CE8550DFCE2D200EBA91B /* SqueakUIController.m */,
 				9458525410F04339001401E7 /* sqSqueakIPhoneClipboardAPI.h */,
@@ -976,6 +991,7 @@
 				94A349B50DDCDBE200D1D4A9 /* iPhone.image */,
 				94638B260EAFB77B00A3F155 /* iPhone.changes */,
 				94FFF7A40EBE2B9C00C69C79 /* SqueakV39.sources */,
+				9431CBB2123B5E0400C97383 /* SqueakV41.sources */,
 				944895AD10F4081300FB3EC8 /* PharoV10.sources */,
 				28AD733E0D9D9553002E5188 /* MainWindow.xib */,
 				945550910DF2041100FB176B /* Default.png */,
@@ -1008,6 +1024,7 @@
 				942ABE6E10AA23E20086D908 /* ApplicationServices.framework */,
 				94C208F810AF7262002F4160 /* QuartzCore.framework */,
 				94329ECA12275FFA0090298B /* OpenGL.framework */,
+				940BE5F81239F70D00674A11 /* OpenGLES.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -2044,6 +2061,7 @@
 				94B6E9DD10BC777A00333E9E /* Localizable.strings in Resources */,
 				944895AE10F4081300FB3EC8 /* PharoV10.sources in Resources */,
 				948EC3901155312600B08A4F /* MainWindow-iPad.xib in Resources */,
+				9431CBB3123B5E0400C97383 /* SqueakV41.sources in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2235,6 +2253,8 @@
 				9458525610F04339001401E7 /* sqSqueakIPhoneClipboardAPI.m in Sources */,
 				9458525C10F043EB001401E7 /* sqSqueakIPhoneApplication+clipboard.m in Sources */,
 				94BD817011C8A58D00556751 /* sqManualSurface.c in Sources */,
+				940BE57B1239F10000674A11 /* SqueakUIViewCALayer.m in Sources */,
+				940BE5E91239F50100674A11 /* SqueakUIViewOpenGL.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
