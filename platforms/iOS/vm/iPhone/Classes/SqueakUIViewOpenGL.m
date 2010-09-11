@@ -89,31 +89,23 @@
 
 -(GLuint)createTextuerUsingWidth:(GLuint)w Height:(GLuint)h
 {
-	int dataSize = w * h * 4;
-	uint8_t* textureData = (uint8_t*)malloc(dataSize);
-	if(textureData == NULL)
-		return 0;
-	memset(textureData, 128, dataSize);
-	
 	GLuint handle;
+
 	glGenTextures(1, &handle);glCheckError();
 	glBindTexture(GL_TEXTURE_2D, handle);glCheckError();
-	glTexParameterf(GL_TEXTURE_2D, GL_GENERATE_MIPMAP, GL_FALSE);
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, 
-				 GL_UNSIGNED_BYTE, textureData);glCheckError();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_LINEAR);glCheckError();
-	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_LINEAR);glCheckError();
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MIN_FILTER, GL_NEAREST);
+	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);glCheckError();
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);glCheckError();
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, 
+				 GL_BGRA, GL_UNSIGNED_BYTE, NULL);glCheckError();
+
 	glDisable(GL_DEPTH_TEST);glCheckError();
 	glDisableClientState(GL_COLOR_ARRAY);glCheckError();
 	glEnable(GL_TEXTURE_2D);glCheckError();
 	glEnableClientState(GL_VERTEX_ARRAY);glCheckError();
 	glEnableClientState(GL_TEXTURE_COORD_ARRAY);glCheckError();
 
-	glBindTexture(GL_TEXTURE_2D, 0);glCheckError();
-	free(textureData);
-	
 	return handle;
 }
 
@@ -171,16 +163,23 @@ GLfloat spriteTexcoords[] = {
 	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 
 					self.frame.size.width, self.frame.size.height, 
 					GL_BGRA, GL_UNSIGNED_BYTE, lastBitsIndex);glCheckError();
- 
+	
+	/*	for( NSInteger y = 0; y < subRect.size.height; y++ ) {
+	 void *row = lastBitsIndex + ((y + (NSUInteger)subRect.origin.y)*(NSUInteger)self.frame.size.width
+	 + (NSUInteger)subRect.origin.x) * 4;
+	 glTexSubImage2D( GL_TEXTURE_2D, 0, (NSUInteger)subRect.origin.x, (NSUInteger)subRect.origin.y+y, 
+	 (NSUInteger)subRect.size.width, 1, GL_RGBA, GL_UNSIGNED_BYTE, row );
+	 }
+	 */		
 	[EAGLContext setCurrentContext:context];
 	
 	glBindFramebufferOES(GL_FRAMEBUFFER_OES, viewFramebuffer);
-    glViewport(0, 0, self.frame.size.width, self.frame.size.height);	
-
+    glViewport( 0, 0, self.frame.size.width, self.frame.size.height);	
+	
 	GLfloat spriteVertices[] =  {
-		0,0,   
-		self.frame.size.width,0,   
-		0,self.frame.size.height, 
+		0.0f,0.0f,   
+		self.frame.size.width,0.0f,   
+		0.0f,self.frame.size.height, 
 		self.frame.size.width,self.frame.size.height};
 	
 	glMatrixMode(GL_PROJECTION);glCheckError();
@@ -196,6 +195,7 @@ GLfloat spriteTexcoords[] = {
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);glCheckError();
 }
 
+
 -(void)drawRect:(CGRect)rect {
 	//	NSLog(@" drawRect %f %f %f %f",rect.origin.x,rect.origin.y,rect.size.width,rect.size.height);
 	sqInt formObj = interpreterProxy->displayObject();
@@ -206,20 +206,4 @@ GLfloat spriteTexcoords[] = {
 	}
 }
 
-
 @end
-
-//	char *subimg = ((char*)lastBitsIndex) + (unsigned int)(subRect.origin.x + (r.size.height-subRect.origin.y-subRect.size.height)*r.size.width)*4;
-//	glTexImage2D( GL_TEXTURE_RECTANGLE_ARB, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_INT_8_8_8_8_REV, subimg );
-//	glTexImage2D( GL_TEXTURE_2D, 0, GL_RGBA, subRect.size.width, subRect.size.height, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL );
-//glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, r.size.width, r.size.height, 
-//				GL_RGBA, GL_UNSIGNED_BYTE, lastBitsIndex);
-//	NSLog(@" loadTexturesFrom %f %f %f %f",subRect.origin.x,subRect.origin.y,subRect.size.width,subRect.size.height);	
-
-/*for( NSInteger y = 0; y < subRect.size.height; y++ )
- {
- char *row = ((char*)lastBitsIndex) + ((y + (NSInteger)subRect.size.height)*(NSInteger)r.size.width + (NSInteger)subRect.size.width) * 4;
- glTexSubImage2D( GL_TEXTURE_2D, 0, 0, y, subRect.size.width, 1, GL_RGBA, GL_UNSIGNED_BYTE, row );
- glCheckError();
- } */
-
