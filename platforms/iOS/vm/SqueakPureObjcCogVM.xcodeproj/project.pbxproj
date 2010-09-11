@@ -33,6 +33,9 @@
 		9428BA9710BB440800DAD287 /* sqSqueakOSXClipboardAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 9428BA9610BB440800DAD287 /* sqSqueakOSXClipboardAPI.m */; };
 		9428BB0610BB478600DAD287 /* sqSqueakOSXApplication+clipboard.m in Sources */ = {isa = PBXBuildFile; fileRef = 9428BB0510BB478600DAD287 /* sqSqueakOSXApplication+clipboard.m */; };
 		942ABE6F10AA23E20086D908 /* ApplicationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 942ABE6E10AA23E20086D908 /* ApplicationServices.framework */; };
+		942F48FE123C1C0C002B05DF /* SqueakUIViewCALayer.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F48FB123C1C0C002B05DF /* SqueakUIViewCALayer.m */; };
+		942F48FF123C1C0C002B05DF /* SqueakUIViewOpenGL.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F48FD123C1C0C002B05DF /* SqueakUIViewOpenGL.m */; };
+		942F499C123C1E42002B05DF /* OpenGLES.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 942F499B123C1E42002B05DF /* OpenGLES.framework */; };
 		942F75D30E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F75D20E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m */; };
 		942F76320E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m in Sources */ = {isa = PBXBuildFile; fileRef = 942F76310E0B6C7600848BF2 /* sqSqueakMainApplication+attributes.m */; };
 		9432A3831227937C0090298B /* OpenGL.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 9432A3821227937C0090298B /* OpenGL.framework */; };
@@ -420,6 +423,11 @@
 		9428BB0410BB478600DAD287 /* sqSqueakOSXApplication+clipboard.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "sqSqueakOSXApplication+clipboard.h"; path = "vm/OSX/sqSqueakOSXApplication+clipboard.h"; sourceTree = "<group>"; };
 		9428BB0510BB478600DAD287 /* sqSqueakOSXApplication+clipboard.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = "sqSqueakOSXApplication+clipboard.m"; path = "vm/OSX/sqSqueakOSXApplication+clipboard.m"; sourceTree = "<group>"; };
 		942ABE6E10AA23E20086D908 /* ApplicationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ApplicationServices.framework; path = /System/Library/Frameworks/ApplicationServices.framework; sourceTree = "<absolute>"; };
+		942F48FA123C1C0C002B05DF /* SqueakUIViewCALayer.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SqueakUIViewCALayer.h; sourceTree = "<group>"; };
+		942F48FB123C1C0C002B05DF /* SqueakUIViewCALayer.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakUIViewCALayer.m; sourceTree = "<group>"; };
+		942F48FC123C1C0C002B05DF /* SqueakUIViewOpenGL.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = SqueakUIViewOpenGL.h; sourceTree = "<group>"; };
+		942F48FD123C1C0C002B05DF /* SqueakUIViewOpenGL.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = SqueakUIViewOpenGL.m; sourceTree = "<group>"; };
+		942F499B123C1E42002B05DF /* OpenGLES.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = OpenGLES.framework; path = System/Library/Frameworks/OpenGLES.framework; sourceTree = SDKROOT; };
 		942F75D10E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakVmAndImagePathAPI.h; path = vm/Common/Classes/sqSqueakVmAndImagePathAPI.h; sourceTree = "<group>"; };
 		942F75D20E0B67AD00848BF2 /* sqSqueakVmAndImagePathAPI.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakVmAndImagePathAPI.m; path = vm/Common/Classes/sqSqueakVmAndImagePathAPI.m; sourceTree = "<group>"; };
 		942F761B0E0B6B6100848BF2 /* sqSqueakIPhoneApplication.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = sqSqueakIPhoneApplication.h; sourceTree = "<group>"; };
@@ -733,6 +741,7 @@
 				94577FBF10684D5E0020840A /* CoreLocation.framework in Frameworks */,
 				94577FC510684D7E0020840A /* SystemConfiguration.framework in Frameworks */,
 				9484F8E810B0E1050038BDC0 /* UIKit.framework in Frameworks */,
+				942F499C123C1E42002B05DF /* OpenGLES.framework in Frameworks */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -781,6 +790,10 @@
 				9452D7640E0452D3000AD792 /* sqiPhoneScreenAndWindow.m */,
 				949E5DB50DE3AB6A007388E0 /* SqueakUIView.h */,
 				949E5DB60DE3AB6A007388E0 /* SqueakUIView.m */,
+				942F48FA123C1C0C002B05DF /* SqueakUIViewCALayer.h */,
+				942F48FB123C1C0C002B05DF /* SqueakUIViewCALayer.m */,
+				942F48FC123C1C0C002B05DF /* SqueakUIViewOpenGL.h */,
+				942F48FD123C1C0C002B05DF /* SqueakUIViewOpenGL.m */,
 				940CE8540DFCE2D200EBA91B /* SqueakUIController.h */,
 				940CE8550DFCE2D200EBA91B /* SqueakUIController.m */,
 				9458525410F04339001401E7 /* sqSqueakIPhoneClipboardAPI.h */,
@@ -867,6 +880,7 @@
 				942ABE6E10AA23E20086D908 /* ApplicationServices.framework */,
 				94C208F810AF7262002F4160 /* QuartzCore.framework */,
 				9432A3821227937C0090298B /* OpenGL.framework */,
+				942F499B123C1E42002B05DF /* OpenGLES.framework */,
 			);
 			name = Frameworks;
 			sourceTree = "<group>";
@@ -2107,6 +2121,8 @@
 				9494933011E527180019BC29 /* sqUnixThreads.c in Sources */,
 				949493C011E52ADE0019BC29 /* aio.c in Sources */,
 				94EF6CC311E55947003BA64D /* gcc3x-interp.c in Sources */,
+				942F48FE123C1C0C002B05DF /* SqueakUIViewCALayer.m in Sources */,
+				942F48FF123C1C0C002B05DF /* SqueakUIViewOpenGL.m in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -2340,6 +2356,8 @@
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
+					"ISQUEAK_IMAGE=\"iPhone\"",
+					"ISQUEAK_SOURCES=\"PharoV10\"",
 				);
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = 4.2;
@@ -2458,6 +2476,8 @@
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
+					"ISQUEAK_IMAGE=\"iPhone\"",
+					"ISQUEAK_SOURCES=\"PharoV10\"",
 				);
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = 4.2;

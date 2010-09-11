@@ -2609,6 +2609,8 @@
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
+					"ISQUEAK_IMAGE=\"iPhone\"",
+					"ISQUEAK_SOURCES=\"PharoV10\"",
 				);
 				GCC_THUMB_SUPPORT = NO;
 				INFOPLIST_FILE = "Info-iPhone.plist";
@@ -2724,6 +2726,8 @@
 					HAVE_SYS_TIME_H,
 					HAVE_NANOSLEEP,
 					SQUEAK_BUILTIN_PLUGIN,
+					"ISQUEAK_IMAGE=\"iPhone\"",
+					"ISQUEAK_SOURCES=\"PharoV10\"",
 				);
 				GCC_THUMB_SUPPORT = NO;
 				GCC_VERSION = 4.2;
