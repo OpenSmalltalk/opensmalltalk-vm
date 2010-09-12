@@ -8,9 +8,6 @@
 /*** Function prototypes ***/
 
 /* InterpreterProxy methodsFor: 'stack access' */
-/* Disable the new checking interface for the moment for simplicity in Cog */
-#define OLD_PRIM_IFC 1
-#if OLD_PRIM_IFC
 sqInt  pop(sqInt nItems);
 sqInt  popthenPush(sqInt nItems, sqInt oop);
 sqInt  push(sqInt object);
@@ -21,18 +18,6 @@ double stackFloatValue(sqInt offset);
 sqInt  stackIntegerValue(sqInt offset);
 sqInt  stackObjectValue(sqInt offset);
 sqInt  stackValue(sqInt offset);
-#else
-sqInt  pluginPop(sqInt nItems);
-sqInt  pluginPopthenPush(sqInt nItems, sqInt oop);
-sqInt  pluginPush(sqInt object);
-sqInt  pluginPushBool(sqInt trueOrFalse);
-sqInt  pluginPushFloat(double f);
-sqInt  pluginPushInteger(sqInt integerValue);
-double pluginStackFloatValue(sqInt offset);
-sqInt  pluginStackIntegerValue(sqInt offset);
-sqInt  pluginStackObjectValue(sqInt offset);
-sqInt  pluginStackValue(sqInt offset);
-#endif /* OLD_PRIM_IFC */
 
 /*** variables ***/
 
@@ -253,7 +238,6 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->minorVersion = minorVersion;
 
 	/* InterpreterProxy methodsFor: 'stack access' */
-#if OLD_PRIM_IFC
 	VM->pop = pop;
 	VM->popthenPush = popthenPush;
 	VM->push = push;
@@ -264,18 +248,6 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->stackIntegerValue = stackIntegerValue;
 	VM->stackObjectValue = stackObjectValue;
 	VM->stackValue = stackValue;
-#else
-	VM->pop = pluginPop;
-	VM->popthenPush = pluginPopthenPush;
-	VM->push = pluginPush;
-	VM->pushBool = pluginPushBool;
-	VM->pushFloat = pluginPushFloat;
-	VM->pushInteger = pluginPushInteger;
-	VM->stackFloatValue = pluginStackFloatValue;
-	VM->stackIntegerValue = pluginStackIntegerValue;
-	VM->stackObjectValue = pluginStackObjectValue;
-	VM->stackValue = pluginStackValue;
-#endif
 
 	/* InterpreterProxy methodsFor: 'object access' */
 	VM->argumentCountOf = argumentCountOf;
