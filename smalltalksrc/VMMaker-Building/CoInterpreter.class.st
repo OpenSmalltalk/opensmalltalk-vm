@@ -27,8 +27,7 @@ Class {
 		'lastUncoggableInterpretedBlockMethod',
 		'processHasThreadId',
 		'flagInterpretedMethods',
-		'maxLiteralCountForCompile',
-		'byteCodeSizeTable'
+		'maxLiteralCountForCompile'
 	],
 	#classVars : [
 		'CSCallbackEnter',
@@ -375,10 +374,7 @@ CoInterpreter class >> needsCogit [
 CoInterpreter class >> preGenerationHook: aCCodeGenerator [
 	"Override to undo the hiding of primitiveClosureValueNoContextSwitch"
 	super preGenerationHook: aCCodeGenerator.
-	(aCCodeGenerator methodNamed: #primitiveClosureValueNoContextSwitch) static: false.
-	"Remove the new stack check stuff for now."
-	#(pluginPop: pluginPop:thenPush: pluginPushFloat: pluginPushBool: pluginPushInteger: pluginPush: pluginStackValue: pluginStackObjectValue: pluginStackFloatValue: pluginStackIntegerValue:) do:
-		[:sel| aCCodeGenerator removeMethodForSelector: sel]
+	(aCCodeGenerator methodNamed: #primitiveClosureValueNoContextSwitch) static: false
 ]
 
 { #category : #translation }
@@ -4031,14 +4027,6 @@ CoInterpreter >> methodHasCogMethod: aMethodOop [
 	^self isCogMethodReference: (self rawHeaderOf: aMethodOop)
 ]
 
-{ #category : #'plugin primitive support' }
-CoInterpreter >> methodReturnValue: oop [
-	"Sets the return value for a method.  In the CoInterpreter we replace the cumbersome
-	 primResult machinery."
-	self pop: argumentCount+1 thenPush: oop.
-	^0
-]
-
 { #category : #'compiled methods' }
 CoInterpreter >> methodShouldBeCogged: aMethodObj [
 	<api>
@@ -4537,7 +4525,7 @@ CoInterpreter >> primitiveFlushCacheByMethod [
 	"The receiver is a compiledMethod.  Clear all entries in the method lookup cache that
 	 refer to this method, presumably because it has been redefined, overridden or removed.
 	 Override to flush appropriate machine code caches also."
-	| probe oldMethod |
+	| probe oldMethod primIdx |
 	oldMethod := self stackTop.
 	probe := 0.
 	1 to: MethodCacheEntries do:
@@ -4545,6 +4533,10 @@ CoInterpreter >> primitiveFlushCacheByMethod [
 		(methodCache at: probe + MethodCacheMethod) = oldMethod ifTrue:
 			[methodCache at: probe + MethodCacheSelector put: 0].
 		probe := probe + MethodCacheEntrySize].
+	primIdx := self primitiveIndexOf: oldMethod.
+	primIdx = PrimitiveExternalCallIndex ifTrue:
+		["It's primitiveExternalCall"
+		self flushExternalPrimitiveOf: oldMethod].
 	(self methodHasCogMethod: oldMethod) ifTrue:
 		[cogit unlinkSendsTo: (self cogMethodOf: oldMethod)]
 ]
@@ -5801,14 +5793,16 @@ CoInterpreter >> slowPrimitiveResponse [
 		 savedFramePointer := framePointer].
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
-	FailImbalancedPrimitives ifTrue:
-		[(self successful
-		  and: [framePointer = savedFramePointer
-		  and: [(self isMachineCodeFrame: framePointer) not]]) ifTrue:"Don't fail if primitive has done something radical, e.g. perform:"
-			[stackPointer ~= (savedStackPointer + (nArgs * BytesPerWord)) ifTrue:
-				"Soon make this a message send of e.g. unbalancedPrimitive to the current process or context"
-				[stackPointer := savedStackPointer. "This is necessary but insufficient; the result may still have been written to the stack."
-				 self failUnbalancedPrimitive]]].
+	(FailImbalancedPrimitives
+	and: [self successful
+	and: [framePointer = savedFramePointer
+	and: [(self isMachineCodeFrame: framePointer) not]]]) ifTrue:"Don't fail if primitive has done something radical, e.g. perform:"
+		[stackPointer ~= (savedStackPointer + (nArgs * BytesPerWord)) ifTrue:
+			[self flag: 'Would be nice to make this a message send of e.g. unbalancedPrimitive to the current process or context'.
+			 "This is necessary but insufficient; the result may still have been written to the stack.
+			   At least we'll know something is wrong."
+			 stackPointer := savedStackPointer.
+			 self failUnbalancedPrimitive]].
 	"If we are profiling, take accurate primitive measures"
 	nextProfileTick > 0 ifTrue:
 		[self checkProfileTick: newMethod].
