@@ -41,9 +41,6 @@ Class {
 		'argumentCount',
 		'newMethod',
 		'primFailCode',
-		'primPops',
-		'primResult',
-		'shouldPopArgs',
 		'primitiveFunctionPointer',
 		'methodCache',
 		'atCache',
@@ -92,6 +89,7 @@ Class {
 		'longRunningPrimitiveGCUsecs',
 		'longRunningPrimitiveCheckSequenceNumber',
 		'longRunningPrimitiveSignalUndelivered',
+		'tempOop',
 		'statForceInterruptCheck',
 		'statStackOverflow',
 		'statStackPageDivorce',
@@ -1110,9 +1108,6 @@ StackInterpreter class >> requiredMethodNames [
 
 	"Nice to actually have all the primitives available"
 	requiredList addAll: (self primitiveTable select: [:each| each isSymbol]).
-
-	"Compatibility push/pop"
-	requiredList addAll:#(pluginPop: pluginPop:thenPush: pluginPushFloat: pluginPushBool: pluginPushInteger: pluginPush: pluginStackValue: pluginStackObjectValue: pluginStackFloatValue: pluginStackIntegerValue:).
 
 	"InterpreterProxy is the internal analogue of sqVirtualMachine.c, so make sure to keep all those"
 	InterpreterProxy organization categories do:
@@ -2594,8 +2589,8 @@ StackInterpreter >> checkInterpreterIntegrity [
 		[ok := false].
 	(self checkOopIntegrity: profileSemaphore named: 'profileSemaphore')ifFalse:
 		[ok := false].
-	primResult = 0 ifFalse:
-		[(self checkOopIntegrity: primResult named: 'primResult')ifFalse:
+	tempOop = 0 ifFalse:
+		[(self checkOopIntegrity: tempOop named: 'tempOop')ifFalse:
 			[ok := false]].
 
 	"Callback support - check suspended callback list"
@@ -4960,11 +4955,7 @@ StackInterpreter >> initPrimCall [
 	 If primFailCode is non-zero a primitive has failed.  If primFailCode is
 	 greater than one then its value indicates the reason for failure."
 	<inline: true>
-	primFailCode := 0.
-	primPops := 0.
-	primResult := 0. "mark as unused return value"
-	shouldPopArgs := false.
-
+	primFailCode := 0
 ]
 
 { #category : #initialization }
@@ -5062,9 +5053,7 @@ StackInterpreter >> initializeInterpreter: bytesToShift [
 	profileMethod := nilObj.
 	nextPollUsecs := 0.
 	nextWakeupUsecs := 0.
-	primPops := 0.
-	primResult := 0.
-	shouldPopArgs := false.
+	tempOop := 0.
 	interruptKeycode := 2094. "cmd-. as used for Mac but no other OS"
 	interruptPending := false.
 	deferDisplayUpdates := false.
@@ -6058,7 +6047,7 @@ StackInterpreter >> mapInterpreterOops [
 	self mapTraceLogs.
 	self mapVMRegisters.
 	self mapProfileState.
-	primResult = 0 ifFalse:[primResult := self remap: primResult].
+	tempOop = 0 ifFalse: [tempOop := self remap: tempOop].
 	1 to: remapBufferCount do: [:i | 
 			oop := remapBuffer at: i.
 			(self isIntegerObject: oop)
@@ -6224,7 +6213,7 @@ StackInterpreter >> markAndTraceInterpreterOops: fullGCFlag [
 	self markAndTrace: newMethod.
 	self markAndTrace: lkupClass.
 	self traceProfileState.
-	primResult = 0 ifFalse:[self markAndTrace: primResult].
+	tempOop = 0 ifFalse: [self markAndTrace: tempOop].
 
 	1 to: remapBufferCount do: [:i | 
 			oop := remapBuffer at: i.
@@ -6480,7 +6469,6 @@ StackInterpreter >> marryFrame: theFP SP: theSP [
 { #category : #'plugin primitive support' }
 StackInterpreter >> methodArg: index [
 	"Like #stackValue: but access method arguments left-to-right"
-	shouldPopArgs := true.
 	index > argumentCount + 1 ifTrue:[
 		self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
 		self printCallStack.
@@ -6519,14 +6507,9 @@ StackInterpreter >> methodPrimitiveIndex [
 
 { #category : #'plugin primitive support' }
 StackInterpreter >> methodReturnValue: oop [
-	"Stores the return value from a primitive"
-	primResult = 0 ifFalse:[
-		"TODO: Report attempt to set return value multiple times."
-		self cCode: 'fprintf(stderr, "[VM]: Attempt to set method return type multiple times\n")'.
-		self printCallStack.
-	].
-	shouldPopArgs := true.
-	primResult := oop.
+	"Sets the return value for a method.  In the CoInterpreter we replace the cumbersome
+	 primResult machinery."
+	self pop: argumentCount+1 thenPush: oop.
 	^0
 ]
 
@@ -6892,102 +6875,6 @@ StackInterpreter >> oopHasOkayClass: signedOop [
 	behaviorFormatBits = oopFormatBits
 		ifFalse: [ self error: 'object and its class (behavior) formats differ'. ^false ].
 	^true
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginPop: nItems [
-	"The (obsolete) interface used by primitives that doesn't actually do anything besides noting the fact someone tried to pop the given number of elements"
-	shouldPopArgs := true.
-	primPops := primPops + nItems.
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginPop: nItems thenPush: oop [
-	"A variant of pop:thenPush: used by primitives that doesn't actually do anything besides noting the fact someone tried to pop the given number of elements"
-	self pluginPop: nItems.
-	self pluginPush: oop.
-
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginPush: oop [
-	"A variant of push: used by primitives to communicate the return value"
-	primPops := primPops - 1. "a push counts as a negative pop"
-	self methodReturnValue: oop.
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginPushBool: trueOrFalse [
-	"For plugin use only"
-	trueOrFalse
-		ifTrue: [ self pluginPush: trueObj ]
-		ifFalse: [ self pluginPush: falseObj ].
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginPushFloat: f [
-	"For plugin use only"
-	<var: #f type: 'double '>
-	self pluginPush: (self floatObjectOf: f).
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginPushInteger: integerValue [
-	"For plugin use only"
-	self pluginPush: (self integerObjectOf: integerValue).
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginStackFloatValue: index [
-	"For plugin use only."
-	<returnTypeC: #double>
-	shouldPopArgs := true.
-	index > (argumentCount + 1) ifTrue:[
-		self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
-		self printCallStack.
-		self primitiveFail.
-		^0].
-	^self stackFloatValue: index
-
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginStackIntegerValue: index [
-	"For plugin use only."
-	shouldPopArgs := true.
-	index > (argumentCount + 1) ifTrue:[
-		self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
-		self printCallStack.
-		self primitiveFail.
-		^0].
-	^self stackIntegerValue: index
-
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginStackObjectValue: index [
-	"For plugin use only."
-	shouldPopArgs := true.
-	index > (argumentCount + 1) ifTrue:[
-		self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
-		self printCallStack.
-		self primitiveFail.
-		^0].
-	^self stackObjectValue: index
-
-]
-
-{ #category : #'plugin primitive support' }
-StackInterpreter >> pluginStackValue: index [
-	"For plugin use only."
-	shouldPopArgs := true.
-	index > (argumentCount + 1) ifTrue:[
-		self cCode: 'fprintf(stderr,"[VM]: Attempt to access method args beyond range\n")'.
-		self printCallStack.
-		self primitiveFail.
-		^0].
-	^self stackValue: index
-
 ]
 
 { #category : #'internal interpreter access' }
@@ -8273,9 +8160,12 @@ StackInterpreter >> primitiveDoPrimitiveWithArgs [
 	primIdx := self stackIntegerValue: 1.
 	self successful ifFalse: [^self primitiveFail]. "invalid args"
 
+	primitiveFunctionPointer := self functionPointerFor: primIdx inClass: nil.
+	primitiveFunctionPointer = 0 ifTrue:
+		[^self primitiveFail].
+
 	"Pop primIndex and argArray, then push args in place..."
 	self pop: 2.
-	primitiveFunctionPointer := self functionPointerFor: primIdx inClass: nil.
 	argumentCount := arraySize.
 	index := 1.
 	[index <= argumentCount] whileTrue:
@@ -8285,16 +8175,22 @@ StackInterpreter >> primitiveDoPrimitiveWithArgs [
 	self isPrimitiveFunctionPointerAnIndex ifTrue:
 		[self externalQuickPrimitiveResponse.
 		^nil].
-	"Run the primitive (sets primFailCode)"
-	self pushRemappableOop: argumentArray. "prim might alloc/gc"
+	"We use tempOop instead of pushRemappableOop:/popRemappableOop here because in
+	 the Cogit primitiveEnterCriticalSection, primitiveSignal, primitiveResume et al longjmp back
+	 to either the interpreter or machine code, depending on the process activated.  So if we're
+	 executing one of these primitives control won't actually return here and the matching
+	 popRemappableOop: wouldn't occur, potentially overflowing the remap buffer.  While recursion
+	 could occur (nil tryPrimitive: 118 withArgs: #(111 #())) it counts as shooting oneself in the foot."
+	tempOop := argumentArray. "prim might alloc/gc"
 	lkupClass := nilObj.
+	"Run the primitive (sets primFailCode)"
 	self slowPrimitiveResponse.
-	argumentArray := self popRemappableOop.
 	self successful ifFalse: "If primitive failed, then restore state for failure code"
 		[self pop: arraySize.
 		 self pushInteger: primIdx.
-		 self push: argumentArray.
-		 argumentCount := 2]
+		 self push: tempOop.
+		 argumentCount := 2].
+	tempOop := 0
 ]
 
 { #category : #'process primitives' }
@@ -8876,14 +8772,18 @@ StackInterpreter >> primitiveFlushCache [
 { #category : #'system control primitives' }
 StackInterpreter >> primitiveFlushCacheByMethod [
 	"The receiver is a compiledMethod.  Clear all entries in the method lookup cache that refer to this method, presumably because it has been redefined, overridden or removed."
-	| probe oldMethod |
+	| probe oldMethod primIdx |
 	oldMethod := self stackTop.
 	probe := 0.
 	1 to: MethodCacheEntries do:
 		[:i |
 		(methodCache at: probe + MethodCacheMethod) = oldMethod ifTrue:
 			[methodCache at: probe + MethodCacheSelector put: 0].
-		probe := probe + MethodCacheEntrySize]
+		probe := probe + MethodCacheEntrySize].
+	primIdx := self primitiveIndexOf: oldMethod.
+	primIdx = PrimitiveExternalCallIndex ifTrue:
+		["It's primitiveExternalCall"
+		self flushExternalPrimitiveOf: oldMethod]
 ]
 
 { #category : #'system control primitives' }
@@ -13777,57 +13677,26 @@ StackInterpreter >> slotSizeOf: oop [
 { #category : #'primitive support' }
 StackInterpreter >> slowPrimitiveResponse [
 	"Called under the assumption that primFunctionPtr has been preloaded"
-	| delta nArgs savedFramePointer savedNewMethod savedStackPointer expectedPops |
+	| nArgs savedFramePointer savedStackPointer |
 	<inline: true>
 	<asmLabel: false>
 	<var: #savedFramePointer type: #'char *'>
 	<var: #savedStackPointer type: #'char *'>
-	FailImbalancedPrimitives
-		ifTrue:
-			[nArgs := argumentCount.
-			 savedStackPointer := stackPointer.
-			 savedFramePointer := framePointer]
-		ifFalse:
-			[DoBalanceChecks ifTrue:"check stack balance"
-				[nArgs := argumentCount.
-				 delta := framePointer - stackPointer.
-				 "If frame pointer changes then primitive has sent or unwound.
-				  Stack will appear unbalanced in this case."
-				 savedFramePointer := framePointer.
-				 savedNewMethod := newMethod]].
+	FailImbalancedPrimitives ifTrue:
+		[nArgs := argumentCount.
+		 savedStackPointer := stackPointer.
+		 savedFramePointer := framePointer].
 	self initPrimCall.
 	self dispatchFunctionPointer: primitiveFunctionPointer.
-	shouldPopArgs ifTrue:[
-		"This was a plugin primitive. If the primitive was successful, pop the args,
-		push the return value. Otherwise leave things alone."
-		self successful ifTrue:[
-			expectedPops := argumentCount.
-			self pop: expectedPops.
-			primResult = 0 ifFalse:[self pop: 1 thenPush: primResult].
-		] ifFalse:[expectedPops := 0].
-		primResult := 0. "clear result"
-		"Verify that the primitive popped the expected number of args.
-		If we have zero primPops assume access via methodArg: etc. 
-		and don't complain."
-		(primPops = 0 or:[expectedPops = primPops]) ifFalse:[
-			self cCode: 'fprintf(stderr,"[VM]: Warning: Primitive popped wrong number of args\n")'.
-			self printCallStack.
-		].
-	].
-	FailImbalancedPrimitives
-		ifTrue:
-			[(self successful
-			  and: [framePointer = savedFramePointer
-			  and: [(self isMachineCodeFrame: framePointer) not]]) ifTrue:"Don't fail if primitive has done something radical, e.g. perform:"
-				[stackPointer ~= (savedStackPointer + (nArgs * BytesPerWord)) ifTrue:
-					"Soon make this a message send of e.g. unbalancedPrimitive to the current process or context"
-					[stackPointer := savedStackPointer. "This is necessary but insufficient; the result may still have been written to the stack."
-					 self failUnbalancedPrimitive]]]
-		ifFalse:
-			[(DoBalanceChecks
-			 and: [framePointer = savedFramePointer]) ifTrue:
-				[(self balancedStack: delta withArgs: nArgs) ifFalse:
-					[self printUnbalancedStack: (self primitiveIndexOf: savedNewMethod)]]].
+	(FailImbalancedPrimitives
+	and: [self successful
+	and: [framePointer = savedFramePointer]]) ifTrue:"Don't fail if primitive has done something radical, e.g. perform:"
+		[stackPointer ~= (savedStackPointer + (nArgs * BytesPerWord)) ifTrue:
+			[self flag: 'Would be nice to make this a message send of e.g. unbalancedPrimitive to the current process or context'.
+			 "This is necessary but insufficient; the result may still have been written to the stack.
+			   At least we'll know something is wrong."
+			 stackPointer := savedStackPointer.
+			 self failUnbalancedPrimitive]].
 	"If we are profiling, take accurate primitive measures"
 	nextProfileTick > 0 ifTrue:
 		[self checkProfileTick: newMethod].

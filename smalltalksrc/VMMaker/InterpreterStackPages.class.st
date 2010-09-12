@@ -15,7 +15,6 @@ Class {
 	#superclass : #VMClass,
 	#instVars : [
 		'interpreter',
-		'pageMap',
 		'stackMemory',
 		'indexOffset',
 		'pages',

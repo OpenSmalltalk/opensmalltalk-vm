@@ -157,6 +157,7 @@ Class {
 		'ClassSemaphore',
 		'ClassString',
 		'ClassUnsafeAlien',
+		'ClassWeakFinalizer',
 		'CompactClassMask',
 		'CompactClasses',
 		'ConstMinusOne',
@@ -170,6 +171,7 @@ Class {
 		'ExternalObjectsArray',
 		'ExtraRootSize',
 		'FalseObject',
+		'ForeignCallbackProcess',
 		'GCTopMarker',
 		'HashBits',
 		'HeaderTypeClass',
@@ -190,6 +192,7 @@ Class {
 		'RootTableSize',
 		'SchedulerAssociation',
 		'SelectorAboutToReturn',
+		'SelectorAttemptToAssign',
 		'SelectorCannotInterpret',
 		'SelectorCannotReturn',
 		'SelectorDoesNotUnderstand',
@@ -482,9 +485,15 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	SelectorAboutToReturn := 48.
 	SelectorRunWithIn := 49.
 
+	SelectorAttemptToAssign := 50.
+	"PrimErrTableIndex := 51. in Interpreter class>>initializePrimitiveErrorCodes"
 	ClassAlien := 52.
 	InvokeCallbackSelector := 53.
-	ClassUnsafeAlien := 54
+	ClassUnsafeAlien := 54.
+
+	ClassWeakFinalizer := 55.
+
+	ForeignCallbackProcess := 56
 ]
 
 { #category : #initialization }
@@ -2722,6 +2731,7 @@ ObjectMemory >> printReferencesTo: anOop [
 ObjectMemory >> pushRemappableOop: oop [
 	"Record the given object in a the remap buffer. Objects in this buffer are remapped when a compaction occurs. This facility is used by the interpreter to ensure that objects in temporary variables are properly remapped."
 	<api>
+	self assert: (self addressCouldBeOop: oop).
 	remapBuffer at: (remapBufferCount := remapBufferCount + 1) put: oop.
 ]
 
@@ -2735,6 +2745,12 @@ ObjectMemory >> remap: oop [
 	(self isObjectForwarded: oop) ifTrue:
 		[^self remappedObj: oop].
 	^ oop
+]
+
+{ #category : #accessing }
+ObjectMemory >> remapBufferCount [
+	<cmacro: '() GIV(remapBufferCount)'>
+	^remapBufferCount
 ]
 
 { #category : #'gc -- compaction' }

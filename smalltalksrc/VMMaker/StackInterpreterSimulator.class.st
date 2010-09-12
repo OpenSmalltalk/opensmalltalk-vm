@@ -22,7 +22,6 @@ Class {
 		'imageName',
 		'pluginList',
 		'mappedPluginEntries',
-		'inputSem',
 		'quitBlock',
 		'transcript',
 		'displayView',
