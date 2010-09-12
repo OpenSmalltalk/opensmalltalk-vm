@@ -15,7 +15,6 @@ Class {
 		'byteCount',
 		'sendCount',
 		'printSends',
-		'printReturns',
 		'traceOn',
 		'myBitBlt',
 		'displayForm',
@@ -23,11 +22,9 @@ Class {
 		'imageName',
 		'pluginList',
 		'mappedPluginEntries',
-		'inputSem',
 		'quitBlock',
 		'transcript',
 		'displayView',
-		'logging',
 		'printFrameAtEachStep',
 		'printBytecodeAtEachStep',
 		'systemAttributes',
@@ -907,7 +904,6 @@ CogVMSimulator >> initialize [
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
 	externalPrimitiveTableFirstFreeIndex := 0.
-	byteCodeSizeTable := CArrayAccessor on: #(2 2 2 2 3 2 2 1 1 1 2 1 3 3 3 4).
 	primitiveTable := self class primitiveTable copy.
 	pluginList := #().
 	mappedPluginEntries := OrderedCollection new.
@@ -1274,7 +1270,7 @@ CogVMSimulator >> isPrimitiveFunctionPointerAnIndex [
 	 externalPrimitiveTable)"
 
 	^primitiveFunctionPointer isInteger
-	  and: [primitiveFunctionPointer ~= 0
+	  and: [primitiveFunctionPointer >= 0
 	  and: [primitiveFunctionPointer <= MaxQuickPrimitiveIndex]]
 ]
 
