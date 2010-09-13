@@ -128,7 +128,7 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		fakeScreenSize.origin.y = 0;
 		fakeScreenSize.size.width = 1200; 
 		fakeScreenSize.size.height = 900;
-//#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
+#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
 		mainView = [[SqueakUIViewCALayer alloc] initWithFrame: fakeScreenSize];
 		mainView.backgroundColor = [UIColor blackColor];
 		mainView.multipleTouchEnabled = YES;
@@ -156,7 +156,7 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		
 	} else {
 		CGRect fakeScreenSize = mainScreenSize;
-//#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
+#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
 		mainView = [[SqueakUIViewCALayer alloc] initWithFrame: fakeScreenSize];
 		self.mainView.clearsContextBeforeDrawing = NO;
 		[self.mainView setMultipleTouchEnabled: YES];

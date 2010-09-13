@@ -153,7 +153,7 @@ const GLfloat spriteTexcoords[] = {
 
 - (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (CGRect) subRectSqueak { 
 	CGRect subRect = subRectSqueak;
-	NSUInteger imageWidth = (NSUInteger)self.bounds.size.width;
+	NSUInteger imageWidth = (NSUInteger)self.bounds.size.width*4;
 	GLfloat spriteVertices[] =  {
 		0.0f,0.0f,   
 		self.bounds.size.width,0.0f,   
@@ -161,7 +161,7 @@ const GLfloat spriteTexcoords[] = {
 		self.bounds.size.width,self.bounds.size.height};
 
 	subRect.origin.y = self.bounds.size.height-subRectSqueak.origin.y-subRectSqueak.size.height;
-	void *span = lastBitsIndex+((NSUInteger)subRect.origin.y*imageWidth + (NSUInteger)subRect.origin.x)* 4;
+	void *span = lastBitsIndex+(NSUInteger)subRect.origin.y*imageWidth + (NSUInteger)subRect.origin.x* 4;
 	
 	if (!textureId) {
 		textureId = [self createTextuerUsingWidth: backingWidth Height: backingHeight];
@@ -170,7 +170,7 @@ const GLfloat spriteTexcoords[] = {
 	}
 	
 	for( GLint y = 0; y < (GLint) subRect.size.height; y++ ) {
-		 void *row =  imageWidth*y*4 + span;
+		 void *row =  imageWidth*y + span;
 		 glTexSubImage2D( GL_TEXTURE_2D, 0, (GLint)subRect.origin.x, (GLint)subRect.origin.y+y, 
 						 (GLsizei)subRect.size.width, 1, GL_BGRA, GL_UNSIGNED_BYTE, row );glCheckError();
 	 }
