@@ -44,6 +44,13 @@
 @property (nonatomic, retain) EAGLContext *context;
 @end
 
+const GLfloat spriteTexcoords[] = {
+	0.0f, 1.0f,
+	1.0f, 1.0f,
+	0.0f, 0.0f,
+	1.0f, 0.0f,
+};
+
 @implementation SqueakUIViewOpenGL
 @synthesize context;
 
@@ -81,7 +88,6 @@
 	
 	glGenFramebuffersOES(1, &viewFramebuffer);glCheckError();
 	glBindFramebufferOES(GL_FRAMEBUFFER_OES, viewFramebuffer);glCheckError();
-
 	glGenRenderbuffersOES(1, &viewRenderbuffer);glCheckError();
 	glBindRenderbufferOES(GL_RENDERBUFFER_OES, viewRenderbuffer);glCheckError();
 	glFramebufferRenderbufferOES(GL_FRAMEBUFFER_OES, GL_COLOR_ATTACHMENT0_OES, GL_RENDERBUFFER_OES, viewRenderbuffer);glCheckError();
@@ -97,9 +103,8 @@
 	glTexParameteri(GL_TEXTURE_2D, GL_TEXTURE_MAG_FILTER, GL_NEAREST);
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_S, GL_CLAMP_TO_EDGE);glCheckError();
 	glTexParameterf(GL_TEXTURE_2D, GL_TEXTURE_WRAP_T, GL_CLAMP_TO_EDGE);glCheckError();
-	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, 
-				 GL_BGRA, GL_UNSIGNED_BYTE, NULL);glCheckError();
-
+	glTexImage2D(GL_TEXTURE_2D, 0, GL_RGBA, w, h, 0, GL_BGRA, GL_UNSIGNED_BYTE, NULL);glCheckError();
+	
 	glDisable(GL_DEPTH_TEST);glCheckError();
 	glDisableClientState(GL_COLOR_ARRAY);glCheckError();
 	glEnable(GL_TEXTURE_2D);glCheckError();
@@ -141,57 +146,43 @@
 		syncNeeded = NO;
 		clippyIsEmpty = YES;
 //		glFlush();
-		glBindRenderbufferOES(GL_RENDERBUFFER_OES, viewRenderbuffer);glCheckError();
+		[EAGLContext setCurrentContext:context];
 		[context presentRenderbuffer:GL_RENDERBUFFER_OES];
 	}
 }
 
-GLfloat spriteTexcoords[] = {
-	0.0f, 1.0f,
-	1.0f, 1.0f,
-	0.0f, 0.0f,
-	1.0f, 0.0f,
-};
+- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (CGRect) subRectSqueak { 
+	CGRect subRect = subRectSqueak;
+	NSUInteger imageWidth = (NSUInteger)self.bounds.size.width;
+	GLfloat spriteVertices[] =  {
+		0.0f,0.0f,   
+		self.bounds.size.width,0.0f,   
+		0.0f,self.bounds.size.height, 
+		self.bounds.size.width,self.bounds.size.height};
 
-- (void)loadTexturesFrom: (void*) lastBitsIndex subRectangle: (CGRect) subRect { 
+	subRect.origin.y = self.bounds.size.height-subRectSqueak.origin.y-subRectSqueak.size.height;
+	void *span = lastBitsIndex+((NSUInteger)subRect.origin.y*imageWidth + (NSUInteger)subRect.origin.x)* 4;
 	
 	if (!textureId) {
 		textureId = [self createTextuerUsingWidth: backingWidth Height: backingHeight];
+	} else {
+		glBindTexture(GL_TEXTURE_2D, textureId);glCheckError();
 	}
 	
-	glBindTexture(GL_TEXTURE_2D, textureId);glCheckError();
-	glTexSubImage2D(GL_TEXTURE_2D, 0, 0, 0, 
-					self.frame.size.width, self.frame.size.height, 
-					GL_BGRA, GL_UNSIGNED_BYTE, lastBitsIndex);glCheckError();
-	
-	/*	for( NSInteger y = 0; y < subRect.size.height; y++ ) {
-	 void *row = lastBitsIndex + ((y + (NSUInteger)subRect.origin.y)*(NSUInteger)self.frame.size.width
-	 + (NSUInteger)subRect.origin.x) * 4;
-	 glTexSubImage2D( GL_TEXTURE_2D, 0, (NSUInteger)subRect.origin.x, (NSUInteger)subRect.origin.y+y, 
-	 (NSUInteger)subRect.size.width, 1, GL_RGBA, GL_UNSIGNED_BYTE, row );
+	for( GLint y = 0; y < (GLint) subRect.size.height; y++ ) {
+		 void *row =  imageWidth*y*4 + span;
+		 glTexSubImage2D( GL_TEXTURE_2D, 0, (GLint)subRect.origin.x, (GLint)subRect.origin.y+y, 
+						 (GLsizei)subRect.size.width, 1, GL_BGRA, GL_UNSIGNED_BYTE, row );glCheckError();
 	 }
-	 */		
-	[EAGLContext setCurrentContext:context];
-	
-	glBindFramebufferOES(GL_FRAMEBUFFER_OES, viewFramebuffer);
-    glViewport( 0, 0, self.frame.size.width, self.frame.size.height);	
-	
-	GLfloat spriteVertices[] =  {
-		0.0f,0.0f,   
-		self.frame.size.width,0.0f,   
-		0.0f,self.frame.size.height, 
-		self.frame.size.width,self.frame.size.height};
-	
+		
+    glViewport( 0, 0, self.bounds.size.width, self.bounds.size.height);glCheckError();	
 	glMatrixMode(GL_PROJECTION);glCheckError();
 	glLoadIdentity();glCheckError();
-	
     glMatrixMode(GL_MODELVIEW);glCheckError();
     glLoadIdentity();glCheckError();
-	
-	glOrthof(0, self.frame.size.width, 0, self.frame.size.height, 0, 1);glCheckError();
-	
 	glVertexPointer(2, GL_FLOAT, 0, spriteVertices);glCheckError();
 	glTexCoordPointer(2, GL_FLOAT, 0, spriteTexcoords);	glCheckError();
+	glOrthof(0, (GLfloat) self.bounds.size.width, 0, (GLfloat) self.bounds.size.height, 0, 1);glCheckError();
 	glDrawArrays(GL_TRIANGLE_STRIP, 0, 4);glCheckError();
 }
 
