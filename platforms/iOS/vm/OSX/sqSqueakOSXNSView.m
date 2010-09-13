@@ -731,7 +731,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 						0.0f,
 						0.0f,
 						0.0f,
-						FALSE);
+						TRUE);
 	if (err == kCGErrorSuccess) {
 		CGReleaseDisplayFadeReservation(fadeToken);
 	} 
