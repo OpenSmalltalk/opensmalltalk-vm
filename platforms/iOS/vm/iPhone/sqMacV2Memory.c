@@ -70,7 +70,7 @@ usqInt	memory;
 #endif 
 
  usqInt	sqGetAvailableMemory() {
-#if STACKVM
+#if COGVM
 	 return gMaxHeapSize - 25*1024*1024;
 #else
 	 return gMaxHeapSize;
