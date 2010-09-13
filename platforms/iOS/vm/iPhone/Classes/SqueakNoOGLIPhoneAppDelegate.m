@@ -105,6 +105,19 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 	[self.scrollView zoomToRect: zoomRect animated: animated];
 }
 
+- (Class) whatRenderCanWeUse {
+//  Ok the proper way is to get the glGetString() extensions, but at this point open/gl is not setup. 
+//  So bail and decide on operating system version.. 
+//	BOOL hasGL_APPLE_texture_2D_limited_npot = (0 != strstr((char *)glGetString(GL_EXTENSIONS), "GL_APPLE_texture_2D_limited_npot"));
+//	return  (hasGL_APPLE_texture_2D_limited_npot) ? [SqueakUIViewOpenGL class] : [SqueakUIViewCALayer class];
+
+    // The device must be running running iOS 3.2 or later.
+    NSString *reqSysVer = @"3.2";
+    NSString *currSysVer = [[UIDevice currentDevice] systemVersion];
+    BOOL osVersionSupported = ([currSysVer compare:reqSysVer options:NSNumericSearch] != NSOrderedAscending);
+	return  (osVersionSupported) ? [SqueakUIViewOpenGL class] : [SqueakUIViewCALayer class];
+}
+
 - (void) makeMainWindowOnMainThread
 
 //This is fired via a cross thread message send from logic that checks to see if the window exists in the squeak thread.
@@ -113,8 +126,7 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		
 	// Set up content view
 	// The application frame includes the status area if needbe. 
-#warning TODO we need an option to let the user decide to dispose of the status bar
-	
+
 	CGRect mainScreenSize = [[UIScreen mainScreen] applicationFrame];
 	
 	BOOL useScrollingView = [(sqSqueakIPhoneInfoPlistInterface*)self.squeakApplication.infoPlistInterfaceLogic useScrollingView];
@@ -128,8 +140,8 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		fakeScreenSize.origin.y = 0;
 		fakeScreenSize.size.width = 1200; 
 		fakeScreenSize.size.height = 900;
-#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
-		mainView = [[SqueakUIViewCALayer alloc] initWithFrame: fakeScreenSize];
+//#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
+		mainView = [[[self whatRenderCanWeUse] alloc] initWithFrame: fakeScreenSize];
 		mainView.backgroundColor = [UIColor blackColor];
 		mainView.multipleTouchEnabled = YES;
 		mainView.autoresizingMask = UIViewAutoresizingNone;
@@ -156,8 +168,8 @@ SqueakNoOGLIPhoneAppDelegate *gDelegateApp;
 		
 	} else {
 		CGRect fakeScreenSize = mainScreenSize;
-#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
-		mainView = [[SqueakUIViewCALayer alloc] initWithFrame: fakeScreenSize];
+//#error use 	SqueakUIViewCALayer SqueakUIViewOpenGL
+		mainView = [[[self whatRenderCanWeUse] alloc] initWithFrame: fakeScreenSize];
 		self.mainView.clearsContextBeforeDrawing = NO;
 		[self.mainView setMultipleTouchEnabled: YES];
 		self.viewController = [SqueakUIController new];
