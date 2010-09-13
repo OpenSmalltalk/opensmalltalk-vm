@@ -553,5 +553,7 @@
 	<string>/foobar/tooBar/forSqueak/bogus/</string>
 	<key>SqueakUseFileMappedMMAP</key>
 	<false/>
+	<key>SqueakUIFadeForFullScreenInSeconds</key>
+	<real>1.5</real>
 </dict>
 </plist>
