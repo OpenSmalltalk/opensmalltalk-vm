@@ -43,7 +43,8 @@ extern int gSqueakUseFileMappedMMAP;
 @implementation sqSqueakOSXInfoPlistInterface
 @synthesize SqueakDebug,SqueakQuitOnQuitAppleEvent,
 	SqueakMaxHeapSize,SqueakUnTrustedDirectory,SqueakTrustedDirectory,SqueakResourceDirectory,
-	SqueakPluginsBuiltInOrLocalOnly,SqueakExplicitWindowOpenNeeded,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakNumStackPages,SqueakEdenBytes;
+	SqueakPluginsBuiltInOrLocalOnly,SqueakExplicitWindowOpenNeeded,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakNumStackPages,SqueakEdenBytes,
+	SqueakUIFadeForFullScreenInSeconds;
 
 - (void) setOverrideSqueakNumStackPages: (NSNumber *) v {
 	self.SqueakNumStackPages = [v integerValue];
@@ -76,6 +77,10 @@ extern int gSqueakUseFileMappedMMAP;
 
 - (void) setOverrideSqueakMaxHeapSize: (NSNumber *) v {
 	self.SqueakMaxHeapSize = [v unsignedIntValue];
+}
+
+- (void) setOverrideSqueakUIFadeForFullScreenInSeconds: (NSNumber *) v {
+	self.SqueakUIFadeForFullScreenInSeconds = [v floatValue];
 }
 
 - (void) setOverrideSqueakUIFlushPrimaryDeferNMilliseconds: (NSNumber *) v {
@@ -128,6 +133,12 @@ extern int gSqueakUseFileMappedMMAP;
 - (void) setInfoPlistNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (NSInteger) defaultInteger using: (SEL) selector{
 	NSNumber *num = [dict objectForKey: key];
 	num = (num) ? num : [NSNumber numberWithInteger: defaultInteger];
+	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
+}
+
+- (void) setInfoPlistFloatNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (float) defaultFloat using: (SEL) selector{
+	NSNumber *num = [dict objectForKey: key];
+	num = (num) ? num : [NSNumber numberWithFloat: defaultFloat];
 	[self performSelectorOnMainThread: selector withObject: num waitUntilDone: YES];
 }
 
@@ -188,6 +199,7 @@ extern int gSqueakUseFileMappedMMAP;
 	[self setInfoPlistBooleanValueFrom: dict key: @"SqueakUseFileMappedMMAP" default: NO using: @selector(setOverrideSqueakUseFileMappedMMAP:)];
 	[self setInfoPlistNumberValueFrom: dict key: @"SqueakMaxHeapSize" default: 512*1024*1024 using: @selector(setOverrideSqueakMaxHeapSize:)];
 	[self setInfoPlistNumberValueFrom: dict key: @"SqueakUIFlushPrimaryDeferNMilliseconds" default: 20 using: @selector(setOverrideSqueakUIFlushPrimaryDeferNMilliseconds:)];
+	[self setInfoPlistFloatNumberValueFrom: dict key: @"SqueakUIFadeForFullScreenInSeconds" default: 1.5 using: @selector(setOverrideSqueakUIFadeForFullScreenInSeconds:)];
 
 	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakUnTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakUnTrustedDirectory:)];
 	[self setInfoPlistNSStringValueFrom: dict key: @"SqueakTrustedDirectory" default: @"/foobar/tooBar/forSqueak/bogus/" using: @selector(setOverrideSqueakTrustedDirectory:)];

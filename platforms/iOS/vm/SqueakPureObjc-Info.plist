@@ -445,6 +445,8 @@
 	<string>/foobar/tooBar/forSqueak/bogus/</string>
 	<key>SqueakUseFileMappedMMAP</key>
 	<false/>
+	<key>SqueakUIFadeForFullScreenInSeconds</key>
+	<real>0.5</real>
 	<key>UTExportedTypeDeclarations</key>
 	<array>
 		<dict>

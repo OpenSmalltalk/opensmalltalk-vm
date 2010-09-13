@@ -43,6 +43,7 @@
 #import "sqSqueakOSXScreenAndWindow.h"
 #import "SqueakOSXAppDelegate.h"
 #import "sqSqueakOSXApplication+events.h"
+#import "sqSqueakOSXInfoPlistInterface.h"
 #import "sq.h"
 #import "sqVirtualMachine.h"
 
@@ -638,24 +639,25 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	if (self.dragCount) {
 		self.dragItems = [self filterOutSqueakImageFilesFromDraggedFiles: info];
 		[(sqSqueakOSXApplication *) gDelegateApp.squeakApplication recordDragEvent: DragDrop numberOfFiles: self.dragCount where: [info draggingLocation] windowIndex: self.windowLogic.windowIndex];
-	} else {
-		NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
-		if ([images count] > 0) {
-			for (NSString *item in images ){
-				NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
-				LSLaunchURLSpec launchSpec;
-				launchSpec.appURL = (CFURLRef)url;
-				launchSpec.passThruParams = NULL;
-				launchSpec.itemURLs = (CFArrayRef) [NSArray arrayWithObject:[NSURL fileURLWithPath: item]];
-				launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
-				launchSpec.asyncRefCon = NULL;
-				
-				OSErr err = LSOpenFromURLSpec(&launchSpec, NULL);
+	} 
+	
+	NSArray *images = [self filterSqueakImageFilesFromDraggedFiles: info];
+	if ([images count] > 0) {
+		for (NSString *item in images ){
+			NSURL *url = [NSURL fileURLWithPath:[[NSBundle mainBundle] bundlePath]];
+			LSLaunchURLSpec launchSpec;
+			launchSpec.appURL = (CFURLRef)url;
+			launchSpec.passThruParams = NULL;
+			launchSpec.itemURLs = (CFArrayRef) [NSArray arrayWithObject:[NSURL fileURLWithPath: item]];
+			launchSpec.launchFlags = kLSLaunchDefaults | kLSLaunchNewInstance;
+			launchSpec.asyncRefCon = NULL;
+			
+			OSErr err = LSOpenFromURLSpec(&launchSpec, NULL);
 #pragma unused(err)
-			}
 		}
-		
 	}
+		
+
 	
 	dragInProgress = NO;
 	return YES;
@@ -709,7 +711,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 										  &fadeToken);
 	if (err == kCGErrorSuccess) {
 		CGDisplayFade(fadeToken,
-					  1.5f,
+					  ((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakUIFadeForFullScreenInSeconds,
 					  (CGDisplayBlendFraction)kCGDisplayBlendNormal,
 					  (CGDisplayBlendFraction)kCGDisplayBlendSolidColor,
 					  0.0f,
@@ -723,7 +725,7 @@ lastSeenKeyBoardModifierDetails,dragInProgress,dragCount,dragItems,windowLogic,s
 	CGDisplayErr    err;
 	
 	err = CGDisplayFade(fadeToken,
-						3.5f,
+						((sqSqueakOSXInfoPlistInterface*) gDelegateApp.squeakApplication.infoPlistInterfaceLogic).SqueakUIFadeForFullScreenInSeconds,
 						(CGDisplayBlendFraction)kCGDisplayBlendSolidColor,
 						(CGDisplayBlendFraction)kCGDisplayBlendNormal,
 						0.0f,

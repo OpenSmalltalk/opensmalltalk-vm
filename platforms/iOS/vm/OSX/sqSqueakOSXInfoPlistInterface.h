@@ -49,6 +49,7 @@
 	NSURL		*SqueakTrustedDirectory;
 	NSURL		*SqueakResourceDirectory;
 	NSTimeInterval	SqueakUIFlushPrimaryDeferNMilliseconds;
+	float		SqueakUIFadeForFullScreenInSeconds;
 	NSInteger	SqueakMouseMappings[4][4];
 	NSInteger	SqueakBrowserMouseMappings[4][4];
 	NSInteger		SqueakNumStackPages;
@@ -65,8 +66,10 @@
 @property (nonatomic,retain) NSURL*		SqueakTrustedDirectory;
 @property (nonatomic,retain) NSURL*		SqueakResourceDirectory;
 @property (nonatomic,assign) NSTimeInterval	SqueakUIFlushPrimaryDeferNMilliseconds;
+@property (nonatomic,assign) float		SqueakUIFadeForFullScreenInSeconds;
 
 - (void) setInfoPlistNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (NSInteger) number using: (SEL) selector;
+- (void) setInfoPlistFloatNumberValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (float) number using: (SEL) selector;
 - (void) setInfoPlistBooleanValueFrom: (NSDictionary*) dict key: (NSString *) key  default: (BOOL) defaultBool using: (SEL) selector;
 - (void) setInfoPlistNumberValueForMouseX: (NSInteger) x Y: (NSInteger) y from: (NSDictionary*) dict key: (NSString *) key  default: (NSInteger) number browser: (BOOL) browser;
 - (NSURL *) expandNSStringIntoNSURL: (NSString*) originalPath doOptionalSqueakLandLogic: (BOOL) isetoysonastick;

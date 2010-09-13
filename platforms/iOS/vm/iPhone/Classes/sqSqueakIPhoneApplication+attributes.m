@@ -85,6 +85,20 @@ extern struct VirtualMachine* interpreterProxy;
 			return "iPhone 1.0.1b1 18-May-08 >1B1BAAE0-F4CA-4192-B3E5-4FE51E5BB820<";
 			return "iPhone 1.0.2b1 02-Sep-08 >08F8D709-6867-4272-B18C-DBA704CB3C62<";
 */			
+		case 1007: { /* vm build string also info.plist */
+#if STACKVM
+			extern char *__interpBuildInfo;
+			return __interpBuildInfo;
+#endif
+			break;
+		}
+		case 1008: { /* vm build string also info.plist */
+# if COGVM
+			extern char *__cogitBuildInfo;
+			return __cogitBuildInfo;
+#endif
+			break;
+		}
 		default: 
 			break;
 	}
