@@ -55,6 +55,7 @@ such third-party acknowledgments.
 - (void)locationManager:(CLLocationManager *)manager didFailWithError:(NSError *)error;
 - (void)locationManager:(CLLocationManager *)manager didUpdateToLocation:(CLLocation *)newLocation fromLocation:(CLLocation *)oldLocation;
 - (void)applicationDidReceiveMemoryWarning:(UIApplication *)application;      // try to clean up as much memory as possible. next step is to terminate app
+- (void) zoomToOrientation:(UIInterfaceOrientation)o animated:(BOOL)animated;
 
 @property (nonatomic,retain) UIWindow *window;
 @property (nonatomic,retain) SqueakUIView *mainView;

@@ -131,6 +131,10 @@ const GLfloat spriteTexcoords[] = {
 	glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_WIDTH_OES, &backingWidth);glCheckError();
     glGetRenderbufferParameterivOES(GL_RENDERBUFFER_OES, GL_RENDERBUFFER_HEIGHT_OES, &backingHeight);glCheckError();
 	rt_assert(GL_FRAMEBUFFER_COMPLETE_OES == glCheckFramebufferStatusOES(GL_FRAMEBUFFER_OES));
+	if (textureId) {
+		glDeleteTextures(1,&textureId);
+		textureId = 0;
+	}
 }
 
 - (void) drawImageUsingClip: (CGRect) clip {

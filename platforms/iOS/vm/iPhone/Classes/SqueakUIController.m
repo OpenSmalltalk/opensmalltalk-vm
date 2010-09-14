@@ -68,10 +68,13 @@ static	sqWindowEvent evt;
 
 - (void)didRotateFromInterfaceOrientation:(UIInterfaceOrientation)fromInterfaceOrientation {
 	UIInterfaceOrientation o = [[UIApplication sharedApplication] statusBarOrientation];
+
+/*	etoys rotate for keyboard! 
 	if (UIInterfaceOrientationIsPortrait(o))
 		[gDelegateApp.mainView becomeFirstResponder];
 	else
 		[gDelegateApp.mainView resignFirstResponder];
+*/	
 	
 	CGRect mainScreenSize = [[UIScreen mainScreen] applicationFrame];
 	CGRect f;

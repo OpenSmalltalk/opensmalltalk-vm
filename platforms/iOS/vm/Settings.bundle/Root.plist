@@ -46,7 +46,7 @@
 			<key>Type</key>
 			<string>PSGroupSpecifier</string>
 			<key>Title</key>
-			<string>Memory 10 MB to 54 MB</string>
+			<string>Memory 20 MB to 132 MB (limited)</string>
 		</dict>
 		<dict>
 			<key>Type</key>
@@ -58,9 +58,9 @@
 			<key>DefaultValue</key>
 			<integer>33554432</integer>
 			<key>MinimumValue</key>
-			<integer>10485760</integer>
+			<integer>20971520</integer>
 			<key>MaximumValue</key>
-			<integer>56623104</integer>
+			<integer>138412032</integer>
 		</dict>
 	</array>
 </dict>

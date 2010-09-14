@@ -54,6 +54,9 @@ extern sqSqueakAppDelegate *gDelegateApp;
 
 - (void) doMemorySetup {
 	gMaxHeapSize =  [(sqSqueakIPhoneInfoPlistInterface*) self.infoPlistInterfaceLogic memorySize];
+	if (gMaxHeapSize == 0) // NO IDEA is this a 4.1 bug? 
+		gMaxHeapSize = 32*1024*1024;
+		
 }
 
 - (void) fetchPreferences {

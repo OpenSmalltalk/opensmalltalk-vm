@@ -70,7 +70,7 @@ NSString * kmemorySize_preferenceKey = @"memorySize_preference";
         NSDictionary *prefItem;
 		NSString	*writeable_preferenceDefault = @"NO";
 		NSString	*scrollableView_preferenceDefault= @"NO";
-		NSString	*memorySize_preferenceDefault=@"56623104";
+		NSString	*memorySize_preferenceDefault=@"33554432";
         for (prefItem in prefSpecifierArray)	{
 			NSString *keyValueStr = [prefItem objectForKey:@"Key"];
 			id defaultValue = [prefItem objectForKey:@"DefaultValue"];
