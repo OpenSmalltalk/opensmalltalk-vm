@@ -4,6 +4,11 @@ Class {
 	#category : #'VMMaker-Tests'
 }
 
+{ #category : #'abstract instructions' }
+CogIA32CompilerTests >> Label [
+	^self gen: Label operand: opcodes size
+]
+
 { #category : #running }
 CogIA32CompilerTests >> assertCheckLongArithOpCodeSize: bytes [
 	self assert: bytes > 4
