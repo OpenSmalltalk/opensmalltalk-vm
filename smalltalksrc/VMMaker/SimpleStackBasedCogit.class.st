@@ -952,16 +952,17 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 ]
 
 { #category : #'primitive generators' }
-SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator [
+SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invertComparison [
 	"Stack looks like
 		receiver (also in ResultReceiverReg)
 		arg
 		return address"
 	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
-	| jumpFail jumpSmallInt jumpTrue compare |
+	| jumpFail jumpSmallInt compare |
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	<var: #jumpSmallInt type: #'AbstractInstruction *'>
 	<var: #jumpTrue type: #'AbstractInstruction *'>
+	<var: #jumpFalse type: #'AbstractInstruction *'>
 	<var: #compare type: #'AbstractInstruction *'>
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
@@ -971,15 +972,29 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator [
 	self CmpCq: coInterpreter classFloatCompactIndex R: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
-	compare := self CmpRd: DPFPReg1 Rd: DPFPReg0.
-	jumpTrue := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
-	self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
-		objRef: coInterpreter falseObject.
-	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
-	jumpTrue jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
-							objRef: coInterpreter trueObject).
-	self RetN: BytesPerWord * 2.
+	invertComparison
+		ifTrue: "May need to invert for NaNs"
+			[| jumpFalse |
+			compare := self CmpRd: DPFPReg0 Rd: DPFPReg1.
+			jumpFalse := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
+			self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
+				objRef: coInterpreter trueObject.
+			self flag: 'currently caller pushes result'.
+			self RetN: BytesPerWord * 2.
+			jumpFalse jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
+									objRef: coInterpreter falseObject).
+			self RetN: BytesPerWord * 2]
+		ifFalse:
+			[| jumpTrue |
+			compare := self CmpRd: DPFPReg1 Rd: DPFPReg0.
+			jumpTrue := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
+			self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
+				objRef: coInterpreter falseObject.
+			self flag: 'currently caller pushes result'.
+			self RetN: BytesPerWord * 2.
+			jumpTrue jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
+									objRef: coInterpreter trueObject).
+			self RetN: BytesPerWord * 2].
 	jumpSmallInt jmpTarget: self Label.
 	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
@@ -1507,27 +1522,27 @@ SimpleStackBasedCogit >> genPrimitiveFloatDivide [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatEqual [
-	^self genDoubleComparison: #JumpFPEqual: asSymbol
+	^self genDoubleComparison: #JumpFPEqual: asSymbol invert: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatGreaterOrEqual [
-	^self genDoubleComparison: #JumpFPGreaterOrEqual: asSymbol
+	^self genDoubleComparison: #JumpFPGreaterOrEqual: asSymbol invert: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatGreaterThan [
-	^self genDoubleComparison: #JumpFPGreater: asSymbol
+	^self genDoubleComparison: #JumpFPGreater: asSymbol invert: false
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatLessOrEqual [
-	^self genDoubleComparison: #JumpFPLessOrEqual: asSymbol
+	^self genDoubleComparison: #JumpFPGreater: asSymbol invert: true
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatLessThan [
-	^self genDoubleComparison: #JumpFPLess: asSymbol
+	^self genDoubleComparison: #JumpFPGreaterOrEqual: asSymbol invert: true
 ]
 
 { #category : #'primitive generators' }
@@ -1537,7 +1552,7 @@ SimpleStackBasedCogit >> genPrimitiveFloatMultiply [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatNotEqual [
-	^self genDoubleComparison: #JumpFPNotEqual: asSymbol
+	^self genDoubleComparison: #JumpFPNotEqual: asSymbol invert: false
 ]
 
 { #category : #'primitive generators' }

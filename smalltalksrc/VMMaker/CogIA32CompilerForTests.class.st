@@ -25,6 +25,21 @@ CogIA32CompilerForTests class >> dataRegistersWithAccessorsExcept: accessorsToEx
 ]
 
 { #category : #'test support' }
+CogIA32CompilerForTests class >> fp64RegistersWithAccessorsDo: aTrinaryBlock [
+	self fp64registers withIndexDo:
+		[:reg :i|
+		aTrinaryBlock
+			value: reg
+			value: (#(xmm0low xmm1low xmm2low xmm3low xmm4low xmm5low xmm6low xmm7low) at: i)
+			value: (#(xmm0low: xmm1low: xmm2low: xmm3low: xmm4low: xmm5low: xmm6low: xmm7low:) at: i)]
+]
+
+{ #category : #'test support' }
+CogIA32CompilerForTests class >> fp64registers [
+	^{ DPFPReg0. DPFPReg1. DPFPReg2. DPFPReg3. DPFPReg4. DPFPReg5. DPFPReg6. DPFPReg7 } "a.k.a. (-9 to: -16 by: -1)"
+]
+
+{ #category : #'test support' }
 CogIA32CompilerForTests class >> registers [
 	^{ EAX. ECX. EDX. EBX. ESP. EBP. ESI. EDI } "a.k.a. (0 to: 7)"
 ]
