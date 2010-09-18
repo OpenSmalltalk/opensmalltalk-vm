@@ -3497,6 +3497,7 @@ Cogit >> findBlockMethodWithStartMcpc: blockEntryPC bcpc: startBcpc [
 Cogit >> findEnclosingMethodFor: mcpc inHomeMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<returnTypeC: #'CogBlockMethod *'>
+	<api>
 	"Find the CMMethod or CMBlock that encloses mcpc.
 	 If the method contains blocks then, because block dispatch is not in order,
 	 enumerate the block dispatch and find the nearest preceeding entry."
