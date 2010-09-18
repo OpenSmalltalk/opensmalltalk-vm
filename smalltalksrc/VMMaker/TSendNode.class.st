@@ -212,19 +212,25 @@ TSendNode >> postCopy [
 
 { #category : #printing }
 TSendNode >> printOn: aStream level: level [
+	| possiblyParenthesize |
+	possiblyParenthesize :=
+		[:node :newLevel|
+		(node isSend
+		 and: [node selector precedence >= 3]) ifTrue:
+			[aStream nextPut: $(].
+		node printOn: aStream level: newLevel.
+		(node isSend
+		 and: [node selector precedence >= 3]) ifTrue:
+			[aStream nextPut: $)]].
 
-	| keywords |
-	receiver printOn: aStream level: level.
-	arguments size = 0 ifTrue: [
-		aStream space; nextPutAll: selector.
-		^self
-	].
-	keywords := selector keywords.
-	1 to: keywords size do: [ :i |
-		aStream space.
-		aStream nextPutAll: (keywords at: i); space.
-		(arguments at: i) printOn: aStream level: level + 1.
-	].
+	possiblyParenthesize value: receiver value: level.
+	arguments size = 0 ifTrue:
+		[aStream space; nextPutAll: selector.
+		^self].
+	selector keywords with: arguments do:
+		[:keyword :arg |
+		aStream space; nextPutAll: keyword; space.
+		possiblyParenthesize value: arg value: level + 1]
 ]
 
 { #category : #accessing }
