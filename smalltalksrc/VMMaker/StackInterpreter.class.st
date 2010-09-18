@@ -1915,9 +1915,8 @@ StackInterpreter >> bytecodePrimGreaterOrEqual [
 		^self booleanCheat: rcvr >= arg].
 
 	self initPrimCall.
-	"Invert test so that NaN comparisons work correctly."
-	aBool := self primitiveFloatLess: rcvr thanArg: arg.
-	self successful ifTrue: [^self booleanCheat: aBool not].
+	aBool := self primitiveFloatGreaterOrEqual: rcvr toArg: arg.
+	self successful ifTrue: [^self booleanCheat: aBool].
 
 	messageSelector := self specialSelector: 5.
 	argumentCount := 1.
@@ -1956,9 +1955,8 @@ StackInterpreter >> bytecodePrimLessOrEqual [
 		^ self booleanCheat: rcvr <= arg].
 
 	self initPrimCall.
-	"Invert test so that NaN comparisons work correctly."
-	aBool := self primitiveFloatGreater: rcvr thanArg: arg.
-	self successful ifTrue: [^self booleanCheat: aBool not].
+	aBool := self primitiveFloatLessOrEqual: rcvr toArg: arg.
+	self successful ifTrue: [^self booleanCheat: aBool].
 
 	messageSelector := self specialSelector: 4.
 	argumentCount := 1.
