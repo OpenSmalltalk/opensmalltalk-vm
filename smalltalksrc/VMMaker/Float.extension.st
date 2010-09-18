@@ -1,5 +1,10 @@
 Extension { #name : #Float }
 
+{ #category : #'*VMMaker-Cog tests' }
+Float >> asIEEE64BitWord [
+	^((self basicAt: 1) bitShift: 32) + (self basicAt: 2)
+]
+
 { #category : #'*VMMaker-plugin generation' }
 Float class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
 

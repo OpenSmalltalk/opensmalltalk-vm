@@ -1672,15 +1672,12 @@ Interpreter >> bytecodePrimGreaterOrEqual [
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
 	(self areIntegers: rcvr and: arg) ifTrue:
-		["The C code can avoid detagging since tagged integers are still signed.
-		 But this means the simulator must override to do detagging."
-		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) >= (self integerValueOf: arg)].
+		[self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) >= (self integerValueOf: arg)].
 		^self booleanCheat: rcvr >= arg].
 
 	successFlag := true.
-	"Invert test so that NaN comparisons work correctly."
-	aBool := self primitiveFloatLess: rcvr thanArg: arg.
-	successFlag ifTrue: [^self booleanCheat: aBool not].
+	aBool := self primitiveFloatGreaterOrEqual: rcvr toArg: arg.
+	successFlag ifTrue: [^self booleanCheat: aBool].
 
 	messageSelector := self specialSelector: 5.
 	argumentCount := 1.
@@ -1713,15 +1710,12 @@ Interpreter >> bytecodePrimLessOrEqual [
 	rcvr := self internalStackValue: 1.
 	arg := self internalStackValue: 0.
 	(self areIntegers: rcvr and: arg) ifTrue:
-		["The C code can avoid detagging since tagged integers are still signed.
-		 But this means the simulator must override to do detagging."
-		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) <= (self integerValueOf: arg)].
+		[self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) <= (self integerValueOf: arg)].
 		^ self booleanCheat: rcvr <= arg].
 
 	successFlag := true.
-	"Invert test so that NaN comparisons work correctly."
-	aBool := self primitiveFloatGreater: rcvr thanArg: arg.
-	successFlag ifTrue: [^self booleanCheat: aBool not].
+	aBool := self primitiveFloatLessOrEqual: rcvr toArg: arg.
+	successFlag ifTrue: [^self booleanCheat: aBool].
 
 	messageSelector := self specialSelector: 4.
 	argumentCount := 1.
@@ -6636,58 +6630,6 @@ Interpreter >> primitiveHighResClock [
 	<export: true>
 	self pop: 1.
 	self push: (self positive64BitIntegerFor: self ioHighResClock).
-]
-
-{ #category : #'other primitives' }
-Interpreter >> primitiveIdentityDictionaryLookup [
-	"Primitive. Speed up IdentityDictionary>>scanFor:.
-	XXXX: DO NOT USE THIS YET. I have a suspicion that the code below might be flawed since the speedup is much less than what I would have expected to see. Perhaps my expectations are wrong but perhaps that code is just completely broken... YMMV."
-	| obj dict array finish hash start assoc key |
-	<export: true>
-	obj := self stackValue: 0.
-	dict := self stackValue: 1.
-	((self isIntegerObject: dict) or:[(self slotSizeOf: dict) < 2]) 
-		ifTrue:[^self primitiveFail].
-
-	array := self fetchPointer: 1 ofObject: dict.
-	(self fetchClassOf: array) == (self splObj: ClassArray) 
-		ifFalse:[^self primitiveFail].
-
-	finish := self lengthOf: array.
-	(self isIntegerObject: obj)
-		ifTrue: [hash := self integerValueOf: obj]
-		ifFalse: [hash := self hashBitsOf: obj].
-	"Scale hash if the receiver is a large dictionary"
-	finish > 4096 ifTrue: [hash := hash * (finish // 4096)].
-
-	"First pass is from start to finish.
-     Dodge undefined remainder in C for negative arguments."
-	hash < 0 ifTrue: [
-		start := (((0 - hash) \\ finish) + 1)
-	] ifFalse: [
-		start := (hash \\ finish) + 1.
-	].
-
-	1 to: 2 do:[:pass|
-		start to: finish do:[:index|
-			assoc := self fetchPointer: index-1 ofObject: array.
-			assoc == self nilObject ifTrue:[
-				^self pop: 2 thenPush: (self integerObjectOf: index).
-			].
-			((self isPointers: assoc) and:[(self lengthOf: assoc) > 1])
-				ifFalse:[^self primitiveFail].
-			key := self fetchPointer: 0 ofObject: assoc.
-			key == obj ifTrue:[
-				^self pop: 2 thenPush: (self integerObjectOf: index).
-			].
-		].
-		"Second pass is from 1 to start-1"
-		finish := start-1.
-		start := 1.
-	].
-	"No match and no empty slot"
-	self pop: 2 thenPush: (self integerObjectOf: 0).
-
 ]
 
 { #category : #'other primitives' }

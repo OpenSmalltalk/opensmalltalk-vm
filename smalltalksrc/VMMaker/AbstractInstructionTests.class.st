@@ -16,6 +16,19 @@ AbstractInstructionTests class >> defaultIntegerBaseInDebugger [
 	^16
 ]
 
+{ #category : #utilities }
+AbstractInstructionTests class >> defaultTestClass [
+	"self defaultTestClass"
+	| defaultInstructionCompilerClass |
+	defaultInstructionCompilerClass := (Cogit classPool at: #ProcessorClass) new abstractInstructionCompilerClass.
+	^self subclasses detect: [:sc| sc new concreteCompilerClass inheritsFrom: defaultInstructionCompilerClass]
+]
+
+{ #category : #utilities }
+AbstractInstructionTests class >> defaultTester [
+	^self defaultTestClass new
+]
+
 { #category : #testing }
 AbstractInstructionTests class >> isAbstract [
 	"Override to true if a TestCase subclass is Abstract and should not have
@@ -79,6 +92,15 @@ AbstractInstructionTests >> coInterpreter [
 AbstractInstructionTests >> concreteCompilerClass [
 	"Answer the concreate subclass of CogAbstractInstruction the concrete test class is testing."
 	self subclassResponsibility
+]
+
+{ #category : #disassembly }
+AbstractInstructionTests >> disassembleOpcodesIn: memory to: aStream [
+	self processor
+		disassembleFrom: opcodes first address
+		to: opcodes last address + opcodes last machineCodeSize - 1
+		in: memory
+		on: aStream
 ]
 
 { #category : #'generating machine code' }
@@ -181,8 +203,8 @@ AbstractInstructionTests >> resetGen [
 
 { #category : #running }
 AbstractInstructionTests >> runAddCqR: assertPrintBar [
-	"self new runAddCqR: true"
-	"self new runAddCqR: false"
+	"self defaultTester runAddCqR: true"
+	"self defaultTester runAddCqR: false"
 	| memory |
 	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -221,7 +243,7 @@ AbstractInstructionTests >> runAddCqR: assertPrintBar [
 
 { #category : #running }
 AbstractInstructionTests >> runAddCwR: assertPrintBar [
-	"self new runAddCwR: false"
+	"self defaultTester runAddCwR: false"
 	| memory |
 	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -260,8 +282,8 @@ AbstractInstructionTests >> runAddCwR: assertPrintBar [
 
 { #category : #running }
 AbstractInstructionTests >> runAddRR: assertPrintBar [
-	"self new runAddRR: false"
-	"self new runAddRR: true"
+	"self defaultTester runAddRR: false"
+	"self defaultTester runAddRR: true"
 	| memory |
 	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -309,8 +331,8 @@ AbstractInstructionTests >> runAddRR: assertPrintBar [
 
 { #category : #running }
 AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
-	"CogIA32CompilerTests new runArithmeticShiftRightRR: false"
-	"CogIA32CompilerTests new runArithmeticShiftRightRR: true"
+	"self defaultTester runArithmeticShiftRightRR: false"
+	"self defaultTester runArithmeticShiftRightRR: true"
 	| memory |
 	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -360,7 +382,7 @@ AbstractInstructionTests >> runArithmeticShiftRightRR: assertPrintBar [
 
 { #category : #running }
 AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
-	"CogIA32CompilerTests new runBinaryConditionalJumps: false"
+	"self defaultTester runBinaryConditionalJumps: false"
 	| mask reg1 reg2 reg3 |
 	mask := (1 << self processor bitsInWord) - 1.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -416,14 +438,15 @@ AbstractInstructionTests >> runBinaryConditionalJumps: assertPrintBar [
 
 { #category : #running }
 AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
-	"CogIA32CompilerTests new runBinaryConditionalJumpsViaCmpCqR: false"
-	| mask reg1 reg2 reg3 |
+	"self defaultTester runBinaryConditionalJumpsViaCmpCqR: false"
+	| mask reg1 reg2 resultRegNum operandRegNum |
 	mask := (1 << self processor bitsInWord) - 1.
+	resultRegNum := 0.
+	operandRegNum := 1.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:n :get :set|
-		n = 0 ifTrue: [reg1 := get].
-		n = 1 ifTrue: [reg2 := set].
-		n = 2 ifTrue: [reg3 := set]].
+		n = resultRegNum ifTrue: [reg1 := get].
+		n = operandRegNum ifTrue: [reg2 := set]].
 	#(	(JumpAbove > unsigned)			(JumpBelowOrEqual <= unsigned)
 		(JumpBelow < unsigned)			(JumpAboveOrEqual >= unsigned)
 		(JumpGreater > signed)			(JumpLessOrEqual <= signed)
@@ -435,19 +458,22 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 		(-2 to: 2) do:
 			[:b| | jumpNotTaken jumpTaken nop memory bogus |
 			self resetGen.
-			self gen: CmpCqR operand: b operand: 2.
+			self gen: CmpCqR operand: b operand: operandRegNum.
 			jumpTaken := self gen: opcode.
-			self gen: MoveCqR operand: 0 operand: 0.
+			self gen: MoveCqR operand: 0 operand: resultRegNum.
 			jumpNotTaken := self gen: Jump.
-			jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: 0).
+			jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: resultRegNum).
 			jumpNotTaken jmpTarget: (nop := self gen: Nop).
 			memory := self generateInstructions.
+			assertPrintBar ifFalse:
+				[Transcript print: triple; cr.
+				 self disassembleOpcodesIn: memory to: Transcript].
 			bogus := false.
 			(-2 to: 2) do:
 				[:a| | taken expected |
 				self processor
 					reset;
-					perform: reg3 with: a signedIntToLong.
+					perform: reg2 with: a signedIntToLong.
 				[self processor singleStepIn: memory.
 				 self processor pc ~= nop address] whileTrue.
 				taken := (self processor perform: reg1) = 1.
@@ -459,11 +485,14 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 						[self assert: taken = expected]
 					ifFalse:
 						[Transcript
-							nextPutAll: reg2; nextPut: $(; print: a; nextPutAll: ') '; nextPutAll: relation; space;
-							nextPutAll: reg3; nextPut: $(; print: b; nextPutAll: ') = ';
-							print: taken;  nextPutAll: ' ('; print: expected; nextPut: $); cr; flush.
-						 taken = expected ifFalse:
-							[bogus := true]]].
+							nextPutAll: 'CmpCqR '; print: b; space; nextPutAll: reg2; tab; tab;
+							nextPutAll: reg2; nextPut: $(; print: a; nextPut: $); space;
+							nextPutAll: relation; space; print: b; nextPutAll: ' = ';
+							print: taken;  nextPutAll: ' ('; print: expected; nextPut: $).
+						 taken ~= expected ifTrue:
+							[Transcript nextPutAll: ' !!'.
+							 bogus := true].
+						 Transcript cr; flush]].
 				bogus ifTrue:
 					[self processor printRegistersOn: Transcript.
 					 Transcript nextPutAll: jumpTaken symbolic; tab; show: (self processor disassembleInstructionAt: jumpTaken address In: memory); cr]]]
@@ -471,8 +500,131 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaCmpCqR: assertPrintBar [
 ]
 
 { #category : #running }
+AbstractInstructionTests >> runBinaryConditionalJumpsViaSubCqR: assertPrintBar [
+	"self defaultTester runBinaryConditionalJumpsViaSubCqR: false"
+	| mask reg1 reg2 setreg2 resultRegNum operandRegNum |
+	mask := (1 << self processor bitsInWord) - 1.
+	resultRegNum := 0.
+	operandRegNum := 1.
+	self concreteCompilerClass dataRegistersWithAccessorsDo:
+		[:n :get :set|
+		n = resultRegNum ifTrue: [reg1 := get].
+		n = operandRegNum ifTrue: [reg2 := get. setreg2 := set]].
+	#(	(JumpAbove > unsigned)			(JumpBelowOrEqual <= unsigned)
+		(JumpBelow < unsigned)			(JumpAboveOrEqual >= unsigned)
+		(JumpGreater > signed)			(JumpLessOrEqual <= signed)
+		(JumpLess < signed)				(JumpGreaterOrEqual >= signed)
+		(JumpZero = signed)				(JumpNonZero ~= signed)) do:
+		[:triple|
+		[:opName :relation :signednessOrResult| | opcode |
+		opcode := CogRTLOpcodes classPool at: opName.
+		(-2 to: 2) do:
+			[:b| | jumpNotTaken jumpTaken nop memory bogus |
+			self resetGen.
+			self gen: SubCqR operand: b operand: operandRegNum.
+			jumpTaken := self gen: opcode.
+			self gen: MoveCqR operand: 0 operand: resultRegNum.
+			jumpNotTaken := self gen: Jump.
+			jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: resultRegNum).
+			jumpNotTaken jmpTarget: (nop := self gen: Nop).
+			memory := self generateInstructions.
+			assertPrintBar ifFalse:
+				[Transcript print: triple; cr.
+				 self disassembleOpcodesIn: memory to: Transcript].
+			bogus := false.
+			(-2 to: 2) do:
+				[:a| | taken result expected |
+				self processor
+					reset;
+					perform: setreg2 with: a signedIntToLong.
+				[self processor singleStepIn: memory.
+				 self processor pc ~= nop address] whileTrue.
+				taken := (self processor perform: reg1) = 1.
+				result := signednessOrResult == #unsigned
+							ifTrue: [(a bitAnd: mask) - (b bitAnd: mask)]
+							ifFalse: [a - b].
+				expected := result perform: relation with: 0.
+				assertPrintBar
+					ifTrue:
+						[self assert: (taken = expected
+									  and: [(result bitAnd: mask) = (processor perform: reg2)])]
+					ifFalse:
+						[Transcript
+							nextPutAll: 'SubCqR '; print: b; space; nextPutAll: reg2; tab; tab;
+							print: b; space; nextPutAll: relation; space;
+							nextPutAll: reg2; nextPut: $(; print: a; nextPutAll: ') = ';
+							print: taken;  nextPutAll: ' ('; print: expected; nextPut: $).
+						 taken ~= expected ifTrue:
+							[Transcript nextPutAll: ' !!'.
+							 bogus := true].
+						 Transcript cr; flush]].
+				bogus ifTrue:
+					[self processor printRegistersOn: Transcript.
+					 Transcript nextPutAll: jumpTaken symbolic; tab; show: (self processor disassembleInstructionAt: jumpTaken address In: memory); cr]]]
+						valueWithArguments: triple]
+]
+
+{ #category : #running }
+AbstractInstructionTests >> runCmpRdRd: assertPrintBar [
+	"self defaultTester runCmpRdRd: false"
+	"self defaultTester runCmpRdRd: true"
+	| resultReg result reg1 reg2 setreg1 setreg2 them |
+	resultReg := 0.
+	self concreteCompilerClass dataRegistersWithAccessorsDo:
+		[:n :get :set| n = resultReg ifTrue: [result := get]].
+	self concreteCompilerClass fp64RegistersWithAccessorsDo:
+		[:n :get :set|
+		n = DPFPReg0 ifTrue: [reg1 := get. setreg1 := set].
+		n = DPFPReg1 ifTrue: [reg2 := set. setreg2 := set]].
+	them := (-2.0 to: 2.0), { Float nan }.
+	#(	(genJumpFPGreater: >)		(genJumpFPLessOrEqual: <=)
+		(genJumpFPLess: <)			(genJumpFPGreaterOrEqual: >=)
+		(genJumpFPEqual: =)		(genJumpFPNotEqual: ~=)) do:
+		[:tuple|
+		[:opName :relation | | inst jumpNotTaken jumpTaken nop memory |
+		self resetGen.
+		inst := self gen: CmpRdRd operand: DPFPReg1 operand: DPFPReg0.
+		jumpTaken := inst perform: opName with: 0.
+		self gen: MoveCqR operand: 0 operand: resultReg.
+		jumpNotTaken := self gen: Jump.
+		jumpTaken jmpTarget: (self gen: MoveCqR operand: 1 operand: resultReg).
+		jumpNotTaken jmpTarget: (nop := self gen: Nop).
+		memory := self generateInstructions.
+		assertPrintBar ifFalse:
+			[Transcript print: tuple; cr.
+			 self disassembleOpcodesIn: memory to: Transcript].
+		them do:
+			[:a|
+			them do:
+				[:b| | taken expected |
+				self processor
+					reset;
+					perform: setreg1 with: a asIEEE64BitWord;
+					perform: setreg2 with: b asIEEE64BitWord.
+				[self processor singleStepIn: memory.
+				 self processor pc ~= nop address] whileTrue.
+				taken := (self processor perform: result) = 1.
+				expected := a perform: relation with: b.
+				assertPrintBar
+					ifTrue:
+						[self assert: taken = expected]
+					ifFalse:
+						[Transcript
+							nextPutAll: 'CmpRdRd ', reg1, ' ', reg2; tab; tab;
+							nextPutAll: reg1; nextPut: $(; print: a; nextPut: $); space;
+							nextPutAll: relation; space;
+							nextPutAll: reg2; nextPut: $(; print: b; nextPut: $); space;
+							nextPutAll: ' = '; print: taken;  nextPutAll: ' ('; print: expected; nextPut: $).
+						 taken ~= expected ifTrue:
+							[Transcript nextPutAll: ' !!'; cr.
+							 self processor printRegistersOn: Transcript.].
+						 Transcript cr; flush]]]]
+						valueWithArguments: tuple]
+]
+
+{ #category : #running }
 AbstractInstructionTests >> runSubCqR: assertPrintBar [
-	"self new runSubCqR: false"
+	"self defaultTester runSubCqR: false"
 	| memory |
 	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -511,7 +663,7 @@ AbstractInstructionTests >> runSubCqR: assertPrintBar [
 
 { #category : #running }
 AbstractInstructionTests >> runSubCwR: assertPrintBar [
-	"self new runSubCwR: false"
+	"self defaultTester runSubCwR: false"
 	| memory |
 	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -550,7 +702,7 @@ AbstractInstructionTests >> runSubCwR: assertPrintBar [
 
 { #category : #running }
 AbstractInstructionTests >> runSubRR: assertPrintBar [
-	"self new runSubRR: false"
+	"self defaultTester runSubRR: false"
 	| memory |
 	memory := ByteArray new: 16.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
@@ -599,56 +751,69 @@ AbstractInstructionTests >> runSubRR: assertPrintBar [
 
 { #category : #tests }
 AbstractInstructionTests >> testBinaryConditionalJumps [
-	"CogIA32CompilerTests new testBinaryConditionalJumps"
-	"CogIA32CompilerTests new runBinaryConditionalJumps: false"
+	"self defaultTester testBinaryConditionalJumps"
+	"self defaultTester runBinaryConditionalJumps: false"
 	self runBinaryConditionalJumps: true
 ]
 
 { #category : #tests }
 AbstractInstructionTests >> testBinaryConditionalJumpsViaCmpCqR [
-	"CogIA32CompilerTests new testBinaryConditionalJumpsViaCmpCqR"
-	"CogIA32CompilerTests new runBinaryConditionalJumpsViaCmpCqR: false"
+	"self defaultTester testBinaryConditionalJumpsViaCmpCqR"
+	"self defaultTester runBinaryConditionalJumpsViaCmpCqR: false"
 	self runBinaryConditionalJumpsViaCmpCqR: true
 ]
 
 { #category : #tests }
+AbstractInstructionTests >> testBinaryConditionalJumpsViaSubCqR [
+	"self defaultTester testBinaryConditionalJumpsViaSubCqR"
+	"self defaultTester runBinaryConditionalJumpsViaSubCqR: false"
+	self runBinaryConditionalJumpsViaSubCqR: true
+]
+
+{ #category : #tests }
 AbstractInstructionTests >> testRunAddCqR [
-	"self new testRunAddCqR"
+	"self defaultTester testRunAddCqR"
 	self runAddCqR: true
 ]
 
 { #category : #tests }
 AbstractInstructionTests >> testRunAddCwR [
-	"self new testRunAddCwR"
+	"self defaultTester testRunAddCwR"
 	self runAddCwR: true
 ]
 
 { #category : #tests }
 AbstractInstructionTests >> testRunAddRR [
-	"self new testRunAddRR"
+	"self defaultTester testRunAddRR"
 	self runAddRR: true
 ]
 
 { #category : #tests }
 AbstractInstructionTests >> testRunArithmeticShiftRightRR [
-	"self new testRunArithmeticShiftRightRR"
+	"self defaultTester testRunArithmeticShiftRightRR"
 	self runArithmeticShiftRightRR: true
 ]
 
 { #category : #tests }
+AbstractInstructionTests >> testRunCmpRdRd [
+	"self defaultTester testRunCmpRdRd"
+	self runCmpRdRd: true
+]
+
+{ #category : #tests }
 AbstractInstructionTests >> testRunSubCqR [
-	"self new testRunSubCqR"
+	"self defaultTester testRunSubCqR"
 	self runSubCqR: true
 ]
 
 { #category : #tests }
 AbstractInstructionTests >> testRunSubCwR [
-	"self new testRunSubCwR"
+	"self defaultTester testRunSubCwR"
 	self runSubCwR: true
 ]
 
 { #category : #tests }
 AbstractInstructionTests >> testRunSubRR [
-	"self new testRunSubRR"
+	"self defaultTester testRunSubRR"
 	self runSubRR: true
 ]

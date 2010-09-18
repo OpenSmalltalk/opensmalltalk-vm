@@ -1939,7 +1939,7 @@ CogIA32Compiler >> dispatchConcretize [
 	opcode caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]				-> [^self concretizeLabel].
-		[AlignmentNops]		-> [^self concretizeAlignmentNops].
+		[AlignmentNops]	-> [^self concretizeAlignmentNops].
 		[Fill16]				-> [^self concretizeFill16].
 		[FillFromWord]		-> [^self concretizeFillFromWord].
 		[Nop]				-> [^self concretizeNop].
@@ -1961,33 +1961,34 @@ CogIA32Compiler >> dispatchConcretize [
 		[Call]					-> [^self concretizeCall].
 		[JumpR]					-> [^self concretizeJumpR].
 		[JumpLong]				-> [^self concretizeJumpLong].
-		[JumpLongZero]			-> [^self concretizeConditionalJumpLong: 16r4].
-		[JumpLongNonZero]		-> [^self concretizeConditionalJumpLong: 16r5].
+		[JumpLongZero]		-> [^self concretizeConditionalJumpLong: 16r4].
+		[JumpLongNonZero]	-> [^self concretizeConditionalJumpLong: 16r5].
 		[Jump]					-> [^self concretizeJump].
+		"Table B-1 Intel® 64 and IA-32 Architectures Software Developer's Manual Volume 1: Basic Architecture"
 		[JumpZero]				-> [^self concretizeConditionalJump: 16r4].
 		[JumpNonZero]			-> [^self concretizeConditionalJump: 16r5].
 		[JumpNegative]			-> [^self concretizeConditionalJump: 16r8].
 		[JumpNonNegative]		-> [^self concretizeConditionalJump: 16r9].
 		[JumpOverflow]			-> [^self concretizeConditionalJump: 16r0].
 		[JumpNoOverflow]		-> [^self concretizeConditionalJump: 16r1].
-		[JumpCarry]				-> [^self concretizeConditionalJump: 16r2].
+		[JumpCarry]			-> [^self concretizeConditionalJump: 16r2].
 		[JumpNoCarry]			-> [^self concretizeConditionalJump: 16r3].
 		[JumpLess]				-> [^self concretizeConditionalJump: 16rC].
 		[JumpGreaterOrEqual]	-> [^self concretizeConditionalJump: 16rD].
 		[JumpGreater]			-> [^self concretizeConditionalJump: 16rF].
 		[JumpLessOrEqual]		-> [^self concretizeConditionalJump: 16rE].
-		[JumpBelow]				-> [^self concretizeConditionalJump: 16r2].
-		[JumpAboveOrEqual]		-> [^self concretizeConditionalJump: 16r3].
+		[JumpBelow]			-> [^self concretizeConditionalJump: 16r2].
+		[JumpAboveOrEqual]	-> [^self concretizeConditionalJump: 16r3].
 		[JumpAbove]			-> [^self concretizeConditionalJump: 16r7].
-		[JumpBelowOrEqual]		-> [^self concretizeConditionalJump: 16r6].
-		[JumpFPEqual]			-> [^self concretizeConditionalJump: 16r4].
-		[JumpFPNotEqual]		-> [^self concretizeConditionalJump: 16r5].
-		[JumpFPLess]			-> [^self concretizeConditionalJump: 16r2].
+		[JumpBelowOrEqual]	-> [^self concretizeConditionalJump: 16r6].
+		[JumpFPEqual]				-> [^self concretizeConditionalJump: 16r4].
+		[JumpFPNotEqual]			-> [^self concretizeConditionalJump: 16r5].
+		[JumpFPLess]				-> [^self concretizeConditionalJump: 16r2].
 		[JumpFPGreaterOrEqual]	-> [^self concretizeConditionalJump: 16r3].
 		[JumpFPGreater]			-> [^self concretizeConditionalJump: 16r7].
-		[JumpFPLessOrEqual]	-> [^self concretizeConditionalJump: 16r6].
-		[JumpFPOrdered]		-> [^self concretizeConditionalJump: 16rB].
-		[JumpFPUnordered]		-> [^self concretizeConditionalJump: 16rA].
+		[JumpFPLessOrEqual]		-> [^self concretizeConditionalJump: 16r6].
+		[JumpFPOrdered]			-> [^self concretizeConditionalJump: 16rB].
+		[JumpFPUnordered]			-> [^self concretizeConditionalJump: 16rA].
 		[RetN]					-> [^self concretizeRetN].
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeAddCqR].

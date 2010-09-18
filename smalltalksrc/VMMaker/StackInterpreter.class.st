@@ -9053,58 +9053,6 @@ StackInterpreter >> primitiveIdentical [
 	self pop: argumentCount + 1 thenPushBool: thisObject = otherObject
 ]
 
-{ #category : #'other primitives' }
-StackInterpreter >> primitiveIdentityDictionaryLookup [
-	"Primitive. Speed up IdentityDictionary>>scanFor:.
-	XXXX: DO NOT USE THIS YET. I have a suspicion that the code below might be flawed since the speedup is much less than what I would have expected to see. Perhaps my expectations are wrong but perhaps that code is just completely broken... YMMV."
-	| obj dict array finish hash start assoc key |
-	<export: true>
-	obj := self stackValue: 0.
-	dict := self stackValue: 1.
-	((self isIntegerObject: dict) or:[(self slotSizeOf: dict) < 2]) 
-		ifTrue:[^self primitiveFail].
-
-	array := self fetchPointer: 1 ofObject: dict.
-	(self fetchClassOf: array) = (self splObj: ClassArray) 
-		ifFalse:[^self primitiveFail].
-
-	finish := self lengthOf: array.
-	(self isIntegerObject: obj)
-		ifTrue: [hash := self integerValueOf: obj]
-		ifFalse: [hash := self hashBitsOf: obj].
-	"Scale hash if the receiver is a large dictionary"
-	finish > 4096 ifTrue: [hash := hash * (finish // 4096)].
-
-	"First pass is from start to finish.
-     Dodge undefined remainder in C for negative arguments."
-	hash < 0 ifTrue: [
-		start := (((0 - hash) \\ finish) + 1)
-	] ifFalse: [
-		start := (hash \\ finish) + 1.
-	].
-
-	1 to: 2 do:[:pass|
-		start to: finish do:[:index|
-			assoc := self fetchPointer: index-1 ofObject: array.
-			assoc = nilObj ifTrue:[
-				^self pop: 2 thenPush: (self integerObjectOf: index).
-			].
-			((self isPointers: assoc) and:[(self lengthOf: assoc) > 1])
-				ifFalse:[^self primitiveFail].
-			key := self fetchPointer: 0 ofObject: assoc.
-			key == obj ifTrue:[
-				^self pop: 2 thenPush: (self integerObjectOf: index).
-			].
-		].
-		"Second pass is from 1 to start-1"
-		finish := start-1.
-		start := 1.
-	].
-	"No match and no empty slot"
-	self pop: 2 thenPush: (self integerObjectOf: 0).
-
-]
-
 { #category : #'object access primitives' }
 StackInterpreter >> primitiveIdentityHash [
 	| thisReceiver |
