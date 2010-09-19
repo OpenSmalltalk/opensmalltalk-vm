@@ -9,6 +9,12 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	code for in-line to:by:do:, etc.  see below, where it is used."
 	| sel args |
 	sel := (selector isSymbol) ifTrue: [selector] ifFalse: [selector key].
+	(sel = #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
+	and: [arguments first isBlockNode]) ifTrue:
+		[| block |
+		 ^(block := arguments first asTranslatorNodeIn: aTMethod) statements size = 1
+			ifTrue: [block statements first]
+			ifFalse: [block]].
 	args := (1 to: sel numArgs) collect:
 			[:i | (arguments at: i) asTranslatorNodeIn: aTMethod].
 	(sel = #to:by:do: and: [arguments size = 7 and: [(arguments at: 7) notNil]])

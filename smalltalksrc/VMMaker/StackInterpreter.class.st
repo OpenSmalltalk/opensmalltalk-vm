@@ -1584,30 +1584,54 @@ StackInterpreter >> bereaveAllMarriedContexts [
 
 { #category : #utilities }
 StackInterpreter >> booleanCheat: cond [
-"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
-	| bytecode offset |
+	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
 	<inline: true>
+
+	cond
+		ifTrue: [self booleanCheatTrue]
+		ifFalse: [self booleanCheatFalse]
+]
+
+{ #category : #utilities }
+StackInterpreter >> booleanCheatFalse [
+	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
+	| bytecode offset |
+	<sharedCodeNamed: 'booleanCheatFalse' inCase: 179>
 
 	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
 	self internalPop: 2.
-	(bytecode < 160 and: [bytecode > 151]) ifTrue: [  "short jumpIfFalse"
-		cond
-			ifTrue: [^ self fetchNextBytecode]
-			ifFalse: [^ self jump: bytecode - 151]].
+	(bytecode < 160 and: [bytecode > 151]) ifTrue:  "short jumpIfFalse"
+		[^self jump: bytecode - 151].
 
-	bytecode = 172 ifTrue: [  "long jumpIfFalse"
-		offset := self fetchByte.
-		cond
-			ifTrue: [^ self fetchNextBytecode]
-			ifFalse: [^ self jump: offset]].
+	bytecode = 172 ifTrue:  "long jumpIfFalse"
+		[offset := self fetchByte.
+		^self jump: offset].
 
 	"not followed by a jumpIfFalse; undo instruction fetch and push boolean result"
 	localIP := localIP - 1.
 	self fetchNextBytecode.
-	cond
-		ifTrue: [self internalPush: trueObj]
-		ifFalse: [self internalPush: falseObj].
+	self internalPush: self falseObject
+]
 
+{ #category : #utilities }
+StackInterpreter >> booleanCheatTrue [
+	"cheat the interpreter out of the pleasure of handling the next bytecode IFF it is a jump-on-boolean. Which it is, often enough when the current bytecode is something like bytecodePrimEqual"
+	| bytecode |
+	<sharedCodeNamed: 'booleanCheatTrue' inCase: 178>
+
+	bytecode := self fetchByte.  "assume next bytecode is jumpIfFalse (99%)"
+	self internalPop: 2.
+	(bytecode < 160 and: [bytecode > 151]) ifTrue:  "short jumpIfFalse"
+		[^self fetchNextBytecode].
+
+	bytecode = 172 ifTrue: "long jumpIfFalse"
+		[self fetchByte.
+		^self fetchNextBytecode].
+
+	"not followed by a jumpIfFalse; undo instruction fetch and push boolean result"
+	localIP := localIP - 1.
+	self fetchNextBytecode.
+	self internalPush: self trueObject
 ]
 
 { #category : #utilities }
@@ -1911,8 +1935,8 @@ StackInterpreter >> bytecodePrimGreaterOrEqual [
 	(self areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
-		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) >= (self integerValueOf: arg)].
-		^self booleanCheat: rcvr >= arg].
+		^self cCode: [self booleanCheat: rcvr >= arg]
+			inSmalltalk: [self booleanCheat: (self integerValueOf: rcvr) >= (self integerValueOf: arg)]].
 
 	self initPrimCall.
 	aBool := self primitiveFloatGreaterOrEqual: rcvr toArg: arg.
@@ -1931,8 +1955,8 @@ StackInterpreter >> bytecodePrimGreaterThan [
 	(self areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
-		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) > (self integerValueOf: arg)].
-		^self booleanCheat: rcvr > arg].
+		^self cCode: [self booleanCheat: rcvr > arg]
+			inSmalltalk: [self booleanCheat: (self integerValueOf: rcvr) > (self integerValueOf: arg)]].
 
 	self initPrimCall.
 	aBool := self primitiveFloatGreater: rcvr thanArg: arg.
@@ -1951,8 +1975,8 @@ StackInterpreter >> bytecodePrimLessOrEqual [
 	(self areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
-		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) <= (self integerValueOf: arg)].
-		^ self booleanCheat: rcvr <= arg].
+		^self cCode: [self booleanCheat: rcvr <= arg]
+			inSmalltalk: [self booleanCheat: (self integerValueOf: rcvr) <= (self integerValueOf: arg)]].
 
 	self initPrimCall.
 	aBool := self primitiveFloatLessOrEqual: rcvr toArg: arg.
@@ -1971,8 +1995,8 @@ StackInterpreter >> bytecodePrimLessThan [
 	(self areIntegers: rcvr and: arg) ifTrue:
 		["The C code can avoid detagging since tagged integers are still signed.
 		 But this means the simulator must override to do detagging."
-		self cCode: '' inSmalltalk: [^self booleanCheat: (self integerValueOf: rcvr) < (self integerValueOf: arg)].
-		^ self booleanCheat: rcvr < arg].
+		^self cCode: [self booleanCheat: rcvr < arg]
+			inSmalltalk: [self booleanCheat: (self integerValueOf: rcvr) < (self integerValueOf: arg)]].
 
 	self initPrimCall.
 	aBool := self primitiveFloatLess: rcvr thanArg: arg.

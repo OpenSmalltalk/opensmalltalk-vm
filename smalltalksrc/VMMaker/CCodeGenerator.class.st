@@ -508,7 +508,8 @@ CCodeGenerator >> doInlining: inlineFlag [
 
 	| removed |
 	inlineFlag ifFalse: [
-		self inlineDispatchesInMethodNamed: #interpret localizingVars: #().
+		self inlineDispatchesInMethodNamed: #interpret localizingVars: #().	
+		self pruneUnreachableMethods.
 		^ self].
 
 	self doBasicInlining: inlineFlag.
