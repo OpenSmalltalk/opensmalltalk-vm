@@ -958,11 +958,10 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 		arg
 		return address"
 	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
-	| jumpFail jumpSmallInt compare |
+	| jumpFail jumpSmallInt jumpCond compare |
 	<var: #jumpFail type: #'AbstractInstruction *'>
 	<var: #jumpSmallInt type: #'AbstractInstruction *'>
-	<var: #jumpTrue type: #'AbstractInstruction *'>
-	<var: #jumpFalse type: #'AbstractInstruction *'>
+	<var: #jumpCond type: #'AbstractInstruction *'>
 	<var: #compare type: #'AbstractInstruction *'>
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
@@ -972,29 +971,17 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	self CmpCq: coInterpreter classFloatCompactIndex R: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
-	invertComparison
-		ifTrue: "May need to invert for NaNs"
-			[| jumpFalse |
-			compare := self CmpRd: DPFPReg0 Rd: DPFPReg1.
-			jumpFalse := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
-			self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
-				objRef: coInterpreter trueObject.
-			self flag: 'currently caller pushes result'.
-			self RetN: BytesPerWord * 2.
-			jumpFalse jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
-									objRef: coInterpreter falseObject).
-			self RetN: BytesPerWord * 2]
-		ifFalse:
-			[| jumpTrue |
-			compare := self CmpRd: DPFPReg1 Rd: DPFPReg0.
-			jumpTrue := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
-			self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
-				objRef: coInterpreter falseObject.
-			self flag: 'currently caller pushes result'.
-			self RetN: BytesPerWord * 2.
-			jumpTrue jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
-									objRef: coInterpreter trueObject).
-			self RetN: BytesPerWord * 2].
+	invertComparison "May need to invert for NaNs"
+		ifTrue: [compare := self CmpRd: DPFPReg0 Rd: DPFPReg1]
+		ifFalse: [compare := self CmpRd: DPFPReg1 Rd: DPFPReg0].
+	jumpCond := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
+	self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
+		objRef: coInterpreter falseObject.
+	self flag: 'currently caller pushes result'.
+	self RetN: BytesPerWord * 2.
+	jumpCond jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
+							objRef: coInterpreter trueObject).
+	self RetN: BytesPerWord * 2.
 	jumpSmallInt jmpTarget: self Label.
 	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
 	self ConvertR: ClassReg Rd: DPFPReg1.
@@ -1537,12 +1524,12 @@ SimpleStackBasedCogit >> genPrimitiveFloatGreaterThan [
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatLessOrEqual [
-	^self genDoubleComparison: #JumpFPGreater: asSymbol invert: true
+	^self genDoubleComparison: #JumpFPGreaterOrEqual: asSymbol invert: true
 ]
 
 { #category : #'primitive generators' }
 SimpleStackBasedCogit >> genPrimitiveFloatLessThan [
-	^self genDoubleComparison: #JumpFPGreaterOrEqual: asSymbol invert: true
+	^self genDoubleComparison: #JumpFPGreater: asSymbol invert: true
 ]
 
 { #category : #'primitive generators' }
