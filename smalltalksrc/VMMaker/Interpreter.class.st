@@ -2995,20 +2995,6 @@ Interpreter >> executeNewMethod [
 	self quickCheckForInterrupts
 ]
 
-{ #category : #'message sending' }
-Interpreter >> executeNewMethodFromCache [
-	"execute a method found in the mCache - which means that 
-	primitiveIndex & primitiveFunctionPointer are already set. Any sender 
-	needs to have previously sent findMethodInClass: or equivalent"
-	primitiveIndex > 0 ifTrue:[
-		self internalPrimitiveResponse.
-		successFlag ifTrue: [^ nil]].
-	"if not primitive, or primitive failed, activate the method"
-	self activateNewMethod.
-	"check for possible interrupts at each real send"
-	self quickCheckForInterrupts
-]
-
 { #category : #'translation support' }
 Interpreter >> expandCases [
 	"For translation only; noop when running in Smalltalk.
@@ -5596,7 +5582,7 @@ Interpreter >> primitiveClosureValue [
 		[^self primitiveFail].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
-	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+	(self isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
 	self activateNewClosureMethod: blockClosure.
@@ -5620,7 +5606,7 @@ Interpreter >> primitiveClosureValueNoContextSwitch [
 		[^self primitiveFail].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
-	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+	(self isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
 	self activateNewClosureMethod: blockClosure
@@ -5651,7 +5637,7 @@ Interpreter >> primitiveClosureValueWithArgs [
 		[^self primitiveFail].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
-	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+	(self isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
 	self popStack.
@@ -5963,9 +5949,8 @@ Interpreter >> primitiveExecuteMethodArgsArray [
 	| methodArgument argCnt argumentArray |
 	methodArgument := self popStack.
 	argumentArray := self popStack.
-	((self isNonIntegerObject: methodArgument)
-	 and: [(self isCompiledMethod: methodArgument)
-	 and: [self isArray: argumentArray]]) ifFalse:
+	((self isOopCompiledMethod: methodArgument)
+	 and: [self isArray: argumentArray]) ifFalse:
 		[self unPop: 2. ^self primitiveFail].
 	argCnt := self argumentCountOf: methodArgument.
 	argCnt = (self fetchWordLengthOf: argumentArray) ifFalse:
@@ -6859,7 +6844,7 @@ Interpreter >> primitiveInvokeObjectAsMethod [
 
 	lookupClass := self fetchClassOf: newReceiver.
 	self findNewMethodInClass: lookupClass.
-	self executeNewMethodFromCache.  "Recursive xeq affects successFlag"
+	self executeNewMethod.  "Recursive xeq affects successFlag"
 	successFlag := true.
 
 ]
@@ -7476,11 +7461,11 @@ Interpreter >> primitivePerform [
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - other objects will have to take their chances"
-	(self isCompiledMethod: newMethod)
+	(self isOopCompiledMethod: newMethod)
 		ifTrue: [self success: (self argumentCountOf: newMethod) = argumentCount].
 
 	successFlag
-		ifTrue: [self executeNewMethodFromCache.
+		ifTrue: [self executeNewMethod.
 			"Recursive xeq affects successFlag"
 			successFlag := true]
 		ifFalse: ["Slide the args back up (sigh) and re-insert the 
@@ -7534,11 +7519,11 @@ Interpreter >> primitivePerformAt: lookupClass [
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"
-	(self isCompiledMethod: newMethod)
+	(self isOopCompiledMethod: newMethod)
 		ifTrue: [self success: (self argumentCountOf: newMethod) = argumentCount].
 
 	successFlag
-		ifTrue: [self executeNewMethodFromCache.  "Recursive xeq affects successFlag"
+		ifTrue: [self executeNewMethod.  "Recursive xeq affects successFlag"
 				successFlag := true]
 		ifFalse: ["Restore the state by popping all those array entries and pushing back the selector and array, and fail"
 				self pop: argumentCount.

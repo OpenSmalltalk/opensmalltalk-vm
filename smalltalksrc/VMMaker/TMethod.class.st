@@ -217,6 +217,11 @@ TMethod >> checkSuccessExpr [
 ]
 
 { #category : #accessing }
+TMethod >> comment [
+	^comment
+]
+
+{ #category : #accessing }
 TMethod >> comment: aComment [
 
 	comment := aComment 
@@ -737,6 +742,11 @@ TMethod >> hasMoreSendsThan: nSends [
 ]
 
 { #category : #testing }
+TMethod >> hasProperties [
+	^properties notNil and: [properties notEmpty]
+]
+
+{ #category : #testing }
 TMethod >> hasReturn [
 	"Answer true if this method contains a return statement."
 
@@ -1107,6 +1117,19 @@ TMethod >> maySubstituteGlobal: globalVar in: aCodeGen [
 	^(writtenToGlobalVarsCache includes: globalVar) not
 ]
 
+{ #category : #inlining }
+TMethod >> mergePropertiesOfSuperMethod: superTMethod [
+	superTMethod hasProperties ifFalse:
+		[^self].
+	self hasProperties ifFalse:
+		[properties := superTMethod properties.
+		 ^self].
+	superTMethod properties pragmas do:
+		[:aPragma|
+		(self shouldIncorporatePragmaFromSuperMethod: aPragma) ifTrue:
+			[properties := properties copyWith: aPragma]]
+]
+
 { #category : #accessing }
 TMethod >> mustAsmLabel [
 	^mustAsmLabel == true
@@ -1380,6 +1403,11 @@ TMethod >> propagateReturnIn: aCodeGen [
 								setValue: (self extractTypeFor: (aCodeGen cFunctionNameFor: self selector)
 											fromDeclaration: returnType) })]].
 	self replaceNodesIn: map.
+]
+
+{ #category : #accessing }
+TMethod >> properties [
+	^properties
 ]
 
 { #category : #initialization }
@@ -1678,6 +1706,19 @@ TMethod >> sharedLabel [
 	^sharedLabel
 ]
 
+{ #category : #inlining }
+TMethod >> shouldIncorporatePragmaFromSuperMethod: aPragma [
+	(properties includesKey: aPragma keyword) ifFalse:
+		[^true].
+	((aPragma keyword beginsWith: #var:)
+	  and: [properties pragmas noneSatisfy:
+			[:p|
+			(p keyword beginsWith: #var:)
+			and: [(p argumentAt: 1) = (aPragma argumentAt: 1)]]]) ifTrue:
+		[^true].
+	^false
+]
+
 { #category : #accessing }
 TMethod >> statements [
 
@@ -1760,6 +1801,36 @@ TMethod >> static [
 { #category : #accessing }
 TMethod >> static: aBoolean [
 	static := aBoolean
+]
+
+{ #category : #inlining }
+TMethod >> superExpansionNode [
+	"Answer the expansion of a super send of this method's selector.  A super send
+	 is restricted to a super send of this method's selector, /not/ an arbitrary selector.
+	 Merge the super expansion's properties into this method's properties."
+	(definingClass superclass lookupSelector: selector)
+		ifNil: [self error: 'superclass does not define super method']
+		ifNotNil:
+			[:superMethod| | superTMethod varMap |
+			superTMethod := superMethod methodNode asTranslationMethodOfClass: self class.
+			self mergePropertiesOfSuperMethod: superTMethod.
+			(varMap := superTMethod locals intersection: locals) notEmpty ifTrue:
+				[varMap := Dictionary new addAll: varMap; yourself.
+				 varMap keys do:
+					[:k| varMap at: k put: (superTMethod unusedNamePrefixedBy: k avoiding: locals)].
+				 superTMethod renameVariablesUsing: varMap].
+			self assert: (superTMethod locals allSatisfy: [:var| (locals includes: var) not]).
+			locals addAllFirst: superTMethod locals.
+			superTMethod locals do:
+				[:var|
+				(superTMethod declarations includesKey: var) ifTrue:
+					[self declarationAt: var put: (superTMethod declarationAt: var)]].
+			superTMethod comment ifNotNil:
+				[:superComment|
+				comment := comment
+								ifNil: [superComment]
+								ifNotNil: [superComment, comment]].
+			^superTMethod parseTree]
 ]
 
 { #category : #transformations }

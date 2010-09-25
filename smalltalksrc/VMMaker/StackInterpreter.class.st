@@ -810,7 +810,7 @@ StackInterpreter class >> initializePrimitiveTable [
 		(245 primitiveFail) "primStringindexOfAsciiinStringstartingAt"
 		(246 primitiveFail) "primStringfindSubstringinstartingAtmatchTable"
 		(247 primitiveSnapshotEmbedded)
-		(248 primitiveFail) "primitiveInvokeObjectAsMethod"
+		(248 primitiveInvokeObjectAsMethod)
 		(249 primitiveArrayBecomeOneWayCopyHash)
 
 		"VM Implementor Primitives (250-255)"
@@ -1299,8 +1299,12 @@ StackInterpreter >> addNewMethodToCache: class [
 	| probe hash primitiveIndex |
 	<inline: false>
 	hash := messageSelector bitXor: class.  "drop low-order zeros from addresses"
-	primitiveIndex := self primitiveIndexOf: newMethod.
-	primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: class.
+	(self isOopCompiledMethod: newMethod)
+		ifTrue:
+			[primitiveIndex := self primitiveIndexOf: newMethod.
+			 primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: class]
+		ifFalse:
+			[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod asSymbol].
 
 	0 to: CacheProbeMax-1 do:
 		[:p | probe := (hash >> p) bitAnd: MethodCacheMask.
@@ -7695,7 +7699,7 @@ StackInterpreter >> primitiveClosureValue [
 		[^self primitiveFail].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
-	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+	(self isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
 	"Note we use activateNewMethod, not executeNewMethodFromCache, to
@@ -7721,7 +7725,7 @@ StackInterpreter >> primitiveClosureValueNoContextSwitch [
 		[^self primitiveFail].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
-	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+	(self isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
 	"Note we use activateNewMethod, not executeNewMethodFromCache, to
@@ -7753,7 +7757,7 @@ StackInterpreter >> primitiveClosureValueWithArgs [
 		[^self primitiveFail].
 	closureMethod := self fetchPointer: MethodIndex ofObject: outerContext.
 	"Check if the closure's method is actually a CompiledMethod."
-	((self isNonIntegerObject: closureMethod) and: [self isCompiledMethod: closureMethod]) ifFalse:
+	(self isOopCompiledMethod: closureMethod) ifFalse:
 		[^self primitiveFail].
 
 	self popStack.
@@ -8102,7 +8106,7 @@ StackInterpreter >> primitiveDoNamedPrimitiveWithArgs [
 	self successful ifFalse:
 		[^self primitiveFailFor: -2]. "invalid args"
 
-	(self isCompiledMethod: methodArg) ifFalse:
+	(self isOopCompiledMethod: methodArg) ifFalse:
 		[^self primitiveFailFor: -2]. "invalid args"
 
 	methodHeader := self headerOf: methodArg.
@@ -8269,8 +8273,7 @@ StackInterpreter >> primitiveExecuteMethod [
 	 hence primitiveFunctionPointer is stale."
 	| methodArgument primitiveIndex |
 	methodArgument := self stackTop.
-	((self isNonIntegerObject: methodArgument)
-	 and: [self isCompiledMethod: methodArgument]) ifFalse:
+	(self isOopCompiledMethod: methodArgument) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	argumentCount - 1 = (self argumentCountOf: methodArgument) ifFalse:
 		[^self primitiveFailFor: PrimErrBadNumArgs].
@@ -8291,9 +8294,8 @@ StackInterpreter >> primitiveExecuteMethodArgsArray [
 	| methodArgument argCnt argumentArray primitiveIndex |
 	methodArgument := self stackTop.
 	argumentArray := self stackValue: 1.
-	((self isNonIntegerObject: methodArgument)
-	 and: [(self isCompiledMethod: methodArgument)
-	 and: [self isArray: argumentArray]]) ifFalse:
+	((self isOopCompiledMethod: methodArgument)
+	 and: [self isArray: argumentArray]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadArgument].
 	argCnt := self argumentCountOf: methodArgument.
 	argCnt = (self fetchWordLengthOf: argumentArray) ifFalse:
@@ -9295,6 +9297,34 @@ StackInterpreter >> primitiveInterruptSemaphore [
 		ifFalse: [self storePointer: TheInterruptSemaphore ofObject: specialObjectsOop withValue: nilObj]
 ]
 
+{ #category : #'control primitives' }
+StackInterpreter >> primitiveInvokeObjectAsMethod [
+	"Primitive. 'Invoke' an object like a function, sending the special message 
+		run: originalSelector with: arguments in: aReceiver.
+	"
+	| runReceiver runArgs lookupClass |
+	runArgs := self instantiateClass: (self splObj: ClassArray) indexableSize: argumentCount.
+	argumentCount - 1 to: 0 by: -1  do:
+		[:i| self storePointerUnchecked: i ofObject: runArgs withValue: self popStack].
+
+	runReceiver := self popStack.
+	"setup send of newMethod run: originalSelector with: runArgs in: runReceiver"
+	self push: newMethod. "newReceiver"
+	self push: messageSelector "original selector".
+	self push: runArgs.
+	self push: runReceiver.
+
+	"stack is clean here"
+
+	messageSelector := self splObj: SelectorRunWithIn.
+	argumentCount := 3.
+	lookupClass := self fetchClassOf: newMethod.
+	self findNewMethodInClass: lookupClass.
+	self executeNewMethod.  "Recursive xeq affects successFlag"
+	self initPrimCall
+
+]
+
 { #category : #'memory space primitives' }
 StackInterpreter >> primitiveIsRoot [
 	"Primitive. Answer whether the argument to the primitive is a root for young space"
@@ -9931,12 +9961,12 @@ StackInterpreter >> primitiveObject: actualReceiver perform: selector withArgume
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - any other objects playacting as CMs will have to take their chances"
-	(self isCompiledMethod: newMethod) ifTrue:
-		[(self argumentCountOf: newMethod) ~= argumentCount ifTrue:
-			["Restore the state by popping all those array entries and pushing back the selector and array, and fail"
-			 self pop: arraySize + 1.
-			 newMethod := self popStack.
-			 ^self primitiveFailFor: PrimErrBadNumArgs]].
+	((self isOopCompiledMethod: newMethod)
+	  and: [(self argumentCountOf: newMethod) = argumentCount]) ifFalse:
+		["Restore the state by popping all those array entries and pushing back the selector and array, and fail"
+		 self pop: arraySize + 1.
+		 newMethod := self popStack.
+		 ^self primitiveFailFor: PrimErrBadNumArgs].
 
 	"Cannot fail this primitive from here-on.  Slide the actual receiver and arguments down
 	 to replace the perform arguments and saved newMethod and then execute the new
@@ -10056,23 +10086,24 @@ StackInterpreter >> primitivePerform [
 	self findNewMethodInClass: lookupClass.
 
 	"Only test CompiledMethods for argument count - other objects will have to take their chances"
-	(self isCompiledMethod: newMethod)
-		ifTrue: [self success: (self argumentCountOf: newMethod) = argumentCount].
+	((self isOopCompiledMethod: newMethod)
+	  and: [(self argumentCountOf: newMethod) = argumentCount]) ifFalse:
+		["Slide the args back up (sigh) and re-insert the selector."
+		self unPop: 1.
+		1 to: argumentCount by: 1 do:
+			[:i |
+			stackPages longAt: stackPointer + ((i - 1) * BytesPerWord)
+				put: (stackPages longAt: stackPointer + (i * BytesPerWord))].
+		stackPages longAt: stackPointer + (argumentCount * BytesPerWord) put: messageSelector.
+		argumentCount := argumentCount + 1.
+		newMethod := performMethod.
+		messageSelector := performSelector.
+		^self primitiveFail].
 
-	self successful
-		ifTrue: [self executeNewMethod.
-			"Recursive xeq affects primErrorCode"
-			self initPrimCall]
-		ifFalse: ["Slide the args back up (sigh) and re-insert the selector."
-			self unPop: 1.
-			1 to: argumentCount by: 1 do:
-				[:i |
-				stackPages longAt: stackPointer + ((i - 1) * BytesPerWord)
-					put: (stackPages longAt: stackPointer + (i * BytesPerWord))].
-			stackPages longAt: stackPointer + (argumentCount * BytesPerWord) put: messageSelector.
-			argumentCount := argumentCount + 1.
-			newMethod := performMethod.
-			messageSelector := performSelector]
+	self executeNewMethod.
+	"Recursive xeq affects primErrorCode"
+	self initPrimCall.
+	^nil
 ]
 
 { #category : #'control primitives' }

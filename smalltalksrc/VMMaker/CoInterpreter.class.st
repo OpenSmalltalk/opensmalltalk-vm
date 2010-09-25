@@ -625,6 +625,16 @@ CoInterpreter >> activateNewMethod [
 	self returnToExecutive: inInterpreter postContextSwitch: switched
 ]
 
+{ #category : #'method lookup cache' }
+CoInterpreter >> addNewMethodToCache: class [
+	"Override to refuse to cache other than compiled methods.
+	 This protects open PICs against having to test for compiled methods."
+	(self isOopCompiledMethod: newMethod) ifFalse:
+		[primitiveFunctionPointer := #primitiveInvokeObjectAsMethod asSymbol.
+		^self].
+	super addNewMethodToCache: class
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> argumentCount [
 	<doNotGenerate>
@@ -1458,7 +1468,7 @@ CoInterpreter >> ceSend: selector "<Integer>" super: superNormalBar to: rcvr "<I
 			 self addNewMethodToCache: class].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
-	(self methodHasCogMethod: newMethod) ifTrue:
+	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[mayLink ifTrue:
 			[| cogMethod |
 			 cogMethod := self cogMethodOf: newMethod.
@@ -1511,7 +1521,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 					lookupClass: class
 					mayLink: false].
 			 self addNewMethodToCache: class].
-	(self methodHasCogMethod: newMethod) ifTrue:
+	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		["Smalltalk stack contains pushed receiver and arguments and return address for sender.
 		  Push the registers to be reloaded and the entry-point and jump/return to the new cog method."
 		 self executeCogMethodFromUnlinkedSend: (self cogMethodOf: newMethod) withReceiver: rcvr
@@ -2414,17 +2424,8 @@ CoInterpreter >> executeNewMethod [
 	"Execute newMethod - either primitiveFunctionPointer must be set directly
 	 (i.e. from primitiveExecuteMethod et al), or it would have been set probing
 	 the method cache (i.e. primitivePerform et al).
-	 Eagerly compile it if it is large enough so that doits are fast."
+	 Eagerly compile it appropriate so that doits are fast."
 	| methodHeader inInterpreter |
-	methodHeader := self rawHeaderOf: newMethod.
-	(self isCogMethodReference: methodHeader) ifFalse:
-		[(self methodWithHeaderShouldBeCogged: methodHeader)
-			ifTrue:
-				[cogit cog: newMethod selector: nilObj.
-				 methodHeader := self rawHeaderOf: newMethod]
-			ifFalse: [self maybeFlagMethodAsInterpreted: newMethod]].
-	(self isCogMethodReference: methodHeader) ifTrue:
-		[^self executeCogMethod: (self cCoerceSimple: methodHeader to: #'CogMethod *')].
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[self isPrimitiveFunctionPointerAnIndex ifTrue:
 			[self externalQuickPrimitiveResponse.
@@ -2434,10 +2435,20 @@ CoInterpreter >> executeNewMethod [
 		  interpreter and have found an interpreter frame.  The instructionPointer tells us
 		  from whence we came."
 		 inInterpreter := instructionPointer >= self startOfMemory.
-		 self slowPrimitiveResponse.
-		 self successful ifTrue:
+		 self slowPrimitiveResponse ifTrue:
 			[self return: self popStack toExecutive: inInterpreter.
 			 ^nil]].
+	"Eagerly compile it appropriate so that doits are fast."
+	methodHeader := self rawHeaderOf: newMethod.
+	(self isCogMethodReference: methodHeader) ifFalse:
+		[(self methodWithHeaderShouldBeCogged: methodHeader)
+			ifTrue:
+				[cogit cog: newMethod selector: nilObj.
+				 methodHeader := self rawHeaderOf: newMethod]
+			ifFalse: [self maybeFlagMethodAsInterpreted: newMethod]].
+	(primitiveFunctionPointer = 0 "don't repeat primitive evaluation!!"
+	 and: [self isCogMethodReference: methodHeader]) ifTrue:
+		[^self executeCogMethod: (self cCoerceSimple: methodHeader to: #'CogMethod *')].
 	"if not primitive, or primitive failed, activate the method"
 	self activateNewMethod
 ]
@@ -2907,7 +2918,7 @@ CoInterpreter >> handleMNUInMachineCodeTo: rcvr lookupClass: class mayLink: mayL
 			[(self lookupMethodNoMNUEtcInClass: class) ifFalse:
 				[self error: 'Recursive not understood error encountered'].
 			 self addNewMethodToCache: class].
-	(self methodHasCogMethod: newMethod) ifTrue:
+	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[mayLinkBoolean ifTrue:
 			[self flag: 'implement creating an MNU PIC sometime'.
 			 false ifTrue: [self shouldBeImplemented]].
@@ -3158,8 +3169,8 @@ CoInterpreter >> internalActivateNewMethod [
 	| methodHeader numTemps rcvr errorCode switched |
 	<inline: true>
 
-	methodHeader := self rawHeaderOf: newMethod.
-	self assert: (self isCogMethodReference: methodHeader) not.
+	self assert: (self isCompiledMethod: newMethod).
+	methodHeader := self headerOf: newMethod.
 	numTemps := self tempCountOfMethodHeader: methodHeader.
 
 	rcvr := self internalStackValue: argumentCount. "could new rcvr be set at point of send?"
@@ -3211,25 +3222,31 @@ CoInterpreter >> internalActivateNewMethod [
 CoInterpreter >> internalExecuteNewMethod [
 	| methodHeader succeeded |
 	<inline: true>
-	methodHeader := self rawHeaderOf: newMethod.
-	(self isCogMethodReference: methodHeader) ifTrue:
-		[self externalizeIPandSP.
-		 self executeCogMethod: (self cCoerceSimple: methodHeader to: #'CogMethod *').
-		 "At least in the simulator control returns here on return."
-		 self internalizeIPandSP.
-		 ^nil].
-	primitiveFunctionPointer ~~ 0 ifTrue:
-		[self isPrimitiveFunctionPointerAnIndex ifTrue:
-			[^self internalQuickPrimitiveResponse].
-		 "slowPrimitiveResponse may of course context-switch.  If so we must reenter the
-		  new process appopriately, returning only if we've found an interpreter frame."
-		 self externalizeIPandSP.
-		 succeeded := self slowPrimitiveResponse.
-		 self internalizeIPandSP.
-		 succeeded ifTrue:
-			[self return: self popStack toExecutive: false.
-			 self browserPluginReturnIfNeeded.
-			^nil]].
+	"For interpreter performance and to ease the objectAsMethod implementation eagerly
+	 evaluate the primtiive, i.e. if the method is cogged and has a primitive /do not/ evaluate
+	 the machine code primitive, just evaluate primitiveFunctionPointer directly."
+	primitiveFunctionPointer ~~ 0
+		ifTrue:
+			[self isPrimitiveFunctionPointerAnIndex ifTrue:
+				[^self internalQuickPrimitiveResponse].
+			 "slowPrimitiveResponse may of course context-switch.  If so we must reenter the
+			  new process appropriately, returning only if we've found an interpreter frame."
+			 self externalizeIPandSP.
+			 succeeded := self slowPrimitiveResponse.
+			 self internalizeIPandSP.
+			 succeeded ifTrue:
+				[self return: self popStack toExecutive: false.
+				 self browserPluginReturnIfNeeded.
+				^nil]]
+		ifFalse: "Entry into a cogged method evaluates the primitive if it has one, but since we must not
+				 invoke the primitive twice we only execute the cogged method if it has no primitive."
+			[methodHeader := self rawHeaderOf: newMethod.
+			 (self isCogMethodReference: methodHeader) ifTrue:
+				[self externalizeIPandSP.
+				 self executeCogMethod: (self cCoerceSimple: methodHeader to: #'CogMethod *').
+				 "At least in the simulator control returns here on return."
+				 self internalizeIPandSP.
+				 ^nil]].
 	"if not primitive, or primitive failed, activate the method"
 	^self internalActivateNewMethod
 ]
@@ -4001,6 +4018,13 @@ CoInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
 			ifFalse: [self storePointerUnchecked: 0 ofObject: aMethod withValue: realHeader]]
 ]
 
+{ #category : #'compiled methods' }
+CoInterpreter >> maybeMethodHasCogMethod: anOop [
+	^(self isNonIntegerObject: anOop)
+	  and: [(self isCompiledMethod: anOop)
+	  and: [self isCogMethodReference: (self rawHeaderOf: anOop)]]
+]
+
 { #category : #'cog jit support' }
 CoInterpreter >> messageSelector: oop [
 	<doNotGenerate>
@@ -4449,9 +4473,7 @@ CoInterpreter >> primitiveContextXray [
 	 and: [(self integerValueOf: pc) < 0]) ifTrue:
 		[flags := flags bitOr: 8].
 	theMethod := self fetchPointer: MethodIndex ofObject: context.
-	((self isNonIntegerObject: theMethod)
-	 and: [(self isCompiledMethod: theMethod)
-	 and: [self methodHasCogMethod: theMethod]]) ifTrue:
+	(self maybeMethodHasCogMethod: theMethod) ifTrue:
 		[flags := flags bitOr: 16].
 	self pop: 1 thenPush: (self integerObjectOf: flags)
 ]
