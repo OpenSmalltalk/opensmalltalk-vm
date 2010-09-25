@@ -4884,14 +4884,16 @@ Cogit >> lookupAddress: address [
 { #category : #'in-line cacheing' }
 Cogit >> lookupAndCog: selector for: receiver [
 	"Lookup selector in the class of receiver.  If not found answer nil.
-	 If found try to compile it to machine code if appropriate.  Answer
-	 the method."
+	 If not a method (objectAsMethod) answer nil.  Otherwise try to
+	 compile it to machine code if appropriate.  Answer the method."
 	| newTargetMethodOrNil |
 	<inline: false>
 	newTargetMethodOrNil := coInterpreter lookup: selector receiver: receiver.
 	(newTargetMethodOrNil notNil
-	 and: [(coInterpreter methodHasCogMethod: newTargetMethodOrNil) not
-	 and: [coInterpreter methodShouldBeCogged: newTargetMethodOrNil]]) ifTrue:
+	 and: [coInterpreter isOopCompiledMethod: newTargetMethodOrNil]) ifFalse:
+		[^nil].
+	((coInterpreter methodHasCogMethod: newTargetMethodOrNil) not
+	 and: [coInterpreter methodShouldBeCogged: newTargetMethodOrNil]) ifTrue:
 		["We assume cog:selector: will *not* reclaim the method zone"
 		 self cog: newTargetMethodOrNil selector: selector].
 	^newTargetMethodOrNil

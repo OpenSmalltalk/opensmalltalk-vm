@@ -2153,7 +2153,7 @@ ObjectMemory >> isBytesNonInt: oop [
 
 { #category : #'interpreter access' }
 ObjectMemory >> isCompiledMethod: oop [
-    "Answer whether the receiver is of compiled method format"
+    "Answer whether the argument object is of compiled method format"
     ^(self formatOf: oop) >= 12
 
 ]
@@ -2203,6 +2203,14 @@ ObjectMemory >> isObjectForwarded: oop [
 	"Answer if the given object has a forwarding table entry 
 	 during a compaction or become operation."
 	^(self isNonIntegerObject: oop) and: [self isMarked: oop]
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> isOopCompiledMethod: oop [
+    "Answer whether the oop is an object of compiled method format"
+	<api>
+    ^(self isNonIntegerObject: oop) and: [(self formatOf: oop) >= 12]
+
 ]
 
 { #category : #'header access' }

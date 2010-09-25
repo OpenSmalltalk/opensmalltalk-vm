@@ -7,7 +7,12 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	On top of this, numArgs is needed due to the (truly grody) use of
 	arguments as a place to store the extra expressions needed to generate
 	code for in-line to:by:do:, etc.  see below, where it is used."
-	| sel args |
+	| rcvrOrNil sel args |
+	rcvrOrNil := receiver ifNotNil: [receiver asTranslatorNodeIn: aTMethod].
+	(rcvrOrNil notNil
+	and: [rcvrOrNil isVariable
+	and: [rcvrOrNil name = 'super']]) ifTrue:
+		[^self superExpansionNodesIn: aTMethod].
 	sel := (selector isSymbol) ifTrue: [selector] ifFalse: [selector key].
 	(sel = #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
 	and: [arguments first isBlockNode]) ifTrue:
@@ -28,6 +33,15 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 				args at: 1 put: ((arguments at: 2) asTranslatorNodeIn: aTMethod)].
 	^ TSendNode new
 		setSelector: sel
-		receiver: (receiver ~~ nil ifTrue: [receiver asTranslatorNodeIn: aTMethod])
+		receiver: rcvrOrNil
 		arguments: args
+]
+
+{ #category : #'*VMMaker-C translation' }
+MessageNode >> superExpansionNodesIn: aTMethod [
+	(selector key = aTMethod selector
+	 and: [(arguments allSatisfy: [:arg| arg isTemp and: [arg isArg]])
+	 and: [(arguments collect: [:ea| ea name]) hasEqualElements: aTMethod args]]) ifFalse:
+		[self error: 'can only send to super with same selector and argument names'].
+	^aTMethod superExpansionNode
 ]
