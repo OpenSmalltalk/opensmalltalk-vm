@@ -9,7 +9,7 @@ and be patient both to wait for things to happen, and to accept various things t
 "
 Class {
 	#name : #StackInterpreterSimulator,
-	#superclass : #StackInterpreter,
+	#superclass : #StackInterpreterPrimitives,
 	#instVars : [
 		'byteCount',
 		'sendCount',
@@ -49,11 +49,11 @@ StackInterpreterSimulator class >> new [
 StackInterpreterSimulator >> allObjectsDo: objBlock [
 
 	| oop |
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:
-			[(self isFreeObject: oop)
+	oop := objectMemory firstObject.
+	[oop < objectMemory endOfMemory] whileTrue:
+			[(objectMemory isFreeObject: oop)
 				ifFalse: [objBlock value: oop].
-			oop := self objectAfter: oop].
+			oop := objectMemory objectAfter: oop].
 
 ]
 
@@ -62,12 +62,12 @@ StackInterpreterSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
 	| oop selected |
-	oop := self firstObject.
+	oop := objectMemory firstObject.
 	selected := OrderedCollection new.
-	[oop < endOfMemory] whileTrue:
-			[(self isFreeObject: oop)
+	[oop < objectMemory endOfMemory] whileTrue:
+			[(objectMemory isFreeObject: oop)
 				ifFalse: [(objBlock value: oop) ifTrue: [selected addLast: oop]].
-			oop := self objectAfter: oop].
+			oop := objectMemory objectAfter: oop].
 	^ selected
 ]
 
@@ -84,6 +84,17 @@ StackInterpreterSimulator >> allocate: byteSize headerSize: hdrSize h1: baseHead
 { #category : #testing }
 StackInterpreterSimulator >> assertValidExecutionPointers [
 	self assertValidExecutionPointe: localIP r: localFP s: localSP
+]
+
+{ #category : #'return bytecodes' }
+StackInterpreterSimulator >> baseFrameReturn [
+	| contextToReturnTo |
+	contextToReturnTo := self frameCallerContext: localFP.
+	((self isContext: contextToReturnTo)
+	 and: [self isMarriedOrWidowedContext: contextToReturnTo]) ifTrue:
+		[(self checkIsStillMarriedContext: contextToReturnTo currentFP: nil) ifFalse:
+			[self halt]].
+	^super baseFrameReturn
 ]
 
 { #category : #'interpreter shell' }
@@ -169,33 +180,34 @@ StackInterpreterSimulator >> charsOfLong: long [
 { #category : #'debug support' }
 StackInterpreterSimulator >> classAndSelectorOfMethod: meth forReceiver: rcvr [
 	| mClass dict length methodArray |
-	mClass := self fetchClassOf: rcvr.
-	[dict := self fetchPointer: MessageDictionaryIndex ofObject: mClass.
-	length := self fetchWordLengthOf: dict.
-	methodArray := self fetchPointer: MethodArrayIndex ofObject: dict.
+	mClass := objectMemory fetchClassOf: rcvr.
+	[dict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mClass.
+	length := objectMemory fetchWordLengthOf: dict.
+	methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dict.
 	0 to: length-SelectorStart-1 do: 
 		[:index | 
-		meth = (self fetchPointer: index ofObject: methodArray) 
+		meth = (objectMemory fetchPointer: index ofObject: methodArray) 
 			ifTrue: [^ Array
 				with: mClass
-				with: (self fetchPointer: index + SelectorStart ofObject: dict)]].
-	mClass := self fetchPointer: SuperclassIndex ofObject: mClass.
-	mClass = nilObj]
-		whileFalse: [].
+				with: (objectMemory fetchPointer: index + SelectorStart ofObject: dict)]].
+	mClass := self superclassOf: mClass.
+	mClass = objectMemory nilObject]
+		whileFalse.
 	^ Array
-		with: (self fetchClassOf: rcvr)
-		with: (self splObj: SelectorDoesNotUnderstand)
+		with: (objectMemory fetchClassOf: rcvr)
+		with: (objectMemory splObj: SelectorDoesNotUnderstand)
 ]
 
 { #category : #'plugin support' }
 StackInterpreterSimulator >> classNameOf: aClass Is: className [
 	"Check if aClass' name is className"
 	| name |
-	(self lengthOf: aClass) <= 6 ifTrue:[^false]. "Not a class but maybe behavior" 
-	name := self fetchPointer: 6 ofObject: aClass.
-	(self isBytes: name) ifFalse:[^false].
-	^ className = (self stringOf: name).
-
+	(objectMemory lengthOf: aClass) <= classNameIndex ifTrue:
+		[^false]. "Not a class but maybe behavior" 
+	name := objectMemory fetchPointer: classNameIndex ofObject: aClass.
+	(objectMemory isBytes: name) ifFalse:
+		[^false].
+	^ className = (self stringOf: name)
 ]
 
 { #category : #'I/O primitives' }
@@ -235,15 +247,15 @@ StackInterpreterSimulator >> compactClassAt: ccIndex [
 	"Index must be between 1 and compactClassArray size. (A zero compact class index in the base header indicate that the class is in the class header word.)"
 
 	| classArray |
-	classArray := self fetchPointer: CompactClasses ofObject: specialObjectsOop.
-	^ self fetchPointer: (ccIndex - 1) ofObject: classArray
+	classArray := objectMemory fetchPointer: CompactClasses ofObject: objectMemory specialObjectsOop.
+	^ objectMemory fetchPointer: (ccIndex - 1) ofObject: classArray
 ]
 
 { #category : #initialization }
 StackInterpreterSimulator >> convertToArray [
 	"I dont believe it -- this *just works*"
-	
-	memory := memory as: Array
+
+	objectMemory memory: (objectMemory memory as: Array)
 ]
 
 { #category : #'I/O primitives support' }
@@ -332,21 +344,6 @@ StackInterpreterSimulator >> drawLoopX: xDelta Y: yDelta [
 ]
 
 { #category : #'debug support' }
-StackInterpreterSimulator >> dumpHeader: hdr [
-	| cc |
-	^ String streamContents: [:strm |
-		cc := (hdr bitAnd: CompactClassMask) >> 12.
-		strm nextPutAll: '<cc=', cc hex.
-		cc > 0 ifTrue:
-			[strm nextPutAll: ':' , (self nameOfClass: (self compactClassAt: cc))].
-		strm nextPutAll: '>'.
-		strm nextPutAll: '<ft=', ((hdr bitShift: -8) bitAnd: 16rF) hex , '>'.
-		strm nextPutAll: '<sz=', (hdr bitAnd: SizeMask) hex , '>'.
-		strm nextPutAll: '<hdr=', (#(big class gcMark short) at: (hdr bitAnd: 3) +1) , '>']
-
-]
-
-{ #category : #'debug support' }
 StackInterpreterSimulator >> dumpMethodHeader: hdr [
 	^ String streamContents:
 		[:strm |
@@ -390,6 +387,24 @@ StackInterpreterSimulator >> externalDivorceFrame: theFP andContext: ctxt [
 	^super externalDivorceFrame: theFP andContext: ctxt
 ]
 
+{ #category : #'frame access' }
+StackInterpreterSimulator >> externalInstVar: index ofContext: aMarriedContext put: anOop [
+	| imMarried shesMarried result |
+	index == SenderIndex ifTrue:
+		[imMarried := self checkIsStillMarriedContext: aMarriedContext currentFP: localFP.
+		(self isContext: anOop) ifTrue:
+			[shesMarried := self checkIsStillMarriedContext: anOop currentFP: localFP.
+			self cr.
+			self shortPrintContext: aMarriedContext.
+			self shortPrintContext: anOop]].
+	result := super externalInstVar: index ofContext: aMarriedContext put: anOop.
+	imMarried ifNotNil:
+		[self assert: imMarried == (self checkIsStillMarriedContext: aMarriedContext currentFP: nil).
+		 shesMarried ifNotNil:
+			[self assert: shesMarried == (self checkIsStillMarriedContext: anOop currentFP: nil)]].
+	^result
+]
+
 { #category : #'stack pages' }
 StackInterpreterSimulator >> externalWriteBackHeadFramePointers [
 	self assert: (localFP = framePointer
@@ -414,9 +429,9 @@ StackInterpreterSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 { #category : #'file primitives' }
 StackInterpreterSimulator >> fileValueOf: integerPointer [
 	"Convert the (integer) fileID to the actual fileStream it uses"
-	self success: (self isIntegerObject: integerPointer).
+	self success: (objectMemory isIntegerObject: integerPointer).
 	self successful
-		ifTrue: [^ filesOpen at: (self integerValueOf: integerPointer)]
+		ifTrue: [^ filesOpen at: (objectMemory integerValueOf: integerPointer)]
 		ifFalse: [^ nil]
 ]
 
@@ -452,21 +467,8 @@ StackInterpreterSimulator >> findNewMethodInClass: class [
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> firstIndexableField: oop [
-	"NOTE: overridden from Interpreter to add coercion to CArray"
-
-	| hdr fmt totalLength fixedFields |
-	<returnTypeC: 'void *'>
-	hdr := self baseHeader: oop.
-	fmt := self formatOfHeader: hdr.
-	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
-	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt < 8 ifTrue:
-		[fmt = 6 ifTrue:"32 bit field objects"
-			[^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)) to: 'int *'].
-		"full word objects (pointer or bits)"
-		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
-	"Byte objects"
-	^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + fixedFields) to: 'char *'
+	"This is in ObjectMemory and overridden in the obj mem simulators"
+	self shouldNotImplement
 ]
 
 { #category : #'debug printing' }
@@ -483,8 +485,8 @@ StackInterpreterSimulator >> flushExternalPrimitives [
 { #category : #'frame access' }
 StackInterpreterSimulator >> frameOfMarriedContext: aContext [ 
 	| senderOop |
-	senderOop := self fetchPointer: SenderIndex ofObject: aContext.
-	self assert: (self isIntegerObject: senderOop).
+	senderOop := objectMemory fetchPointer: SenderIndex ofObject: aContext.
+	self assert: (objectMemory isIntegerObject: senderOop).
 	^self withoutSmallIntegerTags: senderOop
 ]
 
@@ -494,7 +496,7 @@ StackInterpreterSimulator >> fullDisplay [
 	displayForm == nil ifTrue: [^ self].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
-	self displayBitsOf: (self splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
+	self displayBitsOf: (objectMemory splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
 	primFailCode := primFailCodeValue
 ]
 
@@ -544,47 +546,14 @@ StackInterpreterSimulator >> halfWordLowInLong32: long32 [
 { #category : #'debug support' }
 StackInterpreterSimulator >> headerStart: oop [
 
-	^ (self extraHeaderBytes: oop) negated
-]
-
-{ #category : #'debug support' }
-StackInterpreterSimulator >> hexDump100: oop [
-	| byteSize val |
-	^ String streamContents:
-		[:strm |
-		byteSize := 256.
-		(self headerStart: oop) to: byteSize by: 4 do:
-			[:a | val := self longAt: oop+a.
-			strm cr; nextPutAll: (oop+a) hex8; space; space; 
-				nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-				space; space; space; nextPutAll: val hex8;
-				space; space.
-			strm nextPutAll: (self charsOfLong: val).
-			strm space; space; nextPutAll: (oop+a) printString]]
-]
-
-{ #category : #'debug support' }
-StackInterpreterSimulator >> hexDump: oop [
-	| byteSize val |
-	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
-	^ String streamContents:
-		[:strm |
-		byteSize := 256 min: (self sizeBitsOf: oop)-4.
-		(self headerStart: oop) to: byteSize by: 4 do:
-			[:a | val := self longAt: oop+a.
-			strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-				space; space; space; nextPutAll: val hex8;
-				space; space.
-			a=0
-				ifTrue: [strm nextPutAll: (self dumpHeader: val)]
-				ifFalse: [strm nextPutAll: (self charsOfLong: val)]]]
+	^ (objectMemory extraHeaderBytes: oop) negated
 ]
 
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> incrementByteCount [
 	byteCount := byteCount + 1.
 	byteCount \\ 1000 = 0 ifTrue:
-		[self changed: #byteCountText.
+		[self doOrDefer: [self changed: #byteCountText].
 		 self forceInterruptCheck.
 		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
 ]
@@ -597,30 +566,35 @@ StackInterpreterSimulator >> incrementalGC [
 
 { #category : #initialization }
 StackInterpreterSimulator >> initialize [
-
 	"Initialize the StackInterpreterSimulator when running the interpreter
 	 inside Smalltalk. The primary responsibility of this method is to allocate
 	 Smalltalk Arrays for variables that will be declared as statically-allocated
 	 global arrays in the translated code."
 
+	| objectMemoryClass |
+
 	"initialize class variables"
-	ObjectMemory initBytesPerWord: self bytesPerWord.
-	ObjectMemory initialize.
+	objectMemory ifNotNil:
+		[^self halt].
+
+	objectMemoryClass := self class objectMemoryClass.
+
+	objectMemoryClass initBytesPerWord: objectMemoryClass bytesPerWord.
+	objectMemoryClass initialize.
 	StackInterpreter initialize.
 
 	super initialize.
+	objectMemory := objectMemoryClass simulatorClass new.
+	objectMemory coInterpreter: self.
 
 	"Note: we must initialize ConstMinusOne differently for simulation,
 		due to the fact that the simulator works only with +ve 32-bit values"
-	ConstMinusOne := self integerObjectOf: -1.
+	ConstMinusOne := objectMemory integerObjectOf: -1.
 
 	methodCache := Array new: MethodCacheSize.
 	atCache := Array new: AtCacheTotalSize.
 	self flushMethodCache.
 	self flushAtCache.
-	rootTable := Array new: RootTableSize.
-	weakRoots := Array new: WeakRootTableSize.
-	remapBuffer := Array new: RemapBufferSize.
 	gcSemaphoreIndex := 0.
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
@@ -639,12 +613,31 @@ StackInterpreterSimulator >> initialize [
 	printSends := printReturns := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
 	filesOpen := OrderedCollection new.
-	headerTypeBytes := CArrayAccessor on: HeaderTypeExtraBytes.
 	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
 	suppressHeartbeatFlag := false.
 	extSemTabSize := 256
 	
+]
+
+{ #category : #'frame access' }
+StackInterpreterSimulator >> instVar: index ofContext: aMarriedContext put: anOop [
+	| imMarried shesMarried result |
+	index == SenderIndex ifTrue:
+		[imMarried := self checkIsStillMarriedContext: aMarriedContext currentFP: localFP.
+		(self isContext: anOop) ifTrue:
+			[shesMarried := self checkIsStillMarriedContext: anOop currentFP: localFP.
+			"self cr.
+			self shortPrintContext: aMarriedContext.
+			self shortPrintContext: anOop.
+			(#('yield:' 'nextPut:') includesAnyOf: {self stringOf: (self selectorOfContext: aMarriedContext). self stringOf: (self selectorOfContext: anOop)}) ifTrue:
+				[self halt]"]].
+	result := super instVar: index ofContext: aMarriedContext put: anOop.
+	imMarried ifNotNil:
+		[self assert: imMarried == (self checkIsStillMarriedContext: aMarriedContext currentFP: nil).
+		 shesMarried ifNotNil:
+			[self assert: shesMarried == (self checkIsStillMarriedContext: anOop currentFP: nil)]].
+	^result
 ]
 
 { #category : #'interpreter shell' }
@@ -661,14 +654,14 @@ StackInterpreterSimulator >> insufficientMemorySpecifiedError [
 StackInterpreterSimulator >> integerAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
-	^memory integerAt: (byteAddress // 4) + 1
+	^objectMemory memory integerAt: (byteAddress // 4) + 1
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> integerAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
-	^memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
+	^objectMemory memory integerAt: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
 { #category : #'memory access' }
@@ -683,6 +676,36 @@ StackInterpreterSimulator >> integerObjectOf: value [
 StackInterpreterSimulator >> internalCannotReturn: resultOop [
 	self halt.
 	^super internalCannotReturn: resultOop
+]
+
+{ #category : #testing }
+StackInterpreterSimulator >> internalFindNewMethod [
+"
+	| cName |
+	traceOn ifTrue:
+		[cName := (self sizeBitsOf: class) = 16r20
+			ifTrue: ['class ' , (self nameOfClass: (self fetchPointer: 6 ofObject: class))]
+			ifFalse: [(self nameOfClass: class)].
+		self cr; print: cName , '>>' , (self stringOf: messageSelector)].
+"
+	(self stringOf: messageSelector) = 'doesNotUnderstand:' ifTrue: [self halt].
+
+	sendCount := sendCount + 1.
+
+	printSends ifTrue:
+		[self cr; print: byteCount; space; printStringOf: messageSelector; cr].
+"
+	(sendCount > 1000 and: [sendCount\\10 = 0]) ifTrue:
+		[Transcript print: sendCount; space.
+		self validate].
+"
+"
+	(sendCount > 100150) ifTrue:
+		[self qvalidate.
+		messageQueue == nil ifTrue: [messageQueue := OrderedCollection new].
+		messageQueue addLast: (self stringOf: messageSelector)].
+"
+	super internalFindNewMethod
 ]
 
 { #category : #'debugging traps' }
@@ -708,6 +731,12 @@ StackInterpreterSimulator >> ioCanWriteImage [
 
 { #category : #'primitive support' }
 StackInterpreterSimulator >> ioExit [
+
+	quitBlock value  "Cause return from #test"
+]
+
+{ #category : #'primitive support' }
+StackInterpreterSimulator >> ioExitWithErrorCode: ec [
 
 	quitBlock value  "Cause return from #test"
 ]
@@ -867,12 +896,6 @@ StackInterpreterSimulator >> isIntegerValue: valueWord [
 	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> isInterpreterProxy [
-	"Return false since I am a real Interpreter simulation"
-	^false
-]
-
 { #category : #'primitive support' }
 StackInterpreterSimulator >> isPrimitiveFunctionPointerAnIndex [
 	"We save slots in the method cache by using the primitiveFunctionPointer
@@ -913,12 +936,12 @@ StackInterpreterSimulator >> loadNewPlugin: pluginString [
 		plg moduleName asString = pluginString asString ifTrue:[
 			simClass := plg simulatorClass.
 			plugin ifNil:[plugin := simClass]
-				ifNotNil:[plugin == simClass ifFalse:[^self error:'This won''t work...']].
+				ifNotNil:[plugin == simClass ifFalse:[self error:'This won''t work...'. ^nil]].
 		].
 	].
 	plugin ifNil:[transcript show: ' ... not found'. ^nil].
 	plugin := plugin new.
-	plugin setInterpreter: self. "Ignore return value from setInterpreter"
+	plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
 	(plugin respondsTo: #initialiseModule) ifTrue:[
 		plugin initialiseModule ifFalse:[transcript show: ' ... initialiser failed'.^nil]. "module initialiser failed"
 	].
@@ -1084,82 +1107,14 @@ StackInterpreterSimulator >> long32At: byteAddress put: a32BitValue [
 StackInterpreterSimulator >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
-	^memory at: (byteAddress // 4) + 1
+	^objectMemory memory at: (byteAddress // 4) + 1
 ]
 
 { #category : #'memory access' }
 StackInterpreterSimulator >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
-	^memory at: (byteAddress // 4) + 1 put: a32BitValue
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> longAtPointer: pointer [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and the result is the width of a machine word."
-
-	^ self longAt: pointer
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> longAtPointer: pointer put: longValue [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and longValue is the width of a machine word."
-
-	^ self longAt: pointer put: longValue
-]
-
-{ #category : #'debug support' }
-StackInterpreterSimulator >> longPrint: oop [
-	| lastPtr val lastLong hdrType prevVal |
-	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
-	^ String streamContents:
-		[:strm |
-		lastPtr := 64*BytesPerWord min: (self lastPointerOf: oop).
-		hdrType := self headerType: oop.
-		hdrType = 2 ifTrue: [lastPtr := 0].
-		prevVal := 0.
-		(self headerStart: oop) to: lastPtr by: BytesPerWord do:
-			[:a | val := self longAt: oop+a.
-			(a > 0 and: [(val = prevVal) & (a ~= lastPtr)])
-			ifTrue:
-			[prevVal = (self longAt: oop+a-(BytesPerWord*2)) ifFalse: [strm cr; nextPutAll: '        ...etc...']]
-			ifFalse:
-			[strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-				space; space; space; nextPutAll: val hex8; space; space.
-			a = (BytesPerWord*2) negated ifTrue:
-				[strm nextPutAll: 'size = ' , (val - hdrType) hex].
-			a = BytesPerWord negated ifTrue:
-				[strm nextPutAll: '<' , (self nameOfClass: (val - hdrType)) , '>'].
-			a = 0 ifTrue: [strm cr; tab; nextPutAll: (self dumpHeader: val)].
-			a > 0 ifTrue: [strm nextPutAll: (self shortPrint: val)].
-			a = BytesPerWord ifTrue:
-				[(self fetchClassOf: oop) = (self splObj: ClassCompiledMethod) ifTrue:
-							[strm cr; tab; nextPutAll: (self dumpMethodHeader: val)]]].
-			prevVal := val].
-		lastLong := 256 min: (self sizeBitsOf: oop) - BaseHeaderSize.
-		hdrType = 2
-			ifTrue:
-			["free" strm cr; nextPutAll: (oop+(self longAt: oop)-2) hex;
-			space; space; nextPutAll: (oop+(self longAt: oop)-2) printString]
-			ifFalse:
-			[(self formatOf: oop) = 3
-			ifTrue:
-				[strm cr; tab; nextPutAll: '/ next 3 fields are above SP... /'.
-				lastPtr+BytesPerWord to: lastPtr+(3*BytesPerWord) by: BytesPerWord do:
-					[:a | val := self longAt: oop+a.
-					strm cr; nextPutAll: a hex; 
-						space; space; space; nextPutAll: val hex8; space; space.
-					(self validOop: val) ifTrue: [strm nextPutAll: (self shortPrint: val)]]]
-			ifFalse:
-			[lastPtr+BytesPerWord to: lastLong by: BytesPerWord do:
-				[:a | val := self longAt: oop+a.
-				strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-					space; space; space.
-				strm nextPutAll: val hex8; space; space;
-						nextPutAll: (self charsOfLong: val)]]].
-	]
+	^objectMemory memory at: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
 { #category : #'file primitives' }
@@ -1170,22 +1125,22 @@ StackInterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	| modDateOop createDateOop nameString results |
 	<var: 'entryName' type: 'char *'>
 
-	results			:= self instantiateClass: (self splObj: ClassArray) indexableSize: 5.
-	nameString		:= self instantiateClass: (self splObj: ClassString) indexableSize: entryNameSize.
+	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 5.
+	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: entryNameSize.
 	createDateOop	:= self positive32BitIntegerFor: createDate.
 	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
 
 	1 to: entryNameSize do:
 		[ :i |
-		self storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
+		objectMemory storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
 
-	self storePointerUnchecked: 0 ofObject: results withValue: nameString.
-	self storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
-	self storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
+	objectMemory storePointerUnchecked: 0 ofObject: results withValue: nameString.
+	objectMemory storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
+	objectMemory storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
 	dirFlag
-		ifTrue: [ self storePointerUnchecked: 3 ofObject: results withValue: trueObj ]
-		ifFalse: [ self storePointerUnchecked: 3 ofObject: results withValue: falseObj ].
-	self storePointerUnchecked: 4 ofObject: results withValue: (self integerObjectOf: fileSize).
+		ifTrue: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory trueObject ]
+		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
+	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
 	^ results
 ]
 
@@ -1201,10 +1156,10 @@ StackInterpreterSimulator >> moveFramesIn: thePage through: frameAbove toPage: n
 
 { #category : #'debug support' }
 StackInterpreterSimulator >> nameOfClass: classOop [
-	(self sizeBitsOf: classOop) = (Metaclass instSize +1*BytesPerWord) ifTrue:
-		[^ (self nameOfClass:
-				(self fetchPointer: 5 "thisClass" ofObject: classOop)) , ' class'].
-	^ self stringOf: (self fetchPointer: 6 "name" ofObject: classOop)
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+		[^(self nameOfClass:
+				(objectMemory fetchPointer: thisClassIndex ofObject: classOop)) , ' class'].
+	^self stringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
 { #category : #initialization }
@@ -1216,7 +1171,7 @@ StackInterpreterSimulator >> nextLongFrom: aStream [
 { #category : #initialization }
 StackInterpreterSimulator >> nextLongFrom: aStream swap: swapFlag [
 	swapFlag 
-		ifTrue: [^ self byteSwapped: (self nextLongFrom: aStream)]
+		ifTrue: [^ objectMemory byteSwapped: (self nextLongFrom: aStream)]
 		ifFalse: [^ self nextLongFrom: aStream]
 ]
 
@@ -1238,20 +1193,12 @@ StackInterpreterSimulator >> nextShortFrom: aStream swap: swapFlag [
 { #category : #testing }
 StackInterpreterSimulator >> objectBefore: addr [
 	| oop prev |
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue: [
+	oop := objectMemory firstObject.
+	[oop < objectMemory endOfMemory] whileTrue: [
 		prev := oop.  "look here if debugging prev obj overlapping this one"
-		oop := self objectAfter: oop.
+		oop := objectMemory objectAfter: oop.
 		oop >= addr ifTrue: [^ prev]
 	]
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> oopForPointer: pointer [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	oop is the width of a machine word, and pointer is a raw address."
-
-	^ pointer
 ]
 
 { #category : #UI }
@@ -1291,7 +1238,7 @@ StackInterpreterSimulator >> openAsMorphNoTranscript [
 		frame: (0@0 corner: 1@0.95).
 
 	window addMorph: (PluggableTextMorph on: self
-						text: #byteCountText accept: nil) hideScrollBarIndefinitely
+						text: #byteCountText accept: nil) hideScrollBarsIndefinitely
 		frame: (0@0.95 corner: 1@1).
 
 	window openInWorldExtent: (self desiredDisplayExtent
@@ -1322,14 +1269,14 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	version := self nextLongFrom: f.  "current version: 16r1968 (=6504) vive la revolucion!"
 	(self readableFormat: version)
 		ifTrue: [swapBytes := false]
-		ifFalse: [(version := self byteSwapped: version) = self imageFormatVersion
+		ifFalse: [(version := objectMemory byteSwapped: version) = self imageFormatVersion
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
 	headerSize := self nextLongFrom: f swap: swapBytes.
-	self setEndOfMemory: (self nextLongFrom: f swap: swapBytes).  "first unused location in heap"
+	objectMemory setEndOfMemory: (self nextLongFrom: f swap: swapBytes).  "first unused location in heap"
 	oldBaseAddr := self nextLongFrom: f swap: swapBytes.  "object memory base address of image"
-	specialObjectsOop := self nextLongFrom: f swap: swapBytes.
-	lastHash := self nextLongFrom: f swap: swapBytes.  "Should be loaded from, and saved to the image header"
+	objectMemory specialObjectsOop: (self nextLongFrom: f swap: swapBytes).
+	objectMemory lastHash: (self nextLongFrom: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
 
 	savedWindowSize	:= self nextLongFrom: f swap: swapBytes.
 	headerFlags			:= self nextLongFrom: f swap: swapBytes.
@@ -1350,36 +1297,28 @@ StackInterpreterSimulator >> openOn: fileName extraMemory: extraBytes [
 	 Preserve it to be polite to images run on Cog."
 	theUnknownShort	:= self getShortFromFile: f swap: swapBytes.
 	hdrEdenBytes		:= self nextLongFrom: f swap: swapBytes.
-	edenBytes := hdrEdenBytes = 0
-							ifTrue: [self defaultEdenBytes]
-							ifFalse: [hdrEdenBytes].
+	objectMemory edenBytes: (hdrEdenBytes = 0
+							ifTrue: [objectMemory defaultEdenBytes]
+							ifFalse: [hdrEdenBytes]).
 	desiredEdenBytes := hdrEdenBytes.
 	"allocate interpreter memory"
-	self setMemoryLimit: endOfMemory + extraBytes + edenBytes + self interpreterAllocationReserveBytes.
+	objectMemory setMemoryLimit: objectMemory endOfMemory + extraBytes + objectMemory edenBytes + self interpreterAllocationReserveBytes.
 
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
-	memory := Bitmap new: memoryLimit // 4.
-	count := f readInto: memory startingAt: 1 count: endOfMemory // 4.
-	count ~= (endOfMemory // 4) ifTrue: [self halt].
+	objectMemory memory: (Bitmap new: objectMemory memoryLimit // 4).
+	count := f readInto: objectMemory memory startingAt: 1 count: objectMemory endOfMemory // 4.
+	count ~= (objectMemory endOfMemory // 4) ifTrue: [self halt].
 	]
 		ensure: [f close].
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
-	self initialize.
-	bytesToShift := self startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
+	objectMemory initialize.
+	bytesToShift := objectMemory startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
 	Utilities informUser: 'Relocating object pointers...'
 				during: [self initializeInterpreter: bytesToShift].
 
-]
-
-{ #category : #'memory access' }
-StackInterpreterSimulator >> pointerForOop: oop [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	oop is the width of a machine word, and pointer is a raw address."
-
-	^ oop
 ]
 
 { #category : #'debugging traps' }
@@ -1397,8 +1336,8 @@ StackInterpreterSimulator >> primBitmapcompresstoByteArray [
 StackInterpreterSimulator >> primBitmapdecompressfromByteArrayat [
 	| indexInt index baOop bmOop baSize bmSize ba bm |
 	indexInt := self stackTop.
-	(self isIntegerValue: indexInt) ifFalse: [^ self primitiveFail].
-	index := self integerValueOf: indexInt.
+	(objectMemory isIntegerValue: indexInt) ifFalse: [^ self primitiveFail].
+	index := objectMemory integerValueOf: indexInt.
 	baOop := self stackValue: 1.
 	bmOop := self stackValue: 2.
 	baSize := self stSizeOf: baOop.
@@ -1407,13 +1346,13 @@ StackInterpreterSimulator >> primBitmapdecompressfromByteArrayat [
 	bm := Bitmap new: bmSize.
 
 	"Copy the byteArray into ba"
-	1 to: baSize do: [:i | ba at: i put: (self fetchByte: i-1 ofObject: baOop)].
+	1 to: baSize do: [:i | ba at: i put: (objectMemory fetchByte: i-1 ofObject: baOop)].
 
 	"Decompress ba into bm"
 	bm decompress: bm fromByteArray: ba at: index.
 
 	"Then copy bm into the Bitmap"
-	1 to: bmSize do: [:i | self storeLong32: i-1 ofObject: bmOop withValue: (bm at: i)].
+	1 to: bmSize do: [:i | objectMemory storeLong32: i-1 ofObject: bmOop withValue: (bm at: i)].
 	self pop: 3
 ]
 
@@ -1443,7 +1382,7 @@ StackInterpreterSimulator >> primitiveBeDisplay [
 
 	| rcvr destWidth destHeight destDepth |
 	rcvr := self stackTop.
-	self success: ((self isPointers: rcvr) and: [(self lengthOf: rcvr) >= 4]).
+	self success: ((objectMemory isPointers: rcvr) and: [(objectMemory lengthOf: rcvr) >= 4]).
 	self successful ifTrue: [
 		destWidth := self fetchInteger: 1 ofObject: rcvr.
 		destHeight := self fetchInteger: 2 ofObject: rcvr.
@@ -1481,7 +1420,7 @@ StackInterpreterSimulator >> primitiveDirectoryEntry [
 
 	array := FileDirectory default primLookupEntryIn: pathName name: name.
 	array == nil ifTrue:
-		[self pop: 3 thenPush: nilObj.
+		[self pop: 3 thenPush: objectMemory nilObject.
 		^array].
 	array == #badDirectoryPath ifTrue:
 		[self halt.
@@ -1506,7 +1445,7 @@ StackInterpreterSimulator >> primitiveDirectoryLookup [
 	array := FileDirectory default primLookupEntryIn: pathName index: index.
 
 	array == nil ifTrue:
-		[self pop: 3 thenPush: nilObj.
+		[self pop: 3 thenPush: objectMemory nilObject.
 		^array].
 	array == #badDirectoryPath ifTrue:
 		["self halt."
@@ -1542,7 +1481,7 @@ StackInterpreterSimulator >> primitiveFileDelete [
 
 	| namePointer |
 	namePointer := self stackTop.
-	self success: (self isBytes: namePointer).
+	self success: (objectMemory isBytes: namePointer).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: namePointer)).
 	self successful ifTrue: [FileDirectory deleteFilePath: (self stringOf: namePointer)].
 	self successful ifTrue: [self pop: 1].  "pop fileName; leave rcvr on stack"
@@ -1553,7 +1492,7 @@ StackInterpreterSimulator >> primitiveFileOpen [
 	| namePointer writeFlag fileName f |
 	writeFlag := self booleanValueOf: self stackTop.
 	namePointer := self stackValue: 1.
-	self success: (self isBytes: namePointer).
+	self success: (objectMemory isBytes: namePointer).
 	self successful ifTrue:
 		[fileName := self stringOf: namePointer.
 		filesOpen addLast: (writeFlag
@@ -1572,8 +1511,8 @@ StackInterpreterSimulator >> primitiveFileRename [
 	| oldNamePointer newNamePointer f |
 	oldNamePointer := self stackTop.
 	newNamePointer := self stackValue: 1.
-	self success: (self isBytes: oldNamePointer).
-	self success: (self isBytes: newNamePointer).
+	self success: (objectMemory isBytes: oldNamePointer).
+	self success: (objectMemory isBytes: newNamePointer).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: oldNamePointer)).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: newNamePointer)) not.
 	self successful ifTrue: [
@@ -1589,16 +1528,16 @@ StackInterpreterSimulator >> primitiveFileRename [
 { #category : #'file primitives' }
 StackInterpreterSimulator >> primitiveFileStdioHandles [
 	| result |
-	result := self instantiateClass: self classArray indexableSize: 3.
+	result := objectMemory instantiateClass: objectMemory classArray indexableSize: 3.
 	result = nil ifTrue:
 		[^self primitiveFailFor: PrimErrNoMemory].
 	Transcript clear.
 	filesOpen addLast: (FakeStdinStream for: self). "stdin"
-	self storePointerUnchecked: 0 ofObject: result withValue: (self integerObjectOf: filesOpen size).
+	objectMemory storePointerUnchecked: 0 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
 	filesOpen addLast: Transcript. "stdout"
-	self storePointerUnchecked: 1 ofObject: result withValue: (self integerObjectOf: filesOpen size).
+	objectMemory storePointerUnchecked: 1 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
 	filesOpen addLast: Transcript. "stderr"
-	self storePointerUnchecked: 2 ofObject: result withValue: (self integerObjectOf: filesOpen size).
+	objectMemory storePointerUnchecked: 2 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
 	self pop: 1 thenPush: result
 ]
 
@@ -1611,9 +1550,9 @@ StackInterpreterSimulator >> primitiveGetAttribute [
 	self successful ifTrue: [
 		attribute := Smalltalk getSystemAttribute: attr.
 		attribute ifNil: [ ^self primitiveFail ].
-		s := self instantiateClass: (self splObj: ClassString) indexableSize: attribute size.
+		s := objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
-			self storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
+			objectMemory storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
 		self pop: 2.  "rcvr, attr"
 		self push: s]
 ]
@@ -1624,10 +1563,10 @@ StackInterpreterSimulator >> primitiveImageName [
 	| result imageNameSize |
 	self pop: 1.
 	imageNameSize := imageName size.
-	result := self instantiateClass: (self splObj: ClassString)
+	result := objectMemory instantiateClass: (objectMemory splObj: ClassString)
 				   indexableSize: imageNameSize.
 	1 to: imageNameSize do:
-		[:i | self storeByte: i-1 ofObject: result
+		[:i | objectMemory storeByte: i-1 ofObject: result
 			withValue: (imageName at: i) asciiValue].
 	self push: result.
 ]
@@ -1638,7 +1577,7 @@ StackInterpreterSimulator >> primitiveKbdNext [
 	self pop: 1.
 	Sensor keyboardPressed
 		ifTrue: [self pushInteger: Sensor primKbdNext]
-		ifFalse: [self push: nilObj]
+		ifFalse: [self push: objectMemory nilObject]
 ]
 
 { #category : #'I/O primitives' }
@@ -1647,7 +1586,7 @@ StackInterpreterSimulator >> primitiveKbdPeek [
 	self pop: 1.
 	Sensor keyboardPressed
 		ifTrue: [self pushInteger: Sensor primKbdPeek]
-		ifFalse: [self push: nilObj]
+		ifFalse: [self push: objectMemory nilObject]
 ]
 
 { #category : #'I/O primitives' }
@@ -1691,19 +1630,20 @@ StackInterpreterSimulator >> primitiveScreenSize [
 	self pop: 1 thenPush: (self makePointwithxValue: size x yValue: size y)
 ]
 
+{ #category : #'object access primitives' }
+StackInterpreterSimulator >> primitiveStoreStackp [
+	"self printContext: (self stackValue: 1).
+	self halt."
+	super primitiveStoreStackp.
+	"self printContext: self stackTop"
+]
+
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> primitiveSuspend [
 	"Catch errors before we start the whole morphic error process"
 
 	"byteCount > 1000000 ifTrue: [self halt]."  "Ignore early process activity"
 	^ super primitiveSuspend
-]
-
-{ #category : #'debugging traps' }
-StackInterpreterSimulator >> primitiveTerminateTo [
-	Transcript cr; print: byteCount; flush.
-	"self halt."
-	^super primitiveTerminateTo
 ]
 
 { #category : #'debugging traps' }
@@ -1917,7 +1857,7 @@ StackInterpreterSimulator >> reverseBytesFrom: begin to: end [
 	"Byte-swap the given range of memory (not inclusive!)."
 	| wordAddr |
 	wordAddr := begin.
-	memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
+	objectMemory memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
 ]
 
 { #category : #'image save/restore' }
@@ -2058,14 +1998,14 @@ StackInterpreterSimulator >> shortAt: byteAddress put: a16BitValue [
 { #category : #'debug support' }
 StackInterpreterSimulator >> shortPrint: oop [
 	| name classOop |
-	(self isIntegerObject: oop) ifTrue: [^ '=' , (self integerValueOf: oop) printString , 
-		' (' , (self integerValueOf: oop) hex , ')'].
-	(oop between: self startOfMemory and: freeStart) ifFalse:
+	(objectMemory isIntegerObject: oop) ifTrue: [^ '=' , (objectMemory integerValueOf: oop) printString , 
+		' (' , (objectMemory integerValueOf: oop) hex , ')'].
+	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^' is not on the heap'].
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
 		[^' is misaligned'].
-	classOop := self fetchClassOf: oop.
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
+	classOop := objectMemory fetchClassOf: oop.
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
 		^ 'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
@@ -2073,8 +2013,8 @@ StackInterpreterSimulator >> shortPrint: oop [
 	name = 'ByteString' ifTrue: [^ (self stringOf: oop) printString].
 	name = 'Symbol' ifTrue: [^ '#' , (self stringOf: oop)].
 	name = 'ByteSymbol' ifTrue: [^ '#' , (self stringOf: oop)].
-	name = 'Character' ifTrue: [^ '=' , (Character value: (self integerValueOf: 
-				(self fetchPointer: 0 ofObject: oop))) printString].
+	name = 'Character' ifTrue: [^ '=' , (Character value: (objectMemory integerValueOf: 
+				(objectMemory fetchPointer: 0 ofObject: oop))) printString].
 	name = 'UndefinedObject' ifTrue: [^ 'nil'].
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
@@ -2091,15 +2031,15 @@ StackInterpreterSimulator >> shortPrint: oop [
 { #category : #'debug support' }
 StackInterpreterSimulator >> shortPrintRelative: oop [
 	| name classOop |
-	(self isIntegerObject: oop) ifTrue:
-		[^'=' , (self integerValueOf: oop) printString , 
-		' (' , (self integerValueOf: oop) hex , ')'].
-	(oop between: self startOfMemory and: freeStart) ifFalse:
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^'=' , (objectMemory integerValueOf: oop) printString , 
+		' (' , (objectMemory integerValueOf: oop) hex , ')'].
+	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^' is not on the heap'].
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
 		[^' is misaligned'].
-	classOop := self fetchClassOfNonInt: oop.
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
+	classOop := objectMemory fetchClassOfNonInt: oop.
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
 		^'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
@@ -2107,8 +2047,8 @@ StackInterpreterSimulator >> shortPrintRelative: oop [
 	name = 'ByteString' ifTrue: [^(self stringOf: oop) printString].
 	name = 'Symbol' ifTrue: [^'#' , (self stringOf: oop)].
 	name = 'ByteSymbol' ifTrue: [^'#' , (self stringOf: oop)].
-	name = 'Character' ifTrue: [^'=' , (Character value: (self integerValueOf: 
-				(self fetchPointer: 0 ofObject: oop))) printString].
+	name = 'Character' ifTrue: [^'=' , (Character value: (objectMemory integerValueOf: 
+				(objectMemory fetchPointer: 0 ofObject: oop))) printString].
 	name = 'UndefinedObject' ifTrue: [^'nil'].
 	name = 'False' ifTrue: [^'false'].
 	name = 'True' ifTrue: [^'true'].
@@ -2119,7 +2059,7 @@ StackInterpreterSimulator >> shortPrintRelative: oop [
 		^'(' ,
 			(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
 			' -> ' ,
-			((self isIntegerObject: valOop) ifTrue: [valOop] ifFalse: [valOop - self startOfMemory]) hex8 , ')'].
+			((objectMemory isIntegerObject: valOop) ifTrue: [valOop] ifFalse: [valOop - objectMemory startOfMemory]) hex8 , ')'].
 	^(('AEIOU' includes: name first)
 		ifTrue: ['an ']
 		ifFalse: ['a ']) , name
@@ -2130,7 +2070,7 @@ StackInterpreterSimulator >> showDisplayBits: destBits w: w h: h d: d left: left
 	| raster pixPerWord simDisp realDisp rect |
 	pixPerWord := 32 // d.
 	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
-	simDisp := Form new hackBits: memory.
+	simDisp := Form new hackBits: objectMemory memory.
 	displayForm unhibernate.
 	realDisp := Form new hackBits: displayForm bits.
 	realDisp
@@ -2257,8 +2197,8 @@ StackInterpreterSimulator >> sqGetInterpreterProxy [
 StackInterpreterSimulator >> sqGrowMemory: oldLimit By: delta [
 
 	transcript show: 'grow memory from ', oldLimit printString, ' by ', delta printString; cr.
-	memory := memory , (memory class new: delta // 4).
-	^ memory size * 4
+	objectMemory memory: objectMemory memory , (objectMemory memory class new: delta // 4).
+	^ objectMemory memory size * 4
 ]
 
 { #category : #'memory access' }
@@ -2280,41 +2220,6 @@ StackInterpreterSimulator >> startOfMemory [
 	^ 0
 ]
 
-{ #category : #testing }
-StackInterpreterSimulator >> stats [
-	| oop fieldAddr fieldOop last stats v d |
-	stats := Bag new.
-	oop := self firstObject.
-
-'Scanning the image...' displayProgressAt: Sensor cursorPoint
-	from: oop to: endOfMemory
-	during: [:bar |
-
-	[oop < endOfMemory] whileTrue:
-		[(self isFreeObject: oop) ifFalse:
-			[stats add: #objects.
-			fieldAddr := oop + (self lastPointerOf: oop).
-			[fieldAddr > oop] whileTrue:
-				[fieldOop := self longAt: fieldAddr.
-				(self isIntegerObject: fieldOop)
-					ifTrue: [v := self integerValueOf: fieldOop.
-							(v between: -16000 and: 16000)
-								ifTrue: [stats add: #ints32k]
-								ifFalse: [stats add: #intsOther]]
-					ifFalse: [fieldOop = nilObj ifTrue: [stats add: #nil]
-							ifFalse:
-							[d := fieldOop - oop.
-							(d between: -16000 and: 16000)
-								ifTrue: [stats add: #oops32k]
-								ifFalse: [stats add: #oopsOther]]].
-				fieldAddr := fieldAddr - BytesPerWord]].
-		bar value: oop.
-		last := oop.
-		last := last.
-		oop := self objectAfter: oop]].
-	^ stats sortedElements
-]
-
 { #category : #'bytecode routines' }
 StackInterpreterSimulator >> storeAndPopTemporaryVariableBytecode [
 	"Interpreter version has fetchNextBytecode out of order"
@@ -2334,7 +2239,13 @@ StackInterpreterSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 { #category : #'debug printing' }
 StackInterpreterSimulator >> str: aString n: bString cmp: n [
 	"implementation of strncmp(3)"
-	^(aString first: n) ~= (bString first: n)
+	bString isInteger ifFalse:
+		[^(aString first: n) ~= (bString first: n)].
+	1 to: n do:
+		[:i| | v |
+		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
+		v ~= 0 ifTrue: [^v]].
+	^0
 ]
 
 { #category : #'debug support' }
@@ -2405,7 +2316,7 @@ StackInterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	| type offset2 byte2 byte3 byte4 |
 	offset <=6 ifTrue: 
 		["Extended op codes 128-134"
-		byte2 := self fetchByte: ip+1 ofObject: meth.
+		byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
 		offset <= 2 ifTrue:
 			["128-130:  extended pushes and pops"
 			type := byte2 >> 6 bitAnd: 3.
@@ -2429,7 +2340,7 @@ StackInterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 		offset = 3 ifTrue:  "Single extended send"
 			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
 		offset = 4 ifTrue:    "Double extended do-anything"
-			[byte3 := self fetchByte: ip+2 ofObject: meth.
+			[byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
 			type := byte2 // 32.
 			type = 0 ifTrue: [^ 'send ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
 			type = 1 ifTrue: [^ 'superSend ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
@@ -2446,18 +2357,18 @@ StackInterpreterSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	offset = 7 ifTrue: [^ 'doPop'].
 	offset = 8 ifTrue: [^ 'doDup'].
 	offset = 9 ifTrue: [^ 'pushActiveContext'].
-	byte2 := self fetchByte: ip+1 ofObject: meth.
+	byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
 	offset = 10 ifTrue:
 		[^byte2 < 128
 			ifTrue: ['pushNewArrayOfSize: ', byte2 printString]
 			ifFalse: ['pushConsArrayWithElements: ', (byte2 - 128) printString]].
 	offset = 11 ifTrue: [^ 'unusedBytecode'].
-	byte3 := self fetchByte: ip+2 ofObject: meth.
+	byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
 	offset = 12 ifTrue: [^'pushRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
 	offset = 13 ifTrue: [^'storeIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
 	offset = 14 ifTrue: [^'popIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
 	"offset = 15"
-	byte4 := self fetchByte: ip+3 ofObject: meth.
+	byte4 := objectMemory fetchByte: ip+3 ofObject: meth.
 	^'pushClosureCopyNumCopiedValues: ', (byte2 bitShift: -4) printString,
 		' numArgs: ', (byte2 bitAnd: 16rF) printString,
 		' blockSize: ', ((byte3 * 256) + byte4) printString
@@ -2543,30 +2454,30 @@ StackInterpreterSimulator >> test1 [
 StackInterpreterSimulator >> testBecome [
 	"Become some young things.  AA testBecome    "
 	| array list1 list2 p1 p2 p3 p4 |
-	array := self splObj: ClassArray.
-	list1 := self instantiateClass: array indexableSize: 2.
-	list2 := self instantiateClass: array indexableSize: 2.
-	p1 := self instantiateClass: (self splObj: ClassPoint) indexableSize: 0.
+	array := objectMemory splObj: ClassArray.
+	list1 := objectMemory instantiateClass: array indexableSize: 2.
+	list2 := objectMemory instantiateClass: array indexableSize: 2.
+	p1 := objectMemory instantiateClass: (objectMemory splObj: ClassPoint) indexableSize: 0.
 	self push: p1.
-	self storePointer: 0 ofObject: list1 withValue: p1.
-	p2 := self instantiateClass: (self splObj: ClassPoint) indexableSize: 0.
+	objectMemory storePointer: 0 ofObject: list1 withValue: p1.
+	p2 := objectMemory instantiateClass: (objectMemory splObj: ClassPoint) indexableSize: 0.
 	self push: p2.
-	self storePointer: 1 ofObject: list1 withValue: p2.
-	p3 := self instantiateClass: (self splObj: ClassMessage) indexableSize: 0.
+	objectMemory storePointer: 1 ofObject: list1 withValue: p2.
+	p3 := objectMemory instantiateClass: (objectMemory splObj: ClassMessage) indexableSize: 0.
 	self push: p3.
-	self storePointer: 0 ofObject: list2 withValue: p3.
-	p4 := self instantiateClass: (self splObj: ClassMessage) indexableSize: 0.
+	objectMemory storePointer: 0 ofObject: list2 withValue: p3.
+	p4 := objectMemory instantiateClass: (objectMemory splObj: ClassMessage) indexableSize: 0.
 	self push: p4.
-	self storePointer: 1 ofObject: list2 withValue: p4.
-	(self become: list1 with: list2 twoWay: true copyHash: true) ifFalse: [self error: 'failed'].
+	objectMemory storePointer: 1 ofObject: list2 withValue: p4.
+	(objectMemory become: list1 with: list2 twoWay: true copyHash: true) ifFalse: [self error: 'failed'].
 	self popStack = p2 ifFalse: [self halt].
 	self popStack = p1 ifFalse: [self halt].
 	self popStack = p4 ifFalse: [self halt].
 	self popStack = p3 ifFalse: [self halt].
-	(self fetchPointer: 0 ofObject: list1) = p3 ifFalse: [self halt].
-	(self fetchPointer: 1 ofObject: list1) = p4 ifFalse: [self halt].
-	(self fetchPointer: 0 ofObject: list2) = p1 ifFalse: [self halt].
-	(self fetchPointer: 1 ofObject: list2) = p2 ifFalse: [self halt].
+	(objectMemory fetchPointer: 0 ofObject: list1) = p3 ifFalse: [self halt].
+	(objectMemory fetchPointer: 1 ofObject: list1) = p4 ifFalse: [self halt].
+	(objectMemory fetchPointer: 0 ofObject: list2) = p1 ifFalse: [self halt].
+	(objectMemory fetchPointer: 1 ofObject: list2) = p2 ifFalse: [self halt].
 ]
 
 { #category : #testing }
@@ -2603,6 +2514,11 @@ StackInterpreterSimulator >> testWithFramePrint [
 ]
 
 { #category : #'simulation only' }
+StackInterpreterSimulator >> transcript [
+	^transcript
+]
+
+{ #category : #'simulation only' }
 StackInterpreterSimulator >> transcript: aTranscript [
 	transcript := aTranscript
 ]
@@ -2618,42 +2534,6 @@ StackInterpreterSimulator >> unableToReadImageError [
 	self error:  'Read failed or premature end of image file'
 ]
 
-{ #category : #'debug printing' }
-StackInterpreterSimulator >> updatePrintWrappers [
-	"StackInterpreterSimulator basicNew updatePrintWrappers"
-	"Make sure wrappers that write-protect memory while printing are in place and up-to-date."
-	| needed existing |
-	needed := StackInterpreter organization listAtCategoryNamed: #'debug printing'.
-	existing := StackInterpreterSimulator organization listAtCategoryNamed: #'debug printing wrappers'.
-	(existing reject: [:s| needed includes: s]) do:
-		[:s| StackInterpreterSimulator removeSelector: s].
-	(needed reject: [:s| StackInterpreterSimulator includesSelector: s]) do:
-		[:s|
-		StackInterpreterSimulator
-			compile: (String streamContents:
-						[:str| | signature |
-						Parser new
-							parseMethodComment: (StackInterpreter sourceCodeAt: s)
-							setPattern:
-								[:pattern|
-								 signature := String streamContents:
-												[:rats|
-												pattern last = 1
-													ifTrue: [rats nextPutAll: pattern first]
-													ifFalse:
-														[pattern first keywords with: pattern second do:
-															[:kwd :arg|
-															 rats nextPutAll: kwd; space; nextPutAll: arg; space].
-														rats skip: -1]]].
-						str
-							nextPutAll: signature;
-							crtab: 1;
-							nextPutAll: '^self withMemoryProtectionDo: [super ';
-							nextPutAll: signature;
-							nextPut: $]])
-			classified: #'debug printing wrappers']
-]
-
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	"(self frameContext: theFP) = 22163268 ifTrue:
@@ -2666,67 +2546,11 @@ StackInterpreterSimulator >> validOop: oop [
 	" Return true if oop appears to be valid "
 	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
 	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
-	oop >= endOfMemory ifTrue: [^ false].  "Out of range"
+	oop >= objectMemory endOfMemory ifTrue: [^ false].  "Out of range"
 	"could test if within the first large freeblock"
 	(self longAt: oop) = 4 ifTrue: [^ false].
-	(self headerType: oop) = 2 ifTrue: [^ false].	"Free object"
+	(objectMemory headerType: oop) = 2 ifTrue: [^ false].	"Free object"
 	^ true
-]
-
-{ #category : #testing }
-StackInterpreterSimulator >> validate [
-	| oop prev |
-	transcript show: 'Validating...'.
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue: [
-		self validate: oop.
-		prev := oop.  "look here if debugging prev obj overlapping this one"
-		oop := self objectAfter: oop.
-	].
-	prev := prev.  "Don't offer to delete this please"
-	transcript show: 'done.'; cr
-]
-
-{ #category : #testing }
-StackInterpreterSimulator >> validate: oop [
-	| header type cc sz fmt nextChunk | 
-	header := self longAt: oop.
-	type := header bitAnd: 3.
-	type = 2 ifFalse: [type = (self rightType: header) ifFalse: [self halt]].
-	sz := (header bitAnd: SizeMask) >> 2.
-	(self isFreeObject: oop)
-		ifTrue: [ nextChunk := oop + (self sizeOfFree: oop) ]
-		ifFalse: [  nextChunk := oop + (self sizeBitsOf: oop) ].
-	nextChunk > endOfMemory
-		ifTrue: [oop = endOfMemory ifFalse: [self halt]].
-	(self headerType: nextChunk) = 0 ifTrue: [
-		(self headerType: (nextChunk + (BytesPerWord*2))) = 0 ifFalse: [self halt]].
-	(self headerType: nextChunk) = 1 ifTrue: [
-		(self headerType: (nextChunk + BytesPerWord)) = 1 ifFalse: [self halt]].
-	type = 2 ifTrue:
-		["free block" ^ self].
-	fmt := self formatOfHeader: header.
-	cc := self compactClassIndexOfHeader: header.
-	cc > 16 ifTrue: [self halt].	"up to 32 are legal, but not used"
-	type = 0 ifTrue:
-		["three-word header"
-		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
-		((self longAt: oop-(BytesPerWord*2)) bitAnd: 3) = type ifFalse: [self halt].
-		((self longAt: oop-BytesPerWord) = type) ifTrue: [self halt].	"Class word is 0"
-		sz = 0 ifFalse: [self halt]].
-	type = 1 ifTrue:
-		["two-word header"
-		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
-		cc > 0 ifTrue: [sz = 1 ifFalse: [self halt]].
-		sz = 0 ifTrue: [self halt]].
-	type = 3 ifTrue:
-		["one-word header"
-		cc = 0 ifTrue: [self halt]].
-	fmt = 5 ifTrue: [self halt].
-	fmt = 7 ifTrue: [self halt].
-	fmt >= 12 ifTrue:
-		["CompiledMethod -- check for integer header"
-		(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
 ]
 
 { #category : #'file primitives' }
@@ -2735,7 +2559,7 @@ StackInterpreterSimulator >> vmPathGet: stringBase Length: stringSize [
 	pathName := Smalltalk vmPath.
 	stringOop := stringBase - BaseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
-		[:i | self storeByte: i-1 ofObject: stringOop
+		[:i | objectMemory storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].
 
 ]
@@ -2785,7 +2609,7 @@ StackInterpreterSimulator >> withoutSmallIntegerTags: anInteger [
 
 { #category : #'debug printing' }
 StackInterpreterSimulator >> writeEnableMemory [
-	memory := memory array
+	objectMemory memory: objectMemory memory array
 ]
 
 { #category : #'image save/restore' }
@@ -2804,9 +2628,9 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 			self imageFormatVersion.
 			headerSize.
 			numberOfBytesToWrite.
-			self startOfMemory.
-			specialObjectsOop.
-			lastHash.
+			objectMemory startOfMemory.
+			(objectMemory specialObjectsOop).
+			(objectMemory lastHash).
 			self ioScreenSize.
 			fullScreenFlag.
 			extraVMMemory
@@ -2828,11 +2652,11 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 		file position: headerSize.
 	
 		"Write the object memory."
-		self startOfMemory // 4 + 1
+		objectMemory startOfMemory // 4 + 1
 			to: numberOfBytesToWrite // 4
 			do: [:index |
 				self
-					putLong: (memory at: index)
+					putLong: (objectMemory memory at: index)
 					toFile: file].
 	
 		self success: true
@@ -2842,5 +2666,5 @@ StackInterpreterSimulator >> writeImageFileIO: numberOfBytesToWrite [
 
 { #category : #'debug printing' }
 StackInterpreterSimulator >> writeProtectMemory [
-	memory := ReadOnlyArrayWrapper around: memory
+	objectMemory memory: (ReadOnlyArrayWrapper around: objectMemory memory)
 ]

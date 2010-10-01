@@ -178,15 +178,7 @@ VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirN
 				Win32OSProcessPlugin
 			).
 	"
-	| maker |
-	maker := self forPlatform: 'Cross'.
-	maker sourceDirectoryName: srcDirName.
-	maker platformRootDirectoryName: platDirName.
-	maker interpreterClassName: interpreterClass name.
-	maker externalModules addAll: 
-		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
-	maker generateEntire.
-
+	(self makerFor: interpreterClass to: srcDirName platformDir: platDirName excluding: exclusions) generateEntire
 ]
 
 { #category : #initialisation }
@@ -209,6 +201,33 @@ VMMaker class >> isActiveVMMakerClassFor: platformName [
 { #category : #accessing }
 VMMaker class >> machinesDirName [
 	^DirNames at: #machineType ifAbsent:[SmalltalkImage current platformName]
+]
+
+{ #category : #utilities }
+VMMaker class >> makerFor: interpreterClass to: srcDirName platformDir: platDirName excluding: exclusions [
+	"Initialize a VMMaker to generate the VM to the given target directory. Exclude plugins in pluginList.
+	Example:
+		(VMMaker
+			makerFor: CoInterpreter
+			to: (FileDirectory default pathFromURI: '../src')
+			platformDir: (FileDirectory default pathFromURI: '../platforms')
+			excluding:#(
+				BrokenPlugin DShowVideoDecoderPlugin IA32ABIPluginSimulator
+				NewsqueakIABIPlugin NewsqueakIABIPluginAttic
+				QuicktimePlugin QVideoCodecPlugin QwaqMediaPlugin
+				SlangTestPlugin TestOSAPlugin ThreadedFFIPlugin 
+				Win32OSProcessPlugin))
+			generateInterpreterFile.
+	"
+	| maker |
+	maker := self forPlatform: 'Cross'.
+	maker sourceDirectoryName: srcDirName.
+	maker platformRootDirectoryName: platDirName.
+	maker interpreterClassName: interpreterClass name.
+	maker externalModules addAll: 
+		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
+	^maker
+
 ]
 
 { #category : #accessing }
@@ -818,7 +837,7 @@ VMMaker >> internalPluginsDo: aBlock [
 { #category : #'generate sources' }
 VMMaker >> interpreterClass [
 
-	^Smalltalk at: interpreterClassName asSymbol
+	^(Smalltalk classNamed: interpreterClassName) translationClass
 ]
 
 { #category : #'generate sources' }
@@ -991,9 +1010,7 @@ VMMaker >> needsToRegenerateCogitFile [
 	| cogitClass cogitClasses tStamp fstat |
 	cogitClass := self interpreterClass cogitClass.
 	cogitClasses := cogitClass withAllSuperclasses copyUpThrough: Cogit.
-	cogitClasses
-		addAllLast: self interpreterClass ancilliaryClasses;
-		addAllLast: cogitClass ancilliaryClasses.
+	cogitClasses addAllLast: cogitClass ancilliaryClasses.
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
 	cogitClasses do:
 		[:c|
@@ -1012,8 +1029,12 @@ VMMaker >> needsToRegenerateInterpreterFile [
 "check the timestamp for the relevant classes and then the timestamp for the interp.c file if it already exists. Return true if the file needs regenerating, false if not"
 
 	| classes tStamp fstat |
-	classes := self interpreterClass withAllSuperclasses copyUpTo: ObjectMemory superclass.
-	classes addAllLast: self interpreterClass ancilliaryClasses.
+	classes := self interpreterClass withAllSuperclasses copyUpTo: VMClass.
+	self interpreterClass objectMemoryClass ifNotNil:
+		[:objectMemoryClass|
+		classes addAllLast: (objectMemoryClass  withAllSuperclasses copyUpTo: VMClass)].
+	classes copy do:
+		[:class| classes addAllLast: class ancilliaryClasses].
 	classes copy do:
 		[:class| classes addAllLast: class ancilliaryStructClasses].
 	tStamp := classes inject: 0 into: [:tS :cl| tS max: cl timeStamp].

@@ -59,27 +59,21 @@ CogVMSimulator >> CStackPointer [
 	^self longAt: self inMemoryCStackPointerAddress
 ]
 
-{ #category : #'control primitives' }
-CogVMSimulator >> activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch [
-	"Similar to activateNewMethod but for Closure and newMethod.
-	 Override to handle the various interpreter/machine code transitions
-	 and to create an appropriate frame layout."
-	"| outerContext theMethod |
-	outerContext := self fetchPointer: ClosureOuterContextIndex ofObject: blockClosure.
-	theMethod := self fetchPointer: MethodIndex ofObject: outerContext.
-	theMethod = 16rDBBF24 ifTrue: [self halt: 'About to actiavte block in WeakArray>>finalizationProcess']."
-	^super activateNewClosureMethod: blockClosure numArgs: numArgs mayContextSwitch: mayContextSwitch
+{ #category : #'message sending' }
+CogVMSimulator >> activateCoggedNewMethod: inInterpreter [
+	"self halt."
+	^super activateCoggedNewMethod: inInterpreter
 ]
 
 { #category : #'debug support' }
 CogVMSimulator >> allObjectsDo: objBlock [
 
 	| oop |
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue:
-			[(self isFreeObject: oop)
+	oop := objectMemory firstObject.
+	[oop < objectMemory endOfMemory] whileTrue:
+			[(objectMemory isFreeObject: oop)
 				ifFalse: [objBlock value: oop].
-			oop := self objectAfter: oop].
+			oop := objectMemory objectAfter: oop].
 
 ]
 
@@ -88,12 +82,12 @@ CogVMSimulator >> allObjectsSelect: objBlock [
 	"self allObjectsSelect: [:oop | (self baseHeader: oop) = 1234]"
 
 	| oop selected |
-	oop := self firstObject.
+	oop := objectMemory firstObject.
 	selected := OrderedCollection new.
-	[oop < endOfMemory] whileTrue:
-			[(self isFreeObject: oop)
+	[oop < objectMemory endOfMemory] whileTrue:
+			[(objectMemory isFreeObject: oop)
 				ifFalse: [(objBlock value: oop) ifTrue: [selected addLast: oop]].
-			oop := self objectAfter: oop].
+			oop := objectMemory objectAfter: oop].
 	^ selected
 ]
 
@@ -268,33 +262,34 @@ CogVMSimulator >> charsOfLong: long [
 { #category : #'debug support' }
 CogVMSimulator >> classAndSelectorOfMethod: meth forReceiver: rcvr [
 	| mClass dict length methodArray |
-	mClass := self fetchClassOf: rcvr.
-	[dict := self fetchPointer: MessageDictionaryIndex ofObject: mClass.
-	length := self fetchWordLengthOf: dict.
-	methodArray := self fetchPointer: MethodArrayIndex ofObject: dict.
+	mClass := objectMemory fetchClassOf: rcvr.
+	[dict := objectMemory fetchPointer: MethodDictionaryIndex ofObject: mClass.
+	length := objectMemory fetchWordLengthOf: dict.
+	methodArray := objectMemory fetchPointer: MethodArrayIndex ofObject: dict.
 	0 to: length-SelectorStart-1 do: 
 		[:index | 
-		meth = (self fetchPointer: index ofObject: methodArray) 
+		meth = (objectMemory fetchPointer: index ofObject: methodArray) 
 			ifTrue: [^ Array
 				with: mClass
-				with: (self fetchPointer: index + SelectorStart ofObject: dict)]].
-	mClass := self fetchPointer: SuperclassIndex ofObject: mClass.
-	mClass = nilObj]
+				with: (objectMemory fetchPointer: index + SelectorStart ofObject: dict)]].
+	mClass := objectMemory fetchPointer: SuperclassIndex ofObject: mClass.
+	mClass = objectMemory nilObject]
 		whileFalse: [].
 	^ Array
-		with: (self fetchClassOf: rcvr)
-		with: (self splObj: SelectorDoesNotUnderstand)
+		with: (objectMemory fetchClassOf: rcvr)
+		with: (objectMemory splObj: SelectorDoesNotUnderstand)
 ]
 
 { #category : #'plugin support' }
 CogVMSimulator >> classNameOf: aClass Is: className [
 	"Check if aClass' name is className"
 	| name |
-	(self lengthOf: aClass) <= 6 ifTrue:[^false]. "Not a class but maybe behavior" 
-	name := self fetchPointer: 6 ofObject: aClass.
-	(self isBytes: name) ifFalse:[^false].
-	^ className = (self stringOf: name).
-
+	(objectMemory lengthOf: aClass) <= classNameIndex ifTrue:
+		[^false]. "Not a class but maybe behavior" 
+	name := objectMemory fetchPointer: classNameIndex ofObject: aClass.
+	(objectMemory isBytes: name) ifFalse:
+		[^false].
+	^ className = (self stringOf: name)
 ]
 
 { #category : #'I/O primitives' }
@@ -328,7 +323,7 @@ CogVMSimulator >> cogBlockMethodSurrogateAt: address [
 	self assert: (address bitAnd: BytesPerWord - 1) = 0.
 	^cogit cogBlockMethodSurrogateClass new
 		at: address
-		memory: memory
+		memory: objectMemory memory
 ]
 
 { #category : #'simulation only' }
@@ -344,7 +339,7 @@ CogVMSimulator >> cogMethodSurrogateAt: address [
 					and: [(Cogit classPool keyAtValue: address asInteger ifAbsent: nil) notNil]]).
 	^cogit cogMethodSurrogateClass new
 		at: address asInteger
-		memory: memory
+		memory: objectMemory memory
 ]
 
 { #category : #'simulation only' }
@@ -357,8 +352,8 @@ CogVMSimulator >> compactClassAt: ccIndex [
 	"Index must be between 1 and compactClassArray size. (A zero compact class index in the base header indicate that the class is in the class header word.)"
 
 	| classArray |
-	classArray := self fetchPointer: CompactClasses ofObject: specialObjectsOop.
-	^ self fetchPointer: (ccIndex - 1) ofObject: classArray
+	classArray := objectMemory fetchPointer: CompactClasses ofObject: objectMemory specialObjectsOop.
+	^ objectMemory fetchPointer: (ccIndex - 1) ofObject: classArray
 ]
 
 { #category : #initialization }
@@ -449,21 +444,6 @@ CogVMSimulator >> drawLoopX: xDelta Y: yDelta [
 ]
 
 { #category : #'debug support' }
-CogVMSimulator >> dumpHeader: hdr [
-	| cc |
-	^ String streamContents: [:strm |
-		cc := (hdr bitAnd: CompactClassMask) >> 12.
-		strm nextPutAll: '<cc=', cc hex.
-		cc > 0 ifTrue:
-			[strm nextPutAll: ':' , (self nameOfClass: (self compactClassAt: cc))].
-		strm nextPutAll: '>'.
-		strm nextPutAll: '<ft=', ((hdr bitShift: -8) bitAnd: 16rF) hex , '>'.
-		strm nextPutAll: '<sz=', (hdr bitAnd: SizeMask) hex , '>'.
-		strm nextPutAll: '<hdr=', (#(big class gcMark short) at: (hdr bitAnd: 3) +1) , '>']
-
-]
-
-{ #category : #'debug support' }
 CogVMSimulator >> dumpMethodHeader: hdr [
 	^ String streamContents:
 		[:strm |
@@ -483,6 +463,17 @@ CogVMSimulator >> elementsPerPrintOopLine [
 { #category : #'debugging traps' }
 CogVMSimulator >> enableCog: aBoolean [
 	enableCog := aBoolean
+]
+
+{ #category : #testing }
+CogVMSimulator >> ensureDebugAtEachStepBlock [
+	atEachStepBlock := [printFrameAtEachStep ifTrue:
+							[self printFrame: localFP WithSP: localSP].
+						 printBytecodeAtEachStep ifTrue:
+							[self printCurrentBytecodeOn: transcript.
+							 transcript cr; flush].
+						 byteCount = breakCount ifTrue:
+							["printFrameAtEachStep :=" printBytecodeAtEachStep := true]]
 ]
 
 { #category : #'frame access' }
@@ -575,16 +566,16 @@ CogVMSimulator >> fetchFloatAt: floatBitsAddress into: aFloat [
 { #category : #'interpreter access' }
 CogVMSimulator >> fetchPointer: fieldIndex ofObject: oop [
 	"index by word size, and return a pointer as long as the word size"
-	self assert: oop >= self startOfMemory.
-	^super fetchPointer: fieldIndex ofObject: oop
+	self assert: oop >= objectMemory startOfMemory.
+	^objectMemory fetchPointer: fieldIndex ofObject: oop
 ]
 
 { #category : #'file primitives' }
 CogVMSimulator >> fileValueOf: integerPointer [
 	"Convert the (integer) fileID to the actual fileStream it uses"
-	self success: (self isIntegerObject: integerPointer).
+	self success: (objectMemory isIntegerObject: integerPointer).
 	self successful
-		ifTrue: [^ filesOpen at: (self integerValueOf: integerPointer)]
+		ifTrue: [^ filesOpen at: (objectMemory integerValueOf: integerPointer)]
 		ifFalse: [^ nil]
 ]
 
@@ -620,21 +611,8 @@ CogVMSimulator >> findNewMethodInClass: class [
 
 { #category : #'memory access' }
 CogVMSimulator >> firstIndexableField: oop [
-	"NOTE: overridden from Interpreter to add coercion to CArray"
-
-	| hdr fmt totalLength fixedFields |
-	<returnTypeC: 'void *'>
-	hdr := self baseHeader: oop.
-	fmt := self formatOfHeader: hdr.
-	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
-	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt < 8 ifTrue:
-		[fmt = 6 ifTrue:"32 bit field objects"
-			[^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)) to: 'int *'].
-		"full word objects (pointer or bits)"
-		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
-	"Byte objects"
-	^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + fixedFields) to: 'char *'
+	"This is in ObjectMemory and overridden in the obj mem simulators"
+	self shouldNotImplement
 ]
 
 { #category : #'debug printing' }
@@ -669,8 +647,8 @@ CogVMSimulator >> frameCallerContext: theFP [
 { #category : #'frame access' }
 CogVMSimulator >> frameOfMarriedContext: aContext [ 
 	| senderOop |
-	senderOop := self fetchPointer: SenderIndex ofObject: aContext.
-	self assert: (self isIntegerObject: senderOop).
+	senderOop := objectMemory fetchPointer: SenderIndex ofObject: aContext.
+	self assert: (objectMemory isIntegerObject: senderOop).
 	^self withoutSmallIntegerTags: senderOop
 ]
 
@@ -685,7 +663,7 @@ CogVMSimulator >> fullDisplay [
 	displayForm == nil ifTrue: [^ self].
 	primFailCodeValue := primFailCode.
 	self initPrimCall.
-	self displayBitsOf: (self splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
+	self displayBitsOf: (objectMemory splObj: TheDisplay) Left: 0 Top: 0 Right: displayForm width Bottom: displayForm height.
 	primFailCode := primFailCodeValue
 ]
 
@@ -745,40 +723,7 @@ CogVMSimulator >> halfWordLowInLong32: long32 [
 { #category : #'debug support' }
 CogVMSimulator >> headerStart: oop [
 
-	^ (self extraHeaderBytes: oop) negated
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> hexDump100: oop [
-	| byteSize val |
-	^ String streamContents:
-		[:strm |
-		byteSize := 256.
-		(self headerStart: oop) to: byteSize by: 4 do:
-			[:a | val := self longAt: oop+a.
-			strm cr; nextPutAll: (oop+a) hex8; space; space; 
-				nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-				space; space; space; nextPutAll: val hex8;
-				space; space.
-			strm nextPutAll: (self charsOfLong: val).
-			strm space; space; nextPutAll: (oop+a) printString]]
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> hexDump: oop [
-	| byteSize val |
-	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
-	^ String streamContents:
-		[:strm |
-		byteSize := 256 min: (self sizeBitsOf: oop)-4.
-		(self headerStart: oop) to: byteSize by: 4 do:
-			[:a | val := self longAt: oop+a.
-			strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-				space; space; space; nextPutAll: val hex8;
-				space; space.
-			a=0
-				ifTrue: [strm nextPutAll: (self dumpHeader: val)]
-				ifFalse: [strm nextPutAll: (self charsOfLong: val)]]]
+	^ (objectMemory extraHeaderBytes: oop) negated
 ]
 
 { #category : #'debugging traps' }
@@ -854,10 +799,10 @@ CogVMSimulator >> inMemoryVMOwnerLockAddress [
 { #category : #'interpreter shell' }
 CogVMSimulator >> incrementByteCount [
 	(byteCount := byteCount + 1) = breakCount ifTrue:
-		[self changed: #byteCountText.
+		[self doOrDefer: [self changed: #byteCountText].
 		 self halt].
 	byteCount \\ 1000 = 0 ifTrue:
-		[self changed: #byteCountText.
+		[self doOrDefer: [self changed: #byteCountText].
 		 self forceInterruptCheck.
 		 byteCount \\ 10000 = 0 ifTrue: [self fullDisplayUpdate]]
 ]
@@ -870,25 +815,32 @@ CogVMSimulator >> incrementalGC [
 
 { #category : #initialization }
 CogVMSimulator >> initialize [
-
 	"Initialize the StackInterpreterSimulator when running the interpreter
 	 inside Smalltalk. The primary responsibility of this method is to allocate
 	 Smalltalk Arrays for variables that will be declared as statically-allocated
 	 global arrays in the translated code."
 
+	| objectMemoryClass |
+
 	"initialize class variables"
-	ObjectMemory initBytesPerWord: self bytesPerWord.
-	ObjectMemory initialize.
+	objectMemory ifNotNil:
+		[^self halt].
+
+	objectMemoryClass := self class objectMemoryClass.
+
+	objectMemoryClass initBytesPerWord: objectMemoryClass bytesPerWord.
 	CoInterpreter initialize.
 	Cogit initialize.
 
 	super initialize.
+	objectMemory := objectMemoryClass simulatorClass new.
+	cogit := SimpleStackBasedCogit new setInterpreter: self.
+	objectMemory coInterpreter: self cogit: cogit.
 
 	"Note: we must initialize ConstMinusOne & HasBeenReturnedFromMCPC differently
 	 for simulation, due to the fact that the simulator works only with +ve 32-bit values"
-	ConstMinusOne := self integerObjectOf: -1.
-	HasBeenReturnedFromMCPC := self integerObjectOf: -1.
-	cogit := SimpleStackBasedCogit new setInterpreter: self.
+	ConstMinusOne := objectMemory integerObjectOf: -1.
+	HasBeenReturnedFromMCPC := objectMemory integerObjectOf: -1.
 	cogMethodZone := cogit methodZone. "Because Slang can't remove intermediate implicit receivers (cogit methodZone foo doesn't reduce to foo())"
 	enableCog := true.
 
@@ -897,9 +849,6 @@ CogVMSimulator >> initialize [
 	self flushMethodCache.
 	self flushAtCache.
 	cogCompiledCodeCompactionCalledFor := false.
-	rootTable := Array new: RootTableSize.
-	weakRoots := Array new: WeakRootTableSize.
-	remapBuffer := Array new: RemapBufferSize.
 	gcSemaphoreIndex := 0.
 	externalSemaphoreSignalRequests := externalSemaphoreSignalResponses := #().
 	externalPrimitiveTable := CArrayAccessor on: (Array new: MaxExternalPrimitiveTableSize).
@@ -920,7 +869,6 @@ CogVMSimulator >> initialize [
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
 	myBitBlt := BitBltSimulator new setInterpreter: self.
 	filesOpen := OrderedCollection new.
-	headerTypeBytes := CArrayAccessor on: HeaderTypeExtraBytes.
 	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
 	suppressHeartbeatFlag := deferSmash := deferredSmash := false.
@@ -1077,8 +1025,12 @@ CogVMSimulator >> ioCanWriteImage [
 
 { #category : #'primitive support' }
 CogVMSimulator >> ioExit [
+	quitBlock value  "Cause return from #run"
+]
 
-	quitBlock value  "Cause return from #test"
+{ #category : #'primitive support' }
+CogVMSimulator >> ioExitWithErrorCode: ec [
+	self ioExit
 ]
 
 { #category : #'other primitives' }
@@ -1248,12 +1200,6 @@ CogVMSimulator >> isIntegerValue: valueWord [
 	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
-{ #category : #testing }
-CogVMSimulator >> isInterpreterProxy [
-	"Return false since I am a real Interpreter simulation"
-	^false
-]
-
 { #category : #'rump c stack' }
 CogVMSimulator >> isOnRumpCStack: address [
 	^address between: heapBase - self rumpCStackSize and: heapBase - BytesPerWord + 1
@@ -1272,11 +1218,6 @@ CogVMSimulator >> isPrimitiveFunctionPointerAnIndex [
 	^primitiveFunctionPointer isInteger
 	  and: [primitiveFunctionPointer >= 0
 	  and: [primitiveFunctionPointer <= MaxQuickPrimitiveIndex]]
-]
-
-{ #category : #testing }
-CogVMSimulator >> isThreadedVM [
-	^false
 ]
 
 { #category : #'frame access' }
@@ -1310,7 +1251,7 @@ CogVMSimulator >> loadNewPlugin: pluginString [
 	].
 	plugin ifNil:[transcript show: ' ... not found'. ^nil].
 	plugin := plugin new.
-	plugin setInterpreter: self. "Ignore return value from setInterpreter"
+	plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
 	(plugin respondsTo: #initialiseModule) ifTrue:[
 		plugin initialiseModule ifFalse:[transcript show: ' ... initialiser failed'.^nil]. "module initialiser failed"
 	].
@@ -1485,7 +1426,7 @@ CogVMSimulator >> long32At: byteAddress put: a32BitValue [
 CogVMSimulator >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 
-	^memory at: (byteAddress // 4) + 1
+	^objectMemory memory at: (byteAddress // 4) + 1
 ]
 
 { #category : #'memory access' }
@@ -1496,118 +1437,7 @@ CogVMSimulator >> longAt: byteAddress put: a32BitValue [
 	 and: [(self longAt: 16r101BD0) = 16r571D
 	 and: [a32BitValue ~= 16r571D]]) ifTrue: [self halt]."
 	
-	^memory at: (byteAddress // 4) + 1 put: a32BitValue
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> longAtPointer: pointer [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and the result is the width of a machine word."
-
-	^ self longAt: pointer
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> longAtPointer: pointer put: longValue [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	pointer is a raw address, and longValue is the width of a machine word."
-
-	^ self longAt: pointer put: longValue
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> longPrint: oop [
-	| lastPtr val lastLong hdrType prevVal |
-	(self isIntegerObject: oop) ifTrue: [^ self shortPrint: oop].
-	^ String streamContents:
-		[:strm |
-		lastPtr := 64*BytesPerWord min: (self lastPointerOf: oop).
-		hdrType := self headerType: oop.
-		hdrType = 2 ifTrue: [lastPtr := 0].
-		prevVal := 0.
-		(self headerStart: oop) to: lastPtr by: BytesPerWord do:
-			[:a | val := self longAt: oop+a.
-			(a > 0 and: [(val = prevVal) & (a ~= lastPtr)])
-			ifTrue:
-			[prevVal = (self longAt: oop+a-(BytesPerWord*2)) ifFalse: [strm cr; nextPutAll: '        ...etc...']]
-			ifFalse:
-			[strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-				space; space; space; nextPutAll: val hex8; space; space.
-			a = (BytesPerWord*2) negated ifTrue:
-				[strm nextPutAll: 'size = ' , (val - hdrType) hex].
-			a = BytesPerWord negated ifTrue:
-				[strm nextPutAll: '<' , (self nameOfClass: (val - hdrType)) , '>'].
-			a = 0 ifTrue: [strm cr; tab; nextPutAll: (self dumpHeader: val)].
-			a > 0 ifTrue: [strm nextPutAll: (self shortPrint: val)].
-			a = BytesPerWord ifTrue:
-				[(self fetchClassOf: oop) = (self splObj: ClassCompiledMethod) ifTrue:
-							[strm cr; tab; nextPutAll: (self dumpMethodHeader: val)]]].
-			prevVal := val].
-		lastLong := 256 min: (self sizeBitsOf: oop) - BaseHeaderSize.
-		hdrType = 2
-			ifTrue:
-			["free" strm cr; nextPutAll: (oop+(self longAt: oop)-2) hex;
-			space; space; nextPutAll: (oop+(self longAt: oop)-2) printString]
-			ifFalse:
-			[(self formatOf: oop) = 3
-			ifTrue:
-				[strm cr; tab; nextPutAll: '/ next 3 fields are above SP... /'.
-				lastPtr+BytesPerWord to: lastPtr+(3*BytesPerWord) by: BytesPerWord do:
-					[:a | val := self longAt: oop+a.
-					strm cr; nextPutAll: a hex; 
-						space; space; space; nextPutAll: val hex8; space; space.
-					(self validOop: val) ifTrue: [strm nextPutAll: (self shortPrint: val)]]]
-			ifFalse:
-			[lastPtr+BytesPerWord to: lastLong by: BytesPerWord do:
-				[:a | val := self longAt: oop+a.
-				strm cr; nextPutAll: (a<16 ifTrue: [' ', a hex] ifFalse: [a hex]); 
-					space; space; space.
-				strm nextPutAll: val hex8; space; space;
-						nextPutAll: (self charsOfLong: val)]]].
-	]
-]
-
-{ #category : #'debug printing' }
-CogVMSimulator >> lookupAddress: address [
-	"If address appears to be that of a Symbol or a few well-known objects answer it, otherwise answer nil.
-	 For code disassembly"
-	| fmt size string class classSize nameIndex thisClassIndex maybeThisClass |
-	(self addressCouldBeObj: address) ifFalse:
-		[address / BytesPerWord = primTraceLog offset ifTrue: [^'primTraceLog'].
-		 ^nil].
-	fmt := self formatOf: address.
-	size := self lengthOf: address baseHeader: (self baseHeader: address) format: fmt.
-	size = 0 ifTrue:
-		[^address caseOf: { [nilObj] -> ['nil']. [trueObj] -> ['true']. [falseObj] -> ['false'] } otherwise: []].
-	((fmt between: 8 and: 11) "indexable byte fields"
-	and: [(size between: 1 and: 64)
-	and: [Scanner isLiteralSymbol: (string := (0 to: size - 1) collect: [:i| Character value: (self fetchByte: i ofObject: address)])]]) ifTrue:
-		[^'#', (ByteString withAll: string)].
-	class := self fetchClassOfNonInt: address.
-	((self addressCouldBeObj: class)
-	 and: [(self headerType: class) ~= HeaderTypeShort]) ifFalse:
-		[^nil].
-	"address is either a class or a metaclass, or an instance of a class or invalid.  determine which."
-	((classSize := self lengthOf: class baseHeader: (self baseHeader: address) format: fmt) < ClassDescription instSize
-	 or: [classSize > 255]) ifTrue:
-		[^nil].
-	nameIndex := (Class instVarIndexFor: 'name' ifAbsent: []) - 1.
-	thisClassIndex := (Metaclass instVarIndexFor: 'thisClass' ifAbsent: []) - 1.
-	"Address could be a class or a metaclass"
-	(fmt = 1 and: [size >= nameIndex]) ifTrue:
-		["Is address a class? If so class's thisClass is address."
-		 (self lookupAddress: (self fetchPointer: nameIndex ofObject: address)) ifNotNil:
-			[:maybeClassName|
-			(self fetchPointer: thisClassIndex ofObject: class) = address ifTrue:
-				[^maybeClassName allButFirst]].
-		"Is address a Metaclass?  If so class's name is Metaclass and address's thisClass holds the class name"
-		((self lookupAddress: (self fetchPointer: nameIndex ofObject: class)) = '#Metaclass'
-		 and: [size >= thisClassIndex]) ifTrue:
-			[maybeThisClass := self fetchPointer: thisClassIndex ofObject: address.
-			(self lookupAddress: (self fetchPointer: nameIndex ofObject: maybeThisClass)) ifNotNil:
-				[:maybeThisClassName| ^maybeThisClassName allButFirst, ' class']]].
-	^(self lookupAddress: (self fetchPointer: nameIndex ofObject: class)) ifNotNil:
-		[:maybeClassName| 'a(n) ', maybeClassName allButFirst]
+	^objectMemory memory at: (byteAddress // 4) + 1 put: a32BitValue
 ]
 
 { #category : #'file primitives' }
@@ -1618,22 +1448,22 @@ CogVMSimulator >> makeDirEntryName: entryName size: entryNameSize
 	| modDateOop createDateOop nameString results |
 	<var: 'entryName' type: 'char *'>
 
-	results			:= self instantiateClass: (self splObj: ClassArray) indexableSize: 5.
-	nameString		:= self instantiateClass: (self splObj: ClassString) indexableSize: entryNameSize.
+	results			:= objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 5.
+	nameString		:= objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: entryNameSize.
 	createDateOop	:= self positive32BitIntegerFor: createDate.
 	modDateOop	:= self positive32BitIntegerFor: modifiedDate.
 
 	1 to: entryNameSize do:
 		[ :i |
-		self storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
+		objectMemory storeByte: i-1 ofObject: nameString withValue: (entryName at: i) asciiValue].
 
-	self storePointerUnchecked: 0 ofObject: results withValue: nameString.
-	self storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
-	self storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
+	objectMemory storePointerUnchecked: 0 ofObject: results withValue: nameString.
+	objectMemory storePointerUnchecked: 1 ofObject: results withValue: createDateOop.
+	objectMemory storePointerUnchecked: 2 ofObject: results withValue: modDateOop.
 	dirFlag
-		ifTrue: [ self storePointerUnchecked: 3 ofObject: results withValue: trueObj ]
-		ifFalse: [ self storePointerUnchecked: 3 ofObject: results withValue: falseObj ].
-	self storePointerUnchecked: 4 ofObject: results withValue: (self integerObjectOf: fileSize).
+		ifTrue: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory trueObject ]
+		ifFalse: [ objectMemory storePointerUnchecked: 3 ofObject: results withValue: objectMemory falseObject ].
+	objectMemory storePointerUnchecked: 4 ofObject: results withValue: (objectMemory integerObjectOf: fileSize).
 	^ results
 ]
 
@@ -1662,7 +1492,7 @@ CogVMSimulator >> mapFunctionToAddress: aSymbolOrIndexOrBlock [
 
 { #category : #accessing }
 CogVMSimulator >> memory [
-	^memory
+	^objectMemory memory
 ]
 
 { #category : #'simulation only' }
@@ -1681,7 +1511,7 @@ CogVMSimulator >> moveMethodCacheToMemoryAt: address [
 	 one word lower, achieving the same effect.  -1 because CArrayAccessor is 0-relative
 	 and adds 1 on accesses itself."
 	methodCache := CMethodCacheAccessor new
-						memory: memory
+						memory: objectMemory memory
 						offset: address / BytesPerWord
 						array: oldMethodCache
 						functionPointerIndex: MethodCachePrimFunction
@@ -1702,7 +1532,7 @@ CogVMSimulator >> movePrimTraceLogToMemoryAt: address [
 	oldTraceLog := primTraceLog.
 	self flag: 'broken for 64-bit VM because Bitmap access unit is 32-bits'.
 	primTraceLog := CObjectAccessor new
-						memory: memory
+						memory: objectMemory memory
 						offset: address / BytesPerWord.
 	0 to: PrimTraceLogSize - 1 do:
 		[:i|
@@ -1716,10 +1546,10 @@ CogVMSimulator >> movePrimTraceLogToMemoryAt: address [
 
 { #category : #'debug support' }
 CogVMSimulator >> nameOfClass: classOop [
-	(self sizeBitsOf: classOop) = (Metaclass instSize +1*BytesPerWord) ifTrue:
-		[^ (self nameOfClass:
-				(self fetchPointer: 5 "thisClass" ofObject: classOop)) , ' class'].
-	^ self stringOf: (self fetchPointer: 6 "name" ofObject: classOop)
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue:
+		[^(self nameOfClass:
+				(objectMemory fetchPointer: thisClassIndex ofObject: classOop)) , ' class'].
+	^self stringOf: (objectMemory fetchPointer: classNameIndex ofObject: classOop)
 ]
 
 { #category : #initialization }
@@ -1731,7 +1561,7 @@ CogVMSimulator >> nextLongFrom: aStream [
 { #category : #initialization }
 CogVMSimulator >> nextLongFrom: aStream swap: swapFlag [
 	swapFlag 
-		ifTrue: [^ self byteSwapped: (self nextLongFrom: aStream)]
+		ifTrue: [^ objectMemory byteSwapped: (self nextLongFrom: aStream)]
 		ifFalse: [^ self nextLongFrom: aStream]
 ]
 
@@ -1753,72 +1583,69 @@ CogVMSimulator >> nextShortFrom: aStream swap: swapFlag [
 { #category : #'debugging traps' }
 CogVMSimulator >> noteAsRoot: oop headerLoc: headerLoc [
 	"Trap attempts to make cog methods roots."
-	self assert: oop >= self startOfMemory.
+	self assert: oop >= objectMemory startOfMemory.
 	^super noteAsRoot: oop headerLoc: headerLoc
 ]
 
 { #category : #testing }
 CogVMSimulator >> objectBefore: addr [
 	| oop prev |
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue: [
+	oop := objectMemory firstObject.
+	[oop < objectMemory endOfMemory] whileTrue: [
 		prev := oop.  "look here if debugging prev obj overlapping this one"
-		oop := self objectAfter: oop.
+		oop := objectMemory objectAfter: oop.
 		oop >= addr ifTrue: [^ prev]
 	]
-]
-
-{ #category : #'memory access' }
-CogVMSimulator >> oopForPointer: pointerOrSurrogate [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	oop is the width of a machine word, and pointer is a raw address."
-
-	^pointerOrSurrogate asInteger
 ]
 
 { #category : #UI }
 CogVMSimulator >> openAsMorph [
 	"Open a morphic view on this simulation."
-	| window localImageName |
+	| localImageName borderWidth theWindow |
 	localImageName := FileDirectory default localNameFor: imageName.
-	window := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
+	theWindow := (SystemWindow labelled: 'Simulation of ', localImageName) model: self.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
+	theWindow addMorph: (displayView := ImageMorph new image: displayForm)
 		frame: (0@0 corner: 1@0.8).
 
 	transcript := TranscriptStream on: (String new: 10000).
-	window addMorph: (PluggableTextMorph
+	theWindow addMorph: (PluggableTextMorph
 							on: transcript text: nil accept: nil
 							readSelection: nil menu: #codePaneMenu:shifted:)
 			frame: (0@0.8 corner: 0.7@1).
-
-	window addMorph: (PluggableTextMorph on: self
-						text: #byteCountText accept: nil) hideScrollBarsIndefinitely
+	theWindow addMorph: (PluggableTextMorph on: self
+						text: #byteCountText accept: nil
+						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
 			frame: (0.7@0.8 corner: 1@1).
 
-	window openInWorldExtent: (self desiredDisplayExtent
-								+ (2 * window borderWidth)
-								+ (0@window labelHeight)
+	borderWidth := [SystemWindow borderWidth] "Squeak 4.1"
+						on: MessageNotUnderstood
+						do: [:ex| 0]. "3.8"
+	borderWidth := borderWidth + theWindow borderWidth.
+	theWindow openInWorldExtent: (self desiredDisplayExtent
+								+ (2 * borderWidth)
+								+ (0@theWindow labelHeight)
 								* (1@(1/0.8))) rounded
 ]
 
 { #category : #UI }
 CogVMSimulator >> openAsMorphNoTranscript [
 	"Open a morphic view on this simulation."
-	| window localImageName |
+	| localImageName theWindow |
 	localImageName := FileDirectory default localNameFor: imageName.
-	window := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
+	theWindow := (SystemWindow labelled: 'Simulation of ' , localImageName) model: self.
 
-	window addMorph: (displayView := ImageMorph new image: displayForm)
+	theWindow addMorph: (displayView := ImageMorph new image: displayForm)
 		frame: (0@0 corner: 1@0.95).
 
-	window addMorph: (PluggableTextMorph on: self
-						text: #byteCountText accept: nil) hideScrollBarIndefinitely
+	theWindow addMorph: (PluggableTextMorph on: self
+						text: #byteCountText accept: nil
+						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
 		frame: (0@0.95 corner: 1@1).
 
-	window openInWorldExtent: (self desiredDisplayExtent
-								+ (2 * window borderWidth)
-								+ (0@window labelHeight)
+	theWindow openInWorldExtent: (self desiredDisplayExtent
+								+ (2 * theWindow borderWidth)
+								+ (0@theWindow labelHeight)
 								* (1@(1/0.95))) rounded
 ]
 
@@ -1844,14 +1671,14 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 	version := self nextLongFrom: f.  "current version: 16r1968 (=6504) vive la revolucion!"
 	(self readableFormat: version)
 		ifTrue: [swapBytes := false]
-		ifFalse: [(version := self byteSwapped: version) = self imageFormatVersion
+		ifFalse: [(version := objectMemory byteSwapped: version) = self imageFormatVersion
 					ifTrue: [swapBytes := true]
 					ifFalse: [self error: 'incomaptible image format']].
 	headerSize := self nextLongFrom: f swap: swapBytes.
 	heapSize := self nextLongFrom: f swap: swapBytes.  "first unused location in heap"
 	oldBaseAddr := self nextLongFrom: f swap: swapBytes.  "object memory base address of image"
-	specialObjectsOop := self nextLongFrom: f swap: swapBytes.
-	lastHash := self nextLongFrom: f swap: swapBytes.  "Should be loaded from, and saved to the image header"
+	objectMemory specialObjectsOop: (self nextLongFrom: f swap: swapBytes).
+	objectMemory lastHash: (self nextLongFrom: f swap: swapBytes).  "Should be loaded from, and saved to the image header"
 
 	savedWindowSize	:= self nextLongFrom: f swap: swapBytes.
 	headerFlags			:= self nextLongFrom: f swap: swapBytes.
@@ -1879,12 +1706,12 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 									ifFalse: [hdrCogCodeSize]].
 	desiredCogCodeSize := hdrCogCodeSize.
 	hdrEdenBytes	:= self nextLongFrom: f swap: swapBytes.
-	edenBytes := desiredEdenBytes ~= 0
+	objectMemory edenBytes: (desiredEdenBytes ~= 0
 						ifTrue: [desiredEdenBytes]
 						ifFalse:
 							[hdrEdenBytes = 0
-									ifTrue: [self defaultEdenBytes]
-									ifFalse: [hdrEdenBytes]].
+									ifTrue: [objectMemory defaultEdenBytes]
+									ifFalse: [hdrEdenBytes]]).
 	desiredEdenBytes := hdrEdenBytes.
 	"For Open PICs to be able to probe the method cache during
 	 simulation the methodCache must be relocated to memory."
@@ -1897,32 +1724,32 @@ CogVMSimulator >> openOn: fileName extraMemory: extraBytes [
 				+ methodCacheSize
 				+ primTraceLogSize
 				+ self rumpCStackSize.
-	self setMemoryLimit:   heapBase
+	objectMemory setMemoryLimit:   heapBase
 						+ heapSize
-						+ edenBytes
+						+ objectMemory edenBytes
 						+ self interpreterAllocationReserveBytes
 						+ extraBytes.
 
-	self initialize.
+	objectMemory initialize.
 	self assert: cogCodeSize \\ 4 = 0.
-	self assert: memoryLimit \\ 4 = 0.
+	self assert: objectMemory memoryLimit \\ 4 = 0.
 	self assert: self rumpCStackSize \\ 4 = 0.
 	"read in the image in bulk, then swap the bytes if necessary"
 	f position: headerSize.
-	memory := (cogit processor endianness == #little
+	objectMemory memory: ((cogit processor endianness == #little
 					ifTrue: [LittleEndianBitmap]
-					ifFalse: [Bitmap]) new: memoryLimit // 4.
-	count := f readInto: memory startingAt: heapBase // 4 + 1 count: heapSize // 4.
+					ifFalse: [Bitmap]) new: objectMemory memoryLimit // 4).
+	count := f readInto: objectMemory memory startingAt: heapBase // 4 + 1 count: heapSize // 4.
 	count ~= (heapSize // 4) ifTrue: [self halt].
 	]
 		ensure: [f close].
-	self setEndOfMemory: heapBase + heapSize.
+	objectMemory setEndOfMemory: heapBase + heapSize.
 	self moveMethodCacheToMemoryAt: cogCodeSize + stackZoneSize.
 	self movePrimTraceLogToMemoryAt: cogCodeSize + stackZoneSize + methodCacheSize.
 
 	self ensureImageFormatIsUpToDate: swapBytes.
 
-	bytesToShift := self startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
+	bytesToShift := objectMemory startOfMemory - oldBaseAddr.  "adjust pointers for zero base address"
 	Utilities informUser: 'Relocating object pointers...'
 				during: [self initializeInterpreter: bytesToShift].
 	self initializeCodeGenerator
@@ -1944,8 +1771,8 @@ CogVMSimulator >> primBitmapcompresstoByteArray [
 CogVMSimulator >> primBitmapdecompressfromByteArrayat [
 	| indexInt index baOop bmOop baSize bmSize ba bm |
 	indexInt := self stackTop.
-	(self isIntegerValue: indexInt) ifFalse: [^ self primitiveFail].
-	index := self integerValueOf: indexInt.
+	(objectMemory isIntegerValue: indexInt) ifFalse: [^ self primitiveFail].
+	index := objectMemory integerValueOf: indexInt.
 	baOop := self stackValue: 1.
 	bmOop := self stackValue: 2.
 	baSize := self stSizeOf: baOop.
@@ -1954,13 +1781,13 @@ CogVMSimulator >> primBitmapdecompressfromByteArrayat [
 	bm := Bitmap new: bmSize.
 
 	"Copy the byteArray into ba"
-	1 to: baSize do: [:i | ba at: i put: (self fetchByte: i-1 ofObject: baOop)].
+	1 to: baSize do: [:i | ba at: i put: (objectMemory fetchByte: i-1 ofObject: baOop)].
 
 	"Decompress ba into bm"
 	bm decompress: bm fromByteArray: ba at: index.
 
 	"Then copy bm into the Bitmap"
-	1 to: bmSize do: [:i | self storeLong32: i-1 ofObject: bmOop withValue: (bm at: i)].
+	1 to: bmSize do: [:i | objectMemory storeLong32: i-1 ofObject: bmOop withValue: (bm at: i)].
 	self pop: 3
 ]
 
@@ -1995,7 +1822,7 @@ CogVMSimulator >> primitiveBeDisplay [
 
 	| rcvr destWidth destHeight destDepth |
 	rcvr := self stackTop.
-	self success: ((self isPointers: rcvr) and: [(self lengthOf: rcvr) >= 4]).
+	self success: ((objectMemory isPointers: rcvr) and: [(objectMemory lengthOf: rcvr) >= 4]).
 	self successful ifTrue: [
 		destWidth := self fetchInteger: 1 ofObject: rcvr.
 		destHeight := self fetchInteger: 2 ofObject: rcvr.
@@ -2047,7 +1874,7 @@ CogVMSimulator >> primitiveDirectoryEntry [
 
 	array := FileDirectory default primLookupEntryIn: pathName name: name.
 	array == nil ifTrue:
-		[self pop: 3 thenPush: nilObj.
+		[self pop: 3 thenPush: objectMemory nilObject.
 		^array].
 	array == #badDirectoryPath ifTrue:
 		[self halt.
@@ -2072,7 +1899,7 @@ CogVMSimulator >> primitiveDirectoryLookup [
 	array := FileDirectory default primLookupEntryIn: pathName index: index.
 
 	array == nil ifTrue:
-		[self pop: 3 thenPush: nilObj.
+		[self pop: 3 thenPush: objectMemory nilObject.
 		^array].
 	array == #badDirectoryPath ifTrue:
 		["self halt."
@@ -2087,7 +1914,7 @@ CogVMSimulator >> primitiveDirectoryLookup [
 { #category : #'debugging traps' }
 CogVMSimulator >> primitiveDoPrimitiveWithArgs [
 	| primIndex |
-	primIndex := self integerValueOf: (self stackValue: 1).
+	primIndex := objectMemory integerValueOf: (self stackValue: 1).
 	transcript nextPutAll: 'DO PRIMITIVE: '; print: (self functionPointerFor: primIndex inClass: nil); cr; flush.
 	primIndex = 76 ifTrue:
 		[self halt].
@@ -2105,7 +1932,7 @@ CogVMSimulator >> primitiveFileDelete [
 
 	| namePointer |
 	namePointer := self stackTop.
-	self success: (self isBytes: namePointer).
+	self success: (objectMemory isBytes: namePointer).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: namePointer)).
 	self successful ifTrue: [FileDirectory deleteFilePath: (self stringOf: namePointer)].
 	self successful ifTrue: [self pop: 1].  "pop fileName; leave rcvr on stack"
@@ -2116,7 +1943,7 @@ CogVMSimulator >> primitiveFileOpen [
 	| namePointer writeFlag fileName f |
 	writeFlag := self booleanValueOf: self stackTop.
 	namePointer := self stackValue: 1.
-	self success: (self isBytes: namePointer).
+	self success: (objectMemory isBytes: namePointer).
 	self successful ifTrue:
 		[fileName := self stringOf: namePointer.
 		filesOpen addLast: (writeFlag
@@ -2135,8 +1962,8 @@ CogVMSimulator >> primitiveFileRename [
 	| oldNamePointer newNamePointer f |
 	oldNamePointer := self stackTop.
 	newNamePointer := self stackValue: 1.
-	self success: (self isBytes: oldNamePointer).
-	self success: (self isBytes: newNamePointer).
+	self success: (objectMemory isBytes: oldNamePointer).
+	self success: (objectMemory isBytes: newNamePointer).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: oldNamePointer)).
 	self success: (StandardFileStream isAFileNamed: (self stringOf: newNamePointer)) not.
 	self successful ifTrue: [
@@ -2152,16 +1979,16 @@ CogVMSimulator >> primitiveFileRename [
 { #category : #'file primitives' }
 CogVMSimulator >> primitiveFileStdioHandles [
 	| result |
-	result := self instantiateClass: self classArray indexableSize: 3.
+	result := objectMemory instantiateClass: objectMemory classArray indexableSize: 3.
 	result = nil ifTrue:
 		[^self primitiveFailFor: PrimErrNoMemory].
 	Transcript clear.
 	filesOpen addLast: (FakeStdinStream for: self). "stdin"
-	self storePointerUnchecked: 0 ofObject: result withValue: (self integerObjectOf: filesOpen size).
+	objectMemory storePointerUnchecked: 0 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
 	filesOpen addLast: Transcript. "stdout"
-	self storePointerUnchecked: 1 ofObject: result withValue: (self integerObjectOf: filesOpen size).
+	objectMemory storePointerUnchecked: 1 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
 	filesOpen addLast: Transcript. "stderr"
-	self storePointerUnchecked: 2 ofObject: result withValue: (self integerObjectOf: filesOpen size).
+	objectMemory storePointerUnchecked: 2 ofObject: result withValue: (objectMemory integerObjectOf: filesOpen size).
 	self pop: 1 thenPush: result
 ]
 
@@ -2174,9 +2001,9 @@ CogVMSimulator >> primitiveGetAttribute [
 	self successful ifTrue: [
 		attribute := systemAttributes at: index ifAbsent: [Smalltalk getSystemAttribute: index].
 		attribute ifNil: [ ^self primitiveFail ].
-		s := self instantiateClass: (self splObj: ClassString) indexableSize: attribute size.
+		s := objectMemory instantiateClass: (objectMemory splObj: ClassString) indexableSize: attribute size.
 		1 to: attribute size do: [ :i |
-			self storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
+			objectMemory storeByte: i-1 ofObject: s withValue: (attribute at: i) asciiValue].
 		self pop: 2.  "rcvr, attr"
 		self push: s]
 ]
@@ -2187,10 +2014,10 @@ CogVMSimulator >> primitiveImageName [
 	| result imageNameSize |
 	self pop: 1.
 	imageNameSize := imageName size.
-	result := self instantiateClass: (self splObj: ClassString)
+	result := objectMemory instantiateClass: (objectMemory splObj: ClassString)
 				   indexableSize: imageNameSize.
 	1 to: imageNameSize do:
-		[:i | self storeByte: i-1 ofObject: result
+		[:i | objectMemory storeByte: i-1 ofObject: result
 			withValue: (imageName at: i) asciiValue].
 	self push: result.
 ]
@@ -2201,7 +2028,7 @@ CogVMSimulator >> primitiveKbdNext [
 	self pop: 1.
 	Sensor keyboardPressed
 		ifTrue: [self pushInteger: Sensor primKbdNext]
-		ifFalse: [self push: nilObj]
+		ifFalse: [self push: objectMemory nilObject]
 ]
 
 { #category : #'I/O primitives' }
@@ -2210,7 +2037,7 @@ CogVMSimulator >> primitiveKbdPeek [
 	self pop: 1.
 	Sensor keyboardPressed
 		ifTrue: [self pushInteger: Sensor primKbdPeek]
-		ifFalse: [self push: nilObj]
+		ifFalse: [self push: objectMemory nilObject]
 ]
 
 { #category : #'I/O primitives' }
@@ -2237,7 +2064,7 @@ CogVMSimulator >> primitivePerform [
 	| selector |
 	selector := self stackValue: argumentCount - 1.
 	self sendBreak: selector + BaseHeaderSize
-		point: (self lengthOf: selector)
+		point: (objectMemory lengthOf: selector)
 		receiver: (self stackValue: argumentCount).
 	^super primitivePerform
 ]
@@ -2348,7 +2175,7 @@ CogVMSimulator >> printFrameThing: name at: address [
 		printHex: it.
 	it ~= 0 ifTrue:
 		[self printChar: $=; printNum: it.
-		 (it between: self startOfMemory and: endOfMemory) ifFalse:
+		 (it between: objectMemory startOfMemory and: objectMemory endOfMemory) ifFalse:
 			[(cogit lookupAddress: it) ifNotNil:
 				[:label| self space; printChar: $(; print: label; printChar: $)]]].
 	self cr
@@ -2402,19 +2229,19 @@ CogVMSimulator >> printStringOf: oop [
 { #category : #'debug printing' }
 CogVMSimulator >> printStringOf: oop on: aStream [
 	| fmt cnt i |
-	(self isIntegerObject: oop) ifTrue:
+	(objectMemory isIntegerObject: oop) ifTrue:
 		[^nil].
-	(oop between: self startOfMemory and: freeStart) ifFalse:
+	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^nil].
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
 		[^nil].
-	fmt := self formatOf: oop.
+	fmt := objectMemory formatOf: oop.
 	fmt < 8 ifTrue: [ ^nil ].
 
-	cnt := 100 min: (self lengthOf: oop).
+	cnt := 100 min: (objectMemory lengthOf: oop).
 	i := 0.
 	[i < cnt] whileTrue: [
-		aStream nextPut: (Character value: (self fetchByte: i ofObject: oop)).
+		aStream nextPut: (Character value: (objectMemory fetchByte: i ofObject: oop)).
 		i := i + 1.
 	].
 	aStream flush
@@ -2461,7 +2288,7 @@ CogVMSimulator >> reverseBytesFrom: begin to: end [
 	"Byte-swap the given range of memory (not inclusive!)."
 	| wordAddr |
 	wordAddr := begin.
-	memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
+	objectMemory memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
 ]
 
 { #category : #'image save/restore' }
@@ -2490,24 +2317,13 @@ CogVMSimulator >> rumpCStackAddress [
 	^heapBase - BytesPerWord
 ]
 
-{ #category : #'rump c stack' }
-CogVMSimulator >> rumpCStackSize [
-	"Allocate a rump C stack for simulation.  This stack is used for C calls, i.e. calls
-	 made into the sumulated C run-time, typically of routines in CoInterpreter.
-	 We also use it to hold in-memory copies of the cStackPointer and cFramePointer
-	 variables for simulation speed.  Alas we don't use an in-memory copy of stackLimit,
-	 because we need some activity to count in order to implement the ioMSecs
-	 routine and the stackLimit check is the ideal one."
-	^4096
-]
-
 { #category : #testing }
 CogVMSimulator >> run [
 	"Just run"
-	quitBlock := [([transcript dependents anyOne outermostMorphThat: [:m| m isSystemWindow]]
-					on: Error
-					do: [:ex| nil])
-						ifNotNil: [:window| (UIManager default confirm: 'close?') ifTrue: [window delete]].
+	quitBlock := [(displayView notNil
+				   and: [UIManager default confirm: 'close?']) ifTrue:
+					[(displayView outermostMorphThat: [:m| m isSystemWindow]) ifNotNil:
+						[:topWindow| topWindow delete]].
 				  ^self].
 	self initStackPages.
 	self loadInitialContext.
@@ -2517,10 +2333,10 @@ CogVMSimulator >> run [
 { #category : #testing }
 CogVMSimulator >> runWithBreakCount: theBreakCount [
 	"Just run, halting when byteCount is reached"
-	quitBlock := [([transcript dependents anyOne outermostMorphThat: [:m| m isSystemWindow]]
-					on: Error
-					do: [:ex| nil])
-						ifNotNil: [:window| (UIManager default confirm: 'close?') ifTrue: [window delete]].
+	quitBlock := [(displayView notNil
+				   and: [UIManager default confirm: 'close?']) ifTrue:
+					[(displayView outermostMorphThat: [:m| m isSystemWindow]) ifNotNil:
+						[:topWindow| topWindow delete]].
 				  ^self].
 	breakCount := theBreakCount.
 	self initStackPages.
@@ -2532,6 +2348,10 @@ CogVMSimulator >> runWithBreakCount: theBreakCount [
 CogVMSimulator >> sendBreak: selectorString point: selectorLength receiver: receiverOrNil [
 	"self shortPrintFrameAndCallers: localFP"
 	| i |
+	cogit printOnTrace ifTrue:
+		[0 to: selectorLength - 1 do:
+			[:si| Transcript nextPut: (self byteAt: selectorString + si) asCharacter].
+		Transcript cr; flush].
 	breakSelectorLength = selectorLength ifTrue:
 		[i := breakSelectorLength.
 		 [i > 0] whileTrue:
@@ -2559,14 +2379,14 @@ CogVMSimulator >> shortAt: byteAddress put: a16BitValue [
 { #category : #'debug support' }
 CogVMSimulator >> shortPrint: oop [
 	| name classOop |
-	(self isIntegerObject: oop) ifTrue: [^ '=' , (self integerValueOf: oop) printString , 
-		' (' , (self integerValueOf: oop) hex , ')'].
-	(oop between: self startOfMemory and: freeStart) ifFalse:
+	(objectMemory isIntegerObject: oop) ifTrue: [^ '=' , (objectMemory integerValueOf: oop) printString , 
+		' (' , (objectMemory integerValueOf: oop) hex , ')'].
+	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^' is not on the heap'].
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
 		[^' is misaligned'].
-	classOop := self fetchClassOf: oop.
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
+	classOop := objectMemory fetchClassOf: oop.
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
 		^ 'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
@@ -2574,8 +2394,8 @@ CogVMSimulator >> shortPrint: oop [
 	name = 'ByteString' ifTrue: [^ (self stringOf: oop) printString].
 	name = 'Symbol' ifTrue: [^ '#' , (self stringOf: oop)].
 	name = 'ByteSymbol' ifTrue: [^ '#' , (self stringOf: oop)].
-	name = 'Character' ifTrue: [^ '=' , (Character value: (self integerValueOf: 
-				(self fetchPointer: 0 ofObject: oop))) printString].
+	name = 'Character' ifTrue: [^ '=' , (Character value: (objectMemory integerValueOf: 
+				(objectMemory fetchPointer: 0 ofObject: oop))) printString].
 	name = 'UndefinedObject' ifTrue: [^ 'nil'].
 	name = 'False' ifTrue: [^ 'false'].
 	name = 'True' ifTrue: [^ 'true'].
@@ -2592,15 +2412,15 @@ CogVMSimulator >> shortPrint: oop [
 { #category : #'debug support' }
 CogVMSimulator >> shortPrintRelative: oop [
 	| name classOop |
-	(self isIntegerObject: oop) ifTrue:
-		[^'=' , (self integerValueOf: oop) printString , 
-		' (' , (self integerValueOf: oop) hex , ')'].
-	(oop between: self startOfMemory and: freeStart) ifFalse:
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^'=' , (objectMemory integerValueOf: oop) printString , 
+		' (' , (objectMemory integerValueOf: oop) hex , ')'].
+	(oop between: objectMemory startOfMemory and: objectMemory freeStart) ifFalse:
 		[^' is not on the heap'].
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
 		[^' is misaligned'].
-	classOop := self fetchClassOf: oop.
-	(self sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
+	classOop := objectMemory fetchClassOf: oop.
+	(objectMemory sizeBitsOf: classOop) = metaclassSizeBytes ifTrue: [
 		^'class ' , (self nameOfClass: oop)].
 	name := self nameOfClass: classOop.
 	name size = 0 ifTrue: [name := '??'].
@@ -2608,8 +2428,8 @@ CogVMSimulator >> shortPrintRelative: oop [
 	name = 'ByteString' ifTrue: [^(self stringOf: oop) printString].
 	name = 'Symbol' ifTrue: [^'#' , (self stringOf: oop)].
 	name = 'ByteSymbol' ifTrue: [^'#' , (self stringOf: oop)].
-	name = 'Character' ifTrue: [^'=' , (Character value: (self integerValueOf: 
-				(self fetchPointer: 0 ofObject: oop))) printString].
+	name = 'Character' ifTrue: [^'=' , (Character value: (objectMemory integerValueOf: 
+				(objectMemory fetchPointer: 0 ofObject: oop))) printString].
 	name = 'UndefinedObject' ifTrue: [^'nil'].
 	name = 'False' ifTrue: [^'false'].
 	name = 'True' ifTrue: [^'true'].
@@ -2620,7 +2440,7 @@ CogVMSimulator >> shortPrintRelative: oop [
 		^'(' ,
 			(self shortPrint: (self longAt: oop + BaseHeaderSize)) ,
 			' -> ' ,
-			((self isIntegerObject: valOop) ifTrue: [valOop] ifFalse: [valOop - self startOfMemory]) hex8 , ')'].
+			((objectMemory isIntegerObject: valOop) ifTrue: [valOop] ifFalse: [valOop - objectMemory startOfMemory]) hex8 , ')'].
 	^(('AEIOU' includes: name first)
 		ifTrue: ['an ']
 		ifFalse: ['a ']) , name
@@ -2631,7 +2451,7 @@ CogVMSimulator >> showDisplayBits: destBits w: w h: h d: d left: left right: rig
 	| raster pixPerWord simDisp realDisp rect |
 	pixPerWord := 32 // d.
 	raster := displayForm width + (pixPerWord - 1) // pixPerWord.
-	simDisp := Form new hackBits: memory.
+	simDisp := Form new hackBits: objectMemory memory.
 	displayForm unhibernate.
 	realDisp := Form new hackBits: displayForm bits.
 	realDisp
@@ -2758,8 +2578,8 @@ CogVMSimulator >> sqGetInterpreterProxy [
 CogVMSimulator >> sqGrowMemory: oldLimit By: delta [
 
 	transcript show: 'grow memory from ', oldLimit printString, ' by ', delta printString; cr.
-	memory := memory , (memory class new: delta // 4).
-	^ memory size * 4
+	objectMemory memory: objectMemory memory , (objectMemory memory class new: delta // 4).
+	^ objectMemory memory size * 4
 ]
 
 { #category : #'simulation only' }
@@ -2813,39 +2633,9 @@ CogVMSimulator >> stackZoneBase [
 	^cogCodeSize
 ]
 
-{ #category : #testing }
-CogVMSimulator >> stats [
-	| oop fieldAddr fieldOop last stats v d |
-	stats := Bag new.
-	oop := self firstObject.
-
-'Scanning the image...' displayProgressAt: Sensor cursorPoint
-	from: oop to: endOfMemory
-	during: [:bar |
-
-	[oop < endOfMemory] whileTrue:
-		[(self isFreeObject: oop) ifFalse:
-			[stats add: #objects.
-			fieldAddr := oop + (self lastPointerOf: oop).
-			[fieldAddr > oop] whileTrue:
-				[fieldOop := self longAt: fieldAddr.
-				(self isIntegerObject: fieldOop)
-					ifTrue: [v := self integerValueOf: fieldOop.
-							(v between: -16000 and: 16000)
-								ifTrue: [stats add: #ints32k]
-								ifFalse: [stats add: #intsOther]]
-					ifFalse: [fieldOop = nilObj ifTrue: [stats add: #nil]
-							ifFalse:
-							[d := fieldOop - oop.
-							(d between: -16000 and: 16000)
-								ifTrue: [stats add: #oops32k]
-								ifFalse: [stats add: #oopsOther]]].
-				fieldAddr := fieldAddr - BytesPerWord]].
-		bar value: oop.
-		last := oop.
-		last := last.
-		oop := self objectAfter: oop]].
-	^ stats sortedElements
+{ #category : #'debugging traps' }
+CogVMSimulator >> startOfMemory [
+	self shouldNotImplement
 ]
 
 { #category : #'bytecode routines' }
@@ -2867,15 +2657,13 @@ CogVMSimulator >> storeFloatAt: floatBitsAddress from: aFloat [
 { #category : #'interpreter access' }
 CogVMSimulator >> storePointer: index ofObject: oop withValue: valuePointer [
 	"Override to ensure acess is within the heap"
-	self assert: oop >= self startOfMemory.
+	self assert: oop >= objectMemory startOfMemory.
 	^super storePointer: index ofObject: oop withValue: valuePointer
 ]
 
 { #category : #'interpreter access' }
 CogVMSimulator >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
-	"Override to ensure acess is within the heap"
-	self assert: oop >= self startOfMemory.
-	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
+	self shouldNotImplement
 ]
 
 { #category : #'debug printing' }
@@ -2951,7 +2739,7 @@ CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	| type offset2 byte2 byte3 byte4 |
 	offset <=6 ifTrue: 
 		["Extended op codes 128-134"
-		byte2 := self fetchByte: ip+1 ofObject: meth.
+		byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
 		offset <= 2 ifTrue:
 			["128-130:  extended pushes and pops"
 			type := byte2 >> 6 bitAnd: 3.
@@ -2975,7 +2763,7 @@ CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 		offset = 3 ifTrue:  "Single extended send"
 			[^ 'send ' , (self stringOf: (self literal: byte2 \\ 32 ofMethod: meth))].
 		offset = 4 ifTrue:    "Double extended do-anything"
-			[byte3 := self fetchByte: ip+2 ofObject: meth.
+			[byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
 			type := byte2 // 32.
 			type = 0 ifTrue: [^ 'send ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
 			type = 1 ifTrue: [^ 'superSend ' , (self stringOf: (self literal: byte3 ofMethod: meth))].
@@ -2992,18 +2780,18 @@ CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 	offset = 7 ifTrue: [^ 'doPop'].
 	offset = 8 ifTrue: [^ 'doDup'].
 	offset = 9 ifTrue: [^ 'pushActiveContext'].
-	byte2 := self fetchByte: ip+1 ofObject: meth.
+	byte2 := objectMemory fetchByte: ip+1 ofObject: meth.
 	offset = 10 ifTrue:
 		[^byte2 < 128
 			ifTrue: ['pushNewArrayOfSize: ', byte2 printString]
 			ifFalse: ['pushConsArrayWithElements: ', (byte2 - 128) printString]].
 	offset = 11 ifTrue: [^ 'unusedBytecode'].
-	byte3 := self fetchByte: ip+2 ofObject: meth.
+	byte3 := objectMemory fetchByte: ip+2 ofObject: meth.
 	offset = 12 ifTrue: [^'pushRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
 	offset = 13 ifTrue: [^'storeIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
 	offset = 14 ifTrue: [^'popIntoRemoteTemp: ', byte2 printString, ' inVectorAt: ', byte3 printString].
 	"offset = 15"
-	byte4 := self fetchByte: ip+3 ofObject: meth.
+	byte4 := objectMemory fetchByte: ip+3 ofObject: meth.
 	^'pushClosureCopyNumCopiedValues: ', (byte2 bitShift: -4) printString,
 		' numArgs: ', (byte2 bitAnd: 16rF) printString,
 		' blockSize: ', ((byte3 * 256) + byte4) printString
@@ -3013,24 +2801,24 @@ CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 CogVMSimulator >> symbolicMethod: aMethod [
 	| pc end latestContinuation |
 	pc := latestContinuation := self startPCOfMethod: aMethod.
-	end := self byteSizeOf: aMethod.
+	end := objectMemory byteSizeOf: aMethod.
 	[pc <= end] whileTrue:
 		[| byte byte2 byte3 byte4 type offset jumpTarget |
-		 byte := self fetchByte: pc ofObject: aMethod.
+		 byte := objectMemory fetchByte: pc ofObject: aMethod.
 		 type := byte // 16.
 		 offset := byte \\ 16.  
 		 (type =7 and: [offset >= 8 and: [pc >= latestContinuation]]) ifTrue:"Return bytecodes (possible lastPC here)"
 			[end := pc].
 		 (type = 8 and: [offset = 15]) ifTrue: "closure creation; update latest continuation"
-			[byte3 := self fetchByte: pc + 2 ofObject: aMethod.
-			 byte4 := self fetchByte: pc + 3 ofObject: aMethod.
+			[byte3 := objectMemory fetchByte: pc + 2 ofObject: aMethod.
+			 byte4 := objectMemory fetchByte: pc + 3 ofObject: aMethod.
 			 jumpTarget := (byte3 * 256) + byte4 + pc + 4.
 			 jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
 		 type=9 ifTrue: "Short jumps (need to update latest continuation"
 			[jumpTarget := (offset < 8 ifTrue: [offset] ifFalse: [offset - 8]) + pc + 2.
 			jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
 		 type=10 ifTrue: "Long jumps (need to update latest continuation)"
-			[byte2 := self fetchByte: pc + 1 ofObject: aMethod.
+			[byte2 := objectMemory fetchByte: pc + 1 ofObject: aMethod.
 			 jumpTarget := (offset < 8 ifTrue: [offset - 4] ifFalse: [offset bitAnd: 3]) * 256 + byte2 + pc + 2.
 			 jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
 
@@ -3076,30 +2864,30 @@ CogVMSimulator >> test [
 CogVMSimulator >> testBecome [
 	"Become some young things.  AA testBecome    "
 	| array list1 list2 p1 p2 p3 p4 |
-	array := self splObj: ClassArray.
-	list1 := self instantiateClass: array indexableSize: 2.
-	list2 := self instantiateClass: array indexableSize: 2.
-	p1 := self instantiateClass: (self splObj: ClassPoint) indexableSize: 0.
+	array := objectMemory splObj: ClassArray.
+	list1 := objectMemory instantiateClass: array indexableSize: 2.
+	list2 := objectMemory instantiateClass: array indexableSize: 2.
+	p1 := objectMemory instantiateClass: (objectMemory splObj: ClassPoint) indexableSize: 0.
 	self push: p1.
-	self storePointer: 0 ofObject: list1 withValue: p1.
-	p2 := self instantiateClass: (self splObj: ClassPoint) indexableSize: 0.
+	objectMemory storePointer: 0 ofObject: list1 withValue: p1.
+	p2 := objectMemory instantiateClass: (objectMemory splObj: ClassPoint) indexableSize: 0.
 	self push: p2.
-	self storePointer: 1 ofObject: list1 withValue: p2.
-	p3 := self instantiateClass: (self splObj: ClassMessage) indexableSize: 0.
+	objectMemory storePointer: 1 ofObject: list1 withValue: p2.
+	p3 := objectMemory instantiateClass: (objectMemory splObj: ClassMessage) indexableSize: 0.
 	self push: p3.
-	self storePointer: 0 ofObject: list2 withValue: p3.
-	p4 := self instantiateClass: (self splObj: ClassMessage) indexableSize: 0.
+	objectMemory storePointer: 0 ofObject: list2 withValue: p3.
+	p4 := objectMemory instantiateClass: (objectMemory splObj: ClassMessage) indexableSize: 0.
 	self push: p4.
-	self storePointer: 1 ofObject: list2 withValue: p4.
-	(self become: list1 with: list2 twoWay: true copyHash: true) ifFalse: [self error: 'failed'].
+	objectMemory storePointer: 1 ofObject: list2 withValue: p4.
+	(objectMemory become: list1 with: list2 twoWay: true copyHash: true) ifFalse: [self error: 'failed'].
 	self popStack = p2 ifFalse: [self halt].
 	self popStack = p1 ifFalse: [self halt].
 	self popStack = p4 ifFalse: [self halt].
 	self popStack = p3 ifFalse: [self halt].
-	(self fetchPointer: 0 ofObject: list1) = p3 ifFalse: [self halt].
-	(self fetchPointer: 1 ofObject: list1) = p4 ifFalse: [self halt].
-	(self fetchPointer: 0 ofObject: list2) = p1 ifFalse: [self halt].
-	(self fetchPointer: 1 ofObject: list2) = p2 ifFalse: [self halt].
+	(objectMemory fetchPointer: 0 ofObject: list1) = p3 ifFalse: [self halt].
+	(objectMemory fetchPointer: 1 ofObject: list1) = p4 ifFalse: [self halt].
+	(objectMemory fetchPointer: 0 ofObject: list2) = p1 ifFalse: [self halt].
+	(objectMemory fetchPointer: 1 ofObject: list2) = p2 ifFalse: [self halt].
 ]
 
 { #category : #testing }
@@ -3111,19 +2899,26 @@ CogVMSimulator >> testBreakCount: breakCount printSends: shouldPrintSends printF
 	printSends := true & shouldPrintSends. "true & foo allows evaluating printFoo := true in the debugger"
 	printFrameAtEachStep := true & shouldPrintFrames.
 	printBytecodeAtEachStep := true & shouldPrintBytecodes.
-	atEachStepBlock := [printFrameAtEachStep ifTrue:
-							[self printFrame: localFP WithSP: localSP].
-						 printBytecodeAtEachStep ifTrue:
-							[self printCurrentBytecodeOn: transcript.
-							 transcript cr; flush].
-						 byteCount = breakCount ifTrue:
-							["printFrameAtEachStep :=" printBytecodeAtEachStep := true]].
+	self ensureDebugAtEachStepBlock.
 	self initialEnterSmalltalkExecutive
 ]
 
 { #category : #testing }
 CogVMSimulator >> testWithBytecodePrint [
 	self testBreakCount: -1 printSends: true printFrames: false printBytecodes: true
+]
+
+{ #category : #UI }
+CogVMSimulator >> toggleTranscript [
+	| transcriptPane |
+	transcript ifNil: [transcript := Transcript. ^self].
+	displayView ifNil: [^self changed: #flash].
+	transcriptPane := (displayView outermostMorphThat: [:m| m isSystemWindow])
+							submorphThat: [:m| m model isStream]
+							ifNone: [^self changed: #flash].
+	transcript := transcript = Transcript
+					ifTrue: [transcriptPane model]
+					ifFalse: [Transcript]
 ]
 
 { #category : #'simulation only' }
@@ -3141,42 +2936,6 @@ CogVMSimulator >> unableToReadImageError [
 	self error:  'Read failed or premature end of image file'
 ]
 
-{ #category : #'debug printing' }
-CogVMSimulator >> updatePrintWrappers [
-	"CogVMSimulator basicNew updatePrintWrappers"
-	"Make sure wrappers that write-protect memory while printing are in place and up-to-date."
-	| needed existing |
-	needed := StackInterpreter organization listAtCategoryNamed: #'debug printing'.
-	existing := CogVMSimulator organization listAtCategoryNamed: #'debug printing wrappers'.
-	(existing reject: [:s| needed includes: s]) do:
-		[:s| CogVMSimulator removeSelector: s].
-	(needed reject: [:s| CogVMSimulator includesSelector: s]) do:
-		[:s|
-		CogVMSimulator
-			compile: (String streamContents:
-						[:str| | signature |
-						Parser new
-							parseMethodComment: (StackInterpreter sourceCodeAt: s)
-							setPattern:
-								[:pattern|
-								 signature := String streamContents:
-												[:rats|
-												pattern last = 1
-													ifTrue: [rats nextPutAll: pattern first]
-													ifFalse:
-														[pattern first keywords with: pattern second do:
-															[:kwd :arg|
-															 rats nextPutAll: kwd; space; nextPutAll: arg; space].
-														rats skip: -1]]].
-						str
-							nextPutAll: signature;
-							crtab: 1;
-							nextPutAll: '^self withMemoryProtectionDo: [super ';
-							nextPutAll: signature;
-							nextPut: $]])
-			classified: #'debug printing wrappers']
-]
-
 { #category : #'frame access' }
 CogVMSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	 "24204976 = (self frameContext: theFP) ifTrue:
@@ -3184,72 +2943,65 @@ CogVMSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: theSP [
 	^super updateStateOfSpouseContextForFrame: theFP WithSP: theSP
 ]
 
+{ #category : #UI }
+CogVMSimulator >> utilitiesMenu: aMenuMorph [
+	aMenuMorph
+		add: 'toggle transcript' action: #toggleTranscript;
+		addLine;
+		add: 'print ext head frame' action: #printExternalHeadFrame;
+		add: 'print int head frame' action: #printHeadFrame;
+		add: 'short print frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
+		add: 'long print frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'print call stack' action: #printCallStack;
+		addLine;
+		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
+		add: 'print cog frame' action: [self printFrame: cogit processor fp WithSP: cogit processor sp];
+		add: 'disassemble method at pc' action: [cogit disassembleMethodFor: cogit processor pc];
+		addLine;
+		add: 'inspect object memory' target: objectMemory action: #inspect;
+		add: 'inspect cointerpreter' action: #inspect;
+		add: 'inspect cogit' target: cogit action: #inspect;
+		add: 'inspect method zone' target: cogit methodZone action: #inspect.
+	aMenuMorph
+		addLine;
+		add: 'set break pc...' action: #setBreakPC;
+		add: (cogit singleStep
+				ifTrue: ['no single step']
+				ifFalse: ['single step'])
+			action: [cogit singleStep: cogit singleStep not];
+		add: (cogit printRegisters
+				ifTrue: ['no print registers each instruction']
+				ifFalse: ['print registers each instruction'])
+			action: [cogit printRegisters: cogit printRegisters not];
+		add: (cogit printInstructions
+				ifTrue: ['no print instructions each instruction']
+				ifFalse: ['print instructions each instruction'])
+			action: [cogit printInstructions: cogit printInstructions not];
+		addLine;
+		add: 'set break count...' action: #setBreakCount;
+		add: (printBytecodeAtEachStep
+				ifTrue: ['no print bytecode each bytecode']
+				ifFalse: ['print bytecode each bytecode'])
+			action: [self ensureDebugAtEachStepBlock.
+					printBytecodeAtEachStep := printBytecodeAtEachStep not];
+		add: (printFrameAtEachStep
+				ifTrue: ['no print frame each bytecode']
+				ifFalse: ['print frame each bytecode'])
+			action: [self ensureDebugAtEachStepBlock.
+					printFrameAtEachStep := printFrameAtEachStep not].
+	^aMenuMorph
+]
+
 { #category : #testing }
 CogVMSimulator >> validOop: oop [
 	" Return true if oop appears to be valid "
 	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
 	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
-	oop >= endOfMemory ifTrue: [^ false].  "Out of range"
+	oop >= objectMemory endOfMemory ifTrue: [^ false].  "Out of range"
 	"could test if within the first large freeblock"
 	(self longAt: oop) = 4 ifTrue: [^ false].
-	(self headerType: oop) = 2 ifTrue: [^ false].	"Free object"
+	(objectMemory headerType: oop) = 2 ifTrue: [^ false].	"Free object"
 	^ true
-]
-
-{ #category : #testing }
-CogVMSimulator >> validate [
-	| oop prev |
-	transcript show: 'Validating...'.
-	oop := self firstObject.
-	[oop < endOfMemory] whileTrue: [
-		self validate: oop.
-		prev := oop.  "look here if debugging prev obj overlapping this one"
-		oop := self objectAfter: oop.
-	].
-	prev := prev.  "Don't offer to delete this please"
-	transcript show: 'done.'; cr
-]
-
-{ #category : #testing }
-CogVMSimulator >> validate: oop [
-	| header type cc sz fmt nextChunk | 
-	header := self longAt: oop.
-	type := header bitAnd: 3.
-	type = 2 ifFalse: [type = (self rightType: header) ifFalse: [self halt]].
-	sz := (header bitAnd: SizeMask) >> 2.
-	(self isFreeObject: oop)
-		ifTrue: [ nextChunk := oop + (self sizeOfFree: oop) ]
-		ifFalse: [  nextChunk := oop + (self sizeBitsOf: oop) ].
-	nextChunk > endOfMemory
-		ifTrue: [oop = endOfMemory ifFalse: [self halt]].
-	(self headerType: nextChunk) = 0 ifTrue: [
-		(self headerType: (nextChunk + (BytesPerWord*2))) = 0 ifFalse: [self halt]].
-	(self headerType: nextChunk) = 1 ifTrue: [
-		(self headerType: (nextChunk + BytesPerWord)) = 1 ifFalse: [self halt]].
-	type = 2 ifTrue:
-		["free block" ^ self].
-	fmt := self formatOfHeader: header.
-	cc := self compactClassIndexOfHeader: header.
-	cc > 16 ifTrue: [self halt].	"up to 32 are legal, but not used"
-	type = 0 ifTrue:
-		["three-word header"
-		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
-		((self longAt: oop-(BytesPerWord*2)) bitAnd: 3) = type ifFalse: [self halt].
-		((self longAt: oop-BytesPerWord) = type) ifTrue: [self halt].	"Class word is 0"
-		sz = 0 ifFalse: [self halt]].
-	type = 1 ifTrue:
-		["two-word header"
-		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
-		cc > 0 ifTrue: [sz = 1 ifFalse: [self halt]].
-		sz = 0 ifTrue: [self halt]].
-	type = 3 ifTrue:
-		["one-word header"
-		cc = 0 ifTrue: [self halt]].
-	fmt = 5 ifTrue: [self halt].
-	fmt = 7 ifTrue: [self halt].
-	fmt >= 12 ifTrue:
-		["CompiledMethod -- check for integer header"
-		(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
 ]
 
 { #category : #'file primitives' }
@@ -3258,7 +3010,7 @@ CogVMSimulator >> vmPathGet: stringBase Length: stringSize [
 	pathName := Smalltalk vmPath.
 	stringOop := stringBase - BaseHeaderSize. "Due to C call in Interp"
 	1 to: stringSize do:
-		[:i | self storeByte: i-1 ofObject: stringOop
+		[:i | objectMemory storeByte: i-1 ofObject: stringOop
 			withValue: (pathName at: i) asciiValue].
 
 ]
@@ -3319,9 +3071,9 @@ CogVMSimulator >> writeImageFileIO: numberOfBytesToWrite [
 			self imageFormatVersion.
 			headerSize.
 			numberOfBytesToWrite.
-			self startOfMemory.
-			specialObjectsOop.
-			lastHash.
+			objectMemory startOfMemory.
+			(objectMemory specialObjectsOop).
+			(objectMemory lastHash).
 			self ioScreenSize.
 			self getImageHeaderFlags.
 			extraVMMemory
@@ -3343,11 +3095,11 @@ CogVMSimulator >> writeImageFileIO: numberOfBytesToWrite [
 		file position: headerSize.
 	
 		"Write the object memory."
-		self startOfMemory // 4 + 1
+		objectMemory startOfMemory // 4 + 1
 			to: numberOfBytesToWrite // 4
 			do: [:index |
 				self
-					putLong: (memory at: index)
+					putLong: (objectMemory memory at: index)
 					toFile: file].
 	
 		self success: true

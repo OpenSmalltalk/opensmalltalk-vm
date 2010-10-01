@@ -10,7 +10,7 @@ Class {
 	],
 	#pools : [
 		'VMMethodCacheConstants',
-		'VMObjectOffsets'
+		'VMObjectIndices'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -365,8 +365,8 @@ SimpleStackBasedCogit >> compileBlockFrameBuild: blockStart [
 		addDependent: (self annotateMethodRef:
 			(self PushCw: blockStart fakeHeader asInteger)); "method"
 		setLabelOffset: MFMethodFlagIsBlockFlag.
-	self annotate: (self PushCw: coInterpreter nilObject) "context"
-		objRef: coInterpreter nilObject.
+	self annotate: (self PushCw: objectMemory nilObject) "context"
+		objRef: objectMemory nilObject.
 	"fetch home receiver from outer context. closure is on stack and initially in ReceiverResultReg"
 	objectRepresentation
 		genLoadSlot: ClosureOuterContextIndex
@@ -430,8 +430,8 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	self MoveR: SPReg R: FPReg.
 	methodLabel addDependent: (self annotateMethodRef:
 		(self PushCw: methodLabel asInteger)). "method"
-	self annotate: (self MoveCw: coInterpreter nilObject R: SendNumArgsReg)
-		objRef: coInterpreter nilObject.
+	self annotate: (self MoveCw: objectMemory nilObject R: SendNumArgsReg)
+		objRef: objectMemory nilObject.
 	self PushR: SendNumArgsReg. "context"
 	self PushR: ReceiverResultReg.
 	methodOrBlockNumArgs + 1 to: (coInterpreter tempCountOf: methodObj) do:
@@ -473,7 +473,7 @@ SimpleStackBasedCogit >> compileGetErrorCode [
 	self CmpCq: 0 R: TempReg.
 	jmpNoError := self JumpZero: 0.
 	primErrorTable := coInterpreter primErrTable.
-	primErrorTableSize := (coInterpreter lastPointerOf: primErrorTable) // BytesPerWord.
+	primErrorTableSize := objectMemory lengthOf: primErrorTable.
 	self flag: 'use CmpCqR if pc mapping means stable contexts never contain native pcs'.
 	"Can't use CmpCqR here because table could change its size.
 	 Assume generated code is flushed whenever primitive error table is changed."
@@ -861,48 +861,6 @@ SimpleStackBasedCogit >> frameOffsetOfTemporary: index [
 ]
 
 { #category : #'primitive generators' }
-SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator [
-	"Stack looks like
-		receiver (also in ResultReceiverReg)
-		arg
-		return address"
-	<var: #jumpOpcodeGenerator declareC: 'AbstractInstruction *(*jumpOpcodeGenerator)(void *)'>
-	| jumpFailClass jumpFailAlloc jumpSmallInt doop |
-	<var: #jumpFailClass type: #'AbstractInstruction *'>
-	<var: #jumpFailAlloc type: #'AbstractInstruction *'>
-	<var: #jumpSmallInt type: #'AbstractInstruction *'>
-	<var: #doop type: #'AbstractInstruction *'>
-	self MoveMw: BytesPerWord r: SPReg R: TempReg.
-	objectRepresentation genGetDoubleValueOf: ReceiverResultReg into: DPFPReg0.
-	self MoveR: TempReg R: ClassReg.
-	jumpSmallInt := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
-	objectRepresentation genGetCompactClassIndexNonIntOf: ClassReg into: SendNumArgsReg.
-	self CmpCq: coInterpreter classFloatCompactIndex R: SendNumArgsReg.
-	jumpFailClass := self JumpNonZero: 0.
-	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
-	doop := self Label.
-	self gen: arithmeticOperator operand: DPFPReg1 operand: DPFPReg0.
-	jumpFailAlloc := objectRepresentation
-					genAllocFloatValue: DPFPReg0
-					into: SendNumArgsReg
-					scratchReg: ClassReg
-					scratchReg: TempReg.
-	self MoveR: SendNumArgsReg R: ReceiverResultReg.
-	self flag: 'currently caller pushes result'.
-	self RetN: BytesPerWord * 2.
-	jumpSmallInt jmpTarget: self Label.
-	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
-	self ConvertR: ClassReg Rd: DPFPReg1.
-	self Jump: doop.
-	jumpFailAlloc jmpTarget: self Label.
-	self compileInterpreterPrimitive: (coInterpreter
-										functionPointerForCompiledMethod: methodObj
-										primitiveIndex: primitiveIndex).
-	jumpFailClass jmpTarget: self Label.
-	^0
-]
-
-{ #category : #'primitive generators' }
 SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: preOpCheckOrNil [
 	"Stack looks like
 		receiver (also in ResultReceiverReg)
@@ -921,7 +879,7 @@ SimpleStackBasedCogit >> genDoubleArithmetic: arithmeticOperator preOpCheck: pre
 	self MoveR: TempReg R: ClassReg.
 	jumpSmallInt := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genGetCompactClassIndexNonIntOf: ClassReg into: SendNumArgsReg.
-	self CmpCq: coInterpreter classFloatCompactIndex R: SendNumArgsReg.
+	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
 	jumpFailClass := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
 	doOp := self Label.
@@ -968,19 +926,19 @@ SimpleStackBasedCogit >> genDoubleComparison: jumpOpcodeGenerator invert: invert
 	self MoveR: TempReg R: ClassReg.
 	jumpSmallInt := objectRepresentation genJumpSmallIntegerInScratchReg: TempReg.
 	objectRepresentation genGetCompactClassIndexNonIntOf: ClassReg into: SendNumArgsReg.
-	self CmpCq: coInterpreter classFloatCompactIndex R: SendNumArgsReg.
+	self CmpCq: objectMemory classFloatCompactIndex R: SendNumArgsReg.
 	jumpFail := self JumpNonZero: 0.
 	objectRepresentation genGetDoubleValueOf: ClassReg into: DPFPReg1.
 	invertComparison "May need to invert for NaNs"
 		ifTrue: [compare := self CmpRd: DPFPReg0 Rd: DPFPReg1]
 		ifFalse: [compare := self CmpRd: DPFPReg1 Rd: DPFPReg0].
 	jumpCond := self perform: jumpOpcodeGenerator with: 0. "FP jumps are a little weird"
-	self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
-		objRef: coInterpreter falseObject.
+	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+		objRef: objectMemory falseObject.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
-	jumpCond jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
-							objRef: coInterpreter trueObject).
+	jumpCond jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+							objRef: objectMemory trueObject).
 	self RetN: BytesPerWord * 2.
 	jumpSmallInt jmpTarget: self Label.
 	objectRepresentation genConvertSmallIntegerToIntegerInScratchReg: ClassReg.
@@ -1043,13 +1001,13 @@ SimpleStackBasedCogit >> genJumpIf: boolean to: targetBytecodePC [
 	 their distance send mustBeBoolean."
 	| ok |
 	<var: #ok type: #'AbstractInstruction *'>
-	self assert: (coInterpreter objectAfter: coInterpreter falseObject) = coInterpreter trueObject.
+	self assert: (objectMemory objectAfter: objectMemory falseObject) = objectMemory trueObject.
 	self PopR: TempReg.
 	self annotate: (self SubCw: boolean R: TempReg) objRef: boolean.
 	self JumpZero: (self ensureFixupAt: targetBytecodePC).
-	self CmpCq: (boolean == coInterpreter falseObject
-					ifTrue: [coInterpreter trueObject - coInterpreter falseObject]
-					ifFalse: [coInterpreter falseObject - coInterpreter trueObject])
+	self CmpCq: (boolean == objectMemory falseObject
+					ifTrue: [objectMemory trueObject - objectMemory falseObject]
+					ifFalse: [objectMemory falseObject - objectMemory trueObject])
 		R: TempReg.
 	ok := self JumpZero: 0.
 	self flag: 'these two instructions could be moved into the trampoline'.
@@ -1065,7 +1023,7 @@ SimpleStackBasedCogit >> genLongJumpIfFalse [
 	| distance target |
 	distance := self longForwardBranchDist: byte0 ance: byte1.
 	target := distance + 2 + (bytecodePointer - initialPC).
-	^self genJumpIf: coInterpreter falseObject to: target
+	^self genJumpIf: objectMemory falseObject to: target
 ]
 
 { #category : #'bytecode generators' }
@@ -1073,7 +1031,7 @@ SimpleStackBasedCogit >> genLongJumpIfTrue [
 	| distance target |
 	distance := self longForwardBranchDist: byte0 ance: byte1.
 	target := distance + 2 + (bytecodePointer - initialPC).
-	^self genJumpIf: coInterpreter trueObject to: target
+	^self genJumpIf: objectMemory trueObject to: target
 ]
 
 { #category : #'bytecode generators' }
@@ -1372,7 +1330,7 @@ SimpleStackBasedCogit >> genPrimitiveClosureValue [
 	<var: #jumpBCMethod type: #'AbstractInstruction *'>
 	<var: #primitiveRoutine declareC: 'void (*primitiveRoutine)()'>
 	objectRepresentation genLoadSlot: ClosureNumArgsIndex sourceReg: ReceiverResultReg destReg: TempReg.
-	self CmpCq: (coInterpreter integerObjectOf: methodOrBlockNumArgs) R: TempReg.
+	self CmpCq: (objectMemory integerObjectOf: methodOrBlockNumArgs) R: TempReg.
 	jumpFail := self JumpNonZero: 0.
 	objectRepresentation
 		genLoadSlot: ClosureOuterContextIndex sourceReg: ReceiverResultReg destReg: ClassReg;
@@ -1486,13 +1444,13 @@ SimpleStackBasedCogit >> genPrimitiveEquivalent [
 	self MoveMw: BytesPerWord r: SPReg R: TempReg.
 	self CmpR: TempReg R: ReceiverResultReg.
 	jumpFalse := self JumpNonZero: 0.
-	self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
-		objRef: coInterpreter trueObject.
+	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+		objRef: objectMemory trueObject.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
 	jumpFalse jmpTarget: (self
-						annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
-						objRef: coInterpreter falseObject).
+						annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+						objRef: objectMemory falseObject).
 	self RetN: BytesPerWord * 2.
 	^0
 ]
@@ -1764,22 +1722,22 @@ SimpleStackBasedCogit >> genPushClosureCopyCopiedValuesBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushConstantFalseBytecode [
-	self annotate: (self PushCw: coInterpreter falseObject)
-		objRef: coInterpreter falseObject.
+	self annotate: (self PushCw: objectMemory falseObject)
+		objRef: objectMemory falseObject.
 	^0
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushConstantNilBytecode [
-	self annotate: (self PushCw: coInterpreter nilObject)
-		objRef: coInterpreter nilObject.
+	self annotate: (self PushCw: objectMemory nilObject)
+		objRef: objectMemory nilObject.
 	^0
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushConstantTrueBytecode [
-	self annotate: (self PushCw: coInterpreter trueObject)
-		objRef: coInterpreter trueObject.
+	self annotate: (self PushCw: objectMemory trueObject)
+		objRef: objectMemory trueObject.
 	^0
 ]
 
@@ -1872,7 +1830,7 @@ SimpleStackBasedCogit >> genPushNewArrayBytecode [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genPushQuickIntegerConstantBytecode [
-	self MoveCq: (coInterpreter integerObjectOf: byte0 - 117) R: TempReg.
+	self MoveCq: (objectMemory integerObjectOf: byte0 - 117) R: TempReg.
 	self PushR: TempReg.
 	^0
 ]
@@ -1937,7 +1895,7 @@ SimpleStackBasedCogit >> genQuickReturnConst [
 	<api> "because selected by CoInterpreter>>quickPrimitiveGeneratorFor:"
 	| constant |
 	constant := coInterpreter quickPrimitiveConstantFor: primitiveIndex.
-	self gen: ((coInterpreter isIntegerObject: constant)
+	self gen: ((objectMemory isIntegerObject: constant)
 				ifTrue: [MoveCqR]
 				ifFalse: [MoveCwR])
 		operand: constant
@@ -1962,15 +1920,15 @@ SimpleStackBasedCogit >> genQuickReturnSelf [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnFalse [
-	self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
-		objRef: coInterpreter falseObject.
+	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+		objRef: objectMemory falseObject.
 	^self genUpArrowReturn
 ]
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnNil [
-	self annotate: (self MoveCw: coInterpreter nilObject R: ReceiverResultReg)
-		objRef: coInterpreter nilObject.
+	self annotate: (self MoveCw: objectMemory nilObject R: ReceiverResultReg)
+		objRef: objectMemory nilObject.
 	^self genUpArrowReturn
 ]
 
@@ -2009,8 +1967,8 @@ SimpleStackBasedCogit >> genReturnTopFromMethod [
 
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genReturnTrue [
-	self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
-		objRef: coInterpreter trueObject.
+	self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+		objRef: objectMemory trueObject.
 	^self genUpArrowReturn
 ]
 
@@ -2024,7 +1982,7 @@ SimpleStackBasedCogit >> genSecondExtendedSendBytecode [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genSend: selector numArgs: numArgs [
 	<inline: false>
-	(coInterpreter isYoung: selector) ifTrue:
+	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self assert: needsFrame.
 	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
@@ -2056,7 +2014,7 @@ SimpleStackBasedCogit >> genSendLiteralSelector2ArgsBytecode [
 SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 	<inline: false>
 	self assert: needsFrame.
-	(coInterpreter isYoung: selector) ifTrue:
+	(objectMemory isYoung: selector) ifTrue:
 		[hasYoungReferent := true].
 	self MoveMw: numArgs * BytesPerWord r: SPReg R: ReceiverResultReg.
 	numArgs > 2 ifTrue:
@@ -2071,7 +2029,7 @@ SimpleStackBasedCogit >> genSendSuper: selector numArgs: numArgs [
 { #category : #'bytecode generators' }
 SimpleStackBasedCogit >> genShortConditionalJump [
 	^self
-		genJumpIf: coInterpreter falseObject
+		genJumpIf: objectMemory falseObject
 		to: (self shortForwardBranchDistance: byte0) + 1 + (bytecodePointer - initialPC)
 ]
 
@@ -2097,12 +2055,12 @@ SimpleStackBasedCogit >> genSmallIntegerComparison: jumpOpcode [
 	jumpFail := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self CmpR: ClassReg R: ReceiverResultReg. "N.B. FLAGS := RRReg - ClassReg"
 	jumpTrue := self gen: jumpOpcode.
-	self annotate: (self MoveCw: coInterpreter falseObject R: ReceiverResultReg)
-		objRef: coInterpreter falseObject.
+	self annotate: (self MoveCw: objectMemory falseObject R: ReceiverResultReg)
+		objRef: objectMemory falseObject.
 	self flag: 'currently caller pushes result'.
 	self RetN: BytesPerWord * 2.
-	jumpTrue jmpTarget: (self annotate: (self MoveCw: coInterpreter trueObject R: ReceiverResultReg)
-						objRef: coInterpreter trueObject).
+	jumpTrue jmpTarget: (self annotate: (self MoveCw: objectMemory trueObject R: ReceiverResultReg)
+						objRef: objectMemory trueObject).
 	self RetN: BytesPerWord * 2.
 	jumpFail jmpTarget: self Label.
 	^0
@@ -2125,11 +2083,11 @@ SimpleStackBasedCogit >> genSpecialSelectorEqualsEquals [
 	self MoveMw: 0 r: SPReg R: ClassReg.
 	self CmpR: TempReg R: ClassReg.
 	jumpNotEqual := self JumpNonZero: 0.
-	self annotate: (self MoveCw: coInterpreter trueObject R: TempReg)
-		objRef: coInterpreter trueObject.
+	self annotate: (self MoveCw: objectMemory trueObject R: TempReg)
+		objRef: objectMemory trueObject.
 	jumpPush := self Jump: 0.
-	jumpNotEqual jmpTarget: (self annotate: (self MoveCw: coInterpreter falseObject R: TempReg)
-							objRef: coInterpreter falseObject).
+	jumpNotEqual jmpTarget: (self annotate: (self MoveCw: objectMemory falseObject R: TempReg)
+							objRef: objectMemory falseObject).
 	jumpPush jmpTarget: (self MoveR: TempReg Mw: 0 r: SPReg).
 	^0
 ]

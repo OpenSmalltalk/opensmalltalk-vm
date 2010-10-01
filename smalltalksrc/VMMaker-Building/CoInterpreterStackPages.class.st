@@ -15,6 +15,7 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'coInterpreter',
+		'objectMemory',
 		'stackBasePlus1',
 		'pages',
 		'mostRecentlyUsedPage',
@@ -33,15 +34,23 @@ Class {
 { #category : #translation }
 CoInterpreterStackPages class >> declareCVarsIn: aCCodeGenerator [
 	aCCodeGenerator
-		var: #mostRecentlyUsedPage type: 'StackPage *';
-		var: #stackBasePlus1 type: 'char *';
-		var: #pages type: 'StackPage *'.
+		var: #mostRecentlyUsedPage type: #'StackPage *';
+		var: #stackBasePlus1 type: #'char *';
+		var: #pages type: #'StackPage *'.
 	aCCodeGenerator
 		removeVariable: 'coInterpreter'; "These are simulation/debugging things only"
+		removeVariable: 'objectMemory'; "These are simulation/debugging things only"
 		removeVariable: 'pageMap'; "These are simulation/debugging things only"
 		removeVariable: 'maxStackAddress'; "These are simulation/debugging things only"
 		removeVariable: 'minStackAddress'; "These are simulation/debugging things only"
 		removeMethodForSelector: #memIndexFor:
+]
+
+{ #category : #translation }
+CoInterpreterStackPages class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	aCodeGen
+		removeVariable: 'coInterpreter';
+		removeVariable: 'objectMemory'
 ]
 
 { #category : #assertions }
@@ -122,7 +131,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	<var: #pageStructBase type: #'char *'>
 	self cCode: ''
 		inSmalltalk:
-			[self assert: coInterpreter startOfMemory - coInterpreter cogCodeSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
+			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
 					= (stackSlots * BytesPerWord)].
 	structStackPageSize := coInterpreter sizeof: CogSimpleStackPage.
 	bytesPerPage := slotsPerPage * BytesPerWord.
@@ -141,7 +150,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 							address: pageStructBase + (i * structStackPageSize)
 							simulator: coInterpreter
 							zoneBase: coInterpreter stackZoneBase
-							zoneLimit: coInterpreter startOfMemory])
+							zoneLimit: objectMemory startOfMemory])
 						do: [:pageSurrogate|
 							pageMap at: pageSurrogate address put: pageSurrogate];
 						yourself].
@@ -165,7 +174,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	self cCode: ''
 		inSmalltalk:
 			[minStackAddress := theStackPages.
-			 maxStackAddress := theStackPages + (numPages * bytesPerPage)].
+			 maxStackAddress := theStackPages + (numPages * bytesPerPage) + BytesPerWord - 1].
 
 	"The overflow limit is the amount of stack to retain when moving frames from an overflowing
 	 stack to reduce thrashing.  See stackOverflowOrEvent:mayContextSwitch:"
@@ -209,6 +218,7 @@ CoInterpreterStackPages >> initializeWithByteSize: byteSize "<Integer>" for: anI
 	 in one place we defer to the coInterpreter for accessing memory."
 	<doNotGenerate>
 	coInterpreter := anInterpreter.
+	objectMemory := coInterpreter objectMemory.
 	^anInterpreter stackZoneBase
 ]
 
@@ -226,30 +236,14 @@ CoInterpreterStackPages >> longAt: byteAddress [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	self assert: (byteAddress bitAnd: BytesPerWord - 1) == 0.
 	self assert: (byteAddress >= minStackAddress and: [byteAddress < maxStackAddress]).
-	^coInterpreter longAt: byteAddress
+	^objectMemory longAt: byteAddress
 ]
 
 { #category : #'memory access' }
 CoInterpreterStackPages >> longAt: byteAddress put: a32BitValue [
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	self assert: (byteAddress bitAnd: BytesPerWord - 1) == 0.
-	^coInterpreter longAt: byteAddress put: a32BitValue
-]
-
-{ #category : #'memory access' }
-CoInterpreterStackPages >> longAtPointer: pointer [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	 pointer is a raw address, and the result is the width of a machine word."
-
-	^self longAt: pointer
-]
-
-{ #category : #'memory access' }
-CoInterpreterStackPages >> longAtPointer: pointer put: longValue [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	 pointer is a raw address, and longValue is the width of a machine word."
-
-	^self longAt: pointer put: longValue
+	^objectMemory longAt: byteAddress put: a32BitValue
 ]
 
 { #category : #'page access' }
@@ -327,10 +321,12 @@ CoInterpreterStackPages >> overflowLimit [
 CoInterpreterStackPages >> pageIndexFor: pointer [ "<Integer>"
 	"Answer the page index for a pointer into stack memory, i.e. the index
 	 for the page the address is in.  N.B.  This is a zero-relative index."
-	<var: #pointer type: 'void *'>
+	<var: #pointer type: #'void *'>
+	<inline: true>
 	self assert: ((self cCoerceSimple: pointer to: #'char *')
 					between: stackBasePlus1 - 1
-					and: (self cCode: '(char *)GIV(pages)' inSmalltalk: [(self stackPageAt: 0) asInteger])).
+					and: (self cCode: [self cCoerceSimple: pages to: #'char *']
+							inSmalltalk: [(self stackPageAt: 0) asInteger])).
 	^self pageIndexFor: pointer stackBasePlus1: stackBasePlus1 bytesPerPage: bytesPerPage
 ]
 
@@ -414,8 +410,8 @@ CoInterpreterStackPages >> stackPageClass [
 { #category : #'page access' }
 CoInterpreterStackPages >> stackPageFor: pointer [ "<Integer>"
 	<inline: true>
-	<var: #pointer type: 'void *'>
-	<returnTypeC: 'StackPage *'>
+	<var: #pointer type: #'void *'>
+	<returnTypeC: #'StackPage *'>
 	^self stackPageAt: (self pageIndexFor: pointer)
 ]
 
