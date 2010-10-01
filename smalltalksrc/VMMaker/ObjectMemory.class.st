@@ -60,7 +60,6 @@ Class {
 		'remapBufferCount',
 		'allocationsBetweenGCs',
 		'tenuringThreshold',
-		'gcSemaphoreIndex',
 		'gcBiasToGrow',
 		'gcBiasToGrowGCLimit',
 		'gcBiasToGrowThreshold',
@@ -91,7 +90,6 @@ Class {
 		'statAllocationCount',
 		'statSurvivorCount',
 		'statSpecialMarkCount',
-		'statPendingFinalizationSignals',
 		'forceTenureFlag',
 		'gcStartUsecs'
 	],
@@ -100,123 +98,28 @@ Class {
 		'AllButMarkBit',
 		'AllButMarkBitAndTypeMask',
 		'AllButRootBit',
-		'Byte0Mask',
-		'Byte0Shift',
-		'Byte1Mask',
-		'Byte1Shift',
-		'Byte1ShiftNegated',
-		'Byte2Mask',
-		'Byte2Shift',
-		'Byte3Mask',
-		'Byte3Shift',
-		'Byte3ShiftNegated',
-		'Byte4Mask',
-		'Byte4Shift',
-		'Byte4ShiftNegated',
-		'Byte5Mask',
-		'Byte5Shift',
-		'Byte5ShiftNegated',
-		'Byte6Mask',
-		'Byte6Shift',
-		'Byte7Mask',
-		'Byte7Shift',
-		'Byte7ShiftNegated',
-		'Bytes3to0Mask',
-		'Bytes7to4Mask',
-		'CharacterTable',
-		'ClassAlien',
-		'ClassArray',
-		'ClassArrayCompactIndex',
-		'ClassBitmap',
-		'ClassBlockClosure',
-		'ClassBlockClosureCompactIndex',
-		'ClassBlockContext',
-		'ClassBlockContextCompactIndex',
-		'ClassByteArray',
-		'ClassByteStringCompactIndex',
-		'ClassCharacter',
-		'ClassCompiledMethod',
-		'ClassExternalAddress',
-		'ClassExternalData',
-		'ClassExternalFunction',
-		'ClassExternalLibrary',
-		'ClassExternalStructure',
-		'ClassFloat',
-		'ClassFloatCompactIndex',
-		'ClassInteger',
-		'ClassLargeNegativeInteger',
-		'ClassLargeNegativeIntegerCompactIndex',
-		'ClassLargePositiveInteger',
-		'ClassLargePositiveIntegerCompactIndex',
-		'ClassMessage',
-		'ClassMethodContext',
-		'ClassMethodContextCompactIndex',
-		'ClassMutex',
-		'ClassPoint',
-		'ClassProcess',
-		'ClassSemaphore',
-		'ClassString',
-		'ClassUnsafeAlien',
-		'ClassWeakFinalizer',
-		'CompactClassMask',
-		'CompactClasses',
-		'ConstMinusOne',
-		'ConstOne',
-		'ConstTwo',
-		'ConstZero',
-		'ContextFixedSizePlusHeader',
-		'CtxtTempFrameStart',
-		'DoBalanceChecks',
 		'Done',
-		'ExternalObjectsArray',
 		'ExtraRootSize',
-		'FalseObject',
-		'ForeignCallbackProcess',
 		'GCTopMarker',
 		'HashBits',
 		'HeaderTypeClass',
 		'HeaderTypeExtraBytes',
 		'HeaderTypeFree',
 		'HeaderTypeGC',
-		'InvokeCallbackSelector',
-		'LargeContextBit',
-		'LargeContextSize',
 		'NilContext',
-		'NilObject',
-		'PrimErrTableIndex',
-		'PrimNoErr',
-		'ProcessInExternalCodeTag',
-		'ProcessSignalingLowSpace',
 		'RemapBufferSize',
 		'RootTableRedZone',
 		'RootTableSize',
-		'SchedulerAssociation',
-		'SelectorAboutToReturn',
-		'SelectorAttemptToAssign',
-		'SelectorCannotInterpret',
-		'SelectorCannotReturn',
-		'SelectorDoesNotUnderstand',
-		'SelectorMustBeBoolean',
-		'SelectorRunWithIn',
-		'SmallContextSize',
-		'SpecialSelectors',
 		'StartField',
 		'StartObj',
-		'TheDisplay',
-		'TheFinalizationSemaphore',
-		'TheInputSemaphore',
-		'TheInterruptSemaphore',
-		'TheLowSpaceSemaphore',
-		'TheTimerSemaphore',
-		'TrueObject',
 		'Upward',
-		'VMBIGENDIAN',
 		'WeakRootTableSize',
 		'WordMask'
 	],
 	#pools : [
 		'VMBasicConstants',
-		'VMObjectOffsets',
+		'VMObjectIndices',
+		'VMSqueakV3BytecodeConstants',
 		'VMSqueakV3ObjectRepresentationConstants'
 	],
 	#category : #'VMMaker-Interpreter'
@@ -408,7 +311,7 @@ ObjectMemory class >> initializePrimitiveErrorCodes [
 	"ObjectMemory initializePrimitiveErrorCodes"
 	| pet |
 	PrimErrTableIndex := 51. "Zero-relative"
-	"See SystemDictionary>>recreateSpecialObjectsArray for the table definition.
+	"See SmalltalkImage>>recreateSpecialObjectsArray for the table definition.
 	 If the table exists and is large enough the corresponding entry is returned as
 	 the primitive error, otherwise the error is answered numerically."
 	pet := Smalltalk specialObjectsArray at: PrimErrTableIndex + 1 ifAbsent: [#()].
@@ -418,16 +321,17 @@ ObjectMemory class >> initializePrimitiveErrorCodes [
 	PrimErrBadReceiver		:= pet indexOf: #'bad receiver' ifAbsent: 2.
 	PrimErrBadArgument	:= pet indexOf: #'bad argument' ifAbsent: 3.
 	PrimErrBadIndex		:= pet indexOf: #'bad index' ifAbsent: 4.
-	PrimErrBadNumArgs		:= pet indexOf: #'bad number of arguments' ifAbsent: 5.
-	PrimErrInappropriate		:= pet indexOf: #'inappropriate operation' ifAbsent: 6.
-	PrimErrUnsupported		:= pet indexOf: #'unsupported operation' ifAbsent: 7.
+	PrimErrBadNumArgs	:= pet indexOf: #'bad number of arguments' ifAbsent: 5.
+	PrimErrInappropriate	:= pet indexOf: #'inappropriate operation' ifAbsent: 6.
+	PrimErrUnsupported	:= pet indexOf: #'unsupported operation' ifAbsent: 7.
 	PrimErrNoModification	:= pet indexOf: #'no modification' ifAbsent: 8.
 	PrimErrNoMemory		:= pet indexOf: #'insufficient object memory' ifAbsent: 9.
 	PrimErrNoCMemory		:= pet indexOf: #'insufficient C memory' ifAbsent: 10.
 	PrimErrNotFound		:= pet indexOf: #'not found' ifAbsent: 11.
 	PrimErrBadMethod		:= pet indexOf: #'bad method' ifAbsent: 12.
 	PrimErrNamedInternal	:= pet indexOf: #'internal error in named primitive machinery' ifAbsent: 13.
-	PrimErrObjectMayMove	:= pet indexOf: #'object may move' ifAbsent: 14
+	PrimErrObjectMayMove	:= pet indexOf: #'object may move' ifAbsent: 14.
+	PrimErrLimitExceeded	:= pet indexOf: #'resource limit exceeded' ifAbsent: 15
 ]
 
 { #category : #initialization }
@@ -504,21 +408,12 @@ ObjectMemory class >> initializeWithBytesToWord:  numberOfBytesInAWord [
 
 	"Translation flags (booleans that control code generation via conditional translation):"
 	DoAssertionChecks := DoExpensiveAssertionChecks := false.  "generate assertion checks"
-	DoBalanceChecks := false. "generate stack balance checks"
 
 	self initializeSpecialObjectIndices.
 	self initializeCompactClassIndices.
 	self initializePrimitiveErrorCodes.
 	self initializeObjectHeaderConstants.
 
-	CtxtTempFrameStart := 6.  "Copy of TempFrameStart in Interp"
-	ContextFixedSizePlusHeader := CtxtTempFrameStart + 1.
-	SmallContextSize := ContextFixedSizePlusHeader + 16 * BytesPerWord.  "16 indexable fields"
-	"Large contexts have 56 indexable fileds.  Max with single header word."
-	"However note that in 64 bits, for now, large contexts have 3-word headers"
-	LargeContextSize := ContextFixedSizePlusHeader + 56 * BytesPerWord.
-	
-	LargeContextBit := 16r40000.  "This bit set in method headers if large context is needed."
 	NilContext := 1.  "the oop for the integer 0; used to mark the end of context lists"
 
 	RemapBufferSize := 25.
@@ -553,14 +448,14 @@ ObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 { #category : #translation }
 ObjectMemory class >> requiredMethodNames [
 	"return the list of method names that should be retained for export or other support reasons"
-	^ #(byteSwapped: checkedLongAt: firstAccessibleObject noteAsRoot:headerLoc: splObj: printReferencesTo:)
+	^self exportAPISelectors
 ]
 
 { #category : #translation }
 ObjectMemory class >> unsignedIntegerSuffix [
 	"Answer the suffix that should be appended to unsigned integer literals in generated code."
 
-	^BytesPerWord = 4 ifTrue: ['U'] ifFalse: ['ULL']
+	^BytesPerWord = 4 ifTrue: ['UL'] ifFalse: ['ULL']
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -904,6 +799,91 @@ ObjectMemory >> biasToGrowCheckGCLimit [
 					
 ]
 
+{ #category : #'indexing primitive support' }
+ObjectMemory >> byteLengthOf: oop [
+	"Return the number of indexable bytes in the given object. This is basically a special copy of lengthOf: for BitBlt."
+	| header sz fmt |
+	header := self baseHeader: oop.
+	sz := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
+			ifTrue: [(self sizeHeader: oop) bitAnd: AllButTypeMask]
+			ifFalse: [header bitAnd: SizeMask].
+	fmt := self formatOfHeader: header.
+	^fmt < 8
+		ifTrue: [(sz - BaseHeaderSize)]  "words"
+		ifFalse: [(sz - BaseHeaderSize) - (fmt bitAnd: 3)]  "bytes"
+]
+
+{ #category : #'object format' }
+ObjectMemory >> byteSizeOf: oop [
+	<api>
+	| header format size |
+	(self isIntegerObject: oop) ifTrue:[^0].
+	header := self baseHeader: oop.
+	format := self formatOfHeader: header.
+	size := (header bitAnd: TypeMask) = HeaderTypeSizeAndClass
+				ifTrue: [(self sizeHeader: oop) bitAnd: LongSizeMask]
+				ifFalse: [header bitAnd: SizeMask].
+	size := size - (header bitAnd: Size4Bit).
+	^format < 8
+		ifTrue: [ size - BaseHeaderSize "32-bit longs"]
+		ifFalse: [ (size - BaseHeaderSize) - (format bitAnd: 3) "bytes"]
+]
+
+{ #category : #'image segment in/out' }
+ObjectMemory >> byteSwapByteObjectsFrom: startOop to: stopAddr flipFloatsIf: flipFloatWords [
+	"Byte-swap the words of all bytes objects in a range of the 
+	image, including Strings, ByteArrays, and CompiledMethods. 
+	This returns these objects to their original byte ordering 
+	after blindly byte-swapping the entire image. For compiled 
+	methods, byte-swap only their bytecodes part.  For Floats
+	swap their most and least significant words if required."
+	| oop fmt temp wordAddr |
+	oop := startOop.
+	[self oop: oop isLessThan: stopAddr] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[fmt := self formatOf: oop.
+			fmt >= 8 ifTrue:
+				["oop contains bytes; unswap"
+				wordAddr := oop + BaseHeaderSize.
+				fmt >= 12 ifTrue: "compiled method; start after methodHeader and literals"
+					[wordAddr := wordAddr + BytesPerWord + ((self literalCountOf: oop) * BytesPerWord)].
+				self reverseBytesFrom: wordAddr to: oop + (self sizeBitsOf: oop)].
+			fmt = 6  ifTrue: "Bitmap, Float etc"
+				[(self compactClassIndexOf: oop) = ClassFloatCompactIndex
+					ifTrue:
+						[flipFloatWords ifTrue:
+							[temp := self longAt: oop + BaseHeaderSize.
+							 self longAt: oop + BaseHeaderSize put: (self longAt: oop + BaseHeaderSize + 4).
+							 self longAt: oop + BaseHeaderSize + 4 put: temp]]
+					ifFalse:
+						[BytesPerWord = 8 ifTrue:
+							["Object contains 32-bit half-words packed into 64-bit machine words."
+							wordAddr := oop + BaseHeaderSize.
+							self reverseWordsFrom: wordAddr to: oop + (self sizeBitsOf: oop)]]]].
+			oop := self objectAfter: oop]
+]
+
+{ #category : #'image save/restore' }
+ObjectMemory >> byteSwapped: w [
+	"Answer the given integer with its bytes in the reverse order."
+	<api>
+	BytesPerWord = 4
+		ifTrue:
+			[^ ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
+			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
+			 + ((w bitShift: Byte1Shift         ) bitAnd: Byte2Mask)
+			 + ((w bitShift: Byte3Shift         ) bitAnd: Byte3Mask)]
+		ifFalse:
+			[^ ((w bitShift: Byte7ShiftNegated) bitAnd: Byte0Mask)
+			 + ((w bitShift: Byte5ShiftNegated) bitAnd: Byte1Mask)
+			 + ((w bitShift: Byte3ShiftNegated) bitAnd: Byte2Mask)
+			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte3Mask)
+			 + ((w bitShift: Byte1Shift         ) bitAnd: Byte4Mask)
+			 + ((w bitShift: Byte3Shift         ) bitAnd: Byte5Mask)
+			 + ((w bitShift: Byte5Shift         ) bitAnd: Byte6Mask)
+			 + ((w bitShift: Byte7Shift         ) bitAnd: Byte7Mask)]
+]
+
 { #category : #allocation }
 ObjectMemory >> bytesLeft: includingSwap [
 	^(self sizeOfFree: freeBlock) "already commited"
@@ -915,6 +895,116 @@ ObjectMemory >> bytesPerWord [
 	"Answer the size of an object pointer in bytes."
 
 	^BytesPerWord
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> changeClassOf: rcvr to: argClass [
+	"Attempt to change the class of the receiver into the class specified by the argument given that
+	 the format of the receiver matches the format of the argument. If successful answer 0, otherwise
+	 answer an error code indicating the reason for failure.  Fail if receiver or argument are
+	 SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when
+	 the argument's class is compact and the receiver isn't, or when the format of the receiver is
+	 different from the format of the argument's class, or when the arguments class is fixed and the
+	 receiver's size differs from the size that an instance of the argument's class should have."
+	| classHdr sizeHiBits byteSize argFormat rcvrFormat ccIndex |
+	"Check what the format of the class says"
+	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
+
+	"Compute the size of instances of the class (used for fixed field classes only)"
+	sizeHiBits := (classHdr bitAnd: 16r60000) >> 9.
+	classHdr := classHdr bitAnd: 16r1FFFF.
+	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
+
+	"Check the receiver's format against that of the class"
+	argFormat := self formatOfHeader: classHdr.
+	rcvrFormat := self formatOf: rcvr.
+	"If the receiver is a byte object we need to clear the number of odd bytes from the format."
+	rcvrFormat > 8 ifTrue:
+		[rcvrFormat := rcvrFormat bitAnd: 16rC].
+	argFormat = rcvrFormat ifFalse:
+		[^PrimErrInappropriate]. "no way"
+
+	"For fixed field classes, the sizes must match.
+	Note: byteSize-4 because base header is included in class size."
+	argFormat < 2
+		ifTrue:
+			[(byteSize - BaseHeaderSize) ~= (self byteSizeOf: rcvr) ifTrue:
+				[^PrimErrBadReceiver]]
+		ifFalse:
+			[argFormat = 3 ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
+				[(byteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
+					[^PrimErrBadReceiver]]].
+
+	(self headerType: rcvr) = HeaderTypeShort
+		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
+			[ccIndex := classHdr bitAnd: CompactClassMask.
+			ccIndex = 0 ifTrue:[^PrimErrInappropriate]. "class is not compact"
+			self longAt: rcvr put:
+				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32)
+					bitOr: ccIndex)]
+		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass"
+			[self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
+			(self oop: rcvr isLessThan: youngStart)
+				ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
+
+	^0
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> changeClassOf: rcvr toThatOf: arg [
+	"Attempt to change the class of the receiver into the class of the the argument given that
+	 the format of the receiver matches the format of the argument. If successful answer 0, otherwise
+	 answer an error code indicating the reason for failure.  Fail if receiver or argument are
+	 SmallIntegers, or the receiver is an instance of a compact class and the argument isn't, or when
+	 the argument's class is compact and the receiver isn't, or when the format of the receiver is
+	 different from the format of the argument's class, or when the arguments class is fixed and the
+	 receiver's size differs from the size that an instance of the argument's class should have."
+	| argClass classHdr sizeHiBits byteSize argFormat rcvrFormat ccIndex |
+
+	"Get the class we want to convert the receiver into"
+	argClass := self fetchClassOf: arg.
+
+	"Check what the format of the class says"
+	classHdr := self formatOfClass: argClass. "Low 2 bits are 0"
+
+	"Compute the size of instances of the class (used for fixed field classes only)"
+	sizeHiBits := (classHdr bitAnd: 16r60000) >> 9.
+	classHdr := classHdr bitAnd: 16r1FFFF.
+	byteSize := (classHdr bitAnd: SizeMask) + sizeHiBits. "size in bytes -- low 2 bits are 0"
+
+	"Check the receiver's format against that of the class"
+	argFormat := self formatOfHeader: classHdr.
+	rcvrFormat := self formatOf: rcvr.
+	argFormat = rcvrFormat ifFalse:
+		[(rcvrFormat > 8 and: [argFormat > 8]) ifTrue:
+			[rcvrFormat := rcvrFormat bitAnd: 16rC.
+			 argFormat := argFormat bitAnd: 16rC].
+		argFormat = rcvrFormat ifFalse:
+			[^PrimErrInappropriate]]. "no way"
+
+	"For fixed field classes, the sizes must match.
+	Note: byteSize-4 because base header is included in class size."
+	argFormat < 2
+		ifTrue:
+			[(byteSize - BaseHeaderSize) ~= (self byteSizeOf: rcvr) ifTrue:
+				[^PrimErrBadReceiver]]
+		ifFalse:
+			[argFormat = 3 ifTrue: "For indexable plus fixed fields the receiver must be at least big enough."
+				[(byteSize - BaseHeaderSize) > (self byteSizeOf: rcvr) ifTrue:
+					[^PrimErrBadReceiver]]].
+
+	(self headerType: rcvr) = HeaderTypeShort
+		ifTrue: "Compact classes. Check if the arg's class is compact and exchange ccIndex"
+			[ccIndex := classHdr bitAnd: CompactClassMask.
+			ccIndex = 0 ifTrue: [^PrimErrInappropriate]. "class is not compact"
+			self longAt: rcvr put:
+				(((self longAt: rcvr) bitAnd: CompactClassMask bitInvert32)
+					bitOr: ccIndex)]
+		ifFalse: "Exchange the class pointer, which could make rcvr a root for argClass"
+			[self longAt: rcvr-BaseHeaderSize put: (argClass bitOr: (self headerType: rcvr)).
+			(rcvr < youngStart) ifTrue: [self possibleRootStoreInto: rcvr value: argClass]].
+
+	^0
 ]
 
 { #category : #'plugin support' }
@@ -1076,7 +1166,7 @@ ObjectMemory >> checkedByteAt: byteAddress put: byte [
 { #category : #'memory access' }
 ObjectMemory >> checkedLongAt: byteAddress [
 	"Assumes zero-based array indexing. For testing in Smalltalk, this method should be overridden in a subclass."
-
+	<api>
 	self checkAddress: byteAddress.
 	self checkAddress: byteAddress + 3.
 	^ self longAt: byteAddress
@@ -1309,9 +1399,57 @@ ObjectMemory >> containOnlyOops: array1 and: array2 [
 	^ true
 ]
 
+{ #category : #'image segment in/out' }
+ObjectMemory >> copyObj: oop toSegment: segmentWordArray addr: lastSeg stopAt: stopAddr saveOopAt: oopPtr headerAt: hdrPtr [
+	"Copy this object into the segment beginning at lastSeg.
+	Install a forwarding pointer, and save oop and header.
+	Fail if out of space.  Return the next segmentAddr if successful."
+
+	"Copy the object..."
+	| extraSize bodySize hdrAddr |
+	<inline: false>
+	self flag: #Dan.  "None of the imageSegment stuff has been updated for 64 bits"
+	extraSize := self extraHeaderBytes: oop.
+	bodySize := self sizeBitsOf: oop.
+	(self oop: (lastSeg + extraSize + bodySize) isGreaterThanOrEqualTo: stopAddr) ifTrue:
+		[^0]. "failure"
+	self transfer: extraSize + bodySize // BytesPerWord  "wordCount"
+		from: oop - extraSize
+		to: lastSeg+BytesPerWord.
+
+	"Clear root and mark bits of all headers copied into the segment"
+	hdrAddr := lastSeg+BytesPerWord + extraSize.
+	self longAt: hdrAddr put: ((self longAt: hdrAddr) bitAnd: AllButRootBit - MarkBit).
+
+	self forward: oop to: (lastSeg+BytesPerWord + extraSize - segmentWordArray)
+		savingOopAt: oopPtr
+		andHeaderAt: hdrPtr.
+
+	"Return new end of segment"
+	^lastSeg + extraSize + bodySize
+]
+
 { #category : #'plugin support' }
 ObjectMemory >> displayObject [
 	^self splObj: TheDisplay
+]
+
+{ #category : #accessing }
+ObjectMemory >> endOfMemory [
+	^endOfMemory
+]
+
+{ #category : #accessing }
+ObjectMemory >> endOfMemory: aValue [
+	^endOfMemory := aValue
+]
+
+{ #category : #'forward compatibility' }
+ObjectMemory >> enterIntoClassTable: aBehavior [
+	"The old ObjectMemory should never be called upon to enter anything into the class table.
+	 Alas 0 is a valid identityhash in the Squeak V3 objrep so primitiveBehaviorHash may
+	 ask to enter into the table a class with a 0 id hash.  SImply ignore the request."
+	^0
 ]
 
 { #category : #'oop/chunk conversion' }
@@ -1440,11 +1578,66 @@ ObjectMemory >> firstAccessibleObject [
 	self error: 'heap is empty'
 ]
 
+{ #category : #'object format' }
+ObjectMemory >> firstFixedField: oop [
+
+	<returnTypeC: #'void *'>
+	^ self pointerForOop: oop + BaseHeaderSize
+]
+
+{ #category : #'object format' }
+ObjectMemory >> firstIndexableField: oop [
+	"NOTE: copied in InterpreterSimulator, so please duplicate any changes"
+
+	| hdr fmt totalLength fixedFields |
+	<returnTypeC: #'void *'>
+	hdr := self baseHeader: oop.
+	fmt := self formatOfHeader: hdr.
+	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
+	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
+	fmt < 8 ifTrue:
+		[fmt = 6 ifTrue: "32 bit field objects"
+			[^self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)].
+		"full word objects (pointer or bits)"
+		^self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)].
+	"Byte objects"
+	^self pointerForOop: oop + BaseHeaderSize + fixedFields
+]
+
 { #category : #'object enumeration' }
 ObjectMemory >> firstObject [
 	"Return the first object or free chunk in the heap."
 
 	^ self oopFromChunk: self startOfMemory
+]
+
+{ #category : #'object format' }
+ObjectMemory >> fixedFieldsOf: oop format: fmt length: wordLength [
+"
+	NOTE: This code supports the backward-compatible extension to 8 bits of instSize.
+	When we revise the image format, it should become...
+	^ (classFormat >> 2 bitAnd: 16rFF) - 1
+"
+	| class classFormat |
+	<inline: true>
+	<asmLabel: false>
+	((fmt > 4) or: [fmt = 2]) ifTrue: [^0].  "indexable fields only"
+	fmt < 2 ifTrue: [^wordLength].  "fixed fields only (zero or more)"
+	
+	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
+	class := self fetchClassOfNonInt: oop.
+	classFormat := self formatOfClass: class.
+	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
+]
+
+{ #category : #accessing }
+ObjectMemory >> forceTenureFlag [
+	^forceTenureFlag
+]
+
+{ #category : #accessing }
+ObjectMemory >> forceTenureFlag: aValue [
+	^forceTenureFlag := aValue
 ]
 
 { #category : #'header access' }
@@ -1468,6 +1661,19 @@ ObjectMemory >> formatOf: oop [
 	^((self baseHeader: oop) >> 8) bitAnd: 16rF
 ]
 
+{ #category : #'object format' }
+ObjectMemory >> formatOfClass: classPointer [
+	"**should be in-lined**"
+	"Note that, in Smalltalk, the instSpec will be equal to the inst spec
+	part of the base header of an instance (without hdr type) shifted left 1.
+	In this way, apart from the smallInt bit, the bits
+	are just where you want them for the first header word."
+	"Callers (must) expect low 2 bits (header type) to be zero!"
+	<api>
+	<inline: true>
+	^(self fetchPointer: InstanceSpecificationIndex ofObject: classPointer) - 1
+]
+
 { #category : #'header access' }
 ObjectMemory >> formatOfHeader: header [
 "       0      no fields
@@ -1487,6 +1693,17 @@ ObjectMemory >> formatOfHeader: header [
 "
 	<inline: true>
 	^header >> 8 bitAnd: 16rF
+]
+
+{ #category : #'image segment in/out' }
+ObjectMemory >> forward: oop to: newOop savingOopAt: oopPtr andHeaderAt: hdrPtr [
+
+	"Make a new entry in the table of saved oops."
+	self longAt: oopPtr put: oop.					"Save the oop"
+	self longAt: hdrPtr put: (self longAt: oop).	"Save the old header word"
+
+	"Put a forwarding pointer in the old object, flagged with forbidden header type"
+	self longAt: oop put: newOop + HeaderTypeFree
 ]
 
 { #category : #'gc -- compaction' }
@@ -1612,6 +1829,51 @@ ObjectMemory >> fwdTableSize: blkSize [
 	^ (fwdLast - fwdFirst) // blkSize  "round down"
 ]
 
+{ #category : #accessing }
+ObjectMemory >> gcBiasToGrow [
+	^gcBiasToGrow
+]
+
+{ #category : #accessing }
+ObjectMemory >> gcBiasToGrow: aValue [
+	^gcBiasToGrow := aValue
+]
+
+{ #category : #accessing }
+ObjectMemory >> gcBiasToGrowGCLimit [
+	^gcBiasToGrowGCLimit
+]
+
+{ #category : #accessing }
+ObjectMemory >> gcBiasToGrowGCLimit: aValue [
+	^gcBiasToGrowGCLimit := aValue
+]
+
+{ #category : #accessing }
+ObjectMemory >> gcBiasToGrowThreshold [
+	^gcBiasToGrowThreshold
+]
+
+{ #category : #accessing }
+ObjectMemory >> gcBiasToGrowThreshold: aValue [
+	^gcBiasToGrowThreshold := aValue
+]
+
+{ #category : #accessing }
+ObjectMemory >> gcStartUsecs [
+	^gcStartUsecs
+]
+
+{ #category : #accessing }
+ObjectMemory >> growHeadroom [
+	^growHeadroom
+]
+
+{ #category : #accessing }
+ObjectMemory >> growHeadroom: aValue [
+	^growHeadroom := aValue
+]
+
 { #category : #allocation }
 ObjectMemory >> growObjectMemory: delta [ 
 	"Attempt to grow the object memory by the given delta 
@@ -1649,6 +1911,16 @@ ObjectMemory >> headerWhileForwardingOf: oop [
 		 self assert: (self fwdBlockValid: fwdBlock).
 		 header := self longAt: fwdBlock + BytesPerWord].
 	^header
+]
+
+{ #category : #'image segment in/out' }
+ObjectMemory >> imageSegmentVersion [
+	| wholeWord |
+	"a more complex version that tells both the word reversal and the endianness of the machine it came from.  Low half of word is 6502.  Top byte is top byte of #doesNotUnderstand: on this machine. ($d on the Mac or $s on the PC)"
+
+	wholeWord := self longAt: (self splObj: SelectorDoesNotUnderstand) + BaseHeaderSize.
+		"first data word, 'does' "
+	^ self imageFormatVersion bitOr: (wholeWord bitAnd: 16rFF000000)
 ]
 
 { #category : #'gc -- compaction' }
@@ -1882,6 +2154,17 @@ ObjectMemory >> initialInstanceOf: classPointer [
 			thisClass = classPointer ifTrue: [^ thisObj].
 			thisObj := self accessibleObjectAfter: thisObj].
 	^ nilObj
+]
+
+{ #category : #initialization }
+ObjectMemory >> initialize [
+	<doNotGenerate>
+	"Initialize ObjectMemory when simulating the VM inside Smalltalk."
+	super initialize.
+	headerTypeBytes := CArrayAccessor on: HeaderTypeExtraBytes.
+	rootTable := Array new: RootTableSize.
+	weakRoots := Array new: WeakRootTableSize.
+	remapBuffer := Array new: RemapBufferSize
 ]
 
 { #category : #initialization }
@@ -2124,6 +2407,31 @@ ObjectMemory >> integerValueOf: objectPointer [
 				^ objectPointer >> 1]
 ]
 
+{ #category : #simulation }
+ObjectMemory >> interpreter [
+	<doNotGenerate>
+	^self
+]
+
+{ #category : #'header access' }
+ObjectMemory >> is: oop instanceOf: classOop compactClassIndex: compactClassIndex [
+	"Answer if oop is an instance of the given class. If the class has a (non-zero)
+	 compactClassIndex use that to speed up the check.  N.B. Inlining should
+	 result in classOop not being accessed if compactClassIndex is non-zero."
+
+	| ccIndex |
+	<inline: true>
+	(self isIntegerObject: oop) ifTrue:
+		[^false].
+
+	ccIndex := self compactClassIndexOf: oop.
+	compactClassIndex ~= 0 ifTrue:
+		[^compactClassIndex == ccIndex].
+
+	^ccIndex ~= 0
+	  and: [((self classHeader: oop) bitAnd: AllButTypeMask) = classOop]
+]
+
 { #category : #'header access' }
 ObjectMemory >> isArray: oop [
 	"Answer true if this is an indexable object with pointer elements, e.g., an array"
@@ -2151,11 +2459,61 @@ ObjectMemory >> isBytesNonInt: oop [
 	^ (self formatOf: oop)  >= 8
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> isClassOfNonImm: oop equalTo: classOop [
+	"Answer if the given (non-immediate) object is an instance of the given class."
+
+	| ccIndex cl |
+	<inline: true>
+	<asmLabel: false>
+	(self isIntegerObject: oop) ifTrue:
+		[^false].
+
+	cl := (ccIndex := self compactClassIndexOf: oop) = 0
+			ifTrue: [(self classHeader: oop) bitAnd: AllButTypeMask]
+			ifFalse: "look up compact class"
+				[self fetchPointer: ccIndex - 1
+					ofObject: (self fetchPointer: CompactClasses ofObject: specialObjectsOop)].
+
+	^cl = classOop
+]
+
+{ #category : #'header access' }
+ObjectMemory >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: compactClassIndex [
+	"Answer if the given (non-immediate) object is an instance of the given class
+	 that may have a compactClassIndex (if compactClassIndex is non-zero).
+	 N.B. Inlining and/or compiler optimization should result in classOop not being
+	 accessed if compactClassIndex is non-zero."
+
+	| ccIndex |
+	<inline: true>
+	<asmLabel: false>
+	(self isIntegerObject: oop) ifTrue:
+		[^false].
+
+	ccIndex := self compactClassIndexOf: oop.
+	^compactClassIndex = 0
+		ifTrue:
+			[ccIndex = 0
+				ifTrue: [((self classHeader: oop) bitAnd: AllButTypeMask) = classOop]
+				ifFalse: [false]]
+		ifFalse:
+			[compactClassIndex == ccIndex]
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> isCompiledMethod: oop [
     "Answer whether the argument object is of compiled method format"
     ^(self formatOf: oop) >= 12
+]
 
+{ #category : #contexts }
+ObjectMemory >> isContextHeader: aHeader [
+	<inline: true>
+	"c.f. {BlockContext. MethodContext. PseudoContext} collect: [:class| class -> (Smalltalk compactClassesArray indexOf: class)]"
+	^ ((aHeader >> 12) bitAnd: 16r1F) = 13			"BlockContext"
+		or: [((aHeader >> 12) bitAnd: 16r1F) = 14	"MethodContext"
+		or: [((aHeader >> 12) bitAnd: 16r1F) = 4]]	"PseudoContext"
 ]
 
 { #category : #'header access' }
@@ -2210,7 +2568,6 @@ ObjectMemory >> isOopCompiledMethod: oop [
     "Answer whether the oop is an object of compiled method format"
 	<api>
     ^(self isNonIntegerObject: oop) and: [(self formatOf: oop) >= 12]
-
 ]
 
 { #category : #'header access' }
@@ -2275,6 +2632,22 @@ ObjectMemory >> isYoung: oop [
 	<api>
 	^(self isNonIntegerObject: oop)
 	   and: [self oop: oop isGreaterThanOrEqualTo: youngStart]
+]
+
+{ #category : #'garbage collection' }
+ObjectMemory >> isYoungRoot: oop [
+	"Answer if oop is a root for objects in youngSpace"
+	^((self baseHeader: oop) bitAnd: RootBit) ~= 0
+]
+
+{ #category : #accessing }
+ObjectMemory >> lastHash [
+	^lastHash
+]
+
+{ #category : #accessing }
+ObjectMemory >> lastHash: aValue [
+	^lastHash := aValue
 ]
 
 { #category : #'object enumeration' }
@@ -2356,6 +2729,161 @@ ObjectMemory >> lastPointerWhileForwarding: oop [
 	fmt < 12 ifTrue: [^ 0]. "no pointers"
 	methodHeader := self longAt: oop + BaseHeaderSize.
 	^(self literalCountOfHeader: methodHeader) * BytesPerWord + BaseHeaderSize
+]
+
+{ #category : #'indexing primitive support' }
+ObjectMemory >> lengthOf: oop [
+	"Return the number of indexable bytes or words in the given object. Assume the argument is not an integer. For a CompiledMethod, the size of the method header (in bytes) should be subtracted from the result."
+
+	<api>
+	| header |
+	<inline: true>
+	<asmLabel: false> 
+	header := self baseHeader: oop.
+	^self lengthOf: oop baseHeader: header format: (self formatOfHeader: header)
+]
+
+{ #category : #'indexing primitive support' }
+ObjectMemory >> lengthOf: oop baseHeader: hdr format: fmt [
+	"Return the number of indexable bytes or words in the given object. Assume the given oop is not an integer. For a CompiledMethod, the size of the method header (in bytes) should be subtracted from the result of this method."
+
+	| sz |
+	<inline: true>
+	<asmLabel: false> 
+	(hdr bitAnd: TypeMask) = HeaderTypeSizeAndClass
+		ifTrue: [ sz := (self sizeHeader: oop) bitAnd: LongSizeMask ]
+		ifFalse: [ sz := (hdr bitAnd: SizeMask)].
+	sz := sz - (hdr bitAnd: Size4Bit).
+	fmt <= 4
+		ifTrue: [ ^ (sz - BaseHeaderSize) >> ShiftForWord "words"].
+	fmt < 8
+		ifTrue: [ ^ (sz - BaseHeaderSize) >> 2 "32-bit longs"]
+		ifFalse: [ ^ (sz - BaseHeaderSize) - (fmt bitAnd: 3) "bytes"]
+]
+
+{ #category : #'image segment in/out' }
+ObjectMemory >> loadImageSegmentFrom: segmentWordArray outPointers: outPointerArray [
+	"This primitive is called from Squeak as...
+		<imageSegment> loadSegmentFrom: aWordArray outPointers: anArray."
+
+"This primitive will load a binary image segment created by primitiveStoreImageSegment.  It expects the outPointer array to be of the proper size, and the wordArray to be well formed.  It will return as its value the original array of roots, and the erstwhile segmentWordArray will have been truncated to a size of zero.  If this primitive should fail, the segmentWordArray will, sadly, have been reduced to an unrecognizable and unusable jumble.  But what more could you have done with it anyway?"
+
+	| endSeg segOop fieldPtr fieldOop doingClass lastPtr extraSize mapOop lastOut outPtr hdrTypeBits header data |
+	<inline: false>
+	<var: #endSeg type: #usqInt>
+	<var: #segOop type: #usqInt>
+	<var: #fieldPtr type: #usqInt>
+	<var: #lastOut type: #usqInt>
+	<var: #outPtr type: #usqInt>
+	<var: #lastPtr type: #usqInt>
+
+	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
+	lastOut := outPointerArray + (self lastPointerOf: outPointerArray).
+	endSeg := segmentWordArray + (self sizeBitsOf: segmentWordArray) - BaseHeaderSize.
+
+	"Version check.  Byte order of the WordArray now"
+	data := self longAt: segmentWordArray + BaseHeaderSize.
+	(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
+		"Not readable -- try again with reversed bytes..."
+		[self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
+		data := self longAt: segmentWordArray + BaseHeaderSize.
+		(self readableFormat: (data bitAnd: 16rFFFF "low 2 bytes")) ifFalse:
+			"Still NG -- put things back and fail"
+			[self reverseBytesFrom: segmentWordArray + BaseHeaderSize to: endSeg + BytesPerWord.
+			DoAssertionChecks ifTrue: [self verifyCleanHeaders].
+			^0]].
+	"Reverse the Byte type objects if the data is from opposite endian machine.
+	 Test top byte.  $d on the Mac or $s on the PC.  Rest of word is equal."
+	(data >> 16) = (self imageSegmentVersion >> 16)
+		ifFalse: "Reverse the byte-type objects once"
+			[segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+				 "Oop of first embedded object"
+			self byteSwapByteObjectsFrom: segOop
+				to: endSeg + BytesPerWord
+				flipFloatsIf: false].
+
+	"Proceed through the segment, remapping pointers..."
+	segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+	[segOop <= endSeg] whileTrue:
+		[(self headerType: segOop) <= 1
+			ifTrue: ["This object has a class field (type = 0 or 1) -- start with that."
+					fieldPtr := segOop - BytesPerWord.  doingClass := true]
+			ifFalse: ["No class field -- start with first data field"
+					fieldPtr := segOop + BaseHeaderSize.  doingClass := false].
+		lastPtr := segOop + (self lastPointerOf: segOop).	"last field"
+		lastPtr > endSeg ifTrue:
+			[DoAssertionChecks ifTrue: [self verifyCleanHeaders].
+			^0 "out of bounds"].
+
+		"Go through all oops, remapping them..."
+		[fieldPtr > lastPtr] whileFalse:
+			["Examine each pointer field"
+			fieldOop := self longAt: fieldPtr.
+			doingClass ifTrue:
+				[hdrTypeBits := self headerType: fieldPtr.
+				fieldOop := fieldOop - hdrTypeBits].
+			(self isIntegerObject: fieldOop)
+				ifTrue:
+					["Integer -- nothing to do"
+					fieldPtr := fieldPtr + BytesPerWord]
+				ifFalse:
+					[(fieldOop bitAnd: 3) = 0 ifFalse:
+						[^0 "bad oop"].
+					(fieldOop bitAnd: 16r80000000) = 0
+						ifTrue: ["Internal pointer -- add segment offset"
+								mapOop := fieldOop + segmentWordArray]
+						ifFalse: ["External pointer -- look it up in outPointers"
+								outPtr := outPointerArray + (fieldOop bitAnd: 16r7FFFFFFF).
+								outPtr > lastOut ifTrue:
+									[^0 "out of bounds"].
+								mapOop := self longAt: outPtr].
+					doingClass
+						ifTrue: [self longAt: fieldPtr put: mapOop + hdrTypeBits.
+								fieldPtr := fieldPtr + 8.
+								doingClass := false]
+						ifFalse: [self longAt: fieldPtr put: mapOop.
+								fieldPtr := fieldPtr + BytesPerWord].
+					segOop < youngStart ifTrue:
+						[self possibleRootStoreInto: segOop value: mapOop]]].
+		segOop := self objectAfter: segOop].
+
+	"Again, proceed through the segment checking consistency..."
+	segOop := self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord.
+	[segOop <= endSeg] whileTrue:
+		[(self oopHasAcceptableClass: segOop) ifFalse:
+			[^0 "inconsistency"].
+		fieldPtr := segOop + BaseHeaderSize.		"first field"
+		lastPtr := segOop + (self lastPointerOf: segOop).	"last field"
+		"Go through all oops, remapping them..."
+		[fieldPtr > lastPtr] whileFalse:
+			["Examine each pointer field"
+			fieldOop := self longAt: fieldPtr.
+			(self oopHasAcceptableClass: fieldOop) ifFalse:
+				[^0 "inconsistency"].
+			fieldPtr := fieldPtr + BytesPerWord].
+		segOop := self objectAfter: segOop].
+
+	"Truncate the segment word array to size = BytesPerWord (vers stamp only)"
+	extraSize := self extraHeaderBytes: segmentWordArray.
+	hdrTypeBits := self headerType: segmentWordArray.
+	extraSize = 8
+		ifTrue: [self longAt: segmentWordArray-extraSize put: BaseHeaderSize + BytesPerWord + hdrTypeBits]
+		ifFalse: [header := self longAt: segmentWordArray.
+				self longAt: segmentWordArray
+					put: header - (header bitAnd: SizeMask) + BaseHeaderSize + BytesPerWord].	
+	"and return the roots array which was first in the segment"
+	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
+	^self oopFromChunk: segmentWordArray + BaseHeaderSize + BytesPerWord
+]
+
+{ #category : #accessing }
+ObjectMemory >> lowSpaceThreshold [
+	^lowSpaceThreshold
+]
+
+{ #category : #accessing }
+ObjectMemory >> lowSpaceThreshold: aValue [
+	^lowSpaceThreshold := aValue
 ]
 
 { #category : #'garbage collection' }
@@ -2460,6 +2988,27 @@ ObjectMemory >> markPhase [
 
 ]
 
+{ #category : #'forward compatibility' }
+ObjectMemory >> maxIdentityHash [
+	^HashMaskUnshifted
+]
+
+{ #category : #accessing }
+ObjectMemory >> memory [
+	<cmacro: '() memory'>
+	^memory
+]
+
+{ #category : #accessing }
+ObjectMemory >> memory: aValue [
+	^memory := aValue
+]
+
+{ #category : #accessing }
+ObjectMemory >> memoryLimit [
+	^memoryLimit
+]
+
 { #category : #'header access' }
 ObjectMemory >> newObjectHash [
 	"Answer a new 16-bit pseudo-random number for use as an identity hash."
@@ -2474,6 +3023,22 @@ ObjectMemory >> nilObject [
 	<api>
 	"For access from BitBlt module & Cogit"
 	^ nilObj
+]
+
+{ #category : #'object format' }
+ObjectMemory >> nonWeakFieldsOf: oop [
+	"Return the number of non-weak fields in oop (i.e. the number of fixed fields).
+	Note: The following is copied from fixedFieldsOf:format:length: since we do know
+	the format of the oop (e.g. format = 4) and thus don't need the length."
+	| class classFormat |
+	<inline: false> "No need to inline - we won't call this often"
+
+	self assert: (self isWeakNonInt: oop).
+
+	"fmt = 3 or 4: mixture of fixed and indexable fields, so must look at class format word"
+	class := self fetchClassOfNonInt: oop.
+	classFormat := self formatOfClass: class.
+	^(classFormat >> 11 bitAnd: 16rC0) + (classFormat >> 2 bitAnd: 16r3F) - 1
 ]
 
 { #category : #'garbage collection' }
@@ -2545,6 +3110,12 @@ ObjectMemory >> objectAfterWhileForwarding: oop [
 	^ self oopFromChunk: (oop + sz)
 ]
 
+{ #category : #simulation }
+ObjectMemory >> objectMemory [
+	<doNotGenerate>
+	^self
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
 	"This message is deprecated but supported for a while via a tweak to sqVirtualMachine.[ch] Use fetchLong32, fetchLong64 or fetchPointer instead for new code"
@@ -2552,53 +3123,65 @@ ObjectMemory >> obsoleteDontUseThisFetchWord: fieldIndex ofObject: oop [
 	^self fetchLong32: fieldIndex ofObject: oop
 ]
 
-{ #category : #'oop comparison' }
-ObjectMemory >> oop: anOop isGreaterThan: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
+{ #category : #'debug support' }
+ObjectMemory >> okayOop: signedOop [
+	"Verify that the given oop is legitimate. Check address, header, and size but not class."
 
-	^ (self cCoerce: anOop to: #usqInt)
-		> (self cCoerce: otherOop to: #usqInt)
-]
+	| sz type fmt unusedBit oop |
+	<var: #oop type: 'usqInt'>
+	oop := self cCoerce: signedOop to: 'usqInt'.
 
-{ #category : #'oop comparison' }
-ObjectMemory >> oop: anOop isGreaterThan: baseOop andLessThan: limitOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
+	"address and size checks"
+	(self isIntegerObject: oop) ifTrue: [ ^true ].
+	(oop < endOfMemory)
+		ifFalse: [ self error: 'oop is not a valid address'. ^false ].
+	((oop \\ BytesPerWord) = 0)
+		ifFalse: [ self error: 'oop is not a word-aligned address'. ^false ].
+	sz := self sizeBitsOf: oop.
+	(oop + sz) < endOfMemory
+		ifFalse: [ self error: 'oop size would make it extend beyond the end of memory'. ^false ].
 
-	^(self cCoerce: anOop to: #usqInt) > (self cCoerce: baseOop to: #usqInt)
-	  and: [(self cCoerce: anOop to: #usqInt) < (self cCoerce: limitOop to: #usqInt)]
-]
+	"header type checks"
+	type := self headerType: oop.
+	type = HeaderTypeFree
+		ifTrue:  [ self error: 'oop is a free chunk, not an object'. ^false ].
+	type = HeaderTypeShort ifTrue: [
+		(self compactClassIndexOf: oop) = 0
+			ifTrue:  [ self error: 'cannot have zero compact class field in a short header'. ^false ].
+	].
+	type = HeaderTypeClass ifTrue: [
+		((oop >= BytesPerWord) and: [(self headerType: oop - BytesPerWord) = type])
+			ifFalse: [ self error: 'class header word has wrong type'. ^false ].
+	].
+	type = HeaderTypeSizeAndClass ifTrue: [
+		((oop >= (BytesPerWord*2)) and:
+		 [(self headerType: oop - (BytesPerWord*2)) = type and:
+		 [(self headerType: oop - BytesPerWord) = type]])
+			ifFalse: [ self error: 'class header word has wrong type'. ^false ].
+	].
 
-{ #category : #'oop comparison' }
-ObjectMemory >> oop: anOop isGreaterThanOrEqualTo: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
+	"format check"
+	fmt := self formatOf: oop.
+	((fmt = 5) | (fmt = 7))
+		ifTrue:  [ self error: 'oop has an unknown format type'. ^false ].
 
-	^ (self cCoerce: anOop to: #usqInt)
-		>= (self cCoerce: otherOop to: #usqInt)
-]
+	"mark and root bit checks"
+	unusedBit := 16r20000000.
+	BytesPerWord = 8
+		ifTrue:
+			[unusedBit := unusedBit << 16.
+			 unusedBit := unusedBit << 16].
+	((self longAt: oop) bitAnd: unusedBit) = 0
+		ifFalse: [ self error: 'unused header bit 30 is set; should be zero'. ^false ].
+"xxx
+	((self longAt: oop) bitAnd: MarkBit) = 0
+		ifFalse: [ self error: 'mark bit should not be set except during GC' ].
+xxx"
+	(((self longAt: oop) bitAnd: RootBit) = 1 and:
+	 [oop >= youngStart])
+		ifTrue: [ self error: 'root bit is set in a young object'. ^false ].
+	^true
 
-{ #category : #'oop comparison' }
-ObjectMemory >> oop: anOop isLessThan: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-
-	^ (self cCoerce: anOop to: #usqInt) < (self cCoerce: otherOop to: #usqInt)
-]
-
-{ #category : #'oop comparison' }
-ObjectMemory >> oop: anOop isLessThanOrEqualTo: otherOop [
-	"Compare two oop values, treating them as object memory locations.
-	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
-	method will be inlined during C translation."
-
-	^ (self cCoerce: anOop to: #usqInt)
-		<= (self cCoerce: otherOop to: #usqInt)
 ]
 
 { #category : #'oop/chunk conversion' }
@@ -2606,6 +3189,38 @@ ObjectMemory >> oopFromChunk: chunk [
 	"Compute the oop of this chunk by adding its extra header bytes."
 
 	^ chunk + (self extraHeaderBytes: chunk)
+]
+
+{ #category : #'image segment in/out' }
+ObjectMemory >> oopHasAcceptableClass: signedOop [
+	"Similar to oopHasOkayClass:, except that it only returns true or false."
+
+	| oopClass formatMask behaviorFormatBits oopFormatBits oop |
+	<var: #oop type: #usqInt>
+	<var: #oopClass type: #usqInt>
+
+	(self isIntegerObject: signedOop) ifTrue: [^ true].
+
+	oop := self cCoerce: signedOop to: #usqInt.
+
+	oop < freeBlock ifFalse: [^ false].
+	((oop \\ BytesPerWord) = 0) ifFalse: [^ false].
+	(oop + (self sizeBitsOf: oop)) < freeBlock ifFalse: [^ false].
+	oopClass := self cCoerce: (self fetchClassOfNonInt: oop) to: #usqInt.
+
+	(self isIntegerObject: oopClass) ifTrue: [^ false].
+	(oopClass < freeBlock) ifFalse: [^ false].
+	((oopClass \\ BytesPerWord) = 0) ifFalse: [^ false].
+	(oopClass + (self sizeBitsOf: oopClass)) < freeBlock ifFalse: [^ false].
+	((self isPointersNonInt: oopClass) and: [(self lengthOf: oopClass) >= 3]) ifFalse: [^ false].
+	(self isBytesNonInt: oop)
+		ifTrue: [ formatMask := 16rC00 ]  "ignore extra bytes size bits"
+		ifFalse: [ formatMask := 16rF00 ].
+
+	behaviorFormatBits := (self formatOfClass: oopClass) bitAnd: formatMask.
+	oopFormatBits := (self baseHeader: oop) bitAnd: formatMask.
+	behaviorFormatBits = oopFormatBits ifFalse: [^ false].
+	^ true
 ]
 
 { #category : #'interpreter access' }
@@ -2695,6 +3310,33 @@ ObjectMemory >> primitiveErrorTable [
 	^self splObj: PrimErrTableIndex
 ]
 
+{ #category : #'image segment in/out' }
+ObjectMemory >> primitiveFailCodeAfterCleanup: outPointerArray [
+	"If the storeSegment primitive fails, it must clean up first."
+
+	| i lastAddr |   "Store nils throughout the outPointer array."
+	lastAddr := outPointerArray + (self lastPointerOf: outPointerArray).
+	i := outPointerArray + BaseHeaderSize.
+	[i <= lastAddr] whileTrue:
+		[self longAt: i put: nilObj.
+		i := i + BytesPerWord].
+
+	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
+	^PrimErrGenericFailure
+]
+
+{ #category : #'memory access' }
+ObjectMemory >> printInstancesOf: aClassOop [
+	"Scan the heap printing the oops of any and all objects that are instances of aClassOop"
+	| oop |
+	<api>
+	oop := self firstAccessibleObject.
+	[oop = nil] whileFalse:
+		[(self fetchClassOfNonInt: oop) = aClassOop ifTrue:
+			[self printHex: oop; cr].
+		 oop := self accessibleObjectAfter: oop]
+]
+
 { #category : #'memory access' }
 ObjectMemory >> printMethodReferencesTo: anOop [
 	"Scan the heap printing the oops of any and all objects that refer to anOop"
@@ -2706,7 +3348,7 @@ ObjectMemory >> printMethodReferencesTo: anOop [
 			[i := (self literalCountOf: oop) - 1.
 			 [i >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
-					[self printNum: oop; print: ' @ '; printNum: i; cr.
+					[self printHex: oop; print: ' @ '; printNum: i; cr.
 					 i := 0].
 				 i := i - 1]].
 		 oop := self accessibleObjectAfter: oop]
@@ -2729,7 +3371,7 @@ ObjectMemory >> printReferencesTo: anOop [
 						ifFalse: [i := (self lengthOf: oop) - 1]].
 			[i >= 0] whileTrue:
 				[anOop = (self fetchPointer: i ofObject: oop) ifTrue:
-					[self printNum: oop; print: ' @ '; printNum: i; cr.
+					[self printHex: oop; print: ' @ '; printNum: i; cr.
 					 i := 0].
 				 i := i - 1]].
 		 oop := self accessibleObjectAfter: oop]
@@ -2756,9 +3398,24 @@ ObjectMemory >> remap: oop [
 ]
 
 { #category : #accessing }
+ObjectMemory >> remapBuffer [
+	^remapBuffer
+]
+
+{ #category : #accessing }
+ObjectMemory >> remapBuffer: aValue [
+	^remapBuffer := aValue
+]
+
+{ #category : #accessing }
 ObjectMemory >> remapBufferCount [
 	<cmacro: '() GIV(remapBufferCount)'>
 	^remapBufferCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> remapBufferCount: aValue [
+	^remapBufferCount := aValue
 ]
 
 { #category : #'gc -- compaction' }
@@ -2904,6 +3561,54 @@ ObjectMemory >> restoreHeadersAfterForwardBecome: copyHashFlag [
 			fwdBlock := fwdBlock + (BytesPerWord*4)]
 ]
 
+{ #category : #'image segment in/out' }
+ObjectMemory >> restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut [
+
+	"Restore headers smashed by forwarding links"
+	| tablePtr oop header |
+	tablePtr := firstIn.
+	[self oop: tablePtr isLessThanOrEqualTo: lastIn] whileTrue:
+		[oop := self longAt: tablePtr.
+		header := self longAt: hdrBaseIn + (tablePtr-firstIn).
+		self longAt: oop put: header.
+		tablePtr := tablePtr + BytesPerWord].
+	tablePtr := firstOut.
+	[self oop: tablePtr isLessThanOrEqualTo: lastOut] whileTrue:
+		[oop := self longAt: tablePtr.
+		header := self longAt: hdrBaseOut + (tablePtr-firstOut).
+		self longAt: oop put: header.
+		tablePtr := tablePtr + BytesPerWord].
+	
+	"Clear all mark bits"
+	oop := self firstObject.
+	[self oop: oop isLessThan: endOfMemory] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[self longAt: oop put: ((self longAt: oop) bitAnd: AllButMarkBit)].
+		oop := self objectAfter: oop]
+]
+
+{ #category : #'image save/restore' }
+ObjectMemory >> reverseBytesFrom: startAddr to: stopAddr [
+	"Byte-swap the given range of memory (not inclusive of stopAddr!)."
+	| addr |
+	self flag: #Dan.
+	addr := startAddr.
+	[self oop: addr isLessThan: stopAddr] whileTrue:
+		[self longAt: addr put: (self byteSwapped: (self longAt: addr)).
+		addr := addr + BytesPerWord].
+]
+
+{ #category : #'image save/restore' }
+ObjectMemory >> reverseWordsFrom: startAddr to: stopAddr [
+	"Word-swap the given range of memory, excluding stopAddr."
+
+	| addr |
+	addr := startAddr.
+	[self oop: addr isLessThan: stopAddr] whileTrue:
+		[self longAt: addr put: (self wordSwapped: (self longAt: addr)).
+		addr := addr + BytesPerWord].
+]
+
 { #category : #'header access' }
 ObjectMemory >> rightType: headerWord [
 	"Compute the correct header type for an object based on the size and compact class fields of the given base header word, rather than its type bits. This is used during marking, when the header type bits are used to record the state of tracing."
@@ -2913,6 +3618,26 @@ ObjectMemory >> rightType: headerWord [
 		ifFalse: [ (headerWord bitAnd: CompactClassMask) = 0
 				ifTrue: [ ^HeaderTypeClass ]
 				ifFalse: [ ^HeaderTypeShort ]].
+]
+
+{ #category : #accessing }
+ObjectMemory >> rootTable [
+	^rootTable
+]
+
+{ #category : #accessing }
+ObjectMemory >> rootTable: aValue [
+	^rootTable := aValue
+]
+
+{ #category : #accessing }
+ObjectMemory >> rootTableCount [
+	^rootTableCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> rootTableCount: aValue [
+	^rootTableCount := aValue
 ]
 
 { #category : #'debug printing' }
@@ -2946,6 +3671,13 @@ ObjectMemory >> setEndOfMemory: newEndOfMemory [
 	endOfMemory := newEndOfMemory
 ]
 
+{ #category : #'header access' }
+ObjectMemory >> setHashBitsOf: oop to: hash [
+	self longAt: oop
+		put: (((self baseHeader: oop) bitAnd: HashBits bitInvert32)
+				bitOr: (hash bitAnd: HashMaskUnshifted) << HashBitsOffset)
+]
+
 { #category : #initialization }
 ObjectMemory >> setMemoryLimit: newMemoryLimit [
 	self assert: (newMemoryLimit bitAnd: BytesPerWord - 1) = 0.
@@ -2969,6 +3701,26 @@ ObjectMemory >> shrinkObjectMemory: delta [
 	limit = memoryLimit ifFalse:
 		[self setMemoryLimit: limit - 24. "remove a tad for safety"
 		 self initializeMemoryFirstFree: freeBlock]
+]
+
+{ #category : #accessing }
+ObjectMemory >> shrinkThreshold [
+	^shrinkThreshold
+]
+
+{ #category : #accessing }
+ObjectMemory >> shrinkThreshold: aValue [
+	^shrinkThreshold := aValue
+]
+
+{ #category : #accessing }
+ObjectMemory >> signalLowSpace [
+	^signalLowSpace
+]
+
+{ #category : #accessing }
+ObjectMemory >> signalLowSpace: aValue [
+	^signalLowSpace := aValue
 ]
 
 { #category : #'header access' }
@@ -3008,10 +3760,41 @@ ObjectMemory >> sizeOfFree: oop [
 	^ (self longAt: oop) bitAnd: AllButTypeMask
 ]
 
+{ #category : #'translation support' }
+ObjectMemory >> sizeof: objectSymbolOrClass [
+	<doNotGenerate>
+	objectSymbolOrClass isInteger ifTrue:
+		[self flag: #Dan.
+		 ^BytesPerWord].
+	objectSymbolOrClass isSymbol ifTrue:
+		[(objectSymbolOrClass == #sqLong
+		 or: [objectSymbolOrClass == #double]) ifTrue:
+			[^8].
+		 self error: 'unrecognized C type name'].
+	^(objectSymbolOrClass isBehavior
+			ifTrue: [objectSymbolOrClass]
+			ifFalse: [objectSymbolOrClass class]) alignedByteSize
+]
+
+{ #category : #'object format' }
+ObjectMemory >> slotSizeOf: oop [
+	"Returns the number of slots in the receiver.
+	If the receiver is a byte object, return the number of bytes.
+	Otherwise return the number of words."
+	(self isIntegerObject: oop) ifTrue:[^0].
+	^self lengthOf: oop
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> splObj: index [
 	"Return one of the objects in the SpecialObjectsArray"
 	^ self fetchPointer: index ofObject: specialObjectsOop
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> splObj: index put: anObject [
+	"Set one of the objects in the SpecialObjectsArray"
+	self storePointer: index ofObject: specialObjectsOop withValue: anObject
 ]
 
 { #category : #'gc -- mark and sweep' }
@@ -3084,11 +3867,275 @@ ObjectMemory >> startOfMemory [
 	^memory
 ]
 
+{ #category : #accessing }
+ObjectMemory >> statCompMoveCount [
+	^statCompMoveCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statFullGCUsecs [
+	^statFullGCUsecs
+]
+
+{ #category : #accessing }
+ObjectMemory >> statFullGCs [
+	^statFullGCs
+]
+
+{ #category : #accessing }
+ObjectMemory >> statGrowMemory [
+	^statGrowMemory
+]
+
+{ #category : #accessing }
+ObjectMemory >> statIGCDeltaUsecs [
+	^statIGCDeltaUsecs
+]
+
+{ #category : #accessing }
+ObjectMemory >> statIncrGCUsecs [
+	^statIncrGCUsecs
+]
+
+{ #category : #accessing }
+ObjectMemory >> statIncrGCs [
+	^statIncrGCs
+]
+
+{ #category : #accessing }
+ObjectMemory >> statMarkCount [
+	^statMarkCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statMkFwdCount [
+	^statMkFwdCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statRootTableCount [
+	^statRootTableCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statRootTableOverflows [
+	^statRootTableOverflows
+]
+
+{ #category : #accessing }
+ObjectMemory >> statShrinkMemory [
+	^statShrinkMemory
+]
+
+{ #category : #accessing }
+ObjectMemory >> statSpecialMarkCount [
+	^statSpecialMarkCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statSurvivorCount [
+	^statSurvivorCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statSweepCount [
+	^statSweepCount
+]
+
+{ #category : #accessing }
+ObjectMemory >> statTenures [
+	^statTenures
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> storeByte: byteIndex ofObject: oop withValue: valueByte [
 
 	^ self byteAt: oop + BaseHeaderSize + byteIndex
 		put: valueByte
+]
+
+{ #category : #'image segment in/out' }
+ObjectMemory >> storeImageSegmentInto: segmentWordArray outPointers: outPointerArray roots: arrayOfRoots [
+
+"This primitive will store a binary image segment (in the same format as the Squeak image file) of the receiver and every object in its proper tree of subParts (ie, that is not refered to from anywhere else outside the tree).  All pointers from within the tree to objects outside the tree will be copied into the array of outpointers.  In their place in the image segment will be an oop equal to the offset in the outPointer array (the first would be 4). but with the high bit set."
+
+"The primitive expects the array and wordArray to be more than adequately long.  In this case it returns normally, and truncates the two arrays to exactly the right size.  To simplify truncation, both incoming arrays are required to be 256 bytes or more long (ie with 3-word headers).  If either array is too small, the primitive will fail, but in no other case.
+
+During operation of the primitive, it is necessary to convert from both internal and external oops to their mapped values.  To make this fast, the headers of the original objects in question are replaced by the mapped values (and this is noted by adding the forbidden XX header type).  Tables are kept of both kinds of oops, as well as of the original headers for restoration.
+
+To be specific, there are two similar two-part tables, the outpointer array, and one in the upper fifth of the segmentWordArray.  Each grows oops from the bottom up, and preserved headers from halfway up.
+
+In case of either success or failure, the headers must be restored.  In the event of primitive failure, the table of outpointers must also be nilled out (since the garbage in the high half will not have been discarded."
+
+	| savedYoungStart lastOut lastIn firstIn lastSeg endSeg segOop fieldPtr fieldOop mapOop
+	  doingClass lastPtr extraSize hdrTypeBits hdrBaseIn hdrBaseOut header firstOut versionOffset |
+	<inline: false>
+	<var: #firstIn type: #usqInt>
+	<var: #lastIn type: #usqInt>
+	<var: #firstOut type: #usqInt>
+	<var: #lastOut type: #usqInt>
+	<var: #hdrBaseIn type: #usqInt>
+	<var: #hdrBaseOut type: #usqInt>
+	<var: #lastSeg type: #usqInt>
+	<var: #endSeg type: #usqInt>
+	<var: #fieldPtr type: #usqInt>
+	<var: #lastPtr type: #usqInt>
+	<var: #segOop type: #usqInt>
+	<var: #savedYoungStart type: #usqInt>
+
+	((self headerType: outPointerArray) = HeaderTypeSizeAndClass			"Must be 3-word header"
+	and: [(self headerType: segmentWordArray) = HeaderTypeSizeAndClass])	"Must be 3-word header"
+		ifFalse: [^PrimErrGenericFailure].
+
+	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
+	"Use the top half of outPointers for saved headers."
+	firstOut := outPointerArray + BaseHeaderSize.
+	lastOut := firstOut - BytesPerWord.
+	hdrBaseOut := outPointerArray + ((self lastPointerOf: outPointerArray) // (BytesPerWord*2) * BytesPerWord). "top half"
+
+	lastSeg := segmentWordArray.
+	endSeg := segmentWordArray + (self sizeBitsOf: segmentWordArray) - BytesPerWord.
+
+	"Write a version number for byte order and version check"
+	versionOffset := BytesPerWord.
+	lastSeg := lastSeg + versionOffset.
+	lastSeg > endSeg ifTrue: [^PrimErrGenericFailure].
+	self longAt: lastSeg put: self imageSegmentVersion.
+
+	"Allocate top 1/8 of segment for table of internal oops and saved headers"
+	firstIn := endSeg - ((self sizeBitsOf: segmentWordArray) // (BytesPerWord*8) * BytesPerWord).  "Take 1/8 of seg"
+	lastIn := firstIn - BytesPerWord.
+	hdrBaseIn := firstIn + ((self sizeBitsOf: segmentWordArray) // (BytesPerWord*16) * BytesPerWord). "top half of that"
+
+	"First mark the rootArray and all root objects."
+	self longAt: arrayOfRoots put: ((self longAt: arrayOfRoots) bitOr: MarkBit).
+	lastPtr := arrayOfRoots + (self lastPointerOf: arrayOfRoots).
+	fieldPtr := arrayOfRoots + BaseHeaderSize.
+	[fieldPtr <= lastPtr] whileTrue:
+		[fieldOop := self longAt: fieldPtr.
+		(self isIntegerObject: fieldOop) ifFalse:
+			[self longAt: fieldOop put: ((self longAt: fieldOop) bitOr: MarkBit)].
+		fieldPtr := fieldPtr + BytesPerWord].
+
+	"Then do a mark pass over all objects.  This will stop at our marked roots,
+	thus leaving our segment unmarked in their shadow."
+	savedYoungStart := youngStart.
+	youngStart := self startOfMemory.  "process all of memory"
+	self markAndTraceInterpreterOops: false.	"and special objects array"
+	youngStart := savedYoungStart.
+	
+	"Finally unmark the rootArray and all root objects."
+	self longAt: arrayOfRoots put: ((self longAt: arrayOfRoots) bitAnd: AllButMarkBit).
+	fieldPtr := arrayOfRoots + BaseHeaderSize.
+	[fieldPtr <= lastPtr] whileTrue:
+		[fieldOop := self longAt: fieldPtr.
+		(self isIntegerObject: fieldOop) ifFalse:
+			[self longAt: fieldOop put: ((self longAt: fieldOop) bitAnd: AllButMarkBit)].
+		fieldPtr := fieldPtr + BytesPerWord].
+
+	"All external objects, and only they, are now marked.
+	Copy the array of roots into the segment, and forward its oop."
+	lastIn := lastIn + BytesPerWord.
+	(lastIn >= hdrBaseIn
+	 or: [0 = (lastSeg := self copyObj: arrayOfRoots toSegment: segmentWordArray addr: lastSeg stopAt: firstIn saveOopAt: lastIn headerAt: hdrBaseIn + (lastIn - firstIn))]) ifTrue:
+		[lastIn := lastIn - BytesPerWord.
+		self restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut.
+		^self primitiveFailCodeAfterCleanup: outPointerArray].
+
+	"Now run through the segment fixing up all the pointers.
+	Note that more objects will be added to the segment as we make our way along."
+	segOop := self oopFromChunk: segmentWordArray + versionOffset + BaseHeaderSize.
+	[segOop <= lastSeg] whileTrue:
+		[(self headerType: segOop) <= 1
+			ifTrue: ["This object has a class field (type=0 or 1) -- start with that."
+					fieldPtr := segOop - BytesPerWord.  doingClass := true]
+			ifFalse: ["No class field -- start with first data field"
+					fieldPtr := segOop + BaseHeaderSize.  doingClass := false].
+		lastPtr := segOop + (self lastPointerOf: segOop).	"last field"
+
+		"Go through all oops, remapping them..."
+		[fieldPtr > lastPtr] whileFalse:
+			["Examine each pointer field"
+			fieldOop := self longAt: fieldPtr.
+			doingClass ifTrue:
+				[hdrTypeBits := fieldOop bitAnd: TypeMask.
+				fieldOop := fieldOop - hdrTypeBits].
+			(self isIntegerObject: fieldOop)
+				ifTrue: ["Just an integer -- nothing to do"
+						fieldPtr := fieldPtr + BytesPerWord]
+				ifFalse:
+				[header := self longAt: fieldOop.
+				(header bitAnd: TypeMask) = HeaderTypeFree
+					ifTrue: ["Has already been forwarded -- this is the link"
+							mapOop := header bitAnd: AllButTypeMask]
+					ifFalse:
+					[((self longAt: fieldOop) bitAnd: MarkBit) = 0
+						ifTrue:
+							["Points to an unmarked obj -- an internal pointer.
+							Copy the object into the segment, and forward its oop."
+							lastIn := lastIn + BytesPerWord.
+							(lastIn >= hdrBaseIn
+							or: [0 = (lastSeg := self copyObj: fieldOop toSegment: segmentWordArray addr: lastSeg stopAt: firstIn saveOopAt: lastIn headerAt: hdrBaseIn + (lastIn - firstIn))]) ifTrue:
+								["Out of space in segment"
+								lastIn := lastIn - BytesPerWord.
+								self restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut.
+								^self primitiveFailCodeAfterCleanup: outPointerArray].
+							mapOop := (self longAt: fieldOop) bitAnd: AllButTypeMask]
+						ifFalse:
+							["Points to a marked obj -- an external pointer.
+							Map it as a tagged index in outPointers, and forward its oop."
+							lastOut := lastOut + BytesPerWord.
+							lastOut >= hdrBaseOut ifTrue:
+								["Out of space in outPointerArray"
+								lastOut := lastOut - BytesPerWord.
+								self restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut.
+								^self primitiveFailCodeAfterCleanup: outPointerArray].
+.							mapOop := lastOut - outPointerArray bitOr: 16r80000000.
+							self forward: fieldOop to: mapOop
+								savingOopAt: lastOut andHeaderAt: hdrBaseOut + (lastOut - firstOut)]].
+					"Replace the oop by its mapped value"
+					doingClass
+						ifTrue: [self longAt: fieldPtr put: mapOop + hdrTypeBits.
+								fieldPtr := fieldPtr + (BytesPerWord*2).
+								doingClass := false]
+						ifFalse: [self longAt: fieldPtr put: mapOop.
+								fieldPtr := fieldPtr + BytesPerWord]]].
+		segOop := self objectAfter: segOop].
+
+	self restoreHeadersFrom: firstIn to: lastIn from: hdrBaseIn and: firstOut to: lastOut from: hdrBaseOut.
+
+	"Truncate the outPointerArray..."
+	((outPointerArray + (self lastPointerOf: outPointerArray) - lastOut) < 12
+		or: [(endSeg - lastSeg) < 12]) ifTrue:
+			["Not enough room to insert simple 3-word headers"
+			^self primitiveFailCodeAfterCleanup: outPointerArray].
+	extraSize := self extraHeaderBytes: segmentWordArray.
+	hdrTypeBits := self headerType: segmentWordArray.
+	"Copy the 3-word wordArray header to establish a free chunk."
+	self transfer: 3
+		from: segmentWordArray - extraSize
+		to: lastOut+BytesPerWord.
+	"Adjust the size of the original as well as the free chunk."
+	self longAt: lastOut+BytesPerWord
+		put: outPointerArray + (self lastPointerOf: outPointerArray) - lastOut - extraSize + hdrTypeBits.
+	self longAt: outPointerArray-extraSize
+		put: lastOut - firstOut + (BytesPerWord*2) + hdrTypeBits.
+	"Note that pointers have been stored into roots table"
+	self beRootIfOld: outPointerArray.
+
+	"Truncate the image segment..."
+	"Copy the 3-word wordArray header to establish a free chunk."
+	self transfer: 3
+		from: segmentWordArray - extraSize
+		to: lastSeg+BytesPerWord.
+	"Adjust the size of the original as well as the free chunk."
+	self longAt: segmentWordArray-extraSize
+		put: lastSeg - segmentWordArray + BaseHeaderSize + hdrTypeBits.
+	self longAt: lastSeg+BytesPerWord
+		put: endSeg - lastSeg - extraSize + hdrTypeBits.
+
+	DoAssertionChecks ifTrue: [self verifyCleanHeaders].
+	^PrimNoErr
 ]
 
 { #category : #'interpreter access' }
@@ -3107,6 +4154,17 @@ ObjectMemory >> storePointer: fieldIndex ofObject: oop withValue: valuePointer [
 	].
 
 	^ self longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
+		put: valuePointer
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
+	"Like storePointer:ofObject:withValue:, but the caller guarantees that the
+	 object being stored into is a young object or is already marked as a root."
+	<api>
+	<inline: true>
+	^self
+		longAt: oop + BaseHeaderSize + (fieldIndex << ShiftForWord)
 		put: valuePointer
 ]
 
@@ -3245,11 +4303,35 @@ ObjectMemory >> tenuringIncrementalGC [
 	self incrementalGC
 ]
 
+{ #category : #accessing }
+ObjectMemory >> tenuringThreshold [
+	^tenuringThreshold
+]
+
+{ #category : #accessing }
+ObjectMemory >> tenuringThreshold: aValue [
+	^tenuringThreshold := aValue
+]
+
 { #category : #'interpreter access' }
 ObjectMemory >> topRemappableOop [
 	<api>
 	"Returns the top of the remappable oop. Useful when writing loops."
 	^remapBuffer at: remapBufferCount
+]
+
+{ #category : #utilities }
+ObjectMemory >> transfer: count from: src to: dst [ 
+	| in out lastIn |
+	<inline: true>
+	self flag: #Dan.  "Need to check all senders before converting this for 64 bits"
+	in := src - BytesPerWord.
+	lastIn := in + (count * BytesPerWord).
+	out := dst - BytesPerWord.
+	[self oop: in isLessThan: lastIn]
+		whileTrue: [self
+				longAt: (out := out + BytesPerWord)
+				put: (self longAt: (in := in + BytesPerWord))]
 ]
 
 { #category : #'plugin support' }
@@ -3325,7 +4407,86 @@ ObjectMemory >> upward [
 	^nil "for Slang..."
 ]
 
-{ #category : #'memory access' }
+{ #category : #simulation }
 ObjectMemory >> validate [
-"null method just to stop compilation of interp.c from barfing"
+	"Validate all the objects in the heap.  This is a noop unless simulating, but is sent
+	 so we need a null implementation when generating code."
+	<cmacro: '() 0'>
+	| oop prev |
+	self interpreter transcript show: 'Validating...'.
+	oop := self firstObject.
+	[oop < endOfMemory] whileTrue: [
+		self validate: oop.
+		prev := oop.  "look here if debugging prev obj overlapping this one"
+		oop := self objectAfter: oop.
+	].
+	prev := prev.  "Don't offer to delete this please"
+	self interpreter transcript show: 'done.'; cr
+]
+
+{ #category : #simulation }
+ObjectMemory >> validate: oop [
+	<doNotGenerate>
+	| header type cc sz fmt nextChunk | 
+	header := self longAt: oop.
+	type := header bitAnd: 3.
+	type = 2 ifFalse: [type = (self rightType: header) ifFalse: [self halt]].
+	sz := (header bitAnd: SizeMask) >> 2.
+	(self isFreeObject: oop)
+		ifTrue: [ nextChunk := oop + (self sizeOfFree: oop) ]
+		ifFalse: [  nextChunk := oop + (self sizeBitsOf: oop) ].
+	nextChunk > endOfMemory
+		ifTrue: [oop = endOfMemory ifFalse: [self halt]].
+	(self headerType: nextChunk) = 0 ifTrue: [
+		(self headerType: (nextChunk + (BytesPerWord*2))) = 0 ifFalse: [self halt]].
+	(self headerType: nextChunk) = 1 ifTrue: [
+		(self headerType: (nextChunk + BytesPerWord)) = 1 ifFalse: [self halt]].
+	type = 2 ifTrue:
+		["free block" ^ self].
+	fmt := self formatOfHeader: header.
+	cc := self compactClassIndexOfHeader: header.
+	cc > 16 ifTrue: [self halt].	"up to 32 are legal, but not used"
+	type = 0 ifTrue:
+		["three-word header"
+		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
+		((self longAt: oop-(BytesPerWord*2)) bitAnd: 3) = type ifFalse: [self halt].
+		((self longAt: oop-BytesPerWord) = type) ifTrue: [self halt].	"Class word is 0"
+		sz = 0 ifFalse: [self halt]].
+	type = 1 ifTrue:
+		["two-word header"
+		((self longAt: oop-BytesPerWord) bitAnd: 3) = type ifFalse: [self halt].
+		cc > 0 ifTrue: [sz = 1 ifFalse: [self halt]].
+		sz = 0 ifTrue: [self halt]].
+	type = 3 ifTrue:
+		["one-word header"
+		cc = 0 ifTrue: [self halt]].
+	fmt = 5 ifTrue: [self halt].
+	fmt = 7 ifTrue: [self halt].
+	fmt >= 12 ifTrue:
+		["CompiledMethod -- check for integer header"
+		(self isIntegerObject: (self longAt: oop + BytesPerWord)) ifFalse: [self halt]].
+]
+
+{ #category : #'image segment in/out' }
+ObjectMemory >> verifyCleanHeaders [
+	| oop |
+	oop := self firstObject.
+	[self oop: oop isLessThan: endOfMemory] whileTrue:
+		[(self isFreeObject: oop)
+			ifTrue: ["There should only be one free block at end of memory."
+					(self objectAfter: oop) = endOfMemory
+						ifFalse: [self error: 'Invalid obj with HeaderTypeBits = Free.']]
+			ifFalse: [(self isMarked: oop) ifTrue:
+						[self error: 'Invalid obj with MarkBit set.']].
+		oop := self objectAfter: oop]
+]
+
+{ #category : #'memory access' }
+ObjectMemory >> vmEndianness [
+	"return 0 for little endian, 1 for big endian"
+	"?!*#$%! _Terrible_ name. Call it what it is.
+	 VMBIGENDIAN or VMLITTLEENDIAN.  Dont leave us guessing!!!!
+	 Alas this has to remain for backward compatibility."
+
+	^VMBIGENDIAN ifTrue: [1] ifFalse: [0]
 ]

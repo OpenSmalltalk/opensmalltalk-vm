@@ -186,6 +186,12 @@ AbstractInstructionTests >> generateInstructions [
 	^instructions
 ]
 
+{ #category : #accessing }
+AbstractInstructionTests >> objectMemory [
+	"hack for testing"
+	^nil
+]
+
 { #category : #private }
 AbstractInstructionTests >> pairs: aRange do: aBinaryBlock [
 	aRange do: [:a| aRange do: [:b| aBinaryBlock value: a value: b]]

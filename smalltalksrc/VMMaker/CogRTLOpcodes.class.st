@@ -271,12 +271,10 @@ CogRTLOpcodes class >> initialize [
 
 { #category : #'debug printing' }
 CogRTLOpcodes class >> nameForOpcode: opcode [ "<Integer>"
-	^(classPool keyAtValue: opcode ifAbsent: [])
-		ifNotNil:
-			[:opcodeName|
-			((opcodeName beginsWith: 'First')
-			 or: [opcodeName beginsWith: 'Last'])
-				ifTrue: [#(JumpLong JumpBelowOrEqual Jump) detect: [:k| (classPool at: k) = opcode]]
-				ifFalse: [opcodeName]]
-		ifNil: [opcode printString]
+	^(classPool keyAtValue: opcode ifAbsent: []) ifNotNil:
+		[:opcodeName|
+		((opcodeName beginsWith: 'First')
+		 or: [opcodeName beginsWith: 'Last'])
+			ifTrue: [#(JumpLong JumpBelowOrEqual Jump) detect: [:k| (classPool at: k) = opcode]]
+			ifFalse: [opcodeName]]
 ]

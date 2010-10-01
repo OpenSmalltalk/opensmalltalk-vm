@@ -96,9 +96,9 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'coInterpreter',
+		'objectMemory',
 		'objectRepresentation',
 		'processor',
-		'threadManager',
 		'methodZone',
 		'methodZoneBase',
 		'codeBase',
@@ -111,6 +111,7 @@ Class {
 		'printInstructions',
 		'clickConfirm',
 		'breakPC',
+		'breakBlock',
 		'singleStep',
 		'guardPageSize',
 		'traceLinkedSends',
@@ -327,11 +328,7 @@ Cogit class >> declareCVarsIn: aCCodeGenerator [
 		addHeaderFile:'<stddef.h>'; "for e.g. offsetof"
 		addHeaderFile:'"sqCogStackAlignment.h"';
 		addHeaderFile:'"cogmethod.h"';
-		addHeaderFile:'#if COGMTVM';
-		addHeaderFile:'"cointerpmt.h"';
-		addHeaderFile:'#else';
 		addHeaderFile:'"cointerp.h"';
-		addHeaderFile:'#endif';
 		addHeaderFile:'"cogit.h"';
 		addHeaderFile:'"dispdbg.h"'.
 	aCCodeGenerator
@@ -655,6 +652,12 @@ Cogit class >> sourceFileName [
 { #category : #translation }
 Cogit class >> specialValueForConstant: constantName [
 	^CoInterpreter specialValueForConstant: constantName
+]
+
+{ #category : #translation }
+Cogit class >> specialValueForConstant: constantName default: defaultValue [
+	constantName = 'Debug' ifTrue: [^'DEBUGVM'].
+	^CoInterpreter specialValueForConstant: constantName default: defaultValue
 ]
 
 { #category : #'class initialization' }
@@ -1661,7 +1664,7 @@ Cogit >> annotate: abstractInstruction objRef: anOop [
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
 	(objectRepresentation shouldAnnotateObjectReference: anOop) ifTrue:
-		[(coInterpreter isYoung: anOop) ifTrue:
+		[(objectMemory isYoung: anOop) ifTrue:
 			[hasYoungReferent := true].
 		^self annotate: abstractInstruction with: IsObjectReference].
 	^abstractInstruction
@@ -1769,16 +1772,6 @@ Cogit >> assertSaneJumpTarget: jumpTarget [
 ]
 
 { #category : #'simulation only' }
-Cogit >> assertStackPointersBelongToCurrentThread [
-	<doNotGenerate>
-	| range |
-	coInterpreter isThreadedVM ifTrue:
-		[range := coInterpreter cStackRangeForCurrentThread.
-		self assert: ((range includes: processor sp)
-					and: [range includes: processor fp])]
-]
-
-{ #category : #'simulation only' }
 Cogit >> assertStackPointersBelongToCurrentVMOwner [
 	<doNotGenerate>
 	| range |
@@ -1867,9 +1860,9 @@ Cogit >> blockStartPcsIn: aMethod [
 	<doNotGenerate>
 	startpcs := OrderedCollection new.
 	startpcs add: (pc := latestContinuation := coInterpreter startPCOfMethod: aMethod).
-	end := coInterpreter byteSizeOf: aMethod.
+	end := objectMemory byteSizeOf: aMethod.
 	[pc <= end] whileTrue:
-		[descriptor := self generatorAt: (coInterpreter fetchByte: pc ofObject: aMethod).
+		[descriptor := self generatorAt: (objectMemory fetchByte: pc ofObject: aMethod).
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[end := pc].
@@ -1883,6 +1876,12 @@ Cogit >> blockStartPcsIn: aMethod [
 		 descriptor isBlockCreation ifTrue:
 			[startpcs add: pc]].
 	^startpcs
+]
+
+{ #category : #'simulation only' }
+Cogit >> breakBlock: aBlock [
+	<doNotGenerate>
+	breakBlock := aBlock
 ]
 
 { #category : #'simulation only' }
@@ -1908,7 +1907,7 @@ Cogit >> byteAt: anAddress put: aValue [
 	"Store a byte in memory.  In Smaltalk defer to the coInterpreter.
 	 In C this will be replaced by a macro (byteAtPut)."
 	<doNotGenerate> 
-	coInterpreter byteAt: anAddress put: aValue
+	objectMemory byteAt: anAddress put: aValue
 ]
 
 { #category : #'method map' }
@@ -1943,7 +1942,7 @@ Cogit >> bytecodePCFor: mcpc startBcpc: startbcpc in: cogMethod [
 		methodObj: homeMethod methodObject
 		startmcpc: startmcpc
 		bcpc: startbcpc
-		performUntil: #find:Matching:Bcpc:Size:PC: asSymbol
+		performUntil: #find:Mcpc:Bcpc:Size:MatchingMcpc: asSymbol
 		arg: (self cCoerceSimple: mcpc to: #'void *')
 ]
 
@@ -2058,7 +2057,7 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	(cPIC cPICNumCases >= numPICCases
 	 or: [(objectRepresentation inlineCacheTagIsYoung: cacheTag)
 	 or: [newTargetMethodOrNil notNil
-		 and: [coInterpreter isYoung: newTargetMethodOrNil]]]) ifTrue:
+		 and: [objectMemory isYoung: newTargetMethodOrNil]]]) ifTrue:
 		[result := self patchToOpenPICFor: cPIC selector
 					numArgs: cPIC cmNumArgs
 					receiver: receiver.
@@ -2089,16 +2088,7 @@ Cogit >> ceCannotResumePC [
 Cogit >> ceCaptureCStackPointers [
 	<api: 'extern void (*ceCaptureCStackPointers)()'>
 	<doNotGenerate>
-	| range |
-	coInterpreter isThreadedVM ifFalse:
-		[^self].
-	thisContext sender selector == #generateStackPointerCapture ifTrue:
-		[^self].
-	range := coInterpreter cStackRangeForThreadIndex: coInterpreter threadManager getVMOwner.
-	self assert: ((range includes: processor sp)
-				and: [range includes: processor fp]).
-	self setCStackPointer: processor sp.
-	self setCFramePointer: processor fp
+	^self
 ]
 
 { #category : #testing }
@@ -2159,7 +2149,7 @@ Cogit >> ceSICMiss: receiver [
 	entryPoint := backEnd callTargetFromReturnAddress: outerReturn.
 
 	self assert: targetMethod asInteger + cmEntryOffset = entryPoint.
-	self assert: targetMethod selector ~= coInterpreter nilObject.
+	self assert: targetMethod selector ~= objectMemory nilObject.
 
 	newTargetMethodOrNil := self lookupAndCog: targetMethod selector for: receiver.
 	"We assume lookupAndCog:for: will *not* reclaim the method zone"
@@ -2167,7 +2157,7 @@ Cogit >> ceSICMiss: receiver [
 	cacheTag := objectRepresentation inlineCacheTagForInstance: receiver.
 	((objectRepresentation inlineCacheTagIsYoung: cacheTag)
 	  or: [newTargetMethodOrNil notNil
-		 and: [coInterpreter isYoung: newTargetMethodOrNil]]) ifTrue:
+		 and: [objectMemory isYoung: newTargetMethodOrNil]]) ifTrue:
 		[result := self patchToOpenPICFor: targetMethod selector
 					numArgs: targetMethod cmNumArgs
 					receiver: receiver.
@@ -2289,12 +2279,12 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 						ifTrue: [self print: ' is not in youngReferrers'; cr]
 						ifFalse: [self print: ' is in youngReferrers '; printNum: count; print: ' times!'; cr].
 					 ok := false]].
-		 (objectRepresentation checkValidObjectReference: cogMethod selector) ifFalse:
+			 (objectRepresentation checkValidObjectReference: cogMethod selector) ifFalse:
 				[self print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' selector'; cr.
 				 ok := false].
-		 cogMethod cmType = CMMethod
+			 cogMethod cmType = CMMethod
 				ifTrue:
-					[self assert: cogMethod objectHeader = coInterpreter nullHeaderForMachineCodeMethod.
+					[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 					 (objectRepresentation checkValidObjectReference: cogMethod methodObject) ifFalse:
 						[self print: 'object leak in CM '; printHex: cogMethod asInteger; print: ' methodObject'; cr.
 						 ok := false].
@@ -2303,8 +2293,8 @@ Cogit >> checkIntegrityOfObjectReferencesInCode: fullGCFlag [
 						 arg: cogMethod asInteger) ~= 0
 							ifTrue: [ok := false].
 					 fullGCFlag ifFalse:
-						[(((coInterpreter isYoung: cogMethod methodObject)
-						    or: [coInterpreter isYoung: cogMethod selector])
+						[(((objectMemory isYoung: cogMethod methodObject)
+						    or: [objectMemory isYoung: cogMethod selector])
 						   and: [cogMethod cmRefersToYoung not]) ifTrue:
 							[self print: 'CM '; printHex: cogMethod asInteger; print: ' refers to young but not marked as such'; cr.
 							 ok := false]]]
@@ -2386,7 +2376,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 	<var: #cPIC type: #'CogMethod *'>
 	| pc offsetToLiteral object entryPoint targetMethod |
 	<var: #targetMethod type: #'CogMethod *'>
-	(coInterpreter isMarked: cPIC selector)  ifFalse:
+	(objectMemory isMarked: cPIC selector)  ifFalse:
 		[^true].
 	pc := cPIC asInteger + firstCPICCaseOffset.
 	"First jump is unconditional; subsequent ones are conditional"
@@ -2395,7 +2385,7 @@ Cogit >> closedPICRefersToUnmarkedObject: cPIC [
 		[:i|
 		object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral - backEnd loadLiteralByteSize.
 		((objectRepresentation couldBeObject: object)
-		 and: [(coInterpreter isMarked: object) not]) ifTrue:
+		 and: [(objectMemory isMarked: object) not]) ifTrue:
 			[^true].
 		object := backEnd literalBeforeFollowingAddress: pc - offsetToLiteral.
 		((objectRepresentation couldBeObject: object)
@@ -2499,8 +2489,8 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 	methodObj := aMethodObj.
 	"coInterpreter stringOf: aSelectorOop"
 	coInterpreter
-		compilationBreak: aSelectorOop + BaseHeaderSize
-		point: (coInterpreter lengthOf: aSelectorOop).
+		compilationBreak: aSelectorOop
+		point: (objectMemory lengthOf: aSelectorOop).
 	aMethodObj = breakMethod ifTrue: [self halt: 'Compilation of breakMethod'].
 	cogMethod := self compileCogMethod: aSelectorOop.
 	(cogMethod asInteger between: MaxNegativeErrorCode and: -1) ifTrue:
@@ -2610,8 +2600,8 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethodOrNil tag: caseNTag [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	coInterpreter
-		compilationBreak: cPIC selector + BaseHeaderSize
-		point: (coInterpreter lengthOf: cPIC selector).
+		compilationBreak: cPIC selector
+		point: (objectMemory lengthOf: cPIC selector).
 	self allocateOpcodes: 5 bytecodes: 0.
 	self assert: (objectRepresentation inlineCacheTagIsYoung: caseNTag) not.
 	(caseNMethodOrNil ~= nil
@@ -2621,7 +2611,7 @@ Cogit >> cogExtendPIC: cPIC CaseNMethod: caseNMethodOrNil tag: caseNTag [
 			 target :=  (coInterpreter cogMethodOf: caseNMethodOrNil) asInteger + cmNoCheckEntryOffset]
 		ifFalse:
 			["Caller patches to open pic if caseNMethodOrNil is young."
-			 self assert: (caseNMethodOrNil isNil or: [(coInterpreter isYoung: caseNMethodOrNil) not]).
+			 self assert: (caseNMethodOrNil isNil or: [(objectMemory isYoung: caseNMethodOrNil) not]).
 			 operand := caseNMethodOrNil.
 			 target := cPIC asInteger
 					+ (caseNMethodOrNil isNil
@@ -2665,7 +2655,7 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 	cogMethod cmType = CMFree ifTrue: [^2].
 
 	cogMethod cmType = CMMethod ifTrue:
-		[(coInterpreter isIntegerObject: cogMethod methodHeader) ifFalse:
+		[(objectMemory isIntegerObject: cogMethod methodHeader) ifFalse:
 			[^11].
 		 (objectRepresentation couldBeObject: cogMethod methodObject) ifFalse:
 			[^12].
@@ -2723,8 +2713,8 @@ Cogit >> cogOpenPICSelector: selector numArgs: numArgs [
 	<returnTypeC: #'CogMethod *'>
 	| startAddress headerSize codeSize mapSize end |
 	coInterpreter
-		compilationBreak: selector + BaseHeaderSize
-		point: (coInterpreter lengthOf: selector).
+		compilationBreak: selector
+		point: (objectMemory lengthOf: selector).
 	startAddress := methodZone allocate: openPICSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
@@ -2762,8 +2752,8 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 	<returnTypeC: #'CogMethod *'>
 	| startAddress headerSize size end |
 	coInterpreter
-		compilationBreak: selector + BaseHeaderSize
-		point: (coInterpreter lengthOf: selector).
+		compilationBreak: selector
+		point: (objectMemory lengthOf: selector).
 	startAddress := methodZone allocate: closedPICSize.
 	startAddress = 0 ifTrue:
 		[^self cCoerceSimple: InsufficientCodeSpace to: #'CogMethod *'].
@@ -2819,7 +2809,7 @@ Cogit >> compactCogCompiledCode [
 	methodZone planCompaction.
 	coInterpreter updateStackZoneReferencesToCompiledCodePreCompaction.
 	self relocateMethodsPreCompaction.
-	methodZone compactCompiledCode: coInterpreter nullHeaderForMachineCodeMethod.
+	methodZone compactCompiledCode: objectMemory nullHeaderForMachineCodeMethod.
 	self assert: methodZone kosherYoungReferrers.
 	processor flushICacheFrom: methodZoneBase to: methodZone zoneLimit
 ]
@@ -2845,14 +2835,14 @@ Cogit >> compileAbstractInstructionsFrom: start through: end [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	bytecodePointer := start.
-	[byte0 := coInterpreter fetchByte: bytecodePointer ofObject: methodObj.
+	[byte0 := objectMemory fetchByte: bytecodePointer ofObject: methodObj.
 	 descriptor := self generatorAt: byte0.
 	 descriptor numBytes > 1 ifTrue:
-		[byte1 := coInterpreter fetchByte: bytecodePointer + 1 ofObject: methodObj.
+		[byte1 := objectMemory fetchByte: bytecodePointer + 1 ofObject: methodObj.
 		 descriptor numBytes > 2 ifTrue:
-			[byte2 := coInterpreter fetchByte: bytecodePointer + 2 ofObject: methodObj.
+			[byte2 := objectMemory fetchByte: bytecodePointer + 2 ofObject: methodObj.
 			 descriptor numBytes > 3 ifTrue:
-				[byte3 := coInterpreter fetchByte: bytecodePointer + 3 ofObject: methodObj.
+				[byte3 := objectMemory fetchByte: bytecodePointer + 3 ofObject: methodObj.
 				 descriptor numBytes > 4 ifTrue:
 					[self notYetImplemented]]]].
 	 nextOpcodeIndex := opcodeIndex.
@@ -2882,7 +2872,7 @@ Cogit >> compileBlockDispatchFrom: lowBlockStartIndex to: highBlockStartIndex [
 	self assert: (halfWay between: lowBlockStartIndex and: highBlockStartIndex).
 	blockStart := self blockStartAt: halfWay.
 	"N.B. FLAGS := TempReg - startpc"
-	self CmpCq: (coInterpreter integerObjectOf: blockStart startpc + 1) R: TempReg.
+	self CmpCq: (objectMemory integerObjectOf: blockStart startpc + 1) R: TempReg.
 	lowBlockStartIndex = halfWay ifTrue:
 		[self JumpLessOrEqual: blockStart entryLabel.
 		 self compileBlockDispatchFrom: halfWay + 1 to: highBlockStartIndex.
@@ -2956,7 +2946,7 @@ Cogit >> compileCPIC: cPIC Case0: case0CogMethod Case1Method: case1MethodOrNil t
 			 targetEntry := self cCoerceSimple: (coInterpreter cogMethodOf: case1MethodOrNil) asInteger + cmNoCheckEntryOffset
 								to: #'void *']
 		ifFalse:
-			[self assert: (case1MethodOrNil isNil or: [(coInterpreter isYoung: case1MethodOrNil) not]).
+			[self assert: (case1MethodOrNil isNil or: [(objectMemory isYoung: case1MethodOrNil) not]).
 			 operand := case1MethodOrNil.
 			 targetEntry := case1MethodOrNil isNil ifTrue: [mnuCall] ifFalse: [interpretCall]].
 
@@ -3011,8 +3001,8 @@ Cogit >> compileClosedPICPrototype [
 Cogit >> compileCogMethod: selector [
 	<returnTypeC: #'CogMethod *'>
 	| numBytecodes numBlocks result extra |
-	hasYoungReferent := (coInterpreter isYoung: methodObj)
-						  or: [coInterpreter isYoung: selector].
+	hasYoungReferent := (objectMemory isYoung: methodObj)
+						  or: [objectMemory isYoung: selector].
 	methodOrBlockNumArgs := coInterpreter argumentCountOf: methodObj.
 	inBlock := false.
 	primInvokeLabel := nil.
@@ -3025,7 +3015,7 @@ Cogit >> compileCogMethod: selector [
 	"initial estimate.  Actual endPC is determined in scanMethod."
 	endPC := (coInterpreter isQuickPrimitiveIndex: primitiveIndex)
 					ifTrue: [initialPC - 1]
-					ifFalse: [coInterpreter byteSizeOf: methodObj].
+					ifFalse: [objectMemory byteSizeOf: methodObj].
 	numBytecodes := endPC - initialPC + 1.
 	self allocateOpcodes: (numBytecodes + extra) * 10 bytecodes: numBytecodes.
 	(numBlocks := self scanMethod) < 0 ifTrue:
@@ -3354,7 +3344,6 @@ Cogit >> enterCogCodePopReceiver [
 	<inline: false>
 	"(and this exists only to reference Debug)"
 	Debug ifFalse: [self error: 'what??'].
-	coInterpreter assertValidMachineCodeFrame: (coInterpreter stackValue: 1).
 	"This exists only for break-pointing."
 	self cCode: 'realCEEnterCogCodePopReceiverReg()'
 		inSmalltalk: [self ceEnterCogCodePopReceiverReg]
@@ -3368,7 +3357,6 @@ Cogit >> enterCogCodePopReceiverAndClassRegs [
 	<inline: false>
 	"(and this exists only to reference Debug)"
 	Debug ifFalse: [self error: 'what??'].
-	coInterpreter assertValidMachineCodeFrame: (coInterpreter stackValue: 2).
 	"This exists only for break-pointing."
 	self cCode: 'realCEEnterCogCodePopReceiverAndClassRegs()'
 		inSmalltalk: [self ceEnterCogCodePopReceiverAndClassRegs]
@@ -3385,7 +3373,7 @@ Cogit >> entryOffset [
 Cogit >> fillInCPICHeader: pic size: size numArgs: numArgs numCases: numCases selector: selector [
 	<returnTypeC: #'CogMethod *'>
 	<var: #pic type: #'CogMethod *'>
-	self assert: (coInterpreter isYoung: selector) not.
+	self assert: (objectMemory isYoung: selector) not.
 	pic cmType: CMClosedPIC.
 	pic objectHeader: 0.
 	pic blockSize: size.
@@ -3414,7 +3402,7 @@ Cogit >> fillInMethodHeader: method size: size selector: selector [
 	| methodHeader |
 	method cmType: CMMethod.
 	methodHeader := coInterpreter rawHeaderOf: methodObj.
-	method objectHeader: coInterpreter nullHeaderForMachineCodeMethod.
+	method objectHeader: objectMemory nullHeaderForMachineCodeMethod.
 	method blockSize: size.
 	method methodObject: methodObj.
 	method methodHeader: methodHeader.
@@ -3448,7 +3436,7 @@ Cogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
 	pic methodHeader: 0.
 	pic selector: selector.
 	pic cmNumArgs: numArgs.
-	(pic cmRefersToYoung: (coInterpreter isYoung: selector)) ifTrue:
+	(pic cmRefersToYoung: (objectMemory isYoung: selector)) ifTrue:
 		[methodZone addToYoungReferrers: pic].
 	pic cmUsageCount: self initialOpenPICUsageCount.
 	pic cmIsUnlinked: false.
@@ -3463,7 +3451,23 @@ Cogit >> fillInOPICHeader: pic size: size numArgs: numArgs selector: selector [
 ]
 
 { #category : #'method map' }
-Cogit >> find: annotation Matching: mcpc Bcpc: bcpc Size: numBytes PC: targetMcpc [
+Cogit >> find: annotation Mcpc: mcpc Bcpc: bcpc Size: numBytes MatchingBcpc: targetBcpc [
+	<var: #annotation type: #char>
+	<var: #mcpc type: #'char *'>
+	<var: #targetMcpc type: #'void *'>
+	<var: #targetBcpc type: #'void *'>
+	"Transcript
+		print: (#(IsMethodReference HasBytecodePC IsSendCall) select: [:k| (Cogit classPool at: k) = annotation]);
+		space; nextPutAll: (mcpc printStringRadix: 16);
+		space; print: bcpc;
+		space; print: numBytes; cr; flush."
+	^targetBcpc asInteger = bcpc
+		ifTrue: [mcpc asInteger]
+		ifFalse: [0]
+]
+
+{ #category : #'method map' }
+Cogit >> find: annotation Mcpc: mcpc Bcpc: bcpc Size: numBytes MatchingMcpc: targetMcpc [
 	<var: #annotation type: #char>
 	<var: #mcpc type: #'char *'>
 	<var: #targetMcpc type: #'void *'>
@@ -4330,18 +4334,18 @@ Cogit >> generateMapAt: addressOrNull start: startAddress [
 			[maxDelta := (delta min: MaxX2NDisplacement) bitAnd: DisplacementMask bitInvert32.
 			 self assert: maxDelta >> AnnotationShift <= DisplacementMask.
 			 addressOrNull ~= 0 ifTrue:
-				[coInterpreter
+				[objectMemory
 					byteAt: addressOrNull - length
 					put: maxDelta >> AnnotationShift + DisplacementX2N].
 			 location := location + maxDelta.
 			 length := length + 1].
 		 addressOrNull ~= 0 ifTrue:
 			[mapEntry := delta + (annotation annotation << AnnotationShift).
-			 coInterpreter byteAt: addressOrNull - length put: mapEntry].
+			 objectMemory byteAt: addressOrNull - length put: mapEntry].
 		 location := location + delta.
 		 length := length + 1].
 	addressOrNull ~= 0 ifTrue:
-		[coInterpreter byteAt: addressOrNull - length put: MapEnd].
+		[objectMemory byteAt: addressOrNull - length put: MapEnd].
 	^length + 1
 ]
 
@@ -4503,37 +4507,15 @@ Cogit >> generateTrampolines [
 				simulatedTrampolines
 					at: addr
 					put: (MessageSend
-							receiver: ((self respondsTo: selector) ifTrue: [self] ifFalse: [coInterpreter])
+							receiver: ((self respondsTo: selector)
+										ifTrue: [self]
+										ifFalse: [(coInterpreter respondsTo: selector)
+													ifTrue: [coInterpreter]
+													ifFalse: [(objectMemory respondsTo: selector)
+														ifTrue: [objectMemory]
+														ifFalse: [self error: 'cannot find receiver for ', selector]]])
 							selector: selector
 							arguments: (1 to: selector numArgs) asArray)]]
-]
-
-{ #category : #initialization }
-Cogit >> generateVMOwnerLockFunctions [
-	| startAddress |
-	<inline: false>
-	self cCode: ''
-		inSmalltalk: [coInterpreter isThreadedVM ifFalse:
-						[^self]].
-	self cPreprocessorDirective: '#if COGMTVM'.
-	self allocateOpcodes: backEnd numLowLevelLockOpcodes bytecodes: 0.
-	initialPC := 0.
-	endPC := numAbstractOpcodes - 1.
-	startAddress := methodZoneBase.
-	backEnd generateLowLevelTryLock: coInterpreter vmOwnerLockAddress.
-	self outputInstructionsForGeneratedRuntimeAt: startAddress.
-	self recordGeneratedRunTime: 'ceTryLockVMOwner' address: startAddress.
-	ceTryLockVMOwner := self cCoerceSimple: startAddress to: #'unsigned long (*)(void)'.
-
-	opcodeIndex := 0.
-	initialPC := 0.
-	endPC := numAbstractOpcodes - 1.
-	startAddress := methodZoneBase.
-	backEnd generateLowLevelUnlock: coInterpreter vmOwnerLockAddress.
-	self outputInstructionsForGeneratedRuntimeAt: startAddress.
-	self recordGeneratedRunTime: 'ceUnlockVMOwner' address: startAddress.
-	ceUnlockVMOwner := self cCoerceSimple: startAddress to: #'void (*)(void)'.
-	self cPreprocessorDirective: '#endif /* COGMTVM */'
 ]
 
 { #category : #'compile abstract instructions' }
@@ -4573,7 +4555,7 @@ Cogit >> halt: foo [
 { #category : #'simulation only' }
 Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 	<doNotGenerate>
-	| evaluable function result savedFramePointer savedStackPointer savedArgumentCount |
+	| evaluable function result savedFramePointer savedStackPointer savedArgumentCount rpc |
 	evaluable := simulatedTrampolines at: aProcessorSimulationTrap address.
 	function := evaluable
 					isBlock ifTrue: ['aBlock; probably some plugin primitive']
@@ -4601,10 +4583,6 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 												in: coInterpreter memory)]
 				on: ReenterMachineCode
 				do: [:ex| ex return: ex returnValue].
-	threadManager ifNotNil:
-		[threadManager
-			ensureProcessor: processor
-			isInThread: Processor activeProcess].
 			
 	coInterpreter assertValidExternalStackPointers.
 	"Verify the stack layout assumption compileInterpreterPrimitive: makes, provided we've
@@ -4626,11 +4604,13 @@ Cogit >> handleCallOrJumpSimulationTrap: aProcessorSimulationTrap [
 				 self assert: savedStackPointer = coInterpreter stackPointer]].
 	self assert: (result isInteger "an oop result"
 			or: [result == coInterpreter
-			or: [#(nil continue continueNoReturn) includes: result]]).
-	processor cResultRegister: (result isInteger ifTrue: [result] ifFalse: [16rF00BA222]).
+			or: [result == objectMemory
+			or: [#(nil continue continueNoReturn) includes: result]]]).
+	processor cResultRegister: (result ifNil: [0] ifNotNil: [result isInteger ifTrue: [result] ifFalse: [16rF00BA222]]).
 	result ~~ #continueNoReturn ifTrue:
 		[self recordInstruction: {'(simulated return to '. processor retpcIn: coInterpreter memory. ')'}.
-		 self assert: (processor retpcIn: coInterpreter memory) < methodZone zoneLimit.
+		 rpc := processor retpcIn: coInterpreter memory.
+		 self assert: (rpc >= codeBase and: [rpc < methodZone zoneLimit]).
 		 processor simulateReturnIn: coInterpreter memory]
 
 	"coInterpreter cr.
@@ -4656,9 +4636,6 @@ Cogit >> handleReadSimulationTrap: aProcessorSimulationTrap [
 { #category : #'simulation only' }
 Cogit >> handleSimulationTrap: aProcessorSimulationTrap [
 	<doNotGenerate>
-	coInterpreter isThreadedVM ifTrue:
-		[coInterpreter assertCStackPointersBelongToCurrentThread.
-		 coInterpreter assertCStackPointersBelongToCurrentVMOwner].
 	aProcessorSimulationTrap type caseOf:
 		{ [#read] -> [self handleReadSimulationTrap: aProcessorSimulationTrap].
 		  [#write] -> [self handleWriteSimulationTrap: aProcessorSimulationTrap].
@@ -4729,11 +4706,6 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	methodLabel operands at: 1 put: 0. "label offset"
 	self maybeGenerateCheckFeatures.
 	self maybeGenerateICacheFlush.
-	self cPreprocessorDirective: '#if COGMTVM'.
-	self cCode: 'generateVMOwnerLockFunctions()'
-		inSmalltalk: [coInterpreter isThreadedVM ifTrue:
-						[self generateVMOwnerLockFunctions]].
-	self cPreprocessorDirective: '#endif'.
 	ceGetSP := self cCoerceSimple: self genGetLeafCallStackPointer to: #'unsigned long (*)(void)'.
 	self generateStackPointerCapture.
 	self generateTrampolines.
@@ -4741,6 +4713,7 @@ Cogit >> initializeCodeZoneFrom: startAddress upTo: endAddress [
 	methodZone manageFrom: methodZoneBase to: endAddress.
 	self computeEntryOffsets.
 	self generateClosedPICPrototype.
+	"N.B. this is assumed to be the last thing done in initialization; see Cogit>>initialized"
 	self generateOpenPICPrototype
 ]
 
@@ -4760,7 +4733,7 @@ Cogit >> initializeProcessor [
 			[expectedSPAlignment := 0. expectedFPAlignment := 8. cStackAlignment := 16].
 	processor class setStackAlignmentDelta: cStackAlignment.
 	self initializeProcessorStack: coInterpreter rumpCStackAddress.
-	coInterpreter
+	objectMemory
 		longAt: self cFramePointerAddress put: processor fp;
 		longAt: self cStackPointerAddress put: processor sp
 ]
@@ -4776,6 +4749,12 @@ Cogit >> initializeProcessorStack: rumpCStackAddress [
 	self assert: cStackPointer \\ cStackAlignment = expectedSPAlignment.
 	self assert: cFramePointer \\ cStackAlignment = expectedFPAlignment.
 	processor setFramePointer: cFramePointer stackPointer: cStackPointer
+]
+
+{ #category : #testing }
+Cogit >> initialized [
+	<doNotGenerate>
+	^openPICSize isInteger
 ]
 
 { #category : #'in-line cacheing' }
@@ -4865,7 +4844,7 @@ Cogit >> lookupAddress: address [
 			ifTrue:
 				[(cogMethod := methodZone methodFor: address) ~= 0 ifTrue:
 					[cogMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
-					 ^((cogMethod selector ~= coInterpreter nilObject
+					 ^((cogMethod selector ~= objectMemory nilObject
 					    and: [objectRepresentation couldBeObject: cogMethod selector])
 						ifTrue: [coInterpreter stringOf: cogMethod selector]
 						ifFalse: [cogMethod asInteger hex]),
@@ -4890,9 +4869,9 @@ Cogit >> lookupAndCog: selector for: receiver [
 	<inline: false>
 	newTargetMethodOrNil := coInterpreter lookup: selector receiver: receiver.
 	(newTargetMethodOrNil notNil
-	 and: [coInterpreter isOopCompiledMethod: newTargetMethodOrNil]) ifFalse:
+	 and: [objectMemory isOopCompiledMethod: newTargetMethodOrNil]) ifFalse:
 		[^nil].
-	((coInterpreter methodHasCogMethod: newTargetMethodOrNil) not
+	 ((coInterpreter methodHasCogMethod: newTargetMethodOrNil) not
 	 and: [coInterpreter methodShouldBeCogged: newTargetMethodOrNil]) ifTrue:
 		["We assume cog:selector: will *not* reclaim the method zone"
 		 self cog: newTargetMethodOrNil selector: selector].
@@ -4923,9 +4902,9 @@ Cogit >> mapAt: mapStart methodObj: aMethodObj startmcpc: startmcpc bcpc: startb
 	map := mapStart.
 	mcpc := startmcpc.
 	bcpc := startbcpc.
-	endbcpc := coInterpreter byteSizeOf: aMethodObj.
+	endbcpc := objectMemory byteSizeOf: aMethodObj.
 	firstTime := true.
-	[(mapByte := coInterpreter byteAt: map) ~= MapEnd] whileTrue:
+	[(mapByte := objectMemory byteAt: map) ~= MapEnd] whileTrue:
 		[| annotation bcpcArg result descriptor numBytes |
 		 mapByte >= FirstAnnotation
 			ifTrue:
@@ -4935,7 +4914,7 @@ Cogit >> mapAt: mapStart methodObj: aMethodObj startmcpc: startmcpc bcpc: startb
 					ifTrue:
 						[| byte |
 						bcpcArg := bcpc.
-						byte := coInterpreter fetchByte: bcpc ofObject: aMethodObj.
+						byte := objectMemory fetchByte: bcpc ofObject: aMethodObj.
 						descriptor := self generatorAt: byte.
 						numBytes := descriptor numBytes.
 						 (bcpc = startbcpc
@@ -5048,7 +5027,7 @@ Cogit >> mapObjectReferencesInMachineCodeForFullGC [
 					[self mapObjectReferencesInClosedPIC: cogMethod]
 				ifFalse:
 					[cogMethod cmType = CMMethod ifTrue:
-						[self assert: cogMethod objectHeader = coInterpreter nullHeaderForMachineCodeMethod.
+						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject)].
 					 self mapFor: cogMethod
 						 performUntil: #remapIfObjectRef:pc:hasYoung: asSymbol
@@ -5087,12 +5066,12 @@ Cogit >> mapObjectReferencesInMachineCodeForIncrementalGC [
 					[self assert: (cogMethod cmType = CMMethod
 								or: [cogMethod cmType = CMOpenPIC]).
 					 cogMethod selector: (objectRepresentation remapOop: cogMethod selector).
-					 (coInterpreter isYoung: cogMethod selector) ifTrue:
+					 (objectMemory isYoung: cogMethod selector) ifTrue:
 						[hasYoungObj := true].
 					 cogMethod cmType = CMMethod ifTrue:
-						[self assert: cogMethod objectHeader = coInterpreter nullHeaderForMachineCodeMethod.
+						[self assert: cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod.
 						 cogMethod methodObject: (objectRepresentation remapOop: cogMethod methodObject).
-						 (coInterpreter isYoung: cogMethod methodObject) ifTrue:
+						 (objectMemory isYoung: cogMethod methodObject) ifTrue:
 							[hasYoungObj := true]].
 					 self mapFor: cogMethod
 						 performUntil: #remapIfObjectRef:pc:hasYoung: asSymbol
@@ -5127,24 +5106,24 @@ Cogit >> markAndTraceMachineCodeForIncrementalGC [
 	"Free any methods that refer to unmarked objects, unlinking sends to freed methods."
 	| pointer cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	coInterpreter leakCheckIncrementalGC ifTrue:
+	objectMemory leakCheckIncrementalGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified := false.
 	pointer := methodZone youngReferrers.
 	[pointer < methodZone zoneEnd] whileTrue:
-		[cogMethod := coInterpreter cCoerceSimple: (coInterpreter longAt: pointer) to: #'CogMethod *'.
+		[cogMethod := coInterpreter cCoerceSimple: (objectMemory longAt: pointer) to: #'CogMethod *'.
 		 cogMethod cmRefersToYoung ifTrue:
 			[self assert: (self cogMethodDoesntLookKosher: cogMethod) = 0.
 			 self assert: (cogMethod cmType = CMMethod
 						or: [cogMethod cmType = CMOpenPIC]).
-			 (coInterpreter isYoung: cogMethod selector) ifTrue:
-				[coInterpreter markAndTrace: cogMethod selector].
+			 (objectMemory isYoung: cogMethod selector) ifTrue:
+				[objectMemory markAndTrace: cogMethod selector].
 			 cogMethod cmType = CMMethod ifTrue:
-				[(coInterpreter isYoung: cogMethod methodObject) ifTrue:
-					[coInterpreter markAndTrace: cogMethod methodObject].
+				[(objectMemory isYoung: cogMethod methodObject) ifTrue:
+					[objectMemory markAndTrace: cogMethod methodObject].
 				self markYoungObjectsIn: cogMethod]].
 		 pointer := pointer + BytesPerWord].
-	coInterpreter leakCheckIncrementalGC ifTrue:
+	objectMemory leakCheckIncrementalGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
@@ -5177,7 +5156,7 @@ Cogit >> markAndTraceOrFreeCogMethod: cogMethod firstVisit: firstVisit [
 		[^true].
 	self assert: (self cogMethodDoesntLookKosher: cogMethod) = 0.
 	cogMethod cmType = CMMethod ifTrue:
-		[(coInterpreter isMarked: cogMethod methodObject) ifFalse:
+		[(objectMemory isMarked: cogMethod methodObject) ifFalse:
 			[methodZone freeMethod: cogMethod.
 			 ^true].
 		 firstVisit ifTrue:
@@ -5189,7 +5168,7 @@ Cogit >> markAndTraceOrFreeCogMethod: cogMethod firstVisit: firstVisit [
 		 methodZone freeMethod: cogMethod.
 		 ^true].
 	cogMethod cmType = CMOpenPIC ifTrue:
-		[(coInterpreter isMarked: cogMethod selector) ifTrue:
+		[(objectMemory isMarked: cogMethod selector) ifTrue:
 			[^false].
 		 methodZone freeMethod: cogMethod.
 		 ^true].
@@ -5204,14 +5183,14 @@ Cogit >> markAndTraceOrFreeMachineCodeForFullGC [
 	"Free any methods that refer to unmarked objects, unlinking sends to freed methods."
 	| cogMethod |
 	<var: #cogMethod type: #'CogMethod *'>
-	coInterpreter leakCheckFullGC ifTrue:
+	objectMemory leakCheckFullGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified := false.
 	cogMethod := self cCoerceSimple: methodZoneBase to: #'CogMethod *'.
 	[cogMethod < methodZone limitZony] whileTrue:
 		[self markAndTraceOrFreeCogMethod: cogMethod firstVisit: true.
 		 cogMethod := methodZone methodAfter: cogMethod].
-	coInterpreter leakCheckFullGC ifTrue:
+	objectMemory leakCheckFullGC ifTrue:
 		[self assert: self allMachineCodeObjectReferencesValid].
 	codeModified ifTrue: "After updating oops in inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
@@ -5261,7 +5240,7 @@ Cogit >> markLiteralsAndUnlinkUnmarkedSendsIn: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<inline: true>
 	self assert: cogMethod cmType = CMMethod.
-	self assert: (coInterpreter isMarked: cogMethod methodObject).
+	self assert: (objectMemory isMarked: cogMethod methodObject).
 	objectRepresentation markAndTraceLiteral: cogMethod selector.
 	self mapFor: cogMethod
 		 performUntil: #markLiteralsAndUnlinkIfUnmarkedSend:pc:method: asSymbol
@@ -5306,11 +5285,11 @@ Cogit >> markYoungObjectsIn: cogMethod [
 	<inline: true>
 	self assert: (cogMethod cmType = CMMethod
 				or: [cogMethod cmType = CMOpenPIC]).
-	 (coInterpreter isYoung: cogMethod selector) ifTrue:
-		[coInterpreter markAndTrace: cogMethod selector].
+	 (objectMemory isYoung: cogMethod selector) ifTrue:
+		[objectMemory markAndTrace: cogMethod selector].
 	(cogMethod cmType = CMMethod
-	 and: [coInterpreter isYoung: cogMethod methodObject]) ifTrue:
-		[coInterpreter markAndTrace: cogMethod methodObject].
+	 and: [objectMemory isYoung: cogMethod methodObject]) ifTrue:
+		[objectMemory markAndTrace: cogMethod methodObject].
 	self mapFor: cogMethod
 		 performUntil: #markYoungObjects:pc:method: asSymbol
 		 arg: cogMethod asInteger
@@ -5366,6 +5345,45 @@ Cogit >> maybeGenerateICacheFlush [
 ]
 
 { #category : #'method map' }
+Cogit >> mcPCFor: bcpc startBcpc: startbcpc in: cogMethod [
+	"Answer the zero-relative bytecode pc matching the machine code pc argument in
+	 cogMethod, given the start of the bytecodes for cogMethod's block or method object."
+	<api>
+	<var: #cogMethod type: #'CogBlockMethod *'>
+	| startmcpc homeMethod mapStart absPC |
+	<var: #homeMethod type: #'CogMethod *'>
+	"All map entries for bytecodes (sends, mustBeBooleans et al) map to the following
+	 bytecode except the first bytecode (stackCheckOffset).  So special case that here."
+	bcpc = startbcpc ifTrue:
+		[^cogMethod stackCheckOffset].
+	cogMethod cmType = CMMethod
+		ifTrue:
+			[startmcpc := cogMethod asInteger + cmNoCheckEntryOffset.
+			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
+			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
+			 mapStart := self findMapLocationForMcpc: startmcpc inMethod: homeMethod.
+			 self assert: ((coInterpreter byteAt: mapStart) >> AnnotationShift = IsMethodReference
+						 or: [(coInterpreter byteAt: mapStart) >> AnnotationShift = IsRelativeCall
+						 or: [(coInterpreter byteAt: mapStart) >> AnnotationShift = IsDisplacementX2N]])]
+		ifFalse:
+			[startmcpc := cogMethod asInteger + (self sizeof: CogBlockMethod).
+			 homeMethod := self cogHomeMethod: cogMethod.
+			 mapStart := self findMapLocationForMcpc: startmcpc inMethod: homeMethod.
+			 self assert: (coInterpreter byteAt: mapStart) >> AnnotationShift = HasBytecodePC. "fiducial"
+			 mapStart := mapStart - 1]. "skip fiducial"
+	absPC := self
+				mapAt: mapStart
+				methodObj: homeMethod methodObject
+				startmcpc: startmcpc
+				bcpc: startbcpc
+				performUntil: #find:Mcpc:Bcpc:Size:MatchingBcpc: asSymbol
+				arg: (self cCoerceSimple: bcpc to: #'void *').
+	^absPC ~= 0
+		ifTrue: [absPC asUnsignedInteger - cogMethod asUnsignedInteger]
+		ifFalse: [absPC]
+]
+
+{ #category : #'method map' }
 Cogit >> mcpcToBcpcMapFor: cogMethod [
 	<doNotGenerate>
 	| mcpcToBcpcMap blockStartBcpcs |
@@ -5415,7 +5433,7 @@ Cogit >> nextBytecodePCInMapAfter: startbcpc in: methodObject upTo: endpc [
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	bcpc := startbcpc.
 	[bcpc <= endpc] whileTrue:
-		[byte := coInterpreter fetchByte: bcpc ofObject: methodObject.
+		[byte := objectMemory fetchByte: bcpc ofObject: methodObject.
 		 descriptor := self generatorAt: byte.
 		 descriptor isMapped ifTrue:
 			[^bcpc].
@@ -5480,6 +5498,12 @@ Cogit >> notYetImplemented [
 	super notYetImplemented
 ]
 
+{ #category : #accessing }
+Cogit >> objectMemory [
+	<doNotGenerate>
+	^objectMemory
+]
+
 { #category : #'simulation only' }
 Cogit >> offset: aClass of: fieldSymbol [
 	"This is implemented by stddef's offsetof macro."
@@ -5500,7 +5524,7 @@ Cogit >> outputInstructionsAt: startAddress [
 		self assert: abstractInstruction address = absoluteAddress.
 		0 to: abstractInstruction machineCodeSize - 1 do:
 			[:j|
-			coInterpreter byteAt: absoluteAddress put: (abstractInstruction machineCode at: j).
+			objectMemory byteAt: absoluteAddress put: (abstractInstruction machineCode at: j).
 			absoluteAddress := absoluteAddress + 1]].
 	^absoluteAddress
 ]
@@ -5601,6 +5625,12 @@ Cogit >> printCogMethodFor: address [
 ]
 
 { #category : #disassembly }
+Cogit >> printInstructions [
+	<doNotGenerate>
+	^printInstructions
+]
+
+{ #category : #disassembly }
 Cogit >> printInstructions: aBoolean [
 	<doNotGenerate>
 	printInstructions := aBoolean.
@@ -5687,7 +5717,14 @@ Cogit >> printNum: n [
 { #category : #debugging }
 Cogit >> printOnTrace [
 	<api>
-	^(traceLinkedSends bitAnd: 4) ~= 0
+	<cmacro: '() (traceLinkedSends & 8)'>
+	^(traceLinkedSends bitAnd: 8) ~= 0
+]
+
+{ #category : #debugging }
+Cogit >> printRegisters [
+	<doNotGenerate>
+	^printRegisters
 ]
 
 { #category : #debugging }
@@ -5897,23 +5934,23 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 		[| literal mappedLiteral |
 		 literal := backEnd literalBeforeFollowingAddress: mcpc asInteger.
 		 (objectRepresentation couldBeObject: literal) ifTrue:
-			[mappedLiteral := coInterpreter remap: literal.
+			[mappedLiteral := objectMemory remap: literal.
 			 literal ~= mappedLiteral ifTrue:
 				[backEnd storeLiteral: mappedLiteral beforeFollowingAddress: mcpc asInteger.
 				 codeModified := true].
 			 (hasYoungPtr ~= 0
-			  and: [coInterpreter isYoung: mappedLiteral]) ifTrue:
+			  and: [objectMemory isYoung: mappedLiteral]) ifTrue:
 				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]].
 	annotation = IsSendCall ifTrue:
 		[| cacheTag mappedCacheTag |
 		 cacheTag := backEnd inlineCacheTagAt: mcpc asInteger.
 		 (objectRepresentation couldBeObject: cacheTag) ifTrue:
-			[mappedCacheTag := coInterpreter remap: cacheTag.
+			[mappedCacheTag := objectMemory remap: cacheTag.
 			 cacheTag ~= mappedCacheTag ifTrue:
 				[backEnd rewriteInlineCacheTag: mappedCacheTag at: mcpc asInteger.
 				 codeModified := true].
 			 (hasYoungPtr ~= 0
-			  and: [coInterpreter isYoung: mappedCacheTag]) ifTrue:
+			  and: [objectMemory isYoung: mappedCacheTag]) ifTrue:
 				[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]].
 		 hasYoungPtr ~= 0 ifTrue:
 			[| entryPoint offset targetMethod |
@@ -5926,7 +5963,7 @@ Cogit >> remapIfObjectRef: annotation pc: mcpc hasYoung: hasYoungPtr [
 							ifTrue: [cmEntryOffset]
 							ifFalse: [cmNoCheckEntryOffset].
 				targetMethod := self cCoerceSimple: entryPoint - offset to: #'CogMethod *'.
-				(coInterpreter isYoung: targetMethod selector) ifTrue:
+				(objectMemory isYoung: targetMethod selector) ifTrue:
 					[(self cCoerceSimple: hasYoungPtr to: #'sqInt *') at: 0 put: true]]]].
 	^0 "keep scanning"
 ]
@@ -5969,7 +6006,7 @@ Cogit >> scanBlock: blockStart [
 	end := blockStart startpc + blockStart span.
 	stackDelta := 0.
 	[pc < end] whileTrue:
-		[byte0 := coInterpreter fetchByte: pc ofObject: methodObj.
+		[byte0 := objectMemory fetchByte: pc ofObject: methodObj.
 		 descriptor := self generatorAt: byte0.
 		 needsFrame ifFalse:
 			[descriptor needsFrameInBlock
@@ -5980,7 +6017,7 @@ Cogit >> scanBlock: blockStart [
 		[stackDelta < 0 ifTrue:
 			[self error: 'negative stack delta in block; block contains bogus code or internal error'].
 		 [stackDelta > 0] whileTrue:
-			[descriptor := self generatorAt: (coInterpreter fetchByte: blockStart startpc ofObject: methodObj).
+			[descriptor := self generatorAt: (objectMemory fetchByte: blockStart startpc ofObject: methodObj).
 			 descriptor generator ~~ #genPushConstantNilBytecode asSymbol ifTrue:
 				[self error: 'frameless block doesn''t start with enough pushNils'].
 			 blockStart
@@ -6006,7 +6043,7 @@ Cogit >> scanMethod [
 	numBlocks := 0.
 	pc := latestContinuation := initialPC.
 	[pc <= endPC] whileTrue:
-		[byte0 := coInterpreter fetchByte: pc ofObject: methodObj.
+		[byte0 := objectMemory fetchByte: pc ofObject: methodObj.
 		descriptor := self generatorAt: byte0.
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
@@ -6034,7 +6071,8 @@ Cogit >> sendTrace: aBooleanOrInteger [
 	"traceLinkedSends is a set of flags.
 	 1 => trace sends & block activations
 	 2 => trace interpreter primitives
-	 4 => print trace"
+	 4 => trace events (context switches, GCs, etc)
+	 8 => print trace"
 	traceLinkedSends := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [1] ifFalse: [0]]
@@ -6087,8 +6125,8 @@ Cogit >> setInterpreter: aCoInterpreter [
 	 or are used only in the simulation."
 	<doNotGenerate>
 	coInterpreter := aCoInterpreter.
-	threadManager := aCoInterpreter threadManager. "N.B. may be nil"
-	objectRepresentation := coInterpreter objectRepresentationClass for: self.
+	objectMemory := aCoInterpreter objectMemory.
+	objectRepresentation := objectMemory objectRepresentationClass for: self.
 	methodZone := CogMethodZone new.
 	methodZone setInterpreter: aCoInterpreter
 				objectRepresentation: objectRepresentation
@@ -6104,6 +6142,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	traceLinkedSends := 0.
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
+	breakBlock ifNil: [breakBlock := [:cogit| true]].
 	(backEnd := processor abstractInstructionCompilerClass new) cogit: self.
 	(methodLabel := processor abstractInstructionCompilerClass new) cogit: self.
 	sendTrampolines := CArrayAccessor on: (Array new: NumSendTrampolines).
@@ -6128,12 +6167,12 @@ Cogit >> setSelectorOf: cogMethod to: aSelectorOop [
 	<var: #cogMethod type: #'CogMethod *'>
 	"self disassembleMethod: cogMethod"
 	coInterpreter
-		compilationBreak: aSelectorOop + BaseHeaderSize
-		point: (coInterpreter lengthOf: aSelectorOop).
+		compilationBreak: aSelectorOop
+		point: (objectMemory lengthOf: aSelectorOop).
 	self assert: cogMethod cmType = CMMethod.
 	cogMethod selector: aSelectorOop.
 	(cogMethod cmRefersToYoung not
-	 and: [coInterpreter isYoung: aSelectorOop]) ifTrue:
+	 and: [objectMemory isYoung: aSelectorOop]) ifTrue:
 		[self assert: (methodZone occurrencesInYoungReferrers: cogMethod) = 0.
 		 cogMethod cmRefersToYoung: true.
 		 methodZone addToYoungReferrers: cogMethod]
@@ -6153,7 +6192,8 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 		  self recordLastInstruction.
 		  printInstructions ifTrue:
 			[Transcript nextPutAll: lastNInstructions last; cr; flush].
-		  processor pc = breakPC ifTrue:
+		  (processor pc = breakPC
+		   and: [breakBlock value: self]) ifTrue:
 			["printRegisters := printInstructions := true"
 			 "self reportLastNInstructions"
 			 "coInterpreter printExternalHeadFrame"
@@ -6193,10 +6233,6 @@ Cogit >> simulateEnilopmart: enilopmartAddress numArgs: n [
 	 or return to the simulation (if we're in the run-time called from machine code."
 	"If we're simulating the threaded VM then we need to ensure the processor's
 	 register state is that of the current process."
-	threadManager ifNotNil:
-		[threadManager
-			ensureProcessor: processor
-			isInThread: Processor activeProcess].
 	self assert: (coInterpreter isOnRumpCStack: processor sp).
 	self assert: ((coInterpreter stackValue: n) between: guardPageSize and: methodZone zoneLimit - 1).
 	(printInstructions or: [printRegisters]) ifTrue:
@@ -6229,7 +6265,6 @@ Cogit >> simulateLeafCallOf: someFunction [
 			processor registerState ~= initialState ifTrue:
 				[self recordInstruction: '(simulated thread switch)'.
 				 self recordRegisters].
-			self assertStackPointersBelongToCurrentThread.
 			processor
 				simulateLeafCallOf: someFunction
 				nextpc: SmallInteger maxVal
@@ -6310,18 +6345,18 @@ Cogit >> spanFor: descriptor at: pc byte0: opcodeByte in: aMethodObj [
 		   [2] -> [self
 					perform: descriptor spanFunction
 					with: opcodeByte
-					with: (coInterpreter fetchByte: pc + 1 ofObject: aMethodObj)].
+					with: (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)].
 		   [3] -> [self
 					perform: descriptor spanFunction
 					with: opcodeByte
-					with: (coInterpreter fetchByte: pc + 1 ofObject: aMethodObj)
-					with: (coInterpreter fetchByte: pc + 2 ofObject: aMethodObj)].
+					with: (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
+					with: (objectMemory fetchByte: pc + 2 ofObject: aMethodObj)].
 		   [4] -> [self
 					perform: descriptor spanFunction
 					with: opcodeByte
-					with: (coInterpreter fetchByte: pc + 1 ofObject: aMethodObj)
-					with: (coInterpreter fetchByte: pc + 2 ofObject: aMethodObj)
-					with: (coInterpreter fetchByte: pc + 3 ofObject: aMethodObj)] }
+					with: (objectMemory fetchByte: pc + 1 ofObject: aMethodObj)
+					with: (objectMemory fetchByte: pc + 2 ofObject: aMethodObj)
+					with: (objectMemory fetchByte: pc + 3 ofObject: aMethodObj)] }
 ]
 
 { #category : #'jit - api' }
@@ -6359,13 +6394,6 @@ Cogit >> traceStores: aBooleanOrInteger [
 	traceStores := aBooleanOrInteger isInteger
 							ifTrue: [aBooleanOrInteger]
 							ifFalse: [aBooleanOrInteger ifTrue: [1] ifFalse: [0]]
-]
-
-{ #category : #'multi-threading' }
-Cogit >> tryLockVMOwner [
-	<api>
-	<cmacro: '() ceTryLockVMOwner()'>
-	^self simulateLeafCallOf: ceTryLockVMOwner
 ]
 
 { #category : #'simulation only' }
@@ -6577,13 +6605,6 @@ Cogit >> unlinkSendsToFree [
 		cogMethod := methodZone methodAfter: cogMethod].
 	codeModified ifTrue: "After possibly updating inline caches we need to flush the icache."
 		[processor flushICacheFrom: methodZoneBase to: methodZone limitZony asInteger]
-]
-
-{ #category : #'multi-threading' }
-Cogit >> unlockVMOwner [
-	<api>
-	<cmacro: '() ceUnlockVMOwner()'>
-	^self simulateLeafCallOf: ceUnlockVMOwner
 ]
 
 { #category : #compaction }

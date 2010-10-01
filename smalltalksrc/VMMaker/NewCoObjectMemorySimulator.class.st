@@ -1,0 +1,493 @@
+Class {
+	#name : #NewCoObjectMemorySimulator,
+	#superclass : #NewCoObjectMemory,
+	#category : #'VMMaker-JITSimulation'
+}
+
+{ #category : #'instance creation' }
+NewCoObjectMemorySimulator class >> new [
+	^self == NewCoObjectMemorySimulator
+		ifTrue: [SmalltalkImage current endianness == #big
+				ifTrue: [NewCoObjectMemorySimulatorMSB new]
+				ifFalse: [NewCoObjectMemorySimulatorLSB new]]
+		ifFalse: [super new]
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> allocateMemory: endianness [
+	memory := (endianness == #little
+					ifTrue: [LittleEndianBitmap]
+					ifFalse: [Bitmap]) new: memoryLimit // 4.
+	coInterpreter memory: memory
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> booleanValueOf: obj [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter booleanValueOf: obj
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> byteAt: byteAddress [
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> byteAt: byteAddress put: byte [
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> byteAtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	pointer is a raw address, and byte is an 8-bit quantity."
+
+	^ self byteAt: pointer
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> byteAtPointer: pointer put: byteValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	pointer is a raw address, and byteValue is an 8-bit quantity."
+
+	^ self byteAt: pointer  put: byteValue
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> cCoerce: value to: cTypeString [
+	"Type coercion for translation only; just return the value when running in Smalltalk."
+
+	^value == nil
+		ifTrue: [value]
+		ifFalse: [value coerceTo: cTypeString sim: self]
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> capturePendingFinalizationSignals [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter capturePendingFinalizationSignals
+]
+
+{ #category : #initialization }
+NewCoObjectMemorySimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
+	coInterpreter := aCoInterpreter.
+	cogit := aCogit
+]
+
+{ #category : #printing }
+NewCoObjectMemorySimulator >> cr [
+	^coInterpreter cr
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> failed [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter failed
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> fetchInteger: fieldIndex ofObject: objectPointer [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter fetchInteger: fieldIndex ofObject: objectPointer
+]
+
+{ #category : #'interpreter access' }
+NewCoObjectMemorySimulator >> fetchPointer: fieldIndex ofObject: oop [
+	"index by word size, and return a pointer as long as the word size"
+	self assert: oop >= self startOfMemory.
+	^super fetchPointer: fieldIndex ofObject: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> firstIndexableField: oop [
+	"NOTE: overridden from Interpreter to add coercion to CArray"
+
+	| hdr fmt totalLength fixedFields |
+	<returnTypeC: #'void *'>
+	hdr := self baseHeader: oop.
+	fmt := self formatOfHeader: hdr.
+	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
+	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
+	fmt < 8 ifTrue:
+		[fmt = 6 ifTrue:"32 bit field objects"
+			[^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)) to: #'int *'].
+		"full word objects (pointer or bits)"
+		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: #'oop *'].
+	"Byte objects"
+	^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + fixedFields) to: #'char *'
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> floatValueOf: obj [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter floatValueOf: obj
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> forceInterruptCheck [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter forceInterruptCheck
+]
+
+{ #category : #'debug support' }
+NewCoObjectMemorySimulator >> fullGC [
+	self halt.
+	coInterpreter transcript
+		cr; nextPutAll:'<Running full GC ('; print: coInterpreter byteCount; nextPutAll: ')...'; flush.
+	super fullGC.
+	coInterpreter transcript show: ' done>'
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> halfWordHighInLong32: long32 [
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> halfWordLowInLong32: long32 [
+	^self subclassResponsibility
+]
+
+{ #category : #'debug support' }
+NewCoObjectMemorySimulator >> incrementalGC [
+	coInterpreter transcript cr; nextPutAll: 'incrementalGC ('; print: coInterpreter byteCount; nextPut: $); flush.
+	^super incrementalGC
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> integerObjectOf: value [
+	"The simulator works with strictly positive bit patterns"
+	^((value < 0
+		ifTrue: [16r80000000 + value]
+		ifFalse: [value])
+			bitShift: 1) + 1
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> interpreterAllocationReserveBytes [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter interpreterAllocationReserveBytes
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> ioLoadFunction: functionString From: pluginString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter ioLoadFunction: functionString From: pluginString
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> ioMicroMSecs [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter ioMicroMSecs
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> ioUTCMicrosecondsNow [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter ioUTCMicrosecondsNow
+]
+
+{ #category : #'interpreter shell' }
+NewCoObjectMemorySimulator >> isIntegerValue: valueWord [ 
+	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> long32At: byteAddress [
+	"Return the 32-bit word at byteAddress which must be 0 mod 4."
+
+	^ self longAt: byteAddress
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> long32At: byteAddress put: a32BitValue [
+	"Store the 32-bit value at byteAddress which must be 0 mod 4."
+
+	^ self longAt: byteAddress put: a32BitValue
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> longAt: byteAddress [
+	"Note: Adjusted for Smalltalk's 1-based array indexing."
+
+	^memory at: (byteAddress // 4) + 1
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> longAt: byteAddress put: a32BitValue [
+	(byteAddress = 16r1896A50
+	and: [a32BitValue = 7]) ifTrue:
+		[self halt].
+	"Note: Adjusted for Smalltalk's 1-based array indexing."
+	^memory at: (byteAddress // 4) + 1 put: a32BitValue
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> mapInterpreterOops [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter mapInterpreterOops
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> markAndTraceAndMaybeFreeStackPages: fullGCFlag [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter markAndTraceAndMaybeFreeStackPages: fullGCFlag
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> markAndTraceInterpreterOops: fullGCFlag [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter markAndTraceInterpreterOops: fullGCFlag
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> markAndTraceOrFreeMachineCode: fullGCFlag [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter markAndTraceOrFreeMachineCode: fullGCFlag
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> methodArgumentCount [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter methodArgumentCount
+]
+
+{ #category : #'image save/restore' }
+NewCoObjectMemorySimulator >> nextLongFrom: aStream swap: swapFlag [
+	^swapFlag 
+		ifTrue: [self byteSwapped: (self nextLongFrom: aStream)]
+		ifFalse: [self nextLongFrom: aStream]
+]
+
+{ #category : #initialization }
+NewCoObjectMemorySimulator >> nextShortFrom: aStream swap: swapFlag [
+	| aShort |
+	aShort := self nextShortFrom: aStream.
+	^swapFlag 
+		ifTrue: [(aShort bitShift: -8) + ((aShort bitAnd: 16rFF) bitShift: 8)]
+		ifFalse: [aShort]
+]
+
+{ #category : #'debugging traps' }
+NewCoObjectMemorySimulator >> noteAsRoot: oop headerLoc: headerLoc [
+	"Trap attempts to make cog methods roots."
+	self assert: oop >= self startOfMemory.
+	^super noteAsRoot: oop headerLoc: headerLoc
+]
+
+{ #category : #testing }
+NewCoObjectMemorySimulator >> objectBefore: addr [
+	| oop prev |
+	oop := self firstObject.
+	[oop < endOfMemory] whileTrue: [
+		prev := oop.  "look here if debugging prev obj overlapping this one"
+		oop := self objectAfter: oop.
+		oop >= addr ifTrue: [^ prev]
+	]
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> pop: nItems [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pop: nItems
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> pop: nItems thenPush: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pop: nItems thenPush: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> positive32BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive32BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> positive32BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive32BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> positive64BitIntegerFor: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive64BitIntegerFor: integerValue
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> positive64BitValueOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter positive64BitValueOf: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> postGCAction: fullGCFlag [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter postGCAction: fullGCFlag
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> preGCAction: fullGCFlag [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter preGCAction: fullGCFlag
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> primitiveFail [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter primitiveFail
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> primitiveFailureCode [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter primitiveFailureCode
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> push: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter push: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> pushBool: trueOrFalse [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pushBool: trueOrFalse
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> pushFloat: f [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pushFloat: f
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> pushInteger: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter pushInteger: integerValue
+]
+
+{ #category : #initialization }
+NewCoObjectMemorySimulator >> reverseBytesFrom: begin to: end [
+	"Byte-swap the given range of memory (not inclusive!)."
+	| wordAddr |
+	wordAddr := begin.
+	memory swapBytesFrom: wordAddr // 4 + 1 to: end // 4
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> shortAt: byteAddress [
+    "Return the half-word at byteAddress which must be even."
+	^self subclassResponsibility
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> shortAt: byteAddress put: a16BitValue [
+	^ self subclassResponsibility
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> showDisplayBits: aForm Left: l Top: t Right: r Bottom: b [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter showDisplayBits: aForm Left: l Top: t Right: r Bottom: b
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> signalFinalization: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter signalFinalization: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> sqFileSize: file [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter sqFileSize: file
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> sqGrowMemory: oldLimit By: delta [
+	| newMemory |
+	coInterpreter transcript show: 'grow memory from ', oldLimit printString, ' by ', delta printString; cr.
+	memory size * 4 < (oldLimit + delta) ifTrue:
+		[newMemory := (memory class new: oldLimit + delta + 3 // 4).
+		 newMemory replaceFrom: 1 to: memory size with: memory startingAt: 1.
+		 coInterpreter objectMemory memory: (memory := newMemory)].
+	^memory size * 4
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> sqMemoryExtraBytesLeft: includingSwap [
+	^0
+]
+
+{ #category : #'memory access' }
+NewCoObjectMemorySimulator >> sqShrinkMemory: oldLimit By: delta [
+	coInterpreter transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
+
+	^oldLimit
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> stackFloatValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackFloatValue: offset
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> stackIntegerValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackIntegerValue: offset
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> stackObjectValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackObjectValue: offset
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> stackValue: offset [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stackValue: offset
+]
+
+{ #category : #'interpreter access' }
+NewCoObjectMemorySimulator >> storePointer: index ofObject: oop withValue: valuePointer [
+	"Override to ensure acess is within the heap"
+	self assert: oop >= self startOfMemory.
+	^super storePointer: index ofObject: oop withValue: valuePointer
+]
+
+{ #category : #'interpreter access' }
+NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer [
+	"Override to ensure acess is within the heap"
+	self assert: oop >= self startOfMemory.
+	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> stringOf: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stringOf: oop
+]
+
+{ #category : #'debug support' }
+NewCoObjectMemorySimulator >> tenuringIncrementalGC [
+	coInterpreter transcript cr; nextPutAll: 'tenuringIncrementalGC ('; print: coInterpreter byteCount; nextPut: $); flush.
+	^super tenuringIncrementalGC
+]
+
+{ #category : #testing }
+NewCoObjectMemorySimulator >> validOop: oop [
+	" Return true if oop appears to be valid "
+	(oop bitAnd: 1) = 1 ifTrue: [^ true].  "Integer"
+	(oop bitAnd: 3) = 0 ifFalse: [^ false].  "Uneven address"
+	oop >= endOfMemory ifTrue: [^ false].  "Out of range"
+	"could test if within the first large freeblock"
+	(self longAt: oop) = 4 ifTrue: [^ false].
+	(self headerType: oop) = 2 ifTrue: [^ false].	"Free object"
+	^ true
+]

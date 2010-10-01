@@ -79,7 +79,7 @@ CroquetPlugin >> primitiveARC4Transform [
 	interpreterProxy storePointer: 0 ofObject: ptOop withValue: xOop.
 	interpreterProxy storePointer: 1 ofObject: ptOop withValue: yOop.
 	interpreterProxy pop: interpreterProxy methodArgumentCount + 1.
-	interpreterProxy push: ptOop.
+	^interpreterProxy push: ptOop.
 
 ]
 
@@ -190,7 +190,7 @@ CroquetPlugin >> primitiveAdj3 [
 	dst at: c33 put: ((m11 * m22) - (m12 * m21)).
 	
 	interpreterProxy pop: argc + 1.
-	interpreterProxy push: dstOop.
+	^interpreterProxy push: dstOop.
 
 ]
 
@@ -254,7 +254,7 @@ CroquetPlugin >> primitiveDet3 [
 
 	
 	interpreterProxy pop: argc + 1.
-	interpreterProxy pushFloat: det.
+	^interpreterProxy pushFloat: det.
 
 ]
 
@@ -275,7 +275,7 @@ CroquetPlugin >> primitiveGatherEntropy [
 	okay := self cCode: 'ioGatherEntropy(bufPtr, bufSize)' inSmalltalk:[bufPtr. bufSize. false].
 	okay ifFalse:[^interpreterProxy primitiveFail].
 	interpreterProxy pop: interpreterProxy methodArgumentCount + 1.
-	interpreterProxy pushBool: true.
+	^interpreterProxy pushBool: true.
 ]
 
 { #category : #transforms }
@@ -343,6 +343,7 @@ CroquetPlugin >> primitiveInplaceHouseHolderInvert [
 	0 to: 3 do:[:i| 0 to: 3 do:[:j|
 		rcvr at: i*4+j put: (self cCoerce: ((x at: i) at: j) to:'float')]].
 	"Return receiver"
+	^nil
 ]
 
 { #category : #transforms }
@@ -487,7 +488,7 @@ CroquetPlugin >> primitiveInverseByAdjoint [
 	dst at: c34 put: 0.0 - ((x * m31) + (y * m32) + (z * m33)).
 
 	interpreterProxy pop: argc + 1.
-	interpreterProxy push: dstOop.
+	^interpreterProxy push: dstOop.
 
 ]
 
@@ -517,7 +518,42 @@ CroquetPlugin >> primitiveMD5Transform [
 		^interpreterProxy primitiveFail].
 	"Pop args; return buffer"
 	interpreterProxy pop: interpreterProxy methodArgumentCount+1.
-	interpreterProxy push: bufOop.
+	^interpreterProxy push: bufOop.
+]
+
+{ #category : #'mesh processing' }
+CroquetPlugin >> primitiveOptimizeVertexIndicesForCacheLocality [
+	"Given a list of integer indices for rendering a triangle-mesh in indexed-triangles mode, reorganize the indices in-place to provide better vertex cache locality.
+	We use Tom Forsyth's algorithm:
+		http://home.comcast.net/~tom_forsyth/papers/fast_vert_cache_opt.html
+	... and the MIT-licensed implementation by Michael Georgoulpoulos at:
+		http://code.google.com/p/vcacne/"
+	| indicesOop indices byteSize triCount result |
+	<export: true>
+	<inline: true>
+	<var: #indices type: 'void *'>
+
+	"Get the oop of the IntegerArray containing the indices."
+	(interpreterProxy methodArgumentCount = 1) ifFalse: [^interpreterProxy primitiveFail].
+	indicesOop := interpreterProxy stackObjectValue: 0.
+	interpreterProxy failed ifTrue: [^nil].
+	(interpreterProxy isWords: indicesOop) ifFalse: [^interpreterProxy primitiveFail].
+	
+	"Ensure that the number of indices is a multiple of 3."
+	byteSize := interpreterProxy byteSizeOf: indicesOop.
+	triCount := byteSize / 12.
+	(triCount * 12) = byteSize ifFalse: [^interpreterProxy primitiveFail].
+	
+	"Get an int* to the indices, and optimize 'em."
+	indices := interpreterProxy firstIndexableField: indicesOop.
+	self touch: indices.
+	interpreterProxy failed ifTrue: [^nil].
+	result := self cCode: 'optimizeVertexIndices((int*)indices, triCount)'.
+	result = 0 "success" ifFalse: [^interpreterProxy primitiveFail].
+	^interpreterProxy pop: 1.
+
+	
+	
 ]
 
 { #category : #transforms }
@@ -563,7 +599,7 @@ CroquetPlugin >> primitiveOrthoNormInverseMatrix [
 	dst at: 11 put: (self cCoerce: 0.0-rz to: 'float').
 
 	interpreterProxy pop: 1.
-	interpreterProxy push: dstOop.
+	^interpreterProxy push: dstOop.
 
 ]
 
@@ -606,7 +642,7 @@ CroquetPlugin >> primitiveTransformDirection [
 	vertex at: 2 put: (self cCoerce: rz to: 'float').
 
 	interpreterProxy pop: 2.
-	interpreterProxy push: v3Oop.
+	^interpreterProxy push: v3Oop.
 
 ]
 
@@ -627,7 +663,7 @@ CroquetPlugin >> primitiveTransformMatrixWithInto [
 		ifTrue:[^interpreterProxy primitiveFail].
 	m2 == m3 ifTrue:[^interpreterProxy primitiveFail].
 	self transformMatrix: m1 with: m2 into: m3.
-	interpreterProxy pop: 3. "Leave rcvr on stack"
+	^interpreterProxy pop: 3. "Leave rcvr on stack"
 ]
 
 { #category : #transforms }
@@ -679,7 +715,7 @@ CroquetPlugin >> primitiveTransformVector3 [
 		vertex at: 2 put: (self cCoerce: rz*rw to: 'float').
 	].
 	interpreterProxy pop: 2.
-	interpreterProxy push: v3Oop.
+	^interpreterProxy push: v3Oop.
 
 ]
 
@@ -723,7 +759,7 @@ CroquetPlugin >> primitiveTransposeMatrix [
 	"dst at: 15 put: (src at: 15)."
 
 	interpreterProxy pop: 1.
-	interpreterProxy push: dstOop.
+	^interpreterProxy push: dstOop.
 
 ]
 
@@ -751,7 +787,7 @@ CroquetPlugin >> primitiveTriBoxIntersects [
 	result < 0 ifTrue:[^interpreterProxy primitiveFail].
 
 	interpreterProxy pop: 6. "args+rcvr"
-	interpreterProxy pushBool: result.
+	^interpreterProxy pushBool: result.
 ]
 
 { #category : #transforms }
@@ -828,5 +864,7 @@ CroquetPlugin >> transformMatrix: src with: arg into: dst [
 		m1 := m1 + 4.
 		m3 := m3 + 4.
 	].
+
+	^nil
 
 ]
