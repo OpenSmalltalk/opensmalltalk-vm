@@ -28,6 +28,17 @@ VMClass class >> apiExportHeaderName [
 ]
 
 { #category : #translation }
+VMClass class >> coreInterpreterClass [
+	"While the interpreterClass/vmClass for translation may be
+	 a subclass that holds a few primitives we want the actual
+	 interpreter name at the head of the generated file."
+	^((name endsWith: 'Primitives')
+	   and: [name beginsWith: superclass name])
+		ifTrue: [superclass]
+		ifFalse: [self]
+]
+
+{ #category : #translation }
 VMClass class >> declareC: arrayOfVariableNames as: aCType in: aCCodeGenerator [
 	"Declare the variables in arrayOfVariableNames with the given type."
 
@@ -89,6 +100,11 @@ VMClass class >> isInterpreterClass [
 ]
 
 { #category : #translation }
+VMClass class >> isTypePointerToStruct: type [ "<String>"
+	^false
+]
+
+{ #category : #translation }
 VMClass class >> noteCompilationOf: aSelector meta: isMeta [
 	"note the recompiliation by resetting the timeStamp "
 	timeStamp := Time totalSeconds.
@@ -125,6 +141,11 @@ VMClass class >> specialValueForConstant: constantName [
 ]
 
 { #category : #translation }
+VMClass class >> specialValueForConstant: constantName default: defaultValue [
+	^nil
+]
+
+{ #category : #translation }
 VMClass class >> timeStamp [
 	^timeStamp ifNil:[0]
 ]
@@ -136,6 +157,14 @@ VMClass class >> touch [
 		[:c| (c category includesSubString: 'VMMaker-JIT') ifTrue: [c touch]]"
 	"InterpreterPlugin withAllSubclassesDo:[:pl| pl touch]"
 	timeStamp := Time totalSeconds
+]
+
+{ #category : #translation }
+VMClass class >> translationClass [
+	"Return te class to use as the interpreterCLass when translating.  For the all-in-one
+	 VMs that inherit from ObjectMemory this is the receiver.  But for the separate VMs
+	 where most primitives are in a subclass it will be the subclass with the primitives."
+	^self
 ]
 
 { #category : #translation }
@@ -151,6 +180,7 @@ VMClass class >> writeVMHeaderTo: tempStream bytesPerWord: bytesPerWord [
 
 { #category : #'translation support' }
 VMClass >> addressOf: anObject [
+	<doNotGenerate>
 	"Translates into &anObject in C."
 	^anObject
 ]
@@ -162,6 +192,115 @@ VMClass >> asserta: aBooleanExpression [
 	(result := aBooleanExpression value) ifFalse:
 		[AssertionFailure signal: 'Assertion failed'].
 	^result
+]
+
+{ #category : #'simulation support' }
+VMClass >> doOrDefer: aBlock [
+	<doNotGenerate>
+	"Either evaluate aBlock immediately if in the uiProcess or defer aBlock as a UI message"
+	Processor activeProcess == Project uiProcess
+		ifTrue: [aBlock value]
+		ifFalse: [WorldState addDeferredUIMessage: aBlock]
+]
+
+{ #category : #'memory access' }
+VMClass >> fetchFloatAtPointer: pointer into: aFloat [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and aFloat is a 64-bit double precision float."
+	<doNotGenerate>
+
+	^self fetchFloatAt: pointer into: aFloat
+]
+
+{ #category : #'memory access' }
+VMClass >> fetchSingleFloatAtPointer: pointer into: aFloat [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and aFloat is a 32-bit single precision float."
+	<doNotGenerate>
+
+	^self fetchSingleFloatAt: pointer into: aFloat
+]
+
+{ #category : #'plugin support' }
+VMClass >> isInterpreterProxy [
+	<doNotGenerate>
+	"Return false since I am a real Interpreter simulation"
+	^false
+]
+
+{ #category : #'memory access' }
+VMClass >> longAtPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and the result is the width of a machine word."
+	<doNotGenerate>
+
+	^self longAt: pointer
+]
+
+{ #category : #'memory access' }
+VMClass >> longAtPointer: pointer put: longValue [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and longValue is the width of a machine word."
+	<doNotGenerate>
+
+	^self longAt: pointer put: longValue
+]
+
+{ #category : #'oop comparison' }
+VMClass >> oop: anOop isGreaterThan: otherOop [
+	"Compare two oop values, treating them as object memory locations.
+	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
+	method will be inlined during C translation."
+	<inline: true>
+	^(self cCoerce: anOop to: #usqInt)
+		> (self cCoerce: otherOop to: #usqInt)
+]
+
+{ #category : #'oop comparison' }
+VMClass >> oop: anOop isGreaterThan: baseOop andLessThan: limitOop [
+	"Compare two oop values, treating them as object memory locations.
+	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
+	method will be inlined during C translation."
+	<inline: true>
+	^(self cCoerce: anOop to: #usqInt) > (self cCoerce: baseOop to: #usqInt)
+	  and: [(self cCoerce: anOop to: #usqInt) < (self cCoerce: limitOop to: #usqInt)]
+]
+
+{ #category : #'oop comparison' }
+VMClass >> oop: anOop isGreaterThanOrEqualTo: otherOop [
+	"Compare two oop values, treating them as object memory locations.
+	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
+	method will be inlined during C translation."
+	<inline: true>
+	^(self cCoerce: anOop to: #usqInt)
+		>= (self cCoerce: otherOop to: #usqInt)
+]
+
+{ #category : #'oop comparison' }
+VMClass >> oop: anOop isLessThan: otherOop [
+	"Compare two oop values, treating them as object memory locations.
+	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
+	method will be inlined during C translation."
+	<inline: true>
+	^(self cCoerce: anOop to: #usqInt) < (self cCoerce: otherOop to: #usqInt)
+]
+
+{ #category : #'oop comparison' }
+VMClass >> oop: anOop isLessThanOrEqualTo: otherOop [
+	"Compare two oop values, treating them as object memory locations.
+	Use #cCoerce:to: to ensure comparison of unsigned magnitudes. This
+	method will be inlined during C translation."
+	<inline: true>
+	^(self cCoerce: anOop to: #usqInt)
+		<= (self cCoerce: otherOop to: #usqInt)
+]
+
+{ #category : #'memory access' }
+VMClass >> oopForPointer: pointerOrSurrogate [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 oop is the width of a machine word, and pointer is a raw address."
+	<doNotGenerate>
+	^pointerOrSurrogate asInteger
 ]
 
 { #category : #'translation support' }
@@ -186,4 +325,22 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 VMClass >> sqLowLevelMFence [
 	<doNotGenerate>
 	"A no-op in the simulator"
+]
+
+{ #category : #'memory access' }
+VMClass >> storeFloatAtPointer: pointer from: aFloat [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and aFloat is a 64-bit double precision float."
+	<doNotGenerate>
+
+	^self storeFloatAt: pointer from: aFloat
+]
+
+{ #category : #'memory access' }
+VMClass >> storeSingleFloatAtPointer: pointer from: aFloat [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	 pointer is a raw address, and aFloat is a 32-bit single precision float."
+	<doNotGenerate>
+
+	^self storeSingleFloatAt: pointer from: aFloat
 ]

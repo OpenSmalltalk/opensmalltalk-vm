@@ -256,22 +256,6 @@ InterpreterStackPages >> longAt: byteAddress put: a32BitValue [
 	^stackMemory at: byteAddress // BytesPerWord + indexOffset put: a32BitValue
 ]
 
-{ #category : #'memory access' }
-InterpreterStackPages >> longAtPointer: pointer [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	 pointer is a raw address, and the result is the width of a machine word."
-
-	^self longAt: pointer
-]
-
-{ #category : #'memory access' }
-InterpreterStackPages >> longAtPointer: pointer put: longValue [
-	"This gets implemented by Macros in C, where its types will also be checked.
-	 pointer is a raw address, and longValue is the width of a machine word."
-
-	^self longAt: pointer put: longValue
-]
-
 { #category : #'page access' }
 InterpreterStackPages >> markStackPageMostRecentlyUsed: page [ "<InterpreterStackPage>"
 	"MRUP-->used page<->used page<->used page<->used page<--LRUP
@@ -334,16 +318,6 @@ InterpreterStackPages >> mostRecentlyUsedPage [
 	<cmacro: '() GIV(mostRecentlyUsedPage)'>
 	<returnTypeC: #'StackPage *'> "this is to guide Slang's inliner"
 	^mostRecentlyUsedPage
-]
-
-{ #category : #simulation }
-InterpreterStackPages >> oopForPointer: aPointer [
-	<doNotGenerate>
-	"Simulation support.  Pointers and oops are the same when simulating; answer
-	  aPointer. This gets implemented by Macros in C, where its types will also be
-	  checked.  oop is the width of a machine word, and pointer is a raw address."
-
-	^aPointer
 ]
 
 { #category : #'page access' }
@@ -444,8 +418,8 @@ InterpreterStackPages >> stackPageClass [
 { #category : #'page access' }
 InterpreterStackPages >> stackPageFor: pointer [ "<Integer>"
 	<inline: true>
-	<var: #pointer type: 'void *'>
-	<returnTypeC: 'StackPage *'>
+	<var: #pointer type: #'void *'>
+	<returnTypeC: #'StackPage *'>
 	^self stackPageAt: (self pageIndexFor: pointer)
 ]
 

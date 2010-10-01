@@ -14,7 +14,8 @@ Class {
 		'ffiRetSpec',
 		'ffiRetSpecSize',
 		'ffiRetHeader',
-		'ffiLogEnabled'
+		'ffiLogEnabled',
+		'externalFunctionInstSize'
 	],
 	#pools : [
 		'FFIConstants'
@@ -575,9 +576,18 @@ FFIPlugin >> ffiCreateReturnStruct [
 
 { #category : #'callout support' }
 FFIPlugin >> ffiFail: reason [
-	<inline: true>
+	<inline: false>
+	"Map the FFI error code into a primitive error code.  If reason is negative it encodes one of the
+	 standard PrimErr... codes, negated to distinguish it from the FFIError codes.  If it is an FFIError...
+	 code then add the size of the primitive error table + 2 to disambiguate it from the PrimErr... codes.
+	 For historic reasons the FFIError codes range from -1 on up hence adding size + 2 maps them to
+	 size of table + 1 on up.  This OFFSET IS undone by ExternalFunction class>>externalCallFailedWith:.
+	 Thus we can communicate back both PrimErr.. and FFIError codes.  Complex but necessary in the ThreadedFFIPlugin."
 	self ffiSetLastError: reason.
-	^interpreterProxy primitiveFail
+	^interpreterProxy primitiveFailFor:
+		(reason >= FFINoCalloutAvailable
+			ifTrue: [reason + 2 + (interpreterProxy slotSizeOf: interpreterProxy primitiveErrorTable)]
+			ifFalse: [reason negated])
 ]
 
 { #category : #'callout support' }
@@ -642,19 +652,21 @@ FFIPlugin >> ffiLoadCalloutAddressFrom: oop [
 	| module moduleHandle functionName functionLength address |
 	<inline: false>
 	"First find and load the module"
-	module := interpreterProxy fetchPointer: 4 ofObject: oop.
+	module := interpreterProxy fetchPointer: externalFunctionInstSize + 1 ofObject: oop.
 	moduleHandle := self ffiLoadCalloutModule: module.
-	interpreterProxy failed ifTrue:[^0]. "failed"
+	interpreterProxy failed ifTrue:
+		[^0]. "failed"
 	"fetch the function name"
-	functionName := interpreterProxy fetchPointer: 3 ofObject: oop.
-	(interpreterProxy isBytes: functionName) ifFalse:[^self ffiFail: FFIErrorBadExternalFunction].
+	functionName := interpreterProxy fetchPointer: externalFunctionInstSize ofObject: oop.
+	(interpreterProxy isBytes: functionName) ifFalse:
+		[^self ffiFail: FFIErrorBadExternalFunction].
 	functionLength := interpreterProxy byteSizeOf: functionName.
-	address := interpreterProxy ioLoadSymbol: 
-					(self cCoerce: (interpreterProxy firstIndexableField: functionName) to:'int')
+	address := interpreterProxy
+					ioLoadSymbol: (self cCoerce: (interpreterProxy firstIndexableField: functionName) to: #int)
 					OfLength: functionLength 
 					FromModule: moduleHandle.
-	(interpreterProxy failed or:[address = 0])
-		ifTrue:[^self ffiFail: FFIErrorAddressNotFound].
+	(interpreterProxy failed or: [address = 0]) ifTrue:
+		[^self ffiFail: FFIErrorAddressNotFound].
 	^address
 ]
 
@@ -696,7 +708,7 @@ FFIPlugin >> ffiLogCallout: lit [
 	"fetch the function name"
 	| functionName |
 	ffiLogEnabled ifTrue:[
-		functionName := interpreterProxy fetchPointer: 3 ofObject: lit.
+		functionName := interpreterProxy fetchPointer: externalFunctionInstSize ofObject: lit.
 		(interpreterProxy isBytes: functionName) ifFalse:[^nil].
 		self ffiLogCall: (interpreterProxy firstIndexableField: functionName)
 			OfLength: (interpreterProxy byteSizeOf: functionName).
@@ -917,10 +929,14 @@ FFIPlugin >> ffiValidateExternalData: oop AtomicType: atomicType [
 
 { #category : #initialize }
 FFIPlugin >> initialiseModule [
-	"By default, disable logging"
 	<export: true>
+	self initSurfacePluginFunctionPointers.
+	"By default, disable logging"
 	ffiLogEnabled := false.
-
+	"Get the instSize of ExternalFunction to know whether it contains a cache of the stackSize,
+	 and what the offset of ExternalLibraryFunction's functionName and moduleName slots are."
+	externalFunctionInstSize := interpreterProxy instanceSizeOf: interpreterProxy classExternalFunction.
+	^1
 ]
 
 { #category : #'primitive support' }
@@ -1012,6 +1028,51 @@ FFIPlugin >> primitiveCalloutWithArgs [
 		OfSize: nArgs-1.
 	self ffiCleanup. "cleanup temp allocations"
 	^0
+]
+
+{ #category : #'primitives - surfaces' }
+FFIPlugin >> primitiveCreateManualSurface [
+	"arguments: name(type, stack offset)
+		width(Integer, 4)
+		height(Integer, 3)
+		rowPitch(Integer, 2)
+		depth(Integer, 1)
+		isMSB(Boolean, 0)"
+	| width height rowPitch depth isMSB result |
+	<export: true>
+	
+	interpreterProxy methodArgumentCount == 5 ifFalse: [^interpreterProxy primitiveFail].
+	width := interpreterProxy stackIntegerValue: 4.
+	height := interpreterProxy stackIntegerValue: 3.
+	rowPitch := interpreterProxy stackIntegerValue: 2.
+	depth := interpreterProxy stackIntegerValue: 1.
+	isMSB := interpreterProxy stackObjectValue: 0.
+	isMSB := interpreterProxy booleanValueOf: isMSB. 
+	interpreterProxy failed ifTrue: [^nil].
+	
+	self touch: width; touch: height; touch: rowPitch; touch: depth; touch: isMSB.
+	
+	result := self cCode: 'createManualSurface(width, height, rowPitch, depth, isMSB)'.
+	result < 0 ifTrue: [^interpreterProxy primitiveFail].
+	result := interpreterProxy signed32BitIntegerFor: result.
+	^interpreterProxy pop: 6 thenPush: result
+	
+]
+
+{ #category : #'primitives - surfaces' }
+FFIPlugin >> primitiveDestroyManualSurface [
+	"arguments: name(type, stack offset)
+		surfaceID(Integer, 0)"
+	| surfaceID result |
+	<export: true>
+	
+	interpreterProxy methodArgumentCount == 1 ifFalse: [^interpreterProxy primitiveFail].
+	surfaceID := interpreterProxy stackIntegerValue: 0.
+	interpreterProxy failed ifTrue: [^nil].
+	result := self destroyManualSurface: surfaceID.
+	result = 0 ifTrue: [^interpreterProxy primitiveFail].
+	^interpreterProxy pop: 1
+	
 ]
 
 { #category : #primitives }
@@ -1273,4 +1334,27 @@ FFIPlugin >> primitiveLogCallsTo [
 	].
 	^interpreterProxy pop: 1. "pop arg; return rcvr"
 
+]
+
+{ #category : #'primitives - surfaces' }
+FFIPlugin >> primitiveSetManualSurfacePointer [
+	"Create a 'manual surface' data-structure.  See the ExternalForm class in the FFI package for example usage."
+	"arguments: name(type, stack offset)
+		surfaceID(Integer, 1)
+		ptr(uint32, 0)"
+	| surfaceID ptr result |
+	<export: true>
+	<var: #ptr type: #'unsigned int'>
+	
+	interpreterProxy methodArgumentCount == 2 ifFalse: [^interpreterProxy primitiveFail].
+	surfaceID := interpreterProxy stackIntegerValue: 1.
+	ptr := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
+	interpreterProxy failed ifTrue: [^nil].
+
+	self touch: surfaceID; touch: ptr.
+	
+	result := self cCode: 'setManualSurfacePointer(surfaceID, (void*)ptr)'.
+	result = 0 ifTrue: [^interpreterProxy primitiveFail].
+	^interpreterProxy pop: 2
+	
 ]

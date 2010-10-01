@@ -1,5 +1,5 @@
 "
-I am an absract superclass for classes which map to simple structs in C,  Right now I merely serve to organize all the struct types.  I would like toarrange that generated assignment accessors answer their argument to correspond with field assignment in C, but createInstVarAccessors is implemented by the browser not by ClassDerscription.
+I am an absract superclass for classes which map to simple structs in C,  Right now I merely serve to organize all the struct types.  I would like to arrange that generated assignment accessors answer their argument to correspond with field assignment in C, but createInstVarAccessors is implemented by the browser not by ClassDescription.
 "
 Class {
 	#name : #VMStructType,

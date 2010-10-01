@@ -20,7 +20,8 @@ Class {
 		'LargeContextBytes'
 	],
 	#pools : [
-		'VMBasicConstants'
+		'VMBasicConstants',
+		'VMSqueakV3BytecodeConstants'
 	],
 	#category : #'VMMaker-Interpreter'
 }
@@ -35,7 +36,7 @@ InterpreterStackPage class >> alignedByteSize [
 { #category : #'class initialization' }
 InterpreterStackPage class >> initialize [
 	"InterpreterStackPage initialize"
-	LargeContextBytes := (ObjectMemory classPool at: #LargeContextSize)
+	LargeContextBytes := LargeContextSize
 ]
 
 { #category : #translation }

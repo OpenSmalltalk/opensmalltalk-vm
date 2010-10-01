@@ -2317,7 +2317,7 @@ CogIA32Compiler >> instructionSizeAt: pc [
 	"Answer the instruction size at pc.  This is very far from a full decode.
 	 It only has to cope with the instructions generated in a block dispatch."
 	| op |
-	op := coInterpreter byteAt: pc.
+	op := objectMemory byteAt: pc.
 	^op caseOf:
 		{	[16r0F]	->	[self twoByteInstructionSizeAt: pc].
 			[16r3D]	->	[5]. "cmp EAX,imm32"
@@ -2353,18 +2353,18 @@ CogIA32Compiler >> isBigEndian [
 { #category : #testing }
 CogIA32Compiler >> isCallPreceedingReturnPC: mcpc [
 	"Assuming mcpc is a return pc answer if the instruction before it is a call."
-	^(coInterpreter byteAt: mcpc - 5) = 16rE8
+	^(objectMemory byteAt: mcpc - 5) = 16rE8
 ]
 
 { #category : #disassembly }
 CogIA32Compiler >> isJumpAt: pc [
 	| op |
-	op := coInterpreter byteAt: pc.
+	op := objectMemory byteAt: pc.
 	^  (op between: 16r70 and: 16r7F) "short conditional jumps"
 	or: [op = 16rE9 "long unconditional jump"
 	or: [op = 16rEB "short unconditional jump"
 	or: [op = 16r0F "long conditional jumps"
-		and: [(coInterpreter byteAt: pc + 1) between: 16r80 and: 16r8F]]]]
+		and: [(objectMemory byteAt: pc + 1) between: 16r80 and: 16r8F]]]]
 ]
 
 { #category : #testing }
@@ -2418,14 +2418,14 @@ CogIA32Compiler >> jumpTargetAt: pc [
 	size := self instructionSizeAt: pc.
 	size = 2
 		ifTrue:
-			[byte := coInterpreter byteAt: pc + 1.
+			[byte := objectMemory byteAt: pc + 1.
 			 offset := (byte bitAnd: 16r80) = 0 ifTrue: [byte] ifFalse: [byte - 256]]
 		ifFalse:
-			[byte := coInterpreter byteAt: pc + size - 1.
+			[byte := objectMemory byteAt: pc + size - 1.
 			 offset := (byte bitAnd: 16r80) = 0 ifTrue: [byte] ifFalse: [byte - 256].
-			 offset := offset << 8 + (coInterpreter byteAt: pc + size - 2).
-			 offset := offset << 8 + (coInterpreter byteAt: pc + size - 3).
-			 offset := offset << 8 + (coInterpreter byteAt: pc + size - 4)].
+			 offset := offset << 8 + (objectMemory byteAt: pc + size - 2).
+			 offset := offset << 8 + (objectMemory byteAt: pc + size - 3).
+			 offset := offset << 8 + (objectMemory byteAt: pc + size - 4)].
 	^pc + size + offset
 ]
 
@@ -2441,10 +2441,10 @@ CogIA32Compiler >> leafCallStackPointerDelta [
 { #category : #'inline cacheing' }
 CogIA32Compiler >> literalBeforeFollowingAddress: followingAddress [
 	"Answer the literal embedded in the instruction immediately preceeding followingAddress."
-	^  ((coInterpreter byteAt: followingAddress - 1) << 24)
-	+  ((coInterpreter byteAt: followingAddress - 2) << 16)
-	+  ((coInterpreter byteAt: followingAddress - 3) << 8)
-	+   (coInterpreter byteAt: followingAddress - 4)
+	^  ((objectMemory byteAt: followingAddress - 1) << 24)
+	+  ((objectMemory byteAt: followingAddress - 2) << 16)
+	+  ((objectMemory byteAt: followingAddress - 3) << 8)
+	+   (objectMemory byteAt: followingAddress - 4)
 ]
 
 { #category : #accessing }
@@ -2461,7 +2461,7 @@ CogIA32Compiler >> mod: mod RM: regMode RO: regOpcode [
 { #category : #'generate machine code' }
 CogIA32Compiler >> nopsFrom: startAddr to: endAddr [
 	startAddr to: endAddr do:
-		[:p| coInterpreter byteAt: p put: 16r90]
+		[:p| objectMemory byteAt: p put: 16r90]
 ]
 
 { #category : #'feature detection' }
@@ -2492,12 +2492,12 @@ CogIA32Compiler >> numLowLevelLockOpcodes [
 CogIA32Compiler >> relocateCallBeforeReturnPC: retpc by: delta [
 	| distance |
 	delta ~= 0 ifTrue:
-		[distance :=     ((coInterpreter byteAt: retpc - 1) << 24)
-					+  ((coInterpreter byteAt: retpc - 2) << 16)
-					+  ((coInterpreter byteAt: retpc - 3) << 8)
-					+   (coInterpreter byteAt: retpc - 4).
+		[distance :=     ((objectMemory byteAt: retpc - 1) << 24)
+					+  ((objectMemory byteAt: retpc - 2) << 16)
+					+  ((objectMemory byteAt: retpc - 3) << 8)
+					+   (objectMemory byteAt: retpc - 4).
 		 distance := distance + delta.
-		 coInterpreter
+		 objectMemory
 			byteAt: retpc - 1 put: (distance >> 24 bitAnd: 16rFF);
 			byteAt: retpc - 2 put: (distance >> 16 bitAnd: 16rFF);
 			byteAt: retpc - 3 put: (distance >>   8 bitAnd: 16rFF);
@@ -2523,7 +2523,7 @@ CogIA32Compiler >> rewriteCallAt: callSiteReturnAddress target: callTargetAddres
 	"self cCode: ''
 		inSmalltalk: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]."
 	callDistance := (callTargetAddress - callSiteReturnAddress) signedIntToLong.
-	coInterpreter
+	objectMemory
 		byteAt: callSiteReturnAddress - 1 put: (callDistance >> 24 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 2 put: (callDistance >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 3 put: (callDistance >>   8 bitAnd: 16rFF);
@@ -2542,7 +2542,7 @@ CogIA32Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag tar
 	self cCode: ''
 		inSmalltalk: [false ifTrue: [cogit disassembleFrom: callSiteReturnAddress - 10 to: callSiteReturnAddress - 1]].
 	callDistance := (callTargetAddress - callSiteReturnAddress) signedIntToLong.
-	coInterpreter
+	objectMemory
 		byteAt: callSiteReturnAddress - 1 put: (callDistance >> 24 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 2 put: (callDistance >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 3 put: (callDistance >>   8 bitAnd: 16rFF);
@@ -2560,7 +2560,7 @@ CogIA32Compiler >> rewriteInlineCacheAt: callSiteReturnAddress tag: cacheTag tar
 CogIA32Compiler >> rewriteInlineCacheTag: cacheTag at: callSiteReturnAddress [
 	"Rewrite an inline cache with a new tag.  This variant is used
 	 by the garbage collector."
-	coInterpreter
+	objectMemory
 		byteAt: callSiteReturnAddress - 6 put: (cacheTag >> 24 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 7 put: (cacheTag >> 16 bitAnd: 16rFF);
 		byteAt: callSiteReturnAddress - 8 put: (cacheTag >>   8 bitAnd: 16rFF);
@@ -2604,7 +2604,7 @@ CogIA32Compiler >> shiftSetsConditionCodesFor: aConditionalJumpOpcode [
 { #category : #disassembly }
 CogIA32Compiler >> sizeHasModrm: op at: pc [
 	| modrm mod ro rm |
-	modrm := coInterpreter byteAt: pc + 1.
+	modrm := objectMemory byteAt: pc + 1.
 	mod := modrm >> 6.
 	ro := modrm >> 3 bitAnd: 7.
 	rm := modrm bitAnd: 7.
@@ -2625,7 +2625,7 @@ CogIA32Compiler >> sizeHasModrm: op at: pc [
 CogIA32Compiler >> sizeImmediateGroup1: op at: pc [
 	"see [1] p A-7, p A-13"
 	| modrm mod ro rm |
-	modrm := coInterpreter byteAt: pc + 1.
+	modrm := objectMemory byteAt: pc + 1.
 	mod := modrm >> 6.
 	ro := modrm >> 3 bitAnd: 7.
 	rm := modrm bitAnd: 7.
@@ -2699,7 +2699,7 @@ CogIA32Compiler >> stackPageInterruptHeadroomBytes [
 { #category : #'inline cacheing' }
 CogIA32Compiler >> storeLiteral: literal beforeFollowingAddress: followingAddress [
 	"Rewrite the literal in the instruction immediately preceeding followingAddress."
-	coInterpreter
+	objectMemory
 		byteAt: followingAddress - 1 put: (literal >> 24 bitAnd: 16rFF);
 		byteAt: followingAddress - 2 put: (literal >> 16 bitAnd: 16rFF);
 		byteAt: followingAddress - 3 put: (literal >>   8 bitAnd: 16rFF);
@@ -2709,12 +2709,12 @@ CogIA32Compiler >> storeLiteral: literal beforeFollowingAddress: followingAddres
 { #category : #disassembly }
 CogIA32Compiler >> twoByteInstructionSizeAt: pc [
 	| op |
-	op := coInterpreter byteAt: pc + 1. 
+	op := objectMemory byteAt: pc + 1. 
 	^(op bitAnd: 16rF0) caseOf:
 		{	[16r80]	->	[6 "long conditional jumps"] }
 ]
 
 { #category : #accessing }
 CogIA32Compiler >> unsignedShortAt: byteAddress [
-	^(coInterpreter byteAt: byteAddress) + ((coInterpreter byteAt: byteAddress + 1) bitShift: 8)
+	^(objectMemory byteAt: byteAddress) + ((objectMemory byteAt: byteAddress + 1) bitShift: 8)
 ]

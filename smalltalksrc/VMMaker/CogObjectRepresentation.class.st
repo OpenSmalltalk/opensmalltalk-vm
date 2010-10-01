@@ -6,13 +6,13 @@ Class {
 	#superclass : #CogClass,
 	#instVars : [
 		'cogit',
-		'coInterpreter'
+		'objectMemory'
 	],
 	#pools : [
 		'CogMethodConstants',
 		'CogRTLOpcodes',
 		'VMBasicConstants',
-		'VMObjectOffsets'
+		'VMObjectIndices'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -37,5 +37,7 @@ CogObjectRepresentation class >> typeForSelf [
 CogObjectRepresentation >> setCogit: aCogit [
 	<doNotGenerate>
 	cogit := aCogit.
-	coInterpreter := aCogit coInterpreter
+	objectMemory := (aCogit coInterpreter isKindOf: ObjectMemory)
+						ifTrue: [aCogit coInterpreter]
+						ifFalse: [aCogit coInterpreter objectMemory]
 ]

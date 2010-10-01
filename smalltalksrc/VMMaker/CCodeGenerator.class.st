@@ -313,6 +313,34 @@ CCodeGenerator >> cLiteralFor: anObject [
 	^'"XXX UNTRANSLATABLE CONSTANT XXX"'
 ]
 
+{ #category : #'C code generator' }
+CCodeGenerator >> cLiteralFor: anObject name: smalltalkName [
+	"Return a string representing the C literal value for the given object."
+	anObject isInteger ifTrue:
+		[| hex dec rep |
+		hex := anObject printStringBase: 16.
+		dec := anObject printStringBase: 10.
+		rep := ((smalltalkName endsWith: 'Mask')
+				or: [anObject digitLength > 1
+					and: [(hex asSet size * 3) <= (dec asSet size * 2)
+					and: [(smalltalkName endsWith: 'Size') not]]])
+					ifTrue: [hex first = $- ifTrue: ['-0x', hex allButFirst] ifFalse: ['0x', hex]]
+					ifFalse: [dec].
+		^(anObject < 16r7FFFFFFF)
+			ifTrue: [rep]
+			ifFalse: [rep, ObjectMemory unsignedIntegerSuffix "ikp"]].
+	anObject isFloat ifTrue:
+		[^anObject printString].
+	anObject isString ifTrue:
+		[^'"', anObject, '"'].
+	anObject == nil ifTrue: [^ 'null' ].
+	anObject == true ifTrue: [^ '1' ].			"ikp"
+	anObject == false ifTrue: [^ '0' ].			"ikp"
+	anObject isCharacter ifTrue:[^anObject asString printString]. "ar"
+	self error: 'Warning: A Smalltalk literal could not be translated into a C constant: ', anObject printString.
+	^'"XXX UNTRANSLATABLE CONSTANT XXX"'
+]
+
 { #category : #'error notification' }
 CCodeGenerator >> checkClassForNameConflicts: aClass [
 	"Verify that the given class does not have constant, variable, or method names that conflict with those of previously added classes. Raise an error if a conflict is found, otherwise just return."
@@ -559,7 +587,7 @@ CCodeGenerator >> emitBuiltinConstructFor: msgNode on: aStream level: level [
 CCodeGenerator >> emitCAPIExportHeaderOn: aStream [ 
 	"Store prototype declarations for all non-inlined methods on the given stream."
 	| api methodList |
-	api := vmClass exportAPISelectors.
+	api := vmClass translationClass exportAPISelectors.
 	methodList := api select: [:s| (methods includesKey: s) or: [(vmClass whichClassIncludesSelector: s) notNil]]
 					  thenCollect:
 						[:s|
@@ -624,29 +652,32 @@ CCodeGenerator >> emitCConstantsOn: aStream [
 	"Store the global variable declarations on the given stream."
 	| unused constList |
 	unused := constants keys asSet.
-	methods do:[:meth|
-		meth parseTree nodesDo:[:n|
-			n isConstant ifTrue:[unused remove: n name ifAbsent:[]]]].
+	methods do:
+		[:meth|
+		meth parseTree nodesDo:
+			[:n| n isConstant ifTrue: [unused remove: n name ifAbsent: []]]].
 	unused copy do:
 		[:const|
 		(variableDeclarations anySatisfy: [:value| value includesSubString: const]) ifTrue:
 			[unused remove: const ifAbsent: []]].
 	constList := constants keys reject:[:any| unused includes: any].
 	aStream cr; nextPutAll: '/*** Constants ***/'; cr.
-	(self sortStrings: constList) do:[:varName| | node |
+	(self sortStrings: constList) do:
+		[:varName| | node default value |
 		node := constants at: varName.
-		node name isEmpty ifFalse:[
-			aStream nextPutAll: '#define '.
-			aStream nextPutAll: node name.
-			aStream space.
-			aStream nextPutAll: ((vmClass notNil
-								  and: [(vmClass specialValueForConstant: node name) notNil])
-									ifTrue: [vmClass specialValueForConstant: node name]
-									ifFalse: [self cLiteralFor: node value]).
-			aStream cr
-		].
-	].
-	aStream cr.
+		node name isEmpty ifFalse:
+			["Allow the class to provide an alternative definition, either of just the value or the whole shebang"
+			default := self cLiteralFor: node value name: varName.
+			value := vmClass
+						ifNotNil:
+							[(vmClass specialValueForConstant: node name default: default)
+								ifNotNil: [:specialDef| specialDef]
+								ifNil: [default]]
+						ifNil: [default].
+			value first ~= $# ifTrue:
+				[aStream nextPutAll: '#define '; nextPutAll: node name; space].
+			aStream nextPutAll: value; cr]].
+	aStream cr
 ]
 
 { #category : #'C code generator' }
@@ -691,7 +722,11 @@ CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 CCodeGenerator >> emitCHeaderOn: aStream [
 	"Write a C file header onto the given stream."
 
-	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: vmClass).
+	| headerClass |
+	headerClass := [vmClass coreInterpreterClass]
+						on: MessageNotUnderstood
+						do: [:ex| vmClass].
+	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass).
 	aStream cr; cr.
 	self emitGlobalStructFlagOn: aStream.
 	aStream nextPutAll: '#include "sq.h"'; cr.

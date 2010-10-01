@@ -287,6 +287,40 @@ CogMethodZone >> methodFor: address [
 	^0
 ]
 
+{ #category : #'simulation only' }
+CogMethodZone >> methodsDo: aBlock [
+	<doNotGenerate>
+	| cogMethod |
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType ~= CMFree ifTrue:
+			[aBlock value: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]
+	"<api>
+	<returnTypeC: #void>
+	| cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType ~= CMFree ifTrue:
+			[aBlock value: cogMethod].
+		 cogMethod := self methodAfter: cogMethod]"
+]
+
+{ #category : #'jit - api' }
+CogMethodZone >> numMethodsOfType: cogMethodType [
+	<api>
+	| n cogMethod |
+	<var: #cogMethod type: #'CogMethod *'>
+	n := 0.
+	cogMethod := cogit cCoerceSimple: baseAddress to: #'CogMethod *'.
+	[cogMethod < self limitZony] whileTrue:
+		[cogMethod cmType = cogMethodType ifTrue:
+			[n := n + 1].
+		 cogMethod := self methodAfter: cogMethod].
+	^n
+]
+
 { #category : #'young referers' }
 CogMethodZone >> occurrencesInYoungReferrers: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>

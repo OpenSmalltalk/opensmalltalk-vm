@@ -13,7 +13,7 @@ Class {
 		'address',
 		'dependent',
 		'cogit',
-		'coInterpreter'
+		'objectMemory'
 	],
 	#classVars : [
 		'MachineCodeSize'
@@ -39,7 +39,7 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 	"self printTypedefOn: Transcript"
 	self instVarNames do:
 		[:ivn|
-		(#('cogit' 'coInterpreter') includes: ivn) ifFalse:
+		(#('cogit' 'coInterpreter' 'objectMemory') includes: ivn) ifFalse:
 			[aBinaryBlock
 				value: ivn
 				value: (ivn caseOf: {
@@ -53,20 +53,19 @@ CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlo
 
 { #category : #translation }
 CogAbstractInstruction class >> isAccessor: aSelector [
-	^(#(cogit coInterpreter) includes: aSelector) not
+	^(#(cogit coInterpreter objectMemory) includes: aSelector) not
 	   and: [super isAccessor: aSelector]
 ]
 
 { #category : #'debug printing' }
 CogAbstractInstruction class >> nameForOpcode: opcode [ "<Integer>"
-	^(self classPool keyAtValue: opcode ifAbsent: [])
+	^(CogRTLOpcodes nameForOpcode: opcode)
 		ifNotNil:
-			[:opcodeName|
-			((opcodeName beginsWith: 'First')
-			 or: [opcodeName beginsWith: 'Last'])
-				ifTrue: [#(JumpLong JumpBelowOrEqual Jump) detect: [:k| (classPool at: k) = opcode]]
-				ifFalse: [opcodeName]]
-		ifNil: [CogRTLOpcodes nameForOpcode: opcode]
+			[:opcodeName| opcodeName]
+		ifNil:
+			[(self classPool keyAtValue: opcode ifAbsent: [])
+				ifNotNil: [:opcodeName| opcodeName]
+				ifNil: [opcode printString]]
 ]
 
 { #category : #translation }
@@ -161,7 +160,7 @@ CogAbstractInstruction >> canMulRR [
 CogAbstractInstruction >> cogit: aCogit [
 	<doNotGenerate>
 	cogit := aCogit.
-	coInterpreter := aCogit coInterpreter
+	objectMemory := aCogit objectMemory
 ]
 
 { #category : #'generate machine code' }
