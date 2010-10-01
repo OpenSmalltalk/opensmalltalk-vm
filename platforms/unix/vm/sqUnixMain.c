@@ -1634,10 +1634,14 @@ int main(int argc, char **argv, char **envp)
   return 0;
 }
 
-sqInt ioExit(void)
+int ioExit(void) { return ioExitWithErrorCode(0); }
+
+sqInt
+ioExitWithErrorCode(int ec)
 {
   dpy->winExit();
-  exit(0);
+  exit(ec);
+  return ec;
 }
 
 #if defined(DARWIN)

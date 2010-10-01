@@ -108,10 +108,13 @@ CC:=gcc
 ifeq ("$(CONFIGURATION)","product")
 OFLAGS:= -D_MT -O2 -march=pentium4 -momit-leaf-frame-pointer -funroll-loops
 NDEBUG:=-DNDEBUG # Define NDEBUG for production to exclude asserts
+DEBUGVM=0
 else ifeq ("$(CONFIGURATION)","assert")
 OFLAGS:= -D_MT -O1 -march=pentium4 -fno-omit-frame-pointer
+DEBUGVM=0
 else
 OFLAGS:= -D_MT -march=pentium4
+DEBUGVM=1
 endif
 
 # Set minimum version to WindowsXP (see /cygwin/usr/include//w32api/w32api.h)
@@ -122,7 +125,7 @@ INCLUDEPATH:= -isystem/usr/include/mingw -I/usr/include/w32api
 NOBUILTIN:= -D_MT -fno-builtin-printf -fno-builtin-putchar -fno-builtin-fprintf
 CFLAGS:= $(INCLUDEPATH) -msse2 -ggdb2 -mwindows -mthreads -mno-cygwin -mwin32 \
 	-mno-rtd -mms-bitfields -mno-accumulate-outgoing-args $(OFLAGS) $(NOBUILTIN)
-DEFS:=	$(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
+DEFS:=	-DDEBUGVM=$(DEBUGVM) $(WINVER) -DWIN32 -DWIN32_FILE_SUPPORT -DNO_ISNAN \
 		-DNO_SERVICE -DNO_STD_FILE_SUPPORT \
 		$(NDEBUG) -DLSB_FIRST -DVM_NAME=\"$(VM)\" -DX86 $(XDEFS) $(CROQUET)
 XDEFS:=	-DSQUEAK_BUILTIN_PLUGIN

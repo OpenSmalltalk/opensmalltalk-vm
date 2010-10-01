@@ -39,8 +39,8 @@ an interpreter and a JIT, choosing not to generate machine code for large
 methods, interpreting them instead, the default policy being not to JIT methods 
 with more than 60 literals.
 
-The Cog VM requires a few minor image changes all in 
-image/NecessaryImageChangesForCogToWork.1.cs.  The JIT's machine-code 
+The Cog VM requires a few minor image changes to pre Squeak 4.1 trunk images,
+all in image/NecessaryImageChangesForCogToWork.1.cs.  The JIT's machine-code 
 SmallInteger primitives insist on a SmallInteger receiver so the primitives in 
 LargePositiveInteger = ~= bitAnd: bitOr: butShift: and bitXor: cannot be used 
 and these methods must be deleted.  The Cogit inlines the address of the 
@@ -60,6 +60,7 @@ The image/VMMaker-Squeak4.1.image is a Squeak 4.1 image, runnable with the
 current Squeak VMs, that contains these changes, and can hence also be run with 
 a Cog VM.  But beware, once an image has been saved on Cog it cannot be run by 
 an existing Squeak VM, because existing VMs cannot undo the Float order change.
+You'll fid that a Squeak 4.1 image updated to trunk will run Cog unchanged.
 
 
 Platform Subsystem:
@@ -141,16 +142,14 @@ included and selected as required by the platform makefiles).
 Since the Cogit generates x86 machine code simulation is much more complex.  
 There is a support plugin, platforms/Cross/plugins/BochsIA32Plugin that depends 
 on a large simulation of the x86 family implemented in C++ (see  
-processors/IA32/bochs) and on Alien.  I use the simulator frequently (but note 
-that I haven't had time to build a working version for Squeak 4.1).  I have 
+processors/IA32/bochs) and on Alien.  I use the simulator frequently.  I have
 tested Cog simulation in this image, running on the 
 image/VMMaker-Squeak4.1.image itself.  The VM Simulation Workspace in the 
 VMMaker image contains an example doit that starts the simulator. Be patient, 
 even on a fast machine unhibernating the Squeak display background image takes 
-nearly a minute.  Native fonts do not (yet) simulate correctly, but the system 
-runs.  But note that I have only attempted to build and run the simulator on 
+nearly a minute.  I have only attempted to build and run the simulator on 
 Mac OS X.  I expect Bochs can be built on linux and win32 but I have not tried. 
- By the way, I've not described how to run the Bochs simulator on the current 
+By the way, I've not described how to run the Bochs simulator on the current 
 Squeak VM.  That's because the plugin depends on the heartbeat to break out of 
 simulation occasionally via a new interpreterProxy entry point 
 setInterruptCheckChain.  As this isn't supported by the current Squeak VMs the 
@@ -212,19 +211,18 @@ The top-level directories in the tarball are
 Building Cog:
 
 Each build directory above contains a HowToBuild file that describes building 
-in more detail.  The build directories only contain Cogit makefiles.  f you 
+in more detail.  The build directories only contain Cogit makefiles.  If you 
 want to build a Stack VM you're on your own but this is very close to the 
 existing Squeak VM build.
 
 
 Status:
-The Cogit VM has been our sole VM at Teleplace for nearly a year.  We do 
-occasionally find bugs and there are almost certainly areas of functionality 
-that we have not touched (for example I know that co-routining does not yet 
-work).  If you find a bug please try and create a reproducible test case and 
-let me know.  I can't promise to take a look or fix it but I am motivated to do 
-so and will try my best as time allows.  Better still if you find and fix bugs 
-be sure to let me know.
+The Cogit VM has been our sole VM at Teleplace for over a year.  We do 
+occasionally find bugs, and Cog is still relatively immature.  If you find a
+bug please try and create a reproducible test case and let me know.  I can't
+promise to take a look or fix it but I am motivated to do so and will try my
+best as time allows.  Better still if you find and fix bugs be sure to let me
+know.
 
 License (MIT):
 Copyright (c) 2010 Teleplace, Inc.
@@ -250,3 +248,4 @@ THE SOFTWARE.
 
 Eliot Miranda
 June 2010
+updated October 2010

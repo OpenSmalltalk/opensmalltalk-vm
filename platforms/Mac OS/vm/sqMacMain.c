@@ -344,14 +344,18 @@ int main(int argc, char **argv, char **envp) {
     return 0;
 }
 
-int ioExit(void) {
+int ioExit(void) { return ioExitWithErrorCode(0); }
+
+sqInt
+ioExitWithErrorCode(int ec)
+{
     UnloadScrap();
     ioShutdownAllModules();
 	if (!gSqueakHeadless || gSqueakBrowserWasHeadlessButMadeFullScreen) 
 		MenuBarRestore();
 	sqMacMemoryFree();
-    ExitToShell();
-	return 0;
+    exit(ec);
+	return ec;
 }
 
 int ioDisablePowerManager(int disableIfNonZero) {
