@@ -14,7 +14,7 @@ ReentrantARMFFIPlugin class >> calloutStateClass [
 
 { #category : #'class initialization' }
 ReentrantARMFFIPlugin class >> initialize [
-	NumRegArgs := 8
+	NumRegArgs := 4
 ]
 
 { #category : #accessing }

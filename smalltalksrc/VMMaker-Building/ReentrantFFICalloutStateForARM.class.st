@@ -18,7 +18,7 @@ ReentrantFFICalloutStateForARM class >> instVarNamesAndTypesForTranslationDo: aB
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
-						['integerRegisters']	-> [#(#sqInt '[', ReentrantARMFFIPlugin numRegArgs printString, ']')] }
+						['integerRegisters']	-> [{#sqInt. '[', ReentrantARMFFIPlugin numRegArgs printString, ']'}] }
 					otherwise:
 						[#sqInt])]
 ]

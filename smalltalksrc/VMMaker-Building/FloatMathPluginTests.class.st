@@ -177,7 +177,7 @@ FloatMathPluginTests >> md5HashStream: aStream [
 			].
 			"Fill in the final 8 bytes with the 64-bit length in bits."
 			n := (aStream position - start) * 8.
-			7 to: 0 by: -1 do:[:i| buffer at: (buffer size - i) put: ((n bitShift: 7-i*-8) bitAnd: 255)].
+			7 to: 0 by: -1 do:[:i| buffer at: (buffer size - i) put: ((n bitShift: 7 - i * -8) bitAnd: 255)].
 		].
 		1 to: 16 do:[:i| words at: i put: (buffer unsignedLongAt: i*4-3 bigEndian: false)].
 		self md5Transform: words hash: hash.

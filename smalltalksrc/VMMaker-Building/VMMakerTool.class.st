@@ -575,25 +575,25 @@ VMMakerTool >> generateExternal [
 { #category : #'generate sources' }
 VMMakerTool >> generateSelectedExternalPlugin [
 
-	| plugin |
-	plugin := self externalModules at: self currentExternalModuleIndex ifAbsent: [^self].
-	self checkOK
-		ifTrue: [[vmMaker generateExternalPlugin: plugin; logDateAndTime]
-		on: VMMakerException
-		do: [:ex| self inform: ex messageText]]
-
+	| pluginName |
+	pluginName := self externalModules at: self currentExternalModuleIndex ifAbsent: [^self].
+	self checkOK ifTrue:
+		[[(Smalltalk classNamed: pluginName) touch.
+		  vmMaker generateExternalPlugin: pluginName; logDateAndTime]
+			on: VMMakerException
+			do: [:ex| self inform: ex messageText]]
 ]
 
 { #category : #'generate sources' }
 VMMakerTool >> generateSelectedInternalPlugin [
 
-	| plugin |
-	plugin := self internalModules at: self currentInternalModuleIndex ifAbsent: [^self].
-	self checkOK
-		ifTrue: [[vmMaker generateInternalPlugin: plugin]
-		on: VMMakerException
-		do: [:ex| self inform: ex messageText]]
-
+	| pluginName |
+	pluginName := self internalModules at: self currentInternalModuleIndex ifAbsent: [^self].
+	self checkOK ifTrue:
+		[[(Smalltalk classNamed: pluginName) touch.
+		  vmMaker generateInternalPlugin: pluginName]
+			on: VMMakerException
+			do: [:ex| self inform: ex messageText]]
 ]
 
 { #category : #menus }

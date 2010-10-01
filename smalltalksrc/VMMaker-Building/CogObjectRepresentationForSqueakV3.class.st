@@ -29,7 +29,7 @@ CogObjectRepresentationForSqueakV3 >> assertIsValidOop: anOop [
 	<doNotGenerate>
 	"Method map assertion chekcing only (development time only).
 	 Note we never put SmallIntegers in the map."
-	^coInterpreter addressCouldBeObj: anOop
+	^objectMemory addressCouldBeObj: anOop
 ]
 
 { #category : #'garbage collection' }
@@ -37,8 +37,8 @@ CogObjectRepresentationForSqueakV3 >> cacheTagIsMarked: cacheTag [
 	"Answer if the cacheTag is not unmarked, i.e. answer true for compact
 	 class indices and immediates; only answer false for unmarked objects"
 	(self couldBeObject: cacheTag) ifFalse: [^true].
-	self assert: (coInterpreter addressCouldBeObj: cacheTag).
-	^coInterpreter isMarked: cacheTag
+	self assert: (objectMemory addressCouldBeObj: cacheTag).
+	^objectMemory isMarked: cacheTag
 ]
 
 { #category : #'garbage collection' }
@@ -46,20 +46,20 @@ CogObjectRepresentationForSqueakV3 >> checkValidInlineCacheTag: cacheTag [
 	^((cacheTag bitAnd: 1 << ShiftForWord - 1) = 0
 		and: [cacheTag
 				between: 1 << ShiftForWord
-				and: (coInterpreter compactClassIndexOfHeader: -1) << ShiftForWord])
+				and: (objectMemory compactClassIndexOfHeader: -1) << ShiftForWord])
 	   or: [self checkValidObjectReference: cacheTag]
 ]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> checkValidObjectReference: anOop [
-	^(coInterpreter isIntegerObject: anOop)
+	^(objectMemory isIntegerObject: anOop)
 	   or: [(self heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
-	^(coInterpreter isNonIntegerObject: oop)
-	  and: [oop asUnsignedInteger > coInterpreter startOfMemory]
+	^(objectMemory isNonIntegerObject: oop)
+	  and: [oop asUnsignedInteger > objectMemory startOfMemory]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -73,15 +73,15 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 	<returnTypeC: #'AbstractInstruction *'>
 	| allocSize newFloatHeaderSansHash jumpFail |
 	<var: #jumpFail type: #'AbstractInstruction *'>
-	allocSize := BaseHeaderSize + (coInterpreter sizeof: #double asSymbol).
-	newFloatHeaderSansHash := ((coInterpreter classFloatCompactIndex << coInterpreter compactClassFieldLSB
-									bitOr: (coInterpreter formatOfClass: coInterpreter classFloat))
+	allocSize := BaseHeaderSize + (objectMemory sizeof: #double asSymbol).
+	newFloatHeaderSansHash := ((objectMemory classFloatCompactIndex << objectMemory compactClassFieldLSB
+									bitOr: (objectMemory formatOfClass: objectMemory classFloat))
 									bitOr: allocSize)
 									 bitOr: HeaderTypeShort.
-	cogit MoveAw: coInterpreter freeStartAddress R: resultReg.
+	cogit MoveAw: objectMemory freeStartAddress R: resultReg.
 	cogit MoveR: resultReg R: scratch1.
 	cogit AddCq: allocSize R: scratch1.
-	cogit MoveAw: coInterpreter scavengeThresholdAddress R: scratch2.
+	cogit MoveAw: objectMemory scavengeThresholdAddress R: scratch2.
 	cogit CmpR: scratch2 R: scratch1.
 	jumpFail := cogit JumpAboveOrEqual: 0.
 	cogit MoveR: resultReg R: scratch2.
@@ -91,7 +91,7 @@ CogObjectRepresentationForSqueakV3 >> genAllocFloatValue: dpreg into: resultReg 
 	cogit OrCq: newFloatHeaderSansHash R: scratch2.
 	cogit MoveR: scratch2 Mw: 0 r: resultReg.
 	cogit MoveRd: dpreg M64: BaseHeaderSize r: resultReg.
-	cogit MoveR: scratch1 Aw: coInterpreter freeStartAddress.
+	cogit MoveR: scratch1 Aw: objectMemory freeStartAddress.
 	^jumpFail
 ]
 
@@ -125,10 +125,10 @@ CogObjectRepresentationForSqueakV3 >> genGetClassFormatOfNonInt: instReg into: d
 	"Get header word in destReg"
 	cogit MoveMw: 0 r: instReg R: destReg.
 	"Form the byte index of the compact class field"
-	cogit LogicalShiftRightCq: (coInterpreter compactClassFieldLSB - ShiftForWord) R: destReg.
-	cogit AndCq: ((1 << coInterpreter compactClassFieldWidth) - 1) << ShiftForWord R: destReg.
+	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: destReg.
+	cogit AndCq: ((1 << objectMemory compactClassFieldWidth) - 1) << ShiftForWord R: destReg.
 	jumpCompact := cogit JumpNonZero: 0.
-	cogit MoveMw: coInterpreter classFieldOffset r: instReg R: scratchReg.
+	cogit MoveMw: objectMemory classFieldOffset r: instReg R: scratchReg.
 	"The use of signedIntFromLong is a hack to get round short addressing mode computations.
 	 Much easier if offsets are signed and the arithmetic machinery we have makes it difficult to
 	 mix signed and unsigned offsets."
@@ -137,8 +137,8 @@ CogObjectRepresentationForSqueakV3 >> genGetClassFormatOfNonInt: instReg into: d
 	"Don't have to subtract one from the destReg compactClassArray index because of the header word."
 	self assert: BaseHeaderSize = BytesPerWord.
 	jumpCompact jmpTarget:
-		(cogit annotate: (cogit MoveMw: coInterpreter compactClassTable r: destReg R: scratchReg)
-			objRef: coInterpreter compactClassTable).
+		(cogit annotate: (cogit MoveMw: objectMemory compactClassTable r: destReg R: scratchReg)
+			objRef: objectMemory compactClassTable).
 	jumpGotClass jmpTarget:
 		(cogit MoveMw: InstanceSpecificationIndex << ShiftForWord + BytesPerWord r: scratchReg R: destReg).
 	^0
@@ -161,21 +161,21 @@ CogObjectRepresentationForSqueakV3 >> genGetClassObjectOf: instReg into: destReg
 	"Get header word in scratchReg"
 	cogit MoveMw: 0 r: instReg R: scratchReg.
 	"Form the byte index of the compact class field"
-	cogit LogicalShiftRightCq: (coInterpreter compactClassFieldLSB - ShiftForWord) R: scratchReg.
-	cogit AndCq: ((1 << coInterpreter compactClassFieldWidth) - 1) << ShiftForWord R: scratchReg.
+	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: scratchReg.
+	cogit AndCq: ((1 << objectMemory compactClassFieldWidth) - 1) << ShiftForWord R: scratchReg.
 	jumpCompact := cogit JumpNonZero: 0.
-	cogit MoveMw: coInterpreter classFieldOffset r: instReg R: destReg.
+	cogit MoveMw: objectMemory classFieldOffset r: instReg R: destReg.
 	cogit AndCq: AllButTypeMask signedIntFromLong R: destReg.
 	jumpGotClass := cogit Jump: 0.
 	jumpIsInt jmpTarget:
-		(cogit annotate: (cogit MoveCw: coInterpreter classSmallInteger R: destReg)
-				objRef: coInterpreter classSmallInteger).
+		(cogit annotate: (cogit MoveCw: objectMemory classSmallInteger R: destReg)
+				objRef: objectMemory classSmallInteger).
 	jumpGotClass2 := cogit Jump: 0.
 	"Don't have to subtract one from the destReg compactClassArray index because of the header word."
 	self assert: BaseHeaderSize = BytesPerWord.
 	jumpCompact jmpTarget:
-		(cogit annotate: (cogit MoveMw: coInterpreter compactClassTable r: scratchReg R: destReg)
-			objRef: coInterpreter compactClassTable).
+		(cogit annotate: (cogit MoveMw: objectMemory compactClassTable r: scratchReg R: destReg)
+			objRef: objectMemory compactClassTable).
 	jumpGotClass jmpTarget:
 	(jumpGotClass2 jmpTarget: cogit Label).
 	^0
@@ -187,8 +187,8 @@ CogObjectRepresentationForSqueakV3 >> genGetCompactClassIndexNonIntOf: instReg i
 	"Get header word in scratchReg"
 	cogit MoveMw: 0 r: instReg R: destReg.
 	"Form the byte index of the compact class field"
-	cogit LogicalShiftRightCq: coInterpreter compactClassFieldLSB R: destReg.
-	cogit AndCq: (1 << coInterpreter compactClassFieldWidth) - 1 R: destReg.
+	cogit LogicalShiftRightCq: objectMemory compactClassFieldLSB R: destReg.
+	cogit AndCq: (1 << objectMemory compactClassFieldWidth) - 1 R: destReg.
 	^0
 ]
 
@@ -451,8 +451,8 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveStringAt [
 	cogit CmpR: ClassReg R: Arg0Reg.
 	jumpBounds := cogit JumpAboveOrEqual: 0.
 	cogit AddCq: BaseHeaderSize R: Arg0Reg.
-	cogit annotate: (cogit MoveCw: coInterpreter characterTable R: Arg1Reg)
-		objRef: coInterpreter characterTable.
+	cogit annotate: (cogit MoveCw: objectMemory characterTable R: Arg1Reg)
+		objRef: objectMemory characterTable.
 	cogit MoveXbr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg;
 		AddCq: BaseHeaderSize / BytesPerWord R: ReceiverResultReg.
 	cogit MoveXwr: ReceiverResultReg R: Arg1Reg R: ReceiverResultReg.
@@ -507,7 +507,7 @@ CogObjectRepresentationForSqueakV3 >> genStoreSourceReg: sourceReg slotIndex: in
 	cogit AndCq: 1 R: scratchReg.
 	jmpImmediate := cogit JumpNonZero: 0.
 	"Get the old/new boundary in scratchReg"
-	cogit MoveAw: coInterpreter youngStartAddress R: scratchReg.
+	cogit MoveAw: objectMemory youngStartAddress R: scratchReg.
 	"Is target young?  If so we're done"
 	cogit CmpR: scratchReg R: destReg. "N.B. FLAGS := destReg - scratchReg"
 	jmpDestYoung := cogit JumpAboveOrEqual: 0.
@@ -561,10 +561,10 @@ CogObjectRepresentationForSqueakV3 >> getInlineCacheClassTagFrom: sourceReg into
 	"Get header word in destReg"
 	cogit MoveMw: 0 r: sourceReg R: destReg.
 	"Form the byte index of the compact class field"
-	cogit LogicalShiftRightCq: (coInterpreter compactClassFieldLSB - ShiftForWord) R: destReg.
-	cogit AndCq: ((1 << coInterpreter compactClassFieldWidth) - 1) << ShiftForWord R: destReg.
+	cogit LogicalShiftRightCq: (objectMemory compactClassFieldLSB - ShiftForWord) R: destReg.
+	cogit AndCq: ((1 << objectMemory compactClassFieldWidth) - 1) << ShiftForWord R: destReg.
 	jumpCompact := cogit JumpNonZero: 0.
-	cogit MoveMw: coInterpreter classFieldOffset r: sourceReg R: destReg.
+	cogit MoveMw: objectMemory classFieldOffset r: sourceReg R: destReg.
 	"The use of signedIntFromLong is a hack to get round short addressing mode computations.
 	 Much easier if offsets are signed and the arithmetic machinery we have makes it difficult to
 	 mix signed and unsigned offsets."
@@ -576,48 +576,38 @@ CogObjectRepresentationForSqueakV3 >> getInlineCacheClassTagFrom: sourceReg into
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> hasValidHeaderPostGC: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
-	^cogMethod objectHeader = coInterpreter nullHeaderForMachineCodeMethod
+	^cogMethod objectHeader = objectMemory nullHeaderForMachineCodeMethod
 ]
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> inlineCacheTagForInstance: oop [
 	"c.f. getInlineCacheClassTagFrom:into:"
 	| cci |
-	(coInterpreter isIntegerObject: oop) ifTrue:
-		[^coInterpreter integerObjectOf: 0]. "the SmallInteger tag"
-	(cci :=  coInterpreter compactClassIndexOf: oop) > 0 ifTrue:
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^objectMemory integerObjectOf: 0]. "the SmallInteger tag"
+	(cci :=  objectMemory compactClassIndexOf: oop) > 0 ifTrue:
 		[^cci << ShiftForWord].
-	^(coInterpreter classHeader: oop) bitAnd: AllButTypeMask
+	^(objectMemory classHeader: oop) bitAnd: AllButTypeMask
 ]
 
 { #category : #'in-line cacheing' }
 CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
-	^coInterpreter isYoung: cacheTag
-]
-
-{ #category : #'garbage collection' }
-CogObjectRepresentationForSqueakV3 >> markAndTraceCogMethodWithYoungReferents: cogMethod [
-	<var: #cogMethod type: #'CogMethod *'>
-	self assert: cogMethod cmRefersToYoung.
-	(coInterpreter isYoung: cogMethod methodObject) ifTrue:
-		[coInterpreter markAndTrace: cogMethod methodObject].
-	(coInterpreter isYoung: cogMethod selector) ifTrue:
-		[coInterpreter markAndTrace: cogMethod selector]
+	^objectMemory isYoung: cacheTag
 ]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal [
 	(self couldBeObject: literal) ifTrue:
-		[self assert: (coInterpreter addressCouldBeObj: literal).
-		 coInterpreter markAndTrace: literal]
+		[self assert: (objectMemory addressCouldBeObj: literal).
+		 objectMemory markAndTrace: literal]
 ]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> markAndTraceLiteralIfYoung: literal [
 	((self couldBeObject: literal)
-	 and: [coInterpreter isYoung: literal]) ifTrue:
-		[self assert: (coInterpreter addressCouldBeObj: literal).
-		 coInterpreter markAndTrace: literal]
+	 and: [objectMemory isYoung: literal]) ifTrue:
+		[self assert: (objectMemory addressCouldBeObj: literal).
+		 objectMemory markAndTrace: literal]
 ]
 
 { #category : #'compile abstract instructions' }
@@ -633,20 +623,20 @@ CogObjectRepresentationForSqueakV3 >> numSmallIntegerTagBits [
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> remapCacheTag: cacheTag [
 	^(self couldBeObject: cacheTag)
-		ifTrue: [coInterpreter remap: cacheTag]
+		ifTrue: [objectMemory remap: cacheTag]
 		ifFalse: [cacheTag]
 ]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> remapOop: oop [
-	^(coInterpreter isIntegerObject: oop)
+	^(objectMemory isIntegerObject: oop)
 		ifTrue: [oop]
-		ifFalse: [coInterpreter remap: oop]
+		ifFalse: [objectMemory remap: oop]
 ]
 
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> shouldAnnotateObjectReference: anOop [
-	"self assert: ((coInterpreter isIntegerObject: anOop)
-				or: [coInterpreter addressCouldBeObj: anOop])."
-	^coInterpreter isNonIntegerObject: anOop
+	"self assert: ((objectMemory isIntegerObject: anOop)
+				or: [objectMemory addressCouldBeObj: anOop])."
+	^objectMemory isNonIntegerObject: anOop
 ]

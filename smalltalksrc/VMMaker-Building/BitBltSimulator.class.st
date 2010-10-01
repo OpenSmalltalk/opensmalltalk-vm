@@ -79,11 +79,6 @@ BitBltSimulator >> mergeFn: arg1 with: arg2 [
 	^ self perform: (opTable at: combinationRule+1) with: arg1 with: arg2
 ]
 
-{ #category : #simulation }
-BitBltSimulator >> oopForPointer: pointer [
-	^pointer
-]
-
 { #category : #'debug support' }
 BitBltSimulator >> srcLongAt: srcIndex [
 
