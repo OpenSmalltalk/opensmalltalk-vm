@@ -482,37 +482,6 @@ SmartSyntaxPluginTMethod >> setSelector: sel definingClass: class args: argList 
 
 ]
 
-{ #category : #'specifying primitives' }
-SmartSyntaxPluginTMethod >> simulatePrologInContext: aContext [
-
-	|cg instructions |
-	cg := SmartSyntaxPluginCodeGenerator new.
-	parmSpecs keysAndValuesDo: 
-		[:index :each |
-		 instructions := ((parmSpecs at: index)
-			ccg: cg 
-			prolog: (cg ccgTVarBlock: index) 
-			expr: '<foo>' 
-			index: args size - index).
-		 Compiler new 
-			evaluate: instructions
-			in: aContext 
-			to: aContext receiver
-			notifying: nil
-			ifFail: nil].
-	instructions := (rcvrSpec
-		ccg: cg 
-		prolog: [:expr | '^', expr]
-		expr: '<foo>' 
-		index: args size).
-	 ^Compiler new 
-		evaluate: instructions
-		in: aContext 
-		to: aContext receiver
-		notifying: nil
-		ifFail: nil
-]
-
 { #category : #'primitive compilation' }
 SmartSyntaxPluginTMethod >> vmNameString [
 	"return the string to use as the vm name in code generated for this method"

@@ -36,7 +36,9 @@ Object >> asOop: aClass [
 		ifTrue: [self error: 'cannot auto-coerce indexable objects with named instance variables'].
 	(aClass ccgCanConvertFrom: self)
 		ifFalse: [self error: 'incompatible object for this coercion'].
-	^self
+	^(Notification new tag: #getSimulator; signal)
+		ifNotNil: [:simulator| aClass ccg: simulator generateCoerceToOopFrom: self on: nil]
+		ifNil: [self]
 ]
 
 { #category : #'*VMMaker-translation support' }
@@ -91,14 +93,14 @@ Object class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
 
 { #category : #'*VMMaker-plugin generation' }
 Object class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
-
-	cg emitCExpression: aNode on: aStream
+	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
+	^cg emitCExpression: aNode on: aStream
 ]
 
 { #category : #'*VMMaker-plugin generation' }
 Object class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
-
-	cg emitCExpression: aNode on: aStream
+	"N.B.  The could be used both for generation and simulation so answer the result (for interpretation)"
+	^cg emitCExpression: aNode on: aStream
 ]
 
 { #category : #'*VMMaker-plugin generation' }
@@ -125,7 +127,7 @@ Object >> debugCode: aBlock [
 	aBlock. Debug code will be be generated only, if the correponding flag 
 	has been set by TestCodeGenerator>>generateDebugCode:.
 	In ST simulation just perform the debug code."
-	aBlock value
+	false ifTrue: [aBlock value]
 ]
 
 { #category : #'*VMMaker-translation support' }
@@ -155,23 +157,6 @@ Object >> primitive: primName [
 ]
 
 { #category : #'*VMMaker-translation support' }
-Object >> primitive: primName parameters: parms [
-	"For translation only; noop when running in Smalltalk."
-]
-
-{ #category : #'*VMMaker-translation support' }
-Object >> primitive: primID parameters: parmSpecs receiver: rcvrSpec [
-"belongs in CCG package"
-	| tMethod |
-	tMethod := SmartSyntaxPluginTMethod new 
-		fromContext: thisContext sender 
-		primitive: primID 
-		parameters: parmSpecs 
-		receiver: rcvrSpec.
-	^tMethod simulatePrologInContext: thisContext sender
-]
-
-{ #category : #'*VMMaker-translation support' }
 Object >> remapOop: oopOrList in: aBlock [
 	"For translation only; noop when running in Smalltalk."
 	^aBlock value
@@ -189,14 +174,20 @@ Object >> sharedCodeNamed: label inCase: caseNumber [
 
 { #category : #'*VMMaker-translation support' }
 Object >> stAt: index [
-
-	^self at: index
+	"Simulation of generateStAt:on:indent:"
+	
+	^(Notification new tag: #getSimulator; signal)
+		ifNotNil: [:simulator| simulator stObject: self at: index]
+		ifNil: [self at: index]
 ]
 
 { #category : #'*VMMaker-translation support' }
 Object >> stAt: index put: value [
-
-	^self at: index put: value
+	"Simulation of generateStAtPut:on:indent:"
+	
+	^(Notification new tag: #getSimulator; signal)
+		ifNotNil: [:simulator| simulator getInterpreter stObject: self at: index put: value]
+		ifNil: [self at: index put: value]
 ]
 
 { #category : #'*VMMaker-translation support' }
