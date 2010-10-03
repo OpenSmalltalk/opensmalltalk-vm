@@ -31,7 +31,8 @@ Class {
 		'externalSemaphoreSignalRequests',
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
-		'atEachStepBlock'
+		'atEachStepBlock',
+		'breakCount'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -380,6 +381,17 @@ StackInterpreterSimulator >> elementsPerPrintOopLine [
 	^4
 ]
 
+{ #category : #testing }
+StackInterpreterSimulator >> ensureDebugAtEachStepBlock [
+	atEachStepBlock := [printFrameAtEachStep ifTrue:
+							[self printFrame: localFP WithSP: localSP].
+						 printBytecodeAtEachStep ifTrue:
+							[self printCurrentBytecodeOn: transcript.
+							 transcript cr; flush].
+						 byteCount = breakCount ifTrue:
+							["printFrameAtEachStep :=" printBytecodeAtEachStep := true]]
+]
+
 { #category : #'debugging traps' }
 StackInterpreterSimulator >> externalDivorceFrame: theFP andContext: ctxt [
 	"(theFP = -208 or: [ctxt = 22189568]) ifTrue:
@@ -551,7 +563,9 @@ StackInterpreterSimulator >> headerStart: oop [
 
 { #category : #'interpreter shell' }
 StackInterpreterSimulator >> incrementByteCount [
-	byteCount := byteCount + 1.
+	(byteCount := byteCount + 1) = breakCount ifTrue:
+		[self doOrDefer: [self changed: #byteCountText].
+		 self halt].
 	byteCount \\ 1000 = 0 ifTrue:
 		[self doOrDefer: [self changed: #byteCountText].
 		 self forceInterruptCheck.
@@ -926,27 +940,26 @@ StackInterpreterSimulator >> isWidowedContext: aOnceMarriedContext [
 
 { #category : #'plugin support' }
 StackInterpreterSimulator >> loadNewPlugin: pluginString [
-	| plugin simClass |
-	transcript cr; show:'Looking for module ', pluginString.
-	(#('FloatArrayPlugin' 'Matrix2x3Plugin')
-		includes: pluginString) ifTrue:
-		[transcript show: ' ... defeated'. ^ nil].
-	plugin := simClass := nil.
-	InterpreterPlugin allSubclassesDo:[:plg|
-		plg moduleName asString = pluginString asString ifTrue:[
-			simClass := plg simulatorClass.
-			plugin ifNil:[plugin := simClass]
-				ifNotNil:[plugin == simClass ifFalse:[self error:'This won''t work...'. ^nil]].
-		].
-	].
-	plugin ifNil:[transcript show: ' ... not found'. ^nil].
-	plugin := plugin new.
+	| plugin plugins simulatorClasses |
+	transcript cr; show: 'Looking for module ', pluginString.
+	"but *why*??"
+	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
+		[transcript show: ' ... defeated'. ^nil].
+	plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
+	simulatorClasses := (plugins
+							select: [:psc| psc simulatorClass notNil]
+							thenCollect: [:psc| psc simulatorClass]) asSet.
+	simulatorClasses isEmpty ifTrue: [transcript show: ' ... not found'. ^nil].
+	simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
+	plugins size > 1 ifTrue:
+		[transcript show: '...multiple plugin classes; choosing ', plugins last name].
+	plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
 	plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
-	(plugin respondsTo: #initialiseModule) ifTrue:[
-		plugin initialiseModule ifFalse:[transcript show: ' ... initialiser failed'.^nil]. "module initialiser failed"
-	].
+	(plugin respondsTo: #initialiseModule) ifTrue:
+		[plugin initialiseModule ifFalse:
+			[transcript show: ' ... initialiser failed'. ^nil]]. "module initialiser failed"
 	pluginList := pluginList copyWith: (pluginString asString -> plugin).
-	transcript show:' ... loaded'.
+	transcript show: ' ... loaded'.
 	^pluginList last
 ]
 
@@ -1218,7 +1231,8 @@ StackInterpreterSimulator >> openAsMorph [
 			frame: (0@0.8 corner: 0.7@1).
 
 	window addMorph: (PluggableTextMorph on: self
-						text: #byteCountText accept: nil) hideScrollBarsIndefinitely
+						text: #byteCountText accept: nil
+						readSelection: nil menu: #utilitiesMenu:) hideScrollBarsIndefinitely
 			frame: (0.7@0.8 corner: 1@1).
 
 	window openInWorldExtent: (self desiredDisplayExtent
@@ -1608,6 +1622,20 @@ StackInterpreterSimulator >> primitiveMousePoint [
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
+{ #category : #'arithmetic largeint primitives' }
+StackInterpreterSimulator >> primitiveMultiplyLargeIntegers [
+	(objectMemory lengthOf: (self stackValue: 1)) >= 9 ifTrue:
+		[self halt].
+	^super primitiveMultiplyLargeIntegers
+]
+
+{ #category : #'arithmetic largeint primitives' }
+StackInterpreterSimulator >> primitiveQuoLargeIntegers [
+	(objectMemory lengthOf: (self stackValue: 1)) >= 9 ifTrue:
+		[self halt].
+	^super primitiveQuoLargeIntegers
+]
+
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> primitiveRelinquishProcessor [
 	"No-op in simulator"
@@ -1636,6 +1664,13 @@ StackInterpreterSimulator >> primitiveStoreStackp [
 	self halt."
 	super primitiveStoreStackp.
 	"self printContext: self stackTop"
+]
+
+{ #category : #'arithmetic largeint primitives' }
+StackInterpreterSimulator >> primitiveSubtractLargeIntegers [
+	(objectMemory lengthOf: (self stackValue: 1)) >= 9 ifTrue:
+		[self halt].
+	^super primitiveSubtractLargeIntegers
 ]
 
 { #category : #'debugging traps' }
@@ -1953,7 +1988,14 @@ StackInterpreterSimulator >> runForNBytes: nBytecodes [
 ]
 
 { #category : #testing }
-StackInterpreterSimulator >> runWithBreakCount: breakCount [
+StackInterpreterSimulator >> runWithBreakCount: theBreakCount [
+	"Just run, halting when byteCount is reached"
+	quitBlock := [(displayView notNil
+				   and: [UIManager default confirm: 'close?']) ifTrue:
+					[(displayView outermostMorphThat: [:m| m isSystemWindow]) ifNotNil:
+						[:topWindow| topWindow delete]].
+				  ^self].
+	breakCount := theBreakCount.
 	self initStackPages.
 	self loadInitialContext.
 	self internalizeIPandSP.
@@ -2513,6 +2555,19 @@ StackInterpreterSimulator >> testWithFramePrint [
 	self test
 ]
 
+{ #category : #UI }
+StackInterpreterSimulator >> toggleTranscript [
+	| transcriptPane |
+	transcript ifNil: [transcript := Transcript. ^self].
+	displayView ifNil: [^self changed: #flash].
+	transcriptPane := (displayView outermostMorphThat: [:m| m isSystemWindow])
+							submorphThat: [:m| m model isStream]
+							ifNone: [^self changed: #flash].
+	transcript := transcript = Transcript
+					ifTrue: [transcriptPane model]
+					ifFalse: [Transcript]
+]
+
 { #category : #'simulation only' }
 StackInterpreterSimulator >> transcript [
 	^transcript
@@ -2539,6 +2594,47 @@ StackInterpreterSimulator >> updateStateOfSpouseContextForFrame: theFP WithSP: t
 	"(self frameContext: theFP) = 22163268 ifTrue:
 		[self halt]."
 	^super updateStateOfSpouseContextForFrame: theFP WithSP: theSP
+]
+
+{ #category : #UI }
+StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
+	aMenuMorph
+		add: 'toggle transcript' action: #toggleTranscript;
+		addLine;
+		add: 'print ext head frame' action: #printExternalHeadFrame;
+		add: 'print int head frame' action: #printHeadFrame;
+		add: 'short print frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
+		add: 'long print frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'print call stack' action: #printCallStack;
+		addLine;
+		add: 'inspect object memory' target: objectMemory action: #inspect;
+		add: 'inspect cointerpreter' action: #inspect;
+		addLine;
+		add: 'set break pc...' action: #setBreakPC;
+		addLine;
+		add: 'set break count...' action: #setBreakCount;
+		add: (printSends
+				ifTrue: ['no print sends']
+				ifFalse: ['print sends'])
+			action: [self ensureDebugAtEachStepBlock.
+					printSends := printSends not];
+		"currently printReturns does nothing"
+		"add: (printReturns
+				ifTrue: ['no print returns']
+				ifFalse: ['print returns'])
+			action: [self ensureDebugAtEachStepBlock.
+					printReturns := printReturns not];"
+		add: (printBytecodeAtEachStep
+				ifTrue: ['no print bytecode each bytecode']
+				ifFalse: ['print bytecode each bytecode'])
+			action: [self ensureDebugAtEachStepBlock.
+					printBytecodeAtEachStep := printBytecodeAtEachStep not];
+		add: (printFrameAtEachStep
+				ifTrue: ['no print frame each bytecode']
+				ifFalse: ['print frame each bytecode'])
+			action: [self ensureDebugAtEachStepBlock.
+					printFrameAtEachStep := printFrameAtEachStep not].
+	^aMenuMorph
 ]
 
 { #category : #testing }
