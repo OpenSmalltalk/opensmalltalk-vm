@@ -8,14 +8,14 @@ Boolean class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
 
 { #category : #'*VMMaker-plugin generation' }
 Boolean class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
-
-	cg generateCoerceToBooleanObjectFrom: aNode on: aStream
+	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
+	^cg generateCoerceToBooleanObjectFrom: aNode on: aStream
 ]
 
 { #category : #'*VMMaker-plugin generation' }
 Boolean class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
-
-	cg generateCoerceToBooleanValueFrom: aNode on: aStream
+	"N.B.  The could be used both for generation and simulation so answer the result (for interpretation)"
+	^cg generateCoerceToBooleanValueFrom: aNode on: aStream
 ]
 
 { #category : #'*VMMaker-plugin generation' }

@@ -369,23 +369,23 @@ InterpreterSimulator >> findNewMethodInClass: class [
 
 { #category : #'memory access' }
 InterpreterSimulator >> firstIndexableField: oop [
-	"NOTE: overridden from Interpreter to add coercion to CArray"
-
+	"NOTE: overridden from ObjectMemory to add coercion to CArray, so please duplicate any changes"
 	| hdr fmt totalLength fixedFields |
-	<returnTypeC: 'void *'>
+	<returnTypeC: #'void *'>
 	hdr := self baseHeader: oop.
-	fmt := (hdr >> 8) bitAnd: 16rF.
-	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
-	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt < 8 ifTrue:
-		[fmt = 6 ifTrue:
-			["32 bit field objects"
-			^ self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)) to: 'int *'].
-		"full word objects (pointer or bits)"
-		^ self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *']
-		ifFalse:
-		["Byte objects"
-		^ self cCoerce: (self pointerForOop: oop + BaseHeaderSize + fixedFields) to: 'char *']
+	fmt := self formatOfHeader: hdr.
+	fmt <= 4 ifTrue: "<= 4 pointer"
+		["pointer; may need to delve into the class format word"
+		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
+		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
+		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
+	^self
+		cCoerce: (self pointerForOop: oop + BaseHeaderSize)
+		to: (fmt < 8
+				ifTrue: [fmt = 6
+						ifTrue: ["32 bit field objects" 'int *']
+						ifFalse: ["full word objects (bits)" 'oop *']]
+				ifFalse: ["byte objects (including CompiledMethod" 'char *'])
 ]
 
 { #category : #'plugin support' }
@@ -631,10 +631,10 @@ InterpreterSimulator >> ioLoadFunction: functionString From: pluginString [
 	"Load and return the requested function from a module"
 	| plugin fnSymbol |
 	fnSymbol := functionString asSymbol.
-	Transcript cr; show:'Looking for ', functionString, ' in '.
+	transcript cr; show:'Looking for ', functionString, ' in '.
 	pluginString isEmpty
-		ifTrue:[Transcript show: 'vm']
-		ifFalse:[Transcript show: pluginString].
+		ifTrue:[transcript show: 'vm']
+		ifFalse:[transcript show: pluginString].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
 				ifNone:[self loadNewPlugin: pluginString].
@@ -707,27 +707,26 @@ InterpreterSimulator >> isIntegerValue: valueWord [
 
 { #category : #'plugin support' }
 InterpreterSimulator >> loadNewPlugin: pluginString [
-	| plugin simClass |
-	transcript cr; show:'Looking for module ', pluginString.
-	(#('FloatArrayPlugin' 'Matrix2x3Plugin')
-		includes: pluginString) ifTrue:
-		[transcript show: ' ... defeated'. ^ nil].
-	plugin := simClass := nil.
-	InterpreterPlugin allSubclassesDo:[:plg|
-		plg moduleName asString = pluginString asString ifTrue:[
-			simClass := plg simulatorClass.
-			plugin ifNil:[plugin := simClass]
-				ifNotNil:[plugin == simClass ifFalse:[^self error:'This won''t work...']].
-		].
-	].
-	plugin ifNil:[transcript show: ' ... not found'. ^nil].
-	plugin := plugin new.
+	| plugin plugins simulatorClasses |
+	transcript cr; show: 'Looking for module ', pluginString.
+	"but *why*??"
+	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
+		[transcript show: ' ... defeated'. ^nil].
+	plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
+	simulatorClasses := (plugins
+							select: [:psc| psc simulatorClass notNil]
+							thenCollect: [:psc| psc simulatorClass]) asSet.
+	simulatorClasses isEmpty ifTrue: [transcript show: ' ... not found'. ^nil].
+	simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
+	plugins size > 1 ifTrue:
+		[transcript show: '...multiple plugin classes; choosing ', plugins last name].
+	plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
 	plugin setInterpreter: self. "Ignore return value from setInterpreter"
-	(plugin respondsTo: #initialiseModule) ifTrue:[
-		plugin initialiseModule ifFalse:[transcript show: ' ... initialiser failed'.^nil]. "module initialiser failed"
-	].
+	(plugin respondsTo: #initialiseModule) ifTrue:
+		[plugin initialiseModule ifFalse:
+			[transcript show: ' ... initialiser failed'. ^nil]]. "module initialiser failed"
 	pluginList := pluginList copyWith: (pluginString asString -> plugin).
-	transcript show:' ... loaded'.
+	transcript show: ' ... loaded'.
 	^pluginList last
 ]
 

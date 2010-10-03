@@ -4,6 +4,11 @@ Class {
 	#category : #'VMMaker-Plugins-Alien'
 }
 
+{ #category : #translation }
+IA32ABIPluginSimulator class >> shouldBeTranslated [
+	^false
+]
+
 { #category : #'private-support' }
 IA32ABIPluginSimulator >> index: byteIndex length: length inRange: rcvr [
 	"Answer if the indices byteIndex to byteIndex + length - 1 are valid zero-relative indices into the rcvr."

@@ -6188,7 +6188,7 @@ Cogit >> simulateCogCodeAt: address [ "<Integer>"
 		[[processor sp < stackZoneBase ifTrue: [self halt].
 		  self recordRegisters.
 		  printRegisters ifTrue:
-			[processor printRegistersOn: Transcript].
+			[processor printRegistersOn: coInterpreter transcript].
 		  self recordLastInstruction.
 		  printInstructions ifTrue:
 			[Transcript nextPutAll: lastNInstructions last; cr; flush].

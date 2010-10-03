@@ -87,21 +87,23 @@ NewObjectMemorySimulator >> fetchInteger: fieldIndex ofObject: objectPointer [
 
 { #category : #'simulation only' }
 NewObjectMemorySimulator >> firstIndexableField: oop [
-	"NOTE: overridden from Interpreter to add coercion to CArray"
-
+	"NOTE: overridden from ObjectMemory to add coercion to CArray, so please duplicate any changes"
 	| hdr fmt totalLength fixedFields |
 	<returnTypeC: #'void *'>
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
-	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt < 8 ifTrue:
-		[fmt = 6 ifTrue:"32 bit field objects"
-			[^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)) to: #'int *'].
-		"full word objects (pointer or bits)"
-		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: #'oop *'].
-	"Byte objects"
-	^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + fixedFields) to: #'char *'
+	fmt <= 4 ifTrue: "<= 4 pointer"
+		["pointer; may need to delve into the class format word"
+		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
+		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
+		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
+	^self
+		cCoerce: (self pointerForOop: oop + BaseHeaderSize)
+		to: (fmt < 8
+				ifTrue: [fmt = 6
+						ifTrue: ["32 bit field objects" 'int *']
+						ifFalse: ["full word objects (bits)" 'oop *']]
+				ifFalse: ["byte objects (including CompiledMethod" 'char *'])
 ]
 
 { #category : #'simulation only' }
@@ -172,6 +174,12 @@ NewObjectMemorySimulator >> ioMicroMSecs [
 NewObjectMemorySimulator >> ioUTCMicrosecondsNow [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter ioUTCMicrosecondsNow
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> is: oop KindOf: classNameString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter is: oop KindOf: classNameString
 ]
 
 { #category : #'interpreter shell' }
@@ -405,6 +413,12 @@ NewObjectMemorySimulator >> sqShrinkMemory: oldLimit By: delta [
 ]
 
 { #category : #'simulation only' }
+NewObjectMemorySimulator >> stObject: objOop at: indexOop put: valueOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stObject: objOop at: indexOop put: valueOop
+]
+
+{ #category : #'simulation only' }
 NewObjectMemorySimulator >> stackFloatValue: offset [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stackFloatValue: offset
@@ -439,6 +453,12 @@ NewObjectMemorySimulator >> startOfMemory [
 NewObjectMemorySimulator >> stringOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stringOf: oop
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> success: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter success: boolean
 ]
 
 { #category : #'debug support' }

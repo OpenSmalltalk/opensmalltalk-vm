@@ -105,6 +105,12 @@ LargeIntegersPlugin class >> moduleNameAndVersion [
 	^ self moduleName, ' ', self version
 ]
 
+{ #category : #'instance creation' }
+LargeIntegersPlugin class >> simulatorClass [
+	self flag: 'comment when this works!!'.
+	^SmartSyntaxPluginSimulator
+]
+
 { #category : #translation }
 LargeIntegersPlugin class >> version [
 	"Answer the receiver's version info as String."
@@ -1595,5 +1601,8 @@ LargeIntegersPlugin >> think [
 { #category : #util }
 LargeIntegersPlugin >> unsafeByteOf: bytesOop at: ix [
 	"Argument bytesOop must not be aSmallInteger!"
-	^ interpreterProxy integerValueOf: (interpreterProxy stObject: bytesOop at: ix)
+	<inline: true>
+	| pointer |
+	<var: #pointer type: #'unsigned char *'>
+	^(pointer := interpreterProxy firstIndexableField: bytesOop) at: ix - 1
 ]

@@ -108,6 +108,12 @@ InterpreterPlugin class >> moduleNameAndVersion [
 	^ self moduleName
 ]
 
+{ #category : #simulation }
+InterpreterPlugin class >> newFor: anUnsimulatedInterpreterPluginClass [
+	"Overridden by SmartSyntaxPluginSimulator to wrap a specific plugin class."
+	^self new
+]
+
 { #category : #translation }
 InterpreterPlugin class >> pluginClassesUpTo: aPluginClass [
 	"Answer the classes to include for translation of aPluginClass, superclasses first, aPluginClass last."

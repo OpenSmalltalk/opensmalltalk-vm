@@ -1587,21 +1587,17 @@ ObjectMemory >> firstFixedField: oop [
 
 { #category : #'object format' }
 ObjectMemory >> firstIndexableField: oop [
-	"NOTE: copied in InterpreterSimulator, so please duplicate any changes"
-
+	"NOTE: overridden in various simulator subclasses to add coercion to CArray, so please duplicate any changes"
 	| hdr fmt totalLength fixedFields |
 	<returnTypeC: #'void *'>
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
-	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt < 8 ifTrue:
-		[fmt = 6 ifTrue: "32 bit field objects"
-			[^self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)].
-		"full word objects (pointer or bits)"
+	fmt <= 4 ifTrue: "<= 4 pointer"
+		["pointer; may need to delve into the class format word"
+		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
+		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
 		^self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)].
-	"Byte objects"
-	^self pointerForOop: oop + BaseHeaderSize + fixedFields
+	^self pointerForOop: oop + BaseHeaderSize
 ]
 
 { #category : #'object enumeration' }

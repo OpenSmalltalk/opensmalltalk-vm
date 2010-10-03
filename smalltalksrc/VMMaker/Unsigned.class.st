@@ -17,14 +17,14 @@ Unsigned class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
 
 { #category : #'plugin generation' }
 Unsigned class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
-
-	cg generateCoerceToUnsignedObjectFrom: aNode on: aStream
+	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
+	^cg generateCoerceToUnsignedObjectFrom: aNode on: aStream
 ]
 
 { #category : #'plugin generation' }
 Unsigned class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
-
-	cg generateCoerceToUnsignedValueFrom: aNode on: aStream
+	"N.B.  The could be used both for generation and simulation so answer the result (for interpretation)"
+	^cg generateCoerceToUnsignedValueFrom: aNode on: aStream
 ]
 
 { #category : #'plugin generation' }
