@@ -100,21 +100,23 @@ NewCoObjectMemorySimulator >> fetchPointer: fieldIndex ofObject: oop [
 
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> firstIndexableField: oop [
-	"NOTE: overridden from Interpreter to add coercion to CArray"
-
+	"NOTE: overridden from ObjectMemory to add coercion to CArray, so please duplicate any changes"
 	| hdr fmt totalLength fixedFields |
 	<returnTypeC: #'void *'>
 	hdr := self baseHeader: oop.
 	fmt := self formatOfHeader: hdr.
-	totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
-	fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
-	fmt < 8 ifTrue:
-		[fmt = 6 ifTrue:"32 bit field objects"
-			[^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << 2)) to: #'int *'].
-		"full word objects (pointer or bits)"
-		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: #'oop *'].
-	"Byte objects"
-	^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + fixedFields) to: #'char *'
+	fmt <= 4 ifTrue: "<= 4 pointer"
+		["pointer; may need to delve into the class format word"
+		totalLength := self lengthOf: oop baseHeader: hdr format: fmt.
+		fixedFields := self fixedFieldsOf: oop format: fmt length: totalLength.
+		^self cCoerce: (self pointerForOop: oop + BaseHeaderSize + (fixedFields << ShiftForWord)) to: 'oop *'].
+	^self
+		cCoerce: (self pointerForOop: oop + BaseHeaderSize)
+		to: (fmt < 8
+				ifTrue: [fmt = 6
+						ifTrue: ["32 bit field objects" 'int *']
+						ifFalse: ["full word objects (bits)" 'oop *']]
+				ifFalse: ["byte objects (including CompiledMethod" 'char *'])
 ]
 
 { #category : #'simulation only' }
@@ -185,6 +187,12 @@ NewCoObjectMemorySimulator >> ioMicroMSecs [
 NewCoObjectMemorySimulator >> ioUTCMicrosecondsNow [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter ioUTCMicrosecondsNow
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> is: oop KindOf: classNameString [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter is: oop KindOf: classNameString
 ]
 
 { #category : #'interpreter shell' }
@@ -472,6 +480,12 @@ NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop wi
 NewCoObjectMemorySimulator >> stringOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stringOf: oop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> success: boolean [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter success: boolean
 ]
 
 { #category : #'debug support' }

@@ -12,14 +12,14 @@ Class {
 
 { #category : #'plugin generation' }
 Oop class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
-
-	cg emitCExpression: aNode on: aStream
+	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
+	^cg emitCExpression: aNode on: aStream
 ]
 
 { #category : #'plugin generation' }
 Oop class >> ccg: cg generateCoerceToValueFrom: aNode on: aStream [
-
-	cg emitCExpression: aNode on: aStream
+	"N.B.  The could be used both for generation and simulation so answer the result (for interpretation)"
+	^cg emitCExpression: aNode on: aStream
 ]
 
 { #category : #'plugin generation' }

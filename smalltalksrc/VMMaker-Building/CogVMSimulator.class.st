@@ -1080,7 +1080,8 @@ CogVMSimulator >> ioLoadExternalFunction: functionName OfLength: functionLength 
 { #category : #'plugin support' }
 CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 	"Load and return the requested function from a module"
-	| plugin fnSymbol |
+	| firstTime plugin fnSymbol |
+	firstTime := false.
 	fnSymbol := functionString asSymbol.
 	transcript
 		cr;
@@ -1089,21 +1090,24 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 	functionString = breakSelector ifTrue: [self halt: breakSelector].
 	plugin := pluginList 
 				detect:[:any| any key = pluginString asString]
-				ifNone:[self loadNewPlugin: pluginString].
-	plugin ifNil:[
-		"Transcript cr; show:'Failed ... no plugin found'." ^ 0].
+				ifNone:
+					[firstTime := true.
+					self loadNewPlugin: pluginString].
+	plugin ifNil: [^0].
 	plugin := plugin value.
-	mappedPluginEntries doWithIndex:[:pluginAndName :index|
+	mappedPluginEntries doWithIndex:
+		[:pluginAndName :index|
 		((pluginAndName at: 1) == plugin 
-			and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:[
-				"Transcript show:' ... okay'." ^ index]].
-	(plugin respondsTo: fnSymbol) ifFalse:[
-		"Transcript cr; show:'Failed ... primitive not in plugin'." ^ 0].
+		and:[(pluginAndName at: 2) == fnSymbol]) ifTrue:
+			[^index]].
+	(plugin respondsTo: fnSymbol) ifFalse:
+		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+		 ^0].
 	mappedPluginEntries addLast: (Array
 									with: plugin
 									with: fnSymbol
 									with: [plugin perform: fnSymbol. self]).
-	"Transcript show:' ... okay'."
+	"Transcript show: ' ... okay'."
 	^ mappedPluginEntries size
 ]
 
@@ -1236,27 +1240,26 @@ CogVMSimulator >> isWidowedContext: aOnceMarriedContext [
 
 { #category : #'plugin support' }
 CogVMSimulator >> loadNewPlugin: pluginString [
-	| plugin simClass |
-	transcript cr; show:'Looking for module ', pluginString.
-	(#('FloatArrayPlugin' 'Matrix2x3Plugin')
-		includes: pluginString) ifTrue:
-		[transcript show: ' ... defeated'. ^ nil].
-	plugin := simClass := nil.
-	InterpreterPlugin allSubclassesDo:[:plg|
-		plg moduleName asString = pluginString asString ifTrue:[
-			simClass := plg simulatorClass.
-			plugin ifNil:[plugin := simClass]
-				ifNotNil:[plugin == simClass ifFalse:[self error:'This won''t work...'. ^nil]].
-		].
-	].
-	plugin ifNil:[transcript show: ' ... not found'. ^nil].
-	plugin := plugin new.
+	| plugin plugins simulatorClasses |
+	transcript cr; show: 'Looking for module ', pluginString.
+	"but *why*??"
+	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
+		[transcript show: ' ... defeated'. ^nil].
+	plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
+	simulatorClasses := (plugins
+							select: [:psc| psc simulatorClass notNil]
+							thenCollect: [:psc| psc simulatorClass]) asSet.
+	simulatorClasses isEmpty ifTrue: [transcript show: ' ... not found'. ^nil].
+	simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
+	plugins size > 1 ifTrue:
+		[transcript show: '...multiple plugin classes; choosing ', plugins last name].
+	plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
 	plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
-	(plugin respondsTo: #initialiseModule) ifTrue:[
-		plugin initialiseModule ifFalse:[transcript show: ' ... initialiser failed'.^nil]. "module initialiser failed"
-	].
+	(plugin respondsTo: #initialiseModule) ifTrue:
+		[plugin initialiseModule ifFalse:
+			[transcript show: ' ... initialiser failed'. ^nil]]. "module initialiser failed"
 	pluginList := pluginList copyWith: (pluginString asString -> plugin).
-	transcript show:' ... loaded'.
+	transcript show: ' ... loaded'.
 	^pluginList last
 ]
 
@@ -2350,8 +2353,8 @@ CogVMSimulator >> sendBreak: selectorString point: selectorLength receiver: rece
 	| i |
 	cogit printOnTrace ifTrue:
 		[0 to: selectorLength - 1 do:
-			[:si| Transcript nextPut: (self byteAt: selectorString + si) asCharacter].
-		Transcript cr; flush].
+			[:si| transcript nextPut: (self byteAt: selectorString + si) asCharacter].
+		transcript cr; flush].
 	breakSelectorLength = selectorLength ifTrue:
 		[i := breakSelectorLength.
 		 [i > 0] whileTrue:
