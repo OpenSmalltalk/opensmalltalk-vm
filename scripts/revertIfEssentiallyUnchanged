@@ -2,6 +2,4 @@
 # Revert the argument if its changes comprise only the generation metadata
 # such as date generated, VMMaker version etc.
 
-# svn diff $1 | grep '^[+-]' | egrep -v ' VMMaker-[a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker-[a-z][a-z]*\.[0-9][0-9]* \([ie]\)|^-\-\-|^+\+\+'
-
-test -z "`svn diff \"$1\" | grep '^[+-]' | egrep -v ' VMMaker-[a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker-[a-z][a-z]*\.[0-9][0-9]* \([ie]\)|^-\-\-|^+\+\+'`" && svn revert "$1"
+test -z "`svn diff \"$1\" | grep '^[+-]' | egrep -v ' VMMaker-[a-z][a-z]*\.[0-9][0-9]* uuid:| Qwaq-Plugins-[a-z][a-z]*\.[0-9][0-9]* uuid:| VMMaker-[a-z][a-z]*\.[0-9][0-9]* \([ie]\)| Qwaq-Plugins-[a-z][a-z]*\.[0-9][0-9]* \([ie]\)|^-\-\-|^+\+\+|^[+-]$'`" && svn revert "$1"

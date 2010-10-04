@@ -31,8 +31,6 @@ MacMenubarPlugin \
 Matrix2x3Plugin \
 MiscPrimitivePlugin \
 Mpeg3Plugin \
-IA32ABI \
-IA32ABI \
 QVMProfileMacSupportPlugin \
 QuicktimePlugin \
 RePlugin \
