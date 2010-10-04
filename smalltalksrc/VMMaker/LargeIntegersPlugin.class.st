@@ -916,20 +916,19 @@ LargeIntegersPlugin >> digitOfBytes: aBytesOop at: ix [
 { #category : #'oop functions' }
 LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [ 
 	"Normalizes."
-	| firstLen secondLen class larger largerLen smaller smallerLen neg resLen res firstNeg |
+	| firstLen secondLen larger largerLen smaller smallerLen neg resLen res firstNeg |
 	firstNeg := (interpreterProxy fetchClassOf: firstInteger)
 				= interpreterProxy classLargeNegativeInteger.
 	firstLen := self byteSizeOfBytes: firstInteger.
 	secondLen := self byteSizeOfBytes: secondInteger.
-	firstLen = secondLen
-		ifTrue: 
-			[[(self digitOfBytes: firstInteger at: firstLen)
-				= (self digitOfBytes: secondInteger at: firstLen) and: [firstLen > 1]]
-				whileTrue: [firstLen := firstLen - 1].
-			secondLen := firstLen].
+	firstLen = secondLen ifTrue: 
+		[[firstLen > 1
+		  and: [(self digitOfBytes: firstInteger at: firstLen) = (self digitOfBytes: secondInteger at: firstLen)]]
+			whileTrue: [firstLen := firstLen - 1].
+		secondLen := firstLen].
 	(firstLen < secondLen
-		or: [firstLen = secondLen and: [(self digitOfBytes: firstInteger at: firstLen)
-					< (self digitOfBytes: secondInteger at: firstLen)]])
+	 or: [firstLen = secondLen
+		 and: [(self digitOfBytes: firstInteger at: firstLen) < (self digitOfBytes: secondInteger at: firstLen)]])
 		ifTrue: 
 			[larger := secondInteger.
 			largerLen := secondLen.
@@ -943,17 +942,21 @@ LargeIntegersPlugin >> digitSubLarge: firstInteger with: secondInteger [
 			smallerLen := secondLen.
 			neg := firstNeg].
 	resLen := largerLen.
-	neg
-		ifTrue: [class := interpreterProxy classLargeNegativeInteger]
-		ifFalse: [class := interpreterProxy classLargePositiveInteger].
-	self remapOop: #(smaller larger ) in: [res := interpreterProxy instantiateClass: class indexableSize: resLen].
+	self remapOop: #(smaller larger)
+		in: [res := interpreterProxy
+					instantiateClass: (neg
+										ifTrue: [interpreterProxy classLargeNegativeInteger]
+										ifFalse: [interpreterProxy classLargePositiveInteger])
+					indexableSize: resLen].
 	self
 		cDigitSub: (interpreterProxy firstIndexableField: smaller)
 		len: smallerLen
 		with: (interpreterProxy firstIndexableField: larger)
 		len: largerLen
 		into: (interpreterProxy firstIndexableField: res).
-	^ self normalize: res
+	^neg 
+		ifTrue: [self normalizeNegative: res]
+		ifFalse: [self normalizePositive: res]
 ]
 
 { #category : #util }

@@ -2043,7 +2043,13 @@ InterpreterPrimitives >> primitiveMultiplyLargeIntegers [
 	integerRcvr := self signed64BitValueOf: (self stackValue: 1).
 	self successful ifFalse:[^nil].
 
-	result := integerRcvr * integerArg.
+	result := self
+				cCode: [integerRcvr * integerArg]
+				inSmalltalk:
+					[| twoToThe64 r |
+					twoToThe64 := 2 raisedTo: 64.
+					r := integerRcvr * integerArg bitAnd: twoToThe64 - 1.
+					(r bitAt: 64) = 0 ifTrue: [r] ifFalse: [r - twoToThe64]].
 	"check for C overflow by seeing if computation is reversible"
 	((integerArg = 0) or: [(result // integerArg) = integerRcvr])
 		ifTrue:[oopResult := self signed64BitIntegerFor: result]

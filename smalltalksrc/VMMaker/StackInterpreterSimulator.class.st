@@ -12,6 +12,7 @@ Class {
 	#superclass : #StackInterpreterPrimitives,
 	#instVars : [
 		'byteCount',
+		'breakCount',
 		'sendCount',
 		'printSends',
 		'printReturns',
@@ -32,7 +33,7 @@ Class {
 		'externalSemaphoreSignalResponses',
 		'extSemTabSize',
 		'atEachStepBlock',
-		'breakCount'
+		'disableBooleanCheat'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
 }
@@ -96,6 +97,17 @@ StackInterpreterSimulator >> baseFrameReturn [
 		[(self checkIsStillMarriedContext: contextToReturnTo currentFP: nil) ifFalse:
 			[self halt]].
 	^super baseFrameReturn
+]
+
+{ #category : #utilities }
+StackInterpreterSimulator >> booleanCheat: cond [
+	disableBooleanCheat
+		ifTrue: [self internalPop: 2
+					thenPush: (cond
+								ifTrue: [objectMemory trueObject]
+								ifFalse: [objectMemory falseObject]).
+				self fetchNextBytecode]
+		ifFalse: [super booleanCheat: cond]
 ]
 
 { #category : #'interpreter shell' }
@@ -294,6 +306,11 @@ StackInterpreterSimulator >> desiredEdenBytes: anInteger [
 { #category : #initialization }
 StackInterpreterSimulator >> desiredNumStackPages: anInteger [
 	desiredNumStackPages := anInteger
+]
+
+{ #category : #testing }
+StackInterpreterSimulator >> disableBooleanCheat: aBoolean [
+	disableBooleanCheat := aBoolean
 ]
 
 { #category : #'interpreter shell' }
@@ -630,8 +647,8 @@ StackInterpreterSimulator >> initialize [
 	transcript := Transcript.
 	displayForm := 'Display has not yet been installed' asDisplayText form.
 	suppressHeartbeatFlag := false.
-	extSemTabSize := 256
-	
+	extSemTabSize := 256.
+	disableBooleanCheat := false
 ]
 
 { #category : #'frame access' }
@@ -2430,7 +2447,6 @@ StackInterpreterSimulator >> tenuringIncrementalGC [
 
 { #category : #testing }
 StackInterpreterSimulator >> test [
-	| breakCount |
 	self initStackPages.
 	self loadInitialContext.
 	transcript clear.
@@ -2457,7 +2473,6 @@ StackInterpreterSimulator >> test [
 
 { #category : #testing }
 StackInterpreterSimulator >> test1 [
-	| breakCount |
 	self initStackPages.
 	self loadInitialContext.
 	transcript clear.
