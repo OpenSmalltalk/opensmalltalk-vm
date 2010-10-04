@@ -103,13 +103,16 @@ SmartSyntaxPluginSimulator >> computeSignatureMap [
 
 { #category : #'message forwarding' }
 SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
-	| signature selector parameters rawResult resultBlock result |
+	| signature selector parameters result |
 	signature := signatureMap
 					at: aMessage selector
 					ifAbsent: [^super doesNotUnderstand: aMessage].
 	selector := signature first.
 	parameters := signature second.
-	rawResult := [actualPlugin
+	signature third "receiver block" value: (interpreterProxy stackValue: parameters size).
+	interpreterProxy failed ifTrue:
+		[^nil].
+	result := [actualPlugin
 					perform: selector
 					withArguments: (parameters withIndexCollect:
 										[:block :index|
@@ -119,10 +122,6 @@ SmartSyntaxPluginSimulator >> doesNotUnderstand: aMessage [
 						ex tag == #getSimulator
 							ifTrue: [ex resume: self]
 							ifFalse: [ex pass]].
-	interpreterProxy failed ifTrue:
-		[^nil].
-	resultBlock := signature third.
-	result := resultBlock value: rawResult.
 	interpreterProxy failed ifTrue:
 		[^nil].
 	interpreterProxy
