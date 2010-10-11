@@ -17,7 +17,7 @@ char * list, int attributeListLength);
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
  * Return true if ok, false if not, but not currently checked */
-extern int ioShowDisplayOnWindow( unsigned* dispBitsIndex, int width, int
+extern int ioShowDisplayOnWindow( unsigned char *dispBitsIndex, int width, int
 height, int depth, int affectedL, int affectedR, int affectedT, int affectedB,
 int windowIndex);
 
