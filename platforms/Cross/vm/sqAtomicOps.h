@@ -52,6 +52,10 @@
  * boundary.  Since 64-bit globals are so aligned a global access is atomic.
  */
 #  if __SSE2__
+#ifdef TARGET_OS_IS_IPHONE
+#	define get64(variable) variable
+#	define set64(variable,value) variable = value
+#else
 /* atomic read & write of 64-bit values using sse instructions. */
 #	define get64(variable) \
 	({ long long result; \
@@ -66,6 +70,7 @@
 						: "=m" (variable)				\
 						: "m" (value)					\
 						: "memory", "%xmm7")
+#endif
 #  else /* __SSE2__ */
 /* atomic read & write of 64-bit values using the CMPXCHG8B instruction.
  * CMPXCHG8B m64 compares EDX:EAX with m64 and if equal loads ECX:EBX into m64.
@@ -108,6 +113,10 @@
 							: "memory", "eax", "ebx", "ecx", "edx", "cc")
 #  endif /* __SSE2__ */
 # else
+#ifdef TARGET_OS_IS_IPHONE
+#	define get64(variable) variable
+#	define set64(variable,value) variable = value
+#else
 /* Dear implementor, you have choices.  For example consider defining get64 &
  * set64 thusly
  * #define get64(var) read64(&(var))
@@ -115,6 +124,7 @@
  * and get the JIT to generate read64 & write64 above atomic 64-bit read/write.
  */
 #	error atomic access of 64-bit variables not yet defined for this platform
+#endif
 # endif
 
 #else /* LP32 || ILP32 else LP64 || ILP64 || LLP64 */
@@ -130,10 +140,16 @@
 
 	/* Currently we provide definitions for x86 and GCC only.  */
 #if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
-
+#ifdef TARGET_OS_IS_IPHONE
+#define sqAtomicAddConst(var,n) OSAtomicAdd32(n,&var)
+#else
 # define sqAtomicAddConst(var,n) \
 	asm volatile ("lock addl %1, %0" : "=m" (var) : "i" (n), "m" (var))
+#endif
 #else
+#ifdef TARGET_OS_IS_IPHONE
+#define sqAtomicAddConst(var,n) OSAtomicAdd32(n,&var)
+#endif
 /* Dear implementor, you have choices.  Google atomic increment and you will
  * find a number of implementations for other architectures.
  */
@@ -157,6 +173,10 @@
 	/* Currently we provide definitions for x86 and GCC only.  */
 #if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
 
+#ifdef TARGET_OS_IS_IPHONE
+# define sqCompareAndSwap(var,old,new) OSAtomicCompareAndSwap32(old, new, &var) 
+# define sqCompareAndSwapRes(var,old,new,res) res = var; OSAtomicCompareAndSwap32(old, new, &var) 
+#else
 # define sqCompareAndSwap(var,old,new) \
 	asm volatile ("movl %1, %%eax; lock cmpxchg %2, %0" \
 					: "=m"(var) \
@@ -168,7 +188,13 @@
 					: "=m"(var), "=g"(res) \
 					: "g"(old), "r"(new), "m"(var) \
 					: "memory", "%eax")
+#endif
 #else
+#if TARGET_OS_IS_IPHONE
+# define sqCompareAndSwap(var,old,new) OSAtomicCompareAndSwap32(old, new, &var) 
+# define sqCompareAndSwapRes(var,old,new,res) res = var; OSAtomicCompareAndSwap32(old, new, &var) 
+
+#endif
 /* Dear implementor, you have choices.  Google atomic increment and you will
  * find a number of implementations for other architectures.
  */

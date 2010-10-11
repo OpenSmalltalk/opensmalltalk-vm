@@ -61,9 +61,14 @@ extern void forceInterruptCheck(void);
 extern sqInt doSignalSemaphoreWithIndex(sqInt semaIndex);
 
 typedef struct {
+#if !defined(TARGET_OS_IS_IPHONE) && (x86 || x86-64) /* etc etc x86 allows atomic update of 16 bit values */
 		short requests;
 		short responses;
-	} SignalRequest;
+#else
+		long requests;
+		long responses;
+#endif
+} SignalRequest;
 
 static SignalRequest *signalRequests = 0;
 static int numSignalRequests = 0;
