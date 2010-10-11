@@ -204,6 +204,11 @@ int aioPoll(int microSeconds)
 
   if ((maxFd == 0) && (microSeconds == 0))
     return 0;
+	
+#ifdef TARGET_OS_IS_IPHONE
+if (maxFd == 0) 
+		return 0;
+#endif
 
   rd= rdMask;
   wr= wrMask;
