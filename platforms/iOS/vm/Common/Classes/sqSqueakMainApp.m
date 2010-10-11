@@ -124,6 +124,12 @@ sqInt ioExit(void) {
  	return 0;
 }
 
+sqInt ioExitWithErrorCode(int ec) {
+	//API Documented
+ 	[gDelegateApp.squeakApplication ioExitWithErrorCode: ec];
+ 	return 0;
+}
+
 sqInt ioDisablePowerManager(sqInt disableIfNonZero) {
 	//API Documented
 	return 0;

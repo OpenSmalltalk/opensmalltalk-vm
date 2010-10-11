@@ -73,6 +73,7 @@
 - (void) runSqueak;
 - (void) MenuBarRestore;
 - (void) ioExit;
+- (void) ioExitWithErrorCode: (int) ec;
 - (sqSqueakFileDirectoryInterface *) newFileDirectoryInterfaceInstance;
 
 @property (nonatomic,retain) NSURL* vmPathStringURL;

@@ -180,10 +180,13 @@ extern sqInt interpret(void);  //This is a VM Callback
 void sqMacMemoryFree(void);
 
 - (void) ioExit {
-		
+	[self ioExitWithErrorCode: 0];
+}
+
+- (void) ioExitWithErrorCode: (int) ec {
 	ioShutdownAllModules();
 	[self MenuBarRestore];
-	exit(0);  //Will not return
+	exit(ec);  //Will not return
 }
 
 - (void)dealloc {
