@@ -83,7 +83,8 @@ extern struct VirtualMachine* interpreterProxy;
 			
 #if STACKVM
 			
-			return "Mac Cocoa Cog 5.8b11 12-Sep-10 >9BFC792A-F173-4C65-AD2A-FFFB1D52DAC2<";
+			return "Mac Cocoa Cog 5.8b12 21-Sep-10 >1B0534FA-246C-47C5-AB29-7A76C81CCDCB<";
+//			return "Mac Cocoa Cog 5.8b11 12-Sep-10 >9BFC792A-F173-4C65-AD2A-FFFB1D52DAC2<";
 //			return "Mac Cocoa Cog 5.8b10 07-Sep-10 >8AD3A516-DBAC-4CD4-BC89-8F21317DF7E1<";
 //			return "Mac Cocoa Cog 5.8b9 06-Sep-10 >01641B99-1842-4422-A99D-43153BEDEFFA<";
 //			return "Mac Cocoa Cog 5.8b8 04-Sep-10 >8A66B7E0-B578-4E5F-97B4-6195547A35F5<";

@@ -71,7 +71,9 @@ sqExport *pluginExports[] = {
 	ObjectiveCPlugin_exports,
 	RePlugin_exports,
 	SecurityPlugin_exports,
+#ifndef TARGET_OS_IS_IPHONE
 	SocketPlugin_exports,
+#endif
 	SoundCodecPrims_exports,
 	SoundGenerationPlugin_exports,
 	SoundPlugin_exports,

@@ -159,8 +159,7 @@ such third-party acknowledgments.
 		*isDirectory = [fileType isEqualToString: NSFileTypeDirectory] ? 1 : 0;
 	} else {
 		NSDictionary *fileAttributesPossibleAlias = [fileMgr attributesOfItemAtPath: newFilePath error: &error];  // do symbolic link
-		if (!fileAttributes) 
-			fileAttributes = fileAttributesPossibleAlias;
+		fileAttributes = fileAttributesPossibleAlias;
 		
 		fileType = [fileAttributesPossibleAlias objectForKey: NSFileType];
 		*isDirectory = [fileType isEqualToString: NSFileTypeDirectory] ? 1 : 0;

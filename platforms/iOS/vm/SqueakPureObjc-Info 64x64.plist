@@ -550,7 +550,7 @@
 	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
 	<integer>20</integer>
 	<key>SqueakUnTrustedDirectory</key>
-	<string>/foobar/tooBar/forSqueak/bogus/</string>
+	<string>~/Library/Preferences/Squeak/Internet/My Squeak/</string>
 	<key>SqueakUseFileMappedMMAP</key>
 	<false/>
 	<key>SqueakUIFadeForFullScreenInSeconds</key>

@@ -432,7 +432,7 @@
 	<key>SqueakMouseOptionButton3</key>
 	<integer>2</integer>
 	<key>SqueakPluginsBuiltInOrLocalOnly</key>
-	<true/>
+	<false/>
 	<key>SqueakQuitOnQuitAppleEvent</key>
 	<false/>
 	<key>SqueakResourceDirectory</key>
@@ -442,7 +442,7 @@
 	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
 	<integer>20</integer>
 	<key>SqueakUnTrustedDirectory</key>
-	<string>/foobar/tooBar/forSqueak/bogus/</string>
+	<string>~/Library/Preferences/Squeak/Internet/My Squeak/</string>
 	<key>SqueakUseFileMappedMMAP</key>
 	<false/>
 	<key>SqueakUIFadeForFullScreenInSeconds</key>

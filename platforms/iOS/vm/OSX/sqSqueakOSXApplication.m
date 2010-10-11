@@ -234,7 +234,6 @@ void mtfsfi(unsigned long long fpscr) {}
 	printf("\nCommon <option>s:\n");
 	printf("  -help                 print this help message, then exit\n");
 	printf("  -memory <size>[mk]    use fixed heap size (added to image size)\n");
-	printf("  -pathenc <enc>        set encoding for pathnames (default: macintosh)\n");
 	printf("  -headless             run in headless (no window) mode (default: false)\n");
 }
 
