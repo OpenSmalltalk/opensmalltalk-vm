@@ -22,7 +22,7 @@
 			<key>Key</key>
 			<string>writeable_preference</string>
 			<key>DefaultValue</key>
-			<false/>
+			<string>YES</string>
 			<key>TrueValue</key>
 			<string>YES</string>
 			<key>FalseValue</key>
@@ -36,7 +36,7 @@
 			<key>Key</key>
 			<string>scrollableView_preference</string>
 			<key>DefaultValue</key>
-			<false/>
+			<string>NO</string>
 			<key>TrueValue</key>
 			<string>YES</string>
 			<key>FalseValue</key>

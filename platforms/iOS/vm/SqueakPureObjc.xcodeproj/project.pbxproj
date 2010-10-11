@@ -692,7 +692,6 @@
 		94B9528510E6B79E00DC476A /* MacMenubarPlugin.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MacMenubarPlugin.h; sourceTree = "<group>"; };
 		94B9533310E6BD7100DC476A /* MacMenuOS9ToOSX.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = MacMenuOS9ToOSX.h; sourceTree = "<group>"; };
 		94B9533410E6BD7100DC476A /* MacMenuOS9ToOSX.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = MacMenuOS9ToOSX.m; sourceTree = "<group>"; };
-		94BCAAA510AB3A5A00F87527 /* SqueakPureObjc-Info.plist */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = text.plist.xml; path = "SqueakPureObjc-Info.plist"; sourceTree = "<group>"; };
 		94BCABBF10AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sqSqueakOSXFileDirectoryInterface.h; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.h; sourceTree = "<group>"; };
 		94BCABC010AB72A600F87527 /* sqSqueakOSXFileDirectoryInterface.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; name = sqSqueakOSXFileDirectoryInterface.m; path = vm/OSX/sqSqueakOSXFileDirectoryInterface.m; sourceTree = "<group>"; };
 		94BCAD1B10AB942300F87527 /* sqSqueakOSXApplication+attributes.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = "sqSqueakOSXApplication+attributes.h"; path = "vm/OSX/sqSqueakOSXApplication+attributes.h"; sourceTree = "<group>"; };
@@ -985,7 +984,6 @@
 		29B97317FDCFA39411CA2CEA /* Resources */ = {
 			isa = PBXGroup;
 			children = (
-				94BCAAA510AB3A5A00F87527 /* SqueakPureObjc-Info.plist */,
 				94B6E9DC10BC777A00333E9E /* Localizable.strings */,
 				947E64DC10AA18FE00D3B69E /* MainMenu.xib */,
 				94A349B50DDCDBE200D1D4A9 /* iPhone.image */,
@@ -2713,9 +2711,9 @@
 			isa = XCBuildConfiguration;
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
-				ARCHS = "$(ARCHS_UNIVERSAL_IPHONE_OS)";
+				ARCHS = "$(ARCHS_STANDARD_32_BIT)";
 				CODE_SIGN_ENTITLEMENTS = Entitlements.plist;
-				CODE_SIGN_IDENTITY = "iPhone Distribution";
+				CODE_SIGN_IDENTITY = "iPhone Distribution: Corporate Smalltalk Consulting Ltd";
 				"CODE_SIGN_IDENTITY[sdk=iphoneos*]" = "iPhone Distribution";
 				COPY_PHASE_STRIP = YES;
 				GCC_PRECOMPILE_PREFIX_HEADER = YES;
@@ -2742,7 +2740,7 @@
 					"-fomit-frame-pointer",
 				);
 				PRODUCT_NAME = Squeak;
-				PROVISIONING_PROFILE = "";
+				PROVISIONING_PROFILE = "31EFCDFF-BE30-405D-AB3C-E344083790A0";
 				"PROVISIONING_PROFILE[sdk=iphoneos*]" = "";
 				SDKROOT = iphoneos3.2;
 				TARGETED_DEVICE_FAMILY = "1,2";
