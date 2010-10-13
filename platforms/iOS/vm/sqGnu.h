@@ -45,17 +45,24 @@
 
 #include "sq.h"
 
-#define CASE(N)	case N: _##N:
+#define CASE(N)		case N: _##N:
+
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
-    #define BREAK		goto *jumpTableR[currentBytecode]
-    #define PPC_REG_JUMP	; register void **jumpTableR JP_REG; jumpTableR = &jumpTable[0]
+# define JUMP_TABLE_PTR	; register void **jumpTableP JP_REG; jumpTableP= &jumpTable[0]
+# define BREAK		goto *jumpTableP[currentBytecode]
 #else
-    #define BREAK		goto *jumpTable[currentBytecode]
-    #define PPC_REG_JUMP	
+# define JUMP_TABLE_PTR
+# define BREAK		goto *jumpTable[currentBytecode]
 #endif
-#define PRIM_DISPATCH	goto *jumpTable[GIV(primitiveIndex)]
+
+#if defined(SQ_USE_GLOBAL_STRUCT)
+# define PRIM_DISPATCH	goto *jumpTable[GIV(primitiveIndex)]
+#else
+# define PRIM_DISPATCH	goto *jumpTable[primitiveIndex]
+#endif
+
 #define JUMP_TABLE \
-   void *jumpTable[256]= { \
+  static void *jumpTable[256]= { \
       &&_0,   &&_1,   &&_2,   &&_3,   &&_4,   &&_5,   &&_6,   &&_7,   &&_8,   &&_9, \
      &&_10,  &&_11,  &&_12,  &&_13,  &&_14,  &&_15,  &&_16,  &&_17,  &&_18,  &&_19, \
      &&_20,  &&_21,  &&_22,  &&_23,  &&_24,  &&_25,  &&_26,  &&_27,  &&_28,  &&_29, \
@@ -82,7 +89,8 @@
     &&_230, &&_231, &&_232, &&_233, &&_234, &&_235, &&_236, &&_237, &&_238, &&_239, \
     &&_240, &&_241, &&_242, &&_243, &&_244, &&_245, &&_246, &&_247, &&_248, &&_249, \
     &&_250, &&_251, &&_252, &&_253, &&_254, &&_255 \
-  } PPC_REG_JUMP;
+  } JUMP_TABLE_PTR
+
 #define PRIM_TABLE \
   static void *jumpTable[700]= { \
       &&_0,   &&_1,   &&_2,   &&_3,   &&_4,   &&_5,   &&_6,   &&_7,   &&_8,   &&_9, \
@@ -157,50 +165,69 @@
     &&_690, &&_691, &&_692, &&_693, &&_694, &&_695, &&_696, &&_697, &&_698, &&_699, \
   }
 
- /*
-     IP_REG, FP_REG, SP_REG, CB_REG
+  /*
+     IP_REG, SP_REG, CB_REG
         the machine registers in which to place localIP, localFP, localSP and
         currentBytecode.  Wins big on register-deficient architectures --
         especially Intel.
   */
 #if defined(__mips__)
-# define IP_REG asm("$16")
-# define SP_REG asm("$17")
-# define CB_REG asm("$18")
+# define IP_REG __asm__("$16")
+# define SP_REG __asm__("$17")
+# define CB_REG __asm__("$18")
 #endif
 #if defined(__sparc__)
-# define IP_REG asm("%l0")
-# define SP_REG asm("%l1")
-# define CB_REG asm("%l2")
+# define IP_REG __asm__("%l0")
+# define SP_REG __asm__("%l1")
+# define CB_REG __asm__("%l2")
 #endif
 #if defined(__alpha__)
-# define IP_REG asm("$9")
-# define SP_REG asm("$10")
-# define CB_REG asm("$11")
+# define IP_REG __asm__("$9")
+# define SP_REG __asm__("$10")
+# define CB_REG __asm__("$11")
 #endif
 #if defined(__i386__)
-# define IP_REG asm("%esi")
-# define SP_REG asm("%edi")
-# define CB_REG asm("%ebx")
+# define IP_REG __asm__("%esi")
+# define SP_REG __asm__("%edi")
+# if (__GNUC__ > 2) || ((__GNUC__ == 2) && (__GNUC_MINOR__ >= 95))
+#   define CB_REG __asm__("%ebx")
+# else
+#   define CB_REG /* avoid undue register pressure */
+# endif
 #endif
 #if defined(__powerpc__) || defined(PPC) || defined(_POWER) || defined(_IBMR2) || defined(__ppc__)
-# define FOO_REG asm("13")
-# define JP_REG asm("14")
-# define IP_REG asm("15")
-# define SP_REG asm("16")
-# define CB_REG asm("17")
+# define GP_REG __asm__("24")
+# define JP_REG __asm__("25")
+# define IP_REG __asm__("26")
+# define SP_REG __asm__("27")
+# define CB_REG __asm__("28")
 #endif
 #if defined(__hppa__)
-# define IP_REG asm("%r18")
-# define SP_REG asm("%r17")
-# define CB_REG asm("%r16")
+# define IP_REG __asm__("%r18")
+# define SP_REG __asm__("%r17")
+# define CB_REG __asm__("%r16")
 #endif
 #if defined(__mc68000__)
-# define IP_REG asm("a5")
-# define SP_REG asm("a4")
-# define CB_REG asm("d7")
+# define IP_REG __asm__("a5")
+# define SP_REG __asm__("a4")
+# define CB_REG __asm__("d7")
 #endif
 
+#if !defined(JP_REG)
+# define JP_REG
+#endif
+#ifndef IP_REG
+# define IP_REG
+#endif
+#if !defined(SP_REG)
+# define SP_REG
+#endif
+#if !defined(CB_REG)
+# define CB_REG
+#endif
+#if !defined(GP_REG)
+# define GP_REG
+#endif
 #if !defined(FOO_REG)
 # define FOO_REG /* nada */
 #endif
