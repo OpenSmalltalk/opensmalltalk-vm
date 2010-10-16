@@ -9,7 +9,7 @@ VMMaker classSide >> cCodeGenerator: aClass inCache: cache inlined: doInlining [
 		at: aClass name asSymbol
 		ifAbsentPut:
 			[ObjectMemory initialize.
-			ObjectMemory initializeWithBytesToWord: self default bytesPerWord.
+			ObjectMemory initializeConstants.
 			translateableClasses := ObjectMemory withAllSubclasses.
 			MemoryAccess isEnabled ifTrue: [translateableClasses add: MemoryAccess].
 			(translateableClasses  includes: aClass)
@@ -93,10 +93,9 @@ VMMaker classSide >> event: anEvent [
 	"Hook for SystemChangeNotifier. If a translatable class changes, clear all
 	of its code generators from caches to force retranslation."
 
-	| cls |
-	anEvent itemClass ifNotNilDo:
-		[:itemClass |
-		cls := itemClass isMeta
+	| cls itemClass |
+	(itemClass := anEvent itemClass) ifNotNil:
+		[cls := itemClass isMeta
 			ifTrue: [itemClass soleInstance]
 			ifFalse: [itemClass].
 		self clearCacheEntriesFor: cls]
