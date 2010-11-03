@@ -677,7 +677,6 @@ unsigned BX_CPU_C::handleAsyncEvent(void)
 //  * ROM boundary:             2k (dont care since we are only reading)
 //  * segment boundary:         any
 
-#if !COG
 void BX_CPU_C::prefetch(void)
 {
   bx_address laddr = BX_CPU_THIS_PTR get_laddr(BX_SEG_REG_CS, RIP);
@@ -708,6 +707,7 @@ void BX_CPU_C::prefetch(void)
     }
   }
 
+#if !COG
   bx_address lpf = LPFOf(laddr);
   unsigned TLB_index = BX_TLB_INDEX_OF(lpf, 0);
   bx_TLB_entry *tlbEntry = &BX_CPU_THIS_PTR TLB.entry[TLB_index];
@@ -715,9 +715,9 @@ void BX_CPU_C::prefetch(void)
 
   if ((tlbEntry->lpf == lpf) && !(tlbEntry->accessBits & USER_PL)) {
     pAddr = A20ADDR(tlbEntry->ppf | pageOffset);
-#if BX_SupportGuest2HostTLB
+# if BX_SupportGuest2HostTLB
     fetchPtr = (Bit8u*) (tlbEntry->hostPageAddr);
-#endif
+# endif
   }  
   else {
     if (BX_CPU_THIS_PTR cr0.get_PG()) {
@@ -749,15 +749,15 @@ void BX_CPU_C::prefetch(void)
     }
   }
 
-#if BX_SUPPORT_ICACHE
+# if BX_SUPPORT_ICACHE
   BX_CPU_THIS_PTR currPageWriteStampPtr = pageWriteStampTable.getPageWriteStampPtr(pAddr);
   Bit32u pageWriteStamp = *(BX_CPU_THIS_PTR currPageWriteStampPtr);
   pageWriteStamp &= ~ICacheWriteStampFetchModeMask; // Clear out old fetch mode bits
   pageWriteStamp |=  BX_CPU_THIS_PTR fetchModeMask; // And add new ones
   pageWriteStampTable.setPageWriteStamp(pAddr, pageWriteStamp);
-#endif
+# endif
+#endif /* !COG */
 }
-#endif
 
 void BX_CPU_C::boundaryFetch(const Bit8u *fetchPtr, unsigned remainingInPage, bxInstruction_c *i)
 {

@@ -92,8 +92,8 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 
 	int
 	singleStepCPUInSizeMinAddressReadWrite(void *cpu,
-											void *memory, ulong byteSize,
-											ulong minReadAddr, ulong minWriteAddr)
+									void *memory, ulong byteSize,
+									ulong minAddr, ulong minWriteMaxExecAddr)
 	{
 		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
 
@@ -101,33 +101,36 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 			return BadCPUInstance;
 		theMemory = (unsigned char *)memory;
 		theMemorySize = byteSize;
-		minReadAddress = minReadAddr;
-		minWriteAddress = minWriteAddr;
-		if (anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= theMemorySize)
-			return MemoryBoundsError;
+		minReadAddress = minAddr;
+		minWriteAddress = minWriteMaxExecAddr;
+#if 0
+		if (anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= minWriteMaxExecAddr)
+			return anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= byteSize
+					? MemoryBoundsError
+					: ExecutionError;
+#endif
 		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
 			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
 			return theErrorAcorn;
 		}
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled =
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled = minWriteMaxExecAddr - 1;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit =
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
 		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = theMemorySize;
+		anx86->eipPageWindowSize = minWriteMaxExecAddr;
 		anx86->cpu_single_step();
 
 		return blidx == 0 ? 0 : SomethingLoggedError;
 	}
 
 	int
-	runCPUInSizeMinAddressReadWrite(void *cpu,
-									void *memory, ulong byteSize,
-									ulong minReadAddr, ulong minWriteAddr)
+	runCPUInSizeMinAddressReadWrite(void *cpu, void *memory, ulong byteSize,
+									ulong minAddr, ulong minWriteMaxExecAddr)
 	{
 		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
 
@@ -135,24 +138,28 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 			return BadCPUInstance;
 		theMemory = (unsigned char *)memory;
 		theMemorySize = byteSize;
-		minReadAddress = minReadAddr;
-		minWriteAddress = minWriteAddr;
-		if (anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= theMemorySize)
-			return MemoryBoundsError;
+		minReadAddress = minAddr;
+		minWriteAddress = minWriteMaxExecAddr;
+#if 0
+		if (anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= minWriteMaxExecAddr)
+			return anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= byteSize
+					? MemoryBoundsError
+					: ExecutionError;
+#endif
 		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
 			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
 			return theErrorAcorn;
 		}
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled =
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled = minWriteMaxExecAddr - 1;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit =
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit = byteSize >> 16;
 		anx86->eipFetchPtr = theMemory;
-		anx86->eipPageWindowSize = theMemorySize;
+		anx86->eipPageWindowSize = minWriteMaxExecAddr;
 		bx_pc_system.kill_bochs_request = 0;
 		anx86->cpu_loop(0 /* = "run forever" until exception or interupt */);
 		if (anx86->stop_reason != STOP_NO_REASON) {
@@ -413,11 +420,6 @@ BX_CPU_C::write_RMW_virtual_qword(Bit64u val64)
 		longjmp(bx_cpu.jmp_buf_env,PanicError);
 	memcpy(theMemory + last_read_address, &val64, 8);
 	last_read_address = (bx_address)-1;
-}
-
-// Cut-down parts of cpu/cpu.cc
-void BX_CPU_C::prefetch(void)
-{
 }
 
 

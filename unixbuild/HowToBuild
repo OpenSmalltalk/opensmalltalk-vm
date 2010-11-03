@@ -9,6 +9,10 @@ How to build the Cog Croquet VM on Unix
 3. Open a shell, cd into the unixbuild/bld directory and execute
      ../../platforms/unix/config/configure CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0" LIBS=-lpthread
      make install prefix=WhereYouWantTheVmToGo
+
+	N.B.  On Ubuntu *do not* supply "LIBS=-lpthread", i.e. use
+     ../../platforms/unix/config/configure CFLAGS="-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0"
+
 4. At the end of it you'll get a new VM in the path provided via -prefix
 
 
