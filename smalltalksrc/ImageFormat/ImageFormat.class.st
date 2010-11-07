@@ -4,6 +4,9 @@ ImageFormat represents the requirements of the image in terms of capabilities th
 The image format version value is treated as a bit map of size 32, derived from the 32-bit integer value saved in the image header. Bits in the bit map represent image format requirements. For example, if the image sets bit 15 to indicate that it requires some capability from the VM, then the VM can check bit 15 and decide whether it is able to satisfy that requirement.
 
 The base image format numbers (6502, 6504, 68000, and 68002) utiliize 10 of the 32 available bits. The high order bit is reserved as an extension bit for future use. The remaining 21 bits are used to represent additional image format requirements. For example, the low order bit is used to indication that the image uses (and requires support for) the platform byte ordering implemented in the StackInterpreter (Cog) VM.
+
+	""(ImageFormat fromFile: Smalltalk imageName) description""
+
 "
 Class {
 	#name : #ImageFormat,
@@ -73,6 +76,38 @@ ImageFormat class >> default [
 	"The original Squeak image format number"
 
 	^ self wordSize: 4
+]
+
+{ #category : #'instance creation' }
+ImageFormat class >> fromFile: imageFile [
+	"Answer a new instance from a saved image file. The image format number
+	is saved in the first 4 or 8 bytes of the file. Word size and byte ordering are
+	dependent on the image and platform that saved the file, and must be decoded
+	to obtain the image format."
+
+	"ImageFormat fromFile: Smalltalk imageName"
+
+	| f formatNumberBytes rs num |
+	f := FileStream fileNamed: imageFile.
+	f binary.
+	[formatNumberBytes := f next: 8]
+		ensure: [f close].
+	rs := ReadStream on: formatNumberBytes.
+	num := rs nextNumber: 8. "try 64 bit big endian format"
+	[^ self fromInteger: num]
+		on: Error
+		do: [rs position: 0.
+			num := rs nextLittleEndianNumber: 8. "try 64 bit little endian format"
+			^ self fromInteger: num]
+			on: Error
+			do: [rs position: 0.
+				num := rs nextNumber: 4.  "try 32 bit big endian format"
+				^ self fromInteger: num]
+				on: Error
+				do: [rs position: 0.
+					num := rs nextLittleEndianNumber: 4. "try 32 bit little endian format"
+					^ self fromInteger: num].
+	self error: 'unrecognized image format'
 ]
 
 { #category : #'instance creation' }
