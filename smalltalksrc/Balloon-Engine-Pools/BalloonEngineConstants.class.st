@@ -42,11 +42,11 @@ Class {
 		'GBFinalX',
 		'GBMBaseSize',
 		'GBTileFlag',
-		'GBUpdateData',
 		'GBUpdateDDX',
 		'GBUpdateDDY',
 		'GBUpdateDX',
 		'GBUpdateDY',
+		'GBUpdateData',
 		'GBUpdateX',
 		'GBUpdateY',
 		'GBViaX',
@@ -75,8 +75,6 @@ Class {
 		'GEFEntityLoadFailed',
 		'GEFFillDataTooSmall',
 		'GEFFormLoadFailed',
-		'GEFillIndexLeft',
-		'GEFillIndexRight',
 		'GEFSizeMismatch',
 		'GEFWorkBufferBadMagic',
 		'GEFWorkBufferIsInteger',
@@ -88,6 +86,8 @@ Class {
 		'GEFWrongEdge',
 		'GEFWrongFill',
 		'GEFWrongState',
+		'GEFillIndexLeft',
+		'GEFillIndexRight',
 		'GENumLines',
 		'GEObjectIndex',
 		'GEObjectLength',
@@ -110,12 +110,6 @@ Class {
 		'GEPrimitiveWideEdge',
 		'GEPrimitiveWideLine',
 		'GEPrimitiveWideMask',
-		'GErrorAETEntry',
-		'GErrorBadState',
-		'GErrorFillEntry',
-		'GErrorGETEntry',
-		'GErrorNeedFlush',
-		'GErrorNoMoreSpace',
 		'GEStateAddingFromGET',
 		'GEStateBlitBuffer',
 		'GEStateCompleted',
@@ -128,6 +122,12 @@ Class {
 		'GEXValue',
 		'GEYValue',
 		'GEZValue',
+		'GErrorAETEntry',
+		'GErrorBadState',
+		'GErrorFillEntry',
+		'GErrorGETEntry',
+		'GErrorNeedFlush',
+		'GErrorNoMoreSpace',
 		'GFDirectionX',
 		'GFDirectionY',
 		'GFNormalX',
@@ -545,8 +545,8 @@ BalloonEngineConstants class >> initialize [
 { #category : #'pool definition' }
 BalloonEngineConstants class >> initializeInstVarNames: aClass prefixedBy: aString [
 
-	| token value |
-	aClass instVarNames doWithIndex:[:instVarName :index|
+	| token |
+	aClass instVarNames doWithIndex:[:instVarName :index| | value |
 		token := (aString, instVarName first asUppercase asString, (instVarName copyFrom: 2 to: instVarName size),'Index') asSymbol.
 		value := index - 1.
 		(self bindingOf: token) ifNil:[self addClassVarName: token].
