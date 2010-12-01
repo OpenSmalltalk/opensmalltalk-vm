@@ -28,6 +28,23 @@ Class {
 	#category : #ImageFormat
 }
 
+{ #category : #'image formats' }
+ImageFormat class >> allVersionNumberByteArrays [
+	"All known version numbers expressed as byte arrays of size 4 and 8 in little
+	endian and big endian byte ordering."
+
+	"ImageFormat allVersionNumberByteArrays"
+
+	| byteArrays |
+	byteArrays := OrderedCollection new.
+	KnownVersionNumbers do: [:version |
+		byteArrays add: ((WriteStream on: (ByteArray new: 4)) nextNumber: 4 put: version; yourself) contents.
+		byteArrays add: ((WriteStream on: (ByteArray new: 8)) nextNumber: 8 put: version; yourself) contents.
+		byteArrays add: ((WriteStream on: (ByteArray new: 4)) nextLittleEndianNumber: 4 put: version; yourself) contents.
+		byteArrays add: ((WriteStream on: (ByteArray new: 8)) nextLittleEndianNumber: 8 put: version; yourself) contents].
+	^byteArrays
+]
+
 { #category : #'initialize-release' }
 ImageFormat class >> baseVersionMask [
 	"Mask the bits associated with base format number exclusive of capability bits"
@@ -79,6 +96,12 @@ ImageFormat class >> default [
 ]
 
 { #category : #'instance creation' }
+ImageFormat class >> fromBytes: bytes [
+	^ self fromStream: (ReadStream on: bytes)
+
+]
+
+{ #category : #'instance creation' }
 ImageFormat class >> fromFile: imageFile [
 	"Answer a new instance from a saved image file. The image format number
 	is saved in the first 4 or 8 bytes of the file. Word size and byte ordering are
@@ -87,27 +110,12 @@ ImageFormat class >> fromFile: imageFile [
 
 	"ImageFormat fromFile: Smalltalk imageName"
 
-	| f formatNumberBytes rs num |
-	f := FileStream fileNamed: imageFile.
-	f binary.
-	[formatNumberBytes := f next: 8]
-		ensure: [f close].
-	rs := ReadStream on: formatNumberBytes.
-	num := rs nextNumber: 8. "try 64 bit big endian format"
-	[^ self fromInteger: num]
-		on: Error
-		do: [rs position: 0.
-			num := rs nextLittleEndianNumber: 8. "try 64 bit little endian format"
-			^ self fromInteger: num]
-			on: Error
-			do: [rs position: 0.
-				num := rs nextNumber: 4.  "try 32 bit big endian format"
-				^ self fromInteger: num]
-				on: Error
-				do: [rs position: 0.
-					num := rs nextLittleEndianNumber: 4. "try 32 bit little endian format"
-					^ self fromInteger: num].
-	self error: 'unrecognized image format'
+	| f |
+	f := (FileStream oldFileNamed: imageFile) ifNil: [FileStream readOnlyFileNamed: imageFile].
+	f ifNotNil: [f binary.
+		^self fromStream: f].
+	^self error: 'could not open ', imageFile
+
 ]
 
 { #category : #'instance creation' }
@@ -116,6 +124,30 @@ ImageFormat class >> fromInteger: anInteger [
 	image file header."
 
 	^ self new fromInteger: anInteger
+]
+
+{ #category : #'instance creation' }
+ImageFormat class >> fromStream: stream [
+	"Answer a new instance from a saved image file stream. Word size and byte ordering
+	are dependent on the image and platform that saved the file, and must be decoded
+	to obtain the image format."
+
+	| num |
+	num := stream nextNumber: 4.  "try 32 bit big endian format"
+	[^ self fromInteger: num]
+		on: Error
+		do: [stream position: 0.
+			num := stream nextLittleEndianNumber: 4. "try 32 bit little endian format"
+			^ self fromInteger: num]
+			on: Error
+			do: [stream position: 0.
+				num := stream nextNumber: 8. "try 64 bit big endian format"
+				^ self fromInteger: num]
+				on: Error
+				do: [stream position: 0.
+					num := stream nextLittleEndianNumber: 8. "try 64 bit little endian format"
+					^ self fromInteger: num].
+	self error: 'unrecognized image format'
 ]
 
 { #category : #'initialize-release' }
@@ -151,6 +183,18 @@ ImageFormat class >> reservedBitsMask [
 
 ]
 
+{ #category : #'instance creation' }
+ImageFormat class >> thisImageFileFormat [
+	"The image format read from the header of the file from which the current
+	image was loaded. This may be different from the current format if the VM
+	has modified the image at load time or in the course of running the image."
+
+	"ImageFormat thisImageFileFormat description"
+
+	^self fromFile: Smalltalk imageName
+
+]
+
 { #category : #'image formats' }
 ImageFormat class >> versionDescriptions [
 
@@ -160,6 +204,22 @@ ImageFormat class >> versionDescriptions [
 	^ Dictionary
 		withAll: (KnownVersionNumbers
 				collect: [:e | e -> (self fromInteger: e) description])
+]
+
+{ #category : #'image formats' }
+ImageFormat class >> versionNumberByteArrays [
+	"All byte array expressions of known version numbers. These are the possible values
+	that may appear in the first 4 or 8 bytes of a saved image file. A 64 bit image saves
+	its image format number as a 64 bit value in the file header, and a 32 bit image saves
+	its image format as a 32 bit value. The value may be stored in little endian or big endian
+	byte ordering depending on the host platform."
+
+	"ImageFormat versionNumberByteArrays do: [:e |
+		Transcript cr; show: e printString , ': ', (ImageFormat fromBytes: e) description]"
+
+	^self allVersionNumberByteArrays select: [:e |
+		e size = (self fromBytes: e) wordSize]
+
 ]
 
 { #category : #'instance creation' }
