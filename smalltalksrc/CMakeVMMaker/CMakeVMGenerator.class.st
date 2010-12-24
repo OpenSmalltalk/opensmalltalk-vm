@@ -1,3 +1,26 @@
+"
+I am generating a cmake configuration file (CMakeLists.txt)
+for building a Squeak Virtual Machine.
+
+
+Usage: 
+
+CMakeVMGenerator new generate: CogMacOSConfig
+
+or
+
+CMakeVMGenerator new generate: (CogMacOSConfig new setOption: ... ; yourself)
+
+you can provide any valid configuration for build. 
+
+Generator creating a '../build' directory (relative to current one)
+and placing config files there.
+Also, it expects that appropriate VM (re)sources can be found simplarily:
+  ../platforms
+  ../src
+ but these settings are just default ones and could be changed in config
+ (see senders of #topDir #buildDir and #srcDir )
+"
 Class {
 	#name : #CMakeVMGenerator,
 	#superclass : #CMakeGenerator,
@@ -27,18 +50,17 @@ CMakeVMGenerator >> executableName [
 
 { #category : #'as yet unclassified' }
 CMakeVMGenerator >> generate [
-	
-	| libs |
-	libs := OrderedCollection new.
-	
+		
 	output := String new writeStream.
 		
 	self 
 		printHeader;
-		printProjectName;
-		set: #topDir toString: '../';
-		setupDirectories.
+		project: config executableName;
+		"config's topdir, if set, should be absolute"
+		set: #topDir toString: (self config topDir ifNil: [ '..']);
+		setupDirectories: self.
 		
+	self message: '${CMAKE_MODULE_PATH}'.
 	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Debug Release'.
 	self message: '${CMAKE_CONFIGURATION_TYPES}'.
 	
@@ -46,30 +68,32 @@ CMakeVMGenerator >> generate [
 	config standardIncludes do: [:each |
 		self includeDirectories: each ].
 
-	config internalPlugins do: [:each | | plugin |
-		plugin := Smalltalk at: each.
-		plugin generateFor: self internal: true.
-		libs add: plugin moduleName ].
 
 	self addDefinitions: config compilerFlags.
+
+	config extraVMSettings: self.
 	
-	self puts: 'add_executable(' , self executableName, ' ' , self sources , ')'.
+	self puts: 'add_executable(' , config executableName, ' ', config executableType, ' ' , self sources , ')'.
 
 	"linker flags "
-	self puts: 'set_target_properties(',self executableName, ' PROPERTIES LINK_FLAGS "', config linkFlags,'")'.
+	self puts: 'set_target_properties(', config executableName, ' PROPERTIES LINK_FLAGS "', config linkFlags,'")'.
 	
-	self puts: 'target_link_libraries(' , self executableName , ' ' ,
-		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) , ')'.
+	"maker puts: 'set_property(', 
+	maker set: 'MACOSX_PACKAGE_LOCATION' 	maker set: 'RESOURCE' to: '${topdir}/macbuild/resources/ProjectBuilder/Croquet.icns'.
+	"
 
-	self generateExportsH: libs.
+	self processInternalPlugins.	
+	self processExternalDependencies.
+	
 	
 	self saveFile.
 	
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMGenerator >> generate: aConfigClass [
-	config := aConfigClass new.
+CMakeVMGenerator >> generate: aConfigOrClass [
+	
+	config := aConfigOrClass isBehavior ifTrue: [ aConfigOrClass new ] ifFalse: [aConfigOrClass].
 	^ self generate
 ]
 
@@ -126,23 +150,35 @@ CMakeVMGenerator >> internalPlugins: intList externalPlugins: extList [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMGenerator >> mainSettings [
-
-	self 
-		set: #platformsDir toString: '${topDir}/platforms';
-		set: #srcDir toString: '${topDir}/src';
-		set: #srcPluginsDir toString: '${srcDir}/plugins';
-		set: #srcVMDir toString: '${srcDir}/vm';
-		set: #platformName toString: self platformName;
-		set: #targetPlatform to: '${platformsDir}/${platformName}';
-		set: #crossDir toString: '${platformsDir}/Cross';
-		set: #buildDir toString: '${topDir}/build'.
+CMakeVMGenerator >> platformName [
+	^ config platformName
 
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMGenerator >> platformName [
-	^ config platformName
+CMakeVMGenerator >> processExternalDependencies [
+	
+		config frameworks do: [:each |
+		self puts: 'find_library(',each,'_FMWK ', each , ')'.
+		self puts: 'target_link_libraries(' , config executableName , ' ${' , each,'_FMWK})'.
+	].
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> processInternalPlugins [
+
+	| libs |
+	libs := 
+	config internalPlugins collect: [:each | | plugin |
+		plugin := Smalltalk at: each.
+		plugin generateFor: self internal: true.
+		plugin moduleName ].
+	
+	self puts: 'target_link_libraries(' , config executableName , ' ' ,
+		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) , ')'.
+
+	self generateExportsH: libs.
 
 ]
 
@@ -152,6 +188,25 @@ CMakeVMGenerator >> saveFile [
 	(self buildDir forceNewFileNamed: self outputFileName)
 		nextPutAll: (config fixLineEndsOf: output contents);
 		close.
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> setupDirectories: gen [
+"
+setup  a common directories, relative to the ${topDir}
+
+"
+	gen 
+		set: #platformsDir toString: (self config platformsDir ifNil: ['${topDir}/platforms']);
+		set: #srcDir toString: (self config srcDir ifNil: [ '${topDir}/src']);
+		set: #srcPluginsDir toString: '${srcDir}/plugins';
+		set: #srcVMDir toString: '${srcDir}/vm';
+		set: #platformName toString: self config platformName;
+		set: #targetPlatform to: '${platformsDir}/${platformName}';
+		set: #crossDir toString: '${platformsDir}/Cross';
+		set: #buildDir toString: (self config buildDir ifNil: ['${topDir}/build']);
+		set: #platformVMDir toString: '${targetPlatform}/vm'.
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -176,4 +231,12 @@ CMakeVMGenerator >> sources [
 	self set: #extraSources to: config extraSources.
 	
 	^ '${coreSources} ${crossVMSources} ${platformVMSources} ${extraSources}'
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> topDir [
+	| dir |
+	dir := self config topDir ifNil: [ FileDirectory default containingDirectory ].
+	dir isString ifTrue: [^ FileDirectory on: ( FileDirectory fullPathForURI: dir) ].
+	^ dir
 ]
