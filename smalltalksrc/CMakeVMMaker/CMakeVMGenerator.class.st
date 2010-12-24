@@ -81,6 +81,11 @@ CMakeVMGenerator >> generate [
 	"maker puts: 'set_property(', 
 	maker set: 'MACOSX_PACKAGE_LOCATION' 	maker set: 'RESOURCE' to: '${topdir}/macbuild/resources/ProjectBuilder/Croquet.icns'.
 	"
+	
+	config ifMac: [
+		"generate Info.plist "
+		self generatePlist.	
+	].
 
 	self processInternalPlugins.	
 	self processExternalDependencies.
@@ -127,6 +132,19 @@ extern sqExport os_exports[];
 
 	(self buildDir forceNewFileNamed: 'sqNamedPrims.h') nextPutAll: (config fixLineEndsOf: content); close.
 	
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> generatePlist [
+
+	| plist |
+	
+	plist := config plistFile.
+
+	(self buildDir forceNewFileNamed: 'Info.plist') nextPutAll: plist; close.
+	
+	self cmd: 'set_target_properties' params: config executableName , ' PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${buildDir}/Info.plist '
+
 ]
 
 { #category : #'as yet unclassified' }

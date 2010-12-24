@@ -8,6 +8,54 @@ Class {
 	#category : #CMakeVMMaker
 }
 
+{ #category : #'bundle strings' }
+CogMacOSConfig >> CFBundleExecutable [
+	^ self executableName 
+]
+
+{ #category : #'bundle strings' }
+CogMacOSConfig >> CFBundleGetInfoString [
+
+	^ self CFBundleShortVersionString
+
+]
+
+{ #category : #'bundle strings' }
+CogMacOSConfig >> CFBundleIconFile [
+
+	"An application icon"
+	^ 'Cog.icns'
+]
+
+{ #category : #'bundle strings' }
+CogMacOSConfig >> CFBundleIdentifier [
+
+	"A Java package style name (like 'com.myCompany.MyBundle') which is used to uniquely identify bundles."
+	
+	^ 'org.squeak.Cog'
+]
+
+{ #category : #'bundle strings' }
+CogMacOSConfig >> CFBundleName [
+
+	"An application name"
+	^ 'Cog smalltalk Virtual Machine'
+]
+
+{ #category : #'bundle strings' }
+CogMacOSConfig >> CFBundleShortVersionString [
+
+	"An application version"
+	^ 'Cog VM ' , self CFBundleVersion
+]
+
+{ #category : #'bundle strings' }
+CogMacOSConfig >> CFBundleVersion [
+
+	"An application version"
+	^ '4.0.0'
+]
+
 { #category : #'as yet unclassified' }
 CogMacOSConfig >> bundleInfo [
 
@@ -242,8 +290,29 @@ CogMacOSConfig >> platformSources [
 	)
 ]
 
-{ #category : #settings }
+{ #category : #'bundle strings' }
 CogMacOSConfig >> plistFile [
+
+	| plist |
+	
+	plist := self plistTemplate.
+	
+	#(
+	CFBundleExecutable
+	CFBundleGetInfoString
+	CFBundleName
+	CFBundleShortVersionString
+	CFBundleVersion
+	CFBundleIconFile
+	CFBundleIdentifier ) do: [:key |
+		plist := plist copyReplaceAll: '@' , key , '@' with: (self perform: key)
+	].
+
+	^ self fixLineEndsOf: plist
+]
+
+{ #category : #'bundle strings' }
+CogMacOSConfig >> plistTemplate [
 	^ 
 	'<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
@@ -613,25 +682,25 @@ CogMacOSConfig >> plistFile [
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
-	<string>Croquet</string>
+	<string>@CFBundleExecutable@</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Croquet Cog 4.0.0 http://www.teleplace.com</string>
+	<string>@CFBundleGetInfoString@</string>
 	<key>CFBundleIconFile</key>
-	<string>Croquet.icns</string>
+	<string>@CFBundleIconFile@</string>
 	<key>CFBundleIdentifier</key>
-	<string>com.teleplace.Teleplace</string>
+	<string>@CFBundleIdentifier@</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Croquet</string>
+	<string>@CFBundleName@</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>Croquet Cog 3.0.0</string>
+	<string>@CFBundleShortVersionString@</string>
 	<key>CFBundleSignature</key>
 	<string>????</string>
 	<key>CFBundleVersion</key>
-	<string>4.0.0</string>
+	<string>@CFBundleVersion@</string>
 	<key>CGDisableCoalescedUpdates</key>
 	<true/>
 	<key>LSBackgroundOnly</key>
