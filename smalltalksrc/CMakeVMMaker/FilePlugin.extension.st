@@ -11,6 +11,7 @@ FilePlugin classSide >> generateFor: aCMakeVMGenerator internal: aBoolean [
 	maker addCrossSources: #( 'sqFilePluginBasicPrims.c').
 	
 	maker ifMac: [
+		maker includeDirectories: '${platformsDir}/unix/vm'.
 		maker addPlatformSources:
 			#( 'sqMacUnixFileInterface.c' 'sqMacDirectory.c')
 		]
