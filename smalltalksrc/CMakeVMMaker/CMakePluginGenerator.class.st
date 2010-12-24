@@ -39,12 +39,14 @@ CMakePluginGenerator >> generate [
 	self 
 		printHeader;
 		project: name;
-		set: #topDir toString: '../..'.
-				
+		"config's topdir, if set, should be absolute"
+		set: #topDir toString: (vmGen topDir fullName). 
+		vmGen setupDirectories: self. "take dirs from parent gen"
+
 	self message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin'])  , name.
-	
-	self setupDirectories.
-	
+
+"	self puts: 'set(CMAKE_OSX_ARCHITECTURES i386)'.	
+"
 	self 
 		set: #pluginName toString: name;
 		set: #pluginSrc toString: '${srcPluginsDir}/', name;
@@ -64,6 +66,8 @@ CMakePluginGenerator >> generate [
 
 	extraRules ifNotNil: [ extraRules value: self ].
 	
+	vmGen config extraPluginSettings: self.
+
 	self puts: 'add_library(' , name ,
 		' STATIC ${sources} )'.
 	
@@ -87,8 +91,8 @@ CMakePluginGenerator >> generate: aPlugin for: aCMakeVMGenerator internal: aBool
 { #category : #'as yet unclassified' }
 CMakePluginGenerator >> saveFile [
 	
-	((self buildDir / plugin moduleName) assureExistence forceNewFileNamed: self outputFileName) 
-		nextPutAll: self contents; close.
+	((vmGen buildDir / plugin moduleName) assureExistence forceNewFileNamed: self outputFileName) 
+		nextPutAll: (self config fixLineEndsOf: output contents); close.
 
 ]
 
