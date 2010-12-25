@@ -58,6 +58,12 @@ CPlatformConfig >> platformsDir: anObject [
 	platformsDir := anObject
 ]
 
+{ #category : #'as yet unclassified' }
+CPlatformConfig >> setExtraTargetProperties: maker [
+
+	" do nothing"
+]
+
 { #category : #accessing }
 CPlatformConfig >> srcDir [
 	"Answer the value of srcDir"
