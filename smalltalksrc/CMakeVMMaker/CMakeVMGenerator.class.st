@@ -76,17 +76,10 @@ CMakeVMGenerator >> generate [
 	self puts: 'add_executable(' , config executableName, ' ', config executableType, ' ' , self sources , ')'.
 
 	"linker flags "
-	self puts: 'set_target_properties(', config executableName, ' PROPERTIES LINK_FLAGS "', config linkFlags,'")'.
+	self targetPropertyAt: 'LINK_FLAGS' qput: config linkFlags.
 	
-	"maker puts: 'set_property(', 
-	maker set: 'MACOSX_PACKAGE_LOCATION' 	maker set: 'RESOURCE' to: '${topdir}/macbuild/resources/ProjectBuilder/Croquet.icns'.
-	"
-	
-	config ifMac: [
-		"generate Info.plist "
-		self generatePlist.	
-	].
-
+	config setExtraTargetProperties: self.
+		
 	self processInternalPlugins.	
 	self processExternalDependencies.
 	
@@ -249,6 +242,22 @@ CMakeVMGenerator >> sources [
 	self set: #extraSources to: config extraSources.
 	
 	^ '${coreSources} ${crossVMSources} ${platformVMSources} ${extraSources}'
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> targetPropertyAt: aPropName put: aValue [
+	"set target's properties"
+	
+	self cmd: 'set_property' params: 'TARGET ', config executableName , 
+	' PROPERTY ', aPropName , ' ' , aValue.
+
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> targetPropertyAt: aPropName qput: aValue [
+	"set target's properties, put value in quotes"
+	
+	^ self targetPropertyAt: aPropName put: (aValue copyReplaceAll: '"' with: '\"').
 ]
 
 { #category : #'as yet unclassified' }

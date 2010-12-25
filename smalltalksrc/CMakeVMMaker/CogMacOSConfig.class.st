@@ -39,14 +39,14 @@ CogMacOSConfig >> CFBundleIdentifier [
 CogMacOSConfig >> CFBundleName [
 
 	"An application name"
-	^ 'Cog smalltalk Virtual Machine'
+	^ self executableName, ' (Carbon) 32bits'
 ]
 
 { #category : #'bundle strings' }
 CogMacOSConfig >> CFBundleShortVersionString [
 
 	"An application version"
-	^ 'Cog VM ' , self CFBundleVersion
+	^ self executableName, ' VM ' , self CFBundleVersion
 ]
 
 { #category : #'bundle strings' }
@@ -54,19 +54,6 @@ CogMacOSConfig >> CFBundleVersion [
 
 	"An application version"
 	^ '4.0.0'
-]
-
-{ #category : #'as yet unclassified' }
-CogMacOSConfig >> bundleInfo [
-
-	'MACOSX_BUNDLE_INFO_STRING' -> 'Cog 4.0.0. http://squeak.org'.
-	'MACOSX_BUNDLE_ICON_FILE' -> 'Croquet.icns'.
-	'MACOSX_BUNDLE_GUI_IDENTIFIER' -> ''.
-	'MACOSX_BUNDLE_LONG_VERSION_STRING'
-	.'MACOSX_BUNDLE_BUNDLE_NAME'
-	.'MACOSX_BUNDLE_SHORT_VERSION_STRING'
-	.'MACOSX_BUNDLE_BUNDLE_VERSION'
-	.'MACOSX_BUNDLE_COPYRIGHT'
 ]
 
 { #category : #'as yet unclassified' }
@@ -191,7 +178,7 @@ CogMacOSConfig >> extraPluginSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source files' }
 CogMacOSConfig >> extraSources [
 	" mac VM using some unix sources"
 	
@@ -202,8 +189,7 @@ CogMacOSConfig >> extraSources [
 	${platformsDir}/unix/vm/sqUnixHeartbeat.c
 	${platformsDir}/unix/vm/sqUnixVMProfile.c
 	${platformsDir}/unix/vm/sqUnixThreads.c
-	'
-	
+	${resources}'
 ]
 
 { #category : #settings }
@@ -211,7 +197,19 @@ CogMacOSConfig >> extraVMSettings: maker [
 	
 	"Cog currently runs only in 32 bit mode" 
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
-	
+
+	maker set: 'resourceDir' to: '${topDir}/macbuild/resources/ProjectBuilder'.
+	maker set: 'resources' to: 
+		'"${resourceDir}/Squeak VM.r"
+		"${resourceDir}/Cog.icns"
+		"${resourceDir}/Squeak.icns"
+		"${resourceDir}/SqueakChanges.icns"
+		"${resourceDir}/SqueakImage.icns"
+		"${resourceDir}/SqueakPlugin.icns"
+		"${resourceDir}/SqueakScript.icns"
+		"${resourceDir}/SqueakGeneric.icns"
+		"${resourceDir}/SqueakProject.icns"
+		"${resourceDir}/SqueakSources.icns"'
 
 ]
 
@@ -235,8 +233,7 @@ CogMacOSConfig >> frameworks [
 	QuickTime
 	Foundation
 	SystemConfiguration
-	)"
-	inject: '' into: [:res :each | res , ' -framework ', each ]"
+	)
 ]
 
 { #category : #'as yet unclassified' }
@@ -810,6 +807,21 @@ CogMacOSConfig >> plistTemplate [
 </dict>
 </plist>
 '
+]
+
+{ #category : #settings }
+CogMacOSConfig >> setExtraTargetProperties: maker [
+
+	| plist |
+
+	" generated and add Info.plist file "
+	plist := self plistFile.
+
+	(maker buildDir forceNewFileNamed: 'Info.plist') nextPutAll: plist; close.
+	
+	maker targetPropertyAt: 'MACOSX_BUNDLE_INFO_PLIST' put: '${buildDir}/Info.plist'.
+
+	maker cmd: 'set_source_files_properties' params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
 ]
 
 { #category : #'source files' }
