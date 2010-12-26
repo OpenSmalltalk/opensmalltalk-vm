@@ -1,3 +1,25 @@
+"
+Base class, defining some common properties and behavior for all kinds of VM build configurations.
+
+Since some plugins require extra settings (like additional source files etc), there is two ways to add that:
+
+- add custom rules on plugin class side:
+
+PluginClass>>generateFor: aCMakeVMGenerator internal: aBoolean 
+
+	^ aCMakeVMGenerator 
+		generatePlugin: self 
+		internal: aBoolean
+		extraRules: [:maker |   ... your rules come here ... ]
+		
+- define rules by adding #configure<PluginClass>: method in config class (see my 'plugin extra rules' category)
+
+The last one is more compact and also avoids inter-package dependency, so you can load and use
+CMakeVMMaker even if some 3rd-party plugins are not loaded into image.
+
+
+
+"
 Class {
 	#name : #CPlatformConfig,
 	#superclass : #Object,
@@ -24,26 +46,323 @@ CPlatformConfig >> buildDir: anObject [
 	buildDir := anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureB3DAcceleratorPlugin: maker [
+	"extra rules for B3DAcceleratorPlugin"
+	
+	self ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacOpenGL.c' 'sqMacOpenGLInfo.c')
+		].
+
+	maker 
+		addCrossSources: #( 'sqOpenGLRenderer.c' ) 
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureDropPlugin: maker [
+	"extra rules for DropPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacDragDrop')
+		]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureFT2Plugin: maker [ 
+	"extra rules for FT2Plugin"
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureFilePlugin: maker [
+	"extra rules for FilePlugin"
+
+	maker addCrossSources: #( 'sqFilePluginBasicPrims.c').
+	
+	maker ifMac: [
+		maker includeDirectories: '${platformsDir}/unix/vm'.
+		maker addPlatformSources:
+			#( 'sqMacUnixFileInterface.c' 'sqMacDirectory.c')
+		]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureFloatMathPlugin: maker [
+	"extra rules for FloatMathPlugin"
+
+	maker addCrossSources: #(
+		'acos.c' 'acosh.c' 'asin.c' 'asinh.c' 'atan.c' 'atan2.c' 'atanh.c'
+		'copysign.c' 'cos.c' 'cosh.c' 'exp.c' 'expm1.c' 'finite.c' 'fmod.c'
+		'hypot.c' 'isnan.c' 'k_cos.c' 'k_rem_pio2.c' 'k_sin.c' 'k_tan.c' 'ldexp.c'
+		'log.c' 'log10.c' 'log1p.c' 'modf.c' 'pow.c' 'rem_pio2.c' 'rint.c'
+		'scalb.c' 'scalbn.c' 'sin.c' 'sinh.c' 'sqrt.c' 'tan.c' 'tanh.c' ).
+
+	"On windoze, lib should be built without optimizations?
+	On *nix & mac with -DNO_ISNAN "
+	
+	maker puts:'
+if (${WIN32})
+	add_definitions(-Werror-implicit-function-declaration -O0)	
+else(${WIN32})
+	add_definitions(-DNO_ISNAN)
+endif (${WIN32})'.
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureHostWindowPlugin: maker [
+	"extra rules for HostWindowPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacHostWindow.c' )
+		]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureIA32ABIPlugin: maker [
+	"extra rules for IA32ABIPlugin"
+
+	maker addCrossSources:
+		#( 'ia32abicc.c')
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureInternetConfigPlugin: maker [
+	"extra rules for InternetConfigPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacInternetConfiguration.c')
+		]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureJPEGReadWriter2Plugin: maker [ 
+	"extra rules for JPEGReadWriter2Plugin"
+
+maker addCrossSources: #(
+'Error.c'
+'jcapimin.c'
+'jcapistd.c'
+'jccoefct.c'
+'jccolor.c'
+'jcdctmgr.c'
+'jchuff.c'
+'jcinit.c'
+'jcmainct.c'
+'jcmarker.c'
+'jcmaster.c'
+'jcomapi.c'
+'jcparam.c'
+'jcphuff.c'
+'jcprepct.c'
+'jcsample.c'
+'jctrans.c'
+'jdapimin.c'
+'jdapistd.c'
+'jdatadst.c'
+'jdatasrc.c'
+'jdcoefct.c'
+'jdcolor.c'
+'jddctmgr.c'
+'jdhuff.c'
+'jdinput.c'
+'jdmainct.c'
+'jdmarker.c'
+'jdmaster.c'
+'jdmerge.c'
+'jdphuff.c'
+'jdpostct.c'
+'jdsample.c'
+'jdtrans.c'
+'jerror.c'
+'jfdctflt.c'
+'jfdctfst.c'
+'jfdctint.c'
+'jidctflt.c'
+'jidctfst.c'
+'jidctint.c'
+'jidctred.c'
+'jmemdatadst.c'
+'jmemdatasrc.c'
+'jmemmgr.c'
+'jmemnobs.c'
+'jquant1.c'
+'jquant2.c'
+'jutils.c'
+) 
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureJoystickTabletPlugin: maker [ 
+	"extra rules for JoystickTabletPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 
+			'HID_Error_Handler.c'
+			'HID_Name_Lookup.c'
+			'HID_Queue_Utilities.c'
+			'HID_Utilities.c'
+			'sqMacJoystickAndTablet.c'
+			)
+	]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureLocalePlugin: maker [ 
+	"extra rules for LocalePlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacLocaleCarbon.c' )	]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureMIDIPlugin: maker [ 
+	"extra rules for MIDIPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacMIDI.c') ]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureRePlugin: maker [ 
+	"extra rules for RePlugin"
+
+	maker addCrossSources: #(
+		'pcre.c' 'study.c' 'get.c' 'chartables.c').
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureSecurityPlugin: maker [ 
+	"extra rules for SecurityPlugin"
+
+	maker ifMac: [
+		maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
+		maker addPlatformSources:
+			#( 'sqMacSecurity.c' )  ]
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureSerialPlugin: maker [ 
+	"extra rules for SerialPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacSerialPort.c' )
+		]
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureSoundCodecPlugin: maker [ 
+	"extra rules for SoundCodecPlugin"
+
+	maker addCrossSources:
+		#( 'sqSoundCodecPluginBasicPrims.c' )
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureSoundPlugin: maker [ 
+	"extra rules for SoundPlugin"
+
+	maker ifMac: [
+		maker includeDirectories: '${platformsDir}/unix/vm/'.
+		maker addPlatformSources:
+			#( 'sqMacAudioDeviceList.c' 'sqMacUnixInterfaceSound.c' 
+			'sqUnixSoundMacOSXJMM.c')
+		]
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureSurfacePlugin: maker [ 
+	"extra rules for SurfacePlugin"
+
+	maker set: #sources toString: ''. "remove default source file"
+	maker addCrossSources: #('SurfacePlugin.c')
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureUUIDPlugin: maker [ 
+	"extra rules for UUIDPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources:
+			#( 'sqMacUUID.c')
+		]
+
+
+
+]
+
+{ #category : #utils }
+CPlatformConfig >> doesNotUnderstand: aMessage [
+	" ignore configureXYZ: messages "
+
+	| sel  |
+	sel := aMessage selector.
+	
+	((sel beginsWith: 'configure') and: [
+		(sel indexOf: $: ) = sel size ] ) ifTrue: [ ^ self ].
+	
+	^ super doesNotUnderstand: aMessage
+]
+
+{ #category : #accessing }
 CPlatformConfig >> executableName [
 	"default one"
 	^ 'Squeak'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CPlatformConfig >> executableType [
 	^ ''
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #utils }
 CPlatformConfig >> fixLineEndsOf: string [
 	^ string 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CPlatformConfig >> frameworks [
 	"leave empty for all platforms but Mac OS"
 	^ #()
+]
+
+{ #category : #testing }
+CPlatformConfig >> ifMac: aBlock [
+
+	"evaluate a block , if receiver target platform is Mac OS"
 ]
 
 { #category : #accessing }
@@ -58,7 +377,7 @@ CPlatformConfig >> platformsDir: anObject [
 	platformsDir := anObject
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #utils }
 CPlatformConfig >> setExtraTargetProperties: maker [
 
 	" do nothing"

@@ -1,3 +1,8 @@
+"
+I am using for generating CMakeLists.txt (cmake config files) for specific plugin.
+The direct use of my instances is not recommended.
+Use CMakeVMGenerator and appropriate configuration to generate both VM and plugins cmake config files.
+"
 Class {
 	#name : #CMakePluginGenerator,
 	#superclass : #CMakeGenerator,
@@ -45,8 +50,6 @@ CMakePluginGenerator >> generate [
 
 	self message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin'])  , name.
 
-"	self puts: 'set(CMAKE_OSX_ARCHITECTURES i386)'.	
-"
 	self 
 		set: #pluginName toString: name;
 		set: #pluginSrc toString: '${srcPluginsDir}/', name;
@@ -64,13 +67,19 @@ CMakePluginGenerator >> generate [
 	
 	self addDefinitions: vmGen config compilerFlags.
 
+	" perform config's configureXYZ: message to apply per-plugin custom rules, if any "
+	vmGen config perform: ( 'configure' , plugin name , ':' )asSymbol with: self.
+	
 	extraRules ifNotNil: [ extraRules value: self ].
 	
 	vmGen config extraPluginSettings: self.
-
-	self puts: 'add_library(' , name ,
-		' STATIC ${sources} )'.
 	
+	" generate a static lib for internal plugin, or shared for external"
+	internal ifTrue: [
+		self cmd: 'add_library' params:  name , ' STATIC ${sources}'.
+	] ifFalse: [
+		self cmd: 'add_library' params: name , ' MODULE ${sources}'.
+	].
 	vmGen addSubdirectory: name. 
 	
 	self saveFile.
