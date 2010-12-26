@@ -1,3 +1,7 @@
+"
+This is a configuration for Cog VM 32 bit, 
+	for Mac OS, which using Carbon framework. 
+"
 Class {
 	#name : #CogMacOSConfig,
 	#superclass : #CPlatformConfig,
