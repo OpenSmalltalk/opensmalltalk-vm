@@ -251,6 +251,39 @@ sqInt sqFileOpen(SQFile *f, char* sqFileName, sqInt sqFileNameSize, sqInt writeF
 	f->lastOp = UNCOMMITTED;
 }
 
+/*
+ * Fill-in files with handles for stdin, stdout and stderr as available and
+ * answer a bit-mask of the availability, 1 corresponding to stdin, 2 to stdout
+ * and 4 to stderr, with 0 on error or unavailablity.
+ */
+sqInt
+sqFileStdioHandlesInto(SQFile files[3])
+{
+#if defined(_IONBF)
+	if (isatty(fileno(stdin)))
+		setvbuf(stdin,0,_IONBF,0);
+#endif
+	files[0].sessionID = thisSession;
+	files[0].file = stdin;
+	files[0].fileSize = 0;
+	files[0].writable = false;
+	files[0].lastOp = READ_OP;
+
+	files[1].sessionID = thisSession;
+	files[1].file = stdout;
+	files[1].fileSize = 0;
+	files[1].writable = true;
+	files[1].lastOp = WRITE_OP;
+
+	files[2].sessionID = thisSession;
+	files[2].file = stderr;
+	files[2].fileSize = 0;
+	files[2].writable = true;
+	files[2].lastOp = WRITE_OP;
+
+	return 7;
+}
+
 size_t sqFileReadIntoAt(SQFile *f, size_t count, char* byteArrayIndex, size_t startIndex) {
 	/* Read count bytes from the given file into byteArray starting at
 	   startIndex. byteArray is the address of the first byte of a
