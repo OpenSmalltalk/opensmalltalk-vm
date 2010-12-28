@@ -9,6 +9,7 @@
 *   RCSID:   $Id$
 *
 *   NOTES: See change log below.
+*   	2010-12-28 dtl add sqFileStdioHandlesInto() adapted from Cog branch
 *	2008-08-29 bf  add stdin/stdout/stderr support
 *	2005-03-26 IKP fix unaligned accesses to file[Size] members
 * 	2004-06-10 IKP 64-bit cleanliness
