@@ -10,7 +10,8 @@ Class {
 		'plugin',
 		'vmGen',
 		'internal',
-		'extraRules'
+		'extraRules',
+		'doNotGenerate'
 	],
 	#category : #CMakeVMMaker
 }
@@ -35,6 +36,28 @@ CMakePluginGenerator >> config [
 ]
 
 { #category : #'as yet unclassified' }
+CMakePluginGenerator >> doNotGenerate [
+
+	"Forcely exclude plugin form build. Use this method only for debugging purposes.
+	
+	Front-end users should simply specify different list of plugins for building VM,
+	effectively excluding any unwanted stuff "
+	
+	^doNotGenerate
+]
+
+{ #category : #'as yet unclassified' }
+CMakePluginGenerator >> doNotGenerate: aValue [
+
+	"Forcely exclude plugin form build. Use this method only for debugging purposes.
+	
+	Front-end users should simply specify different list of plugins for building VM,
+	effectively excluding any unwanted stuff "
+	
+	doNotGenerate := aValue
+]
+
+{ #category : #'as yet unclassified' }
 CMakePluginGenerator >> generate [
 
 	| name |
@@ -48,7 +71,7 @@ CMakePluginGenerator >> generate [
 		set: #topDir toString: (vmGen topDir fullName). 
 		vmGen setupDirectories: self. "take dirs from parent gen"
 
-	self message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin'])  , name.
+	self message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin: '])  , name.
 
 	self 
 		set: #pluginName toString: name;
@@ -68,7 +91,8 @@ CMakePluginGenerator >> generate [
 	self addDefinitions: vmGen config compilerFlags.
 
 	" perform config's configureXYZ: message to apply per-plugin custom rules, if any "
-	vmGen config perform: ( 'configure' , plugin name , ':' )asSymbol with: self.
+	
+	vmGen config configurePlugin: plugin with: self.
 	
 	extraRules ifNotNil: [ extraRules value: self ].
 	
@@ -78,9 +102,11 @@ CMakePluginGenerator >> generate [
 	internal ifTrue: [
 		self cmd: 'add_library' params:  name , ' STATIC ${sources}'.
 	] ifFalse: [
-		self cmd: 'add_library' params: name , ' MODULE ${sources}'.
+		self cmd: 'add_library' params: name , ' SHARED ${sources}'.
+		
+	"	self cmd: 'set_property' params: 'TARGET ' , name , ' PROPERTY LINK_FLAGS -bundle'"
 	].
-	vmGen addSubdirectory: name. 
+
 	
 	self saveFile.
 
@@ -89,12 +115,23 @@ CMakePluginGenerator >> generate [
 { #category : #'as yet unclassified' }
 CMakePluginGenerator >> generate: aPlugin for: aCMakeVMGenerator internal: aBoolean extraRules: aBlock [
 
+	doNotGenerate := false.
 	internal := aBoolean.
 	plugin := aPlugin.
 	vmGen := aCMakeVMGenerator.
 	extraRules := aBlock.
 		
 	^ self generate
+]
+
+{ #category : #'as yet unclassified' }
+CMakePluginGenerator >> isExternal [
+	^ internal not
+]
+
+{ #category : #'as yet unclassified' }
+CMakePluginGenerator >> isInternal [
+	^ internal
 ]
 
 { #category : #'as yet unclassified' }

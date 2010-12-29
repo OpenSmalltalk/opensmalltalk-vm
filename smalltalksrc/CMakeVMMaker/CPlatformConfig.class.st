@@ -62,6 +62,30 @@ CPlatformConfig >> configureB3DAcceleratorPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CPlatformConfig >> configureBochsIA32Plugin: maker [
+
+	"this stuff is not ready for use yet" 
+	
+" 	maker addCrossSources:
+		#( 'sqBochsIA32Plugin.cpp'  )
+
+"
+	maker doNotGenerate:true
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureCroquetPlugin: maker [ 
+	"extra rules for CroquetPlugin"
+
+	maker ifMac: [
+		maker addPlatformSources: #(
+			'sqMacCroquet.c').
+	].
+
+	maker addCrossSources: #('tribox.c').
+]
+
+{ #category : #'plugin extra rules' }
 CPlatformConfig >> configureDropPlugin: maker [
 	"extra rules for DropPlugin"
 
@@ -70,6 +94,22 @@ CPlatformConfig >> configureDropPlugin: maker [
 			#( 'sqMacDragDrop')
 		]
 
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureFFIPlugin: maker [
+	"extra rules for FFIPlugin"
+
+	" it is incomplete right now, because in Cog this plugin are not used anymore"
+	maker doNotGenerate: true.
+	
+	maker addCrossSources: #('sqFFIPlugin.c').
+
+	maker ifMac:  [
+		maker addPlatformSources: #( "'sqMacIntel-Win32.c'"
+			'x86-sysv-MacIntel.c'
+			'x86-sysv-asm-MacIntel.S'
+		)]
 ]
 
 { #category : #'plugin extra rules' }
@@ -103,12 +143,16 @@ CPlatformConfig >> configureFloatMathPlugin: maker [
 		'log.c' 'log10.c' 'log1p.c' 'modf.c' 'pow.c' 'rem_pio2.c' 'rint.c'
 		'scalb.c' 'scalbn.c' 'sin.c' 'sinh.c' 'sqrt.c' 'tan.c' 'tanh.c' ).
 
-	"On windoze, lib should be built without optimizations?
-	On *nix & mac with -DNO_ISNAN "
 	
+	"according to http://www.netlib.org/fdlibm/readme
+	it should be compiled with no optimizations"
+	maker addDefinitions: '-O0 -mno-fused-madd'.
+	
+	
+	"On *nix & mac with -DNO_ISNAN "
 	maker puts:'
 if (${WIN32})
-	add_definitions(-Werror-implicit-function-declaration -O0)	
+	add_definitions(-Werror-implicit-function-declaration)	
 else(${WIN32})
 	add_definitions(-DNO_ISNAN)
 endif (${WIN32})'.
@@ -240,6 +284,59 @@ CPlatformConfig >> configureMIDIPlugin: maker [
 		maker addPlatformSources:
 			#( 'sqMacMIDI.c') ]
 
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureMpeg3Plugin: maker [
+	"extra rules for Mpeg3Plugin"
+
+	maker includeDirectories: '${pluginCross}/libmpeg ${pluginCross}/libmpeg/audio ${pluginCross}/libmpeg/video'.
+
+	maker addCrossSources: 
+		#( 
+		'libmpeg/bitstream.c' 
+		'libmpeg/changesForSqueak.c'
+		'libmpeg/audio/dct.c'
+		'libmpeg/video/getpicture.c'
+		'libmpeg/audio/header.c'
+		'libmpeg/video/headers.c'
+		'libmpeg/video/idct.c'
+		'libmpeg/audio/layer1.c'
+		'libmpeg/audio/layer2.c'
+		'libmpeg/audio/layer3.c'
+		'libmpeg/libmpeg3.c'
+		'libmpeg/video/macroblocks.c'
+		'libmpeg/video/mmxtest.c'
+		'libmpeg/video/motion.c'
+		'libmpeg/mpeg3atrack.c'
+		'libmpeg/audio/mpeg3audio.c'
+		'libmpeg/mpeg3demux.c'
+		'libmpeg/mpeg3io.c'
+		'libmpeg/mpeg3title.c'
+		'libmpeg/video/mpeg3video.c'
+		'libmpeg/mpeg3vtrack.c'
+		'libmpeg/video/output.c'
+		'libmpeg/audio/pcm.c'
+		'libmpeg/video/reconstruct.c'
+		'libmpeg/video/seek.c'
+		'libmpeg/video/slice.c'
+		
+		'libmpeg/audio/synthesizers.c'
+		'libmpeg/audio/tables.c'
+		'libmpeg/video/vlc.c'
+	).
+	
+	maker addPlatformSources: #(	
+		'sqMacFileBits.c')
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configurePlugin: aPlugin with: generator [
+
+	^ self perform: ( 'configure' , aPlugin name , ':' ) asSymbol with: generator.
+	
 ]
 
 { #category : #'plugin extra rules' }

@@ -186,12 +186,13 @@ CMakeVMGenerator >> processExternalDependencies [
 { #category : #'as yet unclassified' }
 CMakeVMGenerator >> processExternalPlugins [
 
-	| libs |
-	libs := 
-	config externalPlugins collect: [:each | | plugin |
+	config externalPlugins do: [:each | | plugin gen |
 		plugin := Smalltalk at: each.
-		plugin generateFor: self internal: false.
-		plugin moduleName ].
+		gen := plugin generateFor: self internal: false.
+		gen doNotGenerate ifFalse: [
+			self addSubdirectory: plugin moduleName.
+			]
+	].
 	
 
 ]
@@ -200,14 +201,19 @@ CMakeVMGenerator >> processExternalPlugins [
 CMakeVMGenerator >> processInternalPlugins [
 
 	| libs |
-	libs := 
-	config internalPlugins collect: [:each | | plugin |
+	libs := OrderedCollection new.
+
+	config internalPlugins collect: [:each | | plugin gen |
 		plugin := Smalltalk at: each.
-		plugin generateFor: self internal: true.
-		plugin moduleName ].
+		gen := plugin generateFor: self internal: true.
+		gen doNotGenerate ifFalse: [
+			libs add: plugin moduleName.
+			self addSubdirectory: plugin moduleName.
+			 ].
+		].
 	
-	self puts: 'target_link_libraries(' , config executableName , ' ' ,
-		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) , ')'.
+	self cmd: 'target_link_libraries' params:  config executableName , ' ' ,
+		(libs inject: '' into: [:res :ea | res, ' ' , ea ]) .
 
 	self generateExportsH: libs.
 
