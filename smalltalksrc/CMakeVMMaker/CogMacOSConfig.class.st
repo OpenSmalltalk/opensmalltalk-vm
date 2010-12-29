@@ -84,8 +84,45 @@ CogMacOSConfig >> compilerFlagsDebug [
 
 { #category : #'as yet unclassified' }
 CogMacOSConfig >> compilerFlagsRelease [
+" -mdynamic-no-pic "
+	^ self commonCompilerFlags , ' -gdwarf-2 -O3 -funroll-loops -ftree-vectorize -msse3 -DDEBUGVM=0 -DNDEBUG=1 -Wunused-value -Wuninitialized -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS'
+]
 
-	^ self commonCompilerFlags , ' -gdwarf-2 -O3 -funroll-loops -ftree-vectorize -msse3 -DDEBUGVM=0 -DNDEBUG=1 -mdynamic-no-pic -Wunused-value -Wuninitialized -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS'
+{ #category : #'plugin extra rules' }
+CogMacOSConfig >> configureFFIPlugin: maker [
+	"extra rules for FFIPlugin"
+
+	
+	"Never generate this plugin. Because it is a legacy code.
+	For Cog FFI, use ReentrantFFIPlugin  (ReentrantIA32FFIPlugin for x86) "
+	
+	maker doNotGenerate: true.
+	
+
+]
+
+{ #category : #'plugin extra rules' }
+CogMacOSConfig >> configurePlugin: aPlugin with: generator [
+
+	generator isExternal ifTrue: [
+		" set output directory for dynamic library to Resources subdir in .app bundle location "
+		generator 
+			set: 'CMAKE_LIBRARY_OUTPUT_DIRECTORY' 
+			toString: '../',self executableName,'.app/Contents/Resources'.
+		].
+	^ super configurePlugin: aPlugin with: generator
+
+]
+
+{ #category : #'plugin extra rules' }
+CogMacOSConfig >> configureReentrantIA32FFIPlugin: maker [
+	"extra rules for ReentrantIA32FFIPlugin"
+	
+	maker addCrossSources: #(
+		'sqFFIPlugin.c' 'sqFFITestFuncs.c' 'sqManualSurface.c'
+	).
+
+
 ]
 
 { #category : #'source files' }
@@ -104,7 +141,7 @@ CogMacOSConfig >> defaultExternalPlugins [
 	^ #(
 		BochsIA32Plugin
 		CroquetPlugin
-		FFIPlugin "SqueakFFIPrims"
+		ReentrantIA32FFIPlugin "SqueakFFIPrims"
 		FloatArrayPlugin
 		FloatMathPlugin
 		Mpeg3Plugin
