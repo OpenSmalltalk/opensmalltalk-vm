@@ -1894,6 +1894,8 @@ BitBltSimulation >> loadColorMap [
 		cmSize := interpreterProxy slotSizeOf: cmOop.
 		cmLookupTable := interpreterProxy firstIndexableField: cmOop.
 		oldStyle := true.
+		self cCode: '' inSmalltalk:
+			[self assert: cmLookupTable unitSize = 4].
 	] ifFalse: [
 		"A new-style color map (fully qualified)"
 		((interpreterProxy isPointers: cmOop) 
@@ -1909,6 +1911,10 @@ BitBltSimulation >> loadColorMap [
 					cmSize := (interpreterProxy slotSizeOf: oop).
 					cmLookupTable := interpreterProxy firstIndexableField: oop].
 		cmFlags := cmFlags bitOr: ColorMapNewStyle.
+		self cCode: '' inSmalltalk:
+			[self assert: cmShiftTable unitSize = 4.
+			 self assert: cmMaskTable unitSize = 4.
+			 self assert: cmLookupTable unitSize = 4].
 	].
 	(cmSize bitAnd: cmSize - 1) = 0 ifFalse:[^false].
 	cmMask := cmSize - 1.
@@ -2293,7 +2299,7 @@ BitBltSimulation >> pickSourcePixels: nPixels flags: mapperFlags srcMask: srcMas
 		"a little optimization for (pretty crucial) blits using indexed lookups only"
 		[	"grab, colormap and mix in pixel"
 			sourcePix := sourceWord >> srcShift bitAnd: srcMask.
-			destPix := self tableLookup: cmLookupTable at: (sourcePix bitAnd: cmMask).
+			destPix := cmLookupTable at: (sourcePix bitAnd: cmMask).
 			destWord := destWord bitOr: (destPix bitAnd: dstMask) << dstShift.
 			"adjust dest pix index"
 			dstShift := dstShift + dstShiftInc.
@@ -2894,14 +2900,6 @@ BitBltSimulation >> srcLongAt: idx [
 { #category : #'combination rules' }
 BitBltSimulation >> subWord: sourceWord with: destinationWord [
 	^sourceWord - destinationWord
-]
-
-{ #category : #'memory access' }
-BitBltSimulation >> tableLookup: table at: index [
-	"Note: Nasty coercion only necessary for the non-inlined version of this method in C. Duh? Oh well, here's the full story. The code below will definitely be inlined so everything that calls this method is fine. But... the translator doesn't quite prune this method so it generates a C function that tries to attempt an array access on an int - and most compilers don't like this. If you don't know what I'm talking about try to remove the C coercion and you'll see what happens when you try to compile a new VM..."
-	<var: #table type: 'unsigned int *'>
-	^table at: index
-
 ]
 
 { #category : #'combination rules' }

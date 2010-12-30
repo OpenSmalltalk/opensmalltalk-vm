@@ -8,12 +8,6 @@ Class {
 }
 
 { #category : #'plugin generation' }
-WordsOrBytes class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
-
-	cg emitLoad: aString asCharPtrFrom: anInteger on: aStream
-]
-
-{ #category : #'plugin generation' }
 WordsOrBytes class >> ccg: cg prolog: aBlock expr: aString index: anInteger [
 
 	^cg 

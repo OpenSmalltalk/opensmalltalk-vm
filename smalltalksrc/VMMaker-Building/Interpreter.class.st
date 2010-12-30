@@ -83,7 +83,6 @@ Class {
 		'gcSemaphoreIndex'
 	],
 	#classVars : [
-		'ActiveProcessIndex',
 		'AtCacheEntries',
 		'AtCacheFixedFields',
 		'AtCacheFmt',
@@ -97,8 +96,6 @@ Class {
 		'BytecodeTable',
 		'CacheProbeMax',
 		'CallerIndex',
-		'CharacterValueIndex',
-		'ClosureIndex',
 		'ClosureMethodIndex',
 		'CompilerHooksSize',
 		'CrossedX',
@@ -107,38 +104,17 @@ Class {
 		'DirNoMoreEntries',
 		'DoBalanceChecks',
 		'EndOfRun',
-		'ExcessSignalsIndex',
-		'FirstLinkIndex',
 		'HomeIndex',
 		'InitialIPIndex',
 		'JitterTable',
-		'LastLinkIndex',
-		'LiteralStart',
 		'MaxExternalPrimitiveTableSize',
 		'MaxJumpBuf',
 		'MaxPrimitiveIndex',
-		'MessageArgumentsIndex',
-		'MessageLookupClassIndex',
-		'MessageSelectorIndex',
-		'MethodArrayIndex',
 		'MillisecondClockMask',
-		'MyListIndex',
-		'NextLinkIndex',
 		'PrimitiveExternalCallIndex',
 		'PrimitiveTable',
-		'PriorityIndex',
-		'ProcessListsIndex',
-		'SelectorStart',
 		'SemaphoresToSignalSize',
-		'StreamArrayIndex',
-		'StreamIndexIndex',
-		'StreamReadLimitIndex',
-		'StreamWriteLimitIndex',
-		'SuperclassIndex',
-		'SuspendedContextIndex',
-		'TempFrameStart',
-		'XIndex',
-		'YIndex'
+		'TempFrameStart'
 	],
 	#pools : [
 		'VMBasicConstants',
@@ -151,11 +127,6 @@ Class {
 { #category : #translation }
 Interpreter class >> additionalSelectorTables [
 	^{ self primitiveTable }
-]
-
-{ #category : #translation }
-Interpreter class >> ancilliaryStructClasses [
-	^#()
 ]
 
 { #category : #constants }
@@ -830,11 +801,6 @@ Interpreter class >> isInterpreterClass [
 Interpreter class >> isNonArgumentImplicitReceiverVariableName: aString [
 	aString = 'interpreterProxy' ifTrue: [self halt].
 	^'self' = aString
-]
-
-{ #category : #translation }
-Interpreter class >> isTypePointerToStruct: type [ "<String>"
-	^false
 ]
 
 { #category : #benchmarks }
@@ -4590,26 +4556,29 @@ Interpreter >> positive64BitIntegerFor: integerValue [
 { #category : #'primitive support' }
 Interpreter >> positive64BitValueOf: oop [
 	"Convert the given object into an integer value.
-	The object may be either a positive ST integer or a eight-byte LargePositiveInteger."
+	The object may be either a positive SmallInteger or an eight-byte LargePositiveInteger."
 
 	| sz szsqLong value  |
-	<returnTypeC: 'sqLong'>
-	<var: 'value' type: 'sqLong'>
-	(self isIntegerObject: oop) ifTrue: [
-		value := self integerValueOf: oop.
-		value < 0 ifTrue: [^ self primitiveFail].
+	<returnTypeC: #sqLong>
+	<var: #value type: #sqLong>
+	(self isIntegerObject: oop) ifTrue:
+		[value := self integerValueOf: oop.
+		value < 0 ifTrue: [^self primitiveFail].
 		^ value].
 
-	self assertClassOf: oop is: (self splObj: ClassLargePositiveInteger).
-	successFlag ifFalse: [^ self primitiveFail].
-	szsqLong := self cCode: 'sizeof(sqLong)'.
+	(self
+			isClassOfNonImm: oop
+			equalTo: (self splObj: ClassLargePositiveInteger)
+			compactClassIndex: ClassLargePositiveIntegerCompactIndex) ifFalse:
+		[^self primitiveFail].
+	szsqLong := self sizeof: #sqLong asSymbol.
 	sz := self lengthOf: oop.
-	sz > szsqLong
-		ifTrue: [^ self primitiveFail].
+	sz > szsqLong ifTrue:
+		[^self primitiveFail].
 	value := 0.
 	0 to: sz - 1 do: [:i |
-		value := value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: 'sqLong') <<  (i*8))].
-	^value.
+		value := value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
+	^value
 ]
 
 { #category : #'object memory support' }
@@ -8947,6 +8916,7 @@ Interpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imageO
 
 	| swapBytes headerStart headerSize dataSize oldBaseAddr minimumMemory memStart bytesRead bytesToShift heapSize |
 	<var: #f type: 'sqImageFile '>
+	<var: #desiredHeapSize type: 'usqInt'>
 	<var: #headerStart type: 'squeakFileOffsetType '>
 	<var: #dataSize type: 'size_t '>
 	<var: #imageOffset type: 'squeakFileOffsetType '>
@@ -9448,6 +9418,8 @@ Interpreter >> signed32BitValueOf: oop [
 	The object may be either a positive ST integer or a four-byte LargeInteger."
 	| sz value largeClass negative |
 	<inline: false>
+	<returnTypeC: #int>
+	<var: #value type: #int>
 	(self isIntegerObject: oop) ifTrue: [^self integerValueOf: oop].
 	largeClass := self fetchClassOf: oop.
 	largeClass = self classLargePositiveInteger
@@ -9461,14 +9433,21 @@ Interpreter >> signed32BitValueOf: oop [
 			  ((self fetchByte: 1 ofObject: oop) <<  8) +
 			  ((self fetchByte: 2 ofObject: oop) << 16) +
 			  ((self fetchByte: 3 ofObject: oop) << 24).
+	self cCode: []
+		inSmalltalk:
+			[(value anyMask: 16r80000000) ifTrue:
+				[value := value - 16r100000000]].
 	"Filter out values out of range for the signed interpretation such as
 	 16rFFFFFFFF (positive w/ bit 32 set) and -16rFFFFFFFF (negative w/ bit
 	 32 set). Since the sign is implicit in the class we require that the high
 	 bit of the magnitude is not set which is a simple test here.  Note that
 	 we have to handle the most negative 32-bit value -2147483648 specially."
 	value < 0 ifTrue:
-		[self assert: (self cCode: 'sizeof(value) == 4').
-		(negative and: [value - 1 > 0]) ifTrue: "Don't fail for -2147483648 /-16r80000000"
+		[self assert: (self sizeof: value) == 4.
+		 (negative
+		 and: [self
+				cCode: [value - 1 > 0]
+				inSmalltalk: [value = -16r80000000]]) ifTrue: "Don't fail for -2147483648 /-16r80000000"
 			[^value].
 		 ^self primitiveFail].
 	^negative
@@ -9519,35 +9498,45 @@ Interpreter >> signed64BitValueOf: oop [
 	The object may be either a positive ST integer or a eight-byte LargeInteger."
 	| sz value largeClass negative szsqLong |
 	<inline: false>
-	<returnTypeC: 'sqLong'>
-	<var: 'value' type: 'sqLong'>
-	(self isIntegerObject: oop) ifTrue: [^self cCoerce: (self integerValueOf: oop) to: 'sqLong'].
-	largeClass := self fetchClassOf: oop.
+	<returnTypeC: #sqLong>
+	<var: #value type: #sqLong>
+	(self isIntegerObject: oop) ifTrue: [^self cCoerce: (self integerValueOf: oop) to: #sqLong].
+	largeClass := self fetchClassOfNonInt: oop.
 	largeClass = self classLargePositiveInteger
 		ifTrue:[negative := false]
 		ifFalse:[largeClass = self classLargeNegativeInteger
 					ifTrue:[negative := true]
 					ifFalse:[^self primitiveFail]].
-	szsqLong := self cCode: 'sizeof(sqLong)' inSmalltalk: [self bytesPerWord].
+	szsqLong := self sizeof: #sqLong asSymbol.
 	sz := self lengthOf: oop.
 	sz > szsqLong 
 		ifTrue: [^ self primitiveFail].
 	value := 0.
 	0 to: sz - 1 do: [:i |
-		value := value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: 'sqLong') <<  (i*8))].
+		value := value + ((self cCoerce: (self fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
 	"Filter out values out of range for the signed interpretation such as
 	16rFFFFFFFF... (positive w/ bit 64 set) and -16rFFFFFFFF... (negative w/ bit
 	64 set). Since the sign is implicit in the class we require that the high bit of
 	the magnitude is not set which is a simple test here.  Note that we have to
 	handle the most negative 64-bit value -9223372036854775808 specially."
+	self cCode: []
+		inSmalltalk:
+			[(value anyMask: 16r8000000000000000) ifTrue:
+				[value := value - 16r10000000000000000]].
 	value < 0 ifTrue:
-		[self assert: (self cCode: 'sizeof(value) == 8').
-		(negative and: [value - 1 > 0]) ifTrue: "Don't fail for -9223372036854775808/-16r8000000000000000"
+		[self cCode:
+			[self assert: (self sizeof: value) == 8.
+			 self assert: (self sizeof: value << 1) == 8].
+		"Don't fail for -9223372036854775808/-16r8000000000000000.
+		 Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
+		 with optimization and sometimes without.  The shift works on all, touch wood."
+		 (negative and: [0 = (self cCode: [value << 1]
+									inSmalltalk: [value << 1 bitAnd: (1 << 64) - 1])]) ifTrue: 
 			[^value].
 		 ^self primitiveFail].
-	negative
-		ifTrue:[^0 - value]
-		ifFalse:[^value]
+	^negative
+		ifTrue:[0 - value]
+		ifFalse:[value]
 ]
 
 { #category : #'send bytecodes' }

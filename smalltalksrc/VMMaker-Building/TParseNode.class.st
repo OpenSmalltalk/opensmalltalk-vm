@@ -179,13 +179,6 @@ TParseNode >> isStmtList [
 ]
 
 { #category : #testing }
-TParseNode >> isStructTarget: aCodeGen [
-	"Answer if the recever evaluates to a struct pointer
-	 and hence can be dereferenced using ->"
-	^false
-]
-
-{ #category : #testing }
 TParseNode >> isSwitch [
 	^false
 ]
@@ -253,4 +246,12 @@ TParseNode >> removeAssertions [
 TParseNode >> replaceNodesIn: aDictionary [
 
 	^aDictionary at: self ifAbsent: [self]
+]
+
+{ #category : #testing }
+TParseNode >> structTargetKind: aCodeGen [
+	"Answer if the recever evaluates to a struct or struct pointer
+	 and hence can be dereferenced using . or ->.  Answer any of
+	 #struct #pointer or nil"
+	^nil
 ]

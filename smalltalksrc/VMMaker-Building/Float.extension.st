@@ -6,12 +6,6 @@ Float >> asIEEE64BitWord [
 ]
 
 { #category : #'*VMMaker-plugin generation' }
-Float class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
-
-	cg emitLoad: aString asFloatValueFrom: anInteger on: aStream
-]
-
-{ #category : #'*VMMaker-plugin generation' }
 Float class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
 	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
 	^cg generateCoerceToFloatObjectFrom: aNode on: aStream

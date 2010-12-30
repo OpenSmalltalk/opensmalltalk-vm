@@ -70,8 +70,10 @@ CogIA32Compiler class >> initialize [
 	"CogIA32Compiler initialize"
 
 	| specificOpcodes refs |
-	self ~~  CogIA32Compiler ifTrue: [^self].
+	self ~~ CogIA32Compiler ifTrue: [^self].
 
+	"N.B. EAX ECX and EDX are caller-save (scratch) registers.
+		EBX ESI and EDI are callee-save; see concreteRegisterFor:"
 	EAX := 0.
 	ECX := 1.  "Were they completely mad or simply sadistic?"
 	EDX := 2.
@@ -140,6 +142,13 @@ CogIA32Compiler class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 			[aCodeGen removeMethodForSelector: sel]].
 ]
 
+{ #category : #accessing }
+CogIA32Compiler >> cResultRegister [
+	"Answer the abstract register for the C result register.
+	 Only partially implemented.  Works on x86 since TempReg = EAX = C result reg."
+	^self abstractRegisterForConcreteRegister: EAX
+]
+
 { #category : #assertions }
 CogIA32Compiler >> callInstructionByteSize [
 	^5
@@ -151,6 +160,14 @@ CogIA32Compiler >> callTargetFromReturnAddress: callSiteReturnAddress [
 	| callDistance |
 	callDistance := self literalBeforeFollowingAddress: callSiteReturnAddress.
 	^callSiteReturnAddress + callDistance signedIntFromLong
+]
+
+{ #category : #accessing }
+CogIA32Compiler >> callerSavedRegisterMask [
+	^cogit
+		registerMaskFor: (self abstractRegisterForConcreteRegister: EAX)
+		and: (self abstractRegisterForConcreteRegister: ECX)
+		and: (self abstractRegisterForConcreteRegister: EDX)
 ]
 
 { #category : #testing }
@@ -366,6 +383,7 @@ CogIA32Compiler >> computeMaximumSize [
 		[PopR]			-> [^maxSize := 1].
 		[PushR]			-> [^maxSize := 1].
 		[PushCw]		-> [^maxSize := 5].
+		[PrefetchAw]	-> [^maxSize := self hasSSEInstructions ifTrue: [7] ifFalse: [0]].
 		"Conversion"
 		[ConvertRRd]	-> [^maxSize := 4] }.
 	^0 "to keep C compiler quiet"
@@ -415,16 +433,20 @@ CogIA32Compiler >> concreteRegister: registerIndex [
 	  (defined in CogAbstractOpcodes) are all negative.  If registerIndex is
 	 negative assume it is an abstract register.
 
-	[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2A: Instruction Set Reference, A-M"
+	[1] IA-32 Intel® Architecture Software Developer's Manual Volume 2A: Instruction Set Reference, A-M
+
+
+	N.B. EAX ECX & EDX are caller-save (scratch) registers.  Hence we use ECX for class and EDC for
+		receiver/result since these are written in all normal sends.  EBX ESI & EDI are callee-save."
 
 	^registerIndex
 		caseOf: {
 			[TempReg]				-> [EAX].
 			[ClassReg]				-> [ECX].
 			[ReceiverResultReg]	-> [EDX].
-			[SendNumArgsReg]	-> [EBX].
-			[SPReg]				-> [ESP].
-			[FPReg]				-> [EBP].
+			[SendNumArgsReg]		-> [EBX].
+			[SPReg]					-> [ESP].
+			[FPReg]					-> [EBP].
 			[Arg0Reg]				-> [ESI].
 			[Arg1Reg]				-> [EDI] }
 		otherwise:
@@ -1685,6 +1707,25 @@ CogIA32Compiler >> concretizePopR [
 ]
 
 { #category : #'generate machine code' }
+CogIA32Compiler >> concretizePrefetchAw [
+	"Will get inlined into concretizeAt: switch."
+	<inline: true>
+	| addressOperand |
+	machineCodeSize := maxSize.
+	maxSize > 0 ifTrue:
+		[addressOperand := operands at: 0.
+		 machineCode
+			at: 0 put: 16r0f;
+			at: 1 put: 16r18;
+			at: 2 put: (self mod: 0 RM: 5 RO: 1); "prefetch0, prefetch using the T0 tremporal data hint"
+			at: 3 put: (addressOperand bitAnd: 16rFF);
+			at: 4 put: (addressOperand >> 8 bitAnd: 16rFF);
+			at: 5 put: (addressOperand >> 16 bitAnd: 16rFF);
+			at: 6 put: (addressOperand >> 24 bitAnd: 16rFF)].
+	^maxSize
+]
+
+{ #category : #'generate machine code' }
 CogIA32Compiler >> concretizePushCw [
 	<inline: true>
 	| value |
@@ -1989,7 +2030,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[JumpFPLessOrEqual]		-> [^self concretizeConditionalJump: 16r6].
 		[JumpFPOrdered]			-> [^self concretizeConditionalJump: 16rB].
 		[JumpFPUnordered]			-> [^self concretizeConditionalJump: 16rA].
-		[RetN]					-> [^self concretizeRetN].
+		[RetN]						-> [^self concretizeRetN].
 		"Arithmetic"
 		[AddCqR]					-> [^self concretizeAddCqR].
 		[AddCwR]					-> [^self concretizeAddCwR].
@@ -2010,15 +2051,15 @@ CogIA32Compiler >> dispatchConcretize [
 		[SubRR]						-> [^self concretizeSubRR].
 		[SubRdRd]					-> [^self concretizeSEE2OpRdRd: 16r5C].
 		[SqrtRd]						-> [^self concretizeSqrtRd].
-		[XorCwR]					-> [^self concretizeXorCwR].
-		[XorRR]						-> [^self concretizeXorRR].
-		[NegateR]					-> [^self concretizeNegateR].
+		[XorCwR]						-> [^self concretizeXorCwR].
+		[XorRR]							-> [^self concretizeXorRR].
+		[NegateR]						-> [^self concretizeNegateR].
 		[LoadEffectiveAddressMwrR]	-> [^self concretizeLoadEffectiveAddressMwrR].
 		[ArithmeticShiftRightCqR]		-> [^self concretizeArithmeticShiftRightCqR].
-		[LogicalShiftRightCqR]		-> [^self concretizeLogicalShiftRightCqR].
+		[LogicalShiftRightCqR]			-> [^self concretizeLogicalShiftRightCqR].
 		[LogicalShiftLeftCqR]			-> [^self concretizeLogicalShiftLeftCqR].
-		[ArithmeticShiftRightRR]		-> [^self concretizeArithmeticShiftRightRR].
-		[LogicalShiftLeftRR]			-> [^self concretizeLogicalShiftLeftRR].
+		[ArithmeticShiftRightRR]			-> [^self concretizeArithmeticShiftRightRR].
+		[LogicalShiftLeftRR]				-> [^self concretizeLogicalShiftLeftRR].
 		"Data Movement"
 		[MoveCqR]			-> [^self concretizeMoveCqR].
 		[MoveCwR]			-> [^self concretizeMoveCwR].
@@ -2029,15 +2070,16 @@ CogIA32Compiler >> dispatchConcretize [
 		[MoveRMbr]			-> [^self concretizeMoveRMbr].
 		[MoveM16rR]		-> [^self concretizeMoveM16rR].
 		[MoveM64rRd]		-> [^self concretizeMoveM64rRd].
-		[MoveMwrR]			-> [^self concretizeMoveMwrR].
+		[MoveMwrR]		-> [^self concretizeMoveMwrR].
 		[MoveXbrRR]		-> [^self concretizeMoveXbrRR].
 		[MoveXwrRR]		-> [^self concretizeMoveXwrRR].
 		[MoveRXwrR]		-> [^self concretizeMoveRXwrR].
-		[MoveRMwr]			-> [^self concretizeMoveRMwr].
+		[MoveRMwr]		-> [^self concretizeMoveRMwr].
 		[MoveRdM64r]		-> [^self concretizeMoveRdM64r].
 		[PopR]				-> [^self concretizePopR].
 		[PushR]				-> [^self concretizePushR].
 		[PushCw]			-> [^self concretizePushCw].
+		[PrefetchAw]		-> [^self concretizePrefetchAw].
 		"Conversion"
 		[ConvertRRd]		-> [^self concretizeConvertRRd] }
 ]
@@ -2292,6 +2334,11 @@ CogIA32Compiler >> hasDoublePrecisionFloatingPointSupport [
 ]
 
 { #category : #testing }
+CogIA32Compiler >> hasLinkRegister [
+	^false
+]
+
+{ #category : #testing }
 CogIA32Compiler >> hasPCDependentInstructions [
 	"Answer whether the concrete machine code contains pc-dependent
 	 instructions, such as the IA32/x86's short and long relative jumps
@@ -2304,6 +2351,12 @@ CogIA32Compiler >> hasPCDependentInstructions [
 CogIA32Compiler >> hasSSE2Instructions [
 	"Answer if we support SSE2"
 	^(cogit ceCheckFeatures bitAnd: (1 << 26)) ~= 0
+]
+
+{ #category : #testing }
+CogIA32Compiler >> hasSSEInstructions [
+	"Answer if we support SSE"
+	^(cogit ceCheckFeatures bitAnd: (1 << 25)) ~= 0
 ]
 
 { #category : #'inline cacheing' }

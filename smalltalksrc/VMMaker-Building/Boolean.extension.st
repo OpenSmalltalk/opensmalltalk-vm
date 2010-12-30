@@ -1,12 +1,6 @@
 Extension { #name : #Boolean }
 
 { #category : #'*VMMaker-plugin generation' }
-Boolean class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
-
-	cg emitLoad: aString asBooleanValueFrom: anInteger on: aStream 
-]
-
-{ #category : #'*VMMaker-plugin generation' }
 Boolean class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
 	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
 	^cg generateCoerceToBooleanObjectFrom: aNode on: aStream

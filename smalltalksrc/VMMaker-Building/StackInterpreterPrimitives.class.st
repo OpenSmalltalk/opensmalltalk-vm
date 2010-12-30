@@ -413,6 +413,7 @@ StackInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 
 { #category : #'control primitives' }
 StackInterpreterPrimitives >> primitivePerform [
+	<returnTypeC: #void>
 	| performSelector newReceiver lookupClass performMethod |
 	performSelector := messageSelector.
 	performMethod := newMethod.
@@ -453,8 +454,7 @@ StackInterpreterPrimitives >> primitivePerform [
 
 	self executeNewMethod.
 	"Recursive xeq affects primErrorCode"
-	self initPrimCall.
-	^nil
+	self initPrimCall
 ]
 
 { #category : #'memory space primitives' }
@@ -558,6 +558,7 @@ StackInterpreterPrimitives >> primitiveStoreStackp [
 	stackp + 1 to: newStackp do:
 		[:i | objectMemory storePointerUnchecked: i + CtxtTempFrameStart - 1 ofObject: ctxt withValue: objectMemory nilObject].
 	self storeStackPointerValue: newStackp inContext: ctxt.
+	self ensureContextIsExecutionSafeAfterAssignToStackPointer: ctxt.
 	self pop: 1
 ]
 
@@ -644,7 +645,8 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 		["Need to walk the stack freeing stack pages and nilling contexts."
 		[currentCtx = aContextOrNil
 		 or: [currentCtx = objectMemory nilObject]] whileFalse:
-			[(self isMarriedOrWidowedContext: currentCtx)
+			[self assert: (self isContext: currentCtx).
+			 (self isMarriedOrWidowedContext: currentCtx)
 				ifTrue:
 					[theFP := self frameOfMarriedContext: currentCtx.
 					thePage := stackPages stackPageFor: theFP.
@@ -707,10 +709,8 @@ StackInterpreterPrimitives >> primitiveTerminateTo [
 									 "for a short time invariant is violated; assert follows"
 									 stackPages freeStackPageNoAssert: thePage]]]
 				ifFalse:
-					[self assert: (self isContext: currentCtx).
-					 nextCntx := objectMemory fetchPointer: SenderIndex ofObject: currentCtx.
-					 objectMemory storePointerUnchecked: SenderIndex ofObject: currentCtx withValue: objectMemory nilObject.
-					 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: currentCtx withValue: objectMemory nilObject.
+					[nextCntx := objectMemory fetchPointer: SenderIndex ofObject: currentCtx.
+					 self markContextAsDead: currentCtx.
 					 currentCtx := nextCntx]]].
 	self assert: stackPages pageListIsWellFormed.
 	(self isMarriedOrWidowedContext: thisCtx)
@@ -992,9 +992,7 @@ StackInterpreterPrimitives >> primitiveVoidReceiver [
 StackInterpreterPrimitives >> primitiveVoidVMState [
 	"Void all internal VM state in the stack and machine code zones"
 	| activeContext |
-
 	self push: instructionPointer.
 	activeContext := self voidVMStateForSnapshot.
-	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
-	^0
+	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext
 ]

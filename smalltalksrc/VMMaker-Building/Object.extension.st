@@ -86,12 +86,6 @@ Object >> cPreprocessorDirective: codeString [
 ]
 
 { #category : #'*VMMaker-plugin generation' }
-Object class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
-
-	cg emitLoad: aString asNakedOopFrom: anInteger on: aStream
-]
-
-{ #category : #'*VMMaker-plugin generation' }
 Object class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
 	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
 	^cg emitCExpression: aNode on: aStream
