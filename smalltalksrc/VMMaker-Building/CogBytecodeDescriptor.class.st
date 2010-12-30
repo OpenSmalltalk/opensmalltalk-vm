@@ -1,5 +1,5 @@
 "
-I am an entry in the Cogit's dispatch table for bytecodes.  I hold the routine to call to generate code for the partcular bytecode I represent and the number of bytes the bytecode has.  For eliminating temps in frameless blocks I maintan a stack delta for bytecodes that are valid in a frameless block.
+I am an entry in the Cogit's dispatch table for bytecodes.  I hold the routine to call to generate code for the partcular bytecode I represent and the number of bytes the bytecode has.  For eliminating temps in frameless blocks I maintain a stack delta for bytecodes that are valid in a frameless block.  The order of my instance variables is chosen for compact struct packing.
 "
 Class {
 	#name : #CogBytecodeDescriptor,
@@ -7,15 +7,19 @@ Class {
 	#instVars : [
 		'generator',
 		'spanFunction',
-		'numBytes',
 		'stackDelta',
+		'opcode',
+		'numBytes',
 		'needsFrame',
 		'needsFrameInBlock',
 		'isBranch',
 		'isBackwardBranch',
+		'isBranchTrue',
+		'isBranchFalse',
 		'isReturn',
 		'isBlockCreation',
-		'isMapped'
+		'isMapped',
+		'isMappedInBlock'
 	],
 	#category : #'VMMaker-JIT'
 }
@@ -32,7 +36,8 @@ CogBytecodeDescriptor class >> instVarNamesAndTypesForTranslationDo: aBinaryBloc
 							['generator']	->	[#('sqInt (*' ')(void)')].
 							['spanFunction']	->	[#('sqInt (*' ')(unsigned char,...)')].
 							['numBytes']	->	['unsigned char'].
-							['stackDelta']	->	['signed char'] }
+							['stackDelta']	->	['signed char'].
+							['opcode']		->	['unsigned char'] }
 						otherwise: [#('unsigned' ' : 1')])]
 ]
 
@@ -98,6 +103,34 @@ CogBytecodeDescriptor >> isBranch: anObject [
 ]
 
 { #category : #accessing }
+CogBytecodeDescriptor >> isBranchFalse [
+	"Answer the value of isBranchFalse"
+
+	^ isBranchFalse
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBranchFalse: anObject [
+	"Set the value of isBranchFalse"
+
+	^isBranchFalse := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBranchTrue [
+	"Answer the value of isBranchTrue"
+
+	^ isBranchTrue
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isBranchTrue: anObject [
+	"Set the value of isBranchTrue"
+
+	^isBranchTrue := anObject
+]
+
+{ #category : #accessing }
 CogBytecodeDescriptor >> isMapped [
 	"Answer the value of isMapped"
 
@@ -109,6 +142,20 @@ CogBytecodeDescriptor >> isMapped: anObject [
 	"Set the value of isMapped"
 
 	^isMapped := anObject
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isMappedInBlock [
+	"Answer the value of isMappedInBlock"
+
+	^isMappedInBlock
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> isMappedInBlock: anObject [
+	"Set the value of isMappedInBlock"
+
+	^isMappedInBlock := anObject
 ]
 
 { #category : #accessing }
@@ -167,6 +214,20 @@ CogBytecodeDescriptor >> numBytes: anObject [
 	^numBytes := anObject
 ]
 
+{ #category : #accessing }
+CogBytecodeDescriptor >> opcode [
+	"Answer the value of opcode"
+
+	^ opcode
+]
+
+{ #category : #accessing }
+CogBytecodeDescriptor >> opcode: anObject [
+	"Set the value of opcode"
+
+	^opcode := anObject
+]
+
 { #category : #translation }
 CogBytecodeDescriptor >> printCInitializerOn: aStream in: aCCodeGenerator [
 	<doNotGenerate>
@@ -190,15 +251,15 @@ CogBytecodeDescriptor >> printCInitializerOn: aStream in: aCCodeGenerator [
 ]
 
 { #category : #'debug printing' }
-CogBytecodeDescriptor >> printOn: aStream [
-	<doNotGenerate> "Smalltalk-size only"
-	super printOn: aStream.
+CogBytecodeDescriptor >> printStateOn: aStream [
+	<doNotGenerate> "Smalltalk-side only"
 	generator isNil ifTrue:
 		[^self].
 	aStream space; nextPut: $(; nextPutAll: generator; space; print: numBytes.
 	needsFrame ifTrue: [aStream nextPutAll: ' needsFrame'].
 	isBackwardBranch ifTrue: [aStream nextPutAll: ' isBackwardBranch'].
 	isReturn ifTrue: [aStream nextPutAll: ' isReturn'].
+	opcode ifNotNil: [aStream space; nextPutAll: (CogRTLOpcodes nameForOpcode: opcode)].
 	aStream nextPut: $)
 ]
 

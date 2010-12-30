@@ -1269,13 +1269,6 @@ InterpreterSimulator >> primitiveDirectoryLookup [
 
 ]
 
-{ #category : #'debugging traps' }
-InterpreterSimulator >> primitiveFail [
-
-"(primitiveIndex = 61 and: [byteCount > 210000]) ifTrue: [self halt]."
-	successFlag := false.
-]
-
 { #category : #'file primitives' }
 InterpreterSimulator >> primitiveFileDelete [ 
 

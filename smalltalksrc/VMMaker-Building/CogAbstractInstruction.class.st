@@ -13,7 +13,8 @@ Class {
 		'address',
 		'dependent',
 		'cogit',
-		'objectMemory'
+		'objectMemory',
+		'bcpc'
 	],
 	#classVars : [
 		'MachineCodeSize'
@@ -24,10 +25,6 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #translation }
-CogAbstractInstruction class >> declareCVarsIn: aCCodeGenerator [
-]
-
 { #category : #'instance creation' }
 CogAbstractInstruction class >> for: aCogit [
 	^self new cogit: aCogit
@@ -37,16 +34,16 @@ CogAbstractInstruction class >> for: aCogit [
 CogAbstractInstruction class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in an AbstractInstruction struct."
 	"self printTypedefOn: Transcript"
-	self instVarNames do:
+	self filteredInstVarNames do:
 		[:ivn|
-		(#('cogit' 'coInterpreter' 'objectMemory') includes: ivn) ifFalse:
+		ivn ~= 'bcpc' ifTrue:
 			[aBinaryBlock
 				value: ivn
 				value: (ivn caseOf: {
-							['address']		-> ['unsigned long'].
+							['address']			-> ['unsigned long'].
 							['machineCode']	-> [{'unsigned char'. '[', MachineCodeSize printString, ']'}].
 							['operands']		-> [#('unsigned long' '[3]')].
-							['dependent']	-> ['struct _AbstractInstruction *']}
+							['dependent']		-> ['struct _AbstractInstruction *']}
 						otherwise:
 							[#char])]]
 ]
@@ -66,14 +63,6 @@ CogAbstractInstruction class >> nameForOpcode: opcode [ "<Integer>"
 			[(self classPool keyAtValue: opcode ifAbsent: [])
 				ifNotNil: [:opcodeName| opcodeName]
 				ifNil: [opcode printString]]
-]
-
-{ #category : #translation }
-CogAbstractInstruction class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Hook to allow subclasses to interact with the code generation
-	 immediately before having their code assimilated.  e.g. a class
-	 might wish to remove methods it is about to override."
-	^self
 ]
 
 { #category : #translation }
@@ -97,12 +86,65 @@ CogAbstractInstruction class >> typeForSelf [
 ]
 
 { #category : #comparing }
-CogAbstractInstruction >> > anAbstractInstruction [
-	"Support for Cogit>>abstractInstruction:follows:"
+CogAbstractInstruction >> <= anAbstractInstruction [
+	"Support for Cogit>>abstractInstruction:follows: and CogBytecodeFixup>targetInstruction testing:"
 	<doNotGenerate>
 	| opcodesArray |
+	anAbstractInstruction isInteger ifTrue:
+		[self assert: anAbstractInstruction < 16.
+		 ^false]. 
+	opcodesArray := cogit abstractOpcodes object.
+	^(opcodesArray identityIndexOf: self) <= (opcodesArray identityIndexOf: anAbstractInstruction)
+]
+
+{ #category : #comparing }
+CogAbstractInstruction >> > anAbstractInstruction [
+	"Support for Cogit>>abstractInstruction:follows: and CogBytecodeFixup>targetInstruction testing:"
+	<doNotGenerate>
+	| opcodesArray |
+	anAbstractInstruction isInteger ifTrue:
+		[self assert: anAbstractInstruction < 16.
+		 ^true]. 
 	opcodesArray := cogit abstractOpcodes object.
 	^(opcodesArray identityIndexOf: self) > (opcodesArray identityIndexOf: anAbstractInstruction)
+]
+
+{ #category : #comparing }
+CogAbstractInstruction >> >= anAbstractInstruction [
+	"Support for Cogit>>abstractInstruction:follows: and CogBytecodeFixup>targetInstruction testing:"
+	<doNotGenerate>
+	| opcodesArray |
+	anAbstractInstruction isInteger ifTrue:
+		[self assert: anAbstractInstruction < 16.
+		 ^true]. 
+	opcodesArray := cogit abstractOpcodes object.
+	^(opcodesArray identityIndexOf: self) >= (opcodesArray identityIndexOf: anAbstractInstruction)
+]
+
+{ #category : #private }
+CogAbstractInstruction >> abstractRegisterForConcreteRegister: reg [
+	(self concreteRegister: TempReg) = reg ifTrue: [^TempReg].
+	(self concreteRegister: ReceiverResultReg) = reg ifTrue: [^ReceiverResultReg].
+	(self concreteRegister: ClassReg) = reg ifTrue: [^ClassReg].
+	(self concreteRegister: SendNumArgsReg) = reg ifTrue: [^SendNumArgsReg].
+	(self concreteRegister: Arg0Reg) = reg ifTrue: [^Arg0Reg].
+	(self concreteRegister: Arg1Reg) = reg ifTrue: [^Arg1Reg].
+	(self concreteRegister: FPReg) = reg ifTrue: [^FPReg].
+	(self concreteRegister: SPReg) = reg ifTrue: [^SPReg].
+	self error: 'could not find abstract register'.
+	^0
+
+	"While the below works fine in Smalltalk it fo course doesn't work in C ;)"
+	
+	"^reg caseOf: {
+		[self concreteRegister: TempReg] -> [TempReg].
+		[self concreteRegister: ReceiverResultReg] -> [ReceiverResultReg].
+		[self concreteRegister: ClassReg] -> [ClassReg].
+		[self concreteRegister: SendNumArgsReg] -> [SendNumArgsReg].
+		[self concreteRegister: Arg0Reg] -> [Arg0Reg].
+		[self concreteRegister: Arg1Reg] -> [Arg1Reg].
+		[self concreteRegister: FPReg] -> [FPReg].
+		[self concreteRegister: SPReg] -> [SPReg] }"
 ]
 
 { #category : #accessing }
@@ -137,7 +179,44 @@ CogAbstractInstruction >> asUnsignedInteger [
 ]
 
 { #category : #accessing }
+CogAbstractInstruction >> bcpc [
+	^bcpc
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> bcpc: theBcpc [
+	^bcpc := theBcpc
+]
+
+{ #category : #comparing }
+CogAbstractInstruction >> between: min and: max [
+	"Support for CogBytecodeFixup>targetInstruction testing:"
+	<doNotGenerate>
+	| opcodesArray |
+	(min isInteger and: [max isInteger]) ifTrue:
+		[^false].
+	opcodesArray := cogit abstractOpcodes object.
+	^(opcodesArray identityIndexOf: self)
+		between: (opcodesArray identityIndexOf: min)
+		and: (opcodesArray identityIndexOf: max)
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> cResultRegister [
+	"Answer the abstract register for the C result register.
+	 Only partially implemented (there is as yet no CResultReg abstract reg).
+	 Works on x86 since TempReg = EAX = C result reg."
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
 CogAbstractInstruction >> callInstructionByteSize [
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
+CogAbstractInstruction >> callerSavedRegisterMask [
+	"Answer an abstract register mask as computed by StackToRegisterMappingCogit registerMaskFor:"
 	self subclassResponsibility
 ]
 
@@ -259,6 +338,14 @@ CogAbstractInstruction >> genSubstituteReturnAddress: retpc [
 	self subclassResponsibility
 ]
 
+{ #category : #abi }
+CogAbstractInstruction >> genWriteCResultIntoReg: abstractRegister [
+	| cResultReg |
+	cResultReg := self cResultRegister.
+	abstractRegister ~= cResultReg ifTrue:
+		[cogit gen: MoveRR operand: cResultReg operand: abstractRegister]
+]
+
 { #category : #'inline cacheing' }
 CogAbstractInstruction >> generateICacheFlush [
 	"A dummy routine.
@@ -276,8 +363,22 @@ CogAbstractInstruction >> generateLowLevelUnlock: vmOwnerLockAddress [
 	self subclassResponsibility
 ]
 
+{ #category : #accessing }
+CogAbstractInstruction >> getJmpTarget [
+	"Get the target of a jump instruction.  Jumps have the target in the first operand."
+	<returnTypeC: #'AbstractInstruction *'>
+	^cogit cCoerceSimple: (operands at: 0) to: #'AbstractInstruction *'
+]
+
 { #category : #testing }
 CogAbstractInstruction >> hasDoublePrecisionFloatingPointSupport [
+	^self subclassResponsibility
+]
+
+{ #category : #testing }
+CogAbstractInstruction >> hasLinkRegister [
+	"Answer if the processor has a link register, i.e. if calls pass
+	 the return pc in a register instead of pushing it on a stack."
 	^self subclassResponsibility
 ]
 
@@ -446,29 +547,33 @@ CogAbstractInstruction >> operands: anObject [
 	operands := anObject
 ]
 
-{ #category : #'debug printing' }
-CogAbstractInstruction >> printOn: aStream [
-	| orneryOperands |
+{ #category : #printing }
+CogAbstractInstruction >> printStateOn: aStream [
+	| opcodeName orneryOperands format |
 	<doNotGenerate> "Smalltalk-side only"
-	super printOn: aStream.
 	opcode isNil ifTrue:
 		[^self].
-	aStream space; nextPut: $(; nextPutAll: (self class nameForOpcode: opcode).
+	aStream space; nextPut: $(; nextPutAll: (opcodeName := self class nameForOpcode: opcode).
 	orneryOperands := operands isCObjectAccessor
 							ifTrue: [operands object]
 							ifFalse: [operands].
+	(cogit isKindOf: Cogit) ifTrue:
+		[format := CogRTLOpcodes printFormatForOpcodeName: opcodeName].
 	orneryOperands withIndexDo:
 		[:operand :index|
 		operand notNil ifTrue:
 			[aStream space.
 			 index >= (orneryOperands identityIndexOf: nil ifAbsent: [orneryOperands size + 1]) ifTrue:
 				[aStream print: index - 1; nextPut: $:].
-			 aStream print: operand.
-			 (operand isInteger and: [operand > 16]) ifTrue:
-				[(operand allMask: 16r80000000) ifTrue:
-					[aStream nextPut: $/; print: operand signedIntFromLong].
-				 aStream nextPut: $/.
-				 operand printOn: aStream base: 16]]].
+			 (format notNil and: [(format at: index ifAbsent: nil) = $r])
+				ifTrue: [aStream nextPutAll: (CogRTLOpcodes nameForRegister: operand)]
+				ifFalse:
+					[aStream print: operand.
+					 (operand isInteger and: [operand > 16 and: [opcode ~= Label]]) ifTrue:
+						[(operand allMask: 16r80000000) ifTrue:
+							[aStream nextPut: $/; print: operand signedIntFromLong].
+						 aStream nextPut: $/.
+						 operand printOn: aStream base: 16]]]].
 	machineCodeSize ifNotNil:
 		[(machineCodeSize between: 1 and: machineCode size) ifTrue:
 			[0 to: machineCodeSize - 1 do:
@@ -517,13 +622,6 @@ CogAbstractInstruction >> setsConditionCodesFor: aConditionalJumpOpcode [
 	self subclassResponsibility
 ]
 
-{ #category : #testing }
-CogAbstractInstruction >> sizeof: objectOrClass [
-	<doNotGenerate>
-	"This had better be the machineCode field.  Probably won't work otherwise..."
-	^objectOrClass size
-]
-
 { #category : #accessing }
 CogAbstractInstruction >> stackPageInterruptHeadroomBytes [
 	"Return a minimum amount of headroom for each stack page (in bytes).  In a
@@ -531,13 +629,13 @@ CogAbstractInstruction >> stackPageInterruptHeadroomBytes [
 	self subclassResponsibility
 ]
 
-{ #category : #'debug printing' }
+{ #category : #printing }
 CogAbstractInstruction >> symbolic [
 	<doNotGenerate> "Smalltalk-side only"
 	^String streamContents: [:s| self symbolicOn: s]
 ]
 
-{ #category : #'debug printing' }
+{ #category : #printing }
 CogAbstractInstruction >> symbolicOn: aStream [
 	| orneryOperands |
 	<doNotGenerate> "Smalltalk-side only"

@@ -372,7 +372,7 @@ BalloonEngineBase class >> shouldBeTranslated [
 	^self == BalloonEnginePlugin
 ]
 
-{ #category : #accessing }
+{ #category : #simulation }
 BalloonEngineBase class >> simulatorClass [
 	^BalloonEngineSimulation
 ]

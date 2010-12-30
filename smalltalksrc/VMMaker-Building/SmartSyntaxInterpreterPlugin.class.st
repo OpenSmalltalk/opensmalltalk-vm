@@ -44,7 +44,7 @@ SmartSyntaxInterpreterPlugin class >> shouldBeTranslated [
 	^self ~= SmartSyntaxInterpreterPlugin
 ]
 
-{ #category : #'instance creation' }
+{ #category : #simulation }
 SmartSyntaxInterpreterPlugin class >> simulatorClass [
 	"For running from Smalltalk - answer a class that can be used to simulate the receiver, or nil if you want the primitives in this module to always fail, causing simulation to fall through to the Smalltalk code.
 	By default SmartSyntaxInterpreterPlugin answers nil because methods in these plugins are intended to be embedded in code that pushes and pops from the stack and therefore cannot be run independently.  This wrapper code is generated when translated to C.  But, unfortunately, this code is missing during simulation.  There was an attempt to simulate this, but only the prologue code (getting arg from the stack) is simulated (see simulatePrologInContext:). The epologue code (popping args and pushing result) is not.  So I am making this nil until this can be fixed.

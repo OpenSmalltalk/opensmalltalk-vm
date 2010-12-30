@@ -17,7 +17,7 @@ Class {
 CogBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a BytecodeFixup struct."
 
-	self instVarNames do:
+	self allInstVarNames do:
 		[:ivn|
 		aBinaryBlock
 			value: ivn
@@ -29,13 +29,19 @@ CogBytecodeFixup class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 
 { #category : #translation }
 CogBytecodeFixup class >> structTypeName [
-	^self name allButFirst: 3 "Drop initial Cog"
+	^'BytecodeFixup'
 ]
 
 { #category : #coercion }
 CogBytecodeFixup >> asInteger [
 	<doNotGenerate>
 	^self
+]
+
+{ #category : #'initialize-release' }
+CogBytecodeFixup >> initialize [
+	<doNotGenerate>
+	targetInstruction := 0
 ]
 
 { #category : #accessing }
@@ -50,6 +56,13 @@ CogBytecodeFixup >> instructionIndex: anObject [
 	"Set the value of instructionIndex"
 
 	^instructionIndex := anObject
+]
+
+{ #category : #'debug printing' }
+CogBytecodeFixup >> printStateOn: aStream [
+	<doNotGenerate>
+	targetInstruction ifNotNil:
+		[aStream space; nextPut: $(; print: targetInstruction; nextPut: $)]
 ]
 
 { #category : #accessing }

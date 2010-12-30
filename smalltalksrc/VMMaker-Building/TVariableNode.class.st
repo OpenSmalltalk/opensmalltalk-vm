@@ -33,13 +33,6 @@ TVariableNode >> isLeaf [
 ]
 
 { #category : #testing }
-TVariableNode >> isStructTarget: aCodeGen [
-	"Answer if the recever is a struct pointer
-	 and hence can be dereferenced using ->"
-	^aCodeGen isPointerToStructVariableName: name
-]
-
-{ #category : #testing }
 TVariableNode >> isVariable [
 
 	^true
@@ -67,4 +60,12 @@ TVariableNode >> printOn: aStream level: level [
 TVariableNode >> setName: aString [
 
 	name := aString.
+]
+
+{ #category : #testing }
+TVariableNode >> structTargetKind: aCodeGen [
+	"Answer if the recever evaluates to a struct or struct pointer
+	 and hence can be dereferenced using . or ->.  Answer any of
+	 #struct #pointer or nil"
+	^aCodeGen structTargetKindForVariableName: name
 ]

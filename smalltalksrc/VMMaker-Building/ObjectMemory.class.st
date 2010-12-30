@@ -344,7 +344,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	SchedulerAssociation := 3.
 	ClassBitmap := 4.
 	ClassInteger := 5.
-	ClassString := 6. "N.B.  Actually class ByteString"
+	ClassByteString := ClassString := 6. "N.B.  Actually class ByteString"
 	ClassArray := 7.
 	"SmalltalkDictionary := 8."  "Do not delete!"
 	ClassFloat := 9.
@@ -435,14 +435,6 @@ ObjectMemory class >> mustBeGlobal: var [
 	"Answer if a variable must be global and exported.  Used for inst vars that are accessed from VM support code."
 
 	^'memory' = var
-]
-
-{ #category : #translation }
-ObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Hook to allow subclasses to interact with the code generation
-	 immediately before having their code assimilated.  e.g. a class
-	 might wish to remove methods it is about to override."
-	^self
 ]
 
 { #category : #translation }
@@ -867,7 +859,8 @@ ObjectMemory >> byteSwapByteObjectsFrom: startOop to: stopAddr flipFloatsIf: fli
 ObjectMemory >> byteSwapped: w [
 	"Answer the given integer with its bytes in the reverse order."
 	<api>
-	BytesPerWord = 4
+	<returnTypeC: #sqInt>
+	self cppIf: [BytesPerWord = 4]
 		ifTrue:
 			[^ ((w bitShift: Byte3ShiftNegated) bitAnd: Byte0Mask)
 			 + ((w bitShift: Byte1ShiftNegated) bitAnd: Byte1Mask)
@@ -1372,6 +1365,18 @@ ObjectMemory >> compactClassIndexOfHeader: header [
 	^(header >> 12) bitAnd: 16r1F
 ]
 
+{ #category : #initialization }
+ObjectMemory >> compactIndexOfClass: aClassOop [
+	"Check that a class the VM assumes is compact has the right index."
+	| cct |
+	cct := self splObj: CompactClasses.
+	(self lengthOf: cct) - 1 to: 0 by: -2 do:
+		[:index|
+		(self fetchPointer: index ofObject: cct) = aClassOop ifTrue:
+			[^index + 1]].
+	^0
+]
+
 { #category : #become }
 ObjectMemory >> containOnlyOops: array [
 	"Return true if the array contains a small integer. You 
@@ -1442,6 +1447,12 @@ ObjectMemory >> endOfMemory [
 { #category : #accessing }
 ObjectMemory >> endOfMemory: aValue [
 	^endOfMemory := aValue
+]
+
+{ #category : #'header access' }
+ObjectMemory >> ensureBehaviorHash: oop [
+
+	^self hashBitsOf: oop
 ]
 
 { #category : #'forward compatibility' }
@@ -1541,12 +1552,11 @@ ObjectMemory >> finalizeReference: oop [
 	semaphore. "
 	"Do *not* inline this in sweepPhase - it is quite an unlikely 
 	case to run into a weak reference"
-	| weakOop oopGone chunk firstField lastField nonWeakCnt |
+	| weakOop oopGone chunk firstField lastField |
 	<inline: false>
 	<var: #oop type: 'usqInt'>
 	<var: #weakOop type: 'usqInt'>
-	nonWeakCnt := self nonWeakFieldsOf: oop.
-	firstField := BaseHeaderSize + (nonWeakCnt << ShiftForWord).
+	firstField := BaseHeaderSize + ((self nonWeakFieldsOf: oop) << ShiftForWord).
 	lastField := self lastPointerOf: oop.
 	firstField to: lastField by: BytesPerWord do: [:i | 
 			weakOop := self longAt: oop + i.
@@ -1565,9 +1575,7 @@ ObjectMemory >> finalizeReference: oop [
 						ifFalse: [oopGone := (self isMarked: weakOop) not].
 					oopGone ifTrue: ["Store nil in the pointer and signal the  interpreter"
 							self longAt: oop + i put: nilObj.
-							nonWeakCnt >= 2 ifTrue: [ self weakFinalizerCheck: oop ].
 							self signalFinalization: oop]]]
-
 ]
 
 { #category : #'object enumeration' }
@@ -2427,7 +2435,7 @@ ObjectMemory >> is: oop instanceOf: classOop compactClassIndex: compactClassInde
 	compactClassIndex ~= 0 ifTrue:
 		[^compactClassIndex == ccIndex].
 
-	^ccIndex ~= 0
+	^ccIndex = 0
 	  and: [((self classHeader: oop) bitAnd: AllButTypeMask) = classOop]
 ]
 
@@ -2487,8 +2495,7 @@ ObjectMemory >> isClassOfNonImm: oop equalTo: classOop compactClassIndex: compac
 	| ccIndex |
 	<inline: true>
 	<asmLabel: false>
-	(self isIntegerObject: oop) ifTrue:
-		[^false].
+	self assert: (self isIntegerObject: oop) not.
 
 	ccIndex := self compactClassIndexOf: oop.
 	^compactClassIndex = 0
@@ -3759,22 +3766,6 @@ ObjectMemory >> sizeOfFree: oop [
 	^ (self longAt: oop) bitAnd: AllButTypeMask
 ]
 
-{ #category : #'translation support' }
-ObjectMemory >> sizeof: objectSymbolOrClass [
-	<doNotGenerate>
-	objectSymbolOrClass isInteger ifTrue:
-		[self flag: #Dan.
-		 ^BytesPerWord].
-	objectSymbolOrClass isSymbol ifTrue:
-		[(objectSymbolOrClass == #sqLong
-		 or: [objectSymbolOrClass == #double]) ifTrue:
-			[^8].
-		 self error: 'unrecognized C type name'].
-	^(objectSymbolOrClass isBehavior
-			ifTrue: [objectSymbolOrClass]
-			ifFalse: [objectSymbolOrClass class]) alignedByteSize
-]
-
 { #category : #'object format' }
 ObjectMemory >> slotSizeOf: oop [
 	"Returns the number of slots in the receiver.
@@ -4488,30 +4479,4 @@ ObjectMemory >> vmEndianness [
 	 Alas this has to remain for backward compatibility."
 
 	^VMBIGENDIAN ifTrue: [1] ifFalse: [0]
-]
-
-{ #category : #finalization }
-ObjectMemory >> weakFinalizerCheck: oop [
-	"Our oop has at least 2 non-weak fixed slots (this is assured before entering this method, in
-	#finalizeReference:.
-	We are assuming that if its first non-weak field is an instance of ClassWeakFinalizationList class,
-	then we should add this oop to that list, by storing it to list's first field and
-	also, updating the oop's 2nd fixed slot to point to the value which we overridden:
-	
-	list := oop instVarAt: 1.
-	list class == WeakFinalizationList ifTrue: [
-		first := list instVarAt: 1.
-		oop instVarAt: 2 put: first.
-		list instVarAt: 1 put: oop ]	"
-	<inline: true>
-	| listOop listItemOop |
-
-	
-	listOop := self fetchPointer: 0 ofObject: oop.
-	(self fetchClassOf: listOop) == (self splObj: ClassWeakFinalizer) ifTrue: [
-		listItemOop := self fetchPointer: 0 ofObject: listOop.
-		self storePointer: 1 ofObject: oop withValue: listItemOop. 
-		self storePointer: 0 ofObject: listOop withValue: oop.
-	].
-
 ]

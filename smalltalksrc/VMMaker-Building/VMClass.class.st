@@ -4,6 +4,9 @@ I am an abstract superclass for all classes in the VM that want to maintain a so
 Class {
 	#name : #VMClass,
 	#superclass : #Object,
+	#pools : [
+		'VMBasicConstants'
+	],
 	#classInstVars : [
 		'timeStamp'
 	],
@@ -75,6 +78,11 @@ VMClass class >> exportAPISelectorsFor: aClass [
 ]
 
 { #category : #translation }
+VMClass class >> getVMMaker [
+	^Notification new tag: #getVMMaker; signal
+]
+
+{ #category : #translation }
 VMClass class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
 	^#sqInt
@@ -100,11 +108,6 @@ VMClass class >> isInterpreterClass [
 ]
 
 { #category : #translation }
-VMClass class >> isTypePointerToStruct: type [ "<String>"
-	^false
-]
-
-{ #category : #translation }
 VMClass class >> noteCompilationOf: aSelector meta: isMeta [
 	"note the recompiliation by resetting the timeStamp "
 	timeStamp := Time totalSeconds.
@@ -117,6 +120,39 @@ VMClass class >> objectMemoryClass [
 	^nil
 ]
 
+{ #category : #utilities }
+VMClass class >> openCogMultiWindowBrowser [
+	"Answer a new multi-window browser on the ObjectMemory classes, the Cog Interpreter classes, and the main JIT classes"
+	| b |
+	b := Browser open.
+	#(	ObjectMemory NewObjectMemory NewCoObjectMemory
+		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives CoInterpreter CoInterpreterPrimitives CoInterpreterMT
+		Cogit SimpleStackBasedCogit StackToRegisterMappingCogit
+		VMStructClass VMMaker CCodeGenerator TMethod)
+		do: [:className|
+			(Smalltalk classNamed: className) ifNotNil:
+				[:class| b selectCategoryForClass: class; selectClass: class]]
+		separatedBy:
+			[b multiWindowState addNewWindow].
+	b multiWindowState selectWindowIndex: 1
+]
+
+{ #category : #utilities }
+VMClass class >> openObjectMemoriesInterpretersBrowser [
+	"Answer a new multi-window browser opne the ObjectMemory classes and the Cog Interpreter classes"
+	| b |
+	b := Browser open.
+	#(	ObjectMemory NewObjectMemory NewCoObjectMemory
+		InterpreterPrimitives StackInterpreter StackInterpreterPrimitives
+		CoInterpreter CoInterpreterPrimitives CoInterpreterMT)
+		do: [:className|
+			(Smalltalk classNamed: className) ifNotNil:
+				[:class| b selectCategoryForClass: class; selectClass: class]]
+		separatedBy:
+			[b multiWindowState addNewWindow].
+	b multiWindowState selectWindowIndex: 1
+]
+
 { #category : #translation }
 VMClass class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [ 
 	"Hook for translation.  e.g. allows a subclass to override its
@@ -125,19 +161,16 @@ VMClass class >> prepareToBeAddedToCodeGenerator: aCCodeGenerator [
 
 { #category : #translation }
 VMClass class >> requiredMethodNames [
-	"Answer the methods that must be retained, e.g. because they are exported to external code."
+	"Answer a list of method names that should be retained for export or other
+	 support reasons.  These are typically entry-points that unless explicitly noted
+	 will be deleted by the code generator since it will assume these are not used."
 	^#()
 ]
 
 { #category : #translation }
 VMClass class >> shouldGenerateTypedefFor: aStructClass [
-	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
+	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
 	^true
-]
-
-{ #category : #translation }
-VMClass class >> specialValueForConstant: constantName [
-	^nil
 ]
 
 { #category : #translation }
@@ -192,6 +225,35 @@ VMClass >> asserta: aBooleanExpression [
 	(result := aBooleanExpression value) ifFalse:
 		[AssertionFailure signal: 'Assertion failed'].
 	^result
+]
+
+{ #category : #'translation support' }
+VMClass >> cppIf: conditionBlock ifTrue: trueExpressionOrBlock [
+	"When translated, produces #if (condition) #else #endif CPP directives.
+	 Example usage:
+
+		self cppIf: [BytesPerWord = 8]
+			ifTrue: [self doSomethingFor64Bit]
+			ifFalse: [self doSomethingFor32Bit]"
+	self cppIf: conditionBlock ifTrue: trueExpressionOrBlock ifFalse: []
+]
+
+{ #category : #'translation support' }
+VMClass >> cppIf: conditionBlock ifTrue: trueExpressionOrBlock ifFalse: falseExpressionOrBlockOrNil [
+	"When translated, produces #if (condition) #else #endif CPP directives.
+	 Example usage:
+
+		self cppIf: [BytesPerWord = 8]
+			ifTrue: [self doSomethingFor64Bit]
+			ifFalse: [self doSomethingFor32Bit]"
+	(conditionBlock value
+		ifNil: [false]
+		ifNotNil: [:value|
+			value isInteger
+				ifTrue: [value ~= 0]
+				ifFalse: [value]])
+		ifTrue: trueExpressionOrBlock
+		ifFalse: falseExpressionOrBlockOrNil
 ]
 
 { #category : #'simulation support' }
@@ -319,6 +381,33 @@ VMClass >> safe: signedInteger mod: positiveModulus [
 	^(remainder := signedInteger \\ positiveModulus) < 0
 		ifTrue: [remainder + positiveModulus]
 		ifFalse: [remainder]
+]
+
+{ #category : #'translation support' }
+VMClass >> sizeof: objectSymbolOrClass [
+	<doNotGenerate>
+	| index |
+	objectSymbolOrClass isInteger ifTrue:
+		[self flag: #Dan.
+		 ^BytesPerWord].
+	objectSymbolOrClass isSymbol ifTrue:
+		[(objectSymbolOrClass last == $*
+		 or: [#long == objectSymbolOrClass
+		 or: [#'unsigned long' == objectSymbolOrClass]]) ifTrue:
+			[^BytesPerWord].
+		index := #(	#sqLong #usqLong #double
+					#int #'unsigned int' #float
+					#short #'unsigned short'
+					#char #'unsigned char' #'signed char')
+						indexOf: objectSymbolOrClass
+						ifAbsent: [self error: 'unrecognized C type name'].
+		^#(8 8 8
+			4 4 4
+			2 2
+			1 1 1) at: index].
+	^(objectSymbolOrClass isBehavior
+		ifTrue: [objectSymbolOrClass]
+		ifFalse: [objectSymbolOrClass class]) alignedByteSize
 ]
 
 { #category : #'simulation support' }

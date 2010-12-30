@@ -374,16 +374,6 @@ StackInterpreterSimulator >> dumpMethodHeader: hdr [
 ]
 
 { #category : #'debugging traps' }
-StackInterpreterSimulator >> eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize [
-	| newObj |
-	newObj := super eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize.
-	"newObj = 22163268 ifTrue: [self halt]."
-	"byteCount < 600000 ifTrue: [^ newObj]."
-	"(self baseHeader: newObj) =  16r0FCC0600 ifTrue: [self halt]."
-	^newObj
-]
-
-{ #category : #'debugging traps' }
 StackInterpreterSimulator >> eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format [
 	| newObj |
 	newObj := super eeAllocate: byteSize headerSize: hdrSize h1: baseHeader h2: classOop h3: extendedSize doFill: doFill format: format.
@@ -423,9 +413,8 @@ StackInterpreterSimulator >> externalInstVar: index ofContext: aMarriedContext p
 		[imMarried := self checkIsStillMarriedContext: aMarriedContext currentFP: localFP.
 		(self isContext: anOop) ifTrue:
 			[shesMarried := self checkIsStillMarriedContext: anOop currentFP: localFP.
-			self cr.
-			self shortPrintContext: aMarriedContext.
-			self shortPrintContext: anOop]].
+			 "self shortPrintContext: aMarriedContext.
+			  self shortPrintContext: anOop"]].
 	result := super externalInstVar: index ofContext: aMarriedContext put: anOop.
 	imMarried ifNotNil:
 		[self assert: imMarried == (self checkIsStillMarriedContext: aMarriedContext currentFP: nil).
@@ -940,6 +929,11 @@ StackInterpreterSimulator >> isPrimitiveFunctionPointerAnIndex [
 	^primitiveFunctionPointer isInteger
 	  and: [primitiveFunctionPointer ~= 0
 	  and: [primitiveFunctionPointer <= MaxQuickPrimitiveIndex]]
+]
+
+{ #category : #testing }
+StackInterpreterSimulator >> isThreadedVM [
+	^false
 ]
 
 { #category : #'frame access' }
@@ -1495,13 +1489,6 @@ StackInterpreterSimulator >> primitiveDoPrimitiveWithArgs [
 ]
 
 { #category : #'debugging traps' }
-StackInterpreterSimulator >> primitiveFail [
-	"primFailCode == 0 ifTrue:
-		[self halt.
-		 "^super primitiveFail"]"
-]
-
-{ #category : #'debugging traps' }
 StackInterpreterSimulator >> primitiveFailFor: reasonCode [
 	"self halt."
 	^super primitiveFailFor: reasonCode
@@ -1639,20 +1626,6 @@ StackInterpreterSimulator >> primitiveMousePoint [
 				self push: (self makePointwithxValue: relPt x yValue: relPt y)]
 ]
 
-{ #category : #'arithmetic largeint primitives' }
-StackInterpreterSimulator >> primitiveMultiplyLargeIntegers [
-	(objectMemory lengthOf: (self stackValue: 1)) >= 9 ifTrue:
-		[self halt].
-	^super primitiveMultiplyLargeIntegers
-]
-
-{ #category : #'arithmetic largeint primitives' }
-StackInterpreterSimulator >> primitiveQuoLargeIntegers [
-	(objectMemory lengthOf: (self stackValue: 1)) >= 9 ifTrue:
-		[self halt].
-	^super primitiveQuoLargeIntegers
-]
-
 { #category : #'I/O primitives support' }
 StackInterpreterSimulator >> primitiveRelinquishProcessor [
 	"No-op in simulator"
@@ -1681,13 +1654,6 @@ StackInterpreterSimulator >> primitiveStoreStackp [
 	self halt."
 	super primitiveStoreStackp.
 	"self printContext: self stackTop"
-]
-
-{ #category : #'arithmetic largeint primitives' }
-StackInterpreterSimulator >> primitiveSubtractLargeIntegers [
-	(objectMemory lengthOf: (self stackValue: 1)) >= 9 ifTrue:
-		[self halt].
-	^super primitiveSubtractLargeIntegers
 ]
 
 { #category : #'debugging traps' }
@@ -2085,6 +2051,12 @@ StackInterpreterSimulator >> shortPrint: oop [
 	('AEIOU' includes: name first)
 		ifTrue: [^ 'an ' , name]
 		ifFalse: [^ 'a ' , name]
+]
+
+{ #category : #'debug printing' }
+StackInterpreterSimulator >> shortPrintContext: aContext [
+	transcript ensureCr.
+	^super shortPrintContext: aContext
 ]
 
 { #category : #'debug support' }

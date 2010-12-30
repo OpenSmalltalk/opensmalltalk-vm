@@ -13,6 +13,18 @@ NewCoObjectMemorySimulator class >> new [
 		ifFalse: [super new]
 ]
 
+{ #category : #allocation }
+NewCoObjectMemorySimulator >> allocateChunk: byteSize [
+	freeStart = 16r1952688 ifTrue: [self halt].
+	^super allocateChunk: byteSize
+]
+
+{ #category : #allocation }
+NewCoObjectMemorySimulator >> allocateInterpreterChunk: byteSize [
+	freeStart = 16r1952688 ifTrue: [self halt].
+	^super allocateChunk: byteSize
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> allocateMemory: endianness [
 	memory := (endianness == #little
@@ -68,6 +80,12 @@ NewCoObjectMemorySimulator >> capturePendingFinalizationSignals [
 	^coInterpreter capturePendingFinalizationSignals
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> checkedIntegerValueOf: intOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter checkedIntegerValueOf: intOop
+]
+
 { #category : #initialization }
 NewCoObjectMemorySimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 	coInterpreter := aCoInterpreter.
@@ -77,6 +95,14 @@ NewCoObjectMemorySimulator >> coInterpreter: aCoInterpreter cogit: aCogit [
 { #category : #printing }
 NewCoObjectMemorySimulator >> cr [
 	^coInterpreter cr
+]
+
+{ #category : #'interpreter access' }
+NewCoObjectMemorySimulator >> eeInstantiateMethodContextByteSize: sizeInBytes [
+	| result |
+	result := super eeInstantiateMethodContextByteSize: sizeInBytes.
+	"result = 26431360 ifTrue: [self halt]."
+	^result
 ]
 
 { #category : #'simulation only' }
@@ -200,6 +226,11 @@ NewCoObjectMemorySimulator >> isIntegerValue: valueWord [
 	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> literalCountOf: anObj [
+	^coInterpreter literalCountOf: anObj
+]
+
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> long32At: byteAddress [
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."
@@ -223,9 +254,9 @@ NewCoObjectMemorySimulator >> longAt: byteAddress [
 
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> longAt: byteAddress put: a32BitValue [
-	(byteAddress = 16r1896A50
+	"(byteAddress = 16r1896A50
 	and: [a32BitValue = 7]) ifTrue:
-		[self halt].
+		[self halt]."
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	^memory at: (byteAddress // 4) + 1 put: a32BitValue
 ]
@@ -354,6 +385,36 @@ NewCoObjectMemorySimulator >> primitiveFailureCode [
 	^coInterpreter primitiveFailureCode
 ]
 
+{ #category : #printing }
+NewCoObjectMemorySimulator >> print: thing [ 
+	coInterpreter print: thing
+]
+
+{ #category : #printing }
+NewCoObjectMemorySimulator >> printChar: aCharacter [
+	coInterpreter printChar: aCharacter 
+]
+
+{ #category : #printing }
+NewCoObjectMemorySimulator >> printHex: n [
+	coInterpreter printHex: n 
+]
+
+{ #category : #printing }
+NewCoObjectMemorySimulator >> printHexPtr: address [
+	coInterpreter printHexPtr: address
+]
+
+{ #category : #printing }
+NewCoObjectMemorySimulator >> printNum: n [
+	coInterpreter printNum: n
+]
+
+{ #category : #printing }
+NewCoObjectMemorySimulator >> printOop: anOop [ 
+	coInterpreter printOop: anOop
+]
+
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> push: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -439,6 +500,18 @@ NewCoObjectMemorySimulator >> sqShrinkMemory: oldLimit By: delta [
 ]
 
 { #category : #'simulation only' }
+NewCoObjectMemorySimulator >> stObject: objOop at: indexOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stObject: objOop at: indexOop
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> stObject: objOop at: indexOop put: valueOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stObject: objOop at: indexOop put: valueOop
+]
+
+{ #category : #'simulation only' }
 NewCoObjectMemorySimulator >> stackFloatValue: offset [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stackFloatValue: offset
@@ -476,16 +549,38 @@ NewCoObjectMemorySimulator >> storePointerUnchecked: fieldIndex ofObject: oop wi
 	^super storePointerUnchecked: fieldIndex ofObject: oop withValue: valuePointer
 ]
 
+{ #category : #'debug printing' }
+NewCoObjectMemorySimulator >> str: aString n: bString cmp: n [
+	"implementation of strncmp(3)"
+	bString isInteger ifFalse:
+		[^(aString first: n) ~= (bString first: n)].
+	1 to: n do:
+		[:i| | v |
+		v := (aString at: i) asInteger - (self byteAt: bString + i - 1).
+		v ~= 0 ifTrue: [^v]].
+	^0
+]
+
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> stringOf: oop [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter stringOf: oop
 ]
 
+{ #category : #'debug printing' }
+NewCoObjectMemorySimulator >> strlen: aString [
+	^aString size
+]
+
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> success: boolean [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter success: boolean
+]
+
+{ #category : #printing }
+NewCoObjectMemorySimulator >> tab [
+	coInterpreter tab
 ]
 
 { #category : #'debug support' }

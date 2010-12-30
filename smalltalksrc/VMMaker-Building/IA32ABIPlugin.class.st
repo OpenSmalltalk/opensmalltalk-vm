@@ -25,10 +25,17 @@ Class {
 	#category : #'VMMaker-Plugins-Alien'
 }
 
-{ #category : #'translation to C' }
+{ #category : #translation }
+IA32ABIPlugin class >> ancilliaryStructClasses [
+	^{ VMCallbackContext. VMCallbackReturnValue }
+]
+
+{ #category : #translation }
 IA32ABIPlugin class >> declareCVarsIn: aCCodeGen [
-		aCCodeGen addHeaderFile: '"ia32abi.h"'.
-		aCCodeGen addHeaderFile: '<setjmp.h>'
+	aCCodeGen
+		addHeaderFile: '<setjmp.h>';
+		addHeaderFile: '"vmCallback.h"';
+		addHeaderFile: '"ia32abi.h"'
 ]
 
 { #category : #accessing }
@@ -44,6 +51,12 @@ IA32ABIPlugin class >> initialize [
 { #category : #accessing }
 IA32ABIPlugin class >> moduleName [
 	^'IA32ABI'
+]
+
+{ #category : #translation }
+IA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
+	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
+	^aStructClass ~~ VMCallbackContext
 ]
 
 { #category : #'simulation only' }
@@ -324,7 +337,7 @@ IA32ABIPlugin >> primDoubleAt [
 	<export: true>
 	<var: #floatValue type:'double '>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -350,7 +363,7 @@ IA32ABIPlugin >> primDoubleAtPut [
 	(interpreterProxy isIntegerObject: valueOop)
 		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: valueOop) to:'double']
 		ifFalse:[floatValue := self cCoerce: (interpreterProxy floatValueOf: valueOop) to:'double'].
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -371,7 +384,7 @@ IA32ABIPlugin >> primFloatAt [
 	<export: true>
 	<var: #floatValue type: 'float '>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -397,7 +410,7 @@ IA32ABIPlugin >> primFloatAtPut [
 	(interpreterProxy isIntegerObject: valueOop)
 		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: valueOop) to:'double']
 		ifFalse:[floatValue := self cCoerce: (interpreterProxy floatValueOf: valueOop) to:'double'].
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -428,20 +441,17 @@ IA32ABIPlugin >> primFree [
 
 { #category : #'primitives-Windows-VM-specific' }
 IA32ABIPlugin >> primInIOProcessEventsFlagAddress [
-	"Answer the address of the Windows-VM-specific int inIoProcessEvents flag.
-	 See platforms/win32/vm/sqWin32Window.c
-	 and platforms/Cross/plugins/IA32ABI/ia32abicc.c."
+	"Answer the address of the int inIOProcessEvents flag.  This can be used to
+	 disable invocation of ioProcessEvents and is for backward-compatibility.
+	 Please use the core VM primitiveEventProcessingControl in new code."
 	| address |
 	<export: true>
-	address := 0.
-	self cCode: '
-#if defined(WIN32)
-	{ extern int inIoProcessEvents; address = (sqInt)&inIoProcessEvents; }
-#endif
-0' "Do not change this!! It is needed; look at IA32ABI.c".
-	address = 0 ifTrue:
-		[^interpreterProxy primitiveFailFor: PrimErrInappropriate].
-	interpreterProxy pop: 1 thenPush: (interpreterProxy positive32BitIntegerFor: address)
+	self
+		cCode: '{ extern int inIOProcessEvents; address = (sqInt)&inIOProcessEvents; }'
+		inSmalltalk: [address := 0].
+	interpreterProxy
+		pop: 1
+		thenPush: (interpreterProxy positive32BitIntegerFor: address)
 ]
 
 { #category : #'primitives-library loading' }
@@ -515,25 +525,48 @@ IA32ABIPlugin >> primMalloc [
 ]
 
 { #category : #'primitives-callbacks' }
+IA32ABIPlugin >> primReturnAsFromContextThrough [
+	"Return a result from a callback to the callback's callee.  The primitive
+	has a signature of the form:
+		result <VMCallbackContext32/64>
+				primReturnAs: returnTypeCode <Integer>
+				FromContext: callbackContext <Context>
+			<primitive: 'primReturnAsFromContextThrough' error: errorCode module: 'IA32ABI'>"
+	<export: true>
+	(interpreterProxy
+		returnAs: (interpreterProxy stackValue: 1)
+		ThroughCallback: (self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 2))
+								to: #'VMCallbackContext *')
+		Context: (interpreterProxy stackValue: 0)) ifFalse:
+			[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	"NOTREACHED"
+]
+
+{ #category : #'primitives-callbacks' }
 IA32ABIPlugin >> primReturnFromContextThrough [
 	"Return a result from a callback to the callback's callee.  The primitive
 	has a signature of the form:
 		result <FFICallbackResult> primReturnFromContext: callbackContext <Context> through: jmpBuf <Integer>
 			<primitive: 'primReturnFromContextThrough' error: errorCode module: 'IA32ABI'>"
-	| jmpbuf context address |
 	<export: true>
-	jmpbuf := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	(interpreterProxy failed or: [jmpbuf = 0]) ifTrue:
+	<legacy>
+	| vmCallbackContext vmCallbackReturnValue |
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+	<var: #vmCallbackReturnValue type: #'VMCallbackReturnValue *'>
+	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 2))
+								to: #'VMCallbackReturnValue *'.
+	vmCallbackContext := self cCoerceSimple: (interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0))
+								to: #'VMCallbackContext *'.
+	(interpreterProxy failed or: [vmCallbackContext = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	context := interpreterProxy stackValue: 1.
-	"N.B.  Once reestablishContextPriorToCallback: has run the stack for this primitive can
-	 no longer be accessed, since the current context is now that prior to the callback.
-	 So we must grab the address now before changing the active context."
-	address := self startOfData: (interpreterProxy stackValue: 2).
-	(interpreterProxy reestablishContextPriorToCallback: context) ifFalse:
+	(interpreterProxy reestablishContextPriorToCallback: (interpreterProxy stackValue: 1)) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self cCode: 'longjmp((void *)jmpbuf, address)'
-		inSmalltalk: [self error: 'cannot simulate jongjmp'. address + 1]
+	self cCode: "C needs a typedef for structs to be assigned, but that implies a struct class for just one assignment."
+		[self mem: (self addressOf: vmCallbackContext rvs)
+			cp: (self addressOf: vmCallbackReturnValue crvrvs)
+			y: (self sizeof: vmCallbackContext rvs)]
+		inSmalltalk: [vmCallbackContext rvs: vmCallbackReturnValue crvrvs].
+	self long: vmCallbackContext trampoline jmp: vmCallbackReturnValue type + 1
 ]
 
 { #category : #'primitives-accessing' }
@@ -545,7 +578,7 @@ IA32ABIPlugin >> primSignedByteAt [
 	<export: true>
 	<var: #value type: 'signed char '>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -566,7 +599,7 @@ IA32ABIPlugin >> primSignedByteAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	(interpreterProxy failed
@@ -588,7 +621,7 @@ IA32ABIPlugin >> primSignedLongAt [
 	| byteOffset rcvr addr value valueOop |
 	<export: true>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -609,7 +642,7 @@ IA32ABIPlugin >> primSignedLongAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
@@ -633,7 +666,7 @@ IA32ABIPlugin >> primSignedLongLongAt [
 
 	signedlonglongvaluePtr := 0.
 	self touch: signedlonglongvaluePtr.
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -659,7 +692,7 @@ IA32ABIPlugin >> primSignedLongLongAtPut [
 	signedlonglongvaluePtr := 0.
 	self touch: signedlonglongvaluePtr.
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	signedlonglongvalue := interpreterProxy signed64BitValueOf: valueOop.
 	self touch: signedlonglongvalue.
@@ -682,7 +715,7 @@ IA32ABIPlugin >> primSignedShortAt [
 	<export: true>
 	<var: #value type: 'short '>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -703,7 +736,7 @@ IA32ABIPlugin >> primSignedShortAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	(interpreterProxy failed
@@ -760,7 +793,7 @@ IA32ABIPlugin >> primStrlenFromStartIndex [
 	<export: true>
 	<var: #ptr type: 'char *'>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -789,7 +822,7 @@ IA32ABIPlugin >> primStrlenThroughPointerAtIndex [
 	<export: true>
 	<var: #ptr type: 'char *'>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -823,7 +856,7 @@ IA32ABIPlugin >> primUnsignedByteAt [
 	<export: true>
 	<var: #value type: 'unsigned char '>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -844,7 +877,7 @@ IA32ABIPlugin >> primUnsignedByteAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	(interpreterProxy failed
@@ -865,7 +898,7 @@ IA32ABIPlugin >> primUnsignedLongAt [
 	| byteOffset rcvr addr value valueOop |
 	<export: true>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -886,7 +919,7 @@ IA32ABIPlugin >> primUnsignedLongAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
@@ -910,7 +943,7 @@ IA32ABIPlugin >> primUnsignedLongLongAt [
 
 	unsignedlonglongvaluePtr := 0.
 	self touch: unsignedlonglongvaluePtr.
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -937,7 +970,7 @@ IA32ABIPlugin >> primUnsignedLongLongAtPut [
 	self touch: unsignedlonglongvaluePtr.
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	unsignedlonglongvalue := interpreterProxy positive64BitValueOf: valueOop.
 	self touch: unsignedlonglongvalue.
@@ -960,7 +993,7 @@ IA32ABIPlugin >> primUnsignedShortAt [
 	<export: true>
 	<var: #value type: 'unsigned short'>
 
-	byteOffset := (interpreterProxy stackIntegerValue: 0) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
@@ -981,7 +1014,7 @@ IA32ABIPlugin >> primUnsignedShortAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := (interpreterProxy stackIntegerValue: 1) - 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	(interpreterProxy failed
@@ -1082,9 +1115,9 @@ IA32ABIPlugin >> startOfData: rcvr [ "<Alien oop> ^<Integer>"
 	"Answer the start of rcvr's data.  For direct aliens this is the address of
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
-	(self sizeField: rcvr) > 0
-	 	ifTrue: [^rcvr + BaseHeaderSize + BytesPerOop]
-		ifFalse: [^self longAt: rcvr + BaseHeaderSize + BytesPerOop]
+	^(self sizeField: rcvr) > 0
+	 	ifTrue: [rcvr + BaseHeaderSize + BytesPerOop]
+		ifFalse: [self longAt: rcvr + BaseHeaderSize + BytesPerOop]
 ]
 
 { #category : #'private-support' }
@@ -1092,7 +1125,7 @@ IA32ABIPlugin >> startOfData: rcvr "<Alien oop>" withSize: sizeField [ "<Integer
 	"Answer the start of rcvr's data.  For direct aliens this is the address of
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
-	sizeField > 0
-	 	ifTrue: [^rcvr + BaseHeaderSize + BytesPerOop]
-		ifFalse: [^self longAt: rcvr + BaseHeaderSize + BytesPerOop]
+	^sizeField > 0
+	 	ifTrue: [rcvr + BaseHeaderSize + BytesPerOop]
+		ifFalse: [self longAt: rcvr + BaseHeaderSize + BytesPerOop]
 ]

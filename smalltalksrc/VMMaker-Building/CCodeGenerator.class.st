@@ -77,7 +77,8 @@ CCodeGenerator >> addClass: aClass [
 	self addClassVarsFor: aClass.
 	"ikp..."
 	self addPoolVarsFor: aClass.
-	variables addAll: aClass instVarNames.
+	(aClass inheritsFrom: VMStructType) ifFalse:
+		[variables addAll: aClass instVarNames].
 	self retainMethods: aClass requiredMethodNames.
 	
 	'Adding Class ' , aClass name , '...'
@@ -119,10 +120,17 @@ CCodeGenerator >> addMacro: aString for: selector [
 
 { #category : #utilities }
 CCodeGenerator >> addMethod: aTMethod [
-	"Add the given method to the code base and answer it."
+	"Add the given method to the code base and answer it.
+	 Only allow duplicate definitions for struct accessors, since we don't actually
+	 generate code for these methods and hence the conflict doesn't matter."
 
-	(methods includesKey:  aTMethod selector) ifTrue:
-		[self error: 'Method name conflict: ', aTMethod selector].
+	(methods at:  aTMethod selector ifAbsent: []) ifNotNil:
+		[:conflict |
+		(conflict isStructAccessor
+		 and: [aTMethod isStructAccessor
+		 and: [conflict compiledMethod decompileString = aTMethod compiledMethod decompileString]]) ifTrue:
+			[^nil].
+		self error: 'Method name conflict: ', aTMethod selector].
 	^methods at: aTMethod selector put: aTMethod
 ]
 
@@ -216,7 +224,7 @@ CCodeGenerator >> addPoolVarsFor: aClass [
 
 { #category : #public }
 CCodeGenerator >> addSelectorTranslation: aSelector to: aString [
-	selectorTranslations at: aSelector put: aString
+	selectorTranslations at: aSelector asSymbol put: aString
 ]
 
 { #category : #public }
@@ -361,9 +369,11 @@ CCodeGenerator >> checkClassForNameConflicts: aClass [
 	].
 
 	"check for instance variable name collisions"
-	aClass instVarNames do: [ :varName |
-		(variables includes: varName) ifTrue: [
-			self error: 'Instance variable was defined in a previously added class: ', varName.
+	(aClass inheritsFrom: VMStructType) ifFalse: [
+		aClass instVarNames do: [ :varName |
+			(variables includes: varName) ifTrue: [
+				self error: 'Instance variable was defined in a previously added class: ', varName.
+			]
 		].
 	].
 
@@ -447,6 +457,7 @@ CCodeGenerator >> collectInlineList [
 			ifTrue: "don't inline if method has C code or contains negative inline directive"
 				[inlineIt == true ifTrue:
 					[logger
+						ensureCr;
 						nextPutAll: 'failed to inline ';
 						nextPutAll: m selector;
 						nextPutAll: ' as it contains unrenamable C declarations or C code';
@@ -599,7 +610,7 @@ CCodeGenerator >> emitCAPIExportHeaderOn: aStream [
 	methodList do:
 		[:m|
 		m static ifTrue:
-			[logger show: m selector, ' excluded from export API because it is static'; cr]].
+			[logger ensureCr; show: m selector, ' excluded from export API because it is static'; cr]].
 	self emitCFunctionPrototypes: methodList on: aStream.
 	self emitGlobalCVariablesOn: aStream.
 	self emitCMacros: methodList on: aStream
@@ -704,43 +715,42 @@ CCodeGenerator >> emitCFunctionPrototypes: methodList on: aStream [
 		[:m |
 		self emitExportPragma ifTrue:
 			[m export
-				ifTrue: [exporting
-						ifFalse: 
+				ifTrue: [exporting ifFalse: 
 							[aStream nextPutAll: '#pragma export on'; cr.
 							exporting := true]]
-				ifFalse: [exporting
-						ifTrue: 
+				ifFalse: [exporting ifTrue: 
 							[aStream nextPutAll: '#pragma export off'; cr.
 							exporting := false]]].
 		m emitCFunctionPrototype: aStream generator: self.
-		aStream nextPutAll: ';'; cr].
+		aStream nextPut: $; ; cr].
 	exporting ifTrue: [aStream nextPutAll: '#pragma export off'; cr].
 	aStream cr
 ]
 
 { #category : #'C code generator' }
 CCodeGenerator >> emitCHeaderOn: aStream [
-	"Write a C file header onto the given stream."
+	"Emit the initial part of a source file on aStream, comprising the version stamp,
+	 the global struct usage flags, the header files and preamble code."
 
 	| headerClass |
 	headerClass := [vmClass coreInterpreterClass]
 						on: MessageNotUnderstood
 						do: [:ex| vmClass].
-	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass).
-	aStream cr; cr.
+	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: headerClass); cr; cr.
 	self emitGlobalStructFlagOn: aStream.
-	aStream nextPutAll: '#include "sq.h"'; cr.
 
-	"Additional header files"
-	headerFiles do:[:hdr|
-		hdr first ~= $# ifTrue:
-			[aStream nextPutAll: '#include '].
-		aStream nextPutAll: hdr; cr].
+	headerFiles addFirst: '"sq.h"'.
+	vmClass isInterpreterClass ifTrue:
+		[headerFiles addLast: '"sqMemoryAccess.h"'].
+	"Additional header files; include C library ones first."
+	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
+	"Additional header files; include squeak VM ones last"
+	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
 
 	vmClass isInterpreterClass ifTrue:
-		[aStream cr; nextPutAll: '#include "sqMemoryAccess.h"'; cr; cr; nextPutAll: vmClass preambleCCode].
+		[aStream cr; cr; nextPutAll: vmClass preambleCCode].
 
-	aStream cr.
+	aStream cr
 ]
 
 { #category : #'C code generator' }
@@ -863,11 +873,11 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 		[:var | | varString decl |
 		varString := var asString.
 		decl := variableDeclarations at: varString ifAbsent: ['sqInt ' , varString].
-		(decl includes: $=) ifTrue:
-			[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
-		(decl beginsWith: 'static') ifFalse: "work-around hack to prevent localization of variables only referenced once."
-			[aStream
-				nextPutAll: 'extern ';
+		((decl includesSubString: ' private ')
+		  or: [decl beginsWith: 'static']) ifFalse: "work-around hack to prevent localization of variables only referenced once."
+			[(decl includes: $=) ifTrue:
+				[decl := decl copyFrom: 1 to: (decl indexOf: $=) - 1].
+			aStream
 				nextPutAll: decl;
 				nextPut: $;;
 				cr]].
@@ -878,6 +888,15 @@ CCodeGenerator >> emitGlobalCVariablesOn: aStream [
 CCodeGenerator >> emitGlobalStructFlagOn: aStream [
 	"Default: do nothing.  Overridden in CCGenGlobalStruct."
 
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> emitHeaderFiles: headerFilesSubSequence on: aStream [
+	headerFilesSubSequence do:
+		[:hdr|
+		hdr first ~= $# ifTrue:
+			[aStream nextPutAll: '#include '].
+		aStream nextPutAll: hdr; cr]
 ]
 
 { #category : #public }
@@ -1289,6 +1308,132 @@ CCodeGenerator >> generateIfFalseIfTrueAsArgument: msgNode on: aStream indent: l
 ]
 
 { #category : #'C translation' }
+CCodeGenerator >> generateIfNil: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPutAll: 'if (!('.
+			msgNode receiver emitCCodeAsExpressionOn: aStream level: level + 1 generator: self.
+			aStream nextPutAll: ')) {'; cr.
+			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
+			level timesRepeat: [aStream tab].
+			aStream nextPut: $}]
+		ifTrue:
+			[msgNode args first emitCCodeOn: aStream level: level generator: self]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateIfNilAsArgument: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPutAll: '(!('.
+			 msgNode receiver emitCCodeAsArgumentOn: aStream level: 0 generator: self.
+			aStream nextPut: $); crtab: level + 1; nextPut: $?; space.
+			msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+			aStream crtab: level + 1; nextPutAll: ': 0)']
+		ifTrue:
+			[msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateIfNilIfNotNil: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPutAll: 'if ('.
+			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+			aStream nextPutAll: ') {'; cr.
+			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
+			aStream tab: level; nextPut: $}; cr; tab: level; nextPutAll: 'else {'; cr.
+			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
+			aStream tab: level; nextPut: $}]
+		ifTrue:
+			[msgNode args first emitCCodeOn: aStream level: level generator: self]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateIfNilIfNotNilAsArgument: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPut: $(.
+			msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
+			aStream crtab: level + 1; nextPut: $?; space.
+			msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+			aStream crtab: level + 1; nextPut: $:; space.
+			msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+			aStream nextPut: $)]
+		ifTrue:
+			[msgNode args first emitCCodeAsArgumentOn: aStream level: level generator: self]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateIfNotNil: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPutAll: 'if ('.
+			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+			aStream nextPutAll: ') {'; cr.
+			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
+			level timesRepeat: [ aStream tab ].
+			aStream nextPut: $}]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateIfNotNilAsArgument: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPut: $(.
+			 msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
+			 aStream crtab: level + 1; nextPut: $?; space.
+			 msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+			 aStream crtab: level + 1; nextPutAll: ': 0)']
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateIfNotNilIfNil: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPutAll: 'if ('.
+			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+			aStream nextPutAll: ') {'; cr.
+			msgNode args first emitCCodeOn: aStream level: level + 1 generator: self.
+			aStream tab: level; nextPut: $}; cr; tab: level; nextPutAll: 'else {'; cr.
+			msgNode args last emitCCodeOn: aStream level: level + 1 generator: self.
+			aStream tab: level; nextPut: $}]
+		ifTrue:
+			[msgNode args last emitCCodeOn: aStream level: level generator: self]
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateIfNotNilIfNilAsArgument: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	(self isNilConstantReceiverOf: msgNode)
+		ifFalse:
+			[aStream nextPut: $(.
+			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
+			aStream crtab: level + 1; nextPut: $?; space.
+			msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+			aStream crtab: level + 1; nextPut: $:; space.
+			msgNode args last emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
+			aStream nextPut: $)]
+		ifTrue:
+			[msgNode args last emitCCodeAsArgumentOn: aStream level: level generator: self]
+]
+
+{ #category : #'C translation' }
 CCodeGenerator >> generateIfTrue: msgNode on: aStream indent: level [
 	"Generate the C code for this message onto the given stream."
 
@@ -1349,7 +1494,7 @@ CCodeGenerator >> generateIfTrueIfFalseAsArgument: msgNode on: aStream indent: l
 	(self nilOrBooleanConstantReceiverOf: msgNode)
 		ifNil:
 			[aStream nextPut: $(.
-			msgNode receiver emitCCodeAsArgumentOn: aStream level: level generator: self.
+			msgNode receiver emitCCodeAsExpressionOn: aStream level: level generator: self.
 			aStream crtab: level + 1; nextPut: $?; space.
 			msgNode args first emitCCodeAsArgumentOn: aStream level: level + 2 generator: self.
 			aStream crtab: level + 1; nextPut: $:; space.
@@ -1392,6 +1537,35 @@ CCodeGenerator >> generateInlineCPreprocessorDirective: msgNode on: aStream inde
 	"Generate the C preprocessor directive for this message onto the given stream."
 
 	aStream cr; nextPutAll: msgNode args first value
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> generateInlineCppIfElse: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+	| expr |
+	expr := String streamContents:
+				[:es|
+				msgNode args first
+					emitCCodeAsArgumentOn: es
+					level: 0
+					generator: self].
+	[expr last isSeparator] whileTrue:
+		[expr := expr allButLast].
+	aStream
+		ensureCr;
+		nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'if '; nextPutAll: expr; cr.
+	msgNode args second emitCCodeOn: aStream level: level generator: self.
+	expr := ' /* ', expr, ' */'.
+	msgNode args size >= 3 ifTrue:
+		[aStream
+			ensureCr;
+			nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'else'; nextPutAll: expr;
+			cr.
+		msgNode args third emitCCodeOn: aStream level: level generator: self].
+	aStream
+		ensureCr;
+		nextPut: $#; next: level * 2 put: Character space; nextPutAll: 'endif'; nextPutAll: expr;
+		cr
 ]
 
 { #category : #'C translation' }
@@ -1961,10 +2135,10 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#max:			#generateMax:on:indent:
 	#between:and:	#generateBetweenAnd:on:indent:
 
-	#bitAnd:		#generateBitAnd:on:indent:
-	#bitOr:			#generateBitOr:on:indent:
-	#bitXor:		#generateBitXor:on:indent:
-	#bitShift:		#generateBitShift:on:indent:
+	#bitAnd:			#generateBitAnd:on:indent:
+	#bitOr:				#generateBitOr:on:indent:
+	#bitXor:			#generateBitXor:on:indent:
+	#bitShift:			#generateBitShift:on:indent:
 	#signedBitShift:	#generateSignedBitShift:on:indent:
 	#bitInvert32		#generateBitInvert32:on:indent:
 
@@ -1981,7 +2155,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 
 	#whileTrue: 	#generateWhileTrue:on:indent:
 	#whileFalse:	#generateWhileFalse:on:indent:
-	#whileTrue 		#generateDoWhileTrue:on:indent:
+	#whileTrue 	#generateDoWhileTrue:on:indent:
 	#whileFalse		#generateDoWhileFalse:on:indent:
 	#to:do:			#generateToDo:on:indent:
 	#to:by:do:		#generateToByDo:on:indent:
@@ -1991,7 +2165,12 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#ifTrue:ifFalse:	#generateIfTrueIfFalse:on:indent:
 	#ifFalse:ifTrue:	#generateIfFalseIfTrue:on:indent:
 
-	#at:			#generateAt:on:indent:
+	#ifNotNil:		#generateIfNotNil:on:indent:
+	#ifNil:			#generateIfNil:on:indent:
+	#ifNotNil:ifNil:	#generateIfNotNilIfNil:on:indent:
+	#ifNil:ifNotNil:	#generateIfNilIfNotNil:on:indent:
+
+	#at:				#generateAt:on:indent:
 	#at:put:			#generateAtPut:on:indent:
 	#basicAt:		#generateAt:on:indent:
 	#basicAt:put:	#generateAtPut:on:indent:
@@ -2002,19 +2181,21 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#cCode:					#generateInlineCCode:on:indent:
 	#cCode:inSmalltalk:			#generateInlineCCode:on:indent:
 	#cPreprocessorDirective:	#generateInlineCPreprocessorDirective:on:indent:
+	#cppIf:ifTrue:ifFalse:		#generateInlineCppIfElse:on:indent:
+	#cppIf:ifTrue:				#generateInlineCppIfElse:on:indent:
 	#cCoerce:to:				#generateCCoercion:on:indent:
 	#cCoerceSimple:to:			#generateCCoercion:on:indent:
 	#addressOf:				#generateAddressOf:on:indent:
-	#signedIntFromLong			#generateSignedIntFromLong:on:indent:
+	#signedIntFromLong		#generateSignedIntFromLong:on:indent:
 	#signedIntToLong			#generateSignedIntToLong:on:indent:
 	#signedIntFromShort		#generateSignedIntFromShort:on:indent:
 	#signedIntToShort			#generateSignedIntToShort:on:indent:
 	#preIncrement				#generatePreIncrement:on:indent:
-	#preDecrement				#generatePreDecrement:on:indent:
+	#preDecrement			#generatePreDecrement:on:indent:
 	#inline:						#generateInlineDirective:on:indent:
 	#asFloat					#generateAsFloat:on:indent:
 	#asInteger					#generateAsInteger:on:indent:
-	#asUnsignedInteger			#generateAsUnsignedInteger:on:indent:
+	#asUnsignedInteger		#generateAsUnsignedInteger:on:indent:
 	#asSymbol					#generateAsSymbol:on:indent:
 	#anyMask:					#generateBitAnd:on:indent:
 	#raisedTo:					#generateRaisedTo:on:indent:
@@ -2030,7 +2211,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#perform:with:with:with:with:with:	#generatePerform:on:indent:
 
 	#shouldNotImplement				#generateSmalltalkMetaError:on:indent:
-	#shouldBeImplemented				#generateSmalltalkMetaError:on:indent:
+	#shouldBeImplemented			#generateSmalltalkMetaError:on:indent:
 	).
 
 	1 to: pairs size by: 2 do: [:i |
@@ -2041,6 +2222,10 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#ifFalse:			#generateIfFalseAsArgument:on:indent:
 	#ifTrue:ifFalse:		#generateIfTrueIfFalseAsArgument:on:indent:
 	#ifFalse:ifTrue:		#generateIfFalseIfTrueAsArgument:on:indent:
+	#ifNotNil:			#generateIfNotNilAsArgument:on:indent:	
+	#ifNil:				#generateIfNilAsArgument:on:indent:
+	#ifNotNil:ifNil:		#generateIfNotNilIfNilAsArgument:on:indent:
+	#ifNil:ifNotNil:		#generateIfNilIfNotNilAsArgument:on:indent:
 	#cCode:			#generateInlineCCodeAsArgument:on:indent:
 	#cCode:inSmalltalk:	#generateInlineCCodeAsArgument:on:indent:
 	).
@@ -2112,23 +2297,20 @@ CCodeGenerator >> isIntegralCType: aCType [ "<String>"
 		and: [(aCType includesAnyOf: '[*]') not]]
 ]
 
+{ #category : #utilities }
+CCodeGenerator >> isNilConstantReceiverOf: sendNode [
+	"Answer true if the receiver of the given message send is the constant nil. Used to suppress conditional code when the condition is a translation-time constant."
+
+	generateDeadCode ifTrue: [^false].
+	^sendNode receiver isConstant and: [sendNode receiver value isNil]
+]
+
 { #category : #'C code generator' }
 CCodeGenerator >> isNonArgumentImplicitReceiverVariableName: aString [
 	^(self typeOfVariable: aString) == #implicit
 	    or: [vmClass
 			ifNil: [#('interpreterProxy' 'self') includes: aString]
 	 		ifNotNil: [vmClass isNonArgumentImplicitReceiverVariableName: aString]]
-]
-
-{ #category : #'C code generator' }
-CCodeGenerator >> isPointerToStructVariableName: varName [ "<String>"
-	^self isTypePointerToStruct: (self typeOfVariable: varName)
-]
-
-{ #category : #'C code generator' }
-CCodeGenerator >> isTypePointerToStruct: type [ "<String>"
-	^vmClass notNil
-	  and: [vmClass isTypePointerToStruct: type]
 ]
 
 { #category : #inlining }
@@ -2155,7 +2337,7 @@ CCodeGenerator >> localizeGlobalVariables [
 			procedure := methods at: name.
 			procedure isRealMethod ifTrue:
 				[logger notNil ifTrue:
-					[logger show: key, ' localised to ', name; cr].
+					[logger ensureCr; show: key, ' localised to ', name; cr].
 				elected add: (procedure locals add: key).
 				variableDeclarations at: key ifPresent:
 					[:v |
@@ -2549,12 +2731,16 @@ CCodeGenerator >> removeVariable: aName [
 	"Remove the given (instance) variable from the code base."
 	self checkDeleteVariable: aName.
 	variables
-		remove:  aName
+		remove: aName
 		ifAbsent:
-			[logger show: 'warning, variable '
+			[(vmClass notNil
+			  and: [vmClass isNonArgumentImplicitReceiverVariableName: aName]) ifFalse:
+				[logger
+					ensureCr;
+					show: 'warning, variable '
 						, aName
 						, ' doesn''t exist or has already been removed';
-						cr].
+						cr]].
 	variableDeclarations removeKey: aName ifAbsent: []
 ]
 
@@ -2570,7 +2756,7 @@ CCodeGenerator >> reportRecursiveMethods [
 			[calls isEmpty] whileFalse: [
 				sel := calls removeFirst.
 				sel = m selector ifTrue: [
-					logger show: m selector, ' is recursive'; cr.
+					logger ensureCr; show: m selector, ' is recursive'; cr.
 				] ifFalse: [
 					(visited includes: sel) ifFalse: [
 						called := self methodNamed: sel.
@@ -2624,7 +2810,7 @@ CCodeGenerator >> reportShouldNotBeRemoved: removed varList: varList [
 					cr;
 					nextPutAll: 'But it is either used outside of interpret or exported!!';
 					cr].
-		logger show: str.
+		logger ensureCr; show: str.
 		self inform: str]
 ]
 
@@ -2644,9 +2830,8 @@ CCodeGenerator >> returnPrefixFromVariable: aName [
 { #category : #'C code generator' }
 CCodeGenerator >> selectorReturnsPointerToStruct: selector [ "<Symbol>"
 	| tMethod |
-	^vmClass notNil
-	  and: [(tMethod := methods at: selector ifAbsent: []) notNil
-	  and: [vmClass isTypePointerToStruct: tMethod returnType]]
+	^(tMethod := methods at: selector ifAbsent: []) notNil
+	  and: [VMStructType isTypePointerToStruct: tMethod returnType]
 ]
 
 { #category : #utilities }
@@ -2770,6 +2955,11 @@ CCodeGenerator >> structClassesForTranslationClasses: classes [
 						ifTrue: [#()]
 						ifFalse: [ex pass]])].
 	^ChangeSet superclassOrder: structClasses asArray
+]
+
+{ #category : #'C code generator' }
+CCodeGenerator >> structTargetKindForVariableName: varName [ "<String>"
+	^VMStructType structTargetKindForDeclaration: (self typeOfVariable: varName)
 ]
 
 { #category : #utilities }
