@@ -156,6 +156,8 @@ CPlatformConfig >> configureFloatMathPlugin: maker [
 	it should be compiled with no optimizations"
 	maker addDefinitions: '-O0 -mno-fused-madd'.
 	
+	self isLittleEndian ifTrue: [
+		maker addDefinitions: '-D__LITTLE_ENDIAN=1' ].
 	
 	"On *nix & mac with -DNO_ISNAN "
 	maker puts:'
@@ -468,6 +470,12 @@ CPlatformConfig >> frameworks [
 CPlatformConfig >> ifMac: aBlock [
 
 	"evaluate a block , if receiver target platform is Mac OS"
+]
+
+{ #category : #testing }
+CPlatformConfig >> isLittleEndian [
+	"default is true. Override if necessary"
+	^ true
 ]
 
 { #category : #accessing }
