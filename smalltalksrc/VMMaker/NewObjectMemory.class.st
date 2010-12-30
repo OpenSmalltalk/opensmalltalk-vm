@@ -34,7 +34,14 @@ NewObjectMemory class >> initializeWithBytesToWord:  numberOfBytesInAWord [
 
 	super initializeWithBytesToWord:  numberOfBytesInAWord.
 
-	AllocationCheckFiller := 16r55AA55AA
+	AllocationCheckFiller isNil ifTrue:
+		[AllocationCheckFiller := #(	0				"no allocation check"
+									16r55AA55AA	"fill with 16r55AA55AA"
+									16rADD4E55)	"fill with address"
+										last
+		"AllocationCheckFiller := 0"
+		"AllocationCheckFiller := 16r55AA55AA"
+		"AllocationCheckFiller := 16rADD4E55"]
 ]
 
 { #category : #translation }
@@ -70,7 +77,7 @@ NewObjectMemory class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 		removeVariable: 'statGCEndTime' "replaced by statGCEndUsecs"
 ]
 
-{ #category : #'accessing class hierarchy' }
+{ #category : #simulation }
 NewObjectMemory class >> simulatorClass [
 	^NewObjectMemorySimulator
 ]
@@ -184,7 +191,7 @@ NewObjectMemory >> allocateChunk: byteSize [
 	newFreeStart := freeStart + byteSize.
 	newFreeStart < scavengeThreshold ifTrue:
 		[(AllocationCheckFiller ~= 0
-		  and: [(self longAt: newChunk) ~= (AllocationCheckFiller == 16rADD4E55
+		  and: [(self longAt: newChunk) ~= (AllocationCheckFiller = 16rADD4E55
 												ifTrue: [newChunk]
 												ifFalse: [AllocationCheckFiller])]) ifTrue:
 			[self error: 'last object overwritten'].
@@ -1747,7 +1754,7 @@ NewObjectMemory >> printMemField: memField name: name size: length [
 	<var: #name type: #'char *'>
 	self print: name; tab; printHexPtr: memField;
 		printChar: $/; printNum: (self oopForPointer: memField);
-		print: ' ='; printHex: length.
+		print: ' sz: '; printHex: length.
 	length ~= 0 ifTrue:
 		[self printChar: $/; printNum: length].
 	self cr
@@ -1767,6 +1774,17 @@ NewObjectMemory >> printMemory [
 	self printMemField: reserveStart name: 'reserveStart' size: endOfMemory - reserveStart.
 	self printMemField: endOfMemory name: 'endOfMemory ' size: memoryLimit - endOfMemory.
 	self printMemField: memoryLimit name: 'memoryLimit ' size: 0
+]
+
+{ #category : #'debug printing' }
+NewObjectMemory >> printObjectsFrom: startAddress to: endAddress [
+	<api>
+	| oop |
+	oop := startAddress.
+	[oop < endAddress] whileTrue:
+		[(self isFreeObject: oop) ifFalse:
+			[self printOop: oop].
+		oop := self objectAfter: oop].
 ]
 
 { #category : #'image segment in/out' }

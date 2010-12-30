@@ -4,8 +4,17 @@ I am an absract superclass for classes which map to simple structs in C,  Right 
 Class {
 	#name : #VMStructType,
 	#superclass : #VMClass,
+	#classVars : [
+		'StructTypeNameCache'
+	],
 	#category : #'VMMaker-Support'
 }
+
+{ #category : #'accessing class hierarchy' }
+VMStructType class >> addSubclass: aSubclass [
+	self voidStructTypeCache.
+	^super addSubclass: aSubclass
+]
 
 { #category : #'code generation' }
 VMStructType class >> checkGenerateFieldAccessors: fieldSpecs bitPosition: firstBitPosition in: surrogateClass [
@@ -78,6 +87,14 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 	"#(4 8) collect: [:bpw| (CogMethod fieldAccessorsForBytesPerWord: bpw) asArray]"
 ]
 
+{ #category : #translation }
+VMStructType class >> filteredInstVarNames [
+	"Eliminate the obvious simulation-only inst vars"
+	^self allInstVarNames reject:
+		[:n|
+		Cogit isNonArgumentImplicitReceiverVariableName: n]
+]
+
 { #category : #'code generation' }
 VMStructType class >> getter: getter bitPosition: bitPosition bitWidth: bitWidth bool: isBool [
 	^String streamContents:
@@ -126,12 +143,41 @@ VMStructType class >> isAccessor: aSelector [
 ]
 
 { #category : #translation }
+VMStructType class >> isNonArgumentImplicitReceiverVariableName: aString [
+	^Cogit isNonArgumentImplicitReceiverVariableName: aString
+]
+
+{ #category : #translation }
+VMStructType class >> isTypePointerToStruct: type [
+	| index |
+	StructTypeNameCache ifNil:
+		[StructTypeNameCache := Set new.
+		 self allSubclassesDo:
+			[:sc| StructTypeNameCache add: sc name; add: sc structTypeName ]].
+	^type notNil
+	  and: [(index := type indexOf: $*) > 0
+	  and: [StructTypeNameCache anySatisfy:
+			[:structType|
+			(type beginsWith: structType)
+			and: [index > structType size]]]]
+]
+
+{ #category : #translation }
 VMStructType class >> needsTypeTag [
 	self instVarNamesAndTypesForTranslationDo:
 		[:ivn :type|
 		((type isArray ifTrue: [type first] ifFalse: [type]) includesSubString: self structTagName) ifTrue:
 			[^true]].
 	^false
+]
+
+{ #category : #translation }
+VMStructType class >> prepareToBeAddedToCodeGenerator: aCodeGen [
+	aCodeGen
+		removeVariable: 'coInterpreter';
+		removeVariable: 'cogit';
+		removeVariable: 'objectMemory';
+		removeVariable: 'objectRepresentation'
 ]
 
 { #category : #translation }
@@ -172,6 +218,18 @@ VMStructType class >> printTypedefOn: aStream [
 	self name ~= self structTypeName ifTrue:
 		[aStream cr; nextPutAll: '#define '; nextPutAll: self name; space; nextPutAll: self structTypeName; cr].
 	aStream flush
+]
+
+{ #category : #'accessing class hierarchy' }
+VMStructType class >> removeSubclass: aSubclass [
+	self voidStructTypeCache.
+	^super removeSubclass: aSubclass
+]
+
+{ #category : #'class name' }
+VMStructType class >> rename: aString [
+	self voidStructTypeCache.
+	^super rename: aString
 ]
 
 { #category : #translation }
@@ -247,6 +305,39 @@ VMStructType class >> structTagName [
 ]
 
 { #category : #translation }
+VMStructType class >> structTargetKindForDeclaration: decl [
+	StructTypeNameCache ifNil:
+		[StructTypeNameCache := Set new.
+		 self allSubclassesDo:
+			[:sc| StructTypeNameCache add: sc name; add: sc structTypeName ]].
+	^(decl notNil
+	   and: [StructTypeNameCache anySatisfy:
+			[:structType|
+			(decl beginsWith: structType)
+			and: [(decl indexOf: $* ifAbsent: [decl indexOf: Character space]) > structType size]]]) ifTrue:
+		[(decl indexOf: $*) > 0
+			ifTrue: [#pointer]
+			ifFalse: [#struct]]
+]
+
+{ #category : #translation }
+VMStructType class >> structTargetKindForType: type [
+	| index |
+	StructTypeNameCache ifNil:
+		[StructTypeNameCache := Set new.
+		 self allSubclassesDo:
+			[:sc| StructTypeNameCache add: sc name; add: sc structTypeName ]].
+	^(type notNil
+	   and: [StructTypeNameCache anySatisfy:
+			[:structType|
+			(type beginsWith: structType)
+			and: [index > structType size]]]) ifTrue:
+		[(index := type indexOf: $*) > 0
+			ifTrue: [#pointer]
+			ifFalse: [#struct]]
+]
+
+{ #category : #translation }
 VMStructType class >> structTypeName [
 	"Provide the typedef name.  Subclases can override."
 	^self name
@@ -256,4 +347,29 @@ VMStructType class >> structTypeName [
 VMStructType class >> typeForSelf [
 	"Answer the type to give self if appropriate, or nil if not."
 	^self structTypeName, ' *'
+]
+
+{ #category : #translation }
+VMStructType class >> typedef [
+	^String streamContents: [:s| self printTypedefOn: s]
+]
+
+{ #category : #translation }
+VMStructType class >> voidStructTypeCache [
+	StructTypeNameCache := nil
+]
+
+{ #category : #printing }
+VMStructType >> printOn: aStream [
+	"A hook to allow subclasses to print their state if useful."
+	<doNotGenerate>
+	super printOn: aStream.
+	self printStateOn: aStream
+]
+
+{ #category : #printing }
+VMStructType >> printStateOn: aStream [
+	"A hook to allow subclasses to print their state if useful."
+	<doNotGenerate>
+	^self
 ]

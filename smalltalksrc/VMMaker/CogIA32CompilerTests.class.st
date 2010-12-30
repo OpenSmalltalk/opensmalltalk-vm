@@ -134,7 +134,7 @@ CogIA32CompilerTests >> testDivQuoRem [
 	| map compiler memory ops |
 	map := Dictionary new.
 	compiler := self gen: nil.
-	memory := ByteArray new: 1024.
+	memory := ByteArray new: 4096 * 2.
 	ops := Set new.
 	CogIA32CompilerForTests dataRegistersWithAccessorsExcept: #(ebp esp) do:
 		[:sreg :srget :srset|
@@ -150,7 +150,7 @@ CogIA32CompilerTests >> testDivQuoRem [
 					ops add: op.
 					compiler genDivR: sreg R: dreg Quo: qreg Rem: rreg.
 					instructions := self generateInstructions.
-					memory atAllPut: 0; replaceFrom: 1 to: instructions size with: instructions startingAt: 1.
+					memory atAllPut: 0; replaceFrom: 1 to: instructions size with: instructions startingAt: 1; at: instructions size + 1 put: self processor nopOpcode.
 					#(-768 -456 -123 123 456 789)
 						with: #(987 654 321 -321 -654 -987)
 						do: [:dd :dv| "| calc |
@@ -172,7 +172,7 @@ CogIA32CompilerTests >> testDivQuoRem [
 							self processor esp: memory size; eip: 0.
 							self shouldnt:
 								[[self processor pc < instructions size] whileTrue:
-									[self processor singleStepIn: memory]]
+									[self processor singleStepIn: memory readExecuteOnlyBelow: memory size / 2]]
 								raise: Error.
 							map
 								at: qrget put: (dd quo: dv) signedIntToLong;

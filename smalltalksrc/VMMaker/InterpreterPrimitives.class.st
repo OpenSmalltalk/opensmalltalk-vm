@@ -74,6 +74,133 @@ Class {
 	#category : #'VMMaker-Interpreter'
 }
 
+{ #category : #'primitive support' }
+InterpreterPrimitives >> cStringOrNullFor: oop [
+	"Answer either a malloced string with the null-terminated contents of oop if oop is a string,
+	 or the null pointer if oop is nil, or fail.  It is the client's responsibility to free the string later."
+	<api>
+	<returnTypeC: #'char *'>
+	| isString len cString |
+	<var: 'cString' type: #'char *'>
+	isString := objectMemory
+					isClassOfNonImm: oop
+					equalTo: (objectMemory splObj: ClassByteString)
+					compactClassIndex: ClassByteStringCompactIndex.
+	isString ifFalse:
+		[oop ~= objectMemory nilObject ifTrue:
+			[self primitiveFailFor: PrimErrBadArgument].
+		 ^0].
+	len := objectMemory lengthOf: oop.
+	len = 0 ifTrue:
+		[^0].
+	cString := self malloc: len + 1.
+	cString ifNil:
+		[self primitiveFailFor: PrimErrNoCMemory.
+		 ^0].
+	self mem: cString cp: (objectMemory firstIndexableField: oop) y: len.
+	cString at: len put: 0.
+	^cString
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> failed [
+	<api>
+	^primFailCode ~= 0
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> initPrimCall [
+	"Set the failure code/success flag in preparation for calling a primitve.
+	 If primFailCode is non-zero a primitive has failed.  If primFailCode is
+	 greater than one then its value indicates the reason for failure."
+	<inline: true>
+	primFailCode := 0
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> positive32BitValueOf: oop [
+	"Convert the given object into an integer value.
+	The object may be either a positive SmallInteger or a four-byte LargePositiveInteger."
+
+	| value ok |
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[value := objectMemory integerValueOf: oop.
+		value < 0 ifTrue: [self primitiveFail. value := 0].
+		^value].
+
+	ok := objectMemory isClassOfNonImm: oop
+			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	(ok and: [(objectMemory lengthOf: oop) = 4]) ifFalse:
+		[self primitiveFail.
+		 ^0].
+	^(objectMemory fetchByte: 0 ofObject: oop)
+	+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+	+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+	+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> positive64BitValueOf: oop [
+	"Convert the given object into an integer value.
+	The object may be either a positive SmallInteger or an eight-byte LargePositiveInteger."
+
+	<returnTypeC: #sqLong>
+	| sz value ok |
+	<var: #value type: #sqLong>
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[value := objectMemory integerValueOf: oop.
+		 value < 0 ifTrue: [^self primitiveFail].
+		 ^value].
+
+	ok := objectMemory
+			isClassOfNonImm: oop
+			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	(ok and: [(sz := objectMemory lengthOf: oop) <= (self sizeof: #sqLong asSymbol)]) ifFalse:
+		[^self primitiveFail].
+
+	value := 0.
+	0 to: sz - 1 do: [:i |
+		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
+	^value
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> positiveMachineIntegerValueOf: oop [
+	"Answer a value of an integer in address range, i.e up to the size of a machine word.
+	The object may be either a positive SmallInteger or a LargePositiveInteger of size <= word size."
+	<returnTypeC: #'unsigned long'>
+	| value bs ok |
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[value := objectMemory integerValueOf: oop.
+		 value < 0 ifTrue: [^self primitiveFail].
+		^value].
+
+	ok := objectMemory
+			isClassOfNonImm: oop
+			equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+			compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	(ok and: [(bs := objectMemory lengthOf: oop) <= (self sizeof: #'unsigned long' asSymbol)]) ifFalse:
+		[^self primitiveFail].
+
+	((self sizeof: #'unsigned long' asSymbol) = 8
+	and: [bs > 4]) ifTrue:
+		[^  (objectMemory fetchByte: 0 ofObject: oop)
+		 + ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+		 + ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+		 + ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+		 + ((objectMemory fetchByte: 4 ofObject: oop) << 32)
+		 + ((objectMemory fetchByte: 5 ofObject: oop) << 40)
+		 + ((objectMemory fetchByte: 6 ofObject: oop) << 48)
+		 + ((objectMemory fetchByte: 7 ofObject: oop) << 56)].
+
+	^  (objectMemory fetchByte: 0 ofObject: oop)
+	+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+	+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+	+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+]
+
 { #category : #'arithmetic integer primitives' }
 InterpreterPrimitives >> primitiveAdd [
 
@@ -308,14 +435,12 @@ InterpreterPrimitives >> primitiveBeep [
 
 { #category : #'object access primitives' }
 InterpreterPrimitives >> primitiveBehaviorHash [
-	| aBehavior newHash err |
-	aBehavior := self stackTop.
-	self assert: (objectMemory isIntegerObject: aBehavior) not.
-	(newHash := self hashBitsOf: aBehavior) = 0 ifTrue:
-		[err := objectMemory enterIntoClassTable: aBehavior.
-		 err ~= 0 ifTrue: [^self primitiveFailFor: err].
-		 newHash := self hashBitsOf: aBehavior].
-	self pop: 1 thenPushInteger: newHash
+	| hashOrError |
+	self assert: (objectMemory isIntegerObject: self stackTop) not.
+	hashOrError := objectMemory ensureBehaviorHash: self stackTop.
+	hashOrError >= 0
+		ifTrue: [self pop: 1 thenPushInteger: hashOrError]
+		ifFalse: [self primitiveFailFor: hashOrError negated]
 ]
 
 { #category : #'arithmetic integer primitives' }
@@ -950,21 +1075,28 @@ InterpreterPrimitives >> primitiveDivideLargeIntegers [
 InterpreterPrimitives >> primitiveEnterCriticalSection [
 	"Attempt to enter a CriticalSection/Mutex.  If not owned, set the owner to the current
 	 process and answer false. If owned by the current process  answer true.   Otherwise
-	 suspend the process.  Answer if the receiver is owned by the current process."
+	 suspend the process.  Answer if the receiver is owned by the current process.
+	 For simulation if there is an argument it is taken to be the effective activeProcess
+	 (see Process>>effectiveProcess)."
 	| criticalSection owningProcessIndex owningProcess activeProc |
-	criticalSection := self stackTop.  "rcvr"
+	argumentCount > 0
+		ifTrue:
+			[criticalSection := self stackValue: 1.  "rcvr"
+			 activeProc := self stackTop]
+		ifFalse:
+			[criticalSection := self stackTop.  "rcvr"
+			 activeProc := self activeProcess].
 	owningProcessIndex := ExcessSignalsIndex. "CriticalSections are laid out like Semaphores"
 	owningProcess := objectMemory fetchPointer: owningProcessIndex ofObject: criticalSection.
-	activeProc := self activeProcess.
 	owningProcess = objectMemory nilObject ifTrue:
 		[objectMemory storePointer: owningProcessIndex
 			ofObject: criticalSection
 			withValue: activeProc.
-		 ^self pop: 1 thenPush: objectMemory falseObject].
+		 ^self pop: argumentCount + 1 thenPush: objectMemory falseObject].
 	owningProcess = activeProc ifTrue:
-		[^self pop: 1 thenPush: objectMemory trueObject].
+		[^self pop: argumentCount + 1 thenPush: objectMemory trueObject].
 	"Arrange to answer false (unowned) when the process is resumed."
-	self pop: 1 thenPush: objectMemory falseObject.
+	self pop: argumentCount + 1 thenPush: objectMemory falseObject.
 	self addLastLink: activeProc toList: criticalSection.
 	self transferTo: self wakeHighestPriority
 ]
@@ -1007,7 +1139,7 @@ InterpreterPrimitives >> primitiveExitCriticalSection [
 				withValue: objectMemory nilObject]
 		ifFalse:
 			[owningProcess := self removeFirstLinkOfList: criticalSection.
-			 "store check unnecessary because aSemaphore referred to owningProcess
+			 "store check unnecessary because criticalSection referred to owningProcess
 			  via its FirstLinkIndex slot before owningProcess was removed."
 			 objectMemory storePointerUnchecked: owningProcessIndex
 				ofObject: criticalSection
@@ -1051,6 +1183,32 @@ InterpreterPrimitives >> primitiveExponent [
 					inSmalltalk: [pwr := rcvr exponent].
 			self pushInteger: pwr - 1]
 		ifFalse: [self unPop: 1]
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> primitiveFail [
+	"Set general (unspecified) primitive failure.  Don't overwrite an error code that has already been set."
+
+	"Use returnTypeC: #sqInt because that's the way it is defined in sq.h.
+	 Use no explicit return so that Slang doesn't fail an inlining type-check when
+	 a primitive with return type void uses ^self primitiveFail to exit."
+	<returnTypeC: #sqInt>
+	primFailCode == 0 ifTrue:
+		[primFailCode := 1]
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> primitiveFailFor: reasonCode [
+	"Set specific primitive failure.
+	 N.B. primitiveFailFor: PrimNoErr is expected to clear the primFailCode."
+	<api>
+	^primFailCode := reasonCode
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> primitiveFailureCode [
+	<api>
+	^primFailCode
 ]
 
 { #category : #'control primitives' }
@@ -1492,9 +1650,9 @@ InterpreterPrimitives >> primitiveIdentical [
 InterpreterPrimitives >> primitiveIdentityHash [
 	| thisReceiver |
 	thisReceiver := self stackTop.
-	self success: (objectMemory isIntegerObject: thisReceiver) not.
-	self successful
-		ifTrue: [self pop:1 thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
+	(objectMemory isIntegerObject: thisReceiver)
+		ifTrue: [self primitiveFail]
+		ifFalse: [self pop:1 thenPushInteger: (objectMemory hashBitsOf: thisReceiver)]
 ]
 
 { #category : #'other primitives' }
@@ -1580,8 +1738,7 @@ InterpreterPrimitives >> primitiveInstVarAt [
 	(index >= 1 and: [index <= fixedFields]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	(fmt = 3
-	 and: [(objectMemory isContextHeader: hdr)
-	 and: [index - 1 <= StackPointerIndex]])
+	 and: [objectMemory isContextHeader: hdr])
 		ifTrue: [value := self externalInstVar: index - 1 ofContext: rcvr]
 		ifFalse: [value := self subscript: rcvr with: index format: fmt].
 	self pop: argumentCount + 1 thenPush: value
@@ -1602,8 +1759,7 @@ InterpreterPrimitives >> primitiveInstVarAtPut [
 	(index >= 1 and: [index <= fixedFields]) ifFalse:
 		[^self primitiveFailFor: PrimErrBadIndex].
 	(fmt = 3
-	 and: [(objectMemory isContextHeader: hdr)
-	 and: [self isMarriedOrWidowedContext: rcvr]])
+	 and: [objectMemory isContextHeader: hdr])
 		ifTrue: [self externalInstVar: index - 1 ofContext: rcvr put: newValue]
 		ifFalse: [self subscript: rcvr with: index storing: newValue format: fmt].
 	self pop: argumentCount + 1 thenPush: newValue
@@ -1685,6 +1841,7 @@ InterpreterPrimitives >> primitiveInvokeObjectAsMethod [
 	"Primitive. 'Invoke' an object like a function, sending the special message 
 		run: originalSelector with: arguments in: aReceiver.
 	"
+	<returnTypeC: #void>
 	| runReceiver runArgs lookupClass |
 	runArgs := objectMemory eeInstantiateClass: (objectMemory splObj: ClassArray) indexableSize: argumentCount.
 	argumentCount - 1 to: 0 by: -1  do:
@@ -2289,6 +2446,20 @@ InterpreterPrimitives >> primitivePointY [
 	self successful
 		ifTrue: [self push: (objectMemory fetchPointer: YIndex ofObject: rcvr)]
 		ifFalse: [self unPop: 1]
+]
+
+{ #category : #'process primitives' }
+InterpreterPrimitives >> primitiveProcessBindToThreadId [
+	"Simulation only.  Fail."
+	<doNotGenerate>
+	self primitiveFail
+]
+
+{ #category : #'process primitives' }
+InterpreterPrimitives >> primitiveProcessBoundThreadId [
+	"Simulation only.  Fail."
+	<doNotGenerate>
+	self primitiveFail
 ]
 
 { #category : #'process primitives' }
@@ -3065,20 +3236,27 @@ InterpreterPrimitives >> primitiveSuspend [
 InterpreterPrimitives >> primitiveTestAndSetOwnershipOfCriticalSection [
 	"Attempt to test-and-set the ownership of the critical section.  If not owned,
 	 set the owner to the current process and answer false. If owned by the
-	 current process answer true.  If owned by some other process answer nil."
+	 current process answer true.  If owned by some other process answer nil.
+	 For simulation if there is an argument it is taken to be the effective activeProcess
+	 (see Process>>effectiveProcess)."
 	| criticalSection owningProcessIndex owningProcess activeProc |
-	criticalSection := self stackTop.  "rcvr"
+	argumentCount > 0
+		ifTrue:
+			[criticalSection := self stackValue: 1.  "rcvr"
+			 activeProc := self stackTop]
+		ifFalse:
+			[criticalSection := self stackTop.  "rcvr"
+			 activeProc := self activeProcess].
 	owningProcessIndex := ExcessSignalsIndex. "CriticalSections are laid out like Semaphores"
 	owningProcess := objectMemory fetchPointer: owningProcessIndex ofObject: criticalSection.
-	activeProc := self activeProcess.
 	owningProcess = objectMemory nilObject ifTrue:
 		[objectMemory storePointer: owningProcessIndex
 			ofObject: criticalSection
 			withValue: activeProc.
-		 ^self pop: 1 thenPush: objectMemory falseObject].
+		 ^self pop: argumentCount + 1 thenPush: objectMemory falseObject].
 	owningProcess = activeProc ifTrue:
-		[^self pop: 1 thenPush: objectMemory trueObject].
-	self pop: 1 thenPush: objectMemory nilObject
+		[^self pop: argumentCount + 1 thenPush: objectMemory trueObject].
+	self pop: argumentCount + 1 thenPush: objectMemory nilObject
 ]
 
 { #category : #'I/O primitives' }
@@ -3150,6 +3328,13 @@ InterpreterPrimitives >> primitiveUpdateTimezone [
 	 of the timezone once at start-up.  If one wants the VM to keep its notion
 	 up-to-date arrange to invoke this primitive periodically."
 	self ioUpdateVMTimezone
+]
+
+{ #category : #'process primitives' }
+InterpreterPrimitives >> primitiveVMCurrentThreadId [
+	"Simulation only.  Fail."
+	<doNotGenerate>
+	self primitiveFail
 ]
 
 { #category : #'system control primitives' }
@@ -3256,4 +3441,229 @@ InterpreterPrimitives >> primitiveYield [
 	(self isEmptyList: processList) ifFalse:[
 		self addLastLink: activeProc toList: processList.
 		self transferTo: self wakeHighestPriority]
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> signed32BitValueOf: oop [
+	"Convert the given object into an integer value.
+	The object may be either a positive SmallInteger or a four-byte LargeInteger."
+	| value negative ok |
+	<inline: false>
+	<returnTypeC: #int>
+	<var: #value type: #int>
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^objectMemory integerValueOf: oop].
+
+	ok := objectMemory isClassOfNonImm: oop
+					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	ok
+		ifTrue: [negative := false]
+		ifFalse:
+			[negative := true.
+			 ok := objectMemory isClassOfNonImm: oop
+							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
+							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
+			ok ifFalse: [^self primitiveFail]].
+	(objectMemory lengthOf: oop) > 4 ifTrue:
+		[^self primitiveFail].
+
+	value :=  (objectMemory fetchByte: 0 ofObject: oop) +
+			  ((objectMemory fetchByte: 1 ofObject: oop) <<  8) +
+			  ((objectMemory fetchByte: 2 ofObject: oop) << 16) +
+			  ((objectMemory fetchByte: 3 ofObject: oop) << 24).
+	self cCode: []
+		inSmalltalk:
+			[(value anyMask: 16r80000000) ifTrue:
+				[value := value - 16r100000000]].
+	"Filter out values out of range for the signed interpretation such as
+	 16rFFFFFFFF (positive w/ bit 32 set) and -16rFFFFFFFF (negative w/ bit
+	 32 set). Since the sign is implicit in the class we require that the high
+	 bit of the magnitude is not set which is a simple test here.  Note that
+	 we have to handle the most negative 32-bit value -2147483648 specially."
+	value < 0 ifTrue:
+		[self assert: (self sizeof: value) == 4.
+		 (negative
+		 and: [self
+				cCode: [value - 1 > 0]
+				inSmalltalk: [value = -16r80000000]]) ifTrue: "Don't fail for -2147483648 /-16r80000000"
+			[^value].
+		 ^self primitiveFail].
+	^negative
+		ifTrue: [0 - value]
+		ifFalse: [value]
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> signed64BitValueOf: oop [
+	"Convert the given object into an integer value.
+	The object may be either a positive SmallInteger or a eight-byte LargeInteger."
+	| sz value negative ok |
+	<inline: false>
+	<returnTypeC: #sqLong>
+	<var: #value type: #sqLong>
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^self cCoerce: (objectMemory integerValueOf: oop) to: #sqLong].
+
+	ok := objectMemory isClassOfNonImm: oop
+					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	ok
+		ifTrue: [negative := false]
+		ifFalse:
+			[negative := true.
+			 ok := objectMemory isClassOfNonImm: oop
+							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
+							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
+			ok ifFalse: [^self primitiveFail]].
+	sz := objectMemory lengthOf: oop.
+	sz > (self sizeof: #sqLong asSymbol) ifTrue:
+		[^self primitiveFail].
+
+	value := 0.
+	0 to: sz - 1 do: [:i |
+		value := value + ((self cCoerce: (objectMemory fetchByte: i ofObject: oop) to: #sqLong) <<  (i*8))].
+	"Filter out values out of range for the signed interpretation such as
+	16rFFFFFFFF... (positive w/ bit 64 set) and -16rFFFFFFFF... (negative w/ bit
+	64 set). Since the sign is implicit in the class we require that the high bit of
+	the magnitude is not set which is a simple test here.  Note that we have to
+	handle the most negative 64-bit value -9223372036854775808 specially."
+	self cCode: []
+		inSmalltalk:
+			[(value anyMask: 16r8000000000000000) ifTrue:
+				[value := value - 16r10000000000000000]].
+	value < 0 ifTrue:
+		[self cCode:
+			[self assert: (self sizeof: value) == 8.
+			 self assert: (self sizeof: value << 1) == 8].
+		"Don't fail for -9223372036854775808/-16r8000000000000000.
+		 Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
+		 with optimization and sometimes without.  The shift works on all, touch wood."
+		 (negative and: [0 = (self cCode: [value << 1]
+									inSmalltalk: [value << 1 bitAnd: (1 << 64) - 1])]) ifTrue: 
+			[^value].
+		 ^self primitiveFail].
+	^negative
+		ifTrue:[0 - value]
+		ifFalse:[value]
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> signedMachineIntegerValueOf: oop [
+	"Answer a signed value of an integer up to the size of a machine word.
+	The object may be either a positive SmallInteger or a LargeInteger of size <= word size."
+	<returnTypeC: #'long'>
+	| negative ok bs value bits |
+	<var: #value type: #long>
+	(objectMemory isIntegerObject: oop) ifTrue:
+		[^objectMemory integerValueOf: oop].
+
+	ok := objectMemory isClassOfNonImm: oop
+					equalTo: (objectMemory splObj: ClassLargePositiveInteger)
+					compactClassIndex: ClassLargePositiveIntegerCompactIndex.
+	ok
+		ifTrue: [negative := false]
+		ifFalse:
+			[negative := true.
+			 ok := objectMemory isClassOfNonImm: oop
+							equalTo: (objectMemory splObj: ClassLargeNegativeInteger)
+							compactClassIndex: ClassLargeNegativeIntegerCompactIndex.
+			ok ifFalse: [^self primitiveFail]].
+	(bs := objectMemory lengthOf: oop) > (self sizeof: #'unsigned long' asSymbol) ifTrue:
+		[^self primitiveFail].
+
+	((self sizeof: #'unsigned long' asSymbol) = 8
+	 and: [bs > 4])
+		ifTrue:
+			[value :=   (objectMemory fetchByte: 0 ofObject: oop)
+					+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+					+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+					+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)
+					+ ((objectMemory fetchByte: 4 ofObject: oop) << 32)
+					+ ((objectMemory fetchByte: 5 ofObject: oop) << 40)
+					+ ((objectMemory fetchByte: 6 ofObject: oop) << 48)
+					+ ((objectMemory fetchByte: 7 ofObject: oop) << 56)]
+		ifFalse:
+			[value :=   (objectMemory fetchByte: 0 ofObject: oop)
+					+ ((objectMemory fetchByte: 1 ofObject: oop) <<  8)
+					+ ((objectMemory fetchByte: 2 ofObject: oop) << 16)
+					+ ((objectMemory fetchByte: 3 ofObject: oop) << 24)].
+
+	
+	self cCode: []
+		inSmalltalk:
+			[bits := (self sizeof: #long) * 8.
+			 (value bitShift: 1 - bits) > 0 ifTrue:
+				[value := value - (1 bitShift: bits)]].
+	value < 0 ifTrue:
+		["Don't fail for -16r80000000[00000000].
+		  Alas the simple (negative and: [value - 1 > 0]) fails with contemporary gcc and icc versions
+		  with optimization and sometimes without.  The shift works on all, touch wood."
+		 (negative and: [0 = (self cCode: [value << 1]
+									inSmalltalk: [value << 1 bitAnd: (1 << bits) - 1])]) ifTrue: 
+			[^value].
+		 ^self primitiveFail].
+	^negative
+		ifTrue: [0 - value]
+		ifFalse: [value]
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> sizeFieldOfAlien: alienObj [
+	"Answer the first field of alienObj which is assumed to be an Alien of at least 8 bytes"
+	<inline: true>
+	^self longAt: alienObj + BaseHeaderSize
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> sizeOfAlienData: oop [
+	"Answer the start of the Alien's data or fail if oop is not an Alien."
+	<api>
+	<returnTypeC: #usqInt>
+	| size |
+	(self is: oop KindOfClass: (objectMemory splObj: ClassAlien)) ifFalse:
+		[self primitiveFailFor: PrimErrBadArgument.
+		 ^0].
+	size := self sizeFieldOfAlien: oop.
+	^size abs
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> startOfAlienData: oop [
+	"Answer the start of the Alien's data or fail if oop is not an Alien."
+	<api>
+	<returnTypeC: #'void *'>
+	(self is: oop KindOfClass: (objectMemory splObj: ClassAlien)) ifFalse:
+		[self primitiveFailFor: PrimErrBadArgument.
+		 ^0].
+	^self cCoerceSimple: ((self sizeFieldOfAlien: oop) > 0
+						 	ifTrue: [oop + BaseHeaderSize + BytesPerOop]
+							ifFalse: [self longAt: oop + BaseHeaderSize + BytesPerOop])
+			to: #'void *'
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> success: successBoolean [
+	"Set the state of the primitive failure code/success flag, iff successBoolean
+	 is false. If primFailCode is non-zero a primitive has failed.  If primFailCode
+	 is greater than one then its value indicates the reason for failure."
+
+	"Use returnTypeC: #sqInt because that's the way it is defined in sq.h.
+	 Use no explicit return so that Slang doesn't fail an inlin ingtype-check when
+	 a primitive with return type void uses ^self success: false to exit."
+	<returnTypeC: #sqInt>
+	<inline: true>
+	successBoolean ifFalse:
+		["Don't overwrite an error code that has already been set."
+		 primFailCode == 0 ifTrue:
+			[primFailCode := 1]]
+]
+
+{ #category : #'primitive support' }
+InterpreterPrimitives >> successful [
+	"Answer the state of the primitive failure code/success flag.  If
+	 primFailCode is non-zero a primitive has failed.  If primFailCode
+	 is greater than one then its value indicates the reason for failure."
+	<inline: true>
+	^primFailCode == 0
 ]

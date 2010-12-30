@@ -12,7 +12,7 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 	(rcvrOrNil notNil
 	and: [rcvrOrNil isVariable
 	and: [rcvrOrNil name = 'super']]) ifTrue:
-		[^self superExpansionNodesIn: aTMethod].
+		[^aTMethod superExpansionNodeFor: selector key].
 	sel := (selector isSymbol) ifTrue: [selector] ifFalse: [selector key].
 	(sel = #cCode:inSmalltalk: "extracting here rather than in translation allows inlining in the block."
 	and: [arguments first isBlockNode]) ifTrue:
@@ -35,13 +35,4 @@ MessageNode >> asTranslatorNodeIn: aTMethod [
 		setSelector: sel
 		receiver: rcvrOrNil
 		arguments: args
-]
-
-{ #category : #'*VMMaker-C translation' }
-MessageNode >> superExpansionNodesIn: aTMethod [
-	(selector key = aTMethod selector
-	 and: [(arguments allSatisfy: [:arg| arg isTemp and: [arg isArg]])
-	 and: [(arguments collect: [:ea| ea name]) hasEqualElements: aTMethod args]]) ifFalse:
-		[self error: 'can only send to super with same selector and argument names'].
-	^aTMethod superExpansionNode
 ]

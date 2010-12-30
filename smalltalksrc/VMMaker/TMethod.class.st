@@ -74,6 +74,14 @@ TMethod >> allCalls [
 	^parseTree allCalls
 ]
 
+{ #category : #accessing }
+TMethod >> allLocals [
+	"The merge of locals and declarations (don't ask)"
+
+	^(declarations keys asSet reject: [:k| (declarations at: k) == #implicit])
+		addAll: locals; yourself
+]
+
 { #category : #inlining }
 TMethod >> argAssignmentsFor: meth args: argList in: aCodeGen [
 	"Return a collection of assignment nodes that assign the given argument expressions to the formal parameter variables of the given method."
@@ -102,21 +110,26 @@ TMethod >> argConversionExprFor: varName stackIndex: stackIndex [
 	primitive argument at the given stack offset."
 	| exprList decl stmtList |
 	exprList := OrderedCollection new.
-	(declarations includesKey: varName)
-		ifTrue: 
-			[decl := declarations at: varName.
-			(decl includes: $*)
-				ifTrue: 
-					["array"
-					exprList add: varName , ' := ', self vmNameString, ' arrayValueOf: (', self vmNameString, ' stackValue: (' , stackIndex printString , '))'.
-					exprList add: varName , ' := ' , varName , ' - 1']
-				ifFalse: 
-					["must be a double"
-					(decl findString: 'double' startingAt: 1)
-						= 0 ifTrue: [self error: 'unsupported type declaration in a primitive method'].
-					exprList add: varName , ' := ', self vmNameString, ' stackFloatValue: ' , stackIndex printString]]
-		ifFalse: ["undeclared variables are taken to be integer"
-			exprList add: varName , ' := ', self vmNameString, ' stackIntegerValue: ' , stackIndex printString].
+	(declarations includesKey: varName) ifTrue:[
+		decl := declarations at: varName.
+		(decl includes: $*) ifTrue:["array"
+			(decl includesSubString: 'char') ifTrue:[ | expr |
+				expr := '(interpreterProxy isBytes: (interpreterProxy stackValue: (stackIndex))) ifFalse:[^interpreterProxy primitiveFail].'.
+				expr := expr copyReplaceAll: 'interpreterProxy' with: self vmNameString.
+				expr := expr copyReplaceAll: 'stackIndex' with: stackIndex printString.
+				exprList add: expr.
+			].
+			exprList add: varName , ' := ', self vmNameString, ' arrayValueOf: (', self vmNameString, ' stackValue: (' , stackIndex printString , '))'.
+			exprList add: varName , ' := ' , varName , ' - 1'.
+		] ifFalse:["must be a double"
+			(decl findString: 'double' startingAt: 1) = 0 ifTrue: [
+				self error: 'unsupported type declaration in a primitive method'
+			].
+			exprList add: varName , ' := ', self vmNameString, ' stackFloatValue: ' , stackIndex printString.
+		]
+	] ifFalse: ["undeclared variables are taken to be integer"
+		exprList add: varName , ' := ', self vmNameString, ' stackIntegerValue: ' , stackIndex printString
+	].
 	stmtList := OrderedCollection new.
 	exprList do: [:e | stmtList addAll: (self statementsFor: e varName: varName)].
 	^ stmtList
@@ -183,6 +196,11 @@ TMethod >> buildSwitchStmt: aSendNode [
 		otherwiseOrNil: (aSendNode args at: 2 ifAbsent: [nil])
 ]
 
+{ #category : #transformations }
+TMethod >> cascadeVariableNumber [
+	^cascadeVariableNumber
+]
+
 { #category : #inlining }
 TMethod >> checkForCompleteness: stmtLists in: aCodeGen [
 	"Set the complete flag if none of the given statement list nodes contains further candidates for inlining."
@@ -225,6 +243,11 @@ TMethod >> comment [
 TMethod >> comment: aComment [
 
 	comment := aComment 
+]
+
+{ #category : #accessing }
+TMethod >> compiledMethod [
+	^definingClass >> selector
 ]
 
 { #category : #'inlining support' }
@@ -319,20 +342,26 @@ TMethod >> determineTypeFor: aTParseNode in: aCCodeGenerator [
 		[^(aCCodeGenerator methodNamed: aTParseNode selector)
 			ifNil: [#sqInt]
 			ifNotNil: [:method| method returnType]].
+	aTParseNode isAssignment ifTrue:
+		[^self determineTypeFor: aTParseNode expression in: aCCodeGenerator].
 	self error: 'don''t know how to extract return type from this kind of node'
 ]
 
 { #category : #'C code generation' }
 TMethod >> emitCCodeOn: aStream generator: aCodeGen [
-	"Emit C code for this method onto the given stream. All calls to inlined methods should already have been expanded."
+	"Emit C code for this method onto the given stream.
+	 All calls to inlined methods should already have been expanded."
 
 	aCodeGen currentMethod: self.
 	self emitCCommentOn: aStream.	"place method comment before function"
-	self emitCHeaderOn: aStream generator: aCodeGen.
+	aStream cr. 
+	self emitCFunctionPrototype: aStream generator: aCodeGen newlineBeforeName: true.
+	aStream cr; nextPut: ${.
+	self emitCLocalsOn: aStream generator: aCodeGen.
 	aCodeGen
 		pushScope: declarations
 		while: [parseTree emitCCodeOn: aStream level: 1 generator: aCodeGen].
-	aStream nextPut: $}; cr.
+	aStream nextPut: $}; cr
 ]
 
 { #category : #'C code generation' }
@@ -392,30 +421,29 @@ TMethod >> emitCFunctionPrototype: aStream generator: aCodeGen newlineBeforeName
 ]
 
 { #category : #'C code generation' }
-TMethod >> emitCHeaderOn: aStream generator: aCodeGen [
+TMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 	"Emit a C function header for this method onto the given stream."
 
 	| volatileVariables |
 	volatileVariables := properties includesKey: #volatile.
-	aStream cr. 
-	self emitCFunctionPrototype: aStream generator: aCodeGen newlineBeforeName: true.
-	aStream space; nextPut: ${; cr.
-	(self globalStructureBuildMethodHasFoo > 1) ifTrue:
+	self globalStructureBuildMethodHasFoo > 1 ifTrue:
 		[aStream
+			next: 3 put: Character space; "there's already an opening ${ on this line; see sender"
 			nextPutAll: (volatileVariables
 						ifTrue: ['DECL_MAYBE_VOLATILE_SQ_GLOBAL_STRUCT']
-						ifFalse: ['DECL_MAYBE_SQ_GLOBAL_STRUCT']);
-			cr].
-	(aCodeGen sortStrings: locals) do:
-		[ :var |
-		aStream next: 4 put: Character space.
-		volatileVariables ifTrue:
-			[aStream nextPutAll: #volatile; space].
-		aStream
-			nextPutAll: (self declarationAt: var);
-			nextPut: $;;
-			cr].
-	locals isEmpty ifFalse: [ aStream cr ]
+						ifFalse: ['DECL_MAYBE_SQ_GLOBAL_STRUCT'])].
+	aStream cr.
+	locals isEmpty ifFalse:
+		[(aCodeGen sortStrings: locals) do:
+			[ :var |
+			aStream next: 4 put: Character space.
+			volatileVariables ifTrue:
+				[aStream nextPutAll: #volatile; space].
+			aStream
+				nextPutAll: (self declarationAt: var);
+				nextPut: $;;
+				cr].
+		 aStream cr]
 ]
 
 { #category : #'C code generation' }
@@ -1150,7 +1178,7 @@ TMethod >> newCascadeTempFor: aTParseNode [
 	aTParseNode isLeaf ifFalse:
 		[declarations
 			at: varNode name
-			put: [:cg| self determineTypeFor: aTParseNode in: cg]].
+			put: [:tm :cg| tm determineTypeFor: aTParseNode in: cg]].
 	^varNode
 ]
 
@@ -1226,7 +1254,7 @@ TMethod >> prepareMethodIn: aCodeGen [
 				[self assert: ((varName beginsWith: 'cascade') and: [varName last isDigit]).
 				 locals add: varName.
 				 self declarationAt: varName
-					put: (decl value: aCodeGen), ' ', varName]]].
+					put: (decl value: self value: aCodeGen), ' ', varName]]].
 	replacements := IdentityDictionary new.
 	parseTree nodesDo:
 		[:node|
@@ -1767,13 +1795,15 @@ TMethod >> statementsListsForInlining [
 			[node selector = #cCode:inSmalltalk: ifTrue:
 				[node nodesDo:
 					[:inStNode| stmtLists remove: inStNode ifAbsent: []]].
+			 node selector = #cppIf:ifTrue:ifFalse: ifTrue:
+				[node args first nodesDo:
+					[:inCondNode| stmtLists remove: inCondNode ifAbsent: []]].
 			((node selector = #and:) or: [node selector = #or:]) ifTrue:
 				"Note: the PP 2.3 compiler produces two arg nodes for these selectors"
 				[stmtLists remove: node args first ifAbsent: [].
 				stmtLists remove: node args last ifAbsent: []].
-			((node selector = #ifTrue:) or: [node selector = #ifFalse:]) ifTrue:
-				[stmtLists remove: node receiver ifAbsent: []].
-			((node selector = #ifTrue:ifFalse:) or: [node selector = #ifFalse:ifTrue:]) ifTrue:
+			(#(	#ifTrue: #ifFalse: #ifTrue:ifFalse: #ifFalse:ifTrue:
+				#ifNil: #ifNotNil: #ifNil:ifNotNil: #ifNotNil:ifNil: ) includes: node selector) ifTrue:
 				[stmtLists remove: node receiver ifAbsent: []].
 			((node selector = #whileFalse:) or: [node selector = #whileTrue:]) ifTrue:
 				"Allow inlining if it is a [...] whileTrue/whileFalse.
@@ -1804,32 +1834,33 @@ TMethod >> static: aBoolean [
 ]
 
 { #category : #inlining }
-TMethod >> superExpansionNode [
-	"Answer the expansion of a super send of this method's selector.  A super send
-	 is restricted to a super send of this method's selector, /not/ an arbitrary selector.
-	 Merge the super expansion's properties into this method's properties."
-	(definingClass superclass lookupSelector: selector)
+TMethod >> superExpansionNodeFor: aSelector [
+	"Answer the expansion of a super send.  Merge the super expansion's
+	 locals, properties and comment into this method's properties."
+	(definingClass superclass lookupSelector: aSelector)
 		ifNil: [self error: 'superclass does not define super method']
 		ifNotNil:
-			[:superMethod| | superTMethod varMap |
+			[:superMethod| | superTMethod commonVars varMap |
 			superTMethod := superMethod methodNode asTranslationMethodOfClass: self class.
 			self mergePropertiesOfSuperMethod: superTMethod.
-			(varMap := superTMethod locals intersection: locals) notEmpty ifTrue:
-				[varMap := Dictionary new addAll: varMap; yourself.
-				 varMap keys do:
-					[:k| varMap at: k put: (superTMethod unusedNamePrefixedBy: k avoiding: locals)].
+			(commonVars := superTMethod allLocals intersection: self allLocals) notEmpty ifTrue:
+				[varMap := Dictionary new.
+				 commonVars do:
+					[:k| varMap at: k put: (superTMethod unusedNamePrefixedBy: k avoiding: self allLocals)].
 				 superTMethod renameVariablesUsing: varMap].
-			self assert: (superTMethod locals allSatisfy: [:var| (locals includes: var) not]).
+			self assert: (superTMethod allLocals allSatisfy: [:var| (self allLocals includes: var) not]).
 			locals addAllFirst: superTMethod locals.
-			superTMethod locals do:
-				[:var|
-				(superTMethod declarations includesKey: var) ifTrue:
-					[self declarationAt: var put: (superTMethod declarationAt: var)]].
+			superTMethod declarations keysAndValuesDo:
+				[:var :decl|
+				self declarationAt: var put: decl].
 			superTMethod comment ifNotNil:
 				[:superComment|
 				comment := comment
 								ifNil: [superComment]
 								ifNotNil: [superComment, comment]].
+			superTMethod cascadeVariableNumber ifNotNil:
+				[:scvn|
+				cascadeVariableNumber := cascadeVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
 			^superTMethod parseTree]
 ]
 

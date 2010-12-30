@@ -10,12 +10,6 @@ Class {
 }
 
 { #category : #'plugin generation' }
-Unsigned class >> ccg: cg emitLoadFor: aString from: anInteger on: aStream [
-
-	cg emitLoad: aString asUnsignedValueFrom: anInteger on: aStream
-]
-
-{ #category : #'plugin generation' }
 Unsigned class >> ccg: cg generateCoerceToOopFrom: aNode on: aStream [
 	"N.B.  The is used both for generation and simulation so answer the result (for interpretation)"
 	^cg generateCoerceToUnsignedObjectFrom: aNode on: aStream

@@ -80,7 +80,7 @@ CCodeGeneratorGlobalStructure >> emitCVariablesOn: aStream [
 	structure
 		nextPutAll: '#if SQ_USE_GLOBAL_STRUCT'; cr;
 		nextPutAll: '# define _iss /* define in-struct static as void */'; cr;
-		nextPutAll: 'struct foo {'; cr;
+		nextPutAll: 'static struct foo {'; cr;
 		nextPutAll: '#else'; cr;
 		nextPutAll: '# define _iss static'; cr;
 		nextPutAll: '#endif'; cr.

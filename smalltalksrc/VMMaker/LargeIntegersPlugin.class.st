@@ -105,9 +105,8 @@ LargeIntegersPlugin class >> moduleNameAndVersion [
 	^ self moduleName, ' ', self version
 ]
 
-{ #category : #'instance creation' }
+{ #category : #simulation }
 LargeIntegersPlugin class >> simulatorClass [
-	self flag: 'comment when this works!!'.
 	^SmartSyntaxPluginSimulator
 ]
 

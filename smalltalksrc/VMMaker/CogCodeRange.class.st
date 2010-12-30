@@ -2,10 +2,25 @@ Class {
 	#name : #CogCodeRange,
 	#superclass : #Interval,
 	#instVars : [
-		'startpc'
+		'startpc',
+		'cogMethod'
 	],
 	#category : #'VMMaker-JITSimulation'
 }
+
+{ #category : #accessing }
+CogCodeRange >> cogMethod [
+	"Answer the value of cogMethod"
+
+	^ cogMethod
+]
+
+{ #category : #accessing }
+CogCodeRange >> cogMethod: anObject [
+	"Set the value of cogMethod"
+
+	cogMethod := anObject
+]
 
 { #category : #printing }
 CogCodeRange >> printOn: aStream [

@@ -25,10 +25,17 @@ Class {
 	#category : #'VMMaker-Plugins-Alien'
 }
 
+{ #category : #translation }
+NewsqueakIA32ABIPlugin class >> ancilliaryStructClasses [
+	^{ VMCallbackContext. VMCallbackReturnValue }
+]
+
 { #category : #'translation to C' }
 NewsqueakIA32ABIPlugin class >> declareCVarsIn: aCCodeGen [
-		aCCodeGen addHeaderFile: '"ia32abi.h"'.
-		aCCodeGen addHeaderFile: '<setjmp.h>'
+	aCCodeGen
+		addHeaderFile: '<setjmp.h>';
+		addHeaderFile: '"vmCallback.h"';
+		addHeaderFile: '"ia32abi.h"'
 ]
 
 { #category : #accessing }
@@ -38,8 +45,7 @@ NewsqueakIA32ABIPlugin class >> hasHeaderFile [
 
 { #category : #'class initialization' }
 NewsqueakIA32ABIPlugin class >> initialize [
-	BaseHeaderSize := 4.
-	BytesPerOop := 4
+	BytesPerOop := BytesPerWord
 ]
 
 { #category : #accessing }
@@ -47,15 +53,26 @@ NewsqueakIA32ABIPlugin class >> moduleName [
 	^'IA32ABI'
 ]
 
+{ #category : #translation }
+NewsqueakIA32ABIPlugin class >> shouldGenerateTypedefFor: aStructClass [
+	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
+	^aStructClass ~~ VMCallbackContext
+]
+
+{ #category : #'simulation only' }
+NewsqueakIA32ABIPlugin class >> simulatorClass [
+	^NewsqueakIA32ABIPluginSimulator
+]
+
 { #category : #'private-support' }
 NewsqueakIA32ABIPlugin >> index: byteIndex length: length inRange: rcvr [
-	"Answer if the indices byteIndex to byteIndex + length - 1 are valid zero-relative indices into the rcvr."
+	"Answer if the indices byteIndex to byteIndex + length - 1 are valid zero-relative indices into the rcvr.
+	 N.B.  This code only works when translated because asUnisgnedInteger only works for non-negative
+	 values. Hence the override in NewsqueakIA32ABIPluginSimulator."
 	| dataSize |
 	<inline: true>
-	dataSize := self sizeField: rcvr.
-	^self
-		cCode: 'dataSize == 0 || (unsigned long)byteIndex + length <= abs(dataSize)'
-		inSmalltalk: [dataSize = 0 or: [byteIndex > 0 and: [byteIndex + length <= dataSize abs]]]
+	^(dataSize := self sizeField: rcvr) = 0
+	   or: [byteIndex asUnsignedInteger + length <= dataSize abs]
 ]
 
 { #category : #'private-support' }
@@ -325,11 +342,11 @@ NewsqueakIA32ABIPlugin >> primDoubleAt [
 	<export: true>
 	<var: #floatValue type:'double '>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 8 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	self cCode:'((long *)(&floatValue))[0] = ((long *)addr)[0]; ((long *)(&floatValue))[1] = ((long *)addr)[1]'
@@ -351,11 +368,11 @@ NewsqueakIA32ABIPlugin >> primDoubleAtPut [
 	(interpreterProxy isIntegerObject: valueOop)
 		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: valueOop) to:'double']
 		ifFalse:[floatValue := self cCoerce: (interpreterProxy floatValueOf: valueOop) to:'double'].
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 8 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -363,7 +380,6 @@ NewsqueakIA32ABIPlugin >> primDoubleAtPut [
 	self cCode:'((int*)addr)[0] = ((int*)(&floatValue))[0]'.
 	self cCode:'((int*)addr)[1] = ((int*)(&floatValue))[1]'.
 	interpreterProxy pop: 3 thenPush: valueOop
-
 ]
 
 { #category : #'primitives-accessing' }
@@ -375,11 +391,11 @@ NewsqueakIA32ABIPlugin >> primFloatAt [
 	<export: true>
 	<var: #floatValue type: 'float '>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	self cCode:'((long *)(&floatValue))[0] = ((long *)addr)[0]'
@@ -401,18 +417,17 @@ NewsqueakIA32ABIPlugin >> primFloatAtPut [
 	(interpreterProxy isIntegerObject: valueOop)
 		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: valueOop) to:'double']
 		ifFalse:[floatValue := self cCoerce: (interpreterProxy floatValueOf: valueOop) to:'double'].
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
 	addr := (self startOfData: rcvr) + byteOffset.
 	self cCode:'((long *)addr)[0] = ((long *)(&floatValue))[0]'.
 	interpreterProxy pop: 3 thenPush: valueOop
-
 ]
 
 { #category : #'primitives-memory management' }
@@ -522,25 +537,48 @@ NewsqueakIA32ABIPlugin >> primMalloc [
 ]
 
 { #category : #'primitives-callbacks' }
+NewsqueakIA32ABIPlugin >> primReturnAsFromContextThrough [
+	"Return a result from a callback to the callback's callee.  The primitive
+	has a signature of the form:
+		result <VMCallbackContext32/64>
+				primReturnAs: returnTypeCode <Integer>
+				FromContext: callbackContext <Context>
+			<primitive: 'primReturnAsFromContextThrough' error: errorCode module: 'IA32ABI'>"
+	<export: true>
+	(interpreterProxy
+		returnAs: (interpreterProxy stackValue: 1)
+		ThroughCallback: (self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 2))
+								to: #'VMCallbackContext *')
+		Context: (interpreterProxy stackValue: 0)) ifFalse:
+			[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
+	"NOTREACHED"
+]
+
+{ #category : #'primitives-callbacks' }
 NewsqueakIA32ABIPlugin >> primReturnFromContextThrough [
 	"Return a result from a callback to the callback's callee.  The primitive
 	has a signature of the form:
 		result <FFICallbackResult> primReturnFromContext: callbackContext <Context> through: jmpBuf <Integer>
 			<primitive: 'primReturnFromContextThrough' error: errorCode module: 'IA32ABI'>"
-	| jmpbuf context address |
 	<export: true>
-	jmpbuf := interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0).
-	(interpreterProxy failed or: [jmpbuf = 0]) ifTrue:
+	<legacy>
+	| vmCallbackContext vmCallbackReturnValue |
+	<var: #vmCallbackContext type: #'VMCallbackContext *'>
+	<var: #vmCallbackReturnValue type: #'VMCallbackReturnValue *'>
+	vmCallbackReturnValue := self cCoerceSimple: (self startOfData: (interpreterProxy stackValue: 2))
+								to: #'VMCallbackReturnValue *'.
+	vmCallbackContext := self cCoerceSimple: (interpreterProxy positive32BitValueOf: (interpreterProxy stackValue: 0))
+								to: #'VMCallbackContext *'.
+	(interpreterProxy failed or: [vmCallbackContext = 0]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	context := interpreterProxy stackValue: 1.
-	"N.B.  Once reestablishContextPriorToCallback: has run the stack for this primitive can
-	 no longer be accessed, since the current context is now that prior to the callback.
-	 So we must grab the address now before changing the active context."
-	address := self startOfData: (interpreterProxy stackValue: 2).
-	(interpreterProxy reestablishContextPriorToCallback: context) ifFalse:
+	(interpreterProxy reestablishContextPriorToCallback: (interpreterProxy stackValue: 1)) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	self cCode: 'longjmp((void *)jmpbuf, address)'
-		inSmalltalk: [self error: 'cannot simulate jongjmp'. address + 1]
+	self cCode: "C needs a typedef for structs to be assigned, but that implies a struct class for just one assignment."
+		[self mem: (self addressOf: vmCallbackContext rvs)
+			cp: (self addressOf: vmCallbackReturnValue crvrvs)
+			y: (self sizeof: vmCallbackContext rvs)]
+		inSmalltalk: [vmCallbackContext rvs: vmCallbackReturnValue crvrvs].
+	self long: vmCallbackContext trampoline jmp: vmCallbackReturnValue type + 1
 ]
 
 { #category : #'primitives-accessing' }
@@ -552,11 +590,11 @@ NewsqueakIA32ABIPlugin >> primSignedByteAt [
 	<export: true>
 	<var: #value type: 'signed char '>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 1 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	value := self byteAt: addr.
@@ -573,14 +611,14 @@ NewsqueakIA32ABIPlugin >> primSignedByteAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	(interpreterProxy failed
 	or: [value < -128
 	or: [value > 127]]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 1 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -597,11 +635,11 @@ NewsqueakIA32ABIPlugin >> primSignedLongAt [
 	| byteOffset rcvr addr value valueOop |
 	<export: true>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	value := self longAt: addr.
@@ -618,12 +656,12 @@ NewsqueakIA32ABIPlugin >> primSignedLongAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -644,11 +682,11 @@ NewsqueakIA32ABIPlugin >> primSignedLongLongAt [
 
 	signedlonglongvaluePtr := 0.
 	self touch: signedlonglongvaluePtr.
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 8 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	signedlonglongvaluePtr := self cCoerce: addr to: 'long long*'.
@@ -670,13 +708,13 @@ NewsqueakIA32ABIPlugin >> primSignedLongLongAtPut [
 	signedlonglongvaluePtr := 0.
 	self touch: signedlonglongvaluePtr.
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	signedlonglongvalue := interpreterProxy signed64BitValueOf: valueOop.
 	self touch: signedlonglongvalue.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 8 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -695,11 +733,11 @@ NewsqueakIA32ABIPlugin >> primSignedShortAt [
 	<export: true>
 	<var: #value type: 'short '>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 2 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	value := self shortAt: addr.
@@ -716,14 +754,14 @@ NewsqueakIA32ABIPlugin >> primSignedShortAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy signed32BitValueOf: valueOop.
 	(interpreterProxy failed
 	or: [value < -32768
 	or: [value > 32767]]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 2 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -777,11 +815,11 @@ NewsqueakIA32ABIPlugin >> primStrlenFromStartIndex [
 	<export: true>
 	<var: #ptr type: 'char *'>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 1 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	limit := self sizeField: rcvr.
 	ptr := self cCoerce: ((self startOfData: rcvr withSize: limit) + byteOffset) to: 'char *'.
@@ -806,11 +844,11 @@ NewsqueakIA32ABIPlugin >> primStrlenThroughPointerAtIndex [
 	<export: true>
 	<var: #ptr type: 'char *'>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	ptr := self cCoerce: (self longAt: addr) to: 'char *'.
@@ -840,11 +878,11 @@ NewsqueakIA32ABIPlugin >> primUnsignedByteAt [
 	<export: true>
 	<var: #value type: 'unsigned char '>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 1 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	value := self byteAt: addr.
@@ -861,13 +899,13 @@ NewsqueakIA32ABIPlugin >> primUnsignedByteAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	(interpreterProxy failed
 	or: [value > 255]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 1 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 1 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -884,11 +922,11 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongAt [
 	| byteOffset rcvr addr value valueOop |
 	<export: true>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	value := self longAt: addr.
@@ -905,12 +943,12 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 4 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 4 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -931,11 +969,11 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongLongAt [
 
 	unsignedlonglongvaluePtr := 0.
 	self touch: unsignedlonglongvaluePtr.
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 8 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	unsignedlonglongvaluePtr := self cCoerce: addr to: 'unsigned long long*'.
@@ -958,13 +996,13 @@ NewsqueakIA32ABIPlugin >> primUnsignedLongLongAtPut [
 	self touch: unsignedlonglongvaluePtr.
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	unsignedlonglongvalue := interpreterProxy positive64BitValueOf: valueOop.
 	self touch: unsignedlonglongvalue.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 8 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 8 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -983,11 +1021,11 @@ NewsqueakIA32ABIPlugin >> primUnsignedShortAt [
 	<export: true>
 	<var: #value type: 'unsigned short'>
 
-	byteOffset := interpreterProxy stackIntegerValue: 0.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 0) - 1.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 2 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	addr := (self startOfData: rcvr) + byteOffset.
 	value := self shortAt: addr.
@@ -1004,13 +1042,13 @@ NewsqueakIA32ABIPlugin >> primUnsignedShortAtPut [
 	<export: true>
 
 	valueOop := interpreterProxy stackValue: 0.
-	byteOffset := interpreterProxy stackIntegerValue: 1.
+	byteOffset := (interpreterProxy stackPositiveMachineIntegerValue: 1) - 1.
 	rcvr := interpreterProxy stackObjectValue: 2.
 	value := interpreterProxy positive32BitValueOf: valueOop.
 	(interpreterProxy failed
 	or: [value > 65535]) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrBadArgument].
-	(self index: (byteOffset := byteOffset - 1) length: 2 inRange: rcvr) ifFalse:
+	(self index: byteOffset length: 2 inRange: rcvr) ifFalse:
 		[^interpreterProxy primitiveFailFor: PrimErrBadIndex].
 	(interpreterProxy internalIsImmutable: rcvr) ifTrue:
 		[^interpreterProxy primitiveFailFor: PrimErrNoModification].
@@ -1107,9 +1145,9 @@ NewsqueakIA32ABIPlugin >> startOfData: rcvr [ "<Alien oop> ^<Integer>"
 	"Answer the start of rcvr's data.  For direct aliens this is the address of
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
-	(self sizeField: rcvr) > 0
-	 	ifTrue: [^rcvr + BaseHeaderSize + BytesPerOop]
-		ifFalse: [^self longAt: rcvr + BaseHeaderSize + BytesPerOop]
+	^(self sizeField: rcvr) > 0
+	 	ifTrue: [rcvr + BaseHeaderSize + BytesPerOop]
+		ifFalse: [self longAt: rcvr + BaseHeaderSize + BytesPerOop]
 ]
 
 { #category : #'private-support' }
@@ -1117,7 +1155,7 @@ NewsqueakIA32ABIPlugin >> startOfData: rcvr "<Alien oop>" withSize: sizeField [ 
 	"Answer the start of rcvr's data.  For direct aliens this is the address of
 	 the second field.  For indirect and pointer aliens it is what the second field points to."
 	<inline: true>
-	sizeField > 0
-	 	ifTrue: [^rcvr + BaseHeaderSize + BytesPerOop]
-		ifFalse: [^self longAt: rcvr + BaseHeaderSize + BytesPerOop]
+	^sizeField > 0
+	 	ifTrue: [rcvr + BaseHeaderSize + BytesPerOop]
+		ifFalse: [self longAt: rcvr + BaseHeaderSize + BytesPerOop]
 ]

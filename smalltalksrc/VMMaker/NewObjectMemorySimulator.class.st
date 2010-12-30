@@ -68,6 +68,12 @@ NewObjectMemorySimulator >> capturePendingFinalizationSignals [
 	^coInterpreter capturePendingFinalizationSignals
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> checkedIntegerValueOf: intOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter checkedIntegerValueOf: intOop
+]
+
 { #category : #initialization }
 NewObjectMemorySimulator >> coInterpreter: aCoInterpreter [
 	coInterpreter := aCoInterpreter
@@ -164,7 +170,7 @@ NewObjectMemorySimulator >> ioLoadFunction: functionString From: pluginString [
 	^coInterpreter ioLoadFunction: functionString From: pluginString
 ]
 
-{ #category : #'system primitives' }
+{ #category : #'simulation only' }
 NewObjectMemorySimulator >> ioMicroMSecs [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter ioMicroMSecs
@@ -210,9 +216,9 @@ NewObjectMemorySimulator >> longAt: byteAddress [
 
 { #category : #'memory access' }
 NewObjectMemorySimulator >> longAt: byteAddress put: a32BitValue [
-	(byteAddress = 16r1896A50
+	"(byteAddress = 16r1896A50
 	and: [a32BitValue = 7]) ifTrue:
-		[self halt].
+		[self halt]."
 	"Note: Adjusted for Smalltalk's 1-based array indexing."
 	^memory at: (byteAddress // 4) + 1 put: a32BitValue
 ]
@@ -389,6 +395,12 @@ NewObjectMemorySimulator >> signalFinalization: oop [
 	^coInterpreter signalFinalization: oop
 ]
 
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> sqFileSize: file [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter sqFileSize: file
+]
+
 { #category : #'memory access' }
 NewObjectMemorySimulator >> sqGrowMemory: oldLimit By: delta [
 	| newMemory |
@@ -410,6 +422,12 @@ NewObjectMemorySimulator >> sqShrinkMemory: oldLimit By: delta [
 	coInterpreter transcript show: 'shrink memory from ', oldLimit printString, ' by ', delta printString, ' remember it doesn''t actually shrink in simulation'; cr.
 
 	^oldLimit
+]
+
+{ #category : #'simulation only' }
+NewObjectMemorySimulator >> stObject: objOop at: indexOop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter stObject: objOop at: indexOop
 ]
 
 { #category : #'simulation only' }

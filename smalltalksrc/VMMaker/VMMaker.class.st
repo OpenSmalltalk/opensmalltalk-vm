@@ -85,6 +85,7 @@ Class {
 		'logger',
 		'allFilesList',
 		'interpreterClassName',
+		'cogitClassName',
 		'is64BitVM'
 	],
 	#classVars : [
@@ -138,35 +139,34 @@ VMMaker class >> forPlatform: platformName [
 ]
 
 { #category : #utilities }
-VMMaker class >> generate: interpreterClass to: srcDirName excluding: exclusions [
+VMMaker class >> generate: interpreterClass and: cogitClass to: srcDirName platformDir: platDirName excluding: exclusions [
 	"Generate the VM to the given target directory. Exclude plugins in pluginList.
-	Example:
-		VMMaker
+	 Example:
+		(VMMaker
 			generate: CoInterpreter
+			and: SimpleStackBasedCogit
 			to: (FileDirectory default pathFromURI: '../src')
+			platformDir: (FileDirectory default pathFromURI: '../platforms')
 			excluding:#(
 				BrokenPlugin DShowVideoDecoderPlugin IA32ABIPluginSimulator
 				NewsqueakIABIPlugin NewsqueakIABIPluginAttic
 				QuicktimePlugin QVideoCodecPlugin QwaqMediaPlugin
 				SlangTestPlugin TestOSAPlugin ThreadedFFIPlugin 
 				Win32OSProcessPlugin
-			).
-	"
-	| maker |
-	maker := self forPlatform: 'Cross'.
-	maker sourceDirectoryName: srcDirName.
-	maker interpreterClassName: interpreterClass name.
-	maker externalModules addAll: 
-		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
-	maker generateEntire.
-
+			))"
+	(self
+		makerFor: interpreterClass
+		and: cogitClass
+		to: srcDirName
+		platformDir: platDirName
+		excluding: exclusions) generateEntire
 ]
 
 { #category : #utilities }
 VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirName excluding: exclusions [
 	"Generate the VM to the given target directory. Exclude plugins in pluginList.
-	Example:
-		VMMaker
+	 Example:
+		(VMMaker
 			generate: CoInterpreter
 			to: (FileDirectory default pathFromURI: '../src')
 			platformDir: (FileDirectory default pathFromURI: '../platforms')
@@ -176,9 +176,8 @@ VMMaker class >> generate: interpreterClass to: srcDirName platformDir: platDirN
 				QuicktimePlugin QVideoCodecPlugin QwaqMediaPlugin
 				SlangTestPlugin TestOSAPlugin ThreadedFFIPlugin 
 				Win32OSProcessPlugin
-			).
-	"
-	(self makerFor: interpreterClass to: srcDirName platformDir: platDirName excluding: exclusions) generateEntire
+			))."
+	(self makerFor: interpreterClass and: nil to: srcDirName platformDir: platDirName excluding: exclusions) generateEntire
 ]
 
 { #category : #initialisation }
@@ -204,11 +203,12 @@ VMMaker class >> machinesDirName [
 ]
 
 { #category : #utilities }
-VMMaker class >> makerFor: interpreterClass to: srcDirName platformDir: platDirName excluding: exclusions [
+VMMaker class >> makerFor: interpreterClass and: cogitClassOrNil to: srcDirName platformDir: platDirName excluding: exclusions [
 	"Initialize a VMMaker to generate the VM to the given target directory. Exclude plugins in pluginList.
 	Example:
 		(VMMaker
 			makerFor: CoInterpreter
+			and: SimpleStackBasedCogit
 			to: (FileDirectory default pathFromURI: '../src')
 			platformDir: (FileDirectory default pathFromURI: '../platforms')
 			excluding:#(
@@ -223,7 +223,8 @@ VMMaker class >> makerFor: interpreterClass to: srcDirName platformDir: platDirN
 	maker := self forPlatform: 'Cross'.
 	maker sourceDirectoryName: srcDirName.
 	maker platformRootDirectoryName: platDirName.
-	maker interpreterClassName: interpreterClass name.
+	maker interpreterClass: interpreterClass.
+	cogitClassOrNil ifNotNil: [maker cogitClass: cogitClassOrNil].
 	maker externalModules addAll: 
 		(maker availablePlugins reject:[:plugin| exclusions includes: plugin]).
 	^maker
@@ -276,21 +277,27 @@ VMMaker >> availablePlugins [
 VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
 
-	| cg cogitClass cogitClasses |
+	| cg |
 	cg := self createCogitCodeGenerator.
 
-	cg vmClass: (cogitClass := self interpreterClass cogitClass).
-	cogitClasses := OrderedCollection new.
-	[cogitClasses addFirst: cogitClass.
-	 cogitClass ~~ Cogit
-	 and: [cogitClass inheritsFrom: Cogit]] whileTrue:
+	[| cogitClass cogitClasses |
+	 cg vmClass: (cogitClass := self cogitClass).
+	 cogitClasses := OrderedCollection new.
+	 [cogitClasses addFirst: cogitClass.
+	  cogitClass ~~ Cogit
+	  and: [cogitClass inheritsFrom: Cogit]] whileTrue:
 		[cogitClass := cogitClass superclass].
-	cogitClasses addFirst: VMClass.
-	cogitClasses addAllLast: self interpreterClass cogitClass ancilliaryClasses.
-	cogitClasses, { self interpreterClass }  do: [:cgc| cgc initialize].
-	cogitClasses do: [:cgc| cg addClass: cgc].
-	(cg structClassesForTranslationClasses: cogitClasses) do:
-		[:structClasss| cg addStructClass: structClasss].
+	 cogitClasses addFirst: VMClass.
+	 cogitClasses addAllLast: self cogitClass ancilliaryClasses.
+	 cogitClasses, { self interpreterClass }  do: [:cgc| cgc initialize].
+	 cogitClasses do: [:cgc| cg addClass: cgc].
+	 (cg structClassesForTranslationClasses: cogitClasses) do:
+		[:structClass| cg addStructClass: structClass]]
+		on: Notification
+		do: [:ex|
+			ex tag == #getVMMaker
+				ifTrue: [ex resume: self]
+				ifFalse: [ex pass]].
 
 	^cg
 ]
@@ -348,6 +355,19 @@ VMMaker >> canSupportPlugin: pluginClassName [
 		on: VMMakerException
 		do: [^ false].
 	^ true
+]
+
+{ #category : #'generate sources' }
+VMMaker >> cogitClass [
+	^(cogitClassName
+		ifNil: [self interpreterClass cogitClass]
+		ifNotNil: [Smalltalk classNamed: cogitClassName]) translationClass
+]
+
+{ #category : #'generate sources' }
+VMMaker >> cogitClass: aClass [
+
+	cogitClassName := aClass name asString
 ]
 
 { #category : #'objects from disk' }
@@ -569,7 +589,7 @@ VMMaker >> generateCogitFile [
 	self interpreterClass needsCogit ifFalse: [^nil].
 	self needsToRegenerateCogitFile ifFalse: [^nil].
 	cg := self buildCodeGeneratorForCogit.
-	cogitClass := self interpreterClass cogitClass.
+	cogitClass := self cogitClass.
 	cg removeUnneededBuiltins.
 	cg vmClass preGenerationHook: cg.
 	cg storeCodeOnFile: (self sourceFilePathFor: cogitClass sourceFileName) doInlining: cogitClass doInlining.
@@ -704,7 +724,7 @@ VMMaker >> generateInterpreterFile [
 	self interpreterClass additionalHeadersDo:
 		[:headerName :headerContents| | filePath |
 		 filePath := self coreVMDirectory fullNameFor: headerName.
-		 (self needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
+		 (cg needToGenerateHeader: headerName file: filePath contents: headerContents) ifTrue:
 			 [cg storeHeaderOnFile: filePath contents: headerContents]].
 	self interpreterClass apiExportHeaderName ifNotNil:
 		[cg storeAPIExportHeader: self interpreterClass apiExportHeaderName
@@ -721,7 +741,6 @@ VMMaker >> generateMainVM [
 	self generateCogitFile;
 		generateInterpreterFile;
 		processFilesForCoreVM;
-		processAssortedFiles;
 		generateInternalPlugins;
 		generateExportsFile
 ]
@@ -735,7 +754,8 @@ VMMaker >> initialize [
 	externalPlugins := SortedCollection new.
 	platformName := self class machinesDirName.
 	is64BitVM := Smalltalk wordSize == 8.
-	interpreterClassName := Interpreter name
+	interpreterClassName := Interpreter name.
+	VMStructType voidStructTypeCache
 ]
 
 { #category : #initialize }
@@ -854,12 +874,11 @@ VMMaker >> interpreterClassName [
 
 { #category : #'generate sources' }
 VMMaker >> interpreterClassName: aString [
-
 	| tmp |
-	interpreterClassName := aString.
 	tmp := Smalltalk at: aString asSymbol ifAbsent: [nil].
-	(tmp isNil or: [tmp isBehavior not]) ifTrue:
-		[self invalidClassName].
+	tmp isBehavior
+		ifTrue: [self interpreterClass: tmp]
+		ifFalse: [self invalidClassName]
 ]
 
 { #category : #'generate sources' }
@@ -1008,7 +1027,7 @@ VMMaker >> needsToRegenerateCogitFile [
 "check the timestamp for the relevant classes and then the timestamp for the interp.c file if it already exists. Return true if the file needs regenerating, false if not"
 
 	| cogitClass cogitClasses tStamp fstat |
-	cogitClass := self interpreterClass cogitClass.
+	cogitClass := self cogitClass.
 	cogitClasses := cogitClass withAllSuperclasses copyUpThrough: Cogit.
 	cogitClasses addAllLast: cogitClass ancilliaryClasses.
 	tStamp := cogitClasses inject: 0 into: [:tS :cl| tS max: cl timeStamp].
@@ -1182,13 +1201,6 @@ VMMaker >> privateGenerateInternalPlugin: pluginName [
 				ifFalse: [ex pass]].
 	logger show: 'internal plugin ' , plugin name , ' generated as ' , plugin moduleName; cr.
 	self processFilesForInternalPlugin: plugin
-]
-
-{ #category : #'processing external files' }
-VMMaker >> processAssortedFiles [
-	"Here is where we get a chance to process any files needed as part of the make process; instructions, makefile fragments, resources etc.
-	The default is to copy any miscellaneous files/dirs from the cross-platformDirectory/misc/ToCopy, then from the platform specific directory/misc/ToCopy. You can put any tree structure you like under misc/ToCopy, should that be important to you."
-
 ]
 
 { #category : #'processing external files' }

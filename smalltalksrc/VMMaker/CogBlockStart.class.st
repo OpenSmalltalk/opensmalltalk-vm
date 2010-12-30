@@ -9,6 +9,7 @@ Class {
 		'fillInstruction',
 		'numArgs',
 		'numCopied',
+		'numInitialNils',
 		'startpc',
 		'entryLabel',
 		'stackCheckLabel',
@@ -110,6 +111,33 @@ CogBlockStart >> numCopied: anObject [
 ]
 
 { #category : #accessing }
+CogBlockStart >> numInitialNils [
+	"Answer the value of numInitialNils"
+
+	^ numInitialNils
+]
+
+{ #category : #accessing }
+CogBlockStart >> numInitialNils: anObject [
+	"Set the value of numInitialNils"
+
+	^numInitialNils := anObject
+]
+
+{ #category : #printing }
+CogBlockStart >> printStateOn: aStream [
+	<doNotGenerate> "Smalltalk-side only"
+	aStream
+		space; nextPut: $(;
+		nextPutAll: 'numArgs: '; print: numArgs;
+		nextPutAll: ' numCopied: '; print: numCopied;
+		nextPutAll: ' numInitialNils: '; print: numInitialNils;
+		nextPutAll: ' startpc: '; print: startpc;
+		nextPutAll: ' span: '; print: span;
+		nextPut: $)
+]
+
+{ #category : #accessing }
 CogBlockStart >> span [
 	"Answer the value of span"
 
@@ -134,7 +162,7 @@ CogBlockStart >> stackCheckLabel [
 CogBlockStart >> stackCheckLabel: anObject [
 	"Set the value of stackCheckLabel"
 
-	stackCheckLabel := anObject
+	^stackCheckLabel := anObject
 ]
 
 { #category : #accessing }

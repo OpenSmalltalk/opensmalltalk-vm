@@ -16,7 +16,7 @@ FloatMathPlugin class >> requiresCrossPlatformFiles [
 	^true
 ]
 
-{ #category : #'instance creation' }
+{ #category : #simulation }
 FloatMathPlugin class >> simulatorClass [
 	^FloatMathPluginSimulator
 ]

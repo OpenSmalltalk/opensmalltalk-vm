@@ -170,7 +170,7 @@ InterpreterProxy >> classSmallInteger [
 
 { #category : #'special classes' }
 InterpreterProxy >> classString [
-	^String
+	^ByteString
 ]
 
 { #category : #'FFI support' }
@@ -636,6 +636,14 @@ InterpreterProxy >> positive64BitValueOf: oop [
 		ifFalse:[^oop]
 ]
 
+{ #category : #converting }
+InterpreterProxy >> positiveMachineIntegerValueOf: oop [
+	oop isInteger ifFalse:[self error: 'Not an integer object'].
+	^oop < 0 
+		ifTrue: [self primitiveFail. 0]
+		ifFalse: [oop]
+]
+
 { #category : #'special objects' }
 InterpreterProxy >> primitiveErrorTable [
 	^Smalltalk primitiveErrorTable
@@ -754,6 +762,12 @@ InterpreterProxy >> signed64BitValueOf: oop [
 	^oop
 ]
 
+{ #category : #converting }
+InterpreterProxy >> signedMachineIntegerValueOf: oop [
+	oop isInteger ifFalse:[self error:'Not an integer object'].
+	^oop
+]
+
 { #category : #'object access' }
 InterpreterProxy >> sizeOfSTArrayFromCPrimitive: cPtr [
 	"Note: Only called by translated primitive code."
@@ -808,6 +822,16 @@ InterpreterProxy >> stackObjectValue: offset [
 	oop := self stackValue: offset.
 	(self isIntegerObject: oop) ifTrue: [self primitiveFail. ^ nil].
 	^oop
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> stackPositiveMachineIntegerValue: offset [
+	^self positiveMachineIntegerValueOf: (self stackValue: offset)
+]
+
+{ #category : #'stack access' }
+InterpreterProxy >> stackSignedMachineIntegerValue: offset [
+	^self signedMachineIntegerValueOf: (self stackValue: offset)
 ]
 
 { #category : #'stack access' }

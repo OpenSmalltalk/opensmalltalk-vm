@@ -89,9 +89,3 @@ BitBltSimulator >> srcLongAt: srcIndex [
 			ifTrue:[self error:'Out of bounds'].
 	^self long32At: srcIndex
 ]
-
-{ #category : #simulation }
-BitBltSimulator >> tableLookup: table at: index [
-
-	^ self long32At: (table + (index * 4))
-]

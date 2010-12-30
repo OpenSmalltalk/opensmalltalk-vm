@@ -62,19 +62,24 @@ CoInterpreterPrimitives >> primitiveEnterCriticalSection [
 	 process and answer false. If owned by the current process  answer true.   Otherwise
 	 suspend the process.  Answer if the receiver is owned by the current process."
 	| criticalSection owningProcessIndex owningProcess activeProc inInterpreter |
-	criticalSection := self stackTop.  "rcvr"
+	argumentCount > 0
+		ifTrue:
+			[criticalSection := self stackValue: 1.  "rcvr"
+			 activeProc := self stackTop]
+		ifFalse:
+			[criticalSection := self stackTop.  "rcvr"
+			 activeProc := self activeProcess].
 	owningProcessIndex := ExcessSignalsIndex. "CriticalSections are laid out like Semaphores"
 	owningProcess := objectMemory fetchPointer: owningProcessIndex ofObject: criticalSection.
-	activeProc := self activeProcess.
 	owningProcess = objectMemory nilObject ifTrue:
 		[objectMemory storePointer: owningProcessIndex
 			ofObject: criticalSection
 			withValue: activeProc.
-		 ^self pop: 1 thenPush: objectMemory falseObject].
+		 ^self pop: argumentCount + 1 thenPush: objectMemory falseObject].
 	owningProcess = activeProc ifTrue:
-		[^self pop: 1 thenPush: objectMemory trueObject].
+		[^self pop: argumentCount + 1 thenPush: objectMemory trueObject].
 	"Arrange to answer false (unowned) when the process is resumed."
-	self pop: 1 thenPush: objectMemory falseObject.
+	self pop: argumentCount + 1 thenPush: objectMemory falseObject.
 	"We're going to switch process, either to an interpreted frame or a machine
 	 code frame. To know whether to return or enter machine code we have to
 	 know from whence we came.  We could have come from the interpreter,
@@ -200,7 +205,7 @@ CoInterpreterPrimitives >> primitiveLongRunningPrimitiveSemaphore [
 	self voidLongRunningPrimitive: 'install'.
 	self pop: 1.
 	flushState ifTrue:
-		[self siglong: reenterInterpreter jmp: 1]
+		[self siglong: reenterInterpreter jmp: ReturnToInterpreter]
 ]
 
 { #category : #'indexing primitives' }
@@ -290,10 +295,10 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 			 (objectMemory fetchClassOfNonInt: sema) = (objectMemory splObj: ClassSemaphore) ifFalse:
 				[^self primitiveFail]].
 	profileSemaphore := sema.
-	"If we've switched pofiling on or off we must void machine code
-	 (and machine code pcs in contexts) since we will start or stop testing
-	 the profile clock in machine code primitive invocations, and so generate
-	 slightly different code from here on in."
+	"If we've switched profiling on or off we must void machine code
+	 (and machine code pcs in contexts) since we will start or stop
+	 testing the profile clock in machine code primitive invocations,
+	 and so generate slightly different code from here on in."
 	flushState ifTrue:
 		[self push: instructionPointer.
 		 activeContext := self voidVMStateForSnapshot.
@@ -304,7 +309,7 @@ CoInterpreterPrimitives >> primitiveProfileSemaphore [
 	profileProcess := profileMethod := objectMemory nilObject.
 	self pop: 1.
 	flushState ifTrue:
-		[self siglong: reenterInterpreter jmp: 1]
+		[self siglong: reenterInterpreter jmp: ReturnToInterpreter]
 ]
 
 { #category : #'process primitives' }
@@ -370,7 +375,7 @@ CoInterpreterPrimitives >> primitiveSnapshot [
 	 Override to jump to the interpreter because the machine code zone is now void."
 	<inline: false>
 	self snapshot: false.
-	self siglong: reenterInterpreter jmp: 1.
+	self siglong: reenterInterpreter jmp: ReturnToInterpreter
 	"NOTREACHED"
 ]
 
@@ -381,7 +386,7 @@ CoInterpreterPrimitives >> primitiveSnapshotEmbedded [
 	 Override to jump to the interpreter because the machine code zone is now void."
 	<inline: false>
 	self snapshot: true.
-	self siglong: reenterInterpreter jmp: 1.
+	self siglong: reenterInterpreter jmp: ReturnToInterpreter
 	"NOTREACHED"
 ]
 
@@ -507,7 +512,8 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 		["Need to walk the stack freeing stack pages and nilling contexts."
 		[currentCtx = aContextOrNil
 		 or: [currentCtx = objectMemory nilObject]] whileFalse:
-			[(self isMarriedOrWidowedContext: currentCtx)
+			[self assert: (self isContext: currentCtx).
+			 (self isMarriedOrWidowedContext: currentCtx)
 				ifTrue:
 					[theFP := self frameOfMarriedContext: currentCtx.
 					thePage := stackPages stackPageFor: theFP.
@@ -570,10 +576,8 @@ CoInterpreterPrimitives >> primitiveTerminateTo [
 									 "for a short time invariant is violated; assert follows"
 									 stackPages freeStackPageNoAssert: thePage]]]
 				ifFalse:
-					[self assert: (self isContext: currentCtx).
-					 nextCntx := objectMemory fetchPointer: SenderIndex ofObject: currentCtx.
-					 objectMemory storePointerUnchecked: SenderIndex ofObject: currentCtx withValue: objectMemory nilObject.
-					 objectMemory storePointerUnchecked: InstructionPointerIndex ofObject: currentCtx withValue: objectMemory nilObject.
+					[nextCntx := objectMemory fetchPointer: SenderIndex ofObject: currentCtx.
+					 self markContextAsDead: currentCtx.
 					 currentCtx := nextCntx]]].
 	self assert: stackPages pageListIsWellFormed.
 	(self isMarriedOrWidowedContext: thisCtx)
@@ -593,13 +597,11 @@ CoInterpreterPrimitives >> primitiveVoidVMState [
 
 	 Override to jump to the interpreter because the machine code zone is now void."
 	| activeContext |
-
 	self push: instructionPointer.
 	activeContext := self voidVMStateForSnapshot.
 	self marryContextInNewStackPageAndInitializeInterpreterRegisters: activeContext.
-	self siglong: reenterInterpreter jmp: 1.
+	self siglong: reenterInterpreter jmp: ReturnToInterpreter
 	"NOTREACHED"
-	^0
 ]
 
 { #category : #'process primitives' }

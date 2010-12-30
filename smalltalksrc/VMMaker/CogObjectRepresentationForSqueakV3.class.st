@@ -289,28 +289,8 @@ CogObjectRepresentationForSqueakV3 >> genGetSizeOf: sourceReg into: destReg form
 	^jumpNotIndexable
 ]
 
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: 1 R: aRegister.
-	^cogit JumpZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genJumpSmallIntegerInScratchReg: aRegister [
-	<returnTypeC: #'AbstractInstruction *'>
-	cogit AndCq: 1 R: aRegister.
-	^cogit JumpNonZero: 0
-]
-
-{ #category : #'compile abstract instructions' }
-CogObjectRepresentationForSqueakV3 >> genLoadSlot: index sourceReg: sourceReg destReg: destReg [
-	cogit MoveMw: index * BytesPerWord + BaseHeaderSize r: sourceReg R: destReg.
-	^0
-]
-
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genPrimitiveAt [
+CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveAt: retNoffset [
 	| jumpSI jumpNotSI jumpNotIndexable jumpBounds jumpFmtGt4 jumpFmtEq2 jumpFmtLt8 jumpLarge |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpSI type: #'AbstractInstruction *'>
@@ -323,18 +303,17 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveAt [
 	<var: #jumpLarge type: #'AbstractInstruction *'>
 	cogit MoveR: ReceiverResultReg R: TempReg.
 	jumpSI := self genJumpSmallIntegerInScratchReg: TempReg.
-	cogit
-		MoveMw: BytesPerWord r: SPReg R: TempReg;
-		MoveR: TempReg R: Arg0Reg.
+	cogit MoveR: Arg0Reg R: TempReg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallIntegerInScratchReg: TempReg.
 	jumpNotIndexable := self
 							genGetSizeOf: ReceiverResultReg
 							into: ClassReg
 							formatReg: SendNumArgsReg
 							scratchReg: TempReg.
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg0Reg.
-	cogit SubCq: 1 R: Arg0Reg.
-	cogit CmpR: ClassReg R: Arg0Reg.
+	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	cogit SubCq: 1 R: Arg1Reg.
+	cogit CmpR: ClassReg R: Arg1Reg.
 	jumpBounds := cogit JumpAboveOrEqual: 0.
 	"This is tedious.  Because of register pressure on x86 (and the baroque
 	 complexity of the size computation) we have to recompute the format
@@ -351,33 +330,33 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveAt [
 	jumpFmtGt4 := cogit JumpGreater: 0.
 	cogit CmpCq: 2 R: ClassReg.	"Common case, e.g. Array, has format = 2"
 	jumpFmtEq2 := cogit JumpZero: 0.
-	cogit AddR: SendNumArgsReg R: Arg0Reg. "Add fixed fields to index"
+	cogit AddR: SendNumArgsReg R: Arg1Reg. "Add fixed fields to index"
 	jumpFmtEq2 jmpTarget: cogit Label.
 	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
-		AddCq: BaseHeaderSize / BytesPerWord R: Arg0Reg;
-		MoveXwr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg;
-		RetN: BytesPerWord * 2.
+		AddCq: BaseHeaderSize / BytesPerWord R: Arg1Reg;
+		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
+		RetN: retNoffset.
 	jumpFmtGt4 jmpTarget: cogit Label.
 	cogit CmpCq: 8 R: ClassReg.
 	jumpFmtLt8 := cogit JumpLess: 0.
 	cogit
-		AddCq: BaseHeaderSize R: Arg0Reg;
-		MoveXbr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg.
+		AddCq: BaseHeaderSize R: Arg1Reg;
+		MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg.
 	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
-	cogit RetN: BytesPerWord * 2.
+	cogit RetN: retNoffset.
 	jumpFmtLt8 jmpTarget: cogit Label.
 	self assert: BytesPerWord = 4. "documenting my laziness"
 	cogit "Too lazy [knackered, more like. ed.] to define index with displacement addressing right now"
-		AddCq: BaseHeaderSize / BytesPerWord R: Arg0Reg;
-		MoveXwr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg;
+		AddCq: BaseHeaderSize / BytesPerWord R: Arg1Reg;
+		MoveXwr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
 		CmpCq: 16r3FFFFFFF R: ReceiverResultReg.
 	jumpLarge := cogit JumpAbove: 0.
 	self genConvertIntegerToSmallIntegerInScratchReg: ReceiverResultReg.
-	cogit RetN: BytesPerWord * 2.
+	cogit RetN: retNoffset.
 	jumpLarge jmpTarget: (cogit CallRT: cogit cePositive32BitIntegerTrampoline).
 	cogit
 		MoveR: TempReg R: ReceiverResultReg;
-		RetN: BytesPerWord * 2.
+		RetN: retNoffset.
 	jumpSI jmpTarget:
 	(jumpNotSI jmpTarget:
 	(jumpNotIndexable jmpTarget:
@@ -387,7 +366,7 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveAt [
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genPrimitiveSize [
+CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveSize: retNoffset [
 	| jumpNotSI jumpNotIndexable |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpNotSI type: #'AbstractInstruction *'>
@@ -402,13 +381,13 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveSize [
 	self genConvertIntegerToSmallIntegerInScratchReg: ClassReg.
 	cogit MoveR: ClassReg R: ReceiverResultReg.
 	self flag: 'currently caller pushes result'.
-	cogit RetN: BytesPerWord.
+	cogit RetN: retNoffset.
 	jumpNotSI jmpTarget: (jumpNotIndexable jmpTarget: cogit Label).
 	^0
 ]
 
 { #category : #'primitive generators' }
-CogObjectRepresentationForSqueakV3 >> genPrimitiveStringAt [
+CogObjectRepresentationForSqueakV3 >> genInnerPrimitiveStringAt: retNOffset [
 	| jumpSI jumpNotSI jumpNotByteIndexable jumpBounds jumpShortHeader jumpSkip |
 	"c.f. StackInterpreter>>stSizeOf: lengthOf:baseHeader:format: fixedFieldsOf:format:length:"
 	<var: #jumpSI type: #'AbstractInstruction *'>
@@ -419,9 +398,8 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveStringAt [
 	<var: #jumpSkip type: #'AbstractInstruction *'>
 	cogit MoveR: ReceiverResultReg R: TempReg.
 	jumpSI := self genJumpSmallIntegerInScratchReg: TempReg.
-	cogit
-		MoveMw: BytesPerWord r: SPReg R: TempReg;
-		MoveR: TempReg R: Arg0Reg.
+	cogit MoveR: Arg0Reg R: TempReg.
+	cogit MoveR: Arg0Reg R: Arg1Reg.
 	jumpNotSI := self genJumpNotSmallIntegerInScratchReg: TempReg.
 	cogit
 		MoveMw: 0 r: ReceiverResultReg R: TempReg; "self baseHeader: receiver"
@@ -446,17 +424,17 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveStringAt [
 	jumpShortHeader jmpTarget: (cogit AndCq: SizeMask R: ClassReg).	"hdr bitAnd: SizeMask"
 	jumpSkip jmpTarget: (cogit SubCq: BaseHeaderSize R: ClassReg). "sz - BaseHeaderSize"
 	cogit SubR: SendNumArgsReg R: ClassReg. "sz - (fmt bitAnd: 3)"
-	self genConvertSmallIntegerToIntegerInScratchReg: Arg0Reg.
-	cogit SubCq: 1 R: Arg0Reg.
-	cogit CmpR: ClassReg R: Arg0Reg.
+	self genConvertSmallIntegerToIntegerInScratchReg: Arg1Reg.
+	cogit SubCq: 1 R: Arg1Reg.
+	cogit CmpR: ClassReg R: Arg1Reg.
 	jumpBounds := cogit JumpAboveOrEqual: 0.
-	cogit AddCq: BaseHeaderSize R: Arg0Reg.
-	cogit annotate: (cogit MoveCw: objectMemory characterTable R: Arg1Reg)
+	cogit AddCq: BaseHeaderSize R: Arg1Reg.
+	cogit annotate: (cogit MoveCw: objectMemory characterTable R: Arg0Reg)
 		objRef: objectMemory characterTable.
-	cogit MoveXbr: Arg0Reg R: ReceiverResultReg R: ReceiverResultReg;
+	cogit MoveXbr: Arg1Reg R: ReceiverResultReg R: ReceiverResultReg;
 		AddCq: BaseHeaderSize / BytesPerWord R: ReceiverResultReg.
-	cogit MoveXwr: ReceiverResultReg R: Arg1Reg R: ReceiverResultReg.
-	cogit RetN: BytesPerWord * 2.
+	cogit MoveXwr: ReceiverResultReg R: Arg0Reg R: ReceiverResultReg.
+	cogit RetN: retNOffset.
 	jumpSI jmpTarget:
 	(jumpNotSI jmpTarget:
 	(jumpNotByteIndexable jmpTarget:
@@ -466,9 +444,34 @@ CogObjectRepresentationForSqueakV3 >> genPrimitiveStringAt [
 ]
 
 { #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpNotSmallIntegerInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: 1 R: aRegister.
+	^cogit JumpZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genJumpSmallIntegerInScratchReg: aRegister [
+	<returnTypeC: #'AbstractInstruction *'>
+	cogit AndCq: 1 R: aRegister.
+	^cogit JumpNonZero: 0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genLoadSlot: index sourceReg: sourceReg destReg: destReg [
+	cogit MoveMw: index * BytesPerWord + BaseHeaderSize r: sourceReg R: destReg.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 CogObjectRepresentationForSqueakV3 >> genRemoveSmallIntegerTagsInScratchReg: scratchReg [ 
 	cogit SubCq: 1 R: scratchReg.
 	^0
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genSSPushSlot: index reg: baseReg [
+	^cogit ssPushBase: baseReg offset: (self slotOffsetOfInstVarIndex: index)
 ]
 
 { #category : #'compile abstract instructions' }
@@ -490,7 +493,13 @@ CogObjectRepresentationForSqueakV3 >> genStoreCheckTrampoline [
 		genTrampolineFor: #ceStoreCheck: asSymbol
 		called: 'ceStoreCheckTrampoline'
 		arg: ReceiverResultReg
-		result: TempReg
+		result: cogit returnRegForStoreCheck
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> genStoreImmediateInSourceReg: sourceReg slotIndex: index destReg: destReg [
+	cogit MoveR: sourceReg Mw: index * BytesPerWord + BaseHeaderSize r: destReg.
+	^0
 ]
 
 { #category : #'compile abstract instructions' }
@@ -595,6 +604,16 @@ CogObjectRepresentationForSqueakV3 >> inlineCacheTagIsYoung: cacheTag [
 	^objectMemory isYoung: cacheTag
 ]
 
+{ #category : #'object representation' }
+CogObjectRepresentationForSqueakV3 >> isImmediate: anOop [
+	^objectMemory isIntegerObject: anOop
+]
+
+{ #category : #'object representation' }
+CogObjectRepresentationForSqueakV3 >> isSmallIntegerTagNonZero [
+	^true
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> markAndTraceLiteral: literal [
 	(self couldBeObject: literal) ifTrue:
@@ -638,5 +657,11 @@ CogObjectRepresentationForSqueakV3 >> remapOop: oop [
 CogObjectRepresentationForSqueakV3 >> shouldAnnotateObjectReference: anOop [
 	"self assert: ((objectMemory isIntegerObject: anOop)
 				or: [objectMemory addressCouldBeObj: anOop])."
-	^objectMemory isNonIntegerObject: anOop
+	^(objectMemory isNonIntegerObject: anOop)
+	  and: [anOop > objectMemory trueObject]
+]
+
+{ #category : #'compile abstract instructions' }
+CogObjectRepresentationForSqueakV3 >> slotOffsetOfInstVarIndex: index [
+	^index * BytesPerWord + BaseHeaderSize
 ]

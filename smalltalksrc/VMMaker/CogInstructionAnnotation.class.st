@@ -58,9 +58,8 @@ CogInstructionAnnotation >> instruction: anObject [
 ]
 
 { #category : #printing }
-CogInstructionAnnotation >> printOn: aStream [
+CogInstructionAnnotation >> printStateOn: aStream [
 	<doNotGenerate>
-	super printOn: aStream.
 	annotation ifNotNil:
 		[aStream
 			space; nextPut: $(;
