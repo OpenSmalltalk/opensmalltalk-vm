@@ -43,19 +43,6 @@ InterpreterStackPages class >> declareCVarsIn: aCCodeGenerator [
 		removeMethodForSelector: #memIndexFor:
 ]
 
-{ #category : #translation }
-InterpreterStackPages class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Hook to allow subclasses to interact with the code generation
-	 immediately before having their code assimilated.  e.g. a class
-	 might wish to remove methods it is about to override."
-	^self
-]
-
-{ #category : #translation }
-InterpreterStackPages class >> requiredMethodNames [
-	^#()
-]
-
 { #category : #assertions }
 InterpreterStackPages >> allPagesFree [
 	<doNotGenerate>

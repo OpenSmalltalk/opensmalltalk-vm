@@ -574,7 +574,7 @@ AbstractInstructionTests >> runBinaryConditionalJumpsViaSubCqR: assertPrintBar [
 AbstractInstructionTests >> runCmpRdRd: assertPrintBar [
 	"self defaultTester runCmpRdRd: false"
 	"self defaultTester runCmpRdRd: true"
-	| resultReg result reg1 reg2 setreg1 setreg2 them |
+	| resultReg result reg1 reg2 setreg1 setreg2 |
 	resultReg := 0.
 	self concreteCompilerClass dataRegistersWithAccessorsDo:
 		[:n :get :set| n = resultReg ifTrue: [result := get]].
@@ -582,14 +582,17 @@ AbstractInstructionTests >> runCmpRdRd: assertPrintBar [
 		[:n :get :set|
 		n = DPFPReg0 ifTrue: [reg1 := get. setreg1 := set].
 		n = DPFPReg1 ifTrue: [reg2 := set. setreg2 := set]].
-	them := (-2.0 to: 2.0), { Float nan }.
-	#(	(genJumpFPGreater: >)		(genJumpFPLessOrEqual: <=)
-		(genJumpFPLess: <)			(genJumpFPGreaterOrEqual: >=)
-		(genJumpFPEqual: =)		(genJumpFPNotEqual: ~=)) do:
+	#(	(genJumpFPGreater: > false nan)	(genJumpFPLessOrEqual: <= false nil)
+		(genJumpFPLess: < false nil)				(genJumpFPGreaterOrEqual: <= true nan)
+		(genJumpFPGreater: < true nan)		(genJumpFPGreaterOrEqual: >= false nan)
+		(genJumpFPEqual: = false nan)		(genJumpFPNotEqual: ~= false nan)) do:
 		[:tuple|
-		[:opName :relation | | inst jumpNotTaken jumpTaken nop memory |
+		[:opName :relation :invert :nan| | them inst jumpNotTaken jumpTaken nop memory |
+		them := nan ifNil: [-2.0 to: 2.0] ifNotNil: [(-2.0 to: 2.0), { Float nan }].
 		self resetGen.
-		inst := self gen: CmpRdRd operand: DPFPReg1 operand: DPFPReg0.
+		inst := invert
+				ifTrue: [self gen: CmpRdRd operand: DPFPReg0 operand: DPFPReg1]
+				ifFalse: [self gen: CmpRdRd operand: DPFPReg1 operand: DPFPReg0].
 		jumpTaken := inst perform: opName with: 0.
 		self gen: MoveCqR operand: 0 operand: resultReg.
 		jumpNotTaken := self gen: Jump.

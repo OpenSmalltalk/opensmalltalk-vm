@@ -50,20 +50,20 @@ SmartSyntaxPluginTMethod >> checkSuccessExpr [
 
 ]
 
-{ #category : #'generating C code' }
-SmartSyntaxPluginTMethod >> emitCHeaderOn: aStream generator: aCodeGen [
+{ #category : #'C code generation' }
+SmartSyntaxPluginTMethod >> emitCLocalsOn: aStream generator: aCodeGen [
 	"Emit a C function header for this method onto the given stream."
 
 	aStream cr.
-	self emitCFunctionPrototype: aStream generator: aCodeGen newlineBeforeName: true.
-	aStream nextPutAll: ' {'; cr.
-	locals do: [ :var |
+	locals isEmpty ifFalse:
+		[(aCodeGen sortStrings: locals) do:
+			[ :var |
 		aStream 
 			tab; 
 			nextPutAll: (self declarationAt: var);
 			nextPut: $;; 
 			cr].
-	locals isEmpty ifFalse: [ aStream cr ].
+		 aStream cr]
 ]
 
 { #category : #'specifying primitives' }

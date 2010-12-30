@@ -61,13 +61,6 @@ TAssignmentNode >> isAssignment [
 ]
 
 { #category : #testing }
-TAssignmentNode >> isStructTarget: aCodeGen [
-	"Answer if the recever evaluates to a struct pointer
-	 and hence can be dereferenced using ->"
-	^variable isStructTarget: aCodeGen
-]
-
-{ #category : #testing }
 TAssignmentNode >> isVariableUpdatingAssignment [
 	"Return true if this assignment statement is of one of the forms:
 		var = var + ...
@@ -144,6 +137,14 @@ TAssignmentNode >> setVariable: varNode expression: expressionNode [
 
 	variable := varNode.
 	expression := expressionNode.
+]
+
+{ #category : #testing }
+TAssignmentNode >> structTargetKind: aCodeGen [
+	"Answer if the recever evaluates to a struct or struct pointer
+	 and hence can be dereferenced using . or ->.  Answer any of
+	 #struct #pointer or nil"
+	^variable structTargetKind: aCodeGen
 ]
 
 { #category : #accessing }

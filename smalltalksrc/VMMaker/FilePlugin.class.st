@@ -66,7 +66,7 @@ FilePlugin class >> requiresPlatformFiles [
 	^true
 ]
 
-{ #category : #'instance creation' }
+{ #category : #simulation }
 FilePlugin class >> simulatorClass [
 	^FilePluginSimulator
 ]
@@ -670,6 +670,10 @@ FilePlugin >> primitiveFileStdioHandles [
 			 self mem: (interpreterProxy firstIndexableField: result)
 				cp: (self addressOf: (fileRecords at: index))
 				y: self fileRecordSize]].
+	 "In the threaded VM ensure the handles are old, so that sqFileReadIntoAt is unaffected
+	  by incremental GCs.  See platforms/Cross/plugins/FilePlugin/sqFilePluginBasicPrims.c."
+	self cppIf: (self cCode: 'COGMTVM' inSmalltalk: [interpreterProxy isThreadedVM])
+		ifTrue: [interpreterProxy fullGC].
 	result := interpreterProxy popRemappableOop.
 	interpreterProxy pop: 1 thenPush: result
 ]

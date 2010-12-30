@@ -40,6 +40,8 @@ Class {
 		'FillFromWord',
 		'FirstJump',
 		'FirstShortJump',
+		'GPRegMax',
+		'GPRegMin',
 		'Jump',
 		'JumpAbove',
 		'JumpAboveOrEqual',
@@ -110,6 +112,7 @@ Class {
 		'OrCwR',
 		'OrRR',
 		'PopR',
+		'PrefetchAw',
 		'PushCw',
 		'PushR',
 		'ReceiverResultReg',
@@ -148,6 +151,8 @@ CogRTLOpcodes class >> initialize [
 		Mbr  - memory byte whose address is at a constant offset from an address in a register
 		M16r  - memory 16-bit halfword whose address is at a constant offset from an address in a register
 		M64r  - memory 64-bit doubleword whose address is at a constant offset from an address in a register
+		XbrR- memory word whose address is r * byte size away from an address in a register
+		X16rR- memory word whose address is r * (2 bytes size) away from an address in a register
 		XwrR- memory word whose address is r * word size away from an address in a register
 
 	An alternative would be to decouple opcodes from operands, e.g.
@@ -163,12 +168,12 @@ CogRTLOpcodes class >> initialize [
 	| opcodeNames refs |
 	FPReg := -1.
 	SPReg := -2.
-	ReceiverResultReg := -3.
+	ReceiverResultReg := GPRegMax := -3.
 	TempReg := -4.
 	ClassReg := -5.
 	SendNumArgsReg := -6.
 	Arg0Reg := -7.
-	Arg1Reg := -8.
+	Arg1Reg := GPRegMin := -8.
 
 	DPFPReg0 := -9.
 	DPFPReg1 := -10.
@@ -235,6 +240,7 @@ CogRTLOpcodes class >> initialize [
 						MoveCqR MoveCwR MoveC32R MoveC64R
 						MoveRdRd MoveM64rRd MoveRdM64r
 						PopR PushR PushCw
+						PrefetchAw
 
 						"Arithmetic; destination is always last operand except Cmp; CmpXR is SubRX with no update of result"
 						LoadEffectiveAddressMwrR "A variant of add"
@@ -277,4 +283,44 @@ CogRTLOpcodes class >> nameForOpcode: opcode [ "<Integer>"
 		 or: [opcodeName beginsWith: 'Last'])
 			ifTrue: [#(JumpLong JumpBelowOrEqual Jump) detect: [:k| (classPool at: k) = opcode]]
 			ifFalse: [opcodeName]]
+]
+
+{ #category : #'debug printing' }
+CogRTLOpcodes class >> nameForRegister: reg [ "<Integer>"
+	^#(Arg0Reg Arg1Reg ClassReg FPReg ReceiverResultReg SPReg SendNumArgsReg TempReg
+		DPFPReg0 DPFPReg1 DPFPReg2 DPFPReg3 DPFPReg4 DPFPReg5 DPFPReg6 DPFPReg7)
+			detect: [:sym| (classPool at: sym) = reg]
+]
+
+{ #category : #'debug printing' }
+CogRTLOpcodes class >> printFormatForOpcodeName: opcodeName [
+	"Answer a sequence of $r or nil for the operands in the opcode, used for printing."
+	| format operands size |
+	format := OrderedCollection new.
+	size := (operands := opcodeName) size.
+	[#('XwrR' 'X16rR' 'XbrR' 'RR' 'RdR' 'RRd' 'RdRd') do:
+		[:regRegFmt|
+		(operands endsWith: regRegFmt) ifTrue:
+			[format addLast: $r; addLast: $r.
+			 operands := operands allButLast: regRegFmt size]].
+	  #('Mwr' 'M16r' 'Mbr' 'M64r') do:
+		[:constRegFmt|
+		(operands endsWith: constRegFmt) ifTrue:
+			[format addLast: $r; addLast: nil.
+			 operands := operands allButLast: constRegFmt size]].
+	  #('Cq' 'Cw' 'C32' 'C64' 'Aw' 'Ab') do:
+		[:constFmt|
+		(operands endsWith: constFmt) ifTrue:
+			[format addLast: nil.
+			 operands := operands allButLast: constFmt size]].
+	 #('R' 'Rd') do:
+		[:regFmt|
+		(operands endsWith: regFmt) ifTrue:
+			[format addLast: $r.
+			 operands := operands allButLast: regFmt size]].
+	 operands size < size]
+		whileTrue: [size := operands size].
+	^format reverse
+	
+	"classPool keys collect: [:k| { k. (self printFormatForOpcodeName: k) asArray}]"
 ]

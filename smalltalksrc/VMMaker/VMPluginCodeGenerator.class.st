@@ -53,14 +53,13 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: pluginClass).
 	aStream cr; cr.
 
-	aStream nextPutAll:'
-#include <math.h>
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
-#include <time.h>
+	#('<math.h>' '<stdio.h>' '<stdlib.h>' '<string.h>' '<time.h>') reverseDo:
+		[:hdr| headerFiles addFirst: hdr].
 
-/* Default EXPORT macro that does nothing (see comment in sq.h): */
+	"Additional header files; include C library ones first."
+	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
+
+	aStream cr; nextPutAll:'/* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
 
 /* Do not include the entire sq.h file but just those parts needed. */
@@ -78,14 +77,10 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 #undef EXPORT
 // was #undef EXPORT(returnType) but screws NorCroft cc
 #define EXPORT(returnType) static returnType
-#endif
-'.
-
-	"Additional header files"
-	headerFiles do:[:hdr|
-		aStream nextPutAll:'#include '; nextPutAll: hdr; cr].
-
-	aStream cr; nextPutAll: '#include "sqMemoryAccess.h"'; cr.
+#endif'; cr; cr.
+	headerFiles addLast: '"sqMemoryAccess.h"'.
+	"Additional header files; include squeak VM ones last"
+	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
 	pluginClass preambleCCode ifNotNil:
 		[:preamble|
 		aStream cr; nextPutAll: preamble].
@@ -152,15 +147,6 @@ VMPluginCodeGenerator >> generateCodeStringForPrimitives [
 { #category : #testing }
 VMPluginCodeGenerator >> isGeneratingPluginCode [
 	^true
-]
-
-{ #category : #'C code generator' }
-VMPluginCodeGenerator >> isTypePointerToStruct: type [ "<String>"
-	^pluginClass notNil
-	  and: [[pluginClass isTypePointerToStruct: type]
-			on: MessageNotUnderstood
-			do: [:ex| ex message selector == #isTypePointerToStruct: ifTrue: [^false].
-					ex pass]]
 ]
 
 { #category : #public }

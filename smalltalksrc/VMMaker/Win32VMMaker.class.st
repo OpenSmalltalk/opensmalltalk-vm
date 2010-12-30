@@ -39,11 +39,6 @@ Win32VMMaker >> internalPluginsDirectory [
 	^fd"
 ]
 
-{ #category : #'copying files' }
-Win32VMMaker >> processAssortedFiles [
-	"Do nothing."
-]
-
 { #category : #'generate sources' }
 Win32VMMaker >> validatePlugin: plName in: listOfPlugins [
 	"The normal file release process bundles all files in the plugin directory, so don't bother users telling them 'there are no cross platform files for xyz' if there is are platform specific files present."

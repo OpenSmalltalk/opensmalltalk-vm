@@ -30,12 +30,6 @@ ReentrantFFIPlugin class >> calloutStateClass [
 	^ReentrantFFICalloutState
 ]
 
-{ #category : #'C support code' }
-ReentrantFFIPlugin class >> hasHeaderFile [
-	"If there is a single intrinsic header file to be associated with the plugin, here is where you want to flag"
-	^false
-]
-
 { #category : #'class initialization' }
 ReentrantFFIPlugin class >> initialize [
 	"c.f. ExternalFunction allInstVarNames
@@ -50,11 +44,6 @@ ReentrantFFIPlugin class >> initialize [
 	MaxNumArgs := 15.
 
 	DefaultMaxStackSize := 1024 * 16
-]
-
-{ #category : #translation }
-ReentrantFFIPlugin class >> isTypePointerToStruct: type [ "<String>"
-	^type isString and: [type beginsWith: 'CalloutState *']
 ]
 
 { #category : #accessing }
@@ -371,45 +360,50 @@ ReentrantFFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass in: callout
 { #category : #'callout support' }
 ReentrantFFIPlugin >> ffiAtomicArgByReference: oop Class: oopClass in: calloutState [
 	<var: #calloutState type: #'CalloutState *'>
-	"Support for generic callout. Prepare a pointer reference to an atomic type for callout. Note: for type 'void*' we allow either one of ByteArray/String/Symbol or wordVariableSubclass."
-	| atomicType isString |
+	"Support for generic callout. Prepare a pointer reference to an atomic type for callout.
+	 Note: for type 'void*' we allow ByteArray/String/Symbol, wordVariableSubclass or Alien."
+	| atomicType isString isAlien |
 	<inline: true>
 	atomicType := self atomicTypeOf: calloutState ffiArgHeader.
-	(atomicType = FFITypeBool) "No bools on input"
-		ifTrue:[^FFIErrorCoercionFailed].
-	((atomicType >> 1) = (FFITypeSignedChar >> 1)) ifTrue:["string value (char*)"
+	(atomicType = FFITypeBool) ifTrue: "No bools on input"
+		[^FFIErrorCoercionFailed].
+	isAlien := (isString := interpreterProxy 
+					includesBehavior: oopClass 
+					ThatOf: interpreterProxy classString)
+				ifTrue: [false]
+				ifFalse:
+					[interpreterProxy 
+						includesBehavior: oopClass 
+						ThatOf: interpreterProxy classAlien].
+	((atomicType >> 1) = (FFITypeSignedChar >> 1)) ifTrue:"string value (char*)"
 		"note: the only types allowed for passing into char* types are
-		ByteArray, String, Symbol and *no* other byte indexed objects
+		ByteArray, String, Symbol, Alien and *no* other byte indexed objects
 		(e.g., CompiledMethod, LargeInteger). We only check for strings
 		here and fall through to the byte* check otherwise."
-		isString := interpreterProxy 
-					includesBehavior: oopClass 
-					ThatOf: interpreterProxy classString.
-		isString ifTrue:["String/Symbol"
+		[isString ifTrue:"String/Symbol"
 			"Strings must be allocated by the ffi support code"
-			^self ffiPushString: (interpreterProxy firstIndexableField: oop)
+			[^self ffiPushString: (interpreterProxy firstIndexableField: oop)
 				OfLength: (interpreterProxy byteSizeOf: oop)
 				in: calloutState].
 		"Fall through to byte* test"
 		atomicType := FFITypeUnsignedByte].
 
-	(atomicType = FFITypeVoid or:[(atomicType >> 1) = (FFITypeSignedByte >> 1)]) ifTrue:[
+	(atomicType = FFITypeVoid or:[(atomicType >> 1) = (FFITypeSignedByte >> 1)]) ifTrue:
 		"byte* -- see comment on string above"
-		oopClass = interpreterProxy classByteArray ifTrue:["ByteArray"
-			^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
-		isString := interpreterProxy includesBehavior: oopClass 
-					ThatOf: interpreterProxy classString.
-		isString ifTrue:["String/Symbol"
-			^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
-		atomicType = FFITypeVoid ifFalse:[^FFIErrorCoercionFailed].
+		[(isString
+		  or: [oopClass = interpreterProxy classByteArray]) ifTrue:"String/Symbol/ByteArray"
+			[^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState].
+		isAlien ifTrue:
+			[^self ffiPushPointer: (self pointerForOop: (self startOfData: oop)) in: calloutState].
+		atomicType = FFITypeVoid ifFalse:
+			[^FFIErrorCoercionFailed]].
 		"note: type void falls through"
-	].
 
 	(atomicType <= FFITypeSignedInt "void/short/int"
-		or:[atomicType = FFITypeSingleFloat]) ifTrue:[
-			"require a word subclass to work"
-			(interpreterProxy isWords: oop) ifTrue:[
-				^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState]].
+	or:[atomicType = FFITypeSingleFloat]) ifTrue:
+		["require a word subclass to work"
+		(interpreterProxy isWords: oop) ifTrue:
+			[^self ffiPushPointer: (interpreterProxy firstIndexableField: oop) in: calloutState]].
 
 	^FFIErrorCoercionFailed
 ]
@@ -821,6 +815,11 @@ ReentrantFFIPlugin >> ffiPushPointerContentsOf: oop in: calloutState [
 	ptrClass == interpreterProxy classByteArray ifTrue:
 		[ptrAddress := self cCoerce: (interpreterProxy firstIndexableField: oop) to: #int.
 		^self ffiPushPointer: ptrAddress in: calloutState].
+
+	(interpreterProxy includesBehavior: ptrClass ThatOf: interpreterProxy classAlien) ifTrue:
+		[ptrAddress := self startOfData: oop.
+		^self ffiPushPointer: ptrAddress in: calloutState].
+
 	^FFIErrorBadArg
 ]
 
@@ -1157,6 +1156,13 @@ ReentrantFFIPlugin >> initialiseModule [
 ]
 
 { #category : #'primitive support' }
+ReentrantFFIPlugin >> isAlien: anOop [
+	^interpreterProxy
+		includesBehavior: (interpreterProxy fetchClassOf: anOop)
+		ThatOf: interpreterProxy classAlien
+]
+
+{ #category : #'primitive support' }
 ReentrantFFIPlugin >> isAtomicType: typeSpec [
 	^typeSpec anyMask: FFIFlagAtomic
 ]
@@ -1165,6 +1171,12 @@ ReentrantFFIPlugin >> isAtomicType: typeSpec [
 ReentrantFFIPlugin >> isCalleePopsConvention: callType [
 	<cmacro: '(callType) (PLATFORM_API_USES_CALLEE_POPS_CONVENTION && (callType) == FFICallTypeApi)'>
 	^callType == FFICallTypeApi
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> isDirectAlien: oop [
+	self assert: (self isAlien: oop).
+	^(self sizeField: oop) > 0
 ]
 
 { #category : #marshalling }
@@ -1552,4 +1564,21 @@ ReentrantFFIPlugin >> registerArgsSlop [
 ReentrantFFIPlugin >> returnStructInRegisters: returnStructSize [
 	"Answer if a struct result of a given size is returned in memory or not."
 	^self subclassResponsibility
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> sizeField: oop [
+	"Answer the first field of oop which is assumed to be an Alien of at least 8 bytes"
+	<inline: true>
+	^self longAt: oop + BaseHeaderSize
+]
+
+{ #category : #'primitive support' }
+ReentrantFFIPlugin >> startOfData: oop [ "<Alien oop> ^<Integer>"
+	"Answer the start of oop's data.  For direct aliens this is the address of
+	 the second field.  For indirect and pointer aliens it is what the second field points to."
+	<inline: true>
+	^(self sizeField: oop) > 0
+	 	ifTrue: [oop + BaseHeaderSize + BytesPerOop]
+		ifFalse: [self longAt: oop + BaseHeaderSize + BytesPerOop]
 ]

@@ -136,21 +136,6 @@ InterpreterPlugin class >> preambleCCode [
 ]
 
 { #category : #translation }
-InterpreterPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	"Hook to allow subclasses to interact with the code generation
-	 immediately before having their code assimilated.  e.g. a class
-	 might wish to remove methods it is about to override."
-	^self
-]
-
-{ #category : #translation }
-InterpreterPlugin class >> requiredMethodNames [
-	"return the list of method names that should be retained for export or other support reasons"
-	"just which methods?"
-	^#()
-]
-
-{ #category : #translation }
 InterpreterPlugin class >> requiresCrossPlatformFiles [
 	"default is ok for most, any plugin needing cross platform files aside from a normal header must say so. See SoundCodecPlugin for example"
 	^self hasHeaderFile
@@ -172,7 +157,7 @@ InterpreterPlugin class >> shouldBeTranslated [
 	^true
 ]
 
-{ #category : #accessing }
+{ #category : #simulation }
 InterpreterPlugin class >> simulatorClass [
 	"For running from Smalltalk - answer a class that can be used to simulate the receiver, or nil if you want the primitives in this module to always fail, causing simulation to fall through to the Smalltalk code.  By default every non-TestInterpreterPlugin can simulate itself."
 

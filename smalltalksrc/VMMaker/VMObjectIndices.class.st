@@ -19,6 +19,7 @@ Class {
 		'ClassBlockClosure',
 		'ClassBlockContext',
 		'ClassByteArray',
+		'ClassByteString',
 		'ClassCharacter',
 		'ClassCompiledMethod',
 		'ClassExternalAddress',

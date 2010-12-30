@@ -10,7 +10,7 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
-{ #category : #'accessing class hierarchy' }
+{ #category : #simulation }
 NewCoObjectMemory class >> simulatorClass [
 	^NewCoObjectMemorySimulator
 ]
@@ -18,10 +18,14 @@ NewCoObjectMemory class >> simulatorClass [
 { #category : #trampolines }
 NewCoObjectMemory >> ceStoreCheck: anOop [
 	<api>
+	"Do the store check.  Answer the argument for the benefit of the code generator;
+	ReceiverResultReg may be caller-saved and hence smashed by this call.  Answering
+	it allows the code generator to reload ReceiverResultReg cheaply."
 	self assert: (self isNonIntegerObject: anOop).
 	self assert: (self oop: anOop isLessThan: self youngStart).
 	self assert: ((self baseHeader: anOop) bitAnd: RootBit) = 0.
-	self noteAsRoot: anOop headerLoc: anOop
+	self noteAsRoot: anOop headerLoc: anOop.
+	^anOop
 ]
 
 { #category : #'object enumeration' }
@@ -45,12 +49,6 @@ NewCoObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 		nextHeader := obj + sz.
 		obj := self oopFromChunk: nextHeader].
 	cogit addCogMethodsToHeapMap
-]
-
-{ #category : #accessing }
-NewCoObjectMemory >> coInterpreter: aCoInterpreter cogit: aCogit [
-	coInterpreter := aCoInterpreter.
-	cogit := aCogit
 ]
 
 { #category : #accessing }

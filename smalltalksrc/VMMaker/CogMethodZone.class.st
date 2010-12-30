@@ -78,6 +78,10 @@ CogMethodZone >> allocate: numBytes [
 		[^0].
 	allocation := mzFreeStart.
 	mzFreeStart := mzFreeStart + roundedBytes.
+	self cCode: '' inSmalltalk:
+		[(cogit breakPC isInteger
+		   and: [cogit breakPC between: allocation and: mzFreeStart]) ifTrue:
+			[cogit singleStep: true]].
 	^allocation
 ]
 
@@ -285,6 +289,16 @@ CogMethodZone >> methodFor: address [
 			[^cogMethod].
 		 cogMethod := nextMethod].
 	^0
+]
+
+{ #category : #'simulation only' }
+CogMethodZone >> methods [
+	<doNotGenerate>
+	| methods |
+	methods := OrderedCollection new.
+	self methodsDo:
+		[:m| methods addLast: m].
+	^methods
 ]
 
 { #category : #'simulation only' }
