@@ -5,10 +5,6 @@ This is a configuration for Cog VM 32 bit,
 Class {
 	#name : #CogMacOSConfig,
 	#superclass : #CPlatformConfig,
-	#instVars : [
-		'internalPlugins',
-		'externalPlugins'
-	],
 	#category : #CMakeVMMaker
 }
 
