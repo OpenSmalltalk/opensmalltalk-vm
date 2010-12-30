@@ -27,10 +27,18 @@ Class {
 		'topDir',
 		'buildDir',
 		'srcDir',
-		'platformsDir'
+		'platformsDir',
+		'internalPlugins',
+		'externalPlugins'
 	],
 	#category : #CMakeVMMaker
 }
+
+{ #category : #'as yet unclassified' }
+CPlatformConfig class >> generate [
+
+	^ CMakeVMGenerator new generate: self.
+]
 
 { #category : #accessing }
 CPlatformConfig >> buildDir [
