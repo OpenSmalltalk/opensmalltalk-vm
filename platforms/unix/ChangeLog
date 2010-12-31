@@ -1,3 +1,8 @@
+2010-12-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/FloatMathPlugin/config.cmake: Set little-endian flag
+	explicitly.  Disable GCC optimisations.
+
 2010-08-06  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm-display-X11/config.cmake: Manually check for Xrender library.
