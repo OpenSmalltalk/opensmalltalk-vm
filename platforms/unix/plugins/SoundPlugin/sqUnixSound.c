@@ -99,14 +99,14 @@ int snd_AvailableSpace(void)
   return snd->snd_AvailableSpace();
 }
 
-int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime)
+int snd_InsertSamplesFromLeadTime(int frameCount, void *srcBufPtr, int samplesOfLeadTime)
 {
   return snd->snd_InsertSamplesFromLeadTime(frameCount, srcBufPtr, samplesOfLeadTime);
 }
 
-int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+int snd_PlaySamplesFromAtLength(int frameCount, void *srcBufPtr, int startIndex)
 {
-  return snd->snd_PlaySamplesFromAtLength(frameCount, arrayIndex, startIndex);
+  return snd->snd_PlaySamplesFromAtLength(frameCount, srcBufPtr, startIndex);
 }
 
 int snd_PlaySilence(void)
@@ -141,7 +141,7 @@ double snd_GetRecordingSampleRate(void)
   return snd->snd_GetRecordingSampleRate();
 }
 
-int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+int snd_RecordSamplesIntoAtLength(void *buf, int startSliceIndex, int bufferSizeInBytes)
 {
   return snd->snd_RecordSamplesIntoAtLength(buf, startSliceIndex, bufferSizeInBytes);
 }
@@ -150,7 +150,7 @@ int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeIn
 
 void snd_Volume(double *left, double *right)			{	 snd->snd_Volume(left, right); }
 void snd_SetVolume(double left, double right)			{	 snd->snd_SetVolume(left, right); }
-int  snd_SetRecordLevel(int level)				{ return snd->snd_SetRecordLevel(level); }
+void  snd_SetRecordLevel(int level)				{ snd->snd_SetRecordLevel(level); }
 int  snd_GetSwitch(int id, int captureFlag, int channel)	{ return snd->snd_GetSwitch(id, captureFlag, channel); }
 int  snd_SetSwitch(int id, int captureFlag, int parameter)	{ return snd->snd_SetSwitch(id, captureFlag, parameter); }
 int  snd_SetDevice(int id, char *name)				{ return snd->snd_SetDevice(id, name); }

@@ -12,7 +12,7 @@ for vm in Cog.app/Contents/MacOS/Croquet cogwin/Croquet.exe coglinux/lib/squeak/
 do
 	echo
 	echo checking $vm version
-	strings - $vm | egrep "CoInterp.*VMMaker|Cogit.*VMMaker| built on "
+	strings - $vm | egrep "CoInterp.*VMMaker|Cogit.*VMMaker| built on " | grep -v 'Unix built on "__DATE__ " "__TIME__" Compiler: "__VERSION__'
 	echo checking $vm for asserts
 	strings - $vm | grep "assert[^0-9]*[0-9][0-9][0-9]"
 done
