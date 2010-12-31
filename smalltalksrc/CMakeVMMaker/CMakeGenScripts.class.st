@@ -29,6 +29,16 @@ CMakeGenScripts class >> generateCogMacOS [
 { #category : #'as yet unclassified' }
 CMakeGenScripts class >> generateStackMacOS [
 	" generate sources for Stack Interpreter of Mac OS"
+	self generateStackSources.
+		
+	StackInterpreterMacOSConfig generate.
+
+	
+]
+
+{ #category : #'as yet unclassified' }
+CMakeGenScripts class >> generateStackSources [
+	" generate sources for Stack Interpreter of Mac OS"
 	| top |
 	top := FileDirectory default containingDirectory.
 	
@@ -40,7 +50,6 @@ CMakeGenScripts class >> generateStackMacOS [
 			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
 			
 	
-	StackInterpreterMacOSConfig generate.
 
 	
 ]
