@@ -2518,6 +2518,7 @@ int clipboardWriteFromAt(int count, int byteArrayIndex, int startIndex) {
      the memory block previously allocated belongs to
      the clipboard - not to the app. */
   CloseClipboard();
+  free(cvt);
   return 1;
 }
 

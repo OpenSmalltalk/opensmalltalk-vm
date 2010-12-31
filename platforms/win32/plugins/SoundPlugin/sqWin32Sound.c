@@ -136,6 +136,10 @@ char *printGUID(LPGUID p)
 }
 
 
+/* forward declarations */
+void setDefaultSoundPlayer(char *deviceName);
+void setDefaultSoundRecorder(char *deviceName);
+
 void setDeviceName(DeviceInfo* device, LPCTSTR lpszDesc)
 {
 	/* Free existing name string, if any. */
@@ -1257,12 +1261,12 @@ int snd_AvailableSpace(void) {
     return dx_snd_AvailableSpace();
 }
 
-int snd_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime) {
+sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime) {
     return dx_snd_InsertSamplesFromLeadTime(frameCount, srcBufPtr, samplesOfLeadTime);
 }
 
-int snd_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex) {
-    return dx_snd_PlaySamplesFromAtLength(frameCount, arrayIndex, startIndex);
+sqInt snd_PlaySamplesFromAtLength(sqInt frameCount, void *srcBufPtr, sqInt startIndex) {
+    return dx_snd_PlaySamplesFromAtLength(frameCount, srcBufPtr, startIndex);
 }
 
 int snd_PlaySilence(void) {
@@ -1278,8 +1282,8 @@ int snd_Stop(void) {
 }
 
 /* sound input */
-int snd_SetRecordLevel(int level) {
-    return dx_snd_SetRecordLevel(level);
+void snd_SetRecordLevel(sqInt level) {
+    (void)dx_snd_SetRecordLevel(level);
 }
 
 int snd_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex) {
@@ -1309,7 +1313,7 @@ double snd_GetRecordingSampleRate(void) {
 	}
 }
 
-int snd_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes) {
+sqInt snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt bufferSizeInBytes) {
 	if (AEC_ENABLED) { 
 		return aec_snd_RecordSamplesIntoAtLength(buf, startSliceIndex, bufferSizeInBytes);
 	}

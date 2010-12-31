@@ -107,6 +107,9 @@ ioCurrentOSThread()
 	return TlsGetValue(tlthIndex);
 }
 
+sqInt
+amInVMThread() { return ioOSThreadsEqual(ioCurrentOSThread(),getVMThread()); }
+
 void
 ioInitThreads()
 {

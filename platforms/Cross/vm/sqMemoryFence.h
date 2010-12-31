@@ -41,19 +41,15 @@
 # if defined(__MINGW32__) && !__SSE2__
 	/* Andreas is fond of the gcc 2.95 MINGW but it lacks sse2 support */
 #	define sqLowLevelMFence() asm volatile (".byte 0x0f;.byte 0xae;.byte 0xf0")
+# elif defined(TARGET_OS_IS_IPHONE)
+#	define sqLowLevelMFence() __sync_synchronize()
 # else
-#ifdef TARGET_OS_IS_IPHONE
-#define sqLowLevelMFence() __sync_synchronize()
-#else
 #	define sqLowLevelMFence() asm volatile ("mfence")
 # endif
-#endif
 #else
-#ifdef TARGET_OS_IS_IPHONE
-#define sqLowLevelMFence() __sync_synchronize()
-#else
-# if !defined(sqLowLevelMFence)
+# if defined(TARGET_OS_IS_IPHONE)
+#	define sqLowLevelMFence() __sync_synchronize()
+# elif !defined(sqLowLevelMFence)
 extern void sqLowLevelMFence(void);
-#endif
 # endif
 #endif

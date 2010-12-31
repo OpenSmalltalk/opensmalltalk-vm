@@ -44,18 +44,37 @@
 # define set64(variable,value) (variable = value)
 
 #elif LP32 || ILP32
+# if TARGET_OS_IS_IPHONE
+static inline void
+AtomicSet(uint64_t *target, uint64_t new_value)
+{
+	while (true) {
+		uint64_t old_value = *target;
+		if (OSAtomicCompareAndSwap64Barrier(old_value, new_value, target))
+			return;
+	}
+}
+
+static inline uint64_t
+AtomicGet(uint64_t *target)
+{
+	while (true) {
+		int64 value = *target;
+		if (OSAtomicCompareAndSwap64Barrier(value, value, target))
+			return value;
+	}
+}
+#	define get64(variable) AtomicGet(&(variable))
+#	define set64(variable,value) AtomicSet(&(variable),value)
+
 	/* Currently we provide definitions for x86 and GCC only.  But see below. */
-# if defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
+# elif defined(__GNUC__) && (defined(i386) || defined(__i386) || defined(__i386__) || defined(_X86_))
 
 /* atomic read & write of 64-bit values using SSE2 movq to/from sse register.
  * 64-bit reads & writes are only guaranteed to be atomic if aligned on a 64-bit
  * boundary.  Since 64-bit globals are so aligned a global access is atomic.
  */
 #  if __SSE2__
-#ifdef TARGET_OS_IS_IPHONE
-#	define get64(variable) variable
-#	define set64(variable,value) variable = value
-#else
 /* atomic read & write of 64-bit values using sse instructions. */
 #	define get64(variable) \
 	({ long long result; \
@@ -70,7 +89,6 @@
 						: "=m" (variable)				\
 						: "m" (value)					\
 						: "memory", "%xmm7")
-#endif
 #  else /* __SSE2__ */
 /* atomic read & write of 64-bit values using the CMPXCHG8B instruction.
  * CMPXCHG8B m64 compares EDX:EAX with m64 and if equal loads ECX:EBX into m64.
@@ -112,11 +130,7 @@
 							: "m" (lo32(value)), "m" (hi32(value)) \
 							: "memory", "eax", "ebx", "ecx", "edx", "cc")
 #  endif /* __SSE2__ */
-# else
-#ifdef TARGET_OS_IS_IPHONE
-#	define get64(variable) variable
-#	define set64(variable,value) variable = value
-#else
+# else /* TARGET_OS_IS_IPHONE elif x86 variants etc */
 /* Dear implementor, you have choices.  For example consider defining get64 &
  * set64 thusly
  * #define get64(var) read64(&(var))
@@ -124,7 +138,6 @@
  * and get the JIT to generate read64 & write64 above atomic 64-bit read/write.
  */
 #	error atomic access of 64-bit variables not yet defined for this platform
-#endif
 # endif
 
 #else /* LP32 || ILP32 else LP64 || ILP64 || LLP64 */

@@ -24,6 +24,12 @@
 #include <dsconf.h>
 #endif
 
-#include <MMDeviceApi.h>
-#include <wmcodecdsp.h>
-#include <uuids.h>
+#if defined(__MINGW32__) && !defined(ULONG)
+# define ULONG unsigned long
+#endif
+
+#if !defined(__MINGW32__)
+# include <MMDeviceApi.h>
+# include <wmcodecdsp.h>
+# include <uuids.h>
+#endif

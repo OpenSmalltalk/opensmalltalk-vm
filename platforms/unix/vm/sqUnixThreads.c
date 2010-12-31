@@ -15,6 +15,10 @@
 #include <errno.h>
 #include <pthread.h>
 
+/* This is for sqVirtualMachine.h's default ownVM implementation. */
+sqInt
+amInVMThread() { return ioOSThreadsEqual(ioCurrentOSThread(),getVMThread()); }
+
 void
 ioInitThreads()
 {

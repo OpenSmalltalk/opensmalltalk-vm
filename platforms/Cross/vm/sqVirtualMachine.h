@@ -9,7 +9,7 @@
    should work with older VMs. */
 #ifndef VM_PROXY_MINOR
 /* Increment the following number if you add functions at the end */
-# define VM_PROXY_MINOR 11
+# define VM_PROXY_MINOR 12
 #endif
 
 #include "sqMemoryAccess.h"
@@ -29,6 +29,10 @@
 # define PrimErrNotFound 11
 # define PrimErrBadMethod 12
 # define PrimErrNamedInternal 13
+# define PrimErrObjectMayMove 14
+
+/* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
+typedef struct _VMCallbackContext *vmccp;
 #endif
 
 typedef sqInt (*CompilerHook)();
@@ -281,8 +285,9 @@ typedef struct VirtualMachine {
 #endif
 
 #if VM_PROXY_MINOR > 10
+# define DisownVMLockOutFullGC 1
   sqInt	(*disownVM)(sqInt flags);
-  void	(*ownVM)   (sqInt threadIdAndFlags);
+  sqInt	(*ownVM)   (sqInt threadIdAndFlags);
   void  (*addHighPriorityTickee)(void (*ticker)(void), unsigned periodms);
   void  (*addSynchronousTickee)(void (*ticker)(void), unsigned periodms, unsigned roundms);
   usqLong (*utcMicroseconds)(void);
@@ -292,6 +297,20 @@ typedef struct VirtualMachine {
   sqInt (*primitiveErrorTable)(void);
   sqInt (*primitiveFailureCode)(void);
   sqInt (*instanceSizeOf)(sqInt aClass);
+#endif
+
+#if VM_PROXY_MINOR > 11
+/* VMCallbackContext opaque type avoids all including setjmp.h & vmCallback.h */
+  sqInt (*sendInvokeCallbackContext)(vmccp);
+  sqInt (*returnAsThroughCallbackContext)(int, vmccp, sqInt);
+  long  (*signedMachineIntegerValueOf)(sqInt);
+  long  (*stackSignedMachineIntegerValue)(sqInt);
+  unsigned long  (*positiveMachineIntegerValueOf)(sqInt);
+  unsigned long  (*stackPositiveMachineIntegerValue)(sqInt);
+  sqInt	 (*getInterruptPending)(void);
+  char  *(*cStringOrNullFor)(sqInt);
+  void  *(*startOfAlienData)(sqInt);
+  usqInt (*sizeOfAlienData)(sqInt);
 #endif
 } VirtualMachine;
 

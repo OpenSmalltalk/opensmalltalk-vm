@@ -1,3 +1,8 @@
+To generate a VM check-out http://www.squeakvm.org/svn/squeak/branches/Cog/image
+which contains
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.changes
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.image
+
 How to build the Cog Croquet VM on Unix
 -------------------------------
 1. Install the tools (gcc, X11-devel, etc (e.g. libpng, libX11 & libxt source))

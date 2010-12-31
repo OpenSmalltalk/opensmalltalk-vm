@@ -3,7 +3,11 @@
 #include <stdlib.h>
 #include <string.h>
 #include <time.h>
+#include <setjmp.h>
+
+#include "vmCallback.h"
 #include "sqVirtualMachine.h"
+
 
 /*** Function prototypes ***/
 
@@ -97,6 +101,10 @@ sqInt  positive64BitIntegerFor(sqLong integerValue);
 sqLong positive64BitValueOf(sqInt oop);
 sqInt  signed64BitIntegerFor(sqLong integerValue);
 sqLong signed64BitValueOf(sqInt oop);
+long  signedMachineIntegerValueOf(sqInt);
+long  stackSignedMachineIntegerValue(sqInt);
+unsigned long  positiveMachineIntegerValueOf(sqInt);
+unsigned long  stackPositiveMachineIntegerValue(sqInt);
 
 /* InterpreterProxy methodsFor: 'special objects' */
 sqInt characterTable(void);
@@ -146,7 +154,8 @@ usqLong ioUTCMicroseconds(void);
 sqInt forceInterruptCheck(void);
 sqInt getThisSessionID(void);
 sqInt ioFilenamefromStringofLengthresolveAliases(char* aCharBuffer, char* filenameIndex, sqInt filenameLength, sqInt resolveFlag);
-sqInt  vmEndianness(void);	
+sqInt vmEndianness(void);	
+sqInt getInterruptPending(void);
 
 /* InterpreterProxy methodsFor: 'BitBlt support' */
 sqInt loadBitBltFrom(sqInt bbOop);
@@ -164,17 +173,14 @@ sqInt ioLoadSymbolOfLengthFromModule(sqInt functionNameIndex, sqInt functionName
 sqInt isInMemory(sqInt address);
 sqInt classAlien(void); /* Alien FFI */
 sqInt classUnsafeAlien(void); /* Alien FFI */
+void *startOfAlienData(sqInt);
+usqInt sizeOfAlienData(sqInt);
 sqInt getStackPointer(void);  /* Alien FFI */
-#if ALIEN_FFI
 sqInt sendInvokeCallbackStackRegistersJmpbuf(sqInt thunkPtrAsInt, sqInt stackPtrAsInt, sqInt regsPtrAsInt, sqInt jmpBufPtrAsInt); /* Alien FFI */
 sqInt reestablishContextPriorToCallback(sqInt callbackContext); /* Alien FFI */
-#elif VM_PROXY_MINOR > 8
-static sqInt
-dummySendInvokeCallbackStackRegistersJmpbuf(sqInt a, sqInt b, sqInt c, sqInt d)
-{
-	return 0;
-}
-#endif
+sqInt sendInvokeCallbackContext(VMCallbackContext *);
+sqInt returnAsThroughCallbackContext(int, VMCallbackContext *, sqInt);
+char *cStringOrNullFor(sqInt);
 
 void *ioLoadFunctionFrom(char *fnName, char *modName);
 
@@ -218,10 +224,14 @@ void (*setInterruptCheckChain(void (*aFunction)(void)))() { return 0; }
 
 #if COGMTVM
 sqInt disownVM(sqInt flags);
-void  ownVM(sqInt threadIdAndFlags);
+sqInt ownVM(sqInt threadIdAndFlags);
 #else
 sqInt disownVM(sqInt flags) { return 1; }
-void  ownVM(sqInt threadIdAndFlags) {}
+sqInt ownVM(sqInt threadIdAndFlags)
+{
+	extern sqInt amInVMThread(void);
+	return amInVMThread() ? 0 : -1;
+}
 #endif
 extern sqInt isYoung(sqInt);
 
@@ -407,13 +417,9 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->setInterruptCheckChain = setInterruptCheckChain;
 	VM->classAlien          = classAlien;
 	VM->classUnsafeAlien    = classUnsafeAlien;
-# if ALIEN_FFI
 	VM->sendInvokeCallbackStackRegistersJmpbuf = sendInvokeCallbackStackRegistersJmpbuf;
 	VM->reestablishContextPriorToCallback = reestablishContextPriorToCallback;
-	VM->getStackPointer     = (sqInt *(*)(void))getStackPointer;
-# else
-	VM->sendInvokeCallbackStackRegistersJmpbuf = dummySendInvokeCallbackStackRegistersJmpbuf;
-	VM->reestablishContextPriorToCallback = 0;
+# if ALIEN_FFI
 	VM->getStackPointer     = 0;
 # endif
 # if IMMUTABILITY
@@ -446,6 +452,19 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 	VM->primitiveErrorTable = primitiveErrorTable;
 	VM->primitiveFailureCode = primitiveFailureCode;
 	VM->instanceSizeOf = instanceSizeOf;
+#endif
+
+#if VM_PROXY_MINOR > 11
+	VM->sendInvokeCallbackContext = sendInvokeCallbackContext;
+	VM->returnAsThroughCallbackContext = returnAsThroughCallbackContext;
+	VM->signedMachineIntegerValueOf = signedMachineIntegerValueOf;
+	VM->stackSignedMachineIntegerValue = stackSignedMachineIntegerValue;
+	VM->positiveMachineIntegerValueOf = positiveMachineIntegerValueOf;
+	VM->stackPositiveMachineIntegerValue = stackPositiveMachineIntegerValue;
+	VM->getInterruptPending = getInterruptPending;
+	VM->cStringOrNullFor = cStringOrNullFor;
+	VM->startOfAlienData = startOfAlienData;
+	VM->sizeOfAlienData = sizeOfAlienData;
 #endif
 
 	return VM;

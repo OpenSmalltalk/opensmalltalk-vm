@@ -391,7 +391,7 @@ int ioShowDisplay(
 	int affectedL, int affectedR, int affectedT, int affectedB) {
 	
 	if (gSqueakHeadless && !browserActiveAndDrawingContextOk()) return 1;
-	ioShowDisplayOnWindow( (unsigned int*)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
+	ioShowDisplayOnWindow( (unsigned char*)  dispBitsIndex,  width,  height,  depth, affectedL,  affectedR,  affectedT,  affectedB, 1);
 	return 1;
 }
 
@@ -413,7 +413,7 @@ static void * copy124BitsTheHardWay(unsigned int* dispBitsIndex, int width, int 
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex, int *pitch);
 
 int ioShowDisplayOnWindow(
-	unsigned int*  dispBitsIndex, int width, int height, int depth,
+	unsigned char*  dispBitsIndex, int width, int height, int depth,
 	int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex) {
 
 	static CGColorSpaceRef colorspace = NULL;

@@ -193,7 +193,7 @@ int createWindowWidthheightoriginXyattrlength(int w, int h, int x, int y, char *
 
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
  * Return true if ok, false if not, but not currently checked */
-int ioShowDisplayOnWindow( unsigned* dispBits, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
+int ioShowDisplayOnWindow( unsigned char* dispBits, int width, int height, int depth, int affectedL, int affectedR, int affectedT, int affectedB, int windowIndex)
 {
   HWND wnd = (HWND)windowIndex;
   HDC dc;

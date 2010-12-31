@@ -1,5 +1,7 @@
-Warning: The below is optimistic.  One probably has to build SqueakFFI using
-winbuild for now.
+To generate a VM check-out http://www.squeakvm.org/svn/squeak/branches/Cog/image
+which contains
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.changes
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.image
 
 How to Build the Cog VM on Windows
 ----------------------------------

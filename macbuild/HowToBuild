@@ -1,3 +1,8 @@
+To generate a VM check-out http://www.squeakvm.org/svn/squeak/branches/Cog/image
+which contains
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.changes
+http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.image
+
 How to Build the Croquet Cog VM on Mac OS X
 --------------------------------
 1. Install the tools (xcode etc);  the CoreVM.xcodeproj is set-up to build

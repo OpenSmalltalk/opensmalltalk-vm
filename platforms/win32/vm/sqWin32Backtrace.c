@@ -21,12 +21,11 @@
 //#undef NDEBUG  if you want asserts enabled in the production build
 //#define DBGPRINT if you want debug printing turned on
 
+#include "sq.h"
 #include "sqAssert.h"
 #include "sqWin32Backtrace.h"
 #include "sqWin32.h"
-#include "interp.h"
 #if COGVM
-# include "sq.h"
 # include "cogmethod.h"
 # include "cogit.h"
 #endif
@@ -54,7 +53,7 @@ typedef struct _NT_TIB
 #define ulong unsigned long
 
 int
-backtrace(void *retpcs[], int nrpcs)
+backtrace(void **retpcs, int nrpcs)
 {
 	void **__fp;
 #if defined(_MSC_VER)
@@ -71,7 +70,7 @@ backtrace(void *retpcs[], int nrpcs)
 }
 
 int
-backtrace_from_fp(void *startfp, void *retpcs[], int nrpcs)
+backtrace_from_fp(void *startfp, void **retpcs, int nrpcs)
 {
 	Frame *fp; 
 	NT_TIB *tib;
@@ -149,6 +148,48 @@ symbolic_backtrace(int n, void **retpcs, symbolic_pc *spc)
 			spc[i].fnameOrSelector = spc[i].mname = 0, spc[i].offset = 0;
 	}
 	return n;
+}
+
+void
+print_backtrace(FILE *f, int nframes, int maxframes,
+				void **retpcs, symbolic_pc *symbolic_pcs)
+{
+	int i;
+
+	fprintf(f, "\nStack backtrace:\n");
+#if COGVM
+	for (i = 0; i < nframes; ++i) {
+		char *name; int namelen;
+		if (addressCouldBeObj((sqInt)symbolic_pcs[i].fnameOrSelector)) {
+			extern void *firstFixedField(sqInt);
+			name = firstFixedField((sqInt)symbolic_pcs[i].fnameOrSelector);
+			namelen = byteSizeOf((sqInt)symbolic_pcs[i].fnameOrSelector);
+		}
+		else {
+			if (!(name = symbolic_pcs[i].fnameOrSelector))
+				name = "???";
+			namelen = strlen(name);
+		}
+		fprintf(f,
+				"\t[%p] %.*s + %d in %s\n",
+				retpcs[i],
+				namelen, name,
+				symbolic_pcs[i].offset,
+				symbolic_pcs[i].mname);
+	}
+#else
+	for (i = 0; i < nframes; ++i)
+		fprintf(f,
+				"\t[%p] %s + %d in %s\n",
+				retpcs[i],
+				symbolic_pcs[i].fnameOrSelector
+					? symbolic_pcs[i].fnameOrSelector
+					: "???",
+				symbolic_pcs[i].offset,
+				symbolic_pcs[i].mname);
+#endif
+	if (nframes == maxframes)
+		fprintf(f, "\t...\n");
 }
 
 BOOL (WINAPI *EnumProcessModules)(HANDLE,HMODULE*,DWORD,LPDWORD) = NULL;
