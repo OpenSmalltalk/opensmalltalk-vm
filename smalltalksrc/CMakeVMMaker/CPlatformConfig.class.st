@@ -156,6 +156,10 @@ CPlatformConfig >> configureFloatMathPlugin: maker [
 	it should be compiled with no optimizations"
 	maker addDefinitions: '-O0 -mno-fused-madd'.
 	
+	" compile with -D__LITTLE_ENDIAN
+		This macro is set automatically in fdlibm.h when compiled ith -m32 but
+		not when compiled with -m64 (Nicolas Cellier)
+	"
 	self isLittleEndian ifTrue: [
 		maker addDefinitions: '-D__LITTLE_ENDIAN=1' ].
 	
@@ -429,6 +433,18 @@ CPlatformConfig >> configureUUIDPlugin: maker [
 
 
 
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureUnixOSProcessPlugin: maker [
+	"extra rules for UnixOSProcessPlugin"
+
+	maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
+	
+	
+	
+	"THIS IS UGLY AND LAME!!! "
+	maker set: #linkFlags toString: '-undefined dynamic_lookup'
 ]
 
 { #category : #utils }

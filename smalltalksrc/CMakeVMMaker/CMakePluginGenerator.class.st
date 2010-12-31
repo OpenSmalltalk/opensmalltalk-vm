@@ -107,6 +107,9 @@ CMakePluginGenerator >> generate [
 	"	self cmd: 'set_property' params: 'TARGET ' , name , ' PROPERTY LINK_FLAGS -bundle'"
 	].
 
+	" see senders of #linkFlags "
+	self cmd: 'set_property' params: 'TARGET ', name , 
+	' PROPERTY LINK_FLAGS "${linkFlags}"'.
 	
 	self saveFile.
 
