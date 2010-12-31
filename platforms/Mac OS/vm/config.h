@@ -172,9 +172,8 @@
 
 /* other configured variables */
 
-#define SQ_VERSION "3.8g-6548"
-#define VM_VERSION "3.8a-2"
-#define VM_LIBDIR "/usr/local/lib/squeak/3.8a-2"
+#define SQ_VERSION "4.0-2334"
+#define VM_VERSION "4.0"
 #define VM_MODULE_PREFIX ""
 /* #undef VM_DLSYM_PREFIX */
 #define VM_X11DIR "/usr/X11R6/lib"

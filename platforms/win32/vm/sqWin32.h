@@ -236,7 +236,7 @@ int sqMain(char *lpCmdLine, int nCmdShow);
 #define VERSION ""
 #endif
 
-#define VM_VERSION TEXT("Teleplace VM 1.0.15 (release) from ") TEXT(__DATE__) \
+#define VM_VERSION TEXT("Cog VM 4.0.0 (release) from ") TEXT(__DATE__) \
 	TEXT("\n") TEXT("Compiler: ") TEXT(COMPILER) TEXT(VERSION)
 
 /********************************************************/
