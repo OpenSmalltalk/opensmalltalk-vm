@@ -1993,7 +1993,9 @@ Cogit >> bytecodePCFor: mcpc startBcpc: startbcpc in: cogMethod [
 	<var: #cogMethod type: #'CogBlockMethod *'>
 	"All map entries for bytecodes (sends, mustBeBooleans et al) map to the following
 	 bytecode except the first bytecode (stackCheckOffset).  So special case that here."
-	mcpc = (cogMethod asInteger + cogMethod stackCheckOffset) ifTrue:
+	mcpc = (cogMethod stackCheckOffset = 0
+				ifTrue: [cogMethod asInteger + (self sizeof: CogBlockMethod)]
+				ifFalse: [cogMethod asInteger + cogMethod stackCheckOffset]) ifTrue:
 		[^startbcpc].
 	^self
 		mapFor: cogMethod
@@ -3583,12 +3585,14 @@ Cogit >> find: annotation Mcpc: mcpc Bcpc: bcpc MatchingMcpc: targetMcpc [
 { #category : #'method map' }
 Cogit >> findBlockMethodWithStartMcpc: blockEntryPC bcpc: startBcpc [
 	<returnTypeC: #usqInt>
-	| cogBlockMethod stackCheckMcpc |
+	| cogBlockMethod startMcpc |
 	<var: #cogBlockMethod type: #'CogBlockMethod *'>
 	cogBlockMethod := self cCoerceSimple: blockEntryPC - (self sizeof: CogBlockMethod)
 								   to: #'CogBlockMethod *'.
-	stackCheckMcpc := cogBlockMethod asUnsignedInteger + cogBlockMethod stackCheckOffset.
-	(self bytecodePCFor: stackCheckMcpc startBcpc: startBcpc in: cogBlockMethod) = startBcpc ifTrue:
+	startMcpc := cogBlockMethod stackCheckOffset = 0
+					ifTrue: [cogBlockMethod] "frameless block method"
+					ifFalse: [cogBlockMethod asUnsignedInteger + cogBlockMethod stackCheckOffset].
+	(self bytecodePCFor: startMcpc startBcpc: startBcpc in: cogBlockMethod) = startBcpc ifTrue:
 		[^cogBlockMethod asUnsignedInteger].
 	^0 "keep scanning..."
 ]
@@ -3634,8 +3638,8 @@ Cogit >> findMethodForStartBcpc: startbcpc inHomeMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	<returnTypeC: #'CogBlockMethod *'>
 	"Find the CMMethod or CMBlock that has zero-relative startbcpc as its first bytecode pc.
-	 As this is for cannot resme processing it doesn't have to be fast.
-	 Enumerate block returns and map to bytecode pcs"
+	 As this is for cannot resume processing and/or conversion to machine-code on backward
+	 branch, it doesn't have to be fast.  Enumerate block returns and map to bytecode pcs."
 	self assert: cogMethod cmType = CMMethod.
 	startbcpc = (coInterpreter startPCOfMethodHeader: cogMethod methodHeader) ifTrue:
 		[^self cCoerceSimple: cogMethod to: #'CogBlockMethod *'].
@@ -5157,6 +5161,8 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
 			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
 			 map := self findMapLocationForMcpc: mcpc inMethod: homeMethod.
+			 self assert: map ~= 0.
+			 map = 0 ifTrue: [^0].
 			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = IsMethodReference
 						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsRelativeCall
 						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsDisplacementX2N]])]
@@ -5165,6 +5171,8 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			 mcpc := cogMethod asInteger + (self sizeof: CogBlockMethod).
 			 homeMethod := self cogHomeMethod: cogMethod.
 			 map := self findMapLocationForMcpc: mcpc inMethod: homeMethod.
+			 self assert: map ~= 0.
+			 map = 0 ifTrue: [^0].
 			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = HasBytecodePC "fiducial"
 						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsDisplacementX2N]).
 			 [(coInterpreter byteAt: map) >> AnnotationShift ~= HasBytecodePC] whileTrue:
@@ -5923,6 +5931,7 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 		inSmalltalk:
 			[cogMethod isInteger ifTrue:
 				[^self printMethodHeader: (coInterpreter cogMethodSurrogateAt: cogMethod) on: aStream]].
+	aStream ensureCr.
 	cogMethod asInteger printOn: aStream base: 16.
 	aStream crtab; nextPutAll: (cogMethod cmType ~= CMBlock ifTrue: ['objhdr: '] ifFalse: ['homemth: ']).
 	cogMethod objectHeader printOn: aStream base: 16.

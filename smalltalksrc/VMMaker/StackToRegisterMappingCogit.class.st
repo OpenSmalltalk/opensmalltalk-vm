@@ -103,7 +103,8 @@ Class {
 		'debugFixupBreaks',
 		'debugBytecodePointers',
 		'realCEEnterCogCodePopReceiverArg0Regs',
-		'realCEEnterCogCodePopReceiverArg1Arg0Regs'
+		'realCEEnterCogCodePopReceiverArg1Arg0Regs',
+		'deadCode'
 	],
 	#pools : [
 		'CogCompilationConstants',
@@ -477,7 +478,7 @@ StackToRegisterMappingCogit >> ceShortCutTraceStore: aProcessorSimulationTrap [
 { #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: end [
 	"Loop over bytecodes, dispatching to the generator for each bytecode, handling fixups in due course."
-	| nextOpcodeIndex descriptor deadCode fixup result |
+	| nextOpcodeIndex descriptor fixup result |
 	<var: #descriptor type: #'BytecodeDescriptor *'>
 	<var: #fixup type: #'BytecodeFixup *'>
 	self traceSimStack.
@@ -2046,12 +2047,17 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 			 targetBytecodePC := nextPC
 								+ branchDescriptor numBytes
 								+ (self spanFor: branchDescriptor at: nextPC byte0: branchBytecode in: methodObj).
-			postBranchPC := nextPC + branchDescriptor numBytes.
-			self gen: (branchDescriptor isBranchTrue
+			 postBranchPC := nextPC + branchDescriptor numBytes.
+			 (self fixupAt: nextPC - initialPC) targetInstruction = 0 ifTrue: "The next instruction is dead.  we can skip it."
+				[deadCode := true.
+				 self ssPop: 1. "the conditional branch bytecodes pop the item tested from the stack."
+				 self ensureFixupAt: targetBytecodePC - initialPC.
+				 self ensureFixupAt: postBranchPC - initialPC].
+			 self gen: (branchDescriptor isBranchTrue
 						ifTrue: [JumpZero]
 						ifFalse: [JumpNonZero])
 				operand: (self ensureNonMergeFixupAt: targetBytecodePC - initialPC) asUnsignedInteger.
-			self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)]
+			 self Jump: (self ensureNonMergeFixupAt: postBranchPC - initialPC)]
 		ifFalse:
 			[jumpNotEqual := self JumpNonZero: 0.
 			 self annotate: (self MoveCw: objectMemory trueObject R: resultReg)

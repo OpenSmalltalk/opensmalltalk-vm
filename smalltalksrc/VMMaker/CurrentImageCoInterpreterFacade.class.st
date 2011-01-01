@@ -242,9 +242,14 @@ CurrentImageCoInterpreterFacade >> longAt: index put: value [
 	^memory longAt: index + 1 put: value bigEndian: false
 ]
 
-{ #category : #accessing }
+{ #category : #labels }
 CurrentImageCoInterpreterFacade >> lookupAddress: address [
-	^(objectMap keyAtValue: address ifAbsent: [^nil]) asString
+	^(objectMap
+		keyAtValue: address
+		ifAbsent:
+			[variables
+				keyAtValue: address
+				ifAbsent: [^nil]]) asString
 ]
 
 { #category : #accessing }

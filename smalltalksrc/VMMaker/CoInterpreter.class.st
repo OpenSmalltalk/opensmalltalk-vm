@@ -532,7 +532,10 @@ CoInterpreter >> activateInterpreterMethodFromMachineCode [
 	instructionPointer := self popStack.
 	primitiveFunctionPointer ~= 0
 		ifTrue:
-			[self assert: (self primitiveIndexOf: newMethod) ~= 0.
+			[primitiveFunctionPointer = #primitiveInvokeObjectAsMethod asSymbol
+				ifTrue: [self assert: (objectMemory isOopCompiledMethod: newMethod) not]
+				ifFalse: [self assert: ((objectMemory isOopCompiledMethod: newMethod)
+									  and: [(self primitiveIndexOf: newMethod) ~= 0])].
 			 "Invoke an interpreter primitive (because the method is to be interpreted or has not yet been
 			  compiled).  This is very similar to invoking an interpreter primitive from a compiled primitive
 			  (see e.g. SimpleStackBasedCogit>>compileInterpreterPrimitive:).  Cut back the stack pointer
@@ -2361,28 +2364,32 @@ CoInterpreter >> enterRegisterArgCogMethod: cogMethod at: entryOffset receiver: 
 			arg(s)	<- sp
 	 and then enter at either the checked or the unchecked entry-point."
 	<var: #cogMethod type: #'CogMethod *'>
-	self assert: (cogit numRegArgs > 0 and: [cogit numRegArgs <= 2]).
-	cogMethod cmNumArgs = 2 ifTrue:
-		[self stackValue: 3 put: self stackTop. "retpc"
-		 self push: (self stackValue: 1). "last arg"
-		 self stackValue: 1 put: (self stackValue: 3). "first arg"
-		 self stackValue: 2 put: rcvr.
-		 self stackValue: 3 put: cogMethod asInteger + entryOffset.
-		 cogit ceEnterCogCodePopReceiverArg1Arg0Regs
-		"NOTREACHED"].
-	cogMethod cmNumArgs = 1 ifTrue:
-		[self stackValue: 2 put: self stackTop. "retpc"
-		 self push: (self stackValue: 1). "arg"
-		 self stackValue: 1 put: rcvr.
-		 self stackValue: 2 put: cogMethod asInteger + entryOffset.
-		 cogit ceEnterCogCodePopReceiverArg0Regs
-		"NOTREACHED"].
-	self assert: cogMethod cmNumArgs = 0.
-	self stackValue: 1 put: self stackTop. "retpc"
-	self stackValue: 0 put: cogMethod asInteger + entryOffset.
-	self push: rcvr.
-	cogit ceEnterCogCodePopReceiverReg
-	"NOTREACHED"
+	self cppIf: cogit numRegArgs > 0
+		ifTrue:
+			[self assert: (cogit numRegArgs > 0 and: [cogit numRegArgs <= 2]).
+			 cogMethod cmNumArgs = 2 ifTrue:
+				[self stackValue: 3 put: self stackTop. "retpc"
+				 self push: (self stackValue: 1). "last arg"
+				 self stackValue: 1 put: (self stackValue: 3). "first arg"
+				 self stackValue: 2 put: rcvr.
+				 self stackValue: 3 put: cogMethod asInteger + entryOffset.
+				 cogit ceEnterCogCodePopReceiverArg1Arg0Regs
+				"NOTREACHED"].
+			 cogMethod cmNumArgs = 1 ifTrue:
+				[self stackValue: 2 put: self stackTop. "retpc"
+				 self push: (self stackValue: 1). "arg"
+				 self stackValue: 1 put: rcvr.
+				 self stackValue: 2 put: cogMethod asInteger + entryOffset.
+				 cogit ceEnterCogCodePopReceiverArg0Regs
+				"NOTREACHED"].
+			 self assert: cogMethod cmNumArgs = 0.
+			 self stackValue: 1 put: self stackTop. "retpc"
+			 self stackValue: 0 put: cogMethod asInteger + entryOffset.
+			 self push: rcvr.
+			 cogit ceEnterCogCodePopReceiverReg
+			 "NOTREACHED"]
+		ifFalse:
+			[self assert: false]
 ]
 
 { #category : #initialization }
