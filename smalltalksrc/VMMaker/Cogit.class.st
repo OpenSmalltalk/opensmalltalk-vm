@@ -4523,13 +4523,13 @@ Cogit >> generateOpenPICPrototype [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: 100 bytecodes: 0.
-	self compileOpenPIC: 16r5E1EC70 numArgs: 0.
+	self compileOpenPIC: 16r5E1EC70 numArgs: self numRegArgs.
 	self computeMaximumSizes.
 	headerSize := self sizeof: CogMethod.
 	methodLabel concretizeAt: methodZoneBase.
 	codeSize := self generateInstructionsAt: methodZoneBase + headerSize.
 	mapSize := self generateMapAt: 0 start: methodZoneBase + cmNoCheckEntryOffset.
-	openPICSize := methodZone roundUpLength: headerSize + codeSize + mapSize.
+	openPICSize := headerSize + (methodZone roundUpLength: codeSize) + (methodZone roundUpLength: mapSize).
 	"self cCode: ''
 		inSmalltalk:
 			[| end |
