@@ -104,7 +104,7 @@ Gnuifier >> gnuifyFrom: inFileStream to: outFileStream [
 				beforeInterpret ifTrue: [
 					(inLine = '#include "sq.h"') ifTrue: [
 						outLine := '#include "sqGnu.h"'. ].
-					(inLine = 'interpret(void) {') ifTrue: [
+					(inLine beginsWith: 'interpret(void)') ifTrue: [
 						"reached the beginning of interpret"
 						beforeInterpret := false.
 						inInterpret := true.
