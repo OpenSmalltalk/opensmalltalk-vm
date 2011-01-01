@@ -403,9 +403,13 @@ SimpleStackBasedCogit >> compileBlockFrameBuild: blockStart [
 
 { #category : #'compile abstract instructions' }
 SimpleStackBasedCogit >> compileBlockFramelessEntry: blockStart [
-	"Make sure ReceiverResultReg holds the receiver, loaded from
-	 the closure, which is what is initially in ReceiverResultReg"
+	"Make sure ReceiverResultReg holds the receiver, loaded from the closure,
+	 which is what is initially in ReceiverResultReg.  We must annotate the first
+	 instruction so that findMethodForStartBcpc:inHomeMethod: can function.
+	 We need two annotations because the first is a fiducial."
 	<var: #blockStart type: #'BlockStart *'>
+	self annotateBytecode: blockStart entryLabel.
+	self annotateBytecode: blockStart entryLabel.
 	objectRepresentation
 		genLoadSlot: ClosureOuterContextIndex
 			sourceReg: ReceiverResultReg
@@ -2376,6 +2380,27 @@ SimpleStackBasedCogit >> recordCallOffsetIn: cogMethod of: callLabelArg [
 	(offsetTable at: cogMethod cmNumArgs) isNil
 		ifTrue: [offsetTable at: cogMethod cmNumArgs put: offset]
 		ifFalse: [self assert: (offsetTable at: cogMethod cmNumArgs) = offset]
+]
+
+{ #category : #'simulation stack' }
+SimpleStackBasedCogit >> registerMaskFor: reg [
+	"Dummy implementation for CogFooCompiler>callerSavedRegisterMask
+	 which doesn't get pruned due to Slang limitations."
+	^0
+]
+
+{ #category : #'simulation stack' }
+SimpleStackBasedCogit >> registerMaskFor: reg and: reg2 [
+	"Dummy implementation for CogFooCompiler>callerSavedRegisterMask
+	 which doesn't get pruned due to Slang limitations."
+	^0
+]
+
+{ #category : #'simulation stack' }
+SimpleStackBasedCogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
+	"Dummy implementation for CogFooCompiler>callerSavedRegisterMask
+	 which doesn't get pruned due to Slang limitations."
+	^0
 ]
 
 { #category : #trampolines }
