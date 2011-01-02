@@ -27,6 +27,31 @@ CMakeGenScripts class >> generateCogMacOS [
 ]
 
 { #category : #'as yet unclassified' }
+CMakeGenScripts class >> generateCogSourcesEmm40 [
+	" self generateCogSourcesEmm40 "
+
+
+	" generate sources for CoInterpreter"
+
+	| top |
+	
+	CogRTLOpcodes initialize.
+	CogIA32Compiler initialize.
+	
+	top := FileDirectory default containingDirectory.				
+	
+	VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		to: (top / 'src') fullName
+		platformDir: ( top / 'platforms') fullName
+		excluding:#(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
+					FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin 					ReentrantPPCBEFFIPlugin NewsqueakIA32ABIPlugin
+					 NewsqueakIA32ABIPluginAttic).
+
+]
+
+{ #category : #'as yet unclassified' }
 CMakeGenScripts class >> generateStackMacOS [
 	" generate sources for Stack Interpreter of Mac OS"
 	self generateStackSources.
