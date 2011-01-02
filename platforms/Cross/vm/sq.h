@@ -469,6 +469,8 @@ sqInt imageNamePutLength(sqInt sqImageNameIndex, sqInt length);
 sqInt imageNameSize(void);
 sqInt vmPathSize(void);
 sqInt vmPathGetLength(sqInt sqVMPathIndex, sqInt length);
+char* ioGetLogDirectory(void);
+char* ioGetWindowLabel(void);
 
 /* Image security traps. */
 sqInt ioCanRenameImage(void);
