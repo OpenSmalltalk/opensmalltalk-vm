@@ -4189,8 +4189,8 @@ StackInterpreter >> frameCallerSP: theFP [
 { #category : #'frame access' }
 StackInterpreter >> frameCallerSavedIP: theFP [
 	<inline: true>
+	<returnTypeC: #'char *'>
 	<var: #theFP type: #'char *'>
-	<returnTypeC: 'char *'>
 	^self pointerForOop: (stackPages longAt: theFP + FoxCallerSavedIP) "a.k.a. FoxCallerSavedIP"
 ]
 
