@@ -826,12 +826,12 @@ CoInterpreter >> assertValidStackPageHeadPointers [
 { #category : #'jump bytecodes' }
 CoInterpreter >> attemptToSwitchToMachineCode: bcpc [
 	| cogMethod pc |
+	<inline: #false>
 	<var: #cogMethod type: #'CogMethod *'>
 	(self methodHasCogMethod: method) ifFalse:
 		[cogit cog: method selector: objectMemory nilObject].
 	(self methodHasCogMethod: method) ifTrue:
 		[cogMethod := self cogMethodOf: method.
-		 self externalizeFPandSP.
 		 pc := self convertToMachineCodeFrame: cogMethod bcpc: bcpc.
 		 self assertValidMachineCodeFrame: pc.
 		 self push: pc.
@@ -2111,6 +2111,7 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 	 and answer the machine code pc matching bcpc."
 	| startBcpc methodField closure cogMethod pc |
 	<var: #cogMethod type: #'CogBlockMethod *'>
+	<var: #p type: #'char *'>
 	self assert: (self isMachineCodeFrame: framePointer) not.
 	"Update the return pc, perhaps saving it in the caller's iframeSavedIP."
 	(self isBaseFrame: framePointer)
@@ -2121,7 +2122,7 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 		ifFalse:
 			[(self isMachineCodeFrame: (self frameCallerFP: framePointer)) ifFalse:
 				[self iframeSavedIP: (self frameCallerFP: framePointer)
-					put: (self frameCallerSavedIP: framePointer).
+					put: (self frameCallerSavedIP: framePointer) asInteger.
 				 stackPages
 					longAt: framePointer + FoxCallerSavedIP
 					put: cogit ceReturnToInterpreterPC]].
@@ -2145,8 +2146,8 @@ CoInterpreter >> convertToMachineCodeFrame: cogHomeMethod bcpc: bcpc [
 				ifTrue: [MFMethodFlagHasContextFlag]
 				ifFalse: [0]).
 	framePointer + FoxIFReceiver to: stackPointer by: BytesPerWord negated do:
-		[:i|
-		stackPages longAt: i + FoxMFReceiver - FoxIFReceiver put: (stackPages longAt: i)].
+		[:p|
+		stackPages longAt: p + FoxMFReceiver - FoxIFReceiver put: (stackPages longAt: p)].
 	stackPointer := stackPointer + FoxMFReceiver - FoxIFReceiver.
 	pc := cogit mcPCFor: bcpc startBcpc: startBcpc in: cogMethod.
 	self assert: pc > cogit noCheckEntryOffset.
@@ -3560,7 +3561,8 @@ CoInterpreter >> longUnconditionalJump [
 				[(backwardJumpCount := backwardJumpCount - 1) <= 0 ifTrue:
 					[(self methodWithHeaderShouldBeCogged: (self headerOf: method))
 						ifTrue:
-							[self attemptToSwitchToMachineCode: localIP - offset - method - BaseHeaderSize + 1]
+							[self externalizeFPandSP.
+							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize + 1]
 						ifFalse: "don't ask if one should compile a second time..."
 							[backwardJumpCount := 1 bitShift: BytesPerWord * 8 - 2]]]
 			ifFalse:
