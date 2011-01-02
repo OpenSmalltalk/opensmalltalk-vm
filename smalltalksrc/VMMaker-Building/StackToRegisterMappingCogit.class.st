@@ -1829,15 +1829,15 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
-	| primDescriptor rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts jumpContinue |
+	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts jumpContinue |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
 	<var: #jumpOverflow type: #'AbstractInstruction *'>
 	<var: #jumpContinue type: #'AbstractInstruction *'>
 	primDescriptor := self generatorAt: byte0.
-	argIsInt := self ssTop type = SSConstant
+	argIsInt := (argIsConst := self ssTop type = SSConstant)
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
-	rcvrIsInt := (self ssValue: 1) type = SSConstant
+	rcvrIsInt := (rcvrIsConst := (self ssValue: 1) type = SSConstant)
 				 and: [objectMemory isIntegerObject: (rcvrInt := (self ssValue: 1) constant)].
 
 	(argIsInt and: [rcvrIsInt]) ifTrue:
@@ -1853,6 +1853,11 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 			self annotateBytecode: self Label.
 			^self ssPop: 2; ssPushConstant: (objectMemory integerObjectOf: result)].
 		^self genSpecialSelectorSend].
+
+	"If there's any constant involved other than a SmallInteger don't attempt to inline."
+	((rcvrIsConst and: [rcvrIsInt not])
+	 or: [argIsConst and: [argIsInt not]]) ifTrue:
+		[^self genSpecialSelectorSend].
 
 	"If we know nothing about the types then better not to inline as the inline cache and
 	 primitive code is not terribly slow so wasting time on duplicating tag tests is pointless."
