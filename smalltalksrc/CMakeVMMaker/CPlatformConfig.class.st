@@ -29,7 +29,8 @@ Class {
 		'srcDir',
 		'platformsDir',
 		'internalPlugins',
-		'externalPlugins'
+		'externalPlugins',
+		'pluginsDir'
 	],
 	#category : #CMakeVMMaker
 }
@@ -57,12 +58,6 @@ CPlatformConfig >> buildDir: anObject [
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureB3DAcceleratorPlugin: maker [
 	"extra rules for B3DAcceleratorPlugin"
-	
-	self ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacOpenGL.c' 'sqMacOpenGLInfo.c')
-		].
-
 	maker 
 		addCrossSources: #( 'sqOpenGLRenderer.c' ) 
 	
@@ -84,23 +79,12 @@ CPlatformConfig >> configureBochsIA32Plugin: maker [
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureCroquetPlugin: maker [ 
 	"extra rules for CroquetPlugin"
-
-	maker ifMac: [
-		maker addPlatformSources: #(
-			'sqMacCroquet.c').
-	].
-
 	maker addCrossSources: #('tribox.c').
 ]
 
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureDropPlugin: maker [
 	"extra rules for DropPlugin"
-
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacDragDrop')
-		]
 
 ]
 
@@ -110,14 +94,7 @@ CPlatformConfig >> configureFFIPlugin: maker [
 
 	" it is incomplete right now, because in Cog this plugin are not used anymore"
 	maker doNotGenerate: true.
-	
 	maker addCrossSources: #('sqFFIPlugin.c').
-
-	maker ifMac:  [
-		maker addPlatformSources: #( "'sqMacIntel-Win32.c'"
-			'x86-sysv-MacIntel.c'
-			'x86-sysv-asm-MacIntel.S'
-		)]
 ]
 
 { #category : #'plugin extra rules' }
@@ -131,12 +108,6 @@ CPlatformConfig >> configureFilePlugin: maker [
 	"extra rules for FilePlugin"
 
 	maker addCrossSources: #( 'sqFilePluginBasicPrims.c').
-	
-	maker ifMac: [
-		maker includeDirectories: '${platformsDir}/unix/vm'.
-		maker addPlatformSources:
-			#( 'sqMacUnixFileInterface.c' 'sqMacDirectory.c')
-		]
 
 ]
 
@@ -178,11 +149,6 @@ endif (${WIN32})'.
 CPlatformConfig >> configureHostWindowPlugin: maker [
 	"extra rules for HostWindowPlugin"
 
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacHostWindow.c' )
-		]
-
 ]
 
 { #category : #'plugin extra rules' }
@@ -197,12 +163,6 @@ CPlatformConfig >> configureIA32ABIPlugin: maker [
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureInternetConfigPlugin: maker [
 	"extra rules for InternetConfigPlugin"
-
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacInternetConfiguration.c')
-		]
-
 ]
 
 { #category : #'plugin extra rules' }
@@ -267,36 +227,17 @@ maker addCrossSources: #(
 CPlatformConfig >> configureJoystickTabletPlugin: maker [ 
 	"extra rules for JoystickTabletPlugin"
 
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 
-			'HID_Error_Handler.c'
-			'HID_Name_Lookup.c'
-			'HID_Queue_Utilities.c'
-			'HID_Utilities.c'
-			'sqMacJoystickAndTablet.c'
-			)
-	]
-
 ]
 
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureLocalePlugin: maker [ 
 	"extra rules for LocalePlugin"
 
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacLocaleCarbon.c' )	]
-
 ]
 
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureMIDIPlugin: maker [ 
 	"extra rules for MIDIPlugin"
-
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacMIDI.c') ]
 
 ]
 
@@ -366,21 +307,11 @@ CPlatformConfig >> configureRePlugin: maker [
 CPlatformConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for SecurityPlugin"
 
-	maker ifMac: [
-		maker includeDirectories: '${crossDir}/plugins/FilePlugin'.
-		maker addPlatformSources:
-			#( 'sqMacSecurity.c' )  ]
-
 ]
 
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureSerialPlugin: maker [ 
 	"extra rules for SerialPlugin"
-
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacSerialPort.c' )
-		]
 
 
 ]
@@ -400,15 +331,6 @@ CPlatformConfig >> configureSoundCodecPlugin: maker [
 CPlatformConfig >> configureSoundPlugin: maker [ 
 	"extra rules for SoundPlugin"
 
-	maker ifMac: [
-		maker includeDirectories: '${platformsDir}/unix/vm/'.
-		maker addPlatformSources:
-			#( 'sqMacAudioDeviceList.c' 'sqMacUnixInterfaceSound.c' 
-			'sqUnixSoundMacOSXJMM.c')
-		]
-
-
-
 ]
 
 { #category : #'plugin extra rules' }
@@ -426,13 +348,6 @@ CPlatformConfig >> configureSurfacePlugin: maker [
 CPlatformConfig >> configureUUIDPlugin: maker [ 
 	"extra rules for UUIDPlugin"
 
-	maker ifMac: [
-		maker addPlatformSources:
-			#( 'sqMacUUID.c')
-		]
-
-
-
 ]
 
 { #category : #'plugin extra rules' }
@@ -445,6 +360,22 @@ CPlatformConfig >> configureUnixOSProcessPlugin: maker [
 	
 	"THIS IS UGLY AND LAME!!! "
 	maker set: #linkFlags toString: '-undefined dynamic_lookup'
+]
+
+{ #category : #'source files' }
+CPlatformConfig >> coreSources [
+	^#()
+]
+
+{ #category : #'source files' }
+CPlatformConfig >> crossSources [ 
+	^#(
+			'sqHeapMap.c'
+			'sqTicker.c'
+			'sqExternalSemaphores.c'
+			'sqNamedPrims.c'
+			'sqVirtualMachine.c'
+		)
 ]
 
 { #category : #utils }
@@ -471,6 +402,11 @@ CPlatformConfig >> executableType [
 	^ ''
 ]
 
+{ #category : #'source files' }
+CPlatformConfig >> extraSources [
+	^''
+]
+
 { #category : #utils }
 CPlatformConfig >> fixLineEndsOf: string [
 	^ string 
@@ -483,15 +419,14 @@ CPlatformConfig >> frameworks [
 ]
 
 { #category : #testing }
-CPlatformConfig >> ifMac: aBlock [
-
-	"evaluate a block , if receiver target platform is Mac OS"
-]
-
-{ #category : #testing }
 CPlatformConfig >> isLittleEndian [
 	"default is true. Override if necessary"
 	^ true
+]
+
+{ #category : #'source files' }
+CPlatformConfig >> platformSources [
+	^#()
 ]
 
 { #category : #accessing }
@@ -504,6 +439,18 @@ CPlatformConfig >> platformsDir: anObject [
 	"Set the value of platformsDir"
 
 	platformsDir := anObject
+]
+
+{ #category : #accessing }
+CPlatformConfig >> pluginsDir [ 
+	^pluginsDir
+
+]
+
+{ #category : #accessing }
+CPlatformConfig >> pluginsDir: aString [
+	pluginsDir := aString
+
 ]
 
 { #category : #utils }
@@ -524,6 +471,11 @@ CPlatformConfig >> srcDir: anObject [
 	"Set the value of srcDir"
 
 	srcDir := anObject
+]
+
+{ #category : #'source files' }
+CPlatformConfig >> standardIncludes [ 
+	^#()
 ]
 
 { #category : #accessing }

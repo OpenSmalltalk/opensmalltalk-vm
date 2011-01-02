@@ -236,7 +236,7 @@ setup  a common directories, relative to the ${topDir}
 	gen 
 		set: #platformsDir toString: (self config platformsDir ifNil: ['${topDir}/platforms']);
 		set: #srcDir toString: (self config srcDir ifNil: [ '${topDir}/src']);
-		set: #srcPluginsDir toString: '${srcDir}/plugins';
+		set: #srcPluginsDir toString: (self config pluginsDir ifNil: [ '${srcDir}/plugins' ]);
 		set: #srcVMDir toString: '${srcDir}/vm';
 		set: #platformName toString: self config platformName;
 		set: #targetPlatform to: '${platformsDir}/${platformName}';
@@ -257,13 +257,7 @@ CMakeVMGenerator >> sources [
 	
 	
 	self set: #crossVMSources to: 
-		(self append: '${crossDir}/vm/' toAll: #(
-			'sqHeapMap.c'
-			'sqTicker.c'
-			'sqExternalSemaphores.c'
-			'sqNamedPrims.c'
-			'sqVirtualMachine.c'
-		)).
+		(self append: '${crossDir}/vm/' toAll: config crossSources).
 		
 	self set: #extraSources to: config extraSources.
 	

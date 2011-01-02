@@ -77,11 +77,6 @@ CMakeGenerator >> generate [
 	self subclassResponsibility.
 ]
 
-{ #category : #'as yet unclassified' }
-CMakeGenerator >> ifMac: aBlock [
- 	^ self config ifMac: aBlock
-]
-
 { #category : #'cmake commands' }
 CMakeGenerator >> includeDirectories: aString [
 	^ self cmd: 'include_directories' params: aString
