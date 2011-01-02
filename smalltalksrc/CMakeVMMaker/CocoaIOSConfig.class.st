@@ -1,279 +1,151 @@
-"
-This is a configuration for Cog VM 32 bit, 
-	for Mac OS, which using Carbon framework. 
-"
 Class {
-	#name : #CogMacOSConfig,
+	#name : #CocoaIOSConfig,
 	#superclass : #MacOSConfig,
 	#category : #CMakeVMMaker
 }
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> CFBundleExecutable [
+CocoaIOSConfig >> CFBundleExecutable [
 	^ self executableName 
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> CFBundleGetInfoString [
-
+CocoaIOSConfig >> CFBundleGetInfoString [
 	^ self CFBundleShortVersionString
 
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> CFBundleIconFile [
-
+CocoaIOSConfig >> CFBundleIconFile [
 	"An application icon"
-	^ 'Cog.icns'
+	^ 'SqueakImage.icns'
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> CFBundleIdentifier [
-
+CocoaIOSConfig >> CFBundleIdentifier [
 	"A Java package style name (like 'com.myCompany.MyBundle') which is used to uniquely identify bundles."
-	
-	^ 'org.squeak.Cog'
+	^ 'org.squeakfoundation.Squeak'
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> CFBundleName [
-
+CocoaIOSConfig >> CFBundleName [
 	"An application name"
-	^ self executableName, ' (Carbon) 32bits'
+	^ self executableName, ' (Cocoa) 32bits'
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> CFBundleShortVersionString [
-
+CocoaIOSConfig >> CFBundleShortVersionString [
 	"An application version"
 	^ self executableName, ' VM ' , self CFBundleVersion
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> CFBundleVersion [
-
+CocoaIOSConfig >> CFBundleVersion [
 	"An application version"
-	^ '4.0.0'
+	^ '5.7.4'
 ]
 
 { #category : #accessing }
-CogMacOSConfig >> commonCompilerFlags [
-
+CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
+	^ '-arch i386 -mmacosx-version-min=10.5 '	
 	
-	^ ' -fmessage-length=0 -Wno-trigraphs -fpascal-strings -fasm-blocks -DCOGMTVM=0 -DUSE_GLOBAL_STRUCT=0 -DTARGET_API_MAC_CARBON -DHAVE_SYS_TIME_H -mmacosx-version-min=10.5'	
-	
-"	^ '-arch i386 -fmessage-length=0 -Wno-trigraphs -fpascal-strings -fasm-blocks -DCOGMTVM=0 -DUSE_GLOBAL_STRUCT=0 -DTARGET_API_MAC_CARBON -DHAVE_SYS_TIME_H -mmacosx-version-min=10.5'"
+
 ]
 
 { #category : #accessing }
-CogMacOSConfig >> compilerFlags [
-	"depends on config ..."
-	^ self compilerFlagsRelease
+CocoaIOSConfig >> compilerFlags [ 
+	^self commonCompilerFlags, self compilerFlagsRelease
 ]
 
 { #category : #accessing }
-CogMacOSConfig >> compilerFlagsDebug [
-
-	^ self commonCompilerFlags , ' -O0 -Wmissing-prototypes -Wmissing-braces -Wparentheses -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wsign-compare -DDEBUG -DDEBUGVM=1 -DEXTERNALPRIMSDEBUG=1 -gdwarf-2 '
-]
-
-{ #category : #accessing }
-CogMacOSConfig >> compilerFlagsRelease [
-" -mdynamic-no-pic "
-	^ self commonCompilerFlags , ' -gdwarf-2 -O3 -funroll-loops -ftree-vectorize -msse3 -DDEBUGVM=0 -DNDEBUG=1 -Wunused-value -Wuninitialized -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS'
+CocoaIOSConfig >> compilerFlagsRelease [ 
+	self flag: #review. "There are more configurations in .xcodeproj"
+	^'-fobjc-direct-dispatch -fno-objc-call-cxx-cdtors -msse3 -msse4.1 -msse4.2 -mdynamic-no-pic -fvisibility-inlines-hidden -mtune=G4 -fwritable-strings -Os -fvisibility=hidden -funroll-loops -fno-asm -std=gnu99 -fasm-blocks -finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS'
 ]
 
 { #category : #'plugin extra rules' }
-CogMacOSConfig >> configureDropPlugin: maker [
-	"extra rules for DropPlugin"
-	super configureDropPlugin: maker.  
-	maker addPlatformSources: #( 'sqMacDragDrop')
-
-]
-
-{ #category : #'plugin extra rules' }
-CogMacOSConfig >> configureFFIPlugin: maker [
-	"extra rules for FFIPlugin"
-
-	
-	"Never generate this plugin. Because it is a legacy code.
-	For Cog FFI, use ReentrantFFIPlugin  (ReentrantIA32FFIPlugin for x86) "
-	
-	maker doNotGenerate: true.
-	
-
-]
-
-{ #category : #'plugin extra rules' }
-CogMacOSConfig >> configureFilePlugin: maker [
-	"extra rules for FilePlugin"
-
-	super configureFilePlugin: maker.  
-	
-	maker includeDirectories: '${platformsDir}/unix/vm'.
-	maker addPlatformSources: #( 'sqMacUnixFileInterface.c' 'sqMacDirectory.c')
-]
-
-{ #category : #'plugin extra rules' }
-CogMacOSConfig >> configureHostWindowPlugin: maker [
+CocoaIOSConfig >> configureHostWindowPlugin: maker [
 	"extra rules for HostWindowPlugin"
 
 	super configureHostWindowPlugin: maker.  
-	maker addPlatformSources: #( 'sqMacHostWindow.c' )
-
-]
-
-{ #category : #'plugin extra rules' }
-CogMacOSConfig >> configureReentrantIA32FFIPlugin: maker [
-	"extra rules for ReentrantIA32FFIPlugin"
-	
-	maker addCrossSources: #(
-		'sqFFIPlugin.c' 'sqFFITestFuncs.c' 'sqManualSurface.c'
-	).
-
-
-]
-
-{ #category : #'plugin extra rules' }
-CogMacOSConfig >> configureSoundPlugin: maker [ 
-	"extra rules for SoundPlugin"
-
-	super configureSoundPlugin: maker.  
-	maker includeDirectories: '${platformsDir}/unix/vm/'.
-	maker addPlatformSources:
-		#( 
-			'sqMacAudioDeviceList.c' 
-			'sqMacUnixInterfaceSound.c' 
-			'sqUnixSoundMacOSXJMM.c'
-		)
-
-
-
-]
-
-{ #category : #'plugin extra rules' }
-CogMacOSConfig >> configureUUIDPlugin: maker [ 
-	"extra rules for UUIDPlugin"
-
-	super configureUUIDPlugin: maker.    
-	maker addPlatformSources:
-		#( 'sqMacUUID.c')
-
-
+	maker 
+		addSources: #( 'sqMacHostWindow.c' ) 
+		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin/'
 
 ]
 
 { #category : #'source files' }
-CogMacOSConfig >> coreSources [
-	"files to include from src/vm dir"
-	
-	^ #(
-		'cogit.c'
-		'gcc3x-cointerp.c'
-		)
+CocoaIOSConfig >> coreSources [
+	^#('interp.c')
+]
+
+{ #category : #'source files' }
+CocoaIOSConfig >> crossSources [ 
+	^#()
 ]
 
 { #category : #plugins }
-CogMacOSConfig >> defaultExternalPlugins [
-
-	^ #(
-		BochsIA32Plugin
-		CroquetPlugin
-		ReentrantIA32FFIPlugin "SqueakFFIPrims"
-		FloatArrayPlugin
-		FloatMathPlugin
-		Mpeg3Plugin
-		"UnixOSProcessPlugin ?? "
-		)
+CocoaIOSConfig >> defaultExternalPlugins [
+	^#()
 ]
 
 { #category : #plugins }
-CogMacOSConfig >> defaultInternalPlugins [
-
+CocoaIOSConfig >> defaultInternalPlugins [
 	^ #(
 		ADPCMCodecPlugin
-		AsynchFilePlugin
-		B3DAcceleratorPlugin
-		BalloonEnginePlugin "B2DPlugin" 
-		BitBltSimulation "BitBltPlugin"
-		BMPReadWriterPlugin
-		DeflatePlugin  "ZipPlugin"
-		DropPlugin
-		DSAPlugin "DSAPrims"
-		FFTPlugin
-		FilePlugin
-		HostWindowPlugin
-		IA32ABIPlugin "IA32ABI"
-		InternetConfigPlugin
-		JoystickTabletPlugin
-		JPEGReaderPlugin
-		JPEGReadWriter2Plugin
-		KlattSynthesizerPlugin "Klatt"
-		LargeIntegersPlugin "LargeIntegers"
-		LocalePlugin
-		MacMenubarPlugin
-		Matrix2x3Plugin
-		MIDIPlugin
-		MiscPrimitivePlugin
-		QVMProfileMacSupportPlugin
-		RePlugin
-		SecurityPlugin
-		SerialPlugin
-		SocketPlugin
-		SoundCodecPlugin "SoundCodecPrims"
-		SoundGenerationPlugin
-		SoundPlugin
-		StarSqueakPlugin
-		SurfacePlugin
-		UUIDPlugin
-		)
-]
-
-{ #category : #accessing }
-CogMacOSConfig >> executableName [
-	^ 'Cog'
-]
-
-{ #category : #accessing }
-CogMacOSConfig >> executableType [
-	^ 'MACOSX_BUNDLE'
+		"B3DAcceleratorPlugin"
+		BMPReadWriterPlugin 
+		BalloonEnginePlugin 
+		BitBltSimulation 
+		ClipboardExtendedPlugin 
+		DSAPlugin 
+		DeflatePlugin 
+		DropPlugin 
+		FFIPlugin
+		FFTPlugin 
+		FilePlugin 
+		FloatArrayPlugin 
+		GeniePlugin 
+		HostWindowPlugin 
+		JPEGReadWriter2Plugin 
+		JPEGReaderPlugin 
+		KlattSynthesizerPlugin 
+		LargeIntegersPlugin 
+		MacMenubarPlugin 
+		Matrix2x3Plugin 
+		MiscPrimitivePlugin 
+		"IA32ABIPlugin" 
+		ObjectiveCPlugin 
+		RePlugin 
+		SecurityPlugin 
+		SocketPlugin 
+		SoundCodecPlugin 
+		SoundGenerationPlugin 
+		SoundPlugin 
+		StarSqueakPlugin 
+		SurfacePlugin 
+		UUIDPlugin)
 ]
 
 { #category : #plugins }
-CogMacOSConfig >> externalPlugins [
+CocoaIOSConfig >> externalPlugins [
 	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
 ]
 
-{ #category : #plugins }
-CogMacOSConfig >> externalPlugins: aColl [
-
-	externalPlugins := aColl
-]
-
 { #category : #settings }
-CogMacOSConfig >> extraPluginSettings: maker [
-	
-	"Cog currently runs only in 32 bit mode" 
+CocoaIOSConfig >> extraPluginSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'
 ]
 
 { #category : #'source files' }
-CogMacOSConfig >> extraSources [
-	" mac VM using some unix sources"
-	
-	^ 
-	'${platformsDir}/unix/plugins/SocketPlugin/sqUnixSocket.c 
-	${platformsDir}/unix/vm/aio.c 
-	${platformsDir}/unix/plugins/AsynchFilePlugin/sqUnixAsynchFile.c
-	${platformsDir}/unix/vm/sqUnixHeartbeat.c
-	${platformsDir}/unix/vm/sqUnixVMProfile.c
-	${platformsDir}/unix/vm/sqUnixThreads.c
-	${resources}'
+CocoaIOSConfig >> extraSources [
+	self flag: #todo. "This needs to be reified... it does't has any sense compared with #coreSources or #platformSources"
+	^'${resources}'
 ]
 
 { #category : #settings }
-CogMacOSConfig >> extraVMSettings: maker [
+CocoaIOSConfig >> extraVMSettings: maker [
 	
 	"Cog currently runs only in 32 bit mode" 
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
@@ -281,7 +153,6 @@ CogMacOSConfig >> extraVMSettings: maker [
 	maker set: 'resourceDir' to: '${topDir}/macbuild/resources/ProjectBuilder'.
 	maker set: 'resources' to: 
 		'"${resourceDir}/Squeak VM.r"
-		"${resourceDir}/Cog.icns"
 		"${resourceDir}/Squeak.icns"
 		"${resourceDir}/SqueakChanges.icns"
 		"${resourceDir}/SqueakImage.icns"
@@ -294,76 +165,93 @@ CogMacOSConfig >> extraVMSettings: maker [
 ]
 
 { #category : #utils }
-CogMacOSConfig >> fixLineEndsOf: string [
+CocoaIOSConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String lf
 ]
 
 { #category : #accessing }
-CogMacOSConfig >> frameworks [
-
+CocoaIOSConfig >> frameworks [
 	^ #(
-	Carbon
-	AppKit
-	IOKit
+	Cocoa
 	CoreFoundation
+	Foundation
 	AudioToolbox
 	CoreAudio
-	OpenGL
-	AGL
-	QuickTime
-	Foundation
 	SystemConfiguration
-	)
+	ApplicationServices
+	QuartzCore
+	OpenGL)
 ]
 
 { #category : #plugins }
-CogMacOSConfig >> internalPlugins [
+CocoaIOSConfig >> internalPlugins [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
 ]
 
-{ #category : #plugins }
-CogMacOSConfig >> internalPlugins: aColl [
-
-	internalPlugins := aColl
+{ #category : #accessing }
+CocoaIOSConfig >> linkFlags [ 
+	^''
 ]
 
 { #category : #accessing }
-CogMacOSConfig >> linkFlags [
-	^  '' "
-	^ self frameworks"
-]
-
-{ #category : #accessing }
-CogMacOSConfig >> platformName [
-	^ 'Mac OS'
+CocoaIOSConfig >> platformName [ 
+	^'iOS'
 ]
 
 { #category : #'source files' }
-CogMacOSConfig >> platformSources [
-	"files added from platform/Mac OS/vm dir "
+CocoaIOSConfig >> platformSources [
+	"files added from platform/iOS/vm dir "
 	^ #(
-	'NSCursorWrappers.m'
-	'nsPoolManagement.m'
-	'osExports.c'
-	'sqMacEncoding.c'
-	'sqMacImageIO.c'
-	'sqMacMain.c'
-	'sqMacMemory.c'
-	'sqMacNSPluginUILogic2.c'
-	'sqMacTime.c'
-	'sqMacUIAppleEvents.c'
-	'sqMacUIClipBoard.c'
-	'sqMacUIEventsUniversal.c'  " instead of: sqMacUIEvents.c "
-	'sqMacUIMenuBarUniversal.c'
-	'sqMacUnixCommandLineInterface.c'
-	'sqMacUnixExternalPrims.c'
-	'sqMacWindowUniversal.c'
-	'version.c'	
+		'Common/main.m'
+		'Common/aio.c'
+		'Common/Classes/Queue.m'
+		'Common/Classes/sqMacV2Time.c'
+		'Common/Classes/sqSqueakAppDelegate.m'
+		'Common/Classes/sqSqueakFileDirectoryAPI.m'
+		'Common/Classes/sqSqueakFileDirectoryInterface.m'
+		'Common/Classes/sqSqueakInfoPlistInterface.m'
+		'Common/Classes/sqSqueakMainApp.m'
+		'Common/Classes/sqSqueakMainApplication.m'
+		'Common/Classes/sqSqueakMainApplication+attributes.m'
+		'Common/Classes/sqSqueakAttributesAPI.m'
+		'Common/Classes/sqSqueakMainApplication+events.m'
+		'Common/Classes/sqSqueakEventsAPI.m'
+		'Common/Classes/sqSqueakMainApplication+imageReadWrite.m'
+		'Common/Classes/sqSqueakMainApplication+sound.m'
+		'Common/Classes/sqSqueakSoundAPI.m'
+		'Common/Classes/sqSqueakMainApplication+vmAndImagePath.m'
+		'Common/Classes/sqSqueakVmAndImagePathAPI.m'
+		'Common/Classes/sqSqueakMainApplication+screen.m'
+		'Common/Classes/sqSqueakScreenAPI.m'
+		'Common/Classes/sqSqueakScreenAndWindow.m'
+		'Common/Classes/sqSqueakCursorAPI.m'
+		'Common/Classes/sqSqueakMainApplication+cursor.m'
+		'OSX/SqueakOSXAppDelegate.m'
+		'OSX/sqMacV2Browser.m'
+		'OSX/sqMacUnixExternalPrims.m'
+		'OSX/sqSqueakOSXApplication.m'
+		'OSX/sqSqueakOSXFileDirectoryInterface.m'
+		'OSX/sqSqueakOSXApplication+attributes.m'
+		'OSX/sqSqueakOSXInfoPlistInterface.m'
+		'OSX/sqSqueakOSXApplication+imageReadWrite.m'
+		'OSX/sqSqueakOSXScreenAndWindow.m'
+		'OSX/sqSqueakOSXNSView.m'
+		'OSX/SqViewClut.m'
+		'OSX/BitMapConversionLogicFromX11.c'
+		'OSX/SqViewBitmapConversion.m'
+		'OSX/macintoshosxextra.c'
+		'OSX/sqSqueakOSXApplication+cursor.m'
+		'OSX/sqSqueakOSXApplication+events.m'
+		'OSX/keyBoardStrokeDetails.m'
+		'OSX/SqueakOSXApplication.m'
+		'OSX/sqSqueakOSXClipboardAPI.m'
+		'OSX/sqSqueakOSXApplication+clipboard.m'
+		'OSX/sqSqueakOSXDropAPI.m'
 	)
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> plistFile [
+CocoaIOSConfig >> plistFile [
 
 	| plist |
 	
@@ -384,14 +272,11 @@ CogMacOSConfig >> plistFile [
 ]
 
 { #category : #'bundle strings' }
-CogMacOSConfig >> plistTemplate [
-	^ 
-	'<?xml version="1.0" encoding="UTF-8"?>
+CocoaIOSConfig >> plistTemplate [ 
+^'<?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
-	<key>LSMinimumSystemVersion</key>
-	<string>10.5.0</string>
 	<key>CFBundleDevelopmentRegion</key>
 	<string>English</string>
 	<key>CFBundleDocumentTypes</key>
@@ -402,9 +287,9 @@ CogMacOSConfig >> plistTemplate [
 				<string>image</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Croquet.icns</string>
+			<string>SqueakImage.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Croquet Image File</string>
+			<string>Squeak Image File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STim</string>
@@ -418,9 +303,9 @@ CogMacOSConfig >> plistTemplate [
 				<string>sources</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Croquet.icns</string>
+			<string>SqueakSources.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Croquet Sources File</string>
+			<string>Squeak Sources File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STso</string>
@@ -434,9 +319,9 @@ CogMacOSConfig >> plistTemplate [
 				<string>changes</string>
 			</array>
 			<key>CFBundleTypeIconFile</key>
-			<string>Croquet.icns</string>
+			<string>SqueakChanges.icns</string>
 			<key>CFBundleTypeName</key>
-			<string>Croquet Changes File</string>
+			<string>Squeak Changes File</string>
 			<key>CFBundleTypeOSTypes</key>
 			<array>
 				<string>STch</string>
@@ -736,69 +621,35 @@ CogMacOSConfig >> plistTemplate [
 			<key>CFBundleTypeRole</key>
 			<string>Viewer</string>
 		</dict>
-		<dict>
-			<key>CFBundleTypeExtensions</key>
-			<array>
-				<string>bundle</string>
-			</array>
-			<key>CFBundleTypeIconFile</key>
-			<string>SqueakPlugin.icns</string>
-			<key>CFBundleTypeName</key>
-			<string>Squeak Plugin</string>
-			<key>CFBundleTypeOSTypes</key>
-			<array>
-				<string>BNDL</string>
-			</array>
-			<key>CFBundleTypeRole</key>
-			<string>Editor</string>
-		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
-	<string>@CFBundleExecutable@</string>
+	<string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleGetInfoString</key>
-	<string>@CFBundleGetInfoString@</string>
+	<string>Squeak VM 5.7b3 http://www.squeak.org</string>
 	<key>CFBundleIconFile</key>
-	<string>@CFBundleIconFile@</string>
+	<string>Squeak.icns</string>
 	<key>CFBundleIdentifier</key>
-	<string>@CFBundleIdentifier@</string>
+	<string>org.squeak.${PRODUCT_NAME:rfc1034identifier}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>@CFBundleName@</string>
+	<string>Squeak VM Host 64/32bits</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>@CFBundleShortVersionString@</string>
+	<string>5.7b3</string>
 	<key>CFBundleSignature</key>
-	<string>????</string>
+	<string>FAST</string>
 	<key>CFBundleVersion</key>
-	<string>@CFBundleVersion@</string>
-	<key>CGDisableCoalescedUpdates</key>
-	<true/>
+	<string>21.0</string>
 	<key>LSBackgroundOnly</key>
 	<false/>
-	<key>NSServices</key>
-	<array>
-		<dict>
-			<key>NSMenuItem</key>
-			<dict>
-				<key>default</key>
-				<string>Squeak DoIt</string>
-			</dict>
-			<key>NSMessage</key>
-			<string>doitandreturn</string>
-			<key>NSPortName</key>
-			<string>Squeak</string>
-			<key>NSReturnTypes</key>
-			<array>
-				<string>NSStringPboardType</string>
-			</array>
-			<key>NSSendTypes</key>
-			<array>
-				<string>NSStringPboardType</string>
-			</array>
-		</dict>
-	</array>
+	<key>LSMinimumSystemVersion</key>
+	<string>${MACOSX_DEPLOYMENT_TARGET}</string>
+	<key>NSMainNibFile</key>
+	<string>MainMenu</string>
+	<key>NSPrincipalClass</key>
+	<string>SqueakOSXApplication</string>
 	<key>SqueakBrowserMouseCmdButton1</key>
 	<integer>3</integer>
 	<key>SqueakBrowserMouseCmdButton2</key>
@@ -825,13 +676,7 @@ CogMacOSConfig >> plistTemplate [
 	<integer>2</integer>
 	<key>SqueakDebug</key>
 	<integer>0</integer>
-	<key>SqueakEncodingType</key>
-	<string>UTF-8</string>
 	<key>SqueakExplicitWindowOpenNeeded</key>
-	<false/>
-	<key>SqueakFloatingWindowGetsFocus</key>
-	<true/>
-	<key>SqueakHasQuitWithoutSaving</key>
 	<false/>
 	<key>SqueakImageName</key>
 	<string>Squeak.image</string>
@@ -863,58 +708,174 @@ CogMacOSConfig >> plistTemplate [
 	<integer>2</integer>
 	<key>SqueakPluginsBuiltInOrLocalOnly</key>
 	<false/>
+	<key>SqueakQuitOnQuitAppleEvent</key>
+	<false/>
+	<key>SqueakResourceDirectory</key>
+	<string></string>
+	<key>SqueakTrustedDirectory</key>
+	<string>/foobar/tooBar/forSqueak/bogus/</string>
 	<key>SqueakUIFlushPrimaryDeferNMilliseconds</key>
 	<integer>20</integer>
-	<key>SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds</key>
-	<integer>20</integer>
-	<key>SqueakUIFlushSecondaryCleanupDelayMilliseconds</key>
-	<integer>25</integer>
-	<key>SqueakUIFlushUseHighPercisionClock</key>
-	<true/>
 	<key>SqueakUnTrustedDirectory</key>
-	<string>~/Library/Preferences/Croquet/Internet/Untrusted/</string>
-	<key>SqueakWindowAttribute</key>
-	<data>ggAAHw==</data>
-	<key>SqueakWindowHasTitle</key>
-	<true/>
-	<key>SqueakWindowType</key>
-	<integer>6</integer>
+	<string>~/Library/Preferences/Squeak/Internet/My Squeak/</string>
+	<key>SqueakUseFileMappedMMAP</key>
+	<false/>
+	<key>SqueakUIFadeForFullScreenInSeconds</key>
+	<real>0.5</real>
+	<key>UTExportedTypeDeclarations</key>
+	<array>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Image File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.image</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STim</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>image</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-image</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Sources File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.sources</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STso</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sources</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-sources</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.utf8-plain-text</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Changes File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.changes</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STch</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>changes</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-changes</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Script File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.script</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>SOBJ</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>sobj</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/squeak-script</string>
+			</dict>
+		</dict>
+		<dict>
+			<key>UTTypeConformsTo</key>
+			<array>
+				<string>public.data</string>
+			</array>
+			<key>UTTypeDescription</key>
+			<string>Squeak Project File</string>
+			<key>UTTypeIdentifier</key>
+			<string>org.squeak.project</string>
+			<key>UTTypeTagSpecification</key>
+			<dict>
+				<key>com.apple.ostype</key>
+				<string>STpr</string>
+				<key>public.filename-extension</key>
+				<array>
+					<string>pr</string>
+				</array>
+				<key>public.mime-type</key>
+				<string>application/x-squeak-project</string>
+			</dict>
+		</dict>
+	</array>
 </dict>
 </plist>
 '
 ]
 
+{ #category : #accessing }
+CocoaIOSConfig >> pluginsDir [ 
+	^'${srcDir}/vm/intplugins'
+]
+
 { #category : #settings }
-CogMacOSConfig >> setExtraTargetProperties: maker [
+CocoaIOSConfig >> setExtraTargetProperties: maker [
 
 	| plist |
 
 	" generated and add Info.plist file "
 	plist := self plistFile.
 
-	(maker buildDir forceNewFileNamed: 'Info.plist') nextPutAll: plist; close.
+	(maker buildDir forceNewFileNamed: 'Info.plist') 
+		nextPutAll: plist; 
+		close.
 	
 	maker targetPropertyAt: 'MACOSX_BUNDLE_INFO_PLIST' put: '${buildDir}/Info.plist'.
 
 	maker cmd: 'set_source_files_properties' params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
 ]
 
+{ #category : #accessing }
+CocoaIOSConfig >> srcDir [ 
+	^'${topDir}/platforms/iOS/vm/src'
+]
+
 { #category : #'source files' }
-CogMacOSConfig >> standardIncludes [
+CocoaIOSConfig >> standardIncludes [
 	^ #(
-	'SYSTEM /Developer/Headers/FlatCarbon'
-	'${targetPlatform}/vm/Developer'  "for some unknown reason sqGnu.h is put there"
-	
 	'${crossDir}/plugins/SerialPlugin'   "for platforms/Mac OS/vm/osExports.c to work"
 	'${targetPlatform}/plugins/FilePlugin'   "for sqMacFileLogic.h to work"
 	'${targetPlatform}/plugins/HostWindowPlugin'  "for sqMacNSPluginUILogic2.c to work"
-	'${crossDir}/plugins/HostWindowPlugin' "for same... "
+	'${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin' "for same... "
 	'${crossDir}/plugins/DropPlugin' "include DropPlugin.h"
 	'${crossDir}/plugins/SocketPlugin'
 	'${crossDir}/plugins/AsynchFilePlugin'
-	'${platformsDir}/unix/vm'  "suppressing following:
+	'${platformsDir}/unix/vm' "suppressing following:
 		platforms/Mac OS/vm/sqMacMain.c:94:19: error: sqaio.h: No such file or directory
 		platforms/Mac OS/vm/sqMacMain.c:96:28: error: sqUnixCharConv.h: No such file or directory"
-	)
+	'${platformsDir}/iOS/vm/iPhone' "config.h is here. Why???"
+)
 	
 ]
