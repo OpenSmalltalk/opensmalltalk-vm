@@ -4,6 +4,23 @@ Class {
 	#category : #CMakeVMMaker
 }
 
+{ #category : #accessing }
+MacOSConfig >> cMakeMacros [ 
+	^'macro(add_framework appname fwname)
+    find_library(FRAMEWORK_${fwname}
+        NAMES ${fwname}
+        PATHS ${CMAKE_OSX_SYSROOT}/System/Library
+        PATH_SUFFIXES Frameworks
+        NO_DEFAULT_PATH)
+    if( ${FRAMEWORK_${fwname}} STREQUAL FRAMEWORK_${fwname}-NOTFOUND)
+        message(ERROR ": Framework ${fwname} not found")
+    else()
+	  include_directories(SYSTEM /System/Library/Frameworks/${fwname}.framework/Headers)
+	  target_link_libraries(${appname} ${FRAMEWORK_${fwname}})
+    endif()
+endmacro(add_framework)'  
+]
+
 { #category : #'plugin extra rules' }
 MacOSConfig >> configureB3DAcceleratorPlugin: maker [
 	"extra rules for B3DAcceleratorPlugin"
@@ -74,6 +91,11 @@ MacOSConfig >> configureMIDIPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+MacOSConfig >> configureObjectiveCPlugin: maker [
+	maker doNotGenerate: true
+]
+
+{ #category : #'plugin extra rules' }
 MacOSConfig >> configurePlugin: aPlugin with: generator [
 
 	generator isExternal ifTrue: [
@@ -103,4 +125,23 @@ MacOSConfig >> configureSerialPlugin: maker [
 	maker addPlatformSources: #( 'sqMacSerialPort.c' )
 
 
+]
+
+{ #category : #'plugin extra rules' }
+MacOSConfig >> configureSocketPlugin: maker [ 
+	"extra rules for SoundPlugin"
+
+	super configureSoundPlugin: maker.  
+	maker includeDirectories: '${platformsDir}/unix/plugins/SocketPlugin'.
+	maker 
+		addSources: #('sqUnixSocket.c') 
+		prefixed: '${platformsDir}/unix/plugins/SocketPlugin/'
+
+
+
+]
+
+{ #category : #utils }
+MacOSConfig >> fixLineEndsOf: string [
+	^ string copyReplaceAll: String cr with: String lf
 ]

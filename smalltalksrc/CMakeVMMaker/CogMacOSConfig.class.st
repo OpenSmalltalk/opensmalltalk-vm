@@ -293,11 +293,6 @@ CogMacOSConfig >> extraVMSettings: maker [
 
 ]
 
-{ #category : #utils }
-CogMacOSConfig >> fixLineEndsOf: string [
-	^ string copyReplaceAll: String cr with: String lf
-]
-
 { #category : #accessing }
 CogMacOSConfig >> frameworks [
 
