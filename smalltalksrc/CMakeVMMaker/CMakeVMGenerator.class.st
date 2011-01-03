@@ -39,6 +39,20 @@ Class {
 }
 
 { #category : #'as yet unclassified' }
+CMakeVMGenerator >> addFrameworks: aCollection [
+	aCollection do: [:each | 
+		self puts: 'find_library(',each,'_FMWK ', each , ')'.
+		self puts: 'target_link_libraries(' , config executableName , ' ${' , each,'_FMWK})'.
+		"self puts: 'add_framework(', config executableName, ' ', each, ')'" ].
+  
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> addProperty: propertyString value: valueString [
+	self puts: 'set_target_properties(', config executableName, ' PROPERTIES ', propertyString, ' "', valueString ,'")'  
+]
+
+{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> append: aString toAll: list [
 	"flatten the list, adding prefix for each element"
 	^ list inject: '' into: [:result :each | result, ' ', aString, each ].
@@ -175,11 +189,7 @@ CMakeVMGenerator >> platformName [
 
 { #category : #'as yet unclassified' }
 CMakeVMGenerator >> processExternalDependencies [
-	
-		config frameworks do: [:each |
-		self puts: 'find_library(',each,'_FMWK ', each , ')'.
-		self puts: 'target_link_libraries(' , config executableName , ' ${' , each,'_FMWK})'.
-	].
+	self addFrameworks: config frameworks.	
 
 ]
 
@@ -244,6 +254,12 @@ setup  a common directories, relative to the ${topDir}
 		set: #buildDir toString: (self config buildDir ifNil: ['${topDir}/build']);
 		set: #platformVMDir toString: '${targetPlatform}/vm'.
 
+]
+
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> setupMacros: gen [
+	self config cMakeMacros
+		ifNotNil: [ :macros | gen puts: macros ]
 ]
 
 { #category : #'as yet unclassified' }

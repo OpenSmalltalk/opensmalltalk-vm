@@ -55,6 +55,11 @@ CPlatformConfig >> buildDir: anObject [
 	buildDir := anObject
 ]
 
+{ #category : #accessing }
+CPlatformConfig >> cMakeMacros [
+	^nil	
+]
+
 { #category : #'plugin extra rules' }
 CPlatformConfig >> configureB3DAcceleratorPlugin: maker [
 	"extra rules for B3DAcceleratorPlugin"
@@ -313,6 +318,12 @@ CPlatformConfig >> configureSecurityPlugin: maker [
 CPlatformConfig >> configureSerialPlugin: maker [ 
 	"extra rules for SerialPlugin"
 
+
+]
+
+{ #category : #'plugin extra rules' }
+CPlatformConfig >> configureSocketPlugin: maker [ 
+	"extra rules for SocketPlugin"
 
 ]
 

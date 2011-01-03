@@ -18,7 +18,7 @@ CocoaIOSConfig >> CFBundleGetInfoString [
 { #category : #'bundle strings' }
 CocoaIOSConfig >> CFBundleIconFile [
 	"An application icon"
-	^ 'SqueakImage.icns'
+	^ 'Squeak.icns'
 ]
 
 { #category : #'bundle strings' }
@@ -48,7 +48,7 @@ CocoaIOSConfig >> CFBundleVersion [
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
-	^ '-arch i386 -mmacosx-version-min=10.5 '	
+	^ '-arch i386 -fnext-runtime -mmacosx-version-min=10.5 '	
 	
 
 ]
@@ -61,7 +61,7 @@ CocoaIOSConfig >> compilerFlags [
 { #category : #accessing }
 CocoaIOSConfig >> compilerFlagsRelease [ 
 	self flag: #review. "There are more configurations in .xcodeproj"
-	^'-fobjc-direct-dispatch -fno-objc-call-cxx-cdtors -msse3 -msse4.1 -msse4.2 -mdynamic-no-pic -fvisibility-inlines-hidden -mtune=G4 -fwritable-strings -Os -fvisibility=hidden -funroll-loops -fno-asm -std=gnu99 -fasm-blocks -finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS'
+	^'-fobjc-direct-dispatch -msse3 -msse4.1 -msse4.2 -mdynamic-no-pic -mtune=G4 -fwritable-strings -Os -fvisibility=hidden -funroll-loops -fno-asm -std=gnu99 -fasm-blocks -finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS -DBUILD_FOR_OSX -DHAVE_SYS_TIME_H -DHAVE_NANOSLEEP -DSQUEAK_BUILTIN_PLUGIN'
 ]
 
 { #category : #'plugin extra rules' }
@@ -75,6 +75,18 @@ CocoaIOSConfig >> configureHostWindowPlugin: maker [
 
 ]
 
+{ #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureSoundPlugin: maker [ 
+	"extra rules for SoundPlugin"
+
+	super configureSoundPlugin: maker.  
+	maker includeDirectories: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'.
+	maker 
+		addSources: #('sqSqueakOSXSoundCoreAudio.m') 
+		prefixed: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin/'.	
+
+]
+
 { #category : #'source files' }
 CocoaIOSConfig >> coreSources [
 	^#('interp.c')
@@ -82,7 +94,10 @@ CocoaIOSConfig >> coreSources [
 
 { #category : #'source files' }
 CocoaIOSConfig >> crossSources [ 
-	^#()
+	^#(
+			'sqNamedPrims.c'
+			'sqVirtualMachine.c'
+		)
 ]
 
 { #category : #plugins }
@@ -116,7 +131,7 @@ CocoaIOSConfig >> defaultInternalPlugins [
 		Matrix2x3Plugin 
 		MiscPrimitivePlugin 
 		"IA32ABIPlugin" 
-		ObjectiveCPlugin 
+		"ObjectiveCPlugin" 
 		RePlugin 
 		SecurityPlugin 
 		SocketPlugin 
@@ -126,6 +141,11 @@ CocoaIOSConfig >> defaultInternalPlugins [
 		StarSqueakPlugin 
 		SurfacePlugin 
 		UUIDPlugin)
+]
+
+{ #category : #accessing }
+CocoaIOSConfig >> executableType [
+	^ 'MACOSX_BUNDLE'
 ]
 
 { #category : #plugins }
@@ -141,13 +161,12 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 { #category : #'source files' }
 CocoaIOSConfig >> extraSources [
 	self flag: #todo. "This needs to be reified... it does't has any sense compared with #coreSources or #platformSources"
-	^'${resources}'
+	^'${buildDir}/', self executableName, '_Prefix.pch
+	${resources}'
 ]
 
 { #category : #settings }
 CocoaIOSConfig >> extraVMSettings: maker [
-	
-	"Cog currently runs only in 32 bit mode" 
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
 
 	maker set: 'resourceDir' to: '${topDir}/macbuild/resources/ProjectBuilder'.
@@ -164,16 +183,10 @@ CocoaIOSConfig >> extraVMSettings: maker [
 
 ]
 
-{ #category : #utils }
-CocoaIOSConfig >> fixLineEndsOf: string [
-	^ string copyReplaceAll: String cr with: String lf
-]
-
 { #category : #accessing }
 CocoaIOSConfig >> frameworks [
 	^ #(
 	Cocoa
-	CoreFoundation
 	Foundation
 	AudioToolbox
 	CoreAudio
@@ -623,21 +636,21 @@ CocoaIOSConfig >> plistTemplate [
 		</dict>
 	</array>
 	<key>CFBundleExecutable</key>
-	<string>${EXECUTABLE_NAME}</string>
+	<string>@CFBundleExecutable@</string>
 	<key>CFBundleGetInfoString</key>
-	<string>Squeak VM 5.7b3 http://www.squeak.org</string>
+	<string>@CFBundleGetInfoString@</string>
 	<key>CFBundleIconFile</key>
-	<string>Squeak.icns</string>
+	<string>@CFBundleIconFile@</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.squeak.${PRODUCT_NAME:rfc1034identifier}</string>
+	<string>@CFBundleIdentifier@</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundleName</key>
-	<string>Squeak VM Host 64/32bits</string>
+	<string>@CFBundleName@</string>
 	<key>CFBundlePackageType</key>
 	<string>APPL</string>
 	<key>CFBundleShortVersionString</key>
-	<string>5.7b3</string>
+	<string>@CFBundleShortVersionString@</string>
 	<key>CFBundleSignature</key>
 	<string>FAST</string>
 	<key>CFBundleVersion</key>
@@ -841,9 +854,22 @@ CocoaIOSConfig >> pluginsDir [
 ]
 
 { #category : #settings }
+CocoaIOSConfig >> precompiledHeaders [ 
+	^
+'//
+// Prefix header for all source files of the ''', self executableName, ''' target in the ''', self executableName, ''' project
+//
+
+#ifdef __OBJC__
+    #import <Cocoa/Cocoa.h>
+#endif
+'
+]
+
+{ #category : #settings }
 CocoaIOSConfig >> setExtraTargetProperties: maker [
 
-	| plist |
+	| plist precompiledHeaders |
 
 	" generated and add Info.plist file "
 	plist := self plistFile.
@@ -851,10 +877,54 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 	(maker buildDir forceNewFileNamed: 'Info.plist') 
 		nextPutAll: plist; 
 		close.
-	
-	maker targetPropertyAt: 'MACOSX_BUNDLE_INFO_PLIST' put: '${buildDir}/Info.plist'.
 
-	maker cmd: 'set_source_files_properties' params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+	maker 
+		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
+		value: '${buildDir}/Info.plist'.  
+
+	maker 
+		cmd: 'set_source_files_properties' 
+		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+		
+	precompiledHeaders := (self executableName, '_Prefix.pch').
+	(maker buildDir forceNewFileNamed: precompiledHeaders) 
+		nextPutAll: self precompiledHeaders;
+		close.
+		
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_GCC_PREFIX_HEADER' 
+		value: '${buildDir}/', precompiledHeaders.
+
+	self flag: #todo. "Check debug/release"
+	self setExtraTargetPropertiesRelease: maker.  
+]
+
+{ #category : #settings }
+CocoaIOSConfig >> setExtraTargetPropertiesRelease: maker [
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_ICC_DEBUG' 
+		value: 'NO'.  
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_LEVEL' 
+		value: 'speedHLO'.  
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION' 
+		value: 'YES'.  
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_PARALLEL' 
+		value: 'NO'.  
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_PREFETCH_INCERTION' 
+		value: 'YES'.  
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_ICC_PROVIDE_FRAME_PTR' 
+		value: 'NO'.  
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_USE_ARCH_IA32' 
+		value: 'SSE41'.  
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_PER_ARCH_CFLAGS_i386' 
+		value: '-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS'.  
 ]
 
 { #category : #accessing }
@@ -865,16 +935,21 @@ CocoaIOSConfig >> srcDir [
 { #category : #'source files' }
 CocoaIOSConfig >> standardIncludes [
 	^ #(
-	'${crossDir}/plugins/SerialPlugin'   "for platforms/Mac OS/vm/osExports.c to work"
-	'${targetPlatform}/plugins/FilePlugin'   "for sqMacFileLogic.h to work"
-	'${targetPlatform}/plugins/HostWindowPlugin'  "for sqMacNSPluginUILogic2.c to work"
-	'${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin' "for same... "
-	'${crossDir}/plugins/DropPlugin' "include DropPlugin.h"
+	'${crossDir}/plugins/SerialPlugin'   
+	'${targetPlatform}/plugins/FilePlugin'
+	'${crossDir}/plugins/FilePlugin'
+	'${targetPlatform}/plugins/HostWindowPlugin'
+	'${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin' 
+	'${crossDir}/plugins/HostWindowPlugin'
+	'${crossDir}/plugins/DropPlugin'
 	'${crossDir}/plugins/SocketPlugin'
+	'${crossDir}/plugins/SoundPlugin'
 	'${crossDir}/plugins/AsynchFilePlugin'
-	'${platformsDir}/unix/vm' "suppressing following:
-		platforms/Mac OS/vm/sqMacMain.c:94:19: error: sqaio.h: No such file or directory
-		platforms/Mac OS/vm/sqMacMain.c:96:28: error: sqUnixCharConv.h: No such file or directory"
+	'${platformsDir}/unix/vm'
+	'${platformsDir}/iOS/plugins/SoundPlugin'
+	'${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'
+	'${platformsDir}/iOS/vm/Common/Classes'
+	'${platformsDir}/iOS/vm/OSX'
 	'${platformsDir}/iOS/vm/iPhone' "config.h is here. Why???"
 )
 	
