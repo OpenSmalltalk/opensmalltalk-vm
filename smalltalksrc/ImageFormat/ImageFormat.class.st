@@ -219,12 +219,13 @@ ImageFormat class >> generateCkStatusProgram: programName on: stream [
 ImageFormat class >> initialize [
 	"ImageFormat initialize"
 
+	PlatformByteOrderBit := 1.
 	BaseVersionNumbers := self baseVersionNumbers.
 	BaseVersionMask := self baseVersionMask.
 	CapabilitiesBitsMask := self capabilitiesBitsMask.
 	ReservedBitsMask := self reservedBitsMask.
-	KnownVersionNumbers := self knownVersionNumbers.
-	PlatformByteOrderBit := 1
+	KnownVersionNumbers := self knownVersionNumbers
+
 ]
 
 { #category : #'initialize-release' }
