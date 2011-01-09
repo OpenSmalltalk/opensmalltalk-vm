@@ -194,8 +194,9 @@ CogIA32Compiler >> computeMaximumSize [
 	opcode caseOf: {
 		"Noops & Pseudo Ops"
 		[Label]					-> [^maxSize := 0].
-		[AlignmentNops]			-> [^maxSize := (operands at: 0) - 1].
+		[AlignmentNops]		-> [^maxSize := (operands at: 0) - 1].
 		[Fill16]					-> [^maxSize := 2].
+		[Fill32]					-> [^maxSize := 4].
 		[FillFromWord]			-> [^maxSize := 4].
 		[Nop]					-> [^maxSize := 1].
 		"Specific Control/Data Movement"
@@ -913,6 +914,18 @@ CogIA32Compiler >> concretizeFill16 [
 	machineCode at: 0 put: (word bitAnd: 16rFF).
 	machineCode at: 1 put: word >> 8.
 	^machineCodeSize := 2
+]
+
+{ #category : #'generate machine code' }
+CogIA32Compiler >> concretizeFill32 [
+	| word |
+	<var: #word type: #'unsigned long'>
+	word := operands at: 0.
+	machineCode at: 0 put: (word bitAnd: 16rFF).
+	machineCode at: 1 put: word >> 8.
+	machineCode at: 2 put: word >> 16.
+	machineCode at: 3 put: word >> 24.
+	^machineCodeSize := 4
 ]
 
 { #category : #'generate machine code' }
@@ -1982,6 +1995,7 @@ CogIA32Compiler >> dispatchConcretize [
 		[Label]				-> [^self concretizeLabel].
 		[AlignmentNops]	-> [^self concretizeAlignmentNops].
 		[Fill16]				-> [^self concretizeFill16].
+		[Fill32]				-> [^self concretizeFill32].
 		[FillFromWord]		-> [^self concretizeFillFromWord].
 		[Nop]				-> [^self concretizeNop].
 		"Specific Control/Data Movement"
@@ -2757,6 +2771,15 @@ CogIA32Compiler >> storeLiteral: literal beforeFollowingAddress: followingAddres
 		byteAt: followingAddress - 2 put: (literal >> 16 bitAnd: 16rFF);
 		byteAt: followingAddress - 3 put: (literal >>   8 bitAnd: 16rFF);
 		byteAt: followingAddress - 4 put: (literal            bitAnd: 16rFF)
+]
+
+{ #category : #'inline cacheing' }
+CogIA32Compiler >> thirtyTwoBitValueAt: startAddress [
+	"Answer the 32 bit value at startAddress."
+	^  ((objectMemory byteAt: startAddress + 3) << 24)
+	+  ((objectMemory byteAt: startAddress + 2) << 16)
+	+  ((objectMemory byteAt: startAddress + 1) << 8)
+	+   (objectMemory byteAt: startAddress)
 ]
 
 { #category : #disassembly }

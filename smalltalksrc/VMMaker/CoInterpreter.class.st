@@ -747,7 +747,7 @@ CoInterpreter >> asCogHomeMethod: aCogMethod [
 	<returnTypeC: #'CogMethod *'>
 	^aCogMethod cmType = CMMethod
 		ifTrue: [self cCoerceSimple: aCogMethod to: #'CogMethod *']
-		ifFalse: [cogit cogHomeMethod: aCogMethod]
+		ifFalse: [aCogMethod cmHomeMethod]
 ]
 
 { #category : #'debug support' }
@@ -922,7 +922,7 @@ CoInterpreter >> bytecodePCFor: theIP cogMethod: cogMethod startBcpc: startBcpc 
 			[cogMethodForIP := self cCoerceSimple: cogMethod asInteger - ((theIP signedBitShift: -16) * (cogit sizeof: CogBlockMethod))
 									to: #'CogBlockMethod *'.
 			 self assert: cogMethodForIP cmType = CMBlock.
-			 self assert: cogMethodForIP objectHeader = cogMethod asUnsignedInteger.
+			 self assert: cogMethodForIP cmHomeMethod = cogMethod.
 			 mcpc := cogMethodForIP asInteger - theIP signedIntFromShort]
 		ifFalse:
 			[cogMethodForIP := self cCoerceSimple: cogMethod to: #'CogBlockMethod *'.
@@ -1268,7 +1268,8 @@ CoInterpreter >> ceContext: maybeContext instVar: slotIndex [
 CoInterpreter >> ceContext: maybeMarriedContext instVar: slotIndex value: anOop [
 	<api>
 	"genStorePop:MaybeContextReceiverVariable: filters out unmarried contexts
-	 but not arbitrary objects in subclasses."
+	 but not arbitrary objects in subclasses.  It answers maybeMarriedContext so
+	 that the StackToRegisterMappingCogit can keep ReceiverResultReg live."
 	(self isContextNonInt: maybeMarriedContext)
 		ifTrue:
 			[self assert: (self isMarriedOrWidowedContext: maybeMarriedContext).
@@ -1276,7 +1277,8 @@ CoInterpreter >> ceContext: maybeMarriedContext instVar: slotIndex value: anOop 
 			 self externalInstVar: slotIndex ofContext: maybeMarriedContext put: anOop.
 			 self push: instructionPointer]
 		ifFalse:
-			[objectMemory storePointer: slotIndex ofObject: maybeMarriedContext withValue: anOop]
+			[objectMemory storePointer: slotIndex ofObject: maybeMarriedContext withValue: anOop].
+	^maybeMarriedContext
 ]
 
 { #category : #trampolines }
@@ -1523,14 +1525,16 @@ CoInterpreter >> ceSend: selector "<Integer>" super: superNormalBar to: rcvr "<I
 		ifFalse: "This is a cannotReturn:, nonLocalreturn:through: or mustBeBoolean send.  Must not link."
 			[mayLink := false.
 			 argumentCount := -1 - numArgs].
+	"We set the messageSelector for executeMethod below since things
+	 like the at cache read messageSelector and so it cannot be left stale."
+	messageSelector := selector.
 	(self lookupInMethodCacheSel: selector class: class)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[messageSelector := selector.
-			 (self lookupMethodNoMNUEtcInClass: class) ifFalse:
+			[(self lookupMethodNoMNUEtcInClass: class) ifFalse:
 				[^self handleMNUInMachineCodeTo: rcvr
 					lookupClass: class
 					mayLink: (mayLink and: [canLinkCacheTag])]].
@@ -1582,14 +1586,16 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
 	class := objectMemory fetchClassOf: rcvr.
 	argumentCount := numArgs.
+	"We set the messageSelector for executeMethod below since things
+	 like the at cache read messageSelector and so it cannot be left stale."
+	messageSelector := oPIC selector.
 	(self lookupInMethodCacheSel: oPIC selector class: class)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: oPIC selector]
 		ifFalse:
-			[messageSelector := oPIC selector.
-			 (self lookupMethodNoMNUEtcInClass: class) ifFalse:
+			[(self lookupMethodNoMNUEtcInClass: class) ifFalse:
 				[self handleMNUInMachineCodeTo: rcvr
 					lookupClass: class
 					mayLink: false]].
@@ -1748,7 +1754,7 @@ CoInterpreter >> checkStackIntegrity [
 	<var: #theFP type: #'char *'>
 	<var: #callerFP type: #'char *'>
 	<var: #frameRcvrOffset type: #'char *'>
-	<var: #cogMethod type: #'CogBlockMethod *'>
+	<var: #cogMethod type: #'CogMethod *'>
 	ok := true.
 	0 to: numStackPages - 1 do:
 		[:i| | thePage theSP theFP frameRcvrOffset callerFP oop |
@@ -1784,12 +1790,8 @@ CoInterpreter >> checkStackIntegrity [
 			 (self isMachineCodeFrame: theFP)
 				ifTrue:
 					[| cogMethod |
-					 cogMethod := self mframeCogMethod: theFP.
-					 cogMethod cmType = CMBlock ifTrue:
-						[cogMethod := self cCoerceSimple: (cogit cogHomeMethod: cogMethod)
-											to: #'CogBlockMethod *'].
-					 ((cogMethod asInteger bitAnd: BytesPerWord - 1) ~= 0 
-					   or: [(self heapMapAtWord: (self pointerForOop: cogMethod)) = 0]) ifTrue:
+					 cogMethod := self mframeHomeMethod: theFP.
+					 (self heapMapAtWord: (self pointerForOop: cogMethod)) = 0 ifTrue:
 						[self printFrameThing: 'object leak in mframe mthd' at: theFP + FoxMethod; cr.
 						 ok := false]]
 				ifFalse:
@@ -1812,6 +1814,12 @@ CoInterpreter >> checkStackIntegrity [
 	^ok
 ]
 
+{ #category : #'process primitive support' }
+CoInterpreter >> clearCogCompiledCodeCompactionCalledFor [
+	"For in-image tests"
+	cogCompiledCodeCompactionCalledFor := false
+]
+
 { #category : #'debug support' }
 CoInterpreter >> clearTraceLog [
 	<api>
@@ -1830,6 +1838,13 @@ CoInterpreter >> cogMethodOf: aMethodOop [
 	self assert: ((objectMemory isNonIntegerObject: methodHeader)
 				and: [methodHeader asUnsignedInteger < objectMemory startOfMemory]).
 	^self cCoerceSimple: methodHeader to: #'CogMethod *'
+]
+
+{ #category : #accessing }
+CoInterpreter >> cogit: aCogit [
+	<doNotGenerate>
+	"for in-image tests"
+	cogit := aCogit
 ]
 
 { #category : #'process primitive support' }
@@ -2259,7 +2274,7 @@ CoInterpreter >> encodedNativePCOf: mcpc cogMethod: cogMethod [
 		[^HasBeenReturnedFromMCPC].
 	cogMethod cmType = CMMethod ifTrue:
 		[^objectMemory integerObjectOf: cogMethod asInteger - mcpc].
-	homeMethod := cogit cogHomeMethod: cogMethod.
+	homeMethod := cogMethod cmHomeMethod.
 	blockOffset := homeMethod asInteger - cogMethod asInteger / (cogit sizeof: CogBlockMethod).
 	^objectMemory integerObjectOf: ((blockOffset bitShift: 16) bitOr: (cogMethod asInteger - mcpc bitAnd: 16rFFFF))
 ]
@@ -3418,6 +3433,12 @@ CoInterpreter >> isCog [
 	^true
 ]
 
+{ #category : #'process primitive support' }
+CoInterpreter >> isCogCompiledCodeCompactionCalledFor [
+	"For in-image tests"
+	^cogCompiledCodeCompactionCalledFor
+]
+
 { #category : #'compiled methods' }
 CoInterpreter >> isCogMethodReference: methodHeader [
 	self assert: ((objectMemory isIntegerObject: methodHeader)
@@ -4045,7 +4066,7 @@ CoInterpreter >> marryFrame: theFP SP: theSP [
 				ifTrue:
 					[closureOrNil := objectMemory nilObject]
 				ifFalse:
-					[cogMethod := cogit cogHomeMethod: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *').
+					[cogMethod := (self cCoerceSimple: cogMethod to: #'CogBlockMethod *') cmHomeMethod.
 					 closureOrNil := self frameStackedReceiver: theFP numArgs: numArgs].
 			 byteSize := (cogMethod methodHeader bitAnd: LargeContextBit) ~= 0
 							ifTrue: [LargeContextSize]
@@ -4199,14 +4220,14 @@ CoInterpreter >> mframeHasContext: theFP [
 
 { #category : #'frame access' }
 CoInterpreter >> mframeHomeMethod: theFP [
-	"Answer the home method for a machine code frame.  From a block frame
-	 we find the home method through the objectHeader field which points at it.
-	 In both cases we need to strip the isBlock and isContext flags from the pointer."
+	"Answer the home method for a machine code frame.  From a block frame we find
+	 the home method through the block's homeOffset field which is the delta to it.
+	 In both cases we need to strip the isBlock and isContext flags from the method field."
 	<returnTypeC: #'CogMethod *'>
 	| methodField |
 	methodField := self frameMethodField: theFP.
 	(methodField bitAnd: MFMethodFlagIsBlockFlag) ~= 0 ifTrue:
-		[methodField := (self cCoerceSimple: (methodField bitAnd: MFMethodMask) to: #'CogMethod *') objectHeader].
+		[^(self cCoerceSimple: (methodField bitAnd: MFMethodMask) to: #'CogBlockMethod *') cmHomeMethod].
 	^self cCoerceSimple: (methodField bitAnd: MFMethodMask) to: #'CogMethod *'
 ]
 
@@ -4568,7 +4589,7 @@ CoInterpreter >> printCogMethod: cogMethod [
 			printHex: cogMethod methodObject].
 	cogMethod cmType = CMBlock ifTrue:
 		[self print: ': block home: ';
-			printHex: cogMethod objectHeader].
+			printHex: (self cCoerceSimple: cogMethod to: #'CogBlockMethod *') cmHomeMethod asUnsignedInteger].
 	cogMethod cmType = CMClosedPIC ifTrue:
 		[self print: ': Closed PIC N: ';
 			printHex: cogMethod cPICNumCases].
@@ -5644,7 +5665,7 @@ CoInterpreter >> updateStackZoneReferencesToCompiledCodePreCompaction [
 				 theFlags := theMethodField bitAnd: MFMethodFlagsMask.
 				 theMethod := self cCoerceSimple: theMethodField - theFlags to: #'CogMethod *'.
 				 theMethod cmType = CMBlock ifTrue:
-					[theMethod := self cCoerceSimple: theMethod objectHeader to: #'CogMethod *'].
+					[theMethod := (self cCoerceSimple: theMethodField - theFlags to: #'CogBlockMethod *') cmHomeMethod].
 				 theIP := (stackPages longAt: theIPPtr) asUnsignedInteger.
 				 (theIP ~= cogit ceCannotResumePC
 				  and: [self asserta: (theIP >= theMethod asUnsignedInteger

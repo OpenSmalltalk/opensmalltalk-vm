@@ -257,6 +257,12 @@ CogAbstractInstruction >> concretizeFill16 [
 ]
 
 { #category : #'generate machine code' }
+CogAbstractInstruction >> concretizeFill32 [
+	"fill with operand 0 according to the processor's endianness"
+	self subclassResponsibility
+]
+
+{ #category : #'generate machine code' }
 CogAbstractInstruction >> concretizeFillFromWord [
 	"fill with operand 0 + operand 1 according to the processor's endianness"
 	self subclassResponsibility

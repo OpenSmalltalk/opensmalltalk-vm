@@ -3,10 +3,19 @@ Class {
 	#superclass : #Interval,
 	#instVars : [
 		'startpc',
+		'endpc',
 		'cogMethod'
 	],
 	#category : #'VMMaker-JITSimulation'
 }
+
+{ #category : #'instance creation' }
+CogCodeRange class >> from: start to: stop cogMethod: cogMethod startpc: startpc [
+	^(super from: start to: stop)
+		cogMethod: cogMethod;
+		startpc: startpc;
+		yourself
+]
 
 { #category : #accessing }
 CogCodeRange >> cogMethod [
@@ -22,12 +31,31 @@ CogCodeRange >> cogMethod: anObject [
 	cogMethod := anObject
 ]
 
+{ #category : #accessing }
+CogCodeRange >> endPC [
+	"Answer the value of endpc"
+
+	^ endpc
+]
+
+{ #category : #accessing }
+CogCodeRange >> endPC: anObject [
+	endpc := anObject
+]
+
 { #category : #printing }
 CogCodeRange >> printOn: aStream [
-	aStream nextPut: $(;
-	 nextPutAll: 'pc: ';
-	 print: startpc;
-	 space.
+	aStream nextPut: $(.
+	(startpc notNil and: [endpc notNil])
+		ifTrue:
+			[aStream
+				nextPutAll: 'bcpcs: ';
+				print: startpc;
+				nextPutAll: '->';
+				print: endpc]
+		ifFalse:
+			[aStream nextPutAll: 'startpc: '; print: startpc].
+	aStream space.
 	start storeOn: aStream base: 16.
 	aStream nextPutAll: ' to: '.
 	stop storeOn: aStream base: 16.
