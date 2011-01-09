@@ -498,9 +498,7 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 				[deadCode := true]].
 	 self cCode: '' inSmalltalk:
 		[deadCode ifFalse:
-			[self assert: simStackPtr + (needsFrame
-										ifTrue: [0]
-										ifFalse: [methodOrBlockNumArgs + 1])
+			[self assert: simStackPtr + (needsFrame ifTrue: [0] ifFalse: [1])
 						= (self debugStackPointerFor: bytecodePointer)]].
 	 byte0 := objectMemory fetchByte: bytecodePointer ofObject: methodObj.
 	 descriptor := self generatorAt: byte0.
@@ -2019,7 +2017,9 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	self ssPop: 2.
 	resultReg := self availableRegisterOrNil.
 	resultReg ifNil:
-		[self ssAllocateRequiredReg: (resultReg := Arg1Reg)].
+		[(self numRegArgs > 1 and: [needsFrame not and: [methodOrBlockNumArgs = 2]]) ifTrue:
+			[self halt].
+		self ssAllocateRequiredReg: (resultReg := Arg1Reg)].
 	self ssPush: 2.
 	(self ssTop type = SSConstant
 	 and: [self ssTop spilled not]) "if spilled we must generate a real pop"
@@ -2082,15 +2082,15 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	| topReg valueReg association constVal |
 	self flag: 'with better register allocation this wouldn''t need a frame.  e.g. use SendNumArgs instead of ReceiverResultReg'.
 	self assert: needsFrame.
+	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
 	 literal variable loads that stores the result in a register, deferring only the register push."
 	association := coInterpreter literal: litVarIndex ofMethod: methodObj.
-	optStatus isReceiverResultRegLive: false.
+	constVal := self ssTop maybeConstant.
 	"Avoid store check for immediate values"
 	(self ssTop type = SSConstant
-	 and: [objectRepresentation isImmediate: self ssTop constant]) ifTrue:
-		[constVal := self ssTop constant.
-		 popBoolean ifTrue:
+	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
+		[popBoolean ifTrue:
 			[self ssPop: 1].
 		 self ssAllocateRequiredReg: ReceiverResultReg.
 		 self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
@@ -2105,9 +2105,8 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	 or: [topReg = ReceiverResultReg]) ifTrue:
 		[topReg := ClassReg].
 	self ssPop: 1.
-	self ssAllocateRequiredReg: topReg.
+	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
 	self ssPush: 1.
-	self flag: 'but what if we don''t pop?  The top reg is still potentially trashed in the call;. think this through'.
 	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
 	valueReg = ReceiverResultReg ifTrue:
 		[self MoveR: valueReg R: topReg].
@@ -2126,7 +2125,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVariable: slotIndex [
 	<inline: false>
-	| jmpSingle jmpDone |
+	| jmpSingle jmpDone valueReg |
 	<var: #jmpSingle type: #'AbstractInstruction *'>
 	<var: #jmpDone type: #'AbstractInstruction *'>
 	self assert: needsFrame.
@@ -2135,15 +2134,15 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 	 ceStoreContextInstVarTrampoline and ceStoreCheckTrampoline."
 	self ensureReceiverResultRegContainsSelf.
 	self ssPop: 1.
-	self ssAllocateCallReg: ClassReg and: SendNumArgsReg.
+	self ssAllocateCallReg: ClassReg and: SendNumArgsReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
 	self ssPush: 1.
 	objectRepresentation
 		genLoadSlot: SenderIndex
 		sourceReg: ReceiverResultReg
 		destReg: TempReg.
-	self flag: 'why do we always pop??'.
-	self flag: 'but what if we don''t pop?  The top reg is still potentially trashed in the call;. think this through'.
-	self ssTop popToReg: ClassReg.
+	valueReg := self ssStorePop: popBoolean toPreferredReg: ClassReg.
+	valueReg ~= ClassReg ifTrue:
+		[self MoveR: valueReg R: ClassReg].
 	jmpSingle := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	self MoveCq: slotIndex R: SendNumArgsReg.
 	self CallRT: ceStoreContextInstVarTrampoline.
@@ -2158,8 +2157,6 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean MaybeContextReceiverVaria
 		destReg: ReceiverResultReg
 		scratchReg: TempReg.
 	jmpDone jmpTarget: self Label.
-	popBoolean ifTrue:
-		[self ssPop: 1].
 	^0
 ]
 
@@ -2169,10 +2166,10 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 	| topReg valueReg constVal |
 	self ssFlushUpThroughReceiverVariable: slotIndex.
 	"Avoid store check for immediate values"
+	constVal := self ssTop maybeConstant.
 	(self ssTop type = SSConstant
-	 and: [objectRepresentation isImmediate: self ssTop constant]) ifTrue:
-		[constVal := self ssTop constant.
-		 popBoolean ifTrue:
+	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
+		[popBoolean ifTrue:
 			[self ssPop: 1].
 		 self ensureReceiverResultRegContainsSelf.
 		 self MoveCq: constVal R: TempReg.
@@ -2186,9 +2183,8 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 	 or: [topReg = ReceiverResultReg]) ifTrue:
 		[topReg := ClassReg].
 	self ssPop: 1.
-	self ssAllocateCallReg: topReg.
+	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
 	self ssPush: 1.
-	self flag: 'but what if we don''t pop?  The top reg is still potentially trashed in the call;. think this through'.
 	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
 	valueReg = ReceiverResultReg ifTrue:
 		[self MoveR: valueReg R: topReg].
@@ -2209,14 +2205,14 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	<inline: false>
 	| topReg valueReg constVal |
 	self assert: needsFrame.
+	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
 	 remote temp loads that stores the result in a register, deferring only the register push."
 	"Avoid store check for immediate values"
-	optStatus isReceiverResultRegLive: false.
+	constVal := self ssTop maybeConstant.
 	(self ssTop type = SSConstant
-	 and: [objectRepresentation isImmediate: self ssTop constant]) ifTrue:
-		[constVal := self ssTop constant.
-		 popBoolean ifTrue:
+	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
+		[popBoolean ifTrue:
 			[self ssPop: 1].
 		 self ssAllocateRequiredReg: ReceiverResultReg.
 		 self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
@@ -2231,9 +2227,8 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	 or: [topReg = ReceiverResultReg]) ifTrue:
 		[topReg := ClassReg].
 	self ssPop: 1.
-	self ssAllocateRequiredReg: topReg.
+	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
 	self ssPush: 1.
-	self flag: 'but what if we don''t pop?  The top reg is still potentially trashed in the call;. think this through'.
 	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
 	valueReg = ReceiverResultReg ifTrue:
 		[self MoveR: valueReg R: topReg].
@@ -2490,22 +2485,33 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 		isReceiverResultRegLive: true;
 		ssEntry: (self addressOf: simSelf).
 	self assert: methodOrBlockNumTemps = methodOrBlockNumArgs.
-	simStackPtr := simSpillBase := -1.
 	self assert: self numRegArgs <= 2.
-	(methodOrBlockNumArgs between: 1 and: self numRegArgs) ifTrue:
-		[desc := self simStackAt: 0.
-		 desc
-			type: SSRegister;
-			register: Arg0Reg;
-			spilled: false;
-			bcptr: startpc.
-		 methodOrBlockNumArgs > 1 ifTrue:
-			[desc := self simStackAt: 1.
+	(methodOrBlockNumArgs between: 1 and: self numRegArgs)
+		ifTrue:
+			[desc := self simStackAt: 0.
 			 desc
 				type: SSRegister;
-				register: Arg1Reg;
+				register: Arg0Reg;
 				spilled: false;
-				bcptr: startpc]]
+				bcptr: startpc.
+			 methodOrBlockNumArgs > 1 ifTrue:
+				[desc := self simStackAt: 1.
+				 desc
+					type: SSRegister;
+					register: Arg1Reg;
+					spilled: false;
+					bcptr: startpc]]
+		ifFalse:
+			[0 to: methodOrBlockNumArgs - 1 do:
+				[:i|
+				desc := self simStackAt: i.
+				desc
+					type: SSBaseOffset;
+					register: SPReg;
+					offset: ((methodOrBlockNumArgs - i) * BytesPerWord);
+					spilled: true;
+					bcptr: startpc]].
+	simSpillBase := simStackPtr := methodOrBlockNumArgs - 1
 ]
 
 { #category : #initialization }
@@ -2533,7 +2539,15 @@ StackToRegisterMappingCogit >> initializeFixupAt: targetIndex [
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> liveRegisters [
 	| regsSet |
-	regsSet := 0.
+	needsFrame
+		ifTrue: [regsSet := 0]
+		ifFalse:
+			[regsSet := self registerMaskFor: ReceiverResultReg.
+			 (methodOrBlockNumArgs <= self numRegArgs
+			  and: [methodOrBlockNumArgs > 0]) ifTrue:
+				[regsSet := regsSet bitOr: (self registerMaskFor: Arg0Reg).
+				 (self numRegArgs > 1 and: [methodOrBlockNumArgs > 1]) ifTrue:
+					[regsSet := regsSet bitOr: (self registerMaskFor: Arg1Reg)]]].
 	(simSpillBase max: 0) to: simStackPtr do:
 		[:i|
 		regsSet := regsSet bitOr: (self simStackAt: i) registerMask].
@@ -2749,9 +2763,12 @@ StackToRegisterMappingCogit >> simStackAt: index [
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg1 [
+StackToRegisterMappingCogit >> ssAllocateCallReg: requiredReg [
+	"Allocate a register needed in a run-time call (i.e. flush uses of the
+	 register to the real stack).  Since the run-time can smash any and
+	 all caller-saved registers also flush all caller-saved registers."
 	self ssAllocateRequiredRegMask: (callerSavedRegMask
-										bitOr: (self registerMaskFor: requiredReg1))
+										bitOr: (self registerMaskFor: requiredReg))
 		upThrough: simStackPtr
 ]
 
@@ -2816,7 +2833,7 @@ StackToRegisterMappingCogit >> ssAllocateRequiredRegMask: requiredRegsMask upThr
 	"compute live regs while noting the last occurrence of required regs.
 	 If these are not free we must spill from simSpillBase to last occurrence.
 	 Note we are conservative here; we could allocate FPReg in frameless methods."
-	liveRegs := self registerMaskFor: TempReg and: FPReg and: SPReg.
+	liveRegs := self registerMaskFor: FPReg and: SPReg.
 	(simSpillBase max: 0) to: stackPtr do:
 		[:i|
 		liveRegs := liveRegs bitOr: (self simStackAt: i) registerMask.

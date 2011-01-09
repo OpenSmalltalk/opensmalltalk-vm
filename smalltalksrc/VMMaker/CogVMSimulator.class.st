@@ -354,6 +354,24 @@ CogVMSimulator >> cogCodeSize [
 ]
 
 { #category : #'debug support' }
+CogVMSimulator >> cogMethodOrBlockSurrogateAt: address [
+	<doNotGenerate>
+	| surrogate |
+	self assert: ((address asInteger bitAnd: BytesPerWord - 1) = 0
+				or: [address asInteger < 0
+					and: [(Cogit classPool keyAtValue: address asInteger ifAbsent: nil) notNil]]).
+	surrogate := cogit cogMethodSurrogateClass new
+					at: address asInteger
+					memory: objectMemory memory.
+	^surrogate cmType = CMBlock
+		ifTrue:
+			[cogit cogBlockMethodSurrogateClass new
+				at: address asInteger
+				memory: objectMemory memory]
+		ifFalse: [surrogate]
+]
+
+{ #category : #'debug support' }
 CogVMSimulator >> cogMethodSurrogateAt: address [
 	<doNotGenerate>
 	self assert: ((address asInteger bitAnd: BytesPerWord - 1) = 0
@@ -565,7 +583,7 @@ CogVMSimulator >> ensureMethodIsCogged: methodObj [
 CogVMSimulator >> executeCogBlock: cogMethod closure: closure mayContextSwitch: mayContextSwitch [
 	"self shortPrintFrameAndCallers: framePointer"
 	"(#(16r56E90 16r133D0) includes: cogMethod asInteger)  ifTrue: [self halt]."
-	(stackPages longAt: 16r101EB4) = 16r15FFE3C ifTrue: [self halt].
+	"self halt."
 	^super executeCogBlock: cogMethod closure: closure mayContextSwitch: mayContextSwitch
 ]
 
@@ -2956,6 +2974,11 @@ CogVMSimulator >> symbolicExtensions: offset at: ip inMethod: meth [
 
 { #category : #'debug printing' }
 CogVMSimulator >> symbolicMethod: aMethod [
+	self symbolicMethod: aMethod printAbsPC: false
+]
+
+{ #category : #'debug printing' }
+CogVMSimulator >> symbolicMethod: aMethod printAbsPC: printAbsPC [
 	| pc end latestContinuation prim stackDepth stackDepths |
 	transcript ensureCr.
 	(prim := self primitiveIndexOf: aMethod) > 0 ifTrue:
@@ -2990,6 +3013,9 @@ CogVMSimulator >> symbolicMethod: aMethod [
 			 jumpTarget := (offset < 8 ifTrue: [offset - 4] ifFalse: [offset bitAnd: 3]) * 256 + byte2 + pc + 2.
 			 jumpTarget > latestContinuation ifTrue: [latestContinuation := jumpTarget]].
 
+		 printAbsPC ifTrue:
+			[(objectMemory firstIndexableField: aMethod) + pc printOn: transcript base: 16.
+			 transcript space].
 		 transcript print: pc + 1 ; space.
 		 byte printOn: transcript base: 16 length: 2 padded: false.
 		 transcript space; nextPutAll: (self symbolic: byte at: pc inMethod: aMethod).
@@ -3090,7 +3116,7 @@ CogVMSimulator >> testPCMapping [
 			 (self methodHasCogMethod: o)
 				ifTrue:
 					[transcript nextPut: $.; flush.
-					 cogit testPCMappingForMethod: o]
+					 cogit testMcToBcPcMappingForMethod: (self cogMethodOf: o)]
 				ifFalse:
 					[transcript nextPutAll: 'failed to compile method '; print: o; cr; flush]]]
 ]
@@ -3178,6 +3204,8 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 			action: [cogit printInstructions: cogit printInstructions not];
 		addLine;
 		add: 'set break count...' action: #setBreakCount;
+		add: 'set break selector...' action: [|s| s := UIManager default request: 'break selector'.
+											s notEmpty ifTrue: [self setBreakSelector: s]];
 		add: (printBytecodeAtEachStep
 				ifTrue: ['no print bytecode each bytecode']
 				ifFalse: ['print bytecode each bytecode'])

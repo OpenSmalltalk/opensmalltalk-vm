@@ -447,6 +447,14 @@ CogMethodZone >> pruneYoungReferrers [
 	self assert: self kosherYoungReferrers
 ]
 
+{ #category : #'jit - api' }
+CogMethodZone >> quickClearCogCompiledCode [
+	"Quick, for in-image testing"
+	<doNotGenerate>
+	mzFreeStart := baseAddress.
+	self clearCogCompiledCode
+]
+
 { #category : #'young referers' }
 CogMethodZone >> relocateAndPruneYoungReferrers [
 	| source dest next cogMethod |
