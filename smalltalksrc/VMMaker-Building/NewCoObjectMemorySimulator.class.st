@@ -535,6 +535,12 @@ NewCoObjectMemorySimulator >> stackValue: offset [
 	^coInterpreter stackValue: offset
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter storeInteger: fieldIndex ofObject: objectPointer withValue: integerValue
+]
+
 { #category : #'interpreter access' }
 NewCoObjectMemorySimulator >> storePointer: index ofObject: oop withValue: valuePointer [
 	"Override to ensure acess is within the heap"

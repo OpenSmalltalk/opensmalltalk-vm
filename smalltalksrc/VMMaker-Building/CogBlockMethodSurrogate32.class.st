@@ -10,6 +10,13 @@ CogBlockMethodSurrogate32 class >> alignedByteSize [
 ]
 
 { #category : #accessing }
+CogBlockMethodSurrogate32 >> cmHomeMethod [
+	^CogMethodSurrogate32 new
+		at: address - self homeOffset
+		memory: memory
+]
+
+{ #category : #accessing }
 CogBlockMethodSurrogate32 >> cmIsUnlinked [
 	^(((memory unsignedByteAt: address + 6) bitShift: -4) bitAnd: 16r1) ~= 0
 ]
@@ -76,14 +83,14 @@ CogBlockMethodSurrogate32 >> cmUsageCount: aValue [
 ]
 
 { #category : #accessing }
-CogBlockMethodSurrogate32 >> objectHeader [
-	^memory unsignedLongAt: address + 1
+CogBlockMethodSurrogate32 >> homeOffset [
+	^memory unsignedShortAt: address + 1
 ]
 
 { #category : #accessing }
-CogBlockMethodSurrogate32 >> objectHeader: aValue [
+CogBlockMethodSurrogate32 >> homeOffset: aValue [
 	^memory
-		unsignedLongAt: address + 1
+		unsignedShortAt: address + 1
 		put: aValue
 ]
 
@@ -96,6 +103,18 @@ CogBlockMethodSurrogate32 >> stackCheckOffset [
 CogBlockMethodSurrogate32 >> stackCheckOffset: aValue [
 	^memory
 		unsignedShortAt: address + 7
+		put: aValue
+]
+
+{ #category : #accessing }
+CogBlockMethodSurrogate32 >> startpc [
+	^memory unsignedShortAt: address + 3
+]
+
+{ #category : #accessing }
+CogBlockMethodSurrogate32 >> startpc: aValue [
+	^memory
+		unsignedShortAt: address + 3
 		put: aValue
 ]
 

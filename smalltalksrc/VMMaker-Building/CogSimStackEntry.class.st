@@ -100,6 +100,13 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	spilled := true
 ]
 
+{ #category : #accessing }
+CogSimStackEntry >> maybeConstant [
+	"Answer the value of constant, no assert check."
+	<cmacro: '(sse) ((sse)->constant)'>
+	^constant
+]
+
 { #category : #'compile abstract instructions' }
 CogSimStackEntry >> mergeAt: baseOffset from: baseRegister [
 	"Discard type information because of a control-flow merge."
