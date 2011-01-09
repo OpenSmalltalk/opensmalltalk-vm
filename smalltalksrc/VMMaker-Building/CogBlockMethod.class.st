@@ -1,27 +1,28 @@
 "
-I am the rump method header for a block method embedded in a full CogMethod.  I am the superclass of CogMethod, which is a Cog method header proper.  Instances of both classes have the same first two words.  In C I look like
+I am the rump method header for a block method embedded in a full CogMethod.  I am the superclass of CogMethod, which is a Cog method header proper.  Instances of both classes have the same second word.  The homeOffset abd startpc fields are overlaid on the objectHeader in a CogMethod.  In C I look like
 
 	typedef struct {
-	    sqInt   objectHeader;
-	
-	    unsigned        cmNumArgs : 8;
-	    unsigned        cmType : 3;
-	    unsigned        cmRefersToYoung : 1;
-	    unsigned        cmIsUnlinked : 1;
-	    unsigned        cmUsageCount : 3;
+		unsigned short	homeOffset;
+		unsigned short	startpc;
 
-	    unsigned        stackCheckOffset : 16;
+		unsigned		cmNumArgs : 8;
+		unsigned		cmType : 3;
+		unsigned		cmRefersToYoung : 1;
+		unsigned		cmIsUnlinked : 1;
+		unsigned		cmUsageCount : 3;
+		unsigned		stackCheckOffset : 16;
 	} CogBlockMethod;
 
-The objectHeader is a fake object header for a marked object with no fields.  Bytecoded methods which have been compiled to Cog methods have their header field point directly to their Cog method.  The fake objectHeader fools the garbage collector into thinking this reference is to an object it doesn't have to examine further.
-
-However, in a CogBlockMethod the objectHeader field is a direct reference to the CogMethod in which the block occurs.
+My instances are not actually used.  The methods exist only as input to Slang.  The simulator uses my surrogates (CogBlockMethodSurrogate32 and CogBlockMethodSurrogate64.
 "
 Class {
 	#name : #CogBlockMethod,
 	#superclass : #VMStructType,
 	#instVars : [
 		'objectHeader',
+		'homeOffset',
+		'startpc',
+		'padToWord',
 		'cmNumArgs',
 		'cmType',
 		'cmRefersToYoung',
@@ -66,19 +67,27 @@ CogBlockMethod class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 
 	self allInstVarNames do:
 		[:ivn|
-		aBinaryBlock
-			value: ivn
-			value: (ivn caseOf: {
-						['cmNumArgs']		-> [#('unsigned' ' : 8')]. "SqueakV3 needs only 5 bits"
-						['cmType']			-> [#('unsigned' ' : 3')].
-						['cmRefersToYoung']	-> [#('unsigned' #Boolean ' : 1')].
-						['cmIsUnlinked']		-> [#('unsigned' #Boolean ' : 1')].
-						['cmUsageCount']	-> [#('unsigned' ' : 3')]. "see CMMaxUsageCount in initialize"
-						['stackCheckOffset']	-> [#('unsigned' ' : 16')]. "a.k.a. cPICNumCases"
-						['blockSize']			-> ['unsigned short'].
-						['blockEntryOffset']	-> ['unsigned short']}
-					otherwise:
-						[#sqInt])]
+		"Notionally objectHeader is in a union with homeOffset and startpc but
+		 we don't have any convenient supprt for unions.  So hack, hack, hack, hack."
+		((self == CogBlockMethod
+			ifTrue: [#('objectHeader')]
+			ifFalse: [#('homeOffset' 'startpc' 'padToWord')]) includes: ivn) ifFalse:
+				[aBinaryBlock
+					value: ivn
+					value: (ivn caseOf: {
+								['cmNumArgs']			-> [#(unsigned ' : 8')]. "SqueakV3 needs only 5 bits"
+								['cmType']				-> [#(unsigned ' : 3')].
+								['cmRefersToYoung']	-> [#(unsigned #Boolean ' : 1')].
+								['cmIsUnlinked']			-> [#(unsigned #Boolean ' : 1')].
+								['cmUsageCount']		-> [#(unsigned ' : 3')]. "see CMMaxUsageCount in initialize"
+								['stackCheckOffset']	-> [#(unsigned ' : 16')]. "a.k.a. cPICNumCases"
+								['blockSize']			-> [#'unsigned short'].
+								['blockEntryOffset']		-> [#'unsigned short'].
+								['homeOffset']			-> [#'unsigned short'].
+								['startpc']				-> [#'unsigned short'].
+								['padToWord']			-> [#(#BytesPerWord 8 'unsigned int')]}
+							otherwise:
+								[#sqInt])]]
 ]
 
 { #category : #translation }
@@ -110,6 +119,12 @@ CogBlockMethod >> cPICNumCases: anObject [
 ]
 
 { #category : #accessing }
+CogBlockMethod >> cmHomeMethod [
+	<returnTypeC: #'CogMethod *'>
+	^self cCoerceSimple: self asUnsignedInteger - self homeOffset to: #'CogMethod *'
+]
+
+{ #category : #accessing }
 CogBlockMethod >> cmIsUnlinked [
 	"Answer the value of cmIsUnlinked"
 
@@ -127,7 +142,7 @@ CogBlockMethod >> cmIsUnlinked: anObject [
 CogBlockMethod >> cmNumArgs [
 	"Answer the value of cmNumArgs"
 
-	^ cmNumArgs
+	^cmNumArgs
 ]
 
 { #category : #accessing }
@@ -180,17 +195,17 @@ CogBlockMethod >> cmUsageCount: anInteger [
 ]
 
 { #category : #accessing }
-CogBlockMethod >> objectHeader [
-	"Answer the value of objectHeader"
+CogBlockMethod >> homeOffset [
+	"Answer the value of homeOffset"
 
-	^objectHeader
+	^homeOffset
 ]
 
 { #category : #accessing }
-CogBlockMethod >> objectHeader: anObject [
-	"Set the value of objectHeader"
+CogBlockMethod >> homeOffset: anObject [
+	"Set the value of homeOffset"
 
-	^objectHeader := anObject
+	^homeOffset := anObject
 ]
 
 { #category : #accessing }
@@ -205,6 +220,20 @@ CogBlockMethod >> stackCheckOffset: anObject [
 	"Set the value of stackCheckOffset"
 
 	^stackCheckOffset := anObject
+]
+
+{ #category : #accessing }
+CogBlockMethod >> startpc [
+	"Answer the value of startpc"
+
+	^startpc
+]
+
+{ #category : #accessing }
+CogBlockMethod >> startpc: anObject [
+	"Set the value of startpc"
+
+	^startpc := anObject
 ]
 
 { #category : #accessing }

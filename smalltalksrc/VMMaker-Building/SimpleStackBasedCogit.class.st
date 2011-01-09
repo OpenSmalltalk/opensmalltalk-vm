@@ -1378,7 +1378,8 @@ SimpleStackBasedCogit >> genPrimitiveClosureValue [
 							functionPointerForCompiledMethod: methodObj
 							primitiveIndex: primitiveIndex.
 	primitiveRoutine = #primitiveClosureValueNoContextSwitch asSymbol ifTrue:
-		[self SubCq: blockNoContextSwitchOffset R: TempReg].
+		[self assert: blockNoContextSwitchOffset notNil.
+		 self SubCq: blockNoContextSwitchOffset R: TempReg].
 	self JumpR: TempReg.
 	jumpBCMethod jmpTarget: self Label.
 	(result := self compileInterpreterPrimitive: primitiveRoutine) < 0 ifTrue:

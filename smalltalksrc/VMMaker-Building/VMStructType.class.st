@@ -66,8 +66,19 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 	| fieldSpecs |
 	fieldSpecs := OrderedCollection new.
 	self instVarNamesAndTypesForTranslationDo:
-		[:ivn :typeTuple|
-		fieldSpecs add:
+		[:ivn :typeTuple| | index replacement |
+		(index := typeTuple indexOf: #BytesPerWord ifAbsent: 0) > 0
+			ifTrue:
+				[(typeTuple at: index + 1) = bytesPerWord ifTrue:
+					[replacement := typeTuple copyReplaceFrom: index to: index + 1 with: #().
+					 replacement size = 1 ifTrue:
+						[replacement := replacement first].
+					fieldSpecs add: { ivn. replacement }]]
+			ifFalse:
+				[fieldSpecs add: { ivn. typeTuple }]].
+	^fieldSpecs collect:
+		[:tuple|
+			[:ivn :typeTuple|
 			{ (ivn includesSubString: 'Unused') ifTrue: [#unused] ifFalse: [ivn].
 			  (typeTuple isArray and: ['unsigned' = typeTuple first])
 				ifTrue:
@@ -81,9 +92,9 @@ VMStructType class >> fieldAccessorsForBytesPerWord: bytesPerWord [
 								['sqInt']				->	[bytesPerWord * 8].
 								['usqInt']			->	[bytesPerWord * 8] }].
 			(typeTuple isArray and: [typeTuple size >= 3 and: [typeTuple second = #Boolean]]) ifTrue:
-				[#Boolean] }].
-	^fieldSpecs
+				[#Boolean] }] valueWithArguments: tuple]
 
+	"#(4 8) collect: [:bpw| (CogBlockMethod fieldAccessorsForBytesPerWord: bpw) asArray]"
 	"#(4 8) collect: [:bpw| (CogMethod fieldAccessorsForBytesPerWord: bpw) asArray]"
 ]
 
@@ -187,29 +198,35 @@ VMStructType class >> printTypedefOn: aStream [
 		[aStream nextPutAll: self structTagName; space].
 	aStream nextPut: ${; cr.
 	self instVarNamesAndTypesForTranslationDo:
-		[:ivn :type|
-		type isArray
-			ifTrue:
-				[aStream tab: 1.
-				aStream nextPutAll: type first.
-				(type first last isSeparator or: [type first last = $*]) ifFalse:
-					[aStream tab: 2].
-				aStream nextPutAll: ivn.
-				 type last first = $: ifTrue:
-					[aStream space].
-				 aStream
-					nextPutAll: type last;
-					nextPut: $;;
-					cr]
-			ifFalse:
-				[aStream tab: 1.
-				aStream nextPutAll: type.
-				(type last isSeparator or: [type last = $*]) ifFalse:
-					[aStream tab: 1].
-				 aStream
-					nextPutAll: ivn;
-					nextPut: $;;
-					cr]].
+		[:ivn :typeArg| | type index |
+		type := typeArg.
+		(index := type indexOf: #BytesPerWord ifAbsent: 0) > 0 ifTrue:
+			[type := (type at: index + 1) = BytesPerWord ifTrue:
+						[type := type copyReplaceFrom: index to: index + 1 with: #().
+						 type size = 1 ifTrue: [type first] ifFalse: [type]]].
+		type ifNotNil:
+			[type isArray
+				ifTrue:
+					[aStream tab: 1.
+					aStream nextPutAll: type first.
+					(type first last isSeparator or: [type first last = $*]) ifFalse:
+						[aStream tab: 2].
+					aStream nextPutAll: ivn.
+					 type last first = $: ifTrue:
+						[aStream space].
+					 aStream
+						nextPutAll: type last;
+						nextPut: $;;
+						cr]
+				ifFalse:
+					[aStream tab: 1.
+					aStream nextPutAll: type.
+					(type last isSeparator or: [type last = $*]) ifFalse:
+						[aStream tab: 1].
+					 aStream
+						nextPutAll: ivn;
+						nextPut: $;;
+						cr]]].
 	aStream
 		nextPutAll: ' } ';
 		nextPutAll: self structTypeName;

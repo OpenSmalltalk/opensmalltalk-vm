@@ -2539,7 +2539,11 @@ CCodeGenerator >> prepareMethods [
 			(globals includes: var) ifTrue:
 				[self error: 'Local variable name may mask global when inlining: ' , var].
 			((methods at: var ifAbsent: [nil]) ifNil: [false] ifNotNil: [:m1| m1 isStructAccessor not]) ifTrue:
-				[self error: 'Local variable name may mask method when inlining: ' , var]].
+				[logger
+					ensureCr;
+					nextPutAll: 'Local variable name ', var, ' in ';
+					nextPutAll: m selector;
+					nextPutAll: 'may mask method when inlining: ' , var]].
 		m bindClassVariablesIn: constants.
 		m prepareMethodIn: self]
 ]
