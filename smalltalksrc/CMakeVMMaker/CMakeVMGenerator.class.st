@@ -38,13 +38,11 @@ Class {
 	#category : #CMakeVMMaker
 }
 
-{ #category : #'as yet unclassified' }
-CMakeVMGenerator >> addFrameworks: aCollection [
-	aCollection do: [:each | 
-		self puts: 'find_library(',each,'_FMWK ', each , ')'.
-		self puts: 'target_link_libraries(' , config executableName , ' ${' , each,'_FMWK})'.
-		"self puts: 'add_framework(', config executableName, ' ', each, ')'" ].
-  
+{ #category : #'code generation' }
+CMakeVMGenerator class >> generate: aConfigOrClass [  
+	^self new 
+		generate: aConfigOrClass;
+		yourself  
 ]
 
 { #category : #'as yet unclassified' }
@@ -58,17 +56,17 @@ CMakeVMGenerator >> append: aString toAll: list [
 	^ list inject: '' into: [:result :each | result, ' ', aString, each ].
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakeVMGenerator >> config [
 	^ config
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakeVMGenerator >> executableName [
 	^ 'Squeak'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'code generation' }
 CMakeVMGenerator >> generate [
 		
 	output := String new writeStream.
@@ -109,7 +107,7 @@ CMakeVMGenerator >> generate [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'code generation' }
 CMakeVMGenerator >> generate: aConfigOrClass [
 	
 	config := aConfigOrClass isBehavior ifTrue: [ aConfigOrClass new ] ifFalse: [aConfigOrClass].
@@ -181,7 +179,12 @@ CMakeVMGenerator >> internalPlugins: intList externalPlugins: extList [
 	externalPlugins := extList.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
+CMakeVMGenerator >> moduleName [ 
+	^config executableName
+]
+
+{ #category : #accessing }
 CMakeVMGenerator >> platformName [
 	^ config platformName
 
@@ -262,7 +265,7 @@ CMakeVMGenerator >> setupMacros: gen [
 		ifNotNil: [ :macros | gen puts: macros ]
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakeVMGenerator >> sources [
 
 	self set: #coreSources to: 
@@ -296,7 +299,7 @@ CMakeVMGenerator >> targetPropertyAt: aPropName qput: aValue [
 	^ self targetPropertyAt: aPropName put: (aValue copyReplaceAll: '"' with: '\"').
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakeVMGenerator >> topDir [
 	| dir |
 	dir := self config topDir ifNil: [ FileDirectory default containingDirectory ].
