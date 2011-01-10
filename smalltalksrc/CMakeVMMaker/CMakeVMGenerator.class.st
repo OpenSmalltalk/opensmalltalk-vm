@@ -82,10 +82,11 @@ CMakeVMGenerator >> generate [
 	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Debug Release'.
 	self message: '${CMAKE_CONFIGURATION_TYPES}'.
 	
+	config preferredIncludes 
+		do: [ :each | self includeDirectories: each ].
 	self includeDirectories: self includeDirs.	
-	config standardIncludes do: [:each |
-		self includeDirectories: each ].
-
+	config standardIncludes 
+		do: [:each | self includeDirectories: each ].
 
 	self addDefinitions: config compilerFlags.
 

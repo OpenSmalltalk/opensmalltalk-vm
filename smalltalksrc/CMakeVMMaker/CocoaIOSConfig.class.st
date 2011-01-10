@@ -45,6 +45,11 @@ CocoaIOSConfig >> CFBundleVersion [
 	^ '5.7.4'
 ]
 
+{ #category : #'bundle strings' }
+CocoaIOSConfig >> NSMainNibFile [
+	^'MainMenu'
+]
+
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
@@ -119,9 +124,8 @@ CocoaIOSConfig >> coreSources [
 { #category : #'source files' }
 CocoaIOSConfig >> crossSources [ 
 	^#(
-			'sqNamedPrims.c'
-			'sqVirtualMachine.c'
-		)
+		'sqNamedPrims.c'
+		'sqVirtualMachine.c')
 ]
 
 { #category : #plugins }
@@ -188,7 +192,7 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 CocoaIOSConfig >> extraSources [
 	self flag: #todo. "This needs to be reified... it does't has any sense compared with #coreSources or #platformSources"
 	^'${buildDir}/', self executableName, '_Prefix.pch
-	${resources}'
+ ${resources}'
 ]
 
 { #category : #settings }
@@ -205,7 +209,8 @@ CocoaIOSConfig >> extraVMSettings: maker [
 		"${resourceDir}/SqueakScript.icns"
 		"${resourceDir}/SqueakGeneric.icns"
 		"${resourceDir}/SqueakProject.icns"
-		"${resourceDir}/SqueakSources.icns"'
+		"${resourceDir}/SqueakSources.icns"
+		"${resourceDir}/MainMenu.xib"'
 
 ]
 
@@ -287,7 +292,7 @@ CocoaIOSConfig >> platformSources [
 		'OSX/sqSqueakOSXApplication+clipboard.m'
 		'OSX/sqSqueakOSXDropAPI.m'
 		'iPhone/sqMacV2Memory.c'
-	)
+		'iPhone/osExports.c')
 ]
 
 { #category : #'bundle strings' }
@@ -304,7 +309,8 @@ CocoaIOSConfig >> plistFile [
 	CFBundleShortVersionString
 	CFBundleVersion
 	CFBundleIconFile
-	CFBundleIdentifier ) do: [:key |
+	CFBundleIdentifier
+	NSMainNibFile) do: [:key |
 		plist := plist copyReplaceAll: '@' , key , '@' with: (self perform: key)
 	].
 
@@ -687,7 +693,7 @@ CocoaIOSConfig >> plistTemplate [
 	<key>LSMinimumSystemVersion</key>
 	<string>${MACOSX_DEPLOYMENT_TARGET}</string>
 	<key>NSMainNibFile</key>
-	<string>MainMenu</string>
+	<string>@NSMainNibFile@</string>
 	<key>NSPrincipalClass</key>
 	<string>SqueakOSXApplication</string>
 	<key>SqueakBrowserMouseCmdButton1</key>
@@ -893,6 +899,15 @@ CocoaIOSConfig >> precompiledHeaders [
 '
 ]
 
+{ #category : #'source files' }
+CocoaIOSConfig >> preferredIncludes [
+	^ #(
+	'${buildDir}/'
+	'${platformsDir}/iOS/vm/iPhone' "config.h is here. Why???"
+	)
+	
+]
+
 { #category : #settings }
 CocoaIOSConfig >> setExtraTargetProperties: maker [
 
@@ -912,7 +927,7 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 	maker 
 		cmd: 'set_source_files_properties' 
 		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
-		
+			
 	precompiledHeaders := (self executableName, '_Prefix.pch').
 	(maker buildDir forceNewFileNamed: precompiledHeaders) 
 		nextPutAll: self precompiledHeaders;
@@ -957,7 +972,6 @@ CocoaIOSConfig >> standardIncludes [
 	'${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'
 	'${platformsDir}/iOS/vm/Common/Classes'
 	'${platformsDir}/iOS/vm/OSX'
-	'${platformsDir}/iOS/vm/iPhone' "config.h is here. Why???"
 )
 	
 ]
