@@ -16,6 +16,21 @@ CMakeGenerator >> addDefinitions: aString [
 	^ self cmd: 'add_definitions' params: aString
 ]
 
+{ #category : #'cmake commands' }
+CMakeGenerator >> addFrameworks: aCollection [ 
+	aCollection
+		do: [:each | 
+			self puts: 'find_library(' , each , '_FMWK ' , each , ')'.
+			self puts: 'target_link_libraries(' , self moduleName , ' ${' , each , '_FMWK})']
+
+]
+
+{ #category : #'cmake commands' }
+CMakeGenerator >> addProperty: propertyString value: valueString [ 
+	self puts: 'set_target_properties(' , self moduleName , ' PROPERTIES ' , propertyString , ' "' , valueString, '")'
+
+]
+
 { #category : #'sources management' }
 CMakeGenerator >> addSource: aFileName [
 
@@ -44,7 +59,15 @@ CMakeGenerator >> addSubdirectory: aDir [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'cmake commands' }
+CMakeGenerator >> addXCodeProperty: propertyString value: valueString [ 
+	self 
+		addProperty: 'XCODE_ATTRIBUTE_' , propertyString 
+		value: valueString
+
+]
+
+{ #category : #accessing }
 CMakeGenerator >> buildDir [
 	^ self config buildDir ifNil: [
 		(self topDir / 'build') assureExistence ].
@@ -72,7 +95,7 @@ CMakeGenerator >> cmd: cmdName qparams: aString [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'code generation' }
 CMakeGenerator >> generate [
 	self subclassResponsibility.
 ]
@@ -88,7 +111,12 @@ CMakeGenerator >> message: aString [
 	self cmd: 'message' qparams: aString.
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
+CMakeGenerator >> moduleName [
+	self subclassResponsibility
+]
+
+{ #category : #accessing }
 CMakeGenerator >> outputFileName [
 	^ 'CMakeLists.txt'
 ]

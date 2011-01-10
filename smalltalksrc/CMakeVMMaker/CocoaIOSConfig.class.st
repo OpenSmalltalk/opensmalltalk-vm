@@ -65,25 +65,49 @@ CocoaIOSConfig >> compilerFlagsRelease [
 ]
 
 { #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureHostWindowPlugin: maker [
-	"extra rules for HostWindowPlugin"
-
-	super configureHostWindowPlugin: maker.  
+CocoaIOSConfig >> configureClipboardExtendedPlugin: maker [
+	maker includeDirectories: '${platformsDir}/iOS/plugins/ClipboardExtended'.
 	maker 
-		addSources: #( 'sqMacHostWindow.c' ) 
+		addSources: #('sqMacExtendedClipboard.m' ) 
+		prefixed: '${platformsDir}/iOS/plugins/ClipboardExtended/'
+
+]
+
+{ #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureHostWindowPlugin: maker [
+	super configureHostWindowPlugin: maker.
+	maker 
+		addSources: #('sqMacHostWindow.c' ) 
 		prefixed: '${platformsDir}/iOS/vm/iPhone/plugins/HostWindowPlugin/'
 
 ]
 
 { #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureSoundPlugin: maker [ 
-	"extra rules for SoundPlugin"
-
-	super configureSoundPlugin: maker.  
-	maker includeDirectories: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'.
+CocoaIOSConfig >> configureMacMenubarPlugin: maker [
+	maker includeDirectories: '${platformsDir}/iOS/plugins/MacMenubarPlugin'.
 	maker 
-		addSources: #('sqSqueakOSXSoundCoreAudio.m') 
-		prefixed: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin/'.	
+		addSources: #('MacMenuOS9ToOSX.m' ) 
+		prefixed: '${platformsDir}/iOS/plugins/MacMenubarPlugin/'
+
+]
+
+{ #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureSoundPlugin: maker [
+	super configureSoundPlugin: maker.
+	
+	maker includeDirectories: '${platformsDir}/Cross/plugins/SoundPlugin ${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin'.
+	maker 
+		addSources: #('sqSqueakSoundCoreAudio.m' 'sqSqueakSoundCoreAudioAPI.m' ) 
+		prefixed: '${platformsDir}/iOS/plugins/SoundPlugin/'.
+	maker 
+		addSources: #('sqSqueakOSXSoundCoreAudio.m' ) 
+		prefixed: '${platformsDir}/iOS/vm/OSX/plugins/SoundPlugin/'
+]
+
+{ #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureUUIDPlugin: maker [
+	super configureUUIDPlugin: maker.
+	maker addSources: #('sqUnixUUID.c' ) prefixed: '${platformsDir}/unix/plugins/UUIDPlugin/'
 
 ]
 
@@ -140,7 +164,7 @@ CocoaIOSConfig >> defaultInternalPlugins [
 		SoundPlugin 
 		StarSqueakPlugin 
 		SurfacePlugin 
-		UUIDPlugin)
+		"UUIDPlugin")
 ]
 
 { #category : #accessing }
@@ -153,9 +177,11 @@ CocoaIOSConfig >> externalPlugins [
 	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
 ]
 
-{ #category : #settings }
+{ #category : #'plugin extra rules' }
 CocoaIOSConfig >> extraPluginSettings: maker [
-	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'
+	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'
+
 ]
 
 { #category : #'source files' }
@@ -260,6 +286,7 @@ CocoaIOSConfig >> platformSources [
 		'OSX/sqSqueakOSXClipboardAPI.m'
 		'OSX/sqSqueakOSXApplication+clipboard.m'
 		'OSX/sqSqueakOSXDropAPI.m'
+		'iPhone/sqMacV2Memory.c'
 	)
 ]
 
@@ -895,36 +922,16 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 		addProperty: 'XCODE_ATTRIBUTE_GCC_PREFIX_HEADER' 
 		value: '${buildDir}/', precompiledHeaders.
 
-	self flag: #todo. "Check debug/release"
-	self setExtraTargetPropertiesRelease: maker.  
-]
-
-{ #category : #settings }
-CocoaIOSConfig >> setExtraTargetPropertiesRelease: maker [
+	self flag: #todo. "Debug flags"
 	maker 
-		addProperty: 'XCODE_ATTRIBUTE_ICC_DEBUG' 
-		value: 'NO'.  
-	maker 
-		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_LEVEL' 
-		value: 'speedHLO'.  
-	maker 
-		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION' 
-		value: 'YES'.  
-	maker 
-		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_PARALLEL' 
-		value: 'NO'.  
-	maker 
-		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_PREFETCH_INCERTION' 
-		value: 'YES'.  
-	maker 
-		addProperty: 'XCODE_ATTRIBUTE_ICC_PROVIDE_FRAME_PTR' 
-		value: 'NO'.  
-	maker 
-		addProperty: 'XCODE_ATTRIBUTE_ICC_OPT_USE_ARCH_IA32' 
-		value: 'SSE41'.  
-	maker 
-		addProperty: 'XCODE_ATTRIBUTE_PER_ARCH_CFLAGS_i386' 
-		value: '-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS'.  
+		addXCodeProperty: 'ICC_DEBUG' value: 'NO';
+		addXCodeProperty: 'ICC_OPT_LEVEL' value: 'speedHLO';
+		addXCodeProperty: 'ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION' value: 'YES';
+		addXCodeProperty: 'ICC_OPT_PARALLEL' value: 'NO';
+		addXCodeProperty: 'ICC_OPT_PREFETCH_INCERTION' value: 'YES';
+		addXCodeProperty: 'ICC_PROVIDE_FRAME_PTR' value: 'NO';
+		addXCodeProperty: 'ICC_OPT_USE_ARCH_IA32' value: 'SSE41';
+		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS'
 ]
 
 { #category : #accessing }
