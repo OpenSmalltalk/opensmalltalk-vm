@@ -35,7 +35,7 @@ CMakePluginGenerator >> config [
 	^ vmGen config
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> doNotGenerate [
 
 	"Forcely exclude plugin form build. Use this method only for debugging purposes.
@@ -46,7 +46,7 @@ CMakePluginGenerator >> doNotGenerate [
 	^doNotGenerate
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> doNotGenerate: aValue [
 
 	"Forcely exclude plugin form build. Use this method only for debugging purposes.
@@ -57,7 +57,7 @@ CMakePluginGenerator >> doNotGenerate: aValue [
 	doNotGenerate := aValue
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'code generation' }
 CMakePluginGenerator >> generate [
 
 	| name |
@@ -96,8 +96,6 @@ CMakePluginGenerator >> generate [
 	
 	extraRules ifNotNil: [ extraRules value: self ].
 	
-	vmGen config extraPluginSettings: self.
-	
 	" generate a static lib for internal plugin, or shared for external"
 	internal ifTrue: [
 		self cmd: 'add_library' params:  name , ' STATIC ${sources}'.
@@ -107,12 +105,14 @@ CMakePluginGenerator >> generate [
 	"	self cmd: 'set_property' params: 'TARGET ' , name , ' PROPERTY LINK_FLAGS -bundle'"
 	].
 
+	vmGen config extraPluginSettings: self.
+	
 	" see senders of #linkFlags "
-	self cmd: 'set_property' params: 'TARGET ', name , 
-	' PROPERTY LINK_FLAGS "${linkFlags}"'.
+	self 
+		cmd: 'set_property' 
+		params: 'TARGET ', name, ' PROPERTY LINK_FLAGS "${linkFlags}"'.
 	
 	self saveFile.
-
 ]
 
 { #category : #'as yet unclassified' }
@@ -127,14 +127,19 @@ CMakePluginGenerator >> generate: aPlugin for: aCMakeVMGenerator internal: aBool
 	^ self generate
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #testing }
 CMakePluginGenerator >> isExternal [
 	^ internal not
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> isInternal [
 	^ internal
+]
+
+{ #category : #accessing }
+CMakePluginGenerator >> moduleName [ 
+	^plugin moduleName
 ]
 
 { #category : #'as yet unclassified' }
@@ -145,7 +150,7 @@ CMakePluginGenerator >> saveFile [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CMakePluginGenerator >> vmGenerator [
 	"Make it accessible from plugin generator side"
 	^ vmGen
