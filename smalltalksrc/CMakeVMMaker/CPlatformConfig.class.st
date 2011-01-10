@@ -464,6 +464,11 @@ CPlatformConfig >> pluginsDir: aString [
 
 ]
 
+{ #category : #'source files' }
+CPlatformConfig >> preferredIncludes [
+	^#()
+]
+
 { #category : #utils }
 CPlatformConfig >> setExtraTargetProperties: maker [
 
