@@ -68,17 +68,23 @@ sqUnixExternalPrims$o sqUnixMain$o : ../config.h $(topdir)/platforms/unix/vm/dlf
 
 [make_targets]
 
+# Ensure the heartbeat is compiled with less aggressive optimization.  At
+# least with gcc 4.1.2 compiling with -O2 results in an apparently flakey VM;
+# so flakey the Squeak4.2-10856-beta.image image won't even start-up.
+sqUnixHeartbeat$o : $(topdir)/platforms/unix/vm/sqUnixHeartbeat.c
+	$(COMPILE) sqUnixHeartbeat$o -O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(topdir)/platforms/unix/vm/sqUnixHeartbeat.c
+
 # Ensure the cointerpreter is compiled with less aggressive optimization.  At
 # least with gcc 4.1.2 compiling with -O2 results in an apparently flakey VM.
-gcc3x-cointerp$o : $(srcdir)/vm/gcc3x-cointerp.c
-	$(COMPILE) gcc3x-cointerp$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/gcc3x-cointerp.c
+#gcc3x-cointerp$o : $(srcdir)/vm/gcc3x-cointerp.c
+#	$(COMPILE) gcc3x-cointerp$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/gcc3x-cointerp.c
 
 # Ensure the cogit is compiled with less aggressive optimization.  The cogit
 # contains a function that does two alloca's which is miscompiled by a number of
 # optimizing compilers (at least gcc 4.0.x 4.1.x & Intel icc 10.1) under the
 # -fomit-frame-pointer regime.  Also on gcc 4.1 linux -O2 causes an abort on
 # shutdown even though the VM starts correctly.  You have been warned :)
-cogit$o : $(srcdir)/vm/cogit.c
-	$(COMPILE) cogit$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/cogit.c
+#cogit$o : $(srcdir)/vm/cogit.c
+#	$(COMPILE) cogit$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/cogit.c
 
 .force :

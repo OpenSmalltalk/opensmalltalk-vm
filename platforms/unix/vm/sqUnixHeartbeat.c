@@ -510,10 +510,13 @@ static stack_t signal_stack;
 void
 ioInitHeartbeat()
 {
+extern sqInt suppressHeartbeatFlag;
 	int er;
 	struct timespec halfAMo;
 	struct sigaction heartbeat_handler_action, ticker_handler_action;
 	struct itimerval pulse;
+
+	if (suppressHeartbeatFlag) return;
 
 #if NEED_SIGALTSTACK
 	signal_stack.ss_flags = 0;
