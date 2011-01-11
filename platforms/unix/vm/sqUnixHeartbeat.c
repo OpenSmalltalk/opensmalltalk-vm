@@ -301,6 +301,8 @@ ioInitTime(void)
 static void
 heartbeat()
 {
+	int saved_errno = errno;
+
 	updateMicrosecondClock();
 	if (get64(frequencyMeasureStart) == 0) {
 		set64(frequencyMeasureStart,utcMicrosecondClock);
@@ -324,6 +326,8 @@ heartbeat()
 	checkHighPriorityTickees(utcMicrosecondClock);
 #endif
 	forceInterruptCheckFromHeartbeat();
+
+	errno = saved_errno;
 }
 
 #if ITIMER_HEARTBEAT
