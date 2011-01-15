@@ -10,8 +10,7 @@ Class {
 		'stackDelta',
 		'opcode',
 		'numBytes',
-		'needsFrame',
-		'needsFrameInBlock',
+		'needsFrameFunction',
 		'isBranch',
 		'isBackwardBranch',
 		'isBranchTrue',
@@ -33,11 +32,12 @@ CogBytecodeDescriptor class >> instVarNamesAndTypesForTranslationDo: aBinaryBloc
 		aBinaryBlock
 			value: ivn
 			value: (ivn caseOf: {
-							['generator']	->	[#('sqInt (*' ')(void)')].
-							['spanFunction']	->	[#('sqInt (*' ')(unsigned char,...)')].
-							['numBytes']	->	['unsigned char'].
-							['stackDelta']	->	['signed char'].
-							['opcode']		->	['unsigned char'] }
+							['generator']			->	[#('sqInt (*' ')(void)')].
+							['spanFunction']			->	[#('sqInt (*' ')(unsigned char,...)')].
+							['needsFrameFunction']	->	[#('sqInt (*' ')(sqInt)')].
+							['numBytes']			->	['unsigned char'].
+							['stackDelta']			->	['signed char'].
+							['opcode']				->	['unsigned char'] }
 						otherwise: [#('unsigned' ' : 1')])]
 ]
 
@@ -173,31 +173,17 @@ CogBytecodeDescriptor >> isReturn: anObject [
 ]
 
 { #category : #accessing }
-CogBytecodeDescriptor >> needsFrame [
-	"Answer the value of needsFrame"
+CogBytecodeDescriptor >> needsFrameFunction [
+	"Answer the value of needsFrameFunction"
 
-	^ needsFrame
+	^needsFrameFunction
 ]
 
 { #category : #accessing }
-CogBytecodeDescriptor >> needsFrame: anObject [
-	"Set the value of needsFrame"
+CogBytecodeDescriptor >> needsFrameFunction: aSymbol [
+	"Set the value of needsFrameFunction"
 
-	^needsFrame := anObject
-]
-
-{ #category : #accessing }
-CogBytecodeDescriptor >> needsFrameInBlock [
-	"Answer the value of needsFrameInBlock"
-
-	^needsFrameInBlock
-]
-
-{ #category : #accessing }
-CogBytecodeDescriptor >> needsFrameInBlock: anObject [
-	"Set the value of needsFrameInBlock"
-
-	^needsFrameInBlock := anObject
+	^needsFrameFunction := aSymbol
 ]
 
 { #category : #accessing }
@@ -256,7 +242,7 @@ CogBytecodeDescriptor >> printStateOn: aStream [
 	generator isNil ifTrue:
 		[^self].
 	aStream space; nextPut: $(; nextPutAll: generator; space; print: numBytes.
-	needsFrame ifTrue: [aStream nextPutAll: ' needsFrame'].
+	needsFrameFunction ifNotNil: [aStream space; nextPutAll: needsFrameFunction].
 	isBackwardBranch ifTrue: [aStream nextPutAll: ' isBackwardBranch'].
 	isReturn ifTrue: [aStream nextPutAll: ' isReturn'].
 	opcode ifNotNil: [aStream space; nextPutAll: (CogRTLOpcodes nameForOpcode: opcode)].

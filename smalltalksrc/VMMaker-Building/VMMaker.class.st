@@ -83,7 +83,6 @@ Class {
 		'sourceDirName',
 		'platformRootDirName',
 		'logger',
-		'allFilesList',
 		'interpreterClassName',
 		'cogitClassName',
 		'is64BitVM'
