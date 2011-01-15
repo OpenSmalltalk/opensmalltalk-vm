@@ -1,7 +1,22 @@
+How To Build On Linux
+---------------------
+
+Contents:
+	- Checking out sources
+	- How to build the Cog Croquet VM on Unix
+	- Testing an external plugin has completely linked
+	- Compiling in 32-bit mode on a 64-bit linux
+
+
+Checking out sources
+-------------------------------
 To generate a VM check-out http://www.squeakvm.org/svn/squeak/branches/Cog/image
 which contains
 http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.changes
 http://www.squeakvm.org/svn/squeak/branches/Cog/image/VMMaker-Squeak4.1.image
+Start up VMMaker-Squeak4.1.image.  In it is a workspace containing a doit that
+uses something like generate:and:to:platformDir:excluding:.  Doit.
+
 
 How to build the Cog Croquet VM on Unix
 -------------------------------
@@ -57,8 +72,10 @@ To run a 32-bit VM on a 64-bit OS, you'll also need the 32-bit libraries
 provided by the ia32-libs package.
 
 
-According to Paul DeBruicker  the following packages need to be installed to
-compile in 32-bt mode on 64-bit ubuntu.  YMMV.
+Compiling in 32-bit mode on a 64-bit linux
+-------------------------------
+Follow 3d. above.  Also note that according to Paul DeBruicker the following
+packages need to be installed to compile in 32-bt mode on 64-bit ubuntu.  YMMV.
 
 lib32asound2-dev
 libgl1-mesa-dev
@@ -67,3 +84,12 @@ build-essential
 ia32-libs
 gcc-multilib
 g++multilib
+
+
+Testing an external plugin has completely linked
+-------------------------------
+You may find that an external plugin compiles and links but does not load.
+This is usually because it contans undefined symbols.  To find undefined
+symbols, remake the plugin, capturing the link step and then supply
+	-Wl,--warn-unresolved-symbols -Wl,--no-allow-shlib-undefined
+when manually repeating the link command

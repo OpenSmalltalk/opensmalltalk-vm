@@ -61,6 +61,7 @@ mkmf() {
   dirs="$*"
   makefile_in=""
   makefile_inc=""
+  makefile_plg=Makefile.plg.in
   make_targets="${name}/make.targets"
   objs="${name}/.objs"
   excluded="${name}/.excluded"
@@ -82,6 +83,7 @@ mkmf() {
         for sd in ${subdirs}; do dd="${dd} ${topdir}/${sd}"; done
       fi
       srcs="${srcs} `findFiles .c ${dd}`"
+      srcs="${srcs} `findFiles .cc ${dd}`"
       srcs="${srcs} `findFiles .cpp ${dd}`"
       srcs="${srcs} `findFiles .S ${dd}`"
       srcs="${srcs} `findFiles .m ${dd}`"
@@ -114,7 +116,8 @@ mkmf() {
       echo												>> ${make_targets}
       echo "${o} : ${c}"								>> ${make_targets}
       case ${c} in
-        *.cpp|*.cc)	echo '	$(COMPILE.cpp) '"${o} ${c}"	>> ${make_targets};;
+        *.cpp|*.cc)	echo '	$(COMPILE.cpp) '"${o} ${c}"	>> ${make_targets}
+					makefile_plg=Makefile.cpp-plg.in;;
         *)		echo '	$(COMPILE) '"${o} ${c}"			>> ${make_targets}
       esac
     done
@@ -126,7 +129,7 @@ mkmf() {
   fi
   # default Makefile.in if no override
   if test ! -f "${makefile_in}"; then
-    makefile_in=${cfgdir}/Makefile.plg.in
+    makefile_in=${cfgdir}/${makefile_plg}
   fi
   # include Makefile.inc(s)
   if test "${makefile_inc}" != ""; then
