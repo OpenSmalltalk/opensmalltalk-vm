@@ -68,10 +68,10 @@ CoInterpreterStackPages >> couldBeFramePointer: pointer [
 	"Answer if the argument is a properly aligned pointer into the stack zone."
 	<var: #pointer type: #'void *'>
 	^(pointer asUnsignedInteger bitAnd: BytesPerWord - 1) = 0
-	   and: [(self cCoerceSimple: pointer to: #'char *')
-				between: stackBasePlus1 - 1
-				and: (self cCode: [self cCoerceSimple: pages to: #'char *']
-							inSmalltalk: [(self stackPageAt: 0) asInteger])]
+	   and: [pointer asUnsignedInteger
+				between: (stackBasePlus1 - 1) asUnsignedInteger
+				and: (self cCode: [pages asUnsignedInteger]
+							inSmalltalk: [(self stackPageAt: 0) asUnsignedInteger])]
 ]
 
 { #category : #initialization }
@@ -133,7 +133,7 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 		inSmalltalk:
 			[self assert: objectMemory startOfMemory - coInterpreter cogCodeSize - coInterpreter methodCacheSize - coInterpreter primTraceLogSize - coInterpreter rumpCStackSize
 					= (stackSlots * BytesPerWord)].
-	structStackPageSize := coInterpreter sizeof: CogSimpleStackPage.
+	structStackPageSize := coInterpreter sizeof: CogStackPage.
 	bytesPerPage := slotsPerPage * BytesPerWord.
 	numPages := coInterpreter numStkPages.
 
@@ -141,12 +141,12 @@ CoInterpreterStackPages >> initializeStack: theStackPages numSlots: stackSlots p
 	 subtracting BytesPerWord from baseAddress and lastAddress in the init loop below we simply
 	 push the stackPage array up one word to avoid the overlap.  This word is extraStackBytes."
 	pageStructBase := theStackPages + (numPages * bytesPerPage) + BytesPerWord.
-	pages := self cCode: '(StackPage *)pageStructBase'
+	pages := self cCode: [self cCoerceSimple: pageStructBase to: #'StackPage *']
 				  inSmalltalk:
 					[pageMap := Dictionary new.
 					 ((0 to: numPages - 1) collect:
 						[:i|
-						 CogSimpleStackPage surrogateClass new
+						 CogStackPage surrogateClass new
 							address: pageStructBase + (i * structStackPageSize)
 							simulator: coInterpreter
 							zoneBase: coInterpreter stackZoneBase
@@ -413,12 +413,4 @@ CoInterpreterStackPages >> stackPageFor: pointer [ "<Integer>"
 	<var: #pointer type: #'void *'>
 	<returnTypeC: #'StackPage *'>
 	^self stackPageAt: (self pageIndexFor: pointer)
-]
-
-{ #category : #'simulation only' }
-CoInterpreterStackPages >> stackPageSurrogateClass [
-	<doNotGenerate>
-	^BytesPerWord = 4
-		ifTrue: [CogSimpleStackPageSurrogate32]
-		ifFalse: [CogSimpleStackPageSurrogate64]
 ]
