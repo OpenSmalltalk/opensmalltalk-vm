@@ -77,7 +77,8 @@ sqUnixHeartbeat$o : $(topdir)/platforms/unix/vm/sqUnixHeartbeat.c
 # Ensure the cointerpreter is compiled with less aggressive optimization.  At
 # least with gcc 4.1.2 compiling with -O2 results in an apparently flakey VM.
 #gcc3x-cointerp$o : $(srcdir)/vm/gcc3x-cointerp.c
-#	$(COMPILE) gcc3x-cointerp$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/gcc3x-cointerp.c
+# so flakey the Squeak4.2-10856-beta.image image won't even start-up.
+	$(COMPILE) gcc3x-cointerp$o -O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args $(srcdir)/vm/gcc3x-cointerp.c
 
 # Ensure the cogit is compiled with less aggressive optimization.  The cogit
 # contains a function that does two alloca's which is miscompiled by a number of
