@@ -490,9 +490,6 @@ Cogit class >> generatorTableFrom: anArray [
 		(descriptor := CogBytecodeDescriptor new)
 						numBytes: tuple first;
 						generator: tuple fourth;
-						needsFrame: (tuple includes: #frameful);
-						needsFrameInBlock: ((tuple includes: #frameful)
-											  or: [tuple includes: #framefulInBlock]);
 						isReturn: (tuple includes: #return);
 						isMapped: (tuple includes: #mapped);
 						isMappedInBlock: (tuple includes: #mappedInBlock);
@@ -506,15 +503,18 @@ Cogit class >> generatorTableFrom: anArray [
 						yourself.
 		tuple do:
 			[:thing|
-			(CogRTLOpcodes classPool at: thing ifAbsent: []) ifNotNil:
-				[:opcode| descriptor opcode: opcode]].
+			thing isSymbol ifTrue:
+				[(thing beginsWith: 'needsFrame') ifTrue:
+					[descriptor needsFrameFunction: thing].
+				 (CogRTLOpcodes classPool at: thing ifAbsent: []) ifNotNil:
+					[:opcode| descriptor opcode: opcode]]].
 		tuple last isInteger
 			ifTrue: [descriptor stackDelta: tuple last]
 			ifFalse:
-				[descriptor needsFrameInBlock ifFalse:
+				[descriptor needsFrameFunction ifNotNil:
 					[self error: 'frameless block bytecodes must specify a stack delta']].
 		tuple second to: tuple third do:
-			[:index| 
+			[:index|
 			generatorTable at: index put: descriptor]].
 	^generatorTable
 ]
@@ -528,7 +528,8 @@ Cogit class >> implicitReturnTypeFor: aSelector [
 { #category : #'class initialization' }
 Cogit class >> initialize [
 	Debug := false.
-	EagerInstructionDecoration := false. "speeds up single stepping but could lose fidelity"
+	EagerInstructionDecoration isNil ifTrue:
+		[EagerInstructionDecoration := false]. "speeds up single stepping but could lose fidelity"
 	self initializeErrorCodes.
 	self initializeCogMethodConstants.
 	self initializeAnnotationConstants.
@@ -736,6 +737,9 @@ Cogit class >> tableFunctions [
 		addAll: (generatorTable object
 					select: [:ea| ea spanFunction notNil]
 					thenCollect: [:ea| ea spanFunction]);
+		addAll: (generatorTable object
+					select: [:ea| ea needsFrameFunction notNil]
+					thenCollect: [:ea| ea needsFrameFunction]);
 		addAll: (primitiveTable object
 					select: [:ea| ea notNil and: [ea primitiveGenerator notNil]]
 					thenCollect: [:ea| ea primitiveGenerator]);
@@ -5653,6 +5657,16 @@ Cogit >> mnuOffset [
 ]
 
 { #category : #'compile abstract instructions' }
+Cogit >> needsFrameIfInBlock: isInBlock [
+	^inBlock
+]
+
+{ #category : #'compile abstract instructions' }
+Cogit >> needsFrameNever: isInBlock [
+	^false
+]
+
+{ #category : #'compile abstract instructions' }
 Cogit >> nextBytecodePCFor: descriptor at: pc byte0: opcodeByte in: aMethodObj [
 	"Compute the distance to the logically subsequent bytecode, i.e. skip over blocks."
 	<var: #descriptor type: #'BytecodeDescriptor *'>
@@ -6281,7 +6295,8 @@ Cogit >> scanBlock: blockStart [
 		[byte0 := objectMemory fetchByte: pc ofObject: methodObj.
 		 descriptor := self generatorAt: byte0.
 		 needsFrame ifFalse:
-			[descriptor needsFrameInBlock
+			[(descriptor needsFrameFunction isNil
+			  or: [self perform: descriptor needsFrameFunction with: true])
 				ifTrue: [needsFrame := true]
 				ifFalse: [stackDelta := stackDelta + descriptor stackDelta]].
 		 pc := self nextBytecodePCFor: descriptor at: pc byte0: byte0 in: methodObj].
@@ -6320,7 +6335,9 @@ Cogit >> scanMethod [
 		(descriptor isReturn
 		 and: [pc >= latestContinuation]) ifTrue:
 			[endPC := pc].
-		 (needsFrame not and: [descriptor needsFrame]) ifTrue:
+		 (needsFrame not
+		  and: [descriptor needsFrameFunction isNil
+			  or: [self perform: descriptor needsFrameFunction with: false]]) ifTrue:
 			[needsFrame := true].
 		descriptor isBranch ifTrue:
 			[distance := self spanFor: descriptor at: pc byte0: byte0 in: methodObj.

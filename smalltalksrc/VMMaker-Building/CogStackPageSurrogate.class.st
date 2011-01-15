@@ -42,6 +42,11 @@ CogStackPageSurrogate >> asInteger [
 	^address
 ]
 
+{ #category : #accessing }
+CogStackPageSurrogate >> asUnsignedInteger [
+	^address
+]
+
 { #category : #comparing }
 CogStackPageSurrogate >> hash [
 	^address hash

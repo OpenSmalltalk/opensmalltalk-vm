@@ -88,7 +88,7 @@ CoInterpreter class >> ancilliaryClasses [
 
 { #category : #translation }
 CoInterpreter class >> ancilliaryStructClasses [
-	^{ CogSimpleStackPage.
+	^{ CogStackPage.
 		CogBlockMethod.
 		CogMethod }
 ]
@@ -434,8 +434,8 @@ CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 
 { #category : #translation }
 CoInterpreter class >> shouldGenerateTypedefFor: aStructClass [
-	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^({ CogStackPage. CogBlockMethod. CogMethod } includes: aStructClass) not
+	"Hack to work-around multiple definitions.  Sometimes a type has been defined in an include."
+	^({ CogBlockMethod. CogMethod } includes: aStructClass) not
 ]
 
 { #category : #translation }
@@ -2069,7 +2069,7 @@ CoInterpreter >> compilationBreakpointFor: selectorOop [
 
 { #category : #initialization }
 CoInterpreter >> computeStackZoneSize [
-	^numStackPages * ((self sizeof: CogSimpleStackPage) + self stackPageByteSize)
+	^numStackPages * ((self sizeof: CogStackPage) + self stackPageByteSize)
 	 + stackPages extraStackBytes
 ]
 
