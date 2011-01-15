@@ -139,7 +139,7 @@ VMClass class >> openCogMultiWindowBrowser [
 
 { #category : #utilities }
 VMClass class >> openObjectMemoriesInterpretersBrowser [
-	"Answer a new multi-window browser opne the ObjectMemory classes and the Cog Interpreter classes"
+	"Answer a new multi-window browser on the ObjectMemory classes and the Cog Interpreter classes"
 	| b |
 	b := Browser open.
 	#(	ObjectMemory NewObjectMemory NewCoObjectMemory

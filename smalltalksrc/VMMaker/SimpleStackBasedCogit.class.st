@@ -49,64 +49,63 @@ SimpleStackBasedCogit class >> initializeBytecodeTableForClosureV3 [
  selectors either because in the Cointerpreter they are not inlined or because they
  are inlined only to instances of classes for which there will always be a method.'.
 	self generatorTableFrom: #(
-		(1    0   15 genPushReceiverVariableBytecode frameful)
-		(1  16   31 genPushTemporaryVariableBytecode frameful)
-		(1  32   63 genPushLiteralConstantBytecode frameless 1)
-		(1  64   95 genPushLiteralVariableBytecode frameless 1)
-		(1  96 103 genStoreAndPopReceiverVariableBytecode frameless -1)
-		(1 104 111 genStoreAndPopTemporaryVariableBytecode frameful)
-		(1 112 112 genPushReceiverBytecode frameful)
-		(1 113 113 genPushConstantTrueBytecode frameless 1)
-		(1 114 114 genPushConstantFalseBytecode frameless 1)
-		(1 115 115 genPushConstantNilBytecode frameless 1)
-		(1 116 119 genPushQuickIntegerConstantBytecode frameless 1)
-		(1 120 120 genReturnReceiver				frameless return framefulInBlock mappedInBlock)
-		(1 121 121 genReturnTrue					frameless return framefulInBlock mappedInBlock)
-		(1 122 122 genReturnFalse					frameless return framefulInBlock mappedInBlock)
-		(1 123 123 genReturnNil					frameless return framefulInBlock mappedInBlock)
-		(1 124 124 genReturnTopFromMethod		frameless return framefulInBlock mappedInBlock)
-		(1 125 125 genReturnTopFromBlock		frameless return -1)
+		(1    0   15 genPushReceiverVariableBytecode)
+		(1  16   31 genPushTemporaryVariableBytecode)
+		(1  32   63 genPushLiteralConstantBytecode needsFrameNever: 1)
+		(1  64   95 genPushLiteralVariableBytecode needsFrameNever: 1)
+		(1  96 103 genStoreAndPopReceiverVariableBytecode needsFrameNever: -1)
+		(1 104 111 genStoreAndPopTemporaryVariableBytecode)
+		(1 112 112 genPushReceiverBytecode)
+		(1 113 113 genPushConstantTrueBytecode needsFrameNever: 1)
+		(1 114 114 genPushConstantFalseBytecode needsFrameNever: 1)
+		(1 115 115 genPushConstantNilBytecode needsFrameNever: 1)
+		(1 116 119 genPushQuickIntegerConstantBytecode needsFrameNever: 1)
+		"method returns in blocks need a frame because of nonlocalReturn:through:"
+		(1 120 120 genReturnReceiver				return needsFrameIfInBlock: mappedInBlock 0)
+		(1 121 121 genReturnTrue					return needsFrameIfInBlock: mappedInBlock 0)
+		(1 122 122 genReturnFalse					return needsFrameIfInBlock: mappedInBlock 0)
+		(1 123 123 genReturnNil					return needsFrameIfInBlock: mappedInBlock 0)
+		(1 124 124 genReturnTopFromMethod		return needsFrameIfInBlock: mappedInBlock -1)
+		(1 125 125 genReturnTopFromBlock		needsFrameNever: return -1)
 
-		(1 126 127 unknownBytecode frameful)
+		(1 126 127 unknownBytecode)
 
-		(2 128 128 extendedPushBytecode frameless 1)
-		(2 129 129 extendedStoreBytecode frameful)
-		(2 130 130 extendedStoreAndPopBytecode frameful)
-		(2 131 131 genExtendedSendBytecode frameful mapped)
-		(3 132 132 doubleExtendedDoAnythingBytecode frameful mapped)
-		(2 133 133 genExtendedSuperBytecode frameful mapped)
-		(2 134 134 genSecondExtendedSendBytecode frameful mapped)
-		(1 135 135 genPopStackBytecode frameless -1)
-		(1 136 136 duplicateTopBytecode frameless 1)
+		(2 128 128 extendedPushBytecode needsFrameNever: 1)
+		(2 129 129 extendedStoreBytecode)
+		(2 130 130 extendedStoreAndPopBytecode)
+		(2 131 131 genExtendedSendBytecode mapped)
+		(3 132 132 doubleExtendedDoAnythingBytecode mapped)
+		(2 133 133 genExtendedSuperBytecode mapped)
+		(2 134 134 genSecondExtendedSendBytecode mapped)
+		(1 135 135 genPopStackBytecode needsFrameNever: -1)
+		(1 136 136 duplicateTopBytecode needsFrameNever: 1)
 
-		(1 137 137 genPushActiveContextBytecode frameful)
-		(2 138 138 genPushNewArrayBytecode frameful)
-		(1 139 139 unknownBytecode frameful)
-		(3 140 140 genPushRemoteTempLongBytecode frameful)
-		(3 141 141 genStoreRemoteTempLongBytecode frameful)
-		(3 142 142 genStoreAndPopRemoteTempLongBytecode frameful)
-		(4 143 143 genPushClosureCopyCopiedValuesBytecode frameful block blockCodeS:i:z:e:)
+		(1 137 137 genPushActiveContextBytecode)
+		(2 138 138 genPushNewArrayBytecode)
+		(1 139 139 unknownBytecode)
+		(3 140 140 genPushRemoteTempLongBytecode)
+		(3 141 141 genStoreRemoteTempLongBytecode)
+		(3 142 142 genStoreAndPopRemoteTempLongBytecode)
+		(4 143 143 genPushClosureCopyCopiedValuesBytecode block blockCodeS:i:z:e:)
 
-		(1 144 151 genShortUnconditionalJump			frameful forward
+		(1 144 151 genShortUnconditionalJump		forward shortForwardBranchDistance:)
+		(1 152 159 genShortJumpIfFalse				forward false mapped "because of mustBeBoolean"
 														shortForwardBranchDistance:)
-		(1 152 159 genShortJumpIfFalse				frameful forward false mapped "because of mustBeBoolean"
-														shortForwardBranchDistance:)
-		(2 160 163 genLongUnconditionalBackwardJump	frameful backward mapped "because of interrupt check"
+		(2 160 163 genLongUnconditionalBackwardJump	backward mapped "because of interrupt check"
 														longBranchDist:ance:)
-		(2 164 167 genLongUnconditionalForwardJump	frameful forward
-														longBranchDist:ance:)
-		(2 168 171 genLongJumpIfTrue					frameful forward true mapped "because of mustBeBoolean"
+		(2 164 167 genLongUnconditionalForwardJump	forward longBranchDist:ance:)
+		(2 168 171 genLongJumpIfTrue				forward true mapped "because of mustBeBoolean"
 														longForwardBranchDist:ance:)
-		(2 172 175 genLongJumpIfFalse					frameful forward false mapped "because of mustBeBoolean"
+		(2 172 175 genLongJumpIfFalse				forward false mapped "because of mustBeBoolean"
 														longForwardBranchDist:ance:)
 
-		(1 176 197 genSpecialSelectorSend frameful mapped)
-		(1 198 198 genSpecialSelectorEqualsEquals frameless notMapped -1) "not mapped because it is directly inlined (for now)"
-		(1 199 199 genSpecialSelectorClass frameless notMapped 0) "not mapped because it is directly inlined (for now)"
-		(1 200 207 genSpecialSelectorSend frameful mapped)
-		(1 208 223 genSendLiteralSelector0ArgsBytecode frameful mapped)
-		(1 224 239 genSendLiteralSelector1ArgBytecode frameful mapped)
-		(1 240 255 genSendLiteralSelector2ArgsBytecode frameful mapped))
+		(1 176 197 genSpecialSelectorSend mapped)
+		(1 198 198 genSpecialSelectorEqualsEquals needsFrameNever: notMapped -1) "not mapped because it is directly inlined (for now)"
+		(1 199 199 genSpecialSelectorClass needsFrameNever: notMapped 0) "not mapped because it is directly inlined (for now)"
+		(1 200 207 genSpecialSelectorSend mapped)
+		(1 208 223 genSendLiteralSelector0ArgsBytecode mapped)
+		(1 224 239 genSendLiteralSelector1ArgBytecode mapped)
+		(1 240 255 genSendLiteralSelector2ArgsBytecode mapped))
 ]
 
 { #category : #'class initialization' }

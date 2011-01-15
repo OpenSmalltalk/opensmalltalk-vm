@@ -7164,7 +7164,7 @@ StackInterpreter >> printFrameAndCallers: theFP SP: theSP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
 	<var: #theSP type: #'char *'>
-	theFP == 0 ifTrue: [^nil].
+	(stackPages couldBeFramePointer: theFP) ifFalse: [^nil].
 	(self isBaseFrame: theFP) ifFalse:
 		[self printFrameAndCallers: (self frameCallerFP: theFP)
 			SP: (self frameCallerSP: theFP)].
@@ -8618,7 +8618,7 @@ StackInterpreter >> shortPrintFrame: theFP [
 StackInterpreter >> shortPrintFrameAndCallers: theFP [
 	<inline: false>
 	<var: #theFP type: #'char *'>
-	theFP == 0 ifTrue: [^nil].
+	(stackPages couldBeFramePointer: theFP) ifFalse: [^nil].
 	self shortPrintFrame: theFP.
 	self shortPrintFrameAndCallers: (self frameCallerFP: theFP)
 ]

@@ -1,20 +1,12 @@
 Class {
 	#name : #CogStackPage,
-	#superclass : #CogSimpleStackPage,
-	#instVars : [
-		'savedRegisters'
-	],
+	#superclass : #InterpreterStackPage,
 	#category : #'VMMaker-JIT'
 }
 
 { #category : #translation }
-CogStackPage class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
-	"enumerate aBinaryBlock with the names and C type strings for the inst vars to include in a StackPage struct."
-
-	superclass instVarNamesAndTypesForTranslationDo: aBinaryBlock.
-	aBinaryBlock
-		value: 'savedRegisters'
-		value: #(#sqInt '[NumSavedRegisters]')
+CogStackPage class >> alignedByteSize [
+	^self surrogateClass alignedByteSize
 ]
 
 { #category : #'simulation only' }

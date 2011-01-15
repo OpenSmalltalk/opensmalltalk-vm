@@ -472,6 +472,17 @@ CogVMSimulator >> displayLocation [
 	^ Display extent - displayForm extent - (10@10)
 ]
 
+{ #category : #'frame access' }
+CogVMSimulator >> divorceFramesIn: aStackPage [
+	"| thisPage |
+	(self checkIsStillMarriedContext: 22189568 currentFP: framePointer) ifTrue:
+		[thisPage := stackPages stackPageFor: (self frameOfMarriedContext: 22189568).
+		 aStackPage == thisPage ifTrue:
+			[self halt]]."
+	self halt.
+	^super divorceFramesIn: aStackPage
+]
+
 { #category : #'process primitive support' }
 CogVMSimulator >> doSignalExternalSemaphores: minTableSize [
 	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
@@ -904,7 +915,7 @@ CogVMSimulator >> initialize [
 	objectMemoryClass := self class objectMemoryClass.
 
 	objectMemoryClass initBytesPerWord: objectMemoryClass bytesPerWord.
-	CoInterpreter initialize.
+	((Smalltalk classNamed: #CoInterpreterMT) ifNil: [CoInterpreter] ifNotNil: [:cimt| cimt])  initialize.
 	(self class cogitClass withAllSuperclasses copyUpThrough: Cogit) reverseDo:
 		[:c| c initialize].
 
@@ -998,6 +1009,12 @@ CogVMSimulator >> instVar: index ofContext: aMarriedContext put: anOop [
 	self shortPrintOop: anOop.
 	(self confirm: 'continue?') ifFalse: [self halt]."
 	^super instVar: index ofContext: aMarriedContext put: anOop
+]
+
+{ #category : #'indexing primitive support' }
+CogVMSimulator >> install: rcvr inAtCache: cache at: atIx string: stringy [
+	(self is: rcvr KindOf: 'BooleanArray') ifTrue: [self halt].
+	^super install: rcvr inAtCache: cache at: atIx string: stringy
 ]
 
 { #category : #'interpreter shell' }
