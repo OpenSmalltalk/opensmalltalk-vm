@@ -233,11 +233,6 @@ CocoaIOSConfig >> internalPlugins [
 ]
 
 { #category : #accessing }
-CocoaIOSConfig >> linkFlags [ 
-	^''
-]
-
-{ #category : #accessing }
 CocoaIOSConfig >> platformName [ 
 	^'iOS'
 ]
@@ -911,18 +906,18 @@ CocoaIOSConfig >> preferredIncludes [
 { #category : #settings }
 CocoaIOSConfig >> setExtraTargetProperties: maker [
 
-	| plist precompiledHeaders |
+	| precompiledHeaders |
+
+	super setExtraTargetProperties: maker.
+
+	maker addFrameworks: self frameworks.	
 
 	" generated and add Info.plist file "
-	plist := self plistFile.
-
-	(maker buildDir forceNewFileNamed: 'Info.plist') 
-		nextPutAll: plist; 
-		close.
-
+	self write: self plistFile toFile: 'Info.plist'.
 	maker 
 		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
-		value: '${buildDir}/Info.plist'.  
+		value: '${buildDir}/Info.plist'.
+
 
 	maker 
 		cmd: 'set_source_files_properties' 
