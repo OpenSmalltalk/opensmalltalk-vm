@@ -139,23 +139,26 @@ ImageFormat class >> fromInteger: anInteger [
 ImageFormat class >> fromStream: stream [
 	"Answer a new instance from a saved image file stream. Word size and byte ordering
 	are dependent on the image and platform that saved the file, and must be decoded
-	to obtain the image format."
+	to obtain the image format. There may be a 512 byte offset, also."
 
-	| num |
-	num := stream nextNumber: 4.  "try 32 bit big endian format"
-	[^ self fromInteger: num]
-		on: Error
-		do: [stream position: 0.
-			num := stream nextLittleEndianNumber: 4. "try 32 bit little endian format"
-			^ self fromInteger: num]
+	{ 0 . 512 } do: [:offset | | num |
+		[stream position: offset.
+		num := stream nextNumber: 4.  "try 32 bit big endian format"
+		^ self fromInteger: num]
 			on: Error
-			do: [stream position: 0.
-				num := stream nextNumber: 8. "try 64 bit big endian format"
+			do: [[stream position: offset.
+				num := stream nextLittleEndianNumber: 4. "try 32 bit little endian format"
 				^ self fromInteger: num]
 				on: Error
-				do: [stream position: 0.
-					num := stream nextLittleEndianNumber: 8. "try 64 bit little endian format"
-					^ self fromInteger: num].
+				do: [[stream position: offset.
+					num := stream nextNumber: 8. "try 64 bit big endian format"
+					^ self fromInteger: num]
+					on: Error
+					do: [[stream position: offset.
+						num := stream nextLittleEndianNumber: 8. "try 64 bit little endian format"
+						^ self fromInteger: num]
+						on: Error
+						do: ["nothing. fall through for possible second round."]]]]].
 	self error: 'unrecognized image format'
 ]
 
@@ -191,24 +194,30 @@ ImageFormat class >> generateCkStatusProgram: programName on: stream [
 			tab; nextPutAll: 'if (f == NULL) {'; cr;
 			tab; tab; nextPutAll: 'perror(argv[1]);'; cr;
 			tab; tab; nextPutAll: 'exit(2);'; cr;
+			tab; nextPutAll: '}'; cr.
+	{ 0. 512 } do: [:offset |
+		stream
+			tab; nextPutAll: 'if(fseek(f, '; nextPutAll: offset asString; nextPutAll: 'L, SEEK_SET) != 0) {';cr;
+			tab; tab; nextPutAll: 'fprintf(stderr, "cannot go to pos %d in %s\n", '; nextPutAll: offset asString; nextPutAll: ', argv[1]);'; cr;
+			tab; tab; nextPutAll: 'exit(3);'; cr;
 			tab; nextPutAll: '}'; cr;
 			tab; nextPutAll: 'if (fread(buf, 1, 8, f) < 8) {'; cr;
 			tab; tab; nextPutAll: 'fprintf(stderr, "cannot read %s\n", argv[1]);'; cr;
 			tab; tab; nextPutAll: 'exit(3);'; cr;
 			tab; nextPutAll: '}'; cr.
-	self versionNumberByteArrays withIndexDo: [ :v :tag | | b |
-		formatNumber := (self fromBytes: v) asInteger.
-		b := 'b_', formatNumber asString, '_', tag asString.
-		stream tab; nextPutAll: 'unsigned char ', b, '[', v size asString, ']= { '.
-		v inject: true into: [:first : elem |
-			first ifFalse: [stream nextPutAll: ', '].
-			stream nextPutAll: elem asString.
-			false].
-		stream nextPutAll: '};'; cr;
-				tab; nextPutAll: 'if (strncmp(buf, ', b, ', ', v size asString, ') == 0) {'; cr;
-				tab; tab; nextPutAll: 'printf("%d", ', formatNumber, ');'; cr;
-				tab; tab; nextPutAll: 'exit(0);'; cr;
-				tab; nextPutAll: '}'; cr].
+		self versionNumberByteArrays withIndexDo: [ :v :tag | | b |
+			formatNumber := (self fromBytes: v) asInteger.
+			b := 'b_', formatNumber asString, '_', tag asString.
+			stream tab; nextPutAll: '{'; cr; tab; nextPutAll: 'unsigned char ', b, '[', v size asString, ']= { '.
+			v inject: true into: [:first : elem |
+				first ifFalse: [stream nextPutAll: ', '].
+				stream nextPutAll: elem asString.
+				false].
+			stream nextPutAll: '};'; cr;
+					tab; nextPutAll: 'if (strncmp(buf, ', b, ', ', v size asString, ') == 0) {'; cr;
+					tab; tab; nextPutAll: 'printf("%d", ', formatNumber, ');'; cr;
+					tab; tab; nextPutAll: 'exit(0);'; cr;
+					tab; nextPutAll: '}'; cr; tab; nextPutAll: '}'; cr]].
 	stream tab; nextPutAll: 'printf("0"); /* print an invalid format number */';cr;
 			tab; nextPutAll: 'exit (-1); /* not found, exit with error code */'; cr;
 			nextPutAll: '}'; cr
