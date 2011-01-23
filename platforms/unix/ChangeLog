@@ -1,5 +1,8 @@
 2011-01-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
+	* plugins/UUIDPlugin/sqUnixUUID.c (MakeUUID): NetBSD has
+	uuid_generate() not uuidgen().
+
 	* vm-display-X11/config.cmake: Use configured variable
 	X11_Xrender_LIB in link libraries list.
 
