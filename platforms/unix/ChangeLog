@@ -1,3 +1,12 @@
+2011-01-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm-display-X11/config.cmake: Use configured variable
+	X11_Xrender_LIB in link libraries list.
+
+	* plugins/FloatMathPlugin/config.cmake: Set LIBM_CFLAGS to disable GNUCC optimisation.
+
+	* plugins/FloatMathPlugin/build.cmake: Set CFLAGS to LIBM_CFLAGS for this target only.
+
 2010-12-31  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/FloatMathPlugin/config.cmake: Set little-endian flag
