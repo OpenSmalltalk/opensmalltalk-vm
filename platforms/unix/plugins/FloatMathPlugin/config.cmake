@@ -10,5 +10,7 @@ ENDIF ()
 # GCC optimizations break fdlibm so disable them for now.
 
 IF (CMAKE_COMPILER_IS_GNUCC)
-  SET (CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O0 -mno-fused-madd")
+  SET (LIBM_CFLAGS "${CMAKE_C_FLAGS} -O0 -mno-fused-madd")
+ELSE ()
+  SET (LIBM_CFLAGS "${CMAKE_C_FLAGS}")
 ENDIF ()
