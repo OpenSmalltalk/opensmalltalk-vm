@@ -1,3 +1,7 @@
+2011-01-24  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* vm/sqUnixMain.c (sqGetFilenameFromString): Handle relative symlinks properly.
+
 2011-01-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/UUIDPlugin/sqUnixUUID.c (MakeUUID): NetBSD has
