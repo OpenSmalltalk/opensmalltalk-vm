@@ -30,8 +30,7 @@ Class {
 		'platformsDir',
 		'internalPlugins',
 		'externalPlugins',
-		'pluginsDir',
-		'externalLibs'
+		'pluginsDir'
 	],
 	#category : #CMakeVMMaker
 }
@@ -42,11 +41,11 @@ CPlatformConfig class >> generate [
 	^ CMakeVMGenerator new generate: self.
 ]
 
-{ #category : #directories }
+{ #category : #accessing }
 CPlatformConfig >> buildDir [
-	
-	^ buildDir ifNil: [ buildDir := (self topDir / 'build') assureExistence ].
+	"Answer the value of buildDir"
 
+	^ buildDir
 ]
 
 { #category : #accessing }
@@ -287,6 +286,8 @@ CPlatformConfig >> configureMpeg3Plugin: maker [
 		'libmpeg/video/vlc.c'
 	).
 	
+	maker addPlatformSources: #(	
+		'sqMacFileBits.c')
 	
 
 ]
@@ -388,24 +389,6 @@ CPlatformConfig >> crossSources [
 		)
 ]
 
-{ #category : #plugins }
-CPlatformConfig >> defaultExternalPlugins [
-	self shouldBeImplemented 
-]
-
-{ #category : #plugins }
-CPlatformConfig >> defaultInternalPlugins [
-	self shouldBeImplemented 
-]
-
-{ #category : #utils }
-CPlatformConfig >> dirFrom: aStringOrDir [
-	
-	^ aStringOrDir isString ifTrue: [
-		FileDirectory on: ( FileDirectory fullPathForURI: aStringOrDir)] 
-	ifFalse: [ aStringOrDir ]
-]
-
 { #category : #utils }
 CPlatformConfig >> doesNotUnderstand: aMessage [
 	" ignore configureXYZ: messages "
@@ -430,22 +413,6 @@ CPlatformConfig >> executableType [
 	^ ''
 ]
 
-{ #category : #plugins }
-CPlatformConfig >> externalPlugins [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
-]
-
-{ #category : #plugins }
-CPlatformConfig >> externalPlugins: aColl [
-
-	externalPlugins := aColl
-]
-
-{ #category : #plugins }
-CPlatformConfig >> extraPluginSettings: maker [
-	"override in subclasses to apply extra settings for all plugins targets"
-]
-
 { #category : #'source files' }
 CPlatformConfig >> extraSources [
 	^''
@@ -462,21 +429,15 @@ CPlatformConfig >> frameworks [
 	^ #()
 ]
 
-{ #category : #plugins }
-CPlatformConfig >> internalPlugins [
-	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
-]
-
-{ #category : #plugins }
-CPlatformConfig >> internalPlugins: aColl [
-
-	internalPlugins := aColl
-]
-
 { #category : #testing }
 CPlatformConfig >> isLittleEndian [
 	"default is true. Override if necessary"
 	^ true
+]
+
+{ #category : #accessing }
+CPlatformConfig >> linkFlags [ 
+	^''
 ]
 
 { #category : #'source files' }
@@ -503,11 +464,9 @@ CPlatformConfig >> pluginsDir [
 ]
 
 { #category : #accessing }
-CPlatformConfig >> pluginsDir: aStringOrDir [
-	"Set the value of topDir"
+CPlatformConfig >> pluginsDir: aString [
+	pluginsDir := aString
 
-	pluginsDir := self dirFrom: aStringOrDir.
-	
 ]
 
 { #category : #'source files' }
@@ -518,44 +477,21 @@ CPlatformConfig >> preferredIncludes [
 { #category : #utils }
 CPlatformConfig >> setExtraTargetProperties: maker [
 
-
-]
-
-{ #category : #directories }
-CPlatformConfig >> setupDirectories: gen [
-	| dirsInclude |
-
-	" write the directories in separate include file"
-	dirsInclude := gen captureOutputDuring: [
-		gen
-			set: #topDir toString: (self topDir fullName); 
-			set: #buildDir toString: (buildDir ifNil: ['${topDir}/build']);
-			set: #platformsDir toString: (platformsDir ifNil: ['${topDir}/platforms']);
-			set: #srcDir toString: (srcDir ifNil: [ '${topDir}/src']);
-			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
-			set: #srcVMDir toString: '${srcDir}/vm';
-			set: #platformName toString: self platformName;
-			set: #targetPlatform to: '${platformsDir}/${platformName}';
-			set: #crossDir toString: '${platformsDir}/Cross';
-			set: #platformVMDir toString: '${targetPlatform}/vm'.
-	].
-
-	self write: dirsInclude toFile: 'directories.cmake'
+	" do nothing"
 ]
 
 { #category : #accessing }
 CPlatformConfig >> srcDir [
 	"Answer the value of srcDir"
 
-	^ srcDir ifNil: [ srcDir := '${topDir}/src' ]
+	^ srcDir
 ]
 
 { #category : #accessing }
-CPlatformConfig >> srcDir: aStringOrDir [
-	"Set the value of topDir"
+CPlatformConfig >> srcDir: anObject [
+	"Set the value of srcDir"
 
-	srcDir := self dirFrom: aStringOrDir.
-	
+	srcDir := anObject
 ]
 
 { #category : #'source files' }
@@ -563,35 +499,16 @@ CPlatformConfig >> standardIncludes [
 	^#()
 ]
 
-{ #category : #directories }
+{ #category : #accessing }
 CPlatformConfig >> topDir [
-	
-	^ topDir ifNil: [ topDir := FileDirectory default containingDirectory ].
+	"Answer the value of topDir"
 
+	^ topDir
 ]
 
-{ #category : #directories }
-CPlatformConfig >> topDir: pathString [
+{ #category : #accessing }
+CPlatformConfig >> topDir: anObject [
+	"Set the value of topDir"
 
-	topDir :=
-		FileDirectory on: (FileDirectory fullPathForURI: pathString).
-	topDir assureExistence.
-]
-
-{ #category : #directories }
-CPlatformConfig >> write: aContents toFile: aFileName [
-
-	"write a file to current output directory (buildDir).
-	use line end convention appropriate for config platform"
-	
-
-	| bldDir |
-	
-	bldDir := self buildDir.
-	
- 	bldDir isString ifTrue: [ bldDir := FileDirectory on: (FileDirectory fullPathForURI: bldDir) ].
-	bldDir assureExistence.
-	
-	bldDir forceNewFileNamed: aFileName 
-		do: [:stream | stream nextPutAll: (self fixLineEndsOf: aContents) ].
+	topDir := anObject
 ]

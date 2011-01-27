@@ -91,16 +91,6 @@ MacOSConfig >> configureMIDIPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-MacOSConfig >> configureMpeg3Plugin: maker [
-
-	super configureMpeg3Plugin: maker.
-	
-	maker addPlatformSources: #(	
-		'sqMacFileBits.c')
-	
-]
-
-{ #category : #'plugin extra rules' }
 MacOSConfig >> configureObjectiveCPlugin: maker [
 	maker doNotGenerate: true
 ]

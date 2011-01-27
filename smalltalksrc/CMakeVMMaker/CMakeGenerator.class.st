@@ -17,27 +17,12 @@ CMakeGenerator >> addDefinitions: aString [
 ]
 
 { #category : #'cmake commands' }
-CMakeGenerator >> addExternalLibraries: libs [
-
-	libs do: [:each | self addExternalLibrary: each ]
-]
-
-{ #category : #'cmake commands' }
-CMakeGenerator >> addExternalLibrary: aLibrary [ 
-
-	self cmd: 'target_link_libraries' 
-		params: self moduleName , ' ' , aLibrary.
-		
-
-]
-
-{ #category : #'cmake commands' }
 CMakeGenerator >> addFrameworks: aCollection [ 
-	"for mac only "
 	aCollection
 		do: [:each | 
-			self cmd: 'find_library' params:  each , '_FMWK ', each.
-			self addExternalLibrary: '${', each , '_FMWK}' ]
+			self puts: 'find_library(' , each , '_FMWK ' , each , ')'.
+			self puts: 'target_link_libraries(' , self moduleName , ' ${' , each , '_FMWK})']
+
 ]
 
 { #category : #'cmake commands' }
@@ -82,19 +67,10 @@ CMakeGenerator >> addXCodeProperty: propertyString value: valueString [
 
 ]
 
-{ #category : #'code generation' }
-CMakeGenerator >> captureOutputDuring: aBlock [
-	| old result |
-	
-	old := output.
-	output :=  String new writeStream.
-	
-	aBlock value.
-	
-	result := output.
-	output := old.
-	
-	^ result contents
+{ #category : #accessing }
+CMakeGenerator >> buildDir [
+	^ self config buildDir ifNil: [
+		(self topDir / 'build') assureExistence ].
 ]
 
 { #category : #'cmake commands' }
@@ -122,11 +98,6 @@ CMakeGenerator >> cmd: cmdName qparams: aString [
 { #category : #'code generation' }
 CMakeGenerator >> generate [
 	self subclassResponsibility.
-]
-
-{ #category : #'cmake commands' }
-CMakeGenerator >> include: aFileName [
-	^ self cmd: 'include' params: aFileName
 ]
 
 { #category : #'cmake commands' }
