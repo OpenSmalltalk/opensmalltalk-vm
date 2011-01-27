@@ -1,3 +1,11 @@
+2011-01-27  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* cmake/Plugins.cmake: Append ${plugin}_extra_sources to
+	automatically-generated plugin source list.
+
+	* plugins/Mpeg3Plugin/config.cmake: Disable pthreads unconditionally.
+	Add mpeg library files to plugin_extra_sources.
+
 2011-01-24  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* vm/sqUnixMain.c (sqGetFilenameFromString): Handle relative symlinks properly.

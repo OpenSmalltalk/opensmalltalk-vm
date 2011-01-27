@@ -1,6 +1,6 @@
 # Figure out which plugins to build and create a configuration for each.
 # 
-# Last edited: 2009-09-17 09:34:24 by piumarta on ubuntu.piumarta.com
+# Last edited: 2011-01-27 12:16:13 by piumarta on emilia.ipe.media.kyoto-u.ac.jp
 
 FILE (STRINGS ${src}/plugins.int plugins_int)
 STRING (REGEX REPLACE ".*= (.*)" "\\1" plugins_int ${plugins_int})
@@ -49,6 +49,9 @@ MACRO (EXTERNAL_PLUGIN plugin)
       STRING_APPEND (plugin_sources "${tmp}")
     ENDFOREACH (dir)
   ENDIF (DEFINED ${plugin}_sources)
+  IF (DEFINED ${plugin}_extra_sources)
+    STRING_APPEND (plugin_sources "${${plugin}_extra_sources}")
+  ENDIF (DEFINED ${plugin}_extra_sources)
   FILE (WRITE ${bld}/${plugin}/CMakeLists.in "")
   FOREACH (dir ${unix}/plugins ${unix})
     FILE_APPEND (${bld}/${plugin}/CMakeLists.in ${dir}/${plugin}/build.cmake)

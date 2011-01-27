@@ -2,15 +2,11 @@ IF (VM_HOST_CPU MATCHES "i[3456789]86")
   PLUGIN_DEFINITIONS (-DUSE_MMX=1)
 ENDIF ()
 
-PLUGIN_FIND_LIBRARY (PTHREAD pthread)
-
-IF (NOT HAVE_LIBPTHREAD)
-  PLUGIN_DEFINITIONS (-DNOPTHREADS=1)
-ENDIF ()
+PLUGIN_DEFINITIONS (-DNOPTHREADS=1)
 
 SET (lmp3 "${cross}/plugins/Mpeg3Plugin/libmpeg")
 
-LIST(APPEND ${plugin}_sources
+LIST(APPEND ${plugin}_extra_sources
   ${lmp3}/bitstream.c ${lmp3}/libmpeg3.c ${lmp3}/mpeg3atrack.c ${lmp3}/mpeg3demux.c ${lmp3}/mpeg3io.c
   ${lmp3}/mpeg3title.c ${lmp3}/mpeg3vtrack.c ${lmp3}/changesForSqueak.c
   ${lmp3}/audio/dct.c ${lmp3}/audio/header.c ${lmp3}/audio/layer2.c ${lmp3}/audio/layer3.c
