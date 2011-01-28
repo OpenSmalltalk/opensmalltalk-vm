@@ -16,12 +16,6 @@ InterpreterPlugin classSide >> generateFor: aCMakeVMGenerator internal: aBoolean
 ]
 
 { #category : #'*CMakeVMMaker' }
-InterpreterPlugin classSide >> isSupportedPlatform: aPlatformDescriptor [
-
-	^ (self supportedPlatforms: CPlatformDescriptor) includesPlatform: aPlatformDescriptor
-]
-
-{ #category : #'*CMakeVMMaker' }
 InterpreterPlugin classSide >> supportedPlatforms: enum [
 " use:
 	^ enum unix
