@@ -53,54 +53,20 @@ CocoaIOSConfig >> NSMainNibFile [
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
-	^#('-arch i386' '-fnext-runtime' '-mmacosx-version-min=10.5')
+	^ '-arch i386 -fnext-runtime -mmacosx-version-min=10.5 '	
+	
+
 ]
 
 { #category : #accessing }
 CocoaIOSConfig >> compilerFlags [ 
-	^String streamContents: [ :stream |
-		(self commonCompilerFlags, self compilerFlagsRelease)
-			do: [ :each | stream nextPutAll: each ]
-			separatedBy: [ stream space ] ]
+	^self commonCompilerFlags, self compilerFlagsRelease
 ]
 
 { #category : #accessing }
 CocoaIOSConfig >> compilerFlagsRelease [ 
-	^#(
-	"'-fobjc-direct-dispatch'" 
-	'-msse3'
-	"'-msse4.1'"
-	"'-msse4.2'"
-	"'-mdynamic-no-pic'" 
-	"'-fwritable-strings'" 
-	'-Os' 
-	'-fvisibility=hidden' 
-	'-funroll-loops' 
-	"'-fno-asm'" 
-	'-fasm-blocks' 
-	'-finline-functions' 
-	'-mfpmath=sse' 
-	'-fomit-frame-pointer' 
-	'-march=pentium-m' 
-	'-mtune=prescott' 
-	'-falign-functions=16'  
-	'-fno-gcse' 
-	'-fno-cse-follow-jumps' 
-	'-std=gnu99' 
-	'-DBUILD_FOR_OSX' 
-	'-DUSE_INLINE_MEMORY_ACCESSORS' 
-	'-DLSB_FIRST' 
-	'-DUSE_INLINE_MEMORY_ACCESSORS' 
-	'-DHAVE_SYS_TIME_H' 
-	'-DHAVE_NANOSLEEP' 
-	'-DSQUEAK_BUILTIN_PLUGIN'
-	'-DICC_DEBUG=0'
-	'-DICC_OPTLEVEL="speedHLO"' 
-	'-DICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION=1' 
-	'-DICC_OPT_PARALLEL=0' 
-	'-DICC_OPT_PREFETCH_INSERTION=1' 
-	'-DICC_OPT_PROVIDE_FRAME_PTR=0' 
-	'-DICC_OPT_USE_ARCH_IA32="SSE42"')
+	self flag: #review. "There are more configurations in .xcodeproj"
+	^'-fobjc-direct-dispatch -msse3 -msse4.1 -msse4.2 -mdynamic-no-pic -mtune=G4 -fwritable-strings -Os -fvisibility=hidden -funroll-loops -fno-asm -std=gnu99 -fasm-blocks -finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS -DBUILD_FOR_OSX -DHAVE_SYS_TIME_H -DHAVE_NANOSLEEP -DSQUEAK_BUILTIN_PLUGIN'
 ]
 
 { #category : #'plugin extra rules' }
@@ -264,11 +230,6 @@ CocoaIOSConfig >> frameworks [
 { #category : #plugins }
 CocoaIOSConfig >> internalPlugins [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
-]
-
-{ #category : #accessing }
-CocoaIOSConfig >> linkFlags [ 
-	^''
 ]
 
 { #category : #accessing }
@@ -944,18 +905,19 @@ CocoaIOSConfig >> preferredIncludes [
 
 { #category : #settings }
 CocoaIOSConfig >> setExtraTargetProperties: maker [
-	| plist precompiledHeaders |
+
+	| precompiledHeaders |
+
+	super setExtraTargetProperties: maker.
+
+	maker addFrameworks: self frameworks.	
 
 	" generated and add Info.plist file "
-	plist := self plistFile.
-
-	(maker buildDir forceNewFileNamed: 'Info.plist') 
-		nextPutAll: plist; 
-		close.
-
+	self write: self plistFile toFile: 'Info.plist'.
 	maker 
 		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
-		value: '${buildDir}/Info.plist'.  
+		value: '${buildDir}/Info.plist'.
+
 
 	maker 
 		cmd: 'set_source_files_properties' 
@@ -966,27 +928,20 @@ CocoaIOSConfig >> setExtraTargetProperties: maker [
 		nextPutAll: self precompiledHeaders;
 		close.
 		
-	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.
+	maker 
+		addProperty: 'XCODE_ATTRIBUTE_GCC_PREFIX_HEADER' 
+		value: '${buildDir}/', precompiledHeaders.
 
-	"maker 
-		addXCodeProperty: 'GCC_ENABLE_SSE3_EXTENSIONS' value: 'YES';  
-		addXCodeProperty: 'GCC_ENABLE_SSE41_EXTENSIONS' value: 'YES';
-		addXCodeProperty: 'GCC_ENABLE_SSE42_EXTENSIONS' value: 'YES';
-		addXCodeProperty: 'GCC_GENERATE_DEBUGGING_SYMBOLS' value: 'NO';  
-		addXCodeProperty: 'GCC_INLINES_ARE_PRIVATE_EXTERN' value: 'YES';
-		addXCodeProperty: 'GCC_UNROLL_LOOPS' value: 'YES'.	"
-	
-	"Extras"
+	self flag: #todo. "Debug flags"
 	maker 
 		addXCodeProperty: 'ICC_DEBUG' value: 'NO';
-		addXCodeProperty: 'ICC_OPTLEVEL' value: 'speedHLO';
+		addXCodeProperty: 'ICC_OPT_LEVEL' value: 'speedHLO';
 		addXCodeProperty: 'ICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION' value: 'YES';
 		addXCodeProperty: 'ICC_OPT_PARALLEL' value: 'NO';
-		addXCodeProperty: 'ICC_OPT_PREFETCH_INSERTION' value: 'YES';
-		addXCodeProperty: 'ICC_OPT_PROVIDE_FRAME_PTR' value: 'NO';
+		addXCodeProperty: 'ICC_OPT_PREFETCH_INCERTION' value: 'YES';
+		addXCodeProperty: 'ICC_PROVIDE_FRAME_PTR' value: 'NO';
 		addXCodeProperty: 'ICC_OPT_USE_ARCH_IA32' value: 'SSE41';
-		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS';
-		addXCodeProperty: 'PER_ARCH_CFLAGS_ppc' value: '-fast -mtune=7450 -mcpu=7450 -D_BSD_SOCKLEN_T_=int'
+		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-finline-functions -mfpmath=sse -fomit-frame-pointer -march=pentium-m -mtune=prescott -falign-functions=16  -fno-gcse -fno-cse-follow-jumps  -DLSB_FIRST -DUSE_INLINE_MEMORY_ACCESSORS'
 ]
 
 { #category : #accessing }
