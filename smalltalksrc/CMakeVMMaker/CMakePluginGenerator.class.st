@@ -67,9 +67,10 @@ CMakePluginGenerator >> generate [
 	self 
 		printHeader;
 		project: name;
-		"include directories generated for build"
-		include: '../directories.cmake'.
-		
+		"config's topdir, if set, should be absolute"
+		set: #topDir toString: (vmGen topDir fullName). 
+		vmGen setupDirectories: self. "take dirs from parent gen"
+
 	self message: (internal ifTrue: [ 'Adding internal plugin: '] ifFalse: ['Adding external plugin: '])  , name.
 
 	self 
