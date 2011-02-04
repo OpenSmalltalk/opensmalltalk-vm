@@ -8,6 +8,27 @@ Class {
 	#category : #CMakeVMMaker
 }
 
+{ #category : #'scripts generation' }
+CMakeGenScripts class >> fileout: aString to: aFileName [
+
+	" put that file to ../codegen-scripts directory "
+	
+ 	(FileStream forceNewFileNamed: aFileName) 
+		nextPutAll: aString;
+		close.
+	
+]
+
+{ #category : #'scripts generation' }
+CMakeGenScripts class >> fileoutLoaderScript [
+"self fileoutLoaderScript"
+
+
+	" put that file to ../codegen-scripts directory "
+	
+	self fileout: self loaderScript to: self loaderScriptName.
+]
+
 { #category : #'as yet unclassified' }
 CMakeGenScripts class >> generateCocoaVM [
 	| platformDirectoryName |
@@ -81,7 +102,56 @@ CMakeGenScripts class >> generateCogMacOS [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'sources generation' }
+CMakeGenScripts class >> generateCogSources [
+	" self generateCogSources "
+
+	" generate sources for CoInterpreter"
+
+	| top |
+	
+	CogRTLOpcodes initialize.
+	CogIA32Compiler initialize.
+	
+	top := FileDirectory default containingDirectory.				
+	
+	VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		to: (top / 'src') fullName
+		platformDir: ( top / 'platforms') fullName
+		excluding:#(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
+					FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin NewsqueakIA32ABIPlugin
+					 NewsqueakIA32ABIPluginAttic).
+
+]
+
+{ #category : #'sources generation' }
+CMakeGenScripts class >> generateCogSources: config [
+	" self generateCogSources "
+
+	" generate sources for CoInterpreter"
+
+	| top src |
+	
+	CogRTLOpcodes initialize.
+	CogIA32Compiler initialize.
+	
+	top := config topDir.				
+	src := config srcDir assureExistence fullName.
+	
+	VMMaker
+		generate: CoInterpreter
+		and: StackToRegisterMappingCogit
+		to: src
+		platformDir: ( top / 'platforms') fullName
+		excluding:#(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
+					FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin NewsqueakIA32ABIPlugin
+					 NewsqueakIA32ABIPluginAttic).
+
+]
+
+{ #category : #'sources generation' }
 CMakeGenScripts class >> generateCogSourcesEmm40 [
 	" self generateCogSourcesEmm40 "
 
@@ -116,7 +186,7 @@ CMakeGenScripts class >> generateStackMacOS [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'sources generation' }
 CMakeGenScripts class >> generateStackSources [
 	" generate sources for Stack Interpreter of Mac OS"
 	| top |
@@ -131,6 +201,49 @@ CMakeGenScripts class >> generateStackSources [
 			
 	
 
+	
+]
+
+{ #category : #'scripts generation' }
+CMakeGenScripts class >> loaderScript [
+
+"
+Gofer new
+	squeaksource: 'MetacelloRepository';
+	package: 'ConfigurationOfCog';
+	load.
+	
+((Smalltalk at: #ConfigurationOfCog) project
+	version: '1.2') load.
+	
+Gofer new
+	squeaksource: 'VMMaker';
+	package: 'CMakeVMMaker';
+	load.
+	
+(Smalltalk saveAs: 'generator.image') ifFalse: [
+				 Smalltalk snapshot: false andQuit: true]
+"
+
+" i put it into comment to avoid double quoting "
+
+^  thisContext  method methodNode comment first
+
+
+]
+
+{ #category : #'scripts generation' }
+CMakeGenScripts class >> loaderScriptName [
+	^ 'LoadVMMaker.st'
+]
+
+{ #category : #'scripts generation' }
+CMakeGenScripts class >> mcPackage: name [
+	
+	|pkg|
+	pkg := MCWorkingCopy allManagers detect: [:ea | ea packageName = name ].
+	
+	^ pkg ancestry ancestorString , '.mcz'
 	
 ]
 
