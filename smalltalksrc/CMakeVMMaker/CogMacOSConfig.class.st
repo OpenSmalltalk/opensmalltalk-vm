@@ -240,17 +240,6 @@ CogMacOSConfig >> executableType [
 	^ 'MACOSX_BUNDLE'
 ]
 
-{ #category : #plugins }
-CogMacOSConfig >> externalPlugins [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
-]
-
-{ #category : #plugins }
-CogMacOSConfig >> externalPlugins: aColl [
-
-	externalPlugins := aColl
-]
-
 { #category : #settings }
 CogMacOSConfig >> extraPluginSettings: maker [
 	
@@ -309,23 +298,6 @@ CogMacOSConfig >> frameworks [
 	Foundation
 	SystemConfiguration
 	)
-]
-
-{ #category : #plugins }
-CogMacOSConfig >> internalPlugins [
-	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
-]
-
-{ #category : #plugins }
-CogMacOSConfig >> internalPlugins: aColl [
-
-	internalPlugins := aColl
-]
-
-{ #category : #accessing }
-CogMacOSConfig >> linkFlags [
-	^  '' "
-	^ self frameworks"
 ]
 
 { #category : #accessing }
@@ -882,14 +854,15 @@ CogMacOSConfig >> plistTemplate [
 { #category : #settings }
 CogMacOSConfig >> setExtraTargetProperties: maker [
 
-	| plist |
+	super setExtraTargetProperties: maker.
+
+	maker addFrameworks: self frameworks.	
 
 	" generated and add Info.plist file "
-	plist := self plistFile.
-
-	(maker buildDir forceNewFileNamed: 'Info.plist') nextPutAll: plist; close.
-	
-	maker targetPropertyAt: 'MACOSX_BUNDLE_INFO_PLIST' put: '${buildDir}/Info.plist'.
+	self write: self plistFile toFile: 'Info.plist'.
+	maker 
+		addProperty: 'MACOSX_BUNDLE_INFO_PLIST' 
+		value: '${buildDir}/Info.plist'.
 
 	maker cmd: 'set_source_files_properties' params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
 ]
