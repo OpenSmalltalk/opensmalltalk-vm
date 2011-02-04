@@ -29,7 +29,7 @@ CUnixConfig >> addDriver: name sources: aSources generator: cmakeGen [
 			addDefinitions: '-fPIC -DPIC';
 			set: #sources to: srcs;
 			cmd: 'add_library' params: name, ' SHARED ${sources}'; 
-			includeDirectories: '${crossDir}/plugins/FIlePlugin';
+			includeDirectories: '${crossDir}/plugins/FilePlugin';
 	 		cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
 			LINK_FLAGS "-lSM -lICE -ldl -lpthread -lm -lnsl -lX11"'
 	].
