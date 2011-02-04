@@ -46,14 +46,14 @@ CMakeVMGenerator class >> generate: aConfigOrClass [
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMGenerator >> addProperty: propertyString value: valueString [
-	self puts: 'set_target_properties(', config executableName, ' PROPERTIES ', propertyString, ' "', valueString ,'")'  
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> append: aString toAll: list [
 	"flatten the list, adding prefix for each element"
 	^ list inject: '' into: [:result :each | result, ' ', aString, each ].
+]
+
+{ #category : #accessing }
+CMakeVMGenerator >> buildDir [
+	^ config buildDir
 ]
 
 { #category : #accessing }
@@ -73,13 +73,13 @@ CMakeVMGenerator >> generate [
 		
 	self 
 		printHeader;
-		project: config executableName;
-		"config's topdir, if set, should be absolute"
-		set: #topDir toString: (self config topDir ifNil: [ '..']);
-		setupDirectories: self.
+		project: config executableName.
+
+	config setupDirectories: self.
+	self include: 'directories.cmake'.
 		
 	self message: '${CMAKE_MODULE_PATH}'.
-	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Release Debug'.
+	self set: 'CMAKE_CONFIGURATION_TYPES' to: 'Debug Release'.
 	self message: '${CMAKE_CONFIGURATION_TYPES}'.
 	
 	config preferredIncludes 
@@ -93,15 +93,10 @@ CMakeVMGenerator >> generate [
 	config extraVMSettings: self.
 	
 	self puts: 'add_executable(' , config executableName, ' ', config executableType, ' ' , self sources , ')'.
-
-	"linker flags "
-	self targetPropertyAt: 'LINK_FLAGS' qput: config linkFlags.
-	
-	config setExtraTargetProperties: self.
 		
 	self processInternalPlugins.	
-	self processExternalDependencies.
-	
+	config setExtraTargetProperties: self.
+		
 	self processExternalPlugins.
 	
 	self saveFile.
@@ -148,19 +143,6 @@ extern sqExport os_exports[];
 ]
 
 { #category : #'as yet unclassified' }
-CMakeVMGenerator >> generatePlist [
-
-	| plist |
-	
-	plist := config plistFile.
-
-	(self buildDir forceNewFileNamed: 'Info.plist') nextPutAll: plist; close.
-	
-	self cmd: 'set_target_properties' params: config executableName , ' PROPERTIES MACOSX_BUNDLE_INFO_PLIST ${buildDir}/Info.plist '
-
-]
-
-{ #category : #'as yet unclassified' }
 CMakeVMGenerator >> generatePlugin: aPlugin internal: aBoolean extraRules: aBlock [
 	" this method called back from plugin"
 	^ CMakePluginGenerator new
@@ -188,12 +170,6 @@ CMakeVMGenerator >> moduleName [
 { #category : #accessing }
 CMakeVMGenerator >> platformName [
 	^ config platformName
-
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMGenerator >> processExternalDependencies [
-	self addFrameworks: config frameworks.	
 
 ]
 
@@ -236,28 +212,8 @@ CMakeVMGenerator >> processInternalPlugins [
 { #category : #'as yet unclassified' }
 CMakeVMGenerator >> saveFile [
 	
-	(self buildDir forceNewFileNamed: self outputFileName)
-		nextPutAll: (config fixLineEndsOf: output contents);
-		close.
-]
-
-{ #category : #'as yet unclassified' }
-CMakeVMGenerator >> setupDirectories: gen [
-"
-setup  a common directories, relative to the ${topDir}
-
-"
-	gen 
-		set: #platformsDir toString: (self config platformsDir ifNil: ['${topDir}/platforms']);
-		set: #srcDir toString: (self config srcDir ifNil: [ '${topDir}/src']);
-		set: #srcPluginsDir toString: (self config pluginsDir ifNil: [ '${srcDir}/plugins' ]);
-		set: #srcVMDir toString: '${srcDir}/vm';
-		set: #platformName toString: self config platformName;
-		set: #targetPlatform to: '${platformsDir}/${platformName}';
-		set: #crossDir toString: '${platformsDir}/Cross';
-		set: #buildDir toString: (self config buildDir ifNil: ['${topDir}/build']);
-		set: #platformVMDir toString: '${targetPlatform}/vm'.
-
+	config write: output contents toFile: (self outputFileName).
+	
 ]
 
 { #category : #'as yet unclassified' }

@@ -267,11 +267,6 @@ CocoaIOSConfig >> internalPlugins [
 ]
 
 { #category : #accessing }
-CocoaIOSConfig >> linkFlags [ 
-	^''
-]
-
-{ #category : #accessing }
 CocoaIOSConfig >> platformName [ 
 	^'iOS'
 ]
