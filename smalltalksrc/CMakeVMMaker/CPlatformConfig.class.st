@@ -559,7 +559,7 @@ CPlatformConfig >> setupDirectories: gen [
 			set: #topDir toString: (self topDir fullName); 
 			set: #buildDir toString: (buildDir ifNil: ['${topDir}/build']);
 			set: #platformsDir toString: (platformsDir ifNil: ['${topDir}/platforms']);
-			set: #srcDir toString: self srcDir fullName;
+			set: #srcDir toString: self srcDir;
 			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
 			set: #srcVMDir toString: '${srcDir}/vm';
 			set: #platformName toString: self platformName;
