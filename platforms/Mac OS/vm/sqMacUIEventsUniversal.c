@@ -42,7 +42,6 @@
  notes: IsUserCancelEventRef
 
 *****************************************************************************/
-#define MillisecondClockMask 536870911
 
 
 #include "sq.h"

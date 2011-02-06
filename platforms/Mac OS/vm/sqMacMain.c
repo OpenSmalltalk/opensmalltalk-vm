@@ -146,7 +146,9 @@ error(char *msg)
 
 	printf("\n%s\n\n", msg);
 
-	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMThread())) {
+	printf("\nMost recent primitives\n");
+	dumpPrimTraceLog();
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		if (!printingStack) {
 			printingStack = true;
 			printf("\n\nSmalltalk stack dump:\n");
@@ -155,8 +157,6 @@ error(char *msg)
 	}
 	else
 		printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
-	printf("\nMost recent primitives\n");
-	dumpPrimTraceLog();
 	abort();
 }
 #pragma auto_inline on
@@ -353,7 +353,9 @@ ioExitWithErrorCode(int ec)
     ioShutdownAllModules();
 	if (!gSqueakHeadless || gSqueakBrowserWasHeadlessButMadeFullScreen) 
 		MenuBarRestore();
-	sqMacMemoryFree();
+#if !__MACH__
+	sqMacMemoryFree();  // needed on old Mac OS but not on unices
+#endif
     exit(ec);
 	return ec;
 }

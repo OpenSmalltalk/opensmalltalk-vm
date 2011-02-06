@@ -37,7 +37,7 @@ extern TCHAR squeakIniName[];
 LONG CALLBACK sqExceptionFilter(LPEXCEPTION_POINTERS exp);
 
 /* forwarded declaration */
-void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
+static void printCrashDebugInformation(LPEXCEPTION_POINTERS exp);
 
 /*** Variables -- command line */
 char *initialCmdLine;
@@ -141,6 +141,26 @@ void UninstallExceptionHandler(void)
   TopLevelFilter = NULL;
 }
 
+/* N.B. As of cygwin 1.5.25 fopen("crash.dmp","a") DOES NOT WORK!  crash.dmp
+ * contains garbled output as if the file pointer gets set to the start of the
+ * file, not the end.  So we synthesize our own append mode.
+ */
+#if __MINGW32__
+# include <io.h>
+static FILE *
+fopen_for_append(char *filename)
+{
+	FILE *f = !access(filename, F_OK) /* access is bass ackwards */
+		? fopen(filename,"r+")
+		: fopen(filename,"w+");
+	if (f)
+		fseek(f,0,SEEK_END);
+	return f;
+}
+#else
+# define fopen_for_append(filename) fopen(filename,"a+t")
+#endif
+
 /****************************************************************************/
 /*                      Console Window functions                            */
 /****************************************************************************/
@@ -149,7 +169,7 @@ OutputLogMessage(char *string)
 { FILE *fp;
 
   if(!*logName) return 1;
-  fp = fopen(logName, "at");
+  fp = fopen_for_append(logName);
   if(!fp) return 1;
   fprintf(fp, "%s", string);
   fflush(fp);
@@ -201,21 +221,25 @@ int __cdecl DPRINTF(const char *fmt, ...)
 
 // redefining printf doesn't seem like a good idea to me...
 
-int __cdecl printf(const char *fmt, ...)
+int __cdecl
+printf(const char *fmt, ...)
 { va_list al;
+  int result;
 
   va_start(al, fmt);
   wvsprintf(consoleBuffer, fmt, al);
   OutputLogMessage(consoleBuffer);
   if(IsWindow(stWindow)) /* not running as service? */
     OutputConsoleString(consoleBuffer);
-  vfprintf(stdout, fmt, al);
+  result = vfprintf(stdout, fmt, al);
   va_end(al);
-  return 1;
+  return result;
 }
 
-int __cdecl fprintf(FILE *fp, const char *fmt, ...)
+int __cdecl
+fprintf(FILE *fp, const char *fmt, ...)
 { va_list al;
+  int result;
 
   va_start(al, fmt);
   if(fp == stdout || fp == stderr)
@@ -225,13 +249,14 @@ int __cdecl fprintf(FILE *fp, const char *fmt, ...)
       if(IsWindow(stWindow)) /* not running as service? */
         OutputConsoleString(consoleBuffer);
     }
-  vfprintf(fp, fmt, al);
+  result = vfprintf(fp, fmt, al);
   va_end(al);
-  return 1;
+  return result;
 }
 
 
-int __cdecl putchar(int c)
+int __cdecl
+putchar(int c)
 {
   return printf("%c",c);
 }
@@ -746,7 +771,7 @@ dumpStackIfInMainThread(FILE *optionalFile)
 	extern int printCallStack(void);
 
 	if (!optionalFile) {
-		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMThread())) {
+		if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 			printf("\n\nSmalltalk stack dump:\n");
 			printCallStack();
 		}
@@ -754,7 +779,7 @@ dumpStackIfInMainThread(FILE *optionalFile)
 			printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
 		return;
 	}
-	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMThread())) {
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		FILE tmpStdout = *stdout;
 		fprintf(optionalFile, "\n\nSmalltalk stack dump:\n");
 		*stdout = *optionalFile;
@@ -772,16 +797,17 @@ dumpPrimTrace(FILE *optionalFile)
 {
 	extern void dumpPrimTraceLog(void);
 
-	printf("\n\nPrimitive trace:\n");
-	dumpPrimTraceLog();
-	printf("\n");
-
 	if (optionalFile) {
 		FILE tmpStdout = *stdout;
 		*stdout = *optionalFile;
 		dumpPrimTrace(0);
 		*optionalFile = *stdout;
 		*stdout = tmpStdout;
+	}
+	else {
+		printf("\nPrimitive trace:\n");
+		dumpPrimTraceLog();
+		printf("\n");
 	}
 }
 
@@ -826,19 +852,31 @@ extern char *__cogitBuildInfo;
     }
 
     printModuleInfo(f);
-	/* print the caller's stack and recently called prims to "crash.dmp" */
-	dumpStackIfInMainThread(f);
-	dumpPrimTrace(f);
-    fclose(f);
+	fflush(f);
 }
 
-/* Print an error message, possibly a stack trace, and exit. */
+#define MAXFRAMES 64
+
+/* Print an error message, possibly Smalltalk and C stack traces, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
 #pragma auto_inline off
+static int inError = 0;
+
 void
 error(char *msg) {
   FILE *f;
   TCHAR crashInfo[1024];
+  void *callstack[MAXFRAMES];
+  symbolic_pc symbolic_pcs[MAXFRAMES];
+  int i, nframes;
+  int inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread());
+
+  if (inError)
+	exit(-2);
+
+  inError = 1;
+	nframes = backtrace(callstack, MAXFRAMES);
+	symbolic_backtrace(++nframes, callstack, symbolic_pcs);
 
     wsprintf(crashInfo,
 	   TEXT("Sorry but the VM has crashed.\n\n")
@@ -859,26 +897,39 @@ error(char *msg) {
 
   SetCurrentDirectoryW(vmLogDirW);
   /* print the above information */
-  f = fopen("crash.dmp","a");
+  f = fopen_for_append("crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
     fprintf(f,"%s\n\n", ctime(&crashTime));
 
-	fprintf(f,"Reason: %s\n", msg);
+	fprintf(f,
+			"Error in %s thread\nReason: %s\n\n",
+			inVMThread ? "the VM" : "some other",
+			msg);
 	printCommonCrashDumpInfo(f);
+	dumpPrimTrace(f);
+	fflush(f);
+	print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
+	fflush(f);
+	dumpStackIfInMainThread(f);
+	fflush(f);
 	fclose(f);
   }
-  /* print the caller's stack to stdout */
-  dumpStackIfInMainThread(0);
+  printf("Error in %s thread\nReason: %s\n\n",
+		  inVMThread ? "the VM" : "some other",
+		  msg);
+  dumpPrimTrace(0);
+  print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
+  /* /Don't/ print the caller's stack to stdout here; Cleanup will do so. */
+  /* dumpStackIfInMainThread(0); */
   exit(-1);
 }
 #pragma auto_inline on
 
-void
+static void
 printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 { 
-#define MAXFRAMES 64
   void *callstack[MAXFRAMES];
   symbolic_pc symbolic_pcs[MAXFRAMES];
   int i, nframes, inVMThread;
@@ -888,7 +939,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
   UninstallExceptionHandler();
 
-  if ((inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMThread())))
+  if ((inVMThread = ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())))
     /* Retrieve current byte code.
      If this fails the IP is probably wrong */
     TRY {
@@ -899,6 +950,9 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
 
   TRY {
+  if (inVMThread)
+	ifValidWriteBackStackPointers((void *)exp->ContextRecord->Ebp,
+								  (void *)exp->ContextRecord->Esp);
   callstack[0] = (void *)exp->ContextRecord->Eip;
   nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
 							callstack+1,
@@ -927,7 +981,7 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
   SetCurrentDirectoryW(vmLogDirW);
   /* print the above information */
-  f = fopen("crash.dmp","a");
+  f = fopen_for_append("crash.dmp");
   if(f){  
     time_t crashTime = time(NULL);
     fprintf(f,"---------------------------------------------------------------------\n");
@@ -960,55 +1014,22 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 	    exp->ContextRecord->FloatSave.StatusWord,
 	    exp->ContextRecord->FloatSave.TagWord);
 
-	fprintf(f,
-			"\n\nCrashed in %s thread\nStack backtrace:\n",
+	fprintf(f, "\n\nCrashed in %s thread\n\n",
 			inVMThread ? "the VM" : "some other");
 
-	if (inVMThread)
-		ifValidWriteBackStackPointers((void *)exp->ContextRecord->Ebp,
-									  (void *)exp->ContextRecord->Esp);
-#if COGVM
-	for (i = 0; i < nframes; ++i) {
-		char *name; int namelen;
-		if (addressCouldBeObj((sqInt)symbolic_pcs[i].fnameOrSelector)) {
-			extern void *firstFixedField(sqInt);
-			name = firstFixedField((sqInt)symbolic_pcs[i].fnameOrSelector);
-			namelen = byteSizeOf((sqInt)symbolic_pcs[i].fnameOrSelector);
-		}
-		else {
-			if (!(name = symbolic_pcs[i].fnameOrSelector))
-				name = "???";
-			namelen = strlen(name);
-		}
-		fprintf(f,
-				"\t[%p] %.*s + %d in %s\n",
-				callstack[i],
-				namelen, name,
-				symbolic_pcs[i].offset,
-				symbolic_pcs[i].mname);
-	}
-#else
-	for (i = 0; i < nframes; ++i)
-		fprintf(f,
-				"\t[%p] %s + %d in %s\n",
-				callstack[i],
-				symbolic_pcs[i].fnameOrSelector
-					? symbolic_pcs[i].fnameOrSelector
-					: "???",
-				symbolic_pcs[i].offset,
-				symbolic_pcs[i].mname);
-#endif
-	if (nframes == MAXFRAMES)
-		fprintf(f, "\t...\n");
-
 	printCommonCrashDumpInfo(f);
+	dumpPrimTrace(f);
+	print_backtrace(f, nframes, MAXFRAMES, callstack, symbolic_pcs);
+	dumpStackIfInMainThread(f);
     fclose(f);
   }
 
-  /* print the caller's stack to stdout */
-  dumpStackIfInMainThread(0);
   /* print recently called prims to stdout */
   dumpPrimTrace(0);
+  /* print C stack to stdout */
+  print_backtrace(stdout, nframes, MAXFRAMES, callstack, symbolic_pcs);
+  /* print the caller's stack to stdout */
+  dumpStackIfInMainThread(0);
 
   } EXCEPT(EXCEPTION_EXECUTE_HANDLER) {
     /* that's too bad ... */
@@ -1131,9 +1152,11 @@ extern int traceLinkedSends;
 extern sqInt traceStores;
 extern unsigned long debugPrimCallStackOffset;
 extern sqInt maxLiteralCountForCompile;
+extern sqInt minBackwardJumpCountForCompile;
 #endif /* COGVM */
 
 static vmArg args[] = {
+  { ARG_NULL, 0, "--help" }, /* the name of a service */
   { ARG_STRING, &installServiceName, "-service:" }, /* the name of a service */
   { ARG_FLAG, &fHeadlessImage, "-headless" },       /* do we run headless? */
   { ARG_STRING, &logName, "-log:" },                /* VM log file */
@@ -1152,6 +1175,7 @@ static vmArg args[] = {
   { ARG_FLAG, &traceStores, "-tracestores" },     /* assert-check stores */
   { ARG_UINT, &debugPrimCallStackOffset, "-dpcso:"}, /* debug prim call stack offset */
   { ARG_UINT, &maxLiteralCountForCompile, "-cogmaxlits:"}, /* max # of literals for a method to be compiled to machine code */
+  { ARG_UINT, &minBackwardJumpCountForCompile, "-cogminjumps:"}, /* max # of literals for a method to be compiled to machine code */
 #endif /* COGVM */
 
   /* NOTE: the following flags are "undocumented" */

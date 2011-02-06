@@ -52,6 +52,11 @@ extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
 extern int isCFramePointerInUse(void);
 #endif
 
+/* warnPrintf is provided (and needed) on the win32 platform.
+ * But it may be mentioned elsewhere, so provide a suitable def.
+ */
+#define warnPrintf printf
+
 /* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
 #if STACKVM
 # define sqLowLevelYield() sched_yield()
@@ -70,8 +75,9 @@ extern int isCFramePointerInUse(void);
 typedef struct {
 		pthread_cond_t	cond;
 		pthread_mutex_t mutex;
-		int				locked;
+		int				count;
 	} sqOSSemaphore;
+#  define ioDestroyOSSemaphore(ptr) 0
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
 extern const pthread_key_t tltiIndex;
 #  endif
@@ -101,6 +107,8 @@ extern void sqFilenameFromString(char *uxName, sqInt stNameIndex, int sqNameLeng
 #undef	sqFTruncate
 /* sqFTruncate should return 0 on success, ftruncate does also */
 #define	sqFTruncate(f,o) ftruncate(fileno(f), o)
+#define ftell ftello
+#define fseek fseeko
 
 #if defined(__GNUC__)
 # define VM_LABEL(foo) asm("\n.globl L" #foo "\nL" #foo ":")

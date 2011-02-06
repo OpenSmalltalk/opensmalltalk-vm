@@ -33,6 +33,7 @@ void *mmapWasAt;
 
 static usqInt	memoryAllocationBase;
 static int	    pageSize = 0;
+static unsigned int pageMask = 0;
 
 usqInt	sqGetAvailableMemory() {
 
@@ -51,7 +52,6 @@ usqInt	sqGetAvailableMemory() {
 
 usqInt sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize) {
     void * debug, *actually;
-	unsigned int pageMask = 0;
 	#pragma unused(minHeapSize,desiredHeapSize)
      
 	pageSize= getpagesize();
@@ -83,10 +83,7 @@ sqInt sqShrinkMemoryBy(sqInt memoryLimit, sqInt delta) {
 }
 
 sqInt sqMemoryExtraBytesLeft(int flag) {
-    if (flag) 
-        return gMaxHeapSize - gHeapSize;
-    else
-        return 0;
+    return (flag) ? gMaxHeapSize - gHeapSize : 0;
 }
 
 void sqMacMemoryFree() {
@@ -98,11 +95,14 @@ void sqMacMemoryFree() {
 }
 
 #if COGVM
+# define roundDownToPageBoundary(v) ((v)&pageMask)
+# define roundUpToPageBoundary(v) (((v)+pageSize-1)&pageMask)
 void
 sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	if (mprotect(startAddr,
-				 endAddr - startAddr + 1,
+	unsigned long firstPage = roundDownToPageBoundary(startAddr);
+	if (mprotect((void *)firstPage,
+				 roundUpToPageBoundary(endAddr - firstPage),
 				 PROT_READ | PROT_WRITE | PROT_EXEC) < 0)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE | PROT_EXEC)");
 }
@@ -110,9 +110,12 @@ sqMakeMemoryExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 void
 sqMakeMemoryNotExecutableFromTo(unsigned long startAddr, unsigned long endAddr)
 {
-	if (mprotect(startAddr,
-				 endAddr - startAddr + 1,
-				 PROT_READ | PROT_WRITE) < 0)
+	unsigned long firstPage = roundDownToPageBoundary(startAddr);
+	/* We get EACCESS on 10.6.3 when trying to disable exec perm; Why? */
+	if (mprotect((void *)firstPage,
+				 roundUpToPageBoundary(endAddr - firstPage),
+				 PROT_READ | PROT_WRITE) < 0
+	 && errno != EACCES)
 		perror("mprotect(x,y,PROT_READ | PROT_WRITE)");
 }
 #endif /* COGVM */

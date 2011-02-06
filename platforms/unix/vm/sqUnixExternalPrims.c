@@ -407,6 +407,9 @@ void *ioFindExternalFunctionIn(char *lookupName, void *moduleHandle)
   sprintf(buf, "%s", lookupName);
 #endif
 
+  if (!*lookupName) /* avoid errors in dlsym from eitherPlugin: code. */
+    return 0;
+
   fn= dlsym(moduleHandle, buf);
 
   DPRINTF((stderr, "ioFindExternalFunctionIn(%s, %d)\n",

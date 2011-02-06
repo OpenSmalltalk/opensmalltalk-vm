@@ -39,9 +39,6 @@ notes: IsUserCancelEventRef
 #include <DeskBus.h>
 #endif
 
-#define MillisecondClockMask 536870911
-
-
 #include "sq.h"
 #include "sqMacUIEvents.h"
 #include "sqMacUIMenuBar.h"

@@ -68,7 +68,7 @@ typedef struct {
 		long requests;
 		long responses;
 #endif
-} SignalRequest;
+	} SignalRequest;
 
 static SignalRequest *signalRequests = 0;
 static int numSignalRequests = 0;
@@ -97,7 +97,10 @@ ioGetMaxExtSemTableSize(void) { return numSignalRequests; }
 void
 ioSetMaxExtSemTableSize(int n)
 {
-	assert(ioOSThreadsEqual(ioCurrentOSThread(),getVMThread()));
+#if COGMTVM
+  if (getVMOSThread()) /* initialization is a little different in MT. Hack around for now */
+#endif
+	assert(ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()));
 	if (numSignalRequests < n) {
 		extern sqInt highBit(sqInt);
 		int sz = 1 << highBit(n);

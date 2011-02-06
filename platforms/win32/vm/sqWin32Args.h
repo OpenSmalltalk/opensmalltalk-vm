@@ -19,6 +19,7 @@ extern char imageName[];
 #define ARG_INT    3
 #define ARG_UINT   4
 #define ARG_STRING_FUNC 5
+#define ARG_NULL 6
 
 typedef struct vmArg{
   int   type;
@@ -36,6 +37,7 @@ typedef struct vmArg{
     { ARG_FLAG,   &headlessFlag, "-headless" },
     { ARG_STRING, &logFilename, "-log:" },
     { ARG_UINT,    &memorySize, "-memory:"},
+    { ARG_NULL,    0, "--help"},
     { ARG_NONE, NULL, NULL }
   };
 */

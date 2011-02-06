@@ -47,12 +47,6 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 			resetCPU(&bx_cpu);
 			cpu_has_been_reset = 1;
 		}
-#if 0
-		if (!cpu) {
-			cpu = new BX_CPU_C;
-			bx_cpu = *cpu;
-		}
-#endif
 		return &bx_cpu;
 	}
 
@@ -103,19 +97,14 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-#if 0
-		if (anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= minWriteMaxExecAddr)
-			return anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= byteSize
-					? MemoryBoundsError
-					: ExecutionError;
-#endif
 		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
 			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
 			return theErrorAcorn;
 		}
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled = minWriteMaxExecAddr - 1;
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
+			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
@@ -140,19 +129,14 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 		theMemorySize = byteSize;
 		minReadAddress = minAddr;
 		minWriteAddress = minWriteMaxExecAddr;
-#if 0
-		if (anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= minWriteMaxExecAddr)
-			return anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx >= byteSize
-					? MemoryBoundsError
-					: ExecutionError;
-#endif
 		if ((theErrorAcorn = setjmp(anx86->jmp_buf_env)) != 0) {
 			anx86->gen_reg[BX_32BIT_REG_EIP].dword.erx = anx86->prev_rip;
 			return theErrorAcorn;
 		}
 
 		blidx = 0;
-		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled = minWriteMaxExecAddr - 1;
+		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit_scaled
+			= minWriteMaxExecAddr > 0 ? minWriteMaxExecAddr - 1 : 0;
 		bx_cpu.sregs[BX_SEG_REG_DS].cache.u.segment.limit_scaled =
 		bx_cpu.sregs[BX_SEG_REG_SS].cache.u.segment.limit_scaled = byteSize;
 		bx_cpu.sregs[BX_SEG_REG_CS].cache.u.segment.limit = minWriteMaxExecAddr >> 16;
@@ -177,9 +161,6 @@ static bx_address     last_read_address = (bx_address)-1; /* for RMW cycles */
 	void
 	flushICacheFromTo(void *cpu, ulong saddr, ulong eaddr)
 	{
-#if 0
-		BX_CPU_C *anx86 = (BX_CPU_C *)cpu;
-#endif
 #if BX_SUPPORT_ICACHE
 # error not yet implemented
 #endif

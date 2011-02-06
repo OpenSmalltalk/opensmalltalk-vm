@@ -14,8 +14,6 @@
 	char *argstart;
 #endif
 
-	EnsureHaveVMThreadID();
-
 	for (i = numArgs, size = 0; --i >= 0;) {
 		sqInt arg = argVector[i];
 		if (objIsAlien(arg) && sizeField(arg))
@@ -40,7 +38,7 @@
 	 * %esp + 4, so the outgoing stack is offset by one word if uncorrected.
 	 * Grab the actual stack pointer to correct.
 	 */
-	getsp(argvec);
+	argvec = getsp();
 # endif
 #endif
 

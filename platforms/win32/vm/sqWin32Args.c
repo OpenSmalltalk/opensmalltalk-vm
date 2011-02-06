@@ -169,6 +169,9 @@ static char* parseVMArgs(char *string, vmArg args[])
           if(!string) return NULL;
           break;
 
+        case ARG_NULL:
+          return NULL;
+
         default:
           fprintf(stderr,"Unknown option encountered!\n");
           return NULL;

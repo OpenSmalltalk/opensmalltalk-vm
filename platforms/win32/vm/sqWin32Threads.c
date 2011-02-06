@@ -8,6 +8,9 @@
 *   EMAIL:   eliot@teleplace.com
 *   RCSID:   $Id$
 *
+*   NOTES: See the comment of CogThreadManager in the VMMaker package for
+*          overall design documentation.
+*
 *****************************************************************************/
 
 #include <stdlib.h>
@@ -16,9 +19,12 @@
 # define _STRUCT_NAME(foo) foo
 # include <basetyps.h>
 #endif
+#include <limits.h>
 #include <windef.h>
 #include <wincon.h> /* damn right */
 #include <winbase.h> /* damn right 2 */
+
+#define ForCOGMTVMImplementation 1
 
 #include "sq.h"
 #include "sqAssert.h"
@@ -107,15 +113,134 @@ ioCurrentOSThread()
 	return TlsGetValue(tlthIndex);
 }
 
+#if COGMTVM
+typedef struct {
+			void (*func)(void *);
+			void *arg;
+		} InitTuple;
+
+static void *
+angel(void *arg)
+{
+	InitTuple it = *(InitTuple *)arg;
+	DWORD err = duplicateAndSetThreadHandleForCurrentThread();
+
+	free(arg);
+	if (err)
+		ExitThread(err);
+	it.func(it.arg);
+	return 0;
+}
+
+int
+ioNewOSThread(void (*func)(void *), void *arg)
+{
+	HANDLE newThread;
+	InitTuple *it = malloc(sizeof(InitTuple));
+
+	if (!it)
+		return ERROR_OUTOFMEMORY;
+
+	it->func = func;
+	it->arg = arg;
+	newThread = CreateThread(0, /* no security */
+							 0, /* default stack size */
+							 (LPTHREAD_START_ROUTINE)angel,
+							 (void *)it,
+							 STACK_SIZE_PARAM_IS_A_RESERVATION, /* creation flags 0 => run immediately */
+							 0  /* thread id; we don't use it */);
+
+	if (!newThread) {
+		int err = GetLastError();
+		return err == 0 ? -1 : err;
+	}
+	/* we need to close this handle so that closing the duplicated handle will
+	 * actually release resources.  Keeping this handle open will prevent that.
+	 */
+	(void)CloseHandle(newThread);
+	return 0;
+}
+
+int
+ioOSThreadIsAlive(HANDLE thread)
+{
+	DWORD result;
+
+    return GetExitCodeThread(thread, &result)
+		? FALSE
+    	: GetLastError() == STILL_ACTIVE;
+}
+
+void
+ioExitOSThread(HANDLE thread)
+{
+	if (thread == ioCurrentOSThread()) {
+		ioReleaseOSThreadState(thread);
+		ExitThread(0);
+		/*NOTREACHED*/
+	}
+	TerminateThread(thread, 0);
+	ioReleaseOSThreadState(thread);
+}
+
+void
+ioReleaseOSThreadState(HANDLE thread)
+{
+	(void)CloseHandle(thread);
+}
+
+int
+ioNumProcessors(void)
+{
+	char *nprocs = getenv("NUMBER_OF_PROCESSORS");
+
+	return nprocs ? atoi(nprocs) : 1;
+}
+
+int
+ioNewOSSemaphore(sqOSSemaphore *sem)
+{
+	*sem = CreateSemaphore(	0, /* don't need no stinkin' security */
+							0, /* initial signal count */
+							LONG_MAX, /* sky's the limit */
+							0 /* don't need no stinkin' name */);
+	if (!*sem)
+		printLastError("ioNewOSSemaphore CreateSemaphore");
+	return *sem ? 0 : GetLastError();
+}
+
+void
+ioDestroyOSSemaphore(sqOSSemaphore *sem) { CloseHandle(*sem); }
+
+void
+ioSignalOSSemaphore(sqOSSemaphore *sem)
+{
+	if (!ReleaseSemaphore(*sem, 1, 0))
+		abortMessage(TEXT("Fatal: ReleaseMutex(*sem) %ld"),
+					 GetLastError());
+}
+
+void
+ioWaitOnOSSemaphore(sqOSSemaphore *sem)
+{
+	if (WaitForSingleObject(*sem, INFINITE) == WAIT_FAILED)
+		abortMessage(TEXT("Fatal: WaitForSingleObject(*sem) %ld"),
+					 GetLastError());
+}
+#else /* COGMTVM */
+/* This is for sqVirtualMachine.h's default ownVM implementation. */
 sqInt
-amInVMThread() { return ioOSThreadsEqual(ioCurrentOSThread(),getVMThread()); }
+amInVMThread() { return ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread()); }
+#endif /* COGMTVM */
 
 void
 ioInitThreads()
 {
 	extern void ioInitExternalSemaphores(void);
 	initThreadLocalThreadIndices();
+#if !COGMTVM
 	ioVMThread = ioCurrentOSThread();
+#endif
 	ioInitExternalSemaphores();
 }
 
@@ -139,7 +264,7 @@ crashInThisOrAnotherThread(sqInt inThisThread)
 					 0, /* default stack size */
 					 (LPTHREAD_START_ROUTINE)indirect,
 					 (void *)300,
-					 0, /* creation flags 0 => run immediately */
+					 STACK_SIZE_PARAM_IS_A_RESERVATION, /* creation flags 0 => run immediately */
 					 0  /* thread id; we don't use it */);
 		Sleep(1000);
 	}

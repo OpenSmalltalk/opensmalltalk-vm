@@ -26,10 +26,12 @@ HANDLE tryLoading(TCHAR *prefix, TCHAR *baseName, TCHAR *postfix)
   lstrcat(libName,baseName);
   lstrcat(libName,postfix);
   h = LoadLibrary(libName);
-#ifndef NDEBUG
-  if(h == NULL)
-    vprintLastError(TEXT("LoadLibrary(%s)"), libName);
+  if (h == NULL
+#ifdef NDEBUG /* in production ignore errors for non-existent modules */
+   && GetLastError() != ERROR_MOD_NOT_FOUND
 #endif
+      )
+    vprintLastError(TEXT("LoadLibrary(%s)"), libName);
   return h;
 }
 

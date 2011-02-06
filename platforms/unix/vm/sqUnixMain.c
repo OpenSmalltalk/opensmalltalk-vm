@@ -56,6 +56,10 @@
 #include <errno.h>
 #include <signal.h>
 #include <fcntl.h>
+#if !defined(NOEXECINFO)
+# include <execinfo.h>
+# define BACKTRACE_DEPTH 64
+#endif
 
 #if defined(__alpha__) && defined(__osf__)
 # include <sys/sysinfo.h>
@@ -569,10 +573,10 @@ static void emergencyDump(int quit)
   dataSize= preSnapshot();
   writeImageFile(dataSize);
 
-  fprintf(stderr, "\n");
-  printCallStack();
   printf("\nMost recent primitives\n");
   dumpPrimTraceLog();
+  fprintf(stderr, "\n");
+  printCallStack();
   fprintf(stderr, "\nTo recover valuable content from this image:\n");
   fprintf(stderr, "    squeak %s\n", imageName);
   fprintf(stderr, "and then evaluate\n");
@@ -740,12 +744,21 @@ static void outOfMemory(void)
 
 static void sigusr1(int ignore)
 {
-  printf("\nReceived user signal, printing active stack:\n\n");
-  printCallStack();
-  printf("\nReceived user signal, printing all processes:\n\n");
-  printAllStacks();
-  fflush(stdout);
-  fflush(stderr);
+#if !defined(NOEXECINFO)
+	void *addrs[BACKTRACE_DEPTH];
+	int depth;
+	time_t now = time(NULL);
+	/* ctime includes newline */
+	printf("\nReceived user signal, printing active C stack at %s:", ctime(&now));
+	depth = backtrace(addrs, BACKTRACE_DEPTH);
+	backtrace_symbols_fd(addrs, depth, fileno(stdout));
+#endif
+	printf("\nReceived user signal, printing active Smalltalk stack:\n\n");
+	printCallStack();
+	printf("\nReceived user signal, printing all Smalltalk processes:\n\n");
+	printAllStacks();
+	fflush(stdout);
+	fflush(stderr);
 }
 
 /* Print an error message, possibly a stack trace, and exit. */
@@ -754,12 +767,22 @@ static void sigusr1(int ignore)
 void
 error(char *msg)
 {
+#if !defined(NOEXECINFO)
+	void *addrs[BACKTRACE_DEPTH];
+	int depth;
+#endif
 	/* flag prevents recursive error when trying to print a broken stack */
 	static sqInt printingStack = false;
 
 	printf("\n%s\n\n", msg);
 
-	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMThread())) {
+#if !defined(NOEXECINFO)
+	printf("C stack backtrace:\n");
+	depth = backtrace(addrs, BACKTRACE_DEPTH);
+	backtrace_symbols_fd(addrs, depth, fileno(stdout));
+#endif
+
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		if (!printingStack) {
 			printingStack = true;
 			printf("\n\nSmalltalk stack dump:\n");
@@ -1191,6 +1214,10 @@ static int vm_parseArgument(int argc, char **argv)
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
 		return 1; }
+      else if (!strcmp(argv[0], "-pollpip")) { 
+		extern sqInt pollpip;
+		pollpip = atoi(argv[1]);	 
+		return 2; }
 #endif /* STACKVM */
 #if COGVM
       else if (!strcmp(argv[0], "-codesize")) { 
@@ -1219,6 +1246,10 @@ static int vm_parseArgument(int argc, char **argv)
       else if (!strcmp(argv[0], "-cogmaxlits")) { 
 		extern sqInt maxLiteralCountForCompile;
 		maxLiteralCountForCompile = strtobkm(argv[1]);	 
+		return 2; }
+      else if (!strcmp(argv[0], "-cogminjumps")) { 
+		extern sqInt minBackwardJumpCountForCompile;
+		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
 #endif /* COGVM */
       else if (!strcmp(argv[0], "-textenc"))
@@ -1264,6 +1295,7 @@ static void vm_printUsage(void)
   printf("  -sendtrace[=num]      enable send tracing (optionally to a specific value)\n");
   printf("  -tracestores          enable store tracing (assert check stores)\n");
   printf("  -cogmaxlits <n>       set max number of literals for methods compiled to machine code\n");
+  printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
 #endif
 #if 1
   printf("Deprecated:\n");

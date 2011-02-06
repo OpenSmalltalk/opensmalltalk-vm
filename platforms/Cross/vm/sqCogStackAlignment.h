@@ -4,9 +4,15 @@
  *
  *   AUTHOR:   Eliot Miranda
  *   DATE:     February 2009
+ *
+ * Changes: eem Wed Jul 14 17:11:01 PDT 2010
+ *			make 16 bytes the default alignment for all x86.
  */
-
-#if __APPLE__ && __MACH__ && __i386__
+ 
+/* 16-byte stack alignment on x86 is required for SSE instructions which
+ * insist on aligned addresses for accessing 64 or 128 bit values in memory.
+ */
+#if __i386__ && (__SSE2__ || __APPLE__ && __MACH__ || __linux__)
 # define STACK_ALIGN_BYTES 16
 # define LEAF_CALL_STACK_ALIGN_BYTES 12
 # define STACK_FP_ALIGN_BYTES 8

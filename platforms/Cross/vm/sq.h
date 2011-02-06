@@ -121,15 +121,16 @@
 */
 
 sqInt ioMSecs(void);
-/* deprecated out ofexistence sqInt ioLowResMSecs(void); */
+/* deprecated out of existence sqInt ioLowResMSecs(void); */
 sqInt ioMicroMSecs(void);
 
-#define ioMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
-
-/* this macro cannot be used now that ioMicroMSecs is involved in the
-   sqVirtualMachine structures - we must have a function 
-#define ioMicroMSecs()	((1000 * clock()) / CLOCKS_PER_SEC)
-*/
+/* duplicate the generated definition in the interpreter.  If they differ the
+ * compiler will complain and catch it for us.  We use 0x1FFFFFFF instead of
+ * 0x3FFFFFFF so that twice the maximum clock value remains in the positive
+ * SmallInteger range.  This assumes 31 bit SmallIntegers; 0x3FFFFFFF is
+ * SmallInteger maxVal.
+ */
+#define MillisecondClockMask 0x1FFFFFFF
 
 #if STACKVM
 usqLong ioUTCMicrosecondsNow();
@@ -237,11 +238,30 @@ int  ioOSThreadsEqual(sqOSThread,sqOSThread);
 # endif
 # if !COGMTVM
 extern sqOSThread ioVMThread;
-# define getVMThread() ioVMThread
+# define getVMOSThread() ioVMThread
 # endif
 #endif /* STACKVM */
 #if COGMTVM
-extern sqOSThread getVMThread();
+#define THRLOGSZ 256
+extern int thrlogidx;
+extern char *thrlog[];
+
+/* Debug logging that defers printing.  Use like printf, e.g.
+ * TLOG("tryLockVMToIndex vmOwner = %d\n", vmOwner);
+ * Requires #include "sqAtomicOps.h"
+ * N.B. The following still isn't safe.  If enough log entries are made by other
+ * threads after myindex is obtained but before asprintf completes we can get
+ * two threads using the same entry.  But this is good enough for now.
+ */
+#define THRLOG(...) do { int myidx, oldidx; \
+	do { myidx = thrlogidx; \
+		sqCompareAndSwapRes(thrlogidx,myidx,(myidx+1)&(THRLOGSZ-1),oldidx); \
+	} while (myidx != oldidx); \
+	if (thrlog[myidx]) free(thrlog[myidx]); \
+	asprintf(thrlog + myidx, __VA_ARGS__); \
+} while (0)
+
+extern sqOSThread getVMOSThread();
 /* Please read the comment for CogThreadManager in the VMMaker package for
  * documentation of this API.  N.B. code is included from sqPlatformSpecific.h
  * before the code here.  e.g.
@@ -270,6 +290,9 @@ void ioReleaseOSThreadState(sqOSThread thread);
 int  ioOSThreadIsAlive(sqOSThread);
 # endif
 int  ioNewOSSemaphore(sqOSSemaphore *);
+# if !defined(ioDestroyOSSemaphore)
+void ioDestroyOSSemaphore(sqOSSemaphore *);
+# endif
 void ioSignalOSSemaphore(sqOSSemaphore *);
 void ioWaitOnOSSemaphore(sqOSSemaphore *);
 int  ioNumProcessors(void);
@@ -480,8 +503,6 @@ sqInt ioDisableImageWrite(void);
 /* Save/restore. */
 /* Read the image from the given file starting at the given image offset */
 sqInt readImageFromFileHeapSizeStartingAt(sqImageFile f, usqInt desiredHeapSize, squeakFileOffsetType imageOffset);
-/* NOTE: The following is obsolete - it is only provided for compatibility */
-#define readImageFromFileHeapSize(f, s) readImageFromFileHeapSizeStartingAt(f,s,0)
 
 /* Clipboard (cut/copy/paste). */
 sqInt clipboardSize(void);

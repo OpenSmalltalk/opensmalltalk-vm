@@ -20,7 +20,6 @@
 #include "sq.h"
 #include "sqMacTime.h"
 #include "sqMacUIEvents.h"
-#define MillisecondClockMask 536870911
 
 #include <pthread.h>
 #include <sys/types.h>

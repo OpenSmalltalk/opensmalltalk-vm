@@ -56,15 +56,9 @@
 #undef sqFTruncate
 /* sqFTruncate should return 0 on success, ftruncate does also */
 #define sqFTruncate(f,o) ftruncate(fileno(f), o)
-
-// CARBON
-
-#ifdef TARGET_API_MAC_CARBON  
-# undef TARGET_API_MAC_CARBON
-# define TARGET_API_MAC_CARBON 1
-#endif 
 #define ftell ftello
 #define fseek fseeko
+
 typedef FILE *sqImageFile;
 
 #undef sqFilenameFromStringOpen
@@ -99,6 +93,13 @@ usqInt	    sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize);
 /* macro to return from interpret() loop in browser plugin VM */
 #define ReturnFromInterpret() return
 
+// CARBON
+
+#ifdef TARGET_API_MAC_CARBON  
+# undef TARGET_API_MAC_CARBON
+# define TARGET_API_MAC_CARBON 1
+#endif 
+
 #if defined(TARGET_API_MAC_CARBON)
 /* prototypes missing from CW11 headers */
 #include <TextUtils.h>
@@ -121,6 +122,11 @@ extern void sqMakeMemoryNotExecutableFromTo(unsigned long, unsigned long);
 extern int isCFramePointerInUse(void);
 #endif
 
+/* warnPrintf is provided (and needed) on the win32 platform.
+ * But it may be mentioned elsewhere, so provide a suitable def.
+ */
+#define warnPrintf printf
+
 /* Thread support for thread-safe signalSemaphoreWithIndex and/or the COGMTVM */
 #if STACKVM
 # define sqLowLevelYield() sched_yield()
@@ -136,8 +142,9 @@ extern int isCFramePointerInUse(void);
 typedef struct {
 		pthread_cond_t	cond;
 		pthread_mutex_t mutex;
-		int				locked;
+		int				count;
 	} sqOSSemaphore;
+#  define ioDestroyOSSemaphore(ptr) 0
 #  if !ForCOGMTVMImplementation /* this is a read-only export */
 extern const pthread_key_t tltiIndex;
 #  endif
@@ -145,6 +152,7 @@ extern const pthread_key_t tltiIndex;
 #  define ioSetThreadLocalThreadIndex(v) (pthread_setspecific(tltiIndex,(void*)(v)))
 #  define ioOSThreadIsAlive(thread) (pthread_kill(thread,0) == 0)
 #  define ioTransferTimeslice() sched_yield()
+#  define ioMilliSleep(ms) usleep((ms) * 1000)
 # endif /* COGMTVM */
 #endif /* STACKVM */
 

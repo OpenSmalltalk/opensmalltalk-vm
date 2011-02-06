@@ -292,7 +292,7 @@ LRESULT CALLBACK MainWndProcW(HWND hwnd,
 				label, 1000, squeakIniName);
 	if(MessageBox(stWindow, msg, label, MB_YESNO) != IDYES) return 0;
 	DestroyWindow(stWindow);
-	exit(1);
+	ioExit();
       } else {
 	recordWindowEvent(WindowEventClose, NULL);
       }
@@ -1527,26 +1527,11 @@ int ioRelinquishProcessorForMicroseconds(int microSeconds)
   return microSeconds;
 }
 
-/* This counter prevents reentering the ioProcessEvents message pump.  It is
- * also incremented in the Alien callback machinery (in thunkEntry) since the
- * image may be running its own message pump for the native GUI.
- */
-int inIoProcessEvents = 0;
-
 int ioProcessEvents(void)
 { static MSG msg;
   POINT mousePt;
 
-  /*
-   * Callback support; ensure ioProcessEvents is non-reentrant to prevent
-   * callbacks being delivered during other earlier callbacks.
-   */
-  if (inIoProcessEvents)
-    return;
-
   if(fRunService && !fWindows95) return 1;
-
-  ++inIoProcessEvents;
 
   /* WinCE doesn't retrieve WM_PAINTs from the queue with PeekMessage,
      so we won't get anything painted unless we use GetMessage() if there
@@ -1563,9 +1548,6 @@ int ioProcessEvents(void)
       TranslateMessage(&msg);
       DispatchMessage(&msg);
     }
-
-  if (inIoProcessEvents > 0)
-	--inIoProcessEvents;
 
 #ifndef NO_DIRECTINPUT
   /* any buffered mouse input which hasn't been processed is obsolete */
@@ -3127,7 +3109,8 @@ int printUsage(int level)
 #endif /* STACKVM */
 #if COGVM
                    TEXT("\n\t-codesize: bytes \t(set machine-code memory size to bytes)")
-                   TEXT("\n\t-cogmaxlits: n \t(set max number of literals for methods compiled to machine code)")
+                   TEXT("\n\t-cogmaxlits: n \t(set max number of literals for methods to be compiled to machine code)")
+                   TEXT("\n\t-cogminjumps: n \t(set min number of backward jumps for interpreted methods to be considered for compilation to machine code)")
                    TEXT("\n\t-sendtrace \t(trace sends in log for debug)")
                    TEXT("\n\t-tracestores \t(assert-check stores for debug)")
                    TEXT("\n\t-dpcso: bytes \t(stack offset for prim calls for debug)")

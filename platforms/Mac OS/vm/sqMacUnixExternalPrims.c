@@ -272,14 +272,14 @@ void *ioLoadModule(char *pluginName)
 			return handle;
     } else {
 		  if ((   handle= tryLoading( pluginDirPath,	pluginName))
-			  || (handle= tryLoading(    "./",			pluginName))
 			  || (handle= tryLoading( vmDirPath,		pluginName))
 			  || (handle= tryLoadingPath("SQUEAK_PLUGIN_PATH",	pluginName))
 		//JMM || (handle= tryLoadingPath("LD_LIBRARY_PATH",	pluginName))
+			  || (handle= tryLoading(    "./",			pluginName))
 			  || (handle= tryLoading(    "",			pluginName))
-		#    if defined(VM_X11DIR)
+#    if defined(VM_X11DIR)
 			  || (handle= tryLoading(VM_X11DIR"/",		pluginName))
-		#    endif
+#    endif
 			  )
 			return handle;
 	}

@@ -183,6 +183,10 @@ static int parseArgument(int argc, char **argv)
 		extern sqInt suppressHeartbeatFlag;
 		suppressHeartbeatFlag = 1;
 		return 1; }
+      else if (!strcmp(argv[0], "-pollpip")) { 
+		extern sqInt pollpip;
+		pollpip = atoi(argv[1]);	 
+		return 2; }
 #endif /* STACKVM */
 #if COGVM
       else if (!strcmp(argv[0], "-codesize")) { 
@@ -214,7 +218,11 @@ static int parseArgument(int argc, char **argv)
 		return 2; }
       else if (!strcmp(argv[0], "-cogmaxlits")) { 
 		extern sqInt maxLiteralCountForCompile;
-		maxLiteralCountForCompile = (unsigned long)strtobkm(argv[1]);	 
+		maxLiteralCountForCompile = strtobkm(argv[1]);	 
+		return 2; }
+      else if (!strcmp(argv[0], "-cogminjumps")) { 
+		extern sqInt minBackwardJumpCountForCompile;
+		minBackwardJumpCountForCompile = strtobkm(argv[1]);	 
 		return 2; }
 #endif /* COGVM */
       else if (!strcmp(argv[0], "-pathenc")) { 
@@ -260,6 +268,7 @@ static void printUsage(void)
   printf("  -sendtrace[=num]      enable send tracing (optionally to a specific value)\n");
   printf("  -tracestores          enable store tracing (assert check stores)\n");
   printf("  -cogmaxlits <n>       set max number of literals for methods compiled to machine code\n");
+  printf("  -cogminjumps <n>      set min number of backward jumps for interpreted methods to be considered for compilation to machine code\n");
 #endif
   printf("  -pathenc <enc>        set encoding for pathnames (default: macintosh)\n");
   printf("  -headless             run in headless (no window) mode (default: false)\n");

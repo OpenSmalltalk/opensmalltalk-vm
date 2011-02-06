@@ -60,9 +60,9 @@ int ioOldMSecs()
 {
   /* Make sure the value fits into Squeak SmallIntegers */
 #ifndef _WIN32_WCE
-  return timeGetTime() & 0x3FFFFFFF;
+  return timeGetTime() & MillisecondClockMask;
 #else
-  return GetTickCount() &0x3FFFFFFF;
+  return GetTickCount() & MillisecondClockMask;
 #endif
 }
 
@@ -132,7 +132,7 @@ static DWORD vmThreadBaseTick;
 
 #define microToMilliseconds(usecs) ((((usecs) - utcStartMicroseconds) \
 									/ MicrosecondsPerMillisecond) \
-									& 0x3FFFFFFF)
+									& MillisecondClockMask)
 
 #define LOG_CLOCK 1
 
@@ -140,7 +140,7 @@ static DWORD vmThreadBaseTick;
 # define LOGSIZE 1024
 static unsigned __int64 useclog[LOGSIZE];
 static unsigned long mseclog[LOGSIZE];
-static int logClock = 0;
+static int logClock = 1;
 static unsigned int ulogidx = (unsigned int)-1;
 static unsigned int mlogidx = (unsigned int)-1;
 # define logusecs(usecs) do { sqLowLevelMFence(); \
@@ -339,6 +339,9 @@ void
 ioInitHeartbeat()
 {
 	DWORD uselessThreadId;
+extern sqInt suppressHeartbeatFlag;
+
+	if (suppressHeartbeatFlag) return;
 
 	beatSemaphore = CreateSemaphore(NULL,	/*no security*/
 									0,		/*no initial signals*/

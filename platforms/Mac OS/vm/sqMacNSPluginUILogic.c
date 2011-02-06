@@ -34,7 +34,6 @@
 
 #define EnableMenuItemCarbon(m1,v1)  EnableMenuItem(m1,v1);
 #define DisableMenuItemCarbon(m1,v1)  DisableMenuItem(m1,v1);
-#define MillisecondClockMask 536870911
 	
 	//#define PLUGIN_TRACE 1
 

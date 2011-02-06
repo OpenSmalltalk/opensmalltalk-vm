@@ -30,7 +30,7 @@
 
 /* sqLowLevelMFence is required to ensure that after completion any stores made
  * by other threads before a fence will be visible to the calling thread, and
- * vice verce.  Writers follow a write with a fence. Readers use a fence before
+ * vice versa.  Writers follow a write with a fence. Readers use a fence before
  * reading.  See e.g. http://en.wikipedia.org/wiki/Memory_barrier
  *
  * The only implementation directly uses mfence on x86.

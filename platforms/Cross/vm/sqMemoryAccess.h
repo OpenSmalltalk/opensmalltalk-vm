@@ -66,7 +66,7 @@
   extern char *sqMemoryBase;
 # define SQ_FAKE_MEMORY_OFFSET	16 // (1*1024*1024)	/* nonzero to debug addr xlation */
 #else
-# define sqMemoryBase		((char *)0)
+# define sqMemoryBase 0
 #endif
 
 #ifdef USE_INLINE_MEMORY_ACCESSORS
@@ -78,12 +78,17 @@
   static inline sqInt shortAtPointerput(char *ptr, int val)	{ return (sqInt)(*((short *)ptr)= (short)val); }
   static inline sqInt intAtPointer(char *ptr)			{ return (sqInt)(*((unsigned int *)ptr)); }
   static inline sqInt intAtPointerput(char *ptr, int val)	{ return (sqInt)(*((unsigned int *)ptr)= (int)val); }
-  static inline sqInt longAtPointer(char *ptr)			{ return (sqInt)(*((sqInt *)ptr)); }
-  static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
-  static inline sqInt oopAtPointer(char *ptr)			{ return (sqInt)(*((sqInt *)ptr)); }
-  static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*((sqInt *)ptr)= (sqInt)val); }
+  static inline sqInt longAtPointer(char *ptr)			{ return *(sqInt *)ptr; }
+  static inline sqInt longAtPointerput(char *ptr, sqInt val)	{ return *(sqInt *)ptr= (sqInt)val; }
+  static inline sqInt oopAtPointer(char *ptr)			{ return *(sqInt *)ptr; }
+  static inline sqInt oopAtPointerput(char *ptr, sqInt val)	{ return (sqInt)(*(sqInt *)ptr= (sqInt)val); }
+# if defined(sqMemoryBase) && !sqMemoryBase
+  static inline char *pointerForOop(usqInt oop)			{ return (char *)oop; }
+  static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)ptr; }
+# else
   static inline char *pointerForOop(usqInt oop)			{ return sqMemoryBase + oop; }
   static inline sqInt oopForPointer(char *ptr)			{ return (sqInt)(ptr - sqMemoryBase); }
+# endif
   static inline sqInt byteAt(sqInt oop)				{ return byteAtPointer(pointerForOop(oop)); }
   static inline sqInt byteAtput(sqInt oop, int val)		{ return byteAtPointerput(pointerForOop(oop), val); }
   static inline sqInt shortAt(sqInt oop)			{ return shortAtPointer(pointerForOop(oop)); }
@@ -100,14 +105,19 @@
 # define byteAtPointerput(ptr, val)	((sqInt)(*((unsigned char *)(ptr))= (unsigned char)(val)))
 # define shortAtPointer(ptr)		((sqInt)(*((short *)(ptr))))
 # define shortAtPointerput(ptr, val)	((sqInt)(*((short *)(ptr))= (short)(val)))
-# define intAtPointer(ptr)		((sqInt)(*((unsigned int *)(ptr))))
-# define intAtPointerput(ptr, val)	((sqInt)(*((unsigned int *)(ptr))= (int)(val)))
-# define longAtPointer(ptr)		((sqInt)(*((sqInt *)(ptr))))
-# define longAtPointerput(ptr, val)	((sqInt)(*((sqInt *)(ptr))= (sqInt)(val)))
-# define oopAtPointer(ptr)		(sqInt)(*((sqInt *)ptr))
-# define oopAtPointerput(ptr, val)	(sqInt)(*((sqInt *)ptr)= (sqInt)val)
-# define pointerForOop(oop)		((char *)(sqMemoryBase + ((usqInt)(oop))))
-# define oopForPointer(ptr)		((sqInt)(((char *)(ptr)) - (sqMemoryBase)))
+# define intAtPointer(ptr)		((sqInt)(*((int *)(ptr))))
+# define intAtPointerput(ptr, val)	((sqInt)(*((int *)(ptr))= (int)(val)))
+# define longAtPointer(ptr)		(*(sqInt *)(ptr))
+# define longAtPointerput(ptr, val)	(*(sqInt *)(ptr)= (sqInt)(val))
+# define oopAtPointer(ptr)		(*(sqInt *)(ptr))
+# define oopAtPointerput(ptr, val)	(*(sqInt *)(ptr)= (sqInt)(val))
+# if defined(sqMemoryBase) && !sqMemoryBase
+#  define pointerForOop(oop)		((char *)(oop))
+#  define oopForPointer(ptr)		((sqInt)(ptr))
+# else
+#  define pointerForOop(oop)		((char *)(sqMemoryBase + ((usqInt)(oop))))
+#  define oopForPointer(ptr)		((sqInt)(((char *)(ptr)) - (sqMemoryBase)))
+# endif
 # define byteAt(oop)			byteAtPointer(pointerForOop(oop))
 # define byteAtput(oop, val)		byteAtPointerput(pointerForOop(oop), (val))
 # define shortAt(oop)			shortAtPointer(pointerForOop(oop))
@@ -145,7 +155,7 @@ typedef union { double d; int i[sizeof(double) / sizeof(int)]; } _aligner;
 
 #define storeFloatAtfrom(i, doubleVar)	storeFloatAtPointerfrom(pointerForOop(i), doubleVar)
 #define fetchFloatAtinto(i, doubleVar)	fetchFloatAtPointerinto(pointerForOop(i), doubleVar)
-# define storeSingleFloatAtPointerfrom(i, floatVar) (*((float *) (i)) = (floatVar))
+# define storeSingleFloatAtPointerfrom(i, floatVar) (*((float *) (i)) = (float)(floatVar))
 # define fetchSingleFloatAtPointerinto(i, floatVar) ((floatVar) = *((float *) (i)))
 #define storeSingleFloatAtfrom(i, floatVar)	storeSingleFloatAtPointerfrom(pointerForOop(i), floatVar)
 #define fetchSingleFloatAtinto(i, floatVar)	fetchSingleFloatAtPointerinto(pointerForOop(i), floatVar)

@@ -91,7 +91,6 @@
 
 
 #undef	DEBUG
-#undef	DEBUG_TICKER
 
 #if defined(DEBUG)
   int aioLastTick= 0;
@@ -99,18 +98,6 @@
 # define FPRINTF(X) { aioThisTick= ioMSecs();  fprintf(stderr, "%8d %8d ", aioThisTick, aioThisTick - aioLastTick);  aioLastTick= aioThisTick;  fprintf X; }
 #else
 # define FPRINTF(X)
-#endif
-
-#if defined(DEBUG_TICKER)
-  static char *ticks= "-\\|/";
-  static char *ticker= "";
-  #define DO_TICK()				\
-  {						\
-    fprintf(stderr, "\r%c\r", *ticker);		\
-    if (!*ticker++) ticker= ticks;		\
-  }
-#else
-# define DO_TICK()
 #endif
 
 #define _DO_FLAG_TYPE()	do { _DO(AIO_R, rd) _DO(AIO_W, wr) _DO(AIO_X, ex) } while (0)
@@ -191,6 +178,27 @@ void aioFini(void)
 /* answer whether i/o becomes possible within the given number of microSeconds */
 #define max(x,y) (((x)>(y))?(x):(y))
 
+long pollpip = 0; /* set in sqUnixMain.c by -pollpip arg */
+#if COGMTVM
+/* If on the MT VM and pollpip > 1 only pip if a threaded FFI call is in
+ * progress, which we infer from disownCount being non-zero.
+ */
+extern long disownCount;
+# define SHOULD_TICK() (pollpip == 1 || (pollpip > 1 && disownCount))
+#else
+# define SHOULD_TICK() pollpip
+#endif
+
+static char *ticks= "-\\|/";
+static char *ticker= "";
+static int tickCount = 0;
+#define TICKS_PER_CHAR 10
+#define DO_TICK(bool)				\
+do if ((bool) && !(++tickCount % TICKS_PER_CHAR)) {		\
+	fprintf(stderr, "\r%c\r", *ticker);		\
+	if (!*ticker++) ticker= ticks;			\
+} while (0)
+
 int aioPoll(int microSeconds)
 {
   int	 fd;
@@ -198,16 +206,16 @@ int aioPoll(int microSeconds)
   unsigned long long us;
 
   FPRINTF((stderr, "aioPoll(%d)\n", microSeconds));
-  DO_TICK();
+  DO_TICK(SHOULD_TICK());
 
   /* get out early if there is no pending i/o and no need to relinquish cpu */
 
+#ifdef TARGET_OS_IS_IPHONE
+  if (maxFd == 0)
+    return 0;
+#else
   if ((maxFd == 0) && (microSeconds == 0))
     return 0;
-	
-#ifdef TARGET_OS_IS_IPHONE
-if (maxFd == 0) 
-		return 0;
 #endif
 
   rd= rdMask;
