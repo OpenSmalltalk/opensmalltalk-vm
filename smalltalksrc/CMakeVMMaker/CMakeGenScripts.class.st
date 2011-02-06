@@ -117,8 +117,10 @@ CMakeGenScripts class >> generateCocoaVM [
 			SurfacePlugin 
 			UUIDPlugin 
 			DropPlugin)	
-		external: #();
-		generateMainVM.
+		external: #(
+			UnixOSProcessPlugin);
+		generateMainVM;
+		generateExternalPlugins.
 
 	"Gnuifier"
 	(Gnuifier on:((FileDirectory on: platformDirectoryName, '/iOS/vm/src/vm') pathName)) gnuify.	
