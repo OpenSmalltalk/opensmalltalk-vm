@@ -221,6 +221,12 @@ NewCoObjectMemorySimulator >> is: oop KindOf: classNameString [
 	^coInterpreter is: oop KindOf: classNameString
 ]
 
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> isFloatObject: oop [
+	"hack around the CoInterpreter/ObjectMemory split refactoring"
+	^coInterpreter isFloatObject: oop
+]
+
 { #category : #'interpreter shell' }
 NewCoObjectMemorySimulator >> isIntegerValue: valueWord [ 
 	^ valueWord >= 16r-40000000 and: [valueWord <= 16r3FFFFFFF]

@@ -51,8 +51,8 @@ UUIDPlugin >> primitiveMakeUUID [
 			[| uuid |
 			uuid := UUID new.
 			1 to: 16 do:
-				[:i| location at: i - 1 put: (uuid at: i)]]
-
+				[:i| location at: i - 1 put: (uuid at: i)]].
+	^oop
 ]
 
 { #category : #initialize }

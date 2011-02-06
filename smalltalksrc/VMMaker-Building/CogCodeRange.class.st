@@ -43,6 +43,11 @@ CogCodeRange >> endPC: anObject [
 	endpc := anObject
 ]
 
+{ #category : #explorer }
+CogCodeRange >> explorerContents [
+	^nil
+]
+
 { #category : #printing }
 CogCodeRange >> printOn: aStream [
 	aStream nextPut: $(.

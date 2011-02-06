@@ -241,7 +241,7 @@ CurrentImageCoInterpreterFacade >> initialize [
 		instVarNamed: 'objectMemory'
 			put: objectMemory;
 		instVarNamed: 'primitiveTable'
-			put: (CoInterpreter primitiveTable copy).
+			put: (CArrayAccessor on: CoInterpreter primitiveTable copy).
 	variables := Dictionary new.
 	#('stackLimit') do:
 		[:l| self addressForLabel: l].
@@ -435,6 +435,21 @@ CurrentImageCoInterpreterFacade >> primitivePropertyFlags: primIndex [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> quickPrimitiveConstantFor: aQuickPrimitiveIndex [
+	^self oopForObject: (coInterpreter quickPrimitiveConstantFor: aQuickPrimitiveIndex)
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> quickPrimitiveGeneratorFor: aQuickPrimitiveIndex [
+	^coInterpreter quickPrimitiveGeneratorFor: aQuickPrimitiveIndex
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> quickPrimitiveInstVarIndexFor: aQuickPrimitiveIndex [
+	^coInterpreter quickPrimitiveInstVarIndexFor: aQuickPrimitiveIndex
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> rawHeaderOf: anOop [
 	^objectMemory integerObjectOf: (self objectForOop: anOop) header
 ]
@@ -492,6 +507,13 @@ CurrentImageCoInterpreterFacade >> startPCOfMethodHeader: aSmallIntegerOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> stringOf: anOop [
 	^self lookupAddress: anOop
+]
+
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> tempCountForBlockAt: startpc in: methodOop [
+	^BlockLocalTempCounter
+		tempCountForBlockAt: startpc - 4
+		in: (self objectForOop: methodOop)
 ]
 
 { #category : #accessing }

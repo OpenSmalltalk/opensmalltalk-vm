@@ -1248,6 +1248,8 @@ CoInterpreter >> ceCheckProfileTick [
 	 As a courtesy to compileInterpreterPrimitive: map NULL to nilObj."
 	<api>
 	newMethod isNil ifTrue: [newMethod := objectMemory nilObject].
+	self cCode: [] inSmalltalk:
+		[newMethod = 0 ifTrue: [newMethod := objectMemory nilObject]].
 	self checkProfileTick: newMethod
 ]
 
@@ -1290,6 +1292,9 @@ CoInterpreter >> ceInterpretMethodFromPIC: aMethodObj receiver: rcvr [
 	"pop off inner return and locate open PIC"
 	pic := self cCoerceSimple: self popStack - cogit interpretOffset to: #'CogMethod *'.
 	self assert: (pic cmType = CMOpenPIC or: [pic cmType = CMClosedPIC]).
+	"If found from an open PIC then it must be an uncoged method and, since it's been found
+	 in the method cache, should be cogged if possible.  If found from a closed PIC it should
+	 be interpreted (since being reached by that route implies it is uncoggable)."
 	pic cmType = CMOpenPIC
 		ifTrue:
 			[(self methodShouldBeCogged: aMethodObj) ifTrue:
@@ -1525,9 +1530,10 @@ CoInterpreter >> ceSend: selector "<Integer>" super: superNormalBar to: rcvr "<I
 		ifFalse: "This is a cannotReturn:, nonLocalreturn:through: or mustBeBoolean send.  Must not link."
 			[mayLink := false.
 			 argumentCount := -1 - numArgs].
-	"We set the messageSelector for executeMethod below since things
-	 like the at cache read messageSelector and so it cannot be left stale."
+	"We set the messageSelector and lkupClass for executeMethod below since things
+	 like the at cache read messageSelectorand lkupClass and so they cannot be left stale."
 	messageSelector := selector.
+	lkupClass := class.
 	(self lookupInMethodCacheSel: selector class: class)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
@@ -1560,13 +1566,9 @@ CoInterpreter >> ceSend: selector "<Integer>" super: superNormalBar to: rcvr "<I
 						numArgs: numArgs
 						receiver: rcvr
 					"If patchToOpenPICFor:.. returns we're out of code memory"]].
-		 self flag: 'this could work in which case executeCogMethodFromUnlinkedSend:withReceiver: is history.'.
 		 instructionPointer := self popStack.
 		 self executeNewMethod.
-		 self assert: false.
-		 "Smalltalk stack contains pushed receiver and arguments and return address for sender.
-		  Push the registers to be reloaded and the entry-point and jump/return to the new cog method."
-		 self executeCogMethodFromUnlinkedSend: (self cogMethodOf: newMethod) withReceiver: rcvr
+		 self assert: false
 		 "NOTREACHED"].
 	^self activateInterpreterMethodFromMachineCode
 	"NOTREACHED"
@@ -1586,9 +1588,10 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
 	class := objectMemory fetchClassOf: rcvr.
 	argumentCount := numArgs.
-	"We set the messageSelector for executeMethod below since things
-	 like the at cache read messageSelector and so it cannot be left stale."
+	"We set the messageSelector and lkupClass for executeMethod below since things
+	 like the at cache read messageSelectorand lkupClass and so they cannot be left stale."
 	messageSelector := oPIC selector.
+	lkupClass := class.
 	(self lookupInMethodCacheSel: oPIC selector class: class)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
@@ -1600,13 +1603,9 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 					lookupClass: class
 					mayLink: false]].
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
-		[self flag: 'this could work in which case executeCogMethodFromUnlinkedSend:withReceiver: is history.'.
-		 instructionPointer := self popStack.
+		[instructionPointer := self popStack.
 		 self executeNewMethod.
-		 self assert: false.
-		 "Smalltalk stack contains pushed receiver and arguments and return address for sender.
-		  Push the registers to be reloaded and the entry-point and jump/return to the new cog method."
-		 self executeCogMethodFromUnlinkedSend: (self cogMethodOf: newMethod) withReceiver: rcvr
+		 self assert: false
 		 "NOTREACHED"].
 	^self activateInterpreterMethodFromMachineCode
 	"NOTREACHED"
@@ -1723,7 +1722,7 @@ CoInterpreter >> checkLogIntegrity [
 	 there is something at traceLogIndex it has wrapped."
 	| limit ok |
 	limit := self safe: traceLogIndex - 3 mod: TraceBufferSize.
-	(traceLog at: limit) = 0 ifTrue: [^nil].
+	(traceLog at: limit) = 0 ifTrue: [^true].
 	(traceLog at: traceLogIndex) ~= 0 ifTrue:
 		[limit := TraceBufferSize - 3].
 	ok := true.
@@ -3570,7 +3569,10 @@ CoInterpreter >> longUnconditionalJump [
 	| offset switched |
 	offset := (((currentBytecode bitAnd: 7) - 4) * 256) + self fetchByte.
 	localIP := localIP + offset.
-	offset < 0 ifTrue: "backward jump means we're in a loop; check for possible interrupts"
+	"backward jump means we're in a loop.
+		- check for possible interrupts.
+		- check for long-running loops and JIT if appropriate."
+	offset < 0 ifTrue:
 		[localSP < stackLimit ifTrue:
 			[self externalizeIPandSP.
 			 switched := self checkForEventsMayContextSwitch: true.
@@ -3583,7 +3585,7 @@ CoInterpreter >> longUnconditionalJump [
 					[(self methodWithHeaderShouldBeCogged: (self headerOf: method))
 						ifTrue:
 							[self externalizeFPandSP.
-							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize + 1]
+							 self attemptToSwitchToMachineCode: (self oopForPointer: localIP) - offset - method - BaseHeaderSize - 1]
 						ifFalse: "don't ask if one should compile a second time..."
 							[backwardJumpCount := 1 bitShift: BytesPerWord * 8 - 2]]]
 			ifFalse:
@@ -4127,7 +4129,6 @@ CoInterpreter >> marryFrame: theFP SP: theSP [
 { #category : #'compiled methods' }
 CoInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
 	| rawHeader realHeader |
-	<api>
 	flagInterpretedMethods ifTrue:
 		[rawHeader := self rawHeaderOf: aMethod.
 		 realHeader := (self isCogMethodReference: rawHeader)
@@ -4397,7 +4398,26 @@ CoInterpreter >> nextProfileTickAddress [
 	<returnTypeC: #usqInt>
 	"N.B. nextProfileTick is 64-bits"
 	^self cCode: [(self addressOf: nextProfileTick) asUnsignedInteger]
-		inSmalltalk: [cogit simulatedReadWriteVariableAddress: #nextProfileTick in: self]
+		inSmalltalk:
+			[VMBIGENDIAN
+				ifTrue:
+					[cogit simulatedReadWriteVariableAddress: #nextProfileTickLow in: self.
+					 cogit simulatedReadWriteVariableAddress: #nextProfileTickHigh in: self]
+				ifFalse:
+					[cogit simulatedReadWriteVariableAddress: #nextProfileTickHigh in: self.
+					 cogit simulatedReadWriteVariableAddress: #nextProfileTickLow in: self]]
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> nextProfileTickHigh [
+	<doNotGenerate>
+	^nextProfileTick bitShift: -32
+]
+
+{ #category : #'cog jit support' }
+CoInterpreter >> nextProfileTickLow [
+	<doNotGenerate>
+	^nextProfileTick bitAnd: 16rFFFFFFFF
 ]
 
 { #category : #'indexing primitive support' }
@@ -4544,6 +4564,7 @@ CoInterpreter >> primTraceLogIndexAddress [
 
 { #category : #'cog jit support' }
 CoInterpreter >> primitiveFunctionPointer: oop [
+	"Apparently not sent but is used in the simulator."
 	<doNotGenerate>
 	primitiveFunctionPointer := oop
 ]

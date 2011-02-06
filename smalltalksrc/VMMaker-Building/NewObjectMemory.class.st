@@ -234,6 +234,7 @@ NewObjectMemory >> allocateInterpreterChunk: byteSize [
 	 takes freeStart over the scavenge threshold schedule a garbage collection."
 	| newChunk newFreeStart |
 	<inline: true>
+	<asmLabel: false>
 	<var: #newChunk type: #usqInt>
 	<var: #newFreeStart type: #usqInt>
 
@@ -311,6 +312,7 @@ NewObjectMemory >> become: array1 with: array2 twoWay: twoWayFlag copyHash: copy
 
 { #category : #'garbage collection' }
 NewObjectMemory >> biasToGrow [
+	<asmLabel: false>
 	self growObjectMemory: (growHeadroom*3/2) - self freeSize
 ]
 
@@ -713,6 +715,7 @@ NewObjectMemory >> fullCompaction [
 		sweepPhaseForFullGC has already set compStart.
 	 Need not and can not move objects below the first free chunk."
 	| sz |
+	<asmLabel: false>
 	self assert: compStart = (self lowestFreeAfter: self startOfMemory).
 	compStart = freeStart ifTrue:
 		["memory is already compact; only free chunk is at the end "
