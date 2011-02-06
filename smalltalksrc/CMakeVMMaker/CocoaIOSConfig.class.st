@@ -210,11 +210,6 @@ CocoaIOSConfig >> executableType [
 	^ 'MACOSX_BUNDLE'
 ]
 
-{ #category : #plugins }
-CocoaIOSConfig >> externalPlugins [
-	^ externalPlugins ifNil: [ externalPlugins := self defaultExternalPlugins ]
-]
-
 { #category : #'plugin extra rules' }
 CocoaIOSConfig >> extraPluginSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
@@ -259,11 +254,6 @@ CocoaIOSConfig >> frameworks [
 	ApplicationServices
 	QuartzCore
 	OpenGL)
-]
-
-{ #category : #plugins }
-CocoaIOSConfig >> internalPlugins [
-	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
 ]
 
 { #category : #accessing }
