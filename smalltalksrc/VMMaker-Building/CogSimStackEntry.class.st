@@ -5,6 +5,7 @@ Class {
 		'cogit',
 		'type',
 		'spilled',
+		'annotateUse',
 		'register',
 		'offset',
 		'constant',
@@ -25,12 +26,27 @@ CogSimStackEntry class >> instVarNamesAndTypesForTranslationDo: aBinaryBlock [
 	self filteredInstVarNames do:
 		[:ivn|
 		aBinaryBlock
-			value: (ivn = 'register' ifTrue: ['registerr'] ifFalse: [ivn])
+			value: (ivn = 'register' ifTrue: ['registerr'] ifFalse: [ivn]) "avoid reservedWord conflict"
 			value: (ivn caseOf: {
-						['type']		-> [#char].
-						['spilled']	-> [#char]}
+						['type']			-> [#char].
+						['spilled']		-> [#char].
+						['annotateUse']	-> [#char]}
 					otherwise:
 						[#sqInt])]
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> annotateUse [
+	"Answer the value of annotateUse"
+
+	^ annotateUse
+]
+
+{ #category : #accessing }
+CogSimStackEntry >> annotateUse: anObject [
+	"Set the value of annotateUse"
+
+	^annotateUse := anObject
 ]
 
 { #category : #accessing }
@@ -78,6 +94,8 @@ CogSimStackEntry >> constant: anObject [
 
 { #category : #'compile abstract instructions' }
 CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
+	| inst |
+	<var: #inst type: #'AbstractInstruction *'>
 	spilled ifTrue:
 		[type = SSSpill ifTrue:
 			[self assert: (offset = baseOffset and: [register = baseRegister]).
@@ -85,19 +103,22 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 	self assert: type ~= SSSpill.
 	type = SSConstant
 		ifTrue:
-			[cogit annotate: (cogit PushCw: constant) objRef: constant]
+			[inst := cogit annotate: (cogit PushCw: constant) objRef: constant]
 		ifFalse:
 			[type = SSBaseOffset
 				ifTrue:
 					[cogit MoveMw: offset r: register R: TempReg.
-					 cogit PushR: TempReg]
+					 inst := cogit PushR: TempReg]
 				ifFalse:
 					[self assert: type = SSRegister.
-					 cogit PushR: register].
+					 inst := cogit PushR: register].
 			 type := SSSpill.
 			 offset := baseOffset.
 			 register := baseRegister].
-	spilled := true
+	spilled := true.
+	annotateUse ifTrue:
+		[cogit annotateBytecode: inst.
+		 annotateUse := false]
 ]
 
 { #category : #accessing }
@@ -136,16 +157,23 @@ CogSimStackEntry >> offset: anObject [
 
 { #category : #'compile abstract instructions' }
 CogSimStackEntry >> popToReg: reg [
-	spilled ifTrue:
-		[cogit PopR: reg.
-		 ^self].
-	type caseOf: {
-		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: reg].
-		[SSConstant]	-> [(objectRepresentation shouldAnnotateObjectReference: constant)
-								ifTrue: [cogit annotate: (cogit MoveCw: constant R: reg) objRef: constant]
-								ifFalse: [cogit MoveCq: constant R: reg]].
-		[SSRegister]	-> [reg ~= register ifTrue:
-								[cogit MoveR: register R: reg]] }
+	| inst |
+	<var: #inst type: #'AbstractInstruction *'>
+	spilled
+		ifTrue:
+			[inst := cogit PopR: reg]
+		ifFalse:
+			[type caseOf: {
+				[SSBaseOffset]	-> [inst := cogit MoveMw: offset r: register R: reg].
+				[SSConstant]	-> [inst := (objectRepresentation shouldAnnotateObjectReference: constant)
+												ifTrue: [cogit annotate: (cogit MoveCw: constant R: reg) objRef: constant]
+												ifFalse: [cogit MoveCq: constant R: reg]].
+				[SSRegister]	-> [inst := reg ~= register
+												ifTrue: [cogit MoveR: register R: reg]
+												ifFalse: [cogit Label]] }].
+	annotateUse ifTrue:
+		[cogit annotateBytecode: inst.
+		 annotateUse := false]
 ]
 
 { #category : #printing }
@@ -172,6 +200,8 @@ CogSimStackEntry >> printStateOn: aStream [
 							aStream print: offset] }.
 	(spilled and: [type ~= SSSpill]) ifTrue:
 		[aStream nextPutAll: ' (spilled)'].
+	annotateUse ifTrue:
+		[aStream nextPutAll: ' (ANNOTATED)'].
 	bcptr ifNotNil:
 		[aStream space; nextPut: ${; print: bcptr; nextPut: $}].
 	aStream nextPut: $)
@@ -221,14 +251,20 @@ CogSimStackEntry >> spilled: anObject [
 
 { #category : #'compile abstract instructions' }
 CogSimStackEntry >> storeToReg: reg [
+	| inst |
+	<var: #inst type: #'AbstractInstruction *'>
 	type caseOf: {
-		[SSBaseOffset]	-> [cogit MoveMw: offset r: register R: reg].
-		[SSSpill]		-> [cogit MoveMw: offset r: register R: reg].
-		[SSConstant]	-> [(objectRepresentation shouldAnnotateObjectReference: constant)
-								ifTrue: [cogit annotate: (cogit MoveCw: constant R: reg) objRef: constant]
-								ifFalse: [cogit MoveCq: constant R: reg]].
-		[SSRegister]	-> [reg ~= register ifTrue:
-								[cogit MoveR: register R: reg]] }
+		[SSBaseOffset]	-> [inst := cogit MoveMw: offset r: register R: reg].
+		[SSSpill]		-> [inst := cogit MoveMw: offset r: register R: reg].
+		[SSConstant]	-> [inst := (objectRepresentation shouldAnnotateObjectReference: constant)
+										ifTrue: [cogit annotate: (cogit MoveCw: constant R: reg) objRef: constant]
+										ifFalse: [cogit MoveCq: constant R: reg]].
+		[SSRegister]	-> [inst := reg ~= register
+										ifTrue: [cogit MoveR: register R: reg]
+										ifFalse: [cogit Label]] }.
+	annotateUse ifTrue:
+		[cogit annotateBytecode: inst.
+		 annotateUse := false]
 ]
 
 { #category : #accessing }
