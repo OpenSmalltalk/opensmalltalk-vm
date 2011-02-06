@@ -13,6 +13,7 @@ Class {
 	#instVars : [
 		'enableCog',
 		'byteCount',
+		'lastPollCount',
 		'sendCount',
 		'printSends',
 		'traceOn',
@@ -228,7 +229,8 @@ CogVMSimulator >> ceSend: selector "<Integer>" super: superNormalBar "<0|1>" to:
 	"self printOop: rcvr"
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self maybeCheckStackDepth: numArgs + 1 sp: stackPointer.
+	self maybeCheckStackDepth: (numArgs < 0 ifTrue: [0] ifFalse: [numArgs + 1])
+		sp: stackPointer.
 	^super ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs
 ]
 
@@ -472,17 +474,6 @@ CogVMSimulator >> displayLocation [
 	^ Display extent - displayForm extent - (10@10)
 ]
 
-{ #category : #'frame access' }
-CogVMSimulator >> divorceFramesIn: aStackPage [
-	"| thisPage |
-	(self checkIsStillMarriedContext: 22189568 currentFP: framePointer) ifTrue:
-		[thisPage := stackPages stackPageFor: (self frameOfMarriedContext: 22189568).
-		 aStackPage == thisPage ifTrue:
-			[self halt]]."
-	self halt.
-	^super divorceFramesIn: aStackPage
-]
-
 { #category : #'process primitive support' }
 CogVMSimulator >> doSignalExternalSemaphores: minTableSize [
 	"This is a non-thread-safe simulation.  See platforms/Cross/vm/sqExternalSemaphores.c
@@ -596,12 +587,6 @@ CogVMSimulator >> executeCogBlock: cogMethod closure: closure mayContextSwitch: 
 	"(#(16r56E90 16r133D0) includes: cogMethod asInteger)  ifTrue: [self halt]."
 	"self halt."
 	^super executeCogBlock: cogMethod closure: closure mayContextSwitch: mayContextSwitch
-]
-
-{ #category : #'debugging traps' }
-CogVMSimulator >> externalAboutToReturn: resultOop through: aContext [
-	self halt.
-	^super externalAboutToReturn: resultOop through: aContext
 ]
 
 { #category : #'debugging traps' }
@@ -952,8 +937,7 @@ CogVMSimulator >> initialize [
 	flagInterpretedMethods := false.
 
 	"initialize InterpreterSimulator variables used for debugging"
-	byteCount := 0.
-	sendCount := 0.
+	byteCount := lastPollCount := sendCount := 0.
 	quitBlock := [^ self].
 	traceOn := true.
 	printSends := printFrameAtEachStep := printBytecodeAtEachStep := false.
@@ -1163,6 +1147,11 @@ CogVMSimulator >> ioHeartbeatMilliseconds [
 	^1
 ]
 
+{ #category : #'I/O primitives support' }
+CogVMSimulator >> ioHighResClock [
+	^self ioUTCMicroseconds
+]
+
 { #category : #initialization }
 CogVMSimulator >> ioInitHeartbeat [
 	"No-op in the simulator.  We cause a poll every 1000 bytecodes instead."
@@ -1358,19 +1347,23 @@ CogVMSimulator >> loadNewPlugin: pluginString [
 	"but *why*??"
 	(#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: pluginString) ifTrue:
 		[transcript show: ' ... defeated'. ^nil].
-	plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
-	simulatorClasses := (plugins
-							select: [:psc| psc simulatorClass notNil]
-							thenCollect: [:psc| psc simulatorClass]) asSet.
-	simulatorClasses isEmpty ifTrue: [transcript show: ' ... not found'. ^nil].
-	simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
-	plugins size > 1 ifTrue:
-		[transcript show: '...multiple plugin classes; choosing ', plugins last name].
-	plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
-	plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
-	(plugin respondsTo: #initialiseModule) ifTrue:
-		[plugin initialiseModule ifFalse:
-			[transcript show: ' ... initialiser failed'. ^nil]]. "module initialiser failed"
+	pluginString isEmpty
+		ifTrue:
+			[plugin := self]
+		ifFalse:
+			[plugins := InterpreterPlugin allSubclasses select: [:psc| psc moduleName asString = pluginString asString].
+			simulatorClasses := (plugins
+									select: [:psc| psc simulatorClass notNil]
+									thenCollect: [:psc| psc simulatorClass]) asSet.
+			simulatorClasses isEmpty ifTrue: [transcript show: ' ... not found'. ^nil].
+			simulatorClasses size > 1 ifTrue: [^self error: 'This won''t work...'].
+			plugins size > 1 ifTrue:
+				[transcript show: '...multiple plugin classes; choosing ', plugins last name].
+			plugin := simulatorClasses anyOne newFor: plugins last. "hopefully lowest in the hierarchy..."
+			plugin setInterpreter: objectMemory. "Ignore return value from setInterpreter"
+			(plugin respondsTo: #initialiseModule) ifTrue:
+				[plugin initialiseModule ifFalse:
+					[transcript show: ' ... initialiser failed'. ^nil]]]. "module initialiser failed"
 	pluginList := pluginList copyWith: (pluginString asString -> plugin).
 	transcript show: ' ... loaded'.
 	^pluginList last
@@ -2796,11 +2789,16 @@ CogVMSimulator >> stackLimitFromMachineCode [
 	"Intercept accesses to the stackLimit from machine code to
 	 increment byteCount so that ioMSecs/ioMicroseconds does
 	 somethng reasonable when we're purely in machine code."
-	(byteCount := byteCount + 1) \\ 100 = 0 ifTrue:
-		[byteCount \\ 2500 = 0 ifTrue:
+	(byteCount := byteCount + 1) - lastPollCount >= 100 ifTrue:
+		[lastPollCount := byteCount.
+		 byteCount \\ 500 = 0 ifTrue:
 			[self fullDisplayUpdate].
-		 Sensor peekEvent ifNotNil:
-			[self forceInterruptCheckFromHeartbeat]].
+		 (Sensor peekEvent notNil
+		  or: [nextProfileTick > 0
+			  and: [nextProfileTick <= self ioUTCMicroseconds]]) ifTrue:
+			[suppressHeartbeatFlag "gets set by selector breakpoints"
+				ifTrue: [self forceInterruptCheck]
+				ifFalse: [self forceInterruptCheckFromHeartbeat]]].
 	^stackLimit
 ]
 
@@ -3186,11 +3184,14 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print ext head frame' action: #printExternalHeadFrame;
 		add: 'print int head frame' action: #printHeadFrame;
 		add: 'print mc/cog frame' action: [self printFrame: cogit processor fp WithSP: cogit processor sp];
-		add: 'short print frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
+		add: 'short print ext frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
+		add: 'short print int frame & callers' action: [self shortPrintFrameAndCallers: localFP];
 		add: 'short print mc/cog frame & callers' action: [self shortPrintFrameAndCallers: cogit processor fp];
-		add: 'long print frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'long print ext frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'long print int frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
 		add: 'long print mc/cog frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
 		add: 'print call stack' action: #printCallStack;
+		add: 'print all stacks' action: #printAllStacks;
 		addLine;
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
 		add: 'disassemble method at pc' action: [cogit disassembleMethodFor: cogit processor pc];
@@ -3268,6 +3269,23 @@ CogVMSimulator >> vmPathSize [
 CogVMSimulator >> warpBits [
 
 	^ myBitBlt warpBits
+]
+
+{ #category : #'primitive support' }
+CogVMSimulator >> windowIsClosing [
+	self threadManager ifNotNil:
+		[:threadManager|
+		threadManager guiProcess ~= Processor activeProcess ifTrue:
+			[threadManager guiProcess
+				signalException:
+					(Notification new tag: #evaluateQuit; yourself).
+			Processor terminateActive]].
+	quitBlock ifNotNil:
+		[:effectiveQuitBlock|
+		quitBlock := nil. "stop recursion on explicit window close."
+		[effectiveQuitBlock value]
+			on: BlockCannotReturn
+			do: [:ex|]]	"Cause return from #test, et al"
 ]
 
 { #category : #'debug printing' }

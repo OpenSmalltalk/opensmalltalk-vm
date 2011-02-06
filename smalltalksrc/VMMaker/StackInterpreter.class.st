@@ -242,6 +242,17 @@ StackInterpreter class >> declareCVarsIn: aCCodeGenerator [
 ]
 
 { #category : #translation }
+StackInterpreter class >> exportAPISelectors [
+	| omExports |
+	omExports := (self objectMemoryClass withAllSuperclasses copyUpTo: VMClass)
+					inject: Set new
+					into: [:api :c| api addAll: c exportAPISelectors; yourself].
+	^(self withAllSuperclasses copyUpTo: VMClass), self ancilliaryClasses
+		inject: omExports
+		into: [:set :class| set addAll: (self exportAPISelectorsFor: class); yourself]
+]
+
+{ #category : #translation }
 StackInterpreter class >> implicitReturnTypeFor: aSelector [
 	"Answer the return type for methods that don't have an explicit return."
 	^#void
@@ -1114,6 +1125,12 @@ StackInterpreter class >> requiredMethodNames [
 ]
 
 { #category : #translation }
+StackInterpreter class >> shouldGenerateTypedefFor: aStructClass [
+	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
+	^aStructClass ~~ VMCallbackContext
+]
+
+{ #category : #translation }
 StackInterpreter class >> sourceFileName [
 	^'interp.c'
 ]
@@ -1503,6 +1520,7 @@ StackInterpreter >> bereaveAllMarriedContexts [
 	 married to avoid checking for a context's frame pointer being in bounds.
 	 Thanks to Greg Nuyens for this idea."
 	| oop |
+	<asmLabel: false>
 	oop := objectMemory firstObject.
 	[oop < objectMemory freeStart] whileTrue:
 		[((objectMemory isFreeObject: oop) not
@@ -4620,6 +4638,11 @@ StackInterpreter >> highestPriorityProcess [
 	^processOrNil
 ]
 
+{ #category : #'message sending' }
+StackInterpreter >> ifAppropriateCompileToNativeCode: aMethodObj selector: selector [
+	"Convenient  noop in the StackInterpreter e.g. for sendInvokeCallbackContext:"
+]
+
 { #category : #'debug support' }
 StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP [
 	"This is for low-level error reporting.  If either of the C stack pointers are
@@ -6187,6 +6210,11 @@ StackInterpreter >> marryFrame: theFP SP: theSP [
 
 ]
 
+{ #category : #'compiled methods' }
+StackInterpreter >> maybeFlagMethodAsInterpreted: aMethod [
+	"Convenient  noop in the StackInterpreter e.g. for sendInvokeCallbackContext:"
+]
+
 { #category : #'plugin primitive support' }
 StackInterpreter >> methodArg: index [
 	"Like #stackValue: but access method arguments left-to-right"
@@ -6681,6 +6709,7 @@ StackInterpreter >> postGCAction: fullGCFlag [
 
 { #category : #'object memory support' }
 StackInterpreter >> preGCAction: fullGCFlag [
+	<asmLabel: false>
 	"Need to write back the frame pointers unless all pages are free (as in snapshot)"
 	stackPage ~= 0 ifTrue:
 		[self externalWriteBackHeadFramePointers]
@@ -6915,17 +6944,23 @@ StackInterpreter >> printActivationNameFor: aMethod receiver: anObject isBlock: 
 		[self print: '[] in '].
 	methClass := self findClassOfMethod: aMethod forReceiver: anObject.
 	methodSel := self findSelectorOfMethod: aMethod forReceiver: anObject.
-	(objectMemory fetchClassOf: anObject) = methClass
-		ifTrue: [self printNameOfClass: methClass count: 5]
-		ifFalse:
-			[self printNameOfClass: (objectMemory fetchClassOf: anObject) count: 5.
-			 self print: '('.
-			 self printNameOfClass: methClass count: 5.
-			 self print: ')'].
+	(objectMemory addressCouldBeOop: anObject)
+		ifTrue:
+			[(objectMemory fetchClassOf: anObject) = methClass
+				ifTrue: [self printNameOfClass: methClass count: 5]
+				ifFalse:
+					[self printNameOfClass: (objectMemory fetchClassOf: anObject) count: 5.
+					 self print: '('.
+					 self printNameOfClass: methClass count: 5.
+					 self print: ')']]
+		ifFalse: [self print: 'INVALID RECEIVER'].
 	self print: '>'.
-	methodSel = objectMemory nilObject
-		ifTrue: [self print: '?']
-		ifFalse: [self printStringOf: methodSel].
+	(objectMemory addressCouldBeOop: methodSel)
+		ifTrue:
+			[methodSel = objectMemory nilObject
+				ifTrue: [self print: '?']
+				ifFalse: [self printStringOf: methodSel]]
+		ifFalse: [self print: 'INVALID SELECTOR'].
 	(methodSel = (objectMemory splObj: SelectorDoesNotUnderstand)
 	and: [(objectMemory addressCouldBeObj: maybeMessage)
 	and: [(objectMemory fetchClassOf: maybeMessage) = (objectMemory splObj: ClassMessage)]]) ifTrue:

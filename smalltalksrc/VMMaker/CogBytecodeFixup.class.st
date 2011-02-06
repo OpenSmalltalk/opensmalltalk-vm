@@ -1,7 +1,5 @@
 "
-I am a fixup for a bytecode in the Cojit.  Currently fixups are for labels only.  To fixup jumps the cogit places fixups in the fixups array at indices that correspond to bytecodes that are the targets of jumps.  When the cogit encounters a bytecode with a fixup it assigns the fixup's target field to the first generated instruction for the bytecode.  Later when AbstractInstruction Jump* instructions attempt to compute their target they follow the indirection throguh the fixup to the actual target.
-
-In C I am a union of a target field and an index field.
+I am a fixup for a bytecode in the Cogit.  Currently fixups are for labels only.  To fixup jumps the cogit places fixups in the fixups array at indices that correspond to bytecodes that are the targets of jumps.  When the cogit encounters a bytecode with a fixup it assigns the fixup's target field to the first generated instruction for the bytecode.  Later when AbstractInstruction Jump* instructions attempt to compute their target they follow the indirection through the fixup to the actual target.
 "
 Class {
 	#name : #CogBytecodeFixup,

@@ -465,6 +465,46 @@ StackToRegisterMappingCogit class >> stackToRegisterMapping [
 	 and merge this status at control-flow joins."
 ]
 
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> addBlockStartAt: bytecodepc numArgs: numArgs numCopied: numCopied span: span [
+	"Add a blockStart for an embedded block.  For a binary tree walk block dispatch
+	 blocks must be compiled in pc/depth-first order but are scanned in breadth-first
+	 order, so do an insertion sort (which of course is really a bubble sort because we
+	 have to move everything higher to make room)."
+	<returnTypeC: #'BlockStart *'>
+	| i blockStart |
+	<var: #blockStart type: #'BlockStart *'>
+	"Transcript ensureCr; nextPutAll: 'addBlockStartAt: '; print: bytecodepc; cr; flush."
+	blockCount > 0
+		ifTrue:
+			[i := blockCount - 1.
+			 [blockStart := self addressOf: (blockStarts at: i).
+			  "check for repeat addition during recompilation due to initialNil miscount."
+			  blockStart startpc = bytecodepc ifTrue:
+				[^blockStart].
+			  blockStart startpc > bytecodepc
+			  and: [i > 0]] whileTrue:
+				[i := i - 1].
+			 blockCount to: i + 1 by: -1 do:
+				[:j|
+				blockStarts at: j put: (blockStarts at: j - 1)].
+			blockStart := self cCode: [self addressOf: (blockStarts at: i + 1)]
+								inSmalltalk: [blockStarts at: i + 1 put: CogBlockStart new]]
+		ifFalse:
+			[blockStart := self cCode: [self addressOf: (blockStarts at: blockCount)]
+								inSmalltalk: [blockStarts at: blockCount put: CogBlockStart new]].
+	
+	blockCount := blockCount + 1.
+	blockStart
+		startpc: bytecodepc;
+		numArgs: numArgs;
+		numCopied: numCopied;
+		numInitialNils: 0;
+		stackCheckLabel: nil;
+		span: span.
+	^blockStart
+]
+
 { #category : #'simulation stack' }
 StackToRegisterMappingCogit >> availableRegister [
 	| liveRegs |
@@ -613,6 +653,53 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 ]
 
 { #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileBlockBodies [
+	<inline: false>
+	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs initialStackPtr initialOpcodeIndex initialAnnotationIndex |
+	<var: #blockStart type: #'BlockStart *'>
+	self assert: blockCount > 0.
+	"scanBlock: in compileBlockEntry: sets both of these appropriately for each block."
+	savedNeedsFrame := needsFrame.
+	savedNumArgs := methodOrBlockNumArgs.
+	inBlock := true.
+	compiledBlocksCount := 0.
+	[compiledBlocksCount < blockCount] whileTrue:
+		[blockStart := self blockStartAt: compiledBlocksCount.
+		 self scanBlock: blockStart.
+		 initialOpcodeIndex := opcodeIndex.
+		 initialAnnotationIndex := annotationIndex.
+		 [self compileBlockEntry: blockStart.
+		  initialStackPtr := simStackPtr.
+		  (result := self compileAbstractInstructionsFrom: blockStart startpc + blockStart numInitialNils
+						through: blockStart startpc + blockStart span - 1) < 0 ifTrue:
+			[^result].
+		  "If the final simStackPtr is less than the initial simStackPtr then scanBlock: over-
+		   estimated the number of initial nils (because it assumed one or more pushNils to
+		   produce an operand were pushNils to initialize temps.  This is very rare, so
+		   compensate by checking, adjusting numInitialNils and recompiling the block body."
+		  initialStackPtr = simStackPtr]
+			whileFalse:
+				[self assert: initialStackPtr > simStackPtr.
+				 blockStart numInitialNils: blockStart numInitialNils + simStackPtr - initialStackPtr.
+				 blockStart fakeHeader dependent: nil.
+				 self reinitializeFixupsFrom: blockStart startpc + blockStart numInitialNils
+					through: blockStart startpc + blockStart span - 1.
+				 self cCode: 'bzero(abstractOpcodes + initialOpcodeIndex,
+									(opcodeIndex - initialOpcodeIndex) * sizeof(AbstractInstruction))'
+					inSmalltalk: [initialOpcodeIndex to: opcodeIndex - 1 do:
+									[:i|
+									abstractOpcodes
+										at: i
+										put: (processor abstractInstructionCompilerClass for: self)]].
+				 opcodeIndex := initialOpcodeIndex.
+				 annotationIndex := initialAnnotationIndex].
+		compiledBlocksCount := compiledBlocksCount + 1].
+	needsFrame := savedNeedsFrame.
+	methodOrBlockNumArgs := savedNumArgs.
+	^0
+]
+
+{ #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileBlockFrameBuild: blockStart [
 	"Build a frame for a block activation.  See CoInterpreter class>>initializeFrameIndices.
 	 Override to push the register receiver and register arguments, if any, and to correctly
@@ -640,8 +727,8 @@ StackToRegisterMappingCogit >> compileBlockFramelessEntry: blockStart [
 	"Make sure ReceiverResultReg holds the receiver, loaded from
 	 the closure, which is what is initially in ReceiverResultReg"
 	<var: #blockStart type: #'BlockStart *'>
-	methodOrBlockNumTemps := blockStart numArgs + blockStart numCopied.
-	self initSimStackForFramelessMethod: blockStart startpc.
+	methodOrBlockNumTemps := blockStart numArgs + blockStart numCopied + blockStart numInitialNils..
+	self initSimStackForFramelessBlock: blockStart startpc.
 	super compileBlockFramelessEntry: blockStart
 ]
 
@@ -654,6 +741,13 @@ StackToRegisterMappingCogit >> compileCogMethod: selector [
 ]
 
 { #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> compileEntireMethod [
+	"Compile the abstract instructions for the entire method, including blocks."
+	regArgsHaveBeenPushed := false.
+	^super compileEntireMethod
+]
+
+{ #category : #'compile abstract instructions' }
 StackToRegisterMappingCogit >> compileFrameBuild [
 	"Build a frame for a CogMethod activation.  See CoInterpreter class>>initializeFrameIndices.
 	 Override to push the register receiver and register arguments, if any."
@@ -663,60 +757,6 @@ StackToRegisterMappingCogit >> compileFrameBuild [
 	self genPushRegisterArgs.
 	super compileFrameBuild.
 	self initSimStackForFramefulMethod: initialPC
-]
-
-{ #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> compileMethod [
-	"Compile the abstract instructions for a method."
-	regArgsHaveBeenPushed := false.
-	^super compileMethod
-]
-
-{ #category : #'compile abstract instructions' }
-StackToRegisterMappingCogit >> compileMethodBody [
-	"Loop over bytecodes, dispatching to the generator for each bytecode, handling fixups in due course."
-	<inline: false>
-	| result compiledBlocksCount blockStart savedNeedsFrame savedNumArgs jumpSkip |
-	<var: #descriptor type: #'BytecodeDescriptor *'>
-	<var: #blockStart type: #'BlockStart *'>
-	<var: #jumpSkip type: #'AbstractInstruction *'>
-	endPC < initialPC ifTrue: [^0]. "quick primitives"
-	blockCount := 0.
-	(result := self compileAbstractInstructionsFrom: initialPC through: endPC) < 0 ifTrue:
-		[^result].
-	blockCount = 0 ifTrue:
-		[^0].
-	"scanBlock: in compileBlockEntry: sets both of these apropriately for each block."
-	savedNeedsFrame := needsFrame.
-	savedNumArgs := methodOrBlockNumArgs.
-	inBlock := true.
-	compiledBlocksCount := 0.
-	[compiledBlocksCount < blockCount] whileTrue:
-		[blockStart := self blockStartAt: compiledBlocksCount.
-		 self compileBlockEntry: blockStart.
-		 (result := self compileAbstractInstructionsFrom: blockStart startpc + blockStart numInitialNils
-						through: blockStart startpc + blockStart span - 1) < 0 ifTrue:
-			[^result].
-		 compiledBlocksCount := compiledBlocksCount + 1].
-	needsFrame := savedNeedsFrame.
-	methodOrBlockNumArgs := savedNumArgs.
-	"Generate the special block entry for primitiveClosureValueNoContextSwitch
-	 that signals a context-switch is not possible by zeroing SendNumArgsReg.
-	 Even though conceptually this isn't needed if no blocks build a frame it has
-	 to be present so that primitiveClosureValueNoContextSwitch can call it."
-	blockEntryNoContextSwitch := self MoveCq: 0 R: SendNumArgsReg.
-	"Now generate a binary search through start pcs to jump to blocks. 1 block is a special case."
-	jumpSkip := self Jump: 0.
-	"Set OK to context switch flag to non-zero."
-	blockEntryLabel := self MoveR: ReceiverResultReg R: SendNumArgsReg.
-	jumpSkip jmpTarget: self Label.
-	blockCount > 1 ifTrue:
-		[objectRepresentation
-			genLoadSlot: ClosureStartPCIndex
-			sourceReg: ReceiverResultReg
-			destReg: TempReg].
-	self compileBlockDispatchFrom: 0 to: blockCount - 1.
-	^result
 ]
 
 { #category : #'in-line cacheing' }
@@ -822,6 +862,45 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 StackToRegisterMappingCogit >> debugStackPointerFor: bcpc [
 	<doNotGenerate>
 	^(debugStackPointers at: bcpc) - (needsFrame ifTrue: [1] ifFalse: [0])
+]
+
+{ #category : #'bytecode generators' }
+StackToRegisterMappingCogit >> doubleExtendedDoAnythingBytecode [
+	"Replaces the Blue Book double-extended send [132], in which the first byte was wasted on 8 bits of argument count. 
+	Here we use 3 bits for the operation sub-type (opType),  and the remaining 5 bits for argument count where needed. 
+	The last byte give access to 256 instVars or literals. 
+	See also secondExtendedSendBytecode"
+	| opType |
+	opType := byte1 >> 5.
+	opType = 0 ifTrue:
+		[^self genSend: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: (byte1 bitAnd: 31)].
+	opType = 1 ifTrue:
+		[^self genSendSuper: (coInterpreter literal: byte2 ofMethod: methodObj) numArgs: (byte1 bitAnd: 31)].
+	"We need a map entry for this bytecode for correct parsing.
+	 The sends will get an IsSend entry anyway.  The other cases need a
+	 fake one.  We could of course special case the scanning but that's silly."
+	opType caseOf: {
+			[2]	->	[byte2 <= StackPointerIndex
+						ifTrue: [self genPushMaybeContextReceiverVariable: byte2]
+						ifFalse: [self genPushReceiverVariable: byte2.
+								self ssTop annotateUse: true.
+								^0]].
+			[3]	->	[self genPushLiteralIndex: byte2.
+					 self ssTop annotateUse: true.
+					 ^0].
+			[4]	->	[self genPushLiteralVariable: byte2.].
+			[7]	->	[self genStorePop: false LiteralVariable: byte2] }
+		otherwise: "5 & 6"
+			[byte2 <= StackPointerIndex
+				ifTrue: [self genStorePop: opType = 6 MaybeContextReceiverVariable: byte2]
+				ifFalse: [self genStorePop: opType = 6 ReceiverVariable: byte2]].
+	"We need a map entry for this bytecode for correct parsing (if the method builds a frame).
+	 We could of course special case the scanning but that's silly (or is it?)."
+	self assert: needsFrame.
+	"genPushMaybeContextInstVar, pushListVar, store & storePop all generate code"
+	self assert: self prevInstIsPCAnnotated not.
+	self annotateBytecode: self Label.
+	^0
 ]
 
 { #category : #'bytecode generators' }
@@ -1064,18 +1143,29 @@ StackToRegisterMappingCogit >> genJumpBackTo: targetBytecodePC [
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genJumpIf: boolean to: targetBytecodePC [
 	<inline: false>
-	| desc ok |
+	| desc fixup ok |
 	<var: #desc type: #'CogSimStackEntry *'>
+	<var: #fixup type: #'BytecodeFixup *'>
 	<var: #ok type: #'AbstractInstruction *'>
 	self ssFlushTo: simStackPtr - 1.
 	desc := self ssTop.
 	self ssPop: 1.
 	(desc type == SSConstant
 	 and: [desc constant = objectMemory trueObject or: [desc constant = objectMemory falseObject]]) ifTrue:
-		[self annotateBytecode:
-			(desc constant = boolean
-				ifTrue: [self Jump: (self ensureFixupAt: targetBytecodePC - initialPC)]
-				ifFalse: [self Label]).
+		["Must arrange there's a fixup at the target whether it is jumped to or
+		  not so that the simStackPtr can be kept correct."
+		 fixup := self ensureFixupAt: targetBytecodePC - initialPC.
+		 "Must enter any annotatedConstants into the map"
+		 desc annotateUse ifTrue:
+			[self annotateBytecode: (self prevInstIsPCAnnotated
+											ifTrue: [self Nop]
+											ifFalse: [self Label])].
+		 "Must annotate the bytecode for correct pc mapping."
+		 self annotateBytecode: (desc constant = boolean
+									ifTrue: [self Jump: fixup]
+									ifFalse: [self prevInstIsPCAnnotated
+												ifTrue: [self Nop]
+												ifFalse: [self Label]]).
 		 ^0].
 	desc popToReg: TempReg.
 	"Cunning trick by LPD.  If true and false are contiguous subtract the smaller.
@@ -1908,11 +1998,12 @@ StackToRegisterMappingCogit >> genSmallIntegerComparison: jumpOpcode [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
-	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts jumpContinue |
+	| primDescriptor rcvrIsConst argIsConst rcvrIsInt argIsInt rcvrInt argInt result
+	 jumpNotSmallInts jumpContinue annotateInst instToAnnotate |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
-	<var: #jumpOverflow type: #'AbstractInstruction *'>
 	<var: #jumpContinue type: #'AbstractInstruction *'>
+	<var: #instToAnnotate type: #'AbstractInstruction *'>
 	primDescriptor := self generatorAt: byte0.
 	argIsInt := (argIsConst := self ssTop type = SSConstant)
 				 and: [objectMemory isIntegerObject: (argInt := self ssTop constant)].
@@ -1928,9 +2019,17 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 			[AndRR]	-> [result := rcvrInt bitAnd: argInt].
 			[OrRR]	-> [result := rcvrInt bitOr: argInt] }.
 		(objectMemory isIntegerValue: result) ifTrue:
-			["Must annotate the bytecode for correct pc mapping."
-			self annotateBytecode: self Label.
-			^self ssPop: 2; ssPushConstant: (objectMemory integerObjectOf: result)].
+			["Must enter any annotatedConstants into the map"
+			 (self ssValue: 1) annotateUse ifTrue:
+				[self annotateBytecode: (self prevInstIsPCAnnotated
+											ifTrue: [self Nop]
+											ifFalse: [self Label])].
+			 self ssTop annotateUse ifTrue:
+				[self annotateBytecode: (self prevInstIsPCAnnotated
+											ifTrue: [self Nop]
+											ifFalse: [self Label])].
+			 "Must annotate the bytecode for correct pc mapping."
+			^self ssPop: 2; ssPushAnnotatedConstant: (objectMemory integerObjectOf: result)].
 		^self genSpecialSelectorSend].
 
 	"If there's any constant involved other than a SmallInteger don't attempt to inline."
@@ -1947,6 +2046,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 		ifTrue:
 			[self ssFlushTo: simStackPtr - 2.
 			 (self ssValue: 1) popToReg: ReceiverResultReg.
+			 annotateInst := self ssTop annotateUse.
 			 self ssPop: 2.
 			 self MoveR: ReceiverResultReg R: TempReg]
 		ifFalse:
@@ -1960,7 +2060,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 	primDescriptor opcode caseOf: {
 		[AddRR] -> [argIsInt
 						ifTrue:
-							[self AddCq: argInt - ConstZero R: ReceiverResultReg.
+							[instToAnnotate := self AddCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
 							 "overflow; must undo the damage before continuing"
 							 self SubCq: argInt - ConstZero R: ReceiverResultReg]
@@ -1976,7 +2076,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 									 objectRepresentation genSetSmallIntegerTagsIn: ReceiverResultReg]]].
 		[SubRR] -> [argIsInt
 						ifTrue:
-							[self SubCq: argInt - ConstZero R: ReceiverResultReg.
+							[instToAnnotate := self SubCq: argInt - ConstZero R: ReceiverResultReg.
 							 jumpContinue := self JumpNoOverflow: 0.
 							 "overflow; must undo the damage before continuing"
 							 self AddCq: argInt - ConstZero R: ReceiverResultReg]
@@ -1988,16 +2088,17 @@ StackToRegisterMappingCogit >> genSpecialSelectorArithmetic [
 							 self AddR: Arg0Reg R: ReceiverResultReg.
 							 objectRepresentation genSetSmallIntegerTagsIn: Arg0Reg]].
 		[AndRR] -> [argIsInt
-						ifTrue: [self AndCq: argInt R: ReceiverResultReg]
+						ifTrue: [instToAnnotate := self AndCq: argInt R: ReceiverResultReg]
 						ifFalse: [self AndR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := self Jump: 0].
 		[OrRR]	-> [argIsInt
-						ifTrue: [self OrCq: argInt R: ReceiverResultReg]
+						ifTrue: [instToAnnotate := self OrCq: argInt R: ReceiverResultReg]
 						ifFalse: [self OrR: Arg0Reg R: ReceiverResultReg].
 					jumpContinue := self Jump: 0] }.
 	jumpNotSmallInts jmpTarget: self Label.
 	argIsInt ifTrue:
-		[self MoveCq: argInt R: Arg0Reg].
+		[annotateInst ifTrue: [self annotateBytecode: instToAnnotate].
+		 self MoveCq: argInt R: Arg0Reg].
 	self genMarshalledSend: (coInterpreter specialSelector: byte0 - 176) numArgs: 1.
 	jumpContinue jmpTarget: self Label.
 	^0
@@ -2015,7 +2116,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorClass [
 
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genSpecialSelectorComparison [
-	| branchPC postBranchPC targetBytecodePC branchBytecode primDescriptor branchDescriptor rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB |
+	| branchPC postBranchPC targetBytecodePC branchBytecode primDescriptor branchDescriptor
+	  rcvrIsInt argIsInt rcvrInt argInt result jumpNotSmallInts inlineCAB annotateInst |
 	<var: #primDescriptor type: #'BytecodeDescriptor *'>
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpNotSmallInts type: #'AbstractInstruction *'>
@@ -2037,12 +2139,20 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 			[JumpGreaterOrEqual]	-> [result := rcvrInt >= argInt].
 			[JumpZero]				-> [result := rcvrInt = argInt].
 			[JumpNonZero]			-> [result := rcvrInt ~= argInt] }.
+		 "Must enter any annotatedConstants into the map"
+		 (self ssValue: 1) annotateUse ifTrue:
+			[self annotateBytecode: (self prevInstIsPCAnnotated
+											ifTrue: [self Nop]
+											ifFalse: [self Label])].
+		 self ssTop annotateUse ifTrue:
+			[self annotateBytecode: (self prevInstIsPCAnnotated
+											ifTrue: [self Nop]
+											ifFalse: [self Label])].
 		 "Must annotate the bytecode for correct pc mapping."
-		 self annotateBytecode: self Label.
 		 self ssPop: 2.
-		 ^self ssPushConstant: (result
-									ifTrue: [objectMemory trueObject]
-									ifFalse: [objectMemory falseObject])].
+		 ^self ssPushAnnotatedConstant: (result
+											ifTrue: [objectMemory trueObject]
+											ifFalse: [objectMemory falseObject])].
 
 	branchPC := bytecodePointer + primDescriptor numBytes.
 	branchBytecode := objectMemory fetchByte: branchPC ofObject: methodObj.
@@ -2064,6 +2174,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 		ifTrue:
 			[self ssFlushTo: simStackPtr - 2.
 			 (self ssValue: 1) popToReg: ReceiverResultReg.
+			 annotateInst := self ssTop annotateUse.
 			 self ssPop: 2.
 			 self MoveR: ReceiverResultReg R: TempReg]
 		ifFalse:
@@ -2075,7 +2186,9 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 					ifFalse: [self OrR: ReceiverResultReg R: TempReg]]].
 	jumpNotSmallInts := objectRepresentation genJumpNotSmallIntegerInScratchReg: TempReg.
 	argIsInt
-		ifTrue: [self CmpCq: argInt R: ReceiverResultReg]
+		ifTrue: [annotateInst
+					ifTrue: [self annotateBytecode: (self CmpCq: argInt R: ReceiverResultReg)]
+					ifFalse: [self CmpCq: argInt R: ReceiverResultReg]]
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
 	self gen: (branchDescriptor isBranchTrue
 				ifTrue: [primDescriptor opcode]
@@ -2095,6 +2208,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorEqualsEquals [
 	<var: #branchDescriptor type: #'BytecodeDescriptor *'>
 	<var: #jumpEqual type: #'AbstractInstruction *'>
 	<var: #jumpNotEqual type: #'AbstractInstruction *'>
+	self flag: 'rewrite this crap.'.
 	self ssPop: 2.
 	resultReg := self availableRegisterOrNil.
 	resultReg ifNil:
@@ -2171,11 +2285,9 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean LiteralVariable: litVarIn
 	"Avoid store check for immediate values"
 	(self ssTop type = SSConstant
 	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
-		[popBoolean ifTrue:
-			[self ssPop: 1].
-		 self ssAllocateRequiredReg: ReceiverResultReg.
+		[self ssAllocateRequiredReg: ReceiverResultReg.
 		 self annotate: (self MoveCw: association R: ReceiverResultReg) objRef: association.
-		 self MoveCq: constVal R: TempReg.
+		 self ssStorePop: popBoolean toPreferredReg: TempReg.
 		 traceStores > 0 ifTrue:
 			[self CallRT: ceTraceStoreTrampoline].
 		 ^objectRepresentation
@@ -2250,10 +2362,8 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 	constVal := self ssTop maybeConstant.
 	(self ssTop type = SSConstant
 	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
-		[popBoolean ifTrue:
-			[self ssPop: 1].
-		 self ensureReceiverResultRegContainsSelf.
-		 self MoveCq: constVal R: TempReg.
+		[self ensureReceiverResultRegContainsSelf.
+		 self ssStorePop: popBoolean toPreferredReg: TempReg.
 		 traceStores > 0 ifTrue:
 			[self CallRT: ceTraceStoreTrampoline].
 		 ^objectRepresentation
@@ -2293,11 +2403,9 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	constVal := self ssTop maybeConstant.
 	(self ssTop type = SSConstant
 	 and: [(objectRepresentation shouldAnnotateObjectReference: constVal) not]) ifTrue:
-		[popBoolean ifTrue:
-			[self ssPop: 1].
-		 self ssAllocateRequiredReg: ReceiverResultReg.
+		[self ssAllocateRequiredReg: ReceiverResultReg.
 		 self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
-		 self MoveCq: constVal R: TempReg.
+		 self ssStorePop: popBoolean toPreferredReg: TempReg.
 		 traceStores > 0 ifTrue:
 			[self CallRT: ceTraceStoreTrampoline].
 		 ^objectRepresentation
@@ -2527,9 +2635,10 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 	optStatus isReceiverResultRegLive: false.
 	simSelf
 		type: SSBaseOffset;
+		spilled: true;
+		annotateUse: false;
 		register: FPReg;
-		offset: FoxMFReceiver;
-		spilled: true.
+		offset: FoxMFReceiver.
 	simSpillBase := methodOrBlockNumTemps. "N.B. Includes num args"
 	simStackPtr := simSpillBase - 1.
 	"args"
@@ -2538,9 +2647,10 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 		desc := self simStackAt: i.
 		desc
 			type: SSBaseOffset;
+			spilled: true;
+			annotateUse: false;
 			register: FPReg;
 			offset: FoxCallerSavedIP + ((methodOrBlockNumArgs - i) * BytesPerWord);
-			spilled: true;
 			bcptr: startpc].
 	"temps"
 	methodOrBlockNumArgs to: simStackPtr do:
@@ -2548,10 +2658,41 @@ StackToRegisterMappingCogit >> initSimStackForFramefulMethod: startpc [
 		desc := self simStackAt: i.
 		desc
 			type: SSBaseOffset;
+			spilled: true;
+			annotateUse: false;
 			register: FPReg;
 			offset: FoxMFReceiver - (i - methodOrBlockNumArgs + 1 * BytesPerWord);
-			spilled: true;
 			bcptr: startpc]
+]
+
+{ #category : #'simulation stack' }
+StackToRegisterMappingCogit >> initSimStackForFramelessBlock: startpc [
+	"The register receiver (he closure itself) and args are pushed by the closure value primitive(s)
+	 and hence a frameless block has all arguments and copied values pushed to the stack.  However,
+	 the method receiver (self) is put in the ReceiverResultRegister by the block entry."
+	| desc |
+	<var: #desc type: #'CogSimStackEntry *'>
+	simSelf
+		type: SSRegister;
+		spilled: false;
+		annotateUse: false;
+		register: ReceiverResultReg.
+	optStatus
+		isReceiverResultRegLive: true;
+		ssEntry: (self addressOf: simSelf).
+	self assert: methodOrBlockNumTemps >= methodOrBlockNumArgs.
+	self assert: self numRegArgs <= 2.
+	0 to: methodOrBlockNumTemps - 1 do:
+		[:i|
+		desc := self simStackAt: i.
+		desc
+			type: SSBaseOffset;
+			spilled: true;
+			annotateUse: false;
+			register: SPReg;
+			offset: ((methodOrBlockNumTemps - i) * BytesPerWord);
+			bcptr: startpc].
+	simSpillBase := simStackPtr := methodOrBlockNumTemps - 1
 ]
 
 { #category : #'simulation stack' }
@@ -2560,8 +2701,9 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 	<var: #desc type: #'CogSimStackEntry *'>
 	simSelf
 		type: SSRegister;
-		register: ReceiverResultReg;
-		spilled: false.
+		spilled: false;
+		annotateUse: false;
+		register: ReceiverResultReg.
 	optStatus
 		isReceiverResultRegLive: true;
 		ssEntry: (self addressOf: simSelf).
@@ -2572,15 +2714,17 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 			[desc := self simStackAt: 0.
 			 desc
 				type: SSRegister;
-				register: Arg0Reg;
 				spilled: false;
+				annotateUse: false;
+				register: Arg0Reg;
 				bcptr: startpc.
 			 methodOrBlockNumArgs > 1 ifTrue:
 				[desc := self simStackAt: 1.
 				 desc
 					type: SSRegister;
-					register: Arg1Reg;
 					spilled: false;
+					annotateUse: false;
+					register: Arg1Reg;
 					bcptr: startpc]]
 		ifFalse:
 			[0 to: methodOrBlockNumArgs - 1 do:
@@ -2589,8 +2733,9 @@ StackToRegisterMappingCogit >> initSimStackForFramelessMethod: startpc [
 				desc
 					type: SSBaseOffset;
 					register: SPReg;
-					offset: ((methodOrBlockNumArgs - i) * BytesPerWord);
 					spilled: true;
+					annotateUse: false;
+					offset: ((methodOrBlockNumArgs - i) * BytesPerWord);
 					bcptr: startpc]].
 	simSpillBase := simStackPtr := methodOrBlockNumArgs - 1
 ]
@@ -2726,6 +2871,28 @@ StackToRegisterMappingCogit >> picAbortTrampolineFor: numArgs [
 	^picAbortTrampolines at: (numArgs min: self numRegArgs + 1)
 ]
 
+{ #category : #testing }
+StackToRegisterMappingCogit >> prevInstIsPCAnnotated [
+	| annotation prevIndex prevInst |
+	<var: #annotation type: #'InstructionAnnotation *'>
+	<var: #prevInst type: #'AbstractInstruction *'>
+	annotationIndex > 0 ifFalse:
+		[^false].
+	annotation := self addressOf: (annotations at: annotationIndex - 1).
+	(annotation annotation = IsSendCall
+	or: [annotation annotation = HasBytecodePC]) ifFalse:
+		[^false].
+	prevIndex := opcodeIndex - 1.
+	[prevIndex <= 0 ifTrue: [^false].
+	 prevInst := self abstractInstructionAt: prevIndex.
+	 annotation instruction = prevInst ifTrue:
+		[^true].
+	 prevInst opcode = Label]
+		whileTrue:
+			[prevIndex := prevIndex - 1].
+	^false
+]
+
 { #category : #'simulation only' }
 StackToRegisterMappingCogit >> printSimStack [
 	<doNotGenerate>
@@ -2763,6 +2930,31 @@ StackToRegisterMappingCogit >> registerMaskFor: reg1 and: reg2 and: reg3 [
 	^((1 bitShift: 1 - reg1) bitOr: (1 bitShift: 1 - reg2)) bitOr: (1 bitShift: 1 - reg3)
 ]
 
+{ #category : #'compile abstract instructions' }
+StackToRegisterMappingCogit >> reinitializeFixupsFrom: start through: end [
+	"When a block must be recompiled due to overestimating the
+	 numInitialNils fixups must be restored, which means rescannning
+	 since backward branches need their targets initialized."
+	| descriptor pc distance targetPC |
+	<var: #descriptor type: #'BytecodeDescriptor *'>
+	pc := start.
+	[pc <= end] whileTrue:
+		[(self fixupAt: pc - initialPC)
+			targetInstruction: 0;
+			simStackPtr: nil.
+		 byte0 := objectMemory fetchByte: pc ofObject: methodObj.
+		 descriptor := self generatorAt: byte0.
+		 descriptor isBackwardBranch ifTrue:
+			[distance := self spanFor: descriptor at: pc byte0: byte0 in: methodObj.
+			 targetPC := pc + descriptor numBytes + distance.
+			 self initializeFixupAt: targetPC - initialPC].
+		 descriptor isBlockCreation
+			ifTrue:
+				[distance := self spanFor: descriptor at: pc byte0: byte0 in: methodObj.
+				 pc := pc + descriptor numBytes + distance]
+			ifFalse: [pc := pc + descriptor numBytes]]
+]
+
 { #category : #trampolines }
 StackToRegisterMappingCogit >> returnRegForStoreCheck [
 	"We must ensure the ReceiverResultReg is live across the store check so that
@@ -2789,7 +2981,6 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 	end := blockStart startpc + blockStart span.
 	stackDelta := 0.
 	pushingNils := true.
-	blockStart numInitialNils: 0.
 	[pc < end] whileTrue:
 		[byte0 := objectMemory fetchByte: pc ofObject: methodObj.
 		 descriptor := self generatorAt: byte0.
@@ -2799,26 +2990,27 @@ StackToRegisterMappingCogit >> scanBlock: blockStart [
 				ifTrue: [needsFrame := true]
 				ifFalse: [stackDelta := stackDelta + descriptor stackDelta]].
 		 pushingNils ifTrue:
-			["Count the initial number of pushed nils acting as temp initializers.
-			  We can't tell whether an initial pushNil is an operand reference or
-			  a temp initializer, except when the pushNil is a jump target (has a
-			  fixup) in which case it is definitely an operand reference."
+			["Count the initial number of pushed nils acting as temp initializers.  We can't tell
+			  whether an initial pushNil is an operand reference or a temp initializer, except
+			  when the pushNil is a jump target (has a fixup) in which case it is definitely an
+			  operand reference.  So rarely we may end up over-estimating.  We will correct
+			  by checking the stack depth at the end of the block in compileBlockBodies."
 			 (pushingNils := descriptor generator == #genPushConstantNilBytecode asSymbol
 							and: [(self fixupAt: pc - initialPC) targetInstruction = 0]) ifTrue:
 				[self assert: descriptor numBytes = 1. "see compileMethodBody"
 				 blockStart numInitialNils: blockStart numInitialNils + 1]].
 		 pc := self nextBytecodePCFor: descriptor at: pc byte0: byte0 in: methodObj].
+	"It would be nice of this wasn't necessary but alas we need to do the eager
+	 scan for frameless methods so that we don;t end up popping too much off
+	 the simulated stack, e.g. for pushNil; resturnTopFromBlock methods."
 	needsFrame ifFalse:
-		[stackDelta < 0 ifTrue:
-			[self error: 'negative stack delta in block; block contains bogus code or internal error'].
-		 blockStart numInitialNils: 0. "only used/valid in frameful methods."
+		[self assert: stackDelta >= 0.
+		 blockStart numInitialNils: blockStart numInitialNils - stackDelta.
+		 pc := blockStart startpc.
 		 [stackDelta > 0] whileTrue:
-			[descriptor := self generatorAt: (objectMemory fetchByte: blockStart startpc ofObject: methodObj).
-			 descriptor generator ~~ #genPushConstantNilBytecode asSymbol ifTrue:
-				[self error: 'frameless block doesn''t start with enough pushNils'].
-			 blockStart
-				startpc: blockStart startpc + descriptor numBytes;
-				span: blockStart span - descriptor numBytes.
+			[self assert: (self generatorAt: (objectMemory fetchByte: pc ofObject: methodObj)) generator
+						== #genPushConstantNilBytecode asSymbol.
+			 pc := pc + 1.
 			 stackDelta := stackDelta - 1]]
 ]
 
@@ -2990,15 +3182,30 @@ StackToRegisterMappingCogit >> ssPush: n [
 ]
 
 { #category : #'simulation stack' }
+StackToRegisterMappingCogit >> ssPushAnnotatedConstant: literal [
+	self ssPush: 1.
+	simSpillBase > simStackPtr ifTrue:
+		[simSpillBase := simStackPtr max: 0].
+	self ssTop
+		type: SSConstant;
+		annotateUse: true;
+		spilled: false;
+		constant: literal;
+		bcptr: bytecodePointer.
+	^0
+]
+
+{ #category : #'simulation stack' }
 StackToRegisterMappingCogit >> ssPushBase: reg offset: offset [
 	self ssPush: 1.
 	simSpillBase > simStackPtr ifTrue:
 		[simSpillBase := simStackPtr max: 0].
 	self ssTop
 		type: SSBaseOffset;
+		spilled: false;
+		annotateUse: false;
 		register: reg;
 		offset: offset;
-		spilled: false;
 		bcptr: bytecodePointer.
 	^0
 ]
@@ -3010,8 +3217,9 @@ StackToRegisterMappingCogit >> ssPushConstant: literal [
 		[simSpillBase := simStackPtr max: 0].
 	self ssTop
 		type: SSConstant;
-		constant: literal;
 		spilled: false;
+		annotateUse: false;
+		constant: literal;
 		bcptr: bytecodePointer.
 	^0
 ]
@@ -3024,6 +3232,7 @@ StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
 				[simStackEntry type: SSBaseOffset].
 			simStackEntry
 				spilled: false;
+				annotateUse: false;
 				bcptr: bytecodePointer.
 			 simStack
 				at: (simStackPtr := simStackPtr + 1)
@@ -3035,6 +3244,7 @@ StackToRegisterMappingCogit >> ssPushDesc: simStackEntry [
 						ifTrue: [SSBaseOffset]
 						ifFalse: [simStackEntry type]);
 				spilled: false;
+				annotateUse: false;
 				bcptr: bytecodePointer].
 	simSpillBase > simStackPtr ifTrue:
 		[simSpillBase := simStackPtr max: 0].
@@ -3048,8 +3258,9 @@ StackToRegisterMappingCogit >> ssPushRegister: reg [
 		[simSpillBase := simStackPtr max: 0].
 	self ssTop
 		type: SSRegister;
-		register: reg;
 		spilled: false;
+		annotateUse: false;
+		register: reg;
 		bcptr: bytecodePointer.
 	^0
 ]
@@ -3063,11 +3274,13 @@ StackToRegisterMappingCogit >> ssStorePop: popBoolean toPreferredReg: preferredR
 	actualReg := preferredReg.
 	popBoolean
 		ifTrue: [(self ssTop type = SSRegister and: [self ssTop spilled not])
-					ifTrue: [actualReg := self ssTop register]
+					ifTrue: [self assert: self ssTop annotateUse not.
+							actualReg := self ssTop register]
 					ifFalse: [self ssTop popToReg: preferredReg].
 				self ssPop: 1]
 		ifFalse: [self ssTop type = SSRegister
-					ifTrue: [actualReg := self ssTop register]
+					ifTrue: [self assert: self ssTop annotateUse not.
+							actualReg := self ssTop register]
 					ifFalse: [self ssTop storeToReg: preferredReg]].
 	^actualReg
 ]
