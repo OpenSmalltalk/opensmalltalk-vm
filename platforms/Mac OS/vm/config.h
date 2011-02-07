@@ -172,7 +172,6 @@
 
 /* other configured variables */
 
-#define SQ_VERSION "4.0-2334"
 #define VM_VERSION "4.0"
 #define VM_MODULE_PREFIX ""
 /* #undef VM_DLSYM_PREFIX */

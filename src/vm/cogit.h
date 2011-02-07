@@ -10,7 +10,12 @@ sqInt bytecodePCForstartBcpcin(sqInt mcpc, sqInt startbcpc, CogBlockMethod *cogM
 sqInt canLinkToYoungClasses(void);
 extern void (*ceCaptureCStackPointers)();
 sqInt ceCPICMissreceiver(CogMethod *cPIC, sqInt receiver);
+extern void (*ceEnter0ArgsPIC)();
+extern void (*ceEnter1ArgsPIC)();
+extern void (*ceEnter2ArgsPIC)();
 extern void (*ceEnterCogCodePopReceiverAndClassRegs)();
+extern void (*ceEnterCogCodePopReceiverArg0Regs)();
+extern void (*ceEnterCogCodePopReceiverArg1Arg0Regs)();
 extern void (*ceEnterCogCodePopReceiverReg)();
 sqInt ceSICMiss(sqInt receiver);
 void checkAssertsEnabledInCogit(void);
@@ -24,6 +29,8 @@ CogMethod * cogselector(sqInt aMethodObj, sqInt aSelectorOop);
 void compactCogCompiledCode(void);
 void enterCogCodePopReceiver(void);
 void enterCogCodePopReceiverAndClassRegs(void);
+void enterCogCodePopReceiverArg0Regs(void);
+void enterCogCodePopReceiverArg1Arg0Regs(void);
 CogBlockMethod * findEnclosingMethodForinHomeMethod(sqInt mcpc, CogMethod *cogMethod);
 CogBlockMethod * findMethodForStartBcpcinHomeMethod(sqInt startbcpc, CogMethod *cogMethod);
 sqInt genQuickReturnConst(void);
@@ -74,7 +81,12 @@ sqInt ceBaseFrameReturnTrampoline;
 sqInt ceCannotResumeTrampoline;
 void (*ceCaptureCStackPointers)(void);
 sqInt ceCheckForInterruptTrampoline;
+void (*ceEnter0ArgsPIC)(void);
+void (*ceEnter1ArgsPIC)(void);
+void (*ceEnter2ArgsPIC)(void);
 void (*ceEnterCogCodePopReceiverAndClassRegs)(void);
+void (*ceEnterCogCodePopReceiverArg0Regs)(void);
+void (*ceEnterCogCodePopReceiverArg1Arg0Regs)(void);
 void (*ceEnterCogCodePopReceiverReg)(void);
 unsigned long (*ceGetSP)(void);
 sqInt ceReturnToInterpreterTrampoline;
@@ -85,6 +97,8 @@ sqInt cmEntryOffset;
 sqInt cmNoCheckEntryOffset;
 unsigned long debugPrimCallStackOffset;
 void (*realCEEnterCogCodePopReceiverAndClassRegs)(void);
+void (*realCEEnterCogCodePopReceiverArg0Regs)(void);
+void (*realCEEnterCogCodePopReceiverArg1Arg0Regs)(void);
 void (*realCEEnterCogCodePopReceiverReg)(void);
 int traceLinkedSends ;
 sqInt traceStores;
@@ -99,7 +113,7 @@ sqInt traceStores;
 #define getCStackPointer() CStackPointer
 #define noCheckEntryOffset() cmNoCheckEntryOffset
 #define noContextSwitchBlockEntryOffset() blockNoContextSwitchOffset
-#define numRegArgs() 0
+#define numRegArgs() 1
 #define printOnTrace() (traceLinkedSends & 8)
 #define recordEventTrace() (traceLinkedSends & 4)
 #define recordPrimTrace() (traceLinkedSends & 2)
