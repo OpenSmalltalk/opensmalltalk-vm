@@ -30,7 +30,10 @@ CUnixConfig >> addDriver: name sources: aSources generator: cmakeGen [
 			set: #sources to: srcs;
 			cmd: 'add_library' params: name, ' SHARED ${sources}'; 
 			includeDirectories: '${crossDir}/plugins/FilePlugin';
-	 		cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
+			includeDirectories: '${targetPlatform}/plugins/B3DAcceleratorPlugin';
+			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
+			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir;
+			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
 			LINK_FLAGS "-lSM -lICE -ldl -lpthread -lm -lnsl -lX11"'
 	].
 	
@@ -193,6 +196,14 @@ CUnixConfig >> frameworks [
 	^ #()
 ]
 
+{ #category : #directories }
+CUnixConfig >> outputDir [
+
+	"the directory where built binaries will be stored"
+	
+	^ self buildDir fullName , '/results'
+]
+
 { #category : #'as yet unclassified' }
 CUnixConfig >> platformName [
 	^ 'unix'
@@ -209,5 +220,6 @@ CUnixConfig >> setExtraTargetProperties: maker [
 			'pthread' "posix threads" 
 		).
 		
+	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 	self addVMDrivers: maker.
 ]
