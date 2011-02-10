@@ -257,7 +257,7 @@ Gofer new
 	load.
 	
 ((Smalltalk at: #ConfigurationOfCog) project
-	version: '1.2') load.
+	version: '1.3') load.
 	
 Gofer new
 	squeaksource: 'VMMaker';
