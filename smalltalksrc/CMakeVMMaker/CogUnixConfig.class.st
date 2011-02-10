@@ -1,15 +1,18 @@
 "
-Defines used:
+Base configuration for building Cog VM on Unix platform(s).
 
-HAVE_MMAP  (how else Cog are supposed to work?)
+Usage: 
+CogUnixConfig generateWithSources
+or
+CogUnixConfig generate   ""if VMMaker sources already there""
 "
 Class {
 	#name : #CogUnixConfig,
 	#superclass : #CUnixConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-Unix-Cog'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 CogUnixConfig >> commonCompilerFlags [
 
 	"Common compiler flags"
@@ -18,13 +21,21 @@ CogUnixConfig >> commonCompilerFlags [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 CogUnixConfig >> compilerFlags [
 	"depends on config ..."
 	^ self compilerFlagsRelease
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
+CogUnixConfig >> compilerFlagsDebug [
+
+	^ '-g3 -O1 -msse2 -D_GNU_SOURCE -DDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1'
+
+
+]
+
+{ #category : #'compiler flags' }
 CogUnixConfig >> compilerFlagsRelease [
 
 	^ '-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 
@@ -33,7 +44,7 @@ CogUnixConfig >> compilerFlagsRelease [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'headers generation' }
 CogUnixConfig >> configH [
 	" right now its like  that "
 	^ '
@@ -239,7 +250,7 @@ CogUnixConfig >> defaultInternalPlugins [
 		)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 CogUnixConfig >> executableName [
 	^ 'Cog'
 ]
@@ -252,7 +263,7 @@ CogUnixConfig >> extraSources [
 	'version.c'
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'headers generation' }
 CogUnixConfig >> generateConfigH [
 	"will fix that later"
 	self write: self configH toFile: 'config.h'
@@ -304,7 +315,7 @@ CogUnixConfig >> preferredIncludes [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #utils }
 CogUnixConfig >> setExtraTargetProperties: maker [
 
 	
