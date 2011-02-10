@@ -264,6 +264,20 @@ CogUnixConfig >> generateSourceFiles [
 	^ CMakeGenScripts generateCogSources: self
 ]
 
+{ #category : #'source generation' }
+CogUnixConfig >> generateStackSources [
+	" generate sources for Stack Interpreter"
+
+	VMMaker
+		generate: StackInterpreter
+		to: self srcDir fullName
+		platformDir: self platformsDir fullName
+		excluding: #(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
+			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
+			
+
+]
+
 { #category : #sources }
 CogUnixConfig >> platformSources [
 	"files added from platform/unix/vm dir "
