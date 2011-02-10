@@ -34,7 +34,7 @@ CUnixConfig >> addDriver: name sources: aSources generator: cmakeGen [
 			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
 			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir;
 			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
-			LINK_FLAGS "-lSM -lICE -ldl -lpthread -lm -lnsl -lX11"'
+			LINK_FLAGS "-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11"'
 	].
 	
 		
