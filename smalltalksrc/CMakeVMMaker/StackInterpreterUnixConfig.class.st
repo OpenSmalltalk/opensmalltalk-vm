@@ -1,7 +1,11 @@
+"
+Usage: 
+StackInterpreterUnixConfig generateWithSources
+"
 Class {
 	#name : #StackInterpreterUnixConfig,
 	#superclass : #CogUnixConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-Unix-Cog'
 }
 
 { #category : #'as yet unclassified' }

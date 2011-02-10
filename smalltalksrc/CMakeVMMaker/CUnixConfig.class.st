@@ -8,7 +8,7 @@ For ALSA sound driver you need to install a
 Class {
 	#name : #CUnixConfig,
 	#superclass : #CPlatformConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-Unix'
 }
 
 { #category : #utils }

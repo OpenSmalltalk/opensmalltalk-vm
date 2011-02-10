@@ -1,6 +1,11 @@
 "
 Base class, defining some common properties and behavior for all kinds of VM build configurations.
 
+To generate a sources/build configuration use one of my subclasses with:
+<config> generate.   - to generate a build configuration
+<config> generateWithSources - to generate VMMaker sources and then build configuration.
+
+
 Since some plugins require extra settings (like additional source files etc), there is two ways to add that:
 
 - add custom rules on plugin class side:
