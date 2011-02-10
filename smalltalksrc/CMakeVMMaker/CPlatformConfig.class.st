@@ -514,7 +514,9 @@ CPlatformConfig >> platformSources [
 
 { #category : #accessing }
 CPlatformConfig >> platformsDir [
-	^ platformsDir
+	"by default , answer the {topdir}/platforms subdir"
+
+	^ platformsDir ifNil: [ platformsDir := self topDir / 'platforms' ]
 ]
 
 { #category : #accessing }
@@ -558,7 +560,7 @@ CPlatformConfig >> setupDirectories: gen [
 		gen
 			set: #topDir toString: (self topDir fullName); 
 			set: #buildDir toString: (buildDir ifNil: ['${topDir}/build']);
-			set: #platformsDir toString: (platformsDir ifNil: ['${topDir}/platforms']);
+			set: #platformsDir toString: self platformsDir fullName;
 			set: #srcDir toString: self srcDir fullName;
 			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
 			set: #srcVMDir toString: '${srcDir}/vm';
