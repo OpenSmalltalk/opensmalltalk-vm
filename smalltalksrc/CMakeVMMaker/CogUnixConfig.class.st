@@ -15,16 +15,22 @@ Class {
 { #category : #'compiler flags' }
 CogUnixConfig >> commonCompilerFlags [
 
-	"Common compiler flags"
+	"Common compiler flags
 	
-	^ ' -fmessage-length=0 -Wno-trigraphs -DCOGMTVM=0 -DUSE_GLOBAL_STRUCT=0 -DTARGET_API_MAC_CARBON -DHAVE_SYS_TIME_H'	
+	
+	LSB_FIRST=1 means that target platform is little endian. 
+	set it to 0 for big-endian platforms
+	
+	"
+	
+	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0'	
 	
 ]
 
 { #category : #'compiler flags' }
 CogUnixConfig >> compilerFlags [
 	"depends on config ..."
-	^ self compilerFlagsRelease
+	^ self commonCompilerFlags, ' ' ,self compilerFlagsRelease
 ]
 
 { #category : #'compiler flags' }
@@ -279,6 +285,8 @@ CogUnixConfig >> generateSourceFiles [
 CogUnixConfig >> generateStackSources [
 	" generate sources for Stack Interpreter"
 
+	StackInterpreter initialize.
+	
 	VMMaker
 		generate: StackInterpreter
 		to: self srcDir fullName
@@ -319,8 +327,15 @@ CogUnixConfig >> preferredIncludes [
 CogUnixConfig >> setExtraTargetProperties: maker [
 
 	
-	  maker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
+	maker puts: 'set_source_files_properties( ${srcVMDir}/cogit.c PROPERTIES 
 		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -momit-leaf-frame-pointer -mno-rtd -mno-accumulate-outgoing-args")'.
+		
+	
+	maker 
+		cmd: 'set_source_files_properties'
+		params: ' ${targetPlatform}/vm/sqUnixHeartbeat.c PROPERTIES 
+		COMPILE_FLAGS "-O1 -fno-omit-frame-pointer -mno-rtd -mno-accumulate-outgoing-args"'.
+			
 		
 	super setExtraTargetProperties: maker.
 

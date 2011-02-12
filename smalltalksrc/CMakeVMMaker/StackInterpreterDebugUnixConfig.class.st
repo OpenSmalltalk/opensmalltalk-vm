@@ -14,5 +14,5 @@ Class {
 { #category : #'compiler flags' }
 StackInterpreterDebugUnixConfig >> compilerFlags [
 
-	^ self compilerFlagsDebug
+	^  self commonCompilerFlags, ' ' ,self compilerFlagsDebug
 ]

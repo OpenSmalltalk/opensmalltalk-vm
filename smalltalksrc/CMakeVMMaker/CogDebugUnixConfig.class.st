@@ -7,5 +7,5 @@ Class {
 { #category : #'as yet unclassified' }
 CogDebugUnixConfig >> compilerFlags [
 
-	^ self compilerFlagsDebug
+	^  self commonCompilerFlags, ' ' ,self compilerFlagsDebug
 ]
