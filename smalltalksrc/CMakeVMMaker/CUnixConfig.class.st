@@ -75,9 +75,9 @@ vm-display-null
 	vm-sound-null"
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 CUnixConfig >> compilerFlags [
-	^ ''
+	^ self subclassResponsibility
 ]
 
 { #category : #'as yet unclassified' }
