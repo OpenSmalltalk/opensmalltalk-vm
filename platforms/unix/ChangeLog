@@ -1,3 +1,13 @@
+2011-02-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/UUIDPlugin/sqUnixUUID.c (sqUUIDInit): Fail plugin
+	initialisation if using uuid_generate() causes SIGSEGV.
+
+2011-01-29  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/UUIDPlugin/sqUnixUUID.c (MakeUUID): NetBSD and FreeBSD
+	use uuidgen(), others use uuid_generate().
+
 2011-01-27  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* cmake/Plugins.cmake: Append ${plugin}_extra_sources to
@@ -13,7 +23,7 @@
 2011-01-23  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/UUIDPlugin/sqUnixUUID.c (MakeUUID): NetBSD has
-	uuid_generate() not uuidgen().
+	uuidgen() not uuid_generate().
 
 	* vm-display-X11/config.cmake: Use configured variable
 	X11_Xrender_LIB in link libraries list.
