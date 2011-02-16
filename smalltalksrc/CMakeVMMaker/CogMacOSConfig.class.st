@@ -300,6 +300,12 @@ CogMacOSConfig >> frameworks [
 	)
 ]
 
+{ #category : #'source files' }
+CogMacOSConfig >> generateSourceFiles [
+
+	^ CMakeGenScripts generateCogSources: self
+]
+
 { #category : #accessing }
 CogMacOSConfig >> platformName [
 	^ 'Mac OS'
