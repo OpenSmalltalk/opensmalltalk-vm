@@ -490,6 +490,20 @@ CPlatformConfig >> generateSourceFiles [
 	self subclassResponsibility
 ]
 
+{ #category : #'source generation' }
+CPlatformConfig >> generateStackSources [
+	" generate sources for Stack Interpreter"
+
+	StackInterpreter initialize.
+	
+	VMMaker
+		generate: StackInterpreter
+		to: self srcDir fullName
+		platformDir: self platformsDir fullName
+		excluding: #(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
+			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
+]
+
 { #category : #plugins }
 CPlatformConfig >> internalPlugins [
 	^ internalPlugins ifNil: [ internalPlugins := self defaultInternalPlugins ]
