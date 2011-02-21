@@ -17,3 +17,8 @@ StackInterpreterMacOSConfig >> coreSources [
 StackInterpreterMacOSConfig >> executableName [
 	^ 'StackVM'
 ]
+
+{ #category : #'as yet unclassified' }
+StackInterpreterMacOSConfig >> generateSourceFiles [
+	self generateStackSources
+]
