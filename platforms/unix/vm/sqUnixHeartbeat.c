@@ -377,7 +377,7 @@ static int tickCheckInProgress;
 	tickCheckInProgress = 0;
 }
 
-static void
+static void *
 tickerSleepCycle(void *ignored)
 {
 	struct timespec naptime;
@@ -387,6 +387,7 @@ tickerSleepCycle(void *ignored)
 
 	while (1)
 		(void)nanosleep(&naptime, 0);
+	return 0;
 }
 
 /* We require the error check because we're lazy in preventing multiple
