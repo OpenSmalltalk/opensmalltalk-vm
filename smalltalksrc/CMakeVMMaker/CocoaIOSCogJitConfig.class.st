@@ -30,5 +30,7 @@ CocoaIOSCogJitConfig >> pluginsDir [
 
 { #category : #accessing }
 CocoaIOSCogJitConfig >> srcDir [ 
-	^'${topDir}/src'
+	"Answer the value of srcDir"
+
+	^ srcDir ifNil: [ srcDir := self topDir / 'src' ]
 ]
