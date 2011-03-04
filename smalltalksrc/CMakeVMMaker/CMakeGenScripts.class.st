@@ -30,47 +30,6 @@ CMakeGenScripts class >> fileoutLoaderScript [
 ]
 
 { #category : #'sources generation' }
-CMakeGenScripts class >> generateCocoaCogJitVM [
-	"This is copied from Eliot's workspace :)"
-	(VMMaker
-		generate: CoInterpreter
-		to: (FileDirectory default / '../src') fullName
-		platformDir: (FileDirectory default / '../platforms') fullName
-		including: #(UnixOSProcessPlugin)
-		excluding:#(
-			BrokenPlugin 
-			SlangTestPlugin 
-			TestOSAPlugin
-			FFIPlugin 
-			ReentrantARMFFIPlugin 
-			ReentrantFFIPlugin 
-			ReentrantPPCBEFFIPlugin
-			NewsqueakIA32ABIPlugin 
-			NewsqueakIA32ABIPluginAttic 
-			Win32OSProcessPlugin))
-]
-
-{ #category : #'sources generation' }
-CMakeGenScripts class >> generateCocoaCogStackVM [
-	"This is copied from Eliot's workspace :)"
-	 (VMMaker
-		generate: StackInterpreter
-		to: (FileDirectory default / '../stacksrc') fullName
-		platformDir: (FileDirectory default / '../platforms') fullName
-		excluding:#(
-			BrokenPlugin 
-			SlangTestPlugin 
-			TestOSAPlugin
-			FFIPlugin 
-			ReentrantARMFFIPlugin 
-			ReentrantFFIPlugin 
-			ReentrantPPCBEFFIPlugin
-			NewsqueakIA32ABIPlugin 
-			NewsqueakIA32ABIPluginAttic 
-			Win32OSProcessPlugin))
-]
-
-{ #category : #'sources generation' }
 CMakeGenScripts class >> generateCocoaVM [
 	| platformDirectoryName |
 
