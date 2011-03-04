@@ -23,5 +23,7 @@ CocoaIOSCogStackConfig >> pluginsDir [
 
 { #category : #accessing }
 CocoaIOSCogStackConfig >> srcDir [ 
-	^'${topDir}/stacksrc'
+	"Answer the value of srcDir"
+
+	^ srcDir ifNil: [ srcDir := self topDir / 'stacksrc' ]
 ]
