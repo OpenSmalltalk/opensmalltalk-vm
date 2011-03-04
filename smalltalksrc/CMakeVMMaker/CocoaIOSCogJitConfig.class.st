@@ -17,6 +17,12 @@ CocoaIOSCogJitConfig >> coreSources [
 		)
 ]
 
+{ #category : #'source files' }
+CocoaIOSCogJitConfig >> generateSourceFiles [
+
+	^ CMakeGenScripts generateCogSources: self
+]
+
 { #category : #accessing }
 CocoaIOSCogJitConfig >> pluginsDir [ 
 	^'${topDir}/src/plugins'
