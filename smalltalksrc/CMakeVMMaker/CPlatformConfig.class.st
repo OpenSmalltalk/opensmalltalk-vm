@@ -483,6 +483,11 @@ CPlatformConfig >> frameworks [
 	^ #()
 ]
 
+{ #category : #public }
+CPlatformConfig >> generate [
+	^ CMakeVMGenerator generate: self 
+]
+
 { #category : #'source generation' }
 CPlatformConfig >> generateSourceFiles [
 	" generate all interpreter source files and put them in to sources dir (srcDir ) "
