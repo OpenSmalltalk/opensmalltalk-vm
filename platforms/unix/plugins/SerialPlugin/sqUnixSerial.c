@@ -1,6 +1,6 @@
 /* sqUnixSerial.c -- Unix serial support
  * 
- * Last edited: 2009-09-18 18:32:58 by piumarta on emilia-2.local
+ * Last edited: 2011-03-14 14:01:56 by piumarta on emilia.ipe.media.kyoto-u.ac.jp
  */
 
 #include "sq.h"
@@ -197,7 +197,9 @@ int serialPortCloseByName(const char *portName)
       return -1;
     }
 
-  sp->spName[0]= '\0';
+  /* Invalidate descriptor but leave name entry. If file will be reopened
+   * the same entry will be used. */
+  sp->spDescriptor= -1;
 
   success(true);
   return 0;
@@ -215,6 +217,23 @@ int serialPortOpen(int portNum, int dataRate, int stopBitsType, int parityType, 
 			      inFlowCtrl, outFlowCtrl, xOnChar, xOffChar);
 }
 
+/* If anything goes wrong during opening make sure the file descriptor
+ * is closed again, if it was opened already. */
+static int portOpenFailed(serial_port_type *sp)
+{
+  if (sp && 0 <= sp->spDescriptor)
+    {
+      if (close(sp->spDescriptor))
+	{
+	  fprintf(stderr, "Error while closing the com port (errno:%d)\n", errno);
+	}
+      sp->spDescriptor= -1;
+    }
+
+  success(false);
+  return -1;
+}
+
 /* Open the given serial port using the given node as serial port. The
  * data rate can be any number that is in the table above; the driver
  * is not as flexible about the speed as the Mac driver, apparently.
@@ -223,12 +242,20 @@ int serialPortOpen(int portNum, int dataRate, int stopBitsType, int parityType, 
 int serialPortOpenByName(char *portName, int dataRate, int stopBitsType, int parityType, int dataBits,
 			 int inFlowCtrl, int outFlowCtrl, int xOnChar, int xOffChar)
 {
+  int newPort= false;
   serial_port_type *sp= find_stored_serialport(portName);
   if (!sp)
     {
+      if (sp_count >= MAX_SERIAL_PORTS)
+	{
+	  fprintf( stderr, "Error: maximum serial ports (%d) used.", MAX_SERIAL_PORTS);
+	  success( false);
+	  return -1;
+	}
       sp= &previousSerialFiles[sp_count];
       /* save the serial port name */
       strcpy(sp->spName, portName);
+      newPort= true;
     }
   else if (sp->spDescriptor >= 0)
     {
@@ -251,24 +278,21 @@ int serialPortOpenByName(char *portName, int dataRate, int stopBitsType, int par
 		 || xOffChar < 0 || xOffChar > 255 )))
       {
 	fprintf(stderr, "Incorrect serial port parameters.\n");
-	success(false);
-	return -1;
+	return portOpenFailed(sp);
       }
 
     /* open the device and save the file descriptor */
     if ((sp->spDescriptor= open(portName, O_RDWR|O_NONBLOCK|O_NOCTTY)) < 0)
       {
 	fprintf(stderr, "Error while opening the serial port (%s).\n", portName);
-	success(false);
-	return -1;
+	return portOpenFailed(sp);
       }
 
     /* save the old state */
     if (tcgetattr(sp->spDescriptor, &sp->spTermios))
       {
 	fprintf(stderr, "Error while saving old state.\n");
-	success(false);
-	return -1;
+	return portOpenFailed(sp);
       }
 
     /* set up the new modes */
@@ -309,18 +333,21 @@ int serialPortOpenByName(char *portName, int dataRate, int stopBitsType, int par
     if (inFlowCtrl == 2 || outFlowCtrl == 2)
       {
 	fprintf(stderr, "CRTSCTS not supported.\n");
-	success(false);
-	return -1;
+	return portOpenFailed(sp);
       }
 #  endif
 
     if (tcsetattr(sp->spDescriptor, TCSANOW, &flags))	/* set it NOW */
       {
-	success(false);
-	return -1;
+	fprintf(stderr, "Error while setting terminal attributes.\n");
+	return portOpenFailed(sp);
       }
 
-    ++sp_count;
+    if (newPort)
+      {
+	++sp_count;
+      }
+
     /* sorts the table of serial port, to ensure a reliable later retrieval. */
     qsort(previousSerialFiles, sp_count, sizeof (serial_port_type), (int(*)(const void *, const void *))serial_port_cmp);
   }

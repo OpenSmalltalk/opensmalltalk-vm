@@ -1,3 +1,9 @@
+2011-03-14  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
+
+	* plugins/SerialPlugin/sqUnixSerial.c (portOpenFailed): Ensure
+	descriptor closed properly if failure during port initialisation.
+	Never allow more than MAX_SERIAL_PORTS to be open at once.
+
 2011-02-16  Ian Piumarta  <com -dot- gmail -at- piumarta (backwards)>
 
 	* plugins/UUIDPlugin/sqUnixUUID.c (sqUUIDInit): Fail plugin
