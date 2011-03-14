@@ -16,6 +16,12 @@ CocoaIOSCogStackConfig >> coreSources [
 		)
 ]
 
+{ #category : #'source generation' }
+CocoaIOSCogStackConfig >> generateSourceFiles [
+
+	self generateStackSources
+]
+
 { #category : #accessing }
 CocoaIOSCogStackConfig >> pluginsDir [ 
 	^'${topDir}/stacksrc/plugins'
