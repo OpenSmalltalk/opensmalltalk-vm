@@ -213,7 +213,9 @@ CocoaIOSConfig >> executableType [
 { #category : #'plugin extra rules' }
 CocoaIOSConfig >> extraPluginSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
-	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'
+	maker addXCodeProperty: 'GCC_VERSION' value: '4.2'.
+	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
+	
 
 ]
 
