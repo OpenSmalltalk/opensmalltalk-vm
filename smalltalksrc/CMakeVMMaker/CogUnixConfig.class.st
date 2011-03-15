@@ -196,6 +196,11 @@ CogUnixConfig >> configH [
 # include "glibc.h"
 #endif
 
+
+/* used by UUID plugin: */
+
+#define HAVE_UUID_H 1
+
 #endif /* __sq_config_h */
 																																																																					
 																																																																				'
@@ -213,7 +218,12 @@ CogUnixConfig >> coreSources [
 
 { #category : #plugins }
 CogUnixConfig >> defaultExternalPlugins [
-	^ #()
+	^ #(
+		B3DAcceleratorPlugin
+		ReentrantIA32FFIPlugin "SqueakFFIPrims"
+		UUIDPlugin
+		"UnixOSProcessPlugin ?? "	
+	)
 ]
 
 { #category : #plugins }
@@ -277,7 +287,11 @@ CogUnixConfig >> generateConfigH [
 
 { #category : #'source generation' }
 CogUnixConfig >> generateSourceFiles [
-
+	"force fucking file stream to use right line ending on unix "
+	
+	CrLfFileStream defaultToLF.
+	
+	
 	^ CMakeGenScripts generateCogSources: self
 ]
 
@@ -285,8 +299,9 @@ CogUnixConfig >> generateSourceFiles [
 CogUnixConfig >> generateStackSources [
 	" generate sources for Stack Interpreter"
 
+	CrLfFileStream defaultToLF.	
+
 	StackInterpreter initialize.
-	
 	VMMaker
 		generate: StackInterpreter
 		to: self srcDir fullName
