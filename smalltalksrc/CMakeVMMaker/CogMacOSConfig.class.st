@@ -125,17 +125,6 @@ CogMacOSConfig >> configureHostWindowPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CogMacOSConfig >> configureReentrantIA32FFIPlugin: maker [
-	"extra rules for ReentrantIA32FFIPlugin"
-	
-	maker addCrossSources: #(
-		'sqFFIPlugin.c' 'sqFFITestFuncs.c' 'sqManualSurface.c'
-	).
-
-
-]
-
-{ #category : #'plugin extra rules' }
 CogMacOSConfig >> configureSoundPlugin: maker [ 
 	"extra rules for SoundPlugin"
 

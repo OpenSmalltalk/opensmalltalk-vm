@@ -329,6 +329,17 @@ CPlatformConfig >> configureRePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CPlatformConfig >> configureReentrantIA32FFIPlugin: maker [
+	"extra rules for ReentrantIA32FFIPlugin"
+	
+	maker addCrossSources: #(
+		'sqFFIPlugin.c' 'sqFFITestFuncs.c' 'sqManualSurface.c'
+	).
+
+
+]
+
+{ #category : #'plugin extra rules' }
 CPlatformConfig >> configureSecurityPlugin: maker [ 
 	"extra rules for SecurityPlugin"
 
