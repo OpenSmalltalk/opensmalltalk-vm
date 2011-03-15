@@ -1,8 +1,15 @@
 "
 For ALSA sound driver you need to install a 
+
  - libasound2
  - libasound2-dev
+
+For UUID you might also need: 
+
+- uuid-dev
  packages  
+
+
 
 "
 Class {
@@ -166,6 +173,32 @@ CUnixConfig >> configureSoundPlugin: maker [
 	"extra rules for SoundPlugin"
 	
 	maker addPlatformSources: #( 'sqUnixSound')
+]
+
+{ #category : #'plugin extra rules' }
+CUnixConfig >> configureUUIDPlugin: maker [ 
+	"extra rules for UUIDPlugin"
+
+	super configureUUIDPlugin: maker.    
+	
+	maker includeDirectories: '/usr/include/uuid'.
+	
+	maker addPlatformSources:
+		#( 'sqUnixUUID.c')
+
+
+
+]
+
+{ #category : #'plugin extra rules' }
+CUnixConfig >> extraPluginSettings: maker [
+
+
+	maker isExternal ifTrue: [
+		"copy result to results dir "
+		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir
+
+	]
 ]
 
 { #category : #'as yet unclassified' }

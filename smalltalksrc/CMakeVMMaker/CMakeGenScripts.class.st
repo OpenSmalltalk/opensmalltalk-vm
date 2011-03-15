@@ -217,11 +217,11 @@ Gofer new
 	
 ((Smalltalk at: #ConfigurationOfCog) project
 	version: '1.3') load.
+
 	
-Gofer new
-	squeaksource: 'VMMaker';
-	package: 'CMakeVMMaker';
-	load.
+((MCHttpRepository 	location: 'http://www.squeaksource.com/VMMaker' user: '' password: '')
+versionFromFileNamed: 'CMakeVMMaker-EstebanLorenzano.35.mcz') load.
+
 	
 (Smalltalk saveAs: 'generator.image') ifFalse: [
 				 Smalltalk snapshot: false andQuit: true]
