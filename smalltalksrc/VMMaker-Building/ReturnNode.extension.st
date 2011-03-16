@@ -11,3 +11,8 @@ ReturnNode >> asTranslatorNodeIn: aTMethod [
 		setExpression: (expr asTranslatorNodeIn: aTMethod);
 		comment: comment
 ]
+
+{ #category : #'*VMMaker-C translation' }
+ReturnNode >> isReturn [
+	^true
+]

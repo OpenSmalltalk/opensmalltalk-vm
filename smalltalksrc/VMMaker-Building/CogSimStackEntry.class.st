@@ -3,14 +3,14 @@ Class {
 	#superclass : #VMStructType,
 	#instVars : [
 		'cogit',
+		'objectRepresentation',
 		'type',
 		'spilled',
 		'annotateUse',
 		'register',
 		'offset',
 		'constant',
-		'bcptr',
-		'objectRepresentation'
+		'bcptr'
 	],
 	#pools : [
 		'CogCompilationConstants',
@@ -66,8 +66,8 @@ CogSimStackEntry >> bcptr: anObject [
 { #category : #accessing }
 CogSimStackEntry >> cogit [
 	"Answer the value of cogit"
-
-	^ cogit
+	<doNotGenerate>
+	^cogit
 ]
 
 { #category : #'initialize-release' }
@@ -101,6 +101,7 @@ CogSimStackEntry >> ensureSpilledAt: baseOffset from: baseRegister [
 			[self assert: (offset = baseOffset and: [register = baseRegister]).
 			 ^self]].
 	self assert: type ~= SSSpill.
+	cogit traceSpill: self.
 	type = SSConstant
 		ifTrue:
 			[inst := cogit annotate: (cogit PushCw: constant) objRef: constant]

@@ -255,15 +255,6 @@ StackInterpreterSimulator >> commonSend [
 	^super commonSend
 ]
 
-{ #category : #'debug support' }
-StackInterpreterSimulator >> compactClassAt: ccIndex [
-	"Index must be between 1 and compactClassArray size. (A zero compact class index in the base header indicate that the class is in the class header word.)"
-
-	| classArray |
-	classArray := objectMemory fetchPointer: CompactClasses ofObject: objectMemory specialObjectsOop.
-	^ objectMemory fetchPointer: (ccIndex - 1) ofObject: classArray
-]
-
 { #category : #initialization }
 StackInterpreterSimulator >> convertToArray [
 	"I dont believe it -- this *just works*"
@@ -1218,11 +1209,11 @@ StackInterpreterSimulator >> nextShortFrom: aStream swap: swapFlag [
 StackInterpreterSimulator >> objectBefore: addr [
 	| oop prev |
 	oop := objectMemory firstObject.
-	[oop < objectMemory endOfMemory] whileTrue: [
-		prev := oop.  "look here if debugging prev obj overlapping this one"
+	[oop < objectMemory endOfMemory] whileTrue:
+		[prev := oop.  "look here if debugging prev obj overlapping this one"
 		oop := objectMemory objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]
-	]
+		oop >= addr ifTrue: [^ prev]].
+	^0
 ]
 
 { #category : #UI }
@@ -1826,6 +1817,16 @@ StackInterpreterSimulator >> profileSends: nBytecodes [
 		inBlock: [self runForNBytes: nBytecodes]
 		showTree: true.
 	self close
+]
+
+{ #category : #UI }
+StackInterpreterSimulator >> promptHex: string [
+	| s |
+	s := UIManager default request: string, ' (hex)'.
+	^s notEmpty ifTrue:
+		[(s size > 3 and: [s third = $r]) ifTrue:
+			[s := s allButFirst: 3].
+		Integer readFrom: s readStream base: 16]
 ]
 
 { #category : #'bytecode routines' }
@@ -2592,12 +2593,12 @@ StackInterpreterSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print int head frame' action: #printHeadFrame;
 		add: 'short print frame & callers' action: [self shortPrintFrameAndCallers: framePointer];
 		add: 'long print frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
+		add: 'print frame...' target: self action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
+		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
 		add: 'inspect cointerpreter' action: #inspect;
-		addLine;
-		add: 'set break pc...' action: #setBreakPC;
 		addLine;
 		add: 'set break count...' action: #setBreakCount;
 		add: (printSends

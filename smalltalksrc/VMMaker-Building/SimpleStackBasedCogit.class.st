@@ -704,9 +704,9 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:class:"
 	self flag: #lookupInMethodCacheSel:class:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
 	self MoveR: ClassReg R: SendNumArgsReg.
-	self XorCw: selector R: ClassReg.
+	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	self LogicalShiftLeftCq: ShiftForWord R: ClassReg.
-	self AndCq: 	MethodCacheMask << ShiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
 	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
 		r: ClassReg
 		R: TempReg.
@@ -735,9 +735,9 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"First probe missed.  Do second of three probes.  Shift hash right one and retry."
 	jumpSelectorMiss jmpTarget: (jumpClassMiss jmpTarget: self Label).
 	self MoveR: SendNumArgsReg R: ClassReg.
-	self XorCw: selector R: ClassReg.
+	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg.
-	self AndCq: 	MethodCacheMask << ShiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
 	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
 		r: ClassReg
 		R: TempReg.
@@ -752,10 +752,10 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Second probe missed.  Do last probe.  Shift hash right two and retry."
 	jumpSelectorMiss jmpTarget: self Label.
 	self MoveR: SendNumArgsReg R: ClassReg.
-	self XorCw: selector R: ClassReg.
+	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	ShiftForWord > 2 ifTrue:
 		[self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg].
-	self AndCq: 	MethodCacheMask << ShiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
 	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
 		r: ClassReg
 		R: TempReg.

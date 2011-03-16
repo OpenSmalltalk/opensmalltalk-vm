@@ -777,9 +777,9 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Do first of three probes.  See CoInterpreter>>lookupInMethodCacheSel:class:"
 	self flag: #lookupInMethodCacheSel:class:. "so this method shows up as a sender of lookupInMethodCacheSel:class:"
 	self MoveR: ClassReg R: SendNumArgsReg.
-	self XorCw: selector R: ClassReg.
+	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	self LogicalShiftLeftCq: ShiftForWord R: ClassReg.
-	self AndCq: 	MethodCacheMask << ShiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
 	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
 		r: ClassReg
 		R: TempReg.
@@ -808,9 +808,9 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"First probe missed.  Do second of three probes.  Shift hash right one and retry."
 	jumpSelectorMiss jmpTarget: (jumpClassMiss jmpTarget: self Label).
 	self MoveR: SendNumArgsReg R: ClassReg.
-	self XorCw: selector R: ClassReg.
+	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg.
-	self AndCq: 	MethodCacheMask << ShiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
 	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
 		r: ClassReg
 		R: TempReg.
@@ -825,10 +825,10 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	"Second probe missed.  Do last probe.  Shift hash right two and retry."
 	jumpSelectorMiss jmpTarget: self Label.
 	self MoveR: SendNumArgsReg R: ClassReg.
-	self XorCw: selector R: ClassReg.
+	self annotate: (self XorCw: selector R: ClassReg) objRef: selector.
 	ShiftForWord > 2 ifTrue:
 		[self LogicalShiftLeftCq: ShiftForWord - 1 R: ClassReg].
-	self AndCq: 	MethodCacheMask << ShiftForWord R: ClassReg.
+	self AndCq: MethodCacheMask << ShiftForWord R: ClassReg.
 	self MoveMw: coInterpreter methodCacheAddress asUnsignedInteger + (MethodCacheSelector << ShiftForWord)
 		r: ClassReg
 		R: TempReg.
@@ -2160,7 +2160,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	"Only interested in inlining if followed by a conditional branch."
 	inlineCAB := branchDescriptor isBranchTrue or: [branchDescriptor isBranchFalse].
 	"Further, only interested in inlining = and ~= if there's a SmallInteger constant involved.
-	 The relational operators successfully staticaly predict SmallIntegers; the equality operators do not."
+	 The relational operators successfully statically predict SmallIntegers; the equality operators do not."
 	(inlineCAB and: [primDescriptor opcode = JumpZero or: [primDescriptor opcode = JumpNonZero]]) ifTrue:
 		[inlineCAB := argIsInt or: [rcvrIsInt]].
 	inlineCAB ifFalse:
@@ -2172,8 +2172,7 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 	postBranchPC := branchPC + branchDescriptor numBytes.
 	argIsInt
 		ifTrue:
-			[self ssFlushTo: simStackPtr - 2.
-			 (self ssValue: 1) popToReg: ReceiverResultReg.
+			[(self ssValue: 1) popToReg: ReceiverResultReg.
 			 annotateInst := self ssTop annotateUse.
 			 self ssPop: 2.
 			 self MoveR: ReceiverResultReg R: TempReg]
@@ -2190,6 +2189,8 @@ StackToRegisterMappingCogit >> genSpecialSelectorComparison [
 					ifTrue: [self annotateBytecode: (self CmpCq: argInt R: ReceiverResultReg)]
 					ifFalse: [self CmpCq: argInt R: ReceiverResultReg]]
 		ifFalse: [self CmpR: Arg0Reg R: ReceiverResultReg].
+	"Cmp is weird/backwards so invert the comparison.  Further since there is a following conditional
+	 jump bytecode define non-merge fixups and leave the cond bytecode to set the mergeness."
 	self gen: (branchDescriptor isBranchTrue
 				ifTrue: [primDescriptor opcode]
 				ifFalse: [self inverseBranchFor: primDescriptor opcode])
@@ -2394,7 +2395,7 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean ReceiverVariable: slotInd
 { #category : #'bytecode generators' }
 StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At: remoteTempIndex [
 	<inline: false>
-	| topReg valueReg constVal |
+	| topReg valueReg constVal topSpilled |
 	self assert: needsFrame.
 	optStatus isReceiverResultRegLive: false.
 	"N.B.  No need to check the stack for references because we generate code for
@@ -2416,14 +2417,16 @@ StackToRegisterMappingCogit >> genStorePop: popBoolean RemoteTemp: slotIndex At:
 	 or: [topReg = ReceiverResultReg]) ifTrue:
 		[topReg := ClassReg].
 	self ssPop: 1.
-	self ssAllocateCallReg: topReg. "for the ceStoreCheck call in genStoreSourceReg:... below"
+	"for the ceStoreCheck call in genStoreSourceReg:... below"
+	self ssAllocateCallReg: topReg and: ReceiverResultReg.
 	self ssPush: 1.
-	valueReg := self ssStorePop: popBoolean toPreferredReg: topReg.
+	topSpilled := self ssTop spilled.
+	valueReg := self ssStorePop: (popBoolean or: [topSpilled]) toPreferredReg: topReg.
 	valueReg = ReceiverResultReg ifTrue:
 		[self MoveR: valueReg R: topReg].
 	popBoolean ifFalse:
-		[self ssPop: 1; ssPushRegister: topReg].
-	self ssAllocateCallReg: ReceiverResultReg.
+		[topSpilled ifFalse: [self ssPop: 1].
+		 self ssPushRegister: topReg].
 	self MoveMw: (self frameOffsetOfTemporary: remoteTempIndex) r: FPReg R: ReceiverResultReg.
 	 traceStores > 0 ifTrue:
 		[self MoveR: topReg R: TempReg.
@@ -3343,4 +3346,11 @@ StackToRegisterMappingCogit >> traceSimStack [
 	<cmacro: '() 0'>
 	(compilationTrace anyMask: 1) ifTrue:
 		[self printSimStack]
+]
+
+{ #category : #'simulation only' }
+StackToRegisterMappingCogit >> traceSpill: simStackEntry [
+	<cmacro: '(ign) 0'>
+	(compilationTrace anyMask: 2) ifTrue:
+		[coInterpreter transcript cr; print: bytecodePointer; space; print: simStackEntry; flush]
 ]

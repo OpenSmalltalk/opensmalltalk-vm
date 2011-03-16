@@ -945,44 +945,6 @@ InterpreterSimulator >> longPrint: oop [
 	]
 ]
 
-{ #category : #'debug support' }
-InterpreterSimulator >> lookupMethodInClass: class [
-	| currentClass dictionary found rclass |
-
-	"This method overrides the interp, causing a halt on MNU."
-	"true ifTrue: [^ super lookupMethodInClass: class]."    "Defeat debug support"
-
-	currentClass := class.
-	[currentClass ~= nilObj]
-		whileTrue:
-		[dictionary := self fetchPointer: MethodDictionaryIndex ofObject: currentClass.
-		dictionary = nilObj ifTrue:
-			["MethodDict pointer is nil (hopefully due a swapped out stub)
-				-- raise exception #cannotInterpret:."
-			self pushRemappableOop: currentClass.  "may cause GC!"
-			self createActualMessageTo: class.
-			currentClass := self popRemappableOop.
-			messageSelector := self splObj: SelectorCannotInterpret.
-			^ self lookupMethodInClass: (self superclassOf: currentClass)].
-
-		found := self lookupMethodInDictionary: dictionary.
-		found ifTrue: [^currentClass].
-		currentClass := self superclassOf: currentClass].
-
-	"Could not find #doesNotUnderstand: -- unrecoverable error."
-	messageSelector = (self splObj: SelectorDoesNotUnderstand) ifTrue:
-		[self error: 'Recursive not understood error encountered'].
-
-self halt: (self stringOf: messageSelector).
-
-	"Cound not find a normal message -- raise exception #doesNotUnderstand:"
-	self pushRemappableOop: class.  "may cause GC!"
-	self createActualMessageTo: class.
-	rclass := self popRemappableOop.
-	messageSelector := self splObj: SelectorDoesNotUnderstand.
-	^ self lookupMethodInClass: rclass
-]
-
 { #category : #'file primitives' }
 InterpreterSimulator >> makeDirEntryName: entryName size: entryNameSize
 	createDate: createDate modDate: modifiedDate
@@ -1055,11 +1017,11 @@ InterpreterSimulator >> normalSend [
 InterpreterSimulator >> objectBefore: addr [
 	| oop prev |
 	oop := self firstObject.
-	[oop < endOfMemory] whileTrue: [
-		prev := oop.  "look here if debugging prev obj overlapping this one"
+	[oop < endOfMemory] whileTrue:
+		[prev := oop.  "look here if debugging prev obj overlapping this one"
 		oop := self objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]
-	]
+		oop >= addr ifTrue: [^ prev]].
+	^0
 ]
 
 { #category : #UI }
