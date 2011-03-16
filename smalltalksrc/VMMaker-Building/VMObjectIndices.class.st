@@ -81,6 +81,7 @@ Class {
 		'SelectorAttemptToAssign',
 		'SelectorCannotInterpret',
 		'SelectorCannotReturn',
+		'SelectorCounterTripped',
 		'SelectorDoesNotUnderstand',
 		'SelectorInvokeCallback',
 		'SelectorMustBeBoolean',

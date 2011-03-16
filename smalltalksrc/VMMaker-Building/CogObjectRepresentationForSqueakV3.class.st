@@ -56,6 +56,15 @@ CogObjectRepresentationForSqueakV3 >> checkValidObjectReference: anOop [
 	   or: [(self heapMapAtWord: (self pointerForOop: anOop)) ~= 0]
 ]
 
+{ #category : #'in-line cacheing' }
+CogObjectRepresentationForSqueakV3 >> classForInlineCacheTag: inlineCacheTag [
+	(objectMemory isIntegerObject: inlineCacheTag) ifTrue:
+		[^objectMemory classSmallInteger].
+	(self couldBeObject: inlineCacheTag) ifTrue:
+		[^inlineCacheTag].
+	^objectMemory compactClassAt: inlineCacheTag >> ShiftForWord
+]
+
 { #category : #'garbage collection' }
 CogObjectRepresentationForSqueakV3 >> couldBeObject: oop [
 	^(objectMemory isNonIntegerObject: oop)

@@ -3,10 +3,16 @@ Class {
 	#superclass : #Object,
 	#instVars : [
 		'address',
-		'memory'
+		'memory',
+		'cogit'
 	],
 	#category : #'VMMaker-JITSimulation'
 }
+
+{ #category : #accessing }
+CogMethodSurrogate class >> alignedByteSizeForClient: aVMClass [
+	^self alignedByteSize
+]
 
 { #category : #arithmetic }
 CogMethodSurrogate >> + aCogMethodOrAddress [
@@ -67,9 +73,10 @@ CogMethodSurrogate >> asUnsignedInteger [
 ]
 
 { #category : #'instance initialization' }
-CogMethodSurrogate >> at: anAddress memory: aBitmap [
+CogMethodSurrogate >> at: anAddress memory: aBitmap cogit: aCogit [
 	address := anAddress.
-	memory := aBitmap
+	memory := aBitmap.
+	cogit := aCogit
 ]
 
 { #category : #accessing }
@@ -89,10 +96,10 @@ CogMethodSurrogate >> isZero [
 
 { #category : #accessing }
 CogMethodSurrogate >> nextOpenPIC [
-	| address |
-	address := self methodObject.
-	^address ~= 0 ifTrue:
-		[self class new at: address memory: memory]
+	| moField |
+	moField := self methodObject.
+	^moField ~= 0 ifTrue:
+		[cogit cogMethodSurrogateAt: moField - self homeOffset]
 ]
 
 { #category : #accessing }

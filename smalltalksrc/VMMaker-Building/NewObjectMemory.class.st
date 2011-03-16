@@ -542,8 +542,8 @@ NewObjectMemory >> eeInstantiateClass: classPointer indexableSize: size [
 	 Will *not* cause a GC.
 	 Note that the instantiated object IS NOT FILLED and must be completed before
 	 returning it to Smalltalk. Since this call is used in routines that do just that we are
-	 safe. Break this rule and die."
-
+	 safe.  Break this rule and die."
+	<api>
 	| hash header1 header2 cClass byteSize format binc header3 hdrSize sizeHiBits bm1 classFormat |
 	<inline: false>
 	"cannot have a negative indexable field count"

@@ -4,6 +4,21 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #'method introspection support' }
+CoInterpreterPrimitives >> picDataFor: cogMethod [
+	<var: #cogMethod type: #'CogMethod *'>
+	| cm nSlots nEntries data |
+	cm := cogMethod methodObject.
+	nSlots := (objectMemory byteSizeOf: cm) - (self startPCOfMethod: cm) + objectMemory minSlotsForShortening.
+	data := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: nSlots.
+	nEntries := cogit picDataFor: cogMethod into: data.
+	nEntries = 0 ifTrue:
+		[^nil].
+	nEntries < nSlots ifTrue:
+		[objectMemory shorten: data toIndexableSize: nEntries].
+	^data
+]
+
 { #category : #'control primitives' }
 CoInterpreterPrimitives >> primitiveClosureCopyWithCopiedValues [
 	"This is optional old obsolete stuff tedious to implement in Cog because of
@@ -365,6 +380,24 @@ CoInterpreterPrimitives >> primitiveSignal [
 	inInterpreter := instructionPointer >= objectMemory startOfMemory.
 	(self synchronousSignal: self stackTop) ifTrue:
 		[self forProcessPrimitiveReturnToExecutivePostContextSwitch: inInterpreter]
+]
+
+{ #category : #'method introspection primitives' }
+CoInterpreterPrimitives >> primitiveSistaMethodPICAndCounterData [
+	<export: true>
+	<cogit: #SistaStackToRegisterMappingCogit>
+	| methodReceiver data |
+	argumentCount ~= 0 ifTrue:
+		[self primitiveFailFor: PrimErrBadNumArgs].
+	methodReceiver := self stackTop.
+	data := 0.
+	(self methodHasCogMethod: methodReceiver) ifTrue:
+		[data := self picDataFor: (self cogMethodOf: methodReceiver).
+		 data = -1 ifTrue:
+			[self primitiveFailFor: PrimErrNoMemory]].
+	data = 0 ifTrue:
+		[data := objectMemory instantiateClass: (objectMemory splObj: ClassArray) indexableSize: 0].
+	self pop: 1 thenPush: data
 ]
 
 { #category : #'system control primitives' }

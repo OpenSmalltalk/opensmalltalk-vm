@@ -170,8 +170,8 @@ CogVMSimulator >> cCoerceSimple: value to: cTypeString [
 		[#'void *']				->	[value].
 		[#sqInt]					->	[value].
 		[#'void (*)()']			->	[value].
-		[#'CogMethod *']		->	[self cogMethodSurrogateAt: value asUnsignedInteger].
-		[#'CogBlockMethod *']	->	[self cogBlockMethodSurrogateAt: value asUnsignedInteger] }
+		[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
+		[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger] }
 ]
 
 { #category : #'plugin support' }
@@ -224,13 +224,12 @@ CogVMSimulator >> ceNonLocalReturn: returnValue [
 ]
 
 { #category : #trampolines }
-CogVMSimulator >> ceSend: selector "<Integer>" super: superNormalBar "<0|1>" to: rcvr "<Integer>" numArgs: numArgs [ "<Integer>"
+CogVMSimulator >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs [
 	"self stringOf: selector"
 	"self printOop: rcvr"
 	self logSend: selector.
 	cogit assertCStackWellAligned.
-	self maybeCheckStackDepth: (numArgs < 0 ifTrue: [0] ifFalse: [numArgs + 1])
-		sp: stackPointer.
+	self maybeCheckStackDepth: numArgs + 1 sp: stackPointer.
 	^super ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs
 ]
 
@@ -248,7 +247,7 @@ CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
 CogVMSimulator >> ceSendFromInLineCacheMiss: oPIC [
 	"Override to map the address into a CogMethodSurrogate"
 	| surrogate |
-	surrogate := self cogMethodSurrogateAt: oPIC.
+	surrogate := cogit cogMethodSurrogateAt: oPIC.
 	self logSend: surrogate selector.
 	^super ceSendFromInLineCacheMiss: surrogate
 ]
@@ -278,7 +277,7 @@ CogVMSimulator >> ceTraceLinkedSend: theReceiver [
 		[transcript print: byteCount; nextPut: $/; print: sendCount; space].
 	cogit assertCStackWellAligned.
 	super ceTraceLinkedSend: theReceiver.
-	cogMethod := self cogBlockMethodSurrogateAt: (self stackTop - cogit traceLinkedSendOffset).
+	cogMethod := cogit cogBlockMethodSurrogateAt: (self stackTop - cogit traceLinkedSendOffset).
 	cogMethod stackCheckOffset > 0 ifTrue:
 		[delta := (cogMethod cmType = CMMethod
 				   and: [cogMethod cmNumArgs > cogit numRegArgs])
@@ -351,47 +350,9 @@ CogVMSimulator >> close [  "close any files that ST may have opened"
 	filesOpen do: [:f | f close]
 ]
 
-{ #category : #'debug support' }
-CogVMSimulator >> cogBlockMethodSurrogateAt: address [
-	<doNotGenerate>
-	self assert: (address bitAnd: BytesPerWord - 1) = 0.
-	^cogit cogBlockMethodSurrogateClass new
-		at: address
-		memory: objectMemory memory
-]
-
 { #category : #'simulation only' }
 CogVMSimulator >> cogCodeSize [
 	^cogCodeSize
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> cogMethodOrBlockSurrogateAt: address [
-	<doNotGenerate>
-	| surrogate |
-	self assert: ((address asInteger bitAnd: BytesPerWord - 1) = 0
-				or: [address asInteger < 0
-					and: [(Cogit classPool keyAtValue: address asInteger ifAbsent: nil) notNil]]).
-	surrogate := cogit cogMethodSurrogateClass new
-					at: address asInteger
-					memory: objectMemory memory.
-	^surrogate cmType = CMBlock
-		ifTrue:
-			[cogit cogBlockMethodSurrogateClass new
-				at: address asInteger
-				memory: objectMemory memory]
-		ifFalse: [surrogate]
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> cogMethodSurrogateAt: address [
-	<doNotGenerate>
-	self assert: ((address asInteger bitAnd: BytesPerWord - 1) = 0
-				or: [address asInteger < 0
-					and: [(Cogit classPool keyAtValue: address asInteger ifAbsent: nil) notNil]]).
-	^cogit cogMethodSurrogateClass new
-		at: address asInteger
-		memory: objectMemory memory
 ]
 
 { #category : #'simulation only' }
@@ -421,8 +382,7 @@ CogVMSimulator >> cr [
 { #category : #'debugging traps' }
 CogVMSimulator >> createActualMessageTo: class [
 
-	"cogit class == StackToRegisterMappingCogit ifTrue:
-		[self halt: (self stringOf: messageSelector)]."
+	class == objectMemory nilObject ifTrue: [self halt].
 
 	^super createActualMessageTo: class
 ]
@@ -569,11 +529,6 @@ CogVMSimulator >> ensureDebugAtEachStepBlock [
 						 printBytecodeAtEachStep ifTrue:
 							[self printCurrentBytecodeOn: transcript.
 							 transcript cr; flush].
-						 cogit breakBlock ifNotNil:
-							[:bb|
-							(bb value: cogit) ifTrue:
-								[self changed: #byteCountText.
-								 self halt: 'machine code breakpoint in interpreter']].
 						 byteCount = breakCount ifTrue:
 							["printFrameAtEachStep :=" printBytecodeAtEachStep := true]]
 ]
@@ -3219,7 +3174,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print all stacks' action: #printAllStacks;
 		addLine;
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
-		add: 'disassemble method at...' action: [(self promptHex: 'cog method') ifNotNil: [:cm| cogit disassembleMethodFor: cm]];
+		add: 'disassemble method...' action: [(self promptHex: 'cog method') ifNotNil: [:cm| cogit disassembleMethodFor: cm]];
 		add: 'disassemble method at pc' action: [cogit disassembleMethodFor: cogit processor pc];
 		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		addLine;

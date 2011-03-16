@@ -143,6 +143,10 @@ CCodeGenerator >> addMethodFor: aClass selector: selector [
 	method := aClass compiledMethodAt: selector.
 	(method pragmaAt: #doNotGenerate) ifNotNil:
 		[^nil].
+	(method pragmaAt: #cogit:) ifNotNil:
+		[:pragma|
+		VMClass getVMMaker cogitClassName ~= (pragma argumentAt: 1) ifTrue:
+			[^nil]].
 	tmethod := self addMethod: (self compileToTMethodSelector: selector in: aClass).
 	"If the method has a macro then add the macro.  But keep the method
 	 for analysis purposes (e.g. its variable accesses)."
@@ -1048,6 +1052,19 @@ CCodeGenerator >> generateBitAnd: msgNode on: aStream indent: level [
 	self emitCExpression: msgNode receiver on: aStream.
 	aStream nextPutAll: ' & '.
 	self emitCExpression: msgNode args first on: aStream.
+]
+
+{ #category : #'C translation' }
+CCodeGenerator >> generateBitClear: msgNode on: aStream indent: level [
+	"Generate the C code for this message onto the given stream."
+
+	aStream next: 2 put: $(.
+	self emitCExpression: msgNode receiver on: aStream.
+	aStream nextPutAll: ' | '.
+	self emitCExpression: msgNode args first on: aStream.
+	aStream nextPutAll: ') - '.
+	self emitCExpression: msgNode args first on: aStream.
+	aStream nextPut: $)
 ]
 
 { #category : #'C translation' }
@@ -2147,6 +2164,7 @@ CCodeGenerator >> initializeCTranslationDictionary [
 	#bitShift:			#generateBitShift:on:indent:
 	#signedBitShift:	#generateSignedBitShift:on:indent:
 	#bitInvert32		#generateBitInvert32:on:indent:
+	#bitClear:			#generateBitClear:on:indent:
 
 	#<				#generateLessThan:on:indent:
 	#<=			#generateLessThanOrEqual:on:indent:
