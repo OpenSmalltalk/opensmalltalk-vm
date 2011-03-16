@@ -613,7 +613,10 @@ StackToRegisterMappingCogit >> compileAbstractInstructionsFrom: start through: e
 		ifTrue:
 			[deadCode := false.
 	 		 fixup targetInstruction asUnsignedInteger >= 2 ifTrue:
-				[self merge: fixup afterReturn: (descriptor notNil and: [descriptor isReturn])]]
+				[self merge: fixup
+					afterContinuation: (descriptor notNil
+										and: [descriptor isUnconditionalBranch
+											or: [descriptor isReturn]]) not]]
 		ifFalse: "If there's no fixup following a return there's no jump to that code and it is dead."
 			[(descriptor notNil and: [descriptor isReturn]) ifTrue:
 				[deadCode := true]].
@@ -845,7 +848,7 @@ StackToRegisterMappingCogit >> compileOpenPIC: selector numArgs: numArgs [
 	self genPushRegisterArgsForNumArgs: numArgs.
 	self genSaveStackPointers.
 	self genLoadCStackPointers.
-	methodLabel addDependent: (self annotateMethodRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
+	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
 	cStackAlignment > BytesPerWord ifTrue:
 		[backEnd
 			genAlignCStackSavingRegisters: false
@@ -2817,16 +2820,16 @@ StackToRegisterMappingCogit >> marshallSendArguments: numArgs [
 ]
 
 { #category : #'simulation stack' }
-StackToRegisterMappingCogit >> merge: fixup afterReturn: mergeFollowsReturn [
+StackToRegisterMappingCogit >> merge: fixup afterContinuation: mergeWithContinuation [
 	"Merge control flow at a fixup.  The fixup holds the simStackPtr at the jump to this target.
 	 See stackToRegisterMapping on the class side for a full description."
 	<var: #fixup type: #'BytecodeFixup *'>
 	self traceMerge: fixup.
 	"For now we don't try and preserve the optimization status through merges."
 	optStatus isReceiverResultRegLive: false.
-	"If this instruction follows a return then the current simStackPtr
-	 is irrelevant and we continue with that of the fixup."
-	mergeFollowsReturn ifTrue:
+	"If this instruction follows a return or an unconditional branch then the
+	 current simStackPtr is irrelevant and we continue with that of the fixup."
+	mergeWithContinuation ifFalse:
 		[self assert: fixup targetInstruction asUnsignedInteger >= 2.  "Must have a valid simStackPtr"
 		 simStackPtr := fixup simStackPtr].
 	fixup targetInstruction asUnsignedInteger <= 2 ifTrue:

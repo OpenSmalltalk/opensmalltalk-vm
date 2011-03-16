@@ -11,9 +11,7 @@ CogBlockMethodSurrogate32 class >> alignedByteSize [
 
 { #category : #accessing }
 CogBlockMethodSurrogate32 >> cmHomeMethod [
-	^CogMethodSurrogate32 new
-		at: address - self homeOffset
-		memory: memory
+	^cogit cogMethodSurrogateAt: address - self homeOffset
 ]
 
 { #category : #accessing }

@@ -9,6 +9,11 @@ CogStackPage class >> alignedByteSize [
 	^self surrogateClass alignedByteSize
 ]
 
+{ #category : #translation }
+CogStackPage class >> alignedByteSizeForClient: aVMClass [
+	^self surrogateClass alignedByteSize
+]
+
 { #category : #'simulation only' }
 CogStackPage class >> surrogateClass [
 	^BytesPerWord = 4

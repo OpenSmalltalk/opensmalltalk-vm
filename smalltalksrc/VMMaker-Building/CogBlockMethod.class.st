@@ -39,7 +39,12 @@ Class {
 
 { #category : #accessing }
 CogBlockMethod class >> alignedByteSize [
-	^self surrogateClass alignedByteSize
+	self shouldNotImplement
+]
+
+{ #category : #accessing }
+CogBlockMethod class >> alignedByteSizeForClient: aVMClass [
+	^aVMClass cogit cogBlockMethodSurrogateClass alignedByteSize
 ]
 
 { #category : #'class initialization' }
@@ -99,9 +104,7 @@ CogBlockMethod class >> isAccessor: aSelector [
 
 { #category : #accessing }
 CogBlockMethod class >> surrogateClass [
-	^BytesPerWord = 4
-		ifTrue: [CogBlockMethodSurrogate32]
-		ifFalse: [CogBlockMethodSurrogate64]
+	self shouldNotImplement
 ]
 
 { #category : #accessing }

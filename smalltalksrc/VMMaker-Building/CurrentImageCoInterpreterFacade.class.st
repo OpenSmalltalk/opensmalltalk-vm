@@ -12,7 +12,8 @@ Class {
 		'variables'
 	],
 	#pools : [
-		'VMBasicConstants'
+		'VMBasicConstants',
+		'VMObjectIndices'
 	],
 	#category : #'VMMaker-Support'
 }
@@ -25,7 +26,7 @@ CurrentImageCoInterpreterFacade >> addLabel: l [
 
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> addressForLabel: l [
-	^variables at: l ifAbsentPut: [variables size * 4 + 65536]
+	^variables at: l ifAbsentPut: [variables size * 4 + 131072]
 ]
 
 { #category : #accessing }
@@ -64,8 +65,8 @@ CurrentImageCoInterpreterFacade >> cCoerceSimple: value to: cTypeString [
 	 For simulation answer a suitable surrogate for the struct types"
 	^cTypeString
 		caseOf:
-		   {	[#'CogMethod *']		->	[self cogMethodSurrogateAt: value asUnsignedInteger].
-			[#'CogBlockMethod *']	->	[self cogBlockMethodSurrogateAt: value asUnsignedInteger] }
+		   {	[#'CogMethod *']		->	[cogit cogMethodSurrogateAt: value asUnsignedInteger].
+			[#'CogBlockMethod *']	->	[cogit cogBlockMethodSurrogateAt: value asUnsignedInteger] }
 		otherwise: [super cCoerceSimple: value to: cTypeString]
 ]
 
@@ -110,22 +111,8 @@ CurrentImageCoInterpreterFacade >> clearCogCompiledCodeCompactionCalledFor [
 ]
 
 { #category : #accessing }
-CurrentImageCoInterpreterFacade >> cogBlockMethodSurrogateAt: address [
-	^cogit cogBlockMethodSurrogateClass new
-		at: address asInteger
-		memory: memory
-]
-
-{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> cogCodeSize [
 	^memory size / 2
-]
-
-{ #category : #accessing }
-CurrentImageCoInterpreterFacade >> cogMethodSurrogateAt: address [
-	^cogit cogMethodSurrogateClass new
-		at: address asInteger
-		memory: memory
 ]
 
 { #category : #'initialize-release' }
@@ -165,6 +152,11 @@ CurrentImageCoInterpreterFacade >> debugStackPointersFor: anOop [
 	^CArrayAccessor on:
 		((StackDepthFinder on: (objectMap keyAtValue: anOop))
 			stackPointers)
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> eeInstantiateClass: classOop indexableSize: numSlots [
+	^self oopForObject: ((self objectForOop: classOop) new: numSlots)
 ]
 
 { #category : #accessing }
@@ -234,7 +226,7 @@ CurrentImageCoInterpreterFacade >> inMemoryCStackPointerAddress [
 
 { #category : #'initialize-release' }
 CurrentImageCoInterpreterFacade >> initialize [
-	memory := ByteArray new: 131072.
+	memory := ByteArray new: 262144.
 	objectMemory := NewCoObjectMemory new.
 	coInterpreter := CoInterpreter new.
 	coInterpreter
@@ -327,6 +319,16 @@ CurrentImageCoInterpreterFacade >> literal: index ofMethod: anOop [
 ]
 
 { #category : #accessing }
+CurrentImageCoInterpreterFacade >> long32At: index put: value [
+	^memory longAt: index + 1 put: value bigEndian: false
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> longAt: index [ 
+	^memory unsignedLongAt: index + 1
+]
+
+{ #category : #accessing }
 CurrentImageCoInterpreterFacade >> longAt: index put: value [
 	^memory longAt: index + 1 put: value bigEndian: false
 ]
@@ -389,9 +391,12 @@ CurrentImageCoInterpreterFacade >> objectAfter: anOop [
 { #category : #'private-cacheing' }
 CurrentImageCoInterpreterFacade >> objectForOop: anOop [
 	"This is a keyAtValue: search and so needs speeding up either by a reverse map or a simple cache."
-	^anOop = cachedOop
-		ifTrue: [cachedObject]
-		ifFalse: [cachedObject := objectMap keyAtValue: (cachedOop := anOop)]
+	^(anOop bitAnd: 3) caseOf: {
+		[0] -> [anOop = cachedOop
+				ifTrue: [cachedObject]
+				ifFalse: [cachedObject := objectMap keyAtValue: (cachedOop := anOop)]].
+		[1] -> [anOop >> 1].
+		[3] -> [anOop >> 1] }
 ]
 
 { #category : #accessing }
@@ -406,7 +411,19 @@ CurrentImageCoInterpreterFacade >> objectRepresentationClass [
 
 { #category : #'object map' }
 CurrentImageCoInterpreterFacade >> oopForObject: o [
-	^objectMap at: o ifAbsentPut: [objectMap size * 8 + (1024 * 1024)]
+	^o isInteger
+		ifTrue: [o << 1 bitOr: 1]
+		ifFalse: [objectMap at: o ifAbsentPut: [objectMap size * 8 + (1024 * 1024)]]
+]
+
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> picDataFor: cogMethod [
+	| cm nBytes nEntries oversizeData |
+	cm := cogMethod methodObject.
+	nBytes := (self byteSizeOf: cm) - (self startPCOfMethod: cm).
+	oversizeData := Array new: nBytes.
+	nEntries := cogit picDataFor: cogMethod into: (self oopForObject: oversizeData).
+	^oversizeData copyFrom: 1 to: nEntries
 ]
 
 { #category : #accessing }
@@ -479,6 +496,12 @@ CurrentImageCoInterpreterFacade >> specialSelectorNumArgs: index [
 	^Smalltalk specialSelectors at: index * 2 + 2
 ]
 
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> splObj: splObjIndex [
+	^splObjIndex caseOf: {
+		[ClassArray] -> [self oopForObject: Array] }
+]
+
 { #category : #labels }
 CurrentImageCoInterpreterFacade >> stackLimitAddress [
 	^variables at: 'stackLimit'
@@ -502,6 +525,18 @@ CurrentImageCoInterpreterFacade >> startPCOfMethod: anOop [
 { #category : #accessing }
 CurrentImageCoInterpreterFacade >> startPCOfMethodHeader: aSmallIntegerOop [
 	^(CompiledMethod newMethod: 16 header: (objectMemory integerValueOf: aSmallIntegerOop)) initialPC - 1
+]
+
+{ #category : #testing }
+CurrentImageCoInterpreterFacade >> storePointer: index ofObject: objOop withValue: valueOop [ 
+	(self objectForOop: objOop)
+		at: index + 1
+		put: (self objectForOop: valueOop)
+]
+
+{ #category : #accessing }
+CurrentImageCoInterpreterFacade >> storePointerUnchecked: zeroRelativeIndex ofObject: targetOop withValue: valueOop [
+	(self objectForOop: targetOop) at: zeroRelativeIndex + 1 put: (self objectForOop: valueOop)
 ]
 
 { #category : #accessing }
