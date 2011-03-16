@@ -4643,19 +4643,6 @@ StackInterpreter >> ifAppropriateCompileToNativeCode: aMethodObj selector: selec
 	"Convenient  noop in the StackInterpreter e.g. for sendInvokeCallbackContext:"
 ]
 
-{ #category : #'debug support' }
-StackInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP [
-	"This is for low-level error reporting.  If either of the C stack pointers are
-	 pointing into the stack zone then write them back to framePointer and/or
-	 stackPointer so that the stack backtrace will be up to date.
-	 This is a noop in the stack VM since the C stack pointers are always elsewhere
-	 (e.g., in some C function running the interpreter)"
-	<api>
-	<var: #theCFP type: #'void *'>
-	<var: #theCSP type: #'void *'>
-	<returnTypeC: #void>
-]
-
 { #category : #'frame access' }
 StackInterpreter >> iframeMethod: theFP [
 	<inline: true>
@@ -5650,20 +5637,23 @@ StackInterpreter >> lookupMethodInDictionary: dictionary [
 
 { #category : #'callback support' }
 StackInterpreter >> lookupMethodNoMNUEtcInClass: class [
-	"Lookup.  Answer false on failure father than performing MNU processing etc."
+	"Lookup messageSelector in class.  Answer 0 on success. Answer the splObj: index
+	 for the error selector to use on failure rather than performing MNU processing etc."
 	| currentClass dictionary |
 	<inline: true>
 
 	currentClass := class.
 	[currentClass ~= objectMemory nilObject] whileTrue:
 		[dictionary := objectMemory fetchPointer: MethodDictionaryIndex ofObject: currentClass.
-		(dictionary ~= objectMemory nilObject
-		 and: [self lookupMethodInDictionary: dictionary]) ifTrue:
+		 dictionary = objectMemory nilObject ifTrue:
+			[lkupClass := self superclassOf: currentClass.
+			 ^SelectorCannotInterpret].
+		 (self lookupMethodInDictionary: dictionary) ifTrue:
 			[self addNewMethodToCache: class.
-			 ^true].
+			 ^0].
 		currentClass := self superclassOf: currentClass].
-
-	^false
+	lkupClass := class.
+	^SelectorDoesNotUnderstand
 ]
 
 { #category : #'frame access' }
@@ -7355,21 +7345,37 @@ StackInterpreter >> printOop: oop [
 	(oop bitAnd: (BytesPerWord - 1)) ~= 0 ifTrue:
 		[self printHex: oop; print: ' is misaligned'; cr.
 		 ^nil].
+	(objectMemory isFreeObject: oop) ifTrue:
+		[self print: ' free chunk of size '; printNum: (objectMemory sizeOfFree: oop); cr.
+		 ^nil].
 	self print: ': a(n) '.
 	self printNameOfClass: (cls := objectMemory fetchClassOfNonInt: oop) count: 5.
-	self cr.
 	cls = (objectMemory splObj: ClassFloat) ifTrue:
-		[self printFloat: (self dbgFloatValueOf: oop); cr.
+		[self cr; printFloat: (self dbgFloatValueOf: oop); cr.
 		 ^nil].
 	fmt := objectMemory formatOf: oop.
+	fmt > 4 ifTrue:
+		[self print: ' nbytes '; printNum: (objectMemory byteSizeOf: oop)].
+	self cr.
 	(fmt > 4 and: [fmt < 12]) ifTrue:
-		[^self printStringOf: oop; cr].
+		[(objectMemory isWords: oop) ifTrue:
+			[lastIndex := 64 min: ((objectMemory byteSizeOf: oop) / BytesPerWord).
+			 lastIndex > 0 ifTrue:
+				[1 to: lastIndex do:
+					[:index|
+					self space; printHex: (objectMemory fetchLong32: index - 1 ofObject: oop).
+					(index \\ self elementsPerPrintOopLine) = 0 ifTrue:
+						[self cr]].
+				(lastIndex \\ self elementsPerPrintOopLine) = 0 ifFalse:
+					[self cr]].
+			^nil].
+		^self printStringOf: oop; cr].
 	lastIndex := 64 min: (startIP := (objectMemory lastPointerOf: oop) / BytesPerWord).
 	lastIndex > 0 ifTrue:
 		[1 to: lastIndex do:
 			[:index|
 			self cCode: 'printHex(fetchPointerofObject(index - 1, oop)); putchar('' '')'
-				inSmalltalk: [self space; print: (objectMemory fetchPointer: index - 1 ofObject: oop) printString; space.
+				inSmalltalk: [self space; printHex: (objectMemory fetchPointer: index - 1 ofObject: oop); space.
 							 self print: (self shortPrint: (objectMemory fetchPointer: index - 1 ofObject: oop))].
 			(index \\ self elementsPerPrintOopLine) = 0 ifTrue:
 				[self cr]].
@@ -7455,6 +7461,7 @@ StackInterpreter >> printPageHeadFrame [
 
 { #category : #'debug printing' }
 StackInterpreter >> printProcessStack: aProcess [
+	<api>
 	<inline: false>
 	| ctx |
 	self cr; printNameOfClass: (objectMemory fetchClassOf: aProcess) count: 5; space; printHex: aProcess.
@@ -7466,6 +7473,7 @@ StackInterpreter >> printProcessStack: aProcess [
 
 { #category : #'debug printing' }
 StackInterpreter >> printProcsOnList: procList [
+	<api>
 	<inline: false>
 	| proc firstProc |
 	proc := firstProc := objectMemory fetchPointer: FirstLinkIndex ofObject: procList.
@@ -8355,10 +8363,10 @@ StackInterpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regs
 	<export: true>
 	self flag: #obsolete.
 	lkupClass := self fetchClassOfNonInt: (self splObj: ClassAlien).
-	messageSelector := self splObj: InvokeCallbackSelector.
+	messageSelector := self splObj: SelectorInvokeCallback.
 	argumentCount := 4.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
-	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ifFalse:
+	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 			[^false]].
 	((self argumentCountOf: newMethod) = 4
 	and: [primitiveFunctionPointer = 0]) ifFalse:
@@ -8390,9 +8398,9 @@ StackInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	<export: true>
 	<var: #vmCallbackContext type: #'VMCallbackContext *'>
 	lkupClass := self fetchClassOfNonInt: (self splObj: ClassAlien).
-	messageSelector := self splObj: InvokeCallbackSelector.
+	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
-	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ifFalse:
+	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ~= 0 ifTrue:
 			[^false]].
 	primitiveFunctionPointer ~= 0 ifTrue:
 		[^false].

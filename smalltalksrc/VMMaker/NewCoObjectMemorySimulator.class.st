@@ -151,6 +151,11 @@ NewCoObjectMemorySimulator >> floatValueOf: obj [
 	^coInterpreter floatValueOf: obj
 ]
 
+{ #category : #printing }
+NewCoObjectMemorySimulator >> flush [
+	^coInterpreter flush
+]
+
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> forceInterruptCheck [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -324,11 +329,11 @@ NewCoObjectMemorySimulator >> noteAsRoot: oop headerLoc: headerLoc [
 NewCoObjectMemorySimulator >> objectBefore: addr [
 	| oop prev |
 	oop := self firstObject.
-	[oop < endOfMemory] whileTrue: [
-		prev := oop.  "look here if debugging prev obj overlapping this one"
+	[oop < endOfMemory] whileTrue:
+		[prev := oop.  "look here if debugging prev obj overlapping this one"
 		oop := self objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]
-	]
+		oop >= addr ifTrue: [^ prev]].
+	^0
 ]
 
 { #category : #'simulation only' }
@@ -383,6 +388,11 @@ NewCoObjectMemorySimulator >> preGCAction: fullGCFlag [
 NewCoObjectMemorySimulator >> primitiveFail [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter primitiveFail
+]
+
+{ #category : #'simulation only' }
+NewCoObjectMemorySimulator >> primitiveFailFor: reasonCode [
+	^coInterpreter primitiveFailFor: reasonCode
 ]
 
 { #category : #'simulation only' }

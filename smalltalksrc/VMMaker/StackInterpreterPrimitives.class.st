@@ -303,11 +303,9 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	moduleName := objectMemory fetchPointer: 0 ofObject: lit.
 	moduleName = objectMemory nilObject
 		ifTrue: [moduleLength := 0]
-		ifFalse: [self success: (objectMemory isBytes: moduleName).
-				moduleLength := objectMemory lengthOf: moduleName.
-				self cCode: '' inSmalltalk:
-					[ (#('FloatArrayPlugin' 'Matrix2x3Plugin') includes: (self stringOf: moduleName))
-						ifTrue: [moduleLength := 0  "Cause all of these to fail"]]].
+		ifFalse: [(objectMemory isBytes: moduleName) ifFalse:
+					[self primitiveFailFor: PrimErrBadMethod].
+				moduleLength := objectMemory lengthOf: moduleName].
 	functionName := objectMemory fetchPointer: 1 ofObject: lit.
 	(objectMemory isBytes: functionName) ifFalse:
 		[self primitiveFailFor: PrimErrBadMethod].
@@ -328,7 +326,7 @@ StackInterpreterPrimitives >> primitiveExternalCall [
 	"If the function has been successfully loaded cache and call it"
 	index >= 0
 		ifTrue:
-			[self rewriteMethodCacheEntryForExternalPrimitiveToFunction: (self cCode: 'addr' inSmalltalk: [1000 + index]).
+			[self rewriteMethodCacheEntryForExternalPrimitiveToFunction: (self cCode: [addr] inSmalltalk: [1000 + index]).
 			self callExternalPrimitive: addr]
 		ifFalse: ["Otherwise void the primitive function and fail"
 			self rewriteMethodCacheEntryForExternalPrimitiveToFunction: 0.

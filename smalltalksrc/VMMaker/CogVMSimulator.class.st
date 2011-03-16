@@ -9,7 +9,7 @@ and be patient both to wait for things to happen, and to accept various things t
 "
 Class {
 	#name : #CogVMSimulator,
-	#superclass : #CoInterpreter,
+	#superclass : #CoInterpreterPrimitives,
 	#instVars : [
 		'enableCog',
 		'byteCount',
@@ -235,6 +235,16 @@ CogVMSimulator >> ceSend: selector "<Integer>" super: superNormalBar "<0|1>" to:
 ]
 
 { #category : #trampolines }
+CogVMSimulator >> ceSendAbort: selector to: rcvr numArgs: numArgs [
+	"self stringOf: selector"
+	"self printOop: rcvr"
+	self logSend: selector.
+	cogit assertCStackWellAligned.
+	self maybeCheckStackDepth: 0 sp: stackPointer.
+	^super ceSendAbort: selector to: rcvr numArgs: numArgs
+]
+
+{ #category : #trampolines }
 CogVMSimulator >> ceSendFromInLineCacheMiss: oPIC [
 	"Override to map the address into a CogMethodSurrogate"
 	| surrogate |
@@ -387,15 +397,6 @@ CogVMSimulator >> cogMethodSurrogateAt: address [
 { #category : #'simulation only' }
 CogVMSimulator >> cogit [
 	^cogit
-]
-
-{ #category : #'debug support' }
-CogVMSimulator >> compactClassAt: ccIndex [
-	"Index must be between 1 and compactClassArray size. (A zero compact class index in the base header indicate that the class is in the class header word.)"
-
-	| classArray |
-	classArray := objectMemory fetchPointer: CompactClasses ofObject: objectMemory specialObjectsOop.
-	^ objectMemory fetchPointer: (ccIndex - 1) ofObject: classArray
 ]
 
 { #category : #initialization }
@@ -568,6 +569,11 @@ CogVMSimulator >> ensureDebugAtEachStepBlock [
 						 printBytecodeAtEachStep ifTrue:
 							[self printCurrentBytecodeOn: transcript.
 							 transcript cr; flush].
+						 cogit breakBlock ifNotNil:
+							[:bb|
+							(bb value: cogit) ifTrue:
+								[self changed: #byteCountText.
+								 self halt: 'machine code breakpoint in interpreter']].
 						 byteCount = breakCount ifTrue:
 							["printFrameAtEachStep :=" printBytecodeAtEachStep := true]]
 ]
@@ -809,6 +815,13 @@ CogVMSimulator >> halfWordHighInLong32: long32 [
 { #category : #'memory access' }
 CogVMSimulator >> halfWordLowInLong32: long32 [
 	^self subclassResponsibility
+]
+
+{ #category : #'message sending' }
+CogVMSimulator >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage mayLink: mayLinkBoolean [
+	selectorIndex = SelectorCannotInterpret ifTrue:
+		[self halt].
+	^super handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage mayLink: mayLinkBoolean
 ]
 
 { #category : #'debug support' }
@@ -1185,7 +1198,9 @@ CogVMSimulator >> ioLoadFunction: functionString From: pluginString [
 				ifNone:
 					[firstTime := true.
 					self loadNewPlugin: pluginString].
-	plugin ifNil: [^0].
+	plugin ifNil:
+		[firstTime ifTrue: [transcript cr; show: 'Failed ... primitive not in plugin'].
+		 ^0].
 	plugin := plugin value.
 	mappedPluginEntries doWithIndex:
 		[:pluginAndName :index|
@@ -1730,11 +1745,11 @@ CogVMSimulator >> noteAsRoot: oop headerLoc: headerLoc [
 CogVMSimulator >> objectBefore: addr [
 	| oop prev |
 	oop := objectMemory firstObject.
-	[oop < objectMemory endOfMemory] whileTrue: [
-		prev := oop.  "look here if debugging prev obj overlapping this one"
+	[oop < objectMemory endOfMemory] whileTrue:
+		[prev := oop.  "look here if debugging prev obj overlapping this one"
 		oop := objectMemory objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]
-	]
+		oop >= addr ifTrue: [^ prev]].
+	^0
 ]
 
 { #category : #UI }
@@ -2000,6 +2015,15 @@ CogVMSimulator >> primitiveContextAtPut [
 						WithSP: (self frameOfMarriedContext: aContext) - 48]
 			ifFalse: [self printContext: aContext]]."
 	^super primitiveContextAtPut
+]
+
+{ #category : #'I/O primitives' }
+CogVMSimulator >> primitiveDeferDisplayUpdates [
+	| oldDeferDisplayUpdates |
+	oldDeferDisplayUpdates := deferDisplayUpdates.
+	super primitiveDeferDisplayUpdates.
+	oldDeferDisplayUpdates ~= deferDisplayUpdates ifTrue:
+		[self fullDisplayUpdate]
 ]
 
 { #category : #'file primitives' }
@@ -2402,6 +2426,16 @@ CogVMSimulator >> printStringOf: oop on: aStream [
 	aStream flush
 ]
 
+{ #category : #UI }
+CogVMSimulator >> promptHex: string [
+	| s |
+	s := UIManager default request: string, ' (hex)'.
+	^s notEmpty ifTrue:
+		[(s size > 3 and: [s third = $r]) ifTrue:
+			[s := s allButFirst: 3].
+		Integer readFrom: s readStream base: 16]
+]
+
 { #category : #'bytecode routines' }
 CogVMSimulator >> pushLiteralConstantBytecode [
 
@@ -2532,16 +2566,6 @@ CogVMSimulator >> sendBreak: selectorString point: selectorLength receiver: rece
 										ifNotNil: [' to ', (self shortPrint: receiverOrNil)]
 										ifNil: [''])]]
 				ifFalse: [i := 0]]]
-]
-
-{ #category : #UI }
-CogVMSimulator >> setBreakPC [
-	| s |
-	s := UIManager default request: 'break pc (hex)'.
-	s isEmpty ifTrue: [^self].
-	(s size > 3 and: [s third = $r]) ifTrue:
-		[s := s allButFirst: 3].
-	cogit breakPC: (Integer readFrom: s readStream base: 16)
 ]
 
 { #category : #'memory access' }
@@ -3190,11 +3214,14 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'long print ext frame & callers' action: [self printFrameAndCallers: framePointer SP: stackPointer];
 		add: 'long print int frame & callers' action: [self printFrameAndCallers: localFP SP: localSP];
 		add: 'long print mc/cog frame & callers' action: [self printFrameAndCallers: cogit processor fp SP: cogit processor sp];
+		add: 'print frame...' action: [(self promptHex: 'print frame') ifNotNil: [:fp| self printFrame: fp]];
 		add: 'print call stack' action: #printCallStack;
 		add: 'print all stacks' action: #printAllStacks;
 		addLine;
 		add: 'print registers' action: [cogit processor printRegistersOn: transcript];
+		add: 'disassemble method at...' action: [(self promptHex: 'cog method') ifNotNil: [:cm| cogit disassembleMethodFor: cm]];
 		add: 'disassemble method at pc' action: [cogit disassembleMethodFor: cogit processor pc];
+		add: 'print oop...' action: [(self promptHex: 'print oop') ifNotNil: [:oop| self printOop: oop]];
 		addLine;
 		add: 'inspect object memory' target: objectMemory action: #inspect;
 		add: 'inspect cointerpreter' action: #inspect;
@@ -3207,7 +3234,7 @@ CogVMSimulator >> utilitiesMenu: aMenuMorph [
 		add: 'print cog methods' target: cogMethodZone action: #printCogMethods;
 		add: 'print trampoline table' target: cogit action: #printTrampolineTable;
 		add: 'report recent instructions' target: cogit action: #reportLastNInstructions;
-		add: 'set break pc...' target: self action: #setBreakPC;
+		add: 'set break pc...' action: [(self promptHex: 'break pc') ifNotNil: [:bpc| cogit breakPC: bpc]];
 		add: (cogit singleStep
 				ifTrue: ['no single step']
 				ifFalse: ['single step'])

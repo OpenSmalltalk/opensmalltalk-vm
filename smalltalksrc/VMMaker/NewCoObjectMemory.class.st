@@ -53,7 +53,8 @@ NewCoObjectMemory >> clearLeakMapAndMapAccessibleObjects [
 
 { #category : #accessing }
 NewCoObjectMemory >> cogit [
-	^ cogit
+	<doNotGenerate>
+	^cogit
 ]
 
 { #category : #accessing }
