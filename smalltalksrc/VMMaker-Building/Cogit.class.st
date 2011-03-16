@@ -3446,7 +3446,7 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 			arg: { aStream. codeRanges. cogMethod }]
 			on: AssertionFailure
 			do: [:ex|
-				ex primitiveChangeClassTo: MyResumableTestError basicNew. ":) :) :)"
+				ex primitiveChangeClassTo: ResumableVMError basicNew. ":) :) :)"
 				ex resume: nil]].
 	^cogMethod
 ]
