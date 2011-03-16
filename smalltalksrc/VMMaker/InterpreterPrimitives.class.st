@@ -2681,9 +2681,9 @@ InterpreterPrimitives >> primitiveScanCharacters [
 	scanXTable := objectMemory fetchPointer: 2 ofObject: rcvr.
 	scanMap := objectMemory fetchPointer: 3 ofObject: rcvr.
 	((objectMemory isArray: scanXTable) and: [objectMemory isArray: scanMap]) ifFalse: [^ self primitiveFail].
-	(self slotSizeOf: scanMap) = 256 ifFalse: [^ self primitiveFail].
+	(objectMemory slotSizeOf: scanMap) = 256 ifFalse: [^ self primitiveFail].
 	self successful ifFalse: [^ nil].
-	maxGlyph := (self slotSizeOf: scanXTable) - 2.
+	maxGlyph := (objectMemory slotSizeOf: scanXTable) - 2.
 
 	"Okay, here we go. We have eliminated nearly all failure 
 	conditions, to optimize the inner fetches."

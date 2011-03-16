@@ -392,7 +392,7 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 	SelectorAttemptToAssign := 50.
 	"PrimErrTableIndex := 51. in Interpreter class>>initializePrimitiveErrorCodes"
 	ClassAlien := 52.
-	InvokeCallbackSelector := 53.
+	SelectorInvokeCallback := 53.
 	ClassUnsafeAlien := 54.
 
 	ClassWeakFinalizer := 55.
@@ -1490,14 +1490,13 @@ ObjectMemory >> fetchClassOf: oop [
 	| ccIndex |
 	<inline: true>
 	<asmLabel: false>
-	(self isIntegerObject: oop) ifTrue: [^ self splObj: ClassInteger].
+	(self isIntegerObject: oop) ifTrue: [^self splObj: ClassInteger].
 
 	(ccIndex := (self compactClassIndexOf: oop)) = 0
 		ifTrue: [^(self classHeader: oop) bitAnd: AllButTypeMask]
 		ifFalse: "look up compact class"
 			[^self fetchPointer: ccIndex - 1
-				ofObject: (self fetchPointer: CompactClasses
-								ofObject: specialObjectsOop)]
+				ofObject: (self splObj: CompactClasses)]
 ]
 
 { #category : #'interpreter access' }
@@ -1509,8 +1508,7 @@ ObjectMemory >> fetchClassOfNonInt: oop [
 		ifTrue: [^(self classHeader: oop) bitAnd: AllButTypeMask]
 		ifFalse: "look up compact class"
 			[^self fetchPointer: ccIndex - 1
-				ofObject: (self fetchPointer: CompactClasses
-							ofObject: specialObjectsOop)]
+				ofObject: (self splObj: CompactClasses)]
 ]
 
 { #category : #'interpreter access' }

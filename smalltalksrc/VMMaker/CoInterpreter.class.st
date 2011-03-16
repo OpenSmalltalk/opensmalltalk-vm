@@ -11,7 +11,6 @@ Class {
 		'cogCodeSize',
 		'desiredCogCodeSize',
 		'heapBase',
-		'linkSends',
 		'lastCoggableInterpretedBlockMethod',
 		'lastBackwardJumpMethod',
 		'backwardJumpCount',
@@ -518,52 +517,6 @@ CoInterpreter >> activateCoggedNewMethod: inInterpreter [
 	instructionPointer := cogMethod asInteger + cogMethod stackCheckOffset.
 	switched := self handleStackOverflowOrEventAllowContextSwitch: (self canContextSwitchIfActivating: methodHeader).
 	self returnToExecutive: inInterpreter postContextSwitch: switched
-]
-
-{ #category : #trampolines }
-CoInterpreter >> activateInterpreterMethodFromMachineCode [
-	"Execute an interpreted method from machine code.  We assume (require) that newMethod
-	 messageSelector, primitiveFunctionPointer and argumentCount have been set in the caller.
-	 Once evaluated either continue in the interpreter via a jongjmp or in machine code via an
-	 enilopmart (a form of longjmp - a stinking rose by any other name)."
-	<inline: false>
-	cogit assertCStackWellAligned.
-	self assert: (self validInstructionPointer: self stackTop inFrame: framePointer).
-	instructionPointer := self popStack.
-	primitiveFunctionPointer ~= 0
-		ifTrue:
-			[primitiveFunctionPointer = #primitiveInvokeObjectAsMethod asSymbol
-				ifTrue: [self assert: (objectMemory isOopCompiledMethod: newMethod) not]
-				ifFalse: [self assert: ((objectMemory isOopCompiledMethod: newMethod)
-									  and: [(self primitiveIndexOf: newMethod) ~= 0])].
-			 "Invoke an interpreter primitive (because the method is to be interpreted or has not yet been
-			  compiled).  This is very similar to invoking an interpreter primitive from a compiled primitive
-			  (see e.g. SimpleStackBasedCogit>>compileInterpreterPrimitive:).  Cut back the stack pointer
-			  (done above) to skip the return address and invoke the function.  On return if it has succeeded
-			  simply continue otherwise restore the stackPointer, collect the pc and interpret.  Note that
-			  frame building primitives such as primitiveClosureValue, primitiveEvaluateMethod et al will not
-			  return but will instead jump into either machine code or longjmp back to the interpreter."
-			"Assign stackPage headFP so we can tell if the primitive built a frame.  We can't simply save
-			 the framePointer since e.g. assignment to contexts (via primitiveInstVarAt:put:) can change the
-			 framePointer.  But context assignments will change both the framePointer and stackPage headFP."
-			 stackPage headFP: framePointer.
-			 self isPrimitiveFunctionPointerAnIndex
-				ifTrue:
-					[self externalQuickPrimitiveResponse.
-					 primFailCode := 0]
-				ifFalse:
-					[self slowPrimitiveResponse].
-			self successful ifTrue:
-				[self return: self popStack toExecutive: false
-				 "NOTREACHED"]]
-		ifFalse:
-			[self assert: ((self primitiveIndexOf: newMethod) = 0
-						or: [(self functionPointerFor: (self primitiveIndexOf: newMethod) inClass: objectMemory nilObject) = 0])].
-	"if not primitive, or primitive failed, activate the method and reenter the interpreter"
-	self activateNewMethod.
-	self siglong: reenterInterpreter jmp: ReturnToInterpreter.
-	"NOTREACHED"
-	^nil
 ]
 
 { #category : #'control primitives' }
@@ -1227,10 +1180,9 @@ CoInterpreter >> ceCannotResume [
 	"Make sure the happy couple remain returned from."
 	self push: cogit ceCannotResumePC.
 	^self
-		ceSend: (objectMemory splObj: SelectorCannotReturn)
-		super: 0
+		ceSendAbort: (objectMemory splObj: SelectorCannotReturn)
 		to: (self frameContext: framePointer)
-		numArgs: -1 - 1 "i.e. 1 arg & don't link"
+		numArgs: 1
 ]
 
 { #category : #trampolines }
@@ -1310,22 +1262,24 @@ CoInterpreter >> ceInterpretMethodFromPIC: aMethodObj receiver: rcvr [
 	primitiveIndex := self primitiveIndexOf: aMethodObj.
 	primitiveFunctionPointer := self functionPointerFor: primitiveIndex inClass: objectMemory nilObject.
 	argumentCount := pic cmNumArgs.
-	^self activateInterpreterMethodFromMachineCode
+	instructionPointer := self popStack.
+	^self interpretMethodFromMachineCode
 	"NOTREACHED"
 ]
 
 { #category : #trampolines }
 CoInterpreter >> ceMNUFromPICMNUMethod: aMethodObj receiver: rcvr [
 	<api>
-	| cPIC class |
+	| cPIC |
 	<var: #cPIC type: #'CogMethod *'>
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
 	cPIC := self cCoerceSimple: self popStack - cogit mnuOffset to: #'CogMethod *'.
 	self assert: cPIC cmType = CMClosedPIC.
 	argumentCount := cPIC cmNumArgs.
 	messageSelector := cPIC selector.
-	class := objectMemory fetchClassOf: rcvr.
-	self handleMNUInMachineCodeTo: rcvr lookupClass: class mayLink: false
+	lkupClass := objectMemory fetchClassOf: rcvr.
+	self handleMNU: SelectorDoesNotUnderstand InMachineCodeTo: rcvr classForMessage: lkupClass mayLink: false.
+	"NOTREACHED"
 ]
 
 { #category : #trampolines }
@@ -1486,30 +1440,21 @@ CoInterpreter >> ceReturnToInterpreter: anOop [
 ]
 
 { #category : #trampolines }
-CoInterpreter >> ceSend: selector "<Integer>" super: superNormalBar to: rcvr "<Integer>" numArgs: numArgs [ "<Integer>"
-	"Entry-point for an unlinked send in a CogMethod, or, if numArgs < 0, a send of
-	 a return escape case (cannotReturn:, aboutToReturn:through:, mustBeBoolean)
-	 in machine-code.  Smalltalk stack looks like
+CoInterpreter >> ceSend: selector super: superNormalBar to: rcvr numArgs: numArgs [
+	"Entry-point for an unlinked send in a CogMethod.  Smalltalk stack looks like
 					receiver
 					args
 		head sp ->	sender return pc
 		
-	If a return escape then simply try and dispatch the send, but the send may turn into an MNU.
-	If a normal send then try and link the send site as efficiently as possible.
-
 	If an MNU then defer to handleMNUInMachineCodeTo:... which will dispatch the MNU and
-	may choose to allocate a closed PIC with a fast MNU dispatch for this send.
+	may choose to allocate a closed PIC with a fast MNU dispatch for this send.  Otherwise
+	attempt to link the send site as efficiently as possible.  All link attempts may fail; e.g.
+	because we're out of code memory.
 
-	If not an MNU and the receiver's class is old then try to link to the target method.
-	If not an MNU but the receiver's class is young then try and link to an Open PIC for
-	this selector.  All link attempts may fail; e.g. because we're out of code memory.
-
-	Continue execution via either executeCogMethodFromUnlinkedSend:withReceiver: or
-	activateInterpreterMethodFromMachineCode: depending on whether the target method
-	is cogged or not.  Note it seems we can use executeNewMethod instead of 
-	executeCogMethodFromUnlinkedSend:withReceiver:"
+	Continue execution via either executeMethod or interpretMethodFromMachineCode:
+	depending on whether the target method is cogged or not."
 	<api>
-	| class mayLink canLinkCacheTag |
+	| class canLinkCacheTag errSelIdx cogMethod |
 	<inline: false>
 	<var: #cogMethod type: #'CogMethod *'>
 	"self printExternalHeadFrame"
@@ -1522,55 +1467,89 @@ CoInterpreter >> ceSend: selector "<Integer>" super: superNormalBar to: rcvr "<I
 	superNormalBar = 0
 		ifTrue: [class := objectMemory fetchClassOf: rcvr]
 		ifFalse: [class := self superclassOf: (self methodClassOf: (self frameMethodObject: framePointer))].
-	numArgs >= 0
-		ifTrue:
-			[mayLink := linkSends.
-			 canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
-			 argumentCount := numArgs]
-		ifFalse: "This is a cannotReturn:, nonLocalreturn:through: or mustBeBoolean send.  Must not link."
-			[mayLink := false.
-			 argumentCount := -1 - numArgs].
+	canLinkCacheTag := (objectMemory isYoungObject: class) not or: [cogit canLinkToYoungClasses].
 	"We set the messageSelector and lkupClass for executeMethod below since things
-	 like the at cache read messageSelectorand lkupClass and so they cannot be left stale."
+	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
 	messageSelector := selector.
 	lkupClass := class.
+	argumentCount := numArgs.
 	(self lookupInMethodCacheSel: selector class: class)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: selector]
 		ifFalse:
-			[(self lookupMethodNoMNUEtcInClass: class) ifFalse:
-				[^self handleMNUInMachineCodeTo: rcvr
-					lookupClass: class
-					mayLink: (mayLink and: [canLinkCacheTag])]].
+			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class mayLink: canLinkCacheTag.
+				"NOTREACHED"
+				self assert: false]].
 	"Method found and has a cog method.  Attempt to link to it.  The receiver's class may be young.
 	 If the Cogit can't store young classes in inline caches we can link to an open PIC instead."
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
-		[mayLink ifTrue:
-			[| cogMethod |
-			 cogMethod := self cogMethodOf: newMethod.
-			 cogMethod selector = objectMemory nilObject ifTrue:
-				[cogit setSelectorOf: cogMethod to: selector].
-			 canLinkCacheTag
-				ifTrue:
-					[cogit
-						linkSendAt: (stackPages longAt: stackPointer)
-						in: (self mframeHomeMethod: framePointer)
-						to: cogMethod
-						checked: superNormalBar = 0
-						receiver: rcvr]
-				ifFalse:
-					[cogit
-						patchToOpenPICFor: selector
-						numArgs: numArgs
-						receiver: rcvr
-					"If patchToOpenPICFor:.. returns we're out of code memory"]].
+		[cogMethod := self cogMethodOf: newMethod.
+		 cogMethod selector = objectMemory nilObject ifTrue:
+			[cogit setSelectorOf: cogMethod to: selector].
+		 canLinkCacheTag
+			ifTrue:
+				[cogit
+					linkSendAt: (stackPages longAt: stackPointer)
+					in: (self mframeHomeMethod: framePointer)
+					to: cogMethod
+					checked: superNormalBar = 0
+					receiver: rcvr]
+			ifFalse: "If patchToOpenPICFor:.. returns we're out of code memory"
+				[cogit
+					patchToOpenPICFor: selector
+					numArgs: numArgs
+					receiver: rcvr].
 		 instructionPointer := self popStack.
 		 self executeNewMethod.
 		 self assert: false
 		 "NOTREACHED"].
-	^self activateInterpreterMethodFromMachineCode
+	instructionPointer := self popStack.
+	^self interpretMethodFromMachineCode
+	"NOTREACHED"
+]
+
+{ #category : #trampolines }
+CoInterpreter >> ceSendAbort: selector to: rcvr numArgs: numArgs [
+	"Entry-point for an abort send in a CogMethod (aboutToReturn:through:, cannotReturn: et al).
+	 Try and dispatch the send, but the send may turn into an MNU in which case defer to
+	 handleMNUInMachineCodeTo:... which will dispatch the MNU.
+
+	 Continue execution via either executeMethod or interpretMethodFromMachineCode:
+	 depending on whether the target method is cogged or not."
+	<api>
+	| class errSelIdx |
+	<inline: false>
+	"self printExternalHeadFrame"
+	"self printStringOf: selector"
+	cogit assertCStackWellAligned.
+	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
+	self sendBreak: selector + BaseHeaderSize
+		point: (objectMemory lengthOf: selector)
+		receiver: rcvr.
+	argumentCount := numArgs.
+	"We set the messageSelector and lkupClass for executeMethod below since things
+	 like the at cache read messageSelector and lkupClass and so they cannot be left stale."
+	messageSelector := selector.
+	lkupClass := class := objectMemory fetchClassOf: rcvr.
+	(self lookupInMethodCacheSel: selector class: class)
+		ifTrue:"check for coggability because method is in the cache"
+			[self
+				ifAppropriateCompileToNativeCode: newMethod
+				selector: selector]
+		ifFalse:
+			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class mayLink: false.
+				"NOTREACHED"
+				self assert: false]].
+	instructionPointer := self popStack.
+	(self maybeMethodHasCogMethod: newMethod) ifTrue:
+		[self executeNewMethod.
+		 self assert: false
+		 "NOTREACHED"].
+	^self interpretMethodFromMachineCode
 	"NOTREACHED"
 ]
 
@@ -1580,7 +1559,7 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 	 or to continue when PIC creation has failed (e.g. because we're out of code space)."
 	<api>
 	<var: #oPIC type: #'CogMethod *'>
-	| numArgs rcvr class |
+	| numArgs rcvr class errSelIdx |
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
 	numArgs := oPIC cmNumArgs.
@@ -1598,16 +1577,16 @@ CoInterpreter >> ceSendFromInLineCacheMiss: oPIC [
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: oPIC selector]
 		ifFalse:
-			[(self lookupMethodNoMNUEtcInClass: class) ifFalse:
-				[self handleMNUInMachineCodeTo: rcvr
-					lookupClass: class
-					mayLink: false]].
+			[(errSelIdx := self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
+				[self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: class mayLink: false.
+				"NOTREACHED"
+				self assert: false]].
+	instructionPointer := self popStack.
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
-		[instructionPointer := self popStack.
-		 self executeNewMethod.
+		[self executeNewMethod.
 		 self assert: false
 		 "NOTREACHED"].
-	^self activateInterpreterMethodFromMachineCode
+	^self interpretMethodFromMachineCode
 	"NOTREACHED"
 ]
 
@@ -1618,10 +1597,9 @@ CoInterpreter >> ceSendMustBeBoolean: anObject [
 	self push: anObject.
 	self push: instructionPointer.
 	^self
-		ceSend: (objectMemory splObj: SelectorMustBeBoolean)
-		super: 0
+		ceSendAbort: (objectMemory splObj: SelectorMustBeBoolean)
 		to: anObject
-		numArgs: -0 - 1 "i.e. 0 args & don't link"
+		numArgs: 0
 ]
 
 { #category : #trampolines }
@@ -2636,10 +2614,9 @@ CoInterpreter >> externalAboutToReturn: resultOop through: aContext [
 	 In this uncommon case restore it, since a send's call pushes the instructionPointer (after the arguments)."
 	self push: instructionPointer.
 	^self
-		ceSend: (objectMemory splObj: SelectorAboutToReturn)
-		super: 0
+		ceSendAbort: (objectMemory splObj: SelectorAboutToReturn)
 		to: ourContext
-		numArgs: -2 - 1 "i.e. 2 args & don't link"
+		numArgs: 2
 ]
 
 { #category : #'return bytecodes' }
@@ -2652,10 +2629,9 @@ CoInterpreter >> externalCannotReturn: resultOop from: aContext [
 	 it, since a send's call pushes the instructionPointer (after the arguments)."
 	self push: instructionPointer.
 	^self
-		ceSend: (objectMemory splObj: SelectorCannotReturn)
-		super: 0
+		ceSendAbort: (objectMemory splObj: SelectorCannotReturn)
 		to: aContext
-		numArgs: -1 - 1 "i.e. 1 arg & don't link"
+		numArgs: 1
 ]
 
 { #category : #'frame access' }
@@ -3033,24 +3009,29 @@ CoInterpreter >> getImageHeaderFlags [
 ]
 
 { #category : #'message sending' }
-CoInterpreter >> handleMNUInMachineCodeTo: rcvr lookupClass: class mayLink: mayLinkBoolean [
+CoInterpreter >> handleMNU: selectorIndex InMachineCodeTo: rcvr classForMessage: classForMessage mayLink: mayLinkBoolean [
 	"A message send from either an open PIC or an unlinked send has not
 	 been understood.  Load newMethod with the MNU method.  If linking
 	 is allowed and the target MNU method is in the cache then create a
-	 closed PIC with an mnu-entry and link the send to it.  messageSelector
-	 and argumentCount have already been set by the caller."
+	 closed PIC with an mnu-entry and link the send to it.  messageSelector,
+	 argumentCount and lkupClass have already been set by the caller."
+	| errSelIdx classForThisMessage |
 	self assert: ((objectMemory isIntegerObject: rcvr) or: [objectMemory addressCouldBeObj: rcvr]).
 	instructionPointer := self popStack.
-	self createActualMessageTo: class.
-	messageSelector := objectMemory splObj: SelectorDoesNotUnderstand.
-	(self lookupInMethodCacheSel: messageSelector class: class)
+	self createActualMessageTo: classForMessage.
+	messageSelector := objectMemory splObj: selectorIndex.
+	(self lookupInMethodCacheSel: messageSelector class: lkupClass)
 		ifTrue:"check for coggability because method is in the cache"
 			[self
 				ifAppropriateCompileToNativeCode: newMethod
 				selector: messageSelector]
 		ifFalse:
-			[(self lookupMethodNoMNUEtcInClass: class) ifFalse:
-				[self error: 'Recursive not understood error encountered']].
+			[errSelIdx := self lookupMethodNoMNUEtcInClass: (classForThisMessage := lkupClass).
+			 errSelIdx ~= 0 ifTrue:
+				[errSelIdx = SelectorDoesNotUnderstand ifTrue:
+					[self error: 'Recursive not understood error encountered'].
+				 self push: instructionPointer.
+				 ^self handleMNU: errSelIdx InMachineCodeTo: rcvr classForMessage: classForThisMessage mayLink: false]].
 	(self maybeMethodHasCogMethod: newMethod) ifTrue:
 		[mayLinkBoolean ifTrue:
 			[self flag: 'implement creating an MNU PIC sometime'.
@@ -3060,8 +3041,7 @@ CoInterpreter >> handleMNUInMachineCodeTo: rcvr lookupClass: class mayLink: mayL
 			 withReceiver: rcvr.
 		 "NOTREACHED"
 		 self assert: false].
-	self push: instructionPointer.
-	^self activateInterpreterMethodFromMachineCode
+	^self interpretMethodFromMachineCode
 	"NOTREACHED"
 ]
 
@@ -3094,21 +3074,6 @@ CoInterpreter >> ifAppropriateCompileToNativeCode: aMethodObj selector: selector
 			[(self methodWithHeaderShouldBeCogged: methodHeader)
 				ifTrue: [cogit cog: aMethodObj selector: selector]
 				ifFalse: [self maybeFlagMethodAsInterpreted: aMethodObj]]
-]
-
-{ #category : #'debug support' }
-CoInterpreter >> ifValidWriteBackStack: theCFP Pointers: theCSP [
-	"This is for low-level error reporting.  If either of the C stack pointers are
-	 pointing into the stack zone then write them back to framePointer and/or
-	 stackPointer so that the stack backtrace will be up to date."
-	<api>
-	<var: #theCFP type: #'void *'>
-	<var: #theCSP type: #'void *'>
-	<returnTypeC: #void>
-	(self couldBeFramePointer: theCFP) ifTrue:
-		[framePointer := theCFP].
-	(self couldBeFramePointer: theCSP) ifTrue:
-		[stackPointer := theCSP]
 ]
 
 { #category : #'frame access' }
@@ -3214,7 +3179,6 @@ CoInterpreter >> initialEnterSmalltalkExecutive [
 
 { #category : #initialization }
 CoInterpreter >> initializeCodeGenerator [
-	linkSends := true.
 	cogit
 		initializeCodeZoneFrom: (self cCode: [objectMemory memory] inSmalltalk: [0])
 		upTo: (self cCode: [objectMemory memory] inSmalltalk: [0]) + cogCodeSize
@@ -3414,6 +3378,51 @@ CoInterpreter >> internalizeIPandSP [
 	localFP := self pointerForOop: framePointer
 ]
 
+{ #category : #'message sending' }
+CoInterpreter >> interpretMethodFromMachineCode [
+	"Execute a method interpretively from machine code.  We assume (require) that newMethod
+	 messageSelector, primitiveFunctionPointer and argumentCount have been set in the caller.
+	 Once evaluated either continue in the interpreter via a jongjmp or in machine code via an
+	 enilopmart (a form of longjmp - a stinking rose by any other name)."
+	<inline: false>
+	cogit assertCStackWellAligned.
+	self assert: (self validInstructionPointer: instructionPointer inFrame: framePointer).
+	primitiveFunctionPointer ~= 0
+		ifTrue:
+			[primitiveFunctionPointer = #primitiveInvokeObjectAsMethod asSymbol
+				ifTrue: [self assert: (objectMemory isOopCompiledMethod: newMethod) not]
+				ifFalse: [self assert: ((objectMemory isOopCompiledMethod: newMethod)
+									  and: [(self primitiveIndexOf: newMethod) ~= 0])].
+			 "Invoke an interpreter primitive (because the method is to be interpreted or has not yet been
+			  compiled).  This is very similar to invoking an interpreter primitive from a compiled primitive
+			  (see e.g. SimpleStackBasedCogit>>compileInterpreterPrimitive:).  Cut back the stack pointer
+			  (done above) to skip the return address and invoke the function.  On return if it has succeeded
+			  simply continue otherwise restore the stackPointer, collect the pc and interpret.  Note that
+			  frame building primitives such as primitiveClosureValue, primitiveEvaluateMethod et al will not
+			  return but will instead jump into either machine code or longjmp back to the interpreter."
+			"Assign stackPage headFP so we can tell if the primitive built a frame.  We can't simply save
+			 the framePointer since e.g. assignment to contexts (via primitiveInstVarAt:put:) can change the
+			 framePointer.  But context assignments will change both the framePointer and stackPage headFP."
+			 stackPage headFP: framePointer.
+			 self isPrimitiveFunctionPointerAnIndex
+				ifTrue:
+					[self externalQuickPrimitiveResponse.
+					 primFailCode := 0]
+				ifFalse:
+					[self slowPrimitiveResponse].
+			self successful ifTrue:
+				[self return: self popStack toExecutive: false
+				 "NOTREACHED"]]
+		ifFalse:
+			[self assert: ((self primitiveIndexOf: newMethod) = 0
+						or: [(self functionPointerFor: (self primitiveIndexOf: newMethod) inClass: objectMemory nilObject) = 0])].
+	"if not primitive, or primitive failed, activate the method and reenter the interpreter"
+	self activateNewMethod.
+	self siglong: reenterInterpreter jmp: ReturnToInterpreter.
+	"NOTREACHED"
+	^nil
+]
+
 { #category : #'stack pages' }
 CoInterpreter >> interpreterAllocationReserveBytes [
 	"At a rough approximation we may need to allocate up to a couple
@@ -3549,11 +3558,6 @@ CoInterpreter >> justActivateNewMethod [
 	^methodHeader
 ]
 
-{ #category : #'debug support' }
-CoInterpreter >> linkSends: aBoolean [
-	linkSends := aBoolean
-]
-
 { #category : #'cog jit support' }
 CoInterpreter >> long: aJumpBuf jmp: returnValue [
 	"Hack simulation of setjmp/longjmp.
@@ -3597,15 +3601,15 @@ CoInterpreter >> longUnconditionalJump [
 { #category : #'cog jit support' }
 CoInterpreter >> lookup: selector receiver: rcvr [
 	<api>
-	"Lookup selector in rcvr, without doing MNU processing, and
-	 answer either a method or nil if the message was not understood."
+	"Lookup selector in rcvr, without doing MNU processing, and answer either a
+	 method or nil if the message was not understood.  Used to populate closed PICs."
 	| class |
 	"self printFrame: stackPage headFP WithSP: stackPage headSP"
 	"self printStringOf: selector"
 	class := objectMemory fetchClassOf: rcvr.
 	(self lookupInMethodCacheSel: selector class: class) ifFalse:
 		[messageSelector := selector.
-		 (self lookupMethodNoMNUEtcInClass: class) ifFalse:
+		 (self lookupMethodNoMNUEtcInClass: class) ~= 0 ifTrue:
 			[^nil]].
 	^newMethod
 ]
@@ -4644,7 +4648,9 @@ CoInterpreter >> printFrame: theFP [
 					[theSP := self findSPOrNilOf: theFP
 								on: thePage
 								startingFrom: ((thePage = stackPage
-											and: [framePointer < thePage headFP])
+											and: [framePointer
+														between: thePage realStackLimit
+														and: thePage baseAddress])
 												ifTrue: [framePointer]
 												ifFalse: [thePage headFP])]].
 	theSP isNil ifTrue:
@@ -5262,7 +5268,7 @@ CoInterpreter >> sendInvokeCallbackContext: vmCallbackContext [
 	"Override to log.  Since this is an implicit send we need to log it explicitly.
 	 The return side is done via a primitive so that gets logged normally."
 	cogit recordPrimTrace ifTrue:
-		[self fastLogPrim: (self splObj: InvokeCallbackSelector)].
+		[self fastLogPrim: (self splObj: SelectorInvokeCallback)].
 	^super sendInvokeCallbackContext: vmCallbackContext
 ]
 

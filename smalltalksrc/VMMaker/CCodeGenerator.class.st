@@ -1512,7 +1512,10 @@ CCodeGenerator >> generateInlineCCode: msgNode on: aStream indent: level [
 	 There are two forms, self cCode: aString ... and self cCode: aBlock."
 
 	msgNode args first isConstant
-		ifTrue: [aStream nextPutAll: msgNode args first value]
+		ifTrue:
+			[(msgNode args first value at: 1 ifAbsent: nil) = $# ifTrue:
+				[aStream cr].
+			aStream nextPutAll: msgNode args first value]
 		ifFalse: [msgNode args first
 					emitCCodeOn: aStream
 					level: level
@@ -1525,7 +1528,10 @@ CCodeGenerator >> generateInlineCCodeAsArgument: msgNode on: aStream indent: lev
 	 There are two forms, self cCode: aString ... and self cCode: aBlock."
 
 	msgNode args first isConstant
-		ifTrue: [aStream nextPutAll: msgNode args first value]
+		ifTrue:
+			[(msgNode args first value at: 1 ifAbsent: nil) = $# ifTrue:
+				[aStream cr].
+			aStream nextPutAll: msgNode args first value]
 		ifFalse: [msgNode args first
 					emitCCodeAsArgumentOn: aStream
 					level: level

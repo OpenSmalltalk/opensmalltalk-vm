@@ -347,6 +347,22 @@ TMethod >> determineTypeFor: aTParseNode in: aCCodeGenerator [
 	self error: 'don''t know how to extract return type from this kind of node'
 ]
 
+{ #category : #transformations }
+TMethod >> elideAnyFinalReturn [
+	"For super exoansions we need to eliminate any final return to prevent premature exit.
+	 Anything meaningful in the returned expression must be retained."
+
+	| stmtList lastStmt |
+	stmtList := parseTree statements asOrderedCollection.
+	(lastStmt := stmtList last) isReturn ifTrue:
+		[lastStmt expression isLeaf
+			ifTrue:
+				[stmtList removeLast]
+			ifFalse:
+				[stmtList at: stmtList size put: lastStmt expression].
+		parseTree setStatements: stmtList]
+]
+
 { #category : #'C code generation' }
 TMethod >> emitCCodeOn: aStream generator: aCodeGen [
 	"Emit C code for this method onto the given stream.
@@ -1367,7 +1383,7 @@ TMethod >> primitive [
 TMethod >> printOn: aStream [
 
 	super printOn: aStream.
-	aStream nextPutAll: ' (', selector, ')'.
+	aStream nextPutAll: ' (', definingClass name, '>>', selector, ')'.
 ]
 
 { #category : #'C code generation' }
@@ -1712,6 +1728,7 @@ TMethod >> setSelector: sel definingClass: class args: argList locals: localList
 	primitive := aNumber.
 	properties := methodProperties.
 	comment := aComment.
+	parseTree := aBlockNode. "hack; allows nodes to find their parent, etc"
 	parseTree := aBlockNode asTranslatorNodeIn: self.
 	labels := OrderedCollection new.
 	complete := false.  "set to true when all possible inlining has been done"
@@ -1834,7 +1851,7 @@ TMethod >> static: aBoolean [
 ]
 
 { #category : #inlining }
-TMethod >> superExpansionNodeFor: aSelector [
+TMethod >> superExpansionNodeFor: aSelector isReturned: isReturned [
 	"Answer the expansion of a super send.  Merge the super expansion's
 	 locals, properties and comment into this method's properties."
 	(definingClass superclass lookupSelector: aSelector)
@@ -1861,6 +1878,7 @@ TMethod >> superExpansionNodeFor: aSelector [
 			superTMethod cascadeVariableNumber ifNotNil:
 				[:scvn|
 				cascadeVariableNumber := cascadeVariableNumber ifNil: [scvn] ifNotNil: [:cvn| cvn + scvn]].
+			isReturned ifFalse: [superTMethod elideAnyFinalReturn].
 			^superTMethod parseTree]
 ]
 

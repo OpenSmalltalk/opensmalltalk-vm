@@ -227,6 +227,11 @@ VMClass >> asserta: aBooleanExpression [
 	^result
 ]
 
+{ #category : #accessing }
+VMClass >> bytesPerOop [
+	^BytesPerOop
+]
+
 { #category : #'translation support' }
 VMClass >> cppIf: conditionBlock ifTrue: trueExpressionOrBlock [
 	"When translated, produces #if (condition) #else #endif CPP directives.

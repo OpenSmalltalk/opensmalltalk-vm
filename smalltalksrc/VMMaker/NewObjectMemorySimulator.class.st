@@ -273,11 +273,11 @@ NewObjectMemorySimulator >> nextShortFrom: aStream swap: swapFlag [
 NewObjectMemorySimulator >> objectBefore: addr [
 	| oop prev |
 	oop := self firstObject.
-	[oop < endOfMemory] whileTrue: [
-		prev := oop.  "look here if debugging prev obj overlapping this one"
+	[oop < endOfMemory] whileTrue:
+		[prev := oop.  "look here if debugging prev obj overlapping this one"
 		oop := self objectAfter: oop.
-		oop >= addr ifTrue: [^ prev]
-	]
+		oop >= addr ifTrue: [^ prev]].
+	^0
 ]
 
 { #category : #'simulation only' }
