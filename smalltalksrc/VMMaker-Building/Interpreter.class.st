@@ -9236,7 +9236,7 @@ Interpreter >> sendInvokeCallback: thunkPtr Stack: stackPtr Registers: regsPtr J
 	self pushRemappableOop: (self positive32BitIntegerFor: thunkPtr).
 	receiver := self splObj: ClassAlien.
 	lkupClass := self fetchClassOfNonInt: receiver.
-	messageSelector := self splObj: InvokeCallbackSelector.
+	messageSelector := self splObj: SelectorInvokeCallback.
 	(self lookupInMethodCacheSel: messageSelector class: lkupClass) ifFalse:
 	 	[(self lookupMethodNoMNUEtcInClass: lkupClass) ifFalse:
 			[^false]].

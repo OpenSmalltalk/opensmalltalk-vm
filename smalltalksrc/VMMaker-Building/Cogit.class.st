@@ -472,9 +472,17 @@ Cogit class >> exportAPISelectors [
 ]
 
 { #category : #'in-image compilation' }
-Cogit class >> genAndDis: aCompiledMethod [
+Cogit class >> genAndDis: methodOrDoitString [
 	| tuple |
-	tuple := self cog: aCompiledMethod selector: aCompiledMethod selector.
+	methodOrDoitString isCompiledMethod ifFalse:
+		[^self genAndDis: (Compiler new
+								compiledMethodFor: methodOrDoitString
+								in: nil
+								to: nil
+								notifying: nil
+								ifFail: nil
+								logged: false)].
+	tuple := self cog: methodOrDoitString selector: methodOrDoitString selector.
 	tuple second disassembleMethod: tuple last.
 	^tuple
 ]
@@ -1671,7 +1679,6 @@ Cogit >> addressIsInFixups: address [
 { #category : #testing }
 Cogit >> addressIsInInstructions: address [
 	<var: #address type: #'void *'>
-	self flag: 'faster if a macro'.
 	^self cCode: 'address >= (void *)&abstractOpcodes[0] && address < (void *)&abstractOpcodes[opcodeIndex]'
 		inSmalltalk: [(abstractOpcodes object identityIndexOf: address) between: 1 and: opcodeIndex]
 ]
@@ -1973,6 +1980,12 @@ Cogit >> blockStartPcsIn: aMethod [
 		 descriptor isBlockCreation ifTrue:
 			[startpcs add: pc]].
 	^startpcs
+]
+
+{ #category : #'simulation only' }
+Cogit >> breakBlock [
+	<doNotGenerate>
+	^breakBlock
 ]
 
 { #category : #'simulation only' }
@@ -4510,13 +4523,14 @@ Cogit >> generateOpenPICPrototype [
 	"stack allocate the various collections so that they
 	 are effectively garbage collected on return."
 	self allocateOpcodes: 100 bytecodes: 0.
-	self compileOpenPIC: 16r5E1EC70 numArgs: self numRegArgs.
+	"Ned a real selector here so that the map accomodates the annotations for the selector."
+	self compileOpenPIC: (coInterpreter specialSelector: 0) numArgs: self numRegArgs.
 	self computeMaximumSizes.
 	headerSize := self sizeof: CogMethod.
 	methodLabel concretizeAt: methodZoneBase.
 	codeSize := self generateInstructionsAt: methodZoneBase + headerSize.
 	mapSize := self generateMapAt: 0 start: methodZoneBase + cmNoCheckEntryOffset.
-	openPICSize := headerSize + (methodZone roundUpLength: codeSize) + (methodZone roundUpLength: mapSize).
+	openPICSize := (methodZone roundUpLength: headerSize + codeSize) + (methodZone roundUpLength: mapSize).
 	"self cCode: ''
 		inSmalltalk:
 			[| end |
@@ -6442,7 +6456,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	simulatedVariableGetters := Dictionary new.
 	simulatedVariableSetters := Dictionary new.
 	traceStores := 0.
-	traceLinkedSends := 0.
+	traceLinkedSends := 2. "record prim trsce on by default (see Cogit class>>decareCVarsIn:)"
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
 	breakBlock ifNil: [self breakPC: breakPC].
@@ -6876,13 +6890,7 @@ Cogit >> traceMap: annotation byte: byte at: address for: mcpc [
 			ensureCr;
 			print: code; nextPut: $/; nextPutAll: byte hex; space;
 			nextPutAll: address hex; space; nextPutAll: mcpc hex; space;
-			nextPutAll: (#(	IsSendCall
-							IsRelativeCall
-							HasBytecodePC
-							IsMethodReference
-							IsObjectReference
-							IsDisplacementX2N
-							MapEnd) detect: [:name| (Cogit classPool at: name) = code]); cr; flush.
+			nextPutAll: (AnnotationConstantNames detect: [:name| (Cogit classPool at: name ifAbsent: []) = code]); cr; flush.
 		(annotation isInteger not
 		 and: [annotation instruction bcpc isInteger]) ifTrue:
 			[s tab; print: annotation instruction bcpc; nextPut: $/.

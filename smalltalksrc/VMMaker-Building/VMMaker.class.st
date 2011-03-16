@@ -276,27 +276,21 @@ VMMaker >> availablePlugins [
 VMMaker >> buildCodeGeneratorForCogit [
 	"Answer the code generator for translating the cogit."
 
-	| cg |
+	| cg cogitClass cogitClasses |
 	cg := self createCogitCodeGenerator.
 
-	[| cogitClass cogitClasses |
-	 cg vmClass: (cogitClass := self cogitClass).
-	 cogitClasses := OrderedCollection new.
-	 [cogitClasses addFirst: cogitClass.
-	  cogitClass ~~ Cogit
-	  and: [cogitClass inheritsFrom: Cogit]] whileTrue:
+	cg vmClass: (cogitClass := self cogitClass).
+	cogitClasses := OrderedCollection new.
+	[cogitClasses addFirst: cogitClass.
+	 cogitClass ~~ Cogit
+	 and: [cogitClass inheritsFrom: Cogit]] whileTrue:
 		[cogitClass := cogitClass superclass].
-	 cogitClasses addFirst: VMClass.
-	 cogitClasses addAllLast: self cogitClass ancilliaryClasses.
-	 cogitClasses, { self interpreterClass }  do: [:cgc| cgc initialize].
-	 cogitClasses do: [:cgc| cg addClass: cgc].
-	 (cg structClassesForTranslationClasses: cogitClasses) do:
-		[:structClass| cg addStructClass: structClass]]
-		on: Notification
-		do: [:ex|
-			ex tag == #getVMMaker
-				ifTrue: [ex resume: self]
-				ifFalse: [ex pass]].
+	cogitClasses addFirst: VMClass.
+	cogitClasses addAllLast: self cogitClass ancilliaryClasses.
+	cogitClasses, { self interpreterClass } do: [:cgc| cgc initialize].
+	cogitClasses do: [:cgc| cg addClass: cgc].
+	(cg structClassesForTranslationClasses: cogitClasses) do:
+		[:structClass| cg addStructClass: structClass].
 
 	^cg
 ]
@@ -367,6 +361,11 @@ VMMaker >> cogitClass [
 VMMaker >> cogitClass: aClass [
 
 	cogitClassName := aClass name asString
+]
+
+{ #category : #'generate sources' }
+VMMaker >> cogitClassName [
+	^cogitClassName
 ]
 
 { #category : #'objects from disk' }
@@ -587,7 +586,12 @@ VMMaker >> generateCogitFile [
 	| cg cogitClass |
 	self interpreterClass needsCogit ifFalse: [^nil].
 	self needsToRegenerateCogitFile ifFalse: [^nil].
-	cg := self buildCodeGeneratorForCogit.
+	cg := [self buildCodeGeneratorForCogit]
+			on: Notification
+			do: [:ex|
+				ex tag == #getVMMaker
+					ifTrue: [ex resume: self]
+					ifFalse: [ex pass]].
 	cogitClass := self cogitClass.
 	cg removeUnneededBuiltins.
 	cg vmClass preGenerationHook: cg.
@@ -712,7 +716,12 @@ VMMaker >> generateInterpreterFile [
 
 	| cg vmHeaderContents |
 	self needsToRegenerateInterpreterFile ifFalse: [^nil].
-	cg := self buildCodeGeneratorForInterpreter.
+	cg := [self buildCodeGeneratorForInterpreter]
+			on: Notification
+			do: [:ex|
+				ex tag == #getVMMaker
+					ifTrue: [ex resume: self]
+					ifFalse: [ex pass]].
 	cg removeUnneededBuiltins.
 	self interpreterClass preGenerationHook: cg.
 

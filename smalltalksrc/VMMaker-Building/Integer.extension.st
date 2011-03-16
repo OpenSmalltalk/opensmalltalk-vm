@@ -14,10 +14,12 @@ Integer >> coerceTo: cTypeString sim: interpreter [
 	cTypeString last = $* ifTrue: [  "C pointer"
 		unitSize := cTypeString caseOf: {
 		['char *'] -> [1].
+		['short *'] -> [4].
 		['int *'] -> [4].
 		['float *'] -> [4].
+		['double *'] -> [8].
 		['unsigned *'] -> [4].
-		['float *'] -> [4].
+		['oop *'] -> [interpreter bytesPerOop].
 		}
 		otherwise: [ (cTypeString beginsWith: 'char') ifTrue: [1] ifFalse: [4] ].
 		^(CArray basicNew)

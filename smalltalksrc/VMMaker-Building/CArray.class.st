@@ -77,11 +77,13 @@ CArray >> at: offset put: val [
 { #category : #converting }
 CArray >> coerceTo: cTypeString sim: interpreterSimulator [
 
-	cTypeString = 'int' ifTrue: [^ self ptrAddress].
-	cTypeString = 'float *' ifTrue: [^ self asCArrayAccessor asFloatAccessor].
-	cTypeString = 'int *' ifTrue: [^ self asCArrayAccessor asIntAccessor].
-	cTypeString = 'unsigned' ifTrue: [^ self ptrAddress].
-	^ self
+	^cTypeString caseOf: {
+		['int']		-> [self ptrAddress].
+		['float *']	-> [self asCArrayAccessor asFloatAccessor].
+		['int *']		-> [self asCArrayAccessor asIntAccessor].
+		['unsigned']	-> [self ptrAddress].
+		['sqInt']		-> [self ptrAddress].
+		['usqInt']	-> [self ptrAddress] }
 ]
 
 { #category : #converting }
