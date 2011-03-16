@@ -173,6 +173,12 @@ CogBytecodeDescriptor >> isReturn: anObject [
 ]
 
 { #category : #accessing }
+CogBytecodeDescriptor >> isUnconditionalBranch [
+
+	^isBranch and: [(isBranchTrue or: [isBranchFalse]) not]
+]
+
+{ #category : #accessing }
 CogBytecodeDescriptor >> needsFrameFunction [
 	"Answer the value of needsFrameFunction"
 

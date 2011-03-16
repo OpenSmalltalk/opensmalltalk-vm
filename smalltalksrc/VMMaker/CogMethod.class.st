@@ -38,11 +38,16 @@ Class {
 	#category : #'VMMaker-JIT'
 }
 
+{ #category : #accessing }
+CogMethod class >> alignedByteSizeForClient: aVMClass [
+	^aVMClass cogit cogMethodSurrogateClass alignedByteSize
+]
+
 { #category : #translation }
 CogMethod class >> cogMethodHeader [
 	^String streamContents:
 		[:s|
-		superclass printTypedefOn: s.
+		CogBlockMethod printTypedefOn: s.
 		s cr.
 		self printTypedefOn: s]
 ]
@@ -60,9 +65,7 @@ CogMethod class >> initialize [
 
 { #category : #accessing }
 CogMethod class >> surrogateClass [
-	^BytesPerWord = 4
-		ifTrue: [CogMethodSurrogate32]
-		ifFalse: [CogMethodSurrogate64]
+	self shouldNotImplement
 ]
 
 { #category : #accessing }

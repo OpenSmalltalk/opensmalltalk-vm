@@ -421,7 +421,7 @@ SimpleStackBasedCogit >> compileBlockFrameBuild: blockStart [
 	"The block method field must have its MFMethodFlagIsBlockFlag bit set.
 	 We arrange this using a labelOffset.  A hack, but it works."
 	blockStart fakeHeader
-		addDependent: (self annotateMethodRef:
+		addDependent: (self annotateAbsolutePCRef:
 			(self PushCw: blockStart fakeHeader asInteger)); "method"
 		setLabelOffset: MFMethodFlagIsBlockFlag.
 	self annotate: (self PushCw: objectMemory nilObject) "context"
@@ -492,7 +492,7 @@ SimpleStackBasedCogit >> compileFrameBuild [
 	needsFrame ifFalse: [^0].
 	self PushR: FPReg.
 	self MoveR: SPReg R: FPReg.
-	methodLabel addDependent: (self annotateMethodRef:
+	methodLabel addDependent: (self annotateAbsolutePCRef:
 		(self PushCw: methodLabel asInteger)). "method"
 	self annotate: (self MoveCw: objectMemory nilObject R: SendNumArgsReg)
 		objRef: objectMemory nilObject.
@@ -602,7 +602,7 @@ SimpleStackBasedCogit >> compileInterpreterPrimitive: primitiveRoutine [
 		 (flags bitAnd: PrimCallMayCallBack) ~= 0 ifTrue:
 			[needsFrame := true].
 		 methodLabel addDependent:
-			(self annotateMethodRef:
+			(self annotateAbsolutePCRef:
 				(self MoveCw: methodLabel asInteger R: ClassReg)).
 		 self MoveMw: (self offset: CogMethod of: #methodObject asSymbol) r: ClassReg R: TempReg.
 		 self MoveR: TempReg Aw: coInterpreter newMethodAddress].
@@ -771,7 +771,7 @@ SimpleStackBasedCogit >> compileOpenPIC: selector numArgs: numArgs [
 	jumpSelectorMiss jmpTarget: self Label.
 	self genSaveStackPointers.
 	self genLoadCStackPointers.
-	methodLabel addDependent: (self annotateMethodRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
+	methodLabel addDependent: (self annotateAbsolutePCRef: (self MoveCw: methodLabel asInteger R: SendNumArgsReg)).
 	cStackAlignment > BytesPerWord ifTrue:
 		[backEnd
 			genAlignCStackSavingRegisters: false
@@ -999,7 +999,7 @@ SimpleStackBasedCogit >> genFastPrimTraceUsing: r1 and: r2 [
 	self AddCq: 1 R: r1.
 	self MoveR: r1 Mb: coInterpreter primTraceLogIndexAddress r: TempReg.
 	methodLabel addDependent:
-		(self annotateMethodRef:
+		(self annotateAbsolutePCRef:
 			(self MoveCw: methodLabel asInteger R: r1)).
 	self MoveMw: (self offset: CogMethod of: #selector asSymbol) r: r1 R: TempReg.
 	self MoveCw: coInterpreter primTraceLogAddress asInteger R: r1.

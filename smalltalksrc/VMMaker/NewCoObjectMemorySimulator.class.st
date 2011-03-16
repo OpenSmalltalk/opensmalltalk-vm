@@ -13,18 +13,6 @@ NewCoObjectMemorySimulator class >> new [
 		ifFalse: [super new]
 ]
 
-{ #category : #allocation }
-NewCoObjectMemorySimulator >> allocateChunk: byteSize [
-	freeStart = 16r1952688 ifTrue: [self halt].
-	^super allocateChunk: byteSize
-]
-
-{ #category : #allocation }
-NewCoObjectMemorySimulator >> allocateInterpreterChunk: byteSize [
-	freeStart = 16r1952688 ifTrue: [self halt].
-	^super allocateChunk: byteSize
-]
-
 { #category : #'memory access' }
 NewCoObjectMemorySimulator >> allocateMemory: endianness [
 	memory := (endianness == #little
@@ -97,14 +85,6 @@ NewCoObjectMemorySimulator >> cr [
 	^coInterpreter cr
 ]
 
-{ #category : #'interpreter access' }
-NewCoObjectMemorySimulator >> eeInstantiateMethodContextByteSize: sizeInBytes [
-	| result |
-	result := super eeInstantiateMethodContextByteSize: sizeInBytes.
-	"result = 26431360 ifTrue: [self halt]."
-	^result
-]
-
 { #category : #'simulation only' }
 NewCoObjectMemorySimulator >> failed [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
@@ -149,11 +129,6 @@ NewCoObjectMemorySimulator >> firstIndexableField: oop [
 NewCoObjectMemorySimulator >> floatValueOf: obj [
 	"hack around the CoInterpreter/ObjectMemory split refactoring"
 	^coInterpreter floatValueOf: obj
-]
-
-{ #category : #printing }
-NewCoObjectMemorySimulator >> flush [
-	^coInterpreter flush
 ]
 
 { #category : #'simulation only' }
