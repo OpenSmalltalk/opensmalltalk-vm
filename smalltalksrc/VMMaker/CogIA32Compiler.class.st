@@ -1147,6 +1147,8 @@ CogIA32Compiler >> concretizeMoveAwR [
 	<inline: true>
 	| addressOperand reg |
 	addressOperand := operands at: 0.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'void *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
 	reg := self concreteRegister: (operands at: 1).
 	reg = EAX ifTrue:
 		[machineCode
@@ -1399,6 +1401,8 @@ CogIA32Compiler >> concretizeMoveRAw [
 	| addressOperand reg |
 	reg := self concreteRegister: (operands at: 0).
 	addressOperand := operands at: 1.
+	(self isAnInstruction: (cogit cCoerceSimple: addressOperand to: #'void *')) ifTrue:
+		[addressOperand := (cogit cCoerceSimple: addressOperand to: #'AbstractInstruction *') address].
 	reg = EAX ifTrue:
 		[machineCode
 			at: 0 put: 16rA3;
@@ -1981,6 +1985,12 @@ CogIA32Compiler >> concretizeXorRR [
 		at: 0 put: 16r33;
 		at: 1 put: (self mod: ModReg RM: regLHS RO: regRHS).
 	^machineCodeSize := 2
+]
+
+{ #category : #'sista counters' }
+CogIA32Compiler >> counterTargetFromFollowingAddress: nextInstructionAddress [
+	"Answer the address of the MoveAw:R or MoveR:Aw: instruction preceeding nextInstructionAddress"
+	^self literalBeforeFollowingAddress: nextInstructionAddress
 ]
 
 { #category : #'generate machine code' }

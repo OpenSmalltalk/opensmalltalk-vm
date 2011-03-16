@@ -397,7 +397,9 @@ ObjectMemory class >> initializeSpecialObjectIndices [
 
 	ClassWeakFinalizer := 55.
 
-	ForeignCallbackProcess := 56
+	ForeignCallbackProcess := 56.
+
+	SelectorCounterTripped := 57
 ]
 
 { #category : #initialization }
@@ -1350,6 +1352,15 @@ ObjectMemory >> clone: oop [
 	self longAt: newOop put: header.
 	^newOop
 
+]
+
+{ #category : #'interpreter access' }
+ObjectMemory >> compactClassAt: ccIndex [
+	"Index must be between 1 and compactClassArray size. (A zero compact class index in the base header indicate that the class is in the class header word.)"
+	<api>
+	| classArray |
+	classArray := self fetchPointer: CompactClasses ofObject: self specialObjectsOop.
+	^self fetchPointer: (ccIndex - 1) ofObject: classArray
 ]
 
 { #category : #'header access' }
@@ -2997,6 +3008,14 @@ ObjectMemory >> maxIdentityHash [
 	^HashMaskUnshifted
 ]
 
+{ #category : #'interpreter access' }
+ObjectMemory >> maybeSplObj: index [
+	<api>
+	"Return one of the objects in the SpecialObjectsArray, if in range, otherwise ansser nil"
+	^index < (self lengthOf: specialObjectsOop) ifTrue:
+		[self fetchPointer: index ofObject: specialObjectsOop]
+]
+
 { #category : #accessing }
 ObjectMemory >> memory [
 	<cmacro: '() memory'>
@@ -3011,6 +3030,12 @@ ObjectMemory >> memory: aValue [
 { #category : #accessing }
 ObjectMemory >> memoryLimit [
 	^memoryLimit
+]
+
+{ #category : #allocation }
+ObjectMemory >> minSlotsForShortening [
+	"HeaderTypeFree free chunks require 1 word of header"
+	^1
 ]
 
 { #category : #'header access' }
@@ -3696,6 +3721,30 @@ ObjectMemory >> setSizeOfFree: chunk to: byteSize [
 ]
 
 { #category : #allocation }
+ObjectMemory >> shorten: obj toIndexableSize: nSlots [
+	"Currently this works for pointer objects only, and is almost certainly wrong for 64 bits."
+	| deltaBytes desiredLength fixedFields fmt hdr totalLength |
+	(self isPointers: obj) ifFalse:
+		[^obj].
+	hdr := self baseHeader: obj.
+	fmt := (hdr >> 8) bitAnd: 16rF.
+	totalLength := self lengthOf: obj baseHeader: hdr format: fmt.
+	fixedFields := self fixedFieldsOf: obj format: fmt length: totalLength.
+	desiredLength := fixedFields + nSlots.
+	deltaBytes := (totalLength - desiredLength) * BytesPerWord.
+	self setSizeOfFree: obj + BaseHeaderSize + (desiredLength * BytesPerWord)
+		to: deltaBytes.
+	(self headerType: obj) caseOf:	{
+		[HeaderTypeSizeAndClass] ->
+			[self longAt: obj put: hdr - deltaBytes].
+		[HeaderTypeClass] ->
+			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)].
+		[HeaderTypeShort] ->
+			[self longAt: obj put: ((hdr bitClear: SizeMask) bitOr: (hdr bitAnd: SizeMask) - deltaBytes)] }.
+	^obj
+]
+
+{ #category : #allocation }
 ObjectMemory >> shrinkObjectMemory: delta [ 
 	"Attempt to shrink the object memory by the given delta 
 	amount "
@@ -3775,8 +3824,9 @@ ObjectMemory >> slotSizeOf: oop [
 
 { #category : #'interpreter access' }
 ObjectMemory >> splObj: index [
+	<api>
 	"Return one of the objects in the SpecialObjectsArray"
-	^ self fetchPointer: index ofObject: specialObjectsOop
+	^self fetchPointer: index ofObject: specialObjectsOop
 ]
 
 { #category : #'interpreter access' }

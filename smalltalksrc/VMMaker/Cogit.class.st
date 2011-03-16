@@ -214,7 +214,9 @@ Class {
 		'cFramePointerInUse',
 		'debugPrimCallStackOffset',
 		'ceTryLockVMOwner',
-		'ceUnlockVMOwner'
+		'ceUnlockVMOwner',
+		'cogMethodSurrogateClass',
+		'cogBlockMethodSurrogateClass'
 	],
 	#classVars : [
 		'AnnotationConstantNames',
@@ -228,9 +230,9 @@ Class {
 		'FirstAnnotation',
 		'HasBytecodePC',
 		'InsufficientCodeSpace',
+		'IsAbsPCReference',
 		'IsDisplacement',
 		'IsDisplacementX2N',
-		'IsMethodReference',
 		'IsObjectReference',
 		'IsRelativeCall',
 		'IsSendCall',
@@ -365,6 +367,7 @@ Cogit class >> cog: aCompiledMethod selector: aSelector [
 { #category : #translation }
 Cogit class >> declareCVarsIn: aCCodeGenerator [
 	#(	'coInterpreter' 'objectMemory' 'methodZone' 'objectRepresentation'
+		'cogBlockMethodSurrogateClass' 'cogMethodSurrogateClass'
 		'threadManager' 'processor' 'lastNInstructions' 'simulatedAddresses'
 		'simulatedTrampolines' 'simulatedVariableGetters' 'simulatedVariableSetters'
 		'printRegisters' 'printInstructions' 'clickConfirm' 'singleStep') do:
@@ -560,11 +563,13 @@ Cogit class >> initializeAnnotationConstants [
 	 the most signficant bits are the type of annotation at the point reached.  A null
 	 byte ends the map.
 
-	 The map occurs at the end of a method, in reverse, so that its start is found
-	 by rounding up the method's block size.  If the distance between two mapped
+	 The map occurs at the end of a method (*), in reverse, so that its start is found
+	 by adding the method's block size.  If the distance between two mapped
 	 instructions will not fit in the displacement field then one or more displacement
 	 entries are placed in the map to bridge the gap.  There are either unit displacement
-	 bytes or * 32 displacement bytes.
+	 bytes or * 32 displacement bytes. (* if methods have performance counters then
+	 the map preceedes the counters and so one finds the map by adding the block
+	 size and subtracting numCounters * sizeof(counter)).
 
 	 There is only one kind of call annotation that serves for all calls from machine
 	 code. There are four kinds of call, sends, super sends, calls of the generated
@@ -576,21 +581,25 @@ Cogit class >> initializeAnnotationConstants [
 	 Sends can be distinguished from run-time or direct primitive calls based on
 	 address; only sends have their target between methodZoneBase and methodZone
 	 freeStart.  Further, normal sends can be distinguished from super sends because
-	 normal sends link top the checked entry-point, whereas super sends link to the
+	 normal sends link to the checked entry-point, whereas super sends link to the
 	 unchecked entry-point, and both entry points have different alignment.
 	 But to be able to parse bytecoded methods and match their pcs with corresponding
 	 machine code pcs the map needs to differentiate between sends and run-time calls. 
 
 	 While run-time calls can be distinguished from direct primitive calls on the basis
 	 of address there is no need to do so.  They are merely calls to locations that
-	 don't move during method zone compaction."
+	 don't move during method zone compaction.
+
+	 Absolute PC references are used for method references and counter references.
+	 These are references from withi a particular method to absolute pcs in that same
+	 method that must be relocated when the method moves."
 	"self initializeAnnotationConstants"
 	IsSendCall := 7.
 	IsRelativeCall := 6.
 	HasBytecodePC := 5.
-	IsMethodReference := 4.
-	IsObjectReference := 3. "IsNewObjectReference? code 2 is unused"
-
+	IsAbsPCReference := 4.
+	IsObjectReference := 3.
+	"code 2 is unused and is reserved for Newspeak implicit receiver sends"
 	IsDisplacementX2N := 1.
 	IsDisplacement := 0.
 	AnnotationShift := 5.
@@ -603,12 +612,12 @@ Cogit class >> initializeAnnotationConstants [
 
 	MapEnd := 0.
 
-	AnnotationConstantNames := #(	Displacement DisplacementX32 unused
-									IsObjectReference
-									IsMethodReference
-									HasBytecodePC
-									IsRelativeCall
-									IsSendCall)
+	AnnotationConstantNames := #(	IsDisplacement IsDisplacementX2N unused
+										IsObjectReference
+										IsAbsPCReference
+										HasBytecodePC
+										IsRelativeCall
+										IsSendCall)
 ]
 
 { #category : #'class initialization' }
@@ -712,7 +721,7 @@ Cogit class >> requiredMethodNames [
 { #category : #translation }
 Cogit class >> shouldGenerateTypedefFor: aStructClass [
 	"Hack to work-around mutliple definitions.  Sometimes a type has been defined in an include."
-	^({ CogBlockMethod. CogMethod } includes: aStructClass) not
+	^({ CogBlockMethod. CogMethod. SistaCogMethod } includes: aStructClass) not
 ]
 
 { #category : #translation }
@@ -1814,6 +1823,14 @@ Cogit >> annotate: abstractInstruction with: annotationFlag [ "<Integer>"
 ]
 
 { #category : #'method map' }
+Cogit >> annotateAbsolutePCRef: abstractInstruction [
+	<var: #abstractInstruction type: #'AbstractInstruction *'>
+	<returnTypeC: #'AbstractInstruction *'>
+	<inline: true>
+	^self annotate: abstractInstruction with: IsAbsPCReference
+]
+
+{ #category : #'method map' }
 Cogit >> annotateBytecode: abstractInstruction [
 	<var: #abstractInstruction type: #'AbstractInstruction *'>
 	<returnTypeC: #'AbstractInstruction *'>
@@ -1827,14 +1844,6 @@ Cogit >> annotateCall: abstractInstruction [
 	<returnTypeC: #'AbstractInstruction *'>
 	<inline: true>
 	^self annotate: abstractInstruction with: IsRelativeCall
-]
-
-{ #category : #'method map' }
-Cogit >> annotateMethodRef: abstractInstruction [
-	<var: #abstractInstruction type: #'AbstractInstruction *'>
-	<returnTypeC: #'AbstractInstruction *'>
-	<inline: true>
-	^self annotate: abstractInstruction with: IsMethodReference
 ]
 
 { #category : #'method map' }
@@ -1983,12 +1992,6 @@ Cogit >> blockStartPcsIn: aMethod [
 ]
 
 { #category : #'simulation only' }
-Cogit >> breakBlock [
-	<doNotGenerate>
-	^breakBlock
-]
-
-{ #category : #'simulation only' }
 Cogit >> breakBlock: aBlock [
 	<doNotGenerate>
 	breakBlock := aBlock
@@ -2051,9 +2054,9 @@ Cogit >> cCoerceSimple: value to: cTypeString [
 	cTypeString == #'CogMethod *' ifTrue:
 		[^(value isInteger and: [value < 0])
 			ifTrue: [value] "it's an error code; leave it be"
-			ifFalse: [coInterpreter cogMethodSurrogateAt: value asUnsignedInteger]].
+			ifFalse: [self cogMethodSurrogateAt: value asUnsignedInteger]].
 	cTypeString == #'CogBlockMethod *' ifTrue:
-		[^coInterpreter cogBlockMethodSurrogateAt: value asUnsignedInteger].
+		[^self cogBlockMethodSurrogateAt: value asUnsignedInteger].
 	^super cCoerceSimple: value to: cTypeString
 ]
 
@@ -2132,7 +2135,7 @@ Cogit >> ceCPICMiss: cPIC receiver: receiver [
 	self cCode: ''
 		inSmalltalk:
 			[cPIC isInteger ifTrue:
-				[^self ceCPICMiss: (coInterpreter cogMethodSurrogateAt: cPIC) receiver: receiver]].
+				[^self ceCPICMiss: (self cogMethodSurrogateAt: cPIC) receiver: receiver]].
 	outerReturn := coInterpreter stackTop.
 	newTargetMethodOrNil := self lookupAndCog: cPIC selector for: receiver.
 	"We assume lookupAndCog:for: will *not* reclaim the method zone"
@@ -2610,11 +2613,19 @@ Cogit >> cog: aMethodObj selector: aSelectorOop [
 ]
 
 { #category : #'simulation only' }
+Cogit >> cogBlockMethodSurrogateAt: address [
+	<doNotGenerate>
+	self assert: (address bitAnd: BytesPerWord - 1) = 0.
+	^cogBlockMethodSurrogateClass new
+		at: address
+		memory: objectMemory memory
+		cogit: self
+]
+
+{ #category : #'simulation only' }
 Cogit >> cogBlockMethodSurrogateClass [
 	<doNotGenerate>
-	^BytesPerWord = 4
-		ifTrue: [CogBlockMethodSurrogate32]
-		ifFalse: [CogBlockMethodSurrogate64]
+	^cogBlockMethodSurrogateClass
 ]
 
 { #category : #disassembly }
@@ -2789,11 +2800,29 @@ Cogit >> cogMethodDoesntLookKosher: cogMethod [
 ]
 
 { #category : #'simulation only' }
+Cogit >> cogMethodOrBlockSurrogateAt: address [
+	<doNotGenerate>
+	| surrogate |
+	surrogate := self cogMethodSurrogateAt: address.
+	^surrogate cmType = CMBlock
+		ifTrue: [self cogBlockMethodSurrogateAt: address]
+		ifFalse: [surrogate]
+]
+
+{ #category : #'simulation only' }
+Cogit >> cogMethodSurrogateAt: address [
+	<doNotGenerate>
+	self assert: (address bitAnd: BytesPerWord - 1) = 0.
+	^cogMethodSurrogateClass new
+		at: address
+		memory: objectMemory memory
+		cogit: self
+]
+
+{ #category : #'simulation only' }
 Cogit >> cogMethodSurrogateClass [
 	<doNotGenerate>
-	^BytesPerWord = 4
-		ifTrue: [CogMethodSurrogate32]
-		ifFalse: [CogMethodSurrogate64]
+	^cogMethodSurrogateClass
 ]
 
 { #category : #'in-line cacheing' }
@@ -2874,6 +2903,13 @@ Cogit >> cogPICSelector: selector numArgs: numArgs Case0Method: case0CogMethod C
 		numArgs: numArgs
 		numCases: 2
 		selector: selector 
+]
+
+{ #category : #'simulation only' }
+Cogit >> cogit [
+	"This is for the sizeof: CogMethod hook that allows different cogit classes to use differet CogMethod variants."
+	<doNotGenerate>
+	^self
 ]
 
 { #category : #'jit - api' }
@@ -3361,7 +3397,7 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 	<doNotGenerate>
 	| cogMethod mapEntries codeRanges |
 	cogMethod := surrogateOrAddress isInteger
-								ifTrue: [coInterpreter cogMethodSurrogateAt: surrogateOrAddress]
+								ifTrue: [self cogMethodSurrogateAt: surrogateOrAddress]
 								ifFalse: [surrogateOrAddress].
 	cogMethod cmType = CMBlock ifTrue:
 		[^self disassembleMethod: cogMethod cmHomeMethod on: aStream].
@@ -3411,7 +3447,8 @@ Cogit >> disassembleMethod: surrogateOrAddress on: aStream [
 			on: AssertionFailure
 			do: [:ex|
 				ex primitiveChangeClassTo: MyResumableTestError basicNew. ":) :) :)"
-				ex resume: nil]]
+				ex resume: nil]].
+	^cogMethod
 ]
 
 { #category : #disassembly }
@@ -3645,7 +3682,7 @@ Cogit >> findMapLocationForMcpc: targetMcpc inMethod: cogMethod [
 	<var: #cogMethod type: #'CogMethod *'>
 	| mcpc map mapByte annotation |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
-	map := cogMethod asInteger + cogMethod blockSize - 1.
+	map := self mapStartFor: cogMethod.
 	mcpc = targetMcpc ifTrue: [^map].
 	[(mapByte := coInterpreter byteAt: map) ~= MapEnd] whileTrue:
 		[annotation := mapByte >> AnnotationShift.
@@ -4846,6 +4883,8 @@ Cogit >> handleSimulationTrap: aProcessorSimulationTrap [
 Cogit >> handleWriteSimulationTrap: aProcessorSimulationTrap [ 
 	<doNotGenerate>
 	| variableValue |
+	aProcessorSimulationTrap address < coInterpreter cogCodeSize ifTrue:
+		[self error: 'attempt to write to code space'].
 	variableValue := processor perform: aProcessorSimulationTrap registerAccessor.
 	(simulatedVariableSetters at: aProcessorSimulationTrap address) value: variableValue.
 	processor pc: aProcessorSimulationTrap nextpc
@@ -4891,6 +4930,16 @@ Cogit >> initialMethodUsageCount [
 Cogit >> initialOpenPICUsageCount [
 	"Answer a usage count that reflects likely long-term usage."
 	^3
+]
+
+{ #category : #initialization }
+Cogit >> initialize [
+	cogMethodSurrogateClass := BytesPerWord = 4
+											ifTrue: [CogMethodSurrogate32]
+											ifFalse: [CogMethodSurrogate64].
+	cogBlockMethodSurrogateClass := BytesPerWord = 4
+											ifTrue: [CogBlockMethodSurrogate32]
+											ifFalse: [CogBlockMethodSurrogate64]
 ]
 
 { #category : #initialization }
@@ -5028,6 +5077,15 @@ Cogit >> isCFramePointerInUse [
 	^true
 ]
 
+{ #category : #disassembly }
+Cogit >> isPCWithinMethodZone: address [
+	<api>
+	<var: #address type: #'char *'>
+	^address asUnsignedInteger
+		between: methodZoneBase
+		and: methodZone zoneLimit
+]
+
 { #category : #'jit - api' }
 Cogit >> isSendReturnPC: retpc [
 	<api>
@@ -5156,13 +5214,13 @@ Cogit >> lookupCHexString: aCHexString [
 		ifNil: [aCHexString]
 ]
 
-{ #category : #disassembly }
+{ #category : #'method map' }
 Cogit >> mapEndFor: cogMethod [
 	"Answer the address of the null byte at the end of the method map."
 	<var: #cogMethod type: #'CogMethod *'>
-	| end |
 	<inline: true>
-	end := cogMethod asInteger + cogMethod blockSize - 1.
+	| end |
+	end := self mapStartFor: cogMethod.
 	[(coInterpreter byteAt: end) ~= MapEnd] whileTrue:
 		[end := end - 1.
 		 self assert: end > (cogMethod asInteger + cmNoCheckEntryOffset)].
@@ -5174,7 +5232,6 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 	"Machine-code <-> bytecode pc mapping support.  Evaluate functionSymbol
 	 for each mcpc, bcpc pair in the map until the function returns non-zero,
 	 answering that result, or 0 if it fails to.  This works only for frameful methods."
-	<api>
 	<var: #cogMethod type: #'CogBlockMethod *'>
 	<var: #functionSymbol declareC: 'sqInt (*functionSymbol)(char *mcpc, sqInt bcpc, void *arg)'>
 	<var: #arg type: #'void *'>
@@ -5190,8 +5247,8 @@ Cogit >> mapFor: cogMethod bcpc: startbcpc performUntil: functionSymbol arg: arg
 			[isInBlock := false.
 			 homeMethod := self cCoerceSimple: cogMethod to: #'CogMethod *'.
 			 self assert: startbcpc = (coInterpreter startPCOfMethodHeader: homeMethod methodHeader).
-			 map := homeMethod asUnsignedInteger + homeMethod blockSize - 1.
-			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = IsMethodReference
+			 map := self mapStartFor: homeMethod.
+			 self assert: ((coInterpreter byteAt: map) >> AnnotationShift = IsAbsPCReference
 						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsRelativeCall
 						 or: [(coInterpreter byteAt: map) >> AnnotationShift = IsDisplacementX2N]]).
 			 latestContinuation := startbcpc.
@@ -5281,7 +5338,7 @@ Cogit >> mapFor: cogMethod performUntil: functionSymbol arg: arg [
 	<var: #functionSymbol declareC: 'int (*functionSymbol)(sqInt annotation, char *mcpc, sqInt arg)'>
 	| mcpc map mapByte result |
 	mcpc := cogMethod asInteger + cmNoCheckEntryOffset.
-	map := cogMethod asInteger + cogMethod blockSize - 1.
+	map := self mapStartFor: cogMethod.
 	[(mapByte := coInterpreter byteAt: map) ~= MapEnd] whileTrue:
 		[mapByte >= FirstAnnotation
 			ifTrue:
@@ -5408,6 +5465,14 @@ Cogit >> mapPrimitive: primitiveRoutine "<Symbol>" withIndexToUniqueAddress: pri
 				ifTrue: [MessageSend receiver: coInterpreter selector: primitiveRoutine]
 				ifFalse: [primitiveRoutine]].
 	^uniqueAddress
+]
+
+{ #category : #'method map' }
+Cogit >> mapStartFor: cogMethod [
+	"Answer the address of the first byte of the method map."
+	<var: #cogMethod type: #'CogMethod *'>
+	<inline: true>
+	^cogMethod asUnsignedInteger + cogMethod blockSize - 1
 ]
 
 { #category : #'jit - api' }
@@ -5784,7 +5849,7 @@ Cogit >> offset: aClass of: fieldSymbol [
 	"This is implemented by stddef's offsetof macro."
 	<doNotGenerate>
 	^aClass caseOf:
-		{ [CogMethod] -> [self cogMethodSurrogateClass offsetOf: fieldSymbol] }
+		{ [CogMethod] -> [cogMethodSurrogateClass offsetOf: fieldSymbol] }
 ]
 
 { #category : #'generate machine code' }
@@ -5956,7 +6021,7 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 	self cCode: ''
 		inSmalltalk:
 			[cogMethod isInteger ifTrue:
-				[^self printMethodHeader: (coInterpreter cogMethodOrBlockSurrogateAt: cogMethod) on: aStream]].
+				[^self printMethodHeader: (self cogMethodOrBlockSurrogateAt: cogMethod) on: aStream]].
 	aStream ensureCr.
 	cogMethod asInteger printOn: aStream base: 16.
 	aStream crtab.
@@ -5996,7 +6061,10 @@ Cogit >> printMethodHeader: cogMethod on: aStream [
 			 cogMethod stackCheckOffset printOn: aStream base: 16.
 			 cogMethod stackCheckOffset > 0 ifTrue:
 				[aStream nextPut: $/.
-				 cogMethod asInteger + cogMethod stackCheckOffset printOn: aStream base: 16]].
+				 cogMethod asInteger + cogMethod stackCheckOffset printOn: aStream base: 16].
+			cogMethod cmType = CMMethod ifTrue:
+				[([cogMethod numCounters] on: MessageNotUnderstood do: [:ex| nil]) ifNotNil:
+					[:nc| aStream crtab; nextPutAll: 'numCounters: '; print: nc]]].
 	aStream cr; flush
 ]
 
@@ -6213,7 +6281,7 @@ Cogit >> relocateIfCallOrMethodReference: annotation mcpc: mcpc delta: delta [
 	annotation = IsRelativeCall ifTrue:
 		[backEnd relocateCallBeforeReturnPC: mcpc asInteger by: delta negated.
 		 ^0].
-	annotation = IsMethodReference ifTrue:
+	annotation = IsAbsPCReference ifTrue:
 		[backEnd relocateMethodReferenceBeforeAddress: mcpc asInteger by: delta].
 	^0 "keep scanning"
 ]
@@ -6456,7 +6524,7 @@ Cogit >> setInterpreter: aCoInterpreter [
 	simulatedVariableGetters := Dictionary new.
 	simulatedVariableSetters := Dictionary new.
 	traceStores := 0.
-	traceLinkedSends := 2. "record prim trsce on by default (see Cogit class>>decareCVarsIn:)"
+	traceLinkedSends := 2. "record prim trace on by default (see Cogit class>>decareCVarsIn:)"
 	debugPrimCallStackOffset := 0.
 	singleStep := printRegisters := printInstructions := clickConfirm := false.
 	breakBlock ifNil: [self breakPC: breakPC].
@@ -6776,7 +6844,7 @@ Cogit >> subMethodsAsRangesFor: surrogateOrAddress [
 	<doNotGenerate>
 	| cogMethod codeRanges |
 	cogMethod := surrogateOrAddress isInteger
-								ifTrue: [coInterpreter cogMethodSurrogateAt: surrogateOrAddress]
+								ifTrue: [self cogMethodSurrogateAt: surrogateOrAddress]
 								ifFalse: [surrogateOrAddress].
 	^cogMethod cmType = CMMethod ifTrue:
 		[codeRanges := self codeRangesFor: cogMethod.
