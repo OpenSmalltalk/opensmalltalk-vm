@@ -99,6 +99,15 @@ CUnixConfig >> configureAsynchFilePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CUnixConfig >> configureB3DAcceleratorPlugin: maker [
+	"extra rules for B3DAcceleratorPlugin"
+	maker 
+		addPlatformSources: #( 'sqUnixOpenGL.c' ) 
+		
+
+]
+
+{ #category : #'plugin extra rules' }
 CUnixConfig >> configureDropPlugin: maker [
 	"extra rules for DropPlugin"
 	super configureDropPlugin: maker.  
