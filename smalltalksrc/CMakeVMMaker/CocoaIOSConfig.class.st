@@ -125,7 +125,7 @@ CocoaIOSConfig >> configureHostWindowPlugin: maker [
 CocoaIOSConfig >> configureMacMenubarPlugin: maker [
 	maker includeDirectories: '${platformsDir}/iOS/plugins/MacMenubarPlugin'.
 	maker 
-		addSources: #('MacMenuOS9ToOSX.m' ) 
+		addSources: #('MacMenuOS9ToOSX.m') 
 		prefixed: '${platformsDir}/iOS/plugins/MacMenubarPlugin/'
 
 ]
@@ -211,8 +211,13 @@ CocoaIOSConfig >> executableType [
 ]
 
 { #category : #'plugin extra rules' }
-CocoaIOSConfig >> extraPluginSettings: maker [
+CocoaIOSConfig >> extraPluginSettings: maker [	
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
+	
+	maker 
+		cmd: 'set_target_properties' 
+		params: maker moduleName, ' PROPERTIES COMPILE_FLAGS "-include ', (self topDir / 'build' / self prefixHeaderFileName) fullName, '"'. 
+	
 	maker addXCodeProperty: 'GCC_VERSION' value: '4.2'.
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
 	
@@ -221,8 +226,7 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 
 { #category : #'source files' }
 CocoaIOSConfig >> extraSources [
-	self flag: #todo. "This needs to be reified... it does't has any sense compared with #coreSources or #platformSources"
-	^'${buildDir}/', self executableName, '_Prefix.pch
+	^'${buildDir}/', self prefixHeaderFileName, '
  ${resources}'
 ]
 
@@ -241,7 +245,7 @@ CocoaIOSConfig >> extraVMSettings: maker [
 		"${resourceDir}/SqueakGeneric.icns"
 		"${resourceDir}/SqueakProject.icns"
 		"${resourceDir}/SqueakSources.icns"
-		"${resourceDir}/MainMenu.xib"'
+		"${resourceDir}/MainMenu.nib"'
 
 ]
 
@@ -927,6 +931,11 @@ CocoaIOSConfig >> preferredIncludes [
 	'${platformsDir}/iOS/vm/iPhone' "config.h is here. Why???"
 	)
 	
+]
+
+{ #category : #accessing }
+CocoaIOSConfig >> prefixHeaderFileName [ 
+	^self executableName, '_Prefix.pch'
 ]
 
 { #category : #settings }

@@ -65,11 +65,11 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 CocoaIOSCogConfig >> extraSources [
 	" mac VM using some unix sources "
 	
-	^ '${platformsDir}/unix/vm/aio.c 
+	^super extraSources,'
+	${platformsDir}/unix/vm/aio.c 
 	${platformsDir}/unix/vm/sqUnixHeartbeat.c 
 	${platformsDir}/unix/vm/sqUnixVMProfile.c 
-	${platformsDir}/unix/vm/sqUnixThreads.c ', 
-	super extraSources
+	${platformsDir}/unix/vm/sqUnixThreads.c '
 ]
 
 { #category : #'source files' }
@@ -128,7 +128,7 @@ CocoaIOSCogConfig >> platformSources [
 
 { #category : #settings }
 CocoaIOSCogConfig >> setExtraTargetProperties: maker [
-	| plist precompiledHeaders |
+	| plist |
 
 	maker addFrameworks: self frameworks.
 
@@ -147,18 +147,21 @@ CocoaIOSCogConfig >> setExtraTargetProperties: maker [
 		cmd: 'set_source_files_properties' 
 		params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
 			
-	precompiledHeaders := (self executableName, '_Prefix.pch').
-	(maker buildDir forceNewFileNamed: precompiledHeaders) 
+	(maker buildDir forceNewFileNamed: self prefixHeaderFileName) 
 		nextPutAll: self precompiledHeaders;
 		close.
-	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', precompiledHeaders.
+	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/', self prefixHeaderFileName.
 
 	maker 
 		addXCodeProperty: 'PER_ARCH_CFLAGS_i386' value: '-DLSB_FIRST -mfpmath=sse -finline-functions  -fomit-frame-pointer -fno-cse-follow-jumps -fno-gcse -mtune=prescott -march=pentium-m -falign-functions=16'.
 		
 	maker 
-		addXCodeProperty: 'GCC_VERSION' value: '4.2'
+		addXCodeProperty: 'GCC_VERSION' value: '4.2'.
 
+	maker 
+		cmd: 'set_target_properties' 
+		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include ', (self topDir / 'build' / self prefixHeaderFileName) fullName, '"'. 
+	
 ]
 
 { #category : #'source files' }
