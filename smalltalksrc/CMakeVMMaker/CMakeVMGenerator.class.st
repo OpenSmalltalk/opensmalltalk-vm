@@ -61,6 +61,11 @@ CMakeVMGenerator >> config [
 	^ config
 ]
 
+{ #category : #'as yet unclassified' }
+CMakeVMGenerator >> configurationName [
+	^ config class name
+]
+
 { #category : #accessing }
 CMakeVMGenerator >> executableName [
 	^ 'Squeak'

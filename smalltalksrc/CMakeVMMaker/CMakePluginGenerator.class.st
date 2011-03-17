@@ -35,6 +35,11 @@ CMakePluginGenerator >> config [
 	^ vmGen config
 ]
 
+{ #category : #'as yet unclassified' }
+CMakePluginGenerator >> configurationName [
+	^ vmGen configurationName
+]
+
 { #category : #accessing }
 CMakePluginGenerator >> doNotGenerate [
 
