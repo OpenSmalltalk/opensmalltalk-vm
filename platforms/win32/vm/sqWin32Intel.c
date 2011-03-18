@@ -23,7 +23,11 @@
 #include "sqWin32Backtrace.h"
 #if COGVM
 # include "cogmethod.h"
-# include "cointerp.h"
+# if COGMTVM
+#	include "cointerp.h"
+# else
+#	include "cointerp.h"
+# endif
 #endif
 
 /*** Crash debug -- Imported from Virtual Machine ***/
