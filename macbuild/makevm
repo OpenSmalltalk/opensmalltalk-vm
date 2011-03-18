@@ -84,9 +84,9 @@ cp -R CroquetPlugin/build/Release/CroquetPlugin.bundle "$DEST/Contents/Resources
 
 #Build the mpeg3 plugin
 echo
-echo mpeg3Plugin xcodebuild -project mpeg3Plugin/mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
-xcodebuild -project mpeg3Plugin/mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
-cp -R mpeg3Plugin/build/Release/mpeg3Plugin.bundle mpeg3.app/Contents/Resources
+echo Mpeg3Plugin xcodebuild -project Mpeg3Plugin/Mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
+xcodebuild -project Mpeg3Plugin/Mpeg3Plugin.xcodeproj -configuration $NSD_BUILD_CONFIGURATION
+cp -R Mpeg3Plugin/build/Release/Mpeg3Plugin.bundle mpeg3.app/Contents/Resources
 
 # Build the FFI plugin (New as of 27 March 2008)
 echo
