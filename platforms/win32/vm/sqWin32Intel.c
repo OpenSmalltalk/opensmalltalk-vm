@@ -24,7 +24,7 @@
 #if COGVM
 # include "cogmethod.h"
 # if COGMTVM
-#	include "cointerp.h"
+#	include "cointerpmt.h"
 # else
 #	include "cointerp.h"
 # endif
