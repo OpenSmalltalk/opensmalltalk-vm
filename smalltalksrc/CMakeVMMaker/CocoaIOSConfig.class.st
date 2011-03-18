@@ -217,7 +217,7 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 	
 	maker 
 		cmd: 'set_target_properties' 
-		params: maker moduleName, ' PROPERTIES COMPILE_FLAGS "-include ', (self topDir / 'build' / self prefixHeaderFileName) fullName, '"'. 
+		params: maker moduleName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self topDir / 'build' / self prefixHeaderFileName) fullName, '\""'. 
 	
 	maker addXCodeProperty: 'GCC_VERSION' value: '4.2'.
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
