@@ -12,6 +12,13 @@ Class {
 	#category : #'CMakeVMMaker-Unix-Cog'
 }
 
+{ #category : #'source generation' }
+CogUnixConfig >> cogitClass [
+	"answer a class for machine code generation or nil"
+	
+	^ StackToRegisterMappingCogit 
+]
+
 { #category : #'compiler flags' }
 CogUnixConfig >> commonCompilerFlags [
 
@@ -286,30 +293,8 @@ CogUnixConfig >> generateConfigH [
 ]
 
 { #category : #'source generation' }
-CogUnixConfig >> generateSourceFiles [
-	"force fucking file stream to use right line ending on unix "
-	
-	CrLfFileStream defaultToLF.
-	
-	
-	^ CMakeGenScripts generateCogSources: self
-]
-
-{ #category : #'source generation' }
-CogUnixConfig >> generateStackSources [
-	" generate sources for Stack Interpreter"
-
-	CrLfFileStream defaultToLF.	
-
-	StackInterpreter initialize.
-	VMMaker
-		generate: StackInterpreter
-		to: self srcDir fullName
-		platformDir: self platformsDir fullName
-		excluding: #(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
-			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
-			
-
+CogUnixConfig >> interpreterClass [
+	^ CoInterpreter
 ]
 
 { #category : #sources }
@@ -336,6 +321,16 @@ CogUnixConfig >> platformSources [
 CogUnixConfig >> preferredIncludes [
 	^ #( '${targetPlatform}/plugins/B3DAcceleratorPlugin')
 	
+]
+
+{ #category : #'source generation' }
+CogUnixConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
+	^ self prepareForCogGeneration
+
 ]
 
 { #category : #utils }

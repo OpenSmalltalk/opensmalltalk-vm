@@ -1,7 +1,7 @@
 Class {
 	#name : #CocoaIOSCogStackConfig,
 	#superclass : #CocoaIOSCogConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #settings }
@@ -17,14 +17,23 @@ CocoaIOSCogStackConfig >> coreSources [
 ]
 
 { #category : #'source generation' }
-CocoaIOSCogStackConfig >> generateSourceFiles [
-
-	self generateStackSources
+CocoaIOSCogStackConfig >> interpreterClass [
+	^ StackInterpreter
 ]
 
 { #category : #accessing }
 CocoaIOSCogStackConfig >> pluginsDir [ 
 	^'${topDir}/stacksrc/plugins'
+]
+
+{ #category : #'source generation' }
+CocoaIOSCogStackConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
+	^ self prepareForStackVMGeneration
+
 ]
 
 { #category : #accessing }

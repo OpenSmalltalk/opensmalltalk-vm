@@ -18,7 +18,16 @@ StackInterpreterUnixConfig >> coreSources [
 ]
 
 { #category : #'source generation' }
-StackInterpreterUnixConfig >> generateSourceFiles [
+StackInterpreterUnixConfig >> interpreterClass [
+	^ StackInterpreter
+]
 
-	self generateStackSources
+{ #category : #'source generation' }
+StackInterpreterUnixConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
+	^ self prepareForStackVMGeneration
+
 ]

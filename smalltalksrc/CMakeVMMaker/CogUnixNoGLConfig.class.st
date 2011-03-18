@@ -1,3 +1,6 @@
+"
+A slightly modified configuration, which avoids linking with openGL libraries.
+"
 Class {
 	#name : #CogUnixNoGLConfig,
 	#superclass : #CogUnixConfig,

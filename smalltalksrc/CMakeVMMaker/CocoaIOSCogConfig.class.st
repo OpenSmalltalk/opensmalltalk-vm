@@ -1,7 +1,7 @@
 Class {
 	#name : #CocoaIOSCogConfig,
 	#superclass : #CocoaIOSConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #settings }
