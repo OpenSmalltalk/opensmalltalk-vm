@@ -102,6 +102,11 @@
 #if !defined(PATH_MAX)
 # include <sys/syslimits.h>
 #endif
+#if !defined(NOEXECINFO)
+# include <execinfo.h>
+# define BACKTRACE_DEPTH 64
+#endif
+#include <sys/ucontext.h>
 
 extern pthread_mutex_t gEventQueueLock,gSleepLock;
 extern pthread_cond_t  gSleepLockCondition;
@@ -134,6 +139,81 @@ sqInt printAllStacks(void);
 sqInt printCallStack(void);
 extern void dumpPrimTraceLog(void);
 extern BOOL NSApplicationLoad(void);
+static void fetchPrefrences(void);
+
+
+/*** errors ***/
+
+/* Print an error message, possibly a stack trace, do /not/ exit.
+ * Allows e.g. writing to a log file and stderr.
+ */
+static void
+reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
+{
+#if !defined(NOEXECINFO)
+	void *addrs[BACKTRACE_DEPTH];
+	int depth;
+#endif
+	/* flag prevents recursive error when trying to print a broken stack */
+	static sqInt printingStack = false;
+
+	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
+
+#if !defined(NOEXECINFO)
+	printf("C stack backtrace:\n");
+	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
+	depth = backtrace(addrs, BACKTRACE_DEPTH);
+	backtrace_symbols_fd(addrs, depth, fileno(stdout));
+#endif
+
+	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+		if (!printingStack) {
+#if COGVM
+			/* If we're in generated machine code then the only way the stack
+			 * dump machinery has of giving us an accurate report is if we set
+			 * stackPointer & framePointer to the native stack & frame pointers.
+			 */
+# if __APPLE__ && __MACH__ && __i386__
+#	if __GNUC__ /* see sys/ucontext.h; two different namings */
+			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__ebp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__esp: 0);
+#	else
+			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
+#	endif
+# elif __linux__ && __i386__
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
+# else
+#	error need to implement extracting pc from a ucontext_t on this system
+# endif
+			char *savedSP, *savedFP;
+
+			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
+#endif
+
+			printingStack = true;
+			if (printAll) {
+				printf("\n\nAll Smalltalk process stacks (active first):\n");
+				printAllStacks();
+			}
+			else {
+				printf("\n\nSmalltalk stack dump:\n");
+				printCallStack();
+			}
+			printingStack = false;
+#if COGVM
+			/* Now restore framePointer and stackPointer via same function */
+			ifValidWriteBackStackPointersSaveTo(savedFP,savedSP,0,0);
+#endif
+		}
+	}
+	else
+		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
+	printf("\nMost recent primitives\n");
+	dumpPrimTraceLog();
+	fflush(stdout);
+}
 
 /* Print an error message, possibly a stack trace, and exit. */
 /* Disable Intel compiler inlining of error which is used for breakpoints */
@@ -141,33 +221,62 @@ extern BOOL NSApplicationLoad(void);
 void
 error(char *msg)
 {
-	/* flag prevents recursive error when trying to print a broken stack */
-	static sqInt printingStack = false;
-
-	printf("\n%s\n\n", msg);
-
-	printf("\nMost recent primitives\n");
-	dumpPrimTraceLog();
-	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
-		if (!printingStack) {
-			printingStack = true;
-			printf("\n\nSmalltalk stack dump:\n");
-			printCallStack();
-		}
-	}
-	else
-		printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
+	reportStackState(msg,0,0,0);
 	abort();
 }
 #pragma auto_inline on
 
-static void sigsegv(int ignore)
+/* construct /dir/for/image/crash.dmp if a / in imageName else crash.dmp */
+static void
+getCrashDumpFilenameInto(char *buf)
 {
-#pragma unused(ignore)
+  char *slash;
 
-  error("Segmentation fault");
+  strcpy(buf,imageName);
+  slash = strrchr(buf,'/');
+  strcpy(slash ? slash + 1 : buf, "crash.dmp");
 }
 
+static void
+sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
+{
+	int saved_errno = errno;
+	time_t now = time(NULL);
+	char ctimebuf[32];
+	char crashdump[IMAGE_NAME_SIZE+1];
+	unsigned long pc;
+
+	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+		pthread_kill(getVMOSThread(),sig);
+		errno = saved_errno;
+		return;
+	}
+
+	getCrashDumpFilenameInto(crashdump);
+	ctime_r(&now,ctimebuf);
+	pushOutputFile(crashdump);
+	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+	popOutputFile();
+	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+
+	errno = saved_errno;
+}
+
+static void
+sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
+{
+	time_t now = time(NULL);
+	char ctimebuf[32];
+	char crashdump[IMAGE_NAME_SIZE+1];
+
+	getCrashDumpFilenameInto(crashdump);
+	ctime_r(&now,ctimebuf);
+	pushOutputFile(crashdump);
+	reportStackState("Segmentation fault", ctimebuf, 0, uap);
+	popOutputFile();
+	reportStackState("Segmentation fault", ctimebuf, 0, uap);
+	abort();
+}
 
 int main(int argc, char **argv, char **envp);
 
@@ -194,11 +303,15 @@ void mtfsfi(unsigned long long fpscr)
 # define mtfsfi(fpscr)
 #endif
 
-int main(int argc, char **argv, char **envp) {
+int
+main(int argc, char **argv, char **envp)
+{
 	EventRecord theEvent;
 	sqImageFile f;
 	OSErr err;
 	char shortImageName[SHORTIMAGE_NAME_SIZE+1];
+
+	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
 
 #if 0 /* Useful debugging stub?  Dump args to file ~/argvPID. */
   {	char fname[PATH_MAX];
@@ -224,15 +337,23 @@ int main(int argc, char **argv, char **envp) {
 		error("This C compiler's time_t's are not 32 bits.");
 	}
 
-  /* Make parameters global for access from pluggable primitives */
-  argCnt= argc;
-  argVec= argv;
-  envVec= envp;
+	/* Make parameters global for access from pluggable primitives */
+	argCnt= argc;
+	argVec= argv;
+	envVec= envp;
 
-  signal(SIGSEGV, sigsegv);
+	sigsegv_handler_action.sa_sigaction = sigsegv;
+	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigsegv_handler_action.sa_mask);
+    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
 
-  fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
-  mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
+	sigusr1_handler_action.sa_sigaction = sigusr1;
+	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigusr1_handler_action.sa_mask);
+    (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
+
+	fldcw(0x12bf);	/* signed infinity, round to nearest, REAL8, disable intrs, disable signals */
+	mtfsfi(0);		/* disable signals, IEEE mode, round to nearest */
 
 	LoadScrap();
 	SetUpClipboard();
@@ -541,7 +662,8 @@ int getAttributeIntoLength(int id, int byteArrayIndex, int length) {
 }
 
 
-void fetchPrefrences() {
+static void
+fetchPrefrences() {
     CFBundleRef  myBundle;
     CFDictionaryRef myDictionary;
     CFNumberRef SqueakWindowType,SqueakMaxHeapSizeType,SqueakUIFlushPrimaryDeferNMilliseconds,SqueakUIFlushSecondaryCleanupDelayMilliseconds,SqueakUIFlushSecondaryCheckForPossibleNeedEveryNMilliseconds,SqueakDebug;

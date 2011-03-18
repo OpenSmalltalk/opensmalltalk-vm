@@ -955,8 +955,10 @@ printCrashDebugInformation(LPEXCEPTION_POINTERS exp)
 
   TRY {
   if (inVMThread)
-	ifValidWriteBackStackPointers((void *)exp->ContextRecord->Ebp,
-								  (void *)exp->ContextRecord->Esp);
+	ifValidWriteBackStackPointersSaveTo((void *)exp->ContextRecord->Ebp,
+										(void *)exp->ContextRecord->Esp,
+										0,
+										0);
   callstack[0] = (void *)exp->ContextRecord->Eip;
   nframes = backtrace_from_fp((void*)exp->ContextRecord->Ebp,
 							callstack+1,

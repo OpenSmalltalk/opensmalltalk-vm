@@ -735,37 +735,18 @@ sqInt  primitivePluginRequestState(void)	{ return dpy->primitivePluginRequestSta
 
 /*** errors ***/
 
-
 static void outOfMemory(void)
 {
-  fprintf(stderr, "out of memory\n");
-  exit(1);
+  /* pushing stderr outputs the error report on stderr instead of stdout */
+  pushOutputFile((char *)STDERR_FILENO);
+  error("out of memory\n");
 }
 
-static void sigusr1(int ignore)
-{
-#if !defined(NOEXECINFO)
-	void *addrs[BACKTRACE_DEPTH];
-	int depth;
-	time_t now = time(NULL);
-	/* ctime includes newline */
-	printf("\nReceived user signal, printing active C stack at %s:", ctime(&now));
-	depth = backtrace(addrs, BACKTRACE_DEPTH);
-	backtrace_symbols_fd(addrs, depth, fileno(stdout));
-#endif
-	printf("\nReceived user signal, printing active Smalltalk stack:\n\n");
-	printCallStack();
-	printf("\nReceived user signal, printing all Smalltalk processes:\n\n");
-	printAllStacks();
-	fflush(stdout);
-	fflush(stderr);
-}
-
-/* Print an error message, possibly a stack trace, and exit. */
-/* Disable Intel compiler inlining of error which is used for breakpoints */
-#pragma auto_inline off
-void
-error(char *msg)
+/* Print an error message, possibly a stack trace, do /not/ exit.
+ * Allows e.g. writing to a log file and stderr.
+ */
+static void
+reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 {
 #if !defined(NOEXECINFO)
 	void *addrs[BACKTRACE_DEPTH];
@@ -774,49 +755,130 @@ error(char *msg)
 	/* flag prevents recursive error when trying to print a broken stack */
 	static sqInt printingStack = false;
 
-	printf("\n%s\n\n", msg);
+	printf("\n%s%s%s\n\n", msg, date ? " " : "", date ? date : "");
 
 #if !defined(NOEXECINFO)
 	printf("C stack backtrace:\n");
+	fflush(stdout); /* backtrace_symbols_fd uses unbuffered i/o */
 	depth = backtrace(addrs, BACKTRACE_DEPTH);
 	backtrace_symbols_fd(addrs, depth, fileno(stdout));
 #endif
 
 	if (ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
 		if (!printingStack) {
+#if COGVM
+			/* If we're in generated machine code then the only way the stack
+			 * dump machinery has of giving us an accurate report is if we set
+			 * stackPointer & framePointer to the native stack & frame pointers.
+			 */
+# if __APPLE__ && __MACH__ && __i386__
+			void *fp = (void *)(uap ? uap->uc_mcontext->ss.ebp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext->ss.esp: 0);
+# elif __linux__ && __i386__
+			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
+# else
+#	error need to implement extracting pc from a ucontext_t on this system
+# endif
+			char *savedSP, *savedFP;
+
+			ifValidWriteBackStackPointersSaveTo(fp,sp,&savedFP,&savedSP);
+#endif
+
 			printingStack = true;
-			printf("\n\nSmalltalk stack dump:\n");
-			printCallStack();
+			if (printAll) {
+				printf("\n\nAll Smalltalk process stacks (active first):\n");
+				printAllStacks();
+			}
+			else {
+				printf("\n\nSmalltalk stack dump:\n");
+				printCallStack();
+			}
+			printingStack = false;
+#if COGVM
+			/* Now restore framePointer and stackPointer via same function */
+			ifValidWriteBackStackPointersSaveTo(savedFP,savedSP,0,0);
+#endif
 		}
 	}
 	else
-		printf("\nCan't dump Smalltalk stack. Not in VM thread\n");
+		printf("\nCan't dump Smalltalk stack(s). Not in VM thread\n");
 	printf("\nMost recent primitives\n");
 	dumpPrimTraceLog();
+	fflush(stdout);
+}
+
+/* Print an error message, possibly a stack trace, and exit. */
+/* Disable Intel compiler inlining of error which is used for breakpoints */
+#pragma auto_inline off
+void
+error(char *msg)
+{
+	reportStackState(msg,0,0,0);
 	abort();
 }
 #pragma auto_inline on
 
-static void sigsegv(int ignore)
+/* construct /dir/for/image/crash.dmp if a / in imageName else crash.dmp */
+static void
+getCrashDumpFilenameInto(char *buf)
 {
-#pragma unused(ignore)
+  char *slash;
 
-  error("Segmentation fault");
+  strcpy(buf,imageName);
+  slash = strrchr(buf,'/');
+  strcpy(slash ? slash + 1 : buf, "crash.dmp");
 }
+
+static void
+sigusr1(int sig, siginfo_t *info, ucontext_t *uap)
+{
+	int saved_errno = errno;
+	time_t now = time(NULL);
+	char ctimebuf[32];
+	char crashdump[IMAGE_NAME_SIZE+1];
+	unsigned long pc;
+
+	if (!ioOSThreadsEqual(ioCurrentOSThread(),getVMOSThread())) {
+		pthread_kill(getVMOSThread(),sig);
+		errno = saved_errno;
+		return;
+	}
+
+	getCrashDumpFilenameInto(crashdump);
+	ctime_r(&now,ctimebuf);
+	pushOutputFile(crashdump);
+	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+	popOutputFile();
+	reportStackState("SIGUSR1", ctimebuf, 1, uap);
+
+	errno = saved_errno;
+}
+
+static void
+sigsegv(int sig, siginfo_t *info, ucontext_t *uap)
+{
+	time_t now = time(NULL);
+	char ctimebuf[32];
+	char crashdump[IMAGE_NAME_SIZE+1];
+
+	getCrashDumpFilenameInto(crashdump);
+	ctime_r(&now,ctimebuf);
+	pushOutputFile(crashdump);
+	reportStackState("Segmentation fault", ctimebuf, 0, uap);
+	popOutputFile();
+	reportStackState("Segmentation fault", ctimebuf, 0, uap);
+	abort();
+}
+
 
 
 #if defined(IMAGE_DUMP)
+static void
+sighup(int ignore) { dumpImageFile= 1; }
 
-static void sighup(int ignore)
-{
-  dumpImageFile= 1;
-}
-
-static void sigquit(int ignore)
-{
-  emergencyDump(1);
-}
-
+static void
+sigquit(int ignore) { emergencyDump(1); }
 #endif
 
 
@@ -1645,8 +1707,17 @@ int main(int argc, char **argv, char **envp)
 #endif /* defined(HAVE_LIBDL) && !(STACKVM || COGVM) */
 
   if (installHandlers) {
-	signal(SIGSEGV, sigsegv);
-	signal(SIGUSR1, sigusr1);
+	struct sigaction sigusr1_handler_action, sigsegv_handler_action;
+
+	sigsegv_handler_action.sa_sigaction = sigsegv;
+	sigsegv_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigsegv_handler_action.sa_mask);
+    (void)sigaction(SIGSEGV, &sigsegv_handler_action, 0);
+
+	sigusr1_handler_action.sa_sigaction = sigusr1;
+	sigusr1_handler_action.sa_flags = SA_NODEFER | SA_SIGINFO;
+	sigemptyset(&sigusr1_handler_action.sa_mask);
+    (void)sigaction(SIGUSR1, &sigusr1_handler_action, 0);
   }
 
 #if defined(IMAGE_DUMP)

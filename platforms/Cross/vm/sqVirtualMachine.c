@@ -469,3 +469,83 @@ struct VirtualMachine* sqGetInterpreterProxy(void)
 
 	return VM;
 }
+
+
+/* This lives here for now but belongs somewhere else.
+ * platforms/Cross/vm/sqStuff.c??
+ */
+#define STDOUT_STACK_SZ 5
+static int stdoutStackIdx = -1;
+static FILE stdoutStack[STDOUT_STACK_SZ];
+
+/* N.B. As of cygwin 1.5.25 fopen("crash.dmp","a") DOES NOT WORK!  crash.dmp
+ * contains garbled output as if the file pointer gets set to the start of the
+ * file, not the end.  So we synthesize our own append mode.
+ */
+#if __MINGW32__
+# include <io.h>
+static FILE *
+fopen_for_append(char *filename)
+{
+	FILE *f = !access(filename, F_OK) /* access is bass ackwards */
+		? fopen(filename,"r+")
+		: fopen(filename,"w+");
+	if (f)
+		fseek(f,0,SEEK_END);
+	return f;
+}
+#elif defined(WIN32)
+# define fopen_for_append(filename) fopen(filename,"a+t")
+#else
+# define fopen_for_append(filename) fopen(filename,"a+")
+#endif
+
+void
+pushOutputFile(char *filenameOrStdioIndex)
+{
+#ifndef STDOUT_FILENO
+# define STDOUT_FILENO 1
+# define STDERR_FILENO 2
+#endif
+
+	FILE *output;
+
+	if (stdoutStackIdx + 2 >= STDOUT_STACK_SZ) {
+		fprintf(stderr,"output file stack is full.\n");
+		return;
+	}
+	switch ((unsigned)filenameOrStdioIndex) {
+	case STDOUT_FILENO: output = stdout; break;
+	case STDERR_FILENO: output = stderr; break;
+	default:
+		if (!(output = fopen_for_append(filenameOrStdioIndex))) {
+			fprintf(stderr,
+					"could not open \"%s\" for writing.\n",
+					filenameOrStdioIndex);
+			return;
+		}
+	}
+	stdoutStack[++stdoutStackIdx] = *stdout;
+	*stdout = *output;
+}
+
+void
+popOutputFile()
+{
+	if (stdoutStackIdx < 0) {
+		fprintf(stderr,"output file stack is empty.\n");
+		return;
+	}
+	fflush(stdout);
+	if (fileno(stdout) > STDERR_FILENO) {
+		/* as of Feb 2011 with fclose@@GLIBC_2.1 under e.g. CentOS 5.3, fclose
+		 * hangs in _IO_un_link_internal.  This hack avoids that.
+		 */
+#if __linux__
+		close(fileno(stdout));
+#else
+		fclose(stdout);
+#endif
+	}
+	*stdout = stdoutStack[stdoutStackIdx--];
+}
