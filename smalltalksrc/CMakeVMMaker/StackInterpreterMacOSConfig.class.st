@@ -1,10 +1,16 @@
+"
+StackInterpreterMacOSConfig generateWithSources.
+
+This configuration generates sources/build files for building Stack-based interpreter on Mac OS X.
+It is using a Carbon framework , which will be replaced by Cocoa soon. (see CocoaIOSConfig and its subclasses).
+"
 Class {
 	#name : #StackInterpreterMacOSConfig,
 	#superclass : #CogMacOSConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-MacOS'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source files' }
 StackInterpreterMacOSConfig >> coreSources [
 	"files to include from src/vm dir"
 	
@@ -13,12 +19,22 @@ StackInterpreterMacOSConfig >> coreSources [
 		)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
 StackInterpreterMacOSConfig >> executableName [
 	^ 'StackVM'
 ]
 
-{ #category : #'as yet unclassified' }
-StackInterpreterMacOSConfig >> generateSourceFiles [
-	self generateStackSources
+{ #category : #'source generation' }
+StackInterpreterMacOSConfig >> interpreterClass [
+	^ StackInterpreter
+]
+
+{ #category : #'source generation' }
+StackInterpreterMacOSConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
+	^ self prepareForStackVMGeneration
+
 ]

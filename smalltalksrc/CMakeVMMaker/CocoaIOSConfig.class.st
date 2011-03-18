@@ -1,7 +1,7 @@
 Class {
 	#name : #CocoaIOSConfig,
 	#superclass : #MacOSConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-IOS'
 }
 
 { #category : #'bundle strings' }
