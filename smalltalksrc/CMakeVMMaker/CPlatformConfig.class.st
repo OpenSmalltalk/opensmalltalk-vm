@@ -44,23 +44,14 @@ Class {
 { #category : #'as yet unclassified' }
 CPlatformConfig class >> generate [
 
-	^ CMakeVMGenerator new generate: self.
+	^ self new generate
 ]
 
 { #category : #'as yet unclassified' }
 CPlatformConfig class >> generateWithSources [
-	| me |
-	
-	me := self new.
-	
-	"answer 'yes' to all VMMaker questions" 
-	
-	[[
-		me generateSourceFiles.
-	] on: ProvideAnswerNotification do: [:ex | ex resume: true ]]
-	on: Warning do: [:ex | ex resume ].
-	
-	^ CMakeVMGenerator new generate: me.
+
+	^ self new generateSources; generate.
+
 ]
 
 { #category : #directories }
@@ -80,6 +71,13 @@ CPlatformConfig >> buildDir: anObject [
 { #category : #accessing }
 CPlatformConfig >> cMakeMacros [
 	^nil	
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> cogitClass [
+	"answer a class for machine code generation or nil"
+	
+	^ nil
 ]
 
 { #category : #'plugin extra rules' }
@@ -387,6 +385,17 @@ CPlatformConfig >> configureSurfacePlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CPlatformConfig >> configureThreadedIA32FFIPlugin: maker [
+	"extra rules for ThreadedIA32FFIPlugin"
+	
+	maker addCrossSources: #(
+		'sqFFIPlugin.c' 'sqFFITestFuncs.c' 'sqManualSurface.c'
+	).
+
+
+]
+
+{ #category : #'plugin extra rules' }
 CPlatformConfig >> configureUUIDPlugin: maker [ 
 	"extra rules for UUIDPlugin"
 
@@ -500,10 +509,29 @@ CPlatformConfig >> generate [
 ]
 
 { #category : #'source generation' }
-CPlatformConfig >> generateSourceFiles [
-	" generate all interpreter source files and put them in to sources dir (srcDir ) "
+CPlatformConfig >> generateSources [
+	"Generate whole VM + plugins sources"
+	| maker |
+	
+	
+	self prepareForGeneration.
+	
+	"suppress questions and deprecation warnings during generation "
+	[[
+		
+		maker := self prepareVMMaker.
+	
+		maker interpreterClass: self interpreterClass.
+		self cogitClass ifNotNil: [:cg | maker cogitClass: cg ].
 
-	self subclassResponsibility
+	
+		maker generateEntire
+
+	] on: ProvideAnswerNotification do: [:ex | ex resume: true ]]
+	on: Deprecation do: [:ex | ex resume ].
+	
+	
+
 ]
 
 { #category : #'source generation' }
@@ -529,6 +557,12 @@ CPlatformConfig >> internalPlugins [
 CPlatformConfig >> internalPlugins: aColl [
 
 	internalPlugins := aColl
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> interpreterClass [
+	"answer an interpreter class for VM source code generation"
+	self subclassResponsibility 
 ]
 
 { #category : #testing }
@@ -578,6 +612,47 @@ CPlatformConfig >> pluginsDir: aStringOrDir [
 { #category : #'source files' }
 CPlatformConfig >> preferredIncludes [
 	^#()
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> prepareForCogGeneration. [
+	"make sure these classes are initialized properly "	
+	CogRTLOpcodes initialize.
+	CogIA32Compiler initialize.
+	
+
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> prepareForGeneration [
+	self subclassResponsibility 
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> prepareForStackVMGeneration [
+	"make sure these classes are initialized properly "	
+		
+	StackInterpreter initialize
+
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> prepareVMMaker [
+
+	| maker allPlugins |
+	
+	maker := VMMaker forPlatform: 'Cross'.
+	maker sourceDirectoryName: (self srcDir assureExistence fullName).
+	maker platformRootDirectoryName: (self topDir / 'platforms' ) fullName.
+	
+	
+	allPlugins := self internalPlugins , self externalPlugins.
+	
+	"touch plugins to force their source generation unconditionally"
+	allPlugins do: [:name | (Smalltalk globals at: name) touch ].
+	maker externalModules addAll:  allPlugins.
+	
+	^ maker
 ]
 
 { #category : #utils }

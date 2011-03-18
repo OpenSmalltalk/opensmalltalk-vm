@@ -1,7 +1,7 @@
 Class {
 	#name : #MacOSConfig,
 	#superclass : #CPlatformConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-MacOS'
 }
 
 { #category : #accessing }
@@ -154,4 +154,13 @@ MacOSConfig >> configureSocketPlugin: maker [
 { #category : #utils }
 MacOSConfig >> fixLineEndsOf: string [
 	^ string copyReplaceAll: String cr with: String lf
+]
+
+{ #category : #'source generation' }
+MacOSConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
+
 ]
