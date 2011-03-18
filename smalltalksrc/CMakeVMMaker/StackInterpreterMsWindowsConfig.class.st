@@ -24,6 +24,12 @@ StackInterpreterMsWindowsConfig >> executableName [
 ]
 
 { #category : #'source generation' }
-StackInterpreterMsWindowsConfig >> generateSourceFiles [
-	self generateStackSources
+StackInterpreterMsWindowsConfig >> interpreterClass [
+	"answer an interpreter class for VM source code generation"
+	^ StackInterpreter
+]
+
+{ #category : #'source generation' }
+StackInterpreterMsWindowsConfig >> prepareForGeneration [
+	^ self prepareForStackVMGeneration
 ]

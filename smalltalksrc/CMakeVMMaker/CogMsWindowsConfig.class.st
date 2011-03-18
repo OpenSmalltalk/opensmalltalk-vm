@@ -10,6 +10,13 @@ Class {
 	#category : #'CMakeVMMaker-Windows'
 }
 
+{ #category : #'source generation' }
+CogMsWindowsConfig >> cogitClass [
+	"answer a class for machine code generation or nil"
+	
+	^ StackToRegisterMappingCogit 
+]
+
 { #category : #'compiler flags' }
 CogMsWindowsConfig >> compilerFlags [
 	"depends on config ..."
@@ -121,30 +128,8 @@ CogMsWindowsConfig >> extraVMSettings: maker [
 ]
 
 { #category : #'source generation' }
-CogMsWindowsConfig >> generateSourceFiles [
-	"force fucking file stream to use right line ending on unix "
-	
-	CrLfFileStream defaultToLF.
-	
-	
-	^ CMakeGenScripts generateCogSources: self
-]
-
-{ #category : #'source generation' }
-CogMsWindowsConfig >> generateStackSources [
-	" generate sources for Stack Interpreter"
-
-	CrLfFileStream defaultToLF.	
-
-	StackInterpreter initialize.
-	VMMaker
-		generate: StackInterpreter
-		to: self srcDir fullName
-		platformDir: self platformsDir fullName
-		excluding: #(BrokenPlugin IA32ABIPluginSimulator SlangTestPlugin TestOSAPlugin
-			FFIPlugin ReentrantARMFFIPlugin ReentrantFFIPlugin ReentrantPPCBEFFIPlugin).
-			
-
+CogMsWindowsConfig >> interpreterClass [
+	^ CoInterpreter
 ]
 
 { #category : #'source files' }
@@ -171,6 +156,14 @@ CogMsWindowsConfig >> platformSources [
 		'sqWin32Prefs.c'
 		'sqWin32Utils.c'
 	)
+]
+
+{ #category : #'source generation' }
+CogMsWindowsConfig >> prepareForGeneration [
+
+	CrLfFileStream defaultToCRLF.
+
+	^ self prepareForCogGeneration
 ]
 
 { #category : #utils }

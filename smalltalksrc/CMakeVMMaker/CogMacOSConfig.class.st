@@ -1,11 +1,14 @@
 "
-This is a configuration for Cog VM 32 bit, 
-	for Mac OS, which using Carbon framework. 
+CogMacOSConfig generateWithSources.
+
+This is a configuration for building Cog VM 32 bit on Mac OS.
+
+It is using a Carbon framework , which eventually will be replaced by Cocoa. (see CocoaIOSConfig and its subclasses).
 "
 Class {
 	#name : #CogMacOSConfig,
 	#superclass : #MacOSConfig,
-	#category : #CMakeVMMaker
+	#category : #'CMakeVMMaker-MacOS'
 }
 
 { #category : #'bundle strings' }
@@ -54,6 +57,13 @@ CogMacOSConfig >> CFBundleVersion [
 
 	"An application version"
 	^ '4.0.0'
+]
+
+{ #category : #'source generation' }
+CogMacOSConfig >> cogitClass [
+	"answer a class for machine code generation or nil"
+	
+	^ StackToRegisterMappingCogit 
 ]
 
 { #category : #accessing }
@@ -293,6 +303,11 @@ CogMacOSConfig >> frameworks [
 CogMacOSConfig >> generateSourceFiles [
 
 	^ CMakeGenScripts generateCogSources: self
+]
+
+{ #category : #'source generation' }
+CogMacOSConfig >> interpreterClass [
+	^ CoInterpreter
 ]
 
 { #category : #accessing }
@@ -844,6 +859,16 @@ CogMacOSConfig >> plistTemplate [
 </dict>
 </plist>
 '
+]
+
+{ #category : #'source generation' }
+CogMacOSConfig >> prepareForGeneration [
+
+	"force using LF on Macs"
+	CrLfFileStream defaultToLF.
+
+	^ self prepareForCogGeneration
+
 ]
 
 { #category : #settings }
