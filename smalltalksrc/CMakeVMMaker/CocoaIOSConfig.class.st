@@ -17,8 +17,9 @@ CocoaIOSConfig >> CFBundleGetInfoString [
 
 { #category : #'bundle strings' }
 CocoaIOSConfig >> CFBundleIconFile [
+
 	"An application icon"
-	^ 'Squeak.icns'
+	^ 'Cog.icns'
 ]
 
 { #category : #'bundle strings' }
@@ -238,6 +239,7 @@ CocoaIOSConfig >> extraVMSettings: maker [
 	maker set: 'resources' to: 
 		'"${resourceDir}/Squeak VM.r"
 		"${resourceDir}/Squeak.icns"
+		"${resourceDir}/Cog.icns"
 		"${resourceDir}/SqueakChanges.icns"
 		"${resourceDir}/SqueakImage.icns"
 		"${resourceDir}/SqueakPlugin.icns"
