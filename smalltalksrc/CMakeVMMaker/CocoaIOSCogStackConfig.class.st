@@ -16,6 +16,11 @@ CocoaIOSCogStackConfig >> coreSources [
 		)
 ]
 
+{ #category : #accessing }
+CocoaIOSCogStackConfig >> executableName [
+	^ 'StackVM'
+]
+
 { #category : #'source generation' }
 CocoaIOSCogStackConfig >> interpreterClass [
 	^ StackInterpreter

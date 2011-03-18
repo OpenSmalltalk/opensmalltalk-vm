@@ -24,6 +24,11 @@ CocoaIOSCogJitConfig >> coreSources [
 		)
 ]
 
+{ #category : #accessing }
+CocoaIOSCogJitConfig >> executableName [
+	^ 'Cog'
+]
+
 { #category : #'source generation' }
 CocoaIOSCogJitConfig >> interpreterClass [
 	^ CoInterpreter
