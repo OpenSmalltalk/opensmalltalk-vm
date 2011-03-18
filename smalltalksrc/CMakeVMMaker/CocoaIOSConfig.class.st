@@ -17,9 +17,8 @@ CocoaIOSConfig >> CFBundleGetInfoString [
 
 { #category : #'bundle strings' }
 CocoaIOSConfig >> CFBundleIconFile [
-
 	"An application icon"
-	^ 'Cog.icns'
+	^ 'Squeak.icns'
 ]
 
 { #category : #'bundle strings' }
