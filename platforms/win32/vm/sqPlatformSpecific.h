@@ -100,6 +100,7 @@ extern const unsigned long tltiIndex;
 #  define ioGetThreadLocalThreadIndex() ((long)TlsGetValue(tltiIndex))
 #  define ioSetThreadLocalThreadIndex(v) (TlsSetValue(tltiIndex,(void*)(v)))
 #  define ioTransferTimeslice() Sleep(0)
+#  define ioMilliSleep(ms) Sleep(ms)
 # endif /* COGMTVM */
 #endif /* STACKVM */
 

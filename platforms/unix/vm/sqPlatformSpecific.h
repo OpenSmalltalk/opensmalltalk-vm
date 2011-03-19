@@ -85,6 +85,7 @@ extern const pthread_key_t tltiIndex;
 #  define ioSetThreadLocalThreadIndex(v) (pthread_setspecific(tltiIndex,(void*)(v)))
 #  define ioOSThreadIsAlive(thread) (pthread_kill(thread,0) == 0)
 #  define ioTransferTimeslice() sched_yield()
+#  define ioMilliSleep(ms) usleep((ms) * 1000)
 # endif /* COGMTVM */
 #endif /* STACKVM */
 
