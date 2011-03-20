@@ -30,7 +30,7 @@ CogUnixConfig >> commonCompilerFlags [
 	
 	"
 	
-	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0'	
+	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0 -DCOGMTVM=0'	
 	
 ]
 
@@ -43,7 +43,7 @@ CogUnixConfig >> compilerFlags [
 { #category : #'compiler flags' }
 CogUnixConfig >> compilerFlagsDebug [
 
-	^ '-g3 -O1 -msse2 -D_GNU_SOURCE -DDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=1'
+	^ '-g3 -O1 -msse2 -D_GNU_SOURCE -DDEBUG -DITIMER_HEARTBEAT=1 -DNO_VM_PROFILE=1 -DDEBUGVM=1'
 
 
 ]
@@ -52,7 +52,7 @@ CogUnixConfig >> compilerFlagsDebug [
 CogUnixConfig >> compilerFlagsRelease [
 
 	^ '-g -O2 -msse2 -D_GNU_SOURCE -DNDEBUG -DITIMER_HEARTBEAT=1 
-	-DNO_VM_PROFILE=1 -DCOGMTVM=0 -DDEBUGVM=0'
+	-DNO_VM_PROFILE=1 -DDEBUGVM=0'
 
 
 ]
