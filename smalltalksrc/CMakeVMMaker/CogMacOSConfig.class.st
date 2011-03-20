@@ -66,7 +66,7 @@ CogMacOSConfig >> cogitClass [
 	^ StackToRegisterMappingCogit 
 ]
 
-{ #category : #accessing }
+{ #category : #'compiler flags' }
 CogMacOSConfig >> commonCompilerFlags [
 
 	"Common compiler flags"
@@ -76,19 +76,19 @@ CogMacOSConfig >> commonCompilerFlags [
 "	^ '-arch i386 -fmessage-length=0 -Wno-trigraphs -fpascal-strings -fasm-blocks -DCOGMTVM=0 -DUSE_GLOBAL_STRUCT=0 -DTARGET_API_MAC_CARBON -DHAVE_SYS_TIME_H -mmacosx-version-min=10.5'"
 ]
 
-{ #category : #accessing }
+{ #category : #'compiler flags' }
 CogMacOSConfig >> compilerFlags [
 	"depends on config ..."
 	^ self compilerFlagsRelease
 ]
 
-{ #category : #accessing }
+{ #category : #'compiler flags' }
 CogMacOSConfig >> compilerFlagsDebug [
 
 	^ self commonCompilerFlags , ' -O0 -Wmissing-prototypes -Wmissing-braces -Wparentheses -Wunused-function -Wunused-label -Wunused-parameter -Wunused-variable -Wunused-value -Wsign-compare -DDEBUG -DDEBUGVM=1 -DEXTERNALPRIMSDEBUG=1 -gdwarf-2 '
 ]
 
-{ #category : #accessing }
+{ #category : #'compiler flags' }
 CogMacOSConfig >> compilerFlagsRelease [
 " -mdynamic-no-pic "
 	^ self commonCompilerFlags , ' -gdwarf-2 -O3 -funroll-loops -ftree-vectorize -msse3 -DDEBUGVM=0 -DNDEBUG=1 -Wunused-value -Wuninitialized -falign-functions=16 -fno-gcse -mtune=prescott -march=pentium-m -mfpmath=sse -finline-functions -Wall -DUSE_INLINE_MEMORY_ACCESSORS'

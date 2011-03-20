@@ -220,7 +220,7 @@ Gofer new
 
 	
 ((MCHttpRepository 	location: 'http://www.squeaksource.com/VMMaker' user: '' password: '')
-versionFromFileNamed: 'CMakeVMMaker-IgorStasenko.42.mcz') load.
+versionFromFileNamed: 'CMakeVMMaker-IgorStasenko.44.mcz') load.
 
 	
 (Smalltalk saveAs: 'generator.image') ifFalse: [
