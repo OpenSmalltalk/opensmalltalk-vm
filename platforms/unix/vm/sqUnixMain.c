@@ -60,6 +60,9 @@
 # include <execinfo.h>
 # define BACKTRACE_DEPTH 64
 #endif
+#if __FreeBSD__
+# include <sys/ucontext.h>
+#endif
 
 #if defined(__alpha__) && defined(__osf__)
 # include <sys/sysinfo.h>
@@ -777,6 +780,9 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 # elif __linux__ && __i386__
 			void *fp = (void *)(uap ? uap->uc_mcontext.gregs[REG_EBP]: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext.gregs[REG_ESP]: 0);
+# elif __FreeBSD__ && __i386__
+			void *fp = (void *)(uap ? uap->uc_mcontext.mc_ebp: 0);
+			void *sp = (void *)(uap ? uap->uc_mcontext.mc_esp: 0);
 # else
 #	error need to implement extracting pc from a ucontext_t on this system
 # endif

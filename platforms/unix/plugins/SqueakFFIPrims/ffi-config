@@ -39,6 +39,7 @@ esac
 
 case ${abi} in
     linux)		abi=sysv;;
+    freebsd)		abi=sysv;;
     darwin*)		abi=darwin;;
     *)			abi=libffi; lib="-lffi";;
 esac

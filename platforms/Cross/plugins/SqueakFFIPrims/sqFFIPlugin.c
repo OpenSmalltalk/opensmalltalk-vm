@@ -10,7 +10,7 @@
 *****************************************************************************/
 
 #include <stdio.h>
-#if !WIN32
+#if !WIN32 && !__FreeBSD__
 # include <alloca.h>
 #endif
 #include <string.h>
