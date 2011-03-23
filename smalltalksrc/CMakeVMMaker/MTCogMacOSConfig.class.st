@@ -7,7 +7,7 @@ Class {
 	#category : #'CMakeVMMaker-MacOS'
 }
 
-{ #category : #'as yet unclassified' }
+{ #category : #'compiler flags' }
 MTCogMacOSConfig >> commonCompilerFlags [
 
 	"Common compiler flags"
@@ -16,13 +16,13 @@ MTCogMacOSConfig >> commonCompilerFlags [
 	
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'plugin extra rules' }
 MTCogMacOSConfig >> configureReentrantIA32FFIPlugin: maker [
 	self error: 'use ThreadedIA32FFIPlugin instead'
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'source files' }
 MTCogMacOSConfig >> coreSources [
 	"files to include from src/vm dir"
 	
@@ -32,7 +32,7 @@ MTCogMacOSConfig >> coreSources [
 		)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #plugins }
 MTCogMacOSConfig >> defaultExternalPlugins [
 
 	^ #(
@@ -46,7 +46,12 @@ MTCogMacOSConfig >> defaultExternalPlugins [
 	)
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #accessing }
+MTCogMacOSConfig >> executableName [
+	^ 'CogMTVM'
+]
+
+{ #category : #'source generation' }
 MTCogMacOSConfig >> interpreterClass [
 	^ CoInterpreterMT
 ]

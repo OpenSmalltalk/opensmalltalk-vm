@@ -215,13 +215,12 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 	maker set: 'CMAKE_OSX_ARCHITECTURES' to: 'i386'.
 	
 	maker 
-		setTargetProperty: 'COMPILE_FLAGS' 
-		to: '"-include \"', (self topDir / 'build' / self prefixHeaderFileName) fullName, '\""'.  
-
+		cmd: 'set_target_properties' 
+		params: maker moduleName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self topDir / 'build' / self prefixHeaderFileName) fullName, '\""'. 		
+	
 	maker isExternal ifTrue: [
 		"copy result to results dir "
-		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir.
-		maker puts: 'list(APPEND linkFlags "-undefined dynamic_lookup")' ].
+		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir ].
 	
 	maker addXCodeProperty: 'GCC_VERSION' value: '4.2'.
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
