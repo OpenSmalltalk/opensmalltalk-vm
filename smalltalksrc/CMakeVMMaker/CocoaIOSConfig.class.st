@@ -17,9 +17,8 @@ CocoaIOSConfig >> CFBundleGetInfoString [
 
 { #category : #'bundle strings' }
 CocoaIOSConfig >> CFBundleIconFile [
-
 	"An application icon"
-	^ 'Cog.icns'
+	^ 'Squeak.icns'
 ]
 
 { #category : #'bundle strings' }
@@ -217,7 +216,11 @@ CocoaIOSConfig >> extraPluginSettings: maker [
 	
 	maker 
 		cmd: 'set_target_properties' 
-		params: maker moduleName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self topDir / 'build' / self prefixHeaderFileName) fullName, '\""'. 
+		params: maker moduleName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self topDir / 'build' / self prefixHeaderFileName) fullName, '\""'. 		
+	
+	maker isExternal ifTrue: [
+		"copy result to results dir "
+		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir ].
 	
 	maker addXCodeProperty: 'GCC_VERSION' value: '4.2'.
 	maker addXCodeProperty: 'GCC_PREFIX_HEADER' value: '${buildDir}/' , self executableName , '_Prefix.pch'.
@@ -262,6 +265,13 @@ CocoaIOSConfig >> frameworks [
 	ApplicationServices
 	QuartzCore
 	OpenGL)
+]
+
+{ #category : #accessing }
+CocoaIOSConfig >> outputDir [
+	"the directory where built binaries will be stored"
+	
+	^ self buildDir fullName , '/results'
 ]
 
 { #category : #accessing }
