@@ -231,7 +231,7 @@ CogMacOSConfig >> defaultInternalPlugins [
 
 { #category : #accessing }
 CogMacOSConfig >> executableName [
-	^ 'Cog'
+	^ 'CogVM'
 ]
 
 { #category : #accessing }

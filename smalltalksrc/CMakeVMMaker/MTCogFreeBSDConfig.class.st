@@ -1,11 +1,11 @@
 Class {
-	#name : #MTCogUnixConfig,
-	#superclass : #CogUnixConfig,
-	#category : #'CMakeVMMaker-Unix-Cog'
+	#name : #MTCogFreeBSDConfig,
+	#superclass : #CogFreeBSDConfig,
+	#category : #'CMakeVMMaker-FreeBSD-Cog'
 }
 
 { #category : #'compiler flags' }
-MTCogUnixConfig >> commonCompilerFlags [
+MTCogFreeBSDConfig >> commonCompilerFlags [
 
 	"Common compiler flags
 	
@@ -20,13 +20,13 @@ MTCogUnixConfig >> commonCompilerFlags [
 ]
 
 { #category : #'plugin extra rules' }
-MTCogUnixConfig >> configureReentrantIA32FFIPlugin: maker [
+MTCogFreeBSDConfig >> configureReentrantIA32FFIPlugin: maker [
 	self error: 'use ThreadedIA32FFIPlugin instead'
 
 ]
 
 { #category : #sources }
-MTCogUnixConfig >> coreSources [
+MTCogFreeBSDConfig >> coreSources [
 	"files to include from src/vm dir"
 	
 	^ #(
@@ -36,7 +36,7 @@ MTCogUnixConfig >> coreSources [
 ]
 
 { #category : #plugins }
-MTCogUnixConfig >> defaultExternalPlugins [
+MTCogFreeBSDConfig >> defaultExternalPlugins [
 
 	^ #(
 		B3DAcceleratorPlugin
@@ -47,11 +47,11 @@ MTCogUnixConfig >> defaultExternalPlugins [
 ]
 
 { #category : #accessing }
-MTCogUnixConfig >> executableName [
+MTCogFreeBSDConfig >> executableName [
 	^ 'CogMTVM'
 ]
 
 { #category : #'source generation' }
-MTCogUnixConfig >> interpreterClass [
+MTCogFreeBSDConfig >> interpreterClass [
 	^ CoInterpreterMT
 ]

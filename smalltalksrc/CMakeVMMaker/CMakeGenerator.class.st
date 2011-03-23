@@ -181,26 +181,3 @@ CMakeGenerator >> set: variableName toString: aValueString [
 
 	^ self set: variableName to: '"', (aValueString copyReplaceAll: '"' with: '\"'), '"'
 ]
-
-{ #category : #'cmake commands' }
-CMakeGenerator >> setTargetProperty: propertyString to: aString [
-	self 
-		cmd: 'set_target_properties'
-		params: (String streamContents: [ :stream |
-			stream 
-				nextPutAll: self moduleName;
-				nextPutAll: ' PROPERTIES ';
-				nextPutAll: propertyString;
-				space;  
-				nextPutAll: aString ])
-]
-
-{ #category : #'cmake commands' }
-CMakeGenerator >> setTargetProperty: propertyString toAll: aCollection [
-	^self 
-		setTargetProperty: propertyString 
-		to: (String streamContents: [ :stream | 
-			aCollection 
-				do: [ :each | stream nextPutAll: each ]
-				separatedBy: [ stream nextPut: $, ] ])
-]

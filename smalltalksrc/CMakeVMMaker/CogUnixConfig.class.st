@@ -275,7 +275,7 @@ CogUnixConfig >> defaultInternalPlugins [
 
 { #category : #accessing }
 CogUnixConfig >> executableName [
-	^ 'Cog'
+	^ 'CogVM'
 ]
 
 { #category : #sources }
