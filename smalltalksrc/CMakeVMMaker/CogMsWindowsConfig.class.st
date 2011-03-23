@@ -96,7 +96,7 @@ UUIDPlugin
 
 { #category : #accessing }
 CogMsWindowsConfig >> executableName [
-	^ 'Cog'
+	^ 'CogVM'
 ]
 
 { #category : #accessing }

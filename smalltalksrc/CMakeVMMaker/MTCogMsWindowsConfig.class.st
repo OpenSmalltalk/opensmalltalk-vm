@@ -35,6 +35,11 @@ MTCogMsWindowsConfig >> defaultExternalPlugins [
 	)
 ]
 
+{ #category : #accessing }
+MTCogMsWindowsConfig >> executableName [
+	^ 'CogMTVM'
+]
+
 { #category : #'source generation' }
 MTCogMsWindowsConfig >> interpreterClass [
 	"answer an interpreter class for VM source code generation"

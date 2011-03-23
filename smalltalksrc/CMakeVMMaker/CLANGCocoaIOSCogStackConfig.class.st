@@ -1,3 +1,6 @@
+"
+Experimental configuration for compiling using clang compiler
+"
 Class {
 	#name : #CLANGCocoaIOSCogStackConfig,
 	#superclass : #CocoaIOSCogStackConfig,
