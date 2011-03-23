@@ -24,6 +24,11 @@ CocoaIOSCogJitConfig >> coreSources [
 		)
 ]
 
+{ #category : #defaults }
+CocoaIOSCogJitConfig >> defaultExternalPlugins [
+	^#()
+]
+
 { #category : #accessing }
 CocoaIOSCogJitConfig >> executableName [
 	^ 'Cog'
