@@ -31,7 +31,7 @@ CocoaIOSCogJitConfig >> defaultExternalPlugins [
 
 { #category : #accessing }
 CocoaIOSCogJitConfig >> executableName [
-	^ 'Cog'
+	^ 'CogVM'
 ]
 
 { #category : #'source generation' }
