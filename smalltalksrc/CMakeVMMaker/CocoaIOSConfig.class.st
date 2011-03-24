@@ -53,7 +53,7 @@ CocoaIOSConfig >> NSMainNibFile [
 { #category : #accessing }
 CocoaIOSConfig >> commonCompilerFlags [
 	"Common compiler flags"
-	^#('-arch i386' '-fnext-runtime' '-mmacosx-version-min=10.5')
+	^#('-arch i386' "'-fnext-runtime'" '-mmacosx-version-min=10.5')
 ]
 
 { #category : #accessing }
@@ -93,7 +93,6 @@ CocoaIOSConfig >> compilerFlagsRelease [
 	'-DUSE_INLINE_MEMORY_ACCESSORS' 
 	'-DHAVE_SYS_TIME_H' 
 	'-DHAVE_NANOSLEEP' 
-	'-DSQUEAK_BUILTIN_PLUGIN'
 	'-DICC_DEBUG=0'
 	'-DICC_OPTLEVEL="speedHLO"' 
 	'-DICC_OPT_IPO_FOR_SINGLE_FILE_COMPILATION=1' 
