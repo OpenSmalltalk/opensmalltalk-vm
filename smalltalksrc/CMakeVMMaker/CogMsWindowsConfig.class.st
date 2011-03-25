@@ -120,11 +120,37 @@ CogMsWindowsConfig >> extraPluginSettings: maker [
 	]
 ]
 
+{ #category : #'source files' }
+CogMsWindowsConfig >> extraSources [
+
+	^ 
+	'${resources}'
+]
+
 { #category : #settings }
 CogMsWindowsConfig >> extraVMSettings: maker [
 
+	| res |
+	
+	res := '"${buildDir}/resource.o"'.
+	
+	self write: self resourceFile toFile: 'Cog.rc'.
+		
+	maker cmd: 'add_custom_command' params: 'OUTPUT ', res ,
+	'
+		COMMAND 	windres --include-dir ${targetPlatform}/misc -D_WIN32 -i ${buildDir}/Cog.rc -o ', res , '
+		COMMENT "Generating resource file..."
+	'.
+	
+	maker set:  #resources to: res.
+	
 	maker includeDirectories: '${targetPlatform}/third-party/dx9sdk/Include'.
 	
+]
+
+{ #category : #resources }
+CogMsWindowsConfig >> iconFileName [
+	^ 'Cog.ico'
 ]
 
 { #category : #'source generation' }
@@ -164,6 +190,25 @@ CogMsWindowsConfig >> prepareForGeneration [
 	CrLfFileStream defaultToLF. "For strange reason it works like that"
 
 	^ self prepareForCogGeneration
+]
+
+{ #category : #resources }
+CogMsWindowsConfig >> resourceFile [
+
+	^ self resourceFileTemplate
+		copyReplaceAll: '@ICON@' with: self iconFileName
+]
+
+{ #category : #resources }
+CogMsWindowsConfig >> resourceFileTemplate [
+
+	^ '
+#ifdef _WIN32
+1                       ICON    DISCARDABLE     "@ICON@"
+2                       ICON    DISCARDABLE     "@ICON@"
+3                       ICON    DISCARDABLE     "@ICON@"
+#endif
+'
 ]
 
 { #category : #utils }
