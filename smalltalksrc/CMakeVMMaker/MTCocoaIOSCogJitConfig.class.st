@@ -24,12 +24,16 @@ MTCocoaIOSCogJitConfig >> coreSources [
 
 { #category : #defaults }
 MTCocoaIOSCogJitConfig >> defaultExternalPlugins [
-
 	^ #(
-		"CroquetPlugin"
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
-		"FloatMathPlugin"
-		"Mpeg3Plugin"
+		FloatMathPlugin
+		AsynchFilePlugin
+		SerialPlugin
+		Mpeg3Plugin
+		CroquetPlugin
+		JoystickTabletPlugin
+		MIDIPlugin
+		"B3DAcceleratorPlugin"
 	)
 ]
 
