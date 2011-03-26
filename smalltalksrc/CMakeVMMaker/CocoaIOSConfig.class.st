@@ -103,6 +103,14 @@ CocoaIOSConfig >> compilerFlagsRelease [
 ]
 
 { #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureB3DAcceleratorPlugin: maker [
+	"extra rules for B3DAcceleratorPlugin"
+	
+	super configureB3DAcceleratorPlugin: maker.  
+	maker addPlatformSources: #( 'sqMacOpenGL.c' 'sqMacOpenGLInfo.c')
+]
+
+{ #category : #'plugin extra rules' }
 CocoaIOSConfig >> configureClipboardExtendedPlugin: maker [
 	maker includeDirectories: '${platformsDir}/iOS/plugins/ClipboardExtended'.
 	maker 
@@ -121,12 +129,37 @@ CocoaIOSConfig >> configureHostWindowPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureJoystickTabletPlugin: maker [ 
+	"extra rules for JoystickTabletPlugin"
+	
+	super configureJoystickTabletPlugin: maker.  
+	maker addPlatformSources:
+		#( 
+			'HID_Error_Handler.c'
+			'HID_Name_Lookup.c'
+			'HID_Queue_Utilities.c'
+			'HID_Utilities.c'
+			'sqMacJoystickAndTablet.c'
+			)
+
+]
+
+{ #category : #'plugin extra rules' }
 CocoaIOSConfig >> configureMacMenubarPlugin: maker [
 	maker includeDirectories: '${platformsDir}/iOS/plugins/MacMenubarPlugin'.
 	maker 
 		addSources: #('MacMenuOS9ToOSX.m') 
 		prefixed: '${platformsDir}/iOS/plugins/MacMenubarPlugin/'
 
+]
+
+{ #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureMpeg3Plugin: maker [
+	super configureMpeg3Plugin: maker.
+	
+	maker addPlatformSources: #(	
+		'sqMacFileBits.c')
+	
 ]
 
 { #category : #'plugin extra rules' }
@@ -931,7 +964,7 @@ CocoaIOSConfig >> precompiledHeaders [
 //
 
 #ifdef __OBJC__
-    #import <Cocoa/Cocoa.h>
+	#import <Cocoa/Cocoa.h>
 #endif
 '
 ]
