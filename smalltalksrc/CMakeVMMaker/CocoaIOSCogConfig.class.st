@@ -42,6 +42,18 @@ CocoaIOSCogConfig >> crossSources [
 ]
 
 { #category : #plugins }
+CocoaIOSCogConfig >> defaultExternalPlugins [ 
+	^(Array with: self ffiPluginName),
+		#( FloatMathPlugin
+		AsynchFilePlugin
+		SerialPlugin
+		Mpeg3Plugin
+		CroquetPlugin
+		JoystickTabletPlugin
+		MIDIPlugin)
+]
+
+{ #category : #plugins }
 CocoaIOSCogConfig >> defaultInternalPlugins [
 	^ #(
 		ADPCMCodecPlugin
@@ -88,6 +100,11 @@ CocoaIOSCogConfig >> extraSources [
 	${platformsDir}/unix/vm/sqUnixHeartbeat.c 
 	${platformsDir}/unix/vm/sqUnixVMProfile.c 
 	${platformsDir}/unix/vm/sqUnixThreads.c '
+]
+
+{ #category : #plugins }
+CocoaIOSCogConfig >> ffiPluginName [ 
+	^#FFIPlugin 
 ]
 
 { #category : #'source files' }

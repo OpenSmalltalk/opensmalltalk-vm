@@ -24,14 +24,14 @@ CocoaIOSCogJitConfig >> coreSources [
 		)
 ]
 
-{ #category : #defaults }
-CocoaIOSCogJitConfig >> defaultExternalPlugins [
-	^#()
-]
-
 { #category : #accessing }
 CocoaIOSCogJitConfig >> executableName [
 	^ 'CogVM'
+]
+
+{ #category : #plugins }
+CocoaIOSCogJitConfig >> ffiPluginName [ 
+	^#ReentrantIA32FFIPlugin
 ]
 
 { #category : #'source generation' }
