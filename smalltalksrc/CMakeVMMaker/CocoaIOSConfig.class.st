@@ -154,15 +154,6 @@ CocoaIOSConfig >> configureMacMenubarPlugin: maker [
 ]
 
 { #category : #'plugin extra rules' }
-CocoaIOSConfig >> configureMpeg3Plugin: maker [
-	super configureMpeg3Plugin: maker.
-	
-	maker addPlatformSources: #(	
-		'sqMacFileBits.c')
-	
-]
-
-{ #category : #'plugin extra rules' }
 CocoaIOSConfig >> configureSoundPlugin: maker [
 	super configureSoundPlugin: maker.
 	

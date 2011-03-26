@@ -22,24 +22,14 @@ MTCocoaIOSCogJitConfig >> coreSources [
 		)
 ]
 
-{ #category : #defaults }
-MTCocoaIOSCogJitConfig >> defaultExternalPlugins [
-	^ #(
-		ThreadedIA32FFIPlugin "SqueakFFIPrims"
-		FloatMathPlugin
-		AsynchFilePlugin
-		SerialPlugin
-		Mpeg3Plugin
-		CroquetPlugin
-		JoystickTabletPlugin
-		MIDIPlugin
-		"B3DAcceleratorPlugin"
-	)
-]
-
 { #category : #accessing }
 MTCocoaIOSCogJitConfig >> executableName [
 	^ 'CogMTVM'
+]
+
+{ #category : #plugins }
+MTCocoaIOSCogJitConfig >> ffiPluginName [ 
+	^#ThreadedIA32FFIPlugin
 ]
 
 { #category : #'source generation' }
