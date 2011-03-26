@@ -21,6 +21,11 @@ CocoaIOSCogStackConfig >> executableName [
 	^ 'StackVM'
 ]
 
+{ #category : #plugins }
+CocoaIOSCogStackConfig >> ffiPluginName [ 
+	^#ReentrantIA32FFIPlugin
+]
+
 { #category : #'source generation' }
 CocoaIOSCogStackConfig >> interpreterClass [
 	^ StackInterpreter
