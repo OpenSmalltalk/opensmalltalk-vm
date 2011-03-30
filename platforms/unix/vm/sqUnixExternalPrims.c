@@ -100,6 +100,11 @@
   extern int sqIgnorePluginErrors;
 #endif
 
+#if defined(__FreeBSD__)
+# undef RTLD_NOW
+# define RTLD_NOW RTLD_LAZY
+#endif
+
 /*** options ***/
 
 extern char *squeakPlugins;

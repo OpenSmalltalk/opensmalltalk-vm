@@ -7,10 +7,10 @@ IF (NOT IS_BIG_ENDIAN)
   PLUGIN_DEFINITIONS (-D__LITTLE_ENDIAN=1)
 ENDIF ()
 
-# GCC optimizations break fdlibm so disable them for now.
+SET (LIBM_CFLAGS "${CMAKE_C_FLAGS}")
 
-IF (CMAKE_COMPILER_IS_GNUCC)
-  SET (LIBM_CFLAGS "${CMAKE_C_FLAGS} -O0 -mno-fused-madd")
-ELSE ()
-  SET (LIBM_CFLAGS "${CMAKE_C_FLAGS}")
-ENDIF ()
+# GCC optimizations break fdlibm so disable them for now.
+# 
+# IF (CMAKE_COMPILER_IS_GNUCC AND CMAKE_SYSTEM_NAME STREQUAL "Linux")
+#   SET (LIBM_CFLAGS "${CMAKE_C_FLAGS} -O0 -mno-fused-madd")
+# ENDIF ()
