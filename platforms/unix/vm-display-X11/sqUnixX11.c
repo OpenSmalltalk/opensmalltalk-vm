@@ -3073,7 +3073,7 @@ void initPixmap(void)
 	for (b= 0; b < 6; b++)
 	  {
 	    int i= 40 + ((36 * r) + (6 * b) + g);
-	    if (i > 255) error("index out of range in color table compuation");
+	    /* if (i > 255) error("index out of range in color table compuation"); */
 	    initColourmap(i, (r * 65535) / 5, (g * 65535) / 5, (b * 65535) / 5);
 	  }
   }
