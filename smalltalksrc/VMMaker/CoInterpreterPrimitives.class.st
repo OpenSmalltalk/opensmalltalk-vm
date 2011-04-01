@@ -153,12 +153,13 @@ CoInterpreterPrimitives >> primitiveFlushCacheByMethod [
 		(methodCache at: probe + MethodCacheMethod) = oldMethod ifTrue:
 			[methodCache at: probe + MethodCacheSelector put: 0].
 		probe := probe + MethodCacheEntrySize].
-	primIdx := self primitiveIndexOf: oldMethod.
-	primIdx = PrimitiveExternalCallIndex ifTrue:
-		["It's primitiveExternalCall"
-		self flushExternalPrimitiveOf: oldMethod].
-	(self methodHasCogMethod: oldMethod) ifTrue:
-		[cogit unlinkSendsTo: (self cogMethodOf: oldMethod)]
+	(objectMemory isOopCompiledMethod: oldMethod) ifTrue:
+		[primIdx := self primitiveIndexOf: oldMethod.
+		 primIdx = PrimitiveExternalCallIndex ifTrue:
+			["It's primitiveExternalCall"
+			self flushExternalPrimitiveOf: oldMethod].
+		 (self methodHasCogMethod: oldMethod) ifTrue:
+			[cogit unlinkSendsTo: (self cogMethodOf: oldMethod)]]
 ]
 
 { #category : #'system control primitives' }
