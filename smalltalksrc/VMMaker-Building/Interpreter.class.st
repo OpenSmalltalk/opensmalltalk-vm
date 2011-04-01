@@ -117,9 +117,7 @@ Class {
 		'TempFrameStart'
 	],
 	#pools : [
-		'VMBasicConstants',
-		'VMMethodCacheConstants',
-		'VMObjectIndices'
+		'VMMethodCacheConstants'
 	],
 	#category : #'VMMaker-Interpreter'
 }
@@ -1199,6 +1197,27 @@ Interpreter >> allAccessibleObjectsOkay [
 		self okayFields: oop.
 		oop := self accessibleObjectAfter: oop.
 	].
+]
+
+{ #category : #'image save/restore' }
+Interpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize [
+
+	"Translate to C function call with (case sensitive) camelCase. The purpose of this
+	method is to document the translation.
+	The default implementation is sqAllocateMemory(minimumMemory, heapSize). This may
+	be redefined to make use of the image file and header size parameters for efficient
+	implementation with mmap().
+	See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
+
+	self inline: true.
+	self returnTypeC: 'char *'.
+	self var: #fileStream type: 'sqImageFile'.
+	^ self
+		allocateMemory: heapSize
+		Minimum: minimumMemory
+		ImageFile: fileStream
+		HeaderSize: headerSize
+
 ]
 
 { #category : #contexts }
@@ -3307,11 +3326,13 @@ Interpreter >> includesBehavior: aClass ThatOf: aSuperclass [
 	Note: written for efficiency and better inlining (only 1 temp)"
 	| theClass |
 	<inline: true>
-	(((theClass := aClass) = aSuperclass) "aClass == aSuperclass"
-		or:[aSuperclass = nilObj]) "every class inherits from nil"
-			ifTrue:[^true].
-	[(theClass := self superclassOf: theClass) = aSuperclass ifTrue:[^true].
-	theClass ~= nilObj] whileTrue.
+	aSuperclass = nilObj ifTrue:
+		[^false].
+	theClass := aClass.
+	[theClass = aSuperclass ifTrue:
+		[^true].
+	 theClass ~= nilObj] whileTrue:
+		[theClass := self superclassOf: theClass].
 	^false
 ]
 
@@ -6065,7 +6086,7 @@ Interpreter >> primitiveGetLogDirectory [
 { #category : #'I/O primitives' }
 Interpreter >> primitiveGetNextEvent [
 	"Primitive. Return the next input event from the VM event queue."
-	| evtBuf arg value |
+	| evtBuf arg value eventTypeIs |
 	<var: #evtBuf declareC:'int evtBuf[8] = { 0, 0, 0, 0, 0, 0, 0, 0 }'>
 	self cCode:'' inSmalltalk:[evtBuf := CArrayAccessor on: (IntegerArray new: 8)].
 	arg := self stackTop.
@@ -6075,26 +6096,30 @@ Interpreter >> primitiveGetNextEvent [
 	successFlag ifFalse:[^nil].
 
 	"Event type"
+	eventTypeIs := evtBuf at: 0.
 	self storeInteger: 0 ofObject: arg withValue: (evtBuf at: 0).
 	successFlag ifFalse:[^nil].
 
-	"Event time stamp"
-	self storeInteger: 1 ofObject: arg withValue: ((evtBuf at: 1) bitAnd: MillisecondClockMask).
-	successFlag ifFalse:[^nil].
+	"Event is Complex, assume evtBuf is populated correctly and return"
+	eventTypeIs = 6
+		ifTrue: 
+			[1 to: 7 do: [:i |
+				value := evtBuf at: i.
+				self storePointer: i ofObject: arg withValue: value]]
+		ifFalse: "Event time stamp"
+			[self storeInteger: 1 ofObject: arg withValue: ((evtBuf at: 1) bitAnd: MillisecondClockMask).
+			successFlag ifFalse:[^nil].
 
-	"Event arguments"
-	2 to: 7 do:[:i|
-		value := evtBuf at: i.
-		(self isIntegerValue: value)
-			ifTrue:[self storeInteger: i ofObject: arg withValue: value]
-			ifFalse:["Need to remap because allocation may cause GC"
-				self pushRemappableOop: arg.
-				value := self positive32BitIntegerFor: value.
-				arg := self popRemappableOop.
-				self storePointer: i ofObject: arg withValue: value]].
-
-	successFlag ifFalse:[^nil].
-	self pop: 1.
+			"Event arguments; Use stackTop since positive32BitIntegerFor: allocation may cause GC"
+			2 to: 7 do:[:i|
+				value := evtBuf at: i.
+				(self isIntegerValue: value)
+					ifTrue:[self storeInteger: i ofObject: self stackTop withValue: value]
+					ifFalse:
+						[value := self positive32BitIntegerFor: value.
+						successFlag ifFalse:[^nil].
+						self storePointer: i ofObject: self stackTop withValue: value]]].
+	self pop: 1
 ]
 
 { #category : #'I/O primitives' }

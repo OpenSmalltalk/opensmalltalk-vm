@@ -1054,6 +1054,18 @@ invalidCompactClassError(char *s) { /* Print a compact class index error message
 	printf("\nClass %s does not have the required compact class index\n", s);
 	exit(-1);
 }
+
+
+/*
+ * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
+ */
+#if WIN32
+# define sigsetjmp(jb,ssmf) setjmp(jb)
+# define siglongjmp(jb,v) longjmp(jb,v)
+#else
+# define sigsetjmp(jb,ssmf) _setjmp(jb)
+# define siglongjmp(jb,v) _longjmp(jb,v)
+#endif
 '
 ]
 
@@ -1359,6 +1371,27 @@ StackInterpreter >> allAccessibleObjectsOkay [
 		self okayFields: oop.
 		oop := objectMemory accessibleObjectAfter: oop.
 	].
+]
+
+{ #category : #'as yet unclassified' }
+StackInterpreter >> allocateMemory: heapSize minimum: minimumMemory imageFile: fileStream headerSize: headerSize [
+
+	"Translate to C function call with (case sensitive) camelCase. The purpose of this
+	method is to document the translation.
+	The default implementation is sqAllocateMemory(minimumMemory, heapSize). This may
+	be redefined to make use of the image file and header size parameters for efficient
+	implementation with mmap().
+	See CCodeGenerator>>writeDefaultMacrosOn: which specifies a default implementation."
+
+	self inline: true.
+	self returnTypeC: 'char *'.
+	self var: #fileStream type: 'sqImageFile'.
+	^ self
+		allocateMemory: heapSize
+		Minimum: minimumMemory
+		ImageFile: fileStream
+		HeaderSize: headerSize
+
 ]
 
 { #category : #utilities }
@@ -4687,11 +4720,13 @@ StackInterpreter >> includesBehavior: aClass ThatOf: aSuperclass [
 	Note: written for efficiency and better inlining (only 1 temp)"
 	| theClass |
 	<inline: true>
-	(((theClass := aClass) = aSuperclass) "aClass == aSuperclass"
-		or:[aSuperclass = objectMemory nilObject]) "every class inherits from nil"
-			ifTrue:[^true].
-	[(theClass := self superclassOf: theClass) = aSuperclass ifTrue:[^true].
-	theClass ~= objectMemory nilObject] whileTrue.
+	aSuperclass = objectMemory nilObject ifTrue:
+		[^false].
+	theClass := aClass.
+	[theClass = aSuperclass ifTrue:
+		[^true].
+	 theClass ~= objectMemory nilObject] whileTrue:
+		[theClass := self superclassOf: theClass].
 	^false
 ]
 
@@ -7998,7 +8033,12 @@ StackInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: i
 		[self insufficientMemorySpecifiedError].
 
 	"allocate a contiguous block of memory for the Squeak heap"
-	objectMemory memory: (self cCode: 'sqAllocateMemory(minimumMemory, heapSize)').
+	objectMemory memory: (self
+								allocateMemory: heapSize
+								minimum: minimumMemory
+								imageFile: f
+								headerSize: headerSize).
+		
 	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
 
 	memStart := objectMemory startOfMemory.

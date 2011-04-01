@@ -402,23 +402,6 @@ CoInterpreter class >> preGenerationHook: aCCodeGenerator [
 ]
 
 { #category : #translation }
-CoInterpreter class >> preambleCCode [
-	^super 	preambleCCode,
-'
-/*
- * Define sigsetjmp and siglongjmp to be the most minimal setjmp/longjmp available on the platform.
- */
-#if WIN32
-# define sigsetjmp(jb,ssmf) setjmp(jb)
-# define siglongjmp(jb,v) longjmp(jb,v)
-#else
-# define sigsetjmp(jb,ssmf) _setjmp(jb)
-# define siglongjmp(jb,v) _longjmp(jb,v)
-#endif
-'
-]
-
-{ #category : #translation }
 CoInterpreter class >> prepareToBeAddedToCodeGenerator: aCodeGen [
 	"Override to avoid repeating StackInterpreter's preparations and to delete
 	 StackInterpreter & StackInterpreterPrimitives methods we override."
@@ -5084,11 +5067,17 @@ CoInterpreter >> readImageFromFile: f HeapSize: desiredHeapSize StartingAt: imag
 	heapSize < minimumMemory ifTrue:
 		[self insufficientMemorySpecifiedError].
 
-	"allocate a contiguous block of memory for the Squeak heap"
+	"allocate a contiguous block of memory for the Squeak heap and ancilliary data structures"
 	"N.B. If the platform needs to it will redefine this macro to make heapSize
 	 an in/out parameter and assign the ammount actually allocated into heapSize.
 	 See e.g. platforms/Mac OS/vm/sqPlatformSpecific.h.  (I *hate* this. eem 7/23/2009)"
-	objectMemory memory: (self cCode: 'sqAllocateMemory(minimumMemory, heapSize)').
+	"objectMemory memory: (self cCode: 'sqAllocateMemory(minimumMemory, heapSize)').  "
+	objectMemory memory: (self
+								allocateMemory: heapSize
+								minimum: minimumMemory
+								imageFile: f
+								headerSize: headerSize).	
+	
 	objectMemory memory = nil ifTrue: [self insufficientMemoryAvailableError].
 	heapBase := objectMemory memory + cogCodeSize.
 	self assert: objectMemory startOfMemory = heapBase.
