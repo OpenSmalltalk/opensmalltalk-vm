@@ -194,7 +194,6 @@ CocoaIOSConfig >> defaultExternalPlugins [
 CocoaIOSConfig >> defaultInternalPlugins [
 	^ #(
 		ADPCMCodecPlugin
-		"B3DAcceleratorPlugin"
 		BMPReadWriterPlugin 
 		BalloonEnginePlugin 
 		BitBltSimulation 
@@ -215,8 +214,6 @@ CocoaIOSConfig >> defaultInternalPlugins [
 		MacMenubarPlugin 
 		Matrix2x3Plugin 
 		MiscPrimitivePlugin 
-		"IA32ABIPlugin" 
-		"ObjectiveCPlugin" 
 		RePlugin 
 		SecurityPlugin 
 		SocketPlugin 
@@ -224,8 +221,7 @@ CocoaIOSConfig >> defaultInternalPlugins [
 		SoundGenerationPlugin 
 		SoundPlugin 
 		StarSqueakPlugin 
-		SurfacePlugin 
-		"UUIDPlugin")
+		SurfacePlugin)
 ]
 
 { #category : #accessing }
