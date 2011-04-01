@@ -1,5 +1,6 @@
 #!/bin/sh
 VER="`svnversion | sed 's/^.*://'`"
 echo $VER
+test -f README.$VER || vi README.$VER
 ssh -x eliotmiranda@bugsy.dreamhost.com mkdir mirandabanda.org/files/Cog/VM/VM.r$VER
 scp README.$VER Cog.app.tgz coglinux.tgz cogwin.zip eliotmiranda@bugsy.dreamhost.com:mirandabanda.org/files/Cog/VM/VM.r$VER
