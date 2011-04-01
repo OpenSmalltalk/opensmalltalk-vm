@@ -15,7 +15,7 @@ MTCogUnixConfig >> commonCompilerFlags [
 	
 	"
 	
-	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0 -DCOGMTVM=1'	
+	^ ' -DLSB_FIRST=1 -DUSE_GLOBAL_STRUCT=0 -DCOGMTVM=1 -m32' 	
 	
 ]
 
@@ -40,7 +40,7 @@ MTCogUnixConfig >> defaultExternalPlugins [
 
 	^ #(
 		B3DAcceleratorPlugin
-		UUIDPlugin
+		"UUIDPlugin"
 		ThreadedIA32FFIPlugin "SqueakFFIPrims"
 		"UnixOSProcessPlugin ?? "
 	)

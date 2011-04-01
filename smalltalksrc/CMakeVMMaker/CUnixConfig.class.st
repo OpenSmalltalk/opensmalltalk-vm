@@ -41,7 +41,7 @@ CUnixConfig >> addDriver: name sources: aSources generator: cmakeGen [
 			includeDirectories: '${crossDir}/plugins/B3DAcceleratorPlugin';
 			set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir;
 			cmd: 'set_target_properties' params: name , ' PROPERTIES PREFIX "" SUFFIX "" 
-			LINK_FLAGS "-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11"'
+			LINK_FLAGS "', self linkFlags , '"'
 	].
 	
 		
@@ -205,12 +205,12 @@ CUnixConfig >> configureUUIDPlugin: maker [
 { #category : #'plugin extra rules' }
 CUnixConfig >> extraPluginSettings: maker [
 
-
 	maker isExternal ifTrue: [
 		"copy result to results dir "
 		maker set: 'LIBRARY_OUTPUT_PATH' toString: self outputDir
 
-	]
+	].
+
 ]
 
 { #category : #'as yet unclassified' }
@@ -239,6 +239,11 @@ CUnixConfig >> fixLineEndsOf: string [
 { #category : #accessing }
 CUnixConfig >> frameworks [
 	^ #()
+]
+
+{ #category : #utils }
+CUnixConfig >> linkFlags [
+	 ^ '-lSM -lICE -ldl -lGL -lpthread -lm -lnsl -lX11'
 ]
 
 { #category : #directories }
