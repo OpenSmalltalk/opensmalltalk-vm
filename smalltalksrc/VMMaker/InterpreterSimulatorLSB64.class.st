@@ -11,7 +11,7 @@ InterpreterSimulatorLSB64 >> bytesPerWord [
 	^ 8
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'memory access' }
 InterpreterSimulatorLSB64 >> long32At: byteAddress [
 
 	"Return the 32-bit word at byteAddress which must be 0 mod 4."
@@ -24,7 +24,7 @@ InterpreterSimulatorLSB64 >> long32At: byteAddress [
 
 ]
 
-{ #category : #'as yet unclassified' }
+{ #category : #'memory access' }
 InterpreterSimulatorLSB64 >> long32At: byteAddress put: a32BitValue [
 	"Store the 32-bit value at byteAddress which must be 0 mod 4."
 	| lowBits long64 longAddress |
