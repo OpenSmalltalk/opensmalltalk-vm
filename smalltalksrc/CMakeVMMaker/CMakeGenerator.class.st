@@ -183,6 +183,11 @@ CMakeGenerator >> set: variableName toString: aValueString [
 ]
 
 { #category : #'cmake commands' }
+CMakeGenerator >> setTargetProperties: properties [ 
+	self cmd: 'set_target_properties' params: self moduleName, ' PROPERTIES ', properties 
+]
+
+{ #category : #'cmake commands' }
 CMakeGenerator >> setTargetProperty: propertyString to: aString [
 	self 
 		cmd: 'set_target_properties'
