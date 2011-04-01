@@ -7,16 +7,14 @@
  *
  */
 
-#include "sqMacUnixInterfaceSound.h"
 
 #include "sq.h"
+#include "sqMacUnixInterfaceSound.h"
 #include "SoundPlugin.h"
 #include "SqModule.h"
 #include "SqSound.h"
 
-extern int sound_Stop(void);
-extern void clearDeviceCache();   /* sqMacDeviceList.c */
-
+extern sqInt sound_Stop(void);
 
 sqInt soundInit(void)
 {
@@ -27,7 +25,6 @@ sqInt soundInit(void)
 sqInt soundShutdown(void)
 {
   sound_StopRecording();
-  clearDeviceCache();
   return 1;
 }
 
@@ -39,7 +36,7 @@ sqInt snd_AvailableSpace(void)
   return sound_AvailableSpace();
 }
 
-sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void *srcBufPtr, sqInt samplesOfLeadTime)
+sqInt snd_InsertSamplesFromLeadTime(sqInt frameCount, void* srcBufPtr, sqInt samplesOfLeadTime)
 {
   return sound_InsertSamplesFromLeadTime(frameCount, srcBufPtr, samplesOfLeadTime);
 }
@@ -86,22 +83,6 @@ sqInt snd_RecordSamplesIntoAtLength(void *buf, sqInt startSliceIndex, sqInt buff
   return sound_RecordSamplesIntoAtLength(buf, startSliceIndex, bufferSizeInBytes);
 }
 
-/* Acoustic echo-cancellation (AEC) is not supported on Macintosh yet. */
-sqInt snd_EnableAEC(sqInt trueOrFalse)
-{
-	if (trueOrFalse) return PrimErrUnsupported;
-	else return 0; /* success */
-}
-
-
-/* Acoustic echo-cancellation (AEC) is not supported on Macintosh yet. */
-sqInt snd_SupportsAEC()
-{
-	return 0; /* nope */
-}
-
-
-
 /* mixer */
 
 void snd_Volume(double *left, double *right)	{ 
@@ -109,9 +90,4 @@ void snd_Volume(double *left, double *right)	{
 void snd_SetVolume(double left, double right)	{ 
 	sound_SetVolume(left, right); }
 void  snd_SetRecordLevel(sqInt level)		{ 
-	return sound_SetRecordLevel(level); }
-sqInt  snd_GetRecordLevel(void)		{	// howard.stearns@qwaq.com October 24 2008
-	return sound_GetRecordLevel(); }
-
-	
-	
+	 sound_SetRecordLevel(level); }

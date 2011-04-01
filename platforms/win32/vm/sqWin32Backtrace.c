@@ -202,6 +202,10 @@ static int
 expcmp(const void *a, const void *b)
 { return ((dll_exports *)a)->info.lpBaseOfDll - ((dll_exports *)b)->info.lpBaseOfDll; }
 
+static  void find_in_dll(dll_exports *exports, void *pc, symbolic_pc *spc);
+static  void find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc);
+static  void find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc);
+
 static void
 get_modules(void)
 {
@@ -209,9 +213,6 @@ get_modules(void)
 	HANDLE me = GetCurrentProcess();
 	HANDLE hPsApi = LoadLibrary("psapi.dll");
 	HMODULE *modules;
-static void find_in_dll(dll_exports *exports, void *pc, symbolic_pc *spc);
-static void find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc);
-static void find_in_cog(dll_exports *exports, void *pc, symbolic_pc *spc);
 
 	EnumProcessModules = (void*)GetProcAddress(hPsApi, "EnumProcessModules");
 	GetModuleInformation=(void*)GetProcAddress(hPsApi, "GetModuleInformation");
@@ -284,10 +285,11 @@ dll_exports_for_pc(void *retpc)
 	return 0;
 }
 
+static void compute_dll_symbols(dll_exports *exports);
+
 static void
 find_in_dll(dll_exports *exports, void *pcval, symbolic_pc *spc)
 {
-static void compute_dll_symbols(dll_exports *exports);
 	int i;
 	ulong pc = (ulong)pcval - (ulong)exports->info.lpBaseOfDll;
 
@@ -314,10 +316,11 @@ static void compute_dll_symbols(dll_exports *exports);
 	spc->offset = pc;
 }
 
+static void compute_exe_symbols(dll_exports *exports);
+
 static void
 find_in_exe(dll_exports *exports, void *pc, symbolic_pc *spc)
 {
-static void compute_exe_symbols(dll_exports *exports);
 	int i;
 
 	spc->mname = strrchr(exports->name,'\\')

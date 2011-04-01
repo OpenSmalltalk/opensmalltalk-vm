@@ -1085,11 +1085,17 @@ static int eventBufferPut = 0;
 sqInputEvent *sqNextEventPut(void) {
   sqInputEvent *evt;
   evt = eventBuffer + eventBufferPut;
-  eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
-  if (eventBufferGet == eventBufferPut) {
-    /* buffer overflow; drop the last event */
-    printf("WARNING: event buffer overflow\n");
-    eventBufferGet = (eventBufferGet + 1) % MAX_EVENT_BUFFER;
+
+  if(inputSemaphoreIndex)
+  {
+    eventBufferPut = (eventBufferPut + 1) % MAX_EVENT_BUFFER;
+    if (eventBufferGet == eventBufferPut) {
+      /* buffer overflow; drop the last event */
+      printf("WARNING: event buffer overflow\n");
+      eventBufferGet = (eventBufferGet + 1) % MAX_EVENT_BUFFER;
+    }
+
+    signalSemaphoreWithIndex(inputSemaphoreIndex);
   }
   return evt;
 }

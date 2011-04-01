@@ -32,6 +32,7 @@ SerialPlugin \
 SocketPlugin \
 SoundCodecPrims \
 SoundGenerationPlugin \
+SoundPlugin \
 StarSqueakPlugin \
 SurfacePlugin \
 UUIDPlugin

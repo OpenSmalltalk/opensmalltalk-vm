@@ -946,7 +946,7 @@ OSErr	MySndDoImmediate (SndChannelPtr chan, SndCommand * cmd) {
 
 	return (SndDoImmediate (chan, cmd));
 }
-#endif UNNECESSARY_FOR_SQUEAK
+#endif /* UNNECESSARY_FOR_SQUEAK */
 
 
 // This must be called at task time.
@@ -1077,7 +1077,7 @@ OSErr	CarbonSndPlayDoubleBuffer (SndChannelPtr chan, SndDoubleBufferHeaderPtr th
 	if (gCarbonSndPlayDoubleBufferCleanUpUPP == nil) {
 			gCarbonSndPlayDoubleBufferCleanUpUPP = NewSndCallBackProc (CarbonSndPlayDoubleBufferCleanUpProc);
 	}
-#endif
+#endif /* UNNECESSARY_FOR_SQUEAK */
 
 	err = SndDoCommand (chan, &playCmd, true);
 	if (noErr != err) goto exitDispose;
@@ -1101,9 +1101,9 @@ static pascal void	CarbonSndPlayDoubleBufferCleanUpProc(
 	PerChanInfoPtr	perChanInfoPtr;
 
 	perChanInfoPtr = (PerChanInfoPtr)(theCallBackCmd->param2);
-	#if DEBUG
+#if DEBUG
 		if (perChanInfoPtr->magic != 'SANE') DebugStr("\pBAD in CarbonSndPlayDoubleBufferCleanUpProc");
-	#endif
+#endif
 
 	// Put our per channel data on the free queue so we can clean up later
 	Enqueue ((QElemPtr)perChanInfoPtr, gFreeList);
@@ -1114,7 +1114,7 @@ static pascal void	CarbonSndPlayDoubleBufferCleanUpProc(
 	// Have to put the user's callback proc back so they get called when the next buffer finishes
 	theChannel->callBack = perChanInfoPtr->usersCallBack;
 }
-#endif
+#endif /* UNNECESSARY_FOR_SQUEAK */
 
 
 static pascal void	CarbonSndPlayDoubleBufferCallBackProc (SndChannelPtr theChannel, SndCommand * theCallBackCmd) {
@@ -1223,11 +1223,4 @@ static pascal void NMResponseProc (NMRecPtr nmReqPtr) {
 	} while (nil != perChanInfoPtr && noErr == err);
 }
 
-#endif
-
-/** Stub for win-only primitive. **/
-int snd_SetRecordBufferFrameCount(int frameCount)
-{
-	return 0;
-}
-
+#endif /* TARGET_API_MAC_CARBON */

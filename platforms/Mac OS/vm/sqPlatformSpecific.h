@@ -72,7 +72,10 @@ size_t      sqImageFileRead(void *ptr, size_t elementSize, size_t count, sqImage
 void        sqImageFileSeek(sqImageFile f, squeakFileOffsetType pos);
 sqInt       sqImageFileWrite(void *ptr, size_t elementSize, size_t count, sqImageFile f);
 
+#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+	sqAllocateMemoryMac(heapSize, minimumMemory)
 usqInt	    sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize);
+
 
 #define sqAllocateMemory(x,y) sqAllocateMemoryMac(x,&y);
 
@@ -91,7 +94,7 @@ usqInt	    sqAllocateMemoryMac(sqInt minHeapSize, sqInt *desiredHeapSize);
 #endif
 
 /* macro to return from interpret() loop in browser plugin VM */
-#define ReturnFromInterpret() return
+#define ReturnFromInterpret() return 0
 
 // CARBON
 

@@ -8,6 +8,11 @@
 # define UNIX
 #endif
 
+#if !defined(LSB_FIRST)
+#error  "LSB_FIRST is undefined. Used for setting platform endianesness!"
+#endif
+
+
 #if LSB_FIRST
 # define VMBIGENDIAN 0
 #else

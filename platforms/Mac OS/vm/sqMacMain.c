@@ -174,7 +174,8 @@ reportStackState(char *msg, char *date, int printAll, ucontext_t *uap)
 			 * stackPointer & framePointer to the native stack & frame pointers.
 			 */
 # if __APPLE__ && __MACH__ && __i386__
-#	if __GNUC__ /* see sys/ucontext.h; two different namings */
+	/* see sys/ucontext.h; two different namings */
+#	if __GNUC__ && !__INTEL_COMPILER /* icc pretends to be gcc */
 			void *fp = (void *)(uap ? uap->uc_mcontext->__ss.__ebp: 0);
 			void *sp = (void *)(uap ? uap->uc_mcontext->__ss.__esp: 0);
 #	else

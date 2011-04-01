@@ -42,6 +42,8 @@
 #include "sqMemoryAccess.h"
 
 extern sqInt sqAllocateMemory(sqInt minHeapSize, sqInt desiredHeapSize);
+#define allocateMemoryMinimumImageFileHeaderSize(heapSize, minimumMemory, fileStream, headerSize) \
+sqAllocateMemory(minimumMemory, heapSize)
 extern sqInt sqGrowMemoryBy(sqInt oldLimit, sqInt delta);
 extern sqInt sqShrinkMemoryBy(sqInt oldLimit, sqInt delta);
 extern sqInt sqMemoryExtraBytesLeft(sqInt includingSwap);

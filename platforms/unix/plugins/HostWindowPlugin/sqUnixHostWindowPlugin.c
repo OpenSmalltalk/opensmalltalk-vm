@@ -68,11 +68,11 @@ int createWindowWidthheightoriginXyattrlength(
 /* ioShowDisplayOnWindow: similar to ioShowDisplay but adds the int windowIndex
  * Return true if ok, false if not, but not currently checked
  */
-int ioShowDisplayOnWindow(
-	unsigned* dispBitsIndex, 
-	int width, int height, int depth, 
-	int affectedL, int affectedR, int affectedT, int affectedB,
-	int windowIndex)
+sqInt ioShowDisplayOnWindow(
+	unsigned char *dispBitsIndex, 
+	sqInt width, sqInt height, sqInt depth, 
+	sqInt affectedL, sqInt affectedR, sqInt affectedT, sqInt affectedB,
+	sqInt windowIndex)
 {
   if (noDisplay)
     return 0;
@@ -82,17 +82,6 @@ int ioShowDisplayOnWindow(
 }
 
 
-#if 0 /* getter printing */
-# define DBGGPRINT(args) printf args
-#else
-# define DBGGPRINT(args) 0
-#endif
-#if 0 /* setter printing */
-# define DBGSPRINT(args) printf args
-#else
-# define DBGSPRINT(args) 0
-#endif
-
 /* ioSizeOfWindow: arg is int windowIndex. Return the size of the specified
  * window in (width<<16 || height) format like ioScreenSize.
  * Return -1 for failure - typically invalid windowIndex
@@ -101,10 +90,10 @@ int ioShowDisplayOnWindow(
  */
 int ioSizeOfWindow(int windowIndex)
 {
-  int r = noDisplay ? -1 : dpy->hostWindowGetSize(windowIndex);
-  DBGGPRINT(("ioSizeOfWindow(%d) == %x (%d,%d)\n",
-			windowIndex, r, r >> 16, (short)r));
-  return r;
+  if (noDisplay)
+    return -1;
+  else
+    return dpy->hostWindowGetSize(windowIndex);
 }
 
 
@@ -114,10 +103,10 @@ int ioSizeOfWindow(int windowIndex)
  */
 int ioSizeOfWindowSetxy(int windowIndex, int w, int h)
 {
-  int r = noDisplay ? -1 : dpy->hostWindowSetSize(windowIndex, w, h);
-  DBGSPRINT(("ioSizeOfWindowSetxy(%d,%d,%d) == %x (%d,%d)\n",
-			windowIndex, w, h, r, r >> 16, (short)r));
-  return r;
+  if (noDisplay)
+    return -1;
+  else
+    return dpy->hostWindowSetSize(windowIndex, w, h);
 }
 
 
@@ -127,10 +116,10 @@ int ioSizeOfWindowSetxy(int windowIndex, int w, int h)
  */
 int ioPositionOfWindow(int windowIndex)
 {
-  int r = noDisplay ? -1 : dpy->hostWindowGetPosition(windowIndex);
-  DBGGPRINT(("ioPositionOfWindow(%d) == %x (%d,%d)\n",
-			windowIndex, r, r >> 16, (short)r));
-  return r;
+  if (noDisplay)
+    return -1;
+  else
+    return dpy->hostWindowGetPosition(windowIndex);
 }
 
 
@@ -140,10 +129,10 @@ int ioPositionOfWindow(int windowIndex)
  */
 int ioPositionOfWindowSetxy(int windowIndex, int x, int y)
 {
-  int r = noDisplay ? -1 : dpy->hostWindowSetPosition(windowIndex, x, y);
-  DBGSPRINT(("ioPositionOfWindowSetxy(%d,%d,%d) == %x (%d,%d)\n",
-			windowIndex, x, y, r, r >> 16, (short)r));
-  return r;
+  if (noDisplay)
+    return -1;
+  else
+    return dpy->hostWindowSetPosition(windowIndex, x, y);
 }
 
 
@@ -172,70 +161,3 @@ int ioCloseAllWindows(void)
     return dpy->hostWindowCloseAll();
 }
 
-
-/* eem Mar 22 2010 - new code to come up to level of Qwaq host window support
- * on Mac & Win32.
- */
-sqInt ioSetCursorPositionXY(sqInt x, sqInt y)
-{
-  int r = noDisplay ? -1 : dpy->ioSetCursorPositionXY(x,y);
-  DBGSPRINT(("ioSetCursorPositionXY(%d,%d) == %x (%d,%d)\n",
-			x, y, r, r >> 16, (short)r));
-  return r;
-}
-
-/* Return the pixel origin (topleft) of the platform-defined working area
-   for the screen containing the given window. */
-int ioPositionOfScreenWorkArea(int windowIndex)
-{
-  int r = noDisplay ? -1 : dpy->ioPositionOfScreenWorkArea(windowIndex);
-  DBGGPRINT(("ioPositionOfScreenWorkArea(%d) == %x (%d,%d)\n",
-			windowIndex, r, r >> 16, (short)r));
-  return r;
-}
-
-/* Return the pixel extent of the platform-defined working area
-   for the screen containing the given window. */
-int ioSizeOfScreenWorkArea(int windowIndex)
-{
-  int r = noDisplay ? -1 : dpy->ioSizeOfScreenWorkArea(windowIndex);
-  DBGGPRINT(("ioSizeOfScreenWorkArea(%d) == %x (%d,%d)\n",
-			windowIndex, r, r >> 16, (short)r));
-  return r;
-}
-
-#if 0 /* this is in sqUnixMain.c */
-void *ioGetWindowHandle() { return noDisplay ? 0 : dpy->ioGetWindowHandle(); }
-#endif
-
-int ioPositionOfNativeDisplay(unsigned long windowHandle)
-{
-  int r = noDisplay ? -1 : dpy->ioPositionOfNativeDisplay((void *)windowHandle);
-  DBGGPRINT(("ioPositionOfNativeDisplay(%d) == %x (%d,%d)\n",
-			windowHandle, r, r >> 16, (short)r));
-  return r;
-}
-
-int ioSizeOfNativeDisplay(unsigned long windowHandle)
-{
-  int r = noDisplay ? -1 : dpy->ioSizeOfNativeDisplay((void *)windowHandle);
-  DBGGPRINT(("ioSizeOfNativeDisplay(%d) == %x (%d,%d)\n",
-			windowHandle, r, r >> 16, (short)r));
-  return r;
-}
-
-int ioPositionOfNativeWindow(unsigned long windowHandle)
-{
-  int r = noDisplay ? -1 : dpy->ioPositionOfNativeWindow((void *)windowHandle);
-  DBGGPRINT(("ioPositionOfNativeWindow(%d) == %x (%d,%d)\n",
-			windowHandle, r, r >> 16, (short)r));
-  return r;
-}
-
-int ioSizeOfNativeWindow(unsigned long windowHandle)
-{
-  int r = noDisplay ? -1 : dpy->ioSizeOfNativeWindow((void *)windowHandle);
-  DBGGPRINT(("ioSizeOfNativeWindow(%d) == %x (%d,%d)\n",
-			windowHandle, r, r >> 16, (short)r));
-  return r;
-}

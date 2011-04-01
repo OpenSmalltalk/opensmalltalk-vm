@@ -246,7 +246,6 @@
 		A27729A80CE7AFBE00ABAFCA /* SystemConfiguration.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = A27729A70CE7AFBE00ABAFCA /* SystemConfiguration.framework */; };
 		A2835CFF0E07A13300308978 /* sqHeapMap.c in Sources */ = {isa = PBXBuildFile; fileRef = A2835CFE0E07A13300308978 /* sqHeapMap.c */; };
 		A2C08F430EA3E0FD0036416C /* dispdbg.h in Headers */ = {isa = PBXBuildFile; fileRef = A2C08F420EA3E0FD0036416C /* dispdbg.h */; };
-		A2C843B9108A614E00E438C0 /* sqMacAudioDeviceList.c in Sources */ = {isa = PBXBuildFile; fileRef = A2C843B8108A614E00E438C0 /* sqMacAudioDeviceList.c */; };
 		A2F27E691087169800F905FB /* nsPoolManagement.h in Headers */ = {isa = PBXBuildFile; fileRef = A2F27E671087169800F905FB /* nsPoolManagement.h */; };
 		A2F27E6A1087169800F905FB /* nsPoolManagement.m in Sources */ = {isa = PBXBuildFile; fileRef = A2F27E681087169800F905FB /* nsPoolManagement.m */; };
 		A2FB6B590CCD71B000A29088 /* sqMacLocaleCarbon.c in Sources */ = {isa = PBXBuildFile; fileRef = A2FB6B570CCD71B000A29088 /* sqMacLocaleCarbon.c */; };
@@ -398,7 +397,6 @@
 		A27729A70CE7AFBE00ABAFCA /* SystemConfiguration.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = SystemConfiguration.framework; path = /System/Library/Frameworks/SystemConfiguration.framework; sourceTree = "<absolute>"; };
 		A2835CFE0E07A13300308978 /* sqHeapMap.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqHeapMap.c; sourceTree = "<group>"; };
 		A2C08F420EA3E0FD0036416C /* dispdbg.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = dispdbg.h; sourceTree = "<group>"; };
-		A2C843B8108A614E00E438C0 /* sqMacAudioDeviceList.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = sqMacAudioDeviceList.c; sourceTree = "<group>"; };
 		A2F27E671087169800F905FB /* nsPoolManagement.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = nsPoolManagement.h; sourceTree = "<group>"; };
 		A2F27E681087169800F905FB /* nsPoolManagement.m */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.objc; path = nsPoolManagement.m; sourceTree = "<group>"; };
 		A2FB6B570CCD71B000A29088 /* sqMacLocaleCarbon.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; name = sqMacLocaleCarbon.c; path = LocalePlugin/sqMacLocaleCarbon.c; sourceTree = "<group>"; };
@@ -1289,7 +1287,6 @@
 		F5F8AE5D02EB4E0A0100013C /* SoundPlugin */ = {
 			isa = PBXGroup;
 			children = (
-				A2C843B8108A614E00E438C0 /* sqMacAudioDeviceList.c */,
 				94D42B2B07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.h */,
 				94D42B2C07B2C8DC001CCA37 /* sqMacUnixInterfaceSound.c */,
 				94FD7EC807B8491B002F2291 /* sqUnixSoundMacOSXJMM.c */,
@@ -1960,7 +1957,6 @@
 				7351A09B100963670035A878 /* sqUnixThreads.c in Sources */,
 				733B2C37106AB74B004652BE /* sqExternalSemaphores.c in Sources */,
 				A2F27E6A1087169800F905FB /* nsPoolManagement.m in Sources */,
-				A2C843B9108A614E00E438C0 /* sqMacAudioDeviceList.c in Sources */,
 				739C6ED6112DCBB00049B7D3 /* sqTicker.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

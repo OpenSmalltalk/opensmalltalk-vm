@@ -1,25 +1,25 @@
 /* sqUnixSoundMacOSX.c -- sound support for CoreAudio on Mac OS 10
  *
- * Author: Ian.Piumarta@inria.fr
+ * Author: Ian.Piumarta@squeakland.org
  * 
- * Last edited: 2003-11-23 14:39:18 by piumarta on emilia.local
+ * Last edited: 2008-04-21 14:53:42 by piumarta on emilia
  
- * Altered bu johnmci@smalltalkconsulting.com to remove  static  defs
- * Altered by HRS = howard.stearns@qwaq.com to handle
- *	single channel devices, device enumeration/selection.
+  * Altered by johnmci@smalltalkconsulting.com to remove  static  defs, fix bugs, powerpc/intel support.
+ 
+ 
  *
- *   Copyright (C) 1996-2003 Ian Piumarta and other authors/contributors
- *     as listed elsewhere in this file.
+ *   Copyright (C) 1996-2005 by Ian Piumarta and other authors/contributors
+ *                              listed elsewhere in this file.
  *   All rights reserved.
  *   
  *   This file is part of Unix Squeak.
  * 
- *   Permission is hereby granted, free of charge, to any person obtaining a
- *   copy of this software and associated documentation files (the "Software"),
- *   to deal in the Software without restriction, including without limitation
- *   the rights to use, copy, modify, merge, publish, distribute, sublicense,
- *   and/or sell copies of the Software, and to permit persons to whom the
- *   Software is furnished to do so, subject to the following conditions:
+ *   Permission is hereby granted, free of charge, to any person obtaining a copy
+ *   of this software and associated documentation files (the "Software"), to deal
+ *   in the Software without restriction, including without limitation the rights
+ *   to use, copy, modify, merge, publish, distribute, sublicense, and/or sell
+ *   copies of the Software, and to permit persons to whom the Software is
+ *   furnished to do so, subject to the following conditions:
  * 
  *   The above copyright notice and this permission notice shall be included in
  *   all copies or substantial portions of the Software.
@@ -28,9 +28,9 @@
  *   IMPLIED, INCLUDING BUT NOT LIMITED TO THE WARRANTIES OF MERCHANTABILITY,
  *   FITNESS FOR A PARTICULAR PURPOSE AND NONINFRINGEMENT. IN NO EVENT SHALL THE
  *   AUTHORS OR COPYRIGHT HOLDERS BE LIABLE FOR ANY CLAIM, DAMAGES OR OTHER
- *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING
- *   FROM, OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER
- *   DEALINGS IN THE SOFTWARE.
+ *   LIABILITY, WHETHER IN AN ACTION OF CONTRACT, TORT OR OTHERWISE, ARISING FROM,
+ *   OUT OF OR IN CONNECTION WITH THE SOFTWARE OR THE USE OR OTHER DEALINGS IN THE
+ *   SOFTWARE.
  */
 
 // Notes:
@@ -66,15 +66,9 @@
 #include <string.h>
 #include <assert.h>
 
-int numberOfChannels(Boolean isInput, UInt16 deviceID);
 
 #define SqueakFrameSize	4	// guaranteed (see class SoundPlayer)
 #define DeviceFrameSize	8	// ditto (<CoreAudio/AudioHardware.h>, para 9)
-int min(int i, int j);
-int max(int i, int j);
- 
- inline int min(int i, int j) { return (i < j) ? i : j; }
- inline int max(int i, int j) { return (i > j) ? i : j; }
 
 char empty[256] = { 0 };
 
@@ -84,17 +78,22 @@ char empty[256] = { 0 };
 #if (!TESTING)
 # include "sq.h"
 #else
-   int noSoundMixer= 0;
-   inline int signalSemaphoreWithIndex(int sema) { return 0; }
-   inline int success(int flag) { return 0; }
-   inline int primitiveFail(void) { return -1; }
+   inline sqInt signalSemaphoreWithIndex(sqInt sema) { return 0; }
+   inline sqInt success(sqInt flag) { return 0; }
+   inline sqInt primitiveFail(void) { return -1; }
 #endif
+
+#include "sqMacUnixInterfaceSound.h"
+
+char		*dpyPixels  = 0;
+sqInt		 dpyPitch   = 0;
+sqInt		noSoundMixer = 0;
 
 #if (DEBUG)
 
  void dumpFormat(AudioStreamBasicDescription *fmt); // atend
 
- void DPRINTF(const char *fmt, ...)
+ void dprintf(const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -107,13 +106,13 @@ char empty[256] = { 0 };
  inline void dumpFormat(AudioStreamBasicDescription *fmt) {
  #pragma unused(fmt)
  }
- #define  DPRINTF(ARGS, ...)
- // inline void DPRINTF(const char *fmt, ...) {}
+ #define  dprintf(ARGS, ...)
+ // inline void dprintf(const char *fmt, ...) {}
 
 #endif // !DEBUG
- void EPRINTF(const char *fmt, ...);
+ void eprintf(const char *fmt, ...);
  
- void EPRINTF(const char *fmt, ...)
+ void eprintf(const char *fmt, ...)
 {
   va_list ap;
   va_start(ap, fmt);
@@ -121,6 +120,11 @@ char empty[256] = { 0 };
   va_end(ap);
 }
 
+sqInt min(sqInt i, sqInt j);
+sqInt max(sqInt i, sqInt j);
+
+inline sqInt min(sqInt i, sqInt j) { return (i < j) ? i : j; }
+inline sqInt max(sqInt i, sqInt j) { return (i > j) ? i : j; }
 
 // Apple error codes are really (rather contrived) 4-byte chars with
 // (almost) meaningful content.
@@ -129,18 +133,18 @@ char empty[256] = { 0 };
  char *str4(UInt32 chars)
 {
   static char str[5];
-  *(int *)&str= chars;
+  *(sqInt *)&str= chars;
   str[4]= '\0';
   return str;
 }
 
-int checkError(OSStatus err, char *op, char *param);
+sqInt checkError(OSStatus err, char *op, char *param);
 
- inline int checkError(OSStatus err, char *op, char *param)
+ inline sqInt checkError(OSStatus err, char *op, char *param)
 {
   if (kAudioHardwareNoError != noErr)
     {
-      EPRINTF("sound: %s(%s): error %ld (%s)\n", op, param, err, str4(err));
+      eprintf("sound: %s(%s): error %ld (%s)\n", op, param, err, str4(err));
       return 1;
     }
   return 0;
@@ -155,18 +159,18 @@ int checkError(OSStatus err, char *op, char *param);
 typedef struct
 {
   char *data;
-  int   size;	// capacity
-  int   avail;	// available data (not available space)
-  int   iptr;	// next position to write
-  int   optr;	// next position to read
+  sqInt   size;	// capacity
+  sqInt   avail;	// available data (not available space)
+  sqInt   iptr;	// next position to write
+  sqInt   optr;	// next position to read
 } Buffer;
 
 
 // allocate a new, empty buffer
 // 
-Buffer *Buffer_new(int size);
+Buffer *Buffer_new(sqInt size);
 
-Buffer *Buffer_new(int size)
+Buffer *Buffer_new(sqInt size)
 {
   Buffer *b= (Buffer *)malloc(sizeof(Buffer));
   if (!b)
@@ -197,18 +201,18 @@ void Buffer_delete(Buffer *b)
 
 // answer how many bytes are available for reading
 // 
-inline int Buffer_avail(Buffer *b);
+inline sqInt Buffer_avail(Buffer *b);
 
-inline int Buffer_avail(Buffer *b)
+inline sqInt Buffer_avail(Buffer *b)
 {
   return b->avail;
 }
 
 // answer how many bytes can be written
 // 
-inline int Buffer_free(Buffer *b);
+inline sqInt Buffer_free(Buffer *b);
 
-inline int Buffer_free(Buffer *b)
+inline sqInt Buffer_free(Buffer *b)
 {
   return b->size - Buffer_avail(b);
 }
@@ -216,13 +220,13 @@ inline int Buffer_free(Buffer *b)
 // set outputs to address and size of zero (empty), one (contiguous) or two
 // (wrapped, fragmented) populated regions in the buffer
 // 
-inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, int *n2);
+inline sqInt Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2, sqInt *n2);
 
-inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, int *n2)
+inline sqInt Buffer_getOutputPointers(Buffer *b, char **p1, sqInt *n1, char **p2, sqInt *n2)
 {
-  int optr=     b->optr;
-  int avail=    Buffer_avail(b);
-  int headroom= b->size - optr;
+  sqInt optr=     b->optr;
+  sqInt avail=    Buffer_avail(b);
+  sqInt headroom= b->size - optr;
   if (avail == 0)
     {
       *p1=			*p2= 0;
@@ -246,13 +250,13 @@ inline int Buffer_getOutputPointers(Buffer *b, char **p1, int *n1, char **p2, in
 // set the output to the current read position and answer the amount of
 // data at that location
 // 
-inline int Buffer_getOutputPointer(Buffer *b, char **ptr);
+inline sqInt Buffer_getOutputPointer(Buffer *b, char **ptr);
 
-inline int Buffer_getOutputPointer(Buffer *b, char **ptr)
+inline sqInt Buffer_getOutputPointer(Buffer *b, char **ptr)
 {
-  int optr=     b->optr;
-  int avail=    Buffer_avail(b);
-  int headroom= b->size - optr;
+  sqInt optr=     b->optr;
+  sqInt avail=    Buffer_avail(b);
+  sqInt headroom= b->size - optr;
   if (headroom < avail) avail= headroom;
   assert((optr + avail) <= b->size);
   *ptr= b->data + optr;
@@ -262,13 +266,13 @@ inline int Buffer_getOutputPointer(Buffer *b, char **ptr)
 // set the output to the current write location and answer the number of
 // bytes that can be written to that location
 // 
-inline int Buffer_getInputPointer(Buffer *b, char **ptr);
+inline sqInt Buffer_getInputPointer(Buffer *b, char **ptr);
 
-inline int Buffer_getInputPointer(Buffer *b, char **ptr)
+inline sqInt Buffer_getInputPointer(Buffer *b, char **ptr)
 {
-  int iptr=     b->iptr;
-  int nfree=    Buffer_free(b);
-  int headroom= b->size - iptr;
+  sqInt iptr=     b->iptr;
+  sqInt nfree=    Buffer_free(b);
+  sqInt headroom= b->size - iptr;
   if (headroom < nfree) nfree= headroom;
   assert((iptr + nfree) <= b->size);
   *ptr= b->data + iptr;
@@ -277,12 +281,12 @@ inline int Buffer_getInputPointer(Buffer *b, char **ptr)
 
 // increment the output pointer over a contiguous section of buffer
 // 
-inline void Buffer_advanceOutputPointer(Buffer *b, int size);
+inline void Buffer_advanceOutputPointer(Buffer *b, sqInt size);
 
-inline void Buffer_advanceOutputPointer(Buffer *b, int size)
+inline void Buffer_advanceOutputPointer(Buffer *b, sqInt size)
 {
-  int optr=  b->optr;
-  int avail= b->avail;
+  sqInt optr=  b->optr;
+  sqInt avail= b->avail;
   optr+=  size;
   avail-= size;
   assert(optr <= b->size);
@@ -294,12 +298,12 @@ inline void Buffer_advanceOutputPointer(Buffer *b, int size)
 
 // advance the input pointer over a contiguous section of buffer
 // 
-inline void Buffer_advanceInputPointer(Buffer *b, int size);
+inline void Buffer_advanceInputPointer(Buffer *b, sqInt size);
 
-inline void Buffer_advanceInputPointer(Buffer *b, int size)
+inline void Buffer_advanceInputPointer(Buffer *b, sqInt size)
 {
-  int iptr= b->iptr;
-  int nfree= Buffer_free(b);
+  sqInt iptr= b->iptr;
+  sqInt nfree= Buffer_free(b);
   nfree -= size;
   assert(nfree >= 0);
   iptr += size;
@@ -312,12 +316,12 @@ inline void Buffer_advanceInputPointer(Buffer *b, int size)
 // clear the given number of bytes at the input position and advance the
 // input pointer past them
 // 
-inline void Buffer_prefill(Buffer *b, int bytes);
+inline void Buffer_prefill(Buffer *b, sqInt bytes);
 
-inline void Buffer_prefill(Buffer *b, int bytes)
+inline void Buffer_prefill(Buffer *b, sqInt bytes)
 {
   char *ptr;
-  int   size= Buffer_getInputPointer(b, &ptr);
+  sqInt   size= Buffer_getInputPointer(b, &ptr);
   assert(bytes <= size);
   memset(ptr, 0, size);
   Buffer_advanceInputPointer(b, bytes);
@@ -326,14 +330,14 @@ inline void Buffer_prefill(Buffer *b, int bytes)
 // write at most nbytes from buf into the buffer, wrapping in the middle if
 // necessary.  answer the actual number of bytes written.
 // 
-inline int Buffer_write(Buffer *b, char *buf, int nbytes);
+inline sqInt Buffer_write(Buffer *b, char *buf, sqInt nbytes);
 
-inline int Buffer_write(Buffer *b, char *buf, int nbytes)
+inline sqInt Buffer_write(Buffer *b, char *buf, sqInt nbytes)
 {
-  int iptr= b->iptr;
-  int bytesToCopy= min(nbytes, Buffer_free(b));
-  int headroom= b->size - iptr;
-  int bytesCopied= 0;
+  sqInt iptr= b->iptr;
+  sqInt bytesToCopy= min(nbytes, Buffer_free(b));
+  sqInt headroom= b->size - iptr;
+  sqInt bytesCopied= 0;
 
   if (bytesToCopy >= headroom)
     {
@@ -354,14 +358,14 @@ inline int Buffer_write(Buffer *b, char *buf, int nbytes)
   return bytesCopied;
 }
 
-inline int Buffer_writeRecheck(Buffer *b, char *buf, int nbytes);
+inline sqInt Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes);
 
-inline int Buffer_writeRecheck(Buffer *b, char *buf, int nbytes)
+inline sqInt Buffer_writeRecheck(Buffer *b, char *buf, sqInt nbytes)
 {
-  int iptr= b->iptr;
-  int bytesToCopy= min(nbytes, Buffer_free(b));
-  int headroom= b->size - iptr;
-  int bytesCopied= 0;
+  sqInt iptr= b->iptr;
+  sqInt bytesToCopy= min(nbytes, Buffer_free(b));
+  sqInt headroom= b->size - iptr;
+  sqInt bytesCopied= 0;
 
   if (b->data == NULL || buf == NULL) 
 	return 0;
@@ -388,14 +392,14 @@ inline int Buffer_writeRecheck(Buffer *b, char *buf, int nbytes)
 // read at most nbytes from the buffer into buf, wrapping in the middle if
 // necessary.  answer the actual number of bytes read.
 // 
-inline int Buffer_read(Buffer *b, char *buf, int nbytes);
+inline sqInt Buffer_read(Buffer *b, char *buf, sqInt nbytes);
 
-inline int Buffer_read(Buffer *b, char *buf, int nbytes)
+inline sqInt Buffer_read(Buffer *b, char *buf, sqInt nbytes)
 {
-  int optr= b->optr;
-  int bytesToCopy= min(nbytes, Buffer_avail(b));
-  int headroom= b->size - optr;
-  int bytesCopied= 0;
+  sqInt optr= b->optr;
+  sqInt bytesToCopy= min(nbytes, Buffer_avail(b));
+  sqInt headroom= b->size - optr;
+  sqInt bytesCopied= 0;
 
   if (bytesToCopy >= headroom)
     {
@@ -430,15 +434,15 @@ inline int Buffer_read(Buffer *b, char *buf, int nbytes)
 typedef struct Stream
 {
   AudioDeviceID		 id;			// associated with this stream
-  int			 direction;		// 1nput/0utput
-  int			 sampleRate;		// Squeak frames per second
-  int			 channels;		// channels per Squeak frame
-  int			 devBufSize;		// bytes per device buffer
-  int			 imgBufSize;		// bytes per Squeak buffer
-  int			 cvtBufSize;		// bytes per converter buffer
+  sqInt			 direction;		// 1nput/0utput
+  sqInt			 sampleRate;		// Squeak frames per second
+  sqInt			 channels;		// channels per Squeak frame
+  sqInt			 devBufSize;		// bytes per device buffer
+  sqInt			 imgBufSize;		// bytes per Squeak buffer
+  sqInt			 cvtBufSize;		// bytes per converter buffer
   Buffer		*buffer;		// fifo
   AudioConverterRef	 converter;		// frame format converter
-  int			 semaphore;		// ping me!
+  sqInt			 semaphore;		// ping me!
   u_int64_t		 timestamp;		// nominal buffer tail time (uSecs)
 } Stream;
 
@@ -449,8 +453,8 @@ typedef struct Stream
 
 // tell the SoundPlayer that output can be written.
 //
- void ioProcSignal(int semaphore);
-  void ioProcSignal(int semaphore)
+ void ioProcSignal(sqInt semaphore);
+  void ioProcSignal(sqInt semaphore)
 {
   if (semaphore)
     signalSemaphoreWithIndex(semaphore);
@@ -465,7 +469,7 @@ typedef struct Stream
   Stream *s= (Stream *)context;
   Buffer *b= s->buffer;
   char *p1, *p2;
-  int   n1,  n2;
+  sqInt   n1,  n2;
   Buffer_getOutputPointers(b, &p1, &n1, &p2, &n2);
   if (!n1)
     {
@@ -511,7 +515,7 @@ typedef struct Stream
   Stream *s= (Stream *)context;
   Buffer *b= s->buffer;
   if (Buffer_free(b) >= s->imgBufSize)
-    ioProcSignal(s->semaphore);		// restart SoundPlayer
+    ioProcSignal(s->semaphore);		// restart SoundRecorder
   return AudioConverterFillBuffer(((Stream *)context)->converter, bufferDataProc, context,
 				  &outputData->mBuffers[0].mDataByteSize,
 				  outputData->mBuffers[0].mData);
@@ -541,7 +545,7 @@ OSStatus ioProcInput(AudioDeviceID	    device,
 
   Stream *s= (Stream *)context;
   Buffer *b= s->buffer;
-  int     n= Buffer_free(b);
+  sqInt     n= Buffer_free(b);
   if ((UInt32) n >= inputData->mBuffers[0].mDataByteSize)
     Buffer_writeRecheck(b, inputData->mBuffers[0].mData, inputData->mBuffers[0].mDataByteSize);
   if (Buffer_avail(b) >= s->imgBufSize)
@@ -550,8 +554,8 @@ OSStatus ioProcInput(AudioDeviceID	    device,
 }
 
 
- int getDefaultDevice(AudioDeviceID *id, int direction);
-int getDefaultDevice(AudioDeviceID *id, int direction)
+ sqInt getDefaultDevice(AudioDeviceID *id, sqInt direction);
+sqInt getDefaultDevice(AudioDeviceID *id, sqInt direction)
 {
   UInt32 sz= sizeof(*id);
   return (!checkError(AudioHardwareGetProperty((direction
@@ -564,8 +568,8 @@ int getDefaultDevice(AudioDeviceID *id, int direction)
 
 // allocate and a Stream and associate it with a suitable device.
 //
- Stream *Stream_new(int dir);
-Stream *Stream_new(int dir)
+ Stream *Stream_new(sqInt dir);
+Stream *Stream_new(sqInt dir)
 {
   AudioDeviceID id= 0;
   Stream       *s=  0;
@@ -575,12 +579,12 @@ Stream *Stream_new(int dir)
 
   if (!(s= (Stream *)calloc(1, sizeof(Stream))))
     {
-      EPRINTF("out of memory");
+      eprintf("out of memory");
       return 0;
     }
   s->id=	id;
   s->direction= dir;
-  DPRINTF("stream %p[%d] created for device %ld\n", s, dir, id);
+  dprintf("stream %p[%d] created for device %ld\n", s, dir, id);
 
   return s;
 }
@@ -593,7 +597,7 @@ void Stream_delete(Stream *s)
 {
   assert(s && s->buffer);
   Buffer_delete(s->buffer);
-  DPRINTF("stream %p[%d] deleted\n", s, s->direction);
+  dprintf("stream %p[%d] deleted\n", s, s->direction);
   free(s);
 }
 
@@ -601,10 +605,10 @@ void Stream_delete(Stream *s)
 // setup conversion from Squeak to device frame format, or vice-versa.
 // requires: stereo for output, stereo or mono for input.
 //
- int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo);
-int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
+ sqInt Stream_setFormat(Stream *s, sqInt frameCount, sqInt sampleRate, sqInt stereo);
+sqInt Stream_setFormat(Stream *s, sqInt frameCount, sqInt sampleRate, sqInt stereo)
 {
-  int nChannels=	1 + stereo;
+  sqInt nChannels=	1 + stereo;
   AudioStreamBasicDescription imgFmt, devFmt;
   UInt32 sz= sizeof(devFmt);
 
@@ -616,7 +620,7 @@ int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
 		 "GetProperty", "StreamFormat"))
     return 0;
 
-  DPRINTF("stream %p[%d] device format:\n", s, s->direction);  dumpFormat(&devFmt);
+  dprintf("stream %p[%d] device format:\n", s, s->direction);  dumpFormat(&devFmt);
 
   imgFmt.mSampleRate	   = sampleRate;
   imgFmt.mFormatID	   = kAudioFormatLinearPCM;
@@ -627,7 +631,7 @@ int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
   imgFmt.mChannelsPerFrame = nChannels;
   imgFmt.mBitsPerChannel   = 16;
 
-  DPRINTF("stream %p[%d] image format:\n", s, s->direction);  dumpFormat(&imgFmt);
+  dprintf("stream %p[%d] image format:\n", s, s->direction);  dumpFormat(&imgFmt);
 
   if (s->direction) // input
     {
@@ -652,21 +656,9 @@ int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
 
   frameCount= max(frameCount, 512 * sampleRate / devFmt.mSampleRate);
 
-  // BGF/Teleplace - the underlying data allocation (buffer capacity) was '* 2' below, 
-  // I'm changing it to 32 to for input (I think, if I read this stuff correctly)
-  // greatly reduce the chance of read-head write-collisions in the recorder buffer;
-  // since this is a FIFO, capacity seems like a Good Thing To Have.
-  // 
-  // The trigger for sema-triggering squeak is based on the imgBufSize, above,
-  // not the low-level buffer capacity, so these appears safe and possibly helpful.
-  
-  if (s->direction) { 	 // Input -- allow room for raw mic data to accumulate
-  	s->buffer= Buffer_new((s->direction ? DeviceFrameSize : SqueakFrameSize) * nChannels * frameCount * 32);
-  } else {
-  	s->buffer= Buffer_new((s->direction ? DeviceFrameSize : SqueakFrameSize) * nChannels * frameCount * 2);
-  }
+  s->buffer= Buffer_new((s->direction ? DeviceFrameSize : SqueakFrameSize) * nChannels * frameCount * 2);
 
-  DPRINTF("stream %p[%d] sound buffer size %d/%d (%d)\n", s, s->direction, s->imgBufSize, s->buffer->size, frameCount);
+  dprintf("stream %p[%d] sound buffer size %d/%d (%d)\n", s, s->direction, s->imgBufSize, s->buffer->size, frameCount);
 
   return 1;
 }
@@ -674,12 +666,12 @@ int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
 
 // start the device attached to the stream.
 // 
- int Stream_startSema(Stream *s, int semaIndex);
-  int Stream_startSema(Stream *s, int semaIndex)
+ sqInt Stream_startSema(Stream *s, sqInt semaIndex);
+  sqInt Stream_startSema(Stream *s, sqInt semaIndex)
 {
   AudioDeviceIOProc ioProc= s->direction ? ioProcInput : ioProcOutput;
 
-  DPRINTF("stream %p[%d] startSema: %d\n", s, s->direction, semaIndex);
+  dprintf("stream %p[%d] startSema: %d\n", s, s->direction, semaIndex);
   
   s->semaphore= semaIndex;	// can be zero
   if (checkError(AudioDeviceAddIOProc(s->id, ioProc, (void *)s),
@@ -691,22 +683,22 @@ int Stream_setFormat(Stream *s, int frameCount, int sampleRate, int stereo)
       AudioDeviceRemoveIOProc(s->id, ioProc);
       return 0;
     }
-  DPRINTF("stream %p[%d] running\n", s, s->direction);
+  dprintf("stream %p[%d] running\n", s, s->direction);
   return 1;
 }
 
 
 // stop the device attached to a stream.
 // 
- int Stream_stop(Stream *s);
-int Stream_stop(Stream *s)
+ sqInt Stream_stop(Stream *s);
+sqInt Stream_stop(Stream *s)
 {
   AudioDeviceIOProc ioProc= s->direction ? ioProcInput : ioProcOutput;
   checkError(AudioDeviceStop(s->id, ioProc),
 	     "DeviceStop", s->direction ? "ioProcIn" : "ioProcOut");
   checkError(AudioDeviceRemoveIOProc(s->id, ioProc),
 	     "Remove", s->direction ? "ioProcIn" : "ioProcOut");
-  DPRINTF("stream %p[%d] stopped\n", s, s->direction);
+  dprintf("stream %p[%d] stopped\n", s, s->direction);
   return 1;
 }
 
@@ -715,9 +707,9 @@ int Stream_stop(Stream *s)
 /// sound output primitives
 /// 
 
- int sound_AvailableSpace(void);
+ sqInt sound_AvailableSpace(void);
  
- int sound_AvailableSpace(void)
+ sqInt sound_AvailableSpace(void)
 {
   if (output)
     return Buffer_free(output->buffer);
@@ -728,15 +720,15 @@ int Stream_stop(Stream *s)
 
 // mix nFrames of samples into an output buffer.
 // 
- void mixFrames(short *out, short *in, int nFrames);
+ void mixFrames(short *out, short *in, sqInt nFrames);
  
- void mixFrames(short *out, short *in, int nFrames)
+ void mixFrames(short *out, short *in, sqInt nFrames)
 {
   while (nFrames--)
     {
-      int sample;
-      sample= (int)*out + (int)*in++;  *out++= (short)max(-32768, min(32767, sample));
-      sample= (int)*out + (int)*in++;  *out++= (short)max(-32768, min(32767, sample));
+      sqInt sample;
+      sample= (sqInt)*out + (sqInt)*in++;  *out++= (short)max(-32768, min(32767, sample));
+      sample= (sqInt)*out + (sqInt)*in++;  *out++= (short)max(-32768, min(32767, sample));
     }
 }
 
@@ -751,15 +743,13 @@ int Stream_stop(Stream *s)
 // Note: this is only used when the "sound quick start" preference is
 // enabled in the image.
 // 
- int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int framesOfLeadTime);
- int sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr,
-				  int framesOfLeadTime)
+ sqInt sound_InsertSamplesFromLeadTime(sqInt frameCount, void* srcBufPtr,
+				  sqInt framesOfLeadTime)
 {
 #pragma unused(framesOfLeadTime)
   Stream *s= output;
 
-  DPRINTF("snd_InsertSamples %d From %p LeadTime %d\n", frameCount, srcBufPtr, framesOfLeadTime);
+  dprintf("snd_InsertSamples %d From %p LeadTime %d\n", frameCount, srcBufPtr, framesOfLeadTime);
 
   if (s)
     {
@@ -771,9 +761,9 @@ int Stream_stop(Stream *s)
       // middle?
 
       char *frontData=   0, *backData=   0;
-      int   frontFrames= 0,  backFrames= 0;
-      int   framesDone=  0;
-      int   leadBytes;
+      sqInt   frontFrames= 0,  backFrames= 0;
+      sqInt   framesDone=  0;
+      sqInt   leadBytes;
 
 #    if (OBEY_LEAD_TIME)
       {
@@ -795,8 +785,8 @@ int Stream_stop(Stream *s)
 #    endif
 
       {
-	int   availBytes;
-	int   byteCount= frameCount * SqueakFrameSize;
+	sqInt   availBytes;
+	sqInt   byteCount= frameCount * SqueakFrameSize;
 	Buffer_getOutputPointers(s->buffer,
 				 &frontData, &frontFrames,	// bytes!
 				 &backData,  &backFrames);	// bytes!
@@ -842,12 +832,12 @@ int Stream_stop(Stream *s)
 // play (exactly) frameCount of samples (and no less, since the result is
 // ignored).
 // 
- int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex);
-  int sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex)
+
+  sqInt sound_PlaySamplesFromAtLength(sqInt frameCount, void* arrayIndex, sqInt startIndex)
 {
   if (output)
     {
-      int byteCount= frameCount * SqueakFrameSize;
+      sqInt byteCount= frameCount * SqueakFrameSize;
       if (Buffer_free(output->buffer) >= byteCount)
 	{
 	  Buffer_write(output->buffer,
@@ -864,8 +854,8 @@ int Stream_stop(Stream *s)
 
 // play a buffer's worth of silence (as quietly as possible).
 // 
- int sound_PlaySilence(void);
- int sound_PlaySilence(void)
+ sqInt sound_PlaySilence(void);
+ sqInt sound_PlaySilence(void)
 {
   success(false);
   return 8192;
@@ -874,10 +864,10 @@ int Stream_stop(Stream *s)
 
 // shut down sound output.
 // 
- int sound_Stop(void);
- int sound_Stop(void)
+ sqInt sound_Stop(void);
+ sqInt sound_Stop(void)
 {
-  DPRINTF("snd_Stop\n");
+  dprintf("snd_Stop\n");
   
   if (output)
     {
@@ -891,12 +881,12 @@ int Stream_stop(Stream *s)
 
 // start up sound output.
 // 
- int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex);
- int sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex)
+ sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
+ sqInt sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   Stream *s= 0;
 
-  DPRINTF("snd_Start frames: %d samplesPerSec: %d stereo: %d semaIndex: %d\n",
+  dprintf("snd_Start frames: %d samplesPerSec: %d stereo: %d semaIndex: %d\n",
 	   frameCount, samplesPerSec, stereo, semaIndex);
   
   if (output)	// there might be a change of sample rate
@@ -935,10 +925,10 @@ int Stream_stop(Stream *s)
 }
 
 
- int sound_StopRecording(void);
-  int sound_StopRecording(void)
+ sqInt sound_StopRecording(void);
+  sqInt sound_StopRecording(void)
 {
-  DPRINTF("snd_StopRecording\n");
+  dprintf("snd_StopRecording\n");
 
   if (input)
     {
@@ -952,12 +942,12 @@ int Stream_stop(Stream *s)
 
 // start up sound input.
 // 
- int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex);
- int sound_StartRecording(int samplesPerSec, int stereo, int semaIndex)
+ sqInt sound_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
+ sqInt sound_StartRecording(sqInt samplesPerSec, sqInt stereo, sqInt semaIndex)
 {
   Stream *s= 0;
 
-  DPRINTF("snd_StartRecording rate: %d stereo: %d semaIndex: %d\n",
+  dprintf("snd_StartRecording rate: %d stereo: %d semaIndex: %d\n",
 	   samplesPerSec, stereo, semaIndex);
   
   if (input)	// there might be a change of sample rate
@@ -966,7 +956,7 @@ int Stream_stop(Stream *s)
   if ((s= Stream_new(1)))	// 1nput
     {
       // approximate the frameCount that output uses for the same sample rate
-      int frameCount= 5288 * samplesPerSec / 44100;
+      sqInt frameCount= 5288 * samplesPerSec / 44100;
       if ((  Stream_setFormat(s, frameCount, samplesPerSec, stereo))
 	  && Stream_startSema(s, semaIndex))
 	{
@@ -979,15 +969,18 @@ int Stream_stop(Stream *s)
 }
 
 
- int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes);
- int sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes)
+ sqInt sound_RecordSamplesIntoAtLength(void * buf, sqInt startSliceIndex, sqInt bufferSizeInBytes)
 {
   if (input)
     {
       if (Buffer_avail(input->buffer) >= (512 * DeviceFrameSize))
 	{
-	  int    start= startSliceIndex * SqueakFrameSize / 2;
-	  UInt32 count= min(input->cvtBufSize, bufferSizeInBytes - start);
+	  sqInt    start= startSliceIndex * SqueakFrameSize / 2;
+	  sqInt count= min(input->cvtBufSize, bufferSizeInBytes);
+		if (count <= 0) {
+			success(false);
+			return 0;
+		}
 	  if (kAudioHardwareNoError == AudioConverterFillBuffer(input->converter, bufferDataProc, input,
 								&count, (char *)buf + start))
 	    return count / (SqueakFrameSize / 2) / input->channels;
@@ -1003,34 +996,9 @@ int Stream_stop(Stream *s)
 /// mixer
 /// 
 
-// HRS 10/24/08.
-// This is fairly hideous, but necessary: if you try to get or set the left and right channels of a
-// single channel device, you loose.  (At least, in OSX 10.5.5)
 
-int numberOfChannels(Boolean isInput, UInt16 deviceID)
-{
-	OSStatus	err; 
-    UInt32 		outSize = 0;
-	AudioBufferList *theBufferList = NULL;
-	UInt32      theIndex = 0;
-	int			nChannels = 0;
-	err = AudioDeviceGetPropertyInfo( deviceID, 0, isInput, kAudioDevicePropertyStreamConfiguration, &outSize, NULL);
-	if ((err == noErr) && (outSize != 0)) 
-	{
-		theBufferList = (AudioBufferList*) malloc(outSize);
-		err = AudioDeviceGetProperty( deviceID, 0, isInput, kAudioDevicePropertyStreamConfiguration, &outSize, theBufferList);
-		if (err == noErr) {
-			for (theIndex = 0; theIndex < theBufferList->mNumberBuffers; ++theIndex) 
-				nChannels += theBufferList->mBuffers[theIndex].mNumberChannels;
-			}
-		free(theBufferList);
-	}
-	return nChannels;
-}
-
-
- int getVolume(int dir, double *left, double *right);
- int getVolume(int dir, double *left, double *right)
+ sqInt getVolume(sqInt dir, double *left, double *right);
+ sqInt getVolume(sqInt dir, double *left, double *right)
 {
   UInt32	sz;
   AudioDeviceID	id;
@@ -1040,31 +1008,17 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
     return 0;
 
   sz= sizeof(chan1);
-
-  if (2 == numberOfChannels(!!dir, id)) {	// 10/24/08 HRS
-  
-	if (checkError(AudioDeviceGetProperty(id, 1, // left
+  if (checkError(AudioDeviceGetProperty(id, 1, // left
 					dir, kAudioDevicePropertyVolumeScalar,
 					&sz, &chan1),
 		 "GetProperty", "VolumeScalar"))
-		return 0;
-	sz= sizeof(chan2);
-	if (checkError(AudioDeviceGetProperty(id, 2, // right
+    return 0;
+  sz= sizeof(chan2);
+  if (checkError(AudioDeviceGetProperty(id, 2, // right
 					dir, kAudioDevicePropertyVolumeScalar,
 					&sz, &chan2),
 		 "GetProperty", "VolumeScalar"))
-		chan2= chan1;
-		
-  } else {	// Not stereo. 10/24/08 HRS ...
-	
-	if (checkError(AudioDeviceGetProperty(id, 0, // Master
-					dir, kAudioDevicePropertyVolumeScalar,
-					&sz, &chan1),
-		 "GetProperty", "VolumeScalar"))
-		return 0;
-	chan2= chan1;
-	
-  }  // ... end 10/24/08 HRS.
+    chan2= chan1;
   
   *left=  chan1;
   *right= chan2;
@@ -1073,8 +1027,8 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
 }
 
 
- int setVolume(int dir, double dleft, double dright);
- int setVolume(int dir, double dleft, double dright)
+ sqInt setVolume(sqInt dir, double dleft, double dright);
+ sqInt setVolume(sqInt dir, double dleft, double dright)
 {
   Float32 left=  (Float32)dleft;
   Float32 right= (Float32)dright;
@@ -1085,32 +1039,18 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
     return 0;
 
   sz= sizeof(left);
-  
-  if (2 == numberOfChannels(!!dir, id)) {	// 10/24/08 HRS
-
-	if (checkError(AudioDeviceSetProperty(id, 0, 1, // left
+  if (checkError(AudioDeviceSetProperty(id, 0, 1, // left
 					dir, kAudioDevicePropertyVolumeScalar,
 					sz, &left),
 		 "SetProperty", "VolumeScalar"))
-		return 0;
+    return 0;
 
-	sz= sizeof(right);
-	if (checkError(AudioDeviceSetProperty(id, 0, 2, // right
+  sz= sizeof(right);
+  if (checkError(AudioDeviceSetProperty(id, 0, 2, // right
 					dir, kAudioDevicePropertyVolumeScalar,
 					sz, &right),
 		 "SetProperty", "VolumeScalar"))
-		return 0;
-		
-  } else {	// Not stereo. 10/24/08 HRS ...
-  
-    left = (left + right) / 2.0;
-  	if (checkError(AudioDeviceSetProperty(id, 0, 0, // master
-					dir, kAudioDevicePropertyVolumeScalar,
-					sz, &left),
-		 "SetProperty", "VolumeScalar"))
-		return 0;
-
-  }		// ... end 10/24/08 HRS.
+    return 0;
 
   return 1;
 }
@@ -1130,7 +1070,7 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
  void sound_SetVolume(double left, double right);
  void sound_SetVolume(double left, double right)
 {
-  extern int noSoundMixer;	//xxx FIXME: this should not be a global option
+  extern sqInt noSoundMixer;	//xxx FIXME: this should not be a global option
 
   if (noSoundMixer)
     return;
@@ -1138,27 +1078,21 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
   setVolume(0, left, right);
 }
 
-// get recording gain, 0 <= level <= 1000, or <0 for error.  10/28/08 HRS
- int sound_GetRecordLevel(void);
- int sound_GetRecordLevel(void)
-{ double left = 0.0, right = 0.0;
-  if (!getVolume(1, &left, &right)) return -1;
-  return (int) (1000.0L * (left + right) / 2.0);
-}
-
 
 // set recording gain, 0 <= level <= 1000
 // 
- int sound_SetRecordLevel(int level);
- int sound_SetRecordLevel(int level)
+ sqInt sound_SetRecordLevel(sqInt level);
+ sqInt sound_SetRecordLevel(sqInt level)
 {
-  extern int noSoundMixer;
+  extern sqInt noSoundMixer;
 
   if (noSoundMixer)
     return 0;
 
   return setVolume(1, (double)level / 1000.0L, (double)level / 1000.0L);
 }
+
+
 /// 
 /// debugging
 /// 
@@ -1178,8 +1112,8 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
   else							printf(" little-endian");
 
   if	  (flags & kAudioFormatFlagIsFloat)		printf(" float");
-  else if (flags & kAudioFormatFlagIsSignedInteger)	printf(" signed-int");
-  else							printf(" unsigned-int");
+  else if (flags & kAudioFormatFlagIsSignedInteger)	printf(" signed-sqInt");
+  else							printf(" unsigned-sqInt");
 
   if	  (flags & kAudioFormatFlagIsPacked)		printf(" packed");
   else if (flags & kAudioFormatFlagIsAlignedHigh)	printf(" aligned-high");
@@ -1201,23 +1135,37 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
 
 #if (!TESTING)
 
-#if WE_DONT_NEED_NO_STINKING_UNIX_SUPPORT
-
 # include "SqSound.h"
+
+static sqInt sound_SetSwitch(sqInt id, sqInt captureFlag, sqInt parameter)
+{
+	return -1;
+}
+
+static sqInt sound_GetSwitch(sqInt id, sqInt captureFlag, sqInt channel)
+{
+	return -1;
+}
+
+static sqInt sound_SetDevice(sqInt id, char *arg)
+{
+	return -1;
+}
+
 
   SqSoundDefine(MacOSX);
 
 # include "SqModule.h"
 
   void  sound_parseEnvironment(void);
-   int   sound_parseArgument(int argc, char **argv);
+   sqInt   sound_parseArgument(sqInt argc, char **argv);
    void  sound_printUsage(void);
    void  sound_printUsageNotes(void);
    void *sound_makeInterface(void);
    void *np_sound_makeInterface(void);
 
 	void  sound_parseEnvironment(void) {}
-   int   sound_parseArgument(int argc, char **argv) {
+   sqInt   sound_parseArgument(sqInt argc, char **argv) {
 	#pragma unused(argc,argv)
 	return 0; }
    void  sound_printUsage(void) {}
@@ -1228,8 +1176,6 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
 
   SqModuleDefine(sound, MacOSX);
 
-#endif /* WE_DONT_NEED_NO_STINKING_UNIX_SUPPORT */
-
 #else // TESTING
 
 # include "math.h"
@@ -1238,9 +1184,9 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
 # define FRAMES	5288 * RATE / 44100	// nominal buffer size requested by Squeak
 # define FREQ	440.0			// tuning fork required to verify this ;)
 
- short sound[(int)(FRAMES * 2)];
+ short sound[(sqInt)(FRAMES * 2)];
 
- void warble(int n)
+ void warble(sqInt n)
 {
    double phase = 0.0;
    double amp   = 0.5;
@@ -1257,16 +1203,16 @@ int numberOfChannels(Boolean isInput, UInt16 deviceID)
     }
 }
 
-int main()
+sqInt main()
 {
   sound_Start(FRAMES, RATE, 1, 3);
   for (;;)
     {
-      int n= min(sizeof(sound), sound_AvailableSpace()) / 4;
+      sqInt n= min(sizeof(sound), sound_AvailableSpace()) / 4;
       if (n)
 	{
 	  warble(n);
-	  sound_PlaySamplesFromAtLength(n, (int)sound, 0);
+	  sound_PlaySamplesFromAtLength(n, (sqInt)sound, 0);
 #        if (DEBUG)
 	  putchar('.');  fflush(stdout);
 #        endif

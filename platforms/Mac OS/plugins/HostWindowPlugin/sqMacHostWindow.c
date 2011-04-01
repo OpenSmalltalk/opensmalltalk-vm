@@ -6,7 +6,7 @@
  *
 	July 15th 2005 add logic to flush QD buffers for os-x 10.4
 	 3.8.15b3  Feb 19th, 2007 JMM add cursor set logic
-
+	4.1.0b2  set window title via cfstring
  */
 
 #include "sqVirtualMachine.h"
@@ -103,48 +103,11 @@ int closeWindow(int windowIndex) {
 int ioPositionOfWindow(wIndexType windowIndex)
 {
 	Rect portRect;
-
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
 		
 	GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
  	QDLocalToGlobalRect(GetWindowPort(windowHandleFromIndex(windowIndex)), &portRect);
-	return (portRect.left << 16) | (portRect.top & 0xFFFF);  /* left is high 16 bits; top is low 16 bits */
-}
-
-int ioPositionOfNativeWindow(unsigned long windowHandle)
-{
-	Rect portRect, titleRect;
-	CGrafPtr windowPortPtr = GetWindowPort((WindowPtr)windowHandle);
-
-	if (!windowPortPtr)
-		return -1;
-
-	GetWindowBounds((WindowPtr)windowHandle,kWindowTitleBarRgn,&titleRect);
-	GetPortBounds(windowPortPtr,&portRect);
- 	QDLocalToGlobalRect(windowPortPtr, &portRect);
-#if 0
-	printf("titleRect %d@%d corner: %d@%d\n",
-			titleRect.left, titleRect.top,
-			titleRect.right, titleRect.bottom);
-	printf("portRect %d@%d corner: %d@%d\n",
-			portRect.left, portRect.top,
-			portRect.right, portRect.bottom);
-#endif
-	return (portRect.left << 16)  /* x is high 16 bits; y is low 16 bits */
-		 | (portRect.top - (titleRect.bottom - titleRect.top) & 0xFFFF);
-}
-
-int ioPositionOfNativeDisplay(unsigned long windowHandle)
-{
-	Rect portRect;
-	CGrafPtr windowPortPtr = GetWindowPort((WindowPtr)windowHandle);
-
-	if (!windowPortPtr)
-		return -1;
-
-	GetPortBounds(windowPortPtr,&portRect);
- 	QDLocalToGlobalRect(windowPortPtr, &portRect);
 	return (portRect.left << 16) | (portRect.top & 0xFFFF);  /* left is high 16 bits; top is low 16 bits */
 }
 
@@ -181,79 +144,8 @@ int ioSizeOfWindow(wIndexType windowIndex)
 	if (windowHandleFromIndex(windowIndex) == nil)
 		return -1;
 
+
 	GetPortBounds(GetWindowPort(windowHandleFromIndex(windowIndex)),&portRect);
-	w =  portRect.right -  portRect.left;
-	h =  portRect.bottom - portRect.top;
-	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
-}
-
-/** Upper-left of the sanctioned portion of the screen. **/
-int ioPositionOfScreenWorkArea (wIndexType windowIndex)
-{
-	GDHandle device=NULL;
-	WindowRef window;
-	Rect workArea;
-
-	if ( (window = windowHandleFromIndex(windowIndex)) == nil)
-		return -1;
-	
-	GetWindowGreatestAreaDevice((WindowRef) window,kWindowContentRgn,&device,NULL); 	
-	if (! device)
-		return -1;
-	if (GetAvailableWindowPositioningBounds (device, &workArea) != 0) 
-		return -1;
-
-	return ((workArea.left << 16) | (workArea.top & (0xFFFF)));
-}
-
-/** Extent of the sanctioned portion of the screen. **/
-int ioSizeOfScreenWorkArea (wIndexType windowIndex)
-{
-	GDHandle device=NULL;
-	WindowRef window;
-	Rect workArea;
-
-	if ( (window = windowHandleFromIndex(windowIndex)) == nil)
-		return -1;
-	
-	GetWindowGreatestAreaDevice((WindowRef) window,kWindowContentRgn,&device,NULL); 	
-	if (! device)
-		return -1;
-	if (GetAvailableWindowPositioningBounds (device, &workArea) != 0) 
-		return -1;
-
-	return ((workArea.right - workArea.left) << 16) | ((workArea.bottom - workArea.top) & (0xFFFF));
-}
-
-
-int ioSizeOfNativeWindow(unsigned long windowHandle)
-{
-	Rect portRect, titleRect;
-	int w, h;
-	CGrafPtr windowPortPtr = GetWindowPort((WindowPtr)windowHandle);
-
-	if (!windowPortPtr)
-		return -1;
-
-	GetWindowBounds((WindowPtr)windowHandle,kWindowTitleBarRgn,&titleRect);
-	GetPortBounds(windowPortPtr,&portRect);
- 	QDLocalToGlobalRect(windowPortPtr, &portRect);
-	w =  portRect.right -  portRect.left;
-	h =  portRect.bottom - portRect.top + titleRect.bottom -  titleRect.top;
-	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
-}
-
-int ioSizeOfNativeDisplay(unsigned long windowHandle)
-{
-	Rect portRect;
-	int w, h;
-	CGrafPtr windowPortPtr = GetWindowPort((WindowPtr)windowHandle);
-
-	if (!windowPortPtr)
-		return -1;
-
-	GetPortBounds(windowPortPtr,&portRect);
- 	QDLocalToGlobalRect(windowPortPtr, &portRect);
 	w =  portRect.right -  portRect.left;
 	h =  portRect.bottom - portRect.top;
 	return (w << 16) | (h & 0xFFFF);  /* w is high 16 bits; h is low 16 bits */
@@ -288,10 +180,16 @@ int ioSetTitleOfWindow(int windowIndex, char * newTitle, int sizeOfTitle) {
 	char string[256];
 	if (sizeOfTitle > 255) 
 		return -1;
+
 	memcpy(string,newTitle,sizeOfTitle);
 	string[sizeOfTitle] = 0x00;
-	SetWindowTitle(windowIndex,string);
-return 1;
+	
+	CFStringRef windowTitleCFString = CFStringCreateWithCString (nil,string,kCFStringEncodingUTF8);
+
+	SetWindowTitleWithCFString (windowHandleFromIndex(windowIndex),windowTitleCFString);
+	
+	CFRelease(windowTitleCFString);
+	return 1;
 }
 
 int ioCloseAllWindows(void) {
@@ -299,16 +197,6 @@ int ioCloseAllWindows(void) {
 }
 
 
-sqInt ioSetCursorPositionXY(sqInt x, sqInt y)
-{
-	CGPoint p;
-
-	p.x = x;
-	p.y = y;
-	return CGWarpMouseCursorPosition(p)
-		? -1
-		: 0;
-}
 
 /* addendum to sqPlatformSpecific.h */
 /* multiple host windows stuff */

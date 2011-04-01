@@ -6,21 +6,18 @@
  *
  */
 
-       char		*dpyPixels  = 0;
-       int		 dpyPitch   = 0;
-		int		noSoundMixer = 0;
-  int    sound_AvailableSpace(void);
-  int    sound_InsertSamplesFromLeadTime(int frameCount, int srcBufPtr, int samplesOfLeadTime);
-  int    sound_PlaySamplesFromAtLength(int frameCount, int arrayIndex, int startIndex);
-  int    sound_PlaySilence(void);
-  int    sound_Start(int frameCount, int samplesPerSec, int stereo, int semaIndex);
-  int    sound_Stop(void);
+ sqInt    sound_AvailableSpace(void);
+  sqInt    sound_InsertSamplesFromLeadTime(sqInt frameCount, void* srcBufPtr, sqInt samplesOfLeadTime);
+  sqInt    sound_PlaySamplesFromAtLength(sqInt frameCount, void* srcBufPtr, sqInt startIndex);
+  sqInt    sound_PlaySilence(void);
+  sqInt    sound_Start(sqInt frameCount, sqInt samplesPerSec, sqInt stereo, sqInt semaIndex);
+  sqInt    sound_Stop(void);
   /* input */
-  int    sound_StartRecording(int desiredSamplesPerSec, int stereo, int semaIndex);
-  int    sound_StopRecording(void);
+  sqInt    sound_StartRecording(sqInt desiredSamplesPerSec, sqInt stereo, sqInt semaIndex);
+  sqInt    sound_StopRecording(void);
   double sound_GetRecordingSampleRate(void);
-  int    sound_RecordSamplesIntoAtLength(int buf, int startSliceIndex, int bufferSizeInBytes);
+  sqInt    sound_RecordSamplesIntoAtLength(void * buf, sqInt startSliceIndex, sqInt bufferSizeInBytes);
   /* mixer */
   void	 sound_Volume(double *left, double *right);
   void	 sound_SetVolume(double left, double right);
-  int    sound_SetRecordLevel(int level);
+  sqInt    sound_SetRecordLevel(sqInt level);
