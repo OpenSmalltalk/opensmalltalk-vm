@@ -44,13 +44,16 @@ CocoaIOSCogConfig >> crossSources [
 { #category : #plugins }
 CocoaIOSCogConfig >> defaultExternalPlugins [ 
 	^(Array with: self ffiPluginName),
-		#( FloatMathPlugin
+		#(
+		UUIDPlugin
+		FloatMathPlugin
 		AsynchFilePlugin
 		SerialPlugin
 		Mpeg3Plugin
 		CroquetPlugin
 		JoystickTabletPlugin
-		MIDIPlugin)
+		MIDIPlugin
+		B3DAcceleratorPlugin)
 ]
 
 { #category : #plugins }
