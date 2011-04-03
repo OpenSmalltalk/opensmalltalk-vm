@@ -58,8 +58,14 @@ CocoaIOSConfig >> commonCompilerFlags [
 
 { #category : #accessing }
 CocoaIOSConfig >> compilerFlags [ 
+	| releaseFlags |
+	
+	releaseFlags := self isRelease 
+		ifTrue: [ self compilerFlagsRelease ]
+		ifFalse: [ self compilerFlagsDebug ].
+		
 	^String streamContents: [ :stream |
-		(self commonCompilerFlags, self compilerFlagsRelease)
+		(self commonCompilerFlags, releaseFlags)
 			do: [ :each | stream nextPutAll: each ]
 			separatedBy: [ stream space ] ]
 ]
@@ -142,6 +148,14 @@ CocoaIOSConfig >> configureJoystickTabletPlugin: maker [
 			'sqMacJoystickAndTablet.c'
 			)
 
+]
+
+{ #category : #'plugin extra rules' }
+CocoaIOSConfig >> configureLocalePlugin: maker [ 
+	"extra rules for LocalePlugin"
+
+	super configureLocalePlugin: maker.  
+	maker addPlatformSources: #( 'sqMacLocaleCarbon.c' )
 ]
 
 { #category : #'plugin extra rules' }
@@ -285,6 +299,11 @@ CocoaIOSConfig >> frameworks [
 	ApplicationServices
 	QuartzCore
 	OpenGL)
+]
+
+{ #category : #testing }
+CocoaIOSConfig >> isRelease [ 
+	^true
 ]
 
 { #category : #accessing }
