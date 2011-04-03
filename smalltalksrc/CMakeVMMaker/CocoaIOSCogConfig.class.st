@@ -11,12 +11,6 @@ CocoaIOSCogConfig >> CFBundleIconFile [
 	^ 'Cog.icns'
 ]
 
-{ #category : #'bundle strings' }
-CocoaIOSCogConfig >> CFBundleVersion [
-	"An application version"
-	^ '6.0-pre'
-]
-
 { #category : #settings }
 CocoaIOSCogConfig >> compilerFlagsRelease [ 
 	^#('-g3' '-O3' '-fvisibility=hidden' '-funroll-loops' '-fasm-blocks' '-finline-functions' '-mfpmath=sse' '-fomit-frame-pointer' '-march=pentium-m' '-mtune=prescott' '-falign-functions=16' '-fno-gcse' '-fno-cse-follow-jumps' '-std=gnu99' '-DBUILD_FOR_OSX' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DLSB_FIRST' '-DUSE_INLINE_MEMORY_ACCESSORS' '-DHAVE_SYS_TIME_H' '-DHAVE_NANOSLEEP' '-DNDEBUG=1' '-DDEBUGVM=0' '-DCOGMTVM=0' '-DUSE_GLOBAL_STRUCT=0' '-DBASE_HEADER_SIZE=4')
@@ -59,14 +53,14 @@ CocoaIOSCogConfig >> defaultExternalPlugins [
 		CroquetPlugin
 		JoystickTabletPlugin
 		MIDIPlugin
-		B3DAcceleratorPlugin
-		LocalePlugin)
+		B3DAcceleratorPlugin)
 ]
 
 { #category : #plugins }
 CocoaIOSCogConfig >> defaultInternalPlugins [
 	^ #(
 		ADPCMCodecPlugin
+		"B3DAcceleratorPlugin"
 		BMPReadWriterPlugin 
 		BalloonEnginePlugin 
 		BitBltSimulation 
@@ -74,6 +68,7 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 		DSAPlugin 
 		DeflatePlugin 
 		DropPlugin 
+		"FFIPlugin" "FFI Stuff needs to be external"
 		FFTPlugin 
 		FilePlugin 
 		FloatArrayPlugin 
@@ -86,6 +81,8 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 		MacMenubarPlugin 
 		Matrix2x3Plugin 
 		MiscPrimitivePlugin 
+		"IA32ABIPlugin" 
+		"ObjectiveCPlugin" 
 		RePlugin 
 		SecurityPlugin 
 		SocketPlugin 
@@ -94,7 +91,7 @@ CocoaIOSCogConfig >> defaultInternalPlugins [
 		SoundPlugin
 		StarSqueakPlugin 
 		SurfacePlugin 
-		)
+		"UUIDPlugin")
 ]
 
 { #category : #'source files' }

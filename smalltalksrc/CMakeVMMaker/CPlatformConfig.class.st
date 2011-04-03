@@ -512,8 +512,8 @@ CPlatformConfig >> generate [
 CPlatformConfig >> generateSources [
 	"Generate whole VM + plugins sources"
 	| maker |
-	
-	
+
+	self validateSourcesPresent.
 	self prepareForGeneration.
 	
 	"suppress questions and deprecation warnings during generation "
@@ -716,6 +716,18 @@ CPlatformConfig >> topDir: pathString [
 	topDir :=
 		FileDirectory on: (FileDirectory fullPathForURI: pathString).
 	topDir assureExistence.
+]
+
+{ #category : #'source generation' }
+CPlatformConfig >> validateSourcesPresent [
+	| sources |
+	sources := FileDirectory openSources: SmalltalkImage current sourcesName forImage: SmalltalkImage current imageName.
+	
+	((sources == nil or: [sources atEnd])
+			and: [ SmalltalkImage current checkSourcesFileAvailability])
+		ifTrue: [
+		self error: 'VM source code cannot be generated without .sources file'.
+	]		
 ]
 
 { #category : #directories }
