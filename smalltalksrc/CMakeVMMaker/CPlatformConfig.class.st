@@ -65,7 +65,7 @@ CPlatformConfig >> buildDir [
 CPlatformConfig >> buildDir: anObject [
 	"Set the value of buildDir"
 
-	buildDir := anObject
+	buildDir := self dirFrom: anObject
 ]
 
 { #category : #accessing }
@@ -582,10 +582,11 @@ CPlatformConfig >> platformSources [
 ]
 
 { #category : #accessing }
-CPlatformConfig >> platformsDir [
-	"by default , answer the {topdir}/platforms subdir"
+CPlatformConfig >> platformsDir [ 
+	"Answer the value of srcDir"
 
-	^ platformsDir ifNil: [ platformsDir := self topDir / 'platforms' ]
+	^ platformsDir ifNil: [ platformsDir := (self topDir / 'platforms') fullName ]
+	
 ]
 
 { #category : #accessing }
@@ -642,8 +643,8 @@ CPlatformConfig >> prepareVMMaker [
 	| maker allPlugins |
 	
 	maker := VMMaker forPlatform: 'Cross'.
-	maker sourceDirectoryName: (self srcDir assureExistence fullName).
-	maker platformRootDirectoryName: (self topDir / 'platforms' ) fullName.
+	maker sourceDirectoryName: self srcDir.
+	maker platformRootDirectoryName: self platformsDir.
 	
 	
 	allPlugins := self internalPlugins , self externalPlugins.
@@ -669,9 +670,9 @@ CPlatformConfig >> setupDirectories: gen [
 	dirsInclude := gen captureOutputDuring: [
 		gen
 			set: #topDir toString: (self topDir fullName); 
-			set: #buildDir toString: (buildDir ifNil: ['${topDir}/build']);
-			set: #platformsDir toString: self platformsDir fullName;
-			set: #srcDir toString: self srcDir fullName;
+			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil: [self buildDir fullName] );
+			set: #platformsDir toString: self platformsDir;
+			set: #srcDir toString: self srcDir;
 			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
 			set: #srcVMDir toString: '${srcDir}/vm';
 			set: #platformName toString: self platformName;
@@ -687,14 +688,14 @@ CPlatformConfig >> setupDirectories: gen [
 CPlatformConfig >> srcDir [
 	"Answer the value of srcDir"
 
-	^ srcDir ifNil: [ srcDir := self topDir / 'src' ]
+	^ srcDir ifNil: [ srcDir := (self topDir / 'src') assureExistence fullName ]
 ]
 
 { #category : #accessing }
 CPlatformConfig >> srcDir: aStringOrDir [
 	"Set the value of topDir"
 
-	srcDir := self dirFrom: aStringOrDir.
+	srcDir :=  aStringOrDir.
 	
 ]
 

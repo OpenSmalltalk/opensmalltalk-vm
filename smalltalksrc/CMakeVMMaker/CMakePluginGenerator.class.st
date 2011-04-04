@@ -149,7 +149,7 @@ CMakePluginGenerator >> moduleName [
 { #category : #'as yet unclassified' }
 CMakePluginGenerator >> saveFile [
 	
-	((vmGen buildDir / plugin moduleName) assureExistence forceNewFileNamed: self outputFileName) 
+	(((vmGen config dirFrom: vmGen buildDir) / plugin moduleName) assureExistence forceNewFileNamed: self outputFileName) 
 		nextPutAll: (self config fixLineEndsOf: output contents); close.
 
 ]
