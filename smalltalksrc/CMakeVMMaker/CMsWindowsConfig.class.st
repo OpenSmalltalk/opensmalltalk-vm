@@ -266,9 +266,9 @@ CMsWindowsConfig >> setupDirectories: gen [
 	dirsInclude := gen captureOutputDuring: [
 		gen
 			set: #topDir toString: (self msysPathFor: self topDir fullName); 
-			set: #buildDir toString: (buildDir ifNil: ['${topDir}/build'] ifNotNil:[ self msysPathFor: buildDir ]);
-			set: #platformsDir toString: (self msysPathFor: self platformsDir fullName);
-			set: #srcDir toString: (self msysPathFor: self srcDir fullName);
+			set: #buildDir toString: (self buildDir ifNil: ['${topDir}/build'] ifNotNil:[ self msysPathFor: self buildDir fullName ]);
+			set: #platformsDir toString: (self msysPathFor: self platformsDir);
+			set: #srcDir toString: (self msysPathFor: self srcDir);
 			set: #srcPluginsDir toString: (pluginsDir ifNil: [ '${srcDir}/plugins' ]);
 			set: #srcVMDir toString: '${srcDir}/vm';
 			set: #platformName toString: self platformName;
