@@ -308,9 +308,9 @@ CocoaIOSConfig >> isRelease [
 
 { #category : #accessing }
 CocoaIOSConfig >> outputDir [
+
 	"the directory where built binaries will be stored"
-	
-	^ self buildDir fullName , '/results'
+	^ self buildDir containingDirectory fullName , '/results'
 ]
 
 { #category : #accessing }

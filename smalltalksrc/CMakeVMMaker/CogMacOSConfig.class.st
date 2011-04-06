@@ -310,6 +310,13 @@ CogMacOSConfig >> interpreterClass [
 	^ CoInterpreter
 ]
 
+{ #category : #directories }
+CogMacOSConfig >> outputDir [
+
+	"the directory where built binaries will be stored"
+	^ self buildDir containingDirectory fullName , '/results'
+]
+
 { #category : #accessing }
 CogMacOSConfig >> platformName [
 	^ 'Mac OS'
@@ -885,6 +892,8 @@ CogMacOSConfig >> setExtraTargetProperties: maker [
 		value: '${buildDir}/Info.plist'.
 
 	maker cmd: 'set_source_files_properties' params: '${resources} PROPERTIES MACOSX_PACKAGE_LOCATION Resources'.
+	
+	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 ]
 
 { #category : #'source files' }
