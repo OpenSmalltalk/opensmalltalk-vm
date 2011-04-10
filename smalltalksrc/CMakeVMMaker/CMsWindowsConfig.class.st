@@ -247,7 +247,7 @@ CMsWindowsConfig >> outputDir [
 
 	"the directory where built binaries will be stored"
 	
-	^ self msysPathFor: (self buildDir containingDirectory fullName , '/results')
+	^ self msysPathFor: (self buildDir fullName , '/results')
 ]
 
 { #category : #'as yet unclassified' }
