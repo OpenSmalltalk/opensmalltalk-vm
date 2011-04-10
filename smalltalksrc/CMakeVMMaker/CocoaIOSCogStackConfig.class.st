@@ -50,5 +50,5 @@ CocoaIOSCogStackConfig >> prepareForGeneration [
 CocoaIOSCogStackConfig >> srcDir [ 
 	"Answer the value of srcDir"
 
-	^ srcDir ifNil: [ srcDir := self topDir / 'stacksrc' ]
+	^ srcDir ifNil: [ srcDir := (self topDir / 'stacksrc') fullName ]
 ]
