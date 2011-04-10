@@ -203,6 +203,7 @@ CocoaIOSCogConfig >> setExtraTargetProperties: maker [
 		cmd: 'set_target_properties' 
 		params: self executableName, ' PROPERTIES COMPILE_FLAGS "-include \"', (self topDir / 'build' / self prefixHeaderFileName) fullName, '\""'. 
 	
+	maker set: 'EXECUTABLE_OUTPUT_PATH' toString: self outputDir.
 ]
 
 { #category : #'source files' }
