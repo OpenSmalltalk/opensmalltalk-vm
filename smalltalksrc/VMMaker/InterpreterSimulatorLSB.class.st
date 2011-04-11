@@ -39,7 +39,7 @@ InterpreterSimulatorLSB >> byteAt: byteAddress put: byte [
 	}).
 
 	self longAt: longAddress put: long.
-	^byte
+
 ]
 
 { #category : #'debug support' }
@@ -48,6 +48,24 @@ InterpreterSimulatorLSB >> charsOfLong: long [
 		[:i | ((long digitAt: i) between: 14 and: 126)
 					ifTrue: [(long digitAt: i) asCharacter]
 					ifFalse: [$?]]
+]
+
+{ #category : #'debug support' }
+InterpreterSimulatorLSB >> displayForm: f [
+	| width height depth bits realForm simDisp realDisp |
+	bits := self fetchPointer: 0 ofObject: f.
+	width := self fetchInteger: 1 ofObject: f.
+	height := self fetchInteger: 2 ofObject: f.
+	depth := self fetchInteger: 3 ofObject: f.
+	realForm := Form extent: width@height depth: depth.
+	simDisp := Form new hackBits: memory.
+	realDisp := Form new hackBits: realForm bits.
+	realDisp
+		copy: (0 @ 0 extent: 4 @ realForm bits size)
+		from: (0 @ (bits + 4 // 4))
+		in: simDisp
+		rule: Form over.
+	realForm displayOn: Display at: 0@0.
 ]
 
 { #category : #'memory access' }
@@ -68,7 +86,7 @@ InterpreterSimulatorLSB >> halfWordLowInLong32: long32 [
 InterpreterSimulatorLSB >> nextLongFrom: aStream [
 	"Read a 32- or 64-bit quantity from the given (binary) stream."
 
-	^ aStream nextLittleEndianNumber: BytesPerWord
+	^ aStream nextLittleEndianNumber: self bytesPerWord
 ]
 
 { #category : #'image save/restore' }

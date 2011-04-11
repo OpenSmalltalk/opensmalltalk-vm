@@ -15,7 +15,7 @@ FilePluginSimulator class >> shouldBeTranslated [
 
 { #category : #simulation }
 FilePluginSimulator >> fileValueOf: objectPointer [
-	^interpreterProxy interpreter fileValueOf: objectPointer
+	^interpreterProxy fileValueOf: objectPointer
 ]
 
 { #category : #'file security' }
@@ -79,23 +79,26 @@ FilePluginSimulator >> makeDirEntryName: entryName size: entryNameSize
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> primitiveDirectoryEntry [
-	^interpreterProxy interpreter primitiveDirectoryEntry
+FilePluginSimulator >> oopForPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	oop is the width of a machine word, and pointer is a raw address."
+
+	^ pointer
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> primitiveDirectoryLookup [
-	^interpreterProxy interpreter primitiveDirectoryLookup
+	^interpreterProxy primitiveDirectoryLookup
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> primitiveFileDelete [ 
-	^interpreterProxy interpreter primitiveFileDelete 
+	^interpreterProxy primitiveFileDelete 
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> primitiveFileOpen [
-	^interpreterProxy interpreter primitiveFileOpen
+	^interpreterProxy primitiveFileOpen
 ]
 
 { #category : #simulation }
@@ -104,18 +107,13 @@ FilePluginSimulator >> primitiveFileRename [
 ]
 
 { #category : #simulation }
-FilePluginSimulator >> primitiveFileStdioHandles [
-	^interpreterProxy interpreter primitiveFileStdioHandles
-]
-
-{ #category : #simulation }
 FilePluginSimulator >> sqFile: file Read: count Into: byteArrayIndex At: startIndex [
-	^interpreterProxy interpreter sqFile: file Read: count Into: byteArrayIndex At: startIndex
+	^interpreterProxy sqFile: file Read: count Into: byteArrayIndex At: startIndex
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file SetPosition: newPosition [
-	^interpreterProxy interpreter sqFile: file SetPosition: newPosition
+	^interpreterProxy sqFile: file SetPosition: newPosition
 ]
 
 { #category : #simulation }
@@ -125,27 +123,27 @@ FilePluginSimulator >> sqFile: file Truncate: truncatePosition [
 
 { #category : #simulation }
 FilePluginSimulator >> sqFile: file Write: count From: byteArrayIndex At: startIndex [
-	^interpreterProxy interpreter sqFile: file Write: count From: byteArrayIndex At: startIndex
+	^interpreterProxy sqFile: file Write: count From: byteArrayIndex At: startIndex
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileAtEnd: file [
-	^interpreterProxy interpreter sqFileAtEnd: file
+	^interpreterProxy sqFileAtEnd: file
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileClose: file [
-	^interpreterProxy interpreter sqFileClose: file
+	^interpreterProxy sqFileClose: file
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileFlush: file [
-	^interpreterProxy interpreter sqFileFlush: file
+	^interpreterProxy sqFileFlush: file
 ]
 
 { #category : #simulation }
 FilePluginSimulator >> sqFileGetPosition: file [
-	^interpreterProxy interpreter sqFileGetPosition: file
+	^interpreterProxy sqFileGetPosition: file
 ]
 
 { #category : #simulation }

@@ -5,7 +5,6 @@ Class {
 	#name : #VMPluginCodeGenerator,
 	#superclass : #CCodeGenerator,
 	#instVars : [
-		'pluginClass',
 		'pluginName'
 	],
 	#category : #'VMMaker-Translation to C'
@@ -50,16 +49,18 @@ VMPluginCodeGenerator >> emitCHeaderForPrimitivesOn: aStream [
 VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 	"Write a C file header onto the given stream."
 
-	aStream nextPutAll: (self fileHeaderVersionStampForSourceClass: pluginClass).
-	aStream cr; cr.
+	aStream nextPutAll: '/* '.
+	aStream nextPutAll: VMMaker headerNotice.
+	aStream nextPutAll: ' */';cr.
 
-	#('<math.h>' '<stdio.h>' '<stdlib.h>' '<string.h>' '<time.h>') reverseDo:
-		[:hdr| headerFiles addFirst: hdr].
+	aStream nextPutAll:'
+#include <math.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <time.h>
 
-	"Additional header files; include C library ones first."
-	self emitHeaderFiles: (headerFiles select: [:hdr| hdr includes: $<]) on: aStream.
-
-	aStream cr; nextPutAll:'/* Default EXPORT macro that does nothing (see comment in sq.h): */
+/* Default EXPORT macro that does nothing (see comment in sq.h): */
 #define EXPORT(returnType) returnType
 
 /* Do not include the entire sq.h file but just those parts needed. */
@@ -77,27 +78,19 @@ VMPluginCodeGenerator >> emitCHeaderOn: aStream [
 #undef EXPORT
 // was #undef EXPORT(returnType) but screws NorCroft cc
 #define EXPORT(returnType) static returnType
-#endif'; cr; cr.
-	headerFiles addLast: '"sqMemoryAccess.h"'.
-	"Additional header files; include squeak VM ones last"
-	self emitHeaderFiles: (headerFiles reject: [:hdr| hdr includes: $<]) on: aStream.
-	pluginClass preambleCCode ifNotNil:
-		[:preamble|
-		aStream cr; nextPutAll: preamble].
-	aStream cr.
-]
+#endif
+'.
 
-{ #category : #'C code generator' }
-VMPluginCodeGenerator >> emitCTypesOn: aStream [ 
-	"Store local type declarations on the given stream."
-	([pluginClass ancilliaryStructClasses]
-		on: MessageNotUnderstood
-		do: [:ex| ex message selector == #ancilliaryStructClasses ifTrue: [^self].
-				ex pass]) do:
-			[:structClass|
-			(pluginClass shouldGenerateTypedefFor: structClass) ifTrue:
-				[structClass printTypedefOn: aStream.
-				 aStream cr; cr]]
+	"Additional header files"
+	headerFiles do:[:hdr|
+		aStream nextPutAll:'#include '; nextPutAll: hdr; cr].
+
+
+	aStream nextPutAll: '
+#include "sqMemoryAccess.h"
+
+'.
+	aStream cr.
 ]
 
 { #category : #'C code generator' }
@@ -106,11 +99,13 @@ VMPluginCodeGenerator >> emitExportsOn: aStream [
 	| prefix |
 	aStream nextPutAll:'
 
-#ifdef SQUEAK_BUILTIN_PLUGIN
+#ifdef SQUEAK_BUILTIN_PLUGIN';cr.
+
+	aStream nextPutAll:'
 
 void* ', pluginName,'_exports[][3] = {'.
 	prefix := '"', pluginName,'"'.
-	(self sortStrings: self exportedPrimitiveNames) do:[:primName|
+	self exportedPrimitiveNames do:[:primName|
 		aStream cr;
 			nextPutAll:'	{'; 
 			nextPutAll: prefix; 
@@ -123,9 +118,12 @@ void* ', pluginName,'_exports[][3] = {'.
 	aStream nextPutAll:'
 	{NULL, NULL, NULL}
 };
+'.
+	aStream nextPutAll:'
 
 #endif /* ifdef SQ_BUILTIN_PLUGIN */
-'
+
+'.
 ]
 
 { #category : #public }
@@ -149,23 +147,18 @@ VMPluginCodeGenerator >> isGeneratingPluginCode [
 	^true
 ]
 
-{ #category : #public }
-VMPluginCodeGenerator >> localizeGlobalVariables [
-"TPR - we don't do this for plugins"
+{ #category : #'C code generator' }
+VMPluginCodeGenerator >> isTypePointerToStruct: type [ "<String>"
+	^pluginClass notNil
+	  and: [[pluginClass isTypePointerToStruct: type]
+			on: MessageNotUnderstood
+			do: [:ex| ex message selector == #isTypePointerToStruct: ifTrue: [^false].
+					ex pass]]
 ]
 
 { #category : #public }
-VMPluginCodeGenerator >> pluginClass: aPluginClass [
-	"Set the plugin class and name when generating plugins."
-	| packageId |
-	pluginClass := aPluginClass.
-	pluginName := pluginClass moduleName.
-	packageId := self shortMonticelloDescriptionForClass: pluginClass.
-	(packageId beginsWith: pluginClass name) ifTrue:
-		[packageId := packageId allButFirst: pluginClass name size].
-	(packageId beginsWith: pluginName) ifTrue:
-		[packageId := packageId allButFirst: pluginName size].
-	self declareModuleName: pluginClass moduleNameAndVersion, packageId
+VMPluginCodeGenerator >> localizeGlobalVariables [
+"TPR - we don't do this for plugins"
 ]
 
 { #category : #public }
@@ -198,7 +191,7 @@ typedef struct VirtualMachine {
 
 	categoryList do:[:assoc|
 		stream cr; crtab; nextPutAll:'/* InterpreterProxy methodsFor: ''',assoc key, ''' */'; cr; crtab.
-		(self sortStrings: assoc value) do:[:sel|
+		assoc value asSortedCollection do:[:sel|
 			(methods at: sel) emitProxyFunctionPrototype: stream generator: self.
 			stream nextPutAll: ';'; crtab]].
 
@@ -226,9 +219,9 @@ VMPluginCodeGenerator >> storeVirtualMachineProxyImplementation: categoryList on
 
 	categoryList do:[:assoc|
 		stream cr; cr; nextPutAll:'/* InterpreterProxy methodsFor: ''',assoc key, ''' */'; cr.
-		(self sortStrings: assoc value) do:[:sel|
+		assoc value asSortedCollection do:[:sel|
 			(methods at: sel) emitCFunctionPrototype: stream generator: self.
-			stream nextPut: $;; cr]].
+			stream nextPutAll: ';'; cr]].
 
 	stream cr; nextPutAll:'struct VirtualMachine *VM = NULL;'; cr.
 	stream cr; nextPutAll:

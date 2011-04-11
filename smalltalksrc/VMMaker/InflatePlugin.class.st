@@ -130,7 +130,7 @@ InflatePlugin >> primitiveInflateDecompressBlock [
 InflatePlugin >> zipDecodeValueFrom: table size: tableSize [
 	"Decode the next value in the receiver using the given huffman table."
 	| bits bitsNeeded tableIndex value index |
-	<var: #table type:'unsigned int *'>
+	<var: #table type: 'unsigned int *'>
 	bitsNeeded := (table at: 0) bitShift: -24.	"Initial bits needed"
 	bitsNeeded > MaxBits ifTrue:[interpreterProxy primitiveFail. ^0].
 	tableIndex := 2.							"First real table"

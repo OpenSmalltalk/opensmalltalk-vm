@@ -23,6 +23,14 @@ TAssignmentNode >> bindVariablesIn: aDictionary [
 	expression := expression bindVariablesIn: aDictionary.
 ]
 
+{ #category : #'as yet unclassified' }
+TAssignmentNode >> copyTree [
+
+	^self class new
+		setVariable: variable copyTree
+		expression: expression copyTree
+]
+
 { #category : #'C code generation' }
 TAssignmentNode >> emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen [
 	aStream nextPut: $(.
@@ -54,10 +62,24 @@ TAssignmentNode >> expression [
 	^expression
 ]
 
+{ #category : #'as yet unclassified' }
+TAssignmentNode >> inlineMethodsUsing: aDictionary [
+
+	variable inlineMethodsUsing: aDictionary.
+	expression inlineMethodsUsing: aDictionary.
+]
+
 { #category : #testing }
 TAssignmentNode >> isAssignment [
 
 	^true
+]
+
+{ #category : #testing }
+TAssignmentNode >> isStructTarget: aCodeGen [
+	"Answer if the recever evaluates to a struct pointer
+	 and hence can be dereferenced using ->"
+	^variable isStructTarget: aCodeGen
 ]
 
 { #category : #testing }
@@ -79,34 +101,6 @@ TAssignmentNode >> nodesDo: aBlock [
 	variable nodesDo: aBlock.
 	expression nodesDo: aBlock.
 	aBlock value: self.
-]
-
-{ #category : #enumerating }
-TAssignmentNode >> nodesDo: aBlock unless: cautionaryBlock [
-
-	(cautionaryBlock value: self) ifTrue: [^self].
-	variable nodesDo: aBlock unless: cautionaryBlock.
-	expression nodesDo: aBlock unless: cautionaryBlock.
-	aBlock value: self.
-]
-
-{ #category : #copying }
-TAssignmentNode >> postCopy [
-
-	variable := variable copy.
-	expression := expression copy
-]
-
-{ #category : #'C code generation' }
-TAssignmentNode >> prependCCodeOn: aStream level: level generator: aCodeGen [
-	variable emitCCodeOn: aStream level: level generator: aCodeGen.
-	aStream
-		space;
-		nextPutAll: (self isVariableUpdatingAssignment
-						ifTrue: [expression selector "+ or -"]
-						ifFalse: ['']);
-		nextPut: $=;
-		space
 ]
 
 { #category : #printing }
@@ -137,14 +131,6 @@ TAssignmentNode >> setVariable: varNode expression: expressionNode [
 
 	variable := varNode.
 	expression := expressionNode.
-]
-
-{ #category : #testing }
-TAssignmentNode >> structTargetKind: aCodeGen [
-	"Answer if the recever evaluates to a struct or struct pointer
-	 and hence can be dereferenced using . or ->.  Answer any of
-	 #struct #pointer or nil"
-	^variable structTargetKind: aCodeGen
 ]
 
 { #category : #accessing }

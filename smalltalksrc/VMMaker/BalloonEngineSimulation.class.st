@@ -6,7 +6,6 @@ Class {
 	#superclass : #BalloonEnginePlugin,
 	#instVars : [
 		'bbObj',
-		'savedBBObj',
 		'workBufferArray'
 	],
 	#category : #'VMMaker-InterpreterSimulation'
@@ -44,12 +43,9 @@ BalloonEngineSimulation >> copyBitsFrom: x0 to: x1 at: y [
 	| bb |
 	bbObj isInteger ifTrue:
 		["Create a proxy object to handle BitBlt calls"
-		bb := savedBBObj
-				ifNil: [BitBltSimulator new
-						initialiseModule;
-						setInterpreter: interpreterProxy;
-						yourself]
-				ifNotNil: [savedBBObj].
+		bb := BitBltSimulator new.
+		bb initialiseModule.
+		bb setInterpreter: interpreterProxy.
 		(bb loadBitBltFrom: bbObj)
 			ifTrue: [bbObj := bb]
 			ifFalse: [^ self]].
@@ -208,8 +204,6 @@ BalloonEngineSimulation >> ioMicroMSecs [
 
 { #category : #simulation }
 BalloonEngineSimulation >> loadBitBltFrom: oop [
-	(bbObj isInteger or: [bbObj isNil]) ifFalse:
-		[savedBBObj := bbObj].
 	bbObj := oop.
 	^true
 ]
@@ -241,12 +235,12 @@ BalloonEngineSimulation >> loadWordTransformFrom: transformOop into: destPtr len
 
 	| srcPtr wordDestPtr |
 
-	false ifTrue:
-		[^super loadWordTransformFrom: transformOop into: destPtr length: n].
+true ifTrue:
+[^ super loadWordTransformFrom: transformOop into: destPtr length: n].
 
 	srcPtr := interpreterProxy firstIndexableField: transformOop.
 	wordDestPtr := destPtr as: CArrayAccessor.  "Remove float conversion shell"
-	0 to: n-1 do: [:i | wordDestPtr at: i put: (srcPtr floatAt: i)]
+	0 to: n-1 do: [:i | wordDestPtr at: i put: (srcPtr at: i)].
 ]
 
 { #category : #simulation }

@@ -13,15 +13,17 @@ TInlineNode >> bindVariableUsesIn: aDictionary [
 
 ]
 
+{ #category : #accessing }
+TInlineNode >> copyTree [
+
+	^self class new
+		method: method copy
+]
+
 { #category : #'C code generation' }
 TInlineNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 	method emitInlineOn: aStream level: level generator: aCodeGen.
 
-]
-
-{ #category : #testing }
-TInlineNode >> isInline [
-	^true
 ]
 
 { #category : #accessing }
@@ -40,20 +42,6 @@ TInlineNode >> nodesDo: aBlock [
 	aBlock value: self.
 ]
 
-{ #category : #enumerating }
-TInlineNode >> nodesDo: aBlock unless: cautionaryBlock [
-
-	(cautionaryBlock value: self) ifTrue: [^self].
-	method parseTree nodesDo: aBlock unless: cautionaryBlock.
-	aBlock value: self.
-]
-
-{ #category : #copying }
-TInlineNode >> postCopy [
-
-	method := method copy
-]
-
 { #category : #printing }
 TInlineNode >> printOn: aStream level: anInteger [
 	method parseTree printOn: aStream level: anInteger
@@ -64,9 +52,4 @@ TInlineNode >> replaceNodesIn: map [
 	^map at: self ifAbsent: [
 		method replaceNodesIn: map.
 		self]
-]
-
-{ #category : #inlining }
-TInlineNode >> shouldExpand [
-	^method extractExpandCaseDirective
 ]

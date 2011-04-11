@@ -273,14 +273,13 @@ SmartSyntaxPluginCodeGenerator >> ccgTVarBlock: anInteger [
 
 { #category : #coercing }
 SmartSyntaxPluginCodeGenerator >> ccgValBlock: valString [
-
 	^[:index | String streamContents:
 		[:aStream | aStream
 			nextPutAll: 'interpreterProxy success: (interpreterProxy ';
 			nextPutAll: valString;
 			nextPutAll: ': (interpreterProxy stackValue: ';
 			nextPutAll: index asString;
-			nextPutAll: '))']] 
+			nextPutAll: '))']]
 ]
 
 { #category : #linking }
@@ -437,9 +436,8 @@ SmartSyntaxPluginCodeGenerator >> generateAsCDouble: aNode on: aStream indent: a
 { #category : #'translating builtins' }
 SmartSyntaxPluginCodeGenerator >> generateAsCInt: aNode on: aStream indent: anInteger [
 
-	aStream nextPut: $(.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ' >> 1)'.
+	aStream nextPutAll: ' >> 1'.
 ]
 
 { #category : #'translating builtins' }
@@ -596,13 +594,12 @@ SmartSyntaxPluginCodeGenerator >> generateAsValue: aNode on: aStream indent: anI
 ]
 
 { #category : #'translating builtins' }
-SmartSyntaxPluginCodeGenerator >> generateCPtrAsOop: aNode on: aStream indent: anInteger [
+SmartSyntaxPluginCodeGenerator >> generateCPtrAsOop: aNode on: aStream indent: anInteger [ 
 
-	aStream nextPutAll: '((sqInt)(long)('.
+	aStream nextPutAll: '('.
+	aStream nextPutAll: 'oopForPointer( '.
 	self emitCExpression: aNode receiver on: aStream.
-	aStream nextPutAll: ') - ';
-		nextPutAll: ObjectMemory baseHeaderSize printString;
-		nextPut: $).
+	aStream nextPutAll: ' ) - BASE_HEADER_SIZE)'
 ]
 
 { #category : #'translating builtins' }
@@ -649,9 +646,9 @@ SmartSyntaxPluginCodeGenerator >> generateCoerceToFloatValueFrom: aNode on: aStr
 SmartSyntaxPluginCodeGenerator >> generateCoerceToObjectFromPtr: aNode on: aStream [
 	"This code assumes no named instance variables"
 
-	aStream nextPutAll: '((int) '.
+	aStream nextPutAll: 'oopForPointer('.
 	self emitCExpression: aNode on: aStream.
-	aStream nextPutAll: ') - 4'
+	aStream nextPutAll: ') - BASE_HEADER_SIZE'
 ]
 
 { #category : #'asOop:/asValue:' }

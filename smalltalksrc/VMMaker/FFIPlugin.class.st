@@ -6,6 +6,7 @@ Class {
 	#superclass : #InterpreterPlugin,
 	#instVars : [
 		'ffiLastError',
+		'ffiArgClass',
 		'ffiArgSpec',
 		'ffiArgSpecSize',
 		'ffiArgHeader',
@@ -13,9 +14,7 @@ Class {
 		'ffiRetClass',
 		'ffiRetSpec',
 		'ffiRetSpecSize',
-		'ffiRetHeader',
-		'ffiLogEnabled',
-		'externalFunctionInstSize'
+		'ffiRetHeader'
 	],
 	#pools : [
 		'FFIConstants'
@@ -81,7 +80,6 @@ FFIPlugin >> ffiArgByValue: oop [
 	"Support for generic callout. Prepare an argument by value for a callout."
 	| atomicType intValue floatValue |
 	<inline: true>
-	<var: #floatValue type: 'double'>
 	atomicType := self atomicTypeOf: ffiArgHeader.
 	"check if the range is valid"
 	(atomicType < 0 or:[atomicType > FFITypeDoubleFloat])
@@ -157,6 +155,8 @@ FFIPlugin >> ffiArgument: oop Spec: argSpec Class: argClass [
 	isStruct
 		ifTrue:[valueOop := interpreterProxy fetchPointer: 0 ofObject: oop]
 		ifFalse:[valueOop := oop].
+
+	ffiArgClass := argClass.
 
 	"Fetch and check the contents of the compiled spec"
 	(interpreterProxy isIntegerObject: argSpec)
@@ -392,7 +392,7 @@ FFIPlugin >> ffiContentsOfHandle: oop errCode: errCode [
 FFIPlugin >> ffiCreateLongLongReturn: isSigned [
 	"Create a longlong return value from a previous call out"
 	| lowWord highWord largeClass nBytes largeInt ptr |
-	<var: #ptr type:'unsigned char *'>
+	<var: #ptr type: 'unsigned char *'>
 	lowWord := self ffiLongLongResultLow.
 	highWord := self ffiLongLongResultHigh.
 	isSigned ifTrue:["check for 32 bit signed"
@@ -509,7 +509,7 @@ FFIPlugin >> ffiCreateReturnOop: retVal [
 FFIPlugin >> ffiCreateReturnPointer: retVal [
 	"Generic callout support. Create a pointer return value from an external function call"
 	| atomicType retOop oop ptr classOop |
-	<var: #ptr type:'int *'>
+	<var: #ptr type: 'int *'>
 	interpreterProxy failed ifTrue:[^nil].
 	interpreterProxy pop: interpreterProxy methodArgumentCount+1.
 	(ffiRetClass == interpreterProxy nilObject) ifTrue:[
@@ -576,25 +576,16 @@ FFIPlugin >> ffiCreateReturnStruct [
 
 { #category : #'callout support' }
 FFIPlugin >> ffiFail: reason [
-	<inline: false>
-	"Map the FFI error code into a primitive error code.  If reason is negative it encodes one of the
-	 standard PrimErr... codes, negated to distinguish it from the FFIError codes.  If it is an FFIError...
-	 code then add the size of the primitive error table + 2 to disambiguate it from the PrimErr... codes.
-	 For historic reasons the FFIError codes range from -1 on up hence adding size + 2 maps them to
-	 size of table + 1 on up.  This OFFSET IS undone by ExternalFunction class>>externalCallFailedWith:.
-	 Thus we can communicate back both PrimErr.. and FFIError codes.  Complex but necessary in the ThreadedFFIPlugin."
+	<inline: true>
 	self ffiSetLastError: reason.
-	^interpreterProxy primitiveFailFor:
-		(reason >= FFINoCalloutAvailable
-			ifTrue: [reason + 2 + (interpreterProxy slotSizeOf: interpreterProxy primitiveErrorTable)]
-			ifFalse: [reason negated])
+	^interpreterProxy primitiveFail
 ]
 
 { #category : #'callout support' }
 FFIPlugin >> ffiFloatValueOf: oop [
 	"Support for generic callout. Return a float value that is coerced as C would do."
 	| oopClass |
-	<returnTypeC:'double'>
+	<returnTypeC: 'double'>
 	oopClass := interpreterProxy fetchClassOf: oop.
 	oopClass == interpreterProxy classFloat
 		ifTrue:[^interpreterProxy floatValueOf: oop].
@@ -630,7 +621,7 @@ FFIPlugin >> ffiIntegerValueOf: oop [
 FFIPlugin >> ffiLoadCalloutAddress: lit [
 	"Load the address of the foreign function from the given object"
 	| addressPtr address ptr |
-	<var: #ptr type:'int *'>
+	<var: #ptr type: 'int *'>
 	"Lookup the address"
 	addressPtr := interpreterProxy fetchPointer: 0 ofObject: lit.
 	"Make sure it's an external handle"
@@ -652,21 +643,19 @@ FFIPlugin >> ffiLoadCalloutAddressFrom: oop [
 	| module moduleHandle functionName functionLength address |
 	<inline: false>
 	"First find and load the module"
-	module := interpreterProxy fetchPointer: externalFunctionInstSize + 1 ofObject: oop.
+	module := interpreterProxy fetchPointer: 4 ofObject: oop.
 	moduleHandle := self ffiLoadCalloutModule: module.
-	interpreterProxy failed ifTrue:
-		[^0]. "failed"
+	interpreterProxy failed ifTrue:[^0]. "failed"
 	"fetch the function name"
-	functionName := interpreterProxy fetchPointer: externalFunctionInstSize ofObject: oop.
-	(interpreterProxy isBytes: functionName) ifFalse:
-		[^self ffiFail: FFIErrorBadExternalFunction].
+	functionName := interpreterProxy fetchPointer: 3 ofObject: oop.
+	(interpreterProxy isBytes: functionName) ifFalse:[^self ffiFail: FFIErrorBadExternalFunction].
 	functionLength := interpreterProxy byteSizeOf: functionName.
-	address := interpreterProxy
-					ioLoadSymbol: (self cCoerce: (interpreterProxy firstIndexableField: functionName) to: #int)
+	address := interpreterProxy ioLoadSymbol: 
+					(self cCoerce: (interpreterProxy firstIndexableField: functionName) to:'int')
 					OfLength: functionLength 
 					FromModule: moduleHandle.
-	(interpreterProxy failed or: [address = 0]) ifTrue:
-		[^self ffiFail: FFIErrorAddressNotFound].
+	(interpreterProxy failed or:[address = 0])
+		ifTrue:[^self ffiFail: FFIErrorAddressNotFound].
 	^address
 ]
 
@@ -674,7 +663,7 @@ FFIPlugin >> ffiLoadCalloutAddressFrom: oop [
 FFIPlugin >> ffiLoadCalloutModule: module [
 	"Load the given module and return its handle"
 	| moduleHandlePtr moduleHandle ffiModuleName moduleLength rcvr theClass ptr |
-	<var: #ptr type:'int *'>
+	<var: #ptr type: 'int *'>
 	(interpreterProxy isBytes: module) ifTrue:[
 		"plain module name"
 		ffiModuleName := module.
@@ -703,37 +692,6 @@ FFIPlugin >> ffiLoadCalloutModule: module [
 	^moduleHandle
 ]
 
-{ #category : #'symbol loading' }
-FFIPlugin >> ffiLogCallout: lit [
-	"fetch the function name"
-	| functionName |
-	ffiLogEnabled ifTrue:[
-		functionName := interpreterProxy fetchPointer: externalFunctionInstSize ofObject: lit.
-		(interpreterProxy isBytes: functionName) ifFalse:[^nil].
-		self ffiLogCall: (interpreterProxy firstIndexableField: functionName)
-			OfLength: (interpreterProxy byteSizeOf: functionName).
-	].
-]
-
-{ #category : #initialize }
-FFIPlugin >> ffiLogCallsTo: fileName [
-	"This is a special entry point exposed such that client code can 
-	enable and disable logging of FFI calls."
-	| ok |
-	<export: true>
-	<var: #fileName type: 'char*'>
-	fileName == nil ifTrue:[ "disable logging"
-		ok := self ffiLogFileName: nil OfLength: 0.
-		ok ifFalse:[^false].
-		ffiLogEnabled := false.
-	] ifFalse:[ "enable logging"
-		ok := self ffiLogFileName: fileName OfLength: (self strlen: fileName).
-		ok ifFalse:[^false].
-		ffiLogEnabled := true.
-	].
-	^true
-]
-
 { #category : #'callout support' }
 FFIPlugin >> ffiPushPointerContentsOf: oop [
 	"Push the contents of the given external structure"
@@ -758,7 +716,7 @@ FFIPlugin >> ffiPushSignedLongLongOop: oop [
 	"Push a longlong type (e.g., a 64bit integer).
 	Note: Coercions from float are *not* supported."
 	| lowWord highWord length oopClass negative ptr |
-	<var: #ptr type:'unsigned char *'>
+	<var: #ptr type: 'unsigned char *'>
 	oop == interpreterProxy nilObject 
 		ifTrue:[^self ffiPushSignedLong: 0 Long: 0.]. "@@: check this"
 	oop == interpreterProxy falseObject
@@ -836,7 +794,7 @@ FFIPlugin >> ffiPushUnsignedLongLongOop: oop [
 	"Push a longlong type (e.g., a 64bit integer).
 	Note: Coercions from float are *not* supported."
 	| lowWord highWord length ptr |
-	<var: #ptr type:'unsigned char *'>
+	<var: #ptr type: 'unsigned char *'>
 	oop == interpreterProxy nilObject 
 		ifTrue:[^self ffiPushUnsignedLong: 0 Long: 0.]. "@@: check this"
 	oop == interpreterProxy falseObject 
@@ -875,8 +833,8 @@ FFIPlugin >> ffiPushVoid: ignored [
 FFIPlugin >> ffiReturnCStringFrom: cPointer [
 	"Create a Smalltalk string from a zero terminated C string"
 	| strLen strOop cString strPtr |
-	<var: #cString type:'char *'>
-	<var: #strPtr type:'char *'>
+	<var: #cString type: 'char *'>
+	<var: #strPtr type: 'char *'>
 	cPointer = nil ifTrue:[
 		^interpreterProxy push: interpreterProxy nilObject]. "nil always returs as nil"
 	cString := self cCoerce: cPointer to:'char *'.
@@ -927,16 +885,10 @@ FFIPlugin >> ffiValidateExternalData: oop AtomicType: atomicType [
 	^0
 ]
 
-{ #category : #initialize }
+{ #category : #primitives }
 FFIPlugin >> initialiseModule [
 	<export: true>
 	self initSurfacePluginFunctionPointers.
-	"By default, disable logging"
-	ffiLogEnabled := false.
-	"Get the instSize of ExternalFunction to know whether it contains a cache of the stackSize,
-	 and what the offset of ExternalLibraryFunction's functionName and moduleName slots are."
-	externalFunctionInstSize := interpreterProxy instanceSizeOf: interpreterProxy classExternalFunction.
-	^1
 ]
 
 { #category : #'primitive support' }
@@ -979,7 +931,6 @@ FFIPlugin >> primitiveCallout [
 	"must be argumentCount+1 arg types"
 	nArgs = (interpreterProxy methodArgumentCount+1) 
 		ifFalse:[^self ffiFail: FFIErrorBadArgs].
-	self ffiLogCallout: lit.
 	self ffiInitialize. "announce the execution of an external call"
 	self ffiCall: address 
 		WithFlags: flags 
@@ -1081,7 +1032,7 @@ FFIPlugin >> primitiveFFIAllocate [
 	| byteSize addr oop ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type:'int *'>
+	<var: #ptr type: 'int *'>
 	byteSize := interpreterProxy stackIntegerValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	addr := self ffiAlloc: byteSize.
@@ -1102,7 +1053,7 @@ FFIPlugin >> primitiveFFIDoubleAt [
 	| byteOffset rcvr addr floatValue |
 	<export: true>
 	<inline: false>
-	<var: #floatValue type:'double '>
+	<var: #floatValue type: 'double '>
 	byteOffset := interpreterProxy stackIntegerValue: 0.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
@@ -1121,7 +1072,7 @@ FFIPlugin >> primitiveFFIDoubleAtPut [
 	| byteOffset rcvr addr floatValue floatOop |
 	<export: true>
 	<inline: false>
-	<var: #floatValue type:'double '>
+	<var: #floatValue type: 'double '>
 	floatOop := interpreterProxy stackValue: 0.
 	(interpreterProxy isIntegerObject: floatOop)
 		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: floatOop) to:'double']
@@ -1143,7 +1094,7 @@ FFIPlugin >> primitiveFFIFloatAt [
 	| byteOffset rcvr addr floatValue |
 	<export: true>
 	<inline: false>
-	<var: #floatValue type:'float '>
+	<var: #floatValue type: 'float '>
 	byteOffset := interpreterProxy stackIntegerValue: 0.
 	rcvr := interpreterProxy stackObjectValue: 1.
 	interpreterProxy failed ifTrue:[^0].
@@ -1160,7 +1111,7 @@ FFIPlugin >> primitiveFFIFloatAtPut [
 	| byteOffset rcvr addr floatValue floatOop |
 	<export: true>
 	<inline: false>
-	<var: #floatValue type:'float '>
+	<var: #floatValue type: 'float '>
 	floatOop := interpreterProxy stackValue: 0.
 	(interpreterProxy isIntegerObject: floatOop)
 		ifTrue:[floatValue := self cCoerce: (interpreterProxy integerValueOf: floatOop) to:'float']
@@ -1181,7 +1132,7 @@ FFIPlugin >> primitiveFFIFree [
 	| addr oop ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type:'int *'>
+	<var: #ptr type: 'int *'>
 	oop := interpreterProxy stackObjectValue: 0.
 	interpreterProxy failed ifTrue:[^nil].
 	(interpreterProxy fetchClassOf: oop) = (interpreterProxy classExternalAddress)
@@ -1226,7 +1177,7 @@ FFIPlugin >> primitiveFFIIntegerAt [
 		"short/byte"
 		byteSize = 1 
 			ifTrue:[value := interpreterProxy byteAt: addr]
-			ifFalse:[	value := self cCode: '*((short int *) addr)' 
+			ifFalse:[	value := self cCode: '*((unsigned short int *) addr)' 
 								inSmalltalk: [interpreterProxy shortAt: addr]].
 		isSigned ifTrue:["sign extend value"
 			mask := 1 << (byteSize * 8 - 1).
@@ -1289,7 +1240,7 @@ FFIPlugin >> primitiveForceLoad [
 	| rcvr theClass moduleHandlePtr moduleHandle ffiModuleName moduleLength ptr |
 	<export: true>
 	<inline: false>
-	<var: #ptr type:'int *'>
+	<var: #ptr type: 'int *'>
 	self ffiSetLastError: FFIErrorGenericError. "educated guess if we fail silently"
 	interpreterProxy methodArgumentCount = 0
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -1313,29 +1264,6 @@ FFIPlugin >> primitiveForceLoad [
 	^0 "done"
 ]
 
-{ #category : #primitives }
-FFIPlugin >> primitiveLogCallsTo [
-	"Enable logging of FFI calls by providing it with a log file name."
-	| logFile ok |
-	<export: true>
-	interpreterProxy methodArgumentCount = 1 
-		ifFalse:[^interpreterProxy primitiveFail].
-	logFile := interpreterProxy stackObjectValue: 0.
-	logFile == interpreterProxy nilObject ifTrue:[ "disable logging"
-		ok := self ffiLogFileName: nil OfLength: 0.
-		ok ifFalse:[^interpreterProxy primitiveFail].
-		ffiLogEnabled := false.
-	] ifFalse:[ "enable logging"
-		(interpreterProxy isBytes: logFile) ifFalse:[^interpreterProxy primitiveFail].
-		ok := self ffiLogFileName: (interpreterProxy firstIndexableField: logFile)
-					OfLength: (interpreterProxy byteSizeOf: logFile).
-		ok ifFalse:[^interpreterProxy primitiveFail].
-		ffiLogEnabled := true.
-	].
-	^interpreterProxy pop: 1. "pop arg; return rcvr"
-
-]
-
 { #category : #'primitives - surfaces' }
 FFIPlugin >> primitiveSetManualSurfacePointer [
 	"Create a 'manual surface' data-structure.  See the ExternalForm class in the FFI package for example usage."
@@ -1344,7 +1272,7 @@ FFIPlugin >> primitiveSetManualSurfacePointer [
 		ptr(uint32, 0)"
 	| surfaceID ptr result |
 	<export: true>
-	<var: #ptr type: #'unsigned int'>
+	<var: #ptr type: 'unsigned int'>
 	
 	interpreterProxy methodArgumentCount == 2 ifFalse: [^interpreterProxy primitiveFail].
 	surfaceID := interpreterProxy stackIntegerValue: 1.
