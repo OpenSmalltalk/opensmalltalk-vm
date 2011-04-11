@@ -105,11 +105,6 @@ LargeIntegersPlugin class >> moduleNameAndVersion [
 	^ self moduleName, ' ', self version
 ]
 
-{ #category : #simulation }
-LargeIntegersPlugin class >> simulatorClass [
-	^SmartSyntaxPluginSimulator
-]
-
 { #category : #translation }
 LargeIntegersPlugin class >> version [
 	"Answer the receiver's version info as String."

@@ -14,6 +14,14 @@ TStmtListNode >> args [
 	^arguments
 ]
 
+{ #category : #converting }
+TStmtListNode >> asExpression [
+
+	^ (self statements size = 1)
+		ifTrue: [statements first]
+		ifFalse: [self error: 'multiple statements can not serve as a simple expression']
+]
+
 { #category : #transformations }
 TStmtListNode >> bindVariableUsesIn: aDictionary [
 
@@ -24,6 +32,14 @@ TStmtListNode >> bindVariableUsesIn: aDictionary [
 TStmtListNode >> bindVariablesIn: aDictionary [
 
 	statements := statements collect: [ :s | s bindVariablesIn: aDictionary ].
+]
+
+{ #category : #'as yet unclassified' }
+TStmtListNode >> copyTree [
+
+	^self class new
+		setArguments: arguments copy
+		statements: (statements collect: [ :s | s copyTree ])
 ]
 
 { #category : #'C code generation' }
@@ -42,31 +58,17 @@ TStmtListNode >> emitCCodeAsArgumentOn: aStream level: level generator: aCodeGen
 			  or: [statementWasComment]) ifFalse: [aStream nextPut: $,]]
 ]
 
-{ #category : #'C code generation' }
+{ #category : #'as yet unclassified' }
 TStmtListNode >> emitCCodeOn: aStream level: level generator: aCodeGen [
 
-	self emitCCodeOn: aStream prependToEnd: nil level: level generator: aCodeGen
-
-]
-
-{ #category : #'C code generation' }
-TStmtListNode >> emitCCodeOn: aStream prependToEnd: aNodeOrNil level: level generator: aCodeGen [
-
-	statements withIndexDo:
-		[:s :idx|
+	statements do: [:s |
 		s emitCCommentOn: aStream level: level.
 		aStream tab: level.
-		(aNodeOrNil notNil
-		 and: [idx = statements size])
-			ifTrue:
-				[aNodeOrNil prependCCodeOn: aStream level: level generator: aCodeGen.
-				 s emitCCodeAsExpressionOn: aStream level: level generator: aCodeGen]
-			ifFalse:
-				[s emitCCodeOn: aStream level: level generator: aCodeGen].
-		((self endsWithCloseBracket: aStream)
-		 or: [s isComment
-		 or: [s isPreprocessorDirective]]) ifFalse:
-			[aStream nextPut: $;].
+		s emitCCodeOn: aStream level: level generator: aCodeGen.
+		(((self endsWithCloseBracket: aStream) not
+			and: [(s isComment) not])
+				and: [s requiresCLineTerminator])
+			ifTrue: [aStream nextPut: $;].
 		aStream cr].
 
 ]
@@ -83,11 +85,10 @@ TStmtListNode >> endsWithCloseBracket: aStream [
 
 ]
 
-{ #category : #testing }
-TStmtListNode >> endsWithReturn [
-	"Answer true if the last statement of this lock is a return."
+{ #category : #'as yet unclassified' }
+TStmtListNode >> inlineMethodsUsing: aDictionary [
 
-	^statements last isReturn or: [statements last isReturningIf]
+	statements do: [ :s | s inlineMethodsUsing: aDictionary ].
 ]
 
 { #category : #testing }
@@ -110,21 +111,6 @@ TStmtListNode >> nodesDo: aBlock [
 
 	statements do: [ :s | s nodesDo: aBlock ].	
 	aBlock value: self.
-]
-
-{ #category : #enumerating }
-TStmtListNode >> nodesDo: aBlock unless: cautionaryBlock [
-
-	(cautionaryBlock value: self) ifTrue: [^self].
-	statements do: [ :s | s nodesDo: aBlock unless: cautionaryBlock ].	
-	aBlock value: self
-]
-
-{ #category : #copying }
-TStmtListNode >> postCopy [
-
-	arguments := arguments copy.
-	statements := statements collect: [ :s | s copy ]
 ]
 
 { #category : #printing }
@@ -193,11 +179,6 @@ TStmtListNode >> setArguments: argList statements: statementList [
 TStmtListNode >> setStatements: stmtList [
 
 	statements := stmtList asOrderedCollection.
-]
-
-{ #category : #inlining }
-TStmtListNode >> shouldExpand [
-	^(statements detect: [:stmt| stmt isInline]) shouldExpand
 ]
 
 { #category : #accessing }

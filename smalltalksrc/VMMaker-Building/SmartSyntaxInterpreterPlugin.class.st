@@ -4,9 +4,6 @@ Subclass of InterpreterPlugin, used in connection with TestCodeGenerator for nam
 Class {
 	#name : #SmartSyntaxInterpreterPlugin,
 	#superclass : #InterpreterPlugin,
-	#instVars : [
-		'simulator'
-	],
 	#category : #'VMMaker-SmartSyntaxPlugins'
 }
 
@@ -28,23 +25,12 @@ SmartSyntaxInterpreterPlugin class >> doPrimitive: primitiveName withArguments: 
 ]
 
 { #category : #translation }
-SmartSyntaxInterpreterPlugin class >> implicitReturnTypeFor: aSelector [
-	"Answer the return type for methods that don't have an explicit return."
-	^#void
-]
-
-{ #category : #translation }
-SmartSyntaxInterpreterPlugin class >> prepareToBeAddedToCodeGenerator: aCodeGen [
-	aCodeGen removeVariable: 'simulator'
-]
-
-{ #category : #translation }
 SmartSyntaxInterpreterPlugin class >> shouldBeTranslated [
 "SmartSyntaxInterpreterPlugin should not be translated but its subclasses should"
 	^self ~= SmartSyntaxInterpreterPlugin
 ]
 
-{ #category : #simulation }
+{ #category : #'instance creation' }
 SmartSyntaxInterpreterPlugin class >> simulatorClass [
 	"For running from Smalltalk - answer a class that can be used to simulate the receiver, or nil if you want the primitives in this module to always fail, causing simulation to fall through to the Smalltalk code.
 	By default SmartSyntaxInterpreterPlugin answers nil because methods in these plugins are intended to be embedded in code that pushes and pops from the stack and therefore cannot be run independently.  This wrapper code is generated when translated to C.  But, unfortunately, this code is missing during simulation.  There was an attempt to simulate this, but only the prologue code (getting arg from the stack) is simulated (see simulatePrologInContext:). The epologue code (popping args and pushing result) is not.  So I am making this nil until this can be fixed.
@@ -60,46 +46,6 @@ SmartSyntaxInterpreterPlugin class >> translateDoInlining: inlineFlag locally: l
 		doInlining: inlineFlag
 		locally: localFlag
 		debug: debugFlag
-]
-
-{ #category : #simulation }
-SmartSyntaxInterpreterPlugin >> primitive: primName parameters: parms [
-	<doNotGenerate>
-	^simulator primitive: primName parameters: parms
-]
-
-{ #category : #simulation }
-SmartSyntaxInterpreterPlugin >> primitive: primName parameters: anArray receiver: aClassSymbol [
-	<doNotGenerate>
-	^simulator primitive: primName parameters: anArray receiver: aClassSymbol
-]
-
-{ #category : #simulation }
-SmartSyntaxInterpreterPlugin >> remapOop: oopOrList in: aBlock [
-	<doNotGenerate>
-	| numIncrGCs numFullGCs result |
-	numIncrGCs := interpreterProxy statIncrGCs.
-	numFullGCs := interpreterProxy statFullGCs.
-	result := aBlock value.
-	"If you really did want to implement remapping you would try and locate the
-	 arguments in the caller context and update them via tempAt:put:.  But beware
-	 ambiguities.  You'd have to parse the bytecode to be sure to get the right temps."
-	(numIncrGCs ~= interpreterProxy statIncrGCs
-	or: [numFullGCs ~= interpreterProxy statFullGCs]) ifTrue:
-		[self error: 'GC occurred in middle of remapOop:in: and remapping in this context is not implemented'].
-	^result
-]
-
-{ #category : #accessing }
-SmartSyntaxInterpreterPlugin >> simulator [
-	<doNotGenerate>
-	^simulator
-]
-
-{ #category : #accessing }
-SmartSyntaxInterpreterPlugin >> simulator: aSmartSyntaxPluginSimulator [
-	<doNotGenerate>
-	simulator := aSmartSyntaxPluginSimulator
 ]
 
 { #category : #debugging }
