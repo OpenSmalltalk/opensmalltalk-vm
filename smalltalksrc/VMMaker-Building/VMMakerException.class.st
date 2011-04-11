@@ -6,8 +6,3 @@ Class {
 	#superclass : #Error,
 	#category : #'VMMaker-Building'
 }
-
-{ #category : #'priv handling' }
-VMMakerException >> isResumable [
-	^true
-]

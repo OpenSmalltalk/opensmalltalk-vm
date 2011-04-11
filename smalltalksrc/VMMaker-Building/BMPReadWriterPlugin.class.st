@@ -17,6 +17,7 @@ BMPReadWriterPlugin >> primitiveRead24BmpLine [
 	interpreterProxy methodArgumentCount = 4 
 		ifFalse:[^interpreterProxy primitiveFail].
 	width := interpreterProxy stackIntegerValue: 0.
+	width <= 0 ifTrue:[^interpreterProxy primitiveFail].
 	formBitsIndex := interpreterProxy stackIntegerValue: 1.
 	formBitsOop := interpreterProxy stackObjectValue: 2.
 	pixelLineOop := interpreterProxy stackObjectValue: 3.
@@ -59,6 +60,7 @@ BMPReadWriterPlugin >> primitiveWrite24BmpLine [
 	interpreterProxy methodArgumentCount = 4 
 		ifFalse:[^interpreterProxy primitiveFail].
 	width := interpreterProxy stackIntegerValue: 0.
+	width <= 0 ifTrue:[^interpreterProxy primitiveFail].
 	formBitsIndex := interpreterProxy stackIntegerValue: 1.
 	formBitsOop := interpreterProxy stackObjectValue: 2.
 	pixelLineOop := interpreterProxy stackObjectValue: 3.

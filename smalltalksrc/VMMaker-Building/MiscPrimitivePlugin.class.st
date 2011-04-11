@@ -1,5 +1,7 @@
 "
-This plugin pulls together a number of translatable methods with no particularly meaningful home. See class>translatedPrimitives for the list
+This plugin pulls together a number of translatable methods with no particularly meaningful home. See class>translatedPrimitives for the list.
+
+The primitives in this plugin consist of various methods in the image that can benefit greatly from translation to C, but that do not inherently require translation. These may be thought of not as traditional primitives, but as methods that have been annotated for translation to C by this plugin. This approach allows performance critical methods to be written entirely in Smalltalk, then marked for translation as needed to achieve improved performance.
 "
 Class {
 	#name : #MiscPrimitivePlugin,

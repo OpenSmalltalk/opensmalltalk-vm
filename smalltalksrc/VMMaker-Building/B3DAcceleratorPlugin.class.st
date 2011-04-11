@@ -4,9 +4,6 @@ B3DAcceleratorPlugin translate
 Class {
 	#name : #B3DAcceleratorPlugin,
 	#superclass : #InterpreterPlugin,
-	#instVars : [
-		'doRangeChecks'
-	],
 	#category : #'VMMaker-Plugins'
 }
 
@@ -33,40 +30,13 @@ B3DAcceleratorPlugin class >> requiresPlatformFiles [
 	^true
 ]
 
-{ #category : #'primitives-qwaq' }
-B3DAcceleratorPlugin >> checkBoundsRange: vertices faces: facePtr count: faceCount [
-	"Verify the bounds condition on the entire faces array"
-	| vtxSize |
-	<var: #facePtr type: 'unsigned int *'>
-	vtxSize := (interpreterProxy slotSizeOf: vertices) / 3.
-	0 to: faceCount-1 do:[:i|
-		(facePtr at: i) > vtxSize
-			ifTrue:[^interpreterProxy primitiveFail]].
-
-]
-
-{ #category : #'primitives-qwaq' }
-B3DAcceleratorPlugin >> checkVertexData: vertices [
-	"Check the entire vertex data to ensure no nan/inf values"
-	| vtxSize vtxPtr f |
-	<var: #vtxPtr type: 'float *'>
-	<var: #f type: 'float'>
-	vtxSize := interpreterProxy slotSizeOf: vertices.
-	vtxPtr := interpreterProxy firstIndexableField: vertices.
-	0 to: vtxSize-1 do:[:i|
-		f := vtxPtr at: i.
-		(self isnan: (f-f)) ifTrue:[^interpreterProxy primitiveFail].
-	].
-
-]
-
 { #category : #'primitive support' }
 B3DAcceleratorPlugin >> fetchLightSource: index ofObject: anArray [
 	"Fetch the primitive light source from the given array.
 	Note: No checks are done within here - that happened in stackLightArrayValue:"
 	| lightOop |
 	<inline: true>
-	<returnTypeC:'void*'>
+	<returnTypeC: 'void*'>
 	lightOop := interpreterProxy fetchPointer: index ofObject: anArray.
 	^interpreterProxy firstIndexableField: lightOop
 ]
@@ -74,57 +44,7 @@ B3DAcceleratorPlugin >> fetchLightSource: index ofObject: anArray [
 { #category : #'initialize-release' }
 B3DAcceleratorPlugin >> initialiseModule [
 	<export: true>
-	doRangeChecks := true.
 	^self b3dxInitialize
-]
-
-{ #category : #'primitives-qwaq' }
-B3DAcceleratorPlugin >> loadClientState: handle vertices: vertices colors: colors normals: normals texCoords: texCoords [
-	"Common method to set up client state for some render ops"
-	| vtxSize sz colorPtr normalPtr txPtr vertexPtr ok |
-	<var: #colorPtr type: 'void *'>
-	<var: #normalPtr type: 'void *'>
-	<var: #txPtr type: 'void *'>
-	<var: #vertexPtr type: 'void *'>
-
-	colorPtr := normalPtr := txPtr := vertexPtr := nil.
-
-	"Verify vertex data"
-	(interpreterProxy isWords: vertices)
-		ifFalse:[^interpreterProxy primitiveFail].
-	vtxSize := (interpreterProxy slotSizeOf: vertices) / 3.
-
-	"Verify assumptions of color, normal, texCoords data"
-	(colors = interpreterProxy nilObject 
-		or:[(interpreterProxy isWords: colors)
-		and:[(interpreterProxy slotSizeOf: colors) = (vtxSize * 4)]])
-			ifFalse:[^interpreterProxy primitiveFail].
-	(normals = interpreterProxy nilObject 
-		or:[(interpreterProxy isWords: normals)
-		and:[(interpreterProxy slotSizeOf: normals) = (vtxSize * 3)]])
-			ifFalse:[^interpreterProxy primitiveFail].
-	"Don't check size for texCoords since they can be 2,3,4 elements"
-	(texCoords = interpreterProxy nilObject 
-		or:[(interpreterProxy isWords: texCoords)])
-			ifFalse:[^interpreterProxy primitiveFail].
-
-	"Finally submit the data to OpenGL"
-	(colors = interpreterProxy nilObject) ifFalse:[
-		colorPtr := interpreterProxy firstIndexableField: colors.
-	].
-	(normals = interpreterProxy nilObject) ifFalse:[
-		normalPtr := interpreterProxy firstIndexableField: normals.
-	].
-	(texCoords = interpreterProxy nilObject) ifFalse:[
-		sz := (interpreterProxy slotSizeOf: texCoords) / vtxSize.
-		txPtr := interpreterProxy firstIndexableField: texCoords.
-	].
-	vertexPtr := interpreterProxy firstIndexableField: vertices.
-	interpreterProxy failed ifTrue:[^nil].
-	ok := self cCode:'b3dLoadClientState(handle, vertexPtr, 3, colorPtr, 4, normalPtr, 3, txPtr, sz)'
-		inSmalltalk:[vertexPtr. colorPtr. normalPtr. txPtr. sz false].
-	ok ifFalse:[^interpreterProxy primitiveFail].
-
 ]
 
 { #category : #'primitives-textures' }
@@ -257,154 +177,6 @@ B3DAcceleratorPlugin >> primitiveDestroyTexture [
 	^interpreterProxy pop: 2. "pop arg; return rcvr"
 ]
 
-{ #category : #'primitives-qwaq' }
-B3DAcceleratorPlugin >> primitiveDrawArrays [
-	"Primitive. Setup non-VBO client state and call drawRangeElements in one go to avoid
-	garbage collection to move the buffers underneith."
-	| maxIdx minIdx mode texCoords normals colors vertices handle vtxSize ok |
-	<export: true>
-
-	interpreterProxy methodArgumentCount = 8 
-		ifFalse:[^interpreterProxy primitiveFail].
-
-	maxIdx := interpreterProxy stackIntegerValue: 0.
-	minIdx := interpreterProxy stackIntegerValue: 1.
-	mode := interpreterProxy stackIntegerValue: 2.
-	texCoords := interpreterProxy stackValue: 3.
-	normals := interpreterProxy stackValue: 4.
-	colors := interpreterProxy stackValue: 5.
-	vertices := interpreterProxy stackValue: 6.
-	handle := interpreterProxy stackIntegerValue: 7.
-
-	self loadClientState: handle vertices: vertices colors: colors normals: normals texCoords: texCoords.
-	interpreterProxy failed ifTrue:[^nil].
-	doRangeChecks ifTrue:[
-		"Verify the vertex data itself"
-		self checkVertexData: vertices.
-
-		"Verify min-max range in bounds for given vertex array"
-		vtxSize := (interpreterProxy slotSizeOf: vertices) / 3.
-		(minIdx < 0 or:[minIdx > maxIdx or:[maxIdx > vtxSize]])
-			ifTrue:[^interpreterProxy primitiveFail].
-	].
-	interpreterProxy failed ifTrue:[^nil].
-	ok := self cCode: 'b3dDrawArrays(handle, mode, minIdx, maxIdx)' 
-				inSmalltalk:[mode. false].
-	ok ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy failed 
-		ifFalse:[interpreterProxy pop: interpreterProxy methodArgumentCount].
-
-]
-
-{ #category : #'primitives-qwaq' }
-B3DAcceleratorPlugin >> primitiveDrawElements [
-	"Primitive. Setup non-VBO client state and call drawElements in one go to avoid
-	garbage collection to move the buffers underneith."
-	| faces mode texCoords normals colors vertices handle ok facePtr faceSize |
-	<export: true>
-	<var: #facePtr type: 'unsigned int *'>
-
-	interpreterProxy methodArgumentCount = 7 
-		ifFalse:[^interpreterProxy primitiveFail].
-
-	faces := interpreterProxy stackValue: 0.
-	(interpreterProxy isWords: faces)
-		ifFalse:[^interpreterProxy primitiveFail].
-	faceSize := interpreterProxy slotSizeOf: faces.
-	facePtr := interpreterProxy firstIndexableField: faces.
-
-	mode := interpreterProxy stackIntegerValue: 1.
-	texCoords := interpreterProxy stackValue: 2.
-	normals := interpreterProxy stackValue: 3.
-	colors := interpreterProxy stackValue: 4.
-	vertices := interpreterProxy stackValue: 5.
-	handle := interpreterProxy stackIntegerValue: 6.
-
-	self loadClientState: handle vertices: vertices colors: colors normals: normals texCoords: texCoords.
-	interpreterProxy failed ifTrue:[^nil].
-
-	doRangeChecks ifTrue:[
-		"Verify the vertex data itself"
-		self checkVertexData: vertices.
-		"Change bounds range to make sure the data is valid"
-		self checkBoundsRange: vertices faces: facePtr count: faceSize.
-	].
-
-	interpreterProxy failed ifTrue:[^nil].
-	ok := self cCode: 'b3dDrawElements(handle, mode, faceSize, facePtr)'
-		inSmalltalk:[mode. facePtr. false].
-	ok ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy failed 
-		ifFalse:[interpreterProxy pop: interpreterProxy methodArgumentCount].
-
-]
-
-{ #category : #'primitives-qwaq' }
-B3DAcceleratorPlugin >> primitiveDrawRangeElements [
-	"Primitive. Setup non-VBO client state and call drawRangeElements in one go to avoid
-	garbage collection to move the buffers underneith."
-	| faces maxIdx minIdx mode texCoords normals colors vertices handle vtxSize ok facePtr faceSize |
-	<export: true>
-	<var: #facePtr type: 'unsigned int *'>
-
-	interpreterProxy methodArgumentCount = 9 
-		ifFalse:[^interpreterProxy primitiveFail].
-
-	faces := interpreterProxy stackValue: 0.
-	(interpreterProxy isWords: faces)
-		ifFalse:[^interpreterProxy primitiveFail].
-	faceSize := interpreterProxy slotSizeOf: faces.
-	facePtr := interpreterProxy firstIndexableField: faces.
-
-	maxIdx := interpreterProxy stackIntegerValue: 1.
-	minIdx := interpreterProxy stackIntegerValue: 2.
-	mode := interpreterProxy stackIntegerValue: 3.
-	texCoords := interpreterProxy stackValue: 4.
-	normals := interpreterProxy stackValue: 5.
-	colors := interpreterProxy stackValue: 6.
-	vertices := interpreterProxy stackValue: 7.
-	handle := interpreterProxy stackIntegerValue: 8.
-
-	self loadClientState: handle vertices: vertices colors: colors normals: normals texCoords: texCoords.
-	interpreterProxy failed ifTrue:[^nil].
-
-	doRangeChecks ifTrue:[
-		"Verify the vertex data itself"
-		self checkVertexData: vertices.
-		"Change bounds range to make sure the data is valid"
-		self checkBoundsRange: vertices faces: facePtr count: faceSize.
-		"Verify min-max range in bounds for given vertex array"
-		vtxSize := (interpreterProxy slotSizeOf: vertices) / 3.
-		(minIdx < 0 or:[minIdx > maxIdx or:[maxIdx > vtxSize]])
-			ifTrue:[^interpreterProxy primitiveFail].
-	].
-
-	interpreterProxy failed ifTrue:[^nil].
-	ok := self cCode: 'b3dDrawRangeElements(handle, mode, minIdx, maxIdx, faceSize,  facePtr)'
-		inSmalltalk:[mode. facePtr. false].
-	ok ifFalse:[^interpreterProxy primitiveFail].
-	interpreterProxy failed 
-		ifFalse:[interpreterProxy pop: interpreterProxy methodArgumentCount].
-
-]
-
-{ #category : #'primitives-qwaq' }
-B3DAcceleratorPlugin >> primitiveEnableDrawRangeChecks [
-	"Primitive. Enable/disable draw (range) checks"
-	| enabled |
-	<export: true>
-	interpreterProxy methodArgumentCount = 0 ifTrue:[
-		interpreterProxy pop: 1.
-		^interpreterProxy pushBool: doRangeChecks.
-	].
-	interpreterProxy methodArgumentCount = 1 ifTrue:[
-		enabled := interpreterProxy booleanValueOf: (interpreterProxy stackValue: 0).
-		interpreterProxy failed ifTrue:[^nil].
-		doRangeChecks := enabled.
-		^interpreterProxy pop: 1. "pop arg; return recvr"
-	].
-]
-
 { #category : #'primitives-renderer' }
 B3DAcceleratorPlugin >> primitiveFinishRenderer [
 	| handle result |
@@ -449,7 +221,7 @@ B3DAcceleratorPlugin >> primitiveGetIntProperty [
 B3DAcceleratorPlugin >> primitiveGetRendererColorMasks [
 	| handle result masks array arrayOop |
 	<export: true>
-	<var: #masks declareC:'int masks[4]'>
+	<var: #masks declareC: 'int masks[4]'>
 	interpreterProxy methodArgumentCount = 2
 		ifFalse:[^interpreterProxy primitiveFail].
 	array := interpreterProxy stackObjectValue: 0.
@@ -601,7 +373,7 @@ B3DAcceleratorPlugin >> primitiveSetBufferRect [
 B3DAcceleratorPlugin >> primitiveSetFog [
 	| result handle rgba density fogType stop start |
 	<export: true>
-	<var: #density type:'double'>
+	<var: #density type: 'double'>
 	<var: #start type: 'double'>
 	<var: #stop type: 'double'>
 	interpreterProxy methodArgumentCount = 6
@@ -682,8 +454,8 @@ B3DAcceleratorPlugin >> primitiveSetTransform [
 	| projectionMatrix modelViewMatrix handle |
 	<export: true>
 	<inline: false>
-	<var: #projectionMatrix declareC:'float *projectionMatrix'>
-	<var: #modelViewMatrix declareC:'float *modelViewMatrix'>
+	<var: #projectionMatrix declareC: 'float *projectionMatrix'>
+	<var: #modelViewMatrix declareC: 'float *modelViewMatrix'>
 
 	interpreterProxy methodArgumentCount = 3
 		ifFalse:[^interpreterProxy primitiveFail].
@@ -773,7 +545,7 @@ B3DAcceleratorPlugin >> primitiveTextureDepth [
 B3DAcceleratorPlugin >> primitiveTextureGetColorMasks [
 	| handle result masks array renderer arrayOop |
 	<export: true>
-	<var: #masks declareC:'int masks[4]'>
+	<var: #masks declareC: 'int masks[4]'>
 	interpreterProxy methodArgumentCount = 3
 		ifFalse:[^interpreterProxy primitiveFail].
 	array := interpreterProxy stackObjectValue: 0.
@@ -870,7 +642,7 @@ B3DAcceleratorPlugin >> stackMaterialValue: stackIndex [
 	"Load a B3DMaterial from the given stack index"
 	| oop |
 	<inline: false>
-	<returnTypeC:'void *'>
+	<returnTypeC: 'void *'>
 	oop := interpreterProxy stackObjectValue: stackIndex.
 	oop = nil ifTrue:[^nil].
 	oop = interpreterProxy nilObject ifTrue:[^nil].
@@ -885,9 +657,10 @@ B3DAcceleratorPlugin >> stackMatrix: index [
 	Return a pointer to the matrix data if successful, nil otherwise."
 	| oop |
 	<inline: false>
-	<returnTypeC:'void*'>
+	<returnTypeC: 'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
+	oop = interpreterProxy nilObject ifTrue:[^nil].
 	((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 16])
 		ifTrue:[^interpreterProxy firstIndexableField: oop].
 	^nil
@@ -900,8 +673,8 @@ B3DAcceleratorPlugin >> stackPrimitiveIndexArray: stackIndex ofSize: nItems vali
 	Return a pointer to the index data if successful, nil otherwise."
 	| oop oopSize idxPtr index |
 	<inline: false>
-	<returnTypeC:'void*'>
-	<var: #idxPtr declareC:'int *idxPtr'>
+	<returnTypeC: 'void*'>
+	<var: #idxPtr declareC: 'int *idxPtr'>
 
 	oop := interpreterProxy stackObjectValue: stackIndex.
 	oop = nil ifTrue:[^nil].
@@ -922,7 +695,7 @@ B3DAcceleratorPlugin >> stackPrimitiveVertex: index [
 	Return a pointer to the vertex data if successful, nil otherwise."
 	| oop |
 	<inline: false>
-	<returnTypeC:'void*'>
+	<returnTypeC: 'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
 	((interpreterProxy isWords: oop) and:[(interpreterProxy slotSizeOf: oop) = 16])
@@ -936,7 +709,7 @@ B3DAcceleratorPlugin >> stackPrimitiveVertexArray: index ofSize: nItems [
 	Return a pointer to the vertex data if successful, nil otherwise."
 	| oop oopSize |
 	<inline: false>
-	<returnTypeC:'void*'>
+	<returnTypeC: 'void*'>
 	oop := interpreterProxy stackObjectValue: index.
 	oop = nil ifTrue:[^nil].
 	(interpreterProxy isWords: oop) ifTrue:[

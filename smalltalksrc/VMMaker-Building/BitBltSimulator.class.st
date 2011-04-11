@@ -64,19 +64,17 @@ BitBltSimulator >> initializeDitherTables [
 	self initDither8Lookup.
 ]
 
-{ #category : #'memory access' }
-BitBltSimulator >> long32At: byteAddress [
-	^interpreterProxy long32At: byteAddress
-]
-
-{ #category : #'memory access' }
-BitBltSimulator >> long32At: byteAddress put: a32BitValue [
-	^interpreterProxy long32At: byteAddress put: a32BitValue
-]
-
 { #category : #simulation }
 BitBltSimulator >> mergeFn: arg1 with: arg2 [
 	^ self perform: (opTable at: combinationRule+1) with: arg1 with: arg2
+]
+
+{ #category : #simulation }
+BitBltSimulator >> oopForPointer: pointer [
+	"This gets implemented by Macros in C, where its types will also be checked.
+	oop is the width of a machine word, and pointer is a raw address."
+
+	^ pointer
 ]
 
 { #category : #'debug support' }
@@ -88,4 +86,10 @@ BitBltSimulator >> srcLongAt: srcIndex [
 		srcIndex > (sourceBits + (sourcePitch * sourceHeight))]])
 			ifTrue:[self error:'Out of bounds'].
 	^self long32At: srcIndex
+]
+
+{ #category : #simulation }
+BitBltSimulator >> tableLookup: table at: index [
+
+	^ self long32At: (table + (index * 4))
 ]

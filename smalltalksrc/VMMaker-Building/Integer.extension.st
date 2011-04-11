@@ -14,12 +14,10 @@ Integer >> coerceTo: cTypeString sim: interpreter [
 	cTypeString last = $* ifTrue: [  "C pointer"
 		unitSize := cTypeString caseOf: {
 		['char *'] -> [1].
-		['short *'] -> [4].
 		['int *'] -> [4].
 		['float *'] -> [4].
-		['double *'] -> [8].
 		['unsigned *'] -> [4].
-		['oop *'] -> [interpreter bytesPerOop].
+		['float *'] -> [4].
 		}
 		otherwise: [ (cTypeString beginsWith: 'char') ifTrue: [1] ifFalse: [4] ].
 		^(CArray basicNew)
@@ -27,6 +25,20 @@ Integer >> coerceTo: cTypeString sim: interpreter [
 			yourself.
 	].
 	^ self  "C number (int, char, float, etc)"
+]
+
+{ #category : #'*VMMaker-interpreter simulator' }
+Integer >> hex8 [
+	"Print the receiver in base 16 with prefixed base, using at least 8 digits.
+	 DO NOT CHANGE THIS!  The Cog VMMaker depends on this.
+	 Consider using storeStringBase: 16 length: 11 padded: true instead."
+	  "16r3333 hex8"
+	| hex |
+	hex := self hex.  "16rNNN"
+	^hex size < 11
+		ifTrue: [hex copyReplaceFrom: 4 to: 3
+						 with: ('00000000' copyFrom: 1 to: 11-hex size)]
+		ifFalse: [hex]
 ]
 
 { #category : #'*VMMaker-interpreter simulator' }
